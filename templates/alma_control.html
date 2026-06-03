@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Sala de Máquinas — Alma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>
+  /* toggle switch */
+  .sw{position:relative;display:inline-block;width:46px;height:26px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0}
+  .sw .track{position:absolute;cursor:pointer;inset:0;background:#cdd6df;border-radius:26px;transition:.18s}
+  .sw .track:before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .sw input:checked + .track{background:var(--aqua)}
+  .sw input:checked + .track:before{transform:translateX(20px)}
+  .sw input:disabled + .track{opacity:.45;cursor:not-allowed}
+  .piece{display:flex;align-items:flex-start;gap:14px;padding:14px 4px;border-bottom:1px solid var(--border)}
+  .piece:last-child{border-bottom:none}
+  .piece .meta{flex:1;min-width:0}
+  .piece .nm{font-weight:700;color:var(--navy);font-size:14px}
+  .piece .ds{font-size:12.5px;color:var(--mute);margin-top:2px;line-height:1.45}
+  .piece .flagcode{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--blue);margin-top:4px;opacity:.8}
+  .piece .ctrls{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .ovr{width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block;margin-left:6px;vertical-align:middle}
+  .risk-bajo{background:var(--green-s);color:var(--green)}
+  .risk-medio{background:var(--orange-s);color:var(--orange)}
+  .risk-alto{background:var(--red-s);color:var(--red)}
+  .risk-extremo{background:var(--purple-s);color:var(--purple)}
+  .master-card .piece .nm{font-size:15px}
+  .lock{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--border);font-size:13px}
+  .lock:last-child{border-bottom:none}
+  .lock .lk-nm{font-weight:600;color:var(--navy)}
+  .lock .lk-ds{color:var(--mute);font-size:11.5px}
+  .banner{padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;margin-bottom:16px;display:none}
+  .banner.live{display:block;background:var(--red-s);color:var(--red);border:1px solid var(--red)}
+  .banner.dry{display:block;background:var(--green-s);color:var(--green);border:1px solid var(--green)}
+  .acc-item{padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;font-size:13px}
+  .acc-item .ai-sum{font-weight:600;color:var(--navy)}
+  .acc-item .ai-why{font-size:11.5px;color:var(--mute);margin-top:3px}
+</style>
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3"/></svg> Sala de Máquinas</h1>
+  <div class="spacer"></div>
+  <span class="chip" id="ovrChip">0 overrides</span>
+  <button class="btn-ghost" id="btnReset">Restaurar todo (apagar)</button>
+</div>
+
+<div class="wrap">
+  <div id="banner" class="banner"></div>
+
+  <!-- Maestros -->
+  <div class="card master-card">
+    <div class="card-head"><strong>Control maestro</strong><span class="t-meta">Estos mandan sobre todo lo de abajo</span></div>
+    <div id="masters"></div>
+  </div>
+
+  <!-- Candados legales -->
+  <div class="card">
+    <div class="card-head"><strong>🔒 Candados de seguridad</strong><span class="t-meta">Solo lectura — se cambian por .env, no desde acá</span></div>
+    <div id="locks"></div>
+  </div>
+
+  <!-- Capas -->
+  <div id="layers"></div>
+
+  <!-- Auditoría -->
+  <div class="card">
+    <div class="card-head"><strong>📋 Registro de cambios</strong><span class="t-meta">Quién prendió/apagó qué y cuándo</span></div>
+    <div id="audit"><div class="empty">Sin cambios registrados.</div></div>
+  </div>
+</div>
+
+<!-- modal dry-run -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-head"><strong id="mTitle">Ensayo</strong><button class="icon-btn" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" id="mBody"><div class="empty">Cargando…</div></div>
+    <div class="modal-foot"><button class="btn-ghost" onclick="closeModal()">Cerrar</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+const q = (s)=>`${s}${s.includes('?')?'&':'?'}token=${encodeURIComponent(TOKEN)}`;
+const RISK_LABEL={bajo:'Bajo',medio:'Medio',alto:'Alto',extremo:'Extremo'};
+let MAP=null;
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+async function load(){
+  const r=await fetch(q('/alma/control/api/map'));
+  if(!r.ok){document.getElementById('layers').innerHTML='<div class="card"><div class="err">No autorizado o error cargando el mapa.</div></div>';return;}
+  MAP=await r.json();
+  render();
+}
+
+function swHtml(flag,value,disabled){
+  return `<label class="sw"><input type="checkbox" data-flag="${flag}" ${value?'checked':''} ${disabled?'disabled':''}><span class="track"></span></label>`;
+}
+
+function render(){
+  // banner estado de ejecución
+  const exec=MAP.masters.find(m=>m.flag==='ALMA_AGENTS_EXECUTE');
+  const master=MAP.masters.find(m=>m.flag==='ALMA_AGENTS_ENABLED');
+  const b=document.getElementById('banner');
+  if(master.value && exec.value){b.className='banner live';b.textContent='⚠ Flota ENCENDIDA y en EJECUCIÓN REAL — los agentes habilitados pueden actuar sobre pacientes (dentro del piso legal).';}
+  else if(master.value){b.className='banner dry';b.textContent='Flota encendida en modo DRY-RUN — los agentes proponen pero no ejecutan (ejecución real apagada).';}
+  else {b.className='banner dry';b.textContent='Todo apagado. Nada corre. Los ensayos siguen disponibles.';}
+
+  // overrides chip
+  document.getElementById('ovrChip').textContent=`${MAP.n_overrides} override${MAP.n_overrides===1?'':'s'}`;
+
+  // masters
+  document.getElementById('masters').innerHTML=MAP.masters.map(m=>`
+    <div class="piece">
+      <div class="meta"><div class="nm">${m.label}${m.overridden?'<span class="ovr" title="override manual activo"></span>':''}</div>
+        <div class="ds">${m.descr}</div><div class="flagcode">${m.flag}</div></div>
+      <div class="ctrls">${swHtml(m.flag,m.value,false)}</div>
+    </div>`).join('');
+
+  // locks
+  document.getElementById('locks').innerHTML=MAP.locks.map(l=>{
+    const ok = l.flag==='ALMA_AGENTS_REQUIRE_CONSENT' ? l.value : (l.info? l.value : !l.value);
+    const state = l.info ? (l.value?'Activo':'Inactivo') : (l.value?'PERMITIDO':'Bloqueado');
+    const cls = l.flag==='ALMA_AGENTS_REQUIRE_CONSENT'? (l.value?'good':'bad')
+              : l.info ? 'mute' : (l.value?'bad':'good');
+    return `<div class="lock"><div style="flex:1"><span class="lk-nm">${l.label}</span><div class="lk-ds">${l.descr}</div></div>
+      <span class="badge ${cls}">${state}</span></div>`;
+  }).join('');
+
+  // layers
+  document.getElementById('layers').innerHTML=MAP.layers.map(L=>`
+    <div class="card">
+      <div class="card-head"><strong>${L.label}</strong><span class="t-meta">${L.descr}</span></div>
+      ${L.pieces.length?L.pieces.map(p=>pieceHtml(L.key,p)).join(''):'<div class="empty">Sin piezas registradas.</div>'}
+    </div>`).join('');
+
+  // auditoría
+  const aud=MAP.audit||[];
+  document.getElementById('audit').innerHTML = aud.length ? aud.map(a=>{
+    const val = a.flag==='*reset*' ? 'restauró todo (apagó)' :
+      `<strong>${a.value===true?'ENCENDIÓ':a.value===false?'apagó':'restauró'}</strong> ${a.flag}`;
+    return `<div class="lock"><div style="flex:1">${val}</div><span class="t-meta">${(a.ts||'').replace('T',' ')} · ${a.actor||''}</span></div>`;
+  }).join('') : '<div class="empty">Sin cambios registrados.</div>';
+
+  // bind toggles
+  document.querySelectorAll('input[data-flag]').forEach(el=>el.addEventListener('change',onToggle));
+}
+
+function pieceHtml(layer,p){
+  const r=p.risk||'medio';
+  return `<div class="piece">
+    <div class="meta">
+      <div class="nm">${p.name}${p.overridden?'<span class="ovr" title="override manual activo"></span>':''}
+        <span class="chip risk-${r}" style="margin-left:6px">${RISK_LABEL[r]||r}</span></div>
+      <div class="ds">${p.descr||'<em>sin descripción</em>'}</div>
+      <div class="flagcode">${p.flag||'—'}${p.last_run?` · último: ${p.last_run.dry_run?'ensayo':'real'} ${p.last_run.ran_at||''}`:''}</div>
+    </div>
+    <div class="ctrls">
+      <button class="btn-ghost" onclick="dryrun('${layer}','${p.id}','${(p.name||'').replace(/'/g,"")}')">Ensayar</button>
+      ${swHtml(p.flag,p.enabled,!p.flag)}
+    </div></div>`;
+}
+
+async function onToggle(e){
+  const flag=e.target.dataset.flag, value=e.target.checked;
+  e.target.disabled=true;
+  try{
+    const r=await fetch(q('/alma/control/api/toggle'),{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({flag,value})});
+    if(!r.ok){const t=await r.text();throw new Error(t);}
+    toast(`${flag} → ${value?'ON':'OFF'}`);
+    await load(); // recargar para reflejar overrides + banner
+  }catch(err){toast('Error: '+err.message);e.target.checked=!value;e.target.disabled=false;}
+}
+
+async function dryrun(layer,id,name){
+  openModal('Ensayo — '+name);
+  document.getElementById('mBody').innerHTML='<div class="empty">Ejecutando ensayo (sin tocar a nadie)…</div>';
+  try{
+    const r=await fetch(q('/alma/control/api/dryrun'),{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({layer,id})});
+    const d=await r.json();
+    if(!r.ok){document.getElementById('mBody').innerHTML=`<div class="err">${d.detail||'falló'}</div>`;return;}
+    if(!d.n){document.getElementById('mBody').innerHTML=`<div class="empty">Sin acciones para proponer ahora.${d.notes?'<br><span class="mute">'+d.notes+'</span>':''}</div>`;return;}
+    document.getElementById('mBody').innerHTML=`<p class="mute" style="margin:0 0 12px">${d.n} acción(es) que haría — <strong>nada se ejecutó</strong>:</p>`+
+      d.acciones.map(a=>`<div class="acc-item"><div class="ai-sum">${a.summary||'(acción)'}</div>
+        <div class="ai-why">${a.target?('→ '+a.target+' · '):''}riesgo ${a.risk||'—'}${a.se_ejecutaria!==undefined?(a.se_ejecutaria?' · <span class="good">se ejecutaría</span>':' · <span class="bad">bloqueada: '+(a.motivo||'')+'</span>'):''}</div></div>`).join('');
+  }catch(err){document.getElementById('mBody').innerHTML=`<div class="err">${err.message}</div>`;}
+}
+
+function openModal(t){document.getElementById('mTitle').textContent=t;document.getElementById('modal').classList.add('show');}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+document.getElementById('btnReset').addEventListener('click',async()=>{
+  if(!confirm('¿Restaurar todo a apagado? Limpia todos los interruptores manuales.'))return;
+  await fetch(q('/alma/control/api/reset'),{method:'POST'});
+  toast('Todo restaurado a apagado');load();
+});
+
+load();
+</script>
+</body></html>

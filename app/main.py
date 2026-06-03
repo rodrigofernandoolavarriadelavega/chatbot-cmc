@@ -197,6 +197,68 @@ async def lifespan(app: FastAPI):
         id="autopilot_dryrun",
         replace_existing=True,
     )
+    # Cerebro de Alma — snapshot del world-state global (Fase 1). Read-only y
+    # Medilink-free: lee BI + sessions.db + snapshots ya persistidos. Corre
+    # SIEMPRE (es solo lectura, no contacta a nadie); 06:00 CLT, tras el cierre
+    # diario de BI (23:59) para tener data fresca del día anterior.
+    async def _job_alma_brain_snapshot():
+        try:
+            from alma_brain.state import build_and_save
+            st = await asyncio.to_thread(build_and_save, 7)
+            logging.getLogger("bot").info(
+                "[alma_brain] snapshot OK — %d dominios · %d alertas",
+                len(st.get("domains_available", [])), len(st.get("alerts", [])))
+        except Exception as e:  # noqa: BLE001 — nunca tumbar el scheduler por el cerebro
+            logging.getLogger("bot").error("[alma_brain] snapshot falló: %s", e)
+    scheduler.add_job(
+        _job_alma_brain_snapshot,
+        CronTrigger(hour=6, minute=0, timezone=_CLT),
+        id="alma_brain_snapshot",
+        replace_existing=True,
+    )
+    # Flota de agentes autónomos (Alma Agents). INERTE por defecto: register_agent_jobs
+    # no agrega NI UN job si ALMA_AGENTS_ENABLED=false (default). Encender el maestro
+    # recién agenda los agentes, y aún así cada run() vuelve a chequear su propio flag
+    # + execute. Nunca tumba el scheduler (errores aislados por agente).
+    try:
+        from alma_agents.scheduler_hook import register_agent_jobs
+        register_agent_jobs(scheduler, _CLT)
+    except Exception as e:  # noqa: BLE001
+        logging.getLogger("bot").error("[alma_agents] registro de flota falló: %s", e)
+    # Effectiveness Ledger: mide si los contactos de la flota convirtieron (cita/
+    # respuesta) dentro de su ventana. Solo LEE sessions.db y escribe su propia
+    # tabla — no contacta a nadie → corre SIEMPRE, independiente del maestro.
+    async def _job_alma_agents_ledger():
+        try:
+            from alma_agents import ledger
+            res = await asyncio.to_thread(ledger.measure_outcomes)
+            logging.getLogger("bot").info(
+                "[alma_agents] ledger medido — %d citas · %d respuestas · %d sin respuesta",
+                res.get("cita", 0), res.get("respuesta", 0), res.get("sin_respuesta", 0))
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger("bot").error("[alma_agents] ledger falló: %s", e)
+    scheduler.add_job(
+        _job_alma_agents_ledger,
+        CronTrigger(hour=5, minute=30, timezone=_CLT),
+        id="alma_agents_ledger",
+        replace_existing=True,
+    )
+    # Capstone: latido diario que une cerebro + flota (intención simulada) +
+    # ledger en un digest unificado. No re-ejecuta agentes ni contacta a nadie;
+    # solo sensa/mide/reporta → corre SIEMPRE. 06:30 CLT (tras snapshot 06:00).
+    async def _job_alma_agents_capstone():
+        try:
+            from alma_agents import capstone
+            d = await capstone.run_cycle()
+            logging.getLogger("bot").info("[alma_agents] capstone — %s", d.get("headline"))
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger("bot").error("[alma_agents] capstone falló: %s", e)
+    scheduler.add_job(
+        _job_alma_agents_capstone,
+        CronTrigger(hour=6, minute=30, timezone=_CLT),
+        id="alma_agents_capstone",
+        replace_existing=True,
+    )
     # Cola de publicación orgánica (segmento IG·FB·WhatsApp): publica las piezas
     # aprobadas que ya vencieron su hora. La escritura real a Meta está bloqueada
     # salvo ORGANIC_PUBLISH_EXECUTE=true (kill-switch). Cada 5 min.
@@ -645,6 +707,12 @@ app.include_router(admin_routes.router)
 from autopilot.routes import router as autopilot_router  # noqa: E402
 app.include_router(autopilot_router)
 app.include_router(portal_routes.router)
+from alma_brain.routes import router as alma_brain_router  # noqa: E402
+app.include_router(alma_brain_router)
+from alma_agents.routes import router as alma_agents_router  # noqa: E402
+app.include_router(alma_agents_router)
+import alma_control_routes  # noqa: E402
+app.include_router(alma_control_routes.router)
 
 import vuelos_routes
 app.include_router(vuelos_routes.router)

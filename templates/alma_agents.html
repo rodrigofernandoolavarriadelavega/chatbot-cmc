@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Flota de Agentes — Alma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0c3556;
+  --ink:#13202e; --muted:#64798c; --line:#e6edf3; --bg:#f4f7fa; --card:#ffffff;
+  --green:#1f9d6b; --green-bg:#e7f7f0;
+  --amber:#c98a14; --amber-bg:#fdf4e3;
+  --red:#d94c4c; --red-bg:#fdecec;
+  --orange:#b85a0d; --orange-bg:#fef0e6;
+  --slate:#5b7186; --slate-bg:#eef2f6;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --sh-lg:0 12px 32px rgba(15,63,104,.12),0 4px 8px rgba(15,63,104,.06);
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg)}
+body{font-family:'Montserrat',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.45;font-size:13px}
+.wrap{max-width:1320px;margin:0 auto;padding:22px 24px 60px}
+
+/* ---- HEADER ---- */
+.top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+  border-radius:var(--r);padding:22px 26px;color:#fff;box-shadow:var(--sh-lg);
+  position:relative;overflow:hidden;margin-bottom:20px}
+.top::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+  background:radial-gradient(circle,rgba(79,190,206,.35),transparent 70%);pointer-events:none}
+.badge-ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex-shrink:0;
+  background:rgba(255,255,255,.14);backdrop-filter:blur(6px)}
+.badge-ico svg{width:26px;height:26px;stroke:#fff;stroke-width:2;fill:none}
+.top-copy{flex:1;min-width:0}
+.top-copy h1{font-size:21px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.top-copy .sub{font-size:12.5px;opacity:.82;font-weight:500;margin-top:3px}
+.top-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
+.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;
+  font-size:12px;font-weight:700;background:rgba(255,255,255,.16);backdrop-filter:blur(6px)}
+.mode-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--aqua);
+  box-shadow:0 0 0 4px rgba(79,190,206,.3);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.btn-refresh{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;
+  background:var(--aqua);color:var(--navy2);font-family:inherit;font-weight:700;font-size:13px;
+  padding:10px 16px;border-radius:11px;box-shadow:0 4px 14px rgba(79,190,206,.4);transition:.18s}
+.btn-refresh:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,190,206,.5)}
+.btn-refresh svg{width:16px;height:16px;stroke:var(--navy2);stroke-width:2.5;fill:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+.btn-refresh.spin svg{animation:rot 1s linear infinite}
+
+/* ---- FLEET STATUS BAR ---- */
+.fleet-bar{background:var(--card);border-radius:var(--r);border:1px solid var(--line);
+  box-shadow:var(--sh-sm);margin-bottom:20px;overflow:hidden}
+.fleet-banner{display:flex;align-items:center;gap:14px;padding:16px 20px;
+  border-bottom:1px solid var(--line)}
+.fleet-banner.off{background:var(--green-bg);border-left:4px solid var(--green)}
+.fleet-banner.on{background:var(--amber-bg);border-left:4px solid var(--amber)}
+.fleet-banner .fb-ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.fleet-banner.off .fb-ico{background:rgba(31,157,107,.15)}
+.fleet-banner.on .fb-ico{background:rgba(201,138,20,.15)}
+.fleet-banner svg{width:20px;height:20px;stroke-width:2;fill:none}
+.fleet-banner.off svg{stroke:var(--green)}
+.fleet-banner.on svg{stroke:var(--amber)}
+.fleet-banner .fb-title{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.fleet-banner.off .fb-title{color:var(--green)}
+.fleet-banner.on .fb-title{color:var(--amber)}
+.fleet-banner .fb-sub{font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
+.fleet-switches{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0;
+  padding:0 20px}
+.sw-item{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+.sw-item:last-child,.sw-item:nth-last-child(-n+1):first-child{border-bottom:0}
+.sw-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sw-dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(31,157,107,.2)}
+.sw-dot.off{background:var(--line)}
+.sw-label{font-size:11.5px;font-weight:600;color:var(--muted)}
+.sw-val{margin-left:auto;font-size:11.5px;font-weight:700}
+.sw-val.on{color:var(--green)}
+.sw-val.off{color:var(--muted)}
+.fleet-hint{padding:12px 20px;background:var(--bg);border-top:1px solid var(--line);
+  font-size:11px;font-weight:500;color:var(--muted);line-height:1.6}
+.fleet-hint code{font-family:'SF Mono','Fira Mono',monospace;font-size:10.5px;
+  background:var(--slate-bg);color:var(--navy);padding:2px 6px;border-radius:5px;font-weight:600}
+
+/* ---- SECTION HEADER ---- */
+.section-hd{display:flex;align-items:center;gap:10px;margin:24px 0 14px}
+.section-hd h2{font-size:14px;font-weight:800;letter-spacing:-.2px;color:var(--navy)}
+.section-hd .count-pill{font-size:11px;font-weight:700;color:var(--muted);
+  background:var(--card);border:1px solid var(--line);padding:3px 10px;border-radius:999px}
+.section-hd .cat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--muted);margin-left:4px}
+
+/* ---- CATEGORY GROUP ---- */
+.cat-group{margin-bottom:32px}
+.cat-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cat-hd .cat-ico{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+.cat-hd .cat-ico svg{width:15px;height:15px;stroke-width:2;fill:none}
+.cat-hd h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.cat-hd .cat-count{font-size:11px;font-weight:700;color:var(--muted);
+  background:var(--line);padding:2px 8px;border-radius:999px}
+
+/* ---- AGENT CARDS GRID ---- */
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+
+/* ---- AGENT CARD ---- */
+.agent-card{background:var(--card);border-radius:var(--r);border:1px solid var(--line);
+  box-shadow:var(--sh-sm);transition:.2s;display:flex;flex-direction:column}
+.agent-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+
+.agent-card-head{padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+.agent-title-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.agent-ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0}
+.agent-ico svg{width:20px;height:20px;stroke-width:2;fill:none}
+.agent-name{font-size:14px;font-weight:700;letter-spacing:-.2px;color:var(--ink);line-height:1.2;margin-top:2px}
+.risk-badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.4px;padding:3px 9px;border-radius:999px;margin-top:5px;flex-shrink:0}
+
+/* risk colors */
+.risk-bajo{background:var(--green-bg);color:var(--green)}
+.risk-medio{background:var(--aqua-s);color:var(--blue)}
+.risk-alto{background:var(--amber-bg);color:var(--amber)}
+.risk-extremo{background:var(--red-bg);color:var(--red)}
+.risk-extremo-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1.5s infinite}
+
+.agent-descr{font-size:12px;font-weight:500;color:var(--muted);line-height:1.5}
+
+.agent-card-body{padding:12px 16px;flex:1;display:flex;flex-direction:column;gap:10px}
+
+/* flag + schedule row */
+.agent-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.flag-tag{font-family:'SF Mono','Fira Mono',monospace;font-size:10px;font-weight:600;
+  background:var(--bg);border:1px solid var(--line);color:var(--navy);
+  padding:3px 8px;border-radius:6px}
+.schedule-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  color:var(--muted);background:var(--bg);border:1px solid var(--line);
+  padding:4px 9px;border-radius:8px}
+.schedule-tag svg{width:12px;height:12px;stroke:var(--muted);stroke-width:2;fill:none}
+
+/* enabled pill */
+.enabled-row{display:flex;align-items:center;gap:8px}
+.enabled-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  padding:4px 11px;border-radius:999px}
+.enabled-pill.on{background:var(--green-bg);color:var(--green)}
+.enabled-pill.off{background:var(--slate-bg);color:var(--slate)}
+.enabled-pill .ep-dot{width:7px;height:7px;border-radius:50%}
+.enabled-pill.on .ep-dot{background:var(--green)}
+.enabled-pill.off .ep-dot{background:var(--muted)}
+.env-hint{font-size:10px;font-weight:500;color:var(--muted)}
+
+/* last run */
+.last-run{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.last-run .lr-hd{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:5px}
+.last-run .lr-chips{display:flex;gap:6px;flex-wrap:wrap}
+.lr-chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:var(--card);border:1px solid var(--line)}
+.lr-chip.proposed{color:var(--blue)}
+.lr-chip.executed{color:var(--green)}
+.lr-chip.blocked{color:var(--red)}
+.lr-chip.dryrun{color:var(--amber)}
+.lr-ts{font-size:10.5px;color:var(--muted);margin-top:5px;font-weight:500}
+.lr-never{font-size:11.5px;color:var(--muted);font-weight:500;font-style:italic}
+
+/* preview button */
+.agent-card-foot{padding:12px 16px;border-top:1px solid var(--line)}
+.btn-preview{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px;
+  font-family:inherit;font-size:12.5px;font-weight:700;color:var(--blue);
+  cursor:pointer;transition:.18s}
+.btn-preview svg{width:15px;height:15px;stroke:var(--blue);stroke-width:2;fill:none}
+.btn-preview:hover{background:var(--aqua-s);border-color:var(--aqua);color:var(--navy)}
+.btn-preview:disabled{opacity:.45;cursor:not-allowed}
+.btn-preview.loading{opacity:.7;cursor:wait}
+
+/* ---- DRY-RUN MODAL ---- */
+.modal-overlay{position:fixed;inset:0;background:rgba(13,32,46,.45);backdrop-filter:blur(3px);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:680px;
+  max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.modal-head .mh-ico{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--aqua-s),#daf4f9);
+  display:grid;place-items:center;flex-shrink:0}
+.modal-head .mh-ico svg{width:18px;height:18px;stroke:var(--blue);stroke-width:2;fill:none}
+.modal-head h2{font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--navy)}
+.modal-head .mh-sub{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
+.modal-head .mh-close{margin-left:auto;background:none;border:0;cursor:pointer;
+  color:var(--muted);padding:6px;border-radius:8px;transition:.15s}
+.modal-head .mh-close:hover{background:var(--bg)}
+.modal-head .mh-close svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+.modal-body{flex:1;overflow-y:auto;padding:18px 22px}
+.modal-summary{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.ms-chip{font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:10px}
+.ms-chip.proposed{background:var(--aqua-s);color:var(--blue)}
+.ms-chip.would-exec{background:var(--green-bg);color:var(--green)}
+.ms-chip.blocked{background:var(--red-bg);color:var(--red)}
+.ms-chip.dryrun{background:var(--amber-bg);color:var(--amber)}
+.action-list{display:flex;flex-direction:column;gap:8px}
+.action-item{border:1px solid var(--line);border-radius:12px;padding:13px 15px;
+  background:#fff;transition:.15s}
+.action-item:hover{background:var(--bg)}
+.action-item.would-exec{border-left:3px solid var(--green)}
+.action-item.blocked{border-left:3px solid var(--red)}
+.ai-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.ai-kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  padding:2px 8px;border-radius:6px;flex-shrink:0;margin-top:2px}
+.ai-kind.kind-mensaje{background:var(--aqua-s);color:var(--blue)}
+.ai-kind.kind-cita{background:#f0eefa;color:#6b4fd0}
+.ai-kind.kind-alerta{background:var(--amber-bg);color:var(--amber)}
+.ai-kind.kind-tarea{background:var(--slate-bg);color:var(--slate)}
+.ai-kind.kind-otro{background:var(--bg);color:var(--muted)}
+.ai-summary{font-size:12.5px;font-weight:600;color:var(--ink);flex:1;line-height:1.4}
+.ai-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ai-tag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--bg);
+  color:var(--muted);border:1px solid var(--line)}
+.ai-tag.risk-alto,.ai-tag.risk-extremo{color:var(--red);background:var(--red-bg)}
+.ai-tag.risk-bajo{color:var(--green);background:var(--green-bg)}
+.ai-verdict{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+  padding:4px 10px;border-radius:999px;margin-top:8px}
+.ai-verdict.exec{background:var(--green-bg);color:var(--green)}
+.ai-verdict.blocked{background:var(--red-bg);color:var(--red)}
+.ai-verdict svg{width:12px;height:12px;stroke:currentColor;stroke-width:2.5;fill:none}
+.modal-empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.modal-empty svg{width:36px;height:36px;stroke:var(--line);stroke-width:1.5;fill:none;margin-bottom:10px}
+.modal-empty p{font-size:13px;font-weight:600}
+
+/* ---- LOADING / ERROR STATES ---- */
+.state-loading{text-align:center;padding:60px 20px;color:var(--muted)}
+.state-loading .spin-ico{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--aqua);
+  border-radius:50%;animation:rot 1s linear infinite;margin:0 auto 14px}
+.state-loading p{font-size:13px;font-weight:600}
+.state-error{background:var(--red-bg);border:1px solid #f5baba;border-radius:var(--r);
+  padding:20px 22px;margin:20px 0;display:flex;gap:12px;align-items:flex-start}
+.state-error svg{width:20px;height:20px;stroke:var(--red);stroke-width:2;fill:none;flex-shrink:0;margin-top:1px}
+.state-error .se-title{font-size:14px;font-weight:700;color:var(--red)}
+.state-error .se-msg{font-size:12px;color:var(--red);margin-top:3px;font-weight:500}
+.state-error .se-code{font-family:'SF Mono','Fira Mono',monospace;font-size:11px;
+  background:rgba(217,76,76,.1);padding:2px 7px;border-radius:5px}
+.state-403{text-align:center;padding:60px 20px}
+.state-403 svg{width:42px;height:42px;stroke:var(--line);stroke-width:1.5;fill:none;margin-bottom:14px}
+.state-403 h2{font-size:18px;font-weight:800;color:var(--muted);margin-bottom:6px}
+.state-403 p{font-size:13px;color:var(--muted);font-weight:500}
+
+/* ---- RESPONSIVE ---- */
+@media(max-width:700px){
+  .wrap{padding:14px 14px 50px}
+  .top{padding:16px 18px}
+  .top-copy h1{font-size:17px}
+  .agents-grid{grid-template-columns:1fr}
+  .fleet-switches{grid-template-columns:1fr 1fr}
+  .modal-overlay{padding:12px}
+  .modal-head,.modal-body{padding:14px 16px}
+}
+@media(max-width:440px){
+  .fleet-switches{grid-template-columns:1fr}
+  .top-meta{gap:7px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="root">
+  <!-- content rendered by JS -->
+</div>
+
+<!-- DRY-RUN MODAL -->
+<div class="modal-overlay" id="drModal" role="dialog" aria-modal="true" aria-label="Previsualización de agente">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="mh-ico">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      </div>
+      <div>
+        <h2 id="drTitle">Previsualización</h2>
+        <p class="mh-sub" id="drSub">Lo que haría este agente ahora mismo</p>
+      </div>
+      <button class="mh-close" onclick="closeModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="drBody">
+      <div class="state-loading"><div class="spin-ico"></div><p>Ejecutando dry-run...</p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---- HELPERS ---- */
+const $ = id => document.getElementById(id);
+const esc = s => {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+};
+function el(tag, cls, children){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(Array.isArray(children)) children.forEach(c => c && e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+  else if(typeof children === 'string') e.textContent = children;
+  return e;
+}
+function svgEl(path){
+  const s = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  s.setAttribute('viewBox','0 0 24 24');
+  s.innerHTML = path;
+  return s;
+}
+
+/* ---- TOKEN ---- */
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+const API_BASE = '';
+
+/* ---- CATEGORY META ---- */
+const CAT_META = {
+  clinico:      { label:'Clínico',      color:'#1172AB', bg:'#e3f0fb', icon:'<path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-linecap="round" stroke-linejoin="round"/>' },
+  fidelizacion: { label:'Fidelización', color:'#1f9d6b', bg:'#e7f7f0', icon:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke-linecap="round" stroke-linejoin="round"/>' },
+  finanzas:     { label:'Finanzas',     color:'#6b4fd0', bg:'#f0eefa', icon:'<line x1="12" y1="1" x2="12" y2="23" stroke-linecap="round"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round"/>' },
+  ingresos:     { label:'Ingresos',     color:'#c98a14', bg:'#fdf4e3', icon:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17 6 23 6 23 12" stroke-linecap="round" stroke-linejoin="round"/>' },
+  inteligencia: { label:'Inteligencia', color:'#0F3F68', bg:'#e8eef5', icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke-linecap="round" stroke-linejoin="round"/>' },
+  marketing:    { label:'Marketing',    color:'#d94c4c', bg:'#fdecec', icon:'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" stroke-linecap="round"/>' },
+  operaciones:  { label:'Operaciones',  color:'#5b7186', bg:'#eef2f6', icon:'<circle cx="12" cy="12" r="3" stroke-linecap="round"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14" stroke-linecap="round"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 15.54a5 5 0 0 1 0-7.07" stroke-linecap="round"/>' },
+};
+
+function getCatMeta(cat){
+  return CAT_META[cat] || { label: cat, color:'#5b7186', bg:'#eef2f6', icon:'<circle cx="12" cy="12" r="4"/>' };
+}
+
+/* ---- RISK ---- */
+function riskBadge(risk, container){
+  const badge = el('span','risk-badge risk-'+risk);
+  if(risk === 'extremo'){
+    const dot = el('span','risk-extremo-dot');
+    badge.appendChild(dot);
+  }
+  const lbl = { bajo:'Riesgo bajo', medio:'Riesgo medio', alto:'Riesgo alto', extremo:'RIESGO EXTREMO' };
+  badge.appendChild(document.createTextNode(lbl[risk] || risk));
+  return badge;
+}
+
+/* ---- SCHEDULE LEGIBLE ---- */
+function scheduleStr(sched){
+  if(!sched) return '—';
+  if(sched.human) return sched.human;
+  if(sched.cron) return sched.cron;
+  if(sched.every_minutes) return 'cada ' + sched.every_minutes + ' min';
+  if(sched.time && sched.weekday) return sched.weekday + ' ' + sched.time;
+  if(sched.time && sched.days === 'daily') return sched.time + ' diario';
+  if(sched.time) return sched.time;
+  return JSON.stringify(sched);
+}
+
+/* ---- FLEET STATUS RENDER ---- */
+function renderFleetBar(status){
+  const bar = el('div','fleet-bar');
+
+  // main banner
+  const on = status.master_enabled;
+  const banner = el('div','fleet-banner ' + (on ? 'on' : 'off'));
+  const ico = el('div','fb-ico');
+  const iconPath = on
+    ? '<path d="M13 2L3 14h9l-1 8 10-12h-9z" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round"/>';
+  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  iconSvg.setAttribute('viewBox','0 0 24 24');
+  iconSvg.innerHTML = iconPath;
+  ico.appendChild(iconSvg);
+  banner.appendChild(ico);
+
+  const textDiv = el('div');
+  const titleEl = el('div','fb-title', on ? 'FLOTA ENCENDIDA' : 'FLOTA APAGADA');
+  const subEl = el('div','fb-sub', on
+    ? 'Los agentes con flag ON pueden operar. Vigila los kill-switches.'
+    : 'Ningún agente trabaja — estado seguro esperado.');
+  textDiv.appendChild(titleEl);
+  textDiv.appendChild(subEl);
+  banner.appendChild(textDiv);
+  bar.appendChild(banner);
+
+  // switches grid
+  const grid = el('div','fleet-switches');
+  const switches = [
+    { key:'execute_enabled',           label:'Modo ejecución',              on_hint:'Los agentes actúan',     off_hint:'Solo proponen (dry-run)' },
+    { key:'extreme_allowed',           label:'Riesgo extremo permitido',    on_hint:'Agentes extremos ON',    off_hint:'Agentes extremos bloqueados' },
+    { key:'medilink_writes_allowed',   label:'Escrituras Medilink',         on_hint:'Pueden crear/modificar', off_hint:'Solo lectura' },
+    { key:'require_consent',           label:'Consent requerido',           on_hint:'Filtra por consent',     off_hint:'Ignora consent (peligro)' },
+    { key:'in_quiet_hours',            label:'Horario silencio activo',     on_hint:'No contacta pacientes',  off_hint:'Envío habilitado' },
+  ];
+
+  switches.forEach(sw => {
+    const val = status[sw.key];
+    const item = el('div','sw-item');
+    const dot = el('span','sw-dot ' + (val ? 'on' : 'off'));
+    const lbl = el('span','sw-label', sw.label);
+    const valEl = el('span','sw-val ' + (val ? 'on' : 'off'), val ? 'ON' : 'OFF');
+    item.appendChild(dot);
+    item.appendChild(lbl);
+    item.appendChild(valEl);
+    grid.appendChild(item);
+  });
+
+  // contact max
+  if(status.contact_max_week != null){
+    const item = el('div','sw-item');
+    const dot = el('span','sw-dot on');
+    const lbl = el('span','sw-label', 'Tope contactos/semana');
+    const valEl = el('span','sw-val on', String(status.contact_max_week));
+    item.appendChild(dot);
+    item.appendChild(lbl);
+    item.appendChild(valEl);
+    grid.appendChild(item);
+  }
+
+  bar.appendChild(grid);
+
+  // hint
+  const hint = el('div','fleet-hint');
+  hint.innerHTML = '';
+  const hintParts = [
+    document.createTextNode('Estos interruptores se controlan por variables de entorno en '),
+    (() => { const c = el('code',null,'.env'); return c; })(),
+    document.createTextNode('. Para encender la flota: '),
+    (() => { const c = el('code',null,'ALMA_AGENTS_ENABLED=true'); return c; })(),
+    document.createTextNode('. Para que actúen (no solo propongan): '),
+    (() => { const c = el('code',null,'ALMA_AGENTS_EXECUTE=true'); return c; })(),
+    document.createTextNode('.'),
+  ];
+  hintParts.forEach(p => hint.appendChild(p));
+  bar.appendChild(hint);
+  return bar;
+}
+
+/* ---- LAST RUN RENDER ---- */
+function renderLastRun(lr){
+  const box = el('div','last-run');
+  const hd = el('div','lr-hd', 'Última ejecución');
+  box.appendChild(hd);
+  if(!lr){
+    box.appendChild(el('div','lr-never', 'Nunca corrió'));
+    return box;
+  }
+  const chips = el('div','lr-chips');
+  const add = (cls, txt) => {
+    const c = el('span','lr-chip '+cls, txt);
+    chips.appendChild(c);
+  };
+  if(lr.proposed != null) add('proposed', lr.proposed + ' propuestas');
+  if(lr.executed != null) add('executed', lr.executed + ' ejecutadas');
+  if(lr.blocked != null) add('blocked', lr.blocked + ' bloqueadas');
+  if(lr.dry_run) add('dryrun', 'dry-run');
+  box.appendChild(chips);
+  if(lr.ran_at){
+    const ts = el('div','lr-ts');
+    const d = new Date(lr.ran_at);
+    ts.textContent = isNaN(d) ? lr.ran_at : d.toLocaleString('es-CL',{timeZone:'America/Santiago',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'});
+    if(lr.notes){
+      ts.textContent += ' — ' + lr.notes;
+    }
+    box.appendChild(ts);
+  }
+  return box;
+}
+
+/* ---- AGENT CARD RENDER ---- */
+function renderAgentCard(agent){
+  const card = el('div','agent-card');
+  card.dataset.id = agent.id;
+
+  // head
+  const head = el('div','agent-card-head');
+  const titleRow = el('div','agent-title-row');
+
+  // icon tile
+  const cat = getCatMeta(agent.category);
+  const ico = el('div','agent-ico');
+  ico.style.background = cat.bg;
+  const icoSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  icoSvg.setAttribute('viewBox','0 0 24 24');
+  icoSvg.innerHTML = cat.icon;
+  icoSvg.style.stroke = cat.color;
+  ico.appendChild(icoSvg);
+  titleRow.appendChild(ico);
+
+  const nameWrap = el('div');
+  nameWrap.style.flex = '1';
+  nameWrap.style.minWidth = '0';
+  nameWrap.appendChild(el('div','agent-name', agent.name));
+  nameWrap.appendChild(riskBadge(agent.risk));
+  titleRow.appendChild(nameWrap);
+  head.appendChild(titleRow);
+  head.appendChild(el('p','agent-descr', agent.descr));
+  card.appendChild(head);
+
+  // body
+  const body = el('div','agent-card-body');
+
+  // meta row: flag + schedule
+  const meta = el('div','agent-meta');
+  if(agent.flag){
+    meta.appendChild(el('code','flag-tag', agent.flag));
+  }
+  if(agent.schedule){
+    const sTag = el('span','schedule-tag');
+    const clk = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    clk.setAttribute('viewBox','0 0 24 24');
+    clk.innerHTML = '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
+    sTag.appendChild(clk);
+    sTag.appendChild(document.createTextNode(scheduleStr(agent.schedule)));
+    meta.appendChild(sTag);
+  }
+  body.appendChild(meta);
+
+  // enabled pill + env hint
+  const enRow = el('div','enabled-row');
+  const pill = el('span','enabled-pill ' + (agent.enabled ? 'on' : 'off'));
+  const dot = el('span','ep-dot');
+  pill.appendChild(dot);
+  pill.appendChild(document.createTextNode(agent.enabled ? 'ENCENDIDO' : 'apagado'));
+  enRow.appendChild(pill);
+  body.appendChild(enRow);
+
+  if(agent.flag){
+    const hint = el('div','env-hint');
+    if(agent.enabled){
+      hint.textContent = 'Flag activo en .env';
+    } else {
+      const code = el('code','flag-tag', agent.flag + '=true');
+      hint.appendChild(document.createTextNode('Setear '));
+      hint.appendChild(code);
+      hint.appendChild(document.createTextNode(' en .env para encender'));
+    }
+    body.appendChild(hint);
+  }
+
+  // last run
+  body.appendChild(renderLastRun(agent.last_run));
+  card.appendChild(body);
+
+  // footer: preview button
+  const foot = el('div','agent-card-foot');
+  const btn = el('button','btn-preview');
+  const scanSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  scanSvg.setAttribute('viewBox','0 0 24 24');
+  scanSvg.innerHTML = '<polyline points="4 7 4 4 7 4"/><polyline points="17 4 20 4 20 7"/><polyline points="20 17 20 20 17 20"/><polyline points="7 20 4 20 4 17"/><line x1="4" y1="12" x2="20" y2="12"/>';
+  btn.appendChild(scanSvg);
+  btn.appendChild(document.createTextNode('Previsualizar (dry-run)'));
+  btn.addEventListener('click', () => openDryRun(agent));
+  foot.appendChild(btn);
+  card.appendChild(foot);
+  return card;
+}
+
+/* ---- GROUPS RENDER ---- */
+const CAT_ORDER = ['clinico','fidelizacion','ingresos','operaciones','finanzas','inteligencia','marketing'];
+
+function renderGroups(agents){
+  const frag = document.createDocumentFragment();
+  const bycat = {};
+  agents.forEach(a => {
+    const k = a.category || 'otro';
+    (bycat[k] = bycat[k] || []).push(a);
+  });
+
+  const order = [...CAT_ORDER, ...Object.keys(bycat).filter(k => !CAT_ORDER.includes(k))];
+  order.forEach(cat => {
+    if(!bycat[cat] || bycat[cat].length === 0) return;
+    const group = el('div','cat-group');
+    const catMeta = getCatMeta(cat);
+
+    const hd = el('div','cat-hd');
+    const ico = el('div','cat-ico');
+    ico.style.background = catMeta.bg;
+    const iSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    iSvg.setAttribute('viewBox','0 0 24 24');
+    iSvg.innerHTML = catMeta.icon;
+    iSvg.style.stroke = catMeta.color;
+    iSvg.style.strokeWidth = '2';
+    iSvg.style.fill = 'none';
+    iSvg.style.width = '15px';
+    iSvg.style.height = '15px';
+    ico.appendChild(iSvg);
+    hd.appendChild(ico);
+    hd.appendChild(el('h3',null, catMeta.label));
+    hd.appendChild(el('span','cat-count', String(bycat[cat].length)));
+    group.appendChild(hd);
+
+    const grid = el('div','agents-grid');
+    bycat[cat].forEach(a => grid.appendChild(renderAgentCard(a)));
+    group.appendChild(grid);
+    frag.appendChild(group);
+  });
+  return frag;
+}
+
+/* ---- FULL PAGE RENDER ---- */
+function renderPage(data){
+  const root = $('root');
+  root.innerHTML = '';
+  const wrap = el('div','wrap');
+
+  // HEADER
+  const top = el('div','top');
+
+  const badgeIco = el('div','badge-ico');
+  const badgeSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  badgeSvg.setAttribute('viewBox','0 0 24 24');
+  badgeSvg.innerHTML = '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>';
+  badgeIco.appendChild(badgeSvg);
+  top.appendChild(badgeIco);
+
+  const copyDiv = el('div','top-copy');
+  copyDiv.appendChild(el('h1',null,'Flota de Agentes — Alma'));
+  copyDiv.appendChild(el('p','sub','Agentes autónomos que operan la clínica'));
+  top.appendChild(copyDiv);
+
+  const metaDiv = el('div','top-meta');
+  const pill = el('span','mode-pill');
+  const dot = el('span','dot');
+  pill.appendChild(dot);
+  const fs = data.fleet_status;
+  pill.appendChild(document.createTextNode(
+    fs.master_enabled && fs.execute_enabled ? 'Ejecución activa' :
+    fs.master_enabled ? 'Dry-run global' : 'Flota apagada'
+  ));
+  metaDiv.appendChild(pill);
+
+  const refreshBtn = el('button','btn-refresh');
+  const rfSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  rfSvg.setAttribute('viewBox','0 0 24 24');
+  rfSvg.innerHTML = '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>';
+  refreshBtn.appendChild(rfSvg);
+  refreshBtn.appendChild(document.createTextNode('Actualizar'));
+  refreshBtn.addEventListener('click', loadData);
+  metaDiv.appendChild(refreshBtn);
+
+  const simBtn = el('button','btn-refresh');
+  simBtn.style.background = '#0f3f68';
+  simBtn.style.color = '#fff';
+  const simSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  simSvg.setAttribute('viewBox','0 0 24 24');
+  simSvg.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+  simBtn.appendChild(simSvg);
+  simBtn.appendChild(document.createTextNode('Simular flota'));
+  simBtn.addEventListener('click', simulateFleet);
+  metaDiv.appendChild(simBtn);
+  top.appendChild(metaDiv);
+
+  wrap.appendChild(top);
+
+  // FLEET BAR
+  wrap.appendChild(renderFleetBar(fs));
+
+  // CYCLE BANNER — headline del ciclo autónomo (cerebro + flota + ledger)
+  const cycBan = el('div'); cycBan.id = 'cycleBanner';
+  cycBan.style.cssText = 'margin:12px 0;padding:12px 14px;border-radius:12px;background:linear-gradient(90deg,#0f3f68,#1172ab);color:#fff;font-size:13px;display:none';
+  wrap.appendChild(cycBan);
+
+  // count header
+  const secHd = el('div','section-hd');
+  secHd.appendChild(el('h2',null,'Agentes de la flota'));
+  secHd.appendChild(el('span','count-pill', data.agents.length + ' agentes'));
+  const on = data.agents.filter(a => a.enabled).length;
+  if(on > 0){
+    secHd.appendChild(el('span','cat-label', on + ' encendidos'));
+  }
+  wrap.appendChild(secHd);
+
+  // groups
+  wrap.appendChild(renderGroups(data.agents));
+
+  // EFFECTIVENESS LEDGER — conversión real por agente (carga async)
+  const effSec = el('div','eff-section');
+  effSec.style.marginTop = '28px';
+  const effHd = el('div','section-hd');
+  effHd.appendChild(el('h2',null,'Efectividad'));
+  effHd.appendChild(el('span','cat-label','contactos → citas/respuestas medidos en sessions.db'));
+  effSec.appendChild(effHd);
+  const effBody = el('div','eff-body');
+  effBody.id = 'effBody';
+  effBody.appendChild(el('p','sub','Cargando…'));
+  effSec.appendChild(effBody);
+  wrap.appendChild(effSec);
+
+  // AGENCIA — control en lenguaje natural + aprendizaje + metas
+  const agSec = el('div'); agSec.style.marginTop = '28px';
+  const agHd = el('div','section-hd');
+  agHd.appendChild(el('h2',null,'Agencia'));
+  agHd.appendChild(el('span','cat-label','control por intención · aprendizaje · metas'));
+  agSec.appendChild(agHd);
+  // control NL
+  const ctrlBox = el('div'); ctrlBox.style.cssText='background:linear-gradient(120deg,#0f3f68,#1172ab);border-radius:14px;padding:16px;margin-bottom:14px';
+  ctrlBox.innerHTML = '<div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:8px">Decile a Alma en qué enfocarse</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+    '<input id="ctrlInput" placeholder="ej: enfócate en llenar la agenda de kinesiología" '+
+    'style="flex:1;min-width:240px;padding:10px 12px;border-radius:9px;border:0;font-size:13px;font-family:inherit">'+
+    '<button id="ctrlBtn" style="background:#4FBECE;color:#0f3f68;border:0;border-radius:9px;padding:10px 18px;font-weight:700;cursor:pointer;font-family:inherit">Aplicar</button>'+
+    '<button id="ctrlReset" style="background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font-family:inherit">Neutro</button>'+
+    '</div><div id="ctrlOut" style="color:#e6f6f9;font-size:12px;margin-top:8px"></div>';
+  agSec.appendChild(ctrlBox);
+  const agBody = el('div','g2 grid'); agBody.id='agBody';
+  agSec.appendChild(agBody);
+  wrap.appendChild(agSec);
+
+  root.appendChild(wrap);
+  loadEffectiveness();
+  loadCycle();
+  bindControl();
+  loadAgency();
+}
+
+/* ---- AGENCIA: control NL + aprendizaje + metas ---- */
+function bindControl(){
+  const btn = $('ctrlBtn'), inp = $('ctrlInput'), out = $('ctrlOut'), rst = $('ctrlReset');
+  if(!btn) return;
+  const run = () => {
+    const txt = (inp.value||'').trim(); if(!txt) return;
+    out.textContent = 'Interpretando…';
+    fetch(API_BASE+'/alma/agents/api/control?apply=1&instruction='+encodeURIComponent(txt)+'&token='+encodeURIComponent(TOKEN), {method:'POST'})
+      .then(r=>r.json()).then(d=>{
+        const ov = d.overrides||{}; const w = ov.agent_weights||{};
+        const foco = (ov.focus||[]).join(', ')||'—';
+        const ags = Object.keys(w).map(k=>k+'×'+w[k]).join(', ')||'sin cambios';
+        out.innerHTML = 'Foco: <b>'+foco+'</b> · Prioridades: <b>'+ags+'</b> ('+ov.direction+')';
+        loadAgency();
+      }).catch(()=>{ out.textContent='No se pudo aplicar.'; });
+  };
+  btn.addEventListener('click', run);
+  inp.addEventListener('keydown', e=>{ if(e.key==='Enter') run(); });
+  rst.addEventListener('click', ()=>{
+    fetch(API_BASE+'/alma/agents/api/control/reset?token='+encodeURIComponent(TOKEN), {method:'POST'})
+      .then(()=>{ out.textContent='Dial en neutro.'; loadAgency(); });
+  });
+}
+
+function loadAgency(){
+  const body = $('agBody'); if(!body) return;
+  body.innerHTML='';
+  // Metas
+  const goalsCard = el('div','card');
+  goalsCard.innerHTML = '<h3>Metas</h3><div class="role">objetivos con presupuesto</div><div id="goalsList" class="sub">Cargando…</div>';
+  body.appendChild(goalsCard);
+  // Aprendizaje
+  const learnCard = el('div','card');
+  learnCard.innerHTML = '<h3>Aprendizaje</h3><div class="role">mejor variante por agente</div><div id="learnList" class="sub">Cargando…</div>';
+  body.appendChild(learnCard);
+
+  fetch(API_BASE+'/alma/agents/api/goals?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).then(d=>{
+    const g=$('goalsList'); if(!g) return; g.innerHTML='';
+    const act=d.activas||[], prop=d.propuestas||[];
+    if(act.length){
+      act.forEach(x=>{ const p=x.progreso||{}; const row=el('div'); row.style.cssText='font-size:12.5px;padding:5px 0;border-bottom:1px solid #f1f5f9';
+        row.innerHTML='<b>'+x.titulo+'</b> — '+(p.done||0)+'/'+x.target+' ('+(p.pct||0)+'%)'; g.appendChild(row); });
+    } else { g.appendChild(el('div','sub','Sin metas activas.')); }
+    if(prop.length){
+      const ph=el('div'); ph.style.cssText='margin-top:8px;font-size:11.5px;color:#64748b'; ph.textContent='Propuestas por el cerebro:'; g.appendChild(ph);
+      prop.forEach(x=>{ const row=el('div'); row.style.cssText='font-size:12px;padding:3px 0;color:#475569';
+        row.textContent='• '+x.titulo+' ('+(x.agents||[]).join(', ')+')'; g.appendChild(row); });
+    }
+  }).catch(()=>{ const g=$('goalsList'); if(g) g.textContent='—'; });
+
+  fetch(API_BASE+'/alma/agents/api/learning?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).then(d=>{
+    const l=$('learnList'); if(!l) return; l.innerHTML='';
+    const pa=d.per_agent||[];
+    if(!pa.length){ l.appendChild(el('div','sub','Aún sin datos de conversión por variante. Aparece cuando la flota ejecute contactos.')); return; }
+    pa.slice(0,12).forEach(a=>{ const row=el('div'); row.style.cssText='font-size:12.5px;padding:5px 0;border-bottom:1px solid #f1f5f9';
+      row.innerHTML='<b>'+a.agent_id+'</b> → '+(a.recomendada||'—'); l.appendChild(row); });
+  }).catch(()=>{ const l=$('learnList'); if(l) l.textContent='—'; });
+}
+
+/* ---- CICLO AUTÓNOMO (capstone) ---- */
+function loadCycle(){
+  fetch(API_BASE + '/alma/agents/api/cycle?token=' + encodeURIComponent(TOKEN))
+    .then(r => r.json())
+    .then(d => {
+      const ban = $('cycleBanner');
+      if(!ban || !d.headline) return;
+      const alertas = (d.cerebro && d.cerebro.alertas_top) || [];
+      let extra = '';
+      if(alertas.length){
+        extra = ' &nbsp;·&nbsp; ' + alertas.slice(0,2).map(a =>
+          '<span style="opacity:.85">'+(a.severity||'')+': '+(a.message||'')+'</span>').join(' &nbsp;·&nbsp; ');
+      }
+      ban.innerHTML = '<strong>Ciclo autónomo</strong> &nbsp; ' + d.headline + extra;
+      ban.style.display = 'block';
+    })
+    .catch(() => {});
+}
+
+/* ---- EFFECTIVENESS LEDGER ---- */
+function fmtCLP(n){ try{ return '$' + (n||0).toLocaleString('es-CL'); }catch(e){ return '$'+(n||0); } }
+function loadEffectiveness(){
+  fetch(API_BASE + '/alma/agents/api/effectiveness?token=' + encodeURIComponent(TOKEN))
+    .then(r => r.json())
+    .then(d => {
+      const body = $('effBody');
+      if(!body) return;
+      body.innerHTML = '';
+      const rows = (d.per_agent || []).filter(a => a.contactos > 0);
+      if(!rows.length){
+        body.appendChild(el('p','sub','Aún no hay contactos registrados. Cuando la flota ejecute acciones de contacto, acá aparece su conversión real.'));
+        return;
+      }
+      const tbl = el('table','eff-table');
+      tbl.style.width = '100%';
+      tbl.style.borderCollapse = 'collapse';
+      tbl.style.fontSize = '13px';
+      tbl.innerHTML = '<thead><tr>' +
+        ['Agente','Contactos','Citas','Respuestas','Sin resp.','Pend.','Conversión','Ingreso recup.']
+          .map((h,i) => '<th style="text-align:'+(i===0?'left':'right')+';padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#64748b;font-weight:600">'+h+'</th>').join('') +
+        '</tr></thead>';
+      const tb = el('tbody');
+      rows.forEach(a => {
+        const tr = el('tr');
+        const conv = Math.round((a.conversion||0)*100);
+        const cells = [
+          ['<strong>'+a.agent_id+'</strong>', 'left'],
+          [a.contactos, 'right'],
+          ['<strong style="color:#0f766e">'+a.citas+'</strong>', 'right'],
+          [a.respuestas, 'right'],
+          [a.sin_respuesta, 'right'],
+          [a.pendientes, 'right'],
+          [conv+'%', 'right'],
+          [fmtCLP(a.ingreso_recuperable_clp), 'right'],
+        ];
+        tr.innerHTML = cells.map(c => '<td style="text-align:'+c[1]+';padding:8px 10px;border-bottom:1px solid #f1f5f9">'+c[0]+'</td>').join('');
+        tb.appendChild(tr);
+      });
+      tbl.appendChild(tb);
+      body.appendChild(tbl);
+      const tot = d.totales || {};
+      const foot = el('p','sub');
+      foot.style.marginTop = '10px';
+      foot.innerHTML = 'Total: <strong>'+(tot.citas||0)+'</strong> citas de <strong>'+(tot.contactos||0)+'</strong> contactos ('+Math.round((tot.conversion_global||0)*100)+'%) · ingreso recuperable estimado <strong>'+fmtCLP(tot.ingreso_recuperable_clp)+'</strong>. <em>Estimación con ticket promedio $'+(d.avg_ticket_clp||0).toLocaleString('es-CL')+'; caja real en módulo Finanzas.</em>';
+      body.appendChild(foot);
+    })
+    .catch(() => {
+      const body = $('effBody');
+      if(body){ body.innerHTML=''; body.appendChild(el('p','sub','No se pudo cargar la efectividad.')); }
+    });
+}
+
+/* ---- DRY-RUN MODAL ---- */
+let _currentModal = null;
+
+function openDryRun(agent){
+  const modal = $('drModal');
+  const title = $('drTitle');
+  const sub = $('drSub');
+  const body = $('drBody');
+
+  title.textContent = agent.name;
+  sub.textContent = 'Lo que haría este agente ahora mismo (sin ejecutar nada)';
+  body.innerHTML = '';
+  body.appendChild(buildLoading('Ejecutando dry-run...'));
+  modal.classList.add('open');
+  _currentModal = agent.id;
+
+  fetch(API_BASE + '/alma/agents/api/' + encodeURIComponent(agent.id) + '/dryrun?token=' + encodeURIComponent(TOKEN), {method:'POST'})
+    .then(r => {
+      if(r.status === 403) throw {status:403, msg:'Sin acceso a la flota con este perfil.'};
+      if(!r.ok) throw {status:r.status, msg:'Error ' + r.status};
+      return r.json();
+    })
+    .then(d => renderDryRun(d, agent))
+    .catch(err => {
+      body.innerHTML = '';
+      if(err.status === 403){
+        body.appendChild(buildError('Sin acceso','Sin acceso a la flota con este perfil.'));
+      } else {
+        body.appendChild(buildError('Error en dry-run', err.msg || String(err)));
+      }
+    });
+}
+
+function closeModal(){
+  $('drModal').classList.remove('open');
+  _currentModal = null;
+}
+
+/* ---- SIMULAR FLOTA COMPLETA (agregado) ---- */
+function simulateFleet(){
+  const modal = $('drModal');
+  $('drTitle').textContent = 'Vuelo de prueba — flota completa';
+  $('drSub').textContent = 'Qué haría la flota ENTERA ahora mismo, sin ejecutar nada';
+  const body = $('drBody');
+  body.innerHTML = '';
+  body.appendChild(buildLoading('Simulando los ' + '18' + ' agentes…'));
+  modal.classList.add('open');
+  _currentModal = '__sim__';
+  fetch(API_BASE + '/alma/agents/api/simulate?token=' + encodeURIComponent(TOKEN))
+    .then(r => { if(!r.ok) throw {status:r.status, msg:'Error '+r.status}; return r.json(); })
+    .then(renderSimulation)
+    .catch(err => { body.innerHTML=''; body.appendChild(buildError('Error en simulación', err.msg || String(err))); });
+}
+
+function renderSimulation(d){
+  const body = $('drBody');
+  body.innerHTML = '';
+  const t = d.totales || {};
+  const r = t.por_riesgo || {};
+  // KPIs
+  const kpis = el('div','sim-kpis');
+  kpis.style.display='grid'; kpis.style.gridTemplateColumns='repeat(auto-fit,minmax(120px,1fr))';
+  kpis.style.gap='10px'; kpis.style.marginBottom='14px';
+  const card = (label,val,color) => {
+    const c=el('div'); c.style.cssText='background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px';
+    const v=el('div',null,String(val)); v.style.cssText='font-size:22px;font-weight:700;color:'+(color||'#0f3f68');
+    const l=el('div',null,label); l.style.cssText='font-size:11px;color:#64748b;margin-top:2px';
+    c.appendChild(v); c.appendChild(l); return c;
+  };
+  kpis.appendChild(card('Acciones', t.acciones||0));
+  kpis.appendChild(card('Contactos a pacientes', t.contactos_pacientes||0, '#0d9488'));
+  kpis.appendChild(card('Escrituras Medilink', t.escrituras_medilink||0, (t.escrituras_medilink? '#b45309':'#0f3f68')));
+  kpis.appendChild(card('Se ejecutaría', t.se_ejecutaria||0, (t.se_ejecutaria? '#b45309':'#16a34a')));
+  kpis.appendChild(card('Se bloquearía', t.se_bloquearia||0, '#64748b'));
+  body.appendChild(kpis);
+  // riesgo
+  const rk = el('p','sub'); rk.style.marginBottom='12px';
+  rk.innerHTML = 'Por riesgo: bajo <strong>'+(r.bajo||0)+'</strong> · medio <strong>'+(r.medio||0)+'</strong> · alto <strong>'+(r.alto||0)+'</strong> · extremo <strong style="color:'+((r.extremo||0)?'#dc2626':'#64748b')+'">'+(r.extremo||0)+'</strong>';
+  body.appendChild(rk);
+  // riesgo agregado (lo importante)
+  const agg = d.riesgo_agregado || {};
+  const box = el('div'); box.style.cssText='background:'+((agg.pacientes_sobre_presupuesto||[]).length?'#fef2f2':'#f0fdf4')+';border:1px solid '+((agg.pacientes_sobre_presupuesto||[]).length?'#fecaca':'#bbf7d0')+';border-radius:12px;padding:12px;margin-bottom:14px';
+  const bt = el('div',null,'Riesgo agregado (anti-spam)'); bt.style.cssText='font-weight:700;font-size:13px;margin-bottom:4px';
+  box.appendChild(bt);
+  const ba = el('div',null, agg.alerta||''); ba.style.cssText='font-size:12px;color:#334155';
+  box.appendChild(ba);
+  const multi = agg.pacientes_multi_agente || [];
+  if(multi.length){
+    const ul = el('div'); ul.style.cssText='margin-top:8px;font-size:12px';
+    multi.slice(0,8).forEach(o => {
+      const li=el('div',null,'Paciente '+o.paciente+': '+o.n_agentes+' agentes ('+o.agentes.join(', ')+')');
+      li.style.cssText='padding:3px 0;color:#475569'; ul.appendChild(li);
+    });
+    box.appendChild(ul);
+  }
+  body.appendChild(box);
+  // motivos de bloqueo
+  const mb = d.motivos_bloqueo || {};
+  const keys = Object.keys(mb);
+  if(keys.length){
+    const mh = el('div',null,'Por qué se bloquearía (flags actuales)'); mh.style.cssText='font-weight:600;font-size:12px;color:#64748b;margin-bottom:4px';
+    body.appendChild(mh);
+    keys.sort((a,b)=>mb[b]-mb[a]).forEach(k => {
+      const li=el('div',null,'• '+k+' — '+mb[k]); li.style.cssText='font-size:12px;color:#475569;padding:2px 0';
+      body.appendChild(li);
+    });
+  }
+  // por agente
+  const ah = el('div',null,'Por agente'); ah.style.cssText='font-weight:600;font-size:12px;color:#64748b;margin:14px 0 4px';
+  body.appendChild(ah);
+  (d.por_agente||[]).filter(a=>a.n_actions>0).forEach(a => {
+    const li=el('div'); li.style.cssText='font-size:12px;color:#334155;padding:3px 0;border-bottom:1px solid #f1f5f9';
+    li.innerHTML = '<strong>'+a.agent_id+'</strong> ('+a.risk+') — '+a.n_actions+' acciones'+(a.n_contactos?' · '+a.n_contactos+' contactos':'')+(a.n_medilink?' · '+a.n_medilink+' Medilink':'')+(a.error?' · <span style="color:#dc2626">error</span>':'');
+    body.appendChild(li);
+  });
+}
+
+$('drModal').addEventListener('click', e => {
+  if(e.target === $('drModal')) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && _currentModal) closeModal();
+});
+
+function renderDryRun(data, agent){
+  const body = $('drBody');
+  body.innerHTML = '';
+
+  const n = data.n_acciones || 0;
+  const acciones = data.acciones || [];
+
+  if(n === 0){
+    const empty = el('div','modal-empty');
+    const emSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    emSvg.setAttribute('viewBox','0 0 24 24');
+    emSvg.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>';
+    empty.appendChild(emSvg);
+    empty.appendChild(el('p',null,'Este agente no generaría ninguna acción ahora mismo.'));
+    body.appendChild(empty);
+    return;
+  }
+
+  // summary chips
+  const summ = el('div','modal-summary');
+  const total = el('span','ms-chip proposed', n + (n === 1 ? ' acción' : ' acciones'));
+  summ.appendChild(total);
+  const nExec = acciones.filter(a => a.se_ejecutaria).length;
+  const nBlock = acciones.filter(a => !a.se_ejecutaria).length;
+  if(nExec > 0) summ.appendChild(el('span','ms-chip would-exec', nExec + ' se ejecutarían'));
+  if(nBlock > 0) summ.appendChild(el('span','ms-chip blocked', nBlock + ' bloqueadas'));
+  if(agent.enabled === false || data.dry_run_forced) summ.appendChild(el('span','ms-chip dryrun', 'dry-run'));
+  body.appendChild(summ);
+
+  // action list
+  const list = el('div','action-list');
+  acciones.forEach(ac => {
+    const item = el('div','action-item ' + (ac.se_ejecutaria ? 'would-exec' : 'blocked'));
+
+    const head = el('div','ai-head');
+    const kind = (ac.kind || 'otro').toLowerCase();
+    const kindEl = el('span','ai-kind kind-' + (kind in {mensaje:1,cita:1,alerta:1,tarea:1} ? kind : 'otro'), (ac.kind || 'otro').toUpperCase());
+    head.appendChild(kindEl);
+    const summEl = el('p','ai-summary', ac.summary);
+    head.appendChild(summEl);
+    item.appendChild(head);
+
+    const metaDiv = el('div','ai-meta');
+    if(ac.target){
+      const tg = el('span','ai-tag', 'Paciente: ' + ac.target);
+      metaDiv.appendChild(tg);
+    }
+    if(ac.risk){
+      const rg = el('span','ai-tag risk-'+ac.risk, 'Riesgo ' + ac.risk);
+      metaDiv.appendChild(rg);
+    }
+    if(ac.requires_contact){
+      metaDiv.appendChild(el('span','ai-tag', 'Contacta paciente'));
+    }
+    if(ac.requires_medilink_write){
+      metaDiv.appendChild(el('span','ai-tag', 'Escribe en Medilink'));
+    }
+    if(ac.is_staff){
+      metaDiv.appendChild(el('span','ai-tag', 'Notifica staff'));
+    }
+    item.appendChild(metaDiv);
+
+    const verdict = el('div','ai-verdict ' + (ac.se_ejecutaria ? 'exec' : 'blocked'));
+    const vSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    vSvg.setAttribute('viewBox','0 0 24 24');
+    if(ac.se_ejecutaria){
+      vSvg.innerHTML = '<polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/>';
+    } else {
+      vSvg.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>';
+    }
+    verdict.appendChild(vSvg);
+    if(ac.se_ejecutaria){
+      verdict.appendChild(document.createTextNode('SE EJECUTARÍA'));
+    } else {
+      verdict.appendChild(document.createTextNode('BLOQUEADA: ' + (ac.motivo || 'kill-switch activo')));
+    }
+    item.appendChild(verdict);
+    list.appendChild(item);
+  });
+  body.appendChild(list);
+}
+
+/* ---- SHARED UI BUILDERS ---- */
+function buildLoading(msg){
+  const w = el('div','state-loading');
+  w.appendChild(el('div','spin-ico'));
+  w.appendChild(el('p',null, msg || 'Cargando...'));
+  return w;
+}
+
+function buildError(title, msg, code){
+  const w = el('div','state-error');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 24 24');
+  svg.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+  w.appendChild(svg);
+  const txt = el('div');
+  txt.appendChild(el('div','se-title', title));
+  txt.appendChild(el('div','se-msg', msg || ''));
+  if(code) txt.appendChild(el('div',null, (() => { const c = el('code','se-code', code); return c; })()));
+  w.appendChild(txt);
+  return w;
+}
+
+function build403(){
+  const w = el('div','state-403');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 24 24');
+  svg.innerHTML = '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
+  w.appendChild(svg);
+  w.appendChild(el('h2',null,'Sin acceso'));
+  w.appendChild(el('p',null,'Sin acceso a la flota con este perfil.'));
+  return w;
+}
+
+/* ---- INITIAL LOAD ---- */
+function loadData(){
+  const root = $('root');
+  root.innerHTML = '';
+  const wrap = el('div','wrap');
+  wrap.appendChild(buildLoading('Cargando estado de la flota...'));
+  root.appendChild(wrap);
+
+  if(!TOKEN){
+    root.innerHTML = '';
+    const w = el('div','wrap');
+    w.appendChild(buildError('Token requerido','Incluí ?token=TU_TOKEN en la URL.'));
+    root.appendChild(w);
+    return;
+  }
+
+  fetch(API_BASE + '/alma/agents/api/fleet?token=' + encodeURIComponent(TOKEN))
+    .then(r => {
+      if(r.status === 403) throw {status:403};
+      if(!r.ok) throw {status:r.status, msg:'HTTP ' + r.status};
+      return r.json();
+    })
+    .then(data => {
+      renderPage(data);
+    })
+    .catch(err => {
+      root.innerHTML = '';
+      const w = el('div','wrap');
+      if(err.status === 403){
+        w.appendChild(build403());
+      } else {
+        w.appendChild(buildError(
+          'No se pudo cargar la flota',
+          err.msg || 'Verifica que el servidor esté activo y la ruta /alma/agents/api/fleet esté registrada.',
+          err.status ? 'HTTP ' + err.status : null
+        ));
+      }
+      root.appendChild(w);
+    });
+}
+
+loadData();
+})();
+</script>
+</body>
+</html>
