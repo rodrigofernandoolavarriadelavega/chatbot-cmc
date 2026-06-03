@@ -41,7 +41,9 @@ _CHILE_TZ = ZoneInfo("America/Santiago")
 
 router = APIRouter(prefix="/alma/api/ortodoncia", tags=["ortodoncia"])
 
-ESPECIALIDAD_ORTO = 19  # bi.dim_especialidad.especialidad_id
+# Fuente de datos = CAJA REAL (bi_pagos_caja, sync nocturno del bot), NO la BI vieja.
+# Ver memory/cmc_ventas_fuente_fiel: para datos operativos/actuales SIEMPRE la caja.
+ORTO_PROF_IDS = (66,)   # Dra. Daniela Castillo — único ortodoncista (id Medilink)
 
 # ── Umbrales (control mensual ≈ 30 días) ─────────────────────────────────────
 CONTROL_OK_MAX     = 35   # ≤ 35d desde el último control → al día
@@ -103,24 +105,27 @@ def _planes() -> dict[int, dict]:
     return {r["paciente_id"]: dict(r) for r in rows}
 
 
-# ── BI ──────────────────────────────────────────────────────────────────────
+# ── Fuente de datos: CAJA REAL (bi_pagos_caja) + identidad (dim_paciente) ─────
+# La caja la llena el bot por cron nocturno (no depende de Docker/BI). Cada pago de
+# ortodoncia = una visita; instalación vs control se clasifica por monto en _compute.
+# Identidad (nombre/teléfono/localidad) viene de dim_paciente del BI (cambia lento);
+# si el BI no responde, el nombre cae a citas_cache (local) y nunca se rompe.
 
-def _bi_rows(meses: int) -> tuple[list[dict], str]:
-    sql = """
-        SELECT fa.paciente_id,
-               TRIM(COALESCE(p.nombre,'') || ' ' || COALESCE(p.apellido,'')) AS paciente,
-               p.telefono,
-               COALESCE(NULLIF(TRIM(p.localidad),''), p.comuna, '') AS lugar,
-               fa.fecha,
-               COALESCE(fi.monto_bruto, 0) AS monto
-        FROM bi.fact_atenciones fa
-        JOIN bi.dim_paciente p     ON p.paciente_id   = fa.paciente_id
-        JOIN bi.dim_profesional pr ON pr.profesional_id = fa.profesional_id
-        LEFT JOIN bi.fact_ingresos fi ON fi.atencion_id = fa.atencion_id
-        WHERE pr.especialidad_id = %s
-          AND fa.fecha >= (CURRENT_DATE - make_interval(months => %s))
-        ORDER BY fa.paciente_id, fa.fecha
-    """
+def _meses_atras(meses: int) -> str:
+    """Primer día del mes 'meses' atrás, formato YYYY-MM-DD (para filtrar la caja)."""
+    t = _today()
+    y, m = t.year, t.month - meses
+    while m <= 0:
+        m += 12
+        y -= 1
+    return f"{y:04d}-{m:02d}-01"
+
+
+def _identidad_bi(pids: list[int]) -> dict[int, dict]:
+    """Nombre/teléfono/localidad por id_paciente desde bi.dim_paciente (best-effort).
+    Devuelve {} si el BI no está disponible — el caller cae a nombres locales."""
+    if not pids:
+        return {}
     try:
         from main import _bi_pool
         pool = _bi_pool()
@@ -128,16 +133,67 @@ def _bi_rows(meses: int) -> tuple[list[dict], str]:
         try:
             conn = pool.getconn()
             with conn.cursor() as cur:
-                cur.execute(sql, (ESPECIALIDAD_ORTO, meses))
-                cols = [d[0] for d in cur.description]
-                rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-            return rows, "ok"
+                cur.execute(
+                    "SELECT paciente_id, "
+                    "TRIM(COALESCE(nombre,'') || ' ' || COALESCE(apellido,'')), "
+                    "telefono, COALESCE(NULLIF(TRIM(localidad),''), comuna, '') "
+                    "FROM bi.dim_paciente WHERE paciente_id = ANY(%s)",
+                    (pids,),
+                )
+                return {
+                    r[0]: {"paciente": r[1], "telefono": r[2] or "", "lugar": r[3] or ""}
+                    for r in cur.fetchall()
+                }
         finally:
             if conn is not None:
                 pool.putconn(conn)
     except Exception as e:
-        log.warning("ortodoncia: BI no disponible (%s)", e)
-        return [], "bi_unavailable"
+        log.warning("ortodoncia: identidad BI no disponible, uso cache local (%s)", e)
+        return {}
+
+
+def _bi_rows(meses: int) -> tuple[list[dict], str]:
+    """Filas de visitas de ortodoncia desde la CAJA REAL (fresca), con identidad enriquecida.
+    Mantiene el shape que espera _compute: {paciente_id, paciente, telefono, lugar, fecha, monto}."""
+    from session import _conn
+    desde = _meses_atras(meses)
+    ph = ",".join("?" * len(ORTO_PROF_IDS))
+    try:
+        with _conn() as c:
+            pagos = c.execute(
+                f"SELECT id_paciente, fecha, monto FROM bi_pagos_caja "
+                f"WHERE id_profesional IN ({ph}) AND fecha >= ? AND id_paciente IS NOT NULL "
+                f"ORDER BY id_paciente, fecha",
+                (*ORTO_PROF_IDS, desde),
+            ).fetchall()
+            nombres_local = {
+                row[0]: row[1]
+                for row in c.execute(
+                    "SELECT id_paciente, paciente_nombre FROM citas_cache"
+                ).fetchall()
+            }
+    except Exception as e:
+        log.warning("ortodoncia: caja (bi_pagos_caja) no disponible (%s)", e)
+        return [], "caja_unavailable"
+
+    if not pagos:
+        return [], "ok"   # caja vacía no es error: simplemente no hay pagos en la ventana
+
+    pids = sorted({row[0] for row in pagos})
+    ident = _identidad_bi(pids)
+
+    rows = []
+    for id_pac, fecha, monto in pagos:
+        info = ident.get(id_pac) or {}
+        rows.append({
+            "paciente_id": id_pac,
+            "paciente": info.get("paciente") or nombres_local.get(id_pac) or "",
+            "telefono": info.get("telefono") or "",
+            "lugar": info.get("lugar") or "",
+            "fecha": fecha,
+            "monto": float(monto or 0),
+        })
+    return rows, "ok"
 
 
 def _today() -> date:
