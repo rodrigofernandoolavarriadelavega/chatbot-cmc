@@ -692,6 +692,16 @@ async def _job_detectar_cancelaciones():
     from zoneinfo import ZoneInfo
     _CL = ZoneInfo("America/Santiago")
 
+    # Housekeeping Fase 4: vencer holds blandos cuyo TTL pasó sin confirmar.
+    # Barato, idempotente y sin red; aprovechamos que este job corre seguido.
+    try:
+        from session import expire_stale_offers
+        _venc = expire_stale_offers()
+        if _venc:
+            log.info("operativa: %d hold(s) vencido(s) por TTL", _venc)
+    except Exception as e:
+        log.warning("operativa: expire_stale_offers falló: %s", e)
+
     if is_medilink_down():
         log.info("Detect cancelaciones: Medilink down, skip")
         return
@@ -737,6 +747,41 @@ async def _job_detectar_cancelaciones():
         log_event(c.get("phone", ""), "cita_cancelada_detectada",
                   {"id_cita": id_cita, "fecha": c.get("fecha"),
                    "hora": c.get("hora"), "tipo": "anulada" if anulada else "reasignada"})
+
+        # Fase 4 (Alma operativa): si el cupo quedó REALMENTE libre (anulada, no
+        # reasignada), ofrecerlo a la lista de espera. Gateado internamente por
+        # ALMA_OPERATIVA_ENABLED — con el flag apagado esto es un no-op seguro.
+        # Nunca dejamos que un fallo acá frene la detección de cancelaciones.
+        if anulada:
+            try:
+                from alma_brain import operativa
+                id_prof_slot = cita_ml.get("id_profesional")
+                if not id_prof_slot:
+                    # Fallback: mapear el nombre del profesional (citas_bot) a su id.
+                    _pn = (c.get("profesional") or "").strip().lower()
+                    id_prof_slot = next(
+                        (pid for pid, p in PROFESIONALES.items()
+                         if p.get("nombre", "").strip().lower() == _pn), None)
+                await operativa.fill_freed_slot({
+                    "especialidad": c.get("especialidad", ""),
+                    "id_prof": id_prof_slot,
+                    "fecha": c.get("fecha", ""),
+                    "hora": c.get("hora", ""),
+                    "phone_cancelador": c.get("phone", ""),
+                })
+            except Exception as e:
+                log.warning("operativa: fill_freed_slot falló id=%s: %s", id_cita, e)
+            # Bus de eventos (Alma Agents): notifica la cancelación a los agentes
+            # reactivos (ej. yield_agenda contacta demanda reprimida de esa esp).
+            # No-op seguro si la flota está apagada. Nunca frena la detección.
+            try:
+                from alma_agents import events
+                await events.emit("cita_cancelada", {
+                    "especialidad": c.get("especialidad", ""),
+                    "fecha": c.get("fecha", ""), "hora": c.get("hora", ""),
+                })
+            except Exception as e:  # noqa: BLE001
+                log.warning("alma_agents: emit cita_cancelada falló id=%s: %s", id_cita, e)
 
         # ¿Cita próxima? — calcular delta horas
         try:
