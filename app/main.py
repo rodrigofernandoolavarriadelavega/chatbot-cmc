@@ -765,6 +765,7 @@ _ADMIN_V2_HTML = (_TEMPLATE_DIR / "admin_v2.html").read_text(encoding="utf-8") i
 _ADMIN_V3_HTML = (_TEMPLATE_DIR / "admin_v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "admin_v3.html").exists() else ""
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _PORTAL_V2_HTML = (_TEMPLATE_DIR / "portal_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v2.html").exists() else ""
+_PORTAL_V3_HTML = (_TEMPLATE_DIR / "portal_v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v3.html").exists() else ""
 _PORTAL_INFORME_HTML = (_TEMPLATE_DIR / "portal_informe.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_informe.html").exists() else ""
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
@@ -2191,6 +2192,12 @@ def portal_page():
 def portal_page_v2():
     """Portal del paciente v2 — IA modernizada (tabs, sidebar, best practices MyChart/MiSalud)."""
     return _PORTAL_V2_HTML or _PORTAL_HTML
+
+
+@app.get("/portal/v3", response_class=HTMLResponse)
+def portal_page_v3():
+    """Portal del paciente v3 — V2 + Banderas rojas (educación: cuándo pedir ayuda)."""
+    return _PORTAL_V3_HTML or _PORTAL_V2_HTML or _PORTAL_HTML
 
 
 @app.get("/portal/informe", response_class=HTMLResponse)
