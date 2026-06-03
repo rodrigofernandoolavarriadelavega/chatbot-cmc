@@ -417,13 +417,17 @@ button{font-family:inherit}
   .topbar-in{height:58px;gap:8px}
   .pill{display:none}
   .lockup .l2{letter-spacing:2px}
-  .hero{padding:30px 0 28px}
-  .hero h1{letter-spacing:-.6px}
-  .hero p.lead{font-size:15.5px;margin-top:16px}
-  .hero-cta{margin-top:26px;gap:10px}
+  .hero{padding:22px 0 30px}
+  /* En móvil sacamos la tarjeta decorativa: se comía toda la 1ª pantalla.
+     El hero queda liderado por el mensaje + botón, con aire. */
+  .hero-card{display:none}
+  .hero .eyebrow{margin-bottom:13px;font-size:11px;letter-spacing:1.2px}
+  .hero h1{font-size:29px;line-height:1.14;letter-spacing:-.3px}
+  .hero h1 em::after{height:7px;bottom:3px}
+  .hero p.lead{font-size:15.5px;margin-top:14px;line-height:1.55;max-width:none}
+  .hero-cta{margin-top:24px;gap:10px}
   .hero-cta .btn{flex:1}
-  .hero-feats{gap:14px 18px;margin-top:26px}
-  .hero-card{padding:18px}
+  .hero-feats{flex-direction:column;align-items:flex-start;gap:15px;margin-top:28px}
   .tnav button{padding:8px 10px;font-size:12.5px}
   /* stepper → progreso compacto con aire */
   .stepper{display:block;overflow:visible;padding:15px 17px;margin:4px 0 24px}

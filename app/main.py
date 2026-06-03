@@ -3577,7 +3577,9 @@ def agendador_publico_page(request: Request, preview: str | None = Query(None)):
     if not _AGENDADOR_HTML:
         raise HTTPException(404, "Agendador no disponible")
     # __PREVIEW__ → token (en preview) o "" (en producción pública)
-    return _AGENDADOR_HTML.replace("__PREVIEW__", preview if is_preview else "")
+    html = _AGENDADOR_HTML.replace("__PREVIEW__", preview if is_preview else "")
+    # no-store: en preview/iteración el navegador siempre trae la última versión
+    return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.get("/alma/agenda", response_class=HTMLResponse)
