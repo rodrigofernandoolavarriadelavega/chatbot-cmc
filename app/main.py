@@ -2123,6 +2123,34 @@ def portal_informe():
     return _PORTAL_INFORME_HTML
 
 
+@app.get("/portal/demo", response_class=HTMLResponse)
+def portal_demo_page(request: Request):
+    """Puerta de demo: entra directo al portal con la sesion demo (datos
+    ficticios), sin pedir telefono ni codigo. Gateada por PORTAL_DEMO_OPEN;
+    con el flag apagado responde 404 y el login OTP de /portal queda intacto."""
+    from config import PORTAL_DEMO_OPEN
+    if not PORTAL_DEMO_OPEN:
+        raise HTTPException(status_code=404, detail="Not found")
+    from portal_routes import (
+        _sign_portal_cookie, _COOKIE_NAME, _ACTIVE_COOKIE_NAME,
+        _COOKIE_MAX_AGE, DEMO_RUT, DEMO_PHONE,
+    )
+    is_https = (request.url.scheme == "https"
+                or request.headers.get("x-forwarded-proto") == "https")
+    resp = HTMLResponse(_PORTAL_V2_HTML or _PORTAL_HTML)
+    resp.set_cookie(
+        key=_COOKIE_NAME,
+        value=_sign_portal_cookie(DEMO_RUT, DEMO_PHONE),
+        max_age=_COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=is_https,
+        path="/",
+    )
+    resp.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
+    return resp
+
+
 @app.get("/mis-citas", response_class=HTMLResponse)
 async def mis_citas_page(token: str = ""):
     """Portal ligero de citas por magic link.

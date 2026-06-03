@@ -113,6 +113,11 @@ COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")
 # Secreto para firmar cookies del portal del paciente.
 PORTAL_SESSION_SECRET = os.getenv("PORTAL_SESSION_SECRET", "")
 
+# Puerta de demo del portal: cuando es true, GET /portal/demo entra directo al
+# panel con la sesion demo (RUT 50.000.000-7, datos FICTICIOS) sin pedir telefono
+# ni codigo. NO toca el login OTP real de /portal. Apagar el flag mata la puerta.
+PORTAL_DEMO_OPEN = os.getenv("PORTAL_DEMO_OPEN", "false").lower() in ("true", "1", "yes")
+
 # Número WhatsApp al que se envían alertas técnicas (caída Medilink, etc.)
 # Formato sin "+" ni espacios, ej: 56945886628
 ADMIN_ALERT_PHONE  = os.getenv("ADMIN_ALERT_PHONE", "")
