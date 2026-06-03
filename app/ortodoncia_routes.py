@@ -286,8 +286,8 @@ def _compute(meses: int = 6):
             "notas": (plan or {}).get("notas", ""),
         })
 
-    prio = {"vencido": 0, "pronto": 1, "al_dia": 2, "finalizado": 3}
-    pacientes.sort(key=lambda p: (prio.get(p["estado"], 9), -p["dias_sin_control"]))
+    # Orden: último control más reciente arriba → más antiguo abajo (dias_sin_control asc).
+    pacientes.sort(key=lambda p: p["dias_sin_control"])
 
     activos     = [p for p in pacientes if p["estado"] != "finalizado"]
     vencidos    = [p for p in pacientes if p["estado"] == "vencido"]
