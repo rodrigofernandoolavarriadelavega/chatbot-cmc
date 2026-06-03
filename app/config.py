@@ -91,7 +91,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
 # "variante" es la 3ª línea del lockup (debajo de "CARAMPANGUE" fija). "" = no muestra 3ª línea.
 ALMA_PROFILES: dict[str, dict] = {
     "cmc_admin_olacore": {
-        "variante": "OLACORE",
+        "variante": "Adkun",
         "modulos": None,           # acceso total — dueño
         "boxes_financiero": True,
         "panel_profesional": True,
