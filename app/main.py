@@ -732,6 +732,9 @@ app.include_router(inventario_routes.router)
 inventario_routes.seed_if_empty()  # DDL + siembra catálogo MayorDent al arrancar
 import proveedores_routes; app.include_router(proveedores_routes.router); proveedores_routes.seed_if_empty()
 
+# ── Módulos Profesionales (analítica clínica BI-driven por especialidad) ──
+import ortodoncia_routes; app.include_router(ortodoncia_routes.router); ortodoncia_routes.ensure_ortodoncia_plan_table()  # Seguimiento Ortodoncia
+
 # ── Módulos clínicos integrales (pacientes, interconsultas, esterilización, finanzas, equipo, documentos, habilitación) ──
 import pacientes_routes; app.include_router(pacientes_routes.router)
 import interconsultas_routes; app.include_router(interconsultas_routes.router)
@@ -2931,6 +2934,7 @@ _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
 _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
+_ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
 _ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
 _ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
@@ -3630,6 +3634,22 @@ def alma_inventario_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ALMA_INVENTARIO_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/ortodoncia", response_class=HTMLResponse)
+def alma_ortodoncia_page(token: str | None = Query(None),
+                         cmc_session: str | None = Cookie(None)):
+    """Modulo Profesional: Seguimiento Ortodoncia — controles vencidos, avance, plan de pago."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_ORTODONCIA_HTML:
+        raise HTTPException(404, "Ortodoncia no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_ORTODONCIA_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_ORTODONCIA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
