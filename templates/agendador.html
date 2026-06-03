@@ -389,8 +389,8 @@ button{font-family:inherit}
 
 /* ---- modal toast ---- */
 .toast-wrap{position:fixed;left:0;right:0;bottom:22px;display:flex;justify-content:center;z-index:90;pointer-events:none;padding:0 16px}
-.toast{display:flex;align-items:center;gap:11px;background:var(--navy);color:#fff;padding:13px 18px;border-radius:13px;box-shadow:var(--sh-pop);font-size:13.5px;font-weight:600;transform:translateY(120%);transition:transform .4s var(--ease);max-width:420px}
-.toast.show{transform:none}
+.toast{display:flex;align-items:center;gap:11px;background:var(--navy);color:#fff;padding:13px 18px;border-radius:13px;box-shadow:var(--sh-pop);font-size:13.5px;font-weight:600;transform:translateY(16px);opacity:0;visibility:hidden;transition:transform .4s var(--ease),opacity .3s var(--ease),visibility .4s;max-width:420px}
+.toast.show{transform:none;opacity:1;visibility:visible}
 .toast .ti{width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:none}
 .toast .ti svg{width:15px;height:15px}
 .toast.ok .ti{background:var(--ok)}
@@ -417,17 +417,20 @@ button{font-family:inherit}
   .topbar-in{height:58px;gap:8px}
   .pill{display:none}
   .lockup .l2{letter-spacing:2px}
-  .hero{padding:22px 0 30px}
-  /* En móvil sacamos la tarjeta decorativa: se comía toda la 1ª pantalla.
-     El hero queda liderado por el mensaje + botón, con aire. */
-  .hero-card{display:none}
+  .hero{padding:22px 0 28px}
   .hero .eyebrow{margin-bottom:13px;font-size:11px;letter-spacing:1.2px}
   .hero h1{font-size:29px;line-height:1.14;letter-spacing:-.3px}
   .hero h1 em::after{height:7px;bottom:3px}
   .hero p.lead{font-size:15.5px;margin-top:14px;line-height:1.55;max-width:none}
   .hero-cta{margin-top:24px;gap:10px}
   .hero-cta .btn{flex:1}
-  .hero-feats{flex-direction:column;align-items:flex-start;gap:15px;margin-top:28px}
+  .hero-feats{flex-direction:column;align-items:flex-start;gap:14px;margin-top:24px}
+  /* tarjeta DEBAJO del mensaje (no lidera) y compacta: llena el espacio sin apiñar arriba */
+  .hero-card{order:0;display:block;max-width:none;margin-top:26px;padding:16px}
+  .hero-card .hc-av{width:42px;height:42px}
+  .hero-card .hc-slots{gap:7px;margin-top:13px}
+  .hero-card .hc-slot{padding:9px 0;font-size:13px}
+  .hero-card .hc-foot{margin-top:13px;padding:11px 13px}
   .tnav button{padding:8px 10px;font-size:12.5px}
   /* stepper → progreso compacto con aire */
   .stepper{display:block;overflow:visible;padding:15px 17px;margin:4px 0 24px}
