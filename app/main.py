@@ -734,6 +734,8 @@ import proveedores_routes; app.include_router(proveedores_routes.router); provee
 
 # ── Módulos Profesionales (analítica clínica BI-driven por especialidad) ──
 import ortodoncia_routes; app.include_router(ortodoncia_routes.router); ortodoncia_routes.ensure_ortodoncia_plan_table()  # Seguimiento Ortodoncia
+import kine_routes; app.include_router(kine_routes.router); kine_routes.ensure_kine_plan_table()  # Programa Kinesiología
+import programas; app.include_router(programas.router); programas.ensure_programa_plan_table()  # Motor de Programas Clínicos por especialidad
 
 # ── Módulos clínicos integrales (pacientes, interconsultas, esterilización, finanzas, equipo, documentos, habilitación) ──
 import pacientes_routes; app.include_router(pacientes_routes.router)
@@ -2935,6 +2937,8 @@ _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(e
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
 _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
 _ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
+_ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_kine.html").exists() else ""
+_ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
 _ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
 _ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
@@ -3650,6 +3654,38 @@ def alma_ortodoncia_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ALMA_ORTODONCIA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/kine", response_class=HTMLResponse)
+def alma_kine_page(token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    """Modulo Profesional: Programa Kinesiología — adherencia, riesgo de abandono, plan de sesiones."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_KINE_HTML:
+        raise HTTPException(404, "Kine no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_KINE_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_KINE_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/programas", response_class=HTMLResponse)
+def alma_programas_page(token: str | None = Query(None),
+                        cmc_session: str | None = Cookie(None)):
+    """Modulo Profesional: Motor de Programas Clínicos por especialidad (adherencia + control/recall)."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_PROGRAMAS_HTML:
+        raise HTTPException(404, "Programas no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_PROGRAMAS_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_PROGRAMAS_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
