@@ -2182,22 +2182,43 @@ def admin_mapa_direcciones(token: str | None = Query(None),
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
+def _serve_portal(html: str, request: Request, demo: str):
+    """Sirve una versión del portal. Con ?demo=1 y PORTAL_DEMO_OPEN entra
+    directo en modo demo (datos ficticios), sin pedir RUT ni código — para
+    que cualquiera pueda VER el portal sin clave."""
+    resp = HTMLResponse(html)
+    from config import PORTAL_DEMO_OPEN
+    if demo and PORTAL_DEMO_OPEN:
+        from portal_routes import (
+            _sign_portal_cookie, _COOKIE_NAME, _ACTIVE_COOKIE_NAME,
+            _COOKIE_MAX_AGE, DEMO_RUT, DEMO_PHONE,
+        )
+        is_https = (request.url.scheme == "https"
+                    or request.headers.get("x-forwarded-proto") == "https")
+        resp.set_cookie(key=_COOKIE_NAME,
+                        value=_sign_portal_cookie(DEMO_RUT, DEMO_PHONE),
+                        max_age=_COOKIE_MAX_AGE, httponly=True,
+                        samesite="lax", secure=is_https, path="/")
+        resp.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
+    return resp
+
+
 @app.get("/portal", response_class=HTMLResponse)
-def portal_page():
-    """Portal del paciente — webapp pública (auth se maneja client-side con OTP)."""
-    return _PORTAL_HTML
+def portal_page(request: Request, demo: str = ""):
+    """Portal del paciente (auth client-side OTP). ?demo=1 -> modo demo sin clave."""
+    return _serve_portal(_PORTAL_HTML, request, demo)
 
 
 @app.get("/portal/v2", response_class=HTMLResponse)
-def portal_page_v2():
-    """Portal del paciente v2 — IA modernizada (tabs, sidebar, best practices MyChart/MiSalud)."""
-    return _PORTAL_V2_HTML or _PORTAL_HTML
+def portal_page_v2(request: Request, demo: str = ""):
+    """Portal v2 — tabs/sidebar. ?demo=1 -> modo demo sin clave."""
+    return _serve_portal(_PORTAL_V2_HTML or _PORTAL_HTML, request, demo)
 
 
 @app.get("/portal/v3", response_class=HTMLResponse)
-def portal_page_v3():
-    """Portal del paciente v3 — V2 + Banderas rojas (educación: cuándo pedir ayuda)."""
-    return _PORTAL_V3_HTML or _PORTAL_V2_HTML or _PORTAL_HTML
+def portal_page_v3(request: Request, demo: str = ""):
+    """Portal v3 — V2 + Banderas rojas. ?demo=1 -> modo demo sin clave."""
+    return _serve_portal(_PORTAL_V3_HTML or _PORTAL_V2_HTML or _PORTAL_HTML, request, demo)
 
 
 @app.get("/portal/informe", response_class=HTMLResponse)
