@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Agende su hora · Centro Médico Carampangue</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231172AB'/%3E%3Cpath d='M14 7h4v7h7v4h-7v7h-4v-7H7v-4h7z' fill='white'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -147,6 +148,13 @@ button{font-family:inherit}
 .step-bar{flex:1;min-width:18px;height:2px;background:var(--line);margin:0 10px;border-radius:2px;position:relative;overflow:hidden}
 .step-bar i{position:absolute;inset:0;width:0;background:var(--ok);transition:width .4s var(--ease)}
 .step-bar.fill i{width:100%}
+/* progreso compacto móvil (oculto en desktop) */
+.mstep{display:none;flex-direction:column;gap:9px;width:100%}
+.mstep-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.mstep-n{font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--blue)}
+.mstep-l{font-size:15px;font-weight:800;color:var(--navy);letter-spacing:-.2px}
+.mstep-track{height:6px;background:var(--bg-2);border-radius:6px;overflow:hidden}
+.mstep-track i{display:block;height:100%;background:var(--grad);border-radius:6px;transition:width .45s var(--ease)}
 
 /* ---- page heads ---- */
 .phead{margin-bottom:18px}
@@ -405,27 +413,38 @@ button{font-family:inherit}
   .hero-card{order:-1;max-width:440px}
 }
 @media(max-width:640px){
-  .shell{padding:0 14px}
+  .shell{padding:0 16px}
   .topbar-in{height:58px;gap:8px}
   .pill{display:none}
   .lockup .l2{letter-spacing:2px}
-  .hero{padding:34px 0 18px}
-  .hero-feats{gap:14px}
-  .tnav button{padding:8px 10px;font-size:12.5px}
-  .stepper{padding:12px 14px;gap:0}
-  .step .lbl{display:none}
-  .step.active .lbl{display:block}
-  .phead h2{font-size:21px}
-  .spec-grid{grid-template-columns:1fr 1fr;gap:10px}
-  .spec{padding:13px}
-  .spec .sic{width:38px;height:38px}
-  .grid2{grid-template-columns:1fr}
-  .review-h{padding:18px}
-  .review-body,.fcard{padding:18px 16px}
+  .hero{padding:30px 0 28px}
+  .hero h1{letter-spacing:-.6px}
+  .hero p.lead{font-size:15.5px;margin-top:16px}
+  .hero-cta{margin-top:26px;gap:10px}
   .hero-cta .btn{flex:1}
+  .hero-feats{gap:14px 18px;margin-top:26px}
+  .hero-card{padding:18px}
+  .tnav button{padding:8px 10px;font-size:12.5px}
+  /* stepper → progreso compacto con aire */
+  .stepper{display:block;overflow:visible;padding:15px 17px;margin:4px 0 24px}
+  .stepper .step,.stepper .step-bar{display:none}
+  .mstep{display:flex}
+  /* respiración general */
+  .flow{padding:20px 0 64px}
+  .phead{margin-bottom:22px}
+  .phead h2{font-size:21px}
+  .phead p{font-size:14px;margin-top:6px}
+  .chips{margin-bottom:22px}
+  .grouplbl{margin:30px 0 15px}
+  .group{margin-bottom:14px}
+  .spec-grid{grid-template-columns:1fr;gap:13px}
+  .spec{padding:17px}
+  .spec .sic{width:44px;height:44px}
+  .grid2{grid-template-columns:1fr}
+  .review-h{padding:20px}
+  .review-body,.fcard{padding:20px 16px}
 }
 @media(max-width:400px){
-  .spec-grid{grid-template-columns:1fr}
   .slots{grid-template-columns:repeat(3,1fr)}
 }
 
@@ -900,13 +919,18 @@ function back(){ if(S.step>0 && S.step<5) showStep(S.step-1); }
 
 function renderStepper(){
   const wrap = document.getElementById('stepper');
-  wrap.innerHTML = STEPS.map((lbl,i)=>{
+  const desktop = STEPS.map((lbl,i)=>{
     const cls = i<S.step?'done':(i===S.step?'active':'');
     const num = i<S.step ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : (i+1);
     let bar='';
     if(i<STEPS.length-1) bar = `<div class="step-bar ${i<S.step?'fill':''}"><i></i></div>`;
     return `<div class="step ${cls}"><span class="num">${num}</span><span class="lbl">${lbl}</span></div>${bar}`;
   }).join('');
+  // Progreso compacto para móvil (una sola línea, con aire)
+  const cur = Math.min(S.step, STEPS.length-1);
+  const prog = Math.round(cur/(STEPS.length-1)*100);
+  const mstep = `<div class="mstep"><div class="mstep-top"><span class="mstep-n">Paso ${cur+1} de ${STEPS.length}</span><span class="mstep-l">${STEPS[cur]}</span></div><div class="mstep-track"><i style="width:${prog}%"></i></div></div>`;
+  wrap.innerHTML = desktop + mstep;
 }
 
 /* ================================================================
