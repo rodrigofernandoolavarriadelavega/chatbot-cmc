@@ -720,6 +720,9 @@ app.include_router(vuelos_routes.router)
 import agenda_routes
 app.include_router(agenda_routes.router)
 
+import agendador_routes
+app.include_router(agendador_routes.router)  # agendador público (cada endpoint gateado)
+
 import pagos_routes
 app.include_router(pagos_routes.router)
 pagos_routes.ensure_pagos_table()  # DDL idempotente al arrancar
@@ -2932,6 +2935,7 @@ _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
 _ALMA_HTML = (_TEMPLATE_DIR / "alma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma.html").exists() else ""
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
+_AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
@@ -3559,6 +3563,21 @@ def alma_shell(token: str | None = Query(None),
         if role in ("admin", "ortodoncia"):
             return _render(ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/agendar", response_class=HTMLResponse)
+def agendador_publico_page(request: Request, preview: str | None = Query(None)):
+    """Agendador público premium. Gateado: 404 salvo que esté prendido o haya
+    ?preview=ADMIN_TOKEN. La página inyecta el preview para que la API lo herede."""
+    import config as _cfg
+    enabled = _cfg.AGENDADOR_PUBLICO_ENABLED
+    is_preview = bool(preview) and preview == ADMIN_TOKEN
+    if not (enabled or is_preview):
+        raise HTTPException(404, "No encontrado")
+    if not _AGENDADOR_HTML:
+        raise HTTPException(404, "Agendador no disponible")
+    # __PREVIEW__ → token (en preview) o "" (en producción pública)
+    return _AGENDADOR_HTML.replace("__PREVIEW__", preview if is_preview else "")
 
 
 @app.get("/alma/agenda", response_class=HTMLResponse)

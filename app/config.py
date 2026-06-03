@@ -248,3 +248,13 @@ META_AD_ACCOUNT_ID = os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
 META_PIXEL_ID             = os.getenv("META_PIXEL_ID", "")
 META_CAPI_ACCESS_TOKEN    = os.getenv("META_CAPI_ACCESS_TOKEN", "") or os.getenv("META_ACCESS_TOKEN", "")
 META_CAPI_TEST_EVENT_CODE = os.getenv("META_CAPI_TEST_EVENT_CODE", "")
+
+# ── Agendador público online (cara pública premium del agendamiento) ──────────
+# Crea citas REALES en Medilink desde una página pública sin login.
+# OFF por defecto: la página y los endpoints de escritura responden 404 hasta
+# prenderlo. Mientras está OFF se puede previsualizar con ?preview=ADMIN_TOKEN.
+AGENDADOR_PUBLICO_ENABLED = os.getenv("AGENDADOR_PUBLICO_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+# Enviar confirmación inmediata por WhatsApp al reservar (requiere template Meta
+# aprobado). OFF por ahora; los recordatorios automáticos del cron igual salen
+# porque la reserva se registra en citas_bot.
+AGENDADOR_WA_CONFIRM = os.getenv("AGENDADOR_WA_CONFIRM", "false").lower() in ("1", "true", "yes", "on")

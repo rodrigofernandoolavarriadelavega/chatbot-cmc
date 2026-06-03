@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Agende su hora · Centro Médico Carampangue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================== TOKENS ============================== */
+:root{
+  --aqua:#4FBECE; --aqua-deep:#3AA9BA;
+  --blue:#1172AB; --blue-600:#0E5E8E;
+  --navy:#0F3F68; --navy-900:#0B2F4E;
+  --ink:#0E2233; --ink-2:#3D5567; --ink-3:#6B8095; --ink-4:#9AAAB8;
+  --line:#E2EAF0; --line-2:#D2DEE7;
+  --bg:#F4F8FA; --bg-2:#EAF1F5; --card:#FFFFFF;
+  --ok:#16A37B; --ok-bg:#E7F6F0;
+  --warn:#C77A12; --warn-bg:#FCF2E2;
+  --err:#D24A52; --err-bg:#FBE9EA;
+  --halo:rgba(79,190,206,.16);
+  --r-s:8px; --r-m:12px; --r-l:18px; --r-xl:26px;
+  --sh-1:0 1px 2px rgba(15,63,104,.05), 0 1px 1px rgba(15,63,104,.04);
+  --sh-2:0 4px 14px rgba(15,63,104,.08), 0 1px 3px rgba(15,63,104,.05);
+  --sh-3:0 18px 50px -16px rgba(15,63,104,.28), 0 4px 14px rgba(15,63,104,.08);
+  --sh-pop:0 24px 60px -18px rgba(11,47,78,.32);
+  --grad:linear-gradient(135deg,var(--aqua) 0%,var(--blue) 55%,var(--navy) 100%);
+  --grad-soft:linear-gradient(135deg,#EAFAFD 0%,#EAF2F8 100%);
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --tab:"tnum" 1,"lnum" 1;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'Montserrat',system-ui,sans-serif;
+  background:var(--bg); color:var(--ink);
+  line-height:1.5; -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
+  background:
+    radial-gradient(900px 520px at 88% -8%, rgba(79,190,206,.16), transparent 60%),
+    radial-gradient(760px 520px at -6% 8%, rgba(17,114,171,.10), transparent 58%),
+    linear-gradient(180deg,#F7FBFC,#EFF5F8 70%);
+}
+::selection{background:var(--halo);color:var(--navy)}
+button{font-family:inherit}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:var(--tab)}
+
+/* ============================== LAYOUT ============================== */
+.app{min-height:100dvh;display:flex;flex-direction:column}
+.shell{width:100%;max-width:1180px;margin:0 auto;padding:0 18px}
+
+/* ---- top bar ---- */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(247,251,252,.82);backdrop-filter:saturate(140%) blur(12px);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;gap:14px;height:64px}
+.brand{display:flex;align-items:center;gap:11px;cursor:pointer;border:0;background:none;padding:4px}
+.tile{width:40px;height:40px;border-radius:11px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 16px -4px rgba(17,114,171,.5);flex:none}
+.tile svg{width:22px;height:22px}
+.lockup{display:flex;flex-direction:column;line-height:1.04;text-align:left}
+.lockup .l1{font-size:13px;font-weight:500;color:var(--ink-2);letter-spacing:.2px}
+.lockup .l2{font-size:14px;font-weight:800;color:var(--navy);letter-spacing:3px}
+.topbar .spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--blue);background:#EAF6F9;border:1px solid #CFEAF0;padding:7px 12px;border-radius:999px}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(22,163,123,.5);animation:beat 2.2s infinite}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(22,163,123,.45)}70%{box-shadow:0 0 0 7px rgba(22,163,123,0)}100%{box-shadow:0 0 0 0 rgba(22,163,123,0)}}
+.tnav{display:flex;gap:4px}
+.tnav button{border:1px solid transparent;background:none;color:var(--ink-2);font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;cursor:pointer;transition:.15s var(--ease)}
+.tnav button:hover{background:#fff;color:var(--navy);box-shadow:var(--sh-1)}
+.tnav button.on{background:var(--navy);color:#fff}
+
+/* ============================== HERO ============================== */
+.hero{position:relative;padding:54px 0 30px}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);margin-bottom:18px}
+.eyebrow .ln{width:26px;height:2px;background:var(--aqua);border-radius:2px}
+.hero h1{font-size:clamp(33px,5.4vw,52px);font-weight:800;line-height:1.04;letter-spacing:-1.2px;color:var(--navy)}
+.hero h1 em{font-style:normal;color:var(--blue);position:relative}
+.hero h1 em::after{content:"";position:absolute;left:0;right:0;bottom:4px;height:9px;background:var(--halo);z-index:-1;border-radius:3px}
+.hero p.lead{font-size:17px;color:var(--ink-2);margin-top:18px;max-width:480px;line-height:1.55}
+.hero-cta{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap}
+.hero-feats{display:flex;gap:22px;margin-top:30px;flex-wrap:wrap}
+.feat{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-2);font-weight:500}
+.feat .fic{width:30px;height:30px;border-radius:9px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;box-shadow:var(--sh-1);flex:none}
+.feat .fic svg{width:16px;height:16px;color:var(--blue)}
+
+/* hero card mock */
+.hero-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--sh-3);padding:22px;overflow:hidden}
+.hero-card::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:var(--grad)}
+.hc-head{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.hc-av{width:46px;height:46px;border-radius:13px;background:var(--grad-soft);border:1px solid #D4ECF1;display:grid;place-items:center;font-weight:800;color:var(--blue);font-size:15px}
+.hc-head .t{font-weight:700;font-size:14.5px;color:var(--navy)}
+.hc-head .s{font-size:12.5px;color:var(--ink-3)}
+.hc-head .tag{margin-left:auto;font-size:11px;font-weight:700;color:var(--ok);background:var(--ok-bg);padding:5px 9px;border-radius:7px}
+.hc-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.hc-slot{border:1px solid var(--line);border-radius:10px;text-align:center;padding:11px 0;font-size:13.5px;font-weight:600;color:var(--ink-2);background:#fff;animation:floatin .6s var(--ease) backwards}
+.hc-slot.sel{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 8px 20px -8px rgba(15,63,104,.6)}
+.hc-slot:nth-child(1){animation-delay:.05s}.hc-slot:nth-child(2){animation-delay:.1s}.hc-slot:nth-child(3){animation-delay:.15s}.hc-slot:nth-child(4){animation-delay:.2s}.hc-slot:nth-child(5){animation-delay:.25s}.hc-slot:nth-child(6){animation-delay:.3s}
+@keyframes floatin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hc-foot{margin-top:16px;display:flex;align-items:center;justify-content:space-between;background:var(--grad-soft);border:1px solid #D9EDF2;border-radius:12px;padding:12px 14px}
+.hc-foot .pf{font-size:12px;color:var(--ink-3);font-weight:600}
+.hc-foot .pv{font-size:17px;font-weight:800;color:var(--navy)}
+
+/* ============================== BUTTONS ============================== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;font-size:15px;border-radius:12px;border:1px solid transparent;cursor:pointer;padding:14px 22px;min-height:48px;transition:.18s var(--ease);white-space:nowrap;letter-spacing:.2px}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:18px;height:18px}
+.btn-primary{background:var(--navy);color:#fff;box-shadow:0 10px 26px -10px rgba(15,63,104,.7)}
+.btn-primary:hover{background:var(--navy-900);box-shadow:0 14px 30px -10px rgba(15,63,104,.8);transform:translateY(-1px)}
+.btn-accent{background:var(--grad);color:#fff;box-shadow:0 12px 28px -10px rgba(17,114,171,.7)}
+.btn-accent:hover{filter:brightness(1.04);transform:translateY(-1px)}
+.btn-ghost{background:#fff;color:var(--navy);border-color:var(--line-2);box-shadow:var(--sh-1)}
+.btn-ghost:hover{border-color:var(--aqua);color:var(--blue);box-shadow:var(--sh-2)}
+.btn-soft{background:#fff;color:var(--ink-2);border-color:var(--line)}
+.btn-soft:hover{border-color:var(--line-2);color:var(--navy)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none}
+.btn-block{width:100%}
+.btn-sm{min-height:40px;padding:9px 15px;font-size:13.5px;border-radius:10px}
+.btn-danger{background:#fff;color:var(--err);border-color:#F0C9CC}
+.btn-danger:hover{background:var(--err-bg)}
+.linkback{display:inline-flex;align-items:center;gap:7px;background:none;border:0;color:var(--ink-3);font-weight:600;font-size:14px;cursor:pointer;padding:8px 4px;transition:.15s}
+.linkback:hover{color:var(--navy)}
+.linkback svg{width:16px;height:16px}
+/* spinner */
+.spin{width:18px;height:18px;border:2.4px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite;flex:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ============================== FLOW SHELL ============================== */
+.flow{display:none;padding:24px 0 60px;animation:fadepg .35s var(--ease)}
+.flow.on{display:block}
+@keyframes fadepg{from{opacity:0}to{opacity:1}}
+.flow-grid{display:grid;grid-template-columns:1fr 332px;gap:28px;align-items:start}
+.flow-main{min-width:0}
+
+/* ---- stepper ---- */
+.stepper{display:flex;align-items:center;gap:0;margin:6px 0 26px;padding:14px 18px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh-1);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.stepper::-webkit-scrollbar{display:none}
+.step{display:flex;align-items:center;gap:10px;flex:none}
+.step .num{width:30px;height:30px;border-radius:9px;background:var(--bg-2);color:var(--ink-3);font-weight:700;font-size:13px;display:grid;place-items:center;border:1px solid var(--line);transition:.25s var(--ease)}
+.step .lbl{font-size:13px;font-weight:600;color:var(--ink-3);transition:.25s;white-space:nowrap}
+.step.done .num{background:var(--ok-bg);color:var(--ok);border-color:#C7EBDD}
+.step.active .num{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 6px 14px -5px rgba(15,63,104,.7)}
+.step.active .lbl{color:var(--navy)}
+.step .num svg{width:15px;height:15px}
+.step-bar{flex:1;min-width:18px;height:2px;background:var(--line);margin:0 10px;border-radius:2px;position:relative;overflow:hidden}
+.step-bar i{position:absolute;inset:0;width:0;background:var(--ok);transition:width .4s var(--ease)}
+.step-bar.fill i{width:100%}
+
+/* ---- page heads ---- */
+.phead{margin-bottom:18px}
+.phead h2{font-size:25px;font-weight:800;color:var(--navy);letter-spacing:-.6px}
+.phead p{color:var(--ink-2);font-size:14.5px;margin-top:5px}
+.pages{position:relative}
+.page{display:none}
+.page.on{display:block;animation:slidein .34s var(--ease)}
+@keyframes slidein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ---- filter chips ---- */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink-2);background:#fff;border:1px solid var(--line);padding:9px 14px;border-radius:999px;cursor:pointer;transition:.15s var(--ease);min-height:38px}
+.chip:hover{border-color:var(--aqua);color:var(--blue)}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip.on .cdot{background:#fff}
+.chip .cdot{width:7px;height:7px;border-radius:50%;background:var(--aqua)}
+.chip[data-f="fonasa"] .cdot{background:var(--ok)}
+.chip[data-f="particular"] .cdot{background:var(--blue)}
+
+/* ---- group label ---- */
+.grouplbl{display:flex;align-items:center;gap:10px;margin:22px 0 12px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-3)}
+.grouplbl::after{content:"";flex:1;height:1px;background:var(--line)}
+.grouplbl .gic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:var(--grad-soft);border:1px solid #DCEEF2}
+.grouplbl .gic svg{width:13px;height:13px;color:var(--blue)}
+.group{margin-bottom:8px}
+
+/* ---- specialty grid ---- */
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,1fr));gap:12px}
+.spec{position:relative;text-align:left;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;transition:.18s var(--ease);overflow:hidden}
+.spec::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grad);transform:scaleY(0);transform-origin:bottom;transition:transform .25s var(--ease)}
+.spec:hover{border-color:var(--aqua);box-shadow:var(--sh-2);transform:translateY(-2px)}
+.spec:hover::before{transform:scaleY(1)}
+.spec:focus-visible{outline:3px solid var(--halo);outline-offset:2px}
+.spec .top{display:flex;align-items:flex-start;gap:11px}
+.spec .sic{width:42px;height:42px;border-radius:11px;background:var(--grad-soft);border:1px solid #DCEEF2;display:grid;place-items:center;flex:none;transition:.2s}
+.spec:hover .sic{background:var(--navy);border-color:var(--navy)}
+.spec .sic svg{width:21px;height:21px;color:var(--blue);transition:.2s}
+.spec:hover .sic svg{color:#fff}
+.spec .nm{font-weight:700;font-size:15px;color:var(--navy);line-height:1.2}
+.spec .cnt{font-size:12px;color:var(--ink-3);margin-top:3px}
+.spec .pr{margin-top:13px;display:flex;align-items:baseline;gap:6px}
+.spec .pr .from{font-size:11px;color:var(--ink-3);font-weight:600}
+.spec .pr .v{font-size:15px;font-weight:800;color:var(--ink)}
+.spec .badge-f{position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;letter-spacing:.4px;color:var(--ok);background:var(--ok-bg);padding:3px 7px;border-radius:6px}
+
+/* ---- professional cards ---- */
+.prof-list{display:grid;gap:11px}
+.prof{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 16px;cursor:pointer;text-align:left;width:100%;transition:.18s var(--ease)}
+.prof:hover{border-color:var(--aqua);box-shadow:var(--sh-2);transform:translateX(2px)}
+.prof:focus-visible{outline:3px solid var(--halo);outline-offset:2px}
+.prof .av{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex:none;background:var(--grad);letter-spacing:.5px}
+.prof.first .av{background:linear-gradient(135deg,#16A37B,#0E7E5E)}
+.prof .info{flex:1;min-width:0}
+.prof .info .n{font-weight:700;font-size:15.5px;color:var(--navy)}
+.prof .info .sub{font-size:13px;color:var(--ink-3);margin-top:2px}
+.prof .meta{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+.prof .mtag{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--bg-2);padding:3px 8px;border-radius:6px;display:inline-flex;gap:5px;align-items:center}
+.prof .mtag svg{width:12px;height:12px;color:var(--blue)}
+.prof .go{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-3);flex:none;transition:.2s}
+.prof:hover .go{background:var(--navy);border-color:var(--navy);color:#fff}
+.prof .go svg{width:16px;height:16px}
+
+/* ---- day & time ---- */
+.daystrip{display:flex;gap:9px;overflow-x:auto;padding:4px 2px 12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+.daystrip::-webkit-scrollbar{height:0}
+.day{scroll-snap-align:start;flex:none;width:68px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px 0;text-align:center;cursor:pointer;transition:.16s var(--ease)}
+.day:hover{border-color:var(--aqua);transform:translateY(-2px)}
+.day.on{background:var(--navy);border-color:var(--navy);box-shadow:0 10px 22px -10px rgba(15,63,104,.7)}
+.day .dow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3)}
+.day .dnum{font-size:21px;font-weight:800;color:var(--navy);margin:2px 0;line-height:1}
+.day .dmon{font-size:11px;color:var(--ink-3);font-weight:600}
+.day.on .dow,.day.on .dnum,.day.on .dmon{color:#fff}
+.day.on .dow{color:#9FD5DF}
+.day .cnt-pill{font-size:10px;font-weight:700;margin-top:5px;color:var(--ok);background:var(--ok-bg);border-radius:6px;padding:2px 0;display:block;margin:5px 8px 0}
+.day.full .cnt-pill{color:var(--ink-3);background:var(--bg-2)}
+.day.on .cnt-pill{background:rgba(255,255,255,.16);color:#CFEFE6}
+
+.slot-wrap{margin-top:6px}
+.slot-sub{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-3);margin:14px 0 10px}
+.slot-sub:first-child{margin-top:0}
+.slot-sub svg{width:14px;height:14px;color:var(--blue)}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:9px}
+.slot{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 0;font-size:14.5px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:.14s var(--ease);position:relative;min-height:46px;display:flex;align-items:center;justify-content:center;gap:5px}
+.slot:hover{border-color:var(--aqua);color:var(--blue);transform:translateY(-1px)}
+.slot:focus-visible{outline:3px solid var(--halo);outline-offset:2px}
+.slot.on{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 9px 20px -9px rgba(15,63,104,.7)}
+.slot.on .chk{opacity:1;transform:scale(1)}
+.slot .chk{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:var(--ok);display:grid;place-items:center;opacity:0;transform:scale(.4);transition:.2s var(--ease);box-shadow:0 3px 8px rgba(22,163,123,.5)}
+.slot .chk svg{width:12px;height:12px;color:#fff}
+
+/* skeleton */
+.sk{background:#fff;border:1px solid var(--line);border-radius:10px;height:46px;position:relative;overflow:hidden}
+.sk::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(79,190,206,.14),transparent);transform:translateX(-100%);animation:shimmer 1.25s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+
+/* empty / error */
+.softbox{text-align:center;padding:34px 20px;background:#fff;border:1px dashed var(--line-2);border-radius:14px}
+.softbox.err{border-color:#F0C9CC;background:#FEF6F6}
+.softbox .eic{width:54px;height:54px;border-radius:15px;background:var(--grad-soft);display:grid;place-items:center;margin:0 auto 14px;border:1px solid #DCEEF2}
+.softbox.err .eic{background:var(--err-bg);border-color:#F0C9CC}
+.softbox .eic svg{width:25px;height:25px;color:var(--blue)}
+.softbox.err .eic svg{color:var(--err)}
+.softbox h4{font-size:16px;color:var(--navy);font-weight:700}
+.softbox p{font-size:13.5px;color:var(--ink-3);margin:6px 0 16px}
+
+/* ---- forms / RUT ---- */
+.fcard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--sh-1)}
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:7px;letter-spacing:.2px}
+.field label .opt{font-weight:500;color:var(--ink-4);font-size:11.5px}
+.inp{width:100%;font-family:inherit;font-size:16px;font-weight:600;color:var(--ink);background:#fff;border:1.5px solid var(--line-2);border-radius:11px;padding:13px 14px;transition:.16s var(--ease);min-height:50px}
+.inp::placeholder{color:var(--ink-4);font-weight:500}
+.inp:focus{outline:none;border-color:var(--aqua);box-shadow:0 0 0 4px var(--halo)}
+.inp.ok{border-color:var(--ok);box-shadow:0 0 0 4px rgba(22,163,123,.12)}
+.inp.bad{border-color:var(--err);box-shadow:0 0 0 4px rgba(210,74,82,.1)}
+.rut-wrap{position:relative}
+.rut-wrap .vmark{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;opacity:0;transition:.2s}
+.rut-wrap .vmark svg{width:14px;height:14px}
+.rut-wrap.is-ok .vmark{opacity:1;background:var(--ok-bg);color:var(--ok)}
+.rut-wrap.is-bad .vmark{opacity:1;background:var(--err-bg);color:var(--err)}
+.hint{font-size:12px;margin-top:7px;display:flex;align-items:center;gap:6px;color:var(--ink-3)}
+.hint svg{width:13px;height:13px;flex:none}
+.hint.ok{color:var(--ok)}.hint.bad{color:var(--err)}
+.lookup{margin-top:16px;border-radius:13px;padding:15px;display:none;align-items:center;gap:13px;animation:slidein .3s var(--ease)}
+.lookup.show{display:flex}
+.lookup.found{background:var(--ok-bg);border:1px solid #C7EBDD}
+.lookup.new{background:#EAF4FA;border:1px solid #CDE6F2}
+.lookup .lic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none;color:#fff}
+.lookup.found .lic{background:var(--ok)}
+.lookup.new .lic{background:var(--blue)}
+.lookup .lic svg{width:22px;height:22px}
+.lookup .lt{font-weight:700;font-size:14.5px;color:var(--navy)}
+.lookup .ls{font-size:12.5px;color:var(--ink-2);margin-top:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.newform{display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.newform.show{display:block;animation:slidein .3s var(--ease)}
+.seg{display:flex;gap:7px}
+.seg button{flex:1;border:1.5px solid var(--line-2);background:#fff;border-radius:11px;padding:12px 0;font-weight:700;font-size:14px;color:var(--ink-2);cursor:pointer;transition:.15s;min-height:48px}
+.seg button:hover{border-color:var(--aqua)}
+.seg button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ---- confirmation ---- */
+.review{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--sh-2)}
+.review-h{background:var(--grad);color:#fff;padding:22px 24px;position:relative;overflow:hidden}
+.review-h::after{content:"";position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.1)}
+.review-h .rk{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;opacity:.85}
+.review-h .rspec{font-size:23px;font-weight:800;margin-top:4px;letter-spacing:-.4px}
+.review-h .rprof{font-size:14px;opacity:.92;margin-top:3px}
+.review-body{padding:8px 24px}
+.rrow{display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid var(--line)}
+.rrow:last-child{border-bottom:0}
+.rrow .ri{width:38px;height:38px;border-radius:11px;background:var(--grad-soft);border:1px solid #DCEEF2;display:grid;place-items:center;flex:none}
+.rrow .ri svg{width:18px;height:18px;color:var(--blue)}
+.rrow .rl{font-size:12px;color:var(--ink-3);font-weight:600}
+.rrow .rv{font-size:15px;font-weight:700;color:var(--navy);margin-top:1px}
+.rrow .rv small{font-weight:600;color:var(--ink-3);font-size:12.5px}
+.rprice{margin-left:auto;text-align:right}
+.rprice .pv{font-size:22px;font-weight:800;color:var(--navy)}
+.rprice .pl{font-size:11px;color:var(--ink-3);font-weight:600}
+.pay-note{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:13px;margin:16px 0;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.pay-note svg{width:17px;height:17px;color:var(--blue);flex:none;margin-top:1px}
+.consent{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1.5px solid var(--line-2);border-radius:13px;padding:15px;cursor:pointer;transition:.16s;margin-bottom:18px}
+.consent:hover{border-color:var(--aqua)}
+.consent.checked{border-color:var(--ok);background:var(--ok-bg)}
+.consent .cb{width:24px;height:24px;border-radius:7px;border:2px solid var(--line-2);flex:none;display:grid;place-items:center;transition:.16s;margin-top:1px;background:#fff}
+.consent.checked .cb{background:var(--ok);border-color:var(--ok)}
+.consent .cb svg{width:14px;height:14px;color:#fff;opacity:0;transform:scale(.4);transition:.18s}
+.consent.checked .cb svg{opacity:1;transform:scale(1)}
+.consent .ct{font-size:12.8px;color:var(--ink-2);line-height:1.55}
+.consent .ct b{color:var(--navy)}
+
+/* ---- success ---- */
+.success{text-align:center;max-width:560px;margin:10px auto}
+.suc-ring{width:96px;height:96px;margin:0 auto 22px;position:relative}
+.suc-ring .c1{position:absolute;inset:0;border-radius:50%;background:var(--ok-bg);animation:pop .5s var(--ease)}
+.suc-ring .c2{position:absolute;inset:14px;border-radius:50%;background:var(--ok);display:grid;place-items:center;box-shadow:0 14px 34px -10px rgba(22,163,123,.6)}
+.suc-ring .c2 svg{width:38px;height:38px;color:#fff;stroke-dasharray:60;stroke-dashoffset:60;animation:draw .55s .25s var(--ease) forwards}
+@keyframes pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@keyframes draw{to{stroke-dashoffset:0}}
+.success h2{font-size:28px;font-weight:800;color:var(--navy);letter-spacing:-.5px}
+.success>p{color:var(--ink-2);font-size:15px;margin-top:8px}
+.suc-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 22px;margin:24px 0;text-align:left;box-shadow:var(--sh-1)}
+.wa-note{display:inline-flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;color:#0B7E54;background:var(--ok-bg);border:1px solid #C7EBDD;padding:11px 16px;border-radius:11px;margin-bottom:22px}
+.wa-note svg{width:18px;height:18px}
+.suc-cta{display:flex;gap:11px;justify-content:center;flex-wrap:wrap}
+
+/* ============================== SUMMARY SIDEBAR ============================== */
+.summary{position:sticky;top:84px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh-2);overflow:hidden}
+.sum-h{background:var(--grad-soft);border-bottom:1px solid #DCEEF2;padding:16px 18px;display:flex;align-items:center;gap:10px}
+.sum-h .si{width:32px;height:32px;border-radius:9px;background:var(--navy);display:grid;place-items:center}
+.sum-h .si svg{width:17px;height:17px;color:#fff}
+.sum-h .st{font-weight:800;font-size:14px;color:var(--navy)}
+.sum-h .ss{font-size:11.5px;color:var(--ink-3)}
+.sum-body{padding:8px 18px}
+.sline{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.sline:last-of-type{border-bottom:0}
+.sline .sl-ic{width:30px;height:30px;border-radius:8px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;flex:none;transition:.2s}
+.sline.set .sl-ic{background:var(--grad-soft);border-color:#DCEEF2}
+.sline .sl-ic svg{width:15px;height:15px;color:var(--ink-4);transition:.2s}
+.sline.set .sl-ic svg{color:var(--blue)}
+.sline .sl-l{font-size:11px;color:var(--ink-3);font-weight:600}
+.sline .sl-v{font-size:13.5px;font-weight:700;color:var(--ink-4);margin-top:1px;line-height:1.3}
+.sline.set .sl-v{color:var(--navy)}
+.sum-total{margin:6px 18px 0;padding:15px 0 6px;border-top:2px solid var(--line)}
+.sum-total .tt{display:flex;justify-content:space-between;align-items:baseline}
+.sum-total .tt .tl{font-size:13px;font-weight:700;color:var(--ink-2)}
+.sum-total .tt .tv{font-size:24px;font-weight:800;color:var(--navy)}
+.sum-total .tnote{font-size:11px;color:var(--ink-3);margin-top:4px}
+.sum-foot{padding:16px 18px;background:var(--bg);border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--ink-3)}
+.sum-foot svg{width:16px;height:16px;color:var(--ok);flex:none}
+
+/* mobile summary bar */
+.msum{display:none}
+
+/* ============================== MIS HORAS ============================== */
+.mh-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh-1);overflow:hidden;margin-bottom:13px;transition:.2s var(--ease)}
+.mh-card:hover{box-shadow:var(--sh-2)}
+.mh-top{display:flex;gap:14px;padding:17px 18px;align-items:center}
+.mh-date{width:60px;text-align:center;flex:none;background:var(--grad-soft);border:1px solid #DCEEF2;border-radius:12px;padding:9px 0}
+.mh-date .md{font-size:22px;font-weight:800;color:var(--navy);line-height:1}
+.mh-date .mm{font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--blue);margin-top:3px;letter-spacing:.5px}
+.mh-info{flex:1;min-width:0}
+.mh-info .ms{font-weight:700;font-size:15.5px;color:var(--navy)}
+.mh-info .mp{font-size:13px;color:var(--ink-3);margin-top:2px}
+.mh-info .mt{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--blue);background:#EAF6F9;padding:4px 10px;border-radius:7px;margin-top:8px}
+.mh-info .mt svg{width:13px;height:13px}
+.mh-stat{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ok);background:var(--ok-bg);padding:5px 9px;border-radius:7px;flex:none;align-self:flex-start}
+.mh-acts{display:flex;gap:9px;padding:0 18px 16px}
+.mh-acts .btn{flex:1}
+
+/* ---- modal toast ---- */
+.toast-wrap{position:fixed;left:0;right:0;bottom:22px;display:flex;justify-content:center;z-index:90;pointer-events:none;padding:0 16px}
+.toast{display:flex;align-items:center;gap:11px;background:var(--navy);color:#fff;padding:13px 18px;border-radius:13px;box-shadow:var(--sh-pop);font-size:13.5px;font-weight:600;transform:translateY(120%);transition:transform .4s var(--ease);max-width:420px}
+.toast.show{transform:none}
+.toast .ti{width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:none}
+.toast .ti svg{width:15px;height:15px}
+.toast.ok .ti{background:var(--ok)}
+.toast.err{background:var(--err)}
+.toast.err .ti{background:rgba(255,255,255,.2)}
+
+/* footer */
+.foot{margin-top:auto;border-top:1px solid var(--line);background:rgba(255,255,255,.6)}
+.foot-in{display:flex;align-items:center;gap:16px;padding:18px 0;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap}
+.foot-in .fl{display:flex;align-items:center;gap:7px}
+.foot-in .fl svg{width:14px;height:14px;color:var(--blue)}
+.foot-in .sep{flex:1}
+
+/* ============================== RESPONSIVE ============================== */
+@media(max-width:980px){
+  .flow-grid{grid-template-columns:1fr}
+  .summary{display:none}
+  .msum{display:block}
+  .hero-grid{grid-template-columns:1fr;gap:28px}
+  .hero-card{order:-1;max-width:440px}
+}
+@media(max-width:640px){
+  .shell{padding:0 14px}
+  .topbar-in{height:58px;gap:8px}
+  .pill{display:none}
+  .lockup .l2{letter-spacing:2px}
+  .hero{padding:34px 0 18px}
+  .hero-feats{gap:14px}
+  .tnav button{padding:8px 10px;font-size:12.5px}
+  .stepper{padding:12px 14px;gap:0}
+  .step .lbl{display:none}
+  .step.active .lbl{display:block}
+  .phead h2{font-size:21px}
+  .spec-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .spec{padding:13px}
+  .spec .sic{width:38px;height:38px}
+  .grid2{grid-template-columns:1fr}
+  .review-h{padding:18px}
+  .review-body,.fcard{padding:18px 16px}
+  .hero-cta .btn{flex:1}
+}
+@media(max-width:400px){
+  .spec-grid{grid-template-columns:1fr}
+  .slots{grid-template-columns:repeat(3,1fr)}
+}
+
+/* mobile sticky CTA + summary */
+.mbar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:11px 14px calc(11px + env(safe-area-inset-bottom));display:none;align-items:center;gap:12px}
+.mbar.show{display:flex}
+.mbar .mb-info{flex:1;min-width:0}
+.mbar .mb-l{font-size:11px;color:var(--ink-3);font-weight:600}
+.mbar .mb-v{font-size:15px;font-weight:800;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:980px){
+  .has-mbar{padding-bottom:84px}
+}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ===================== TOP BAR ===================== -->
+  <header class="topbar">
+    <div class="shell topbar-in">
+      <button class="brand" onclick="go('home')" aria-label="Inicio Centro Médico Carampangue">
+        <span class="tile" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M10 3.5h4a1.5 1.5 0 0 1 1.5 1.5V8.5H19A1.5 1.5 0 0 1 20.5 10v4A1.5 1.5 0 0 1 19 15.5h-3.5V19a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 8.5 19v-3.5H5A1.5 1.5 0 0 1 3.5 14v-4A1.5 1.5 0 0 1 5 8.5h3.5V5A1.5 1.5 0 0 1 10 3.5Z" fill="#fff"/></svg>
+        </span>
+        <span class="lockup"><span class="l1">Centro Médico</span><span class="l2">CARAMPANGUE</span></span>
+      </button>
+      <span class="spacer"></span>
+      <span class="pill"><span class="dot"></span>Agenda en línea · 24/7</span>
+      <nav class="tnav" aria-label="Navegación">
+        <button id="nav-agendar" class="on" onclick="go('home')">Agendar</button>
+        <button id="nav-mis" onclick="go('mis')">Mis horas</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===================== HERO ===================== -->
+  <main id="page-home" class="flow on">
+    <section class="hero shell">
+      <div class="hero-grid">
+        <div>
+          <span class="eyebrow"><span class="ln"></span>Centro Médico Carampangue · Comuna de Arauco</span>
+          <h1>Agende su hora <em>en línea</em>, a cualquier hora del día.</h1>
+          <p class="lead">Reserve con sus profesionales de confianza en menos de un minuto. Sin filas, sin llamados: disponible incluso de madrugada, todos los días.</p>
+          <div class="hero-cta">
+            <button class="btn btn-accent" onclick="startFlow()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 15h.01M12 15h.01M16 15h.01"/></svg>
+              Agendar hora
+            </button>
+            <button class="btn btn-ghost" onclick="go('mis')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Mis horas
+            </button>
+          </div>
+          <div class="hero-feats">
+            <div class="feat"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Confirmación inmediata</div>
+            <div class="feat"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V5l-8-3Z"/><path d="M9 12l2 2 4-4"/></svg></span>Datos protegidos</div>
+            <div class="feat"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg></span>Recordatorios por WhatsApp</div>
+          </div>
+        </div>
+
+        <div class="hero-card" aria-hidden="true">
+          <div class="hc-head">
+            <span class="hc-av">RO</span>
+            <div><div class="t">Dr. Rodrigo Olavarría</div><div class="s">Medicina General</div></div>
+            <span class="tag">Disponible hoy</span>
+          </div>
+          <div class="hc-slots">
+            <div class="hc-slot">09:00</div>
+            <div class="hc-slot sel">09:30</div>
+            <div class="hc-slot">10:00</div>
+            <div class="hc-slot">11:15</div>
+            <div class="hc-slot">12:00</div>
+            <div class="hc-slot">16:30</div>
+          </div>
+          <div class="hc-foot">
+            <span class="pf">Valor consulta · Fonasa</span>
+            <span class="pv tnum">$7.880</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== FLOW (agendar) ===================== -->
+  <main id="page-flow" class="flow">
+    <div class="shell">
+      <button class="linkback" id="backbtn" onclick="back()" style="margin:2px 0 4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Volver
+      </button>
+
+      <!-- stepper -->
+      <div class="stepper" id="stepper"></div>
+
+      <div class="flow-grid">
+        <div class="flow-main">
+          <!-- mobile summary -->
+          <div class="msum" id="msum"></div>
+
+          <div class="pages">
+            <!-- 1. ESPECIALIDAD -->
+            <section class="page" id="pg-spec" data-step="0">
+              <div class="phead">
+                <h2>¿Qué atención necesita?</h2>
+                <p>Seleccione la especialidad. Los valores se muestran desde el menor disponible.</p>
+              </div>
+              <div class="chips" id="spec-chips">
+                <button class="chip on" data-f="all" onclick="filterSpec('all',this)"><span class="cdot"></span>Todas</button>
+                <button class="chip" data-f="fonasa" onclick="filterSpec('fonasa',this)"><span class="cdot"></span>Convenio Fonasa</button>
+                <button class="chip" data-f="particular" onclick="filterSpec('particular',this)"><span class="cdot"></span>Particular</button>
+              </div>
+              <div id="spec-groups"></div>
+            </section>
+
+            <!-- 2. PROFESIONAL -->
+            <section class="page" id="pg-prof" data-step="1">
+              <div class="phead"><h2 id="prof-title">Seleccione profesional</h2><p id="prof-sub"></p></div>
+              <div class="prof-list" id="prof-list"></div>
+            </section>
+
+            <!-- 3. DÍA Y HORA -->
+            <section class="page" id="pg-time" data-step="2">
+              <div class="phead"><h2>Elija día y hora</h2><p id="time-sub">Seleccione un día disponible y luego su hora preferida.</p></div>
+              <div class="daystrip" id="daystrip"></div>
+              <div class="slot-wrap" id="slot-wrap"></div>
+            </section>
+
+            <!-- 4. IDENTIFICACIÓN -->
+            <section class="page" id="pg-id" data-step="3">
+              <div class="phead"><h2>Identifíquese</h2><p>Ingrese su RUT para reservar. Si ya es paciente, lo reconoceremos.</p></div>
+              <div class="fcard">
+                <div class="field">
+                  <label for="rut">RUT del paciente</label>
+                  <div class="rut-wrap" id="rutwrap">
+                    <input class="inp tnum" id="rut" inputmode="numeric" autocomplete="off" placeholder="12.345.678-5" aria-describedby="rut-hint">
+                    <span class="vmark" id="rut-vmark"></span>
+                  </div>
+                  <div class="hint" id="rut-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    Escriba su RUT con dígito verificador.
+                  </div>
+                </div>
+
+                <div class="lookup" id="lookup">
+                  <span class="lic" id="lookup-ic"></span>
+                  <div><div class="lt" id="lookup-t"></div><div class="ls" id="lookup-s"></div></div>
+                </div>
+
+                <div class="newform" id="newform">
+                  <div class="grid2">
+                    <div class="field"><label for="nombre">Nombre</label><input class="inp" id="nombre" autocomplete="off" placeholder="Su nombre"></div>
+                    <div class="field"><label for="apellido">Apellidos <span class="opt">· opcional</span></label><input class="inp" id="apellido" autocomplete="off" placeholder="Apellidos"></div>
+                  </div>
+                  <div class="grid2">
+                    <div class="field"><label for="nac">Fecha de nacimiento <span class="opt">· opcional</span></label><input class="inp tnum" id="nac" inputmode="numeric" placeholder="dd/mm/aaaa"></div>
+                    <div class="field"><label>Sexo <span class="opt">· opcional</span></label>
+                      <div class="seg" id="sexo-seg">
+                        <button type="button" data-v="F" onclick="pickSeg(this)">Femenino</button>
+                        <button type="button" data-v="M" onclick="pickSeg(this)">Masculino</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="grid2">
+                    <div class="field"><label for="comuna">Comuna <span class="opt">· opcional</span></label><input class="inp" id="comuna" value="Arauco" autocomplete="off"></div>
+                    <div class="field"><label for="email">Correo <span class="opt">· opcional</span></label><input class="inp" id="email" type="email" autocomplete="off" placeholder="correo@ejemplo.cl"></div>
+                  </div>
+                </div>
+
+                <div class="field" id="cel-field" style="margin-bottom:0;margin-top:18px">
+                  <label for="cel">Celular (WhatsApp)</label>
+                  <input class="inp tnum" id="cel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678">
+                  <div class="hint" id="cel-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>Enviaremos aquí su confirmación y recordatorios.</div>
+                </div>
+
+                <button class="btn btn-primary btn-block" id="id-continue" disabled onclick="next()" style="margin-top:20px">
+                  Continuar
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- 5. CONFIRMACIÓN -->
+            <section class="page" id="pg-confirm" data-step="4">
+              <div class="phead"><h2>Revise y confirme</h2><p>Verifique los datos de su reserva antes de confirmar.</p></div>
+              <div class="review">
+                <div class="review-h">
+                  <div class="rk">Su reserva</div>
+                  <div class="rspec" id="cf-spec">—</div>
+                  <div class="rprof" id="cf-prof">—</div>
+                </div>
+                <div class="review-body">
+                  <div class="rrow">
+                    <span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+                    <div><div class="rl">Fecha y hora</div><div class="rv" id="cf-when">—</div></div>
+                  </div>
+                  <div class="rrow">
+                    <span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+                    <div><div class="rl">Paciente</div><div class="rv" id="cf-pac">—</div></div>
+                  </div>
+                  <div class="rrow">
+                    <span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                    <div><div class="rl">Lugar de atención</div><div class="rv">Carampangue, Comuna de Arauco <small>· Región del Biobío</small></div></div>
+                    <div class="rprice"><div class="pv tnum" id="cf-price">—</div><div class="pl" id="cf-priceL">Valor consulta</div></div>
+                  </div>
+                </div>
+                <div style="padding:0 24px 22px">
+                  <div class="pay-note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                    <span id="cf-pay">El pago se realiza en el centro al momento de la atención.</span>
+                  </div>
+                  <label class="consent" id="consent" onclick="toggleConsent()">
+                    <span class="cb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                    <input type="checkbox" id="consent-cb" class="sr-only">
+                    <span class="ct"><b>Autorizo</b> el tratamiento de mis datos personales para la gestión de esta atención y el envío de recordatorios, conforme a la <b>Ley 21.719</b> de protección de datos personales.</span>
+                  </label>
+                  <button class="btn btn-accent btn-block" id="confirm-btn" disabled onclick="confirmReserva()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    Confirmar hora
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- 6. ÉXITO -->
+            <section class="page" id="pg-done" data-step="5">
+              <div class="success">
+                <div class="suc-ring"><span class="c1"></span><span class="c2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>
+                <h2>Su hora quedó reservada</h2>
+                <p>Le esperamos en el Centro Médico Carampangue.</p>
+                <div class="suc-card">
+                  <div class="rrow"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><div class="rl">Su atención</div><div class="rv" id="dn-spec">—</div></div></div>
+                  <div class="rrow"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><div class="rl">Fecha y hora</div><div class="rv" id="dn-when">—</div></div></div>
+                </div>
+                <div class="wa-note">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+                  Le enviaremos la confirmación y los recordatorios por WhatsApp.
+                </div>
+                <div class="suc-cta">
+                  <button class="btn btn-primary" onclick="addCalendar()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg>
+                    Agregar a mi calendario
+                  </button>
+                  <button class="btn btn-ghost" onclick="go('home')">Volver al inicio</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- SUMMARY SIDEBAR -->
+        <aside class="summary" id="summary" aria-label="Resumen de su reserva">
+          <div class="sum-h">
+            <span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <div><div class="st">Su reserva</div><div class="ss">Se completa paso a paso</div></div>
+          </div>
+          <div class="sum-body">
+            <div class="sline" id="su-spec"><span class="sl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.7 0-3 .9-4.5 2.4C10.5 3.9 9.2 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><div><div class="sl-l">Especialidad</div><div class="sl-v">Por elegir</div></div></div>
+            <div class="sline" id="su-prof"><span class="sl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><div><div class="sl-l">Profesional</div><div class="sl-v">Por elegir</div></div></div>
+            <div class="sline" id="su-when"><span class="sl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><div class="sl-l">Fecha y hora</div><div class="sl-v">Por elegir</div></div></div>
+            <div class="sline" id="su-pac"><span class="sl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v12H3z"/><path d="M3 11h18"/></svg></span><div><div class="sl-l">Paciente</div><div class="sl-v">Por identificar</div></div></div>
+          </div>
+          <div class="sum-total">
+            <div class="tt"><span class="tl">Valor</span><span class="tv tnum" id="su-total">—</span></div>
+            <div class="tnote" id="su-note">Se confirma al elegir la atención.</div>
+          </div>
+          <div class="sum-foot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V5l-8-3Z"/></svg>
+            Su información viaja protegida (Ley 21.719).
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== MIS HORAS ===================== -->
+  <main id="page-mis" class="flow">
+    <div class="shell" style="max-width:680px">
+      <button class="linkback" onclick="go('home')" style="margin:2px 0 8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Inicio
+      </button>
+      <div class="phead"><h2>Mis horas</h2><p>Ingrese su RUT para ver, cancelar o reagendar sus próximas horas.</p></div>
+
+      <div class="fcard" id="mis-search">
+        <div class="field">
+          <label for="mis-rut">RUT del paciente</label>
+          <div class="rut-wrap" id="mis-rutwrap">
+            <input class="inp tnum" id="mis-rut" inputmode="numeric" autocomplete="off" placeholder="12.345.678-5">
+            <span class="vmark" id="mis-vmark"></span>
+          </div>
+          <div class="hint" id="mis-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Use el RUT con el que reservó.</div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label for="mis-cel">Celular (WhatsApp) <span class="opt">· para cancelar</span></label>
+          <input class="inp tnum" id="mis-cel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678">
+        </div>
+        <button class="btn btn-primary btn-block" id="mis-btn" disabled onclick="buscarMis()" style="margin-top:18px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Ver mis horas
+        </button>
+      </div>
+
+      <div id="mis-results" style="margin-top:18px"></div>
+    </div>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="foot">
+    <div class="shell foot-in">
+      <span class="fl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>+56 9 6661 0737</span>
+      <span class="fl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 1.7 2Z"/></svg>(44) 296 5226</span>
+      <span class="fl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Lunes a sábado</span>
+      <span class="sep"></span>
+      <span>Centro Médico Carampangue · Comuna de Arauco, Biobío</span>
+    </div>
+  </footer>
+
+  <!-- mobile sticky bar -->
+  <div class="mbar" id="mbar">
+    <div class="mb-info"><div class="mb-l" id="mbar-l">Continúe</div><div class="mb-v" id="mbar-v">Seleccione una opción</div></div>
+    <button class="btn btn-accent btn-sm" id="mbar-btn" onclick="next()">Continuar</button>
+  </div>
+
+  <!-- toast -->
+  <div class="toast-wrap"><div class="toast" id="toast"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span id="toast-msg"></span></div></div>
+</div>
+
+<script>
+/* ================================================================
+   API LAYER
+================================================================ */
+const PREVIEW = "__PREVIEW__";  // "" en producción, o un token en modo preview
+const API = '/agendar/api';
+
+// arma una URL del API agregando ?preview=/&preview= solo si PREVIEW existe
+function apiURL(path){
+  let url = API + path;
+  if(PREVIEW){
+    url += (url.includes('?') ? '&' : '?') + 'preview=' + encodeURIComponent(PREVIEW);
+  }
+  return url;
+}
+async function apiGet(path){
+  const r = await fetch(apiURL(path), {headers:{'Accept':'application/json'}});
+  return handle(r);
+}
+async function apiPost(path, body){
+  const r = await fetch(apiURL(path), {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify(body||{})
+  });
+  return handle(r);
+}
+async function handle(r){
+  let data=null;
+  try{ data = await r.json(); }catch(e){ data=null; }
+  if(!r.ok){
+    const detail = data && data.detail !== undefined ? data.detail : null;
+    let msg='No fue posible completar la operación. Intente nuevamente.';
+    let conflict=false;
+    if(r.status===409 && detail && typeof detail==='object'){
+      msg = detail.mensaje || msg;
+      conflict = (detail.error==='cupo_tomado' || detail.error==='slot_taken');
+    } else if(typeof detail==='string'){
+      msg = detail;
+    } else if(detail && typeof detail==='object' && detail.mensaje){
+      msg = detail.mensaje;
+    }
+    const err = new Error(msg);
+    err.status = r.status;
+    err.detail = detail;
+    err.conflict = conflict;
+    throw err;
+  }
+  return data;
+}
+
+/* ================================================================
+   STATIC HELPERS (icons + fonts of dates)
+================================================================ */
+function ic(p){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';}
+const GROUP_SVG = {
+  'Médicas':'<path d="M10 3.5h4a1.5 1.5 0 0 1 1.5 1.5V8.5H19A1.5 1.5 0 0 1 20.5 10v4A1.5 1.5 0 0 1 19 15.5h-3.5V19a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 8.5 19v-3.5H5A1.5 1.5 0 0 1 3.5 14v-4A1.5 1.5 0 0 1 5 8.5h3.5V5A1.5 1.5 0 0 1 10 3.5Z"/>',
+  'Salud de la mujer':'<circle cx="12" cy="7" r="4"/><path d="M12 11v7M9 15h6"/>',
+  'Terapias y bienestar':'<circle cx="12" cy="5" r="2.5"/><path d="M5 9h14M12 9v6M12 15l-3 6M12 15l3 6"/>',
+  'Imágenes':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/>',
+  'Dentales':'<path d="M8 3c-2 0-3.5 1.5-3.5 4 0 1.5.5 3 1 5s1 9 2.5 9 1.5-4 2-4 .5 4 2 4 2-7 2.5-9 1-3.5 1-5C19.5 4.5 18 3 16 3c-1.5 0-2.5 1-4 1S9.5 3 8 3Z"/>'
+};
+const SPEC_ICON = {
+  'Medicina General':GROUP_SVG['Médicas'],
+  'Medicina Familiar':'<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.7 0-3 .9-4.5 2.4C10.5 3.9 9.2 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/>',
+  'Cardiología':'<path d="M3 12h4l2 6 4-14 2 8h6"/>',
+  'Gastroenterología':GROUP_SVG['Terapias y bienestar'],
+  'Otorrinolaringología':'<path d="M6 8.5a6 6 0 0 1 12 0c0 4-3 5-3 8a3 3 0 0 1-6 0"/><path d="M9 9a3 3 0 0 1 6 0"/>',
+  'Ginecología':GROUP_SVG['Salud de la mujer'],
+  'Matrona':'<circle cx="12" cy="6" r="3"/><path d="M5 21c0-5 3-8 7-8s7 3 7 8"/><path d="M9 12c1 1 5 1 6 0"/>',
+  'Kinesiología':GROUP_SVG['Terapias y bienestar'],
+  'Nutrición':'<path d="M12 7c0-2 1.5-3.5 4-3.5M16 8a4 4 0 0 0-8 0c-2 0-4 2-4 5s2 7 5 7c1 0 1.5-.5 3-.5s2 .5 3 .5c3 0 5-4 5-7s-2-5-4-5"/>',
+  'Psicología Adulto':'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1 5 3 3 0 0 0 1 5 3 3 0 0 0 3 3 2 2 0 0 0 3 0M9 4a2 2 0 0 1 3 0v15M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1 5 3 3 0 0 1-1 5 3 3 0 0 1-3 3"/>',
+  'Fonoaudiología':'<path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/>',
+  'Podología':'<path d="M14 4c2 0 3 2 3 5s-1 4-1 6-1 4-3 4-2-2-2-4-2-3-3-5-1-4 1-5 3-1 5-1Z"/>',
+  'Masoterapia':'<path d="M7 11V6a2 2 0 0 1 4 0v5M11 11V4a2 2 0 0 1 4 0v7M15 11V6a2 2 0 0 1 4 0v9a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6v-2l2 1"/>',
+  'Ecografía':GROUP_SVG['Imágenes'],
+  'Odontología General':GROUP_SVG['Dentales'],
+  'Ortodoncia':'<path d="M5 7h14M5 12h14M5 17h14M8 4v3M16 4v3M8 14v3M16 14v3"/>',
+  'Endodoncia':'<path d="M12 2v6M12 8c-3 0-5 2-5 6s1 8 3 8 1-4 2-4 0 4 2 4 3-4 3-8-2-6-5-6Z"/>',
+  'Implantología':'<path d="M12 2a4 4 0 0 1 4 4c0 2-1.5 3-1.5 5h-5C9.5 9 8 8 8 6a4 4 0 0 1 4-4ZM10 13h4l-1 9h-2Z"/>'
+};
+function specIcon(name){ return SPEC_ICON[name] || GROUP_SVG['Médicas']; }
+
+const DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+const MON=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function longDow(i){return ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][i];}
+function longMon(i){return ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][i];}
+function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+// parse "YYYY-MM-DD" to a local Date (avoid TZ shift)
+function parseISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function whenLong(iso, hora){
+  const d = parseISO(iso);
+  return `${capitalize(longDow(d.getDay()))} ${d.getDate()} de ${longMon(d.getMonth())} · ${hora} h`;
+}
+
+/* ================================================================
+   STATE
+================================================================ */
+const STEPS = ['Especialidad','Profesional','Día y hora','Identificación','Confirmación'];
+const PAGES = ['pg-spec','pg-prof','pg-time','pg-id','pg-confirm','pg-done'];
+let CATALOG = null;          // {grupos:[...]} from /catalogo
+let SPEC_INDEX = {};         // especialidad-name -> spec object
+// S.spec = especialidad object {especialidad, precio, dental, metodos_pago, profesionales:[{id,nombre,precio}], grupo}
+// S.prof = {id, nombre} or {auto:true}
+// S.slot = chosen slot object {hora_inicio,hora_fin,fecha,fecha_display,profesional,especialidad,id_profesional,id_recurso}
+let S = {step:0, spec:null, prof:null, day:null, slot:null, patient:null, consent:false, reagId:null};
+
+/* ================================================================
+   NAV
+================================================================ */
+function go(view){
+  ['home','flow','mis'].forEach(v=>document.getElementById('page-'+v).classList.toggle('on', v===view));
+  document.getElementById('nav-agendar').classList.toggle('on', view!=='mis');
+  document.getElementById('nav-mis').classList.toggle('on', view==='mis');
+  document.body.classList.toggle('has-mbar', view==='flow');
+  document.getElementById('mbar').classList.remove('show');
+  window.scrollTo({top:0,behavior:'auto'});
+  if(view==='mis'){ resetMis(); }
+}
+async function startFlow(){
+  S = {step:0, spec:null, prof:null, day:null, slot:null, patient:null, consent:false, reagId:null};
+  resetIdForm();
+  go('flow'); showStep(0); updateSummary();
+  await ensureCatalog(true);
+}
+
+function showStep(i){
+  S.step = i;
+  PAGES.forEach((p,idx)=>document.getElementById(p).classList.toggle('on', idx===i));
+  renderStepper();
+  updateMbar();
+  document.getElementById('summary').style.display = i>=5 ? 'none' : '';
+  document.getElementById('backbtn').style.visibility = (i===0||i>=5)?'hidden':'visible';
+  window.scrollTo({top:0,behavior:'auto'});
+}
+function next(){
+  if(S.step===3 && !patientReady()) return;
+  if(S.step<5) showStep(S.step+1);
+  if(S.step===4) fillConfirm();
+}
+function back(){ if(S.step>0 && S.step<5) showStep(S.step-1); }
+
+function renderStepper(){
+  const wrap = document.getElementById('stepper');
+  wrap.innerHTML = STEPS.map((lbl,i)=>{
+    const cls = i<S.step?'done':(i===S.step?'active':'');
+    const num = i<S.step ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : (i+1);
+    let bar='';
+    if(i<STEPS.length-1) bar = `<div class="step-bar ${i<S.step?'fill':''}"><i></i></div>`;
+    return `<div class="step ${cls}"><span class="num">${num}</span><span class="lbl">${lbl}</span></div>${bar}`;
+  }).join('');
+}
+
+/* ================================================================
+   CATALOG  ←  GET /catalogo
+================================================================ */
+async function ensureCatalog(showSkeleton){
+  if(CATALOG){ renderSpecs(); return; }
+  const cont = document.getElementById('spec-groups');
+  if(showSkeleton){
+    cont.innerHTML = `<div class="spec-grid">${Array.from({length:6}).map(()=>'<div class="sk" style="height:104px"></div>').join('')}</div>`;
+  }
+  try{
+    CATALOG = await apiGet('/catalogo');
+    SPEC_INDEX = {};
+    (CATALOG.grupos||[]).forEach(g=>{
+      (g.especialidades||[]).forEach(e=>{ e.grupo=g.grupo; SPEC_INDEX[e.especialidad]=e; });
+    });
+    renderSpecs();
+  }catch(err){
+    cont.innerHTML = errorBox('No pudimos cargar las atenciones', err.message, 'startFlow()');
+  }
+}
+
+let specFilter='all';
+function renderSpecs(){
+  const cont = document.getElementById('spec-groups');
+  if(!CATALOG){ return; }
+  let html='';
+  (CATALOG.grupos||[]).forEach(g=>{
+    let items = (g.especialidades||[]).slice();
+    if(specFilter==='fonasa') items = items.filter(s=>/fonasa/i.test(s.precio||''));
+    if(specFilter==='particular') items = items.filter(s=>/particular/i.test(s.precio||'') || !/fonasa/i.test(s.precio||''));
+    if(!items.length) return;
+    const gic = GROUP_SVG[g.grupo] || GROUP_SVG['Médicas'];
+    html += `<div class="group"><div class="grouplbl"><span class="gic">${ic(gic)}</span>${g.grupo}</div><div class="spec-grid">`;
+    items.forEach(s=>{
+      const nProf = (s.profesionales||[]).length;
+      const fonasa = /fonasa/i.test(s.precio||'');
+      const badge = fonasa ? `<span class="badge-f">FONASA</span>` : '';
+      // precio ya viene formateado; mostramos compacto
+      html += `<button class="spec" onclick="pickSpec('${escAttr(s.especialidad)}')" aria-label="${escAttr(s.especialidad)}">
+        ${badge}
+        <div class="top"><span class="sic">${ic(specIcon(s.especialidad))}</span>
+          <div><div class="nm">${esc(s.especialidad)}</div><div class="cnt">${nProf} profesional${nProf===1?'':'es'}</div></div></div>
+        <div class="pr"><span class="from">Valor</span><span class="v tnum">${esc(s.precio||'Consultar')}</span></div>
+      </button>`;
+    });
+    html += `</div></div>`;
+  });
+  cont.innerHTML = html || `<div class="softbox"><div class="eic">${ic(GROUP_SVG['Imágenes'])}</div><h4>Sin resultados</h4><p>No hay atenciones con ese filtro.</p></div>`;
+}
+function filterSpec(f, el){
+  specFilter=f;
+  document.querySelectorAll('#spec-chips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  renderSpecs();
+}
+function pickSpec(name){
+  S.spec = SPEC_INDEX[name];
+  S.prof=null; S.day=null; S.slot=null;
+  updateSummary();
+  renderProfs();
+  showStep(1);
+}
+
+/* ================================================================
+   PROFESIONAL
+================================================================ */
+function initials(name){
+  const p = (name||'').replace(/^(Dr\.|Dra\.)\s*/,'').trim().split(/\s+/);
+  return ((p[0]?.[0]||'')+(p[1]?.[0]||'')).toUpperCase();
+}
+function renderProfs(){
+  document.getElementById('prof-title').textContent = S.spec.especialidad;
+  document.getElementById('prof-sub').textContent = `Seleccione un profesional o elija el primer disponible.`;
+  const list = document.getElementById('prof-list');
+  const profs = S.spec.profesionales||[];
+  let html='';
+  if(profs.length>1){
+    html += `<button class="prof first" onclick="pickProf('auto')">
+      <span class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg></span>
+      <div class="info"><div class="n">Primer disponible</div><div class="sub">La hora más cercana de ${esc(S.spec.especialidad)}</div>
+        <div class="meta"><span class="mtag">${ic('<path d="M12 2 4 5v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V5l-8-3Z"/>')}Recomendado</span></div></div>
+      <span class="go">${ic('<path d="M5 12h14M12 5l7 7-7 7"/>')}</span></button>`;
+  }
+  profs.forEach((p)=>{
+    const priceTag = p.precio ? `<span class="mtag">${ic('<path d="M3 7h18v10H3z"/><circle cx="12" cy="12" r="2"/>')}${esc(p.precio)}</span>` : '';
+    html += `<button class="prof" onclick="pickProf('${escAttr(String(p.id))}')">
+      <span class="av">${initials(p.nombre)}</span>
+      <div class="info"><div class="n">${esc(p.nombre)}</div><div class="sub">${esc(S.spec.especialidad)}</div>
+        <div class="meta">${priceTag}</div></div>
+      <span class="go">${ic('<path d="M5 12h14M12 5l7 7-7 7"/>')}</span></button>`;
+  });
+  list.innerHTML = html;
+}
+async function pickProf(idOrAuto){
+  if(idOrAuto==='auto'){ S.prof = {auto:true}; }
+  else {
+    const p = (S.spec.profesionales||[]).find(x=>String(x.id)===String(idOrAuto));
+    S.prof = {id:p.id, nombre:p.nombre, precio:p.precio};
+  }
+  S.day=null; S.slot=null;
+  updateSummary();
+  showStep(2);
+  await initDays();
+}
+
+/* ================================================================
+   DÍA Y HORA  ←  GET /slots
+================================================================ */
+let DAYS=[];           // [{date:Date, iso, count:null|number}]
+let SLOTS_CACHE={};    // iso -> array of slot objects (for selected prof context)
+let RESOLVED_PROF=null;// when auto: {id, fecha} the earliest resolved professional
+
+// build the next ~10 lun-sáb days
+function buildDayList(startISO){
+  DAYS=[];
+  let d = new Date(); d.setHours(0,0,0,0);
+  if(startISO){ const sd=parseISO(startISO); if(sd>d) d=sd; }
+  let guard=0;
+  while(DAYS.length<10 && guard<40){
+    const dow=d.getDay();
+    if(dow!==0){ DAYS.push({date:new Date(d), iso:fmtISO(d), count:null}); }
+    d.setDate(d.getDate()+1); guard++;
+  }
+}
+
+// For auto: query each professional sin fecha (parallel) -> pick earliest fecha (tiebreak more slots)
+async function resolveAutoProf(){
+  const profs = S.spec.profesionales||[];
+  const results = await Promise.all(profs.map(async p=>{
+    try{
+      const r = await apiGet(`/slots?id_prof=${encodeURIComponent(p.id)}`);
+      return {id:p.id, nombre:p.nombre, fecha:r.fecha, count:(r.slots||[]).length, slots:r.slots||[]};
+    }catch(e){ return {id:p.id, nombre:p.nombre, fecha:null, count:0, slots:[]}; }
+  }));
+  const valid = results.filter(x=>x.fecha);
+  if(!valid.length) return null;
+  valid.sort((a,b)=> a.fecha===b.fecha ? (b.count-a.count) : (a.fecha<b.fecha?-1:1));
+  return valid[0];
+}
+
+async function initDays(){
+  const strip=document.getElementById('daystrip');
+  const wrap=document.getElementById('slot-wrap');
+  strip.innerHTML = `<div class="sk" style="width:68px;height:78px;flex:none"></div>`.repeat(6);
+  wrap.innerHTML = slotSkeleton();
+  SLOTS_CACHE={}; RESOLVED_PROF=null;
+
+  try{
+    let firstISO=null, firstSlots=null, profId;
+    if(S.prof.auto){
+      const best = await resolveAutoProf();
+      if(!best){ showNoAvail(); return; }
+      RESOLVED_PROF = best;                 // remember resolved real professional
+      profId = best.id;
+      firstISO = best.fecha;
+      firstSlots = best.slots;
+    } else {
+      profId = S.prof.id;
+      const r = await apiGet(`/slots?id_prof=${encodeURIComponent(profId)}`);
+      firstISO = r.fecha;
+      firstSlots = r.slots||[];
+      if(!firstISO){ showNoAvail(); return; }
+    }
+    S._profId = profId;
+    buildDayList(firstISO);
+    // make sure first available day is the selected one
+    const idx = DAYS.findIndex(x=>x.iso===firstISO);
+    S.day = idx>=0 ? DAYS[idx] : (DAYS[0]||{iso:firstISO,date:parseISO(firstISO)});
+    if(idx<0){ DAYS.unshift({date:parseISO(firstISO), iso:firstISO, count:(firstSlots||[]).length}); S.day=DAYS[0]; }
+    SLOTS_CACHE[firstISO] = firstSlots||[];
+    S.day.count = (firstSlots||[]).length;
+    renderDays();
+    renderSlots(firstSlots||[]);
+  }catch(err){
+    document.getElementById('daystrip').innerHTML='';
+    wrap.innerHTML = errorBox('No pudimos cargar la disponibilidad', err.message, 'retryDays()');
+  }
+}
+function retryDays(){ initDays(); }
+
+function showNoAvail(){
+  document.getElementById('daystrip').innerHTML='';
+  document.getElementById('slot-wrap').innerHTML =
+    `<div class="softbox"><div class="eic">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l6-6M9 10l6 6"/>')}</div>
+     <h4>Sin horas disponibles</h4><p>Por el momento este profesional no tiene cupos. Pruebe con otro profesional.</p>
+     <button class="btn btn-ghost btn-sm" onclick="back()">Elegir otro profesional</button></div>`;
+}
+
+function renderDays(){
+  const strip=document.getElementById('daystrip');
+  strip.innerHTML = DAYS.map((x,i)=>{
+    const on = S.day && x.iso===S.day.iso;
+    let pill, fullCls='';
+    if(x.count===null){ pill='Ver horas'; }
+    else if(x.count===0){ pill='Sin cupos'; fullCls='full'; }
+    else { pill=`${x.count} cupos`; }
+    return `<button class="day ${on?'on':''} ${fullCls}" onclick="pickDay(${i})">
+      <div class="dow">${DOW[x.date.getDay()]}</div>
+      <div class="dnum tnum">${x.date.getDate()}</div>
+      <div class="dmon">${MON[x.date.getMonth()]}</div>
+      <span class="cnt-pill">${pill}</span>
+    </button>`;
+  }).join('');
+}
+async function pickDay(i){
+  S.day=DAYS[i]; S.slot=null;
+  renderDays(); updateSummary();
+  await loadSlotsForDay(S.day.iso);
+}
+async function loadSlotsForDay(iso){
+  const wrap=document.getElementById('slot-wrap');
+  if(SLOTS_CACHE[iso]){ renderSlots(SLOTS_CACHE[iso]); return; }
+  wrap.innerHTML = slotSkeleton();
+  try{
+    const r = await apiGet(`/slots?id_prof=${encodeURIComponent(S._profId)}&fecha=${encodeURIComponent(iso)}`);
+    const slots = r.slots||[];
+    SLOTS_CACHE[iso]=slots;
+    const d=DAYS.find(x=>x.iso===iso); if(d) d.count=slots.length;
+    renderDays();
+    renderSlots(slots);
+  }catch(err){
+    wrap.innerHTML = errorBox('No pudimos cargar las horas', err.message, `loadSlotsForDay('${iso}')`);
+  }
+}
+function slotSkeleton(){
+  return `<div class="slot-sub">${ic('<path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 21l2.2-5.4A8.5 8.5 0 1 1 21 11.5Z"/>')}Buscando disponibilidad…</div>
+    <div class="slots">${Array.from({length:10}).map(()=>'<div class="sk"></div>').join('')}</div>`;
+}
+function renderSlots(slots){
+  const wrap=document.getElementById('slot-wrap');
+  if(!slots || !slots.length){
+    wrap.innerHTML = `<div class="softbox"><div class="eic">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l6-6M9 10l6 6"/>')}</div>
+      <h4>No hay horas ese día</h4><p>Pruebe con otro día; suele haber más cupos.</p>
+      <button class="btn btn-ghost btn-sm" onclick="nextOpenDay()">Ver siguiente día con cupos</button></div>`;
+    return;
+  }
+  // split AM / PM by hora_inicio
+  const am=slots.filter(s=>parseInt(s.hora_inicio.slice(0,2),10)<13);
+  const pm=slots.filter(s=>parseInt(s.hora_inicio.slice(0,2),10)>=13);
+  const priceTip = S.spec && S.spec.precio
+    ? `<span style="margin-left:auto;font-weight:600;color:var(--ink-3)">${esc(S.spec.precio)}</span>` : '';
+  let html='';
+  if(am.length) html += `<div class="slot-sub">${ic('<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>')}Mañana ${priceTip}</div>
+    <div class="slots">${am.map(slotHTML).join('')}</div>`;
+  if(pm.length) html += `<div class="slot-sub" style="margin-top:18px">${ic('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>')}Tarde ${am.length?'':priceTip}</div>
+    <div class="slots">${pm.map(slotHTML).join('')}</div>`;
+  wrap.innerHTML = html;
+  if(S.slot) markSlot(S.slot.hora_inicio);
+}
+function slotHTML(s){
+  return `<button class="slot tnum" data-t="${s.hora_inicio}" onclick="pickSlot('${s.hora_inicio}')">${s.hora_inicio}<span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></button>`;
+}
+function pickSlot(hora){
+  const slots = SLOTS_CACHE[S.day.iso]||[];
+  S.slot = slots.find(s=>s.hora_inicio===hora) || null;
+  markSlot(hora); updateSummary(); updateMbar();
+}
+function markSlot(t){
+  document.querySelectorAll('.slot').forEach(s=>s.classList.toggle('on', s.dataset.t===t));
+}
+function nextOpenDay(){
+  const ci = DAYS.findIndex(x=>x.iso===S.day.iso);
+  for(let i=ci+1;i<DAYS.length;i++){
+    if(DAYS[i].count===null || DAYS[i].count>0){
+      pickDay(i);
+      document.getElementById('daystrip').children[i]?.scrollIntoView({inline:'center',behavior:'smooth'});
+      return;
+    }
+  }
+  toast('No hay más días con cupos en este rango','ok');
+}
+
+/* ================================================================
+   RUT + IDENTIFICACIÓN  ←  POST /identificar
+================================================================ */
+function cleanRut(v){ return v.replace(/[^0-9kK]/g,'').toUpperCase(); }
+function formatRut(v){
+  v=cleanRut(v); if(!v) return '';
+  let body=v.slice(0,-1), dv=v.slice(-1);
+  if(v.length===1) return v;
+  body = body.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  return body+'-'+dv;
+}
+function rutCanonical(v){ v=cleanRut(v); if(v.length<2) return ''; return v.slice(0,-1)+'-'+v.slice(-1); }
+function validRut(v){
+  v=cleanRut(v); if(v.length<2) return false;
+  let body=v.slice(0,-1), dv=v.slice(-1);
+  if(!/^\d+$/.test(body)) return false;
+  let sum=0,mul=2;
+  for(let i=body.length-1;i>=0;i--){ sum+=parseInt(body[i])*mul; mul=mul===7?2:mul+1; }
+  let r=11-(sum%11);
+  let exp = r===11?'0':r===10?'K':String(r);
+  return exp===dv;
+}
+
+function setupRut(inputId, wrapId, vmarkId, hintId, onChange){
+  const inp=document.getElementById(inputId), wrap=document.getElementById(wrapId), vm=document.getElementById(vmarkId), hint=document.getElementById(hintId);
+  inp.addEventListener('input', ()=>{
+    inp.value=formatRut(inp.value);
+    const ok=validRut(inp.value);
+    inp.classList.toggle('ok', ok);
+    inp.classList.toggle('bad', !ok && cleanRut(inp.value).length>=7);
+    wrap.classList.toggle('is-ok', ok);
+    wrap.classList.toggle('is-bad', !ok && cleanRut(inp.value).length>=7);
+    vm.innerHTML = ok
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    if(ok){ hint.className='hint ok'; hint.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>RUT válido.`; }
+    else if(cleanRut(inp.value).length>=7){ hint.className='hint bad'; hint.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>El dígito verificador no coincide.`; }
+    else { hint.className='hint'; hint.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Escriba su RUT con dígito verificador.`; }
+    onChange && onChange(ok, inp.value);
+  });
+}
+
+let identifyTimer=null, lastIdentified=null;
+function onRutFlow(ok, val){
+  const look=document.getElementById('lookup'), nf=document.getElementById('newform'), btn=document.getElementById('id-continue');
+  clearTimeout(identifyTimer);
+  if(!ok){
+    look.classList.remove('show','found','new'); nf.classList.remove('show');
+    S.patient=null; lastIdentified=null; btn.disabled=true; updateSummary(); return;
+  }
+  // debounce server call
+  identifyTimer = setTimeout(()=>identify(rutCanonical(val)), 350);
+}
+async function identify(rut){
+  const look=document.getElementById('lookup'), nf=document.getElementById('newform'),
+        btn=document.getElementById('id-continue'), licEl=document.getElementById('lookup-ic'),
+        t=document.getElementById('lookup-t'), s=document.getElementById('lookup-s');
+  // loading state
+  look.classList.add('show'); look.classList.remove('found','new');
+  licEl.innerHTML='<div class="spin" style="border-color:rgba(15,63,104,.25);border-top-color:var(--navy)"></div>';
+  t.textContent='Verificando…'; s.textContent='Consultando su ficha.';
+  try{
+    const r = await apiPost('/identificar', {rut});
+    lastIdentified = r;
+    if(r.encontrado){
+      S.patient = {rut: r.rut||rut, id:r.id, name:r.nombre||r.nombre_corto||'Paciente', short:r.nombre_corto, found:true};
+      look.classList.add('found'); look.classList.remove('new');
+      nf.classList.remove('show');
+      licEl.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>';
+      t.textContent = `Hola, ${r.nombre_corto || (r.nombre||'').split(' ')[0] || 'paciente'}`;
+      s.textContent = r.telefono_parcial
+        ? `Paciente registrado. Confirme su celular (${r.telefono_parcial}).`
+        : 'Paciente registrado. Confirme su celular para recibir el aviso.';
+    } else {
+      S.patient = {rut: r.rut||rut, found:false, name:''};
+      look.classList.add('new'); look.classList.remove('found');
+      licEl.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+      t.textContent='Paciente nuevo';
+      s.textContent='Complete sus datos para crear su ficha. Solo el nombre es obligatorio.';
+      nf.classList.add('show');
+    }
+    validateId();
+  }catch(err){
+    look.classList.remove('found','new');
+    licEl.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    look.style.background='var(--err-bg)'; look.style.border='1px solid #F0C9CC';
+    licEl.style.background='var(--err)';
+    t.textContent='No pudimos verificar su RUT';
+    s.textContent=err.message;
+    S.patient=null; btn.disabled=true; updateSummary();
+  }
+}
+function celValid(){
+  const v=document.getElementById('cel').value.replace(/\D/g,'');
+  // celular chileno: 9 dígitos empezando en 9, o 11 con 56
+  return /^9\d{8}$/.test(v) || /^569\d{8}$/.test(v);
+}
+function validateId(){
+  const btn=document.getElementById('id-continue');
+  if(!S.patient){ btn.disabled=true; return; }
+  const phoneOk = celValid();
+  if(S.patient.found){
+    btn.disabled = !phoneOk;
+  } else {
+    const name=document.getElementById('nombre').value.trim();
+    S.patient.name = name ? (name+' '+document.getElementById('apellido').value.trim()).trim() : '';
+    btn.disabled = !(name.length>=2 && phoneOk);
+  }
+  // phone hint
+  const hint=document.getElementById('cel-hint');
+  if(document.getElementById('cel').value && !phoneOk){
+    hint.className='hint bad';
+    hint.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>Ingrese un celular válido (+56 9 XXXX XXXX).`;
+  } else {
+    hint.className='hint';
+    hint.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>Enviaremos aquí su confirmación y recordatorios.`;
+  }
+  updateSummary();
+}
+function patientReady(){
+  if(!S.patient || !celValid()) return false;
+  if(S.patient.found) return true;
+  return document.getElementById('nombre').value.trim().length>=2;
+}
+function pickSeg(el){ el.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on')); el.classList.add('on'); }
+// format chilean phone as +56 9 XXXX XXXX
+function formatCel(v){
+  let d=v.replace(/\D/g,'');
+  if(d.startsWith('56')) d=d.slice(2);
+  d=d.slice(0,9);
+  let out='+56';
+  if(d.length>0) out+=' '+d.slice(0,1);
+  if(d.length>1) out+=' '+d.slice(1,5);
+  if(d.length>5) out+=' '+d.slice(5,9);
+  return out;
+}
+function telDigits(v){
+  let d=v.replace(/\D/g,'');
+  if(d.startsWith('56')) d=d.slice(2);
+  return '+56'+d;
+}
+function resetIdForm(){
+  ['nombre','apellido','nac','email','cel'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  const cm=document.getElementById('comuna'); if(cm) cm.value='Arauco';
+  document.getElementById('sexo-seg').querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+  const rut=document.getElementById('rut'); rut.value=''; rut.classList.remove('ok','bad');
+  document.getElementById('rutwrap').classList.remove('is-ok','is-bad');
+  const look=document.getElementById('lookup'); look.classList.remove('show','found','new'); look.style.background=''; look.style.border='';
+  document.getElementById('lookup-ic').style.background='';
+  document.getElementById('newform').classList.remove('show');
+  document.getElementById('id-continue').disabled=true;
+}
+
+/* ================================================================
+   CONFIRMACIÓN  ←  POST /reservar
+================================================================ */
+function profLabel(){
+  if(!S.prof) return '—';
+  if(S.prof.auto) return RESOLVED_PROF ? RESOLVED_PROF.nombre : 'Primer profesional disponible';
+  return S.prof.nombre;
+}
+function fillConfirm(){
+  document.getElementById('cf-spec').textContent=S.spec.especialidad;
+  document.getElementById('cf-prof').textContent=profLabel();
+  document.getElementById('cf-when').textContent = S.slot ? whenLong(S.slot.fecha, S.slot.hora_inicio) : '—';
+  const pacName = S.patient.found ? (S.patient.name||S.patient.short||'Paciente') : (S.patient.name||'Paciente nuevo');
+  document.getElementById('cf-pac').textContent = pacName + ' · ' + formatRut(S.patient.rut);
+  document.getElementById('cf-price').textContent = S.spec.precio || '—';
+  document.getElementById('cf-priceL').textContent = 'Valor consulta';
+  const metodos = (S.spec.metodos_pago && S.spec.metodos_pago.length) ? S.spec.metodos_pago.join(', ') : null;
+  document.getElementById('cf-pay').textContent = metodos
+    ? `Medios de pago: ${metodos}. El pago se realiza en el centro al momento de la atención.`
+    : 'El pago se realiza en el centro al momento de la atención.';
+}
+function toggleConsent(){
+  S.consent=!S.consent;
+  document.getElementById('consent').classList.toggle('checked',S.consent);
+  document.getElementById('consent-cb').checked=S.consent;
+  document.getElementById('confirm-btn').disabled=!S.consent;
+}
+let reserving=false;
+async function confirmReserva(){
+  if(reserving || !S.consent) return;
+  reserving=true;
+  const btn=document.getElementById('confirm-btn');
+  const orig=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Reservando…';
+  const mbtn=document.getElementById('mbar-btn'); if(mbtn) mbtn.disabled=true;
+
+  const profId = S.prof.auto ? (RESOLVED_PROF? RESOLVED_PROF.id : S._profId) : S.prof.id;
+  const body = {
+    rut: rutCanonical(S.patient.rut),
+    telefono: telDigits(document.getElementById('cel').value),
+    id_profesional: profId,
+    fecha: S.slot.fecha,
+    hora_inicio: S.slot.hora_inicio,
+    hora_fin: S.slot.hora_fin,
+    especialidad: S.spec.especialidad,
+    consent: true
+  };
+  if(!S.patient.found){
+    const nombre=document.getElementById('nombre').value.trim();
+    const apellidos=document.getElementById('apellido').value.trim();
+    const nac=document.getElementById('nac').value.trim();
+    const sexoBtn=document.getElementById('sexo-seg').querySelector('button.on');
+    const comuna=document.getElementById('comuna').value.trim();
+    const email=document.getElementById('email').value.trim();
+    if(nombre) body.nombre=nombre;
+    if(apellidos) body.apellidos=apellidos;
+    if(nac) body.fecha_nacimiento=nac;
+    if(sexoBtn) body.sexo=sexoBtn.dataset.v;
+    if(comuna) body.comuna=comuna;
+    if(email) body.email=email;
+  }
+  try{
+    const r = await apiPost('/reservar', body);
+    document.getElementById('dn-spec').textContent = (r.especialidad||S.spec.especialidad) + ' · ' + (r.profesional||profLabel());
+    document.getElementById('dn-when').textContent = whenLong(r.fecha||S.slot.fecha, r.hora_inicio||S.slot.hora_inicio);
+    S.lastReserva = r;
+    S.reagId=null;
+    showStep(5);
+    document.getElementById('mbar').classList.remove('show');
+  }catch(err){
+    if(err.conflict){
+      // cupo tomado: invalidar cache del día y devolver a elegir hora
+      toast(err.message, 'err');
+      delete SLOTS_CACHE[S.day.iso];
+      S.slot=null; updateSummary();
+      showStep(2);
+      await loadSlotsForDay(S.day.iso);
+    } else {
+      toast(err.message, 'err');
+    }
+  } finally {
+    reserving=false;
+    btn.innerHTML=orig;
+    btn.disabled=!S.consent;
+    if(mbtn) mbtn.disabled=false;
+  }
+}
+function addCalendar(){
+  const r=S.lastReserva;
+  if(r){
+    const d=parseISO(r.fecha);
+    const [h,m]=(r.hora_inicio||'09:00').split(':').map(Number);
+    const start=new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m);
+    const [eh,em]=(r.hora_fin||r.hora_inicio||'09:30').split(':').map(Number);
+    const end=new Date(d.getFullYear(),d.getMonth(),d.getDate(),eh,em);
+    const z=n=>String(n).padStart(2,'0');
+    const fmt=dt=>dt.getFullYear()+z(dt.getMonth()+1)+z(dt.getDate())+'T'+z(dt.getHours())+z(dt.getMinutes())+'00';
+    const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${(r.especialidad||'Atención')} · Centro Médico Carampangue\nDTSTART:${fmt(start)}\nDTEND:${fmt(end)}\nLOCATION:Carampangue, Comuna de Arauco\nEND:VEVENT\nEND:VCALENDAR`;
+    const blob=new Blob([ics],{type:'text/calendar'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hora-cmc.ics'; a.click();
+  }
+  toast('Evento agregado a su calendario','ok');
+}
+
+/* ================================================================
+   SUMMARY + MOBILE BAR
+================================================================ */
+function setLine(id, val, set){
+  const el=document.getElementById(id);
+  el.classList.toggle('set', !!set);
+  el.querySelector('.sl-v').textContent=val;
+}
+function summaryWhen(){
+  return S.slot ? whenLong(S.slot.fecha, S.slot.hora_inicio) : 'Por elegir';
+}
+function pacLabel(){
+  if(!S.patient) return 'Por identificar';
+  const nm = S.patient.found ? (S.patient.short||S.patient.name||'Paciente') : (S.patient.name||'Paciente nuevo');
+  return nm + ' · ' + formatRut(S.patient.rut);
+}
+function updateSummary(){
+  setLine('su-spec', S.spec?S.spec.especialidad:'Por elegir', S.spec);
+  setLine('su-prof', S.prof?profLabel():'Por elegir', S.prof);
+  setLine('su-when', S.slot?summaryWhen():'Por elegir', !!S.slot);
+  setLine('su-pac', pacLabel(), S.patient);
+  document.getElementById('su-total').textContent = S.spec ? (S.spec.precio||'—') : '—';
+  document.getElementById('su-note').textContent = S.spec
+    ? 'Valor referencial. El pago se realiza en el centro.'
+    : 'Se confirma al elegir la atención.';
+  renderMsum();
+  updateMbar();
+}
+function renderMsum(){
+  const m=document.getElementById('msum');
+  if(!S.spec){ m.innerHTML=''; return; }
+  const sub = (S.prof?profLabel():'Profesional por elegir') + (S.slot?(' · '+parseISO(S.slot.fecha).getDate()+' '+MON[parseISO(S.slot.fecha).getMonth()]+' '+S.slot.hora_inicio):'');
+  m.innerHTML = `<div class="summary" style="margin-bottom:18px;display:block">
+    <div class="sum-h"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+      <div style="flex:1"><div class="st">${esc(S.spec.especialidad)}</div><div class="ss">${esc(sub)}</div></div>
+      <div style="text-align:right"><div class="tv tnum" style="font-size:16px;font-weight:800;color:var(--navy)">${esc(S.spec.precio||'—')}</div></div></div>
+  </div>`;
+}
+function updateMbar(){
+  const bar=document.getElementById('mbar'), l=document.getElementById('mbar-l'), v=document.getElementById('mbar-v'), b=document.getElementById('mbar-btn');
+  if(!document.getElementById('page-flow').classList.contains('on') || S.step>=5){ bar.classList.remove('show'); return; }
+  let ready=false, txt='', label='Continúe';
+  if(S.step===0){ bar.classList.remove('show'); return; }
+  if(S.step===1){ if(S.prof){ready=true;txt=profLabel();} else txt='Seleccione un profesional'; }
+  if(S.step===2){ if(S.slot){ready=true;label='Su hora';txt=parseISO(S.slot.fecha).getDate()+' '+MON[parseISO(S.slot.fecha).getMonth()]+' · '+S.slot.hora_inicio+' h';} else txt='Seleccione una hora'; }
+  if(S.step===3){ ready=patientReady(); txt=ready?((S.patient.short||S.patient.name||'Paciente')):'Ingrese su RUT y celular'; }
+  if(S.step===4){ ready=S.consent; label='Total'; txt=ready?((S.spec?S.spec.precio+' · ':'')+'confirmar'):'Acepte el consentimiento'; }
+  l.textContent=label; v.textContent=txt;
+  b.disabled=!ready;
+  b.textContent = S.step===4?'Confirmar':'Continuar';
+  b.onclick = S.step===4?confirmReserva:next;
+  bar.classList.add('show');
+}
+
+/* ================================================================
+   MIS HORAS  ←  POST /mis-horas, POST /cancelar
+================================================================ */
+let MIS=[];
+function resetMis(){
+  document.getElementById('mis-rut').value='';
+  document.getElementById('mis-rut').classList.remove('ok','bad');
+  document.getElementById('mis-rutwrap').classList.remove('is-ok','is-bad');
+  document.getElementById('mis-cel').value='';
+  document.getElementById('mis-btn').disabled=true;
+  document.getElementById('mis-results').innerHTML='';
+  document.getElementById('mis-search').style.display='';
+}
+async function buscarMis(){
+  const btn=document.getElementById('mis-btn');
+  const origH=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Buscando…';
+  const res=document.getElementById('mis-results');
+  res.innerHTML = `<div class="mh-card" style="padding:18px"><div class="sk" style="height:60px;border:0"></div></div>`;
+  const rut=rutCanonical(document.getElementById('mis-rut').value);
+  try{
+    const r = await apiPost('/mis-horas', {rut});
+    MIS = (r.citas||[]).map(c=>({...c}));
+    MIS_NAME = r.nombre_corto || '';
+    document.getElementById('mis-search').style.display='none';
+    renderMisHoras();
+  }catch(err){
+    res.innerHTML = errorBox('No pudimos buscar sus horas', err.message, 'buscarMis()');
+  }finally{
+    btn.disabled=false; btn.innerHTML=origH;
+  }
+}
+let MIS_NAME='';
+function renderMisHoras(){
+  const res=document.getElementById('mis-results');
+  const rut=formatRut(document.getElementById('mis-rut').value);
+  if(!MIS.length){
+    res.innerHTML=`<div class="softbox"><div class="eic">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>')}</div>
+      <h4>No tiene horas reservadas</h4><p>Cuando agende, sus próximas horas aparecerán aquí.</p>
+      <button class="btn btn-accent btn-sm" onclick="startFlow()">Agendar una hora</button></div>`;
+    return;
+  }
+  let head=`<div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;color:var(--ink-2);font-size:13.5px;font-weight:600">
+    ${ic('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>')}<span>Próximas horas · ${esc(MIS_NAME||rut||'su RUT')}</span></div>`;
+  res.innerHTML = head + MIS.map(m=>{
+    const d=parseISO(m.fecha);
+    return `<div class="mh-card" id="mh-${escAttr(String(m.id_cita))}">
+      <div class="mh-top">
+        <div class="mh-date"><div class="md tnum">${d.getDate()}</div><div class="mm">${MON[d.getMonth()]}</div></div>
+        <div class="mh-info">
+          <div class="ms">${esc(m.especialidad||'Atención')}</div>
+          <div class="mp">${esc(m.profesional||'')}</div>
+          <span class="mt">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}${capitalize(longDow(d.getDay()))} · ${esc(m.hora_inicio||'')} h</span>
+        </div>
+        <span class="mh-stat">Confirmada</span>
+      </div>
+      <div class="mh-acts">
+        <button class="btn btn-soft btn-sm" onclick="reagendar('${escAttr(String(m.id_cita))}')">${ic('<path d="M3 2v6h6M21 12A9 9 0 1 1 6 5.3L3 8"/>')}Reagendar</button>
+        <button class="btn btn-danger btn-sm" onclick="cancelar('${escAttr(String(m.id_cita))}')">${ic('<path d="M18 6 6 18M6 6l12 12"/>')}Cancelar</button>
+      </div>
+    </div>`;}).join('') +
+    `<button class="btn btn-ghost btn-block" onclick="startFlow()" style="margin-top:6px">
+      ${ic('<path d="M12 5v14M5 12h14"/>')}Agendar otra hora</button>`;
+}
+async function cancelar(id){
+  const card=document.getElementById('mh-'+id);
+  const cancelBtn=card?.querySelector('.btn-danger');
+  if(cancelBtn){ cancelBtn.disabled=true; cancelBtn.innerHTML='<span class="spin" style="border-color:rgba(210,74,82,.3);border-top-color:var(--err)"></span>Cancelando…'; }
+  const rut=rutCanonical(document.getElementById('mis-rut').value);
+  const telefono=telDigits(document.getElementById('mis-cel').value);
+  try{
+    await apiPost('/cancelar', {rut, id_cita:id, telefono});
+    if(card){ card.style.transition='.35s ease'; card.style.opacity='0'; card.style.transform='translateX(-12px)'; }
+    setTimeout(()=>{ MIS=MIS.filter(m=>String(m.id_cita)!==String(id)); renderMisHoras(); toast('Su hora fue cancelada','ok'); },340);
+  }catch(err){
+    if(cancelBtn){ cancelBtn.disabled=false; cancelBtn.innerHTML=`${ic('<path d="M18 6 6 18M6 6l12 12"/>')}Cancelar`; }
+    toast(err.message,'err');
+  }
+}
+// Reagendar = cancelar la hora y reentrar al flujo con el MISMO profesional
+async function reagendar(id){
+  const m=MIS.find(x=>String(x.id_cita)===String(id));
+  if(!m) return;
+  const card=document.getElementById('mh-'+id);
+  const reBtn=card?.querySelector('.btn-soft');
+  if(reBtn){ reBtn.disabled=true; reBtn.innerHTML='<span class="spin" style="border-color:rgba(15,63,104,.25);border-top-color:var(--navy)"></span>Cancelando…'; }
+  const rut=rutCanonical(document.getElementById('mis-rut').value);
+  const telefono=telDigits(document.getElementById('mis-cel').value);
+  try{
+    await apiPost('/cancelar', {rut, id_cita:id, telefono});
+  }catch(err){
+    if(reBtn){ reBtn.disabled=false; reBtn.innerHTML=`${ic('<path d="M3 2v6h6M21 12A9 9 0 1 1 6 5.3L3 8"/>')}Reagendar`; }
+    toast(err.message,'err'); return;
+  }
+  MIS=MIS.filter(x=>String(x.id_cita)!==String(id));
+  // entra al flujo en el paso día/hora del mismo profesional
+  await ensureCatalog(false);
+  const spec = SPEC_INDEX[m.especialidad];
+  if(!spec){ toast('Agende nuevamente eligiendo la especialidad','ok'); startFlow(); return; }
+  S = {step:0, spec, prof:null, day:null, slot:null,
+       patient:{rut, name:MIS_NAME||'Paciente', short:MIS_NAME, found:true}, consent:false, reagId:id};
+  // localizar al profesional original de esa cita
+  const prof = (spec.profesionales||[]).find(p=>p.nombre===m.profesional);
+  S.prof = prof ? {id:prof.id, nombre:prof.nombre, precio:prof.precio} : {auto:true};
+  // prefill RUT + cel en el form de identificación
+  document.getElementById('rut').value=formatRut(rut);
+  document.getElementById('cel').value=document.getElementById('mis-cel').value;
+  go('flow'); updateSummary(); showStep(2);
+  await initDays();
+  toast('Seleccione una nueva fecha y hora','ok');
+}
+
+/* ================================================================
+   UTILS
+================================================================ */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
+function errorBox(title, msg, retryFn){
+  return `<div class="softbox err"><div class="eic">${ic('<circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>')}</div>
+    <h4>${esc(title)}</h4><p>${esc(msg)}</p>
+    ${retryFn?`<button class="btn btn-ghost btn-sm" onclick="${retryFn}">Reintentar</button>`:''}</div>`;
+}
+let toastTimer;
+function toast(msg, type){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.toggle('ok', type==='ok');
+  t.classList.toggle('err', type==='err');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+/* ================================================================
+   INIT
+================================================================ */
+setupRut('rut','rutwrap','rut-vmark','rut-hint', onRutFlow);
+setupRut('mis-rut','mis-rutwrap','mis-vmark','mis-hint',(ok)=>{ document.getElementById('mis-btn').disabled=!ok; });
+['nombre','apellido','email','nac'].forEach(id=>document.getElementById(id).addEventListener('input',validateId));
+['cel'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{ e.target.value=formatCel(e.target.value); validateId(); }));
+document.getElementById('mis-cel').addEventListener('input',e=>{ e.target.value=formatCel(e.target.value); });
+renderStepper();
+</script>
+</body>
+</html>
