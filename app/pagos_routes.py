@@ -869,6 +869,11 @@ async def post_pago(
     id_prof_raw = body.get("id_profesional")
     id_profesional = int(id_prof_raw) if id_prof_raw is not None else None
 
+    # Nombre canónico por id (evita fragmentar reportes: "Javiera Burgos Godoy"
+    # y "Dra. Javiera Burgos" entran ambos como el nombre maestro del id 55).
+    from prof_canon import canonical_name
+    profesional_canon = canonical_name(id_profesional, body.get("profesional") or "")
+
     copago      = int(body.get("copago")      or 0)
     bonificacion = int(body.get("bonificacion") or 0)
 
@@ -887,7 +892,7 @@ async def post_pago(
                 paciente_nombre,
                 (body.get("rut") or "").strip(),
                 id_profesional,
-                (body.get("profesional") or "").strip(),
+                profesional_canon,
                 (body.get("area") or "").strip(),
                 prevision,
                 copago,
