@@ -664,6 +664,14 @@
         </div>
         <div class="panel-b" id="limits"><div class="skel" style="height:140px"></div></div>
       </div>
+      <div class="panel">
+        <div class="panel-h">
+          <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6-6.3 4.6L7.9 14 2 9.4h7.6z"/></svg></span>
+          <h2>Ranking de creatividades</h2>
+          <button class="mini-btn" style="margin-left:auto;background:#eef6ff;color:var(--blue);border:1px solid #cfe3f5" onclick="refreshCreatives(this)">Medir</button>
+        </div>
+        <div class="panel-b" id="creatives"><div class="skel" style="height:140px"></div></div>
+      </div>
     </div>
   </div>
   </div><!-- /viewDecisiones -->
@@ -1145,8 +1153,51 @@ async function load(){
   try{ d = await (await fetch(`/autopilot/api/snapshot?token=${TOKEN}`)).json(); }
   catch(e){ return showEmpty('No pude cargar el snapshot.'); }
   loadPending();
+  loadCreatives();
   if(d.empty){ return showEmpty(d.message); }
   render(d);
+}
+
+const _VBADGE={winner:['Ganadora','#1a8f5a','#e9f9f0'],ok:['Estable','#1172AB','#eaf3fb'],
+  marginal:['Marginal','#c9772a','#fdf3e3'],loser:['Perdedora','#c0392b','#fdecea'],
+  unknown:['Sin juicio','#7a7f87','#f0f1f3']};
+
+async function loadCreatives(){
+  const box=document.getElementById('creatives');
+  let d;
+  try{ d=await (await fetch(`/autopilot/api/creatives?token=${TOKEN}`)).json(); }
+  catch(e){ box.innerHTML='<div class="empty" style="padding:20px"><p>—</p></div>'; return; }
+  if(d.empty || !d.creatives || !d.creatives.length){
+    box.innerHTML=`<div class="empty" style="padding:22px"><p>${(d.message)||'Sin medición todavía.'} Pulsa <b>Medir</b> para rankear los anuncios por rendimiento real (solo lee Meta).</p></div>`;
+    return;
+  }
+  const rows=d.creatives.slice(0,8).map((r,i)=>{
+    const v=_VBADGE[r.verdict]||_VBADGE.unknown;
+    const cpm = r.cost_per_message!=null ? ('$'+r.cost_per_message.toLocaleString('es-CL')+'/msg') :
+                (r.cac_purchase!=null?('$'+r.cac_purchase.toLocaleString('es-CL')+'/pac'):'—');
+    return `<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">
+      <div style="font-weight:800;color:var(--muted);font-size:12px;width:18px">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(r.ad_name||r.campaign_name||'(sin nombre)').replace(/</g,'&lt;')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${r.messages} msgs · $${r.spend.toLocaleString('es-CL')} · CTR ${r.ctr}%</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:800;font-size:12.5px">${cpm}</div>
+        <span style="font-size:10px;font-weight:700;color:${v[1]};background:${v[2]};padding:1px 7px;border-radius:20px">${v[0]}</span>
+      </div>
+    </div>`;
+  }).join('');
+  const avg = d.avg_cost_per_message? ('$'+d.avg_cost_per_message.toLocaleString('es-CL')+'/msg prom') : '';
+  box.innerHTML=`<div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">${d.n_ads} anuncios · ${avg} · ventana ${d.window_days}d</div>${rows}`;
+}
+
+async function refreshCreatives(btn){
+  const old=btn.textContent; btn.disabled=true; btn.textContent='Midiendo…';
+  try{
+    await fetch(`/autopilot/api/creatives/refresh?window=${WIN||30}&token=${TOKEN}`,{method:'POST'});
+    await loadCreatives();
+  }catch(e){ alert('No se pudo medir: '+e); }
+  btn.disabled=false; btn.textContent=old;
 }
 
 function _money(n){ return (n==null)?'—':('$'+Number(n).toLocaleString('es-CL')); }

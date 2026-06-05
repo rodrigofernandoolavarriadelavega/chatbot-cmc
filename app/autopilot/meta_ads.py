@@ -122,6 +122,50 @@ async def list_adsets(client: httpx.AsyncClient, campaign_id: str) -> list[dict]
     return data.get("data", [])
 
 
+async def account_insights_by_ad(
+    client: httpx.AsyncClient, date_preset: str = "last_30d"
+) -> list[dict]:
+    """Insights a nivel ANUNCIO (creatividad) de toda la cuenta, en pocas llamadas.
+
+    Cierra el loop de medición de creatividades: mide qué anuncio individual
+    convierte mejor, no solo qué campaña. Devuelve una lista de dicts con
+    {ad_id, ad_name, campaign_name, + métricas normalizadas}. Filtra spend>0.
+    """
+    params = {
+        "level": "ad",
+        "fields": "ad_id,ad_name,campaign_name,adset_name,spend,impressions,clicks,"
+                  "ctr,cpm,actions,action_values,cost_per_action_type,purchase_roas",
+        "date_preset": date_preset,
+        "limit": 500,
+        "filtering": '[{"field":"spend","operator":"GREATER_THAN","value":0}]',
+    }
+    out: list[dict] = []
+    next_url = f"{GRAPH}/{AD_ACCOUNT}/insights"
+    page_params = {**params, "access_token": _token()}
+    for _ in range(10):
+        r = await client.get(next_url, params=page_params, timeout=45)
+        data = r.json()
+        if "error" in data:
+            err = data["error"]
+            log.warning("account_insights_by_ad → error %s: %s", err.get("code"), err.get("message"))
+            raise RuntimeError(f"Marketing API error {err.get('code')}: {err.get('message')}")
+        for row in data.get("data", []):
+            aid = row.get("ad_id")
+            if not aid:
+                continue
+            norm = _normalize_insights(row)
+            norm["ad_id"] = aid
+            norm["ad_name"] = row.get("ad_name", "")
+            norm["campaign_name"] = row.get("campaign_name", "")
+            norm["adset_name"] = row.get("adset_name", "")
+            out.append(norm)
+        nxt = (data.get("paging") or {}).get("next")
+        if not nxt:
+            break
+        next_url, page_params = nxt, {}
+    return out
+
+
 async def insights(
     client: httpx.AsyncClient,
     object_id: str,

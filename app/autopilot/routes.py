@@ -575,3 +575,30 @@ def pending_reject(pid: str, token: str | None = Query(None), request: Request =
     if not item:
         raise HTTPException(404, "no encontrada")
     return JSONResponse({"ok": True, "item": item})
+
+
+# ── Loop de medición de creatividades — ranking de anuncios por rendimiento ──
+
+@router.get("/autopilot/api/creatives")
+def creatives_get(token: str | None = Query(None), request: Request = None):
+    """Último ranking de creatividades (lee snapshot; no golpea Meta)."""
+    _check_token(token, request)
+    from . import creatives
+    data = creatives.load_snapshot()
+    if not data:
+        return JSONResponse({"empty": True, "message": "Sin ranking todavía. Pulsa Actualizar."})
+    return JSONResponse(data)
+
+
+@router.post("/autopilot/api/creatives/refresh")
+async def creatives_refresh(window: int = Query(30), token: str | None = Query(None),
+                            request: Request = None):
+    """Recalcula el ranking de creatividades desde Meta (read-only) y lo cachea."""
+    _check_token(token, request)
+    from . import creatives
+    try:
+        data = await creatives.rank_creatives(window_days=window)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"No se pudo medir creatividades: {e}")
+    creatives.save_snapshot(data)
+    return JSONResponse(data)
