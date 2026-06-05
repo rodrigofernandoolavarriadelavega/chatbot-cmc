@@ -5297,7 +5297,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["last_esp_context"] = _esp_ctx
                 data["last_esp_context_ts"] = _dt_ctx.now(timezone.utc).isoformat()
                 save_session(phone, "IDLE", data)
-            resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)
+            # Respuesta DETERMINÍSTICA para preguntas sobre un tipo de ecografía
+            # (qué es / para qué sirve / preparación). Más precisa que Claude y sin
+            # riesgo de inventar; base en ecografias.ECO_INFO. Cae a FAQ si no aplica.
+            _eco_info_resp = None
+            try:
+                from ecografias import info_ecografia as _info_eco_fn
+                _eco_info_resp = _info_eco_fn(txt)
+            except Exception:  # noqa: BLE001
+                _eco_info_resp = None
+            if _eco_info_resp:
+                resp = _eco_info_resp + "\n\n¿Quieres que te la agende? Responde *sí* 😊"
+                log_event(phone, "eco_info_respondida", {"txt": txt[:80]})
+            else:
+                resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)
             resp = _strip_canal_circular(resp, phone)  # BUG-F
             esp_sug = (result.get("especialidad") or "").strip()
             # Si Claude infirió una especialidad, intentamos mostrar el próximo slot

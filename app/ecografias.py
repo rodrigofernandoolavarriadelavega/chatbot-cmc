@@ -382,3 +382,170 @@ def texto_menciona_ecografia(texto: str) -> bool:
     # Las partes del cuerpo desnudas (rodilla, pie, tiroides, embarazo...) NO
     # bastan: son qualifiers de tipo, no gatillos. Ver _ECO_CONTEXT_RE.
     return _tiene_contexto_eco(txt_norm)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  BASE DE CONOCIMIENTO DE ECOGRAFÍAS
+#  Para que el bot explique al paciente qué es / para qué sirve / cómo prepararse
+#  cuando pregunta por un tipo concreto. Info general del estudio (NO diagnóstico).
+#  Cada entrada: keywords, qué evalúa, para qué sirve, preparación, profesional/precio.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Bloques de profesional/precio reutilizables.
+_PARDO = ("David Pardo (Tecnólogo Médico · Ecografía)", 40000)
+_REJON = ("Dr. Tirso Rejón (Ginecología)", 35000)
+
+ECO_INFO: dict[str, dict] = {
+    "abdominal": {
+        "nombre": "Ecografía abdominal",
+        "keywords": ["abdominal", "abdomen", "eco abdominal", "abdomen completo"],
+        "evalua": "hígado, vesícula y vías biliares, páncreas, bazo, riñones y la aorta abdominal",
+        "sirve": "estudiar dolor abdominal, cálculos en la vesícula, hígado graso, quistes o masas",
+        "preparacion": "Ayuno de 6 a 8 horas (no comer antes). Puedes tomar agua y tus medicamentos.",
+        "prof": _PARDO,
+    },
+    "renal": {
+        "nombre": "Ecografía renal / urinaria",
+        "keywords": ["renal", "rinon", "riñon", "urinaria", "vias urinarias", "eco renal"],
+        "evalua": "los riñones y la vejiga",
+        "sirve": "buscar cálculos (piedras), quistes, infecciones a repetición o alteraciones del flujo de orina",
+        "preparacion": "Vejiga llena: toma 4-6 vasos de agua 1 hora antes y no orines hasta el examen.",
+        "prof": _PARDO,
+    },
+    "vesical": {
+        "nombre": "Ecografía vesical (vejiga)",
+        "keywords": ["vesical", "vejiga", "eco vesical"],
+        "evalua": "la vejiga (paredes, contenido y vaciado)",
+        "sirve": "estudiar molestias al orinar, retención o infecciones urinarias",
+        "preparacion": "Vejiga llena: toma harta agua 1 hora antes y no orines hasta el examen.",
+        "prof": _PARDO,
+    },
+    "hepatica": {
+        "nombre": "Ecografía hepática / de vesícula",
+        "keywords": ["hepatica", "higado", "vesicula", "vesicula biliar", "eco higado"],
+        "evalua": "el hígado y la vesícula biliar",
+        "sirve": "detectar cálculos en la vesícula, hígado graso o alteraciones del hígado",
+        "preparacion": "Ayuno de 6 a 8 horas.",
+        "prof": _PARDO,
+    },
+    "tiroidea": {
+        "nombre": "Ecografía de tiroides",
+        "keywords": ["tiroides", "tiroidea", "eco tiroides", "eco tiroidea"],
+        "evalua": "la glándula tiroides en el cuello",
+        "sirve": "estudiar nódulos, bocio o alteraciones detectadas en exámenes de tiroides",
+        "preparacion": "No requiere preparación.",
+        "prof": _PARDO,
+    },
+    "mamaria": {
+        "nombre": "Ecografía mamaria",
+        "keywords": ["mamaria", "mamas", "mama", "eco de mamas", "ecotomografia mamaria"],
+        "evalua": "las mamas (es un estudio de partes blandas, no ginecológico)",
+        "sirve": "estudiar nódulos o quistes palpables y complementar la mamografía, sobre todo en mamas densas o en mujeres jóvenes",
+        "preparacion": "No requiere preparación. Idealmente la primera semana después de la regla.",
+        "prof": _PARDO,
+    },
+    "partes_blandas": {
+        "nombre": "Ecografía de partes blandas",
+        "keywords": ["partes blandas", "superficial", "eco superficial", "bulto", "lipoma", "ganglio", "ganglios"],
+        "evalua": "estructuras bajo la piel: bultos, ganglios, lipomas, quistes",
+        "sirve": "estudiar un bulto o aumento de volumen que se palpa",
+        "preparacion": "No requiere preparación.",
+        "prof": _PARDO,
+    },
+    "testicular": {
+        "nombre": "Ecografía testicular / escrotal",
+        "keywords": ["testicular", "testiculo", "escrotal", "escroto", "eco testicular"],
+        "evalua": "los testículos y el escroto",
+        "sirve": "estudiar dolor, aumento de volumen, masas o varicocele",
+        "preparacion": "No requiere preparación.",
+        "prof": _PARDO,
+    },
+    "prostatica": {
+        "nombre": "Ecografía prostática (vía abdominal)",
+        "keywords": ["prostata", "prostatica", "eco prostata"],
+        "evalua": "la próstata y la vejiga por vía abdominal",
+        "sirve": "estimar el tamaño de la próstata y estudiar síntomas urinarios",
+        "preparacion": "Vejiga llena: toma harta agua 1 hora antes y no orines.",
+        "prof": _PARDO,
+    },
+    "doppler": {
+        "nombre": "Ecografía Doppler",
+        "keywords": ["doppler", "eco doppler", "flujo", "venas", "varices", "arterial"],
+        "evalua": "el flujo de sangre en vasos y órganos",
+        "sirve": "estudiar várices, trombosis, circulación de las piernas u órganos",
+        "preparacion": "Depende de la zona; en general no requiere preparación especial. Te confirmamos al agendar.",
+        "prof": _PARDO,
+    },
+    "transvaginal": {
+        "nombre": "Ecografía transvaginal (ginecológica)",
+        "keywords": ["transvaginal", "transvajinal", "intravaginal", "endovaginal", "vaginal", "ginecologica", "ovarios", "utero", "endometrio"],
+        "evalua": "el útero, los ovarios y el endometrio, mediante una sonda vaginal (da más detalle que la vía abdominal)",
+        "sirve": "estudiar quistes de ovario, miomas, dolor pélvico, sangrados o control ginecológico",
+        "preparacion": "Vejiga vacía (orina antes del examen). La realiza el ginecólogo.",
+        "prof": _REJON,
+    },
+    "pelvica": {
+        "nombre": "Ecografía pélvica / ginecológica (vía abdominal)",
+        "keywords": ["pelvica", "pelvis", "ginecologica abdominal"],
+        "evalua": "el útero y los ovarios por vía abdominal",
+        "sirve": "estudio ginecológico general cuando no se hace por vía transvaginal",
+        "preparacion": "Vejiga llena: toma harta agua 1 hora antes. La realiza el ginecólogo.",
+        "prof": _REJON,
+    },
+}
+
+# Tipos que el CMC NO realiza (responder claro para no generar falsas expectativas).
+ECO_NO_DISPONIBLE = {
+    "obstetrica": ("Ecografía obstétrica (de embarazo)",
+                   "Por ahora *no realizamos ecografía obstétrica de embarazo* en el Centro Médico Carampangue."),
+    "ecocardiograma": ("Ecocardiograma (del corazón)",
+                       "El ecocardiograma lo realiza el *Dr. Miguel Millán* (Cardiología), $110.000 particular, por lista de espera."),
+}
+
+# keyword normalizada → clave de ECO_INFO (orden importa: lo más específico primero).
+_ECO_INFO_INDEX: list[tuple[str, str]] = []
+for _k, _v in ECO_INFO.items():
+    for _kw in _v["keywords"]:
+        _ECO_INFO_INDEX.append((_norm(_kw), _k))
+# Más largos primero → "transvaginal" antes que "vaginal", etc.
+_ECO_INFO_INDEX.sort(key=lambda p: -len(p[0]))
+
+_ECO_NO_DISP_KW = {
+    "obstetrica": ["obstetrica", "embarazo", "embarazada", "feto", "prenatal", "gestacion"],
+    "ecocardiograma": ["ecocardiograma", "corazon", "cardiaca", "cardiaco", "eco al corazon", "eco del corazon"],
+}
+
+
+def detectar_tipo_eco(texto: str) -> str | None:
+    """Devuelve la clave de ECO_INFO del tipo de eco mencionado, o None."""
+    t = _norm(texto)
+    for kw, clave in _ECO_INFO_INDEX:
+        if kw in t:
+            return clave
+    return None
+
+
+def info_ecografia(texto: str) -> str | None:
+    """Respuesta explicativa para un tipo de eco preguntado por el paciente.
+    Devuelve el texto formateado (qué evalúa, para qué, preparación, precio) o None
+    si no se reconoce un tipo concreto. Solo info del estudio, NO diagnóstico."""
+    t = _norm(texto)
+    # Primero: tipos NO disponibles (responder claro).
+    for clave, kws in _ECO_NO_DISP_KW.items():
+        if any(k in t for k in kws):
+            nombre, msg = ECO_NO_DISPONIBLE[clave]
+            return f"*{nombre}*\n\n{msg}"
+    clave = detectar_tipo_eco(texto)
+    if not clave:
+        return None
+    e = ECO_INFO[clave]
+    prof_nom, precio = e["prof"]
+    precio_fmt = f"${precio:,}".replace(",", ".")   # formato chileno: $40.000
+    return (
+        f"🩺 *{e['nombre']}*\n\n"
+        f"*¿Qué evalúa?* {e['evalua'][0].upper()}{e['evalua'][1:]}.\n"
+        f"*¿Para qué sirve?* Sirve para {e['sirve']}.\n"
+        f"*Preparación:* {e['preparacion']}\n"
+        f"*La realiza:* {prof_nom} · {precio_fmt}\n\n"
+        "_Es un estudio de imágenes; el resultado lo interpreta tu médico._"
+    )
