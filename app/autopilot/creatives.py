@@ -101,8 +101,84 @@ async def rank_creatives(window_days: int = 30) -> dict:
         "best": ranked[0] if ranked else None,
         "worst": ranked[-1] if ranked and len(ranked) > 1 else None,
         "creatives": ranked,
+        "angles": angle_insights(ranked),
     }
     return out
+
+
+# Tokens que NO son ángulos creativos (códigos de especialidad, canal, edición…).
+_ANGLE_STOP = {
+    "ECO", "ORTO", "CMC", "WA", "LOCAL", "EDITION", "BATTLE", "CLAUDE",
+    "PUBLICACION", "PUBLICACIÓN", "POST", "VIDEO", "IMAGEN", "COPY", "TEST",
+    "FB", "IG", "ADS", "AD", "V1", "V2", "V3", "FINAL", "NUEVO", "NUEVA",
+    # Marca / boilerplate (no son ángulos creativos):
+    "CENTRO", "MEDICO", "MÉDICO", "MEDICA", "MÉDICA", "CARAMPANGUE",
+    "SALUD", "HOLA", "PARA", "DEJES", "PROBLEMAS",
+}
+
+
+def _angle_tokens(name: str) -> list[str]:
+    """Extrae los tokens de 'ángulo' de un nombre de anuncio (ej. ECO-C2-FUNCIONAL
+    → ['FUNCIONAL']). Descarta códigos (A1/C2/B3), especialidad y canal."""
+    import re
+    raw = re.split(r"[-_\s]+", (name or "").upper())
+    out = []
+    for t in raw:
+        t = t.strip()
+        if len(t) < 4 or not t.isalpha():   # descarta C2, A3, WA, y separadores
+            continue
+        if t in _ANGLE_STOP:
+            continue
+        out.append(t)
+    return out
+
+
+def angle_insights(ranked: list[dict]) -> dict:
+    """Agrupa las creatividades por 'ángulo' (palabra del nombre: FUNCIONAL, DIRECTO,
+    PADRES…) y rankea cada ángulo por costo/mensaje. Cierra el loop: dice qué ángulo
+    DUPLICAR y cuál DESCARTAR para la próxima tanda de creatividades.
+    """
+    agg: dict[str, dict] = {}
+    for r in ranked:
+        name = f"{r.get('ad_name','')} {r.get('campaign_name','')}"
+        for tok in set(_angle_tokens(name)):
+            a = agg.setdefault(tok, {"angle": tok, "ads": 0, "spend": 0,
+                                     "messages": 0, "winners": 0})
+            a["ads"] += 1
+            a["spend"] += r.get("spend") or 0
+            a["messages"] += r.get("messages") or 0
+            if r.get("verdict") == "winner":
+                a["winners"] += 1
+    angles = []
+    for a in agg.values():
+        a["cost_per_message"] = round(a["spend"] / a["messages"]) if a["messages"] else None
+        angles.append(a)
+
+    # Con tracción medible: tienen mensajes. El mejor = menor costo/mensaje.
+    with_traction = [a for a in angles if a["messages"] >= 10]
+    with_traction.sort(key=lambda a: a["cost_per_message"])
+    # Probados con gasto pero sin tracción (≥$3.000 y <3 mensajes) = candidatos a descartar.
+    duds = [a for a in angles if a["spend"] >= 3000 and a["messages"] < 3]
+    duds.sort(key=lambda a: -a["spend"])
+
+    recs = []
+    if with_traction:
+        best = with_traction[0]
+        recs.append({
+            "kind": "scale_angle", "angle": best["angle"],
+            "text": (f"Duplicá el ángulo «{best['angle']}»: ${best['cost_per_message']:,}/msg "
+                     f"en {best['ads']} anuncio(s). Generá más variantes de ese ángulo."),
+        })
+    for d in duds[:2]:
+        recs.append({
+            "kind": "drop_angle", "angle": d["angle"],
+            "text": (f"Descartá el ángulo «{d['angle']}»: gastó ${d['spend']:,} y casi no "
+                     f"generó conversaciones. No insistas con ese mensaje."),
+        })
+    return {
+        "ranking": with_traction,
+        "recommendations": recs,
+    }
 
 
 def save_snapshot(data: dict) -> None:

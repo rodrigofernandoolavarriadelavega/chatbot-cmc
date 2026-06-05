@@ -1188,7 +1188,19 @@ async function loadCreatives(){
     </div>`;
   }).join('');
   const avg = d.avg_cost_per_message? ('$'+d.avg_cost_per_message.toLocaleString('es-CL')+'/msg prom') : '';
-  box.innerHTML=`<div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">${d.n_ads} anuncios · ${avg} · ventana ${d.window_days}d</div>${rows}`;
+  let recsHtml='';
+  const recs=(d.angles&&d.angles.recommendations)||[];
+  if(recs.length){
+    recsHtml='<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Qué generar después</div>'+
+      recs.map(r=>{
+        const win=r.kind==='scale_angle';
+        const ic=win?'⬆️':'🗑️'; const col=win?'#1a8f5a':'#c0392b'; const bg=win?'#e9f9f0':'#fdecea';
+        return `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;margin-bottom:5px;background:${bg};border-radius:8px">
+          <span>${ic}</span><span style="font-size:12px;color:${col};font-weight:600">${(r.text||'').replace(/</g,'&lt;')}</span></div>`;
+      }).join('')+'</div>';
+  }
+  box.innerHTML=`<div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">${d.n_ads} anuncios · ${avg} · ventana ${d.window_days}d</div>${rows}${recsHtml}`;
 }
 
 async function refreshCreatives(btn){
