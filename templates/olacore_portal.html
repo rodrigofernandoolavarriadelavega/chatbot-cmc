@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLACORE Holding · Portal</title>
+<style>
+  :root{--fiordo:#1f3a4d;--fiordo2:#162c3a;--cobre:#b5703a;--cobre-s:#f3e5d8;--aqua:#4FBECE;
+    --neblina:#eef3f5;--papel:#fbfaf7;--tinta:#1a2b34;--mute:#5e7079;--linea:#d8e2e7;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--neblina);color:var(--tinta);font-family:'Inter',-apple-system,sans-serif;
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:50px;}
+  .page{max-width:860px;margin:0 auto;background:var(--papel);min-height:100vh;box-shadow:0 1px 40px rgba(31,58,77,.1);}
+  .cover{background:linear-gradient(150deg,var(--fiordo),var(--fiordo2));color:#fff;padding:42px 40px 34px;position:relative;overflow:hidden;}
+  .cover::after{content:"";position:absolute;right:-50px;top:-50px;width:200px;height:200px;border:1px solid rgba(181,112,58,.5);border-radius:50%;}
+  .brand{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--cobre);font-weight:700;}
+  .cover h1{font-size:28px;margin:10px 0 6px;font-weight:800;}
+  .cover p{color:#cdd9df;font-size:14px;max-width:520px;margin:0;}
+  .body{padding:30px 40px 46px;}
+  .sec{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--cobre);font-weight:700;margin:6px 0 12px;}
+  .cards{display:grid;gap:14px;grid-template-columns:1fr;}
+  a.card{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--linea);
+    border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(31,58,77,.05);transition:.15s;border-left:4px solid var(--cobre);}
+  a.card:hover{box-shadow:0 4px 18px rgba(31,58,77,.12);transform:translateY(-1px);}
+  a.card h3{margin:0 0 3px;font-size:17px;color:var(--fiordo);font-weight:800;}
+  a.card p{margin:0;font-size:13px;color:var(--mute);}
+  a.card .ico{font-size:20px;float:right;margin-left:10px;}
+  .gloss{margin-top:14px;}
+  .gloss dt{font-weight:800;color:var(--fiordo);font-size:13.5px;margin-top:11px;}
+  .gloss dd{margin:1px 0 0;font-size:13px;color:#3a4d57;}
+  .aviso{background:var(--cobre-s);border:1px solid #e3c4a6;border-left:4px solid var(--cobre);border-radius:8px;
+    padding:13px 16px;margin:20px 0 0;font-size:12.5px;color:#6e4a28;}
+  @media (max-width:600px){.cover{padding:30px 22px}.body{padding:24px 22px 40px}.cover h1{font-size:23px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="cover">
+    <div class="brand">OLACORE · Holding</div>
+    <h1>Planificación tributaria del grupo</h1>
+    <p>Todo en un lugar: la estructura legal, el roadmap, el simulador de números y la hoja para la reunión con el contador.</p>
+  </div>
+  <div class="body">
+
+    <div class="sec">Documentos</div>
+    <div class="cards">
+      <a class="card" href="/olacore/estructura?token=__TOKEN__">
+        <span class="ico">📄</span>
+        <h3>Estructura legal + Roadmap</h3>
+        <p>Las 6 empresas del grupo, las palancas legales, las líneas rojas, el plan por fases y las fuentes para estudiar.</p>
+      </a>
+      <a class="card" href="/olacore/holding?token=__TOKEN__">
+        <span class="ico">📊</span>
+        <h3>Dashboard financiero</h3>
+        <p>Consolidado del grupo, IDPC con créditos y simulador de retiros vs Global Complementario. Editás las cifras y recalcula.</p>
+      </a>
+      <a class="card" href="/olacore/reunion?token=__TOKEN__">
+        <span class="ico">📋</span>
+        <h3>Hoja de reunión con el contador</h3>
+        <p>1 página imprimible: preguntas clave por área + checklist de qué llevar.</p>
+      </a>
+    </div>
+
+    <div class="sec" style="margin-top:30px">Diccionario tributario en simple</div>
+    <dl class="gloss">
+      <dt>Holding</dt><dd>Empresa "cabeza" que es dueña de las otras. No opera; concentra y ordena.</dd>
+      <dt>IDPC — Impuesto de Primera Categoría</dt><dd>El impuesto que paga la empresa por su utilidad. En Pyme hoy ~12,5%.</dd>
+      <dt>Global Complementario (IGC)</dt><dd>Tu impuesto personal, progresivo (0% a 40%). Se paga cuando <b>retirás</b> la plata de la empresa.</dd>
+      <dt>Diferimiento</dt><dd>Postergar (legalmente) el impuesto personal: si no retirás y reinvertís en el holding, ese 40% espera.</dd>
+      <dt>Pro Pyme 14D</dt><dd>Régimen para empresas chicas/medianas (&lt;75.000 UF): tasa baja e "integrada" (el IDPC te sirve de crédito).</dd>
+      <dt>Crédito tributario</dt><dd>Plata que descuenta impuesto a pagar (no solo la base). Ej: el IDPC ya pagado, o el crédito por I+D / activo fijo.</dd>
+      <dt>NGA — Norma General Anti-Elusión</dt><dd>La regla que deja al SII deshacer estructuras "de papel" sin razón de negocio real. La línea roja.</dd>
+      <dt>Sustancia / razón de negocio</dt><dd>Que cada empresa y operación exista de verdad y tenga un motivo más allá de pagar menos. Es lo que hace todo defendible.</dd>
+      <dt>Reorganización empresarial</dt><dd>Mover/aportar las empresas al holding usando figuras legales que (bien hechas) no gatillan impuesto.</dd>
+      <dt>Depreciación</dt><dd>Reconocer como gasto el desgaste de un equipo. "Instantánea" (beneficio Pyme) = todo el gasto de una.</dd>
+      <dt>Sueldo patronal</dt><dd>Sueldo que el dueño se paga por trabajar; es gasto deducible y suele tributar menos que retirar utilidad.</dd>
+      <dt>UF / UTM / UTA</dt><dd>Unidades reajustables. La UF mide montos en general; los tramos del impuesto personal van en UTA (≈ 12 UTM).</dd>
+    </dl>
+
+    <div class="aviso">
+      <b>Recordatorio:</b> material de estudio y preparación, no asesoría tributaria. Antes de constituir nada, validar con contador + abogado tributario. Marco Chile 2025-2026 (tasas transitorias).
+    </div>
+  </div>
+</div>
+</body>
+</html>
