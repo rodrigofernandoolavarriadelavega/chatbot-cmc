@@ -736,3 +736,18 @@ async def autopilot_capacity_set(request: Request, token: str | None = Query(Non
         raise HTTPException(400, "Falta 'especialidad'")
     s = _s.set_capacity(esp, status=(body.get("status") or "fill"), target=body.get("target"))
     return JSONResponse({"ok": True, "capacity_override": s.get("capacity_override", {})})
+
+
+# ── CAC real por anuncio — atribución LOCAL (source_id × agendó/pagó × spend) ─
+
+@router.get("/autopilot/api/cac-local")
+async def autopilot_cac_local(window: int = Query(30), token: str | None = Query(None),
+                              request: Request = None):
+    """CAC real por anuncio calculado localmente (no depende del CAPI de Meta).
+    Cruza meta_referrals.source_id (qué ad) × agendó/pagó × spend del ad."""
+    _check_token(token, request)
+    from . import cac_local
+    try:
+        return JSONResponse(await cac_local.cac_by_ad(window_days=window))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"No se pudo calcular CAC local: {e}")
