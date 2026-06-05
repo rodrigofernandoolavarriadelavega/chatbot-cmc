@@ -136,7 +136,7 @@ PROFESIONALES = {
     68: {"nombre": "David Pardo",              "especialidad": "Ecografía",             "intervalo": 15},
     # Psiquiatría TELECONSULTA — solo jueves (weekday 3) 16:00-20:00. Bloque de 60 min
     # (45 min consulta + 15 min descanso) → cupos 16:00/17:00/18:00/19:00.
-    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 60, "dias": [3]},
+    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 30, "dias": [3]},  # 30: su agenda Medilink tiene slots :00 (descanso en :30); intervalo 60 solo dejaba ver 19:00
 }
 
 # Mapa de palabras clave → IDs de profesionales
