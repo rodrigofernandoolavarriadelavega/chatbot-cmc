@@ -73,6 +73,14 @@ class AdsExecutorAgent(Agent):
             return {}
 
     async def decide(self, ctx: dict) -> list[AgentAction]:
+        # CANDADO ANTI-DOBLE-ACCIÓN: la Fase 3 del Autopilot (AUTOPILOT_AUTOAPPLY)
+        # ya aplica sola los ajustes sin aprobación. Si está activa, este agente se
+        # INHIBE para no mover dos veces el mismo presupuesto. El Autopilot es la
+        # fuente de verdad de ads; este agente solo actúa si la Fase 3 está apagada.
+        import os as _os
+        if _os.getenv("AUTOPILOT_AUTOAPPLY", "false").lower() == "true":
+            log.info("ads_executor: inhibido — Autopilot Fase 3 (AUTOPILOT_AUTOAPPLY) activa")
+            return []
         snap = ctx.get("snapshot")
         if not snap:
             return []
@@ -175,7 +183,10 @@ AGENT = AdsExecutorAgent(
     name="Executor de Ads",
     descr=(
         "Aplica los ajustes de presupuesto que el Autopilot ya propuso "
-        "y que no necesitan aprobacion humana. No contacta pacientes."
+        "y que no necesitan aprobacion humana. No contacta pacientes. "
+        "⚠ El Autopilot (/autopilot) es la FUENTE DE VERDAD de ads y su Fase 3 "
+        "(AUTOPILOT_AUTOAPPLY) ya hace esto mismo: NO prendas ambos a la vez. "
+        "Si la Fase 3 esta activa, este agente se inhibe solo."
     ),
     risk="alto",
     flag="ALMA_AGENT_ADS_EXECUTOR",
