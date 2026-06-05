@@ -304,19 +304,18 @@ def decide(ws: WorldState, limits: HardLimits | None = None) -> list[ProposedAct
         conf *= trust
         budget = _campaign_budget(c)
 
-        # Gasto consciente de CAPACIDAD: si la agenda de esta especialidad está
-        # saturada (próxima hora libre lejana), NO escalar aunque sea ganadora —
-        # generaría demanda que no se puede atender. Es además señal de contratar.
+        # Gasto consciente de CAPACIDAD. El CMC hace SOBRECUPOS → por defecto SIGUE
+        # LLENANDO mientras el ad rinda; el horario formal de Medilink es solo info
+        # (sub-cuenta la capacidad real). La ÚNICA forma de frenar una ganadora por
+        # agenda es que el dueño marque la especialidad "lleno" (capacity_override).
         _cap = (ws.capacity or {}).get(_infer_especialidad(c.name) or "", {})
-        _saturada = bool(_cap.get("saturated"))
+        _lleno = bool(_cap.get("gate"))
 
-        if verdict == EconVerdict.WINNER and _saturada:
-            _dias = _cap.get("days_to_next")
+        if verdict == EconVerdict.WINNER and _lleno:
             act = ProposedAction(
                 campaign_id=c.id, campaign_name=c.name, action=ActionType.KEEP,
-                reason=(f"Ganadora PERO agenda saturada (próx. hora en {_dias} días): "
-                        f"no escalar, la demanda extra no se puede atender. "
-                        f"Señal de contratación / redirigir presupuesto a especialidad con cupos."),
+                reason=(f"Ganadora ({expl}) pero marcaste esta especialidad LLENA: "
+                        f"mantener, no escalar más. Quitá la marca para volver a llenar."),
                 current_budget_clp=budget, proposed_budget_clp=budget, confidence=conf,
             )
         elif verdict == EconVerdict.WINNER:

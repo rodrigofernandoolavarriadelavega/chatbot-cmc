@@ -15,7 +15,25 @@ _FILE = Path(__file__).parent.parent.parent / "data" / "autopilot_settings.json"
 
 _DEFAULTS = {
     "autogen": False,   # #5 — generar solo variantes del ángulo ganador (OFF por defecto)
+    # #1 — capacidad por especialidad. Default = seguir llenando (sobrecupos).
+    # {especialidad: {"status": "fill"|"lleno", "target": int|None}}. Solo "lleno" frena.
+    "capacity_override": {},
 }
+
+
+def set_capacity(especialidad: str, status: str = "fill", target=None) -> dict:
+    """Marca una especialidad 'fill' (seguir llenando, default) o 'lleno' (no escalar
+    más). target opcional (nº de cupos objetivo, informativo)."""
+    esp = (especialidad or "").strip().lower()
+    if not esp:
+        return get_settings()
+    ov = dict(get("capacity_override") or {})
+    if status == "fill" and not target:
+        ov.pop(esp, None)            # volver al default = quitar la marca
+    else:
+        ov[esp] = {"status": status if status in ("fill", "lleno") else "fill",
+                   "target": int(target) if target else None}
+    return set_setting("capacity_override", ov)
 
 
 def get_settings() -> dict:

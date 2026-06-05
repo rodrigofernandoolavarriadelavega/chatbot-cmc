@@ -52,20 +52,35 @@ async def capacity_for(specialties, *, saturated_days: int = 10) -> dict:
     today = _today()
     out: dict = {}
     for esp in specialties:
+        # Señal Medilink = SOLO INFORMATIVA. El CMC hace SOBRECUPOS, así que el horario
+        # formal sub-cuenta la capacidad real (eco: /proxima dice 11 días pero hay 25
+        # cupos vía sobrecupo). Por eso NUNCA gatea sola; la autoridad es el override.
         try:
             fecha = await medilink.proxima_fecha_especialidad(esp)
         except Exception as e:  # noqa: BLE001
             log.warning("capacity: %s falló: %s", esp, e)
             fecha = None
+        days = None
         if fecha:
             try:
                 days = max(0, (date.fromisoformat(fecha) - today).days)
-                out[esp] = {"days_to_next": days, "saturated": days >= saturated_days, "known": True}
             except Exception:  # noqa: BLE001
-                out[esp] = {"days_to_next": None, "saturated": False, "known": False}
-        else:
-            # None = no hay slots en el horizonte O fallo. No bloquear gasto (fail-open).
-            out[esp] = {"days_to_next": None, "saturated": False, "known": False}
+                days = None
+        out[esp] = {"days_to_next_formal": days, "known": days is not None}
+
+    # Override del dueño = AUTORIDAD. Default = SEGUIR LLENANDO (no gatea).
+    # capacity_override[esp] = {"status": "fill"|"lleno", "target": int|None}
+    try:
+        from . import settings as _s
+        override = _s.get("capacity_override") or {}
+    except Exception:  # noqa: BLE001
+        override = {}
+    for esp, v in out.items():
+        ov = override.get(esp) or {}
+        status = ov.get("status", "fill")          # default: llenar
+        v["status"] = status
+        v["target"] = ov.get("target")
+        v["gate"] = (status == "lleno")            # solo frena si el dueño lo marcó lleno
 
     merged = dict((cached or {}).get("data", {}))
     merged.update(out)

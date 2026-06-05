@@ -706,3 +706,33 @@ async def autopilot_creatives_autogen(n: int = Query(1), token: str | None = Que
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"No se pudo generar: {e}")
     return JSONResponse({"created": created})
+
+
+# ── #1 — Capacidad por especialidad (sobrecupos: default seguir llenando) ────
+
+@router.get("/autopilot/api/capacity")
+def autopilot_capacity_get(token: str | None = Query(None), request: Request = None):
+    """Estado de capacidad por especialidad (info Medilink) + overrides del dueño."""
+    _check_token(token, request)
+    from . import capacity, settings as _s
+    return JSONResponse({
+        "snapshot": (capacity.load_snapshot() or {}).get("data", {}),
+        "override": _s.get("capacity_override") or {},
+    })
+
+
+@router.post("/autopilot/api/capacity")
+async def autopilot_capacity_set(request: Request, token: str | None = Query(None)):
+    """Marca una especialidad. Body: {especialidad, status:'fill'|'lleno', target?}.
+    Default 'fill' = seguir llenando (sobrecupos). 'lleno' = no escalar más."""
+    _check_token(token, request)
+    from . import settings as _s
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    esp = (body or {}).get("especialidad")
+    if not esp:
+        raise HTTPException(400, "Falta 'especialidad'")
+    s = _s.set_capacity(esp, status=(body.get("status") or "fill"), target=body.get("target"))
+    return JSONResponse({"ok": True, "capacity_override": s.get("capacity_override", {})})
