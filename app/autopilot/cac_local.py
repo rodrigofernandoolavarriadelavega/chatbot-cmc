@@ -68,6 +68,33 @@ def _norm_rut(rut: str) -> str:
     return (rut or "").replace(".", "").replace("-", "").lower().strip()
 
 
+def _norm_phone(p: str) -> str:
+    """Solo dígitos, últimos 8 (ignora prefijo país/0/+). Para cruzar teléfonos
+    entre meta_referrals y el BI sin pelearse con formatos."""
+    d = "".join(ch for ch in str(p or "") if ch.isdigit())
+    return d[-8:] if len(d) >= 8 else d
+
+
+def _paid_phones_window(cutoff_date: str) -> set:
+    """Teléfonos (normalizados) de pacientes que PAGARON desde cutoff_date, del BI
+    (bi.fact_pagos × bi.dim_paciente.telefono). Captura a los que pagaron pero no
+    tienen RUT en contact_profiles → sube la cobertura del match. Vacío si BI falla."""
+    try:
+        from bi_helper import bi_query
+        rows, status = bi_query(
+            "SELECT DISTINCT dp.telefono AS tel "
+            "FROM bi.fact_pagos fp "
+            "JOIN bi.dim_paciente dp ON dp.paciente_id = fp.paciente_id "
+            "WHERE fp.fecha >= %s AND dp.telefono IS NOT NULL",
+            (cutoff_date,),
+        )
+        if status != "ok":
+            return set()
+        return {_norm_phone(r.get("tel")) for r in rows if r.get("tel")}
+    except Exception:  # noqa: BLE001
+        return set()
+
+
 async def cac_by_ad(window_days: int = 30) -> dict:
     """CAC real por anuncio. Cruza spend (Meta por ad) × pacientes de ese ad que
     agendaron/pagaron (local). Devuelve lista ordenada por CAC ascendente."""
@@ -79,6 +106,8 @@ async def cac_by_ad(window_days: int = 30) -> dict:
     # 1) Pacientes por ad (local).
     attended = _attended_phones_window(cutoff_ts)
     paid_ruts = _paid_ruts_window(cutoff_date)
+    paid_phones = _paid_phones_window(cutoff_date)
+    _bi_ok = bool(paid_ruts or paid_phones)
 
     # 2) Spend por ad (Meta).
     preset = {7: "last_7d", 14: "last_14d", 30: "last_30d", 90: "last_90d"}.get(window_days, "last_30d")
@@ -104,7 +133,11 @@ async def cac_by_ad(window_days: int = 30) -> dict:
         a["leads"] += 1
         if info["booked"]:
             a["booked"] += 1
-        if paid_ruts and _norm_rut(info["rut"]) in paid_ruts:
+        # Pagó si su RUT O su teléfono aparecen en los pagos del BI (combinar sube la
+        # cobertura: muchos pagaron sin RUT en contact_profiles pero sí con teléfono).
+        _pago = (paid_ruts and _norm_rut(info["rut"]) in paid_ruts) or \
+                (paid_phones and _norm_phone(phone) in paid_phones)
+        if _pago:
             a["paid"] += 1
 
     out = []
@@ -112,7 +145,7 @@ async def cac_by_ad(window_days: int = 30) -> dict:
         s = spend_by_ad.get(ad, {})
         spend = s.get("spend") or 0
         # "atendido" = pagó si hay BI; si no, proxy = agendó.
-        atendidos = a["paid"] if paid_ruts else a["booked"]
+        atendidos = a["paid"] if _bi_ok else a["booked"]
         out.append({
             "ad_id": ad,
             "ad_name": s.get("ad_name") or "(sin gasto en ventana)",
@@ -132,7 +165,7 @@ async def cac_by_ad(window_days: int = 30) -> dict:
     return {
         "generated_ts": now,
         "window_days": window_days,
-        "modo_atendido": "pago_real_BI" if paid_ruts else "agendó (proxy local)",
+        "modo_atendido": "pago_real_BI" if _bi_ok else "agendó (proxy local)",
         "n_ads": len(out),
         "total_spend": total_spend,
         "total_atendidos": total_atendidos,
