@@ -8,6 +8,7 @@
 <div class="pg-topbar">
   <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6l-5 9a2 2 0 002 3h12a2 2 0 002-3l-5-9V2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2h8M7 14h10" stroke-linecap="round"/></svg> Exámenes y resultados</h1>
   <div class="spacer"></div>
+  <button class="btn-ghost" onclick="openFoto()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4"/></svg> Transcribir foto</button>
   <button class="btn-primary" onclick="openNew()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Orden</button>
 </div>
 <div class="wrap">
@@ -31,6 +32,22 @@
     <div class="field"><label>Notas</label><input id="x-notas"></div>
   </div>
   <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-x')">Cancelar</button><button class="btn-primary" onclick="save()">Guardar</button></div>
+</div></div>
+
+<div class="modal-bg" id="m-foto"><div class="modal">
+  <div class="modal-head"><h2>Transcribir examen desde foto</h2><div class="x" onclick="AlmaKit.closeModal('m-foto')">✕</div></div>
+  <div class="modal-body">
+    <div class="field"><label>Foto del examen</label><input id="foto-file" type="file" accept="image/*" capture="environment" onchange="fotoPreview()"></div>
+    <img id="foto-prev" style="display:none;max-width:100%;border-radius:10px;margin:8px 0">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0;cursor:pointer">
+      <input id="foto-opus" type="checkbox"> Alta precisión (manuscrito o letra difícil · más lento y caro)
+    </label>
+    <button class="btn-primary" style="width:100%" onclick="doFoto()">Transcribir</button>
+    <div id="foto-status" style="font-size:12px;color:var(--muted,#6a7b88);margin:10px 0 4px"></div>
+    <textarea id="foto-texto" spellcheck="false" placeholder="Aquí saldrá el texto del examen para revisar y copiar a la ficha…" style="width:100%;min-height:200px;border:1px solid var(--line,#dde6ec);border-radius:10px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.5;resize:vertical"></textarea>
+    <div class="note" style="margin-top:8px">⚠️ Transcripción asistida por IA. Verifica los valores contra el examen original antes de guardar en la ficha.</div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-foto')">Cerrar</button><button class="btn-primary" onclick="copyFoto()">📋 Copiar</button></div>
 </div></div>
 
 <script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/examenes";</script>
@@ -73,5 +90,23 @@ async function save(){ const id=F('x-id').value; const body={paciente_nombre:F('
   if(!body.paciente_nombre){toast('El paciente es obligatorio',true);return;}
   try{ if(id) await api("/"+id,{method:"PATCH",body:JSON.stringify(body)}); else await api("",{method:"POST",body:JSON.stringify(body)}); closeModal('m-x'); toast('Guardado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
 async function del(id){ if(!confirm('¿Eliminar examen?'))return; try{ await api("/"+id,{method:"DELETE"}); toast('Eliminado'); loadKpis(); load(); }catch(e){toast(e.message,true);} }
+
+// ── Transcribir examen desde foto ──────────────────────────────────────
+function openFoto(){ F('foto-file').value=''; F('foto-texto').value=''; F('foto-opus').checked=false;
+  F('foto-status').textContent=''; const p=F('foto-prev'); p.style.display='none'; p.src=''; openModal('m-foto'); }
+function fotoPreview(){ const f=F('foto-file').files[0]; const p=F('foto-prev');
+  if(f){ p.src=URL.createObjectURL(f); p.style.display='block'; } else { p.style.display='none'; } }
+async function doFoto(){ const f=F('foto-file').files[0]; if(!f){toast('Elige una foto del examen',true);return;}
+  const modelo=F('foto-opus').checked?'opus':'sonnet';
+  F('foto-status').textContent='Transcribiendo… ⏳ ('+(modelo==='opus'?'alta precisión':'normal')+')'; F('foto-texto').value='';
+  const fd=new FormData(); fd.append('foto',f); fd.append('modelo',modelo);
+  try{ const r=await fetch(ALMA_API+'/transcribir-foto?token='+encodeURIComponent(ALMA_TOKEN),{method:'POST',body:fd});
+    const j=await r.json(); if(!r.ok){throw new Error(j.detail||'error');}
+    F('foto-texto').value=j.texto; F('foto-status').textContent='Listo · '+j.modelo+' — revisa antes de pegar en la ficha';
+  }catch(e){ F('foto-status').textContent='Error: '+e.message; } }
+async function copyFoto(){ const t=F('foto-texto').value; if(!t){toast('Nada que copiar',true);return;}
+  try{ await navigator.clipboard.writeText(t); }catch(_){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast('Copiado — pega en la ficha de Medilink'); }
+
 loadKpis(); load();
 </script></body></html>

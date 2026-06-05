@@ -11,7 +11,7 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Request, Query, Cookie
+from fastapi import APIRouter, HTTPException, Request, Query, Cookie, UploadFile, File, Form
 
 from alma_common import require_admin
 
@@ -137,3 +137,25 @@ async def eliminar(ex_id: int, token: str | None = Query(None), cmc_session: str
     if cur.rowcount == 0:
         raise HTTPException(404, "No encontrado")
     return {"ok": True}
+
+
+@router.post("/transcribir-foto")
+async def transcribir_foto(
+    request: Request,
+    foto: UploadFile = File(...),
+    modelo: str = Form("sonnet"),
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+):
+    """Foto de un examen → texto clínico para pegar en la ficha de Medilink.
+    Reusa el motor examenes_transcribe. modelo: 'sonnet' (default) o 'opus' (alta
+    precisión). No persiste la imagen (dato sensible de salud, Ley 21.719)."""
+    require_admin(request, token=token, cmc_session=cmc_session)
+    data = await foto.read()
+    if not data:
+        raise HTTPException(400, "Archivo vacío")
+    from examenes_transcribe import transcribir_examen
+    texto = await transcribir_examen(data, foto.content_type, modelo)
+    if not texto:
+        raise HTTPException(502, "No se pudo transcribir el examen. Intenta una foto más nítida.")
+    return {"texto": texto, "modelo": "opus" if (modelo or "").lower() == "opus" else "sonnet"}
