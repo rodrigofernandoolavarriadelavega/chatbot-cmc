@@ -20,7 +20,7 @@ from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       listar_citas_paciente)
 from session import (get_sesiones_abandonadas, save_session, log_event, log_message,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
-                     get_waitlist_pending, mark_waitlist_notified,
+                     get_waitlist_pending, mark_waitlist_notified, cancel_waitlist,
                      get_cita_bot_by_id_for_rebook, mark_cita_cancel_detected,
                      get_profile,
                      get_candidatos_horas_vacias, log_horas_vacias_envio,
@@ -1287,7 +1287,7 @@ _WAITLIST_ESP_KEYWORDS = (
     ("cardiolog", "cardiologia"),
     ("gastroenter", "gastroenterologia"),
     ("ginecolog", "ginecologia"),
-    ("traumatol", "traumatologia"),
+    # Traumatología NO se ofrece (Dr. Barraza ya no atiende) → fuera de la waitlist.
     ("endodon", "endodoncia"),
     ("ortodon", "ortodoncia"),
     ("implantol", "implantologia"),
@@ -1348,6 +1348,17 @@ async def _job_waitlist_check():
         id_prof_pref = row.get("id_prof_pref")
         nombre = row.get("nombre") or ""
         rut_p = (row.get("rut") or "").strip()
+
+        # Traumatología NO se ofrece en el CMC (Dr. Barraza ya no atiende), pero está
+        # redirigida a Medicina General (id 10) → el job encontraba slots de MG y
+        # notificaba "cupo de Traumatología". Cancelar la inscripción y no notificar.
+        if any(k in (esp or "").lower() for k in ("traumatol", "trauma")):
+            try:
+                cancel_waitlist(wl_id)
+            except Exception as _e_tw:  # noqa: BLE001
+                log.warning("waitlist_check: no se pudo cancelar trauma wl_id=%s: %s", wl_id, _e_tw)
+            log.info("waitlist_check: skip+cancel wl_id=%d esp=%s (Traumatología no se ofrece)", wl_id, esp)
+            continue
 
         # Skip si el paciente ya tiene una cita futura en esta especialidad
         # (recepcionista pudo haberla agendado a mano fuera del bot).
