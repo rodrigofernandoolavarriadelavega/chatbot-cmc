@@ -117,6 +117,13 @@ ALMA_PROFILES: dict[str, dict] = {
         "boxes_financiero": False,
         "panel_profesional": False,
     },
+    "cmc_kine_etcheverry": {
+        "variante": "Leonardo Etcheverry · Kinesiología",
+        "modulos": ["agenda", "kine"],
+        "profesional_id": 21,        # Leonardo Etcheverry (kine)
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    },
 }
 
 # Feature flags — se activan cuando Rodrigo apruebe condiciones comerciales
