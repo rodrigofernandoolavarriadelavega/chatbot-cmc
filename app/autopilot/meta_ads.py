@@ -158,6 +158,21 @@ def _normalize_insights(row: dict) -> dict:
                     return 0.0
         return 0.0
 
+    def _action_family(arr: list[dict] | None, *keys: str) -> float:
+        """Máximo entre variantes equivalentes de un mismo evento. Meta nombra la
+        conversión de CAPI de varias formas según canal: `purchase`, `omni_purchase`,
+        `offsite_conversion.fct.purchase`. Tomamos el MÁXIMO (no la suma) para no
+        duplicar cuando Meta reporta la variante omni Y la de canal a la vez."""
+        best = 0.0
+        for a in (arr or []):
+            at = a.get("action_type", "")
+            if at in keys or any(at.endswith("." + k) for k in keys):
+                try:
+                    best = max(best, float(a.get("value", 0)))
+                except (TypeError, ValueError):
+                    pass
+        return best
+
     actions = row.get("actions")
     values = row.get("action_values")
     cpa = row.get("cost_per_action_type")
@@ -165,10 +180,12 @@ def _normalize_insights(row: dict) -> dict:
 
     spend = float(row.get("spend", 0) or 0)
     # En CMC los eventos relevantes son Lead (calificado), Schedule (cita) y Purchase (atendido).
-    leads = _action(actions, "lead")
-    schedules = _action(actions, "schedule")
-    purchases = _action(actions, "purchase")
-    purchase_value = _action(values, "purchase")
+    # Match por FAMILIA — Meta los reporta con prefijos distintos según canal
+    # (onsite_conversion.lead, omni_purchase, offsite_conversion.fct.purchase, etc.).
+    leads = _action_family(actions, "lead", "omni_lead")
+    schedules = _action_family(actions, "schedule", "omni_schedule")
+    purchases = _action_family(actions, "purchase", "omni_purchase")
+    purchase_value = _action_family(values, "purchase", "omni_purchase")
 
     # Eventos de mensajería WhatsApp (Click-to-WhatsApp) y de tráfico. Meta los nombra
     # de varias formas según el tipo de campaña; sumamos las variantes conocidas.

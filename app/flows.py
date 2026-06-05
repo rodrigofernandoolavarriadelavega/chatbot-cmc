@@ -45,6 +45,24 @@ from messaging import send_whatsapp
 
 log = logging.getLogger("bot.flows")
 
+
+def _ctwa_clid_for(phone: str) -> str | None:
+    """Recupera el ctwa_clid (Click-to-WhatsApp click-id) del paciente para CAPI.
+
+    Los ads CTWA NO traen `fbclid` (eso es solo para clics web); el click-id nativo
+    es `ctwa_clid`, que se guarda en meta_referrals al llegar el referral. Sin esto,
+    los eventos Lead/Schedule/CompleteRegistration salen con attr=none y Meta no los
+    atribuye a la campaña aunque el clic esté fresco. TTL amplio (90d) porque el ciclo
+    clic→agenda→atención puede exceder los 7d; Meta ignora los fuera de su ventana,
+    enviarlo de más no daña. Devuelve None si el paciente no vino de un ad CTWA.
+    """
+    try:
+        from session import get_meta_referral_fresh as _gmrf_capi
+        return ((_gmrf_capi(phone, ttl_horas=2160) or {}).get("ctwa_clid")) or None
+    except Exception:
+        return None
+
+
 # Dirección canónica del CMC — usar siempre esta constante, no strings hardcodeados.
 _CMC_DIRECCION = "Monsalve 102 (frente a la antigua estación de trenes), Carampangue"
 
@@ -7664,6 +7682,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 phone=phone,
                 fbclid=data.get("fbclid"),
                 fbclid_ts=data.get("fbclid_ts"),
+                ctwa_clid=_ctwa_clid_for(phone),
                 custom_data={
                     "content_name": _lead_esp,
                     "content_category": "appointment_intent",
@@ -8897,6 +8916,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         email=_capi_email,
                         fbclid=data.get("fbclid"),
                         fbclid_ts=data.get("fbclid_ts"),
+                        ctwa_clid=_ctwa_clid_for(phone),
                         custom_data={
                             "content_name": esp,
                             "content_category": "appointment",
@@ -10329,6 +10349,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 email=data.get("reg_email") or None,
                 fbclid=data.get("fbclid"),
                 fbclid_ts=data.get("fbclid_ts"),
+                ctwa_clid=_ctwa_clid_for(phone),
                 custom_data={"registration_method": "whatsapp"},
             ))
         except Exception as _capi_reg_err:
