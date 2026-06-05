@@ -3585,12 +3585,10 @@ def alma_shell(token: str | None = Query(None),
                 .replace("__PROFILE_MODULES__", profile_modules_json)
                 .replace("__PANEL_PROFESIONAL__", panel_profesional))
 
-    if token and _is_admin_token(token):
-        return _render(token)
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return _render(ADMIN_TOKEN)
+    from alma_scope import page_token as _alma_page_token
+    eff = _alma_page_token(token, cmc_session, None)  # shell: solo exige login válido
+    if eff:
+        return _render(eff)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
@@ -3615,15 +3613,12 @@ def agendador_publico_page(request: Request, preview: str | None = Query(None)):
 def alma_agenda_page(token: str | None = Query(None),
                      cmc_session: str | None = Cookie(None)):
     """Modulo nativo Agenda — ver citas del dia y agendar desde Alma."""
-    from admin_routes import _verify_cookie, _is_admin_token
+    from alma_scope import page_token as _alma_page_token
     if not _ALMA_AGENDA_HTML:
         raise HTTPException(404, "Agenda no disponible")
-    if token and _is_admin_token(token):
-        return _ALMA_AGENDA_HTML.replace("__TOKEN__", token)
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return _ALMA_AGENDA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    eff = _alma_page_token(token, cmc_session, "agenda")
+    if eff:
+        return _ALMA_AGENDA_HTML.replace("__TOKEN__", eff)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
@@ -3711,15 +3706,12 @@ def alma_ortodoncia_page(token: str | None = Query(None),
 def alma_kine_page(token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None)):
     """Modulo Profesional: Programa Kinesiología — adherencia, riesgo de abandono, plan de sesiones."""
-    from admin_routes import _verify_cookie, _is_admin_token
+    from alma_scope import page_token as _alma_page_token
     if not _ALMA_KINE_HTML:
         raise HTTPException(404, "Kine no disponible")
-    if token and _is_admin_token(token):
-        return _ALMA_KINE_HTML.replace("__TOKEN__", token)
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return _ALMA_KINE_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    eff = _alma_page_token(token, cmc_session, "kine")
+    if eff:
+        return _ALMA_KINE_HTML.replace("__TOKEN__", eff)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

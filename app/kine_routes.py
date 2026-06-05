@@ -59,23 +59,12 @@ PLAN_DEFAULT       = 0    # 0 = sin plan prescrito (analítica solo por conducta
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
-def _require_admin(request: Request, token: str | None, cmc_session: str | None) -> str:
-    import hmac as _hmac
-    from config import ADMIN_TOKEN
-    from admin_routes import _verify_cookie
-
-    auth_header = (request.headers.get("authorization", "") if request else "")
-    if auth_header.lower().startswith("bearer "):
-        tk = auth_header.split(None, 1)[1].strip()
-        if _hmac.compare_digest(tk, ADMIN_TOKEN):
-            return tk
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return ADMIN_TOKEN
-    if token and _hmac.compare_digest(token, ADMIN_TOKEN):
-        return token
-    raise HTTPException(status_code=401, detail="Token inválido")
+def _require_admin(request: Request, token: str | None,
+                   cmc_session: str | None) -> tuple[str, int | None]:
+    """(token_efectivo, scope_profesional). scope None = ve todo el programa;
+    int = un kinesiólogo viendo solo SUS pacientes. Delega en alma_scope."""
+    from alma_scope import resolve
+    return resolve(request, token, cmc_session, "kine")
 
 
 # ── Capa de gestión propia (sessions.db) ────────────────────────────────────
@@ -108,10 +97,15 @@ def _planes() -> dict[int, dict]:
 # Cada pago de kinesiología = una sesión; la clasificación por días la hace _compute.
 # Identidad (nombre/teléfono/localidad) y nombre de profesional las resuelve el helper.
 
-def _bi_rows(meses: int) -> tuple[list[dict], str]:
-    """Sesiones de kinesiología desde la caja real (fresca). (rows, status)."""
+def _bi_rows(meses: int, scope_prof: int | None = None) -> tuple[list[dict], str]:
+    """Sesiones de kinesiología desde la caja real (fresca). (rows, status).
+
+    `scope_prof`: si se pasa, acota a un solo kinesiólogo (su perfil ve solo
+    SUS pacientes). None = todos los kine (admin/recepción).
+    """
     from caja_helper import caja_visitas
-    return caja_visitas(KINE_PROF_IDS, meses)
+    ids = (scope_prof,) if scope_prof is not None else KINE_PROF_IDS
+    return caja_visitas(ids, meses)
 
 
 def _today() -> date:
@@ -150,9 +144,12 @@ def _clasificar(dias: int, sesiones: int, plan: dict | None) -> tuple[str, str]:
     return "cerrado", "Episodio cerrado"
 
 
-def _compute(meses: int = 6):
-    """Núcleo: una sola pasada por la BI → dataset completo de pacientes + KPIs."""
-    rows, status = _bi_rows(max(meses, 9))  # ventana ancha para contexto de episodios
+def _compute(meses: int = 6, scope_prof: int | None = None):
+    """Núcleo: una sola pasada por la BI → dataset completo de pacientes + KPIs.
+
+    `scope_prof`: acota a un kinesiólogo (ve solo SUS pacientes). None = todos.
+    """
+    rows, status = _bi_rows(max(meses, 9), scope_prof)  # ventana ancha para contexto de episodios
     planes = _planes()
     today = _today()
 
@@ -248,8 +245,8 @@ async def resumen(meses: int = Query(6, ge=1, le=24),
                   token: str | None = Query(None),
                   cmc_session: str | None = Cookie(None),
                   request: Request = None):
-    _require_admin(request, token, cmc_session)
-    data = _compute(meses)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    data = _compute(meses, scope)
     return {"kpis": data["kpis"], "carga": data["carga"], "source_status": data["source_status"]}
 
 
@@ -259,8 +256,8 @@ async def pacientes(estado: str | None = Query(None, description="filtrar por es
                     token: str | None = Query(None),
                     cmc_session: str | None = Cookie(None),
                     request: Request = None):
-    _require_admin(request, token, cmc_session)
-    data = _compute(meses)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    data = _compute(meses, scope)
     pac = data["pacientes"]
     if estado and estado != "todos":
         pac = [p for p in pac if p["estado"] == estado]
@@ -307,8 +304,8 @@ async def export_csv(meses: int = Query(6, ge=1, le=24),
                      token: str | None = Query(None),
                      cmc_session: str | None = Cookie(None),
                      request: Request = None):
-    _require_admin(request, token, cmc_session)
-    data = _compute(meses)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    data = _compute(meses, scope)
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["Paciente", "Teléfono", "Lugar", "Kinesiólogo", "Sesiones episodio",

@@ -106,6 +106,17 @@ ALMA_PROFILES: dict[str, dict] = {
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
     },
+    # ── Perfiles por profesional (datos acotados a lo suyo) ──────────────────
+    # `profesional_id` = id en Medilink (== bi.dim_profesional.profesional_id).
+    # Su sola presencia activa el scoping: cada módulo filtra a ese profesional.
+    # Kinesiólogos → Agenda + Kine (Programas no cubre kine, esp 3).
+    "cmc_kine_armijo": {
+        "variante": "Luis Armijo · Kinesiología",
+        "modulos": ["agenda", "kine"],
+        "profesional_id": 77,        # Luis Armijo (kine) — ve solo SUS pacientes
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    },
 }
 
 # Feature flags — se activan cuando Rodrigo apruebe condiciones comerciales

@@ -65,23 +65,17 @@ def _require_admin_dep(request: Request,
                        token: str | None = Query(None),
                        authorization: str | None = None,
                        cmc_session: str | None = Cookie(None)) -> str:
-    """Inline auth compatible con require_admin de admin_routes."""
-    import hmac as _hmac
-    from config import ADMIN_TOKEN
-    from admin_routes import _verify_cookie
+    """Auth (compat: devuelve solo el token). Para scoping usar _require_scope."""
+    tk, _scope = _require_scope(request, token, cmc_session)
+    return tk
 
-    auth_header = request.headers.get("authorization", "")
-    if auth_header.lower().startswith("bearer "):
-        tk = auth_header.split(None, 1)[1].strip()
-        if _hmac.compare_digest(tk, ADMIN_TOKEN):
-            return tk
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return ADMIN_TOKEN
-    if token and _hmac.compare_digest(token, ADMIN_TOKEN):
-        return token
-    raise HTTPException(status_code=401, detail="Token inválido")
+
+def _require_scope(request: Request, token: str | None,
+                   cmc_session: str | None) -> tuple[str, int | None]:
+    """(token_efectivo, scope_profesional). scope int = un profesional viendo
+    SOLO su propia agenda; None = recepción/admin ve a todos. Vía alma_scope."""
+    from alma_scope import resolve
+    return resolve(request, token, cmc_session, "agenda")
 
 
 # ── Flujo 1: Agenda del día desde cache local ─────────────────────────────────
@@ -100,7 +94,9 @@ async def get_agenda_dia(
     y actualiza el caché como efecto secundario.
     Cubre fechas pasadas, hoy y futuras.
     """
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    _tok, scope = _require_scope(request, token, cmc_session)
+    if scope is not None:
+        id_prof = scope  # perfil de profesional: forzado a su propia agenda
 
     from medilink import PROFESIONALES, sync_citas_dia
     if id_prof not in PROFESIONALES:
@@ -151,7 +147,9 @@ async def get_slots_disponibles(
     Retorna slots disponibles para UN profesional en una fecha, en vivo a Medilink.
     Usa buscar_slots_dia_por_ids con intervalo del dict PROFESIONALES.
     """
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    _tok, scope = _require_scope(request, token, cmc_session)
+    if scope is not None:
+        id_prof = scope  # perfil de profesional: solo sus propios slots
 
     from medilink import PROFESIONALES, buscar_slots_dia_por_ids
     if id_prof not in PROFESIONALES:
@@ -234,7 +232,7 @@ async def post_crear_cita(
       confirmado: bool  (debe ser true — campo de seguridad anti-accidental)
       origen: str  (opcional) "telefono" | "presencial" | "chat" — canal de llegada del paciente
     """
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    _tok, scope = _require_scope(request, token, cmc_session)
 
     try:
         body = await request.json()
@@ -247,6 +245,8 @@ async def post_crear_cita(
 
     id_paciente = body.get("id_paciente")
     id_profesional = body.get("id_profesional")
+    if scope is not None:
+        id_profesional = scope  # perfil de profesional: solo crea citas para sí mismo
     fecha = body.get("fecha")
     hora_inicio = body.get("hora_inicio")
     hora_fin = body.get("hora_fin")
@@ -450,8 +450,9 @@ async def get_profesionales_lista(
     cmc_session: str | None = Cookie(None),
     request: Request = None,
 ):
-    """Lista todos los profesionales habilitados (para el selector de la UI)."""
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    """Lista los profesionales habilitados (para el selector de la UI).
+    Un perfil de profesional ve solo su propia entrada."""
+    _tok, scope = _require_scope(request, token, cmc_session)
 
     from medilink import PROFESIONALES
     profs = [
@@ -462,5 +463,6 @@ async def get_profesionales_lista(
             "intervalo": info["intervalo"],
         }
         for id_p, info in sorted(PROFESIONALES.items(), key=lambda x: x[1]["nombre"])
+        if scope is None or id_p == scope
     ]
     return {"profesionales": profs}
