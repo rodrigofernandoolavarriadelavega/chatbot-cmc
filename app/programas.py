@@ -337,12 +337,15 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
     ventana_6m = today.toordinal() - meses * 30
     pacientes, ingreso_total = [], 0.0
     sesiones_por_episodio = []
+    atendidos_mes = 0  # pacientes distintos con ≥1 visita en el mes calendario actual
     n_atenciones = sum(len(d["fechas"]) for d in porpac.values())
 
     for pid, d in porpac.items():
         fechas = sorted(set(d["fechas"]))
         if not fechas:
             continue
+        if any(f.year == today.year and f.month == today.month for f in fechas):
+            atendidos_mes += 1
         last = fechas[-1]
         dias = (today - last).days
         plan = planes.get(pid)
@@ -371,9 +374,11 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
             "notas": (plan or {}).get("notas", ""),
         })
 
+    # Orden: del control/atención más reciente al de hace más tiempo
+    # (menos días sin visita primero). Estado como desempate secundario.
     prio = {"vencido": 0, "riesgo": 0, "abandono": 1, "pronto": 1,
             "en_curso": 2, "al_dia": 2, "completado": 3, "alta": 4, "no_contactar": 5, "cerrado": 6}
-    pacientes.sort(key=lambda p: (prio.get(p["estado"], 9), -p["dias_sin_visita"]))
+    pacientes.sort(key=lambda p: (p["dias_sin_visita"], prio.get(p["estado"], 9)))
 
     acc = ACCIONABLES[tipo]
     accionables = [p for p in pacientes if p["estado"] in acc]
@@ -401,6 +406,7 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
         "metric_label": metric_label, "metric_val": metric_val,
         "ingreso": round(ingreso_total), "n_pacientes": len(pacientes),
         "ticket_prom": round(ticket_prom), "valor_recuperable": valor_recuperable,
+        "atendidos_mes": atendidos_mes,
     }
     return {"kpis": kpis, "pacientes": pacientes, "cfg": cfg, "source_status": status}
 

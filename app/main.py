@@ -3734,10 +3734,13 @@ def alma_programas_page(token: str | None = Query(None),
         raise HTTPException(404, "Programas no disponible")
     eff = _alma_page_token(token, cmc_session, "programas")
     if eff:
-        scoped = "true" if _prof_id_of(eff) else "false"  # perfil de profesional → vista acotada
+        pid = _prof_id_of(eff)
+        scoped = "true" if pid else "false"  # perfil de profesional → vista acotada
+        dash_url = f"/profesional/dashboard?token={_make_prof_token(pid)}" if pid else ""
         return (_ALMA_PROGRAMAS_HTML
                 .replace("__TOKEN__", eff)
-                .replace("__PROG_SCOPED__", scoped))
+                .replace("__PROG_SCOPED__", scoped)
+                .replace("__PROF_DASHBOARD_URL__", dash_url))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
