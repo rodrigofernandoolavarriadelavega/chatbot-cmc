@@ -591,12 +591,12 @@ def pending_list(token: str | None = Query(None), request: Request = None):
     """Acciones de presupuesto esperando OK del dueño + historial reciente."""
     _check_token(token, request)
     from . import approvals
-    import os as _os
+    from .flags import flag_on
     return JSONResponse({
         "pending": approvals.list_pending(),
         "recent": approvals.list_recent(30),
-        "enabled": _os.getenv("AUTOPILOT_ENABLED", "false").lower() == "true",
-        "execute": _os.getenv("AUTOPILOT_EXECUTE", "false").lower() == "true",
+        "enabled": flag_on("AUTOPILOT_ENABLED"),
+        "execute": flag_on("AUTOPILOT_EXECUTE"),
     })
 
 

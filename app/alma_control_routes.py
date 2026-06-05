@@ -74,6 +74,15 @@ def _build_map() -> dict:
     def is_over(flag: str) -> bool:
         return flag in overrides
 
+    def _ap_flag(name: str) -> bool:
+        # Valor efectivo de un flag del Autopilot (switchboard > env), mismo helper
+        # que usa el Autopilot, para que panel y motor muestren/usen lo mismo.
+        try:
+            from autopilot.flags import flag_on
+            return flag_on(name)
+        except Exception:
+            return False
+
     # --- Maestros (conmutables) ---
     from alma_agents import guardrails
     fs = guardrails.fleet_status()
@@ -89,6 +98,16 @@ def _build_map() -> dict:
          "value": sb.effective("ALMA_OPERATIVA_ENABLED",
                                __import__("os").getenv("ALMA_OPERATIVA_ENABLED", "false").lower() in ("true", "1", "yes")),
          "overridden": is_over("ALMA_OPERATIVA_ENABLED")},
+        # --- Autopilot Meta Ads (cerebro de marketing) ---
+        {"flag": "AUTOPILOT_ENABLED", "label": "Autopilot: motor de Meta Ads",
+         "descr": "El motor analiza campañas (CAC real) y ENCOLA propuestas de presupuesto. Sin esto no propone nada.",
+         "value": _ap_flag("AUTOPILOT_ENABLED"), "overridden": is_over("AUTOPILOT_ENABLED")},
+        {"flag": "AUTOPILOT_EXECUTE", "label": "Autopilot: aplicar a Meta (vs simular)",
+         "descr": "Apagado = simula los cambios. Encendido = escribe presupuestos reales en Meta (tras tu aprobación).",
+         "value": _ap_flag("AUTOPILOT_EXECUTE"), "overridden": is_over("AUTOPILOT_EXECUTE")},
+        {"flag": "AUTOPILOT_AUTOAPPLY", "label": "Autopilot: auto-aplicar (Fase 3)",
+         "descr": "Aplica los movimientos de plata de ALTA confianza sin esperar tu OK. OJO: no prendas esto y el agente 'ads_executor' de la flota a la vez (doble acción sobre las mismas campañas).",
+         "value": _ap_flag("AUTOPILOT_AUTOAPPLY"), "overridden": is_over("AUTOPILOT_AUTOAPPLY")},
     ]
 
     # --- Candados legales (solo lectura) ---
@@ -174,7 +193,8 @@ def _build_map() -> dict:
 # ── flags conmutables (whitelist auto-derivada) ──────────────────────────────
 
 def _toggleable_flags() -> set[str]:
-    flags = {"ALMA_AGENTS_ENABLED", "ALMA_AGENTS_EXECUTE", "ALMA_OPERATIVA_ENABLED"}
+    flags = {"ALMA_AGENTS_ENABLED", "ALMA_AGENTS_EXECUTE", "ALMA_OPERATIVA_ENABLED",
+             "AUTOPILOT_ENABLED", "AUTOPILOT_EXECUTE", "AUTOPILOT_AUTOAPPLY"}
     try:
         from alma_agents import registry
         flags |= {a.flag for a in registry.all_agents().values()}

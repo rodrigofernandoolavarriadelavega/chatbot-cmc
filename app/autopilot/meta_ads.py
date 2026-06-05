@@ -11,6 +11,7 @@ en su servidor. Aquí solo los leemos.
 """
 import logging
 import os
+from .flags import flag_on
 from typing import Any
 
 import httpx
@@ -36,7 +37,7 @@ def _token() -> str:
 
 def _execute_enabled() -> bool:
     """Master kill-switch de escritura. False en Fase 0/1."""
-    return os.getenv("AUTOPILOT_EXECUTE", "false").lower() == "true"
+    return flag_on("AUTOPILOT_EXECUTE")
 
 
 # ── Lectura ──────────────────────────────────────────────────────────────────
