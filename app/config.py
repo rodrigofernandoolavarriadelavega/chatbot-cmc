@@ -78,6 +78,9 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "tareas":      {"label": "Tareas",           "icon": "listcheck", "title": "Tareas del equipo",              "sub": "Pendientes · asignación · vencimientos",           "src": "/alma/tareas"},
     "liquidaciones":{"label": "Liquidaciones",  "icon": "coins",     "title": "Liquidaciones de honorarios",    "sub": "Producción × % · pagado/pendiente por profesional","src": "/alma/liquidaciones"},
     "branding":    {"label": "Brand Board",      "icon": "palette",   "title": "Brand Board — Alma",             "sub": "Identidad visual · sistema de diseño Alma",        "src": "/alma/branding"},
+    # Módulo externo (app standalone alma-print). src configurable por env para no
+    # incrustar la llave en git; por defecto sin token (se pega una vez en el PC).
+    "impresion":   {"label": "Impresión",        "icon": "printer",   "title": "Impresión — imprimir en recepción", "sub": "Manda PDF/imágenes a la impresora del centro",  "src": os.getenv("ALMA_PRINT_URL", "https://print.agentecmc.cl/")},
 }
 
 # ── Mapa de perfiles Alma: token → {variante, modulos, boxes_financiero} ────────
@@ -98,7 +101,7 @@ ALMA_PROFILES: dict[str, dict] = {
     },
     "cmc_admin_2026": {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "agenda", "pagos", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a cmc_admin_olacore
+        "modulos": ["panel", "panel2", "agenda", "pagos", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a cmc_admin_olacore
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
