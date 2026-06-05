@@ -7120,14 +7120,49 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             and any(k in tl_norm_slot for k in _PROC_KW)
             and len(tl_norm_slot) >= 5
         ):
-            # Construir respuesta contextual
+            # FIX exactitud médica: NO atribuir eco ginecológica/obstétrica a David
+            # Pardo. Routing real: transvaginal/pélvica/ovarios/útero → Dr. Tirso
+            # Rejón (Ginecología); mamaria/abdominal/partes blandas → David Pardo
+            # (Ecografía); obstétrica de embarazo → NO se realiza en el CMC.
+            _GINECO_KW_SLOT = ("transvaginal", "transvajinal", "intravaginal",
+                               "endovaginal", "pelvica", "pélvica", "obstetrica",
+                               "obstétrica", "ovario", "utero", "útero")
+            _pidio_gineco = any(k in tl_norm_slot for k in _GINECO_KW_SLOT)
+            _slot_es_eco = "ecograf" in _esp_slot_activo
+            _slot_es_gineco = "ginec" in _esp_slot_activo
+
+            # Caso crítico: pide eco GINECOLÓGICA pero el slot activo es de Pardo
+            # (Ecografía) → él NO la hace. Redirigir a Ginecología en vez de ofrecer
+            # confirmar una hora equivocada.
+            if _pidio_gineco and _slot_es_eco:
+                log_event(phone, "eco_gineco_redirect_pardo_a_rejon", {"texto": tl_norm_slot[:80]})
+                return await _iniciar_agendar(
+                    phone, {}, "Ginecología",
+                    saludo_prefix=(
+                        "La ecografía *ginecológica* (transvaginal/pélvica) la realiza "
+                        "el *Dr. Tirso Rejón* en *Ginecología* ($35.000), no David "
+                        "Pardo. La eco *obstétrica* de embarazo no se realiza en el "
+                        "CMC.\n\nTe busco hora con el Dr. Rejón 👇"
+                    ),
+                )
+
+            # El slot activo SÍ corresponde a lo que pide. Descripción específica
+            # por especialidad (sin mezclar ámbitos).
             _proc_slot = todos_slots[0] if todos_slots else {}
             _prof_slot = _proc_slot.get("profesional", "el profesional")
             _esp_slot_disp = _proc_slot.get("especialidad", "").capitalize() or especialidad.capitalize()
             _precio_proc = _precio_line(_esp_slot_activo) or ""
+            if _slot_es_gineco:
+                _incluye = ("incluyendo ecografías ginecológicas (transvaginal y "
+                            "pélvica). La eco obstétrica de embarazo no se realiza en el CMC.")
+            elif _slot_es_eco:
+                _incluye = ("incluyendo ecografías generales: abdominal, mamaria, "
+                            "tiroidea, renal y de partes blandas.")
+            else:
+                _incluye = ""
             _resp_proc = (
-                f"*{_prof_slot}* atiende {_esp_slot_disp} en el CMC, "
-                f"incluyendo ecografías transvaginales, pélvicas y obstétricas."
+                f"*{_prof_slot}* atiende {_esp_slot_disp} en el CMC"
+                + (f", {_incluye}" if _incluye else ".")
                 + (f"\n{_precio_proc}" if _precio_proc else "")
             )
             save_session(phone, "WAIT_SLOT", data)
