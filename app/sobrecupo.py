@@ -187,7 +187,14 @@ async def generar_slots(especialidad: str, dias_horizonte: int = 10) -> list[dic
             if (_min_to_h(t), 3) not in usados:
                 capa3.append(_slot(t, 3))
             t += cad3
-        out = capa2 + capa3                 # capa 2 primero (prioridad)
+        # Mostrar capa 2 Y capa 3 JUNTAS, ordenadas por hora (no capa2 en bloque). Así
+        # el paciente ve todos los horarios disponibles cronológicos; cuando capa 2 de
+        # una hora ya está tomada, esa misma hora sigue ofreciéndose vía capa 3. Dedup
+        # por hora (capa 2 gana en la asignación, por eso va primero en el merge).
+        by_hora: dict = {}
+        for s in capa2 + capa3:             # capa 2 primero → gana el dedup por hora
+            by_hora.setdefault(s["hora_inicio"], s)
+        out = sorted(by_hora.values(), key=lambda s: s["hora_inicio"])
         if out:
             return out                      # primer día con sobrecupos disponibles
     return []
