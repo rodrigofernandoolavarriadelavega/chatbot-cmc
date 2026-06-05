@@ -12707,6 +12707,32 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             todos = _todos_f
             if not mejor or not _slot_en_franja(mejor):
                 mejor = _todos_f[0]
+    # SOBRECUPO en la PRIMERA oferta: si la especialidad sobrecupea (eco) y la hora
+    # formal está LEJOS, anteponer cupos cercanos ANTES de persistir/mostrar, para no
+    # perder al paciente. Sin esto la 1ª oferta mostraba el formal lejano (caso real:
+    # paciente con dolor recibió el martes 16 en vez del sobrecupo del lunes 8; la
+    # inyección de WAIT_SLOT recién entraba en el render siguiente). Se actualiza mejor +
+    # smart_sugerido + todos para que el mensaje, data["slots"] y "Sí, esa hora" usen el
+    # sobrecupo. Inerte salvo SOBRECUPO_ENABLED=true (generar_slots → []).
+    if not any(s.get("sobrecupo") for s in todos):
+        try:
+            import sobrecupo as _sc_first
+            _sobres_first = await _sc_first.generar_slots(especialidad_lower)
+            if _sobres_first:
+                from medilink import _fmt_fecha as _ff_first
+                _mejor_fecha = (mejor or {}).get("fecha", "9999-99-99") if mejor else "9999-99-99"
+                _cercanos = [s for s in _sobres_first if s.get("fecha", "9999") < _mejor_fecha]
+                if _cercanos:
+                    for _s in _cercanos:
+                        _s.setdefault("fecha_display", _ff_first(_s["fecha"]))
+                    todos = _cercanos + todos
+                    smart_sugerido = _cercanos + smart_sugerido
+                    mejor = _cercanos[0]
+                    log_event(phone, "sobrecupo_primera_oferta",
+                              {"esp": especialidad_lower, "fecha": mejor.get("fecha")})
+        except Exception as _e_scf:  # noqa: BLE001 — nunca romper el agendamiento
+            log.warning("sobrecupo primera oferta falló: %s", _e_scf)
+
     data.update({"especialidad": especialidad_lower, "slots": smart_sugerido,
                  "todos_slots": todos, "fechas_vistas": [fecha],
                  "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
