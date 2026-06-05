@@ -34,10 +34,12 @@ def _especialidades() -> set:
 
 
 def _max_dia() -> int:
+    # Con el 2º tecnólogo, se sobrecupea EN CADA atención de David → tope alto
+    # (≈ una jornada completa). Ajustable por env.
     try:
-        return int(os.getenv("SOBRECUPO_MAX_DIA", "4"))
+        return int(os.getenv("SOBRECUPO_MAX_DIA", "30"))
     except (TypeError, ValueError):
-        return 4
+        return 30
 
 
 def _cadencia_min() -> int:
@@ -124,9 +126,11 @@ async def generar_slots(especialidad: str, dias_horizonte: int = 10) -> list[dic
     cad = _cadencia_min()
     tope = _max_dia()
 
-    # Busca el próximo día con CITAS (= día que David trabaja y hay demanda). Ofrece
-    # sobrecupos "por medio" a `cad` min a lo largo de su jornada de ese día, doblando
-    # su grilla. Salta el día de hoy (no sobrecupear para hoy mismo).
+    # David Pardo ahora viene con un SEGUNDO tecnólogo médico → atienden en paralelo.
+    # Por eso se abre un sobrecupo EN CADA ATENCIÓN que tiene David (el 2º técnico toma
+    # la misma hora), no "por medio". Generamos un sobrecupo por cada hora ocupada de su
+    # jornada (la que el 2º técnico puede espejar), hasta el tope diario, restando los ya
+    # creados. Salta hoy. (`cad` queda sin uso: ahora se espeja la grilla real.)
     for d in range(1, dias_horizonte + 1):
         dia = hoy + timedelta(days=d)
         fecha = dia.strftime("%Y-%m-%d")
@@ -141,15 +145,20 @@ async def generar_slots(especialidad: str, dias_horizonte: int = 10) -> list[dic
             continue
         usados = _ocupados(id_prof, fecha)
         try:
-            mins = sorted(M._h_to_min(h) for h in ocup)
+            ocup_min = {M._h_to_min(h) for h in ocup}
         except Exception:  # noqa: BLE001
             continue
-        t0, t1 = mins[0], mins[-1]         # span de su jornada (primera→última cita)
+        # _get_horas_ocupadas expande cada cita a marcas finas (cada 5 min). Para tener
+        # UNA sobrecupo por ATENCIÓN real, recorremos la jornada al intervalo de David
+        # (15 min) y ofrecemos donde tiene un paciente (el 2º técnico lo espeja).
+        t0, t1 = min(ocup_min), max(ocup_min)
         out: list[dict] = []
         t = t0
         while t <= t1 and (ya + len(out)) < tope:
             hora = _min_to_h(t)
-            if hora not in usados:
+            # ¿hay atención en este bloque? (alguna marca ocupada dentro del intervalo)
+            ocupado_aqui = any((t <= mm < t + intervalo) for mm in ocup_min)
+            if ocupado_aqui and hora not in usados:
                 out.append({
                     "profesional": nombre,
                     "id_profesional": id_prof,
@@ -159,7 +168,7 @@ async def generar_slots(especialidad: str, dias_horizonte: int = 10) -> list[dic
                     "hora_fin": _min_to_h(t + intervalo),
                     "sobrecupo": True,
                 })
-            t += cad
+            t += intervalo
         if out:
             return out                     # primer día con sobrecupos disponibles
     return []
