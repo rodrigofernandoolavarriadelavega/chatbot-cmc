@@ -74,7 +74,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_winback_daily_report,
                   _job_dental_consent_blast,
                   _job_dental_winback,
-                  _job_crosssell_post_dental_ortodoncia)
+                  _job_crosssell_post_dental_ortodoncia,
+                  _job_sync_citas_recepcion)
 import admin_routes
 import portal_routes
 
@@ -291,6 +292,14 @@ async def lifespan(app: FastAPI):
         _job_recordatorios_48h,
         CronTrigger(hour=10, minute=0, timezone=_CLT),
         id="recordatorios_48h",
+        replace_existing=True,
+    )
+    # Piloto recordatorios recepción (Márquez id=13): 08:00 CLT, antes de recordatorios 09:00.
+    # Con RECORDATORIOS_RECEPCION_ENABLED=false (default) termina inmediatamente.
+    scheduler.add_job(
+        _job_sync_citas_recepcion,
+        CronTrigger(hour=8, minute=0, timezone=_CLT),
+        id="sync_citas_recepcion",
         replace_existing=True,
     )
     # Reenganche: cada 5 minutos revisa sesiones abandonadas

@@ -235,6 +235,18 @@ if MEULEN_ASSISTANT_ENABLED and not MEULEN_ASSISTANT_ACTIVE:
 # Poner en True SOLO cuando los templates estén aprobados en Meta Business Manager.
 USE_TEMPLATES = os.getenv("USE_TEMPLATES", "false").lower() in ("true", "1", "yes")
 
+# ── Recordatorios para citas agendadas por recepción (piloto Márquez id=13) ────
+# Con RECORDATORIOS_RECEPCION_ENABLED=false (default) el comportamiento es
+# idéntico al actual — cero mensajes adicionales, cero cambio observable.
+RECORDATORIOS_RECEPCION_ENABLED: bool = (
+    os.getenv("RECORDATORIOS_RECEPCION_ENABLED", "false").lower() in ("true", "1", "yes")
+)
+# IDs de profesional habilitados. Formato env: "13" o "13,73".
+_rr_ids_raw = os.getenv("RECORDATORIOS_RECEPCION_PROF_IDS", "13")
+RECORDATORIOS_RECEPCION_PROF_IDS: list[int] = [
+    int(x.strip()) for x in _rr_ids_raw.split(",") if x.strip().isdigit()
+]
+
 # Google Analytics Data API — para mostrar métricas web en el panel admin.
 # GA4_PROPERTY_ID: solo el número (ej: "529028500")
 # GA4_CREDENTIALS_PATH: ruta al JSON de la cuenta de servicio

@@ -7,7 +7,7 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from config import USE_TEMPLATES, ADMIN_ALERT_PHONE
+from config import USE_TEMPLATES, ADMIN_ALERT_PHONE, RECORDATORIOS_RECEPCION_ENABLED
 from messaging import render_template_body
 from session import (
     get_citas_bot_pendientes,
@@ -22,6 +22,12 @@ from session import (
     mark_waitlist_notified,
     log_message,
     log_event,
+    get_citas_recepcion_pendientes_24h,
+    get_citas_recepcion_pendientes_2h,
+    get_citas_recepcion_pendientes_48h,
+    mark_recepcion_reminder_24h_sent,
+    mark_recepcion_reminder_2h_sent,
+    mark_recepcion_reminder_48h_sent,
 )
 from medilink import get_cita, cita_esta_confirmada
 
@@ -631,3 +637,251 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
                      phone, id_cita, motivo_log)
         except Exception as e:
             log.error("Error recordatorio 48h cita_id=%s: %s", cita.get("id"), e)
+
+    if enviados:
+        log.info("Recordatorios 48h: %d enviados", enviados)
+
+
+# ── Recordatorios para citas agendadas por recepción (piloto Márquez id=13) ──
+
+def _guard_recepcion(fn_name: str) -> bool:
+    if not RECORDATORIOS_RECEPCION_ENABLED:
+        log.debug("%s: RECORDATORIOS_RECEPCION_ENABLED=false → skip", fn_name)
+        return False
+    return True
+
+
+async def enviar_recordatorios_recepcion_24h(
+    send_text_fn,
+    send_interactive_fn=None,
+    send_template_fn=None,
+) -> int:
+    """Recordatorio 24h para citas de recepción. Gate: RECORDATORIOS_RECEPCION_ENABLED."""
+    if not _guard_recepcion("enviar_recordatorios_recepcion_24h"):
+        return 0
+
+    manana = (datetime.now(_TZ_CL).date() + timedelta(days=1)).isoformat()
+    citas = get_citas_recepcion_pendientes_24h(manana)
+    if not citas:
+        log.info("Recordatorios recepción 24h: sin citas para %s", manana)
+        return 0
+
+    enviados = 0
+    for cita in citas:
+        phone   = cita.get("phone")
+        if not phone:
+            continue
+        id_cita = cita["id_cita_medilink"]
+        try:
+            cita_ml = await get_cita(int(id_cita))
+            if cita_ml is None or cita_ml.get("id_estado") == 1 or cita_ml.get("estado_anulacion") == 1:
+                log.info("Recepción 24h: cita %s anulada/no existe en Medilink, skip", id_cita)
+                mark_recepcion_reminder_24h_sent(cita["id"])
+                continue
+        except Exception as e:
+            log.warning("Recepción 24h: pre-validación id=%s falló: %s — skip", id_cita, e)
+            continue
+
+        nombre = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+        esp    = cita.get("especialidad", "")
+        prof   = cita.get("profesional", "")
+        fecha_display = _fmt_fecha_display(cita["fecha"])
+        hora   = _fmt_hora(cita["hora"])
+
+        try:
+            last_in = get_last_inbound_ts(phone)
+            _now_utc = datetime.now(timezone.utc)
+            _window_open = (
+                last_in is not None
+                and (_now_utc - last_in).total_seconds() < 86400
+            )
+            if _window_open and send_interactive_fn:
+                _rec = {
+                    "id_cita": id_cita, "especialidad": esp, "profesional": prof,
+                    "fecha": cita["fecha"], "hora": cita["hora"], "modalidad": "particular",
+                    "paciente_nombre": nombre, "phone_owner": None, "es_tercero": 0,
+                }
+                await send_interactive_fn(phone, _interactive_recordatorio(_rec))
+                log.info("Recepción 24h (service_window) → %s id_cita=%s", phone[:8] + "***", id_cita)
+            elif USE_TEMPLATES and send_template_fn:
+                await send_template_fn(
+                    phone, "recordatorio_cita",
+                    body_params=[nombre, esp, prof, fecha_display, hora, "Particular"],
+                    button_payloads=[f"cita_confirm:{id_cita}",
+                                     f"cita_reagendar:{id_cita}",
+                                     f"cita_cancelar:{id_cita}"],
+                )
+                log_event(phone, "template_enviado", {
+                    "template": "recordatorio_cita", "id_cita": id_cita, "origen": "recepcion",
+                })
+                log.info("Recepción 24h (template) → %s id_cita=%s", phone[:8] + "***", id_cita)
+            elif send_interactive_fn:
+                _rec = {
+                    "id_cita": id_cita, "especialidad": esp, "profesional": prof,
+                    "fecha": cita["fecha"], "hora": cita["hora"], "modalidad": "particular",
+                    "paciente_nombre": nombre, "phone_owner": None, "es_tercero": 0,
+                }
+                await send_interactive_fn(phone, _interactive_recordatorio(_rec))
+                log.info("Recepción 24h (interactive) → %s id_cita=%s", phone[:8] + "***", id_cita)
+            else:
+                await send_text_fn(
+                    phone,
+                    f"Hola {nombre} te recordamos tu cita en el *Centro Médico Carampangue*:\n\n"
+                    f"*{esp}* — {prof}\n"
+                    f"*{fecha_display}* a las *{hora}*\n"
+                    "📍 Monsalve esquina República, Carampangue\n\n"
+                    "Recuerda llegar 15 minutos antes con tu cédula de identidad.\n\n"
+                    "¿Confirmas tu asistencia? Responde *SÍ* o *NO*.",
+                )
+                log.info("Recepción 24h (texto) → %s id_cita=%s", phone[:8] + "***", id_cita)
+
+            log_message(phone, "out",
+                        f"[Recordatorio recepción 24h] {esp} con {prof} — {fecha_display} a las {hora}",
+                        "IDLE")
+            mark_recepcion_reminder_24h_sent(cita["id"])
+            log_event(phone, "recordatorio_recepcion_24h_enviado", {
+                "id_cita": id_cita, "id_profesional": cita["id_profesional"],
+            })
+            enviados += 1
+        except Exception as e:
+            log.error("Error recordatorio recepción 24h id_cita=%s: %s", id_cita, e)
+
+    log.info("Recordatorios recepción 24h: %d enviados para %s", enviados, manana)
+    return enviados
+
+
+async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None) -> int:
+    """Recordatorio 2h para citas de recepción. Gate: RECORDATORIOS_RECEPCION_ENABLED."""
+    if not _guard_recepcion("enviar_recordatorios_recepcion_2h"):
+        return 0
+
+    now_cl    = datetime.now(_TZ_CL)
+    fecha_hoy = now_cl.date().isoformat()
+    hora_min  = (now_cl - timedelta(minutes=15)).strftime("%H:%M")
+    hora_max  = (now_cl + timedelta(minutes=15)).strftime("%H:%M")
+
+    citas = get_citas_recepcion_pendientes_2h(fecha_hoy, hora_min, hora_max)
+    if not citas:
+        return 0
+
+    enviados = 0
+    for cita in citas:
+        phone   = cita.get("phone")
+        if not phone:
+            continue
+        id_cita = cita["id_cita_medilink"]
+        nombre  = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+        esp     = cita.get("especialidad", "")
+        prof    = cita.get("profesional", "")
+        hora    = _fmt_hora(cita["hora"])
+
+        try:
+            last_in = get_last_inbound_ts(phone)
+            _now_utc = datetime.now(timezone.utc)
+            _window_open = (
+                last_in is not None and (_now_utc - last_in).total_seconds() < 86400
+            )
+            if _window_open:
+                await send_text_fn(
+                    phone,
+                    f"Recuerda {nombre}, tienes una cita *hoy a las {hora}* con "
+                    f"*{prof}* ({esp}) en el Centro Médico Carampangue.\n"
+                    "📍 Monsalve esquina República. ¡Te esperamos!",
+                )
+            elif USE_TEMPLATES and send_template_fn:
+                fecha_display = _fmt_fecha_display(cita["fecha"])
+                await send_template_fn(phone, "recordatorio_cita_2h",
+                                       body_params=[nombre, esp, prof, fecha_display, hora])
+                log_event(phone, "template_enviado", {
+                    "template": "recordatorio_cita_2h", "id_cita": id_cita, "origen": "recepcion",
+                })
+            else:
+                await send_text_fn(
+                    phone,
+                    f"Recuerda {nombre}, tienes una cita *hoy a las {hora}* con "
+                    f"*{prof}* ({esp}) en el Centro Médico Carampangue.\n"
+                    "📍 Monsalve esquina República. ¡Te esperamos!",
+                )
+
+            log_message(phone, "out",
+                        f"[Recordatorio recepción 2h] {esp} — hoy a las {hora}", "IDLE")
+            mark_recepcion_reminder_2h_sent(cita["id"])
+            log_event(phone, "recordatorio_recepcion_2h_enviado", {
+                "id_cita": id_cita, "id_profesional": cita["id_profesional"],
+            })
+            enviados += 1
+            log.info("Recepción 2h enviado → %s id_cita=%s", phone[:8] + "***", id_cita)
+        except Exception as e:
+            log.error("Error recordatorio recepción 2h id_cita=%s: %s", id_cita, e)
+
+    if enviados:
+        log.info("Recordatorios recepción 2h: %d enviados", enviados)
+    return enviados
+
+
+async def enviar_recordatorios_recepcion_48h(send_text_fn, send_interactive_fn=None) -> int:
+    """Recordatorio 48h para citas de recepción. Gate: RECORDATORIOS_RECEPCION_ENABLED."""
+    if not _guard_recepcion("enviar_recordatorios_recepcion_48h"):
+        return 0
+
+    pasado_manana = (datetime.now(_TZ_CL).date() + timedelta(days=2)).isoformat()
+    citas = get_citas_recepcion_pendientes_48h(pasado_manana)
+    if not citas:
+        return 0
+
+    enviados = 0
+    for cita in citas:
+        phone   = cita.get("phone")
+        if not phone:
+            continue
+        id_cita = cita["id_cita_medilink"]
+        nombre  = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
+        esp     = cita.get("especialidad", "")
+        prof    = cita.get("profesional", "")
+        hora    = _fmt_hora(cita["hora"])
+        fecha_display = _fmt_fecha_display(cita["fecha"])
+
+        # Piloto Márquez: enviamos 48h a todos (el Dr. quiere cobertura máxima)
+        try:
+            if send_interactive_fn:
+                body_txt = (
+                    f"Hola {nombre}, te recordamos con anticipación tu cita:\n\n"
+                    f"*{esp}* — {prof}\n"
+                    f"*{fecha_display}* a las *{hora}*\n"
+                    "Monsalve esquina República, Carampangue\n\n"
+                    "¿Puedes confirmar tu asistencia?"
+                )
+                await send_interactive_fn(phone, {
+                    "type": "button",
+                    "body": {"text": body_txt},
+                    "action": {"buttons": [
+                        {"type": "reply", "reply": {"id": f"cita_confirm:{id_cita}", "title": "Confirmo"}},
+                        {"type": "reply", "reply": {"id": f"cita_reagendar:{id_cita}", "title": "Cambiar hora"}},
+                        {"type": "reply", "reply": {"id": f"cita_cancelar:{id_cita}", "title": "No podre ir"}},
+                    ]},
+                })
+            else:
+                await send_text_fn(
+                    phone,
+                    f"Hola {nombre}, te recordamos tu próxima cita:\n\n"
+                    f"*{esp}* — {prof}\n"
+                    f"*{fecha_display}* a las *{hora}*\n"
+                    "Monsalve esquina República, Carampangue\n\n"
+                    "Por favor confirma tu asistencia respondiendo *SÍ* o *NO*.",
+                )
+
+            log_message(phone, "out",
+                        f"[Recordatorio recepción 48h] {esp} con {prof} — {fecha_display} a las {hora}",
+                        "IDLE")
+            mark_recepcion_reminder_48h_sent(cita["id"])
+            log_event(phone, "recordatorio_recepcion_48h_enviado", {
+                "id_cita": id_cita, "id_profesional": cita["id_profesional"],
+            })
+            enviados += 1
+            log.info("Recepción 48h enviado → %s id_cita=%s", phone[:8] + "***", id_cita)
+        except Exception as e:
+            log.error("Error recordatorio recepción 48h id_cita=%s: %s", id_cita, e)
+
+    if enviados:
+        log.info("Recordatorios recepción 48h: %d enviados", enviados)
+    return enviados

@@ -257,6 +257,34 @@ def _run_ddl_inline(conn) -> None:
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cache_fecha ON citas_cache(fecha)")
+    # ── Recordatorios de citas agendadas por recepción (piloto Márquez id=13) ──
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS citas_recepcion_reminders (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_cita_medilink    INTEGER UNIQUE NOT NULL,
+            id_profesional      INTEGER NOT NULL,
+            id_paciente         INTEGER NOT NULL,
+            paciente_nombre     TEXT    DEFAULT '',
+            especialidad        TEXT    DEFAULT '',
+            profesional         TEXT    DEFAULT '',
+            fecha               TEXT    NOT NULL,
+            hora                TEXT    NOT NULL,
+            phone               TEXT,
+            phone_source        TEXT    DEFAULT 'medilink',
+            synced_at           TEXT    DEFAULT (datetime('now')),
+            reminder_24h_sent   INTEGER DEFAULT 0,
+            reminder_2h_sent    INTEGER DEFAULT 0,
+            reminder_48h_sent   INTEGER DEFAULT 0
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_recepcion_rem_fecha "
+        "ON citas_recepcion_reminders(fecha)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_recepcion_rem_phone "
+        "ON citas_recepcion_reminders(phone)"
+    )
     conn.execute("""
         CREATE TABLE IF NOT EXISTS abarca_atenciones_cache (
             id_cita         INTEGER PRIMARY KEY,
@@ -4114,6 +4142,126 @@ def mark_reminder_48h_sent(row_id: int):
     with _conn() as conn:
         conn.execute(
             "UPDATE citas_bot SET reminder_48h_sent=1 WHERE id=?", (row_id,)
+        )
+        conn.commit()
+
+
+# ── Recordatorios de recepción (citas no agendadas por el bot) ───────────────
+
+def upsert_citas_recepcion(citas: list[dict]) -> int:
+    """Inserta/actualiza citas en citas_recepcion_reminders.
+    Omite citas que ya están en citas_bot (anti-doble-recordatorio).
+    Retorna cantidad de filas insertadas/actualizadas."""
+    if not citas:
+        return 0
+    inserted = 0
+    with _conn() as conn:
+        for c in citas:
+            id_cita = c["id_cita_medilink"]
+            ya_en_bot = conn.execute(
+                "SELECT 1 FROM citas_bot WHERE id_cita=? LIMIT 1", (str(id_cita),)
+            ).fetchone()
+            if ya_en_bot:
+                continue
+            conn.execute(
+                """INSERT INTO citas_recepcion_reminders
+                       (id_cita_medilink, id_profesional, id_paciente,
+                        paciente_nombre, especialidad, profesional,
+                        fecha, hora, phone, phone_source, synced_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                   ON CONFLICT(id_cita_medilink) DO UPDATE SET
+                       paciente_nombre = excluded.paciente_nombre,
+                       phone           = excluded.phone,
+                       phone_source    = excluded.phone_source,
+                       synced_at       = excluded.synced_at""",
+                (
+                    id_cita,
+                    c["id_profesional"],
+                    c["id_paciente"],
+                    c.get("paciente_nombre", ""),
+                    c.get("especialidad", ""),
+                    c.get("profesional", ""),
+                    c["fecha"],
+                    c["hora"],
+                    c.get("phone"),
+                    c.get("phone_source", "medilink"),
+                ),
+            )
+            inserted += 1
+        conn.commit()
+    return inserted
+
+
+def get_citas_recepcion_pendientes_24h(fecha: str) -> list[dict]:
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT * FROM citas_recepcion_reminders
+               WHERE fecha = ? AND reminder_24h_sent = 0
+                 AND phone IS NOT NULL AND phone != ''""",
+            (fecha,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_citas_recepcion_pendientes_2h(fecha: str, hora_min: str, hora_max: str) -> list[dict]:
+    """Atómico: marca como enviado dentro de la misma transacción."""
+    with _conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            rows = conn.execute(
+                """SELECT * FROM citas_recepcion_reminders
+                   WHERE fecha = ? AND hora >= ? AND hora <= ?
+                     AND reminder_2h_sent = 0
+                     AND phone IS NOT NULL AND phone != ''""",
+                (fecha, hora_min, hora_max),
+            ).fetchall()
+            citas = [dict(r) for r in rows]
+            if citas:
+                ids = [r["id"] for r in citas]
+                placeholders = ",".join("?" for _ in ids)
+                conn.execute(
+                    f"UPDATE citas_recepcion_reminders "
+                    f"SET reminder_2h_sent=1 WHERE id IN ({placeholders})",
+                    ids,
+                )
+            conn.commit()
+            return citas
+        except Exception:
+            conn.rollback()
+            raise
+
+
+def get_citas_recepcion_pendientes_48h(fecha: str) -> list[dict]:
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT * FROM citas_recepcion_reminders
+               WHERE fecha = ? AND reminder_48h_sent = 0
+                 AND phone IS NOT NULL AND phone != ''""",
+            (fecha,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_recepcion_reminder_24h_sent(row_id: int) -> None:
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE citas_recepcion_reminders SET reminder_24h_sent=1 WHERE id=?", (row_id,)
+        )
+        conn.commit()
+
+
+def mark_recepcion_reminder_2h_sent(row_id: int) -> None:
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE citas_recepcion_reminders SET reminder_2h_sent=1 WHERE id=?", (row_id,)
+        )
+        conn.commit()
+
+
+def mark_recepcion_reminder_48h_sent(row_id: int) -> None:
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE citas_recepcion_reminders SET reminder_48h_sent=1 WHERE id=?", (row_id,)
         )
         conn.commit()
 

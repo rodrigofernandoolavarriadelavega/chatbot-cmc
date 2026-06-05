@@ -3,10 +3,13 @@ import logging
 
 import httpx
 
-from config import MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEMPLATES
+from config import (MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEMPLATES,
+                    RECORDATORIOS_RECEPCION_ENABLED, RECORDATORIOS_RECEPCION_PROF_IDS)
 from messaging import (send_whatsapp, send_whatsapp_interactive, send_instagram, send_messenger,
                        send_whatsapp_template, send_whatsapp_proactive, is_proactive_blocked)
-from reminders import enviar_recordatorios, enviar_recordatorios_2h, enviar_recordatorios_48h
+from reminders import (enviar_recordatorios, enviar_recordatorios_2h, enviar_recordatorios_48h,
+                       enviar_recordatorios_recepcion_24h, enviar_recordatorios_recepcion_2h,
+                       enviar_recordatorios_recepcion_48h)
 from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_seguimiento_postconsulta_dia_anterior,
                           enviar_reactivacion_pacientes,
@@ -26,6 +29,7 @@ from session import (get_sesiones_abandonadas, save_session, log_event, log_mess
                      get_candidatos_horas_vacias, log_horas_vacias_envio,
                      get_horas_vacias_envios_hoy,
                      phone_tiene_solo_citas_canceladas,
+                     upsert_citas_recepcion,
                      _conn as _session_conn)
 from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_reception, mark_reception_notified,
@@ -398,9 +402,23 @@ _tpl = send_whatsapp_template  # alias corto para los wrappers
 
 async def _job_recordatorios():
     await enviar_recordatorios(send_whatsapp_proactive, send_whatsapp_interactive, send_template_fn=_tpl)
+    # Piloto recepción: citas no-bot (si flag activo)
+    try:
+        await enviar_recordatorios_recepcion_24h(
+            send_whatsapp_proactive,
+            send_interactive_fn=send_whatsapp_interactive,
+            send_template_fn=_tpl,
+        )
+    except Exception as e:
+        log.error("_job_recordatorios_recepcion_24h falló: %s", e)
 
 async def _job_recordatorios_2h():
     await enviar_recordatorios_2h(send_whatsapp_proactive, send_template_fn=_tpl)
+    # Piloto recepción: citas no-bot (si flag activo)
+    try:
+        await enviar_recordatorios_recepcion_2h(send_whatsapp_proactive, send_template_fn=_tpl)
+    except Exception as e:
+        log.error("_job_recordatorios_recepcion_2h falló: %s", e)
 
 async def _job_postconsulta():
     try:
@@ -2175,6 +2193,139 @@ async def _job_recordatorios_48h():
         await enviar_recordatorios_48h(send_whatsapp_proactive, send_interactive_fn=send_whatsapp_interactive)
     except Exception as e:
         log.error("_job_recordatorios_48h falló: %s", e)
+    # Piloto recepción: enviar también a citas no-bot (si flag activo)
+    try:
+        await enviar_recordatorios_recepcion_48h(
+            send_whatsapp_proactive, send_interactive_fn=send_whatsapp_interactive
+        )
+    except Exception as e:
+        log.error("_job_recordatorios_recepcion_48h falló: %s", e)
+
+
+async def _job_sync_citas_recepcion():
+    """Descarga citas futuras de Medilink para RECORDATORIOS_RECEPCION_PROF_IDS,
+    resuelve el celular del paciente y puebla citas_recepcion_reminders.
+    Con RECORDATORIOS_RECEPCION_ENABLED=false termina inmediatamente — cero efecto.
+    """
+    if not RECORDATORIOS_RECEPCION_ENABLED:
+        log.debug("_job_sync_citas_recepcion: flag OFF → skip")
+        return
+
+    import asyncio
+    from datetime import date, timedelta as _td
+
+    hoy = date.today()
+    fechas = [(hoy + _td(days=d)).isoformat() for d in range(1, 4)]
+
+    _HEADERS = {
+        "Authorization": f"Bearer {MEDILINK_TOKEN}",
+        "Content-Type":  "application/json",
+        "Accept":        "application/json",
+    }
+
+    import json as _json
+
+    def _q(params: dict) -> str:
+        return _json.dumps(params)
+
+    from config import MEDILINK_SUCURSAL
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        for id_prof in RECORDATORIOS_RECEPCION_PROF_IDS:
+            prof_info    = PROFESIONALES.get(id_prof, {})
+            prof_nombre  = prof_info.get("nombre", f"Prof {id_prof}")
+            especialidad = prof_info.get("especialidad", "Medicina General")
+
+            for fecha in fechas:
+                params = {
+                    "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
+                    "id_profesional":   {"eq": id_prof},
+                    "fecha":            {"eq": fecha},
+                    "estado_anulacion": {"eq": 0},
+                }
+                try:
+                    r = await client.get(
+                        f"{MEDILINK_BASE_URL}/citas",
+                        params={"q": _q(params)},
+                        headers=_HEADERS,
+                    )
+                except httpx.RequestError as e:
+                    log.warning("sync_recepcion prof=%d fecha=%s: %s", id_prof, fecha, e)
+                    continue
+
+                if r.status_code == 429:
+                    log.warning("sync_recepcion prof=%d: 429 Medilink, skip fecha %s", id_prof, fecha)
+                    await asyncio.sleep(30)
+                    continue
+                if r.status_code != 200:
+                    log.warning("sync_recepcion prof=%d fecha=%s: HTTP %d", id_prof, fecha, r.status_code)
+                    continue
+
+                citas_raw = r.json().get("data", [])
+                citas_a_insertar = []
+                for c in citas_raw:
+                    id_pac = c.get("id_paciente")
+                    if not id_pac:
+                        continue
+
+                    # Resolver celular del paciente vía /pacientes/{id}
+                    phone_resuelto = None
+                    phone_source   = "sin_celular"
+                    try:
+                        rp = await client.get(
+                            f"{MEDILINK_BASE_URL}/pacientes/{id_pac}",
+                            headers=_HEADERS,
+                        )
+                        if rp.status_code == 200:
+                            p = rp.json().get("data", {})
+                            if isinstance(p, list):
+                                p = p[0] if p else {}
+                            # Prioridad: celular > telefono_movil > telefono
+                            cel_raw = (
+                                p.get("celular")
+                                or p.get("telefono_movil")
+                                or p.get("telefono")
+                                or ""
+                            )
+                            cel_raw = str(cel_raw).strip().replace(" ", "").replace("-", "")
+                            if cel_raw:
+                                if cel_raw.startswith("+"):
+                                    cel_raw = cel_raw[1:]
+                                if cel_raw.startswith("9") and len(cel_raw) == 9:
+                                    cel_raw = "56" + cel_raw
+                                elif cel_raw.startswith("56") and len(cel_raw) == 11:
+                                    pass
+                                elif len(cel_raw) == 9:
+                                    cel_raw = "56" + cel_raw
+                                if cel_raw.startswith("56") and len(cel_raw) == 11:
+                                    phone_resuelto = cel_raw
+                                    phone_source   = "medilink_celular"
+                    except httpx.RequestError as e:
+                        log.debug("sync_recepcion pac_id=%d celular error: %s", id_pac, e)
+
+                    await asyncio.sleep(0.5)  # anti-429 entre llamadas a /pacientes
+
+                    citas_a_insertar.append({
+                        "id_cita_medilink": c["id"],
+                        "id_profesional":   id_prof,
+                        "id_paciente":      id_pac,
+                        "paciente_nombre":  (c.get("nombre_paciente") or "").strip(),
+                        "especialidad":     especialidad,
+                        "profesional":      prof_nombre,
+                        "fecha":            fecha,
+                        "hora":             (c.get("hora_inicio") or "")[:5],
+                        "phone":            phone_resuelto,
+                        "phone_source":     phone_source,
+                    })
+
+                if citas_a_insertar:
+                    n = upsert_citas_recepcion(citas_a_insertar)
+                    log.info(
+                        "sync_recepcion prof=%d fecha=%s → %d citas, %d upserted",
+                        id_prof, fecha, len(citas_a_insertar), n,
+                    )
+                else:
+                    log.debug("sync_recepcion prof=%d fecha=%s → sin citas", id_prof, fecha)
 
 
 async def _job_crosssell_dx():
