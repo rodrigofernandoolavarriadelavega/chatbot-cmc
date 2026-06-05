@@ -2976,6 +2976,7 @@ _ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8")
 _ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
 _OLACORE_ESTRUCTURA_HTML = (_TEMPLATE_DIR / "olacore_estructura.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_estructura.html").exists() else ""
 _OLACORE_HOLDING_HTML = (_TEMPLATE_DIR / "olacore_holding.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_holding.html").exists() else ""
+_OLACORE_REUNION_HTML = (_TEMPLATE_DIR / "olacore_reunion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_reunion.html").exists() else ""
 # Token dedicado para compartir SOLO los documentos del holding (no da acceso al resto de Alma).
 OLACORE_HOLDING_TOKEN = "olacore_holding_2026"
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
@@ -3775,6 +3776,16 @@ def olacore_holding_page(token: str | None = Query(None)):
     if not _OLACORE_HOLDING_HTML:
         raise HTTPException(404, "Dashboard no disponible")
     return HTMLResponse(_OLACORE_HOLDING_HTML, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/olacore/reunion", response_class=HTMLResponse)
+def olacore_reunion_page(token: str | None = Query(None)):
+    """Hoja de 1 página para la reunión con el contador (gateado)."""
+    if not _olacore_holding_ok(token):
+        raise HTTPException(401, "No autorizado")
+    if not _OLACORE_REUNION_HTML:
+        raise HTTPException(404, "Documento no disponible")
+    return HTMLResponse(_OLACORE_REUNION_HTML, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/anima", include_in_schema=False)

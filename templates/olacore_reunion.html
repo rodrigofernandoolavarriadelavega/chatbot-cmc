@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLACORE · Hoja de reunión con el contador</title>
+<style>
+  :root{--fiordo:#1f3a4d;--cobre:#b5703a;--papel:#fbfaf7;--tinta:#1a2b34;--mute:#5e7079;--linea:#d8e2e7;--verde:#2d7a4f;--rojo:#b3402e;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#eef3f5;color:var(--tinta);font-family:'Inter',-apple-system,sans-serif;font-size:12.5px;line-height:1.45;}
+  .page{max-width:900px;margin:0 auto;background:var(--papel);padding:26px 32px 34px;box-shadow:0 1px 30px rgba(31,58,77,.1);}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--cobre);padding-bottom:10px;margin-bottom:14px;}
+  .brand{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--cobre);font-weight:700;}
+  h1{font-size:19px;margin:3px 0 0;color:var(--fiordo);font-weight:800;}
+  .head .d{font-size:10.5px;color:var(--mute);text-align:right;}
+  .cols{column-count:2;column-gap:26px;}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--cobre);font-weight:800;margin:12px 0 5px;break-after:avoid;}
+  h2:first-child{margin-top:0;}
+  ul{margin:0 0 8px;padding-left:16px;}
+  li{margin:2.5px 0;break-inside:avoid;}
+  .q{color:var(--fiordo);}
+  .estr{background:#fff;border:1px solid var(--linea);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:11.5px;break-inside:avoid;}
+  .estr b{color:var(--fiordo);}
+  .chk li{list-style:none;margin-left:-16px;padding-left:18px;position:relative;}
+  .chk li::before{content:"☐";position:absolute;left:0;color:var(--cobre);font-size:13px;}
+  .foot{margin-top:14px;border-top:1px solid var(--linea);padding-top:9px;font-size:10px;color:var(--mute);}
+  .roja{color:var(--rojo);font-weight:700;}
+  @media print{body{background:#fff}.page{box-shadow:none;max-width:100%;padding:0}@page{margin:1.2cm}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <div><div class="brand">OLACORE · Holding</div><h1>Hoja de reunión con el contador / abogado tributario</h1></div>
+    <div class="d">Llevar a la reunión<br>v1 · jun 2026</div>
+  </div>
+
+  <div class="estr">
+    <b>La estructura que quiero validar:</b> Holding <b>OLACORE SpA</b> arriba; abajo 2 operativas (<b>CMC</b> salud, <b>Meulen</b> retail) en Pro Pyme 14D, y 4 de activos/servicios que les arriendan a valor de mercado: <b>Inmobiliaria</b> (raíces), <b>Flota</b> (vehículos comerciales), <b>Equipamiento Médico</b> (equipos en leasing a CMC) y <b>OLACORE Tech</b> (software). Objetivo: bajar la carga tributaria de forma <b>100% legal y defendible</b> (sustancia real), no eludir.
+  </div>
+
+  <div class="cols">
+
+    <h2>1 · Régimen de cada empresa</h2>
+    <ul class="q">
+      <li>¿CMC y Meulen están en <b>Pro Pyme 14D</b>? ¿Conviene 14D N°3 o <b>Transparente N°8</b> según mis tramos personales?</li>
+      <li>¿Estamos cerca del techo de <b>75.000 UF</b> en alguna? ¿Qué pasa si una crece?</li>
+      <li>¿Aprovechamos la tasa transitoria 12,5% (2025-2027)?</li>
+    </ul>
+
+    <h2>2 · Holding</h2>
+    <ul class="q">
+      <li>¿Cómo aporto las acciones de CMC/Meulen al holding <b>sin costo tributario</b> (reorganización)? ¿Qué <b>razón de negocio</b> documentamos?</li>
+      <li>¿SpA o Ltda para el holding? ¿Y para entrar a la familia?</li>
+      <li>Dividendos entre empresas del grupo: ¿confirmamos que no se vuelven a gravar y difieren mi impuesto personal?</li>
+    </ul>
+
+    <h2>3 · Empresas de activos</h2>
+    <ul class="q">
+      <li>¿A qué <b>valor de mercado</b> fijo los arriendos de Inmobiliaria / Flota / Equipamiento? ¿Necesito tasación?</li>
+      <li>Equipo médico: <b>leasing operativo vs financiero</b>, ¿cuál conviene?</li>
+      <li>Vehículos: ¿cuáles califican como <b>comerciales</b> (Art. 31)? ¿La camioneta de Meulen sí? <span class="roja">(autos personales NO)</span></li>
+    </ul>
+
+    <h2>4 · Créditos e incentivos</h2>
+    <ul class="q">
+      <li><b>Ley I+D (35%)</b> por el software: ¿calificamos? ¿Cómo certificamos con <b>CORFO</b>?</li>
+      <li><b>Art. 33 bis</b> por los equipos comprados: ¿cuánto crédito? ¿se combina con depreciación instantánea?</li>
+      <li><b>Franquicia SENCE</b> por capacitación del equipo.</li>
+      <li><b>Donaciones</b> con beneficio: ¿cuáles y con qué tope?</li>
+    </ul>
+
+    <h2>5 · Mi bolsillo</h2>
+    <ul class="q">
+      <li>¿Cuánto <b>sueldo patronal</b> razonable puedo asignarme?</li>
+      <li><b>Política de retiros</b>: ¿cuánto retirar al año para no saltar de tramo en Global Complementario?</li>
+      <li>¿Conviene <b>APV / APV colectivo</b>? ¿Cuánto?</li>
+    </ul>
+
+    <h2>6 · Sucesión</h2>
+    <ul class="q">
+      <li>¿Cómo estructuro el holding para el <b>traspaso a la familia</b> con el menor impuesto a la herencia?</li>
+      <li>¿Donaciones en vida planificadas? ¿Pacto de socios?</li>
+    </ul>
+
+    <h2>7 · Cumplimiento / riesgo</h2>
+    <ul class="q">
+      <li>¿Qué riesgo de <b>Norma General Anti-Elusión</b> ves en cada parte?</li>
+      <li>¿Qué respaldo de "razón de negocio" debo <b>guardar</b> de cada decisión?</li>
+      <li>¿Calendario y costos de mantener todo esto (contabilidad, F29, F22)?</li>
+    </ul>
+
+    <h2>Llevar a la reunión</h2>
+    <ul class="chk">
+      <li>Constitución + RUT de CMC y Meulen</li>
+      <li>Último F22 y balances de cada una</li>
+      <li>Régimen tributario actual de cada empresa</li>
+      <li>Ingresos anuales de cada negocio (para el techo UF)</li>
+      <li>Listado de inmuebles (cuáles, de quién, uso)</li>
+      <li>Listado de vehículos (tipo y uso de negocio)</li>
+      <li>Listado de equipos médicos y su valor</li>
+      <li>Este documento + el de estructura completa</li>
+    </ul>
+
+  </div>
+
+  <div class="foot">
+    Material de preparación interno · no es asesoría tributaria. Acompaña a <b>OLACORE_estructura_tributaria</b> (estructura + roadmap) y al dashboard financiero. Marco Chile 2025-2026 (tasas transitorias, confirmar vigencia).
+  </div>
+</div>
+</body>
+</html>
