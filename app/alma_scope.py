@@ -38,6 +38,12 @@ def _bearer(request) -> str | None:
     return None
 
 
+def shows_money(token: str | None) -> bool:
+    """¿Este token ve cifras de INGRESO? Solo el dueño (OLACORE_TOKEN). Recepción
+    y perfiles de profesional NO. Recibe el token efectivo (el de page_token)."""
+    return bool(token) and hmac.compare_digest(token, OLACORE_TOKEN)
+
+
 def resolve(request, token: str | None, cmc_session: str | None,
             module_key: str) -> tuple[str, int | None]:
     """Auth para endpoints de API. Devuelve (token_efectivo, scope_profesional).

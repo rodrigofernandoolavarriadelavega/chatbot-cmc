@@ -3708,12 +3708,15 @@ def alma_ortodoncia_page(token: str | None = Query(None),
 def alma_kine_page(token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None)):
     """Modulo Profesional: Programa Kinesiología — adherencia, riesgo de abandono, plan de sesiones."""
-    from alma_scope import page_token as _alma_page_token
+    from alma_scope import page_token as _alma_page_token, shows_money as _shows_money
     if not _ALMA_KINE_HTML:
         raise HTTPException(404, "Kine no disponible")
     eff = _alma_page_token(token, cmc_session, "kine")
     if eff:
-        return _ALMA_KINE_HTML.replace("__TOKEN__", eff)
+        financiero = "true" if _shows_money(eff) else "false"
+        return (_ALMA_KINE_HTML
+                .replace("__TOKEN__", eff)
+                .replace("__KINE_FINANCIERO__", financiero))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

@@ -176,11 +176,14 @@ def _compute(meses: int = 6, scope_prof: int | None = None):
     carga_prof: dict[str, int] = {}
     sesiones_por_episodio: list[int] = []
     ingreso_total = 0.0
+    atendidos_mes = 0  # pacientes distintos con ≥1 sesión en el mes calendario actual
 
     for pid, d in porpac.items():
         fechas = sorted(set(d["fechas"]))
         if not fechas:
             continue
+        if any(f.year == today.year and f.month == today.month for f in fechas):
+            atendidos_mes += 1
         episodios = _split_episodios(fechas)
         for ep in episodios:
             sesiones_por_episodio.append(len(ep))
@@ -212,9 +215,10 @@ def _compute(meses: int = 6, scope_prof: int | None = None):
             "notas": (plan or {}).get("notas", ""),
         })
 
-    # Orden: riesgo primero (más urgente = más días dentro de la ventana recuperable)
+    # Orden: del paciente con atención más reciente al de hace más tiempo
+    # (menos días sin sesión primero). Estado como desempate secundario.
     prio = {"riesgo": 0, "abandono": 1, "en_curso": 2, "completado": 3, "alta": 4, "cerrado": 5}
-    pacientes.sort(key=lambda p: (prio.get(p["estado"], 9), -p["dias_sin_sesion"]))
+    pacientes.sort(key=lambda p: (p["dias_sin_sesion"], prio.get(p["estado"], 9)))
 
     # KPIs (sobre la ventana pedida)
     activos   = [p for p in pacientes if p["estado"] in ("en_curso", "riesgo")]
@@ -229,6 +233,7 @@ def _compute(meses: int = 6, scope_prof: int | None = None):
         "abandono": len(abandono),
         "sesiones_prom": prom_ses,
         "ingreso_programa": round(ingreso_total),
+        "atendidos_mes": atendidos_mes,
         "n_pacientes": len(pacientes),
     }
     carga = sorted(
