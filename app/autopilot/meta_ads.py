@@ -21,7 +21,9 @@ log = logging.getLogger("bot")
 GRAPH = "https://graph.facebook.com/v21.0"
 
 # Cuenta publicitaria CMC (la misma que usan meta-ads-builder / custom_audiences_sync).
-AD_ACCOUNT = os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
+from .tenants import active as _active_tenant
+# La cuenta Meta sale del inquilino activo (CMC por defecto → mismo valor de antes).
+AD_ACCOUNT = _active_tenant().ad_account or os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
 
 
 def _token() -> str:

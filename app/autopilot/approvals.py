@@ -371,7 +371,9 @@ def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> 
     auto_applied = auto_applied or []
     if (not new_ids and not auto_applied) or not flag_on("AUTOPILOT_ENABLED"):
         return
-    phone = (os.getenv("AUTOPILOT_OWNER_PHONE")
+    from .tenants import active as _active_tenant
+    phone = (_active_tenant().owner_phone
+             or os.getenv("AUTOPILOT_OWNER_PHONE")
              or os.getenv("ADMIN_ALERT_PHONE") or "").strip()
     if not phone:
         log.info("[autopilot] avisos pendientes pero sin AUTOPILOT_OWNER_PHONE/ADMIN_ALERT_PHONE")
