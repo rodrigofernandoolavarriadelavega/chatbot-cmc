@@ -558,7 +558,22 @@ _CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
          "complementar tu chequeo médico.\n\n"
          "Gisela Pinto atiende en el CMC. ¿Te interesa agendar?"),
     ],
+    # Psiquiatría → Psicología (el inverso: terapia complementa los fármacos).
+    # El lado Psicología→Psiquiatría se agrega a la clave "Psicología Adulto" de abajo.
+    "Psiquiatría": [
+        ("Psicología",
+         "El tratamiento psiquiátrico suele potenciarse con *terapia psicológica* "
+         "en paralelo.\n\n"
+         "¿Te agendo sesiones con nuestros psicólogos para acompañar tu tratamiento?"),
+    ],
     "Psicología Adulto": [
+        # Psiquiatría primero: el cross-sell más relevante para un paciente en terapia
+        # (evaluación de fármacos). Teleconsulta con la Dra. Cecilia Unibazo (jueves).
+        ("Psiquiatría",
+         "Como complemento a tu terapia, el CMC ahora tiene *psiquiatría* por "
+         "teleconsulta (Dra. Cecilia Unibazo, los jueves). El psiquiatra puede evaluar "
+         "si un apoyo con medicamentos te ayudaría junto a tu proceso.\n\n"
+         "¿Quieres que te agende una evaluación psiquiátrica?"),
         ("Medicina General",
          "El bienestar mental se complementa con salud física. Un chequeo de medicina "
          "general puede descartar causas orgánicas (tiroides, anemia, déficits) que "
@@ -8780,6 +8795,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "waitlist_no", "title": "No, gracias"},
                         ]
                     )
+            # Psiquiatría (Dra. Cecilia Unibazo, prof 78) es SOLO teleconsulta → forzar
+            # modalidad TELEMEDICINA (marca [ONLINE] en Medilink), sin preguntar presencial.
+            if str(slot.get("id_profesional")) == "78" or "psiquiatr" in (slot.get("especialidad", "") or "").lower():
+                data["telemedicina_modalidad"] = "TELEMEDICINA"
             try:
                 if slot.get("sobrecupo"):
                     # Reserva de SOBRECUPO: crea la cita marcada [SOBRECUPO] y registra

@@ -99,6 +99,10 @@ _INTENT_CACHE: dict[str, dict] = {
     "psico":          {"intent": "agendar", "especialidad": "psicología"},
     "psicología":     {"intent": "agendar", "especialidad": "psicología"},
     "psicologia":     {"intent": "agendar", "especialidad": "psicología"},
+    "psiquiatra":     {"intent": "agendar", "especialidad": "psiquiatría"},
+    "psiquiatría":    {"intent": "agendar", "especialidad": "psiquiatría"},
+    "psiquiatria":    {"intent": "agendar", "especialidad": "psiquiatría"},
+    "psiquiatrico":   {"intent": "agendar", "especialidad": "psiquiatría"},
     "nutri":          {"intent": "agendar", "especialidad": "nutrición"},
     "nutrición":      {"intent": "agendar", "especialidad": "nutrición"},
     "nutricion":      {"intent": "agendar", "especialidad": "nutrición"},
@@ -648,6 +652,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
+- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, solo jueves 16-20, $60.000 particular). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
 - Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
 - Ecografía mamaria / de mamas / ecotomografía mamaria → "ecografía" (David Pardo, ID 68, $40.000). Es partes blandas, NO ginecológica. NUNCA Rejón para mamaria.
@@ -855,6 +860,7 @@ MEDICINA GENERAL / SÍNTOMAS
 
 SALUD MENTAL
 - Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular.
+- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, **solo los jueves de 16:00 a 20:00**, **$60.000 particular**. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia). Hay pocos cupos por semana.
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
