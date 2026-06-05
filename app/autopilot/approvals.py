@@ -377,6 +377,13 @@ def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> 
         return
     items = [x for x in (get(i) for i in new_ids) if x]
     base = os.getenv("PUBLIC_BASE_URL", "https://agentecmc.cl")
+    # El aviso es del DUEÑO → link con su token (acceso total, abre en Decisiones).
+    # cmc_admin_2026 es recepción y solo ve Diseños del Autopilot.
+    try:
+        from config import OLACORE_TOKEN as _owner_tok
+    except Exception:  # noqa: BLE001
+        _owner_tok = "cmc_admin_olacore"
+    panel = f"{base}/autopilot?token={_owner_tok}"
 
     lines: list[str] = []
     if items:
@@ -391,11 +398,11 @@ def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> 
         lines.append("✅ *Aplicadas solas (alta confianza):*")
         for x in auto_applied[:6]:
             lines += _fmt_action_line(x)
-    lines += ["", f"Detalle: {base}/autopilot"]
+    lines += ["", f"Detalle: {panel}"]
     msg = "\n".join(lines)
 
     # Proactivo fuera de ventana 24h → texto libre rebota (code 131047). Si hay
-    # pendientes, se manda el template `autopilot_pendientes` (UTILITY) con su count
+    # pendientes, se manda el template `autopilot_aviso` (UTILITY) con su count
     # + resumen; el texto libre (con la sección de auto-aplicadas) queda de fallback.
     # Si SOLO hay auto-aplicadas (nada que aprobar), se intenta texto libre (entrega
     # dentro de la ventana 24h; el detalle siempre está en el dashboard).
@@ -408,7 +415,7 @@ def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> 
                 try:
                     from messaging import send_whatsapp_template
                     await send_whatsapp_template(
-                        phone, "autopilot_pendientes",
+                        phone, "autopilot_aviso",
                         body_params=[str(len(items)), top_summary])
                     log.info("[autopilot] aviso (template) de %d pendientes → %s", len(items), phone)
                     return
