@@ -89,19 +89,110 @@ class EconVerdict(str, Enum):
     UNKNOWN = "unknown"     # sin datos suficientes para juzgar
 
 
-# ── Umbrales económicos (AJUSTAR según tu negocio) ───────────────────────────
-# TODO(Rodrigo): estos valores definen qué es "rentable". Ajústalos a tu realidad:
-#   Nivel 1 (Purchase): ¿cuál es el CAC máximo tolerable por paciente atendido?
-#   Nivel 2 (Mensaje):  ¿cuánto estás dispuesto a pagar por una conversación WhatsApp?
-#     Pista: si ~1 de cada N mensajes se vuelve paciente, costo/mensaje tolerable ≈ CAC/N.
-CAC_BUENO = 12000        # CAC/paciente por debajo de esto = excelente → escalar
-CAC_TOLERABLE = 22000    # aceptable
-ROAS_GANADORA = 2.5      # ROAS Meta para considerar escalar
-MSG_BUENO = 1500         # costo por mensaje WhatsApp iniciado: barato
-MSG_TOLERABLE = 3500     # aceptable
+# ── Umbrales económicos CALIBRADOS POR ESPECIALIDAD (2026-06-05, Rodrigo) ────
+# Calibración acordada con el dueño:
+#   • Margen de contribución de un paciente NUEVO atendido: ~$15.000 en Medicina
+#     General (ancla; rango declarado $10.000–$20.000 sobre la primera consulta).
+#   • Segmentación POR ESPECIALIDAD: un implante/endodoncia tolera un CAC mucho
+#     mayor que una consulta general.
+#   • ROAS ganadora para escalar: 2.5×.
+#
+# Derivación del margen por especialidad: se ancla en MG ($15k margen / $25k arancel)
+# y se escala SUBLINEALMENTE con el arancel real (config.ARANCELES_CLP):
+#     margen(esp) = MG_MARGEN · (arancel(esp) / MG_ARANCEL) ^ 0.7
+# El exponente 0.7 (<1) refleja que los tratamientos de ticket alto (dental,
+# estética, endo) tienen mayor costo variable (materiales, laboratorio, honorario
+# del especialista) → su margen NO crece proporcional al precio. Un solo supuesto
+# defendible en vez de 20 números inventados. Ajustá MG_MARGEN o el exponente para
+# recalibrar todo el set, o sobreescribí una especialidad puntual en _MARGEN_OVERRIDE.
+MG_MARGEN = 15000        # margen de contribución de una consulta de Medicina General
+MG_ARANCEL = 25000       # arancel base de referencia (debe matchear config)
+_MARGEN_EXP = 0.7        # escalamiento sublineal del margen vs arancel
+ROAS_GANADORA = 2.5      # ROAS Meta para considerar escalar (acordado)
+
+# Un mensaje de WhatsApp iniciado vale ≈ margen × tasa de conversión a paciente.
+# Supuesto conservador: ~1 de cada 7 conversaciones de alta intención se vuelve
+# paciente atendido (MSG_CONV). Recalibrar cuando el funnel real (mensaje→Purchase
+# atribuido) tenga volumen — el fix de atribución ctwa_clid de hoy lo habilita.
+MSG_CONV = 0.14
 MSG_MIN_TO_TRUST = 5     # nº mínimo de mensajes para confiar en el costo/mensaje
 CLICK_TOLERABLE = 400    # costo por clic al enlace tolerable
 CLICK_MIN_TO_TRUST = 30  # nº mínimo de clics para confiar en el costo/clic
+
+# Margen de fallback cuando no se puede inferir la especialidad de la campaña
+# (mitad del rango declarado, ligeramente sobre MG por mezcla con especialistas).
+_MARGEN_GLOBAL = 16000
+_MARGEN_OVERRIDE: dict[str, int] = {}  # esp_lower -> margen, para forzar casos puntuales
+
+
+def _aranceles() -> dict[str, int]:
+    try:
+        from config import ARANCELES_CLP
+        return ARANCELES_CLP
+    except Exception:
+        return {}
+
+
+def _margen_esp(especialidad: str | None) -> int:
+    """Margen de contribución estimado por paciente atendido de esa especialidad."""
+    esp = (especialidad or "").lower().strip()
+    if esp in _MARGEN_OVERRIDE:
+        return _MARGEN_OVERRIDE[esp]
+    arancel = _aranceles().get(esp)
+    if not arancel:
+        return _MARGEN_GLOBAL
+    return int(round(MG_MARGEN * (arancel / MG_ARANCEL) ** _MARGEN_EXP / 100) * 100)
+
+
+def _econ_thresholds(especialidad: str | None) -> dict:
+    """Devuelve los umbrales económicos para una especialidad, derivados del margen.
+
+    - cac_bueno    = 0.55 · margen  → claramente rentable (escalar)
+    - cac_tolerable=        margen  → breakeven de la PRIMERA visita (LTV/recurrencia
+                                      y referidos son colchón adicional, no contado)
+    - msg_bueno/tolerable = escala del CAC por la tasa de conversión mensaje→paciente
+    """
+    m = _margen_esp(especialidad)
+    cac_tol = m
+    cac_bueno = int(round(0.55 * m / 100) * 100)
+    msg_tol = int(round(m * MSG_CONV / 100) * 100)
+    msg_bueno = int(round(0.55 * m * MSG_CONV / 100) * 100)
+    return {"cac_bueno": cac_bueno, "cac_tolerable": cac_tol,
+            "msg_bueno": msg_bueno, "msg_tolerable": msg_tol, "margen": m}
+
+
+# Inferencia de especialidad desde el nombre de la campaña (Meta no lo da estructurado).
+# keyword (en el nombre) -> especialidad canónica (clave de ARANCELES_CLP).
+_ESP_KEYWORDS: list[tuple[tuple[str, ...], str]] = [
+    (("endodonc", "tratamiento de conducto"), "endodoncia"),
+    (("implant",), "implantología"),
+    (("ortodonc", "orto ", "frenillo", "bracket"), "ortodoncia"),
+    (("estetic", "estética", "facial", "botox", "armoniza", "hilos"), "estética facial"),
+    (("odonto", "dental", "diente", "muela", "tapadura", "limpieza dental", "blanqueam"), "odontología general"),
+    (("eco", "ecotomograf", "ecograf", "ecotomo"), "ecografía"),
+    (("cardio", "corazón", "corazon", "presión", "presion"), "cardiología"),
+    (("ginec", "matrona", "pap", "preventivo de la mujer"), "ginecología"),
+    (("gastro", "colon", "endoscop"), "gastroenterología"),
+    (("trauma", "rodilla", "hombro", "fractura", "ortopedia"), "traumatología y ortopedia"),
+    (("otorrino", "oído", "oido", "garganta", "nariz"), "otorrinolaringología"),
+    (("kine", "kinesio", "rehabilita"), "kinesiología"),
+    (("nutric", "nutri", "obesidad", "bajar de peso"), "nutrición"),
+    (("psico", "salud mental", "ansiedad", "depres"), "psicología"),
+    (("fono", "lenguaje", "voz", "deglu"), "fonoaudiología"),
+    (("podolog", "uña", "pie diabét"), "podología"),
+    (("masoterap", "masaje"), "masoterapia"),
+    (("familiar",), "medicina familiar"),
+    (("medicina general", "consulta general", "médico general", "medico general"), "medicina general"),
+]
+
+
+def _infer_especialidad(campaign_name: str | None) -> str | None:
+    """Mejor esfuerzo: deduce la especialidad del nombre de la campaña. None si no hay señal."""
+    n = (campaign_name or "").lower()
+    for keys, esp in _ESP_KEYWORDS:
+        if any(k in n for k in keys):
+            return esp
+    return None
 
 
 def evaluate_economics(c: CampaignState, limits: HardLimits) -> tuple[EconVerdict, float, str]:
@@ -121,6 +212,15 @@ def evaluate_economics(c: CampaignState, limits: HardLimits) -> tuple[EconVerdic
     if c.spend < limits.min_spend_to_judge_clp:
         return EconVerdict.UNKNOWN, 0.0, f"gasto ${c.spend:.0f} < mínimo para juzgar"
 
+    # Umbrales POR ESPECIALIDAD: se infiere del nombre de la campaña; si no hay
+    # señal, se usa el margen global. Así una campaña de endodoncia tolera un CAC
+    # mucho mayor que una de medicina general.
+    _esp = _infer_especialidad(c.name)
+    _t = _econ_thresholds(_esp)
+    CAC_BUENO, CAC_TOLERABLE = _t["cac_bueno"], _t["cac_tolerable"]
+    MSG_BUENO, MSG_TOLERABLE = _t["msg_bueno"], _t["msg_tolerable"]
+    _esp_tag = f" [{_esp}]" if _esp else " [margen global]"
+
     # Jerarquía de señal: usamos el evento medible más cercano a la conversión.
     #   1. Purchase (paciente atendido, vía CAPI)  → la señal de oro: ROAS/CAC real.
     #   2. Mensaje WhatsApp iniciado               → proxy fuerte (intención de agendar).
@@ -131,24 +231,24 @@ def evaluate_economics(c: CampaignState, limits: HardLimits) -> tuple[EconVerdic
     if c.purchases >= limits.min_purchases_to_trust and c.cac_purchase is not None:
         cac, roas = c.cac_purchase, c.roas_meta
         if cac <= CAC_BUENO and roas >= ROAS_GANADORA:
-            return EconVerdict.WINNER, 0.85, f"CAC/paciente ${cac:,.0f} y ROAS {roas:.1f}×"
+            return EconVerdict.WINNER, 0.85, f"CAC/paciente ${cac:,.0f} y ROAS {roas:.1f}×{_esp_tag} (bueno ≤${CAC_BUENO:,})"
         if cac <= CAC_TOLERABLE:
-            return EconVerdict.OK, 0.75, f"CAC/paciente ${cac:,.0f} tolerable"
+            return EconVerdict.OK, 0.75, f"CAC/paciente ${cac:,.0f} tolerable{_esp_tag} (tope ${CAC_TOLERABLE:,})"
         if cac <= CAC_TOLERABLE * 1.5:
-            return EconVerdict.MARGINAL, 0.65, f"CAC/paciente ${cac:,.0f} sobre lo tolerable"
-        return EconVerdict.LOSER, 0.75, f"CAC/paciente ${cac:,.0f} muy alto"
+            return EconVerdict.MARGINAL, 0.65, f"CAC/paciente ${cac:,.0f} sobre lo tolerable{_esp_tag} (tope ${CAC_TOLERABLE:,})"
+        return EconVerdict.LOSER, 0.75, f"CAC/paciente ${cac:,.0f} muy alto{_esp_tag} (tope ${CAC_TOLERABLE:,})"
 
     # ── Nivel 2: Mensajes de WhatsApp iniciados ──
     if c.messages >= MSG_MIN_TO_TRUST and c.cost_per_message is not None:
         cpm = c.cost_per_message
         # Confianza algo menor: un mensaje no es un paciente atendido todavía.
         if cpm <= MSG_BUENO:
-            return EconVerdict.WINNER, 0.7, f"{c.messages:.0f} mensajes a ${cpm:,.0f} c/u (barato)"
+            return EconVerdict.WINNER, 0.7, f"{c.messages:.0f} mensajes a ${cpm:,.0f} c/u (barato){_esp_tag}"
         if cpm <= MSG_TOLERABLE:
-            return EconVerdict.OK, 0.65, f"costo/mensaje ${cpm:,.0f} tolerable"
+            return EconVerdict.OK, 0.65, f"costo/mensaje ${cpm:,.0f} tolerable{_esp_tag} (tope ${MSG_TOLERABLE:,})"
         if cpm <= MSG_TOLERABLE * 1.6:
-            return EconVerdict.MARGINAL, 0.6, f"costo/mensaje ${cpm:,.0f} alto"
-        return EconVerdict.LOSER, 0.65, f"costo/mensaje ${cpm:,.0f} muy alto"
+            return EconVerdict.MARGINAL, 0.6, f"costo/mensaje ${cpm:,.0f} alto{_esp_tag} (tope ${MSG_TOLERABLE:,})"
+        return EconVerdict.LOSER, 0.65, f"costo/mensaje ${cpm:,.0f} muy alto{_esp_tag} (tope ${MSG_TOLERABLE:,})"
 
     # ── Nivel 3: Clics al enlace (señal débil — no escalamos solo por clics) ──
     if c.link_clicks >= CLICK_MIN_TO_TRUST and c.cost_per_link_click is not None:
