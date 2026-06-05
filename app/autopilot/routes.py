@@ -292,6 +292,52 @@ async def autopilot_designs_save_edit(request: Request, token: str | None = Quer
     return JSONResponse({"ok": True, "design": rec})
 
 
+@router.post("/autopilot/api/designs/cutout")
+async def autopilot_designs_cutout(request: Request, token: str | None = Query(None)):
+    """Recorte automático con IA (quitar fondo) vía remove.bg.
+
+    Requiere REMOVEBG_API_KEY en el entorno. Si no está, devuelve ok=false /
+    reason=no_key (HTTP 200) para que el editor caiga al modo manual sin error.
+    Body: {image_b64 (dataURL o base64 PNG)}.
+    """
+    _check_token(token, request)
+    import os
+    key = os.getenv("REMOVEBG_API_KEY", "").strip()
+    if not key:
+        return JSONResponse({"ok": False, "reason": "no_key",
+                             "message": "Falta REMOVEBG_API_KEY en el .env del servidor."})
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    raw = (body.get("image_b64") or "").strip()
+    if not raw:
+        raise HTTPException(400, "Falta 'image_b64'")
+    if raw.startswith("data:") and "," in raw:
+        raw = raw.split(",", 1)[1]
+    try:
+        png = base64.b64decode(raw)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "image_b64 inválido")
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=45) as client:
+            r = await client.post(
+                "https://api.remove.bg/v1.0/removebg",
+                headers={"X-Api-Key": key},
+                data={"size": "auto", "format": "png"},
+                files={"image_file": ("image.png", png, "image/png")},
+            )
+        if r.status_code != 200:
+            return JSONResponse({"ok": False, "reason": "api_error",
+                                 "message": f"remove.bg {r.status_code}: {r.text[:200]}"})
+        out = base64.b64encode(r.content).decode()
+        return JSONResponse({"ok": True, "image_b64": "data:image/png;base64," + out})
+    except Exception as e:  # noqa: BLE001
+        log.warning("cutout remove.bg falló: %s", e)
+        return JSONResponse({"ok": False, "reason": "exception", "message": str(e)})
+
+
 # ── Email marketing (segmentos) ──────────────────────────────────────────────
 
 @router.get("/autopilot/api/email/segments")
