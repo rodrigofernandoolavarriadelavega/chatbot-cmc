@@ -241,13 +241,20 @@ def evaluate_economics(c: CampaignState, limits: HardLimits) -> tuple[EconVerdic
     _at_local = getattr(c, "atendidos_local", 0) or 0
     _cac_local = getattr(c, "cac_real_local", None)
     if _at_local >= limits.min_purchases_to_trust and _cac_local:
+        # ASIMETRÍA HONESTA: el CAC real local es un TECHO — solo cuenta los atendidos
+        # que matchean source_id→RUT→pago; los gaps de teléfono subestiman atenciones e
+        # INFLAN el CAC. Por eso confiamos en las BUENAS noticias (si hasta el CAC
+        # inflado es bueno, es bueno → winner) pero somos cautos con las MALAS: un CAC
+        # alto puede ser artefacto de sub-conteo → como mucho MARGINAL (bajar/vigilar),
+        # NUNCA loser/pausa por esta señal sola. Pausar requiere señal más dura.
         if _cac_local <= CAC_BUENO:
             return EconVerdict.WINNER, 0.9, f"CAC REAL ${_cac_local:,.0f}/paciente ({_at_local} pagaron){_esp_tag} (bueno ≤${CAC_BUENO:,})"
         if _cac_local <= CAC_TOLERABLE:
             return EconVerdict.OK, 0.8, f"CAC REAL ${_cac_local:,.0f}/paciente ({_at_local} pagaron){_esp_tag} (tope ${CAC_TOLERABLE:,})"
-        if _cac_local <= CAC_TOLERABLE * 1.5:
-            return EconVerdict.MARGINAL, 0.75, f"CAC REAL ${_cac_local:,.0f}/paciente sobre lo tolerable{_esp_tag} (tope ${CAC_TOLERABLE:,})"
-        return EconVerdict.LOSER, 0.8, f"CAC REAL ${_cac_local:,.0f}/paciente muy alto{_esp_tag} (tope ${CAC_TOLERABLE:,})"
+        return EconVerdict.MARGINAL, 0.7, (
+            f"CAC REAL ${_cac_local:,.0f}/paciente sobre el tope{_esp_tag} (${CAC_TOLERABLE:,}). "
+            f"Ojo: la atribución local SUBESTIMA atenciones → este CAC es un techo, "
+            f"puede ser mejor. Bajar y vigilar, no pausar a ciegas.")
 
     # ── Nivel 1: Purchase (paciente atendido) ──
     if c.purchases >= limits.min_purchases_to_trust and c.cac_purchase is not None:
