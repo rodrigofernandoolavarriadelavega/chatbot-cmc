@@ -407,6 +407,14 @@ input, textarea, select{font-family:inherit; color:inherit}
   margin-top:4px;
 }
 .chat-empty p{font-size:13px; color:var(--text-mute); max-width:360px; line-height:1.6}
+.chat-empty .ce-agendar{
+  margin-top:18px; display:inline-flex; align-items:center; gap:8px;
+  padding:11px 20px; border-radius:11px; border:none; cursor:pointer;
+  background:var(--cmc-aqua); color:#fff; font-size:14px; font-weight:700;
+  box-shadow:0 8px 20px -6px rgba(79,190,206,.6); transition:background .15s, transform .12s;
+}
+.chat-empty .ce-agendar:hover{background:var(--cmc-aqua-dark); transform:translateY(-1px)}
+.chat-empty .ce-agendar svg{width:17px; height:17px}
 .chat-empty .shortcuts{
   display:flex; gap:18px; margin-top:14px; padding:12px 20px;
   background:var(--surface-elevated);
@@ -1366,6 +1374,10 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
       <div class="iso"><img src="/static/isotipo.png" alt="CMC"></div>
       <h2>Centro Médico Carampangue</h2>
       <p>Selecciona una conversación de la bandeja para visualizar los mensajes del paciente y responder.</p>
+      <button class="ce-agendar" onclick="openAgendarModal({ global: true })" title="Agendar una cita sin abrir un chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/></svg>
+        Agendar cita
+      </button>
       <div class="shortcuts">
         <span><kbd>j</kbd><kbd>k</kbd> navegar</span>
         <span><kbd>↵</kbd> enviar</span>
