@@ -196,3 +196,60 @@ def load_snapshot() -> dict | None:
         return json.loads(_SNAPSHOT.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
         return None
+
+
+# ── #5 — Generación automática de variantes del ángulo ganador ───────────────
+
+async def autogen_winner(snapshot: dict | None = None, *, n: int = 1) -> list[dict]:
+    """Genera n variante(s) del ÁNGULO GANADOR y las deja como borrador en la galería.
+
+    Cierra el bucle producción→optimización: el ranking ya dice qué ángulo rinde
+    (recommendations[0]); acá se generan piezas nuevas de ese ángulo, listas para que
+    el dueño las revise/publique. Usa el MISMO pipeline que la generación manual
+    (build_prompt → generate_png → add_design). Cuesta ~$75 CLP/imagen (gpt-image),
+    por eso vive detrás del toggle `autogen` (OFF por defecto). Read-only sobre Meta.
+    """
+    snap = snapshot or load_snapshot() or {}
+    recs = (snap.get("angles") or {}).get("recommendations") or []
+    scale = next((r for r in recs if r.get("kind") == "scale_angle"), None)
+    if not scale:
+        log.info("autogen: sin ángulo ganador claro, no genero")
+        return []
+    angle = scale.get("angle", "")
+    best = snap.get("best") or {}
+    # Especialidad del mejor anuncio (para que la pieza sea del tema correcto).
+    from .policy import _infer_especialidad
+    esp = _infer_especialidad(f"{best.get('ad_name','')} {best.get('campaign_name','')}") or ""
+
+    from .ad_formats import FORMAT_BY_KEY
+    from .image_gen import build_prompt, generate_png, gpt_size_for, OPENAI_IMAGE_MODEL
+    from .designs import add_design
+    import time as _t
+    from pathlib import Path as _P
+
+    fmt = FORMAT_BY_KEY.get("instagram_story") or next(iter(FORMAT_BY_KEY.values()))
+    title = (esp.title() or "Centro Médico Carampangue")
+    brief = (f"Variante NUEVA del ángulo ganador «{angle}» (el que mejor convierte en "
+             f"WhatsApp). Mantené ese enfoque y tono, cambiá la composición.")
+    static_dir = _P(__file__).parent.parent.parent / "static" / "ad_designs"
+
+    created: list[dict] = []
+    for i in range(max(1, n)):
+        try:
+            prompt = build_prompt(fmt, title=title, subtitle="", specialty=esp, brief=brief)
+            png = await generate_png(prompt, size=gpt_size_for(fmt))
+            rid = f"autogen-{angle.lower()}-{int(_t.time())}-{i}"
+            static_dir.mkdir(parents=True, exist_ok=True)
+            (static_dir / f"{rid}.png").write_bytes(png)
+            rec = add_design({
+                "id": rid, "title": f"{title} · {angle}", "specialty": esp,
+                "format": fmt["key"], "image_url": f"/static/ad_designs/{rid}.png",
+                "status": "borrador", "source": f"autogen:{OPENAI_IMAGE_MODEL}",
+                "angle": angle,
+            })
+            created.append(rec)
+            log.info("autogen: generada variante de «%s» (%s)", angle, rid)
+        except Exception as e:  # noqa: BLE001
+            log.error("autogen: falló generación de «%s»: %s", angle, e)
+            break
+    return created

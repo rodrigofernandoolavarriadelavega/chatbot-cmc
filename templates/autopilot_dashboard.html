@@ -623,6 +623,15 @@
     <div class="auditor" id="auditor"></div>
   </div>
 
+  <div class="panel" id="digestPanel" style="margin-top:18px">
+    <div class="panel-h">
+      <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l3-3 3 2 4-5"/></svg></span>
+      <h2>Resumen de los últimos 7 días</h2>
+      <button class="mini-btn" style="margin-left:auto;background:#eef6ff;color:var(--blue);border:1px solid #cfe3f5" onclick="loadDigest(this)">Actualizar</button>
+    </div>
+    <div class="panel-b" id="digest"><div class="skel" style="height:60px"></div></div>
+  </div>
+
   <div class="panel" id="pendingPanel" style="margin-top:18px;display:none;border:1.5px solid #f0c36d">
     <div class="panel-h" style="background:linear-gradient(135deg,#fffaf0,#fdf3dc)">
       <span class="ph-ico" style="background:linear-gradient(135deg,#fdf0d0,#f8e3ad)"><svg viewBox="0 0 24 24" fill="none" stroke="#b5852a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg></span>
@@ -668,7 +677,10 @@
         <div class="panel-h">
           <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6-6.3 4.6L7.9 14 2 9.4h7.6z"/></svg></span>
           <h2>Ranking de creatividades</h2>
-          <button class="mini-btn" style="margin-left:auto;background:#eef6ff;color:var(--blue);border:1px solid #cfe3f5" onclick="refreshCreatives(this)">Medir</button>
+          <label style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer" title="Generar solo variantes del ángulo ganador (cuesta ~$75 CLP/imagen)">
+            <input type="checkbox" id="autogenToggle" onchange="toggleAutogen(this)" style="cursor:pointer"> Auto-generar
+          </label>
+          <button class="mini-btn" style="background:#eef6ff;color:var(--blue);border:1px solid #cfe3f5" onclick="refreshCreatives(this)">Medir</button>
         </div>
         <div class="panel-b" id="creatives"><div class="skel" style="height:140px"></div></div>
       </div>
@@ -1154,8 +1166,47 @@ async function load(){
   catch(e){ return showEmpty('No pude cargar el snapshot.'); }
   loadPending();
   loadCreatives();
+  loadDigest();
+  loadAutogenState();
   if(d.empty){ return showEmpty(d.message); }
   render(d);
+}
+
+async function loadDigest(btn){
+  const box=document.getElementById('digest');
+  if(btn){ btn.disabled=true; const _o=btn.textContent; btn.textContent='…'; btn._o=_o; }
+  let d;
+  try{ d=await (await fetch(`/autopilot/api/digest?days=7&token=${TOKEN}`)).json(); }
+  catch(e){ box.innerHTML='<div class="empty" style="padding:18px"><p>—</p></div>'; if(btn){btn.disabled=false;btn.textContent=btn._o;} return; }
+  const chip=(lbl,val,col)=>`<div style="flex:1;min-width:96px;text-align:center;padding:10px;background:var(--bg);border-radius:10px">
+    <div style="font-size:20px;font-weight:800;color:${col||'var(--navy)'}">${val}</div>
+    <div style="font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em">${lbl}</div></div>`;
+  const dlt=d.delta_presupuesto_aplicado||0;
+  let html='<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+    chip('Esperan tu OK', d.pendientes, d.pendientes?'#b5852a':'var(--navy)')+
+    chip('Auto-aplicadas', d.auto_aplicadas)+
+    chip('Aprobadas', d.aprobadas, '#1a8f5a')+
+    chip('Rechazadas', d.rechazadas, '#c0392b')+
+    chip('Δ presup./día', (dlt>0?'+':'')+'$'+Math.abs(dlt).toLocaleString('es-CL'), dlt>0?'#1a8f5a':(dlt<0?'#c0392b':'var(--navy)'))+
+    '</div>';
+  if(d.creativo_recomendacion){ html+=`<div style="margin-top:10px;font-size:12px;color:var(--blue)">🎨 ${d.creativo_recomendacion.replace(/</g,'&lt;')}</div>`; }
+  box.innerHTML=html;
+  if(btn){ btn.disabled=false; btn.textContent=btn._o; }
+}
+
+async function loadAutogenState(){
+  try{
+    const s=await (await fetch(`/autopilot/api/settings?token=${TOKEN}`)).json();
+    const el=document.getElementById('autogenToggle'); if(el) el.checked=!!s.autogen;
+  }catch(e){}
+}
+
+async function toggleAutogen(el){
+  const on=el.checked;
+  if(on && !confirm('Generar automáticamente variantes del ángulo ganador en cada medición. Cuesta ~$75 CLP por imagen. ¿Activar?')){ el.checked=false; return; }
+  try{
+    await fetch(`/autopilot/api/settings?token=${TOKEN}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'autogen',value:on})});
+  }catch(e){ alert('No se pudo guardar: '+e); el.checked=!on; }
 }
 
 const _VBADGE={winner:['Ganadora','#1a8f5a','#e9f9f0'],ok:['Estable','#1172AB','#eaf3fb'],

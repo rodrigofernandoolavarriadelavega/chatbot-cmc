@@ -647,4 +647,62 @@ async def creatives_refresh(window: int = Query(30), token: str | None = Query(N
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"No se pudo medir creatividades: {e}")
     creatives.save_snapshot(data)
+    # #5 — si el toggle `autogen` está ON, genera una variante del ángulo ganador.
+    try:
+        from . import settings as _ap_settings
+        if _ap_settings.get("autogen"):
+            created = await creatives.autogen_winner(data, n=1)
+            data["autogen_created"] = [c.get("id") for c in created]
+    except Exception as _e_ag:  # noqa: BLE001
+        logging.getLogger("bot").warning("autogen en refresh falló: %s", _e_ag)
     return JSONResponse(data)
+
+
+# ── Digest + ajustes (toggle autogen) ────────────────────────────────────────
+
+@router.get("/autopilot/api/digest")
+def autopilot_digest(days: int = Query(7), token: str | None = Query(None),
+                     request: Request = None):
+    """Resumen de los últimos N días (qué aplicó/propuso/aprobó + creatividad)."""
+    _check_token(token, request)
+    from . import digest
+    d = digest.build_digest(days=days)
+    d["text"] = digest.render_text(d)
+    return JSONResponse(d)
+
+
+@router.get("/autopilot/api/settings")
+def autopilot_settings_get(token: str | None = Query(None), request: Request = None):
+    """Ajustes runtime toggleables (hoy: autogen)."""
+    _check_token(token, request)
+    from . import settings as _ap_settings
+    return JSONResponse(_ap_settings.get_settings())
+
+
+@router.post("/autopilot/api/settings")
+async def autopilot_settings_set(request: Request, token: str | None = Query(None)):
+    """Prende/apaga un ajuste. Body: {key, value}."""
+    _check_token(token, request)
+    from . import settings as _ap_settings
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    key = (body or {}).get("key")
+    if key not in ("autogen",):
+        raise HTTPException(400, "ajuste no permitido")
+    return JSONResponse(_ap_settings.set_setting(key, bool(body.get("value"))))
+
+
+@router.post("/autopilot/api/creatives/autogen")
+async def autopilot_creatives_autogen(n: int = Query(1), token: str | None = Query(None),
+                                      request: Request = None):
+    """Genera AHORA n variante(s) del ángulo ganador (manual). Cuesta ~$75 CLP/imagen.
+    Devuelve los borradores creados."""
+    _check_token(token, request)
+    from . import creatives
+    try:
+        created = await creatives.autogen_winner(n=max(1, min(int(n), 3)))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"No se pudo generar: {e}")
+    return JSONResponse({"created": created})
