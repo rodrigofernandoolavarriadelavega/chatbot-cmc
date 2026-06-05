@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLACORE · Estructura tributaria y roadmap (documento de estudio)</title>
+<style>
+  :root{
+    --fiordo:#1f3a4d; --fiordo2:#162c3a; --cobre:#b5703a; --cobre-s:#f3e5d8;
+    --neblina:#eef3f5; --papel:#fbfaf7; --tinta:#1a2b34; --mute:#5e7079; --linea:#d8e2e7;
+    --verde:#2d7a4f; --rojo:#b3402e; --rojo-s:#f7e6e2; --verde-s:#e7f3ec;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--neblina);color:var(--tinta);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased;}
+  .page{max-width:880px;margin:0 auto;background:var(--papel);
+    box-shadow:0 1px 40px rgba(31,58,77,.10);}
+  /* Portada */
+  .cover{background:linear-gradient(150deg,var(--fiordo),var(--fiordo2));color:#fff;
+    padding:54px 56px 46px;position:relative;overflow:hidden;}
+  .cover::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+    border:1px solid rgba(181,112,58,.5);border-radius:50%;}
+  .cover::before{content:"";position:absolute;right:30px;top:30px;width:120px;height:120px;
+    border:1px solid rgba(255,255,255,.2);border-radius:50%;}
+  .brand{font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:var(--cobre);font-weight:700;}
+  .cover h1{font-size:33px;line-height:1.12;margin:14px 0 8px;font-weight:800;letter-spacing:-.01em;}
+  .cover .sub{font-size:15px;color:#cdd9df;max-width:560px;}
+  .cover .meta{margin-top:26px;font-size:12px;color:#9fb3bc;font-family:'IBM Plex Mono',monospace;}
+  /* Cuerpo */
+  .body{padding:38px 56px 60px;}
+  h2{font-size:21px;margin:42px 0 6px;color:var(--fiordo);font-weight:800;letter-spacing:-.01em;
+    padding-top:18px;border-top:2px solid var(--cobre);display:inline-block;}
+  h2 .n{color:var(--cobre);font-family:'IBM Plex Mono',monospace;font-size:15px;margin-right:8px;}
+  h3{font-size:16px;margin:24px 0 4px;color:var(--fiordo2);font-weight:700;}
+  p{margin:8px 0 12px;}
+  .lead{font-size:16px;color:var(--fiordo2);}
+  strong{color:var(--fiordo2);}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  ul,ol{margin:8px 0 14px;padding-left:22px;}
+  li{margin:5px 0;}
+  /* Aviso */
+  .aviso{background:var(--cobre-s);border:1px solid #e3c4a6;border-left:4px solid var(--cobre);
+    border-radius:8px;padding:14px 18px;margin:22px 0;font-size:13.5px;color:#6e4a28;}
+  .aviso b{color:#5a3c20;}
+  /* Cajas */
+  .card{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:18px 20px;margin:14px 0;
+    box-shadow:0 1px 3px rgba(31,58,77,.05);}
+  .card h3{margin-top:0;}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;
+    text-transform:uppercase;letter-spacing:.04em;vertical-align:middle;}
+  .pill.legal{background:var(--verde-s);color:var(--verde);}
+  .pill.roja{background:var(--rojo-s);color:var(--rojo);}
+  /* Tabla */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--linea);vertical-align:top;}
+  th{background:var(--neblina);color:var(--fiordo);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+  td .mono{font-size:12.5px;}
+  /* Diagrama */
+  .diagram{background:var(--fiordo2);color:#dfe9ee;border-radius:12px;padding:22px;margin:18px 0;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.5;overflow-x:auto;white-space:pre;}
+  .diagram .h{color:var(--cobre);font-weight:700;}
+  /* Roadmap */
+  .fase{display:flex;gap:16px;margin:16px 0;padding:16px 18px;background:#fff;border:1px solid var(--linea);
+    border-radius:12px;border-left:4px solid var(--cobre);box-shadow:0 1px 3px rgba(31,58,77,.05);}
+  .fase .num{flex-shrink:0;width:42px;height:42px;border-radius:50%;background:var(--fiordo);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;font-family:'IBM Plex Mono',monospace;}
+  .fase h3{margin:0 0 4px;}
+  .fase .tag{font-size:11px;color:var(--cobre);font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+  .fase ul{margin:8px 0 0;}
+  .roja-box{background:var(--rojo-s);border:1px solid #e3b5ac;border-radius:12px;padding:16px 20px;margin:16px 0;}
+  .roja-box h3{color:var(--rojo);margin-top:0;}
+  .verde-box{background:var(--verde-s);border:1px solid #b9dcc7;border-radius:12px;padding:16px 20px;margin:16px 0;}
+  .foot{padding:24px 56px 40px;color:var(--mute);font-size:12px;border-top:1px solid var(--linea);}
+  @media print{ body{background:#fff} .page{box-shadow:none;max-width:100%} .fase,.card{break-inside:avoid} }
+  @media (max-width:640px){ .cover{padding:34px 22px} .body{padding:26px 22px 40px} .foot{padding:20px 22px} .cover h1{font-size:26px} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover">
+    <div class="brand">OLACORE · Holding</div>
+    <h1>Estructura tributaria legal<br>y roadmap de implementación</h1>
+    <div class="sub">Cómo ordenar Centro Médico Carampangue y Supermercado Meulen bajo un holding para reducir la carga tributaria de forma <strong style="color:#fff">legal y defendible</strong>, y el plan por fases para lograrlo.</div>
+    <div class="meta">Documento de estudio interno · v1 · junio 2026 · para revisión con contador y abogado tributario</div>
+  </div>
+
+  <div class="body">
+
+    <div class="aviso">
+      <b>Antes de leer.</b> Este documento es material de <b>estudio y estructura</b>, no asesoría tributaria formal. Las tasas y umbrales citados son del marco 2025-2026 (varios son transitorios y cambian). <b>Nada de esto se ejecuta sin que un contador y un abogado tributario lo validen y firmen.</b> La meta es <b>planificación legal</b> — aprovechar bien la ley — nunca elusión ni evasión.
+    </div>
+
+    <p class="lead">La idea central no es "esconder" plata. Es <strong>ordenar</strong> el ecosistema OLACORE en una estructura que la ley chilena reconoce y premia: pagar la tasa más baja que corresponde (Pyme), <strong>diferir</strong> el impuesto personal hasta que de verdad se retira la plata, y separar los activos del riesgo. Todo con sustancia económica real.</p>
+
+    <h2><span class="n">01</span> El marco real (Chile 2025-2026)</h2>
+    <table>
+      <tr><th>Concepto</th><th>Qué es</th><th>Por qué importa</th></tr>
+      <tr><td><b>Régimen Pro Pyme<br>(14 D N°3)</b></td><td>IDPC <b>12,5%</b> transitorio 2025-2027 (15% en 2028; luego 25%). Aplica si el ingreso promedio de los últimos 3 años es <b>&lt; 75.000 UF</b>. Totalmente integrado.</td><td>Mitad de tasa que el régimen general (27%) y el dueño usa el 100% del crédito. Es el régimen objetivo de cada operativa.</td></tr>
+      <tr><td><b>Pro Pyme Transparente<br>(14 D N°8)</b></td><td>La empresa <b>no paga IDPC</b>; los dueños tributan directo en su Global Complementario.</td><td>Conviene cuando el dueño está en tramos personales bajos.</td></tr>
+      <tr><td><b>Semi-Integrado<br>(14 A)</b></td><td>27%, pero el dueño solo aprovecha 65% del crédito.</td><td>Es a donde caes si te pasas de 75.000 UF. Carga efectiva alta. <b>A evitar mientras se pueda.</b></td></tr>
+      <tr><td><b>Global Complementario<br>(impuesto personal)</b></td><td>Progresivo, de 0% a <b>40%</b>. Se gatilla cuando <b>retiras</b> utilidad de la empresa.</td><td>Acá está la palanca del diferimiento: no retirar = no pagar (aún).</td></tr>
+      <tr><td><b>IVA</b></td><td>19%. Servicios médicos tienen tratamiento especial; retail lo recarga y descuenta crédito fiscal.</td><td>Gestión de crédito fiscal, no "ahorro" directo.</td></tr>
+    </table>
+
+    <h2><span class="n">02</span> La palanca grande: diferimiento</h2>
+    <p>En Chile el impuesto personal alto (Global Complementario, hasta 40%) <strong>solo se paga cuando retiras la plata</strong> de la empresa. Si las utilidades se acumulan en un <strong>holding</strong> y se reinvierten, pagas solo el IDPC Pyme (12,5%) y <strong>aplazas el resto por años</strong>. El holding no esconde nada: es un estanque legal que te deja decidir <em>cuándo</em> tributas a nivel personal — y retirar de a poco para no saltar al tramo del 40%.</p>
+
+    <h2><span class="n">03</span> La estructura propuesta</h2>
+    <div class="diagram"><span class="h">                  OLACORE SpA  ·  HOLDING</span>
+              (sociedad de inversiones · dueño: Rodrigo +/- familia)
+                  recibe dividendos · reinvierte · difiere
+                              │
+     ┌──────────────┬─────────┴────────┬──────────────────┐
+     ▼              ▼                  ▼                  ▼
+ <span class="h">CMC SpA</span>        <span class="h">Meulen SpA</span>       <span class="h">Inmobiliaria</span>       <span class="h">OLACORE Tech</span>
+ (salud)        (retail)         Olavarría SpA      SpA (software)
+ Pro Pyme 14D   Pro Pyme 14D     (bienes raíces)    el bot / SaaS
+                                      │ arrienda a CMC y Meulen
+                                      ▼ (gasto deducible para ellos)
+</div>
+
+    <h3>Empresas a crear / ordenar</h3>
+
+    <div class="card">
+      <h3>1. OLACORE SpA — el holding <span class="pill legal">legal</span></h3>
+      <p>Sociedad de inversiones, cabeza de todo. Dueña de las operativas. Recibe los dividendos (entre empresas chilenas no se vuelve a pagar IDPC: viaja con su crédito) y los <b>acumula/reinvierte</b> → difiere tu impuesto personal. Es también donde se consolida para pedir financiamiento y donde entra un eventual socio/inversionista.</p>
+    </div>
+    <div class="card">
+      <h3>2. CMC SpA y Meulen SpA — operativas, separadas <span class="pill legal">legal</span></h3>
+      <p>Mantenerlas <b>separadas</b> es lo correcto: giros y riesgos distintos, y cada una puede calificar a Pro Pyme 14D por su cuenta (12,5%). Separar también es <b>protección patrimonial</b>: un juicio o deuda en una no arrastra a la otra ni al holding.</p>
+    </div>
+    <div class="card">
+      <h3>3. Inmobiliaria Olavarría SpA — los bienes raíces <span class="pill legal">legal</span></h3>
+      <p>Dueña de los inmuebles (Estación Olavarría y, si se compran, los locales de CMC/Meulen). Se los <b>arrienda</b> a las operativas: el arriendo es <b>gasto deducible</b> para ellas y renta para la inmobiliaria, y saca los activos valiosos del riesgo del día a día. <b>Condición:</b> el arriendo debe ser a <b>valor de mercado</b> — inflarlo para vaciar utilidad es elusión.</p>
+    </div>
+    <div class="card">
+      <h3>4. OLACORE Tech SpA — el software <span class="pill legal">legal</span></h3>
+      <p>Vehículo para el bot/SaaS clínico que se va a comercializar. Permite facturar servicios <b>reales</b> a CMC/Meulen (gasto deducible legítimo, porque el servicio existe), aislar la propiedad intelectual y abrir la puerta a un inversionista del producto sin tocar las clínicas.</p>
+    </div>
+
+    <h2><span class="n">04</span> Palancas legales (lo que de verdad baja el pago)</h2>
+    <div class="verde-box">
+      <ol>
+        <li><b>Quedarse en Pro Pyme 14D</b> mientras se pueda → 12,5% vs 27%, e integrado. Vigilar el techo de 75.000 UF; si una operativa crece, otra razón para tenerlas separadas.</li>
+        <li><b>Sueldo del dueño ("sueldo patronal")</b>: lo que te pagas por gerenciar es gasto deducible para la empresa y tributa en tu impuesto personal, normalmente a tasa menor que retirar utilidad. Debe ser razonable y por trabajo efectivo.</li>
+        <li><b>Capturar todos los gastos necesarios</b>: equipamiento médico, insumos, sistemas, capacitación, vehículo de empresa, etc., con respaldo. Mucha "optimización" real es dejar de regalar deducciones.</li>
+        <li><b>Depreciación instantánea/acelerada</b> (beneficio Pyme) sobre equipos médicos, mobiliario del super, equipos: adelanta el gasto y baja la base imponible los primeros años.</li>
+        <li><b>Diferir y planificar retiros</b>: dejar utilidad en el holding y retirar de forma escalonada para no saltar al tramo de 40% en un solo año.</li>
+        <li><b>APV / APV colectivo</b>: rebaja tu base de impuesto personal (con tope legal).</li>
+        <li><b>Reinversión vía el holding</b> para crecer (más boxes, sucursal Meulen, Ríomonte) con utilidades que aún no pagaron impuesto personal.</li>
+        <li><b>Repartir propiedad con la familia</b> — <u>solo si es real</u> (aportan capital o trabajo) — distribuye renta en tramos más bajos.</li>
+      </ol>
+    </div>
+
+    <h2><span class="n">05</span> La línea roja — lo que NO se hace</h2>
+    <p>La diferencia entre planificación (legal) y elusión (que el SII recalifica) es una sola: <strong>sustancia económica y propósito de negocio real</strong>. La <strong>Norma General Anti-Elusión</strong> (arts. 4 bis–4 quinquies del Código Tributario) deja al SII recalificar operaciones por "abuso de formas jurídicas" o "simulación", cobrar lo eludido con intereses y multas; y si hay simulación, entra el Art. 97 N°4 (delito tributario).</p>
+    <div class="roja-box">
+      <h3>Banderas rojas <span class="pill roja">no hacer</span></h3>
+      <ul>
+        <li>Sociedades <b>sin sustancia económica</b> creadas solo para mover utilidad.</li>
+        <li>Arriendos o servicios entre empresas <b>inflados</b> para vaciar la que paga impuesto.</li>
+        <li>Facturas por servicios que <b>no existen</b>.</li>
+        <li>Gastos <b>personales</b> disfrazados de gasto de empresa.</li>
+        <li>Repartir propiedad a familiares que <b>no participan</b> de verdad.</li>
+      </ul>
+      <p style="margin-bottom:0;font-size:13.5px;color:#7a3325;">Todo lo de la sección 04 tiene sustancia y propósito real → es defendible. "Rozar la ilegalidad" pierde esa sustancia por definición → es recalificable y, en Chile, mal negocio.</p>
+    </div>
+
+    <h2><span class="n">06</span> Roadmap por fases</h2>
+    <p>Orden sugerido para llegar a la estructura sin sustos. Cada fase se ejecuta <b>con el contador/abogado tributario</b>, no solo.</p>
+
+    <div class="fase"><div class="num">0</div><div>
+      <div class="tag">Diagnóstico · 2-4 semanas</div>
+      <h3>Fotografía del estado actual</h3>
+      <ul>
+        <li>Reunión con contador + abogado tributario (idealmente uno con experiencia en holdings Pyme).</li>
+        <li>Levantar: forma jurídica y régimen actual de CMC y Meulen, RUTs, propiedad, deudas, inmuebles, contratos vigentes.</li>
+        <li>Estimar ingresos anuales de cada una vs el techo de 75.000 UF.</li>
+        <li><b>Resultado:</b> mapa del "antes" y validación de que la estructura aplica al caso real.</li>
+      </ul>
+    </div></div>
+
+    <div class="fase"><div class="num">1</div><div>
+      <div class="tag">Holding · 1-2 meses</div>
+      <h3>Constituir OLACORE SpA y reorganizar la propiedad</h3>
+      <ul>
+        <li>Crear OLACORE SpA (sociedad de inversiones).</li>
+        <li>Aportar/traspasar las acciones de CMC y Meulen al holding (reorganización empresarial — hay figuras legales que lo hacen sin costo tributario si se hace bien).</li>
+        <li>Definir pacto de socios si entra la familia.</li>
+        <li><b>Cuidado NGA:</b> la reorganización debe tener razón de negocio (ordenar el grupo, atraer inversión), no solo tributaria.</li>
+      </ul>
+    </div></div>
+
+    <div class="fase"><div class="num">2</div><div>
+      <div class="tag">Activos · 1-2 meses</div>
+      <h3>Inmobiliaria y separación de bienes raíces</h3>
+      <ul>
+        <li>Constituir Inmobiliaria Olavarría SpA bajo el holding.</li>
+        <li>Aportar/traspasar los inmuebles (terreno Piedra Azul, locales).</li>
+        <li>Firmar contratos de arriendo <b>a valor de mercado</b> con CMC y Meulen.</li>
+        <li><b>Resultado:</b> activos protegidos + gasto deducible legítimo en las operativas.</li>
+      </ul>
+    </div></div>
+
+    <div class="fase"><div class="num">3</div><div>
+      <div class="tag">Operación · continuo</div>
+      <h3>Optimización operativa de cada empresa</h3>
+      <ul>
+        <li>Confirmar/elegir Pro Pyme 14D en CMC y Meulen.</li>
+        <li>Implementar sueldo patronal razonable.</li>
+        <li>Ordenar la captura de gastos deducibles (proceso contable, no improvisado).</li>
+        <li>Activar depreciación instantánea/acelerada en equipos.</li>
+      </ul>
+    </div></div>
+
+    <div class="fase"><div class="num">4</div><div>
+      <div class="tag">Caja personal · anual</div>
+      <h3>Política de retiros y reinversión</h3>
+      <ul>
+        <li>Definir cuánto retiras al año para no saltar de tramo en Global Complementario (el dashboard simula esto).</li>
+        <li>Lo no retirado queda en el holding para reinvertir (crecimiento) con impuesto personal diferido.</li>
+        <li>Sumar APV para bajar la base personal.</li>
+      </ul>
+    </div></div>
+
+    <div class="fase"><div class="num">5</div><div>
+      <div class="tag">Escala · cuando aplique</div>
+      <h3>OLACORE Tech SpA (el SaaS)</h3>
+      <ul>
+        <li>Constituir cuando el bot/producto empiece a comercializarse a terceros.</li>
+        <li>Facturar servicios reales a CMC/Meulen; aislar la IP; preparar entrada de inversionista del producto.</li>
+      </ul>
+    </div></div>
+
+    <div class="fase"><div class="num">6</div><div>
+      <div class="tag">Gobernanza · continuo</div>
+      <h3>Cumplimiento y control</h3>
+      <ul>
+        <li>Contabilidad consolidada del holding + calendario tributario (F29 mensual, PPM, F22 en abril).</li>
+        <li>Revisión anual con asesores antes de la Operación Renta.</li>
+        <li>Carpeta de respaldo de cada decisión (la "razón de negocio" documentada es tu mejor defensa ante el SII).</li>
+      </ul>
+    </div></div>
+
+    <h2><span class="n">07</span> Para la conversación con tu papá</h2>
+    <p>Tres ideas que resumen todo, sin tecnicismos:</p>
+    <ul>
+      <li><b>No es esconder, es ordenar.</b> Un holding arriba, cada negocio abajo, los bienes raíces aparte. Es lo que hace cualquier grupo familiar serio.</li>
+      <li><b>El ahorro real viene de dos cosas legales:</b> pagar la tasa Pyme (12,5%) y <b>elegir cuándo</b> sacas la plata para tu bolsillo (diferir el 40%).</li>
+      <li><b>La regla de oro:</b> cada empresa y cada movimiento tiene que tener una razón de negocio de verdad. Con eso, es sólido. Sin eso, el SII lo deshace.</li>
+    </ul>
+
+  </div>
+
+  <div class="foot">
+    OLACORE Holding · documento de estudio interno. Preparado como base para validar con contador y abogado tributario.
+    No constituye asesoría tributaria ni legal. Tasas y normas: marco Chile 2025-2026 (sujetas a cambio).
+    Fuentes: SII (regímenes renta 2025, Circulares 31 y 53/2025), Ley 21.755 (rebaja IDPC Pyme), Código Tributario arts. 4 bis–4 quinquies (NGA).
+  </div>
+
+</div>
+</body>
+</html>

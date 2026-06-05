@@ -2974,6 +2974,10 @@ _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encod
 _ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
 _ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_kine.html").exists() else ""
 _ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
+_OLACORE_ESTRUCTURA_HTML = (_TEMPLATE_DIR / "olacore_estructura.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_estructura.html").exists() else ""
+_OLACORE_HOLDING_HTML = (_TEMPLATE_DIR / "olacore_holding.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_holding.html").exists() else ""
+# Token dedicado para compartir SOLO los documentos del holding (no da acceso al resto de Alma).
+OLACORE_HOLDING_TOKEN = "olacore_holding_2026"
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
 _ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
 _ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
@@ -3742,6 +3746,35 @@ def alma_programas_page(token: str | None = Query(None),
                 .replace("__PROG_SCOPED__", scoped)
                 .replace("__PROF_DASHBOARD_URL__", dash_url))
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+def _olacore_holding_ok(token: str | None) -> bool:
+    """Acceso a los documentos del holding: dueño (OLACORE_TOKEN) o el token
+    dedicado de solo-documentos (compartible con la familia/contador sin dar
+    acceso al resto de Alma)."""
+    import hmac as _hm
+    return bool(token) and (_hm.compare_digest(token, OLACORE_TOKEN)
+                            or _hm.compare_digest(token, OLACORE_HOLDING_TOKEN))
+
+
+@app.get("/olacore/estructura", response_class=HTMLResponse)
+def olacore_estructura_page(token: str | None = Query(None)):
+    """Documento de estudio: estructura tributaria legal + roadmap (gateado)."""
+    if not _olacore_holding_ok(token):
+        raise HTTPException(401, "No autorizado")
+    if not _OLACORE_ESTRUCTURA_HTML:
+        raise HTTPException(404, "Documento no disponible")
+    return HTMLResponse(_OLACORE_ESTRUCTURA_HTML, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/olacore/holding", response_class=HTMLResponse)
+def olacore_holding_page(token: str | None = Query(None)):
+    """Dashboard financiero del holding OLACORE (gateado)."""
+    if not _olacore_holding_ok(token):
+        raise HTTPException(401, "No autorizado")
+    if not _OLACORE_HOLDING_HTML:
+        raise HTTPException(404, "Dashboard no disponible")
+    return HTMLResponse(_OLACORE_HOLDING_HTML, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/anima", include_in_schema=False)

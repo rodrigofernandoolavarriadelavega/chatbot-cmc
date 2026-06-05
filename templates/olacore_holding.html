@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alma · OLACORE Holding — Financiero</title>
+<style>
+  :root{
+    --fiordo:#1f3a4d; --fiordo2:#162c3a; --aqua:#4FBECE; --cobre:#b5703a;
+    --bg:#0f1f29; --panel:#162c3a; --panel2:#1d3848; --linea:#2a4456;
+    --tinta:#e7eef2; --mute:#8aa4b2; --verde:#4ec77f; --amar:#e8b54f; --rojo:#e8694f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tinta);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;padding-bottom:50px;}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  .top{background:linear-gradient(140deg,var(--fiordo),var(--fiordo2));padding:22px 20px;border-bottom:1px solid var(--linea);}
+  .brand{font-size:11px;letter-spacing:.36em;text-transform:uppercase;color:var(--cobre);font-weight:700;}
+  .top h1{margin:6px 0 2px;font-size:21px;font-weight:800;letter-spacing:-.01em;}
+  .top .sub{color:var(--mute);font-size:12.5px;}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 16px;}
+  .sec{margin:26px 0 10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--aqua);font-weight:700;}
+  .grid{display:grid;gap:13px;}
+  .g-emp{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
+  .g-kpi{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));}
+  .card{background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:16px;}
+  .card.emp h3{margin:0 0 2px;font-size:15px;font-weight:800;}
+  .card.emp .giro{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+  label{display:block;font-size:11px;color:var(--mute);margin:9px 0 3px;text-transform:uppercase;letter-spacing:.04em;}
+  input[type=text],input[type=number]{width:100%;background:var(--bg);border:1px solid var(--linea);border-radius:9px;
+    color:var(--tinta);padding:9px 11px;font-size:14px;font-family:'IBM Plex Mono',monospace;}
+  input:focus{outline:none;border-color:var(--aqua);}
+  .emp-out{margin-top:11px;padding-top:11px;border-top:1px dashed var(--linea);font-size:12.5px;}
+  .emp-out .row{display:flex;justify-content:space-between;margin:3px 0;}
+  .emp-out .row b{font-family:'IBM Plex Mono',monospace;}
+  .sem{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;margin-top:8px;}
+  .dot{width:9px;height:9px;border-radius:50%;}
+  .kpi{background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:15px 16px;}
+  .kpi .k-label{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;}
+  .kpi .k-val{font-size:23px;font-weight:800;margin-top:5px;font-family:'IBM Plex Mono',monospace;}
+  .kpi .k-sub{font-size:11px;color:var(--mute);margin-top:3px;}
+  .kpi.acc .k-val{color:var(--aqua);}
+  .kpi.cobre .k-val{color:var(--cobre);}
+  .sim{background:var(--panel2);border:1px solid var(--linea);border-radius:16px;padding:18px;}
+  .sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .sim .out{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+  .sim .ob{background:var(--bg);border:1px solid var(--linea);border-radius:11px;padding:12px 13px;}
+  .sim .ob .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;}
+  .sim .ob .v{font-size:19px;font-weight:800;font-family:'IBM Plex Mono',monospace;margin-top:4px;}
+  .bar{height:9px;border-radius:999px;background:var(--bg);overflow:hidden;margin-top:14px;border:1px solid var(--linea);}
+  .bar > div{height:100%;}
+  .tramo{font-size:12px;color:var(--mute);margin-top:8px;}
+  .tramo b{color:var(--tinta);font-family:'IBM Plex Mono',monospace;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--linea);}
+  th{color:var(--aqua);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  td.r,th.r{text-align:right;font-family:'IBM Plex Mono',monospace;}
+  .aviso{background:rgba(181,112,58,.13);border:1px solid #6e4a28;border-left:3px solid var(--cobre);
+    border-radius:10px;padding:12px 15px;font-size:12px;color:#e6c9ab;margin:18px 0;}
+  .cfg{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:var(--panel);border:1px solid var(--linea);
+    border-radius:12px;padding:13px 15px;margin-bottom:8px;}
+  .cfg .f{flex:1;min-width:130px;}
+  @media (max-width:620px){
+    .wrap{padding:14px 12px;} .sim-grid{grid-template-columns:1fr;} .top h1{font-size:18px;}
+    .sim{padding:14px;} .kpi .k-val{font-size:20px;}
+  }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">OLACORE · Holding</div>
+    <h1>Panel Financiero del Grupo</h1>
+    <div class="sub">Consolidado · carga tributaria estimada · simulador de retiros. Editá las cifras y todo se recalcula.</div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="cfg">
+      <div class="f"><label>Tasa IDPC Pyme (%)</label><input type="number" id="tasaIdpc" value="12.5" step="0.5"></div>
+      <div class="f"><label>Valor UF ($)</label><input type="number" id="uf" value="39200"></div>
+      <div class="f"><label>Valor UTA ($)</label><input type="number" id="uta" value="840000"></div>
+      <div class="f" style="flex:2;min-width:180px;align-self:center;color:var(--mute);font-size:11.5px;padding-top:14px">
+        Actualizá UF y UTA con el valor del mes (los tramos del Global Complementario van en UTA).
+      </div>
+    </div>
+
+    <div class="sec">Empresas del grupo · ingresos y utilidad anual</div>
+    <div class="grid g-emp" id="empresas"></div>
+
+    <div class="sec">Consolidado del holding</div>
+    <div class="grid g-kpi" id="kpis"></div>
+
+    <div class="sec">Simulador de retiro personal (Global Complementario)</div>
+    <div class="sim">
+      <div class="sim-grid">
+        <div><label>¿Cuánto retirás al año? ($)</label><input type="number" id="retiro" value="40000000"></div>
+        <div><label>Otras rentas tuyas: sueldo anual ($)</label><input type="number" id="sueldo" value="0"></div>
+      </div>
+      <div class="out" id="simOut"></div>
+      <div class="bar"><div id="simBar"></div></div>
+      <div class="tramo" id="simTramo"></div>
+    </div>
+
+    <div class="aviso">
+      <b>Es una estimación para planificar, no una declaración.</b> El cálculo del Global Complementario usa los tramos en UTA y el crédito por IDPC (régimen integrado Pyme). Las cifras reales dependen de incrementos, exenciones y tu situación — validá con tu contador. La meta del simulador es ver <b>cuánto retirar sin saltar de tramo</b>.
+    </div>
+
+    <div class="sec">Calendario tributario (referencia)</div>
+    <div class="card">
+      <table>
+        <tr><th>Cuándo</th><th>Qué</th><th>Quién</th></tr>
+        <tr><td><b>Mensual (día 12/20)</b></td><td>F29 — IVA + PPM de cada empresa</td><td>Contador</td></tr>
+        <tr><td><b>Abril</b></td><td>F22 — Renta anual (IDPC empresas + Global Complementario tuyo)</td><td>Contador</td></tr>
+        <tr><td><b>Antes de abril</b></td><td>Revisión de cierre: retiros, depreciación, gastos, decisión de tramo</td><td>Contador + tú</td></tr>
+        <tr><td><b>Anual</b></td><td>Revisión de estructura con abogado tributario (razón de negocio documentada)</td><td>Abogado tributario</td></tr>
+      </table>
+    </div>
+
+    <div class="aviso" style="background:rgba(79,190,206,.10);border-color:#2a5a66;border-left-color:var(--aqua);color:#bfe3ea;">
+      Acompaña al documento <b>OLACORE_estructura_tributaria.html</b> (estructura legal + roadmap por fases). Este panel es el lado de los números; aquel es el del plan.
+    </div>
+  </div>
+
+<script>
+const fmt = n => "$" + Math.round(n||0).toLocaleString("es-CL");
+const $ = id => document.getElementById(id);
+
+// Estado editable de las empresas (cifras de ejemplo — editar)
+const EMPRESAS = [
+  {key:"cmc",   nom:"CMC SpA",            giro:"Salud",          ingresos:480000000, utilidad:96000000},
+  {key:"meulen",nom:"Meulen SpA",         giro:"Retail",         ingresos:900000000, utilidad:72000000},
+  {key:"inmo",  nom:"Inmobiliaria Olavarría", giro:"Bienes raíces", ingresos:36000000,  utilidad:30000000},
+  {key:"tech",  nom:"OLACORE Tech SpA",   giro:"Software",       ingresos:0,         utilidad:0},
+];
+
+// Tramos Global Complementario (anual, en UTA) — estructura legal estándar
+const TRAMOS = [
+  {hasta:13.5, t:0.00}, {hasta:30, t:0.04}, {hasta:50, t:0.08}, {hasta:70, t:0.135},
+  {hasta:90, t:0.23}, {hasta:120, t:0.304}, {hasta:310, t:0.35}, {hasta:Infinity, t:0.40},
+];
+
+function igc(base, uta){           // impuesto Global Complementario por integración marginal
+  let restante = base, prev = 0, imp = 0, tasaMax = 0;
+  for(const tr of TRAMOS){
+    const tope = tr.hasta===Infinity ? Infinity : tr.hasta*uta;
+    const ancho = Math.min(restante, tope - prev);
+    if(ancho > 0){ imp += ancho * tr.t; if(tr.t>0) tasaMax = tr.t; restante -= ancho; }
+    prev = tope;
+    if(restante<=0) break;
+  }
+  return {imp, tasaMax};
+}
+
+function renderEmpresas(){
+  const cont = $("empresas"); cont.innerHTML = "";
+  EMPRESAS.forEach(e=>{
+    const c = document.createElement("div");
+    c.className = "card emp";
+    c.innerHTML = `
+      <h3>${e.nom}</h3><div class="giro">${e.giro}</div>
+      <label>Ingresos anuales ($)</label><input type="number" data-k="${e.key}" data-f="ingresos" value="${e.ingresos}">
+      <label>Utilidad anual ($)</label><input type="number" data-k="${e.key}" data-f="utilidad" value="${e.utilidad}">
+      <div class="emp-out" id="out-${e.key}"></div>`;
+    cont.appendChild(c);
+  });
+  cont.querySelectorAll("input").forEach(inp=>inp.addEventListener("input", e=>{
+    const emp = EMPRESAS.find(x=>x.key===e.target.dataset.k);
+    emp[e.target.dataset.f] = parseFloat(e.target.value)||0;
+    recompute();
+  }));
+}
+
+function recompute(){
+  const tasa = (parseFloat($("tasaIdpc").value)||0)/100;
+  const uf = parseFloat($("uf").value)||1;
+  const uta = parseFloat($("uta").value)||1;
+  const TECHO_UF = 75000;
+  let totIng=0, totUtil=0, totIdpc=0;
+
+  EMPRESAS.forEach(e=>{
+    const idpc = e.utilidad*tasa;
+    const ingUF = e.ingresos/uf;
+    totIng+=e.ingresos; totUtil+=e.utilidad; totIdpc+=idpc;
+    const pct = ingUF/TECHO_UF;
+    let color=var0(pct), txt = pct>=1?"Sobre techo Pyme":(pct>=0.8?"Cerca del techo":"Dentro de Pyme");
+    const out = $("out-"+e.key);
+    if(out) out.innerHTML = `
+      <div class="row"><span>IDPC (${($("tasaIdpc").value)}%)</span><b>${fmt(idpc)}</b></div>
+      <div class="row"><span>Utilidad post-IDPC</span><b>${fmt(e.utilidad-idpc)}</b></div>
+      <div class="row" style="color:var(--mute)"><span>Ingresos en UF</span><b>${Math.round(ingUF).toLocaleString("es-CL")} / 75.000</b></div>
+      <div class="sem" style="color:${color}"><span class="dot" style="background:${color}"></span>${txt}</div>`;
+  });
+
+  const utilHolding = totUtil - totIdpc;
+  const tasaEfEmp = totUtil>0 ? totIdpc/totUtil*100 : 0;
+  $("kpis").innerHTML = `
+    ${kpi("Ingresos del grupo", fmt(totIng), "consolidado anual","")}
+    ${kpi("Utilidad del grupo", fmt(totUtil), "antes de impuestos","acc")}
+    ${kpi("IDPC total (empresas)", fmt(totIdpc), tasaEfEmp.toFixed(1)+"% efectivo","cobre")}
+    ${kpi("Disponible en holding", fmt(utilHolding), "para reinvertir o retirar","acc")}`;
+
+  simular(uta, tasa);
+}
+
+function kpi(l,v,s,cls){ return `<div class="kpi ${cls}"><div class="k-label">${l}</div><div class="k-val">${v}</div><div class="k-sub">${s}</div></div>`; }
+
+function simular(uta, tasaIdpc){
+  const retiro = parseFloat($("retiro").value)||0;
+  const sueldo = parseFloat($("sueldo").value)||0;
+  // Régimen integrado: el retiro trae crédito IDPC. Base IGC = retiro incrementado + sueldo.
+  const credito = retiro * tasaIdpc;            // crédito IDPC asociado al retiro
+  const base = retiro + sueldo;                 // base imponible aprox (planificación)
+  const {imp, tasaMax} = igc(base, uta);
+  const impNeto = Math.max(0, imp - credito);
+  const efectiva = retiro>0 ? impNeto/retiro*100 : 0;
+  $("simOut").innerHTML = `
+    ${ob("IGC bruto", fmt(imp))}
+    ${ob("Crédito IDPC", "−"+fmt(credito))}
+    ${ob("Impuesto personal neto", fmt(impNeto))}
+    ${ob("Tasa efectiva del retiro", efectiva.toFixed(1)+"%")}`;
+  // barra: posición en tramos (0 a 310 UTA escala visual)
+  const baseUTA = base/uta;
+  const pctBar = Math.min(100, baseUTA/120*100);
+  let col = tasaMax>=0.35?"var(--rojo)":(tasaMax>=0.23?"var(--amar)":"var(--verde)");
+  $("simBar").style.width = pctBar+"%";
+  $("simBar").style.background = col;
+  $("simTramo").innerHTML = `Estás en el tramo marginal <b>${(tasaMax*100).toFixed(1)}%</b> · base ≈ <b>${baseUTA.toFixed(1)} UTA</b>. ${tasaMax>=0.35?"⚠ Tramo alto — evaluá retirar menos este año y diferir el resto en el holding.":(tasaMax>=0.23?"Tramo medio — margen para optimizar el monto.":"Tramo bajo — eficiente.")}`;
+}
+
+function ob(l,v){ return `<div class="ob"><div class="l">${l}</div><div class="v">${v}</div></div>`; }
+
+// color del semáforo de techo Pyme
+function var0(pct){ return pct>=1?"var(--rojo)":(pct>=0.8?"var(--amar)":"var(--verde)"); }
+
+["tasaIdpc","uf","uta","retiro","sueldo"].forEach(id=>$(id).addEventListener("input",recompute));
+renderEmpresas();
+recompute();
+</script>
+</body>
+</html>
