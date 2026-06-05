@@ -741,6 +741,1234 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- ── Simulador Tarjeta ─────────────────────────────────────────────────────── -->
+<div class="sim-section" id="simSection">
+  <div class="sim-header" id="simHeader">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4FBECE" stroke-width="2.2" stroke-linecap="round">
+      <rect x="1" y="4" width="22" height="16" rx="2"/>
+      <path d="M1 10h22"/>
+    </svg>
+    <h3>Simulador de Comision por Tarjeta</h3>
+    <span class="sim-badge">Herramienta del dueno</span>
+    <span class="sim-toggle-icon" id="simToggleIcon">&#9660;</span>
+  </div>
+
+  <div class="sim-body" id="simBody">
+
+    <!-- Header interno tipo Alma premium -->
+    <div class="sim-top">
+      <div class="sim-top-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4FBECE" stroke-width="2" stroke-linecap="round">
+          <rect x="1" y="4" width="22" height="16" rx="2"/>
+          <path d="M1 10h22"/>
+        </svg>
+      </div>
+      <div class="sim-top-text">
+        <div class="sim-top-title">Simulador de Comision Adquirente</div>
+        <div class="sim-top-sub">Cuanto cuesta cobrar con tarjeta — base Mayo 2026 real ($24,1M caja, mes completo 24 dias habiles) + mix real del modulo Pagos (309 registros, 30-may a 4-jun 2026)</div>
+      </div>
+      <div class="sim-mode-pill">
+        <span class="sim-dot"></span>
+        Datos reales CMC
+      </div>
+      <!-- Toggle IVA -->
+      <div class="sim-iva-wrap">
+        <label class="sim-iva-label" for="simIvaToggle">
+          <input type="checkbox" id="simIvaToggle" checked>
+          <span class="sim-iva-text">IVA sobre comision (19%, no recuperable)</span>
+        </label>
+        <div class="sim-iva-note">Confirmar con contador — servicios salud exentos de IVA de venta, pero la comision del adquirente SI lleva IVA y CMC probablemente no lo recupera como CF.</div>
+      </div>
+    </div>
+
+    <!-- Panel informativo: datos reales del módulo Pagos -->
+    <div class="sim-data-real-card">
+      <div class="sim-data-real-header">
+        <div class="sim-ph-ico" style="margin:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+        </div>
+        <div class="sim-data-real-title">Datos reales — modulo Pagos</div>
+        <div class="sim-data-real-badge">309 registros · 30-may a 4-jun 2026 · copago total $3.949.423</div>
+      </div>
+      <div class="sim-data-real-body">
+        <div class="sim-data-real-bars">
+          <div class="sim-dr-bar-row">
+            <div class="sim-dr-lbl">Efectivo</div>
+            <div class="sim-dr-track"><div class="sim-dr-fill" style="width:37%"></div></div>
+            <div class="sim-dr-val">37,0%</div>
+          </div>
+          <div class="sim-dr-bar-row">
+            <div class="sim-dr-lbl">Transferencia</div>
+            <div class="sim-dr-track"><div class="sim-dr-fill" style="width:37.4%"></div></div>
+            <div class="sim-dr-val">37,4%</div>
+          </div>
+          <div class="sim-dr-bar-row">
+            <div class="sim-dr-lbl">Debito</div>
+            <div class="sim-dr-track"><div class="sim-dr-fill sim-dr-fill-aqua" style="width:19.5%"></div></div>
+            <div class="sim-dr-val">19,5%</div>
+          </div>
+          <div class="sim-dr-bar-row">
+            <div class="sim-dr-lbl">Credito</div>
+            <div class="sim-dr-track"><div class="sim-dr-fill sim-dr-fill-aqua" style="width:3.3%"></div></div>
+            <div class="sim-dr-val">3,3%</div>
+          </div>
+          <div class="sim-dr-bar-row">
+            <div class="sim-dr-lbl" style="color:var(--mute)">Sin registrar</div>
+            <div class="sim-dr-track"><div class="sim-dr-fill sim-dr-fill-muted" style="width:2.8%"></div></div>
+            <div class="sim-dr-val" style="color:var(--mute)">2,8%</div>
+          </div>
+        </div>
+        <div class="sim-data-real-chips">
+          <div class="sim-dr-chip sim-dr-chip-blue">
+            <div class="sim-dr-chip-val">74,4%</div>
+            <div class="sim-dr-chip-lbl">Efectivo + transf. — potencial de migracion a tarjeta</div>
+          </div>
+          <div class="sim-dr-chip sim-dr-chip-aqua">
+            <div class="sim-dr-chip-val">22,8%</div>
+            <div class="sim-dr-chip-lbl">Debito + credito — ya va en tarjeta hoy</div>
+          </div>
+          <div class="sim-dr-chip sim-dr-chip-slate">
+            <div class="sim-dr-chip-val">86% / 14%</div>
+            <div class="sim-dr-chip-lbl">Del total tarjeta: debito vs credito</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de descomposicion del mes real — dinamico: Mayo (default) o Abril -->
+    <div class="sim-abril-card" id="simAbrilCard">
+      <div class="sim-abril-header">
+        <div class="sim-ph-ico" style="margin:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F3F68" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <div class="sim-abril-title" id="simMesTitle">Mayo 2026 — Descomposicion de la caja</div>
+        <div class="sim-abril-badge" id="simMesBadge">bi_pagos_caja x convenio (cruce exacto) + arancel N3</div>
+      </div>
+      <div class="sim-abril-body">
+        <div class="sim-abril-table" id="simMesTable">
+          <!-- contenido dinamico por JS -->
+        </div>
+        <div class="sim-abril-chips" id="simMesChips">
+          <!-- contenido dinamico por JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Nota conceptual: caja vs bonificacion -->
+    <div class="sim-note-card sim-note-blue">
+      <div class="sim-note-ico">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      </div>
+      <div class="sim-note-text">
+        <strong>La comision solo afecta la CAJA (copago de bolsillo).</strong> La bonificacion Fonasa la reembolsa Imed y nunca pasa por la tarjeta — se deriva del arancel N3, no se resta de la caja. DB Mensual ya muestra la caja, no el arancel total. Sobre $24,1M de caja (Mayo) la tasa real es 0,70%.
+      </div>
+    </div>
+
+    <!-- Nota matiz realista: base probable de tarjeta -->
+    <div class="sim-note-card" style="margin:12px 20px 0;background:#f0f7fd;border:1px solid #b8d4e8;border-radius:10px;padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+      <div class="sim-note-ico" style="flex-shrink:0;margin-top:1px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="sim-note-text">
+        <strong>Matiz practico:</strong> en la practica el copago Fonasa (montos fijos bajos $11.390–$15.130) tiende a pagarse en efectivo o transferencia — la base real de tarjeta probablemente este mas cerca de <strong>$18–20M (lo particular)</strong>, no los $24M completos de caja. Usa el slider de % de migracion para ajustar al escenario que mejor refleje tu situacion.
+      </div>
+    </div>
+
+    <!-- Nota de frescura amber -->
+    <div class="sim-warning-card">
+      <div class="sim-warning-ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c98a14" stroke-width="2.2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </div>
+      <div class="sim-warning-text" id="simNotaFrescura">
+        <strong>Datos desde la BI.</strong> El metodo de pago real solo existe desde el 30/05 en el modulo Pagos — el mix se consolida mes a mes. Medilink no registra metodo de pago (marca todo "Efectivo").
+      </div>
+    </div>
+
+    <!-- Controles: base + bolsillo + slider -->
+    <div class="sim-controls sim-controls-3">
+      <!-- Selector de base -->
+      <div class="sim-control-card">
+        <div class="sim-ctrl-label">Base de calculo</div>
+        <!-- Dropdown de mes vivo (se puebla desde /alma/api/pagos/comision-mes) -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <select id="simMesSel" style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:var(--navy);cursor:pointer">
+            <option value="">Cargando meses...</option>
+          </select>
+          <span id="simMesStatus" style="font-size:11px;color:#888;white-space:nowrap"></span>
+        </div>
+        <div class="sim-seg" id="simBaseSeg">
+          <button class="active" data-base="mes_vivo">Mes selec.<br><span id="simMesBtn">—</span></button>
+          <button data-base="total">Promedio<br><span>$21.181.190/mes</span></button>
+          <button data-base="medica">Solo medica<br><span>$15.974.528/mes</span></button>
+          <button data-base="dental">Solo dental<br><span>$5.206.662/mes</span></button>
+        </div>
+        <div class="sim-ctrl-hint" id="simCtrlHint">Cargando datos desde la BI...</div>
+      </div>
+
+      <!-- Slider % de caja que migra a tarjeta -->
+      <div class="sim-control-card sim-control-card-bolsillo">
+        <div class="sim-ctrl-label">% de la caja que se cobraria con tarjeta</div>
+        <div class="sim-bolsillo-explain" id="simBolsilloExplain">
+          La caja es lo que el paciente paga en el mostrador (copago de bolsillo). YA excluye la bonificacion Fonasa/Imed, que el tercero reembolsa por convenio y nunca pasa por la tarjeta. Este % es cuanto de esa caja migraria de efectivo/transferencia a tarjeta.
+        </div>
+        <div class="sim-slider-row" style="margin-top:10px">
+          <span class="sim-slider-tag">0%<br>Todo efectivo</span>
+          <div class="sim-slider-wrap">
+            <input type="range" id="simBolsilloSlider" min="0" max="100" value="100" step="5">
+            <div class="sim-slider-marks">
+              <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+            </div>
+          </div>
+          <span class="sim-slider-tag" style="text-align:right">100%<br>Todo tarjeta</span>
+        </div>
+        <div class="sim-bolsillo-marker">
+          <div class="sim-bolsillo-marker-line"></div>
+          <div class="sim-bolsillo-marker-label">74,4% potencial real<br>(el 22,8% ya esta en tarjeta)</div>
+        </div>
+        <div class="sim-slider-desc" id="simBolsilloDesc">100% de la caja migraria a tarjeta</div>
+        <div class="sim-bolsillo-base-display">
+          Caja que migra a tarjeta: <strong id="simBaseAfectaDisplay">—</strong>
+        </div>
+      </div>
+
+      <!-- Slider mix debito/credito -->
+      <div class="sim-control-card">
+        <div class="sim-ctrl-label">Mix de tarjeta</div>
+        <div class="sim-slider-row">
+          <span class="sim-slider-tag">100% Debito<br>0,60%</span>
+          <div class="sim-slider-wrap">
+            <input type="range" id="simSlider" min="0" max="100" value="14" step="1">
+            <div class="sim-slider-marks">
+              <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+            </div>
+          </div>
+          <span class="sim-slider-tag" style="text-align:right">100% Credito<br>1,30%</span>
+        </div>
+        <div class="sim-slider-desc" id="simSliderDesc">14% credito · 86% debito (segun datos reales)</div>
+        <div class="sim-rate-display">
+          Tasa efectiva: <strong id="simTasaEfectiva">0,81%</strong>
+          &nbsp;·&nbsp; Iva: <span id="simTasaConIva">0,96%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado grande -->
+    <div class="sim-result-row" style="grid-template-columns:1.2fr 1.1fr 1fr 1fr 1fr">
+      <div class="sim-result-card sim-result-main">
+        <div class="sim-result-label">Costo total / mes</div>
+        <div class="sim-result-value" id="simResMes">—</div>
+        <div class="sim-result-sub" id="simResSubMes">—</div>
+      </div>
+      <div class="sim-result-card sim-result-card-incr">
+        <div class="sim-result-label">Costo NUEVO (incremental) / mes</div>
+        <div class="sim-result-value sim-result-incr" id="simResIncr">—</div>
+        <div class="sim-result-sub" id="simResSubIncr">solo sobre el 74,4% que migraria</div>
+      </div>
+      <div class="sim-result-card sim-result-card-afecta">
+        <div class="sim-result-label">Caja que migra a tarjeta</div>
+        <div class="sim-result-value sim-result-afecta" id="simResBaseAfecta">—</div>
+        <div class="sim-result-sub" id="simResSubBaseAfecta">caja x % tarjeta</div>
+      </div>
+      <div class="sim-result-card">
+        <div class="sim-result-label">Costo comision / ano</div>
+        <div class="sim-result-value sim-result-secondary" id="simResAno">—</div>
+        <div class="sim-result-sub" id="simResSubAno">sobre caja tarjeta anual</div>
+      </div>
+      <div class="sim-result-card">
+        <div class="sim-result-label">% de la caja a tarjeta</div>
+        <div class="sim-result-value sim-result-pct" id="simResPct">—</div>
+        <div class="sim-result-sub">Menos margen sobre caja tarjeta</div>
+      </div>
+    </div>
+
+    <!-- Tabla de escenarios fijos -->
+    <div class="sim-escenarios">
+      <div class="sim-panel-h">
+        <div class="sim-ph-ico">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+        </div>
+        <div class="sim-ph-title">Escenarios fijos</div>
+        <div class="sim-ph-note" id="simEscNota">Caja que migra: $21.181.190/mes (100% de $21.181.190)</div>
+      </div>
+      <table class="sim-table">
+        <thead>
+          <tr>
+            <th>Escenario</th>
+            <th>Tasa</th>
+            <th>Caja a tarjeta / mes</th>
+            <th>Sin IVA / mes</th>
+            <th>Con IVA / mes</th>
+            <th>Con IVA / ano</th>
+            <th>% Caja a tarjeta</th>
+          </tr>
+        </thead>
+        <tbody id="simTablaBody">
+          <!-- generada por JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Grafico de barras -->
+    <div class="sim-chart-wrap">
+      <div class="sim-panel-h">
+        <div class="sim-ph-ico">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </div>
+        <div class="sim-ph-title">Comparacion de escenarios</div>
+      </div>
+      <div class="sim-chart-area" id="simChartArea">
+        <!-- barras CSS generadas por JS -->
+      </div>
+    </div>
+
+    <!-- Card de conclusion -->
+    <div class="sim-conclusion">
+      <div class="sim-conclusion-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      </div>
+      <div>
+        <div class="sim-conclusion-title">Lectura rapida</div>
+        <div class="sim-conclusion-text" id="simConcluText">
+          Sobre <strong>Mayo real ($24,1M caja, mejor mes)</strong>: cobrar todo con tarjeta cuesta <strong>~$200.000/mes total (con IVA)</strong>,
+          de los cuales <strong>~$149.000/mes es costo nuevo</strong> (el 22,8% que ya va en tarjeta no es incremental).
+          Menos del 0,7% de la caja. La bonificacion Imed (~$2,3M) es ingreso aparte que no paga comision.
+          En la practica, base real probable $18–20M (lo particular) → costo algo menor.
+          Credito en cuotas (2,5–3,5%) conviene traspasarlo al paciente.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /sim-body -->
+</div><!-- /sim-section -->
+
+<style>
+/* ── Simulador Tarjeta ── */
+.sim-section {
+  margin: 0 20px 28px;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--sh-sm); overflow: hidden;
+}
+.sim-header {
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(135deg, var(--navy), #1172AB);
+  padding: 12px 20px; cursor: pointer; user-select: none;
+}
+.sim-header h3 {
+  font-size: 13px; font-weight: 800; color: #fff;
+  margin: 0; letter-spacing: .04em; text-transform: uppercase;
+}
+.sim-badge {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,.7);
+  background: rgba(255,255,255,.12); border-radius: 999px;
+  padding: 3px 10px; letter-spacing: .04em;
+}
+.sim-toggle-icon {
+  margin-left: auto; color: #b8d4e8; font-size: 11px; font-weight: 700;
+  transition: transform .2s;
+}
+.sim-toggle-icon.open { transform: rotate(180deg); }
+.sim-body { display: none; padding: 0; }
+.sim-body.open { display: block; }
+
+/* Header interno premium */
+.sim-top {
+  display: flex; align-items: flex-start; flex-wrap: wrap; gap: 14px;
+  padding: 18px 20px 0;
+}
+.sim-top-badge {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, #e3f5f8, #cfeef3);
+  display: grid; place-items: center;
+}
+.sim-top-text { flex: 1; min-width: 200px; }
+.sim-top-title { font-size: 15px; font-weight: 800; color: var(--navy); letter-spacing: -.2px; }
+.sim-top-sub { font-size: 11.5px; color: var(--mute); margin-top: 3px; font-weight: 500; }
+.sim-mode-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--aqua-s); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: var(--navy);
+}
+.sim-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--aqua);
+  box-shadow: 0 0 0 3px rgba(79,190,206,.25);
+  animation: simPulse 2s infinite;
+}
+@keyframes simPulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+/* Toggle IVA */
+.sim-iva-wrap {
+  width: 100%; margin-top: 4px; margin-bottom: 14px;
+  background: #f0fbfd; border: 1px solid #cfeef3; border-radius: 10px;
+  padding: 10px 16px;
+}
+.sim-iva-label {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
+.sim-iva-label input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--aqua); cursor: pointer; }
+.sim-iva-text { font-size: 12px; font-weight: 700; color: var(--navy); }
+.sim-iva-note { font-size: 10.5px; color: var(--mute); margin-top: 6px; line-height: 1.5; }
+
+/* Advertencia amber */
+.sim-warning-card {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin: 14px 20px 0;
+  background: var(--amber-bg, #fdf4e3); border: 1px solid #e8c97a;
+  border-radius: 10px; padding: 12px 16px;
+}
+.sim-warning-ico { flex-shrink: 0; margin-top: 1px; }
+.sim-warning-text {
+  font-size: 11.5px; font-weight: 500; color: #6b4a00; line-height: 1.55;
+}
+.sim-warning-text strong { font-weight: 700; }
+
+/* Controles */
+.sim-controls {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  padding: 16px 20px;
+}
+.sim-controls-3 {
+  grid-template-columns: 1fr 1.4fr 1fr;
+}
+.sim-control-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+}
+.sim-control-card-bolsillo {
+  border-color: #b8d4e8; background: #f0f7fd;
+}
+.sim-ctrl-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--mute); margin-bottom: 10px;
+}
+.sim-ctrl-hint {
+  font-size: 10px; color: var(--mute); margin-top: 8px; font-weight: 500;
+}
+.sim-bolsillo-explain {
+  font-size: 10.5px; color: #1a3c5c; line-height: 1.55; font-weight: 500;
+  background: rgba(17,114,171,.07); border-radius: 7px; padding: 8px 10px;
+  margin-bottom: 2px;
+}
+.sim-bolsillo-base-display {
+  font-size: 11px; color: var(--mute); font-weight: 500;
+  text-align: center; margin-top: 8px;
+}
+.sim-bolsillo-base-display strong { color: var(--navy); font-weight: 800; }
+input[type=range]#simBolsilloSlider {
+  width: 100%; accent-color: var(--navy); cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--navy) 50%, var(--border) 50%);
+  outline: none;
+}
+input[type=range]#simBolsilloSlider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--navy);
+  border: 3px solid #fff; box-shadow: 0 2px 6px rgba(15,63,104,.3);
+  cursor: pointer;
+}
+
+/* Segmented selector base */
+.sim-seg {
+  display: flex; gap: 0; border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.sim-seg button {
+  flex: 1; border: 0; background: none; font-family: inherit;
+  font-size: 11px; font-weight: 600; padding: 10px 6px; line-height: 1.35;
+  cursor: pointer; transition: all .14s; color: var(--mute);
+  text-align: center;
+}
+.sim-seg button span { display: block; font-size: 9.5px; font-weight: 500; margin-top: 2px; }
+.sim-seg button + button { border-left: 1px solid var(--border); }
+.sim-seg button.active { background: var(--navy); color: #fff; }
+
+/* Slider */
+.sim-slider-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.sim-slider-tag {
+  font-size: 9.5px; font-weight: 600; color: var(--mute); line-height: 1.4;
+  flex-shrink: 0; min-width: 54px;
+}
+.sim-slider-wrap { flex: 1; }
+input[type=range]#simSlider {
+  width: 100%; accent-color: var(--aqua); cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--aqua) 0%, var(--border) 0%);
+  outline: none;
+}
+input[type=range]#simSlider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--navy);
+  border: 3px solid #fff; box-shadow: 0 2px 6px rgba(15,63,104,.3);
+  cursor: pointer;
+}
+.sim-slider-marks {
+  display: flex; justify-content: space-between;
+  font-size: 9px; color: var(--mute); font-weight: 500;
+  margin-top: 4px;
+}
+.sim-slider-desc {
+  font-size: 11px; font-weight: 600; color: var(--navy);
+  margin-top: 10px; text-align: center;
+}
+.sim-rate-display {
+  font-size: 11px; color: var(--mute); font-weight: 500;
+  text-align: center; margin-top: 5px;
+}
+.sim-rate-display strong { color: var(--navy); font-weight: 800; }
+
+/* Resultado grande */
+.sim-result-row {
+  display: grid; grid-template-columns: 1.2fr 1.1fr 1fr 1fr 1fr; gap: 14px;
+  padding: 0 20px 16px;
+}
+.sim-result-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 18px; position: relative; overflow: hidden;
+}
+.sim-result-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--border); border-radius: 3px 0 0 3px;
+}
+.sim-result-main::before { background: var(--navy); }
+.sim-result-card-afecta::before { background: var(--blue); }
+.sim-result-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--mute); margin-bottom: 6px;
+}
+.sim-result-value {
+  font-size: 24px; font-weight: 800; color: var(--navy); letter-spacing: -.5px;
+}
+.sim-result-secondary { font-size: 20px; }
+.sim-result-afecta { font-size: 20px; color: var(--blue); }
+.sim-result-pct { font-size: 22px; color: #c98a14; }
+.sim-result-sub {
+  font-size: 10.5px; color: var(--mute); margin-top: 4px; font-weight: 500;
+}
+
+/* Escenarios tabla */
+.sim-escenarios {
+  margin: 0 20px 16px;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.sim-panel-h {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  background: #fafcfe;
+}
+.sim-ph-ico {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, #e3f5f8, #cfeef3);
+  display: grid; place-items: center;
+}
+.sim-ph-title { font-size: 13px; font-weight: 700; color: var(--navy); }
+.sim-ph-note { margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--mute); }
+
+.sim-table { width: 100%; border-collapse: collapse; }
+.sim-table thead th {
+  background: linear-gradient(180deg, var(--navy), #0c3556);
+  color: #b8d4e8; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: 8px 14px; text-align: left; white-space: nowrap;
+}
+.sim-table tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+.sim-table tbody tr:last-child { border-bottom: 0; }
+.sim-table tbody tr:hover { background: var(--aqua-s); }
+.sim-table tbody td {
+  padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--navy);
+  white-space: nowrap;
+}
+.sim-table tbody td:first-child { font-weight: 700; }
+.sim-table tbody td.sim-td-afecta { color: var(--blue); font-weight: 700; }
+.sim-table tbody td.sim-td-amt { color: var(--navy); }
+.sim-table tbody td.sim-td-iva { color: #d94c4c; font-weight: 700; }
+.sim-table tbody td.sim-td-ano { color: var(--mute); }
+.sim-table tbody td.sim-td-pct { color: #c98a14; }
+.sim-table tbody tr.sim-row-active { background: #f0fbfd; }
+.sim-table tbody tr.sim-row-active td { color: var(--blue); }
+.sim-table tbody tr.sim-row-real td:first-child { font-weight: 800; }
+.sim-table tbody tr.sim-row-real { background: #f0faf5; }
+
+/* Grafico barras CSS */
+.sim-chart-wrap {
+  margin: 0 20px 16px;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.sim-chart-area {
+  padding: 16px 20px 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sim-bar-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.sim-bar-lbl {
+  width: 160px; flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--navy);
+  white-space: nowrap;
+}
+.sim-bar-track {
+  flex: 1; height: 20px; background: var(--bg);
+  border-radius: 6px; overflow: hidden; position: relative;
+}
+.sim-bar-fill {
+  height: 100%; border-radius: 6px;
+  background: linear-gradient(90deg, var(--aqua), var(--blue));
+  transition: width .7s cubic-bezier(.2,.8,.2,1);
+}
+.sim-bar-fill.sim-bar-iva {
+  background: linear-gradient(90deg, #f48c8c, #d94c4c);
+}
+.sim-bar-val {
+  width: 110px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--navy);
+  text-align: right;
+}
+
+/* Card conclusion */
+.sim-conclusion {
+  display: flex; gap: 14px; align-items: flex-start;
+  margin: 0 20px 20px;
+  background: linear-gradient(135deg, #e8f2fb, #d8ecf8);
+  border: 1px solid #b8d4e8; border-radius: 12px;
+  padding: 16px 18px;
+}
+.sim-conclusion-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: #fff; border-radius: 10px;
+  display: grid; place-items: center;
+  box-shadow: 0 2px 6px rgba(15,63,104,.1);
+}
+.sim-conclusion-title {
+  font-size: 12px; font-weight: 800; color: var(--navy);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+}
+.sim-conclusion-text {
+  font-size: 12px; font-weight: 500; color: #1a3c5c; line-height: 1.6;
+}
+.sim-conclusion-text strong { font-weight: 800; }
+
+/* Panel datos reales */
+.sim-data-real-card {
+  margin: 14px 20px 0;
+  background: #f4f9fe; border: 1px solid #c2d9ef;
+  border-radius: 12px; overflow: hidden;
+}
+.sim-data-real-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid #d8eaf6;
+  background: #eaf3fb;
+}
+.sim-data-real-title {
+  font-size: 12px; font-weight: 800; color: var(--navy);
+  letter-spacing: -.1px;
+}
+.sim-data-real-badge {
+  margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--mute);
+  background: #fff; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid #c2d9ef;
+}
+.sim-data-real-body {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 14px 16px; flex-wrap: wrap;
+}
+.sim-data-real-bars { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 7px; }
+.sim-dr-bar-row { display: flex; align-items: center; gap: 10px; }
+.sim-dr-lbl { width: 90px; flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--navy); }
+.sim-dr-track {
+  flex: 1; height: 14px; background: var(--line, #e6edf3);
+  border-radius: 4px; overflow: hidden;
+}
+.sim-dr-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #b8d4e8, var(--navy));
+  transition: width .7s cubic-bezier(.2,.8,.2,1);
+}
+.sim-dr-fill-aqua { background: linear-gradient(90deg, var(--aqua), var(--blue)); }
+.sim-dr-fill-muted { background: #c8d8e4; }
+.sim-dr-val { width: 38px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--navy); text-align: right; }
+.sim-data-real-chips {
+  display: flex; flex-direction: column; gap: 7px; min-width: 220px;
+}
+.sim-dr-chip {
+  border-radius: 10px; padding: 9px 14px;
+}
+.sim-dr-chip-blue { background: #e3ecf8; border: 1px solid #b8d4e8; }
+.sim-dr-chip-aqua { background: #e8f8fb; border: 1px solid #b0e0ea; }
+.sim-dr-chip-slate { background: var(--bg, #f4f7fa); border: 1px solid var(--line, #e6edf3); }
+.sim-dr-chip-val { font-size: 16px; font-weight: 800; color: var(--navy); letter-spacing: -.4px; }
+.sim-dr-chip-lbl { font-size: 10.5px; font-weight: 500; color: var(--mute); margin-top: 2px; line-height: 1.4; }
+
+/* Marcador 74.4% en slider bolsillo */
+.sim-bolsillo-marker {
+  position: relative; height: 18px; margin-top: 4px;
+}
+.sim-bolsillo-marker-line {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: #c98a14; left: 74.4%;
+}
+.sim-bolsillo-marker-label {
+  position: absolute; top: 0; left: calc(74.4% + 4px);
+  font-size: 9px; font-weight: 700; color: #c98a14; white-space: nowrap; line-height: 1.4;
+}
+
+/* Resultado: card costo incremental */
+.sim-result-card-incr::before { background: #1f9d6b; }
+.sim-result-incr { font-size: 20px; color: #1f9d6b; }
+
+@media (max-width: 1100px) {
+  .sim-controls-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 1100px) {
+  .sim-result-row { grid-template-columns: 1fr 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  .sim-controls { grid-template-columns: 1fr; }
+  .sim-controls-3 { grid-template-columns: 1fr; }
+  .sim-result-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .sim-result-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .sim-section { margin: 0 12px 20px; }
+  .sim-table { font-size: 10.5px; }
+  .sim-table thead th, .sim-table tbody td { padding: 7px 10px; }
+  .sim-bar-lbl { width: 110px; }
+}
+
+/* Boton Mayo 2026 — default destacado */
+.sim-btn-real {
+  background: linear-gradient(135deg, var(--navy), #1172AB) !important;
+  color: #fff !important;
+  position: relative;
+}
+.sim-btn-real::after {
+  content: 'DEFAULT';
+  position: absolute; top: 4px; right: 4px;
+  font-size: 7px; font-weight: 800; letter-spacing: .04em;
+  background: var(--aqua); color: var(--navy-deep, #0a2e4d);
+  border-radius: 4px; padding: 1px 4px; line-height: 1.4;
+}
+
+/* Boton Abril 2026 — mes de comparacion */
+.sim-btn-abril {
+  background: linear-gradient(135deg, #3a6186, #5b8db8) !important;
+  color: #fff !important;
+  position: relative;
+}
+.sim-btn-abril::after {
+  content: 'COMP.';
+  position: absolute; top: 4px; right: 4px;
+  font-size: 7px; font-weight: 800; letter-spacing: .04em;
+  background: rgba(255,255,255,.25); color: #fff;
+  border-radius: 4px; padding: 1px 4px; line-height: 1.4;
+}
+
+/* Panel Abril 2026 */
+.sim-abril-card {
+  margin: 14px 20px 0;
+  background: linear-gradient(135deg, #f0f7fd, #e8f3fa);
+  border: 1px solid #b8d4e8; border-radius: 12px; overflow: hidden;
+}
+.sim-abril-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid #c2d9ef;
+  background: linear-gradient(135deg, #e3edf8, #d8e9f5);
+}
+.sim-abril-title {
+  font-size: 12.5px; font-weight: 800; color: var(--navy); letter-spacing: -.1px;
+}
+.sim-abril-badge {
+  margin-left: auto; font-size: 10px; font-weight: 600; color: var(--mute);
+  background: #fff; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid #c2d9ef; white-space: nowrap;
+}
+.sim-abril-body {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 14px 16px; flex-wrap: wrap;
+}
+.sim-abril-table {
+  flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 6px;
+}
+.sim-abril-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.sim-abril-sub { padding-left: 14px; }
+.sim-abril-lbl {
+  font-size: 11.5px; font-weight: 600; color: var(--navy); line-height: 1.4;
+}
+.sim-abril-lbl-total { font-weight: 800; }
+.sim-abril-val {
+  font-size: 13px; font-weight: 700; color: var(--navy); white-space: nowrap;
+  flex-shrink: 0;
+}
+.sim-abril-val-main { font-size: 16px; font-weight: 800; color: var(--navy); }
+.sim-abril-val-total { font-size: 14px; font-weight: 800; color: var(--blue); }
+.sim-abril-val-muted { color: var(--mute); font-weight: 600; font-size: 12px; }
+.sim-abril-pct {
+  font-size: 10px; font-weight: 700; color: var(--mute);
+  background: rgba(15,63,104,.08); border-radius: 5px; padding: 1px 5px;
+  margin-left: 4px;
+}
+.sim-abril-sep {
+  height: 1px; background: #c2d9ef; margin: 3px 0;
+}
+.sim-abril-row-muted { opacity: .7; }
+.sim-abril-notarjeta {
+  display: block; font-size: 9.5px; font-weight: 600; color: var(--mute);
+  font-style: italic; margin-top: 1px;
+}
+.sim-abril-chips {
+  display: flex; flex-direction: column; gap: 7px; min-width: 160px;
+}
+.sim-abril-chip {
+  background: #fff; border: 1px solid #c2d9ef;
+  border-radius: 10px; padding: 8px 12px;
+}
+.sim-abril-chip-note { border-color: var(--aqua); background: #e8f8fb; }
+.sim-abril-chip-val {
+  font-size: 18px; font-weight: 800; color: var(--navy); letter-spacing: -.4px;
+}
+.sim-abril-chip-lbl {
+  font-size: 10px; font-weight: 500; color: var(--mute); margin-top: 2px; line-height: 1.4;
+}
+
+/* Nota conceptual azul */
+.sim-note-card {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin: 12px 20px 0;
+  border-radius: 10px; padding: 12px 16px;
+}
+.sim-note-blue {
+  background: #e3f0fb; border: 1px solid #b0cceb;
+}
+.sim-note-ico { flex-shrink: 0; margin-top: 1px; }
+.sim-note-text {
+  font-size: 11.5px; font-weight: 500; color: #1a3c5c; line-height: 1.55;
+}
+.sim-note-text strong { font-weight: 700; }
+</style>
+
+<script>
+// ── Simulador de Comision por Tarjeta ────────────────────────────────────────
+
+// Datos base estaticos (Promedio / Solo medica / Solo dental permanecen hardcodeados)
+const SIM_BASES = {
+  mes_vivo: 0,           // se rellena desde la BI al expandir/cambiar mes
+  total:    21_181_190,  // Promedio Nov 2025–Abr 2026
+  medica:   15_974_528,
+  dental:    5_206_662,
+};
+
+// Datos del mes vivo (se inyectan desde el endpoint)
+let _simBiData = null;  // null = sin datos / offline
+
+// Conversion YYYY-MM → etiqueta legible ("Mayo 2026")
+const _MESES_ESP = [
+  '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+function _mesLabel(yyyymm) {
+  if (!yyyymm || yyyymm.length < 7) return yyyymm;
+  const mo = parseInt(yyyymm.slice(5, 7), 10);
+  const yr = yyyymm.slice(0, 4);
+  return (_MESES_ESP[mo] || yyyymm) + ' ' + yr;
+}
+
+// Datos de descomposicion por mes (panel informativo)
+// Para mes_vivo se construye dinamicamente desde _simBiData.
+// Los meses fijos anteriores quedan como fallback offline.
+const SIM_MES_DATA_LEGACY = {
+  mayo_2026: {
+    titulo:   'Mayo 2026 — Descomposicion de la caja',
+    badge:    'Mayo 2026 · bi_pagos_caja x convenio (cruce exacto) + arancel N3',
+    caja:     24_072_160,
+    atenciones: 1144,
+    diasHabiles: 24,
+    particular:  { monto: 18_666_520, pct: '77,5%', pagos: 828 },
+    fonasa:      { monto:  5_405_640, pct: '22,5%', pagos: 316 },
+    bonif:       2_305_220,
+    bonifNote:   'NO pasa por tarjeta — reembolso Fonasa, 286 prestaciones (Med.173/Kine 97/Psico 11/Nutri 5)',
+    ingresoTotal: 26_377_380,
+    tasaEfectiva: '0,70%',
+  },
+  abril_2026: {
+    titulo:   'Abril 2026 — Descomposicion de la caja',
+    badge:    'Abril 2026 · Medilink finanzas · arancel N3 · modulo Conciliacion',
+    caja:     22_383_800,
+    atenciones: 1013,
+    diasHabiles: 22,
+    particular:  { monto: 17_495_500, pct: '78,2%', pagos: 733 },
+    fonasa:      { monto:  4_888_300, pct: '21,8%', pagos: 280 },
+    bonif:       1_995_500,
+    bonifNote:   'NO pasa por tarjeta — reembolso Fonasa (Imed)',
+    ingresoTotal: 24_379_300,
+    tasaEfectiva: '0,70%',
+  },
+};
+
+// Construye el objeto SIM_MES_DATA para el mes vivo desde los datos del endpoint
+function _buildMesData(bi) {
+  if (!bi || bi.source_status === 'no_data') return null;
+  const label = _mesLabel(bi.mes);
+  const pTotal = bi.caja_total || 1;
+  const pctPart  = bi.caja_total ? ((bi.particular / pTotal) * 100).toFixed(1).replace('.', ',') + '%' : '—';
+  const pctFon   = bi.caja_total ? ((bi.fonasa_copago / pTotal) * 100).toFixed(1).replace('.', ',') + '%' : '—';
+  const mix = bi.metodo_mix || {};
+  const tasa = (SIM_TASA_DEB * (1 - (mix.cred_share_en_tarjeta || 0)) + SIM_TASA_CRE * (mix.cred_share_en_tarjeta || 0));
+  const tasaEfStr = (tasa * 100).toFixed(2).replace('.', ',') + '%';
+  const credPct = Math.round((mix.cred_share_en_tarjeta || 0) * 100);
+  const debPct  = 100 - credPct;
+  return {
+    titulo:      label + ' — Descomposicion de la caja',
+    badge:       label + ' · bi_pagos_caja x convenio (cruce exacto) + arancel N3',
+    caja:        bi.caja_total,
+    atenciones:  bi.n_tx,
+    diasHabiles: null,  // no disponible en este endpoint
+    particular:  { monto: bi.particular,    pct: pctPart, pagos: null },
+    fonasa:      { monto: bi.fonasa_copago, pct: pctFon,  pagos: null },
+    bonif:       bi.bonif_imed,
+    bonifNote:   'NO pasa por tarjeta — reembolso Fonasa (Imed)',
+    ingresoTotal: bi.ingreso_total,
+    tasaEfectiva: tasaEfStr + ' (' + debPct + '% deb / ' + credPct + '% cred)',
+  };
+}
+
+const SIM_ESCENARIOS = [
+  { label: 'Todo debito (0,60%)',                    tasa: 0.006,  real: false },
+  { label: 'Mix real (86% deb / 14% cred, 0,70%)',   tasa: 0.00702, real: true  },
+  { label: 'Mix 70% deb / 30% cred (0,81%)',         tasa: 0.0081, real: false },
+  { label: 'Mix 50% / 50% (0,95%)',                  tasa: 0.0095, real: false },
+  { label: 'Todo credito (1,30%)',                   tasa: 0.013,  real: false },
+];
+
+const SIM_TASA_DEB = 0.006;
+const SIM_TASA_CRE = 0.013;
+const SIM_IVA      = 1.19;
+
+let simBase        = 'mes_vivo'; // default: mes vivo desde la BI
+let simCredPct     = 14;   // % credito en el mix de tarjeta; se actualiza desde BI
+let simBolsilloPct = 100;  // % de la caja que migraria a tarjeta (slider)
+let simIva         = true;
+
+// Variables de mix: se actualizan cuando llega la respuesta del endpoint.
+// Defaults seguros = datos historicos de mayo 2026.
+let _simPctYaTarjeta = 0.228;  // se sobreescribe con metodo_mix.pct_ya_tarjeta
+let _simPctPotencial = 0.744;  // se sobreescribe con metodo_mix.pct_migrable
+
+function simFmtClp(n) {
+  return '$' + Math.round(n).toLocaleString('es-CL');
+}
+function simFmtPct(n) {
+  return (n * 100).toFixed(2) + '%';
+}
+
+function simTasaEfectiva(credPct) {
+  const f = credPct / 100;
+  return SIM_TASA_DEB * (1 - f) + SIM_TASA_CRE * f;
+}
+
+// baseAfecta = caja * (% tarjeta / 100)
+// La comision se aplica SOLO sobre la caja que migra a tarjeta.
+function simCalc(baseAfecta, tasa, iva) {
+  const comision = baseAfecta * tasa;
+  const conIva   = comision * (iva ? SIM_IVA : 1);
+  const anual    = conIva * 12;
+  const pct      = baseAfecta > 0 ? conIva / baseAfecta : 0;
+  return { comision, conIva, anual, pct };
+}
+
+function simRender() {
+  const facturacionTotal = SIM_BASES[simBase] || 0;
+  const baseAfecta = facturacionTotal * (simBolsilloPct / 100);
+  const tasa       = simTasaEfectiva(simCredPct);
+  const r          = simCalc(baseAfecta, tasa, simIva);
+
+  // Costo incremental: solo sobre el porcentaje que MIGRA (potencial real, no lo que ya va en tarjeta)
+  const baseIncrementalReal = facturacionTotal * _simPctPotencial;
+  const baseIncremental = Math.min(baseAfecta, baseIncrementalReal);
+  const rIncr = simCalc(baseIncremental, tasa, simIva);
+
+  // Resultado grande
+  document.getElementById('simResMes').textContent    = simFmtClp(r.conIva);
+  document.getElementById('simResSubMes').textContent = simIva
+    ? 'Incluye IVA 19% no recuperable'
+    : 'Sin IVA aplicado';
+
+  // Costo incremental (nuevo)
+  document.getElementById('simResIncr').textContent    = simFmtClp(rIncr.conIva);
+  const yaTarjetaPctStr = (_simPctYaTarjeta * 100).toFixed(1).replace('.', ',') + '%';
+  document.getElementById('simResSubIncr').textContent = simIva
+    ? 'Lo que ya pagas en tarjeta (' + yaTarjetaPctStr + ') no es costo nuevo'
+    : 'Solo sobre ' + simFmtClp(baseIncremental) + ' potencial de migracion';
+
+  document.getElementById('simResBaseAfecta').textContent = simFmtClp(baseAfecta);
+  document.getElementById('simResSubBaseAfecta').textContent =
+    simFmtClp(facturacionTotal) + ' x ' + simBolsilloPct + '% a tarjeta';
+  document.getElementById('simResAno').textContent    = simFmtClp(r.anual);
+  document.getElementById('simResSubAno').textContent =
+    'sobre ' + simFmtClp(baseAfecta * 12) + ' anual (caja tarjeta)';
+  document.getElementById('simResPct').textContent    = simFmtPct(r.pct);
+
+  // Tasa display
+  document.getElementById('simTasaEfectiva').textContent = (tasa * 100).toFixed(2) + '%';
+  document.getElementById('simTasaConIva').textContent   = simIva
+    ? (tasa * SIM_IVA * 100).toFixed(2) + '% con IVA'
+    : 'IVA desactivado';
+
+  // Slider mix background
+  const sl = document.getElementById('simSlider');
+  sl.style.background = `linear-gradient(90deg, var(--aqua) ${simCredPct}%, var(--border) ${simCredPct}%)`;
+
+  // Slider bolsillo background
+  const slB = document.getElementById('simBolsilloSlider');
+  slB.style.background = `linear-gradient(90deg, var(--navy) ${simBolsilloPct}%, var(--border) ${simBolsilloPct}%)`;
+
+  // Descripcion slider mix
+  const debPct = 100 - simCredPct;
+  document.getElementById('simSliderDesc').textContent =
+    simCredPct === 0   ? '100% debito (escenario mas barato)' :
+    simCredPct === 100 ? '100% credito (escenario mas caro)'  :
+    `${simCredPct}% credito · ${debPct}% debito`;
+
+  // Descripcion slider tarjeta
+  const efectivoPct = 100 - simBolsilloPct;
+  document.getElementById('simBolsilloDesc').textContent =
+    simBolsilloPct === 0   ? '0% a tarjeta — toda la caja permanece en efectivo/transferencia (comision = $0)' :
+    simBolsilloPct === 100 ? '100% de la caja migraria a tarjeta' :
+    `${simBolsilloPct}% a tarjeta · ${efectivoPct}% permanece en efectivo/transferencia`;
+
+  // Display caja que migra a tarjeta en slider
+  document.getElementById('simBaseAfectaDisplay').textContent = simFmtClp(baseAfecta) + '/mes';
+
+  // Panel de descomposicion dinamico
+  const mesCard = document.getElementById('simAbrilCard');
+  if (mesCard) {
+    // Para mes_vivo: construir desde _simBiData; para legacy: desde SIM_MES_DATA_LEGACY
+    const md = simBase === 'mes_vivo'
+      ? _buildMesData(_simBiData)
+      : (SIM_MES_DATA_LEGACY[simBase] || null);
+    if (md) {
+      mesCard.style.display = '';
+      document.getElementById('simMesTitle').textContent = md.titulo;
+      document.getElementById('simMesBadge').textContent = md.badge;
+      const fmtM = n => '$' + Math.round(n).toLocaleString('es-CL');
+      document.getElementById('simMesTable').innerHTML = `
+        <div class="sim-abril-row">
+          <span class="sim-abril-lbl">Caja total (copago de bolsillo)${md.atenciones ? ' — ' + md.atenciones.toLocaleString('es-CL') + ' atenciones' : ''}${md.diasHabiles ? ' · ' + md.diasHabiles + ' dias habiles' : ''}</span>
+          <span class="sim-abril-val sim-abril-val-main">${fmtM(md.caja)}</span>
+        </div>
+        <div class="sim-abril-row sim-abril-sub">
+          <span class="sim-abril-lbl">Particular (100% del precio)</span>
+          <span class="sim-abril-val">${fmtM(md.particular.monto)} <span class="sim-abril-pct">${md.particular.pct}</span></span>
+        </div>
+        <div class="sim-abril-row sim-abril-sub">
+          <span class="sim-abril-lbl">Fonasa copago (parte del paciente)</span>
+          <span class="sim-abril-val">${fmtM(md.fonasa.monto)} <span class="sim-abril-pct">${md.fonasa.pct}</span></span>
+        </div>
+        <div class="sim-abril-sep"></div>
+        <div class="sim-abril-row sim-abril-row-muted">
+          <span class="sim-abril-lbl">Bonificacion Imed<span class="sim-abril-notarjeta">${md.bonifNote}</span></span>
+          <span class="sim-abril-val sim-abril-val-muted">~${fmtM(md.bonif)}</span>
+        </div>
+        <div class="sim-abril-sep"></div>
+        <div class="sim-abril-row">
+          <span class="sim-abril-lbl sim-abril-lbl-total">Ingreso total clinica (caja + bonificacion)</span>
+          <span class="sim-abril-val sim-abril-val-total">~${fmtM(md.ingresoTotal)}</span>
+        </div>`;
+      document.getElementById('simMesChips').innerHTML = `
+        <div class="sim-abril-chip">
+          <div class="sim-abril-chip-val">${md.particular.pagos != null ? md.particular.pagos.toLocaleString('es-CL') : '—'}</div>
+          <div class="sim-abril-chip-lbl">pagos particular</div>
+        </div>
+        <div class="sim-abril-chip">
+          <div class="sim-abril-chip-val">${md.fonasa.pagos != null ? md.fonasa.pagos.toLocaleString('es-CL') : '—'}</div>
+          <div class="sim-abril-chip-lbl">pagos Fonasa</div>
+        </div>
+        <div class="sim-abril-chip sim-abril-chip-note">
+          <div class="sim-abril-chip-val">${md.tasaEfectiva}</div>
+          <div class="sim-abril-chip-lbl">tasa efectiva real (86% deb / 14% cred)</div>
+        </div>`;
+    } else {
+      mesCard.style.display = 'none';
+    }
+  }
+
+  // Tabla escenarios — calculada sobre caja que migra a tarjeta
+  const notaBaseLabels = {
+    mes_vivo: _simBiData ? 'caja ' + _mesLabel(_simBiData.mes) + ' (' + simFmtClp(_simBiData.caja_total) + ' — BI live)' : 'caja mes seleccionado',
+    total:    'caja promedio ($21.181.190/mes)',
+    medica:   'caja medica ($15.974.528/mes)',
+    dental:   'caja dental ($5.206.662/mes)',
+  };
+  document.getElementById('simEscNota').textContent =
+    'Caja que migra: ' + simFmtClp(baseAfecta) + '/mes (' + simBolsilloPct + '% de ' + (notaBaseLabels[simBase] || simBase) + ')';
+
+  const tbody = document.getElementById('simTablaBody');
+  tbody.innerHTML = SIM_ESCENARIOS.map((esc) => {
+    const tasaEsc   = esc.tasa;
+    const sinIva    = baseAfecta * tasaEsc;
+    const conIvaEsc = sinIva * SIM_IVA;
+    const aIva      = simIva ? conIvaEsc : sinIva;
+    const anoEsc    = aIva * 12;
+    const pctEsc    = baseAfecta > 0 ? aIva / baseAfecta : 0;
+    const isNearest = Math.abs(tasaEsc - tasa) < 0.0005;
+    const realBadge = esc.real
+      ? ` <span style="font-size:9px;font-weight:700;background:#e7f7f0;color:#1f9d6b;padding:1px 6px;border-radius:4px;vertical-align:middle">real</span>`
+      : '';
+    return `<tr class="${isNearest ? 'sim-row-active' : ''}${esc.real ? ' sim-row-real' : ''}">
+      <td>${esc.label}${realBadge}</td>
+      <td>${simFmtPct(tasaEsc)}</td>
+      <td class="sim-td-afecta">${simFmtClp(baseAfecta)}</td>
+      <td class="sim-td-amt">${simFmtClp(sinIva)}</td>
+      <td class="sim-td-iva">${simFmtClp(conIvaEsc)}</td>
+      <td class="sim-td-ano">${simFmtClp(anoEsc)}</td>
+      <td class="sim-td-pct">${simFmtPct(pctEsc)}</td>
+    </tr>`;
+  }).join('');
+
+  // Grafico barras CSS — sobre caja que migra a tarjeta
+  const maxVal = SIM_BASES.total * 1.0 * SIM_TASA_CRE * SIM_IVA; // max absoluto (100% caja, todo credito, base total)
+  const chartArea = document.getElementById('simChartArea');
+  chartArea.innerHTML = SIM_ESCENARIOS.map((esc) => {
+    const sinIvaV    = baseAfecta * esc.tasa;
+    const conIvaV    = sinIvaV * SIM_IVA;
+    const displayVal = simIva ? conIvaV : sinIvaV;
+    const pctWidth   = maxVal > 0 ? Math.round((displayVal / maxVal) * 100) : 0;
+    return `<div class="sim-bar-row">
+      <div class="sim-bar-lbl">${esc.label.replace(/\(.*\)/, '').trim()}</div>
+      <div class="sim-bar-track">
+        <div class="sim-bar-fill ${simIva ? 'sim-bar-iva' : ''}" style="width:${pctWidth}%"></div>
+      </div>
+      <div class="sim-bar-val">${simFmtClp(displayVal)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Eventos ──────────────────────────────────────────────────────────────────
+
+// ── Fetch datos BI para el simulador ─────────────────────────────────────────
+
+let _simFetching = false;
+
+async function simFetchMes(mesParam) {
+  _simFetching = true;
+  const status = document.getElementById('simMesStatus');
+  if (status) status.textContent = 'cargando...';
+  try {
+    const url = '/alma/api/pagos/comision-mes' + (mesParam ? '?mes=' + mesParam : '') + (typeof qp !== 'undefined' && qp ? (mesParam ? '&' : '?') + qp.slice(1) : '');
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const bi = await resp.json();
+    _simBiData = bi;
+
+    // Actualizar SIM_BASES con el dato vivo
+    SIM_BASES['mes_vivo'] = bi.caja_total || 0;
+
+    // Actualizar variables de mix
+    const mix = bi.metodo_mix || {};
+    _simPctYaTarjeta = mix.pct_ya_tarjeta  || 0.228;
+    _simPctPotencial = mix.pct_migrable    || 0.744;
+
+    // Actualizar el slider de mix credito/debito con los datos reales
+    const credSharePct = Math.round((mix.cred_share_en_tarjeta || 0) * 100);
+    simCredPct = credSharePct;
+    const slMix = document.getElementById('simSlider');
+    if (slMix) slMix.value = simCredPct;
+
+    // Poblar dropdown con meses disponibles (solo la primera vez o si cambia)
+    const sel = document.getElementById('simMesSel');
+    if (sel && bi.meses_disponibles && bi.meses_disponibles.length) {
+      const prev = sel.value;
+      sel.innerHTML = bi.meses_disponibles.map(m =>
+        `<option value="${m}"${m === bi.mes ? ' selected' : ''}>${_mesLabel(m)}</option>`
+      ).join('');
+      if (!mesParam && bi.mes) sel.value = bi.mes;
+    }
+
+    // Actualizar boton "Mes selec."
+    const btnMes = document.getElementById('simMesBtn');
+    if (btnMes) btnMes.textContent = _mesLabel(bi.mes) + (bi.caja_total ? ' · ' + simFmtClp(bi.caja_total) : '');
+
+    // Actualizar hint y nota de frescura
+    const hint = document.getElementById('simCtrlHint');
+    if (hint && bi.n_tx) hint.textContent = _mesLabel(bi.mes) + ': ' + bi.n_tx.toLocaleString('es-CL') + ' atenciones · ticket promedio ' + simFmtClp(bi.ticket_promedio) + '. Dental ya usa tarjeta; la medica es la que migraria.';
+
+    const notaFrescura = document.getElementById('simNotaFrescura');
+    if (notaFrescura) {
+      const rango = (mix.rango || '');
+      const nReg  = mix.n_registros || 0;
+      notaFrescura.innerHTML = `<strong>${_mesLabel(bi.mes)} · ${bi.n_tx ? bi.n_tx.toLocaleString('es-CL') + ' atenciones.' : ''}</strong> Mix de metodo calculado sobre ${nReg} registros en el modulo Pagos${rango ? ' (' + rango + ')' : ''}. Medilink no registra metodo de pago (marca todo "Efectivo") — el mix se consolida mes a mes.`;
+    }
+
+    if (status) status.textContent = bi.source_status === 'ok' ? '✓ BI live' : 'sin datos';
+  } catch (e) {
+    // Fallback: mantener los datos de mayo hardcodeados como respaldo
+    _simBiData = null;
+    SIM_BASES['mes_vivo'] = 24_072_160;
+    _simPctYaTarjeta = 0.228;
+    _simPctPotencial = 0.744;
+    const hint = document.getElementById('simCtrlHint');
+    if (hint) hint.textContent = 'Sin conexion BI — usando datos de Mayo 2026 como referencia.';
+    if (status) status.textContent = 'sin conexion';
+    console.warn('simFetchMes error:', e);
+  }
+  _simFetching = false;
+  simRender();
+}
+
+// Toggle colapsar seccion simulador
+document.getElementById('simHeader').addEventListener('click', () => {
+  const body = document.getElementById('simBody');
+  const icon = document.getElementById('simToggleIcon');
+  const isOpen = body.classList.toggle('open');
+  icon.classList.toggle('open', isOpen);
+  if (isOpen) {
+    simRender();  // render inmediato con lo que haya
+    if (!_simBiData && !_simFetching) {
+      simFetchMes(null);  // fetch al expandir (primer apertura o sin datos)
+    }
+  }
+});
+
+// Selector de base (botones estáticos + boton mes vivo)
+document.getElementById('simBaseSeg').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-base]');
+  if (!btn) return;
+  simBase = btn.dataset.base;
+  document.querySelectorAll('#simBaseSeg button').forEach(b => {
+    b.classList.toggle('active', b.dataset.base === simBase);
+  });
+  simRender();
+});
+
+// Dropdown de mes vivo
+document.getElementById('simMesSel').addEventListener('change', function() {
+  const mesVal = this.value;
+  if (mesVal) simFetchMes(mesVal);
+});
+
+// Slider mix debito/credito
+document.getElementById('simSlider').addEventListener('input', function() {
+  simCredPct = parseInt(this.value);
+  simRender();
+});
+
+// Slider bolsillo
+document.getElementById('simBolsilloSlider').addEventListener('input', function() {
+  simBolsilloPct = parseInt(this.value);
+  simRender();
+});
+
+// Toggle IVA
+document.getElementById('simIvaToggle').addEventListener('change', function() {
+  simIva = this.checked;
+  simRender();
+});
+</script>
+
 <script>
 // ── Config ──────────────────────────────────────────────────────────────────
 const TOKEN = "__TOKEN__";

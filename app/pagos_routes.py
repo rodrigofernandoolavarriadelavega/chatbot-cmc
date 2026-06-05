@@ -1247,6 +1247,262 @@ async def export_pagos_xlsx(
     )
 
 
+# ── Mapa de bonificación Fonasa MLE N3 por id_profesional ───────────────────
+# Solo profesionales que operan bajo Fonasa MLE N3 en CMC.
+# Especialistas (ORL, Cardio, Gastro, Traumato, Gineco) atienden Fonasa como
+# libre elección SIN bono Imed → NO se incluyen aquí.
+_BONIF_N3_POR_PROF: dict[int, int] = {
+    1:  7_880,   # Olavarría MG
+    73: 7_880,   # Abarca MG
+    13: 7_880,   # Márquez MG/MedFam
+    77: 7_830,   # Armijo Kine
+    21: 7_830,   # Etcheverry Kine
+    52: 4_770,   # Pinto Nutri
+    74: 14_420,  # Montalba Psico
+    49: 14_420,  # J.P. Rodríguez Psico
+}
+
+# Mapa para normalizar método de pago a clave canónica
+_METODO_CANON: dict[str, str] = {
+    "efectivo": "efectivo",
+    "transferencia": "transferencia",
+    "debito": "debito",
+    "débito": "debito",
+    "credito": "credito",
+    "crédito": "credito",
+    "tarjeta débito": "debito",
+    "tarjeta debito": "debito",
+    "tarjeta crédito": "credito",
+    "tarjeta credito": "credito",
+    "tarjeta": "credito",
+}
+
+
+def _normalizar_metodo(metodo_raw: str) -> str:
+    """Colapsa variantes de metodo_pago a {efectivo, transferencia, debito, credito, otro}."""
+    m = (metodo_raw or "").strip().lower()
+    return _METODO_CANON.get(m, "otro")
+
+
+@router.get("/comision-mes")
+async def get_comision_mes(
+    mes: str | None = Query(None, description="YYYY-MM; None = último mes con datos"),
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+    request: Request = None,
+):
+    """
+    Resumen financiero de un mes para el Simulador de Comisión por Tarjeta.
+
+    Fuentes:
+    - caja_total / n_tx / ticket / meses_disponibles: bi_pagos_caja
+    - particular / fonasa_copago / bonif_imed: bi_pagos_caja LEFT JOIN bi_atenciones
+    - metodo_mix: pagos_cmc (todos los registros disponibles, base pequeña)
+
+    Robustez: cualquier error en BI → ceros + source_status "no_data", nunca 500.
+    """
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+
+    _CERO = {
+        "mes": mes or "",
+        "meses_disponibles": [],
+        "caja_total": 0,
+        "n_tx": 0,
+        "ticket_promedio": 0,
+        "particular": 0,
+        "fonasa_copago": 0,
+        "n_sin_atencion": 0,
+        "bonif_imed": 0,
+        "ingreso_total": 0,
+        "metodo_mix": {
+            "efectivo": 0.0, "transferencia": 0.0, "debito": 0.0,
+            "credito": 0.0, "otro": 0.0,
+            "pct_migrable": 0.0, "pct_ya_tarjeta": 0.0, "cred_share_en_tarjeta": 0.0,
+            "n_registros": 0, "rango": "",
+        },
+        "tasas": {"debito": 0.006, "credito": 0.013},
+        "iva": 0.19,
+        "source_status": "no_data",
+    }
+
+    try:
+        from session import _conn
+
+        # ── 1. Meses disponibles ──────────────────────────────────────────────
+        with _conn() as conn:
+            rows_meses = conn.execute(
+                """SELECT DISTINCT substr(fecha, 1, 7) AS m
+                   FROM bi_pagos_caja
+                   WHERE fecha >= '2024-01-01'
+                   ORDER BY m DESC"""
+            ).fetchall()
+
+        meses_disponibles = [r[0] for r in rows_meses]
+
+        if not meses_disponibles:
+            return JSONResponse(_CERO)
+
+        # ── 2. Resolver mes objetivo ──────────────────────────────────────────
+        if mes and len(mes) == 7:
+            mes_obj = mes
+        else:
+            mes_obj = meses_disponibles[0]  # el más reciente
+
+        yr, mo = int(mes_obj[:4]), int(mes_obj[5:7])
+        inicio = f"{mes_obj}-01"
+        fin_yr = yr + (mo // 12)
+        fin_mo = (mo % 12) + 1
+        fin = f"{fin_yr}-{fin_mo:02d}-01"
+
+        # ── 3. caja_total, n_tx, ticket ──────────────────────────────────────
+        with _conn() as conn:
+            row_caja = conn.execute(
+                """SELECT COALESCE(SUM(monto), 0) AS caja,
+                          COUNT(*) AS n_tx
+                   FROM bi_pagos_caja
+                   WHERE fecha >= ? AND fecha < ?""",
+                (inicio, fin),
+            ).fetchone()
+
+        caja_total = int(row_caja[0])
+        n_tx = int(row_caja[1])
+        ticket_promedio = (caja_total // n_tx) if n_tx else 0
+
+        if caja_total == 0:
+            resp = dict(_CERO)
+            resp["mes"] = mes_obj
+            resp["meses_disponibles"] = meses_disponibles
+            return JSONResponse(resp)
+
+        # ── 4. Particular / Fonasa copago / n_sin_atencion ───────────────────
+        # LEFT JOIN bi_atenciones; clasifica por nombre_convenio.
+        # Pagos sin fila en bi_atenciones (n_sin_atencion) → particular.
+        with _conn() as conn:
+            rows_conv = conn.execute(
+                """SELECT
+                       p.monto,
+                       p.id_profesional,
+                       LOWER(COALESCE(a.nombre_convenio, '')) AS convenio
+                   FROM bi_pagos_caja p
+                   LEFT JOIN bi_atenciones a ON p.atencion_id = a.atencion_id
+                   WHERE p.fecha >= ? AND p.fecha < ?""",
+                (inicio, fin),
+            ).fetchall()
+
+        particular = 0
+        fonasa_copago = 0
+        bonif_imed = 0
+        n_sin_atencion = 0
+
+        for monto, id_prof, convenio in rows_conv:
+            monto = int(monto or 0)
+            es_fonasa = any(kw in convenio for kw in ("fonasa", "mle", "bono"))
+            if not convenio:
+                # Sin atención enlazada → particular + conteo
+                n_sin_atencion += 1
+                particular += monto
+            elif es_fonasa:
+                fonasa_copago += monto
+                # Bono Imed solo para profesionales MLE N3
+                bonif = _BONIF_N3_POR_PROF.get(id_prof)
+                if bonif:
+                    bonif_imed += bonif
+            else:
+                particular += monto
+
+        ingreso_total = caja_total + bonif_imed
+
+        # ── 5. Metodo mix desde pagos_cmc (TODOS los registros disponibles) ──
+        with _conn() as conn:
+            rows_pago = conn.execute(
+                """SELECT copago, metodo_pago,
+                          MIN(fecha) AS f_min, MAX(fecha) AS f_max
+                   FROM pagos_cmc
+                   WHERE COALESCE(copago, 0) > 0
+                   GROUP BY id""",  # cada fila es un registro
+            ).fetchall()
+
+        # Reagrupar sobre copago total por método
+        mix_totales: dict[str, int] = {
+            "efectivo": 0, "transferencia": 0, "debito": 0, "credito": 0, "otro": 0,
+        }
+        f_min_list: list[str] = []
+        f_max_list: list[str] = []
+        n_registros = 0
+
+        # Necesitamos fecha min/max: re-query sin GROUP BY id
+        with _conn() as conn:
+            rows_pago = conn.execute(
+                """SELECT copago, metodo_pago, fecha
+                   FROM pagos_cmc
+                   WHERE COALESCE(copago, 0) > 0"""
+            ).fetchall()
+
+        for copago, metodo_raw, fecha_p in rows_pago:
+            copago = int(copago or 0)
+            canon = _normalizar_metodo(metodo_raw or "")
+            mix_totales[canon] = mix_totales.get(canon, 0) + copago
+            if fecha_p:
+                f_min_list.append(fecha_p)
+                f_max_list.append(fecha_p)
+            n_registros += 1
+
+        total_mix = sum(mix_totales.values()) or 1  # evitar div/0
+
+        # Proporciones sobre suma de copago (no por conteo)
+        efectivo_pct     = mix_totales["efectivo"]     / total_mix
+        transferencia_pct = mix_totales["transferencia"] / total_mix
+        debito_pct       = mix_totales["debito"]       / total_mix
+        credito_pct      = mix_totales["credito"]      / total_mix
+        otro_pct         = mix_totales["otro"]         / total_mix
+
+        ya_tarjeta = debito_pct + credito_pct
+        migrable   = efectivo_pct + transferencia_pct
+        cred_share_en_tarjeta = (credito_pct / ya_tarjeta) if ya_tarjeta > 0 else 0.0
+
+        rango = ""
+        if f_min_list and f_max_list:
+            rango = f"{min(f_min_list)} a {max(f_max_list)}"
+
+        metodo_mix = {
+            "efectivo":             round(efectivo_pct, 4),
+            "transferencia":        round(transferencia_pct, 4),
+            "debito":               round(debito_pct, 4),
+            "credito":              round(credito_pct, 4),
+            "otro":                 round(otro_pct, 4),
+            "pct_migrable":         round(migrable, 4),
+            "pct_ya_tarjeta":       round(ya_tarjeta, 4),
+            "cred_share_en_tarjeta": round(cred_share_en_tarjeta, 4),
+            "n_registros":          n_registros,
+            "rango":                rango,
+        }
+
+        return JSONResponse({
+            "mes":               mes_obj,
+            "meses_disponibles": meses_disponibles,
+            "caja_total":        caja_total,
+            "n_tx":              n_tx,
+            "ticket_promedio":   ticket_promedio,
+            "particular":        particular,
+            "fonasa_copago":     fonasa_copago,
+            "n_sin_atencion":    n_sin_atencion,
+            "bonif_imed":        bonif_imed,
+            "ingreso_total":     ingreso_total,
+            "metodo_mix":        metodo_mix,
+            "tasas":             {"debito": 0.006, "credito": 0.013},
+            "iva":               0.19,
+            "source_status":     "ok",
+        })
+
+    except Exception as exc:
+        log.warning("get_comision_mes error: %s", exc)
+        resp = dict(_CERO)
+        resp["mes"] = mes or ""
+        resp["meses_disponibles"] = []
+        resp["source_status"] = "error"
+        return JSONResponse(resp)
+
+
 @router.post("/cruzar-origen")
 async def cruzar_origen(
     fecha: str | None = Query(None, description="YYYY-MM-DD; por defecto hoy"),
