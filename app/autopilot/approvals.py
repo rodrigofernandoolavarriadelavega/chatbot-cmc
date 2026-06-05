@@ -276,10 +276,39 @@ def notify_owner(new_ids: list[str]) -> None:
     base = os.getenv("PUBLIC_BASE_URL", "https://agentecmc.cl")
     lines += ["", f"Revisar y aprobar: {base}/autopilot"]
     msg = "\n".join(lines)
+
+    # Resumen de la acción principal para el template (1 línea).
+    top = items[0]
+    _verbo = {"increase_budget": "Subir", "decrease_budget": "Bajar",
+              "pause": "Pausar"}.get(top["action"], top["action"])
+    _camp = (top.get("campaign_name") or "")[:34]
+    if top["action"] == "pause":
+        top_summary = f"{_verbo} {_camp}"
+    else:
+        _cur = f"${top['current_budget']:,}" if top.get("current_budget") else "—"
+        _prop = f"${top['proposed_budget']:,}" if top.get("proposed_budget") else "—"
+        top_summary = f"{_verbo} {_camp} {_cur} → {_prop}/día"
+
+    # Proactivo fuera de ventana 24h → texto libre rebota con code 131047
+    # ("Re-engagement message"). Se manda como template `autopilot_pendientes`
+    # (UTILITY), con fallback a texto libre por si el template aún no está aprobado
+    # (dentro de la ventana de 24h el texto sí entrega).
     try:
         import asyncio
-        from messaging import send_whatsapp
-        asyncio.create_task(send_whatsapp(phone, msg))
-        log.info("[autopilot] aviso de %d pendientes → %s", len(items), phone)
+
+        async def _send():
+            try:
+                from messaging import send_whatsapp_template
+                await send_whatsapp_template(
+                    phone, "autopilot_pendientes",
+                    body_params=[str(len(items)), top_summary])
+                log.info("[autopilot] aviso (template) de %d pendientes → %s", len(items), phone)
+            except Exception as _e_tpl:  # noqa: BLE001 — fallback a texto libre
+                log.warning("[autopilot] template aviso falló (%s); intento texto libre", _e_tpl)
+                from messaging import send_whatsapp
+                await send_whatsapp(phone, msg)
+                log.info("[autopilot] aviso (texto) de %d pendientes → %s", len(items), phone)
+
+        asyncio.create_task(_send())
     except Exception as e:  # noqa: BLE001
         log.warning("[autopilot] no se pudo avisar al dueño: %s", e)
