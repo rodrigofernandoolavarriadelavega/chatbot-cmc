@@ -233,6 +233,21 @@
     </div>
   </div>
 
+  <div class="modal-bg" id="m-cal">
+    <div class="modal">
+      <div class="modal-head"><h2 id="cal-title">Tu calendario · días trabajados</h2><div class="x" onclick="closeM('m-cal')">✕</div></div>
+      <div class="modal-body">
+        <div id="cal-month" style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--aqua);margin-bottom:10px"></div>
+        <div id="cal-grid" style="min-height:60px"></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mute);margin-top:14px">
+          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#2d7a4f;margin-right:5px;vertical-align:-1px"></span>Sobre objetivo</span>
+          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#fdecea;border:1px solid #e0a9a0;margin-right:5px;vertical-align:-1px"></span>Bajo objetivo</span>
+          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--bg);border:1px solid var(--border);margin-right:5px;vertical-align:-1px"></span>Sin atención</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
 <script>
@@ -265,12 +280,10 @@ async function loadResumen(){
       <div class="kpi alert"><div class="k-label">Riesgo abandono</div><div class="k-val">${k.riesgo}</div><div class="k-sub">contactar hoy</div></div>
       <div class="kpi warn"><div class="k-label">Abandono temprano</div><div class="k-val">${k.abandono}</div><div class="k-sub">win-back 22-45d</div></div>
       <div class="kpi"><div class="k-label">Sesiones / episodio</div><div class="k-val">${k.sesiones_prom}</div><div class="k-sub">promedio</div></div>
-      <div class="kpi" id="kpi-atendidos" ${PROF_DASHBOARD_URL?'style="cursor:pointer" title="Ver tu calendario de días trabajados"':''}><div class="k-label">Pacientes atendidos este mes</div><div class="k-val">${k.atendidos_mes}</div><div class="k-sub">${PROF_DASHBOARD_URL?'toca para ver tu calendario ↗':'este mes'}</div></div>
+      <div class="kpi" id="kpi-atendidos" ${PROF_DASHBOARD_URL?'style="cursor:pointer" title="Ver tu calendario de días trabajados"':''}><div class="k-label">Pacientes atendidos este mes</div><div class="k-val">${k.atendidos_mes}</div><div class="k-sub">${PROF_DASHBOARD_URL?'toca para ver tu calendario →':'este mes'}</div></div>
       ${ingresoCard}`;
     const _at = document.getElementById('kpi-atendidos');
-    if (_at && PROF_DASHBOARD_URL) _at.addEventListener('click', () => {
-      window.open(PROF_DASHBOARD_URL, '_blank');  // abre el panel profesional (Tu calendario) en pestaña nueva
-    });
+    if (_at && PROF_DASHBOARD_URL) _at.addEventListener('click', openCalendario);
     renderCarga(r.carga);
     if(r.source_status!=="ok"){ toast("BI no disponible — los datos se ven en producción", true); }
   } catch(e){ toast("Error KPIs: "+e.message, true); }
@@ -348,6 +361,47 @@ function renderTable(){
 function setEstado(e){ STATE.estado=e; loadPacientes(); }
 let st; document.getElementById('search').addEventListener('input', e=>{ clearTimeout(st); st=setTimeout(()=>{ STATE.q=e.target.value.trim(); renderTable(); },200); });
 function closeM(id){ document.getElementById(id).classList.remove('show'); }
+
+// ── Popup "Tu calendario": días trabajados del mes (datos del panel profesional) ──
+async function openCalendario(){
+  if(!PROF_DASHBOARD_URL) return;
+  document.getElementById('m-cal').classList.add('show');
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '<div style="color:var(--mute);font-size:12px">Cargando…</div>';
+  const tk = (PROF_DASHBOARD_URL.split('token=')[1] || '');
+  try {
+    const r = await fetch(`/api/profesional/dashboard?token=${encodeURIComponent(tk)}`);
+    const d = await r.json();
+    renderCalModal(d.por_dia || {}, (d.kpis && d.kpis.atend_avg_dia) || 10);
+  } catch(e){
+    grid.innerHTML = '<div style="color:var(--mute);font-size:12px">No se pudo cargar el calendario.</div>';
+  }
+}
+
+function renderCalModal(porDia, objetivo){
+  const MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const keys = Object.keys(porDia).sort();
+  const now = new Date();
+  let ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if(!keys.some(k => k.slice(0,7)===ym) && keys.length) ym = keys[keys.length-1].slice(0,7);
+  const [Y, Mo] = ym.split('-').map(Number);
+  document.getElementById('cal-month').textContent = `${MESES[Mo]} ${Y}`;
+  const daysInMonth = new Date(Y, Mo, 0).getDate();
+  const firstDow = (new Date(Y, Mo-1, 1).getDay() + 6) % 7;  // Lunes = 0
+  let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;max-width:330px">';
+  ['L','M','M','J','V','S','D'].forEach(d => html += `<div style="font-family:ui-monospace,monospace;font-size:10px;text-align:center;color:var(--mute)">${d}</div>`);
+  for(let i=0; i<firstDow; i++) html += '<div></div>';
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = `${Y}-${String(Mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const n = porDia[ds] || 0;
+    let bg='var(--bg)', tc='var(--mute)', bd='1px solid var(--border)';
+    if(n>0 && n>=objetivo){ bg = n>=objetivo*1.5 ? '#2d7a4f' : '#5fa858'; tc='#fff'; bd='none'; }
+    else if(n>0){ bg='#fdecea'; tc='#c0392b'; bd='1px solid #e0a9a0'; }
+    html += `<div title="${ds}: ${n} atenciones" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;background:${bg};color:${tc};border:${bd};font-size:12px;font-weight:700">${n||'·'}</div>`;
+  }
+  html += '</div>';
+  document.getElementById('cal-grid').innerHTML = html;
+}
 
 function openPlan(pid){
   const p = STATE.pacientes.find(x=>x.paciente_id===pid); if(!p) return;
