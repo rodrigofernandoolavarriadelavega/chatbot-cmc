@@ -742,7 +742,7 @@ input, textarea, select{font-family:inherit; color:inherit}
 /* Panel flotante anclado abajo-derecha: NO bloquea la pantalla.
    La recepción puede seguir leyendo/operando el resto del panel mientras agenda. */
 .ag-modal{
-  position:fixed; right:18px; bottom:18px; left:auto; top:auto; inset:auto; z-index:300;
+  position:fixed; inset:auto 18px 18px auto; z-index:300;  /* top right bottom left → ancla abajo-derecha */
   background:none; backdrop-filter:none;
   display:block; padding:0;
   width:min(430px, calc(100vw - 32px));
