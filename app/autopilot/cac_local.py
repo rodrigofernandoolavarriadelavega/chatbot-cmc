@@ -45,17 +45,22 @@ def _attended_phones_window(cutoff_ts: int) -> dict:
 
 
 def _paid_ruts_window(cutoff_date: str) -> set:
-    """RUTs con pago real en bi_pagos_caja desde cutoff_date (atendido de verdad).
-    Vacío si BI/tabla no disponible (degradación: se usa 'booked' como proxy)."""
+    """RUTs con PAGO REAL (atendido de verdad) desde cutoff_date, del BI Postgres:
+    bi.fact_pagos × bi.dim_paciente (paciente_id↔rut). Set vacío si el BI no responde
+    → la capa que lo usa cae al proxy 'agendó' (citas_bot)."""
     try:
-        from session import _conn
-        with _conn() as conn:
-            rows = conn.execute(
-                "SELECT DISTINCT rut FROM bi_pagos_caja WHERE fecha>=?",
-                (cutoff_date,),
-            ).fetchall()
-        return {(_r["rut"] or "").replace(".", "").replace("-", "").lower() for _r in rows if _r["rut"]}
-    except Exception:  # noqa: BLE001 — tabla no existe localmente → proxy booked
+        from bi_helper import bi_query
+        rows, status = bi_query(
+            "SELECT DISTINCT dp.rut AS rut "
+            "FROM bi.fact_pagos fp "
+            "JOIN bi.dim_paciente dp ON dp.paciente_id = fp.paciente_id "
+            "WHERE fp.fecha >= %s AND dp.rut IS NOT NULL",
+            (cutoff_date,),
+        )
+        if status != "ok":
+            return set()
+        return {_norm_rut(r.get("rut")) for r in rows if r.get("rut")}
+    except Exception:  # noqa: BLE001 — BI no disponible → proxy booked
         return set()
 
 
