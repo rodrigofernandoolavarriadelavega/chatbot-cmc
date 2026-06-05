@@ -124,6 +124,42 @@ ALMA_PROFILES: dict[str, dict] = {
         "boxes_financiero": False,
         "panel_profesional": False,
     },
+    # No-kine → módulo Programas (se acota a su programa + sus pacientes).
+    "cmc_nutri_pinto": {
+        "variante": "Gisela Pinto · Nutrición",
+        "modulos": ["agenda", "programas"],
+        "profesional_id": 52,        # Gisela Pinto (nutrición)
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    },
+    "cmc_psico_montalba": {
+        "variante": "Jorge Montalba · Psicología",
+        "modulos": ["agenda", "programas"],
+        "profesional_id": 74,        # Jorge Montalba (psicología)
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    },
+    "cmc_psico_rodriguez": {
+        "variante": "Juan Pablo Rodríguez · Psicología",
+        "modulos": ["agenda", "programas"],
+        "profesional_id": 49,        # Juan Pablo Rodríguez (psicología)
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    },
+    "cmc_matrona_gomez": {
+        "variante": "Sarai Gómez · Matrona",
+        "modulos": ["agenda", "programas"],
+        "profesional_id": 67,        # Sarai Gómez (matrona)
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    },
+    "cmc_fono_arratia": {
+        "variante": "Juana Arratia · Fonoaudiología",
+        "modulos": ["agenda", "programas"],
+        "profesional_id": 70,        # Juana Arratia (fonoaudiología)
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    },
 }
 
 # Feature flags — se activan cuando Rodrigo apruebe condiciones comerciales

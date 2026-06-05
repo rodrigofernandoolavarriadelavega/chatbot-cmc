@@ -165,23 +165,24 @@ TAMIZAJE: dict[str, dict] = {
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
-def _require_admin(request: Request, token: str | None, cmc_session: str | None) -> str:
-    import hmac as _hmac
-    from config import ADMIN_TOKEN
-    from admin_routes import _verify_cookie
+def _require_admin(request: Request, token: str | None,
+                   cmc_session: str | None) -> tuple[str, int | None]:
+    """(token_efectivo, scope_profesional). scope None = ve todos los programas;
+    int = un profesional viendo solo SU programa + SUS pacientes. Vía alma_scope."""
+    from alma_scope import resolve
+    return resolve(request, token, cmc_session, "programas")
 
-    auth_header = (request.headers.get("authorization", "") if request else "")
-    if auth_header.lower().startswith("bearer "):
-        tk = auth_header.split(None, 1)[1].strip()
-        if _hmac.compare_digest(tk, ADMIN_TOKEN):
-            return tk
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return ADMIN_TOKEN
-    if token and _hmac.compare_digest(token, ADMIN_TOKEN):
-        return token
-    raise HTTPException(status_code=401, detail="Token inválido")
+
+def _prog_for_prof(pid: int | None) -> str | None:
+    """Programa al que pertenece un profesional (por su especialidad). Para forzar
+    que un perfil de profesional solo vea SU programa."""
+    if pid is None:
+        return None
+    for prog, cfg in PROGRAMAS.items():
+        for e in cfg.get("especialidad_ids", []):
+            if pid in _ESP_TO_PROF.get(e, []):
+                return prog
+    return None
 
 
 def _cfg(prog: str) -> dict:
@@ -239,11 +240,17 @@ _ESP_TO_PROF = {
 }
 
 
-def _bi_rows(especialidad_ids: list[int], meses: int) -> tuple[list[dict], str]:
+def _bi_rows(especialidad_ids: list[int], meses: int,
+             scope_prof: int | None = None) -> tuple[list[dict], str]:
     """Visitas de tratamiento desde la CAJA REAL (fresca, sin Docker), no la BI vieja.
     Resuelve especialidad → profesionales y delega en caja_helper. El TAMIZAJE
-    (cohortes poblacionales de quién NO vino) sigue en la BI — ver _compute_tamizaje."""
+    (cohortes poblacionales de quién NO vino) sigue en la BI — ver _compute_tamizaje.
+
+    `scope_prof`: si se pasa, acota a ESE profesional (su perfil ve solo sus
+    pacientes; clave en psicología, donde 2 profes comparten especialidad)."""
     from caja_helper import caja_visitas
+    if scope_prof is not None:
+        return caja_visitas([scope_prof], meses)
     prof_ids: list[int] = []
     for e in especialidad_ids:
         prof_ids.extend(_ESP_TO_PROF.get(e, []))
@@ -303,9 +310,9 @@ ACCIONABLES = {
 }
 
 
-def _compute(prog: str, meses: int = 6):
+def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
     cfg = _cfg(prog)
-    rows, status = _bi_rows(cfg["especialidad_ids"], max(meses, 12))
+    rows, status = _bi_rows(cfg["especialidad_ids"], max(meses, 12), scope_prof)
     planes = _planes(prog)
     today = _today()
 
@@ -474,11 +481,11 @@ def _compute_tamizaje(prog: str, meses: int = 6):
     return {"kpis": kpis, "pacientes": pacientes, "cfg": cfg_out, "source_status": status}
 
 
-def _dispatch(prog: str, meses: int = 6):
+def _dispatch(prog: str, meses: int = 6, scope_prof: int | None = None):
     """Enruta al motor correcto: tamizaje (cohorte) o tratamiento (especialidad)."""
     if prog in TAMIZAJE:
         return _compute_tamizaje(prog, meses)
-    return _compute(prog, meses)
+    return _compute(prog, meses, scope_prof)
 
 
 def _primer_nombre(nombre: str) -> str:
@@ -503,8 +510,9 @@ def _wa_link(tel: str, mensaje: str) -> str | None:
 async def listar_programas(token: str | None = Query(None),
                            cmc_session: str | None = Cookie(None),
                            request: Request = None):
-    """Lista los programas disponibles (para el selector del módulo)."""
-    _require_admin(request, token, cmc_session)
+    """Lista los programas disponibles (para el selector del módulo).
+    Un perfil de profesional ve solo SU programa."""
+    _tok, scope = _require_admin(request, token, cmc_session)
     progs = [
         {"key": k, "label": v["label"], "tipo": v["tipo"], "objetivo": v["objetivo"],
          "categoria": "tratamiento"}
@@ -515,6 +523,9 @@ async def listar_programas(token: str | None = Query(None),
          "categoria": "tamizaje"}
         for k, v in TAMIZAJE.items()
     ]
+    if scope is not None:
+        mine = _prog_for_prof(scope)
+        progs = [p for p in progs if p["key"] == mine]
     return {"programas": progs}
 
 
@@ -522,8 +533,10 @@ async def listar_programas(token: str | None = Query(None),
 async def resumen(prog: str, meses: int = Query(6, ge=1, le=36),
                   token: str | None = Query(None), cmc_session: str | None = Cookie(None),
                   request: Request = None):
-    _require_admin(request, token, cmc_session)
-    data = _dispatch(prog, meses)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog
+    data = _dispatch(prog, meses, scope)
     return {"kpis": data["kpis"], "cfg": {"label": data["cfg"]["label"], "tipo": data["cfg"]["tipo"],
             "objetivo": data["cfg"]["objetivo"]}, "source_status": data["source_status"]}
 
@@ -532,8 +545,10 @@ async def resumen(prog: str, meses: int = Query(6, ge=1, le=36),
 async def pacientes(prog: str, estado: str | None = Query(None), meses: int = Query(6, ge=1, le=36),
                     token: str | None = Query(None), cmc_session: str | None = Cookie(None),
                     request: Request = None):
-    _require_admin(request, token, cmc_session)
-    data = _dispatch(prog, meses)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog
+    data = _dispatch(prog, meses, scope)
     tipo = data["cfg"]["tipo"]
     pac = data["pacientes"]
     if estado and estado != "todos":
@@ -563,8 +578,10 @@ async def accion(prog: str, paciente_id: int, meses: int = Query(12, ge=1, le=36
                  token: str | None = Query(None), cmc_session: str | None = Cookie(None),
                  request: Request = None):
     """Next best action: redacta el mensaje WhatsApp personalizado para el paciente."""
-    _require_admin(request, token, cmc_session)
-    data = _dispatch(prog, meses)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog
+    data = _dispatch(prog, meses, scope)
     p = next((x for x in data["pacientes"] if x["paciente_id"] == paciente_id), None)
     if not p:
         raise HTTPException(404, "Paciente no está en este programa")
@@ -579,7 +596,9 @@ async def accion(prog: str, paciente_id: int, meses: int = Query(12, ge=1, le=36
 @router.put("/{prog}/plan/{paciente_id}")
 async def set_plan(prog: str, paciente_id: int, request: Request,
                    token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
-    _require_admin(request, token, cmc_session)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog  # un profesional solo edita planes de SU programa
     if prog not in PROGRAMAS and prog not in TAMIZAJE:
         raise HTTPException(404, f"Programa '{prog}' no existe")
     try:
@@ -667,7 +686,9 @@ async def digest(meses: int = Query(6, ge=1, le=12),
                  token: str | None = Query(None), cmc_session: str | None = Cookie(None),
                  request: Request = None):
     """Lista de hoy: top pacientes a contactar cruzando TODOS los programas + Kine + Ortodoncia."""
-    _require_admin(request, token, cmc_session)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        raise HTTPException(403, "Vista cruzada no disponible para perfil de profesional")
     d = build_digest(meses)
     d["items"] = d["items"][:200]
     return d
@@ -731,7 +752,9 @@ async def overview(meses: int = Query(6, ge=1, le=12),
                    token: str | None = Query(None), cmc_session: str | None = Cookie(None),
                    request: Request = None):
     """Portfolio de programas: todos de un vistazo, ranqueados por ingreso recuperable."""
-    _require_admin(request, token, cmc_session)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        raise HTTPException(403, "Vista portfolio no disponible para perfil de profesional")
     return build_overview(meses)
 
 
@@ -739,8 +762,10 @@ async def overview(meses: int = Query(6, ge=1, le=12),
 async def export_csv(prog: str, meses: int = Query(6, ge=1, le=36),
                      token: str | None = Query(None), cmc_session: str | None = Cookie(None),
                      request: Request = None):
-    _require_admin(request, token, cmc_session)
-    data = _dispatch(prog, meses)
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog
+    data = _dispatch(prog, meses, scope)
     tipo = data["cfg"]["tipo"]
     acc = ACCIONABLES.get(tipo, ())
     msg_tpl = data["cfg"]["wa"]

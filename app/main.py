@@ -3729,15 +3729,15 @@ def alma_kine_page(token: str | None = Query(None),
 def alma_programas_page(token: str | None = Query(None),
                         cmc_session: str | None = Cookie(None)):
     """Modulo Profesional: Motor de Programas Clínicos por especialidad (adherencia + control/recall)."""
-    from admin_routes import _verify_cookie, _is_admin_token
+    from alma_scope import page_token as _alma_page_token, profesional_id_of as _prof_id_of
     if not _ALMA_PROGRAMAS_HTML:
         raise HTTPException(404, "Programas no disponible")
-    if token and _is_admin_token(token):
-        return _ALMA_PROGRAMAS_HTML.replace("__TOKEN__", token)
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return _ALMA_PROGRAMAS_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    eff = _alma_page_token(token, cmc_session, "programas")
+    if eff:
+        scoped = "true" if _prof_id_of(eff) else "false"  # perfil de profesional → vista acotada
+        return (_ALMA_PROGRAMAS_HTML
+                .replace("__TOKEN__", eff)
+                .replace("__PROG_SCOPED__", scoped))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
