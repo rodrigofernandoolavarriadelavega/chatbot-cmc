@@ -25,7 +25,7 @@ from config import (META_VERIFY_TOKEN, CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_TO
                     OLACORE_TOKEN, ALMA_PROFILES, ALMA_MODULE_REGISTRY,
                     MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID,
                     ASISTENTE_EXAMENES_ENABLED, STAFF_PHONES,
-                    MEULEN_ASSISTANT_ENABLED, MEULEN_ASSISTANT_PHONES,
+                    MEULEN_ASSISTANT_ACTIVE, MEULEN_ASSISTANT_PHONES,
                     MEULEN_ASSISTANT_URL, MEULEN_ASSISTANT_SECRET)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
@@ -8716,7 +8716,7 @@ async def webhook(request: Request):
             # Si escribe el número autorizado (el papá), su mensaje va al bot de
             # Meulen (modo supermercado) en vez del flujo de pacientes. Gateado:
             # cualquier otro número sigue el flujo clínico normal.
-            if MEULEN_ASSISTANT_ENABLED and phone in MEULEN_ASSISTANT_PHONES:
+            if MEULEN_ASSISTANT_ACTIVE and phone in MEULEN_ASSISTANT_PHONES:
                 _mln_reply = ""
                 try:
                     import httpx as _httpx_mln

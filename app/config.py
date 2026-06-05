@@ -167,6 +167,27 @@ MEULEN_ASSISTANT_PHONES: set[str] = {
 MEULEN_ASSISTANT_URL    = os.getenv("MEULEN_ASSISTANT_URL", "http://127.0.0.1:8004/assistant")
 MEULEN_ASSISTANT_SECRET = os.getenv("MEULEN_ASSISTANT_SECRET", "")
 
+# Gate de seguridad (fail-closed): el puente SOLO se activa si está bien
+# configurado. Depende de META_APP_SECRET porque la firma del webhook es lo que
+# hace confiable el número del remitente — sin ella, un webhook spoofeado podría
+# operar precios/stock de Meulen. Si falta algo, el puente queda inerte (el bot
+# médico NO se cae; ese número simplemente seguiría el flujo normal).
+def _meulen_url_segura(u: str) -> bool:
+    return u.startswith(("http://127.0.0.1", "http://localhost")) or u.startswith("https://")
+
+MEULEN_ASSISTANT_ACTIVE = (
+    MEULEN_ASSISTANT_ENABLED
+    and bool(MEULEN_ASSISTANT_SECRET)
+    and bool(os.getenv("META_APP_SECRET", "").strip())
+    and _meulen_url_segura(MEULEN_ASSISTANT_URL)
+)
+if MEULEN_ASSISTANT_ENABLED and not MEULEN_ASSISTANT_ACTIVE:
+    import logging as _lg_mln
+    _lg_mln.getLogger("config").error(
+        "Puente Meulen DESACTIVADO por seguridad — requiere MEULEN_ASSISTANT_SECRET + "
+        "META_APP_SECRET (firma webhook) + URL https/localhost. Revisa el .env."
+    )
+
 # Mensajes proactivos: usar Message Templates aprobados por Meta (fuera de ventana 24h).
 # Poner en True SOLO cuando los templates estén aprobados en Meta Business Manager.
 USE_TEMPLATES = os.getenv("USE_TEMPLATES", "false").lower() in ("true", "1", "yes")
