@@ -125,11 +125,12 @@ _MARGEN_GLOBAL = 16000
 # esp_lower -> margen REAL del CMC (sobreescribe la fórmula). Casos donde el servicio
 # lo presta un tercero/SpA y el CMC se queda solo con una fracción:
 #   • Ecografía: la presta "Servicios Imagenológicos Spa" (David Pardo). El CMC retiene
-#     el 30% de ~$40.000 = $12.000 por eco (según DB Mensual), NO los ~$18.600 que la
-#     fórmula sublineal asumía. El Autopilot debe optimizar sobre el margen real.
+#     el 30%. Dato REAL de caja BI (bi.fact_ingresos esp 13, 30d): 52 eco, promedio
+#     $53.461 → margen CMC = 30% × $53.461 ≈ $16.000 (NO los $40k que asumí antes ni los
+#     $18.600 de la fórmula). El Autopilot optimiza sobre este margen real.
 _MARGEN_OVERRIDE: dict[str, int] = {
-    "ecografía": 12000,
-    "ecografia": 12000,
+    "ecografía": 16000,
+    "ecografia": 16000,
 }
 
 
