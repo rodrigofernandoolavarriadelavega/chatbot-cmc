@@ -348,8 +348,8 @@ async function loadResumen(){
       <div class="kpi alert"><div class="k-label">${urgenteLbl}</div><div class="k-val">${k.urgentes}</div><div class="k-sub">contactar hoy</div></div>
       <div class="kpi warn"><div class="k-label">${accLbl}</div><div class="k-val">${k.accionables}</div><div class="k-sub">worklist total</div></div>
       <div class="kpi money"><div class="k-label">Ingreso recuperable</div><div class="k-val">${clp(k.valor_recuperable)}</div><div class="k-sub">si contactas la worklist</div></div>
-      ${atendidosCard}
-      <div class="kpi"><div class="k-label">${esc(k.metric_label)}</div><div class="k-val">${k.metric_val}</div><div class="k-sub">ticket prom ${clp(k.ticket_prom)}</div></div>`;
+      <div class="kpi"><div class="k-label">${esc(k.metric_label)}</div><div class="k-val">${k.metric_val}</div><div class="k-sub">ticket prom ${clp(k.ticket_prom)}</div></div>
+      ${atendidosCard}`;
     const _at = document.getElementById('kpi-atendidos');
     if (_at) _at.addEventListener('click', openCalendario);
     }
