@@ -35,6 +35,9 @@ class CampaignState:
     purchases: float = 0.0
     purchase_value: float = 0.0
     cac_purchase: float | None = None
+    # Atribución LOCAL (source_id → pagó, sin depender del CAPI de Meta):
+    atendidos_local: int = 0
+    cac_real_local: float | None = None
     roas_meta: float = 0.0
     ctr: float = 0.0
     cpm: float = 0.0
@@ -207,6 +210,25 @@ async def build_world_state(window_days: int = 7) -> WorldState:
                 log.info("autopilot capacidad: saturadas → %s (no se escalan)", ", ".join(_sat))
     except Exception as e:  # noqa: BLE001
         log.warning("autopilot: capacidad no disponible (%s); sigo sin gating de agenda", e)
+
+    # Atribución LOCAL real por campaña (source_id → pagó), independiente del CAPI de
+    # Meta. Adjunta cac_real_local + atendidos_local a cada campaña (match por nombre).
+    try:
+        from . import cac_local
+        _cl = await cac_local.cac_by_campaign(window_days=max(window_days, 30))
+        _byc = _cl.get("by_campaign") or {}
+        _matched = 0
+        for c in ws.campaigns:
+            info = _byc.get((c.name or "").strip())
+            if info:
+                c.atendidos_local = int(info.get("atendidos") or 0)
+                c.cac_real_local = info.get("cac_real")
+                _matched += 1
+        if _matched:
+            log.info("autopilot: CAC local real adjuntado a %d campañas (modo %s)",
+                     _matched, _cl.get("modo_atendido"))
+    except Exception as e:  # noqa: BLE001
+        log.warning("autopilot: CAC local no disponible (%s); sigo con señal Meta", e)
 
     return ws
 

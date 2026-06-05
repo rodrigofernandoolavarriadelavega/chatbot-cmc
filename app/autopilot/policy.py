@@ -230,10 +230,24 @@ def evaluate_economics(c: CampaignState, limits: HardLimits) -> tuple[EconVerdic
     _esp_tag = f" [{_esp}]" if _esp else " [margen global]"
 
     # Jerarquía de señal: usamos el evento medible más cercano a la conversión.
-    #   1. Purchase (paciente atendido, vía CAPI)  → la señal de oro: ROAS/CAC real.
+    #   0. CAC REAL LOCAL (source_id → pagó)       → la verdad: atribución propia, no Meta.
+    #   1. Purchase (paciente atendido, vía CAPI)  → CAC de Meta (suele dar 0 acá).
     #   2. Mensaje WhatsApp iniciado               → proxy fuerte (intención de agendar).
     #   3. Clic al enlace                          → proxy débil (solo interés).
-    # Cuando vincules el CAPI Purchase a las campañas, el motor sube solo al nivel 1.
+
+    # ── Nivel 0: CAC REAL LOCAL (atribución propia, lo más confiable) ──
+    # Pacientes que vinieron del ad (source_id) y PAGARON, cruzado local con BI. No
+    # depende de que Meta acredite el Purchase. Es la señal de oro real.
+    _at_local = getattr(c, "atendidos_local", 0) or 0
+    _cac_local = getattr(c, "cac_real_local", None)
+    if _at_local >= limits.min_purchases_to_trust and _cac_local:
+        if _cac_local <= CAC_BUENO:
+            return EconVerdict.WINNER, 0.9, f"CAC REAL ${_cac_local:,.0f}/paciente ({_at_local} pagaron){_esp_tag} (bueno ≤${CAC_BUENO:,})"
+        if _cac_local <= CAC_TOLERABLE:
+            return EconVerdict.OK, 0.8, f"CAC REAL ${_cac_local:,.0f}/paciente ({_at_local} pagaron){_esp_tag} (tope ${CAC_TOLERABLE:,})"
+        if _cac_local <= CAC_TOLERABLE * 1.5:
+            return EconVerdict.MARGINAL, 0.75, f"CAC REAL ${_cac_local:,.0f}/paciente sobre lo tolerable{_esp_tag} (tope ${CAC_TOLERABLE:,})"
+        return EconVerdict.LOSER, 0.8, f"CAC REAL ${_cac_local:,.0f}/paciente muy alto{_esp_tag} (tope ${CAC_TOLERABLE:,})"
 
     # ── Nivel 1: Purchase (paciente atendido) ──
     if c.purchases >= limits.min_purchases_to_trust and c.cac_purchase is not None:

@@ -139,3 +139,24 @@ async def cac_by_ad(window_days: int = 30) -> dict:
         "cac_promedio": round(total_spend / total_atendidos) if total_atendidos else None,
         "ads": out,
     }
+
+
+async def cac_by_campaign(window_days: int = 30) -> dict:
+    """CAC real local AGREGADO POR CAMPAÑA (para el motor del Autopilot). Devuelve
+    {campaign_name: {spend, atendidos, cac_real}}. Reusa cac_by_ad."""
+    base = await cac_by_ad(window_days=window_days)
+    by_camp: dict = {}
+    for a in base.get("ads", []):
+        camp = (a.get("campaign_name") or "").strip()
+        if not camp:
+            continue
+        c = by_camp.setdefault(camp, {"spend": 0, "atendidos": 0})
+        c["spend"] += a.get("spend") or 0
+        c["atendidos"] += a.get("atendidos") or 0
+    for camp, c in by_camp.items():
+        c["cac_real"] = round(c["spend"] / c["atendidos"]) if c["atendidos"] else None
+    return {
+        "modo_atendido": base.get("modo_atendido"),
+        "window_days": window_days,
+        "by_campaign": by_camp,
+    }
