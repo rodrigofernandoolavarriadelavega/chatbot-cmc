@@ -5301,13 +5301,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # (qué es / para qué sirve / preparación). Más precisa que Claude y sin
             # riesgo de inventar; base en ecografias.ECO_INFO. Cae a FAQ si no aplica.
             _eco_info_resp = None
+            _eco_offer_book = True   # info de tipo → ofrecer agendar; prep (ya agendó) → no
             try:
                 from ecografias import info_ecografia as _info_eco_fn
                 _eco_info_resp = _info_eco_fn(txt)
             except Exception:  # noqa: BLE001
                 _eco_info_resp = None
+            # Ayuno/preparación: si pregunta eso y tiene una ECO agendada, dar la
+            # preparación de eco (caso real: agendó eco y preguntó "cuántas horas de
+            # ayuno" → antes respondía genérico). Solo si no detectó ya un tipo concreto.
+            if not _eco_info_resp:
+                _txt_low_ayuno = (txt or "").lower()
+                _AYUNO_KW = ("ayuno", "ayunas", "ayunar", "en ayunas", "preparacion",
+                             "preparación", "preparo", "prepararme", "me preparo")
+                if any(k in _txt_low_ayuno for k in _AYUNO_KW):
+                    try:
+                        from session import _conn as _c_eco_ayuno
+                        with _c_eco_ayuno() as _cn_ay:
+                            _row_eco = _cn_ay.execute(
+                                "SELECT 1 FROM citas_bot WHERE phone=? AND "
+                                "(especialidad LIKE '%cograf%' OR especialidad LIKE '%cotomograf%') "
+                                "AND fecha>=date('now','-1 day') ORDER BY id DESC LIMIT 1",
+                                (phone,)).fetchone()
+                        if _row_eco:
+                            from ecografias import prep_ayuno_eco as _prep_eco_fn
+                            _eco_info_resp = _prep_eco_fn()
+                            _eco_offer_book = False   # ya tiene la eco agendada
+                            log_event(phone, "eco_prep_ayuno_respondida", {})
+                    except Exception:  # noqa: BLE001
+                        pass
             if _eco_info_resp:
-                resp = _eco_info_resp + "\n\n¿Quieres que te la agende? Responde *sí* 😊"
+                resp = _eco_info_resp + ("\n\n¿Quieres que te la agende? Responde *sí* 😊"
+                                         if _eco_offer_book else "")
                 log_event(phone, "eco_info_respondida", {"txt": txt[:80]})
             else:
                 resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)

@@ -549,3 +549,18 @@ def info_ecografia(texto: str) -> str | None:
         f"*La realiza:* {prof_nom} · {precio_fmt}\n\n"
         "_Es un estudio de imágenes; el resultado lo interpreta tu médico._"
     )
+
+
+def prep_ayuno_eco() -> str:
+    """Preparación de ecografía por tipo (para responder 'cuántas horas de ayuno' /
+    'cómo me preparo' cuando el paciente tiene una eco agendada). Conservador."""
+    return (
+        "🩺 *Preparación para tu ecografía*\n\n"
+        "Depende del tipo:\n"
+        "• *Abdominal / hígado / vesícula:* ayuno de 6 a 8 horas (no comer antes; "
+        "puedes tomar agua y tus remedios).\n"
+        "• *Renal / vejiga / próstata:* vejiga llena — toma harta agua 1 hora antes y "
+        "no orines hasta el examen.\n"
+        "• *Tiroides / mama / partes blandas / testicular:* no requiere preparación.\n\n"
+        "¿De qué tipo es la tuya? Así te confirmo exacto 😊"
+    )
