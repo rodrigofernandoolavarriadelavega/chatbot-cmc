@@ -8649,22 +8649,39 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "fecha": slot.get("fecha"),
                         "hora_existente": (same_prof_dia.get("hora_inicio", "") or "")[:5],
                     })
-                    reset_session(phone)
                     _nom_blk = _first_name(paciente.get("nombre"))
                     # OJO: `es_tercero` se asigna recién más abajo en esta misma
                     # función (~L8691) → referenciarlo aquí daría UnboundLocalError.
                     # Derivamos el flag directo de `data`, igual que esa línea.
                     _es_tercero_blk = bool(data.get("booking_for_other"))
-                    _quien_blk = (
-                        f"{_nom_blk} ya tiene" if (_es_tercero_blk and _nom_blk) else "Ya tienes"
-                    )
+                    _hora_blk = (same_prof_dia.get("hora_inicio", "") or "")[:5]
+                    _prof_blk = same_prof_dia.get("profesional", "este profesional")
+                    _fecha_blk = slot.get("fecha_display", "ese día")
+
+                    # REGLA (Rodrigo): pueden ser VARIAS personas en el mismo celular con
+                    # el mismo profesional; lo que NO puede es la MISMA persona dos veces.
+                    # El quick-book usa el RUT del PERFIL del teléfono sin preguntar para
+                    # quién es → si una mamá agenda para su hijo, bloqueaba mal. Cuando NO
+                    # es un agendamiento explícito para tercero, en vez de bloquear de una,
+                    # preguntamos para quién es (preservando el cupo). Si es otra persona,
+                    # se agenda con SU RUT y el bloqueo no aplica.
+                    if not _es_tercero_blk:
+                        data.pop("dup_pending", None)
+                        save_session(phone, "WAIT_BOOKING_FOR", data)
+                        return _btn_msg(
+                            f"📋 Con ese RUT ya hay una hora con *{_prof_blk}* el "
+                            f"{_fecha_blk} a las *{_hora_blk}*.\n\n"
+                            "¿Esta nueva hora es para *ti* o para *otra persona* "
+                            "(un familiar en este mismo teléfono)?",
+                            [{"id": "booking_other", "title": "👤 Otra persona"},
+                             {"id": "accion_recepcion", "title": "📞 Es mía / recepción"}]
+                        )
+                    reset_session(phone)
                     return _btn_msg(
-                        f"📋 {_quien_blk} una hora con "
-                        f"{same_prof_dia.get('profesional','este profesional')} el "
-                        f"{slot.get('fecha_display','ese día')} a las "
-                        f"*{(same_prof_dia.get('hora_inicio','') or '')[:5]}*.\n\n"
-                        "No agendamos dos horas con el mismo profesional el mismo "
-                        "día.\n\n¿Quieres *cambiar* esa hora?",
+                        f"📋 {_nom_blk} ya tiene una hora con *{_prof_blk}* el "
+                        f"{_fecha_blk} a las *{_hora_blk}*.\n\n"
+                        "Esa persona no puede tener dos horas con el mismo profesional "
+                        "el mismo día.\n\n¿Quieres *cambiar* esa hora?",
                         [{"id": "reagendar", "title": "🔄 Cambiar la hora"},
                          {"id": "accion_recepcion", "title": "📞 Recepción"}]
                     )
