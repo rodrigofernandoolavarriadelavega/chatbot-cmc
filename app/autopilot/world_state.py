@@ -61,6 +61,9 @@ class WorldState:
     total_spend: float = 0.0
     total_purchase_value_meta: float = 0.0
     attribution_ratio: float | None = None  # ingreso_real_BI / valor_atribuido_Meta
+    # Capacidad de agenda por especialidad (gasto consciente de oferta):
+    # {especialidad: {days_to_next, saturated, known}}.
+    capacity: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -190,6 +193,21 @@ async def build_world_state(window_days: int = 7) -> WorldState:
         f"${rev:.0f}" if rev is not None else "n/d",
         f"{ws.attribution_ratio:.2f}" if ws.attribution_ratio else "n/d",
     )
+
+    # Capacidad de agenda SOLO para las especialidades que tienen campañas activas
+    # (infiere del nombre). Fail-safe: si falla, capacity queda {} y no se gatea nada.
+    try:
+        from .policy import _infer_especialidad
+        from . import capacity as _cap
+        esps = {e for e in (_infer_especialidad(c.name) for c in ws.campaigns) if e}
+        if esps:
+            ws.capacity = await _cap.capacity_for(esps)
+            _sat = [e for e, v in ws.capacity.items() if v.get("saturated")]
+            if _sat:
+                log.info("autopilot capacidad: saturadas → %s (no se escalan)", ", ".join(_sat))
+    except Exception as e:  # noqa: BLE001
+        log.warning("autopilot: capacidad no disponible (%s); sigo sin gating de agenda", e)
+
     return ws
 
 

@@ -304,7 +304,22 @@ def decide(ws: WorldState, limits: HardLimits | None = None) -> list[ProposedAct
         conf *= trust
         budget = _campaign_budget(c)
 
-        if verdict == EconVerdict.WINNER:
+        # Gasto consciente de CAPACIDAD: si la agenda de esta especialidad está
+        # saturada (próxima hora libre lejana), NO escalar aunque sea ganadora —
+        # generaría demanda que no se puede atender. Es además señal de contratar.
+        _cap = (ws.capacity or {}).get(_infer_especialidad(c.name) or "", {})
+        _saturada = bool(_cap.get("saturated"))
+
+        if verdict == EconVerdict.WINNER and _saturada:
+            _dias = _cap.get("days_to_next")
+            act = ProposedAction(
+                campaign_id=c.id, campaign_name=c.name, action=ActionType.KEEP,
+                reason=(f"Ganadora PERO agenda saturada (próx. hora en {_dias} días): "
+                        f"no escalar, la demanda extra no se puede atender. "
+                        f"Señal de contratación / redirigir presupuesto a especialidad con cupos."),
+                current_budget_clp=budget, proposed_budget_clp=budget, confidence=conf,
+            )
+        elif verdict == EconVerdict.WINNER:
             proposed = _step_budget(budget, 1 + limits.max_step_pct, limits)
             act = ProposedAction(
                 campaign_id=c.id, campaign_name=c.name, action=ActionType.INCREASE,

@@ -2121,3 +2121,37 @@ def fmt_slot_ctwa(slot: dict) -> str:
     hora = slot.get("hora_inicio", "")[:5]
     prof = slot.get("profesional", "")
     return f"{dia_str} · {hora} — {prof}"
+
+
+async def proxima_fecha_especialidad(especialidad: str) -> Optional[str]:
+    """Primera fecha disponible (YYYY-MM-DD) de una especialidad vía /proxima.
+
+    Liviano: 1 llamada cacheada (reusa _proxima_cache). Pensado para la señal de
+    CAPACIDAD del Autopilot (gasto consciente de agenda). Fail-safe: devuelve None
+    si no se puede determinar (la capa que lo usa NO debe bloquear gasto ante None,
+    para no frenar una campaña por un dato incierto)."""
+    id_esp = _id_especialidad(especialidad)
+    if not id_esp:
+        return None
+    _px = _proxima_cache.get(id_esp)
+    if _px and (time.monotonic() - _px["_ts"]) < _PROXIMA_CACHE_TTL:
+        return _px.get("fecha")
+    try:
+        client = _get_shared_client()
+        r = await _get(
+            client, f"{MEDILINK_BASE_URL}/especialidades/{id_esp}/proxima",
+            params={"q": _q({"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}})},
+            headers=HEADERS,
+        )
+    except Exception as e:  # noqa: BLE001
+        log.warning("proxima_fecha_especialidad %s: %s", especialidad, e)
+        return None
+    if r is not None and r.status_code == 200:
+        for slot in _safe_json(r).get("data", []):
+            try:
+                fecha_dt = datetime.strptime(slot.get("fecha", ""), "%d/%m/%Y").strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+            _proxima_cache[id_esp] = {"fecha": fecha_dt, "_ts": time.monotonic()}
+            return fecha_dt
+    return None
