@@ -67,22 +67,54 @@ def clasificar(dias: int) -> dict:
             "SELECT DISTINCT phone FROM conversation_events WHERE event LIKE 'winback%'"
         ).fetchall())
 
-    # Clasificación: prioridad meta > winback > espontaneo.
-    detalle = []
-    for phone in phones_periodo:
-        if phone in meta:
-            origen = "meta"
-        elif phone in winback:
-            origen = "winback"
-        else:
-            origen = "espontaneo"
-        tipo = "nuevo" if primera_cita.get(phone, "9999") >= desde else "recurrente"
-        detalle.append((phone, origen, tipo))
+        # Puente phone → id_paciente Medilink (para cruzar a la caja real).
+        bridge = dict(c.execute(
+            "SELECT phone, id_paciente_medilink FROM citas_bot "
+            "WHERE id_paciente_medilink IS NOT NULL AND id_paciente_medilink != 0"
+        ).fetchall())
+
+        # Clasificación: prioridad meta > winback > espontaneo.
+        PRI = {"meta": 3, "winback": 2, "espontaneo": 1}
+        detalle = []
+        idpac_origin: dict[int, str] = {}   # un origen por paciente (gana prioridad alta)
+        for phone in phones_periodo:
+            if phone in meta:
+                origen = "meta"
+            elif phone in winback:
+                origen = "winback"
+            else:
+                origen = "espontaneo"
+            tipo = "nuevo" if primera_cita.get(phone, "9999") >= desde else "recurrente"
+            detalle.append((phone, origen, tipo))
+            idp = bridge.get(phone)
+            if idp and (idp not in idpac_origin or PRI[origen] > PRI[idpac_origin[idp]]):
+                idpac_origin[idp] = origen
+
+        # Cruce a plata: caja real del período, atribuida al origen del paciente.
+        hoy = datetime.now().strftime("%Y-%m-%d")
+        ingreso = Counter()
+        pagadores = Counter()
+        if idpac_origin:
+            ids = list(idpac_origin)
+            qm = ",".join("?" for _ in ids)
+            for idp, monto in c.execute(
+                f"SELECT id_paciente, COALESCE(SUM(monto),0) FROM bi_pagos_caja "
+                f"WHERE id_paciente IN ({qm}) AND fecha BETWEEN ? AND ? GROUP BY id_paciente",
+                ids + [desde, hoy],
+            ).fetchall():
+                o = idpac_origin[idp]
+                ingreso[o] += monto or 0
+                if monto:
+                    pagadores[o] += 1
+        total_caja = c.execute(
+            "SELECT COALESCE(SUM(monto),0) FROM bi_pagos_caja WHERE fecha BETWEEN ? AND ?",
+            (desde, hoy),
+        ).fetchone()[0] or 0
 
     # Conteos limpios.
-    by_origen_tipo = Counter((o, t) for _, o, t in detalle)
     nuevos = Counter(o for _, o, t in detalle if t == "nuevo")
     recurr = Counter(o for _, o, t in detalle if t == "recurrente")
+    ingreso_atribuible = sum(ingreso.values())
     return {
         "periodo_dias": dias,
         "desde": desde,
@@ -92,6 +124,11 @@ def clasificar(dias: int) -> dict:
         "adquisicion_nuevos": {o: nuevos.get(o, 0) for o in ORIGENES},
         "recurrentes_por_origen": {o: recurr.get(o, 0) for o in ORIGENES},
         "todos_por_origen": {o: nuevos.get(o, 0) + recurr.get(o, 0) for o in ORIGENES},
+        "ingreso_por_origen": {o: ingreso.get(o, 0) for o in ORIGENES},
+        "pagadores_por_origen": {o: pagadores.get(o, 0) for o in ORIGENES},
+        "ingreso_atribuible": ingreso_atribuible,
+        "caja_total_periodo": total_caja,
+        "caja_no_rastreada": total_caja - ingreso_atribuible,
     }
 
 
@@ -116,13 +153,55 @@ def render(d: dict) -> None:
         n = d["todos_por_origen"][o]
         print(f"  {o:<11} {n:>4}  ({100*n/tot:4.1f}%)")
 
+    # ── Loop a plata ───────────────────────────────────────────────────────────
+    def clp(n): return f"${int(n):,}".replace(",", ".")
+    print()
+    print("💰 INGRESO REAL por origen (caja Medilink del período):")
+    for o in ORIGENES:
+        ing = d["ingreso_por_origen"][o]
+        pag = d["pagadores_por_origen"][o]
+        tk = ing / pag if pag else 0
+        linea = f"  {o:<11} {clp(ing):>12}  ({pag} pagaron · ticket {clp(tk)})"
+        spend = d.get("spend_por_origen", {}).get(o)
+        if spend is not None:
+            cac = spend / d["adquisicion_nuevos"][o] if d["adquisicion_nuevos"][o] else 0
+            roas = ing / spend if spend else float("inf")
+            linea += f"\n               gasto {clp(spend)} · CAC {clp(cac)} · ROAS {roas:.1f}x"
+        print(linea)
+    print()
+    print(f"  Atribuible (canales digitales): {clp(d['ingreso_atribuible'])}")
+    print(f"  Caja total del período:         {clp(d['caja_total_periodo'])}")
+    share = 100 * d["ingreso_atribuible"] / (d["caja_total_periodo"] or 1)
+    print(f"  No rastreada (presencial/sin bot): {clp(d['caja_no_rastreada'])}  "
+          f"→ digital explica {share:.0f}% de la caja")
+    if "spend_por_origen" not in d:
+        print("\n  (CAC/ROAS de Meta: reejecutá con --spend para traer el gasto de la Marketing API)")
+
+
+def _meta_spend_total(desde: str, hoy: str) -> float | None:
+    """Gasto total Meta del período vía cac_report.meta_spend(). None si falla."""
+    try:
+        from cac_report import meta_spend
+        ads = meta_spend(desde, hoy)
+        return sum(float(v.get("spend", 0) or 0) for v in ads.values())
+    except Exception as e:
+        print(f"[!] no pude traer Meta spend: {e}", file=sys.stderr)
+        return None
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dias", type=int, default=30)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--spend", action="store_true",
+                    help="Trae gasto Meta (Marketing API, ~60s) para CAC/ROAS real.")
     args = ap.parse_args()
     d = clasificar(args.dias)
+    if args.spend:
+        total = _meta_spend_total(d["desde"], datetime.now().strftime("%Y-%m-%d"))
+        if total is not None:
+            # Gasto solo en Meta; winback/espontáneo ≈ $0 (no hay pauta detrás).
+            d["spend_por_origen"] = {"meta": total, "winback": 0.0, "espontaneo": 0.0}
     if args.json:
         print(json.dumps(d, ensure_ascii=False, indent=2))
     else:
