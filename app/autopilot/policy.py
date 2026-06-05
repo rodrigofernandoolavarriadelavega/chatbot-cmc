@@ -122,7 +122,15 @@ CLICK_MIN_TO_TRUST = 30  # nº mínimo de clics para confiar en el costo/clic
 # Margen de fallback cuando no se puede inferir la especialidad de la campaña
 # (mitad del rango declarado, ligeramente sobre MG por mezcla con especialistas).
 _MARGEN_GLOBAL = 16000
-_MARGEN_OVERRIDE: dict[str, int] = {}  # esp_lower -> margen, para forzar casos puntuales
+# esp_lower -> margen REAL del CMC (sobreescribe la fórmula). Casos donde el servicio
+# lo presta un tercero/SpA y el CMC se queda solo con una fracción:
+#   • Ecografía: la presta "Servicios Imagenológicos Spa" (David Pardo). El CMC retiene
+#     el 30% de ~$40.000 = $12.000 por eco (según DB Mensual), NO los ~$18.600 que la
+#     fórmula sublineal asumía. El Autopilot debe optimizar sobre el margen real.
+_MARGEN_OVERRIDE: dict[str, int] = {
+    "ecografía": 12000,
+    "ecografia": 12000,
+}
 
 
 def _aranceles() -> dict[str, int]:
