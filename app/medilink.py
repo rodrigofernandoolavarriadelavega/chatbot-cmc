@@ -1191,12 +1191,14 @@ async def verificar_slot_disponible(id_profesional: int, fecha: str,
 
 async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
                      hora_inicio: str, hora_fin: str, id_recurso: int = 1,
-                     modalidad: str = "PRESENCIAL") -> Optional[dict]:
+                     modalidad: str = "PRESENCIAL",
+                     observaciones_extra: str = "") -> Optional[dict]:
     """Crea una cita en Medilink. Devuelve dict con id de la cita o None si falla.
 
     modalidad: 'PRESENCIAL' (default) o 'TELEMEDICINA'.
-    Si es TELEMEDICINA, se agrega el prefijo [ONLINE] en el campo observaciones
-    de la cita, visible en la agenda de Medilink.
+    Si es TELEMEDICINA, se agrega el prefijo [ONLINE] en el campo observaciones.
+    observaciones_extra: prefijo libre para observaciones (ej '[SOBRECUPO]'), visible
+    en la agenda de Medilink para que recepción lo identifique.
     """
     duracion = _h_to_min(hora_fin) - _h_to_min(hora_inicio)
     body = {
@@ -1209,8 +1211,12 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
         "hora_fin":       hora_fin,
         "duracion":       duracion,
     }
-    if modalidad == "TELEMEDICINA":
-        body["observaciones"] = "[ONLINE] Consulta por videollamada"
+    _obs = " ".join(p for p in (
+        observaciones_extra.strip(),
+        "[ONLINE] Consulta por videollamada" if modalidad == "TELEMEDICINA" else "",
+    ) if p).strip()
+    if _obs:
+        body["observaciones"] = _obs
     client = _get_shared_client()
     try:
         r = await _post(client, f"{MEDILINK_BASE_URL}/citas", json=body, headers=HEADERS)

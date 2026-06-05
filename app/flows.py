@@ -6102,6 +6102,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             data["todos_slots"] = todos_slots
         fechas_vistas   = data.get("fechas_vistas", [])
         especialidad    = data.get("especialidad", "")
+
+        # ── SOBRECUPO (gateado OFF) ──────────────────────────────────────────
+        # Para especialidades que sobrecupean (eco, autorizado por David), si la hora
+        # formal está lejos, anteponer cupos "por medio" cercanos para no perder al
+        # paciente. Inerte salvo SOBRECUPO_ENABLED=true (generar_slots devuelve []).
+        # Dedup: solo inyecta una vez (si ya hay un slot sobrecupo en la lista, skip).
+        if not any(s.get("sobrecupo") for s in todos_slots):
+            try:
+                import sobrecupo as _sc
+                _sobres = await _sc.generar_slots(especialidad)
+                if _sobres:
+                    from medilink import _fmt_fecha as _ff_sc
+                    _primera_formal = todos_slots[0]["fecha"] if todos_slots else "9999-99-99"
+                    for _s in _sobres:
+                        _s.setdefault("fecha_display", _ff_sc(_s["fecha"]))
+                    # Anteponer SOLO los sobrecupos más cercanos que la 1ª hora formal.
+                    _sobres = [s for s in _sobres if s["fecha"] < _primera_formal] or _sobres
+                    todos_slots = _sobres + todos_slots
+                    slots_mostrados = todos_slots[:5]
+                    data["slots"] = slots_mostrados
+                    data["todos_slots"] = todos_slots
+                    log_event(phone, "sobrecupo_ofrecido",
+                              {"esp": especialidad, "n": len(_sobres)})
+            except Exception as _e_sc:  # noqa: BLE001 — nunca romper el agendamiento
+                log.warning("sobrecupo offering falló: %s", _e_sc)
+
         fecha_actual    = todos_slots[0]["fecha"] if todos_slots else None
         # tl_norm_slot: normalizado usado por todo el handler. Definido al inicio
         # porque bloques tempranos (mes/fecha/semana) lo referencian antes del
@@ -8645,10 +8671,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 slot["hora_inicio"], phone, ttl_segundos=30,
             )
             # ── Doble-check: verificar que el slot sigue libre ──
-            slot_libre = (await verificar_slot_disponible(
-                slot["id_profesional"], slot["fecha"],
-                slot["hora_inicio"], slot["hora_fin"],
-            )) if _lock_ok else False
+            # SOBRECUPO: es doble-cupo INTENCIONAL (David lo autorizó) → saltar el
+            # chequeo de disponibilidad (siempre dará "ocupado"); basta el lock
+            # anti-race + el tope diario que valida el módulo sobrecupo.
+            if slot.get("sobrecupo"):
+                slot_libre = _lock_ok
+            else:
+                slot_libre = (await verificar_slot_disponible(
+                    slot["id_profesional"], slot["fecha"],
+                    slot["hora_inicio"], slot["hora_fin"],
+                )) if _lock_ok else False
             if not _lock_ok:
                 log.warning("Slot lock ocupado por otro paciente: %s %s prof %s",
                             slot["fecha"], slot["hora_inicio"], slot["id_profesional"])
@@ -8694,15 +8726,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         ]
                     )
             try:
-                resultado = await crear_cita(
-                    id_paciente=paciente["id"],
-                    id_profesional=slot["id_profesional"],
-                    fecha=slot["fecha"],
-                    hora_inicio=slot["hora_inicio"],
-                    hora_fin=slot["hora_fin"],
-                    id_recurso=slot.get("id_recurso", 1),
-                    modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
-                )
+                if slot.get("sobrecupo"):
+                    # Reserva de SOBRECUPO: crea la cita marcada [SOBRECUPO] y registra
+                    # el cupo para el tope diario (gateado por SOBRECUPO_ENABLED).
+                    import sobrecupo as _sc
+                    resultado = await _sc.crear_sobrecupo(
+                        slot, paciente["id"], phone=phone,
+                        rut=data.get("rut", ""),
+                        modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
+                    )
+                else:
+                    resultado = await crear_cita(
+                        id_paciente=paciente["id"],
+                        id_profesional=slot["id_profesional"],
+                        fecha=slot["fecha"],
+                        hora_inicio=slot["hora_inicio"],
+                        hora_fin=slot["hora_fin"],
+                        id_recurso=slot.get("id_recurso", 1),
+                        modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
+                    )
             except Exception as _crear_err:
                 # C3 fix: httpx.RequestError se lanza cuando Medilink persiste en
                 # 429 tras todos los reintentos de medilink._post. Antes este error
