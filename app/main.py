@@ -24,7 +24,9 @@ from fastapi.staticfiles import StaticFiles
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_TOKEN,
                     OLACORE_TOKEN, ALMA_PROFILES, ALMA_MODULE_REGISTRY,
                     MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID,
-                    ASISTENTE_EXAMENES_ENABLED, STAFF_PHONES)
+                    ASISTENTE_EXAMENES_ENABLED, STAFF_PHONES,
+                    MEULEN_ASSISTANT_ENABLED, MEULEN_ASSISTANT_PHONES,
+                    MEULEN_ASSISTANT_URL, MEULEN_ASSISTANT_SECRET)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
                        send_whatsapp_location,
@@ -8709,6 +8711,28 @@ async def webhook(request: Request):
                 log.info("HUMAN_TAKEOVER activo from=%s type=%s — silenciado", phone, msg_type)
                 return Response(status_code=200)
             # ── fin guard HUMAN_TAKEOVER ────────────────────────────────────
+
+            # ── Puente asistente Meulen ─────────────────────────────────────
+            # Si escribe el número autorizado (el papá), su mensaje va al bot de
+            # Meulen (modo supermercado) en vez del flujo de pacientes. Gateado:
+            # cualquier otro número sigue el flujo clínico normal.
+            if MEULEN_ASSISTANT_ENABLED and phone in MEULEN_ASSISTANT_PHONES:
+                _mln_reply = ""
+                try:
+                    import httpx as _httpx_mln
+                    async with _httpx_mln.AsyncClient(timeout=45) as _cmln:
+                        _rmln = await _cmln.post(MEULEN_ASSISTANT_URL, json={
+                            "phone": phone, "text": texto, "secret": MEULEN_ASSISTANT_SECRET})
+                        _rmln.raise_for_status()
+                        _mln_reply = (_rmln.json() or {}).get("reply", "")
+                except Exception as _emln:
+                    log.error("Puente Meulen error from=%s: %s", phone, _emln)
+                    _mln_reply = "Uy, tuve un problema con el sistema de Meulen. Probá de nuevo en un ratito 🙏"
+                if not _mln_reply:
+                    _mln_reply = "No te entendí 😅 ¿me lo repetís?"
+                await send_whatsapp(phone, _mln_reply)
+                log_message(phone, "out", _mln_reply[:600], "MEULEN", canal="whatsapp")
+                return Response(status_code=200)
 
             # autocapture_profile: solo corre fuera de HUMAN_TAKEOVER para evitar
             # capturar texto dictado por el operador como si fuera datos del paciente.

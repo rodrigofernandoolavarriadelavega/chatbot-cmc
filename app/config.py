@@ -156,6 +156,17 @@ STAFF_PHONES: dict[str, str] = _json.loads(os.getenv("STAFF_PHONES", "{}"))
 # Medilink). NUNCA se activa para pacientes (gate por STAFF_PHONES). OFF por defecto.
 ASISTENTE_EXAMENES_ENABLED = os.getenv("ASISTENTE_EXAMENES_ENABLED", "false").lower() in ("true", "1", "yes")
 
+# ── Puente asistente Meulen ─────────────────────────────────────────────────
+# Si un número de MEULEN_ASSISTANT_PHONES escribe al bot, su mensaje se reenvía
+# al bot de Meulen (modo asistente del supermercado) en vez del flujo de
+# pacientes. Gateado por número → la clínica/pacientes no se ven afectados.
+MEULEN_ASSISTANT_ENABLED = os.getenv("MEULEN_ASSISTANT_ENABLED", "false").lower() in ("true", "1", "yes")
+MEULEN_ASSISTANT_PHONES: set[str] = {
+    p.strip().lstrip("+") for p in os.getenv("MEULEN_ASSISTANT_PHONES", "").split(",") if p.strip()
+}
+MEULEN_ASSISTANT_URL    = os.getenv("MEULEN_ASSISTANT_URL", "http://127.0.0.1:8004/assistant")
+MEULEN_ASSISTANT_SECRET = os.getenv("MEULEN_ASSISTANT_SECRET", "")
+
 # Mensajes proactivos: usar Message Templates aprobados por Meta (fuera de ventana 24h).
 # Poner en True SOLO cuando los templates estén aprobados en Meta Business Manager.
 USE_TEMPLATES = os.getenv("USE_TEMPLATES", "false").lower() in ("true", "1", "yes")
