@@ -6825,6 +6825,45 @@ def seo_localidades_arauco():
     }
 
 
+@app.get("/api/seo/paginas")
+def seo_paginas_list(token: str = "", cmc_session: str | None = Cookie(None)):
+    """Páginas SEO especialidad×comuna generadas + oportunidades pendientes."""
+    _seo_api_auth(token, cmc_session)
+    import seo_pages
+    return {"paginas": seo_pages.listar(), "oportunidades": seo_pages.oportunidades()}
+
+
+@app.post("/api/seo/generar-pagina")
+async def seo_generar_pagina(request: Request, token: str = "",
+                             cmc_session: str | None = Cookie(None)):
+    """Crea una landing SEO para una celda especialidad×comuna (contenido único via
+    Claude + schema fijo). Devuelve la meta + el HTML para previsualizar embebido."""
+    _seo_api_auth(token, cmc_session)
+    import seo_pages
+    body = await request.json()
+    esp_slug = (body.get("esp_slug") or "").strip()
+    com_slug = (body.get("com_slug") or "").strip()
+    publicar = bool(body.get("publicar"))
+    if not esp_slug or not com_slug:
+        raise HTTPException(400, "esp_slug y com_slug requeridos")
+    try:
+        res = await seo_pages.generar(esp_slug, com_slug, publicar=publicar)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return res
+
+
+@app.get("/seo/p/{slug}", response_class=HTMLResponse)
+def seo_pagina_serve(slug: str):
+    """Sirve una página SEO generada (pública — para previsualizar embebida y, si se
+    publica, para que Google la indexe)."""
+    import seo_pages
+    html = seo_pages.get_html(slug)
+    if not html:
+        raise HTTPException(404, "página no encontrada")
+    return HTMLResponse(html)
+
+
 @app.get("/api/seo/geo")
 def seo_geo_api(periodo: str = "todos", desde: str | None = None,
                 hasta: str | None = None, profesional: str = "",

@@ -300,6 +300,30 @@
 
   <!-- Tab: Blog posts -->
   <section id="tab-content" class="tab-content hidden">
+    <!-- Generador de páginas SEO especialidad×comuna -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <h2 style="margin:0;font-size:1.05rem;color:#0F3F68">📄 Generador de páginas (especialidad × comuna)</h2>
+          <p style="margin:4px 0 0;color:#64748b;font-size:.85rem">Crea landings SEO únicas para las oportunidades de mayor demanda. Se generan en <code>noindex</code> para que las revises; publicás las que te gusten.</p>
+        </div>
+        <button id="seo-refrescar-pag" style="background:#1172AB;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer">↻ Actualizar</button>
+      </div>
+      <div id="seo-oportunidades" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"></div>
+      <h3 style="font-size:.9rem;color:#0F3F68;margin:18px 0 8px">Páginas creadas</h3>
+      <div id="seo-paginas-creadas" style="color:#64748b;font-size:.85rem">—</div>
+    </div>
+    <!-- Previsualización embebida -->
+    <div id="seo-preview-wrap" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <strong id="seo-preview-titulo" style="color:#0F3F68"></strong>
+        <div style="display:flex;gap:8px">
+          <a id="seo-preview-abrir" href="#" target="_blank" style="font-size:.8rem;color:#1172AB">Abrir en pestaña ↗</a>
+          <button id="seo-preview-cerrar" style="background:#f1f5f9;border:0;border-radius:8px;padding:4px 10px;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <iframe id="seo-preview-frame" style="width:100%;height:70vh;border:1px solid #e2e8f0;border-radius:10px;background:#fff"></iframe>
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="posts-grid"></div>
   </section>
 
@@ -1455,8 +1479,76 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+    if (btn.dataset.tab === 'content') loadPaginasSEO();
   });
 });
+
+// ── Generador de páginas SEO (especialidad × comuna) ──────────────────────
+let _seoPagLoaded = false;
+async function loadPaginasSEO(force) {
+  if (_seoPagLoaded && !force) return;
+  _seoPagLoaded = true;
+  const opDiv = document.getElementById('seo-oportunidades');
+  const crDiv = document.getElementById('seo-paginas-creadas');
+  opDiv.innerHTML = '<span style="color:#94a3b8;font-size:.85rem">Cargando…</span>';
+  try {
+    const r = await fetch('/api/seo/paginas?' + _withTok(''));
+    const d = await r.json();
+    // Oportunidades como chips con botón Generar
+    opDiv.innerHTML = (d.oportunidades || []).map(o =>
+      `<div style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:99px;padding:5px 6px 5px 12px;font-size:.82rem">
+        <span><b>${o.especialidad}</b> en ${o.comuna} <span style="color:#94a3b8">·${o.priority}</span></span>
+        <button onclick="generarPagina('${o.esp_slug}','${o.com_slug}',this)"
+          style="background:#0F3F68;color:#fff;border:0;border-radius:99px;padding:4px 10px;cursor:pointer;font-weight:600">Generar</button>
+      </div>`).join('') || '<span style="color:#16a34a;font-size:.85rem">✓ Todas las oportunidades top ya tienen página</span>';
+    renderPaginasCreadas(d.paginas || []);
+  } catch (e) {
+    opDiv.innerHTML = '<span style="color:#dc2626;font-size:.85rem">Error cargando</span>';
+  }
+}
+
+function renderPaginasCreadas(pags) {
+  const crDiv = document.getElementById('seo-paginas-creadas');
+  if (!pags.length) { crDiv.innerHTML = '<span style="color:#94a3b8">Aún no creaste páginas.</span>'; return; }
+  crDiv.innerHTML = pags.map(p =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:6px">
+      <span><b>${p.especialidad}</b> en ${p.comuna}
+        ${p.publicado ? '<span style="color:#16a34a;font-size:.75rem">● publicada</span>' : '<span style="color:#f59e0b;font-size:.75rem">● borrador</span>'}</span>
+      <button onclick="previsualizar('${p.slug}','${(p.especialidad+' en '+p.comuna).replace(/'/g,"")}')"
+        style="background:#1172AB;color:#fff;border:0;border-radius:8px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:.82rem">👁 Previsualizar</button>
+    </div>`).join('');
+}
+
+async function generarPagina(esp, com, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+  try {
+    const r = await fetch('/api/seo/generar-pagina?' + _withTok(''), {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ esp_slug: esp, com_slug: com })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    previsualizar(d.slug, d.especialidad + ' en ' + d.comuna);
+    loadPaginasSEO(true);  // refrescar listas
+  } catch (e) {
+    alert('No se pudo generar: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Generar'; }
+  }
+}
+
+function previsualizar(slug, titulo) {
+  const wrap = document.getElementById('seo-preview-wrap');
+  document.getElementById('seo-preview-titulo').textContent = '👁 ' + titulo;
+  document.getElementById('seo-preview-frame').src = '/seo/p/' + slug + '?_=' + Date.now();
+  document.getElementById('seo-preview-abrir').href = '/seo/p/' + slug;
+  wrap.style.display = 'block';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+document.getElementById('seo-preview-cerrar').addEventListener('click', () => {
+  document.getElementById('seo-preview-wrap').style.display = 'none';
+  document.getElementById('seo-preview-frame').src = 'about:blank';
+});
+document.getElementById('seo-refrescar-pag').addEventListener('click', () => loadPaginasSEO(true));
 
 // KPIs overview
 const doneCount = DATA.tasks.filter(t => t.status === 'done').length;
