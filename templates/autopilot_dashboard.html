@@ -2568,7 +2568,7 @@ load();
 const ED = {
   w:1080, h:1080, bg:'#0F3F68', bgGrad:false, els:[], sel:null, base:null,
   meta:{title:'Diseño editado', specialty:'', format:'instagram_post'},
-  hist:[], hi:-1, drag:null, imgcache:{}, _raf:0, guides:{vx:null,hy:null}, cropTarget:null,
+  hist:[], hi:-1, drag:null, imgcache:{}, _raf:0, guides:{vx:null,hy:null}, cropTarget:null, pickMode:false, eraseMode:null,
 };
 const TKN = new URLSearchParams(location.search).get('token')||'';
 const FONTS = ['Montserrat','Anton','Bebas Neue','Georgia','Arial','Impact','Courier New','Times New Roman','Verdana'];
@@ -2639,7 +2639,7 @@ function box(el){ if(el.type==='text'){ const b=textBox(el); return {w:b.w,h:b.h
 // ---------- dibujo ----------
 function draw(el){
   ctx.save(); ctx.translate(el.x,el.y); ctx.rotate(el.rot||0); ctx.globalAlpha=(el.opacity==null?1:el.opacity);
-  if(el.type==='image'||el.type==='logo'){ const im=ED.imgcache[el.src];
+  if(el.type==='image'||el.type==='logo'){ const im=(el.type==='image'&&el._cvs)?el._cvs:ED.imgcache[el.src];
     if(im){ if(el.type==='image'&&(el.bright!=100||el.contrast!=100||el.sat!=100))
         ctx.filter=`brightness(${el.bright}%) contrast(${el.contrast}%) saturate(${el.sat}%)`;
       ctx.drawImage(im,-el.w/2,-el.h/2,el.w,el.h); ctx.filter='none'; }
@@ -2702,6 +2702,8 @@ function hitEl(p){ for(let i=ED.els.length-1;i>=0;i--){ const el=ED.els[i]; if(e
 
 // ---------- interacción ----------
 function down(e){ hideFly(); const p=ptFromEvent(e);
+  if(ED.pickMode){ pickColorAt(p); return; }
+  if(ED.eraseMode){ ED.drag={mode:'erase'}; eraseAt(p); e.preventDefault(); return; }
   if(ED.sel){ const h=hitHandle(ED.sel,p);
     if(h==='rot'){ ED.drag={mode:'rot',el:ED.sel}; e.preventDefault(); return; }
     if(h){ ED.drag={mode:'resize',el:ED.sel,h,b0:box(ED.sel),x0:ED.sel.x,y0:ED.sel.y,size0:ED.sel.size}; e.preventDefault(); return; } }
@@ -2715,7 +2717,7 @@ function snap(el,nx,ny){ const b=box(el), s=scaleNow()||0.4, th=8/s; ED.guides.v
   const cy=[[ED.h/2,ED.h/2],[b.h/2,0],[ED.h-b.h/2,ED.h]];
   for(const c of cy){ if(Math.abs(ny-c[0])<th){ ny=c[0]; ED.guides.hy=c[1]; break; } }
   return [nx,ny]; }
-function move(e){ if(!ED.drag)return; const p=ptFromEvent(e); const el=ED.drag.el;
+function move(e){ if(!ED.drag)return; const p=ptFromEvent(e); if(ED.drag.mode==='erase'){ eraseAt(p); return; } const el=ED.drag.el;
   if(ED.drag.mode==='move'){ const prim=ED.drag.members.find(m=>m.m===el);
     let nx=prim.x0+(p.x-ED.drag.p0.x), ny=prim.y0+(p.y-ED.drag.p0.y);
     [nx,ny]=snap(el,nx,ny); const adx=nx-prim.x0, ady=ny-prim.y0;
@@ -2732,7 +2734,7 @@ function move(e){ if(!ED.drag)return; const p=ptFromEvent(e); const el=ED.drag.e
     el.x=opp.x + c*(sign[0]*nw/2) - s*(sign[1]*nh/2); el.y=opp.y + s*(sign[0]*nw/2) + c*(sign[1]*nh/2); }
   rqRender(); panelLive();
 }
-function up(){ if(ED.drag){ ED.drag=null; ED.guides.vx=null; ED.guides.hy=null; pushHist(); render(); } }
+function up(){ if(ED.drag){ const we=ED.drag.mode==='erase'; ED.drag=null; ED.guides.vx=null; ED.guides.hy=null; if(we&&ED.eraseMode&&ED.eraseMode._cvs){ const el=ED.eraseMode; el.src=el._cvs.toDataURL('image/png'); loadImg(el.src); } pushHist(); render(); } }
 
 // ---------- añadir ----------
 function addEl(el){ ED.els.push(el); ED.sel=el; pushHist(); render(); panel(); return el; }
@@ -2834,7 +2836,7 @@ function panel(){ const el=ED.sel, P=$('edPanel');
     h+=`<div class="grp"><div class="ed-row"><label>Brillo</label><input type="range" id="pBright" min="40" max="180" value="${el.bright}"></div>
       <div class="ed-row"><label>Contraste</label><input type="range" id="pContrast" min="40" max="180" value="${el.contrast}"></div>
       <div class="ed-row"><label>Saturación</label><input type="range" id="pSat" min="0" max="200" value="${el.sat}"></div>
-      <div class="ed-layeract"><button class="ed-btn" id="pCover">Cubrir</button><button class="ed-btn" id="pContain">Ajustar</button></div><div class="ed-layeract"><button class="ed-btn" id="pCrop">\u2702 Recortar parte</button></div><div class="ed-row"><label>Quitar fondo</label><input type="range" id="pTol" min="0" max="120" value="40"><button class="ed-btn" id="pBg0">Aplicar</button></div></div>`;
+      <div class="ed-layeract"><button class="ed-btn" id="pCover">Cubrir</button><button class="ed-btn" id="pContain">Ajustar</button></div><div class="ed-layeract"><button class="ed-btn" id="pCrop">\u2702 Recortar parte</button></div><div class="ed-layeract"><button class="ed-btn primary" id="pBgAI">\u2728 Quitar fondo IA</button></div><div class="ed-row"><label>Manual</label><input type="range" id="pTol" min="0" max="120" value="40"><button class="ed-btn" id="pBg0">Aplicar</button></div><div class="ed-row"><label>Por color</label><button class="ed-btn" id="pPick">Cuentagotas</button><label style="min-width:auto;gap:5px;color:var(--ed-mut)"><input type="checkbox" id="pConn">conectado</label></div><div class="ed-layeract"><button class="ed-btn" id="pErase">Borrador a mano</button></div></div>`;
   } else if(el.type==='rect'||el.type==='overlay'||el.type==='ellipse'||el.type==='line'||el.type==='icon'){
     h+=`<div class="grp"><div class="ed-row"><label>Color</label><input type="color" id="pColor" value="${el.color}"></div>`;
     if(el.type==='rect') h+=`<div class="ed-row"><label>Redondeo</label><input type="range" id="pRad" min="0" max="${Math.round(Math.min(el.w,el.h)/2)}" value="${el.radius||0}"></div>`;
@@ -2876,7 +2878,11 @@ function wirePanel(el){ const on=(id,ev,fn)=>{ const e=$(id); if(e) e.addEventLi
   on('pSat','input',e=>{el.sat=+e.target.value; render();}); on('pSat','change',()=>pushHist());
   on('pCover','click',()=>{ const im=ED.imgcache[el.src]; if(!im)return; const k=Math.max(ED.w/im.naturalWidth,ED.h/im.naturalHeight); el.w=im.naturalWidth*k; el.h=im.naturalHeight*k; el.x=ED.w/2; el.y=ED.h/2; el.rot=0; upd(1);});
   on('pContain','click',()=>{ const im=ED.imgcache[el.src]; if(!im)return; const k=Math.min(ED.w/im.naturalWidth,ED.h/im.naturalHeight); el.w=im.naturalWidth*k; el.h=im.naturalHeight*k; el.x=ED.w/2; el.y=ED.h/2; el.rot=0; upd(1);});
-  on('pCrop','click',()=>startCrop(el)); on('pBg0','click',()=>removeBg(el,+(($('pTol')&&$('pTol').value)||40)));
+  on('pCrop','click',()=>startCrop(el));
+  on('pBg0','click',()=>removeBg(el,+(($('pTol')&&$('pTol').value)||40),{connected:$('pConn')&&$('pConn').checked}));
+  on('pPick','click',()=>{ ED.pickMode=true; cv.style.cursor='crosshair'; toast('Haz clic en el color de fondo a quitar'); });
+  on('pBgAI','click',()=>bgAI(el));
+  on('pErase','click',()=>startErase(el));
   on('pRad','input',e=>{el.radius=+e.target.value; render();}); on('pRad','change',()=>pushHist());
   on('pOpac','input',e=>{el.opacity=+e.target.value; render();}); on('pOpac','change',()=>pushHist());
   on('pRot','input',e=>{el.rot=(+e.target.value)*Math.PI/180; render();}); on('pRot','change',()=>pushHist());
@@ -2904,7 +2910,7 @@ function showFly(kind,btn){ const F=$('edFlyout');
 }
 
 // ---------- historial ----------
-function snap2(){ return JSON.stringify({w:ED.w,h:ED.h,bg:ED.bg,bgGrad:ED.bgGrad,els:ED.els}); }
+function snap2(){ return JSON.stringify({w:ED.w,h:ED.h,bg:ED.bg,bgGrad:ED.bgGrad,els:ED.els}, (k,v)=>k==='_cvs'?undefined:v); }
 function pushHist(){ ED.hist=ED.hist.slice(0,ED.hi+1); ED.hist.push(snap2()); if(ED.hist.length>60)ED.hist.shift(); ED.hi=ED.hist.length-1; updHistBtns(); }
 function restore(s){ const o=JSON.parse(s); ED.w=o.w;ED.h=o.h;ED.bg=o.bg;ED.bgGrad=!!o.bgGrad;ED.els=o.els; ED.sel=null; $('edBg').value=ED.bg; syncFormatSelect(); fit(); render(); panel(); }
 function undo(){ if(ED.hi>0){ED.hi--; restore(ED.hist[ED.hi]); updHistBtns();} }
@@ -2927,14 +2933,44 @@ function applyCrop(){ const cropEl=ED.els.find(e=>e.type==='crop'); const img=ED
   loadImg(url).then(()=>{ ED.els=ED.els.filter(e=>e.type!=='crop'); ED.cropTarget=null;
     const ne={type:'image',src:url,x:nx,y:ny,w:nw,h:nh,rot:0,opacity:1,bright:100,contrast:100,sat:100};
     ED.els.push(ne); ED.sel=ne; pushHist(); render(); panel(); toast('Parte recortada como nuevo elemento'); }); }
-function removeBg(imgEl, tol){ const src=imgEl._origSrc||imgEl.src; loadImg(src).then(im=>{ imgEl._origSrc=src;
-  const oc=document.createElement('canvas'); oc.width=im.naturalWidth; oc.height=im.naturalHeight; const o=oc.getContext('2d'); o.drawImage(im,0,0);
-  let d; try{ d=o.getImageData(0,0,oc.width,oc.height); }catch(e){ toast('Imagen protegida, no se puede procesar'); return; }
-  const px=d.data,W=oc.width,H=oc.height; let r=0,g=0,b=0;
-  [[0,0],[W-1,0],[0,H-1],[W-1,H-1]].forEach(c=>{ const i=(c[1]*W+c[0])*4; r+=px[i];g+=px[i+1];b+=px[i+2]; }); r/=4;g/=4;b/=4;
-  const t=tol*tol*3; for(let i=0;i<px.length;i+=4){ const dr=px[i]-r,dg=px[i+1]-g,db=px[i+2]-b; if(dr*dr+dg*dg+db*db<t) px[i+3]=0; }
+function removeBg(el, tol, opts){ opts=opts||{}; const src=el._origSrc||el.src; loadImg(src).then(im=>{ el._origSrc=src;
+  const W=im.naturalWidth,H=im.naturalHeight; const oc=document.createElement('canvas'); oc.width=W; oc.height=H; const o=oc.getContext('2d'); o.drawImage(im,0,0);
+  let d; try{ d=o.getImageData(0,0,W,H); }catch(e){ toast('Imagen protegida'); return; }
+  const px=d.data; let R,G,B;
+  if(opts.color){ R=opts.color[0];G=opts.color[1];B=opts.color[2]; }
+  else { R=G=B=0; [[0,0],[W-1,0],[0,H-1],[W-1,H-1]].forEach(c=>{ const i=(c[1]*W+c[0])*4; R+=px[i];G+=px[i+1];B+=px[i+2]; }); R/=4;G/=4;B/=4; }
+  const t=tol*tol*3, close=i=>{ const dr=px[i]-R,dg=px[i+1]-G,db=px[i+2]-B; return dr*dr+dg*dg+db*db<t; };
+  if(opts.connected){ const vis=new Uint8Array(W*H), st=[];
+    (opts.seed?[opts.seed]:[[0,0],[W-1,0],[0,H-1],[W-1,H-1]]).forEach(s2=>{ const x=Math.max(0,Math.min(W-1,Math.round(s2[0]))),y=Math.max(0,Math.min(H-1,Math.round(s2[1]))); st.push(y*W+x); });
+    while(st.length){ const idx=st.pop(); if(vis[idx])continue; vis[idx]=1; if(!close(idx*4))continue; px[idx*4+3]=0;
+      const x=idx%W,y=(idx/W)|0; if(x>0)st.push(idx-1); if(x<W-1)st.push(idx+1); if(y>0)st.push(idx-W); if(y<H-1)st.push(idx+W); } }
+  else { for(let i=0;i<px.length;i+=4){ if(close(i)) px[i+3]=0; } }
   o.putImageData(d,0,0); const url=oc.toDataURL('image/png');
-  loadImg(url).then(()=>{ imgEl.src=url; pushHist(); render(); toast('Fondo quitado · ajusta tolerancia si falta'); }); }); }
+  loadImg(url).then(()=>{ el.src=url; delete el._cvs; pushHist(); render(); toast('Fondo quitado · ajusta tolerancia'); }); }); }
+function pickColorAt(p){ const el=ED.sel; ED.pickMode=false; cv.style.cursor='default'; if(!el||el.type!=='image')return;
+  const im=ED.imgcache[el.src]; if(!im)return;
+  const sx=Math.round((p.x-(el.x-el.w/2))/el.w*im.naturalWidth), sy=Math.round((p.y-(el.y-el.h/2))/el.h*im.naturalHeight);
+  const oc=document.createElement('canvas'); oc.width=im.naturalWidth; oc.height=im.naturalHeight; const o=oc.getContext('2d'); o.drawImage(im,0,0);
+  let c; try{ c=o.getImageData(Math.max(0,Math.min(im.naturalWidth-1,sx)),Math.max(0,Math.min(im.naturalHeight-1,sy)),1,1).data; }catch(e){ toast('Imagen protegida'); return; }
+  const tol=+(($('pTol')&&$('pTol').value)||40), conn=$('pConn')&&$('pConn').checked;
+  removeBg(el,tol,{color:[c[0],c[1],c[2]],connected:conn,seed:conn?[sx,sy]:null}); }
+function ensureBitmap(el){ if(el._cvs)return; const im=ED.imgcache[el.src]; if(!im)return; const c=document.createElement('canvas');
+  c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); el._cvs=c; }
+function startErase(el){ ED.eraseMode=(ED.eraseMode===el)?null:el;
+  if(ED.eraseMode){ ensureBitmap(el); cv.style.cursor='cell'; toast('Borrador activo · arrastra sobre la imagen'); } else cv.style.cursor='default'; }
+function eraseAt(p){ const el=ED.eraseMode; if(!el||!el._cvs)return; const c=el._cvs.getContext('2d');
+  const sx=(p.x-(el.x-el.w/2))/el.w*el._cvs.width, sy=(p.y-(el.y-el.h/2))/el.h*el._cvs.height, rad=el._cvs.width*0.035;
+  c.save(); c.globalCompositeOperation='destination-out'; c.beginPath(); c.arc(sx,sy,rad,0,7); c.fill(); c.restore(); rqRender(); }
+async function bgAI(el){ const im=el._cvs||ED.imgcache[el.src]; if(!im){ toast('Sin imagen'); return; }
+  const oc=document.createElement('canvas'); oc.width=im.naturalWidth||im.width; oc.height=im.naturalHeight||im.height; oc.getContext('2d').drawImage(im,0,0);
+  let data; try{ data=oc.toDataURL('image/png'); }catch(e){ toast('Imagen protegida'); return; }
+  toast('Procesando con IA…');
+  try{ const r=await fetch(`/autopilot/api/designs/cutout?token=${TKN}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_b64:data})});
+    const j=await r.json();
+    if(j.ok){ await loadImg(j.image_b64); el._origSrc=el.src; el.src=j.image_b64; delete el._cvs; pushHist(); render(); toast('\u2713 Fondo quitado con IA'); }
+    else if(j.reason==='no_key'){ toast('Falta la API key de remove.bg en el .env. Usa "Quitar fondo" manual mientras tanto.'); }
+    else { toast('IA: '+(j.message||'error')); }
+  }catch(e){ toast('Error: '+e.message); } }
 
 // ---------- exportar ----------
 function exportCanvas(){ ED.els=ED.els.filter(e=>e.type!=='crop'); ED.cropTarget=null; ED.sel=null; ED.guides.vx=null; ED.guides.hy=null; render(false); const url=cv.toDataURL('image/png'); render(true); return url; }
