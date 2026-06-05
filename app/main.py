@@ -3708,15 +3708,20 @@ def alma_ortodoncia_page(token: str | None = Query(None),
 def alma_kine_page(token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None)):
     """Modulo Profesional: Programa Kinesiología — adherencia, riesgo de abandono, plan de sesiones."""
-    from alma_scope import page_token as _alma_page_token, shows_money as _shows_money
+    from alma_scope import (page_token as _alma_page_token, shows_money as _shows_money,
+                            profesional_id_of as _prof_id_of)
     if not _ALMA_KINE_HTML:
         raise HTTPException(404, "Kine no disponible")
     eff = _alma_page_token(token, cmc_session, "kine")
     if eff:
         financiero = "true" if _shows_money(eff) else "false"
+        # Si es perfil de profesional, deep-link a su panel (Tu calendario).
+        pid = _prof_id_of(eff)
+        dash_url = f"/profesional/dashboard?token={_make_prof_token(pid)}" if pid else ""
         return (_ALMA_KINE_HTML
                 .replace("__TOKEN__", eff)
-                .replace("__KINE_FINANCIERO__", financiero))
+                .replace("__KINE_FINANCIERO__", financiero)
+                .replace("__PROF_DASHBOARD_URL__", dash_url))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

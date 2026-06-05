@@ -238,6 +238,7 @@
 <script>
 const TOKEN = "__TOKEN__";
 const FINANCIERO = __KINE_FINANCIERO__;  // solo el dueño ve "Ingreso programa"
+const PROF_DASHBOARD_URL = "__PROF_DASHBOARD_URL__";  // panel del profesional (Tu calendario); "" si no es perfil de profesional
 const API = "/alma/api/kine";
 const H = { "Authorization": "Bearer " + TOKEN, "Content-Type": "application/json" };
 let STATE = { estado: "todos", q: "", pacientes: [], conteos: {} };
@@ -264,12 +265,11 @@ async function loadResumen(){
       <div class="kpi alert"><div class="k-label">Riesgo abandono</div><div class="k-val">${k.riesgo}</div><div class="k-sub">contactar hoy</div></div>
       <div class="kpi warn"><div class="k-label">Abandono temprano</div><div class="k-val">${k.abandono}</div><div class="k-sub">win-back 22-45d</div></div>
       <div class="kpi"><div class="k-label">Sesiones / episodio</div><div class="k-val">${k.sesiones_prom}</div><div class="k-sub">promedio</div></div>
-      <div class="kpi" id="kpi-atendidos" style="cursor:pointer" title="Ver el calendario / agenda"><div class="k-label">Pacientes atendidos este mes</div><div class="k-val">${k.atendidos_mes}</div><div class="k-sub">toca para ver el calendario →</div></div>
+      <div class="kpi" id="kpi-atendidos" ${PROF_DASHBOARD_URL?'style="cursor:pointer" title="Ver tu calendario de días trabajados"':''}><div class="k-label">Pacientes atendidos este mes</div><div class="k-val">${k.atendidos_mes}</div><div class="k-sub">${PROF_DASHBOARD_URL?'toca para ver tu calendario ↗':'este mes'}</div></div>
       ${ingresoCard}`;
     const _at = document.getElementById('kpi-atendidos');
-    if (_at) _at.addEventListener('click', () => {
-      try { window.parent.postMessage({ type: 'ALMA_ACTIVATE_MODULE', id: 'agenda' }, '*'); }
-      catch (e) {}
+    if (_at && PROF_DASHBOARD_URL) _at.addEventListener('click', () => {
+      window.open(PROF_DASHBOARD_URL, '_blank');  // abre el panel profesional (Tu calendario) en pestaña nueva
     });
     renderCarga(r.carga);
     if(r.source_status!=="ok"){ toast("BI no disponible — los datos se ven en producción", true); }

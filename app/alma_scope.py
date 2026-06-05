@@ -29,6 +29,13 @@ def _is_admin(tk: str) -> bool:
     return any(hmac.compare_digest(tk, t) for t in _ADMIN_TOKENS)
 
 
+def profesional_id_of(token: str | None) -> int | None:
+    """profesional_id del perfil (para deep-link a su panel), o None si el token
+    no es un perfil de profesional (admin/recepción)."""
+    prof = ALMA_PROFILES.get(token or "")
+    return prof.get("profesional_id") if prof else None
+
+
 def _bearer(request) -> str | None:
     if request is None:
         return None
