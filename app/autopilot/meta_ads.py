@@ -260,6 +260,31 @@ async def set_adset_budget(
     return out
 
 
+async def set_campaign_budget(
+    client: httpx.AsyncClient,
+    campaign_id: str,
+    daily_budget_clp: int,
+    *,
+    reason: str = "",
+) -> dict:
+    """Cambia el presupuesto diario de una campaña con CBO. ABORTA si AUTOPILOT_EXECUTE != true.
+
+    Solo aplica a campañas con Campaign Budget Optimization (presupuesto a nivel
+    campaña). Para presupuesto a nivel ad set, usar set_adset_budget.
+    """
+    if not _execute_enabled():
+        log.info("[autopilot dry-run] set_campaign_budget(%s → $%s) bloqueado (motivo: %s)",
+                 campaign_id, daily_budget_clp, reason)
+        return {"dry_run": True, "campaign_id": campaign_id, "daily_budget": daily_budget_clp}
+
+    params = {"daily_budget": int(daily_budget_clp), "access_token": _token()}
+    r = await client.post(f"{GRAPH}/{campaign_id}", data=params, timeout=30)
+    out = r.json()
+    log.info("[autopilot] set_campaign_budget(%s → $%s) motivo=%s → %s",
+             campaign_id, daily_budget_clp, reason, out)
+    return out
+
+
 async def pause_adset(client: httpx.AsyncClient, adset_id: str, *, reason: str = "") -> dict:
     """Pausa un ad set. ABORTA si AUTOPILOT_EXECUTE != true."""
     if not _execute_enabled():

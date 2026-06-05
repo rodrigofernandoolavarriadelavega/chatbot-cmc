@@ -40,6 +40,18 @@ async def run_dry_run(window_days: int = 7) -> AutopilotRun:
              len(ws.campaigns),
              sum(1 for a in actions if a.action in (ActionType.INCREASE, ActionType.DECREASE,
                                                     ActionType.PAUSE)))
+
+    # Fase 2 — encolar las acciones que mueven plata y avisar al dueño para su OK.
+    # Inerte salvo AUTOPILOT_ENABLED=true (enqueue/notify chequean el flag adentro).
+    # NO ejecuta nada: solo deja pendientes que el dueño aprueba desde el dashboard.
+    try:
+        from . import approvals
+        new_ids = approvals.enqueue(actions)
+        if new_ids:
+            approvals.notify_owner(new_ids)
+    except Exception as e:  # noqa: BLE001 — nunca tumbar el run por la cola de aprobación
+        log.error("[autopilot] enqueue/notify falló: %s", e)
+
     return AutopilotRun(ws=ws, actions=actions, limits=limits, report_md=report)
 
 

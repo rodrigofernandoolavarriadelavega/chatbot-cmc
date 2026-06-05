@@ -10,6 +10,7 @@
 Auth: mismo token admin que el resto del panel (?token= o cookie).
 """
 import asyncio
+import base64
 import json
 import logging
 import re
@@ -254,6 +255,43 @@ def autopilot_designs_generate_status(job_id: str, token: str | None = Query(Non
     return JSONResponse(_GEN_JOBS.get(job_id, {"status": "unknown"}))
 
 
+@router.post("/autopilot/api/designs/save-edit")
+async def autopilot_designs_save_edit(request: Request, token: str | None = Query(None)):
+    """Guarda una imagen editada (texto sobrepuesto + tamaño/formato) como diseño nuevo.
+
+    Body: {image_b64 (dataURL o base64 PNG), title?, specialty?, format?}
+    Devuelve el registro creado para insertarlo en la galería sin recargar.
+    """
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    raw = (body.get("image_b64") or "").strip()
+    if not raw:
+        raise HTTPException(400, "Falta 'image_b64'")
+    if raw.startswith("data:") and "," in raw:
+        raw = raw.split(",", 1)[1]
+    try:
+        png = base64.b64decode(raw)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "image_b64 inválido")
+    if len(png) > 12 * 1024 * 1024:
+        raise HTTPException(413, "Imagen demasiado grande")
+    title = (body.get("title") or "Diseño editado").strip()
+    specialty = (body.get("specialty") or "").strip()
+    fmt = (body.get("format") or "instagram_post").strip()
+    rid = f"{_slug(specialty or title)}-edit-{int(time.time())}"
+    _STATIC_DESIGNS.mkdir(parents=True, exist_ok=True)
+    (_STATIC_DESIGNS / f"{rid}.png").write_bytes(png)
+    rec = add_design({
+        "id": rid, "title": title, "specialty": specialty, "format": fmt,
+        "image_url": f"/static/ad_designs/{rid}.png", "status": "borrador",
+        "source": "editor",
+    })
+    return JSONResponse({"ok": True, "design": rec})
+
+
 # ── Email marketing (segmentos) ──────────────────────────────────────────────
 
 @router.get("/autopilot/api/email/segments")
@@ -431,6 +469,12 @@ def seo_snapshot(token: str | None = Query(None), request: Request = None):
             "local_checklist": seo_audit.local_seo_checklist(),
             "opportunities": seo_audit.OPPORTUNITY_TEMPLATES,
         })
+    # coverage/checklist/oportunidades son cálculos puros (baratos): recalcular
+    # fresco para que un cambio de pesos se refleje sin re-auditar el sitio.
+    # Solo las páginas (requieren fetch de red) quedan cacheadas en el snapshot.
+    snap["coverage"] = seo_audit.coverage_matrix()
+    snap["local_checklist"] = seo_audit.local_seo_checklist()
+    snap["opportunities"] = seo_audit.OPPORTUNITY_TEMPLATES
     return JSONResponse(snap)
 
 
@@ -492,3 +536,42 @@ def seo_targets_del(url: str = Query(...), token: str | None = Query(None),
     _check_token(token, request)
     from . import seo_audit
     return JSONResponse({"ok": seo_audit.delete_target(url)})
+
+
+# ── Fase 2: decisiones de presupuesto pendientes de aprobación ───────────────
+
+@router.get("/autopilot/api/pending")
+def pending_list(token: str | None = Query(None), request: Request = None):
+    """Acciones de presupuesto esperando OK del dueño + historial reciente."""
+    _check_token(token, request)
+    from . import approvals
+    import os as _os
+    return JSONResponse({
+        "pending": approvals.list_pending(),
+        "recent": approvals.list_recent(30),
+        "enabled": _os.getenv("AUTOPILOT_ENABLED", "false").lower() == "true",
+        "execute": _os.getenv("AUTOPILOT_EXECUTE", "false").lower() == "true",
+    })
+
+
+@router.post("/autopilot/api/pending/{pid}/approve")
+async def pending_approve(pid: str, token: str | None = Query(None), request: Request = None):
+    """Aprueba y APLICA la acción (re-valida límites; escritura real gateada por
+    AUTOPILOT_EXECUTE). Devuelve el item con su resultado de aplicación."""
+    _check_token(token, request)
+    from . import approvals
+    item = await approvals.approve(pid, by="dashboard")
+    if not item:
+        raise HTTPException(404, "no encontrada")
+    return JSONResponse({"ok": item["status"] in ("approved",), "item": item})
+
+
+@router.post("/autopilot/api/pending/{pid}/reject")
+def pending_reject(pid: str, token: str | None = Query(None), request: Request = None):
+    """Rechaza una acción pendiente (no se aplica)."""
+    _check_token(token, request)
+    from . import approvals
+    item = approvals.reject(pid, by="dashboard")
+    if not item:
+        raise HTTPException(404, "no encontrada")
+    return JSONResponse({"ok": True, "item": item})

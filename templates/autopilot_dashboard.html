@@ -92,6 +92,9 @@
   .panel-h .count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);
        background:var(--bg);padding:4px 10px;border-radius:999px}
   .panel-b{padding:16px 18px}
+  .mini-btn{padding:6px 11px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+    font-family:inherit;transition:filter .12s} .mini-btn:hover{filter:brightness(.96)}
+  .mini-btn:disabled{opacity:.6;cursor:default}
 
   /* Auditor */
   .auditor{display:flex;align-items:center;gap:18px;padding:18px 20px;flex-wrap:wrap}
@@ -620,6 +623,16 @@
     <div class="auditor" id="auditor"></div>
   </div>
 
+  <div class="panel" id="pendingPanel" style="margin-top:18px;display:none;border:1.5px solid #f0c36d">
+    <div class="panel-h" style="background:linear-gradient(135deg,#fffaf0,#fdf3dc)">
+      <span class="ph-ico" style="background:linear-gradient(135deg,#fdf0d0,#f8e3ad)"><svg viewBox="0 0 24 24" fill="none" stroke="#b5852a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg></span>
+      <h2>Esperando tu OK — cambios de presupuesto</h2>
+      <span class="count" id="pendCount"></span>
+    </div>
+    <div class="panel-b" id="pendingList"></div>
+    <div class="panel-b" id="pendingFoot" style="border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);padding-top:10px"></div>
+  </div>
+
   <div class="grid">
     <div class="col">
       <div class="panel">
@@ -1130,8 +1143,53 @@ async function load(){
   let d;
   try{ d = await (await fetch(`/autopilot/api/snapshot?token=${TOKEN}`)).json(); }
   catch(e){ return showEmpty('No pude cargar el snapshot.'); }
+  loadPending();
   if(d.empty){ return showEmpty(d.message); }
   render(d);
+}
+
+function _money(n){ return (n==null)?'—':('$'+Number(n).toLocaleString('es-CL')); }
+
+async function loadPending(){
+  let r;
+  try{ r = await (await fetch(`/autopilot/api/pending?token=${TOKEN}`)).json(); }
+  catch(e){ return; }
+  const panel=document.getElementById('pendingPanel');
+  const pend=r.pending||[];
+  document.getElementById('pendCount').textContent = pend.length? (pend.length+' por aprobar') : '';
+  if(!pend.length){ panel.style.display='none'; }
+  else{
+    panel.style.display='block';
+    const verbo={increase_budget:['Subir presupuesto','#1a8f5a'],decrease_budget:['Bajar presupuesto','#c9772a'],pause:['Pausar','#c0392b']};
+    document.getElementById('pendingList').innerHTML = pend.map(p=>{
+      const v=verbo[p.action]||[p.action,'#555'];
+      const chg = p.action==='pause' ? '' :
+        `<span style="font-weight:700">${_money(p.current_budget)}</span> → <span style="font-weight:800;color:${v[1]}">${_money(p.proposed_budget)}</span>/día`;
+      return `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px"><span style="color:${v[1]}">${v[0]}</span> · ${(p.campaign_name||'').replace(/</g,'&lt;')}</div>
+          <div style="font-size:12px;margin-top:3px">${chg}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">${(p.reason||'').replace(/</g,'&lt;')} · confianza ${(p.confidence*100|0)}%</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="mini-btn" style="background:#e9f9f0;color:#1a8f5a;border:1px solid #bfe8d0" onclick="pendAction('${p.id}','approve',this)">Aprobar</button>
+          <button class="mini-btn" style="background:#fdecea;color:#c0392b;border:1px solid #f3c9c2" onclick="pendAction('${p.id}','reject',this)">Rechazar</button>
+        </div>
+      </div>`;
+    }).join('');
+    const exec = r.execute ? 'aplica REAL en Meta' : 'modo simulado (AUTOPILOT_EXECUTE=off): al aprobar NO toca Meta, solo registra';
+    const en = r.enabled ? '' : ' · ⚠ AUTOPILOT_ENABLED=off: el motor no está encolando nuevas';
+    document.getElementById('pendingFoot').textContent = `Aprobar ${exec}. Se re-validan los límites duros antes de aplicar.${en}`;
+  }
+}
+
+async function pendAction(id, act, btn){
+  if(act==='approve' && !confirm('¿Aprobar y aplicar este cambio de presupuesto?')) return;
+  btn.disabled=true; btn.textContent='…';
+  try{
+    await fetch(`/autopilot/api/pending/${id}/${act}?token=${TOKEN}`,{method:'POST'});
+    await loadPending();
+  }catch(e){ btn.disabled=false; alert('No se pudo: '+e); }
 }
 
 function showEmpty(msg){
