@@ -38,8 +38,21 @@ from session import _conn  # noqa: E402
 ORIGENES = ["meta", "winback", "espontaneo"]
 
 
-def clasificar(dias: int) -> dict:
+def _ventana(dias: int, mes: str | None) -> tuple[str, str, str]:
+    """Devuelve (desde, hasta_excl, etiqueta). `mes`='YYYY-MM' → mes calendario
+    (misma ventana que el módulo DB Mensual: fecha>=ini AND fecha<fin)."""
+    if mes:
+        yr, mo = int(mes[:4]), int(mes[5:7])
+        desde = f"{mes}-01"
+        hasta_excl = f"{yr + mo // 12}-{(mo % 12) + 1:02d}-01"
+        return desde, hasta_excl, f"mes {mes}"
     desde = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
+    hasta_excl = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    return desde, hasta_excl, f"últimos {dias}d"
+
+
+def clasificar(dias: int = 30, mes: str | None = None) -> dict:
+    desde, hasta_excl, etiqueta = _ventana(dias, mes)
 
     with _conn() as c:
         # Primera cita-por-bot de cada phone (all-time) → define nuevo/recurrente.
@@ -50,12 +63,13 @@ def clasificar(dias: int) -> dict:
         ).fetchall():
             primera_cita[phone] = ts
 
-        # Phones con AL MENOS una cita dentro del período.
+        # Phones con AL MENOS una cita dentro del período [desde, hasta_excl).
         phones_periodo = set(
             r[0] for r in c.execute(
                 "SELECT DISTINCT phone FROM conversation_events "
-                "WHERE event='cita_creada' AND ts >= ? AND phone IS NOT NULL AND phone!=''",
-                (desde,),
+                "WHERE event='cita_creada' AND ts >= ? AND ts < ? "
+                "AND phone IS NOT NULL AND phone!=''",
+                (desde, hasta_excl),
             ).fetchall()
         )
 
@@ -90,8 +104,9 @@ def clasificar(dias: int) -> dict:
             if idp and (idp not in idpac_origin or PRI[origen] > PRI[idpac_origin[idp]]):
                 idpac_origin[idp] = origen
 
-        # Cruce a plata: caja real del período, atribuida al origen del paciente.
-        hoy = datetime.now().strftime("%Y-%m-%d")
+        # Cruce a plata: caja real del período [desde, hasta_excl), atribuida al
+        # origen del paciente. MISMA tabla y SUM(monto) que el módulo DB Mensual
+        # (/api/cmc/mensual) → con --mes reconcilia 1:1 con lo que ve recepción.
         ingreso = Counter()
         pagadores = Counter()
         if idpac_origin:
@@ -99,16 +114,16 @@ def clasificar(dias: int) -> dict:
             qm = ",".join("?" for _ in ids)
             for idp, monto in c.execute(
                 f"SELECT id_paciente, COALESCE(SUM(monto),0) FROM bi_pagos_caja "
-                f"WHERE id_paciente IN ({qm}) AND fecha BETWEEN ? AND ? GROUP BY id_paciente",
-                ids + [desde, hoy],
+                f"WHERE id_paciente IN ({qm}) AND fecha >= ? AND fecha < ? GROUP BY id_paciente",
+                ids + [desde, hasta_excl],
             ).fetchall():
                 o = idpac_origin[idp]
                 ingreso[o] += monto or 0
                 if monto:
                     pagadores[o] += 1
         total_caja = c.execute(
-            "SELECT COALESCE(SUM(monto),0) FROM bi_pagos_caja WHERE fecha BETWEEN ? AND ?",
-            (desde, hoy),
+            "SELECT COALESCE(SUM(monto),0) FROM bi_pagos_caja WHERE fecha >= ? AND fecha < ?",
+            (desde, hasta_excl),
         ).fetchone()[0] or 0
 
     # Conteos limpios.
@@ -117,7 +132,9 @@ def clasificar(dias: int) -> dict:
     ingreso_atribuible = sum(ingreso.values())
     return {
         "periodo_dias": dias,
+        "etiqueta": etiqueta,
         "desde": desde,
+        "hasta_excl": hasta_excl,
         "total_phones": len(phones_periodo),
         "total_nuevos": sum(nuevos.values()),
         "total_recurrentes": sum(recurr.values()),
@@ -134,7 +151,7 @@ def clasificar(dias: int) -> dict:
 
 def render(d: dict) -> None:
     tot = d["total_phones"] or 1
-    print(f"=== Atribución unificada — últimos {d['periodo_dias']}d (desde {d['desde']}) ===")
+    print(f"=== Atribución unificada — {d.get('etiqueta','')} ({d['desde']} → {d['hasta_excl']}) ===")
     print(f"Pacientes con cita en período: {d['total_phones']}  "
           f"(nuevos {d['total_nuevos']} · recurrentes {d['total_recurrentes']})\n")
 
@@ -192,13 +209,17 @@ def _meta_spend_total(desde: str, hoy: str) -> float | None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dias", type=int, default=30)
+    ap.add_argument("--mes", type=str, default=None,
+                    help="YYYY-MM: ventana mes calendario (reconcilia 1:1 con DB Mensual).")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--spend", action="store_true",
                     help="Trae gasto Meta (Marketing API, ~60s) para CAC/ROAS real.")
     args = ap.parse_args()
-    d = clasificar(args.dias)
+    d = clasificar(args.dias, args.mes)
     if args.spend:
-        total = _meta_spend_total(d["desde"], datetime.now().strftime("%Y-%m-%d"))
+        # hasta_excl es exclusivo; Marketing API usa rango inclusivo → resto 1 día.
+        hasta_incl = (datetime.strptime(d["hasta_excl"], "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+        total = _meta_spend_total(d["desde"], hasta_incl)
         if total is not None:
             # Gasto solo en Meta; winback/espontáneo ≈ $0 (no hay pauta detrás).
             d["spend_por_origen"] = {"meta": total, "winback": 0.0, "espontaneo": 0.0}
