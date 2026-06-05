@@ -30,8 +30,38 @@ ST_APPROVED = "approved"       # aprobada y aplicada (o simulada) con éxito
 ST_REJECTED = "rejected"
 ST_FAILED = "failed"           # aprobada pero la aplicación falló
 ST_EXPIRED = "expired"         # caducó sin decisión (no aplicar propuestas viejas)
+ST_AUTO = "auto_applied"       # Fase 3: aplicada sola (alta confianza, sin pedir OK)
 
 _MONEY_ACTIONS = ("increase_budget", "decrease_budget", "pause")
+
+
+def _autoapply_on() -> bool:
+    """Fase 3 — autonomía acotada. OFF por defecto. Solo con esto en true el motor
+    aplica solo los movimientos de ALTA confianza (sin pedir aprobación)."""
+    return os.getenv("AUTOPILOT_AUTOAPPLY", "false").lower() == "true"
+
+
+def _autoapply_min_conf() -> float:
+    try:
+        return float(os.getenv("AUTOPILOT_AUTOAPPLY_MIN_CONF", "0.75"))
+    except (TypeError, ValueError):
+        return 0.75
+
+
+def _is_auto(a) -> bool:
+    """¿Esta acción califica para auto-aplicarse en Fase 3?
+
+    Solo movimientos de plata de ALTA confianza, y solo si AUTOPILOT_AUTOAPPLY=true.
+    El tamaño ya está capado al ±max_step (límite duro), así que el filtro de riesgo
+    aquí es la confianza: lo obvio se aplica solo, lo dudoso va a tu aprobación.
+    NUNCA auto-pausa: pausar una campaña siempre pasa por aprobación humana.
+    """
+    if not _autoapply_on():
+        return False
+    act = getattr(a.action, "value", a.action)
+    if act not in ("increase_budget", "decrease_budget"):
+        return False
+    return float(getattr(a, "confidence", 0.0)) >= _autoapply_min_conf()
 
 
 def _conn():
@@ -81,6 +111,8 @@ def enqueue(actions: list, *, dedupe_hours: int = 20) -> list[str]:
             act = getattr(a.action, "value", a.action)
             if act not in _MONEY_ACTIONS or not getattr(a, "needs_approval", False):
                 continue
+            if _is_auto(a):
+                continue  # Fase 3: lo aplica auto_apply, no va a la cola de aprobación
             dup = conn.execute(
                 "SELECT 1 FROM autopilot_pending WHERE campaign_id=? AND action=? "
                 "AND status=? AND created_ts>=? LIMIT 1",
@@ -102,6 +134,67 @@ def enqueue(actions: list, *, dedupe_hours: int = 20) -> list[str]:
     if new_ids:
         log.info("[autopilot] %d acciones encoladas para aprobación", len(new_ids))
     return new_ids
+
+
+async def auto_apply(actions: list, *, dedupe_hours: int = 20) -> list[dict]:
+    """Fase 3 — aplica SOLA los movimientos de alta confianza (sin pedir OK).
+
+    Solo corre con AUTOPILOT_ENABLED + AUTOPILOT_AUTOAPPLY en true. Cada acción
+    pasa por el MISMO `_apply` (re-valida límites duros; escritura real gateada por
+    AUTOPILOT_EXECUTE). Registra cada una como `auto_applied` para auditoría y la
+    devuelve para el aviso informativo (FYI, no pide aprobación). Dedupe igual que
+    enqueue para no re-aplicar la misma propuesta cada corrida.
+    """
+    if os.getenv("AUTOPILOT_ENABLED", "false").lower() != "true" or not _autoapply_on():
+        return []
+    _ensure_table()
+    now = int(time.time())
+    cutoff = now - dedupe_hours * 3600
+    applied: list[dict] = []
+    for a in actions:
+        if not _is_auto(a):
+            continue
+        act = getattr(a.action, "value", a.action)
+        # Dedupe: no re-aplicar lo mismo (cola O auto) dentro de la ventana.
+        with _conn() as conn:
+            dup = conn.execute(
+                "SELECT 1 FROM autopilot_pending WHERE campaign_id=? AND action=? "
+                "AND status IN (?,?) AND created_ts>=? LIMIT 1",
+                (a.campaign_id, act, ST_PENDING, ST_AUTO, cutoff),
+            ).fetchone()
+        if dup:
+            continue
+        pid = uuid.uuid4().hex[:12]
+        item = {
+            "id": pid, "campaign_id": a.campaign_id, "campaign_name": a.campaign_name,
+            "action": act, "current_budget": a.current_budget_clp,
+            "proposed_budget": a.proposed_budget_clp, "reason": a.reason,
+            "confidence": float(getattr(a, "confidence", 0.0)),
+        }
+        try:
+            result = await _apply(item)
+            ok = bool(result.get("ok"))
+        except Exception as e:  # noqa: BLE001
+            log.error("[autopilot] auto_apply %s falló: %s", pid, e)
+            result, ok = {"ok": False, "error": str(e)}, False
+        status = ST_AUTO if ok else ST_FAILED
+        with _conn() as conn:
+            conn.execute(
+                "INSERT INTO autopilot_pending "
+                "(id, created_ts, campaign_id, campaign_name, action, current_budget, "
+                " proposed_budget, reason, confidence, status, decided_ts, decided_by, "
+                " applied_ts, apply_result) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (pid, now, a.campaign_id, a.campaign_name, act, a.current_budget_clp,
+                 a.proposed_budget_clp, a.reason, float(getattr(a, "confidence", 0.0)),
+                 status, now, "autopilot", now,
+                 json.dumps(result, ensure_ascii=False)),
+            )
+        if ok:
+            item["status"] = ST_AUTO
+            applied.append(item)
+    if applied:
+        log.info("[autopilot] Fase 3: %d acciones auto-aplicadas", len(applied))
+    return applied
 
 
 def _row_to_dict(r) -> dict:
@@ -244,70 +337,87 @@ async def _apply(item: dict) -> dict:
                 "delta": delta, "meta": res}
 
 
-def notify_owner(new_ids: list[str]) -> None:
-    """Avisa al dueño por WhatsApp que hay decisiones de presupuesto esperando su OK.
+def _fmt_action_line(x: dict) -> list[str]:
+    verbo = {"increase_budget": "Subir", "decrease_budget": "Bajar",
+             "pause": "Pausar"}.get(x["action"], x["action"])
+    out = [f"• *{verbo}* — {(x.get('campaign_name') or '')[:40]}"]
+    if x["action"] != "pause":
+        cur = f"${x['current_budget']:,}" if x.get("current_budget") else "—"
+        prop = f"${x['proposed_budget']:,}" if x.get("proposed_budget") else "—"
+        out.append(f"   {cur} → {prop}/día · {(x.get('reason') or '')[:80]}")
+    else:
+        out.append(f"   {(x.get('reason') or '')[:80]}")
+    return out
 
-    Una sola vía (notificación, no comando): el link lleva al dashboard donde aprueba.
+
+def _action_summary(x: dict) -> str:
+    verbo = {"increase_budget": "Subir", "decrease_budget": "Bajar",
+             "pause": "Pausar"}.get(x["action"], x["action"])
+    camp = (x.get("campaign_name") or "")[:34]
+    if x["action"] == "pause":
+        return f"{verbo} {camp}"
+    cur = f"${x['current_budget']:,}" if x.get("current_budget") else "—"
+    prop = f"${x['proposed_budget']:,}" if x.get("proposed_budget") else "—"
+    return f"{verbo} {camp} {cur} → {prop}/día"
+
+
+def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> None:
+    """Avisa al dueño por WhatsApp: decisiones esperando su OK y/o cambios que el
+    autopilot aplicó solo (Fase 3, FYI). El link lleva al dashboard.
+
     Gateado: solo con AUTOPILOT_ENABLED y si hay un teléfono de dueño configurado.
     """
-    if not new_ids or os.getenv("AUTOPILOT_ENABLED", "false").lower() != "true":
+    auto_applied = auto_applied or []
+    if (not new_ids and not auto_applied) or os.getenv("AUTOPILOT_ENABLED", "false").lower() != "true":
         return
     phone = (os.getenv("AUTOPILOT_OWNER_PHONE")
              or os.getenv("ADMIN_ALERT_PHONE") or "").strip()
     if not phone:
-        log.info("[autopilot] %d pendientes pero sin AUTOPILOT_OWNER_PHONE/ADMIN_ALERT_PHONE",
-                 len(new_ids))
+        log.info("[autopilot] avisos pendientes pero sin AUTOPILOT_OWNER_PHONE/ADMIN_ALERT_PHONE")
         return
-    items = [get(i) for i in new_ids]
-    items = [x for x in items if x]
-    lines = ["🤖 *Autopilot — decisiones esperando tu OK*", ""]
-    for x in items[:6]:
-        verbo = {"increase_budget": "Subir", "decrease_budget": "Bajar",
-                 "pause": "Pausar"}.get(x["action"], x["action"])
-        cur = f"${x['current_budget']:,}" if x["current_budget"] else "—"
-        prop = f"${x['proposed_budget']:,}" if x["proposed_budget"] else "—"
-        lines.append(f"• *{verbo}* — {x['campaign_name'][:40]}")
-        if x["action"] != "pause":
-            lines.append(f"   {cur} → {prop}/día · {x['reason'][:80]}")
-        else:
-            lines.append(f"   {x['reason'][:80]}")
-    if len(items) > 6:
-        lines.append(f"… y {len(items) - 6} más.")
+    items = [x for x in (get(i) for i in new_ids) if x]
     base = os.getenv("PUBLIC_BASE_URL", "https://agentecmc.cl")
-    lines += ["", f"Revisar y aprobar: {base}/autopilot"]
+
+    lines: list[str] = []
+    if items:
+        lines += ["🤖 *Autopilot — decisiones esperando tu OK*", ""]
+        for x in items[:6]:
+            lines += _fmt_action_line(x)
+        if len(items) > 6:
+            lines.append(f"… y {len(items) - 6} más.")
+    if auto_applied:
+        if lines:
+            lines.append("")
+        lines.append("✅ *Aplicadas solas (alta confianza):*")
+        for x in auto_applied[:6]:
+            lines += _fmt_action_line(x)
+    lines += ["", f"Detalle: {base}/autopilot"]
     msg = "\n".join(lines)
 
-    # Resumen de la acción principal para el template (1 línea).
-    top = items[0]
-    _verbo = {"increase_budget": "Subir", "decrease_budget": "Bajar",
-              "pause": "Pausar"}.get(top["action"], top["action"])
-    _camp = (top.get("campaign_name") or "")[:34]
-    if top["action"] == "pause":
-        top_summary = f"{_verbo} {_camp}"
-    else:
-        _cur = f"${top['current_budget']:,}" if top.get("current_budget") else "—"
-        _prop = f"${top['proposed_budget']:,}" if top.get("proposed_budget") else "—"
-        top_summary = f"{_verbo} {_camp} {_cur} → {_prop}/día"
-
-    # Proactivo fuera de ventana 24h → texto libre rebota con code 131047
-    # ("Re-engagement message"). Se manda como template `autopilot_pendientes`
-    # (UTILITY), con fallback a texto libre por si el template aún no está aprobado
-    # (dentro de la ventana de 24h el texto sí entrega).
+    # Proactivo fuera de ventana 24h → texto libre rebota (code 131047). Si hay
+    # pendientes, se manda el template `autopilot_pendientes` (UTILITY) con su count
+    # + resumen; el texto libre (con la sección de auto-aplicadas) queda de fallback.
+    # Si SOLO hay auto-aplicadas (nada que aprobar), se intenta texto libre (entrega
+    # dentro de la ventana 24h; el detalle siempre está en el dashboard).
     try:
         import asyncio
 
         async def _send():
-            try:
-                from messaging import send_whatsapp_template
-                await send_whatsapp_template(
-                    phone, "autopilot_pendientes",
-                    body_params=[str(len(items)), top_summary])
-                log.info("[autopilot] aviso (template) de %d pendientes → %s", len(items), phone)
-            except Exception as _e_tpl:  # noqa: BLE001 — fallback a texto libre
-                log.warning("[autopilot] template aviso falló (%s); intento texto libre", _e_tpl)
-                from messaging import send_whatsapp
-                await send_whatsapp(phone, msg)
-                log.info("[autopilot] aviso (texto) de %d pendientes → %s", len(items), phone)
+            if items:
+                top_summary = _action_summary(items[0])
+                try:
+                    from messaging import send_whatsapp_template
+                    await send_whatsapp_template(
+                        phone, "autopilot_pendientes",
+                        body_params=[str(len(items)), top_summary])
+                    log.info("[autopilot] aviso (template) de %d pendientes → %s", len(items), phone)
+                    return
+                except Exception as _e_tpl:  # noqa: BLE001 — fallback a texto libre
+                    log.warning("[autopilot] template aviso falló (%s); intento texto libre", _e_tpl)
+            from messaging import send_whatsapp
+            await send_whatsapp(phone, msg)
+            log.info("[autopilot] aviso (texto) → %s (%d pend · %d auto)",
+                     phone, len(items), len(auto_applied))
 
         asyncio.create_task(_send())
     except Exception as e:  # noqa: BLE001

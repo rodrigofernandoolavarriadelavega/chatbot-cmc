@@ -41,16 +41,19 @@ async def run_dry_run(window_days: int = 7) -> AutopilotRun:
              sum(1 for a in actions if a.action in (ActionType.INCREASE, ActionType.DECREASE,
                                                     ActionType.PAUSE)))
 
-    # Fase 2 — encolar las acciones que mueven plata y avisar al dueño para su OK.
-    # Inerte salvo AUTOPILOT_ENABLED=true (enqueue/notify chequean el flag adentro).
-    # NO ejecuta nada: solo deja pendientes que el dueño aprueba desde el dashboard.
+    # Fase 2/3 — autonomía con límites.
+    # Inerte salvo AUTOPILOT_ENABLED=true (todas chequean el flag adentro).
+    #   • Fase 3 (AUTOPILOT_AUTOAPPLY=true): los movimientos de ALTA confianza se
+    #     aplican solos (auto_apply) — FYI al dueño, sin pedir OK.
+    #   • Fase 2: el resto que mueve plata se encola para aprobación humana.
     try:
         from . import approvals
-        new_ids = approvals.enqueue(actions)
-        if new_ids:
-            approvals.notify_owner(new_ids)
+        auto_done = await approvals.auto_apply(actions)   # [] salvo AUTOAPPLY on
+        new_ids = approvals.enqueue(actions)              # no incluye las auto-aplicadas
+        if new_ids or auto_done:
+            approvals.notify_owner(new_ids, auto_applied=auto_done)
     except Exception as e:  # noqa: BLE001 — nunca tumbar el run por la cola de aprobación
-        log.error("[autopilot] enqueue/notify falló: %s", e)
+        log.error("[autopilot] auto_apply/enqueue/notify falló: %s", e)
 
     return AutopilotRun(ws=ws, actions=actions, limits=limits, report_md=report)
 
