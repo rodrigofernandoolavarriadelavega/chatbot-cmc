@@ -137,6 +137,11 @@ GES_ASSISTANT_URL  = os.getenv("GES_ASSISTANT_URL", "http://localhost:8002")
 import json as _json
 STAFF_PHONES: dict[str, str] = _json.loads(os.getenv("STAFF_PHONES", "{}"))
 
+# Modalidad asistente de exámenes: si un número de STAFF_PHONES manda una FOTO al
+# bot, se transcribe el examen y se le devuelve el texto (para pegar en la ficha de
+# Medilink). NUNCA se activa para pacientes (gate por STAFF_PHONES). OFF por defecto.
+ASISTENTE_EXAMENES_ENABLED = os.getenv("ASISTENTE_EXAMENES_ENABLED", "false").lower() in ("true", "1", "yes")
+
 # Mensajes proactivos: usar Message Templates aprobados por Meta (fuera de ventana 24h).
 # Poner en True SOLO cuando los templates estén aprobados en Meta Business Manager.
 USE_TEMPLATES = os.getenv("USE_TEMPLATES", "false").lower() in ("true", "1", "yes")

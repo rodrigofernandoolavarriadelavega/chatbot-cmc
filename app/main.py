@@ -23,7 +23,8 @@ from fastapi.staticfiles import StaticFiles
 
 from config import (META_VERIFY_TOKEN, CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_TOKEN,
                     OLACORE_TOKEN, ALMA_PROFILES, ALMA_MODULE_REGISTRY,
-                    MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID)
+                    MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID,
+                    ASISTENTE_EXAMENES_ENABLED, STAFF_PHONES)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
                        send_whatsapp_location,
@@ -8386,6 +8387,38 @@ async def webhook(request: Request):
             log.info("AUDIO transcrito from=%s text=%r", phone, texto[:120])
         elif msg_type == "reaction":
             # Reacciones (emoji a un mensaje) — ignorar silenciosamente
+            return Response(status_code=200)
+        elif msg_type == "image" and ASISTENTE_EXAMENES_ENABLED and phone in STAFF_PHONES:
+            # MODALIDAD ASISTENTE: un número de staff manda la foto de un examen →
+            # la transcribimos y le devolvemos el texto para pegar en la ficha de
+            # Medilink. Solo staff (gate arriba); el paciente nunca entra acá.
+            media_id = msg.get("image", {}).get("id", "")
+            log.info("ASISTENTE_EXAMEN foto staff from=%s media_id=%s", phone, media_id)
+            log_message(phone, "in", "[examen: foto staff]",
+                        get_session(phone).get("state", "IDLE"), canal="whatsapp")
+            media = await download_whatsapp_media(media_id)
+            if not media:
+                _ex_err = "No pude descargar la foto del examen 😕 Reenvíala, porfa."
+                await send_whatsapp(phone, _ex_err)
+                log_message(phone, "out", _ex_err, "ASISTENTE", canal="whatsapp")
+                return Response(status_code=200)
+            _img_bytes, _img_mime = media
+            from examenes_transcribe import transcribir_examen
+            _texto_examen = await transcribir_examen(_img_bytes, _img_mime)
+            if not _texto_examen:
+                _ex_fail = ("No logré leer el examen 😕 Intenta una foto más nítida, "
+                            "derecha y con buena luz.")
+                await send_whatsapp(phone, _ex_fail)
+                log_message(phone, "out", _ex_fail, "ASISTENTE", canal="whatsapp")
+                return Response(status_code=200)
+            _ex_out = ("📋 *Transcripción del examen* — revísala antes de guardar en la ficha:\n\n"
+                       + _texto_examen)
+            await send_whatsapp(phone, _ex_out)
+            log_message(phone, "out", _ex_out, "ASISTENTE", canal="whatsapp")
+            try:
+                log_event(phone, "asistente_examen_transcrito", {"chars": len(_texto_examen)})
+            except Exception:
+                pass
             return Response(status_code=200)
         elif msg_type in ("image", "video", "document"):
             # Archivos: descargar, almacenar. PDF/Word → extraer texto como audio.
