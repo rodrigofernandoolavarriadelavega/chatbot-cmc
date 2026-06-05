@@ -326,12 +326,25 @@ def decide(ws: WorldState, limits: HardLimits | None = None) -> list[ProposedAct
                 current_budget_clp=budget, proposed_budget_clp=proposed, confidence=conf,
             )
         elif verdict == EconVerdict.LOSER:
-            proposed = _step_budget(budget, 1 - limits.max_step_pct, limits)
-            act = ProposedAction(
-                campaign_id=c.id, campaign_name=c.name, action=ActionType.DECREASE,
-                reason=f"Perdedora: {expl}. Recortar al máximo permitido por paso.",
-                current_budget_clp=budget, proposed_budget_clp=proposed, confidence=conf,
-            )
+            # Perdedora clara que YA gastó fuerte (≥4× el piso para juzgar) → proponer
+            # PAUSAR (cortar la hemorragia), no solo recortar 20%. Las perdedoras leves
+            # (gastaron poco) se recortan. Solo campañas con presupuesto propio (donde
+            # el pausado es fiable; las publicaciones impulsadas se dejan al advisor).
+            burner = bool(budget) and c.spend >= 4 * limits.min_spend_to_judge_clp
+            if burner:
+                act = ProposedAction(
+                    campaign_id=c.id, campaign_name=c.name, action=ActionType.PAUSE,
+                    reason=(f"Quema plata: {expl}. ${c.spend:,.0f} gastados con ~0 "
+                            f"conversaciones → pausar."),
+                    current_budget_clp=budget, proposed_budget_clp=0, confidence=conf,
+                )
+            else:
+                proposed = _step_budget(budget, 1 - limits.max_step_pct, limits)
+                act = ProposedAction(
+                    campaign_id=c.id, campaign_name=c.name, action=ActionType.DECREASE,
+                    reason=f"Perdedora: {expl}. Recortar al máximo permitido por paso.",
+                    current_budget_clp=budget, proposed_budget_clp=proposed, confidence=conf,
+                )
         else:  # UNKNOWN → ambiguo, lo verá el advisor
             act = ProposedAction(
                 campaign_id=c.id, campaign_name=c.name, action=ActionType.ALERT,
@@ -345,6 +358,10 @@ def decide(ws: WorldState, limits: HardLimits | None = None) -> list[ProposedAct
             change = abs((act.proposed_budget_clp or budget) - budget) / budget
             if change >= limits.approval_threshold_pct or act.confidence < 0.6:
                 act.needs_approval = True
+        # Pausar una campaña es irreversible-en-la-práctica → SIEMPRE pide OK humano
+        # (nunca se auto-aplica en Fase 3; _is_auto excluye 'pause').
+        if act.action == ActionType.PAUSE:
+            act.needs_approval = True
         if act.confidence < 0.6:
             act.ambiguous = True
 
