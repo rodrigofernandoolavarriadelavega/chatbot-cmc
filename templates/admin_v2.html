@@ -739,17 +739,27 @@ input, textarea, select{font-family:inherit; color:inherit}
 .mb-btn.save:hover{background:var(--cmc-navy)}
 .mb-btn:disabled{opacity:.6; cursor:not-allowed}
 /* ===== MODAL AGENDAR (wizard contextual) ==================================== */
+/* Panel flotante anclado abajo-derecha: NO bloquea la pantalla.
+   La recepción puede seguir leyendo/operando el resto del panel mientras agenda. */
 .ag-modal{
-  position:fixed; inset:0; z-index:300;
-  background:rgba(15,63,104,.4); backdrop-filter:blur(4px);
-  display:flex; align-items:center; justify-content:center; padding:16px;
+  position:fixed; right:18px; bottom:18px; left:auto; top:auto; inset:auto; z-index:300;
+  background:none; backdrop-filter:none;
+  display:block; padding:0;
+  width:min(430px, calc(100vw - 32px));
+  max-height:calc(100vh - 36px);
 }
 .ag-modal[hidden]{display:none !important}
 .ag-dialog{
-  background:var(--panel); border-radius:16px; width:100%; max-width:480px;
-  max-height:90vh; overflow:hidden; display:flex; flex-direction:column;
-  box-shadow:var(--shadow-lg); border:1px solid var(--border);
-  animation:mbIn 150ms var(--ease-spring);
+  background:var(--panel); border-radius:16px; width:100%; max-width:none;
+  max-height:calc(100vh - 36px); overflow:hidden; display:flex; flex-direction:column;
+  box-shadow:0 22px 55px -14px rgba(15,63,104,.5), 0 6px 18px rgba(15,63,104,.2);
+  border:1px solid var(--border);
+  animation:agDock 190ms var(--ease-spring);
+}
+@keyframes agDock{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+@media (max-width:760px){
+  /* en móvil ancla abajo a lo ancho (más usable que una esquinita) */
+  .ag-modal{right:8px; left:8px; bottom:8px; width:auto}
 }
 .ag-header{
   display:flex; align-items:center; gap:10px;
@@ -4269,7 +4279,7 @@ function syncAppBadge(count) {
 </div>
 
 <!-- ===== MODAL AGENDAR (wizard contextual) ================================= -->
-<div id="agModal" class="ag-modal" hidden role="dialog" aria-modal="true" aria-labelledby="agModalTitle">
+<div id="agModal" class="ag-modal" hidden role="dialog" aria-modal="false" aria-labelledby="agModalTitle">
   <div class="ag-dialog">
     <div class="ag-header">
       <h3 id="agModalTitle">Agendar cita</h3>
