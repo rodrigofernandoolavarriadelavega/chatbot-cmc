@@ -599,7 +599,7 @@ def pending_list(token: str | None = Query(None), request: Request = None):
         "recent": approvals.list_recent(30),
         "enabled": flag_on("AUTOPILOT_ENABLED"),
         "execute": flag_on("AUTOPILOT_EXECUTE"),
-        "product": "Alma Ads",
+        "product": "Kintu",
         "tenant": {"id": _t.id, "label": _t.label, "currency": _t.currency,
                    "margin_profile": _t.margin_profile},
     })
@@ -607,7 +607,7 @@ def pending_list(token: str | None = Query(None), request: Request = None):
 
 @router.get("/autopilot/api/tenants")
 def tenants_list(token: str | None = Query(None), request: Request = None):
-    """Alma Ads — inquilinos (marcas) registrados en el motor. CMC activo; las demás
+    """Kintu — inquilinos (marcas) registrados en el motor. CMC activo; las demás
     quedan registradas pero apagadas hasta tener cuenta de ads + atribución."""
     _check_token(token, request)
     from . import tenants as _tn
@@ -621,7 +621,7 @@ def tenants_list(token: str | None = Query(None), request: Request = None):
             "active": t.id == act,
             "ready": bool(t.ad_account) and t.attribution != "none",
         })
-    return JSONResponse({"product": "Alma Ads", "active": act, "tenants": out})
+    return JSONResponse({"product": "Kintu", "active": act, "tenants": out})
 
 
 @router.post("/autopilot/api/pending/{pid}/approve")
