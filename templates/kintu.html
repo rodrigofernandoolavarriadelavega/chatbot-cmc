@@ -1,0 +1,170 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kintu · Inteligencia de crecimiento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0B1D2A;--teal:#0F5B5D;--seafoam:#7FA7A3;--cobre:#D6A45A;--stone:#F2F1EE;
+  --ink:#13202e;--muted:#6f8390;--line:#e6edf3;--bg:#eef2f4}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;height:100vh;overflow:hidden}
+/* Rail */
+.rail{width:228px;flex-shrink:0;background:linear-gradient(180deg,var(--navy),#0a2733);color:var(--stone);
+  display:flex;flex-direction:column;padding:16px 12px}
+.rail-brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px}
+.rail-mark{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.07);display:grid;place-items:center}
+.rail-brand .wm{font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:.16em;font-size:18px}
+.rail-brand .tag{font-size:10px;opacity:.6;letter-spacing:.02em}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.nav-i{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:10px;cursor:pointer;
+  color:#cfdad7;font-size:13.5px;font-weight:500;border:0;background:none;text-align:left;width:100%}
+.nav-i:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-i.on{background:rgba(214,164,90,.16);color:#fff}
+.nav-i.on::before{content:"";position:absolute;left:0;width:3px;height:22px;background:var(--cobre);border-radius:0 3px 3px 0;margin-left:-12px}
+.nav-i .ic{font-size:15px;width:20px;text-align:center}
+.nav-sec{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.45;margin:16px 8px 6px}
+.rail-foot{margin-top:auto;padding:8px}
+.rail-foot a{color:#cfdad7;font-size:12px;text-decoration:none;opacity:.8}
+.rail-foot a:hover{opacity:1}
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:54px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 20px;flex-shrink:0}
+.topbar h1{font-size:15px;font-weight:700}
+.topbar .marca-pill{margin-left:auto;font-size:11.5px;background:#eef6f8;color:var(--teal);padding:5px 12px;border-radius:99px;font-weight:600}
+.stage{flex:1;position:relative;overflow:auto;background:var(--bg)}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none}
+.stage iframe.on{display:block}
+.panel{display:none;padding:26px;max-width:980px;margin:0 auto}
+.panel.on{display:block}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.panel h2{font-family:'Poppins',sans-serif;font-size:24px;margin:7px 0 6px}
+.panel h2 em{font-style:normal;color:var(--teal)}
+.panel .lead{color:var(--muted);font-size:14px;max-width:680px;line-height:1.55;margin-bottom:22px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:22px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+.kpi .l{font-size:11.5px;color:var(--muted)}
+.kpi .n{font-family:'Poppins',sans-serif;font-size:24px;margin-top:4px;color:var(--navy)}
+.kpi .s{font-size:11px;color:var(--muted);margin-top:2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.bcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+.bcard .t{font-weight:700;display:flex;align-items:center;gap:8px}
+.bcard .v{font-size:11px;color:var(--muted)}
+.bcard p{font-size:12.5px;color:var(--muted);margin:8px 0 10px;line-height:1.45}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}.dot.on{background:#34c77b}.dot.off{background:#9aa6b2}
+.est{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;margin-left:auto}
+.est.a{background:#e7f7ef;color:#198a5a}.est.o{background:#eef1f3;color:#7a8893}
+.kbtn{display:inline-block;font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;text-decoration:none;background:var(--cobre);color:var(--navy)}
+.kbtn.ghost{background:#eef1f3;color:var(--ink)}
+.chrow{display:flex;align-items:center;gap:10px;padding:13px 16px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:#fff;font-size:13.5px}
+.chrow .badge{margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px}
+.chrow .ok{background:#e7f7ef;color:#198a5a}.chrow .pend{background:#fdf4e3;color:#b07d18}
+@media(max-width:760px){.rail{position:fixed;z-index:30;height:100%;transform:translateX(-100%);transition:.2s}
+  .rail.open{transform:none}.hamb{display:grid!important}}
+.hamb{display:none;width:34px;height:34px;border:0;background:#eef1f3;border-radius:8px;place-items:center;cursor:pointer}
+</style></head>
+<body>
+<aside class="rail" id="rail">
+  <div class="rail-brand">
+    <div class="rail-mark">
+      <svg viewBox="0 0 44 36" width="26" height="22"><circle cx="6" cy="18" r="3.6" fill="#D6A45A"/>
+      <path d="M14 2 L26 2 L16 18 L26 34 L14 34 L6 18 Z" fill="#7FA7A3"/>
+      <path d="M24 18 L36 4 L30 18 L36 32 Z" fill="#0F5B5D"/></svg>
+    </div>
+    <div><div class="wm">KINTU</div><div class="tag">Inteligencia de crecimiento</div></div>
+  </div>
+  <div class="nav" id="nav"></div>
+  <div class="rail-foot"><a href="https://adkun.cl/consola/?token=__ADKUN_TOKEN__">← Consola Adkun</a></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <button class="hamb" onclick="document.getElementById('rail').classList.toggle('open')">☰</button>
+    <h1 id="crumb">Resumen</h1>
+    <span class="marca-pill">Marca: CMC</span>
+  </div>
+  <div class="stage" id="stage">
+    <!-- iframes inyectados -->
+    <!-- Panel Resumen -->
+    <div class="panel on" id="p-resumen">
+      <span class="eyebrow">Kintu Global</span>
+      <h2>El motor que <em>detecta dónde crecer</em>.</h2>
+      <p class="lead">Kintu observa los canales de cada negocio, mide el <b>CAC real</b> (caja, no métricas de vanidad) y te dice dónde invertir. Esta es la vista transversal de todas tus marcas.</p>
+      <div class="kpis" id="kResumen"><div class="kpi"><div class="l">Cargando…</div></div></div>
+      <h3 style="font-family:'Poppins';font-size:15px;margin:6px 0 10px">Marcas en Kintu</h3>
+      <div class="cards" id="kMarcasMini"></div>
+    </div>
+    <!-- Panel Marcas -->
+    <div class="panel" id="p-marcas">
+      <span class="eyebrow">Marcas</span><h2>Negocios que <em>Kintu</em> hace crecer.</h2>
+      <p class="lead">Cada marca = un inquilino del motor. Activá una conectando su cuenta de ads + su fuente de atribución.</p>
+      <div class="cards" id="kMarcas"></div>
+    </div>
+    <!-- Panel Canales -->
+    <div class="panel" id="p-canales">
+      <span class="eyebrow">Canales</span><h2>Dónde <em>Kintu</em> mide y optimiza.</h2>
+      <p class="lead">El motor cruza el gasto de cada canal con el CAC real. Meta ya está conectado; Google y GBP esperan credenciales.</p>
+      <div class="chrow"><b>Meta Ads</b> — campañas, CAC real, presupuesto <span class="badge ok">● conectado</span></div>
+      <div class="chrow"><b>Google Ads</b> — <span style="color:var(--muted)">falta developer token + OAuth + customer id</span> <span class="badge pend">● pendiente</span></div>
+      <div class="chrow"><b>Google Business Profile</b> — <span style="color:var(--muted)">falta API + OAuth</span> <span class="badge pend">● pendiente</span></div>
+    </div>
+  </div>
+</div>
+<script>
+const TOKEN="__TOKEN__", SEO_TOKEN="__SEO_TOKEN__";
+const MODULES=[
+  {id:'resumen',label:'Resumen',icon:'📊',kind:'inline'},
+  {sec:'Capacidades'},
+  {id:'campanas',label:'Campañas & CAC',icon:'🎯',kind:'iframe',src:'/autopilot?token='+encodeURIComponent(TOKEN)},
+  {id:'seo',label:'Contenido & SEO',icon:'✍️',kind:'iframe',src:'/seo?token='+encodeURIComponent(SEO_TOKEN)},
+  {sec:'Ecosistema'},
+  {id:'marcas',label:'Marcas',icon:'🏢',kind:'inline'},
+  {id:'canales',label:'Canales',icon:'🔌',kind:'inline'},
+];
+const nav=document.getElementById('nav'), stage=document.getElementById('stage');
+const loaded={};
+MODULES.forEach(m=>{
+  if(m.sec){const d=document.createElement('div');d.className='nav-sec';d.textContent=m.sec;nav.appendChild(d);return;}
+  const b=document.createElement('button');b.className='nav-i'+(m.id==='resumen'?' on':'');b.dataset.id=m.id;
+  b.innerHTML=`<span class="ic">${m.icon}</span> ${m.label}`;
+  b.onclick=()=>show(m);nav.appendChild(b);
+});
+function show(m){
+  document.querySelectorAll('.nav-i').forEach(n=>n.classList.toggle('on',n.dataset.id===m.id));
+  document.getElementById('crumb').textContent=m.label;
+  document.getElementById('rail').classList.remove('open');
+  // ocultar todo
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.stage iframe').forEach(f=>f.classList.remove('on'));
+  if(m.kind==='iframe'){
+    let f=document.getElementById('if-'+m.id);
+    if(!f){f=document.createElement('iframe');f.id='if-'+m.id;f.src=m.src;stage.appendChild(f);}
+    f.classList.add('on');
+  } else {
+    document.getElementById('p-'+m.id).classList.add('on');
+  }
+}
+// Resumen con KPIs vivos
+(async()=>{
+  const fmt=n=>'$'+(n||0).toLocaleString('es-CL');
+  try{
+    const [cac,ten]=await Promise.all([
+      fetch('/autopilot/api/cac-local?window=30&token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({})),
+      fetch('/autopilot/api/tenants?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({tenants:[]})),
+    ]);
+    document.getElementById('kResumen').innerHTML=`
+      <div class="kpi"><div class="l">CAC real promedio (30d)</div><div class="n">${cac.cac_promedio?fmt(cac.cac_promedio):'—'}</div><div class="s">${cac.modo_atendido||''}</div></div>
+      <div class="kpi"><div class="l">Pacientes atendidos</div><div class="n">${cac.total_atendidos??'—'}</div><div class="s">atribuidos a ads</div></div>
+      <div class="kpi"><div class="l">Gasto (30d)</div><div class="n">${cac.total_spend?fmt(cac.total_spend):'—'}</div><div class="s">Meta Ads</div></div>
+      <div class="kpi"><div class="l">Marcas</div><div class="n">${(ten.tenants||[]).length}</div><div class="s">${(ten.tenants||[]).filter(t=>t.active).length} activa(s)</div></div>`;
+    const cards=(ten.tenants||[]).map(t=>`<div class="bcard">
+        <div class="t"><span class="dot ${t.active?'on':'off'}"></span>${t.label}<span class="est ${t.active?'a':'o'}">${t.active?'activo':'apagado'}</span></div>
+        <div class="v">${t.margin_profile||''} · ${t.currency||''}</div>
+        <p>${t.ready?'Conectado · operando':'Falta cuenta de ads + atribución'}</p>
+        ${t.active?'<a class="kbtn" href="/autopilot?token='+encodeURIComponent(TOKEN)+'" target="_blank">Abrir panel ↗</a>':'<span class="kbtn ghost">+ Conectar</span>'}
+      </div>`).join('');
+    document.getElementById('kMarcasMini').innerHTML=cards;
+    document.getElementById('kMarcas').innerHTML=cards;
+  }catch(e){document.getElementById('kResumen').innerHTML='<div class="kpi"><div class="l">No se pudo cargar</div></div>';}
+})();
+</script>
+</body></html>

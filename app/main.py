@@ -2974,6 +2974,7 @@ _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(e
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
 _ALMA_HTML = (_TEMPLATE_DIR / "alma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma.html").exists() else ""
+_KINTU_HTML = (_TEMPLATE_DIR / "kintu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "kintu.html").exists() else ""
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
@@ -3553,6 +3554,27 @@ def boxes_dashboard_page(token: str | None = Query(None)):
     if not _BOXES_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Boxes no disponible")
     return _BOXES_DASHBOARD_HTML
+
+
+@app.get("/kintu", response_class=HTMLResponse)
+@app.get("/kintu/dashboard", response_class=HTMLResponse)
+def kintu_shell(token: str | None = Query(None),
+                cmc_session: str | None = Cookie(None)):
+    """Kintu — shell del producto Growth (espejo de /alma con brand Kintu). Embebe los
+    módulos reales de growth (/autopilot, /seo) + Resumen (Kintu Global) + Marcas + Canales.
+    Cada iframe recibe su token correcto: autopilot=token dueño, seo=ADMIN_TOKEN."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _KINTU_HTML:
+        raise HTTPException(404, "Kintu no disponible")
+    active = token if (token and _is_admin_token(token)) else None
+    if not active and _verify_cookie(cmc_session or "") == "admin":
+        active = token if (token and _is_admin_token(token)) else "cmc_admin_olacore"
+    if not active:
+        raise HTTPException(403, "no autorizado")
+    return HTMLResponse(_KINTU_HTML
+                        .replace("__TOKEN__", active)
+                        .replace("__SEO_TOKEN__", ADMIN_TOKEN)
+                        .replace("__ADKUN_TOKEN__", ""))
 
 
 @app.get("/alma", response_class=HTMLResponse)
