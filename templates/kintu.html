@@ -85,6 +85,33 @@ h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
 .chrow{display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;background:#fff;font-size:14px;box-shadow:var(--sh-sm)}
 .chrow .badge{margin-left:auto;font-size:11px;font-weight:700;padding:4px 11px;border-radius:var(--pill)}
 .chrow .ok{background:#e7f7ef;color:#198a5a}.chrow .pend{background:#fdf4e3;color:#b07d18}
+/* Welcome hero */
+.welcome{position:absolute;inset:0;display:none;place-items:center;text-align:center;color:#fff;overflow:hidden;
+  background:linear-gradient(160deg,#081722 0%,#0B1D2A 42%,#0d3a3c 115%)}
+.welcome.on{display:grid;animation:fade .4s var(--ease)}
+.welcome .gridbg{position:absolute;inset:0;opacity:.5;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:46px 46px;-webkit-mask:radial-gradient(circle at 50% 40%,#000,transparent 72%);mask:radial-gradient(circle at 50% 40%,#000,transparent 72%)}
+.welcome .glow{position:absolute;width:680px;height:680px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(214,164,90,.20),transparent 60%);top:-220px;right:-160px}
+.welcome .glow2{position:absolute;width:520px;height:520px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(15,91,93,.32),transparent 62%);bottom:-200px;left:-120px}
+.welcome .inner{position:relative;z-index:2;padding:0 24px;animation:rise .9s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.welcome .wmark{width:106px;height:106px;border-radius:28px;margin:0 auto 30px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#0F5B5D,#0B1D2A);box-shadow:0 24px 60px rgba(15,91,93,.45);animation:floaty 5.5s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.welcome .word{font-family:var(--fd);font-weight:800;font-size:clamp(40px,7vw,64px);letter-spacing:.05em;line-height:1;
+  background:linear-gradient(90deg,#fff,#e6c08a 55%,#D6A45A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.welcome .wtag{font-size:13px;letter-spacing:.34em;text-transform:uppercase;color:var(--cobre);font-weight:700;margin-top:15px}
+.welcome .whi{font-family:var(--fd);font-weight:600;font-size:clamp(20px,3vw,27px);margin-top:34px}
+.welcome .wmsg{font-size:16px;color:rgba(255,255,255,.72);margin-top:11px;max-width:580px;margin-inline:auto;line-height:1.55}
+.welcome .whint{display:inline-flex;align-items:center;gap:9px;margin-top:36px;padding:11px 20px;
+  border:1px solid rgba(255,255,255,.2);border-radius:var(--pill);background:rgba(255,255,255,.07);
+  font-size:13.5px;color:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.welcome .whint svg{width:17px;height:17px;stroke:var(--cobre);stroke-width:2;fill:none}
+.welcome .wfoot{position:absolute;bottom:22px;left:0;right:0;text-align:center;z-index:2;font-size:11.5px;letter-spacing:.04em;color:rgba(255,255,255,.45)}
+.welcome .wfoot b{color:var(--cobre);font-weight:700}
 .menu-btn{display:none}
 @media(max-width:760px){.layout{grid-template-columns:1fr}
   .side{position:fixed;left:-270px;width:258px;z-index:99;transition:.22s var(--ease)}
@@ -103,9 +130,21 @@ h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
     <div class="foot"><a href="https://adkun.cl/consola/">← Consola Adkun</a><br>Powered by <b>Adkun</b></div>
   </aside>
   <div class="main">
-    <div class="topbar"><h1 id="crumb">Resumen</h1><span class="pill">Marca: CMC</span></div>
+    <div class="topbar"><h1 id="crumb">Inicio</h1><span class="pill">Marca: CMC</span></div>
     <div class="stage" id="stage">
-      <div class="panel on" id="p-resumen">
+      <div class="welcome on" id="p-welcome">
+        <div class="gridbg"></div><div class="glow"></div><div class="glow2"></div>
+        <div class="inner">
+          <div class="wmark"><svg viewBox="0 0 44 36" width="58" height="46"><circle cx="6" cy="18" r="3.6" fill="#D6A45A"/><path d="M14 2 L26 2 L16 18 L26 34 L14 34 L6 18 Z" fill="#7FA7A3"/><path d="M24 18 L36 4 L30 18 L36 32 Z" fill="#0F5B5D"/></svg></div>
+          <div class="word">KINTU</div>
+          <div class="wtag">Inteligencia de crecimiento</div>
+          <div class="whi">Tu motor para crecer</div>
+          <div class="wmsg">Kintu observa cada canal, mide el <b style="color:#fff">CAC real</b> (caja, no vanidad) y te dice dónde invertir. Campañas, contenido, atribución y resultados de todas tus marcas, en un solo lugar.</div>
+          <div class="whint"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg> Elegí un módulo en el panel para comenzar</div>
+        </div>
+        <div class="wfoot">Kintu · Producto de crecimiento del ecosistema · Powered by <b>Adkun</b></div>
+      </div>
+      <div class="panel" id="p-resumen">
         <span class="eyebrow">Kintu Global</span>
         <h2>El motor que <em>detecta dónde crecer</em>.</h2>
         <p class="lead">Kintu observa los canales de cada negocio, mide el <b>CAC real</b> (caja, no métricas de vanidad) y te dice dónde invertir. Esta es la vista transversal de todas tus marcas.</p>
@@ -131,6 +170,7 @@ h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
 <script>
 const TOKEN="__TOKEN__", SEO_TOKEN="__SEO_TOKEN__";
 const I={
+  inicio:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
   resumen:'<path d="M3 13h4l2 6 4-14 2 8h6"/>',
   campanas:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>',
   seo:'<path d="M4 5h16M4 12h10M4 19h7"/><circle cx="18" cy="17" r="3"/>',
@@ -138,6 +178,7 @@ const I={
   canales:'<path d="M5 12h14"/><circle cx="5" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/>',
 };
 const MODULES=[
+  {id:'inicio',label:'Inicio',kind:'welcome'},
   {id:'resumen',label:'Resumen',kind:'inline'},
   {sec:'Capacidades'},
   {id:'campanas',label:'Campañas & CAC',kind:'iframe',src:'/autopilot?token='+encodeURIComponent(TOKEN)},
@@ -149,7 +190,7 @@ const MODULES=[
 const nav=document.getElementById('nav'), stage=document.getElementById('stage');
 MODULES.forEach(m=>{
   if(m.sec){const d=document.createElement('div');d.className='grp';d.textContent=m.sec;nav.appendChild(d);return;}
-  const a=document.createElement('a');a.dataset.id=m.id;if(m.id==='resumen')a.classList.add('active');
+  const a=document.createElement('a');a.dataset.id=m.id;if(m.id==='inicio')a.classList.add('active');
   a.innerHTML=`<svg viewBox="0 0 24 24">${I[m.id]||''}</svg>${m.label}`;
   a.onclick=()=>show(m);nav.appendChild(a);
 });
@@ -160,7 +201,10 @@ function show(m){
   document.getElementById('side').classList.remove('open');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.stage iframe').forEach(f=>f.classList.remove('on'));
-  if(m.kind==='iframe'){
+  document.getElementById('p-welcome').classList.remove('on');
+  if(m.kind==='welcome'){
+    document.getElementById('p-welcome').classList.add('on');
+  }else if(m.kind==='iframe'){
     let f=document.getElementById('if-'+m.id);
     if(!f){f=document.createElement('iframe');f.id='if-'+m.id;f.src=m.src;stage.appendChild(f);}
     f.classList.add('on');
