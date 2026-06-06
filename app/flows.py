@@ -822,9 +822,14 @@ def _cross_reference_msg(especialidad: str) -> str:
     return CROSS_REFERENCE.get(especialidad.strip(), "")
 
 
-def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override: str | None = None) -> str:
+def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override: str | None = None, id_profesional: int | None = None) -> str:
     """Línea de precio para insertar en la oferta de slot.
-    Retorna string vacío si la especialidad no tiene precio registrado."""
+    Retorna string vacío si la especialidad no tiene precio registrado.
+
+    id_profesional: permite el override por-profesional incluso cuando no hay
+    slot completo disponible (ej: WAIT_MODALIDAD, confirmación, reagendamiento).
+    Si slot está presente, su id_profesional tiene precedencia sobre este param.
+    """
     if not especialidad:
         return ""
     esp = especialidad.strip()
@@ -832,8 +837,10 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
     # "Medicina General" para el ruteo (ver bypass en medilink.py), pero su
     # consulta particular es $30.000, NO $25.000. Forzamos la tarifa
     # "Medicina Familiar" cuando el slot es suyo, sin tocar su especialidad de
-    # ruteo. Cubre cualquier camino (lo agenden como MG o como Med. Familiar).
-    if slot and slot.get("id_profesional") == 13 and esp.lower() in ("medicina general", "medicina familiar"):
+    # ruteo. Cubre cualquier camino (lo agenden como MG o como Med. Familiar):
+    # con slot completo, o solo con id_profesional en data de sesión.
+    _pid = (slot.get("id_profesional") if slot else None) or id_profesional
+    if _pid == 13 and esp.lower() in ("medicina general", "medicina familiar"):
         esp = "Medicina Familiar"
     # Masoterapia: el precio depende de la duración real del slot (20 o 40 min)
     if esp.lower() == "masoterapia":
@@ -2019,7 +2026,8 @@ def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
                 _modalidad_pedida = "particular"
             elif "fonasa" in _txt_low:
                 _modalidad_pedida = "fonasa"
-            linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida)
+            _pid_precio = (slot.get("id_profesional") if slot else None) or data.get("prof_sugerido_id")
+            linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida, id_profesional=_pid_precio)
             if linea:
                 # Precio conocido → mostrarlo + métodos de pago aplicables
                 esp_low = esp.lower()
@@ -2067,7 +2075,8 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
                 _modalidad_pedida = "particular"
             elif "fonasa" in _txt_low:
                 _modalidad_pedida = "fonasa"
-            linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida)
+            _pid_pago = (slot.get("id_profesional") if slot else None) or data.get("prof_sugerido_id")
+            linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida, id_profesional=_pid_pago)
             if linea:
                 precio_block = f"{linea}\n\n"
     # Filtrar la línea de pago según el tipo de especialidad
@@ -6861,9 +6870,52 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     data["profs_vistos"] = list(_pv)
                     save_session(phone, "WAIT_SLOT", data)
                     return _format_slots(slots_de_ese[:10], mostrar_todos=True)
-                # Sin slots de ese profesional en el día actual → búsqueda fresca
-                reset_session(phone)
-                return await _iniciar_agendar(phone, {}, _apellido_slot)
+                # Sin slots de ese profesional en el día actual.
+                # FIX-4: intentar primero en la fecha ya mostrada (fecha_actual)
+                # para no corromper la fecha en la confirmación. Si no hay slots
+                # en esa fecha, buscar el primer día disponible preservando la
+                # sesión (no reset_session) para que la fecha no se recalcule
+                # desde cero con otro path.
+                if fecha_actual:
+                    try:
+                        _sm_ap, _td_ap = await buscar_slots_dia_por_ids(
+                            list(ids_apellido), fecha_actual)
+                        if _td_ap:
+                            data["slots"] = _td_ap[:5]
+                            data["todos_slots"] = _td_ap
+                            data["prof_sugerido_id"] = _td_ap[0].get("id_profesional")
+                            _pv2 = set(data.get("profs_vistos", []))
+                            _pv2.update(ids_apellido)
+                            data["profs_vistos"] = list(_pv2)
+                            save_session(phone, "WAIT_SLOT", data)
+                            _nombre_ap = PROFESIONALES.get(list(ids_apellido)[0], {}).get("nombre", "ese doctor")
+                            return (f"Encontré horas con *{_nombre_ap}* para el mismo día:\n\n"
+                                    + (_format_slots(_td_ap[:5]) if isinstance(_format_slots(_td_ap[:5]), str)
+                                       else "")) or _format_slots(_td_ap[:5])
+                    except Exception as _e_ap:
+                        log.warning("buscar_slots_dia_por_ids apellido mismo día falló: %s", _e_ap)
+                # Fallback: búsqueda fresca preservando especialidad y fechas_vistas
+                _esp_ap = PROFESIONALES.get(list(ids_apellido)[0], {}).get("especialidad", especialidad).lower() if ids_apellido else especialidad
+                try:
+                    _sm_ap2, _td_ap2 = await buscar_primer_dia(
+                        _esp_ap, excluir=fechas_vistas, solo_ids=list(ids_apellido))
+                    if _td_ap2:
+                        _nf_ap = _td_ap2[0].get("fecha")
+                        _fv_ap = list(fechas_vistas) + ([_nf_ap] if _nf_ap and _nf_ap not in fechas_vistas else [])
+                        data.update({"slots": _td_ap2[:5], "todos_slots": _td_ap2,
+                                     "fechas_vistas": _fv_ap,
+                                     "prof_sugerido_id": _td_ap2[0].get("id_profesional"),
+                                     "especialidad": _esp_ap})
+                        save_session(phone, "WAIT_SLOT", data)
+                        return _format_slots(_td_ap2[:5])
+                except Exception as _e_ap2:
+                    log.warning("buscar_primer_dia apellido fallback falló: %s", _e_ap2)
+                # Sin disponibilidad alguna: avisar y mantener sesión
+                save_session(phone, "WAIT_SLOT", data)
+                return (
+                    f"No encontré disponibilidad con ese profesional en los próximos días 😕\n\n"
+                    "Escribe *otro profesional* o *otro día* para continuar."
+                )
 
         # ── Intento de cambio de profesional por lenguaje natural ──
         # "no quiero ese profesional", "con otro doctor", "no me gusta", etc.
@@ -7261,7 +7313,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if idx is None and any(k in tl_norm_slot for k in _PRECIO_KW_SLOT):
             _esp_precio = todos_slots[0]["especialidad"] if todos_slots else especialidad
             if _esp_precio:
-                _precio_resp = _precio_line(_esp_precio)
+                _pid_ws = (todos_slots[0].get("id_profesional") if todos_slots else None) or data.get("prof_sugerido_id")
+                _precio_resp = _precio_line(_esp_precio, id_profesional=_pid_ws)
                 if _precio_resp:
                     save_session(phone, "WAIT_SLOT", data)
                     return (
@@ -7645,7 +7698,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if any(k in tl for k in _PRECIO_KW):
                 esp_modal = data.get("especialidad", "")
                 if esp_modal:
-                    precio_l = _precio_line(esp_modal)
+                    _pid_modal = data.get("prof_sugerido_id") or (data.get("slot_elegido") or {}).get("id_profesional")
+                    precio_l = _precio_line(esp_modal, id_profesional=_pid_modal)
                     if precio_l:
                         save_session(phone, "WAIT_MODALIDAD", data)
                         return _btn_msg(
@@ -9867,7 +9921,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ya no existe (waitlist), el paciente no tiene incentivo de seguir.
     if state == "WAIT_WAITLIST_NOMBRE":
         partes = txt.strip().split()
-        if len(partes) < 2:
+        # Guard semántico compartido con WAIT_DATOS_NUEVO: rechazar frases que
+        # no son nombres (peticiones, verbos de necesidad, términos médicos).
+        _NOMBRE_INVALIDO_WL = re.compile(
+            r"\b(necesito|quiero|tengo|quisiera|necesita|requiero|solicito|"
+            r"ficha|doctor|doctora|dra?\.?|radiograf|ecograf|examen|hora|cita|"
+            r"consulta|control|costo|precio|valor|cuanto|cuando|agendar|cancelar|"
+            r"ver\s+mis|mis\s+citas|mis\s+horas|urgente|urgencia)\b",
+            re.IGNORECASE,
+        )
+        _nombre_es_frase = _NOMBRE_INVALIDO_WL.search(txt.strip())
+        if len(partes) < 2 or _nombre_es_frase:
             _intentos_wn = data.get("waitlist_nombre_intentos", 0) + 1
             if _intentos_wn >= 1:
                 # Skip: usar "paciente" genérico y completar la inscripción
@@ -10046,6 +10110,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "No reconocí el nombre 😕\n\n"
                 "Escríbelo separado por comas:\n"
                 "*Nombre Apellido, M o F, DD/MM/AAAA*\n\n"
+                f"_Ejemplo: {_ej}_{_tip}"
+            )
+        # Guard semántico: detectar frases que NO son nombres de persona.
+        # Casos reales: "Necesito Una Radiografia Transvaginal", "No Tengo Ficha
+        # Con El Doctor", "Los". Verbos de necesidad/acción y sustantivos médicos
+        # son señales inequívocas de que el paciente escribió su petición, no su nombre.
+        _NOMBRE_INVALIDO_KW = re.compile(
+            r"\b(necesito|quiero|tengo|quisiera|necesita|requiero|solicito|"
+            r"ficha|doctor|doctora|dra?\.?|radiograf|ecograf|examen|hora|cita|"
+            r"consulta|control|costo|precio|valor|cuanto|cuando|agendar|cancelar|"
+            r"ver\s+mis|mis\s+citas|mis\s+horas|urgente|urgencia)\b",
+            re.IGNORECASE,
+        )
+        if _NOMBRE_INVALIDO_KW.search(nombre_raw):
+            return (
+                "Parece que escribiste una consulta, no un nombre 😊\n\n"
+                "Necesito tu *nombre completo* (nombre y apellido):\n\n"
                 f"_Ejemplo: {_ej}_{_tip}"
             )
         partes_nombre = nombre_raw.split()
@@ -10717,10 +10798,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Bot puede responder: procesar normalmente pero mantener HUMAN_TAKEOVER
         if _can_bot_respond and _new_intent_result:
             _new_intent = _new_intent_result.get("intent", "otro")
-            # Para ver_reservas y precio/info con respuesta_directa, responder directo
+            # FIX-5: Si la recepcionista ya respondió (human_replied=True), la
+            # conversación está activa y el bot NO debe pisar con FAQ automáticas.
+            # "¡De nada!", "Con gusto", precios y horarios mezclados con respuestas
+            # reales de recepción confunden al paciente.
+            # Solo responder FAQ si la recep aún NO ha dicho nada (primer ack pendiente).
+            _recep_ya_respondio = data.get("human_replied", False)
             if _new_intent in ("precio", "info") and _new_intent_result.get("respuesta_directa"):
+                _rd_ht = _new_intent_result["respuesta_directa"]
+                # Bloquear respuestas de cortesía cortas (saludos de cierre, "de nada")
+                # que no aportan valor y suenan extrañas mezcladas con recepcionista.
+                _CORTESIA_PATTERN = re.compile(
+                    r"^(¡?de\s+nada|con\s+gusto|gracias|un\s+placer|"
+                    r"perfecto|claro|bienvenid|buenas?|hola)[!., ]*$",
+                    re.IGNORECASE,
+                )
+                if _CORTESIA_PATTERN.match(_rd_ht.strip()):
+                    # Silencio — no responder cortesías automáticas en takeover
+                    save_session(phone, "HUMAN_TAKEOVER", data)
+                    return ""
+                if _recep_ya_respondio:
+                    # Recepcionista activa: suprimir FAQ para no pisar la conversación
+                    log_event(phone, "takeover_faq_suprimida_recep_activa",
+                              {"intent": _new_intent, "rd_snippet": _rd_ht[:80]})
+                    save_session(phone, "HUMAN_TAKEOVER", data)
+                    return ""
                 save_session(phone, "HUMAN_TAKEOVER", data)
-                return _new_intent_result["respuesta_directa"]
+                return _rd_ht
             # Para agendar/cancelar/ver_reservas: salir temporalmente de HUMAN_TAKEOVER,
             # procesar el intent, y restaurar el takeover al final de ese flujo no es
             # trivial. En su lugar, reseteamos la sesión a IDLE con un flag que indica

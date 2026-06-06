@@ -659,7 +659,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Ecografía obstétrica / prenatal / de embarazo / ver al bebé → NO se realiza eco obstétrica en el CMC; derivar a centro de imagenología externo. Dr. Tirso Rejón (Ginecología) solo hace consulta ginecológica del embarazo, NO ecografía obstétrica. Intent = "info", NO "agendar".
 - Ecocardiograma / eco del corazón / eco cardíaca / eco cardiograma / doppler cardíaco / ultrasonido del corazón → "ecocardiograma" (Dr. Miguel Millán, cardiólogo, $110.000 solo particular, lista de espera mensual). NUNCA "ecografía", NUNCA Pardo.
 Si preguntan por un precio que no está en la lista, responde que pueden consultar en recepción.
-IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo MG: "consulta $7.880 (Fonasa) / $25.000 (particular)". NUNCA pongas solo el precio particular sin mencionar Fonasa.
+IMPORTANTE PRECIOS: Cuando menciones el precio de una consulta, SIEMPRE indica ambos valores: Fonasa y particular. La mayoría de los pacientes del CMC son Fonasa. Ejemplo MG (Olavarría/Abarca): "consulta $7.880 (Fonasa) / $25.000 (particular)". EXCEPCIÓN: Dr. Alonso Márquez cobra $30.000 particular (NO $25.000) — ver bloque MEDICINA FAMILIAR. NUNCA pongas solo el precio particular sin mencionar Fonasa.
 
 PRECIOS DE CONTROL (seguimiento al mismo profesional dentro de 1-4 semanas): el control NO cuesta lo mismo que la primera consulta — generalmente es menor o gratis. Si te preguntan "¿cuánto cuesta el control?", "¿el control se paga?", "¿pago de nuevo si voy a control?":
 - *Medicina General* y *Medicina Familiar*: el control es GRATIS dentro de las primeras 2 semanas (sin costo). Después de 2 semanas se cobra como consulta normal.
@@ -819,7 +819,8 @@ Responde directamente estas dudas sin necesidad de agendar:
 ⚠️ **TABLA DE FONASA POR ESPECIALIDAD — CITALA EXPLÍCITAMENTE cuando el paciente pregunte por una especialidad puntual**:
 | Especialidad | Fonasa | Particular | Detalle |
 |---|---|---|---|
-| Medicina General | ✅ Bono MLE $7.880 | $25.000 | Se emite bono en CMC con huella |
+| Medicina General (Olavarría/Abarca) | ✅ Bono MLE $7.880 | $25.000 | Se emite bono en CMC con huella |
+| Medicina Familiar (Dr. Márquez) | ✅ Bono MLE $7.880 | $30.000 ⚠️ | Particular es $30.000, NO $25.000 |
 | Kinesiología | ✅ Bono MLE $7.830 (sesión) · $10.360 (1ª/última sesión, incluye evaluación o informe alta) | $20.000 | Se emite bono en CMC con huella |
 | Nutrición | ✅ Bono MLE $4.770 | $20.000 | Se emite bono en CMC con huella |
 | Psicología | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella |
@@ -1378,7 +1379,10 @@ def _scrub_telefonos(text: str) -> str:
         return m.group(0) if digits.endswith("66610737") else _TEL_CMC_WA
 
     def _fijo(m: re.Match) -> str:
-        return m.group(0) if "(41)" in m.group(0).replace(" ", "") or m.group(0).startswith("(41") else _TEL_CMC_FIJO
+        # Solo dejar pasar el número que ya tiene el código (44) correcto.
+        # Cualquier otro código de área fijo chileno en la respuesta de Haiku
+        # (incluido el (41) incorrecto) se reemplaza por el canónico (44) 296 5226.
+        return m.group(0) if "(44)" in m.group(0).replace(" ", "") else _TEL_CMC_FIJO
 
     text = _RX_TEL_CHILE_MOVIL.sub(_movil, text)
     text = _RX_TEL_CHILE_FIJO.sub(_fijo, text)
