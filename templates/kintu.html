@@ -85,6 +85,27 @@ h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
 .chrow{display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;background:#fff;font-size:14px;box-shadow:var(--sh-sm)}
 .chrow .badge{margin-left:auto;font-size:11px;font-weight:700;padding:4px 11px;border-radius:var(--pill)}
 .chrow .ok{background:#e7f7ef;color:#198a5a}.chrow .pend{background:#fdf4e3;color:#b07d18}
+.muted-s{color:var(--muted);font-weight:400;font-size:12px}
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start;margin-top:6px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--sh-sm);overflow:hidden}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:13px}
+.adrow{display:flex;align-items:center;gap:13px;padding:13px 16px;border-bottom:1px solid var(--line);transition:.12s}
+.adrow:last-child{border-bottom:0}.adrow:hover{background:#f7fafa}
+.adrow .rk{width:25px;height:25px;border-radius:7px;background:#eef3f4;color:var(--teal);font-weight:700;font-size:12px;display:grid;place-items:center;flex:0 0 auto;font-family:var(--fm)}
+.adrow .rk.top{background:var(--cobre);color:var(--navy)}
+.adrow .an{flex:1;min-width:0}
+.adrow .an .t{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adrow .an .m{font-size:11.5px;color:var(--muted);margin-top:2px}
+.adrow .cac{font-family:var(--fm);font-weight:700;font-size:14.5px;color:var(--navy);text-align:right;flex:0 0 auto}
+.adrow .cac small{display:block;font-size:10px;color:var(--muted);font-weight:400;font-family:var(--fb)}
+.decrow{display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.decrow:last-child{border-bottom:0}
+.decrow .ab{font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--pill);flex:0 0 auto;height:fit-content;letter-spacing:.02em;white-space:nowrap}
+.ab.pause{background:#fdecec;color:#c0392b}.ab.up{background:#e7f7ef;color:#198a5a}.ab.down{background:#fdf4e3;color:#b07d18}.ab.keep{background:#eef1f3;color:#7a8893}
+.decrow .dt{font-size:12.5px;line-height:1.45}.decrow .dt b{font-size:13px}
+.card-foot{padding:11px 16px;border-top:1px solid var(--line);text-align:center}
+.card-foot a{font-size:12.5px;color:var(--teal);text-decoration:none;font-weight:600}
 /* Welcome hero */
 .welcome{position:absolute;inset:0;display:none;place-items:center;text-align:center;color:#fff;overflow:hidden;
   background:linear-gradient(160deg,#081722 0%,#0B1D2A 42%,#0d3a3c 115%)}
@@ -146,11 +167,21 @@ h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
       </div>
       <div class="panel" id="p-resumen">
         <span class="eyebrow">Kintu Global</span>
-        <h2>El motor que <em>detecta dónde crecer</em>.</h2>
-        <p class="lead">Kintu observa los canales de cada negocio, mide el <b>CAC real</b> (caja, no métricas de vanidad) y te dice dónde invertir. Esta es la vista transversal de todas tus marcas.</p>
+        <h2>El pulso de tu <em>crecimiento</em>.</h2>
+        <p class="lead">Lo que el motor ve hoy: CAC real por canal, los anuncios que más rinden y las decisiones que esperan tu OK — de todas tus marcas.</p>
         <div class="kpis" id="kResumen"><div class="kpi"><div class="l">Cargando…</div></div></div>
-        <div class="sec-h">Marcas en Kintu</div>
-        <div class="cards" id="kMarcasMini"></div>
+        <div class="grid2">
+          <div>
+            <div class="sec-h">🏆 Mejores anuncios por CAC real <span class="muted-s">· 30 días</span></div>
+            <div class="card" id="kAds"><div class="empty">Cargando…</div></div>
+          </div>
+          <div>
+            <div class="sec-h">⚡ Decisiones esperando tu OK</div>
+            <div class="card" id="kDec"><div class="empty">—</div></div>
+            <div class="sec-h" style="margin-top:22px">🏢 Marcas</div>
+            <div class="cards" id="kMarcasMini"></div>
+          </div>
+        </div>
       </div>
       <div class="panel" id="p-marcas">
         <span class="eyebrow">Marcas</span><h2>Negocios que <em>Kintu</em> hace crecer.</h2>
@@ -210,18 +241,39 @@ function show(m){
     f.classList.add('on');
   }else document.getElementById('p-'+m.id).classList.add('on');
 }
+const fmt=n=>'$'+Math.round(n||0).toLocaleString('es-CL');
+const short=(s,n)=>{s=(s||'').replace(/^Publicación:\s*/,'').replace(/["“”]/g,'');return s.length>n?s.slice(0,n-1)+'…':s;};
+const ABMAP={pause:['pause','Pausar'],decrease_budget:['down','Bajar'],increase_budget:['up','Subir'],keep:['keep','Mantener']};
 (async()=>{
-  const fmt=n=>'$'+(n||0).toLocaleString('es-CL');
   try{
-    const [cac,ten]=await Promise.all([
+    const [cac,ten,pend]=await Promise.all([
       fetch('/autopilot/api/cac-local?window=30&token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({})),
       fetch('/autopilot/api/tenants?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({tenants:[]})),
+      fetch('/autopilot/api/pending?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({pending:[]})),
     ]);
+    const pendientes=(pend.pending||[]);
     document.getElementById('kResumen').innerHTML=`
       <div class="kpi"><div class="l">CAC real prom · 30d</div><div class="v">${cac.cac_promedio?fmt(cac.cac_promedio):'—'}</div><div class="s">${cac.modo_atendido||'—'}</div></div>
       <div class="kpi"><div class="l">Pacientes atendidos</div><div class="v">${cac.total_atendidos??'—'}</div><div class="s">atribuidos a ads</div></div>
       <div class="kpi"><div class="l">Gasto · 30d</div><div class="v">${cac.total_spend?fmt(cac.total_spend):'—'}</div><div class="s">Meta Ads</div></div>
+      <div class="kpi"><div class="l">Decisiones pendientes</div><div class="v">${pendientes.length}</div><div class="s">esperan tu OK</div></div>
       <div class="kpi"><div class="l">Marcas</div><div class="v">${(ten.tenants||[]).length}</div><div class="s">${(ten.tenants||[]).filter(t=>t.active).length} activa(s)</div></div>`;
+    // Ranking de anuncios por CAC real
+    const ads=(cac.ads||[]).filter(a=>a.spend>0&&a.cac_real).sort((a,b)=>a.cac_real-b.cac_real).slice(0,6);
+    document.getElementById('kAds').innerHTML=ads.length?ads.map((a,i)=>`
+      <div class="adrow"><div class="rk ${i===0?'top':''}">${i+1}</div>
+        <div class="an"><div class="t">${short(a.ad_name||a.campaign_name,46)}</div>
+          <div class="m">${a.pagaron} pagaron · ${fmt(a.spend)} gastado</div></div>
+        <div class="cac">${fmt(a.cac_real)}<small>CAC/paciente</small></div></div>`).join('')
+      :'<div class="empty">Sin anuncios con CAC atribuido aún.</div>';
+    // Decisiones del motor
+    document.getElementById('kDec').innerHTML=(pendientes.length?pendientes.slice(0,4).map(p=>{
+      const ab=ABMAP[p.action]||['keep',p.action];
+      return `<div class="decrow"><span class="ab ${ab[0]}">${ab[1]}</span>
+        <div class="dt"><b>${short(p.campaign_name,38)}</b><br>${short(p.reason,90)}</div></div>`;
+    }).join('')+'<div class="card-foot"><a href="#" onclick="show(MODULES.find(m=>m.id===\'campanas\'));return false">Revisar y aprobar en Campañas →</a></div>'
+      :'<div class="empty">Sin decisiones pendientes 👌</div>');
+    // Marcas
     const cards=(ten.tenants||[]).map(t=>`<div class="bcard">
         <div class="t"><span class="dot ${t.active?'on':'off'}"></span>${t.label}<span class="est ${t.active?'a':'o'}">${t.active?'activo':'apagado'}</span></div>
         <div class="v">${t.margin_profile||''} · ${t.currency||''}</div>
