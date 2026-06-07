@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Alma · La capa agéntica — cómo funciona</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0F3F68; --navy2:#0a2a47; --blue:#1172AB; --aqua:#4FBECE; --aqua-l:#7fd4e0;
+    --ink:#13202e; --muted:#647a8c; --bg:#eef3f8; --card:#fff; --line:#e2eaf2;
+    --ok:#1f9d6b; --gold:#d6a45a; --red:#d6453b; --soft:#f3f7fb;
+    --sh:0 8px 30px rgba(15,63,104,.10); --sh-sm:0 3px 12px rgba(15,63,104,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Montserrat',-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);
+       color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.55}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+  section{padding:60px 0;border-bottom:1px solid rgba(226,234,242,.7)}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:2px;
+        text-transform:uppercase;color:var(--blue);margin-bottom:14px}
+  .eyebrow::before{content:'';width:26px;height:2px;background:var(--aqua);border-radius:2px}
+  h1{font-size:48px;font-weight:900;letter-spacing:-1.6px;line-height:1.04}
+  h2{font-size:32px;font-weight:800;letter-spacing:-.9px;margin-bottom:14px;line-height:1.12}
+  h3{font-size:17px;font-weight:700}
+  p.lead{font-size:18.5px;color:var(--muted);max-width:700px;line-height:1.65}
+  .muted{color:var(--muted)} .big{font-size:16px;line-height:1.7;color:#3a4d5e;max-width:760px}
+  b.hl{color:var(--navy)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;gap:8px;height:54px;overflow-x:auto}
+  nav .brand{font-weight:900;color:var(--navy);letter-spacing:1px;margin-right:auto;font-size:15px;white-space:nowrap}
+  nav a{font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:none;padding:6px 11px;border-radius:8px;white-space:nowrap}
+  nav a:hover{background:var(--soft);color:var(--navy)}
+
+  /* HERO */
+  .hero{background:linear-gradient(140deg,var(--navy2),var(--navy) 48%,var(--blue));color:#fff;
+        padding:78px 0 70px;position:relative;overflow:hidden;border-bottom:none}
+  .hero::after{content:'';position:absolute;right:-140px;top:-140px;width:480px;height:480px;
+        background:radial-gradient(circle,rgba(79,190,206,.35),transparent 70%);border-radius:50%}
+  .hero::before{content:'';position:absolute;left:-100px;bottom:-160px;width:380px;height:380px;
+        background:radial-gradient(circle,rgba(17,114,171,.4),transparent 70%);border-radius:50%}
+  .hero .wrap{position:relative;z-index:2}
+  .logo{display:flex;align-items:center;gap:13px;margin-bottom:38px}
+  .logo .mark{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.15);
+        display:grid;place-items:center;font-size:27px;font-weight:800}
+  .logo b{font-size:12.5px;letter-spacing:.6px;display:block;opacity:.85}
+  .logo .c{color:var(--aqua);font-size:17px;font-weight:800;letter-spacing:1.6px}
+  .hero h1{color:#fff;max-width:900px}
+  .hero h1 em{font-style:normal;color:var(--aqua)}
+  .hero p{font-size:20px;color:#cfe3f0;max-width:680px;margin-top:22px;line-height:1.62}
+  .tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:34px}
+  .tag{font-size:12.5px;font-weight:600;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+        padding:8px 15px;border-radius:999px;color:#eaf4fa}
+
+  /* cards / grid */
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--sh-sm)}
+  .card .ico{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#e3f5f8,#cfeef3);
+        display:grid;place-items:center;margin-bottom:15px;font-size:21px}
+  .card h3{margin-bottom:7px}.card p{font-size:13.5px;color:var(--muted);line-height:1.58}
+
+  .metric .n{font-size:36px;font-weight:900;color:var(--navy);letter-spacing:-1px;line-height:1}
+  .metric .l{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.4}
+  .metric .sub{font-size:11px;color:var(--blue);font-weight:700;margin-top:5px}
+
+  /* architecture stack */
+  .stack{display:flex;flex-direction:column;gap:11px;margin-top:10px}
+  .layer{display:flex;align-items:flex-start;gap:18px;background:var(--card);border:1px solid var(--line);
+        border-radius:15px;padding:18px 22px;box-shadow:var(--sh-sm)}
+  .layer .num{width:36px;height:36px;flex:0 0 auto;border-radius:11px;background:var(--navy);color:#fff;
+        display:grid;place-items:center;font-weight:800;font-size:15px;margin-top:2px}
+  .layer.l-aqua .num{background:var(--aqua);color:var(--navy)}
+  .layer .lc{flex:1}.layer .lc h3{font-size:16px}
+  .layer .lc p{font-size:13.5px;color:var(--muted);margin-top:5px;line-height:1.55}
+  .layer .lc .reads{font-size:11.5px;color:var(--blue);font-weight:600;margin-top:7px}
+  .arrow{text-align:center;color:var(--aqua);font-size:17px;line-height:.3;margin:1px 0}
+
+  /* FUNNEL */
+  .funnel{display:flex;flex-direction:column;align-items:center;gap:6px;margin:14px auto 0;max-width:640px}
+  .fstage{width:100%;color:#fff;border-radius:12px;padding:16px 22px;display:flex;align-items:center;
+        justify-content:space-between;box-shadow:var(--sh-sm);position:relative}
+  .fstage .ft{font-weight:700;font-size:15px}.fstage .fs{font-size:12px;opacity:.85;margin-top:2px}
+  .fstage .fn{font-size:26px;font-weight:900;letter-spacing:-.5px}
+  .fdrop{font-size:11.5px;font-weight:700;color:var(--muted);padding:2px 0}
+  .fdrop b{color:var(--red)} .fdrop b.up{color:var(--ok)}
+  .f1{background:linear-gradient(135deg,#27628f,#1172AB);max-width:100%}
+  .f2{background:linear-gradient(135deg,#1172AB,#2a8099);max-width:86%}
+  .f3{background:linear-gradient(135deg,#1f8fa8,#3aa7b3);max-width:74%}
+  .f4{background:linear-gradient(135deg,#34a9b0,#4FBECE);max-width:60%}
+  .f5{background:linear-gradient(135deg,#3fb39a,#46c08a);max-width:48%}
+  .f6{background:linear-gradient(135deg,#1f9d6b,#2bb377);max-width:38%}
+  .f6 .fn{color:#eafff5}
+
+  /* JOURNEY stepper */
+  .journey{margin-top:14px;border-left:2px dashed var(--aqua);padding-left:0}
+  .jstep{display:flex;gap:16px;padding:0 0 22px 0;position:relative}
+  .jstep:last-child{padding-bottom:0}
+  .jstep .jb{width:38px;height:38px;flex:0 0 auto;border-radius:50%;background:#fff;border:2px solid var(--aqua);
+        color:var(--navy);display:grid;place-items:center;font-weight:800;font-size:14px;margin-left:-20px;box-shadow:var(--sh-sm)}
+  .jstep .jc{flex:1;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 18px;box-shadow:var(--sh-sm)}
+  .jstep .jc h3{font-size:14.5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .jstep .jc .layer-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;
+        background:#eaf3fa;color:var(--blue);padding:2px 8px;border-radius:6px}
+  .jstep .jc p{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.55}
+  .jstep .jc .say{margin-top:8px;font-size:12.5px;font-style:italic;color:var(--navy);background:var(--soft);
+        border-left:3px solid var(--aqua);padding:7px 11px;border-radius:0 8px 8px 0}
+
+  /* day in life timeline */
+  .day{display:grid;gap:10px;margin-top:10px}
+  .drow{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);
+        border-radius:12px;padding:12px 18px;box-shadow:var(--sh-sm)}
+  .drow .time{font-weight:800;color:var(--blue);font-size:13px;width:62px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+  .drow .act{font-size:13.5px}.drow .act b{color:var(--navy)}
+
+  /* agents */
+  .agents{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .agent{background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+  .agent b{display:block;font-weight:700;color:var(--navy);font-size:13.5px}
+  .agent span{font-size:11.5px;color:var(--muted);line-height:1.4;display:block;margin-top:2px}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:14px}
+  .step{text-align:center;padding:0 14px;position:relative}
+  .step .b{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--blue));
+        color:#fff;display:grid;place-items:center;font-size:23px;margin:0 auto 13px}
+  .step h3{font-size:14px}.step p{font-size:12px;color:var(--muted);margin-top:6px}
+  .step:not(:last-child)::after{content:'→';position:absolute;right:-8px;top:18px;color:var(--aqua);font-weight:800}
+
+  .band{background:linear-gradient(140deg,var(--navy2),var(--navy));color:#fff;border-radius:24px;padding:48px}
+  .band h2{color:#fff}.band p{color:#cfe3f0;font-size:16.5px;max-width:740px;line-height:1.65}
+  .biz{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+  .biz span{font-size:13px;font-weight:600;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+        padding:10px 16px;border-radius:10px}.biz span b{color:var(--aqua)}
+
+  .honest{background:#fff;border:1px solid var(--line);border-left:5px solid var(--gold);border-radius:14px;
+        padding:20px 24px;box-shadow:var(--sh-sm)}
+  .honest h3{color:#b9791d;font-size:15px;margin-bottom:7px}
+  .honest p{font-size:13.5px;color:var(--muted);line-height:1.62}
+
+  .callout{background:linear-gradient(135deg,#eaf6f9,#f3fafb);border:1px solid #cfe8ee;border-radius:14px;
+        padding:18px 22px;margin-top:18px}
+  .callout p{font-size:14px;color:#27566b;line-height:1.6}.callout b{color:var(--navy)}
+
+  footer{text-align:center;padding:46px 0 64px;color:var(--muted);font-size:12.5px;line-height:1.9;border:none}
+  .quote{font-size:24px;font-weight:700;color:var(--navy);max-width:780px;margin:0 auto;text-align:center;line-height:1.42;letter-spacing:-.4px}
+  .quote em{color:var(--blue);font-style:normal}
+  .secnum{font-size:12px;font-weight:800;color:var(--aqua);letter-spacing:1px}
+
+  @media(max-width:780px){
+    h1,.hero h1{font-size:34px}h2{font-size:25px}
+    .g2,.g3,.g4,.agents,.steps{grid-template-columns:1fr 1fr}
+    .steps{gap:20px}.step::after{display:none}
+    .fstage{max-width:100%!important}
+    nav .wrap{height:48px}
+  }
+  @media(max-width:480px){.g3,.g4,.agents,.steps{grid-template-columns:1fr}.fstage{flex-direction:column;align-items:flex-start;gap:4px}}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <span class="brand">✦ ALMA</span>
+  <a href="#problema">El problema</a>
+  <a href="#dia">Un día</a>
+  <a href="#arquitectura">Cómo funciona</a>
+  <a href="#funnel">El funnel</a>
+  <a href="#ejemplo">Ejemplo</a>
+  <a href="#aprende">Aprende</a>
+  <a href="#seguro">Seguridad</a>
+  <a href="#vision">Visión</a>
+</div></nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="wrap">
+    <div class="logo"><div class="mark">✦</div><div><b>ADKUN · TECH</b><span class="c">ALMA</span></div></div>
+    <h1>Un sistema que <em>opera el negocio solo</em> — y te deja a ti decidir el rumbo.</h1>
+    <p>Alma es una capa de inteligencia que mira tu negocio en tiempo real, decide qué conviene hacer,
+       lo ejecuta dentro de límites que tú controlas, y mide si funcionó. Nació en un centro médico.
+       Está hecha para cualquier negocio.</p>
+    <div class="tags">
+      <span class="tag">🧠 Decide con datos reales</span>
+      <span class="tag">🤖 33 agentes con oficio</span>
+      <span class="tag">📊 Mide cada peso</span>
+      <span class="tag">🔒 Nada actúa sin tu permiso</span>
+      <span class="tag">↩️ Todo es reversible</span>
+    </div>
+  </div>
+</div>
+
+<!-- EL PROBLEMA -->
+<section id="problema"><div class="wrap">
+  <div class="eyebrow">01 · El problema</div>
+  <h2>Un negocio toma cientos de decisiones al día. Nadie alcanza.</h2>
+  <p class="lead">Imagina un centro médico cualquier mañana. Hay decenas de preguntas abiertas, todas con
+     plata adentro, y nadie con tiempo para responderlas todas:</p>
+  <div class="grid g2" style="margin-top:22px">
+    <div class="card"><div class="ico">🩺</div><h3>"¿A quién recupero hoy?"</h3>
+      <p>Hay cientos de pacientes que no vuelven hace meses. Algunos volverían con un mensaje. ¿Cuáles? ¿Cuándo? ¿Con qué texto?</p></div>
+    <div class="card"><div class="ico">📅</div><h3>"Se canceló una hora a las 4"</h3>
+      <p>Queda un cupo vacío. Hay 10 personas en lista de espera. ¿A quién le aviso primero, sin que lleguen tres a la vez?</p></div>
+    <div class="card"><div class="ico">💸</div><h3>"¿Dónde gasto en publicidad?"</h3>
+      <p>Estás pagando avisos de varias especialidades. Unas traen pacientes baratos; otras queman plata. ¿Cuál es cuál, hoy?</p></div>
+    <div class="card"><div class="ico">🧾</div><h3>"¿Está bien este precio?"</h3>
+      <p>El margen real depende de cuánto se lleva el especialista. Si está mal calculado, gastas de más sin notarlo.</p></div>
+  </div>
+  <div class="callout"><p>👉 <b>El problema no es falta de ganas — es falta de manos, de tiempo y de visibilidad.</b>
+     Las oportunidades vencen rápido, lo que no se mide no se ve, y las buenas prácticas se aplican a veces sí y a veces no.
+     Alma existe para que ninguna de esas decisiones se quede sin responder.</p></div>
+</div></section>
+
+<!-- UN DÍA -->
+<section id="dia"><div class="wrap">
+  <div class="eyebrow">02 · Un día con Alma</div>
+  <h2>Mientras tú atiendes, el sistema trabaja en segundo plano.</h2>
+  <p class="lead">Un día cualquiera, sin que nadie tenga que acordarse de nada, esto pasa solo —
+     y cada acción queda registrada para que la revises:</p>
+  <div class="day">
+    <div class="drow"><span class="time">08:00</span><span class="act"><b>Resumen del día:</b> arma la lista de hoy — a quién conviene contactar, qué cupos hay que rellenar, qué pagos siguen pendientes.</span></div>
+    <div class="drow"><span class="time">10:05</span><span class="act"><b>Recuperación:</b> identifica pacientes inactivos con permiso, y les manda un WhatsApp personalizado con su especialidad — sin saturar a nadie.</span></div>
+    <div class="drow"><span class="time">11:30</span><span class="act"><b>Adherencia:</b> a los pacientes de kinesiología que dejaron el tratamiento a medias, les recuerda la próxima sesión.</span></div>
+    <div class="drow"><span class="time">14:18</span><span class="act"><b>Cupo liberado:</b> se cancela una hora → invita al primero de la lista de espera; el que acepta primero, se la queda.</span></div>
+    <div class="drow"><span class="time">19:00</span><span class="act"><b>Reporte:</b> cuántos contactó, cuántos agendaron, cuánto entró a la caja — y qué regla detectó mal calibrada.</span></div>
+    <div class="drow"><span class="time">00:20</span><span class="act"><b>Cierre nocturno:</b> cruza el gasto en publicidad con los pacientes que de verdad pagaron, y recalcula la rentabilidad de cada campaña.</span></div>
+  </div>
+</div></section>
+
+<!-- ARQUITECTURA -->
+<section id="arquitectura"><div class="wrap">
+  <div class="eyebrow">03 · Cómo funciona por dentro</div>
+  <h2>Cinco capas: sensa → entiende → ejecuta → controla → mide.</h2>
+  <p class="lead">Funciona como un cuerpo. Cada capa hace una cosa y le pasa el resultado a la siguiente.
+     Lo importante: <b class="hl">la inteligencia decide, pero las manos están enjauladas</b> — solo hacen
+     lo que las reglas permiten.</p>
+  <div class="stack">
+    <div class="layer l-aqua"><div class="num">1</div><div class="lc"><h3>Sensores — los sentidos</h3>
+      <p>Leen la realidad del negocio sin tocarla. No inventan: miran la fuente de la verdad.</p>
+      <div class="reads">Leen: la caja real (pagos Medilink), la agenda, las conversaciones de WhatsApp, el gasto en ads.</div></div></div>
+    <div class="arrow">↓</div>
+    <div class="layer"><div class="num">2</div><div class="lc"><h3>Cerebro (Alma Brain) — la decisión</h3>
+      <p>Junta lo que sensó, entiende el estado del negocio, y decide la mejor acción ahora. Usa IA (Claude)
+         con herramientas reales: puede consultar la agenda, calcular un margen, redactar un mensaje.</p>
+      <div class="reads">Produce: "para este paciente, lo mejor es un win-back de kinesiología hoy".</div></div></div>
+    <div class="arrow">↓</div>
+    <div class="layer l-aqua"><div class="num">3</div><div class="lc"><h3>Flota de agentes — las manos</h3>
+      <p>33 trabajadores digitales, cada uno con un oficio: recuperar pacientes, rellenar cupos, cobrar,
+         vigilar stock, pedir reseñas, decidir el presupuesto de publicidad. Ejecutan la decisión del cerebro.</p>
+      <div class="reads">Cada agente respeta su límite: nunca contacta sin permiso, nunca gasta de más.</div></div></div>
+    <div class="arrow">↓</div>
+    <div class="layer"><div class="num">4</div><div class="lc"><h3>Sala de Máquinas — el tablero</h3>
+      <p>Tu cabina de control. Prendes o apagas cada agente con un switch. Ves <b>qué haría</b> antes de que
+         lo haga (modo ensayo). Auditas todo lo que pasó. El dueño manda.</p>
+      <div class="reads">Una sola fuente de la verdad: si está apagado, no actúa. Punto.</div></div></div>
+    <div class="arrow">↓</div>
+    <div class="layer l-aqua"><div class="num">5</div><div class="lc"><h3>P&amp;L agéntico — la conciencia</h3>
+      <p>Mide cuánto costó y cuánto generó cada acción, cruzando contra la caja real. Lo que no rinde, se ve.
+         Lo que rinde, se escala. Y eso alimenta de vuelta al cerebro para que decida mejor.</p>
+      <div class="reads">Cierra el círculo: actuar → medir → aprender → actuar mejor.</div></div></div>
+  </div>
+</div></section>
+
+<!-- EL FUNNEL -->
+<section id="funnel"><div class="wrap">
+  <div class="eyebrow">04 · El funnel, con números reales</div>
+  <h2>Cómo un grupo de pacientes se convierte en plata — y dónde se escapa.</h2>
+  <p class="lead">Este es el embudo real de la <b>recuperación de pacientes (win-back)</b>, con los datos de
+     verdad del centro médico. Cada escalón es más angosto: muestra cuántos pasan a la siguiente etapa
+     y, sobre todo, <b class="hl">dónde está el cuello de botella</b>.</p>
+  <div class="funnel">
+    <div class="fstage f1"><div><div class="ft">Pacientes que no vuelven</div><div class="fs">El sistema los detecta en la caja real</div></div><div class="fn">12.500</div></div>
+    <div class="fdrop">↓ pero solo se puede escribir a quien <b>dio permiso</b> (Ley de datos) &nbsp;·&nbsp; <b>−99%</b></div>
+    <div class="fstage f2"><div><div class="ft">Con consentimiento de marketing</div><div class="fs">El filtro legal — el verdadero cuello</div></div><div class="fn">97</div></div>
+    <div class="fdrop">↓ se les manda WhatsApp (acumulado del periodo, sin saturar)</div>
+    <div class="fstage f3"><div><div class="ft">Mensajes enviados</div><div class="fs">Personalizados por su última especialidad</div></div><div class="fn">218</div></div>
+    <div class="fdrop">↓ <b class="up">15%</b> volvió a agendar — buena tasa para recuperación</div>
+    <div class="fstage f4"><div><div class="ft">Volvieron a agendar</div><div class="fs">Reengancharon con la clínica</div></div><div class="fn">33</div></div>
+    <div class="fdrop">↓ de los que agendaron, llegaron y pagaron</div>
+    <div class="fstage f5"><div><div class="ft">Pacientes que pagaron</div><div class="fs">Cruzado contra la caja real de Medilink</div></div><div class="fn">14</div></div>
+    <div class="fdrop">↓ ingreso verificado, no estimado</div>
+    <div class="fstage f6"><div><div class="ft">Ingreso a la caja</div><div class="fs">Atribuido al win-back, peso por peso</div></div><div class="fn">$420k</div></div>
+  </div>
+  <div class="callout"><p>💡 <b>Lo que el funnel enseña:</b> la caída brutal está al principio — de 12.500 a 97. No porque
+     el mensaje sea malo, sino porque <b>solo 97 pacientes han dado permiso</b> para que les escribamos.
+     Ahí está la mayor oportunidad: hay <b>8.902 pacientes</b> a los que primero hay que pedirles permiso
+     para luego poder recuperarlos. El embudo no solo mide — <b>te dice exactamente dónde apretar</b>.</p></div>
+</div></section>
+
+<!-- EJEMPLO PASO A PASO -->
+<section id="ejemplo"><div class="wrap">
+  <div class="eyebrow">05 · El recorrido de un paciente</div>
+  <h2>Cómo recupera el sistema a María — paso a paso, capa por capa.</h2>
+  <p class="lead">Para que se vea concreto: así viaja UNA paciente por las cinco capas, desde que el sistema
+     nota que se fue hasta que su pago queda medido. Todo automático; tú solo lo supervisas.</p>
+  <div class="journey">
+    <div class="jstep"><div class="jb">1</div><div class="jc"><h3>El sistema nota que María se fue <span class="layer-tag">Sensor</span></h3>
+      <p>Mirando la caja real, ve que María no se atiende hace 8 meses. La clasifica en la cohorte de pacientes inactivos "frescos".</p></div></div>
+    <div class="jstep"><div class="jb">2</div><div class="jc"><h3>¿Tenemos permiso para escribirle? <span class="layer-tag">Filtro legal</span></h3>
+      <p>Antes de cualquier cosa, revisa: ¿María dio consentimiento de marketing? Sí lo dio, por WhatsApp.
+         <b>Si no lo hubiera dado, el sistema se detiene aquí</b> — nunca contacta a alguien sin permiso.</p></div></div>
+    <div class="jstep"><div class="jb">3</div><div class="jc"><h3>El cerebro decide la mejor jugada <span class="layer-tag">Alma Brain</span></h3>
+      <p>Decide que la mejor acción es un win-back, con el template de su última especialidad (kinesiología).
+         Y chequea que no se le haya escrito en los últimos 90 días, para no saturarla.</p></div></div>
+    <div class="jstep"><div class="jb">4</div><div class="jc"><h3>El agente le escribe <span class="layer-tag">Flota de agentes</span></h3>
+      <p>El agente de win-back le manda un WhatsApp personalizado, cálido, con un solo llamado a la acción.</p>
+      <div class="say">"Hola María 👋 En el Centro Médico te extrañamos. ¿Retomamos tu kinesiología? Te dejo horas esta semana."</div></div></div>
+    <div class="jstep"><div class="jb">5</div><div class="jc"><h3>María responde y agenda <span class="layer-tag">Conversión</span></h3>
+      <p>María contesta, el mismo bot la guía, y queda con hora para el jueves. Reenganchó.</p></div></div>
+    <div class="jstep"><div class="jb">6</div><div class="jc"><h3>María se atiende y paga <span class="layer-tag">Caja real</span></h3>
+      <p>Llega, se atiende, y paga $25.000. Ese pago queda registrado en la caja real de Medilink —
+         la misma fuente con que se mide todo lo demás.</p></div></div>
+    <div class="jstep"><div class="jb">7</div><div class="jc"><h3>El sistema se atribuye el mérito (de verdad) <span class="layer-tag">P&amp;L agéntico</span></h3>
+      <p>Cruza el pago de María con el mensaje que le mandó, por su identificación de paciente. Cuenta esos
+         $25.000 como ingreso generado por el win-back — verificado contra caja, no estimado.</p></div></div>
+    <div class="jstep"><div class="jb">8</div><div class="jc"><h3>Y aprende para la próxima <span class="layer-tag">Optimizador</span></h3>
+      <p>Nota que María estaba "fresca" (8 meses) y convirtió. Al ver muchos casos, descubre que los frescos
+         reenganchan <b>3× mejor</b> que los muy antiguos → propone disparar la recuperación más temprano.
+         Pero antes de cambiar la regla, lo prueba. (Siguiente sección.)</p></div></div>
+  </div>
+</div></section>
+
+<!-- APRENDE -->
+<section id="aprende"><div class="wrap">
+  <div class="eyebrow">06 · Lo que la hace especial</div>
+  <h2>No solo ejecuta: detecta sus propios errores y aprende con disciplina.</h2>
+  <div class="grid g2" style="margin-top:22px">
+    <div class="card"><div class="ico">🎯</div><h3>Optimizador — se audita a sí mismo</h3>
+      <p>Cruza los resultados reales contra sus propias reglas y avisa cuáles están mal calibradas.
+         <b>Caso real:</b> descubrió que la rentabilidad de varias especialidades estaba sobreestimada porque
+         no descontaba el ~70% que se lleva el especialista. Resultado: el sistema toleraba gastar de más en
+         publicidad para esas especialidades. Lo detectó solo y lo marcó para revisión.</p></div>
+    <div class="card"><div class="ico">🧪</div><h3>Champion / Challenger — prueba antes de cambiar</h3>
+      <p>Antes de cambiar una regla, la prueba como "retador" contra la actual y mide cuál gana de verdad.
+         <b>Caso real:</b> el retador "recuperar pacientes más frescos" mostró el doble de conversión…
+         pero la evidencia era apenas marginal. <b>El sistema se negó a cambiar la regla</b> y pidió confirmarla
+         con más datos. Esa negativa es la diferencia entre aprender y engañarse.</p></div>
+  </div>
+  <div class="callout"><p>🛡️ <b>Por qué esto importa:</b> un sistema que se "auto-mejora" sin disciplina puede empeorar
+     solo, persiguiendo casualidades. Alma trata cada cambio como un experimento con grupo de control —
+     <b>la misma forma en que la ciencia distingue una causa de una coincidencia.</b></p></div>
+</div></section>
+
+<!-- RESULTADOS -->
+<section id="resultados"><div class="wrap">
+  <div class="eyebrow">07 · Resultados reales — números honestos</div>
+  <h2>Lo que ya hizo, medido contra la caja de verdad.</h2>
+  <div class="grid g4" style="margin-top:22px">
+    <div class="card metric"><div class="n">218</div><div class="l">mensajes de recuperación enviados</div></div>
+    <div class="card metric"><div class="n">15%</div><div class="l">de los contactados volvió a agendar</div><div class="sub">33 pacientes</div></div>
+    <div class="card metric"><div class="n">$420k</div><div class="l">ingreso real atribuido a la caja</div><div class="sub">verificado, no estimado</div></div>
+    <div class="card metric"><div class="n">3×</div><div class="l">los frescos reenganchan vs los fríos</div><div class="sub">28% vs 9%</div></div>
+  </div>
+  <div class="honest" style="margin-top:20px">
+    <h3>Por qué confiar en estos números</h3>
+    <p>Estos son los números <b>corregidos</b>. En el camino, el sistema mostró primero una cifra inflada
+       (sumaba un "valor esperado" por cada mensaje, aunque el paciente no volviera). Al cruzarla contra la caja
+       real de Medilink —el mismo método con que se mide la publicidad— quedó el dato verdadero: ~$420.000 de
+       ingreso, de pacientes que <b>efectivamente pagaron</b> después del mensaje. Un sistema serio se mide
+       contra la fuente de la verdad, no contra lo que él mismo se cuenta. Esa honestidad es la que lo hace
+       confiable para tomar decisiones de plata.</p>
+  </div>
+</div></section>
+
+<!-- SEGURIDAD -->
+<section id="seguro"><div class="wrap">
+  <div class="eyebrow">08 · Por qué es seguro</div>
+  <h2>Cada cosa nace apagada, se prueba, y es reversible.</h2>
+  <p class="lead">El mismo principio en todo: <b class="hl">construir → bloquear → medir con datos reales →
+     activar con red</b>. Nunca a ciegas.</p>
+  <div class="steps">
+    <div class="step"><div class="b">🔒</div><h3>Nace apagado</h3><p>Todo agente arranca en pausa. No hace nada hasta que tú lo enciendes.</p></div>
+    <div class="step"><div class="b">👁️</div><h3>Modo ensayo</h3><p>Ves exactamente qué haría —a quién y qué le escribiría— antes de que lo haga.</p></div>
+    <div class="step"><div class="b">📏</div><h3>Se mide</h3><p>Cada acción queda registrada con su costo y su resultado real.</p></div>
+    <div class="step"><div class="b">↩️</div><h3>Reversible</h3><p>Si algo sale mal, vuelve solo al estado bueno. Tú apruebas; tú apagas.</p></div>
+  </div>
+  <div class="callout" style="margin-top:26px"><p>🚧 <b>Y hay pisos que la máquina nunca cruza:</b> jamás decide nada clínico,
+     nunca contacta sin consentimiento, nunca gasta más allá de los límites que tú pones, y a cada paciente le
+     respeta un "presupuesto de contacto" para no saturarlo entre todos los canales.
+     <b>La autonomía vive dentro de una jaula que tú diseñas.</b></p></div>
+</div></section>
+
+<!-- VISIÓN -->
+<section id="vision"><div class="wrap">
+  <div class="band">
+    <div class="eyebrow" style="color:var(--aqua-l)">09 · La visión</div>
+    <h2>Un cerebro. Muchos negocios.</h2>
+    <p>Lo más valioso no es que opere un centro médico. Es que el <b>mismo cerebro</b> sirve a cualquier
+       negocio — solo cambian los sensores (de dónde lee) y las reglas (qué le permites). Para sumar un negocio
+       nuevo no se construye todo otra vez: se conecta su caja, se definen sus límites, y se encienden los
+       agentes que apliquen. Construyes el sistema una vez; lo enciendes en muchos lados.</p>
+    <div class="biz">
+      <span><b>●</b> Centro Médico</span>
+      <span><b>●</b> Clínica Dental</span>
+      <span><b>●</b> Farmacia</span>
+      <span><b>●</b> Supermercado</span>
+      <span><b>●</b> Taller automotriz</span>
+      <span><b>●</b> Transporte / buses</span>
+      <span><b>●</b> + el tuyo</span>
+    </div>
+  </div>
+</div></section>
+
+<!-- CIERRE -->
+<section style="border:none"><div class="wrap" style="padding-top:14px">
+  <p class="quote">Una empresa que se opera casi sola, donde la persona deja de apagar incendios y pasa a
+     <em>decidir el rumbo</em> — con un sistema que le muestra la verdad y ejecuta lo que aprueba.</p>
+</div></section>
+
+<footer>
+  <b style="color:var(--navy)">ALMA</b> · capa agéntica · Adkun Tech (ex Ánima) · OLACORE<br>
+  Construido y operando sobre datos reales · Cifras verificadas contra la caja de Medilink · 2026<br>
+  Hecho con cariño y con disciplina.
+</footer>
+
+</body>
+</html>

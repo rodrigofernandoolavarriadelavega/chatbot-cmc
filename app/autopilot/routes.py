@@ -560,6 +560,19 @@ def impact_pnl(days: int = Query(90), token: str | None = Query(None), request: 
     return JSONResponse(impact.pnl(days=max(1, min(int(days), 365))))
 
 
+_CAPA_AGENTICA = Path(__file__).parent.parent.parent / "templates" / "dashboard_capa_agentica.html"
+
+
+@router.get("/dashboardcapaagentica", response_class=HTMLResponse)
+def dashboard_capa_agentica():
+    """Presentación PÚBLICA de la capa agéntica Alma (sin token) — para mostrar y
+    pitch a otros negocios. noindex en el HTML para no indexarse en Google."""
+    try:
+        return HTMLResponse(_CAPA_AGENTICA.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        raise HTTPException(404, "No disponible")
+
+
 @router.get("/autopilot/api/winback/report")
 def winback_report_ep(days: int = Query(120), token: str | None = Query(None), request: Request = None):
     """Win-back día por día: a quién se envió, si agendó/pagó, e INGRESO REAL (caja
