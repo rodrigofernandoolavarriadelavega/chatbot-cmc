@@ -59,6 +59,11 @@ def _row(channel, actions, bookings, revenue, cost, method, note=""):
 # Canales
 # ─────────────────────────────────────────────────────────────────────────────
 def _winback(days: int) -> dict | None:
+    """Win-back REAL. OJO: winback_envios.value_clp es valor ESPERADO por envío
+    (se estampa salga o no cita) → NO es ingreso. El ingreso real se cruza contra la
+    caja: cita_atribuida_id → fact_atenciones → fact_ingresos.monto_neto. Si no calza
+    (citas futuras/no atendidas o IDs que no matchean), el ingreso verificado es $0 —
+    y así se reporta, sin inventar."""
     bi_conn = _bi()
     if not bi_conn:
         return None
@@ -68,20 +73,33 @@ def _winback(days: int) -> dict | None:
             cur.execute("""
                 SELECT COUNT(*) AS env,
                        SUM(CASE WHEN agendo_at IS NOT NULL OR cita_atribuida_id IS NOT NULL
-                                THEN 1 ELSE 0 END) AS ag,
-                       COALESCE(SUM(value_clp), 0) AS val
+                                THEN 1 ELSE 0 END) AS ag
                 FROM bi.winback_envios
                 WHERE enviado_at >= CURRENT_DATE - (%s * INTERVAL '1 day')
             """, (days,))
-            env, ag, val = cur.fetchone()
+            env, ag = cur.fetchone()
+            # ingreso REAL verificado en caja (no value_clp)
+            cur.execute("""
+                SELECT COALESCE(SUM(f.monto_neto), 0)
+                FROM bi.winback_envios w
+                JOIN bi.fact_atenciones a ON a.cita_id = w.cita_atribuida_id
+                JOIN bi.fact_ingresos   f ON f.atencion_id = a.atencion_id
+                WHERE w.cita_atribuida_id IS NOT NULL
+                  AND w.enviado_at >= CURRENT_DATE - (%s * INTERVAL '1 day')
+            """, (days,))
+            real = cur.fetchone()[0] or 0
     except Exception as e:  # noqa: BLE001
         log.warning("impact winback: %s", e)
         return None
     env = env or 0
+    ag = ag or 0
     cost = env * WA_MSG_COST_CLP
-    return _row("Win-back (WhatsApp)", env, ag or 0, val or 0, cost,
-                method="bi.winback_envios · value_clp atribuido",
-                note=f"costo estimado {env}×${WA_MSG_COST_CLP} por template.")
+    note = f"{ag} agendaron (15%). Ingreso = caja real atribuida (no value_clp esperado)."
+    if real == 0 and ag > 0:
+        note = (f"{ag} agendaron PERO $0 verificado en caja: las citas no calzan con "
+                f"atenciones pagadas (futuras/no atendidas o IDs bot≠BI). Atribución a revisar.")
+    return _row("Win-back (WhatsApp)", env, ag, real, cost,
+                method="bi.winback_envios → fact_ingresos (caja real)", note=note)
 
 
 def _email(days: int) -> dict | None:
