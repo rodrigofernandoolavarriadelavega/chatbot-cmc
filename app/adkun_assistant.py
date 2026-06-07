@@ -30,6 +30,7 @@ def _menu() -> str:
         "• *director* — qué conviene prender/apagar + agentes nuevos\n"
         "• *ads* — rendimiento del Autopilot de publicidad\n"
         "• *reglas* — políticas mal calibradas (Optimizador)\n\n"
+        "🔀 *modos* — cambiar a modo CMC o paciente\n"
         "_Todo es lectura: te informo, tú decides en la Sala de Máquinas._"
     )
 
@@ -141,7 +142,7 @@ _ROUTES = [
 
 
 def respond(text: str) -> str:
-    """Devuelve la respuesta del asistente Adkun para el texto del dueño."""
+    """Despacha un reporte del modo ADKUN para el texto del dueño."""
     t = (text or "").strip().lower()
     if not t:
         return _menu()
@@ -153,3 +154,155 @@ def respond(text: str) -> str:
                 log.error("adkun_assistant %s: %s", fn.__name__, e)
                 return "Tuve un problema generando ese reporte 🙏. Probá *menu*."
     return ("No te entendí 🤔. " + _menu())
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SWITCHER DE 3 MODOS — paciente / asistente CMC / asistente Adkun, en un número
+# ═════════════════════════════════════════════════════════════════════════════
+_VALID_MODES = ("adkun", "cmc", "paciente")
+
+
+def _mode_table(conn) -> None:
+    conn.execute("""CREATE TABLE IF NOT EXISTS owner_assistant_mode (
+        phone TEXT PRIMARY KEY, mode TEXT, updated_at TEXT DEFAULT (datetime('now')))""")
+
+
+def get_mode(phone: str) -> str:
+    try:
+        from session import _conn
+        with _conn() as c:
+            _mode_table(c)
+            r = c.execute("SELECT mode FROM owner_assistant_mode WHERE phone=?", (phone,)).fetchone()
+        return r["mode"] if r and r["mode"] in _VALID_MODES else "adkun"
+    except Exception:  # noqa: BLE001
+        return "adkun"
+
+
+def set_mode(phone: str, mode: str) -> None:
+    if mode not in _VALID_MODES:
+        return
+    try:
+        from session import _conn
+        with _conn() as c:
+            _mode_table(c)
+            c.execute("""INSERT INTO owner_assistant_mode (phone, mode, updated_at)
+                VALUES (?,?,datetime('now')) ON CONFLICT(phone) DO UPDATE SET
+                mode=excluded.mode, updated_at=datetime('now')""", (phone, mode))
+            c.commit()
+    except Exception as e:  # noqa: BLE001
+        log.warning("set_mode: %s", e)
+
+
+def _modes_menu() -> str:
+    return (
+        "🔀 *Tus 3 modos* (escribe la palabra para cambiar):\n\n"
+        "🧠 *adkun* — la capa agéntica (P&L, win-back, Director)\n"
+        "🏥 *cmc* — operación de la clínica (agenda, demanda, actividad)\n"
+        "🧪 *paciente* — usar el bot como un paciente normal (para probar)\n\n"
+        "_Estás en un solo número; cambias de sombrero con una palabra._"
+    )
+
+
+# ── Modo CMC: operación de la clínica (data real de sessions.db) ──────────────
+def _cmc_menu() -> str:
+    return ("🏥 *Asistente CMC* — la clínica\n\nEscríbeme:\n"
+            "• *agenda* — citas que agendó el bot (hoy/semana)\n"
+            "• *demanda* — qué piden y no tenemos\n"
+            "• *actividad* — conversaciones y registros\n\n"
+            "_Cambia de modo: *adkun* · *paciente* · *modos*_")
+
+
+def _cmc_agenda() -> str:
+    try:
+        from session import _conn
+        with _conn() as c:
+            hoy = c.execute("SELECT COUNT(*) n FROM citas_bot WHERE date(created_at)=date('now')").fetchone()["n"]
+            sem = c.execute("SELECT COUNT(*) n FROM citas_bot WHERE created_at>=datetime('now','-7 days')").fetchone()["n"]
+            rows = c.execute("""SELECT especialidad, COUNT(*) n FROM citas_bot
+                WHERE created_at>=datetime('now','-7 days') GROUP BY especialidad
+                ORDER BY n DESC LIMIT 6""").fetchall()
+    except Exception as e:  # noqa: BLE001
+        return f"No pude leer la agenda 🙏 ({e})"
+    out = [f"📅 *Agenda (bot)*\n", f"• Hoy: *{hoy}* citas", f"• Últimos 7 días: *{sem}*"]
+    if rows:
+        out.append("\nPor especialidad (7 días):")
+        for r in rows:
+            out.append(f"  • {r['especialidad'] or '—'}: {r['n']}")
+    return "\n".join(out)
+
+
+def _cmc_demanda() -> str:
+    try:
+        from session import _conn
+        with _conn() as c:
+            rows = c.execute("""SELECT especialidad, COUNT(*) n FROM demanda
+                WHERE created_at>=datetime('now','-30 days')
+                GROUP BY especialidad ORDER BY n DESC LIMIT 8""").fetchall()
+    except Exception as e:  # noqa: BLE001
+        return f"No pude leer la demanda 🙏 ({e})"
+    if not rows:
+        return "🔎 *Demanda*: sin registros de demanda no satisfecha en 30 días."
+    out = ["🔎 *Demanda no satisfecha (30 días)*\n"]
+    for r in rows:
+        out.append(f"• {r['especialidad'] or '—'}: *{r['n']}*")
+    out.append("\n_Lo que piden y no ofrecemos = pistas para contratar/agregar._")
+    return "\n".join(out)
+
+
+def _cmc_actividad() -> str:
+    try:
+        from session import _conn
+        with _conn() as c:
+            convs = c.execute("SELECT COUNT(DISTINCT phone) n FROM messages WHERE date(timestamp)=date('now')").fetchone()["n"]
+            regs = c.execute("""SELECT COUNT(*) n FROM contact_profiles
+                WHERE date(updated_at)>=date('now','-7 days')""").fetchone()["n"]
+    except Exception as e:  # noqa: BLE001
+        return f"No pude leer la actividad 🙏 ({e})"
+    return (f"📈 *Actividad*\n\n• Conversaciones hoy: *{convs}*\n"
+            f"• Perfiles actualizados (7 días): *{regs}*")
+
+
+_CMC_ROUTES = [
+    (("menu", "menú", "hola", "ayuda", "inicio"), _cmc_menu),
+    (("agenda", "cita", "hora"), _cmc_agenda),
+    (("demanda", "piden", "falta"), _cmc_demanda),
+    (("actividad", "conversa", "registro", "movimiento"), _cmc_actividad),
+]
+
+
+def _cmc_dispatch(t: str) -> str:
+    for keys, fn in _CMC_ROUTES:
+        if any(k in t for k in keys):
+            try:
+                return fn()
+            except Exception as e:  # noqa: BLE001
+                log.error("cmc %s: %s", fn.__name__, e)
+                return "Problema con ese reporte 🙏. Probá *menu*."
+    return "No te entendí 🤔.\n\n" + _cmc_menu()
+
+
+def route(phone: str, text: str) -> tuple[bool, str | None]:
+    """Router maestro del dueño. Devuelve (handled, reply):
+      handled=True  → respondemos nosotros (modo adkun o cmc, o cambio de modo).
+      handled=False → caer al flujo de PACIENTE normal (modo paciente).
+    Los comandos de modo se atienden SIEMPRE (aun en modo paciente, para poder volver)."""
+    t = (text or "").strip().lower()
+
+    # Comandos de cambio de modo (prioridad máxima)
+    if t in ("adkun", "modo adkun"):
+        set_mode(phone, "adkun"); return True, "🧠 *Modo Adkun.*\n\n" + _menu()
+    if t in ("cmc", "modo cmc", "centro", "clinica", "clínica"):
+        set_mode(phone, "cmc"); return True, _cmc_menu()
+    if t in ("paciente", "modo paciente", "probar bot"):
+        set_mode(phone, "paciente")
+        return True, ("🧪 *Modo paciente activado.* Ahora el bot te atiende como un paciente "
+                      "normal (para probarlo). Escribe *adkun*, *cmc* o *modos* para volver.")
+    if t in ("modos", "cambiar modo", "menu principal", "switch"):
+        return True, _modes_menu()
+
+    mode = get_mode(phone)
+    if mode == "paciente":
+        return False, None            # cae al flujo de pacientes
+    if mode == "cmc":
+        return True, _cmc_dispatch(t)
+    return True, respond(text)        # modo adkun (default)

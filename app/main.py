@@ -8880,14 +8880,16 @@ async def webhook(request: Request):
             # de pacientes. READ-ONLY. Gateado: otro número sigue el flujo normal.
             if ADKUN_ASSISTANT_ACTIVE and phone in ADKUN_ASSISTANT_PHONES:
                 try:
-                    from adkun_assistant import respond as _adkun_respond
-                    _adk_reply = _adkun_respond(texto)
+                    from adkun_assistant import route as _adkun_route
+                    _handled, _adk_reply = _adkun_route(phone, texto)
                 except Exception as _eadk:
                     log.error("Asistente Adkun error from=%s: %s", phone, _eadk)
-                    _adk_reply = "Tuve un problema con el asistente Adkun 🙏. Probá *menu*."
-                await send_whatsapp(phone, _adk_reply)
-                log_message(phone, "out", _adk_reply[:600], "ADKUN", canal="whatsapp")
-                return Response(status_code=200)
+                    _handled, _adk_reply = True, "Tuve un problema con el asistente Adkun 🙏. Probá *menu*."
+                if _handled:
+                    await send_whatsapp(phone, _adk_reply or "Probá *menu*.")
+                    log_message(phone, "out", (_adk_reply or "")[:600], "ADKUN", canal="whatsapp")
+                    return Response(status_code=200)
+                # modo paciente: cae al flujo clínico normal (no interrumpe)
 
             # autocapture_profile: solo corre fuera de HUMAN_TAKEOVER para evitar
             # capturar texto dictado por el operador como si fuera datos del paciente.
