@@ -674,9 +674,9 @@ body.embed .flow{padding-top:18px}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
                     <span id="cf-pay">El pago se realiza en el centro al momento de la atención.</span>
                   </div>
-                  <label class="consent" id="consent" onclick="toggleConsent()">
+                  <label class="consent" id="consent">
                     <span class="cb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                    <input type="checkbox" id="consent-cb" class="sr-only">
+                    <input type="checkbox" id="consent-cb" class="sr-only" onchange="toggleConsent()">
                     <span class="ct"><b>Autorizo</b> el tratamiento de mis datos personales para la gestión de esta atención y el envío de recordatorios, conforme a la <b>Ley 21.719</b> de protección de datos personales.</span>
                   </label>
                   <button class="btn btn-accent btn-block" id="confirm-btn" disabled onclick="confirmReserva()">
@@ -1398,9 +1398,9 @@ function fillConfirm(){
     : 'El pago se realiza en el centro al momento de la atención.';
 }
 function toggleConsent(){
-  S.consent=!S.consent;
+  // El checkbox nativo es la única fuente de verdad (evita el doble-toggle del label).
+  S.consent=document.getElementById('consent-cb').checked;
   document.getElementById('consent').classList.toggle('checked',S.consent);
-  document.getElementById('consent-cb').checked=S.consent;
   document.getElementById('confirm-btn').disabled=!S.consent;
 }
 let reserving=false;
