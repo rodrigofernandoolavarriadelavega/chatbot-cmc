@@ -1525,7 +1525,7 @@ document.getElementById('tabs').addEventListener('click',e=>{
 
 /* ── Pestaña Win-back (recuperación + ingreso real por número) ── */
 let WB_LOADED=false;
-const clp=n=>'$'+(n||0).toLocaleString('es-CL');
+// (reusa la función clp() ya declarada arriba — evita 'clp already declared')
 document.getElementById('tabs').addEventListener('click',e=>{
   const b=e.target.closest('.tab'); if(!b)return;
   const v=b.dataset.view;
