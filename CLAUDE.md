@@ -80,13 +80,29 @@ ngrok http 8001
 
 SSH ahora es **solo por llave pública** (Ed25519 en `~/.ssh/id_ed25519`, password deshabilitado el 2026-04-10). Conexión directa con `ssh root@157.245.13.107`.
 
-### Deploy con systemd (recomendado)
+### Deploy — usar SIEMPRE `scripts/deploy.sh` (único camino sancionado)
+```bash
+bash scripts/deploy.sh
+```
+El script tiene 4 guardas y auto-rollback: **G1** aborta si el árbol de prod está
+sucio (no borra trabajo sin commitear), **G2** aborta si prod divergió de origin/main
+(exige reconciliar, no forzar pull), **G3** deep-import antes de reiniciar (el
+`ast.parse` NO ve un `NameError` de import faltante — ya tumbó el bot 3 min una vez),
+**G4** verifica `/health` 200 + servicio active y hace **rollback automático** si no.
+
+> ⚠️ **REGLA DE ORO (incidente 2026-06-07):** el VPS es DESTINO de deploy, **nunca**
+> de edición. Jamás `git commit` ni editar archivos directo en `/opt/chatbot-cmc`.
+> Todo cambio nace en local → `git push` → `scripts/deploy.sh`. Editar en el server
+> dejó prod 21 commits atrás + ~20 archivos sin commitear que un pull habría borrado.
+> Ver memory `cmc_prod_divergencia_2026_06_07`.
+
+**Deploy manual (solo emergencia, conociendo los riesgos de arriba):**
 ```bash
 git push origin main
-ssh root@157.245.13.107 "cd /opt/chatbot-cmc && git pull && systemctl restart chatbot-cmc"
+ssh root@157.245.13.107 "cd /opt/chatbot-cmc && git pull --ff-only && systemctl restart chatbot-cmc"
 ```
 
-**Verificación post-deploy**:
+**Verificación post-deploy** (el script ya la hace; manual):
 ```bash
 curl -s -o /dev/null -w 'HTTP %{http_code}\n' https://agentecmc.cl/health   # → 200
 ssh root@157.245.13.107 "systemctl is-active chatbot-cmc"                    # → active
