@@ -90,7 +90,8 @@ async def resumen(token: str | None = Query(None), cmc_session: str | None = Coo
         kpis["ingresos"] = ing_p
         kpis["egresos"] = egr_p
         kpis["neto"] = ing_p - egr_p
-        kpis["pacientes_activos"] = _q1(conn, "SELECT COUNT(DISTINCT rut) FROM pagos_cmc WHERE fecha BETWEEN ? AND ? AND rut!=''", (desde, hasta))
+        # cuenta por RUT cuando existe, si no por nombre (los históricos importados no traen RUT)
+        kpis["pacientes_activos"] = _q1(conn, "SELECT COUNT(DISTINCT COALESCE(NULLIF(rut,''), paciente_nombre)) FROM pagos_cmc WHERE fecha BETWEEN ? AND ? AND COALESCE(NULLIF(rut,''), paciente_nombre)!=''", (desde, hasta))
         kpis["pagos"] = _q1(conn, "SELECT COUNT(*) FROM pagos_cmc WHERE fecha BETWEEN ? AND ?", (desde, hasta))
         kpis["citas_bot"] = _q1(conn, "SELECT COUNT(*) FROM citas_bot WHERE fecha BETWEEN ? AND ?", (desde, hasta))
 
