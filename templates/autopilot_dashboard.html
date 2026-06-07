@@ -2315,17 +2315,31 @@ function renderHeatmap(cov){
   const color=p=>{ // prioridad 1-25 → escala aqua→navy
     if(p>=20)return '#0F3F68'; if(p>=15)return '#1172AB'; if(p>=10)return '#4FBECE'; if(p>=6)return '#9bd4de'; return '#d7eaef';
   };
+  const hasAxes=esp.some(e=>e.volumen!=null&&e.intencion_seo!=null);
   let html='<table><thead><tr><th class="rowh">Especialidad ╲ Comuna</th>'+
-    com.map(c=>`<th title="${esc(c.nombre)} · concentración ${c.concentracion}">${esc(c.nombre.slice(0,9))}</th>`).join('')+'</tr></thead><tbody>';
+    com.map(c=>`<th title="${esc(c.nombre)} · concentración de pacientes ${c.concentracion}/5">${esc(c.nombre.slice(0,9))}</th>`).join('')+'</tr></thead><tbody>';
   esp.forEach(e=>{
-    html+=`<tr><td class="rowlbl" title="demanda ${e.demanda}">${esc(e.nombre)}</td>`;
+    const dem=e.demanda, axes=(e.volumen!=null&&e.intencion_seo!=null);
+    const rowTitle=axes
+      ? `demanda SEO ${dem}/5  =  (volumen ${e.volumen} + 2×intención ${e.intencion_seo}) ÷ 3\nvolumen = citas reales · intención = valor de la búsqueda para clínica privada`
+      : `demanda ${dem}/5`;
+    const badge=axes
+      ? ` <span style="font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.3px">V${e.volumen}·I${e.intencion_seo}</span>`
+      : '';
+    html+=`<tr><td class="rowlbl" title="${esc(rowTitle)}">${esc(e.nombre)}${badge}</td>`;
     com.forEach(c=>{
-      const pr=e.demanda*c.concentracion;
-      html+=`<td><div class="cell" style="background:${color(pr)}" title="${esc(e.nombre)} en ${esc(c.nombre)} · prioridad ${pr}/25">${pr}</div></td>`;
+      const pr=dem*c.concentracion;
+      const cellTitle=axes
+        ? `${e.nombre} en ${c.nombre} · prioridad ${pr}/25\ndemanda ${dem} (vol ${e.volumen}·int ${e.intencion_seo}) × concentración ${c.concentracion}`
+        : `${e.nombre} en ${c.nombre} · prioridad ${pr}/25`;
+      html+=`<td><div class="cell" style="background:${color(pr)}" title="${esc(cellTitle)}">${pr}</div></td>`;
     });
     html+='</tr>';
   });
   html+='</tbody></table>';
+  if(hasAxes){
+    html+=`<p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.55">Cada celda = <b>demanda SEO</b> × <b>concentración de pacientes</b>. La demanda SEO mezcla el <b>volumen</b> de citas reales con la <b>intención</b> comercial de la búsqueda (peso 1:2) — por eso medicina general, mucho volumen pero baja intención, no encabeza. <span style="opacity:.8">V·I junto a cada especialidad = volumen·intención.</span></p>`;
+  }
   document.getElementById('seoCoverage').innerHTML=html;
 }
 
