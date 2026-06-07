@@ -94,19 +94,25 @@ fi
 
 echo "→ restart…"
 systemctl restart chatbot-cmc
-sleep 4
 
-# G4 — health + auto-rollback.
+# G4 — health + auto-rollback. PACIENTE: el app tarda en bootear (templates + pool BI),
+# así que reintentamos /health hasta ~36s antes de declarar fracaso (evita falsos
+# negativos por timing que dispararían un rollback innecesario).
+HC=""
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  sleep 3
+  HC="$(curl -s -o /dev/null -w '%{http_code}' --max-time 12 "$HEALTH_URL" || true)"
+  [ "$HC" = "200" ] && break
+done
 ACT="$(systemctl is-active chatbot-cmc || true)"
-HC="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$HEALTH_URL" || true)"
 if [ "$ACT" = "active" ] && [ "$HC" = "200" ]; then
   echo "DEPLOY OK: prod en $(git rev-parse --short HEAD) · servicio=$ACT · health=$HC"
 else
   echo "ABORT (G4): post-deploy NO sano (servicio=$ACT health=$HC) → AUTO-ROLLBACK."
   git reset --hard "$OLD" --quiet
   systemctl restart chatbot-cmc
-  sleep 3
-  HC2="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$HEALTH_URL" || true)"
+  HC2=""
+  for i in 1 2 3 4 5 6 7 8; do sleep 3; HC2="$(curl -s -o /dev/null -w '%{http_code}' --max-time 12 "$HEALTH_URL" || true)"; [ "$HC2" = "200" ] && break; done
   echo "Rollback a $(git rev-parse --short HEAD) · health=$HC2"
   exit 5
 fi
