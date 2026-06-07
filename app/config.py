@@ -231,6 +231,17 @@ if MEULEN_ASSISTANT_ENABLED and not MEULEN_ASSISTANT_ACTIVE:
         "META_APP_SECRET (firma webhook) + URL https/localhost. Revisa el .env."
     )
 
+# ── Asistente Adkun (dueño) ──────────────────────────────────────────────────
+# Si el DUEÑO escribe desde un número de ADKUN_ASSISTANT_PHONES, recibe reportes de
+# la capa agéntica (P&L, win-back, Director, Autopilot, Optimizador) por WhatsApp en
+# vez del flujo de pacientes. READ-ONLY: informa, no ejecuta. OFF por defecto; cualquier
+# otro número sigue el flujo clínico normal (gate por número, fail-safe).
+ADKUN_ASSISTANT_ENABLED = os.getenv("ADKUN_ASSISTANT_ENABLED", "false").lower() in ("true", "1", "yes")
+ADKUN_ASSISTANT_PHONES: set[str] = {
+    p.strip().lstrip("+") for p in os.getenv("ADKUN_ASSISTANT_PHONES", "").split(",") if p.strip()
+}
+ADKUN_ASSISTANT_ACTIVE = ADKUN_ASSISTANT_ENABLED and bool(ADKUN_ASSISTANT_PHONES)
+
 # Mensajes proactivos: usar Message Templates aprobados por Meta (fuera de ventana 24h).
 # Poner en True SOLO cuando los templates estén aprobados en Meta Business Manager.
 USE_TEMPLATES = os.getenv("USE_TEMPLATES", "false").lower() in ("true", "1", "yes")

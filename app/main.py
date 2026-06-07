@@ -26,7 +26,8 @@ from config import (META_VERIFY_TOKEN, CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_TO
                     MEDILINK_TOKEN, META_AD_ACCOUNT_ID as _CFG_META_ACCOUNT_ID,
                     ASISTENTE_EXAMENES_ENABLED, STAFF_PHONES,
                     MEULEN_ASSISTANT_ACTIVE, MEULEN_ASSISTANT_PHONES,
-                    MEULEN_ASSISTANT_URL, MEULEN_ASSISTANT_SECRET)
+                    MEULEN_ASSISTANT_URL, MEULEN_ASSISTANT_SECRET,
+                    ADKUN_ASSISTANT_ACTIVE, ADKUN_ASSISTANT_PHONES)
 from flows import handle_message
 from messaging import (send_whatsapp, send_whatsapp_interactive,
                        send_whatsapp_location,
@@ -8871,6 +8872,21 @@ async def webhook(request: Request):
                     _mln_reply = "No te entendí 😅 ¿me lo repetís?"
                 await send_whatsapp(phone, _mln_reply)
                 log_message(phone, "out", _mln_reply[:600], "MEULEN", canal="whatsapp")
+                return Response(status_code=200)
+
+            # ── Asistente Adkun (dueño): capa agéntica por WhatsApp ──────────
+            # Si escribe el dueño desde un número autorizado, recibe reportes
+            # (P&L, win-back, Director, Autopilot, Optimizador) en vez del flujo
+            # de pacientes. READ-ONLY. Gateado: otro número sigue el flujo normal.
+            if ADKUN_ASSISTANT_ACTIVE and phone in ADKUN_ASSISTANT_PHONES:
+                try:
+                    from adkun_assistant import respond as _adkun_respond
+                    _adk_reply = _adkun_respond(texto)
+                except Exception as _eadk:
+                    log.error("Asistente Adkun error from=%s: %s", phone, _eadk)
+                    _adk_reply = "Tuve un problema con el asistente Adkun 🙏. Probá *menu*."
+                await send_whatsapp(phone, _adk_reply)
+                log_message(phone, "out", _adk_reply[:600], "ADKUN", canal="whatsapp")
                 return Response(status_code=200)
 
             # autocapture_profile: solo corre fuera de HUMAN_TAKEOVER para evitar
