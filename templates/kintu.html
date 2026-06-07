@@ -86,6 +86,14 @@ h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
 .chrow .badge{margin-left:auto;font-size:11px;font-weight:700;padding:4px 11px;border-radius:var(--pill)}
 .chrow .ok{background:#e7f7ef;color:#198a5a}.chrow .pend{background:#fdf4e3;color:#b07d18}
 .muted-s{color:var(--muted);font-weight:400;font-size:12px}
+.daterange{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:2px 0 24px}
+.segbar{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:var(--pill);padding:4px;box-shadow:var(--sh-xs)}
+.segbar button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);padding:7px 16px;border-radius:var(--pill);cursor:pointer;transition:.15s var(--ease)}
+.segbar button:hover{color:var(--ink)}
+.segbar button.on{background:var(--grad-navy);color:#fff;box-shadow:var(--sh-sm)}
+.rangelbl{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);font-weight:500}
+.rangelbl svg{width:15px;height:15px;stroke:var(--cobre);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.rangelbl b{color:var(--ink);font-family:var(--fm);font-weight:700}
 .grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start;margin-top:6px}
 @media(max-width:900px){.grid2{grid-template-columns:1fr}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--sh-sm);overflow:hidden}
@@ -168,11 +176,20 @@ h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
       <div class="panel" id="p-resumen">
         <span class="eyebrow">Kintu Global</span>
         <h2>El pulso de tu <em>crecimiento</em>.</h2>
-        <p class="lead">Lo que el motor ve hoy: CAC real por canal, los anuncios que más rinden y las decisiones que esperan tu OK — de todas tus marcas.</p>
+        <p class="lead">Lo que el motor ve en el período elegido: CAC real por canal, los anuncios que más rinden y las decisiones que esperan tu OK — de todas tus marcas.</p>
+        <div class="daterange">
+          <div class="segbar" id="segWin">
+            <button data-w="7">7 días</button>
+            <button data-w="14">14 días</button>
+            <button data-w="30" class="on">30 días</button>
+            <button data-w="90">90 días</button>
+          </div>
+          <span class="rangelbl"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><b id="rangeLbl">—</b></span>
+        </div>
         <div class="kpis" id="kResumen"><div class="kpi"><div class="l">Cargando…</div></div></div>
         <div class="grid2">
           <div>
-            <div class="sec-h">🏆 Mejores anuncios por CAC real <span class="muted-s">· 30 días</span></div>
+            <div class="sec-h">🏆 Mejores anuncios por CAC real <span class="muted-s" id="kAdsWin">· 30 días</span></div>
             <div class="card" id="kAds"><div class="empty">Cargando…</div></div>
           </div>
           <div>
@@ -244,18 +261,32 @@ function show(m){
 const fmt=n=>'$'+Math.round(n||0).toLocaleString('es-CL');
 const short=(s,n)=>{s=(s||'').replace(/^Publicación:\s*/,'').replace(/["“”]/g,'');return s.length>n?s.slice(0,n-1)+'…':s;};
 const ABMAP={pause:['pause','Pausar'],decrease_budget:['down','Bajar'],increase_budget:['up','Subir'],keep:['keep','Mantener']};
-(async()=>{
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function rangeLabel(win){
+  const to=new Date(); const from=new Date(); from.setDate(from.getDate()-(win-1));
+  const f=d=>d.getDate()+' '+MES[d.getMonth()];
+  return f(from)+' – '+f(to);
+}
+let curWin=30, resumenSeq=0;
+async function loadResumen(win){
+  curWin=win; const seq=++resumenSeq;          // guarda contra respuestas fuera de orden
+  document.querySelectorAll('#segWin button').forEach(b=>b.classList.toggle('on',+b.dataset.w===win));
+  document.getElementById('rangeLbl').textContent=rangeLabel(win);
+  document.getElementById('kAdsWin').textContent='· '+win+' días';
+  document.getElementById('kResumen').innerHTML='<div class="kpi"><div class="l">Cargando…</div></div>';
+  document.getElementById('kAds').innerHTML='<div class="empty">Cargando…</div>';
   try{
     const [cac,ten,pend]=await Promise.all([
-      fetch('/autopilot/api/cac-local?window=30&token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({})),
+      fetch('/autopilot/api/cac-local?window='+win+'&token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({})),
       fetch('/autopilot/api/tenants?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({tenants:[]})),
       fetch('/autopilot/api/pending?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({pending:[]})),
     ]);
+    if(seq!==resumenSeq)return;                 // llegó tarde: el usuario ya cambió de período
     const pendientes=(pend.pending||[]);
     document.getElementById('kResumen').innerHTML=`
-      <div class="kpi"><div class="l">CAC real prom · 30d</div><div class="v">${cac.cac_promedio?fmt(cac.cac_promedio):'—'}</div><div class="s">${cac.modo_atendido||'—'}</div></div>
+      <div class="kpi"><div class="l">CAC real prom · ${win}d</div><div class="v">${cac.cac_promedio?fmt(cac.cac_promedio):'—'}</div><div class="s">${cac.modo_atendido||'—'}</div></div>
       <div class="kpi"><div class="l">Pacientes atendidos</div><div class="v">${cac.total_atendidos??'—'}</div><div class="s">atribuidos a ads</div></div>
-      <div class="kpi"><div class="l">Gasto · 30d</div><div class="v">${cac.total_spend?fmt(cac.total_spend):'—'}</div><div class="s">Meta Ads</div></div>
+      <div class="kpi"><div class="l">Gasto · ${win}d</div><div class="v">${cac.total_spend?fmt(cac.total_spend):'—'}</div><div class="s">Meta Ads</div></div>
       <div class="kpi"><div class="l">Decisiones pendientes</div><div class="v">${pendientes.length}</div><div class="s">esperan tu OK</div></div>
       <div class="kpi"><div class="l">Marcas</div><div class="v">${(ten.tenants||[]).length}</div><div class="s">${(ten.tenants||[]).filter(t=>t.active).length} activa(s)</div></div>`;
     // Ranking de anuncios por CAC real
@@ -265,7 +296,7 @@ const ABMAP={pause:['pause','Pausar'],decrease_budget:['down','Bajar'],increase_
         <div class="an"><div class="t">${short(a.ad_name||a.campaign_name,46)}</div>
           <div class="m">${a.pagaron} pagaron · ${fmt(a.spend)} gastado</div></div>
         <div class="cac">${fmt(a.cac_real)}<small>CAC/paciente</small></div></div>`).join('')
-      :'<div class="empty">Sin anuncios con CAC atribuido aún.</div>';
+      :'<div class="empty">Sin anuncios con CAC atribuido en este período.</div>';
     // Decisiones del motor
     document.getElementById('kDec').innerHTML=(pendientes.length?pendientes.slice(0,4).map(p=>{
       const ab=ABMAP[p.action]||['keep',p.action];
@@ -282,6 +313,8 @@ const ABMAP={pause:['pause','Pausar'],decrease_budget:['down','Bajar'],increase_
       </div>`).join('');
     document.getElementById('kMarcasMini').innerHTML=cards;
     document.getElementById('kMarcas').innerHTML=cards;
-  }catch(e){document.getElementById('kResumen').innerHTML='<div class="kpi"><div class="l">No se pudo cargar</div></div>';}
-})();
+  }catch(e){if(seq===resumenSeq)document.getElementById('kResumen').innerHTML='<div class="kpi"><div class="l">No se pudo cargar</div></div>';}
+}
+document.querySelectorAll('#segWin button').forEach(b=>b.onclick=()=>loadResumen(+b.dataset.w));
+loadResumen(30);
 </script></body></html>
