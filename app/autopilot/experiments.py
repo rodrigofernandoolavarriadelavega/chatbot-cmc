@@ -21,8 +21,15 @@ import hashlib
 import json
 import logging
 import math
+import os
 
 log = logging.getLogger("bot")
+
+# Interruptor maestro del modo PROSPECTIVO (asignación en vivo que afecta a quién se
+# contacta). OFF por defecto: la maquinaria existe pero NO decide nada hasta prenderlo
+# desde la Sala de Máquinas. Encenderlo = el win-back empieza a contactar pacientes
+# frescos del brazo challenger → mensajes reales. Decisión deliberada del dueño.
+EXPERIMENTS_LIVE = os.getenv("EXPERIMENTS_LIVE_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 
 
 def _conn():
@@ -107,6 +114,55 @@ def assign(exp_id: int, unit_key: str, holdout_pct: int = 50) -> str:
     h = hashlib.sha256(f"{exp_id}:{unit_key}".encode()).hexdigest()
     bucket = int(h[:8], 16) % 100
     return "challenger" if bucket < holdout_pct else "champion"
+
+
+def set_status(name: str, status: str) -> None:
+    """proposed → running → decided. Arrancar un experimento es una acción gateada."""
+    with _conn() as conn:
+        _ensure_table(conn)
+        conn.execute("UPDATE policy_experiments SET status=? WHERE name=?", (status, name))
+        conn.commit()
+
+
+def _ensure_decisions(conn) -> None:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS experiment_decisions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            experiment TEXT, unit_key TEXT, arm TEXT,
+            decided_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(experiment, unit_key)
+        )
+    """)
+
+
+def live_arm(exp_name: str, unit_key: str, holdout_pct: int = 50) -> str | None:
+    """Punto de decisión PROSPECTIVO. Devuelve 'champion'/'challenger' (estable por
+    unidad) y lo registra, SOLO si el experimento está 'running' Y EXPERIMENTS_LIVE
+    está prendido. Si no, devuelve None → el caller usa el comportamiento champion
+    (status quo). Así, cablearlo a winback es inerte hasta encender el flag.
+
+    Integración prevista (NO cableada aún, zona guard del sprint win-back):
+      en winback.get_candidatos_dia / job, para una cohorte fresca (30-60d):
+        arm = experiments.live_arm("winback_timing_30d", phone)
+        if arm == "challenger":  # solo el brazo retador se contacta fresco
+            ...incluir al candidato...
+    """
+    if not EXPERIMENTS_LIVE:
+        return None
+    with _conn() as conn:
+        _ensure_table(conn)
+        _ensure_decisions(conn)
+        exp = conn.execute(
+            "SELECT id, status, holdout_pct FROM policy_experiments WHERE name=?",
+            (exp_name,)).fetchone()
+        if not exp or exp["status"] != "running":
+            return None
+        arm = assign(exp["id"], unit_key, exp["holdout_pct"] or holdout_pct)
+        conn.execute(
+            "INSERT OR IGNORE INTO experiment_decisions (experiment, unit_key, arm) "
+            "VALUES (?,?,?)", (exp_name, unit_key, arm))
+        conn.commit()
+        return arm
 
 
 # ─────────────────────────────────────────────────────────────────────────────

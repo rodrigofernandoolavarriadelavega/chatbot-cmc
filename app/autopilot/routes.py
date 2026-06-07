@@ -551,6 +551,15 @@ def experiments_ledger(token: str | None = Query(None), request: Request = None)
     return JSONResponse(experiments.run_evaluations())
 
 
+@router.get("/autopilot/api/impact")
+def impact_pnl(days: int = Query(90), token: str | None = Query(None), request: Request = None):
+    """P&L agéntico: qué hizo la capa autónoma (win-back/email/ads) y cuánto rindió,
+    por canal + totales. READ-ONLY. Cifras = piso atribuible (no contabilidad oficial)."""
+    _check_token(token, request)
+    from . import impact
+    return JSONResponse(impact.pnl(days=max(1, min(int(days), 365))))
+
+
 # ── Publicación orgánica (segmento Instagram · Facebook · WhatsApp) ───────────
 
 @router.get("/autopilot/api/publish/status")
