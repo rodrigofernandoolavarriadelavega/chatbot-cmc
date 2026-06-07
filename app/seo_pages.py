@@ -14,13 +14,13 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from autopilot.seo_audit import ESPECIALIDADES, COMUNAS, coverage_matrix
+from autopilot.seo_audit import ESPECIALIDADES, COMUNAS, coverage_matrix, demanda_seo
 
 _DIR = Path(os.getenv("SEO_PAGES_DIR", "data/seo_generated"))
 _BASE = "https://centromedicocarampangue.cl"
 _WA = "56966610737"
 
-_ESP = {s: n for s, n, _ in ESPECIALIDADES}
+_ESP = {s: n for s, n, *_ in ESPECIALIDADES}
 _COM = {s: n for s, n, _ in COMUNAS}
 
 
@@ -231,7 +231,8 @@ def oportunidades(top_n: int = 24) -> list[dict]:
     cells = coverage_matrix().get("top_opportunities", [])
     # top_opportunities trae solo 15; reconstruimos la grilla completa ordenada.
     full = []
-    for esp_slug, esp, dem in ESPECIALIDADES:
+    for esp_slug, esp, vol, intent in ESPECIALIDADES:
+        dem = demanda_seo(vol, intent)
         for com_slug, com, conc in COMUNAS:
             full.append({"esp_slug": esp_slug, "especialidad": esp,
                          "com_slug": com_slug, "comuna": com,

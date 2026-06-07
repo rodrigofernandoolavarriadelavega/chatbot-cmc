@@ -59,44 +59,55 @@ FORBIDDEN_TRUST_WORDS = ["certificad", "habilitad", "superintendencia", "acredit
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Comunas de la Provincia de Arauco con peso de prioridad SEO.
-# concentracion = señal de demanda real de pacientes (memoria del proyecto):
-#   Carampangue (sede), Arauco y Curanilahue concentran el grueso; Lebu/Cañete
-#   aportan dental privado; el resto es cola larga. Tunear acá cambia el ranking
-#   de oportunidades. Decoplado de COMUNAS_ARAUCO (main.py) a propósito para no
-#   crear un import circular con la app.
+# concentracion (1-5) = DERIVADO de pacientes reales en data/heatmap_cache.db
+# (pacientes_heatmap, conteo 2026-06-02): Arauco 2056 · Curanilahue 313 · Los
+# Álamos 58 · Lebu/Cañete 19 · resto cola larga. Carampangue se rola a comuna
+# "Arauco" en el registro pero es la sede física + keyword de marca → 5.
+# Tunear acá cambia el ranking del mapa de oportunidad. Decoplado de
+# COMUNAS_ARAUCO (main.py) a propósito para no crear un import circular.
 # ─────────────────────────────────────────────────────────────────────────────
 COMUNAS = [
-    # slug          nombre          concentracion(1-5)
-    ("carampangue", "Carampangue",  5),
-    ("arauco",      "Arauco",       5),
-    ("curanilahue", "Curanilahue",  5),
-    ("laraquete",   "Laraquete",    3),
-    ("los-alamos",  "Los Álamos",   3),
-    ("lebu",        "Lebu",         3),
-    ("canete",      "Cañete",       2),
-    ("ramadilla",   "Ramadilla",    2),
-    ("contulmo",    "Contulmo",     1),
-    ("tirua",       "Tirúa",        1),
+    # slug          nombre          concentracion(1-5)  · pacientes reales
+    ("carampangue", "Carampangue",  5),   # sede física + marca (registro→Arauco)
+    ("arauco",      "Arauco",       5),   # 2056
+    ("curanilahue", "Curanilahue",  4),   # 313
+    ("los-alamos",  "Los Álamos",   3),   # 58
+    ("lebu",        "Lebu",         2),   # 19
+    ("canete",      "Cañete",       2),   # 19
+    ("laraquete",   "Laraquete",    2),   # cercana a la sede (8 km)
+    ("ramadilla",   "Ramadilla",    1),   # 2 · rural cercana
+    ("tirua",       "Tirúa",        1),   # 2
+    ("contulmo",    "Contulmo",     1),   # 0 registrados
 ]
 _COMUNA_NOMBRE = {s: n for s, n, _ in COMUNAS}
 
-# Especialidades con landing/blog y su demanda relativa (memoria: ecografía,
-# gastro, implantología, cardiología fueron la demanda no satisfecha top; dental
-# y ortodoncia el ingreso recurrente más fuerte).
+# Especialidades con landing/blog, priorizadas por DOS señales ortogonales:
+#   volumen (1-5)       = DERIVADO del volumen real de citas en
+#                         data/heatmap_cache.db (citas_heatmap por profesional →
+#                         especialidad, 2026-06-02): MG 2985 · Kine 817 ·
+#                         Odonto 507 · Otorrino 379 · Orto 298 · Gineco 288 ·
+#                         Trauma 173 · Nutri 161 · Eco 157 · Cardio 74 · Gastro 27.
+#   intencion_seo (1-5) = valor comercial de la búsqueda "[esp] en [comuna]" para
+#                         una clínica PRIVADA. Alto cuando el paciente decide y
+#                         compara (dentista, ortodoncia, ginecólogo, ecografía);
+#                         bajo cuando va al CESFAM por defecto (medicina general).
+# coverage_matrix() los mezcla 1:2 a favor de la intención (ver demanda_seo()).
+# Implantología: volumen ~1 (oferta restringida) pero ticket alto + demanda no
+# satisfecha (memoria) → intención 5.
 ESPECIALIDADES = [
-    # slug                    nombre                  demanda(1-5)
-    ("ecografia",             "Ecografía",            5),
-    ("ginecologia",          "Ginecología",          4),
-    ("traumatologia",        "Traumatología",        4),
-    ("ortodoncia",           "Ortodoncia",           4),
-    ("implantologia",        "Implantología",        4),
-    ("cardiologia",          "Cardiología",          3),
-    ("otorrinolaringologia", "Otorrinolaringología", 3),
-    ("kinesiologia",         "Kinesiología",         3),
-    ("odontologia-general",  "Odontología",          3),
-    ("gastroenterologia",    "Gastroenterología",    3),
-    ("medicina-general",     "Medicina General",     2),
-    ("nutricion",            "Nutrición",            2),
+    # slug                    nombre                  volumen  intencion_seo
+    ("odontologia-general",  "Odontología",          4,       5),   # 507 · "dentista en X"
+    ("ortodoncia",           "Ortodoncia",           4,       5),   # 298 · ticket alto, comparada
+    ("ginecologia",          "Ginecología",          4,       5),   # 288 · "ginecólogo en X"
+    ("kinesiologia",         "Kinesiología",         5,       4),   # 817 · "kinesiólogo/domicilio"
+    ("otorrinolaringologia", "Otorrinolaringología", 4,       4),   # 379 · especialista escaso
+    ("traumatologia",        "Traumatología",        3,       4),   # 173 · especialista escaso
+    ("ecografia",            "Ecografía",            3,       4),   # 157 · demanda > oferta
+    ("implantologia",        "Implantología",        1,       5),   # <30 · ticket alto + no satisfecha
+    ("cardiologia",          "Cardiología",          2,       4),   # 74 · especialista escaso
+    ("gastroenterologia",    "Gastroenterología",    1,       4),   # 27 · escaso pero buscado
+    ("nutricion",            "Nutrición",            3,       3),   # 161
+    ("medicina-general",     "Medicina General",     5,       2),   # 2985 · volumen alto, baja intención (CESFAM)
 ]
 
 
@@ -528,24 +539,40 @@ async def fetch_and_audit(targets: list[dict] | None = None) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # Coverage matrix — especialidad × comuna priorizada por demanda × concentración
 # ─────────────────────────────────────────────────────────────────────────────
+def demanda_seo(volumen: int, intencion_seo: int) -> int:
+    """Mezcla las dos señales en una demanda efectiva para ranking SEO (1-5).
+    La intención pesa el doble que el volumen: para una clínica privada importa
+    más que la búsqueda convierta ("dentista en X") que cuántas citas mueve la
+    especialidad ("medicina general", alto volumen pero el paciente va al CESFAM).
+    Ambas señales quedan expuestas en el payload para que el dashboard muestre
+    el porqué del orden."""
+    return round((volumen + 2 * intencion_seo) / 3)
+
+
 def coverage_matrix() -> dict:
-    """Grilla de oportunidad: cada celda esp×comuna con su prioridad (demanda ×
-    concentración de pacientes). El sitemap ya genera la URL base-{comuna}; lo
-    valioso es priorizar dónde invertir contenido único."""
+    """Grilla de oportunidad: cada celda esp×comuna con su prioridad
+    (demanda_seo × concentración de pacientes). El sitemap ya genera la URL
+    base-{comuna}; lo valioso es priorizar dónde invertir contenido único."""
     cells = []
-    for esp_slug, esp_nombre, dem in ESPECIALIDADES:
+    for esp_slug, esp_nombre, vol, intent in ESPECIALIDADES:
+        dem = demanda_seo(vol, intent)
         for com_slug, com_nombre, conc in COMUNAS:
             priority = dem * conc  # 1-25
             cells.append({
                 "esp_slug": esp_slug, "especialidad": esp_nombre,
                 "comuna_slug": com_slug, "comuna": com_nombre,
-                "priority": priority,
+                "priority": priority, "demanda": dem,
+                "volumen": vol, "intencion_seo": intent,
                 "url": f"{CANONICAL_BASE}/blog/{esp_slug}-{com_slug}",
                 "keyword": f"{esp_nombre.lower()} en {com_nombre}",
             })
     cells.sort(key=lambda c: -c["priority"])
     return {
-        "especialidades": [{"slug": s, "nombre": n, "demanda": d} for s, n, d in ESPECIALIDADES],
+        "especialidades": [
+            {"slug": s, "nombre": n, "volumen": v, "intencion_seo": i,
+             "demanda": demanda_seo(v, i)}
+            for s, n, v, i in ESPECIALIDADES
+        ],
         "comunas": [{"slug": s, "nombre": n, "concentracion": c} for s, n, c in COMUNAS],
         "top_opportunities": cells[:15],
     }

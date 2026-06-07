@@ -42,14 +42,14 @@ def _coverage_gaps(top_n: int) -> list[dict]:
     """Combinaciones especialidad x comuna con alta intencion sin pagina cubierta.
     Degrada a [] si falla."""
     try:
-        from autopilot.seo_audit import coverage_matrix, ESPECIALIDADES, COMUNAS
+        from autopilot.seo_audit import coverage_matrix, ESPECIALIDADES, COMUNAS, demanda_seo
         matrix = coverage_matrix()
         gaps = []
         for row in matrix:
             if not row.get("covered", True):
                 gaps.append(row)
         # Ordenar por demanda (especialidad) * concentracion (comuna) desc
-        esp_dem = {s: d for s, _, d in ESPECIALIDADES}
+        esp_dem = {s: demanda_seo(v, i) for s, _, v, i in ESPECIALIDADES}
         com_conc = {s: c for s, _, c in COMUNAS}
         gaps.sort(
             key=lambda r: esp_dem.get(r.get("esp_slug", ""), 0)
