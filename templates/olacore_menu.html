@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Portal OLACORE — Ecosistema Meridiano Sur</title>
+
+<!-- PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OLACORE">
+<meta name="theme-color" content="#0E2530">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest-olacore.json">
+<link rel="apple-touch-icon" href="/static/olacore_icon_v3_180.png">
+<link rel="icon" type="image/png" href="/static/olacore_icon_v3_192.png">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,600;9..144,1,300;9..144,1,400&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  :root {
+    --olacore-fiordo:    #0E2530;
+    --olacore-fiordo-2:  #17323F;
+    --olacore-neblina:   #E8E0D0;
+    --olacore-cobre:     #B98149;
+    --olacore-lenga:     #7C4A2A;
+    --olacore-lacre:     #9A3E2F;
+    --olacore-musgo:     #4A5D44;
+    --olacore-bg:        #FAF6EE;
+    --olacore-card-bg:   #FFFCF5;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--olacore-bg);
+    color: var(--olacore-fiordo);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    color: var(--olacore-fiordo);
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  /* ── Animacion brujula ── */
+  @keyframes brujula-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .brujula-animate {
+    will-change: transform;
+    animation: brujula-spin 60s linear infinite;
+  }
+
+  /* ── Header sticky ── */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(250, 246, 238, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(185, 129, 73, 0.22);
+  }
+  .site-header__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .site-header__wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.35rem;
+    color: var(--olacore-fiordo);
+    letter-spacing: 0.06em;
+    line-height: 1;
+  }
+  .site-header__eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--olacore-cobre);
+    opacity: 0.85;
+    line-height: 1;
+    margin-top: 3px;
+  }
+  .meridian-line {
+    width: 1px;
+    height: 40px;
+    background: var(--olacore-cobre);
+    opacity: 0.5;
+    position: relative;
+    flex-shrink: 0;
+    margin: 0 6px;
+  }
+  .meridian-line::before,
+  .meridian-line::after {
+    content: "";
+    position: absolute;
+    left: -3px;
+    width: 7px;
+    height: 7px;
+    background: var(--olacore-cobre);
+    border-radius: 50%;
+  }
+  .meridian-line::before { top: 20%; }
+  .meridian-line::after  { bottom: 20%; }
+
+  .header-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+  .header-nav a {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--olacore-fiordo);
+    opacity: 0.65;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .header-nav a:hover {
+    opacity: 1;
+    background: rgba(185, 129, 73, 0.1);
+  }
+
+  /* ── Hero ── */
+  .hero {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 64px 24px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .hero__brujula-wrap {
+    width: 240px;
+    height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .hero__brujula-wrap svg {
+    width: 100%;
+    height: 100%;
+  }
+  .hero__title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 600;
+    color: var(--olacore-fiordo);
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .hero__subtitle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--olacore-cobre);
+    margin-bottom: 18px;
+  }
+  .hero__desc {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--olacore-fiordo);
+    opacity: 0.7;
+    max-width: 520px;
+  }
+
+  /* ── Divisor ── */
+  .hero-divider {
+    max-width: 1200px;
+    margin: 0 auto 48px;
+    padding: 0 24px;
+  }
+  .hero-divider hr {
+    border: none;
+    border-top: 1px solid rgba(185, 129, 73, 0.25);
+  }
+
+  /* ── Contenido principal ── */
+  .main-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── Secciones de categoria ── */
+  .cat-section {
+    margin-bottom: 40px;
+    background: var(--olacore-card-bg);
+    border: 1px solid rgba(14, 37, 48, 0.1);
+    border-radius: 16px;
+    padding: 28px;
+    transition: box-shadow 0.2s ease;
+  }
+  .cat-section:hover {
+    box-shadow: 0 4px 20px rgba(14, 37, 48, 0.06);
+  }
+  .cat-section__eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.36em;
+    text-transform: uppercase;
+    color: var(--olacore-cobre);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cat-section__eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 1px;
+    background: var(--olacore-cobre);
+    opacity: 0.6;
+  }
+  .cat-section__title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--olacore-fiordo);
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+  .cat-section__desc {
+    font-size: 12.5px;
+    color: var(--olacore-fiordo);
+    opacity: 0.6;
+    margin-bottom: 20px;
+    line-height: 1.55;
+  }
+
+  /* ── Grid de sub-cards ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 900px) {
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Sub-card ── */
+  .dash-card {
+    display: flex;
+    flex-direction: column;
+    padding: 18px 18px 14px;
+    background: var(--olacore-bg);
+    border: 1px solid rgba(14, 37, 48, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    min-height: 44px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .dash-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(14, 37, 48, 0.1);
+    border-color: rgba(185, 129, 73, 0.3);
+  }
+  .dash-card:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+  .dash-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+  .dash-card__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(14, 37, 48, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .dash-card__icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--olacore-fiordo);
+    opacity: 0.65;
+  }
+  .dash-card__name {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--olacore-fiordo);
+    line-height: 1.25;
+    flex: 1;
+    padding-top: 2px;
+  }
+  .dash-card__desc {
+    font-size: 12px;
+    color: var(--olacore-fiordo);
+    opacity: 0.6;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    flex: 1;
+  }
+  .dash-card__url {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--olacore-cobre);
+    opacity: 0.85;
+  }
+
+  /* ── Icono color por categoria ── */
+  .icon-cmc    { background: rgba(14, 37, 48, 0.08); }
+  .icon-meulen { background: rgba(143, 107, 78, 0.12); }
+  .icon-rincon { background: rgba(74, 93, 68, 0.12); }
+  .icon-portal { background: rgba(154, 62, 47, 0.08); }
+  .icon-admin  { background: rgba(14, 37, 48, 0.06); }
+
+  /* ── Footer ── */
+  .site-footer {
+    border-top: 1px solid rgba(14, 37, 48, 0.1);
+    padding: 24px;
+    text-align: center;
+  }
+  .site-footer__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .site-footer__text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--olacore-fiordo);
+    opacity: 0.45;
+  }
+  .site-footer__links {
+    display: flex;
+    gap: 16px;
+  }
+  .site-footer__links a {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--olacore-cobre);
+    opacity: 0.75;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+  }
+  .site-footer__links a:hover { opacity: 1; }
+
+  /* ── Mobile header ajustes ── */
+  @media (max-width: 640px) {
+    .site-header__inner { padding: 12px 16px; gap: 10px; }
+    .site-header__wordmark { font-size: 1.1rem; }
+    .meridian-line { display: none; }
+    .header-nav { gap: 2px; }
+    .header-nav a { font-size: 11px; padding: 4px 7px; }
+    .hero { padding: 40px 16px 32px; }
+    .hero__brujula-wrap { width: 160px; height: 160px; margin-bottom: 24px; }
+    .main-content { padding: 0 16px 64px; }
+    .cat-section { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════ HEADER STICKY ═══════ -->
+<header class="site-header">
+  <div class="site-header__inner">
+    <!-- Wordmark + eyebrow -->
+    <div>
+      <div class="site-header__wordmark">OLACORE</div>
+      <div class="site-header__eyebrow">Meridiano Sur</div>
+    </div>
+
+    <!-- Linea meridiana decorativa -->
+    <div class="meridian-line" aria-hidden="true"></div>
+
+    <!-- Nav cruzada -->
+    <nav class="header-nav" aria-label="Navegacion principal">
+      <a href="/horizonte">Horizonte</a>
+      <a href="/proyectos2026">Proyectos</a>
+      <a href="/meta/dashboard">Meta</a>
+      <a href="/seo/dashboard">SEO</a>
+      <a href="/meulen/ecosistemameulen">Meulen</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </div>
+</header>
+
+
+<!-- ═══════ HERO ═══════ -->
+<section class="hero" aria-label="Portal OLACORE">
+
+  <!-- Brujula girando -->
+  <div class="hero__brujula-wrap" aria-hidden="true">
+    <svg class="brujula-animate" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280" width="280" height="280">
+      <circle cx="140" cy="140" r="128" fill="none" stroke="#0E2530" stroke-width="1.5"/>
+      <circle cx="140" cy="140" r="120" fill="none" stroke="#0E2530" stroke-width="0.4" opacity="0.4"/>
+      <g stroke="#0E2530" stroke-width="0.8">
+        <line x1="12" y1="140" x2="28" y2="140"/>
+        <line x1="252" y1="140" x2="268" y2="140"/>
+      </g>
+      <g stroke="#0E2530" stroke-width="0.4" opacity="0.5">
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(30 140 140)"/>
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(60 140 140)"/>
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(120 140 140)"/>
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(150 140 140)"/>
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(210 140 140)"/>
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(240 140 140)"/>
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(300 140 140)"/>
+        <line x1="140" y1="14" x2="140" y2="22" transform="rotate(330 140 140)"/>
+      </g>
+      <line x1="140" y1="50" x2="140" y2="230" stroke="#B98149" stroke-width="1.4"/>
+      <circle cx="140" cy="92" r="6" fill="#B98149"/>
+      <circle cx="140" cy="188" r="6" fill="#B98149"/>
+      <line x1="44" y1="140" x2="236" y2="140" stroke="#0E2530" stroke-width="0.4" opacity="0.4"/>
+      <circle cx="140" cy="140" r="2.5" fill="#0E2530"/>
+      <polygon points="140,50 134,62 146,62" fill="#B98149"/>
+      <defs>
+        <path id="topArc" d="M 20 140 A 120 120 0 0 1 260 140"/>
+        <path id="botArc" d="M 260 140 A 120 120 0 0 1 20 140"/>
+      </defs>
+      <text font-family="IBM Plex Mono, monospace" font-size="9" fill="#0E2530" letter-spacing="0.32em">
+        <textPath href="#topArc" startOffset="50%" text-anchor="middle">— OLACORE · MERIDIANO SUR —</textPath>
+      </text>
+      <text font-family="IBM Plex Mono, monospace" font-size="8" fill="#B98149" letter-spacing="0.36em">
+        <textPath href="#botArc" startOffset="50%" text-anchor="middle">CARAMPANGUE · PUERTO MONTT</textPath>
+      </text>
+    </svg>
+  </div>
+
+  <h1 class="hero__title">Ecosistema OLACORE</h1>
+  <p class="hero__subtitle">Meridiano Sur · Holding Olavarría</p>
+  <p class="hero__desc">Portal unificado de los proyectos del holding. Centro Médico Carampangue, Supermercado Meulen, El Rincón del Camarón y servicios transversales — todos accesibles desde un punto.</p>
+</section>
+
+<div class="hero-divider">
+  <hr>
+</div>
+
+
+<!-- ═══════ CONTENIDO PRINCIPAL ═══════ -->
+<main class="main-content">
+
+
+  <!-- ─────────────── 1. CMC ─────────────── -->
+  <section class="cat-section" aria-labelledby="cat-cmc-title">
+    <div class="cat-section__eyebrow">01 · Centro Médico</div>
+    <h2 class="cat-section__title" id="cat-cmc-title">Centro Médico Carampangue</h2>
+    <p class="cat-section__desc">Dashboards clínicos, comerciales y estratégicos del CMC — desde la atención diaria hasta el roadmap a 7 años.</p>
+
+    <div class="cards-grid">
+
+      <a class="dash-card" href="/horizonte">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <!-- Icono compass -->
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          </div>
+          <div class="dash-card__name">Horizonte Estratégico</div>
+        </div>
+        <div class="dash-card__desc">Roadmap a 12 meses, 36 meses y 7 años con escenarios A/B/C y pipeline de contratación.</div>
+        <div class="dash-card__url">/horizonte</div>
+      </a>
+
+      <a class="dash-card" href="/atribucion">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="dash-card__name">Atribución Diaria</div>
+        </div>
+        <div class="dash-card__desc">Cruce Meta Ads, Bot WhatsApp y pacientes agendados — atribución de canal diaria.</div>
+        <div class="dash-card__url">/atribucion</div>
+      </a>
+
+      <a class="dash-card" href="/crecimientopersonal">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          </div>
+          <div class="dash-card__name">Crecimiento Personal</div>
+        </div>
+        <div class="dash-card__desc">Roadmap personal Dr. Olavarría — UC, formación y desarrollo profesional.</div>
+        <div class="dash-card__url">/crecimientopersonal</div>
+      </a>
+
+      <a class="dash-card" href="/meta/dashboard">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <div class="dash-card__name">Meta Ads</div>
+        </div>
+        <div class="dash-card__desc">Campanas activas, ROAS, leads y estrategia de pauta en Facebook e Instagram.</div>
+        <div class="dash-card__url">/meta/dashboard</div>
+      </a>
+
+      <a class="dash-card" href="/seo/dashboard">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          <div class="dash-card__name">SEO</div>
+        </div>
+        <div class="dash-card__desc">Google Search Console, heatmap de captación orgánica y rendimiento por keyword.</div>
+        <div class="dash-card__url">/seo/dashboard</div>
+      </a>
+
+      <a class="dash-card" href="/olavarria">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="dash-card__name">Olavarría · Vista Geográfica</div>
+        </div>
+        <div class="dash-card__desc">Ingreso real por atenciones con factor 0.85 aplicado. Validado vs Caja Medilink.</div>
+        <div class="dash-card__url">/olavarria</div>
+      </a>
+
+      <a class="dash-card" href="/abarca/2026">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="dash-card__name">Abarca 2026</div>
+        </div>
+        <div class="dash-card__desc">Proyecto de expansión y sala Abarca — planificación y seguimiento 2026.</div>
+        <div class="dash-card__url">/abarca/2026</div>
+      </a>
+
+      <a class="dash-card" href="/bi/dashboard-mensual">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="dash-card__name">BI Mensual</div>
+        </div>
+        <div class="dash-card__desc">Business Intelligence mensual — ingresos, atenciones y tendencias acumuladas.</div>
+        <div class="dash-card__url">/bi/dashboard-mensual</div>
+      </a>
+
+      <a class="dash-card" href="/bi/dashboard-dia">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="dash-card__name">BI Diario</div>
+        </div>
+        <div class="dash-card__desc">Pulso diario de atenciones y caja — visión operativa en tiempo real.</div>
+        <div class="dash-card__url">/bi/dashboard-dia</div>
+      </a>
+
+      <a class="dash-card" href="/bi/proyecto">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="dash-card__name">BI Proyecto</div>
+        </div>
+        <div class="dash-card__desc">Seguimiento de proyectos de desarrollo del CMC con métricas de avance.</div>
+        <div class="dash-card__url">/bi/proyecto</div>
+      </a>
+
+      <a class="dash-card" href="/admin/dashboard">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="dash-card__name">Atencion al Paciente</div>
+        </div>
+        <div class="dash-card__desc">Dashboard de recepción — agenda, NPS, funnel de conversion por especialidad.</div>
+        <div class="dash-card__url">/admin/dashboard</div>
+      </a>
+
+      <a class="dash-card" href="/admin/mapa-comunas">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          </div>
+          <div class="dash-card__name">Mapa de Comunas</div>
+        </div>
+        <div class="dash-card__desc">Distribucion geografica de pacientes por comuna de origen.</div>
+        <div class="dash-card__url">/admin/mapa-comunas</div>
+      </a>
+
+      <a class="dash-card" href="/admin/mapa-direcciones">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <div class="dash-card__name">Mapa de Direcciones</div>
+        </div>
+        <div class="dash-card__desc">Heatmap geografico de captacion — densidad de pacientes por direccion.</div>
+        <div class="dash-card__url">/admin/mapa-direcciones</div>
+      </a>
+
+      <a class="dash-card" href="/agentes/dashboard">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><circle cx="12" cy="10" r="2"/></svg>
+          </div>
+          <div class="dash-card__name">Agentes IA</div>
+        </div>
+        <div class="dash-card__desc">Dashboard del bot WhatsApp — conversaciones, derivaciones y metricas del agente.</div>
+        <div class="dash-card__url">/agentes/dashboard</div>
+      </a>
+
+      <a class="dash-card" href="/profesionalescmc">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="dash-card__name">Profesionales CMC</div>
+        </div>
+        <div class="dash-card__desc">Listado y perfil de profesionales activos del Centro Medico Carampangue.</div>
+        <div class="dash-card__url">/profesionalescmc</div>
+      </a>
+
+      <a class="dash-card" href="/proyectos2026">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          </div>
+          <div class="dash-card__name">Proyectos 2026</div>
+        </div>
+        <div class="dash-card__desc">Vista force-directed de CMC, Meulen y Buses Estuario — stack compartido del holding.</div>
+        <div class="dash-card__url">/proyectos2026</div>
+      </a>
+
+      <a class="dash-card" href="/cmc/mensual">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div class="dash-card__name">CMC Mensual</div>
+        </div>
+        <div class="dash-card__desc">Informe mensual consolidado del Centro Medico Carampangue.</div>
+        <div class="dash-card__url">/cmc/mensual</div>
+      </a>
+
+      <a class="dash-card" href="/sitio/v7-1">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <div class="dash-card__name">Sitio Publico v7.1</div>
+        </div>
+        <div class="dash-card__desc">Sitio web publico final del CMC con SEO local, schema y reseñas Google Places dinamicas.</div>
+        <div class="dash-card__url">/sitio/v7-1</div>
+      </a>
+
+      <a class="dash-card" href="/blog">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-cmc">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div class="dash-card__name">Blog CMC</div>
+        </div>
+        <div class="dash-card__desc">Contenido editorial del Centro Medico Carampangue para SEO organico.</div>
+        <div class="dash-card__url">/blog</div>
+      </a>
+
+    </div>
+  </section>
+
+
+  <!-- ─────────────── 2. MEULEN ─────────────── -->
+  <section class="cat-section" aria-labelledby="cat-meulen-title">
+    <div class="cat-section__eyebrow">02 · Retail</div>
+    <h2 class="cat-section__title" id="cat-meulen-title">Supermercado Meulen</h2>
+    <p class="cat-section__desc">Ecosistema operativo y de inteligencia del supermercado. Planificacion, KPIs, farmacia y suplementos.</p>
+
+    <div class="cards-grid">
+
+      <a class="dash-card" href="/meulen/ecosistemameulen">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          </div>
+          <div class="dash-card__name">Ecosistema Meulen</div>
+        </div>
+        <div class="dash-card__desc">Vista force-directed del ecosistema completo del supermercado — nodos y relaciones.</div>
+        <div class="dash-card__url">/meulen/ecosistemameulen</div>
+      </a>
+
+      <a class="dash-card" href="/meulen/dashboardplanificacion">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="dash-card__name">Planificacion</div>
+        </div>
+        <div class="dash-card__desc">Dashboard de planificacion estrategica y operativa del supermercado Meulen.</div>
+        <div class="dash-card__url">/meulen/dashboardplanificacion</div>
+      </a>
+
+      <a class="dash-card" href="/meulen/kpis">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="dash-card__name">KPIs Meulen</div>
+        </div>
+        <div class="dash-card__desc">Indicadores clave de rendimiento — ventas, margen, rotacion y ticket promedio.</div>
+        <div class="dash-card__url">/meulen/kpis</div>
+      </a>
+
+      <a class="dash-card" href="/bi/meulen-operaciones">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="dash-card__name">BI Operaciones</div>
+        </div>
+        <div class="dash-card__desc">Business intelligence operacional del supermercado Meulen.</div>
+        <div class="dash-card__url">/bi/meulen-operaciones</div>
+      </a>
+
+      <a class="dash-card" href="/bi/meulen-roadmap">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          </div>
+          <div class="dash-card__name">BI Roadmap Meulen</div>
+        </div>
+        <div class="dash-card__desc">Hoja de ruta de iniciativas y proyectos del supermercado.</div>
+        <div class="dash-card__url">/bi/meulen-roadmap</div>
+      </a>
+
+      <a class="dash-card" href="/farmacia">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          </div>
+          <div class="dash-card__name">Farmacia</div>
+        </div>
+        <div class="dash-card__desc">Gestion y catalogo del modulo de farmacia del supermercado Meulen.</div>
+        <div class="dash-card__url">/farmacia</div>
+      </a>
+
+      <a class="dash-card" href="/suplementos">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          </div>
+          <div class="dash-card__name">Suplementos</div>
+        </div>
+        <div class="dash-card__desc">Catalogo y gestion de suplementos — modulo especializado Meulen.</div>
+        <div class="dash-card__url">/suplementos</div>
+      </a>
+
+      <a class="dash-card" href="/bi/farmacia-ideas">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-meulen">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="dash-card__name">BI Farmacia Ideas</div>
+        </div>
+        <div class="dash-card__desc">Exploracion de ideas y oportunidades para el modulo de farmacia.</div>
+        <div class="dash-card__url">/bi/farmacia-ideas</div>
+      </a>
+
+    </div>
+  </section>
+
+
+  <!-- ─────────────── 3. EL RINCON DEL CAMARON ─────────────── -->
+  <section class="cat-section" aria-labelledby="cat-rincon-title">
+    <div class="cat-section__eyebrow">03 · Gastronomia</div>
+    <h2 class="cat-section__title" id="cat-rincon-title">El Rincon del Camaron</h2>
+    <p class="cat-section__desc">Proyecto gastronomico OLACORE — seguimiento de iniciativa y dashboard operativo.</p>
+
+    <div class="cards-grid">
+
+      <a class="dash-card" href="/rincon">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-rincon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+          </div>
+          <div class="dash-card__name">Dashboard El Rincon</div>
+        </div>
+        <div class="dash-card__desc">Panel del proyecto gastronomico — metricas, avance y planificacion.</div>
+        <div class="dash-card__url">/rincon</div>
+      </a>
+
+    </div>
+  </section>
+
+
+  <!-- ─────────────── 4. PORTALES DE ACCESO ─────────────── -->
+  <section class="cat-section" aria-labelledby="cat-portal-title">
+    <div class="cat-section__eyebrow">04 · Pacientes</div>
+    <h2 class="cat-section__title" id="cat-portal-title">Portales de Acceso</h2>
+    <p class="cat-section__desc">Acceso para pacientes del CMC — agendamiento, informes y portal personalizado.</p>
+
+    <div class="cards-grid">
+
+      <a class="dash-card" href="/portal">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-portal">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="dash-card__name">Portal Pacientes</div>
+        </div>
+        <div class="dash-card__desc">Portal principal de acceso para pacientes del Centro Medico Carampangue.</div>
+        <div class="dash-card__url">/portal</div>
+      </a>
+
+      <a class="dash-card" href="/portal/v2">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-portal">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
+          <div class="dash-card__name">Portal Pacientes v2</div>
+        </div>
+        <div class="dash-card__desc">Segunda version del portal — diseño actualizado y funcionalidades ampliadas.</div>
+        <div class="dash-card__url">/portal/v2</div>
+      </a>
+
+      <a class="dash-card" href="/portal/informe">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-portal">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div class="dash-card__name">Portal Informe</div>
+        </div>
+        <div class="dash-card__desc">Generacion de informes para pacientes desde el portal de acceso.</div>
+        <div class="dash-card__url">/portal/informe</div>
+      </a>
+
+    </div>
+  </section>
+
+
+  <!-- ─────────────── 5. ADMIN / GENERAL ─────────────── -->
+  <section class="cat-section" aria-labelledby="cat-admin-title">
+    <div class="cat-section__eyebrow">05 · Administracion</div>
+    <h2 class="cat-section__title" id="cat-admin-title">Admin · General</h2>
+    <p class="cat-section__desc">Paneles de administracion del ecosistema, menus de navegacion y accesos generales.</p>
+
+    <div class="cards-grid">
+
+      <a class="dash-card" href="/admin">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-admin">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.42 1.42M5.35 18.65l-1.42 1.42M4.93 4.93l1.42 1.42M18.65 18.65l1.42 1.42M12 2v2M12 20v2M2 12H4M20 12h2"/></svg>
+          </div>
+          <div class="dash-card__name">Admin v1</div>
+        </div>
+        <div class="dash-card__desc">Panel de administracion principal — recepcion, agenda y operaciones diarias.</div>
+        <div class="dash-card__url">/admin</div>
+      </a>
+
+      <a class="dash-card" href="/admin/v2">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-admin">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <div class="dash-card__name">Admin v2</div>
+        </div>
+        <div class="dash-card__desc">Segunda version del panel de administracion con interfaz actualizada.</div>
+        <div class="dash-card__url">/admin/v2</div>
+      </a>
+
+      <a class="dash-card" href="/menu">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-admin">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </div>
+          <div class="dash-card__name">Menu Clasico CMC</div>
+        </div>
+        <div class="dash-card__desc">Menu esquematico de todas las rutas desplegadas en agentecmc.cl.</div>
+        <div class="dash-card__url">/menu</div>
+      </a>
+
+      <a class="dash-card" href="/ecosistema">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-admin">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+          </div>
+          <div class="dash-card__name">Ecosistema General</div>
+        </div>
+        <div class="dash-card__desc">Vista general del ecosistema OLACORE — mapa de proyectos y servicios.</div>
+        <div class="dash-card__url">/ecosistema</div>
+      </a>
+
+      <a class="dash-card" href="/privacidad">
+        <div class="dash-card__head">
+          <div class="dash-card__icon icon-admin">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="dash-card__name">Privacidad</div>
+        </div>
+        <div class="dash-card__desc">Politica de privacidad y tratamiento de datos del Centro Medico Carampangue.</div>
+        <div class="dash-card__url">/privacidad</div>
+      </a>
+
+    </div>
+  </section>
+
+
+</main>
+
+<!-- ═══════ FOOTER ═══════ -->
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <span class="site-footer__text">OLACORE · Meridiano Sur · Holding Olavarria · 2026</span>
+    <nav class="site-footer__links">
+      <a href="/menu">Menu clasico</a>
+      <a href="/ecosistema">Ecosistema</a>
+    </nav>
+  </div>
+</footer>
+
+<!-- Service Worker PWA -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw-olacore.js').catch(console.warn);
+  });
+}
+</script>
+
+</body>
+</html>

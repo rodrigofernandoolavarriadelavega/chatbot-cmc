@@ -248,9 +248,13 @@ async def send_event(
                     resp = {}
                 ms = resp.get("events_received", "?")
                 score = resp.get("quality_score", {})
+                # Observabilidad de atribución: registrar SI el evento llevó click-id.
+                # Sin esto, "0 eventos con fbc" en logs es ambiguo (¿no se adjuntó o no
+                # se logueó?). Hace auditable el cierre del loop CAC de un solo grep.
+                _attr = "fbc" if user_data.get("fbc") else "none"
                 log.info(
-                    "CAPI %s event_id=%s received=%s quality=%s test_code=%s",
-                    event_name, eid[:8], ms,
+                    "CAPI %s event_id=%s received=%s attr=%s quality=%s test_code=%s",
+                    event_name, eid[:8], ms, _attr,
                     score if score else "n/a",
                     test_event_code or "off",
                 )
@@ -263,6 +267,7 @@ async def send_event(
                         "content_name": (custom_data or {}).get("content_name"),
                         "events_received": ms,
                         "event_id": eid[:16],
+                        "attribution": _attr,  # "fbc" si llevó click-id, "none" si no
                     })
                 except Exception as _e_ok:
                     log.debug("CAPI: no se pudo loggear capi_send_ok: %s", _e_ok)
