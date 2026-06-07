@@ -329,6 +329,22 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 **Fecha**: 2026-04-27 / 2026-04-28 (sesión maratónica que cubrió varios frentes)
 **Historial completo**: ver claude-mem timeline o git log
 
+### 2026-06-07 — Fix menu-loop ecografía (auditoría portavión)
+- **Bug**: paciente dice "eco abdominal" → bot explica + ofrece "✅ Sí, agendar"
+  guardando `especialidad_sugerida="ecografía"` (genérico, el órgano se perdía).
+  Al aceptar, `_iniciar_agendar` recibía "ecografía" sin órgano y el texto del
+  turno era el payload del botón → `route_ecografia()`→None → re-preguntaba el
+  tipo → **menu-loop** (patrón de fricción dominante de eco, auditoría 2026-06-07).
+- **Fix** (`app/flows.py`): al ofrecer agendar tras explicar un tipo de eco se
+  persiste `data["eco_tipo_text"]=txt`; `_iniciar_agendar` lo consume (pop) y
+  resuelve el routing sin re-preguntar. Cubre path info/precio y disponibilidad.
+- **Tests**: `tests/test_eco_menu_loop.py` (2/2, falla sin el fix). Corregidos 4
+  tests obsoletos de `test_ecografia_routing.py` que afirmaban mamaria→Rejón
+  (la verdad es mamaria→Pardo, partes blandas, fix 2026-05-22). Suite eco 78/78.
+- **OJO**: las 9 fallas de test_no_silent_date_jump/test_meta_ctwa/test_takeover
+  son PRE-EXISTENTES (idénticas con/sin este cambio). Y los docs ECO_FRICCION_*
+  /ECO_VARIANTES_DAVID que una sesión previa dijo escribir NO están en el repo.
+
 ---
 
 ### Resumen sesión 2026-04-27 / 2026-04-28

@@ -26,7 +26,11 @@ os.environ.setdefault("SQLCIPHER_KEY", "")
 
 
 class TestRouteEcografiaGinecologia(unittest.TestCase):
-    """Ecografías ginecológicas/obstétricas/mamarias → Rejón (ID 61, $35.000)."""
+    """Ecografías ginecológicas/obstétricas → Rejón (ID 61, $35.000).
+
+    OJO: mamaria NO va acá — es partes blandas → Pardo (ID 68). Los tests de
+    mamaria de esta clase usan _assert_pardo_mamaria por razones históricas.
+    """
 
     def _route(self, texto: str):
         from ecografias import route_ecografia
@@ -64,14 +68,25 @@ class TestRouteEcografiaGinecologia(unittest.TestCase):
     def test_ecografia_pelvica_tilde(self):
         self._assert_rejon("ecografía pélvica")
 
+    # NOTA: mamaria NO es ginecológica — es partes blandas y la realiza David
+    # Pardo (ID 68, $40.000). Fix 2026-05-22 (676239f+4906130). Estos tests se
+    # corrigieron el 2026-06-07: antes afirmaban Rejón y quedaron obsoletos tras
+    # ese fix. Ver app/ecografias.py (ecografia_general_pardo) y CLAUDE.md.
+    def _assert_pardo_mamaria(self, texto: str):
+        r = self._route(texto)
+        self.assertIsNotNone(r, f"{texto!r}: no debe retornar None")
+        self.assertEqual(r["id_profesional"], 68, f"{texto!r}: mamaria → Pardo (ID 68), es partes blandas")
+        self.assertEqual(r["especialidad_destino"], "ecografía", f"{texto!r}: destino ecografía")
+        self.assertEqual(r["precio_particular"], 40000, f"{texto!r}: $40.000")
+
     def test_eco_mamaria(self):
-        self._assert_rejon("eco mamaria")
+        self._assert_pardo_mamaria("eco mamaria")
 
     def test_ecotomografia_mamaria(self):
-        self._assert_rejon("ecotomografía mamaria")
+        self._assert_pardo_mamaria("ecotomografía mamaria")
 
     def test_eco_de_mamas(self):
-        self._assert_rejon("eco de mamas")
+        self._assert_pardo_mamaria("eco de mamas")
 
     def test_ecografia_obstetrica(self):
         self._assert_rejon("ecografía obstétrica")
@@ -285,12 +300,13 @@ class TestIntegracionDetectarEspecialidad(unittest.TestCase):
 class TestPrioridadGinecologiaVsGeneral(unittest.TestCase):
     """Ginecología tiene prioridad sobre ecografía general en keywords ambiguos."""
 
-    def test_mamaria_va_a_rejon_no_pardo(self):
+    def test_mamaria_va_a_pardo_no_rejon(self):
+        # Mamaria es partes blandas → David Pardo (68), NO ginecología/Rejón (61).
         from ecografias import route_ecografia
         r = route_ecografia("eco mamaria")
         self.assertIsNotNone(r)
-        self.assertEqual(r["id_profesional"], 61, "eco mamaria debe ir a Rejón, no Pardo")
-        self.assertNotEqual(r["id_profesional"], 68, "eco mamaria NO debe ir a Pardo")
+        self.assertEqual(r["id_profesional"], 68, "eco mamaria debe ir a Pardo (partes blandas)")
+        self.assertNotEqual(r["id_profesional"], 61, "eco mamaria NO debe ir a Rejón")
 
     def test_pelvica_va_a_rejon_no_pardo(self):
         from ecografias import route_ecografia

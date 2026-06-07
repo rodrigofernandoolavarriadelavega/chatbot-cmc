@@ -5289,6 +5289,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if fecha:
                     data["especialidad_sugerida"] = especialidad.lower()
                     data["especialidad_sugerida_ts"] = datetime.now(timezone.utc).isoformat()
+                    # Si es ecografía, persistir el órgano del texto original para
+                    # que el click en "Sí, agendar" no re-pregunte el tipo (menu-loop).
+                    try:
+                        from ecografias import texto_menciona_ecografia as _tme_disp
+                        if _tme_disp(txt):
+                            data["eco_tipo_text"] = txt
+                    except Exception:  # noqa: BLE001
+                        pass
                     save_session(phone, "IDLE", data)
                     return _btn_msg(
                         f"Sí, para *{especialidad}* hay hora disponible el *{fecha}* 📅\n\n"
@@ -5377,6 +5385,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 resp = _eco_info_resp + ("\n\n¿Quieres que te la agende? Responde *sí* 😊"
                                          if _eco_offer_book else "")
                 log_event(phone, "eco_info_respondida", {"txt": txt[:80]})
+                # Persistir el órgano de la eco para que, si el paciente acepta
+                # ("sí" o botón "✅ Sí, agendar"), _iniciar_agendar lo recupere y
+                # NO vuelva a preguntar el tipo (menu-loop). Solo cuando se ofrece
+                # agendar (no en prep/ayuno, donde la eco ya está agendada).
+                if _eco_offer_book:
+                    data["eco_tipo_text"] = txt
             else:
                 resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)
             resp = _strip_canal_circular(resp, phone)  # BUG-F
@@ -12252,6 +12266,11 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         "podología", "podologia",
     }
     _txt_raw = data.pop("_txt_raw", "") or ""
+    # Texto del órgano de eco capturado cuando el bot ofreció "Sí, agendar" tras
+    # explicar un tipo de eco. Se consume aquí (pop) para que el click del botón
+    # recupere "abdominal"/"renal"/... y route_ecografia NO vuelva a preguntar el
+    # tipo (menu-loop dominante de ecografía, auditoría 2026-06-07).
+    _eco_tipo_sugerido = data.pop("eco_tipo_text", "") or ""
     # ── Detección SISTÉMICA de tercero (fix 2026-05-29) ──────────────────────
     # Antes _OTRA_PERSONA_RE solo se evaluaba en WAIT_MODALIDAD, así que
     # "quiero agendar para mi hijo" desde el primer mensaje (o por audio
@@ -12372,7 +12391,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     #           un keyword de órgano: route_ecografia lo re-rutea al correcto.
     # Caso C — especialidad_lower == "ecografía" sin órgano: preguntar tipo.
     if especialidad_lower in ("ecografía", "ecografia", "eco", "ecotomografía", "ecotomografia", "ecotomo"):
-        _txt_para_eco = data.get("_txt_raw") or _txt_raw or especialidad
+        _txt_para_eco = _eco_tipo_sugerido or data.get("_txt_raw") or _txt_raw or especialidad
         try:
             from ecografias import route_ecografia as _route_eco, MSG_PREGUNTAR_TIPO as _MSG_ECO
             # assume_context=True: ya decidimos especialidad=ecografía, este texto
