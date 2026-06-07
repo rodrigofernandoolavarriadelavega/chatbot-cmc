@@ -235,16 +235,16 @@ def _cmc_demanda() -> str:
     try:
         from session import _conn
         with _conn() as c:
-            rows = c.execute("""SELECT especialidad, COUNT(*) n FROM demanda
+            rows = c.execute("""SELECT solicitud, COUNT(*) n FROM demanda_no_disponible
                 WHERE created_at>=datetime('now','-30 days')
-                GROUP BY especialidad ORDER BY n DESC LIMIT 8""").fetchall()
+                GROUP BY solicitud ORDER BY n DESC LIMIT 8""").fetchall()
     except Exception as e:  # noqa: BLE001
         return f"No pude leer la demanda 🙏 ({e})"
     if not rows:
         return "🔎 *Demanda*: sin registros de demanda no satisfecha en 30 días."
     out = ["🔎 *Demanda no satisfecha (30 días)*\n"]
     for r in rows:
-        out.append(f"• {r['especialidad'] or '—'}: *{r['n']}*")
+        out.append(f"• {r['solicitud'] or '—'}: *{r['n']}*")
     out.append("\n_Lo que piden y no ofrecemos = pistas para contratar/agregar._")
     return "\n".join(out)
 
@@ -253,7 +253,7 @@ def _cmc_actividad() -> str:
     try:
         from session import _conn
         with _conn() as c:
-            convs = c.execute("SELECT COUNT(DISTINCT phone) n FROM messages WHERE date(timestamp)=date('now')").fetchone()["n"]
+            convs = c.execute("SELECT COUNT(DISTINCT phone) n FROM messages WHERE date(ts)=date('now')").fetchone()["n"]
             regs = c.execute("""SELECT COUNT(*) n FROM contact_profiles
                 WHERE date(updated_at)>=date('now','-7 days')""").fetchone()["n"]
     except Exception as e:  # noqa: BLE001
