@@ -529,6 +529,18 @@ async def email_send_ep(request: Request, token: str | None = Query(None)):
     return JSONResponse(summary)
 
 
+# ── Optimizador de Políticas (nivel 5) — bandeja SOLO-PROPUESTA, read-only ─────
+
+@router.get("/autopilot/api/optimizer/proposals")
+def optimizer_proposals(token: str | None = Query(None), request: Request = None):
+    """Bandeja de revisión de políticas: cruza outcomes reales (margen con honorario,
+    conversión de win-back) vs las reglas vigentes y PROPONE cambios con evidencia.
+    READ-ONLY: no aplica nada. La aplicación (champion/challenger) es fase posterior."""
+    _check_token(token, request)
+    from . import optimizer
+    return JSONResponse(optimizer.run_analysis())
+
+
 # ── Publicación orgánica (segmento Instagram · Facebook · WhatsApp) ───────────
 
 @router.get("/autopilot/api/publish/status")
