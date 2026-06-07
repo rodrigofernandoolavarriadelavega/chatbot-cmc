@@ -24,8 +24,16 @@ import logging
 
 log = logging.getLogger("bot")
 
+import os
+
 MARGIN_GAP_PCT = 25          # % de desalineación para marcar
 WINBACK_MIN_SENDS = 25       # mínimo de envíos por cohorte para confiar en la conversión
+
+# Profesionales cuyo honorario NO es costo marginal del negocio: el dueño (su % se
+# lo paga a sí mismo) y, por extensión, los de SUELDO FIJO (el sueldo es costo fijo,
+# no marginal — un paciente más no lo aumenta). Para ellos el margen marginal ≈ ingreso.
+# El dueño se fija explícito; el sueldo fijo se detecta por dim_honorarios.tipo_pago.
+OWNER_PROF_IDS = [int(x) for x in os.getenv("OWNER_PROF_IDS", "1").split(",") if x.strip().isdigit()]
 
 
 def _rec(policy, current, proposed, evidence, impact, confidence, action="revisar"):
@@ -46,17 +54,23 @@ def _bi():
 # ─────────────────────────────────────────────────────────────────────────────
 # Analizador 1 — Margen REAL (con honorario) vs asumido por especialidad
 # ─────────────────────────────────────────────────────────────────────────────
+# Margen marginal por atención según quién presta:
+#   • dueño (OWNER_PROF_IDS) o sueldo fijo  → frac 1.0 (honorario no es costo marginal)
+#   • tercero con honorario %                → frac (1 − pct/100)
 _SQL_MARGEN = """
 WITH hon AS (
-  SELECT profesional_id, MAX(pct_profesional) AS pct
-  FROM bi.dim_honorarios
-  WHERE activo IS NOT FALSE AND tipo_pago = 'porcentaje'
-  GROUP BY profesional_id
+  SELECT profesional_id, MAX(tipo_pago) AS tipo, MAX(pct_profesional) AS pct
+  FROM bi.dim_honorarios WHERE activo IS NOT FALSE GROUP BY profesional_id
 )
 SELECT e.nombre, COUNT(*) AS n,
        ROUND(AVG(f.monto_neto)) AS ingreso,
-       ROUND(AVG(h.pct)) AS pct,
-       ROUND(AVG(CASE WHEN h.pct IS NOT NULL THEN f.monto_neto * (1 - h.pct/100.0) END)) AS margen_real
+       ROUND(AVG(CASE WHEN h.tipo = 'porcentaje' AND f.profesional_id <> ALL(%s)
+                      THEN h.pct ELSE 0 END)) AS pct_var,
+       ROUND(AVG(f.monto_neto * CASE
+            WHEN f.profesional_id = ANY(%s) THEN 1.0
+            WHEN h.tipo = 'fijo' THEN 1.0
+            WHEN h.tipo = 'porcentaje' AND h.pct IS NOT NULL THEN (1 - h.pct/100.0)
+            ELSE 1.0 END)) AS margen_real
 FROM bi.fact_ingresos f
 JOIN bi.dim_profesional  p ON p.profesional_id = f.profesional_id
 JOIN bi.dim_especialidad e ON e.especialidad_id = p.especialidad_id
@@ -89,21 +103,24 @@ def analyze_margins(days: int = 90, min_n: int = 5) -> tuple[list[dict], list[st
     try:
         with bi_conn() as c:
             cur = c.cursor()
-            cur.execute(_SQL_MARGEN, (days, min_n))
+            cur.execute(_SQL_MARGEN, (OWNER_PROF_IDS, OWNER_PROF_IDS, days, min_n))
             rows = cur.fetchall()
     except Exception as e:  # noqa: BLE001
         return [], [f"query de margen falló: {e}"]
 
     recs, notes = [], []
-    for esp, n, ingreso, pct, margen_real in rows:
+    for esp, n, ingreso, pct_var, margen_real in rows:
         ingreso = int(ingreso or 0)
         if not margen_real:
-            notes.append(f"{esp}: sin honorario %-based (prob. sueldo fijo) — margen real no estimable acá.")
+            notes.append(f"{esp}: sin datos de honorario — margen real no estimable acá.")
             continue
         real = int(margen_real)
+        pct_var = int(pct_var or 0)
         asum = policy._margen_esp(esp)
         gap = (asum - real) / real * 100 if real else 0
-        base = (f"{n} atenciones/90d · ingreso ${ingreso:,}/paciente · honorario {int(pct or 0)}% → "
+        # pct_var > 0 = tercero con split variable; 0 = dueño o sueldo fijo (sin costo marginal)
+        costo = f"honorario {pct_var}% (tercero)" if pct_var > 0 else "sin honorario marginal (dueño/sueldo fijo)"
+        base = (f"{n} atenciones/90d · ingreso ${ingreso:,}/paciente · {costo} → "
                 f"margen real CMC ≈ ${real:,}. Asumido ${asum:,} ({gap:+.0f}%).")
         if gap >= MARGIN_GAP_PCT:
             recs.append(_rec(

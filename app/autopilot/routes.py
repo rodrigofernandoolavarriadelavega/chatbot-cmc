@@ -541,6 +541,16 @@ def optimizer_proposals(token: str | None = Query(None), request: Request = None
     return JSONResponse(optimizer.run_analysis())
 
 
+@router.get("/autopilot/api/experiments")
+def experiments_ledger(token: str | None = Query(None), request: Request = None):
+    """Champion/Challenger: ledger de experimentos de política + veredictos con
+    estadística honesta sobre data real. READ-ONLY: evalúa y recomienda; promover el
+    ganador a la política viva es una acción humana, gateada."""
+    _check_token(token, request)
+    from . import experiments
+    return JSONResponse(experiments.run_evaluations())
+
+
 # ── Publicación orgánica (segmento Instagram · Facebook · WhatsApp) ───────────
 
 @router.get("/autopilot/api/publish/status")
