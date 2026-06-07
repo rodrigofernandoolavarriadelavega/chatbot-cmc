@@ -5,7 +5,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/alma_kit.css">
 <style>
- .hero{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+ .hero{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+ .period{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+ .segbar{display:inline-flex;background:#fff;border:1px solid var(--border);border-radius:999px;padding:3px;box-shadow:var(--sh-sm)}
+ .segbar button{border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--mute);padding:6px 13px;border-radius:999px;cursor:pointer;transition:.14s}
+ .segbar button:hover{color:var(--navy)}
+ .segbar button.on{background:linear-gradient(90deg,var(--aqua),var(--blue));color:#fff;box-shadow:var(--sh-sm)}
+ .cal{display:flex;align-items:center;gap:6px}
+ .cal input[type=date]{font:inherit;font-size:12px;border:1px solid var(--border);border-radius:9px;padding:6px 9px;color:var(--navy);background:#fff}
+ .cal input[type=date]:focus{outline:0;border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.18)}
+ .cal .arr{color:var(--mute);font-weight:700}
+ .cal .btn-apply{font:inherit;font-size:12px;font-weight:700;border:0;border-radius:9px;padding:7px 13px;background:var(--navy);color:#fff;cursor:pointer}
+ .cal .btn-apply:hover{filter:brightness(1.08)}
  .hero h2{margin:0;font-size:20px;font-weight:800;color:var(--navy)}
  .hero .fecha{font-size:12px;color:var(--mute);font-weight:600;text-transform:capitalize}
  .sec-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin:22px 0 12px;display:flex;align-items:center;gap:8px}
@@ -32,7 +43,21 @@
   <button class="btn-ghost" onclick="loadAll()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16" stroke-linecap="round" stroke-linejoin="round"/></svg> Actualizar</button>
 </div>
 <div class="wrap">
-  <div class="hero"><div><h2 id="saludo">Resumen de hoy</h2><div class="fecha" id="fecha"></div></div></div>
+  <div class="hero">
+    <div><h2 id="saludo">Resumen</h2><div class="fecha" id="fecha"></div></div>
+    <div class="period">
+      <div class="segbar" id="segPer">
+        <button data-p="hoy">Hoy</button>
+        <button data-p="7">7 días</button>
+        <button data-p="mes" class="on">Este mes</button>
+        <button data-p="30">30 días</button>
+      </div>
+      <div class="cal">
+        <input type="date" id="dDesde"><span class="arr">→</span><input type="date" id="dHasta">
+        <button class="btn-apply" id="aplicar">Aplicar</button>
+      </div>
+    </div>
+  </div>
   <div class="kpis" id="kpis"></div>
 
   <div class="sec-h">Requiere atención <span id="alta-pill" class="pill" style="display:none"></span></div>
@@ -51,18 +76,37 @@
 const {api,clp,esc,toast}=AlmaKit;
 const TK=AlmaKit.TOKEN;
 function go(ruta){ location.href = ruta + "?token=" + encodeURIComponent(TK); }
-async function loadAll(){
+
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const MESL=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const human=s=>{const d=new Date(s+'T12:00:00');return d.getDate()+' '+MESL[d.getMonth()];};
+function presetRange(p){
+  const to=new Date(); let from=new Date();
+  if(p==='7') from.setDate(from.getDate()-6);
+  else if(p==='30') from.setDate(from.getDate()-29);
+  else if(p==='mes') from=new Date(to.getFullYear(),to.getMonth(),1);
+  // 'hoy' → from = to
+  return [iso(from), iso(to)];
+}
+function setPills(p){ document.querySelectorAll('#segPer button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); }
+
+let curDesde, curHasta, perSeq=0;
+async function load(desde,hasta){
+  curDesde=desde; curHasta=hasta; const seq=++perSeq;
+  document.getElementById('dDesde').value=desde;
+  document.getElementById('dHasta').value=hasta;
+  document.getElementById('fecha').textContent = (desde===hasta) ? human(desde) : (human(desde)+' – '+human(hasta));
   try{
-    const r = await api("/resumen");
-    const d = new Date(r.fecha+"T12:00:00");
-    document.getElementById('fecha').textContent = d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const r = await api("/resumen?desde="+desde+"&hasta="+hasta);
+    if(seq!==perSeq) return;             // llegó tarde: el usuario ya cambió el período
     const k = r.kpis;
     document.getElementById('kpis').innerHTML = `
-      <div class="kpi money"><div class="k-label">Recaudado hoy</div><div class="k-val">${clp(k.recaudado_hoy)}</div><div class="k-sub">${k.pagos_hoy} pagos · ${k.citas_bot_hoy} citas bot</div></div>
-      <div class="kpi money"><div class="k-label">Ingresos del mes</div><div class="k-val">${clp(k.ingresos_mes)}</div><div class="k-sub">${k.pacientes_activos_mes} pacientes activos</div></div>
-      <div class="kpi ${k.neto_mes>=0?'good':'bad'}"><div class="k-label">Resultado del mes</div><div class="k-val">${clp(k.neto_mes)}</div><div class="k-sub">ingresos − egresos (${clp(k.egresos_mes)})</div></div>
-      <div class="kpi ${r.n_alertas_altas?'alert':'good'}"><div class="k-label">Alertas activas</div><div class="k-val">${r.alertas.length}</div><div class="k-sub">${r.n_alertas_altas} de prioridad alta</div></div>`;
-    // alertas
+      <div class="kpi money"><div class="k-label">Recaudado</div><div class="k-val">${clp(k.recaudado)}</div><div class="k-sub">${k.pagos} pagos · ${k.citas_bot} citas bot</div></div>
+      <div class="kpi ${k.neto>=0?'good':'bad'}"><div class="k-label">Resultado</div><div class="k-val">${clp(k.neto)}</div><div class="k-sub">ingresos − egresos (${clp(k.egresos)})</div></div>
+      <div class="kpi"><div class="k-label">Pacientes activos</div><div class="k-val">${k.pacientes_activos}</div><div class="k-sub">atendidos en el período</div></div>
+      <div class="kpi ${r.n_alertas_altas?'alert':'good'}"><div class="k-label">Alertas activas</div><div class="k-val">${r.alertas.length}</div><div class="k-sub">${r.n_alertas_altas} de prioridad alta · ahora</div></div>`;
+    // alertas (estado actual — point-in-time, no dependen del período)
     const cont = document.getElementById('alerts');
     const pill = document.getElementById('alta-pill');
     if(r.n_alertas_altas){ pill.style.display='inline-block'; pill.textContent=r.n_alertas_altas+' urgentes'; } else pill.style.display='none';
@@ -76,7 +120,12 @@ async function loadAll(){
     // habilitación
     document.getElementById('hab-pct').textContent = (k.habilitacion_pct||0) + '%';
     document.getElementById('hab-bar').style.width = (k.habilitacion_pct||0) + '%';
-  }catch(e){ toast(e.message, true); }
+  }catch(e){ if(seq===perSeq) toast(e.message, true); }
 }
-loadAll();
+function loadAll(){ load(curDesde, curHasta); }   // botón Actualizar → recarga el período actual
+
+document.querySelectorAll('#segPer button').forEach(b=>b.onclick=()=>{ const [d,h]=presetRange(b.dataset.p); setPills(b.dataset.p); load(d,h); });
+document.getElementById('aplicar').onclick=()=>{ const d=document.getElementById('dDesde').value, h=document.getElementById('dHasta').value; if(d&&h){ setPills(''); load(d,h); } };
+
+(()=>{ const [d,h]=presetRange('mes'); setPills('mes'); load(d,h); })();   // arranca: este mes
 </script></body></html>

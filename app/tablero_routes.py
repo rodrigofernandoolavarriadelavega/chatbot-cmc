@@ -46,6 +46,23 @@ async def resumen(token: str | None = Query(None), cmc_session: str | None = Coo
     mes = now.strftime("%Y-%m")
     hoy = now.strftime("%Y-%m-%d")
 
+    # Período seleccionable (?desde=YYYY-MM-DD&hasta=YYYY-MM-DD). Default = mes en curso.
+    def _valid_date(s):
+        try:
+            datetime.strptime(s, "%Y-%m-%d")
+            return True
+        except Exception:
+            return False
+    qp = request.query_params if request is not None else {}
+    desde = (qp.get("desde") or "").strip()
+    hasta = (qp.get("hasta") or "").strip()
+    if not _valid_date(desde):
+        desde = now.strftime("%Y-%m-01")
+    if not _valid_date(hasta):
+        hasta = hoy
+    if desde > hasta:
+        desde, hasta = hasta, desde
+
     kpis = {}
     alertas = []
 
@@ -65,6 +82,17 @@ async def resumen(token: str | None = Query(None), cmc_session: str | None = Coo
         kpis["pagos_hoy"] = _q1(conn, "SELECT COUNT(*) FROM pagos_cmc WHERE fecha=?", (hoy,))
         kpis["recaudado_hoy"] = _q1(conn, "SELECT COALESCE(SUM(copago),0) FROM pagos_cmc WHERE fecha=?", (hoy,))
         kpis["citas_bot_hoy"] = _q1(conn, "SELECT COUNT(*) FROM citas_bot WHERE fecha=?", (hoy,))
+
+        # ── KPIs del período seleccionado (default = mes en curso) ──
+        ing_p = _q1(conn, "SELECT COALESCE(SUM(copago),0) FROM pagos_cmc WHERE fecha BETWEEN ? AND ?", (desde, hasta))
+        egr_p = _q1(conn, "SELECT COALESCE(SUM(monto),0) FROM egresos_cmc WHERE fecha BETWEEN ? AND ?", (desde, hasta))
+        kpis["recaudado"] = ing_p          # SUM(copago) = lo recaudado en el período
+        kpis["ingresos"] = ing_p
+        kpis["egresos"] = egr_p
+        kpis["neto"] = ing_p - egr_p
+        kpis["pacientes_activos"] = _q1(conn, "SELECT COUNT(DISTINCT rut) FROM pagos_cmc WHERE fecha BETWEEN ? AND ? AND rut!=''", (desde, hasta))
+        kpis["pagos"] = _q1(conn, "SELECT COUNT(*) FROM pagos_cmc WHERE fecha BETWEEN ? AND ?", (desde, hasta))
+        kpis["citas_bot"] = _q1(conn, "SELECT COUNT(*) FROM citas_bot WHERE fecha BETWEEN ? AND ?", (desde, hasta))
 
         # ── Alertas por módulo ──
         # Inventario: bajo mínimo o agotado
@@ -137,6 +165,7 @@ async def resumen(token: str | None = Query(None), cmc_session: str | None = Coo
 
     return {
         "fecha": hoy,
+        "periodo": {"desde": desde, "hasta": hasta},
         "kpis": kpis,
         "alertas": alertas,
         "n_alertas_altas": sum(1 for a in alertas if a["severidad"] == "alta"),
