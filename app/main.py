@@ -2974,6 +2974,7 @@ _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(e
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
 _ALMA_HTML = (_TEMPLATE_DIR / "alma.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma.html").exists() else ""
+_KINTU_HTML = (_TEMPLATE_DIR / "kintu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "kintu.html").exists() else ""
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
@@ -3553,6 +3554,27 @@ def boxes_dashboard_page(token: str | None = Query(None)):
     if not _BOXES_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard Boxes no disponible")
     return _BOXES_DASHBOARD_HTML
+
+
+@app.get("/kintu", response_class=HTMLResponse)
+@app.get("/kintu/dashboard", response_class=HTMLResponse)
+def kintu_shell(token: str | None = Query(None),
+                cmc_session: str | None = Cookie(None)):
+    """Kintu — shell del producto Growth (espejo de /alma con brand Kintu). Embebe los
+    módulos reales de growth (/autopilot, /seo) + Resumen (Kintu Global) + Marcas + Canales.
+    Cada iframe recibe su token correcto: autopilot=token dueño, seo=ADMIN_TOKEN."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _KINTU_HTML:
+        raise HTTPException(404, "Kintu no disponible")
+    active = token if (token and _is_admin_token(token)) else None
+    if not active and _verify_cookie(cmc_session or "") == "admin":
+        active = token if (token and _is_admin_token(token)) else "cmc_admin_olacore"
+    if not active:
+        raise HTTPException(403, "no autorizado")
+    return HTMLResponse(_KINTU_HTML
+                        .replace("__TOKEN__", active)
+                        .replace("__SEO_TOKEN__", ADMIN_TOKEN)
+                        .replace("__ADKUN_TOKEN__", ""))
 
 
 @app.get("/alma", response_class=HTMLResponse)
@@ -6823,6 +6845,45 @@ def seo_localidades_arauco():
         "fuente":         "scripts/heatmap_comunas.py × INE Censo 2017",
         "arauco":         locs,
     }
+
+
+@app.get("/api/seo/paginas")
+def seo_paginas_list(token: str = "", cmc_session: str | None = Cookie(None)):
+    """Páginas SEO especialidad×comuna generadas + oportunidades pendientes."""
+    _seo_api_auth(token, cmc_session)
+    import seo_pages
+    return {"paginas": seo_pages.listar(), "oportunidades": seo_pages.oportunidades()}
+
+
+@app.post("/api/seo/generar-pagina")
+async def seo_generar_pagina(request: Request, token: str = "",
+                             cmc_session: str | None = Cookie(None)):
+    """Crea una landing SEO para una celda especialidad×comuna (contenido único via
+    Claude + schema fijo). Devuelve la meta + el HTML para previsualizar embebido."""
+    _seo_api_auth(token, cmc_session)
+    import seo_pages
+    body = await request.json()
+    esp_slug = (body.get("esp_slug") or "").strip()
+    com_slug = (body.get("com_slug") or "").strip()
+    publicar = bool(body.get("publicar"))
+    if not esp_slug or not com_slug:
+        raise HTTPException(400, "esp_slug y com_slug requeridos")
+    try:
+        res = await seo_pages.generar(esp_slug, com_slug, publicar=publicar)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return res
+
+
+@app.get("/seo/p/{slug}", response_class=HTMLResponse)
+def seo_pagina_serve(slug: str):
+    """Sirve una página SEO generada (pública — para previsualizar embebida y, si se
+    publica, para que Google la indexe)."""
+    import seo_pages
+    html = seo_pages.get_html(slug)
+    if not html:
+        raise HTTPException(404, "página no encontrada")
+    return HTMLResponse(html)
 
 
 @app.get("/api/seo/geo")

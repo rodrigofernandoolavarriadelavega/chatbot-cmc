@@ -134,6 +134,9 @@ PROFESIONALES = {
     67: {"nombre": "Sarai Gómez",              "especialidad": "Matrona",               "intervalo": 30},
     56: {"nombre": "Andrea Guevara",           "especialidad": "Podología",             "intervalo": 60},
     68: {"nombre": "David Pardo",              "especialidad": "Ecografía",             "intervalo": 15},
+    # Psiquiatría TELECONSULTA — solo jueves (weekday 3) 16:00-20:00. Bloque de 60 min
+    # (45 min consulta + 15 min descanso) → cupos 16:00/17:00/18:00/19:00.
+    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 30, "dias": [3]},  # 30: su agenda Medilink tiene slots :00 (descanso en :30); intervalo 60 solo dejaba ver 19:00
 }
 
 # Mapa de palabras clave → IDs de profesionales
@@ -173,6 +176,7 @@ ESPECIALIDADES_MAP = {
     "psicología adulto": [74, 49], "psicólogo adulto": [74, 49],
     "psicología infantil": [74], "psicólogo infantil": [74],
     "psicología": [74, 49], "psicólogo": [74, 49], "psicóloga": [74, 49],
+    "psiquiatría": [78], "psiquiatria": [78], "psiquiatra": [78], "psiquiátrica": [78],
     "nutrición": [52], "nutricionista": [52],
     "podología": [56], "podólogo": [56],
     "ortodoncia": [66], "ortodoncista": [66],
@@ -196,6 +200,7 @@ ESPECIALIDADES_ID = {
     "cardiología": 16, "cardiólogo": 16,
     "gastroenterología": 18, "gastroenterólogo": 18,
     "psicología": 5, "psicólogo": 5, "psicóloga": 5,
+    "psiquiatría": 22, "psiquiatria": 22, "psiquiatra": 22,
     "psicología adulto": 5, "psicología infantil": 5,
     "nutrición": 4, "nutricionista": 4,
     "podología": 12, "podólogo": 12,

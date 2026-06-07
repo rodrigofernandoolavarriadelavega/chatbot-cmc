@@ -67,6 +67,36 @@ def _deterministic_event_id(phone: str, fecha: str, especialidad: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
+def _ya_purchase_forward(phone: str, fecha: str) -> bool:
+    """¿El forward-path (cron postconsulta) YA envió un Purchase por esta atención?
+
+    GUARD ANTI-DUPLICADO. El forward-path usa event_id uuid4 aleatorio, así que su
+    Purchase NO deduplica contra el event_id determinístico de este backfill: enviar
+    de nuevo contaría DOS conversiones en Meta para la misma atención.
+
+    El cron postconsulta loguea `capi_send_ok` (event_type=Purchase) ~02:00 UTC del
+    día siguiente a la cita. Buscamos uno con ts en [fecha, fecha+2d] → si existe,
+    esta atención ya está atribuida y NO hay que reenviar.
+    """
+    import json as _json
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT meta FROM conversation_events
+               WHERE phone=? AND event='capi_send_ok'
+                 AND date(ts) >= date(?) AND date(ts) <= date(?, '+2 days')""",
+            (phone, fecha, fecha),
+        ).fetchall()
+    for r in rows:
+        try:
+            d = _json.loads(r["meta"]) if r["meta"] else {}
+        except Exception:
+            d = {}
+        if d.get("event_type") == "Purchase":
+            return True
+    return False
+
+
 def _mask_phone(phone: str) -> str:
     """Enmascara teléfono para logs: '56966610737' → '569***0737'."""
     if len(phone) > 7:
@@ -178,12 +208,13 @@ def cita_fecha_to_unix(fecha: str, hora: str) -> int:
         return int(time.time())
 
 
-async def run_backfill(days: int, send: bool) -> None:
+async def run_backfill(days: int, send: bool, force_resend: bool = False) -> None:
     from config import get_arancel_cpl
     import meta_capi
 
     log.info("=== Backfill CAPI Purchase con atribución ===")
-    log.info("Ventana: %d días | Modo: %s", days, "ENVÍO REAL" if send else "DRY-RUN")
+    log.info("Ventana: %d días | Modo: %s%s", days, "ENVÍO REAL" if send else "DRY-RUN",
+             " | FORCE-RESEND (ignora guard anti-duplicado)" if force_resend else "")
 
     citas = get_citas_con_atribucion(days)
     log.info("Citas con referral recuperadas del DB: %d", len(citas))
@@ -228,6 +259,7 @@ async def run_backfill(days: int, send: bool) -> None:
 
     enviadas = 0
     errores = 0
+    saltadas_dup = 0
 
     for cita in dentro:
         phone = cita["phone"]
@@ -255,6 +287,17 @@ async def run_backfill(days: int, send: bool) -> None:
         nom_parts = nombre.split()
         first_name = nom_parts[0] if nom_parts else None
         last_name = nom_parts[-1] if len(nom_parts) > 1 else None
+
+        # GUARD ANTI-DUPLICADO: si el forward-path ya envió el Purchase de esta
+        # atención, reenviar duplicaría la conversión en Meta (event_id distinto).
+        if not force_resend and _ya_purchase_forward(phone, fecha):
+            log.info(
+                "[SKIP-DUP] phone=%s fecha=%s esp=%s — forward-path ya atribuyó esta "
+                "atención; reenviar duplicaría la conversión. Usá --force-resend para forzar.",
+                _mask_phone(phone), fecha, esp or "(sin esp)",
+            )
+            saltadas_dup += 1
+            continue
 
         log.info(
             "[%s] phone=%s fecha=%s esp=%s value=%d ad_id=%s ctwa=%s... event_id=%s",
@@ -304,10 +347,17 @@ async def run_backfill(days: int, send: bool) -> None:
         await asyncio.sleep(0.1)
 
     if send:
-        log.info("=== Resultado: enviadas=%d errores=%d ===", enviadas, errores)
+        log.info("=== Resultado: enviadas=%d saltadas_dup=%d errores=%d ===",
+                 enviadas, saltadas_dup, errores)
     else:
-        log.info("=== DRY-RUN completo: %d eventos serían enviados ===", len(dentro))
-        log.info("Para enviar de verdad: python scripts/backfill_capi_purchase_attribution.py --send")
+        a_enviar = len(dentro) - saltadas_dup
+        log.info("=== DRY-RUN completo: %d candidatos | %d ya atribuidos por forward-path (SKIP) | "
+                 "%d realmente faltantes ===", len(dentro), saltadas_dup, a_enviar)
+        if a_enviar > 0:
+            log.info("Para enviar los faltantes: python scripts/backfill_capi_purchase_attribution.py --send")
+        else:
+            log.info("Nada que enviar: el forward-path ya atribuyó todas las atenciones. "
+                     "Backfill innecesario.")
 
 
 def main() -> None:
@@ -320,6 +370,11 @@ def main() -> None:
         "--send", action="store_true", default=False,
         help="Enviar eventos de verdad. Sin este flag solo hace dry-run.",
     )
+    parser.add_argument(
+        "--force-resend", action="store_true", default=False,
+        help="Ignora el guard anti-duplicado y reenvía aunque el forward-path "
+             "ya haya atribuido la atención. PELIGRO: duplica conversiones en Meta.",
+    )
     args = parser.parse_args()
 
     if args.days > 7:
@@ -328,7 +383,7 @@ def main() -> None:
             "Procedeiendo igualmente con --days=%d.", args.days
         )
 
-    asyncio.run(run_backfill(days=args.days, send=args.send))
+    asyncio.run(run_backfill(days=args.days, send=args.send, force_resend=args.force_resend))
 
 
 if __name__ == "__main__":

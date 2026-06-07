@@ -1,0 +1,320 @@
+<!DOCTYPE html><html lang="es-CL"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1D2A"><meta name="robots" content="noindex,nofollow">
+<title>Kintu · Inteligencia de crecimiento</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B1D2A'/%3E%3Ccircle cx='14' cy='32' r='5' fill='%23D6A45A'/%3E%3Cpath d='M24 8 L42 8 L28 32 L42 56 L24 56 L12 32 Z' fill='%237FA7A3'/%3E%3Cpath d='M40 32 L58 10 L50 32 L58 54 Z' fill='%230F5B5D'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B1D2A; --navy-700:#081722; --teal:#0F5B5D;
+  --seafoam:#7FA7A3; --cobre:#D6A45A; --cobre-300:#e6c08a; --stone:#F2F1EE;
+  --ink:#13242c; --muted:#6f8390; --line:#e6edf0;
+  --bg:#EDF1F3; --card:#fff;
+  --radius:14px; --pill:999px;
+  --sh-xs:0 1px 2px rgba(11,29,42,.06);
+  --sh-sm:0 2px 8px rgba(11,29,42,.07),0 1px 2px rgba(11,29,42,.04);
+  --sh-md:0 12px 28px rgba(11,29,42,.11),0 4px 8px rgba(11,29,42,.05);
+  --sh-lg:0 28px 60px rgba(11,29,42,.18),0 8px 16px rgba(11,29,42,.07);
+  --grad-navy:linear-gradient(150deg,#0B1D2A 0%,#0d3a3c 60%,#0F5B5D 150%);
+  --fd:'Poppins',system-ui,sans-serif; --fb:'Inter',system-ui,sans-serif; --fm:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--fb);color:var(--ink);background:var(--bg)}
+h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em}
+::selection{background:var(--cobre-300)}
+.layout{display:grid;grid-template-columns:258px 1fr;height:100vh}
+.side{background:var(--grad-navy);color:#fff;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.side::after{content:"";position:absolute;left:0;right:0;bottom:0;height:170px;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 258 170'%3E%3Cg fill='none' stroke-width='2'%3E%3Cpath d='M-10 60 L40 100 L-10 140' stroke='rgba(214,164,90,.12)'/%3E%3Cpath d='M40 50 L92 100 L40 150' stroke='rgba(127,167,163,.12)'/%3E%3Cpath d='M96 70 L132 100 L96 130' stroke='rgba(214,164,90,.08)'/%3E%3C/g%3E%3C/svg%3E") bottom left/cover no-repeat}
+.brand{padding:22px 20px;display:flex;gap:12px;align-items:center;border-bottom:1px solid rgba(255,255,255,.09);cursor:pointer}
+.brand .mark{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.07);flex:0 0 auto;display:grid;place-items:center;box-shadow:var(--sh-sm)}
+.brand .t1{font-family:var(--fd);font-weight:800;font-size:19px;line-height:1;letter-spacing:.14em}
+.brand .t2{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--cobre);margin-top:5px;font-weight:700}
+.brand .t3{font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;font-weight:600}
+.nav{flex:1;overflow-y:auto;padding:10px 12px;z-index:1}
+.nav::-webkit-scrollbar{width:6px}.nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:3px}
+.grp{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.38);padding:16px 12px 7px;font-weight:700}
+.nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:11px;color:rgba(255,255,255,.82);
+  font-size:14px;font-weight:500;margin-bottom:2px;cursor:pointer;transition:.15s var(--ease)}
+.nav a svg{width:19px;height:19px;flex:0 0 auto;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.82}
+.nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav a.active{background:linear-gradient(135deg,rgba(15,91,93,.95),rgba(214,164,90,.45));color:#fff;font-weight:600;box-shadow:var(--sh-md)}
+.nav a.active svg{opacity:1}
+.foot{padding:15px 20px;border-top:1px solid rgba(255,255,255,.09);font-size:11px;color:rgba(255,255,255,.5);z-index:1}
+.foot b{color:var(--cobre);font-weight:700}
+.foot a{color:rgba(255,255,255,.55);text-decoration:none}.foot a:hover{color:#fff}
+.main{display:flex;flex-direction:column;min-width:0;height:100vh}
+.topbar{height:60px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 24px;flex-shrink:0;box-shadow:var(--sh-xs)}
+.topbar h1{font-size:16px;font-weight:700}
+.topbar .pill{margin-left:auto;font-size:11.5px;background:#e9f3f3;color:var(--teal);padding:6px 13px;border-radius:var(--pill);font-weight:600}
+.stage{flex:1;position:relative;overflow:auto;background:var(--bg)}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none}
+.stage iframe.on{display:block}
+.panel{display:none;padding:34px;max-width:1020px;margin:0 auto}
+.panel.on{display:block;animation:fade .3s var(--ease)}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cobre);font-weight:700}
+.panel h2{font-size:28px;margin:9px 0 7px;letter-spacing:-.02em}
+.panel h2 em{font-style:normal;color:var(--teal)}
+.panel .lead{color:var(--muted);font-size:14.5px;max-width:660px;line-height:1.6;margin-bottom:26px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));gap:14px;margin-bottom:28px}
+.kpi{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px 16px;
+  box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cobre);border-radius:4px 0 0 4px}
+.kpi .l{font-size:11.5px;color:var(--muted);font-weight:500}
+.kpi .v{font-family:var(--fm);font-size:26px;font-weight:700;color:var(--navy);line-height:1.1;margin-top:6px;letter-spacing:-.02em}
+.kpi .s{font-size:11px;color:var(--muted);margin-top:3px}
+.sec-h{font-family:var(--fd);font-size:15px;font-weight:700;margin:8px 0 12px;color:var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:14px}
+.bcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--sh-sm);transition:.18s var(--ease)}
+.bcard:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+.bcard .t{font-weight:700;display:flex;align-items:center;gap:9px;font-size:15px}
+.bcard .v{font-size:11.5px;color:var(--muted);margin-top:2px}
+.bcard p{font-size:12.5px;color:var(--muted);margin:11px 0 13px;line-height:1.5}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}.dot.on{background:#34c77b}.dot.off{background:#9aa6b2}
+.est{font-size:10px;font-weight:700;padding:3px 10px;border-radius:var(--pill);margin-left:auto;letter-spacing:.03em}
+.est.a{background:#e7f7ef;color:#198a5a}.est.o{background:#eef1f3;color:#7a8893}
+.kbtn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:9px 15px;border-radius:11px;text-decoration:none;
+  background:var(--cobre);color:var(--navy);box-shadow:var(--sh-xs);transition:.15s}
+.kbtn:hover{filter:brightness(1.05);box-shadow:var(--sh-sm)}
+.kbtn.ghost{background:#eef1f3;color:var(--ink);box-shadow:none}
+.chrow{display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;background:#fff;font-size:14px;box-shadow:var(--sh-sm)}
+.chrow .badge{margin-left:auto;font-size:11px;font-weight:700;padding:4px 11px;border-radius:var(--pill)}
+.chrow .ok{background:#e7f7ef;color:#198a5a}.chrow .pend{background:#fdf4e3;color:#b07d18}
+.muted-s{color:var(--muted);font-weight:400;font-size:12px}
+.daterange{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:2px 0 24px}
+.segbar{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:var(--pill);padding:4px;box-shadow:var(--sh-xs)}
+.segbar button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);padding:7px 16px;border-radius:var(--pill);cursor:pointer;transition:.15s var(--ease)}
+.segbar button:hover{color:var(--ink)}
+.segbar button.on{background:var(--grad-navy);color:#fff;box-shadow:var(--sh-sm)}
+.rangelbl{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);font-weight:500}
+.rangelbl svg{width:15px;height:15px;stroke:var(--cobre);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.rangelbl b{color:var(--ink);font-family:var(--fm);font-weight:700}
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start;margin-top:6px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--sh-sm);overflow:hidden}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:13px}
+.adrow{display:flex;align-items:center;gap:13px;padding:13px 16px;border-bottom:1px solid var(--line);transition:.12s}
+.adrow:last-child{border-bottom:0}.adrow:hover{background:#f7fafa}
+.adrow .rk{width:25px;height:25px;border-radius:7px;background:#eef3f4;color:var(--teal);font-weight:700;font-size:12px;display:grid;place-items:center;flex:0 0 auto;font-family:var(--fm)}
+.adrow .rk.top{background:var(--cobre);color:var(--navy)}
+.adrow .an{flex:1;min-width:0}
+.adrow .an .t{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adrow .an .m{font-size:11.5px;color:var(--muted);margin-top:2px}
+.adrow .cac{font-family:var(--fm);font-weight:700;font-size:14.5px;color:var(--navy);text-align:right;flex:0 0 auto}
+.adrow .cac small{display:block;font-size:10px;color:var(--muted);font-weight:400;font-family:var(--fb)}
+.decrow{display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.decrow:last-child{border-bottom:0}
+.decrow .ab{font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--pill);flex:0 0 auto;height:fit-content;letter-spacing:.02em;white-space:nowrap}
+.ab.pause{background:#fdecec;color:#c0392b}.ab.up{background:#e7f7ef;color:#198a5a}.ab.down{background:#fdf4e3;color:#b07d18}.ab.keep{background:#eef1f3;color:#7a8893}
+.decrow .dt{font-size:12.5px;line-height:1.45}.decrow .dt b{font-size:13px}
+.card-foot{padding:11px 16px;border-top:1px solid var(--line);text-align:center}
+.card-foot a{font-size:12.5px;color:var(--teal);text-decoration:none;font-weight:600}
+/* Welcome hero */
+.welcome{position:absolute;inset:0;display:none;place-items:center;text-align:center;color:#fff;overflow:hidden;
+  background:linear-gradient(160deg,#081722 0%,#0B1D2A 42%,#0d3a3c 115%)}
+.welcome.on{display:grid;animation:fade .4s var(--ease)}
+.welcome .gridbg{position:absolute;inset:0;opacity:.5;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:46px 46px;-webkit-mask:radial-gradient(circle at 50% 40%,#000,transparent 72%);mask:radial-gradient(circle at 50% 40%,#000,transparent 72%)}
+.welcome .glow{position:absolute;width:680px;height:680px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(214,164,90,.20),transparent 60%);top:-220px;right:-160px}
+.welcome .glow2{position:absolute;width:520px;height:520px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(15,91,93,.32),transparent 62%);bottom:-200px;left:-120px}
+.welcome .inner{position:relative;z-index:2;padding:0 24px;animation:rise .9s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.welcome .wmark{width:106px;height:106px;border-radius:28px;margin:0 auto 30px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#0F5B5D,#0B1D2A);box-shadow:0 24px 60px rgba(15,91,93,.45);animation:floaty 5.5s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.welcome .word{font-family:var(--fd);font-weight:800;font-size:clamp(40px,7vw,64px);letter-spacing:.05em;line-height:1;
+  background:linear-gradient(90deg,#fff,#e6c08a 55%,#D6A45A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.welcome .wtag{font-size:13px;letter-spacing:.34em;text-transform:uppercase;color:var(--cobre);font-weight:700;margin-top:15px}
+.welcome .whi{font-family:var(--fd);font-weight:600;font-size:clamp(20px,3vw,27px);margin-top:34px}
+.welcome .wmsg{font-size:16px;color:rgba(255,255,255,.72);margin-top:11px;max-width:580px;margin-inline:auto;line-height:1.55}
+.welcome .whint{display:inline-flex;align-items:center;gap:9px;margin-top:36px;padding:11px 20px;
+  border:1px solid rgba(255,255,255,.2);border-radius:var(--pill);background:rgba(255,255,255,.07);
+  font-size:13.5px;color:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.welcome .whint svg{width:17px;height:17px;stroke:var(--cobre);stroke-width:2;fill:none}
+.welcome .wfoot{position:absolute;bottom:22px;left:0;right:0;text-align:center;z-index:2;font-size:11.5px;letter-spacing:.04em;color:rgba(255,255,255,.45)}
+.welcome .wfoot b{color:var(--cobre);font-weight:700}
+.menu-btn{display:none}
+@media(max-width:760px){.layout{grid-template-columns:1fr}
+  .side{position:fixed;left:-270px;width:258px;z-index:99;transition:.22s var(--ease)}
+  .side.open{left:0;box-shadow:var(--sh-lg)}
+  .menu-btn{display:grid;place-items:center;position:fixed;top:13px;left:13px;z-index:100;width:42px;height:42px;border-radius:11px;background:var(--navy);color:#fff;box-shadow:var(--sh-md);border:0}
+  .panel{padding:22px}}
+</style></head><body>
+<button class="menu-btn" onclick="document.getElementById('side').classList.toggle('open')">☰</button>
+<div class="layout">
+  <aside class="side" id="side">
+    <div class="brand" onclick="show(MODULES[0])">
+      <div class="mark"><svg viewBox="0 0 44 36" width="27" height="22"><circle cx="6" cy="18" r="3.6" fill="#D6A45A"/><path d="M14 2 L26 2 L16 18 L26 34 L14 34 L6 18 Z" fill="#7FA7A3"/><path d="M24 18 L36 4 L30 18 L36 32 Z" fill="#0F5B5D"/></svg></div>
+      <div><div class="t1">KINTU</div><div class="t2">Crecimiento</div><div class="t3">Carampangue</div></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot"><a href="https://adkun.cl/consola/">← Consola Adkun</a><br>Powered by <b>Adkun</b></div>
+  </aside>
+  <div class="main">
+    <div class="topbar"><h1 id="crumb">Inicio</h1><span class="pill">Marca: CMC</span></div>
+    <div class="stage" id="stage">
+      <div class="welcome on" id="p-welcome">
+        <div class="gridbg"></div><div class="glow"></div><div class="glow2"></div>
+        <div class="inner">
+          <div class="wmark"><svg viewBox="0 0 44 36" width="58" height="46"><circle cx="6" cy="18" r="3.6" fill="#D6A45A"/><path d="M14 2 L26 2 L16 18 L26 34 L14 34 L6 18 Z" fill="#7FA7A3"/><path d="M24 18 L36 4 L30 18 L36 32 Z" fill="#0F5B5D"/></svg></div>
+          <div class="word">KINTU</div>
+          <div class="wtag">Inteligencia de crecimiento</div>
+          <div class="whi">Tu motor para crecer</div>
+          <div class="wmsg">Kintu observa cada canal, mide el <b style="color:#fff">CAC real</b> (caja, no vanidad) y te dice dónde invertir. Campañas, contenido, atribución y resultados de todas tus marcas, en un solo lugar.</div>
+          <div class="whint"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg> Elegí un módulo en el panel para comenzar</div>
+        </div>
+        <div class="wfoot">Kintu · Producto de crecimiento del ecosistema · Powered by <b>Adkun</b></div>
+      </div>
+      <div class="panel" id="p-resumen">
+        <span class="eyebrow">Kintu Global</span>
+        <h2>El pulso de tu <em>crecimiento</em>.</h2>
+        <p class="lead">Lo que el motor ve en el período elegido: CAC real por canal, los anuncios que más rinden y las decisiones que esperan tu OK — de todas tus marcas.</p>
+        <div class="daterange">
+          <div class="segbar" id="segWin">
+            <button data-w="7">7 días</button>
+            <button data-w="14">14 días</button>
+            <button data-w="30" class="on">30 días</button>
+            <button data-w="90">90 días</button>
+          </div>
+          <span class="rangelbl"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><b id="rangeLbl">—</b></span>
+        </div>
+        <div class="kpis" id="kResumen"><div class="kpi"><div class="l">Cargando…</div></div></div>
+        <div class="grid2">
+          <div>
+            <div class="sec-h">🏆 Mejores anuncios por CAC real <span class="muted-s" id="kAdsWin">· 30 días</span></div>
+            <div class="card" id="kAds"><div class="empty">Cargando…</div></div>
+          </div>
+          <div>
+            <div class="sec-h">⚡ Decisiones esperando tu OK</div>
+            <div class="card" id="kDec"><div class="empty">—</div></div>
+            <div class="sec-h" style="margin-top:22px">🏢 Marcas</div>
+            <div class="cards" id="kMarcasMini"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="p-marcas">
+        <span class="eyebrow">Marcas</span><h2>Negocios que <em>Kintu</em> hace crecer.</h2>
+        <p class="lead">Cada marca = un inquilino del motor. Activá una conectando su cuenta de ads + su fuente de atribución.</p>
+        <div class="cards" id="kMarcas"></div>
+      </div>
+      <div class="panel" id="p-canales">
+        <span class="eyebrow">Canales</span><h2>Dónde <em>Kintu</em> mide y optimiza.</h2>
+        <p class="lead">El motor cruza el gasto de cada canal con el CAC real. Meta ya está conectado; Google y GBP esperan credenciales.</p>
+        <div class="chrow"><b>Meta Ads</b> — campañas, CAC real, presupuesto <span class="badge ok">● conectado</span></div>
+        <div class="chrow"><b>Google Ads</b> — <span style="color:var(--muted)">falta developer token + OAuth + customer id</span> <span class="badge pend">● pendiente</span></div>
+        <div class="chrow"><b>Google Business Profile</b> — <span style="color:var(--muted)">falta API + OAuth</span> <span class="badge pend">● pendiente</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const TOKEN="__TOKEN__", SEO_TOKEN="__SEO_TOKEN__";
+const I={
+  inicio:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  resumen:'<path d="M3 13h4l2 6 4-14 2 8h6"/>',
+  campanas:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>',
+  seo:'<path d="M4 5h16M4 12h10M4 19h7"/><circle cx="18" cy="17" r="3"/>',
+  marcas:'<rect x="3" y="9" width="8" height="11"/><rect x="13" y="4" width="8" height="16"/>',
+  canales:'<path d="M5 12h14"/><circle cx="5" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/>',
+};
+const MODULES=[
+  {id:'inicio',label:'Inicio',kind:'welcome'},
+  {id:'resumen',label:'Resumen',kind:'inline'},
+  {sec:'Capacidades'},
+  {id:'campanas',label:'Campañas & CAC',kind:'iframe',src:'/autopilot?token='+encodeURIComponent(TOKEN)},
+  {id:'seo',label:'Contenido & SEO',kind:'iframe',src:'/seo?token='+encodeURIComponent(SEO_TOKEN)},
+  {sec:'Ecosistema'},
+  {id:'marcas',label:'Marcas',kind:'inline'},
+  {id:'canales',label:'Canales',kind:'inline'},
+];
+const nav=document.getElementById('nav'), stage=document.getElementById('stage');
+MODULES.forEach(m=>{
+  if(m.sec){const d=document.createElement('div');d.className='grp';d.textContent=m.sec;nav.appendChild(d);return;}
+  const a=document.createElement('a');a.dataset.id=m.id;if(m.id==='inicio')a.classList.add('active');
+  a.innerHTML=`<svg viewBox="0 0 24 24">${I[m.id]||''}</svg>${m.label}`;
+  a.onclick=()=>show(m);nav.appendChild(a);
+});
+function show(m){
+  if(m.sec)return;
+  document.querySelectorAll('.nav a').forEach(n=>n.classList.toggle('active',n.dataset.id===m.id));
+  document.getElementById('crumb').textContent=m.label;
+  document.getElementById('side').classList.remove('open');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.stage iframe').forEach(f=>f.classList.remove('on'));
+  document.getElementById('p-welcome').classList.remove('on');
+  if(m.kind==='welcome'){
+    document.getElementById('p-welcome').classList.add('on');
+  }else if(m.kind==='iframe'){
+    let f=document.getElementById('if-'+m.id);
+    if(!f){f=document.createElement('iframe');f.id='if-'+m.id;f.src=m.src;stage.appendChild(f);}
+    f.classList.add('on');
+  }else document.getElementById('p-'+m.id).classList.add('on');
+}
+const fmt=n=>'$'+Math.round(n||0).toLocaleString('es-CL');
+const short=(s,n)=>{s=(s||'').replace(/^Publicación:\s*/,'').replace(/["“”]/g,'');return s.length>n?s.slice(0,n-1)+'…':s;};
+const ABMAP={pause:['pause','Pausar'],decrease_budget:['down','Bajar'],increase_budget:['up','Subir'],keep:['keep','Mantener']};
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function rangeLabel(win){
+  const to=new Date(); const from=new Date(); from.setDate(from.getDate()-(win-1));
+  const f=d=>d.getDate()+' '+MES[d.getMonth()];
+  return f(from)+' – '+f(to);
+}
+let curWin=30, resumenSeq=0;
+async function loadResumen(win){
+  curWin=win; const seq=++resumenSeq;          // guarda contra respuestas fuera de orden
+  document.querySelectorAll('#segWin button').forEach(b=>b.classList.toggle('on',+b.dataset.w===win));
+  document.getElementById('rangeLbl').textContent=rangeLabel(win);
+  document.getElementById('kAdsWin').textContent='· '+win+' días';
+  document.getElementById('kResumen').innerHTML='<div class="kpi"><div class="l">Cargando…</div></div>';
+  document.getElementById('kAds').innerHTML='<div class="empty">Cargando…</div>';
+  try{
+    const [cac,ten,pend]=await Promise.all([
+      fetch('/autopilot/api/cac-local?window='+win+'&token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({})),
+      fetch('/autopilot/api/tenants?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({tenants:[]})),
+      fetch('/autopilot/api/pending?token='+encodeURIComponent(TOKEN)).then(r=>r.json()).catch(()=>({pending:[]})),
+    ]);
+    if(seq!==resumenSeq)return;                 // llegó tarde: el usuario ya cambió de período
+    const pendientes=(pend.pending||[]);
+    document.getElementById('kResumen').innerHTML=`
+      <div class="kpi"><div class="l">CAC real prom · ${win}d</div><div class="v">${cac.cac_promedio?fmt(cac.cac_promedio):'—'}</div><div class="s">${cac.modo_atendido||'—'}</div></div>
+      <div class="kpi"><div class="l">Pacientes atendidos</div><div class="v">${cac.total_atendidos??'—'}</div><div class="s">atribuidos a ads</div></div>
+      <div class="kpi"><div class="l">Gasto · ${win}d</div><div class="v">${cac.total_spend?fmt(cac.total_spend):'—'}</div><div class="s">Meta Ads</div></div>
+      <div class="kpi"><div class="l">Decisiones pendientes</div><div class="v">${pendientes.length}</div><div class="s">esperan tu OK</div></div>
+      <div class="kpi"><div class="l">Marcas</div><div class="v">${(ten.tenants||[]).length}</div><div class="s">${(ten.tenants||[]).filter(t=>t.active).length} activa(s)</div></div>`;
+    // Ranking de anuncios por CAC real
+    const ads=(cac.ads||[]).filter(a=>a.spend>0&&a.cac_real).sort((a,b)=>a.cac_real-b.cac_real).slice(0,6);
+    document.getElementById('kAds').innerHTML=ads.length?ads.map((a,i)=>`
+      <div class="adrow"><div class="rk ${i===0?'top':''}">${i+1}</div>
+        <div class="an"><div class="t">${short(a.ad_name||a.campaign_name,46)}</div>
+          <div class="m">${a.pagaron} pagaron · ${fmt(a.spend)} gastado</div></div>
+        <div class="cac">${fmt(a.cac_real)}<small>CAC/paciente</small></div></div>`).join('')
+      :'<div class="empty">Sin anuncios con CAC atribuido en este período.</div>';
+    // Decisiones del motor
+    document.getElementById('kDec').innerHTML=(pendientes.length?pendientes.slice(0,4).map(p=>{
+      const ab=ABMAP[p.action]||['keep',p.action];
+      return `<div class="decrow"><span class="ab ${ab[0]}">${ab[1]}</span>
+        <div class="dt"><b>${short(p.campaign_name,38)}</b><br>${short(p.reason,90)}</div></div>`;
+    }).join('')+'<div class="card-foot"><a href="#" onclick="show(MODULES.find(m=>m.id===\'campanas\'));return false">Revisar y aprobar en Campañas →</a></div>'
+      :'<div class="empty">Sin decisiones pendientes 👌</div>');
+    // Marcas
+    const cards=(ten.tenants||[]).map(t=>`<div class="bcard">
+        <div class="t"><span class="dot ${t.active?'on':'off'}"></span>${t.label}<span class="est ${t.active?'a':'o'}">${t.active?'activo':'apagado'}</span></div>
+        <div class="v">${t.margin_profile||''} · ${t.currency||''}</div>
+        <p>${t.ready?'Conectado · operando':'Falta cuenta de ads + atribución'}</p>
+        ${t.active?'<a class="kbtn" href="/autopilot?token='+encodeURIComponent(TOKEN)+'" target="_blank">Abrir panel ↗</a>':'<span class="kbtn ghost">+ Conectar</span>'}
+      </div>`).join('');
+    document.getElementById('kMarcasMini').innerHTML=cards;
+    document.getElementById('kMarcas').innerHTML=cards;
+  }catch(e){if(seq===resumenSeq)document.getElementById('kResumen').innerHTML='<div class="kpi"><div class="l">No se pudo cargar</div></div>';}
+}
+document.querySelectorAll('#segWin button').forEach(b=>b.onclick=()=>loadResumen(+b.dataset.w));
+loadResumen(30);
+</script></body></html>

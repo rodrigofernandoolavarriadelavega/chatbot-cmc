@@ -319,6 +319,8 @@ ARANCELES_CLP: dict[str, int] = {
     "gastroenterologia":            35000,
     "psicología":                   35000,
     "psicologia":                   35000,
+    "psiquiatría":                  60000,
+    "psiquiatria":                  60000,
     "ginecología":                  40000,
     "ginecologia":                  40000,
     "matrona":                      25000,

@@ -19,6 +19,7 @@ dashboard (endpoints en routes.py), no por parseo de comandos de WhatsApp.
 import json
 import logging
 import os
+from .flags import flag_on
 import time
 import uuid
 
@@ -38,7 +39,7 @@ _MONEY_ACTIONS = ("increase_budget", "decrease_budget", "pause")
 def _autoapply_on() -> bool:
     """Fase 3 — autonomía acotada. OFF por defecto. Solo con esto en true el motor
     aplica solo los movimientos de ALTA confianza (sin pedir aprobación)."""
-    return os.getenv("AUTOPILOT_AUTOAPPLY", "false").lower() == "true"
+    return flag_on("AUTOPILOT_AUTOAPPLY")
 
 
 def _autoapply_min_conf() -> float:
@@ -100,7 +101,7 @@ def enqueue(actions: list, *, dedupe_hours: int = 20) -> list[str]:
     misma campaña+acción dentro de `dedupe_hours`, no la duplica (evita spamear al
     dueño con la misma propuesta cada día).
     """
-    if os.getenv("AUTOPILOT_ENABLED", "false").lower() != "true":
+    if not flag_on("AUTOPILOT_ENABLED"):
         return []
     _ensure_table()
     now = int(time.time())
@@ -145,7 +146,7 @@ async def auto_apply(actions: list, *, dedupe_hours: int = 20) -> list[dict]:
     devuelve para el aviso informativo (FYI, no pide aprobación). Dedupe igual que
     enqueue para no re-aplicar la misma propuesta cada corrida.
     """
-    if os.getenv("AUTOPILOT_ENABLED", "false").lower() != "true" or not _autoapply_on():
+    if not flag_on("AUTOPILOT_ENABLED") or not _autoapply_on():
         return []
     _ensure_table()
     now = int(time.time())
@@ -368,9 +369,11 @@ def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> 
     Gateado: solo con AUTOPILOT_ENABLED y si hay un teléfono de dueño configurado.
     """
     auto_applied = auto_applied or []
-    if (not new_ids and not auto_applied) or os.getenv("AUTOPILOT_ENABLED", "false").lower() != "true":
+    if (not new_ids and not auto_applied) or not flag_on("AUTOPILOT_ENABLED"):
         return
-    phone = (os.getenv("AUTOPILOT_OWNER_PHONE")
+    from .tenants import active as _active_tenant
+    phone = (_active_tenant().owner_phone
+             or os.getenv("AUTOPILOT_OWNER_PHONE")
              or os.getenv("ADMIN_ALERT_PHONE") or "").strip()
     if not phone:
         log.info("[autopilot] avisos pendientes pero sin AUTOPILOT_OWNER_PHONE/ADMIN_ALERT_PHONE")

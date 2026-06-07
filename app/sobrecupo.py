@@ -56,40 +56,54 @@ def _min_to_h(m: int) -> str:
 def _ensure_table() -> None:
     from session import _conn
     with _conn() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS sobrecupos (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_profesional INTEGER,
-                fecha         TEXT,
-                hora_inicio   TEXT,
-                phone         TEXT,
-                rut           TEXT,
-                id_cita       TEXT,
-                creado_ts     INTEGER,
-                UNIQUE(id_profesional, fecha, hora_inicio)
-            )
-        """)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(sobrecupos)").fetchall()]
+        if cols and "capa" not in cols:
+            # Esquema viejo (sin capa, UNIQUE por hora) → recrear para permitir 2 capas
+            # por hora. La tabla es solo cap-tracking; las citas reales viven en Medilink.
+            conn.execute("DROP TABLE sobrecupos")
+            cols = []
+        if not cols:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS sobrecupos (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id_profesional INTEGER,
+                    fecha         TEXT,
+                    hora_inicio   TEXT,
+                    capa          INTEGER DEFAULT 2,
+                    phone         TEXT,
+                    rut           TEXT,
+                    id_cita       TEXT,
+                    creado_ts     INTEGER,
+                    UNIQUE(id_profesional, fecha, hora_inicio, capa)
+                )
+            """)
 
 
-def count_dia(id_profesional: int, fecha: str) -> int:
+def count_dia(id_profesional: int, fecha: str, capa: int | None = None) -> int:
+    """Sobrecupos creados ese día (total, o de una capa si se pasa)."""
     _ensure_table()
     from session import _conn
     with _conn() as conn:
-        r = conn.execute("SELECT COUNT(*) FROM sobrecupos WHERE id_profesional=? AND fecha=?",
-                         (id_profesional, fecha)).fetchone()
+        if capa is None:
+            r = conn.execute("SELECT COUNT(*) FROM sobrecupos WHERE id_profesional=? AND fecha=?",
+                             (id_profesional, fecha)).fetchone()
+        else:
+            r = conn.execute("SELECT COUNT(*) FROM sobrecupos WHERE id_profesional=? AND fecha=? AND capa=?",
+                             (id_profesional, fecha, capa)).fetchone()
     return (r[0] if r else 0) or 0
 
 
 def _ocupados(id_profesional: int, fecha: str) -> set:
+    """Set de (hora_inicio, capa) ya creados ese día."""
     _ensure_table()
     from session import _conn
     with _conn() as conn:
-        rows = conn.execute("SELECT hora_inicio FROM sobrecupos WHERE id_profesional=? AND fecha=?",
+        rows = conn.execute("SELECT hora_inicio, capa FROM sobrecupos WHERE id_profesional=? AND fecha=?",
                            (id_profesional, fecha)).fetchall()
-    return {r[0] for r in rows}
+    return {(r[0], r[1]) for r in rows}
 
 
-def registrar(id_profesional: int, fecha: str, hora_inicio: str,
+def registrar(id_profesional: int, fecha: str, hora_inicio: str, capa: int = 2,
               phone: str = "", rut: str = "", id_cita: str = "") -> None:
     """Anota un sobrecupo creado (para respetar el tope diario)."""
     _ensure_table()
@@ -99,9 +113,9 @@ def registrar(id_profesional: int, fecha: str, hora_inicio: str,
         with _conn() as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO sobrecupos "
-                "(id_profesional, fecha, hora_inicio, phone, rut, id_cita, creado_ts) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (id_profesional, fecha, hora_inicio, phone, rut, str(id_cita), int(_t.time())))
+                "(id_profesional, fecha, hora_inicio, capa, phone, rut, id_cita, creado_ts) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                (id_profesional, fecha, hora_inicio, int(capa), phone, rut, str(id_cita), int(_t.time())))
     except Exception as e:  # noqa: BLE001
         log.warning("sobrecupo registrar falló: %s", e)
 
@@ -123,14 +137,14 @@ async def generar_slots(especialidad: str, dias_horizonte: int = 10) -> list[dic
     esp_disp = M.PROFESIONALES.get(id_prof, {}).get("especialidad", especialidad)
 
     hoy = datetime.now(_TZ).date() if _TZ else datetime.utcnow().date()
-    cad = _cadencia_min()
+    cad3 = _cadencia_min()                  # capa 3: "por medio" (default 30 min)
     tope = _max_dia()
 
-    # David Pardo ahora viene con un SEGUNDO tecnólogo médico → atienden en paralelo.
-    # Por eso se abre un sobrecupo EN CADA ATENCIÓN que tiene David (el 2º técnico toma
-    # la misma hora), no "por medio". Generamos un sobrecupo por cada hora ocupada de su
-    # jornada (la que el 2º técnico puede espejar), hasta el tope diario, restando los ya
-    # creados. Salta hoy. (`cad` queda sin uso: ahora se espeja la grilla real.)
+    # MODELO DE 3 CAPAS (David viene con un 2º tecnólogo médico → atienden en paralelo):
+    #   Capa 1 = slots normales de David (la maneja el flujo normal del bot).
+    #   Capa 2 = PRIMER sobrecupo: uno EN CADA ATENCIÓN de David (15min: 10:00,10:15,...).
+    #   Capa 3 = SEGUNDO sobrecupo: "hora por medio" (30min: 10:00,10:30,...), capa extra.
+    # Prioridad de oferta: capa 2 antes que capa 3 (el bot toma las primeras del listado).
     for d in range(1, dias_horizonte + 1):
         dia = hoy + timedelta(days=d)
         fecha = dia.strftime("%Y-%m-%d")
@@ -140,37 +154,49 @@ async def generar_slots(especialidad: str, dias_horizonte: int = 10) -> list[dic
             continue
         if not ocup:
             continue                       # no trabaja / sin citas ese día → no sobrecupear
-        ya = count_dia(id_prof, fecha)
-        if ya >= tope:
+        if count_dia(id_prof, fecha) >= tope:
             continue
-        usados = _ocupados(id_prof, fecha)
+        usados = _ocupados(id_prof, fecha)  # set de (hora, capa)
         try:
             ocup_min = {M._h_to_min(h) for h in ocup}
         except Exception:  # noqa: BLE001
             continue
-        # _get_horas_ocupadas expande cada cita a marcas finas (cada 5 min). Para tener
-        # UNA sobrecupo por ATENCIÓN real, recorremos la jornada al intervalo de David
-        # (15 min) y ofrecemos donde tiene un paciente (el 2º técnico lo espeja).
         t0, t1 = min(ocup_min), max(ocup_min)
-        out: list[dict] = []
+
+        def _slot(t, capa):
+            return {
+                "profesional": nombre, "id_profesional": id_prof,
+                "especialidad": esp_disp, "fecha": fecha,
+                "hora_inicio": _min_to_h(t), "hora_fin": _min_to_h(t + intervalo),
+                "sobrecupo": True, "capa": capa,
+            }
+
+        capa2: list[dict] = []  # uno por atención (15 min)
+        capa3: list[dict] = []  # por medio (30 min)
+        n2 = count_dia(id_prof, fecha, 2)
+        n3 = count_dia(id_prof, fecha, 3)
+        # Capa 2: recorre al intervalo de David; ofrece donde tiene paciente.
         t = t0
-        while t <= t1 and (ya + len(out)) < tope:
-            hora = _min_to_h(t)
-            # ¿hay atención en este bloque? (alguna marca ocupada dentro del intervalo)
-            ocupado_aqui = any((t <= mm < t + intervalo) for mm in ocup_min)
-            if ocupado_aqui and hora not in usados:
-                out.append({
-                    "profesional": nombre,
-                    "id_profesional": id_prof,
-                    "especialidad": esp_disp,
-                    "fecha": fecha,
-                    "hora_inicio": hora,
-                    "hora_fin": _min_to_h(t + intervalo),
-                    "sobrecupo": True,
-                })
+        while t <= t1 and (n2 + len(capa2)) < tope:
+            if any((t <= mm < t + intervalo) for mm in ocup_min) and (_min_to_h(t), 2) not in usados:
+                capa2.append(_slot(t, 2))
             t += intervalo
+        # Capa 3: "por medio" a cad3 (30 min) a lo largo de la jornada.
+        t = t0
+        while t <= t1 and (n3 + len(capa3)) < tope:
+            if (_min_to_h(t), 3) not in usados:
+                capa3.append(_slot(t, 3))
+            t += cad3
+        # Mostrar capa 2 Y capa 3 JUNTAS, ordenadas por hora (no capa2 en bloque). Así
+        # el paciente ve todos los horarios disponibles cronológicos; cuando capa 2 de
+        # una hora ya está tomada, esa misma hora sigue ofreciéndose vía capa 3. Dedup
+        # por hora (capa 2 gana en la asignación, por eso va primero en el merge).
+        by_hora: dict = {}
+        for s in capa2 + capa3:             # capa 2 primero → gana el dedup por hora
+            by_hora.setdefault(s["hora_inicio"], s)
+        out = sorted(by_hora.values(), key=lambda s: s["hora_inicio"])
         if out:
-            return out                     # primer día con sobrecupos disponibles
+            return out                      # primer día con sobrecupos disponibles
     return []
 
 
@@ -186,17 +212,19 @@ async def crear_sobrecupo(slot: dict, id_paciente: int, *, phone: str = "",
     fecha = slot.get("fecha")
     hora_inicio = slot.get("hora_inicio")
     hora_fin = slot.get("hora_fin")
+    capa = int(slot.get("capa", 2) or 2)
     if not all([id_prof, fecha, hora_inicio, hora_fin]):
         return None
     if count_dia(id_prof, fecha) >= _max_dia():
         log.info("[sobrecupo] tope diario alcanzado prof=%s fecha=%s", id_prof, fecha)
         return None
     import medilink as M
+    _marca = f"[SOBRECUPO C{capa}]"          # C2 = primer sobrecupo, C3 = segundo (por medio)
     try:
         cita = await M.crear_cita(
             id_paciente=id_paciente, id_profesional=id_prof, fecha=fecha,
             hora_inicio=hora_inicio, hora_fin=hora_fin, modalidad=modalidad,
-            observaciones_extra="[SOBRECUPO]",
+            observaciones_extra=_marca,
         )
     except TypeError:
         # crear_cita sin soporte de observaciones_extra → crear igual y marcar luego no aplica
@@ -208,6 +236,6 @@ async def crear_sobrecupo(slot: dict, id_paciente: int, *, phone: str = "",
         return None
     if cita:
         id_cita = cita.get("id") or cita.get("id_cita") or ""
-        registrar(id_prof, fecha, hora_inicio, phone=phone, rut=rut, id_cita=id_cita)
-        log.info("[sobrecupo] creado prof=%s %s %s id_cita=%s", id_prof, fecha, hora_inicio, id_cita)
+        registrar(id_prof, fecha, hora_inicio, capa=capa, phone=phone, rut=rut, id_cita=id_cita)
+        log.info("[sobrecupo] creado C%s prof=%s %s %s id_cita=%s", capa, id_prof, fecha, hora_inicio, id_cita)
     return cita

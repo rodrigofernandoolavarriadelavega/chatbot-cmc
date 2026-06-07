@@ -11,6 +11,7 @@ en su servidor. Aquí solo los leemos.
 """
 import logging
 import os
+from .flags import flag_on
 from typing import Any
 
 import httpx
@@ -20,7 +21,9 @@ log = logging.getLogger("bot")
 GRAPH = "https://graph.facebook.com/v21.0"
 
 # Cuenta publicitaria CMC (la misma que usan meta-ads-builder / custom_audiences_sync).
-AD_ACCOUNT = os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
+from .tenants import active as _active_tenant
+# La cuenta Meta sale del inquilino activo (CMC por defecto → mismo valor de antes).
+AD_ACCOUNT = _active_tenant().ad_account or os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
 
 
 def _token() -> str:
@@ -36,7 +39,7 @@ def _token() -> str:
 
 def _execute_enabled() -> bool:
     """Master kill-switch de escritura. False en Fase 0/1."""
-    return os.getenv("AUTOPILOT_EXECUTE", "false").lower() == "true"
+    return flag_on("AUTOPILOT_EXECUTE")
 
 
 # ── Lectura ──────────────────────────────────────────────────────────────────

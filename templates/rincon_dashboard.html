@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>El Rincón del Camarón · Dashboard del Proyecto</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,300;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --olacore-fiordo: #0E2530;
+    --olacore-fiordo-2: #17323F;
+    --olacore-neblina: #E8E0D0;
+    --olacore-cobre: #B98149;
+    --olacore-lenga: #7C4A2A;
+    --olacore-lacre: #9A3E2F;
+    --olacore-verde-musgo: #4A5D44;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #faf6ee; color: var(--olacore-fiordo); }
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; font-weight: 600; color: var(--olacore-fiordo); }
+  .text-slate-800, .text-slate-700, .text-slate-600, .text-slate-500 { color: var(--olacore-fiordo) !important; opacity: 0.85; }
+  .text-slate-500 { opacity: 0.65; }
+  .text-slate-400 { opacity: 0.5; }
+  .bg-white { background: #fffcf5 !important; }
+  .border-slate-200, .divide-slate-100 > * + * { border-color: rgba(14, 37, 48, 0.12) !important; }
+  .bg-slate-50 { background: rgba(232, 224, 208, 0.3) !important; color: var(--olacore-fiordo); }
+  .hover\:bg-slate-50:hover { background: rgba(232, 224, 208, 0.35) !important; }
+  .tab-btn.active { color: var(--olacore-fiordo) !important; border-bottom-color: var(--olacore-cobre) !important; border-bottom-width: 2px !important; }
+  /* OLACORE wordmark inline (standalone, sin /static/) */
+  .by-olacore { display: flex; align-items: center; gap: 12px; padding-left: 16px; margin-left: 4px; text-decoration: none; }
+  .by-olacore-text-block { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .by-olacore-by { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--olacore-cobre); opacity: 0.85; line-height: 1; }
+  .by-olacore-wordmark { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--olacore-fiordo); letter-spacing: 0.04em; display: block; margin: 2px 0; }
+  .by-olacore-tag { font-family: 'Fraunces', serif; font-style: italic; font-weight: 300; font-size: 10px; color: var(--olacore-cobre); opacity: 0.8; line-height: 1; letter-spacing: 0.04em; }
+  .by-olacore-sello { width: 38px; height: 38px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  @keyframes sello-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .by-olacore-sello svg { animation: sello-spin 60s linear infinite; }
+  /* meridian divider */
+  .meridian { width: 1px; height: 56px; background: var(--olacore-cobre); position: relative; opacity: 0.7; flex-shrink: 0; margin-left: 24px; margin-right: 8px; }
+  .meridian::before, .meridian::after { content: ""; position: absolute; left: -4px; width: 9px; height: 9px; background: var(--olacore-cobre); border-radius: 50%; }
+  .meridian::before { top: 22%; }
+  .meridian::after  { bottom: 22%; }
+  /* tone cards */
+  .tone-fiordo  { background: rgba(14, 37, 48, 0.08); color: var(--olacore-fiordo); border: 1px solid rgba(14, 37, 48, 0.18); }
+  .tone-cobre   { background: rgba(185, 129, 73, 0.12); color: var(--olacore-lenga); border: 1px solid rgba(185, 129, 73, 0.35); }
+  .tone-musgo   { background: rgba(74, 93, 68, 0.1); color: #2f3d2c; border: 1px solid rgba(74, 93, 68, 0.3); }
+  .tone-lacre   { background: rgba(154, 62, 47, 0.1); color: var(--olacore-lacre); border: 1px solid rgba(154, 62, 47, 0.3); }
+  .tone-neblina { background: rgba(232, 224, 208, 0.45); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.12); }
+  /* status pills */
+  .status-done       { background: rgba(74, 93, 68, 0.18); color: #2f3d2c; }
+  .status-in_progress{ background: rgba(185, 129, 73, 0.2); color: var(--olacore-lenga); }
+  .status-planned    { background: rgba(232, 224, 208, 0.7); color: var(--olacore-fiordo); }
+  .status-bloqueado  { background: rgba(154, 62, 47, 0.15); color: var(--olacore-lacre); }
+  /* kpi cards */
+  .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 37, 48, .12); }
+  .kpi-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.62; margin-bottom: 6px; }
+  .kpi-num { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 600; line-height: 1; }
+  .kpi-sub { font-size: 11px; opacity: 0.55; margin-top: 5px; }
+  /* header border accent */
+  header { border-bottom: 1px solid rgba(185, 129, 73, 0.2) !important; }
+  /* cross-nav */
+  .cross-nav { position: fixed; top: 16px; right: 16px; z-index: 50; display: flex; gap: 8px; font-size: 12px; }
+  .cross-nav a { padding: 6px 12px; border-radius: 999px; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.9); color: var(--olacore-fiordo); border: 1px solid rgba(14,37,48,0.18); transition: border-color .15s, color .15s; }
+  .cross-nav a:hover { border-color: var(--olacore-cobre); color: var(--olacore-cobre); }
+  /* tabs scrollable */
+  #tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs .tab-btn { flex-shrink: 0; white-space: nowrap; }
+  /* mobile */
+  @media (max-width: 768px) {
+    header > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 12px !important; padding: 14px 16px !important; }
+    .meridian { display: none; }
+    .by-olacore { padding-left: 0; margin-left: 0; gap: 8px; }
+    main { padding: 16px 12px !important; }
+  }
+  /* meta section card */
+  .meta-section { background: #fffcf5; border: 1px solid rgba(14,37,48,0.12); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .meta-section h3 { font-size: 1rem; margin-bottom: 12px; }
+  .meta-section h4 { font-size: 0.9rem; margin-bottom: 10px; margin-top: 18px; }
+  code.inline { background: rgba(232,224,208,0.5); padding: 1px 6px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  /* timeline */
+  .timeline-line { position: relative; padding-left: 24px; }
+  .timeline-line::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--olacore-cobre); opacity: 0.3; }
+  .timeline-dot { position: absolute; left: 0; top: 6px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid; background: #fffcf5; }
+  /* task rows */
+  .task-row { transition: opacity .15s; }
+  .task-row.done-row { opacity: 0.42; }
+  .task-row.done-row .task-title-text { text-decoration: line-through; }
+  .task-row:hover td { background: rgba(232, 224, 208, 0.25); }
+  input[type=checkbox] { accent-color: var(--olacore-verde-musgo); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+  /* phase header rows */
+  .fase-header-row td { background: rgba(232,224,208,0.35) !important; padding: 14px 12px 10px !important; }
+  .fase-header-num { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; color: var(--olacore-cobre); line-height: 1; }
+  .fase-header-name { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--olacore-fiordo); }
+  .fase-header-when { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--olacore-cobre); margin-left: auto; opacity: 0.8; }
+  /* table thead */
+  .tbl-head th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; background: rgba(232,224,208,0.3); color: var(--olacore-fiordo); padding: 10px 12px; border-bottom: 1px solid rgba(14,37,48,0.12); }
+  /* blocker bar */
+  .blocker-bar { background: rgba(154,62,47,0.08); border: 1px solid rgba(154,62,47,0.28); border-left: 4px solid var(--olacore-lacre); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
+  .blocker-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--olacore-lacre); font-weight: 600; margin-bottom: 6px; }
+  /* progress bar */
+  .progress-bar-outer { background: rgba(14,37,48,0.1); border-radius: 99px; height: 6px; overflow: hidden; }
+  .progress-bar-inner { height: 100%; background: var(--olacore-verde-musgo); border-radius: 99px; transition: width .5s ease; }
+  /* badges */
+  .badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+  .badge-r { background: rgba(185,129,73,0.15); color: var(--olacore-lenga); }
+  .badge-c { background: rgba(74,93,68,0.14); color: #2f3d2c; }
+  .badge-a { background: rgba(14,37,48,0.1); color: var(--olacore-fiordo); }
+  .badge-p1 { background: rgba(154,62,47,0.14); color: var(--olacore-lacre); }
+  .badge-p2 { background: rgba(185,129,73,0.14); color: var(--olacore-lenga); }
+  .badge-p3 { background: rgba(74,93,68,0.1); color: #2f3d2c; }
+</style>
+</head>
+<body>
+
+<nav class="cross-nav">
+  <a href="/horizonte">CMC · Horizonte</a>
+  <a href="/seo/dashboard">SEO</a>
+  <a href="/meta/dashboard">Meta</a>
+  <a href="/crecimientopersonal">Crecimiento</a>
+</nav>
+
+<header class="bg-white">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div>
+        <h1 class="text-xl font-semibold">El Rincón del Camarón</h1>
+        <div class="text-sm text-slate-500">Dashboard del proyecto · 47 tareas · 9 fases · apertura en 4-6 meses</div>
+      </div>
+      <div class="meridian" aria-hidden="true"></div>
+      <div class="by-olacore">
+        <div class="by-olacore-text-block">
+          <span class="by-olacore-by">by</span>
+          <span class="by-olacore-wordmark">OLACORE</span>
+          <span class="by-olacore-tag">Meridiano Sur</span>
+        </div>
+        <div class="by-olacore-sello" title="OLACORE">
+          <!-- sello SVG inline (standalone, no acceso a /static/) -->
+          <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg" opacity="0.75">
+            <circle cx="19" cy="19" r="17.5" stroke="#B98149" stroke-width="1" stroke-dasharray="3 2.5"/>
+            <circle cx="19" cy="19" r="12" stroke="#B98149" stroke-width="0.6" opacity="0.4"/>
+            <!-- compass needle -->
+            <path d="M19 8 L20.4 18.5 L19 21 L17.6 18.5 Z" fill="#B98149"/>
+            <path d="M19 30 L20.4 19.5 L19 17 L17.6 19.5 Z" fill="rgba(14,37,48,0.3)"/>
+            <circle cx="19" cy="19" r="1.8" fill="#B98149"/>
+            <!-- cardinal marks -->
+            <text x="19" y="5.5" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="3" fill="#B98149" letter-spacing="0">N</text>
+            <text x="19" y="35" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="3" fill="#B98149" opacity="0.5">S</text>
+            <text x="34" y="19.8" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="3" fill="#B98149" opacity="0.5">E</text>
+            <text x="4" y="19.8" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="3" fill="#B98149" opacity="0.5">O</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-5">
+      <div class="text-right">
+        <div class="kpi-eyebrow mb-1">Progreso total</div>
+        <div class="flex items-center gap-2">
+          <div class="progress-bar-outer w-28"><div class="progress-bar-inner" id="global-progress-bar" style="width:0%"></div></div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600" id="global-progress-pct">0%</span>
+        </div>
+      </div>
+      <div class="text-xs text-slate-400" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em">v1.0 · mayo 2026</div>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto px-6">
+    <nav class="flex gap-1 -mb-px" id="tabs">
+      <button class="tab-btn active px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="overview">Overview</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="fases">Fases y tareas</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="criticas">Criticas pendientes</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="costos">Capital y costos</button>
+      <button class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-tab="notas">Supuestos y notas</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- ─────────────── OVERVIEW ─────────────── -->
+  <section id="tab-overview" class="tab-content">
+
+    <!-- bloqueante -->
+    <div class="blocker-bar">
+      <div class="blocker-label">Proximo bloqueante</div>
+      <div class="text-sm font-medium" style="color:var(--olacore-fiordo)">Cerrar SpA + busqueda INAPI antes de gastar mas. Estas dos decisiones desbloquean legalmente todo el proyecto.</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+      <div class="kpi-card bg-white rounded-xl p-4 border border-slate-200">
+        <div class="kpi-eyebrow">Total tareas</div>
+        <div class="kpi-num">47</div>
+      </div>
+      <div class="kpi-card bg-white rounded-xl p-4 border border-slate-200">
+        <div class="kpi-eyebrow">Completadas</div>
+        <div class="kpi-num" style="color:var(--olacore-verde-musgo)" id="kpi-done">0</div>
+      </div>
+      <div class="kpi-card bg-white rounded-xl p-4 border border-slate-200">
+        <div class="kpi-eyebrow">Progreso</div>
+        <div class="kpi-num" style="color:var(--olacore-cobre)" id="kpi-pct">0%</div>
+      </div>
+      <div class="kpi-card bg-white rounded-xl p-4 border border-slate-200">
+        <div class="kpi-eyebrow">Criticas pend.</div>
+        <div class="kpi-num" style="color:var(--olacore-lacre)" id="kpi-criticas">—</div>
+      </div>
+      <div class="kpi-card bg-white rounded-xl p-4 border border-slate-200">
+        <div class="kpi-eyebrow">Capital estim.</div>
+        <div class="kpi-num">$10-20M</div>
+        <div class="kpi-sub">CLP apertura</div>
+      </div>
+      <div class="kpi-card bg-white rounded-xl p-4 border border-slate-200">
+        <div class="kpi-eyebrow">Plazo</div>
+        <div class="kpi-num">4-6</div>
+        <div class="kpi-sub">meses</div>
+      </div>
+    </div>
+
+    <!-- charts row -->
+    <div class="grid md:grid-cols-3 gap-5 mb-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="kpi-eyebrow mb-4">Tareas por owner</div>
+        <div style="max-height:180px;position:relative"><canvas id="chartOwner"></canvas></div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="kpi-eyebrow mb-4">Tareas por prioridad</div>
+        <div style="max-height:180px;position:relative"><canvas id="chartPrio"></canvas></div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="kpi-eyebrow mb-4">Tareas por fase</div>
+        <div style="max-height:180px;position:relative"><canvas id="chartFases"></canvas></div>
+      </div>
+    </div>
+
+    <!-- timeline horizontal de fases -->
+    <div class="meta-section mb-6">
+      <h3>Timeline de fases</h3>
+      <div class="overflow-x-auto">
+        <div class="flex gap-0 min-w-max relative mt-4 mb-2" id="timeline-phases">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- resumen del proyecto -->
+    <div class="meta-section">
+      <h3>Punto de partida — contexto del proyecto</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+        <div class="tone-fiordo p-3 rounded-lg"><div class="text-xs uppercase opacity-75" style="font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em">Modelo</div><div class="text-lg font-bold mt-1">Colaciones diarias</div></div>
+        <div class="tone-cobre p-3 rounded-lg"><div class="text-xs uppercase opacity-75" style="font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em">Mercado objetivo</div><div class="text-lg font-bold mt-1">Plaza Carampangue</div></div>
+        <div class="tone-musgo p-3 rounded-lg"><div class="text-xs uppercase opacity-75" style="font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em">P. de equilibrio</div><div class="text-lg font-bold mt-1">40-50 colac/dia</div><div class="text-xs opacity-60">con 2 trabajadores</div></div>
+        <div class="tone-lacre p-3 rounded-lg"><div class="text-xs uppercase opacity-75" style="font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em">Socios</div><div class="text-lg font-bold mt-1">R + Chef</div></div>
+        <div class="tone-neblina p-3 rounded-lg"><div class="text-xs uppercase opacity-75" style="font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em">Estructura legal</div><div class="text-lg font-bold mt-1">SpA recomendada</div></div>
+        <div class="tone-fiordo p-3 rounded-lg"><div class="text-xs uppercase opacity-75" style="font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em">Food cost meta</div><div class="text-lg font-bold mt-1">&lt;30%</div></div>
+      </div>
+      <p class="text-sm leading-relaxed">El proyecto parte con un piloto de preventa por WhatsApp (30 dias desde cocina prestada) antes de abrir el local. La primera decision critica es la estructura societaria: <strong>SpA via Tu Empresa en un Dia</strong>, acordar el split accionario y hacer la busqueda fonetica en INAPI antes de gastar nada mas.</p>
+    </div>
+
+  </section>
+
+  <!-- ─────────────── FASES Y TAREAS ─────────────── -->
+  <section id="tab-fases" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Todas las tareas — 9 fases · 47 tareas</h3>
+      <p class="text-sm opacity-70 mb-5">Marcar completadas persiste en el navegador (localStorage). Los porcentajes del overview se actualizan automaticamente.</p>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm" id="main-task-table">
+          <thead class="tbl-head">
+            <tr>
+              <th class="text-left w-8"></th>
+              <th class="text-left">Tarea</th>
+              <th class="text-left">Owner</th>
+              <th class="text-left">Prioridad</th>
+              <th class="text-left">Costo estimado</th>
+            </tr>
+          </thead>
+          <tbody id="task-tbody" class="divide-y divide-slate-100">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── CRITICAS ─────────────── -->
+  <section id="tab-criticas" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Tareas criticas pendientes</h3>
+      <p class="text-sm opacity-70 mb-5">Solo tareas de prioridad 1 (Critica) que aun no estan completadas, ordenadas por fase.</p>
+
+      <div id="criticas-list" class="space-y-4">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <div class="meta-section" style="border-color:rgba(154,62,47,0.4)">
+      <h3 style="color:var(--olacore-lacre)">Decisiones inmediatas (esta semana)</h3>
+      <div class="space-y-4 timeline-line mt-4">
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-lacre)"></div>
+          <div class="font-semibold text-sm">1. Definir estructura societaria</div>
+          <p class="text-xs opacity-80 mt-1">Ambos acuerdan si van con SpA o sociedad de responsabilidad limitada. SpA es mas flexible para entrada/salida de socios y manejo de acciones. Recomendada para este caso.</p>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-lacre)"></div>
+          <div class="font-semibold text-sm">2. Acordar % accionario y aportes</div>
+          <p class="text-xs opacity-80 mt-1">Definir quien aporta que (capital, trabajo, marca, red) y en que porcentaje se distribuyen las acciones. Sin esto no se puede constituir la SpA.</p>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-cobre)"></div>
+          <div class="font-semibold text-sm">3. Busqueda fonetica en INAPI</div>
+          <p class="text-xs opacity-80 mt-1">Verificar que "El Rincon del Camaron" no esta registrado como marca en clase 43 (servicios de restauracion). Es gratuito en el buscador web de INAPI. Si hay conflicto, mejor saberlo antes de imprimir nada.</p>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-cobre)"></div>
+          <div class="font-semibold text-sm">4. Reservar dominios .cl y .com</div>
+          <p class="text-xs opacity-80 mt-1">Costo ~$20k CLP/año. Aunque la web se construya despues, el dominio vale la pena asegurarlo ahora (riesgo de que alguien lo registre).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── COSTOS ─────────────── -->
+  <section id="tab-costos" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Capital estimado por fase</h3>
+      <p class="text-sm opacity-70 mb-5">Rangos referenciales en CLP. Los items sin costo monetario directo (tramites de $0) no se incluyen en el grafico de barras.</p>
+
+      <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+        <div class="kpi-eyebrow mb-4">Inversion estimada por fase (CLP, valor medio del rango)</div>
+        <div style="height:260px;position:relative"><canvas id="chartCostos"></canvas></div>
+      </div>
+
+      <h4>Desglose por concepto</h4>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm mb-4">
+          <thead class="tbl-head">
+            <tr>
+              <th class="text-left">Concepto</th>
+              <th class="text-right">Min CLP</th>
+              <th class="text-right">Max CLP</th>
+              <th class="text-left pl-4">Nota</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Constitucion SpA + abogado</td><td class="text-right py-2.5 px-3">$80k</td><td class="text-right py-2.5 px-3">$170k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Tu Empresa en un Dia (0) + pacto accionistas (80-150k)</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Registro marca INAPI clase 43</td><td class="text-right py-2.5 px-3">$140k</td><td class="text-right py-2.5 px-3">$140k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Tasa unica</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Arriendo local (mensual)</td><td class="text-right py-2.5 px-3">$300k</td><td class="text-right py-2.5 px-3">$700k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Por mes. Negociar 1 mes gratis para habilitacion</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Adecuacion local</td><td class="text-right py-2.5 px-3">$2.0M</td><td class="text-right py-2.5 px-3">$6.0M</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Plomeria, electricidad, ventilacion, ceramica</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Plano de planta</td><td class="text-right py-2.5 px-3">$150k</td><td class="text-right py-2.5 px-3">$400k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Arquitecto o dibujante tecnico</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Permisos sanitarios y patente</td><td class="text-right py-2.5 px-3">$295k</td><td class="text-right py-2.5 px-3">$630k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">SEREMI + patente municipal + extintores + carnets</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Equipamiento cocina</td><td class="text-right py-2.5 px-3">$1.5M</td><td class="text-right py-2.5 px-3">$4.0M</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Anafe industrial, horno, plancha, freidora</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Refrigeracion</td><td class="text-right py-2.5 px-3">$1.0M</td><td class="text-right py-2.5 px-3">$3.0M</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Camara fria, mostrador refrigerado, congelador</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Mobiliario sala</td><td class="text-right py-2.5 px-3">$800k</td><td class="text-right py-2.5 px-3">$2.0M</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Mesas, sillas, mostrador atencion</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Vajilla y cristaleria</td><td class="text-right py-2.5 px-3">$400k</td><td class="text-right py-2.5 px-3">$800k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Para ~60 cubiertos</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">POS y boleta electronica</td><td class="text-right py-2.5 px-3">$50k</td><td class="text-right py-2.5 px-3">$50k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">+ porcentaje sobre venta (modelo SaaS)</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Decoracion y letrero</td><td class="text-right py-2.5 px-3">$400k</td><td class="text-right py-2.5 px-3">$1.0M</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Letrero exterior, pizarra menu, decoracion</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Equipo (cocinera + garzona) mensual</td><td class="text-right py-2.5 px-3">$1.3M</td><td class="text-right py-2.5 px-3">$1.3M</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Costo mensual recurrente post-apertura</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Soft launch y comunicacion</td><td class="text-right py-2.5 px-3">$200k</td><td class="text-right py-2.5 px-3">$300k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Invitados, fotografo, inaug. comunicacional</td></tr>
+            <tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-medium">Merchandising y produccion</td><td class="text-right py-2.5 px-3">$350k</td><td class="text-right py-2.5 px-3">$800k</td><td class="pl-4 py-2.5 px-3 text-xs opacity-75">Delantales, bolsas kraft, fotografo profesional</td></tr>
+            <tr style="border-top:2px solid rgba(14,37,48,0.15)">
+              <td class="py-3 px-3 font-bold">TOTAL APERTURA (est.)</td>
+              <td class="text-right py-3 px-3 font-bold" style="color:var(--olacore-verde-musgo)">~$9.0M</td>
+              <td class="text-right py-3 px-3 font-bold" style="color:var(--olacore-lacre)">~$21.3M</td>
+              <td class="pl-4 py-3 px-3 text-xs opacity-70">Sin capital de trabajo inicial</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tone-cobre p-4 rounded-lg mt-2">
+        <strong>Capital objetivo recomendado:</strong> $12-15M CLP para apertura comoda, con margen para imprevistos. El rango $10-20M refleja la alta variabilidad del local (cuanto trabajo previo necesita) y equipamiento (nuevo vs usado).
+      </div>
+    </div>
+
+    <div class="meta-section">
+      <h3>Punto de equilibrio operativo</h3>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="tone-fiordo p-4 rounded-lg">
+          <div class="kpi-eyebrow mb-2">Colaciones necesarias/dia</div>
+          <div class="text-2xl font-bold" style="font-family:'Fraunces',serif">40-50</div>
+          <div class="text-xs opacity-70 mt-1">para cubrir costos fijos con 2 trabajadores</div>
+        </div>
+        <div class="tone-musgo p-4 rounded-lg">
+          <div class="kpi-eyebrow mb-2">Food cost objetivo</div>
+          <div class="text-2xl font-bold" style="font-family:'Fraunces',serif">&lt;30%</div>
+          <div class="text-xs opacity-70 mt-1">costeo unitario por plato previo a la apertura</div>
+        </div>
+        <div class="tone-cobre p-4 rounded-lg">
+          <div class="kpi-eyebrow mb-2">Convenios potenciales</div>
+          <div class="text-2xl font-bold" style="font-family:'Fraunces',serif">4+</div>
+          <div class="text-xs opacity-70 mt-1">CMC, CESFAM, Carabineros, Escuela</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── NOTAS ─────────────── -->
+  <section id="tab-notas" class="tab-content hidden">
+    <div class="meta-section">
+      <h3>Supuestos y restricciones del plan</h3>
+
+      <h4>Supuestos clave</h4>
+      <div class="space-y-3 mt-3">
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-verde-musgo)">
+          <strong class="text-sm">Local disponible en o cerca de Plaza Carampangue</strong>
+          <p class="text-xs opacity-80 mt-1">El plan asume que se encuentra un local en un radio razonable de la plaza principal. Si no hay disponibilidad, el plazo se extiende y el presupuesto puede variar significativamente.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-cobre)">
+          <strong class="text-sm">SpA con 2 socios (R y Chef) — sin inversores externos en Fase 0</strong>
+          <p class="text-xs opacity-80 mt-1">El financiamiento inicial proviene de los propios socios. Si se requiere capital externo, la estructura societaria debe revisarse con un abogado antes de emitir acciones a terceros.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-cobre)">
+          <strong class="text-sm">Piloto WhatsApp (Fase 7) con cocina prestada — sin costo de arriendo</strong>
+          <p class="text-xs opacity-80 mt-1">El piloto de 30 dias se hace antes de abrir el local fisico, desde una cocina prestada (CMC, domicilio, o similar). Esto reduce riesgo y valida la demanda real antes de la inversion en equipamiento.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-lenga)">
+          <strong class="text-sm">Plazos pueden superponerse — las fases no son estrictamente secuenciales</strong>
+          <p class="text-xs opacity-80 mt-1">Marca y digital (Fase 6) corre en paralelo con todas las otras. Equipamiento (Fase 4) puede comenzar mientras se tramitan permisos (Fase 3). El camino critico es: legal → local → permisos → apertura.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-lacre)">
+          <strong class="text-sm">Costos son estimaciones — requieren cotizacion real</strong>
+          <p class="text-xs opacity-80 mt-1">Especialmente equipamiento cocina (nuevo vs usado hace diferencia de 2-3x), adecuacion del local (depende del estado actual) y honorarios profesionales (abogado, arquitecto). Cotizar antes de comprometer capital.</p>
+        </div>
+        <div class="border-l-4 pl-4 py-2" style="border-color:var(--olacore-fiordo)">
+          <strong class="text-sm">Resolucion sanitaria SEREMI puede tomar 2-4 meses</strong>
+          <p class="text-xs opacity-80 mt-1">Es el permiso con mas variabilidad de tiempo. Iniciar el tramite lo antes posible una vez definido el local. El resto de los permisos son mas rapidos.</p>
+        </div>
+      </div>
+
+      <h4>Riesgos principales</h4>
+      <div class="overflow-x-auto mt-2">
+        <table class="w-full text-sm">
+          <thead class="tbl-head">
+            <tr>
+              <th class="text-left">Riesgo</th>
+              <th class="text-left">Probabilidad</th>
+              <th class="text-left">Impacto</th>
+              <th class="text-left">Mitigacion</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr class="hover:bg-slate-50">
+              <td class="py-2.5 px-3 font-medium">No encontrar local adecuado en plaza</td>
+              <td class="py-2.5 px-3"><span class="status-in_progress px-2 py-0.5 rounded text-xs font-medium">media</span></td>
+              <td class="py-2.5 px-3"><span class="status-bloqueado px-2 py-0.5 rounded text-xs font-medium">alto</span></td>
+              <td class="py-2.5 px-3 text-xs opacity-75">Mapear en Fase 2 con criterios tecnicos minimos (380V, agua, gas)</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="py-2.5 px-3 font-medium">Desacuerdo en % accionario</td>
+              <td class="py-2.5 px-3"><span class="status-planned px-2 py-0.5 rounded text-xs font-medium">baja</span></td>
+              <td class="py-2.5 px-3"><span class="status-bloqueado px-2 py-0.5 rounded text-xs font-medium">critico</span></td>
+              <td class="py-2.5 px-3 text-xs opacity-75">Resolverlo antes de cualquier gasto. Usar mediador si es necesario.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="py-2.5 px-3 font-medium">SEREMI demora mas de 4 meses</td>
+              <td class="py-2.5 px-3"><span class="status-in_progress px-2 py-0.5 rounded text-xs font-medium">media</span></td>
+              <td class="py-2.5 px-3"><span class="status-in_progress px-2 py-0.5 rounded text-xs font-medium">medio</span></td>
+              <td class="py-2.5 px-3 text-xs opacity-75">Iniciar tramite en paralelo con adecuacion. Usar piloto para no perder tiempo.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="py-2.5 px-3 font-medium">Equipamiento usado con fallas</td>
+              <td class="py-2.5 px-3"><span class="status-in_progress px-2 py-0.5 rounded text-xs font-medium">media</span></td>
+              <td class="py-2.5 px-3"><span class="status-in_progress px-2 py-0.5 rounded text-xs font-medium">medio</span></td>
+              <td class="py-2.5 px-3 text-xs opacity-75">Pedir garantia minima o comprar criticos (refrigeracion) nuevo.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="py-2.5 px-3 font-medium">Demanda real menor a proyectada</td>
+              <td class="py-2.5 px-3"><span class="status-planned px-2 py-0.5 rounded text-xs font-medium">baja</span></td>
+              <td class="py-2.5 px-3"><span class="status-in_progress px-2 py-0.5 rounded text-xs font-medium">medio</span></td>
+              <td class="py-2.5 px-3 text-xs opacity-75">Piloto WhatsApp 30 dias antes de abrir el local valida esto directamente.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="meta-section">
+      <h3>Hitos clave</h3>
+      <div class="space-y-4 timeline-line mt-4">
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-lacre)"></div>
+          <div class="font-semibold text-sm">Semana 1 — Decisiones fundacionales</div>
+          <p class="text-xs opacity-80 mt-1">SpA acordada, % accionario definido, dominio reservado, busqueda INAPI hecha.</p>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-cobre)"></div>
+          <div class="font-semibold text-sm">Mes 1 — Legal resuelto</div>
+          <p class="text-xs opacity-80 mt-1">SpA constituida, inicio actividades SII, cuenta bancaria empresa, proceso INAPI iniciado.</p>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-cobre)"></div>
+          <div class="font-semibold text-sm">Mes 2 — Local firmado y permisos en tramite</div>
+          <p class="text-xs opacity-80 mt-1">Contrato de arriendo firmado, plano de planta listo, resolucion sanitaria ingresada a SEREMI, patente municipal solicitada.</p>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-verde-musgo)"></div>
+          <div class="font-semibold text-sm">Mes 3 — Piloto WhatsApp + equipamiento en proceso</div>
+          <p class="text-xs opacity-80 mt-1">30 dias de preventa por WhatsApp desde cocina prestada. Cotizaciones de equipamiento cerradas. Recetario y costeo definidos.</p>
+        </div>
+        <div style="position:relative">
+          <div class="timeline-dot" style="border-color:var(--olacore-verde-musgo)"></div>
+          <div class="font-semibold text-sm">Mes 4-6 — Apertura</div>
+          <p class="text-xs opacity-80 mt-1">Permisos obtenidos, equipo contratado y capacitado, soft launch con familia/amigos, inauguracion comunicacional.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ──── DATOS DE TAREAS ────────────────────────────────────────────────────
+const FASES = [
+  { id: 0, nombre: "Decisiones fundacionales", cuando: "Esta semana" },
+  { id: 1, nombre: "Constitucion legal",        cuando: "Mes 1" },
+  { id: 2, nombre: "Local fisico",              cuando: "Mes 1-3" },
+  { id: 3, nombre: "Permisos sanitarios",       cuando: "Mes 2-3" },
+  { id: 4, nombre: "Equipamiento",              cuando: "Mes 2-3" },
+  { id: 5, nombre: "Operacion pre-apertura",    cuando: "Mes 3-4" },
+  { id: 6, nombre: "Marca y digital",           cuando: "Mes 1-3 paralelo" },
+  { id: 7, nombre: "Validacion / soft launch",  cuando: "Mes 3-4" },
+  { id: 8, nombre: "Operacion post-apertura",   cuando: "Continuo" },
+];
+
+const TASKS = [
+  // fase 0
+  { id:"t0a", fase:0, titulo:"Definir estructura societaria (SpA recomendada)", nota:"Acuerdo entre R y Chef sobre el tipo de sociedad. SpA es mas flexible para acciones.", owner:"A", prio:1, costo:"$0" },
+  { id:"t0b", fase:0, titulo:"Acordar % accionario y aportes de cada socio", nota:"Capital, trabajo, marca, red de contactos. Sin esto no se constituye la SpA.", owner:"A", prio:1, costo:"$0" },
+  { id:"t0c", fase:0, titulo:"Reservar dominio .cl y .com del nombre", nota:"~$20k CLP/año. Asegurar antes de que alguien mas lo registre.", owner:"R", prio:1, costo:"~$20k" },
+  { id:"t0d", fase:0, titulo:"Busqueda fonetica en INAPI clase 43", nota:"Verificar que el nombre no este registrado como marca de restauracion.", owner:"R", prio:1, costo:"$0" },
+  { id:"t0e", fase:0, titulo:"Crear handles Instagram y email corporativo", nota:"Asegurar el username en IG. Email: rincondelcamaron@gmail.com o con dominio propio.", owner:"R", prio:2, costo:"$0" },
+  { id:"t0f", fase:0, titulo:"Acordar nombre legal y razon social definitiva", nota:"Debe coincidir con lo que se registra en INAPI y el SII.", owner:"A", prio:2, costo:"$0" },
+  // fase 1
+  { id:"t1a", fase:1, titulo:"Constituir SpA en Tu Empresa en un Dia", nota:"Portal del gobierno, gratuito, demora 1-2 dias habiles.", owner:"R", prio:1, costo:"$0-20k" },
+  { id:"t1b", fase:1, titulo:"Pacto de accionistas via abogado", nota:"Regula derechos, obligaciones, salida de socios, resolicion de conflictos.", owner:"A", prio:1, costo:"$80-150k" },
+  { id:"t1c", fase:1, titulo:"Inicio de actividades SII regimen Pro Pyme Transparente", nota:"Necesario para emitir boletas. Se hace online en el SII.", owner:"R", prio:1, costo:"$0" },
+  { id:"t1d", fase:1, titulo:"Abrir cuenta corriente empresa en banco", nota:"Requiere la SpA ya constituida. BancoEstado o BCI son los mas accesibles.", owner:"R", prio:1, costo:"~$5k/mes" },
+  { id:"t1e", fase:1, titulo:"Registro de marca INAPI clase 43", nota:"Servicios de restauracion. Tasa ~$140k. Plazo de resolucion: 12-18 meses.", owner:"R", prio:2, costo:"~$140k" },
+  { id:"t1f", fase:1, titulo:"Contratar contador externo", nota:"Para declaraciones SII, IVA mensual, conciliacion. $80-150k/mes.", owner:"R", prio:3, costo:"$80-150k/mes" },
+  // fase 2
+  { id:"t2a", fase:2, titulo:"Mapeo de locales disponibles en y alrededor de Plaza Carampangue", nota:"Visitar, fotografiar, medir, consultar precio. Hacer lista de candidatos.", owner:"A", prio:1, costo:"$0" },
+  { id:"t2b", fase:2, titulo:"Validar factibilidad tecnica del local (380V, agua, alcantarillado, gas)", nota:"Sin estos requisitos no se puede instalar cocina industrial. Fundamental antes de firmar.", owner:"A", prio:1, costo:"$0" },
+  { id:"t2c", fase:2, titulo:"Negociar y firmar contrato de arriendo", nota:"Negociar 1 mes de gracia para habilitacion. Plazo minimo 2 años.", owner:"R", prio:1, costo:"$300-700k/mes" },
+  { id:"t2d", fase:2, titulo:"Plano de planta con distribucion cocina/sala/banos/bodega", nota:"Lo hace un arquitecto o dibujante tecnico. Necesario para SEREMI y obra.", owner:"C", prio:2, costo:"$150-400k" },
+  { id:"t2e", fase:2, titulo:"Adecuacion del local (obra menor)", nota:"Plomeria, electricidad trifasica, ventilacion forzada, ceramica, pintura.", owner:"C", prio:2, costo:"$2-6M" },
+  // fase 3
+  { id:"t3a", fase:3, titulo:"Resolucion sanitaria SEREMI Salud Biobio", nota:"El permiso mas critico y el que mas tarda (2-4 meses). Iniciar lo antes posible.", owner:"C", prio:1, costo:"~$80k" },
+  { id:"t3b", fase:3, titulo:"Patente comercial Municipalidad de Arauco", nota:"Permiso para operar el local. Se renueva anualmente.", owner:"R", prio:1, costo:"$200-500k/año" },
+  { id:"t3c", fase:3, titulo:"Carnet de manipulador de alimentos (chef y equipo)", nota:"Curso obligatorio de higiene alimentaria. Por persona.", owner:"C", prio:1, costo:"$15k/persona" },
+  { id:"t3d", fase:3, titulo:"Permiso de instalacion electrica ante SEC", nota:"El instalador electrico debe tramitarlo. Costo incluido en presupuesto de obra.", owner:"C", prio:2, costo:"~$50k" },
+  { id:"t3e", fase:3, titulo:"Inscripcion Bomberos y provision de extintores", nota:"Obligatorio para apertura. Extintores vigentes y accesibles.", owner:"C", prio:3, costo:"~$60k" },
+  // fase 4
+  { id:"t4a", fase:4, titulo:"Cocina industrial (anafe, horno, plancha, freidora)", nota:"El equipo mas critico. Puede ser nuevo (cartera mas amplia) o usado (revisar garantia).", owner:"C", prio:1, costo:"$1.5-4M" },
+  { id:"t4b", fase:4, titulo:"Refrigeracion (camara fria, mostrador, congelador)", nota:"Fundamental para mantener cadena de frio. Recomendado nuevo para confiabilidad.", owner:"C", prio:1, costo:"$1-3M" },
+  { id:"t4c", fase:4, titulo:"Mobiliario de sala (mesas, sillas, mostrador de atencion)", nota:"Estilo alineado al brand. Puede ser a medida o prefabricado.", owner:"R", prio:2, costo:"$800k-2M" },
+  { id:"t4d", fase:4, titulo:"Vajilla, cuberteria, cristaleria", nota:"Para ~60 cubiertos minimo. Pedir excedente para reposicion.", owner:"C", prio:2, costo:"$400-800k" },
+  { id:"t4e", fase:4, titulo:"POS / caja registradora / boleta electronica", nota:"Integrado con SII. Modelos SaaS (iZettle, Fudo, etc.) tienen bajo costo inicial.", owner:"R", prio:2, costo:"$50k +%venta" },
+  { id:"t4f", fase:4, titulo:"Decoracion alineada al brand (letrero, pizarra, detalles)", nota:"Coherente con identidad grafica. No saturar. Menos es mas.", owner:"R", prio:3, costo:"$200-500k" },
+  // fase 5
+  { id:"t5a", fase:5, titulo:"Recetario semanal definido (menu de colaciones)", nota:"Al menos 3 semanas de rotacion. Con variaciones estacionales.", owner:"C", prio:1, costo:"$0" },
+  { id:"t5b", fase:5, titulo:"Costeo unitario por plato (food cost <30%)", nota:"Para cada plato: costo de insumos / precio de venta. Meta: food cost menor al 30%.", owner:"A", prio:1, costo:"$0" },
+  { id:"t5c", fase:5, titulo:"Lista de proveedores con precios y frecuencia de entrega", nota:"Pescado/mariscos, verduras, lacteos, abarrotes. Minimo 2 proveedores por categoria.", owner:"C", prio:1, costo:"$0" },
+  { id:"t5d", fase:5, titulo:"Manual de procesos (apertura, cierre, limpieza, inventario)", nota:"Checklist operativo para cada turno. Reduce errores y facilita onboarding.", owner:"C", prio:2, costo:"$0" },
+  { id:"t5e", fase:5, titulo:"Contratar equipo (cocinera ayudante + garzona)", nota:"Personal de planta. Costos previsionales y de mutualidad incluidos.", owner:"C", prio:2, costo:"~$1.3M/mes" },
+  { id:"t5f", fase:5, titulo:"Capacitacion del equipo (1 semana antes de apertura)", nota:"Roles, procesos, estandares de servicio, manejo de quejas.", owner:"C", prio:2, costo:"$0" },
+  // fase 6
+  { id:"t6a", fase:6, titulo:"Web online en dominio real", nota:"Landing simple: quien somos, menu, horarios, ubicacion, WhatsApp. Sin ecommerce.", owner:"R", prio:2, costo:"$0" },
+  { id:"t6b", fase:6, titulo:"Instagram activo con feed pre-apertura", nota:"Fotos del proceso (cocina, local en construccion). Genera expectativa antes de abrir.", owner:"C", prio:2, costo:"$0" },
+  { id:"t6c", fase:6, titulo:"Google Business Profile verificado", nota:"Fundamental para busquedas locales. Gratis. Configurar con horario, fotos, menu.", owner:"R", prio:1, costo:"$0" },
+  { id:"t6d", fase:6, titulo:"WhatsApp Business con catalogo y respuestas rapidas", nota:"Numero dedicado del negocio. Configurar respuestas automaticas y horario.", owner:"R", prio:2, costo:"$0" },
+  { id:"t6e", fase:6, titulo:"Bot WhatsApp para preventa diaria de colaciones", nota:"Automatiza el pedido y la preventa. Arquitectura similar al chatbot CMC.", owner:"R", prio:2, costo:"$0" },
+  { id:"t6f", fase:6, titulo:"Produccion de merchandising (delantales, bolsas kraft, menus impresos)", nota:"Identidad de marca en cada punto de contacto fisico.", owner:"R", prio:3, costo:"$200-400k" },
+  { id:"t6g", fase:6, titulo:"Letrero exterior y pizarra de menu", nota:"Visible desde la calle. Pizarra permite actualizar el menu diario.", owner:"R", prio:2, costo:"$200-500k" },
+  { id:"t6h", fase:6, titulo:"Sesion de fotos profesional (comida + local)", nota:"Para redes, web y menu impreso. Una buena sesion dura meses de contenido.", owner:"R", prio:3, costo:"$150-400k" },
+  // fase 7
+  { id:"t7a", fase:7, titulo:"Piloto WhatsApp 30 dias desde cocina prestada", nota:"Valida demanda real antes de invertir en el local. El experimento mas importante.", owner:"A", prio:1, costo:"$0" },
+  { id:"t7b", fase:7, titulo:"Convenios con CMC, CESFAM, Carabineros, Escuela", nota:"Acuerdos de colacion fija con instituciones. Baseline de ingresos predecibles.", owner:"R", prio:1, costo:"$0" },
+  { id:"t7c", fase:7, titulo:"Soft launch (familia y amigos invitados)", nota:"Test completo del servicio. Identificar errores antes de la apertura real.", owner:"C", prio:2, costo:"~$200k" },
+  { id:"t7d", fase:7, titulo:"Inauguracion y lanzamiento comunicacional", nota:"Nota en redes, stories, posible nota en radio local. Sin gastar en publicidad paga aun.", owner:"A", prio:2, costo:"$0-100k" },
+  // fase 8
+  { id:"t8a", fase:8, titulo:"Metricas diarias (colaciones vendidas, ticket promedio, mix de platos)", nota:"Hoja o app simple. Datos para tomar decisiones de menu.", owner:"R", prio:1, costo:"$0" },
+  { id:"t8b", fase:8, titulo:"Iteracion del menu segun ventas reales", nota:"Sacar los platos que no venden, potenciar los que si. Revision mensual.", owner:"C", prio:2, costo:"$0" },
+  { id:"t8c", fase:8, titulo:"Conciliacion de caja diaria + flujo semanal", nota:"Controlar que el dinero cuadra cada dia. Pasa al contador mensualmente.", owner:"C", prio:2, costo:"$0" },
+  { id:"t8d", fase:8, titulo:"Pedir resenas Google e IG a clientes recurrentes", nota:"5 resenas bien escritas mueven mucho el algoritmo local. Pedirlas activamente.", owner:"C", prio:3, costo:"$0" },
+  { id:"t8e", fase:8, titulo:"Revision mensual del P&L con contador", nota:"Ventas, costos, margen, gastos fijos. Identificar desviaciones y ajustar.", owner:"R", prio:3, costo:"$0" },
+];
+
+// ──── localStorage ─────────────────────────────────────────────────────
+const LS_KEY = "rincon-tasks-v3";
+function loadDone() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch(e){ return {}; }
+}
+function saveDone(obj) { localStorage.setItem(LS_KEY, JSON.stringify(obj)); }
+let doneState = loadDone();
+
+function isDone(id) { return !!doneState[id]; }
+function toggleDone(id) {
+  if (doneState[id]) delete doneState[id]; else doneState[id] = 1;
+  saveDone(doneState);
+  refreshAll();
+}
+
+// ──── CONTADORES ───────────────────────────────────────────────────────
+function countDone() { return TASKS.filter(t => isDone(t.id)).length; }
+function countCriticasPendientes() { return TASKS.filter(t => t.prio === 1 && !isDone(t.id)).length; }
+
+function refreshKPIs() {
+  const done = countDone();
+  const pct = Math.round(done / TASKS.length * 100);
+  const crit = countCriticasPendientes();
+  document.getElementById("kpi-done").textContent = done;
+  document.getElementById("kpi-pct").textContent = pct + "%";
+  document.getElementById("kpi-criticas").textContent = crit;
+  document.getElementById("global-progress-pct").textContent = pct + "%";
+  document.getElementById("global-progress-bar").style.width = pct + "%";
+}
+
+// ──── TABLA PRINCIPAL ──────────────────────────────────────────────────
+function ownerLabel(o) { return o==="R"?"Rodrigo":o==="C"?"Chef":"Ambos"; }
+function ownerBadge(o) { const c={R:"badge-r",C:"badge-c",A:"badge-a"}; return `<span class="badge ${c[o]||''}">${ownerLabel(o)}</span>`; }
+function prioBadge(p) {
+  const cls={1:"badge-p1",2:"badge-p2",3:"badge-p3"};
+  const lbl={1:"Critica",2:"Importante",3:"Normal"};
+  return `<span class="badge ${cls[p]}">${lbl[p]}</span>`;
+}
+
+function buildTaskTable() {
+  const tbody = document.getElementById("task-tbody");
+  let html = "";
+  let lastFase = -1;
+  TASKS.forEach(t => {
+    if (t.fase !== lastFase) {
+      const f = FASES[t.fase];
+      html += `<tr class="fase-header-row"><td colspan="5"><div style="display:flex;align-items:baseline;gap:10px">
+        <span class="fase-header-num">${f.id}</span>
+        <span class="fase-header-name">${f.nombre}</span>
+        <span class="fase-header-when">${f.cuando}</span>
+      </div></td></tr>`;
+      lastFase = t.fase;
+    }
+    const done = isDone(t.id);
+    html += `<tr class="task-row${done?" done-row":""}" data-task-id="${t.id}">
+      <td class="py-2.5 px-3" style="vertical-align:middle">
+        <input type="checkbox" class="task-cb" data-id="${t.id}"${done?" checked":""}>
+      </td>
+      <td class="py-2.5 px-3">
+        <div class="task-title-text font-medium text-sm">${t.titulo}</div>
+        <div class="text-xs opacity-60 mt-0.5">${t.nota}</div>
+      </td>
+      <td class="py-2.5 px-3">${ownerBadge(t.owner)}</td>
+      <td class="py-2.5 px-3">${prioBadge(t.prio)}</td>
+      <td class="py-2.5 px-3 text-xs" style="font-family:'IBM Plex Mono',monospace;color:var(--olacore-cobre)">${t.costo}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+
+  tbody.querySelectorAll(".task-cb").forEach(cb => {
+    cb.addEventListener("change", () => toggleDone(cb.dataset.id));
+  });
+}
+
+function refreshTaskTable() {
+  document.querySelectorAll("#task-tbody .task-row").forEach(row => {
+    const id = row.dataset.taskId;
+    if (!id) return;
+    const done = isDone(id);
+    row.classList.toggle("done-row", done);
+    const cb = row.querySelector(".task-cb");
+    if (cb) cb.checked = done;
+  });
+}
+
+// ──── CRITICAS ─────────────────────────────────────────────────────────
+function buildCriticas() {
+  const container = document.getElementById("criticas-list");
+  const pendientes = TASKS.filter(t => t.prio === 1 && !isDone(t.id));
+  if (!pendientes.length) {
+    container.innerHTML = '<div class="tone-musgo p-5 rounded-lg text-sm font-medium">Todas las tareas criticas estan completadas.</div>';
+    return;
+  }
+  container.innerHTML = pendientes.map((t, i) => {
+    const f = FASES[t.fase];
+    return `<div class="bg-white border border-slate-200 rounded-xl p-4 flex gap-4">
+      <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:rgba(154,62,47,0.35);line-height:1;flex-shrink:0;width:28px;text-align:right">${i+1}</div>
+      <div style="flex:1">
+        <div class="font-semibold text-sm mb-1">${t.titulo}</div>
+        <div class="text-xs opacity-60 mb-2.5">${t.nota}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          ${ownerBadge(t.owner)}
+          <span class="badge" style="background:rgba(232,224,208,0.6);color:var(--olacore-fiordo)">Fase ${t.fase}: ${f.nombre}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--olacore-cobre)">${t.costo}</span>
+        </div>
+      </div>
+      <div>
+        <input type="checkbox" class="task-cb" data-id="${t.id}"${isDone(t.id)?" checked":""} title="Marcar como hecha">
+      </div>
+    </div>`;
+  }).join("");
+
+  container.querySelectorAll(".task-cb").forEach(cb => {
+    cb.addEventListener("change", () => toggleDone(cb.dataset.id));
+  });
+}
+
+function refreshCriticas() { buildCriticas(); }
+
+// ──── TIMELINE (overview) ─────────────────────────────────────────────
+function buildTimeline() {
+  const wrap = document.getElementById("timeline-phases");
+  if (!wrap) return;
+
+  wrap.innerHTML = FASES.map((f, i) => {
+    const tasksInFase = TASKS.filter(t => t.fase === f.id);
+    const doneInFase = tasksInFase.filter(t => isDone(t.id)).length;
+    const allDone = doneInFase === tasksInFase.length && tasksInFase.length > 0;
+    const someActive = doneInFase > 0 && !allDone;
+    const dotStyle = allDone
+      ? "background:var(--olacore-verde-musgo);border-color:var(--olacore-verde-musgo);color:#fff"
+      : someActive
+        ? "background:var(--olacore-cobre);border-color:var(--olacore-cobre);color:#fff"
+        : "background:#fffcf5;border-color:rgba(14,37,48,0.18);color:var(--olacore-fiordo)";
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0 4px;position:relative;z-index:1">
+      <div style="width:36px;height:36px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:15px;font-weight:600;margin-bottom:8px;box-shadow:0 1px 4px rgba(14,37,48,0.1);${dotStyle}">${f.id}</div>
+      <div style="font-size:10px;font-weight:600;color:var(--olacore-fiordo);text-align:center;line-height:1.3;max-width:80px">${f.nombre}</div>
+      <div style="font-size:9px;color:var(--olacore-cobre);text-align:center;margin-top:3px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.04em">${f.cuando}</div>
+      <div style="font-size:9px;opacity:0.55;margin-top:2px">${doneInFase}/${tasksInFase.length}</div>
+    </div>`;
+  }).join("");
+
+  // linea horizontal de fondo
+  wrap.style.position = "relative";
+  const existing = wrap.querySelector(".tl-line");
+  if (!existing) {
+    const line = document.createElement("div");
+    line.className = "tl-line";
+    line.style.cssText = "position:absolute;top:18px;left:28px;right:28px;height:2px;background:rgba(14,37,48,0.08);z-index:0";
+    wrap.insertBefore(line, wrap.firstChild);
+  }
+}
+
+// ──── CHARTS ──────────────────────────────────────────────────────────
+const OC = {
+  fiordo: "#0E2530",
+  cobre:  "#B98149",
+  musgo:  "#4A5D44",
+  lacre:  "#9A3E2F",
+  neblina:"#E8E0D0",
+  lenga:  "#7C4A2A",
+};
+
+const CHART_DEFAULTS = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: {
+    legend: {
+      position: "bottom",
+      labels: { font: { family: "Inter", size: 11 }, color: OC.fiordo, padding: 12 }
+    }
+  }
+};
+
+let chartOwner, chartPrio, chartFases, chartCostos;
+
+function buildCharts() {
+  const ownerCounts = {R:0, C:0, A:0};
+  TASKS.forEach(t => ownerCounts[t.owner]++);
+
+  if (chartOwner) chartOwner.destroy();
+  chartOwner = new Chart(document.getElementById("chartOwner"), {
+    type: "doughnut",
+    data: {
+      labels: ["Rodrigo", "Chef", "Ambos"],
+      datasets: [{
+        data: [ownerCounts.R, ownerCounts.C, ownerCounts.A],
+        backgroundColor: [OC.cobre, OC.musgo, OC.fiordo],
+        borderWidth: 0,
+      }]
+    },
+    options: { ...CHART_DEFAULTS }
+  });
+
+  const prioCounts = {1:0, 2:0, 3:0};
+  TASKS.forEach(t => prioCounts[t.prio]++);
+
+  if (chartPrio) chartPrio.destroy();
+  chartPrio = new Chart(document.getElementById("chartPrio"), {
+    type: "doughnut",
+    data: {
+      labels: ["Critica", "Importante", "Normal"],
+      datasets: [{
+        data: [prioCounts[1], prioCounts[2], prioCounts[3]],
+        backgroundColor: [OC.lacre, OC.cobre, OC.musgo],
+        borderWidth: 0,
+      }]
+    },
+    options: { ...CHART_DEFAULTS }
+  });
+
+  const faseLabels = FASES.map(f => "F" + f.id);
+  const faseTotals = FASES.map(f => TASKS.filter(t => t.fase === f.id).length);
+  const faseDone   = FASES.map(f => TASKS.filter(t => t.fase === f.id && isDone(t.id)).length);
+  const fasePend   = faseTotals.map((tot, i) => tot - faseDone[i]);
+
+  if (chartFases) chartFases.destroy();
+  chartFases = new Chart(document.getElementById("chartFases"), {
+    type: "bar",
+    data: {
+      labels: faseLabels,
+      datasets: [
+        { label: "Completadas", data: faseDone, backgroundColor: OC.musgo + "cc", borderRadius: 3 },
+        { label: "Pendientes",  data: fasePend,  backgroundColor: OC.neblina,      borderRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: "bottom", labels: { font: { family: "Inter", size: 11 }, color: OC.fiordo, padding: 12 } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { family: "IBM Plex Mono", size: 10 }, color: OC.fiordo } },
+        y: { stacked: true, beginAtZero: true, grid: { color: "rgba(14,37,48,0.06)" }, ticks: { font: { family: "Inter", size: 10 }, color: OC.fiordo } }
+      }
+    }
+  });
+}
+
+function buildCostosChart() {
+  const faseData = [
+    { f:"F0", v:10 },
+    { f:"F1", v:195 },
+    { f:"F2", v:4225 },
+    { f:"F3", v:390 },
+    { f:"F4", v:4525 },
+    { f:"F5", v:650 },
+    { f:"F6", v:625 },
+    { f:"F7", v:150 },
+    { f:"F8", v:0 },
+  ];
+  if (chartCostos) chartCostos.destroy();
+  chartCostos = new Chart(document.getElementById("chartCostos"), {
+    type: "bar",
+    data: {
+      labels: faseData.map(d => d.f),
+      datasets: [{
+        label: "Inversion estimada (miles CLP)",
+        data: faseData.map(d => d.v),
+        backgroundColor: faseData.map(d => d.v > 1000 ? OC.lacre + "cc" : OC.cobre + "cc"),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => "$" + ctx.parsed.y.toLocaleString("es-CL") + "k CLP"
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: "IBM Plex Mono", size: 11 }, color: OC.fiordo } },
+        y: { beginAtZero: true, grid: { color: "rgba(14,37,48,0.06)" }, ticks: { font: { family: "Inter", size: 11 }, color: OC.fiordo, callback: v => "$"+v+"k" } }
+      }
+    }
+  });
+}
+
+// ──── REFRESH GENERAL ─────────────────────────────────────────────────
+function refreshAll() {
+  refreshKPIs();
+  refreshTaskTable();
+  refreshCriticas();
+  buildTimeline();
+  if (chartFases) {
+    const faseDone = FASES.map(f => TASKS.filter(t => t.fase === f.id && isDone(t.id)).length);
+    const faseTotals = FASES.map(f => TASKS.filter(t => t.fase === f.id).length);
+    const fasePend = faseTotals.map((tot, i) => tot - faseDone[i]);
+    chartFases.data.datasets[0].data = faseDone;
+    chartFases.data.datasets[1].data = fasePend;
+    chartFases.update("none");
+  }
+}
+
+// ──── TABS ─────────────────────────────────────────────────────────────
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(t => t.classList.add("hidden"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.remove("hidden");
+    if (btn.dataset.tab === "costos" && !chartCostos) buildCostosChart();
+  });
+});
+
+// ──── INIT ─────────────────────────────────────────────────────────────
+buildTaskTable();
+buildCriticas();
+buildTimeline();
+buildCharts();
+refreshKPIs();
+</script>
+</body>
+</html>
