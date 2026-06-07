@@ -36,6 +36,11 @@ SEGMENTS_PATH = os.getenv("EMAIL_SEGMENTS_PATH", "data/email_segments.json")
 
 WA_BOT_NUMBER = "56966610737"  # número del bot (memory: nunca el personal del Dr.)
 
+# Ley 21.719: para dato sensible de salud por canal nuevo (email) exigimos doble
+# opt-in CONFIRMADO antes de enviar. Default true = postura legal segura. Cuando
+# está activo, "deliverable" = consent general AND doble opt-in email confirmado.
+EMAIL_REQUIRE_DOUBLE_OPTIN = os.getenv("EMAIL_REQUIRE_DOUBLE_OPTIN", "true").lower() == "true"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Lifecycle / RFM — DECISIÓN DE NEGOCIO. Tunear acá cambia toda la segmentación.
@@ -367,18 +372,29 @@ def resolve_audience(segment: dict, sample_size: int = 5) -> dict:
     if not bi_available:
         return _resolve_sessions_fallback(crit, consented, opted_out, sample_size)
 
+    optin = _email_optin_sets()
+
     matched = [r for r in universe if _matches_criteria(r, crit)]
     with_email = [r for r in matched if _valid_email(r.get("email"))]
 
-    deliverable, suppressed, no_consent, sample = [], 0, 0, []
+    deliverable, suppressed, no_consent, no_optin, sample = [], 0, 0, 0, []
+    general_consent = 0
     by_life: dict[str, int] = {}
     for r in with_email:
         phone = _normalize_phone_e164(r.get("telefono") or "")
-        if phone and phone in opted_out:
+        email = (r.get("email") or "").strip().lower()
+        if phone and (phone in opted_out or phone in optin["revoked_phones"]):
             suppressed += 1
             continue
         if not (phone and phone in consented):
             no_consent += 1
+            continue
+        general_consent += 1
+        # Doble opt-in de canal email (Ley 21.719). Si se exige y no está confirmado,
+        # NO es entregable: este es el cuello real que el embudo hace visible.
+        confirmed = (phone in optin["confirmed_phones"]) or (email in optin["confirmed_emails"])
+        if EMAIL_REQUIRE_DOUBLE_OPTIN and not confirmed:
+            no_optin += 1
             continue
         deliverable.append(r)
         life = _classify_lifecycle(r.get("dias_inactivo"), r.get("freq") or 0) or "—"
@@ -398,12 +414,66 @@ def resolve_audience(segment: dict, sample_size: int = 5) -> dict:
         "with_email": len(with_email),
         "suppressed_optout": suppressed,
         "no_email_consent": no_consent,
+        "general_consent": general_consent,        # con opt-in general de marketing
+        "email_confirmed": len(deliverable) if EMAIL_REQUIRE_DOUBLE_OPTIN else general_consent,
+        "no_double_optin": no_optin,               # falta confirmar canal email
+        "require_double_optin": EMAIL_REQUIRE_DOUBLE_OPTIN,
         "deliverable": len(deliverable),
         "coverage_pct": round(100 * len(with_email) / len(matched), 1) if matched else 0,
         "by_lifecycle": {_LIFECYCLE_LABEL.get(k, k): v for k, v in by_life.items()},
         "sample": sample,
-        "warnings": _audience_warnings(len(matched), len(with_email), len(deliverable)),
+        "warnings": _audience_warnings(len(matched), len(with_email), len(deliverable),
+                                       general_consent, no_optin),
     }
+
+
+def _email_optin_sets() -> dict:
+    """Sets de doble opt-in de canal email. Defensivo: si el módulo aún no creó
+    su tabla o falla, devuelve sets vacíos (todo no-confirmado → nada entregable)."""
+    try:
+        from . import email_optin
+        return email_optin.get_confirmed_email_sets()
+    except Exception as e:  # noqa: BLE001
+        log.warning("email_optin no disponible: %s", e)
+        return {"confirmed_phones": set(), "confirmed_emails": set(), "revoked_phones": set()}
+
+
+def resolve_recipients(segment: dict, *, limit: int = 200) -> list[dict]:
+    """Devuelve las FILAS reales entregables de un segmento (no conteos): pacientes
+    con email válido, opt-in general vigente, sin opt-out/baja, y — si se exige —
+    con doble opt-in de canal email confirmado. Ordenadas por recencia (más
+    recientemente atendido primero, regla fija UI Alma). Lo consume send_segment().
+    """
+    from session import get_email_consent_sets, _normalize_phone_e164
+
+    crit = (segment or {}).get("criteria") or {}
+    consent = get_email_consent_sets()
+    consented, opted_out = consent["consented"], consent["opted_out"]
+    optin = _email_optin_sets()
+
+    universe = _bi_universe()
+    if universe is None:
+        return []
+
+    out = []
+    for r in universe:
+        if not _matches_criteria(r, crit):
+            continue
+        if not _valid_email(r.get("email")):
+            continue
+        phone = _normalize_phone_e164(r.get("telefono") or "")
+        email = (r.get("email") or "").strip().lower()
+        if phone and (phone in opted_out or phone in optin["revoked_phones"]):
+            continue
+        if not (phone and phone in consented):
+            continue
+        confirmed = (phone in optin["confirmed_phones"]) or (email in optin["confirmed_emails"])
+        if EMAIL_REQUIRE_DOUBLE_OPTIN and not confirmed:
+            continue
+        out.append(r)
+
+    out.sort(key=lambda r: (r.get("dias_inactivo") is None, r.get("dias_inactivo") or 0))
+    return out[: max(0, int(limit))]
 
 
 def _resolve_sessions_fallback(crit, consented, opted_out, sample_size) -> dict:
@@ -439,7 +509,8 @@ def _resolve_sessions_fallback(crit, consented, opted_out, sample_size) -> dict:
     }
 
 
-def _audience_warnings(matched: int, with_email: int, deliverable: int) -> list[str]:
+def _audience_warnings(matched: int, with_email: int, deliverable: int,
+                       general_consent: int = 0, no_optin: int = 0) -> list[str]:
     w = []
     if matched == 0:
         w.append("Ningún paciente cumple estos criterios. Amplía el segmento.")
@@ -447,7 +518,14 @@ def _audience_warnings(matched: int, with_email: int, deliverable: int) -> list[
         w.append(f"Audiencia muy chica ({matched}). El A/B y las métricas no serán confiables.")
     if matched and with_email / max(matched, 1) < 0.4:
         w.append("Menos del 40% tiene email registrado. Considera capturar email en el bot.")
-    if with_email and deliverable == 0:
+    # El cuello real: muchos con consent general pero sin confirmar el canal email.
+    if no_optin and deliverable == 0:
+        w.append(f"{general_consent} con consent general, pero 0 con doble opt-in de email "
+                 f"confirmado. Ese es el cuello: activa la captura de opt-in en el bot.")
+    elif no_optin:
+        w.append(f"{no_optin} pacientes con consent general aún no confirman el canal email "
+                 f"(doble opt-in pendiente).")
+    elif with_email and deliverable == 0:
         w.append("0 contactables: falta opt-in de email. Activa el doble opt-in antes de enviar.")
     return w
 

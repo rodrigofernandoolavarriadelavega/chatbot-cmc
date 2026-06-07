@@ -148,6 +148,51 @@ def render_subject(segment: dict, ctx: dict | None = None) -> str:
     return merge((segment.get("email") or {}).get("subject") or "", ctx)
 
 
+def render_confirmation_email(confirm_url: str, nombre: str = "") -> str:
+    """Correo de confirmación del DOBLE opt-in (Ley 21.719). Es el segundo paso:
+    el paciente dijo 'sí' en WhatsApp y debe confirmar haciendo clic aquí. Sobrio,
+    un solo CTA, sin contenido promocional (es un correo transaccional de consent)."""
+    greeting = f"Hola {_esc(nombre.split(' ')[0])}," if (nombre or "").strip() else "Hola,"
+    return f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirma tu suscripción</title></head>
+<body style="margin:0;padding:0;background:{_BG}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{_BG}">
+<tr><td align="center" style="padding:24px 12px">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+         style="width:600px;max-width:100%;background:#fff;border-radius:16px;overflow:hidden;
+                font-family:Arial,Helvetica,sans-serif;box-shadow:0 4px 18px rgba(15,63,104,.08)">
+    <tr><td style="background:linear-gradient(135deg,{_NAVY},{_BLUE});padding:26px 30px">
+      <div style="color:#fff;font-size:13px;font-weight:bold;letter-spacing:.5px">Centro Médico</div>
+      <div style="color:{_AQUA};font-size:15px;font-weight:bold;letter-spacing:1px">CARAMPANGUE</div>
+    </td></tr>
+    <tr><td style="padding:32px 30px 8px">
+      <h1 style="margin:0 0 12px;font-size:21px;color:{_NAVY}">Confirma tu suscripción</h1>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:{_INK}">{greeting}</p>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:{_INK}">
+        Pediste recibir recordatorios y novedades del Centro Médico Carampangue por
+        correo. Para activarlo, confirma con un clic:</p>
+    </td></tr>
+    <tr><td align="center" style="padding:8px 30px 28px">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="border-radius:12px;background:{_AQUA}">
+          <a href="{_esc(confirm_url)}" target="_blank"
+             style="display:inline-block;padding:15px 30px;font-size:16px;font-weight:bold;
+                    color:{_NAVY};text-decoration:none;border-radius:12px">Sí, confirmar mi correo →</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding:18px 30px;background:#f0f5f9;border-top:1px solid #e6edf3">
+      <p style="margin:0;font-size:11px;line-height:1.5;color:{_MUTED}">
+        Si no fuiste tú, ignora este correo: sin tu confirmación no te enviaremos nada.
+        Centro Médico Carampangue · centromedicocarampangue.cl</p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>"""
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Envío provider-agnostic — GATED
 # ─────────────────────────────────────────────────────────────────────────────
