@@ -564,9 +564,11 @@ _CAPA_AGENTICA = Path(__file__).parent.parent.parent / "templates" / "dashboard_
 
 
 @router.get("/dashboardcapaagentica", response_class=HTMLResponse)
+@router.get("/dashboard-capa-agentica", response_class=HTMLResponse)
 def dashboard_capa_agentica():
     """Presentación PÚBLICA de la capa agéntica Alma (sin token) — para mostrar y
-    pitch a otros negocios. noindex en el HTML para no indexarse en Google."""
+    pitch a otros negocios. noindex en el HTML para no indexarse en Google.
+    Disponible en /dashboardcapaagentica y /dashboard-capa-agentica."""
     try:
         return HTMLResponse(_CAPA_AGENTICA.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
