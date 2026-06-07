@@ -2450,6 +2450,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         texto = txt
         tl = txt.lower().strip("*_~").strip()
 
+    # ── Tracking origen email: marcador "(email)" / "(email: segmento)" ──────────
+    # El clic en un correo de marketing pasa por /e/c/{token}, que redirige a wa.me
+    # con este marcador. Cierra la cadena email → conversación → cita (mismo método
+    # que el marcador web: lo único que WhatsApp transmite es el text= precargado).
+    _email_match = re.search(
+        r"\(\s*email(?:\s*[:：]\s*([\w-]+))?\s*\)\s*$", txt, re.IGNORECASE
+    )
+    if _email_match:
+        _eslug = (_email_match.group(1) or "").strip().lower()
+        if "referral_source:email" not in get_tags(phone):
+            save_tag(phone, "referral_source:email")
+            log_event(phone, "referral_source_auto", {"source": "email"})
+            if _eslug:
+                save_tag(phone, f"referral_source:email_{_eslug}")
+                log_event(phone, "referral_source_auto", {"source": f"email_{_eslug}"})
+        txt = txt[: _email_match.start()].rstrip(" .,-–—")
+        texto = txt
+        tl = txt.lower().strip("*_~").strip()
+
     # ── BUG-K FIX: Staff whitelist — silencio permanente en IDLE ──────────────
     # Personal médico/admin (ej: Dra. Javiera Burgos 56938738734) usa el canal
     # público para coordinar con recepción. El bot los interceptaba en cada
@@ -10290,6 +10309,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             email = txt.strip().lower()
             if re.match(r"^[^@\s]+@[^@\s]+\.[a-z]{2,}$", email):
                 data["reg_email"] = email
+                # ── Doble opt-in de canal email (Ley 21.719) — GATED ──────────
+                # Capturamos el "sí" blando al dar el correo y disparamos el correo
+                # de confirmación: SOLO el clic en ese correo habilita envíos (nadie
+                # recibe marketing sin confirmar). Fire-and-forget — jamás rompe el
+                # registro ni lo demora.
+                from config import EMAIL_OPTIN_ENABLED as _EMAIL_OPTIN
+                if _EMAIL_OPTIN:
+                    try:
+                        import asyncio as _aio
+                        from autopilot.email_tracking import send_optin_confirmation
+                        _nom = data.get("reg_nombre") or data.get("nombre") or ""
+                        _aio.create_task(send_optin_confirmation(phone, email, _nom))
+                        log_event(phone, "email_optin_requested", {"src": "registro"})
+                    except Exception as _eo:  # noqa: BLE001
+                        log.warning("email opt-in no disparado: %s", _eo)
             else:
                 # No parece correo válido, lo ignoramos y seguimos
                 log_event(phone, "registro_skip", {"step": "email", "raw": email[:60]})

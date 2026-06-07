@@ -366,3 +366,7 @@ AGENDADOR_PUBLICO_ENABLED = os.getenv("AGENDADOR_PUBLICO_ENABLED", "false").lowe
 # aprobado). OFF por ahora; los recordatorios automáticos del cron igual salen
 # porque la reserva se registra en citas_bot.
 AGENDADOR_WA_CONFIRM = os.getenv("AGENDADOR_WA_CONFIRM", "false").lower() in ("1", "true", "yes", "on")
+# Captura de doble opt-in de canal email (Ley 21.719) durante el registro: al
+# tomar el correo, dispara el correo de confirmación. Nadie recibe marketing sin
+# hacer clic en ese correo. OFF por defecto — el dueño decide cuándo encenderlo.
+EMAIL_OPTIN_ENABLED = os.getenv("EMAIL_OPTIN_ENABLED", "false").lower() in ("1", "true", "yes", "on")

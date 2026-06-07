@@ -20,7 +20,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Query, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from config import ADMIN_TOKEN, OLACORE_TOKEN, ALMA_PROFILES
 
@@ -408,6 +408,125 @@ async def email_preview(request: Request, token: str | None = Query(None)):
         "subject_preview": render_subject(seg),
         "html_preview": render_email(seg, preview=True),
     })
+
+
+# ── Doble opt-in / baja / tracking de email (endpoints PÚBLICOS, sin token) ────
+# Los abre el paciente desde su correo: confirmación (paso 2 del doble opt-in),
+# baja one-click (List-Unsubscribe), pixel de apertura y redirect de clic.
+
+_PIXEL_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+
+
+def _consent_page(title: str, msg: str, ok: bool = True) -> HTMLResponse:
+    color = "#1172AB" if ok else "#b42318"
+    icon = "✓" if ok else "•"
+    return HTMLResponse(f"""<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title></head>
+<body style="margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f7fa;color:#13202e">
+<div style="max-width:480px;margin:8vh auto;background:#fff;border-radius:16px;padding:38px 30px;
+            box-shadow:0 4px 18px rgba(15,63,104,.08);text-align:center">
+  <div style="width:54px;height:54px;border-radius:50%;background:{color};color:#fff;font-size:28px;
+              line-height:54px;margin:0 auto 18px">{icon}</div>
+  <h1 style="margin:0 0 10px;font-size:21px;color:#0F3F68">{title}</h1>
+  <p style="margin:0;font-size:15px;line-height:1.6;color:#64798c">{msg}</p>
+  <p style="margin:22px 0 0;font-size:13px"><a href="https://centromedicocarampangue.cl"
+     style="color:#1172AB">centromedicocarampangue.cl</a></p>
+</div></body></html>""")
+
+
+@router.get("/email/confirmar", response_class=HTMLResponse)
+def email_confirmar(t: str | None = Query(None)):
+    """Paso 2 del doble opt-in: el paciente confirma su correo (Ley 21.719)."""
+    from . import email_optin
+    rec = email_optin.confirm_email_optin(t or "")
+    if not rec:
+        return _consent_page("Enlace no válido",
+                             "Este enlace expiró o ya no es válido. Si quieres recibir "
+                             "nuestros correos, vuelve a pedirlo por WhatsApp.", ok=False)
+    return _consent_page("¡Suscripción confirmada!",
+                         "Listo, vas a recibir recordatorios y novedades del Centro Médico "
+                         "Carampangue. Puedes darte de baja cuando quieras desde cualquier correo.")
+
+
+@router.get("/email/baja", response_class=HTMLResponse)
+def email_baja(t: str | None = Query(None), p: str | None = Query(None)):
+    """Baja one-click del canal email (List-Unsubscribe). Acepta token o teléfono."""
+    from . import email_optin
+    email_optin.revoke_email_optin(token=t, phone=p)
+    return _consent_page("Te diste de baja",
+                         "No volverás a recibir correos de marketing del Centro Médico "
+                         "Carampangue. Esto no afecta los recordatorios de tus citas.")
+
+
+@router.post("/email/baja", response_class=HTMLResponse)
+def email_baja_post(t: str | None = Query(None), p: str | None = Query(None)):
+    """List-Unsubscribe-Post=One-Click: los clientes de correo hacen POST."""
+    return email_baja(t=t, p=p)
+
+
+@router.get("/e/o/{token}.png")
+def email_open_pixel(token: str):
+    """Pixel de apertura 1x1. Devuelve PNG transparente siempre (no filtra errores)."""
+    try:
+        from . import email_tracking
+        email_tracking.record_open(token)
+    except Exception:  # noqa: BLE001
+        pass
+    return Response(content=_PIXEL_PNG, media_type="image/png",
+                    headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+
+
+@router.get("/e/c/{token}")
+def email_click(token: str):
+    """Redirect de clic: registra el clic y manda a wa.me con marcador de atribución."""
+    from . import email_tracking
+    rec = email_tracking.record_click(token)
+    dest = (rec or {}).get("cta_url") or f"https://wa.me/{email_tracking.WA_NUMBER}"
+    return RedirectResponse(dest, status_code=302)
+
+
+# ── Email — opt-in stats, audiencias unificadas y envío (admin) ───────────────
+
+@router.get("/autopilot/api/email/optin")
+def email_optin_stats_ep(token: str | None = Query(None), request: Request = None):
+    """Embudo de doble opt-in + métricas de campaña (aperturas/clics)."""
+    _check_token(token, request)
+    from . import email_optin, email_tracking
+    return JSONResponse({"optin": email_optin.optin_stats(),
+                         "campaign": email_tracking.campaign_stats()})
+
+
+@router.post("/autopilot/api/audiences/overview")
+async def audiences_overview_ep(request: Request, token: str | None = Query(None)):
+    """Alcance de una audiencia (criterios RFM) lado a lado por canal WhatsApp/Email/Meta."""
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    from . import audiences
+    crit = (body or {}).get("criteria") or {}
+    return JSONResponse(audiences.audience_overview(crit))
+
+
+@router.post("/autopilot/api/email/send")
+async def email_send_ep(request: Request, token: str | None = Query(None)):
+    """Envía (o simula) un segmento. dry_run=true por defecto: NO envía, solo cuenta.
+    El envío real exige además EMAIL_SENDING_ENABLED en el server (doble gate)."""
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    seg = (body or {}).get("segment") or {}
+    if not isinstance(seg, dict) or not seg.get("criteria"):
+        raise HTTPException(400, "Falta 'segment.criteria'")
+    dry_run = bool((body or {}).get("dry_run", True))
+    limit = int((body or {}).get("limit", 200))
+    from . import email_tracking
+    summary = await email_tracking.send_segment(seg, limit=limit, dry_run=dry_run)
+    return JSONResponse(summary)
 
 
 # ── Publicación orgánica (segmento Instagram · Facebook · WhatsApp) ───────────
