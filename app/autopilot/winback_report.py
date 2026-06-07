@@ -83,10 +83,16 @@ def report(days: int = 120) -> dict:
     # 3) Ingreso atribuido por envío = pagos del paciente con fecha >= envío
     by_day: dict[str, dict] = {}
     for s in sends:
-        ingreso = 0
-        for fecha, monto in pagos.get(s["paciente_id"], []):
-            if fecha >= s["dia"]:
-                ingreso += monto
+        # Atribución CONSERVADORA: el win-back trae al paciente de vuelta UNA vez.
+        # Se cuenta solo la VISITA DE REACTIVACIÓN = los pagos del PRIMER día que
+        # volvió tras el envío. Las visitas posteriores son actividad normal de la
+        # clínica, no del mensaje → no se inflan (caso Olga: 3 visitas → 1 sola).
+        despues = [(f, m) for (f, m) in pagos.get(s["paciente_id"], []) if f >= s["dia"]]
+        if despues:
+            primer_dia = min(f for f, _ in despues)
+            ingreso = sum(m for f, m in despues if f == primer_dia)
+        else:
+            ingreso = 0
         s["ingreso"] = ingreso
         s["pago"] = ingreso > 0
         s["telefono_masked"] = _mask_phone(s["telefono"])
