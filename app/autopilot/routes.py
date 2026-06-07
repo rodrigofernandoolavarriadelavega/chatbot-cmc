@@ -551,6 +551,38 @@ def experiments_ledger(token: str | None = Query(None), request: Request = None)
     return JSONResponse(experiments.run_evaluations())
 
 
+@router.get("/autopilot/api/director")
+def director_cabinet(token: str | None = Query(None), request: Request = None):
+    """El Director — gabinete de 4 roles (operador/auditor/inventor/optimizador de
+    decisiones) que deciden qué switches prender/apagar según el P&L real, dentro del
+    presupuesto, y proponen agentes nuevos. READ-ONLY (propose-only)."""
+    _check_token(token, request)
+    from . import director
+    return JSONResponse(director.cabinet())
+
+
+@router.get("/autopilot/api/director/budget")
+def director_get_budget(token: str | None = Query(None), request: Request = None):
+    _check_token(token, request)
+    from . import director
+    return JSONResponse(director.get_budget())
+
+
+@router.post("/autopilot/api/director/budget")
+async def director_set_budget(request: Request, token: str | None = Query(None)):
+    """Define el sobre de dinero del Director. Body: {mode:'free'|'fixed', amount, period}."""
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "JSON inválido")
+    from . import director
+    return JSONResponse(director.set_budget(
+        mode=(body or {}).get("mode", "free"),
+        amount=int((body or {}).get("amount", 0) or 0),
+        period=(body or {}).get("period", "week")))
+
+
 @router.get("/autopilot/api/impact")
 def impact_pnl(days: int = Query(90), token: str | None = Query(None), request: Request = None):
     """P&L agéntico: qué hizo la capa autónoma (win-back/email/ads) y cuánto rindió,
