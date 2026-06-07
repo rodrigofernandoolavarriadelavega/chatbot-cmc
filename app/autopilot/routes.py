@@ -560,6 +560,15 @@ def impact_pnl(days: int = Query(90), token: str | None = Query(None), request: 
     return JSONResponse(impact.pnl(days=max(1, min(int(days), 365))))
 
 
+@router.get("/autopilot/api/winback/report")
+def winback_report_ep(days: int = Query(120), token: str | None = Query(None), request: Request = None):
+    """Win-back día por día: a quién se envió, si agendó/pagó, e INGRESO REAL (caja
+    bi_pagos_caja por id_paciente), con desglose por número. READ-ONLY."""
+    _check_token(token, request)
+    from . import winback_report
+    return JSONResponse(winback_report.report(days=max(1, min(int(days), 365))))
+
+
 # ── Publicación orgánica (segmento Instagram · Facebook · WhatsApp) ───────────
 
 @router.get("/autopilot/api/publish/status")

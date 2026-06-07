@@ -609,6 +609,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></svg>
       Atribución
     </button>
+    <button class="tab" data-view="winback">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+      Win-back
+    </button>
   </div>
 
   <div class="ap-main">
@@ -839,6 +843,44 @@
           </div>
           <div class="panel-b" id="seoOpps"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewWinback" style="display:none">
+    <style>
+      .wb-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+      .wb-kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;box-shadow:var(--sh-sm)}
+      .wb-kpi .n{font-size:24px;font-weight:800;color:var(--navy);letter-spacing:-.5px}
+      .wb-kpi .l{font-size:11px;color:var(--muted);margin-top:4px}
+      .wb-day{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;box-shadow:var(--sh-sm);overflow:hidden}
+      .wb-day-h{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;user-select:none}
+      .wb-day-h:hover{background:var(--bg)}
+      .wb-day-h .d{font-weight:700;font-size:13.5px;color:var(--navy);width:104px}
+      .wb-day-h .chips{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);flex:1}
+      .wb-chip b{color:var(--ink)} .wb-chip.money b{color:var(--green,#1f9d6b)}
+      .wb-day-h .chev{color:var(--muted);transition:transform .2s;font-size:12px}
+      .wb-day.open .chev{transform:rotate(90deg)}
+      .wb-recs{display:none;border-top:1px solid var(--line)}
+      .wb-day.open .wb-recs{display:block}
+      .wb-tbl{width:100%;border-collapse:collapse;font-size:12px}
+      .wb-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;padding:7px 14px;background:var(--soft)}
+      .wb-tbl td{padding:8px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+      .wb-tbl tr:last-child td{border-bottom:none}
+      .wb-tbl tr.paid{background:#f2fbf6}
+      .wb-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
+      .wb-badge.ok{background:#e4f6ee;color:#1f9d6b}.wb-badge.no{background:#eef2f6;color:var(--muted)}
+      .wb-money{font-weight:800;color:#1f9d6b}
+    </style>
+    <div class="panel">
+      <div class="panel-h">
+        <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg></span>
+        <h2>Win-back — recuperación de pacientes</h2>
+        <span class="count" id="wbNote">Ingreso = caja real (bi_pagos_caja)</span>
+      </div>
+      <div class="panel-b">
+        <div class="wb-kpis" id="wbKpis"></div>
+        <div id="wbDays"><div style="padding:30px;text-align:center;color:var(--muted);font-size:13px">Cargando…</div></div>
       </div>
     </div>
   </div>
@@ -1480,6 +1522,55 @@ document.getElementById('tabs').addEventListener('click',e=>{
   vp.style.display = v==='publicar'?'block':'none';
   if(v==='publicar' && !PUB_LOADED) loadPublish();
 });
+
+/* ── Pestaña Win-back (recuperación + ingreso real por número) ── */
+let WB_LOADED=false;
+const clp=n=>'$'+(n||0).toLocaleString('es-CL');
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b)return;
+  const v=b.dataset.view;
+  const vw=document.getElementById('viewWinback'); if(!vw)return;
+  vw.style.display = v==='winback'?'block':'none';
+  if(v==='winback' && !WB_LOADED) loadWinback();
+});
+async function loadWinback(){
+  WB_LOADED=true;
+  let d;
+  try{ d=await (await fetch(`/autopilot/api/winback/report?days=180&token=${TOKEN}`)).json(); }
+  catch(_){ document.getElementById('wbDays').innerHTML='<div style="padding:24px;color:var(--muted)">No se pudo cargar.</div>'; return; }
+  const t=d.totals||{};
+  if(d.note) document.getElementById('wbNote').textContent=d.note;
+  document.getElementById('wbKpis').innerHTML=[
+    ['Enviados',t.enviados||0],['Agendaron',(t.agendaron||0)+' ('+(t.conv_pct||0)+'%)'],
+    ['Pagaron',t.pagaron||0],['Ingreso real',clp(t.ingreso)]
+  ].map(k=>`<div class="wb-kpi"><div class="n">${k[1]}</div><div class="l">${k[0]}</div></div>`).join('');
+  const days=d.days||[];
+  if(!days.length){ document.getElementById('wbDays').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">Sin envíos en el período.</div>'; return; }
+  document.getElementById('wbDays').innerHTML=days.map((day,i)=>{
+    const recs=(day.destinatarios||[]).map(r=>`
+      <tr class="${r.pago?'paid':''}">
+        <td>${r.telefono||'—'}</td><td>${r.nombre||'—'}</td>
+        <td>${r.cohorte||''}</td><td>${r.especialidad||'—'}</td>
+        <td>${r.agendo?'<span class="wb-badge ok">agendó</span>':'<span class="wb-badge no">—</span>'}</td>
+        <td>${r.ingreso?('<span class="wb-money">'+clp(r.ingreso)+'</span>'):'—'}</td>
+      </tr>`).join('');
+    return `<div class="wb-day${i===0?' open':''}">
+      <div class="wb-day-h" onclick="this.parentNode.classList.toggle('open')">
+        <span class="d">${day.dia}</span>
+        <span class="chips">
+          <span class="wb-chip">env <b>${day.enviados}</b></span>
+          <span class="wb-chip">agend <b>${day.agendaron}</b></span>
+          <span class="wb-chip">pagaron <b>${day.pagaron}</b></span>
+          <span class="wb-chip money">ingreso <b>${clp(day.ingreso)}</b></span>
+        </span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="wb-recs"><table class="wb-tbl">
+        <thead><tr><th>Teléfono</th><th>Nombre</th><th>Cohorte</th><th>Especialidad</th><th>Estado</th><th>Ingreso</th></tr></thead>
+        <tbody>${recs}</tbody></table></div>
+    </div>`;
+  }).join('');
+}
 
 /* ── Biblioteca de diseños (DAM facetado) ─────────────── */
 let DESIGNS=[], DESIGNS_LOADED=false, FORMATS=[], FBYKEY={};
