@@ -80,7 +80,34 @@ ngrok http 8001
 
 SSH ahora es **solo por llave pública** (Ed25519 en `~/.ssh/id_ed25519`, password deshabilitado el 2026-04-10). Conexión directa con `ssh root@157.245.13.107`.
 
-### Deploy — usar SIEMPRE `scripts/deploy.sh` (único camino sancionado)
+### ⚡ Si hay varias ventanas abiertas (el caso normal): usá `scripts/ship.sh`
+El dueño trabaja con **muchas sesiones de Claude en paralelo sobre este mismo
+checkout**. Si deployás con `deploy.sh` directo y otra ventana dejó WIP sin
+commitear, choca (G1 aborta) o arriesgás pisar trabajo ajeno. Para deployar **tu
+pedazo** en vivo sin chocar:
+```bash
+bash scripts/ship.sh "<mensaje de commit>" <archivo> [archivo...]
+```
+Hace: snapshot del árbol completo → aparta (stash) los archivos modificados que NO
+nombraste → commitea SOLO los tuyos → `deploy.sh` (G1-G4) → restaura la WIP ajena.
+**Regla de oro del flujo paralelo: tocá archivos DISTINTOS de las otras ventanas.**
+Nada se pierde: `eod_snapshot.sh` (launchd horario) respalda todo a `eod-backup/*`,
+y `nightly_order.py` (03:00) deja un informe en `~/Desktop/cmc_orden_*.html`.
+Ver memory `cmc_sistema_orden_multisesion`.
+
+### 🧰 Aislamiento fuerte (opcional): un worktree por ventana
+Si querés cero choque a nivel de archivo, cada ventana puede trabajar en su propio
+worktree (carpeta + rama aparte, mismo .git):
+```bash
+bash scripts/newsession.sh eco     # crea ~/cmc-work/eco en rama session/eco (+ enlaza .env, data/)
+# …abrís Claude en ~/cmc-work/eco y trabajás aislado…
+bash scripts/wship.sh "fix(eco): X" # rebasa sobre origin/main y deploya con guardas
+bash scripts/newsession.sh --done eco
+```
+Más setup que `ship.sh`, pero dos ventanas jamás se ven los archivos. Recomendado
+cuando varias sesiones deban tocar el MISMO archivo (ej. todas en `flows.py`).
+
+### Deploy directo — `scripts/deploy.sh` (cuando el árbol es tuyo solo / una sola ventana)
 ```bash
 bash scripts/deploy.sh
 ```
