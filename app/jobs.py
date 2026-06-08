@@ -2746,12 +2746,14 @@ async def _job_watchdog_blast() -> None:
         or quality_rating not in ("GREEN",)
         or (tasa_rechazo > 40.0 and muestra_rechazo >= 30)
     )
+    # Reactivar es SIMÉTRICO a pausar: apenas no haya razón para pausar, vuelve.
+    # (Bug histórico 2026-05-28→06-08: reactivar exigía errores<=1 mientras pausar
+    #  exigía errores>10 → con errores en 2-10 quedaba TRABADO en OFF 11 días sin
+    #  loguear nada. La zona muerta entre umbrales mató el blast UTILITY general.)
     debe_reactivar = (
         not flag_actual
         and fue_auto_set
-        and errores_total <= 1
-        and quality_rating == "GREEN"
-        and not (tasa_rechazo > 40.0 and muestra_rechazo >= 30)
+        and not debe_pausar
     )
 
     razones: list[str] = []
