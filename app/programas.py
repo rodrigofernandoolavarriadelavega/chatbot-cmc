@@ -54,7 +54,7 @@ router = APIRouter(prefix="/alma/api/programas", tags=["programas"])
 # Para control:    control_ok / control_due (días desde la última visita).
 PROGRAMAS: dict[str, dict] = {
     "nutricion": {
-        "label": "Nutrición", "especialidad_ids": [4], "tipo": "adherencia",
+        "label": "Nutrición", "especialidad_ids": [4], "tipo": "adherencia", "clinico": True,
         "cadencia": 21, "en_curso_max": 21, "riesgo_max": 45, "abandono_max": 90, "gap_nuevo": 150,
         "objetivo": "El control nutricional funciona con seguimiento cada 2-3 semanas. El que deja de venir no baja de peso y no vuelve.",
         "wa": "Hola {primer}, te saludamos del Centro Médico Carampangue. Para que tu plan nutricional dé resultados conviene no cortar el seguimiento. ¿Agendamos tu próximo control con la nutricionista?",
@@ -220,7 +220,78 @@ def ensure_programa_plan_table() -> None:
             conn.execute("ALTER TABLE programa_plan ADD COLUMN segmento TEXT DEFAULT ''")
         if "pendientes" not in cols:
             conn.execute("ALTER TABLE programa_plan ADD COLUMN pendientes TEXT DEFAULT '[]'")
+        if "peso_meta" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN peso_meta REAL")
+        if "objetivo" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN objetivo TEXT DEFAULT ''")
+        if "plan" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN plan TEXT DEFAULT ''")
         conn.commit()
+
+
+# ── Capa clínica (mediciones de peso/medidas + objetivo clínico) ──────────────
+DEFAULT_OBJETIVOS = ["Bajar peso", "Subir peso", "Mantención", "Diabético", "Deportista", "Embarazo"]
+
+
+def ensure_medicion_table() -> None:
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS programa_medicion (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                programa    TEXT NOT NULL,
+                paciente_id INTEGER NOT NULL,
+                fecha       TEXT NOT NULL,          -- YYYY-MM-DD del control
+                peso        REAL,                   -- kg
+                cintura     REAL,                   -- cm (opcional)
+                grasa       REAL,                   -- % (opcional)
+                nota        TEXT DEFAULT '',
+                created_at  TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_medicion_pac ON programa_medicion(programa, paciente_id, fecha)")
+        conn.commit()
+
+
+def ensure_categoria_table() -> None:
+    """Categorías editables multi-dimensión (dim='objetivo' para el motivo clínico).
+    La segmentación demográfica sigue en programa_segmento (sin tocar)."""
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS programa_categoria (
+                programa TEXT NOT NULL,
+                dim      TEXT NOT NULL,
+                nombre   TEXT NOT NULL,
+                orden    INTEGER DEFAULT 0,
+                PRIMARY KEY (programa, dim, nombre)
+            )
+        """)
+        conn.commit()
+
+
+def _categorias(prog: str, dim: str, defaults: list[str]) -> list[dict]:
+    ensure_categoria_table()
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute("SELECT nombre, orden FROM programa_categoria WHERE programa=? AND dim=? ORDER BY orden, nombre", (prog, dim)).fetchall()
+        if not rows and defaults:
+            for i, n in enumerate(defaults):
+                conn.execute("INSERT OR IGNORE INTO programa_categoria (programa, dim, nombre, orden) VALUES (?,?,?,?)", (prog, dim, n, i))
+            conn.commit()
+            rows = conn.execute("SELECT nombre, orden FROM programa_categoria WHERE programa=? AND dim=? ORDER BY orden, nombre", (prog, dim)).fetchall()
+    return [{"nombre": r["nombre"], "orden": r["orden"]} for r in rows]
+
+
+def _mediciones(prog: str, pid: int) -> list[dict]:
+    ensure_medicion_table()
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id, fecha, peso, cintura, grasa, nota FROM programa_medicion "
+            "WHERE programa=? AND paciente_id=? ORDER BY fecha, id", (prog, pid)
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 # ── Categorías de segmentación (editables por la profesional, por programa) ───
@@ -374,6 +445,17 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
     rows, status = _bi_rows(cfg["especialidad_ids"], max(meses, 12), scope_prof)
     planes = _planes(prog)
     today = _today()
+    es_clinico = bool(cfg.get("clinico"))
+    meds_por_pac: dict[int, list] = {}
+    if es_clinico:
+        ensure_medicion_table()
+        from session import _conn as _c_med
+        with _c_med() as _cm:
+            for _m in _cm.execute(
+                "SELECT paciente_id, peso FROM programa_medicion "
+                "WHERE programa=? AND peso IS NOT NULL ORDER BY paciente_id, fecha, id", (prog,)
+            ).fetchall():
+                meds_por_pac.setdefault(_m["paciente_id"], []).append(_m["peso"])
 
     porpac: dict[int, dict] = {}
     for r in rows:
@@ -410,6 +492,10 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
         plan = planes.get(pid)
         ingreso_total += d["monto"]
         _pend = _parse_pendientes((plan or {}).get("pendientes"))
+        _meds = meds_por_pac.get(pid, []) if es_clinico else []
+        _peso_ini = _meds[0] if _meds else None
+        _peso_act = _meds[-1] if _meds else None
+        _delta = round(_peso_act - _peso_ini, 1) if (_peso_ini is not None and _peso_act is not None) else None
 
         if tipo == "adherencia":
             episodios = _split_episodios(fechas, cfg["gap_nuevo"])
@@ -436,6 +522,11 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
             "segmento": (plan or {}).get("segmento", "") or "",
             "pendientes": _pend,
             "n_pendientes": sum(1 for it in _pend if not it["hecho"]),
+            "peso_meta": (plan or {}).get("peso_meta"),
+            "objetivo": (plan or {}).get("objetivo", "") or "",
+            "plan": (plan or {}).get("plan", "") or "",
+            "peso_inicial": _peso_ini, "peso_actual": _peso_act, "delta_peso": _delta,
+            "n_mediciones": len(_meds),
         })
 
     # Orden: del control/atención más reciente al de hace más tiempo
@@ -465,12 +556,36 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
     else:
         metric_label, metric_val = "Pacientes en cartera", len(pacientes)
 
+    clin = {"clinico": es_clinico}
+    if es_clinico:
+        kg_perdidos = 0.0
+        n_seg = n_mej = 0
+        for p in pacientes:
+            pi, pa = p.get("peso_inicial"), p.get("peso_actual")
+            if pi is None or pa is None or p["n_mediciones"] < 2:
+                continue
+            n_seg += 1
+            if pi > pa:
+                kg_perdidos += (pi - pa)
+            meta = p.get("peso_meta")
+            obj = (p.get("objetivo") or "").lower()
+            if meta is not None:
+                mejoro = abs(pa - meta) < abs(pi - meta)
+            elif obj.startswith("subir"):
+                mejoro = pa > pi
+            else:
+                mejoro = pa < pi
+            if mejoro:
+                n_mej += 1
+        clin.update({"kg_perdidos": round(kg_perdidos, 1), "n_seguimiento": n_seg,
+                     "n_mejoraron": n_mej, "pct_mejora": round(100 * n_mej / n_seg) if n_seg else 0})
+
     kpis = {
         "tipo": tipo, "activos": len(activos), "accionables": n_acc, "urgentes": n_urgentes,
         "metric_label": metric_label, "metric_val": metric_val,
         "ingreso": round(ingreso_total), "n_pacientes": len(pacientes),
         "ticket_prom": round(ticket_prom), "valor_recuperable": valor_recuperable,
-        "atendidos_mes": atendidos_mes,
+        "atendidos_mes": atendidos_mes, **clin,
     }
     return {"kpis": kpis, "pacientes": pacientes, "cfg": cfg, "source_status": status}
 
@@ -609,7 +724,8 @@ async def resumen(prog: str, meses: int = Query(6, ge=1, le=36),
         prog = _prog_for_prof(scope) or prog
     data = _dispatch(prog, meses, scope)
     return {"kpis": data["kpis"], "cfg": {"label": data["cfg"]["label"], "tipo": data["cfg"]["tipo"],
-            "objetivo": data["cfg"]["objetivo"]}, "source_status": data["source_status"]}
+            "objetivo": data["cfg"]["objetivo"], "clinico": bool(data["cfg"].get("clinico"))},
+            "source_status": data["source_status"]}
 
 
 @router.get("/{prog}/calendario")
@@ -717,16 +833,23 @@ async def set_plan(prog: str, paciente_id: int, request: Request,
         estado_manual = ""
     notas = (body.get("notas") or "").strip()
     resumen = (body.get("resumen") or "").strip()
+    plan = (body.get("plan") or "").strip()
+    try:
+        peso_meta = float(body["peso_meta"]) if body.get("peso_meta") not in (None, "", "null") else None
+    except (ValueError, TypeError):
+        peso_meta = None
+    objetivo = (body.get("objetivo") or "").strip()[:60]
     ensure_programa_plan_table()
     from session import _conn
     with _conn() as conn:
         conn.execute("""
-            INSERT INTO programa_plan (programa, paciente_id, sesiones_plan, estado_manual, notas, resumen, updated_at)
-            VALUES (?,?,?,?,?,?, datetime('now'))
+            INSERT INTO programa_plan (programa, paciente_id, sesiones_plan, estado_manual, notas, resumen, plan, peso_meta, objetivo, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?, datetime('now'))
             ON CONFLICT(programa, paciente_id) DO UPDATE SET
                 sesiones_plan=excluded.sesiones_plan, estado_manual=excluded.estado_manual,
-                notas=excluded.notas, resumen=excluded.resumen, updated_at=excluded.updated_at
-        """, (prog, paciente_id, sesiones_plan, estado_manual, notas, resumen))
+                notas=excluded.notas, resumen=excluded.resumen, plan=excluded.plan,
+                peso_meta=excluded.peso_meta, objetivo=excluded.objetivo, updated_at=excluded.updated_at
+        """, (prog, paciente_id, sesiones_plan, estado_manual, notas, resumen, plan, peso_meta, objetivo))
         conn.commit()
     return {"ok": True}
 
@@ -852,6 +975,144 @@ async def set_pendientes(prog: str, paciente_id: int, request: Request,
         """, (prog, paciente_id, json.dumps(clean, ensure_ascii=False)))
         conn.commit()
     return {"ok": True, "pendientes": clean, "n_pendientes": sum(1 for it in clean if not it["hecho"])}
+
+
+# ── Capa clínica: mediciones de peso ──────────────────────────────────────────
+
+@router.get("/{prog}/mediciones/{paciente_id}")
+async def listar_mediciones(prog: str, paciente_id: int, token: str | None = Query(None),
+                            cmc_session: str | None = Cookie(None), request: Request = None):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    return {"mediciones": _mediciones(prog, paciente_id)}
+
+
+@router.post("/{prog}/mediciones/{paciente_id}")
+async def agregar_medicion(prog: str, paciente_id: int, request: Request,
+                           token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    fecha = (body.get("fecha") or _today().isoformat())[:10]
+    def _num(k):
+        try:
+            return float(body[k]) if body.get(k) not in (None, "", "null") else None
+        except (ValueError, TypeError):
+            return None
+    peso, cintura, grasa = _num("peso"), _num("cintura"), _num("grasa")
+    if peso is None and cintura is None and grasa is None:
+        raise HTTPException(400, "Ingresa al menos un valor (peso/cintura/grasa)")
+    nota = (body.get("nota") or "").strip()[:200]
+    ensure_medicion_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO programa_medicion (programa, paciente_id, fecha, peso, cintura, grasa, nota) "
+            "VALUES (?,?,?,?,?,?,?)", (prog, paciente_id, fecha, peso, cintura, grasa, nota))
+        conn.commit()
+    return {"ok": True, "mediciones": _mediciones(prog, paciente_id)}
+
+
+@router.delete("/{prog}/mediciones/{paciente_id}/{medicion_id}")
+async def borrar_medicion(prog: str, paciente_id: int, medicion_id: int, token: str | None = Query(None),
+                          cmc_session: str | None = Cookie(None), request: Request = None):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    ensure_medicion_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("DELETE FROM programa_medicion WHERE id=? AND programa=? AND paciente_id=?",
+                     (medicion_id, prog, paciente_id))
+        conn.commit()
+    return {"ok": True, "mediciones": _mediciones(prog, paciente_id)}
+
+
+# ── Capa clínica: objetivo (categorías editables, dim='objetivo') ─────────────
+
+@router.get("/{prog}/objetivos")
+async def listar_objetivos(prog: str, token: str | None = Query(None),
+                           cmc_session: str | None = Cookie(None), request: Request = None):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    return {"categorias": _categorias(prog, "objetivo", DEFAULT_OBJETIVOS)}
+
+
+@router.post("/{prog}/objetivos")
+async def crear_objetivo(prog: str, request: Request, token: str | None = Query(None),
+                         cmc_session: str | None = Cookie(None)):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        nombre = (await request.json()).get("nombre", "").strip()[:60]
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    if not nombre:
+        raise HTTPException(400, "Nombre vacío")
+    ensure_categoria_table()
+    from session import _conn
+    with _conn() as conn:
+        nxt = conn.execute("SELECT COALESCE(MAX(orden),-1)+1 FROM programa_categoria WHERE programa=? AND dim='objetivo'", (prog,)).fetchone()[0]
+        conn.execute("INSERT OR IGNORE INTO programa_categoria (programa, dim, nombre, orden) VALUES (?,?,?,?)", (prog, "objetivo", nombre, nxt))
+        conn.commit()
+    return {"categorias": _categorias(prog, "objetivo", DEFAULT_OBJETIVOS)}
+
+
+@router.put("/{prog}/objetivos")
+async def renombrar_objetivo(prog: str, request: Request, token: str | None = Query(None),
+                             cmc_session: str | None = Cookie(None)):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    old = (body.get("old") or "").strip()
+    new = (body.get("new") or "").strip()[:60]
+    if not old or not new:
+        raise HTTPException(400, "old/new requeridos")
+    ensure_categoria_table(); ensure_programa_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        row = conn.execute("SELECT orden FROM programa_categoria WHERE programa=? AND dim='objetivo' AND nombre=?", (prog, old)).fetchone()
+        if row is None:
+            raise HTTPException(404, "Categoría no existe")
+        if new != old:
+            conn.execute("INSERT OR IGNORE INTO programa_categoria (programa, dim, nombre, orden) VALUES (?,?,?,?)", (prog, "objetivo", new, row["orden"]))
+            conn.execute("DELETE FROM programa_categoria WHERE programa=? AND dim='objetivo' AND nombre=?", (prog, old))
+            conn.execute("UPDATE programa_plan SET objetivo=? WHERE programa=? AND objetivo=?", (new, prog, old))
+        conn.commit()
+    return {"categorias": _categorias(prog, "objetivo", DEFAULT_OBJETIVOS)}
+
+
+@router.delete("/{prog}/objetivos")
+async def borrar_objetivo(prog: str, nombre: str = Query(...), token: str | None = Query(None),
+                          cmc_session: str | None = Cookie(None), request: Request = None):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    ensure_categoria_table(); ensure_programa_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("DELETE FROM programa_categoria WHERE programa=? AND dim='objetivo' AND nombre=?", (prog, nombre))
+        conn.execute("UPDATE programa_plan SET objetivo='' WHERE programa=? AND objetivo=?", (prog, nombre))
+        conn.commit()
+    return {"categorias": _categorias(prog, "objetivo", DEFAULT_OBJETIVOS)}
+
+
+@router.put("/{prog}/objetivo/{paciente_id}")
+async def set_objetivo(prog: str, paciente_id: int, request: Request,
+                       token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    """Asigna el objetivo clínico a un paciente (upsert liviano, no toca el resto del plan)."""
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        obj = (await request.json()).get("objetivo", "").strip()[:60]
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    ensure_programa_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO programa_plan (programa, paciente_id, objetivo, updated_at)
+            VALUES (?,?,?, datetime('now'))
+            ON CONFLICT(programa, paciente_id) DO UPDATE SET objetivo=excluded.objetivo, updated_at=excluded.updated_at
+        """, (prog, paciente_id, obj))
+        conn.commit()
+    return {"ok": True, "objetivo": obj}
 
 
 def build_digest(meses: int = 6) -> dict:

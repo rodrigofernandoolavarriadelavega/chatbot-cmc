@@ -147,6 +147,14 @@
   }
   .cal-nav { width:30px; height:30px; border:1px solid var(--border); background:#fff; color:var(--blue); border-radius:8px; cursor:pointer; font-size:16px; font-weight:700; line-height:1; display:flex; align-items:center; justify-content:center; }
   .cal-nav:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .delta { font-weight:700; }
+  .delta.down { color:var(--green); } .delta.up { color:var(--red); }
+  .spark { display:block; }
+  .med-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #eef4f8; font-size:12.5px; }
+  .med-row:last-child { border-bottom:0; } .med-row .mf { color:var(--mute); width:74px; flex-shrink:0; }
+  .med-row .mp { font-weight:800; color:var(--navy); } .med-row .mx { color:var(--mute); font-size:11px; }
+  .med-in { font-family:inherit; font-size:13px; border:1px solid var(--border); border-radius:8px; padding:7px 8px; color:var(--navy); background:var(--bg); }
+  .med-in:focus { outline:none; border-color:var(--aqua); background:#fff; }
 </style>
 </head>
 <body>
@@ -168,12 +176,13 @@
       <div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg><div class="bt" id="banner-txt"></div></div>
       <div class="toolbar"><div class="chips" id="chips"></div>
         <button class="btn-ghost" id="segCatBtn" onclick="openSegCat()" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Categorías</button>
+        <button class="btn-ghost" id="objCatBtn" onclick="openObjCat()" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Objetivos</button>
       </div>
       <div class="card">
         <table>
           <thead><tr>
-            <th>Paciente</th><th class="ctr" id="th-seg">Segmentación</th><th class="hide-sm">Profesional</th>
-            <th class="num" id="th-ses">Sesiones</th><th class="num">Sin venir</th>
+            <th>Paciente</th><th class="ctr" id="th-seg">Segmentación</th><th class="ctr" id="th-obj">Objetivo</th><th class="hide-sm">Profesional</th>
+            <th class="num" id="th-ses">Sesiones</th><th class="num" id="th-peso">Peso</th><th class="num">Sin venir</th>
             <th class="ctr" id="th-pend">Pendiente</th>
             <th class="ctr">Estado</th><th class="num">Acciones</th>
           </tr></thead>
@@ -233,6 +242,24 @@
         </div>
         <div class="field"><label>Notas</label><textarea id="pl-notas" rows="2" placeholder="Etiqueta corta (se ve en la lista)"></textarea></div>
         <div class="field"><label>Resumen clínico</label><textarea id="pl-resumen" rows="6" placeholder="Resumen del paciente: evolución, adherencia, indicaciones, qué revisar el próximo control…"></textarea></div>
+        <div id="pl-clinico" style="display:none">
+          <div style="height:1px;background:var(--border);margin:6px 0 14px"></div>
+          <div class="field-row">
+            <div class="field"><label>Peso objetivo (kg)</label><input id="pl-peso-meta" type="number" step="0.1" min="0" placeholder="—"></div>
+            <div class="field"><label>Objetivo</label><select id="pl-objetivo"></select></div>
+          </div>
+          <div class="field"><label>Plan alimentario / indicaciones</label><textarea id="pl-plan" rows="3" placeholder="Pauta, indicaciones, restricciones…"></textarea></div>
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin:4px 0 6px">Evolución de peso</label>
+          <div id="pl-curva" style="margin-bottom:6px"></div>
+          <div id="pl-meds-list" style="margin-bottom:8px"></div>
+          <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1 1 110px"><label style="font-size:10px;color:var(--mute);font-weight:700;display:block;margin-bottom:3px">Fecha</label><input id="med-fecha" type="date" class="med-in" style="width:100%"></div>
+            <div style="flex:0 0 76px"><label style="font-size:10px;color:var(--mute);font-weight:700;display:block;margin-bottom:3px">Peso kg</label><input id="med-peso" type="number" step="0.1" class="med-in" style="width:100%"></div>
+            <div style="flex:0 0 76px"><label style="font-size:10px;color:var(--mute);font-weight:700;display:block;margin-bottom:3px">Cintura</label><input id="med-cintura" type="number" step="0.1" class="med-in" style="width:100%"></div>
+            <div style="flex:0 0 70px"><label style="font-size:10px;color:var(--mute);font-weight:700;display:block;margin-bottom:3px">% grasa</label><input id="med-grasa" type="number" step="0.1" class="med-in" style="width:100%"></div>
+            <button class="btn-primary" onclick="addMedicion()" style="height:34px;padding:0 14px">Agregar</button>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <a class="btn-ghost" id="pl-wa" target="_blank" href="#"><svg viewBox="0 0 24 24" fill="currentColor" style="color:#25d366"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2z"/></svg>WhatsApp</a>
@@ -293,6 +320,21 @@
     </div>
   </div>
 
+  <div class="modal-bg" id="m-obj-cat">
+    <div class="modal">
+      <div class="modal-head"><h2>Objetivos clínicos</h2><div class="x" onclick="closeM('m-obj-cat')">✕</div></div>
+      <div class="modal-body">
+        <div style="font-size:11.5px;color:var(--mute);margin-bottom:12px;line-height:1.5">Renombra un objetivo y se actualiza en todos los pacientes que lo tenían. Borrarlo deja sin objetivo a quienes lo tenían.</div>
+        <div id="objcat-list"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input id="objcat-new" type="text" placeholder="Nuevo objetivo…" style="flex:1;font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--navy);background:var(--bg)" onkeydown="if(event.key==='Enter')addObjCat()">
+          <button class="btn-primary" onclick="addObjCat()">Agregar</button>
+        </div>
+      </div>
+      <div class="modal-foot"><div style="flex:1"></div><button class="btn-ghost" onclick="closeM('m-obj-cat')">Cerrar</button></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 <script>
 const TOKEN="__TOKEN__"; const API="/alma/api/programas";
@@ -300,7 +342,7 @@ const SCOPED = __PROG_SCOPED__;  // true = perfil de profesional (vista acotada:
 const VER_INGRESO = __PROG_VER_INGRESO__;  // flag por perfil: este profesional SÍ ve su ingreso
 const PROF_DASHBOARD_URL = "__PROF_DASHBOARD_URL__";  // panel del profesional (Tu calendario); "" si no es profesional
 const H={ "Authorization":"Bearer "+TOKEN, "Content-Type":"application/json" };
-let STATE={ prog:null, tipo:"adherencia", estado:"todos", q:"", pacientes:[], conteos:{}, programas:[], segmentos:[], digest:false, overview:false };
+let STATE={ prog:null, tipo:"adherencia", estado:"todos", q:"", pacientes:[], conteos:{}, programas:[], segmentos:[], objetivos:[], clinico:false, digest:false, overview:false };
 
 const clp=n=>"$"+(n||0).toLocaleString("es-CL");
 function toast(m,e){ const t=document.getElementById('toast'); t.textContent=m; t.className='toast show'+(e?' err':''); setTimeout(()=>t.className='toast',2200); }
@@ -381,7 +423,7 @@ async function loadProg(){ await Promise.all([loadResumen(), loadPacientes()]); 
 
 async function loadResumen(){
   try {
-    const r=await api("/"+STATE.prog+"/resumen"); const k=r.kpis; STATE.tipo=k.tipo;
+    const r=await api("/"+STATE.prog+"/resumen"); const k=r.kpis; STATE.tipo=k.tipo; STATE.clinico=!!(r.cfg&&r.cfg.clinico);
     document.getElementById('banner-txt').innerHTML='<b>'+esc(r.cfg.label)+':</b> '+esc(r.cfg.objetivo);
     if(k.tipo==="tamizaje"){
       document.getElementById('kpis').innerHTML=`
@@ -397,13 +439,16 @@ async function loadResumen(){
     // Para el profesional: su propio calendario. Para recepción/dueño: el del programa.
     const calSub = (SCOPED && PROF_DASHBOARD_URL) ? 'toca para ver tu calendario →' : 'toca para ver el calendario →';
     const atendidosCard = `<div class="kpi" id="kpi-atendidos" style="cursor:pointer" title="Ver el calendario de días trabajados"><div class="k-label">Pacientes atendidos este mes</div><div class="k-val">${k.atendidos_mes||0}</div><div class="k-sub">${calSub}</div></div>`;
+    const clinKpis = STATE.clinico ? `
+      <div class="kpi"><div class="k-label">Kg perdidos · cartera</div><div class="k-val" style="color:var(--green)">${k.kg_perdidos||0}</div><div class="k-sub">en pacientes con seguimiento</div></div>
+      <div class="kpi"><div class="k-label">Mejoran</div><div class="k-val">${k.pct_mejora||0}%</div><div class="k-sub">${k.n_mejoraron||0}/${k.n_seguimiento||0} con 2+ controles</div></div>` : '';
     document.getElementById('kpis').innerHTML=`
       <div class="kpi"><div class="k-label">Activos</div><div class="k-val">${k.activos}</div><div class="k-sub">en seguimiento</div></div>
       <div class="kpi alert"><div class="k-label">${urgenteLbl}</div><div class="k-val">${k.urgentes}</div><div class="k-sub">contactar hoy</div></div>
       <div class="kpi warn"><div class="k-label">${accLbl}</div><div class="k-val">${k.accionables}</div><div class="k-sub">worklist total</div></div>
       <div class="kpi money"><div class="k-label">Ingreso recuperable</div><div class="k-val">${clp(k.valor_recuperable)}</div><div class="k-sub">si contactas la worklist</div></div>
       <div class="kpi"><div class="k-label">${esc(k.metric_label)}</div><div class="k-val">${k.metric_val}</div><div class="k-sub">ticket prom ${clp(k.ticket_prom)}</div></div>
-      ${atendidosCard}`;
+      ${atendidosCard}${clinKpis}`;
     const _at = document.getElementById('kpi-atendidos');
     if (_at) _at.addEventListener('click', openCalendario);
     }
@@ -418,10 +463,14 @@ async function loadPacientes(){
     document.getElementById('th-ses').textContent = STATE.tipo==="adherencia"?"Sesiones":(STATE.tipo==="tamizaje"?"Edad":"Visitas");
     // Segmentación + Pendiente: solo en programas de tratamiento (no en tamizaje poblacional)
     const trat = STATE.tipo!=="tamizaje";
+    const clin = trat && STATE.clinico;
     ['th-seg','th-pend'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=trat?'':'none'; });
+    ['th-obj','th-peso'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=clin?'':'none'; });
     document.getElementById('segCatBtn').style.display = trat?'inline-flex':'none';
-    STATE.segmentos = [];
+    document.getElementById('objCatBtn').style.display = clin?'inline-flex':'none';
+    STATE.segmentos = []; STATE.objetivos = [];
     if(trat){ try{ const sg=await api("/"+STATE.prog+"/segmentos"); STATE.segmentos=sg.categorias||[]; }catch(e){} }
+    if(clin){ try{ const og=await api("/"+STATE.prog+"/objetivos"); STATE.objetivos=og.categorias||[]; }catch(e){} }
     renderChips(); renderTable();
     // badge urgentes en la pill
     const urgent = STATE.tipo==="adherencia"?(r.conteos.riesgo||0):(STATE.tipo==="tamizaje"?(r.conteos.lapsed||0):(r.conteos.vencido||0));
@@ -455,11 +504,16 @@ function renderTable(){
     const segCell = trat ? `<td class="ctr">${segSelect(p)}</td>` : '';
     const nPend = p.n_pendientes||0;
     const pendCell = trat ? `<td class="ctr"><button class="pend-btn ${nPend?'has':''}" onclick='openPend(${p.paciente_id})' title="Pendientes del paciente">${nPend||'＋'}</button></td>` : '';
+    const clinT = trat && STATE.clinico;
+    const objCell = clinT ? `<td class="ctr">${objSelect(p)}</td>` : '';
+    const pesoCell = clinT ? pesoCellHtml(p) : '';
     return `<tr>
       <td><div class="pac-name">${esc(p.paciente)}${p.resumen?' <span title="Tiene resumen clínico" style="cursor:default">📝</span>':''}</div><div class="pac-meta">${esc(p.lugar||'—')}${p.notas?' · '+esc(p.notas):''}</div></td>
       ${segCell}
+      ${objCell}
       <td class="hide-sm" style="color:var(--mute);font-weight:600">${esc(p.profesional)}</td>
       <td class="num"><div class="ses">${sesTxt}</div></td>
+      ${pesoCell}
       <td class="num"><span class="dias-pill ${dpCls}">${diasTxt}</span><div class="pac-meta">${p.ultima_visita}</div></td>
       ${pendCell}
       <td class="ctr"><span class="estado ${p.estado}"><span class="dot"></span>${esc(p.estado_label)}</span></td>
@@ -471,6 +525,88 @@ function renderTable(){
 }
 
 function setEstado(e){ STATE.estado=e; loadPacientes(); }
+
+/* ── Capa clínica: objetivo, peso, mediciones ── */
+function objSelect(p){
+  const names=STATE.objetivos.map(o=>o.nombre);
+  let opts='<option value="">—</option>';
+  if(p.objetivo && !names.includes(p.objetivo)) opts+='<option value="'+esc(p.objetivo)+'" selected>'+esc(p.objetivo)+'</option>';
+  opts+=STATE.objetivos.map(o=>'<option value="'+esc(o.nombre)+'"'+(p.objetivo===o.nombre?' selected':'')+'>'+esc(o.nombre)+'</option>').join('');
+  return '<select class="seg-select" onchange="setObjetivo('+p.paciente_id+', this.value)">'+opts+'</select>';
+}
+async function setObjetivo(pid,val){
+  try { await api("/"+STATE.prog+"/objetivo/"+pid,{method:"PUT",body:JSON.stringify({objetivo:val})});
+    const p=STATE.pacientes.find(x=>x.paciente_id===pid); if(p) p.objetivo=val; toast("Objetivo guardado"); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+function pesoCellHtml(p){
+  if(p.peso_actual==null) return '<td class="num"><span class="pac-meta">—</span></td>';
+  const d=p.delta_peso, dcls=d==null?'':(d<0?'down':(d>0?'up':''));
+  const dtxt=d==null?'':'<div class="pac-meta delta '+dcls+'">'+(d>0?'+':'')+d+' kg</div>';
+  return '<td class="num"><div class="ses" style="font-size:13px">'+p.peso_actual+' kg</div>'+dtxt+'</td>';
+}
+let MEDS=[];
+function sparkline(meds){
+  const pts=meds.filter(m=>m.peso!=null).map(m=>m.peso);
+  if(pts.length<2) return '<div class="pac-meta">Agrega 2+ pesos para ver la curva de evolución.</div>';
+  const w=300,h=56,pad=5, min=Math.min(...pts), max=Math.max(...pts), rng=(max-min)||1, step=(w-2*pad)/(pts.length-1);
+  const xy=pts.map((v,i)=>[pad+i*step, pad+(h-2*pad)*(1-(v-min)/rng)]);
+  const d=xy.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
+  const dots=xy.map(q=>'<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="2.6" fill="#1172AB"/>').join('');
+  const first=pts[0], last=pts[pts.length-1], delta=+(last-first).toFixed(1), dcls=delta<0?'down':(delta>0?'up':'');
+  return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'"><path d="'+d+'" fill="none" stroke="#4FBECE" stroke-width="2.2"/>'+dots+'</svg>'
+    + '<div style="font-size:12px;margin-top:2px"><b>'+last+' kg</b> <span class="delta '+dcls+'">('+(delta>0?'+':'')+delta+' kg desde '+first+' kg)</span></div>';
+}
+async function loadMediciones(pid){
+  try { const r=await api("/"+STATE.prog+"/mediciones/"+pid); MEDS=r.mediciones||[]; } catch(e){ MEDS=[]; }
+  renderMediciones(pid);
+}
+function renderMediciones(pid){
+  document.getElementById('pl-curva').innerHTML = sparkline(MEDS);
+  const el=document.getElementById('pl-meds-list');
+  el.innerHTML = !MEDS.length ? '' : MEDS.slice().reverse().map(m=>'<div class="med-row">'
+    +'<span class="mf">'+m.fecha+'</span><span class="mp">'+(m.peso!=null?m.peso+' kg':'—')+'</span>'
+    +'<span class="mx">'+(m.cintura!=null?'cint '+m.cintura:'')+(m.grasa!=null?' · '+m.grasa+'% grasa':'')+(m.nota?' · '+esc(m.nota):'')+'</span>'
+    +'<div style="flex:1"></div><button class="icon-btn" title="Eliminar" onclick="delMedicion('+pid+','+m.id+')">✕</button></div>').join('');
+}
+async function addMedicion(){
+  const pid=+document.getElementById('pl-id').value, g=id=>document.getElementById(id).value;
+  const body={ fecha:g('med-fecha')||undefined, peso:g('med-peso')||null, cintura:g('med-cintura')||null, grasa:g('med-grasa')||null };
+  if(!body.peso && !body.cintura && !body.grasa){ toast("Ingresa al menos un valor",true); return; }
+  try { const r=await api("/"+STATE.prog+"/mediciones/"+pid,{method:"POST",body:JSON.stringify(body)}); MEDS=r.mediciones; renderMediciones(pid);
+    ['med-peso','med-cintura','med-grasa'].forEach(id=>document.getElementById(id).value=''); toast("Medición agregada"); loadResumen(); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+async function delMedicion(pid,mid){
+  try { const r=await api("/"+STATE.prog+"/mediciones/"+pid+"/"+mid,{method:"DELETE"}); MEDS=r.mediciones; renderMediciones(pid); loadResumen(); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+/* ── Objetivos clínicos: edición de categorías ── */
+function openObjCat(){ renderObjCat(); document.getElementById('m-obj-cat').classList.add('show'); }
+function renderObjCat(){
+  const el=document.getElementById('objcat-list');
+  if(!STATE.objetivos.length){ el.innerHTML='<div style="color:var(--mute);font-size:12px;padding:6px 0">Sin objetivos aún. Agrega el primero abajo.</div>'; return; }
+  el.innerHTML=STATE.objetivos.map(o=>'<div class="pend-row"><input class="segcat-input" value="'+esc(o.nombre)+'" data-old="'+esc(o.nombre)+'" onchange="renameObjCat(this)"><button class="icon-btn" title="Eliminar" onclick="delObjCat(this.previousElementSibling.getAttribute(\'data-old\'))">✕</button></div>').join('');
+}
+async function addObjCat(){
+  const inp=document.getElementById('objcat-new'); const t=inp.value.trim(); if(!t) return;
+  try { const r=await api("/"+STATE.prog+"/objetivos",{method:"POST",body:JSON.stringify({nombre:t})});
+    STATE.objetivos=r.categorias; inp.value=''; renderObjCat(); renderTable(); toast("Objetivo agregado"); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+async function renameObjCat(input){
+  const old=input.getAttribute('data-old'), nv=input.value.trim();
+  if(!nv||nv===old){ input.value=old; return; }
+  try { const r=await api("/"+STATE.prog+"/objetivos",{method:"PUT",body:JSON.stringify({old, new:nv})});
+    STATE.objetivos=r.categorias; renderObjCat(); loadPacientes(); toast("Renombrado"); }
+  catch(e){ toast("Error: "+e.message,true); input.value=old; }
+}
+async function delObjCat(nombre){
+  if(!confirm('¿Eliminar el objetivo "'+nombre+'"?')) return;
+  try { const r=await api("/"+STATE.prog+"/objetivos?nombre="+encodeURIComponent(nombre),{method:"DELETE"});
+    STATE.objetivos=r.categorias; renderObjCat(); loadPacientes(); toast("Eliminado"); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
 
 /* ── Segmentación: dropdown por paciente + edición de categorías ── */
 function segSelect(p){
@@ -624,6 +760,19 @@ function openPlan(pid){
   document.getElementById('pl-estado').value=(['alta','no_contactar','pausa'].includes(p.estado)?p.estado:'');
   document.getElementById('pl-notas').value=p.notas||'';
   document.getElementById('pl-resumen').value=p.resumen||'';
+  const _cb=document.getElementById('pl-clinico');
+  if(STATE.clinico){
+    _cb.style.display='block';
+    document.getElementById('pl-peso-meta').value = p.peso_meta!=null ? p.peso_meta : '';
+    document.getElementById('pl-plan').value = p.plan||'';
+    const _sel=document.getElementById('pl-objetivo'), _nm=STATE.objetivos.map(o=>o.nombre);
+    let _o='<option value="">—</option>';
+    if(p.objetivo && !_nm.includes(p.objetivo)) _o+='<option value="'+esc(p.objetivo)+'" selected>'+esc(p.objetivo)+'</option>';
+    _o+=STATE.objetivos.map(o=>'<option value="'+esc(o.nombre)+'"'+(p.objetivo===o.nombre?' selected':'')+'>'+esc(o.nombre)+'</option>').join('');
+    _sel.innerHTML=_o;
+    document.getElementById('med-fecha').value=new Date().toLocaleDateString('en-CA');
+    loadMediciones(pid);
+  } else { _cb.style.display='none'; }
   // mensaje sugerido (agéntico)
   document.getElementById('pl-msg').textContent='Cargando…';
   document.getElementById('pl-wa').style.display='none';
@@ -637,6 +786,7 @@ function openPlan(pid){
 async function savePlan(){
   const pid=document.getElementById('pl-id').value;
   const body={ sesiones_plan:+document.getElementById('pl-ses').value||0, estado_manual:document.getElementById('pl-estado').value, notas:document.getElementById('pl-notas').value.trim(), resumen:document.getElementById('pl-resumen').value.trim() };
+  if(STATE.clinico){ body.peso_meta=document.getElementById('pl-peso-meta').value||null; body.objetivo=document.getElementById('pl-objetivo').value; body.plan=document.getElementById('pl-plan').value.trim(); }
   try { await api("/"+STATE.prog+"/plan/"+pid,{method:"PUT",body:JSON.stringify(body)}); closeM('m-plan'); toast("Guardado"); loadProg(); }
   catch(e){ toast("Error: "+e.message,true); }
 }
