@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Envíos / Campañas — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --green:#23c25e; --amber:#f0a821;
+    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font-family:'Montserrat',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+  .pg-topbar{display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid var(--border);
+    padding:0 20px;height:54px;box-shadow:var(--sh-sm);position:sticky;top:0;z-index:20}
+  .pg-topbar h1{font-size:15px;font-weight:700;margin:0;color:var(--navy);display:flex;align-items:center;gap:8px}
+  .pg-topbar h1 .ico{width:20px;height:20px;color:var(--aqua)}
+  .pg-topbar .spacer{flex:1}
+  select.f{font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;
+    padding:6px 10px;color:var(--navy);background:#fff;cursor:pointer}
+  .btn-secondary{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--blue);
+    border:1px solid var(--border);border-radius:9px;padding:7px 12px;font-family:inherit;font-size:12px;
+    font-weight:700;cursor:pointer}
+  .btn-secondary:hover{background:var(--aqua-s);border-color:var(--aqua)}
+  .wrap{padding:18px 20px 60px;max-width:1180px;margin:0 auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:var(--sh-sm)}
+  .card .lbl{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+  .card .val{font-size:23px;font-weight:800;color:var(--navy);margin-top:3px}
+  .card.accent{background:linear-gradient(135deg,var(--navy),var(--blue));border:0}
+  .card.accent .lbl{color:rgba(255,255,255,.78)} .card.accent .val{color:#fff}
+  .tbl-card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh-sm);overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.03em;
+    text-align:left;padding:11px 14px;background:#fbfdfe;border-bottom:1px solid var(--border);white-space:nowrap}
+  tbody td{padding:10px 14px;border-bottom:1px solid #eef4f8;font-size:12.5px;vertical-align:top}
+  tbody tr:hover{background:#fafdff}
+  .pac{font-weight:700;color:var(--navy)} .rut{font-size:11px;color:var(--mute)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:700}
+  .t-template{background:#eef0fb;color:#4b46b0} .t-imagen{background:var(--aqua-s);color:var(--blue)}
+  .body-txt{color:#41566a;max-width:420px;white-space:pre-wrap;line-height:1.35;font-size:12px}
+  .thumb{width:54px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-top:6px;cursor:pointer;display:block}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+  .ok{background:#e3f9ec;color:#147a3c} .info{background:#eaf2fb;color:#1763b0}
+  .bad{background:#fdeaea;color:#b22}
+  .empty{padding:46px;text-align:center;color:var(--mute)}
+  @media(max-width:640px){thead{display:none} tbody td{display:block;border:0;padding:5px 14px} tbody tr{display:block;border-bottom:1px solid var(--border);padding:8px 0}}
+</style>
+</head>
+<body>
+<div class="pg-topbar">
+  <h1><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Envíos / Campañas</h1>
+  <div class="spacer"></div>
+  <select class="f" id="fTipo">
+    <option value="todos">Todos</option>
+    <option value="template">Solo templates</option>
+    <option value="imagen">Solo imágenes</option>
+  </select>
+  <select class="f" id="fDias">
+    <option value="1">Hoy</option>
+    <option value="7" selected>7 días</option>
+    <option value="30">30 días</option>
+    <option value="90">90 días</option>
+  </select>
+  <button class="btn-secondary" id="btnReload">↻ Actualizar</button>
+</div>
+
+<div class="wrap">
+  <div class="cards" id="cards"></div>
+  <div class="tbl-card">
+    <table>
+      <thead><tr><th>Fecha</th><th>Destinatario</th><th>Tipo</th><th>Contenido</th><th>Entrega</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">Sin envíos de campaña en este período.</div>
+  </div>
+</div>
+
+<script>
+const TOKEN="__TOKEN__";
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function fmtTs(ts){ if(!ts) return ""; const d=new Date(ts.replace(" ","T")+"Z");
+  return isNaN(d)?ts:d.toLocaleString("es-CL",{timeZone:"America/Santiago",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }
+
+async function load(){
+  const tipo=document.getElementById("fTipo").value;
+  const dias=document.getElementById("fDias").value;
+  const r=await fetch(`/alma/api/envios?token=${encodeURIComponent(TOKEN)}&tipo=${tipo}&dias=${dias}`);
+  if(!r.ok){ document.getElementById("empty").style.display="block"; return; }
+  const d=await r.json();
+  const rs=d.resumen||{};
+  document.getElementById("cards").innerHTML=`
+    <div class="card accent"><div class="lbl">Total enviados</div><div class="val">${rs.total||0}</div></div>
+    <div class="card"><div class="lbl">Templates</div><div class="val">${rs.template||0}</div></div>
+    <div class="card"><div class="lbl">Imágenes</div><div class="val">${rs.imagen||0}</div></div>
+    <div class="card"><div class="lbl">Entregados</div><div class="val" style="color:var(--green)">${rs.entregados||0}</div></div>
+    <div class="card"><div class="lbl">Fallidos</div><div class="val" style="color:var(--red)">${rs.fallidos||0}</div></div>`;
+  const list=d.envios||[];
+  const tb=document.getElementById("tbody"), empty=document.getElementById("empty");
+  if(!list.length){ tb.innerHTML=""; empty.style.display="block"; return; }
+  empty.style.display="none";
+  tb.innerHTML=list.map(e=>`
+    <tr>
+      <td style="white-space:nowrap">${esc(fmtTs(e.ts))}</td>
+      <td><div class="pac">${esc(e.nombre||"—")}</div><div class="rut">${esc(e.phone||"")}</div></td>
+      <td><span class="tag t-${e.tipo}">${e.tipo==="template"?"Template":"Imagen"}</span>
+          ${e.template?`<div class="rut" style="margin-top:4px">${esc(e.template)}</div>`:""}</td>
+      <td><div class="body-txt">${esc(e.contenido||"")}</div>
+          ${e.img_url?`<a href="${esc(e.img_url)}" target="_blank"><img class="thumb" src="${esc(e.img_url)}" loading="lazy" alt=""></a>`:""}</td>
+      <td><span class="badge ${e.estado_cls}">${esc(e.estado)}</span>
+          ${e.error_code?`<div class="rut" style="margin-top:3px">cód ${esc(e.error_code)}</div>`:""}</td>
+    </tr>`).join("");
+}
+document.getElementById("btnReload").onclick=load;
+document.getElementById("fTipo").onchange=load;
+document.getElementById("fDias").onchange=load;
+load();
+</script>
+</body>
+</html>

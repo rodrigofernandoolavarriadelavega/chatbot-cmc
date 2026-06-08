@@ -55,6 +55,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "pagos_olacore":{"label": "Pagos OLACORE",   "icon": "banknote",  "title": "Pagos del dia (completo)",       "sub": "Registro · copagos · bonif. Imed · Caja/Cierre",   "src": "/alma/pagos"},
     "pagos":       {"label": "Pagos",            "icon": "banknote",  "title": "Pagos del dia",                  "sub": "Registrar y editar pagos · export Excel",           "src": "/alma/pagos-simple"},
     "abonos":      {"label": "Abonos",           "icon": "banknote",  "title": "Abonos anticipados",             "sub": "Anticipos psiquiatría/fono/nutrición · saldo · no-show","src": "/alma/abonos"},
+    "envios":      {"label": "Envíos / Campañas", "icon": "target",    "title": "Envíos / Campañas",              "sub": "Qué manda el bot: templates e imágenes · estado de entrega","src": "/alma/envios"},
     "pagos_medilink":{"label": "Pagos Medilink",  "icon": "banknote",  "title": "Pagos Medilink",                 "sub": "Caja real Medilink · misma fuente que DB Mensual · solo lectura","src": "/alma/pagos-medilink"},
     "conciliacion":{"label": "Conciliacion",     "icon": "layers",    "title": "Conciliacion Financiera",        "sub": "Cruce multi-fuente · Imed · hallazgos · cuadre",   "src": "/alma/conciliacion"},
     "boxes":       {"label": "Boxes",            "icon": "grid",      "title": "Boxes — Gemelo Digital",         "sub": "Ocupación y recaudación por box",                  "src": "/boxes"},
@@ -103,7 +104,7 @@ ALMA_PROFILES: dict[str, dict] = {
     },
     "cmc_admin_2026": {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "agenda", "pagos", "abonos", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a cmc_admin_olacore
+        "modulos": ["panel", "panel2", "agenda", "pagos", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a cmc_admin_olacore
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
