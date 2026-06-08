@@ -47,7 +47,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_detectar_cancelaciones,
                   _job_monitor_anomalias,
                   _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
-                  _job_bi_sync_diario, _job_cac_snapshot,
+                  _job_bi_sync_diario, _job_cac_snapshot, _job_repasada_historica,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
@@ -374,6 +374,14 @@ async def lifespan(app: FastAPI):
         _job_bi_sync_diario,
         CronTrigger(hour=23, minute=59, timezone=_CLT),
         id="bi_sync_v2_diario",
+        replace_existing=True,
+    )
+
+    # Repasada histórica completa (semanal): domingo 03:30 CLT, caza errores viejos
+    scheduler.add_job(
+        _job_repasada_historica,
+        CronTrigger(day_of_week="sun", hour=3, minute=30, timezone=_CLT),
+        id="repasada_historica_semanal",
         replace_existing=True,
     )
     # CAC snapshot: 00:20 CLT (post bi_sync → usa pagos frescos). Alimenta la

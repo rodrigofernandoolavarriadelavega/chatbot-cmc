@@ -933,6 +933,24 @@ async def _job_bi_sync_diario():
         log.warning("bi_sync_diario repasada fallo: %s", e)
 
 
+async def _job_repasada_historica():
+    """Barrido HISTÓRICO completo (semanal): corre la repasada sobre toda la caja
+    (desde 2024) para cazar errores de atribución viejos que quedan fuera de la
+    ventana de 120 días del job nocturno. Conservador, respeta overrides manuales."""
+    try:
+        from pagos_medilink_routes import aplicar_repasada
+        rr = aplicar_repasada("2024-01-01", _date_today_iso())
+        log.info("repasada_historica: revisados=%s con_match=%s corregidos=%s tasa=%s%%",
+                 rr.get("revisados"), rr.get("con_match_manual"), rr.get("corregidos"), rr.get("tasa_error_pct"))
+    except Exception as e:
+        log.warning("repasada_historica fallo: %s", e)
+
+
+def _date_today_iso():
+    from datetime import date as _d
+    return _d.today().isoformat()
+
+
 async def _job_cac_snapshot():
     """Genera el snapshot JSON de atribución/CAC (data/cac_snapshot.json) que
     consume la pestaña Atribución de Autopilot. Reusa scripts/cac_report.py via
