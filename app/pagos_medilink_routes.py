@@ -226,3 +226,71 @@ async def reasignar(pago_id: int, request: Request,
         c.commit()
     return {"ok": True, "id_profesional": id_prof,
             "profesional": PROFESIONALES[id_prof].get("nombre", "")}
+
+
+def aplicar_repasada(d_desde: str, d_hasta: str) -> dict:
+    """Persiste la REPASADA a la fuente: corrige bi_pagos_caja (y por ende DB Mensual)
+    cruzando contra el módulo Pagos. CONSERVADOR: solo corrige cuando recepción registró
+    a esa persona ese día con un ÚNICO profesional (caso claro) y difiere del actual;
+    NUNCA pisa un override manual existente. Escribe override (auditable) + actualiza
+    bi_pagos_caja. Idempotente (re-correr no duplica)."""
+    from session import _conn
+    corregidos, revisados = 0, 0
+    with _conn() as c:
+        cmc: dict = {}
+        for fe, nom, idp in c.execute(
+            "SELECT fecha, paciente_nombre, id_profesional FROM pagos_cmc "
+            "WHERE id_profesional IS NOT NULL AND fecha >= ? AND fecha <= ?",
+            (d_desde, d_hasta),
+        ).fetchall():
+            cmc.setdefault((fe, _norm_nombre(nom)), set()).add(idp)
+        nombres_local = {
+            r[0]: r[1] for r in
+            c.execute("SELECT id_paciente, paciente_nombre FROM citas_cache").fetchall()
+        }
+        rows = c.execute(
+            """SELECT p.pago_id, p.fecha, p.atencion_id, p.id_paciente, p.id_profesional,
+                      (SELECT a.paciente_nombre FROM bi_atenciones a
+                         WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha
+                         ORDER BY a.atencion_id LIMIT 1) AS nombre_aten
+               FROM bi_pagos_caja p
+               WHERE p.fecha >= ? AND p.fecha <= ?
+                 AND NOT EXISTS (SELECT 1 FROM bi_pago_overrides o WHERE o.pago_id=p.pago_id)""",
+            (d_desde, d_hasta),
+        ).fetchall()
+        for r in rows:
+            revisados += 1
+            nombre = r["nombre_aten"] or nombres_local.get(r["id_paciente"]) or ""
+            profs = cmc.get((r["fecha"], _norm_nombre(nombre)))
+            if profs and len(profs) == 1:
+                correcto = next(iter(profs))
+                if correcto != r["id_profesional"]:
+                    c.execute(
+                        "INSERT OR REPLACE INTO bi_pago_overrides "
+                        "(pago_id, id_profesional, atencion_id, reason, created_at) "
+                        "VALUES (?,?,?,?, datetime('now'))",
+                        (r["pago_id"], correcto, r["atencion_id"], "repasada auto (cruce módulo Pagos)"),
+                    )
+                    c.execute("UPDATE bi_pagos_caja SET id_profesional=? WHERE pago_id=?",
+                              (correcto, r["pago_id"]))
+                    corregidos += 1
+        c.commit()
+    log.info("repasada %s..%s: revisados=%d corregidos=%d", d_desde, d_hasta, revisados, corregidos)
+    return {"revisados": revisados, "corregidos": corregidos, "desde": d_desde, "hasta": d_hasta}
+
+
+@router.post("/aplicar-repasada")
+async def aplicar_repasada_endpoint(desde: str | None = Query(None),
+                                    hasta: str | None = Query(None),
+                                    token: str | None = Query(None),
+                                    cmc_session: str | None = Cookie(None),
+                                    request: Request = None):
+    """Corre la repasada persistente sobre un rango (default: últimos 120 días). Solo dueño."""
+    _tk, scope = _resolve(request, token, cmc_session)
+    if scope is not None:
+        raise HTTPException(403, "Solo el dueño")
+    from datetime import timedelta
+    hoy = datetime.now(_TZ).date()
+    d_desde = desde or (hoy - timedelta(days=120)).isoformat()
+    d_hasta = hasta or hoy.isoformat()
+    return aplicar_repasada(d_desde, d_hasta)
