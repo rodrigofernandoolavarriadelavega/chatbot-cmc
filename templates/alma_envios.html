@@ -51,6 +51,24 @@
   .ok{background:#e3f9ec;color:#147a3c} .info{background:#eaf2fb;color:#1763b0}
   .bad{background:#fdeaea;color:#b22}
   .empty{padding:46px;text-align:center;color:var(--mute)}
+  tbody tr.rowc{cursor:pointer}
+  /* Chat lateral */
+  .chat-backdrop{position:fixed;inset:0;background:rgba(15,63,104,.35);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.2s;z-index:50}
+  .chat-backdrop.open{opacity:1;pointer-events:auto}
+  .chat-drawer{position:fixed;top:0;right:0;height:100%;width:min(440px,92vw);background:var(--bg);box-shadow:-8px 0 40px rgba(15,63,104,.22);
+    transform:translateX(100%);transition:transform .24s;z-index:60;display:flex;flex-direction:column}
+  .chat-drawer.open{transform:translateX(0)}
+  .chat-head{display:flex;align-items:center;gap:10px;padding:0 16px;height:56px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0}
+  .chat-title{font-weight:800;color:var(--navy);font-size:14px;flex:1}
+  .chat-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--mute);cursor:pointer;font-size:15px}
+  .chat-close:hover{background:#fdecec;color:var(--red);border-color:var(--red)}
+  .chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px}
+  .cmsg{display:flex} .cmsg.out{justify-content:flex-end}
+  .cbub{max-width:78%;padding:8px 11px;border-radius:12px;font-size:12.5px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+  .cmsg.in .cbub{background:#fff;border:1px solid var(--border);border-bottom-left-radius:4px}
+  .cmsg.out .cbub{background:var(--aqua-s);border:1px solid var(--aqua);border-bottom-right-radius:4px}
+  .ctime{font-size:10px;color:var(--mute);margin-top:3px;text-align:right}
+  .cimg{max-width:170px;max-height:230px;border-radius:9px;border:1px solid var(--border);display:block;margin-top:5px;cursor:pointer}
   @media(max-width:640px){thead{display:none} tbody td{display:block;border:0;padding:5px 14px} tbody tr{display:block;border-bottom:1px solid var(--border);padding:8px 0}}
 </style>
 </head>
@@ -58,6 +76,7 @@
 <div class="pg-topbar">
   <h1><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Envíos / Campañas</h1>
   <div class="spacer"></div>
+  <select class="f" id="fCampana"><option value="">Todas las campañas</option></select>
   <select class="f" id="fTipo">
     <option value="todos">Todos</option>
     <option value="template">Solo templates</option>
@@ -83,6 +102,15 @@
   </div>
 </div>
 
+<div class="chat-backdrop" id="chatBackdrop"></div>
+<aside class="chat-drawer" id="chatDrawer">
+  <div class="chat-head">
+    <div class="chat-title" id="chatTitle">Chat</div>
+    <button class="chat-close" id="chatClose">✕</button>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+</aside>
+
 <script>
 const TOKEN="__TOKEN__";
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -92,7 +120,8 @@ function fmtTs(ts){ if(!ts) return ""; const d=new Date(ts.replace(" ","T")+"Z")
 async function load(){
   const tipo=document.getElementById("fTipo").value;
   const dias=document.getElementById("fDias").value;
-  const r=await fetch(`/alma/api/envios?token=${encodeURIComponent(TOKEN)}&tipo=${tipo}&dias=${dias}`);
+  const campana=document.getElementById("fCampana").value;
+  const r=await fetch(`/alma/api/envios?token=${encodeURIComponent(TOKEN)}&tipo=${tipo}&dias=${dias}`+(campana?`&campana=${encodeURIComponent(campana)}`:""));
   if(!r.ok){ document.getElementById("empty").style.display="block"; return; }
   const d=await r.json();
   const rs=d.resumen||{};
@@ -107,7 +136,7 @@ async function load(){
   if(!list.length){ tb.innerHTML=""; empty.style.display="block"; return; }
   empty.style.display="none";
   tb.innerHTML=list.map(e=>`
-    <tr>
+    <tr class="rowc" data-phone="${esc(e.phone||'')}" title="Ver chat de este paciente">
       <td style="white-space:nowrap">${esc(fmtTs(e.ts))}</td>
       <td><div class="pac">${esc(e.nombre||"—")}</div><div class="rut">${esc(e.phone||"")}</div></td>
       <td><span class="tag t-${e.tipo}">${e.tipo==="template"?"Template":"Imagen"}</span>
@@ -117,10 +146,58 @@ async function load(){
       <td><span class="badge ${e.estado_cls}">${esc(e.estado)}</span>
           ${e.error_code?`<div class="rut" style="margin-top:3px">cód ${esc(e.error_code)}</div>`:""}</td>
     </tr>`).join("");
+  tb.querySelectorAll(".rowc").forEach(tr=>tr.onclick=()=>openChat(tr.dataset.phone));
 }
+
+// ── Dropdown de campañas ──
+async function loadCampanas(){
+  try{
+    const d=await (await fetch(`/alma/api/envios/campanas?token=${encodeURIComponent(TOKEN)}&dias=90`)).json();
+    const sel=document.getElementById("fCampana");
+    (d.campanas||[]).forEach(c=>{
+      const o=document.createElement("option");
+      o.value=c.template; o.textContent=`${c.template} (${c.destinatarios})`;
+      sel.appendChild(o);
+    });
+  }catch(_){}
+}
+
+// ── Chat lateral ──
+function fmtT(ts){ if(!ts) return ""; const d=new Date(ts.replace(" ","T")+"Z");
+  return isNaN(d)?ts:d.toLocaleString("es-CL",{timeZone:"America/Santiago",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }
+function fmtBody(s){
+  let t=esc(s);
+  t=t.replace(/(https?:\/\/[^\s<]+\.(?:jpe?g|png|webp|gif)(?:\?[^\s<]*)?)/gi,'<a href="$1" target="_blank"><img class="cimg" src="$1" loading="lazy"></a>');
+  return t;
+}
+async function openChat(phone){
+  if(!phone) return;
+  const dr=document.getElementById("chatDrawer"), bd=document.getElementById("chatBody");
+  document.getElementById("chatTitle").textContent="Cargando…";
+  bd.innerHTML='<div style="padding:30px;text-align:center;color:var(--mute)">…</div>';
+  dr.classList.add("open"); document.getElementById("chatBackdrop").classList.add("open");
+  let d;
+  try{ d=await (await fetch(`/alma/api/envios/chat?token=${encodeURIComponent(TOKEN)}&phone=${encodeURIComponent(phone)}`)).json(); }
+  catch(_){ bd.innerHTML='<div style="padding:30px;color:var(--mute)">No se pudo cargar el chat.</div>'; return; }
+  document.getElementById("chatTitle").innerHTML=`${esc(d.nombre||"Paciente")} <span style="font-weight:500;color:var(--mute);font-size:12px">${esc(d.phone||"")}</span>`;
+  const ms=d.mensajes||[];
+  if(!ms.length){ bd.innerHTML='<div style="padding:30px;text-align:center;color:var(--mute)">Sin mensajes.</div>'; return; }
+  bd.innerHTML=ms.map(m=>{
+    const out=m.direction==="out";
+    return `<div class="cmsg ${out?'out':'in'}"><div class="cbub">${fmtBody(m.text||"")}<div class="ctime">${esc(fmtT(m.ts))}</div></div></div>`;
+  }).join("");
+  bd.scrollTop=bd.scrollHeight;
+}
+function closeChat(){ document.getElementById("chatDrawer").classList.remove("open"); document.getElementById("chatBackdrop").classList.remove("open"); }
+
 document.getElementById("btnReload").onclick=load;
 document.getElementById("fTipo").onchange=load;
 document.getElementById("fDias").onchange=load;
+document.getElementById("fCampana").onchange=load;
+document.getElementById("chatClose").onclick=closeChat;
+document.getElementById("chatBackdrop").onclick=closeChat;
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeChat(); });
+loadCampanas();
 load();
 </script>
 </body>

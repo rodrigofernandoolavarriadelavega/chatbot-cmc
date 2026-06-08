@@ -55,9 +55,11 @@ def _require_admin_dep(request: Request,
 async def get_envios(request: Request,
                      dias: int = Query(7, ge=1, le=90),
                      tipo: str = Query("todos"),
+                     campana: str | None = Query(None, description="nombre exacto de template"),
                      token: str | None = Query(None),
                      cmc_session: str | None = Cookie(None)):
-    """Lista mensajes salientes de campaña (template/imagen) con estado de entrega."""
+    """Lista mensajes salientes de campaña (template/imagen) con estado de entrega.
+    `campana` filtra a un template específico (ej. dental_limpieza_junio_v2)."""
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
 
     where = ["m.direction = 'out'",
@@ -68,6 +70,12 @@ async def get_envios(request: Request,
         where.append("m.text LIKE '[template:%'")
     elif tipo == "imagen":
         where.append("m.text LIKE '[imagen]%'")
+    if campana:
+        # Solo nombres de template válidos (alfanumérico + _), evita inyección por LIKE
+        safe = re.sub(r"[^A-Za-z0-9_]", "", campana)
+        if safe:
+            where.append("m.text LIKE ?")
+            params.append(f"[template: {safe}]%")
 
     from session import _conn
     with _conn() as conn:
@@ -149,3 +157,56 @@ async def get_envios(request: Request,
             resumen["fallidos"] += 1
 
     return {"envios": envios, "resumen": resumen, "dias": dias, "tipo": tipo}
+
+
+@router.get("/campanas")
+async def get_campanas(request: Request,
+                       dias: int = Query(30, ge=1, le=180),
+                       token: str | None = Query(None),
+                       cmc_session: str | None = Cookie(None)):
+    """Lista de campañas (templates) enviadas + cuántos destinatarios únicos."""
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT m.text, m.phone FROM messages m
+               WHERE m.direction='out' AND m.text LIKE '[template:%'
+                 AND m.ts >= datetime('now', ?)""",
+            [f"-{int(dias)} days"],
+        ).fetchall()
+    agg: dict[str, set] = {}
+    for r in rows:
+        mt = _TPL_RE.match(r["text"] or "")
+        name = mt.group(1).strip() if mt else "?"
+        agg.setdefault(name, set()).add(r["phone"])
+    campanas = sorted(
+        [{"template": k, "destinatarios": len(v)} for k, v in agg.items()],
+        key=lambda x: -x["destinatarios"],
+    )
+    return {"campanas": campanas}
+
+
+@router.get("/chat")
+async def get_chat(request: Request,
+                   phone: str = Query(...),
+                   token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    """Conversación completa (in/out) de un paciente, para abrir desde Envíos."""
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    ph = re.sub(r"[^0-9]", "", phone or "")
+    if not ph:
+        raise HTTPException(400, "phone inválido")
+    from session import _conn
+    with _conn() as conn:
+        nombre_row = conn.execute(
+            "SELECT nombre FROM contact_profiles WHERE phone = ? LIMIT 1", (ph,)
+        ).fetchone()
+        rows = conn.execute(
+            """SELECT direction, text, ts FROM messages
+               WHERE phone = ? ORDER BY ts ASC LIMIT 300""",
+            (ph,),
+        ).fetchall()
+    msgs = [{"direction": r["direction"], "text": r["text"], "ts": r["ts"]}
+            for r in (dict(x) for x in rows)]
+    nombre = (dict(nombre_row).get("nombre") if nombre_row else "") or ""
+    return {"phone": ph, "nombre": nombre, "mensajes": msgs}
