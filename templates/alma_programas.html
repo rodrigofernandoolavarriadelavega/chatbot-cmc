@@ -48,7 +48,7 @@
     background:var(--red); color:#fff; border-radius:999px; padding:1px 5px; margin-left:6px; }
   .prog-pill.active .badge { background:rgba(255,255,255,.28); }
 
-  .kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:13px; margin-bottom:16px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:13px; margin-bottom:16px; }
   .kpi { background:#fff; border:1px solid var(--border); border-radius:16px; padding:15px 17px; box-shadow:var(--sh-sm); position:relative; overflow:hidden; }
   .kpi::after { content:''; position:absolute; right:-18px; top:-18px; width:64px; height:64px; border-radius:50%; background:var(--aqua-s); opacity:.6; }
   .kpi .k-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
@@ -216,7 +216,8 @@
             <option value="pausa">En pausa</option><option value="no_contactar">No contactar</option>
           </select></div>
         </div>
-        <div class="field"><label>Notas</label><textarea id="pl-notas" rows="2"></textarea></div>
+        <div class="field"><label>Notas</label><textarea id="pl-notas" rows="2" placeholder="Etiqueta corta (se ve en la lista)"></textarea></div>
+        <div class="field"><label>Resumen clínico</label><textarea id="pl-resumen" rows="6" placeholder="Resumen del paciente: evolución, adherencia, indicaciones, qué revisar el próximo control…"></textarea></div>
       </div>
       <div class="modal-foot">
         <a class="btn-ghost" id="pl-wa" target="_blank" href="#"><svg viewBox="0 0 24 24" fill="currentColor" style="color:#25d366"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2z"/></svg>WhatsApp</a>
@@ -340,9 +341,10 @@ async function loadResumen(){
     } else {
     const urgenteLbl = k.tipo==="adherencia"?"Riesgo abandono":"Control vencido";
     const accLbl = k.tipo==="adherencia"?"Por reenganchar":"Por citar";
-    const atendidosCard = (SCOPED && PROF_DASHBOARD_URL)
-      ? `<div class="kpi" id="kpi-atendidos" style="cursor:pointer" title="Ver tu calendario de días trabajados"><div class="k-label">Pacientes atendidos este mes</div><div class="k-val">${k.atendidos_mes||0}</div><div class="k-sub">toca para ver tu calendario →</div></div>`
-      : '';
+    // Card "atendidos este mes" → abre el calendario de días trabajados.
+    // Para el profesional: su propio calendario. Para recepción/dueño: el del programa.
+    const calSub = (SCOPED && PROF_DASHBOARD_URL) ? 'toca para ver tu calendario →' : 'toca para ver el calendario →';
+    const atendidosCard = `<div class="kpi" id="kpi-atendidos" style="cursor:pointer" title="Ver el calendario de días trabajados"><div class="k-label">Pacientes atendidos este mes</div><div class="k-val">${k.atendidos_mes||0}</div><div class="k-sub">${calSub}</div></div>`;
     document.getElementById('kpis').innerHTML=`
       <div class="kpi"><div class="k-label">Activos</div><div class="k-val">${k.activos}</div><div class="k-sub">en seguimiento</div></div>
       <div class="kpi alert"><div class="k-label">${urgenteLbl}</div><div class="k-val">${k.urgentes}</div><div class="k-sub">contactar hoy</div></div>
@@ -392,7 +394,7 @@ function renderTable(){
     const diasTxt = isNunca?'—':`${dp} d`;
     const sesTxt = (STATE.tipo==="tamizaje")?`${p.edad??p.sesiones} años`:(p.sesiones_plan?`${p.sesiones}/${p.sesiones_plan}`:`${p.sesiones}`);
     return `<tr>
-      <td><div class="pac-name">${esc(p.paciente)}</div><div class="pac-meta">${esc(p.lugar||'—')}${p.notas?' · '+esc(p.notas):''}</div></td>
+      <td><div class="pac-name">${esc(p.paciente)}${p.resumen?' <span title="Tiene resumen clínico" style="cursor:default">📝</span>':''}</div><div class="pac-meta">${esc(p.lugar||'—')}${p.notas?' · '+esc(p.notas):''}</div></td>
       <td class="hide-sm" style="color:var(--mute);font-weight:600">${esc(p.profesional)}</td>
       <td class="num"><div class="ses">${sesTxt}</div></td>
       <td class="num"><span class="dias-pill ${dpCls}">${diasTxt}</span><div class="pac-meta">${p.ultima_visita}</div></td>
@@ -410,15 +412,24 @@ function closeM(id){ document.getElementById(id).classList.remove('show'); }
 
 // ── Popup "Tu calendario": días trabajados del mes (datos del panel profesional) ──
 async function openCalendario(){
-  if(!PROF_DASHBOARD_URL) return;
   document.getElementById('m-cal').classList.add('show');
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '<div style="color:var(--mute);font-size:12px">Cargando…</div>';
-  const tk = (PROF_DASHBOARD_URL.split('token=')[1] || '');
+  // Título: el profesional ve "Tu calendario"; recepción/dueño ven el del programa.
+  const progLabel = (STATE.programas.find(p=>p.key===STATE.prog)||{}).label || '';
+  document.getElementById('cal-title').textContent = (SCOPED && PROF_DASHBOARD_URL)
+    ? 'Tu calendario · días trabajados'
+    : `Calendario · días trabajados${progLabel?' — '+progLabel:''}`;
   try {
-    const r = await fetch(`/api/profesional/dashboard?token=${encodeURIComponent(tk)}`);
-    const d = await r.json();
-    renderCalModal(d.por_dia || {}, (d.kpis && d.kpis.atend_avg_dia) || 10);
+    if (PROF_DASHBOARD_URL) {  // perfil de profesional → su propio dashboard
+      const tk = (PROF_DASHBOARD_URL.split('token=')[1] || '');
+      const r = await fetch(`/api/profesional/dashboard?token=${encodeURIComponent(tk)}`);
+      const d = await r.json();
+      renderCalModal(d.por_dia || {}, (d.kpis && d.kpis.atend_avg_dia) || 10);
+    } else {  // recepción / dueño → días trabajados del programa seleccionado
+      const d = await api("/"+STATE.prog+"/calendario");
+      renderCalModal(d.por_dia || {}, d.objetivo || 1);
+    }
   } catch(e){
     grid.innerHTML = '<div style="color:var(--mute);font-size:12px">No se pudo cargar el calendario.</div>';
   }
@@ -462,6 +473,7 @@ function openPlan(pid){
   document.getElementById('pl-ses').value=p.sesiones_plan||0;
   document.getElementById('pl-estado').value=(['alta','no_contactar','pausa'].includes(p.estado)?p.estado:'');
   document.getElementById('pl-notas').value=p.notas||'';
+  document.getElementById('pl-resumen').value=p.resumen||'';
   // mensaje sugerido (agéntico)
   document.getElementById('pl-msg').textContent='Cargando…';
   document.getElementById('pl-wa').style.display='none';
@@ -474,7 +486,7 @@ function openPlan(pid){
 }
 async function savePlan(){
   const pid=document.getElementById('pl-id').value;
-  const body={ sesiones_plan:+document.getElementById('pl-ses').value||0, estado_manual:document.getElementById('pl-estado').value, notas:document.getElementById('pl-notas').value.trim() };
+  const body={ sesiones_plan:+document.getElementById('pl-ses').value||0, estado_manual:document.getElementById('pl-estado').value, notas:document.getElementById('pl-notas').value.trim(), resumen:document.getElementById('pl-resumen').value.trim() };
   try { await api("/"+STATE.prog+"/plan/"+pid,{method:"PUT",body:JSON.stringify(body)}); closeM('m-plan'); toast("Guardado"); loadProg(); }
   catch(e){ toast("Error: "+e.message,true); }
 }

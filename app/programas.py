@@ -203,11 +203,16 @@ def ensure_programa_plan_table() -> None:
                 paciente_id    INTEGER NOT NULL,
                 sesiones_plan  INTEGER DEFAULT 0,
                 estado_manual  TEXT DEFAULT '',   -- '' | 'alta' | 'pausa' | 'no_contactar'
-                notas          TEXT DEFAULT '',
+                notas          TEXT DEFAULT '',   -- etiqueta corta visible en la lista
+                resumen        TEXT DEFAULT '',   -- resumen clínico largo por programa+paciente
                 updated_at     TEXT DEFAULT (datetime('now')),
                 PRIMARY KEY (programa, paciente_id)
             )
         """)
+        # Migración para DBs creadas antes de la columna `resumen` (prod ya tiene la tabla).
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(programa_plan)").fetchall()}
+        if "resumen" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN resumen TEXT DEFAULT ''")
         conn.commit()
 
 
@@ -372,6 +377,7 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
             "ultima_visita": last.isoformat(), "dias_sin_visita": dias,
             "n_episodios": n_eps, "estado": estado, "estado_label": etiqueta,
             "notas": (plan or {}).get("notas", ""),
+            "resumen": (plan or {}).get("resumen", ""),
         })
 
     # Orden: del control/atención más reciente al de hace más tiempo
@@ -469,7 +475,7 @@ def _compute_tamizaje(prog: str, meses: int = 6):
             "edad": r.get("edad"), "sesiones": r.get("edad"), "sesiones_plan": 0, "avance_pct": None,
             "profesional": "—", "ultima_visita": ultima_txt,
             "dias_sin_visita": dias if dias is not None else 9999,
-            "n_episodios": 0, "estado": estado, "estado_label": etiqueta, "notas": "",
+            "n_episodios": 0, "estado": estado, "estado_label": etiqueta, "notas": "", "resumen": "",
         })
     # lapsed primero (alta confianza), luego nunca; dentro, más atrasados primero
     pacientes.sort(key=lambda p: (0 if p["estado"] == "lapsed" else 1, -(p["dias_sin_visita"] or 0)))
@@ -547,6 +553,41 @@ async def resumen(prog: str, meses: int = Query(6, ge=1, le=36),
             "objetivo": data["cfg"]["objetivo"]}, "source_status": data["source_status"]}
 
 
+@router.get("/{prog}/calendario")
+async def calendario(prog: str, meses: int = Query(3, ge=1, le=12),
+                     token: str | None = Query(None), cmc_session: str | None = Cookie(None),
+                     request: Request = None):
+    """Días trabajados del programa (atenciones por día) para el popup de calendario.
+    A diferencia de /api/profesional/dashboard (un profesional), esto agrega las
+    atenciones del/los profesional(es) del programa — así recepción y dueño ven el
+    calendario sin estar atados a un token de profesional. Solo programas de
+    tratamiento (el tamizaje es cohorte poblacional, no tiene 'días trabajados')."""
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog
+    if prog not in PROGRAMAS:
+        raise HTTPException(404, f"Programa de tratamiento '{prog}' no existe")
+    cfg = _cfg(prog)
+    rows, status = _bi_rows(cfg["especialidad_ids"], meses, scope)
+    por_dia: dict[str, int] = {}
+    for r in rows:
+        f = r["fecha"]
+        if isinstance(f, str):
+            f = f[:10]
+        else:
+            try:
+                f = f.isoformat()[:10]
+            except Exception:
+                continue
+        por_dia[f] = por_dia.get(f, 0) + 1
+    # Objetivo = promedio de atenciones por día efectivamente trabajado (para colorear
+    # verde sobre objetivo / rojo bajo objetivo). Mínimo 1 para no dividir por cero.
+    trabajados = [v for v in por_dia.values() if v > 0]
+    objetivo = max(round(sum(trabajados) / len(trabajados)), 1) if trabajados else 1
+    return {"por_dia": por_dia, "objetivo": objetivo,
+            "label": cfg["label"], "source_status": status}
+
+
 @router.get("/{prog}/pacientes")
 async def pacientes(prog: str, estado: str | None = Query(None), meses: int = Query(6, ge=1, le=36),
                     token: str | None = Query(None), cmc_session: str | None = Cookie(None),
@@ -616,16 +657,17 @@ async def set_plan(prog: str, paciente_id: int, request: Request,
     if estado_manual not in ("", "alta", "pausa", "no_contactar"):
         estado_manual = ""
     notas = (body.get("notas") or "").strip()
+    resumen = (body.get("resumen") or "").strip()
     ensure_programa_plan_table()
     from session import _conn
     with _conn() as conn:
         conn.execute("""
-            INSERT INTO programa_plan (programa, paciente_id, sesiones_plan, estado_manual, notas, updated_at)
-            VALUES (?,?,?,?,?, datetime('now'))
+            INSERT INTO programa_plan (programa, paciente_id, sesiones_plan, estado_manual, notas, resumen, updated_at)
+            VALUES (?,?,?,?,?,?, datetime('now'))
             ON CONFLICT(programa, paciente_id) DO UPDATE SET
                 sesiones_plan=excluded.sesiones_plan, estado_manual=excluded.estado_manual,
-                notas=excluded.notas, updated_at=excluded.updated_at
-        """, (prog, paciente_id, sesiones_plan, estado_manual, notas))
+                notas=excluded.notas, resumen=excluded.resumen, updated_at=excluded.updated_at
+        """, (prog, paciente_id, sesiones_plan, estado_manual, notas, resumen))
         conn.commit()
     return {"ok": True}
 
