@@ -981,3 +981,77 @@ async def autopilot_cac_local(window: int = Query(30), token: str | None = Query
         return JSONResponse(await cac_local.cac_by_ad(window_days=window))
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, f"No se pudo calcular CAC local: {e}")
+
+
+# ── Plantillas Meta aprobadas (UTILITY / MARKETING-winback) ──────────────────
+# Mapa de plantillas propias con imagen hosteada (Meta no devuelve URL pública
+# del header IMAGE en el GET). Agregar acá cada template-con-foto que creemos.
+_PLANTILLA_IMG = {
+    "dental_limpieza_junio_v2": "https://agentecmc.cl/static/promos/dental_limpieza_junio.jpg",
+}
+
+
+@router.get("/autopilot/api/plantillas")
+async def autopilot_plantillas(token: str | None = Query(None), request: Request = None):
+    """Todas las plantillas APROBADAS por Meta, agrupadas UTILITY / WINBACK.
+
+    Devuelve copy (body/footer/header), botones y la foto (para las de imagen).
+    Lee la WhatsApp Business Management API en vivo (cacheable si molesta)."""
+    _check_token(token, request)
+    import httpx
+    from config import META_WABA_ID, META_ACCESS_TOKEN
+    if not (META_WABA_ID and META_ACCESS_TOKEN):
+        return JSONResponse({"error": "Sin WABA_ID/token configurado"}, status_code=500)
+
+    try:
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.get(
+                f"https://graph.facebook.com/v22.0/{META_WABA_ID}/message_templates",
+                params={"fields": "name,status,category,language,components", "limit": 250},
+                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            )
+        data = r.json().get("data", []) if r.status_code == 200 else []
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": f"Meta API: {e}"}, status_code=502)
+
+    out = {"utility": [], "winback": [], "otros": []}
+    for t in data:
+        if t.get("status") != "APPROVED":
+            continue
+        body = footer = header_type = header_text = img_url = ""
+        buttons: list[str] = []
+        for comp in t.get("components", []):
+            ct = comp.get("type")
+            if ct == "BODY":
+                body = comp.get("text", "")
+            elif ct == "FOOTER":
+                footer = comp.get("text", "")
+            elif ct == "HEADER":
+                header_type = comp.get("format", "")
+                if header_type == "TEXT":
+                    header_text = comp.get("text", "")
+                elif header_type == "IMAGE":
+                    ex = (comp.get("example", {}) or {}).get("header_handle", []) or []
+                    if ex and str(ex[0]).startswith("http"):
+                        img_url = ex[0]
+            elif ct == "BUTTONS":
+                buttons = [b.get("text", "") for b in comp.get("buttons", [])]
+        if not img_url:
+            img_url = _PLANTILLA_IMG.get(t.get("name", ""), "")
+        item = {
+            "name": t.get("name"), "category": t.get("category"),
+            "language": t.get("language"), "body": body, "footer": footer,
+            "header_type": header_type, "header_text": header_text,
+            "img_url": img_url, "buttons": buttons,
+        }
+        cat = (t.get("category") or "").upper()
+        if cat == "UTILITY":
+            out["utility"].append(item)
+        elif cat == "MARKETING":
+            out["winback"].append(item)
+        else:
+            out["otros"].append(item)
+    out["resumen"] = {"utility": len(out["utility"]),
+                      "winback": len(out["winback"]),
+                      "otros": len(out["otros"])}
+    return JSONResponse(out)
