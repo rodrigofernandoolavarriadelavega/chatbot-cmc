@@ -582,6 +582,8 @@ input, textarea, select{font-family:inherit; color:inherit}
   font-feature-settings:"tnum"; font-weight:500;
 }
 .msg .text{white-space:pre-wrap}
+.msg .text .msg-img{display:block;margin-top:5px}
+.msg .text .msg-img img{max-width:220px;max-height:300px;border-radius:10px;border:1px solid rgba(15,63,104,.12);cursor:pointer}
 .msg .prefix{
   font-size:10px; color:var(--cmc-blue); font-weight:700; margin-bottom:2px; display:block;
   letter-spacing:.5px; text-transform:uppercase;
@@ -1597,6 +1599,9 @@ const formatWa = (s="") => {
   t = t.replace(/\*([^\s*][^*\n]*?[^\s*]|[^\s*])\*/g, '<b>$1</b>');
   t = t.replace(/(^|[\s(])_([^\s_][^_\n]*?[^\s_]|[^\s_])_(?=[\s.,!?)]|$)/g, '$1<i>$2</i>');
   t = t.replace(/~([^\s~][^~\n]*?[^\s~]|[^\s~])~/g, '<s>$1</s>');
+  // URLs de imagen (flyers/promos enviadas, imágenes de pacientes) → miniatura inline
+  t = t.replace(/(https?:\/\/[^\s<]+\.(?:jpe?g|png|webp|gif)(?:\?[^\s<]*)?)/gi,
+    '<a href="$1" target="_blank" class="msg-img"><img src="$1" loading="lazy" alt="imagen"></a>');
   return t;
 };
 const stripWa = (s="") => String(s).replace(/[*_~`]/g, "");

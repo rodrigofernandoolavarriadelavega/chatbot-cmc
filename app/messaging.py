@@ -431,17 +431,31 @@ async def send_whatsapp_document(to: str, media_url: str, filename: str = "",
 
 
 async def send_whatsapp_image(to: str, media_url: str,
-                               caption: str = "") -> str | None:
-    """Envía una imagen vía Meta Cloud API usando URL pública."""
+                               caption: str = "",
+                               log: bool = False,
+                               log_state: str = "IDLE") -> str | None:
+    """Envía una imagen vía Meta Cloud API usando URL pública.
+
+    log=True registra el envío en el historial (tabla messages) con la URL
+    pública embebida, para que el panel lo renderice inline como miniatura.
+    Usar log=True en campañas/envíos de imagen que el dueño debe poder ver."""
     img = {"link": media_url}
     if caption:
         img["caption"] = caption
-    return await _post_meta({
+    res = await _post_meta({
         "messaging_product": "whatsapp",
         "to": to,
         "type": "image",
         "image": img,
     })
+    if log:
+        try:
+            from session import log_message as _lm
+            _txt = (f"[imagen] {caption}".strip() if caption else "[imagen]") + f"\n{media_url}"
+            _lm(to, "out", _txt, log_state, wamid=res)
+        except Exception:
+            pass
+    return res
 
 
 async def upload_media_to_whatsapp(file_bytes: bytes, mime_type: str,
@@ -567,7 +581,9 @@ async def _get_template_language(template_name: str) -> str:
 async def send_whatsapp_template(to: str, template_name: str,
                                   body_params: list[str] | None = None,
                                   button_payloads: list[str] | None = None,
-                                  language: str | None = None):
+                                  language: str | None = None,
+                                  header_image_url: str | None = None,
+                                  header_image_id: str | None = None):
     """Envía un Message Template aprobado por Meta.
 
     Usar para TODOS los mensajes proactivos (fuera de ventana 24h):
@@ -580,6 +596,11 @@ async def send_whatsapp_template(to: str, template_name: str,
         button_payloads: payloads para botones QUICK_REPLY (índice 0, 1, 2)
         language: código de idioma. Si es None (default), se consulta desde
                   Meta API con caché TTL 1h. Pasar explícitamente solo en tests.
+        header_image_url: URL pública de la imagen del header (templates con
+                  header tipo IMAGE, ej. dental_limpieza_junio). Toma prioridad
+                  sobre header_image_id si ambos se pasan.
+        header_image_id: media_id ya subido a Meta para el header IMAGE
+                  (alternativa a la URL). Más robusto si la URL no es pública.
     """
     # Resolver language desde Meta API si no se especificó explícitamente.
     # Root cause del bug: antes era language="es" hardcodeado; todos los templates
@@ -588,6 +609,14 @@ async def send_whatsapp_template(to: str, template_name: str,
         language = await _get_template_language(template_name)
 
     components = []
+
+    # Header tipo IMAGE (templates con flyer/foto). Va primero por convención Meta.
+    if header_image_url or header_image_id:
+        _img = {"link": header_image_url} if header_image_url else {"id": header_image_id}
+        components.append({
+            "type": "header",
+            "parameters": [{"type": "image", "image": _img}],
+        })
 
     # Variables del body
     if body_params:
