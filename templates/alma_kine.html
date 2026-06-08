@@ -159,6 +159,8 @@
     .modal-bg { padding:0; align-items:stretch; }
     .modal { max-width:100%; width:100%; height:100%; max-height:100%; border-radius:0; }
   }
+  .cal-nav { width:30px; height:30px; border:1px solid var(--border); background:#fff; color:var(--blue); border-radius:8px; cursor:pointer; font-size:16px; font-weight:700; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .cal-nav:hover { background:var(--aqua-s); border-color:var(--aqua); }
 </style>
 </head>
 <body>
@@ -252,7 +254,11 @@
     <div class="modal">
       <div class="modal-head"><h2 id="cal-title">Tu calendario · días trabajados</h2><div class="x" onclick="closeM('m-cal')">✕</div></div>
       <div class="modal-body">
-        <div id="cal-month" style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--aqua);margin-bottom:10px"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <button class="cal-nav" onclick="_calShift(-1)" title="Mes anterior">&#8249;</button>
+          <div id="cal-month" style="flex:1;text-align:center;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--aqua)"></div>
+          <button class="cal-nav" onclick="_calShift(1)" title="Mes siguiente">&#8250;</button>
+        </div>
         <div id="cal-grid" style="min-height:60px"></div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mute);margin-top:14px">
           <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#2d7a4f;margin-right:5px;vertical-align:-1px"></span>Sobre objetivo</span>
@@ -393,14 +399,28 @@ async function openCalendario(){
   }
 }
 
+let _calPorDia = {}, _calObjetivo = 1, _calYm = null;
+const _CAL_MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 function renderCalModal(porDia, objetivo){
-  const MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  const keys = Object.keys(porDia).sort();
+  _calPorDia = porDia || {}; _calObjetivo = objetivo || 1;
+  const keys = Object.keys(_calPorDia).sort();
   const now = new Date();
   let ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   if(!keys.some(k => k.slice(0,7)===ym) && keys.length) ym = keys[keys.length-1].slice(0,7);
-  const [Y, Mo] = ym.split('-').map(Number);
-  document.getElementById('cal-month').textContent = `${MESES[Mo]} ${Y}`;
+  _calYm = ym;
+  _renderCalMonth();
+}
+function _calShift(delta){
+  if(!_calYm) return;
+  let [Y, Mo] = _calYm.split('-').map(Number);
+  Mo += delta;
+  if(Mo < 1){ Mo = 12; Y--; } else if(Mo > 12){ Mo = 1; Y++; }
+  _calYm = `${Y}-${String(Mo).padStart(2,'0')}`;
+  _renderCalMonth();
+}
+function _renderCalMonth(){
+  const [Y, Mo] = _calYm.split('-').map(Number);
+  document.getElementById('cal-month').textContent = `${_CAL_MESES[Mo]} ${Y}`;
   const daysInMonth = new Date(Y, Mo, 0).getDate();
   const firstDow = (new Date(Y, Mo-1, 1).getDay() + 6) % 7;  // Lunes = 0
   let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;max-width:330px">';
@@ -408,9 +428,9 @@ function renderCalModal(porDia, objetivo){
   for(let i=0; i<firstDow; i++) html += '<div></div>';
   for(let day=1; day<=daysInMonth; day++){
     const ds = `${Y}-${String(Mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const n = porDia[ds] || 0;
+    const n = _calPorDia[ds] || 0;
     let bg='var(--bg)', tc='var(--mute)', bd='1px solid var(--border)';
-    if(n>0 && n>=objetivo){ bg = n>=objetivo*1.5 ? '#2d7a4f' : '#5fa858'; tc='#fff'; bd='none'; }
+    if(n>0 && n>=_calObjetivo){ bg = n>=_calObjetivo*1.5 ? '#2d7a4f' : '#5fa858'; tc='#fff'; bd='none'; }
     else if(n>0){ bg='#fdecea'; tc='#c0392b'; bd='1px solid #e0a9a0'; }
     html += `<div title="${ds}: ${n} atenciones" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;background:${bg};color:${tc};border:${bd};font-size:12px;font-weight:700">${n||'·'}</div>`;
   }
