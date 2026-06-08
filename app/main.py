@@ -3697,14 +3697,15 @@ def alma_pagos_simple_page(token: str | None = Query(None),
                 .replace("__PAGOS_READONLY__", "true" if readonly else "false"))
     if token and _is_admin_token(token):
         return _ren_pagos(token, False)
+    # Perfil de profesional por token explícito → prioridad sobre la cookie admin del navegador
+    if token:
+        eff = _pt(token, None, "pagos")
+        if eff:
+            return _ren_pagos(eff, _ro(eff))  # SOLO LECTURA, filtrado a su especialidad
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ren_pagos(ADMIN_TOKEN, False)
-    # Perfil de profesional con módulo pagos → SOLO LECTURA, filtrado a su especialidad
-    eff = _pt(token, cmc_session, "pagos")
-    if eff:
-        return _ren_pagos(eff, _ro(eff))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
@@ -3722,14 +3723,15 @@ def alma_abonos_page(token: str | None = Query(None),
                 .replace("__ABONOS_READONLY__", "true" if readonly else "false"))
     if token and _is_admin_token(token):
         return _ren_abonos(token, False)
+    # Perfil de profesional por token explícito → prioridad sobre la cookie admin del navegador
+    if token:
+        eff = _pt(token, None, "abonos")
+        if eff:
+            return _ren_abonos(eff, _ro(eff))  # SOLO LECTURA, filtrado a su especialidad
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ren_abonos(ADMIN_TOKEN, False)
-    # Perfil de profesional con módulo abonos → SOLO LECTURA, filtrado a su especialidad
-    eff = _pt(token, cmc_session, "abonos")
-    if eff:
-        return _ren_abonos(eff, _ro(eff))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
