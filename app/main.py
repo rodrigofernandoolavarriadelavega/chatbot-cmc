@@ -742,6 +742,9 @@ pagos_routes.ensure_pagos_table()  # DDL idempotente al arrancar
 
 import abonos_routes
 app.include_router(abonos_routes.router)
+
+import pagos_medilink_routes
+app.include_router(pagos_medilink_routes.router)
 abonos_routes.ensure_abonos_table()  # DDL idempotente al arrancar
 
 import conciliacion_routes
@@ -2985,6 +2988,7 @@ _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8")
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_ABONOS_HTML = (_TEMPLATE_DIR / "alma_abonos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_abonos.html").exists() else ""
+_ALMA_PAGOS_MEDILINK_HTML = (_TEMPLATE_DIR / "alma_pagos_medilink.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_medilink.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
 _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
 _ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
@@ -3732,6 +3736,31 @@ def alma_abonos_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ren_abonos(ADMIN_TOKEN, False)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/pagos-medilink", response_class=HTMLResponse)
+def alma_pagos_medilink_page(token: str | None = Query(None),
+                             cmc_session: str | None = Cookie(None)):
+    """Módulo Pagos Medilink — espejo SOLO LECTURA de la caja real (bi_pagos_caja),
+    misma fuente que DB Mensual. Dueño/recepción ve todo; perfil de profesional, lo suyo."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    from alma_scope import page_token as _pt
+    if not _ALMA_PAGOS_MEDILINK_HTML:
+        raise HTTPException(404, "Pagos Medilink no disponible")
+    def _ren_pm(tok: str) -> str:
+        return _ALMA_PAGOS_MEDILINK_HTML.replace("__TOKEN__", tok)
+    if token and _is_admin_token(token):
+        return _ren_pm(token)
+    # Perfil de profesional por token explícito → prioridad sobre la cookie admin del navegador
+    if token:
+        eff = _pt(token, None, "pagos_medilink")
+        if eff:
+            return _ren_pm(eff)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ren_pm(ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

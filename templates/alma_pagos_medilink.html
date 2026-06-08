@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Pagos Medilink — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --green:#23c25e; --green-s:#e7f9ee;
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body { font-family:'Montserrat',-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+  .pg-topbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#fff; border-bottom:1px solid var(--border);
+    padding:10px 18px; box-shadow:0 1px 3px rgba(15,63,104,.08); position:sticky; top:0; z-index:20; }
+  .pg-topbar h1 { font-size:15px; font-weight:800; margin:0; color:var(--navy); }
+  .pg-topbar .sub { font-size:11px; color:var(--mute); font-weight:600; margin-left:-4px; }
+  .spacer { flex:1; }
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; }
+  .seg button { border:0; background:#fff; color:var(--blue); font-family:inherit; font-size:12px; font-weight:700; padding:7px 13px; cursor:pointer; }
+  .seg button.on { background:var(--navy); color:#fff; }
+  .date-nav { display:flex; align-items:center; gap:6px; }
+  .date-nav input[type=date] { font-family:inherit; font-size:12px; border:1px solid var(--border); border-radius:8px; padding:6px 9px; color:var(--navy); background:var(--bg); }
+  .date-nav button { border:1px solid var(--border); background:#fff; color:var(--blue); font-family:inherit; font-size:12px; font-weight:600; padding:6px 10px; border-radius:8px; cursor:pointer; }
+  .date-nav button:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .btn-export { display:inline-flex; align-items:center; gap:6px; background:#fff; color:var(--blue); border:1px solid var(--border);
+    border-radius:9px; padding:7px 13px; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; }
+  .btn-export:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .btn-export svg { width:15px; height:15px; }
+
+  .wrap { padding:16px 18px; }
+  .kpis { display:flex; gap:13px; margin-bottom:14px; flex-wrap:wrap; }
+  .kpi { background:#fff; border:1px solid var(--border); border-radius:14px; padding:13px 18px; box-shadow:0 1px 3px rgba(15,63,104,.08); }
+  .kpi .l { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
+  .kpi .v { font-size:22px; font-weight:800; color:var(--navy); margin-top:4px; }
+  .kpi.money .v { color:var(--blue); }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 3px rgba(15,63,104,.08); overflow:hidden; }
+  .card.scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; min-width:760px; }
+  thead th { text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--mute);
+    padding:12px 14px; background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
+  th.num, td.num { text-align:right; }
+  tbody td { padding:11px 14px; border-bottom:1px solid #eef4f8; font-size:12.5px; vertical-align:middle; white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; } tbody tr:hover { background:#fafdfe; }
+  .pac { font-weight:700; color:var(--navy); }
+  .pill { display:inline-block; font-size:11px; font-weight:700; border-radius:999px; padding:3px 10px; background:var(--aqua-s); color:var(--blue); }
+  .monto { font-weight:800; color:var(--navy); }
+  .mute { color:var(--mute); }
+  .empty, .loading { text-align:center; padding:40px 20px; color:var(--mute); }
+  tfoot td { padding:12px 14px; font-weight:800; color:var(--navy); border-top:2px solid var(--border); background:var(--bg); }
+
+  @media (max-width:620px){
+    .pg-topbar { padding:10px 12px; }
+    .wrap { padding:12px; }
+  }
+</style>
+</head>
+<body>
+  <div class="pg-topbar">
+    <div>
+      <h1>Pagos Medilink</h1>
+      <div class="sub">Caja real Medilink · misma fuente que DB Mensual</div>
+    </div>
+    <div class="seg" id="modoSeg">
+      <button id="btnDia" class="on">Día</button>
+      <button id="btnRango">Rango</button>
+    </div>
+    <div class="date-nav" id="navDia">
+      <button id="btnPrev" title="Día anterior">&#8592;</button>
+      <input type="date" id="pickerFecha">
+      <button id="btnNext" title="Día siguiente">&#8594;</button>
+      <button id="btnHoy">Hoy</button>
+    </div>
+    <div class="date-nav" id="navRango" style="display:none">
+      <input type="date" id="pickerDesde">
+      <span class="mute" style="font-weight:700">&#8594;</span>
+      <input type="date" id="pickerHasta">
+      <button id="btnMes">Este mes</button>
+      <button id="btnMesAnt">Mes pasado</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-export" id="btnExport">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Descargar Excel
+    </button>
+  </div>
+
+  <div class="wrap">
+    <div class="kpis">
+      <div class="kpi money"><div class="l">Total recaudado</div><div class="v" id="kTotal">—</div></div>
+      <div class="kpi"><div class="l">N° de pagos</div><div class="v" id="kN">—</div></div>
+    </div>
+    <div class="card scroll">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Fecha</th><th>Hora</th><th>Paciente</th><th>Profesional</th>
+          <th>Área</th><th class="num">Pago</th><th>Método</th><th>Folio</th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="9" class="loading">Cargando…</td></tr></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const API = "/alma/api/pagos-medilink";
+const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+const todayStr = () => new Date().toLocaleDateString('en-CA');
+const clp = n => '$' + Number(n||0).toLocaleString('es-CL');
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtHora = s => s ? s.slice(0,5) : '—';
+const fmtFecha = s => s ? (s.slice(8,10) + '/' + s.slice(5,7) + '/' + s.slice(0,4)) : '—';
+
+let _modo = 'dia', _fecha = todayStr(), _desde = todayStr(), _hasta = todayStr();
+document.getElementById('pickerFecha').value = _fecha;
+
+function setModo(m) {
+  _modo = m;
+  document.getElementById('btnDia').classList.toggle('on', m === 'dia');
+  document.getElementById('btnRango').classList.toggle('on', m === 'rango');
+  document.getElementById('navDia').style.display = m === 'dia' ? 'flex' : 'none';
+  document.getElementById('navRango').style.display = m === 'rango' ? 'flex' : 'none';
+  if (m === 'rango') { document.getElementById('pickerDesde').value = _desde; document.getElementById('pickerHasta').value = _hasta; }
+  cargar();
+}
+function setFecha(f) { _fecha = f; document.getElementById('pickerFecha').value = f; cargar(); }
+function setRango(d, h) { _desde = d; _hasta = h;
+  document.getElementById('pickerDesde').value = d; document.getElementById('pickerHasta').value = h; cargar(); }
+
+document.getElementById('btnDia').onclick = () => setModo('dia');
+document.getElementById('btnRango').onclick = () => { if (_modo !== 'rango') { _desde = _fecha; _hasta = _fecha; } setModo('rango'); };
+document.getElementById('pickerFecha').onchange = e => setFecha(e.target.value);
+document.getElementById('btnPrev').onclick = () => { const d = new Date(_fecha + 'T12:00:00'); d.setDate(d.getDate()-1); setFecha(d.toLocaleDateString('en-CA')); };
+document.getElementById('btnNext').onclick = () => { const d = new Date(_fecha + 'T12:00:00'); d.setDate(d.getDate()+1); setFecha(d.toLocaleDateString('en-CA')); };
+document.getElementById('btnHoy').onclick = () => setFecha(todayStr());
+document.getElementById('pickerDesde').onchange = e => { _desde = e.target.value; if (_desde > _hasta) { _hasta = _desde; document.getElementById('pickerHasta').value = _hasta; } cargar(); };
+document.getElementById('pickerHasta').onchange = e => { _hasta = e.target.value; if (_hasta < _desde) { _desde = _hasta; document.getElementById('pickerDesde').value = _desde; } cargar(); };
+document.getElementById('btnMes').onclick = () => { const n = new Date(), y = n.getFullYear(), m = n.getMonth(), f = x => x.toLocaleDateString('en-CA'); setRango(f(new Date(y,m,1)), f(new Date(y,m+1,0))); };
+document.getElementById('btnMesAnt').onclick = () => { const n = new Date(), y = n.getFullYear(), m = n.getMonth(), f = x => x.toLocaleDateString('en-CA'); setRango(f(new Date(y,m-1,1)), f(new Date(y,m,0))); };
+document.getElementById('btnExport').onclick = () => {
+  const q = _modo === 'rango' ? ('&fecha_desde=' + _desde + '&fecha_hasta=' + _hasta) : ('&fecha=' + _fecha);
+  window.open(API + '/export' + qp + q, '_blank');
+};
+
+async function cargar() {
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '<tr><td colspan="9" class="loading">Cargando…</td></tr>';
+  document.getElementById('tfoot').innerHTML = '';
+  const q = _modo === 'rango' ? ('&fecha_desde=' + _desde + '&fecha_hasta=' + _hasta) : ('&fecha=' + _fecha);
+  try {
+    const r = await fetch(API + qp + q);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="9" class="empty">No se pudo cargar la caja.</td></tr>';
+    console.error(e);
+  }
+}
+
+function render(d) {
+  const pagos = d.pagos || [];
+  document.getElementById('kTotal').textContent = clp(d.total);
+  document.getElementById('kN').textContent = d.n;
+  const tb = document.getElementById('tbody');
+  if (!pagos.length) {
+    tb.innerHTML = '<tr><td colspan="9" class="empty">Sin pagos en la caja para ' + (_modo === 'rango' ? 'este rango' : 'este día') + '.</td></tr>';
+    return;
+  }
+  tb.innerHTML = pagos.map((p, i) => `<tr>
+    <td class="mute">${i+1}</td>
+    <td class="mute">${fmtFecha(p.fecha)}</td>
+    <td class="mute">${fmtHora(p.hora)}</td>
+    <td class="pac" title="${esc(p.paciente_nombre)}">${esc(p.paciente_nombre)}</td>
+    <td class="mute" title="${esc(p.profesional)}">${esc(p.profesional)}</td>
+    <td class="mute">${esc(p.area || '—')}</td>
+    <td class="num"><span class="monto">${clp(p.monto)}</span></td>
+    <td><span class="pill">${esc(p.metodo_pago || '—')}</span></td>
+    <td class="mute">${esc(p.folio || '—')}</td>
+  </tr>`).join('');
+  document.getElementById('tfoot').innerHTML = `<tr><td colspan="6" style="text-align:right">Total</td><td class="num">${clp(d.total)}</td><td colspan="2"></td></tr>`;
+}
+
+cargar();
+</script>
+</body>
+</html>

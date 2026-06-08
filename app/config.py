@@ -55,6 +55,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "pagos_olacore":{"label": "Pagos OLACORE",   "icon": "banknote",  "title": "Pagos del dia (completo)",       "sub": "Registro · copagos · bonif. Imed · Caja/Cierre",   "src": "/alma/pagos"},
     "pagos":       {"label": "Pagos",            "icon": "banknote",  "title": "Pagos del dia",                  "sub": "Registrar y editar pagos · export Excel",           "src": "/alma/pagos-simple"},
     "abonos":      {"label": "Abonos",           "icon": "banknote",  "title": "Abonos anticipados",             "sub": "Anticipos psiquiatría/fono/nutrición · saldo · no-show","src": "/alma/abonos"},
+    "pagos_medilink":{"label": "Pagos Medilink",  "icon": "banknote",  "title": "Pagos Medilink",                 "sub": "Caja real Medilink · misma fuente que DB Mensual · solo lectura","src": "/alma/pagos-medilink"},
     "conciliacion":{"label": "Conciliacion",     "icon": "layers",    "title": "Conciliacion Financiera",        "sub": "Cruce multi-fuente · Imed · hallazgos · cuadre",   "src": "/alma/conciliacion"},
     "boxes":       {"label": "Boxes",            "icon": "grid",      "title": "Boxes — Gemelo Digital",         "sub": "Ocupación y recaudación por box",                  "src": "/boxes"},
     "mensual":     {"label": "DB Mensual",       "icon": "chart",     "title": "Dashboard Mensual",              "sub": "Ingresos y honorarios por profesional",            "src": "/cmc/mensual"},
@@ -128,7 +129,7 @@ ALMA_PROFILES: dict[str, dict] = {
     # No-kine → módulo Programas (se acota a su programa + sus pacientes).
     "cmc_nutri_pinto": {
         "variante": "Gisela Pinto · Nutrición",
-        "modulos": ["agenda", "programas", "pagos", "abonos"],
+        "modulos": ["agenda", "programas", "pagos", "abonos", "pagos_medilink"],
         "profesional_id": 52,        # Gisela Pinto (nutrición)
         "boxes_financiero": False,
         "panel_profesional": True,   # ve su propio panel (scopeado a ella)
