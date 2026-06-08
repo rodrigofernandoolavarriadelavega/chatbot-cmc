@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Abonos — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0c3556;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --green:#23c25e; --amber:#f0a821; --violet:#7b61c9;
+    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font-family:'Montserrat',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+
+  /* Topbar */
+  .pg-topbar{display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid var(--border);
+    padding:0 20px;height:54px;box-shadow:var(--sh-sm);position:sticky;top:0;z-index:20}
+  .pg-topbar h1{font-size:15px;font-weight:700;margin:0;color:var(--navy);display:flex;align-items:center;gap:8px}
+  .pg-topbar h1 .ico{width:20px;height:20px;color:var(--aqua)}
+  .pg-topbar .spacer{flex:1}
+  .btn-primary{display:inline-flex;align-items:center;gap:6px;background:var(--aqua);color:#fff;border:0;
+    border-radius:9px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+    transition:all .15s;box-shadow:0 2px 8px rgba(79,190,206,.3)}
+  .btn-primary:hover{background:var(--blue);box-shadow:0 4px 14px rgba(17,114,171,.35)}
+  .btn-primary:disabled{opacity:.55;cursor:not-allowed}
+  .btn-primary svg{width:16px;height:16px;flex-shrink:0}
+  .btn-secondary{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--blue);
+    border:1px solid var(--border);border-radius:9px;padding:8px 14px;font-family:inherit;font-size:13px;
+    font-weight:700;cursor:pointer;transition:all .15s}
+  .btn-secondary:hover{background:var(--aqua-s);border-color:var(--aqua)}
+  .btn-secondary svg{width:16px;height:16px}
+
+  /* Layout */
+  .wrap{padding:18px 20px 60px;max-width:1200px;margin:0 auto}
+
+  /* Cards resumen */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:var(--sh-sm)}
+  .card .lbl{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+  .card .val{font-size:24px;font-weight:800;color:var(--navy);margin-top:4px;line-height:1.1}
+  .card .sub{font-size:11px;color:var(--mute);margin-top:3px}
+  .card.accent{background:linear-gradient(135deg,var(--navy),var(--blue));border:0;color:#fff}
+  .card.accent .lbl,.card.accent .sub{color:rgba(255,255,255,.78)}
+  .card.accent .val{color:#fff}
+
+  /* Filtros */
+  .filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;align-items:center}
+  .chip{border:1px solid var(--border);background:#fff;color:var(--navy);border-radius:20px;
+    padding:6px 13px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .14s}
+  .chip:hover{background:var(--aqua-s);border-color:var(--aqua)}
+  .chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chip .n{opacity:.7;margin-left:4px;font-weight:700}
+
+  /* Tabla */
+  .tbl-card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh-sm);overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.03em;
+    text-align:left;padding:11px 14px;background:#fbfdfe;border-bottom:1px solid var(--border);white-space:nowrap}
+  tbody td{padding:11px 14px;border-bottom:1px solid #eef4f8;font-size:12.5px;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:#fafdff}
+  .pac{font-weight:700;color:var(--navy)}
+  .rut{font-size:11px;color:var(--mute)}
+  .money{font-weight:700;font-variant-numeric:tabular-nums}
+  .saldo{color:var(--blue)}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+  .b-pendiente{background:#fff4e0;color:#9a6a05}
+  .b-aplicado{background:#e3f9ec;color:#147a3c}
+  .b-reembolsado{background:#eaf2fb;color:#1763b0}
+  .b-trasladado{background:#f0ecfb;color:#5a3fb0}
+  .b-perdido{background:#fdeaea;color:#b22}
+  .pres{display:inline-block;padding:2px 8px;border-radius:7px;background:var(--aqua-s);color:var(--blue);
+    font-size:11px;font-weight:700}
+  .acts{display:flex;gap:5px;justify-content:flex-end}
+  .ic-btn{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;
+    border:1px solid var(--border);background:#fff;color:var(--blue);cursor:pointer;transition:all .14s}
+  .ic-btn:hover{background:var(--aqua-s);border-color:var(--aqua)}
+  .ic-btn.go{color:#fff;background:var(--green);border-color:var(--green)}
+  .ic-btn.go:hover{filter:brightness(1.06)}
+  .ic-btn.del:hover{background:#fdecec;border-color:var(--red);color:var(--red)}
+  .ic-btn svg{width:15px;height:15px}
+  .empty{padding:48px 20px;text-align:center;color:var(--mute)}
+  .empty svg{width:46px;height:46px;color:var(--border);margin-bottom:8px}
+
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,63,104,.42);backdrop-filter:blur(2px);
+    display:none;align-items:flex-start;justify-content:center;z-index:60;padding:30px 14px;overflow-y:auto}
+  .modal-bg.open{display:flex}
+  .modal{background:#fff;border-radius:18px;box-shadow:var(--sh-md);width:100%;max-width:560px;
+    padding:22px 24px 24px;position:relative}
+  .modal h2{font-size:16px;font-weight:800;color:var(--navy);margin:0 0 4px}
+  .modal .msub{font-size:12px;color:var(--mute);margin:0 0 16px}
+  .modal-close{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+    background:#fff;color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .modal-close:hover{background:#fdecec;color:var(--red);border-color:var(--red)}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.03em}
+  .field input,.field select,.field textarea{font-family:inherit;font-size:13px;color:var(--navy);
+    border:1px solid var(--border);border-radius:9px;padding:9px 11px;background:#fff;width:100%}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--aqua);
+    box-shadow:0 0 0 3px var(--aqua-s)}
+  .field .hint{font-size:11px;color:var(--mute)}
+  .saldo-box{grid-column:1/-1;background:var(--aqua-s);border:1px solid var(--aqua);border-radius:11px;
+    padding:11px 14px;display:flex;justify-content:space-between;align-items:center}
+  .saldo-box .k{font-size:12px;font-weight:700;color:var(--navy)}
+  .saldo-box .v{font-size:20px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+  .btn-cancel{background:#fff;color:var(--mute);border:1px solid var(--border);border-radius:9px;
+    padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+  .btn-cancel:hover{background:#f5f8fa}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy);
+    color:#fff;padding:11px 20px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:var(--sh-md);
+    z-index:90;opacity:0;transition:all .3s}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .toast.err{background:var(--red)}
+
+  @media(max-width:640px){
+    .form-grid{grid-template-columns:1fr}
+    thead{display:none}
+    tbody td{display:block;padding:6px 14px;border:0}
+    tbody tr{display:block;border-bottom:1px solid var(--border);padding:8px 0}
+    tbody td.num{text-align:left}
+    .acts{justify-content:flex-start;margin-top:4px}
+  }
+</style>
+</head>
+<body>
+
+<div class="pg-topbar">
+  <h1>
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Abonos anticipados
+  </h1>
+  <div class="spacer"></div>
+  <button class="btn-secondary" id="btnExport" title="Descargar como Excel/CSV">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    Excel
+  </button>
+  <button class="btn-primary" id="btnNuevo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+    Nuevo abono
+  </button>
+</div>
+
+<div class="wrap">
+  <div class="cards" id="cards"></div>
+  <div class="filters" id="filters"></div>
+
+  <div class="tbl-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Paciente</th><th>Prestación</th><th>Cita</th>
+          <th class="num">Total</th><th class="num">Abono</th><th class="num">Saldo</th>
+          <th>Método</th><th>Estado</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <div>Sin abonos registrados con este filtro.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal crear/editar -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="16" height="16"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <h2 id="modalTitle">Registrar abono</h2>
+    <p class="msub">El abono se descuenta del total el día de la atención.</p>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Paciente</label>
+        <input type="text" id="fNombre" placeholder="Nombre completo" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>RUT</label>
+        <input type="text" id="fRut" placeholder="12.345.678-9" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Prestación</label>
+        <select id="fArea"><option value="">— Seleccionar —</option></select>
+      </div>
+      <div class="field">
+        <label>Profesional</label>
+        <select id="fProf"><option value="">— Opcional —</option></select>
+      </div>
+      <div class="field">
+        <label>Fecha de la cita</label>
+        <input type="date" id="fFechaCita">
+      </div>
+      <div class="field">
+        <label>Precio total</label>
+        <input type="number" id="fPrecio" min="0" step="500" placeholder="0">
+      </div>
+      <div class="field">
+        <label>Abono (anticipo)</label>
+        <input type="number" id="fAbono" min="0" step="500" placeholder="0">
+      </div>
+      <div class="saldo-box">
+        <span class="k">Saldo a pagar el día de la atención</span>
+        <span class="v" id="fSaldo">$0</span>
+      </div>
+      <div class="field">
+        <label>Método de pago</label>
+        <select id="fMetodo">
+          <option value="transferencia">Transferencia</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="debito">Débito</option>
+          <option value="credito">Crédito</option>
+          <option value="imed">Imed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Folio / comprobante</label>
+        <input type="text" id="fFolio" placeholder="Opcional">
+      </div>
+      <div class="field full">
+        <label>Procedimiento / nota</label>
+        <input type="text" id="fNota" placeholder="Ej: primera consulta, evaluación…">
+      </div>
+      <div class="field" id="rowEstado" style="display:none">
+        <label>Estado</label>
+        <select id="fEstado">
+          <option value="pendiente">Pendiente</option>
+          <option value="aplicado">Aplicado</option>
+          <option value="reembolsado">Reembolsado</option>
+          <option value="trasladado">Trasladado</option>
+          <option value="perdido">Perdido (no-show)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelar">Cancelar</button>
+      <button class="btn-primary" id="btnGuardar">Guardar abono</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const QP = "?token=" + encodeURIComponent(TOKEN);
+let POLICY = {prestaciones:[], estados:[], metodos:[]};
+let PROFES = [];
+let CURRENT_FILTER = "";   // '' = todos
+let EDIT_ID = null;
+let DATA = {abonos:[], resumen:{}, n_pendientes:0, total_pendiente_monto:0, total_pendiente_saldo:0};
+
+const CLP = n => "$" + (Number(n)||0).toLocaleString("es-CL");
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ESTADO_LBL = {pendiente:"Pendiente",aplicado:"Aplicado",reembolsado:"Reembolsado",trasladado:"Trasladado",perdido:"Perdido"};
+
+function toast(msg, err){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.className="toast show"+(err?" err":"");
+  setTimeout(()=>t.className="toast",2600);
+}
+async function api(path, opts){
+  const sep = path.includes("?") ? "&" : "?";
+  const r = await fetch("/alma/api/abonos"+path+sep+"token="+encodeURIComponent(TOKEN), opts);
+  if(!r.ok){ const e=await r.text().catch(()=>r.statusText); throw new Error(e); }
+  return r.json();
+}
+
+// ── Carga inicial ──
+async function init(){
+  try{
+    POLICY = await api("/policy");
+  }catch(e){ console.warn("policy",e); }
+  // profesionales (reutiliza endpoint de Agenda)
+  try{
+    const r = await fetch("/alma/api/agenda/profesionales"+QP);
+    if(r.ok){ const d=await r.json(); PROFES = d.profesionales || []; }
+  }catch(e){ console.warn("profes",e); }
+
+  // dropdown prestaciones
+  const selArea = document.getElementById("fArea");
+  POLICY.prestaciones.forEach(p=>{
+    const o=document.createElement("option"); o.value=p.area; o.textContent=p.area;
+    o.dataset.abono=p.abono_sugerido; o.dataset.precio=p.precio_sugerido;
+    o.dataset.prof=p.id_profesional||""; selArea.appendChild(o);
+  });
+  // dropdown profesionales
+  const selProf=document.getElementById("fProf");
+  PROFES.forEach(p=>{
+    const o=document.createElement("option");
+    o.value=p.id_profesional ?? p.id ?? "";
+    o.textContent=(p.nombre||p.profesional||"")+(p.especialidad?(" · "+p.especialidad):"");
+    selProf.appendChild(o);
+  });
+  await load();
+}
+
+// ── Listar ──
+async function load(){
+  const q = CURRENT_FILTER ? ("?estado="+CURRENT_FILTER) : "";
+  DATA = await api(q);  // GET con o sin estado
+  renderCards(); renderFilters(); renderRows();
+}
+
+function renderCards(){
+  const r = DATA.resumen||{};
+  const c = document.getElementById("cards");
+  c.innerHTML = `
+    <div class="card accent">
+      <div class="lbl">Abonos pendientes</div>
+      <div class="val">${DATA.n_pendientes||0}</div>
+      <div class="sub">esperando atención</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Monto retenido</div>
+      <div class="val">${CLP(DATA.total_pendiente_monto)}</div>
+      <div class="sub">anticipos en garantía</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Saldo por cobrar</div>
+      <div class="val">${CLP(DATA.total_pendiente_saldo)}</div>
+      <div class="sub">se cobra al atender</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Aplicados / Perdidos</div>
+      <div class="val">${(r.aplicado?.n||0)} <span style="color:var(--mute);font-size:16px">/ ${(r.perdido?.n||0)}</span></div>
+      <div class="sub">${CLP(r.perdido?.monto||0)} retenido por no-show</div>
+    </div>`;
+}
+
+function renderFilters(){
+  const r=DATA.resumen||{};
+  const all = Object.values(r).reduce((a,x)=>a+(x.n||0),0);
+  const f=document.getElementById("filters");
+  const chips=[["","Todos",all]].concat(
+    POLICY.estados.map(e=>[e,ESTADO_LBL[e]||e,(r[e]?.n||0)]));
+  f.innerHTML=chips.map(([v,lbl,n])=>
+    `<button class="chip ${CURRENT_FILTER===v?'active':''}" data-f="${v}">${lbl}<span class="n">${n}</span></button>`
+  ).join("");
+  f.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{CURRENT_FILTER=b.dataset.f;load();});
+}
+
+function renderRows(){
+  const tb=document.getElementById("tbody");
+  const empty=document.getElementById("empty");
+  const list=DATA.abonos||[];
+  if(!list.length){ tb.innerHTML=""; empty.style.display="block"; return; }
+  empty.style.display="none";
+  tb.innerHTML=list.map(a=>{
+    const aplicado = a.estado==="aplicado";
+    return `<tr data-id="${a.id}">
+      <td><div class="pac">${esc(a.paciente_nombre)}</div><div class="rut">${esc(a.rut||"—")}</div></td>
+      <td><span class="pres">${esc(a.area||"—")}</span>${a.procedimiento?`<div class="rut">${esc(a.procedimiento)}</div>`:""}</td>
+      <td>${a.fecha_cita?esc(a.fecha_cita):'<span class="rut">—</span>'}</td>
+      <td class="num money">${CLP(a.precio_total)}</td>
+      <td class="num money">${CLP(a.monto_abono)}</td>
+      <td class="num money saldo">${CLP(a.saldo)}</td>
+      <td>${esc(a.metodo_pago||"")}</td>
+      <td><span class="badge b-${a.estado}">${ESTADO_LBL[a.estado]||a.estado}</span></td>
+      <td>
+        <div class="acts">
+          ${aplicado?"":`<button class="ic-btn go" title="Atendido: aplicar abono y cobrar saldo" data-act="aplicar" data-id="${a.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></button>`}
+          <button class="ic-btn" title="Editar" data-act="editar" data-id="${a.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+          <button class="ic-btn del" title="Eliminar" data-act="borrar" data-id="${a.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+  tb.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>handleAct(b.dataset.act, +b.dataset.id));
+}
+
+// ── Acciones de fila ──
+async function handleAct(act, id){
+  const ab = (DATA.abonos||[]).find(x=>x.id===id);
+  if(act==="editar"){ openModal(ab); return; }
+  if(act==="borrar"){
+    if(!confirm("¿Eliminar este abono? No se puede deshacer.")) return;
+    try{ await api("/"+id,{method:"DELETE"}); toast("Abono eliminado"); load(); }
+    catch(e){ toast("Error al eliminar",true); }
+    return;
+  }
+  if(act==="aplicar"){
+    const crear = confirm(`Aplicar abono de ${esc(ab.paciente_nombre)}.\n\nSaldo a cobrar hoy: ${CLP(ab.saldo)}.\n\nAceptar = registrar ese saldo en el módulo Pagos.\nCancelar = solo marcar aplicado (sin registrar pago).`);
+    try{
+      const r = await api("/"+id+"/aplicar",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({crear_pago:crear})});
+      toast(crear && r.pago_id ? `Aplicado · saldo ${CLP(r.saldo_cobrado)} → Pagos` : "Abono aplicado");
+      load();
+    }catch(e){ toast("Error al aplicar",true); }
+    return;
+  }
+}
+
+// ── Modal ──
+function openModal(ab){
+  EDIT_ID = ab ? ab.id : null;
+  document.getElementById("modalTitle").textContent = ab?"Editar abono":"Registrar abono";
+  document.getElementById("rowEstado").style.display = ab ? "flex" : "none";
+  document.getElementById("fNombre").value = ab?.paciente_nombre || "";
+  document.getElementById("fRut").value    = ab?.rut || "";
+  document.getElementById("fArea").value   = ab?.area || "";
+  document.getElementById("fProf").value   = ab?.id_profesional ?? "";
+  document.getElementById("fFechaCita").value = ab?.fecha_cita || "";
+  document.getElementById("fPrecio").value = ab?.precio_total ?? "";
+  document.getElementById("fAbono").value  = ab?.monto_abono ?? "";
+  document.getElementById("fMetodo").value = ab?.metodo_pago || "transferencia";
+  document.getElementById("fFolio").value  = ab?.folio || "";
+  document.getElementById("fNota").value   = ab?.procedimiento || ab?.nota || "";
+  document.getElementById("fEstado").value = ab?.estado || "pendiente";
+  recalcSaldo();
+  document.getElementById("modalBg").classList.add("open");
+  document.getElementById("fNombre").focus();
+}
+function closeModal(){ document.getElementById("modalBg").classList.remove("open"); }
+
+function recalcSaldo(){
+  const p=+document.getElementById("fPrecio").value||0;
+  const a=+document.getElementById("fAbono").value||0;
+  document.getElementById("fSaldo").textContent = CLP(Math.max(p-a,0));
+}
+
+// Auto-sugerencia al elegir prestación
+document.getElementById("fArea").addEventListener("change", function(){
+  const o=this.selectedOptions[0]; if(!o||!o.value) return;
+  // Solo rellena si los campos están vacíos (no pisa edición manual)
+  const fA=document.getElementById("fAbono"), fP=document.getElementById("fPrecio");
+  if(!fA.value && o.dataset.abono) fA.value=o.dataset.abono;
+  if(!fP.value && o.dataset.precio) fP.value=o.dataset.precio;
+  const fProf=document.getElementById("fProf");
+  if(!fProf.value && o.dataset.prof) fProf.value=o.dataset.prof;
+  recalcSaldo();
+});
+["fPrecio","fAbono"].forEach(id=>document.getElementById(id).addEventListener("input",recalcSaldo));
+
+async function guardar(){
+  const nombre=document.getElementById("fNombre").value.trim();
+  if(!nombre){ toast("Falta el nombre del paciente",true); return; }
+  const profSel=document.getElementById("fProf");
+  const payload={
+    paciente_nombre:nombre,
+    rut:document.getElementById("fRut").value.trim(),
+    area:document.getElementById("fArea").value,
+    id_profesional:profSel.value||null,
+    profesional:profSel.selectedOptions[0]?.textContent.split(" · ")[0]||"",
+    fecha_cita:document.getElementById("fFechaCita").value,
+    precio_total:+document.getElementById("fPrecio").value||0,
+    monto_abono:+document.getElementById("fAbono").value||0,
+    metodo_pago:document.getElementById("fMetodo").value,
+    folio:document.getElementById("fFolio").value.trim(),
+    procedimiento:document.getElementById("fNota").value.trim(),
+  };
+  const btn=document.getElementById("btnGuardar"); btn.disabled=true;
+  try{
+    if(EDIT_ID){
+      payload.estado=document.getElementById("fEstado").value;
+      await api("/"+EDIT_ID,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      toast("Abono actualizado");
+    }else{
+      await api("",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      toast("Abono registrado");
+    }
+    closeModal(); load();
+  }catch(e){ toast("Error al guardar",true); console.error(e); }
+  finally{ btn.disabled=false; }
+}
+
+document.getElementById("btnNuevo").onclick=()=>openModal(null);
+document.getElementById("btnCancelar").onclick=closeModal;
+document.getElementById("modalClose").onclick=closeModal;
+document.getElementById("btnGuardar").onclick=guardar;
+document.getElementById("modalBg").onclick=e=>{ if(e.target.id==="modalBg") closeModal(); };
+document.getElementById("btnExport").onclick=()=>{
+  const q = CURRENT_FILTER ? ("&estado="+CURRENT_FILTER) : "";
+  window.open("/alma/api/abonos/export"+QP+q,"_blank");
+};
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+
+init();
+</script>
+</body>
+</html>
