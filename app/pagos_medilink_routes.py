@@ -228,14 +228,24 @@ async def reasignar(pago_id: int, request: Request,
             "profesional": PROFESIONALES[id_prof].get("nombre", "")}
 
 
-def aplicar_repasada(d_desde: str, d_hasta: str) -> dict:
-    """Persiste la REPASADA a la fuente: corrige bi_pagos_caja (y por ende DB Mensual)
-    cruzando contra el módulo Pagos. CONSERVADOR: solo corrige cuando recepción registró
-    a esa persona ese día con un ÚNICO profesional (caso claro) y difiere del actual;
-    NUNCA pisa un override manual existente. Escribe override (auditable) + actualiza
-    bi_pagos_caja. Idempotente (re-correr no duplica)."""
+def aplicar_repasada(d_desde: str, d_hasta: str, dry_run: bool = False) -> dict:
+    """Cruza la caja (bi_pagos_caja) contra el módulo Pagos (pagos_cmc, recepción) y,
+    para los casos CLAROS (recepción atendió a esa persona ese día con un ÚNICO
+    profesional) donde el heurístico difiere, corrige la atribución.
+
+    dry_run=True → no escribe; solo reporta las discrepancias (para el informe).
+    dry_run=False → persiste: escribe override (auditable) + actualiza bi_pagos_caja,
+    corrigiendo también DB Mensual. NUNCA pisa un override manual existente. Idempotente."""
     from session import _conn
-    corregidos, revisados = 0, 0
+    try:
+        from medilink import PROFESIONALES
+    except Exception:
+        PROFESIONALES = {}
+    def _nom(pid):
+        return (PROFESIONALES.get(pid, {}) or {}).get("nombre", "") or f"Prof {pid}"
+
+    corregidos, revisados, con_match = 0, 0, 0
+    detalle = []
     with _conn() as c:
         cmc: dict = {}
         for fe, nom, idp in c.execute(
@@ -249,7 +259,7 @@ def aplicar_repasada(d_desde: str, d_hasta: str) -> dict:
             c.execute("SELECT id_paciente, paciente_nombre FROM citas_cache").fetchall()
         }
         rows = c.execute(
-            """SELECT p.pago_id, p.fecha, p.atencion_id, p.id_paciente, p.id_profesional,
+            """SELECT p.pago_id, p.fecha, p.atencion_id, p.id_paciente, p.id_profesional, p.monto,
                       (SELECT a.paciente_nombre FROM bi_atenciones a
                          WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha
                          ORDER BY a.atencion_id LIMIT 1) AS nombre_aten
@@ -262,21 +272,37 @@ def aplicar_repasada(d_desde: str, d_hasta: str) -> dict:
             revisados += 1
             nombre = r["nombre_aten"] or nombres_local.get(r["id_paciente"]) or ""
             profs = cmc.get((r["fecha"], _norm_nombre(nombre)))
-            if profs and len(profs) == 1:
-                correcto = next(iter(profs))
-                if correcto != r["id_profesional"]:
-                    c.execute(
-                        "INSERT OR REPLACE INTO bi_pago_overrides "
-                        "(pago_id, id_profesional, atencion_id, reason, created_at) "
-                        "VALUES (?,?,?,?, datetime('now'))",
-                        (r["pago_id"], correcto, r["atencion_id"], "repasada auto (cruce módulo Pagos)"),
-                    )
-                    c.execute("UPDATE bi_pagos_caja SET id_profesional=? WHERE pago_id=?",
-                              (correcto, r["pago_id"]))
-                    corregidos += 1
-        c.commit()
-    log.info("repasada %s..%s: revisados=%d corregidos=%d", d_desde, d_hasta, revisados, corregidos)
-    return {"revisados": revisados, "corregidos": corregidos, "desde": d_desde, "hasta": d_hasta}
+            if not (profs and len(profs) == 1):
+                continue
+            con_match += 1
+            correcto = next(iter(profs))
+            if correcto == r["id_profesional"]:
+                continue
+            # discrepancia: el heurístico se equivocó
+            detalle.append({
+                "pago_id": r["pago_id"], "fecha": r["fecha"],
+                "paciente": nombre or "—", "monto": int(r["monto"] or 0),
+                "heuristico_id": r["id_profesional"], "heuristico": _nom(r["id_profesional"]),
+                "correcto_id": correcto, "correcto": _nom(correcto),
+            })
+            corregidos += 1
+            if not dry_run:
+                c.execute(
+                    "INSERT OR REPLACE INTO bi_pago_overrides "
+                    "(pago_id, id_profesional, atencion_id, reason, created_at) "
+                    "VALUES (?,?,?,?, datetime('now'))",
+                    (r["pago_id"], correcto, r["atencion_id"], "repasada auto (cruce módulo Pagos)"),
+                )
+                c.execute("UPDATE bi_pagos_caja SET id_profesional=? WHERE pago_id=?",
+                          (correcto, r["pago_id"]))
+        if not dry_run:
+            c.commit()
+    tasa = round(100 * corregidos / con_match, 1) if con_match else 0.0
+    if not dry_run:
+        log.info("repasada %s..%s: revisados=%d con_match=%d corregidos=%d (%.1f%%)",
+                 d_desde, d_hasta, revisados, con_match, corregidos, tasa)
+    return {"revisados": revisados, "con_match_manual": con_match, "corregidos": corregidos,
+            "tasa_error_pct": tasa, "detalle": detalle, "desde": d_desde, "hasta": d_hasta}
 
 
 @router.post("/aplicar-repasada")
@@ -285,7 +311,7 @@ async def aplicar_repasada_endpoint(desde: str | None = Query(None),
                                     token: str | None = Query(None),
                                     cmc_session: str | None = Cookie(None),
                                     request: Request = None):
-    """Corre la repasada persistente sobre un rango (default: últimos 120 días). Solo dueño."""
+    """Corre la repasada PERSISTENTE sobre un rango (default: últimos 120 días). Solo dueño."""
     _tk, scope = _resolve(request, token, cmc_session)
     if scope is not None:
         raise HTTPException(403, "Solo el dueño")
@@ -293,4 +319,24 @@ async def aplicar_repasada_endpoint(desde: str | None = Query(None),
     hoy = datetime.now(_TZ).date()
     d_desde = desde or (hoy - timedelta(days=120)).isoformat()
     d_hasta = hasta or hoy.isoformat()
-    return aplicar_repasada(d_desde, d_hasta)
+    r = aplicar_repasada(d_desde, d_hasta)
+    r.pop("detalle", None)
+    return r
+
+
+@router.get("/informe")
+async def informe(desde: str | None = Query(None),
+                  hasta: str | None = Query(None),
+                  token: str | None = Query(None),
+                  cmc_session: str | None = Cookie(None),
+                  request: Request = None):
+    """Informe (dry-run, NO escribe): cuánto se equivoca el heurístico de la caja vs lo
+    que recepción registró a mano en el módulo Pagos. Default últimos 120 días. Solo dueño."""
+    _tk, scope = _resolve(request, token, cmc_session)
+    if scope is not None:
+        raise HTTPException(403, "Solo el dueño")
+    from datetime import timedelta
+    hoy = datetime.now(_TZ).date()
+    d_desde = desde or (hoy - timedelta(days=120)).isoformat()
+    d_hasta = hasta or hoy.isoformat()
+    return aplicar_repasada(d_desde, d_hasta, dry_run=True)

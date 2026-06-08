@@ -3748,19 +3748,21 @@ def alma_pagos_medilink_page(token: str | None = Query(None),
     from alma_scope import page_token as _pt
     if not _ALMA_PAGOS_MEDILINK_HTML:
         raise HTTPException(404, "Pagos Medilink no disponible")
-    def _ren_pm(tok: str) -> str:
-        return _ALMA_PAGOS_MEDILINK_HTML.replace("__TOKEN__", tok)
+    def _ren_pm(tok: str, is_dueno: bool) -> str:
+        return (_ALMA_PAGOS_MEDILINK_HTML
+                .replace("__TOKEN__", tok)
+                .replace("__IS_DUENO__", "true" if is_dueno else "false"))
     if token and _is_admin_token(token):
-        return _ren_pm(token)
+        return _ren_pm(token, True)
     # Perfil de profesional por token explícito → prioridad sobre la cookie admin del navegador
     if token:
         eff = _pt(token, None, "pagos_medilink")
         if eff:
-            return _ren_pm(eff)
+            return _ren_pm(eff, False)  # profesional: sin informe (vista acotada)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return _ren_pm(ADMIN_TOKEN)
+            return _ren_pm(ADMIN_TOKEN, True)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

@@ -90,6 +90,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       Descargar Excel
     </button>
+    <button class="btn-export" id="btnInforme" style="display:none" title="Cuánto se equivoca el heurístico de la caja vs el módulo Pagos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Informe
+    </button>
   </div>
 
   <div class="wrap">
@@ -109,6 +113,17 @@
     </div>
   </div>
 
+<div id="m-informe" style="display:none;position:fixed;inset:0;background:rgba(15,63,104,.45);backdrop-filter:blur(2px);align-items:center;justify-content:center;z-index:100;padding:20px">
+  <div style="background:#fff;border-radius:16px;max-width:780px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 8px 30px rgba(15,63,104,.22)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+      <div><b style="color:var(--navy);font-size:15px">Informe de repasada</b>
+        <div class="sub" style="margin-top:2px">Cuánto se equivoca el heurístico de la caja vs lo que recepción registra a mano en Pagos · últimos 120 días</div></div>
+      <div style="cursor:pointer;color:var(--mute);font-size:18px;font-weight:700" onclick="document.getElementById('m-informe').style.display='none'">✕</div>
+    </div>
+    <div style="padding:18px 20px" id="inf-body">Cargando…</div>
+  </div>
+</div>
+
 <script>
 const TOKEN = "__TOKEN__";
 const API = "/alma/api/pagos-medilink";
@@ -118,6 +133,7 @@ const clp = n => '$' + Number(n||0).toLocaleString('es-CL');
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtHora = s => s ? s.slice(0,5) : '—';
 const fmtFecha = s => s ? (s.slice(8,10) + '/' + s.slice(5,7) + '/' + s.slice(0,4)) : '—';
+const IS_DUENO = __IS_DUENO__;  // due\u00f1o/recepci\u00f3n ve el bot\u00f3n Informe; un profesional no
 
 let _modo = 'dia', _fecha = todayStr(), _desde = todayStr(), _hasta = todayStr();
 document.getElementById('pickerFecha').value = _fecha;
@@ -189,6 +205,33 @@ function render(d) {
   document.getElementById('tfoot').innerHTML = `<tr><td colspan="6" style="text-align:right">Total</td><td class="num">${clp(d.total)}</td><td colspan="2"></td></tr>`;
 }
 
+if (IS_DUENO) { document.getElementById('btnInforme').style.display = 'inline-flex'; }
+document.getElementById('btnInforme').onclick = openInforme;
+async function openInforme(){
+  document.getElementById('m-informe').style.display = 'flex';
+  const body = document.getElementById('inf-body'); body.innerHTML = '<div class="mute">Cargando\u2026</div>';
+  try {
+    const r = await fetch(API + '/informe' + qp); const d = await r.json();
+    renderInforme(d);
+  } catch(e){ body.innerHTML = '<div class="mute">No se pudo cargar el informe.</div>'; }
+}
+function renderInforme(d){
+  let html = '<div class="kpis">'
+    + '<div class="kpi"><div class="l">Cruzables con Pagos</div><div class="v">'+d.con_match_manual+'</div></div>'
+    + '<div class="kpi"><div class="l">Mal atribuidos (heur\u00edstico)</div><div class="v" style="color:#e84545">'+d.corregidos+'</div></div>'
+    + '<div class="kpi money"><div class="l">Tasa de error</div><div class="v">'+d.tasa_error_pct+'%</div></div>'
+    + '</div>';
+  if(!d.detalle || !d.detalle.length){
+    html += '<div class="mute" style="padding:8px 0">Sin discrepancias en el per\u00edodo: el heur\u00edstico coincide con lo que registr\u00f3 recepci\u00f3n. (Lo ya corregido por la repasada no reaparece.)</div>';
+  } else {
+    html += '<div class="card scroll" style="margin-top:4px"><table style="min-width:640px"><thead><tr><th>Fecha</th><th>Paciente</th><th class="num">Monto</th><th>Caja dec\u00eda</th><th>Correcto (Pagos)</th></tr></thead><tbody>'
+      + d.detalle.map(function(x){ return '<tr><td class="mute">'+fmtFecha(x.fecha)+'</td><td class="pac">'+esc(x.paciente)+'</td>'
+        + '<td class="num"><span class="monto">'+clp(x.monto)+'</span></td><td class="mute">'+esc(x.heuristico)+'</td>'
+        + '<td style="color:var(--blue);font-weight:700">'+esc(x.correcto)+'</td></tr>'; }).join('')
+      + '</tbody></table></div>';
+  }
+  document.getElementById('inf-body').innerHTML = html;
+}
 cargar();
 </script>
 </body>

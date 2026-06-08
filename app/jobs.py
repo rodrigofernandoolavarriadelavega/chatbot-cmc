@@ -921,6 +921,17 @@ async def _job_bi_sync_diario():
     except Exception as e:
         log.warning("bi_sync_diario re-cross fallo: %s", e)
 
+    # Repasada: corrige la atribución cruzando con el módulo Pagos (recepción, verificado).
+    # Persiste overrides en bi_pagos_caja → corrige también DB Mensual. Conservador.
+    try:
+        from pagos_medilink_routes import aplicar_repasada
+        from datetime import date as _d, timedelta as _td
+        rr = aplicar_repasada((_d.today() - _td(days=120)).isoformat(), _d.today().isoformat())
+        log.info("bi_sync_diario repasada: revisados=%s con_match=%s corregidos=%s",
+                 rr.get("revisados"), rr.get("con_match_manual"), rr.get("corregidos"))
+    except Exception as e:
+        log.warning("bi_sync_diario repasada fallo: %s", e)
+
 
 async def _job_cac_snapshot():
     """Genera el snapshot JSON de atribución/CAC (data/cac_snapshot.json) que
