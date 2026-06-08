@@ -133,6 +133,12 @@
     tbody td.num{text-align:left}
     .acts{justify-content:flex-start;margin-top:4px}
   }
+  /* Modo SOLO LECTURA (perfil de profesional). Barrera real en el servidor (401 en escritura). */
+  body.readonly #btnNuevo,
+  body.readonly .acts { display: none !important; }
+  body.readonly::before { content: "Solo lectura"; position: fixed; top: 10px; right: 14px; z-index: 9999;
+    background: #0F3F68; color: #fff; font: 700 11px/1 'Montserrat',sans-serif; letter-spacing: .04em;
+    padding: 7px 11px; border-radius: 8px; box-shadow: 0 4px 14px rgba(15,63,104,.25); }
 </style>
 </head>
 <body>
@@ -256,6 +262,8 @@
 
 <script>
 const TOKEN = "__TOKEN__";
+const READONLY = __ABONOS_READONLY__;  // perfil de profesional: solo lectura, filtrado a su especialidad
+if (READONLY) document.body.classList.add("readonly");
 const QP = "?token=" + encodeURIComponent(TOKEN);
 let POLICY = {prestaciones:[], estados:[], metodos:[]};
 let PROFES = [];

@@ -88,6 +88,16 @@ def _require_admin_dep(request: Request,
     raise HTTPException(status_code=401, detail="Token inválido")
 
 
+def _resolve_abonos(request: Request,
+                    token: str | None = None,
+                    cmc_session: str | None = None) -> tuple[str, int | None]:
+    """Auth de Abonos con scope. scope None = admin/recepción (r/w); int = perfil de
+    profesional → SOLO LECTURA, filtrado a su id_profesional. La escritura sigue
+    gateada por _require_admin_dep (401 a tokens de profesional)."""
+    from alma_scope import resolve
+    return resolve(request, token, cmc_session, "abonos")
+
+
 # ── DDL ──────────────────────────────────────────────────────────────────────
 
 def ensure_abonos_table() -> None:
@@ -271,9 +281,11 @@ async def get_abonos(request: Request,
                      token: str | None = Query(None),
                      cmc_session: str | None = Cookie(None)):
     """Lista abonos (más reciente primero). Filtros opcionales: estado, rango."""
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    _tk, _scope = _resolve_abonos(request, token=token, cmc_session=cmc_session)
     ensure_abonos_table()
     abonos = _fetch_abonos(estado, fecha_desde, fecha_hasta)
+    if _scope is not None:  # perfil de profesional: solo sus abonos
+        abonos = [a for a in abonos if a.get("id_profesional") == _scope]
 
     # Resumen por estado (para las píldoras del header)
     resumen = {e: {"n": 0, "monto": 0} for e in _ESTADOS}
@@ -464,9 +476,11 @@ async def export_abonos(request: Request,
                         fecha_hasta: str | None = Query(None),
                         token: str | None = Query(None),
                         cmc_session: str | None = Cookie(None)):
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    _tk, _scope = _resolve_abonos(request, token=token, cmc_session=cmc_session)
     ensure_abonos_table()
     abonos = _fetch_abonos(estado, fecha_desde, fecha_hasta)
+    if _scope is not None:
+        abonos = [a for a in abonos if a.get("id_profesional") == _scope]
 
     buf = io.StringIO()
     buf.write("﻿")  # BOM → Excel respeta UTF-8

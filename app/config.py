@@ -128,10 +128,12 @@ ALMA_PROFILES: dict[str, dict] = {
     # No-kine → módulo Programas (se acota a su programa + sus pacientes).
     "cmc_nutri_pinto": {
         "variante": "Gisela Pinto · Nutrición",
-        "modulos": ["agenda", "programas"],
+        "modulos": ["agenda", "programas", "pagos", "abonos"],
         "profesional_id": 52,        # Gisela Pinto (nutrición)
         "boxes_financiero": False,
-        "panel_profesional": False,
+        "panel_profesional": True,   # ve su propio panel (scopeado a ella)
+        "ver_ingreso": True,         # ve "Ingreso recuperable" en Programas
+        "pagos_readonly": True,      # Pagos/Abonos: solo lectura, filtrados a su especialidad
     },
     "cmc_psico_montalba": {
         "variante": "Jorge Montalba · Psicología",

@@ -3688,14 +3688,23 @@ def alma_pagos_simple_page(token: str | None = Query(None),
                             cmc_session: str | None = Cookie(None)):
     """Modulo Pagos simple — version liviana sin Caja/Cierre. Misma tabla pagos_cmc."""
     from admin_routes import _verify_cookie, _is_admin_token
+    from alma_scope import page_token as _pt, is_readonly as _ro
     if not _ALMA_PAGOS_SIMPLE_HTML:
         raise HTTPException(404, "Pagos simple no disponible")
+    def _ren_pagos(tok: str, readonly: bool) -> str:
+        return (_ALMA_PAGOS_SIMPLE_HTML
+                .replace("__TOKEN__", tok)
+                .replace("__PAGOS_READONLY__", "true" if readonly else "false"))
     if token and _is_admin_token(token):
-        return _ALMA_PAGOS_SIMPLE_HTML.replace("__TOKEN__", token)
+        return _ren_pagos(token, False)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return _ALMA_PAGOS_SIMPLE_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+            return _ren_pagos(ADMIN_TOKEN, False)
+    # Perfil de profesional con módulo pagos → SOLO LECTURA, filtrado a su especialidad
+    eff = _pt(token, cmc_session, "pagos")
+    if eff:
+        return _ren_pagos(eff, _ro(eff))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
@@ -3704,14 +3713,23 @@ def alma_abonos_page(token: str | None = Query(None),
                      cmc_session: str | None = Cookie(None)):
     """Modulo Abonos — pagos anticipados (psiquiatria, fono, nutricion)."""
     from admin_routes import _verify_cookie, _is_admin_token
+    from alma_scope import page_token as _pt, is_readonly as _ro
     if not _ALMA_ABONOS_HTML:
         raise HTTPException(404, "Abonos no disponible")
+    def _ren_abonos(tok: str, readonly: bool) -> str:
+        return (_ALMA_ABONOS_HTML
+                .replace("__TOKEN__", tok)
+                .replace("__ABONOS_READONLY__", "true" if readonly else "false"))
     if token and _is_admin_token(token):
-        return _ALMA_ABONOS_HTML.replace("__TOKEN__", token)
+        return _ren_abonos(token, False)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return _ALMA_ABONOS_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+            return _ren_abonos(ADMIN_TOKEN, False)
+    # Perfil de profesional con módulo abonos → SOLO LECTURA, filtrado a su especialidad
+    eff = _pt(token, cmc_session, "abonos")
+    if eff:
+        return _ren_abonos(eff, _ro(eff))
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
@@ -3788,17 +3806,19 @@ def alma_kine_page(token: str | None = Query(None),
 def alma_programas_page(token: str | None = Query(None),
                         cmc_session: str | None = Cookie(None)):
     """Modulo Profesional: Motor de Programas Clínicos por especialidad (adherencia + control/recall)."""
-    from alma_scope import page_token as _alma_page_token, profesional_id_of as _prof_id_of
+    from alma_scope import page_token as _alma_page_token, profesional_id_of as _prof_id_of, ver_ingreso_of as _ver_ing
     if not _ALMA_PROGRAMAS_HTML:
         raise HTTPException(404, "Programas no disponible")
     eff = _alma_page_token(token, cmc_session, "programas")
     if eff:
         pid = _prof_id_of(eff)
         scoped = "true" if pid else "false"  # perfil de profesional → vista acotada
+        ver_ingreso = "true" if _ver_ing(eff) else "false"  # flag por perfil: ve su ingreso
         dash_url = f"/profesional/dashboard?token={_make_prof_token(pid)}" if pid else ""
         return (_ALMA_PROGRAMAS_HTML
                 .replace("__TOKEN__", eff)
                 .replace("__PROG_SCOPED__", scoped)
+                .replace("__PROG_VER_INGRESO__", ver_ingreso)
                 .replace("__PROF_DASHBOARD_URL__", dash_url))
     return RedirectResponse(url="/admin/login", status_code=302)
 
@@ -5673,13 +5693,17 @@ def api_alma_profesionales(token: str | None = Query(None),
     para construir el navegador desplegable del módulo 'Panel del Profesional' en Alma.
     Auth admin (token query o cookie de sesión)."""
     from admin_routes import _verify_cookie, _is_admin_token
-    ok = (token and _is_admin_token(token)) or (
+    from alma_scope import profesional_id_of as _prof_id_of
+    is_admin = (token and _is_admin_token(token)) or (
         cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia"))
-    if not ok:
+    scope_pid = _prof_id_of(token)  # perfil de profesional → solo se ve a sí mismo
+    if not is_admin and scope_pid is None:
         raise HTTPException(401, "No autorizado")
     from medilink import PROFESIONALES
     grupos: dict[str, list] = {}
     for pid, info in sorted(PROFESIONALES.items(), key=lambda kv: (kv[1].get("especialidad", ""), kv[1].get("nombre", ""))):
+        if scope_pid is not None and pid != scope_pid:
+            continue
         esp = (info.get("especialidad") or "Otros").split(" / ")[0].strip()
         grupos.setdefault(esp, []).append({
             "id": pid,

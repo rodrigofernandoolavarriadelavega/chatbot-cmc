@@ -117,6 +117,18 @@ def _require_admin_dep(request: Request,
     raise HTTPException(status_code=401, detail="Token inválido")
 
 
+def _resolve_pagos(request: Request,
+                   token: str | None = None,
+                   cmc_session: str | None = None) -> tuple[str, int | None]:
+    """Auth de Pagos con scope. (token_efectivo, scope_prof).
+    scope None = admin/recepción (lectura + escritura completa).
+    scope int  = perfil de profesional → SOLO LECTURA, filtrado a su id_profesional.
+    La escritura NO usa este resolver: sigue gateada por _require_admin_dep, que da
+    401 a cualquier token de profesional. Read-only enforced en el servidor."""
+    from alma_scope import resolve
+    return resolve(request, token, cmc_session, "pagos")
+
+
 # ── DDL helper — llamado en lifespan de main.py (o lazy en primera query) ────
 
 def ensure_pagos_table() -> None:
@@ -937,7 +949,7 @@ async def get_pagos(
     - fecha=YYYY-MM-DD: ese día.
     - fecha_desde + fecha_hasta: rango.
     """
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    _tk, _scope = _resolve_pagos(request, token=token, cmc_session=cmc_session)
     ensure_pagos_table()
 
     now_cl = datetime.now(_CHILE_TZ)
@@ -971,9 +983,9 @@ async def get_pagos(
                       COALESCE(fuente, '') as fuente,
                       COALESCE(match_confianza, '') as match_confianza
                FROM pagos_cmc
-               WHERE fecha BETWEEN ? AND ?
+               WHERE fecha BETWEEN ? AND ?""" + (" AND id_profesional = ?" if _scope is not None else "") + """
                ORDER BY fecha DESC, hora DESC""",
-            (d_desde, d_hasta)
+            ((d_desde, d_hasta, _scope) if _scope is not None else (d_desde, d_hasta))
         ).fetchall()
 
     pagos = [dict(r) for r in rows]
@@ -1111,7 +1123,7 @@ async def export_pagos_xlsx(
     Columnas: HORA, PACIENTE, NOMBRE PROFESIONAL, AREA, PREVISION,
               VALOR, METODO DE PAGO, N° FOLIO, PROCEDIMIENTO
     """
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    _tk, _scope = _resolve_pagos(request, token=token, cmc_session=cmc_session)
     ensure_pagos_table()
 
     now_cl = datetime.now(_CHILE_TZ)
@@ -1140,9 +1152,9 @@ async def export_pagos_xlsx(
                       COALESCE(canal, 'presencial') as canal,
                       COALESCE(fuente, '') as fuente
                FROM pagos_cmc
-               WHERE fecha BETWEEN ? AND ?
+               WHERE fecha BETWEEN ? AND ?""" + (" AND id_profesional = ?" if _scope is not None else "") + """
                ORDER BY fecha ASC, hora ASC""",
-            (d_desde, d_hasta)
+            ((d_desde, d_hasta, _scope) if _scope is not None else (d_desde, d_hasta))
         ).fetchall()
 
     try:

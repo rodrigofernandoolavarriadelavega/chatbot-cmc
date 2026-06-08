@@ -366,6 +366,16 @@
     .form-grid .full { grid-column: 1; }
     .metodo-grid { grid-template-columns: repeat(2,1fr); }
   }
+  /* Modo SOLO LECTURA (perfil de profesional): oculta toda la UI de escritura.
+     La barrera real está en el servidor (endpoints de escritura dan 401); esto es cosmético. */
+  body.readonly #btnNuevoPago,
+  body.readonly #btnPrellenar,
+  body.readonly #btnCruzarOrigen,
+  body.readonly .td-actions { display: none !important; }
+  body.readonly td.editable { pointer-events: none; }
+  body.readonly::before { content: "Solo lectura"; position: fixed; top: 10px; right: 14px; z-index: 9999;
+    background: var(--navy); color: #fff; font: 700 11px/1 'Montserrat',sans-serif; letter-spacing: .04em;
+    padding: 7px 11px; border-radius: 8px; box-shadow: 0 4px 14px rgba(15,63,104,.25); }
 </style>
 </head>
 <body>
@@ -548,6 +558,8 @@
 <script>
 // ── Config ──────────────────────────────────────────────────────────────────
 const TOKEN = "__TOKEN__";
+const READONLY = __PAGOS_READONLY__;  // perfil de profesional: solo lectura, filtrado a su especialidad
+if (READONLY) document.body.classList.add("readonly");
 const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
 
 // ── Estado global ────────────────────────────────────────────────────────────

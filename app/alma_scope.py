@@ -51,6 +51,20 @@ def shows_money(token: str | None) -> bool:
     return bool(token) and hmac.compare_digest(token, OLACORE_TOKEN)
 
 
+def ver_ingreso_of(token: str | None) -> bool:
+    """¿Este perfil de profesional puede ver su 'Ingreso recuperable' en Programas?
+    Se habilita por perfil con el flag `ver_ingreso` (pedido del dueño, p.ej. Gisela)."""
+    p = ALMA_PROFILES.get(token or "")
+    return bool(p and p.get("ver_ingreso"))
+
+
+def is_readonly(token: str | None) -> bool:
+    """¿Este perfil ve los módulos financieros (Pagos/Abonos) en SOLO LECTURA?
+    Flag `pagos_readonly`. Un token así no puede crear/editar/borrar (403 en endpoints)."""
+    p = ALMA_PROFILES.get(token or "")
+    return bool(p and p.get("pagos_readonly"))
+
+
 def resolve(request, token: str | None, cmc_session: str | None,
             module_key: str) -> tuple[str, int | None]:
     """Auth para endpoints de API. Devuelve (token_efectivo, scope_profesional).

@@ -57,7 +57,7 @@
   .kpi.alert .k-val { color:var(--red); } .kpi.alert::after { background:var(--red-s); }
   .kpi.warn .k-val { color:var(--orange); } .kpi.warn::after { background:var(--orange-s); }
   .kpi.money .k-val { color:var(--blue); font-size:20px; }
-  body.scoped .kpi.money { display:none !important; }  /* profesional no ve ingreso */
+  body.no-money .kpi.money { display:none !important; }  /* profesional sin flag ver_ingreso */
 
   .banner { display:flex; align-items:flex-start; gap:11px; background:linear-gradient(100deg,#fff,var(--aqua-s));
     border:1px solid var(--border); border-left:4px solid var(--aqua); border-radius:13px; padding:13px 16px; margin-bottom:16px; box-shadow:var(--sh-sm); }
@@ -290,7 +290,8 @@
   <div class="toast" id="toast"></div>
 <script>
 const TOKEN="__TOKEN__"; const API="/alma/api/programas";
-const SCOPED = __PROG_SCOPED__;  // true = perfil de profesional (vista acotada: sin ingreso, sin vistas cruzadas)
+const SCOPED = __PROG_SCOPED__;  // true = perfil de profesional (vista acotada: sin vistas cruzadas)
+const VER_INGRESO = __PROG_VER_INGRESO__;  // flag por perfil: este profesional SÍ ve su ingreso
 const PROF_DASHBOARD_URL = "__PROF_DASHBOARD_URL__";  // panel del profesional (Tu calendario); "" si no es profesional
 const H={ "Authorization":"Bearer "+TOKEN, "Content-Type":"application/json" };
 let STATE={ prog:null, tipo:"adherencia", estado:"todos", q:"", pacientes:[], conteos:{}, programas:[], segmentos:[], digest:false, overview:false };
@@ -306,8 +307,9 @@ const ORDER_CTL=["todos","vencido","pronto","al_dia","no_contactar"];
 const ORDER_TAM=["todos","lapsed","nunca"];
 
 async function init(){
-  if (SCOPED) {  // perfil de profesional: oculta ingreso (CSS) y vistas cruzadas (Resumen/Lista de hoy)
+  if (SCOPED) {  // perfil de profesional: oculta vistas cruzadas (Resumen/Lista de hoy)
     document.body.classList.add('scoped');
+    if (!VER_INGRESO) document.body.classList.add('no-money');  // y oculta ingreso, salvo flag ver_ingreso
     ['overviewBtn','digestBtn'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
   }
   try {
