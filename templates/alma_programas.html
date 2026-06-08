@@ -100,6 +100,16 @@
   .icon-btn svg { width:15px; height:15px; }
   .empty { text-align:center; padding:54px 20px; color:var(--mute); } .empty svg { width:44px; height:44px; opacity:.4; margin-bottom:12px; }
   .pgtag { display:inline-block; font-size:10px; font-weight:700; color:var(--blue); background:var(--aqua-s); border-radius:6px; padding:3px 8px; }
+  .seg-select { font-family:inherit; font-size:11.5px; font-weight:600; border:1px solid var(--border); border-radius:8px; padding:5px 7px; color:var(--navy); background:#fff; max-width:128px; cursor:pointer; }
+  .seg-select:focus { outline:none; border-color:var(--aqua); }
+  .pend-btn { min-width:30px; height:28px; padding:0 9px; display:inline-flex; align-items:center; justify-content:center; gap:4px; border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--mute); font-family:inherit; font-weight:800; font-size:12.5px; cursor:pointer; transition:all .14s; }
+  .pend-btn:hover { border-color:var(--aqua); background:var(--aqua-s); }
+  .pend-btn.has { background:var(--orange-s); border-color:var(--orange); color:var(--orange); }
+  .pend-row { display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid #eef4f8; }
+  .pend-row:last-child { border-bottom:0; }
+  .pend-row .icon-btn { width:26px; height:26px; flex-shrink:0; }
+  .segcat-input { flex:1; font-family:inherit; font-size:13px; font-weight:600; border:1px solid var(--border); border-radius:8px; padding:7px 9px; color:var(--navy); background:var(--bg); }
+  .segcat-input:focus { outline:none; border-color:var(--aqua); background:#fff; }
 
   .modal-bg { position:fixed; inset:0; background:rgba(15,63,104,.45); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:100; padding:20px; }
   .modal-bg.show { display:flex; }
@@ -131,7 +141,7 @@
     .kpi .k-val { font-size:20px; }
     .prog-pills { gap:6px; }
     .card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    table { min-width:560px; }
+    table { min-width:720px; }
     .modal-bg { padding:0; align-items:stretch; }
     .modal { max-width:100%; width:100%; height:100%; max-height:100%; border-radius:0; }
   }
@@ -154,12 +164,15 @@
     <div id="view-prog">
       <div class="kpis" id="kpis"></div>
       <div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg><div class="bt" id="banner-txt"></div></div>
-      <div class="toolbar"><div class="chips" id="chips"></div></div>
+      <div class="toolbar"><div class="chips" id="chips"></div>
+        <button class="btn-ghost" id="segCatBtn" onclick="openSegCat()" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Categorías</button>
+      </div>
       <div class="card">
         <table>
           <thead><tr>
-            <th>Paciente</th><th class="hide-sm">Profesional</th>
+            <th>Paciente</th><th class="ctr" id="th-seg">Segmentación</th><th class="hide-sm">Profesional</th>
             <th class="num" id="th-ses">Sesiones</th><th class="num">Sin venir</th>
+            <th class="ctr" id="th-pend">Pendiente</th>
             <th class="ctr">Estado</th><th class="num">Acciones</th>
           </tr></thead>
           <tbody id="tbody"></tbody>
@@ -243,13 +256,44 @@
     </div>
   </div>
 
+  <!-- Modal Pendientes (checklist por paciente) -->
+  <div class="modal-bg" id="m-pend">
+    <div class="modal">
+      <div class="modal-head"><h2 id="pend-title">Pendientes</h2><div class="x" onclick="closeM('m-pend')">✕</div></div>
+      <div class="modal-body">
+        <div id="pend-list"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input id="pend-new" type="text" placeholder="Agregar pendiente…" style="flex:1;font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--navy);background:var(--bg)" onkeydown="if(event.key==='Enter')addPend()">
+          <button class="btn-primary" onclick="addPend()">Agregar</button>
+        </div>
+      </div>
+      <div class="modal-foot"><div style="flex:1"></div><button class="btn-ghost" onclick="closeM('m-pend')">Cerrar</button></div>
+    </div>
+  </div>
+
+  <!-- Modal Categorías de segmentación (editar nombres / agregar / borrar) -->
+  <div class="modal-bg" id="m-seg-cat">
+    <div class="modal">
+      <div class="modal-head"><h2>Categorías de segmentación</h2><div class="x" onclick="closeM('m-seg-cat')">✕</div></div>
+      <div class="modal-body">
+        <div style="font-size:11.5px;color:var(--mute);margin-bottom:12px;line-height:1.5">Renombra una categoría y se actualiza en todos los pacientes que la tenían. Borrarla deja sin categoría a quienes la tenían.</div>
+        <div id="segcat-list"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input id="segcat-new" type="text" placeholder="Nueva categoría…" style="flex:1;font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:9px;padding:9px 11px;color:var(--navy);background:var(--bg)" onkeydown="if(event.key==='Enter')addSegCat()">
+          <button class="btn-primary" onclick="addSegCat()">Agregar</button>
+        </div>
+      </div>
+      <div class="modal-foot"><div style="flex:1"></div><button class="btn-ghost" onclick="closeM('m-seg-cat')">Cerrar</button></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 <script>
 const TOKEN="__TOKEN__"; const API="/alma/api/programas";
 const SCOPED = __PROG_SCOPED__;  // true = perfil de profesional (vista acotada: sin ingreso, sin vistas cruzadas)
 const PROF_DASHBOARD_URL = "__PROF_DASHBOARD_URL__";  // panel del profesional (Tu calendario); "" si no es profesional
 const H={ "Authorization":"Bearer "+TOKEN, "Content-Type":"application/json" };
-let STATE={ prog:null, tipo:"adherencia", estado:"todos", q:"", pacientes:[], conteos:{}, programas:[], digest:false, overview:false };
+let STATE={ prog:null, tipo:"adherencia", estado:"todos", q:"", pacientes:[], conteos:{}, programas:[], segmentos:[], digest:false, overview:false };
 
 const clp=n=>"$"+(n||0).toLocaleString("es-CL");
 function toast(m,e){ const t=document.getElementById('toast'); t.textContent=m; t.className='toast show'+(e?' err':''); setTimeout(()=>t.className='toast',2200); }
@@ -364,6 +408,12 @@ async function loadPacientes(){
     const r=await api("/"+STATE.prog+"/pacientes?estado="+encodeURIComponent(STATE.estado));
     STATE.pacientes=r.pacientes; STATE.conteos=r.conteos; STATE.tipo=r.tipo;
     document.getElementById('th-ses').textContent = STATE.tipo==="adherencia"?"Sesiones":(STATE.tipo==="tamizaje"?"Edad":"Visitas");
+    // Segmentación + Pendiente: solo en programas de tratamiento (no en tamizaje poblacional)
+    const trat = STATE.tipo!=="tamizaje";
+    ['th-seg','th-pend'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=trat?'':'none'; });
+    document.getElementById('segCatBtn').style.display = trat?'inline-flex':'none';
+    STATE.segmentos = [];
+    if(trat){ try{ const sg=await api("/"+STATE.prog+"/segmentos"); STATE.segmentos=sg.categorias||[]; }catch(e){} }
     renderChips(); renderTable();
     // badge urgentes en la pill
     const urgent = STATE.tipo==="adherencia"?(r.conteos.riesgo||0):(STATE.tipo==="tamizaje"?(r.conteos.lapsed||0):(r.conteos.vencido||0));
@@ -393,11 +443,17 @@ function renderTable(){
     const dpCls = isNunca?'':(dp>=(STATE.tipo==="adherencia"?22:80)?'hot':(dp>=(STATE.tipo==="adherencia"?8:36)?'warm':''));
     const diasTxt = isNunca?'—':`${dp} d`;
     const sesTxt = (STATE.tipo==="tamizaje")?`${p.edad??p.sesiones} años`:(p.sesiones_plan?`${p.sesiones}/${p.sesiones_plan}`:`${p.sesiones}`);
+    const trat = STATE.tipo!=="tamizaje";
+    const segCell = trat ? `<td class="ctr">${segSelect(p)}</td>` : '';
+    const nPend = p.n_pendientes||0;
+    const pendCell = trat ? `<td class="ctr"><button class="pend-btn ${nPend?'has':''}" onclick='openPend(${p.paciente_id})' title="Pendientes del paciente">${nPend||'＋'}</button></td>` : '';
     return `<tr>
       <td><div class="pac-name">${esc(p.paciente)}${p.resumen?' <span title="Tiene resumen clínico" style="cursor:default">📝</span>':''}</div><div class="pac-meta">${esc(p.lugar||'—')}${p.notas?' · '+esc(p.notas):''}</div></td>
+      ${segCell}
       <td class="hide-sm" style="color:var(--mute);font-weight:600">${esc(p.profesional)}</td>
       <td class="num"><div class="ses">${sesTxt}</div></td>
       <td class="num"><span class="dias-pill ${dpCls}">${diasTxt}</span><div class="pac-meta">${p.ultima_visita}</div></td>
+      ${pendCell}
       <td class="ctr"><span class="estado ${p.estado}"><span class="dot"></span>${esc(p.estado_label)}</span></td>
       <td class="num"><div class="row-actions">
         ${p.wa?`<a class="icon-btn wa" target="_blank" href="${p.wa}" title="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2z"/></svg></a>`:''}
@@ -407,6 +463,78 @@ function renderTable(){
 }
 
 function setEstado(e){ STATE.estado=e; loadPacientes(); }
+
+/* ── Segmentación: dropdown por paciente + edición de categorías ── */
+function segSelect(p){
+  const names = STATE.segmentos.map(s=>s.nombre);
+  let opts = '<option value="">—</option>';
+  if(p.segmento && !names.includes(p.segmento)) opts += `<option value="${esc(p.segmento)}" selected>${esc(p.segmento)}</option>`;
+  opts += STATE.segmentos.map(s=>`<option value="${esc(s.nombre)}" ${p.segmento===s.nombre?'selected':''}>${esc(s.nombre)}</option>`).join('');
+  return `<select class="seg-select" onchange="setSegmento(${p.paciente_id}, this.value)">${opts}</select>`;
+}
+async function setSegmento(pid, val){
+  try { await api("/"+STATE.prog+"/segmento/"+pid,{method:"PUT",body:JSON.stringify({segmento:val})});
+    const p=STATE.pacientes.find(x=>x.paciente_id===pid); if(p) p.segmento=val; toast("Segmento guardado"); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+function openSegCat(){ renderSegCat(); document.getElementById('m-seg-cat').classList.add('show'); }
+function renderSegCat(){
+  const el=document.getElementById('segcat-list');
+  if(!STATE.segmentos.length){ el.innerHTML='<div style="color:var(--mute);font-size:12px;padding:6px 0">Sin categorías aún. Agrega la primera abajo.</div>'; return; }
+  el.innerHTML=STATE.segmentos.map(s=>`<div class="pend-row">
+    <input class="segcat-input" value="${esc(s.nombre)}" data-old="${esc(s.nombre)}" onchange="renameSegCat(this)">
+    <button class="icon-btn" title="Eliminar" onclick="delSegCat(this.previousElementSibling.getAttribute('data-old'))">✕</button>
+  </div>`).join('');
+}
+async function addSegCat(){
+  const inp=document.getElementById('segcat-new'); const t=inp.value.trim(); if(!t) return;
+  try { const r=await api("/"+STATE.prog+"/segmentos",{method:"POST",body:JSON.stringify({nombre:t})});
+    STATE.segmentos=r.categorias; inp.value=''; renderSegCat(); renderTable(); toast("Categoría agregada"); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+async function renameSegCat(input){
+  const old=input.getAttribute('data-old'); const nv=input.value.trim();
+  if(!nv||nv===old){ input.value=old; return; }
+  try { const r=await api("/"+STATE.prog+"/segmentos",{method:"PUT",body:JSON.stringify({old, new:nv})});
+    STATE.segmentos=r.categorias; renderSegCat(); loadPacientes(); toast("Renombrada"); }
+  catch(e){ toast("Error: "+e.message,true); input.value=old; }
+}
+async function delSegCat(nombre){
+  if(!confirm('¿Eliminar la categoría "'+nombre+'"? Los pacientes con ella quedan sin segmento.')) return;
+  try { const r=await api("/"+STATE.prog+"/segmentos?nombre="+encodeURIComponent(nombre),{method:"DELETE"});
+    STATE.segmentos=r.categorias; renderSegCat(); loadPacientes(); toast("Eliminada"); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
+
+/* ── Pendientes: checklist por paciente ── */
+let PEND_PID=null, PEND_ITEMS=[];
+function openPend(pid){
+  const p=STATE.pacientes.find(x=>x.paciente_id===pid); if(!p) return;
+  PEND_PID=pid; PEND_ITEMS=(p.pendientes||[]).map(it=>({texto:it.texto, hecho:!!it.hecho}));
+  document.getElementById('pend-title').textContent='Pendientes · '+p.paciente;
+  renderPend(); document.getElementById('m-pend').classList.add('show');
+  setTimeout(()=>document.getElementById('pend-new').focus(),50);
+}
+function renderPend(){
+  const el=document.getElementById('pend-list');
+  if(!PEND_ITEMS.length){ el.innerHTML='<div style="color:var(--mute);font-size:12px;padding:6px 0">Sin pendientes. Agrega el primero abajo.</div>'; return; }
+  el.innerHTML=PEND_ITEMS.map((it,i)=>`<div class="pend-row">
+    <label style="display:flex;align-items:center;gap:9px;flex:1;cursor:pointer">
+      <input type="checkbox" ${it.hecho?'checked':''} onchange="togglePend(${i})" style="width:17px;height:17px;cursor:pointer">
+      <span style="${it.hecho?'text-decoration:line-through;color:var(--mute)':'color:var(--navy)'}">${esc(it.texto)}</span>
+    </label>
+    <button class="icon-btn" title="Eliminar" onclick="delPend(${i})">✕</button>
+  </div>`).join('');
+}
+function addPend(){ const inp=document.getElementById('pend-new'); const t=inp.value.trim(); if(!t) return; PEND_ITEMS.push({texto:t, hecho:false}); inp.value=''; renderPend(); savePend(); }
+function togglePend(i){ PEND_ITEMS[i].hecho=!PEND_ITEMS[i].hecho; renderPend(); savePend(); }
+function delPend(i){ PEND_ITEMS.splice(i,1); renderPend(); savePend(); }
+async function savePend(){
+  try { const r=await api("/"+STATE.prog+"/pendientes/"+PEND_PID,{method:"PUT",body:JSON.stringify({pendientes:PEND_ITEMS})});
+    const p=STATE.pacientes.find(x=>x.paciente_id===PEND_PID); if(p){ p.pendientes=r.pendientes; p.n_pendientes=r.n_pendientes; }
+    renderTable(); }
+  catch(e){ toast("Error: "+e.message,true); }
+}
 let st; document.getElementById('search').addEventListener('input',e=>{ clearTimeout(st); st=setTimeout(()=>{ STATE.q=e.target.value.trim(); STATE.digest?renderDigest():renderTable(); },200); });
 function closeM(id){ document.getElementById(id).classList.remove('show'); }
 

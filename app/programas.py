@@ -32,6 +32,7 @@ Valor agéntico:
 """
 import csv
 import io
+import json
 import logging
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -205,15 +206,68 @@ def ensure_programa_plan_table() -> None:
                 estado_manual  TEXT DEFAULT '',   -- '' | 'alta' | 'pausa' | 'no_contactar'
                 notas          TEXT DEFAULT '',   -- etiqueta corta visible en la lista
                 resumen        TEXT DEFAULT '',   -- resumen clínico largo por programa+paciente
+                segmento       TEXT DEFAULT '',   -- categoría de segmentación (nombre, editable)
+                pendientes     TEXT DEFAULT '[]', -- checklist JSON: [{"texto","hecho"}]
                 updated_at     TEXT DEFAULT (datetime('now')),
                 PRIMARY KEY (programa, paciente_id)
             )
         """)
-        # Migración para DBs creadas antes de la columna `resumen` (prod ya tiene la tabla).
+        # Migración para DBs creadas antes de estas columnas (prod ya tiene la tabla).
         cols = {r[1] for r in conn.execute("PRAGMA table_info(programa_plan)").fetchall()}
         if "resumen" not in cols:
             conn.execute("ALTER TABLE programa_plan ADD COLUMN resumen TEXT DEFAULT ''")
+        if "segmento" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN segmento TEXT DEFAULT ''")
+        if "pendientes" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN pendientes TEXT DEFAULT '[]'")
         conn.commit()
+
+
+# ── Categorías de segmentación (editables por la profesional, por programa) ───
+DEFAULT_SEGMENTOS = ["Adultos", "Niños", "Trabajadores"]
+
+
+def ensure_segmento_table() -> None:
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS programa_segmento (
+                programa TEXT NOT NULL,
+                nombre   TEXT NOT NULL,
+                orden    INTEGER DEFAULT 0,
+                PRIMARY KEY (programa, nombre)
+            )
+        """)
+        conn.commit()
+
+
+def _segmentos(prog: str) -> list[dict]:
+    """Categorías de un programa. Si no hay ninguna todavía, siembra las 3 por
+    defecto (la profesional luego las renombra / agrega / borra)."""
+    ensure_segmento_table()
+    from session import _conn
+    with _conn() as conn:
+        rows = conn.execute("SELECT nombre, orden FROM programa_segmento WHERE programa=? ORDER BY orden, nombre", (prog,)).fetchall()
+        if not rows:
+            for i, n in enumerate(DEFAULT_SEGMENTOS):
+                conn.execute("INSERT OR IGNORE INTO programa_segmento (programa, nombre, orden) VALUES (?,?,?)", (prog, n, i))
+            conn.commit()
+            rows = conn.execute("SELECT nombre, orden FROM programa_segmento WHERE programa=? ORDER BY orden, nombre", (prog,)).fetchall()
+    return [{"nombre": r["nombre"], "orden": r["orden"]} for r in rows]
+
+
+def _parse_pendientes(raw) -> list[dict]:
+    """Lee la columna JSON `pendientes` de forma tolerante → lista de {texto, hecho}."""
+    try:
+        data = json.loads(raw) if isinstance(raw, str) else (raw or [])
+    except Exception:
+        return []
+    out = []
+    if isinstance(data, list):
+        for it in data:
+            if isinstance(it, dict) and (it.get("texto") or "").strip():
+                out.append({"texto": str(it["texto"]).strip()[:300], "hecho": bool(it.get("hecho"))})
+    return out
 
 
 def _planes(prog: str) -> dict[int, dict]:
@@ -355,6 +409,7 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
         dias = (today - last).days
         plan = planes.get(pid)
         ingreso_total += d["monto"]
+        _pend = _parse_pendientes((plan or {}).get("pendientes"))
 
         if tipo == "adherencia":
             episodios = _split_episodios(fechas, cfg["gap_nuevo"])
@@ -378,6 +433,9 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
             "n_episodios": n_eps, "estado": estado, "estado_label": etiqueta,
             "notas": (plan or {}).get("notas", ""),
             "resumen": (plan or {}).get("resumen", ""),
+            "segmento": (plan or {}).get("segmento", "") or "",
+            "pendientes": _pend,
+            "n_pendientes": sum(1 for it in _pend if not it["hecho"]),
         })
 
     # Orden: del control/atención más reciente al de hace más tiempo
@@ -476,6 +534,7 @@ def _compute_tamizaje(prog: str, meses: int = 6):
             "profesional": "—", "ultima_visita": ultima_txt,
             "dias_sin_visita": dias if dias is not None else 9999,
             "n_episodios": 0, "estado": estado, "estado_label": etiqueta, "notas": "", "resumen": "",
+            "segmento": "", "pendientes": [], "n_pendientes": 0,
         })
     # lapsed primero (alta confianza), luego nunca; dentro, más atrasados primero
     pacientes.sort(key=lambda p: (0 if p["estado"] == "lapsed" else 1, -(p["dias_sin_visita"] or 0)))
@@ -672,6 +731,129 @@ async def set_plan(prog: str, paciente_id: int, request: Request,
     return {"ok": True}
 
 
+def _resolve_editable(request, token, cmc_session, prog: str) -> str:
+    """Auth + resuelve el programa editable (un profesional solo toca el suyo) y
+    valida que exista. Reutilizado por los endpoints de segmento/pendientes."""
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog
+    if prog not in PROGRAMAS and prog not in TAMIZAJE:
+        raise HTTPException(404, f"Programa '{prog}' no existe")
+    return prog
+
+
+# ── Segmentación: categorías editables + asignación por paciente ──────────────
+
+@router.get("/{prog}/segmentos")
+async def listar_segmentos(prog: str, token: str | None = Query(None),
+                           cmc_session: str | None = Cookie(None), request: Request = None):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    return {"categorias": _segmentos(prog)}
+
+
+@router.post("/{prog}/segmentos")
+async def crear_segmento(prog: str, request: Request, token: str | None = Query(None),
+                         cmc_session: str | None = Cookie(None)):
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        nombre = (await request.json()).get("nombre", "").strip()[:60]
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    if not nombre:
+        raise HTTPException(400, "Nombre vacío")
+    ensure_segmento_table()
+    from session import _conn
+    with _conn() as conn:
+        nxt = conn.execute("SELECT COALESCE(MAX(orden),-1)+1 FROM programa_segmento WHERE programa=?", (prog,)).fetchone()[0]
+        conn.execute("INSERT OR IGNORE INTO programa_segmento (programa, nombre, orden) VALUES (?,?,?)", (prog, nombre, nxt))
+        conn.commit()
+    return {"categorias": _segmentos(prog)}
+
+
+@router.put("/{prog}/segmentos")
+async def renombrar_segmento(prog: str, request: Request, token: str | None = Query(None),
+                             cmc_session: str | None = Cookie(None)):
+    """Renombra una categoría y arrastra a todos los pacientes que la tenían."""
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    old = (body.get("old") or "").strip()
+    new = (body.get("new") or "").strip()[:60]
+    if not old or not new:
+        raise HTTPException(400, "old/new requeridos")
+    ensure_segmento_table(); ensure_programa_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        row = conn.execute("SELECT orden FROM programa_segmento WHERE programa=? AND nombre=?", (prog, old)).fetchone()
+        if row is None:
+            raise HTTPException(404, "Categoría no existe")
+        if new != old:
+            conn.execute("INSERT OR IGNORE INTO programa_segmento (programa, nombre, orden) VALUES (?,?,?)", (prog, new, row["orden"]))
+            conn.execute("DELETE FROM programa_segmento WHERE programa=? AND nombre=?", (prog, old))
+            conn.execute("UPDATE programa_plan SET segmento=? WHERE programa=? AND segmento=?", (new, prog, old))
+        conn.commit()
+    return {"categorias": _segmentos(prog)}
+
+
+@router.delete("/{prog}/segmentos")
+async def borrar_segmento(prog: str, nombre: str = Query(...), token: str | None = Query(None),
+                          cmc_session: str | None = Cookie(None), request: Request = None):
+    """Borra una categoría; los pacientes que la tenían quedan sin segmento."""
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    ensure_segmento_table(); ensure_programa_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("DELETE FROM programa_segmento WHERE programa=? AND nombre=?", (prog, nombre))
+        conn.execute("UPDATE programa_plan SET segmento='' WHERE programa=? AND segmento=?", (prog, nombre))
+        conn.commit()
+    return {"categorias": _segmentos(prog)}
+
+
+@router.put("/{prog}/segmento/{paciente_id}")
+async def set_segmento(prog: str, paciente_id: int, request: Request,
+                       token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    """Asigna la categoría a un paciente (upsert liviano, no toca plan/notas/resumen)."""
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        seg = (await request.json()).get("segmento", "").strip()[:60]
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    ensure_programa_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO programa_plan (programa, paciente_id, segmento, updated_at)
+            VALUES (?,?,?, datetime('now'))
+            ON CONFLICT(programa, paciente_id) DO UPDATE SET segmento=excluded.segmento, updated_at=excluded.updated_at
+        """, (prog, paciente_id, seg))
+        conn.commit()
+    return {"ok": True, "segmento": seg}
+
+
+@router.put("/{prog}/pendientes/{paciente_id}")
+async def set_pendientes(prog: str, paciente_id: int, request: Request,
+                         token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    """Reemplaza el checklist de pendientes del paciente (upsert liviano)."""
+    prog = _resolve_editable(request, token, cmc_session, prog)
+    try:
+        items = (await request.json()).get("pendientes")
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    clean = _parse_pendientes(items)[:50]
+    ensure_programa_plan_table()
+    from session import _conn
+    with _conn() as conn:
+        conn.execute("""
+            INSERT INTO programa_plan (programa, paciente_id, pendientes, updated_at)
+            VALUES (?,?,?, datetime('now'))
+            ON CONFLICT(programa, paciente_id) DO UPDATE SET pendientes=excluded.pendientes, updated_at=excluded.updated_at
+        """, (prog, paciente_id, json.dumps(clean, ensure_ascii=False)))
+        conn.commit()
+    return {"ok": True, "pendientes": clean, "n_pendientes": sum(1 for it in clean if not it["hecho"])}
+
+
 def build_digest(meses: int = 6) -> dict:
     """Lista de hoy UNIFICADA: pacientes a contactar cruzando TODOS los programas
     de este motor + los módulos dedicados Kine y Ortodoncia. Priorizada.
@@ -821,17 +1003,18 @@ async def export_csv(prog: str, meses: int = Query(6, ge=1, le=36),
     w = csv.writer(buf)
     # Incluye el mensaje sugerido + link wa.me para los accionables → recepción
     # baja la lista y contacta uno por uno (la worklist como sesión de trabajo).
-    w.writerow(["Paciente", "Teléfono", "Lugar", "Profesional", "Visitas/Sesiones",
-                "Última visita", "Días sin visita", "Estado", "Mensaje sugerido", "Link WhatsApp"])
+    w.writerow(["Paciente", "Segmento", "Teléfono", "Lugar", "Profesional", "Visitas/Sesiones",
+                "Última visita", "Días sin visita", "Estado", "Pendientes abiertos",
+                "Mensaje sugerido", "Link WhatsApp"])
     for p in data["pacientes"]:
         if p["estado"] in acc:
             mensaje = msg_tpl.format(primer=_primer_nombre(p["paciente"]))
             wa = _wa_link(p["telefono"], mensaje) or ""
         else:
             mensaje, wa = "", ""
-        w.writerow([p["paciente"], p["telefono"], p["lugar"], p["profesional"],
+        w.writerow([p["paciente"], p.get("segmento", ""), p["telefono"], p["lugar"], p["profesional"],
                     p["sesiones"], p["ultima_visita"], p["dias_sin_visita"], p["estado_label"],
-                    mensaje, wa])
+                    p.get("n_pendientes", 0), mensaje, wa])
     buf.seek(0)
     fname = f"programa_{prog}_{_today().isoformat()}.csv"
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
