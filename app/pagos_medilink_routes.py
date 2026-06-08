@@ -58,26 +58,35 @@ def _rango(fecha, fecha_desde, fecha_hasta) -> tuple[str, str]:
 def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
     """Pagos de la caja real en el rango, enriquecidos. Filtra por profesional si scope.
 
-    ATRIBUCIÓN: el profesional sale de la ATENCIÓN real (bi_atenciones cruzada por
-    atencion_id) — que viene de Medilink /atenciones y es autoritativa — y solo cae
-    al id_profesional heurístico de bi_pagos_caja cuando no hay atención cruzable.
-    Esto evita que un pago de Medicina General quede atribuido por error a Nutrición.
-    El filtro por profesional (scope) usa esa misma atribución real."""
+    ATRIBUCIÓN PRECISA: cada pago se liga a la atención del MISMO DÍA cuyo total
+    coincide EXACTO con el monto (eso ata el pago a SU atención específica, aunque el
+    paciente vea a dos profesionales ese día → no sobre-incluye). Si no hay esa
+    coincidencia (típico en copagos Fonasa, donde lo pagado ≠ total bruto), cae al
+    id_profesional heurístico de bi_pagos_caja (la misma atribución que DB Mensual).
+    Esos casos residuales se corrigen con override manual aguas arriba."""
     from session import _conn
+    sub_match_prof = ("(SELECT a.id_profesional FROM bi_atenciones a "
+                      "WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha AND a.total=p.monto "
+                      "ORDER BY a.atencion_id LIMIT 1)")
+    sub_nom = ("(SELECT a.paciente_nombre FROM bi_atenciones a "
+               "WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha "
+               "ORDER BY a.atencion_id LIMIT 1)")
     where = "p.fecha >= ? AND p.fecha <= ?"
     params: list = [d_desde, d_hasta]
     if scope is not None:
-        where += " AND COALESCE(a.id_profesional, p.id_profesional) = ?"
-        params.append(scope)
+        where += (" AND (EXISTS (SELECT 1 FROM bi_atenciones a WHERE a.id_paciente=p.id_paciente "
+                  "AND a.fecha=p.fecha AND a.total=p.monto AND a.id_profesional=?) "
+                  "OR (NOT EXISTS (SELECT 1 FROM bi_atenciones a WHERE a.id_paciente=p.id_paciente "
+                  "AND a.fecha=p.fecha AND a.total=p.monto) AND p.id_profesional=?))")
+        params += [scope, scope]
     try:
         with _conn() as c:
             rows = c.execute(
                 f"""SELECT p.pago_id, p.fecha, p.monto, p.metodo_pago, p.n_folio,
-                          COALESCE(a.id_profesional, p.id_profesional) AS id_prof,
-                          COALESCE(a.id_paciente, p.id_paciente) AS id_pac,
-                          a.paciente_nombre AS nombre_aten
+                          COALESCE({sub_match_prof}, p.id_profesional) AS id_prof,
+                          p.id_paciente AS id_pac,
+                          {sub_nom} AS nombre_aten
                    FROM bi_pagos_caja p
-                   LEFT JOIN bi_atenciones a ON a.atencion_id = p.atencion_id
                    WHERE {where}
                    ORDER BY p.fecha DESC, p.pago_id DESC""",
                 params,
