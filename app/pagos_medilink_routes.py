@@ -56,19 +56,30 @@ def _rango(fecha, fecha_desde, fecha_hasta) -> tuple[str, str]:
 
 
 def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
-    """Pagos de la caja real en el rango, enriquecidos. Filtra por profesional si scope."""
+    """Pagos de la caja real en el rango, enriquecidos. Filtra por profesional si scope.
+
+    ATRIBUCIÓN: el profesional sale de la ATENCIÓN real (bi_atenciones cruzada por
+    atencion_id) — que viene de Medilink /atenciones y es autoritativa — y solo cae
+    al id_profesional heurístico de bi_pagos_caja cuando no hay atención cruzable.
+    Esto evita que un pago de Medicina General quede atribuido por error a Nutrición.
+    El filtro por profesional (scope) usa esa misma atribución real."""
     from session import _conn
-    where = "fecha >= ? AND fecha <= ?"
+    where = "p.fecha >= ? AND p.fecha <= ?"
     params: list = [d_desde, d_hasta]
     if scope is not None:
-        where += " AND id_profesional = ?"
+        where += " AND COALESCE(a.id_profesional, p.id_profesional) = ?"
         params.append(scope)
     try:
         with _conn() as c:
             rows = c.execute(
-                f"SELECT pago_id, atencion_id, fecha, id_profesional, id_paciente, "
-                f"       monto, metodo_pago, n_folio "
-                f"FROM bi_pagos_caja WHERE {where} ORDER BY fecha DESC, pago_id DESC",
+                f"""SELECT p.pago_id, p.fecha, p.monto, p.metodo_pago, p.n_folio,
+                          COALESCE(a.id_profesional, p.id_profesional) AS id_prof,
+                          COALESCE(a.id_paciente, p.id_paciente) AS id_pac,
+                          a.paciente_nombre AS nombre_aten
+                   FROM bi_pagos_caja p
+                   LEFT JOIN bi_atenciones a ON a.atencion_id = p.atencion_id
+                   WHERE {where}
+                   ORDER BY p.fecha DESC, p.pago_id DESC""",
                 params,
             ).fetchall()
             nombres_local = {
@@ -88,26 +99,18 @@ def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
     except Exception:
         PROFESIONALES = {}
 
-    pids = sorted({r["id_paciente"] for r in rows if r["id_paciente"]})
-    try:
-        from caja_helper import _identidad_pacientes
-        ident = _identidad_pacientes(pids)
-    except Exception:
-        ident = {}
-
     out = []
     for r in rows:
-        pid = r["id_paciente"]
-        prof = PROFESIONALES.get(r["id_profesional"], {}) if isinstance(PROFESIONALES, dict) else {}
-        info = ident.get(pid) or {}
+        pid = r["id_pac"]
+        prof = PROFESIONALES.get(r["id_prof"], {}) if isinstance(PROFESIONALES, dict) else {}
         out.append({
             "id": r["pago_id"],
             "fecha": r["fecha"],
             "hora": horas_local.get((pid, r["fecha"]), "") or "",
-            "id_profesional": r["id_profesional"],
+            "id_profesional": r["id_prof"],
             "profesional": prof.get("nombre", "") or "—",
             "area": (prof.get("especialidad", "") or "").split(" / ")[0],
-            "paciente_nombre": info.get("paciente") or nombres_local.get(pid) or "—",
+            "paciente_nombre": r["nombre_aten"] or nombres_local.get(pid) or "—",
             "monto": int(r["monto"] or 0),
             "metodo_pago": r["metodo_pago"] or "",
             "folio": r["n_folio"] or "",
