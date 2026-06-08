@@ -55,41 +55,44 @@ def _rango(fecha, fecha_desde, fecha_hasta) -> tuple[str, str]:
     return d, d
 
 
-def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
-    """Pagos de la caja real en el rango, enriquecidos. Filtra por profesional si scope.
+def _norm_nombre(s: str) -> str:
+    """Normaliza un nombre para cruzar entre tablas (sin tildes, minúsculas, 1 espacio)."""
+    import unicodedata
+    s = (s or "").strip().lower()
+    s = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+    return " ".join(s.split())
 
-    ATRIBUCIÓN PRECISA: cada pago se liga a la atención del MISMO DÍA cuyo total
-    coincide EXACTO con el monto (eso ata el pago a SU atención específica, aunque el
-    paciente vea a dos profesionales ese día → no sobre-incluye). Si no hay esa
-    coincidencia (típico en copagos Fonasa, donde lo pagado ≠ total bruto), cae al
-    id_profesional heurístico de bi_pagos_caja (la misma atribución que DB Mensual).
-    Esos casos residuales se corrigen con override manual aguas arriba."""
+
+def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
+    """Pagos de la caja real en el rango, con ATRIBUCIÓN POR CAPAS del profesional.
+
+    Capa 0 — override manual (bi_pago_overrides): si el dueño reasignó el pago, gana.
+    Capa 1 — heurístico (bi_pagos_caja.id_profesional): la misma atribución que DB
+             Mensual; base razonable, se equivoca solo en casos ambiguos.
+    Capa 2 — REPASADA: corrige la capa 1 cruzando contra el módulo Pagos (pagos_cmc,
+             registrado a mano por recepción CON el profesional correcto). Se cruza
+             por (fecha + nombre normalizado); si recepción atendió a esa persona ese
+             día con un ÚNICO profesional, ese profesional manda. Si vio a dos, queda
+             ambiguo → se respeta una atención del día con monto exacto, o el heurístico.
+
+    El filtro por profesional (scope, p.ej. Gisela) usa la atribución YA corregida."""
     from session import _conn
-    sub_match_prof = ("(SELECT a.id_profesional FROM bi_atenciones a "
-                      "WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha AND a.total=p.monto "
-                      "ORDER BY a.atencion_id LIMIT 1)")
-    sub_nom = ("(SELECT a.paciente_nombre FROM bi_atenciones a "
-               "WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha "
-               "ORDER BY a.atencion_id LIMIT 1)")
-    where = "p.fecha >= ? AND p.fecha <= ?"
-    params: list = [d_desde, d_hasta]
-    if scope is not None:
-        where += (" AND (EXISTS (SELECT 1 FROM bi_atenciones a WHERE a.id_paciente=p.id_paciente "
-                  "AND a.fecha=p.fecha AND a.total=p.monto AND a.id_profesional=?) "
-                  "OR (NOT EXISTS (SELECT 1 FROM bi_atenciones a WHERE a.id_paciente=p.id_paciente "
-                  "AND a.fecha=p.fecha AND a.total=p.monto) AND p.id_profesional=?))")
-        params += [scope, scope]
     try:
         with _conn() as c:
             rows = c.execute(
-                f"""SELECT p.pago_id, p.fecha, p.monto, p.metodo_pago, p.n_folio,
-                          COALESCE({sub_match_prof}, p.id_profesional) AS id_prof,
-                          p.id_paciente AS id_pac,
-                          {sub_nom} AS nombre_aten
+                """SELECT p.pago_id, p.fecha, p.monto, p.metodo_pago, p.n_folio,
+                          p.id_profesional AS heur_prof, p.id_paciente AS id_pac,
+                          (SELECT a.id_profesional FROM bi_atenciones a
+                             WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha AND a.total=p.monto
+                             ORDER BY a.atencion_id LIMIT 1) AS exact_prof,
+                          (SELECT a.paciente_nombre FROM bi_atenciones a
+                             WHERE a.id_paciente=p.id_paciente AND a.fecha=p.fecha
+                             ORDER BY a.atencion_id LIMIT 1) AS nombre_aten,
+                          (SELECT 1 FROM bi_pago_overrides o WHERE o.pago_id=p.pago_id) AS has_override
                    FROM bi_pagos_caja p
-                   WHERE {where}
+                   WHERE p.fecha >= ? AND p.fecha <= ?
                    ORDER BY p.fecha DESC, p.pago_id DESC""",
-                params,
+                (d_desde, d_hasta),
             ).fetchall()
             nombres_local = {
                 r[0]: r[1] for r in
@@ -99,6 +102,15 @@ def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
                 (r[0], r[1]): r[2] for r in
                 c.execute("SELECT id_paciente, fecha, hora_inicio FROM citas_cache").fetchall()
             }
+            # Repasada: (fecha, nombre normalizado) → set de profesionales que recepción
+            # registró ese día para esa persona (fuente humana, verificada).
+            cmc: dict = {}
+            for fe, nom, idp in c.execute(
+                "SELECT fecha, paciente_nombre, id_profesional FROM pagos_cmc "
+                "WHERE id_profesional IS NOT NULL AND fecha >= ? AND fecha <= ?",
+                (d_desde, d_hasta),
+            ).fetchall():
+                cmc.setdefault((fe, _norm_nombre(nom)), set()).add(idp)
     except Exception as e:  # noqa: BLE001
         log.warning("bi_pagos_caja no disponible (%s)", e)
         return []
@@ -111,15 +123,29 @@ def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
     out = []
     for r in rows:
         pid = r["id_pac"]
-        prof = PROFESIONALES.get(r["id_prof"], {}) if isinstance(PROFESIONALES, dict) else {}
+        nombre = r["nombre_aten"] or nombres_local.get(pid) or ""
+        # ── Atribución por capas ──
+        if r["has_override"]:
+            prof_id = r["heur_prof"]                       # capa 0: manual (gana)
+        else:
+            cmc_profs = cmc.get((r["fecha"], _norm_nombre(nombre)))
+            if cmc_profs and len(cmc_profs) == 1:
+                prof_id = next(iter(cmc_profs))            # capa 2: repasada (recepción, único prof del día)
+            elif r["exact_prof"] is not None:
+                prof_id = r["exact_prof"]                  # atención del día con monto exacto
+            else:
+                prof_id = r["heur_prof"]                   # capa 1: heurístico
+        if scope is not None and prof_id != scope:
+            continue
+        prof = PROFESIONALES.get(prof_id, {}) if isinstance(PROFESIONALES, dict) else {}
         out.append({
             "id": r["pago_id"],
             "fecha": r["fecha"],
             "hora": horas_local.get((pid, r["fecha"]), "") or "",
-            "id_profesional": r["id_prof"],
+            "id_profesional": prof_id,
             "profesional": prof.get("nombre", "") or "—",
             "area": (prof.get("especialidad", "") or "").split(" / ")[0],
-            "paciente_nombre": r["nombre_aten"] or nombres_local.get(pid) or "—",
+            "paciente_nombre": nombre or "—",
             "monto": int(r["monto"] or 0),
             "metodo_pago": r["metodo_pago"] or "",
             "folio": r["n_folio"] or "",
@@ -166,3 +192,37 @@ async def export(fecha: str | None = Query(None),
     fname = f"pagos_medilink_{d_desde}_a_{d_hasta}.csv" if d_desde != d_hasta else f"pagos_medilink_{d_desde}.csv"
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv; charset=utf-8",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+@router.put("/reasignar/{pago_id}")
+async def reasignar(pago_id: int, request: Request,
+                    token: str | None = Query(None),
+                    cmc_session: str | None = Cookie(None)):
+    """Reasigna el profesional de un pago (override manual). SOLO dueño/recepción
+    (un perfil de profesional → 403). Escribe bi_pago_overrides (NIVEL 0 del matcher,
+    persiste ante re-syncs) y actualiza bi_pagos_caja → corrige este módulo Y DB Mensual."""
+    _tk, scope = _resolve(request, token, cmc_session)
+    if scope is not None:
+        raise HTTPException(403, "Solo el dueño puede reasignar")
+    try:
+        id_prof = int((await request.json()).get("id_profesional"))
+    except Exception:
+        raise HTTPException(400, "id_profesional inválido")
+    from medilink import PROFESIONALES
+    if id_prof not in PROFESIONALES:
+        raise HTTPException(400, "Profesional inexistente")
+    from session import _conn
+    with _conn() as c:
+        row = c.execute("SELECT atencion_id FROM bi_pagos_caja WHERE pago_id=?", (pago_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Pago no existe")
+        c.execute(
+            "INSERT OR REPLACE INTO bi_pago_overrides "
+            "(pago_id, id_profesional, atencion_id, reason, created_at) "
+            "VALUES (?,?,?,?, datetime('now'))",
+            (pago_id, id_prof, row["atencion_id"], "reasignación manual (Pagos Medilink)"),
+        )
+        c.execute("UPDATE bi_pagos_caja SET id_profesional=? WHERE pago_id=?", (id_prof, pago_id))
+        c.commit()
+    return {"ok": True, "id_profesional": id_prof,
+            "profesional": PROFESIONALES[id_prof].get("nombre", "")}
