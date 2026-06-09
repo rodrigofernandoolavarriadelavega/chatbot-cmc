@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Caja Diaria — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --green:#23c25e;
+    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body { font-family:'Montserrat',-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+
+  /* Topbar */
+  .pg-topbar { display:flex; align-items:center; gap:12px; background:#fff;
+    border-bottom:1px solid var(--border); padding:0 20px; height:54px;
+    box-shadow:var(--sh-sm); position:sticky; top:0; z-index:20; }
+  .pg-topbar h1 { font-size:15px; font-weight:700; margin:0; color:var(--navy); }
+  .pg-topbar .spacer { flex:1; }
+  .date-nav { display:flex; align-items:center; gap:6px; }
+  .date-nav button, .btn-sec { border:1px solid var(--border); background:#fff; color:var(--blue);
+    border-radius:7px; padding:6px 10px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all .14s; }
+  .date-nav button:hover, .btn-sec:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .date-nav input[type=month] { font-family:inherit; font-size:12px; font-weight:600;
+    border:1px solid var(--border); border-radius:7px; padding:5px 9px; color:var(--navy); background:#fff; cursor:pointer; }
+  .btn-pri { display:inline-flex; align-items:center; gap:6px; border:0; background:var(--navy); color:#fff;
+    border-radius:8px; padding:8px 13px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .btn-pri:hover { background:#0c3556; }
+  .btn-sec { display:inline-flex; align-items:center; gap:6px; }
+  .btn-pri svg, .btn-sec svg { width:15px; height:15px; }
+
+  /* Resumen sticky */
+  .resumen { display:flex; align-items:stretch; gap:10px; flex-wrap:wrap;
+    padding:11px 20px; background:var(--aqua-s); border-bottom:1px solid var(--border);
+    position:sticky; top:54px; z-index:19; }
+  .resumen .kpi { background:#fff; border:1px solid var(--border); border-radius:11px;
+    padding:9px 15px; min-width:150px; flex:1; }
+  .resumen .kpi.saldo { border-color:var(--aqua); background:#fff; }
+  .resumen .kpi .lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--mute); }
+  .resumen .kpi .val { font-size:19px; font-weight:800; color:var(--navy); font-variant-numeric:tabular-nums; margin-top:2px; }
+  .resumen .kpi.saldo .val { color:var(--blue); }
+
+  /* Banner faltantes */
+  .faltantes { display:none; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:9px 20px; background:#fff7e8; border-bottom:1px solid #f0e2c0; color:#9a6a00;
+    font-size:12px; font-weight:600; }
+  .faltantes b { color:#7a5400; }
+  .faltantes .btn-sec { background:#fff; border-color:#e6cf93; color:#9a6a00; }
+
+  /* Tabla */
+  .table-wrap { padding:0 20px 60px; margin-top:14px; }
+  table { width:100%; border-collapse:separate; border-spacing:0; background:#fff;
+    border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--sh-sm); }
+  thead th { background:#f3f9fc; text-align:left; font-size:10.5px; font-weight:800; text-transform:uppercase;
+    letter-spacing:.03em; color:var(--mute); padding:11px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody td { padding:7px 10px; border-bottom:1px solid #eef4f8; vertical-align:middle; font-size:12.5px; }
+  tbody tr:last-child td { border-bottom:0; }
+  tbody tr:hover { background:#fafdfe; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+  .c-dep td { background:#fbfdff; }
+  input.cell, textarea.cell { width:100%; font-family:inherit; font-size:12.5px; color:var(--navy);
+    border:1px solid transparent; border-radius:7px; padding:6px 8px; background:transparent; resize:none; }
+  input.cell:hover, textarea.cell:hover { border-color:var(--border); }
+  input.cell:focus, textarea.cell:focus { outline:none; border-color:var(--aqua); background:#fff;
+    box-shadow:0 0 0 2px rgba(79,190,206,.18); }
+  input.cell.num { text-align:right; font-weight:700; }
+  .col-fecha { width:120px; } .col-monto { width:130px; } .col-fdep { width:130px; }
+  .col-vdep { width:130px; } .col-act { width:54px; }
+  .row-saved { animation:flash .9s ease; }
+  @keyframes flash { 0%{background:#dff5ea;} 100%{background:transparent;} }
+  .btn-del { border:0; background:none; color:#c0ccd6; cursor:pointer; padding:4px; border-radius:6px; }
+  .btn-del:hover { color:var(--red); background:#fff0f0; }
+  .btn-del svg { width:16px; height:16px; }
+  .efec-hint { display:inline-block; font-size:10px; color:var(--aqua); font-weight:700; cursor:pointer; margin-left:6px; white-space:nowrap; }
+  .efec-hint:hover { text-decoration:underline; }
+  .loading, .empty { text-align:center; padding:28px; color:var(--mute); font-weight:600; }
+
+  /* Toast */
+  .toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--navy); color:#fff; padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600;
+    box-shadow:var(--sh-md); opacity:0; transition:all .3s; z-index:90; }
+  .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  .toast.success { background:#1a7a42; } .toast.error { background:var(--red); }
+
+  @media (max-width:760px) {
+    .pg-topbar { flex-wrap:wrap; height:auto; padding:8px 12px; gap:8px; }
+    .pg-topbar h1 { width:100%; }
+    .resumen { padding:9px 12px; top:0; position:static; }
+    .table-wrap { padding:0 8px 60px; overflow-x:auto; }
+    table { min-width:760px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="pg-topbar">
+  <h1>Caja Diaria</h1>
+  <div class="date-nav">
+    <button id="btnPrevMes" title="Mes anterior">&#8592;</button>
+    <input type="month" id="pickerMes">
+    <button id="btnNextMes" title="Mes siguiente">&#8594;</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn-sec" id="btnExport" title="Descargar Excel (mismo formato)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    Excel
+  </button>
+  <button class="btn-pri" id="btnNueva">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Nueva fila
+  </button>
+</div>
+
+<!-- Resumen -->
+<div class="resumen">
+  <div class="kpi"><div class="lbl">Efectivo del mes</div><div class="val" id="kEfectivo">—</div></div>
+  <div class="kpi"><div class="lbl">Depositado</div><div class="val" id="kDeposito">—</div></div>
+  <div class="kpi saldo"><div class="lbl">Saldo sin depositar</div><div class="val" id="kSaldo">—</div></div>
+</div>
+
+<!-- Banner días con efectivo en Pagos sin registrar -->
+<div class="faltantes" id="faltantes">
+  <span><b id="faltN">0</b> día(s) con efectivo en <b>Pagos</b> sin registrar en Caja Diaria.</span>
+  <button class="btn-sec" id="btnTraerTodos">Traer todos desde Pagos</button>
+</div>
+
+<!-- Tabla -->
+<div class="table-wrap">
+  <table id="tabla">
+    <thead>
+      <tr>
+        <th class="col-fecha">Fecha</th>
+        <th class="col-monto">Monto efectivo</th>
+        <th>Comentario</th>
+        <th class="col-fdep">Fecha depósito</th>
+        <th class="col-vdep">Valor depósito</th>
+        <th>Días que corresponden</th>
+        <th class="col-act"></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"><tr><td colspan="7" class="loading">Cargando…</td></tr></tbody>
+  </table>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+let _mes = new Date().toLocaleDateString('en-CA').slice(0,7);  // YYYY-MM
+
+function fmt$(n){ return '$' + (Number(n)||0).toLocaleString('es-CL'); }
+function showToast(msg, type=''){ const t=document.getElementById('toast'); t.textContent=msg;
+  t.className='toast show '+(type||''); clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',2600); }
+function rango(mes){ const [y,m]=mes.split('-').map(Number); const desde=`${mes}-01`;
+  const hasta=new Date(y, m, 0).toLocaleDateString('en-CA'); return [desde,hasta]; }
+function fechaCorta(iso){ if(!iso) return ''; const p=iso.split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso; }
+
+let _faltantes = [];
+
+async function cargar(){
+  const tb=document.getElementById('tbody');
+  tb.innerHTML='<tr><td colspan="7" class="loading">Cargando…</td></tr>';
+  const [desde,hasta]=rango(_mes);
+  try{
+    const r=await fetch('/alma/api/caja-diaria'+qp+'&fecha_desde='+desde+'&fecha_hasta='+hasta);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    document.getElementById('kEfectivo').textContent=fmt$(d.total_efectivo);
+    document.getElementById('kDeposito').textContent=fmt$(d.total_deposito);
+    document.getElementById('kSaldo').textContent=fmt$(d.saldo_sin_depositar);
+    _faltantes=d.faltantes||[];
+    renderFaltantes();
+    renderTabla(d.filas||[]);
+  }catch(e){ tb.innerHTML='<tr><td colspan="7" class="empty">Error al cargar.</td></tr>'; console.error(e); }
+}
+
+function renderFaltantes(){
+  const box=document.getElementById('faltantes');
+  if(_faltantes.length){ document.getElementById('faltN').textContent=_faltantes.length; box.style.display='flex'; }
+  else box.style.display='none';
+}
+
+function rowHTML(f){
+  // f.id puede ser null (fila nueva sin guardar)
+  const efecHint = (f.efectivo_pagos>0 && f.efectivo_pagos!==f.monto_efectivo)
+    ? `<span class="efec-hint" data-act="usar-efec">Pagos: ${fmt$(f.efectivo_pagos)} ↵</span>` : '';
+  return `
+    <td class="col-fecha"><input class="cell" type="date" data-col="fecha" value="${f.fecha||''}"></td>
+    <td class="col-monto"><input class="cell num" type="number" data-col="monto_efectivo" value="${f.monto_efectivo||''}" placeholder="0">${efecHint}</td>
+    <td><textarea class="cell" rows="1" data-col="comentario" placeholder="—">${(f.comentario||'').replace(/</g,'&lt;')}</textarea></td>
+    <td class="col-fdep"><input class="cell" type="date" data-col="fecha_deposito" value="${f.fecha_deposito||''}"></td>
+    <td class="col-vdep"><input class="cell num" type="number" data-col="valor_deposito" value="${f.valor_deposito||''}" placeholder="0"></td>
+    <td><textarea class="cell" rows="1" data-col="dias_corresponden" placeholder="—">${(f.dias_corresponden||'').replace(/</g,'&lt;')}</textarea></td>
+    <td class="col-act"><button class="btn-del" title="Eliminar" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button></td>`;
+}
+
+function renderTabla(filas){
+  const tb=document.getElementById('tbody');
+  if(!filas.length){ tb.innerHTML='<tr><td colspan="7" class="empty">Sin movimientos este mes. Usa “Nueva fila”.</td></tr>'; return; }
+  tb.innerHTML='';
+  filas.forEach(f=>{
+    const tr=document.createElement('tr');
+    tr.dataset.id=f.id||''; tr.dataset.efec=f.efectivo_pagos||0;
+    if(f.valor_deposito>0) tr.classList.add('c-dep');
+    tr.innerHTML=rowHTML(f);
+    tb.appendChild(tr);
+    bindRow(tr);
+  });
+}
+
+function bindRow(tr){
+  tr.querySelectorAll('.cell').forEach(inp=>{
+    inp.addEventListener('change', ()=>guardarFila(tr));
+  });
+  const del=tr.querySelector('[data-act="del"]');
+  if(del) del.addEventListener('click', ()=>eliminarFila(tr));
+  const usar=tr.querySelector('[data-act="usar-efec"]');
+  if(usar) usar.addEventListener('click', ()=>{
+    const efec=parseInt(tr.dataset.efec,10)||0;
+    tr.querySelector('[data-col="monto_efectivo"]').value=efec;
+    guardarFila(tr);
+  });
+}
+
+function leerFila(tr){
+  const g=c=>tr.querySelector(`[data-col="${c}"]`).value;
+  return { fecha:g('fecha'), monto_efectivo:g('monto_efectivo'), comentario:g('comentario'),
+           fecha_deposito:g('fecha_deposito'), valor_deposito:g('valor_deposito'), dias_corresponden:g('dias_corresponden') };
+}
+
+async function guardarFila(tr){
+  const body=leerFila(tr);
+  if(!body.fecha){ showToast('Pon la fecha primero','error'); return; }
+  const id=tr.dataset.id;
+  try{
+    let r;
+    if(id){ r=await fetch('/alma/api/caja-diaria/'+id+qp, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+    else  { r=await fetch('/alma/api/caja-diaria'+qp, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+    if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.detail||'HTTP '+r.status); }
+    const d=await r.json();
+    if(!id && d.id) tr.dataset.id=d.id;
+    tr.classList.remove('row-saved'); void tr.offsetWidth; tr.classList.add('row-saved');
+    showToast('Guardado','success');
+    // refrescar KPIs (recalcula totales del mes)
+    refrescarTotales();
+  }catch(e){ showToast('Error: '+e.message,'error'); }
+}
+
+async function eliminarFila(tr){
+  const id=tr.dataset.id;
+  if(!id){ tr.remove(); return; }
+  if(!confirm('¿Eliminar esta fila de caja?')) return;
+  try{
+    const r=await fetch('/alma/api/caja-diaria/'+id+qp,{method:'DELETE'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    tr.remove(); showToast('Eliminada','success'); refrescarTotales();
+    if(!document.querySelector('#tbody tr')) renderTabla([]);
+  }catch(e){ showToast('Error: '+e.message,'error'); }
+}
+
+async function refrescarTotales(){
+  const [desde,hasta]=rango(_mes);
+  try{
+    const r=await fetch('/alma/api/caja-diaria'+qp+'&fecha_desde='+desde+'&fecha_hasta='+hasta);
+    if(!r.ok) return; const d=await r.json();
+    document.getElementById('kEfectivo').textContent=fmt$(d.total_efectivo);
+    document.getElementById('kDeposito').textContent=fmt$(d.total_deposito);
+    document.getElementById('kSaldo').textContent=fmt$(d.saldo_sin_depositar);
+    _faltantes=d.faltantes||[]; renderFaltantes();
+  }catch(e){}
+}
+
+document.getElementById('btnNueva').addEventListener('click', ()=>{
+  const tb=document.getElementById('tbody');
+  if(tb.querySelector('.empty')) tb.innerHTML='';
+  const tr=document.createElement('tr'); tr.dataset.id=''; tr.dataset.efec=0;
+  tr.innerHTML=rowHTML({fecha:new Date().toLocaleDateString('en-CA'), monto_efectivo:'', comentario:'',
+                        fecha_deposito:'', valor_deposito:'', dias_corresponden:'', efectivo_pagos:0});
+  tb.insertBefore(tr, tb.firstChild); bindRow(tr);
+  tr.querySelector('[data-col="monto_efectivo"]').focus();
+});
+
+document.getElementById('btnTraerTodos').addEventListener('click', async ()=>{
+  if(!_faltantes.length) return;
+  for(const f of _faltantes){
+    await fetch('/alma/api/caja-diaria'+qp, {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({fecha:f.fecha, monto_efectivo:f.efectivo_pagos})});
+  }
+  showToast(`${_faltantes.length} día(s) traído(s) desde Pagos`,'success');
+  cargar();
+});
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const [desde,hasta]=rango(_mes);
+  window.open('/alma/api/caja-diaria/export'+qp+'&fecha_desde='+desde+'&fecha_hasta='+hasta,'_blank');
+});
+
+function setMes(m){ _mes=m; document.getElementById('pickerMes').value=m; cargar(); }
+document.getElementById('pickerMes').addEventListener('change', e=>setMes(e.target.value));
+document.getElementById('btnPrevMes').addEventListener('click', ()=>{
+  const [y,m]=_mes.split('-').map(Number); const d=new Date(y,m-2,1); setMes(d.toLocaleDateString('en-CA').slice(0,7)); });
+document.getElementById('btnNextMes').addEventListener('click', ()=>{
+  const [y,m]=_mes.split('-').map(Number); const d=new Date(y,m,1); setMes(d.toLocaleDateString('en-CA').slice(0,7)); });
+
+document.getElementById('pickerMes').value=_mes;
+cargar();
+</script>
+</body>
+</html>

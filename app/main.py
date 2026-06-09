@@ -755,6 +755,7 @@ app.include_router(agendador_routes.router)  # agendador público (cada endpoint
 
 import pagos_routes
 app.include_router(pagos_routes.router)
+import caja_diaria_routes; app.include_router(caja_diaria_routes.router); caja_diaria_routes.ensure_caja_diaria_table()  # Caja Diaria (libro de caja + depósitos)
 pagos_routes.ensure_pagos_table()  # DDL idempotente al arrancar
 
 import abonos_routes
@@ -3008,6 +3009,7 @@ _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8")
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_ABONOS_HTML = (_TEMPLATE_DIR / "alma_abonos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_abonos.html").exists() else ""
+_ALMA_CAJA_DIARIA_HTML = (_TEMPLATE_DIR / "alma_caja_diaria.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_caja_diaria.html").exists() else ""
 _ALMA_ENVIOS_HTML = (_TEMPLATE_DIR / "alma_envios.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_envios.html").exists() else ""
 _ALMA_PAGOS_MEDILINK_HTML = (_TEMPLATE_DIR / "alma_pagos_medilink.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_medilink.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
@@ -3757,6 +3759,23 @@ def alma_abonos_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ren_abonos(ADMIN_TOKEN, False)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/caja-diaria", response_class=HTMLResponse)
+def alma_caja_diaria_page(token: str | None = Query(None),
+                          cmc_session: str | None = Cookie(None)):
+    """Módulo Caja Diaria — libro de caja (efectivo del día + depósitos al banco).
+    Caja global del centro: solo dueño/recepción (no scopeado por profesional)."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_CAJA_DIARIA_HTML:
+        raise HTTPException(404, "Caja Diaria no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_CAJA_DIARIA_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_CAJA_DIARIA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
