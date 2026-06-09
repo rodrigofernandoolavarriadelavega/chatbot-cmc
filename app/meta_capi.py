@@ -187,6 +187,22 @@ async def send_event(
         if h:
             user_data["external_id"] = [h]
     fbc = _build_fbc(fbclid, fbclid_ts)
+    # ── Fallback de atribución CENTRAL ──────────────────────────────────────
+    # Si ningún call-site pasó fbclid ni ctwa_clid, buscar el ctwa_clid en
+    # meta_referrals por teléfono (ad CTWA, TTL 90d). Así TODO evento atribuye
+    # sin depender de que cada call-site se acuerde de pasarlo (agenda_routes,
+    # agendador_routes y cualquier camino futuro). Es ADITIVO: solo actúa cuando
+    # no había atribución → nunca pisa una más precisa ni rompe la existente.
+    if not fbc and not ctwa_clid:
+        try:
+            from session import get_meta_referral_fresh as _gmrf_central
+            _ref_central = _gmrf_central(phone_norm, ttl_horas=2160) or {}
+            _clid_central = (_ref_central.get("ctwa_clid") or "").strip()
+            if _clid_central:
+                ctwa_clid = _clid_central
+                log.debug("CAPI %s: ctwa_clid recuperado de meta_referrals (fallback central)", event_name)
+        except Exception as _e_central:
+            log.debug("CAPI: fallback central ctwa_clid lookup falló: %s", _e_central)
     if not fbc and ctwa_clid:
         # ctwa_clid es el ID nativo de Click-to-WhatsApp ads.
         # Meta lo acepta como fbc con el mismo formato que fbclid.
