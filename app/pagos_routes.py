@@ -182,6 +182,8 @@ def ensure_pagos_table() -> None:
             #   'probable' → match solo por nombre completo (puede haber homónimo)
             #   ''         → presencial / sin cruce
             "ALTER TABLE pagos_cmc ADD COLUMN match_confianza TEXT DEFAULT ''",
+            # Monto REAL de la atención traído de Medilink por prellenar (cuadre al peso). 0 = sin dato.
+            "ALTER TABLE pagos_cmc ADD COLUMN monto_medilink INTEGER DEFAULT 0",
         ]:
             try:
                 conn.execute(col_ddl)
@@ -981,7 +983,8 @@ async def get_pagos(
                       COALESCE(bloqueado, 0) as bloqueado,
                       COALESCE(canal, 'presencial') as canal,
                       COALESCE(fuente, '') as fuente,
-                      COALESCE(match_confianza, '') as match_confianza
+                      COALESCE(match_confianza, '') as match_confianza,
+                      COALESCE(monto_medilink, 0) as monto_medilink
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?""" + (" AND id_profesional = ?" if _scope is not None else "") + """
                ORDER BY fecha DESC, hora DESC""",
@@ -1009,6 +1012,33 @@ async def get_pagos(
     # Total recaudado = solo lo que entro a caja (copago)
     total_recaudado = total_copago
 
+    # ── Arancel total (cuadre con Medilink) ──────────────────────────────────
+    # Tres datos por atención: efectivo (caja) + por cobrar Imed (bono+seguro) = arancel total.
+    #   (A) arancel_ref  → referencia por tipo de atención (tabla Fonasa N3 / particular=copago).
+    #   (B) monto_medilink → valor REAL traído de Medilink por prellenar (cuadre al peso). 0 si no hay.
+    # Solo cuenta como pago real si hubo copago>0 o método cargado (los placeholders $0 = cita pendiente
+    # NO inflan el arancel).
+    def _arancel_ref_para(area: str, prevision: str, copago: int) -> int:
+        if prevision == "fonasa" and area in _ARANCEL_N3:
+            a = _ARANCEL_N3[area]
+            return int(a.get("total") or a.get("total_sesion") or copago)
+        return int(copago)  # particular: paga el arancel completo
+
+    total_arancel_ref = 0
+    total_arancel_medilink = 0
+    for p in pagos:
+        cop = p.get("copago", 0) or 0
+        pago_real = cop > 0 or (p.get("metodo_pago") or "").strip() != ""
+        ar = _arancel_ref_para(p.get("area", ""), p.get("prevision", ""), cop) if pago_real else 0
+        p["arancel_ref"] = ar
+        mm = int(p.get("monto_medilink") or 0)
+        # arancel efectivo a usar: el real de Medilink si existe, si no la referencia
+        p["arancel"] = mm if mm > 0 else ar
+        total_arancel_ref += ar
+        total_arancel_medilink += (mm if mm > 0 else ar)
+    # Por cobrar a Imed (bono Fonasa + seguros complementarios) = arancel − efectivo
+    total_imed = max(total_arancel_medilink - total_copago, 0)
+
     # Totales por metodo de pago (para sección Caja)
     totales_por_metodo: dict[str, int] = {
         "efectivo":      0,
@@ -1027,6 +1057,9 @@ async def get_pagos(
         "total_copago":        total_copago,
         "total_bonif":         total_bonif,       # informativo, calculado desde arancel
         "total_recaudado":     total_recaudado,
+        "total_arancel":       total_arancel_medilink,  # referencia/cuadre con Medilink
+        "total_arancel_ref":   total_arancel_ref,        # solo referencia por tipo (A)
+        "total_imed":          total_imed,                # por cobrar a Imed (bono + seguro)
         "totales_por_metodo":  totales_por_metodo,
         "fecha_desde":         d_desde,
         "fecha_hasta":         d_hasta,

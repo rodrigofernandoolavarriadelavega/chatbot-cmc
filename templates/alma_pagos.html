@@ -427,6 +427,15 @@
   .caja-met.efectivo .value { color: var(--navy); }
 
   /* Fila de totales + efectivo esperado */
+  .caja-concil { display: flex; align-items: stretch; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  .caja-concil .cc-item { flex: 1; min-width: 140px; background: #fff; border: 1px solid var(--border); border-radius: 11px; padding: 10px 13px; }
+  .caja-concil .cc-item.cc-total { background: var(--aqua-s); border-color: var(--aqua); }
+  .caja-concil .cc-l { font-size: 10.5px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: .03em; }
+  .caja-concil .cc-l .cc-est { display: inline-block; font-size: 9px; background: #eef4f8; color: var(--mute); border-radius: 5px; padding: 1px 5px; margin-left: 4px; text-transform: none; letter-spacing: 0; }
+  .caja-concil .cc-v { font-size: 19px; font-weight: 800; color: var(--navy); margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .caja-concil .cc-total .cc-v { color: var(--blue); }
+  .caja-concil .cc-op { display: flex; align-items: center; font-size: 18px; font-weight: 800; color: var(--mute); }
+  @media (max-width: 640px) { .caja-concil .cc-op { display: none; } }
   .caja-totales {
     display: flex; align-items: flex-start; gap: 16px;
     flex-wrap: wrap; margin-bottom: 20px;
@@ -596,6 +605,15 @@
         <div class="value" id="cajaEfectivoEsperado">—</div>
         <div class="subtext" id="cajaEfectivoSubtext">Fondo inicial + efectivo del dia</div>
       </div>
+    </div>
+
+    <!-- Conciliación Medilink: Efectivo + por cobrar Imed = Arancel total -->
+    <div class="caja-concil" id="cajaConcil">
+      <div class="cc-item"><div class="cc-l">💵 Efectivo en caja</div><div class="cc-v" id="ccEfectivo">—</div></div>
+      <div class="cc-op">+</div>
+      <div class="cc-item"><div class="cc-l">🏦 Por cobrar a Imed <span class="cc-est">bono + seguro</span></div><div class="cc-v" id="ccImed">—</div></div>
+      <div class="cc-op">=</div>
+      <div class="cc-item cc-total"><div class="cc-l">📋 Arancel total <span class="cc-est" id="ccArancelHint">≈ Medilink</span></div><div class="cc-v" id="ccArancel">—</div></div>
     </div>
 
     <!-- Fondo inicial -->
@@ -3065,6 +3083,14 @@ function renderCaja(d) {
   document.getElementById('cajaMDebito').textContent        = fmt$(tpm.debito        || 0);
   document.getElementById('cajaMCredito').textContent       = fmt$(tpm.credito       || 0);
   document.getElementById('cajaTotalRecaudado').textContent = fmt$(d.total_recaudado || 0);
+
+  // Conciliación Medilink: Efectivo + por cobrar Imed = Arancel total
+  document.getElementById('ccEfectivo').textContent = fmt$(d.total_copago || 0);
+  document.getElementById('ccImed').textContent     = fmt$(d.total_imed || 0);
+  document.getElementById('ccArancel').textContent  = fmt$(d.total_arancel || 0);
+  // Si todavía no hay montos reales de Medilink, el arancel es referencia por tipo
+  const _hint = document.getElementById('ccArancelHint');
+  if (_hint) _hint.textContent = (d.total_arancel === d.total_arancel_ref) ? 'referencia por tipo' : '≈ Medilink (real)';
 
   actualizarEfectivoEsperado();
   actualizarArqueo();
