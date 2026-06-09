@@ -3176,8 +3176,9 @@ document.getElementById('btnPrellenar').addEventListener('click', async () => {
     const partes = [];
     if (d.creadas      > 0) partes.push(`${d.creadas} nueva${d.creadas>1?'s':''}`);
     if (d.actualizadas > 0) partes.push(`${d.actualizadas} actualizada${d.actualizadas>1?'s':''}`);
+    if (d.eliminadas   > 0) partes.push(`${d.eliminadas} quitada${d.eliminadas>1?'s':''} (no asistió)`);
     const msg = partes.length > 0 ? partes.join(' · ') : (d.mensaje || 'Todo al dia');
-    showToast(msg, (d.creadas > 0 || d.actualizadas > 0) ? 'success' : '');
+    showToast(msg, (d.creadas > 0 || d.actualizadas > 0 || d.eliminadas > 0) ? 'success' : '');
     cargarPagos(); // siempre recargar para reflejar canal/fuente actualizados
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
   finally {
