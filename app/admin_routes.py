@@ -1793,7 +1793,14 @@ def api_serve_file(file_id: int, _=Depends(require_admin)):
         ).fetchone()
     if not row:
         raise HTTPException(404, "Archivo no encontrado")
-    fpath = Path(__file__).parent.parent / row["file_path"]
+    # MED-3: file_path viene de la BD; validar que resuelva DENTRO de data/
+    # para que un valor manipulado (ej. "../../app/.env") no se sirva.
+    _root = Path(__file__).parent.parent
+    fpath = (_root / row["file_path"]).resolve()
+    try:
+        fpath.relative_to((_root / "data").resolve())
+    except ValueError:
+        raise HTTPException(400, "Ruta fuera del directorio permitido")
     if not fpath.exists():
         raise HTTPException(404, "Archivo eliminado del disco")
     content = fpath.read_bytes()
