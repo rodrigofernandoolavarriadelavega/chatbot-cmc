@@ -4048,7 +4048,7 @@ def boxes_manifest(token: str | None = Query(None)):
         "name": "Boxes CMC",
         "short_name": "Boxes CMC",
         "description": "Gemelo digital de boxes del Centro Médico Carampangue",
-        "start_url": f"/boxes?token={ADMIN_TOKEN}",
+        "start_url": f"/boxes?token={token}",  # token ya validado == ADMIN_TOKEN; no emitir el literal del config
         "scope": "/boxes",
         "display": "standalone",
         "orientation": "any",

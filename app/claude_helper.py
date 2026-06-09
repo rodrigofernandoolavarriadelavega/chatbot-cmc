@@ -1890,6 +1890,14 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
                 prefix, content, suffix = m.group(1), m.group(2), m.group(3)
                 # Escapa comillas dobles que no estén ya precedidas por backslash
                 fixed = re.sub(r'(?<!\\)"', r'\\"', content)
+                # Escapa caracteres de control DENTRO del valor (Claude a veces
+                # mete saltos de línea LITERALES en respuesta_directa al describir
+                # tratamientos/listar servicios → "Invalid control character" en
+                # raw_decode → fallback a menú. 48 casos en logs 2026-06-08/09).
+                # Solo sobre el contenido del campo (no toca los \n estructurales
+                # entre campos del JSON).
+                fixed = (fixed.replace("\n", "\\n")
+                              .replace("\r", "\\r").replace("\t", "\\t"))
                 return prefix + fixed + suffix
             _sanitized = re.sub(
                 r'("respuesta_directa"\s*:\s*")(.*?)("(?:\s*[,}]))',

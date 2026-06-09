@@ -1906,9 +1906,14 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
                 if prof_id != prof_mencionado_id:
                     # Paciente pide otro doctor → switch al que pide
                     prof_id = prof_mencionado_id
+                    # PROFESIONALES se importa más abajo (1941) → Python lo marca
+                    # local en toda la función → acá lanzaba UnboundLocalError y el
+                    # switch fallaba EN SILENCIO (paciente seguía con el doctor
+                    # original). Alias propio importado antes del uso.
+                    from medilink import PROFESIONALES as _PROFS_SW
                     # Intentar cargar slots del nuevo doctor para ofrecerlos
                     try:
-                        esp_prof = PROFESIONALES.get(int(prof_id), {}).get("especialidad", "").lower()
+                        esp_prof = _PROFS_SW.get(int(prof_id), {}).get("especialidad", "").lower()
                         if esp_prof:
                             smart, todos = await buscar_primer_dia(esp_prof, solo_ids=[int(prof_id)])
                             if todos:
@@ -1917,7 +1922,7 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
                                 data["prof_sugerido_id"] = int(prof_id)
                                 data["especialidad"] = esp_prof
                                 save_session(phone, "WAIT_SLOT", data)
-                                prof_nombre_sw = PROFESIONALES.get(int(prof_id), {}).get("nombre", "")
+                                prof_nombre_sw = _PROFS_SW.get(int(prof_id), {}).get("nombre", "")
                                 # _format_slots puede devolver dict (interactive list)
                                 # con <=8 slots → no concatenar, mandar header como msg separado.
                                 _slot_resp = _format_slots((smart or todos)[:5])
