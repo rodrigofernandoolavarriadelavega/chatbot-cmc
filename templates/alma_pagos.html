@@ -3089,21 +3089,34 @@ function renderCaja(d) {
   document.getElementById('cajaMCredito').textContent       = fmt$(tpm.credito       || 0);
   document.getElementById('cajaTotalRecaudado').textContent = fmt$(d.total_recaudado || 0);
 
-  // Conciliación Medilink: Efectivo + por cobrar Imed = Arancel total
-  document.getElementById('ccEfectivo').textContent = fmt$(d.total_copago || 0);
-  document.getElementById('ccImed').textContent     = fmt$(d.total_imed || 0);
-  document.getElementById('ccArancel').textContent  = fmt$(d.total_arancel || 0);
-  // Si todavía no hay montos reales de Medilink, el arancel es referencia por tipo
+  // Conciliación: Efectivo (copago) + por cobrar Imed = Arancel total.
+  // Cuando Medilink YA sincronizó (caja oficial T+1), ese arancel ES la verdad →
+  // recalculamos "por cobrar Imed" = Medilink − copago para que CUADRE AL PESO.
+  // El "total_imed/total_arancel" del backend es una ESTIMACIÓN por arancel N3 que
+  // se pasa (aplica bonif a filas que la caja real no tiene); solo se usa mientras
+  // Medilink aún no sincroniza. (fix dueño 2026-06-09)
+  const _copago = d.total_copago || 0;
+  const _mlReal = d.total_medilink_caja || 0;
+  const _nMl    = d.n_medilink_caja || 0;
+  document.getElementById('ccEfectivo').textContent = fmt$(_copago);
   const _hint = document.getElementById('ccArancelHint');
-  if (_hint) _hint.textContent = (d.total_arancel === d.total_arancel_ref) ? 'referencia por tipo' : '≈ Medilink (real)';
-
-  // Arancel REAL Medilink (caja oficial bi_pagos_caja, sync nocturno T+1)
   const cm = document.getElementById('ccMedilinkReal');
-  if (cm) {
-    if ((d.n_medilink_caja || 0) > 0) {
-      cm.innerHTML = `📋 <b>Arancel real Medilink (caja oficial): ${fmt$(d.total_medilink_caja || 0)}</b> — cuadra al peso`;
+  if (_nMl > 0) {
+    // Cuadre REAL contra la caja oficial Medilink
+    const _imedReal = Math.max(0, _mlReal - _copago);
+    document.getElementById('ccImed').textContent    = fmt$(_imedReal);
+    document.getElementById('ccArancel').textContent = fmt$(_mlReal);
+    if (_hint) _hint.textContent = '= Medilink real';
+    if (cm) {
+      cm.innerHTML = `📋 <b>Arancel real Medilink (caja oficial): ${fmt$(_mlReal)}</b> — copago + bonif Imed cuadra al peso ✓`;
       cm.className = 'cc-medilink ok';
-    } else {
+    }
+  } else {
+    // Aún sin sincronizar → estimado por arancel N3 (referencia, puede no cuadrar)
+    document.getElementById('ccImed').textContent    = fmt$(d.total_imed || 0);
+    document.getElementById('ccArancel').textContent = fmt$(d.total_arancel || 0);
+    if (_hint) _hint.textContent = 'estimado por arancel';
+    if (cm) {
       cm.innerHTML = `⏳ <b>Arancel real Medilink: pendiente</b> — el arancel de arriba es estimado; cuadra mañana con la caja Medilink (sync nocturno)`;
       cm.className = 'cc-medilink pend';
     }
