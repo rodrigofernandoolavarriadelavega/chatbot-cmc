@@ -2010,22 +2010,21 @@ async def api_send_consent_request(phone: str, nombre: str = Query("Paciente"),
     (tras pedírselo de viva voz). El paciente confirma con el botón 'Sí, acepto'
     → el handler de flows registra el consent como ACTO DEL PACIENTE
     (method=whatsapp), que es prueba fuerte bajo Ley 21.719 — no un tick de
-    recepción. Usa el template aprobado consent_marketing_v1 (cuyos botones
-    'Sí, acepto'/'No, gracias' ya reconoce el handler). Cambiar a
-    consent_marketing_v2 cuando Meta lo apruebe + se actualice el handler."""
+    recepción. Usa el template aprobado consent_marketing_v2 (value-first; sus
+    botones 'Sí, actívenlos'/'No por ahora' los reconoce el handler de flows)."""
     phone_clean = phone.lstrip("+").strip()
     from messaging import send_whatsapp_template, render_template_body
     from session import log_message
     from winback import registrar_consent_enviado
     nombre_first = (nombre or "Paciente").strip().split(" ")[0] or "Paciente"
     try:
-        await send_whatsapp_template(phone_clean, "consent_marketing_v1",
+        await send_whatsapp_template(phone_clean, "consent_marketing_v2",
                                      body_params=[nombre_first])
         log_message(phone_clean, "out",
-                    render_template_body("consent_marketing_v1", [nombre_first]), "IDLE")
+                    render_template_body("consent_marketing_v2", [nombre_first]), "IDLE")
         registrar_consent_enviado(phone_clean)
         log_event(phone_clean, "privacy_consent_request_sent",
-                  {"via": "recepcion", "template": "consent_marketing_v1"})
+                  {"via": "recepcion", "template": "consent_marketing_v2"})
     except Exception as e:
         log.error("send_consent_request error phone=%s: %s", phone_clean, e)
         raise HTTPException(502, f"No se pudo enviar el consentimiento: {e}")

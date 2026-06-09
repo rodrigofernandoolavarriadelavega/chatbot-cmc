@@ -2770,14 +2770,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # Si el registro en bi.marketing_consent está en estado 'pending',
     # se actualiza al estado correspondiente.
     _es_consent_si = (
-        tl in ("sí, acepto", "si, acepto", "si acepto", "si")
-        or tl_norm in ("si, acepto", "si acepto", "si")
-        or txt in ("Sí, acepto", "Si, acepto")
+        tl in ("sí, acepto", "si, acepto", "si acepto", "si",
+               "sí, actívenlos", "si, activenlos", "sí, activenlos", "actívenlos", "activenlos")
+        or tl_norm in ("si, acepto", "si acepto", "si",
+                       "si, activenlos", "si activenlos", "activenlos")
+        or txt in ("Sí, acepto", "Si, acepto", "Sí, actívenlos", "Si, activenlos")
     )
     _es_consent_no = (
-        tl in ("no, gracias", "no gracias", "no")
-        or tl_norm in ("no, gracias", "no gracias", "no")
-        or txt in ("No, gracias", "No gracias")
+        tl in ("no, gracias", "no gracias", "no", "no por ahora")
+        or tl_norm in ("no, gracias", "no gracias", "no", "no por ahora")
+        or txt in ("No, gracias", "No gracias", "No por ahora")
     )
     # Guard: solo interceptar si el paciente está en IDLE o tiene una solicitud
     # de consent pendiente. "si" en CONFIRMING_CANCEL, WAIT_SLOT, etc. NO debe
