@@ -865,7 +865,7 @@ async def post_pago(
         prevision = "particular"
 
     metodo_pago = (body.get("metodo_pago") or "efectivo").lower()
-    if metodo_pago not in ("efectivo", "transferencia", "debito", "credito"):
+    if metodo_pago not in ("efectivo", "transferencia", "debito", "credito", "bono_web"):
         metodo_pago = "efectivo"
 
     origen = (body.get("origen") or "presencial").lower()
@@ -1061,6 +1061,7 @@ async def get_pagos(
         "transferencia": 0,
         "debito":        0,
         "credito":       0,
+        "bono_web":      0,
     }
     for p in pagos:
         metodo = (p.get("metodo_pago") or "efectivo").lower()
@@ -1121,7 +1122,7 @@ async def patch_pago(
     if "prevision" in campos and campos["prevision"] not in ("fonasa", "particular"):
         raise HTTPException(400, "prevision debe ser 'fonasa' o 'particular'")
     if "metodo_pago" in campos and campos["metodo_pago"] not in (
-        "efectivo", "transferencia", "debito", "credito"
+        "efectivo", "transferencia", "debito", "credito", "bono_web"
     ):
         raise HTTPException(400, "metodo_pago inválido")
     if "canal" in campos and campos["canal"] not in (
@@ -1338,6 +1339,8 @@ _METODO_CANON: dict[str, str] = {
     "tarjeta crédito": "credito",
     "tarjeta credito": "credito",
     "tarjeta": "credito",
+    "bono_web": "bono_web",
+    "bono web": "bono_web",
 }
 
 

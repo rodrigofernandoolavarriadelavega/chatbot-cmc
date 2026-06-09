@@ -727,6 +727,7 @@
           <button class="metodo-btn" data-metodo="transferencia">Transferencia</button>
           <button class="metodo-btn" data-metodo="debito">Debito</button>
           <button class="metodo-btn" data-metodo="credito">Credito</button>
+          <button class="metodo-btn" data-metodo="bono_web">Bono web</button>
         </div>
         <div class="hint" id="hintMetodo"></div>
       </div>
@@ -2234,7 +2235,7 @@ function buildSavedRow(p, i) {
       <td class="editable" data-col="area" style="color:var(--mute)" title="${esc(p.area || '')}">${esc(p.area || '—')}</td>
       <td class="editable" data-col="prevision" style="overflow:visible;max-width:none"><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Partic.'}</span></td>
       <td class="editable" data-col="copago" style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
-      <td class="editable" data-col="metodo_pago" style="overflow:visible;max-width:none"><span class="pill metodo">${capitalize(p.metodo_pago || 'efectivo')}</span></td>
+      <td class="editable" data-col="metodo_pago" style="overflow:visible;max-width:none"><span class="pill metodo">${capitalize((p.metodo_pago || 'efectivo').replace('_',' '))}</span></td>
       <td class="editable" data-col="folio" style="color:var(--mute)" title="${esc(p.folio || '')}">${esc(p.folio || '—')}</td>
       <td class="editable" data-col="procedimiento" style="color:var(--mute)" title="${esc(p.procedimiento || '')}">${esc(p.procedimiento || '—')}</td>
       <td style="color:var(--mute)" title="${esc(p.canal||'presencial')} ${p.fuente ? '· '+esc(p.fuente) : ''}${p.match_confianza==='probable' ? ' (probable, por nombre)' : ''}">${renderCanalFuente(p.canal, p.fuente, p.match_confianza)}</td>
@@ -2285,8 +2286,8 @@ function buildPrevToggle(containerId, val) {
 }
 
 function buildMetodoBtns(containerId, val) {
-  const opts = ['efectivo','transf.','debito','credito'];
-  const vals = ['efectivo','transferencia','debito','credito'];
+  const opts = ['efectivo','transf.','debito','credito','bono web'];
+  const vals = ['efectivo','transferencia','debito','credito','bono_web'];
   return `<div class="met-mini" id="${containerId}">${vals.map((v,i)=>
     `<button type="button" class="met-btn${v===val?' active':''}" data-v="${v}">${opts[i]}</button>`
   ).join('')}</div>`;
