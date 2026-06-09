@@ -427,9 +427,37 @@
     font-size: 18px; font-weight: 800; color: var(--navy);
     font-variant-numeric: tabular-nums;
   }
+  /* Pill Medilink oficial del día: secundario (borde gris, no aqua) */
+  .caja-efectivo-bar .ce-ml { border-color: var(--border); background: #fff; }
+  .caja-efectivo-bar .ce-ml .ce-label { color: var(--mute); }
+  .caja-efectivo-bar .ce-ml .ce-value { font-size: 15px; color: var(--blue); }
+  .caja-efectivo-bar .ce-ml.pend .ce-value { font-size: 12px; font-weight: 700; color: var(--mute); }
+
+  /* ── Cuadre de ayer: recepción vs Medilink oficial (revisión matutina) ── */
+  .cuadre-ayer {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+    padding: 8px 20px; background: #fff;
+    border-bottom: 1px solid var(--border); font-size: 12px;
+  }
+  .cuadre-ayer .ca-title { font-weight: 800; color: var(--navy); text-transform: uppercase;
+    letter-spacing: .03em; font-size: 11px; }
+  .cuadre-ayer .ca-title b { color: var(--mute); font-weight: 700; margin-left: 4px; }
+  .cuadre-ayer .ca-item { color: var(--mute); font-weight: 600; }
+  .cuadre-ayer .ca-item b { color: var(--navy); font-weight: 800; margin-left: 5px;
+    font-variant-numeric: tabular-nums; }
+  .cuadre-ayer .ca-sep { color: var(--border); font-weight: 700; }
+  .cuadre-ayer .ca-dif { margin-left: auto; font-weight: 800; padding: 4px 11px;
+    border-radius: 8px; font-variant-numeric: tabular-nums; }
+  .cuadre-ayer .ca-dif.ok    { background: #dff5ea; color: #1a7a42; }
+  .cuadre-ayer .ca-dif.info  { background: #fff7e8; color: #9a6a00; }
+  .cuadre-ayer .ca-dif.pend  { background: var(--bg);  color: var(--mute); }
+  .cuadre-ayer .ca-motivo { color: var(--mute); font-size: 10.5px; font-weight: 600;
+    flex: 1 1 100%; margin-top: -2px; }
   @media (max-width: 640px) {
     .caja-efectivo-bar { flex-wrap: wrap; justify-content: space-between; padding: 8px 12px; }
-    .caja-efectivo-bar .ce-pill { flex: 1; justify-content: space-between; }
+    .caja-efectivo-bar .ce-pill { flex: 1 1 100%; justify-content: space-between; }
+    .cuadre-ayer { padding: 8px 12px; }
+    .cuadre-ayer .ca-dif { margin-left: 0; flex: 1 1 100%; text-align: center; }
   }
 </style>
 </head>
@@ -485,6 +513,21 @@
     <span class="ce-label">La caja deber&iacute;a tener</span>
     <span class="ce-value" id="ceValue">$0</span>
   </div>
+  <div class="ce-pill ce-ml pend" id="ceMlPill">
+    <span class="ce-ico">&#128203;</span>
+    <span class="ce-label">Medilink oficial</span>
+    <span class="ce-value" id="ceMedilinkHoy">&#8987; cuadra ma&ntilde;ana</span>
+  </div>
+</div>
+
+<!-- Cuadre de ayer: lo que registró recepción vs la caja oficial de Medilink (T+1) -->
+<div class="cuadre-ayer" id="cuadreAyer" style="display:none">
+  <span class="ca-title">Cuadre de ayer <b id="caFecha"></b></span>
+  <span class="ca-item">Recepci&oacute;n <b id="caRec">&mdash;</b></span>
+  <span class="ca-sep">vs</span>
+  <span class="ca-item">Medilink oficial <b id="caMl">&mdash;</b></span>
+  <span class="ca-dif pend" id="caDif">&mdash;</span>
+  <span class="ca-motivo" id="caMotivo"></span>
 </div>
 
 <!-- Tabla planilla -->
@@ -783,6 +826,7 @@ async function cargarPagos() {
     const d = await r.json();
 
     renderTabla(d.pagos || []);
+    renderMedilinkHoy(d);
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Error al cargar pagos.</td></tr>';
     console.error(e);
@@ -814,6 +858,67 @@ function renderEfectivoCaja(pagos) {
     document.getElementById('ceValue').textContent = _fmtCLP(fondo + _efectivoDia);
   });
 })();
+
+// ── Medilink oficial del día (caja real bi_pagos_caja, sync nocturno T+1) ─────
+// Si el día aún no se sincronizó (n_medilink_caja == 0) → "cuadra mañana".
+function renderMedilinkHoy(d) {
+  const pill = document.getElementById('ceMlPill');
+  const val  = document.getElementById('ceMedilinkHoy');
+  if ((d.n_medilink_caja || 0) > 0) {
+    pill.classList.remove('pend');
+    val.textContent = _fmtCLP(d.total_medilink_caja || 0);
+  } else {
+    pill.classList.add('pend');
+    val.innerHTML = '⌛ cuadra mañana';
+  }
+}
+
+// ── Cuadre de ayer: recepción (pagos_cmc) vs Medilink oficial (bi_pagos_caja) ─
+// "Ayer" = día anterior real (no el seleccionado). Es la revisión del cierre
+// previo: Medilink ya sincronizó la noche pasada, así que ayer cuadra al peso.
+function _yesterdayStr() {
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('en-CA');   // YYYY-MM-DD en hora local
+}
+async function cargarCuadreAyer() {
+  const box = document.getElementById('cuadreAyer');
+  const ayer = _yesterdayStr();
+  try {
+    const r = await fetch('/alma/api/pagos' + qp + '&fecha=' + ayer);
+    if (!r.ok) return;                       // sin datos → no mostrar nada
+    const d = await r.json();
+    const rec = d.total_copago || 0;
+    const ml  = d.total_medilink_caja || 0;
+    const sincronizado = (d.n_medilink_caja || 0) > 0;
+    document.getElementById('caFecha').textContent = ayer.split('-').reverse().join('/');
+    document.getElementById('caRec').textContent = _fmtCLP(rec);
+    const difEl = document.getElementById('caDif');
+    const motEl = document.getElementById('caMotivo');
+    if (!sincronizado) {
+      document.getElementById('caMl').innerHTML = '⌛ pendiente';
+      difEl.className = 'ca-dif pend';
+      difEl.textContent = 'Medilink sincroniza de noche';
+      motEl.textContent = '';
+    } else {
+      document.getElementById('caMl').textContent = _fmtCLP(ml);
+      const dif = ml - rec;                  // + = Medilink registra más que recepción
+      const adif = Math.abs(dif);
+      if (dif === 0) {
+        difEl.className = 'ca-dif ok';
+        difEl.textContent = 'Cuadrado';
+        motEl.textContent = '';
+      } else {
+        // La diferencia es esperable, NO un descuadre: Medilink registra el arancel
+        // Fonasa y recepción el copago de bolsillo (montos distintos), + nombres con
+        // formato distinto. Tono informativo (no alarma roja).
+        difEl.className = 'ca-dif info';
+        difEl.textContent = 'diferencia ' + (dif > 0 ? '+' : '−') + _fmtCLP(adif);
+        motEl.textContent = 'Diferencia esperable: Medilink registra arancel Fonasa, recepción el copago real (+ nombres con distinto formato). No es plata perdida.';
+      }
+    }
+    box.style.display = 'flex';
+  } catch (e) { /* silencioso: el cuadre es un extra, no debe romper la página */ }
+}
 
 function renderTabla(pagos) {
   const tbody = document.getElementById('tablaPagosBody');
@@ -1739,6 +1844,7 @@ document.getElementById('btnPrellenar').addEventListener('click', async () => {
       : (d.mensaje || 'Todo al dia');
     showToast(msg, (d.creadas > 0 || d.actualizadas > 0 || d.eliminadas > 0) ? 'success' : '');
     cargarPagos(); // siempre recargar para reflejar canal/fuente actualizados
+    cargarCuadreAyer();
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
   } finally {
@@ -1824,6 +1930,7 @@ function syncErFuente(canalSel) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 setupTbodyDelegate();
 initData().then(() => cargarPagos());
+cargarCuadreAyer();
 </script>
 </body>
 </html>
