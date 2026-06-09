@@ -4045,6 +4045,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         pass
                 log_event(phone, "seguimiento_mejor",
                           {"especialidad": esp, "rating": rating})
+                # Promotor recién atendido → si luego declina el control, es el
+                # momento de baja presión para ofrecerle el opt-in de avisos.
+                data["pc_promotor"] = True
                 # Pide reseña Google solo a promotores (rating ≥ 4)
                 try:
                     from resilience import spawn_task
@@ -4129,8 +4132,52 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_agendar(phone, data, upsell_esp)
         if tl == "no_control":
             data.pop("upsell_especialidad", None)
+            # Opt-in post-consulta: si un promotor recién atendido declina el
+            # control, es el momento de baja presión para ofrecer los avisos
+            # (ventana 24h abierta → mensaje libre, sin template ni costo). Solo
+            # a quien NUNCA estuvo en el sistema de consent (no re-molestar).
+            if data.pop("pc_promotor", False):
+                try:
+                    from winback import marketing_consent_status
+                    _cs = marketing_consent_status(phone)
+                except Exception:
+                    _cs = "accepted"  # ante error, no molestar
+                if _cs is None:
+                    save_session(phone, "IDLE", data)
+                    log_event(phone, "consent_optin_postconsulta_ofrecido", {})
+                    return _btn_msg(
+                        "¡Gracias por tu confianza! 🙏\n\n¿Quieres que te avisemos "
+                        "por aquí cuando se acerque tu próximo control, para que no "
+                        "se te pase? Puedes desactivarlo cuando quieras.",
+                        [{"id": "pc_consent_si", "title": "Sí, avísenme"},
+                         {"id": "pc_consent_no", "title": "No, gracias"}],
+                    )
+            save_session(phone, "IDLE", data)
             return (
                 "Entendido 😊 Cuando lo necesites, estamos acá.\n"
+                "_Escribe *menu* para volver al inicio._"
+            )
+        if tl == "pc_consent_si":
+            try:
+                from winback import registrar_consent_respuesta
+                registrar_consent_respuesta(phone, "accepted", "postconsulta_optin")
+            except Exception as _ce:
+                log.warning("pc_consent_si registrar error: %s", _ce)
+            log_event(phone, "consent_optin_postconsulta_aceptado", {})
+            return (
+                "¡Listo! ✅ Te avisaremos cuando se acerque tu próximo control. "
+                "Para dejar de recibirlos, escribe *baja* cuando quieras.\n"
+                "_Escribe *menu* para volver al inicio._"
+            )
+        if tl == "pc_consent_no":
+            try:
+                from winback import registrar_consent_respuesta
+                registrar_consent_respuesta(phone, "declined", "postconsulta_optin")
+            except Exception as _ce:
+                log.warning("pc_consent_no registrar error: %s", _ce)
+            log_event(phone, "consent_optin_postconsulta_rechazado", {})
+            return (
+                "Sin problema 😊 No te enviaremos avisos.\n"
                 "_Escribe *menu* para volver al inicio._"
             )
         if tl == "wb_agendar":

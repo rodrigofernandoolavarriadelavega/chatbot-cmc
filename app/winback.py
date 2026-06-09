@@ -261,6 +261,25 @@ def has_marketing_consent(phone: str) -> bool:
         return False
 
 
+def marketing_consent_status(phone: str) -> str | None:
+    """Retorna el status en bi.marketing_consent ('accepted'|'declined'|'pending')
+    o None si el teléfono nunca estuvo en el sistema de consent."""
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT status FROM bi.marketing_consent WHERE phone = %s",
+                    (phone,)
+                )
+                row = cur.fetchone()
+                return row[0] if row else None
+    except Exception as e:
+        log.warning("winback: marketing_consent_status error %s: %s", phone[-4:], e)
+        return None
+
+
 def registrar_consent_enviado(phone: str) -> None:
     """Inserta o actualiza bi.marketing_consent con status='pending' al enviar el consent template."""
     from session import normalize_wa_id
