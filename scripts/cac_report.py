@@ -245,7 +245,11 @@ def bot_funnel(cur, since: str, until: str) -> dict:
 def meta_spend(since: str, until: str) -> dict[str, dict]:
     token = os.getenv("META_ACCESS_TOKEN") or os.getenv("META_CAPI_ACCESS_TOKEN", "")
     acct = os.getenv("META_AD_ACCOUNT_ID", "")
-    if not token or not acct:
+    if not token:
+        print("[!] meta_spend: META_ACCESS_TOKEN / META_CAPI_ACCESS_TOKEN no configurado — spend=0", file=sys.stderr)
+        return {}
+    if not acct:
+        print("[!] meta_spend: META_AD_ACCOUNT_ID no configurado — spend=0", file=sys.stderr)
         return {}
     if not acct.startswith("act_"):
         acct = f"act_{acct}"
@@ -260,13 +264,15 @@ def meta_spend(since: str, until: str) -> dict[str, dict]:
     try:
         r = httpx.get(url, params=params, timeout=30)
         if r.status_code != 200:
-            print(f"[!] Meta API HTTP {r.status_code}: {r.text[:200]}", file=sys.stderr)
+            print(f"[!] meta_spend: Meta API HTTP {r.status_code}: {r.text[:300]}", file=sys.stderr)
             return {}
         data = r.json().get("data", [])
+        if not data:
+            print(f"[!] meta_spend: Meta API devolvió 0 ads para {since}→{until} (¿sin campañas activas o token sin permisos ads_read?)", file=sys.stderr)
     except Exception as e:
-        print(f"[!] Meta API error: {e}", file=sys.stderr)
+        print(f"[!] meta_spend: excepción consultando Meta API: {e}", file=sys.stderr)
         return {}
-    return {row["ad_id"]: {
+    result = {row["ad_id"]: {
         "ad_name": row.get("ad_name", ""),
         "campaign_name": row.get("campaign_name", ""),
         "spend": float(row.get("spend") or 0),
@@ -274,6 +280,9 @@ def meta_spend(since: str, until: str) -> dict[str, dict]:
         "clicks": int(row.get("clicks") or 0),
         "ctr": float(row.get("ctr") or 0),
     } for row in data}
+    total_spend = sum(v["spend"] for v in result.values())
+    print(f"[meta_spend] {len(result)} ads, spend total={total_spend:.0f} CLP, período {since}→{until}")
+    return result
 
 
 # Heurísticas para asociar ad → especialidad (por nombre del ad/campaña)

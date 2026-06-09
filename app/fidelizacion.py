@@ -251,8 +251,9 @@ def _dispatch_capi_purchase(cita: dict) -> None:
     Extraído del flujo post-consulta para llamarlo TANTO en citas únicas COMO por
     cada atención de un grupo multi-cita (teléfono familiar compartido), que antes
     hacía `continue` sin emitir → esas familias quedaban sin conversión atribuida.
-    Recupera el ctwa_clid (ttl 168h) y lo manda como fbc. No lanza: loguea y sigue.
-    Debe llamarse desde contexto async (usa asyncio.create_task).
+    Recupera el ctwa_clid con ttl_horas=2160 (90d) — mismo TTL que _ctwa_clid_for()
+    en flows.py — para cubrir ciclos largos clic-CTWA→agenda→atención. No lanza:
+    loguea y sigue. Debe llamarse desde contexto async (usa asyncio.create_task).
     """
     try:
         import asyncio as _asyncio_fidel
@@ -261,10 +262,14 @@ def _dispatch_capi_purchase(cita: dict) -> None:
         from config import get_arancel_cpl as _get_arancel
         _prof_fidel = _gp_fidel(cita["phone"]) or {}
         _nom_fidel = (cita.get("nombre") or _prof_fidel.get("nombre") or "").split()
-        # Recuperar atribución Meta Ads: ttl_horas=168 cubre ciclo agendar→asistir (7d)
+        # Recuperar atribución Meta Ads: ttl_horas=2160 (90d) porque el ciclo
+        # clic-CTWA→agenda→atención puede superar los 7d (seguimiento crónico,
+        # reagendamientos). 168h (7d) original era insuficiente: pacientes de
+        # campañas CTWA que agendaron hace 2-4 semanas salían con attr=none.
+        # Usar el mismo TTL que _ctwa_clid_for() en flows.py.
         _ref_fidel = None
         try:
-            _ref_fidel = _gmrf(cita["phone"])
+            _ref_fidel = _gmrf(cita["phone"], ttl_horas=2160)
         except Exception as _ref_err:
             log.debug("CAPI: no se pudo leer meta_referral para %s: %s", cita["phone"], _ref_err)
         _ctwa = (_ref_fidel or {}).get("ctwa_clid") or None

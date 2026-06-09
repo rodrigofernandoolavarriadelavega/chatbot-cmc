@@ -975,10 +975,25 @@ async def _job_cac_snapshot():
             proc.kill()
             log.warning("cac_snapshot: timeout (>240s), cancelado")
             return
+        output_str = (stdout or b"").decode("utf-8", "replace")
         if proc.returncode == 0:
-            log.info("cac_snapshot: generado en %s", out)
+            # Extraer línea de auditoría de spend (impresa por meta_spend())
+            spend_line = next(
+                (l for l in output_str.splitlines() if l.startswith("[meta_spend]")),
+                None,
+            )
+            if spend_line:
+                log.info("cac_snapshot: generado en %s | %s", out, spend_line)
+            else:
+                # Sin línea de spend = meta_spend retornó {} (token/config issue)
+                # Buscar mensaje de error en output para diagnosarlo
+                err_lines = [l for l in output_str.splitlines() if l.startswith("[!]")]
+                if err_lines:
+                    log.warning("cac_snapshot: generado con spend=0 — %s", "; ".join(err_lines[:3]))
+                else:
+                    log.info("cac_snapshot: generado en %s (sin datos Meta Ads)", out)
         else:
-            tail = (stdout or b"")[-300:].decode("utf-8", "replace")
+            tail = output_str[-400:]
             log.warning("cac_snapshot: rc=%s out=%s", proc.returncode, tail)
     except Exception as e:
         log.warning("cac_snapshot: fallo %s", e)
