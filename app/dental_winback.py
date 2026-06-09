@@ -752,7 +752,7 @@ async def job_dental_winback_diario() -> None:
 # -- Blast de consent dental --------------------------------------------------
 
 async def run_dental_consent_blast() -> dict:
-    """Envía consent_dental_v1 (UTILITY) a candidatos dentales sin registro consent.
+    """Envía consent_dental_v2 (UTILITY) a candidatos dentales sin registro consent.
 
     Solo corre si DENTAL_CONSENT_BLAST_ACTIVE=true y template APPROVED.
     Max 200/día, 30s entre envíos, L-V 10-19 CLT.
@@ -765,8 +765,8 @@ async def run_dental_consent_blast() -> dict:
         log.debug("dental_winback: consent blast fuera de horario")
         return {"status": "fuera_horario", "enviados": 0}
 
-    if not await is_template_approved("consent_dental_v1"):
-        log.warning("dental_winback: consent_dental_v1 no esta APPROVED en Meta -- skip")
+    if not await is_template_approved("consent_dental_v2"):
+        log.warning("dental_winback: consent_dental_v2 no esta APPROVED en Meta -- skip")
         return {"status": "template_no_aprobado", "enviados": 0}
 
     LIMITE_DIA = 200
@@ -826,10 +826,10 @@ async def run_dental_consent_blast() -> dict:
         try:
             await send_whatsapp_template(
                 phone,
-                "consent_dental_v1",
+                "consent_dental_v2",
                 body_params=[nombre],
             )
-            _lm(phone, "out", _rtb("consent_dental_v1", [nombre]), "IDLE")
+            _lm(phone, "out", _rtb("consent_dental_v2", [nombre]), "IDLE")
             registrar_dental_consent_enviado(phone)
             enviados += 1
             log.info("dental_winback: consent enviado phone=...%s (%d)", phone[-4:], enviados)
@@ -961,7 +961,7 @@ async def send_dental_winback_smart(candidato: dict, prefer_session: bool = True
     """Envía winback dental eligiendo la vía mas económica disponible.
 
     Si prefer_session=True y la ventana 24h está abierta (el paciente acaba
-    de responder al consent_dental_v1), envía session message — costo $0.
+    de responder al consent_dental_v2), envía session message — costo $0.
     Si la ventana está cerrada, usa template MARKETING. El batch diario sigue
     usando send_dental_winback() directamente (ventana siempre cerrada).
     """

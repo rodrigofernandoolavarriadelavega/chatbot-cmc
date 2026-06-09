@@ -1,0 +1,35 @@
+{
+    "name": "consent_dental_v2",
+    "category": "UTILITY",
+    "language": "es_CL",
+    "components": [
+        {
+            "type": "BODY",
+            "text": "Hola {{1}}, le saluda el Centro Médico Carampangue.\n\nPodemos avisarle cuando le toque su control y limpieza dental —y su control de ortodoncia, si está en tratamiento— para que no se le pasen.\n\n¿Quiere que activemos estos avisos para usted? Es gratis y los puede desactivar cuando quiera.\n\nMás información: agentecmc.cl/privacidad",
+            "example": {
+                "body_text": [
+                    [
+                        "Juan"
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "FOOTER",
+            "text": "Su decisión no afecta en nada su atención"
+        },
+        {
+            "type": "BUTTONS",
+            "buttons": [
+                {
+                    "type": "QUICK_REPLY",
+                    "text": "Sí, acepto"
+                },
+                {
+                    "type": "QUICK_REPLY",
+                    "text": "No, gracias"
+                }
+            ]
+        }
+    ]
+}
