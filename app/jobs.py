@@ -2383,11 +2383,11 @@ async def _job_crosssell_dx():
 
 
 async def _job_marketing_consent_blast():
-    """Blast diario L-V 10:30 CLT: envía consent_marketing_v1 (UTILITY)
+    """Blast diario L-V 10:30 CLT: envía consent_marketing_v2 (UTILITY)
     a phones en v_winback_cohortes_contactables sin registro en marketing_consent.
 
     MARKETING_CONSENT_BLAST_ACTIVE=false hasta que Rodrigo confirme
-    que consent_marketing_v1 está APPROVED en Meta.
+    que consent_marketing_v2 está APPROVED en Meta.
     """
     import os as _osc
     if not _osc.getenv("MARKETING_CONSENT_BLAST_ACTIVE", "false").lower() in ("true", "1", "yes"):
@@ -2403,8 +2403,8 @@ async def _job_marketing_consent_blast():
         from datetime import datetime as _dt_mc
 
         # Verificar template aprobado
-        if not await is_template_approved("consent_marketing_v1"):
-            log.warning("consent_template_not_approved: consent_marketing_v1 no está APPROVED en Meta — skip")
+        if not await is_template_approved("consent_marketing_v2"):
+            log.warning("consent_template_not_approved: consent_marketing_v2 no está APPROVED en Meta — skip")
             return
 
         # Ventana horaria L-V 10:30-19:00
@@ -2467,11 +2467,11 @@ async def _job_marketing_consent_blast():
             try:
                 await send_whatsapp_template(
                     phone,
-                    "consent_marketing_v1",
+                    "consent_marketing_v2",
                     body_params=[nombre],
                 )
                 from messaging import render_template_body as _rtb_cm
-                log_message(phone, "out", _rtb_cm("consent_marketing_v1", [nombre]), "IDLE")
+                log_message(phone, "out", _rtb_cm("consent_marketing_v2", [nombre]), "IDLE")
                 registrar_consent_enviado(phone)
                 enviados += 1
                 log.info("consent_blast enviado → %s (%d/%d)", phone, enviados, len(candidates))
