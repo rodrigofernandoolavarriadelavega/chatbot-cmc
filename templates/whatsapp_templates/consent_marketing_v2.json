@@ -1,0 +1,35 @@
+{
+    "name": "consent_marketing_v2",
+    "category": "UTILITY",
+    "language": "es_CL",
+    "components": [
+        {
+            "type": "BODY",
+            "text": "Hola {{1}}, le saluda el Centro Médico Carampangue.\n\nPodemos avisarle cuando se acerque su próximo control y cuando se liberen horas antes con su médico, para que no se le pase ninguna.\n\n¿Quiere que activemos estos avisos para usted? Es gratis y los puede desactivar cuando quiera.\n\nMás información: agentecmc.cl/privacidad",
+            "example": {
+                "body_text": [
+                    [
+                        "Juan"
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "FOOTER",
+            "text": "Su decisión no afecta en nada su atención médica"
+        },
+        {
+            "type": "BUTTONS",
+            "buttons": [
+                {
+                    "type": "QUICK_REPLY",
+                    "text": "Sí, actívenlos"
+                },
+                {
+                    "type": "QUICK_REPLY",
+                    "text": "No por ahora"
+                }
+            ]
+        }
+    ]
+}

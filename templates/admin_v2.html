@@ -2201,6 +2201,7 @@ function renderHeader(){
   acts.push(`<button class="chat-btn ag-cta" onclick="openAgendarModal()" title="Agendar cita en Medilink desde este chat">${iconAgenda}Agendar</button>`);
   const iconPago = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>`;
   acts.push(`<button class="chat-btn pago-cta" onclick="openPagoModal()" title="Registrar pago de este paciente">${iconPago}Pago</button>`);
+  acts.push(`<button class="chat-btn" onclick="pedirConsent()" title="Enviar consentimiento al WhatsApp del paciente (pídeselo de viva voz primero)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Consentir</button>`);
   acts.push(`<button class="chat-btn" onclick="openMarkBookedModal()" title="Marcar cita agendada manualmente">${iconBook}Manual</button>`);
   acts.push(`<a class="chat-btn" href="${MEDILINK_AGENDA_URL}" target="_blank" rel="noopener" title="Abrir la agenda en Medilink">🗓️ Medilink</a>`);
   acts.push(`<button class="chat-btn icon-only" onclick="copyRut()" title="Copiar RUT del paciente">🆔</button>`);
@@ -3754,6 +3755,22 @@ const _pg = {
   metodo: "efectivo",
   sugerenciaAplicada: false,
 };
+
+// Recepción: envía el consentimiento al WhatsApp del paciente para que ÉL
+// confirme (prueba fuerte Ley 21.719). Pídeselo de viva voz primero.
+async function pedirConsent(){
+  if (!activePhone){ toast("Selecciona un chat primero", "error"); return; }
+  const conv   = activeConv || {};
+  const nombre = conv.nombre || conv.phone || "";
+  const first  = nombre ? nombre.split(" ")[0] : "el paciente";
+  if (!confirm(`Vas a enviar el mensaje de consentimiento al WhatsApp de ${first}.\n\nPrimero pídeselo de viva voz ("le mando un mensajito, apriete Sí") y recién confirma aquí.`)) return;
+  try {
+    await api(`/admin/api/privacy/consent/${encodeURIComponent(activePhone)}/send-request?nombre=${encodeURIComponent(nombre || "Paciente")}`, { method: "POST" });
+    toast("Consentimiento enviado ✓ — dile que apriete \"Sí, acepto\"", "success");
+  } catch (e) {
+    toast("No se pudo enviar: " + e.message, "error");
+  }
+}
 
 function openPagoModal(opts){
   const globalMode = !!(opts && opts.global);

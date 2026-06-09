@@ -1982,7 +1982,7 @@ async def api_cancel_by_doctor(id_cita: str, _=Depends(require_admin)):
     return result
 
 
-# ── Ley 19.628: consent + derecho al olvido ──────────────────────────────────
+# ── Ley 21.719: consent + derecho al olvido ──────────────────────────────────
 
 @router.get("/admin/api/privacy/consent/{phone}")
 def api_get_consent(phone: str, _=Depends(require_admin)):
@@ -2001,6 +2001,35 @@ def api_set_consent(phone: str, status: str = Query(..., pattern="^(accepted|dec
     save_privacy_consent(phone_clean, status=status, method="admin")
     log_event(phone_clean, "privacy_consent_admin_set", {"status": status})
     return {"phone": phone_clean, "status": status}
+
+
+@router.post("/admin/api/privacy/consent/{phone}/send-request")
+async def api_send_consent_request(phone: str, nombre: str = Query("Paciente"),
+                                   _=Depends(require_admin)):
+    """Recepción dispara el template de consentimiento al WhatsApp del paciente
+    (tras pedírselo de viva voz). El paciente confirma con el botón 'Sí, acepto'
+    → el handler de flows registra el consent como ACTO DEL PACIENTE
+    (method=whatsapp), que es prueba fuerte bajo Ley 21.719 — no un tick de
+    recepción. Usa el template aprobado consent_marketing_v1 (cuyos botones
+    'Sí, acepto'/'No, gracias' ya reconoce el handler). Cambiar a
+    consent_marketing_v2 cuando Meta lo apruebe + se actualice el handler."""
+    phone_clean = phone.lstrip("+").strip()
+    from messaging import send_whatsapp_template, render_template_body
+    from session import log_message
+    from winback import registrar_consent_enviado
+    nombre_first = (nombre or "Paciente").strip().split(" ")[0] or "Paciente"
+    try:
+        await send_whatsapp_template(phone_clean, "consent_marketing_v1",
+                                     body_params=[nombre_first])
+        log_message(phone_clean, "out",
+                    render_template_body("consent_marketing_v1", [nombre_first]), "IDLE")
+        registrar_consent_enviado(phone_clean)
+        log_event(phone_clean, "privacy_consent_request_sent",
+                  {"via": "recepcion", "template": "consent_marketing_v1"})
+    except Exception as e:
+        log.error("send_consent_request error phone=%s: %s", phone_clean, e)
+        raise HTTPException(502, f"No se pudo enviar el consentimiento: {e}")
+    return {"phone": phone_clean, "sent": True}
 
 
 @router.delete("/admin/api/patient")
