@@ -6155,19 +6155,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return _especialidades_dental_msg()
 
-        # Bug 4 fix: respuesta especial para psiquiatra (no disponible en CMC)
+        # Psiquiatría disponible desde 2026: Dra. Cecilia Unibazo (prof 78),
+        # TELECONSULTA solo jueves 16-20. Antes este branch respondía "no
+        # tenemos psiquiatra" (fósil de cuando no había) y contradecía al
+        # flujo IDLE, que sí agendaba con ella.
         if any(k in tl_norm for k in ("psiquiatra", "psiquiatria", "psiquiatría",
-                                       "psiquiatras", "psiquiatra ")):
-            save_session(phone, "WAIT_ESPECIALIDAD", data)
-            return _btn_msg(
-                "No tenemos psiquiatra en el CMC 😊\n\n"
-                "Sí contamos con *psicólogo adulto* e *infantil*. "
-                "¿Te sirve consultar con el psicólogo?",
-                [
-                    {"id": "psicología", "title": "Sí, psicólogo/a"},
-                    {"id": "menu_volver", "title": "Volver al menú"},
-                ]
-            )
+                                       "psiquiatras")):
+            return await _iniciar_agendar(phone, data, "psiquiatría")
         from medilink import _ids_para_especialidad
         # Traducir ID de lista interactiva al nombre real de especialidad
         especialidad_candidata = _ESP_ID_MAP.get(tl, tl)
