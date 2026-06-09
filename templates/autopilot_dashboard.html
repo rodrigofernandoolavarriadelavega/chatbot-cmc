@@ -883,6 +883,15 @@
       .wb-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
       .wb-badge.ok{background:#e4f6ee;color:#1f9d6b}.wb-badge.no{background:#eef2f6;color:var(--muted)}
       .wb-money{font-weight:800;color:#1f9d6b}
+      .dp-promo{display:none;margin-bottom:16px;border:1px solid var(--line);border-radius:13px;overflow:hidden}
+      .dp-promo.on{display:block}
+      .dp-promo .dp-h{background:linear-gradient(135deg,#0F3F68,#1172AB);color:#fff;padding:10px 16px;font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:8px}
+      .dp-promo .dp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--card)}
+      .dp-promo .dp-c{padding:12px 16px;border-right:1px solid var(--line)}
+      .dp-promo .dp-c:last-child{border-right:0}
+      .dp-promo .dp-n{font-size:23px;font-weight:800;color:var(--navy)}
+      .dp-promo .dp-l{font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.03em}
+      @media(max-width:640px){.dp-promo .dp-grid{grid-template-columns:repeat(2,1fr)}}
     </style>
     <div class="panel">
       <div class="panel-h">
@@ -891,6 +900,7 @@
         <span class="count" id="wbNote">Ingreso = caja real (bi_pagos_caja)</span>
       </div>
       <div class="panel-b">
+        <div id="dpPromo" class="dp-promo"></div>
         <div class="wb-kpis" id="wbKpis"></div>
         <div id="wbDays"><div style="padding:30px;text-align:center;color:var(--muted);font-size:13px">Cargando…</div></div>
       </div>
@@ -1601,8 +1611,26 @@ document.getElementById('tabs').addEventListener('click',e=>{
   vw.style.display = v==='winback'?'block':'none';
   if(v==='winback' && !WB_LOADED) loadWinback();
 });
+async function loadDentalPromo(){
+  try{
+    const p=await (await fetch(`/autopilot/api/dental-promo?token=${TOKEN}`)).json();
+    if(!p || !p.recipientes){ return; }
+    const conv = p.recipientes ? Math.round(p.agendaron/p.recipientes*100) : 0;
+    const el=document.getElementById('dpPromo');
+    el.innerHTML=`
+      <div class="dp-h">🦷 Promo Dental Junio — conversión del flyer</div>
+      <div class="dp-grid">
+        <div class="dp-c"><div class="dp-n">${p.recipientes}</div><div class="dp-l">📨 Recibieron flyer</div></div>
+        <div class="dp-c"><div class="dp-n">${p.respondieron}</div><div class="dp-l">💬 Respondieron</div></div>
+        <div class="dp-c"><div class="dp-n">${p.agendaron} <span style="font-size:13px;color:var(--muted)">(${conv}%)</span></div><div class="dp-l">📅 Agendaron (bot)</div></div>
+        <div class="dp-c"><div class="dp-n">${p.auto_trigger}</div><div class="dp-l">🤖 Auto-trigger</div></div>
+      </div>`;
+    el.classList.add('on');
+  }catch(_){}
+}
 async function loadWinback(){
   WB_LOADED=true;
+  loadDentalPromo();
   let d;
   try{ d=await (await fetch(`/autopilot/api/winback/report?days=180&token=${TOKEN}`)).json(); }
   catch(_){ document.getElementById('wbDays').innerHTML='<div style="padding:24px;color:var(--muted)">No se pudo cargar.</div>'; return; }

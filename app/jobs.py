@@ -2542,6 +2542,32 @@ async def _job_dental_winback() -> None:
 
 # ── Reporte semanal de salud del bot ─────────────────────────────────────────
 
+async def _job_dental_promo_report() -> None:
+    """Diario 09:00 CLT (junio): reporte de conversión de la Promo Dental al dueño.
+    SOLO envía si la ventana de 24h del dueño está abierta (no rebota). Tras junio, no-op."""
+    try:
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo
+        _now = _dt.now(ZoneInfo("America/Santiago"))
+        if (_now.year, _now.month) != (2026, 6):
+            return  # promo solo junio 2026
+        if not ADMIN_ALERT_PHONE:
+            return
+        from session import is_window_open
+        if not is_window_open(ADMIN_ALERT_PHONE):
+            log.info("_job_dental_promo_report: ventana 24h cerrada — skip (no rebota)")
+            return
+        from messaging import send_whatsapp
+        from session import log_message
+        from dental_promo_report import texto_whatsapp
+        txt = texto_whatsapp()
+        await send_whatsapp(ADMIN_ALERT_PHONE, txt)
+        log_message(ADMIN_ALERT_PHONE, "out", txt, "IDLE")
+        log.info("_job_dental_promo_report: enviado al dueño")
+    except Exception as e:
+        log.warning("_job_dental_promo_report fallo: %s", e)
+
+
 async def _job_health_report() -> None:
     """Lunes 09:00 CLT: envía al admin el reporte semanal de salud del bot.
 

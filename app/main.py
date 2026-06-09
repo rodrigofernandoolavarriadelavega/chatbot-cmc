@@ -73,6 +73,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_health_report,
                   _job_watchdog_blast,
                   _job_winback_daily_report,
+                  _job_dental_promo_report,
                   _job_dental_consent_blast,
                   _job_dental_winback,
                   _job_crosssell_post_dental_ortodoncia,
@@ -667,6 +668,13 @@ async def lifespan(app: FastAPI):
         _job_winback_daily_report,
         CronTrigger(day_of_week="mon-fri", hour=19, minute=0, timezone=_CLT),
         id="winback_daily_report",
+        replace_existing=True,
+    )
+    # Reporte conversión Promo Dental Junio: diario 09:00 CLT (solo si ventana 24h abierta; no-op tras junio)
+    scheduler.add_job(
+        _job_dental_promo_report,
+        CronTrigger(hour=9, minute=0, timezone=_CLT),
+        id="dental_promo_report",
         replace_existing=True,
     )
     # Reporte semanal de salud del bot: lunes 09:00 CLT

@@ -1055,3 +1055,11 @@ async def autopilot_plantillas(token: str | None = Query(None), request: Request
                       "winback": len(out["winback"]),
                       "otros": len(out["otros"])}
     return JSONResponse(out)
+
+
+@router.get("/autopilot/api/dental-promo")
+def autopilot_dental_promo(token: str | None = Query(None), request: Request = None):
+    """Conversión de la Promo Dental Junio (flyer) — para el tile en Win-back."""
+    _check_token(token, request)
+    from dental_promo_report import report
+    return JSONResponse(report())
