@@ -58,6 +58,18 @@
     border: 1px solid var(--border); border-radius: 7px;
     padding: 5px 9px; color: var(--navy); background: #fff; cursor: pointer;
   }
+  /* Toggle Día / Rango (mismo patrón que Pagos simple) */
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+  .seg button { border: 0; background: #fff; color: var(--blue); font-family: inherit; font-size: 12px; font-weight: 700; padding: 7px 13px; cursor: pointer; }
+  .seg button.seg-on { background: var(--navy); color: #fff; }
+  #navRango { display: flex; align-items: center; gap: 7px; }
+  #navRango button { border: 1px solid var(--border); background: #fff; color: var(--blue); font-family: inherit; font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+  #navRango button:hover { background: var(--aqua-s); border-color: var(--aqua); }
+  /* En modo Rango el módulo es de consulta/exporta: oculta acciones de día y desactiva edición inline */
+  body.modo-rango #btnNuevoPago,
+  body.modo-rango #btnPrellenar,
+  body.modo-rango #btnCruzarOrigen { display: none !important; }
+  body.modo-rango td.editable { pointer-events: none; cursor: default; }
   .btn-primary {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--aqua); color: #fff; border: 0;
@@ -500,11 +512,22 @@
 <!-- Topbar -->
 <div class="pg-topbar">
   <h1>Pagos</h1>
-  <div class="date-nav">
+  <div class="seg" id="modoSeg">
+    <button id="btnModoDia" class="seg-on">Día</button>
+    <button id="btnModoRango">Rango</button>
+  </div>
+  <div class="date-nav" id="navDia">
     <button id="btnPrevDay" title="Dia anterior">&#8592;</button>
     <input type="date" id="pickerFecha">
     <button id="btnNextDay" title="Dia siguiente">&#8594;</button>
     <button id="btnHoy">Hoy</button>
+  </div>
+  <div class="date-nav" id="navRango" style="display:none">
+    <input type="date" id="pickerDesde">
+    <span style="color:var(--mute);font-weight:700">&#8594;</span>
+    <input type="date" id="pickerHasta">
+    <button id="btnRangoMes" title="Este mes">Este mes</button>
+    <button id="btnRangoMesAnt" title="Mes pasado">Mes pasado</button>
   </div>
   <div class="spacer"></div>
   <button class="btn-prefill" id="btnPrellenar" title="Agrega citas nuevas y rellena prestaciones pendientes desde Medilink">
@@ -2015,6 +2038,47 @@ document.getElementById('btnNextDay').addEventListener('click', () => {
 });
 document.getElementById('btnHoy').addEventListener('click', () => setFecha(todayStr()));
 
+// ── Modo Rango (igual que Pagos simple) ──────────────────────────────────────
+let _modo = 'dia';
+let _desde = todayStr();
+let _hasta = todayStr();
+function setModo(m) {
+  _modo = m;
+  document.body.classList.toggle('modo-rango', m === 'rango');
+  document.getElementById('btnModoDia').classList.toggle('seg-on', m === 'dia');
+  document.getElementById('btnModoRango').classList.toggle('seg-on', m === 'rango');
+  document.getElementById('navDia').style.display = m === 'dia' ? 'flex' : 'none';
+  document.getElementById('navRango').style.display = m === 'rango' ? 'flex' : 'none';
+  if (m === 'rango') {
+    document.getElementById('pickerDesde').value = _desde;
+    document.getElementById('pickerHasta').value = _hasta;
+  }
+  cargarPagos();
+}
+document.getElementById('btnModoDia').addEventListener('click', () => setModo('dia'));
+document.getElementById('btnModoRango').addEventListener('click', () => {
+  if (_modo !== 'rango') { _desde = _fecha; _hasta = _fecha; }
+  setModo('rango');
+});
+document.getElementById('pickerDesde').addEventListener('change', e => {
+  _desde = e.target.value; if (_desde > _hasta) { _hasta = _desde; document.getElementById('pickerHasta').value = _hasta; }
+  cargarPagos();
+});
+document.getElementById('pickerHasta').addEventListener('change', e => {
+  _hasta = e.target.value; if (_hasta < _desde) { _desde = _hasta; document.getElementById('pickerDesde').value = _desde; }
+  cargarPagos();
+});
+function _setRango(d, h) { _desde = d; _hasta = h;
+  document.getElementById('pickerDesde').value = d; document.getElementById('pickerHasta').value = h; cargarPagos(); }
+document.getElementById('btnRangoMes').addEventListener('click', () => {
+  const n = new Date(), y = n.getFullYear(), m = n.getMonth(), f = x => x.toLocaleDateString('en-CA');
+  _setRango(f(new Date(y, m, 1)), f(new Date(y, m + 1, 0)));
+});
+document.getElementById('btnRangoMesAnt').addEventListener('click', () => {
+  const n = new Date(), y = n.getFullYear(), m = n.getMonth(), f = x => x.toLocaleDateString('en-CA');
+  _setRango(f(new Date(y, m - 1, 1)), f(new Date(y, m, 0)));
+});
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const fmt$ = n => n == null ? '—' : '$' + Number(n).toLocaleString('es-CL');
 const fmtHora = s => s ? s.slice(0,5) : '—';
@@ -2068,7 +2132,10 @@ async function cargarPagos() {
   const tbody = document.getElementById('tablaPagosBody');
   tbody.innerHTML = '<tr><td colspan="13" class="loading">Cargando...</td></tr>';
   try {
-    const r = await fetch('/alma/api/pagos' + qp + '&fecha=' + _fecha);
+    const _q = _modo === 'rango'
+      ? (qp + '&fecha_desde=' + _desde + '&fecha_hasta=' + _hasta)
+      : (qp + '&fecha=' + _fecha);
+    const r = await fetch('/alma/api/pagos' + _q);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     renderKPIs(d);
@@ -2094,6 +2161,12 @@ let _editingRowId = null;
 function renderTabla(pagos) {
   const tbody = document.getElementById('tablaPagosBody');
 
+  // Anti-pérdida: preservar la fila de paciente nuevo SIN guardar al recargar
+  // (antes se borraba en silencio al apretar Prellenar / refrescar). Bug 2026-06-08.
+  const _keepNew = (_newRow
+      && (_newRow.querySelector('#nr_nombre')?.value || '').trim())
+      ? _newRow : null;
+
   // Ordenar por hora ascendente; filas sin hora van al final
   pagos = pagos.slice().sort((a, b) => {
     const ha = (a.hora || '').slice(0, 5);
@@ -2106,12 +2179,16 @@ function renderTabla(pagos) {
 
   _pagosCache = pagos;
   if (!pagos.length) {
-    tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para este dia.</td></tr>';
-    _newRow = null; _editingRowId = null;
+    tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para ' + (_modo === 'rango' ? 'este rango' : 'este dia') + '.</td></tr>';
+    _editingRowId = null;
+    if (_keepNew) { tbody.insertBefore(_keepNew, tbody.firstChild); _newRow = _keepNew; }
+    else { _newRow = null; }
     return;
   }
   tbody.innerHTML = pagos.map((p, i) => buildSavedRow(p, i)).join('');
-  _newRow = null; _editingRowId = null;
+  _editingRowId = null;
+  if (_keepNew) { tbody.insertBefore(_keepNew, tbody.firstChild); _newRow = _keepNew; showToast('Tienes un paciente sin guardar — apriétale Guardar', 'info'); }
+  else { _newRow = null; }
 }
 
 function buildSavedRow(p, i) {
@@ -2717,11 +2794,14 @@ document.getElementById('btnExportXlsx').addEventListener('click', () => {
   const btn = document.getElementById('btnExportXlsx');
   btn.disabled = true;
   const sep = qp ? '&' : '?';
-  const url = '/alma/api/pagos/export' + qp + sep + 'fecha=' + _fecha;
+  const _qx = _modo === 'rango'
+    ? (sep + 'fecha_desde=' + _desde + '&fecha_hasta=' + _hasta)
+    : (sep + 'fecha=' + _fecha);
+  const url = '/alma/api/pagos/export' + qp + _qx;
   // Descarga via ancla oculta
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'pagos_' + _fecha + '.xlsx';
+  a.download = 'pagos_' + (_modo === 'rango' ? (_desde + '_' + _hasta) : _fecha) + '.xlsx';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

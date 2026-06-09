@@ -739,6 +739,13 @@ let _editingRowId = null; // id de la fila en modo edicion
 function renderTabla(pagos) {
   const tbody = document.getElementById('tablaPagosBody');
 
+  // Anti-pérdida: si hay una fila de paciente nuevo SIN guardar con datos escritos,
+  // la preservamos para re-insertarla tras el refresco (antes se borraba en silencio
+  // al apretar Prellenar / recargar — el paciente "desaparecía"). Bug 2026-06-08.
+  const _keepNew = (_newRow
+      && (_newRow.querySelector('#nr_nombre')?.value || '').trim())
+      ? _newRow : null;
+
   // Ordenar por hora ascendente; filas sin hora van al final
   pagos = pagos.slice().sort((a, b) => {
     const ha = (a.hora || '').slice(0, 5);
@@ -752,12 +759,14 @@ function renderTabla(pagos) {
   _pagosCache = pagos;
   if (!pagos.length) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para ' + (_modo === 'rango' ? 'este rango' : 'este dia') + '.</td></tr>';
-    _newRow = null;
     _editingRowId = null;
+    if (_keepNew) { tbody.insertBefore(_keepNew, tbody.firstChild); _newRow = _keepNew; }
+    else { _newRow = null; }
     return;
   }
   tbody.innerHTML = pagos.map((p, i) => buildSavedRow(p, i)).join('');
-  _newRow = null;
+  if (_keepNew) { tbody.insertBefore(_keepNew, tbody.firstChild); _newRow = _keepNew; showToast('Tienes un paciente sin guardar — apriétale Guardar', 'info'); }
+  else { _newRow = null; }
   _editingRowId = null;
 }
 
