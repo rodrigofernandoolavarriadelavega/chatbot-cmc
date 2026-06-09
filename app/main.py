@@ -760,6 +760,7 @@ app.include_router(agenda_routes.router)
 
 import agendador_routes
 app.include_router(agendador_routes.router)  # agendador público (cada endpoint gateado)
+import checkin_routes; app.include_router(checkin_routes.router); checkin_routes.ensure_checkin_table()  # Check-in QR (gateado CHECKIN_ENABLED)
 
 import pagos_routes
 app.include_router(pagos_routes.router)
@@ -3019,6 +3020,8 @@ _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(e
 _ALMA_ABONOS_HTML = (_TEMPLATE_DIR / "alma_abonos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_abonos.html").exists() else ""
 _ALMA_CAJA_DIARIA_HTML = (_TEMPLATE_DIR / "alma_caja_diaria.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_caja_diaria.html").exists() else ""
 _ALMA_CAJA_DIARIA_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_caja_diaria_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_caja_diaria_simple.html").exists() else ""
+_CHECKIN_HTML = (_TEMPLATE_DIR / "checkin.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "checkin.html").exists() else ""
+_ALMA_SALA_HTML = (_TEMPLATE_DIR / "alma_sala.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_sala.html").exists() else ""
 _ALMA_ENVIOS_HTML = (_TEMPLATE_DIR / "alma_envios.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_envios.html").exists() else ""
 _ALMA_PAGOS_MEDILINK_HTML = (_TEMPLATE_DIR / "alma_pagos_medilink.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_medilink.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
@@ -3785,6 +3788,32 @@ def alma_caja_diaria_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ALMA_CAJA_DIARIA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/checkin", response_class=HTMLResponse)
+def checkin_page():
+    """Página pública de check-in (paciente escanea QR → pone RUT). Gateada por
+    CHECKIN_ENABLED en los endpoints; la página se sirve siempre."""
+    import os as _os
+    if not _CHECKIN_HTML:
+        raise HTTPException(404, "Check-in no disponible")
+    if _os.getenv("CHECKIN_ENABLED", "false").lower() != "true":
+        raise HTTPException(404, "Check-in no disponible")
+    return _CHECKIN_HTML
+
+
+@app.get("/alma/sala", response_class=HTMLResponse)
+def alma_sala_page(token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None)):
+    """Panel 'En sala' — pacientes que hicieron check-in. Recepción/profesional."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_SALA_HTML:
+        raise HTTPException(404, "Sala no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_SALA_HTML.replace("__TOKEN__", token)
+    if cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia"):
+        return _ALMA_SALA_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

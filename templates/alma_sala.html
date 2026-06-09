@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>En sala — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68;
+    --bg:#F7FBFD; --border:#d6e4ec; --mute:#62788a; --green:#1a7a42; --amber:#9a6a00;
+    --sh:0 1px 3px rgba(15,63,104,.08); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; }
+  body { font-family:'Montserrat',sans-serif; background:var(--bg); color:var(--navy); font-size:13px; }
+  .top { display:flex; align-items:center; gap:10px; background:#fff; border-bottom:1px solid var(--border);
+    padding:0 20px; height:54px; position:sticky; top:0; z-index:10; box-shadow:var(--sh); }
+  .top h1 { font-size:15px; font-weight:800; margin:0; }
+  .top .count { background:var(--aqua-s); color:var(--blue); font-weight:800; font-size:12px;
+    padding:4px 11px; border-radius:20px; }
+  .top .spacer { flex:1; }
+  .top .live { font-size:11px; color:var(--mute); font-weight:600; }
+  .wrap { padding:18px 20px 60px; max-width:760px; margin:0 auto; }
+  .row { display:flex; align-items:center; gap:14px; background:#fff; border:1px solid var(--border);
+    border-radius:14px; padding:14px 16px; margin-bottom:10px; box-shadow:var(--sh); }
+  .row .hora { font-size:20px; font-weight:800; color:var(--blue); min-width:64px; }
+  .row .info { flex:1; }
+  .row .info .nom { font-size:15px; font-weight:800; }
+  .row .info .prof { font-size:12px; color:var(--mute); font-weight:600; }
+  .row .espera { font-size:11px; font-weight:700; color:var(--amber); white-space:nowrap; }
+  .row .pago { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+    padding:3px 8px; border-radius:6px; }
+  .row .pago.si { background:#dff5ea; color:var(--green); }
+  .row .pago.no { background:#fff7e8; color:var(--amber); }
+  .row button { border:0; background:var(--navy); color:#fff; font-family:inherit; font-size:13px;
+    font-weight:700; border-radius:10px; padding:9px 14px; cursor:pointer; white-space:nowrap; }
+  .row button:hover { background:#0c3556; }
+  .empty { text-align:center; color:var(--mute); font-weight:600; padding:50px 0; }
+  .empty .big { font-size:38px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>En sala de espera</h1>
+  <span class="count" id="count">—</span>
+  <div class="spacer"></div>
+  <span class="live">● actualiza solo</span>
+</div>
+<div class="wrap"><div id="list"><div class="empty">Cargando…</div></div></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
+function esperaTxt(iso){
+  if(!iso) return '';
+  const t = new Date(iso.replace(' ','T')+'Z');
+  const min = Math.max(0, Math.round((Date.now()-t.getTime())/60000));
+  return min < 60 ? `esperando ${min} min` : `esperando ${Math.floor(min/60)}h ${min%60}m`;
+}
+async function cargar(){
+  try{
+    const r = await fetch('/checkin/api/en-sala'+qp);
+    if(!r.ok) throw new Error();
+    const d = await r.json();
+    document.getElementById('count').textContent = d.total + (d.total===1?' paciente':' pacientes');
+    const list = document.getElementById('list');
+    if(!d.en_sala.length){ list.innerHTML='<div class="empty"><div class="big">🪑</div>Nadie en sala por ahora.</div>'; return; }
+    list.innerHTML='';
+    d.en_sala.forEach(p=>{
+      const div=document.createElement('div'); div.className='row';
+      div.innerHTML=`<div class="hora">${p.hora_cita||'—'}</div>
+        <div class="info"><div class="nom">${p.paciente_nombre||'Paciente'}</div>
+          <div class="prof">${p.profesional||''}</div></div>
+        <span class="espera">${esperaTxt(p.llegada_at)}</span>
+        <span class="pago ${p.pagado?'si':'no'}">${p.pagado?'Pagado':'Por cobrar'}</span>
+        <button data-id="${p.id}">Atendido</button>`;
+      div.querySelector('button').addEventListener('click', ()=>atendido(p.id));
+      list.appendChild(div);
+    });
+  }catch(e){ document.getElementById('list').innerHTML='<div class="empty">Error al cargar.</div>'; }
+}
+async function atendido(id){
+  try{ await fetch('/checkin/api/atendido/'+id+qp, {method:'POST'}); cargar(); }
+  catch(e){}
+}
+cargar();
+setInterval(cargar, 20000);  // refresco cada 20s
+</script>
+</body>
+</html>

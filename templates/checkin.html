@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Check-in — Centro Médico Carampangue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68;
+    --bg:#F7FBFD; --border:#d6e4ec; --mute:#62788a; --green:#1a7a42; --red:#e84545;
+    --sh:0 10px 34px rgba(15,63,104,.14); }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Montserrat',sans-serif; background:var(--bg); color:var(--navy);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:26px 18px 50px; }
+  .card { width:100%; max-width:440px; background:#fff; border:1px solid var(--border);
+    border-radius:20px; box-shadow:var(--sh); padding:26px 22px; }
+  .brand { text-align:center; margin-bottom:18px; }
+  .brand .t { font-size:13px; font-weight:800; letter-spacing:.02em; color:var(--navy); }
+  .brand .s { font-size:11px; font-weight:700; letter-spacing:.18em; color:var(--aqua); text-transform:uppercase; }
+  h1 { font-size:20px; font-weight:800; margin:4px 0 4px; text-align:center; }
+  .sub { font-size:13px; color:var(--mute); text-align:center; margin-bottom:20px; font-weight:500; }
+  label { font-size:12px; font-weight:700; color:var(--mute); text-transform:uppercase; letter-spacing:.03em; }
+  input { width:100%; font-family:inherit; font-size:18px; font-weight:700; color:var(--navy);
+    border:1.5px solid var(--border); border-radius:12px; padding:13px 15px; margin-top:7px; text-align:center; }
+  input:focus { outline:none; border-color:var(--aqua); box-shadow:0 0 0 3px rgba(79,190,206,.18); }
+  button.primary { width:100%; border:0; background:var(--navy); color:#fff; font-family:inherit;
+    font-size:16px; font-weight:800; border-radius:12px; padding:14px; margin-top:16px; cursor:pointer; }
+  button.primary:disabled { opacity:.5; }
+  .cita { border:1.5px solid var(--border); border-radius:14px; padding:15px; margin-top:14px; }
+  .cita .h { font-size:22px; font-weight:800; color:var(--blue); }
+  .cita .p { font-size:14px; font-weight:700; margin-top:2px; }
+  .cita .e { font-size:12px; color:var(--mute); font-weight:600; }
+  .cita button { width:100%; border:0; background:var(--aqua); color:#fff; font-family:inherit;
+    font-size:15px; font-weight:800; border-radius:11px; padding:12px; margin-top:12px; cursor:pointer; }
+  .cita button:disabled { background:var(--green); }
+  .ok { text-align:center; padding:20px 0; }
+  .ok .big { font-size:40px; }
+  .ok .msg { font-size:18px; font-weight:800; color:var(--green); margin-top:8px; }
+  .ok .sub2 { font-size:13px; color:var(--mute); font-weight:600; margin-top:6px; }
+  .err { color:var(--red); font-size:13px; font-weight:700; text-align:center; margin-top:12px; }
+  .muted { color:var(--mute); font-size:13px; font-weight:600; text-align:center; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand"><div class="t">Centro Médico</div><div class="s">Carampangue</div></div>
+
+  <div id="step-rut">
+    <h1>Avísanos que llegaste</h1>
+    <div class="sub">Escribe tu RUT para registrar tu llegada y pasar a la sala de espera.</div>
+    <label for="rut">Tu RUT</label>
+    <input id="rut" inputmode="numeric" placeholder="12.345.678-9" autocomplete="off">
+    <button class="primary" id="btnBuscar">Buscar mi hora</button>
+    <div class="err" id="errRut" style="display:none"></div>
+  </div>
+
+  <div id="step-citas" style="display:none">
+    <h1 id="hola">Hola</h1>
+    <div class="sub">Toca tu hora para avisar que llegaste.</div>
+    <div id="citas"></div>
+    <div class="muted"><a href="#" id="otroRut" style="color:var(--blue)">Buscar otro RUT</a></div>
+  </div>
+
+  <div id="step-ok" style="display:none">
+    <div class="ok">
+      <div class="big">🪑</div>
+      <div class="msg">¡Estás en sala de espera!</div>
+      <div class="sub2" id="okSub">Toma asiento, te llamaremos pronto.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _ctx = {};
+function show(step){ ['rut','citas','ok'].forEach(s=>document.getElementById('step-'+s).style.display = s===step?'block':'none'); }
+
+document.getElementById('btnBuscar').addEventListener('click', buscar);
+document.getElementById('rut').addEventListener('keydown', e=>{ if(e.key==='Enter') buscar(); });
+document.getElementById('otroRut').addEventListener('click', e=>{ e.preventDefault(); show('rut'); });
+
+async function buscar(){
+  const rut = document.getElementById('rut').value.trim();
+  const err = document.getElementById('errRut');
+  err.style.display='none';
+  if(rut.replace(/[^0-9kK]/g,'').length < 7){ err.textContent='Escribe tu RUT completo'; err.style.display='block'; return; }
+  const btn = document.getElementById('btnBuscar'); btn.disabled=true; btn.textContent='Buscando…';
+  try{
+    const r = await fetch('/checkin/api/buscar?rut='+encodeURIComponent(rut));
+    if(!r.ok) throw new Error('No disponible');
+    const d = await r.json();
+    if(!d.encontrado || !d.citas || !d.citas.length){
+      err.textContent = (d.mensaje || 'No encontramos tu hora de hoy. Acércate a recepción.');
+      err.style.display='block'; return;
+    }
+    _ctx = {rut, nombre:d.nombre};
+    document.getElementById('hola').textContent = 'Hola, ' + (d.nombre||'').split(' ')[0];
+    const cont = document.getElementById('citas'); cont.innerHTML='';
+    d.citas.forEach(c=>{
+      const div = document.createElement('div'); div.className='cita';
+      div.innerHTML = `<div class="h">${c.hora||''}</div>
+        <div class="p">${c.profesional||''}</div>
+        <div class="e">${c.especialidad||''}</div>
+        <button ${c.ya_en_sala?'disabled':''}>${c.ya_en_sala?'✓ Ya estás en sala':'Avisar que llegué'}</button>`;
+      const b = div.querySelector('button');
+      if(!c.ya_en_sala) b.addEventListener('click', ()=>llegada(c, b));
+      cont.appendChild(div);
+    });
+    show('citas');
+  }catch(e){ err.textContent='No se pudo buscar. Intenta de nuevo o acércate a recepción.'; err.style.display='block'; }
+  finally{ btn.disabled=false; btn.textContent='Buscar mi hora'; }
+}
+
+async function llegada(c, btn){
+  btn.disabled=true; btn.textContent='Registrando…';
+  try{
+    const r = await fetch('/checkin/api/llegada', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id_cita:c.id_cita, rut:_ctx.rut, nombre:_ctx.nombre,
+        profesional:c.profesional, id_profesional:c.id_profesional, hora:c.hora})});
+    if(!r.ok) throw new Error();
+    const d = await r.json();
+    document.getElementById('okSub').textContent = (c.hora? `Tu hora de las ${c.hora}. ` : '') + 'Toma asiento, te llamaremos pronto.';
+    show('ok');
+  }catch(e){ btn.disabled=false; btn.textContent='Avisar que llegué'; alert('No se pudo registrar, avísale a recepción.'); }
+}
+</script>
+</body>
+</html>
