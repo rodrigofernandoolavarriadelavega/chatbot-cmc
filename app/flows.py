@@ -6912,6 +6912,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             from medilink import _ids_para_especialidad
             ids_apellido = set(_ids_para_especialidad(_apellido_slot))
             if ids_apellido:
+                # PROFESIONALES no está importado en el scope de handle_message:
+                # usarlo crudo abajo (6959/6966) lanzaba NameError → "Tuve un
+                # problema técnico" + reset (66 casos en logs 2026-06-08/09).
+                # Alias propio para no convertir PROFESIONALES en local de toda
+                # la función (evita el UnboundLocalError de _responder_pregunta_horario).
+                from medilink import PROFESIONALES as _PROFS_AP
                 slots_de_ese = [s for s in todos_slots if s.get("id_profesional") in ids_apellido]
                 if slots_de_ese:
                     # Bug 7 fix: si el texto también menciona una hora (ej. "Andrés Abarca
