@@ -1975,15 +1975,13 @@ async def prellenar_pagos(
                 if _total and int(_total) > 0 and not existing.get("monto_medilink"):
                     monto_update = int(_total)   # arancel real Medilink (Fase B + backfill filas llenas)
                 if es_draft:
+                    # Solo derivamos la PREVISIÓN real (fonasa/particular del convenio).
+                    # El copago se deja en 0: recepción pone el monto real al cobrar; no
+                    # reintroducimos el precio sugerido en re-corridas (decisión dueño
+                    # 2026-06-09). copago_update queda None a propósito.
                     prev_calc = _convenio_a_prevision(convenio)
-                    sug = _sugerir_copago(existing.get("area") or "", prev_calc, existing.get("id_profesional"))
-                    copago_calc = int(sug.get("copago_sugerido") or 0)
                     if prev_calc != (existing.get("prevision") or "particular"):
                         prev_update = prev_calc
-                    if copago_calc and copago_calc != existing.get("copago", 0):
-                        copago_update = copago_calc
-                        if prev_update is None:  # si cambia el copago, fijar también la previsión coherente
-                            prev_update = prev_calc
 
             # Normalizar nombre del profesional (etiqueta única en Pagos)
             id_prof_cita = cita.get("id_profesional")
@@ -2064,8 +2062,9 @@ async def prellenar_pagos(
         # Previsión + precio desde la atención de Medilink (convenio → fonasa/particular).
         convenio, _total = await _fetch_atencion_meta(id_aten)
         prevision_cita = _convenio_a_prevision(convenio)
-        sug = _sugerir_copago(area, prevision_cita, id_prof)
-        copago_sug = int(sug.get("copago_sugerido") or 0)
+        # El copago se siembra en 0 a propósito (ver INSERT): recepción pone el monto
+        # real al cobrar. NO pre-cargamos el precio particular sugerido porque aparentaba
+        # un cobro que no ocurrió (decisión dueño 2026-06-09).
 
         # Derivar atribución (canal/fuente/confianza). El teléfono de la ficha de
         # Medilink hace el cruce EXACTO; rut_cita ya viene relleno desde la ficha.
@@ -2097,7 +2096,7 @@ async def prellenar_pagos(
                         profesional,
                         area,
                         prevision_cita,
-                        copago_sug,
+                        0,                  # pago 0 por defecto — recepción registra el monto real al cobrar
                         prestacion,
                         origen_cita,
                         id_cita_str,
