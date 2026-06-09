@@ -15,7 +15,8 @@ Cada entrada incluye `meta_payload()`-able fields para crear el template vía
 POST /{WABA_ID}/message_templates sin re-escribir componentes.
 """
 
-FOOTER = "Centro Médico Carampangue · Escribe SALIR para no recibir más mensajes"
+# Meta limita el FOOTER a 60 caracteres — este mide 53.
+FOOTER = "Centro Médico Carampangue · SALIR para no recibir más"
 
 # Botones por defecto: 3 quick-replies (máx Meta para QUICK_REPLY puros).
 _BTN_DEFAULT = ["Agendar mi hora", "Ver horarios", "No por ahora"]
