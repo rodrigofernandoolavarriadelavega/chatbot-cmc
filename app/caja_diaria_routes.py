@@ -200,6 +200,108 @@ def get_caja_diaria(
     }
 
 
+# ── GET /saldo: "lo que hay en la caja en el momento" (vista recepción) ──────
+# Efectivo acumulado que aún NO se deposita = Σ efectivo − Σ depósito (hasta hoy).
+# El efectivo de HOY se suma desde Pagos aunque recepción aún no lo anote en el libro.
+
+@router.get("/saldo")
+def get_saldo_actual(
+    request: Request,
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+):
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    ensure_caja_diaria_table()
+    hoy = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
+
+    from session import _conn
+    with _conn() as conn:
+        r = conn.execute(
+            """SELECT COALESCE(SUM(monto_efectivo),0), COALESCE(SUM(valor_deposito),0)
+                 FROM caja_diaria WHERE fecha <= ?""",
+            (hoy,),
+        ).fetchone()
+        libro_efectivo = int(r[0] or 0)
+        libro_deposito = int(r[1] or 0)
+        hoy_en_libro = conn.execute(
+            "SELECT monto_efectivo FROM caja_diaria WHERE fecha = ?", (hoy,)
+        ).fetchone()
+        ult = conn.execute(
+            """SELECT fecha, valor_deposito FROM caja_diaria
+                WHERE valor_deposito > 0 ORDER BY fecha DESC, id DESC LIMIT 1"""
+        ).fetchone()
+
+    # Efectivo de HOY: del libro si ya lo anotaron; si no, desde Pagos (efectivo del día)
+    pagos_hoy = _efectivo_pagos_por_fecha(hoy, hoy).get(hoy, 0)
+    if hoy_en_libro is not None:
+        efectivo_hoy = int(hoy_en_libro[0] or 0)
+        extra_hoy = 0   # ya contabilizado en libro_efectivo
+    else:
+        efectivo_hoy = pagos_hoy
+        extra_hoy = pagos_hoy   # aún no en el libro → sumar al saldo
+
+    en_caja = libro_efectivo - libro_deposito + extra_hoy
+
+    return {
+        "en_caja":          en_caja,                 # lo que hay en la caja ahora
+        "efectivo_hoy":     efectivo_hoy,            # efectivo recaudado hoy
+        "pagos_hoy":        pagos_hoy,               # efectivo de hoy según Pagos (referencia)
+        "hoy_en_libro":     hoy_en_libro is not None,
+        "fecha":            hoy,
+        "ultimo_deposito":  {"fecha": ult[0], "valor": int(ult[1] or 0)} if ult else None,
+    }
+
+
+# ── POST /deposito: recepción registra un depósito (baja el efectivo en caja) ─
+# Se anota en la fila del día de caja (default hoy): SUMA al valor_deposito y fija
+# fecha_deposito. No pisa el monto_efectivo. El detalle fino vive en OLACORE.
+
+@router.post("/deposito")
+async def registrar_deposito(
+    request: Request,
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+):
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    ensure_caja_diaria_table()
+    body = await request.json()
+    valor = _vint(body.get("valor"))
+    if valor <= 0:
+        raise HTTPException(400, "El valor del depósito debe ser > 0")
+    hoy = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
+    fecha_caja = _vfecha(body.get("fecha")) or hoy
+    fecha_dep  = _vfecha(body.get("fecha_deposito")) or hoy
+    dias       = (body.get("dias_corresponden") or "").strip()
+
+    from session import _conn
+    with _conn() as conn:
+        ex = conn.execute(
+            "SELECT id, valor_deposito, dias_corresponden FROM caja_diaria WHERE fecha = ?",
+            (fecha_caja,),
+        ).fetchone()
+        if ex:
+            nuevo = int(ex["valor_deposito"] or 0) + valor
+            ndias = dias or (ex["dias_corresponden"] or "")
+            conn.execute(
+                """UPDATE caja_diaria SET valor_deposito = ?, fecha_deposito = ?,
+                          dias_corresponden = ?, updated_at = datetime('now') WHERE id = ?""",
+                (nuevo, fecha_dep, ndias, ex["id"]),
+            )
+        else:
+            # No hay fila para ese día → la creamos con el efectivo de Pagos como base
+            efec = _efectivo_pagos_por_fecha(fecha_caja, fecha_caja).get(fecha_caja, 0)
+            conn.execute(
+                """INSERT INTO caja_diaria
+                      (fecha, monto_efectivo, comentario, fecha_deposito, valor_deposito,
+                       dias_corresponden, creado_por, created_at, updated_at)
+                   VALUES (?,?,?,?,?,?, 'recepcion', datetime('now'), datetime('now'))""",
+                (fecha_caja, efec, "", fecha_dep, valor, dias),
+            )
+        conn.commit()
+    log.info("caja_diaria depósito registrado fecha=%s valor=%d", fecha_caja, valor)
+    return {"ok": True, "valor": valor}
+
+
 # ── POST: crear/actualizar la fila de un día (upsert por fecha) ──────────────
 
 @router.post("")
