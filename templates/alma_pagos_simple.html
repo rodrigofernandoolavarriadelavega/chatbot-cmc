@@ -907,13 +907,18 @@ async function cargarCuadreAyer() {
         difEl.className = 'ca-dif ok';
         difEl.textContent = 'Cuadrado';
         motEl.textContent = '';
+      } else if (dif > 0) {
+        // Medilink registra el arancel COMPLETO del Fonasa; recepción el copago de
+        // bolsillo. La diferencia ≈ la bonificación que paga Imed → CUADRA:
+        // copago + bonif Imed = arancel Medilink. No es caja faltante.
+        difEl.className = 'ca-dif ok';
+        difEl.textContent = '≈ Bonif. Imed +' + _fmtCLP(dif);
+        motEl.textContent = 'Cuadra: copago de recepción + bonificación Imed (Fonasa) = arancel completo de Medilink. La diferencia la paga el seguro, no es caja faltante.';
       } else {
-        // La diferencia es esperable, NO un descuadre: Medilink registra el arancel
-        // Fonasa y recepción el copago de bolsillo (montos distintos), + nombres con
-        // formato distinto. Tono informativo (no alarma roja).
+        // recepción registró MÁS que la caja oficial → vale revisar (poco común).
         difEl.className = 'ca-dif info';
-        difEl.textContent = 'diferencia ' + (dif > 0 ? '+' : '−') + _fmtCLP(adif);
-        motEl.textContent = 'Diferencia esperable: Medilink registra arancel Fonasa, recepción el copago real (+ nombres con distinto formato). No es plata perdida.';
+        difEl.textContent = 'recepción +' + _fmtCLP(adif);
+        motEl.textContent = 'Recepción registró más que la caja oficial de Medilink: posible pago duplicado o atención aún sin sincronizar en Medilink. Conviene revisar.';
       }
     }
     box.style.display = 'flex';
