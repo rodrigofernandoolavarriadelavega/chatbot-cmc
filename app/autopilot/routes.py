@@ -1057,9 +1057,22 @@ async def autopilot_plantillas(token: str | None = Query(None), request: Request
     return JSONResponse(out)
 
 
+@router.get("/autopilot/api/plantillas/biblioteca")
+def autopilot_plantillas_biblioteca(token: str | None = Query(None), request: Request = None):
+    """Biblioteca comercial de plantillas por profesional (borradores Meta-ready).
+
+    Capa anterior del embudo a las APROBADAS: copy comercial con precios
+    reales por cada profesional activo, con el payload exacto para crearlas
+    vía la Management API. No envía nada — solo data estática del repo."""
+    _check_token(token, request)
+    from . import plantillas_profesionales
+    return JSONResponse(plantillas_profesionales.get_biblioteca())
+
+
 @router.get("/autopilot/api/dental-promo")
 def autopilot_dental_promo(token: str | None = Query(None), request: Request = None):
     """Conversión de la Promo Dental Junio (flyer) — para el tile en Win-back."""
     _check_token(token, request)
     from dental_promo_report import report
     return JSONResponse(report())
+
