@@ -1774,6 +1774,7 @@ async def prellenar_pagos(
             existing_by_rut[row["rut"]] = meta
 
     creadas = actualizadas = saltadas = errores = 0
+    no_asiste = eliminadas = 0   # no-shows detectados / placeholders borradas
 
     async def _fetch_prestacion(id_aten) -> str:
         """Obtiene prestaciones desde /atenciones/{id}/detalles. Throttleado."""
@@ -1872,6 +1873,46 @@ async def prellenar_pagos(
 
         # Buscar si ya existe una fila para esta cita (por id_cita; rut viene vacío de /citas)
         existing = existing_by_id_cita.get(id_cita_str) if id_cita_str else None
+
+        # ── No-show: recepción marcó la cita como "No asiste" en Medilink ─────
+        # El paciente no acudió → no corresponde figurar como pago. Borramos su
+        # fila placeholder (la que creó prellenar y nadie cobró) y la saltamos.
+        # NUNCA tocamos una fila con cobro real: si tiene método de pago, está
+        # bloqueada, o la creó recepción a mano, se respeta (cuenta como saltada).
+        estado_cita = (cita.get("estado_cita") or "").strip().lower()
+        if "asiste" in estado_cita:          # "No asiste" / "No asistió a la cita"
+            no_asiste += 1
+            if existing and existing.get("db_id") is not None:
+                _placeholder_sin_cobro = (
+                    existing.get("creado_por") == "prellenar"
+                    and not (existing.get("metodo_pago") or "").strip()
+                    and not existing.get("bloqueado")
+                )
+                if _placeholder_sin_cobro:
+                    try:
+                        with _conn() as conn:
+                            conn.execute(
+                                "DELETE FROM pagos_cmc WHERE id = ? "
+                                "AND creado_por = 'prellenar' "
+                                "AND COALESCE(metodo_pago,'') = '' "
+                                "AND COALESCE(bloqueado,0) = 0",
+                                (existing["db_id"],),
+                            )
+                            conn.commit()
+                        eliminadas += 1
+                        log.info(
+                            "prellenar_pagos: no-show → fila placeholder eliminada id=%d cita=%s estado=%r",
+                            existing["db_id"], id_cita_str, estado_cita,
+                        )
+                    except Exception as e_del:
+                        log.warning(
+                            "prellenar_pagos: error DELETE no-show id=%s: %s",
+                            existing.get("db_id"), e_del,
+                        )
+                        errores += 1
+                else:
+                    saltadas += 1   # fila con cobro real / manual → no se borra
+            continue
 
         # Pedir la ficha (rut+tel) SOLO si hace falta — evita 504 por timeout en
         # re-ejecuciones: si la fila ya tiene RUT y canal resuelto, no se consulta.
@@ -2079,10 +2120,12 @@ async def prellenar_pagos(
             errores += 1
 
     log.info(
-        "prellenar_pagos: fecha=%s creadas=%d actualizadas=%d saltadas=%d errores=%d",
-        fecha_iso, creadas, actualizadas, saltadas, errores,
+        "prellenar_pagos: fecha=%s creadas=%d actualizadas=%d saltadas=%d "
+        "no_asiste=%d eliminadas=%d errores=%d",
+        fecha_iso, creadas, actualizadas, saltadas, no_asiste, eliminadas, errores,
     )
-    return {"creadas": creadas, "actualizadas": actualizadas, "saltadas": saltadas, "errores": errores}
+    return {"creadas": creadas, "actualizadas": actualizadas, "saltadas": saltadas,
+            "no_asiste": no_asiste, "eliminadas": eliminadas, "errores": errores}
 
 
 @router.patch("/{pago_id}/lock")

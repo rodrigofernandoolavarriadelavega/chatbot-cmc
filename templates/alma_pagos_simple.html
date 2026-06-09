@@ -387,6 +387,50 @@
   body.modo-rango #btnPrellenar,
   body.modo-rango #btnCruzarOrigen { display: none !important; }
   body.modo-rango td.editable { pointer-events: none; cursor: default; }
+
+  /* ── Efectivo en caja (cierre simple de recepción) ──
+     Fondo inicial + efectivo del día = lo que debería estar físicamente en el cajón.
+     Es un concepto de cierre DIARIO → se oculta en modo Rango. */
+  .caja-efectivo-bar {
+    display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+    padding: 9px 20px; background: var(--aqua-s);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 54px; z-index: 19;
+  }
+  body.modo-rango .caja-efectivo-bar { display: none; }
+  .caja-efectivo-bar .ce-fondo {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 700; color: var(--mute);
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+  .caja-efectivo-bar .ce-fondo input {
+    width: 96px; font-family: inherit; font-size: 13px; font-weight: 700;
+    color: var(--navy); text-align: right;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 9px; background: #fff;
+  }
+  .caja-efectivo-bar .ce-fondo input:focus {
+    outline: none; border-color: var(--aqua);
+    box-shadow: 0 0 0 2px rgba(79,190,206,.18);
+  }
+  .caja-efectivo-bar .ce-pill {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: #fff; border: 1.5px solid var(--aqua); border-radius: 11px;
+    padding: 7px 15px; box-shadow: var(--sh-sm);
+  }
+  .caja-efectivo-bar .ce-ico { font-size: 16px; line-height: 1; }
+  .caja-efectivo-bar .ce-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--blue);
+  }
+  .caja-efectivo-bar .ce-value {
+    font-size: 18px; font-weight: 800; color: var(--navy);
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 640px) {
+    .caja-efectivo-bar { flex-wrap: wrap; justify-content: space-between; padding: 8px 12px; }
+    .caja-efectivo-bar .ce-pill { flex: 1; justify-content: space-between; }
+  }
 </style>
 </head>
 <body>
@@ -428,6 +472,19 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     Nueva fila
   </button>
+</div>
+
+<!-- Efectivo en caja: fondo inicial + efectivo del día (cierre diario simple) -->
+<div class="caja-efectivo-bar" id="cajaEfectivoBar">
+  <label class="ce-fondo">
+    Fondo inicial
+    <input type="number" id="ceFondo" min="0" step="1000" placeholder="0" value="0">
+  </label>
+  <div class="ce-pill">
+    <span class="ce-ico">&#128181;</span>
+    <span class="ce-label">La caja deber&iacute;a tener</span>
+    <span class="ce-value" id="ceValue">$0</span>
+  </div>
 </div>
 
 <!-- Tabla planilla -->
@@ -736,6 +793,28 @@ async function cargarPagos() {
 let _pagosCache = [];   // copia en memoria de las filas cargadas
 let _editingRowId = null; // id de la fila en modo edicion
 
+// ── Efectivo en caja = fondo inicial + efectivo recaudado del día ────────────
+// Solo cuenta el método efectivo (transferencia/débito/crédito no quedan en el
+// cajón). El fondo lo escribe recepción en la mañana y persiste en el navegador.
+let _efectivoDia = 0;
+function _fmtCLP(n) { return '$' + (Number(n) || 0).toLocaleString('es-CL'); }
+function renderEfectivoCaja(pagos) {
+  _efectivoDia = (pagos || []).reduce((s, p) =>
+    s + (((p.metodo_pago || 'efectivo') === 'efectivo') ? (p.copago || 0) : 0), 0);
+  const fondo = parseInt(document.getElementById('ceFondo').value, 10) || 0;
+  document.getElementById('ceValue').textContent = _fmtCLP(fondo + _efectivoDia);
+}
+(function initFondoCaja() {
+  const f = document.getElementById('ceFondo');
+  const saved = localStorage.getItem('cmc_caja_fondo');
+  if (saved !== null) f.value = saved;
+  f.addEventListener('input', () => {
+    localStorage.setItem('cmc_caja_fondo', f.value);
+    const fondo = parseInt(f.value, 10) || 0;
+    document.getElementById('ceValue').textContent = _fmtCLP(fondo + _efectivoDia);
+  });
+})();
+
 function renderTabla(pagos) {
   const tbody = document.getElementById('tablaPagosBody');
 
@@ -757,6 +836,7 @@ function renderTabla(pagos) {
   });
 
   _pagosCache = pagos;
+  renderEfectivoCaja(pagos);
   if (!pagos.length) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin pagos registrados para ' + (_modo === 'rango' ? 'este rango' : 'este dia') + '.</td></tr>';
     _editingRowId = null;
@@ -1653,10 +1733,11 @@ document.getElementById('btnPrellenar').addEventListener('click', async () => {
     const partes = [];
     if (d.creadas      > 0) partes.push(`${d.creadas} nueva${d.creadas>1?'s':''}`);
     if (d.actualizadas > 0) partes.push(`${d.actualizadas} actualizada${d.actualizadas>1?'s':''}`);
+    if (d.eliminadas   > 0) partes.push(`${d.eliminadas} quitada${d.eliminadas>1?'s':''} (no asistió)`);
     const msg = partes.length > 0
       ? partes.join(' · ')
       : (d.mensaje || 'Todo al dia');
-    showToast(msg, (d.creadas > 0 || d.actualizadas > 0) ? 'success' : '');
+    showToast(msg, (d.creadas > 0 || d.actualizadas > 0 || d.eliminadas > 0) ? 'success' : '');
     cargarPagos(); // siempre recargar para reflejar canal/fuente actualizados
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
