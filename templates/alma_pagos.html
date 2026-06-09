@@ -436,6 +436,10 @@
   .caja-concil .cc-total .cc-v { color: var(--blue); }
   .caja-concil .cc-op { display: flex; align-items: center; font-size: 18px; font-weight: 800; color: var(--mute); }
   @media (max-width: 640px) { .caja-concil .cc-op { display: none; } }
+  .cc-medilink { font-size: 12px; padding: 8px 12px; border-radius: 9px; margin-bottom: 12px; }
+  .cc-medilink.ok { background: #e3f9ec; color: #147a3c; border: 1px solid #b6ecc8; }
+  .cc-medilink.pend { background: #fff4e0; color: #9a6a05; border: 1px solid #f3d9a0; }
+  .cc-medilink b { font-variant-numeric: tabular-nums; }
   .caja-totales {
     display: flex; align-items: flex-start; gap: 16px;
     flex-wrap: wrap; margin-bottom: 20px;
@@ -615,6 +619,7 @@
       <div class="cc-op">=</div>
       <div class="cc-item cc-total"><div class="cc-l">📋 Arancel total <span class="cc-est" id="ccArancelHint">≈ Medilink</span></div><div class="cc-v" id="ccArancel">—</div></div>
     </div>
+    <div class="cc-medilink" id="ccMedilinkReal"></div>
 
     <!-- Fondo inicial -->
     <div class="caja-fondo-row">
@@ -3091,6 +3096,18 @@ function renderCaja(d) {
   // Si todavía no hay montos reales de Medilink, el arancel es referencia por tipo
   const _hint = document.getElementById('ccArancelHint');
   if (_hint) _hint.textContent = (d.total_arancel === d.total_arancel_ref) ? 'referencia por tipo' : '≈ Medilink (real)';
+
+  // Arancel REAL Medilink (caja oficial bi_pagos_caja, sync nocturno T+1)
+  const cm = document.getElementById('ccMedilinkReal');
+  if (cm) {
+    if ((d.n_medilink_caja || 0) > 0) {
+      cm.innerHTML = `📋 <b>Arancel real Medilink (caja oficial): ${fmt$(d.total_medilink_caja || 0)}</b> — cuadra al peso`;
+      cm.className = 'cc-medilink ok';
+    } else {
+      cm.innerHTML = `⏳ <b>Arancel real Medilink: pendiente</b> — el arancel de arriba es estimado; cuadra mañana con la caja Medilink (sync nocturno)`;
+      cm.className = 'cc-medilink pend';
+    }
+  }
 
   actualizarEfectivoEsperado();
   actualizarArqueo();

@@ -1039,6 +1039,22 @@ async def get_pagos(
     # Por cobrar a Imed (bono Fonasa + seguros complementarios) = arancel − efectivo
     total_imed = max(total_arancel_medilink - total_copago, 0)
 
+    # ── Arancel REAL de Medilink (caja oficial bi_pagos_caja, sync nocturno T+1) ──
+    # Cuadre AL PESO para días ya sincronizados. n_medilink_caja=0 → aún no sincronizado
+    # (ej. el día de hoy): el frontend muestra "estimado, cuadra mañana".
+    total_medilink_caja = 0
+    n_medilink_caja = 0
+    try:
+        with _conn() as _cc:
+            _rcaja = _cc.execute(
+                "SELECT COALESCE(SUM(monto), 0), COUNT(*) FROM bi_pagos_caja WHERE fecha BETWEEN ? AND ?",
+                (d_desde, d_hasta),
+            ).fetchone()
+            total_medilink_caja = int(_rcaja[0] or 0)
+            n_medilink_caja = int(_rcaja[1] or 0)
+    except Exception as _e_caja:
+        log.debug("get_pagos: bi_pagos_caja no disponible: %s", _e_caja)
+
     # Totales por metodo de pago (para sección Caja)
     totales_por_metodo: dict[str, int] = {
         "efectivo":      0,
@@ -1060,6 +1076,8 @@ async def get_pagos(
         "total_arancel":       total_arancel_medilink,  # referencia/cuadre con Medilink
         "total_arancel_ref":   total_arancel_ref,        # solo referencia por tipo (A)
         "total_imed":          total_imed,                # por cobrar a Imed (bono + seguro)
+        "total_medilink_caja": total_medilink_caja,       # EXACTO desde bi_pagos_caja (T+1)
+        "n_medilink_caja":     n_medilink_caja,            # 0 = día aún no sincronizado
         "totales_por_metodo":  totales_por_metodo,
         "fecha_desde":         d_desde,
         "fecha_hasta":         d_hasta,
