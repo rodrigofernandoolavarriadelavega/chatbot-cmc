@@ -216,37 +216,34 @@ def get_saldo_actual(
 
     from session import _conn
     with _conn() as conn:
-        r = conn.execute(
-            """SELECT COALESCE(SUM(monto_efectivo),0), COALESCE(SUM(valor_deposito),0)
-                 FROM caja_diaria WHERE fecha <= ?""",
-            (hoy,),
-        ).fetchone()
-        libro_efectivo = int(r[0] or 0)
-        libro_deposito = int(r[1] or 0)
-        hoy_en_libro = conn.execute(
-            "SELECT monto_efectivo FROM caja_diaria WHERE fecha = ?", (hoy,)
-        ).fetchone()
+        libro = {row["fecha"]: int(row["monto_efectivo"] or 0)
+                 for row in conn.execute(
+                     "SELECT fecha, monto_efectivo FROM caja_diaria WHERE fecha <= ?", (hoy,))}
+        libro_deposito = int(conn.execute(
+            "SELECT COALESCE(SUM(valor_deposito),0) FROM caja_diaria WHERE fecha <= ?", (hoy,)
+        ).fetchone()[0] or 0)
         ult = conn.execute(
             """SELECT fecha, valor_deposito FROM caja_diaria
                 WHERE valor_deposito > 0 ORDER BY fecha DESC, id DESC LIMIT 1"""
         ).fetchone()
 
-    # Efectivo de HOY: del libro si ya lo anotaron; si no, desde Pagos (efectivo del día)
-    pagos_hoy = _efectivo_pagos_por_fecha(hoy, hoy).get(hoy, 0)
-    if hoy_en_libro is not None:
-        efectivo_hoy = int(hoy_en_libro[0] or 0)
-        extra_hoy = 0   # ya contabilizado en libro_efectivo
-    else:
-        efectivo_hoy = pagos_hoy
-        extra_hoy = pagos_hoy   # aún no en el libro → sumar al saldo
+    # Efectivo por día = max(libro, Pagos): el Excel cubre la historia vieja (Pagos=0
+    # ahí) y Pagos cubre lo reciente (el import dejó días recientes en blanco). Así no
+    # se pierde plata real recaudada que el libro tiene en 0.
+    pagos = _efectivo_pagos_por_fecha("2000-01-01", hoy)   # solo días con pagos devuelven >0
+    fechas = set(libro) | set(pagos)
+    efectivo_total = sum(max(libro.get(f, 0), pagos.get(f, 0)) for f in fechas)
+    en_caja = efectivo_total - libro_deposito
 
-    en_caja = libro_efectivo - libro_deposito + extra_hoy
+    efectivo_hoy = max(libro.get(hoy, 0), pagos.get(hoy, 0))
+    pagos_hoy    = pagos.get(hoy, 0)
+    hoy_en_libro_flag = hoy in libro
 
     return {
         "en_caja":          en_caja,                 # lo que hay en la caja ahora
         "efectivo_hoy":     efectivo_hoy,            # efectivo recaudado hoy
         "pagos_hoy":        pagos_hoy,               # efectivo de hoy según Pagos (referencia)
-        "hoy_en_libro":     hoy_en_libro is not None,
+        "hoy_en_libro":     hoy_en_libro_flag,
         "fecha":            hoy,
         "ultimo_deposito":  {"fecha": ult[0], "valor": int(ult[1] or 0)} if ult else None,
     }
