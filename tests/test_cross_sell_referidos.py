@@ -97,7 +97,8 @@ class TestCrossSellCooldown(unittest.TestCase):
                             if isinstance(k, ast.Constant):
                                 found_keys.append(k.value)
         self.assertIn("Ginecología", found_keys)
-        self.assertIn("Traumatología", found_keys)
+        # Traumatología eliminada (Dr. Barraza no disponible) — removido 2026-06-09
+        self.assertNotIn("Traumatología", found_keys)
         self.assertIn("Ortodoncia", found_keys)
         self.assertIn("Implantología", found_keys)
 

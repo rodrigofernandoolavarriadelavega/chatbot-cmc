@@ -2110,8 +2110,23 @@ async def prellenar_pagos(
                     )
                 )
                 conn.commit()
-            # Registrar en mapas para idempotencia dentro del mismo batch
-            meta_new = {"db_id": None, "procedimiento": prestacion, "bloqueado": 0, "canal": canal_cita}
+            # Registrar en mapas para idempotencia dentro del mismo batch.
+            # Incluir todos los campos que la rama "if existing:" lee como key
+            # obligatoria (existing["fuente"]) o vía .get() para evitar KeyError.
+            meta_new = {
+                "db_id": None,
+                "procedimiento": prestacion,
+                "bloqueado": 0,
+                "canal": canal_cita,
+                "fuente": fuente_cita,
+                "match_confianza": att["confianza"],
+                "copago": 0,
+                "metodo_pago": "",
+                "creado_por": "prellenar",
+                "monto_medilink": int(_total or 0),
+                "prevision": prevision_cita,
+                "profesional": profesional,
+            }
             if id_cita_str:
                 existing_by_id_cita[id_cita_str] = meta_new
             if rut_cita:

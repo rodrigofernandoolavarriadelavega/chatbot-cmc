@@ -88,14 +88,30 @@ class TestRouteEcografiaGinecologia(unittest.TestCase):
     def test_eco_de_mamas(self):
         self._assert_pardo_mamaria("eco de mamas")
 
-    def test_ecografia_obstetrica(self):
-        self._assert_rejon("ecografía obstétrica")
+    # CORRECCIÓN 2026-06-09: eco obstétrica/prenatal/embarazo → NO disponible en CMC
+    # (antes iban a Rejón, lo cual era incorrecto — CMC no hace eco de embarazo).
+    # Las keywords obstétricas ahora van a "obstetrica_no_disponible" (flujo: no_disponible).
+    def test_ecografia_obstetrica_no_disponible(self):
+        from ecografias import route_ecografia
+        r = route_ecografia("ecografía obstétrica")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["flujo"], "no_disponible",
+                         "eco obstétrica debe tener flujo=no_disponible (CMC no la realiza)")
+        self.assertEqual(r["especialidad_destino"], "obstetrica")
 
-    def test_ecografia_prenatal(self):
-        self._assert_rejon("eco prenatal")
+    def test_ecografia_prenatal_no_disponible(self):
+        from ecografias import route_ecografia
+        r = route_ecografia("eco prenatal")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["flujo"], "no_disponible",
+                         "eco prenatal debe tener flujo=no_disponible (CMC no la realiza)")
 
-    def test_ecografia_embarazo(self):
-        self._assert_rejon("ecografía de embarazo")
+    def test_ecografia_embarazo_no_disponible(self):
+        from ecografias import route_ecografia
+        r = route_ecografia("ecografía de embarazo")
+        self.assertIsNotNone(r)
+        self.assertEqual(r["flujo"], "no_disponible",
+                         "eco de embarazo debe tener flujo=no_disponible (CMC no la realiza)")
 
     def test_ecografia_de_ovarios(self):
         self._assert_rejon("ecografía de ovarios")

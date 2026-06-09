@@ -589,7 +589,7 @@
 {"input": "donde quedan ubicados", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
 {"input": "se puede pagar con tarjeta", "intent": "info", "especialidad": null, "axis": "typo", "group": "info-precio"}
 {"input": "kuanto bale sacar radiografia", "intent": "info", "especialidad": "odontología", "axis": "fonetico", "group": "info-precio"}
-{"input": "asen ecografia de embarazo", "intent": "info", "especialidad": "ginecología", "axis": "fonetico", "group": "info-precio"}
+{"input": "asen ecografia de embarazo", "intent": "info", "especialidad": "obstetrica", "axis": "fonetico", "group": "info-precio"}
 {"input": "cuanto sale aregla los pies", "intent": "info", "especialidad": "podología", "axis": "incompleta", "group": "info-precio"}
 {"input": "atienden ortodoncia los frenillos", "intent": "info", "especialidad": "ortodoncia", "axis": "rural", "group": "info-precio"}
 {"input": "q precio tiene la consulta de garganta", "intent": "info", "especialidad": "otorrinolaringología", "axis": "abreviacion", "group": "info-precio"}
@@ -778,7 +778,7 @@
 {"input": "ando bajoneada hace meses no le encuentro sentido", "intent": "sintoma", "especialidad": "psicología", "axis": "rural", "group": "sintomas"}
 {"input": "tengo un dolor raro en el pecho cuando me enojo", "intent": "sintoma", "especialidad": "cardiología", "axis": "runon", "group": "sintomas"}
 {"input": "me da tos seca en la noche y no me deja dormir", "intent": "sintoma", "especialidad": "medicina general", "axis": "runon", "group": "sintomas"}
-{"input": "qiero un eco pa ver el bebe toi embarasada", "intent": "agendar", "especialidad": "ginecología", "axis": "fonetico", "group": "sintomas"}
+{"input": "qiero un eco pa ver el bebe toi embarasada", "intent": "agendar", "especialidad": "obstetrica", "axis": "fonetico", "group": "sintomas"}
 {"input": "nesesito una ecografia de la guata me duele", "intent": "sintoma", "especialidad": "ecografía", "axis": "fonetico", "group": "sintomas"}
 {"input": "me duele aca abajo del lado izqierdo de la pelvis", "intent": "sintoma", "especialidad": "ginecología", "axis": "typo", "group": "sintomas"}
 {"input": "ando con jaqueca q me dan ganas de vomitar", "intent": "sintoma", "especialidad": "medicina general", "axis": "rural", "group": "sintomas"}
@@ -1064,7 +1064,7 @@
 {"input": "me duele el oido hace 3 dias", "intent": "sintoma", "especialidad": "otorrinolaringología", "axis": "numerico", "group": "r2-numerico-mixto"}
 {"input": "llevo 4 dias con dolor de guata", "intent": "sintoma", "especialidad": "gastroenterología", "axis": "numerico", "group": "r2-numerico-mixto"}
 {"input": "mi presion esta en 180 quiero ver doctor del corazon", "intent": "agendar", "especialidad": "cardiología", "axis": "numerico", "group": "r2-numerico-mixto"}
-{"input": "necesito eco pal embarazo voy en la semana 12", "intent": "agendar", "especialidad": "ginecología", "axis": "numerico", "group": "r2-numerico-mixto"}
+{"input": "necesito eco pal embarazo voy en la semana 12", "intent": "agendar", "especialidad": "obstetrica", "axis": "numerico", "group": "r2-numerico-mixto"}
 {"input": "hora podologa pa mis 2 pies que me duelen", "intent": "agendar", "especialidad": "podología", "axis": "numerico", "group": "r2-numerico-mixto"}
 {"input": "quiero arreglar 1 muela con el dentista", "intent": "agendar", "especialidad": "odontología", "axis": "numerico", "group": "r2-numerico-mixto"}
 {"input": "necesito endodoncia en la muela numero 6", "intent": "agendar", "especialidad": "endodoncia", "axis": "numerico", "group": "r2-numerico-mixto"}
@@ -1224,7 +1224,7 @@
 {"input": "kiero cambiar el horario de mi sesion de psicologia pa la tarde", "intent": "agendar", "especialidad": "psicología", "axis": "colision", "group": "r2-colision-dura-2"}
 {"input": "me pueden mandar la orden medica al correo no puedo ir a buscarla", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
 {"input": "voy al control de mis dientes con el de los frenos", "intent": "agendar", "especialidad": "ortodoncia", "axis": "colision", "group": "r2-colision-dura-2"}
-{"input": "tengo q hacerme una ecografia de embarazo donde la pido", "intent": "agendar", "especialidad": "ginecología", "axis": "colision", "group": "r2-colision-dura-2"}
+{"input": "tengo q hacerme una ecografia de embarazo donde la pido", "intent": "agendar", "especialidad": "obstetrica", "axis": "colision", "group": "r2-colision-dura-2"}
 {"input": "oiga quiero hablar con la recepcionista pa coordinar algo especial", "intent": "humano", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
 {"input": "necesito la licencia, el doctor me la iba a dejar lista", "intent": "info", "especialidad": null, "axis": "colision", "group": "r2-colision-dura-2"}
 {"input": "kiero reservar nutricion y de paso si dan plan pa bajar de peso", "intent": "agendar", "especialidad": "nutrición", "axis": "colision", "group": "r2-colision-dura-2"}
@@ -1332,7 +1332,7 @@
 {"input": "necesito el doctor q hace las dietas estoy muy gordo", "intent": "agendar", "especialidad": "nutrición", "axis": "rural", "group": "r2-rural-modismos"}
 {"input": "el dotor pa la garganta cuando atiende", "intent": "info", "especialidad": "otorrinolaringología", "axis": "rural", "group": "r2-rural-modismos"}
 {"input": "kiero hora con la señora q ayuda a hablar a los niños", "intent": "agendar", "especialidad": "fonoaudiología", "axis": "rural", "group": "r2-rural-modismos"}
-{"input": "atienden pa hacer la ecografia de la guagua?", "intent": "info", "especialidad": "ginecología", "axis": "rural", "group": "r2-rural-modismos"}
+{"input": "atienden pa hacer la ecografia de la guagua?", "intent": "info", "especialidad": "obstetrica", "axis": "rural", "group": "r2-rural-modismos"}
 {"input": "necesito el doctor q soba y hace ejercicios pa la espalda", "intent": "agendar", "especialidad": "kinesiología", "axis": "rural", "group": "r2-rural-modismos"}
 {"input": "hay dotora pa cosas de mujer abajo", "intent": "info", "especialidad": "ginecología", "axis": "rural", "group": "r2-rural-modismos"}
 {"input": "kiero al q saca el nervio de la muela me duele harto", "intent": "agendar", "especialidad": "endodoncia", "axis": "rural", "group": "r2-rural-modismos"}

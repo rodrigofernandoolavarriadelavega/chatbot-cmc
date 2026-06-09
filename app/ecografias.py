@@ -79,8 +79,24 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "ecografia de utero",
             "eco utero",
             "ecografia utero",
-            # Obstétrica / embarazo / prenatal
+        ],
+        "mensaje": (
+            "La ecografía {tipo} la realiza el Dr. Tirso Rejón (Ginecólogo) en el CMC, "
+            "no el ecografista general.\nValor: $35.000 particular."
+        ),
+    },
+
+    # ── Ecografía obstétrica (de embarazo) → NO se realiza en el CMC ────────
+    # Keywords coloquiales de embarazo con contexto eco (gate _tiene_contexto_eco
+    # ya exige raíz ecográfica antes de llegar acá).
+    "obstetrica_no_disponible": {
+        "id_profesional": None,
+        "especialidad_destino": "obstetrica",
+        "flujo": "no_disponible",
+        "precio_particular": None,
+        "keywords": [
             "obstetrica",
+            "obstétrica",
             "eco obstetrica",
             "ecografia obstetrica",
             "embarazo",
@@ -90,11 +106,9 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "prenatal",
             "eco prenatal",
             "ecografia prenatal",
-            # Embarazo coloquial — solo enrutan porque el GATE ya exigió contexto
-            # ecográfico (_tiene_contexto_eco), así "eco pa ver el bebe" → Rejón
-            # pero "control de embarazo" (sin eco) sigue yendo a matrona.
-            "embaraz",        # embarazo, embarazada, embarasada(_norm sin tilde no aplica aquí)
-            "embaras",        # variante fonética "embarasada"
+            # Coloquial — gate eco ya exige "eco/ecografia/ultrasonido/..." en texto
+            "embaraz",
+            "embaras",
             "ver el bebe",
             "ver al bebe",
             "ver el bb",
@@ -103,8 +117,10 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "la wawa",
         ],
         "mensaje": (
-            "La ecografía {tipo} la realiza el Dr. Tirso Rejón (Ginecólogo) en el CMC, "
-            "no el ecografista general.\nValor: $35.000 particular."
+            "Por ahora *no realizamos ecografía obstétrica de embarazo* en el "
+            "Centro Médico Carampangue.\n\n"
+            "Para ecografías de embarazo puedes consultar en la *Clínica de "
+            "Maternidad* más cercana o el Hospital de tu red de salud."
         ),
     },
 
@@ -319,7 +335,7 @@ def _tiene_contexto_eco(txt_norm: str) -> bool:
 MSG_PREGUNTAR_TIPO = (
     "¿De qué tipo es la ecografía? Por ejemplo:\n\n"
     "• Abdominal / renal / tiroides / vejiga / articulación / hombro → David Pardo, $40.000\n"
-    "• Transvaginal / pélvica / obstétrica → Ginecología (Dr. Rejón), $35.000\n"
+    "• Transvaginal / pélvica / ginecológica → Ginecología (Dr. Rejón), $35.000\n"
     "• Mamaria → Ecografía (David Pardo), $40.000 — es partes blandas\n"
     "• Ecocardiograma (corazón) → Cardiología (Dr. Millán), $110.000\n\n"
     "Escribe el tipo que necesitas."
@@ -354,8 +370,10 @@ def route_ecografia(texto: str, assume_context: bool = False) -> dict | None:
     if not assume_context and not _tiene_contexto_eco(txt_norm):
         return None
 
-    # Prioridad fija: ginecología primero, luego cardiología, luego general
-    for key in ("ginecologia_rejon", "cardiologia_millan_waitlist", "ecografia_general_pardo"):
+    # Prioridad fija: obstétrica no-disponible primero (para no caer en ginecología),
+    # luego ginecología, luego cardiología, luego general.
+    for key in ("obstetrica_no_disponible", "ginecologia_rejon",
+                "cardiologia_millan_waitlist", "ecografia_general_pardo"):
         routing = ECOGRAFIA_ROUTING[key]
         for kw in routing["keywords"]:
             if _norm(kw) in txt_norm:

@@ -102,9 +102,12 @@ def _detectar_fecha_pedida_idle(txt: str) -> str | None:
 
 
 def _first_name(nombre) -> str:
-    """Primer token de un nombre, seguro ante None/vacío/solo-espacios."""
+    """Primer token de un nombre, seguro ante None/vacío/solo-espacios.
+    Devuelve "" cuando el nombre está vacío para que los callers puedan
+    decidir si saludan por nombre o usan un saludo genérico (guard: if nombre_corto:).
+    """
     parts = (nombre or "").split()
-    return parts[0] if parts else "paciente"
+    return parts[0] if parts else ""
 
 
 def _detectar_franja_horaria(txt: str) -> "tuple[int, int] | None":
@@ -384,7 +387,8 @@ PRECIOS_SLOT = {
     "Psicología Adulto":      ("fonasa",    14420),
     "Psicología Infantil":    ("fonasa",    14420),
     "Nutrición":              ("fonasa",     4770),
-    "Matrona":                ("fonasa",    16000),
+    "Matrona":                ("ambas",     16000,  None, 30000),  # Fonasa $16.000 / Particular $30.000
+    "Psiquiatría":            ("particular", 60000),
     "Fonoaudiología":         ("particular", 25000),
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
@@ -1943,11 +1947,11 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
         )
     try:
         import httpx as _httpx
-        from medilink import _get_horario, PROFESIONALES
+        from medilink import _get_horario, PROFESIONALES as _PROFS_HQ
         async with _httpx.AsyncClient(timeout=10) as _c:
             horario = await _get_horario(_c, int(prof_id))
-        prof_nombre = PROFESIONALES.get(int(prof_id), {}).get("nombre", "El profesional")
-        especialidad = PROFESIONALES.get(int(prof_id), {}).get("especialidad", "")
+        prof_nombre = _PROFS_HQ.get(int(prof_id), {}).get("nombre", "El profesional")
+        especialidad = _PROFS_HQ.get(int(prof_id), {}).get("especialidad", "")
         esp_sufijo = f" de *{especialidad}*" if especialidad else ""
         horario_str = _format_horario_prof(horario)
         # Marcar prof pedido explícitamente para que confirmar_sugerido no
@@ -2798,6 +2802,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA", "WAIT_ORTODONCIA_ACTIVO",
         "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
         "WAIT_CROSS_SELL",
+        "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
     }
     _consent_in_active_flow = state in _FLOW_STATES
 
@@ -5987,6 +5992,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "flujo": _eco_fi.get("flujo"),
                 })
                 _esp_eco_fi = _eco_fi["especialidad_destino"]
+                if _eco_fi.get("flujo") == "no_disponible":
+                    # Eco obstétrica → el CMC no la realiza
+                    log_event(phone, "eco_obstetrica_no_disponible", {"txt": txt[:120]})
+                    reset_session(phone)
+                    return _eco_fi["mensaje"].format(tipo=txt)
                 if _eco_fi.get("flujo") == "waitlist":
                     # Ecocardiograma → waitlist
                     data["waitlist_especialidad"] = _esp_eco_fi
@@ -6972,14 +6982,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             _pv2.update(ids_apellido)
                             data["profs_vistos"] = list(_pv2)
                             save_session(phone, "WAIT_SLOT", data)
-                            _nombre_ap = PROFESIONALES.get(list(ids_apellido)[0], {}).get("nombre", "ese doctor")
+                            _nombre_ap = _PROFS_AP.get(list(ids_apellido)[0], {}).get("nombre", "ese doctor")
                             return (f"Encontré horas con *{_nombre_ap}* para el mismo día:\n\n"
                                     + (_format_slots(_td_ap[:5]) if isinstance(_format_slots(_td_ap[:5]), str)
                                        else "")) or _format_slots(_td_ap[:5])
                     except Exception as _e_ap:
                         log.warning("buscar_slots_dia_por_ids apellido mismo día falló: %s", _e_ap)
                 # Fallback: búsqueda fresca preservando especialidad y fechas_vistas
-                _esp_ap = PROFESIONALES.get(list(ids_apellido)[0], {}).get("especialidad", especialidad).lower() if ids_apellido else especialidad
+                _esp_ap = _PROFS_AP.get(list(ids_apellido)[0], {}).get("especialidad", especialidad).lower() if ids_apellido else especialidad
                 try:
                     _sm_ap2, _td_ap2 = await buscar_primer_dia(
                         _esp_ap, excluir=fechas_vistas, solo_ids=list(ids_apellido))
@@ -10821,7 +10831,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return "_Escribe *menu* si necesitas algo más._"
         else:
-            # Respuesta ambigua (ej: "¿cuánto cuesta?", "gracias") → recordatorio sin resetear estado
+            # Respuesta ambigua (ej: "¿cuánto cuesta?", "gracias", RUT, texto libre)
+            # → reprompt una vez; al segundo intento fallido, escapar para evitar loop.
+            _cs_intentos = data.get("cs_intentos", 0) + 1
+            if _cs_intentos > 1:
+                log_cross_sell(phone, esp_origen, esp_destino, "timeout")
+                log_event(phone, "cross_sell_loop_escape", {
+                    "esp_origen": esp_origen, "esp_destino": esp_destino,
+                    "intentos": _cs_intentos,
+                })
+                reset_session(phone)
+                return (
+                    "_No te preocupes, puedes escribir *menu* cuando quieras retomar._"
+                )
+            data["cs_intentos"] = _cs_intentos
             save_session(phone, "WAIT_CROSS_SELL", data)
             return _btn_msg(
                 f"¿Te gustaría agendar una hora de *{esp_destino}*?",
@@ -12454,12 +12477,17 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             _MSG_ECO = (
                 "¿De qué tipo es la ecografía? Por ejemplo:\n\n"
                 "• Abdominal / renal / tiroides → David Pardo, $40.000\n"
-                "• Transvaginal / pélvica / obstétrica → Ginecología (Dr. Rejón), $35.000\n"
+                "• Transvaginal / pélvica / ginecológica → Ginecología (Dr. Rejón), $35.000\n"
                 "• Mamaria → Ecografía (David Pardo), $40.000 — es partes blandas, no ginecológica\n"
                 "• Ecocardiograma (corazón) → Cardiología (Dr. Millán), $110.000\n\n"
                 "Escribe el tipo que necesitas."
             )
         if _eco_r is not None:
+            # Eco obstétrica → el CMC no la realiza
+            if _eco_r.get("flujo") == "no_disponible":
+                log_event(phone, "eco_obstetrica_no_disponible", {"txt": _txt_para_eco[:120]})
+                reset_session(phone)
+                return _eco_r["mensaje"].format(tipo=_txt_para_eco)
             # Hay tipo reconocido — re-invocar con la especialidad destino correcta
             especialidad = _eco_r["especialidad_destino"]
             especialidad_lower = especialidad.lower()
