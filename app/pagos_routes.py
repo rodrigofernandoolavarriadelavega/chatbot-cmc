@@ -1721,6 +1721,7 @@ async def prellenar_pagos(
                       COALESCE(area, '') as area,
                       COALESCE(prevision, 'particular') as prevision,
                       COALESCE(profesional, '') as profesional,
+                      COALESCE(monto_medilink, 0) as monto_medilink,
                       id_profesional
                FROM pagos_cmc WHERE fecha = ?""",
             (fecha_iso,)
@@ -1746,6 +1747,7 @@ async def prellenar_pagos(
             "area":          row["area"],
             "prevision":     row["prevision"],
             "profesional":   row["profesional"],
+            "monto_medilink": row["monto_medilink"],
             "id_profesional": row["id_profesional"],
         }
         if row["id_cita"]:
@@ -1902,22 +1904,27 @@ async def prellenar_pagos(
             # (copago 0, sin método, creada por prellenar) → no pisa ediciones de recepción.
             prev_update = None
             copago_update = None
+            monto_update = None
             es_draft = (
                 existing.get("copago", 0) == 0
                 and not (existing.get("metodo_pago") or "").strip()
                 and existing.get("creado_por") == "prellenar"
             )
-            if es_draft and id_aten:
+            _falta_monto = bool(id_aten) and not existing.get("monto_medilink")
+            if id_aten and (es_draft or _falta_monto):
                 convenio, _total = await _fetch_atencion_meta(id_aten)
-                prev_calc = _convenio_a_prevision(convenio)
-                sug = _sugerir_copago(existing.get("area") or "", prev_calc, existing.get("id_profesional"))
-                copago_calc = int(sug.get("copago_sugerido") or 0)
-                if prev_calc != (existing.get("prevision") or "particular"):
-                    prev_update = prev_calc
-                if copago_calc and copago_calc != existing.get("copago", 0):
-                    copago_update = copago_calc
-                    if prev_update is None:  # si cambia el copago, fijar también la previsión coherente
+                if _total and int(_total) > 0 and not existing.get("monto_medilink"):
+                    monto_update = int(_total)   # arancel real Medilink (Fase B + backfill filas llenas)
+                if es_draft:
+                    prev_calc = _convenio_a_prevision(convenio)
+                    sug = _sugerir_copago(existing.get("area") or "", prev_calc, existing.get("id_profesional"))
+                    copago_calc = int(sug.get("copago_sugerido") or 0)
+                    if prev_calc != (existing.get("prevision") or "particular"):
                         prev_update = prev_calc
+                    if copago_calc and copago_calc != existing.get("copago", 0):
+                        copago_update = copago_calc
+                        if prev_update is None:  # si cambia el copago, fijar también la previsión coherente
+                            prev_update = prev_calc
 
             # Normalizar nombre del profesional (etiqueta única en Pagos)
             id_prof_cita = cita.get("id_profesional")
@@ -1929,7 +1936,8 @@ async def prellenar_pagos(
             fuente_cambio    = fuente_nueva    != existing["fuente"]
             confianza_cambio = confianza_nueva != (existing.get("match_confianza") or "")
             hay_cambio       = (canal_cambio or fuente_cambio or confianza_cambio or bool(prestacion_update)
-                                or bool(rut_relleno) or bool(prev_update) or bool(copago_update) or bool(prof_update))
+                                or bool(rut_relleno) or bool(prev_update) or bool(copago_update) or bool(prof_update)
+                                or bool(monto_update))
 
             if not hay_cambio:
                 saltadas += 1
@@ -1953,6 +1961,9 @@ async def prellenar_pagos(
             if copago_update is not None:
                 set_parts.insert(len(set_parts)-1, "copago = ?")
                 set_vals.append(copago_update)
+            if monto_update is not None:
+                set_parts.insert(len(set_parts)-1, "monto_medilink = ?")
+                set_vals.append(monto_update)
 
             if prestacion_update:
                 set_parts.insert(len(set_parts)-1, "procedimiento = ?")
@@ -2014,10 +2025,10 @@ async def prellenar_pagos(
                        (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
                         area, prevision, copago, bonificacion, metodo_pago, folio,
                         codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
-                        creado_por, bloqueado, canal, fuente, match_confianza,
+                        creado_por, bloqueado, canal, fuente, match_confianza, monto_medilink,
                         created_at, updated_at)
                        VALUES (?,?,?,?,?,?,?,?,?,0,'','','','',?,?,?,
-                               'prellenar', 0, ?, ?, ?, datetime('now'), datetime('now'))""",
+                               'prellenar', 0, ?, ?, ?, ?, datetime('now'), datetime('now'))""",
                     (
                         fecha_iso,
                         hora_inicio,
@@ -2034,6 +2045,7 @@ async def prellenar_pagos(
                         canal_cita,
                         fuente_cita,
                         att["confianza"],
+                        int(_total or 0),   # monto real Medilink (arancel) — Fase B cuadre
                     )
                 )
                 conn.commit()
