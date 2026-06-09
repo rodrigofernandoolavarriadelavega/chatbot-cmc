@@ -893,6 +893,31 @@ def atribuir_cita_a_winback(phone: str, cita_id: int | str) -> int:
     return total
 
 
+def _especialidad_sin_profesional(especialidad: str | None) -> bool:
+    """True si TODOS los profesionales de la especialidad están en licencia hoy
+    → no hay a quién derivar, NO conviene invitar (caso 'otorrino de vacaciones').
+    Fail-open: ante cualquier duda o error, retorna False (sí enviar)."""
+    if not especialidad:
+        return False
+    try:
+        from equipo_routes import profesionales_en_licencia
+        from medilink import PROFESIONALES
+        esp_l = especialidad.strip().lower()
+        profs = [pid for pid, info in PROFESIONALES.items()
+                 if esp_l and ((info.get("especialidad") or "").strip().lower() in esp_l
+                               or esp_l in (info.get("especialidad") or "").strip().lower())]
+        if not profs:
+            return False  # no mapeamos la especialidad → no bloquear
+        lic = profesionales_en_licencia()
+        if all(pid in lic for pid in profs):
+            log.info("winback: '%s' sin profesional disponible (todos en licencia) — skip", especialidad)
+            return True
+        return False
+    except Exception as e:
+        log.warning("winback: check disponibilidad especialidad falló (%s): %s", especialidad, e)
+        return False
+
+
 # ── Envío individual ──────────────────────────────────────────────────────────
 async def send_winback(candidato: dict) -> bool:
     """Envía mensaje winback a un candidato.
@@ -912,6 +937,11 @@ async def send_winback(candidato: dict) -> bool:
         _tel_digits = "56" + _tel_digits.lstrip("0")
     telefono   = _tel_digits
     especialidad = candidato.get("ultima_especialidad")
+    # Guard disponibilidad: no invitar a una especialidad cuyo profesional está
+    # en licencia/vacaciones (batch — skip silencioso, nadie espera respuesta).
+    if _especialidad_sin_profesional(especialidad):
+        log.info("winback: skip envío — %s sin profesional disponible phone=...%s", especialidad, telefono[-4:])
+        return False
     cohorte    = candidato.get("cohorte", "090d")
     nombre     = candidato.get("nombre") or "paciente"
     paciente_id = candidato.get("paciente_id", 0)

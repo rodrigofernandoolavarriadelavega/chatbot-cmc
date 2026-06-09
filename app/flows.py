@@ -2871,6 +2871,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 get_candidato_por_phone,
                 ya_enviado_winback_hoy,
                 send_winback_smart,
+                _especialidad_sin_profesional,
             )
             _consent_status = "accepted" if _es_consent_si else "declined"
             registrar_consent_respuesta(phone, _consent_status, method="reply")
@@ -2912,6 +2913,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if not _candidato:
                 # Paciente no en BI o no contactable — confirmación genérica
                 log_event(phone, "winback_event_skip_no_candidato", {})
+                return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
+
+            # Guard disponibilidad: si la especialidad del paciente no tiene
+            # profesional disponible (licencia/vacaciones), NO lo invitamos a una
+            # hora que no existe — confirmamos el consent sin winback (no silencio).
+            if _especialidad_sin_profesional(_candidato.get("ultima_especialidad")):
+                log_event(phone, "winback_event_skip_sin_disponibilidad",
+                          {"especialidad": _candidato.get("ultima_especialidad")})
                 return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
 
             # Enviar winback event-driven (asíncrono, no bloquea la respuesta)
