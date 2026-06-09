@@ -227,16 +227,19 @@ def get_saldo_actual(
                 WHERE valor_deposito > 0 ORDER BY fecha DESC, id DESC LIMIT 1"""
         ).fetchone()
 
-    # Efectivo por día = max(libro, Pagos): el Excel cubre la historia vieja (Pagos=0
-    # ahí) y Pagos cubre lo reciente (el import dejó días recientes en blanco). Así no
-    # se pierde plata real recaudada que el libro tiene en 0.
-    pagos = _efectivo_pagos_por_fecha("2000-01-01", hoy)   # solo días con pagos devuelven >0
-    fechas = set(libro) | set(pagos)
-    efectivo_total = sum(max(libro.get(f, 0), pagos.get(f, 0)) for f in fechas)
+    # El libro (Excel) es la autoridad de la caja en toda su historia. El import dejó
+    # algunos días RECIENTES en blanco (efectivo 0) → para esos, y SOLO esos, tomamos
+    # el efectivo real desde Pagos (live). Ventana corta para no tocar la historia vieja
+    # (pagos_cmc tiene además su propio import de 'pacientes diarios' que NO es la caja).
+    from datetime import timedelta as _td
+    cutoff = (datetime.now(_CHILE_TZ) - _td(days=30)).strftime("%Y-%m-%d")
+    pagos_recientes = _efectivo_pagos_por_fecha(cutoff, hoy)
+    extra = sum(v for f, v in pagos_recientes.items() if libro.get(f, 0) == 0)
+    efectivo_total = sum(libro.values()) + extra
     en_caja = efectivo_total - libro_deposito
 
-    efectivo_hoy = max(libro.get(hoy, 0), pagos.get(hoy, 0))
-    pagos_hoy    = pagos.get(hoy, 0)
+    pagos_hoy    = pagos_recientes.get(hoy, 0)
+    efectivo_hoy = libro.get(hoy, 0) or pagos_hoy
     hoy_en_libro_flag = hoy in libro
 
     return {
