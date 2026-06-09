@@ -71,6 +71,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_marketing_consent_blast,
                   _job_takeover_pendiente_alert,
                   _job_health_report,
+                  _job_caja_report,
                   _job_watchdog_blast,
                   _job_winback_daily_report,
                   _job_dental_promo_report,
@@ -682,6 +683,13 @@ async def lifespan(app: FastAPI):
         _job_health_report,
         CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
         id="health_report_semanal",
+        replace_existing=True,
+    )
+    # Reporte de caja al dueño: cada mañana 08:45 CLT (cuadre de ayer + efectivo en caja)
+    scheduler.add_job(
+        _job_caja_report,
+        CronTrigger(hour=8, minute=45, timezone=_CLT),
+        id="caja_report_diario",
         replace_existing=True,
     )
     # Primera generación al arrancar (sin await — no bloquear startup)

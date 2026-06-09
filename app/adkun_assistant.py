@@ -29,7 +29,8 @@ def _menu() -> str:
         "• *winback* — recuperación de pacientes (ingreso real)\n"
         "• *director* — qué conviene prender/apagar + agentes nuevos\n"
         "• *ads* — rendimiento del Autopilot de publicidad\n"
-        "• *reglas* — políticas mal calibradas (Optimizador)\n\n"
+        "• *reglas* — políticas mal calibradas (Optimizador)\n"
+        "• *caja* — cuadre Medilink×recepción + efectivo en caja + qué falta registrar\n\n"
         "🔀 *modos* — cambiar a modo CMC o paciente\n"
         "_Todo es lectura: te informo, tú decides en la Sala de Máquinas._"
     )
@@ -131,6 +132,11 @@ def _reglas() -> str:
     return "\n".join(out)
 
 
+def _caja() -> str:
+    from cuadre_caja import texto_cuadre
+    return texto_cuadre()
+
+
 _ROUTES = [
     (("menu", "menú", "hola", "ayuda", "help", "inicio", "buenas"), _menu),
     (("plata", "pyl", "p&l", "pnl", "ingreso", "ganancia", "rendimiento"), _pnl),
@@ -138,6 +144,7 @@ _ROUTES = [
     (("director", "gabinete", "maestro", "switches", "prender", "apagar"), _director),
     (("ads", "autopilot", "publicidad", "campaña", "campana", "meta"), _ads),
     (("reglas", "optimiz", "margen", "calibr", "politica", "política"), _reglas),
+    (("caja", "cuadre", "efectivo", "deposito", "depósito", "deposit"), _caja),
 ]
 
 

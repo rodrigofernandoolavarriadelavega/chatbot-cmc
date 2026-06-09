@@ -2663,6 +2663,65 @@ async def _job_health_report() -> None:
         log.error("_job_health_report: fallback archivo también falló: %s", e)
 
 
+async def _job_caja_report() -> None:
+    """Cada mañana (08:45 CLT): cuadre de ayer + efectivo en caja + qué falta registrar,
+    al WhatsApp del dueño. Entrega: template `reporte_caja_diaria` → send_whatsapp si la
+    ventana 24h del admin está abierta → fallback archivo. Lo confiable es el comando
+    *caja* del asistente Adkun (el dueño escribe y lo recibe al instante)."""
+    import sys
+    from pathlib import Path
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo as _ZI
+
+    if not ADMIN_ALERT_PHONE:
+        log.warning("_job_caja_report: ADMIN_ALERT_PHONE no configurado — skip")
+        return
+    try:
+        from cuadre_caja import texto_cuadre
+        ayer = (datetime.now(_ZI("America/Santiago")) - timedelta(days=1)).strftime("%Y-%m-%d")
+        reporte = texto_cuadre(ayer)
+    except Exception as e:
+        log.error("_job_caja_report: error generando reporte: %s", e)
+        return
+
+    admin_phone = ADMIN_ALERT_PHONE.lstrip("+")
+
+    if USE_TEMPLATES:
+        try:
+            from session import get_approved_templates as _get_tmpl
+            aprobados = _get_tmpl() or []
+        except Exception:
+            aprobados = []
+        if "reporte_caja_diaria" in aprobados:
+            try:
+                wamid = await send_whatsapp_template(admin_phone, "reporte_caja_diaria",
+                                                     body_params=[reporte[:1024]])
+                if wamid:
+                    log.info("_job_caja_report: enviado via template → %s", wamid)
+                    return
+            except Exception as e:
+                log.warning("_job_caja_report: template falló: %s", e)
+
+    from session import is_window_open as _is_win
+    if _is_win(admin_phone):
+        try:
+            if await send_whatsapp(admin_phone, reporte):
+                log.info("_job_caja_report: enviado via send_whatsapp (ventana abierta)")
+                return
+        except Exception as e:
+            log.warning("_job_caja_report: send_whatsapp falló: %s", e)
+
+    try:
+        d = Path(__file__).parent.parent / "data" / "reportes_caja"
+        d.mkdir(parents=True, exist_ok=True)
+        dest = d / f"{datetime.now(_ZI('America/Santiago')).strftime('%Y-%m-%d')}.md"
+        dest.write_text(reporte, encoding="utf-8")
+        log.info("_job_caja_report: sin canal disponible — guardado en %s", dest)
+        print(f"[caja_report] guardado en {dest} (ventana cerrada / sin template)", file=sys.stderr)
+    except Exception as e:
+        log.error("_job_caja_report: fallback archivo falló: %s", e)
+
+
 # ── Watchdog auto-pausa/auto-reactivación del blast ──────────────────────────
 
 async def _job_watchdog_blast() -> None:

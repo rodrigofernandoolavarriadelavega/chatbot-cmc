@@ -22,7 +22,7 @@ _require_admin_dep; scope de profesional NO aplica — es caja global del centro
 """
 import io
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request
@@ -204,16 +204,13 @@ def get_caja_diaria(
 # Efectivo acumulado que aún NO se deposita = Σ efectivo − Σ depósito (hasta hoy).
 # El efectivo de HOY se suma desde Pagos aunque recepción aún no lo anote en el libro.
 
-@router.get("/saldo")
-def get_saldo_actual(
-    request: Request,
-    token: str | None = Query(None),
-    cmc_session: str | None = Cookie(None),
-):
-    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+def calcular_saldo_caja() -> dict:
+    """Lo que hay en la caja AHORA = Σ efectivo − Σ depósito (hasta hoy), reutilizable
+    desde el endpoint, el cruce y el reporte. El libro (Excel) es la autoridad; para
+    días recientes en blanco (que el import dejó en 0) se toma el efectivo real de Pagos.
+    Incluye días sin depositar desde el último depósito (señal de seguridad)."""
     ensure_caja_diaria_table()
     hoy = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
-
     from session import _conn
     with _conn() as conn:
         libro = {row["fecha"]: int(row["monto_efectivo"] or 0)
@@ -227,29 +224,57 @@ def get_saldo_actual(
                 WHERE valor_deposito > 0 ORDER BY fecha DESC, id DESC LIMIT 1"""
         ).fetchone()
 
-    # El libro (Excel) es la autoridad de la caja en toda su historia. El import dejó
-    # algunos días RECIENTES en blanco (efectivo 0) → para esos, y SOLO esos, tomamos
-    # el efectivo real desde Pagos (live). Ventana corta para no tocar la historia vieja
-    # (pagos_cmc tiene además su propio import de 'pacientes diarios' que NO es la caja).
     from datetime import timedelta as _td
     cutoff = (datetime.now(_CHILE_TZ) - _td(days=30)).strftime("%Y-%m-%d")
     pagos_recientes = _efectivo_pagos_por_fecha(cutoff, hoy)
     extra = sum(v for f, v in pagos_recientes.items() if libro.get(f, 0) == 0)
-    efectivo_total = sum(libro.values()) + extra
-    en_caja = efectivo_total - libro_deposito
+    en_caja = sum(libro.values()) + extra - libro_deposito
 
     pagos_hoy    = pagos_recientes.get(hoy, 0)
     efectivo_hoy = libro.get(hoy, 0) or pagos_hoy
-    hoy_en_libro_flag = hoy in libro
+
+    dias_sin_depositar = None
+    if ult and ult[0]:
+        try:
+            d0 = datetime.strptime(ult[0][:10], "%Y-%m-%d").date()
+            dias_sin_depositar = (datetime.now(_CHILE_TZ).date() - d0).days
+        except ValueError:
+            pass
 
     return {
-        "en_caja":          en_caja,                 # lo que hay en la caja ahora
-        "efectivo_hoy":     efectivo_hoy,            # efectivo recaudado hoy
-        "pagos_hoy":        pagos_hoy,               # efectivo de hoy según Pagos (referencia)
-        "hoy_en_libro":     hoy_en_libro_flag,
+        "en_caja":          en_caja,
+        "efectivo_hoy":     efectivo_hoy,
+        "pagos_hoy":        pagos_hoy,
+        "hoy_en_libro":     hoy in libro,
         "fecha":            hoy,
         "ultimo_deposito":  {"fecha": ult[0], "valor": int(ult[1] or 0)} if ult else None,
+        "dias_sin_depositar": dias_sin_depositar,
     }
+
+
+@router.get("/saldo")
+def get_saldo_actual(
+    request: Request,
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+):
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    return calcular_saldo_caja()
+
+
+@router.get("/cuadre")
+def get_cuadre(
+    request: Request,
+    fecha: str | None = Query(None, description="YYYY-MM-DD; default ayer"),
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+):
+    """Cruce caja oficial Medilink × recepción: qué cobró Medilink que recepción NO
+    registró (plata posiblemente perdida) + bonif Imed. Read-only."""
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    from cuadre_caja import cruce_dia
+    f = _vfecha(fecha) or (datetime.now(_CHILE_TZ) - timedelta(days=1)).strftime("%Y-%m-%d")
+    return cruce_dia(f)
 
 
 # ── POST /deposito: recepción registra un depósito (baja el efectivo en caja) ─
