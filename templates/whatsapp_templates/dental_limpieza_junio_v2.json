@@ -1,0 +1,15 @@
+{
+  "name": "dental_limpieza_junio_v2",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "HEADER",
+      "format": "IMAGE"
+    },
+    {
+      "type": "BODY",
+      "text": "🦷✨ ¡Promoción especial de junio! ✨🦷\n\nRecupera la salud y frescura de tu sonrisa con nuestra Limpieza Dental + Fluoración por solo $28.000 🤩\n\n💰 Valor referencial: $70.000\n\n✅ Eliminación de sarro con ultrasonido\n✅ Eliminación de manchas superficiales con profilaxis dental\n✅ Aplicación de flúor para fortalecer tus dientes y prevenir caries\n\n⚠️ Promoción no aplica para usuarios con enfermedad periodontal.\n\n📅 Promoción válida durante todo junio mostrando esta imagen.\n\n📍 Monsalve esquina República, Carampangue\n📲 Agenda tu hora por mensaje directo o WhatsApp."
+    }
+  ]
+}

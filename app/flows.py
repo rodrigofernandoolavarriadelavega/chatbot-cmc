@@ -2984,16 +2984,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     import asyncio as _aio_promo
                     async def _send_promo_flyer():
                         try:
-                            from messaging import send_whatsapp_template
+                            from messaging import (send_whatsapp_template,
+                                                   render_template_body as _rtb_promo)
                             await send_whatsapp_template(
                                 phone, DENTAL_PROMO_FLYER_TEMPLATE,
                                 header_image_url=DENTAL_PROMO_FLYER_IMG,
                             )
+                            # Log con el COPY REAL del template (no una etiqueta) +
+                            # la URL para que el panel muestre la miniatura.
                             log_message(
                                 phone, "out",
-                                f"[template: {DENTAL_PROMO_FLYER_TEMPLATE}] "
-                                f"Promo Limpieza Dental + Fluoración $28.000 (todo junio)\n"
-                                f"{DENTAL_PROMO_FLYER_IMG}",
+                                _rtb_promo(DENTAL_PROMO_FLYER_TEMPLATE) + "\n" + DENTAL_PROMO_FLYER_IMG,
                                 "IDLE",
                             )
                             log_event(phone, "dental_promo_flyer_enviado", {
