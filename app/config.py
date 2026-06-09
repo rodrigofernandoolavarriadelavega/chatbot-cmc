@@ -173,6 +173,14 @@ TELEMEDICINA_ENABLED   = os.getenv("TELEMEDICINA_ENABLED", "false").lower() == "
 REFERRAL_BONOS_ENABLED = os.getenv("REFERRAL_BONOS_ENABLED", "false").lower() == "true"
 ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "cmc_ortodoncia_2026")
 
+# Promo dental: flyer que se envía AUTOMÁTICAMENTE a quien recién acepta el
+# consent dental (consent_dental_v1 → "Sí, acepto"). Gateado: apagar al terminar
+# la promo (ej. fin de junio). Template MARKETING con header de imagen aprobado.
+DENTAL_PROMO_FLYER_ACTIVE   = os.getenv("DENTAL_PROMO_FLYER_ACTIVE", "false").lower() in ("true", "1", "yes")
+DENTAL_PROMO_FLYER_TEMPLATE = os.getenv("DENTAL_PROMO_FLYER_TEMPLATE", "dental_limpieza_junio_v2")
+DENTAL_PROMO_FLYER_IMG      = os.getenv("DENTAL_PROMO_FLYER_IMG",
+                                        "https://agentecmc.cl/static/promos/dental_limpieza_junio.jpg")
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

@@ -2971,6 +2971,40 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     registrar_dental_opt_out(phone, source="consent_dental_v1")
                     return "Listo, no recibirás más mensajes del área dental."
 
+                # ── Promo flyer dental (junio): a TODO el que recién acepta ────
+                # Va antes del winback "candidato" porque el flyer es general (no
+                # requiere historial dental). Gateado por DENTAL_PROMO_FLYER_ACTIVE.
+                try:
+                    from config import (DENTAL_PROMO_FLYER_ACTIVE,
+                                        DENTAL_PROMO_FLYER_TEMPLATE,
+                                        DENTAL_PROMO_FLYER_IMG)
+                except Exception:
+                    DENTAL_PROMO_FLYER_ACTIVE = False
+                if DENTAL_PROMO_FLYER_ACTIVE:
+                    import asyncio as _aio_promo
+                    async def _send_promo_flyer():
+                        try:
+                            from messaging import send_whatsapp_template
+                            await send_whatsapp_template(
+                                phone, DENTAL_PROMO_FLYER_TEMPLATE,
+                                header_image_url=DENTAL_PROMO_FLYER_IMG,
+                            )
+                            log_message(
+                                phone, "out",
+                                f"[template: {DENTAL_PROMO_FLYER_TEMPLATE}] "
+                                f"Promo Limpieza Dental + Fluoración $28.000 (todo junio)\n"
+                                f"{DENTAL_PROMO_FLYER_IMG}",
+                                "IDLE",
+                            )
+                            log_event(phone, "dental_promo_flyer_enviado", {
+                                "template": DENTAL_PROMO_FLYER_TEMPLATE,
+                            })
+                        except Exception as _pfe:
+                            log.warning("dental promo flyer error phone=...%s: %s",
+                                        phone[-4:], _pfe)
+                    _aio_promo.get_event_loop().create_task(_send_promo_flyer())
+                    return None  # el flyer ES la respuesta al "Sí, acepto"
+
                 # ── Consent SI dental: enviar winback inmediato si activo ──────
                 if not DENTAL_WINBACK_ACTIVE:
                     log_event(phone, "dental_winback_event_skip_inactive", {})
