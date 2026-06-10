@@ -94,6 +94,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "liquidaciones":{"label": "Liquidaciones",  "icon": "coins",     "title": "Liquidaciones de honorarios",    "sub": "Producción × % · pagado/pendiente por profesional","src": "/alma/liquidaciones"},
     "branding":    {"label": "Brand Board",      "icon": "palette",   "title": "Brand Board — Alma",             "sub": "Identidad visual · sistema de diseño Alma",        "src": "/alma/branding"},
     "mejoras":     {"label": "Mejoras",          "icon": "clipcheck", "title": "Plan de Mejoras",                "sub": "Auditoría 2026-06-09 · hallazgos · plan accionable", "src": "/alma/mejoras"},
+    "grafo":       {"label": "Cerebro Alma",     "icon": "network",   "title": "Cerebro Alma — grafo del organismo", "sub": "Módulos, agentes y datos conectados",          "src": "/alma/grafo"},
     # Módulo externo (app standalone alma-print). src configurable por env para no
     # incrustar la llave en git; por defecto sin token (se pega una vez en el PC).
     "impresion":   {"label": "Impresión",        "icon": "printer",   "title": "Impresión — imprimir en recepción", "sub": "Manda PDF/imágenes a la impresora del centro",  "src": os.getenv("ALMA_PRINT_URL", "https://print.agentecmc.cl/")},

@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Cerebro Alma — Centro Médico Carampangue</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fafafa;
+  --line:#d0d0d0;
+  --ink:#1a1a2e;
+  --muted:#555;
+  --card:#ffffff;
+  --header-bg:rgba(250,250,250,0.92);
+  --d-conv:#0ea5e9;
+  --d-agenda:#10b981;
+  --d-pagos:#f59e0b;
+  --d-mkt:#ef4444;
+  --d-agentico:#8b5cf6;
+  --d-clinico:#ec4899;
+  --d-bi:#06b6d4;
+  --d-cump:#f97316;
+  --d-ops:#6366f1;
+  --d-ext:#94a3b8;
+  --d-core:#1a1a2e;
+  --s-live:#22c55e;
+  --s-gated:#f59e0b;
+  --s-local:#94a3b8;
+  --s-off:#a78bfa;
+  --s-ext:#4FBECE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:'Montserrat',system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+#header{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:var(--header-bg);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(0,0,0,0.07);
+  padding:9px 18px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+.hd-logo{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--ink);display:grid;place-items:center;flex-shrink:0;
+}
+.hd-logo svg{width:18px;height:18px;}
+.hd-title{font-size:13px;font-weight:800;letter-spacing:-.3px;color:var(--ink);}
+.hd-sub{font-size:10.5px;color:var(--muted);font-weight:500;}
+#search-wrap{
+  flex:1;display:flex;justify-content:center;
+  max-width:360px;margin:0 auto;position:relative;
+}
+#search{
+  width:100%;padding:7px 13px 7px 32px;
+  border-radius:999px;border:1px solid rgba(0,0,0,0.13);
+  background:#fff;color:var(--ink);
+  font-family:inherit;font-size:12px;font-weight:500;
+  outline:none;transition:.15s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.05);
+}
+#search:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.15);}
+#search::placeholder{color:#aaa;}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none;}
+#counter{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;margin-left:auto;}
+#canvas{position:fixed;top:0;left:0;width:100%;height:100%;cursor:grab;}
+#canvas.dragging{cursor:grabbing;}
+#tooltip{
+  position:fixed;z-index:200;pointer-events:none;
+  opacity:0;transition:opacity .12s;
+  background:#fff;border:1px solid rgba(0,0,0,0.1);
+  border-radius:12px;padding:11px 14px;
+  max-width:240px;min-width:160px;
+  box-shadow:0 6px 24px rgba(0,0,0,0.1),0 2px 6px rgba(0,0,0,0.07);
+}
+#tooltip.vis{opacity:1;}
+#tooltip .tt-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+#tooltip .tt-desc{font-size:11px;color:var(--muted);line-height:1.4;margin-bottom:6px;}
+#tooltip .tt-state{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;
+}
+.state-live{background:#f0fdf4;color:#16a34a;}
+.state-gated{background:#fffbeb;color:#d97706;}
+.state-local{background:#f8fafc;color:#64748b;}
+.state-off{background:#faf5ff;color:#7c3aed;}
+.state-ext{background:#f0f9ff;color:#0369a1;}
+#focus-panel{
+  position:fixed;right:14px;top:54px;z-index:100;
+  width:210px;background:#fff;
+  border:1px solid rgba(0,0,0,0.09);
+  border-radius:14px;padding:14px;
+  display:none;
+  max-height:calc(100vh - 80px);overflow-y:auto;
+  box-shadow:0 8px 28px rgba(0,0,0,0.09);
+}
+#focus-panel h3{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:9px;}
+#focus-panel .fp-item{
+  font-size:11px;color:var(--muted);
+  padding:3px 0;line-height:1.4;
+  border-bottom:1px solid rgba(0,0,0,0.05);
+}
+#focus-panel .fp-close{
+  position:absolute;top:8px;right:10px;cursor:pointer;
+  color:var(--muted);font-size:12px;font-weight:700;opacity:.5;
+}
+#focus-panel .fp-close:hover{opacity:1;}
+#focus-panel p.fp-hint{font-size:9.5px;color:#bbb;margin-top:8px;}
+#legend{
+  position:fixed;bottom:14px;left:14px;z-index:100;
+  background:rgba(255,255,255,0.92);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:12px;padding:10px 13px;
+  display:flex;flex-direction:column;gap:5px;
+  max-width:180px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.06);
+}
+.leg-title{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#bbb;margin-bottom:2px;}
+.leg-row{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:500;color:var(--muted);}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.leg-sq{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.leg-sep{height:1px;background:rgba(0,0,0,0.06);margin:2px 0;}
+@media(max-width:600px){
+  #legend{display:none;}
+  #focus-panel{width:170px;font-size:10px;}
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="hd-logo">
+    <svg viewBox="0 0 18 18" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round">
+      <line x1="9" y1="1" x2="9" y2="17"/>
+      <line x1="1" y1="9" x2="17" y2="9"/>
+    </svg>
+  </div>
+  <div>
+    <div class="hd-title">Cerebro Alma</div>
+    <div class="hd-sub">Centro Médico Carampangue</div>
+  </div>
+  <div id="search-wrap">
+    <svg class="si" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input id="search" type="text" placeholder="Buscar módulo, agente..." autocomplete="off" spellcheck="false">
+  </div>
+  <div id="counter">-- nodos &middot; -- conexiones</div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="tooltip">
+  <div class="tt-name"></div>
+  <div class="tt-desc"></div>
+  <div class="tt-state"></div>
+</div>
+
+<div id="focus-panel">
+  <span class="fp-close" id="fp-close">ESC</span>
+  <h3 id="fp-title">Dominio</h3>
+  <div id="fp-list"></div>
+  <p class="fp-hint">Click fuera o ESC para cerrar</p>
+</div>
+
+<div id="legend">
+  <div class="leg-title">Dominios</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-conv)"></div>Conversacional</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-agenda)"></div>Agenda & Citas</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-pagos)"></div>Pagos & Finanzas</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-mkt)"></div>Marketing / Autopilot</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-agentico)"></div>Capa Agéntica</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-clinico)"></div>Clínico & Programas</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-bi)"></div>Datos & BI</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-cump)"></div>Cumplimiento</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--d-ops)"></div>Operaciones</div>
+  <div class="leg-row"><div class="leg-sq" style="background:var(--d-ext)"></div>Externas</div>
+  <div class="leg-sep"></div>
+  <div class="leg-title">Estado</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--s-live)"></div>Vivo en prod</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--s-gated)"></div>Gateado OFF</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--s-local)"></div>Local / sin deploy</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--s-off)"></div>Motor OFF</div>
+</div>
+
+<script>
+/* =====================================================================
+   DOMAIN COLORS
+   ===================================================================== */
+const DOMAIN_COLORS = {
+  core:     '#1a1a2e',
+  conv:     '#0ea5e9',
+  agenda:   '#10b981',
+  pagos:    '#f59e0b',
+  mkt:      '#ef4444',
+  agentico: '#8b5cf6',
+  clinico:  '#ec4899',
+  bi:       '#06b6d4',
+  cump:     '#f97316',
+  ops:      '#6366f1',
+  ext:      '#94a3b8',
+};
+
+// ring: 0=center, 1=domains, 2=modules, 25=golden ring (orq+cron), 3=internals/agents, 4=ext
+// "ring 25" is stored as 2.5 but we use integer 25 for cleaner logic
+const N = (id, label, domain, state, desc, ring=2) =>
+  ({id, label, domain, state, desc, ring});
+
+/* =====================================================================
+   GRAPH DATA
+   ===================================================================== */
+const rawNodes = [
+  /* CENTRO */
+  N('alma_cmc','Alma · CMC','core','live','Plataforma unificada de gestión — Centro Médico Carampangue',0),
+
+  /* DOMINIOS (ring 1) */
+  N('d_conv','Conversacional','conv','live','Motor de conversación WhatsApp + recepción digital',1),
+  N('d_agenda','Agenda & Citas','agenda','live','Gestión de citas, cupos y agendamiento',1),
+  N('d_pagos','Pagos & Finanzas','pagos','live','Caja, copagos, conciliación e informes financieros',1),
+  N('d_mkt','Marketing & Crecimiento','mkt','live','Autopilot: ads, atribución, winback, campañas',1),
+  N('d_agentico','Capa Agéntica','agentico','off','Brain autónomo: sensores → estado → decisión → ejecución',1),
+  N('d_clinico','Clínico & Programas','clinico','live','Fichas, programas, adherencia y portal paciente',1),
+  N('d_bi','Datos & BI','bi','live','Dashboards, segmentación y analítica territorial',1),
+  N('d_cump','Cumplimiento & Calidad','cump','live','Consent 21.719, auditoría, SEREMI, calidad',1),
+  N('d_ops','Operaciones','ops','live','Inventario, mantención, RRHH, print',1),
+
+  /* ---- MÓDULOS CONVERSACIONAL (ring 2) ---- */
+  N('bot_flows','Bot WhatsApp (flows.py)','conv','live','Motor de intents + flujos conversacionales. Backbone del sistema.',2),
+  N('panel_v2','Panel Recepción /admin/v2','conv','live','Inbox WhatsApp-style maduro + buscador FTS5',2),
+  N('panel_v3','Panel Recepción /admin/v3','conv','local','V3 beta: diseño premium, en WIP sin deploy',2),
+  N('envios','Envíos/Campañas /alma/envios','conv','live','Auditoría de templates salientes + imágenes',2),
+  N('adkun_asst','Asistente Adkun WhatsApp','conv','gated','Dueño consulta por WhatsApp → reportes en tiempo real. GATED OFF.',2),
+  N('ges_triage','GES Triage :8002','conv','live','Clasificación de urgencias GES por conversación',2),
+  N('examen_ficha','Examen→Ficha :8700','conv','live','Foto de examen → texto ficha Medilink (Claude vision)',2),
+  N('checkin_qr','Check-in QR /checkin','conv','gated','Auto check-in por QR + sala de espera virtual. GATED.',2),
+
+  /* ---- MÓDULOS AGENDA (ring 2) ---- */
+  N('agenda_nativa','Agenda nativa /alma/agenda','agenda','live','Ver día + agendar wizard 3 pasos sobre Medilink',2),
+  N('agendador_pub','Agendador público /agendar','agenda','live','Cara pública premium sobre Medilink. ON en prod.',2),
+  N('agenda_familiar','Agenda familiar','agenda','live','Bloqueo RUT+prof+día. Ofrece cupos contiguos para familia.',2),
+  N('waitlist','Waitlist/Oferta de cupos','agenda','gated','Operativa F4: cancela → match → invita → claim atómico. GATED.',2),
+  N('boxes','Boxes /alma/boxes','agenda','live','Utilización, yield, ociosidad y forecast de boxes',2),
+
+  /* ---- MÓDULOS PAGOS (ring 2) ---- */
+  N('pagos_mod','Pagos /alma/pagos','pagos','live','Copagos editables + arancel Fonasa N3 + folio Imed',2),
+  N('abonos','Abonos /alma/abonos','pagos','local','Pago anticipado psiquiatría/fono/nutrición. Local, sin deploy.',2),
+  N('caja_diaria','Caja diaria /alma/caja_diaria','pagos','live','Cierre diario de caja + métodos de pago',2),
+  N('conciliacion','Conciliación 6 fuentes','pagos','live','Auditor.py: Imed + Fonasa + Transbank + caja + WA + sheets',2),
+  N('liquidaciones','Liquidaciones honorarios','pagos','live','Cálculo honorarios por profesional + mes',2),
+  N('finanzas','Finanzas /alma/finanzas','pagos','live','Egresos + flujo de caja mensual',2),
+
+  /* ---- MÓDULOS MARKETING / AUTOPILOT (ring 2) ---- */
+  N('autopilot_core','Autopilot (engine)','mkt','live','Motor central: señales → presupuesto → ejecución → ROAS',2),
+  N('atribucion','Atribución CAC/ROAS','mkt','live','meta_referrals → bi_pagos_caja → cac_snapshot.json diario',2),
+  N('winback','Win-back','mkt','live','Pool consentido → blast WA → ingreso real en bi_pagos_caja',2),
+  N('email_mkt','Email Marketing RFM','mkt','gated','6 segmentos RFM, plantillas, scoring best-practices. GATED.',2),
+  N('custom_aud','Custom Audiences Meta','mkt','live','Sync pacientes → audiences → ads retargeting',2),
+  N('disenos','Diseños (gpt-image-2)','mkt','live','Galería de creatividades generadas por IA',2),
+  N('image_runner','Image Runner (gratis)','mkt','local','ChatGPT Pro Playwright → galería, $0 costo. Motor principal.',2),
+  N('plantillas_prof','Plantillas 24 prof.','mkt','live','24 borradores Meta-ready por profesional con precios reales',2),
+  N('seo_blog','SEO / Blog','mkt','live','27+ commits, 21 schemas, sitemap 223 URLs, Marketing Kit',2),
+  N('director','Director (gabinete)','mkt','live','4 roles: operador, auditor, inventor, optimizador. Read-only.',2),
+  N('ads_meta_mod','Ads Meta (policy)','mkt','live','Umbrales CAC/msg por especialidad + política de presupuesto',2),
+  N('optimizer_l5','Optimizer L5','mkt','live','Margen real + honorario + Champion/Challenger z-test',2),
+  N('approvals','Approvals Fase 2','mkt','gated','Cola aprobación dueño → WhatsApp → /autopilot. GATED.',2),
+  N('experiments','Experiments','mkt','live','Champion/Challenger con z-test honesto, no promueve con p marginal',2),
+  N('impact_pl','Impact P&L agéntico','mkt','live','P&L por agente con honorario real dueño vs tercero',2),
+
+  /* ---- MÓDULOS CAPA AGÉNTICA (ring 2) ---- */
+  N('alma_brain','Alma Brain','agentico','off','sensors → state → copilot → tools → policy. Todo OFF.',2),
+  N('sala_maquinas','Sala de Máquinas /alma/control','agentico','off','Switchboard: toggles en vivo + dry-run + auditoría flota',2),
+  N('flota_agentes','Flota 18 agentes','agentico','off','18 agentes autónomos gateados OFF',2),
+  N('orquestadores','26 orquestadores','agentico','off','26 orquestadores de tareas clínicas/comerciales. OFF.',2),
+  N('guardrails','Guardrails','agentico','off','Presupuesto de contacto/paciente + kill-switch por orquestador',2),
+  N('copilot','Copilot (tool-use Claude)','agentico','off','Claude con tool-use: sense → propose → run',2),
+  N('ledger','Ledger/Goals/Learning','agentico','off','Registro de acciones, metas y aprendizaje agéntico',2),
+
+  /* ---- MÓDULOS CLÍNICO (ring 2) ---- */
+  N('pacientes360','Pacientes ficha 360','clinico','live','Ficha completa: historial, pagos, adherencia, notas',2),
+  N('kine_mod','Kine /alma/kine','clinico','live','Pacientes kine: adherencia, días sin sesión, BAI/BDI',2),
+  N('ortodoncia','Ortodoncia /alma/ortodoncia','clinico','live','Pacientes orto: control próximo, cuotas, status',2),
+  N('programas','Programas /alma/programas','clinico','live','Motor 11 especialidades: adherencia vs control/recall',2),
+  N('interconsultas','Interconsultas','clinico','live','Derivaciones internas + seguimiento',2),
+  N('examenes_mod','Exámenes','clinico','live','Registro y estado de exámenes solicitados',2),
+  N('resultados_mod','Resultados','clinico','live','Resultados recibidos + aviso WA al paciente',2),
+  N('portal_v3','Portal paciente /portal/v3','clinico','live','Banderas rojas por dx, SAMU 131, autocuidado. V2 default.',2),
+  N('autocuidado','Autocuidado','clinico','local','Instrucciones post-consulta personalizadas. Local.',2),
+
+  /* ---- MÓDULOS BI (ring 2) ---- */
+  N('dash_cmc','Dashboard /cmc','bi','live','Segmentación + global: KPIs, evolución, territorio',2),
+  N('demanda_bi','Demanda /alma/demanda','bi','live','Demanda por especialidad, hora, día + forecast',2),
+  N('db_mensual','DB Mensual /alma/db','bi','live','Base de datos mensual exportable',2),
+  N('localidad','dim_paciente.localidad','bi','live','Demografía territorial enriquecida, nunca reinventar CASE',2),
+  N('heatmaps','Heatmaps territorio','bi','live','Mapa de calor por localidad de origen de pacientes',2),
+  N('rfm','RFM engine','bi','live','Segmentación RFM: Recencia, Frecuencia, Monto',2),
+
+  /* ---- MÓDULOS CUMPLIMIENTO (ring 2) ---- */
+  N('consent','Consent 21.719','cump','live','Botón recepción → WA → paciente confirma (prueba fuerte)',2),
+  N('auditoria','Auditoría 6 checks','cump','live','5 checks deterministas + 1 Claude. Vista /admin/auditoria',2),
+  N('calidad','Calidad/Reclamos','cump','live','Registro de reclamos + seguimiento',2),
+  N('esterilizacion','Esterilización SEREMI','cump','live','Registro de ciclos de esterilización para SEREMI',2),
+  N('habilitacion','Habilitación SEREMI','cump','live','Documentos + estado habilitación SEREMI',2),
+  N('documentos','Documentos','cump','live','Repositorio documental de la clínica',2),
+
+  /* ---- MÓDULOS OPERACIONES (ring 2) ---- */
+  N('inventario','Inventario dental','ops','live','41 productos MayorDent + stock movimientos + OC auto',2),
+  N('mantencion','Mantención','ops','live','Registro de mantención de equipos',2),
+  N('tareas','Tareas','ops','live','Gestión de tareas del equipo',2),
+  N('equipo_rrhh','Equipo/RRHH','ops','live','Profesionales, licencias, % honorario',2),
+  N('alma_print','Alma Print :8800','ops','local','Impresión remota recepción sin exponer impresora. Local.',2),
+  N('ship_sh','Deploy ship.sh','ops','live','Deploy quirúrgico multi-sesión sin barrer WIP ajeno',2),
+
+  /* ====================================================================
+     RING 25 — GOLDEN RING: orquestadores + jobs cron
+     Distribuidos UNIFORMEMENTE en 360°, ignorando sector de dominio padre.
+     ==================================================================== */
+
+  /* 26 orquestadores */
+  N('orc_confirm','orc:confirmaciones','agentico','off','Confirmaciones 24h antes de la cita por WA',25),
+  N('orc_adh_kine','orc:adherencia_kine','agentico','off','Worklist adherencia kine para recepción',25),
+  N('orc_ads_anom','orc:ads_anomalia','agentico','off','Detecta anomalías en gasto/rendimiento Meta Ads',25),
+  N('orc_agenda_salud','orc:agenda_salud','agentico','off','Promueve agenda preventiva por perfil de riesgo',25),
+  N('orc_briefing','orc:briefing','agentico','off','Brief diario automático para el dueño',25),
+  N('orc_campanas','orc:campanas_estacionales','agentico','off','Coordina campañas estacionales (invierno, IRM, etc.)',25),
+  N('orc_cob_orto','orc:cobranza_ortodoncia','agentico','off','Seguimiento de cuotas ortodoncia vencidas',25),
+  N('orc_ctrl_cron','orc:control_cronico','agentico','off','Recall pacientes crónicos por protocolo',25),
+  N('orc_ctrl_orto','orc:controles_ortodoncia','agentico','off','Recall controles ortodoncia por intervalo',25),
+  N('orc_conv_par','orc:conversacion_parada','agentico','off','Detecta conversaciones sin respuesta >4h',25),
+  N('orc_crosssell','orc:crosssell_postconsulta','agentico','off','Cross-sell post-consulta por especialidad complementaria',25),
+  N('orc_cumple','orc:cumpleanos','agentico','off','Felicitación + oferta cumpleaños',25),
+  N('orc_demanda','orc:demanda_abrir_agenda','agentico','off','Abre agenda automática cuando hay alta demanda insatisfecha',25),
+  N('orc_ficha','orc:ficha_incompleta','agentico','off','Solicita completar ficha paciente pendiente',25),
+  N('orc_ges','orc:ges_backlog','agentico','off','Gestiona backlog de casos GES pendientes',25),
+  N('orc_hueco','orc:hueco_proactivo','agentico','off','Ofrece cupo liberado proactivamente a waitlist',25),
+  N('orc_inv_compra','orc:inventario_compra','agentico','off','Genera OC cuando stock dental baja de umbral',25),
+  N('orc_noshow','orc:no_show_recovery','agentico','off','Recupera y reagenda no-shows del día',25),
+  N('orc_prev_edad','orc:preventivo_edad','agentico','off','Examen preventivo por tramo etario (EMPAM/EMPA)',25),
+  N('orc_primera','orc:primera_vez_sin_retorno','agentico','off','Re-invita pacientes que no volvieron tras primera consulta',25),
+  N('orc_reactivacion','orc:reactivacion','agentico','off','Reactiva pacientes inactivos con oferta personalizada',25),
+  N('orc_referral','orc:referral_sin_cerrar','agentico','off','Seguimiento de interconsultas sin respuesta',25),
+  N('orc_reputacion','orc:reputacion_nps','agentico','off','Solicita NPS + reseña Google Business Profile',25),
+  N('orc_resultados','orc:resultados_examenes','agentico','off','Avisa cuando llegan resultados de exámenes',25),
+  N('orc_snapshot','orc:snapshot','agentico','off','Snapshot diario de KPIs para el Director',25),
+
+  /* Jobs cron del sistema (para completar el anillo hasta ~50 puntos) */
+  N('job_confirmaciones','job:confirmaciones 10:00','conv','live','Cron 10:00 CLT — envía confirmaciones del día siguiente',25),
+  N('job_winback','job:winback 10:05','mkt','live','Cron 10:05 CLT — win-back pool consentido',25),
+  N('job_cac_snapshot','job:cac_snapshot 00:20','mkt','live','Cron 00:20 CLT — snapshot CAC/ROAS diario',25),
+  N('job_audit_00','job:audit :00','cump','live','Cron :00 — motor auditoría 6 checks',25),
+  N('job_audit_30','job:audit :30','cump','live','Cron :30 — motor auditoría 6 checks (alternado)',25),
+  N('job_bi_sync','job:bi_sync 23:50','bi','live','Cron 23:50 CLT — sync Medilink → Postgres BI',25),
+  N('job_citas_cache','job:citas_cache refresh','agenda','live','Cron diario — recarga citas_cache desde Medilink',25),
+  N('job_reminders_09','job:reminders 09:00','conv','live','Cron 09:00 CLT — recordatorios del día siguiente',25),
+  N('job_reminders_2h','job:reminders 2h antes','conv','live','Cron cada 15min 07:30-21:30 — recordatorio 2h antes de cita',25),
+  N('job_reenganche','job:reenganche 5min','conv','live','Cron cada 5min — reenganche de flujos abandonados',25),
+  N('job_waitlist','job:waitlist 07:00','agenda','live','Cron 07:00 CLT — notifica waitlist de cupos disponibles',25),
+  N('job_cumple','job:cumpleanos 08:00','mkt','live','Cron 08:00 CLT — mensajes de cumpleaños',25),
+  N('job_fidelizacion','job:fidelizacion post-consulta','clinico','live','Cron diario — post-consulta segmentado por especialidad',25),
+  N('job_sre','job:sre watchdog','ops','live','Cron cada 10min — watchdog salud del sistema',25),
+  N('job_ap_run','job:autopilot cada hora','mkt','live','Cron horario — Autopilot engine main loop',25),
+
+  /* ---- INTERNALS ring 3: Autopilot ---- */
+  N('ap_ad_formats','ad_formats.py','mkt','live','Formatos de anuncios Meta disponibles',3),
+  N('ap_advisor','advisor.py','mkt','live','Recomendaciones táctica por señales de demanda',3),
+  N('ap_audiences','audiences.py','mkt','live','Gestión de audiencias Custom y Lookalike',3),
+  N('ap_cac_local','cac_local.py','mkt','live','Cálculo local CAC sin depender de Postgres en tiempo real',3),
+  N('ap_capacity','capacity.py','mkt','live','Estimación de capacidad disponible por especialidad',3),
+  N('ap_creatives','creatives.py','mkt','live','Ranking de anuncios por rendimiento nivel-ad',3),
+  N('ap_designs','designs.py','mkt','live','Job asíncrono de generación de imágenes + galería',3),
+  N('ap_digest','digest.py','mkt','live','Resumen diario para Director + worklist unificada',3),
+  N('ap_email_optin','email_optin.py','mkt','gated','Double opt-in Ley 21.719 para email marketing',3),
+  N('ap_email_render','email_render.py','mkt','gated','Renderizado HTML/texto plantillas email',3),
+  N('ap_email_segs','email_segments.py','mkt','gated','Segmentación RFM para campañas email',3),
+  N('ap_email_track','email_tracking.py','mkt','gated','Tracking apertura + clicks email',3),
+  N('ap_flags','flags.py','mkt','live','Feature flags runtime del motor Autopilot',3),
+  N('ap_image_gen','image_gen.py','mkt','live','Wrapper OpenAI gpt-image-2 con async job_id',3),
+  N('ap_meta_ads','meta_ads.py','mkt','live','Cliente Meta Graph API + manejo de campañas',3),
+  N('ap_publishing','publishing.py','mkt','live','Publicación/pausa de anuncios con guardrails',3),
+  N('ap_run','run.py','mkt','live','Entry point cron Autopilot (cada hora)',3),
+  N('ap_seo_audit','seo_audit.py','mkt','live','Auditoría SEO on-demand + recomendaciones',3),
+  N('ap_settings','settings.py','mkt','live','Configuración del motor Autopilot',3),
+  N('ap_tenants','tenants.py','mkt','live','Multi-tenant config (CMC, futuras clínicas)',3),
+  N('ap_winback_rpt','winback_report.py','mkt','live','Reporte P&L real Win-back vs bi_pagos_caja',3),
+  N('ap_world_state','world_state.py','mkt','live','Estado del mundo: demanda, presupuesto, métricas vivas',3),
+
+  /* ---- INTERNALS ring 3: Brain ---- */
+  N('br_sensors','sensors.py','agentico','off','Sensores: agenda, pagos, conversaciones, métricas',3),
+  N('br_state','state.py','agentico','off','Estado del sistema consolidado para el Copilot',3),
+  N('br_policy','brain/policy.py','agentico','off','Política de decisión del Brain (cuándo actuar)',3),
+  N('br_tools','tools.py','agentico','off','Herramientas disponibles para el Copilot',3),
+  N('br_operativa','operativa.py','agentico','gated','Operativa F4: cupos + waitlist + hold blando. GATED.',3),
+
+  /* ---- INTERNALS ring 3: Agents ---- */
+  N('ag_broker','broker.py','agentico','off','Broker de mensajes entre agentes',3),
+  N('ag_capstone','capstone.py','agentico','off','Resumen/informe maestro de la flota',3),
+  N('ag_ctrl','control_plane.py','agentico','off','Plano de control: arranque/parada de agentes',3),
+  N('ag_conv','conversation.py','agentico','off','Adaptador conversacional para agentes',3),
+  N('ag_events','events.py','agentico','off','Bus de eventos inter-agente',3),
+  N('ag_goals','goals.py','agentico','off','Gestión de metas por agente + cadencia',3),
+  N('ag_guardrails','guardrails.py','agentico','off','Guardrails a nivel agente: límites de gasto/contacto',3),
+  N('ag_learning','learning.py','agentico','off','Aprendizaje por refuerzo: qué funcionó',3),
+  N('ag_ledger','ledger.py','agentico','off','Libro de acciones ejecutadas y su impacto',3),
+  N('ag_registry','registry.py','agentico','off','Registro y descubrimiento de agentes disponibles',3),
+  N('ag_runtime','runtime.py','agentico','off','Runtime de ejecución de agentes async',3),
+  N('ag_scheduler','scheduler_hook.py','agentico','off','Hook al scheduler de crons de FastAPI',3),
+  N('ag_simulator','simulator.py','agentico','off','Simulador dry-run para preview seguro',3),
+  N('ag_store','store.py','agentico','off','Persistencia de estado de agentes en SQLite',3),
+  N('ag_abandono','abandono_recovery','agentico','off','Recupera conversaciones abandonadas a mitad del flujo',3),
+  N('ag_adh_kine','adherencia_kine (agente)','agentico','off','Adherencia a plan kine: recordatorios + escalada',3),
+  N('ag_ads_exec','ads_executor','agentico','off','Ejecuta cambios de presupuesto aprobados en Meta',3),
+  N('ag_briefing','briefing (agente)','agentico','off','Brief diario de estado clínica para el dueño',3),
+  N('ag_cobranza','cobranza','agentico','off','Gestión de deudas + recordatorios de pago',3),
+  N('ag_concil','conciliacion_auto','agentico','off','Conciliación automática 6 fuentes sin intervención',3),
+  N('ag_ctrl_cron','control_cronico (agente)','agentico','off','Seguimiento pacientes con patología crónica',3),
+  N('ag_creativos','creativos','agentico','off','Genera y publica creatividades Meta de forma autónoma',3),
+  N('ag_demanda','demanda_estrategia','agentico','off','Analiza demanda y sugiere apertura/cierre de agenda',3),
+  N('ag_inventario','inventario_auto','agentico','off','Genera OC automática cuando stock cae bajo umbral',3),
+  N('ag_postconsulta','postconsulta_smart','agentico','off','Mensajes post-consulta segmentados por especialidad',3),
+  N('ag_pricing','pricing_analyst','agentico','off','Analiza precios vs competencia + Fonasa actualizado',3),
+  N('ag_reactivacion','reactivacion_winback','agentico','off','Reactivación automatizada de pacientes inactivos',3),
+  N('ag_reputacion','reputacion','agentico','off','Solicita reseñas GBP + monitorea NPS',3),
+  N('ag_seo','seo_content','agentico','off','Genera y publica contenido SEO de forma autónoma',3),
+  N('ag_sre','sre_watchdog','agentico','off','Monitorea salud del sistema y alerta anomalías',3),
+  N('ag_supervisor','supervisor','agentico','off','Supervisor de flota: detiene agentes problemáticos',3),
+  N('ag_yield','yield_agenda','agentico','off','Optimiza ocupación de agenda con pricing dinámico',3),
+
+  /* ---- FUENTES EXTERNAS (ring 4) ---- */
+  N('medilink','Medilink EHR','ext','ext','EHR central. Citas, fichas, agenda. No iframeable.',4),
+  N('wa_api','WhatsApp Cloud API','ext','ext','Canal de conversación principal. Meta WABA.',4),
+  N('meta_ads_ext','Meta Ads / CAPI','ext','ext','Ads + Conversions API para atribución servidor a servidor',4),
+  N('sessions_db','sessions.db (SQLCipher)','ext','ext','Base conversaciones cifrada en VPS',4),
+  N('postgres_bi','Postgres BI (DO)','ext','ext','Data warehouse en DigitalOcean. ETL desde Medilink.',4),
+  N('bi_pagos','bi_pagos_caja','ext','ext','Caja real Medilink: ingresos/pagos por cron',4),
+  N('claude_api','Claude API','ext','ext','Anthropic Claude — motor de IA: intents, copilot, vision',4),
+  N('openai_img','OpenAI Imágenes','ext','ext','gpt-image-2: generación de creatividades. Fallback.',4),
+  N('gbp_gsc','Google (GBP/GSC)','ext','ext','Google Business Profile + Search Console + Ads',4),
+  N('wordpress','WordPress CMC','ext','ext','Sitio web centromedicocarampangue.cl en hPanel',4),
+  N('imed_fonasa','Imed / Fonasa','ext','ext','Procesamiento bonificaciones + arancel MLE N3',4),
+  N('transbank','Transbank','ext','ext','POS presencial + conciliación débito/crédito',4),
+  N('chatgpt_pro','ChatGPT Pro','ext','ext','Generación imágenes gratis vía Playwright. Motor principal.',4),
+];
+
+/* ---- LINKS ---- */
+const treeLinks = [
+  ['alma_cmc','d_conv'],['alma_cmc','d_agenda'],['alma_cmc','d_pagos'],
+  ['alma_cmc','d_mkt'],['alma_cmc','d_agentico'],['alma_cmc','d_clinico'],
+  ['alma_cmc','d_bi'],['alma_cmc','d_cump'],['alma_cmc','d_ops'],
+
+  ['d_conv','bot_flows'],['d_conv','panel_v2'],['d_conv','panel_v3'],
+  ['d_conv','envios'],['d_conv','adkun_asst'],['d_conv','ges_triage'],
+  ['d_conv','examen_ficha'],['d_conv','checkin_qr'],
+
+  ['d_agenda','agenda_nativa'],['d_agenda','agendador_pub'],
+  ['d_agenda','agenda_familiar'],['d_agenda','waitlist'],['d_agenda','boxes'],
+
+  ['d_pagos','pagos_mod'],['d_pagos','abonos'],['d_pagos','caja_diaria'],
+  ['d_pagos','conciliacion'],['d_pagos','liquidaciones'],['d_pagos','finanzas'],
+
+  ['d_mkt','autopilot_core'],['d_mkt','atribucion'],['d_mkt','winback'],
+  ['d_mkt','email_mkt'],['d_mkt','custom_aud'],['d_mkt','disenos'],
+  ['d_mkt','image_runner'],['d_mkt','plantillas_prof'],['d_mkt','seo_blog'],
+  ['d_mkt','director'],['d_mkt','ads_meta_mod'],['d_mkt','optimizer_l5'],
+  ['d_mkt','approvals'],['d_mkt','experiments'],['d_mkt','impact_pl'],
+
+  ['autopilot_core','ap_ad_formats'],['autopilot_core','ap_advisor'],
+  ['autopilot_core','ap_audiences'],['autopilot_core','ap_cac_local'],
+  ['autopilot_core','ap_capacity'],['autopilot_core','ap_creatives'],
+  ['autopilot_core','ap_designs'],['autopilot_core','ap_digest'],
+  ['autopilot_core','ap_email_optin'],['autopilot_core','ap_email_render'],
+  ['autopilot_core','ap_email_segs'],['autopilot_core','ap_email_track'],
+  ['autopilot_core','ap_flags'],['autopilot_core','ap_image_gen'],
+  ['autopilot_core','ap_meta_ads'],['autopilot_core','ap_publishing'],
+  ['autopilot_core','ap_run'],['autopilot_core','ap_seo_audit'],
+  ['autopilot_core','ap_settings'],['autopilot_core','ap_tenants'],
+  ['autopilot_core','ap_winback_rpt'],['autopilot_core','ap_world_state'],
+
+  ['d_agentico','alma_brain'],['d_agentico','sala_maquinas'],
+  ['d_agentico','flota_agentes'],['d_agentico','orquestadores'],
+  ['d_agentico','guardrails'],['d_agentico','copilot'],['d_agentico','ledger'],
+
+  ['alma_brain','br_sensors'],['alma_brain','br_state'],
+  ['alma_brain','br_policy'],['alma_brain','br_tools'],['alma_brain','br_operativa'],
+
+  ['flota_agentes','ag_broker'],['flota_agentes','ag_capstone'],
+  ['flota_agentes','ag_ctrl'],['flota_agentes','ag_conv'],
+  ['flota_agentes','ag_events'],['flota_agentes','ag_goals'],
+  ['flota_agentes','ag_guardrails'],['flota_agentes','ag_learning'],
+  ['flota_agentes','ag_ledger'],['flota_agentes','ag_registry'],
+  ['flota_agentes','ag_runtime'],['flota_agentes','ag_scheduler'],
+  ['flota_agentes','ag_simulator'],['flota_agentes','ag_store'],
+  ['flota_agentes','ag_abandono'],['flota_agentes','ag_adh_kine'],
+  ['flota_agentes','ag_ads_exec'],['flota_agentes','ag_briefing'],
+  ['flota_agentes','ag_cobranza'],['flota_agentes','ag_concil'],
+  ['flota_agentes','ag_ctrl_cron'],['flota_agentes','ag_creativos'],
+  ['flota_agentes','ag_demanda'],['flota_agentes','ag_inventario'],
+  ['flota_agentes','ag_postconsulta'],['flota_agentes','ag_pricing'],
+  ['flota_agentes','ag_reactivacion'],['flota_agentes','ag_reputacion'],
+  ['flota_agentes','ag_seo'],['flota_agentes','ag_sre'],
+  ['flota_agentes','ag_supervisor'],['flota_agentes','ag_yield'],
+
+  // orquestadores → parent is 'orquestadores' module node
+  ['orquestadores','orc_confirm'],['orquestadores','orc_adh_kine'],
+  ['orquestadores','orc_ads_anom'],['orquestadores','orc_agenda_salud'],
+  ['orquestadores','orc_briefing'],['orquestadores','orc_campanas'],
+  ['orquestadores','orc_cob_orto'],['orquestadores','orc_ctrl_cron'],
+  ['orquestadores','orc_ctrl_orto'],['orquestadores','orc_conv_par'],
+  ['orquestadores','orc_crosssell'],['orquestadores','orc_cumple'],
+  ['orquestadores','orc_demanda'],['orquestadores','orc_ficha'],
+  ['orquestadores','orc_ges'],['orquestadores','orc_hueco'],
+  ['orquestadores','orc_inv_compra'],['orquestadores','orc_noshow'],
+  ['orquestadores','orc_prev_edad'],['orquestadores','orc_primera'],
+  ['orquestadores','orc_reactivacion'],['orquestadores','orc_referral'],
+  ['orquestadores','orc_reputacion'],['orquestadores','orc_resultados'],
+  ['orquestadores','orc_snapshot'],
+
+  // jobs → parent modules
+  ['bot_flows','job_confirmaciones'],['winback','job_winback'],
+  ['atribucion','job_cac_snapshot'],['auditoria','job_audit_00'],
+  ['auditoria','job_audit_30'],['dash_cmc','job_bi_sync'],
+  ['agenda_nativa','job_citas_cache'],['bot_flows','job_reminders_09'],
+  ['bot_flows','job_reminders_2h'],['bot_flows','job_reenganche'],
+  ['waitlist','job_waitlist'],['winback','job_cumple'],
+  ['programas','job_fidelizacion'],['ship_sh','job_sre'],
+  ['autopilot_core','job_ap_run'],
+
+  ['d_clinico','pacientes360'],['d_clinico','kine_mod'],['d_clinico','ortodoncia'],
+  ['d_clinico','programas'],['d_clinico','interconsultas'],['d_clinico','examenes_mod'],
+  ['d_clinico','resultados_mod'],['d_clinico','portal_v3'],['d_clinico','autocuidado'],
+
+  ['d_bi','dash_cmc'],['d_bi','demanda_bi'],['d_bi','db_mensual'],
+  ['d_bi','localidad'],['d_bi','heatmaps'],['d_bi','rfm'],
+
+  ['d_cump','consent'],['d_cump','auditoria'],['d_cump','calidad'],
+  ['d_cump','esterilizacion'],['d_cump','habilitacion'],['d_cump','documentos'],
+
+  ['d_ops','inventario'],['d_ops','mantencion'],['d_ops','tareas'],
+  ['d_ops','equipo_rrhh'],['d_ops','alma_print'],['d_ops','ship_sh'],
+
+  ['alma_cmc','medilink'],['alma_cmc','wa_api'],['alma_cmc','meta_ads_ext'],
+  ['alma_cmc','sessions_db'],['alma_cmc','postgres_bi'],['alma_cmc','bi_pagos'],
+  ['alma_cmc','claude_api'],['alma_cmc','openai_img'],['alma_cmc','gbp_gsc'],
+  ['alma_cmc','wordpress'],['alma_cmc','imed_fonasa'],['alma_cmc','transbank'],
+  ['alma_cmc','chatgpt_pro'],
+];
+
+const crossLinks = [
+  ['bot_flows','medilink'],['bot_flows','sessions_db'],['bot_flows','claude_api'],
+  ['bot_flows','wa_api'],['bot_flows','consent'],['panel_v2','bot_flows'],
+  ['envios','wa_api'],['adkun_asst','wa_api'],['adkun_asst','director'],
+  ['examen_ficha','claude_api'],['checkin_qr','pagos_mod'],['ges_triage','claude_api'],
+  ['agenda_nativa','medilink'],['agendador_pub','medilink'],['agenda_familiar','medilink'],
+  ['waitlist','wa_api'],['waitlist','br_operativa'],['boxes','postgres_bi'],
+  ['pagos_mod','imed_fonasa'],['pagos_mod','bi_pagos'],['conciliacion','transbank'],
+  ['conciliacion','imed_fonasa'],['conciliacion','bi_pagos'],['abonos','pagos_mod'],
+  ['caja_diaria','transbank'],['liquidaciones','bi_pagos'],
+  ['autopilot_core','meta_ads_ext'],['autopilot_core','postgres_bi'],
+  ['atribucion','bi_pagos'],['atribucion','meta_ads_ext'],['atribucion','ap_cac_local'],
+  ['winback','consent'],['winback','wa_api'],['winback','bi_pagos'],
+  ['custom_aud','meta_ads_ext'],['disenos','openai_img'],['image_runner','chatgpt_pro'],
+  ['seo_blog','wordpress'],['seo_blog','gbp_gsc'],['director','optimizer_l5'],
+  ['director','impact_pl'],['director','ap_world_state'],['experiments','autopilot_core'],
+  ['optimizer_l5','experiments'],['ads_meta_mod','meta_ads_ext'],['approvals','wa_api'],
+  ['ap_meta_ads','meta_ads_ext'],['ap_image_gen','openai_img'],['ap_seo_audit','gbp_gsc'],
+  ['alma_brain','br_sensors'],['copilot','br_tools'],['copilot','claude_api'],
+  ['br_sensors','medilink'],['br_sensors','bi_pagos'],['br_sensors','sessions_db'],
+  ['br_tools','wa_api'],['br_tools','medilink'],['guardrails','sala_maquinas'],
+  ['guardrails','ag_guardrails'],['flota_agentes','guardrails'],
+  ['sala_maquinas','flota_agentes'],['sala_maquinas','orquestadores'],
+  ['ag_ads_exec','meta_ads_ext'],['ag_creativos','openai_img'],
+  ['ag_seo','wordpress'],['ag_reputacion','gbp_gsc'],['ag_cobranza','wa_api'],
+  ['orc_confirm','wa_api'],['orc_reputacion','gbp_gsc'],['orc_hueco','waitlist'],
+  ['orc_noshow','medilink'],['ag_ledger','ledger'],['ag_learning','ledger'],
+  ['dash_cmc','postgres_bi'],['rfm','postgres_bi'],['localidad','postgres_bi'],
+  ['heatmaps','localidad'],['demanda_bi','postgres_bi'],['demanda_bi','medilink'],
+  ['db_mensual','postgres_bi'],
+  ['pacientes360','medilink'],['pacientes360','bi_pagos'],['kine_mod','bi_pagos'],
+  ['ortodoncia','medilink'],['programas','medilink'],['programas','bi_pagos'],
+  ['resultados_mod','wa_api'],['examenes_mod','medilink'],['interconsultas','medilink'],
+  ['consent','wa_api'],['auditoria','sessions_db'],['auditoria','bi_pagos'],
+  ['auditoria','claude_api'],
+  ['inventario','bi_pagos'],['equipo_rrhh','medilink'],['ship_sh','alma_cmc'],
+];
+
+const nodeMap = {};
+rawNodes.forEach(n => { nodeMap[n.id] = n; });
+
+const allLinkDefs = [...treeLinks, ...crossLinks];
+const crossSet = new Set(crossLinks.map(([a,b])=>a+'|'+b));
+
+const GRAPH = {
+  nodes: rawNodes,
+  links: allLinkDefs.map(([s,t]) => ({
+    source:s, target:t,
+    cross: crossSet.has(s+'|'+t)
+  }))
+};
+
+/* =====================================================================
+   MANDALA LAYOUT ENGINE
+   Ring 0  = center     r=0
+   Ring 1  = domains    r=130
+   Ring 2  = modules    r=280  (arcs of tiles per domain, even spacing, no radius jitter)
+   Ring 25 = golden     r=390  (full 360° uniform: orq + cron jobs)
+   Ring 3  = internals  r=500  (dense, per-domain sector, slight radius jitter)
+   Ring 4  = external   r=620  (full 360°)
+   ===================================================================== */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const DPR = window.devicePixelRatio || 1;
+
+let W, H, CX, CY;
+let transform = {x:0, y:0, scale:1};
+let nodes = [], links = [];
+let hovered = null, focused = null, searchHits = new Set();
+let panStart = null, panOrigin = null;
+let lastPinchDist = null;
+let rotation = 0;
+
+const RING_R = {
+  0:   0,
+  1:   130,
+  2:   275,
+  25:  385,
+  3:   490,
+  4:   600,
+};
+
+const DOMAIN_ORDER = ['conv','agenda','pagos','mkt','agentico','clinico','bi','cump','ops'];
+const SECTOR_DEG = 360 / DOMAIN_ORDER.length; // 40°
+
+function domainSectorCenter(domain) {
+  const idx = DOMAIN_ORDER.indexOf(domain);
+  if(idx < 0) return 0;
+  return (idx / DOMAIN_ORDER.length) * Math.PI * 2 - Math.PI / 2;
+}
+
+// Seeded deterministic jitter
+function hashJitter(id, salt) {
+  let h = 0;
+  const s = id + salt;
+  for(let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return ((h & 0xffff) / 0xffff) * 2 - 1; // -1..1
+}
+
+function resize() {
+  canvas.width  = window.innerWidth  * DPR;
+  canvas.height = window.innerHeight * DPR;
+  canvas.style.width  = window.innerWidth  + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.scale(DPR, DPR);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  CX = W / 2;
+  CY = H / 2;
+}
+window.addEventListener('resize', () => { resize(); recomputePositions(); });
+resize();
+
+function initGraph() {
+  // Group ring-2 nodes by domain (for arc layout)
+  const domainRing2 = {};
+  DOMAIN_ORDER.forEach(d => { domainRing2[d] = []; });
+  rawNodes.forEach(n => {
+    if(n.ring === 2 && DOMAIN_ORDER.includes(n.domain)) {
+      domainRing2[n.domain].push(n.id);
+    }
+  });
+
+  // Group ring-3 nodes by domain
+  const domainRing3 = {};
+  DOMAIN_ORDER.forEach(d => { domainRing3[d] = []; });
+  rawNodes.forEach(n => {
+    if(n.ring === 3 && DOMAIN_ORDER.includes(n.domain)) {
+      domainRing3[n.domain].push(n.id);
+    }
+  });
+
+  // Ring 25: all golden nodes uniformly spaced 360°
+  const goldenNodes = rawNodes.filter(n => n.ring === 25);
+  const goldenTotal = goldenNodes.length;
+
+  // Ring 4: external nodes uniformly spaced 360°
+  const extNodes = rawNodes.filter(n => n.ring === 4);
+  const extTotal = extNodes.length;
+
+  nodes = rawNodes.map(nd => {
+    let angle = 0, radius = 0;
+
+    if(nd.ring === 0) {
+      angle = 0; radius = 0;
+
+    } else if(nd.ring === 1) {
+      const di = DOMAIN_ORDER.indexOf(nd.domain);
+      angle  = (di / DOMAIN_ORDER.length) * Math.PI * 2 - Math.PI / 2;
+      radius = RING_R[1];
+
+    } else if(nd.ring === 2) {
+      // Arcs of tiles: even angular spacing within sector, NO radius jitter
+      const list   = domainRing2[nd.domain] || [];
+      const idx    = list.indexOf(nd.id);
+      const count  = list.length;
+      const sc     = domainSectorCenter(nd.domain);
+      // Use 78% of sector width so arcs don't overlap neighbors
+      const spread = (SECTOR_DEG * 0.78) * Math.PI / 180;
+      const step   = count > 1 ? spread / (count - 1) : 0;
+      const start  = sc - spread / 2;
+      angle  = count === 1 ? sc : start + idx * step;
+      radius = RING_R[2]; // NO jitter — constant radius gives clean arc
+
+    } else if(nd.ring === 25) {
+      // GOLDEN RING: full 360°, perfectly uniform
+      const gi = goldenNodes.findIndex(g => g.id === nd.id);
+      angle  = (gi / goldenTotal) * Math.PI * 2 - Math.PI / 2;
+      // Minimal jitter: organic but stays tight to the ring
+      const j = hashJitter(nd.id, 'g25') * 4;
+      radius = RING_R[25] + j;
+
+    } else if(nd.ring === 3) {
+      const list  = domainRing3[nd.domain] || [];
+      const idx   = list.indexOf(nd.id);
+      const count = list.length;
+      const sc    = domainSectorCenter(nd.domain);
+      // Angular spread: scale with node count so large domains fill more arc.
+      // Cap: each node gets at least 7° of arc. Max spread = 270° (3/4 circle).
+      const minDegPerNode = 7;
+      const spread = Math.min(
+        270 * Math.PI / 180,           // hard cap 270°
+        Math.max(
+          SECTOR_DEG * 0.92 * Math.PI / 180,  // at least 1 sector
+          (count - 1) * minDegPerNode * Math.PI / 180
+        )
+      );
+      const step   = count > 1 ? spread / (count - 1) : 0;
+      const start  = sc - spread / 2;
+      angle  = count === 1 ? sc : start + idx * step;
+      // Multi-row via radius jitter: larger bands for very dense domains
+      const jitterScale = count > 20 ? 32 : (count > 10 ? 20 : 14);
+      radius = RING_R[3] + hashJitter(nd.id, 'r3') * jitterScale;
+
+    } else if(nd.ring === 4) {
+      const ei = extNodes.findIndex(e => e.id === nd.id);
+      angle  = (ei / extTotal) * Math.PI * 2 - Math.PI / 2;
+      const j = hashJitter(nd.id, 'ext') * 18;
+      radius = RING_R[4] + j;
+    }
+
+    return { ...nd, angle, radius, x: 0, y: 0 };
+  });
+
+  recomputePositions();
+
+  links = GRAPH.links.map(l => ({
+    ...l,
+    source: nodes.find(n => n.id === l.source),
+    target: nodes.find(n => n.id === l.target),
+  })).filter(l => l.source && l.target);
+
+  document.getElementById('counter').textContent =
+    `${nodes.length} nodos · ${links.length} conexiones`;
+}
+
+function recomputePositions() {
+  nodes.forEach(n => {
+    if(n.ring === 0) { n.x = CX; n.y = CY; return; }
+    const a = n.angle + rotation;
+    n.x = CX + Math.cos(a) * n.radius;
+    n.y = CY + Math.sin(a) * n.radius;
+  });
+}
+
+/* =====================================================================
+   VISUAL HELPERS
+   ===================================================================== */
+const STATE_DOT_COLOR = {
+  live:  '#22c55e',
+  gated: '#f59e0b',
+  local: '#94a3b8',
+  off:   '#a78bfa',
+  ext:   '#4FBECE',
+};
+
+function domainColor(domain) {
+  return DOMAIN_COLORS[domain] || '#94a3b8';
+}
+
+function hexToRgb(hex) {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
+function hexAlpha(hex, a) {
+  const [r,g,b] = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function linkAlpha(l) {
+  if(focused) {
+    const fNode = nodes.find(n => n.id === focused);
+    if(!fNode) return 0.02;
+    if(l.source.id === focused || l.target.id === focused) return 0.75;
+    const neighbors = new Set(
+      links.filter(ll => ll.source === fNode || ll.target === fNode)
+           .flatMap(ll => [ll.source.id, ll.target.id])
+    );
+    if(neighbors.has(l.source.id) && neighbors.has(l.target.id)) return 0.22;
+    return 0.012;
+  }
+  if(hovered) {
+    if(l.source.id === hovered || l.target.id === hovered) return 0.8;
+    return 0.04;
+  }
+  return l.cross ? 0.09 : 0.16;
+}
+
+function nodeAlpha(n) {
+  if(focused) {
+    const fNode = nodes.find(nd => nd.id === focused);
+    if(!fNode) return 0.07;
+    if(n.id === focused) return 1;
+    const neighbors = new Set(
+      links.filter(l => l.source === fNode || l.target === fNode)
+           .flatMap(l => [l.source.id, l.target.id])
+    );
+    return neighbors.has(n.id) ? 0.9 : 0.07;
+  }
+  if(hovered) {
+    if(n.id === hovered) return 1;
+    const hNode = nodes.find(nd => nd.id === hovered);
+    if(!hNode) return 0.5;
+    const neighbors = new Set(
+      links.filter(l => l.source === hNode || l.target === hNode)
+           .flatMap(l => [l.source.id, l.target.id])
+    );
+    return neighbors.has(n.id) ? 1 : 0.07;
+  }
+  if(searchHits.size > 0) return searchHits.has(n.id) ? 1 : 0.07;
+  return 1;
+}
+
+/* =====================================================================
+   DRAW
+   ===================================================================== */
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(transform.x, transform.y);
+  ctx.scale(transform.scale, transform.scale);
+
+  // Concentric ring guides
+  ctx.save();
+  const guideRings = [RING_R[1], RING_R[2], RING_R[25], RING_R[3], RING_R[4]];
+  guideRings.forEach((r, i) => {
+    ctx.beginPath();
+    ctx.arc(CX, CY, r, 0, Math.PI * 2);
+    // Golden ring guide slightly more visible
+    ctx.strokeStyle = i === 2 ? 'rgba(245,158,11,0.12)' : 'rgba(0,0,0,0.04)';
+    ctx.lineWidth   = i === 2 ? 1.2 : 0.7;
+    ctx.stroke();
+  });
+  ctx.restore();
+
+  // Sector dividers
+  ctx.save();
+  DOMAIN_ORDER.forEach((d, i) => {
+    const a = (i / DOMAIN_ORDER.length) * Math.PI * 2 - Math.PI / 2 - (SECTOR_DEG / 2) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.lineTo(CX + Math.cos(a + rotation) * RING_R[4], CY + Math.sin(a + rotation) * RING_R[4]);
+    ctx.strokeStyle = 'rgba(0,0,0,0.022)';
+    ctx.lineWidth   = 0.6;
+    ctx.stroke();
+  });
+  ctx.restore();
+
+  // Links
+  links.forEach(l => {
+    const a = linkAlpha(l);
+    if(a < 0.005) return;
+    ctx.beginPath();
+    ctx.moveTo(l.source.x, l.source.y);
+    ctx.lineTo(l.target.x, l.target.y);
+    const col = domainColor(l.source.domain);
+    ctx.strokeStyle = hexAlpha(col, a);
+    ctx.lineWidth   = 0.55;
+    ctx.stroke();
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const a = nodeAlpha(n);
+    if(a < 0.01) return;
+    const col   = domainColor(n.domain);
+    const isHov = n.id === hovered;
+    const isFoc = n.id === focused;
+    const isHit = searchHits.has(n.id);
+
+    ctx.save();
+    ctx.globalAlpha = a;
+
+    if(n.ring === 0) {
+      // Center tile: dark rounded square with cross
+      const sz = 44, r = 12;
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath();
+      ctx.roundRect(n.x - sz/2, n.y - sz/2, sz, sz, r);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth   = 2.5;
+      ctx.lineCap     = 'round';
+      ctx.beginPath();
+      ctx.moveTo(n.x, n.y - 12); ctx.lineTo(n.x, n.y + 12);
+      ctx.moveTo(n.x - 12, n.y); ctx.lineTo(n.x + 12, n.y);
+      ctx.stroke();
+      ctx.fillStyle   = '#1a1a2e';
+      ctx.font        = '700 10px Montserrat,sans-serif';
+      ctx.textAlign   = 'center';
+      ctx.textBaseline = 'top';
+      ctx.globalAlpha  = a * 0.65;
+      ctx.fillText('Alma · CMC', n.x, n.y + sz/2 + 5);
+
+    } else if(n.ring === 1) {
+      // Domain circle
+      const nr = isHov ? 26 : 22;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, nr, 0, Math.PI * 2);
+      ctx.fillStyle = col;
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 11px Montserrat,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.label.charAt(0).toUpperCase(), n.x, n.y);
+      const lbl = n.label.length > 16 ? n.label.split(' ')[0] : n.label;
+      ctx.fillStyle   = '#333';
+      ctx.font        = '600 9.5px Montserrat,sans-serif';
+      ctx.textAlign   = 'center';
+      ctx.textBaseline = 'top';
+      ctx.globalAlpha  = a * 0.85;
+      ctx.fillText(lbl, n.x, n.y + nr + 4);
+
+    } else if(n.ring === 2) {
+      // Module tiles: clean arc, no radius jitter, constant size
+      const sz = isHov ? 20 : 15;
+      const rr = 4;
+      ctx.fillStyle   = hexAlpha(col, 0.18);
+      ctx.strokeStyle = hexAlpha(col, 0.7);
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.roundRect(n.x - sz/2, n.y - sz/2, sz, sz, rr);
+      ctx.fill();
+      ctx.stroke();
+      // State dot top-right
+      const dc = STATE_DOT_COLOR[n.state] || '#94a3b8';
+      ctx.beginPath();
+      ctx.arc(n.x + sz/2 - 2.5, n.y - sz/2 + 2.5, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = dc;
+      ctx.shadowColor = dc;
+      ctx.shadowBlur  = 4;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+    } else if(n.ring === 25) {
+      // GOLDEN RING: characteristic yellow dots
+      // Jobs (job_*) get a slightly different shade to distinguish from orc_*
+      const isJob = n.id.startsWith('job_');
+      const dotR = isHov ? 6.5 : (isJob ? 3.8 : 4.8);
+      const golden = isJob ? '#fbbf24' : '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = isHov ? '#f59e0b' : hexAlpha(golden, 0.88);
+      if(isHov) { ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 10; }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // thin ring outline for jobs
+      if(isJob && !isHov) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, dotR + 1.5, 0, Math.PI * 2);
+        ctx.strokeStyle = hexAlpha('#f59e0b', 0.35);
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+
+    } else if(n.ring === 3) {
+      // Internals/Agents: small domain-colored tiles
+      const sz  = isHov ? 12 : 8;
+      const rr  = 2.5;
+      ctx.fillStyle   = hexAlpha(col, 0.22);
+      ctx.strokeStyle = hexAlpha(col, 0.5);
+      ctx.lineWidth   = 0.7;
+      ctx.beginPath();
+      ctx.roundRect(n.x - sz/2, n.y - sz/2, sz, sz, rr);
+      ctx.fill();
+      ctx.stroke();
+      const dc = STATE_DOT_COLOR[n.state] || '#94a3b8';
+      ctx.beginPath();
+      ctx.arc(n.x + sz/2 - 1.5, n.y - sz/2 + 1.5, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = dc;
+      ctx.fill();
+
+    } else if(n.ring === 4) {
+      // External: white tile with colored monogram
+      const sz = isHov ? 20 : 15;
+      const rr = 4;
+      ctx.fillStyle   = '#ffffff';
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.roundRect(n.x - sz/2, n.y - sz/2, sz, sz, rr);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle    = col;
+      ctx.font         = `700 ${isHov ? 8 : 6}px Montserrat,sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.label.charAt(0).toUpperCase(), n.x, n.y);
+    }
+
+    ctx.restore();
+
+    // Hover/focus/search label for ring 2+
+    if((isHov || isFoc || isHit) && n.ring >= 2) {
+      const lbl = n.label.length > 24 ? n.label.substring(0, 24) + '…' : n.label;
+      ctx.save();
+      ctx.globalAlpha = a;
+      const fs = 9;
+      ctx.font = `600 ${fs}px Montserrat,sans-serif`;
+      const lw = ctx.measureText(lbl).width;
+      const offset = n.ring === 25 ? 9 : (n.ring === 2 ? 13 : 10);
+      const px = n.x, py = n.y + offset;
+      ctx.fillStyle = 'rgba(255,255,255,0.93)';
+      ctx.beginPath();
+      ctx.roundRect(px - lw/2 - 4, py - 1, lw + 8, fs + 4, 3);
+      ctx.fill();
+      ctx.fillStyle    = '#1a1a2e';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(lbl, px, py);
+      ctx.restore();
+    }
+  });
+
+  ctx.restore();
+}
+
+/* =====================================================================
+   ANIMATION LOOP
+   ===================================================================== */
+const ROTATION_SPEED = 0.00022;
+
+function loop() {
+  rotation += ROTATION_SPEED;
+  nodes.forEach(n => {
+    if(n.ring === 0) { n.x = CX; n.y = CY; return; }
+    const a = n.angle + rotation;
+    n.x = CX + Math.cos(a) * n.radius;
+    n.y = CY + Math.sin(a) * n.radius;
+  });
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* =====================================================================
+   INTERACTION
+   ===================================================================== */
+function screenToGraph(sx, sy) {
+  return {
+    x: (sx - transform.x) / transform.scale,
+    y: (sy - transform.y) / transform.scale,
+  };
+}
+
+function nodeAt(gx, gy) {
+  let best = null, bestD = Infinity;
+  nodes.forEach(n => {
+    const dx = n.x - gx, dy = n.y - gy;
+    const d  = Math.sqrt(dx*dx + dy*dy);
+    let hitR;
+    if(n.ring === 0)       hitR = 28;
+    else if(n.ring === 1)  hitR = 24;
+    else if(n.ring === 2)  hitR = 13;
+    else if(n.ring === 25) hitR = 10;
+    else if(n.ring === 3)  hitR = 8;
+    else                   hitR = 12;
+    if(d < hitR && d < bestD) { bestD = d; best = n; }
+  });
+  return best;
+}
+
+const tooltip    = document.getElementById('tooltip');
+const stateLabel = {live:'Vivo en prod',gated:'Gateado OFF',local:'Local, sin deploy',off:'Motor OFF',ext:'Integración externa'};
+const stateClass = {live:'state-live',gated:'state-gated',local:'state-local',off:'state-off',ext:'state-ext'};
+
+function showTooltip(n, px, py) {
+  tooltip.querySelector('.tt-name').textContent = n.label;
+  tooltip.querySelector('.tt-desc').textContent = n.desc || '';
+  const st = tooltip.querySelector('.tt-state');
+  st.textContent = stateLabel[n.state] || n.state;
+  st.className   = 'tt-state ' + (stateClass[n.state] || 'state-ext');
+  let tx = px + 16, ty = py - 14;
+  if(tx + 250 > window.innerWidth)  tx = px - 260;
+  if(ty + 100 > window.innerHeight) ty = py - 110;
+  tooltip.style.left = tx + 'px';
+  tooltip.style.top  = ty + 'px';
+  tooltip.classList.add('vis');
+}
+function hideTooltip() { tooltip.classList.remove('vis'); }
+
+const focusPanel = document.getElementById('focus-panel');
+const fpTitle    = document.getElementById('fp-title');
+const fpList     = document.getElementById('fp-list');
+
+function showFocusPanel(n) {
+  focused    = n.id;
+  fpTitle.textContent = n.label;
+  const children = links
+    .filter(l => l.source.id === n.id || l.target.id === n.id)
+    .map(l => l.source.id === n.id ? l.target : l.source)
+    .filter(nd => nd.id !== n.id);
+  const unique = [...new Map(children.map(c => [c.id, c])).values()];
+  fpList.innerHTML = unique.map(c => `<div class="fp-item">${c.label}</div>`).join('');
+  focusPanel.style.display = 'block';
+}
+function hideFocusPanel() {
+  focused = null;
+  focusPanel.style.display = 'none';
+}
+
+document.getElementById('fp-close').addEventListener('click', hideFocusPanel);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') hideFocusPanel(); });
+
+canvas.addEventListener('mousemove', e => {
+  const gp = screenToGraph(e.clientX, e.clientY);
+  const n  = nodeAt(gp.x, gp.y);
+  if(panStart) {
+    transform.x = panOrigin.x + (e.clientX - panStart.x);
+    transform.y = panOrigin.y + (e.clientY - panStart.y);
+    return;
+  }
+  if(n) {
+    hovered = n.id;
+    showTooltip(n, e.clientX, e.clientY);
+    canvas.style.cursor = 'pointer';
+  } else {
+    hovered = null;
+    hideTooltip();
+    canvas.style.cursor = panStart ? 'grabbing' : 'grab';
+  }
+});
+
+canvas.addEventListener('mousedown', e => {
+  panStart  = {x: e.clientX, y: e.clientY};
+  panOrigin = {x: transform.x, y: transform.y};
+  canvas.classList.add('dragging');
+});
+
+canvas.addEventListener('mouseup', e => {
+  if(panStart) {
+    const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
+    panStart = null; panOrigin = null;
+    canvas.classList.remove('dragging');
+    if(Math.abs(dx) < 4 && Math.abs(dy) < 4) {
+      const gp = screenToGraph(e.clientX, e.clientY);
+      const n  = nodeAt(gp.x, gp.y);
+      if(n) showFocusPanel(n);
+      else  hideFocusPanel();
+    }
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hovered = null; hideTooltip();
+  if(panStart) { panStart = null; panOrigin = null; canvas.classList.remove('dragging'); }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.91;
+  const cx = e.clientX, cy = e.clientY;
+  transform.x = cx - (cx - transform.x) * factor;
+  transform.y = cy - (cy - transform.y) * factor;
+  transform.scale = Math.max(0.10, Math.min(5, transform.scale * factor));
+}, {passive: false});
+
+let lastTouchTap = null;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if(e.touches.length === 1) {
+    const t = e.touches[0];
+    lastTouchTap = {x: t.clientX, y: t.clientY};
+    panStart  = {x: t.clientX, y: t.clientY};
+    panOrigin = {...transform};
+  } else if(e.touches.length === 2) {
+    panStart = null;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+  }
+}, {passive: false});
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if(e.touches.length === 2 && lastPinchDist) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist   = Math.sqrt(dx*dx + dy*dy);
+    const factor = dist / lastPinchDist;
+    const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    transform.x = mx - (mx - transform.x) * factor;
+    transform.y = my - (my - transform.y) * factor;
+    transform.scale = Math.max(0.10, Math.min(5, transform.scale * factor));
+    lastPinchDist = dist;
+    return;
+  }
+  if(e.touches.length === 1 && panStart) {
+    const t = e.touches[0];
+    transform.x = panOrigin.x + (t.clientX - panStart.x);
+    transform.y = panOrigin.y + (t.clientY - panStart.y);
+  }
+}, {passive: false});
+
+canvas.addEventListener('touchend', e => {
+  if(e.touches.length === 0) {
+    if(panStart && lastTouchTap) {
+      const dx = lastTouchTap.x - panStart.x;
+      const dy = lastTouchTap.y - panStart.y;
+      if(Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+        const gp = screenToGraph(lastTouchTap.x, lastTouchTap.y);
+        const n  = nodeAt(gp.x, gp.y);
+        if(n) showFocusPanel(n);
+        else  hideFocusPanel();
+      }
+    }
+    panStart = null; panOrigin = null; lastPinchDist = null; lastTouchTap = null;
+  }
+}, {passive: false});
+
+const searchEl = document.getElementById('search');
+searchEl.addEventListener('input', () => {
+  const q = searchEl.value.trim().toLowerCase();
+  searchHits.clear();
+  if(q.length < 2) return;
+  nodes.forEach(n => {
+    if(n.label.toLowerCase().includes(q) ||
+       n.desc.toLowerCase().includes(q)  ||
+       n.id.toLowerCase().includes(q)) {
+      searchHits.add(n.id);
+    }
+  });
+});
+
+/* =====================================================================
+   START
+   ===================================================================== */
+initGraph();
+
+// Center view — scale to fill more of the viewport
+transform.scale = 0.78;
+transform.x = CX * (1 - transform.scale);
+transform.y = CY * (1 - transform.scale);
+
+loop();
+</script>
+</body>
+</html>
