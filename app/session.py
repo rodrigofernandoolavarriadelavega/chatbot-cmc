@@ -10,6 +10,7 @@ históricas sin encriptar.
 import json
 import logging
 import os
+import random
 import re
 import sqlite3
 import time
@@ -646,6 +647,20 @@ def _run_ddl_inline(conn) -> None:
     # P-2: índice fecha para fidelización, winback y jobs (era full scan)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_citas_bot_fecha ON citas_bot(fecha)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_event_ts ON conversation_events(event, ts)")
+    # ITEM-18: índice de expresión sobre json_extract(meta,'$.especialidad').
+    # Convierte SCAN → SEARCH en get_candidatos_horas_vacias y queries similares
+    # sobre ~180k filas. Requiere SQLite ≥3.38 (json_extract en índices).
+    # Verificado: prod usa SQLite 3.45.1. EXPLAIN: SCAN→SEARCH (event=?).
+    try:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_events_esp "
+            "ON conversation_events(event, json_extract(meta,'$.especialidad'), ts)"
+        )
+    except Exception:
+        # SQLite <3.38 no soporta json_extract en índices — degradar silenciosamente
+        # pero loguear para que no pase inadvertido.
+        log.warning("idx_events_esp: SQLite demasiado viejo para índice de expresión (requiere ≥3.38); "
+                    "get_candidatos_horas_vacias usará SCAN completo.")
     # P2: índice compuesto phone+ts para queries de historial de eventos
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_phone ON conversation_events(phone, ts DESC)")
     # P5: índice fecha en processed_msgs para purge/cleanup queries
@@ -892,8 +907,13 @@ def is_duplicate(msg_id: str) -> bool:
         cur = conn.execute(
             "INSERT OR IGNORE INTO processed_msgs (msg_id) VALUES (?)", (msg_id,)
         )
-        # FIX-16: Meta puede reintentar hasta 7 días. TTL ampliado de 1h → 7d.
-        conn.execute("DELETE FROM processed_msgs WHERE created_at < datetime('now', '-7 days')")
+        # FIX-17: purge probabilístico (1% de llamadas) para evitar write-lock
+        # en el hot-path del webhook (is_duplicate se llama hasta 4 veces por
+        # mensaje). El DELETE antes era incondicionado → write-lock en cada
+        # llamada. Con p=0.01 el TTL de 7 días sigue respetándose (esperanza
+        # de limpieza: cada ~100 mensajes entrantes = varias veces al día).
+        if random.random() < 0.01:
+            conn.execute("DELETE FROM processed_msgs WHERE created_at < datetime('now', '-7 days')")
         conn.commit()
         return cur.rowcount == 0
 

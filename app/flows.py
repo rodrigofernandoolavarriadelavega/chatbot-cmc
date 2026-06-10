@@ -8,6 +8,8 @@ import re
 import time
 from datetime import datetime, timedelta, timezone, date
 from zoneinfo import ZoneInfo
+
+import httpx
 _CHILE_TZ = ZoneInfo("America/Santiago")
 
 from claude_helper import (detect_intent, respuesta_faq, clasificar_respuesta_seguimiento,
@@ -4293,7 +4295,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if perfil:
                 data["rut_conocido"] = perfil["rut"]
                 data["nombre_conocido"] = perfil["nombre"]
-            return await _iniciar_agendar(phone, data, "medicina general")
+            # ITEM-20: si la última cita del paciente fue con Dr. Márquez (id=13),
+            # el control debe reagendar con él (cobra $30.000, no $25.000).
+            # Pasamos especialidad="medicina familiar" → _iniciar_agendar entra
+            # por el path _ESP_MED_FAMILIAR que usa solo_ids=[13] y normaliza
+            # los slots a "Medicina Familiar" → _precio_line ve id=13 → $30.000.
+            _ult_cita_xch = get_ultima_cita_paciente(phone)
+            _esp_xch = "medicina general"
+            if _ult_cita_xch:
+                _prof_xch = (_ult_cita_xch.get("profesional") or "").lower()
+                if "márquez" in _prof_xch or "marquez" in _prof_xch:
+                    _esp_xch = "medicina familiar"
+                    log_event(phone, "xchequeo_forzado_marquez", {})
+            return await _iniciar_agendar(phone, data, _esp_xch)
         if tl == "xchequeo_no":
             log_event(phone, "crosssell_mg_chequeo_rechazo", {})
             return "Sin problema 😊 Cuando te haga sentido, avísame.\n_Escribe *menu* para ver opciones._"
@@ -6377,8 +6391,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_agendar(phone, {}, especialidad or None)
         if tl == "ver_otros":
             if especialidad in _ESPECIALIDADES_EXPANSION:
-                return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
-                                               data.get("expansion_stage", 0), fecha_actual)
+                # ITEM-19: capturar errores de Medilink en _handle_expansion para
+                # no propagar hasta main.py (que hace reset_session → paciente pierde
+                # todo el flujo). Mantenemos WAIT_SLOT intacto y mostramos mensaje amable.
+                try:
+                    return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
+                                                   data.get("expansion_stage", 0), fecha_actual)
+                except (httpx.RequestError, Exception) as _exp_he:
+                    _is_medilink_err = isinstance(_exp_he, httpx.RequestError) or "Medilink" in str(_exp_he)
+                    if not _is_medilink_err:
+                        raise
+                    save_session(phone, "WAIT_SLOT", data)
+                    log_event(phone, "expansion_medilink_error", {"error": str(_exp_he)[:200]})
+                    return (
+                        "Tuve un problema al cargar más horarios en este momento 😕\n\n"
+                        "Puedes intentarlo de nuevo en unos segundos, o escribe "
+                        "*otro día* para buscar en otra fecha."
+                    )
             # Defensa sistémica: si solo hay 1 slot total (ya mostrado), no
             # tiene sentido "ver_otros" del mismo día — debemos expandir a otro
             # día o profesional. Caso real 2026-04-28 (56934363158): bot ofreció
@@ -6589,8 +6618,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # era el bug: Vicente Salas veía solo Abarca, nunca Márquez ni Olavarría.
                 # Forzamos stage=1 → next_stage=2 → _handle_expansion consulta _MED_GENERAL_IDS.
                 _stage_ver_todos = max(data.get("expansion_stage", 0), 1)
-                return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
-                                               _stage_ver_todos, fecha_actual)
+                # ITEM-19: ídem al bloque "ver_otros" — capturar error Medilink
+                # sin resetear sesión ni perder el contexto de agendamiento.
+                try:
+                    return await _handle_expansion(phone, data, slots_mostrados, todos_slots,
+                                                   _stage_ver_todos, fecha_actual)
+                except (httpx.RequestError, Exception) as _exp_vt:
+                    _is_ml_err = isinstance(_exp_vt, httpx.RequestError) or "Medilink" in str(_exp_vt)
+                    if not _is_ml_err:
+                        raise
+                    save_session(phone, "WAIT_SLOT", data)
+                    log_event(phone, "expansion_medilink_error", {"error": str(_exp_vt)[:200]})
+                    return (
+                        "Tuve un problema al cargar más horarios en este momento 😕\n\n"
+                        "Puedes intentarlo de nuevo en unos segundos, o escribe "
+                        "*otro día* para buscar en otra fecha."
+                    )
             data["slots"] = todos_slots
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(todos_slots, mostrar_todos=True)
