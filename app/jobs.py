@@ -2500,7 +2500,7 @@ async def _job_sync_citas_recepcion():
     fechas = [(hoy + _td(days=d)).isoformat() for d in range(1, 4)]
 
     _HEADERS = {
-        "Authorization": f"Bearer {MEDILINK_TOKEN}",
+        "Authorization": f"Token {MEDILINK_TOKEN}",
         "Content-Type":  "application/json",
         "Accept":        "application/json",
     }
