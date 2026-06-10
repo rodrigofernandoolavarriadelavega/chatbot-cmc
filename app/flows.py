@@ -9043,10 +9043,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if slot.get("sobrecupo"):
                 slot_libre = _lock_ok
             else:
-                slot_libre = (await verificar_slot_disponible(
-                    slot["id_profesional"], slot["fecha"],
-                    slot["hora_inicio"], slot["hora_fin"],
-                )) if _lock_ok else False
+                # Deadline duro a la operación (incidente Matías 2026-06-05): el
+                # timeout=15 de httpx acota cada request, pero retries + backoff
+                # 429 + espera del semáforo _MEDILINK_SEM no tienen tope. Una
+                # reserva colgada >90s no drena en el stop de systemd → SIGKILL
+                # → reserva perdida en silencio. 25s aquí + 45s en crear_cita
+                # garantizan terminar (o fallar con sesión preservada) antes.
+                try:
+                    slot_libre = (await asyncio.wait_for(verificar_slot_disponible(
+                        slot["id_profesional"], slot["fecha"],
+                        slot["hora_inicio"], slot["hora_fin"],
+                    ), timeout=25)) if _lock_ok else False
+                except asyncio.TimeoutError:
+                    log_event(phone, "reserva_deadline_timeout", {
+                        "fase": "verificar_slot",
+                        "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
+                    })
+                    save_session(phone, "CONFIRMING_CITA", data)
+                    return (
+                        "Estamos con alta demanda en este momento y no pude confirmar "
+                        "la reserva.\n\n"
+                        "Tu selección sigue guardada. Escribe *si* en unos segundos "
+                        "para reintentar, o llama a recepción:\n"
+                        f"📞 *{CMC_TELEFONO}*"
+                    )
             if not _lock_ok:
                 log.warning("Slot lock ocupado por otro paciente: %s %s prof %s",
                             slot["fecha"], slot["hora_inicio"], slot["id_profesional"])
@@ -9060,9 +9080,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "fecha": slot["fecha"], "hora": slot["hora_inicio"],
                     "profesional": slot.get("profesional", ""),
                 })
-                # Re-buscar y ofrecer nueva hora
+                # Re-buscar y ofrecer nueva hora (acotado: el fallback día-por-día
+                # de buscar_primer_dia puede tardar minutos bajo tormenta 429)
                 esp = data.get("especialidad", slot.get("especialidad", ""))
-                smart, todos = await buscar_primer_dia(esp)
+                try:
+                    smart, todos = await asyncio.wait_for(
+                        buscar_primer_dia(esp), timeout=30)
+                except asyncio.TimeoutError:
+                    log_event(phone, "reserva_deadline_timeout", {
+                        "fase": "rebuscar_slot", "especialidad": esp,
+                    })
+                    smart, todos = [], []  # → cae a la oferta de waitlist
                 if smart:
                     new_slot = smart[0]
                     data["slot_elegido"] = new_slot
@@ -9095,18 +9123,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # modalidad TELEMEDICINA (marca [ONLINE] en Medilink), sin preguntar presencial.
             if str(slot.get("id_profesional")) == "78" or "psiquiatr" in (slot.get("especialidad", "") or "").lower():
                 data["telemedicina_modalidad"] = "TELEMEDICINA"
+            # Marca durable ANTES del POST: si el proceso muere con la reserva en
+            # vuelo (SIGKILL en restart), este evento queda sin su par
+            # "reserva_resultado" → la reserva perdida es auditable en vez de
+            # evaporarse en silencio (incidente Matías 2026-06-05).
+            log_event(phone, "reserva_en_vuelo", {
+                "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
+                "id_profesional": slot.get("id_profesional"),
+            })
             try:
                 if slot.get("sobrecupo"):
                     # Reserva de SOBRECUPO: crea la cita marcada [SOBRECUPO] y registra
                     # el cupo para el tope diario (gateado por SOBRECUPO_ENABLED).
                     import sobrecupo as _sc
-                    resultado = await _sc.crear_sobrecupo(
+                    resultado = await asyncio.wait_for(_sc.crear_sobrecupo(
                         slot, paciente["id"], phone=phone,
                         rut=data.get("rut", ""),
                         modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
-                    )
+                    ), timeout=45)
                 else:
-                    resultado = await crear_cita(
+                    # 45s > peor caso interno de medilink._post (15+3+15 ≈ 33s):
+                    # el deadline casi siempre corta una ESPERA (semáforo/cola),
+                    # no un POST en vuelo — minimiza el riesgo de cita creada
+                    # pero reportada como fallida.
+                    resultado = await asyncio.wait_for(crear_cita(
                         id_paciente=paciente["id"],
                         id_profesional=slot["id_profesional"],
                         fecha=slot["fecha"],
@@ -9114,7 +9154,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         hora_fin=slot["hora_fin"],
                         id_recurso=slot.get("id_recurso", 1),
                         modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
-                    )
+                    ), timeout=45)
             except Exception as _crear_err:
                 # C3 fix: httpx.RequestError se lanza cuando Medilink persiste en
                 # 429 tras todos los reintentos de medilink._post. Antes este error
@@ -9123,16 +9163,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Un 429 es transitorio — preservar sesión en CONFIRMING_CITA para
                 # que el paciente pueda reintentar sin perder slot ni datos.
                 import httpx as _httpx
-                if isinstance(_crear_err, _httpx.RequestError):
+                # asyncio.TimeoutError = deadline de 45s vencido (cola/semáforo
+                # Medilink saturado) — mismo tratamiento que el 429: transitorio,
+                # preservar sesión para que el paciente reintente con *si*.
+                if isinstance(_crear_err, (_httpx.RequestError, asyncio.TimeoutError)):
                     log.warning(
-                        "CONFIRMING_CITA: crear_cita falló por error de red/429 "
+                        "CONFIRMING_CITA: crear_cita falló por %s "
                         "phone=%s slot=%s/%s — preservando sesión",
+                        type(_crear_err).__name__,
                         phone, slot.get("fecha"), slot.get("hora_inicio"),
                     )
                     log_event(phone, "crear_cita_429_preservado", {
                         "fecha": slot.get("fecha"),
                         "hora": slot.get("hora_inicio"),
                         "profesional": slot.get("profesional", ""),
+                        "causa": type(_crear_err).__name__,
+                    })
+                    log_event(phone, "reserva_resultado", {
+                        "ok": False, "causa": type(_crear_err).__name__,
+                        "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
                     })
                     save_session(phone, "CONFIRMING_CITA", data)
                     return (
@@ -9143,12 +9192,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"📞 *{CMC_TELEFONO}*"
                     )
                 # Otros errores (4xx, errores de datos, etc.): dejar subir para que
-                # el except genérico de main.py los maneje normalmente.
+                # el except genérico de main.py los maneje normalmente. Cerrar el
+                # par de auditoría para no contar esto como "muerta en vuelo".
+                log_event(phone, "reserva_resultado", {
+                    "ok": False, "causa": type(_crear_err).__name__,
+                    "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
+                })
                 raise
             # Liberar lock tentativo — éxito o fallo, ya no lo necesitamos.
             # Si la cita se creó, Medilink ya tiene el slot ocupado real.
             # Si falló, otro paciente puede intentar este slot.
             liberar_slot_lock(slot["id_profesional"], slot["fecha"], slot["hora_inicio"])
+            # Cierra el par con "reserva_en_vuelo" — en_vuelo sin resultado = la
+            # reserva murió con el proceso (restart/crash) y hay que auditarla.
+            log_event(phone, "reserva_resultado", {
+                "ok": bool(resultado),
+                "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
+                "id_cita": (resultado or {}).get("id"),
+            })
             # Si estamos en reagendar, cancelamos la anterior SOLO si la nueva
             # se creó bien. Si falla la nueva, la vieja queda intacta.
             cancel_ok = False
