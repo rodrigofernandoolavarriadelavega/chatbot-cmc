@@ -386,8 +386,10 @@ a{color:inherit; text-decoration:none}
 .main{padding:22px 26px 36px; min-width:0}
 @media (max-width:860px){ .main{padding:16px 14px 30px} }
 
-.view{display:none; animation:fadeInUp .3s var(--ease) both}
-.view.active{display:block}
+/* One-page (demo 2): todas las secciones visibles en un solo scroll;
+   el menú navega por anclas con scrollspy en vez de alternar vistas. */
+.view{display:block; animation:fadeInUp .3s var(--ease) both; scroll-margin-top:calc(66px + env(safe-area-inset-top))}
+.view + .view{margin-top:30px; padding-top:26px; border-top:1px solid var(--border)}
 @keyframes fadeInUp{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
 
 /* Page head */
@@ -779,6 +781,11 @@ a{color:inherit; text-decoration:none}
 }
 .btn-wa-float:hover{box-shadow:0 8px 28px rgba(17,114,171,.45)}
 .btn-wa-float svg{width:18px;height:18px;fill:#fff}
+/* La CTA flotante se oculta mientras la agenda embebida está a la vista
+   (sería redundante apuntar a algo que ya tienes en pantalla). */
+.cta-float{transition:opacity .25s}
+.cta-float.cta-hidden{opacity:0}
+.cta-float.cta-hidden > *{pointer-events:none}
 
 /* ═══════════════════════════════════════════════════════════
    MOBILE — reescrito pensando en el device, no en shrink-to-fit
@@ -1436,15 +1443,46 @@ function classifyTemp(t) {
 
 /* ═══ View switch ═══ */
 function switchView(v) {
+  // One-page: el menú ya no alterna vistas, navega por anclas dentro del scroll.
   currentView = v;
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
-  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
   if (v === 'inicio') renderInicio();
   if (v === 'agenda') renderAgenda();
   if (v === 'salud') renderSalud();
   if (v === 'recursos') renderRecursos();
   if (v === 'perfil') renderPerfil();
+  _spyLock = Date.now() + 800;
+  const sec = document.getElementById('view-'+v);
+  if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
 }
+
+/* Scrollspy: marca en el menú la sección que está a la vista, y oculta la
+   CTA flotante mientras la agenda embebida ocupa la pantalla. */
+let _spyLock = 0;
+const _SPY_IDS = ['inicio','agenda','salud','perfil','recursos'];
+function _onSpyScroll() {
+  const f = document.querySelector('.cta-float');
+  const panel = document.getElementById('ag-inline-panel');
+  if (f) {
+    let hide = false;
+    if (panel && panel.style.display !== 'none') {
+      const r = panel.getBoundingClientRect();
+      hide = r.top < window.innerHeight * 0.75 && r.bottom > 120;
+    }
+    f.classList.toggle('cta-hidden', hide);
+  }
+  if (Date.now() < _spyLock) return;
+  let cur = _SPY_IDS[0];
+  for (const id of _SPY_IDS) {
+    const el = document.getElementById('view-'+id);
+    if (el && el.getBoundingClientRect().top <= 130) cur = id;
+  }
+  if (cur !== currentView) {
+    currentView = cur;
+    document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
+  }
+}
+window.addEventListener('scroll', _onSpyScroll, {passive:true});
 
 /* ═══ Render root ═══ */
 function renderAll() {
@@ -1831,8 +1869,7 @@ async function saveVital() {
     await loadAllVitals();
     closeVitalModal();
     toast('Registro guardado');
-    if (currentView === 'salud') renderSalud();
-    if (currentView === 'inicio') renderInicio();
+    renderSalud(); renderInicio();  // one-page: ambas secciones están visibles
   } catch (e) { toast(e.message || 'Error al guardar'); }
   btn.disabled = false; btn.textContent = 'Guardar';
 }
