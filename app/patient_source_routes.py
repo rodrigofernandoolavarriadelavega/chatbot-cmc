@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from pathlib import Path
 
@@ -68,6 +69,26 @@ def _ad_spend() -> float:
 
 
 # ── Captura ──────────────────────────────────────────────────────────────────
+def _recent_checkin(rut: str | None) -> bool:
+    """¿Este RUT tiene un check-in real reciente (<4h)? Prueba de paciente legítimo
+    para que un atacante no pueda envenenar la fuente de RUTs arbitrarios sin auth."""
+    r = re.sub(r"[^0-9kK]", "", (rut or "")).upper()
+    if not r:
+        return False
+    try:
+        from session import _conn
+        with _conn() as c:
+            row = c.execute(
+                "SELECT 1 FROM checkin_cmc "
+                "WHERE replace(replace(replace(upper(rut),'.',''),'-',''),' ','')=? "
+                "  AND llegada_at >= datetime('now','-4 hours') LIMIT 1",
+                (r,),
+            ).fetchone()
+        return bool(row)
+    except Exception:
+        return False
+
+
 @router.post("/api/fuente")
 async def set_fuente(request: Request,
                      token: str | None = Query(None),
@@ -75,18 +96,25 @@ async def set_fuente(request: Request,
     if not _rate_ok(f"src:{_client_ip(request)}", 20, 60):
         raise HTTPException(429, "Demasiadas solicitudes")
     body = await request.json()
-    via = (body.get("via") or "checkin").strip()
-    # via=recepcion exige auth; el self-service (checkin) es público pero rate-limited.
-    if via == "recepcion" and not _is_admin(token, cmc_session):
-        raise HTTPException(403, "Token inválido")
+    is_admin = _is_admin(token, cmc_session)
+    rut = body.get("rut")
+    # El SERVIDOR decide `via` según el contexto de auth — no se confía en el body.
+    if is_admin:
+        via = "checkin" if body.get("via") == "checkin" else "recepcion"
+    else:
+        # Escritura pública (autoservicio/check-in): exige prueba de un check-in
+        # REAL reciente del mismo RUT → nadie puede envenenar fuentes a ciegas.
+        via = "checkin"
+        if not _recent_checkin(rut):
+            raise HTTPException(403, "Sin check-in reciente")
     res = ps.set_source(
-        rut=body.get("rut"),
+        rut=rut,
         fuente=body.get("fuente"),
         via=via,
-        id_paciente=body.get("id_paciente"),
+        id_paciente=body.get("id_paciente") if is_admin else None,
         nombre=body.get("nombre"),
         detalle=body.get("detalle"),
-        overwrite=bool(body.get("overwrite")) and _is_admin(token, cmc_session),
+        overwrite=bool(body.get("overwrite")) and is_admin,
     )
     if res.get("error"):
         raise HTTPException(400, res["error"])
@@ -121,17 +149,24 @@ async def canal_page(token: str | None = Query(None),
     botones = "".join(
         f'<button class="src" data-f="{k}">{lbl}</button>' for k, lbl in ps.FUENTES
     )
+    # Reflejar SOLO un token admin VALIDADO, JSON-encoded (anti-XSS). Si la auth vino
+    # por cookie, TK queda "" y los fetch usan la cookie (same-origin).
+    try:
+        from admin_routes import _is_admin_token
+        eff = token if (token and _is_admin_token(token)) else ""
+    except Exception:
+        eff = ""
     return HTMLResponse(_REPORT_HTML.replace("{{BOTONES}}", botones)
-                        .replace("{{TOKEN}}", token or ""))
+                        .replace("{{TOKEN}}", json.dumps(eff)))
 
 
 @router.get("/fuente", response_class=HTMLResponse)
-async def fuente_selfservice(rut: str = Query(""), nombre: str = Query("")):
+async def fuente_selfservice():
+    # Sin parámetros del URL → cero superficie de XSS reflejado. El paciente teclea su RUT.
     botones = "".join(
         f'<button class="src" data-f="{k}">{lbl}</button>' for k, lbl in ps.FUENTES
     )
-    return HTMLResponse(_SELF_HTML.replace("{{BOTONES}}", botones)
-                        .replace("{{RUT}}", rut).replace("{{NOMBRE}}", nombre))
+    return HTMLResponse(_SELF_HTML.replace("{{BOTONES}}", botones))
 
 
 # ── HTML (estilo Alma: navy/aqua, Montserrat) ────────────────────────────────
@@ -161,7 +196,7 @@ _SELF_HTML = """<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <div class="card">
   <h1>¿Cómo nos conoció? 👋</h1>
   <div class="sub">Tu respuesta nos ayuda a mejorar. Es solo un toque.</div>
-  <input id="rut" placeholder="Tu RUT (sin puntos ni guión)" value="{{RUT}}">
+  <input id="rut" placeholder="Tu RUT (sin puntos ni guión)" value="">
   <div id="botones">{{BOTONES}}</div>
   <div id="done" style="display:none" class="ok">¡Gracias! 🙌</div>
 </div>
@@ -173,7 +208,7 @@ document.querySelectorAll('.src').forEach(b=>b.onclick=async()=>{
   document.querySelectorAll('.src').forEach(x=>x.classList.remove('sel'));
   b.classList.add('sel');
   await fetch('/api/fuente',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({rut,fuente:b.dataset.f,via:'checkin',nombre:'{{NOMBRE}}'})});
+    body:JSON.stringify({rut,fuente:b.dataset.f,via:'checkin'})});
   document.getElementById('botones').style.display='none';
   document.getElementById('done').style.display='block';
 });
@@ -202,7 +237,7 @@ _REPORT_HTML = """<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
   <div id="done" style="display:none" class="ok">Guardado ✓</div>
 </div>
 <script>
-const TK="{{TOKEN}}";
+const TK={{TOKEN}};
 function isoAgo(d){const x=new Date();x.setDate(x.getDate()-d);return x.toISOString().slice(0,10);}
 document.getElementById('d1').value=isoAgo(30);
 document.getElementById('d2').value=isoAgo(0);
