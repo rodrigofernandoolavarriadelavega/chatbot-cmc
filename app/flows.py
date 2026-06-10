@@ -2795,7 +2795,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL",
         "WAIT_REFERRAL", "WAIT_REFERRAL_POST", "CONFIRMING_CITA",
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
+        "WAIT_CITA_CANCELAR_FAMILIAR", "WAIT_RUT_FAMILIAR_CANCELAR",
         "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR",
+        "WAIT_CITA_REAGENDAR_FAMILIAR", "WAIT_RUT_FAMILIAR_REAGENDAR",
         "WAIT_WAITLIST_CONFIRM", "WAIT_WAITLIST_RUT", "WAIT_WAITLIST_NOMBRE",
         "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
         "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
@@ -3339,7 +3341,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_SLOT_OTRO",
         "WAIT_RUT_AGENDAR", "CONFIRMING_CITA",
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
+        "WAIT_CITA_CANCELAR_FAMILIAR", "WAIT_RUT_FAMILIAR_CANCELAR",
         "WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR",
+        "WAIT_CITA_REAGENDAR_FAMILIAR", "WAIT_RUT_FAMILIAR_REAGENDAR",
     }
     if _es_saludo_puro and state in _FLUJO_RETOMABLE and not data.get("_retomar_ofrecido"):
         data["_retomar_ofrecido"] = True
@@ -9613,10 +9617,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             citas = citas_medilink + citas_local_extra
 
         if not citas:
+            # Buscar citas de familiares antes de responder "no hay"
+            try:
+                familiares_con_citas = await _buscar_citas_familiares(rut)
+            except Exception:
+                familiares_con_citas = []
+            if familiares_con_citas:
+                citas_planas = _flatten_citas_familiares(familiares_con_citas)
+                data.update({"citas_familiares": citas_planas, "rut": rut})
+                save_session(phone, "WAIT_CITA_CANCELAR_FAMILIAR", data)
+                log_event(phone, "cancelar_familiar_sugerido", {"rut": rut, "n_citas": len(citas_planas)})
+                return _format_citas_familiares_cancelar(familiares_con_citas)
             reset_session(phone)
             return (
                 f"No tienes citas futuras agendadas, *{_first_name(paciente.get('nombre'))}* 📋\n\n"
-                "¿Quieres agendar una hora?"
+                "Si la hora está a nombre de otra persona (hijo/a, familiar), "
+                "escribe su RUT y la busco."
             )
 
         data.update({"paciente": paciente, "citas": citas})
@@ -9815,10 +9831,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
         if not citas:
+            # Buscar citas de familiares antes de responder "no hay"
+            try:
+                familiares_con_citas = await _buscar_citas_familiares(rut)
+            except Exception:
+                familiares_con_citas = []
+            if familiares_con_citas:
+                citas_planas = _flatten_citas_familiares(familiares_con_citas)
+                data.update({"citas_familiares": citas_planas, "rut": rut})
+                save_session(phone, "WAIT_CITA_REAGENDAR_FAMILIAR", data)
+                log_event(phone, "reagendar_familiar_sugerido", {"rut": rut, "n_citas": len(citas_planas)})
+                return _format_citas_familiares_reagendar(familiares_con_citas)
             reset_session(phone)
             return (
                 f"No tienes citas futuras agendadas, *{_first_name(paciente.get('nombre'))}* 📋\n\n"
-                "¿Quieres agendar una hora?"
+                "Si la hora está a nombre de otra persona (hijo/a, familiar), "
+                "escribe su RUT y la busco."
             )
 
         data.update({"paciente": paciente, "citas": citas, "rut": rut})
@@ -10125,6 +10153,133 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "menu_volver", "title": "Volver al menú"},
             ]
         )
+
+    # ── WAIT_CITA_CANCELAR_FAMILIAR ───────────────────────────────────────────
+    # El usuario llegó acá porque su propio RUT no tenía citas pero sí las
+    # tienen sus familiares vinculados. Le mostramos esa lista y esperamos
+    # que elija un número, o que mande un RUT de familiar no vinculado.
+    if state == "WAIT_CITA_CANCELAR_FAMILIAR":
+        citas_planas = data.get("citas_familiares", [])
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        if tl in _SET_SALIR or tl_norm in _SET_SALIR:
+            reset_session(phone)
+            return "Perfecto, no cancelamos nada 😊\n_Escribe *menu* si necesitas algo más._"
+        # ¿Es un RUT? → buscar por ese RUT directamente
+        try:
+            from medilink import clean_rut as _cr_f, valid_rut as _vr_f
+            _rut_f = _cr_f(txt)
+            if _vr_f(_rut_f):
+                pac_f, transient_f = await _buscar_paciente_safe(_rut_f)
+                if transient_f:
+                    save_session(phone, "HUMAN_TAKEOVER", data)
+                    return _msg_medilink_transient()
+                if not pac_f:
+                    save_session(phone, "WAIT_CITA_CANCELAR_FAMILIAR", data)
+                    return "No encontré ese RUT 🔎\n\nElige el número de la lista o escribe *menu* para volver."
+                citas_f = await listar_citas_paciente(pac_f["id"], rut=pac_f.get("rut"))
+                if not citas_f:
+                    save_session(phone, "WAIT_CITA_CANCELAR_FAMILIAR", data)
+                    return (
+                        f"No hay citas futuras para *{_first_name(pac_f.get('nombre'))}* 📋\n\n"
+                        "Elige el número de la lista o escribe *menu*."
+                    )
+                data.update({"paciente": pac_f, "citas": citas_f})
+                save_session(phone, "WAIT_CITA_CANCELAR", data)
+                log_event(phone, "cancelar_familiar_por_rut", {"rut": _rut_f})
+                return _format_citas_cancelar(citas_f, pac_f["nombre"])
+        except Exception:
+            pass
+        # ¿Es un número de la lista?
+        try:
+            idx = int(txt) - 1
+            if 0 <= idx < len(citas_planas):
+                cita = citas_planas[idx]
+                pac_sel = cita.get("_familiar_paciente", {})
+                data.update({"paciente": pac_sel, "citas": [cita], "cita_cancelar": cita})
+                save_session(phone, "CONFIRMING_CANCEL", data)
+                _esp_c = cita.get("especialidad", "")
+                _prof_c = cita.get("profesional", "")
+                _label_c = f"{_esp_c} — {_prof_c}" if _esp_c else _prof_c
+                _nombre_pac = _first_name(pac_sel.get("nombre", "")) if pac_sel else ""
+                return _btn_msg(
+                    f"Vas a cancelar esta hora de *{_nombre_pac}*:\n\n"
+                    f"🏥 {_label_c}\n"
+                    f"📅 {cita['fecha_display']}\n"
+                    f"🕐 {cita['hora_inicio'][:5]}\n\n"
+                    "¿Confirmas la cancelación?",
+                    [
+                        {"id": "si", "title": "✅ Sí, cancelar"},
+                        {"id": "no", "title": "❌ No, mantener"},
+                    ]
+                )
+        except (ValueError, TypeError):
+            pass
+        retries = data.get("familiar_cancelar_retries", 0) + 1
+        if retries >= 3:
+            save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": False, "handoff_reason": "familiar_cancelar_retries"})
+            return _btn_msg(
+                "No logro entender la selección 😕\n\nUna recepcionista puede ayudarte.",
+                [{"id": "accion_recepcion", "title": "Hablar con recepción"}],
+            )
+        data["familiar_cancelar_retries"] = retries
+        save_session(phone, "WAIT_CITA_CANCELAR_FAMILIAR", data)
+        return f"Elige un número entre 1 y {len(citas_planas)}, o escribe el RUT del familiar 😊"
+
+    # ── WAIT_CITA_REAGENDAR_FAMILIAR ──────────────────────────────────────────
+    if state == "WAIT_CITA_REAGENDAR_FAMILIAR":
+        citas_planas = data.get("citas_familiares", [])
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        if tl in _SET_SALIR or tl_norm in _SET_SALIR:
+            reset_session(phone)
+            return "Perfecto, dejamos las citas como están 😊\n_Escribe *menu* si necesitas algo más._"
+        # ¿Es un RUT? → buscar por ese RUT directamente
+        try:
+            from medilink import clean_rut as _cr_rf, valid_rut as _vr_rf
+            _rut_rf = _cr_rf(txt)
+            if _vr_rf(_rut_rf):
+                pac_rf, transient_rf = await _buscar_paciente_safe(_rut_rf)
+                if transient_rf:
+                    save_session(phone, "HUMAN_TAKEOVER", data)
+                    return _msg_medilink_transient()
+                if not pac_rf:
+                    save_session(phone, "WAIT_CITA_REAGENDAR_FAMILIAR", data)
+                    return "No encontré ese RUT 🔎\n\nElige el número de la lista o escribe *menu* para volver."
+                citas_rf = await listar_citas_paciente(pac_rf["id"], rut=pac_rf.get("rut"))
+                if not citas_rf:
+                    save_session(phone, "WAIT_CITA_REAGENDAR_FAMILIAR", data)
+                    return (
+                        f"No hay citas futuras para *{_first_name(pac_rf.get('nombre'))}* 📋\n\n"
+                        "Elige el número de la lista o escribe *menu*."
+                    )
+                data.update({"paciente": pac_rf, "citas": citas_rf, "rut": _rut_rf})
+                save_session(phone, "WAIT_CITA_REAGENDAR", data)
+                log_event(phone, "reagendar_familiar_por_rut", {"rut": _rut_rf})
+                return _format_citas_reagendar(citas_rf, pac_rf["nombre"])
+        except Exception:
+            pass
+        # ¿Es un número de la lista?
+        try:
+            idx = int(txt) - 1
+            if 0 <= idx < len(citas_planas):
+                cita = citas_planas[idx]
+                pac_sel = cita.get("_familiar_paciente", {})
+                # Aquí pasamos al handler normal de reagendar — data["citas"] = [cita] y paciente = familiar
+                data.update({"paciente": pac_sel, "citas": [cita], "rut": pac_sel.get("rut", "")})
+                save_session(phone, "WAIT_CITA_REAGENDAR", data)
+                log_event(phone, "reagendar_familiar_elegido", {"rut": pac_sel.get("rut", "")})
+                return _format_citas_reagendar([cita], pac_sel.get("nombre", ""))
+        except (ValueError, TypeError):
+            pass
+        retries = data.get("familiar_reagendar_retries", 0) + 1
+        if retries >= 3:
+            save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": False, "handoff_reason": "familiar_reagendar_retries"})
+            return _btn_msg(
+                "No logro entender la selección 😕\n\nUna recepcionista puede ayudarte.",
+                [{"id": "accion_recepcion", "title": "Hablar con recepción"}],
+            )
+        data["familiar_reagendar_retries"] = retries
+        save_session(phone, "WAIT_CITA_REAGENDAR_FAMILIAR", data)
+        return f"Elige un número entre 1 y {len(citas_planas)}, o escribe el RUT del familiar 😊"
 
     # ── WAIT_DATOS_NUEVO (registro en un solo mensaje) ────────────────────────
     if state == "WAIT_DATOS_NUEVO":
@@ -13068,6 +13223,92 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     )
 
 
+async def _buscar_citas_familiares(rut_titular: str) -> list[dict]:
+    """Busca citas futuras de los dependientes vinculados a rut_titular via family_links.
+
+    Retorna lista de dicts con keys 'paciente' y 'citas'. Solo incluye
+    dependientes que tengan al menos una cita futura. Vacío si no hay links
+    activos o si todos están sin citas. Nunca lanza — ante cualquier error
+    retorna [].
+    """
+    try:
+        dependientes = list_family_links(rut_titular)
+        if not dependientes:
+            return []
+        resultado = []
+        for dep in dependientes:
+            dep_rut = dep.get("dependent_rut", "")
+            dep_nombre = dep.get("dependent_nombre") or ""
+            if not dep_rut:
+                continue
+            try:
+                pac = await buscar_paciente(dep_rut)
+                if not pac:
+                    continue
+                citas = await listar_citas_paciente(pac["id"], rut=pac.get("rut"))
+                if citas:
+                    # Usar el nombre de Medilink si el guardado en family_links está vacío
+                    if not dep_nombre:
+                        dep_nombre = pac.get("nombre", dep_rut)
+                    resultado.append({"paciente": pac, "citas": citas, "dep_nombre": dep_nombre})
+            except Exception:
+                continue
+        return resultado
+    except Exception:
+        return []
+
+
+def _format_citas_familiares_cancelar(familiares: list[dict]) -> str:
+    """Formatea la lista de citas de familiares para presentarla al usuario (flujo cancelar)."""
+    lineas = ["Encontré citas a nombre de tus familiares:\n"]
+    n = 1
+    for fam in familiares:
+        nombre_corto = _first_name(fam["dep_nombre"])
+        for cita in fam["citas"]:
+            esp = cita.get("especialidad", "")
+            prof = cita.get("profesional", "")
+            label = f"{esp} — {prof}" if esp else prof
+            lineas.append(
+                f"*{n}.* {nombre_corto} — {label}\n"
+                f"   📅 {cita['fecha_display']} {cita['hora_inicio'][:5]}"
+            )
+            n += 1
+    lineas.append("\nEscribe el *número* de la cita que quieres cancelar.")
+    return "\n".join(lineas)
+
+
+def _format_citas_familiares_reagendar(familiares: list[dict]) -> str:
+    """Formatea la lista de citas de familiares para presentarla al usuario (flujo reagendar)."""
+    lineas = ["Encontré citas a nombre de tus familiares:\n"]
+    n = 1
+    for fam in familiares:
+        nombre_corto = _first_name(fam["dep_nombre"])
+        for cita in fam["citas"]:
+            esp = cita.get("especialidad", "")
+            prof = cita.get("profesional", "")
+            label = f"{esp} — {prof}" if esp else prof
+            lineas.append(
+                f"*{n}.* {nombre_corto} — {label}\n"
+                f"   📅 {cita['fecha_display']} {cita['hora_inicio'][:5]}"
+            )
+            n += 1
+    lineas.append("\nEscribe el *número* de la cita que quieres reagendar.")
+    return "\n".join(lineas)
+
+
+def _flatten_citas_familiares(familiares: list[dict]) -> list[dict]:
+    """Aplana la lista de familiares+citas a una lista plana de citas,
+    cada una con 'paciente' adjunto. El índice coincide con la numeración
+    que muestra _format_citas_familiares_*."""
+    planas = []
+    for fam in familiares:
+        for cita in fam["citas"]:
+            cita_con_pac = dict(cita)
+            cita_con_pac["_familiar_paciente"] = fam["paciente"]
+            planas.append(cita_con_pac)
+    return planas
+
+
 async def _iniciar_cancelar(phone: str, data: dict, txt: str = "") -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "cancelar")
@@ -13080,10 +13321,23 @@ async def _iniciar_cancelar(phone: str, data: dict, txt: str = "") -> str:
         if paciente:
             citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
             if not citas:
+                # Buscar citas de familiares vinculados antes de responder "no hay"
+                try:
+                    familiares_con_citas = await _buscar_citas_familiares(perfil["rut"])
+                except Exception:
+                    familiares_con_citas = []
+                if familiares_con_citas:
+                    citas_planas = _flatten_citas_familiares(familiares_con_citas)
+                    data.update({"citas_familiares": citas_planas, "rut": perfil["rut"]})
+                    save_session(phone, "WAIT_CITA_CANCELAR_FAMILIAR", data)
+                    log_event(phone, "cancelar_familiar_sugerido", {"rut": perfil["rut"], "n_citas": len(citas_planas)})
+                    return _format_citas_familiares_cancelar(familiares_con_citas)
                 reset_session(phone)
                 return (
                     f"No encontré citas futuras para *{_first_name(paciente.get('nombre'))}* 📋\n\n"
-                    "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
+                    "Si la hora está a nombre de otra persona (hijo/a, familiar), "
+                    "escribe su RUT y la busco.\n\n"
+                    "¿O prefieres agendar una nueva hora? Escribe *1* o *menu*."
                 )
             data.update({"paciente": paciente, "citas": citas, "rut": perfil["rut"]})
             save_session(phone, "WAIT_CITA_CANCELAR", data)
@@ -13142,10 +13396,23 @@ async def _iniciar_reagendar(phone: str, data: dict) -> str:
         if paciente:
             citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
             if not citas:
+                # Buscar citas de familiares vinculados antes de responder "no hay"
+                try:
+                    familiares_con_citas = await _buscar_citas_familiares(perfil["rut"])
+                except Exception:
+                    familiares_con_citas = []
+                if familiares_con_citas:
+                    citas_planas = _flatten_citas_familiares(familiares_con_citas)
+                    data.update({"citas_familiares": citas_planas, "rut": perfil["rut"]})
+                    save_session(phone, "WAIT_CITA_REAGENDAR_FAMILIAR", data)
+                    log_event(phone, "reagendar_familiar_sugerido", {"rut": perfil["rut"], "n_citas": len(citas_planas)})
+                    return _format_citas_familiares_reagendar(familiares_con_citas)
                 reset_session(phone)
                 return (
                     f"No encontré citas futuras para *{_first_name(paciente.get('nombre'))}* 📋\n\n"
-                    "¿Quieres agendar una nueva hora? Escribe *1* o *menu*."
+                    "Si la hora está a nombre de otra persona (hijo/a, familiar), "
+                    "escribe su RUT y la busco.\n\n"
+                    "¿O prefieres agendar una nueva hora? Escribe *1* o *menu*."
                 )
             data.update({"paciente": paciente, "citas": citas, "rut": perfil["rut"]})
             save_session(phone, "WAIT_CITA_REAGENDAR", data)
