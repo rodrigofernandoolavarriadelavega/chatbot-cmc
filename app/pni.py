@@ -1,7 +1,22 @@
 """
-Programa Nacional de Inmunización (PNI) Chile 2026.
+Programa Nacional de Inmunización (PNI) Chile — calendario vigente 2025.
 Genera recordatorios de vacunas pendientes según la edad del paciente.
-Fuente: MINSAL — Calendario de Vacunación vigente.
+
+Fuente oficial: MINSAL — "Calendario del Programa Nacional de Inmunizaciones 2025"
+(infografía descargada de https://vacunas.minsal.cl/wp-content/uploads/2025/03/
+CALENDARIO-INMUNIZACIONES-2025.pdf). Verificado 2026-06-10.
+Cambios respecto al esquema previo reflejados aquí:
+  • Meningocócica B recombinante (serogrupo B) AGREGADA: 2m, 4m y refuerzo 18m
+    (incorporada al PNI para nacidos desde el 01-05-2023).
+  • Meningocócica conjugada tetravalente ACWY: DOSIS ÚNICA a los 12m (antes el
+    archivo tenía una 2ª dosis a los 36m inexistente → removida).
+  • Tres Vírica (SRP) 2ª dosis movida a los 36 MESES (antes 1° básico).
+  • Hepatitis A: DOSIS ÚNICA a los 18m (antes el archivo ponía 2 dosis 12m+18m).
+  • VPH: DOSIS ÚNICA en 4° básico (antes 2 dosis 4°+5° básico).
+  • Removido el refuerzo DPT + polio oral de los 4 años (no existe en 2025).
+  • Removida influenza del calendario por edad (es campaña estacional, no PNI etario).
+  • Rotavirus se mantiene por precaución, PENDIENTE de confirmación: la infografía
+    oficial 2025 NO lo lista como vacuna programática (verificar con el dueño médico).
 """
 from datetime import date, datetime
 from typing import Optional
@@ -11,43 +26,39 @@ from typing import Optional
 # escolar=True indica que la vacuna se da por curso escolar, no por edad exacta
 _PNI_CALENDARIO = [
     # Recién nacido
-    (0, 1, "BCG", "protege contra tuberculosis", False),
-    (0, 1, "Hepatitis B (1ª dosis)", "primera dosis contra hepatitis B", False),
+    (0, 1, "BCG", "protege contra enfermedades invasoras por M. tuberculosis", False),
+    (0, 1, "Hepatitis B (recién nacido)", "dosis de recién nacido contra hepatitis B (las siguientes van incluidas en la hexavalente)", False),
     # 2 meses
     (2, 4, "Hexavalente (1ª dosis)", "protege contra difteria, tétanos, tos convulsiva, polio, Hib y hepatitis B", False),
-    (2, 4, "Neumocócica conjugada (1ª dosis)", "protege contra neumonía y meningitis neumocócica", False),
-    (2, 4, "Rotavirus (1ª dosis)", "protege contra gastroenteritis grave por rotavirus (PNI Chile desde 2022)", False),
+    (2, 4, "Neumocócica conjugada 13v (1ª dosis)", "protege contra enfermedades invasoras por neumococo (neumonía, meningitis)", False),
+    (2, 4, "Meningocócica B recombinante (1ª dosis)", "protege contra enfermedad invasora por meningococo serogrupo B (PNI para nacidos desde el 01-05-2023)", False),
+    (2, 4, "Rotavirus (1ª dosis)", "protege contra gastroenteritis grave por rotavirus", False),
     # 4 meses
     (4, 6, "Hexavalente (2ª dosis)", "segunda dosis de hexavalente", False),
-    (4, 6, "Neumocócica conjugada (2ª dosis)", "segunda dosis contra neumonía", False),
+    (4, 6, "Neumocócica conjugada 13v (2ª dosis)", "segunda dosis contra neumococo", False),
+    (4, 6, "Meningocócica B recombinante (2ª dosis)", "segunda dosis contra meningococo serogrupo B", False),
     (4, 6, "Rotavirus (2ª dosis)", "segunda dosis contra rotavirus", False),
     # 6 meses
     (6, 12, "Hexavalente (3ª dosis)", "tercera dosis de hexavalente", False),
-    (6, 24, "Influenza (campaña anual)", "vacuna antigripal — se repite cada año en campaña invernal (abril–mayo). Crítica en menores de 2 años, embarazadas, mayores de 65 y crónicos", False),
+    # (la 3ª dosis de neumocócica a los 6m es SÓLO para prematuros → no se recuerda masivamente)
     # 12 meses
     (12, 18, "Tres Vírica SRP (1ª dosis)", "protege contra sarampión, rubéola y paperas", False),
-    (12, 18, "Meningocócica conjugada (1ª dosis)", "protege contra meningitis meningocócica", False),
-    (12, 18, "Neumocócica conjugada (3ª dosis)", "tercera dosis contra neumonía", False),
-    (12, 18, "Hepatitis A (1ª dosis)", "primera dosis contra hepatitis A", False),
+    (12, 18, "Neumocócica conjugada 13v (refuerzo)", "refuerzo contra neumococo", False),
+    (12, 18, "Meningocócica conjugada tetravalente ACWY (dosis única)", "protege contra meningococo serogrupos A, C, W-135 e Y", False),
     # 18 meses
     (18, 24, "Hexavalente (refuerzo)", "refuerzo de hexavalente", False),
-    (18, 24, "Hepatitis A (2ª dosis)", "segunda dosis contra hepatitis A", False),
+    (18, 24, "Meningocócica B recombinante (refuerzo)", "refuerzo contra meningococo serogrupo B", False),
+    (18, 24, "Hepatitis A (dosis única)", "protege contra hepatitis A", False),
     (18, 24, "Varicela (1ª dosis)", "protege contra varicela", False),
     # 36 meses (3 años)
-    (36, 48, "Meningocócica conjugada (2ª dosis)", "segunda dosis contra meningitis meningocócica", False),
+    (36, 48, "Tres Vírica SRP (2ª dosis)", "segunda dosis contra sarampión, rubéola y paperas", False),
     (36, 48, "Varicela (2ª dosis)", "segunda dosis contra varicela", False),
-    # 4 años (48 meses)
-    (48, 72, "DPT (refuerzo)", "refuerzo contra difteria, tétanos y tos convulsiva", False),
-    (48, 72, "Polio oral (refuerzo)", "refuerzo contra poliomielitis", False),
-    # 1° Básico (~5-7 años) — vacunación escolar
-    (60, 96, "Tres Vírica SRP (2ª dosis)", "segunda dosis contra sarampión, rubéola y paperas", True),
-    (60, 96, "dTpa (refuerzo escolar)", "refuerzo contra difteria, tétanos y tos convulsiva acelular", True),
-    # 4° Básico (~9-11 años) — VPH para niños y niñas
-    (108, 144, "VPH (1ª dosis)", "primera dosis contra virus papiloma humano — previene cáncer", True),
-    # 5° Básico (~10-12 años)
-    (120, 156, "VPH (2ª dosis)", "segunda dosis contra virus papiloma humano", True),
+    # 1° Básico (~6-7 años) — vacunación escolar
+    (60, 96, "dTpa (1ª dosis escolar, 1° básico)", "refuerzo contra difteria, tétanos y tos convulsiva acelular", True),
+    # 4° Básico (~9-11 años) — VPH dosis única para niños y niñas
+    (108, 144, "VPH (dosis única)", "protege contra el virus papiloma humano — previene cáncer cervicouterino y otros", True),
     # 8° Básico (~13-15 años)
-    (156, 180, "dTpa (refuerzo 8° básico)", "refuerzo adolescente contra difteria, tétanos y tos convulsiva", True),
+    (156, 180, "dTpa (2ª dosis escolar, 8° básico)", "refuerzo adolescente contra difteria, tétanos y tos convulsiva", True),
 ]
 
 
@@ -130,7 +141,7 @@ def get_vaccine_reminder(fecha_nacimiento: str, nombre: str = "") -> Optional[st
         if anios <= 7:
             curso = "1° Básico"
         elif anios <= 11:
-            curso = "4° o 5° Básico"
+            curso = "4° Básico"
         else:
             curso = "8° Básico"
         if vacunas_exactas:

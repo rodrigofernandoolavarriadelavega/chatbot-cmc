@@ -44,8 +44,8 @@ _EXAMENES_PREVENTIVOS = [
     (40, 99, None,
      "🩺 *Perfil lipídico y glicemia*: a partir de los 40 años se recomienda controlar "
      "colesterol y azúcar en sangre periódicamente."),
-    (50, 99, None,
-     "🩺 *Detección cáncer colorrectal*: a partir de los 50 años consulta con tu doctor "
+    (45, 99, None,
+     "🩺 *Detección cáncer colorrectal*: a partir de los 45 años consulta con tu doctor "
      "sobre el test de sangre oculta en deposiciones. Examen simple y preventivo."),
     (65, 99, None,
      "🩺 *EMPAM (Examen de Medicina Preventiva del Adulto Mayor)*: a los 65+ años tienes "

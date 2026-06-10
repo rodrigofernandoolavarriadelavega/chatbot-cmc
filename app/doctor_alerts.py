@@ -23,7 +23,7 @@ _PREVENTIVOS = [
     (50, 75, "M", "PSA + TR próstata"),
     (40, 99, None, "Perfil lipídico + glicemia"),
     (45, 99, None, "Control PA"),
-    (50, 99, None, "TSOH / colonoscopía"),
+    (45, 99, None, "TSOH / colonoscopía (USPSTF/ACG 2021: tamizaje desde los 45; GES Chile aún ≥50)"),
     (65, 99, None, "EMPAM anual"),
     (65, 99, None, "Vacuna influenza + neumococo"),
     (18, 39, None, "EMP (examen preventivo)"),
