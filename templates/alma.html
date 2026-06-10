@@ -459,6 +459,12 @@
 const TOKEN = "__TOKEN__";
 const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
 
+// Limpiar el token de la URL una vez que el JS lo leyó (vive en memoria, no necesita quedar en barra).
+if (TOKEN && location.search.includes("token=")) {
+  const clean = location.pathname + location.search.replace(/[?&]token=[^&]*/g, "").replace(/^&/, "?").replace(/^\?$/, "") + location.hash;
+  history.replaceState(null, "", clean || location.pathname);
+}
+
 // PWA: manifest con token (para que el launcher abra autenticado) + service worker
 (function(){
   const mEl = document.getElementById('animaManifest');

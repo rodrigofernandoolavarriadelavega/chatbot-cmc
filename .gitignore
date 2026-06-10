@@ -1,4 +1,8 @@
 .env
+.env.bak*
+.env.backup*
+.env.pre-*
+ga4-key.json
 data/
 __pycache__/
 *.pyc

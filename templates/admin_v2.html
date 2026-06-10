@@ -1606,8 +1606,15 @@ const formatWa = (s="") => {
 };
 const stripWa = (s="") => String(s).replace(/[*_~`]/g, "");
 
+// Limpiar el token de la URL una vez cargado el JS (el token ya vive en memoria).
+if (TOKEN && location.search.includes("token=")) {
+  const clean = location.pathname + location.search.replace(/[?&]token=[^&]*/g, "").replace(/^&/, "?").replace(/^\?$/, "") + location.hash;
+  history.replaceState(null, "", clean || location.pathname);
+}
+
 function api(path, opts={}){
-  const url = path.startsWith("http") ? path : path + (path.includes("?") ? "&" : QS ? "?" : "") + (TOKEN && !path.includes("token=") ? "token=" + encodeURIComponent(TOKEN) : "");
+  // El token viaja SOLO en el header Authorization: Bearer (nunca en la URL).
+  const url = path.startsWith("http") ? path : path;
   return fetch(url, {
     credentials: "include",
     headers: { "Content-Type": "application/json", ...HEADERS, ...(opts.headers||{}) },
@@ -2476,7 +2483,7 @@ async function sendReply(){
       fd.append("phone", activePhone);
       if (text) fd.append("message", text);
       fd.append("file", pendingFile);
-      const url = "/admin/api/send-document" + QS;
+      const url = "/admin/api/send-document";
       const r = await fetch(url, {method:"POST", body: fd, credentials:"include", headers: HEADERS});
       if (!r.ok) throw new Error("HTTP " + r.status);
       pendingFile = null;
@@ -3909,15 +3916,15 @@ function _pgUpdateMetodoHint(){
 }
 
 async function _pgCargarSugerencia(rut, idCita){
-  const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "?";
-  let url = "/alma/api/pagos/sugerencia" + qpLocal;
-  if (rut)    url += "&rut="     + encodeURIComponent(rut);
-  if (idCita) url += "&id_cita=" + encodeURIComponent(idCita);
+  let url = "/alma/api/pagos/sugerencia?";
+  if (rut)    url += "rut="     + encodeURIComponent(rut) + "&";
+  if (idCita) url += "id_cita=" + encodeURIComponent(idCita) + "&";
   // Pasar la fecha del registro para que el backend busque la cita de ese día
   const fechaReg = document.getElementById("pgFecha")?.value;
-  if (fechaReg) url += "&fecha=" + encodeURIComponent(fechaReg);
+  if (fechaReg) url += "fecha=" + encodeURIComponent(fechaReg) + "&";
+  url = url.replace(/[?&]$/, "");
   try {
-    const r = await fetch(url, { credentials: "include" });
+    const r = await fetch(url, { credentials: "include", headers: HEADERS });
     if (!r.ok) return;
     const s = await r.json();
     const fN = document.getElementById("pgNombre");
@@ -3998,10 +4005,9 @@ async function _pgGuardar(){
   if (btn) { btn.disabled = true; btn.textContent = "Guardando…"; }
 
   try {
-    const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
-    const r = await fetch("/alma/api/pagos" + qpLocal, {
+    const r = await fetch("/alma/api/pagos", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...HEADERS },
       credentials: "include",
       body: JSON.stringify(body),
     });
@@ -4116,8 +4122,7 @@ async function _pgLoadProfesionales(){
   const sel = document.getElementById("pgProf");
   if (!sel || sel.options.length > 1) return; // ya cargado
   try {
-    const qpLocal = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
-    const r = await fetch("/alma/api/agenda/profesionales" + qpLocal, { credentials: "include" });
+    const r = await fetch("/alma/api/agenda/profesionales", { credentials: "include", headers: HEADERS });
     if (!r.ok) return;
     const d = await r.json();
     (d.profesionales || []).forEach(p => {
