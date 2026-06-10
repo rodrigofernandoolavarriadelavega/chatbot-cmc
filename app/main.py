@@ -721,6 +721,18 @@ async def lifespan(app: FastAPI):
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup
     _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())
+    # Check one-shot post-arranque: reservas que murieron en vuelo en el proceso
+    # anterior (reserva_en_vuelo sin reserva_resultado, incidente Matías
+    # 2026-06-05) → marca y alerta a recepción. 10s de gracia para no competir
+    # con el arranque.
+    async def _startup_reservas_huerfanas():
+        await _asyncio_startup.sleep(10)
+        try:
+            from jobs import startup_reservas_huerfanas_check
+            await startup_reservas_huerfanas_check()
+        except Exception as e:  # noqa: BLE001 — nunca tumbar el startup por esto
+            log.error("reservas_huerfanas: check de arranque falló: %s", e)
+    _asyncio_startup.get_event_loop().create_task(_startup_reservas_huerfanas())
     scheduler.start()
     log.info(
         "Scheduler iniciado — recordatorios 09:00 · recordatorios 2h cada 15min · cumpleaños 10:00 · "

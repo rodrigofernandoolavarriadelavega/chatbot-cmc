@@ -1275,6 +1275,92 @@ async def _job_takeover_pendiente_alert():
         log.error("takeover_pendiente_alert: no se pudo enviar alerta: %s", e)
 
 
+async def startup_reservas_huerfanas_check(window_min: int = 60):
+    """Corre UNA vez al arrancar el bot (lifespan en main.py): busca eventos
+    `reserva_en_vuelo` recientes sin su par `reserva_resultado` — la firma de
+    una reserva que murió con el proceso (restart/SIGKILL con el booking a
+    Medilink en vuelo, incidente Matías 2026-06-05) — y alerta a recepción.
+    NO reintenta la reserva (el slot pudo cambiar y el paciente no recibió
+    confirmación): el humano decide. Cada caso se marca con
+    `reserva_huerfana_detectada` para no re-alertar en el próximo restart.
+    """
+    import json as _json
+    from session import _conn as _s_conn, log_event as _le
+
+    try:
+        conn = _s_conn()
+        vuelo = conn.execute(
+            "SELECT phone, meta, ts FROM conversation_events "
+            "WHERE event='reserva_en_vuelo' AND ts > datetime('now', ?) "
+            "ORDER BY ts",
+            (f"-{int(window_min)} minutes",),
+        ).fetchall()
+        cierres = conn.execute(
+            "SELECT phone, meta, ts FROM conversation_events "
+            "WHERE event IN ('reserva_resultado','reserva_huerfana_detectada') "
+            "AND ts > datetime('now', ?)",
+            (f"-{int(window_min) + 5} minutes",),
+        ).fetchall()
+        conn.close()
+    except Exception as e:
+        log.error("reservas_huerfanas: error leyendo DB: %s", e)
+        return
+
+    def _key(row):
+        try:
+            m = _json.loads(row[1] or "{}")
+        except Exception:
+            m = {}
+        return (row[0], m.get("fecha"), m.get("hora"))
+
+    # Huérfana = en_vuelo sin cierre posterior para el mismo (phone, fecha, hora).
+    # ts es 'YYYY-MM-DD HH:MM:SS' → comparación lexicográfica válida.
+    huerfanas = {}
+    for row in vuelo:
+        k = _key(row)
+        cerrada = any(_key(c) == k and c[2] >= row[2] for c in cierres)
+        if not cerrada:
+            huerfanas[k] = row[2]
+
+    if not huerfanas:
+        log.info("reservas_huerfanas: 0 huérfanas en los últimos %d min", window_min)
+        return
+
+    casos = []
+    for (phone, fecha, hora), ts in sorted(huerfanas.items(), key=lambda kv: kv[1]):
+        log.warning("reservas_huerfanas: reserva muerta en vuelo phone=…%s %s %s (en_vuelo ts=%s)",
+                    str(phone)[-4:], fecha, hora, ts)
+        _le(phone, "reserva_huerfana_detectada",
+            {"fecha": fecha, "hora": hora, "en_vuelo_ts": ts})
+        casos.append({"phone": phone, "fecha": fecha, "hora": hora})
+
+    if not ADMIN_ALERT_PHONE:
+        log.warning("reservas_huerfanas: %d casos pero ADMIN_ALERT_PHONE no configurado", len(casos))
+        return
+    # Guard ventana 24h (mismo patrón que takeover_pendiente_alert): texto libre
+    # con ventana cerrada genera 131047 en bucle. Los casos quedan en eventos
+    # (reserva_huerfana_detectada) y en los logs igual.
+    if not _admin_window_open():
+        log.warning("reservas_huerfanas: ventana 24h cerrada — %d casos quedan solo en eventos/logs", len(casos))
+        return
+
+    lineas = [f"• …{str(c['phone'])[-4:]} · {c['fecha']} {str(c['hora'] or '')[:5]}" for c in casos[:5]]
+    if len(casos) > 5:
+        lineas.append(f"… y {len(casos) - 5} más")
+    cuerpo = (
+        f"🚨 *{len(casos)} reserva(s) perdida(s) en reinicio del bot*\n\n"
+        "El paciente confirmó una hora pero el sistema se reinició antes de "
+        "crearla en Medilink. El bot NO le respondió:\n\n"
+        + "\n".join(lineas)
+        + "\n\nContáctalo desde el panel o agéndalo manual."
+    )
+    try:
+        await send_whatsapp(ADMIN_ALERT_PHONE, cuerpo)
+        log.info("reservas_huerfanas: alerta enviada a recepción (%d casos)", len(casos))
+    except Exception as e:
+        log.error("reservas_huerfanas: no se pudo enviar alerta: %s", e)
+
+
 async def _job_medilink_watchdog():
     """Cada minuto: si Medilink está marcado como caído, prueba un ping.
     - Si se recuperó: marca up, notifica a los pacientes encolados y avisa a recepción.
