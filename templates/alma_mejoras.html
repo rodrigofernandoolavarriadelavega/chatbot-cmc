@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mejoras — Alma CMC</title>
+<meta name="alma-token" content="__TOKEN__">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --aqua:#4FBECE;--blue:#1172AB;--navy:#0F3F68;--navy-deep:#0a2e4d;
+  --ink:#13202e;--muted:#64798c;--line:#e6edf3;--bg:#f4f7fa;--card:#ffffff;
+  --green:#1f9d6b;--green-bg:#e7f7f0;--amber:#c98a14;--amber-bg:#fdf4e3;
+  --red:#d94c4c;--red-bg:#fdecec;--slate:#5b7186;--slate-bg:#eef2f6;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --sh-lg:0 12px 32px rgba(15,63,104,.12),0 4px 8px rgba(15,63,104,.06);
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+     -webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:1320px;margin:0 auto;padding:22px 24px 80px}
+
+/* ── Header ── */
+.top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+     background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+     border-radius:var(--r);padding:22px 26px;color:#fff;box-shadow:var(--sh-lg);
+     position:relative;overflow:hidden}
+.top::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+     background:radial-gradient(circle,rgba(79,190,206,.35),transparent 70%);pointer-events:none}
+.top .badge-ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+     background:rgba(255,255,255,.14);backdrop-filter:blur(6px);flex-shrink:0}
+.top-text{flex:1;min-width:0}
+.top h1{font-size:21px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.top .sub{font-size:12.5px;opacity:.82;font-weight:500;margin-top:3px}
+.top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;
+     font-size:12px;font-weight:700;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);
+     white-space:nowrap}
+.mode-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--aqua);
+     box-shadow:0 0 0 4px rgba(79,190,206,.3);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.badge-date{font-size:11px;font-weight:600;padding:6px 12px;border-radius:999px;
+     background:rgba(255,255,255,.12);backdrop-filter:blur(6px);color:rgba(255,255,255,.9);
+     white-space:nowrap}
+
+/* ── KPIs ── */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:20px}
+.kpi{background:var(--card);border-radius:var(--r);padding:17px 18px;box-shadow:var(--sh-sm);
+     border:1px solid var(--line);position:relative;overflow:hidden;transition:.2s}
+.kpi:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+.kpi .ki{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;margin-bottom:11px}
+.kpi .kl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;line-height:1.3}
+.kpi .kv{font-size:24px;font-weight:800;letter-spacing:-.6px;margin-top:4px}
+.kpi .kh{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:3px}
+.kpi .badge-p{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;
+     padding:3px 8px;border-radius:999px}
+.kpi .badge-p.p0{background:var(--red-bg);color:var(--red)}
+.kpi .badge-p.p1{background:var(--amber-bg);color:var(--amber)}
+
+/* ── Panels ── */
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-sm);border:1px solid var(--line);overflow:hidden;margin-top:20px}
+.panel-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-h .ph-ico{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#e3f5f8,#cfeef3);display:grid;place-items:center;flex-shrink:0}
+.panel-h h2{font-size:14.5px;font-weight:700;letter-spacing:-.2px}
+.panel-h .count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);background:var(--bg);padding:4px 10px;border-radius:999px;white-space:nowrap}
+.panel-b{padding:18px 20px}
+
+/* ── Filtros ── */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-btn{border:1px solid var(--line);background:var(--bg);color:var(--muted);font-family:inherit;
+     font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.16s}
+.filter-btn:hover{border-color:var(--aqua);color:var(--blue)}
+.filter-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ── Hallazgos ── */
+.findings{display:grid;gap:10px;margin-top:16px}
+.finding{border-radius:12px;border:1px solid var(--line);padding:0;overflow:hidden;
+         transition:.18s;cursor:default;background:var(--card)}
+.finding:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
+.finding-inner{display:flex;gap:14px;padding:14px 16px;align-items:flex-start}
+.finding .sev-bar{width:3px;border-radius:4px;align-self:stretch;min-height:20px;flex-shrink:0}
+.finding.p0 .sev-bar{background:var(--red)}
+.finding.p1 .sev-bar{background:var(--amber)}
+.finding.p2 .sev-bar{background:var(--slate)}
+.finding-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.chip-sev{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.finding.p0 .chip-sev{background:var(--red-bg);color:var(--red)}
+.finding.p1 .chip-sev{background:var(--amber-bg);color:var(--amber)}
+.finding.p2 .chip-sev{background:var(--slate-bg);color:var(--slate)}
+.chip-area{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;
+     background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.finding-title{font-size:13.5px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
+.finding-desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.55}
+.finding-fix{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11.5px;
+     font-weight:600;color:var(--green);background:var(--green-bg);padding:4px 10px;border-radius:8px}
+.finding[data-hidden="true"]{display:none}
+
+/* ── Embudo ── */
+.funnel{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.funnel-row{display:flex;align-items:center;gap:12px}
+.funnel-label{font-size:12px;font-weight:600;color:var(--muted);width:210px;flex-shrink:0;text-align:right}
+.funnel-bar-wrap{flex:1;background:var(--line);border-radius:999px;height:14px;overflow:hidden}
+.funnel-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--aqua),var(--blue));
+            transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.funnel-val{font-size:12px;font-weight:800;color:var(--navy);width:60px;text-align:right;flex-shrink:0}
+.funnel-pct{font-size:11px;font-weight:600;color:var(--muted);width:42px;flex-shrink:0}
+.funnel-warn{flex:1;display:flex;align-items:center;gap:12px}
+
+/* ── Plan de mejoras ── */
+.mejoras-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.matrix-wrap{background:var(--bg);border-radius:12px;padding:16px;border:1px solid var(--line)}
+.matrix-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+     letter-spacing:.4px;margin-bottom:12px}
+.matrix{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;height:160px}
+.matrix-cell{border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.matrix-cell.qs{background:#e7f7f0;border:1px solid #b8e8d5}
+.matrix-cell.pl{background:#fdf4e3;border:1px solid #f0d89a}
+.matrix-cell.pr{background:#eef2f6;border:1px solid #d5dfe7}
+.matrix-cell.sp{background:var(--bg);border:1px solid var(--line)}
+.matrix-cell .mc-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.matrix-cell.qs .mc-label{color:var(--green)}
+.matrix-cell.pl .mc-label{color:var(--amber)}
+.matrix-cell.pr .mc-label{color:var(--blue)}
+.matrix-cell.sp .mc-label{color:var(--slate)}
+.matrix-cell .mc-items{font-size:10px;font-weight:500;color:var(--ink);line-height:1.5;overflow:hidden}
+.matrix-axes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.axis-label{font-size:10px;font-weight:600;color:var(--muted);text-align:center}
+
+.mejoras-table{margin-top:16px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.mejoras-table table{width:100%;border-collapse:collapse}
+.mejoras-table th{background:var(--bg);font-size:11px;font-weight:700;color:var(--muted);
+     text-transform:uppercase;letter-spacing:.4px;padding:10px 14px;text-align:left;
+     border-bottom:1px solid var(--line)}
+.mejoras-table td{padding:11px 14px;font-size:12.5px;font-weight:500;border-bottom:1px solid var(--line);vertical-align:top}
+.mejoras-table tr:last-child td{border-bottom:0}
+.mejoras-table tr:hover td{background:var(--bg)}
+.mejoras-table td.num{font-weight:700;color:var(--navy);font-size:12px;width:30px}
+.chip-ef{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.ef-s{background:#e7f7f0;color:var(--green)}
+.ef-m{background:var(--amber-bg);color:var(--amber)}
+.ef-l{background:var(--red-bg);color:var(--red)}
+.chip-imp{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.imp-a{background:linear-gradient(135deg,var(--aqua),var(--blue));color:#fff}
+.imp-m{background:var(--slate-bg);color:var(--slate)}
+.imp-b{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.mejora-title{font-size:12.5px;font-weight:600;line-height:1.35}
+.mejora-qw{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+     color:var(--green);background:var(--green-bg);padding:2px 7px;border-radius:999px}
+.mejoras-table tr[data-hidden="true"]{display:none}
+
+/* ── Agentes ── */
+.agents-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.agent-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:10px;
+     border:1px solid var(--line);font-size:12px;font-weight:600}
+.agent-chip.on{background:var(--green-bg);color:var(--green);border-color:#b8e8d5}
+.agent-chip.off{background:var(--bg);color:var(--muted)}
+.agent-chip.ready{background:var(--amber-bg);color:var(--amber);border-color:#f0d89a}
+.agent-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.on .agent-dot{background:var(--green)}
+.off .agent-dot{background:var(--line)}
+.ready .agent-dot{background:var(--amber)}
+
+/* ── Acordeón conversaciones ── */
+.accord-item{border-radius:12px;border:1px solid var(--line);overflow:hidden;margin-bottom:8px;background:var(--card)}
+.accord-head{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;
+     font-size:13px;font-weight:700;user-select:none;transition:.15s}
+.accord-head:hover{background:var(--bg)}
+.accord-head .ac-sev{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;flex-shrink:0}
+.accord-head .ac-sev.p0{background:var(--red-bg);color:var(--red)}
+.accord-head .ac-sev.p1{background:var(--amber-bg);color:var(--amber)}
+.accord-head .ac-sev.p2{background:var(--slate-bg);color:var(--slate)}
+.accord-head .ac-arrow{margin-left:auto;transition:transform .2s;color:var(--muted);flex-shrink:0}
+.accord-head.open .ac-arrow{transform:rotate(180deg)}
+.accord-body{display:none;padding:14px 16px;border-top:1px solid var(--line);font-size:12.5px;
+     color:var(--muted);line-height:1.65}
+.accord-body.visible{display:block}
+.accord-body .conv-line{padding:5px 0;border-bottom:1px dashed var(--line)}
+.accord-body .conv-line:last-child{border-bottom:0}
+.accord-body .bug-tag{display:inline-flex;align-items:center;gap:5px;background:var(--red-bg);
+     color:var(--red);font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px;margin-top:10px}
+.accord-body .fix-tag{display:inline-flex;align-items:center;gap:5px;background:var(--green-bg);
+     color:var(--green);font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px;margin-left:6px}
+
+/* ── Mobile ── */
+@media(max-width:760px){
+  .wrap{padding:14px 14px 80px}
+  .top{padding:16px 18px;gap:12px}
+  .top h1{font-size:17px}
+  .top .sub{font-size:11.5px}
+  .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi .kv{font-size:20px}
+  .panel-b{padding:14px 14px}
+  .funnel-label{width:130px;font-size:11px}
+  .funnel-val{width:48px}
+  .mejoras-grid{grid-template-columns:1fr}
+  .mejoras-table{overflow-x:auto}
+  .mejoras-table table{min-width:580px}
+  .filters{gap:6px}
+  .filter-btn{font-size:11px;padding:6px 11px}
+}
+@media(max-width:480px){
+  .kpis{grid-template-columns:1fr}
+  .kpi{padding:14px 15px}
+  .funnel-label{width:110px;font-size:10.5px}
+  .top-right{gap:6px}
+  .badge-date{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── Header ── -->
+  <div class="top">
+    <div class="badge-ico">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4FBECE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+    <div class="top-text">
+      <div style="font-size:11px;font-weight:600;opacity:.7;letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px">Alma · Centro Médico Carampangue</div>
+      <h1>Plan de Mejoras</h1>
+      <div class="sub">Auditoría exhaustiva 2026-06-09 · 4 P0 · 9 P1 · 9 P2 · 22 mejoras accionables</div>
+    </div>
+    <div class="top-right">
+      <div class="mode-pill"><div class="dot"></div>Auditoría activa</div>
+      <div class="badge-date">2026-06-09</div>
+    </div>
+  </div>
+
+  <!-- ── KPIs hero ── -->
+  <div class="kpis" id="kpiRow"></div>
+
+  <!-- ── Sección 1: Hallazgos ── -->
+  <div class="panel">
+    <div class="panel-h">
+      <div class="ph-ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h2>Hallazgos priorizados</h2>
+      <div class="count" id="findCount">22</div>
+    </div>
+    <div class="panel-b">
+      <div class="filters" id="findFilters">
+        <button class="filter-btn active" data-sev="all" data-area="">Todos</button>
+        <button class="filter-btn" data-sev="p0" data-area="">P0 Critico</button>
+        <button class="filter-btn" data-sev="p1" data-area="">P1 Alto</button>
+        <button class="filter-btn" data-sev="p2" data-area="">P2 Medio</button>
+        <button class="filter-btn" data-sev="" data-area="Panel">Panel</button>
+        <button class="filter-btn" data-sev="" data-area="Bot">Bot</button>
+      </div>
+      <div class="findings" id="findingsList"></div>
+    </div>
+  </div>
+
+  <!-- ── Sección 2: Embudo bot ── -->
+  <div class="panel">
+    <div class="panel-h">
+      <div class="ph-ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+        </svg>
+      </div>
+      <h2>Embudo bot — 7 dias (2–9 jun)</h2>
+      <div class="count">906 usuarios</div>
+    </div>
+    <div class="panel-b">
+      <div class="funnel" id="funnelViz"></div>
+    </div>
+  </div>
+
+  <!-- ── Sección 3: Plan de mejoras ── -->
+  <div class="panel">
+    <div class="panel-h">
+      <div class="ph-ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+      </div>
+      <h2>Plan de mejoras (22)</h2>
+      <div class="count" id="mejCount">22</div>
+    </div>
+    <div class="panel-b">
+      <!-- Matriz 2x2 -->
+      <div class="mejoras-grid">
+        <div>
+          <div class="matrix-wrap">
+            <div class="matrix-title">Matriz esfuerzo × impacto</div>
+            <div class="matrix">
+              <div class="matrix-cell qs">
+                <div class="mc-label">Quick wins (S+A)</div>
+                <div class="mc-items">Fix auth v3 · Catch-all "no" waitlist · Rescate slot · Embudo granular · Brain+Agents sidebar · Operativa F4 · Auth branding</div>
+              </div>
+              <div class="matrix-cell pl">
+                <div class="mc-label">Planificar (M-L+A)</div>
+                <div class="mc-items">Cancelar familiar · UI orquestadores · Kit 5 modulos · Breakpoints kit · Rotar tokens · Family links reagendar</div>
+              </div>
+              <div class="matrix-cell pr">
+                <div class="mc-label">Evaluar (S+M)</div>
+                <div class="mc-items">Ocultar En sala · % honorario Equipo · Normalizar slugs · Reintento ver_todos · Aviso waitlist semanal</div>
+              </div>
+              <div class="matrix-cell sp">
+                <div class="mc-label">Segundo plano</div>
+                <div class="mc-items">TODOs cross-sell · Smoke-test cron · Intent aviso_atraso · Umbral SAMU · Follow-up intent info</div>
+              </div>
+            </div>
+            <div class="matrix-axes">
+              <div class="axis-label">Esfuerzo Bajo</div>
+              <div class="axis-label">Esfuerzo Alto</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="background:var(--navy);border-radius:12px;padding:16px;color:#fff;height:100%;display:flex;flex-direction:column;justify-content:center;gap:12px">
+            <div style="font-size:11px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.4px">Oportunidad total estimada</div>
+            <div style="font-size:34px;font-weight:800;letter-spacing:-.8px;color:var(--aqua)">$5–7M</div>
+            <div style="font-size:12px;opacity:.8;font-weight:500">CLP por mes, combinando:</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11.5px;font-weight:600;display:flex;justify-content:space-between"><span>Conversión bot mejorada</span><span style="color:var(--aqua)">+83 citas/sem</span></div>
+              <div style="font-size:11.5px;font-weight:600;display:flex;justify-content:space-between"><span>Waitlist cardiologia/ORL</span><span style="color:var(--aqua)">$1.4–1.9M</span></div>
+              <div style="font-size:11.5px;font-weight:600;display:flex;justify-content:space-between"><span>Operativa Fase 4 (lista)</span><span style="color:var(--aqua)">cupos sin llenar = $0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Filtros + tabla -->
+      <div class="filters" id="mejFilters" style="margin-top:18px">
+        <button class="filter-btn active" data-area="">Todas</button>
+        <button class="filter-btn" data-area="Panel">Panel</button>
+        <button class="filter-btn" data-area="Bot">Bot</button>
+        <button class="filter-btn" data-area="QW">Quick wins</button>
+      </div>
+      <div class="mejoras-table">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Mejora</th>
+              <th>Area</th>
+              <th>Esfuerzo</th>
+              <th>Impacto</th>
+            </tr>
+          </thead>
+          <tbody id="mejList"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sección 4: Estado capa agéntica ── -->
+  <div class="panel">
+    <div class="panel-h">
+      <div class="ph-ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+        </svg>
+      </div>
+      <h2>Estado capa agentica</h2>
+      <div class="count">Snapshot 2026-06-09</div>
+    </div>
+    <div class="panel-b">
+      <div class="agents-grid" id="agentsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ── Sección 5: Conversaciones problemáticas ── -->
+  <div class="panel">
+    <div class="panel-h">
+      <div class="ph-ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <h2>Conversaciones documentadas</h2>
+      <div class="count">6 casos</div>
+    </div>
+    <div class="panel-b">
+      <div id="accordList"></div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+/* ================================================================
+   AUDIT_DATA — snapshot 2026-06-09
+   Para actualizar: reemplazar solo este bloque JSON.
+================================================================ */
+const AUDIT_DATA = {
+  fecha: "2026-06-09",
+  kpis: [
+    {label:"Salud panel",   val:"97.5%", hint:"39/40 rutas OK",         color:"var(--green)",  bg:"var(--green-bg)",  icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`},
+    {label:"Conversión bot", val:"34.1%", hint:"43/126 intent→cita 7d",  color:"var(--amber)",  bg:"var(--amber-bg)",  icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`, badge:"P0"},
+    {label:"Usuarios 7d",   val:"906",   hint:"9.649 mensajes · 158 citas", color:"var(--blue)", bg:"#e8f2fa", icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`},
+    {label:"Deriv. humano", val:"8.9%",  hint:"81 conversaciones",       color:"var(--slate)",  bg:"var(--slate-bg)", icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`},
+    {label:"Oportunidad",   val:"$5–7M", hint:"CLP/mes estimado",        color:"var(--red)",    bg:"var(--red-bg)",   icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`, badge:"P0"},
+    {label:"Hallazgos",     val:"4·9·9", hint:"P0 · P1 · P2",           color:"var(--navy)",   bg:"#e8f2fa",          icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`},
+  ],
+
+  findings: [
+    // PANEL — P0
+    {sev:"p0",area:"Panel",title:"Panel Recepcion v3 roto para perfil dueño",
+     desc:"main.py:2148 valida token == ADMIN_TOKEN en vez de _is_admin_token(token) → redirige 302 al login. El dueño no puede acceder al panel v3.",
+     fix:"1 línea: reemplazar comparación directa por _is_admin_token(token)"},
+    {sev:"p0",area:"Panel",title:"/alma/branding sin autenticación",
+     desc:"main.py:2922 sirve el Brand Board públicamente. Cualquier persona con la URL accede sin token ni sesión.",
+     fix:"Agregar guard _is_admin_token + redirect login (mismo patrón que /alma/abonos)"},
+    // PANEL — P1
+    {sev:"p1",area:"Panel",title:"/alma/orquestadores 404 en prod",
+     desc:"El template alma_orquestadores.html nunca fue commiteado. 23 orquestadores sin UI de inbox ni catálogo. Recuperable del commit 4c38d54.",
+     fix:"Cherry-pick o re-crear template desde commit 4c38d54"},
+    {sev:"p1",area:"Panel",title:"/alma/brain y /alma/agents huerfanos",
+     desc:"Rutas vivas en la app pero sin entrada en el sidebar de Alma. El dueño no puede acceder desde la plataforma — solo con URL directa.",
+     fix:"Agregar entradas 'brain' y 'agents' al ALMA_MODULE_REGISTRY (modulos=None → solo dueño)"},
+    {sev:"p1",area:"Panel",title:"Kit compartido solo en 15/34 templates",
+     desc:"Pagos (3.283 líneas), Agenda, Inventario y otros duplican CSS completo. Actualizaciones de estilo requieren editar múltiples archivos, aumentando riesgo de divergencia.",
+     fix:"Migrar 5 módulos más grandes al alma_kit.css en siguiente sprint de refactor"},
+    {sev:"p1",area:"Panel",title:"Mobile-first incumplido en módulos clave",
+     desc:"alma_sala.html sin ningún @media query. alma_kit.css con un solo breakpoint a 768px. Los profesionales usan Alma principalmente en celular.",
+     fix:"Agregar breakpoints 480px y 376px al kit; aplicar a sala y módulos de alta frecuencia"},
+    {sev:"p1",area:"Panel",title:"Tokens de perfil commiteados en config.py",
+     desc:"Los valores por defecto de ADMIN_TOKEN, OLACORE_TOKEN y otros están en el repositorio. Rotación pendiente con riesgo de lockout si se hace incorrectamente.",
+     fix:"Rotar todos los tokens a valores no predecibles vía .env (NUNCA como defaults en código)"},
+    // PANEL — P2
+    {sev:"p2",area:"Panel",title:"TODOs vivos: cross-sell y agendador",
+     desc:"claude_helper.py:1130/1162 (cross-sell), flows.py:2159 y agendador_routes.py:546 tienen TODOs sin resolver que apagan funcionalidad parcial.",
+     fix:"Audit completo de TODOs con grep -rn 'TODO\\|FIXME' app/ y cerrar los 4 más críticos"},
+    {sev:"p2",area:"Panel",title:"Módulo En sala visible con CHECKIN_ENABLED=false",
+     desc:"El módulo aparece en el sidebar para recepción aunque el feature esté apagado. Es una entrada inerte que confunde.",
+     fix:"Filtrar visibilidad del módulo 'sala' según env CHECKIN_ENABLED al construir PROFILE_MODULES"},
+    {sev:"p2",area:"Panel",title:"% honorario por profesional incompleto",
+     desc:"Módulo Equipo tiene huecos para varios profesionales → Liquidaciones calcula mal los honorarios. Reportado en sprint nocturno 2026-06-02.",
+     fix:"Completar tabla honorarios en alma_equipo.html o endpoint /alma/equipo para los 6 pendientes"},
+    // BOT — P0
+    {sev:"p0",area:"Bot",title:"Conversión agendar→cita 34.1% — 83 intents/sem sin convertir",
+     desc:"83 intents de agendar por semana se pierden sin razón registrada. Filtro Márquez absorbe 329 usuarios sin alternativa ofrecida. 55 slots rechazados (19 MG, 5 kine, 5 eco).",
+     fix:"Embudo granular por paso + rescate de slot rechazado + alternativa cuando filtro actúa"},
+    {sev:"p0",area:"Bot",title:"Loop waitlist no acepta respuesta negativa",
+     desc:"Paciente ...1412 recibió 4 veces el prompt binario de waitlist sin poder salir. 'No del Otorrino' fue normalizado como especialidad 'no otorrino' — bug de routing.",
+     fix:"Catch-all 'no/nope/no gracias' en waitlist + derivar a IDLE tras 2 repeticiones sin respuesta válida"},
+    // BOT — P1
+    {sev:"p1",area:"Bot",title:"Cancelar cita de familiar falla",
+     desc:"El flujo busca por RUT del teléfono, ignorando family_links. 4 casos en 7 días terminaron en derivación a humano sin poder cancelar.",
+     fix:"En WAIT_RUT_CANCELAR: buscar también en family_links del teléfono antes de reportar 'no encontrado'"},
+    {sev:"p1",area:"Bot",title:"Intent 'otro' = 26.8% con 9% de conversión",
+     desc:"Confirmaciones de asistencia, preguntas de info y avisos de atraso quedan como 'otro' sin reconducción. Potencial de ~22 citas/semana adicionales.",
+     fix:"Agregar intents aviso_asistencia e intent_info al router; cache de patrones en claude_helper.py"},
+    // BOT — P2
+    {sev:"p2",area:"Bot",title:"Error tecnico en ver_todos — 9 instancias/7d",
+     desc:"Tendencia al alza (4 el 8-jun). Falla intermitente Medilink sin reintento automático. El paciente queda sin respuesta.",
+     fix:"Reintento exponencial (2 intentos, 500ms) en buscar_slots_dia antes de reportar error"},
+    {sev:"p2",area:"Bot",title:"Waitlist larga sin notificar: 17 cardiología + 9 más",
+     desc:"17 en cardiología, 6 en otorrino, 3 en gastro sin notificación de apertura de cupos. Valor en riesgo estimado $1.4–1.9M CLP. Slugs duplicados: 'estetica'/'estética facial'.",
+     fix:"Normalizar slugs waitlist + aviso semanal automático a pacientes en lista >14 días"},
+    {sev:"p2",area:"Bot",title:"Trigger SAMU131 demasiado sensible",
+     desc:"Se disparó ante queja histórica narrada sin urgencia actual (caso ...1412). Genera fricción innecesaria y puede erosionar confianza del paciente.",
+     fix:"Ajustar umbral: requerir tiempo verbal presente o indicador de urgencia además de keyword"},
+    {sev:"p2",area:"Bot",title:"Nombre incorrecto en template marketing",
+     desc:"Template dental_limpieza_junio_v2 envió nombre de campo vacío a algunos pacientes sin nombre registrado. Afecta percepción de personalización.",
+     fix:"Fallback 'Estimado/a paciente' cuando contact_profiles.name es None o vacío en template render"},
+  ],
+
+  funnel: [
+    {label:"Usuarios unicos 7d",         val:906,  max:906,   pct:"100%"},
+    {label:"Con intent detectado",        val:520,  max:906,   pct:"57%"},
+    {label:"Intent agendar",              val:126,  max:906,   pct:"13.9%"},
+    {label:"Filtro Marquez interceptado", val:329,  max:906,   pct:"36.3%", warn:true},
+    {label:"Slots rechazados",            val:55,   max:906,   pct:"6%",    warn:true},
+    {label:"Derivados a humano",          val:81,   max:906,   pct:"8.9%"},
+    {label:"Errores tecnicos",            val:9,    max:906,   pct:"1%",    warn:true},
+    {label:"Citas creadas 7d",            val:158,  max:906,   pct:"17.4%"},
+    {label:"Conversion intent→cita",      val:43,   max:126,   pct:"34.1%", warn:true, note:"de 126 intents agendar"},
+  ],
+
+  mejoras: [
+    // Quick wins S+A
+    {n:1,  title:"Fix auth /admin/v3 — 1 línea",                          area:"Panel", ef:"S", imp:"A", qw:true},
+    {n:2,  title:"Catch-all 'no' en waitlist + derivar tras 2 repeticiones",area:"Bot",  ef:"S", imp:"A", qw:true},
+    {n:3,  title:"Rescate de slot rechazado (¿otro día u otro especialista?)",area:"Bot", ef:"S", imp:"A", qw:true},
+    {n:4,  title:"Embudo granular con eventos por paso",                   area:"Bot",  ef:"S", imp:"A", qw:true},
+    {n:5,  title:"Sumar Brain + Agents + Orquestadores al sidebar",        area:"Panel", ef:"S", imp:"A", qw:true},
+    {n:6,  title:"Encender Operativa Fase 4 (template Meta aprobado, todo listo)",area:"Bot",ef:"S",imp:"A",qw:true},
+    {n:7,  title:"Auth en /alma/branding",                                 area:"Panel", ef:"S", imp:"A", qw:true},
+    // Panel M/L
+    {n:8,  title:"Recuperar UI orquestadores (template del commit 4c38d54)",area:"Panel", ef:"M", imp:"A", qw:false},
+    {n:9,  title:"Ocultar módulo En sala cuando CHECKIN_ENABLED=false",    area:"Panel", ef:"S", imp:"M", qw:false},
+    {n:10, title:"Migrar 5 módulos top a alma_kit.css",                    area:"Panel", ef:"L", imp:"A", qw:false},
+    {n:11, title:"Breakpoints móviles: kit + alma_sala",                   area:"Panel", ef:"M", imp:"A", qw:false},
+    {n:12, title:"Rotar tokens de perfil a valores .env",                  area:"Panel", ef:"M", imp:"A", qw:false},
+    {n:13, title:"Completar % honorario por profesional en Equipo",        area:"Panel", ef:"S", imp:"M", qw:false},
+    {n:14, title:"Cerrar TODOs cross-sell (claude_helper + flows + agendador)",area:"Panel",ef:"M",imp:"M",qw:false},
+    {n:15, title:"Smoke-test automático 37 rutas en deploy",               area:"Panel", ef:"M", imp:"A", qw:false},
+    // Bot M/L
+    {n:16, title:"Cancelar/reagendar familiar via family_links",           area:"Bot",  ef:"M", imp:"A", qw:false},
+    {n:17, title:"Normalizar slugs waitlist duplicados",                   area:"Bot",  ef:"S", imp:"M", qw:false},
+    {n:18, title:"Reintento exponencial en ver_todos (Medilink intermitente)",area:"Bot",ef:"S", imp:"M", qw:false},
+    {n:19, title:"Aviso semanal waitlist larga (>14 días)",                area:"Bot",  ef:"S", imp:"M", qw:false},
+    {n:20, title:"Intent aviso_atraso — reconducción en vez de ignorar",   area:"Bot",  ef:"S", imp:"B", qw:false},
+    {n:21, title:"Umbral SAMU en quejas históricas sin urgencia presente", area:"Bot",  ef:"M", imp:"M", qw:false},
+    {n:22, title:"Follow-up proactivo a intent 'otro' de tipo info",       area:"Bot",  ef:"M", imp:"M", qw:false},
+  ],
+
+  agents: [
+    {label:"Autopilot ENABLED",   st:"on"},
+    {label:"Autopilot EXECUTE",   st:"on"},
+    {label:"Consent 21.719",      st:"on"},
+    {label:"Presupuesto 2/sem",   st:"on"},
+    {label:"Flota 18 agentes",    st:"off"},
+    {label:"23 orquestadores",    st:"off"},
+    {label:"Operativa Fase 4",    st:"ready", note:"LISTA — template aprobado"},
+    {label:"Brain writes",        st:"off"},
+    {label:"Check-in QR",         st:"off"},
+    {label:"Asistente Adkun WA",  st:"off"},
+    {label:"Email sending",       st:"off"},
+    {label:"Agendador publico",   st:"on"},
+    {label:"Win-back blast",      st:"off"},
+    {label:"ALMA_ORQ_*",          st:"off"},
+  ],
+
+  convs: [
+    {id:"A",phone:"...7534",sev:"p1",title:"Cancelación de familiar rota",
+     lines:[
+       "Paciente solicita cancelar cita de su hijo (RUT distinto al teléfono).",
+       "Bot responde: 'No encontré citas con ese RUT'. Falla: no busca en family_links.",
+       "Deriva a humano sin resolver. Tiempo perdido: ~4 minutos.",
+     ],
+     bug:"family_links ignorado en flujo de cancelación",
+     fix:"Buscar RUT en links vinculados al teléfono antes de reportar 'no encontrado'"},
+    {id:"B",phone:"...1412",sev:"p0",title:"Loop waitlist + falso SAMU",
+     lines:[
+       "Paciente recibió 4 veces el prompt binario de waitlist otorrino sin poder rechazar.",
+       "'No del Otorrino' procesado como especialidad 'no otorrino' — routing incorrecto.",
+       "Bot dispara alerta SAMU131 ante queja histórica sin urgencia actual.",
+       "Paciente abandona conversación frustrado.",
+     ],
+     bug:"Sin catch-all negativo en waitlist + umbral SAMU demasiado sensible",
+     fix:"Catch-all 'no' + timeout tras 2 repeticiones + ajustar umbral SAMU a tiempo presente"},
+    {id:"C",phone:"...1364",sev:"p2",title:"Error ver_todos intermitente",
+     lines:[
+       "Paciente en WAIT_SLOT solicita ver todos los horarios disponibles.",
+       "Bot responde con error técnico sin reintento (4 de 9 instancias del 8-jun).",
+       "Paciente intenta de nuevo, segunda solicitud sí funciona.",
+     ],
+     bug:"buscar_slots_dia falla sin reintento cuando Medilink devuelve error intermitente",
+     fix:"Retry exponencial: 2 intentos con 500ms de espera antes de reportar error al usuario"},
+    {id:"D",phone:"...anon",sev:"p1",title:"Takeover humano reinicia saludo",
+     lines:[
+       "Recepcionista toma control activo (HUMAN_TAKEOVER).",
+       "Cuando libera, bot envía saludo inicial como si fuera primera interacción.",
+       "Paciente recibe 'Hola, soy el asistente del CMC' en medio de conversación activa.",
+     ],
+     bug:"Post-takeover no revisa contexto de sesión existente antes de enviar saludo",
+     fix:"Al salir de HUMAN_TAKEOVER, verificar si hay estado de sesión y retomar desde IDLE sin saludo"},
+    {id:"E",phone:"...anon",sev:"p2",title:"Aviso de atraso sin reconducción",
+     lines:[
+       "Paciente escribe 'llegare 10 minutos tarde a mi cita de las 11'.",
+       "Bot responde con menú completo ignorando el aviso contextual.",
+       "Recepción no fue notificada del aviso.",
+     ],
+     bug:"Intent 'otro' captura avisos de atraso sin path de reconducción",
+     fix:"Agregar intent aviso_atraso: confirmar recibo + notificar recepción + ofrecer opciones si es >15min"},
+    {id:"F",phone:"...anon",sev:"p2",title:"Nombre vacío en template marketing",
+     lines:[
+       "Template dental_limpieza_junio_v2 enviado con campo nombre vacío.",
+       "Pacientes reciben 'Hola,' sin nombre — percepción de mensaje masivo no personalizado.",
+       "Afecta tasa de apertura y confianza en la comunicación del centro.",
+     ],
+     bug:"contact_profiles.name=None no tiene fallback al construir parámetros del template",
+     fix:"Agregar fallback 'Estimado/a paciente' en send_whatsapp_template cuando name es None"},
+  ]
+};
+
+/* ================================================================
+   RENDER
+================================================================ */
+
+// KPIs
+(function renderKPIs(){
+  const c = document.getElementById('kpiRow');
+  AUDIT_DATA.kpis.forEach(k=>{
+    const d = document.createElement('div');
+    d.className = 'kpi';
+    d.innerHTML = `
+      <div class="ki" style="background:${k.bg};color:${k.color}">${k.icon}</div>
+      ${k.badge?`<span class="badge-p ${k.badge.toLowerCase()}">${k.badge}</span>`:''}
+      <div class="kl">${k.label}</div>
+      <div class="kv" style="color:${k.color}">${k.val}</div>
+      <div class="kh">${k.hint}</div>`;
+    c.appendChild(d);
+  });
+})();
+
+// Hallazgos
+(function renderFindings(){
+  const list = document.getElementById('findingsList');
+  const countEl = document.getElementById('findCount');
+  AUDIT_DATA.findings.forEach((f,i)=>{
+    const d = document.createElement('div');
+    d.className = `finding ${f.sev}`;
+    d.dataset.sev = f.sev;
+    d.dataset.area = f.area;
+    d.innerHTML = `<div class="finding-inner">
+      <div class="sev-bar"></div>
+      <div style="flex:1;min-width:0">
+        <div class="finding-meta">
+          <span class="chip-sev">${f.sev.toUpperCase()}</span>
+          <span class="chip-area">${f.area}</span>
+        </div>
+        <div class="finding-title">${f.title}</div>
+        <div class="finding-desc">${f.desc}</div>
+        ${f.fix?`<div class="finding-fix">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Fix: ${f.fix}</div>`:''}
+      </div></div>`;
+    list.appendChild(d);
+  });
+
+  // Filtros hallazgos
+  document.querySelectorAll('#findFilters .filter-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#findFilters .filter-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const sev = btn.dataset.sev;
+      const area = btn.dataset.area;
+      let vis = 0;
+      document.querySelectorAll('.finding').forEach(el=>{
+        const match = (!sev||el.dataset.sev===sev) && (!area||el.dataset.area===area);
+        el.dataset.hidden = match ? 'false' : 'true';
+        if(match) vis++;
+      });
+      countEl.textContent = vis;
+    });
+  });
+})();
+
+// Embudo
+(function renderFunnel(){
+  const c = document.getElementById('funnelViz');
+  AUDIT_DATA.funnel.forEach(f=>{
+    const pct = (f.val/f.max*100).toFixed(0);
+    const row = document.createElement('div');
+    row.className = 'funnel-row';
+    const warningIcon = f.warn
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+      : '';
+    row.innerHTML = `
+      <div class="funnel-label" style="color:${f.warn?'var(--amber)':'var(--muted)'}">${warningIcon} ${f.label}</div>
+      <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:0%" data-w="${pct}%"></div></div>
+      <div class="funnel-val" style="color:${f.warn?'var(--amber)':'var(--navy)'}">${f.val.toLocaleString('es-CL')}</div>
+      <div class="funnel-pct">${f.note||f.pct}</div>`;
+    c.appendChild(row);
+  });
+  // Animar barras
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.funnel-bar').forEach(b=>{
+      b.style.width = b.dataset.w;
+    });
+  });
+})();
+
+// Mejoras
+(function renderMejoras(){
+  const tbody = document.getElementById('mejList');
+  const countEl = document.getElementById('mejCount');
+  AUDIT_DATA.mejoras.forEach(m=>{
+    const tr = document.createElement('tr');
+    tr.dataset.area = m.area;
+    tr.dataset.qw = m.qw ? 'true' : 'false';
+    const efClass = {S:'ef-s',M:'ef-m',L:'ef-l'}[m.ef]||'ef-m';
+    const impClass = {A:'imp-a',M:'imp-m',B:'imp-b'}[m.imp]||'imp-m';
+    tr.innerHTML = `
+      <td class="num">${m.n}</td>
+      <td><div class="mejora-title">${m.title}${m.qw?` <span class="mejora-qw">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Quick win</span>`:''}</div></td>
+      <td><span class="chip-area">${m.area}</span></td>
+      <td><span class="chip-ef ${efClass}">${m.ef}</span></td>
+      <td><span class="chip-imp ${impClass}">${m.imp}</span></td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.querySelectorAll('#mejFilters .filter-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#mejFilters .filter-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const area = btn.dataset.area;
+      let vis = 0;
+      document.querySelectorAll('#mejList tr').forEach(tr=>{
+        let match = true;
+        if(area === 'QW') match = tr.dataset.qw === 'true';
+        else if(area) match = tr.dataset.area === area;
+        tr.dataset.hidden = match ? 'false' : 'true';
+        if(match) vis++;
+      });
+      countEl.textContent = vis;
+    });
+  });
+})();
+
+// Agentes
+(function renderAgents(){
+  const c = document.getElementById('agentsGrid');
+  AUDIT_DATA.agents.forEach(a=>{
+    const d = document.createElement('div');
+    const cls = a.st==='on'?'on':a.st==='ready'?'ready':'off';
+    const lbl = a.st==='on'?'ON':a.st==='ready'?'LISTO':'OFF';
+    d.className = `agent-chip ${cls}`;
+    d.title = a.note||'';
+    d.innerHTML = `<span class="agent-dot"></span>${a.label}<span style="font-size:10px;font-weight:800;opacity:.8">${lbl}</span>`;
+    c.appendChild(d);
+  });
+})();
+
+// Acordeón conversaciones
+(function renderConvs(){
+  const c = document.getElementById('accordList');
+  AUDIT_DATA.convs.forEach(cv=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'accord-item';
+    const head = document.createElement('div');
+    head.className = 'accord-head';
+    head.innerHTML = `
+      <span class="ac-sev ${cv.sev}">${cv.sev.toUpperCase()}</span>
+      <span>${cv.id} · ${cv.phone} — ${cv.title}</span>
+      <svg class="ac-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+    const body = document.createElement('div');
+    body.className = 'accord-body';
+    body.innerHTML = cv.lines.map(l=>`<div class="conv-line">${l}</div>`).join('')
+      + `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+           <span class="bug-tag">
+             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+             ${cv.bug}</span>
+           <span class="fix-tag">
+             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+             ${cv.fix}</span>
+         </div>`;
+    head.addEventListener('click',()=>{
+      const open = body.classList.contains('visible');
+      head.classList.toggle('open', !open);
+      body.classList.toggle('visible', !open);
+    });
+    wrap.appendChild(head);
+    wrap.appendChild(body);
+    c.appendChild(wrap);
+  });
+})();
+</script>
+</body>
+</html>
