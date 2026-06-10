@@ -443,7 +443,7 @@ const AUDIT_DATA = {
      desc:"Paciente ...1412 recibió 4 veces el prompt binario de waitlist sin poder salir. 'No del Otorrino' fue normalizado como especialidad 'no otorrino' — bug de routing.",
      fix:"Catch-all 'no/nope/no gracias' en waitlist + derivar a IDLE tras 2 repeticiones sin respuesta válida"},
     // BOT — P1
-    {sev:"p1",area:"Bot",title:"Cancelar cita de familiar falla",
+    {sev:"p1",area:"Bot",title:"Cancelar cita de familiar falla",done:"2026-06-09 · fae4d4c",
      desc:"El flujo busca por RUT del teléfono, ignorando family_links. 4 casos en 7 días terminaron en derivación a humano sin poder cancelar.",
      fix:"En WAIT_RUT_CANCELAR: buscar también en family_links del teléfono antes de reportar 'no encontrado'"},
     {sev:"p1",area:"Bot",title:"Intent 'otro' = 26.8% con 9% de conversión",
@@ -495,7 +495,7 @@ const AUDIT_DATA = {
     {n:14, title:"Cerrar TODOs cross-sell (claude_helper + flows + agendador)",area:"Panel",ef:"M",imp:"M",qw:false},
     {n:15, title:"Smoke-test automático 37 rutas en deploy",               area:"Panel", ef:"M", imp:"A", qw:false},
     // Bot M/L
-    {n:16, title:"Cancelar/reagendar familiar via family_links",           area:"Bot",  ef:"M", imp:"A", qw:false},
+    {n:16, title:"Cancelar/reagendar familiar via family_links",           area:"Bot",  ef:"M", imp:"A", qw:false, done:true},
     {n:17, title:"Normalizar slugs waitlist duplicados",                   area:"Bot",  ef:"S", imp:"M", qw:false},
     {n:18, title:"Reintento exponencial en ver_todos (Medilink intermitente)",area:"Bot",ef:"S", imp:"M", qw:false},
     {n:19, title:"Aviso semanal waitlist larga (>14 días)",                area:"Bot",  ef:"S", imp:"M", qw:false},
@@ -609,6 +609,7 @@ const AUDIT_DATA = {
         <div class="finding-meta">
           <span class="chip-sev">${f.sev.toUpperCase()}</span>
           <span class="chip-area">${f.area}</span>
+          ${f.done?`<span class="chip-area" style="background:#dcfce7;color:#15803d;font-weight:800">✓ RESUELTO ${f.done===true?'':f.done}</span>`:''}
         </div>
         <div class="finding-title">${f.title}</div>
         <div class="finding-desc">${f.desc}</div>
@@ -674,7 +675,7 @@ const AUDIT_DATA = {
     const impClass = {A:'imp-a',M:'imp-m',B:'imp-b'}[m.imp]||'imp-m';
     tr.innerHTML = `
       <td class="num">${m.n}</td>
-      <td><div class="mejora-title">${m.title}${m.qw?` <span class="mejora-qw">
+      <td><div class="mejora-title">${m.done?`<span style="display:inline-flex;align-items:center;gap:3px;background:#dcfce7;color:#15803d;font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px;margin-right:5px;vertical-align:1px">✓ RESUELTO</span>`:''}${m.title}${m.qw?` <span class="mejora-qw">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         Quick win</span>`:''}</div></td>
       <td><span class="chip-area">${m.area}</span></td>
