@@ -1499,6 +1499,7 @@ function renderAll() {
   if (tb) tb.classList.toggle('dependent', !!d.is_dependent);
   if (!d.is_dependent) ownerPatient = d;
   renderInicio(); renderAgenda(); renderSalud(); renderRecursos(); renderPerfil();
+  setTimeout(_onSpyScroll, 80);  // CTA flotante: estado correcto apenas existe el DOM
 }
 
 /* ═══ Inicio ═══ */
