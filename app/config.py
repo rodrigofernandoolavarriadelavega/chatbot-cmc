@@ -42,6 +42,15 @@ if "987834148" in CMC_TELEFONO.replace(" ", ""):
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "")
 OLACORE_TOKEN      = os.getenv("OLACORE_TOKEN", "")
 
+# Tokens de perfiles profesionales (cada uno accede solo a sus datos)
+KINE_ARMIJO_TOKEN      = os.getenv("KINE_ARMIJO_TOKEN", "")
+KINE_ETCHEVERRY_TOKEN  = os.getenv("KINE_ETCHEVERRY_TOKEN", "")
+NUTRI_PINTO_TOKEN      = os.getenv("NUTRI_PINTO_TOKEN", "")
+PSICO_MONTALBA_TOKEN   = os.getenv("PSICO_MONTALBA_TOKEN", "")
+PSICO_RODRIGUEZ_TOKEN  = os.getenv("PSICO_RODRIGUEZ_TOKEN", "")
+MATRONA_GOMEZ_TOKEN    = os.getenv("MATRONA_GOMEZ_TOKEN", "")
+FONO_ARRATIA_TOKEN     = os.getenv("FONO_ARRATIA_TOKEN", "")
+
 # ── Registro de módulos Alma ────────────────────────────────────────────────────
 # Fuente de verdad de todos los módulos disponibles en el shell Alma.
 # key → {label, icon, title, sub, src}.
@@ -120,22 +129,22 @@ ALMA_PROFILES: dict[str, dict] = {
     # `profesional_id` = id en Medilink (== bi.dim_profesional.profesional_id).
     # Su sola presencia activa el scoping: cada módulo filtra a ese profesional.
     # Kinesiólogos → Agenda + Kine (Programas no cubre kine, esp 3).
-    "cmc_kine_armijo": {
+    **({KINE_ARMIJO_TOKEN: {
         "variante": "Luis Armijo · Kinesiología",
         "modulos": ["agenda", "kine"],
         "profesional_id": 77,        # Luis Armijo (kine) — ve solo SUS pacientes
         "boxes_financiero": False,
         "panel_profesional": False,
-    },
-    "cmc_kine_etcheverry": {
+    }} if KINE_ARMIJO_TOKEN else {}),
+    **({KINE_ETCHEVERRY_TOKEN: {
         "variante": "Leonardo Etcheverry · Kinesiología",
         "modulos": ["agenda", "kine"],
         "profesional_id": 21,        # Leonardo Etcheverry (kine)
         "boxes_financiero": False,
         "panel_profesional": False,
-    },
+    }} if KINE_ETCHEVERRY_TOKEN else {}),
     # No-kine → módulo Programas (se acota a su programa + sus pacientes).
-    "cmc_nutri_pinto": {
+    **({NUTRI_PINTO_TOKEN: {
         "variante": "Gisela Pinto · Nutrición",
         "modulos": ["agenda", "programas", "pagos", "abonos", "pagos_medilink"],
         "profesional_id": 52,        # Gisela Pinto (nutrición)
@@ -143,35 +152,35 @@ ALMA_PROFILES: dict[str, dict] = {
         "panel_profesional": True,   # ve su propio panel (scopeado a ella)
         "ver_ingreso": True,         # ve "Ingreso recuperable" en Programas
         "pagos_readonly": True,      # Pagos/Abonos: solo lectura, filtrados a su especialidad
-    },
-    "cmc_psico_montalba": {
+    }} if NUTRI_PINTO_TOKEN else {}),
+    **({PSICO_MONTALBA_TOKEN: {
         "variante": "Jorge Montalba · Psicología",
         "modulos": ["agenda", "programas"],
         "profesional_id": 74,        # Jorge Montalba (psicología)
         "boxes_financiero": False,
         "panel_profesional": False,
-    },
-    "cmc_psico_rodriguez": {
+    }} if PSICO_MONTALBA_TOKEN else {}),
+    **({PSICO_RODRIGUEZ_TOKEN: {
         "variante": "Juan Pablo Rodríguez · Psicología",
         "modulos": ["agenda", "programas"],
         "profesional_id": 49,        # Juan Pablo Rodríguez (psicología)
         "boxes_financiero": False,
         "panel_profesional": False,
-    },
-    "cmc_matrona_gomez": {
+    }} if PSICO_RODRIGUEZ_TOKEN else {}),
+    **({MATRONA_GOMEZ_TOKEN: {
         "variante": "Sarai Gómez · Matrona",
         "modulos": ["agenda", "programas"],
         "profesional_id": 67,        # Sarai Gómez (matrona)
         "boxes_financiero": False,
         "panel_profesional": False,
-    },
-    "cmc_fono_arratia": {
+    }} if MATRONA_GOMEZ_TOKEN else {}),
+    **({FONO_ARRATIA_TOKEN: {
         "variante": "Juana Arratia · Fonoaudiología",
         "modulos": ["agenda", "programas"],
         "profesional_id": 70,        # Juana Arratia (fonoaudiología)
         "boxes_financiero": False,
         "panel_profesional": False,
-    },
+    }} if FONO_ARRATIA_TOKEN else {}),
 }
 
 # Feature flags — se activan cuando Rodrigo apruebe condiciones comerciales
