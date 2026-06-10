@@ -2676,7 +2676,7 @@ _CROSS_SELL_PRECIO: dict[str, int] = {
     "psicolog\u00eda infantil":    20000,
     "fonoaudiolog\u00eda":         35000,
     "audiometr\u00eda":            25000,
-    "matrona":                30000,
+    "matrona":                20000,
     "podolog\u00eda":              25000,
     "ecograf\u00eda":              40000,
     "traumatolog\u00eda":          35000,

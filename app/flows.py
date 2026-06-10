@@ -387,7 +387,7 @@ PRECIOS_SLOT = {
     "Psicología Adulto":      ("fonasa",    14420),
     "Psicología Infantil":    ("fonasa",    14420),
     "Nutrición":              ("fonasa",     4770),
-    "Matrona":                ("ambas",     16000,  None, 30000),  # Fonasa $16.000 / Particular $30.000
+    "Matrona":                ("ambas",     16000,  None, 20000),  # Fonasa $16.000 / Particular $20.000
     "Psiquiatría":            ("particular", 60000),
     "Fonoaudiología":         ("particular", 25000),
     "Podología":              ("particular", 20000, "desde"),

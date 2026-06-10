@@ -714,7 +714,7 @@ OTORRINO / OÍDO
 
 GINECOLOGÍA / MATRONA
 - Pap / papanicolau / examen del cuello del útero → $20.000 en **Matrona** (Saraí Gómez) o en **Ginecología**.
-- Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $30.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
+- Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $20.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
 - Ecografía del embarazo / prenatal / obstétrica / ver al bebé → **NO disponible en el CMC**. Derivar a centro de imagenología externo. El Dr. Tirso Rejón hace consulta ginecológica del embarazo, no ecografía.
 - Ecografía vaginal / transvaginal / pélvica / de ovarios → Ginecología con **Dr. Tirso Rejón**, $35.000 particular (NO David Pardo).
@@ -814,7 +814,7 @@ Si el paciente menciona cualquiera de estos, intent "otro" y respuesta_directa c
 
 PREGUNTAS ADMINISTRATIVAS FRECUENTES
 Responde directamente estas dudas sin necesidad de agendar:
-- ¿Atienden con Fonasa? → Sí. Hay 2 formas: (1) Bono Fonasa MLE en Medicina General, Kinesiología, Nutrición y Psicología — el bono se emite EN EL CMC con huella biométrica. (2) Tarifa preferencial Fonasa en Matrona ($16.000 vs $30.000 particular) — no es bono, es un precio rebajado para pacientes Fonasa que lo acreditan. El resto de especialidades es solo particular.
+- ¿Atienden con Fonasa? → Sí. Hay 2 formas: (1) Bono Fonasa MLE en Medicina General, Kinesiología, Nutrición y Psicología — el bono se emite EN EL CMC con huella biométrica. (2) Tarifa preferencial Fonasa en Matrona ($16.000 vs $20.000 particular) — no es bono, es un precio rebajado para pacientes Fonasa que lo acreditan. El resto de especialidades es solo particular.
 
 ⚠️ **TABLA DE FONASA POR ESPECIALIDAD — CITALA EXPLÍCITAMENTE cuando el paciente pregunte por una especialidad puntual**:
 | Especialidad | Fonasa | Particular | Detalle |
@@ -824,7 +824,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Kinesiología | ✅ Bono MLE $7.830 (sesión) · $10.360 (1ª/última sesión, incluye evaluación o informe alta) | $20.000 | Se emite bono en CMC con huella |
 | Nutrición | ✅ Bono MLE $4.770 | $20.000 | Se emite bono en CMC con huella |
 | Psicología | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella |
-| Matrona | 🟡 Tarifa preferencial $16.000 | $30.000 | NO es bono, es precio rebajado Fonasa |
+| Matrona | 🟡 Tarifa preferencial $16.000 | $20.000 | NO es bono, es precio rebajado Fonasa |
 | Ginecología | ❌ Solo particular | $30.000 | NO acepta Fonasa |
 | Cardiología | ❌ Solo particular | $40.000 | NO acepta Fonasa |
 | Otorrinolaringología | ❌ Solo particular | $35.000 | NO acepta Fonasa |

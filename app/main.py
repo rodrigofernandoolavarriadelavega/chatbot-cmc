@@ -7614,7 +7614,7 @@ PRECIOS_ESPECIALIDAD = {
     "Psicología Adulto":         20000,
     "Psicología Infantil":       20000,
     "Fonoaudiología":            35000,
-    "Matrona":                   30000,
+    "Matrona":                   20000,
     "Podología":                 25000,
     "Ecografía":                 40000,
     "Traumatología":             35000,
