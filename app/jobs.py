@@ -2771,6 +2771,7 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
 
         candidatos = []
         pac_cache = {}
+        seen_phones = set()
         for cita in citas:
             if len(candidatos) >= CAP:
                 break
@@ -2797,11 +2798,14 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
                 continue
             if teln in bot_phones:
                 continue  # número ya del bot (caso papá agenda al niño)
+            if teln in seen_phones:
+                continue  # mismo número en 2 citas (papá con 2 hijos) → 1 solo mensaje
             if marketing_consent_status(teln) is not None:
                 continue  # ya está en el sistema de consent
             if phone_in_opt_out(teln):
                 continue
             nombre = (pac.get("nombre") or cita.get("paciente_nombre") or "Paciente").split(" ")[0]
+            seen_phones.add(teln)
             candidatos.append((teln, nombre))
 
         if dry_run:
