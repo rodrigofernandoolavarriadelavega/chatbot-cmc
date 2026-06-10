@@ -210,24 +210,50 @@ def bot_funnel(cur, since: str, until: str) -> dict:
 
     atendidos: list[dict] = []
     hoy = dt.date.today().isoformat()
-    total_ing = 0
+
+    # ── Atribución de ingreso SIN doble conteo ───────────────────────────────
+    # BUG histórico (cazado 2026-06-10): se sumaba la ventana [-2d,+30d] POR CADA
+    # cita y se creaba un "atendido" por cita. Un paciente con N citas del bot
+    # contaba sus pagos N veces → ROAS inflado (ej. un kine recurrente con 11
+    # reservas = 11× su ingreso; un ad mostró $1.058M cuando lo real eran ~$304k).
+    # Fix: acumular los pagos DISTINTOS por paciente (dedup por pago_id, que es
+    # único en bi_pagos_caja) sobre la unión de las ventanas de sus citas, y
+    # emitir UN atendido por paciente. Cada peso se cuenta una sola vez. Corrige
+    # tanto el ingreso por ad como el "ingreso" global del funnel.
+    pac_info: dict = {}        # id_pac -> {esp, fecha (la más temprana), phone, source_id}
+    pac_pagos: dict = {}       # id_pac -> {pago_id: monto}  (dedup por pago_id)
+    sin_pac: list[dict] = []   # citas válidas sin id_paciente (no se les puede medir ingreso)
     for phone, id_cita, esp, fecha, id_pac, cancel in citas:
         if not fecha or fecha >= hoy or cancel is not None:
             continue
-        cobrado = 0
-        if id_pac:
-            cur.execute(
-                "SELECT COALESCE(SUM(monto),0) FROM bi_pagos_caja "
-                "WHERE id_paciente = ? AND fecha BETWEEN date(?, '-2 days') AND date(?, '+30 days')",
-                (id_pac, fecha, fecha),
-            )
-            cobrado = cur.fetchone()[0] or 0
+        src = referrals[phone]["source_id"]
+        if not id_pac:
+            sin_pac.append({
+                "phone": phone, "esp": esp, "fecha": fecha,
+                "id_pac": None, "cobrado": 0, "source_id": src,
+            })
+            continue
+        prev = pac_info.get(id_pac)
+        if prev is None or fecha < prev["fecha"]:
+            pac_info[id_pac] = {"esp": esp, "fecha": fecha, "phone": phone, "source_id": src}
+        cur.execute(
+            "SELECT pago_id, monto FROM bi_pagos_caja "
+            "WHERE id_paciente = ? AND fecha BETWEEN date(?, '-2 days') AND date(?, '+30 days')",
+            (id_pac, fecha, fecha),
+        )
+        d = pac_pagos.setdefault(id_pac, {})
+        for pago_id, monto in cur.fetchall():
+            d[pago_id] = int(monto or 0)   # mismo pago_id → no se cuenta dos veces
+
+    total_ing = 0
+    for id_pac, info in pac_info.items():
+        cobrado = sum(pac_pagos.get(id_pac, {}).values())
         atendidos.append({
-            "phone": phone, "esp": esp, "fecha": fecha,
-            "id_pac": id_pac, "cobrado": cobrado,
-            "source_id": referrals[phone]["source_id"],
+            "phone": info["phone"], "esp": info["esp"], "fecha": info["fecha"],
+            "id_pac": id_pac, "cobrado": cobrado, "source_id": info["source_id"],
         })
         total_ing += cobrado
+    atendidos.extend(sin_pac)
 
     return {
         "referrals": referrals,
