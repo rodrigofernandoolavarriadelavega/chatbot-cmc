@@ -1598,6 +1598,7 @@ async function mountInlineAgenda() {
       panel.style.display = '';
     } else { panel.style.display = 'none'; }
   } catch (e) { panel.style.display = 'none'; }
+  _onSpyScroll();  // el panel aparece async: recalcular CTA flotante recién aquí
 }
 function scrollToAgenda() {
   const panel = document.getElementById('ag-inline-panel');
