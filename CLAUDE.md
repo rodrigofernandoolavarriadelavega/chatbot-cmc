@@ -625,3 +625,8 @@ Reemplazar substring matching por similitud coseno con embeddings multilingües 
 6. Dr. Luis Armijo (ID 77) aparece como Medicina General en Medilink pero es Kinesiólogo — error de datos en Medilink, no en el bot
 7. SQLite no escala bien con concurrencia alta — migrar a PostgreSQL o Redis si hay múltiples sucursales
 8. Verificar IDs de profesionales menos frecuentes (Millán, Barraza, Rejón, etc.) directamente en API
+
+### ⚠️ INCIDENTE 2026-06-10 04:17 UTC — symlink data/ commiteado borró sessions.db de prod (RESUELTO)
+- Una carrera de `newsession.sh` dejó `~/chatbot-cmc/data` como symlink a sí mismo; el commit `4988a7c` lo arrastró trackeado; el pull en prod reemplazó `/opt/chatbot-cmc/data/` real → bot crash-loop → DB vacía.
+- RESTAURADO desde `/opt/backups/chatbot-cmc/sessions_20260610_033002.db.gz` (backup diario 03:30). Pérdida: solo 03:30→04:17 UTC. La DB vacía del gap quedó en `data/sessions.db.POST-INCIDENTE-0417`.
+- REGLAS: (1) `data` está en .gitignore y NUNCA debe trackearse — si `git status` muestra `data` (symlink o dir), NO commitear, avisar. (2) Antes de ship/deploy: `git ls-files data` debe estar VACÍO. (3) `~/chatbot-cmc/data` debe ser un directorio real, no symlink.
