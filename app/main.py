@@ -891,6 +891,7 @@ import examenes_routes; app.include_router(examenes_routes.router)
 import tareas_routes; app.include_router(tareas_routes.router)
 import liquidaciones_routes; app.include_router(liquidaciones_routes.router)
 import tablero_routes; app.include_router(tablero_routes.router)
+import patient_source_routes; app.include_router(patient_source_routes.router)  # Canal declarado ("¿cómo nos conoció?")
 import grafo_routes; grafo_routes.register_grafo_routes(app)  # Cerebro Alma (grafo del organismo)
 
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario

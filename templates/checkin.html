@@ -69,6 +69,11 @@
       <div class="msg">¡Estás en sala de espera!</div>
       <div class="sub2" id="okSub">Toma asiento, te llamaremos pronto.</div>
     </div>
+    <div id="srcQ" style="display:none;margin-top:18px">
+      <div style="font-weight:800;text-align:center;margin-bottom:10px">¿Cómo nos conoció? 🙂</div>
+      <div id="srcBtns"></div>
+      <div id="srcThanks" style="display:none;text-align:center;font-weight:800;color:var(--green);margin-top:6px">¡Gracias! 🙌</div>
+    </div>
   </div>
 </div>
 
@@ -122,7 +127,32 @@ async function llegada(c, btn){
     const d = await r.json();
     document.getElementById('okSub').textContent = (c.hora? `Tu hora de las ${c.hora}. ` : '') + 'Toma asiento, te llamaremos pronto.';
     show('ok');
+    askSource(_ctx.rut, _ctx.nombre);
   }catch(e){ btn.disabled=false; btn.textContent='Avisar que llegué'; alert('No se pudo registrar, avísale a recepción.'); }
+}
+
+// "¿Cómo nos conoció?" — solo si aún no sabemos la fuente de este paciente.
+const _FUENTES=[['instagram','Instagram'],['facebook','Facebook'],['google','Google'],
+  ['nos_llamo','Los llamé por teléfono'],['paso_por_fuera','Pasaba por fuera'],
+  ['recomendado','Me recomendaron'],['ya_paciente','Ya soy paciente'],['otro','Otro']];
+async function askSource(rut, nombre){
+  try{
+    const k = await (await fetch('/api/fuente/'+encodeURIComponent(rut))).json();
+    if(k.conocida) return;                       // ya respondió antes → no molestar
+  }catch(e){ return; }
+  const wrap=document.getElementById('srcBtns'); wrap.innerHTML='';
+  _FUENTES.forEach(([f,lbl])=>{
+    const b=document.createElement('button'); b.textContent=lbl;
+    b.style.cssText='display:block;width:100%;margin:6px 0;padding:13px;border:1.5px solid #d7e6f0;border-radius:12px;background:#f1f7fb;font-weight:700;font-size:16px;cursor:pointer';
+    b.onclick=async()=>{
+      await fetch('/api/fuente',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({rut,fuente:f,via:'checkin',nombre})});
+      document.getElementById('srcBtns').style.display='none';
+      document.getElementById('srcThanks').style.display='block';
+    };
+    wrap.appendChild(b);
+  });
+  document.getElementById('srcQ').style.display='block';
 }
 </script>
 </body>
