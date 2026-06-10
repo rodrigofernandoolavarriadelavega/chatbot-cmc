@@ -800,6 +800,57 @@ a{color:inherit; text-decoration:none}
 .back-top svg{width:20px; height:20px}
 @media (max-width:860px){ .back-top{right:12px; bottom:calc(128px + env(safe-area-inset-bottom)); width:40px; height:40px} }
 
+/* Chips de acción bajo la próxima cita (hero) */
+.hero-chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+.hero-chip{display:inline-flex; align-items:center; gap:6px; padding:9px 13px; border-radius:999px;
+  background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28); color:#fff;
+  font-family:var(--font); font-size:11.5px; font-weight:700; cursor:pointer; text-decoration:none; transition:background .15s}
+.hero-chip:hover{background:rgba(255,255,255,.26)}
+.hero-prep{margin-top:10px; font-size:11px; opacity:.82; font-weight:600; letter-spacing:.2px}
+
+/* Carrusel cross-sell "Descubre el centro" */
+.xs-track{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:2px}
+.xs-track::-webkit-scrollbar{display:none}
+.xs-card{flex:0 0 76%; max-width:300px; scroll-snap-align:start; border-radius:16px; padding:16px;
+  background:linear-gradient(145deg, var(--cmc-aqua-soft), #fff); border:1px solid var(--border-soft);
+  cursor:pointer; transition:transform .18s var(--ease), box-shadow .18s var(--ease)}
+.xs-card.alt{background:linear-gradient(145deg, #eaf3fa, #fff)}
+.xs-card:hover{transform:translateY(-2px); box-shadow:0 8px 22px rgba(15,63,104,.12)}
+.xs-ic{width:40px; height:40px; border-radius:12px; background:var(--cmc-navy); color:#fff; display:grid; place-items:center; margin-bottom:10px}
+.xs-ic svg{width:20px; height:20px}
+.xs-label{font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--cmc-blue)}
+.xs-title{font-size:14.5px; font-weight:800; color:var(--cmc-navy); margin-top:2px; letter-spacing:-.2px}
+.xs-desc{font-size:11.5px; color:var(--text-mute); font-weight:600; margin-top:5px; line-height:1.45; min-height:32px}
+.xs-foot{display:flex; align-items:center; justify-content:space-between; margin-top:10px; gap:8px}
+.xs-price{font-size:11px; font-weight:800; color:var(--green-dark); background:rgba(18,140,126,.1); padding:4px 10px; border-radius:20px}
+.xs-cta{font-size:11.5px; font-weight:800; color:var(--cmc-blue)}
+.xs-dots{display:flex; gap:5px; justify-content:center; margin-top:10px}
+.xs-dots span{width:6px; height:6px; border-radius:50%; background:var(--border); transition:.2s}
+.xs-dots span.on{background:var(--cmc-blue); width:16px; border-radius:4px}
+@media (min-width:861px){ .xs-card{flex:0 0 280px} }
+
+/* Panel "Mis controles" */
+.ctrl-row{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border-soft)}
+.ctrl-row:last-of-type{border-bottom:0}
+.ctrl-ic{width:38px; height:38px; flex:none; border-radius:11px; background:var(--cmc-aqua-soft); display:grid; place-items:center; font-size:17px}
+.ctrl-info{flex:1; min-width:0}
+.ctrl-esp{font-size:13px; font-weight:800; color:var(--cmc-navy)}
+.ctrl-last{font-size:11.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
+.ctrl-next{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:800; color:var(--green-dark); background:rgba(18,140,126,.1); padding:3px 9px; border-radius:20px; margin-top:4px}
+.ctrl-due{color:var(--amber); background:rgba(181,129,5,.12)}
+.ctrl-cta{flex:none; padding:9px 14px; border:0; border-radius:10px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:11.5px; font-weight:800; cursor:pointer; transition:filter .15s}
+.ctrl-cta:hover{filter:brightness(1.06)}
+
+/* Información útil */
+.iu-grid{display:grid; grid-template-columns:1fr; gap:10px}
+@media (min-width:861px){ .iu-grid{grid-template-columns:1fr 1fr} }
+.iu-item{display:flex; align-items:center; gap:12px; padding:13px 14px; background:var(--panel-2); border:1px solid var(--border-soft); border-radius:12px; text-decoration:none; color:var(--text); font-family:var(--font); cursor:pointer; text-align:left; width:100%; transition:transform .15s, box-shadow .15s}
+.iu-item:hover{transform:translateY(-1px); box-shadow:0 6px 16px rgba(15,63,104,.1)}
+.iu-item .ic{width:38px; height:38px; flex:none; border-radius:11px; background:var(--cmc-aqua-soft); display:grid; place-items:center; font-size:17px}
+.iu-item .t{font-size:12.5px; font-weight:800; color:var(--cmc-navy)}
+.iu-item .s{font-size:11.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
+.iu-item .go{margin-left:auto; color:var(--cmc-blue); flex:none}
+
 /* Acordeones de Recursos: secciones largas colapsadas por defecto */
 .acc .panel-head{cursor:pointer; -webkit-user-select:none; user-select:none}
 .acc .acc-caret{margin-left:auto; color:var(--text-dim); font-size:14px; line-height:1; transition:transform .2s}
@@ -1526,6 +1577,68 @@ function renderAll() {
   setTimeout(_onSpyScroll, 80);  // CTA flotante: estado correcto apenas existe el DOM
 }
 
+/* ═══ Utilidades próximo control / info útil ═══ */
+const CMC_DIR = 'República 102, Carampangue, Arauco';
+const CMC_MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Centro Médico Carampangue, ' + CMC_DIR);
+const CMC_WA = 'https://wa.me/56966610737';
+let _nextCita = null;
+
+function _fmtCitaLarga(c) {
+  const d = parseFecha(c.fecha); if (!d) return c.fecha;
+  return `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]} a las ${c.hora_inicio} hrs`;
+}
+function hace(fecha) {
+  const d = parseFecha(fecha); if (!d) return '';
+  const dias = Math.round((new Date() - d) / 86400000);
+  if (dias < 1) return 'hoy'; if (dias === 1) return 'ayer';
+  if (dias < 31) return `hace ${dias} días`;
+  const m = Math.round(dias / 30.4);
+  if (m < 12) return `hace ${m} ${m === 1 ? 'mes' : 'meses'}`;
+  const a = Math.floor(m / 12); return a > 1 ? `hace ${a} años` : 'hace 1 año';
+}
+function gcalUrl(c) {
+  const d = parseFecha(c.fecha); if (!d) return '#';
+  const [h, mi] = (c.hora_inicio || '09:00').split(':').map(n => parseInt(n, 10) || 0);
+  const p = n => String(n).padStart(2, '0');
+  const ds = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+  const endMin = h * 60 + mi + 30;
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent(`${c.especialidad || 'Cita'} — Centro Médico Carampangue`)
+    + '&dates=' + `${ds}T${p(h)}${p(mi)}00/${ds}T${p(Math.floor(endMin / 60))}${p(endMin % 60)}00`
+    + '&ctz=America/Santiago'
+    + '&details=' + encodeURIComponent(`${c.profesional || ''}\nLlega 10 minutos antes con tu carnet.`)
+    + '&location=' + encodeURIComponent(CMC_DIR);
+}
+function compartirCita(c) {
+  if (!c) return;
+  const txt = `📅 Hora médica en Centro Médico Carampangue\n${c.especialidad || ''} · ${_fmtCitaLarga(c)}\n${c.profesional || ''}\n📍 ${CMC_DIR}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
+function avisarReagendar(c) {
+  if (!c) return;
+  const txt = `Hola, tengo una hora de ${c.especialidad || 'consulta'} el ${_fmtCitaLarga(c)} y necesito reagendarla.`;
+  window.open(CMC_WA + '?text=' + encodeURIComponent(txt), '_blank');
+}
+const _ESP_EMOJI = [[/odont|dental|endodon|implant|ortodon/i,'🦷'],[/kine|masoter/i,'💪'],[/nutri/i,'🥗'],[/psic|psiqu/i,'🧠'],[/matron|gine|obst/i,'🤰'],[/cardio/i,'❤️'],[/trauma/i,'🦴'],[/fono/i,'🗣️'],[/eco|imagen/i,'🩻'],[/podo/i,'🦶'],[/otorrino/i,'👂'],[/estética|estetica/i,'✨']];
+function espEmoji(e) { for (const [r, x] of _ESP_EMOJI) if (r.test(e || '')) return x; return '🩺'; }
+function buildControles(d) {
+  const last = {}, next = {};
+  for (const h of (d.historial || [])) {
+    const e = (h.especialidad || '').trim(); if (!e) continue;
+    if (!last[e] || h.fecha > last[e].fecha) last[e] = h;
+  }
+  for (const c of (d.citas_futuras || [])) {
+    const e = (c.especialidad || '').trim(); if (!e) continue;
+    if (!next[e] || c.fecha < next[e].fecha) next[e] = c;
+  }
+  return [...new Set([...Object.keys(next), ...Object.keys(last)])]
+    .map(e => ({ esp: e, last: last[e] || null, next: next[e] || null }))
+    .sort((a, b) => {
+      if (!!b.next !== !!a.next) return (!!b.next) - (!!a.next);          // con próxima cita primero
+      return (b.last ? b.last.fecha : '') < (a.last ? a.last.fecha : '') ? -1 : 1; // luego más reciente primero
+    });
+}
+
 /* ═══ Inicio ═══ */
 function renderInicio() {
   const d = patientData; const el = document.getElementById('inicio-content');
@@ -1546,9 +1659,18 @@ function renderInicio() {
       </div>
       <button class="appt-cta" onclick="switchView('agenda')">Ver agenda</button>
     </div>`;
+    _nextCita = next;
+    html += `<div class="hero-chips">
+      <a class="hero-chip" href="${gcalUrl(next)}" target="_blank" rel="noopener">📅 Guardar en calendario</a>
+      <a class="hero-chip" href="${CMC_MAPS_URL}" target="_blank" rel="noopener">📍 Cómo llegar</a>
+      <button class="hero-chip" onclick="compartirCita(_nextCita)">↗️ Compartir</button>
+      <button class="hero-chip" onclick="avisarReagendar(_nextCita)">✏️ Reagendar</button>
+    </div>
+    <div class="hero-prep">Llega 10 minutos antes · Trae tu carnet${/kine|masoter/i.test(next.especialidad||'') ? ' · Ven con ropa cómoda' : ''}${/nutri/i.test(next.especialidad||'') ? ' · Si tienes exámenes recientes, tráelos' : ''}</div>`;
   } else {
+    const ult = (d.historial || [])[0];
     html += `<div class="next-appt empty">
-      <span style="opacity:.85; font-size:12.5px; font-weight:600">No tienes próximas citas — agéndala aquí mismo 👇</span>
+      <span style="opacity:.9; font-size:12.5px; font-weight:600">No tienes próximas citas${ult ? ` — tu última atención fue ${hace(ult.fecha)} (${ult.especialidad || 'consulta'})` : ''}. Reserva tu control aquí mismo 👇</span>
     </div>`;
   }
   html += `<div class="hero-actions">
@@ -1556,6 +1678,26 @@ function renderInicio() {
       <button class="h-btn wa" onclick="abrirWhatsApp()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp</button>
     </div>`;
   html += `</div>`;
+
+  // ── Cross-sell: carrusel "Descubre el centro" (personalizado por dx/historial,
+  //    auto-desliza; tocar una card lleva directo al agendador) ──
+  const promoKeys = pickPromos(d);
+  if (promoKeys.length) {
+    html += `<div class="panel">
+      <div class="panel-head"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Descubre el centro</h2><span class="count">para ti</span></div>
+      <div class="xs-track" id="xs-track">`;
+    promoKeys.forEach((k, i) => {
+      const p = PROMO_CATALOG[k];
+      html += `<div class="xs-card ${i % 2 ? 'alt' : ''}" onclick="scrollToAgenda()">
+        <div class="xs-ic">${p.svg}</div>
+        <div class="xs-label">${p.label}</div>
+        <div class="xs-title">${p.title}</div>
+        <div class="xs-desc">${p.desc}</div>
+        <div class="xs-foot">${p.price ? `<span class="xs-price">${p.price}</span>` : '<span></span>'}<span class="xs-cta">Agendar →</span></div>
+      </div>`;
+    });
+    html += `</div><div class="xs-dots" id="xs-dots">${promoKeys.map((_, i) => `<span class="${i === 0 ? 'on' : ''}"></span>`).join('')}</div></div>`;
+  }
 
   // Quick actions
   html += `<div class="quick-actions">
@@ -1581,6 +1723,40 @@ function renderInicio() {
     </button>
   </div>`;
 
+  // ── Mis controles: responde "¿cuándo fue / cuándo tengo control?" por especialidad ──
+  const ctrls = buildControles(d);
+  if (ctrls.length) {
+    html += `<div class="panel">
+      <div class="panel-head"><span class="dot"></span><h2>Mis controles</h2><span class="count">${ctrls.length}</span></div>`;
+    for (const c of ctrls.slice(0, 6)) {
+      const nd = c.next ? parseFecha(c.next.fecha) : null;
+      const meses = c.last ? Math.round((new Date() - parseFecha(c.last.fecha)) / 86400000 / 30.4) : null;
+      html += `<div class="ctrl-row">
+        <div class="ctrl-ic">${espEmoji(c.esp)}</div>
+        <div class="ctrl-info">
+          <div class="ctrl-esp">${c.esp}</div>
+          ${c.last ? `<div class="ctrl-last">Última atención: ${hace(c.last.fecha)}</div>` : ''}
+          ${c.next
+            ? `<span class="ctrl-next">✓ Próximo control: ${nd.getDate()} ${MESES[nd.getMonth()]} · ${c.next.hora_inicio} hrs</span>`
+            : (meses !== null && meses >= 6 ? `<span class="ctrl-next ctrl-due">Sin control hace ${meses} meses</span>` : '')}
+        </div>
+        ${c.next ? '' : `<button class="ctrl-cta" onclick="scrollToAgenda()">Agendar</button>`}
+      </div>`;
+    }
+    html += `<div style="font-size:10.5px;color:var(--text-dim);margin-top:10px;font-weight:600">La frecuencia de tus controles la define tu profesional tratante.</div></div>`;
+  }
+
+  // ── Información útil del centro ──
+  html += `<div class="panel">
+    <div class="panel-head"><span class="dot" style="background:var(--cmc-navy); box-shadow:0 0 0 4px rgba(15,63,104,.2)"></span><h2>Información útil</h2></div>
+    <div class="iu-grid">
+      <a class="iu-item" href="${CMC_MAPS_URL}" target="_blank" rel="noopener"><span class="ic">📍</span><div><div class="t">Cómo llegar</div><div class="s">${CMC_DIR}</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></a>
+      <a class="iu-item" href="${CMC_WA}" target="_blank" rel="noopener"><span class="ic">💬</span><div><div class="t">WhatsApp del centro</div><div class="s">Consultas, horas y reagendamientos</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></a>
+      <button class="iu-item" onclick="scrollToAgenda()"><span class="ic">📅</span><div><div class="t">Agendar una hora</div><div class="s">Agenda online, sin llamar ni esperar</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <a class="iu-item" href="tel:131"><span class="ic">🚑</span><div><div class="t">Emergencias: SAMU 131</div><div class="s">Ante riesgo vital, llama de inmediato</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></a>
+    </div>
+  </div>`;
+
   // Resumen rápido: dx + última medición
   if ((d.diagnosticos || []).length > 0) {
     html += `<div class="panel">
@@ -1593,6 +1769,31 @@ function renderInicio() {
   }
 
   el.innerHTML = html;
+  initCrossCarousel();
+}
+
+/* Carrusel cross-sell: auto-desliza cada 3.5s; se pausa si el paciente lo toca */
+function initCrossCarousel() {
+  const track = document.getElementById('xs-track');
+  if (!track || !track.children.length) return;
+  if (window._xsTimer) clearInterval(window._xsTimer);
+  const dots = document.getElementById('xs-dots');
+  const cards = track.children.length;
+  let idx = 0, paused = false;
+  const setDot = i => { if (dots) [...dots.children].forEach((s, j) => s.classList.toggle('on', j === i)); };
+  const cardW = () => track.firstElementChild.offsetWidth + 12;
+  track.addEventListener('scroll', () => {
+    idx = Math.max(0, Math.min(cards - 1, Math.round(track.scrollLeft / cardW())));
+    setDot(idx);
+  }, { passive: true });
+  ['pointerdown', 'touchstart'].forEach(ev => track.addEventListener(ev, () => { paused = true; }, { passive: true }));
+  track.addEventListener('mouseenter', () => { paused = true; });
+  track.addEventListener('mouseleave', () => { paused = false; });
+  window._xsTimer = setInterval(() => {
+    if (paused || document.hidden) return;
+    idx = (idx + 1) % cards;
+    track.scrollTo({ left: idx * cardW(), behavior: 'smooth' });
+  }, 3500);
 }
 
 function vitalCount() { return Object.values(allVitals).reduce((s,a)=>s+a.length, 0); }
