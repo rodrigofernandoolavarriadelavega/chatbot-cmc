@@ -70,7 +70,11 @@ done
 OTHERS="$(echo "$OTHERS" | sed 's/^ *//;s/ *$//')"  # trim
 
 STASHED=0
+# Temp file con nombre impredecible y exclusivo (mktemp, O_EXCL) — evita symlink
+# TOCTOU y que dos ventanas con ship.sh en paralelo se pisen el archivo de error.
+ERR="$(mktemp "${TMPDIR:-/tmp}/ship_stash_err.XXXXXX")" || { c_red "mktemp falló"; exit 1; }
 restore() {
+  rm -f "$ERR"
   if [ "$STASHED" = "1" ]; then
     echo "→ restaurando WIP ajena…"
     git stash pop >/dev/null 2>&1 && c_grn "  WIP ajena restaurada." \
@@ -89,13 +93,13 @@ if [ -n "$OTHERS" ]; then
   # Reintento ante carrera de índice con otra ventana ('could not write index').
   ok=0
   for try in 1 2 3 4 5; do
-    if git stash push -q -- $OTHERS 2>/tmp/ship_stash_err; then ok=1; break; fi
+    if git stash push -q -- $OTHERS 2>"$ERR"; then ok=1; break; fi
     c_ylw "  índice ocupado por otra ventana (intento $try/5) — espero…"; sleep 2
   done
   if [ "$ok" != "1" ]; then
     c_red "ABORT: no pude apartar la WIP ajena (índice en disputa con otra ventana)."
     c_red "  NO commiteo, para no mezclar trabajo ajeno. Reintentá o usá un worktree (newsession.sh)."
-    sed 's/^/    /' /tmp/ship_stash_err 2>/dev/null
+    sed 's/^/    /' "$ERR" 2>/dev/null
     exit 1
   fi
   STASHED=1
