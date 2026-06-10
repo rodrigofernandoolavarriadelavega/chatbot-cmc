@@ -11,6 +11,8 @@ piden token admin (es cara al paciente, como el agendador); los de gestión
 """
 import logging
 import os
+import time
+from collections import deque
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -20,6 +22,28 @@ log = logging.getLogger("checkin_routes")
 _CHILE_TZ = ZoneInfo("America/Santiago")
 
 router = APIRouter(prefix="/checkin/api", tags=["checkin"])
+
+# ── Rate limiter en memoria (sliding window) — mismo patrón que agendador_routes ──
+_ck_buckets: dict[str, deque] = {}
+
+def _ck_rate_ok(key: str, limit: int, window_s: int) -> bool:
+    now = time.time()
+    dq = _ck_buckets.get(key)
+    if dq is None:
+        dq = deque()
+        _ck_buckets[key] = dq
+    while dq and dq[0] <= now - window_s:
+        dq.popleft()
+    if len(dq) >= limit:
+        return False
+    dq.append(now)
+    return True
+
+def _ck_client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 def _enabled() -> bool:
@@ -64,9 +88,12 @@ def _es_hoy(fecha_cita: str) -> bool:
 # ── Público: buscar mi cita de hoy por RUT ───────────────────────────────────
 
 @router.get("/buscar")
-async def buscar_cita_hoy(rut: str = Query(...)):
+async def buscar_cita_hoy(rut: str = Query(...), request: Request = None):
     if not _enabled():
         raise HTTPException(404, "Check-in no disponible")
+    # Rate limit: 10 req/min por IP — /buscar es público y devuelve datos de paciente
+    if request and not _ck_rate_ok(f"ck_buscar:{_ck_client_ip(request)}", 10, 60):
+        raise HTTPException(429, "Demasiadas solicitudes")
     from medilink import buscar_paciente, listar_citas_paciente
     rut = (rut or "").strip()
     if len(rut) < 7:
@@ -107,6 +134,9 @@ async def buscar_cita_hoy(rut: str = Query(...)):
 async def marcar_llegada(request: Request):
     if not _enabled():
         raise HTTPException(404, "Check-in no disponible")
+    # Rate limit: 5 req/min por IP — /llegada escribe en DB y es público
+    if not _ck_rate_ok(f"ck_llegada:{_ck_client_ip(request)}", 5, 60):
+        raise HTTPException(429, "Demasiadas solicitudes")
     ensure_checkin_table()
     body = await request.json()
     id_cita = str(body.get("id_cita") or "").strip()

@@ -1198,11 +1198,42 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
     Detecta si un mensaje libre es respuesta a '¿Cómo te sientes después de tu consulta?'
     Retorna 'mejor', 'igual', 'peor', o None si el mensaje no es una respuesta de seguimiento.
     Usa cache determinístico para casos obvios y Claude Haiku solo para ambiguos.
+
+    IMPORTANTE: override determinístico de negación ANTES de Claude para evitar que el LLM
+    clasifique "el dolor persiste no ha mejorado" como "mejor" (caso real 2026-06-09).
+    Los patrones de negación son señales fuertes de peor/igual y no deben delegarse a Claude.
     """
+    import re as _re_seg
     clave = mensaje.strip().lower()
     if clave in _SEGUIMIENTO_CACHE:
         log.info("seguimiento cache hit: %r → %s", clave, _SEGUIMIENTO_CACHE[clave])
         return _SEGUIMIENTO_CACHE[clave]
+
+    # ── Override determinístico: patrones de negación / persistencia ─────────
+    # Si el texto contiene señales explícitas de que el síntoma NO mejoró,
+    # devolver "peor" o "igual" sin consultar Claude.
+    # Primero verificar "peor" (negación + empeoramiento), luego "igual" (persistencia).
+    _NEG_PEOR = _re_seg.compile(
+        r"(no (ha|a|e) (mejorado?|mejora[od]|mejorou|sanado?)|"
+        r"sigue? (el |los |la |las )?(dolor|molest|sintom|moles|fiebre|nausea|mareo)|"
+        r"persiste|no (me |te |le )?(ha (mejorado?|pasado?)|mejora|pasa)|"
+        r"cada vez (mas|más) (mal|peor)|"
+        r"(empeor|peorar|empeoró|empeoró|empeoran|se (ha |está |esta )?(puest[oa] )?peor)|"
+        r"no (hay |ha |se nota )?(ninguna? |mucha? )?(mejori?a?|mejoría?|cambio|diferencia)|"
+        r"(dolor|molest|sintom).{0,30}(persiste|no (cede|mejora|pasa|desaparece)))",
+        _re_seg.IGNORECASE,
+    )
+    _NEG_IGUAL = _re_seg.compile(
+        r"(igual(ito)?|lo mismo (de antes)?|sin (mucho )?cambio|"
+        r"(más|mas) o menos (igual|lo mismo)|no (gran|mucho) (cambio|mejori?a?))",
+        _re_seg.IGNORECASE,
+    )
+    if _NEG_PEOR.search(clave):
+        log.info("seguimiento negacion-det peor: %r", mensaje[:60])
+        return "peor"
+    if _NEG_IGUAL.search(clave):
+        log.info("seguimiento negacion-det igual: %r", mensaje[:60])
+        return "igual"
 
     try:
         resp = await _claude_create(
@@ -1210,9 +1241,14 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
             max_tokens=10,
             system=(
                 "Clasifica si el mensaje es una respuesta a '¿Cómo te sientes después de tu consulta médica?'. "
-                "Devuelve SOLO una de estas palabras exactas: mejor, igual, peor, ninguno. "
-                "Si el mensaje habla de cómo se siente el paciente → mejor/igual/peor. "
-                "Si el mensaje no tiene relación con sentirse bien o mal → ninguno."
+                "Devuelve SOLO una de estas palabras exactas: mejor, igual, peor, ninguno.\n"
+                "Reglas estrictas:\n"
+                "- 'mejor': el paciente dice explícitamente que mejoró, se recuperó o está bien.\n"
+                "- 'igual': sigue igual, sin cambios notables, más o menos.\n"
+                "- 'peor': empeoró, sigue el dolor, persiste el síntoma, no ha mejorado.\n"
+                "- 'ninguno': el mensaje no tiene relación con su estado de salud.\n"
+                "IMPORTANTE: si el texto contiene negaciones como 'no mejoró', 'persiste', "
+                "'sigue el dolor' → clasificar como 'peor', NUNCA como 'mejor'."
             ),
             messages=[{"role": "user", "content": mensaje}],
         )

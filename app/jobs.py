@@ -212,6 +212,45 @@ async def _enviar_reenganche():
                 save_session(phone, "IDLE", {})
             continue
 
+        # ── Guardas de no-interferencia (FIX 2026-06-09) ─────────────────────
+        #
+        # (a) Último mensaje ENTRANTE más reciente que último SALIENTE → el paciente
+        #     respondió pero el bot aún no procesó (latencia/bug): NO es abandono.
+        # (b) Estado CONFIRMING_CANCEL o CONFIRMING_CITA → decisión terminal en curso.
+        #     Un reenganche encima pisa la decisión (caso real: cita quedó activa = no-show).
+        # (c) updated_at < 10 min → la sesión sigue activa (cubierta en get_sesiones_abandonadas
+        #     pero se defiende aquí también por si el filtro upstream cambia).
+        #
+        # Loggea reenganche_skip con motivo para auditoría.
+        try:
+            with _session_conn() as _c_guard:
+                _last_in_row = _c_guard.execute(
+                    "SELECT ts FROM messages WHERE phone=? AND direction='in' "
+                    "ORDER BY ts DESC LIMIT 1",
+                    (phone,),
+                ).fetchone()
+                _last_out_row = _c_guard.execute(
+                    "SELECT ts FROM messages WHERE phone=? AND direction='out' "
+                    "ORDER BY ts DESC LIMIT 1",
+                    (phone,),
+                ).fetchone()
+            _last_in_ts  = _last_in_row["ts"]  if _last_in_row  else None
+            _last_out_ts = _last_out_row["ts"] if _last_out_row else None
+            if _last_in_ts and _last_out_ts and _last_in_ts > _last_out_ts:
+                log_event(phone, "reenganche_skip",
+                          {"motivo": "mensaje_entrante_sin_responder",
+                           "last_in": _last_in_ts, "last_out": _last_out_ts, "state": state})
+                log.info("Reenganche skip (inbound sin responder) phone=%s state=%s", phone, state)
+                continue
+        except Exception as _e_guard:
+            log.warning("Reenganche guard inbound-check error phone=%s: %s", phone, _e_guard)
+
+        if state in ("CONFIRMING_CANCEL", "CONFIRMING_CITA"):
+            log_event(phone, "reenganche_skip",
+                      {"motivo": "estado_confirmacion_terminal", "state": state})
+            log.info("Reenganche skip (estado terminal) phone=%s state=%s", phone, state)
+            continue
+
         # Límite de reintentos genérico: máximo 3 skips o TTL 2h desde el primer skip.
         # Cubre condiciones de skip presentes o futuras que no sean cita cancelada.
         # Persistencia: session.data["reenganche_skip_count"] y ["reenganche_first_skip_ts"].
