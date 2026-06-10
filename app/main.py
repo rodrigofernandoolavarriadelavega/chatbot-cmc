@@ -338,10 +338,12 @@ async def lifespan(app: FastAPI):
     )
     # Post-consulta: 18:00 CLT (Item 33 — dentro de ventana 09:30-20:00 para evitar
     # mensajes de madrugada; 44% sin respuesta cuando corría a las 22:00).
-    # Citas con hora >18:00 quedan para _job_postconsulta_morning (09:00 CLT).
+    # 22:00 CLT por decisión del dueño: la clínica atiende hasta las 21:00,
+    # así el envío del día alcanza a TODOS los atendidos. Citas posteriores
+    # las recoge _job_postconsulta_morning (09:00 CLT).
     scheduler.add_job(
         _job_postconsulta,
-        CronTrigger(hour=18, minute=0, timezone=_CLT),
+        CronTrigger(hour=22, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta",
         replace_existing=True,
     )

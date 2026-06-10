@@ -462,11 +462,12 @@ async def _job_recordatorios_2h():
 async def _job_postconsulta():
     """Post-consulta diario (cron 22:00 CLT).
 
-    Item 33: solo envía en ventana 09:30-20:00 CLT para evitar mensajes de madrugada
-    (antes: 44% sin respuesta por envíos nocturnos). Si el job corre fuera de esa
-    ventana, programa un one-shot para las 09:30 del día siguiente y termina sin
-    enviar — ningún paciente se pierde, solo se difiere. Las citas con hora >20:00
-    quedan para _job_postconsulta_morning (09:00 CLT).
+    Corre 22:00 CLT (decisión del dueño 2026-06-10): la clínica atiende hasta las
+    21:00, así el envío del día alcanza a todos los atendidos. La guardia de ventana
+    09:30-22:30 CLT solo protege contra disparos de madrugada (deferred/restarts):
+    fuera de ventana programa un one-shot para las 09:30 del día siguiente y termina
+    sin enviar — ningún paciente se pierde, solo se difiere. Las citas posteriores a
+    las 22:00 quedan para _job_postconsulta_morning (09:00 CLT).
     """
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -474,11 +475,11 @@ async def _job_postconsulta():
     ahora_clt = datetime.now(_TZ_CHILE)
     hora_mins = ahora_clt.hour * 60 + ahora_clt.minute
     _VENTANA_INI = 9 * 60 + 30   # 09:30
-    _VENTANA_FIN = 20 * 60       # 20:00
+    _VENTANA_FIN = 22 * 60 + 30  # 22:30 — el cron de las 22:00 debe pasar
 
     if not (_VENTANA_INI <= hora_mins <= _VENTANA_FIN):
         log.info(
-            "_job_postconsulta: hora %s fuera de ventana 09:30-20:00 CLT — "
+            "_job_postconsulta: hora %s fuera de ventana 09:30-22:30 CLT — "
             "difiriendo a las 09:30 de manana (no se pierde ninguna cita)",
             ahora_clt.strftime("%H:%M"),
         )
