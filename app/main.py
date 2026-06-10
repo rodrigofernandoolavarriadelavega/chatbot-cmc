@@ -70,6 +70,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_winback_bi,
                   _job_custom_audiences_sync,
                   _job_marketing_consent_blast,
+                  _job_consent_agendados,
                   _job_takeover_pendiente_alert,
                   _job_health_report,
                   _job_caja_report,
@@ -207,6 +208,15 @@ async def lifespan(app: FastAPI):
         _job_recordatorios,
         CronTrigger(hour=9, minute=0, timezone=_CLT),
         id="recordatorios_diarios",
+        replace_existing=True,
+    )
+    # Consent en caliente: barrido HORARIO de citas Medilink → consent_marketing_v2
+    # a agendados por teléfono/presencial (no del bot). Gated CONSENT_AGENDADOS_ACTIVE.
+    # El job se auto-limita a L-V 09-20 CLT aunque el cron dispare cada hora.
+    scheduler.add_job(
+        _job_consent_agendados,
+        CronTrigger(minute=25, timezone=_CLT),
+        id="consent_agendados_horario",
         replace_existing=True,
     )
     # Autopilot marketing (Fase 1, dry-run diario 08:30 CLT).

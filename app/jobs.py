@@ -2728,6 +2728,106 @@ async def _job_marketing_consent_blast():
         log.error("_job_marketing_consent_blast falló: %s", e)
 
 
+async def _job_consent_agendados(dry_run: bool = False) -> dict:
+    """Barrido HORARIO: manda consent_marketing_v2 a pacientes agendados por
+    TELÉFONO/PRESENCIAL (NO por el bot) sin consent ni opt-out — captura consent
+    EN CALIENTE del que recién reservó por recepción.
+
+    'Del bot' = id_cita en citas_bot (exacto) o teléfono ya en citas_bot del día
+    (cubre el caso niño agendado por el papá: el número del papá ya está).
+    Gated CONSENT_AGENDADOS_ACTIVE. Cap CONSENT_AGENDADOS_CAP (default 30/run)."""
+    import os as _os
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _ZI
+    if not dry_run and _os.getenv("CONSENT_AGENDADOS_ACTIVE", "false").lower() not in ("true", "1", "yes"):
+        log.debug("_job_consent_agendados: CONSENT_AGENDADOS_ACTIVE=false — skip")
+        return {"status": "inactive"}
+    now_cl = _dt.now(_ZI("America/Santiago"))
+    if not dry_run and (now_cl.weekday() >= 5 or not (9 <= now_cl.hour < 20)):
+        return {"status": "fuera_horario"}
+    fecha = now_cl.strftime("%Y-%m-%d")
+    CAP = int(_os.getenv("CONSENT_AGENDADOS_CAP", "30"))
+    try:
+        from medilink import _get_shared_client, _q, _safe_json, HEADERS
+        from config import MEDILINK_BASE_URL
+        from session import _conn, normalize_wa_id, log_message
+        from winback import (bi_conn, marketing_consent_status, phone_in_opt_out,
+                             registrar_consent_enviado)
+        from messaging import send_whatsapp_template, render_template_body
+
+        client = _get_shared_client()
+        r = await client.get(
+            f"{MEDILINK_BASE_URL}/citas",
+            params={"q": _q({"fecha": {"eq": fecha}, "estado_anulacion": {"eq": 0}})},
+            headers=HEADERS, timeout=15)
+        citas = _safe_json(r).get("data", []) if r.status_code == 200 else []
+
+        with _conn() as cdb:
+            rows = cdb.execute(
+                "SELECT id_cita, phone FROM citas_bot WHERE created_at >= datetime('now','-2 days')"
+            ).fetchall()
+        bot_cita_ids = {str(x[0]) for x in rows if x[0]}
+        bot_phones = {normalize_wa_id(x[1]) for x in rows if x[1]}
+
+        candidatos = []
+        pac_cache = {}
+        for cita in citas:
+            if len(candidatos) >= CAP:
+                break
+            id_cita = str(cita.get("id_cita") or cita.get("id") or "")
+            if id_cita and id_cita in bot_cita_ids:
+                continue  # agendada por el bot → el bot le pregunta
+            id_pac = cita.get("id_paciente")
+            if not id_pac:
+                continue
+            if id_pac in pac_cache:
+                pac = pac_cache[id_pac]
+            else:
+                try:
+                    rp = await client.get(f"{MEDILINK_BASE_URL}/pacientes/{id_pac}", headers=HEADERS, timeout=12)
+                    pac = (_safe_json(rp).get("data") or {}) if rp.status_code == 200 else {}
+                    if isinstance(pac, list):
+                        pac = pac[0] if pac else {}
+                except Exception:
+                    pac = {}
+                pac_cache[id_pac] = pac
+            tel = (pac.get("celular") or pac.get("telefono") or "").strip()
+            teln = normalize_wa_id(tel) if tel else ""
+            if not teln or len(teln) < 11:
+                continue
+            if teln in bot_phones:
+                continue  # número ya del bot (caso papá agenda al niño)
+            if marketing_consent_status(teln) is not None:
+                continue  # ya está en el sistema de consent
+            if phone_in_opt_out(teln):
+                continue
+            nombre = (pac.get("nombre") or cita.get("paciente_nombre") or "Paciente").split(" ")[0]
+            candidatos.append((teln, nombre))
+
+        if dry_run:
+            return {"candidatos": len(candidatos),
+                    "muestra": [(t[:5] + "***" + t[-2:], n) for t, n in candidatos[:25]],
+                    "citas_dia": len(citas), "bot_excluidos": len(bot_cita_ids)}
+
+        import asyncio as _ai
+        enviados = 0
+        for teln, nombre in candidatos:
+            try:
+                await send_whatsapp_template(teln, "consent_marketing_v2", body_params=[nombre])
+                log_message(teln, "out", render_template_body("consent_marketing_v2", [nombre]), "IDLE")
+                registrar_consent_enviado(teln)
+                enviados += 1
+                log.info("consent_agendados: enviado → ...%s (%d/%d)", teln[-4:], enviados, len(candidatos))
+            except Exception as _e:
+                log.error("consent_agendados: error %s: %s", teln[-4:], _e)
+            await _ai.sleep(30)
+        log.info("_job_consent_agendados: enviados=%d de %d candidatos", enviados, len(candidatos))
+        return {"enviados": enviados, "candidatos": len(candidatos)}
+    except Exception as e:
+        log.error("_job_consent_agendados falló: %s", e)
+        return {"status": "error", "error": str(e)}
+
+
 # ── Winback BI ────────────────────────────────────────────────────────────────
 
 async def _job_custom_audiences_sync() -> None:
