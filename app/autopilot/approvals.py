@@ -385,7 +385,7 @@ def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> 
     try:
         from config import OLACORE_TOKEN as _owner_tok
     except Exception:  # noqa: BLE001
-        _owner_tok = "cmc_admin_olacore"
+        _owner_tok = ""
     panel = f"{base}/autopilot?token={_owner_tok}"
 
     lines: list[str] = []

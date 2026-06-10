@@ -107,6 +107,16 @@ done
 ACT="$(systemctl is-active chatbot-cmc || true)"
 if [ "$ACT" = "active" ] && [ "$HC" = "200" ]; then
   echo "DEPLOY OK: prod en $(git rev-parse --short HEAD) · servicio=$ACT · health=$HC"
+  # G5 — permisos de .env: todos los .env* (excepto .env.example) deben ser 600.
+  for _envf in "$DIR"/.env "$DIR"/.env.*; do
+    [ -f "$_envf" ] || continue
+    case "$_envf" in *.example) continue ;; esac
+    _perm="$(stat -c '%a' "$_envf" 2>/dev/null || stat -f '%A' "$_envf" 2>/dev/null)"
+    if [ "$_perm" != "600" ]; then
+      chmod 600 "$_envf"
+      echo "WARNING (G5): permisos de $( basename "$_envf") eran $_perm — corregido a 600"
+    fi
+  done
 else
   echo "ABORT (G4): post-deploy NO sano (servicio=$ACT health=$HC) → AUTO-ROLLBACK."
   git reset --hard "$OLD" --quiet

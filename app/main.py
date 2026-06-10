@@ -3641,7 +3641,7 @@ def kintu_shell(token: str | None = Query(None),
         raise HTTPException(404, "Kintu no disponible")
     active = token if (token and _is_admin_token(token)) else None
     if not active and _verify_cookie(cmc_session or "") == "admin":
-        active = token if (token and _is_admin_token(token)) else "cmc_admin_olacore"
+        active = token if (token and _is_admin_token(token)) else OLACORE_TOKEN
     if not active:
         raise HTTPException(403, "no autorizado")
     return HTMLResponse(_KINTU_HTML

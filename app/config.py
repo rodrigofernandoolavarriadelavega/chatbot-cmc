@@ -39,8 +39,8 @@ if "987834148" in CMC_TELEFONO.replace(" ", ""):
     )
     CMC_TELEFONO = "+56966610737"
 
-ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "cmc_admin_2026")
-OLACORE_TOKEN      = os.getenv("OLACORE_TOKEN", "cmc_admin_olacore")
+ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "")
+OLACORE_TOKEN      = os.getenv("OLACORE_TOKEN", "")
 
 # ── Registro de módulos Alma ────────────────────────────────────────────────────
 # Fuente de verdad de todos los módulos disponibles en el shell Alma.
@@ -84,6 +84,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "tareas":      {"label": "Tareas",           "icon": "listcheck", "title": "Tareas del equipo",              "sub": "Pendientes · asignación · vencimientos",           "src": "/alma/tareas"},
     "liquidaciones":{"label": "Liquidaciones",  "icon": "coins",     "title": "Liquidaciones de honorarios",    "sub": "Producción × % · pagado/pendiente por profesional","src": "/alma/liquidaciones"},
     "branding":    {"label": "Brand Board",      "icon": "palette",   "title": "Brand Board — Alma",             "sub": "Identidad visual · sistema de diseño Alma",        "src": "/alma/branding"},
+    "mejoras":     {"label": "Mejoras",          "icon": "clipcheck", "title": "Plan de Mejoras",                "sub": "Auditoría 2026-06-09 · hallazgos · plan accionable", "src": "/alma/mejoras"},
     # Módulo externo (app standalone alma-print). src configurable por env para no
     # incrustar la llave en git; por defecto sin token (se pega una vez en el PC).
     "impresion":   {"label": "Impresión",        "icon": "printer",   "title": "Impresión — imprimir en recepción", "sub": "Manda PDF/imágenes a la impresora del centro",  "src": os.getenv("ALMA_PRINT_URL", "https://print.agentecmc.cl/")},
@@ -99,19 +100,22 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
 # Para agregar un perfil nuevo: añadir una entrada aquí.
 # "variante" es la 3ª línea del lockup (debajo de "CARAMPANGUE" fija). "" = no muestra 3ª línea.
 ALMA_PROFILES: dict[str, dict] = {
-    "cmc_admin_olacore": {
+    # Las claves son los tokens reales leídos de env (OLACORE_TOKEN / ADMIN_TOKEN).
+    # Si el token está vacío (env no definida) no se registra la entrada — el dict
+    # no tendrá claves vacías que permitan acceso sin token.
+    **({OLACORE_TOKEN: {
         "variante": "Adkun",
         "modulos": None,           # acceso total — dueño
         "boxes_financiero": True,
         "panel_profesional": True,
-    },
-    "cmc_admin_2026": {
+    }} if OLACORE_TOKEN else {}),
+    **({ADMIN_TOKEN: {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "agenda", "sala", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a cmc_admin_olacore
+        "modulos": ["panel", "panel2", "agenda", "sala", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a OLACORE_TOKEN
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
-    },
+    }} if ADMIN_TOKEN else {}),
     # ── Perfiles por profesional (datos acotados a lo suyo) ──────────────────
     # `profesional_id` = id en Medilink (== bi.dim_profesional.profesional_id).
     # Su sola presencia activa el scoping: cada módulo filtra a ese profesional.
@@ -174,7 +178,7 @@ ALMA_PROFILES: dict[str, dict] = {
 # (precios, % descuento, cuenta bancaria, templates Meta).
 TELEMEDICINA_ENABLED   = os.getenv("TELEMEDICINA_ENABLED", "false").lower() == "true"
 REFERRAL_BONOS_ENABLED = os.getenv("REFERRAL_BONOS_ENABLED", "false").lower() == "true"
-ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "cmc_ortodoncia_2026")
+ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "")
 
 # Promo dental: flyer que se envía AUTOMÁTICAMENTE a quien recién acepta el
 # consent dental (consent_dental_v1 → "Sí, acepto"). Gateado: apagar al terminar

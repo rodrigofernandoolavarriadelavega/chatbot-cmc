@@ -2751,6 +2751,7 @@ async def _job_watchdog_blast() -> None:
     from datetime import datetime
     from pathlib import Path
     from zoneinfo import ZoneInfo
+    from config import OLACORE_TOKEN as _olacore_tok
 
     log.info("_job_watchdog_blast: iniciando evaluación")
 
@@ -2928,7 +2929,7 @@ async def _job_watchdog_blast() -> None:
             f"Razon: {razones_txt}\n"
             f"Errores 24h: {errores_total} | Quality: {quality_rating} | "
             f"Rechazo 7d: {tasa_rechazo}% (n={muestra_rechazo})\n\n"
-            f"Dashboard: agentecmc.cl/winback?token=cmc_admin_2026\n"
+            f"Dashboard: agentecmc.cl/winback?token={_olacore_tok}\n"
             f"{_ts}"
         )
 
@@ -2970,6 +2971,7 @@ async def _job_winback_daily_report() -> None:
     from datetime import datetime
     from pathlib import Path
     from zoneinfo import ZoneInfo
+    from config import OLACORE_TOKEN as _olacore_tok_dr
 
     if not ADMIN_ALERT_PHONE:
         log.warning("_job_winback_daily_report: ADMIN_ALERT_PHONE no configurado — skip")
@@ -3062,7 +3064,7 @@ async def _job_winback_daily_report() -> None:
         f"Costo Meta hoy: ${costo_hoy:,} CLP\n"
         f"Errores 24h: {errores_24h}\n\n"
         f"Estado blast: {estado_flag}\n"
-        f"Dashboard: agentecmc.cl/winback?token=cmc_admin_2026"
+        f"Dashboard: agentecmc.cl/winback?token={_olacore_tok_dr}"
     )
 
     # ── 5. Enviar ─────────────────────────────────────────────────────────
