@@ -620,9 +620,21 @@ async def send_whatsapp_template(to: str, template_name: str,
 
     # Variables del body
     if body_params:
+        # FIX 5b (2026-06-10): sanitizar params para evitar "Hola ," cuando el
+        # nombre del contact_profile es None o vacío. El primer param de
+        # cualquier template de saludo suele ser el nombre — si llega vacío,
+        # usar fallback "Estimado/a paciente" para que el template quede legible.
+        _body_params_sanitized = []
+        for _i, _p in enumerate(body_params):
+            _val = str(_p).strip() if _p is not None else ""
+            if not _val and _i == 0:
+                # Solo el primer param (nombre) recibe el fallback; los demás
+                # (especialidad, fecha, etc.) se dejan como están.
+                _val = "Estimado/a paciente"
+            _body_params_sanitized.append(_val)
         components.append({
             "type": "body",
-            "parameters": [{"type": "text", "text": p} for p in body_params],
+            "parameters": [{"type": "text", "text": p} for p in _body_params_sanitized],
         })
 
     # Payloads de botones QUICK_REPLY (dinámicos al enviar)

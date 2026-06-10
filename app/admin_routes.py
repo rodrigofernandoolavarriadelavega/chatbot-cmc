@@ -709,6 +709,14 @@ async def admin_resume(phone: str, _: str = Depends(require_admin)):
         save_session(phone, "HUMAN_TAKEOVER", merged)
         log_event(phone, "recepcion_ctx_snapshot", {"n_msgs": len(ctx.get("recepcion_resumen", []))})
     reset_session(phone)
+    # FIX 4 (2026-06-10): marcar que la sesión viene de un resume para que
+    # el bot NO envíe el saludo de primera interacción en el próximo mensaje.
+    # El flag se consume en flows.py al primer mensaje post-resume.
+    import time as _time
+    sess_after = get_session(phone)
+    _data_resumed = dict(sess_after.get("data") or {})
+    _data_resumed["_resumed_from_takeover_at"] = _time.time()
+    save_session(phone, "IDLE", _data_resumed)
     log_event(phone, "bot_reanudado")
     msg_reanuda = (
         "Continúo desde donde te dejaste con la recepcionista.\n"

@@ -157,6 +157,26 @@ AFIRMACIONES = {
 }
 NEGACIONES   = {"no", "nop", "nope", "cancelar", "cancel", "no gracias"}
 
+
+async def _buscar_slots_dia_con_retry(especialidad: str, fecha: str, **kwargs):
+    """FIX 3 (2026-06-10): retry con backoff para buscar_slots_dia.
+    Intenta hasta 3 veces (0.5s y 1s de espera entre reintentos).
+    Si los 3 fallan, relanza la última excepción para que el caller la maneje.
+    """
+    ultimo_exc = None
+    for intento, espera in enumerate([0, 0.5, 1.0]):
+        if espera:
+            await asyncio.sleep(espera)
+        try:
+            return await buscar_slots_dia(especialidad, fecha, **kwargs)
+        except Exception as _e:
+            ultimo_exc = _e
+            if intento < 2:
+                log.warning("buscar_slots_dia reintento %d/%d esp=%s fecha=%s: %s",
+                            intento + 1, 3, especialidad, fecha, _e)
+    raise ultimo_exc
+
+
 EMERGENCIAS  = {
     # generales
     "emergencia", "urgencia", "dolor muy fuerte", "no puedo respirar",
@@ -2229,6 +2249,12 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     if _es_respuesta_obvia_al_prompt(txt, tl, state, data):
         return None
 
+    # FIX 1 (2026-06-10): en WAIT_WAITLIST_CONFIRM, si el texto empieza con
+    # negación (ej: "No del Otorrino"), no llamar a classify_with_context para
+    # que el handler normal lo procese como negación ampliada.
+    if state == "WAIT_WAITLIST_CONFIRM" and re.match(r"^no\b", tl.strip(), re.IGNORECASE):
+        return None
+
     try:
         intent = await classify_with_context(txt, state, data)
     except Exception as e:
@@ -3163,9 +3189,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         and _DENTAL_URGENCIA_KEYWORDS.search(tl)
         and not _VITAL_SIGNAL.search(tl)
     )
+    # FIX 2 (2026-06-10): inhibir también cuando el match de keyword de emergencia
+    # ocurre dentro de una frase claramente en pasado/condicional Y sin ningún
+    # indicador de urgencia presente. CONSERVADOR: si hay duda, disparar igual.
+    # Caso prod (paciente ...1412): "esa misma preocupación debió haber tenido
+    # cuando me correspondía control" → queja histórica, sin urgencia real.
+    _PASADO_CONDICIONAL = re.compile(
+        r"(debió\s+(haber|haberlo|tenerlo)|debería\s+haber|tendría\s+que\s+haber"
+        r"|hubiera\s+(sido|tenido|hecho)|hubiese\s+(sido|tenido|hecho)"
+        r"|cuando\s+(me\s+)(correspondía|toc[oó]|atendieron|vine|fui\s+a)"
+        r"|en\s+(esa|aquel|ese)\s+(entonces|momento|tiempo|oportunidad)"
+        r"|hace\s+(meses|años|tiempo|semanas)\s+(atrás|que))",
+        re.IGNORECASE,
+    )
+    _URGENCIA_PRESENTE = re.compile(
+        r"(ahora|en\s+este\s+momento|me\s+siento|tengo\s+(fiebre|dolor|sangrado)"
+        r"|estoy\s+(mal|grave|sangrando|desmay|convuls)"
+        r"|no\s+puedo\s+respirar|me\s+duele\s+mucho)",
+        re.IGNORECASE,
+    )
+    _inhibir_por_pasado = (
+        _PASADO_CONDICIONAL.search(tl)
+        and not _URGENCIA_PRESENTE.search(tl)
+        and not _VITAL_SIGNAL.search(tl)
+    )
     _inhibir_emergencia = (
         (_solo_urgencia_trigger and _URGENCIA_EXCUSA.search(tl) and not _GRAVEDAD_INMEDIATA.search(tl))
         or _urgencia_dental_falso_positivo
+        or _inhibir_por_pasado
     )
 
     if not _inhibir_emergencia and (
@@ -3412,6 +3463,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Escribe *modo* para cambiar."
                 )
             return _doctor_mode_menu()
+        # FIX 4 (2026-06-10): si venimos de un resume de takeover reciente (<24h),
+        # NO enviar saludo de primera interacción — el bot simplemente queda
+        # escuchando. El paciente ya sabe que es el bot (le avisó admin_resume).
+        import time as _time_resume
+        _resumed_at = data.get("_resumed_from_takeover_at") if isinstance(data, dict) else None
+        _es_resume_reciente = (
+            _resumed_at is not None
+            and (_time_resume.time() - float(_resumed_at)) < 86400  # 24h
+        )
+        if _es_resume_reciente:
+            # Consumir el flag y procesar el mensaje del paciente como IDLE normal
+            data_clean = {k: v for k, v in (data or {}).items() if k != "_resumed_from_takeover_at"}
+            save_session(phone, "IDLE", data_clean)
+            log_event(phone, "resume_post_takeover_skip_saludo", {})
+            return await handle_message(phone, txt, {"state": "IDLE", "data": data_clean})
+
         # FIX-17 (FIX-1-2026-05-13): disclosure en primer contacto (Ley 21.719)
         _primer_contacto_disclosure = not has_recent_event(phone, "disclosure_enviado", days=3650)
 
@@ -5316,6 +5383,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 takeover_reason="farmaco",
             )
 
+        # FIX 5a (2026-06-10): aviso de atraso — responder con confirmación simple
+        # + log_event para que aparezca en el panel, sin derivar a humano completo.
+        # También capturar por regex en caso de que Claude no devuelva el intent.
+        _ATRASO_RE = re.compile(
+            r"(llego?\s+tarde|llegaré\s+tarde|llegare\s+tarde"
+            r"|voy\s+(atrasad[oa]|demorad[oa]|en\s+camino)"
+            r"|me\s+(atrasé|atrase|demoré|demore)"
+            r"|llegaré?\s+(con\s+retraso|unos?\s+\d+\s+min)"
+            r"|estoy\s+(en\s+camino|de\s+camino))",
+            re.IGNORECASE,
+        )
+        if intent == "aviso_atraso" or _ATRASO_RE.search(tl):
+            log_event(phone, "aviso_atraso", {"texto": txt[:200]})
+            # Notificar a recepción via log (aparece en panel como evento)
+            log_event(phone, "recepcion_pendiente", {"tipo": "aviso_atraso", "texto": txt[:200]})
+            return (
+                "¡Gracias por avisar! Le informamos a recepción 🙂\n\n"
+                "Si tienes alguna otra consulta, escribe *menu*."
+            )
+
         if intent == "humano":
             # Override defensivo: Claude Haiku ocasionalmente clasifica
             # frases con carga clínica/vital como "humano" cuando deberían ser
@@ -6224,7 +6311,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             or ".-" in _ec_lower
             or _ec_lower.count(" ") >= 5
         )
-        if _ec_es_frase_libre:
+        # FIX 1c (2026-06-10): si el texto normalizado empieza con "no " o ES
+        # exactamente "no", nunca generar un slug de especialidad.
+        # Caso prod: "No del Otorrino" → especialidad_candidata="no otorrino" →
+        # "No encontré horas para *no otorrino*". Ahora se bloquea aquí.
+        _ec_empieza_no = bool(re.match(r"^no(\s|$)", _ec_lower))
+        if _ec_es_frase_libre or _ec_empieza_no:
             log_event(phone, "wait_esp_texto_libre_rechazado", {"txt": txt[:120]})
             save_session(phone, "WAIT_ESPECIALIDAD", data)
             return f"No reconocí eso como una especialidad. ¿Qué especialidad necesitas?\n\n{_ESPECIALIDADES_TEXTO}"
@@ -6644,7 +6736,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if dia_pedido is not None:
             fecha_dia = _proxima_fecha_dia(dia_pedido)
             if fecha_dia:
-                smart_dia, todos_dia = await buscar_slots_dia(especialidad, fecha_dia, intervalo_override=_maso_override)
+                try:
+                    smart_dia, todos_dia = await _buscar_slots_dia_con_retry(
+                        especialidad, fecha_dia, intervalo_override=_maso_override)
+                except Exception as _e_dia_ped:
+                    log.warning("buscar_slots_dia dia_pedido falló tras retries: %s", _e_dia_ped)
+                    smart_dia, todos_dia = [], []
                 if todos_dia:
                     if fecha_dia not in fechas_vistas:
                         fechas_vistas = fechas_vistas + [fecha_dia]
@@ -7099,8 +7196,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             _DIA_RELATIVO = _hoy.strftime("%Y-%m-%d")
         if _DIA_RELATIVO:
             _maso_override = {59: data["maso_duracion"]} if especialidad == "masoterapia" and data.get("maso_duracion") else None
-            smart_dia, todos_dia = await buscar_slots_dia(
-                especialidad, _DIA_RELATIVO, intervalo_override=_maso_override)
+            try:
+                smart_dia, todos_dia = await _buscar_slots_dia_con_retry(
+                    especialidad, _DIA_RELATIVO, intervalo_override=_maso_override)
+            except Exception as _e_dia_rel:
+                log.warning("buscar_slots_dia DIA_RELATIVO falló tras retries: %s", _e_dia_rel)
+                smart_dia, todos_dia = [], []
             # Filtro estricto: Medilink a veces devuelve slots del día siguiente
             # cuando no hay disponibilidad en el día pedido. Aseguramos que solo
             # mostramos slots con fecha == _DIA_RELATIVO.
@@ -10053,12 +10154,46 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "cancelar", "anular", "cambiar", "ver mis", "mis citas",
             "menu", "menú",
         )
-        if any(kw in tl for kw in _NUEVO_INTENT_KW):
+        # FIX 1c-pre: si el texto empieza con negación aunque contenga keyword
+        # de especialidad (ej: "No del Otorrino"), tratar como negación antes
+        # de reciclar como IDLE. Evita slug "no otorrino".
+        _tl_empieza_no = bool(re.match(r"^no\b", tl.strip(), re.IGNORECASE))
+        if any(kw in tl for kw in _NUEVO_INTENT_KW) and not _tl_empieza_no:
             log_event(phone, "waitlist_confirm_break", {"txt": txt[:120]})
             reset_session(phone)
             # FIX-10: pasar dict limpio en lugar de get_session() post-reset
             # (evita lectura redundante a SQLite y fragilidad ante busy).
             return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
+
+        # FIX 1 (2026-06-10): catch-all de negación ampliada — variantes que no
+        # están en NEGACIONES estricto pero son claramente un "no" contextual.
+        # Caso prod: "No del Otorrino" → normalizador de especialidades generaba
+        # slug "no otorrino" y el bot respondía "no tengo horas para no otorrino".
+        _NEGACION_AMPLIADA = re.compile(
+            r"^(no\b|nop\b|nope\b|no gracias\b|no,?\s+gracias|nel\b|negativo\b"
+            r"|cuando pueda\b|después\b|despues\b|la llamo\b|los llamo\b"
+            r"|le llamo\b|voy a llamar\b|prefiero llamar\b|gracias,?\s*pero\b"
+            r"|por ahora no\b|ahora no\b|no por ahora\b"
+            r"|gracias$)",  # "gracias" a secas sin más texto = rechazo cortés
+            re.IGNORECASE,
+        )
+        if _NEGACION_AMPLIADA.match(tl.strip()):
+            log_event(phone, "waitlist_negacion_ampliada", {"txt": txt[:120]})
+            reset_session(phone)
+            return (
+                "Sin problema 😊 Cuando lo necesites, escríbenos.\n"
+                f"_Llama a recepción: 📞 *{CMC_TELEFONO}* · ☎️ *{CMC_TELEFONO_FIJO}*_"
+            )
+
+        # FIX 1b: tope de repeticiones — si el bot ya envió el prompt binario 2 veces
+        # sin respuesta válida, salir a IDLE en vez de seguir repromptando.
+        _wl_reprompts = data.get("_wl_reprompts", 0) + 1
+        data["_wl_reprompts"] = _wl_reprompts
+        if _wl_reprompts >= 2:
+            log_event(phone, "waitlist_confirm_timeout", {"reprompts": _wl_reprompts, "txt": txt[:120]})
+            reset_session(phone)
+            return "Quedo atento si necesitas algo más 🙂"
+        save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
         return "Responde *SÍ* para inscribirte o *NO* si prefieres llamar a recepción."
 
     # ── WAIT_WAITLIST_RUT ─────────────────────────────────────────────────────
