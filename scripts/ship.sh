@@ -81,12 +81,39 @@ trap restore EXIT
 
 if [ -n "$OTHERS" ]; then
   N=$(echo "$OTHERS" | wc -w | tr -d ' ')
+  if [ "$N" -ge 8 ]; then
+    c_ylw "⚠️  $N archivos de otras ventanas en vuelo. Bajo esta concurrencia conviene un"
+    c_ylw "    worktree aislado (scripts/newsession.sh <tema>) — ver incidente de índice 2026-06-10."
+  fi
   echo "→ aparto WIP ajena ($N arch.): $OTHERS"
-  git stash push -q -- $OTHERS && STASHED=1
+  # Reintento ante carrera de índice con otra ventana ('could not write index').
+  ok=0
+  for try in 1 2 3 4 5; do
+    if git stash push -q -- $OTHERS 2>/tmp/ship_stash_err; then ok=1; break; fi
+    c_ylw "  índice ocupado por otra ventana (intento $try/5) — espero…"; sleep 2
+  done
+  if [ "$ok" != "1" ]; then
+    c_red "ABORT: no pude apartar la WIP ajena (índice en disputa con otra ventana)."
+    c_red "  NO commiteo, para no mezclar trabajo ajeno. Reintentá o usá un worktree (newsession.sh)."
+    sed 's/^/    /' /tmp/ship_stash_err 2>/dev/null
+    exit 1
+  fi
+  STASHED=1
 fi
 
 # 3. Commit SOLO lo mío.
 git add -- "${MINE[@]}"
+# ── Guardia anti-incidente #2 (2026-06-10): si una carrera de índice dejó staged
+#    archivos que NO son tuyos, ABORTAR antes de commitear mezclado (fue justo lo
+#    que pasó: 5 archivos ajenos se bundlearon bajo un commit equivocado).
+for f in $(git diff --cached --name-only); do
+  case "$MINE_STR" in
+    *" $f "*) : ;;
+    *) c_red "ABORT: '$f' quedó staged y NO es tuyo — índice contaminado por una carrera."
+       c_red "  NO commiteo para no bundlear trabajo ajeno. Reintentá o usá un worktree."
+       exit 1 ;;
+  esac
+done
 if git diff --cached --quiet; then
   c_ylw "Nada que commitear en tus archivos (¿ya estaban commiteados?). Deploy igual del estado actual."
 else
