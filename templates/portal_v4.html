@@ -787,6 +787,26 @@ a{color:inherit; text-decoration:none}
 .cta-float.cta-hidden{opacity:0}
 .cta-float.cta-hidden > *{pointer-events:none}
 
+/* Botón discreto "volver arriba" (aparece pasada ~1 pantalla de scroll) */
+.back-top{
+  position:fixed; right:16px; bottom:calc(88px + env(safe-area-inset-bottom)); z-index:16;
+  width:42px; height:42px; border-radius:50%; border:1px solid var(--border);
+  background:rgba(255,255,255,.95); color:var(--cmc-navy); cursor:pointer;
+  display:grid; place-items:center; box-shadow:0 4px 14px rgba(15,63,104,.18);
+  opacity:0; pointer-events:none; transition:opacity .25s, transform .15s;
+}
+.back-top.show{opacity:1; pointer-events:auto}
+.back-top:hover{transform:translateY(-2px)}
+.back-top svg{width:20px; height:20px}
+@media (max-width:860px){ .back-top{right:12px; bottom:calc(128px + env(safe-area-inset-bottom)); width:40px; height:40px} }
+
+/* Acordeones de Recursos: secciones largas colapsadas por defecto */
+.acc .panel-head{cursor:pointer; -webkit-user-select:none; user-select:none}
+.acc .acc-caret{margin-left:auto; color:var(--text-dim); font-size:14px; line-height:1; transition:transform .2s}
+.acc.closed .acc-caret{transform:rotate(-90deg)}
+.acc.closed .acc-body{display:none}
+.acc.closed .panel-head{margin-bottom:0}
+
 /* ═══════════════════════════════════════════════════════════
    MOBILE — reescrito pensando en el device, no en shrink-to-fit
    ═══════════════════════════════════════════════════════════ */
@@ -1215,6 +1235,10 @@ a{color:inherit; text-decoration:none}
     </button>
   </div>
 
+  <button class="back-top" id="back-top" onclick="switchView('inicio')" aria-label="Volver arriba">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+
   <!-- Modal vital -->
   <div class="modal-backdrop" id="vital-modal" onclick="if(event.target===this)closeVitalModal()">
     <div class="modal">
@@ -1446,11 +1470,9 @@ function switchView(v) {
   // One-page: el menú ya no alterna vistas, navega por anclas dentro del scroll.
   currentView = v;
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
-  if (v === 'inicio') renderInicio();
-  if (v === 'agenda') renderAgenda();
-  if (v === 'salud') renderSalud();
-  if (v === 'recursos') renderRecursos();
-  if (v === 'perfil') renderPerfil();
+  // Sin re-render aquí: las secciones ya están renderizadas (y re-renderizar
+  // Agenda recargaría el iframe del agendador). Las mutaciones de datos
+  // re-renderizan su sección directamente.
   _spyLock = Date.now() + 800;
   const sec = document.getElementById('view-'+v);
   if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
@@ -1471,6 +1493,8 @@ function _onSpyScroll() {
     }
     f.classList.toggle('cta-hidden', hide);
   }
+  const bt = document.getElementById('back-top');
+  if (bt) bt.classList.toggle('show', window.scrollY > window.innerHeight * 1.2);
   if (Date.now() < _spyLock) return;
   let cur = _SPY_IDS[0];
   for (const id of _SPY_IDS) {
@@ -1533,12 +1557,6 @@ function renderInicio() {
     </div>`;
   html += `</div>`;
 
-  // Agenda online embebida (landing) — visible si el agendador está prendido
-  html += `<div class="panel" id="ag-inline-panel" style="display:none">
-    <div class="panel-head"><span class="dot"></span><h2>Agenda online</h2><span class="count">en vivo</span></div>
-    <div class="ag-inline-wrap"><iframe id="ag-inline-frame" class="ag-inline" title="Agendar una hora" src="about:blank" allow="clipboard-write" loading="lazy"></iframe></div>
-  </div>`;
-
   // Quick actions
   html += `<div class="quick-actions">
     <button class="qa" onclick="switchView('agenda')">
@@ -1575,7 +1593,6 @@ function renderInicio() {
   }
 
   el.innerHTML = html;
-  mountInlineAgenda();
 }
 
 function vitalCount() { return Object.values(allVitals).reduce((s,a)=>s+a.length, 0); }
@@ -1616,7 +1633,7 @@ function renderAgenda() {
       <span class="count">${d.citas_futuras.length}</span>
     </div>`;
   if (d.citas_futuras.length === 0) {
-    html += `<div class="empty-state"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No tienes citas agendadas</p><div class="sub">Agenda desde WhatsApp con el botón de abajo</div></div>`;
+    html += `<div class="empty-state"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>No tienes citas agendadas</p><div class="sub">Puedes reservar aquí mismo, en la agenda online de abajo 👇</div></div>`;
   } else {
     for (const c of d.citas_futuras) {
       const chip = dateChip(c.fecha); const when = whenBadge(c.fecha);
@@ -1632,6 +1649,12 @@ function renderAgenda() {
     }
   }
   html += `</div>`;
+
+  // Agenda online embebida — fusionada con "Próximas citas": ver y reservar en un solo bloque
+  html += `<div class="panel" id="ag-inline-panel" style="display:none">
+    <div class="panel-head"><span class="dot"></span><h2>Agenda online</h2><span class="count">en vivo</span></div>
+    <div class="ag-inline-wrap"><iframe id="ag-inline-frame" class="ag-inline" title="Agendar una hora" src="about:blank" allow="clipboard-write" loading="lazy"></iframe></div>
+  </div>`;
 
   html += `<div class="panel">
     <div class="panel-head">
@@ -1651,6 +1674,7 @@ function renderAgenda() {
   }
   html += `</div>`;
   el.innerHTML = html;
+  mountInlineAgenda();
 }
 
 /* ═══ Mi salud ═══ */
@@ -2115,9 +2139,9 @@ function renderRecursos() {
   const generales = GUIDES.filter(g => !relevantes.includes(g));
   const ordered = [...relevantes, ...generales];
 
-  html += `<div class="panel">
-    <div class="panel-head"><span class="dot"></span><h2>Guías rápidas de autocuidado</h2><span class="count">${ordered.length}</span></div>
-    <div class="grid-2">`;
+  html += `<div class="panel acc closed">
+    <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot"></span><h2>Guías rápidas de autocuidado</h2><span class="count">${ordered.length}</span><span class="acc-caret">▾</span></div>
+    <div class="acc-body"><div class="grid-2">`;
   for (const g of ordered) {
     html += `<div class="guide" onclick="this.classList.toggle('open')">
       <div class="h"><span class="ic">${g.icon}</span>
@@ -2126,13 +2150,13 @@ function renderRecursos() {
       <div class="guide-detail"><ol>${g.steps.map(s => `<li>${s}</li>`).join('')}</ol></div>
     </div>`;
   }
-  html += `</div></div>`;
+  html += `</div></div></div>`;
 
   // Tips
   const tips = pickTips(d);
-  html += `<div class="panel">
-    <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Consejos para ti</h2><span class="count">${tips.length}</span></div>
-    <div class="grid-2">`;
+  html += `<div class="panel acc closed">
+    <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Consejos para ti</h2><span class="count">${tips.length}</span><span class="acc-caret">▾</span></div>
+    <div class="acc-body"><div class="grid-2">`;
   for (const k of tips) {
     const t = TIPS_CATALOG[k]; if (!t) continue;
     html += `<div class="tip ${t.color||''}">
@@ -2140,13 +2164,13 @@ function renderRecursos() {
       <div class="d">${t.desc}</div>
     </div>`;
   }
-  html += `</div></div>`;
+  html += `</div></div></div>`;
 
   // Promos
   const promos = pickPromos(d);
-  html += `<div class="panel">
-    <div class="panel-head"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Servicios recomendados</h2></div>
-    <div class="grid-2">`;
+  html += `<div class="panel acc closed">
+    <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Servicios recomendados</h2><span class="acc-caret">▾</span></div>
+    <div class="acc-body"><div class="grid-2">`;
   for (const k of promos) {
     const p = PROMO_CATALOG[k]; if (!p) continue;
     html += `<div class="promo" onclick="agendar()">
@@ -2156,7 +2180,7 @@ function renderRecursos() {
       <div class="cta">Agendar por WhatsApp <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
     </div>`;
   }
-  html += `</div></div>`;
+  html += `</div></div></div>`;
 
   el.innerHTML = html;
 }
