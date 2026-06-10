@@ -1483,6 +1483,8 @@ function _onSpyScroll() {
   }
 }
 window.addEventListener('scroll', _onSpyScroll, {passive:true});
+window.addEventListener('resize', _onSpyScroll, {passive:true});
+setTimeout(_onSpyScroll, 600);  // estado inicial correcto sin esperar el primer scroll
 
 /* ═══ Render root ═══ */
 function renderAll() {
