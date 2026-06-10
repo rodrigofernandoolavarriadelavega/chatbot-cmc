@@ -460,6 +460,50 @@ async def _job_recordatorios_2h():
         log.error("_job_recordatorios_recepcion_2h falló: %s", e)
 
 async def _job_postconsulta():
+    """Post-consulta diario (cron 22:00 CLT).
+
+    Item 33: solo envía en ventana 09:30-20:00 CLT para evitar mensajes de madrugada
+    (antes: 44% sin respuesta por envíos nocturnos). Si el job corre fuera de esa
+    ventana, programa un one-shot para las 09:30 del día siguiente y termina sin
+    enviar — ningún paciente se pierde, solo se difiere. Las citas con hora >20:00
+    quedan para _job_postconsulta_morning (09:00 CLT).
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    _TZ_CHILE = ZoneInfo("America/Santiago")
+    ahora_clt = datetime.now(_TZ_CHILE)
+    hora_mins = ahora_clt.hour * 60 + ahora_clt.minute
+    _VENTANA_INI = 9 * 60 + 30   # 09:30
+    _VENTANA_FIN = 20 * 60       # 20:00
+
+    if not (_VENTANA_INI <= hora_mins <= _VENTANA_FIN):
+        log.info(
+            "_job_postconsulta: hora %s fuera de ventana 09:30-20:00 CLT — "
+            "difiriendo a las 09:30 de manana (no se pierde ninguna cita)",
+            ahora_clt.strftime("%H:%M"),
+        )
+        try:
+            import sys as _sys
+            from datetime import timedelta
+            _main_mod = _sys.modules.get("app.main") or _sys.modules.get("main")
+            _sched = getattr(_main_mod, "scheduler", None)
+            if _sched and _sched.running:
+                _tomorrow_930 = (ahora_clt + timedelta(days=1)).replace(
+                    hour=9, minute=30, second=0, microsecond=0,
+                )
+                _sched.add_job(
+                    _job_postconsulta,
+                    "date",
+                    run_date=_tomorrow_930,
+                    id="postconsulta_deferred",
+                    replace_existing=True,
+                    timezone=str(_TZ_CHILE),
+                )
+                log.info("_job_postconsulta: diferido para %s CLT", _tomorrow_930.strftime("%Y-%m-%d %H:%M"))
+        except Exception as _e_defer:
+            log.warning("_job_postconsulta: no se pudo diferir one-shot: %s", _e_defer)
+        return
+
     try:
         await enviar_seguimiento_postconsulta(
             send_whatsapp_proactive, send_template_fn=_tpl,
@@ -2464,7 +2508,8 @@ async def _job_sync_citas_recepcion():
     import json as _json
 
     def _q(params: dict) -> str:
-        return _json.dumps(params)
+        # Medilink rechaza JSON con espacios — separadores compactos (igual que medilink._q).
+        return _json.dumps(params, separators=(",", ":"))
 
     from config import MEDILINK_SUCURSAL
 
@@ -2475,6 +2520,10 @@ async def _job_sync_citas_recepcion():
             especialidad = prof_info.get("especialidad", "Medicina General")
 
             for fecha in fechas:
+                # Throttle entre llamadas /citas: con muchos profesionales el sync
+                # hacía requests back-to-back y 429-tormentaba Medilink en hora peak
+                # (08:00), degradando al bot en vivo. 0.7s deja ~72 llamadas en ~50s.
+                await asyncio.sleep(0.7)
                 params = {
                     "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
                     "id_profesional":   {"eq": id_prof},
@@ -3279,3 +3328,422 @@ async def _job_winback_daily_report() -> None:
             log.info("_job_winback_daily_report: ventana cerrada — guardado en %s", _ALERT_LOG)
         except Exception as e:
             log.error("_job_winback_daily_report: fallback log también falló: %s", e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# M4: Digest semanal de pacientes con >14 días en waitlist
+# Gateado por WAITLIST_DIGEST_ENABLED (default true — notificación solo interna)
+# ─────────────────────────────────────────────────────────────────────────────
+_WAITLIST_DIGEST_ENABLED = _os_dr.getenv("WAITLIST_DIGEST_ENABLED", "true").lower() in ("true", "1", "yes")
+
+
+async def _job_waitlist_digest_semanal():
+    """Lunes 09:30 CLT: arma digest de pacientes con >14 días en waitlist y
+    lo envía a recepción via ADMIN_ALERT_PHONE (igual que otras alertas).
+    NO contacta a los pacientes — es solo notificación interna.
+    Gateado por env WAITLIST_DIGEST_ENABLED (default true).
+    """
+    if not _WAITLIST_DIGEST_ENABLED:
+        log.info("waitlist_digest: desactivado (WAITLIST_DIGEST_ENABLED=false)")
+        return
+
+    if not ADMIN_ALERT_PHONE:
+        log.warning("waitlist_digest: ADMIN_ALERT_PHONE no configurado, abortando")
+        return
+
+    from datetime import datetime as _dt_wd, timezone as _tz_wd
+    from session import _conn as _conn_wd, log_event as _le_wd
+
+    try:
+        with _conn_wd() as _c_wd:
+            rows_wd = _c_wd.execute("""
+                SELECT id, phone, nombre, especialidad, created_at
+                FROM waitlist
+                WHERE notified_at IS NULL AND canceled_at IS NULL
+                  AND created_at <= datetime('now', '-14 days')
+                ORDER BY created_at ASC
+            """).fetchall()
+    except Exception as _e_wd:
+        log.error("waitlist_digest: error leyendo DB: %s", _e_wd)
+        return
+
+    if not rows_wd:
+        log.info("waitlist_digest: no hay pacientes con >14 dias en waitlist")
+        return
+
+    lineas_wd = []
+    for row_wd in rows_wd:
+        _nombre_wd = (row_wd["nombre"] or "").split()[0] if row_wd.get("nombre") else "Paciente"
+        _esp_wd = row_wd.get("especialidad") or "?"
+        _phone_wd = row_wd.get("phone") or ""
+        _phone_fmt = _phone_wd[-8:] if len(_phone_wd) >= 8 else _phone_wd
+        try:
+            _ts_wd = _dt_wd.fromisoformat(row_wd["created_at"])
+            if _ts_wd.tzinfo is None:
+                from zoneinfo import ZoneInfo as _ZI_wd
+                _ts_wd = _ts_wd.replace(tzinfo=_ZI_wd("America/Santiago"))
+            _dias_wd = (_dt_wd.now(_ts_wd.tzinfo) - _ts_wd).days
+        except Exception:
+            _dias_wd = "?"
+        lineas_wd.append(f"• {_nombre_wd} — {_esp_wd} — +56{_phone_fmt} ({_dias_wd} dias)")
+
+    n_wd = len(rows_wd)
+    cuerpo_wd = (
+        f"*Lista de espera — pacientes con >14 dias sin cupo* ({n_wd} total)\n\n"
+        + "\n".join(lineas_wd[:20])
+        + ("\n\n... y mas" if n_wd > 20 else "")
+        + "\n\nRevisa disponibilidad en Medilink y contáctalos por recepción."
+    )
+
+    try:
+        from session import is_window_open as _is_win_wd
+        _admin_bare = ADMIN_ALERT_PHONE.lstrip("+")
+        if _is_win_wd(_admin_bare):
+            await send_whatsapp(_admin_bare, cuerpo_wd)
+            log.info("waitlist_digest: enviado a %s (%d pacientes)", ADMIN_ALERT_PHONE, n_wd)
+        else:
+            # Ventana cerrada: loggear como alerta de texto
+            log.warning("waitlist_digest: ventana 24h cerrada — digest guardado en log")
+            try:
+                _ALERT_LOG.parent.mkdir(parents=True, exist_ok=True)
+                with open(_ALERT_LOG, "a", encoding="utf-8") as _f_wd:
+                    _f_wd.write(f"\n--- WAITLIST DIGEST {_dt_wd.now().strftime('%Y-%m-%d')} ---\n{cuerpo_wd}\n")
+            except Exception:
+                pass
+        _le_wd(ADMIN_ALERT_PHONE, "waitlist_digest_semanal", {
+            "n_pacientes": n_wd,
+            "especialidades": list({r.get("especialidad") for r in rows_wd}),
+        })
+    except Exception as _e_send_wd:
+        log.error("waitlist_digest: no se pudo enviar alerta: %s", _e_send_wd)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# M5: Follow-up proactivo para intent=info sin cita creada en 10 min
+# ─────────────────────────────────────────────────────────────────────────────
+_FOLLOWUP_INFO_ENABLED = _os_dr.getenv("FOLLOWUP_INFO_ENABLED", "true").lower() in ("true", "1", "yes")
+
+
+async def _job_followup_info():
+    """Cada 5 min (cron del scheduler): busca sesiones IDLE que tuvieron intent=info
+    en los ultimos 10-20 min, sin cita creada posterior, y envia UNA vez el mensaje
+    de reenganche. Guards estrictos: max 1 por sesion, no HUMAN_TAKEOVER,
+    ventana 24h Meta, respeta has_recent_event followup_info_enviado (7 dias).
+    """
+    if not _FOLLOWUP_INFO_ENABLED:
+        return
+
+    import json as _json_fi
+    from datetime import datetime as _dt_fi, timezone as _tz_fi
+    from session import _conn as _conn_fi, log_event as _le_fi, has_recent_event as _hre_fi
+
+    try:
+        with _conn_fi() as _c_fi:
+            rows_fi = _c_fi.execute("""
+                SELECT phone, state, data, updated_at FROM sessions
+                WHERE state = 'IDLE'
+                  AND updated_at >= datetime('now', '-25 minutes')
+                  AND updated_at <= datetime('now', '-10 minutes')
+            """).fetchall()
+    except Exception as _e_fi:
+        log.error("followup_info: error leyendo DB: %s", _e_fi)
+        return
+
+    for row_fi in (rows_fi or []):
+        _phone_fi = row_fi["phone"] if isinstance(row_fi, dict) else row_fi[0]
+        _state_fi = row_fi["state"] if isinstance(row_fi, dict) else row_fi[1]
+        _data_raw = row_fi["data"] if isinstance(row_fi, dict) else row_fi[2]
+        try:
+            _data_fi = _json_fi.loads(_data_raw) if isinstance(_data_raw, str) else (_data_raw or {})
+        except Exception:
+            continue
+
+        # Guards
+        if _data_fi.get("followup_info_sent"):
+            continue
+        if not _data_fi.get("followup_info_ts"):
+            continue
+        if _data_fi.get("followup_info_sent") is not False:
+            # Solo procesar sesiones explicitamente marcadas (flag=False)
+            continue
+
+        # Verificar que no haya cita creada despues del intent info
+        _info_ts_str = _data_fi.get("followup_info_ts", "")
+        try:
+            _info_ts = _dt_fi.fromisoformat(_info_ts_str)
+            if _info_ts.tzinfo is None:
+                _info_ts = _info_ts.replace(tzinfo=_tz_fi.utc)
+            _age_min = (_dt_fi.now(_tz_fi.utc) - _info_ts).total_seconds() / 60
+            if _age_min < 10 or _age_min > 25:
+                continue
+        except Exception:
+            continue
+
+        # Anti-spam: max 1 followup_info_enviado por 7 dias
+        if _hre_fi(_phone_fi, "followup_info_enviado", days=7):
+            continue
+
+        # No enviar a ADMIN_ALERT_PHONE (nunca tiene ventana 24h)
+        if _phone_fi == (ADMIN_ALERT_PHONE or "").lstrip("+"):
+            continue
+        if _phone_fi == ADMIN_ALERT_PHONE:
+            continue
+
+        # Verificar ventana 24h abierta
+        try:
+            from session import is_window_open as _is_win_fi
+            if not _is_win_fi(_phone_fi):
+                continue
+        except Exception:
+            continue
+
+        # Verificar que no haya cita creada recientemente en la DB de citas
+        try:
+            with _conn_fi() as _c_cita:
+                _cita_reciente = _c_cita.execute(
+                    "SELECT 1 FROM citas_bot WHERE phone=? AND created_at >= ? LIMIT 1",
+                    (_phone_fi, _info_ts_str),
+                ).fetchone()
+            if _cita_reciente:
+                # Ya agendó — limpiar flags y saltar
+                _data_fi["followup_info_sent"] = True
+                try:
+                    from session import save_session as _ss_fi
+                    _ss_fi(_phone_fi, "IDLE", _data_fi)
+                except Exception:
+                    pass
+                continue
+        except Exception:
+            pass
+
+        # Armar mensaje de follow-up
+        _esp_fi = (_data_fi.get("followup_info_esp") or "").strip()
+        _nombre_fi = (_data_fi.get("nombre_conocido") or _data_fi.get("reg_nombre") or "").split()
+        _saludo_fi = f"*{_nombre_fi[0]}*, " if _nombre_fi else ""
+        if _esp_fi:
+            _msg_fi = (
+                f"Hola {_saludo_fi}¿te gustaría que te ayude a agendar una hora "
+                f"en *{_esp_fi}*? 😊"
+            )
+        else:
+            _msg_fi = f"Hola {_saludo_fi}¿te gustaría que te ayude a agendar una hora? 😊"
+
+        canal_fi = _canal_de_phone(_phone_fi)
+        if canal_fi == "unknown":
+            continue
+
+        try:
+            from flows import _btn_msg as _btn_fi
+            _interactive_fi = _btn_fi(
+                _msg_fi,
+                [
+                    {"id": "1",             "title": "Si, agendar"},
+                    {"id": "no_gracias_fi", "title": "No, gracias"},
+                ],
+            )
+            if canal_fi == "wa":
+                await send_whatsapp_interactive(_phone_fi, _interactive_fi["interactive"])
+                log_message(_phone_fi, "out", _msg_fi, "IDLE")
+            elif canal_fi == "ig":
+                await send_instagram(_phone_fi[3:], _msg_fi)
+                log_message(_phone_fi, "out", _msg_fi, "IDLE")
+            elif canal_fi == "fb":
+                await send_messenger(_phone_fi[3:], _msg_fi)
+                log_message(_phone_fi, "out", _msg_fi, "IDLE")
+            else:
+                continue
+
+            _data_fi["followup_info_sent"] = True
+            try:
+                from session import save_session as _ss_fi2
+                _ss_fi2(_phone_fi, "IDLE", _data_fi)
+            except Exception:
+                pass
+            _le_fi(_phone_fi, "followup_info_enviado", {
+                "esp": _esp_fi,
+                "age_min": round(_age_min, 1),
+            })
+            log.info("followup_info: enviado a %s (esp=%s, age=%.1f min)", _phone_fi, _esp_fi, _age_min)
+        except Exception as _e_send_fi:
+            log.warning("followup_info: error enviando a %s: %s", _phone_fi, _e_send_fi)
+
+
+# ── Reporte semanal de demanda no capturada (Items 31/32/35) ─────────────────
+
+# Precios de consulta por especialidad (para estimar $ perdidos).
+# Fuente: PRECIOS_SLOT en flows.py — mismo origen que los mensajes al paciente.
+# Para especialidades con Fonasa+Particular usamos precio particular (conservador).
+_PRECIO_ESP: dict[str, int] = {
+    "medicina general":       25000,
+    "medicina familiar":      30000,
+    "otorrinolaringología":   35000,
+    "cardiología":            40000,
+    "gastroenterología":      35000,
+    "ginecología":            30000,
+    "traumatología":          30000,
+    "kinesiología":           20000,
+    "psicología adulto":      20000,
+    "psicología infantil":    20000,
+    "nutrición":              20000,
+    "fonoaudiología":         25000,
+    "podología":              20000,
+    "ecografía":              40000,
+    "odontología general":    15000,
+    "ortodoncia":             30000,
+    "endodoncia":            110000,
+    "implantología":         650000,
+    "estética facial":        15000,
+    "matrona":                20000,
+    "psiquiatría":            60000,
+    "masoterapia":            22000,
+}
+
+
+async def _job_demanda_semanal():
+    """Lunes 09:00 CLT — reporte de demanda no capturada de los últimos 7 días.
+
+    Agrega eventos sin_disponibilidad + demanda_no_disponible + demanda_no_disponible_faq
+    de conversation_events, los rankea por phones únicos y estima revenue perdido.
+    Incluye cuántos waitlist_notificados del período convirtieron en cita ≤72h.
+    Solo lectura — NO contacta pacientes.
+    """
+    if not ADMIN_ALERT_PHONE:
+        log.info("demanda_semanal: ADMIN_ALERT_PHONE no configurado — skip")
+        return
+    if not _admin_window_open():
+        log.info("demanda_semanal: ventana 24h cerrada para ADMIN_ALERT_PHONE — skip")
+        return
+
+    try:
+        from datetime import datetime, timedelta, timezone
+        from zoneinfo import ZoneInfo
+        import json
+
+        _TZ_CHILE = ZoneInfo("America/Santiago")
+        ahora_clt = datetime.now(_TZ_CHILE)
+        hace_7d = (ahora_clt - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+
+        with _session_conn() as conn:
+            # ── 1. Demanda no capturada por especialidad ──────────────────────
+            # Eventos: sin_disponibilidad, demanda_no_disponible, demanda_no_disponible_faq
+            rows_demanda = conn.execute("""
+                SELECT
+                    lower(COALESCE(
+                        json_extract(meta, '$.especialidad'),
+                        json_extract(meta, '$.solicitud'),
+                        'desconocida'
+                    )) AS especialidad,
+                    COUNT(DISTINCT phone) AS phones_unicos,
+                    COUNT(*) AS total_eventos
+                FROM conversation_events
+                WHERE event IN (
+                    'sin_disponibilidad',
+                    'demanda_no_disponible',
+                    'demanda_no_disponible_faq'
+                )
+                  AND ts >= ?
+                GROUP BY especialidad
+                ORDER BY phones_unicos DESC
+            """, (hace_7d,)).fetchall()
+
+            # ── 2. Waitlist notificados en el período ─────────────────────────
+            rows_wl_total = conn.execute("""
+                SELECT COUNT(DISTINCT phone) AS phones_notificados
+                FROM conversation_events
+                WHERE event = 'waitlist_notificado'
+                  AND ts >= ?
+            """, (hace_7d,)).fetchone()
+            notificados_total = (rows_wl_total["phones_notificados"] if rows_wl_total else 0) or 0
+
+            # ── 3. Conversión waitlist→cita ≤72h ─────────────────────────────
+            # Join: phone que recibió waitlist_notificado en el período
+            # y luego tiene una cita en citas_bot creada ≤72h después.
+            rows_wl_conv = conn.execute("""
+                SELECT COUNT(DISTINCT e.phone) AS convertidos
+                FROM conversation_events e
+                JOIN citas_bot c ON c.phone = e.phone
+                WHERE e.event = 'waitlist_notificado'
+                  AND e.ts >= ?
+                  AND c.created_at >= e.ts
+                  AND (
+                      julianday(c.created_at) - julianday(e.ts)
+                  ) * 86400 <= 259200  -- 72h en segundos
+            """, (hace_7d,)).fetchone()
+            convertidos = (rows_wl_conv["convertidos"] if rows_wl_conv else 0) or 0
+
+            # ── 4. Waitlist activa por especialidad ───────────────────────────
+            rows_wl_activa = conn.execute("""
+                SELECT lower(especialidad) AS especialidad, COUNT(*) AS inscriptos
+                FROM waitlist
+                WHERE canceled_at IS NULL AND notified_at IS NULL
+                GROUP BY especialidad
+                ORDER BY inscriptos DESC
+            """).fetchall()
+
+        # ── Construir resumen ─────────────────────────────────────────────────
+        _fecha_inicio = (ahora_clt - timedelta(days=7)).strftime("%d/%m")
+        _fecha_fin = ahora_clt.strftime("%d/%m")
+
+        lineas_demanda = []
+        total_perdido = 0
+        for row in rows_demanda[:10]:  # top 10
+            esp = row["especialidad"] or "desconocida"
+            phones = row["phones_unicos"] or 0
+            precio = _PRECIO_ESP.get(esp, 25000)
+            perdido = phones * precio
+            total_perdido += perdido
+            perdido_fmt = f"${perdido:,}".replace(",", ".")
+            lineas_demanda.append(f"• {esp.title()}: {phones} personas ({perdido_fmt})")
+
+        lineas_waitlist = []
+        wl_dict = {r["especialidad"]: r["inscriptos"] for r in rows_wl_activa}
+        for row in rows_wl_activa[:5]:
+            esp = row["especialidad"] or "?"
+            lineas_waitlist.append(f"• {esp.title()}: {row['inscriptos']} en lista")
+
+        total_perdido_fmt = f"${total_perdido:,}".replace(",", ".")
+
+        tasa_conv = 0
+        if notificados_total > 0:
+            tasa_conv = round(convertidos / notificados_total * 100)
+
+        msg_parts = [
+            f"*Demanda no capturada — {_fecha_inicio} al {_fecha_fin}*",
+            "",
+        ]
+        if lineas_demanda:
+            msg_parts.append("*Por especialidad (phones únicos · $ est.):*")
+            msg_parts.extend(lineas_demanda)
+            msg_parts.append("")
+            msg_parts.append(f"*Total estimado: {total_perdido_fmt}*")
+        else:
+            msg_parts.append("Sin eventos de demanda no capturada esta semana.")
+
+        if lineas_waitlist:
+            msg_parts.append("")
+            msg_parts.append("*Lista de espera activa:*")
+            msg_parts.extend(lineas_waitlist)
+
+        msg_parts.append("")
+        if notificados_total > 0:
+            msg_parts.append(
+                f"*Conversión waitlist→cita (≤72h):* "
+                f"{convertidos}/{notificados_total} ({tasa_conv}%)"
+            )
+        else:
+            msg_parts.append("Sin notificaciones de waitlist esta semana.")
+
+        msg = "\n".join(msg_parts)
+
+        try:
+            await send_whatsapp(ADMIN_ALERT_PHONE, msg)
+            log.info(
+                "demanda_semanal: reporte enviado — %d especialidades · %s perdido · "
+                "%d/%d conv waitlist",
+                len(rows_demanda), total_perdido_fmt, convertidos, notificados_total,
+            )
+        except Exception as e:
+            log.error("demanda_semanal: fallo enviando reporte WA: %s", e)
+
+    except Exception as e:
+        log.error("_job_demanda_semanal falló: %s", e, exc_info=True)

@@ -41,6 +41,22 @@ def _get_meta_client() -> httpx.AsyncClient:
     return _META_CLIENT
 
 
+# P36: cliente httpx compartido para OpenAI (Whisper) — evita TLS handshake por audio.
+# graph.facebook.com y api.openai.com son hosts distintos → cliente separado.
+_OPENAI_CLIENT: httpx.AsyncClient | None = None
+
+
+def _get_openai_client() -> httpx.AsyncClient:
+    """Retorna el cliente httpx compartido para OpenAI, creándolo si está cerrado."""
+    global _OPENAI_CLIENT
+    if _OPENAI_CLIENT is None or _OPENAI_CLIENT.is_closed:
+        _OPENAI_CLIENT = httpx.AsyncClient(
+            timeout=60,
+            limits=httpx.Limits(max_keepalive_connections=2, max_connections=4),
+        )
+    return _OPENAI_CLIENT
+
+
 async def _post_meta(payload: dict) -> str | None:
     """POST a Meta Cloud API con retry selectivo.
 
@@ -466,13 +482,15 @@ async def upload_media_to_whatsapp(file_bytes: bytes, mime_type: str,
         return None
     url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/media"
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.post(
-                url,
-                headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
-                data={"messaging_product": "whatsapp", "type": mime_type},
-                files={"file": (filename, file_bytes, mime_type)},
-            )
+        # P36: reusar _get_meta_client() — mismo host que mensajes salientes,
+        # evita TLS handshake extra por cada subida de media (~150-300ms).
+        client = _get_meta_client()
+        r = await client.post(
+            url,
+            headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+            data={"messaging_product": "whatsapp", "type": mime_type},
+            files={"file": (filename, file_bytes, mime_type)},
+        )
         if r.status_code == 200:
             return r.json().get("id")
         log.error("Upload media %s: %s", r.status_code, r.text[:200])
@@ -726,19 +744,20 @@ async def transcribe_audio(audio_bytes: bytes, mime: str = "audio/ogg") -> str:
         elif "webm" in mime:
             ext = "webm"
 
-        # Llamada HTTP directa (evita dependencia del SDK async del cliente openai)
-        async with httpx.AsyncClient(timeout=60) as client:
-            files = {
-                "file": (f"audio.{ext}", audio_bytes, mime or "application/octet-stream"),
-                "model": (None, "whisper-1"),
-                "language": (None, "es"),
-                "response_format": (None, "text"),
-            }
-            r = await client.post(
-                "https://api.openai.com/v1/audio/transcriptions",
-                headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
-                files=files,
-            )
+        # P36: reusar singleton _get_openai_client() — evita TLS handshake (~150-300ms)
+        # por cada transcripción de audio (antes: AsyncClient efímero por llamada).
+        client = _get_openai_client()
+        files = {
+            "file": (f"audio.{ext}", audio_bytes, mime or "application/octet-stream"),
+            "model": (None, "whisper-1"),
+            "language": (None, "es"),
+            "response_format": (None, "text"),
+        }
+        r = await client.post(
+            "https://api.openai.com/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+            files=files,
+        )
         if r.status_code != 200:
             log.error("Whisper API %s: %s", r.status_code, r.text[:300])
             return ""

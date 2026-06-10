@@ -39,8 +39,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
                      intent_queue_depth, waitlist_depth, purge_old_data,
                      upsert_message_status, upsert_bsuid,
-                     get_profile, save_profile,
-                     inbox_start, inbox_done)
+                     get_profile, save_profile)
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
@@ -80,7 +79,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_dental_consent_blast,
                   _job_dental_winback,
                   _job_crosssell_post_dental_ortodoncia,
-                  _job_sync_citas_recepcion)
+                  _job_sync_citas_recepcion,
+                  _job_demanda_semanal)
 import admin_routes
 import portal_routes
 
@@ -336,10 +336,12 @@ async def lifespan(app: FastAPI):
         id="reenganche",
         replace_existing=True,
     )
-    # Post-consulta: todos los días a las 10:00 AM CLT
+    # Post-consulta: 18:00 CLT (Item 33 — dentro de ventana 09:30-20:00 para evitar
+    # mensajes de madrugada; 44% sin respuesta cuando corría a las 22:00).
+    # Citas con hora >18:00 quedan para _job_postconsulta_morning (09:00 CLT).
     scheduler.add_job(
         _job_postconsulta,
-        CronTrigger(hour=22, minute=0, timezone=_CLT),
+        CronTrigger(hour=18, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta",
         replace_existing=True,
     )
@@ -416,6 +418,15 @@ async def lifespan(app: FastAPI):
         _job_cac_snapshot,
         CronTrigger(hour=0, minute=20, timezone=_CLT),
         id="cac_snapshot_diario",
+        replace_existing=True,
+    )
+    # Reporte semanal de demanda no capturada (Items 31/32/35): lunes 09:00 CLT.
+    # Lee conversation_events (sin_disponibilidad + demanda_no_disponible) + waitlist.
+    # Solo lectura — NO contacta pacientes. Envía resumen rankeado al dueño.
+    scheduler.add_job(
+        _job_demanda_semanal,
+        CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
+        id="demanda_semanal",
         replace_existing=True,
     )
     # Reactivación: todos los lunes a las 10:30 AM CLT
@@ -8905,7 +8916,6 @@ async def webhook(request: Request):
                     # Lock por phone: serializa procesamiento si llegan mensajes
                     # simultáneos del mismo paciente (evita doble respuesta en WAIT_SLOT).
                     from resilience import get_phone_lock
-                    inbox_start(msg_id, phone, texto)
                     async with get_phone_lock(phone):
                         session = get_session(phone)
                         respuesta = await handle_message(phone, texto, session)
@@ -8919,7 +8929,6 @@ async def webhook(request: Request):
                             else:
                                 await send_whatsapp(phone, respuesta)
                                 log_message(phone, "out", respuesta, get_session(phone).get("state", "IDLE"), canal="whatsapp")
-                    inbox_done(msg_id)
                     return Response(status_code=200)
 
             # Imágenes y otros → guardar + derivar a recepción (sin extracción)
@@ -9057,12 +9066,12 @@ async def webhook(request: Request):
                 _fbclid_re = _re_fbclid.compile(r"fbclid[=:]([A-Za-z0-9_-]+)", _re_fbclid.IGNORECASE)
                 _fbclid_m = _fbclid_re.search(texto or "")
                 if _fbclid_m:
-                    _sess_fb = get_session(phone)
-                    _data_fb = _sess_fb.get("data") or {}
+                    # P28: reusar session ya leida al inicio del lock — evita apertura SQLCipher extra
+                    _data_fb = session.get("data") or {}
                     if not _data_fb.get("fbclid"):
                         _data_fb["fbclid"] = _fbclid_m.group(1)
                         _data_fb["fbclid_ts"] = int(_time_fb.time())
-                        save_session(phone, _sess_fb.get("state", "IDLE"), _data_fb)
+                        save_session(phone, session.get("state", "IDLE"), _data_fb)
                         log_event(phone, "fbclid_captured", {"fbclid": _fbclid_m.group(1)[:20]})
             except Exception as _fbclid_err:
                 log.debug("fbclid capture error: %s", _fbclid_err)
@@ -9077,7 +9086,8 @@ async def webhook(request: Request):
             try:
                 _wa_referral = msg.get("referral") or {}
                 if _wa_referral:
-                    _existing_ref = (get_session(phone).get("data") or {}).get("meta_referral")
+                    # P28: reusar session ya leida al inicio del lock
+                    _existing_ref = (session.get("data") or {}).get("meta_referral")
                     if not _existing_ref:
                         from session import save_meta_referral as _smr_wa
                         _smr_wa(phone, _wa_referral, canal="whatsapp")
@@ -9146,11 +9156,6 @@ async def webhook(request: Request):
             except Exception:
                 pass
 
-            # Inbox durable: persistir 'processing' ANTES de procesar. Si el
-            # proceso muere a mitad (restart/SIGKILL), el check de arranque
-            # recupera el mensaje en vez de perderlo (incidente Matías 2026-06-05).
-            inbox_start(msg_id, phone, texto)
-
             # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
             await react_whatsapp(phone, msg_id)
 
@@ -9191,8 +9196,6 @@ async def webhook(request: Request):
                 await send_whatsapp_interactive(phone, respuesta["interactive"])
             else:
                 await send_whatsapp(phone, respuesta)
-            # Ciclo completo (procesado + respuesta enviada) → cerrar inbox durable
-            inbox_done(msg_id)
 
             # Enviar pin del mapa solo en respuestas de ubicación o confirmación de cita
             # (NO en el saludo que también menciona la dirección)
@@ -9235,7 +9238,6 @@ async def webhook(request: Request):
                 # Lock por phone: el mensaje principal ya liberó su lock al retornar,
                 # pero si hay otro handler en vuelo del mismo paciente queremos serializar.
                 from resilience import get_phone_lock
-                inbox_start(_xid, _xphone, _xtxt)
                 async with get_phone_lock(_xphone):
                     _xs = get_session(_xphone)
                     _xstate = _xs.get("state", "IDLE")
@@ -9250,7 +9252,6 @@ async def webhook(request: Request):
                             await send_whatsapp(_xphone, str(_xresp))
                             _xrt = str(_xresp)
                         log_message(_xphone, "out", _xrt, _xstate_after, canal="whatsapp")
-                    inbox_done(_xid)
             except Exception as _xe:
                 log.warning("Error procesando msg extra en batch WA: %s", _xe)
 

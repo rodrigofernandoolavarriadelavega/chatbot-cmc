@@ -74,7 +74,7 @@ _HORARIO_CACHE_TTL = 3600  # 1 hora — si cambian horarios en Medilink, se refr
 # Medilink devuelve 429 con fan-out (ej: panel admin carga citas de 20 profesionales en paralelo).
 # Con N=4 las requests se serializan lo suficiente para no saturar y el circuit breaker
 # no oscila. Si se necesita más throughput, subir con cuidado probando rate limit real.
-_MEDILINK_SEM = asyncio.Semaphore(4)
+_MEDILINK_SEM = asyncio.Semaphore(8)
 
 # Caché de pacientes por RUT — ~200 pacientes activos, datos casi inmutables.
 # Paciente se re-consulta 2-5 veces por flujo de agendar/cancelar/reagendar.
