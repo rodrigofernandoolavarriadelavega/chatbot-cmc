@@ -632,7 +632,7 @@ MAT_BODY = f'''
         <h2>¿Qué es la <em>Matrona</em>?</h2>
         <p>La matrona es la profesional especializada en salud sexual y reproductiva de la mujer en todas las etapas de la vida. Hace control ginecológico preventivo, anticoncepción, control de embarazo de bajo riesgo, atención del climaterio y mucho más. En el CMC atiende <strong>Sarai Gómez</strong>.</p>
 
-        {callout_info('<strong>Tarifa preferencial Fonasa $16.000</strong> (no es bono — es un precio rebajado para pacientes Fonasa). Particular $30.000. Con PAP incluido: $25.000 Fonasa / $30.000 particular.')}
+        {callout_info('<strong>Tarifa preferencial Fonasa $16.000</strong> (no es bono — es un precio rebajado para pacientes Fonasa). Particular $20.000. Con PAP incluido: $25.000 Fonasa / $30.000 particular.')}
 
         <h2>¿Cuándo consultar a la <em>matrona</em>?</h2>
         <div class="symptom-grid">
@@ -651,11 +651,11 @@ MAT_BODY = f'''
           <li>Para la mayoría de las mujeres, <strong>la matrona resuelve el 80% de las necesidades</strong>. Cuando hace falta especialista, deriva al Dr. Rejón.</li>
         </ul>
 
-        {make_cta_inline('Matrona', 'Agenda tu hora con [Matrona]', 'Fonasa preferencial $16.000 / particular $30.000. Con PAP $25.000 / $30.000. WhatsApp 24/7.', 'quiero%20agendar%20una%20hora%20con%20Matrona.')}
+        {make_cta_inline('Matrona', 'Agenda tu hora con [Matrona]', 'Fonasa preferencial $16.000 / particular $20.000. Con PAP $25.000 / $30.000. WhatsApp 24/7.', 'quiero%20agendar%20una%20hora%20con%20Matrona.')}
 
         <h2>Preguntas <em>frecuentes</em></h2>
         <div class="faq-list">
-          {faq_item('¿Cuánto cuesta la consulta?', '<strong>$16.000 con tarifa preferencial Fonasa</strong> o <strong>$30.000 particular</strong>. Si incluye PAP: $25.000 (Fonasa) / $30.000 (particular). Revisión de exámenes: $10.000.')}
+          {faq_item('¿Cuánto cuesta la consulta?', '<strong>$16.000 con tarifa preferencial Fonasa</strong> o <strong>$20.000 particular</strong>. Si incluye PAP: $25.000 (Fonasa) / $30.000 (particular). Revisión de exámenes: $10.000.')}
           {faq_item('¿Cuál es la diferencia con bono Fonasa?', 'La matrona no usa bono Fonasa MLE como medicina general. Es una <strong>tarifa preferencial</strong>: precio rebajado para quienes acreditan ser Fonasa. Trae tu cédula al venir.')}
           {faq_item('¿Atiende adolescentes?', 'Sí, a partir de los 14 años aprox. La primera consulta es exploratoria, sin examen ginecológico si la paciente no se siente lista. Recomendamos venir con un adulto responsable.')}
           {faq_item('¿Hace inserción de DIU?', 'No, la inserción de DIU la realiza el ginecólogo (Dr. Tirso Rejón). La matrona evalúa, te orienta sobre el método y deriva.')}
@@ -664,7 +664,7 @@ MAT_BODY = f'''
         </div>'''
 
 MAT_FAQ_JSONLD = '''
-    {"@type":"Question","name":"¿Cuánto cuesta la consulta de matrona?","acceptedAnswer":{"@type":"Answer","text":"$16.000 Fonasa preferencial o $30.000 particular. Con PAP: $25.000 / $30.000."}},
+    {"@type":"Question","name":"¿Cuánto cuesta la consulta de matrona?","acceptedAnswer":{"@type":"Answer","text":"$16.000 Fonasa preferencial o $20.000 particular. Con PAP: $25.000 / $30.000."}},
     {"@type":"Question","name":"¿Cuál es la diferencia con bono Fonasa?","acceptedAnswer":{"@type":"Answer","text":"Matrona no usa bono MLE — es tarifa preferencial: precio rebajado para Fonasa que se acredita con cédula."}},
     {"@type":"Question","name":"¿Atiende adolescentes?","acceptedAnswer":{"@type":"Answer","text":"Sí desde 14 años aprox. Primera consulta exploratoria, sin examen ginecológico si no está lista."}},
     {"@type":"Question","name":"¿Hace inserción de DIU?","acceptedAnswer":{"@type":"Answer","text":"No. La realiza el ginecólogo. Matrona orienta sobre método y deriva."}},
@@ -964,9 +964,9 @@ BLOGS = [
         'breadcrumb_name': 'Matrona',
         'eyebrow': 'Matrona · Salud sexual y reproductiva',
         'h1': 'Salud de la mujer <em>en cada etapa</em>',
-        'lead': 'PAP, anticoncepción, control de embarazo, climaterio. Con Sarai Gómez. Tarifa preferencial Fonasa $16.000 / particular $30.000.',
+        'lead': 'PAP, anticoncepción, control de embarazo, climaterio. Con Sarai Gómez. Tarifa preferencial Fonasa $16.000 / particular $20.000.',
         'title': 'Matrona en Carampangue · Fonasa $16.000 | CMC',
-        'description': 'Matrona en Carampangue con Sarai Gómez. Tarifa preferencial Fonasa $16.000 / particular $30.000. PAP, anticoncepción, embarazo, climaterio.',
+        'description': 'Matrona en Carampangue con Sarai Gómez. Tarifa preferencial Fonasa $16.000 / particular $20.000. PAP, anticoncepción, embarazo, climaterio.',
         'og_title': 'Matrona en Carampangue · Fonasa $16.000',
         'og_description': 'Control ginecológico, PAP, anticoncepción, embarazo. Sarai Gómez. Carampangue.',
         'headline': 'Matrona en Carampangue: salud sexual y reproductiva integral',
@@ -974,7 +974,7 @@ BLOGS = [
         'body_html': MAT_BODY,
         'faq_jsonld': MAT_FAQ_JSONLD,
         'related_list': MAT_RELATED,
-        'sidebar_cta_desc': 'Fonasa preferencial $16.000 / particular $30.000. Con PAP $25.000 / $30.000. Atendemos adolescentes y adultas.',
+        'sidebar_cta_desc': 'Fonasa preferencial $16.000 / particular $20.000. Con PAP $25.000 / $30.000. Atendemos adolescentes y adultas.',
         'cta_band_h2': 'Tu salud reproductiva <em>en buenas manos</em>',
         'cta_band_p': 'Agenda hora con Sarai por WhatsApp. PAP, anticoncepción, embarazo bajo riesgo, climaterio.',
         'wa_text': 'quiero%20agendar%20una%20hora%20con%20Matrona.',
