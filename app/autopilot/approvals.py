@@ -97,9 +97,15 @@ def _ensure_table() -> None:
 def enqueue(actions: list, *, dedupe_hours: int = 20) -> list[str]:
     """Encola las acciones que mueven plata y requieren aprobación. Devuelve ids nuevos.
 
-    Solo corre si AUTOPILOT_ENABLED=true. Dedupe: si ya hay una pendiente para la
-    misma campaña+acción dentro de `dedupe_hours`, no la duplica (evita spamear al
-    dueño con la misma propuesta cada día).
+    Solo corre si AUTOPILOT_ENABLED=true. Dedupe en dos capas (fix 2026-06-10:
+    en prod había duplicados de la misma campaña en tandas separadas, porque el
+    dedupe original solo miraba pendientes RECIENTES — una pendiente >20h sin
+    decisión dejaba pasar su clon):
+      1. Si ya hay una PENDIENTE viva para la misma campaña+acción (cualquier
+         edad), no se duplica jamás.
+      2. Si la misma campaña+acción fue DECIDIDA (aprobada/rechazada/auto) hace
+         menos de `dedupe_hours`, tampoco se re-propone (no insistir al dueño
+         con lo que acaba de resolver). Las expiradas SÍ pueden volver.
     """
     if not flag_on("AUTOPILOT_ENABLED"):
         return []
@@ -116,8 +122,9 @@ def enqueue(actions: list, *, dedupe_hours: int = 20) -> list[str]:
                 continue  # Fase 3: lo aplica auto_apply, no va a la cola de aprobación
             dup = conn.execute(
                 "SELECT 1 FROM autopilot_pending WHERE campaign_id=? AND action=? "
-                "AND status=? AND created_ts>=? LIMIT 1",
-                (a.campaign_id, act, ST_PENDING, cutoff),
+                "AND (status=? OR (status IN (?,?,?) AND created_ts>=?)) LIMIT 1",
+                (a.campaign_id, act, ST_PENDING,
+                 ST_APPROVED, ST_REJECTED, ST_AUTO, cutoff),
             ).fetchone()
             if dup:
                 continue
@@ -248,6 +255,105 @@ def expire_stale(hours: int = 48) -> int:
             (ST_EXPIRED, ST_PENDING, cutoff),
         )
         return cur.rowcount or 0
+
+
+# ── Recordatorio de cola embotellada (fix 2026-06-10) ────────────────────────
+# Antes, expire_stale solo corría si alguien abría el panel, y el único aviso era
+# el del momento de encolar. Resultado real: 6 pendientes acumuladas días, todas
+# de AHORRO (bajar presupuesto), mientras el gasto seguía a CAC marginal. Esto
+# le recuerda al dueño lo que está esperando y cuánta plata por día hay en juego.
+
+def _kv_get(key: str, default: int = 0) -> int:
+    with _conn() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS autopilot_kv (k TEXT PRIMARY KEY, v TEXT)")
+        r = conn.execute("SELECT v FROM autopilot_kv WHERE k=?", (key,)).fetchone()
+    try:
+        return int(r["v"]) if r else default
+    except (TypeError, ValueError, KeyError):
+        return default
+
+
+def _kv_set(key: str, value) -> None:
+    with _conn() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS autopilot_kv (k TEXT PRIMARY KEY, v TEXT)")
+        conn.execute("INSERT INTO autopilot_kv (k, v) VALUES (?,?) "
+                     "ON CONFLICT(k) DO UPDATE SET v=excluded.v", (key, str(value)))
+
+
+def stale_pending(min_age_hours: int = 24) -> list[dict]:
+    """Pendientes vivas con más de `min_age_hours` sin decisión (las embotelladas)."""
+    _ensure_table()
+    cutoff = int(time.time()) - min_age_hours * 3600
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM autopilot_pending WHERE status=? AND created_ts<? "
+            "ORDER BY created_ts", (ST_PENDING, cutoff)).fetchall()
+    return [_row_to_dict(r) for r in rows]
+
+
+def remind_owner_stale(min_age_hours: int = 24, throttle_hours: int = 20) -> int:
+    """Si hay pendientes >24h, recuerda al dueño por WhatsApp (máx. 1 vez/20h).
+
+    Devuelve el nº de pendientes viejas (0 si no había o si el throttle lo calló).
+    El monto del mensaje = ahorro diario propuesto que NO se está aplicando
+    (suma de current−proposed de los decrease pendientes).
+    """
+    if not flag_on("AUTOPILOT_ENABLED"):
+        return 0
+    items = stale_pending(min_age_hours)
+    if not items:
+        return 0
+    now = int(time.time())
+    if _kv_get("stale_reminder_ts") > now - throttle_hours * 3600:
+        return 0  # ya le recordamos hace poco
+    _kv_set("stale_reminder_ts", now)
+    ahorro = sum(max(0, (x.get("current_budget") or 0) - (x.get("proposed_budget") or 0))
+                 for x in items if x.get("action") == "decrease_budget")
+    try:
+        _send_stale_reminder(items, ahorro)
+    except Exception as e:  # noqa: BLE001 — nunca tumbar el run por un recordatorio
+        log.warning("[autopilot] recordatorio de pendientes falló: %s", e)
+    return len(items)
+
+
+def _send_stale_reminder(items: list[dict], ahorro_clp: int) -> None:
+    """Envía el recordatorio (template UTILITY con fallback a texto libre)."""
+    from .tenants import active as _active_tenant
+    phone = (_active_tenant().owner_phone
+             or os.getenv("AUTOPILOT_OWNER_PHONE")
+             or os.getenv("ADMIN_ALERT_PHONE") or "").strip()
+    if not phone:
+        return
+    base = os.getenv("PUBLIC_BASE_URL", "https://agentecmc.cl")
+    try:
+        from config import OLACORE_TOKEN as _owner_tok
+    except Exception:  # noqa: BLE001
+        _owner_tok = ""
+    dias = max(1, int((int(time.time()) - items[0]["created_ts"]) / 86400))
+    resumen = (f"{len(items)} propuestas llevan {dias}+ día(s) sin tu OK"
+               + (f" · ${ahorro_clp:,}/día de ahorro sin aplicar" if ahorro_clp else ""))
+    msg = ("⏳ *Autopilot — decisiones esperando hace días*\n\n"
+           + "\n".join(line for x in items[:6] for line in _fmt_action_line(x))
+           + (f"\n… y {len(items) - 6} más." if len(items) > 6 else "")
+           + f"\n\n{resumen}\nDetalle: {base}/autopilot/salud?token={_owner_tok}")
+    import asyncio
+
+    async def _send():
+        try:
+            from messaging import send_whatsapp_template
+            await send_whatsapp_template(phone, "autopilot_aviso",
+                                         body_params=[str(len(items)), resumen])
+            log.info("[autopilot] recordatorio (template) de %d pendientes viejas → %s",
+                     len(items), phone)
+            return
+        except Exception as _e:  # noqa: BLE001 — fallback a texto libre
+            log.warning("[autopilot] template recordatorio falló (%s); texto libre", _e)
+        from messaging import send_whatsapp
+        await send_whatsapp(phone, msg)
+        log.info("[autopilot] recordatorio (texto) de %d pendientes viejas → %s",
+                 len(items), phone)
+
+    asyncio.create_task(_send())
 
 
 def reject(pid: str, by: str = "recepción") -> dict | None:

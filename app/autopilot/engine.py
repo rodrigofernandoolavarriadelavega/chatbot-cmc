@@ -52,6 +52,14 @@ async def run_dry_run(window_days: int = 7) -> AutopilotRun:
         new_ids = approvals.enqueue(actions)              # no incluye las auto-aplicadas
         if new_ids or auto_done:
             approvals.notify_owner(new_ids, auto_applied=auto_done)
+        # Higiene de la cola en cada run (fix 2026-06-10): antes expire_stale solo
+        # corría si alguien abría el panel, y nadie recordaba las pendientes viejas.
+        expired = approvals.expire_stale()
+        if expired:
+            log.info("[autopilot] %d pendientes caducadas (>48h sin decisión)", expired)
+        stale = approvals.remind_owner_stale()
+        if stale:
+            log.info("[autopilot] recordatorio: %d pendientes llevan >24h sin OK", stale)
     except Exception as e:  # noqa: BLE001 — nunca tumbar el run por la cola de aprobación
         log.error("[autopilot] auto_apply/enqueue/notify falló: %s", e)
 

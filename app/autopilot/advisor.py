@@ -5,6 +5,7 @@ Nunca ve ni cambia las decisiones que las reglas resolvieron con confianza.
 Y nunca ejecuta: devuelve hipótesis + recomendación que el engine vuelve a
 pasar por los límites duros antes de considerarlas. IA propone, reglas mandan.
 """
+import asyncio
 import json
 import logging
 import os
@@ -18,6 +19,10 @@ log = logging.getLogger("bot")
 # Modelo para el análisis de casos ambiguos. Sonnet por defecto (mejor razonamiento
 # que Haiku para juicios económicos); override con AUTOPILOT_MODEL en .env.
 _MODEL = os.getenv("AUTOPILOT_MODEL", "claude-sonnet-4-6")
+
+# Timeout duro de la llamada a Claude. Sin esto, una llamada colgada congela el
+# run completo del autopilot (corre cada 6h dentro del proceso del bot).
+_TIMEOUT_S = float(os.getenv("AUTOPILOT_ADVISOR_TIMEOUT_S", "25"))
 
 try:
     from anthropic import AsyncAnthropic
@@ -81,11 +86,14 @@ async def advise(ws: WorldState, actions: list[ProposedAction],
 
     limits = limits or HardLimits.from_env()
     try:
-        resp = await _client.messages.create(
-            model=_MODEL,
-            max_tokens=2000,
-            system=_SYSTEM,
-            messages=[{"role": "user", "content": _context_blob(ws, ambiguous)}],
+        resp = await asyncio.wait_for(
+            _client.messages.create(
+                model=_MODEL,
+                max_tokens=2000,
+                system=_SYSTEM,
+                messages=[{"role": "user", "content": _context_blob(ws, ambiguous)}],
+            ),
+            timeout=_TIMEOUT_S,
         )
         text = resp.content[0].text.strip()
         if text.startswith("```"):
