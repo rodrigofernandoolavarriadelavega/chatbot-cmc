@@ -2176,6 +2176,7 @@ async def _job_no_show_check():
     cupo a lista de espera. Mejor que descubrirlo al día siguiente.
     """
     try:
+        import asyncio
         import prof_notifications as pn
         from medilink import obtener_agenda_dia, PROFESIONALES
         from datetime import datetime as _dt, date as _date
@@ -2193,6 +2194,7 @@ async def _job_no_show_check():
             try:
                 agenda = await obtener_agenda_dia(id_prof, hoy_str)
             except Exception:
+                await asyncio.sleep(0.3)
                 continue
             prof_info = PROFESIONALES.get(id_prof, {})
             prof_nombre = prof_info.get("nombre", "")
@@ -2225,6 +2227,9 @@ async def _job_no_show_check():
                     hora=hora_str,
                     id_cita=id_cita,
                 ), name=f"prof_notif_no_show_{id_prof}_{id_cita}")
+            # Throttle: 0.3s entre profesionales para no saturar Medilink con
+            # hasta ~24 requests simultáneos (290 errores 429 en 1min, 2026-06-09)
+            await asyncio.sleep(0.3)
     except Exception as e:
         log.error("_job_no_show_check fallo: %s", e)
 

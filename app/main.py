@@ -11,6 +11,7 @@ import logging.config
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
+import re
 from time import monotonic
 
 import httpx
@@ -105,6 +106,28 @@ logging.config.dictConfig({
     },
 })
 log = logging.getLogger("bot")
+
+# ── Redactar tokens en access log de uvicorn ─────────────────────────────────
+# uvicorn.access emite record.args = (client_addr, method, full_path, http_version, status_code)
+# El query string (con token=...) va en full_path (índice 2). El filtro lo redacta
+# antes de que el formatter lo procese. Confirmado en uvicorn AccessFormatter.formatMessage.
+_TOKEN_RE = re.compile(r"(token=)[^&\s\"']+")
+
+class _RedactTokenFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            if record.args and isinstance(record.args, tuple) and len(record.args) >= 3:
+                args = list(record.args)
+                if isinstance(args[2], str):
+                    args[2] = _TOKEN_RE.sub(r"\1REDACTED", args[2])
+                record.args = tuple(args)
+            if isinstance(record.msg, str):
+                record.msg = _TOKEN_RE.sub(r"\1REDACTED", record.msg)
+        except Exception:
+            pass
+        return True
+
+logging.getLogger("uvicorn.access").addFilter(_RedactTokenFilter())
 
 # ── Background task helper (FIX-7) ──────────────────────────────────────────
 # asyncio.create_task() sin guardar referencia permite que el GC elimine la
@@ -497,11 +520,12 @@ async def lifespan(app: FastAPI):
         id="doctor_resumen_precita",
         replace_existing=True,
     )
-    # Doctor alerts: reporte progreso 09:00, 12:00, 16:00, 20:00 CLT
+    # Doctor alerts: reporte progreso 09:05, 12:05, 16:05, 20:05 CLT
+    # (+5 min para no chocar con recordatorios y no-show que parten a :00/:02)
     for h in (9, 12, 16, 20):
         scheduler.add_job(
             _job_doctor_reporte_progreso,
-            CronTrigger(hour=h, minute=0, timezone=_CLT),
+            CronTrigger(hour=h, minute=5, timezone=_CLT),
             id=f"doctor_reporte_{h}",
             replace_existing=True,
         )
@@ -537,9 +561,10 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
     # Reporte periódico de estado al admin cada 30 min
+    # (+8 min para separar del no-show_check (:02/:32) y reporte progreso (:05)
     scheduler.add_job(
         _job_admin_status_report,
-        CronTrigger(minute="0,30", timezone=_CLT),
+        CronTrigger(minute="8,38", timezone=_CLT),
         id="admin_status_report",
         replace_existing=True,
     )
@@ -579,9 +604,10 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
     # No-show check: cada 30 min entre 09:00 y 21:00 CLT (permiso notif_no_show)
+    # +2 min para escalonar respecto a recordatorios que parten a :00
     scheduler.add_job(
         _job_no_show_check,
-        CronTrigger(hour="9-21", minute="0,30", timezone=_CLT),
+        CronTrigger(hour="9-21", minute="2,32", timezone=_CLT),
         id="no_show_check_profesionales",
         replace_existing=True,
     )
@@ -3049,6 +3075,7 @@ _ALMA_TAREAS_HTML = (_TEMPLATE_DIR / "alma_tareas.html").read_text(encoding="utf
 _ALMA_LIQUIDACIONES_HTML = (_TEMPLATE_DIR / "alma_liquidaciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_liquidaciones.html").exists() else ""
 _ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inicio.html").exists() else ""
 _ALMA_PROVEEDORES_HTML = (_TEMPLATE_DIR / "alma_proveedores.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_proveedores.html").exists() else ""
+_ALMA_MEJORAS_HTML = (_TEMPLATE_DIR / "alma_mejoras.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_mejoras.html").exists() else ""
 
 def _make_alma_page(_html, _label):
     """Factory de páginas Alma simples (template con __TOKEN__, misma auth que el shell)."""
@@ -3080,6 +3107,7 @@ for _ap, _ah, _al in [
     ("/alma/liquidaciones", _ALMA_LIQUIDACIONES_HTML, "Liquidaciones"),
     ("/alma/inicio", _ALMA_INICIO_HTML, "Inicio"),
     ("/alma/proveedores", _ALMA_PROVEEDORES_HTML, "Proveedores"),
+    ("/alma/mejoras", _ALMA_MEJORAS_HTML, "Mejoras"),
 ]:
     app.add_api_route(_ap, _make_alma_page(_ah, _al), methods=["GET"], response_class=HTMLResponse, include_in_schema=False)
 
