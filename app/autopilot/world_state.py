@@ -81,37 +81,32 @@ def _bi_window_totals(date_from: str, date_to: str) -> tuple[float | None, int |
     Devuelve (None, None) si BI no está configurado/accesible — el autopilot
     debe degradar con gracia y operar solo con la señal Meta, marcándolo.
     """
+    # FIX 2026-06-09: importaba `_connect_bi` de bi_sync, función que ya no
+    # existe — el except lo tragaba y el auditor BI llevaba semanas muerto en
+    # silencio ("bi_sync no importable" en el log). Se usa winback.bi_conn(),
+    # el pool canónico con rollback al devolver (root-fix 2026-05-29).
     try:
-        from bi_sync import _connect_bi
+        from winback import bi_conn
     except ImportError:
-        log.warning("autopilot: bi_sync no importable; sin auditor BI")
+        log.warning("autopilot: winback.bi_conn no importable; sin auditor BI")
         return None, None
 
-    conn = None
     try:
-        conn = _connect_bi()
-        if conn is None:
-            return None, None
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT COALESCE(SUM(monto), 0)::float, COUNT(*)::int
-                FROM bi.fact_pagos
-                WHERE fecha >= %s AND fecha <= %s
-                """,
-                (date_from, date_to),
-            )
-            monto, n = cur.fetchone()
-            return float(monto or 0), int(n or 0)
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COALESCE(SUM(monto), 0)::float, COUNT(*)::int
+                    FROM bi.fact_pagos
+                    WHERE fecha >= %s AND fecha <= %s
+                    """,
+                    (date_from, date_to),
+                )
+                monto, n = cur.fetchone()
+                return float(monto or 0), int(n or 0)
     except Exception as e:  # noqa: BLE001 — degradar con gracia, no romper el bot
         log.warning("autopilot: auditor BI falló (%s); sigo solo con Meta", e)
         return None, None
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:  # noqa: BLE001
-                pass
 
 
 # ── Construcción del estado ─────────────────────────────────────────────────

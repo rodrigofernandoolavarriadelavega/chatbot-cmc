@@ -1076,3 +1076,16 @@ def autopilot_dental_promo(token: str | None = Query(None), request: Request = N
     from dental_promo_report import report
     return JSONResponse(report())
 
+# ── Salud del Autopilot — torre de control ───────────────────────────────────
+
+_SALUD_TEMPLATE = Path(__file__).parent.parent.parent / "templates" / "autopilot_salud.html"
+
+
+@router.get("/autopilot/salud", response_class=HTMLResponse)
+def autopilot_salud(token: str | None = Query(None), request: Request = None):
+    """Dashboard 'Salud del Autopilot': semáforo de salud, P&L agéntico,
+    cola de aprobación, último run y Director. Mismo auth que /autopilot."""
+    _check_token(token, request)
+    if not _SALUD_TEMPLATE.exists():
+        raise HTTPException(404, "Vista Salud no disponible")
+    return HTMLResponse(_SALUD_TEMPLATE.read_text(encoding="utf-8"))

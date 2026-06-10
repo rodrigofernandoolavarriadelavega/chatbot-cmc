@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salud del Autopilot — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --aqua:#4FBECE; --blue:#1172AB; --navy:#0F3F68; --navy-deep:#0a2e4d;
+  --ink:#13202e; --muted:#64798c; --line:#e6edf3; --bg:#f4f7fa; --card:#ffffff;
+  --green:#1f9d6b; --green-bg:#e7f7f0; --amber:#c98a14; --amber-bg:#fdf4e3;
+  --red:#d94c4c; --red-bg:#fdecec; --slate:#5b7186; --slate-bg:#eef2f6;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --sh-lg:0 12px 32px rgba(15,63,104,.12),0 4px 8px rgba(15,63,104,.06);
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+     -webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 16px 60px}
+
+/* Header */
+.top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+     background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+     border-radius:var(--r);padding:22px 26px;color:#fff;box-shadow:var(--sh-lg);
+     position:relative;overflow:hidden}
+.top::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+     background:radial-gradient(circle,rgba(79,190,206,.35),transparent 70%);pointer-events:none}
+.top .badge-ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+     background:rgba(255,255,255,.14);backdrop-filter:blur(6px);flex-shrink:0}
+.top .badge-ico svg{width:25px;height:25px;stroke:#fff;stroke-width:2;fill:none}
+.top h1{font-size:21px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.top .sub{font-size:12.5px;opacity:.82;font-weight:500;margin-top:3px}
+.top .spacer{flex:1}
+.top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;
+     font-size:12px;font-weight:700;background:rgba(255,255,255,.16);backdrop-filter:blur(6px)}
+.mode-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--aqua);
+     box-shadow:0 0 0 4px rgba(79,190,206,.3);animation:pulse 2s infinite}
+.mode-pill.exec .dot{background:#ffb347;box-shadow:0 0 0 4px rgba(255,179,71,.3)}
+.mode-pill.exec{background:rgba(201,138,20,.22)}
+.enabled-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+     font-size:11.5px;font-weight:700;background:rgba(255,255,255,.12)}
+.enabled-chip.on{background:rgba(31,157,107,.25);color:#7CFFB2}
+.enabled-chip.off{background:rgba(217,76,76,.2);color:#ffaaaa}
+.btn-refresh{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;
+     background:var(--aqua);color:var(--navy-deep);font-family:inherit;font-weight:700;font-size:13px;
+     padding:10px 16px;border-radius:11px;box-shadow:0 4px 14px rgba(79,190,206,.4);transition:.18s}
+.btn-refresh:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,190,206,.5)}
+.btn-refresh svg{width:16px;height:16px;stroke:var(--navy-deep);stroke-width:2;fill:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+.btn-refresh.spin svg{animation:rot 1s linear infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.ts{font-size:11px;opacity:.65;font-weight:500;white-space:nowrap}
+
+/* Semaforo */
+.semaforo{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:20px}
+@media(max-width:900px){.semaforo{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.semaforo{grid-template-columns:1fr 1fr}}
+.scard{background:var(--card);border-radius:var(--r);padding:16px 16px 14px;
+     box-shadow:var(--sh-sm);border:1px solid var(--line);
+     border-top:3px solid var(--line);transition:.2s;cursor:default}
+.scard:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+.scard.verde{border-top-color:var(--green)}
+.scard.ambar{border-top-color:var(--amber)}
+.scard.rojo{border-top-color:var(--red)}
+.scard.gris{border-top-color:var(--slate)}
+.scard .s-ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;margin-bottom:10px}
+.scard.verde .s-ico{background:var(--green-bg)}.scard.verde .s-ico svg{stroke:var(--green)}
+.scard.ambar .s-ico{background:var(--amber-bg)}.scard.ambar .s-ico svg{stroke:var(--amber)}
+.scard.rojo .s-ico{background:var(--red-bg)}.scard.rojo .s-ico svg{stroke:var(--red)}
+.scard.gris .s-ico{background:var(--slate-bg)}.scard.gris .s-ico svg{stroke:var(--slate)}
+.scard .s-ico svg{width:17px;height:17px;stroke-width:2;fill:none}
+.scard .sl{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.scard .sv{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-top:3px;line-height:1.1}
+.scard.verde .sv{color:var(--green)}
+.scard.ambar .sv{color:var(--amber)}
+.scard.rojo .sv{color:var(--red)}
+.scard.gris .sv{color:var(--slate)}
+.scard .se{font-size:11px;font-weight:500;color:var(--muted);margin-top:5px;line-height:1.4}
+
+/* Panel */
+.section{margin-top:22px}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-sm);border:1px solid var(--line);overflow:hidden}
+.panel-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.panel-h .ph-ico{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#e3f5f8,#cfeef3);
+     display:grid;place-items:center;flex-shrink:0}
+.panel-h .ph-ico svg{width:17px;height:17px;stroke:var(--blue);stroke-width:2;fill:none}
+.panel-h h2{font-size:14.5px;font-weight:700;letter-spacing:-.2px}
+.panel-h .count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);
+     background:var(--bg);padding:4px 10px;border-radius:999px;flex-shrink:0}
+.panel-b{padding:16px 18px}
+
+/* Selector de ventana */
+.win-sel{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:2px;width:fit-content;margin-bottom:16px}
+.win-sel button{border:0;background:transparent;color:var(--muted);font-family:inherit;
+     font-weight:700;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:.15s}
+.win-sel button.on{background:#fff;color:var(--navy);box-shadow:var(--sh-sm)}
+
+/* Tabla PnL */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+     padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+.tbl td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tr.total-row td{font-weight:700;background:var(--bg);color:var(--navy)}
+.roas-g{color:var(--green);font-weight:800}
+.roas-a{color:var(--amber);font-weight:800}
+.roas-r{color:var(--red);font-weight:800}
+.caveat{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5;
+     padding:10px 14px;background:var(--bg);border-radius:10px;border-left:3px solid var(--line)}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* Cola de aprobacion */
+.pend-card{border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;
+     background:#fff;transition:.18s;position:relative}
+.pend-card:last-child{margin-bottom:0}
+.pend-card:hover{box-shadow:var(--sh-md);border-color:#d4e0ea}
+.pend-card.dup{border-left:3px solid var(--amber);background:var(--amber-bg)}
+.pend-top{display:flex;align-items:flex-start;gap:12px}
+.pend-ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.pend-ico svg{width:18px;height:18px;stroke-width:2;fill:none}
+.act-up .pend-ico{background:var(--green-bg)}.act-up .pend-ico svg{stroke:var(--green)}
+.act-down .pend-ico{background:var(--amber-bg)}.act-down .pend-ico svg{stroke:var(--amber)}
+.act-pause .pend-ico{background:var(--red-bg)}.act-pause .pend-ico svg{stroke:var(--red)}
+.act-default .pend-ico{background:var(--slate-bg)}.act-default .pend-ico svg{stroke:var(--slate)}
+.pend-name{font-size:13.5px;font-weight:700;letter-spacing:-.2px;line-height:1.25}
+.pend-reason{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+.pend-age{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.pend-age.old{color:var(--red);font-weight:700}
+.pend-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);align-items:center}
+.chip{font-size:11px;font-weight:600;color:var(--ink);background:var(--bg);padding:5px 10px;border-radius:8px;
+     display:inline-flex;align-items:center;gap:5px}
+.chip b{color:var(--navy);font-weight:800}
+.chip.bud{background:#eef9fb;color:var(--blue)}
+.chip.dup-tag{background:var(--amber-bg);color:var(--amber)}
+.conf-bar{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--muted)}
+.conf-track{width:46px;height:6px;border-radius:999px;background:var(--line);overflow:hidden;flex-shrink:0}
+.conf-fill{height:100%;background:linear-gradient(90deg,var(--aqua),var(--blue))}
+.pend-btns{display:flex;gap:8px;margin-left:auto;flex-shrink:0;flex-wrap:wrap}
+.btn-ap{border:0;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;
+     padding:8px 14px;border-radius:10px;transition:.15s}
+.btn-ok{background:var(--green-bg);color:var(--green)}.btn-ok:hover{background:#d0f0e4}
+.btn-no{background:var(--red-bg);color:var(--red)}.btn-no:hover{background:#fbd8d8}
+.btn-ap:disabled{opacity:.5;cursor:wait}
+
+/* Decision cards (Ultimo run) */
+.dec{border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:12px;
+     transition:.18s;position:relative;background:#fff}
+.dec:hover{box-shadow:var(--sh-md);border-color:#d4e0ea}
+.dec:last-child{margin-bottom:0}
+.dec-top{display:flex;align-items:flex-start;gap:12px}
+.dec-ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0}
+.dec-ico svg{width:20px;height:20px;stroke-width:2;fill:none}
+.dec-name{font-size:14px;font-weight:700;letter-spacing:-.2px;line-height:1.25}
+.dec-reason{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+.dec-act{margin-left:auto;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+     padding:6px 11px;border-radius:9px;white-space:nowrap;flex-shrink:0}
+.a-increase .dec-ico{background:var(--green-bg)}.a-increase .dec-ico svg{stroke:var(--green)}
+.a-increase .dec-act{background:var(--green-bg);color:var(--green)}
+.a-increase{border-left:3px solid var(--green)}
+.a-decrease .dec-ico{background:var(--amber-bg)}.a-decrease .dec-ico svg{stroke:var(--amber)}
+.a-decrease .dec-act{background:var(--amber-bg);color:var(--amber)}
+.a-decrease{border-left:3px solid var(--amber)}
+.a-pause .dec-ico{background:var(--red-bg)}.a-pause .dec-ico svg{stroke:var(--red)}
+.a-pause .dec-act{background:var(--red-bg);color:var(--red)}
+.a-pause{border-left:3px solid var(--red)}
+.a-keep .dec-ico{background:#e3f5f8}.a-keep .dec-ico svg{stroke:var(--blue)}
+.a-keep .dec-act{background:#e3f5f8;color:var(--blue)}
+.a-keep{border-left:3px solid var(--blue)}
+.a-alert .dec-ico{background:var(--slate-bg)}.a-alert .dec-ico svg{stroke:var(--slate)}
+.a-alert .dec-act{background:var(--slate-bg);color:var(--slate)}
+.a-alert{border-left:3px solid var(--slate)}
+.dec-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px;padding-top:13px;border-top:1px dashed var(--line)}
+
+/* Director card */
+.dir-card{border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:12px;
+     background:#fff;transition:.18s;position:relative}
+.dir-card:hover{box-shadow:var(--sh-md);border-color:#d4e0ea}
+.dir-card:last-child{margin-bottom:0}
+.dir-top{display:flex;align-items:flex-start;gap:12px}
+.dir-ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.dir-ico svg{width:18px;height:18px;stroke-width:2;fill:none}
+.dir-title{font-size:13.5px;font-weight:700;letter-spacing:-.2px;line-height:1.25}
+.dir-action{font-size:12px;font-weight:600;color:var(--muted);margin-top:3px}
+.dir-razon{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4}
+.dir-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);align-items:center}
+.contrast-note{font-size:11px;padding:8px 12px;border-radius:9px;background:linear-gradient(135deg,#eef9fb,#e3f5f8);
+     border:1px solid #cfeef3;color:var(--blue);font-weight:600;line-height:1.4;margin-top:8px}
+
+/* Win-back mini */
+.wb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:600px){.wb-grid{grid-template-columns:1fr 1fr}}
+.wb-tile{background:var(--bg);border-radius:12px;padding:14px 16px;text-align:center}
+.wb-tile .wl{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.wb-tile .wv{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-top:4px;color:var(--navy)}
+.wb-tile .ws{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* Empty / error states */
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state svg{width:36px;height:36px;stroke:var(--muted);stroke-width:1.5;fill:none;
+     display:block;margin:0 auto 12px;opacity:.5}
+.empty-state p{font-size:13px;font-weight:500}
+.unavail{padding:18px 20px;text-align:center;font-size:13px;color:var(--muted);font-weight:500;
+     background:var(--bg);border-radius:10px}
+
+/* Responsive */
+@media(max-width:760px){
+  .wrap{padding:14px 12px 50px}
+  .top{padding:18px 18px}
+  .top h1{font-size:18px}
+  .tbl td,.tbl th{padding:10px 8px;font-size:12px}
+  .pend-btns{margin-left:0;margin-top:10px}
+  .win-sel button{padding:5px 10px;font-size:11px}
+}
+@media(max-width:480px){
+  .top-right{gap:7px}
+  .btn-refresh{padding:8px 12px;font-size:12px}
+  .mode-pill{padding:5px 10px;font-size:11px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="top">
+    <div class="badge-ico">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <h1>Salud del Autopilot</h1>
+      <div class="sub">Torre de control — Alma CMC</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="top-right">
+      <div class="mode-pill" id="modePill">
+        <span class="dot"></span>
+        <span id="modeLabel">cargando…</span>
+      </div>
+      <div class="enabled-chip" id="enabledChip">—</div>
+      <button class="btn-refresh" id="btnRefresh" onclick="refreshAll()">
+        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Actualizar
+      </button>
+    </div>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:right" id="refreshTs">
+    Auto-actualiza cada 5 min
+  </div>
+
+  <!-- SEMAFORO DE SALUD -->
+  <div class="semaforo" id="semaforo">
+    <!-- inyectado por JS -->
+    <div class="scard gris"><div class="s-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div><div class="sl">Cargando</div><div class="sv">…</div></div>
+  </div>
+
+  <!-- PnL AGENTICO -->
+  <div class="section">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="ph-ico"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <h2>P&amp;L Agentico</h2>
+        <div class="count" id="pnlLabel">—</div>
+      </div>
+      <div class="panel-b">
+        <div class="win-sel" id="winSel">
+          <button onclick="setPnlDays(7)" data-d="7">7 d</button>
+          <button onclick="setPnlDays(30)" data-d="30" class="on">30 d</button>
+          <button onclick="setPnlDays(90)" data-d="90">90 d</button>
+        </div>
+        <div class="tbl-wrap" id="pnlBody">
+          <div class="unavail">Cargando datos…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLA DE APROBACION -->
+  <div class="section">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="ph-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <h2>Cola de aprobacion</h2>
+        <div class="count" id="pendCount">—</div>
+      </div>
+      <div class="panel-b" id="pendBody">
+        <div class="unavail">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ULTIMO RUN -->
+  <div class="section">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="ph-ico"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <h2>Ultimo run — acciones del snapshot</h2>
+        <div class="count" id="runCount">—</div>
+      </div>
+      <div class="panel-b" id="runBody">
+        <div class="unavail">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIRECTOR -->
+  <div class="section">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="ph-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h2>Director — recomendaciones del operador</h2>
+        <div class="count" id="dirCount">—</div>
+      </div>
+      <div class="panel-b" id="dirBody">
+        <div class="unavail">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WIN-BACK -->
+  <div class="section">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="ph-ico"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <h2>Win-back — ultimos 90 dias</h2>
+      </div>
+      <div class="panel-b" id="wbBody">
+        <div class="unavail">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── Utilidades ──────────────────────────────────────────────────────────────
+const TOK = new URLSearchParams(location.search).get('token') || '';
+function qs(path){ return path + (TOK ? (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOK) : ''); }
+
+function clp(n){
+  if(n==null||isNaN(n)) return '—';
+  const v=Math.round(Number(n));
+  return '$' + v.toLocaleString('es-CL');
+}
+function pct(n){ return n==null?'—': Number(n).toFixed(1)+'%'; }
+function roasColor(r){
+  if(r==null) return '';
+  const v=Number(r);
+  if(v>=2.5) return 'roas-g';
+  if(v>=1) return 'roas-a';
+  return 'roas-r';
+}
+function roasFmt(r){ if(r==null||isNaN(r)) return '—'; return Number(r).toFixed(1)+'x'; }
+
+function ageStr(epochOrStr){
+  if(!epochOrStr) return '';
+  let ts = typeof epochOrStr === 'number' ? epochOrStr*1000 : new Date(epochOrStr).getTime();
+  const d = Date.now() - ts;
+  const mins = Math.floor(d/60000);
+  if(mins<2) return 'hace un momento';
+  if(mins<60) return 'hace '+mins+' min';
+  const hrs = Math.floor(mins/60);
+  if(hrs<24) return 'hace '+hrs+' h';
+  return 'hace '+Math.floor(hrs/24)+' d';
+}
+function ageDays(epochOrStr){
+  if(!epochOrStr) return 0;
+  let ts = typeof epochOrStr === 'number' ? epochOrStr*1000 : new Date(epochOrStr).getTime();
+  return (Date.now()-ts)/86400000;
+}
+
+// ── Estado global para roas 90d por canal (del impact endpoint) ─────────────
+let _roas90 = {};
+
+// ── Fetch helpers ────────────────────────────────────────────────────────────
+async function safeGet(path){
+  try{
+    const r = await fetch(qs(path));
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+// ── Semaforo ─────────────────────────────────────────────────────────────────
+function semCard(cls, label, val, explain, icon){
+  return `<div class="scard ${cls}">
+    <div class="s-ico"><svg viewBox="0 0 24 24">${icon}</svg></div>
+    <div class="sl">${label}</div>
+    <div class="sv">${val}</div>
+    <div class="se">${explain}</div>
+  </div>`;
+}
+
+function buildSemaforo(snap, pend, impact90){
+  const cards = [];
+
+  // 1. Auditor BI
+  const biOk = snap && snap.kpis && snap.kpis.bi_available;
+  cards.push(semCard(
+    biOk ? 'verde' : 'rojo',
+    'Auditor BI',
+    biOk ? 'OK' : 'ROJO',
+    biOk ? 'Decisiones contrastadas con caja real' : 'Decidiendo sin contraste de caja real',
+    '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+  ));
+
+  // 2. Señal Purchase
+  const spend = snap && snap.kpis ? (snap.kpis.total_spend||0) : 0;
+  const purchases = snap && snap.kpis ? (snap.kpis.total_purchases||0) : 0;
+  const purchaseState = spend > 0 && purchases === 0 ? 'ambar' : 'verde';
+  cards.push(semCard(
+    snap ? purchaseState : 'gris',
+    'Señal Purchase',
+    snap ? (purchases > 0 ? purchases : (spend > 0 ? '0' : '—')) : '—',
+    snap
+      ? (purchases === 0 && spend > 0 ? 'CAPI sin Purchase — CAC indeterminable' : 'Eventos en la ventana')
+      : 'Sin datos',
+    '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'
+  ));
+
+  // 3. Cola de aprobacion
+  const pendItems = pend ? (pend.pending||[]) : [];
+  let pendState = 'verde', pendVal = pendItems.length, pendExp = 'Sin decisiones pendientes';
+  if(pendItems.length > 0){
+    const maxAge = Math.max(...pendItems.map(p => ageDays(p.created_ts)));
+    if(maxAge > 5){ pendState = 'rojo'; pendExp = 'Mas de 5 d embotelladas — la plata sigue saliendo'; }
+    else if(maxAge > 2){ pendState = 'ambar'; pendExp = 'Mas de 2 d sin decisión — revisar'; }
+    else { pendState = 'ambar'; pendExp = pendItems.length + ' acciones esperando aprobación'; }
+  }
+  cards.push(semCard(
+    pend ? pendState : 'gris',
+    'Cola aprobación',
+    pend ? pendVal : '—',
+    pend ? pendExp : 'No disponible',
+    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+  ));
+
+  // 4. Frescura snapshot
+  let freshState = 'gris', freshVal = '—', freshExp = 'Sin datos';
+  if(snap && snap.generated_at){
+    const d = ageDays(snap.generated_at);
+    freshVal = d < 1 ? 'Hoy' : Math.floor(d) + ' d';
+    freshState = d > 1 ? 'ambar' : 'verde';
+    freshExp = d > 1 ? 'Snapshot desactualizado — considerar actualizar' : ageStr(snap.generated_at);
+  }
+  cards.push(semCard(
+    freshState,
+    'Frescura snapshot',
+    freshVal,
+    freshExp,
+    '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+  ));
+
+  // 5. Optimizer proposals
+  const propCount = impact90 && impact90._proposals_count != null ? impact90._proposals_count : null;
+  cards.push(semCard(
+    'gris',
+    'Optimizer',
+    propCount != null ? propCount : '—',
+    propCount === 0 ? 'Sin propuestas nuevas en este ciclo' : (propCount > 0 ? propCount + ' propuesta(s) activa(s)' : 'No disponible'),
+    '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>'
+  ));
+
+  document.getElementById('semaforo').innerHTML = cards.join('');
+}
+
+// ── Header: modo + enabled ───────────────────────────────────────────────────
+function updateHeader(snap, pend){
+  const pill = document.getElementById('modePill');
+  const lbl = document.getElementById('modeLabel');
+  const chip = document.getElementById('enabledChip');
+
+  if(snap){
+    const mode = (snap.mode||'').toLowerCase();
+    const isExec = mode.includes('ejec') || mode.includes('exec') || mode === 'live';
+    pill.className = 'mode-pill' + (isExec ? ' exec' : '');
+    lbl.textContent = snap.mode || mode;
+  }
+  if(pend != null){
+    const on = pend.enabled && pend.execute;
+    chip.className = 'enabled-chip ' + (on ? 'on' : 'off');
+    chip.textContent = on ? 'ACTIVO' : (pend.enabled ? 'MODO DRY-RUN' : 'APAGADO');
+  }
+}
+
+// ── PnL ─────────────────────────────────────────────────────────────────────
+let _pnlDays = 30;
+let _pnlData = null;
+
+function setPnlDays(d){
+  _pnlDays = d;
+  document.querySelectorAll('#winSel button').forEach(b=>{
+    b.className = Number(b.dataset.d)===d ? 'on' : '';
+  });
+  loadPnl(d);
+}
+
+async function loadPnl(days){
+  document.getElementById('pnlBody').innerHTML = '<div class="unavail">Cargando…</div>';
+  const data = await safeGet('/autopilot/api/impact?days=' + days);
+  _pnlData = data;
+
+  // Guardar roas 90d para contraste en el Director
+  if(days === 90 && data && data.channels){
+    _roas90 = {};
+    (data.channels||[]).forEach(ch => {
+      if(ch.channel) _roas90[ch.channel.toLowerCase()] = ch.roas;
+    });
+  }
+
+  renderPnl(data, days);
+}
+
+function renderPnl(data, days){
+  const label = document.getElementById('pnlLabel');
+  if(!data || !data.channels){
+    document.getElementById('pnlBody').innerHTML = '<div class="unavail">No disponible — API impact no respondio</div>';
+    label.textContent = '—';
+    return;
+  }
+  label.textContent = days + ' dias';
+  const rows = (data.channels||[]).map(ch => {
+    const rc = roasColor(ch.roas);
+    return `<tr>
+      <td style="font-weight:600">${ch.channel||'—'}</td>
+      <td>${ch.actions||ch.enviados||0}</td>
+      <td>${ch.bookings||ch.agendaron||0}</td>
+      <td>${clp(ch.revenue_clp)}</td>
+      <td>${clp(ch.cost_clp)}</td>
+      <td style="font-weight:700;color:${ch.net_clp>=0?'var(--green)':'var(--red)'}">${clp(ch.net_clp)}</td>
+      <td class="${rc}">${roasFmt(ch.roas)}</td>
+      <td style="font-size:11px;color:var(--muted)">${ch.method||ch.note||''}</td>
+    </tr>`;
+  }).join('');
+  const t = data.totals||{};
+  const totalRow = `<tr class="total-row">
+    <td>TOTAL</td>
+    <td>${t.actions||''}</td>
+    <td>${t.bookings||''}</td>
+    <td>${clp(t.revenue_clp)}</td>
+    <td>${clp(t.cost_clp)}</td>
+    <td style="color:${(t.net_clp||0)>=0?'var(--green)':'var(--red)'}">${clp(t.net_clp)}</td>
+    <td class="${roasColor(t.roas)}">${roasFmt(t.roas)}</td>
+    <td></td>
+  </tr>`;
+
+  const caveat = data.caveat ? `<div class="caveat">${data.caveat}</div>` : '';
+  document.getElementById('pnlBody').innerHTML = `
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th>Canal</th><th>Acciones</th><th>Citas</th>
+          <th>Ingreso</th><th>Costo</th><th>Neto</th><th>ROAS</th><th>Metodo</th>
+        </tr></thead>
+        <tbody>${rows}${totalRow}</tbody>
+      </table>
+    </div>${caveat}`;
+}
+
+// ── Cola de aprobacion ────────────────────────────────────────────────────────
+function actionClass(a){
+  const v=(a||'').toLowerCase();
+  if(v.includes('increase')||v.includes('aumentar')||v.includes('subir')) return 'act-up';
+  if(v.includes('decrease')||v.includes('reducir')||v.includes('bajar')) return 'act-down';
+  if(v.includes('pause')||v.includes('pausar')) return 'act-pause';
+  return 'act-default';
+}
+function actionIcon(a){
+  const v=(a||'').toLowerCase();
+  if(v.includes('increase')||v.includes('aumentar')||v.includes('subir'))
+    return '<polyline points="18 15 12 9 6 15"/>';
+  if(v.includes('decrease')||v.includes('reducir')||v.includes('bajar'))
+    return '<polyline points="6 9 12 15 18 9"/>';
+  if(v.includes('pause')||v.includes('pausar'))
+    return '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  return '<circle cx="12" cy="12" r="10"/>';
+}
+function actionLabel(a){
+  const v=(a||'').toLowerCase();
+  if(v.includes('increase')||v.includes('aumentar')) return 'Aumentar';
+  if(v.includes('decrease')||v.includes('reducir')) return 'Reducir';
+  if(v.includes('pause')||v.includes('pausar')) return 'Pausar';
+  return a||'Acción';
+}
+
+let _pendItems = [];
+
+async function loadPend(){
+  const data = await safeGet('/autopilot/api/pending');
+  if(!data){
+    document.getElementById('pendBody').innerHTML = '<div class="unavail">No disponible</div>';
+    document.getElementById('pendCount').textContent = '—';
+    return;
+  }
+  _pendItems = (data.pending||[]).sort((a,b)=>(b.created_ts||0)-(a.created_ts||0));
+  renderPend();
+  return data;
+}
+
+function renderPend(){
+  const count = document.getElementById('pendCount');
+  const body = document.getElementById('pendBody');
+  if(!_pendItems.length){
+    count.textContent = '0';
+    body.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p>Sin acciones pendientes de aprobacion</p></div>';
+    return;
+  }
+
+  // Detectar duplicados (misma campaign + action)
+  const dupKey = i => (i.campaign_name||'')+'|'+(i.action||'');
+  const seen = {}, dupIds = new Set();
+  _pendItems.forEach(i => {
+    const k = dupKey(i);
+    if(seen[k]) dupIds.add(i.id);
+    else seen[k] = true;
+  });
+
+  count.textContent = _pendItems.length;
+  body.innerHTML = _pendItems.map(item => {
+    const ac = actionClass(item.action);
+    const ico = actionIcon(item.action);
+    const lbl = actionLabel(item.action);
+    const age = ageDays(item.created_ts);
+    const isDup = dupIds.has(item.id);
+    const conf = Math.round((item.confidence||0)*100);
+    const budgetFrom = clp(item.current_budget_clp);
+    const budgetTo = clp(item.proposed_budget_clp);
+    return `<div class="pend-card ${isDup?'dup':''}" id="pc-${item.id}">
+      <div class="pend-top">
+        <div class="pend-ico ${ac}"><svg viewBox="0 0 24 24">${ico}</svg></div>
+        <div style="flex:1;min-width:0">
+          <div class="pend-name">${item.campaign_name||'Campaña desconocida'}</div>
+          <div class="pend-reason">${item.reason||''}</div>
+          <div class="pend-age ${age>2?'old':''}">${ageStr(item.created_ts)}</div>
+        </div>
+        <div class="pend-btns">
+          <button class="btn-ap btn-ok" onclick="approve('${item.id}')">Aprobar</button>
+          <button class="btn-ap btn-no" onclick="reject('${item.id}')">Rechazar</button>
+        </div>
+      </div>
+      <div class="pend-meta">
+        <span class="chip bud"><b>${budgetFrom}</b> → <b>${budgetTo}</b></span>
+        <span class="chip">${lbl}</span>
+        <span class="conf-bar">
+          <div class="conf-track"><div class="conf-fill" style="width:${conf}%"></div></div>
+          ${conf}% confianza
+        </span>
+        ${isDup?'<span class="chip dup-tag">Posible duplicado</span>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approve(pid){
+  const el = document.getElementById('pc-'+pid);
+  if(!el) return;
+  if(!confirm('Aprobar y aplicar esta accion?')) return;
+  el.querySelectorAll('.btn-ap').forEach(b=>b.disabled=true);
+  const r = await safeGet('/autopilot/api/pending/'+pid+'/approve');
+  // POST, no GET — hacerlo correcto
+  try{
+    const res = await fetch(qs('/autopilot/api/pending/'+pid+'/approve'), {method:'POST'});
+    const j = await res.json();
+    if(j.ok) el.remove();
+    else alert('Error al aprobar: ' + (j.detail||JSON.stringify(j)));
+  }catch(e){ alert('Error de red: '+e); el.querySelectorAll('.btn-ap').forEach(b=>b.disabled=false); }
+  _pendItems = _pendItems.filter(i=>i.id!==pid);
+  document.getElementById('pendCount').textContent = _pendItems.length;
+}
+async function reject(pid){
+  const el = document.getElementById('pc-'+pid);
+  if(!el) return;
+  if(!confirm('Rechazar esta accion?')) return;
+  el.querySelectorAll('.btn-ap').forEach(b=>b.disabled=true);
+  try{
+    const res = await fetch(qs('/autopilot/api/pending/'+pid+'/reject'), {method:'POST'});
+    const j = await res.json();
+    if(j.ok) el.remove();
+    else alert('Error al rechazar: ' + (j.detail||JSON.stringify(j)));
+  }catch(e){ alert('Error de red: '+e); el.querySelectorAll('.btn-ap').forEach(b=>b.disabled=false); }
+  _pendItems = _pendItems.filter(i=>i.id!==pid);
+  document.getElementById('pendCount').textContent = _pendItems.length;
+}
+
+// ── Ultimo run ────────────────────────────────────────────────────────────────
+function renderRun(snap){
+  const body = document.getElementById('runBody');
+  const count = document.getElementById('runCount');
+  if(!snap || !snap.actions){
+    count.textContent = '—';
+    body.innerHTML = '<div class="unavail">Sin snapshot disponible</div>';
+    return;
+  }
+  const actions = snap.actions||[];
+  count.textContent = actions.length;
+  if(!actions.length){
+    body.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Sin acciones en el ultimo run</p></div>';
+    return;
+  }
+  body.innerHTML = actions.map(a => {
+    const act = (a.action||'').toLowerCase();
+    let cls='a-keep';
+    if(act.includes('increase')) cls='a-increase';
+    else if(act.includes('decrease')) cls='a-decrease';
+    else if(act.includes('pause')) cls='a-pause';
+    let ico='<polyline points="5 12 12 5 19 12"/>';
+    if(act.includes('decrease')) ico='<polyline points="19 12 12 19 5 12"/>';
+    if(act.includes('pause')) ico='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+
+    const m = a.metrics||{};
+    const chips = [
+      m.spend!=null ? `<span class="chip">Spend <b>${clp(m.spend)}</b></span>` : '',
+      m.cac!=null ? `<span class="chip">CAC <b>${clp(m.cac)}</b></span>` : '',
+      m.roas!=null ? `<span class="chip">ROAS <b class="${roasColor(m.roas)}">${roasFmt(m.roas)}</b></span>` : '',
+      a.confidence!=null ? `<span class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:${Math.round((a.confidence||0)*100)}%"></div></div>${Math.round((a.confidence||0)*100)}%</span>` : '',
+    ].filter(Boolean).join('');
+
+    return `<div class="dec ${cls}">
+      <div class="dec-top">
+        <div class="dec-ico"><svg viewBox="0 0 24 24">${ico}</svg></div>
+        <div style="flex:1;min-width:0">
+          <div class="dec-name">${a.campaign_name||'—'}</div>
+          <div class="dec-reason">${a.reason||''}</div>
+        </div>
+        <div class="dec-act">${a.action||'—'}</div>
+      </div>
+      ${chips?`<div class="dec-meta">${chips}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── Director ──────────────────────────────────────────────────────────────────
+async function loadDirector(){
+  const data = await safeGet('/autopilot/api/director');
+  // Cargar impact 90d si no está
+  if(Object.keys(_roas90).length === 0){
+    const imp90 = await safeGet('/autopilot/api/impact?days=90');
+    if(imp90 && imp90.channels){
+      (imp90.channels||[]).forEach(ch => {
+        if(ch.channel) _roas90[ch.channel.toLowerCase()] = ch.roas;
+      });
+    }
+  }
+  renderDirector(data);
+}
+
+function renderDirector(data){
+  const body = document.getElementById('dirBody');
+  const count = document.getElementById('dirCount');
+  if(!data){
+    count.textContent='—';
+    body.innerHTML='<div class="unavail">No disponible — API director no respondio</div>';
+    return;
+  }
+  // Navegamos defensivamente
+  const gab = data.gabinete||data||{};
+  const op = gab.operador||{};
+  const recs = op.recommendations||op.recomendaciones||[];
+  count.textContent = recs.length||'—';
+
+  if(!recs.length){
+    body.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Sin recomendaciones activas</p></div>';
+    return;
+  }
+
+  body.innerHTML = recs.map((r,i) => {
+    const action = r.accion||r.action||'';
+    const channel = (r.channel||r.canal||r.switch||'').toLowerCase();
+    const roas90v = _roas90[channel];
+    const roasRec = r.roas||null;
+
+    // contraste ventana corta vs 90d
+    let contrast = '';
+    if(roas90v != null && roasRec != null && Math.abs(roas90v - roasRec) > 0.5){
+      contrast = `<div class="contrast-note">
+        Contraste ventana: ROAS short <b class="${roasColor(roasRec)}">${roasFmt(roasRec)}</b> vs
+        ROAS 90d <b class="${roasColor(roas90v)}">${roasFmt(roas90v)}</b> —
+        verificar si la ventana corta representa una tendencia real o una anomalia
+      </div>`;
+    } else if(roas90v != null){
+      contrast = `<div class="contrast-note">ROAS 90d del canal: <b class="${roasColor(roas90v)}">${roasFmt(roas90v)}</b></div>`;
+    }
+
+    const act = action.toLowerCase();
+    let icoPath = '<polyline points="5 12 12 5 19 12"/>';
+    let tileCls = 'background:var(--slate-bg)'; let icoStroke = 'var(--slate)';
+    if(act.includes('encend')||act.includes('activ')||act.includes('aumentar')){
+      icoPath='<polyline points="5 12 12 5 19 12"/>'; tileCls='background:var(--green-bg)'; icoStroke='var(--green)';
+    } else if(act.includes('apag')||act.includes('pausar')||act.includes('reducir')){
+      icoPath='<polyline points="19 12 12 19 5 12"/>'; tileCls='background:var(--amber-bg)'; icoStroke='var(--amber)';
+    }
+
+    const conf = r.confianza||r.confidence;
+    const confPct = conf!=null ? Math.round(Number(conf)*100) : null;
+    const netClp = r.net_clp!=null ? r.net_clp : null;
+
+    return `<div class="dir-card">
+      <div class="dir-top">
+        <div class="dir-ico" style="${tileCls}">
+          <svg viewBox="0 0 24 24" style="stroke:${icoStroke};stroke-width:2;fill:none;width:18px;height:18px">${icoPath}</svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="dir-title">${r.switch||r.canal||r.channel||'Canal'}</div>
+          <div class="dir-action">Accion recomendada: ${action||'—'}</div>
+          <div class="dir-razon">${r.razon||r.reason||''}</div>
+        </div>
+      </div>
+      <div class="dir-meta">
+        ${confPct!=null?`<span class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:${confPct}%"></div></div>${confPct}%</span>`:''}
+        ${netClp!=null?`<span class="chip">Neto estimado <b style="color:${netClp>=0?'var(--green)':'var(--red)'}">${clp(netClp)}</b></span>`:''}
+        ${r.estado_actual?`<span class="chip">Estado: <b>${r.estado_actual}</b></span>`:''}
+      </div>
+      ${contrast}
+    </div>`;
+  }).join('');
+}
+
+// ── Win-back ─────────────────────────────────────────────────────────────────
+async function loadWinback(){
+  const data = await safeGet('/autopilot/api/winback/report?days=90');
+  renderWinback(data);
+}
+function renderWinback(data){
+  const body = document.getElementById('wbBody');
+  if(!data || !data.totals){
+    body.innerHTML='<div class="unavail">No disponible — API win-back no respondio</div>';
+    return;
+  }
+  const t = data.totals;
+  body.innerHTML = `<div class="wb-grid">
+    <div class="wb-tile">
+      <div class="wl">Enviados</div>
+      <div class="wv">${t.enviados||0}</div>
+      <div class="ws">mensajes</div>
+    </div>
+    <div class="wb-tile">
+      <div class="wl">Agendaron</div>
+      <div class="wv">${t.agendaron||0}</div>
+      <div class="ws">pacientes</div>
+    </div>
+    <div class="wb-tile">
+      <div class="wl">Pagaron</div>
+      <div class="wv">${t.pagaron||0}</div>
+      <div class="ws">confirmados</div>
+    </div>
+    <div class="wb-tile">
+      <div class="wl">Ingreso</div>
+      <div class="wv" style="font-size:17px">${clp(t.ingreso)}</div>
+      <div class="ws">atribuido</div>
+    </div>
+  </div>`;
+}
+
+// ── Optimizer proposals count (solo para el semaforo) ─────────────────────
+async function loadOptimizerCount(){
+  const data = await safeGet('/autopilot/api/optimizer/proposals');
+  return data && data.proposals ? data.proposals.length : (data ? 0 : null);
+}
+
+// ── Refresh principal ─────────────────────────────────────────────────────────
+let _lastSnap = null, _lastPend = null;
+
+async function refreshAll(){
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spin'); btn.disabled = true;
+
+  // Cargar en paralelo
+  const [snap, pend, propCount] = await Promise.all([
+    safeGet('/autopilot/api/snapshot'),
+    loadPend(),
+    loadOptimizerCount(),
+  ]);
+  _lastSnap = snap;
+  _lastPend = pend;
+
+  // Cargar PnL 90d primero (para roas contraste), luego el seleccionado
+  const imp90 = await safeGet('/autopilot/api/impact?days=90');
+  if(imp90 && imp90.channels){
+    (imp90.channels||[]).forEach(ch => {
+      if(ch.channel) _roas90[ch.channel.toLowerCase()] = ch.roas;
+    });
+  }
+  // El _proposals_count lo pasamos al semaforo via hack en imp90
+  const imp90WithProp = imp90 || {};
+  imp90WithProp._proposals_count = propCount;
+
+  buildSemaforo(snap, pend, imp90WithProp);
+  updateHeader(snap, pend);
+  renderRun(snap);
+
+  await Promise.all([
+    loadPnl(_pnlDays),
+    loadDirector(),
+    loadWinback(),
+  ]);
+
+  btn.classList.remove('spin'); btn.disabled = false;
+  document.getElementById('refreshTs').textContent =
+    'Actualizado ' + new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'}) +
+    ' — auto-actualiza cada 5 min';
+}
+
+// ── Auto-refresh ──────────────────────────────────────────────────────────────
+refreshAll();
+setInterval(refreshAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
