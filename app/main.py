@@ -730,6 +730,21 @@ async def lifespan(app: FastAPI):
         id="caja_report_diario",
         replace_existing=True,
     )
+    # M4: digest semanal a recepción de pacientes >14 días en waitlist (lunes 09:30 CLT)
+    from jobs import _job_waitlist_digest_semanal, _job_followup_info
+    scheduler.add_job(
+        _job_waitlist_digest_semanal,
+        CronTrigger(day_of_week="mon", hour=9, minute=30, timezone=_CLT),
+        id="waitlist_digest_semanal",
+        replace_existing=True,
+    )
+    # M5: follow-up proactivo a intent=info sin cita (cada 5 min, gated FOLLOWUP_INFO_ENABLED)
+    scheduler.add_job(
+        _job_followup_info,
+        CronTrigger(minute="*/5", timezone=_CLT),
+        id="followup_info",
+        replace_existing=True,
+    )
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup
     _asyncio_startup.get_event_loop().create_task(_job_regenerate_heatmap_cache())

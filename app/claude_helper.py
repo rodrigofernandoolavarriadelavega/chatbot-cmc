@@ -1142,17 +1142,48 @@ _SEGUIMIENTO_CACHE: dict[str, str] = {
 #           · "ambiguo" (NO consume, deja seguir al router normal — pregunta tangencial,
 #             menciona otra especialidad, audio sin transcripción, etc.)
 #
-# TODO RODRIGO: completar _CROSSSELL_RESP_CACHE y el system prompt.
-# La decisión de qué cuenta como afirmativo en WhatsApp rural Arauco es tuya.
-
+# M6: caché completado con frases reales de pacientes de Arauco (chileno rural).
+# "si" = acepta cross-sell; "no" = rechaza; el resto va a Claude.
 _CROSSSELL_RESP_CACHE: dict[str, str] = {
-    # Llename con frases que veas en producción.
-    # Formato: "texto literal en minúscula sin tildes ni signos" : "si" | "no"
-    # Ejemplos de partida (borrá/editá según tu juicio):
-    "si":                  "si",
-    "si me interesa":      "si",
-    "no":                  "no",
-    "no por ahora":        "no",
+    # Afirmaciones
+    "si":                    "si",
+    "si me interesa":        "si",
+    "si quiero":             "si",
+    "si por favor":          "si",
+    "dale":                  "si",
+    "ya":                    "si",
+    "ya po":                 "si",
+    "ok":                    "si",
+    "buena":                 "si",
+    "agendame":              "si",
+    "agendame por favor":    "si",
+    "agendame una hora":     "si",
+    "agendame una horita":   "si",
+    "si agendame":           "si",
+    "si por favor agendame": "si",
+    "claro":                 "si",
+    "claro que si":          "si",
+    "obvio":                 "si",
+    "por supuesto":          "si",
+    "me interesa":           "si",
+    "me interesa si":        "si",
+    "si me gustaria":        "si",
+    # Rechazos
+    "no":                    "no",
+    "no por ahora":          "no",
+    "no gracias":            "no",
+    "no gracias igual":      "no",
+    "ahora no":              "no",
+    "despues":               "no",
+    "mas adelante":          "no",
+    "lo dejo pa despues":    "no",
+    "lo voy a pensar":       "no",
+    "voy a pensarlo":        "no",
+    "no me interesa":        "no",
+    "por ahora no":          "no",
+    "dejalo":                "no",
+    "olvida":                "no",
+    "no necesito":           "no",
 }
 
 
@@ -1174,27 +1205,27 @@ async def clasificar_respuesta_crosssell(mensaje: str, destino: str) -> str:
         log.info("crosssell cache hit: %r → %s", clave, _CROSSSELL_RESP_CACHE[clave])
         return _CROSSSELL_RESP_CACHE[clave]
 
-    # TODO RODRIGO: ajustar el system prompt.
-    # Considera el contexto: el bot acaba de ofrecer agendar `destino`.
-    # ¿Qué cuenta como "si" en chileno rural? ("buena", "ya po", "dale",
-    # "agéndame", "claro", "por supuesto", "obvio", "filo", "bacán")
-    # ¿Qué cuenta como "no" sin ser maleducado? ("después", "más adelante",
-    # "ahora no", "voy a pensarlo", "lo dejo pa luego")
-    # ¿Qué cuenta como "ambiguo"? (pregunta sobre precios, dice otra
-    # especialidad, audio sin transcribir, saludo solo)
+    # M6: system prompt completo con contexto chileno rural (Arauco).
+    # Afirmaciones: "buena", "ya po", "dale", "agéndame", "claro", "obvio".
+    # Rechazos suaves: "después", "más adelante", "ahora no", "lo dejo pa luego".
+    # Ambiguo: pregunta de precio, otra especialidad, saludo, audio sin transcribir.
     try:
         resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=10,
             system=(
-                f"El bot acaba de proponerle al paciente agendar *{destino}*. "
-                "Clasifica la respuesta del paciente en UNA sola palabra: "
-                "si | no | ambiguo. "
-                "'si' = acepta o muestra interés positivo claro. "
-                "'no' = rechaza o posterga. "
-                "'ambiguo' = pregunta algo distinto, menciona otra especialidad, "
-                "no tiene sentido en contexto, o no se entiende. "
-                "Devuelve SOLO una de las tres palabras."
+                f"El bot acaba de ofrecerle al paciente agendar una hora en {destino}. "
+                "El paciente es de la Región del Biobío, Chile (zona rural de Arauco). "
+                "Clasifica su respuesta en UNA sola palabra: si | no | ambiguo. "
+                "'si' = acepta o muestra interés positivo claro: "
+                "dale, ya, ya po, ok, buena, claro, obvio, agéndame, si por favor, "
+                "agéndame una hora, me interesa, por supuesto. "
+                "'no' = rechaza o posterga sin ofender: "
+                "no, no gracias, ahora no, después, más adelante, lo dejo pa después, "
+                "voy a pensarlo, no me interesa, por ahora no. "
+                "'ambiguo' = pregunta algo distinto (precio, horario, otra especialidad), "
+                "saludo solo, o respuesta que no aplica al contexto. "
+                "Devuelve SOLO una de las tres palabras: si, no, o ambiguo."
             ),
             messages=[{"role": "user", "content": mensaje}],
         )

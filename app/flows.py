@@ -5615,6 +5615,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "no_agendar",      "title": "No por ahora"},
                         ]
                     )
+            # M5: marcar sesion para follow-up proactivo a los 10 min.
+            # Solo cuando NO tenemos esp_sug (ya se ofrecio agendar arriba con boton).
+            from datetime import datetime as _dt_m5
+            data["followup_info_ts"] = _dt_m5.now(timezone.utc).isoformat()
+            data["followup_info_esp"] = (result.get("especialidad") or "").strip()
+            data["followup_info_sent"] = False
+            save_session(phone, "IDLE", data)
             return _btn_msg(
                 f"{resp}\n\n{DISCLAIMER}",
                 [
@@ -7739,6 +7746,55 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"{resp}\n\n"
                         "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
                     )
+            # M1: funnel — el paciente llegó aquí sin elegir slot (rechazo implícito)
+            log_event(phone, "funnel_slot_rechazado", {
+                "esp": especialidad,
+                "paso": "slot_no_elegido",
+                "txt": txt[:80],
+            })
+            # M2: Rescate de slot rechazado — detectar negación explícita y ofrecer
+            # botones de rescate en vez del mensaje genérico "no te entendí".
+            # Fail-safe total: cualquier error vuelve al comportamiento anterior.
+            try:
+                _NEGACION_SLOT_KW = (
+                    "no", "nop", "no me sirve", "no me acomoda", "no me queda",
+                    "no puedo", "no puedo a esa hora", "no puedo ir",
+                    "muy tarde", "muy temprano", "no me viene",
+                    "no me viene bien", "no quiero", "no me interesa",
+                    "no por ahora", "ahora no", "despues", "después",
+                    "no esa hora", "no ese dia", "no ese día",
+                    "no me sirve ese", "no alcanza", "no llego",
+                )
+                _es_negacion_slot = (
+                    tl_norm_slot in ("no", "nop", "nope")
+                    or any(k in tl_norm_slot for k in _NEGACION_SLOT_KW)
+                )
+                if _es_negacion_slot and slots_mostrados:
+                    try:
+                        from medilink import _ids_para_especialidad as _ids_rescate
+                        _ids_rescate_esp = _ids_rescate(especialidad)
+                        if especialidad in _ESP_MED_GENERAL:
+                            _ids_rescate_esp = list(_MED_GENERAL_IDS)
+                        _hay_otro_prof = len([i for i in _ids_rescate_esp
+                                              if i != data.get("prof_sugerido_id")]) > 0
+                    except Exception:
+                        _hay_otro_prof = False
+                    _botones_rescate = [{"id": "otro_dia", "title": "Otro dia"}]
+                    if _hay_otro_prof:
+                        _botones_rescate.append({"id": "otro_prof", "title": "Otro profesional"})
+                    _botones_rescate.append({"id": "accion_recepcion", "title": "Llamar a recepcion"})
+                    log_event(phone, "funnel_rescate_ofrecido", {
+                        "esp": especialidad,
+                        "hay_otro_prof": _hay_otro_prof,
+                        "txt": txt[:80],
+                    })
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _btn_msg(
+                        "Sin problema 😊 ¿Qué prefieres?",
+                        _botones_rescate,
+                    )
+            except Exception as _e_rescate:
+                log.debug("M2 rescate slot error (ignorado): %s", _e_rescate)
             # Fallback sistémico: antes de dar el mensaje genérico, re-correr
             # detect_intent. Si el paciente pivotó a otra acción clara (cancelar,
             # reagendar, cambiar de especialidad, ver reservas), procesamos ese
@@ -8753,6 +8809,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log.warning("preflight edad/genero error (ignorado): %s", _e_pf)
 
         data.update({"paciente": paciente, "rut": rut})
+        log_event(phone, "funnel_confirmacion", {
+            "esp": (data.get("slot_elegido") or {}).get("especialidad", data.get("especialidad", "")),
+            "paso": "llegando_confirming_cita",
+        })
         save_session(phone, "CONFIRMING_CITA", data)
 
         slot = data["slot_elegido"]
@@ -13366,7 +13426,19 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     data.update({"especialidad": especialidad_lower, "slots": smart_sugerido,
                  "todos_slots": todos, "fechas_vistas": [fecha],
                  "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
+    log_event(phone, "funnel_especialidad", {
+        "esp": especialidad_lower,
+        "paso": "especialidad_resuelta",
+        "n_slots": len(todos),
+    })
     save_session(phone, "WAIT_SLOT", data)
+    log_event(phone, "funnel_slot_ofrecido", {
+        "esp": especialidad_lower,
+        "paso": "slot_ofrecido",
+        "fecha": fecha,
+        "profesional": mejor.get("profesional", ""),
+        "hora": mejor.get("hora_inicio", "")[:5],
+    })
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = _first_name(nombre_conocido) if nombre_conocido else ""
     # Si viene con saludo_prefix (ej. desde un motivo del menú), el prefix

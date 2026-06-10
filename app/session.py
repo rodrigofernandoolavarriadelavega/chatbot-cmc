@@ -3971,12 +3971,53 @@ def get_slots_rechazados(phone: str, especialidad: str) -> set[tuple[str, str]]:
 # Lista de espera (waitlist)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# M3: mapa canónico de slugs de waitlist. Aplica al insertar/actualizar.
+# Captura variantes con/sin tildes y texto libre del paciente.
+_WAITLIST_SLUG_MAP: tuple[tuple[str, str], ...] = (
+    ("ecograf",           "ecografia"),
+    ("cardiolog",         "cardiologia"),
+    ("gastroenter",       "gastroenterologia"),
+    ("ginecolog",         "ginecologia"),
+    ("traumatol",         "traumatologia"),
+    ("endodon",           "endodoncia"),
+    ("ortodon",           "ortodoncia"),
+    ("implantol",         "implantologia"),
+    ("estetic",           "estetica facial"),
+    ("kinesiolog",        "kinesiologia"),
+    ("fonoaud",           "fonoaudiologia"),
+    ("otorrin",           "otorrinolaringologia"),
+    ("psicolog",          "psicologia"),
+    ("nutricion",         "nutricion"),
+    ("matron",            "matrona"),
+    ("podolog",           "podologia"),
+    ("masoterap",         "masoterapia"),
+    ("odontolog",         "odontologia"),
+    ("medicina familiar", "medicina familiar"),
+    ("medicina general",  "medicina general"),
+)
+
+
+def _normalize_waitlist_esp(especialidad: str) -> str:
+    """Normaliza un slug de especialidad de waitlist al slug canonico del bot.
+    Elimina tildes, pasa a minusculas y mapea variantes al canonical.
+    Ejemplo: Estetica Facial -> estetica facial."""
+    import unicodedata as _ud
+    s = (especialidad or "").strip().lower()
+    s = _ud.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    for needle, canon in _WAITLIST_SLUG_MAP:
+        if needle in s:
+            return canon
+    return s
+
+
 def add_to_waitlist(phone: str, rut: str, nombre: str,
                     especialidad: str, id_prof_pref: int | None = None,
                     notas: str = "") -> int:
-    """Inscribe a un paciente en la lista de espera. Si ya existe una inscripción
+    """Inscribe a un paciente en la lista de espera. Si ya existe una inscripcion
     activa (no notificada ni cancelada) para el mismo phone+especialidad, la
     actualiza en lugar de duplicar. Retorna el id de la fila."""
+    # M3: normalizar slug antes de INSERT/UPDATE para evitar duplicados.
+    especialidad = _normalize_waitlist_esp(especialidad)
     with _conn() as conn:
         existing = conn.execute("""
             SELECT id FROM waitlist

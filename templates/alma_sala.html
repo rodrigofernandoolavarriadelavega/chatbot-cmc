@@ -38,6 +38,31 @@
   .row button:hover { background:#0c3556; }
   .empty { text-align:center; color:var(--mute); font-weight:600; padding:50px 0; }
   .empty .big { font-size:38px; }
+
+  /* ── Mobile: 760 px ── */
+  @media (max-width:760px){
+    .top { padding:0 14px; height:50px; gap:8px; }
+    .top h1 { font-size:13.5px; }
+    .wrap { padding:12px 12px 60px; max-width:100%; }
+    .row { flex-wrap:wrap; gap:10px; padding:12px 14px; }
+    .row .hora { font-size:17px; min-width:52px; }
+    .row .info .nom { font-size:14px; }
+    .row button { flex:1 1 100%; padding:11px; min-height:44px; border-radius:12px; font-size:14px; }
+    .row .pago { font-size:10px; padding:4px 9px; }
+  }
+
+  /* ── Mobile: 480 px ── */
+  @media (max-width:480px){
+    .top h1 { font-size:13px; }
+    .top .live { display:none; }
+    .wrap { padding:10px 10px 70px; }
+    .row { padding:10px 12px; border-radius:12px; }
+    .row .hora { font-size:16px; min-width:48px; }
+    .row .info .nom { font-size:13.5px; }
+    .row .info .prof { font-size:11.5px; }
+    .row .espera { font-size:10.5px; }
+    .row button { padding:12px; font-size:14px; min-height:48px; }
+  }
 </style>
 </head>
 <body>
