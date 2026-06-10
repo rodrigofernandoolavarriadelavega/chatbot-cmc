@@ -353,6 +353,22 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
+**Última actualización**: 2026-06-09
+
+### 2026-06-09 — Deploy 9 bugfixes críticos (commit 5c59702)
+- **B1** `flows.py:6981/6988` — NameError en tiempo de ejecución: `PROFESIONALES` bare → `_PROFS_AP` (causa de 66 resets confirmados en logs)
+- **B2** `flows.py:1947` — alias `PROFESIONALES as _PROFS_HQ` en `_responder_pregunta_horario` (elimina riesgo UnboundLocalError, 20 warnings previos)
+- **B3** `flows.py:6165` — eliminado bloque que negaba psiquiatría (fósil pre-Unibazo). Conflicto con d65314a resuelto manteniendo la versión más completa (con `_iniciar_agendar`)
+- **B4** `flows.py:107` — `_first_name` devuelve `""` (no `"paciente"`) cuando nombre vacío; guards en callers ya existentes
+- **B5** `flows.py:PRECIOS_SLOT` — Psiquiatría $60.000 particular; Matrona $16.000/$30.000 ambas modalidades
+- **B6** `flows.py:2802` — `WAIT_META_SLOT_CHOICE` y `WAIT_META_WAITLIST` agregados a `_FLOW_STATES` (consent no interceptaba CTWA)
+- **B7** `flows.py:10829` — cross-sell loop: máx 1 reprompt, al 2° intento fallido escapa con reset
+- **B8** `pagos_routes.py:2114` — `meta_new` completo (fuente/match_confianza/copago/metodo_pago/creado_por/monto_medilink/prevision/profesional), eliminados 6 KeyError en logs
+- **B9** `ecografias.py` — keywords obstétricas → grupo `obstetrica_no_disponible`; flows.py maneja flujo en 2 call sites
+- **Conflicto resuelto**: 948283b creado sobre base anterior a d65314a (WAIT_ESPECIALIDAD psiquiatra). Cherry-pick con resolución conservadora: se mantuvo HEAD que era más completo.
+- **Tests post-deploy**: harness_50 76/103 (=baseline), harness_stress_200 169/200 (=baseline), normalizer 52/52, WRONG=0 (=baseline). 0 regresiones nuevas.
+- **Deploy**: /health 200, service active, logs limpios.
+
 **Fecha**: 2026-04-27 / 2026-04-28 (sesión maratónica que cubrió varios frentes)
 **Historial completo**: ver claude-mem timeline o git log
 
