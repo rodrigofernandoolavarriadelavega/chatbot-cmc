@@ -139,6 +139,7 @@ async def send_event(
     event_id: str | None = None,
     event_time: int | None = None,
     custom_data: dict | None = None,
+    action_source: str = "business_messaging",
 ) -> dict[str, Any]:
     """Envía un evento server-side a Meta CAPI. Async, retry 3x con backoff.
 
@@ -222,10 +223,12 @@ async def send_event(
         "event_name": event_name,
         "event_time": event_time if event_time is not None else int(time.time()),
         "event_id": eid,
-        "action_source": "business_messaging",
-        "messaging_channel": "whatsapp",
+        "action_source": action_source,
         "user_data": user_data,
     }
+    # messaging_channel solo aplica a eventos de mensajería (no a offline/physical_store)
+    if action_source == "business_messaging":
+        event["messaging_channel"] = "whatsapp"
 
     if value is not None or custom_data:
         cd: dict[str, Any] = {"currency": currency}

@@ -237,6 +237,11 @@ ASISTENTE_EXAMENES_ENABLED = os.getenv("ASISTENTE_EXAMENES_ENABLED", "false").lo
 # al bot de Meulen (modo asistente del supermercado) en vez del flujo de
 # pacientes. Gateado por número → la clínica/pacientes no se ven afectados.
 MEULEN_ASSISTANT_ENABLED = os.getenv("MEULEN_ASSISTANT_ENABLED", "false").lower() in ("true", "1", "yes")
+
+# Meta Offline Conversions: enviar conversiones del canal NO-bot (fijo/walk-in) a Meta
+# CAPI con identificadores hasheados para que Meta atribuya las llamadas al fijo a los ads
+# (ver app/offline_match.py). Envía datos de pacientes a Meta → OFF hasta decisión del dueño.
+OFFLINE_MATCH_ENABLED = os.getenv("OFFLINE_MATCH_ENABLED", "false").lower() in ("true", "1", "yes")
 MEULEN_ASSISTANT_PHONES: set[str] = {
     p.strip().lstrip("+") for p in os.getenv("MEULEN_ASSISTANT_PHONES", "").split(",") if p.strip()
 }
