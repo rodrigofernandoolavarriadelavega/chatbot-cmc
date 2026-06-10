@@ -439,7 +439,7 @@ const AUDIT_DATA = {
     {sev:"p0",area:"Bot",title:"Conversión agendar→cita 34.1% — 83 intents/sem sin convertir",
      desc:"83 intents de agendar por semana se pierden sin razón registrada. Filtro Márquez absorbe 329 usuarios sin alternativa ofrecida. 55 slots rechazados (19 MG, 5 kine, 5 eco).",
      fix:"Embudo granular por paso + rescate de slot rechazado + alternativa cuando filtro actúa"},
-    {sev:"p0",area:"Bot",title:"Loop waitlist no acepta respuesta negativa",
+    {sev:"p0",area:"Bot",title:"Loop waitlist no acepta respuesta negativa",done:"2026-06-10 · b750282",
      desc:"Paciente ...1412 recibió 4 veces el prompt binario de waitlist sin poder salir. 'No del Otorrino' fue normalizado como especialidad 'no otorrino' — bug de routing.",
      fix:"Catch-all 'no/nope/no gracias' en waitlist + derivar a IDLE tras 2 repeticiones sin respuesta válida"},
     // BOT — P1
@@ -450,16 +450,16 @@ const AUDIT_DATA = {
      desc:"Confirmaciones de asistencia, preguntas de info y avisos de atraso quedan como 'otro' sin reconducción. Potencial de ~22 citas/semana adicionales.",
      fix:"Agregar intents aviso_asistencia e intent_info al router; cache de patrones en claude_helper.py"},
     // BOT — P2
-    {sev:"p2",area:"Bot",title:"Error tecnico en ver_todos — 9 instancias/7d",
+    {sev:"p2",area:"Bot",title:"Error tecnico en ver_todos — 9 instancias/7d",done:"2026-06-10 · b750282",
      desc:"Tendencia al alza (4 el 8-jun). Falla intermitente Medilink sin reintento automático. El paciente queda sin respuesta.",
      fix:"Reintento exponencial (2 intentos, 500ms) en buscar_slots_dia antes de reportar error"},
     {sev:"p2",area:"Bot",title:"Waitlist larga sin notificar: 17 cardiología + 9 más",
      desc:"17 en cardiología, 6 en otorrino, 3 en gastro sin notificación de apertura de cupos. Valor en riesgo estimado $1.4–1.9M CLP. Slugs duplicados: 'estetica'/'estética facial'.",
      fix:"Normalizar slugs waitlist + aviso semanal automático a pacientes en lista >14 días"},
-    {sev:"p2",area:"Bot",title:"Trigger SAMU131 demasiado sensible",
+    {sev:"p2",area:"Bot",title:"Trigger SAMU131 demasiado sensible",done:"2026-06-10 · b750282",
      desc:"Se disparó ante queja histórica narrada sin urgencia actual (caso ...1412). Genera fricción innecesaria y puede erosionar confianza del paciente.",
      fix:"Ajustar umbral: requerir tiempo verbal presente o indicador de urgencia además de keyword"},
-    {sev:"p2",area:"Bot",title:"Nombre incorrecto en template marketing",
+    {sev:"p2",area:"Bot",title:"Nombre incorrecto en template marketing",done:"2026-06-10 · b750282",
      desc:"Template dental_limpieza_junio_v2 envió nombre de campo vacío a algunos pacientes sin nombre registrado. Afecta percepción de personalización.",
      fix:"Fallback 'Estimado/a paciente' cuando contact_profiles.name es None o vacío en template render"},
   ],
@@ -479,7 +479,7 @@ const AUDIT_DATA = {
   mejoras: [
     // Quick wins S+A
     {n:1,  title:"Fix auth /admin/v3 — 1 línea",                          area:"Panel", ef:"S", imp:"A", qw:true},
-    {n:2,  title:"Catch-all 'no' en waitlist + derivar tras 2 repeticiones",area:"Bot",  ef:"S", imp:"A", qw:true},
+    {n:2,  title:"Catch-all 'no' en waitlist + derivar tras 2 repeticiones",area:"Bot",  ef:"S", imp:"A", qw:true, done:true},
     {n:3,  title:"Rescate de slot rechazado (¿otro día u otro especialista?)",area:"Bot", ef:"S", imp:"A", qw:true},
     {n:4,  title:"Embudo granular con eventos por paso",                   area:"Bot",  ef:"S", imp:"A", qw:true},
     {n:5,  title:"Sumar Brain + Agents + Orquestadores al sidebar",        area:"Panel", ef:"S", imp:"A", qw:true},
@@ -497,10 +497,10 @@ const AUDIT_DATA = {
     // Bot M/L
     {n:16, title:"Cancelar/reagendar familiar via family_links",           area:"Bot",  ef:"M", imp:"A", qw:false, done:true},
     {n:17, title:"Normalizar slugs waitlist duplicados",                   area:"Bot",  ef:"S", imp:"M", qw:false},
-    {n:18, title:"Reintento exponencial en ver_todos (Medilink intermitente)",area:"Bot",ef:"S", imp:"M", qw:false},
+    {n:18, title:"Reintento exponencial en ver_todos (Medilink intermitente)",area:"Bot",ef:"S", imp:"M", qw:false, done:true},
     {n:19, title:"Aviso semanal waitlist larga (>14 días)",                area:"Bot",  ef:"S", imp:"M", qw:false},
-    {n:20, title:"Intent aviso_atraso — reconducción en vez de ignorar",   area:"Bot",  ef:"S", imp:"B", qw:false},
-    {n:21, title:"Umbral SAMU en quejas históricas sin urgencia presente", area:"Bot",  ef:"M", imp:"M", qw:false},
+    {n:20, title:"Intent aviso_atraso — reconducción en vez de ignorar",   area:"Bot",  ef:"S", imp:"B", qw:false, done:true},
+    {n:21, title:"Umbral SAMU en quejas históricas sin urgencia presente", area:"Bot",  ef:"M", imp:"M", qw:false, done:true},
     {n:22, title:"Follow-up proactivo a intent 'otro' de tipo info",       area:"Bot",  ef:"M", imp:"M", qw:false},
   ],
 
