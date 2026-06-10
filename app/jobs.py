@@ -3334,7 +3334,9 @@ async def _job_winback_daily_report() -> None:
 # M4: Digest semanal de pacientes con >14 días en waitlist
 # Gateado por WAITLIST_DIGEST_ENABLED (default true — notificación solo interna)
 # ─────────────────────────────────────────────────────────────────────────────
-_WAITLIST_DIGEST_ENABLED = _os_dr.getenv("WAITLIST_DIGEST_ENABLED", "true").lower() in ("true", "1", "yes")
+def _get_waitlist_digest_enabled() -> bool:
+    import os as _os_wd2
+    return _os_wd2.getenv("WAITLIST_DIGEST_ENABLED", "true").lower() in ("true", "1", "yes")
 
 
 async def _job_waitlist_digest_semanal():
@@ -3343,7 +3345,7 @@ async def _job_waitlist_digest_semanal():
     NO contacta a los pacientes — es solo notificación interna.
     Gateado por env WAITLIST_DIGEST_ENABLED (default true).
     """
-    if not _WAITLIST_DIGEST_ENABLED:
+    if not _get_waitlist_digest_enabled():
         log.info("waitlist_digest: desactivado (WAITLIST_DIGEST_ENABLED=false)")
         return
 
@@ -3421,7 +3423,9 @@ async def _job_waitlist_digest_semanal():
 # ─────────────────────────────────────────────────────────────────────────────
 # M5: Follow-up proactivo para intent=info sin cita creada en 10 min
 # ─────────────────────────────────────────────────────────────────────────────
-_FOLLOWUP_INFO_ENABLED = _os_dr.getenv("FOLLOWUP_INFO_ENABLED", "true").lower() in ("true", "1", "yes")
+def _get_followup_info_enabled() -> bool:
+    import os as _os_fi2
+    return _os_fi2.getenv("FOLLOWUP_INFO_ENABLED", "true").lower() in ("true", "1", "yes")
 
 
 async def _job_followup_info():
@@ -3430,7 +3434,7 @@ async def _job_followup_info():
     de reenganche. Guards estrictos: max 1 por sesion, no HUMAN_TAKEOVER,
     ventana 24h Meta, respeta has_recent_event followup_info_enviado (7 dias).
     """
-    if not _FOLLOWUP_INFO_ENABLED:
+    if not _get_followup_info_enabled():
         return
 
     import json as _json_fi
