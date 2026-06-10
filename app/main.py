@@ -905,6 +905,7 @@ _ADMIN_V3_HTML = (_TEMPLATE_DIR / "admin_v3.html").read_text(encoding="utf-8") i
 _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _PORTAL_V2_HTML = (_TEMPLATE_DIR / "portal_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v2.html").exists() else ""
 _PORTAL_V3_HTML = (_TEMPLATE_DIR / "portal_v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v3.html").exists() else ""
+_PORTAL_V4_HTML = (_TEMPLATE_DIR / "portal_v4.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v4.html").exists() else ""
 _PORTAL_INFORME_HTML = (_TEMPLATE_DIR / "portal_informe.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_informe.html").exists() else ""
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
@@ -2358,6 +2359,12 @@ def portal_page_v2(request: Request, demo: str = ""):
 def portal_page_v3(request: Request, demo: str = ""):
     """Portal v3 — V2 + Banderas rojas. ?demo=1 -> modo demo sin clave."""
     return _serve_portal(_PORTAL_V3_HTML or _PORTAL_V2_HTML or _PORTAL_HTML, request, demo)
+
+
+@app.get("/portal/v4", response_class=HTMLResponse)
+def portal_page_v4(request: Request, demo: str = ""):
+    """Portal v4 — copia editable de v3 ("demo 2"). v3 queda congelada como demo 1."""
+    return _serve_portal(_PORTAL_V4_HTML or _PORTAL_V3_HTML or _PORTAL_V2_HTML or _PORTAL_HTML, request, demo)
 
 
 @app.get("/portal/informe", response_class=HTMLResponse)
