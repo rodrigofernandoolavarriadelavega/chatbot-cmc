@@ -361,7 +361,7 @@ async def lifespan(app: FastAPI):
     # que el cron de las 22:00 no alcanzó (la cita aún no había ocurrido).
     scheduler.add_job(
         _job_postconsulta_morning,
-        CronTrigger(hour=9, minute=0, timezone=_CLT),
+        CronTrigger(hour=9, minute=12, timezone=_CLT),  # 9:12 (era 9:00; cluster de 6 jobs → 429)
         id="seguimiento_postconsulta_morning",
         replace_existing=True,
     )
@@ -382,7 +382,7 @@ async def lifespan(app: FastAPI):
     # (cita 54874 anulada hace 20 días seguía generando recordatorios).
     scheduler.add_job(
         _job_detectar_cancelaciones,
-        CronTrigger(minute=15, timezone=_CLT),  # cada hora :15
+        CronTrigger(minute=24, timezone=_CLT),  # cada hora :24 (era :15; chocaba con recordatorios_2h+telemedicina → 995×429 en :15)
         id="detectar_cancelaciones",
         replace_existing=True,
     )
@@ -437,7 +437,7 @@ async def lifespan(app: FastAPI):
     # Solo lectura — NO contacta pacientes. Envía resumen rankeado al dueño.
     scheduler.add_job(
         _job_demanda_semanal,
-        CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon", hour=9, minute=6, timezone=_CLT),  # 9:06 (era 9:00)
         id="demanda_semanal",
         replace_existing=True,
     )
@@ -472,7 +472,7 @@ async def lifespan(app: FastAPI):
     # Cross-sell ORL↔Fono: jueves 11:00 CLT
     scheduler.add_job(
         _job_crosssell_orl_fono,
-        CronTrigger(day_of_week="thu", hour=11, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="thu", hour=11, minute=24, timezone=_CLT),  # 11:24 (era 11:00)
         id="crosssell_orl_fono",
         replace_existing=True,
     )
@@ -495,21 +495,21 @@ async def lifespan(app: FastAPI):
     # Template pendiente de aprobacion Meta: crosssell_ortodoncia_post_dental_v1.
     scheduler.add_job(
         _job_crosssell_post_dental_ortodoncia,
-        CronTrigger(day_of_week="mon-fri", hour=11, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon-fri", hour=11, minute=6, timezone=_CLT),  # 11:06 (era 11:00; cluster de 5 jobs)
         id="crosssell_post_dental_ortodoncia",
         replace_existing=True,
     )
     # Cumpleaños: diario a las 10:00 CLT
     scheduler.add_job(
         _job_cumpleanos,
-        CronTrigger(hour=10, minute=0, timezone=_CLT),
+        CronTrigger(hour=10, minute=18, timezone=_CLT),  # 10:18 (era 10:00; chocaba con recordatorios_48h)
         id="cumpleanos_diario",
         replace_existing=True,
     )
     # Win-back >90 días: primer lunes de cada mes a las 10:00 CLT
     scheduler.add_job(
         _job_winback,
-        CronTrigger(day_of_week="mon", day="1-7", hour=10, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon", day="1-7", hour=10, minute=42, timezone=_CLT),  # 10:42 (era 10:00; libre entre dental 10:35 y blast 11:xx)
         id="winback_mensual",
         replace_existing=True,
     )
@@ -538,9 +538,11 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
     # Doctor alerts: resumen pre-cita cada 5 min (lun-sáb 07:30-21:30 CLT)
+    # Desfasado a :03/:08/.../:58 para no caer en :00/:15/:30/:45 junto a
+    # recordatorios_2h (anti-429 Medilink).
     scheduler.add_job(
         _job_doctor_resumen_precita,
-        CronTrigger(minute="*/5", hour="7-21", day_of_week="mon-sat", timezone=_CLT),
+        CronTrigger(minute="3-58/5", hour="7-21", day_of_week="mon-sat", timezone=_CLT),
         id="doctor_resumen_precita",
         replace_existing=True,
     )
@@ -609,14 +611,14 @@ async def lifespan(app: FastAPI):
     # Dashboards semanales a profesionales: lunes 09:00 CLT
     scheduler.add_job(
         _job_enviar_dashboards_semanales,
-        CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon", hour=9, minute=18, timezone=_CLT),  # 9:18 (era 9:00)
         id="dashboards_semanales_profesionales",
         replace_existing=True,
     )
     # Resumen diario a profesionales: lun-sáb 07:00 CLT (permiso resumen_diario_07)
     scheduler.add_job(
         _job_resumen_diario_profesionales,
-        CronTrigger(day_of_week="mon-sat", hour=7, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon-sat", hour=7, minute=12, timezone=_CLT),  # 7:12 (era 7:00; chocaba con waitlist_check, ambos Medilink-heavy)
         id="resumen_diario_profesionales",
         replace_existing=True,
     )
@@ -644,9 +646,12 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
     # Telemedicina recordatorios: cada 15 min entre 7 y 22 CLT
+    # Desfasado a :07/:22/:37/:52 — antes corría en :00/:15/:30/:45, la misma
+    # grilla que recordatorios_2h → ráfagas simultáneas a Medilink = 429
+    # (1.640 errores en minuto :00, peor burst 290 el 2026-06-09 16:00 CLT).
     scheduler.add_job(
         _job_telemedicina_recordatorios,
-        CronTrigger(minute="*/15", hour="7-22", timezone=_CLT),
+        CronTrigger(minute="7,22,37,52", hour="7-22", timezone=_CLT),
         id="telemedicina_recordatorios",
         replace_existing=True,
     )
@@ -655,7 +660,7 @@ async def lifespan(app: FastAPI):
     # Activar solo después de piloto N=5 y confirmación de Rodrigo.
     scheduler.add_job(
         _job_crosssell_dx,
-        CronTrigger(hour=11, minute=0, timezone=_CLT),
+        CronTrigger(hour=11, minute=18, timezone=_CLT),  # 11:18 (era 11:00)
         id="crosssell_dx_diario",
         replace_existing=True,
     )
@@ -682,7 +687,7 @@ async def lifespan(app: FastAPI):
     # candidatos ya están excluidos del pool general vía v_winback_cohortes_contactables.
     scheduler.add_job(
         _job_marketing_consent_blast,
-        CronTrigger(day_of_week="mon-fri", hour=11, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon-fri", hour=11, minute=12, timezone=_CLT),  # 11:12 (era 11:00; sigue corriendo después del dental 10:30)
         id="marketing_consent_blast",
         replace_existing=True,
         misfire_grace_time=600,
@@ -724,14 +729,14 @@ async def lifespan(app: FastAPI):
     # Reporte conversión Promo Dental Junio: diario 09:00 CLT (solo si ventana 24h abierta; no-op tras junio)
     scheduler.add_job(
         _job_dental_promo_report,
-        CronTrigger(hour=9, minute=0, timezone=_CLT),
+        CronTrigger(hour=9, minute=24, timezone=_CLT),  # 9:24 (era 9:00)
         id="dental_promo_report",
         replace_existing=True,
     )
     # Reporte semanal de salud del bot: lunes 09:00 CLT
     scheduler.add_job(
         _job_health_report,
-        CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=_CLT),
+        CronTrigger(day_of_week="mon", hour=9, minute=36, timezone=_CLT),  # 9:36 (era 9:00)
         id="health_report_semanal",
         replace_existing=True,
     )
