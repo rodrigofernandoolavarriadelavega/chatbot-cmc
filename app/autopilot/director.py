@@ -104,6 +104,15 @@ def evaluate() -> dict:
         return {"error": f"P&L no disponible: {e}", "budget": budget, "recommendations": []}
 
     channels = pnl.get("channels", [])
+    # Dos relojes (fix 2026-06-10): el táctico (ventana del presupuesto) dice cuánta
+    # plata mover; el estratégico (90d) dice si un canal VIVE o MUERE. Sin esto el
+    # operador recomendó apagar win-back por una semana floja (neto −$1.450) cuando
+    # el 90d daba ROAS 29× — el canal no estaba malo, tenía el pool de consent seco.
+    try:
+        pnl90 = impact.pnl(days=90) if days < 90 else pnl
+    except Exception:  # noqa: BLE001
+        pnl90 = pnl
+    ch90 = {c["channel"]: c for c in pnl90.get("channels", [])}
     spend_used = sum(c["cost_clp"] for c in channels
                      if CHANNEL_SWITCH.get(c["channel"], {}).get("spends"))
     cap = budget["amount"] if budget["mode"] == "fixed" else None
@@ -127,9 +136,23 @@ def evaluate() -> dict:
             why = f"rinde: ${rev:,} ingreso vs ${cost:,} costo (neto +${net:,}{', ROAS '+str(roas)+'x' if roas else ''})."
             conf = "alta" if (roas or 99) >= 2 else "media"
         elif net < 0:
-            action = "apagar" if on else "mantener OFF"
-            why = f"pierde: ${cost:,} costo vs ${rev:,} ingreso (neto ${net:,}). Cortar es seguro y reversible."
-            conf = "alta"
+            c90 = ch90.get(c["channel"]) or {}
+            net90 = c90.get("net_clp", 0) or 0
+            roas90 = c90.get("roas")
+            if net90 > 0:
+                # Ventana corta negativa pero el 90d RINDE → el canal no está malo,
+                # tiene un cuello (pool seco, estacionalidad). No se mata un canal
+                # rentable por una semana floja.
+                action = "vigilar"
+                why = (f"ventana corta pierde (neto ${net:,}) pero a 90d RINDE "
+                       f"(neto +${net90:,}" + (f", ROAS {roas90}×" if roas90 else "") +
+                       ") → no apagar por una semana floja; revisar el cuello "
+                       "(pool de consent / estacionalidad).")
+                conf = "media"
+            else:
+                action = "apagar" if on else "mantener OFF"
+                why = f"pierde: ${cost:,} costo vs ${rev:,} ingreso (neto ${net:,}). Cortar es seguro y reversible."
+                conf = "alta"
         else:
             action, why, conf = "vigilar", f"al límite (neto ${net:,}).", "media"
 
@@ -142,12 +165,16 @@ def evaluate() -> dict:
                 action = "esperar presupuesto"
                 conf = "media"
 
+        _c90 = ch90.get(c["channel"]) or {}
         recs.append({
             "switch": meta["label"], "flag": meta["flag"], "channel": c["channel"],
             "estado_actual": "ON" if on else "OFF", "accion": action,
             "razon": why, "confianza": conf, "spends": meta["spends"],
             "roas": roas, "net_clp": net, "cost_clp": cost, "revenue_clp": rev,
             "budget_block": budget_block,
+            # Dos relojes: el juicio declara su ventana y expone el 90d al lado.
+            "ventana_dias": days,
+            "roas_90d": _c90.get("roas"), "net_90d_clp": _c90.get("net_clp"),
         })
 
     order = {"apagar": 0, "prender": 1, "esperar presupuesto": 2, "mantener ON": 3,

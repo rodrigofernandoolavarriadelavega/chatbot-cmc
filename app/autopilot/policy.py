@@ -142,9 +142,25 @@ def _aranceles() -> dict[str, int]:
         return {}
 
 
+def _margen_overrides_aplicados() -> dict[str, int]:
+    """Overrides de margen APLICADOS desde el panel (cierre del loop Optimizer→policy,
+    2026-06-10). El Optimizador detecta margen real ≠ asumido (con honorario del BI);
+    al aprobarse en /autopilot/salud se persiste acá (autopilot_settings.json) y la
+    política lo usa EN VIVO sin redeploy. Prioridad máxima: dato real > hardcode > fórmula."""
+    try:
+        from . import settings as ap_settings
+        ov = ap_settings.get("policy_margen_override") or {}
+        return {str(k).lower().strip(): int(v) for k, v in ov.items() if v and int(v) > 0}
+    except Exception:  # noqa: BLE001 — sin settings, la política sigue con sus defaults
+        return {}
+
+
 def _margen_esp(especialidad: str | None) -> int:
     """Margen de contribución estimado por paciente atendido de esa especialidad."""
     esp = (especialidad or "").lower().strip()
+    aplicado = _margen_overrides_aplicados()
+    if esp in aplicado:
+        return aplicado[esp]
     if esp in _MARGEN_OVERRIDE:
         return _MARGEN_OVERRIDE[esp]
     arancel = _aranceles().get(esp)

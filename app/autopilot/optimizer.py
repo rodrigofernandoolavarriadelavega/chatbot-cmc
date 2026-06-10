@@ -36,10 +36,10 @@ WINBACK_MIN_SENDS = 25       # mínimo de envíos por cohorte para confiar en la
 OWNER_PROF_IDS = [int(x) for x in os.getenv("OWNER_PROF_IDS", "1").split(",") if x.strip().isdigit()]
 
 
-def _rec(policy, current, proposed, evidence, impact, confidence, action="revisar"):
+def _rec(policy, current, proposed, evidence, impact, confidence, action="revisar", **extra):
     return {"policy": policy, "current": current, "proposed": proposed,
             "evidence": evidence, "impact": impact,
-            "confidence": confidence, "action": action}
+            "confidence": confidence, "action": action, **extra}
 
 
 def _bi():
@@ -128,14 +128,16 @@ def analyze_margins(days: int = 90, min_n: int = 5) -> tuple[list[dict], list[st
                 evidence=base,
                 impact="SOBREESTIMA la rentabilidad → el Autopilot tolera un CAC más alto del real "
                        "y puede sobre-gastar en esta especialidad. Bajar acerca el CAC tolerable a la realidad.",
-                confidence="alta", action="bajar"))
+                confidence="alta", action="bajar",
+                especialidad=str(esp).lower(), proposed_clp=real, current_clp=asum))
         elif gap <= -MARGIN_GAP_PCT:
             recs.append(_rec(
                 policy=f"margen[{esp}]", current=f"${asum:,}", proposed=f"≈ ${real:,}",
                 evidence=base,
                 impact="SUBESTIMA la rentabilidad → el Autopilot es demasiado conservador y puede "
                        "dejar de escalar campañas que sí convienen.",
-                confidence="media", action="subir"))
+                confidence="media", action="subir",
+                especialidad=str(esp).lower(), proposed_clp=real, current_clp=asum))
         else:
             notes.append(f"{esp}: asumido ${asum:,} vs real ${real:,} ({gap:+.0f}%) — alineado.")
     return recs, notes

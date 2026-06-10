@@ -37,6 +37,17 @@ for f in "${MINE[@]}"; do
   [ -e "$f" ] || { c_red "No existe: $f"; exit 1; }
 done
 
+# ── Tripwire (incidente 2026-06-10): 'data' JAMÁS debe trackearse. Un symlink
+#    'data' se coló a git y borró la sessions.db de prod. Abortar si reaparece.
+if [ -n "$(git ls-files data)" ] || [ -L data ]; then
+  c_red "ABORT: 'data' está trackeado o es un symlink — NUNCA se commitea (borra la DB de prod)."
+  c_red "  Arreglar:  [ -L data ] && rm data && mkdir -p data ; git rm -r --cached data 2>/dev/null || true"
+  exit 1
+fi
+for f in "${MINE[@]}"; do
+  case "$f" in data|data/*) c_red "ABORT: no se puede shippear bajo data/ ($f)."; exit 1;; esac
+done
+
 echo "── ship: $(printf '%s ' "${MINE[@]}")──"
 
 # 1. SNAPSHOT (nada se pierde).

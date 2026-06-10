@@ -541,6 +541,54 @@ def optimizer_proposals(token: str | None = Query(None), request: Request = None
     return JSONResponse(optimizer.run_analysis())
 
 
+# Especialidades del BI cuyo nombre no coincide con la clave que usa la política
+# (policy._infer_especialidad / ARANCELES_CLP). El apply traduce antes de guardar.
+_OPT_ESP_ALIAS = {
+    "tecnólogo médico ecografista": "ecografía",
+    "tecnologo medico ecografista": "ecografía",
+    "traumatología": "traumatología y ortopedia",
+}
+
+
+@router.post("/autopilot/api/optimizer/apply")
+async def optimizer_apply(request: Request, token: str | None = Query(None)):
+    """Cierra el loop Optimizer→policy (2026-06-10): aplica una recomendación de
+    margen como override vivo en autopilot_settings.json. La política lo lee al
+    instante (sin redeploy). margen=0 borra el override (vuelve a la fórmula).
+    Auditable: queda log_event `optimizer_override_aplicado`."""
+    _check_token(token, request)
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "body JSON requerido")
+    esp = str(body.get("especialidad") or "").strip().lower()
+    esp = _OPT_ESP_ALIAS.get(esp, esp)
+    try:
+        margen = int(body.get("margen") or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "margen debe ser entero CLP")
+    if not esp:
+        raise HTTPException(400, "especialidad requerida")
+    if margen < 0 or margen > 500_000:
+        raise HTTPException(400, "margen fuera de rango razonable")
+    from . import settings as ap_settings
+    ov = dict(ap_settings.get("policy_margen_override") or {})
+    if margen == 0:
+        ov.pop(esp, None)
+    else:
+        ov[esp] = margen
+    ap_settings.set_setting("policy_margen_override", ov)
+    try:
+        from session import log_event
+        log_event("system", "optimizer_override_aplicado",
+                  {"especialidad": esp, "margen_clp": margen})
+    except Exception:  # noqa: BLE001
+        pass
+    log.info("[autopilot] override de margen aplicado: %s → %s", esp,
+             f"${margen:,}" if margen else "(borrado, vuelve a fórmula)")
+    return {"ok": True, "especialidad": esp, "margen_clp": margen, "overrides": ov}
+
+
 @router.get("/autopilot/api/experiments")
 def experiments_ledger(token: str | None = Query(None), request: Request = None):
     """Champion/Challenger: ledger de experimentos de política + veredictos con

@@ -37,6 +37,12 @@ TEMA="$(echo "$1" | tr ' ' '-' | tr -cd 'a-zA-Z0-9-_')"
 DEST="$WROOT/$TEMA"
 BR="session/$TEMA"
 
+# ── Salvaguarda (incidente 2026-06-10): jamás operar sobre el checkout principal.
+if [ -z "$TEMA" ] || [ "$DEST" = "$MAIN" ] || [ "$(cd "$DEST" 2>/dev/null && pwd -P)" = "$(cd "$MAIN" && pwd -P)" ]; then
+  echo "ABORT: tema inválido o el destino sería el checkout principal ($MAIN). No toco nada."
+  exit 1
+fi
+
 git fetch origin --quiet 2>/dev/null || true
 mkdir -p "$WROOT"
 
@@ -48,11 +54,14 @@ else
   else
     git worktree add "$DEST" -b "$BR" origin/main
   fi
-  # gitignored que el worktree necesita: enlazar al checkout principal.
-  for shared in .env data; do
-    [ -e "$MAIN/$shared" ] && ln -sfn "$MAIN/$shared" "$DEST/$shared"
-  done
-  echo "✔ sesión '$TEMA' lista (rama $BR, basada en origin/main; .env y data/ enlazados)"
+  # Enlazar SOLO .env (archivo) — el worktree lo necesita para importar la app.
+  # ⚠️ NO se enlaza data/: causó el incidente 2026-06-10 (un symlink 'data' se coló
+  # a git y borró la sessions.db de prod). El worktree usa su propio data/ aislado
+  # (vacío, se crea solo); para deployar basta que el CÓDIGO importe, no los datos.
+  if [ -e "$MAIN/.env" ] && [ ! -e "$DEST/.env" ]; then
+    ln -s "$MAIN/.env" "$DEST/.env"   # sin -fn: nunca fuerza/reemplaza nada
+  fi
+  echo "✔ sesión '$TEMA' lista (rama $BR, basada en origin/main; .env enlazado, data/ aislado)"
 fi
 echo
 echo "  → Abrí una ventana de Claude AHÍ:    cd $DEST"

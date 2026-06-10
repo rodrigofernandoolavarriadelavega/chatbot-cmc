@@ -22,6 +22,14 @@ esac
 
 MSG="${1:-}"; shift || true
 
+# ── Tripwire (incidente 2026-06-10): 'data' JAMÁS debe trackearse. Como acá se
+#    hace 'git add -A', un symlink 'data' se colaría y borraría la DB de prod.
+if [ -n "$(git ls-files data)" ] || [ -L data ]; then
+  echo "✘ ABORT: 'data' está trackeado o es un symlink — NUNCA se commitea (borra la DB de prod)."
+  echo "  Arreglar:  [ -L data ] && rm data && mkdir -p data ; git rm -r --cached data 2>/dev/null || true"
+  exit 1
+fi
+
 # 1. Commit.
 if [ -n "$MSG" ]; then
   if [ $# -gt 0 ]; then git add -- "$@"; else git add -A; fi

@@ -4,6 +4,8 @@
 .env.pre-*
 ga4-key.json
 data/
+/data
+/data.*
 __pycache__/
 *.pyc
 .DS_Store

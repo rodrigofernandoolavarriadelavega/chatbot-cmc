@@ -321,6 +321,20 @@ body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:va
     </div>
   </div>
 
+  <!-- OPTIMIZER -->
+  <div class="section">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="ph-ico"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+        <h2>Optimizador — recalibraciones con evidencia real</h2>
+        <div class="count" id="optCount">—</div>
+      </div>
+      <div class="panel-b" id="optBody">
+        <div class="unavail">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- WIN-BACK -->
   <div class="section">
     <div class="panel">
@@ -458,10 +472,10 @@ function buildSemaforo(snap, pend, impact90){
   // 5. Optimizer proposals
   const propCount = impact90 && impact90._proposals_count != null ? impact90._proposals_count : null;
   cards.push(semCard(
-    'gris',
+    propCount > 0 ? 'ambar' : 'gris',
     'Optimizer',
     propCount != null ? propCount : '—',
-    propCount === 0 ? 'Sin propuestas nuevas en este ciclo' : (propCount > 0 ? propCount + ' propuesta(s) activa(s)' : 'No disponible'),
+    propCount === 0 ? 'Sin propuestas nuevas en este ciclo' : (propCount > 0 ? propCount + ' recalibracion(es) esperando — la politica esta desalineada de la caja real' : 'No disponible'),
     '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>'
   ));
 
@@ -855,10 +869,55 @@ function renderWinback(data){
   </div>`;
 }
 
-// ── Optimizer proposals count (solo para el semaforo) ─────────────────────
-async function loadOptimizerCount(){
-  const data = await safeGet('/autopilot/api/optimizer/proposals');
-  return data && data.proposals ? data.proposals.length : (data ? 0 : null);
+// ── Optimizer — recomendaciones con evidencia + aplicar override ───────────
+// FIX 2026-06-10: la API devuelve `recommendations` (no `proposals`); por leer la
+// clave equivocada el panel decia "0 propuestas" con el optimizador lleno de
+// hallazgos (ej: otorrino margen real $6.757 vs $19.000 asumido, +181%).
+let _optData = null;
+async function loadOptimizer(){
+  _optData = await safeGet('/autopilot/api/optimizer/proposals');
+  renderOptimizer(_optData);
+  const recs = _optData && _optData.recommendations;
+  return recs ? recs.length : (_optData ? 0 : null);
+}
+
+function renderOptimizer(data){
+  const body = document.getElementById('optBody');
+  const cnt = document.getElementById('optCount');
+  if(!data){ body.innerHTML = '<div class="unavail">No disponible</div>'; cnt.textContent='—'; return; }
+  const recs = data.recommendations || [];
+  cnt.textContent = recs.length;
+  if(!recs.length){ body.innerHTML = '<div class="unavail">Sin recalibraciones pendientes — politica alineada con la caja real.</div>'; return; }
+  body.innerHTML = recs.map((r,i) => {
+    const aplicable = r.especialidad && r.proposed_clp;
+    const verbo = r.action === 'bajar' ? '⬇️' : (r.action === 'subir' ? '⬆️' : '✏️');
+    return `<div class="dir-card">
+      <div class="dir-top">
+        <span class="dir-switch">${verbo} ${esc(r.policy||'')}</span>
+        <span class="dir-badge ${r.confidence==='alta'?'on':''}">${esc(r.confidence||'')} confianza</span>
+      </div>
+      <div class="dir-reason">${esc(r.evidence||'')}</div>
+      <div class="dir-reason" style="opacity:.75">${esc(r.impact||'')}</div>
+      <div class="dir-top" style="margin-top:8px">
+        <span class="dir-reason"><b>${esc(r.current||'')}</b> → <b>${esc(r.proposed||'')}</b></span>
+        ${aplicable ? `<button class="btn-approve" onclick="applyOptimizer(${i})">Aplicar a la politica</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function applyOptimizer(i){
+  const r = (_optData && _optData.recommendations || [])[i];
+  if(!r || !r.especialidad || !r.proposed_clp) return;
+  if(!confirm(`Aplicar margen ${r.proposed} a "${r.especialidad}"?\n\nLa politica usara este margen real (con honorario) en vez del asumido ${r.current}. Reversible desde este panel.`)) return;
+  try{
+    const res = await fetch(qs('/autopilot/api/optimizer/apply'), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({especialidad: r.especialidad, margen: r.proposed_clp})
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    await loadOptimizer();
+  }catch(e){ alert('No se pudo aplicar: '+e.message); }
 }
 
 // ── Refresh principal ─────────────────────────────────────────────────────────
@@ -872,7 +931,7 @@ async function refreshAll(){
   const [snap, pend, propCount] = await Promise.all([
     safeGet('/autopilot/api/snapshot'),
     loadPend(),
-    loadOptimizerCount(),
+    loadOptimizer(),
   ]);
   _lastSnap = snap;
   _lastPend = pend;
