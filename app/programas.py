@@ -38,7 +38,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 from bi_helper import bi_query
 
@@ -226,6 +226,10 @@ def ensure_programa_plan_table() -> None:
             conn.execute("ALTER TABLE programa_plan ADD COLUMN objetivo TEXT DEFAULT ''")
         if "plan" not in cols:
             conn.execute("ALTER TABLE programa_plan ADD COLUMN plan TEXT DEFAULT ''")
+        if "altura" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN altura REAL")
+        if "proximo_control" not in cols:
+            conn.execute("ALTER TABLE programa_plan ADD COLUMN proximo_control TEXT DEFAULT ''")
         conn.commit()
 
 
@@ -292,6 +296,53 @@ def _mediciones(prog: str, pid: int) -> list[dict]:
             "WHERE programa=? AND paciente_id=? ORDER BY fecha, id", (prog, pid)
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def _imc_calc(peso, altura):
+    """IMC = peso(kg) / altura(m)². altura guardada en metros (ej. 1.68)."""
+    try:
+        if peso and altura and altura > 0:
+            return round(peso / (altura * altura), 1)
+    except Exception:
+        pass
+    return None
+
+
+def _imc_clase(imc):
+    if imc is None:
+        return ""
+    if imc < 18.5: return "Bajo peso"
+    if imc < 25:   return "Normal"
+    if imc < 30:   return "Sobrepeso"
+    return "Obesidad"
+
+
+def _banderas(meds):
+    """Alertas clínicas desde la serie de mediciones [(fecha, peso)] asc.
+    rapida = pérdida >1%/semana en el último tramo; estancado = últimos 3 sin
+    cambio (<0.5 kg); reganancia = subió ≥2 kg desde su mínimo histórico."""
+    pts = [(fe, p) for fe, p in meds if p is not None]
+    out = []
+    if len(pts) < 2:
+        return out
+    pesos = [p for _f, p in pts]
+    (f0, p0), (f1, p1) = pts[-2], pts[-1]
+    try:
+        d0 = datetime.strptime(f0[:10], "%Y-%m-%d").date()
+        d1 = datetime.strptime(f1[:10], "%Y-%m-%d").date()
+        sem = (d1 - d0).days / 7.0
+    except Exception:
+        sem = 0
+    if sem >= 0.5 and p0 > 0:
+        tasa = (p0 - p1) / p0 * 100 / sem  # %/semana (positivo = bajó)
+        if tasa > 1.0:
+            out.append({"tipo": "rapida", "label": "Pérdida muy rápida"})
+    if len(pesos) >= 3 and (max(pesos[-3:]) - min(pesos[-3:])) < 0.5:
+        out.append({"tipo": "estancado", "label": "Estancado"})
+    pmin = min(pesos)
+    if pesos.index(pmin) < len(pesos) - 1 and pesos[-1] - pmin >= 2.0:
+        out.append({"tipo": "reganancia", "label": "Reganancia"})
+    return out
 
 
 # ── Categorías de segmentación (editables por la profesional, por programa) ───
@@ -452,10 +503,10 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
         from session import _conn as _c_med
         with _c_med() as _cm:
             for _m in _cm.execute(
-                "SELECT paciente_id, peso FROM programa_medicion "
+                "SELECT paciente_id, fecha, peso FROM programa_medicion "
                 "WHERE programa=? AND peso IS NOT NULL ORDER BY paciente_id, fecha, id", (prog,)
             ).fetchall():
-                meds_por_pac.setdefault(_m["paciente_id"], []).append(_m["peso"])
+                meds_por_pac.setdefault(_m["paciente_id"], []).append((_m["fecha"], _m["peso"]))
 
     porpac: dict[int, dict] = {}
     for r in rows:
@@ -493,9 +544,13 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
         ingreso_total += d["monto"]
         _pend = _parse_pendientes((plan or {}).get("pendientes"))
         _meds = meds_por_pac.get(pid, []) if es_clinico else []
-        _peso_ini = _meds[0] if _meds else None
-        _peso_act = _meds[-1] if _meds else None
+        _pesos = [p for _f, p in _meds]
+        _peso_ini = _pesos[0] if _pesos else None
+        _peso_act = _pesos[-1] if _pesos else None
         _delta = round(_peso_act - _peso_ini, 1) if (_peso_ini is not None and _peso_act is not None) else None
+        _altura = (plan or {}).get("altura")
+        _imc = _imc_calc(_peso_act, _altura)
+        _band = _banderas(_meds) if es_clinico else []
 
         if tipo == "adherencia":
             episodios = _split_episodios(fechas, cfg["gap_nuevo"])
@@ -527,6 +582,8 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
             "plan": (plan or {}).get("plan", "") or "",
             "peso_inicial": _peso_ini, "peso_actual": _peso_act, "delta_peso": _delta,
             "n_mediciones": len(_meds),
+            "altura": _altura, "imc": _imc, "imc_clase": _imc_clase(_imc), "banderas": _band,
+            "proximo_control": (plan or {}).get("proximo_control", "") or "",
         })
 
     # Orden: del control/atención más reciente al de hace más tiempo
@@ -577,8 +634,19 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
                 mejoro = pa < pi
             if mejoro:
                 n_mej += 1
+        n_band = sum(1 for p in pacientes if p.get("banderas"))
+        prox7 = 0
+        for p in pacientes:
+            pc = p.get("proximo_control")
+            if pc:
+                try:
+                    if 0 <= (datetime.strptime(pc[:10], "%Y-%m-%d").date() - today).days <= 7:
+                        prox7 += 1
+                except Exception:
+                    pass
         clin.update({"kg_perdidos": round(kg_perdidos, 1), "n_seguimiento": n_seg,
-                     "n_mejoraron": n_mej, "pct_mejora": round(100 * n_mej / n_seg) if n_seg else 0})
+                     "n_mejoraron": n_mej, "pct_mejora": round(100 * n_mej / n_seg) if n_seg else 0,
+                     "n_banderas": n_band, "proximos_control": prox7})
 
     kpis = {
         "tipo": tipo, "activos": len(activos), "accionables": n_acc, "urgentes": n_urgentes,
@@ -839,17 +907,23 @@ async def set_plan(prog: str, paciente_id: int, request: Request,
     except (ValueError, TypeError):
         peso_meta = None
     objetivo = (body.get("objetivo") or "").strip()[:60]
+    try:
+        altura = float(body["altura"]) if body.get("altura") not in (None, "", "null") else None
+    except (ValueError, TypeError):
+        altura = None
+    proximo_control = (body.get("proximo_control") or "").strip()[:10]
     ensure_programa_plan_table()
     from session import _conn
     with _conn() as conn:
         conn.execute("""
-            INSERT INTO programa_plan (programa, paciente_id, sesiones_plan, estado_manual, notas, resumen, plan, peso_meta, objetivo, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?, datetime('now'))
+            INSERT INTO programa_plan (programa, paciente_id, sesiones_plan, estado_manual, notas, resumen, plan, peso_meta, objetivo, altura, proximo_control, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?, datetime('now'))
             ON CONFLICT(programa, paciente_id) DO UPDATE SET
                 sesiones_plan=excluded.sesiones_plan, estado_manual=excluded.estado_manual,
                 notas=excluded.notas, resumen=excluded.resumen, plan=excluded.plan,
-                peso_meta=excluded.peso_meta, objetivo=excluded.objetivo, updated_at=excluded.updated_at
-        """, (prog, paciente_id, sesiones_plan, estado_manual, notas, resumen, plan, peso_meta, objetivo))
+                peso_meta=excluded.peso_meta, objetivo=excluded.objetivo,
+                altura=excluded.altura, proximo_control=excluded.proximo_control, updated_at=excluded.updated_at
+        """, (prog, paciente_id, sesiones_plan, estado_manual, notas, resumen, plan, peso_meta, objetivo, altura, proximo_control))
         conn.commit()
     return {"ok": True}
 
@@ -1280,3 +1354,126 @@ async def export_csv(prog: str, meses: int = Query(6, ge=1, le=36),
     fname = f"programa_{prog}_{_today().isoformat()}.csv"
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+def _curva_svg(meds, meta=None):
+    """SVG inline de la curva de peso para el informe (560x190)."""
+    pts = [(fe, p) for fe, p in [(m["fecha"], m["peso"]) for m in meds] if p is not None]
+    if len(pts) < 2:
+        return '<div style="color:#62788a;font-size:13px;padding:20px 0">Sin suficientes mediciones para graficar.</div>'
+    pesos = [p for _f, p in pts]
+    W, H, PAD = 560, 190, 26
+    vmin, vmax = min(pesos), max(pesos)
+    if meta is not None:
+        vmin, vmax = min(vmin, meta), max(vmax, meta)
+    rng = (vmax - vmin) or 1
+    step = (W - 2 * PAD) / (len(pts) - 1)
+    xy = [(PAD + i * step, PAD + (H - 2 * PAD) * (1 - (p - vmin) / rng)) for i, p in enumerate(pesos)]
+    path = " ".join(("L" if i else "M") + f"{x:.1f} {y:.1f}" for i, (x, y) in enumerate(xy))
+    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.5" fill="#1172AB"/>'
+                   f'<text x="{x:.1f}" y="{y-8:.1f}" font-size="10" fill="#0F3F68" text-anchor="middle">{pesos[i]}</text>'
+                   for i, (x, y) in enumerate(xy))
+    meta_line = ""
+    if meta is not None:
+        my = PAD + (H - 2 * PAD) * (1 - (meta - vmin) / rng)
+        meta_line = (f'<line x1="{PAD}" y1="{my:.1f}" x2="{W-PAD}" y2="{my:.1f}" stroke="#23c25e" '
+                     f'stroke-width="1.5" stroke-dasharray="5 4"/>'
+                     f'<text x="{W-PAD}" y="{my-5:.1f}" font-size="10" fill="#1a7a42" text-anchor="end">meta {meta} kg</text>')
+    fechas = "".join(f'<text x="{xy[i][0]:.1f}" y="{H-6}" font-size="9" fill="#62788a" text-anchor="middle">{pts[i][0][5:10]}</text>'
+                     for i in range(len(pts)))
+    return (f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}" style="max-width:100%">'
+            f'{meta_line}<path d="{path}" fill="none" stroke="#4FBECE" stroke-width="2.5"/>{dots}{fechas}</svg>')
+
+
+@router.get("/{prog}/informe-paciente/{paciente_id}", response_class=HTMLResponse)
+async def informe_paciente(prog: str, paciente_id: int, meses: int = Query(12, ge=1, le=36),
+                           token: str | None = Query(None), cmc_session: str | None = Cookie(None),
+                           request: Request = None):
+    """Informe imprimible (guardar como PDF) del paciente: curva de peso + meta + IMC +
+    resumen + indicaciones. Para entregarle/enviarle al paciente."""
+    _tok, scope = _require_admin(request, token, cmc_session)
+    if scope is not None:
+        prog = _prog_for_prof(scope) or prog
+    cfg = _cfg(prog)
+    data = _dispatch(prog, meses, scope)
+    p = next((x for x in data["pacientes"] if x["paciente_id"] == paciente_id), None)
+    if not p:
+        raise HTTPException(404, "Paciente no está en este programa")
+    meds = _mediciones(prog, paciente_id)
+    delta = p.get("delta_peso")
+    dcolor = "#23c25e" if (delta or 0) < 0 else ("#e84545" if (delta or 0) > 0 else "#62788a")
+    def _esc(t):
+        return (str(t or "")).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    def card(lbl, val, sub=""):
+        return (f'<div class="c"><div class="cl">{lbl}</div><div class="cv">{val}</div>'
+                f'<div class="cs">{sub}</div></div>')
+    cards = card("Peso actual", (f"{p['peso_actual']} kg" if p.get("peso_actual") is not None else "—"),
+                 (f'<span style="color:{dcolor}">{"+" if (delta or 0)>0 else ""}{delta} kg</span>' if delta is not None else "desde el inicio"))
+    cards += card("Meta", (f"{p['peso_meta']} kg" if p.get("peso_meta") is not None else "—"), "objetivo de peso")
+    cards += card("IMC", (f"{p['imc']}" if p.get("imc") is not None else "—"), _esc(p.get("imc_clase") or "agregar altura"))
+    cards += card("Objetivo", _esc(p.get("objetivo") or "—"), "motivo de consulta")
+    rows = "".join(f'<tr><td>{m["fecha"]}</td><td><b>{m["peso"] if m["peso"] is not None else "—"} kg</b></td>'
+                   f'<td>{m["cintura"] if m["cintura"] is not None else "—"}</td>'
+                   f'<td>{m["grasa"] if m["grasa"] is not None else "—"}</td>'
+                   f'<td>{_esc(m["nota"])}</td></tr>' for m in reversed(meds))
+    band = "".join(f'<span class="band">⚑ {_esc(b["label"])}</span>' for b in (p.get("banderas") or []))
+    prox = p.get("proximo_control")
+    prox_html = (f'<div class="prox">Próximo control: <b>{prox}</b></div>' if prox else "")
+    msg = f"Hola {_esc((p.get('paciente') or '').split(' ')[0])}, te comparto tu avance nutricional del Centro Médico Carampangue."
+    wa = _wa_link(p.get("telefono", ""), msg) or ""
+    wa_btn = (f'<a class="btn wa" href="{wa}" target="_blank">Compartir por WhatsApp</a>' if wa else "")
+    html = _INFORME_TPL
+    for k, v in {
+        "__PACIENTE__": _esc(p.get("paciente")), "__LUGAR__": _esc(p.get("lugar") or ""),
+        "__FECHA__": _today().strftime("%d/%m/%Y"), "__CARDS__": cards,
+        "__CURVA__": _curva_svg(meds, p.get("peso_meta")), "__ROWS__": rows or '<tr><td colspan="5" style="color:#62788a">Sin mediciones registradas.</td></tr>',
+        "__BANDERAS__": band, "__PROX__": prox_html,
+        "__RESUMEN__": _esc(p.get("resumen") or "—"), "__PLAN__": _esc(p.get("plan") or "—"),
+        "__WA__": wa_btn,
+    }.items():
+        html = html.replace(k, v)
+    return HTMLResponse(html)
+
+
+_INFORME_TPL = """<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Informe nutricional — __PACIENTE__</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box} body{font-family:'Montserrat',sans-serif;color:#0F3F68;margin:0;background:#eef4f8}
+  .page{max-width:820px;margin:18px auto;background:#fff;padding:30px 34px;border-radius:14px;box-shadow:0 6px 24px rgba(15,63,104,.12)}
+  .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #4FBECE;padding-bottom:14px;margin-bottom:18px}
+  .hd h1{font-size:20px;margin:0;color:#0F3F68} .hd .sub{font-size:12px;color:#62788a;margin-top:2px}
+  .hd .org{text-align:right;font-size:11px;color:#62788a} .hd .org b{color:#1172AB;font-size:13px}
+  .pac{font-size:16px;font-weight:800;color:#0F3F68;margin-bottom:2px}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0 20px}
+  .c{background:#F7FBFD;border:1px solid #d6e4ec;border-radius:12px;padding:12px 14px}
+  .cl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#62788a}
+  .cv{font-size:22px;font-weight:800;color:#0F3F68;margin-top:3px} .cs{font-size:10px;color:#62788a;margin-top:2px}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#62788a;margin:20px 0 8px}
+  .band{display:inline-block;background:#fdecea;color:#c0392b;border:1px solid #e0a9a0;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;margin-right:6px}
+  .prox{background:#e8f8fb;border:1px solid #4FBECE;border-radius:10px;padding:8px 12px;font-size:13px;margin-top:6px}
+  table{width:100%;border-collapse:collapse;margin-top:4px} th{text-align:left;font-size:10px;text-transform:uppercase;color:#62788a;border-bottom:1px solid #d6e4ec;padding:7px 8px}
+  td{font-size:12.5px;padding:8px;border-bottom:1px solid #eef4f8}
+  .box{background:#F7FBFD;border:1px solid #d6e4ec;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;white-space:pre-wrap}
+  .tb{display:flex;gap:10px;margin:0 auto 16px;max-width:820px;padding:0 4px}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none}
+  .btn.print{background:#1172AB;color:#fff} .btn.wa{background:#25d366;color:#fff}
+  @media print{ body{background:#fff} .page{box-shadow:none;margin:0;max-width:100%} .tb{display:none} }
+</style></head><body>
+<div class="tb"><button class="btn print" onclick="window.print()">Imprimir / Guardar PDF</button>__WA__</div>
+<div class="page">
+  <div class="hd">
+    <div><h1>Informe nutricional</h1><div class="sub">Seguimiento de peso y evolución</div></div>
+    <div class="org"><b>Centro Médico Carampangue</b><br>Nutrición<br>__FECHA__</div>
+  </div>
+  <div class="pac">__PACIENTE__</div><div class="sub" style="font-size:12px;color:#62788a">__LUGAR__</div>
+  <div style="margin-top:8px">__BANDERAS__</div>
+  __PROX__
+  <div class="cards">__CARDS__</div>
+  <h2>Evolución de peso</h2>
+  <div style="text-align:center">__CURVA__</div>
+  <h2>Mediciones</h2>
+  <table><thead><tr><th>Fecha</th><th>Peso</th><th>Cintura</th><th>% grasa</th><th>Nota</th></tr></thead><tbody>__ROWS__</tbody></table>
+  <h2>Resumen clínico</h2><div class="box">__RESUMEN__</div>
+  <h2>Plan / indicaciones</h2><div class="box">__PLAN__</div>
+</div></body></html>"""
