@@ -30,12 +30,13 @@ _DB_INIT_DONE = False
 
 
 def _conn():
-    """Reusa session._conn: maneja SQLCipher si está activo en producción.
-    Antes este módulo abría sessions.db con sqlite3 plano y fallaba con
-    'file is not a database' en cada call después de activar SQLCipher en
-    el VPS, bloqueando push notifications al admin (visto 2026-04-30)."""
-    from session import _conn as _session_conn
-    return _session_conn()
+    """Reusa session.db(): SQLCipher si aplica + cierre EXPLÍCITO de la
+    conexión (close() suelta el GIL; el cierre por destructor no, y deadlockeó
+    el proceso completo el 2026-06-10 — este módulo corre en threads).
+    Histórico: antes abría sessions.db con sqlite3 plano y fallaba con
+    'file is not a database' tras activar SQLCipher (visto 2026-04-30)."""
+    from session import db as _session_db
+    return _session_db()
 
 
 def init_db():

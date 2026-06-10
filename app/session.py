@@ -14,6 +14,7 @@ import random
 import re
 import sqlite3
 import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -135,6 +136,25 @@ def _conn():
 
 # Alias retrocompatible — algunos módulos importan _get_conn en vez de _conn
 _get_conn = _conn
+
+
+@contextmanager
+def db():
+    """Conexión con transacción + CIERRE EXPLÍCITO.
+
+    Idéntico a `with db() as c:` (commit/rollback) pero cierra la conexión
+    en finally. Crítico: Connection.close() suelta el GIL mientras SQLite
+    cierra; el cierre por destructor (dealloc) NO lo suelta y deadlockeó todo
+    el proceso contra el hilo de push el 2026-06-10 (sqlite3WalClose vs
+    _fire_push_on_inbound en _conn). Usar SIEMPRE db() en vez de _conn() para
+    el patrón with.
+    """
+    conn = _conn()
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def _run_ddl_inline(conn) -> None:
@@ -914,7 +934,7 @@ def is_duplicate(msg_id: str) -> bool:
     Usa INSERT OR IGNORE atómico: si la fila ya existía, rowcount==0 → duplicado.
     Evita race condition cuando Meta reenvía el mismo msg_id en paralelo.
     """
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             "INSERT OR IGNORE INTO processed_msgs (msg_id) VALUES (?)", (msg_id,)
         )
@@ -942,7 +962,7 @@ def inbox_start(wamid: str, phone: str, texto: str) -> None:
     if not wamid:
         return
     try:
-        with _conn() as conn:
+        with db() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO inbox_messages (wamid, phone, texto, status) "
                 "VALUES (?, ?, ?, 'processing')",
@@ -959,7 +979,7 @@ def inbox_done(wamid: str, ok: bool = True, error: str = "") -> None:
     if not wamid:
         return
     try:
-        with _conn() as conn:
+        with db() as conn:
             conn.execute(
                 "UPDATE inbox_messages SET status=?, ts_done=datetime('now'), error=? "
                 "WHERE wamid=?",
@@ -979,7 +999,7 @@ def inbox_stuck(minutes: int = 30) -> list:
     """Mensajes que quedaron en 'processing' (el proceso murió con ellos en
     vuelo) dentro de la ventana reciente. Para el check de arranque."""
     try:
-        with _conn() as conn:
+        with db() as conn:
             return conn.execute(
                 "SELECT wamid, phone, texto, ts_received FROM inbox_messages "
                 "WHERE status='processing' AND ts_received > datetime('now', ?) "
@@ -996,7 +1016,7 @@ def inbox_mark_recovered(wamid: str) -> None:
     if not wamid:
         return
     try:
-        with _conn() as conn:
+        with db() as conn:
             conn.execute(
                 "UPDATE inbox_messages SET status='recovered', ts_done=datetime('now') "
                 "WHERE wamid=?", (wamid,),
@@ -1017,7 +1037,7 @@ def get_session(phone: str) -> dict:
     - IDLE / HUMAN_TAKEOVER / otros: 30 min
     """
     phone = normalize_wa_id(phone)  # BUG-09: formato canónico sin '+'
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute("SELECT * FROM sessions WHERE phone=?", (phone,)).fetchone()
         if not row:
             return {"state": "IDLE", "data": {}}
@@ -1058,7 +1078,7 @@ def save_session(phone: str, state: str, data: dict):
         if _owner and phone == _owner:
             log.info("save_session: HUMAN_TAKEOVER bloqueado para dueño %s — forzado IDLE", phone)
             state = "IDLE"
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             INSERT INTO sessions (phone, state, data, updated_at)
             VALUES (?, ?, ?, datetime('now'))
@@ -1073,7 +1093,7 @@ def save_session(phone: str, state: str, data: dict):
 def reset_session(phone: str):
     """Reinicia la sesión a IDLE."""
     phone = normalize_wa_id(phone)  # BUG-09: formato canónico sin '+'
-    with _conn() as conn:
+    with db() as conn:
         _reset(conn, phone)
 
 
@@ -1092,7 +1112,7 @@ def reanudar_takeovers_expirados(horas_max: int = 24,
     9 sesiones varadas con +8h por imagen sin acción.
     """
     phones_reanudados: list[str] = []
-    with _conn() as conn:
+    with db() as conn:
         if solo_media:
             rows_raw = conn.execute(
                 """
@@ -1163,7 +1183,7 @@ def cleanup_stuck_sessions(hours: int = 4) -> int:
     PRESERVANDO el snapshot last_slots/last_especialidad (igual que _reset).
     Antes el UPDATE crudo borraba ese snapshot y el paciente perdia la
     posibilidad de retomar con '10:30'."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             f"""SELECT phone FROM sessions
                 WHERE (state LIKE 'WAIT_%' OR state LIKE 'CONFIRMING_%')
@@ -1222,7 +1242,7 @@ def _reset(conn, phone: str):
 
 def save_tag(phone: str, tag: str):
     """Agrega un tag al contacto (idempotente). Ej: 'cita-kinesiología'."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT OR IGNORE INTO contact_tags (phone, tag) VALUES (?, ?)",
             (phone, tag)
@@ -1232,7 +1252,7 @@ def save_tag(phone: str, tag: str):
 
 def get_tags(phone: str) -> list[str]:
     """Devuelve todos los tags de un contacto."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT tag FROM contact_tags WHERE phone=? ORDER BY ts", (phone,)
         ).fetchall()
@@ -1241,7 +1261,7 @@ def get_tags(phone: str) -> list[str]:
 
 def delete_tag(phone: str, tag: str):
     """Elimina un tag de un contacto."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("DELETE FROM contact_tags WHERE phone=? AND tag=?", (phone, tag))
         conn.commit()
 
@@ -1252,7 +1272,7 @@ def get_tags_summary() -> dict:
     Excluye tags auto-generados (referido:*, dx:*) para que solo aparezcan
     como filtros las etiquetas manuales y las de interés operativo.
     """
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT phone, tag FROM contact_tags "
             "WHERE tag NOT LIKE 'referido:%' AND tag NOT LIKE 'dx:%'"
@@ -1278,7 +1298,7 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
     es_tercero: True si quien agenda es un familiar/tercero (el celular no es del paciente).
     id_paciente_medilink: ID de paciente en Medilink, para validación de cancelaciones.
     """
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             """INSERT INTO citas_bot (phone, id_cita, especialidad, profesional,
                                        fecha, hora, modalidad, paciente_nombre, es_tercero,
@@ -1314,7 +1334,7 @@ def save_telemedicina_cita(medilink_cita_id: str, phone: str,
     Retorna el id de la fila insertada.
     """
     ts = int(_time_mod.time())
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             """INSERT OR IGNORE INTO telemedicina_citas
                (medilink_cita_id, phone, profesional_id, fecha_hora,
@@ -1330,7 +1350,7 @@ def save_telemedicina_cita(medilink_cita_id: str, phone: str,
 def get_telemedicina_pendientes_24h() -> list[dict]:
     """Citas AGENDADAS de telemedicina cuyo recordatorio de 24h no se ha enviado
     y faltan entre 23h y 25h para la cita."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT * FROM telemedicina_citas
                WHERE status = 'AGENDADA'
@@ -1344,7 +1364,7 @@ def get_telemedicina_pendientes_24h() -> list[dict]:
 def get_telemedicina_pendientes_30min() -> list[dict]:
     """Citas AGENDADAS de telemedicina cuyo recordatorio de 30min no se ha enviado
     y faltan entre 25 y 35 minutos para la cita."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT * FROM telemedicina_citas
                WHERE status = 'AGENDADA'
@@ -1361,7 +1381,7 @@ def mark_telemedicina_recordatorio(row_id: int, tipo: str):
     """
     campo = "enviado_24h" if tipo == "24h" else "enviado_30min"
     ts = int(_time_mod.time())
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             f"UPDATE telemedicina_citas SET {campo}=1, actualizada_ts=? WHERE id=?",
             (ts, row_id)
@@ -1391,7 +1411,7 @@ def get_contactos_con_nombre_sospechoso() -> list[dict]:
         r'es\s+primera(\s+vez)?\s*$)',
         re.IGNORECASE
     )
-    with _conn() as c:
+    with db() as c:
         rows = c.execute(
             "SELECT phone, rut, nombre, updated_at FROM contact_profiles "
             "WHERE nombre IS NOT NULL AND nombre != '' "
@@ -1405,7 +1425,7 @@ def update_contact_nombre(phone: str, nuevo_nombre: str) -> bool:
     nuevo = (nuevo_nombre or "").strip()
     if not nuevo or len(nuevo) < 2:
         return False
-    with _conn() as c:
+    with db() as c:
         cur = c.execute(
             "UPDATE contact_profiles SET nombre = ?, updated_at = datetime('now') "
             "WHERE phone = ?",
@@ -1416,7 +1436,7 @@ def update_contact_nombre(phone: str, nuevo_nombre: str) -> bool:
 
 
 def _ensure_slot_locks_table():
-    with _conn() as c:
+    with db() as c:
         c.execute("""
             CREATE TABLE IF NOT EXISTS slot_locks_tentativos (
                 id_profesional INTEGER NOT NULL,
@@ -1443,7 +1463,7 @@ def adquirir_slot_lock(id_profesional: int, fecha: str, hora_inicio: str,
     Limpia automáticamente locks viejos (> TTL) antes de intentar.
     """
     _ensure_slot_locks_table()
-    with _conn() as c:
+    with db() as c:
         c.execute(
             "DELETE FROM slot_locks_tentativos WHERE ts < datetime('now', ?)",
             (f"-{int(ttl_segundos)} seconds",)
@@ -1467,7 +1487,7 @@ def adquirir_slot_lock(id_profesional: int, fecha: str, hora_inicio: str,
 def liberar_slot_lock(id_profesional: int, fecha: str, hora_inicio: str):
     """Libera el lock tras crear_cita (éxito o fallo). Idempotente."""
     try:
-        with _conn() as c:
+        with db() as c:
             c.execute("""
                 DELETE FROM slot_locks_tentativos
                 WHERE id_profesional=? AND fecha=? AND hora_inicio=?
@@ -1484,7 +1504,7 @@ def get_citas_bot_para_validar(dias_adelante: int = 14) -> list[dict]:
     de forma preventiva (cada hora), no solo en el momento del recordatorio.
     Limita a dias_adelante para no procesar 1000s de citas viejas.
     """
-    with _conn() as conn:
+    with db() as conn:
         # Usar SELECT * para tolerar que id_paciente_medilink no exista aún
         # (primer arranque post-deploy antes de que corra la migración ALTER TABLE).
         # Los callers acceden a las columnas por nombre usando dict.get().
@@ -1507,7 +1527,7 @@ def get_citas_bot_pendientes(fecha: str) -> list[dict]:
     Filtra citas con cancel_detected_at NOT NULL (canceladas detectadas previamente).
     Usa paciente_nombre de citas_bot si existe; fallback a contact_profiles.
     Incluye phone_owner (nombre del dueño del celular) para recordatorios de terceros."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT c.*,
                       CASE WHEN c.paciente_nombre != '' THEN c.paciente_nombre
@@ -1525,7 +1545,7 @@ def get_citas_bot_pendientes(fecha: str) -> list[dict]:
 
 def save_profile(phone: str, rut: str, nombre: str, fecha_nacimiento: str = None):
     """Guarda o actualiza el perfil del paciente asociado al número."""
-    with _conn() as conn:
+    with db() as conn:
         if fecha_nacimiento:
             conn.execute("""
                 INSERT INTO contact_profiles (phone, rut, nombre, fecha_nacimiento, updated_at)
@@ -1547,7 +1567,7 @@ def save_profile(phone: str, rut: str, nombre: str, fecha_nacimiento: str = None
 
 def get_profile(phone: str) -> dict | None:
     """Retorna el perfil del paciente si existe (rut, nombre)."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT rut, nombre FROM contact_profiles WHERE phone=?", (phone,)
         ).fetchone()
@@ -1563,7 +1583,7 @@ _PERFIL_CAMPOS = (
 def get_profile_full(phone: str) -> dict:
     """Retorna el perfil completo (todos los campos editables + phone + rut)."""
     cols = ["phone", "rut", *_PERFIL_CAMPOS, "updated_at"]
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             f"SELECT {', '.join(cols)} FROM contact_profiles WHERE phone=?",
             (phone,),
@@ -1576,7 +1596,7 @@ def update_profile_fields(phone: str, rut: str, data: dict) -> None:
     campos = {k: data.get(k) for k in _PERFIL_CAMPOS if k in data}
     if not campos:
         return
-    with _conn() as conn:
+    with db() as conn:
         # Asegurar que el registro exista
         conn.execute(
             "INSERT OR IGNORE INTO contact_profiles (phone, rut, updated_at) VALUES (?, ?, datetime('now'))",
@@ -1683,7 +1703,7 @@ def get_phone_by_rut(rut: str) -> str | None:
     """Busca el teléfono asociado a un RUT en contact_profiles."""
     if not rut:
         return None
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT phone FROM contact_profiles WHERE rut=? LIMIT 1", (rut,)
         ).fetchone()
@@ -1692,7 +1712,7 @@ def get_phone_by_rut(rut: str) -> str | None:
 
 def mark_reminder_sent(cita_id: int):
     """Marca una cita como recordatorio enviado."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("UPDATE citas_bot SET reminder_sent=1 WHERE id=?", (cita_id,))
         conn.commit()
 
@@ -1706,7 +1726,7 @@ def get_citas_bot_para_2h_reminder(fecha: str, hora_min: str, hora_max: str) -> 
     corren casi simultáneamente. Si el envío posterior falla, la cita queda
     marcada como enviada — preferimos no recordar que molestar con duplicados.
     """
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("BEGIN IMMEDIATE")
         try:
             rows = conn.execute(
@@ -1738,7 +1758,7 @@ def get_citas_bot_para_2h_reminder(fecha: str, hora_min: str, hora_max: str) -> 
 
 def mark_reminder_2h_sent(cita_id: int):
     """Marca una cita como recordatorio 2h enviado."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("UPDATE citas_bot SET reminder_2h_sent=1 WHERE id=?", (cita_id,))
         conn.commit()
 
@@ -1747,7 +1767,7 @@ def get_next_cita_bot_by_phone(phone: str) -> dict | None:
     """Próxima cita futura (fecha >= hoy CLT) agendada por el bot para un teléfono.
     Incluye paciente_nombre resolviendo por fallback a contact_profiles."""
     hoy = datetime.now(ZoneInfo("America/Santiago")).date().isoformat()
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             """SELECT c.*,
                       CASE WHEN c.paciente_nombre != '' THEN c.paciente_nombre
@@ -1765,7 +1785,7 @@ def get_next_cita_bot_by_phone(phone: str) -> dict | None:
 def get_cita_bot_by_id_cita(id_cita: str, phone: str = None) -> dict | None:
     """Busca una cita del bot por id_cita (id Medilink).
     Si se pasa phone, además filtra por ese teléfono (seguridad)."""
-    with _conn() as conn:
+    with db() as conn:
         if phone:
             row = conn.execute(
                 "SELECT * FROM citas_bot WHERE id_cita=? AND phone=? ORDER BY id DESC LIMIT 1",
@@ -1782,7 +1802,7 @@ def get_cita_bot_by_id_cita(id_cita: str, phone: str = None) -> dict | None:
 def mark_cita_confirmation(id_cita: str, phone: str, status: str):
     """Guarda la respuesta del paciente al recordatorio pre-cita.
     status ∈ {'confirmed', 'reagendar', 'cancelar'}"""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             """UPDATE citas_bot
                SET confirmation_status=?, confirmation_at=datetime('now')
@@ -1807,7 +1827,7 @@ def get_citas_bot_futuras(phone: str, max_age_minutes: int = 10) -> list[dict]:
     hoy = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
     cutoff = datetime.now(ZoneInfo("America/Santiago")) - timedelta(minutes=max_age_minutes)
     cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT id_cita, especialidad, profesional, fecha, hora
                FROM citas_bot
@@ -1853,7 +1873,7 @@ def _fmt_fecha_iso(fecha_iso: str) -> str:
 def get_confirmaciones_dia(fecha: str) -> list[dict]:
     """Devuelve las citas del bot para una fecha con su estado de confirmación.
     Usado por el panel admin para mostrar el estado."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT id_cita, phone, especialidad, profesional, hora, modalidad,
                       confirmation_status, confirmation_at
@@ -1869,7 +1889,7 @@ def get_confirmaciones_dia(fecha: str) -> list[dict]:
 
 def mark_admin_seen(phone: str, seen_by: str = "admin"):
     """Registra que la admin vio la conversación ahora. Persistente."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             INSERT INTO admin_seen (phone, seen_at, seen_by)
             VALUES (?, datetime('now'), ?)
@@ -1882,7 +1902,7 @@ def mark_admin_seen(phone: str, seen_by: str = "admin"):
 def get_unread_counts() -> dict:
     """Retorna {phone: cantidad_mensajes_no_leidos} solo para inbound posteriores
     a admin_seen.seen_at (o todos los inbound si nunca se marcó)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT m.phone, COUNT(*) as cnt
             FROM messages m
@@ -1901,7 +1921,7 @@ def log_event(phone: str, event: str, meta: dict = None):
     sin_disponibilidad, derivado_humano, paciente_nuevo, error_bot
     """
     import json as _json
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT INTO conversation_events (phone, event, meta) VALUES (?, ?, ?)",
             (phone, event, _json.dumps(meta or {}, ensure_ascii=False))
@@ -1912,7 +1932,7 @@ def log_event(phone: str, event: str, meta: dict = None):
 def has_recent_event(phone: str, event: str, days: int = 90) -> bool:
     """¿Tiene este phone un `event` registrado en los últimos `days`?
     Usado por anti-spam (review_request_sent, etc.)."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             "SELECT 1 FROM conversation_events "
             "WHERE phone = ? AND event = ? AND ts > datetime('now', ?) LIMIT 1",
@@ -1924,7 +1944,7 @@ def has_recent_event(phone: str, event: str, days: int = 90) -> bool:
 def purge_old_data(msgs_days: int = 90, events_days: int = 180) -> dict:
     """Borra mensajes y eventos antiguos para evitar crecimiento ilimitado del SQLite.
     Retorna conteos de filas eliminadas."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             "DELETE FROM messages WHERE ts < datetime('now', ?)",
             (f"-{msgs_days} days",),
@@ -1937,7 +1957,7 @@ def purge_old_data(msgs_days: int = 90, events_days: int = 180) -> dict:
         events_del = cur.rowcount
         # Reconstruir espacio libre
         conn.commit()
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("VACUUM")
     log.info("purge_old_data: -%d messages, -%d events", msgs_del, events_del)
     return {"messages_deleted": msgs_del, "events_deleted": events_del}
@@ -1960,7 +1980,7 @@ def _scrub_pii(text: str) -> str:
 def log_message(phone: str, direction: str, text: str, state: str = "IDLE",
                 canal: str = "whatsapp", wamid: str | None = None):
     """Registra un mensaje entrante ('in') o saliente ('out') en el historial."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT INTO messages (phone, direction, text, state, canal, wamid) VALUES (?, ?, ?, ?, ?, ?)",
             (phone, direction, str(text)[:2000], state, canal, wamid)
@@ -1982,7 +2002,7 @@ def _fire_push_on_inbound(phone: str, text: str, canal: str):
         # Nombre del contacto si lo tenemos, fallback al teléfono
         nombre = None
         try:
-            with _conn() as c:
+            with db() as c:
                 row = c.execute("SELECT nombre FROM contact_profiles WHERE phone=?", (phone,)).fetchone()
                 if row and row["nombre"]:
                     nombre = str(row["nombre"]).strip().split()[0:2]
@@ -2012,7 +2032,7 @@ def _fire_push_on_inbound(phone: str, text: str, canal: str):
 def update_message_text_by_wamid(wamid: str, new_text: str) -> bool:
     """Actualiza el texto de un mensaje ya registrado y marca edited_at.
     Retorna True si se actualizó al menos una fila."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             "UPDATE messages SET text=?, edited_at=datetime('now') WHERE wamid=?",
             (str(new_text)[:2000], wamid)
@@ -2023,7 +2043,7 @@ def update_message_text_by_wamid(wamid: str, new_text: str) -> bool:
 
 def get_message_by_wamid(wamid: str) -> dict | None:
     """Retorna el mensaje con ese wamid, o None si no existe."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal, wamid, edited_at "
             "FROM messages WHERE wamid=? LIMIT 1",
@@ -2038,7 +2058,7 @@ def upsert_message_status(wamid: str, phone: str, status: str,
     Statuses: sent -> delivered -> read (or failed).
     Only upgrades status: sent < delivered < read. 'failed' always overwrites."""
     _STATUS_ORDER = {"sent": 1, "delivered": 2, "read": 3, "failed": 0}
-    with _conn() as conn:
+    with db() as conn:
         existing = conn.execute(
             "SELECT status FROM message_statuses WHERE wamid=?", (wamid,)
         ).fetchone()
@@ -2060,7 +2080,7 @@ def upsert_message_status(wamid: str, phone: str, status: str,
 
 def get_message_status_summary(phone: str) -> dict:
     """Get delivery status summary for a phone's outgoing messages (last 24h)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT status, COUNT(*) as cnt
             FROM message_statuses
@@ -2072,7 +2092,7 @@ def get_message_status_summary(phone: str) -> dict:
 
 def get_last_message_status(phone: str) -> str | None:
     """Get the status of the last outgoing message to this phone."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT status FROM message_statuses WHERE phone=? ORDER BY ts DESC LIMIT 1",
             (phone,)
@@ -2084,7 +2104,7 @@ def get_last_inbound_ts(phone: str) -> datetime | None:
     """Timestamp UTC del ultimo mensaje entrante del paciente. None si nunca escribio.
     Usado para detectar service window de 24h de Meta (donde se pueden enviar
     mensajes libres sin cobrar template)."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT ts FROM messages WHERE phone=? AND direction='in' "
             "ORDER BY ts DESC LIMIT 1",
@@ -2131,7 +2151,7 @@ def get_messages(phone: str, limit: int = 300) -> list[dict]:
     (más antiguo primero, más reciente al final — lo que espera el panel para mostrar
     estilo WhatsApp). Antes usaba ORDER BY id ASC LIMIT N lo que devolvía los MÁS
     ANTIGUOS y cortaba los mensajes nuevos en conversaciones largas."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal, "
             "wamid, edited_at FROM messages "
@@ -2185,7 +2205,7 @@ def search_messages(query: str, limit: int = 500) -> list[dict]:
     q = _build_fts5_query(query)
     if not q:
         return []
-    with _conn() as conn:
+    with db() as conn:
         try:
             # snippet(table, col, start, end, ellipsis, max_tokens)
             # TODO(UX): el último parámetro (max_tokens) controla el ancho del
@@ -2225,7 +2245,7 @@ def search_messages(query: str, limit: int = 500) -> list[dict]:
 
 def get_notes(phone: str) -> str:
     """Retorna las notas internas de un paciente."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT notes FROM contact_notes WHERE phone=?", (phone,)
         ).fetchone()
@@ -2234,7 +2254,7 @@ def get_notes(phone: str) -> str:
 
 def save_notes(phone: str, notes: str):
     """Guarda notas internas de un paciente (upsert)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             """INSERT INTO contact_notes (phone, notes, updated_at)
                VALUES (?, ?, datetime('now'))
@@ -2248,7 +2268,7 @@ def save_notes(phone: str, notes: str):
 
 def get_patient_context(phone: str) -> dict:
     """Datos enriquecidos de un paciente para el panel de contexto admin."""
-    with _conn() as conn:
+    with db() as conn:
         last_cita = conn.execute(
             "SELECT especialidad, profesional, fecha, hora FROM citas_bot "
             "WHERE phone=? ORDER BY fecha DESC, hora DESC LIMIT 1",
@@ -2274,7 +2294,7 @@ def get_patient_context(phone: str) -> dict:
 
 def get_registration_stats(dias: int = 30) -> dict:
     """Completados vs abandonados en el flujo de registro."""
-    with _conn() as conn:
+    with db() as conn:
         completados = conn.execute(
             "SELECT COUNT(*) FROM conversation_events "
             "WHERE event='registro_completo' AND ts >= datetime('now', ?)",
@@ -2293,7 +2313,7 @@ def get_registration_stats(dias: int = 30) -> dict:
 
 def get_cita_bot_by_id_for_rebook(id_cita: str) -> dict | None:
     """Retorna una cita agendada vía bot por id_cita, si aún no se notificó cancelación."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT phone, id_cita, especialidad, profesional, fecha, hora, modalidad, "
             "cancel_detected_at FROM citas_bot WHERE id_cita=? LIMIT 1",
@@ -2309,7 +2329,7 @@ def phone_tiene_solo_citas_canceladas(phone: str) -> bool:
     ya no existe — evita el mensaje "tienes una reserva pendiente" cuando
     cancel_detected_at está poblado en todas sus citas futuras.
     """
-    with _conn() as conn:
+    with db() as conn:
         # Citas futuras o de hoy no canceladas
         row = conn.execute(
             "SELECT COUNT(*) FROM citas_bot "
@@ -2322,7 +2342,7 @@ def phone_tiene_solo_citas_canceladas(phone: str) -> bool:
 
 def mark_cita_cancel_detected(id_cita: str):
     """Marca una cita como 'cancelación detectada y notificada' para evitar duplicados."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE citas_bot SET cancel_detected_at = datetime('now') WHERE id_cita=?",
             (id_cita,)
@@ -2336,7 +2356,7 @@ def get_ultima_cita_paciente(phone: str) -> dict | None:
     Usada para ofrecer Quick-book: "¿agendo otra hora con {profesional} de {especialidad}?"
     Retorna None si el paciente nunca agendó vía bot.
     """
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT especialidad, profesional, fecha, hora, modalidad "
             "FROM citas_bot "
@@ -2356,7 +2376,7 @@ def get_proxima_cita_paciente(phone: str) -> dict | None:
     """
     from datetime import date as _date
     hoy = _date.today().isoformat()
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT especialidad, profesional, fecha, hora, modalidad, "
             "       fecha as fecha_display "
@@ -2391,7 +2411,7 @@ def get_conversion_funnel_by_especialidad(dias: int = 30) -> list[dict]:
     Para cada especialidad retorna: intents, confirmados, tasa (%).
     Dato clave para decidir dónde invertir marketing y optimizar flujo.
     """
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT
                 COALESCE(json_extract(meta, '$.especialidad'), '(sin especialidad)') AS esp,
@@ -2424,7 +2444,7 @@ def get_conversion_funnel_by_especialidad(dias: int = 30) -> list[dict]:
 
 def get_referral_stats(dias: int = 30) -> dict:
     """Estadísticas de cómo nos conocieron los pacientes nuevos."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT tag, COUNT(*) as cnt FROM contact_tags "
             "WHERE tag LIKE 'referido:%' AND ts >= datetime('now', ?) "
@@ -2448,7 +2468,7 @@ def get_conversations(limit: int = 2000) -> list[dict]:
     (p.ej. una pregunta FAQ en mitad del flujo) igual "suba" la
     conversación al tope del panel.
     """
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             WITH last_msgs AS (
                 SELECT phone, MAX(id) AS last_id, COUNT(*) AS msg_count
@@ -2520,7 +2540,7 @@ def get_sesiones_abandonadas() -> list[dict]:
     """
     excluidos = ("IDLE", "COMPLETED", "HUMAN_TAKEOVER")
     placeholders = ",".join("?" * len(excluidos))
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(f"""
             SELECT phone, state, data, updated_at FROM sessions
             WHERE state NOT IN ({placeholders})
@@ -2593,7 +2613,7 @@ def get_citas_para_seguimiento(fecha_hoy: str, hora_corte: str | None = None) ->
                 el bot mandó "¿cómo te fue?" el 1-may a las 22:00 porque
                 date.today() en servidor UTC ya marcaba 2-may.
     """
-    with _conn() as conn:
+    with db() as conn:
         if hora_corte is not None:
             rows = conn.execute("""
                 SELECT cb.id, cb.phone, cb.id_cita, cb.especialidad, cb.profesional, cb.fecha, cb.hora,
@@ -2631,7 +2651,7 @@ def get_citas_para_seguimiento(fecha_hoy: str, hora_corte: str | None = None) ->
 def get_pacientes_inactivos(dias_min: int = 30, dias_max: int = 90) -> list[dict]:
     """Pacientes cuya última cita fue entre dias_min y dias_max días atrás,
     sin mensaje de reactivación enviado en los últimos 60 días."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, MAX(cb.fecha) AS ultima_cita, MAX(cb.especialidad) AS especialidad,
                    p.nombre
@@ -2654,7 +2674,7 @@ def save_fidelizacion_msg(phone: str, tipo: str, cita_id: str = ""):
     BUG-01: INSERT OR IGNORE evita duplicado si se llama dos veces
     (ej. retry tras excepción post-send).
     """
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT OR IGNORE INTO fidelizacion_msgs (phone, tipo, cita_id) VALUES (?, ?, ?)",
             (phone, tipo, cita_id or "")
@@ -2668,7 +2688,7 @@ def set_pending_crosssell(phone: str, tipo: str, destino: str) -> None:
     afirmativo en las próximas 72h, el router lo consume y dispara `_iniciar_agendar(destino)`.
     Sobrescribe cualquier pending previo (último cross-sell gana).
     """
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO pending_crosssell (phone, tipo, destino, created_at, consumed_at) "
             "VALUES (?, ?, ?, datetime('now'), NULL)",
@@ -2680,7 +2700,7 @@ def set_pending_crosssell(phone: str, tipo: str, destino: str) -> None:
 def get_pending_crosssell(phone: str, hours: int = 72) -> dict | None:
     """Devuelve el pending cross-sell activo (no consumido, dentro de la ventana)
     o None. Retorna dict con keys: tipo, destino, created_at."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT tipo, destino, created_at FROM pending_crosssell "
             "WHERE phone=? AND consumed_at IS NULL "
@@ -2693,7 +2713,7 @@ def get_pending_crosssell(phone: str, hours: int = 72) -> dict | None:
 
 def consume_pending_crosssell(phone: str) -> None:
     """Marca el pending cross-sell como consumido. No borra para mantener auditoría."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE pending_crosssell SET consumed_at=datetime('now') "
             "WHERE phone=? AND consumed_at IS NULL",
@@ -2704,7 +2724,7 @@ def consume_pending_crosssell(phone: str) -> None:
 
 def save_fidelizacion_respuesta(phone: str, tipo: str, respuesta: str):
     """Guarda la respuesta del paciente al último mensaje de fidelización."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             UPDATE fidelizacion_msgs SET respuesta = ?
             WHERE id = (
@@ -2717,7 +2737,7 @@ def save_fidelizacion_respuesta(phone: str, tipo: str, respuesta: str):
 
 def get_ultimo_seguimiento(phone: str) -> dict | None:
     """Retorna el último seguimiento post-consulta sin respuesta para este paciente."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute("""
             SELECT f.phone, f.cita_id, f.enviado_en, cb.especialidad, cb.profesional
             FROM fidelizacion_msgs f
@@ -2737,7 +2757,7 @@ def get_metricas_fidelizacion(dias: int | None = None) -> dict:
     También calcula responded como: pacientes que enviaron un mensaje (direction='in')
     dentro de las 24h siguientes al envío de la campaña.
     """
-    with _conn() as conn:
+    with db() as conn:
         where = ""
         params: list = []
         if dias:
@@ -2834,7 +2854,7 @@ def _ensure_kine_table(conn):
 
 def get_kine_tracking_all() -> list:
     """Retorna todos los registros de seguimiento de pacientes en control."""
-    with _conn() as conn:
+    with db() as conn:
         _ensure_kine_table(conn)
         rows = conn.execute("SELECT * FROM kine_tracking ORDER BY updated_at DESC").fetchall()
         return [dict(r) for r in rows]
@@ -2843,7 +2863,7 @@ def get_kine_tracking_all() -> list:
 def save_kine_tracking(id_paciente: int, id_prof: int, total_sesiones: int,
                        modalidad: str = "fonasa", notas: str = ""):
     """Guarda o actualiza el seguimiento de un paciente en control."""
-    with _conn() as conn:
+    with db() as conn:
         _ensure_kine_table(conn)
         conn.execute("""
             INSERT INTO kine_tracking (id_paciente, id_prof, total_sesiones, modalidad, notas, updated_at)
@@ -2861,7 +2881,7 @@ def puede_enviar_campana(phone: str, tipo: str, dias_cooldown: int = 7) -> bool:
     """True si no se envió este tipo de campaña en los últimos dias_cooldown días
     Y el paciente NO hizo opt-out ni revocó privacidad
     (compliance Ley 21.719 + WhatsApp Business Policy marketing)."""
-    with _conn() as conn:
+    with db() as conn:
         # Hard-block: opt-out marketing (contact_tags legacy)
         opt_out = conn.execute(
             "SELECT 1 FROM contact_tags WHERE phone=? AND tag='marketing_opt_out'",
@@ -2901,7 +2921,7 @@ def get_kine_candidatos_adherencia(gap_dias: int = 4) -> list[dict]:
     Pacientes con cita de kinesiología hace gap_dias+ días,
     sin cita kine futura, sin mensaje de adherencia en últimos 7 días.
     """
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, MAX(cb.fecha) AS ultima_fecha, cb.profesional, p.nombre
             FROM citas_bot cb
@@ -2931,7 +2951,7 @@ def get_control_candidatos(especialidad: str, dias_control: int) -> list[dict]:
     sin cita futura de esa especialidad, sin recordatorio de control en 15 días.
     """
     tipo_fidel = f"control_{especialidad.lower().replace(' ', '_')}"
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, MAX(cb.fecha) AS ultima_fecha, cb.profesional, p.nombre
             FROM citas_bot cb
@@ -2961,7 +2981,7 @@ def get_crosssell_kine_candidatos() -> list[dict]:
     sin cita de kinesiología reciente, sin cross-sell enviado en 21 días.
     Ventana ampliada (1-14d) tras detectar 0 candidatos con 1-5d.
     """
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, MAX(cb.fecha) AS ultima_fecha, cb.especialidad, p.nombre
             FROM citas_bot cb
@@ -2991,7 +3011,7 @@ def get_crosssell_orl_fono_candidatos() -> list[dict]:
     - Paciente con cita de Fono en últimos 14d sin ORL reciente → ofrecer ORL
     Retorna lista con {phone, nombre, especialidad_origen, especialidad_destino}.
     """
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, cb.especialidad AS origen, MAX(cb.fecha) AS ultima_fecha, p.nombre
             FROM citas_bot cb
@@ -3044,7 +3064,7 @@ def get_crosssell_odonto_estetica_candidatos() -> list[dict]:
     """Pacientes con 2+ citas de odontología general en últimos 90d
     (higienista/limpieza frecuente) → candidatos a estética facial.
     Criterio: ya confían en el equipo dental, pueden probar estética."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, COUNT(*) AS n_citas, p.nombre, MAX(cb.fecha) AS ultima_fecha
             FROM citas_bot cb
@@ -3073,7 +3093,7 @@ def get_crosssell_mg_chequeo_candidatos() -> list[dict]:
     """Pacientes con cita de MG hace 30-180d sin control/chequeo reciente
     → ofrecer chequeo preventivo (EMPAM, exámenes generales).
     Edad >=40 prioridad (alta prevalencia HTA/DM2/dislipidemia)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, p.nombre, p.fecha_nacimiento, MAX(cb.fecha) AS ultima_fecha
             FROM citas_bot cb
@@ -3100,7 +3120,7 @@ def get_crosssell_mg_chequeo_candidatos() -> list[dict]:
 def get_cumpleanos_hoy() -> list[dict]:
     """Pacientes cuya fecha_nacimiento coincide con el día y mes de hoy,
     sin mensaje de cumpleaños enviado en los últimos 330 días."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT p.phone, p.nombre, p.fecha_nacimiento, p.rut
             FROM contact_profiles p
@@ -3118,7 +3138,7 @@ def get_cumpleanos_hoy() -> list[dict]:
 def get_pacientes_winback(dias_min: int = 91, dias_max: int = 365) -> list[dict]:
     """Pacientes cuya última cita fue entre dias_min y dias_max días atrás,
     sin mensaje de winback en los últimos 90 días, sin cita futura."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT cb.phone, MAX(cb.fecha) AS ultima_cita,
                    MAX(cb.especialidad) AS especialidad, p.nombre
@@ -3148,7 +3168,7 @@ def get_pacientes_winback(dias_min: int = 91, dias_max: int = 365) -> list[dict]
 def get_nps_por_profesional(dias: int | None = None) -> dict:
     """NPS por profesional basado en respuestas postconsulta (mejor/igual/peor).
     NPS = (mejor - peor) / total * 100.  Retorna global + desglose por profesional."""
-    with _conn() as conn:
+    with db() as conn:
         where = ""
         params: list = []
         if dias:
@@ -3200,7 +3220,7 @@ def get_promotores_recientes(dias: int = 30, limit: int = 25) -> list[dict]:
     """Pacientes que respondieron 'mejor' al seguimiento postconsulta en los
     últimos `dias` — promotores candidatos a pedirles una reseña en Google.
     Tool nueva para el orquestador `reputacion_nps`."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT f.phone, cb.profesional, cb.especialidad, f.cita_id, f.enviado_en,
                    COALESCE(cp.nombre, cb.paciente_nombre, '') AS nombre
@@ -3221,7 +3241,7 @@ def get_cronicos_para_control(dias: int = 90) -> list[dict]:
     candidatos a recordarles su control crónico. Phone-keyed, todo en sessions.db.
     Tool nueva para el orquestador `control_cronico`."""
     from datetime import date
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT ct.phone,
                    COALESCE(cp.nombre, '') AS nombre,
@@ -3251,7 +3271,7 @@ def get_cronicos_para_control(dias: int = 90) -> list[dict]:
 
 def get_metricas(dias: int = 30) -> dict:
     """Resumen de métricas de los últimos N días."""
-    with _conn() as conn:
+    with db() as conn:
         total_conv = conn.execute(
             "SELECT COUNT(DISTINCT phone) FROM conversation_events "
             "WHERE ts >= datetime('now', ?)", (f"-{dias} days",)
@@ -3278,7 +3298,7 @@ def get_metricas(dias: int = 30) -> dict:
 
 def get_case_study_report(dias: int = 30) -> dict:
     """Reporte consolidado de KPIs para caso de éxito / documentación."""
-    with _conn() as conn:
+    with db() as conn:
         since = f"-{dias} days"
 
         # ── Funnel de agendamiento ────────────────────────────────────────
@@ -3479,7 +3499,7 @@ def upsert_citas_cache(citas: list[dict]):
     id_prof, id_paciente, paciente_nombre, fecha, hora_inicio."""
     if not citas:
         return
-    with _conn() as conn:
+    with db() as conn:
         conn.executemany("""
             INSERT INTO citas_cache (id_prof, id_paciente, paciente_nombre, fecha, hora_inicio, synced_at)
             VALUES (:id_prof, :id_paciente, :paciente_nombre, :fecha, :hora_inicio, datetime('now'))
@@ -3492,14 +3512,14 @@ def upsert_citas_cache(citas: list[dict]):
 
 def delete_citas_cache_fecha(id_prof: int, fecha: str):
     """Borra todas las citas cacheadas de un profesional para una fecha (antes de re-sync)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("DELETE FROM citas_cache WHERE id_prof=? AND fecha=?", (id_prof, fecha))
         conn.commit()
 
 
 def citas_cache_tiene_fecha(id_prof: int, fecha: str) -> bool:
     """True si ya hay datos cacheados para este profesional y fecha."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT 1 FROM citas_cache WHERE id_prof=? AND fecha=? LIMIT 1",
             (id_prof, fecha)
@@ -3511,7 +3531,7 @@ def upsert_ortodoncia_cache(visitas: list[dict]):
     """Inserta o actualiza visitas de ortodoncia. No sobreescribe tipo_manual=1."""
     if not visitas:
         return
-    with _conn() as conn:
+    with db() as conn:
         for v in visitas:
             conn.execute("""
                 INSERT INTO ortodoncia_cache
@@ -3528,7 +3548,7 @@ def upsert_ortodoncia_cache(visitas: list[dict]):
 
 def set_ortodoncia_tipo(id_atencion: int, tipo: str):
     """Guarda clasificación manual de una visita (instalacion/control)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE ortodoncia_cache SET tipo=?, tipo_manual=1 WHERE id_atencion=?",
             (tipo, id_atencion)
@@ -3538,7 +3558,7 @@ def set_ortodoncia_tipo(id_atencion: int, tipo: str):
 
 def get_ortodoncia_pacientes() -> list[dict]:
     """Retorna todos los pacientes de ortodoncia con sus visitas agrupadas."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT id_atencion, id_paciente, paciente_nombre, fecha, hora_inicio, total, tipo, tipo_manual
             FROM ortodoncia_cache
@@ -3562,7 +3582,7 @@ def get_ortodoncia_pacientes() -> list[dict]:
 
 def get_ortodoncia_sync_max_fecha() -> str | None:
     """Retorna la fecha más reciente sincronizada en ortodoncia_cache."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute("SELECT MAX(fecha) FROM ortodoncia_cache").fetchone()
         return row[0] if row else None
 
@@ -3570,7 +3590,7 @@ def get_ortodoncia_sync_max_fecha() -> str | None:
 def get_citas_cache_dia(id_prof: int, fecha: str) -> list[dict]:
     """Retorna citas cacheadas para un profesional en una fecha específica.
     Filtra el centinela __empty__ (id_paciente=0). Usado por agenda_routes."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT * FROM citas_cache WHERE id_prof=? AND fecha=? AND id_paciente != 0 "
             "ORDER BY hora_inicio",
@@ -3582,7 +3602,7 @@ def get_citas_cache_dia(id_prof: int, fecha: str) -> list[dict]:
 def get_citas_cache_todos(ids_prof: list[int]) -> list[dict]:
     """Retorna todas las citas cacheadas (sin filtro de mes) para los profesionales dados."""
     placeholders = ",".join("?" * len(ids_prof))
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             f"SELECT * FROM citas_cache WHERE id_prof IN ({placeholders}) "
             f"AND id_paciente != 0 ORDER BY fecha, hora_inicio",
@@ -3598,7 +3618,7 @@ def get_citas_cache_mes(year: int, month: int, ids_prof: list[int]) -> list[dict
     fecha_ini = f"{year}-{month:02d}-01"
     fecha_fin = f"{year}-{month:02d}-{last_day:02d}"
     placeholders = ",".join("?" * len(ids_prof))
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             f"SELECT * FROM citas_cache WHERE id_prof IN ({placeholders}) "
             f"AND fecha >= ? AND fecha <= ? ORDER BY fecha, hora_inicio",
@@ -3615,7 +3635,7 @@ def upsert_abarca_atenciones(citas: list[dict]) -> int:
     if not citas:
         return 0
     n = 0
-    with _conn() as conn:
+    with db() as conn:
         for c in citas:
             cid = c.get("id")
             if not cid:
@@ -3639,7 +3659,7 @@ def upsert_abarca_atenciones(citas: list[dict]) -> int:
 
 def delete_abarca_atenciones_fecha(fecha: str) -> int:
     """Borra todas las atenciones de una fecha (para reemplazar con un fetch fresco)."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute("DELETE FROM abarca_atenciones_cache WHERE fecha=?", (fecha,))
         return cur.rowcount
 
@@ -3647,7 +3667,7 @@ def delete_abarca_atenciones_fecha(fecha: str) -> int:
 def get_abarca_atenciones(desde: str = "2025-05-01") -> list[dict]:
     """Lee todas las atenciones desde la fecha indicada. Formato compatible con
     el endpoint /api/abarca/data (campos: id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT id_cita AS id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre "
             "FROM abarca_atenciones_cache WHERE fecha >= ? ORDER BY fecha, hora_inicio",
@@ -3658,13 +3678,13 @@ def get_abarca_atenciones(desde: str = "2025-05-01") -> list[dict]:
 
 def abarca_cache_count() -> int:
     """Total de atenciones cacheadas (0 si tabla recién creada)."""
-    with _conn() as conn:
+    with db() as conn:
         return conn.execute("SELECT COUNT(*) FROM abarca_atenciones_cache").fetchone()[0]
 
 
 def abarca_cache_max_fecha() -> str | None:
     """Fecha más reciente cacheada (YYYY-MM-DD) o None si vacío."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute("SELECT MAX(fecha) FROM abarca_atenciones_cache").fetchone()
         return row[0] if row and row[0] else None
 
@@ -3674,7 +3694,7 @@ def get_abarca_fechas_existentes() -> set[str]:
     Usado por sync_abarca_atenciones para saltar días ya sincronizados y
     evitar barridos completos de 313 días en cada llamada (crash 2026-04-30
     SIGBUS por OOM con admin polling concurrente)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT DISTINCT fecha FROM abarca_atenciones_cache"
         ).fetchall()
@@ -3688,7 +3708,7 @@ def upsert_olavarria_atenciones(citas: list[dict]) -> int:
     if not citas:
         return 0
     n = 0
-    with _conn() as conn:
+    with db() as conn:
         for c in citas:
             cid = c.get("id")
             if not cid:
@@ -3715,7 +3735,7 @@ def upsert_olavarria_atenciones(citas: list[dict]) -> int:
 
 def update_olavarria_monto(id_cita: int, monto: int) -> None:
     """Setea monto_facturado para una cita específica (no toca otros campos)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE olavarria_atenciones_cache SET monto_facturado=? WHERE id_cita=?",
             (monto, id_cita)
@@ -3724,7 +3744,7 @@ def update_olavarria_monto(id_cita: int, monto: int) -> None:
 
 def get_olavarria_atenciones_sin_monto() -> list[dict]:
     """Atenciones (estado=atendido) con id_atencion conocido pero sin monto_facturado todavía."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT id_cita, id_atencion FROM olavarria_atenciones_cache "
             "WHERE LOWER(estado_cita)='atendido' AND id_atencion IS NOT NULL AND monto_facturado IS NULL "
@@ -3734,13 +3754,13 @@ def get_olavarria_atenciones_sin_monto() -> list[dict]:
 
 
 def delete_olavarria_atenciones_fecha(fecha: str) -> int:
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute("DELETE FROM olavarria_atenciones_cache WHERE fecha=?", (fecha,))
         return cur.rowcount
 
 
 def get_olavarria_atenciones(desde: str = "2025-05-01") -> list[dict]:
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT id_cita AS id, fecha, hora_inicio, estado_cita, id_paciente, paciente_nombre, "
             "       id_atencion, monto_facturado "
@@ -3751,12 +3771,12 @@ def get_olavarria_atenciones(desde: str = "2025-05-01") -> list[dict]:
 
 
 def olavarria_cache_count() -> int:
-    with _conn() as conn:
+    with db() as conn:
         return conn.execute("SELECT COUNT(*) FROM olavarria_atenciones_cache").fetchone()[0]
 
 
 def get_olavarria_fechas_existentes() -> set[str]:
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT DISTINCT fecha FROM olavarria_atenciones_cache"
         ).fetchall()
@@ -3771,7 +3791,7 @@ def upsert_bi_atenciones(records: list[dict]) -> int:
     if not records:
         return 0
     n = 0
-    with _conn() as conn:
+    with db() as conn:
         for r in records:
             aid = r.get("id")
             if not aid:
@@ -3819,7 +3839,7 @@ def upsert_bi_atenciones(records: list[dict]) -> int:
 def get_bi_fechas_sincronizadas(id_profesional: int) -> set[str]:
     """Set de fechas YYYY-MM-DD que ya tienen al menos 1 atención cargada
     para el profesional dado. Usado por el sync para skip incremental."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT DISTINCT fecha FROM bi_atenciones WHERE id_profesional=? AND fecha IS NOT NULL",
             (id_profesional,)
@@ -3829,7 +3849,7 @@ def get_bi_fechas_sincronizadas(id_profesional: int) -> set[str]:
 
 def get_bi_atenciones_profesional(id_profesional: int, desde: str = "2024-01-01") -> list[dict]:
     """Atenciones de un profesional desde la fecha indicada."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT * FROM bi_atenciones WHERE id_profesional=? AND fecha>=? "
             "ORDER BY fecha, atencion_id",
@@ -3840,7 +3860,7 @@ def get_bi_atenciones_profesional(id_profesional: int, desde: str = "2024-01-01"
 
 def log_bi_sync(tipo: str, id_profesional: int, fecha: str, inicio: str,
                 fin: str, n_registros: int, n_errores: int, ok: bool) -> None:
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT INTO bi_sync_log (tipo, id_profesional, fecha, inicio, fin, "
             "n_registros, n_errores, ok) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -3856,7 +3876,7 @@ def log_bi_sync(tipo: str, id_profesional: int, fecha: str, inicio: str,
 def enqueue_intent(phone: str, intent: str, state_snap: str = ""):
     """Guarda en la cola una intención recibida durante una caída de Medilink.
     Se usa para avisar al paciente cuando el sistema vuelva a estar operativo."""
-    with _conn() as conn:
+    with db() as conn:
         # Evitar duplicados: si el mismo teléfono ya tiene una intención pendiente
         # en los últimos 10 min, no volver a encolar.
         existing = conn.execute("""
@@ -3876,7 +3896,7 @@ def enqueue_intent(phone: str, intent: str, state_snap: str = ""):
 
 def get_pending_intent_queue() -> list[dict]:
     """Retorna todas las intenciones pendientes de notificar al paciente."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT id, phone, intent, state_snap, ts_enqueued
             FROM intent_queue
@@ -3888,14 +3908,14 @@ def get_pending_intent_queue() -> list[dict]:
 
 def mark_intent_notified(queue_id: int):
     """Marca una entrada de la cola como notificada."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("UPDATE intent_queue SET notified = 1 WHERE id = ?", (queue_id,))
         conn.commit()
 
 
 def intent_queue_depth() -> int:
     """Cantidad de intenciones pendientes de notificar (para /health)."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT COUNT(*) FROM intent_queue WHERE notified = 0"
         ).fetchone()
@@ -3904,7 +3924,7 @@ def intent_queue_depth() -> int:
 
 def system_state_get(key: str) -> str | None:
     """Lee un valor del estado del sistema."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT value FROM system_state WHERE key = ?", (key,)
         ).fetchone()
@@ -3913,7 +3933,7 @@ def system_state_get(key: str) -> str | None:
 
 def system_state_set(key: str, value: str):
     """Escribe un valor en el estado del sistema (upsert)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             INSERT INTO system_state (key, value, updated_at)
             VALUES (?, ?, datetime('now'))
@@ -3926,7 +3946,7 @@ def system_state_set(key: str, value: str):
 
 def system_state_updated_at(key: str) -> str | None:
     """Retorna cuándo se actualizó por última vez un valor del estado."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT updated_at FROM system_state WHERE key = ?", (key,)
         ).fetchone()
@@ -3942,7 +3962,7 @@ def system_state_updated_at(key: str) -> str | None:
 def registrar_slot_rechazado(phone: str, especialidad: str, fecha: str,
                               hora: str, prof_id: int | None = None) -> None:
     """Registra que el paciente rechazó un slot específico."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             INSERT INTO slots_rechazados (phone, especialidad, fecha, hora, prof_id)
             VALUES (?, ?, ?, ?, ?)
@@ -3958,7 +3978,7 @@ def registrar_slot_rechazado(phone: str, especialidad: str, fecha: str,
 def get_slots_rechazados(phone: str, especialidad: str) -> set[tuple[str, str]]:
     """Retorna set de (fecha, hora_HH:MM) que el paciente rechazó para esta
     especialidad en las últimas 48 horas."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT fecha, hora FROM slots_rechazados
             WHERE phone = ? AND especialidad = ?
@@ -4018,7 +4038,7 @@ def add_to_waitlist(phone: str, rut: str, nombre: str,
     actualiza en lugar de duplicar. Retorna el id de la fila."""
     # M3: normalizar slug antes de INSERT/UPDATE para evitar duplicados.
     especialidad = _normalize_waitlist_esp(especialidad)
-    with _conn() as conn:
+    with db() as conn:
         existing = conn.execute("""
             SELECT id FROM waitlist
             WHERE phone = ? AND especialidad = ?
@@ -4043,7 +4063,7 @@ def add_to_waitlist(phone: str, rut: str, nombre: str,
 def get_waitlist_pending() -> list[dict]:
     """Retorna todas las inscripciones activas (no notificadas ni canceladas)
     ordenadas por antigüedad (FIFO). La usa el cron de chequeo diario."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT id, phone, rut, nombre, especialidad, id_prof_pref, created_at
             FROM waitlist
@@ -4055,7 +4075,7 @@ def get_waitlist_pending() -> list[dict]:
 
 def mark_waitlist_notified(waitlist_id: int):
     """Marca una entrada como notificada (ya se avisó al paciente)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE waitlist SET notified_at = datetime('now') WHERE id = ?",
             (waitlist_id,)
@@ -4065,7 +4085,7 @@ def mark_waitlist_notified(waitlist_id: int):
 
 def cancel_waitlist(waitlist_id: int):
     """Marca una entrada como cancelada (por el paciente o la recepción)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE waitlist SET canceled_at = datetime('now') WHERE id = ?",
             (waitlist_id,)
@@ -4075,7 +4095,7 @@ def cancel_waitlist(waitlist_id: int):
 
 def get_waitlist_all(limit: int = 200) -> list[dict]:
     """Retorna todas las entradas de waitlist (para el panel admin)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT w.*, p.nombre AS perfil_nombre
             FROM waitlist w
@@ -4087,7 +4107,7 @@ def get_waitlist_all(limit: int = 200) -> list[dict]:
 
 def waitlist_depth() -> int:
     """Cantidad de inscripciones activas (para /health)."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT COUNT(*) FROM waitlist "
             "WHERE notified_at IS NULL AND canceled_at IS NULL"
@@ -4097,7 +4117,7 @@ def waitlist_depth() -> int:
 
 def get_waitlist_by_especialidad(especialidad: str) -> list[dict]:
     """Retorna inscripciones activas para una especialidad (FIFO)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT * FROM waitlist "
             "WHERE especialidad = ? AND notified_at IS NULL AND canceled_at IS NULL "
@@ -4122,7 +4142,7 @@ def create_offer(slot_key: str, phone: str, especialidad: str, id_prof,
                  rut: str = "", nombre: str = "") -> int:
     """Crea una oferta 'enviada' para un candidato. Idempotente por (slot_key, phone):
     si ya existe una oferta abierta de ese paciente para ese cupo, no la duplica."""
-    with _conn() as conn:
+    with db() as conn:
         dup = conn.execute(
             "SELECT id FROM waitlist_offers WHERE slot_key=? AND phone=? "
             "AND estado IN ('enviada','apartado') LIMIT 1",
@@ -4140,7 +4160,7 @@ def create_offer(slot_key: str, phone: str, especialidad: str, id_prof,
 
 def slot_has_winner(slot_key: str) -> bool:
     """¿Ya hay un ganador (apartado/confirmado/en recepción) para este cupo?"""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT 1 FROM waitlist_offers WHERE slot_key=? "
             "AND estado IN ('apartado','confirmada','recepcion') LIMIT 1",
@@ -4152,7 +4172,7 @@ def get_open_offer_for_phone(phone: str) -> dict | None:
     """La oferta 'enviada' más reciente de un paciente (para resolver su aceptación).
     SQLite serializa escrituras (single writer + WAL), así que el claim posterior
     es la sección crítica real; esto solo localiza qué oferta reclamar."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT * FROM waitlist_offers WHERE phone=? AND estado='enviada' "
             "ORDER BY id DESC LIMIT 1", (phone,)).fetchone()
@@ -4164,7 +4184,7 @@ def claim_offer(offer_id: int, ttl_minutes: int = 30) -> dict:
     si ningún otro candidato ya ganó el mismo slot_key. Como SQLite tiene un único
     escritor, dos claims concurrentes se serializan: el segundo ve el 'apartado' ya
     commiteado del primero y pierde. Devuelve {ok, reason, offer}."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute("SELECT * FROM waitlist_offers WHERE id=?", (offer_id,)).fetchone()
         if not row:
             return {"ok": False, "reason": "not_found"}
@@ -4193,7 +4213,7 @@ def claim_offer(offer_id: int, ttl_minutes: int = 30) -> dict:
 def set_offer_estado(offer_id: int, estado: str, *, id_cita: str | None = None) -> dict | None:
     """Transiciona una oferta (apartado→confirmada/recepcion, etc.) y opcionalmente
     guarda el id de cita Medilink cuando se confirma."""
-    with _conn() as conn:
+    with db() as conn:
         sets = ["estado=?", "resolved_at=datetime('now')"]
         params: list = [estado]
         if id_cita is not None:
@@ -4210,7 +4230,7 @@ def expire_stale_offers() -> int:
     """Vence holds 'apartado' cuyo TTL pasó sin que recepción/auto confirmara, y
     ofertas 'enviada' del mismo slot que quedaron colgadas. Devuelve cuántas venció.
     Idempotente — lo llama el cron."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             "UPDATE waitlist_offers SET estado='expirada', resolved_at=datetime('now') "
             "WHERE estado='apartado' AND expires_at IS NOT NULL AND expires_at < datetime('now')")
@@ -4221,7 +4241,7 @@ def expire_stale_offers() -> int:
 
 def get_offers_pendientes_recepcion(limit: int = 100) -> list[dict]:
     """Holds que esperan validación humana (estado 'recepcion') — para el panel."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT * FROM waitlist_offers WHERE estado='recepcion' "
             "ORDER BY claimed_at ASC LIMIT ?", (limit,)).fetchall()
@@ -4229,7 +4249,7 @@ def get_offers_pendientes_recepcion(limit: int = 100) -> list[dict]:
 
 
 def get_offer_by_id(offer_id: int) -> dict | None:
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute("SELECT * FROM waitlist_offers WHERE id=?", (offer_id,)).fetchone()
         return dict(row) if row else None
 
@@ -4237,7 +4257,7 @@ def get_offer_by_id(offer_id: int) -> dict | None:
 # ── Resultados de examen pendientes de avisar (orquestador resultados_examenes) ──
 
 def add_resultado_pendiente(phone: str, examen: str, rut: str = "", nombre: str = "") -> int:
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             "INSERT INTO resultados_pendientes (phone, rut, nombre, examen) VALUES (?, ?, ?, ?)",
             (phone, rut, nombre, examen))
@@ -4246,7 +4266,7 @@ def add_resultado_pendiente(phone: str, examen: str, rut: str = "", nombre: str 
 
 
 def get_resultados_para_avisar(limit: int = 50) -> list[dict]:
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT * FROM resultados_pendientes "
             "WHERE avisado_at IS NULL AND canceled_at IS NULL "
@@ -4255,7 +4275,7 @@ def get_resultados_para_avisar(limit: int = 50) -> list[dict]:
 
 
 def mark_resultado_avisado(resultado_id: int) -> None:
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("UPDATE resultados_pendientes SET avisado_at = datetime('now') WHERE id = ?",
                      (resultado_id,))
         conn.commit()
@@ -4270,7 +4290,7 @@ def get_citas_bot_para_48h_reminder(fecha: str) -> list[dict]:
     Agrega la columna reminder_48h_sent inline si no existe (evita migración
     manual).
     """
-    with _conn() as conn:
+    with db() as conn:
         # Agregar columna si no existe
         try:
             conn.execute("ALTER TABLE citas_bot ADD COLUMN reminder_48h_sent INTEGER DEFAULT 0")
@@ -4288,7 +4308,7 @@ def get_citas_bot_para_48h_reminder(fecha: str) -> list[dict]:
 
 def mark_reminder_48h_sent(row_id: int):
     """Marca reminder_48h_sent=1 para la fila de citas_bot con id=row_id."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE citas_bot SET reminder_48h_sent=1 WHERE id=?", (row_id,)
         )
@@ -4304,7 +4324,7 @@ def upsert_citas_recepcion(citas: list[dict]) -> int:
     if not citas:
         return 0
     inserted = 0
-    with _conn() as conn:
+    with db() as conn:
         for c in citas:
             id_cita = c["id_cita_medilink"]
             ya_en_bot = conn.execute(
@@ -4342,7 +4362,7 @@ def upsert_citas_recepcion(citas: list[dict]) -> int:
 
 
 def get_citas_recepcion_pendientes_24h(fecha: str) -> list[dict]:
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT * FROM citas_recepcion_reminders
                WHERE fecha = ? AND reminder_24h_sent = 0
@@ -4354,7 +4374,7 @@ def get_citas_recepcion_pendientes_24h(fecha: str) -> list[dict]:
 
 def get_citas_recepcion_pendientes_2h(fecha: str, hora_min: str, hora_max: str) -> list[dict]:
     """Atómico: marca como enviado dentro de la misma transacción."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("BEGIN IMMEDIATE")
         try:
             rows = conn.execute(
@@ -4381,7 +4401,7 @@ def get_citas_recepcion_pendientes_2h(fecha: str, hora_min: str, hora_max: str) 
 
 
 def get_citas_recepcion_pendientes_48h(fecha: str) -> list[dict]:
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT * FROM citas_recepcion_reminders
                WHERE fecha = ? AND reminder_48h_sent = 0
@@ -4392,7 +4412,7 @@ def get_citas_recepcion_pendientes_48h(fecha: str) -> list[dict]:
 
 
 def mark_recepcion_reminder_24h_sent(row_id: int) -> None:
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE citas_recepcion_reminders SET reminder_24h_sent=1 WHERE id=?", (row_id,)
         )
@@ -4400,7 +4420,7 @@ def mark_recepcion_reminder_24h_sent(row_id: int) -> None:
 
 
 def mark_recepcion_reminder_2h_sent(row_id: int) -> None:
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE citas_recepcion_reminders SET reminder_2h_sent=1 WHERE id=?", (row_id,)
         )
@@ -4408,7 +4428,7 @@ def mark_recepcion_reminder_2h_sent(row_id: int) -> None:
 
 
 def mark_recepcion_reminder_48h_sent(row_id: int) -> None:
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE citas_recepcion_reminders SET reminder_48h_sent=1 WHERE id=?", (row_id,)
         )
@@ -4422,7 +4442,7 @@ def tiene_historial_noshow(phone: str, minimo: int = 1) -> bool:
     Lógica: reminder_sent=1 AND confirmation_status NOT 'confirmed'
     AND cancel_detected_at IS NULL (el paciente no avisó con tiempo).
     """
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT COUNT(*) FROM citas_bot "
             "WHERE phone=? AND reminder_sent=1 "
@@ -4449,7 +4469,7 @@ def get_crosssell_dx_candidatos(
     desde = (hoy - timedelta(days=dias_post + 1)).isoformat()
     hasta = (hoy - timedelta(days=1)).isoformat()
 
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT DISTINCT cb.phone, cp.nombre "
             "FROM citas_bot cb "
@@ -4473,7 +4493,7 @@ def upsert_bsuid(bsuid: str, phone: str | None = None):
     """Store or update a BSUID→phone mapping. phone can be None if hidden."""
     if not bsuid:
         return
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             INSERT INTO bsuid_map (bsuid, phone, last_seen)
             VALUES (?, ?, datetime('now'))
@@ -4486,7 +4506,7 @@ def upsert_bsuid(bsuid: str, phone: str | None = None):
 
 def resolve_phone_from_bsuid(bsuid: str) -> str | None:
     """Look up the phone number for a BSUID. Returns None if unknown."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT phone FROM bsuid_map WHERE bsuid=?", (bsuid,)
         ).fetchone()
@@ -4495,7 +4515,7 @@ def resolve_phone_from_bsuid(bsuid: str) -> str | None:
 
 def get_bsuid_stats() -> dict:
     """Return BSUID mapping statistics for /health endpoint."""
-    with _conn() as conn:
+    with db() as conn:
         total = conn.execute("SELECT COUNT(*) as c FROM bsuid_map").fetchone()["c"]
         with_phone = conn.execute(
             "SELECT COUNT(*) as c FROM bsuid_map WHERE phone IS NOT NULL"
@@ -4507,7 +4527,7 @@ def get_bsuid_stats() -> dict:
 
 def save_portal_otp(rut: str, phone: str, code: str):
     """Guarda un OTP para el portal del paciente."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT INTO portal_otp (rut, phone, code) VALUES (?, ?, ?)",
             (rut, phone, code)
@@ -4518,7 +4538,7 @@ def save_portal_otp(rut: str, phone: str, code: str):
 def verify_portal_otp(rut: str, code: str) -> str | None:
     """Verifica un OTP. Retorna el phone si es válido, None si no.
     Válido = código correcto, < 5 min, no usado."""
-    with _conn() as conn:
+    with db() as conn:
         # Limpiar expirados
         conn.execute(
             "DELETE FROM portal_otp WHERE created_at < datetime('now', '-10 minutes')"
@@ -4543,7 +4563,7 @@ def verify_portal_otp(rut: str, code: str) -> str | None:
 
 def count_portal_otps(rut: str, minutes: int = 60) -> int:
     """Cuenta OTPs enviados a un RUT en los últimos N minutos (rate limit)."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT COUNT(*) as c FROM portal_otp WHERE rut=? AND created_at >= datetime('now', ?)",
             (rut, f"-{minutes} minutes")
@@ -4557,7 +4577,7 @@ def add_family_link(owner_rut: str, dependent_rut: str, dependent_nombre: str,
                     relation: str, verification_method: str) -> int:
     """Crea una vinculación familiar. Si ya existe (revocada), la reactiva.
     verification_method: 'tutor_declaration' (menor) | 'otp' (adulto)."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             """INSERT INTO family_links
                (owner_rut, dependent_rut, dependent_nombre, relation, verification_method)
@@ -4580,7 +4600,7 @@ def add_family_link(owner_rut: str, dependent_rut: str, dependent_nombre: str,
 
 def list_family_links(owner_rut: str) -> list[dict]:
     """Lista familiares activos (no revocados) de un titular."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT dependent_rut, dependent_nombre, relation, verification_method,
                       verified_at, created_at
@@ -4594,7 +4614,7 @@ def list_family_links(owner_rut: str) -> list[dict]:
 
 def revoke_family_link(owner_rut: str, dependent_rut: str) -> bool:
     """Marca como revocada una vinculación familiar. Retorna True si hubo cambio."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             """UPDATE family_links SET revoked_at=datetime('now')
                WHERE owner_rut=? AND dependent_rut=? AND revoked_at IS NULL""",
@@ -4608,7 +4628,7 @@ def is_family_link(owner_rut: str, dependent_rut: str) -> bool:
     """True si existe una vinculación activa entre owner y dependent."""
     if owner_rut == dependent_rut:
         return True
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             """SELECT 1 FROM family_links
                WHERE owner_rut=? AND dependent_rut=? AND revoked_at IS NULL LIMIT 1""",
@@ -4628,7 +4648,7 @@ def add_vital(rut: str, tipo: str, valor: float, valor2: float | None = None,
     if tipo not in _VITAL_TIPOS:
         raise ValueError(f"tipo inválido: {tipo}")
     ts = ts or __import__("datetime").datetime.utcnow().isoformat(timespec="seconds") + "Z"
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             """INSERT INTO patient_vitals (rut, tipo, valor, valor2, contexto, nota, ts)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -4651,7 +4671,7 @@ def list_vitals(rut: str, tipo: str | None = None, dias: int | None = None,
         params.append(f"-{int(dias)} days")
     where_sql = " AND ".join(where)
     params.append(limit)
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             f"""SELECT id, rut, tipo, valor, valor2, contexto, nota, ts, created_at
                 FROM patient_vitals
@@ -4664,7 +4684,7 @@ def list_vitals(rut: str, tipo: str | None = None, dias: int | None = None,
 
 def delete_vital(rut: str, vital_id: int) -> bool:
     """Borra un registro de vital (solo si pertenece al RUT)."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute(
             "DELETE FROM patient_vitals WHERE id=? AND rut=?",
             (vital_id, rut)
@@ -4686,7 +4706,7 @@ def generate_referral_code(phone: str) -> str:
     Si ya tiene uno, retorna el existente."""
     import random
     import string as _string
-    with _conn() as conn:
+    with db() as conn:
         existing = conn.execute(
             "SELECT code FROM referral_codes WHERE phone=?", (phone,)
         ).fetchone()
@@ -4710,7 +4730,7 @@ def generate_referral_code(phone: str) -> str:
 
 def get_referral_code(phone: str) -> str | None:
     """Retorna el código de referido de un paciente, o None."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT code FROM referral_codes WHERE phone=?", (phone,)
         ).fetchone()
@@ -4719,7 +4739,7 @@ def get_referral_code(phone: str) -> str | None:
 
 def validate_referral_code(code: str) -> dict | None:
     """Valida un código de referido. Retorna {phone, code} o None."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT phone, code FROM referral_codes WHERE code=?",
             (code.upper().strip(),)
@@ -4730,7 +4750,7 @@ def validate_referral_code(code: str) -> dict | None:
 def use_referral_code(code: str, referred_phone: str) -> bool:
     """Registra el uso de un código de referido. Retorna True si es válido."""
     code = code.upper().strip()
-    with _conn() as conn:
+    with db() as conn:
         ref = conn.execute(
             "SELECT phone FROM referral_codes WHERE code=?", (code,)
         ).fetchone()
@@ -4755,7 +4775,7 @@ def use_referral_code(code: str, referred_phone: str) -> bool:
 
 def log_cross_sell(phone: str, esp_origen: str, esp_destino: str, evento: str) -> None:
     """Registra un evento de cross-sell: 'ofrecido', 'aceptado' o 'rechazado'."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT INTO cross_sell_log (phone, esp_origen, esp_destino, evento) "
             "VALUES (?, ?, ?, ?)",
@@ -4768,7 +4788,7 @@ def puede_cross_sell(phone: str, esp_origen: str, esp_destino: str,
                      dias_cooldown: int = 30) -> bool:
     """True si no se ofreció este par de cross-sell en los últimos dias_cooldown días
     Y no se ofreció NINGÚN cross-sell en la sesión del día (1 por sesión)."""
-    with _conn() as conn:
+    with db() as conn:
         # 1) No más de 1 cross-sell cualquiera hoy
         hoy = conn.execute(
             "SELECT 1 FROM cross_sell_log WHERE phone=? "
@@ -4794,7 +4814,7 @@ def registrar_bono_referral(code: str, referrer_phone: str, referred_phone: str,
     """Crea un bono pendiente al validarse primera cita del referido.
     tipo_bono: 'medica_20' o 'dental_15'.
     Retorna el id del bono creado, o None si ya existe uno para este par."""
-    with _conn() as conn:
+    with db() as conn:
         existing = conn.execute(
             "SELECT id FROM referral_bonos WHERE code=? AND referred_phone=?",
             (code, referred_phone)
@@ -4814,7 +4834,7 @@ def marcar_bono_primera_cita(referred_phone: str) -> list[dict]:
     """Cuando el referido completa su primera cita, marca los bonos pendientes
     y retorna la lista de referentes a notificar (pueden ser varios si entró
     con múltiples códigos, aunque en la práctica es 1)."""
-    with _conn() as conn:
+    with db() as conn:
         ahora = datetime.now(timezone.utc).isoformat()
         conn.execute(
             "UPDATE referral_bonos SET fecha_primera_cita=? "
@@ -4833,7 +4853,7 @@ def marcar_bono_primera_cita(referred_phone: str) -> list[dict]:
 
 def marcar_bono_notificado(bono_id: int) -> None:
     """Registra que se notificó al referente sobre el bono."""
-    with _conn() as conn:
+    with db() as conn:
         ahora = datetime.now(timezone.utc).isoformat()
         conn.execute(
             "UPDATE referral_bonos SET bono_notificado_at=? WHERE id=?",
@@ -4844,7 +4864,7 @@ def marcar_bono_notificado(bono_id: int) -> None:
 
 def marcar_bono_aplicado(bono_id: int) -> None:
     """Registra que el bono fue canjeado (uso manual por recepción)."""
-    with _conn() as conn:
+    with db() as conn:
         ahora = datetime.now(timezone.utc).isoformat()
         conn.execute(
             "UPDATE referral_bonos SET bono_aplicado_at=? WHERE id=?",
@@ -4855,7 +4875,7 @@ def marcar_bono_aplicado(bono_id: int) -> None:
 
 def get_bonos_referral(estado: str = "todos", dias: int = 90) -> list[dict]:
     """Lista de bonos filtrados por estado: 'pendiente' | 'notificado' | 'aplicado' | 'todos'."""
-    with _conn() as conn:
+    with db() as conn:
         filtro_estado = ""
         if estado == "pendiente":
             filtro_estado = "AND fecha_primera_cita IS NOT NULL AND bono_aplicado_at IS NULL"
@@ -4881,7 +4901,7 @@ def get_bonos_referral(estado: str = "todos", dias: int = 90) -> list[dict]:
 
 def conteo_referidos_mes(referrer_phone: str) -> int:
     """Cuántos referidos completaron primera cita este mes (para cap de 3/mes)."""
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT COUNT(*) FROM referral_bonos "
             "WHERE referrer_phone=? AND fecha_primera_cita IS NOT NULL "
@@ -4893,7 +4913,7 @@ def conteo_referidos_mes(referrer_phone: str) -> int:
 
 def get_referral_code_stats(dias: int = 30) -> dict:
     """Estadísticas del programa de referidos."""
-    with _conn() as conn:
+    with db() as conn:
         since = f"-{dias} days"
         total_codes = conn.execute(
             "SELECT COUNT(*) FROM referral_codes"
@@ -4924,7 +4944,7 @@ def get_referral_code_stats(dias: int = 30) -> dict:
 
 def save_campana_envio(phone: str, campana_id: str):
     """Registra un envío de campaña estacional."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT INTO campanas_envios (phone, campana_id) VALUES (?, ?)",
             (phone, campana_id)
@@ -4934,7 +4954,7 @@ def save_campana_envio(phone: str, campana_id: str):
 
 def get_campana_envio_stats(campana_id: str | None = None) -> list[dict]:
     """Estadísticas de envíos de campañas estacionales."""
-    with _conn() as conn:
+    with db() as conn:
         if campana_id:
             rows = conn.execute("""
                 SELECT campana_id, COUNT(*) as enviados,
@@ -4957,7 +4977,7 @@ def get_campana_envio_stats(campana_id: str | None = None) -> list[dict]:
 def puede_enviar_campana_estacional(phone: str, campana_id: str,
                                      dias_cooldown: int = 30) -> bool:
     """True si no se ha enviado esta campaña al teléfono en los últimos N días."""
-    with _conn() as conn:
+    with db() as conn:
         # Hard-block: opt-out marketing (contact_tags + bi.opt_outs_marketing)
         opt_out = conn.execute(
             "SELECT 1 FROM contact_tags WHERE phone=? AND tag='marketing_opt_out'",
@@ -4984,7 +5004,7 @@ def get_segmented_phones(tags: list[str] | None = None,
                          dias_sin_visita: int | None = None) -> list[dict]:
     """Retorna pacientes que cumplen los criterios de segmentación.
     Retorna list[{phone, nombre}]."""
-    with _conn() as conn:
+    with db() as conn:
         base = conn.execute("""
             SELECT DISTINCT cp.phone, cp.nombre
             FROM contact_profiles cp
@@ -5048,7 +5068,7 @@ def get_email_consent_sets() -> dict:
     """
     consented: set[str] = set()
     opted_out: set[str] = set()
-    with _conn() as conn:
+    with db() as conn:
         for r in conn.execute(
             "SELECT phone FROM contact_tags WHERE tag='marketing_opt_out'"
         ).fetchall():
@@ -5073,7 +5093,7 @@ def get_email_consent_sets() -> dict:
 
 def get_fidelizacion_trends(semanas: int = 4) -> list[dict]:
     """Retorna tendencias semanales de fidelización."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT
                 strftime('%%Y-%%W', enviado_en) as semana,
@@ -5094,7 +5114,7 @@ def save_patient_file(phone: str, filename: str, media_type: str,
                       mime_type: str, file_path: str, file_size: int,
                       caption: str = "") -> int:
     """Guarda referencia a un archivo recibido del paciente."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute("""
             INSERT INTO patient_files (phone, filename, media_type, mime_type,
                                        file_path, file_size, caption)
@@ -5106,7 +5126,7 @@ def save_patient_file(phone: str, filename: str, media_type: str,
 
 def get_patient_files(phone: str, limit: int = 50) -> list[dict]:
     """Lista archivos de un paciente, más recientes primero."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute("""
             SELECT id, filename, media_type, mime_type, file_path,
                    file_size, caption, created_at
@@ -5120,7 +5140,7 @@ def get_patient_files(phone: str, limit: int = 50) -> list[dict]:
 
 def get_media_stats() -> dict:
     """Estadísticas de archivos media recibidos (imágenes, docs, etc.) — todo el historial."""
-    with _conn() as conn:
+    with db() as conn:
         totals = conn.execute("""
             SELECT media_type, COUNT(*) as cnt
             FROM patient_files
@@ -5155,7 +5175,7 @@ def get_media_stats() -> dict:
 def save_demanda_no_disponible(phone: str, solicitud: str,
                                 tipo: str = "especialidad"):
     """Registra un especialista o examen solicitado que no tenemos."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             INSERT INTO demanda_no_disponible (phone, solicitud, tipo)
             VALUES (?, ?, ?)
@@ -5165,7 +5185,7 @@ def save_demanda_no_disponible(phone: str, solicitud: str,
 
 def get_demanda_no_disponible(dias: int = 90) -> list[dict]:
     """Lista demanda de especialistas/exámenes no disponibles."""
-    with _conn() as conn:
+    with db() as conn:
         since = (datetime.now(timezone.utc) - timedelta(days=dias)).strftime("%Y-%m-%d")
         rows = conn.execute("""
             SELECT d.id, d.phone, cp.nombre, d.solicitud, d.tipo,
@@ -5189,7 +5209,7 @@ def has_privacy_consent(phone: str) -> bool:
     False si aún no respondió, si rechazó, o si revocó."""
     if not phone:
         return False
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT status, consent_version, revoked_at FROM privacy_consents WHERE phone=?",
             (phone,)
@@ -5210,7 +5230,7 @@ def get_privacy_consent(phone: str) -> dict | None:
     """Retorna el registro de consent completo (para auditoría)."""
     if not phone:
         return None
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT * FROM privacy_consents WHERE phone=?", (phone,)
         ).fetchone()
@@ -5223,7 +5243,7 @@ def save_privacy_consent(phone: str, status: str, method: str = "whatsapp"):
     method ∈ {'whatsapp', 'admin', 'portal'}
     """
     assert status in ("accepted", "declined", "pending"), f"Invalid status: {status}"
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             INSERT INTO privacy_consents (phone, status, consent_version, method, consented_at)
             VALUES (?, ?, ?, ?, datetime('now'))
@@ -5239,7 +5259,7 @@ def save_privacy_consent(phone: str, status: str, method: str = "whatsapp"):
 
 def revoke_privacy_consent(phone: str):
     """Revoca el consent (marca revoked_at). Útil si el paciente escribe 'stop'."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "UPDATE privacy_consents SET revoked_at=datetime('now') WHERE phone=?",
             (phone,)
@@ -5252,7 +5272,7 @@ def log_gdpr_deletion(rut: str | None, phone: str | None, summary: dict,
     """Registra la ejecución de un borrado en cascada (art. 12 Ley 19.628).
     Esta tabla NO debe borrarse nunca — es la prueba legal de cumplimiento."""
     import json as _json
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             "INSERT INTO gdpr_deletions (rut, phone, deleted_by, summary) VALUES (?, ?, ?, ?)",
             (rut, phone, deleted_by, _json.dumps(summary, ensure_ascii=False))
@@ -5315,7 +5335,7 @@ def delete_patient_data(phone: str | None, rut: str | None,
             resolved_rut = prof.get("rut")
 
     deleted = {}
-    with _conn() as conn:
+    with db() as conn:
         try:
             conn.execute("BEGIN IMMEDIATE")
             # Borrado por phone
@@ -5406,7 +5426,7 @@ def get_recepcion_msgs(phone: str, since_minutes: int = 60, max_n: int = 3) -> l
     - excluye mensajes de sistema ('[Recepcionista tomó la conversación]', '[Bot reanudado...]')
     """
     phone = normalize_wa_id(phone)
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """
             SELECT text FROM messages
@@ -5459,7 +5479,7 @@ def get_candidatos_horas_vacias(especialidad: str, dias: int = 30) -> list[dict]
     since_iso = since.isoformat()
     cooldown_ts = int((datetime.now(timezone.utc) - timedelta(days=14)).timestamp())
 
-    with _conn() as conn:
+    with db() as conn:
         # Candidatos que preguntaron por esta especialidad sin agendar
         intent_rows = conn.execute("""
             SELECT DISTINCT e.phone
@@ -5522,7 +5542,7 @@ def get_candidatos_horas_vacias(especialidad: str, dias: int = 30) -> list[dict]
 def log_horas_vacias_envio(phone: str, especialidad: str, profesional_id: int,
                            fecha_slot: str, hora_slot: str) -> int:
     """Registra un envío de push horas vacías. Retorna el ID generado."""
-    with _conn() as conn:
+    with db() as conn:
         cur = conn.execute("""
             INSERT INTO horas_vacias_envios (phone, especialidad, profesional_id, fecha_slot, hora_slot, enviado_ts)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -5533,7 +5553,7 @@ def log_horas_vacias_envio(phone: str, especialidad: str, profesional_id: int,
 
 def mark_horas_vacias_respondio(phone: str, especialidad: str):
     """Marca que el paciente respondió al push de horas vacías."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             UPDATE horas_vacias_envios
             SET respondio = 1
@@ -5546,7 +5566,7 @@ def mark_horas_vacias_respondio(phone: str, especialidad: str):
 
 def mark_horas_vacias_agendo(phone: str, especialidad: str):
     """Marca que el paciente agendó tras recibir un push de horas vacías."""
-    with _conn() as conn:
+    with db() as conn:
         conn.execute("""
             UPDATE horas_vacias_envios
             SET respondio = 1, agendo = 1
@@ -5562,7 +5582,7 @@ def get_horas_vacias_envios_hoy(especialidad: str) -> int:
     inicio_dia = int(datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     ).timestamp())
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             "SELECT COUNT(*) AS cnt FROM horas_vacias_envios WHERE especialidad=? AND enviado_ts >= ?",
             (especialidad.lower(), inicio_dia)
@@ -5589,7 +5609,7 @@ def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") 
     media_type = (referral_obj.get("media_type") or "").strip()[:64]
     ctwa_clid = (referral_obj.get("ctwa_clid") or "").strip()[:512]
 
-    with _conn() as conn:
+    with db() as conn:
         conn.execute(
             """INSERT INTO meta_referrals
                (phone, source_type, source_id, headline, body, media_type,
@@ -5643,7 +5663,7 @@ def get_meta_referral_fresh(phone: str, ttl_horas: int = 168) -> dict | None:
 
     # Fallback: última fila en DB
     cutoff = int(time.time()) - ttl_horas * 3600
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             """SELECT source_type, source_id, headline, body, ctwa_clid
                FROM meta_referrals
@@ -5664,7 +5684,7 @@ def get_meta_referral_fresh(phone: str, ttl_horas: int = 168) -> dict | None:
 
 def get_meta_referrals_recientes(limit: int = 100) -> list[dict]:
     """Retorna los últimos `limit` referrals de campañas Meta para el panel admin."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             """SELECT phone, source_type, source_id, headline, body,
                       media_type, ctwa_clid, canal,
@@ -5688,7 +5708,7 @@ def get_recent_pni_event(phone: str, horas: int = 72) -> dict | None:
     dentro de la ventana de 72h post-envio.
     """
     import json as _json
-    with _conn() as conn:
+    with db() as conn:
         row = conn.execute(
             """SELECT id, meta, ts
                FROM conversation_events
@@ -5724,7 +5744,7 @@ def log_pni_cita_generada(phone: str, pni_evento_id: int,
     # Verificar si ya existe un evento pni_cita_generada para esta cita_id.
     # La constraint de unicidad la manejamos por query, no por schema,
     # para no alterar la tabla existente.
-    with _conn() as conn:
+    with db() as conn:
         exists = conn.execute(
             """SELECT 1 FROM conversation_events
                WHERE phone = ?
