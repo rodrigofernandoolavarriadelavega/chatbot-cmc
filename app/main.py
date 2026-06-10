@@ -39,7 +39,8 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
                      intent_queue_depth, waitlist_depth, purge_old_data,
                      upsert_message_status, upsert_bsuid,
-                     get_profile, save_profile)
+                     get_profile, save_profile,
+                     inbox_start, inbox_done)
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from jobs import (_enviar_reenganche, _sync_citas_hoy,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
@@ -2181,10 +2182,10 @@ def admin_panel_v2(token: str | None = Query(None),
 def admin_panel_v3(token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None)):
     """Panel de recepción v3 (beta, rediseño premium Alma). Misma auth que /admin."""
-    from admin_routes import _verify_cookie
+    from admin_routes import _verify_cookie, _is_admin_token
     if not _ADMIN_V3_HTML:
         raise HTTPException(404, "Panel v3 no disponible")
-    if token and token == ADMIN_TOKEN:
+    if token and _is_admin_token(token):
         return _ADMIN_V3_HTML.replace("__TOKEN__", token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
@@ -2959,11 +2960,17 @@ def adkun_company_board():
 
 
 @app.get("/alma/branding", response_class=HTMLResponse)
-def alma_product_board():
-    """Brand board Alma — producto."""
+def alma_product_board(token: str | None = Query(None),
+                       cmc_session: str | None = Cookie(None)):
+    """Brand board Alma — producto. Misma auth que el resto de módulos Alma."""
+    from admin_routes import _verify_cookie, _is_admin_token
     if not _ALMA_PRODUCT_HTML:
         raise HTTPException(404, "Brand board Alma no disponible")
-    return _ALMA_PRODUCT_HTML
+    if token and _is_admin_token(token):
+        return _ALMA_PRODUCT_HTML
+    if cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia"):
+        return _ALMA_PRODUCT_HTML
+    return RedirectResponse(url="/admin/login", status_code=302)
 
 
 @app.get("/meta", response_class=HTMLResponse)
@@ -3702,6 +3709,9 @@ def alma_shell(token: str | None = Query(None),
                 for k in allowed_keys
                 if k in ALMA_MODULE_REGISTRY
             ]
+        # Módulos gateados por feature flag: no mostrar módulos inertes.
+        if os.getenv("CHECKIN_ENABLED", "false").lower() != "true":
+            modules_list = [m for m in modules_list if m["id"] != "sala"]
         profile_modules_json = _json_alma.dumps(modules_list, ensure_ascii=False)
         panel_profesional = "true" if profile.get("panel_profesional", True) else "false"
         return (_ALMA_HTML
@@ -8890,6 +8900,7 @@ async def webhook(request: Request):
                     # Lock por phone: serializa procesamiento si llegan mensajes
                     # simultáneos del mismo paciente (evita doble respuesta en WAIT_SLOT).
                     from resilience import get_phone_lock
+                    inbox_start(msg_id, phone, texto)
                     async with get_phone_lock(phone):
                         session = get_session(phone)
                         respuesta = await handle_message(phone, texto, session)
@@ -8903,6 +8914,7 @@ async def webhook(request: Request):
                             else:
                                 await send_whatsapp(phone, respuesta)
                                 log_message(phone, "out", respuesta, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                    inbox_done(msg_id)
                     return Response(status_code=200)
 
             # Imágenes y otros → guardar + derivar a recepción (sin extracción)
@@ -9129,6 +9141,11 @@ async def webhook(request: Request):
             except Exception:
                 pass
 
+            # Inbox durable: persistir 'processing' ANTES de procesar. Si el
+            # proceso muere a mitad (restart/SIGKILL), el check de arranque
+            # recupera el mensaje en vez de perderlo (incidente Matías 2026-06-05).
+            inbox_start(msg_id, phone, texto)
+
             # Indicador de "pensando" — reacción ⏳ al mensaje del paciente
             await react_whatsapp(phone, msg_id)
 
@@ -9169,6 +9186,8 @@ async def webhook(request: Request):
                 await send_whatsapp_interactive(phone, respuesta["interactive"])
             else:
                 await send_whatsapp(phone, respuesta)
+            # Ciclo completo (procesado + respuesta enviada) → cerrar inbox durable
+            inbox_done(msg_id)
 
             # Enviar pin del mapa solo en respuestas de ubicación o confirmación de cita
             # (NO en el saludo que también menciona la dirección)
@@ -9211,6 +9230,7 @@ async def webhook(request: Request):
                 # Lock por phone: el mensaje principal ya liberó su lock al retornar,
                 # pero si hay otro handler en vuelo del mismo paciente queremos serializar.
                 from resilience import get_phone_lock
+                inbox_start(_xid, _xphone, _xtxt)
                 async with get_phone_lock(_xphone):
                     _xs = get_session(_xphone)
                     _xstate = _xs.get("state", "IDLE")
@@ -9225,6 +9245,7 @@ async def webhook(request: Request):
                             await send_whatsapp(_xphone, str(_xresp))
                             _xrt = str(_xresp)
                         log_message(_xphone, "out", _xrt, _xstate_after, canal="whatsapp")
+                    inbox_done(_xid)
             except Exception as _xe:
                 log.warning("Error procesando msg extra en batch WA: %s", _xe)
 

@@ -95,6 +95,9 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "branding":    {"label": "Brand Board",      "icon": "palette",   "title": "Brand Board — Alma",             "sub": "Identidad visual · sistema de diseño Alma",        "src": "/alma/branding"},
     "mejoras":     {"label": "Mejoras",          "icon": "clipcheck", "title": "Plan de Mejoras",                "sub": "Auditoría 2026-06-09 · hallazgos · plan accionable", "src": "/alma/mejoras"},
     "grafo":       {"label": "Cerebro Alma",     "icon": "network",   "title": "Cerebro Alma — grafo del organismo", "sub": "Módulos, agentes y datos conectados",          "src": "/alma/grafo"},
+    "brain":       {"label": "Copilot Alma",     "icon": "activity",  "title": "Copilot Alma (Brain)",           "sub": "Capa agéntica · sensores · propuestas",            "src": "/alma/brain"},
+    "agents":      {"label": "Flota Agentes",    "icon": "grid" ,     "title": "Flota de agentes autónomos",     "sub": "18 agentes · gating en cascada · dry-run",         "src": "/alma/agents"},
+    "orquestadores":{"label": "Orquestadores",   "icon": "layers",    "title": "Orquestadores clínicos",         "sub": "Orquestadores · propuestas · inbox",               "src": "/alma/orquestadores"},
     # Módulo externo (app standalone alma-print). src configurable por env para no
     # incrustar la llave en git; por defecto sin token (se pega una vez en el PC).
     "impresion":   {"label": "Impresión",        "icon": "printer",   "title": "Impresión — imprimir en recepción", "sub": "Manda PDF/imágenes a la impresora del centro",  "src": os.getenv("ALMA_PRINT_URL", "https://print.agentecmc.cl/")},
