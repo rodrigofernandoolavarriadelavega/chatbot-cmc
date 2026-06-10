@@ -733,6 +733,11 @@ async def lifespan(app: FastAPI):
             await startup_reservas_huerfanas_check()
         except Exception as e:  # noqa: BLE001 — nunca tumbar el startup por esto
             log.error("reservas_huerfanas: check de arranque falló: %s", e)
+        try:
+            from jobs import startup_mensajes_huerfanos_check
+            await startup_mensajes_huerfanos_check()
+        except Exception as e:  # noqa: BLE001
+            log.error("mensajes_huerfanos: check de arranque falló: %s", e)
     _asyncio_startup.get_event_loop().create_task(_startup_reservas_huerfanas())
     scheduler.start()
     log.info(

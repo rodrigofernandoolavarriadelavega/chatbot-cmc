@@ -193,6 +193,17 @@ def _run_ddl_inline(conn) -> None:
         )
     """)
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS inbox_messages (
+            wamid       TEXT PRIMARY KEY,
+            phone       TEXT,
+            texto       TEXT,
+            status      TEXT DEFAULT 'processing',
+            ts_received TEXT DEFAULT (datetime('now')),
+            ts_done     TEXT,
+            error       TEXT
+        )
+    """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             phone       TEXT NOT NULL,
@@ -916,6 +927,83 @@ def is_duplicate(msg_id: str) -> bool:
             conn.execute("DELETE FROM processed_msgs WHERE created_at < datetime('now', '-7 days')")
         conn.commit()
         return cur.rowcount == 0
+
+
+# ── Inbox durable (causa de fondo incidente Matías 2026-06-05) ──────────────
+# El webhook procesa inline: si el proceso muere a mitad de handle_message
+# (restart/SIGKILL/crash), el mensaje queda registrado como recibido pero la
+# acción nunca completa ni se reintenta. Estos helpers persisten el estado de
+# procesamiento ANTES de procesar; al arrancar, jobs.startup_mensajes_huerfanos
+# recupera los que quedaron en 'processing'. TODOS los helpers tragan
+# excepciones: la durabilidad jamás debe romper el hot-path del webhook.
+
+def inbox_start(wamid: str, phone: str, texto: str) -> None:
+    """Marca un mensaje como 'processing' antes de procesarlo (durable)."""
+    if not wamid:
+        return
+    try:
+        with _conn() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO inbox_messages (wamid, phone, texto, status) "
+                "VALUES (?, ?, ?, 'processing')",
+                (wamid, phone, (texto or "")[:300]),
+            )
+            conn.commit()
+    except Exception as e:
+        logging.getLogger("session").error("inbox_start falló wamid=%s: %s", wamid, e)
+
+
+def inbox_done(wamid: str, ok: bool = True, error: str = "") -> None:
+    """Cierra el ciclo de un mensaje ('done' o 'error'). Purge probabilístico
+    de filas cerradas >7 días (mismo patrón FIX-17 que processed_msgs)."""
+    if not wamid:
+        return
+    try:
+        with _conn() as conn:
+            conn.execute(
+                "UPDATE inbox_messages SET status=?, ts_done=datetime('now'), error=? "
+                "WHERE wamid=?",
+                ("done" if ok else "error", (error or "")[:200], wamid),
+            )
+            if random.random() < 0.01:
+                conn.execute(
+                    "DELETE FROM inbox_messages WHERE status != 'processing' "
+                    "AND ts_received < datetime('now', '-7 days')"
+                )
+            conn.commit()
+    except Exception as e:
+        logging.getLogger("session").error("inbox_done falló wamid=%s: %s", wamid, e)
+
+
+def inbox_stuck(minutes: int = 30) -> list:
+    """Mensajes que quedaron en 'processing' (el proceso murió con ellos en
+    vuelo) dentro de la ventana reciente. Para el check de arranque."""
+    try:
+        with _conn() as conn:
+            return conn.execute(
+                "SELECT wamid, phone, texto, ts_received FROM inbox_messages "
+                "WHERE status='processing' AND ts_received > datetime('now', ?) "
+                "ORDER BY ts_received",
+                (f"-{int(minutes)} minutes",),
+            ).fetchall()
+    except Exception as e:
+        logging.getLogger("session").error("inbox_stuck falló: %s", e)
+        return []
+
+
+def inbox_mark_recovered(wamid: str) -> None:
+    """Marca un mensaje huérfano como recuperado (ya se gestionó el aviso)."""
+    if not wamid:
+        return
+    try:
+        with _conn() as conn:
+            conn.execute(
+                "UPDATE inbox_messages SET status='recovered', ts_done=datetime('now') "
+                "WHERE wamid=?", (wamid,),
+            )
+            conn.commit()
+    except Exception as e:
+        logging.getLogger("session").error("inbox_mark_recovered falló wamid=%s: %s", wamid, e)
 
 
 _REGISTRO_STATES = {"WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL"}

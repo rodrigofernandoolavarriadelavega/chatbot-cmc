@@ -1361,6 +1361,70 @@ async def startup_reservas_huerfanas_check(window_min: int = 60):
         log.error("reservas_huerfanas: no se pudo enviar alerta: %s", e)
 
 
+async def startup_mensajes_huerfanos_check(window_min: int = 30, max_avisos: int = 5):
+    """Corre UNA vez al arrancar (encadenado tras startup_reservas_huerfanas_check
+    en el lifespan): mensajes del inbox durable que quedaron en 'processing' =
+    el proceso murió mientras los procesaba (restart/SIGKILL/crash) y el
+    paciente quedó sin respuesta. Le pide al PACIENTE repetir su mensaje (su
+    ventana 24h está abierta: acaba de escribir hace <window_min minutos) y
+    deja eventos `mensaje_huerfano` para auditoría + alerta a recepción.
+
+    Salvaguardas anti-spam: máx `max_avisos` pacientes por arranque, 1 aviso
+    por phone, y la parte saliente se puede apagar con INBOX_RECOVERY_NOTIFY=false
+    (los eventos y la alerta a recepción se registran igual).
+    """
+    import os
+    from session import (inbox_stuck, inbox_mark_recovered,
+                         log_event as _le, log_message as _lm, get_session as _gs)
+
+    rows = inbox_stuck(window_min)
+    if not rows:
+        log.info("mensajes_huerfanos: 0 mensajes perdidos en vuelo en los últimos %d min", window_min)
+        return
+
+    notify_on = os.getenv("INBOX_RECOVERY_NOTIFY", "true").lower() == "true"
+    avisados: set = set()
+    casos = []
+    for row in rows:
+        wamid, phone, texto, ts = row[0], row[1], row[2], row[3]
+        log.warning("mensajes_huerfanos: msg muerto en vuelo phone=…%s ts=%s texto=%r",
+                    str(phone)[-4:], ts, (texto or "")[:60])
+        _le(phone, "mensaje_huerfano", {
+            "wamid": wamid, "ts_received": ts, "texto": (texto or "")[:120],
+        })
+        inbox_mark_recovered(wamid)
+        casos.append({"phone": phone, "ts": ts})
+        if notify_on and phone not in avisados and len(avisados) < max_avisos:
+            try:
+                cuerpo = (
+                    "Disculpa 🙏 — tuve un reinicio justo cuando me escribiste y tu "
+                    "último mensaje quedó sin responder.\n\n"
+                    "¿Me lo repites? Seguimos desde donde quedamos."
+                )
+                await send_whatsapp(phone, cuerpo)
+                _lm(phone, "out", cuerpo, _gs(phone).get("state", "IDLE"), canal="whatsapp")
+                avisados.add(phone)
+            except Exception as e:
+                log.error("mensajes_huerfanos: no se pudo avisar a %s: %s", str(phone)[-4:], e)
+
+    # Alerta consolidada a recepción (mismo guard de ventana 24h que
+    # reservas_huerfanas / takeover_pendiente_alert).
+    if ADMIN_ALERT_PHONE and _admin_window_open():
+        lineas = [f"• …{str(c['phone'])[-4:]} · {c['ts']}" for c in casos[:5]]
+        if len(casos) > 5:
+            lineas.append(f"… y {len(casos) - 5} más")
+        try:
+            await send_whatsapp(
+                ADMIN_ALERT_PHONE,
+                f"⚙️ *{len(casos)} mensaje(s) de paciente(s) perdidos en reinicio del bot*\n\n"
+                + "\n".join(lineas)
+                + f"\n\nA {len(avisados)} ya se les pidió repetir su mensaje. Revisa el panel."
+            )
+        except Exception as e:
+            log.error("mensajes_huerfanos: no se pudo alertar a recepción: %s", e)
+    log.info("mensajes_huerfanos: %d casos · %d pacientes avisados", len(casos), len(avisados))
+
+
 async def _job_medilink_watchdog():
     """Cada minuto: si Medilink está marcado como caído, prueba un ping.
     - Si se recuperó: marca up, notifica a los pacientes encolados y avisa a recepción.
