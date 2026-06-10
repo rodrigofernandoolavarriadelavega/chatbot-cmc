@@ -264,6 +264,51 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "pie",
             "de pie",
             "eco pie",
+            # Muslo / pierna / pantorrilla (tejidos blandos miembro inferior)
+            "muslo",
+            "de muslo",
+            "eco muslo",
+            "ecografia muslo",
+            "ecotomografia muslo",
+            "pierna",
+            "de pierna",
+            "eco pierna",
+            "ecografia pierna",
+            "pantorrilla",
+            "de pantorrilla",
+            "eco pantorrilla",
+            "gemelo",  # músculo gastrocnemio
+            "de gemelo",
+            # Zona lumbar / columna (partes blandas paravertebrales)
+            "lumbar",
+            "de lumbar",
+            "eco lumbar",
+            "ecografia lumbar",
+            "ecotomografia lumbar",
+            "paravertebral",
+            # Omóplato / escápula / hombro posterior
+            "omoplato",
+            "omóplato",
+            "escapula",
+            "escápula",
+            "eco omoplato",
+            "ecografia omoplato",
+            # Glúteos (partes blandas)
+            "gluteo",
+            "gluteos",
+            "de gluteo",
+            "eco gluteo",
+            "ecografia gluteo",
+            "ecografia gluteos",
+            # Pared abdominal (hernias, lipomas, defectos musculoaponeuróticos)
+            "pared abdominal",
+            "eco pared abdominal",
+            "ecografia pared abdominal",
+            # Cervical / cuello (tiroides ya incluida arriba; este cubre partes blandas cervicales)
+            "cervical",
+            "eco cervical",
+            "ecografia cervical",
+            "ecotomografia cervical",
             # Articulación genérico
             "articulacion",
             "articulación",
@@ -277,6 +322,14 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "inguinal",
             "eco inguinal",
             "ecografia inguinal",
+            # Variantes pegadas / typos frecuentes de pacientes (portavión 2026-06-09)
+            "ecomamaria",       # eco+mamaria pegado → mamaria (partes blandas, Pardo)
+            "renovesical",      # renal + vesical combinado → Pardo
+            "renovecical",      # typo de renovesical
+            "reno vesical",
+            # NOTA: "ecotomografia", "ecotografia", "ecotomagrafia", "eco grafia",
+            # "eco tomografia" son alias raíz SIN órgano — viven en _SOLO_ECO_KEYWORDS
+            # para que route_ecografia retorne None y pregunte el tipo, igual que "eco".
         ],
         "mensaje": (
             "La ecografía {tipo} la realiza David Pardo en el CMC. "
@@ -285,15 +338,24 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
     },
 }
 
-# Palabras que indican ecografía sin especificar órgano
+# Palabras que indican ecografía sin especificar órgano.
+# Al matchear, route_ecografia retorna None → el bot pregunta el tipo al paciente.
+# Incluir aquí los alias raíz SIN órgano (ecotomografia, eco grafia, etc.) para que
+# no caigan a un grupo específico de Pardo cuando el paciente no especificó el órgano.
 _SOLO_ECO_KEYWORDS = frozenset({
     "ecografia",
     "eco",
-    "ecotomografia",
+    "ecotomografia",   # sin tilde — igual que "ecografia" pero con alias ecotomo
     "ecotomografo",
     "ecotomo",
     "ultrasonido",
     "ecografista",
+    # Alias raíz con variantes ortográficas / typos frecuentes
+    "ecotografia",     # typo (sin -mo-)
+    "ecotomagrafia",   # typo doble
+    "eco grafia",      # con espacio
+    "eco grafias",
+    "eco tomografia",  # con espacio
 })
 
 # ── GATE de contexto ecográfico ──────────────────────────────────────────────
@@ -317,7 +379,9 @@ _ECO_CONTEXT_RE = _re_eco.compile(
     r"ecograf\w*|"                  # ecografia, ecografias, ecografista, ecografico
     r"ecocardio\w*|"                # ecocardiograma, ecocardiografia
     r"ecotomograf\w*|ecotomo\w*|"   # ecotomografia, ecotomografo, ecotomo
+    r"ecotograf\w*|"                # ecotografia (typo sin -mo-)
     r"ecodoppler|"
+    r"ecomamaria|"                  # variante pegada
     r"ultrasonido\w*|"
     r"doppler|"
     r"transvaginal|transvajinal|intravaginal|intravajinal|endovaginal"

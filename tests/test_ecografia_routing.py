@@ -228,6 +228,175 @@ class TestRouteEcografiaGeneral(unittest.TestCase):
         self._assert_pardo("me dijeron que tengo que hacerme una eco abdominal")
 
 
+class TestRouteEcografiaLexicoNuevo(unittest.TestCase):
+    """Keywords agregados en 2026-06-10: muslo, pierna, lumbar, omóplato, glúteos,
+    pared abdominal, ecotomografía, renovesical, cervical, ecomamaria.
+    Todos deben ir a David Pardo (ID 68, $40.000, particular).
+    """
+
+    def _route(self, texto: str):
+        from ecografias import route_ecografia
+        return route_ecografia(texto)
+
+    def _assert_pardo(self, texto: str, msg: str = ""):
+        r = self._route(texto)
+        label = msg or repr(texto)
+        self.assertIsNotNone(r, f"{label}: route_ecografia no debe retornar None")
+        self.assertEqual(r["id_profesional"], 68, f"{label}: debe ser Pardo (ID 68)")
+        self.assertEqual(r["especialidad_destino"], "ecografía", f"{label}: especialidad debe ser ecografía")
+        self.assertEqual(r["precio_particular"], 40000, f"{label}: precio debe ser $40.000")
+
+    # ── Muslo / pierna / pantorrilla ──────────────────────────────────────────
+    def test_eco_muslo(self):
+        self._assert_pardo("eco tomografia de muslo")
+
+    def test_ecografia_muslo(self):
+        self._assert_pardo("ecografia muslo")
+
+    def test_eco_muslo_sin_eco(self):
+        """'muslo' solo (sin raíz eco) no debe enrutar — gate de contexto."""
+        from ecografias import route_ecografia
+        r = route_ecografia("me duele el muslo")
+        self.assertIsNone(r, "muslo sin contexto eco debe retornar None (gate)")
+
+    def test_ecografia_pierna(self):
+        self._assert_pardo("ecografia pierna")
+
+    def test_ecografia_pantorrilla(self):
+        self._assert_pardo("ecografia pantorrilla")
+
+    # ── Lumbar ────────────────────────────────────────────────────────────────
+    def test_ecografia_lumbar(self):
+        self._assert_pardo("ecografia lumbar")
+
+    def test_ecotomografia_lumbar(self):
+        self._assert_pardo("ecotomografia lumbar")
+
+    def test_eco_lumbar(self):
+        self._assert_pardo("eco de lumbar")
+
+    # ── Omóplato / escápula ──────────────────────────────────────────────────
+    def test_ecografia_omoplato(self):
+        self._assert_pardo("ecografia omoplato")
+
+    def test_eco_escapula(self):
+        self._assert_pardo("eco escapula")
+
+    def test_frase_omoplato(self):
+        self._assert_pardo("quiero una ecografia de omoplato y brazo")
+
+    # ── Glúteos ───────────────────────────────────────────────────────────────
+    def test_ecografia_gluteos(self):
+        self._assert_pardo("ecografia gluteos")
+
+    def test_ecotomografia_gluteos_bilateral(self):
+        self._assert_pardo("ecotomografia gluteos bilateral")
+
+    # ── Pared abdominal ──────────────────────────────────────────────────────
+    def test_pared_abdominal(self):
+        self._assert_pardo("ecografia pared abdominal")
+
+    # ── Cervical ─────────────────────────────────────────────────────────────
+    def test_ecografia_cervical(self):
+        self._assert_pardo("ecografia cervical")
+
+    # ── Ecotomografía (alias raíz sin tilde) ─────────────────────────────────
+    def test_ecotomografia_raiz(self):
+        """ecotomografia a secas → debe retornar None (preguntar tipo)."""
+        from ecografias import route_ecografia
+        r = route_ecografia("ecotomografia")
+        self.assertIsNone(r, "ecotomografia sin órgano debe preguntar tipo (None)")
+
+    def test_ecotomografia_con_organo(self):
+        self._assert_pardo("ecotomografia hombro")
+
+    def test_ecotomografia_con_organo_tobillo(self):
+        self._assert_pardo("ecotomografia de tobillo")
+
+    # ── Renovesical / typos ───────────────────────────────────────────────────
+    def test_renovesical(self):
+        self._assert_pardo("eco renovesical")
+
+    def test_renovecical_typo(self):
+        self._assert_pardo("eco renovecical")
+
+    def test_reno_vesical_separado(self):
+        self._assert_pardo("ecografia reno vesical")
+
+    # ── Ecomamaria pegado ────────────────────────────────────────────────────
+    def test_ecomamaria_pegado(self):
+        """'ecomamaria' sin espacio debe ir a Pardo (partes blandas, NO Rejón)."""
+        self._assert_pardo("ecomamaria")
+
+    def test_ecomamaria_pegado_no_es_rejon(self):
+        from ecografias import route_ecografia
+        r = route_ecografia("ecomamaria")
+        self.assertIsNotNone(r)
+        self.assertNotEqual(r["id_profesional"], 61, "ecomamaria NO debe ir a Rejón")
+
+    # ── eco grafia con espacio ────────────────────────────────────────────────
+    def test_eco_grafia_con_espacio(self):
+        self._assert_pardo("eco grafia abdominal")
+
+    # ── Assume_context: respuestas cortas sin raíz eco ────────────────────────
+    def test_assume_context_muslo(self):
+        """Con assume_context=True, 'muslo' solo debe enrutar a Pardo."""
+        from ecografias import route_ecografia
+        r = route_ecografia("muslo", assume_context=True)
+        self.assertIsNotNone(r, "muslo con assume_context debe enrutar")
+        self.assertEqual(r["id_profesional"], 68)
+
+    def test_assume_context_lumbar(self):
+        from ecografias import route_ecografia
+        r = route_ecografia("lumbar", assume_context=True)
+        self.assertIsNotNone(r)
+        self.assertEqual(r["id_profesional"], 68)
+
+    def test_assume_context_pierna(self):
+        from ecografias import route_ecografia
+        r = route_ecografia("pierna", assume_context=True)
+        self.assertIsNotNone(r)
+        self.assertEqual(r["id_profesional"], 68)
+
+
+class TestFaqEcografiaFonasa(unittest.TestCase):
+    """FAQ local: eco + fonasa debe retornar mensaje claro (solo particular)."""
+
+    def _fallback(self, texto: str):
+        # Importar directamente sin deps de red
+        import unicodedata as _u
+        tl = texto.lower()
+        tl_na = ''.join(c for c in _u.normalize('NFD', tl) if _u.category(c) != 'Mn')
+        from claude_helper import _FAQ_LOCAL_FALLBACKS
+        for keywords, respuesta in _FAQ_LOCAL_FALLBACKS:
+            if all(k in tl_na for k in keywords):
+                return respuesta
+        return None
+
+    def test_eco_fonasa_hit(self):
+        r = self._fallback("ecografia con fonasa")
+        self.assertIsNotNone(r, "eco+fonasa debe tener hit en FAQ local")
+        self.assertIn("particular", r.lower())
+        self.assertIn("40.000", r)
+
+    def test_ecotomografia_fonasa_hit(self):
+        r = self._fallback("ecotomografia bono fonasa")
+        self.assertIsNotNone(r, "ecotomografia+fonasa debe tener hit")
+        self.assertIn("particular", r.lower())
+
+    def test_ecografia_bono_hit(self):
+        r = self._fallback("puedo usar el bono para la ecografia")
+        self.assertIsNotNone(r, "eco+bono debe tener hit en FAQ local")
+        self.assertIn("particular", r.lower())
+
+    def test_sin_eco_sin_hit(self):
+        """Medicina general + Fonasa no debe caer en el hit de eco."""
+        r = self._fallback("medicina general con fonasa")
+        # Si hay hit, no debe ser el mensaje de ecografía
+        if r:
+            self.assertNotIn("David Pardo", r)
+
+
 class TestRouteEcografiaSinEspecificar(unittest.TestCase):
     """Sin tipo especificado → None (caller debe preguntar tipo)."""
 

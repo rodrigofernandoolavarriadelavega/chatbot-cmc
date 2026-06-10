@@ -849,7 +849,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Fonoaudiología | ❌ Solo particular | $25.000–$50.000 | NO acepta Fonasa |
 | Podología | ❌ Solo particular | $20.000+ | NO acepta Fonasa |
 | Masoterapia | ❌ Solo particular | $17.990–$26.990 | NO acepta Fonasa |
-| Ecografía | ❌ Solo particular | varía | NO acepta Fonasa |
+| Ecografía (David Pardo) | ❌ Solo particular | $40.000 | NO acepta Fonasa en ninguna modalidad ni tramo |
 
 REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay Fonasa para [X especialidad]?", RESPONDE EXPLÍCITAMENTE SÍ/NO según la tabla. NO contestes con "tenemos Fonasa MLE en otras especialidades" sin antes responder lo que preguntan.
 - ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición, Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo).
@@ -2094,6 +2094,21 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
 _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     # (keywords que deben aparecer, respuesta). Solo keywords muy específicas
     # para evitar falsos positivos. Se usa como fallback cuando Claude falla.
+    # Eco + Fonasa/bono: respuesta contextual explícita (todas las ecos de David Pardo
+    # son SOLO PARTICULAR $40.000 — no hay convenio Fonasa ni bono MLE para ecografía).
+    # Cubre el path offline cuando Claude no está disponible.
+    (("ecograf", "fonasa"),
+     "La ecografía con *David Pardo* es solo *particular* ($40.000) — "
+     "no aceptamos Fonasa para este servicio.\n\n"
+     "Escribe *agendar ecografía* para reservar hora."),
+    (("ecotomograf", "fonasa"),
+     "La ecotomografía con *David Pardo* es solo *particular* ($40.000) — "
+     "no aceptamos Fonasa para este servicio.\n\n"
+     "Escribe *agendar ecografía* para reservar hora."),
+    (("ecograf", "bono"),
+     "La ecografía con *David Pardo* es solo *particular* ($40.000) — "
+     "no se puede pagar con bono Fonasa.\n\n"
+     "Escribe *agendar ecografía* para reservar hora."),
     # Fix 2026-05-25: eco mamaria → David Pardo (partes blandas), $40.000, agendar ecografía.
     (("ecograf", "mamari"),
      "Sí, realizamos *ecografía mamaria* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
