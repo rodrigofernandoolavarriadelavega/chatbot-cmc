@@ -812,7 +812,8 @@ async def portal_family_verify_otp(request: Request,
     if not dep_raw or not code:
         raise HTTPException(status_code=400, detail="RUT y código requeridos")
     if relation not in {"padre", "madre", "conyuge", "pareja", "hermano", "hermana",
-                        "hijo", "hija", "abuelo", "abuela", "otro", "familiar"}:
+                        "hijo", "hija", "abuelo", "abuela", "otro", "familiar",
+                        "amigo", "amiga", "vecino", "vecina", "cuidador", "cuidadora"}:
         relation = "familiar"
 
     dep_rut = _normalize_rut(dep_raw)

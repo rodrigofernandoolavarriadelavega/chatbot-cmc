@@ -1833,7 +1833,7 @@ async function renderFamilyStrip() {
     if (!mem.length) return;
     const activo = _normRut((patientData && patientData.rut) || '');
     let h = `<div class="panel">
-      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia</h2><span class="count">${mem.length}</span>${mem.length > 1 ? '<button class="gen-btn" onclick="openGenograma()">🌳 Genograma</button>' : ''}</div>
+      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia y cercanos</h2><span class="count">${mem.length}</span>${mem.length > 1 ? '<button class="gen-btn" onclick="openGenograma()">🌳 Genograma</button>' : ''}</div>
       <div class="fam-track">`;
     for (const m of mem) {
       const first = (m.nombre || '').split(' ')[0] || '—';
@@ -1851,7 +1851,7 @@ async function renderFamilyStrip() {
     h += `<button class="fam-card add" onclick="openAddFamilyModal()">
         <div class="fam-ava plus">+</div>
         <div class="fam-name">Agregar</div>
-        <div class="fam-rel">familiar</div>
+        <div class="fam-rel">familiar o cercano</div>
       </button>
     </div>`;
     // Sugerencias preventivas por miembro (cross-sell familiar, máx 4).
@@ -1876,7 +1876,7 @@ async function renderFamilyStrip() {
         </button>`;
       }
     }
-    h += `<div class="fam-note">Toca a un familiar para ver sus horas, controles y mediciones desde este mismo portal.</div></div>`;
+    h += `<div class="fam-note">Toca a una persona para ver sus horas, controles y mediciones desde este mismo portal. Puedes vincular familiares, amigos o vecinos (con su autorización por WhatsApp).</div></div>`;
     slot.innerHTML = h;
   } catch (e) { /* fail-safe: sin strip */ }
 }
@@ -1981,6 +1981,15 @@ function buildGenSVG(mem) {
       path(`M${t.x + 24} ${t.y} L${c.x - 24} ${c.y}`);
       uX = (t.x + c.x) / 2; uY = t.y;
     } else { uX = t.x; uY = t.y + 24; }
+  }
+  // Cercanos no consanguíneos (amigos/vecinos/cuidadores): línea punteada al titular
+  if (tit && otros.length) {
+    const t = pos.get(tit.rut);
+    for (const o of otros) {
+      const op = pos.get(o.rut); if (!op) continue;
+      const dir = op.x > t.x ? 1 : -1;
+      P.push(`<path d="M${t.x + 24 * dir} ${t.y} L${op.x - 24 * dir} ${op.y}" fill="none" stroke="#b9cddb" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 5"/>`);
+    }
   }
   if (hijos.length && uX != null) {
     const hs = hijos.map(h => pos.get(h.rut));
@@ -3127,7 +3136,7 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
 <!-- Modal: Agregar familiar -->
 <div class="af-backdrop" id="af-backdrop" onclick="if(event.target===this)closeAddFamilyModal()">
   <div class="af-modal" role="dialog" aria-labelledby="af-title">
-    <h3 id="af-title">Agregar familiar</h3>
+    <h3 id="af-title">Agregar familiar o persona cercana</h3>
     <div class="af-sub">Gestiona las citas de tus hijos o padres desde el portal.</div>
 
     <div class="af-tabs">
@@ -3167,11 +3176,11 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
     <div id="af-pane-adult" style="display:none">
       <div id="af-adult-step1">
         <div class="af-field">
-          <label>RUT del familiar adulto</label>
+          <label>RUT de la persona (adulto)</label>
           <input type="text" id="af-adult-rut" placeholder="12.345.678-9" inputmode="text" maxlength="12" oninput="formatRutInput(this)">
         </div>
         <div class="af-check" style="background:var(--cmc-aqua-soft); color:var(--cmc-navy)">
-          <span>Enviaremos un código de autorización al WhatsApp registrado del familiar. Pídeselo y escríbelo en el siguiente paso.</span>
+          <span>Enviaremos un código de autorización al WhatsApp registrado de esa persona. Pídeselo y escríbelo en el siguiente paso. Sirve para familiares, amigos o vecinos a quienes les gestionas sus horas.</span>
         </div>
         <div class="af-actions">
           <button class="af-btn" onclick="closeAddFamilyModal()">Cancelar</button>
@@ -3180,7 +3189,7 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
       </div>
       <div id="af-adult-step2" style="display:none">
         <div class="af-field">
-          <label>Código recibido por el familiar (6 dígitos)</label>
+          <label>Código que recibió esa persona (6 dígitos)</label>
           <input type="text" id="af-adult-code" placeholder="123456" inputmode="numeric" maxlength="6">
         </div>
         <div class="af-field">
@@ -3196,6 +3205,11 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
             <option value="abuela">Abuela</option>
             <option value="hijo">Hijo (adulto)</option>
             <option value="hija">Hija (adulta)</option>
+            <option value="amigo">Amigo</option>
+            <option value="amiga">Amiga</option>
+            <option value="vecino">Vecino</option>
+            <option value="vecina">Vecina</option>
+            <option value="cuidador">Cuidador(a)</option>
             <option value="otro">Otro</option>
           </select>
         </div>
