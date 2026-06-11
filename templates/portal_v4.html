@@ -923,7 +923,7 @@ a{color:inherit; text-decoration:none}
 .gs-body{max-height:408px; overflow:auto; padding:2px}
 @media (max-width:700px){
   .gen-card.zoom{grid-template-columns:1fr; grid-template-areas:"head" "tree" "side"}
-  .gen-card.zoom #gen-svg{height:150px}
+  .gen-card.zoom #gen-svg{height:185px}
   .gs-frame{height:390px}
 }
 #gz-cam{transition:transform .55s cubic-bezier(.22,.8,.3,1)}
@@ -2054,11 +2054,16 @@ function _genAimCam(wrap, svg, g) {
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const wr = wrap.getBoundingClientRect();
     if (!wr.width || !wr.height) return;
-    const k = 2;
-    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy) - 3;
-    const wT = svg._vb0.w / k, hT = wT * (wr.height / wr.width);
-    // arranque con el encuadre actual adaptado al aspecto del marco (sin salto feo)
-    const h0 = svg._vb0.w * (wr.height / wr.width);
+    // Zoom adaptativo: acercarse lo MÁXIMO posible dejando siempre a la vista
+    // el conjunto completo nodo + nombre + edad + diagnósticos (~136 unidades,
+    // desde el badge VIENDO en cy-50 hasta el chip de dx en cy+78)
+    const NEED = 136;
+    const aspect = wr.height / wr.width;
+    const k = Math.max(1.15, Math.min(2, (svg._vb0.w * aspect) / NEED));
+    const cx = parseFloat(g.dataset.cx);
+    const cy = parseFloat(g.dataset.cy) + 14;   // centro del conjunto nodo+etiquetas
+    const wT = svg._vb0.w / k, hT = wT * aspect;
+    const h0 = svg._vb0.w * aspect;
     svg.setAttribute('viewBox', `${svg._vb0.x} ${Math.max(svg._vb0.y, cy - h0 / 2)} ${svg._vb0.w} ${h0}`);
     _vbAnimate(svg, { x: cx - wT / 2, y: cy - hT / 2, w: wT, h: hT }, 550);
   }));
