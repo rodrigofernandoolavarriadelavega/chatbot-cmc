@@ -2791,6 +2791,94 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log.warning("confirm_recordatorio_texto_libre falló: %s", _e_rc)
         # Si no hay cita con recordatorio pendiente, dejar caer al flujo normal
 
+    # ── Texto libre NEGATIVO tras recordatorio ("No", "no puedo") ─────────────
+    # Espejo del bloque anterior (caso real María 2026-06-11: recordatorio 2h →
+    # respondió "No" → el bot le mostró el menú genérico y la hora quedó tomada).
+    # Si hay cita futura recordada sin respuesta, un "no" corto = probablemente
+    # no puede asistir → preguntar explícito con botones que reusan el handler
+    # de confirmación pre-cita (cita_cancelar:/cita_confirm:).
+    _TOKENS_NO_RECOD = {
+        "no", "no puedo", "no voy", "no ire", "no iré",
+        "no puedo ir", "no puedo asistir", "no podre ir", "no podré ir",
+        "no podre", "no podré", "no asistire", "no asistiré",
+        "no voy a poder", "no voy a poder ir", "no alcanzo",
+    }
+    if state == "IDLE" and tl_norm in _TOKENS_NO_RECOD:
+        try:
+            from session import db as _conn_nr
+            _hoy_nr = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
+            with _conn_nr() as _c_nr:
+                _fila_nr = _c_nr.execute(
+                    "SELECT id_cita, especialidad, profesional, fecha, hora "
+                    "FROM citas_bot "
+                    "WHERE phone=? AND fecha >= ? "
+                    "AND (reminder_sent=1 OR reminder_2h_sent=1) "
+                    "AND (confirmation_status IS NULL OR confirmation_status='') "
+                    "AND (cancel_detected_at IS NULL) "
+                    "ORDER BY fecha ASC, hora ASC LIMIT 1",
+                    (phone, _hoy_nr),
+                ).fetchone()
+            if _fila_nr:
+                _id_nr = str(_fila_nr["id_cita"])
+                log_event(phone, "recordatorio_respuesta_negativa", {
+                    "id_cita": _id_nr, "txt": txt[:60],
+                })
+                _cuando_nr = ("hoy" if _fila_nr["fecha"] == _hoy_nr
+                              else f"el {_fila_nr['fecha']}")
+                return _btn_msg(
+                    f"¿No puedes asistir a tu hora de *{_fila_nr['especialidad']}* "
+                    f"{_cuando_nr} a las *{_fila_nr['hora']}* con {_fila_nr['profesional']}? 🤔\n\n"
+                    "Si la cancelas, el cupo queda libre para otro paciente.",
+                    [
+                        {"id": f"cita_cancelar:{_id_nr}", "title": "❌ Cancelar mi hora"},
+                        {"id": f"cita_confirm:{_id_nr}", "title": "✅ Sí asistiré"},
+                    ],
+                )
+        except Exception as _e_nr:
+            log.warning("recordatorio_respuesta_negativa falló: %s", _e_nr)
+        # Sin cita recordada pendiente → dejar caer al flujo normal
+
+    # ── "¿Tengo hora (hoy)?" — pregunta por SUS citas, no por disponibilidad ──
+    # Caso real María 2026-06-11: "Entonces para hoy no tengo hora?" → el bot
+    # respondió con el fallback de disponibilidad y tuvo que entrar recepción.
+    # Respuesta directa desde citas_bot, sin pedir RUT (el phone ya identifica).
+    _PREG_MIS_HORAS = (
+        "tengo hora", "no tengo hora", "tengo una hora", "tengo cita",
+        "tengo una cita", "tengo hora hoy", "tengo alguna hora",
+        "quedo mi hora", "quedó mi hora", "quedo agendada", "quedó agendada",
+        "quedo agendado", "quedó agendado", "mi hora quedo", "mi hora quedó",
+    )
+    if state == "IDLE" and any(p in tl_norm for p in _PREG_MIS_HORAS)             and ("?" in txt or tl_norm.startswith(("entonces", "y ", "no ")) or "hoy" in tl_norm or "manana" in tl_norm):
+        try:
+            from session import db as _conn_mh
+            _hoy_mh = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
+            with _conn_mh() as _c_mh:
+                _citas_mh = _c_mh.execute(
+                    "SELECT especialidad, profesional, fecha, hora FROM citas_bot "
+                    "WHERE phone=? AND fecha >= ? AND cancel_detected_at IS NULL "
+                    "ORDER BY fecha ASC, hora ASC LIMIT 3",
+                    (phone, _hoy_mh),
+                ).fetchall()
+            if _citas_mh:
+                log_event(phone, "consulta_mis_horas_atajo", {"n": len(_citas_mh)})
+                _lineas_mh = []
+                for _cm in _citas_mh:
+                    _dia_mh = "HOY" if _cm["fecha"] == _hoy_mh else _cm["fecha"]
+                    _lineas_mh.append(
+                        f"• *{_dia_mh}* {_cm['hora']} — {_cm['especialidad']} "
+                        f"con {_cm['profesional']}")
+                return ("Sí ✅ Tienes reservado:\n\n" + "\n".join(_lineas_mh)
+                        + "\n\nRecuerda llegar 15 minutos antes con tu cédula. "
+                          "Escribe *menu* si necesitas algo más.")
+            # Sin citas del bot: puede tener hora tomada en recepción → honesto.
+            log_event(phone, "consulta_mis_horas_atajo", {"n": 0})
+            return ("Por este chat no veo horas reservadas a tu nombre 🤔\n\n"
+                    "Si reservaste por teléfono o en recepción, igual puede estar "
+                    f"agendada — confírmalo al {CMC_TELEFONO}.\n\n"
+                    "¿Quieres que te agende una hora? Escribe *menu* 😊")
+        except Exception as _e_mh:
+            log.warning("consulta_mis_horas_atajo falló: %s", _e_mh)
+
     # ── Respuesta al reenganche "No por ahora" ────────────────────────────────
     # Bug 2026-04-25 (56933748605, 15:32): el botón de jobs.py mandaba
     # "no_gracias_reeng" pero no había handler → caía en HUMAN_TAKEOVER y el
@@ -3512,7 +3600,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             try:
                 from session import get_meta_referral_fresh as _get_ref_bienvenida
                 _ref_bienvenida = _get_ref_bienvenida(phone, ttl_horas=24)
-                if _ref_bienvenida and _ref_bienvenida.get("headline"):
+                # Si el paciente YA convirtió (creó una cita hace <24h), el aviso
+                # cumplió su pega: NO replayar la oferta del ad ni mandarlo a
+                # waitlist (caso María 2026-06-11: agendó 10:02, "menu" 10:17 →
+                # el bot le repitió el aviso de brackets y la inscribió en espera).
+                _ya_convirtio_ctwa = has_recent_event(phone, "cita_creada", days=1)
+                if _ref_bienvenida and _ref_bienvenida.get("headline") and not _ya_convirtio_ctwa:
                     _headline_bv = _ref_bienvenida["headline"]
                     log_event(phone, "disclosure_enviado", {})
                     log_event(phone, "bienvenida_adaptativa_meta", {"headline": _headline_bv[:80]})
