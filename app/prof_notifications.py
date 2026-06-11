@@ -120,10 +120,11 @@ def _ya_enviado(phone: str, event_type: str, dedup_key: str) -> bool:
     dedup_key típicamente = id_cita."""
     try:
         with _conn() as c:
+            # FIX F042: la columna es 'meta', no 'data' (conversation_events schema)
             r = c.execute(
                 "SELECT 1 FROM conversation_events "
                 "WHERE phone=? AND event='prof_notif_sent' "
-                "AND data LIKE ? "
+                "AND meta LIKE ? "
                 "AND ts > datetime('now', '-7 days') LIMIT 1",
                 (phone, f'%"event_type":"{event_type}"%"dedup_key":"{dedup_key}"%')
             ).fetchone()

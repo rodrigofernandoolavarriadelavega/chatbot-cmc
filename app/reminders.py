@@ -496,10 +496,15 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                                         f"*{cita['especialidad']}* hoy a las *{hora}*.\n\n"
                                         "Escribe *agendar* si te interesa tomarla."
                                     )
-                                    mark_waitlist_notified(_primer["id"])
+                                    # FIX F045: este es un aviso especulativo (el slot aún
+                                    # no se liberó realmente). NO marcar notified_at aquí
+                                    # para que el paciente siga en waitlist y reciba la
+                                    # oferta real cuando la operativa confirme la cancelación.
+                                    # Solo loggear el aviso enviado.
                                     log_event(_wp, "waitlist_notif_slot_liberado", {
                                         "especialidad": cita["especialidad"],
                                         "hora": hora,
+                                        "especulativo": True,
                                     })
                         except Exception as _ew:
                             log.warning("Error notificando waitlist slot liberado: %s", _ew)
@@ -822,9 +827,11 @@ async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None)
                     "📍 Monsalve esquina República. ¡Te esperamos!",
                 )
             elif USE_TEMPLATES and send_template_fn:
-                fecha_display = _fmt_fecha_display(cita["fecha"])
+                # FIX F041: template recordatorio_cita_2h tiene 4 placeholders
+                # {{1}}=nombre {{2}}=especialidad {{3}}=profesional {{4}}=hora
+                # (fecha_display era el 5to parámetro que causaba error Meta 132000)
                 _wamid_r2h = await send_template_fn(phone, "recordatorio_cita_2h",
-                                       body_params=[nombre, esp, prof, fecha_display, hora])
+                                       body_params=[nombre, esp, prof, hora])
                 if _wamid_r2h is None:
                     log.error("Recepción 2h (template) FALLÓ (sin wamid) → %s id_cita=%s; "
                               "NO se marca reminder_2h_sent", phone[:8] + "***", id_cita)

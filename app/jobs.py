@@ -3504,11 +3504,13 @@ async def _job_waitlist_digest_semanal():
         log.info("waitlist_digest: no hay pacientes con >14 dias en waitlist")
         return
 
+    # FIX F043: sqlite3.Row no tiene .get() — acceder por clave directo (devuelve None si ausente)
     lineas_wd = []
     for row_wd in rows_wd:
-        _nombre_wd = (row_wd["nombre"] or "").split()[0] if row_wd.get("nombre") else "Paciente"
-        _esp_wd = row_wd.get("especialidad") or "?"
-        _phone_wd = row_wd.get("phone") or ""
+        _nombre_raw = row_wd["nombre"]
+        _nombre_wd = (_nombre_raw or "").split()[0] if _nombre_raw else "Paciente"
+        _esp_wd = row_wd["especialidad"] or "?"
+        _phone_wd = row_wd["phone"] or ""
         _phone_fmt = _phone_wd[-8:] if len(_phone_wd) >= 8 else _phone_wd
         try:
             _ts_wd = _dt_wd.fromisoformat(row_wd["created_at"])
@@ -3538,14 +3540,16 @@ async def _job_waitlist_digest_semanal():
             # Ventana cerrada: loggear como alerta de texto
             log.warning("waitlist_digest: ventana 24h cerrada — digest guardado en log")
             try:
-                _ALERT_LOG.parent.mkdir(parents=True, exist_ok=True)
-                with open(_ALERT_LOG, "a", encoding="utf-8") as _f_wd:
+                from pathlib import Path as _Path_wd
+                _ALERT_LOG_WD = _Path_wd("/var/log/cmc-watchdog-alerts.log")
+                _ALERT_LOG_WD.parent.mkdir(parents=True, exist_ok=True)
+                with open(_ALERT_LOG_WD, "a", encoding="utf-8") as _f_wd:
                     _f_wd.write(f"\n--- WAITLIST DIGEST {_dt_wd.now().strftime('%Y-%m-%d')} ---\n{cuerpo_wd}\n")
             except Exception:
                 pass
         _le_wd(ADMIN_ALERT_PHONE, "waitlist_digest_semanal", {
             "n_pacientes": n_wd,
-            "especialidades": list({r.get("especialidad") for r in rows_wd}),
+            "especialidades": list({r["especialidad"] for r in rows_wd}),
         })
     except Exception as _e_send_wd:
         log.error("waitlist_digest: no se pudo enviar alerta: %s", _e_send_wd)
