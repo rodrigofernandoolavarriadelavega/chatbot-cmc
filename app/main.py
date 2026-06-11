@@ -2296,6 +2296,22 @@ def admin_manifest(token: str | None = Query(None),
     return JSONResponse(base, media_type="application/manifest+json")
 
 
+@app.get("/sitio-v8", response_class=HTMLResponse)
+def sitio_v8_preview():
+    """Preview pública del sitio V8 «Costero Editorial» (borrador, no indexar)."""
+    html = (_TEMPLATE_DIR / "sitio-v8.html").read_text(encoding="utf-8")
+    return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0",
+                                       "X-Robots-Tag": "noindex, nofollow"})
+
+
+@app.get("/sitio-v9", response_class=HTMLResponse)
+def sitio_v9_preview():
+    """Preview pública del sitio V9 «MAREA» (borrador, no indexar)."""
+    html = (_TEMPLATE_DIR / "sitio-v9.html").read_text(encoding="utf-8")
+    return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0",
+                                       "X-Robots-Tag": "noindex, nofollow"})
+
+
 @app.get("/vecino", response_class=HTMLResponse)
 def vecino_meulen_page():
     """Mi Vecino Meulen — demo navegable del portal del vecino (datos ficticios).
