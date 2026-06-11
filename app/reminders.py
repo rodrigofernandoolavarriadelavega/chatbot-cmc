@@ -210,7 +210,7 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
                 id_cita = cita["id_cita"]
                 _tpl_params = [nombre, cita["especialidad"], cita["profesional"],
                                fecha_display, hora, modalidad]
-                await send_template_fn(
+                _wamid = await send_template_fn(
                     cita["phone"],
                     "recordatorio_cita",
                     body_params=_tpl_params,
@@ -218,6 +218,14 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
                                      f"cita_reagendar:{id_cita}",
                                      f"cita_cancelar:{id_cita}"],
                 )
+                if _wamid is None:
+                    log.error("Recordatorio (template) FALLÓ (sin wamid) → %s cita_id=%s; "
+                              "NO se marca reminder_sent", cita["phone"], id_cita)
+                    log_event(cita["phone"], "template_fallido", {
+                        "template": "recordatorio_cita",
+                        "id_cita": id_cita,
+                    })
+                    continue
                 log_event(cita["phone"], "template_enviado", {
                     "template": "recordatorio_cita",
                     "id_cita": id_cita,
@@ -395,11 +403,19 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
             elif USE_TEMPLATES and send_template_fn:
                 _tpl_params_2h = [nombre_pac, cita["especialidad"],
                                   cita["profesional"], hora]
-                await send_template_fn(
+                _wamid_2h = await send_template_fn(
                     cita["phone"],
                     "recordatorio_cita_2h",
                     body_params=_tpl_params_2h,
                 )
+                if _wamid_2h is None:
+                    log.error("Recordatorio 2h (template) FALLÓ (sin wamid) → %s cita_id=%s; "
+                              "NO se marca reminder_2h_sent", cita["phone"], id_cita_medilink)
+                    log_event(cita["phone"], "template_fallido", {
+                        "template": "recordatorio_cita_2h",
+                        "id_cita": id_cita_medilink,
+                    })
+                    continue
                 log_event(cita["phone"], "template_enviado", {
                     "template": "recordatorio_cita_2h",
                     "id_cita": id_cita_medilink,
@@ -704,13 +720,20 @@ async def enviar_recordatorios_recepcion_24h(
                 await send_interactive_fn(phone, _interactive_recordatorio(_rec))
                 log.info("Recepción 24h (service_window) → %s id_cita=%s", phone[:8] + "***", id_cita)
             elif USE_TEMPLATES and send_template_fn:
-                await send_template_fn(
+                _wamid_r24 = await send_template_fn(
                     phone, "recordatorio_cita",
                     body_params=[nombre, esp, prof, fecha_display, hora, "Particular"],
                     button_payloads=[f"cita_confirm:{id_cita}",
                                      f"cita_reagendar:{id_cita}",
                                      f"cita_cancelar:{id_cita}"],
                 )
+                if _wamid_r24 is None:
+                    log.error("Recepción 24h (template) FALLÓ (sin wamid) → %s id_cita=%s; "
+                              "NO se marca reminder_24h_sent", phone[:8] + "***", id_cita)
+                    log_event(phone, "template_fallido", {
+                        "template": "recordatorio_cita", "id_cita": id_cita, "origen": "recepcion",
+                    })
+                    continue
                 log_event(phone, "template_enviado", {
                     "template": "recordatorio_cita", "id_cita": id_cita, "origen": "recepcion",
                 })
@@ -757,8 +780,18 @@ async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None)
 
     now_cl    = datetime.now(_TZ_CL)
     fecha_hoy = now_cl.date().isoformat()
-    hora_min  = (now_cl - timedelta(minutes=15)).strftime("%H:%M")
-    hora_max  = (now_cl + timedelta(minutes=15)).strftime("%H:%M")
+    # Ventana "2h antes" real: [1h45, 2h15] desde ahora — espejo de
+    # enviar_recordatorios_2h (versión bot). Antes era [ahora-15, ahora+15]
+    # y el recordatorio llegaba a la hora exacta de la cita (bug F006).
+    hora_min_dt = now_cl + timedelta(minutes=105)
+    hora_max_dt = now_cl + timedelta(minutes=135)
+    # Solo el mismo día (si la ventana cruza medianoche salteamos — raro en CMC)
+    if hora_min_dt.date() != now_cl.date() or hora_max_dt.date() != now_cl.date():
+        return 0
+    # OJO: hora en citas_recepcion_reminders es "HH:MM" (hora_inicio[:5]),
+    # NO "HH:MM:SS" como en citas_bot — mantener %H:%M.
+    hora_min = hora_min_dt.strftime("%H:%M")
+    hora_max = hora_max_dt.strftime("%H:%M")
 
     citas = get_citas_recepcion_pendientes_2h(fecha_hoy, hora_min, hora_max)
     if not citas:
@@ -790,8 +823,15 @@ async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None)
                 )
             elif USE_TEMPLATES and send_template_fn:
                 fecha_display = _fmt_fecha_display(cita["fecha"])
-                await send_template_fn(phone, "recordatorio_cita_2h",
+                _wamid_r2h = await send_template_fn(phone, "recordatorio_cita_2h",
                                        body_params=[nombre, esp, prof, fecha_display, hora])
+                if _wamid_r2h is None:
+                    log.error("Recepción 2h (template) FALLÓ (sin wamid) → %s id_cita=%s; "
+                              "NO se marca reminder_2h_sent", phone[:8] + "***", id_cita)
+                    log_event(phone, "template_fallido", {
+                        "template": "recordatorio_cita_2h", "id_cita": id_cita, "origen": "recepcion",
+                    })
+                    continue
                 log_event(phone, "template_enviado", {
                     "template": "recordatorio_cita_2h", "id_cita": id_cita, "origen": "recepcion",
                 })

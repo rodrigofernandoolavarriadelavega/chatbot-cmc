@@ -672,7 +672,7 @@ async def send_whatsapp_template(to: str, template_name: str,
             to, template_name,
         )
         return None
-    await _post_meta({
+    return await _post_meta({
         "messaging_product": "whatsapp",
         "to": to_norm,
         "type": "template",

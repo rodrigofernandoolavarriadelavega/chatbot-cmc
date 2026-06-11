@@ -1503,7 +1503,7 @@ def _get_crosssell_post_dental_candidatos() -> list:
         with _s_conn() as conn:
             rows = conn.execute(
                 """
-                SELECT DISTINCT cb.phone, cb.paciente_nombre
+                SELECT DISTINCT cb.phone, cb.paciente_nombre, cb.profesional
                 FROM citas_bot cb
                 WHERE cb.especialidad IN ('odontología', 'odontologia',
                                           'odontología general', 'odontologia general')
@@ -1516,7 +1516,7 @@ def _get_crosssell_post_dental_candidatos() -> list:
         log.error("_get_crosssell_post_dental_candidatos: %s", e)
         return []
 
-    for phone, nombre in rows:
+    for phone, nombre, profesional in rows:
         # Excluir si ya tiene cita futura con Castillo (id_prof=66 en citas_bot)
         try:
             with _s_conn() as conn2:
@@ -1534,7 +1534,8 @@ def _get_crosssell_post_dental_candidatos() -> list:
                 continue
         except Exception:
             pass
-        candidatos.append({"phone": phone, "nombre": nombre})
+        candidatos.append({"phone": phone, "nombre": nombre,
+                           "profesional": profesional or ""})
 
     return candidatos
 
@@ -1549,6 +1550,15 @@ async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None
         log.info("Cross-sell post-dental ortodoncia: sin candidatos")
         return
     log.info("Cross-sell post-dental ortodoncia: enviando %d mensaje(s)", len(candidatos))
+    # F010: gate de aprobación Meta (mismo patrón que enviar_cumpleanos).
+    # Se consulta UNA vez por corrida (is_template_approved cachea 30 min).
+    _tpl_aprobado = False
+    if USE_TEMPLATES and send_template_fn is not None:
+        from winback import is_template_approved as _is_tpl_approved
+        _tpl_aprobado = await _is_tpl_approved("crosssell_ortodoncia_post_dental_v1")
+        if not _tpl_aprobado:
+            log.warning("crosssell_post_dental: template crosssell_ortodoncia_post_dental_v1 "
+                        "no APPROVED en Meta — fallback a texto libre (requiere ventana)")
     for p in candidatos:
         phone = p.get("phone", "")
         if not puede_enviar_campana(phone, "crosssell_post_dental_ortodoncia", dias_cooldown=180):
@@ -1558,34 +1568,45 @@ async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None
                       {"template": "crosssell_post_dental_ortodoncia"})
             continue
         # C2 fix: la cita dental ocurrió hace 48-72h → la ventana de 24h casi
-        # siempre está cerrada. El gate anterior descartaba TODOS los candidatos
-        # cuando la ventana estaba cerrada y no había template aprobado, produciendo
-        # cero envíos desde que se escribió la función (2026-05-19).
-        # Orden correcto: si hay template aprobado + USE_TEMPLATES, enviar por
-        # template (no necesita ventana abierta); si no, fallback a ventana libre.
-        _tiene_template = USE_TEMPLATES and send_template_fn is not None
-        if not _tiene_template and not is_window_open(phone):
+        # siempre está cerrada. Si hay template APPROVED se envía por template
+        # (no necesita ventana abierta); si no, fallback a ventana libre.
+        # F010: el BODY aprobado tiene DOS placeholders — "Hola {{1}}, ... con
+        # la Dra. {{2}} ..." — por lo que exige 2 body_params y solo es
+        # gramaticalmente correcto si la tratante fue una "Dra." (ej. Burgos).
+        _prof = (p.get("profesional") or "").strip()
+        _usar_template = _tpl_aprobado and _prof.lower().startswith("dra")
+        if not _usar_template and not is_window_open(phone):
             log_event(phone, "template_skip_no_aprobado",
                       {"template": "crosssell_ortodoncia_post_dental_v1",
-                       "motivo": "sin_template_y_ventana_cerrada"})
+                       "motivo": "sin_template_compatible_y_ventana_cerrada",
+                       "profesional": _prof})
             continue
         try:
             nombre = _nombre_corto(p.get("nombre"))
-            save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")
-            set_pending_crosssell(phone, "crosssell_post_dental_ortodoncia", "ortodoncia")
-            if _tiene_template:
-                # Template aprobado disponible: enviar fuera de ventana de 24h.
+            if _usar_template:
+                # Template APPROVED: enviar fuera de ventana de 24h.
+                # {{1}} = nombre paciente · {{2}} = apellido de la Dra. tratante.
                 nombre_param = nombre or "paciente"
-                await send_template_fn(
+                apellido_dra = _prof.split()[-1]
+                msg_id = await send_template_fn(
                     phone,
                     "crosssell_ortodoncia_post_dental_v1",
-                    body_params=[nombre_param],
+                    body_params=[nombre_param, apellido_dra],
                     button_payloads=["xpostdental_orto_si", "xpostdental_orto_no"],
                 )
+                if not msg_id:
+                    # Meta rechazó (4xx) u omitió: NO quemar cooldown de 180 días.
+                    log_event(phone, "template_send_failed",
+                              {"template": "crosssell_ortodoncia_post_dental_v1"})
+                    continue
+                save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")
+                set_pending_crosssell(phone, "crosssell_post_dental_ortodoncia", "ortodoncia")
                 log_message(phone, "out",
                             "[Cross-sell post-dental ortodoncia — template]", "IDLE")
             else:
                 # Sin template: enviamos mensaje libre (ventana ya validada arriba).
+                save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")
+                set_pending_crosssell(phone, "crosssell_post_dental_ortodoncia", "ortodoncia")
                 saludo = f"Hola *{nombre}* " if nombre else "Hola "
                 texto = (
                     f"{saludo}— esperamos que te haya ido bien en tu consulta dental "

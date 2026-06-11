@@ -349,18 +349,24 @@ async def _enviar_reenganche():
         log.info("Reenganche enviado → %s (estado: %s, canal: %s)", phone, state, canal)
 
 
-async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_cancel") -> dict:
+async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_cancel",
+                                           force: bool = False) -> dict:
     """Envía al paciente 3 slots alternativos tras cancelación del doctor.
 
     Flujo 1-click: pre-carga los slots en session.data con estado WAIT_SLOT. El
     paciente responde un número y entra directo al flujo existente de confirmación.
+
+    force=True salta el guard de idempotencia sobre cancel_detected_at: lo usa
+    _job_detectar_cancelaciones, que marca la cita como detectada ANTES de
+    llamar acá (esa marca significa "detectada", no "ya notificada"). Sin
+    force, la pre-marca hacía retornar 'ya_notificado' sin enviar nada.
 
     Retorna: {"ok": bool, "reason": str, "phone": str, "slots_enviados": int}.
     """
     cita = get_cita_bot_by_id_for_rebook(id_cita)
     if not cita:
         return {"ok": False, "reason": "cita_no_encontrada"}
-    if cita.get("cancel_detected_at"):
+    if cita.get("cancel_detected_at") and not force:
         return {"ok": False, "reason": "ya_notificado"}
     phone = cita["phone"]
     esp = (cita.get("especialidad") or "").strip()
@@ -903,11 +909,15 @@ async def _job_detectar_cancelaciones():
     log.info("Detect cancelaciones: %d próximas (≤48h) · %d lejanas · %d errores",
              len(canceladas_proximas), canceladas_lejanas, errores)
 
-    # Disparar reagendamiento automático para las próximas
+    # Disparar reagendamiento automático para las próximas.
+    # force=True: el loop de detección de arriba ya marcó cancel_detected_at
+    # (esa marca significa "detectada", no "ya notificada"); sin force el guard
+    # de enviar_reagendar_por_cancelacion devolvía 'ya_notificado' y el
+    # paciente nunca recibía los 3 slots alternativos (bug F005).
     for cp in canceladas_proximas:
         try:
             res = await enviar_reagendar_por_cancelacion(
-                str(cp["id_cita"]), motivo="medilink_cancel_detected"
+                str(cp["id_cita"]), motivo="medilink_cancel_detected", force=True
             )
             log.info("Reagendar auto id=%s phone=%s: %s",
                      cp["id_cita"], cp["phone"], res)
@@ -1541,7 +1551,11 @@ async def _job_medilink_watchdog_inner():
         try:
             if USE_TEMPLATES:
                 # Template: sistema_recuperado — no params
-                await send_whatsapp_template(phone_p, "sistema_recuperado")
+                _ok_sr = await send_whatsapp_template(phone_p, "sistema_recuperado")
+                if _ok_sr is None:
+                    log.error("watchdog: notificación sistema_recuperado FALLÓ (sin wamid) "
+                              "→ %s; queda en cola para el próximo ciclo", phone_p)
+                    continue
                 from messaging import render_template_body as _rtb_sr
                 log_message(phone_p, "out", _rtb_sr("sistema_recuperado"), "IDLE")
             else:
@@ -1550,7 +1564,11 @@ async def _job_medilink_watchdog_inner():
                     "Si quieres retomar lo que estabas haciendo, escribe *menu* y te ayudo al tiro.\n\n"
                     "_Gracias por tu paciencia._"
                 )
-                await send_whatsapp(phone_p, _sr_msg)
+                _ok_sr = await send_whatsapp(phone_p, _sr_msg)
+                if _ok_sr is None:
+                    log.error("watchdog: notificación sistema_recuperado (texto) FALLÓ "
+                              "→ %s; queda en cola para el próximo ciclo", phone_p)
+                    continue
                 log_message(phone_p, "out", _sr_msg, "IDLE")
             mark_intent_notified(row["id"])
         except Exception as e:

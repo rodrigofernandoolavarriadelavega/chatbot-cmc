@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, esperamos que te haya ido bien con la Dra. {{2}} esta semana.\n\nSi el odontólogo te recomendó evaluar tratamiento de ortodoncia, podemos agendarte con la Dra. Daniela Castillo, ortodoncista del centro, para que arme tu plan de tratamiento.\n\nCostos referenciales del tratamiento:\n- Instalación brackets: desde $120.000\n- Controles mensuales: $30.000\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.",
+      "text": "Hola {{1}}, esperamos que te haya ido bien con la Dra. {{2}} esta semana.\n\nSi el odontólogo te recomendó evaluar tratamiento de ortodoncia, podemos agendarte con la Dra. Daniela Castillo, ortodoncista del centro, para que arme tu plan de tratamiento.\n\nCostos referenciales del tratamiento:\n- Instalación brackets: desde $120.000\n- Controles mensuales: $30.000\n\nEscríbenos por este WhatsApp o llama al (44) 296 5226.",
       "example": {
         "body_text": [["Carmen", "Burgos"]]
       }
