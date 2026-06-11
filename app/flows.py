@@ -2838,6 +2838,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             log.warning("recordatorio_respuesta_negativa falló: %s", _e_nr)
         # Sin cita recordada pendiente → dejar caer al flujo normal
 
+    # ── Opt-out "No avisar" (avisos de horas liberadas / horas_vacias) ────────
+    # El aviso proactivo promete: "Si no quieres recibir más avisos, responde
+    # *No avisar*" — pero el handler NO existía (caso real Nataly 2026-06-11:
+    # respondió "No avisar" y el bot le mostró el menú genérico). El filtro de
+    # candidatos ya excluye el tag marketing_opt_out; acá lo seteamos.
+    _TOKENS_NO_AVISAR = {
+        "no avisar", "no avisarme", "no quiero avisos", "no mas avisos",
+        "no más avisos", "no quiero mas avisos", "no quiero más avisos",
+        "dejar de avisar", "no me avisen", "no me avises",
+    }
+    if state == "IDLE" and tl_norm in _TOKENS_NO_AVISAR:
+        try:
+            save_tag(phone, "marketing_opt_out")
+            log_event(phone, "horas_vacias_optout", {"txt": txt[:60]})
+        except Exception as _e_na:
+            log.warning("no_avisar opt-out falló phone=...%s: %s", phone[-4:], _e_na)
+        return ("Listo 👍 No te enviaremos más avisos de horas disponibles.\n\n"
+                "Tus recordatorios de citas que ya tengas reservadas siguen "
+                "llegando normal. Si algún día quieres volver a recibir avisos, "
+                "escríbenos por acá 😊")
+
     # ── "¿Tengo hora (hoy)?" — pregunta por SUS citas, no por disponibilidad ──
     # Caso real María 2026-06-11: "Entonces para hoy no tengo hora?" → el bot
     # respondió con el fallback de disponibilidad y tuvo que entrar recepción.
