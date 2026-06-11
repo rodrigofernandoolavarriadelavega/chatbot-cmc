@@ -1847,7 +1847,7 @@ async function renderFamilyStrip() {
     if (!mem.length) return;
     const activo = _normRut((patientData && patientData.rut) || '');
     let h = `<div class="panel">
-      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia y cercanos</h2><span class="count">${mem.length}</span>${mem.length > 1 ? '<button class="gen-btn" onclick="openGenograma()">🌳 Genograma</button>' : ''}</div>
+      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia y cercanos</h2><span class="count">${mem.length}</span>${mem.length > 1 ? '<button class="gen-btn" onclick="openGenograma()">🌳 Árbol familiar</button>' : ''}</div>
       <div class="fam-track">`;
     for (const m of mem) {
       const first = (m.nombre || '').split(' ')[0] || '—';
@@ -1909,7 +1909,7 @@ function openGenograma() {
              + (mem.some(m => /hij|niet/i.test(m.relation || '')) ? 1 : 0);
   bd.innerHTML = `<div class="gen-card">
     <div class="gen-head">
-      <div><h3>Genograma familiar</h3><p class="gen-sub">${gens} generaciones · ${mem.length} integrantes</p></div>
+      <div><h3>Árbol familiar</h3><p class="gen-sub">${gens} generaciones · ${mem.length} integrantes</p></div>
       <button class="gen-x" onclick="closeGenograma()">×</button>
     </div>
     <div id="gen-svg">${buildGenSVG(mem)}</div>
