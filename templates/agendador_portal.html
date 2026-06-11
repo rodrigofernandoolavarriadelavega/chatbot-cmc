@@ -41,6 +41,12 @@ input{font-family:inherit;color:inherit}
 .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .chip.on .pr{color:#bcd9ea}
 
+/* Catálogo colapsado tras elegir: la grilla de horas queda arriba, sin recorrer */
+.esp-sel{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--aqua-soft);border:1.2px solid var(--aqua);border-radius:10px}
+.esp-sel .es-name{font-size:12.5px;font-weight:800;color:var(--navy)}
+.esp-sel .es-pr{font-size:10px;font-weight:700;color:var(--mute);flex:1}
+.esp-sel .es-ch{font-size:10px;font-weight:800;color:var(--blue);padding:5px 10px;border:1.2px solid var(--blue);border-radius:8px;background:#fff}
+
 .profs{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border-soft)}
 .profs:empty{display:none}
 .pchip{padding:6px 10px;border:1.2px solid var(--border);border-radius:9px;font-size:10.5px;font-weight:700;color:var(--mute)}
@@ -116,6 +122,10 @@ input{font-family:inherit;color:inherit}
 
   <div class="sec">
     <h3><span class="n">1</span>Especialidad <span class="hint" id="esp-hint">precios referenciales</span></h3>
+    <div class="esp-sel" id="esp-sel" style="display:none">
+      <span class="es-name" id="es-name"></span><span class="es-pr" id="es-pr"></span>
+      <button class="es-ch" onclick="cambiarEsp()">Cambiar</button>
+    </div>
     <div id="esp-box"><div class="empty"><span class="spin"></span>Cargando especialidades…</div></div>
     <div class="profs" id="prof-row"></div>
   </div>
@@ -260,11 +270,23 @@ function pickEsp(nombre) {
   $('prof-row').innerHTML = S.profs.length > 1
     ? S.profs.map(p => `<button class="pchip ${p.id === S.prof.id ? 'on' : ''}" onclick="pickProf(${p.id})">${p.nombre}</button>`).join('')
     : '';
+  // Colapsar el catálogo: día y hora quedan a la vista sin recorrer la lista
+  $('es-name').textContent = e.especialidad;
+  $('es-pr').textContent = e.precio || '';
+  $('esp-sel').style.display = 'flex';
+  $('esp-box').style.display = 'none';
+  $('esp-hint').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   $('sec-day').style.display = 'block';
   $('day-hint').textContent = S.prof ? S.prof.nombre : '';
   buildDays(null);
   loadSlots(null);
   refreshSum();
+}
+function cambiarEsp() {
+  $('esp-sel').style.display = 'none';
+  $('esp-box').style.display = 'block';
+  $('esp-hint').style.display = '';
 }
 function pickProf(id) {
   S.prof = S.profs.find(p => p.id === id) || S.prof;
