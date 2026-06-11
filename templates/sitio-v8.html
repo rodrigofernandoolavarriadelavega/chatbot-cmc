@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://centromedicocarampangue.cl/wp-content/uploads/2026/05/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="theme-color" content="#0F3F68">
+<meta name="theme-color" content="#11342B">
 <link rel="icon" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -76,21 +76,21 @@
 <style>
 /* ====== TOKENS ====== */
 :root{
-  --paper:#F2F7FA;
-  --paper-2:#E7F0F5;
-  --cream:#FBFDFE;
-  --ink:#0F3F68;
-  --ink-soft:#42617D;
-  --pine:#1172AB;
-  --pine-deep:#0A2C4A;
-  --terra:#1172AB;
-  --terra-dark:#0D5A8C;
-  --terra-soft:#E4F5F7;
-  --sand:#CFE2EB;
-  --gold:#4FBECE;
+  --paper:#FAF5EC;
+  --paper-2:#F2EADA;
+  --cream:#FFFDF6;
+  --ink:#11342B;
+  --ink-soft:#39564C;
+  --pine:#175043;
+  --pine-deep:#0C2A23;
+  --terra:#CE5630;
+  --terra-dark:#AE4523;
+  --terra-soft:#F7E2D4;
+  --sand:#E7DCC4;
+  --gold:#D89E2B;
   --wa:#1FAD5E;
   --radius:22px;
-  --shadow-soft:0 18px 50px -22px rgba(15,63,104,.28);
+  --shadow-soft:0 18px 50px -22px rgba(17,52,43,.28);
   --font-display:"Fraunces",Georgia,serif;
   --font-body:"Hanken Grotesk",-apple-system,sans-serif;
 }
@@ -130,17 +130,17 @@ section{position:relative}
   position:fixed;top:0;left:0;right:0;z-index:100;
   background:rgba(250,245,236,.86);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  border-bottom:1px solid rgba(15,63,104,.1);
+  border-bottom:1px solid rgba(17,52,43,.1);
   transition:box-shadow .3s;
 }
-.nav.scrolled{box-shadow:0 8px 30px -16px rgba(15,63,104,.25)}
+.nav.scrolled{box-shadow:0 8px 30px -16px rgba(17,52,43,.25)}
 .nav-in{display:flex;align-items:center;justify-content:space-between;height:68px;gap:16px}
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none}
 .brand-tile{
   width:40px;height:40px;border-radius:11px;flex:none;
   background:linear-gradient(135deg,var(--pine) 0%,var(--pine-deep) 100%);
   display:grid;place-items:center;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 6px 14px -6px rgba(10,44,74,.5);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 6px 14px -6px rgba(12,42,35,.5);
 }
 .brand-tile svg{width:20px;height:20px}
 .brand-tx{line-height:1.04;white-space:nowrap}
@@ -168,7 +168,7 @@ section{position:relative}
     background:var(--cream);flex-direction:column;align-items:flex-start;
     padding:34px 30px;gap:22px;border-left:1px solid var(--sand);
     transform:translateX(105%);transition:transform .35s cubic-bezier(.22,1,.36,1);
-    box-shadow:-30px 0 60px -30px rgba(10,44,74,.3);
+    box-shadow:-30px 0 60px -30px rgba(12,42,35,.3);
   }
   .nav-links.open{transform:translateX(0)}
   .nav-links a{font-size:17px}
@@ -179,8 +179,8 @@ section{position:relative}
 .hero{
   padding:128px 0 40px;
   background:
-    radial-gradient(900px 480px at 88% -10%, rgba(17,114,171,.10), transparent 60%),
-    radial-gradient(700px 500px at -10% 30%, rgba(17,114,171,.08), transparent 60%),
+    radial-gradient(900px 480px at 88% -10%, rgba(206,86,48,.10), transparent 60%),
+    radial-gradient(700px 500px at -10% 30%, rgba(23,80,67,.08), transparent 60%),
     var(--paper);
   overflow:hidden;
 }
@@ -188,8 +188,8 @@ section{position:relative}
 .kicker{
   display:inline-flex;align-items:center;gap:9px;
   font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--pine);background:rgba(17,114,171,.08);
-  border:1px solid rgba(17,114,171,.18);
+  color:var(--pine);background:rgba(23,80,67,.08);
+  border:1px solid rgba(23,80,67,.18);
   padding:7px 15px;border-radius:100px;margin-bottom:22px;
 }
 .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--wa);box-shadow:0 0 0 0 rgba(31,173,94,.5);animation:pulse 2.2s infinite}
@@ -211,12 +211,12 @@ section{position:relative}
 .btn-wa:hover{transform:translateY(-2px);box-shadow:0 18px 38px -12px rgba(31,173,94,.65)}
 .btn-ghost{
   background:transparent;color:var(--ink);
-  border:1.5px solid rgba(15,63,104,.28);
+  border:1.5px solid rgba(17,52,43,.28);
 }
 .btn-ghost:hover{border-color:var(--terra);color:var(--terra)}
-.stats{display:flex;gap:0;border-top:1px solid rgba(15,63,104,.14);padding-top:22px;max-width:520px}
+.stats{display:flex;gap:0;border-top:1px solid rgba(17,52,43,.14);padding-top:22px;max-width:520px}
 .stat{flex:1;padding-right:18px}
-.stat + .stat{border-left:1px solid rgba(15,63,104,.14);padding-left:18px}
+.stat + .stat{border-left:1px solid rgba(17,52,43,.14);padding-left:18px}
 .stat b{font-family:var(--font-display);font-size:clamp(24px,2.6vw,32px);font-weight:600;display:block;line-height:1}
 .stat span{font-size:12.5px;color:var(--ink-soft);font-weight:600;letter-spacing:.02em}
 
@@ -225,15 +225,15 @@ section{position:relative}
 .arch{
   position:relative;border-radius:240px 240px var(--radius) var(--radius);
   overflow:hidden;aspect-ratio:4/4.6;
-  border:1.5px solid rgba(15,63,104,.16);
+  border:1.5px solid rgba(17,52,43,.16);
   box-shadow:var(--shadow-soft);
   background:var(--sand);
 }
 .arch img{width:100%;height:100%;object-fit:cover}
-.arch::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(10,44,74,.34));}
+.arch::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(12,42,35,.34));}
 .float-card{
-  position:absolute;background:var(--cream);border:1px solid rgba(15,63,104,.12);
-  border-radius:16px;box-shadow:0 16px 40px -18px rgba(10,44,74,.4);
+  position:absolute;background:var(--cream);border:1px solid rgba(17,52,43,.12);
+  border-radius:16px;box-shadow:0 16px 40px -18px rgba(12,42,35,.4);
   padding:13px 17px;display:flex;align-items:center;gap:11px;z-index:3;
 }
 .fc-rating{bottom:26px;left:-26px;animation:floaty 5.5s ease-in-out infinite}
@@ -298,7 +298,7 @@ html.js .rv.in{opacity:1;transform:none}
 /* ====== PASOS ====== */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .step{
-  background:var(--cream);border:1px solid rgba(15,63,104,.12);border-radius:var(--radius);
+  background:var(--cream);border:1px solid rgba(17,52,43,.12);border-radius:var(--radius);
   padding:30px 26px;position:relative;overflow:hidden;
   transition:transform .25s,box-shadow .25s;
 }
@@ -319,18 +319,18 @@ html.js .rv.in{opacity:1;transform:none}
 .chip{
   font-family:var(--font-body);font-weight:700;font-size:14px;cursor:pointer;
   background:transparent;color:var(--ink-soft);
-  border:1.5px solid rgba(15,63,104,.22);border-radius:100px;padding:9px 19px;
+  border:1.5px solid rgba(17,52,43,.22);border-radius:100px;padding:9px 19px;
   transition:all .2s;
 }
 .chip:hover{border-color:var(--terra);color:var(--terra)}
 .chip.active{background:var(--ink);border-color:var(--ink);color:var(--cream)}
 .esp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
 .esp-card{
-  background:var(--cream);border:1px solid rgba(15,63,104,.13);border-radius:18px;
+  background:var(--cream);border:1px solid rgba(17,52,43,.13);border-radius:18px;
   padding:24px 22px 20px;display:flex;flex-direction:column;gap:10px;
   transition:transform .22s,box-shadow .22s,border-color .22s;
 }
-.esp-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-soft);border-color:rgba(17,114,171,.5)}
+.esp-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-soft);border-color:rgba(206,86,48,.5)}
 .esp-card.hide{display:none}
 .esp-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .esp-card h3{font-family:var(--font-display);font-weight:600;font-size:19.5px;letter-spacing:-.01em}
@@ -338,13 +338,13 @@ html.js .rv.in{opacity:1;transform:none}
   font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
   padding:4px 9px;border-radius:6px;flex:none;
 }
-.tag.med{background:rgba(17,114,171,.1);color:var(--pine)}
+.tag.med{background:rgba(23,80,67,.1);color:var(--pine)}
 .tag.den{background:var(--terra-soft);color:var(--terra-dark)}
 .esp-card p{font-size:14px;color:var(--ink-soft);flex:1}
 .price-row{display:flex;gap:7px;flex-wrap:wrap}
 .price{
   font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:100px;
-  background:var(--paper-2);border:1px solid rgba(15,63,104,.12);
+  background:var(--paper-2);border:1px solid rgba(17,52,43,.12);
 }
 .price.fonasa{background:rgba(31,173,94,.1);border-color:rgba(31,173,94,.3);color:#0E7A41}
 .esp-cta{
@@ -356,7 +356,7 @@ html.js .rv.in{opacity:1;transform:none}
 
 /* ====== HORARIOS ====== */
 .hor-card{
-  background:var(--cream);border:1px solid rgba(15,63,104,.13);border-radius:var(--radius);
+  background:var(--cream);border:1px solid rgba(17,52,43,.13);border-radius:var(--radius);
   overflow:hidden;box-shadow:var(--shadow-soft);
 }
 .hor-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -366,30 +366,30 @@ table.hor th{
   color:var(--paper);background:var(--pine-deep);padding:14px 18px;font-weight:700;
 }
 table.hor th.day{text-align:center;width:44px}
-table.hor td{padding:12px 18px;border-top:1px solid rgba(15,63,104,.08);font-size:14.5px}
+table.hor td{padding:12px 18px;border-top:1px solid rgba(17,52,43,.08);font-size:14.5px}
 table.hor td.day{text-align:center}
 table.hor tr:nth-child(even) td{background:rgba(231,220,196,.25)}
 table.hor td b{font-weight:700}
 table.hor td small{color:var(--ink-soft);display:block;font-size:12.5px}
 .day-on,.day-off{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:8px;font-size:11px;font-weight:800}
 .day-on{background:rgba(31,173,94,.14);color:#0E7A41}
-.day-off{background:rgba(15,63,104,.06);color:rgba(15,63,104,.3)}
+.day-off{background:rgba(17,52,43,.06);color:rgba(17,52,43,.3)}
 .coord{font-size:12px;font-weight:700;color:var(--terra);background:var(--terra-soft);padding:4px 11px;border-radius:100px;white-space:nowrap}
 .hor-note{
-  display:flex;gap:13px;background:rgba(79,190,206,.1);border:1px solid rgba(79,190,206,.35);
+  display:flex;gap:13px;background:rgba(216,158,43,.1);border:1px solid rgba(216,158,43,.35);
   border-radius:16px;padding:18px 20px;margin-top:20px;font-size:14.5px;color:var(--ink-soft);
 }
 .hor-note b{color:var(--ink)}
 
 /* ====== TOUR / GALERÍA ====== */
 .tour-grid{display:grid;grid-template-columns:1.35fr 1fr 1fr;grid-template-rows:230px 230px;gap:14px}
-.tour-item{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(15,63,104,.14)}
+.tour-item{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(17,52,43,.14)}
 .tour-item:first-child{grid-row:span 2}
 .tour-item img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.22,1,.36,1)}
 .tour-item:hover img{transform:scale(1.06)}
 .tour-item figcaption{
   position:absolute;left:14px;bottom:12px;color:#fff;font-size:13px;font-weight:700;
-  background:rgba(10,44,74,.55);backdrop-filter:blur(6px);
+  background:rgba(12,42,35,.55);backdrop-filter:blur(6px);
   padding:6px 13px;border-radius:100px;
 }
 @media(max-width:760px){
@@ -400,7 +400,7 @@ table.hor td small{color:var(--ink-soft);display:block;font-size:12.5px}
 /* ====== EQUIPO ====== */
 .team-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px}
 .prof{
-  background:var(--cream);border:1px solid rgba(15,63,104,.12);border-radius:16px;
+  background:var(--cream);border:1px solid rgba(17,52,43,.12);border-radius:16px;
   padding:20px 18px;transition:transform .2s,box-shadow .2s;
 }
 .prof:hover{transform:translateY(-3px);box-shadow:var(--shadow-soft)}
@@ -447,7 +447,7 @@ table.hor td small{color:var(--ink-soft);display:block;font-size:12.5px}
 /* ====== FAQ ====== */
 .faq-wrap{max-width:780px}
 details.faq{
-  background:var(--cream);border:1px solid rgba(15,63,104,.13);border-radius:16px;
+  background:var(--cream);border:1px solid rgba(17,52,43,.13);border-radius:16px;
   margin-bottom:11px;overflow:hidden;transition:box-shadow .2s;
 }
 details.faq[open]{box-shadow:var(--shadow-soft)}
@@ -467,9 +467,9 @@ details.faq .a b{color:var(--ink)}
 /* ====== CTA FINAL ====== */
 .final{
   background:
-    radial-gradient(700px 360px at 80% 110%, rgba(17,114,171,.16), transparent 60%),
+    radial-gradient(700px 360px at 80% 110%, rgba(206,86,48,.16), transparent 60%),
     var(--paper-2);
-  border-top:1px solid rgba(15,63,104,.1);
+  border-top:1px solid rgba(17,52,43,.1);
 }
 .final-in{
   display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center;
@@ -477,13 +477,13 @@ details.faq .a b{color:var(--ink)}
 .final h2{font-size:clamp(32px,4.2vw,52px);margin-bottom:16px}
 .final p{color:var(--ink-soft);font-size:17px;margin-bottom:28px;max-width:46ch}
 .contact-card{
-  background:var(--cream);border:1px solid rgba(15,63,104,.13);border-radius:var(--radius);
+  background:var(--cream);border:1px solid rgba(17,52,43,.13);border-radius:var(--radius);
   padding:30px 28px;box-shadow:var(--shadow-soft);
 }
 .contact-card h3{font-family:var(--font-display);font-weight:600;font-size:21px;margin-bottom:18px}
-.cl{display:flex;gap:13px;align-items:flex-start;padding:11px 0;border-top:1px solid rgba(15,63,104,.08);font-size:15px}
+.cl{display:flex;gap:13px;align-items:flex-start;padding:11px 0;border-top:1px solid rgba(17,52,43,.08);font-size:15px}
 .cl:first-of-type{border-top:0}
-.cl .ic{flex:none;width:34px;height:34px;border-radius:10px;background:rgba(17,114,171,.09);color:var(--pine);display:grid;place-items:center}
+.cl .ic{flex:none;width:34px;height:34px;border-radius:10px;background:rgba(23,80,67,.09);color:var(--pine);display:grid;place-items:center}
 .cl b{display:block;font-size:14.5px}
 .cl span{color:var(--ink-soft);font-size:13.5px}
 .cl a{color:var(--ink);font-weight:700;text-decoration:none}
@@ -535,7 +535,7 @@ footer.site a:hover{color:var(--terra-soft)}
   <div class="wrap nav-in">
     <a class="brand" href="#" aria-label="Centro Médico Carampangue — inicio">
       <span class="brand-tile" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 4v16M4 12h16" stroke="#F2F7FA" stroke-width="3.4" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 4v16M4 12h16" stroke="#FAF5EC" stroke-width="3.4" stroke-linecap="round"/></svg>
       </span>
       <span class="brand-tx"><b>Centro Médico</b><span>CARAMPANGUE</span></span>
     </a>
@@ -740,7 +740,7 @@ footer.site a:hover{color:var(--terra-soft)}
   <div class="wrap">
     <div class="sec-head rv">
       <div class="sec-eyebrow" style="color:var(--terra-soft)">Opiniones reales</div>
-      <h2 class="display">Pacientes de Carampangue y Arauco <span class="it" style="color:#7FD0DC">confían en nosotros</span></h2>
+      <h2 class="display">Pacientes de Carampangue y Arauco <span class="it" style="color:#E8A283">confían en nosotros</span></h2>
       <p>Reseñas reales publicadas en Google por personas que se atendieron en el centro.</p>
     </div>
     <div class="op-grid">
@@ -811,9 +811,9 @@ footer.site a:hover{color:var(--terra-soft)}
       <div>
         <div class="brand" style="margin-bottom:16px">
           <span class="brand-tile" aria-hidden="true" style="background:linear-gradient(135deg,var(--terra),var(--terra-dark))">
-            <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M12 4v16M4 12h16" stroke="#F2F7FA" stroke-width="3.4" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M12 4v16M4 12h16" stroke="#FAF5EC" stroke-width="3.4" stroke-linecap="round"/></svg>
           </span>
-          <span class="brand-tx" style="color:var(--paper)"><b style="color:var(--paper)">Centro Médico</b><span style="color:#7FD0DC">CARAMPANGUE</span></span>
+          <span class="brand-tx" style="color:var(--paper)"><b style="color:var(--paper)">Centro Médico</b><span style="color:#E8A283">CARAMPANGUE</span></span>
         </div>
         <p style="max-width:34ch;font-size:13.5px">Centro médico y dental privado en Carampangue. Cuidamos a las familias de Arauco, Curanilahue, Cañete, Lebu y alrededores.</p>
       </div>
