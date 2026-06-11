@@ -1978,7 +1978,7 @@ function openGenograma() {
   if (!bd) {
     bd = document.createElement('div');
     bd.id = 'gen-backdrop'; bd.className = 'gen-backdrop';
-    bd.onclick = e => { if (e.target === bd) closeGenograma(); };
+    bd.onclick = e => { if (e.target === bd) genHeaderClose(); };
     document.body.appendChild(bd);
   }
   const mem = _famOverview.members;
@@ -1989,7 +1989,7 @@ function openGenograma() {
       <div><h3>Agenda familiar</h3><p class="gen-sub">${gens} generaciones · ${mem.length} integrantes — toque a alguien para ver, agendar o cambiar sus horas</p></div>
       <div style="display:flex;gap:7px;align-items:center">
         <button class="gen-share" onclick="compartirArbol()">↗ Compartir</button>
-        <button class="gen-x" onclick="closeGenograma()">×</button>
+        <button class="gen-x" onclick="genHeaderClose()">×</button>
       </div>
     </div>
     <div id="gen-svg">${buildGenSVG(mem)}</div>
@@ -2005,6 +2005,13 @@ function openGenograma() {
   _genHover();
 }
 function closeGenograma() { _genCerrarAgenda(); const b = document.getElementById('gen-backdrop'); if (b) b.classList.remove('show'); }
+function genHeaderClose() {
+  // Un paso atrás: si está en zoom (agendando o viendo resumen) vuelve al
+  // árbol completo; recién desde el árbol la × cierra la Agenda familiar.
+  const card = document.querySelector('#gen-backdrop .gen-card');
+  if (card && card.classList.contains('zoom')) { _genCerrarAgenda(); return; }
+  closeGenograma();
+}
 /* Tarjeta de persona: hover = vista previa; toque = fijada con botones */
 function _genShowTip(rut, pinned) {
   if (document.querySelector('#gen-backdrop .gen-card.zoom')) return;  // en zoom no hay tooltips
