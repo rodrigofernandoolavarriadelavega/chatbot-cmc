@@ -875,6 +875,13 @@ a{color:inherit; text-decoration:none}
 .fam-sug .fs-s{font-size:10.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
 .fam-sug .fs-go{flex:none; font-size:11px; font-weight:800; color:var(--cmc-blue); white-space:nowrap}
 
+/* Pop-up tarjeta del agendador (mismo lenguaje que la Agenda familiar) */
+.agpop{position:fixed; inset:0; z-index:280; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(15,63,104,.45); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
+.agpop.show{display:flex}
+.agpop-card{background:#fff; border-radius:20px; width:min(94vw, 480px); overflow:hidden; box-shadow:0 22px 60px rgba(15,63,104,.4); animation:fadeInUp .25s var(--ease) both}
+.agpop-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 15px; font-size:13px; font-weight:800; color:var(--cmc-navy); border-bottom:1px solid var(--border-soft)}
+.agpop-frame{display:block; width:100%; height:min(72vh, 600px); border:0; background:var(--bg)}
+
 /* Franja protagonista Agenda familiar */
 .fam-hero{display:flex; align-items:center; gap:13px; width:100%; text-align:left; padding:15px 16px; margin-bottom:14px;
   border:0; border-radius:16px; cursor:pointer; font-family:var(--font); color:#fff;
@@ -1576,10 +1583,7 @@ async function agendar() {
   if (patientData && patientData.whatsapp_url) window.open(patientData.whatsapp_url, '_blank');
 }
 function abrirAgendadorEmbed() {
-  const rut = encodeURIComponent(currentRut || (patientData && patientData.rut) || '');
-  document.getElementById('agendar-frame').src = '/agendar?embed=1' + (rut ? '&rut=' + rut : '');
-  document.getElementById('agendar-overlay').classList.add('show');
-  document.body.style.overflow = 'hidden';
+  _abrirAgendadorPopup('');
 }
 function cerrarAgendar() {
   document.getElementById('agendar-overlay').classList.remove('show');
@@ -2383,11 +2387,27 @@ async function mountInlineAgenda() {
   _onSpyScroll();  // el panel aparece async: recalcular CTA flotante recién aquí
 }
 function _abrirAgendadorPopup(extra) {
+  // Pop-up tarjeta (como el de la Agenda familiar): la página queda detrás, difuminada
+  let bd = document.getElementById('agpop');
+  if (!bd) {
+    bd = document.createElement('div'); bd.id = 'agpop'; bd.className = 'agpop';
+    bd.onclick = e => { if (e.target === bd) cerrarAgendadorPopup(); };
+    bd.innerHTML = `<div class="agpop-card">
+      <div class="agpop-head"><span id="agpop-title">📅 Agendar una hora</span><button class="gen-x" onclick="cerrarAgendadorPopup()">×</button></div>
+      <iframe id="agpop-frame" class="agpop-frame" title="Agendar hora" src="about:blank"></iframe>
+    </div>`;
+    document.body.appendChild(bd);
+  }
+  document.getElementById('agpop-title').textContent =
+    (extra || '').includes('reag=1') ? '↺ Cambiar mi hora' : '📅 Agendar una hora';
   const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
   const demo = (patientData && patientData.demo) ? '&demo=1' : '';
-  document.getElementById('agendar-frame').src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo + (extra || '');
-  document.getElementById('agendar-overlay').classList.add('show');
-  document.body.style.overflow = 'hidden';
+  document.getElementById('agpop-frame').src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo + (extra || '');
+  bd.classList.add('show');
+}
+function cerrarAgendadorPopup() {
+  const bd = document.getElementById('agpop');
+  if (bd) { bd.classList.remove('show'); const f = document.getElementById('agpop-frame'); if (f) f.src = 'about:blank'; }
 }
 function scrollToAgenda() { _abrirAgendadorPopup(''); }
 
