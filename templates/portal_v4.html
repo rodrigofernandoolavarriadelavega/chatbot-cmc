@@ -841,15 +841,12 @@ a{color:inherit; text-decoration:none}
 .ctrl-cta{flex:none; padding:9px 14px; border:0; border-radius:10px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:11.5px; font-weight:800; cursor:pointer; transition:filter .15s}
 .ctrl-cta:hover{filter:brightness(1.06)}
 
-/* Información útil */
-.iu-grid{display:grid; grid-template-columns:1fr; gap:10px}
-@media (min-width:861px){ .iu-grid{grid-template-columns:1fr 1fr} }
-.iu-item{display:flex; align-items:center; gap:12px; padding:13px 14px; background:var(--panel-2); border:1px solid var(--border-soft); border-radius:12px; text-decoration:none; color:var(--text); font-family:var(--font); cursor:pointer; text-align:left; width:100%; transition:transform .15s, box-shadow .15s}
-.iu-item:hover{transform:translateY(-1px); box-shadow:0 6px 16px rgba(15,63,104,.1)}
-.iu-item .ic{width:38px; height:38px; flex:none; border-radius:11px; background:var(--cmc-aqua-soft); display:grid; place-items:center; font-size:17px}
-.iu-item .t{font-size:12.5px; font-weight:800; color:var(--cmc-navy)}
-.iu-item .s{font-size:11.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
-.iu-item .go{margin-left:auto; color:var(--cmc-blue); flex:none}
+/* Footer del centro (una sola vez, al final de la página) */
+.site-foot{margin-top:34px; padding:22px 12px calc(86px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); text-align:center}
+.site-foot .sf-name{font-size:12.5px; font-weight:800; color:var(--cmc-navy); letter-spacing:.3px}
+.site-foot .sf-line{font-size:11.5px; color:var(--text-mute); font-weight:600; margin-top:6px; line-height:1.6}
+.site-foot a{color:var(--cmc-blue); font-weight:800; text-decoration:none}
+.site-foot a:hover{text-decoration:underline}
 
 /* Acordeones de Recursos: secciones largas colapsadas por defecto */
 .acc .panel-head{cursor:pointer; -webkit-user-select:none; user-select:none}
@@ -1276,6 +1273,12 @@ a{color:inherit; text-decoration:none}
         </div>
         <div id="recursos-content"></div>
       </section>
+
+      <footer class="site-foot">
+        <div class="sf-name">Centro Médico Carampangue</div>
+        <div class="sf-line">📍 República 102, Carampangue · <a href="https://www.google.com/maps/search/?api=1&query=Centro%20M%C3%A9dico%20Carampangue%2C%20Rep%C3%BAblica%20102%2C%20Carampangue%2C%20Arauco" target="_blank" rel="noopener">Cómo llegar</a></div>
+        <div class="sf-line">💬 <a href="https://wa.me/56966610737" target="_blank" rel="noopener">WhatsApp del centro</a> · 🚑 Emergencias: <a href="tel:131">SAMU 131</a></div>
+      </footer>
     </main>
   </div>
 
@@ -1745,17 +1748,6 @@ function renderInicio() {
     }
     html += `<div style="font-size:10.5px;color:var(--text-dim);margin-top:10px;font-weight:600">La frecuencia de tus controles la define tu profesional tratante.</div></div>`;
   }
-
-  // ── Información útil del centro ──
-  html += `<div class="panel">
-    <div class="panel-head"><span class="dot" style="background:var(--cmc-navy); box-shadow:0 0 0 4px rgba(15,63,104,.2)"></span><h2>Información útil</h2></div>
-    <div class="iu-grid">
-      <a class="iu-item" href="${CMC_MAPS_URL}" target="_blank" rel="noopener"><span class="ic">📍</span><div><div class="t">Cómo llegar</div><div class="s">${CMC_DIR}</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></a>
-      <a class="iu-item" href="${CMC_WA}" target="_blank" rel="noopener"><span class="ic">💬</span><div><div class="t">WhatsApp del centro</div><div class="s">Consultas, horas y reagendamientos</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></a>
-      <button class="iu-item" onclick="scrollToAgenda()"><span class="ic">📅</span><div><div class="t">Agendar una hora</div><div class="s">Agenda online, sin llamar ni esperar</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></button>
-      <a class="iu-item" href="tel:131"><span class="ic">🚑</span><div><div class="t">Emergencias: SAMU 131</div><div class="s">Ante riesgo vital, llama de inmediato</div></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></a>
-    </div>
-  </div>`;
 
   // Resumen rápido: dx + última medición
   if ((d.diagnosticos || []).length > 0) {
