@@ -183,6 +183,26 @@ _RX_FIJO_41_CMC = re.compile(r"\(\s*41\s*\)\s*296[\s\-]*5226")
 _FIJO_CMC_CANONICO = "(44) 296 5226"
 
 
+_CUENTAS_FALSAS = ("16.625.671-3", "16.625.671", "16625671")  # cuenta inventada detectada 2026-06-12
+
+def _final_bank_guard(text: str) -> str:
+    """Última puerta: si un mensaje saliente contiene la cuenta bancaria FALSA
+    (inventada por una sesión antigua y quemada en código; 6 pacientes la
+    recibieron), la reemplaza por los datos reales de config y deja log CRITICAL
+    para detectar la regresión. Mismo patrón que _final_phone_guard."""
+    if not text or not any(c in text for c in _CUENTAS_FALSAS):
+        return text
+    try:
+        from config import CMC_TRANSFERENCIA as _CTF
+        log.critical("BANK_GUARD fake_account_caught — reemplazada por la real")
+        for c in _CUENTAS_FALSAS:
+            text = text.replace(c, _CTF["numero"])
+        text = text.replace("BancoEstado", _CTF["banco"]).replace("Cuenta RUT", _CTF["tipo"])
+    except Exception:
+        log.critical("BANK_GUARD fake_account_caught — y el reemplazo falló")
+    return text
+
+
 def _final_phone_guard(text: str) -> str:
     """Última defensa antes de enviar al canal. Si por algún path el número
     personal o el código de área incorrecto se filtraron sin pasar por

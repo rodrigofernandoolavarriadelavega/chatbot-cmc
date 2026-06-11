@@ -207,6 +207,21 @@ DENTAL_PROMO_FLYER_TEMPLATE = os.getenv("DENTAL_PROMO_FLYER_TEMPLATE", "dental_l
 DENTAL_PROMO_FLYER_IMG      = os.getenv("DENTAL_PROMO_FLYER_IMG",
                                         "https://agentecmc.cl/static/promos/dental_limpieza_junio.jpg")
 
+# Datos de transferencia bancaria del CMC (abonos / pagos anticipados).
+# Fuente única: cualquier mensaje que pida transferencia debe leer de acá.
+# (Dato entregado por el dueño 2026-06-12 para el abono de Psiquiatría.)
+CMC_TRANSFERENCIA = {
+    "banco":   "Banco Itaú",
+    "tipo":    "Cuenta Corriente",
+    "numero":  "0221708538",
+    "titular": "Centro Médico Carampangue",
+    "rut":     "77.140.898-2",
+    "correo":  "centromedicocarampangue@gmail.com",
+}
+# Monto del abono anticipado de Psiquiatría (mismo valor que la política del
+# módulo /alma/abonos — abono_sugerido; el saldo se paga el día de la atención).
+ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "20000"))
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

@@ -9850,6 +9850,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _link_video = data.pop("_link_video", None)
                 if _link_video:
                     # Confirmación telemedicina — incluye link + instrucciones de pago
+                    from config import CMC_TRANSFERENCIA as _CTF_TELE
                     confirmacion_msg = (
                         f"{titulo}\n\n"
                         f"👤 {paciente['nombre']}\n"
@@ -9859,9 +9860,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"📡 *Consulta por videollamada*\n\n"
                         f"*Tu link de videollamada:*\n{_link_video}\n\n"
                         "*Pago (solo transferencia):*\n"
-                        "Banco: BancoEstado\n"
-                        "Cuenta RUT: 16.625.671-3\n"
-                        "Nombre: Centro Médico Carampangue SpA\n"
+                        # CUENTA REAL desde config (incidente 2026-06-12: acá había
+                        # una cuenta INVENTADA — BancoEstado CuentaRUT 16.625.671-3,
+                        # "SpA" con CuentaRUT que no existe — 6 pacientes la recibieron).
+                        f"{_CTF_TELE['banco']}\n"
+                        f"{_CTF_TELE['tipo']} {_CTF_TELE['numero']}\n"
+                        f"{_CTF_TELE['titular']}\n"
+                        f"RUT: {_CTF_TELE['rut']}\n"
                         "Monto: según lo indicado por recepción\n"
                         "Envía el comprobante a este chat.\n\n"
                         "El link se activa 15 min antes de tu hora.\n\n"
@@ -9879,6 +9884,39 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         f"📍 {_CMC_DIRECCION}\n\n"
                         f"¡Te esperamos! 😊{cross_ref}"
                     )
+                # ── Abono Psiquiatría (pedido dueño 2026-06-12): la hora se
+                # confirma con un abono por transferencia. Segundo mensaje aparte
+                # (mismo patrón PNI: evita el truncamiento "ver más" de WA).
+                # Solo presencial — telemedicina ya trae su propio bloque de pago.
+                if not _link_video and "psiquiatr" in (slot.get("especialidad") or "").lower():
+                    try:
+                        from config import CMC_TRANSFERENCIA as _CTF, ABONO_PSIQUIATRIA_CLP as _ABO
+                        _abono_txt = (
+                            "💳 *Importante — abono para confirmar tu hora de Psiquiatría*\n\n"
+                            f"Pedimos un abono de *${_ABO:,} CLP* para asegurar tu hora "
+                            "(se descuenta del valor de la consulta; el saldo se paga el día de la atención).\n\n"
+                            "*Datos para transferir:*\n"
+                            f"{_CTF['banco']}\n"
+                            f"{_CTF['tipo']} {_CTF['numero']}\n"
+                            f"{_CTF['titular']}\n"
+                            f"RUT: {_CTF['rut']}\n"
+                            f"Correo: {_CTF['correo']}\n\n"
+                            "Envía el comprobante por este chat 📎 y recepción deja tu hora confirmada.\n\n"
+                            "_Si prefieres, también puedes abonar directamente en recepción._"
+                        ).replace(",", ".")
+                        from resilience import spawn_task as _spawn_abono
+                        async def _send_abono_psiq():
+                            import asyncio as _ai_ab
+                            await _ai_ab.sleep(4)  # después de la confirmación
+                            await send_whatsapp(phone, _abono_txt)
+                            from session import log_message as _lm_ab
+                            _lm_ab(phone, "out", _abono_txt, "IDLE")
+                            log_event(phone, "abono_psiq_instrucciones_enviadas",
+                                      {"monto": _ABO, "id_cita": str(data.get("id_cita_creada", ""))})
+                        _spawn_abono(_send_abono_psiq())
+                    except Exception as _e_abono:
+                        log.warning("abono psiquiatría msg falló: %s", _e_abono)
+
                 # BUG-D: PNI/hitos en segundo mensaje separado para evitar truncamiento
                 # WA trunca con "ver más" ~1000 chars, ocultando dirección y CTA.
                 # ── Tracking referral_source pasivo (sin preguntar al paciente) ──
