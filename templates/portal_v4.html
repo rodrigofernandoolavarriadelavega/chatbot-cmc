@@ -857,6 +857,15 @@ a{color:inherit; text-decoration:none}
 .fam-cta{font-size:10.5px; font-weight:800; color:var(--cmc-blue); margin-top:1px}
 .fam-badge{position:absolute; top:7px; right:7px; background:var(--cmc-aqua); color:var(--cmc-navy); font-size:8.5px; font-weight:800; padding:2px 6px; border-radius:8px; letter-spacing:.4px}
 .fam-note{font-size:10.5px; color:var(--text-dim); font-weight:600; margin-top:10px}
+.fam-sug-title{font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--cmc-blue); margin:14px 0 8px}
+.fam-sug{display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:11px 12px; margin-bottom:8px; background:var(--panel-2); border:1px solid var(--border-soft); border-radius:12px; font-family:var(--font); cursor:pointer; transition:transform .15s, box-shadow .15s}
+.fam-sug:hover{transform:translateY(-1px); box-shadow:0 6px 16px rgba(15,63,104,.1)}
+.fam-sug .fs-ic{width:34px; height:34px; flex:none; border-radius:10px; background:var(--cmc-aqua-soft); display:grid; place-items:center; font-size:16px}
+.fam-sug .fs-tx{flex:1; min-width:0}
+.fam-sug .fs-t{font-size:12px; font-weight:700; color:var(--cmc-navy)}
+.fam-sug .fs-t b{font-weight:800}
+.fam-sug .fs-s{font-size:10.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
+.fam-sug .fs-go{flex:none; font-size:11px; font-weight:800; color:var(--cmc-blue); white-space:nowrap}
 
 /* Footer del centro (una sola vez, al final de la página) */
 .site-foot{margin-top:34px; padding:22px 12px calc(86px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); text-align:center}
@@ -1825,19 +1834,54 @@ async function renderFamilyStrip() {
         <div class="fam-name">Agregar</div>
         <div class="fam-rel">familiar</div>
       </button>
-    </div>
-    <div class="fam-note">Toca a un familiar para ver sus horas, controles y mediciones desde este mismo portal.</div></div>`;
+    </div>`;
+    // Sugerencias preventivas por miembro (cross-sell familiar, máx 4)
+    let sugs = [];
+    for (const m of mem) {
+      const first = (m.nombre || '').split(' ')[0] || '—';
+      for (const sg of famSugerencias(m)) sugs.push({ ...sg, rut: m.rut, quien: `${first}${m.edad != null ? ' (' + m.edad + ')' : ''}` });
+    }
+    sugs = sugs.slice(0, 4);
+    if (sugs.length) {
+      h += `<div class="fam-sug-title">Recomendado para tu familia</div>`;
+      for (const sg of sugs) {
+        h += `<button class="fam-sug" onclick="famTap('${sg.rut}', true)">
+          <span class="fs-ic">${sg.ic}</span>
+          <div class="fs-tx"><div class="fs-t"><b>${sg.quien}</b> · ${sg.t}</div><div class="fs-s">${sg.s}</div></div>
+          <span class="fs-go">Agendar →</span>
+        </button>`;
+      }
+    }
+    h += `<div class="fam-note">Toca a un familiar para ver sus horas, controles y mediciones desde este mismo portal.</div></div>`;
     slot.innerHTML = h;
   } catch (e) { /* fail-safe: sin strip */ }
 }
 async function famTap(rut, quiereAgendar) {
   const esActivo = _normRut(rut) === _normRut((patientData && patientData.rut) || '');
-  if (_famOverview && _famOverview.demo && !esActivo) {
-    toast('🧪 En la demo no se puede cambiar de perfil — con tu clave real sí');
-    return;
-  }
   if (!esActivo) await switchPatient(rut);
   if (quiereAgendar) scrollToAgenda();
+}
+
+/* Sugerencias preventivas por edad/sexo para cada miembro de la familia.
+   Solo prestaciones REALES del CMC; cobertura genérica, nunca consejo clínico. */
+function famSugerencias(m) {
+  if (m.edad == null) return [];
+  const out = [];
+  const esp = ((m.proxima && m.proxima.especialidad) || '').toLowerCase();
+  const esMujer = (m.sexo || '').toUpperCase().startsWith('F');
+  if (m.edad <= 14) {
+    if (!/odont/.test(esp)) out.push({ ic: '🦷', t: 'Control dental infantil', s: 'Odontología · prevención desde los 2 años' });
+    out.push({ ic: '🩺', t: 'Control sano', s: 'Medicina General · crecimiento y desarrollo' });
+  } else if (m.edad < 60) {
+    out.push({ ic: '🩺', t: 'Chequeo preventivo anual', s: 'Medicina General · bono Fonasa $7.880' });
+    if (esMujer && m.edad >= 25) out.push({ ic: '🌸', t: 'PAP al día', s: 'Matrona · bono preferencial' });
+    else if (!/odont/.test(esp)) out.push({ ic: '🦷', t: 'Control dental', s: 'Limpieza y revisión anual' });
+  } else {
+    if (!/podo/.test(esp)) out.push({ ic: '🦶', t: 'Podología preventiva', s: 'Cuidado del pie, clave en diabetes' });
+    if (!/kine/.test(esp)) out.push({ ic: '💪', t: 'Kinesiología', s: 'Fuerza y equilibrio para prevenir caídas' });
+    if (!/cardio/.test(esp)) out.push({ ic: '❤️', t: 'Control cardiovascular', s: 'Cardiología · presión y corazón' });
+  }
+  return out.slice(0, 2);
 }
 
 /* Carrusel cross-sell: auto-desliza cada 3.5s; se pausa si el paciente lo toca */

@@ -92,6 +92,88 @@ def _demo_data() -> dict:
         "whatsapp_url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20cita",
         "demo": True,
     }
+
+
+# Familia ficticia del modo demo: permite recorrer la estructura familiar completa
+# (switch real entre perfiles con datos inventados, nada toca Medilink).
+DEMO_FAMILY = {
+    "50000001-5": {"nombre": "Tomás Ejemplo Demo", "relation": "hijo/a",
+                   "sexo": "M", "fnac": "2018-03-10", "rut_fmt": "50.000.001-5"},
+    "50000002-3": {"nombre": "Pedro Ejemplo Demo", "relation": "cónyuge",
+                   "sexo": "M", "fnac": "1981-01-20", "rut_fmt": "50.000.002-3"},
+    "50000003-1": {"nombre": "Rosa Ejemplo Demo", "relation": "madre/padre",
+                   "sexo": "F", "fnac": "1958-04-02", "rut_fmt": "50.000.003-1"},
+}
+
+
+def _demo_member_data(rut: str) -> dict:
+    """Datos ficticios completos para un familiar del modo demo."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+    hoy = datetime.now(ZoneInfo("America/Santiago")).date()
+    meta = DEMO_FAMILY[rut]
+
+    def ymd(d):
+        return d.strftime("%Y-%m-%d")
+
+    def fmt_es(d):
+        dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+        meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                 "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+        return f"{dias[d.weekday()]} {d.day} de {meses[d.month-1]}"
+
+    def cita(idx, prof_id, prof, esp, delta, hora):
+        d = hoy + timedelta(days=delta)
+        return {"id": idx, "id_profesional": prof_id, "profesional": prof,
+                "especialidad": esp, "fecha": ymd(d), "fecha_display": fmt_es(d),
+                "hora_inicio": hora, "estado": "Confirmada"}
+
+    def aten(idx, prof, esp, hace_dias, hora):
+        d = hoy - timedelta(days=hace_dias)
+        return {"id": idx, "profesional": prof, "especialidad": esp,
+                "fecha": ymd(d), "fecha_display": fmt_es(d), "hora_inicio": hora}
+
+    perfiles = {
+        "50000001-5": {  # Tomás, 8 años
+            "citas_futuras": [cita(911, 55, "Dra. Javiera Burgos", "Odontología General", 5, "16:30")],
+            "historial": [
+                aten(811, "Dr. Andrés Abarca", "Medicina General", 75, "11:30"),
+                aten(812, "Dra. Javiera Burgos", "Odontología General", 210, "16:00"),
+                aten(813, "Juana Arratia", "Fonoaudiología", 300, "15:00"),
+            ],
+            "diagnosticos": ["Asma"],
+        },
+        "50000002-3": {  # Pedro, 45 años — sin citas futuras (cross-sell)
+            "citas_futuras": [],
+            "historial": [
+                aten(821, "Luis Armijo", "Kinesiología", 120, "17:20"),
+                aten(822, "Dr. Claudio Barraza", "Traumatología", 150, "12:20"),
+                aten(823, "Dr. Rodrigo Olavarría", "Medicina General", 400, "10:15"),
+            ],
+            "diagnosticos": ["HTA"],
+        },
+        "50000003-1": {  # Rosa, 68 años
+            "citas_futuras": [cita(931, 77, "Luis Armijo", "Kinesiología", 8, "10:40")],
+            "historial": [
+                aten(831, "Dr. Andrés Abarca", "Medicina General", 30, "09:00"),
+                aten(832, "Dr. Miguel Millán", "Cardiología", 240, "11:20"),
+                aten(833, "Gisela Pinto", "Nutrición", 100, "15:45"),
+            ],
+            "diagnosticos": ["DM2", "Artrosis"],
+        },
+    }
+    p = perfiles[rut]
+    return {
+        "nombre": meta["nombre"],
+        "rut": meta["rut_fmt"],
+        "fecha_nacimiento": meta["fnac"],
+        "sexo": meta["sexo"],
+        "citas_futuras": p["citas_futuras"],
+        "historial": p["historial"],
+        "diagnosticos": p["diagnosticos"],
+        "whatsapp_url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20cita",
+        "demo": True,
+    }
 _COOKIE_MAX_AGE = 24 * 3600  # 24 hours
 
 
@@ -188,7 +270,9 @@ def _resolve_context(portal_session: str | None,
     if portal_active:
         candidate = _verify_active_cookie(portal_active, owner_rut)
         if candidate and candidate != owner_rut:
-            if candidate == DEMO_RUT or is_family_link(owner_rut, candidate):
+            if (candidate == DEMO_RUT
+                    or (owner_rut == DEMO_RUT and candidate in DEMO_FAMILY)
+                    or is_family_link(owner_rut, candidate)):
                 active_rut = candidate
     if active_rut == owner_rut:
         active_phone = owner_phone
@@ -312,8 +396,8 @@ async def portal_datos(portal_session: str | None = Cookie(None),
     owner_rut, owner_phone, active_rut, active_phone = _resolve_context(portal_session, portal_active)
 
     # Modo demo: datos ficticios cuando el activo es el RUT demo
-    if active_rut == DEMO_RUT:
-        data = _demo_data()
+    if active_rut == DEMO_RUT or (owner_rut == DEMO_RUT and active_rut in DEMO_FAMILY):
+        data = _demo_data() if active_rut == DEMO_RUT else _demo_member_data(active_rut)
         data["owner_rut"] = owner_rut
         data["is_dependent"] = (active_rut != owner_rut)
         return data
@@ -437,6 +521,14 @@ async def portal_get_perfil(portal_session: str | None = Cookie(None),
                 "contacto_emerg_telefono": "+56 9 8765 4321",
             },
         }
+    if rut in DEMO_FAMILY:
+        meta = DEMO_FAMILY[rut]
+        return {"ok": True, "demo": True, "profile": {
+            "nombre": meta["nombre"], "fecha_nacimiento": meta["fnac"],
+            "sexo": meta["sexo"], "email": "", "comuna": "Arauco",
+            "direccion": "Calle Ficticia 123", "prevision": "Fonasa B",
+            "contacto_emerg_nombre": "María Ejemplo Demo",
+            "contacto_emerg_telefono": "+56 9 8765 4321"}}
     prof = get_profile_full(phone)
     return {"ok": True, "profile": prof}
 
@@ -459,7 +551,7 @@ async def portal_update_perfil(request: Request,
     # Sexo
     if data.get("sexo") and data["sexo"] not in ("M", "F", "O"):
         raise HTTPException(status_code=400, detail="Sexo inválido")
-    if rut == DEMO_RUT:
+    if rut == DEMO_RUT or rut in DEMO_FAMILY:
         return {"ok": True, "demo": True}  # no persistir demo
     update_profile_fields(phone, rut, data)
     return {"ok": True}
@@ -524,27 +616,19 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
     abre SU portal y ve de un vistazo las horas de todos, sin cambiar de perfil."""
     owner_rut, _owner_phone = _require_portal(portal_session)
 
-    # Modo demo: familia ficticia para mostrar la funcionalidad
+    # Modo demo: familia ficticia completa (cada miembro navegable con switch)
     if owner_rut == DEMO_RUT:
-        from datetime import datetime, timedelta
-        from zoneinfo import ZoneInfo
-        hoy = datetime.now(ZoneInfo("America/Santiago")).date()
-
-        def ymd(d):
-            return d.strftime("%Y-%m-%d")
-
-        return {"ok": True, "demo": True, "members": [
-            {"rut": DEMO_RUT, "nombre": "María Ejemplo Demo", "relation": "titular",
-             "proxima": {"especialidad": "Cardiología", "fecha": ymd(hoy + timedelta(days=3)),
-                         "hora_inicio": "11:00", "profesional": "Dr. Miguel Millán"}},
-            {"rut": "50000001-5", "nombre": "Tomás Ejemplo Demo", "relation": "hijo/a",
-             "proxima": {"especialidad": "Odontología General", "fecha": ymd(hoy + timedelta(days=5)),
-                         "hora_inicio": "16:30", "profesional": "Dra. Javiera Burgos"}},
-            {"rut": "50000002-3", "nombre": "Pedro Ejemplo Demo", "relation": "cónyuge", "proxima": None},
-            {"rut": "50000003-1", "nombre": "Rosa Ejemplo Demo", "relation": "madre/padre",
-             "proxima": {"especialidad": "Kinesiología", "fecha": ymd(hoy + timedelta(days=8)),
-                         "hora_inicio": "10:40", "profesional": "Luis Armijo"}},
-        ]}
+        members = []
+        d0 = _demo_data()
+        members.append({"rut": DEMO_RUT, "nombre": d0["nombre"], "relation": "titular",
+                        "sexo": d0["sexo"], "edad": _age_years(d0["fecha_nacimiento"]),
+                        "proxima": d0["citas_futuras"][0] if d0["citas_futuras"] else None})
+        for fr, meta in DEMO_FAMILY.items():
+            dm = _demo_member_data(fr)
+            members.append({"rut": fr, "nombre": meta["nombre"], "relation": meta["relation"],
+                            "sexo": meta["sexo"], "edad": _age_years(meta["fnac"]),
+                            "proxima": dm["citas_futuras"][0] if dm["citas_futuras"] else None})
+        return {"ok": True, "demo": True, "members": members}
 
     import asyncio
 
@@ -563,7 +647,8 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
             if not pac:
                 return {**m, "proxima": None}
             citas = await listar_citas_paciente(pac["id"], rut=pac.get("rut") or "")
-            out = {**m, "nombre": pac.get("nombre") or m["nombre"], "proxima": None}
+            out = {**m, "nombre": pac.get("nombre") or m["nombre"], "proxima": None,
+                   "sexo": pac.get("sexo") or "", "edad": _age_years(pac.get("fecha_nacimiento") or "")}
             if citas:
                 prox = citas[0]
                 out["proxima"] = {"especialidad": prox.get("especialidad", ""),
@@ -588,7 +673,8 @@ async def portal_family_switch(request: Request,
     target = _normalize_rut(target_raw) if target_raw else owner_rut
 
     if target != owner_rut and target != DEMO_RUT:
-        if not is_family_link(owner_rut, target):
+        es_demo_fam = (owner_rut == DEMO_RUT and target in DEMO_FAMILY)
+        if not es_demo_fam and not is_family_link(owner_rut, target):
             raise HTTPException(status_code=403, detail="Familiar no vinculado")
 
     is_https = (request.url.scheme == "https"
