@@ -875,6 +875,19 @@ a{color:inherit; text-decoration:none}
 .fam-sug .fs-s{font-size:10.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
 .fam-sug .fs-go{flex:none; font-size:11px; font-weight:800; color:var(--cmc-blue); white-space:nowrap}
 
+/* Franja protagonista Agenda familiar */
+.fam-hero{display:flex; align-items:center; gap:13px; width:100%; text-align:left; padding:15px 16px; margin-bottom:14px;
+  border:0; border-radius:16px; cursor:pointer; font-family:var(--font); color:#fff;
+  background:radial-gradient(420px 180px at 100% -40%, rgba(79,190,206,.35), transparent 60%), linear-gradient(115deg, var(--cmc-navy), var(--cmc-blue));
+  box-shadow:0 8px 24px rgba(15,63,104,.28); transition:transform .18s var(--ease), box-shadow .18s var(--ease)}
+.fam-hero:hover{transform:translateY(-2px); box-shadow:0 12px 30px rgba(15,63,104,.38)}
+.fam-hero .fh-ic{width:52px; height:40px; flex:none; display:grid; place-items:center; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); border-radius:12px}
+.fam-hero .fh-ic svg{width:38px; height:27px}
+.fam-hero .fh-tx{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+.fam-hero .fh-t{font-size:14.5px; font-weight:800; letter-spacing:-.2px}
+.fam-hero .fh-s{font-size:10.5px; font-weight:600; opacity:.82; line-height:1.45}
+.fam-hero .fh-go{flex:none; font-size:11.5px; font-weight:800; background:var(--cmc-aqua); color:var(--cmc-navy); padding:9px 14px; border-radius:999px}
+
 /* Genograma familiar (pop-up) */
 .gen-btn{margin-left:auto; font-size:10px; font-weight:800; color:var(--cmc-blue); border:1.2px solid var(--cmc-blue); border-radius:8px; padding:4px 9px; background:#fff; cursor:pointer; transition:.15s}
 .gen-btn:hover{background:var(--cmc-aqua-soft)}
@@ -1900,8 +1913,14 @@ async function renderFamilyStrip() {
     const mem = _famOverview.members || [];
     if (!mem.length) return;
     const activo = _normRut((patientData && patientData.rut) || '');
-    let h = `<div class="panel">
-      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia y cercanos</h2><span class="count">${mem.length}</span>${mem.length > 1 ? '<button class="gen-btn" onclick="openGenograma()">🌳 Árbol familiar</button>' : ''}</div>
+    // Franja protagonista: la Agenda familiar es LA herramienta del portal
+    const banner = mem.length > 1 ? `<button class="fam-hero" onclick="openGenograma()">
+      <span class="fh-ic"><svg viewBox="0 0 48 34" fill="none"><circle cx="24" cy="8" r="5.5" stroke="#7fd4df" stroke-width="2.4"/><rect x="6" y="20" width="11" height="11" rx="3.5" stroke="#7fd4df" stroke-width="2.4"/><circle cx="36.5" cy="25.5" r="5.5" stroke="#7fd4df" stroke-width="2.4"/><path d="M24 13.5v4.5M24 18h-12.5v2M24 18h12.5v2" stroke="#5b8fb0" stroke-width="2"/></svg></span>
+      <span class="fh-tx"><span class="fh-t">Agenda familiar</span><span class="fh-s">Las horas de toda su familia en una sola imagen — vea, agende y cambie horas de cada uno</span></span>
+      <span class="fh-go">Abrir →</span>
+    </button>` : '';
+    let h = banner + `<div class="panel">
+      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia y cercanos</h2><span class="count">${mem.length}</span></div>
       <div class="fam-track">`;
     for (const m of mem) {
       const first = (m.nombre || '').split(' ')[0] || '—';
@@ -1963,7 +1982,7 @@ function openGenograma() {
              + (mem.some(m => /hij|niet/i.test(m.relation || '')) ? 1 : 0);
   bd.innerHTML = `<div class="gen-card">
     <div class="gen-head">
-      <div><h3>Árbol familiar</h3><p class="gen-sub">${gens} generaciones · ${mem.length} integrantes</p></div>
+      <div><h3>Agenda familiar</h3><p class="gen-sub">${gens} generaciones · ${mem.length} integrantes — toque a alguien para ver, agendar o cambiar sus horas</p></div>
       <div style="display:flex;gap:7px;align-items:center">
         <button class="gen-share" onclick="compartirArbol()">↗ Compartir</button>
         <button class="gen-x" onclick="closeGenograma()">×</button>
