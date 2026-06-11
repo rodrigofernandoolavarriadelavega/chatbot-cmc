@@ -8976,6 +8976,42 @@ async def webhook(request: Request):
                 pass
             return Response(status_code=200)
         elif msg_type in ("image", "video", "document"):
+            # ── Abono-Gate: capturar imagen de comprobante ─────────────────
+            # Si el paciente está esperando enviar un comprobante de abono
+            # (estado WAIT_ABONO_COMPROBANTE) y manda una imagen, la procesamos
+            # con Claude vision ANTES del pipeline normal de media (que la
+            # enviaría a HUMAN_TAKEOVER y perdería el contexto del gate).
+            if msg_type == "image":
+                _ag_sess = get_session(phone)
+                if (_ag_sess or {}).get("state") == "WAIT_ABONO_COMPROBANTE":
+                    _ag_media_id = msg.get("image", {}).get("id", "")
+                    _ag_caption  = msg.get("image", {}).get("caption", "")
+                    log_text_ag  = "[imagen comprobante abono]" + (f" {_ag_caption}" if _ag_caption else "")
+                    log_message(phone, "in", log_text_ag, "WAIT_ABONO_COMPROBANTE", canal="whatsapp")
+                    _ag_blob = None
+                    _ag_mime = "image/jpeg"
+                    if _ag_media_id:
+                        try:
+                            _ag_res = await download_whatsapp_media(_ag_media_id)
+                            if _ag_res:
+                                _ag_blob, _ag_mime = _ag_res
+                        except Exception as _ag_dl_err:
+                            log.warning("abono-gate: error descargando imagen: %s", _ag_dl_err)
+                    if _ag_blob:
+                        from flows import procesar_imagen_abono
+                        async with get_phone_lock(phone):
+                            _ag_respuesta = await procesar_imagen_abono(phone, _ag_blob, _ag_mime)
+                        if _ag_respuesta:
+                            await send_whatsapp(phone, _ag_respuesta)
+                            log_message(phone, "out", _ag_respuesta,
+                                        get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                    else:
+                        _ag_err = "No pude descargar la imagen. Reenvíala, por favor."
+                        await send_whatsapp(phone, _ag_err)
+                        log_message(phone, "out", _ag_err, "WAIT_ABONO_COMPROBANTE", canal="whatsapp")
+                    return Response(status_code=200)
+            # ── fin abono-gate imagen ──────────────────────────────────────
+
             # Archivos: descargar, almacenar. PDF/Word → extraer texto como audio.
             log.info("MEDIA recibido from=%s type=%s", phone, msg_type)
             _MEDIA_LABELS = {"image": "imagen 📷", "video": "video 🎥", "document": "documento 📄"}

@@ -98,6 +98,10 @@ async def _enviar_reenganche():
             """).fetchall()
         for _row_j in (_stale or []):
             _ph_j, _st_j = _row_j["phone"], _row_j["state"]
+            # WAIT_ABONO_COMPROBANTE tiene TTL propio de 90 min (menor que 2h):
+            # el cron de abono-gate ya lo maneja → no forzar reset aquí.
+            if _st_j == "WAIT_ABONO_COMPROBANTE":
+                continue
             log_event(_ph_j, "reenganche_force_reset", {"estado_previo": _st_j})
             save_session(_ph_j, "IDLE", {})
             log.info("Reenganche force-reset phone=%s estado=%s", _ph_j, _st_j)
@@ -249,6 +253,50 @@ async def _enviar_reenganche():
             log_event(phone, "reenganche_skip",
                       {"motivo": "estado_confirmacion_terminal", "state": state})
             log.info("Reenganche skip (estado terminal) phone=%s state=%s", phone, state)
+            continue
+
+        # (d.1) Abono-Gate Psiquiatría: tiene TTL propio de 90 min. El reenganche
+        #       no debe mandar "tienes una reserva pendiente" — el paciente está
+        #       en proceso de pagar (o venció el plazo). Verificar timeout acá:
+        #       si expiró → reset + mensaje especial. Si no → skip sin mensaje
+        #       (el próximo mensaje del paciente activa el handler de timeout).
+        if state == "WAIT_ABONO_COMPROBANTE":
+            _ab_ts_str = data.get("abono_gate_ts", "")
+            _ab_expirado = False
+            if _ab_ts_str:
+                try:
+                    from datetime import datetime as _dt_abj
+                    from zoneinfo import ZoneInfo as _ZI_abj
+                    _ab_dt = _dt_abj.fromisoformat(_ab_ts_str)
+                    if _ab_dt.tzinfo is None:
+                        _ab_dt = _ab_dt.replace(tzinfo=_ZI_abj("America/Santiago"))
+                    _ab_expirado = (_dt_abj.now(_ZI_abj("America/Santiago")) - _ab_dt).total_seconds() > 5400  # 90 min
+                except Exception:
+                    pass
+            if _ab_expirado:
+                log_event(phone, "abono_gate_timeout_reenganche", {"gate_ts": _ab_ts_str})
+                log.info("Abono-gate expirado → reset IDLE phone=%s", phone)
+                save_session(phone, "IDLE", {})
+                # Aviso al paciente solo si tiene canal abierto (ventana 24h)
+                try:
+                    _canal_ab = _canal_de_phone(phone)
+                    if _canal_ab != "unknown":
+                        _msg_ab = (
+                            "El tiempo para enviar el comprobante de tu hora de Psiquiatría venció "
+                            "y el aparte fue liberado.\n\n"
+                            "Escribe *menu* si quieres volver a buscar una hora."
+                        )
+                        from messaging import send_whatsapp as _sw_abj
+                        import asyncio as _aio_abj
+                        _aio_abj.create_task(_sw_abj(phone, _msg_ab))
+                        from session import log_message as _lm_abj
+                        _lm_abj(phone, "out", _msg_ab, "IDLE")
+                except Exception as _e_ab_notif:
+                    log.debug("Abono-gate timeout notif error: %s", _e_ab_notif)
+            else:
+                log_event(phone, "reenganche_skip",
+                          {"motivo": "abono_gate_esperando_comprobante", "state": state})
+                log.info("Reenganche skip (abono-gate activo) phone=%s", phone)
             continue
 
         # (d) Estados de OFERTA OPCIONAL post-acción (cross-sell tras reservar,

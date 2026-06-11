@@ -127,6 +127,8 @@ def _build_map() -> dict:
               "Aceptó consent + se atendió de verdad (cita Atendido / pago caja) → promo dental segmentada. 1 por paciente."),
         _riel("ECO_PREP_ACTIVE", "Preparación de ecografía",
               "Cita de eco entra a la ventana de 3 días → instrucciones de preparación (ayuno / vejiga llena)."),
+        _riel("ABONO_GATE_PSIQ_ACTIVE", "Abono-gate Psiquiatría",
+              "La hora de Psiquiatría se aparta 90 min y se crea SOLO al recibir el comprobante del abono ($20.000, leído por visión). Registra en /alma/abonos."),
         _riel("HORAS_VACIAS_ACTIVE", "Aviso de horas liberadas (D+1)",
               "Diario 14:00: si mañana hay agenda holgada, avisa a quienes preguntaron por esa especialidad sin agendar (30d). Tope 30/día, cooldown 14d, opt-out 'No avisar'.",
               default="true"),  # mismo default que el job (corría sin flag desde antes)
@@ -224,7 +226,7 @@ def _toggleable_flags() -> set[str]:
              "AUTOPILOT_ENABLED", "AUTOPILOT_EXECUTE", "AUTOPILOT_AUTOAPPLY",
              # Rieles de mensajería (leen switchboard en runtime → conmutables en vivo)
              "CONSENT_AGENDADOS_ACTIVE", "PROMO_POSTCONSENT_ACTIVE", "ECO_PREP_ACTIVE",
-             "HORAS_VACIAS_ACTIVE"}
+             "HORAS_VACIAS_ACTIVE", "ABONO_GATE_PSIQ_ACTIVE"}
     try:
         from alma_agents import registry
         flags |= {a.flag for a in registry.all_agents().values()}

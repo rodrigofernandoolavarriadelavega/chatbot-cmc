@@ -103,6 +103,20 @@ def _detectar_fecha_pedida_idle(txt: str) -> str | None:
     return None
 
 
+def _abono_gate_psiq_activo() -> bool:
+    """Flag efectivo para el Abono-Gate de Psiquiatría.
+
+    Patrón idéntico a promo_postconsent._active():
+    switchboard (Sala de Máquinas) > env var > OFF por defecto.
+    """
+    env_val = __import__("os").getenv("ABONO_GATE_PSIQ_ACTIVE", "false").lower() in ("true", "1", "yes")
+    try:
+        from alma_switchboard import effective
+        return effective("ABONO_GATE_PSIQ_ACTIVE", env_val)
+    except Exception:
+        return env_val
+
+
 def _first_name(nombre) -> str:
     """Primer token de un nombre, seguro ante None/vacío/solo-espacios.
     Devuelve "" cuando el nombre está vacío para que los callers puedan
@@ -3485,6 +3499,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
                 "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
                 "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
+                "WAIT_ABONO_COMPROBANTE",  # abono-gate psiquiatría
             )
             if state in _estados_activos:
                 # No interpretar como opt-out — dejar que el handler del estado decida
@@ -9428,6 +9443,48 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # modalidad TELEMEDICINA (marca [ONLINE] en Medilink), sin preguntar presencial.
             if str(slot.get("id_profesional")) == "78" or "psiquiatr" in (slot.get("especialidad", "") or "").lower():
                 data["telemedicina_modalidad"] = "TELEMEDICINA"
+
+            # ── Abono-Gate Psiquiatría (feature 2026-06-11) ───────────────────
+            # Cuando ABONO_GATE_PSIQ_ACTIVE está ON, NO creamos la cita todavía:
+            # pedimos el comprobante de transferencia ($20.000) primero. La hora
+            # queda "apartada" 90 min en la sesión; el handler WAIT_ABONO_COMPROBANTE
+            # procesa la imagen y crea la cita al validar el monto.
+            # Con flag OFF el flujo sigue igual que antes (crea cita directamente).
+            _es_psiquiatria_gate = (
+                "psiquiatr" in (slot.get("especialidad", "") or "").lower()
+                and not reagendar  # reagendas ya tienen cita → no pedir abono de nuevo
+            )
+            if _es_psiquiatria_gate and _abono_gate_psiq_activo():
+                from config import CMC_TRANSFERENCIA as _CTF_AG, ABONO_PSIQUIATRIA_CLP as _ABO_AG
+                # Guardar TODO lo necesario para crear la cita después
+                data["abono_gate_slot"]     = slot
+                data["abono_gate_paciente"] = paciente
+                data["abono_gate_ts"]       = datetime.now(_CHILE_TZ).isoformat()
+                liberar_slot_lock(slot["id_profesional"], slot["fecha"], slot["hora_inicio"])
+                save_session(phone, "WAIT_ABONO_COMPROBANTE", data)
+                log_event(phone, "abono_gate_activado", {
+                    "especialidad": slot.get("especialidad"),
+                    "fecha": slot.get("fecha"),
+                    "hora": slot.get("hora_inicio"),
+                    "monto_requerido": _ABO_AG,
+                })
+                _monto_fmt = f"${_ABO_AG:,}".replace(",", ".")
+                return (
+                    f"Para confirmar tu hora de *Psiquiatría* pedimos un abono de "
+                    f"*{_monto_fmt} CLP* (se descuenta del valor total de la consulta; "
+                    "el saldo se paga el día de la atención).\n\n"
+                    "*Datos para transferir:*\n"
+                    f"{_CTF_AG['banco']}\n"
+                    f"{_CTF_AG['tipo']} {_CTF_AG['numero']}\n"
+                    f"{_CTF_AG['titular']}\n"
+                    f"RUT: {_CTF_AG['rut']}\n"
+                    f"Correo: {_CTF_AG['correo']}\n\n"
+                    "Tu hora queda *apartada por 90 minutos*.\n"
+                    "Envía el comprobante por este chat 📎 y confirmo tu reserva de inmediato.\n\n"
+                    "_Si prefieres abonar en recepción, escribe *recepcion* y te orientamos._"
+                )
+            # ── fin Abono-Gate ────────────────────────────────────────────────
+
             # Marca durable ANTES del POST: si el proceso muere con la reserva en
             # vuelo (SIGKILL en restart), este evento queda sin su par
             # "reserva_resultado" → la reserva perdida es auditable en vez de
@@ -11561,6 +11618,108 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "si", "title": "\u2705 Confirmar"},
                 {"id": "no", "title": "\u274c Cambiar"},
             ]
+        )
+
+    # ── WAIT_ABONO_COMPROBANTE ────────────────────────────────────────────────
+    # Estado post abono-gate: la cita NO fue creada aún. El paciente debe
+    # enviar el comprobante de transferencia. Manejamos 4 casos:
+    #   (A) imagen → leer_comprobante → crear cita + INSERT abonos_cmc
+    #   (B) texto "ya transferí" / "ya envié" sin imagen → recordar que mande foto
+    #   (C) texto "no puedo transferir" / "en recepción" → derivar a recepción (HUMAN_TAKEOVER)
+    #   (D) texto libre genérico → recordar que esperamos comprobante
+    #
+    # El gate de imagen es el PRIMERO en llamarse (desde main.py) cuando llega
+    # un msg_type="image" con el estado WAIT_ABONO_COMPROBANTE. Cuando el paciente
+    # escribe texto el handler llega acá vía el pipeline normal de handle_message.
+    # El timeout de 90 min se verifica perezosamente al llegar cualquier mensaje.
+    if state == "WAIT_ABONO_COMPROBANTE":
+        from datetime import datetime as _dt_ag, timezone as _tz_ag_utc
+        from zoneinfo import ZoneInfo as _ZI_ag
+        _CHILE_TZ_ag = _ZI_ag("America/Santiago")
+
+        # ── Verificar timeout 90 min ─────────────────────────────────────────
+        _gate_ts_str = data.get("abono_gate_ts", "")
+        _gate_expirado = False
+        if _gate_ts_str:
+            try:
+                _gate_dt = _dt_ag.fromisoformat(_gate_ts_str)
+                if _gate_dt.tzinfo is None:
+                    _gate_dt = _gate_dt.replace(tzinfo=_CHILE_TZ_ag)
+                _elapsed_min = (_dt_ag.now(_CHILE_TZ_ag) - _gate_dt).total_seconds() / 60
+                _gate_expirado = _elapsed_min > 90
+            except Exception:
+                pass  # fromisoformat falla → ignorar, no bloquear
+
+        if _gate_expirado:
+            log_event(phone, "abono_gate_timeout", {
+                "gate_ts": _gate_ts_str,
+            })
+            reset_session(phone)
+            return (
+                "El tiempo para enviar el comprobante venció y el aparte fue liberado.\n\n"
+                "Escribe *menu* si quieres volver a buscar una hora de Psiquiatría."
+            )
+
+        # ── Caso C: quiere abonar en recepción / no puede transferir ─────────
+        _kw_recepcion = ("recepcion", "recepción", "presencial", "efectivo",
+                         "no puedo transferir", "no tengo como", "no tengo cómo",
+                         "no tengo transferencia", "no puedo", "sin transferencia")
+        if any(k in tl_norm for k in _kw_recepcion):
+            log_event(phone, "abono_gate_recepcion", {})
+            save_session(phone, "HUMAN_TAKEOVER", {
+                "hold_sent": True,
+                "handoff_reason": "abono_gate_prefiere_recepcion",
+                "abono_gate_slot": data.get("abono_gate_slot"),
+            })
+            # Aviso a recepción
+            _slot_r = data.get("abono_gate_slot") or {}
+            _pac_r  = data.get("abono_gate_paciente") or {}
+            _nom_r  = _pac_r.get("nombre", "")
+            if ADMIN_ALERT_PHONE:
+                from resilience import spawn_task as _spawn_ag_r
+                async def _aviso_recep_abono():
+                    from config import CMC_TRANSFERENCIA as _ctf_r
+                    _msg_r = (
+                        f"📋 *Abono Psiquiatría — abonar en recepción*\n"
+                        f"Paciente: {_nom_r}\n"
+                        f"Fecha cita: {_slot_r.get('fecha_display', _slot_r.get('fecha', ''))}\n"
+                        f"Hora: {(_slot_r.get('hora_inicio') or '')[:5]}\n"
+                        f"WA: {phone}\n"
+                        "El paciente prefiere abonar presencialmente. Coordinar en recepción."
+                    )
+                    await send_whatsapp(ADMIN_ALERT_PHONE, _msg_r)
+                    from session import log_message as _lm_agr
+                    _lm_agr(ADMIN_ALERT_PHONE, "out", _msg_r, "WAIT_ABONO_COMPROBANTE")
+                _spawn_ag_r(_aviso_recep_abono())
+            return (
+                "Sin problema. Una recepcionista te va a contactar para coordinar el abono "
+                "en el centro.\n\n"
+                "Si preferes llamar directamente: 📞 (44) 296 5226\n\n"
+                "_Tu hora queda pendiente de confirmar hasta que se reciba el abono._"
+            )
+
+        # ── Caso B: texto "ya transferí" / "ya envié" pero sin imagen ────────
+        _kw_ya_transferi = ("ya transferi", "ya transferí", "ya pagué", "ya pagé",
+                            "ya mande", "ya mandé", "ya envié", "ya envie",
+                            "ya hice la transferencia", "ya realice", "ya realicé",
+                            "hice la transferencia", "hice el pago")
+        if any(k in tl_norm for k in _kw_ya_transferi):
+            save_session(phone, "WAIT_ABONO_COMPROBANTE", data)
+            return (
+                "Gracias por transferir. Para confirmar tu hora necesito ver el comprobante.\n\n"
+                "Envía una *foto* del comprobante de transferencia por este chat 📎"
+            )
+
+        # ── Caso D: texto libre genérico ──────────────────────────────────────
+        # (El caso A —imagen— no llega aquí; main.py lo intercepta antes.)
+        save_session(phone, "WAIT_ABONO_COMPROBANTE", data)
+        from config import ABONO_PSIQUIATRIA_CLP as _ABO_D
+        _monto_d = f"${_ABO_D:,}".replace(",", ".")
+        return (
+            f"Estoy esperando el comprobante de la transferencia de *{_monto_d} CLP* "
+            "para confirmar tu hora de Psiquiatría.\n\n"
+            "Envía una *foto* del comprobante por este chat 📎\n\n"
+            "_Si no puedes hacer la transferencia, escribe *recepcion* y te ayudamos._"
         )
 
     # ── WAIT_CROSS_SELL ───────────────────────────────────────────────────────
@@ -14360,3 +14519,263 @@ async def _admin_status_report_live() -> str:
     except Exception as _e:
         log.error("Error en _admin_status_report_live: %s", _e)
         return "⚠️ Error generando reporte. Revisa logs."
+
+
+# ── Abono-Gate: procesar imagen de comprobante ────────────────────────────────
+
+async def procesar_imagen_abono(phone: str, img_bytes: bytes,
+                                content_type: str | None) -> str:
+    """Llama a leer_comprobante y decide: crear cita o derivar a humano.
+
+    Retorna el texto del mensaje a enviar al paciente.
+    Esta función es async para poder llamar a crear_cita (también async).
+    Es llamada DIRECTAMENTE desde main.py cuando msg_type=="image" y
+    state=="WAIT_ABONO_COMPROBANTE", ANTES del pipeline normal de media.
+    """
+    import asyncio
+    from datetime import datetime as _dt_pc
+    from zoneinfo import ZoneInfo as _ZI_pc
+    from session import get_session, save_session, reset_session, log_event
+    from session import log_message
+    from abono_comprobante import leer_comprobante
+    from config import ABONO_PSIQUIATRIA_CLP, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
+    from abonos_routes import ensure_abonos_table
+    from session import db as _sdb
+    from medilink import crear_cita
+    from resilience import spawn_task as _spawn
+
+    _CHILE_TZ_pc = _ZI_pc("America/Santiago")
+
+    sess = get_session(phone)
+    if not sess or sess.get("state") != "WAIT_ABONO_COMPROBANTE":
+        # Ya no estamos en el estado correcto — no hacer nada
+        return ""
+
+    data = sess.get("data") or {}
+    slot    = data.get("abono_gate_slot") or {}
+    paciente = data.get("abono_gate_paciente") or {}
+
+    # Verificar timeout 90 min (mismo check que en el handler de texto)
+    _gate_ts_str = data.get("abono_gate_ts", "")
+    if _gate_ts_str:
+        try:
+            _gate_dt = _dt_pc.fromisoformat(_gate_ts_str)
+            if _gate_dt.tzinfo is None:
+                _gate_dt = _gate_dt.replace(tzinfo=_CHILE_TZ_pc)
+            _elapsed = (_dt_pc.now(_CHILE_TZ_pc) - _gate_dt).total_seconds() / 60
+            if _elapsed > 90:
+                log_event(phone, "abono_gate_timeout", {"gate_ts": _gate_ts_str})
+                reset_session(phone)
+                return (
+                    "El tiempo para enviar el comprobante venció y el aparte fue liberado.\n\n"
+                    "Escribe *menu* si quieres volver a buscar una hora de Psiquiatría."
+                )
+        except Exception:
+            pass
+
+    # Leer comprobante con Claude vision
+    resultado_vision = leer_comprobante(img_bytes, content_type)
+    legible = resultado_vision.get("legible", False)
+    monto   = resultado_vision.get("monto") or 0
+
+    log_event(phone, "abono_comprobante_leido", {
+        "legible": legible,
+        "monto": monto,
+        "codigo": resultado_vision.get("codigo_operacion"),
+        "banco_origen": resultado_vision.get("banco_origen"),
+    })
+
+    # Validación suave: monto suficiente Y legible
+    if not legible or monto < ABONO_PSIQUIATRIA_CLP:
+        # Derivar a humano con contexto — la cita NO se crea
+        motivo = "monto_insuficiente" if (legible and monto < ABONO_PSIQUIATRIA_CLP) else "ilegible"
+        log_event(phone, "abono_comprobante_fallo", {
+            "motivo": motivo,
+            "monto_leido": monto,
+            "monto_requerido": ABONO_PSIQUIATRIA_CLP,
+        })
+        save_session(phone, "HUMAN_TAKEOVER", {
+            "hold_sent": True,
+            "handoff_reason": f"abono_comprobante_{motivo}",
+            "abono_gate_slot": slot,
+        })
+
+        # Aviso a recepción con el contexto
+        if ADMIN_ALERT_PHONE:
+            _nom_pf = paciente.get("nombre", "")
+            _slot_fd = slot.get("fecha_display", slot.get("fecha", ""))
+            _hora_pf = (slot.get("hora_inicio") or "")[:5]
+            if motivo == "monto_insuficiente":
+                _aviso_pf = (
+                    f"⚠️ *Abono Psiquiatría — validar manual*\n"
+                    f"Paciente: {_nom_pf} · WA: {phone}\n"
+                    f"Cita: {_slot_fd} {_hora_pf}\n"
+                    f"Comprobante recibido. Monto leído: ${monto:,} "
+                    f"(requerido: ${ABONO_PSIQUIATRIA_CLP:,}). Monto no calza — verificar con el banco."
+                )
+            else:
+                _aviso_pf = (
+                    f"⚠️ *Abono Psiquiatría — comprobante ilegible*\n"
+                    f"Paciente: {_nom_pf} · WA: {phone}\n"
+                    f"Cita: {_slot_fd} {_hora_pf}\n"
+                    "Comprobante recibido pero no pude leerlo automáticamente — validar manual con el banco."
+                )
+            async def _notif_recep_fallo():
+                from messaging import send_whatsapp as _sw_pf
+                await _sw_pf(ADMIN_ALERT_PHONE, _aviso_pf)
+                log_message(ADMIN_ALERT_PHONE, "out", _aviso_pf, "WAIT_ABONO_COMPROBANTE")
+            _spawn(_notif_recep_fallo())
+
+        if motivo == "monto_insuficiente":
+            _monto_req_fmt = f"${ABONO_PSIQUIATRIA_CLP:,}".replace(",", ".")
+            _monto_leido_fmt = f"${monto:,}".replace(",", ".")
+            return (
+                f"Vi que el monto en el comprobante es *{_monto_leido_fmt}* y necesitamos "
+                f"*{_monto_req_fmt}* para confirmar la hora de Psiquiatría.\n\n"
+                "Le avisé a recepción para que te contacte y lo aclaren.\n\n"
+                f"Si tienes dudas, llama al 📞 *{CMC_TELEFONO_FIJO}*"
+            )
+        else:
+            return (
+                "No pude leer el comprobante automáticamente. "
+                "Le avisé a recepción para que lo revise manualmente.\n\n"
+                f"Si tienes dudas, llama al 📞 *{CMC_TELEFONO_FIJO}*"
+            )
+
+    # ── Validación OK: crear cita en Medilink ────────────────────────────────
+    id_cita = ""
+    try:
+        resultado_ml = await asyncio.wait_for(crear_cita(
+            id_paciente=paciente["id"],
+            id_profesional=slot["id_profesional"],
+            fecha=slot["fecha"],
+            hora_inicio=slot["hora_inicio"],
+            hora_fin=slot["hora_fin"],
+            id_recurso=slot.get("id_recurso", 1),
+            modalidad=data.get("telemedicina_modalidad", "TELEMEDICINA"),
+        ), timeout=45)
+        if isinstance(resultado_ml, dict):
+            id_cita = str(resultado_ml.get("id", ""))
+    except Exception as _err_ml:
+        log.error("procesar_imagen_abono: crear_cita falló: %s", _err_ml)
+        resultado_ml = None
+
+    if not resultado_ml:
+        # La cita falló (slot tomado u otro error) — intentar re-buscar
+        from medilink import buscar_primer_dia as _bpd_ag
+        try:
+            _smart_ag, _todos_ag = await asyncio.wait_for(
+                _bpd_ag("psiquiatría"), timeout=30)
+        except Exception:
+            _smart_ag, _todos_ag = [], []
+
+        if _smart_ag:
+            _new_slot = _smart_ag[0]
+            data["abono_gate_slot"] = _new_slot
+            data["slot_elegido"]    = _new_slot
+            save_session(phone, "CONFIRMING_CITA", data)
+            log_event(phone, "abono_gate_slot_tomado_rebusco", {
+                "new_fecha": _new_slot.get("fecha"),
+                "new_hora":  _new_slot.get("hora_inicio"),
+            })
+            return (
+                "Recibí tu comprobante ✅ pero esa hora fue tomada mientras esperábamos.\n\n"
+                f"Te encontré otra disponible:\n"
+                f"📅 *{_new_slot.get('fecha_display', '')}* a las "
+                f"*{_new_slot.get('hora_inicio', '')[:5]}* con "
+                f"*{_new_slot.get('profesional', '')}*\n\n"
+                "¿La reservo con el abono que ya enviaste? Escribe *si* para confirmar."
+            )
+        else:
+            # No hay alternativa → humano
+            reset_session(phone)
+            log_event(phone, "abono_gate_sin_alternativa", {})
+            return (
+                "Recibí tu comprobante ✅ pero al intentar reservar la hora ya no estaba disponible "
+                "y no encontré otra. Avisé a recepción para que te contacten y coordinen.\n\n"
+                f"📞 *{CMC_TELEFONO_FIJO}*"
+            )
+
+    # ── Cita creada → INSERT en abonos_cmc ───────────────────────────────────
+    now_cl = _dt_pc.now(_CHILE_TZ_pc)
+    precio_total = 60000  # valor consulta psiquiatría
+    saldo = max(precio_total - monto, 0)
+    fecha_cita_str = slot.get("fecha_display", slot.get("fecha", ""))
+    try:
+        ensure_abonos_table()
+        with _sdb() as _conn_ab:
+            _conn_ab.execute(
+                """INSERT INTO abonos_cmc
+                   (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
+                    area, fecha_cita, precio_total, monto_abono, saldo,
+                    metodo_pago, codigo_transferencia, estado, id_cita, nota,
+                    creado_por, created_at, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
+                (
+                    now_cl.strftime("%Y-%m-%d"),
+                    now_cl.strftime("%H:%M"),
+                    paciente.get("nombre", ""),
+                    (data.get("rut") or "").strip(),
+                    slot.get("id_profesional"),
+                    slot.get("profesional", ""),
+                    "Psiquiatría",
+                    fecha_cita_str,
+                    precio_total,
+                    monto,
+                    saldo,
+                    "transferencia",
+                    resultado_vision.get("codigo_operacion") or "",
+                    "pendiente",
+                    id_cita,
+                    f"auto-bot: comprobante leído por visión — banco {resultado_vision.get('banco_origen') or '?'}",
+                    "bot",
+                )
+            )
+            _conn_ab.commit()
+        log_event(phone, "abono_comprobante_ok", {
+            "monto": monto,
+            "id_cita": id_cita,
+            "codigo": resultado_vision.get("codigo_operacion"),
+        })
+    except Exception as _e_ab:
+        log.warning("procesar_imagen_abono: INSERT abonos_cmc falló: %s", _e_ab)
+
+    # ── Confirmación al paciente ──────────────────────────────────────────────
+    nombre_corto = _first_name(paciente.get("nombre", ""))
+    saludo = f"*{nombre_corto}*" if nombre_corto else "Tu hora"
+    _saldo_fmt = f"${saldo:,}".replace(",", ".")
+    confirmacion = (
+        f"✅ *{saludo}, tu hora de Psiquiatría quedó confirmada.*\n\n"
+        f"👤 {paciente.get('nombre', '')}\n"
+        f"🏥 Psiquiatría — {slot.get('profesional', '')}\n"
+        f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"
+        f"🕐 {(slot.get('hora_inicio') or '')[:5]}\n\n"
+        f"Abono recibido: ${monto:,} CLP\n"
+        f"Saldo a pagar el día de la atención: {_saldo_fmt} CLP\n\n"
+        "Recepción validará la transferencia con el banco.\n"
+        "_Escribe *menu* si necesitas algo más._"
+    ).replace(",", ".")
+
+    reset_session(phone)
+
+    # Aviso a recepción para validación real
+    if ADMIN_ALERT_PHONE:
+        _nom_conf = paciente.get("nombre", "")
+        _aviso_conf = (
+            f"✅ *Abono Psiquiatría — VALIDAR CON BANCO*\n"
+            f"Paciente: {_nom_conf} · WA: {phone}\n"
+            f"Cita: {fecha_cita_str} {(slot.get('hora_inicio') or '')[:5]} "
+            f"(ID Medilink: {id_cita})\n"
+            f"Monto: ${monto:,}\n"
+            f"Código op.: {resultado_vision.get('codigo_operacion') or '?'}\n"
+            f"Banco origen: {resultado_vision.get('banco_origen') or '?'}\n"
+            f"Titular: {resultado_vision.get('titular_origen') or '?'}\n"
+            "⚠️ Verificar que la transferencia llegó al banco antes de confirmar."
+        ).replace(",", ".")
+        async def _notif_recep_ok():
+            from messaging import send_whatsapp as _sw_conf
+            await _sw_conf(ADMIN_ALERT_PHONE, _aviso_conf)
+            log_message(ADMIN_ALERT_PHONE, "out", _aviso_conf, "WAIT_ABONO_COMPROBANTE")
+        _spawn(_notif_recep_ok())
+
+    return confirmacion
