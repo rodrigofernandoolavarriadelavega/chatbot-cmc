@@ -2353,7 +2353,9 @@ def _serve_portal(html: str, request: Request, demo: str):
     """Sirve una versión del portal. Con ?demo=1 y PORTAL_DEMO_OPEN entra
     directo en modo demo (datos ficticios), sin pedir RUT ni código — para
     que cualquiera pueda VER el portal sin clave."""
-    resp = HTMLResponse(html)
+    # no-store: el navegador siempre trae la última versión (el caché viejo
+    # hacía que el dueño viera comportamientos ya corregidos: "sigue igual")
+    resp = HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0"})
     from config import PORTAL_DEMO_OPEN
     if demo and PORTAL_DEMO_OPEN:
         from portal_routes import (
