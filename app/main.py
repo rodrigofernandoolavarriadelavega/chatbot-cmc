@@ -8596,13 +8596,23 @@ async def webhook(request: Request):
             if not (n.startswith("ig_") or n.startswith("fb_")):
                 return  # ya tenemos un nombre real
         from config import META_ACCESS_TOKEN, META_PAGE_ACCESS_TOKEN
-        # Para Messenger: intentar con system user token y page token
-        tokens = [META_ACCESS_TOKEN]
-        if META_PAGE_ACCESS_TOKEN and META_PAGE_ACCESS_TOKEN != META_ACCESS_TOKEN:
-            tokens.append(META_PAGE_ACCESS_TOKEN)
+        # Instagram (Instagram Login API): el perfil del usuario se consulta en
+        # graph.instagram.com con el token de PÁGINA — el mismo host/token que usa
+        # el ENVÍO de IG (send_instagram). Pegarle a graph.facebook.com con el
+        # system-user token daba 400/401 → el bot no capturaba el nombre (name='').
+        # Messenger/FB sí va por graph.facebook.com (system-user y/o page token).
+        if platform == "instagram":
+            host = "https://graph.instagram.com/v22.0"
+            fields = "name,username"
+            tokens = [t for t in (META_PAGE_ACCESS_TOKEN, META_ACCESS_TOKEN) if t]
+        else:
+            host = "https://graph.facebook.com/v22.0"
+            fields = "name,first_name,last_name"
+            tokens = [META_ACCESS_TOKEN]
+            if META_PAGE_ACCESS_TOKEN and META_PAGE_ACCESS_TOKEN != META_ACCESS_TOKEN:
+                tokens.append(META_PAGE_ACCESS_TOKEN)
         try:
             import httpx
-            fields = "name,username" if platform == "instagram" else "name,first_name,last_name"
             async with httpx.AsyncClient(timeout=5) as client:
                 for token in tokens:
                     if not token:
@@ -8610,7 +8620,7 @@ async def webhook(request: Request):
                     # Pasar token por Authorization header evita que httpx lo logee
                     # en la URL (seguridad: antes se filtraba en /var/log/cmc-bot.log)
                     r = await client.get(
-                        f"https://graph.facebook.com/v22.0/{sender_id}",
+                        f"{host}/{sender_id}",
                         params={"fields": fields},
                         headers={"Authorization": f"Bearer {token}"},
                     )
