@@ -888,6 +888,11 @@ a{color:inherit; text-decoration:none}
 .gt-acts{display:flex; gap:6px; margin-top:7px}
 .gt-acts button{flex:1; padding:7px 6px; border:0; border-radius:8px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:9.5px; font-weight:800; cursor:pointer}
 .gt-acts button.alt{background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35)}
+.gen-card{max-height:92vh; overflow:auto}
+.gen-back{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; color:var(--cmc-blue); background:var(--cmc-aqua-soft); border:0; border-radius:9px; padding:8px 12px; margin:0 0 8px; cursor:pointer; font-family:var(--font)}
+.gen-para{font-size:10.5px; font-weight:700; color:var(--text-mute); margin-left:8px}
+.gen-para b{color:var(--cmc-navy)}
+.gen-ag-frame{width:100%; height:min(64vh, 560px); border:0; border-radius:12px; background:var(--bg); margin-top:2px}
 .gen-tip .gt-name{font-weight:800; font-size:11px; margin-bottom:3px}
 .gen-tip .gt-row{font-weight:600; line-height:1.5}
 .gen-tip .gt-row.ok{color:#9fe8d8}
@@ -1971,7 +1976,31 @@ function _genHover() {
 let _genPin = null;
 function genTap(rut) { _genPin = rut; _genShowTip(rut, true); }   // 1er toque: tarjeta con acciones (clave en celular)
 function _genAbrir(rut) { _genPin = null; closeGenograma(); famTap(rut, false); }
-function _genAgendarP(rut) { _genPin = null; closeGenograma(); famTap(rut, true); }
+function _genAgendarP(rut) {
+  // Agendar SIN salir del árbol: el agendador compacto se abre dentro del pop-up
+  _genPin = null;
+  const tip = document.getElementById('gen-tip'); if (tip) tip.classList.remove('show');
+  const card = document.querySelector('#gen-backdrop .gen-card');
+  const svgWrap = document.getElementById('gen-svg');
+  const leg = card.querySelector('.gen-leg');
+  const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
+  const first = m ? (m.nombre || '').split(' ')[0] : '';
+  svgWrap.style.display = 'none'; if (leg) leg.style.display = 'none';
+  let pane = document.getElementById('gen-ag');
+  if (!pane) { pane = document.createElement('div'); pane.id = 'gen-ag'; card.appendChild(pane); }
+  pane.innerHTML = `<button class="gen-back" onclick="_genVolver()">← Volver al árbol</button>
+    <span class="gen-para">Agendando para <b>${first}</b></span>
+    <iframe class="gen-ag-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`;
+  pane.style.display = 'block';
+  const demo = (patientData && patientData.demo) ? '&demo=1' : '';
+  document.getElementById('gen-ag-frame').src = '/agendar/portal?embed=1&rut=' + encodeURIComponent(rut) + demo;
+}
+function _genVolver() {
+  const pane = document.getElementById('gen-ag');
+  if (pane) { pane.style.display = 'none'; const f = document.getElementById('gen-ag-frame'); if (f) f.src = 'about:blank'; }
+  const svgWrap = document.getElementById('gen-svg'); if (svgWrap) svgWrap.style.display = '';
+  const leg = document.querySelector('#gen-backdrop .gen-leg'); if (leg) leg.style.display = '';
+}
 function buildGenSVG(mem) {
   const act = _normRut((patientData && patientData.rut) || '');
   const cls = m => {
