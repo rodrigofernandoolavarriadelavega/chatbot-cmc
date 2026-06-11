@@ -846,7 +846,7 @@ function loadMeta() {
   Object.values(_charts).forEach(c => { try { c.destroy(); } catch(_){} });
   _charts = {};
 
-  fetch('/api/seo/meta-ads?token=cmc_admin_2026&periodo=' + encodeURIComponent(periodo))
+  fetch('/api/seo/meta-ads?token=' + encodeURIComponent(new URLSearchParams(location.search).get('token') || '') + '&periodo=' + encodeURIComponent(periodo))
     .then(r => r.json())
     .then(d => {
       loading.style.display = 'none';

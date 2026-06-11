@@ -567,7 +567,7 @@
 </div>
 
 <script>
-const TOKEN = new URLSearchParams(location.search).get('token') || 'cmc_admin_2026';
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
 let STATE = { boxes_config_default: [], profesionales_all: [], citas_raw: [], citas_dia_full: [], rev_por_prof: {}, citas_por_prof: {}, historial: [] };
 let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {} };
 let editMode = false;

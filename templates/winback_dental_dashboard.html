@@ -51,9 +51,9 @@
   <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-5 overflow-x-auto">
     <span class="serif text-lg font-medium shrink-0" style="color:var(--olacore-fiordo)">CMC</span>
     <span class="mono text-xs opacity-40 shrink-0">|</span>
-    <a href="/winback?token=cmc_admin_2026" class="nav-link shrink-0">Winback General</a>
-    <a href="/winback-dental?token=cmc_admin_2026" class="nav-link active shrink-0">Dental</a>
-    <a href="/admin?token=cmc_admin_2026" class="nav-link shrink-0">Panel</a>
+    <a href="#" data-nav="/winback" class="nav-link shrink-0">Winback General</a>
+    <a href="#" data-nav="/winback-dental" class="nav-link active shrink-0">Dental</a>
+    <a href="#" data-nav="/admin" class="nav-link shrink-0">Panel</a>
     <span class="ml-auto mono text-xs opacity-40" id="last-refresh">--</span>
   </div>
 </nav>
@@ -150,6 +150,9 @@
 
 <script>
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-nav]').forEach(a => { a.href = a.dataset.nav + '?token=' + encodeURIComponent(TOKEN); });
+});
 
 const SC_META = {
   'dental_ortodoncia_180d':     { label: 'Ortodoncia',           esp: 'Castillo (ID 66)',            ltv: '$660K–$1M',   cls: 'sc-orto' },

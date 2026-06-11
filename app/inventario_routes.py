@@ -120,18 +120,18 @@ def _require_admin_dep(request: Request,
                        cmc_session: str | None = Cookie(None)) -> str:
     import hmac as _hmac
     from config import ADMIN_TOKEN
-    from admin_routes import _verify_cookie
+    from admin_routes import _verify_cookie, _is_admin_token
 
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         tk = auth_header.split(None, 1)[1].strip()
-        if _hmac.compare_digest(tk, ADMIN_TOKEN):
+        if _is_admin_token(tk):
             return tk
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return ADMIN_TOKEN
-    if token and _hmac.compare_digest(token, ADMIN_TOKEN):
+    if token and _is_admin_token(token):
         return token
     raise HTTPException(status_code=401, detail="Token inválido")
 
