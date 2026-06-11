@@ -219,6 +219,17 @@ async def lifespan(app: FastAPI):
         id="consent_agendados_horario",
         replace_existing=True,
     )
+    # Promo post-consent: riel consent_marketing aceptado → (delay 18h) → promo
+    # dental segmentada. Diario L-V 12:41 CLT (minuto libre del escalonado 429).
+    # Gated PROMO_POSTCONSENT_ACTIVE (default OFF) + override switchboard.
+    from promo_postconsent import job_promo_postconsent as _job_promo_postconsent
+    scheduler.add_job(
+        _job_promo_postconsent,
+        CronTrigger(day_of_week="mon-fri", hour=12, minute=41, timezone=_CLT),
+        id="promo_postconsent_diario",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
     # Autopilot marketing (Fase 1, dry-run diario 08:30 CLT).
     # Inerte salvo AUTOPILOT_ENABLED=true. NO ejecuta cambios en Meta (solo reporta).
     async def _job_autopilot_dryrun():
@@ -892,6 +903,7 @@ import tareas_routes; app.include_router(tareas_routes.router)
 import liquidaciones_routes; app.include_router(liquidaciones_routes.router)
 import tablero_routes; app.include_router(tablero_routes.router)
 import patient_source_routes; app.include_router(patient_source_routes.router)  # Canal declarado ("¿cómo nos conoció?")
+import promo_postconsent; app.include_router(promo_postconsent.router)  # Riel consent aceptado → promo dental diferida (gated OFF)
 import grafo_routes; grafo_routes.register_grafo_routes(app)  # Cerebro Alma (grafo del organismo)
 
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
