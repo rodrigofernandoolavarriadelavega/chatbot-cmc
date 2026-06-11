@@ -633,12 +633,18 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
         members.append({"rut": DEMO_RUT, "nombre": d0["nombre"], "relation": "titular",
                         "sexo": d0["sexo"], "edad": _age_years(d0["fecha_nacimiento"]),
                         "dx": d0.get("diagnosticos") or [],
+                        "ultima": ({"especialidad": d0["historial"][0]["especialidad"],
+                                    "fecha": d0["historial"][0]["fecha"]} if d0["historial"] else None),
+                        "n_at": len(d0["historial"]),
                         "proxima": d0["citas_futuras"][0] if d0["citas_futuras"] else None})
         for fr, meta in DEMO_FAMILY.items():
             dm = _demo_member_data(fr)
             members.append({"rut": fr, "nombre": meta["nombre"], "relation": meta["relation"],
                             "sexo": meta["sexo"], "edad": _age_years(meta["fnac"]),
                             "dx": dm.get("diagnosticos") or [],
+                            "ultima": ({"especialidad": dm["historial"][0]["especialidad"],
+                                        "fecha": dm["historial"][0]["fecha"]} if dm["historial"] else None),
+                            "n_at": len(dm["historial"]),
                             "proxima": dm["citas_futuras"][0] if dm["citas_futuras"] else None})
         return {"ok": True, "demo": True, "members": members}
 
@@ -658,8 +664,15 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
             pac = await buscar_paciente(m["rut"])
             if not pac:
                 return {**m, "proxima": None}
-            citas = await listar_citas_paciente(pac["id"], rut=pac.get("rut") or "")
+            rut_ml = pac.get("rut") or ""
+            citas, hist = await asyncio.gather(
+                listar_citas_paciente(pac["id"], rut=rut_ml),
+                listar_historial_paciente(pac["id"], meses=12, rut=rut_ml),
+            )
             out = {**m, "nombre": pac.get("nombre") or m["nombre"], "proxima": None,
+                   "ultima": ({"especialidad": hist[0].get("especialidad", ""),
+                               "fecha": hist[0].get("fecha", "")} if hist else None),
+                   "n_at": len(hist or []),
                    "sexo": pac.get("sexo") or "", "edad": _age_years(pac.get("fecha_nacimiento") or "")}
             try:
                 _ph = get_phone_by_rut(m["rut"])
