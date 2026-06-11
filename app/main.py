@@ -8473,16 +8473,23 @@ async def webhook(request: Request):
     # Leer body raw primero para poder validar firma (json.loads consume el stream)
     body_bytes = await request.body()
     from config import META_APP_SECRET as _MAS
-    if _MAS:
-        sig_header = request.headers.get("x-hub-signature-256", "")
-        if not sig_header.startswith("sha256="):
-            log.warning("webhook firma faltante o malformada")
-            return Response(status_code=403)
-        import hmac as _hmac_w, hashlib as _hl_w
-        expected = "sha256=" + _hmac_w.new(_MAS.encode(), body_bytes, _hl_w.sha256).hexdigest()
-        if not _hmac_w.compare_digest(sig_header, expected):
-            log.warning("webhook firma inválida")
-            return Response(status_code=403)
+    # Fail-CLOSED: sin secret configurado NO se puede verificar la firma de Meta,
+    # así que rechazamos en vez de aceptar payloads sin autenticar (un webhook sin
+    # firma permitiría inyectar mensajes WhatsApp falsos que agendan/cancelan citas
+    # reales). En prod META_APP_SECRET está seteado; este guard evita la regresión
+    # si alguna vez falta en el .env.
+    if not _MAS:
+        log.error("webhook RECHAZADO: META_APP_SECRET ausente, no se puede validar firma")
+        return Response(status_code=503)
+    sig_header = request.headers.get("x-hub-signature-256", "")
+    if not sig_header.startswith("sha256="):
+        log.warning("webhook firma faltante o malformada")
+        return Response(status_code=403)
+    import hmac as _hmac_w, hashlib as _hl_w
+    expected = "sha256=" + _hmac_w.new(_MAS.encode(), body_bytes, _hl_w.sha256).hexdigest()
+    if not _hmac_w.compare_digest(sig_header, expected):
+        log.warning("webhook firma inválida")
+        return Response(status_code=403)
     try:
         import json as _json_w
         data = _json_w.loads(body_bytes.decode() or "{}")

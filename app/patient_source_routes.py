@@ -44,7 +44,13 @@ def _rate_ok(key: str, limit: int, window: int) -> bool:
 def _client_ip(req: Request | None) -> str:
     if not req:
         return "?"
-    return (req.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    # X-Real-IP (lo setea nginx con $remote_addr y lo sobrescribe) es la IP real.
+    # El primer valor de X-Forwarded-For lo controla el cliente → no confiar; el
+    # hop confiable es el ÚLTIMO (lo agrega nginx).
+    xri = (req.headers.get("x-real-ip") or "").strip()
+    if xri:
+        return xri
+    return ((req.headers.get("x-forwarded-for", "").split(",")[-1].strip())
             or (req.client.host if req.client else "?"))
 
 

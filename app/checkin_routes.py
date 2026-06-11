@@ -40,9 +40,15 @@ def _ck_rate_ok(key: str, limit: int, window_s: int) -> bool:
     return True
 
 def _ck_client_ip(request: Request) -> str:
+    # X-Real-IP (lo setea nginx con $remote_addr y lo sobrescribe) es la IP real.
+    # El primer valor de X-Forwarded-For lo controla el cliente → no confiar; el
+    # hop confiable es el ÚLTIMO (lo agrega nginx).
+    xri = (request.headers.get("x-real-ip") or "").strip()
+    if xri:
+        return xri
     fwd = request.headers.get("x-forwarded-for", "")
     if fwd:
-        return fwd.split(",")[0].strip()
+        return fwd.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 
