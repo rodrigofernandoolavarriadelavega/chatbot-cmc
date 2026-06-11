@@ -54,3 +54,19 @@ ls -1t "${DST_DIR}"/sessions_*.db.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
 
 SIZE=$(du -h "${DST}.gz" | cut -f1)
 echo "[$(date -Iseconds)] OK: ${DST}.gz (${SIZE}, ${ROWS} sessions)"
+
+# ── Backup de archivos subidos por pacientes (data/uploads) ───────────────────
+# Añadido 2026-06-11: el incidente del symlink data/ (2026-06-10) borró uploads y
+# NO había backup → imágenes/PDFs de pacientes previos se perdieron. Esto lo
+# previene. Los uploads son chicos (~MB), tar.gz es barato.
+UPLOADS_SRC=/opt/chatbot-cmc/data/uploads
+if [ -d "${UPLOADS_SRC}" ]; then
+    UPDST=${DST_DIR}/uploads_${TS}.tar.gz
+    tar -czf "${UPDST}" -C /opt/chatbot-cmc/data uploads 2>/dev/null && chmod 600 "${UPDST}"
+    USIZE=$(du -h "${UPDST}" 2>/dev/null | cut -f1)
+    UFILES=$(find "${UPLOADS_SRC}" -type f 2>/dev/null | wc -l)
+    echo "[$(date -Iseconds)] OK uploads: ${UPDST} (${USIZE}, ${UFILES} archivos)"
+    ls -1t "${DST_DIR}"/uploads_*.tar.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+else
+    echo "[$(date -Iseconds)] WARN: no existe ${UPLOADS_SRC}, skip uploads backup" >&2
+fi
