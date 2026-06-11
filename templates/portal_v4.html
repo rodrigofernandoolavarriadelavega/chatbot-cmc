@@ -872,7 +872,9 @@ a{color:inherit; text-decoration:none}
 .gen-btn:hover{background:var(--cmc-aqua-soft)}
 .gen-backdrop{position:fixed; inset:0; background:rgba(15,63,104,.45); z-index:300; display:none; align-items:center; justify-content:center; padding:18px; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
 .gen-backdrop.show{display:flex}
-.gen-card{background:#fff; border-radius:18px; max-width:440px; width:100%; padding:16px 14px; box-shadow:0 18px 50px rgba(15,63,104,.3); animation:fadeInUp .25s var(--ease) both}
+.gen-card{background:#fff; border-radius:20px; max-width:720px; width:min(96vw, 720px); padding:18px 16px; box-shadow:0 18px 50px rgba(15,63,104,.3); animation:fadeInUp .25s var(--ease) both}
+#gen-svg{max-width:540px; margin:0 auto}
+@media (max-width:560px){ .gen-card{padding:14px 10px} }
 .gen-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px}
 .gen-head h3{font-size:14.5px; font-weight:800; color:var(--cmc-navy); letter-spacing:-.2px}
 .gen-sub{font-size:10px; font-weight:700; color:var(--text-mute); margin-top:2px}
@@ -897,8 +899,10 @@ a{color:inherit; text-decoration:none}
 .gr-box.none{color:var(--text-mute)}
 .gr-box.sug{background:#fdf6e3; border-color:#eedfb6}
 .gr-dx{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
-.gen-tip{position:absolute; width:184px; background:var(--cmc-navy); color:#fff; border-radius:11px; padding:9px 11px; font-size:10px; opacity:0; pointer-events:none; transition:opacity .15s, transform .15s; z-index:5; transform:translateY(-96%); box-shadow:0 10px 26px rgba(15,63,104,.4)}
+.gen-tip{position:absolute; width:200px; background:var(--cmc-navy); color:#fff; border-radius:12px; padding:10px 12px; font-size:10px; opacity:0; pointer-events:none; transition:opacity .15s, transform .15s; z-index:5; transform:translateY(-96%); box-shadow:0 10px 26px rgba(15,63,104,.4)}
 .gen-tip.show{opacity:1; transform:translateY(-100%); pointer-events:auto}
+.gen-tip.below{transform:translateY(4%)}
+.gen-tip.below.show{transform:translateY(0)}
 .gt-acts{display:flex; gap:6px; margin-top:7px}
 .gt-acts button{flex:1; padding:7px 6px; border:0; border-radius:8px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:9.5px; font-weight:800; cursor:pointer}
 .gt-acts button.alt{background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35)}
@@ -906,7 +910,7 @@ a{color:inherit; text-decoration:none}
 .gen-back{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; color:var(--cmc-blue); background:var(--cmc-aqua-soft); border:0; border-radius:9px; padding:8px 12px; margin:0 0 8px; cursor:pointer; font-family:var(--font)}
 .gen-para{font-size:10.5px; font-weight:700; color:var(--text-mute); margin-left:8px}
 .gen-para b{color:var(--cmc-navy)}
-.gen-ag-frame{width:100%; height:min(64vh, 560px); border:0; border-radius:12px; background:var(--bg); margin-top:2px}
+.gen-ag-frame{width:100%; height:min(72vh, 660px); border:0; border-radius:12px; background:var(--bg); margin-top:2px}
 .gen-tip .gt-name{font-weight:800; font-size:11px; margin-bottom:3px}
 .gen-tip .gt-row{font-weight:600; line-height:1.5}
 .gen-tip .gt-row.ok{color:#9fe8d8}
@@ -1970,8 +1974,15 @@ function _genShowTip(rut, pinned) {
     : `<div class="gt-hint">toca para ver opciones</div>`;
   tip.innerHTML = h;
   const wr = wrap.getBoundingClientRect(), gr = g.getBoundingClientRect();
-  tip.style.left = Math.max(6, Math.min(wr.width - 192, gr.left - wr.left + gr.width / 2 - 92)) + 'px';
-  tip.style.top = (gr.top - wr.top - 6) + 'px';
+  tip.style.left = Math.max(6, Math.min(wr.width - 208, gr.left - wr.left + gr.width / 2 - 100)) + 'px';
+  const nodeTop = gr.top - wr.top;
+  if (nodeTop < 150) {           // fila superior: la tarjeta se abre hacia abajo
+    tip.style.top = (gr.bottom - wr.top + 10) + 'px';
+    tip.classList.add('below');
+  } else {                        // resto: hacia arriba, dentro del lienzo
+    tip.style.top = (nodeTop - 6) + 'px';
+    tip.classList.remove('below');
+  }
   tip.classList.add('show');
 }
 function _genHover() {
