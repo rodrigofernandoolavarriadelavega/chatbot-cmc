@@ -928,7 +928,8 @@ a{color:inherit; text-decoration:none}
 .gr-box.sug{background:#fdf6e3; border-color:#eedfb6}
 .gr-dx{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
 .gen-tip{position:absolute; width:200px; background:var(--cmc-navy); color:#fff; border-radius:12px; padding:10px 12px; font-size:10px; opacity:0; pointer-events:none; transition:opacity .15s, transform .15s; z-index:5; transform:translateY(-96%); box-shadow:0 10px 26px rgba(15,63,104,.4)}
-.gen-tip.show{opacity:1; transform:translateY(-100%); pointer-events:auto}
+.gen-tip.show{opacity:1; transform:translateY(-100%)}
+.gen-tip.pin{pointer-events:auto}
 .gen-tip.below{transform:translateY(4%)}
 .gen-tip.below.show{transform:translateY(0)}
 .gt-acts{display:flex; gap:6px; margin-top:7px}
@@ -966,8 +967,8 @@ a{color:inherit; text-decoration:none}
 .gen-tip .gt-row.none{color:#b9cddb}
 .gen-tip .gt-row.sug{color:#ffd98a}
 .gen-tip .gt-hint{margin-top:4px; font-size:8.5px; color:#8fb4cf; font-weight:700}
-#gen-svg g{transform-box:fill-box; transform-origin:center; transition:transform .18s var(--ease)}
-#gen-svg g:hover{transform:translateY(-3px) scale(1.04)}
+#gen-svg g[data-rut]{transform-box:fill-box; transform-origin:center; transition:transform .18s var(--ease)}
+#gen-svg g[data-rut]:hover{transform:scale(1.05)}
 
 /* Nuestro equipo */
 .gl-team{font-size:9.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); margin:12px 0 7px}
@@ -2042,6 +2043,7 @@ function _genShowTip(rut, pinned) {
     tip.style.top = (nodeTop - 6) + 'px';
     tip.classList.remove('below');
   }
+  tip.classList.toggle('pin', !!pinned);
   tip.classList.add('show');
 }
 function _genHover() {
