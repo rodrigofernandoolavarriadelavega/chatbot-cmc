@@ -8,7 +8,7 @@
 <title>Mi Salud · CMC (demo 2 — borrador)</title>
 <link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/wp-content/uploads/2025/08/cropped-logo-carampangue.png">
 <link rel="apple-touch-icon" href="/static/pwa/icon-192.png">
-<link rel="manifest" href="/static/pwa/portal-manifest.webmanifest">
+<link rel="manifest" href="/static/pwa/portal-v4-manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -989,6 +989,10 @@ a{color:inherit; text-decoration:none}
 .site-foot .sf-line{font-size:11.5px; color:var(--text-mute); font-weight:600; margin-top:6px; line-height:1.6}
 .site-foot a{color:var(--cmc-blue); font-weight:800; text-decoration:none}
 .site-foot a:hover{text-decoration:underline}
+.sf-install{display:inline-flex; align-items:center; gap:7px; margin-top:14px; padding:12px 22px; border:0; border-radius:999px;
+  background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff; font-family:var(--font); font-size:12.5px; font-weight:800;
+  cursor:pointer; box-shadow:0 6px 18px rgba(15,63,104,.3); transition:transform .15s, box-shadow .15s}
+.sf-install:hover{transform:translateY(-1px); box-shadow:0 9px 24px rgba(15,63,104,.4)}
 
 /* Acordeones de Recursos: secciones largas colapsadas por defecto */
 .acc .panel-head{cursor:pointer; -webkit-user-select:none; user-select:none}
@@ -1420,6 +1424,7 @@ a{color:inherit; text-decoration:none}
         <div class="sf-name">Centro Médico Carampangue</div>
         <div class="sf-line">📍 República 102, Carampangue · <a href="https://www.google.com/maps/search/?api=1&query=Centro%20M%C3%A9dico%20Carampangue%2C%20Rep%C3%BAblica%20102%2C%20Carampangue%2C%20Arauco" target="_blank" rel="noopener">Cómo llegar</a></div>
         <div class="sf-line">💬 <a href="https://wa.me/56966610737" target="_blank" rel="noopener">WhatsApp del centro</a> · 🚑 Emergencias: <a href="tel:131">SAMU 131</a></div>
+        <button class="sf-install" id="sf-install" onclick="instalarApp()">📲 Instalar la app del centro</button>
       </footer>
     </main>
   </div>
@@ -3531,6 +3536,27 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
 </div>
 
 <script>
+// PWA: instalación con un toque (prompt nativo en Android/Chrome; guía en iPhone)
+let _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _pwaPrompt = e; });
+async function instalarApp() {
+  if (_pwaPrompt) {
+    _pwaPrompt.prompt();
+    const r = await _pwaPrompt.userChoice;
+    _pwaPrompt = null;
+    if (r && r.outcome === 'accepted' && typeof toast === 'function') toast('✅ Listo: la app quedó en su pantalla de inicio');
+    return;
+  }
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+    alert('Para instalar la app del centro:\n\n1. Toque el botón Compartir (el cuadrado con la flecha hacia arriba)\n2. Elija "Agregar a pantalla de inicio"\n3. Toque "Agregar"\n\nLa app quedará con el logo del centro en su pantalla.');
+    return;
+  }
+  alert('En el menú del navegador (⋮) elija "Instalar aplicación" o "Agregar a pantalla de inicio".');
+}
+if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+  document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('sf-install'); if (b) b.style.display = 'none'; });
+}
+
 // PWA: registrar service worker (scope /portal/)
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
