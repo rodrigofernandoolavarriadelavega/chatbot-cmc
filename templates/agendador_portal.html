@@ -79,6 +79,15 @@ input{font-family:inherit;color:inherit}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
 
+/* Modo cambiar hora: selector de la cita actual */
+.rg-row{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:9px 11px;margin-bottom:6px;border:1.4px solid var(--border);border-radius:11px;background:var(--panel);font-size:11px;font-weight:600;color:var(--text);transition:.15s}
+.rg-row.on{border-color:var(--aqua);background:var(--aqua-soft)}
+.rg-row .rg-dot{width:14px;height:14px;flex:none;border-radius:50%;border:2px solid var(--border)}
+.rg-row.on .rg-dot{border-color:var(--blue);background:var(--blue);box-shadow:inset 0 0 0 2.5px #fff}
+.rg-row b{color:var(--navy)}
+.rg-row span{font-size:9.5px;color:var(--mute)}
+.rg-note{font-size:9.5px;font-weight:700;color:#8b6508;background:#fff4d6;border-radius:9px;padding:8px 10px;margin-top:4px;line-height:1.5}
+
 /* Datos paciente nuevo (solo si el RUT no existe) */
 #sec-nuevo{display:none}
 .f2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
@@ -144,6 +153,11 @@ input{font-family:inherit;color:inherit}
 <div class="wrap">
   <div class="idline off" id="idline"></div>
 
+  <div class="sec" id="sec-reag" style="display:none">
+    <h3><span class="n">↺</span>Cambiar hora <span class="hint">elija cuál desea mover</span></h3>
+    <div id="reag-list"></div>
+  </div>
+
   <div class="sec" id="sec-esp">
     <h3><span class="n">1</span>Especialidad <span class="hint" id="esp-hint">precios referenciales</span></h3>
     <div class="esp-sel" id="esp-sel" style="display:none">
@@ -193,7 +207,7 @@ input{font-family:inherit;color:inherit}
 <div class="done" id="done">
   <div class="dcard">
     <div class="ok">✓</div>
-    <h2>¡Hora reservada!</h2>
+    <h2 id="done-title">¡Hora reservada!</h2>
     <div class="dw2" id="done-det">—</div>
     <div class="dnote" id="done-note">Le llegará un recordatorio por WhatsApp. Llegue 10 minutos antes con su carnet.</div>
     <div class="acts">
@@ -209,6 +223,7 @@ input{font-family:inherit;color:inherit}
 const API = '/agendar/api';
 const Q = new URLSearchParams(location.search);
 const DEMO = Q.get('demo') === '1';
+const REAG = Q.get('reag') === '1';
 const RUT_IN = (Q.get('rut') || '').trim();
 const DEMO_NAMES = { '50000000-7':'María', '50000001-5':'Tomás', '50000002-3':'Pedro', '50000003-1':'Rosa', '50000004-K':'Carmen' };
 const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -264,6 +279,45 @@ async function identificar() {
   } catch (e) { /* sin identificación previa: la reserva igual valida el RUT */ S.patient = { rut: rn, found:true, nombre:'' }; }
 }
 
+/* ── Modo cambiar hora: sus citas actuales ── */
+let MIS = [];
+async function loadMisHoras() {
+  if (!REAG || !RUT_IN) return;
+  const rn = normRut(RUT_IN);
+  if (DEMO) {
+    const f = d => { const x = new Date(); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); };
+    const map = {
+      '50000000-7': [{ id_cita: 'demo-901', especialidad: 'Cardiología', profesional: 'Dr. Miguel Millán', fecha: f(3), hora_inicio: '11:00' }],
+      '50000001-5': [{ id_cita: 'demo-911', especialidad: 'Odontología General', profesional: 'Dra. Javiera Burgos', fecha: f(5), hora_inicio: '16:30' }],
+      '50000003-1': [{ id_cita: 'demo-931', especialidad: 'Kinesiología', profesional: 'Luis Armijo', fecha: f(8), hora_inicio: '10:40' }],
+    };
+    MIS = map[rn] || [];
+  } else {
+    try { const r = await apiPost('/mis-horas', { rut: rn }); MIS = r.citas || []; } catch (e) { MIS = []; }
+  }
+  S.reagSel = MIS[0] || null;
+  renderReag();
+  if (S.reagSel && window._CAT && !S.esp && findEsp(S.reagSel.especialidad)) pickEsp(S.reagSel.especialidad);
+}
+function renderReag() {
+  const sec = $('sec-reag'); if (!sec || !REAG) return;
+  sec.style.display = 'block';
+  if (!MIS.length) {
+    $('reag-list').innerHTML = '<div class="empty">No tiene horas próximas que cambiar — puede reservar una nueva abajo 👇</div>';
+    return;
+  }
+  $('reag-list').innerHTML = MIS.map(c => {
+    const d = parseFecha(c.fecha);
+    const sel = S.reagSel && String(S.reagSel.id_cita) === String(c.id_cita);
+    return `<button class="rg-row ${sel ? 'on' : ''}" onclick="pickReag('${c.id_cita}')">
+      <span class="rg-dot"></span>
+      <div><b>${c.especialidad}</b> · ${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${c.hora_inicio} hrs<br><span>${c.profesional || ''}</span></div>
+    </button>`;
+  }).join('') + '<div class="rg-note">Elija abajo su NUEVA hora — la actual se liberará automáticamente al confirmar.</div>';
+}
+function pickReag(id) { S.reagSel = MIS.find(c => String(c.id_cita) === String(id)) || null; renderReag(); }
+function parseFecha(f) { const [y, m, d] = (f || '').split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); }
+
 /* ── Catálogo: chips por grupo, todo visible ── */
 async function loadCatalogo() {
   try {
@@ -282,6 +336,7 @@ async function loadCatalogo() {
     // ?esp= preselecciona la especialidad (p.ej. al tocar un profesional en el portal)
     const pre = Q.get('esp');
     if (pre && findEsp(pre)) pickEsp(pre);
+    else if (REAG && S.reagSel && findEsp(S.reagSel.especialidad)) pickEsp(S.reagSel.especialidad);
   } catch (e) { $('esp-box').innerHTML = '<div class="empty">No pudimos cargar. Recargue la página.</div>'; }
 }
 function findEsp(nombre) {
@@ -418,7 +473,9 @@ async function confirmar() {
   try {
     if (DEMO) {
       await new Promise(r => setTimeout(r, 700));   // simulación: en demo NO se crea cita real
-      $('done-note').textContent = '🧪 Reserva simulada (modo demo): no se creó ninguna cita real.';
+      $('done-note').textContent = REAG && S.reagSel
+        ? '🧪 Cambio simulado (modo demo): su hora anterior se habría liberado automáticamente.'
+        : '🧪 Reserva simulada (modo demo): no se creó ninguna cita real.';
     } else {
       const body = {
         rut: S.patient.rut || normRut(RUT_IN),
@@ -438,6 +495,21 @@ async function confirmar() {
         if (!body.nombre) { toast('Complete su nombre (sección 3)', true); throw Object.assign(new Error(''), {silent:true}); }
       }
       await apiPost('/reservar', body);
+      if (REAG && S.reagSel) {
+        try {
+          await apiPost('/cancelar', { rut: body.rut, id_cita: S.reagSel.id_cita });
+          $('done-note').textContent = 'Su hora anterior quedó liberada. Le llegará un recordatorio por WhatsApp.';
+        } catch (e) {
+          $('done-note').textContent = '⚠ Reservamos su nueva hora, pero no pudimos liberar la anterior — recepción la ajustará.';
+        }
+      }
+    }
+    if (REAG && S.reagSel) {
+      const od = parseFecha(S.reagSel.fecha);
+      $('done-title').textContent = '¡Hora cambiada!';
+      $('done-det').innerHTML = `<span style="text-decoration:line-through;opacity:.55">${S.reagSel.especialidad} · ${DIAS[od.getDay()]} ${od.getDate()} ${MES[od.getMonth()]} · ${S.reagSel.hora_inicio}</span><br><b>${S.esp.especialidad}</b> · ${S.prof.nombre}<br>${fmtSel()}`;
+      $('done').classList.add('show');
+      return;
     }
     $('done-det').innerHTML = `<b>${S.esp.especialidad}</b> · ${S.prof.nombre}<br>${fmtSel()}`;
     $('done-gcal').href = gcalHref();
@@ -459,6 +531,7 @@ function resetAll() {
 
 identificar();
 loadCatalogo();
+loadMisHoras();
 </script>
 </body>
 </html>

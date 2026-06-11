@@ -1737,12 +1737,8 @@ function compartirCita(c) {
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 function avisarReagendar(c) {
-  // Abre el agendador compacto en pop-up (antes derivaba a WhatsApp)
-  const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
-  const demo = (patientData && patientData.demo) ? '&demo=1' : '';
-  document.getElementById('agendar-frame').src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo;
-  document.getElementById('agendar-overlay').classList.add('show');
-  document.body.style.overflow = 'hidden';
+  // Pop-up en modo "cambiar hora": muestra la cita actual y la libera al confirmar
+  _abrirAgendadorPopup('&reag=1');
 }
 const _ESP_EMOJI = [[/odont|dental|endodon|implant|ortodon/i,'🦷'],[/kine|masoter/i,'💪'],[/nutri/i,'🥗'],[/psic|psiqu/i,'🧠'],[/matron|gine|obst/i,'🤰'],[/cardio/i,'❤️'],[/trauma/i,'🦴'],[/fono/i,'🗣️'],[/eco|imagen/i,'🩻'],[/podo/i,'🦶'],[/otorrino/i,'👂'],[/estética|estetica/i,'✨']];
 function espEmoji(e) { for (const [r, x] of _ESP_EMOJI) if (r.test(e || '')) return x; return '🩺'; }
@@ -2367,11 +2363,14 @@ async function mountInlineAgenda() {
   } catch (e) { panel.style.display = 'none'; }
   _onSpyScroll();  // el panel aparece async: recalcular CTA flotante recién aquí
 }
-function scrollToAgenda() {
-  const panel = document.getElementById('ag-inline-panel');
-  if (panel && panel.style.display !== 'none') { panel.scrollIntoView({behavior:'smooth', block:'start'}); }
-  else { agendar(); }
+function _abrirAgendadorPopup(extra) {
+  const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
+  const demo = (patientData && patientData.demo) ? '&demo=1' : '';
+  document.getElementById('agendar-frame').src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo + (extra || '');
+  document.getElementById('agendar-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
+function scrollToAgenda() { _abrirAgendadorPopup(''); }
 
 /* ═══ Agenda ═══ */
 function renderAgenda() {
