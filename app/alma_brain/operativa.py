@@ -249,8 +249,16 @@ async def accept_offer(offer: dict, *, send_fn=None) -> dict:
         motivo = f"auto-confirmación falló ({res.get('error')}) → recepción"
 
     # No auto-confirmable (o falló) → queda apartado para validación humana.
-    from session import set_offer_estado
+    from session import set_offer_estado, mark_waitlist_notified as _mwn
     set_offer_estado(o["id"], "recepcion")
+    # Marcar la inscripción también acá: si no, el cron waitlist de las 07:00
+    # le ofrece OTRO cupo al mismo paciente mientras su apartada espera a
+    # recepción (doble-mensaje — advertencia de la auditoría 2026-06-05).
+    try:
+        if o.get("waitlist_id"):
+            _mwn(int(o["waitlist_id"]))
+    except Exception as _e_wl:
+        log.warning("operativa: no pude marcar waitlist_id=%s: %s", o.get("waitlist_id"), _e_wl)
     msg = (f"¡Te aparté la hora de *{o['especialidad'].title()}* para el *{o['fecha']}* "
            f"a las *{o['hora']}*! 🟡\n\n"
            "Nuestra recepción la confirma y te avisa en breve. "
