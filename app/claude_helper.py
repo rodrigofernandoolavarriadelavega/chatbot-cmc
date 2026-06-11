@@ -106,8 +106,11 @@ _INTENT_CACHE: dict[str, dict] = {
     "nutri":          {"intent": "agendar", "especialidad": "nutrición"},
     "nutrición":      {"intent": "agendar", "especialidad": "nutrición"},
     "nutricion":      {"intent": "agendar", "especialidad": "nutrición"},
-    "traumato":       {"intent": "agendar", "especialidad": "medicina general"},
-    "traumatología":  {"intent": "agendar", "especialidad": "medicina general"},
+    # F037: devolver "traumatología" para que _iniciar_agendar presente la oferta
+    # MG-vs-waitlist. Antes llegaba como "medicina general" y el check de línea
+    # 12934 de flows.py nunca se ejecutaba → paciente no veía la opción de waitlist.
+    "traumato":       {"intent": "agendar", "especialidad": "traumatología"},
+    "traumatología":  {"intent": "agendar", "especialidad": "traumatología"},
     "cardio":         {"intent": "agendar", "especialidad": "cardiología"},
     "cardiología":    {"intent": "agendar", "especialidad": "cardiología"},
     "gine":           {"intent": "agendar", "especialidad": "ginecología"},

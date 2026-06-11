@@ -41,21 +41,23 @@ def test_precio_line_minusculas_kinesiologia():
 
 
 def test_precio_line_minusculas_ginecologia():
+    # F034: precio ginecología actualizado de $30.000 → $35.000 (precio real)
     linea = flows._precio_line("ginecología")
     assert linea, "ginecología (minúsculas) debe resolver precio"
-    assert "30.000" in linea
+    assert "35.000" in linea
 
 
 def test_precio_line_title_case_sigue_funcionando():
     assert "7.830" in flows._precio_line("Kinesiología")
-    assert "30.000" in flows._precio_line("Ginecología")
+    # F034: ginecología $35.000 (no $30.000)
+    assert "35.000" in flows._precio_line("Ginecología")
 
 
-def test_precio_line_modalidad_override_muestra_especialidad_canonica():
-    # En el branch de modalidad cruzada se interpola {esp} en el mensaje:
-    # debe salir bien escrita aunque haya entrado en minúsculas.
+def test_precio_line_kine_tiene_precio_particular():
+    # F035: kinesiología es "ambas" → particular $20.000 disponible (no "solo Fonasa")
     linea = flows._precio_line("kinesiología", modalidad_override="particular")
-    assert "Kinesiología" in linea
+    assert "20.000" in linea, "kine particular debe mostrar $20.000"
+    assert "solo con valor Fonasa" not in linea, "no debe decir solo Fonasa"
 
 
 def test_precio_line_marquez_override_intacto():

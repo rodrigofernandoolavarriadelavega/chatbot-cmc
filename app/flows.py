@@ -405,16 +405,16 @@ PRECIOS_SLOT = {
     # Para "ambas" la tupla es: ("ambas", precio_fonasa, None, precio_particular)
     "Medicina General":       ("ambas",      7880,  None, 25000),  # Fonasa $7.880 / Particular $25.000
     "Medicina Familiar":      ("ambas",      7880,  None, 30000),  # Fonasa $7.880 / Particular $30.000 (Dr. Márquez)
-    "Kinesiología":           ("fonasa",     7830),
-    "Psicología Adulto":      ("fonasa",    14420),
-    "Psicología Infantil":    ("fonasa",    14420),
-    "Nutrición":              ("fonasa",     4770),
+    "Kinesiología":           ("ambas",     7830, None, 20000),   # Fonasa $7.830 / Particular $20.000 (F035)
+    "Psicología Adulto":      ("ambas",    14420, None, 20000),   # Fonasa $14.420 / Particular $20.000 (F035)
+    "Psicología Infantil":    ("ambas",    14420, None, 20000),   # Fonasa $14.420 / Particular $20.000 (F035)
+    "Nutrición":              ("ambas",     4770, None, 20000),   # Fonasa $4.770 / Particular $20.000 (F035)
     "Matrona":                ("ambas",     16000,  None, 20000),  # Fonasa $16.000 / Particular $20.000
     "Psiquiatría":            ("particular", 60000),
     "Fonoaudiología":         ("particular", 25000),
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
-    "Ginecología":            ("particular", 30000),
+    "Ginecología":            ("particular", 35000),  # F034: precio real $35.000 (no $30.000)
     # "Traumatología" — temporalmente deshabilitada (Dr. Barraza no disponible)
     "Otorrinolaringología":   ("particular", 35000),
     "Gastroenterología":      ("particular", 35000),
@@ -475,7 +475,7 @@ CROSS_REFERENCE: dict[str, str] = {
     "Odontología General": (
         "\n\n✨ *¿Sabías que hacemos Blanqueamiento Dental?*\n"
         "Dra. Javiera Burgos y Dr. Carlos Jiménez realizan:\n"
-        "• Blanqueamiento dental ($120.000)\n"
+        "• Blanqueamiento dental ($75.000)\n"  # F033: precio real $75.000 (no $120.000)
         "• Carillas de resina (desde $50.000)\n\n"
         "Aprovecha tu visita y mejora tu sonrisa. "
         "Escribe *menu* para agendar 😊"
@@ -4053,7 +4053,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # Atajos numéricos del menú (compatibilidad + sub-menús "Cambiar/cancelar"
         # y "Mis citas / espera" que devuelven botones con estos IDs)
-        if txt == "1": return await _iniciar_agendar(phone, data, None)
+        if txt == "1":
+            # F134: si viene del botón post-cancelación, usar la especialidad de la cita cancelada
+            _pce = data.pop("_post_cancel_esp", None)
+            if _pce:
+                save_session(phone, "IDLE", data)
+            return await _iniciar_agendar(phone, data, _pce or None)
         if txt == "2": return await _iniciar_reagendar(phone, data)
         if txt == "3": return await _iniciar_cancelar(phone, data)
         if txt == "4": return await _iniciar_ver(phone, data)
@@ -7162,9 +7167,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             data["profs_vistos"] = list(_pv2)
                             save_session(phone, "WAIT_SLOT", data)
                             _nombre_ap = _PROFS_AP.get(list(ids_apellido)[0], {}).get("nombre", "ese doctor")
-                            return (f"Encontré horas con *{_nombre_ap}* para el mismo día:\n\n"
-                                    + (_format_slots(_td_ap[:5]) if isinstance(_format_slots(_td_ap[:5]), str)
-                                       else "")) or _format_slots(_td_ap[:5])
+                            # F030: calcular _format_slots UNA vez; si es dict (interactivo) devolverlo
+                            # directo (ya trae los slots); si es str, adjuntar el encabezado.
+                            _fmt_ap = _format_slots(_td_ap[:5])
+                            if isinstance(_fmt_ap, dict):
+                                return _fmt_ap
+                            return f"Encontré horas con *{_nombre_ap}* para el mismo día:\n\n{_fmt_ap}"
                     except Exception as _e_ap:
                         log.warning("buscar_slots_dia_por_ids apellido mismo día falló: %s", _e_ap)
                 # Fallback: búsqueda fresca preservando especialidad y fechas_vistas
@@ -7997,7 +8005,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     save_session(phone, "WAIT_SLOT", data)
                     return _format_slots((smart_mn or todos_mn)[:5], mostrar_todos=False)
                 # FIX 2: ofrecer waitlist con botones, no instrucción de texto libre
-                _wl_esp_mn = _esp_modal_neg or especialidad or data.get("especialidad", "")
+                # F031: `especialidad` puede no estar definida si se llega a WAIT_MODALIDAD
+                # sin pasar por WAIT_SLOT (ej: restauración de sesión tras timeout).
+                _wl_esp_mn = _esp_modal_neg or data.get("especialidad", "")
                 data["waitlist_especialidad"] = _wl_esp_mn
                 data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
                 save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
@@ -9990,9 +10000,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return "No pude recuperar la cita a cancelar. ¿Me das tu RUT para revisar tus reservas?"
             # BUG-4 FIX: preservar _intent_pendiente antes de reset_session
             _intent_pendiente_cancel = data.get("_intent_pendiente")
+            # F134: preservar especialidad de la cita cancelada para ofrecerla
+            # directamente si el paciente quiere agendar de nuevo.
+            _esp_cita_cancelada = (cita.get("especialidad") or "").lower().strip()
             ok = await cancelar_cita(cita["id"])
             reset_session(phone)
             if ok:
+                # Guardar la especialidad en la sesión recién reseteada para que el
+                # botón "Sí, agendar" la use directamente sin volver a preguntar.
+                if _esp_cita_cancelada:
+                    _s_post_cancel = get_session(phone)
+                    _s_post_cancel["data"]["_post_cancel_esp"] = _esp_cita_cancelada
+                    save_session(phone, "IDLE", _s_post_cancel["data"])
                 log_event(phone, "cita_cancelada", {"id_cita": cita["id"], "profesional": cita.get("profesional")})
                 save_tag(phone, "canceló")
                 # ── Notificación al profesional (push WA, ventana 24h, $0) ───
@@ -10087,14 +10106,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                "mañana", "manana", "hoy", "tarde")
         )
         if not _parece_rut and (_tiene_hora_explicita or _tiene_hora_texto):
-            # Guardar la preferencia si la extraemos — la usamos cuando tengamos el RUT
+            # F032: guardar la preferencia de franja para pre-filtrar slots.
+            # (Antes se prometía "anoté tu preferencia" pero nunca se leía.)
             data["reagendar_preferencia"] = txt[:120]
             save_session(phone, "WAIT_RUT_REAGENDAR", data)
             return (
-                "¡Perfecto, anoté tu preferencia! 🗓️\n\n"
-                "Primero necesito tu *RUT* para buscar tu cita actual:\n"
+                "Primero necesito tu *RUT* para buscar tu cita actual 🗓️\n"
                 "(ej: *12.345.678-9*)\n\n"
-                "Cuando me lo des, te ofrezco nuevos horarios."
+                "Cuando me lo des, buscamos los nuevos horarios."
             )
         rut = clean_rut(txt)
         if not valid_rut(rut):

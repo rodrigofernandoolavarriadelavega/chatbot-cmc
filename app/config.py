@@ -377,7 +377,7 @@ ARANCELES_CLP: dict[str, int] = {
     "psiquiatria":                  60000,
     "ginecología":                  40000,
     "ginecologia":                  40000,
-    "matrona":                      25000,
+    "matrona":                      20000,  # F172: particular $20.000 (Fonasa $16.000); era 25000 incorrecto
     "ecografía":                    34000,
     "ecografia":                    34000,
     "tecnólogo médico ecografista": 34000,

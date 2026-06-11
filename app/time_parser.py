@@ -85,6 +85,21 @@ _DESCALIFICADORES = (
     "grados", "fiebre", "temperatura",
 )
 
+# F036: expresiones de día del mes que se confunden con hora ("el 15" ≠ las 15:00)
+# Patrón: "el NN", "para el NN", "el día NN", "el NN de [mes]"
+# Solo aplica cuando el número está en rango 1-31 y no hay indicador de hora.
+_MESES = (
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+)
+_DIA_DEL_MES_RE = re.compile(
+    r"(?:^|\s)"
+    r"(?:para\s+)?(?:el\s+(?:dia\s+)?|el\s+)"
+    r"(\d{1,2})"
+    r"(?:\s+de\s+(?:" + "|".join(_MESES) + r")|\s*$)",
+    re.IGNORECASE,
+)
+
 
 def parse_hora(texto: str) -> Optional[Tuple[int, int]]:
     """Extrae (hora, minuto) de texto libre en español. None si no aplica.
@@ -97,6 +112,15 @@ def parse_hora(texto: str) -> Optional[Tuple[int, int]]:
         return None
     t = _normalizar(texto)
     if any(re.search(rf"\b{w}\b", t) for w in _DESCALIFICADORES):
+        return None
+
+    # F036: rechazar expresiones que son claramente un día del mes, no una hora.
+    # "el 15", "para el 15", "el día 15", "el 15 de junio" → no es hora 15:00.
+    # Solo rechaza si el número no está acompañado de indicadores de hora (":MM", "hrs", "am", "pm").
+    _tiene_indicador_hora = bool(
+        re.search(r"[:.](?:\d{2})\b|\b(?:hrs?|horas?|hs?|am|pm|a\.m|p\.m)\b", t)
+    )
+    if not _tiene_indicador_hora and _DIA_DEL_MES_RE.search(t):
         return None
 
     # Mediodía / medianoche
