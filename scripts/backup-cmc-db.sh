@@ -50,7 +50,7 @@ gzip -f "${DST}"
 chmod 600 "${DST}.gz"
 
 # Purga: conservar solo los 8 más recientes
-ls -1t "${DST_DIR}"/sessions_*.db.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+ls -1t "${DST_DIR}"/sessions_*.db.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
 
 SIZE=$(du -h "${DST}.gz" | cut -f1)
 echo "[$(date -Iseconds)] OK: ${DST}.gz (${SIZE}, ${ROWS} sessions)"
@@ -66,7 +66,7 @@ if [ -d "${UPLOADS_SRC}" ]; then
     USIZE=$(du -h "${UPDST}" 2>/dev/null | cut -f1)
     UFILES=$(find "${UPLOADS_SRC}" -type f 2>/dev/null | wc -l)
     echo "[$(date -Iseconds)] OK uploads: ${UPDST} (${USIZE}, ${UFILES} archivos)"
-    ls -1t "${DST_DIR}"/uploads_*.tar.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+    ls -1t "${DST_DIR}"/uploads_*.tar.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
 else
     echo "[$(date -Iseconds)] WARN: no existe ${UPLOADS_SRC}, skip uploads backup" >&2
 fi

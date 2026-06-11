@@ -391,6 +391,17 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
   /ECO_VARIANTES_DAVID que una sesión previa dijo escribir NO están en el repo.
 
 ---
+**Fecha**: 2026-05-29
+**Historial completo**: ver claude-mem timeline o git log
+
+### Deploy 2026-05-29 — pool PG + teléfono fijo
+
+- `baf7f3c` — fix(estabilidad,contacto): pool PG boxes endurecido + teléfono fijo corregido a (44) 296 5226
+  - `app/main.py`: conn=None guard, PoolError→HTTP 503, rollback antes putconn, cursor en finally, 3 fases para no retener PG durante llamadas Medilink
+  - `app/config.py` + `claude_helper.py`, `flows.py`, `fidelizacion.py`, `winback.py`, `dental_winback.py`, `messaging.py`: (41)→(44) en todos los mensajes outbound
+  - `scripts/medir_conversion_postfix.py`: nuevo script read-only de medición conversión
+  - Servidor: `/opt/chatbot-cmc/.env` actualizado (`CMC_TELEFONO_FIJO=(44) 296 5226`)
+  - /health post-deploy: **200** · service: **active** · logs: limpios
 
 ### Resumen sesión 2026-04-27 / 2026-04-28
 
