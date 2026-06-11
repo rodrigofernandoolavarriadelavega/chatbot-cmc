@@ -2739,7 +2739,13 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
     import os as _os
     from datetime import datetime as _dt
     from zoneinfo import ZoneInfo as _ZI
-    if not dry_run and _os.getenv("CONSENT_AGENDADOS_ACTIVE", "false").lower() not in ("true", "1", "yes"):
+    _env_consent_ag = _os.getenv("CONSENT_AGENDADOS_ACTIVE", "false").lower() in ("true", "1", "yes")
+    try:
+        from alma_switchboard import effective as _sb_eff
+        _consent_ag_on = _sb_eff("CONSENT_AGENDADOS_ACTIVE", _env_consent_ag)
+    except Exception:
+        _consent_ag_on = _env_consent_ag
+    if not dry_run and not _consent_ag_on:
         log.debug("_job_consent_agendados: CONSENT_AGENDADOS_ACTIVE=false — skip")
         return {"status": "inactive"}
     now_cl = _dt.now(_ZI("America/Santiago"))

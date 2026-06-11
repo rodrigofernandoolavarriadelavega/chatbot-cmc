@@ -1,204 +1,911 @@
-<!DOCTYPE html><html lang="es"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
 <title>Sala de Máquinas — Alma</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/alma_kit.css">
 <style>
-  /* toggle switch */
-  .sw{position:relative;display:inline-block;width:46px;height:26px;flex:0 0 auto}
-  .sw input{opacity:0;width:0;height:0}
-  .sw .track{position:absolute;cursor:pointer;inset:0;background:#cdd6df;border-radius:26px;transition:.18s}
-  .sw .track:before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
-  .sw input:checked + .track{background:var(--aqua)}
-  .sw input:checked + .track:before{transform:translateX(20px)}
-  .sw input:disabled + .track{opacity:.45;cursor:not-allowed}
-  .piece{display:flex;align-items:flex-start;gap:14px;padding:14px 4px;border-bottom:1px solid var(--border)}
-  .piece:last-child{border-bottom:none}
-  .piece .meta{flex:1;min-width:0}
-  .piece .nm{font-weight:700;color:var(--navy);font-size:14px}
-  .piece .ds{font-size:12.5px;color:var(--mute);margin-top:2px;line-height:1.45}
-  .piece .flagcode{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--blue);margin-top:4px;opacity:.8}
-  .piece .ctrls{display:flex;align-items:center;gap:10px;flex:0 0 auto}
-  .ovr{width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block;margin-left:6px;vertical-align:middle}
-  .risk-bajo{background:var(--green-s);color:var(--green)}
-  .risk-medio{background:var(--orange-s);color:var(--orange)}
-  .risk-alto{background:var(--red-s);color:var(--red)}
-  .risk-extremo{background:var(--purple-s);color:var(--purple)}
-  .master-card .piece .nm{font-size:15px}
-  .lock{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--border);font-size:13px}
-  .lock:last-child{border-bottom:none}
-  .lock .lk-nm{font-weight:600;color:var(--navy)}
-  .lock .lk-ds{color:var(--mute);font-size:11.5px}
-  .banner{padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;margin-bottom:16px;display:none}
-  .banner.live{display:block;background:var(--red-s);color:var(--red);border:1px solid var(--red)}
-  .banner.dry{display:block;background:var(--green-s);color:var(--green);border:1px solid var(--green)}
-  .acc-item{padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;font-size:13px}
-  .acc-item .ai-sum{font-weight:600;color:var(--navy)}
-  .acc-item .ai-why{font-size:11.5px;color:var(--mute);margin-top:3px}
+/* ── TOKENS ─────────────────────────────────────────────── */
+:root{
+  --aqua:#4FBECE; --blue:#1172AB; --navy:#0F3F68; --navy-deep:#0a2e4d;
+  --ink:#13202e; --muted:#64798c; --line:#e6edf3; --bg:#f4f7fa; --card:#ffffff;
+  --green:#1f9d6b; --green-bg:#e7f7f0;
+  --amber:#c98a14; --amber-bg:#fdf4e3;
+  --red:#d94c4c; --red-bg:#fdecec;
+  --slate:#5b7186; --slate-bg:#eef2f6;
+  --orange:#c06b14; --orange-bg:#fef0e6;
+  --purple:#7c3aed; --purple-bg:#f2eeff;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --sh-lg:0 12px 32px rgba(15,63,104,.12),0 4px 8px rgba(15,63,104,.06);
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+     -webkit-font-smoothing:antialiased;line-height:1.45;padding:0;overflow-x:hidden}
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px 80px}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+     background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+     border-radius:var(--r);padding:20px 24px;color:#fff;box-shadow:var(--sh-lg);
+     position:relative;overflow:hidden;margin-bottom:20px}
+.top::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;
+     background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%);pointer-events:none}
+.top .brand-tile{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+     background:rgba(255,255,255,.15);backdrop-filter:blur(6px);flex:0 0 auto}
+.top .brand-tile svg{width:26px;height:26px}
+.top .brand-text{flex:1;min-width:0}
+.top .brand-text .b1{font-size:10px;font-weight:600;opacity:.72;letter-spacing:.6px;text-transform:uppercase}
+.top .brand-text h1{font-size:18px;font-weight:800;letter-spacing:-.4px;line-height:1.15}
+.top .brand-text .b3{font-size:12px;opacity:.78;font-weight:500;margin-top:2px}
+.top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1}
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+     border-radius:999px;font-size:11.5px;font-weight:700;
+     background:rgba(255,255,255,.16);backdrop-filter:blur(6px)}
+.status-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--aqua);
+     box-shadow:0 0 0 3px rgba(79,190,206,.3);animation:pulse 2s infinite}
+.status-pill.live .dot{background:#f87171;box-shadow:0 0 0 3px rgba(248,113,113,.3)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.btn-reset-all{border:0;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;
+     padding:8px 14px;border-radius:10px;
+     background:rgba(217,76,76,.25);color:#ffb3b3;border:1px solid rgba(217,76,76,.35);
+     transition:.18s;white-space:nowrap}
+.btn-reset-all:hover{background:rgba(217,76,76,.38)}
+.ovr-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;
+     border-radius:999px;font-size:11.5px;font-weight:700;
+     background:rgba(255,255,255,.13);color:rgba(255,255,255,.9)}
+.ovr-badge .ct{color:var(--aqua);font-size:13px}
+
+/* ── SECTION LABEL ───────────────────────────────────────── */
+.sec-label{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+     color:var(--muted);margin:24px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* ── LOCKS BAR ────────────────────────────────────────────── */
+.locks-bar{background:var(--navy-deep);border-radius:var(--r);padding:14px 18px;
+     box-shadow:var(--sh-md);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.locks-bar .locks-title{font-size:10.5px;font-weight:700;letter-spacing:.5px;
+     text-transform:uppercase;color:rgba(255,255,255,.45);margin-right:4px;white-space:nowrap}
+.lock-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;
+     border-radius:8px;font-size:11px;font-weight:600;white-space:nowrap;
+     background:rgba(255,255,255,.08);color:rgba(255,255,255,.78);
+     border:1px solid rgba(255,255,255,.1);cursor:default;position:relative}
+.lock-badge svg{width:11px;height:11px;flex:0 0 auto;opacity:.65}
+.lock-badge.safe{background:rgba(31,157,107,.18);color:#5de8b5;border-color:rgba(31,157,107,.25)}
+.lock-badge.warn{background:rgba(201,138,20,.18);color:#f0cc7a;border-color:rgba(201,138,20,.25)}
+.lock-badge.info{background:rgba(79,190,206,.13);color:#8ee8f5;border-color:rgba(79,190,206,.2)}
+.lock-badge .lk-tip{display:none;position:absolute;top:calc(100% + 6px);left:50%;
+     transform:translateX(-50%);z-index:99;background:var(--navy-deep);color:rgba(255,255,255,.88);
+     font-size:11px;font-weight:500;padding:7px 11px;border-radius:8px;width:200px;
+     box-shadow:var(--sh-lg);white-space:normal;pointer-events:none;
+     border:1px solid rgba(255,255,255,.1)}
+.lock-badge:hover .lk-tip{display:block}
+
+/* ── MASTER GROUPS ───────────────────────────────────────── */
+.masters-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.master-group{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-sm);
+     border:1px solid var(--line);overflow:hidden}
+.mg-head{padding:14px 16px;border-bottom:1px solid var(--line);
+     display:flex;align-items:center;gap:10px}
+.mg-head .mg-ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto}
+.mg-head .mg-ico svg{width:17px;height:17px}
+.mg-head .mg-title{font-size:13px;font-weight:700;letter-spacing:-.2px}
+.mg-head .mg-sub{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+.mg-body{padding:10px 12px 12px}
+.master-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;
+     border-bottom:1px solid var(--line);position:relative}
+.master-row:last-child{border-bottom:none;padding-bottom:0}
+.master-row.child{padding-left:16px}
+.master-row.child::before{content:"";position:absolute;left:5px;top:0;bottom:0;
+     width:1.5px;background:var(--line)}
+.mr-meta{flex:1;min-width:0}
+.mr-name{font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mr-desc{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:3px;line-height:1.4}
+.mr-flag{font-size:10px;font-family:ui-monospace,Menlo,monospace;color:var(--blue);
+     margin-top:4px;opacity:.75}
+.mr-ctrl{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding-top:2px}
+
+/* override dot */
+.ovr-dot{width:7px;height:7px;border-radius:50%;background:var(--aqua);
+     box-shadow:0 0 0 3px rgba(79,190,206,.25);flex:0 0 auto}
+/* inert badge */
+.inert-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;
+     background:var(--amber-bg);color:var(--amber);border:1px solid rgba(201,138,20,.2)}
+
+/* ── TOGGLE SWITCH ────────────────────────────────────────── */
+.sw{position:relative;display:inline-block;width:46px;height:26px;flex:0 0 auto;touch-action:manipulation}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw .track{position:absolute;cursor:pointer;inset:0;background:#cdd6df;border-radius:26px;transition:.18s}
+.sw .track:before{content:"";position:absolute;height:20px;width:20px;left:3px;top:3px;
+     background:#fff;border-radius:50%;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.sw input:checked + .track{background:var(--aqua)}
+.sw input:checked + .track:before{transform:translateX(20px)}
+.sw input:disabled + .track{opacity:.42;cursor:not-allowed}
+/* overridden ring */
+.sw.overridden .track{box-shadow:0 0 0 2.5px var(--aqua),0 0 0 4px rgba(79,190,206,.2)}
+
+/* ── RIELES ───────────────────────────────────────────────── */
+.rieles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.riel-card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-sm);
+     border:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:10px;
+     transition:.18s}
+.riel-card:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
+.riel-top{display:flex;align-items:center;gap:10px}
+.riel-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
+.riel-ico svg{width:18px;height:18px}
+.riel-name{font-size:13px;font-weight:700;flex:1;min-width:0}
+.riel-desc{font-size:11.5px;color:var(--muted);font-weight:500;line-height:1.4}
+.riel-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.riel-flag{font-size:10px;font-family:ui-monospace,Menlo,monospace;color:var(--blue);opacity:.7}
+.env-only-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+     padding:3px 8px;border-radius:7px;background:var(--slate-bg);color:var(--slate);
+     border:1px solid rgba(91,113,134,.18)}
+.env-only-badge svg{width:10px;height:10px}
+
+/* ── LAYER SECTION ───────────────────────────────────────── */
+.layer-panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-sm);
+     border:1px solid var(--line);overflow:hidden}
+.layer-head{display:flex;align-items:center;gap:10px;padding:14px 18px;
+     border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.layer-head:hover{background:#fafcfd}
+.layer-head .lh-ico{width:30px;height:30px;border-radius:9px;
+     background:linear-gradient(135deg,#e3f5f8,#cfeef3);display:grid;place-items:center;flex:0 0 auto}
+.layer-head .lh-ico svg{width:16px;height:16px;stroke:var(--blue)}
+.layer-head .lh-title{font-size:14px;font-weight:700;letter-spacing:-.2px;flex:1}
+.layer-head .lh-meta{font-size:11.5px;color:var(--muted);font-weight:500}
+.layer-head .lh-count{font-size:11.5px;font-weight:700;color:var(--muted);
+     background:var(--bg);padding:4px 10px;border-radius:999px;white-space:nowrap}
+.layer-head .lh-chevron{width:20px;height:20px;stroke:var(--muted);transition:.2s;flex:0 0 auto}
+.layer-head.open .lh-chevron{transform:rotate(180deg)}
+
+.layer-body{display:none;padding:0}
+.layer-body.open{display:block}
+
+/* inactive master banner */
+.master-off-banner{display:flex;align-items:center;gap:10px;margin:14px 18px 10px;
+     padding:10px 14px;border-radius:10px;background:var(--amber-bg);
+     border:1px solid rgba(201,138,20,.22);font-size:12.5px;font-weight:600;color:var(--amber)}
+.master-off-banner svg{width:16px;height:16px;flex:0 0 auto}
+
+/* filter chips */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--line)}
+.fc{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;
+     font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--line);
+     background:var(--card);color:var(--muted);transition:.14s;user-select:none}
+.fc:hover{background:var(--bg)}
+.fc.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.fc .fc-ct{background:rgba(255,255,255,.25);border-radius:5px;
+     font-size:10px;padding:1px 5px;margin-left:2px;font-weight:800}
+.fc:not(.active) .fc-ct{background:var(--bg);color:var(--ink)}
+
+/* pieces grid */
+.pieces-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+     gap:12px;padding:14px 18px 18px}
+
+/* piece card */
+.piece-card{background:var(--bg);border-radius:13px;border:1px solid var(--line);
+     padding:14px;display:flex;flex-direction:column;gap:10px;transition:.15s}
+.piece-card:hover{background:#ecf2f8;border-color:#d0dde8}
+.piece-card.hidden{display:none}
+.pc-top{display:flex;align-items:flex-start;gap:8px}
+.pc-name{font-size:13px;font-weight:700;color:var(--navy);flex:1;line-height:1.3}
+.risk-chip{font-size:10px;font-weight:700;padding:3px 7px;border-radius:7px;
+     flex:0 0 auto;white-space:nowrap}
+.risk-bajo{background:var(--green-bg);color:var(--green)}
+.risk-medio{background:var(--amber-bg);color:var(--amber)}
+.risk-alto{background:var(--orange-bg);color:var(--orange)}
+.risk-extremo{background:var(--red-bg);color:var(--red)}
+.pc-desc{font-size:11.5px;color:var(--muted);font-weight:500;line-height:1.45;
+     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pc-desc.expanded{-webkit-line-clamp:unset;overflow:visible}
+.pc-meta{font-size:10.5px;color:var(--muted);opacity:.8;display:flex;flex-wrap:wrap;gap:6px}
+.pc-meta span{display:inline-flex;align-items:center;gap:3px}
+.pc-meta svg{width:10px;height:10px}
+.pc-ctrl{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.btn-dryrun{border:0;cursor:pointer;font-family:inherit;font-weight:700;font-size:11px;
+     padding:7px 12px;border-radius:9px;background:var(--card);color:var(--blue);
+     border:1px solid var(--line);transition:.14s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn-dryrun:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-dryrun svg{width:13px;height:13px}
+
+/* ── AUDIT ────────────────────────────────────────────────── */
+.audit-panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-sm);
+     border:1px solid var(--line);overflow:hidden}
+.audit-head{display:flex;align-items:center;gap:10px;padding:14px 18px;
+     border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.audit-head:hover{background:#fafcfd}
+.audit-head .ah-title{font-size:13.5px;font-weight:700;flex:1}
+.audit-head svg{width:16px;height:16px;stroke:var(--muted)}
+.audit-head .lh-chevron{width:18px;height:18px;stroke:var(--muted);transition:.2s;flex:0 0 auto}
+.audit-head.open .lh-chevron{transform:rotate(180deg)}
+.audit-body{display:none;padding:0}
+.audit-body.open{display:block;max-height:400px;overflow-y:auto}
+.audit-row{display:flex;align-items:center;gap:10px;padding:10px 18px;
+     border-bottom:1px solid var(--line);font-size:12.5px}
+.audit-row:last-child{border-bottom:none}
+.audit-row .ar-flag{font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--navy);font-size:11px}
+.audit-row .ar-val{font-weight:600;padding:2px 7px;border-radius:6px;font-size:11px;white-space:nowrap}
+.ar-val.on{background:var(--green-bg);color:var(--green)}
+.ar-val.off{background:var(--red-bg);color:var(--red)}
+.ar-val.reset{background:var(--slate-bg);color:var(--slate)}
+.audit-row .ar-meta{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ── MODAL ────────────────────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;background:rgba(10,25,40,.55);backdrop-filter:blur(3px);
+     z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-lg);
+     width:100%;max-width:540px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.modal-head strong{font-size:15px;font-weight:700;flex:1;letter-spacing:-.2px}
+.modal-head .m-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
+     background:transparent;cursor:pointer;display:grid;place-items:center;font-size:16px;
+     color:var(--muted);transition:.14s}
+.modal-head .m-close:hover{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+.modal-body{padding:18px 20px;overflow-y:auto;flex:1}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end}
+.btn-ghost{border:1px solid var(--line);background:transparent;cursor:pointer;font-family:inherit;
+     font-weight:600;font-size:13px;padding:9px 16px;border-radius:10px;color:var(--ink);transition:.14s}
+.btn-ghost:hover{background:var(--bg)}
+.acc-item{padding:12px 14px;border:1px solid var(--line);border-radius:11px;margin-bottom:10px}
+.acc-item:last-child{margin-bottom:0}
+.acc-item .ai-sum{font-size:13px;font-weight:700;color:var(--navy)}
+.acc-item .ai-why{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+.acc-item .ai-why .good{color:var(--green);font-weight:700}
+.acc-item .ai-why .bad{color:var(--red);font-weight:700}
+.empty-state{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px;font-weight:500}
+.err-state{padding:14px;border-radius:10px;background:var(--red-bg);
+     color:var(--red);font-size:13px;font-weight:600}
+
+/* ── TOAST ─────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+     background:var(--navy);color:#fff;font-size:13px;font-weight:600;
+     padding:10px 20px;border-radius:10px;box-shadow:var(--sh-lg);
+     transition:.22s;z-index:300;white-space:nowrap;pointer-events:none;opacity:0}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.ok{background:var(--green)}
+.toast.err{background:var(--red)}
+
+/* ── SKELETON ─────────────────────────────────────────────── */
+@keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+.skeleton{border-radius:8px;height:14px;background:linear-gradient(90deg,#e6edf3 25%,#f0f4f8 50%,#e6edf3 75%);
+     background-size:600px 100%;animation:shimmer 1.4s infinite;margin-bottom:8px}
+
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media(max-width:900px){
+  .masters-grid{grid-template-columns:1fr}
+  .rieles-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  .pieces-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .wrap{padding:12px 12px 80px}
+  .top{padding:16px 16px}
+  .top .brand-text h1{font-size:15px}
+  .top-right{gap:8px}
+  .rieles-grid{grid-template-columns:1fr}
+  .locks-bar{padding:12px 14px}
+  .lock-badge .lk-tip{left:0;transform:none}
+}
 </style>
-</head><body>
-<div class="pg-topbar">
-  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3"/></svg> Sala de Máquinas</h1>
-  <div class="spacer"></div>
-  <span class="chip" id="ovrChip">0 overrides</span>
-  <button class="btn-ghost" id="btnReset">Restaurar todo (apagar)</button>
-</div>
+</head>
+<body>
 
 <div class="wrap">
-  <div id="banner" class="banner"></div>
 
-  <!-- Maestros -->
-  <div class="card master-card">
-    <div class="card-head"><strong>Control maestro</strong><span class="t-meta">Estos mandan sobre todo lo de abajo</span></div>
-    <div id="masters"></div>
+  <!-- ── HEADER ─────────────────────────────────────────── -->
+  <div class="top">
+    <div class="brand-tile">
+      <!-- Cruz CMC -->
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="2" width="8" height="24" rx="2" fill="white" opacity=".95"/>
+        <rect x="2" y="10" width="24" height="8" rx="2" fill="white" opacity=".95"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="b1">Centro Médico / CARAMPANGUE</div>
+      <h1>Sala de Máquinas</h1>
+      <div class="b3">Control agéntico de Alma — acceso exclusivo dueño</div>
+    </div>
+    <div class="top-right">
+      <div class="ovr-badge" id="ovrBadge"><span class="ct" id="ovrCount">0</span> overrides</div>
+      <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">Cargando…</span></div>
+      <button class="btn-reset-all" id="btnReset">Restablecer todo</button>
+    </div>
   </div>
 
-  <!-- Candados legales -->
-  <div class="card">
-    <div class="card-head"><strong>🔒 Candados de seguridad</strong><span class="t-meta">Solo lectura — se cambian por .env, no desde acá</span></div>
-    <div id="locks"></div>
+  <!-- ── 1. CANDADOS LEGALES ────────────────────────────── -->
+  <div class="sec-label">Cimiento legal — solo lectura</div>
+  <div class="locks-bar" id="locksBar">
+    <span class="locks-title">Candados</span>
+    <div class="skeleton" style="width:110px;height:26px;border-radius:8px"></div>
+    <div class="skeleton" style="width:130px;height:26px;border-radius:8px"></div>
+    <div class="skeleton" style="width:100px;height:26px;border-radius:8px"></div>
   </div>
 
-  <!-- Capas -->
-  <div id="layers"></div>
-
-  <!-- Auditoría -->
-  <div class="card">
-    <div class="card-head"><strong>📋 Registro de cambios</strong><span class="t-meta">Quién prendió/apagó qué y cuándo</span></div>
-    <div id="audit"><div class="empty">Sin cambios registrados.</div></div>
+  <!-- ── 2. MOTORES POR DOMINIO ─────────────────────────── -->
+  <div class="sec-label">Motores por dominio — switches maestros</div>
+  <div class="masters-grid" id="mastersGrid">
+    <div class="master-group"><div class="mg-body"><div class="skeleton" style="height:70px"></div></div></div>
+    <div class="master-group"><div class="mg-body"><div class="skeleton" style="height:70px"></div></div></div>
+    <div class="master-group"><div class="mg-body"><div class="skeleton" style="height:70px"></div></div></div>
   </div>
-</div>
 
-<!-- modal dry-run -->
+  <!-- ── 3. RIELES DE MENSAJERÍA ────────────────────────── -->
+  <div class="sec-label">Rieles de mensajería — mensajes automáticos a pacientes</div>
+  <div style="font-size:12px;color:var(--muted);font-weight:500;margin:-6px 0 12px">Cada riel tiene sus propios frenos: caps diarios, dedupe y ventanas horarias.</div>
+  <div class="rieles-grid" id="rielesGrid">
+    <div class="skeleton" style="height:120px;border-radius:16px"></div>
+    <div class="skeleton" style="height:120px;border-radius:16px"></div>
+    <div class="skeleton" style="height:120px;border-radius:16px"></div>
+  </div>
+
+  <!-- ── 4. FLOTA ────────────────────────────────────────── -->
+  <div class="sec-label" style="margin-top:28px">Flota de agentes autónomos</div>
+  <div class="layer-panel" id="flotaPanel">
+    <div class="layer-head open" onclick="toggleLayer('flota')">
+      <div class="lh-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/></svg></div>
+      <div style="flex:1"><div class="lh-title">Flota de Agentes</div><div class="lh-meta">18 agentes autónomos orientados a pacientes</div></div>
+      <div class="lh-count" id="flotaCount">—</div>
+      <svg class="lh-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="layer-body open" id="flotaBody">
+      <div class="master-off-banner" id="flotaBanner" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        El maestro de la flota (ALMA_AGENTS_ENABLED) está apagado — estos switches quedan preparados pero inertes.
+      </div>
+      <div class="filter-row" id="flotaFilters">
+        <div class="fc active" data-layer="flota" data-risk="all" onclick="filterLayer('flota','all',this)">Todos<span class="fc-ct" id="fcFlotaAll">0</span></div>
+        <div class="fc" data-layer="flota" data-risk="bajo" onclick="filterLayer('flota','bajo',this)">Bajo<span class="fc-ct" id="fcFlotaBajo">0</span></div>
+        <div class="fc" data-layer="flota" data-risk="medio" onclick="filterLayer('flota','medio',this)">Medio<span class="fc-ct" id="fcFlotaMedio">0</span></div>
+        <div class="fc" data-layer="flota" data-risk="alto" onclick="filterLayer('flota','alto',this)">Alto<span class="fc-ct" id="fcFlotaAlto">0</span></div>
+        <div class="fc" data-layer="flota" data-risk="extremo" onclick="filterLayer('flota','extremo',this)">Extremo<span class="fc-ct" id="fcFlotaExtremo">0</span></div>
+      </div>
+      <div class="pieces-grid" id="flotaPieces"></div>
+    </div>
+  </div>
+
+  <!-- ── 5. ORQUESTADORES ───────────────────────────────── -->
+  <div class="sec-label" style="margin-top:18px">Orquestadores del cerebro</div>
+  <div class="layer-panel" id="orqPanel">
+    <div class="layer-head" onclick="toggleLayer('orq')">
+      <div class="lh-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div style="flex:1"><div class="lh-title">Orquestadores del Cerebro</div><div class="lh-meta">15 orquestadores de proceso clínico y operativo</div></div>
+      <div class="lh-count" id="orqCount">—</div>
+      <svg class="lh-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="layer-body" id="orqBody">
+      <div class="filter-row" id="orqFilters">
+        <div class="fc active" data-layer="orq" data-risk="all" onclick="filterLayer('orq','all',this)">Todos<span class="fc-ct" id="fcOrqAll">0</span></div>
+        <div class="fc" data-layer="orq" data-risk="bajo" onclick="filterLayer('orq','bajo',this)">Bajo<span class="fc-ct" id="fcOrqBajo">0</span></div>
+        <div class="fc" data-layer="orq" data-risk="medio" onclick="filterLayer('orq','medio',this)">Medio<span class="fc-ct" id="fcOrqMedio">0</span></div>
+        <div class="fc" data-layer="orq" data-risk="alto" onclick="filterLayer('orq','alto',this)">Alto<span class="fc-ct" id="fcOrqAlto">0</span></div>
+        <div class="fc" data-layer="orq" data-risk="extremo" onclick="filterLayer('orq','extremo',this)">Extremo<span class="fc-ct" id="fcOrqExtremo">0</span></div>
+      </div>
+      <div class="pieces-grid" id="orqPieces"></div>
+    </div>
+  </div>
+
+  <!-- ── 6. AUDITORÍA ────────────────────────────────────── -->
+  <div style="margin-top:18px">
+    <div class="audit-panel">
+      <div class="audit-head" onclick="toggleAudit()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span class="ah-title">Registro de cambios</span>
+        <span style="font-size:11.5px;color:var(--muted);font-weight:500">Quién prendió/apagó qué y cuándo</span>
+        <svg class="lh-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="audit-body" id="auditBody">
+        <div class="empty-state">Sin cambios registrados.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- ── MODAL DRY-RUN ─────────────────────────────────────── -->
 <div class="modal-bg" id="modal">
   <div class="modal">
-    <div class="modal-head"><strong id="mTitle">Ensayo</strong><button class="icon-btn" onclick="closeModal()">✕</button></div>
-    <div class="modal-body" id="mBody"><div class="empty">Cargando…</div></div>
+    <div class="modal-head">
+      <strong id="mTitle">Ensayo</strong>
+      <button class="m-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="mBody"><div class="empty-state">Cargando ensayo…</div></div>
     <div class="modal-foot"><button class="btn-ghost" onclick="closeModal()">Cerrar</button></div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+/* ━━━ GLOBALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
-const q = (s)=>`${s}${s.includes('?')?'&':'?'}token=${encodeURIComponent(TOKEN)}`;
-const RISK_LABEL={bajo:'Bajo',medio:'Medio',alto:'Alto',extremo:'Extremo'};
-let MAP=null;
+const q = s => `${s}${s.includes('?') ? '&' : '?'}token=${encodeURIComponent(TOKEN)}`;
 
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+const RISK_LABEL = { bajo:'Bajo', medio:'Medio', alto:'Alto', extremo:'Extremo' };
+const RISK_COLOR = { bajo:'var(--green)', medio:'var(--amber)', alto:'var(--orange)', extremo:'var(--red)' };
 
-async function load(){
-  const r=await fetch(q('/alma/control/api/map'));
-  if(!r.ok){document.getElementById('layers').innerHTML='<div class="card"><div class="err">No autorizado o error cargando el mapa.</div></div>';return;}
-  MAP=await r.json();
-  render();
+let MAP = null;
+let refreshTimer = null;
+
+/* ━━━ TOAST ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = 'toast'; }, 2400);
 }
 
-function swHtml(flag,value,disabled){
-  return `<label class="sw"><input type="checkbox" data-flag="${flag}" ${value?'checked':''} ${disabled?'disabled':''}><span class="track"></span></label>`;
+/* ━━━ LOAD & RENDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function load() {
+  try {
+    const r = await fetch(q('/alma/control/api/map'));
+    if (!r.ok) { renderError(r.status); return; }
+    MAP = await r.json();
+    render();
+  } catch(e) {
+    renderError('red');
+  }
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(load, 60000);
 }
 
-function render(){
-  // banner estado de ejecución
-  const exec=MAP.masters.find(m=>m.flag==='ALMA_AGENTS_EXECUTE');
-  const master=MAP.masters.find(m=>m.flag==='ALMA_AGENTS_ENABLED');
-  const b=document.getElementById('banner');
-  if(master.value && exec.value){b.className='banner live';b.textContent='⚠ Flota ENCENDIDA y en EJECUCIÓN REAL — los agentes habilitados pueden actuar sobre pacientes (dentro del piso legal).';}
-  else if(master.value){b.className='banner dry';b.textContent='Flota encendida en modo DRY-RUN — los agentes proponen pero no ejecutan (ejecución real apagada).';}
-  else {b.className='banner dry';b.textContent='Todo apagado. Nada corre. Los ensayos siguen disponibles.';}
+function renderError(code) {
+  document.getElementById('mastersGrid').innerHTML =
+    `<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--red);font-weight:600">
+     Error ${code} — No autorizado o error de red. Verifica el token.</div>`;
+}
 
-  // overrides chip
-  document.getElementById('ovrChip').textContent=`${MAP.n_overrides} override${MAP.n_overrides===1?'':'s'}`;
+function render() {
+  renderHeader();
+  renderLocks();
+  renderMasters();
+  renderRieles();
+  renderLayer('flota');
+  renderLayer('orq');
+  renderAudit();
+  document.querySelectorAll('input[data-flag]').forEach(el =>
+    el.addEventListener('change', onToggle));
+}
 
-  // masters
-  document.getElementById('masters').innerHTML=MAP.masters.map(m=>`
-    <div class="piece">
-      <div class="meta"><div class="nm">${m.label}${m.overridden?'<span class="ovr" title="override manual activo"></span>':''}</div>
-        <div class="ds">${m.descr}</div><div class="flagcode">${m.flag}</div></div>
-      <div class="ctrls">${swHtml(m.flag,m.value,false)}</div>
-    </div>`).join('');
+/* ━━━ HEADER STATUS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function renderHeader() {
+  const n = MAP.n_overrides || 0;
+  document.getElementById('ovrCount').textContent = n;
 
-  // locks
-  document.getElementById('locks').innerHTML=MAP.locks.map(l=>{
-    const ok = l.flag==='ALMA_AGENTS_REQUIRE_CONSENT' ? l.value : (l.info? l.value : !l.value);
-    const state = l.info ? (l.value?'Activo':'Inactivo') : (l.value?'PERMITIDO':'Bloqueado');
-    const cls = l.flag==='ALMA_AGENTS_REQUIRE_CONSENT'? (l.value?'good':'bad')
-              : l.info ? 'mute' : (l.value?'bad':'good');
-    return `<div class="lock"><div style="flex:1"><span class="lk-nm">${l.label}</span><div class="lk-ds">${l.descr}</div></div>
-      <span class="badge ${cls}">${state}</span></div>`;
+  const agents = MAP.masters.find(m => m.flag === 'ALMA_AGENTS_ENABLED');
+  const exec   = MAP.masters.find(m => m.flag === 'ALMA_AGENTS_EXECUTE');
+  const ap     = MAP.masters.find(m => m.flag === 'AUTOPILOT_ENABLED');
+  const pill   = document.getElementById('statusPill');
+  const txt    = document.getElementById('statusText');
+
+  if (agents && agents.value && exec && exec.value) {
+    pill.className = 'status-pill live';
+    txt.textContent = 'Flota activa · ejecucion real';
+  } else if (agents && agents.value) {
+    pill.className = 'status-pill';
+    txt.textContent = 'Flota encendida · dry-run';
+  } else if (ap && ap.value) {
+    pill.className = 'status-pill';
+    txt.textContent = 'Autopilot activo';
+  } else {
+    pill.className = 'status-pill';
+    txt.textContent = 'Todo apagado';
+  }
+}
+
+/* ━━━ LOCKS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function renderLocks() {
+  const bar = document.getElementById('locksBar');
+  if (!MAP.locks || !MAP.locks.length) {
+    bar.innerHTML = '<span class="locks-title">Candados</span><span style="color:rgba(255,255,255,.4);font-size:12px">Sin datos</span>';
+    return;
+  }
+  let html = '<span class="locks-title">Piso legal</span>';
+  for (const l of MAP.locks) {
+    // Determine visual class
+    let cls = 'info';
+    if (l.info) {
+      cls = 'info';
+    } else if (l.flag === 'ALMA_AGENTS_REQUIRE_CONSENT') {
+      cls = l.value ? 'safe' : 'warn';
+    } else {
+      // locks genericos: value=true puede ser bueno o malo segun contexto
+      cls = l.value ? 'safe' : 'warn';
+    }
+    const state = l.info ? (l.value ? 'Activo' : 'Inactivo')
+                         : (l.value ? 'Activo' : 'Inactivo');
+    html += `<div class="lock-badge ${cls}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      ${l.label} · ${state}
+      <div class="lk-tip">${l.descr}</div>
+    </div>`;
+  }
+  bar.innerHTML = html;
+}
+
+/* ━━━ MASTERS (3 grupos) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const MASTER_GROUPS = [
+  {
+    key: 'flota',
+    label: 'Flota de Agentes',
+    sub: 'Agentes autónomos sobre pacientes',
+    ico: `<svg viewBox="0 0 24 24" fill="none" stroke="${'#4FBECE'}" stroke-width="2" width="17" height="17"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/></svg>`,
+    icoBg: 'linear-gradient(135deg,#e3f5f8,#cfeef3)',
+    flags: ['ALMA_AGENTS_ENABLED', 'ALMA_AGENTS_EXECUTE'],
+    parents: { 'ALMA_AGENTS_EXECUTE': 'ALMA_AGENTS_ENABLED' }
+  },
+  {
+    key: 'operativa',
+    label: 'Operativa de Cupos',
+    sub: 'Relleno automatico de horas liberadas',
+    ico: `<svg viewBox="0 0 24 24" fill="none" stroke="${'#1172AB'}" stroke-width="2" width="17" height="17"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    icoBg: 'linear-gradient(135deg,#e3eef7,#cfdff0)',
+    flags: ['ALMA_OPERATIVA_ENABLED'],
+    parents: {}
+  },
+  {
+    key: 'autopilot',
+    label: 'Autopilot Meta Ads',
+    sub: 'Optimizacion de pauta y presupuesto',
+    ico: `<svg viewBox="0 0 24 24" fill="none" stroke="${'#1f9d6b'}" stroke-width="2" width="17" height="17"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
+    icoBg: 'linear-gradient(135deg,#e7f7f0,#cff0e3)',
+    flags: ['AUTOPILOT_ENABLED', 'AUTOPILOT_EXECUTE', 'AUTOPILOT_AUTOAPPLY'],
+    parents: { 'AUTOPILOT_EXECUTE': 'AUTOPILOT_ENABLED', 'AUTOPILOT_AUTOAPPLY': 'AUTOPILOT_EXECUTE' }
+  }
+];
+
+function renderMasters() {
+  const masterMap = {};
+  (MAP.masters || []).forEach(m => { masterMap[m.flag] = m; });
+
+  const grid = document.getElementById('mastersGrid');
+  grid.innerHTML = '';
+
+  for (const g of MASTER_GROUPS) {
+    const div = document.createElement('div');
+    div.className = 'master-group';
+
+    let bodyHtml = '';
+    const validFlags = g.flags.filter(f => masterMap[f]);
+    const isChild = (f) => !!g.parents[f];
+
+    for (const f of validFlags) {
+      const m = masterMap[f];
+      const parentFlag = g.parents[f];
+      const parentOn = parentFlag ? (masterMap[parentFlag] && masterMap[parentFlag].value) : true;
+      const inert = !parentOn && m.value;
+
+      bodyHtml += `<div class="master-row${isChild(f) ? ' child' : ''}">
+        <div class="mr-meta">
+          <div class="mr-name">
+            ${m.label}
+            ${m.overridden ? `<span class="ovr-dot" title="Override manual activo"></span>` : ''}
+            ${inert ? `<span class="inert-chip">esperando al padre</span>` : ''}
+          </div>
+          <div class="mr-desc">${m.descr}</div>
+          <div class="mr-flag">${m.flag}</div>
+        </div>
+        <div class="mr-ctrl">
+          <label class="sw${m.overridden ? ' overridden' : ''}">
+            <input type="checkbox" data-flag="${m.flag}" ${m.value ? 'checked' : ''}>
+            <span class="track"></span>
+          </label>
+        </div>
+      </div>`;
+    }
+
+    if (!validFlags.length) {
+      bodyHtml = '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin datos del API</div>';
+    }
+
+    div.innerHTML = `
+      <div class="mg-head">
+        <div class="mg-ico" style="background:${g.icoBg}">${g.ico}</div>
+        <div><div class="mg-title">${g.label}</div><div class="mg-sub">${g.sub}</div></div>
+      </div>
+      <div class="mg-body">${bodyHtml}</div>`;
+    grid.appendChild(div);
+  }
+}
+
+/* ━━━ RIELES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const RIEL_ICO = {
+  default: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+};
+function rielIco(label) {
+  const l = label.toLowerCase();
+  if (l.includes('consent') || l.includes('caliente'))
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+  if (l.includes('promo') || l.includes('atencion'))
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  if (l.includes('eco') || l.includes('ecograf') || l.includes('preparaci'))
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
+  if (l.includes('flyer') || l.includes('dental'))
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
+  if (l.includes('blast') || l.includes('frio') || l.includes('masivo'))
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+  return RIEL_ICO.default;
+}
+function rielColor(label) {
+  const l = label.toLowerCase();
+  if (l.includes('blast') || l.includes('frio')) return { bg:'var(--red-bg)', stroke:'var(--red)' };
+  if (l.includes('flyer') || l.includes('dental')) return { bg:'var(--amber-bg)', stroke:'var(--amber)' };
+  if (l.includes('eco')) return { bg:'var(--slate-bg)', stroke:'var(--slate)' };
+  if (l.includes('promo')) return { bg:'var(--green-bg)', stroke:'var(--green)' };
+  return { bg:'linear-gradient(135deg,#e3f5f8,#cfeef3)', stroke:'var(--blue)' };
+}
+
+function renderRieles() {
+  const grid = document.getElementById('rielesGrid');
+  if (!MAP.rieles || !MAP.rieles.length) {
+    grid.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0">Sin rieles en el API</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  for (const r of MAP.rieles) {
+    const col = rielColor(r.label);
+    const card = document.createElement('div');
+    card.className = 'riel-card';
+
+    const toggleOrLock = r.env_only
+      ? `<div class="env-only-badge">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+           </svg>
+           solo .env
+         </div>`
+      : `<label class="sw${r.overridden ? ' overridden' : ''}">
+           <input type="checkbox" data-flag="${r.flag}" ${r.value ? 'checked' : ''}>
+           <span class="track"></span>
+         </label>`;
+
+    card.innerHTML = `
+      <div class="riel-top">
+        <div class="riel-ico" style="background:${col.bg}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${col.stroke}" stroke-width="2" width="18" height="18">
+            ${rielIco(r.label).replace(/<svg[^>]*>|<\/svg>/g,'')}
+          </svg>
+        </div>
+        <div class="riel-name">${r.label}${r.overridden ? `<span class="ovr-dot" style="display:inline-block;margin-left:5px" title="Override manual activo"></span>` : ''}</div>
+      </div>
+      <div class="riel-desc">${r.descr || ''}</div>
+      <div class="riel-footer">
+        <div class="riel-flag">${r.flag}</div>
+        ${toggleOrLock}
+      </div>`;
+    grid.appendChild(card);
+  }
+}
+
+/* ━━━ LAYERS (flota / orq) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function renderLayer(layerKey) {
+  const layerData = (MAP.layers || []).find(l => l.key === layerKey);
+  const piecesEl = document.getElementById(`${layerKey}Pieces`);
+  const countEl  = document.getElementById(`${layerKey}Count`);
+
+  if (!layerData || !layerData.pieces) {
+    piecesEl.innerHTML = '<div class="empty-state">Sin piezas registradas.</div>';
+    return;
+  }
+
+  const pieces = layerData.pieces;
+  const onCount = pieces.filter(p => p.enabled).length;
+  countEl.textContent = `${onCount}/${pieces.length} encendidos`;
+
+  // update filter counters
+  const counts = { all: pieces.length, bajo:0, medio:0, alto:0, extremo:0 };
+  pieces.forEach(p => { counts[p.risk || 'medio']++; });
+  const prefix = layerKey === 'flota' ? 'Flota' : 'Orq';
+  Object.keys(counts).forEach(k => {
+    const el = document.getElementById(`fc${prefix}${k.charAt(0).toUpperCase()+k.slice(1)}`);
+    if (el) el.textContent = counts[k];
+  });
+
+  // flota master banner
+  if (layerKey === 'flota') {
+    const masterEl = (MAP.masters || []).find(m => m.flag === 'ALMA_AGENTS_ENABLED');
+    const banner = document.getElementById('flotaBanner');
+    if (banner) banner.style.display = (masterEl && !masterEl.value) ? 'flex' : 'none';
+  }
+
+  piecesEl.innerHTML = '';
+  for (const p of pieces) {
+    const risk = p.risk || 'medio';
+    const lastRunTxt = p.last_run
+      ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+         ${p.last_run.dry_run ? 'ensayo' : 'real'} ${(p.last_run.ran_at||'').substring(0,16)}</span>`
+      : '';
+    const cadTxt = p.cadencia ? `<span>${p.cadencia}</span>` : '';
+    const notesTxt = (p.last_run && p.last_run.notes)
+      ? `<span title="${p.last_run.notes}">ver notas</span>` : '';
+
+    const card = document.createElement('div');
+    card.className = `piece-card`;
+    card.dataset.risk = risk;
+    card.dataset.layer = layerKey;
+    card.innerHTML = `
+      <div class="pc-top">
+        <div class="pc-name">
+          ${p.name}
+          ${p.overridden ? `<span class="ovr-dot" style="display:inline-block;margin-left:4px" title="Override manual activo"></span>` : ''}
+        </div>
+        <span class="risk-chip risk-${risk}">${RISK_LABEL[risk]||risk}</span>
+      </div>
+      <div class="pc-desc">${p.descr || '<em style="opacity:.6">Sin descripcion</em>'}</div>
+      ${lastRunTxt || cadTxt ? `<div class="pc-meta">${lastRunTxt}${cadTxt}${notesTxt}</div>` : ''}
+      <div class="pc-ctrl">
+        <button class="btn-dryrun" onclick="dryrun('${layerKey}','${p.id}','${(p.name||'').replace(/'/g,'').replace(/"/g,'')}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Ensayar
+        </button>
+        <label class="sw${p.overridden ? ' overridden' : ''}">
+          <input type="checkbox" data-flag="${p.flag||''}" ${p.enabled ? 'checked' : ''} ${!p.flag ? 'disabled' : ''}>
+          <span class="track"></span>
+        </label>
+      </div>`;
+    piecesEl.appendChild(card);
+  }
+}
+
+/* ━━━ AUDIT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function renderAudit() {
+  const aud = MAP.audit || [];
+  const body = document.getElementById('auditBody');
+  if (!aud.length) {
+    body.innerHTML = '<div class="empty-state">Sin cambios registrados.</div>';
+    return;
+  }
+  body.innerHTML = aud.map(a => {
+    const isReset = a.flag === '*reset*';
+    const valClass = isReset ? 'reset' : (a.value === true ? 'on' : a.value === false ? 'off' : 'reset');
+    const valLabel = isReset ? 'RESET' : (a.value === true ? 'ON' : a.value === false ? 'OFF' : 'RESTAURADO');
+    const flag = isReset ? 'Todo el panel' : a.flag;
+    const ts = (a.ts||'').replace('T',' ').substring(0,16);
+    return `<div class="audit-row">
+      <span class="ar-flag">${flag}</span>
+      <span class="ar-val ${valClass}">${valLabel}</span>
+      <span class="ar-meta">${ts}${a.actor ? ' · ' + a.actor : ''}</span>
+    </div>`;
   }).join('');
-
-  // layers
-  document.getElementById('layers').innerHTML=MAP.layers.map(L=>`
-    <div class="card">
-      <div class="card-head"><strong>${L.label}</strong><span class="t-meta">${L.descr}</span></div>
-      ${L.pieces.length?L.pieces.map(p=>pieceHtml(L.key,p)).join(''):'<div class="empty">Sin piezas registradas.</div>'}
-    </div>`).join('');
-
-  // auditoría
-  const aud=MAP.audit||[];
-  document.getElementById('audit').innerHTML = aud.length ? aud.map(a=>{
-    const val = a.flag==='*reset*' ? 'restauró todo (apagó)' :
-      `<strong>${a.value===true?'ENCENDIÓ':a.value===false?'apagó':'restauró'}</strong> ${a.flag}`;
-    return `<div class="lock"><div style="flex:1">${val}</div><span class="t-meta">${(a.ts||'').replace('T',' ')} · ${a.actor||''}</span></div>`;
-  }).join('') : '<div class="empty">Sin cambios registrados.</div>';
-
-  // bind toggles
-  document.querySelectorAll('input[data-flag]').forEach(el=>el.addEventListener('change',onToggle));
 }
 
-function pieceHtml(layer,p){
-  const r=p.risk||'medio';
-  return `<div class="piece">
-    <div class="meta">
-      <div class="nm">${p.name}${p.overridden?'<span class="ovr" title="override manual activo"></span>':''}
-        <span class="chip risk-${r}" style="margin-left:6px">${RISK_LABEL[r]||r}</span></div>
-      <div class="ds">${p.descr||'<em>sin descripción</em>'}</div>
-      <div class="flagcode">${p.flag||'—'}${p.last_run?` · último: ${p.last_run.dry_run?'ensayo':'real'} ${p.last_run.ran_at||''}`:''}</div>
-    </div>
-    <div class="ctrls">
-      <button class="btn-ghost" onclick="dryrun('${layer}','${p.id}','${(p.name||'').replace(/'/g,"")}')">Ensayar</button>
-      ${swHtml(p.flag,p.enabled,!p.flag)}
-    </div></div>`;
+/* ━━━ TOGGLE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function onToggle(e) {
+  const flag = e.target.dataset.flag;
+  const value = e.target.checked;
+  if (!flag) return;
+  e.target.disabled = true;
+
+  // optimistic
+  const prevChecked = !value;
+  try {
+    const r = await fetch(q('/alma/control/api/toggle'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ flag, value })
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(t);
+    }
+    toast(`${flag} → ${value ? 'ON' : 'OFF'}`, 'ok');
+    await load();
+  } catch(err) {
+    toast('Error: ' + err.message, 'err');
+    e.target.checked = prevChecked;
+    e.target.disabled = false;
+  }
 }
 
-async function onToggle(e){
-  const flag=e.target.dataset.flag, value=e.target.checked;
-  e.target.disabled=true;
-  try{
-    const r=await fetch(q('/alma/control/api/toggle'),{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({flag,value})});
-    if(!r.ok){const t=await r.text();throw new Error(t);}
-    toast(`${flag} → ${value?'ON':'OFF'}`);
-    await load(); // recargar para reflejar overrides + banner
-  }catch(err){toast('Error: '+err.message);e.target.checked=!value;e.target.disabled=false;}
+/* ━━━ LAYER TOGGLE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function toggleLayer(key) {
+  const head = document.querySelector(`#${key}Panel .layer-head`);
+  const body = document.getElementById(`${key}Body`);
+  head.classList.toggle('open');
+  body.classList.toggle('open');
+}
+function toggleAudit() {
+  const head = document.querySelector('.audit-head');
+  const body = document.getElementById('auditBody');
+  head.classList.toggle('open');
+  body.classList.toggle('open');
 }
 
-async function dryrun(layer,id,name){
-  openModal('Ensayo — '+name);
-  document.getElementById('mBody').innerHTML='<div class="empty">Ejecutando ensayo (sin tocar a nadie)…</div>';
-  try{
-    const r=await fetch(q('/alma/control/api/dryrun'),{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({layer,id})});
-    const d=await r.json();
-    if(!r.ok){document.getElementById('mBody').innerHTML=`<div class="err">${d.detail||'falló'}</div>`;return;}
-    if(!d.n){document.getElementById('mBody').innerHTML=`<div class="empty">Sin acciones para proponer ahora.${d.notes?'<br><span class="mute">'+d.notes+'</span>':''}</div>`;return;}
-    document.getElementById('mBody').innerHTML=`<p class="mute" style="margin:0 0 12px">${d.n} acción(es) que haría — <strong>nada se ejecutó</strong>:</p>`+
-      d.acciones.map(a=>`<div class="acc-item"><div class="ai-sum">${a.summary||'(acción)'}</div>
-        <div class="ai-why">${a.target?('→ '+a.target+' · '):''}riesgo ${a.risk||'—'}${a.se_ejecutaria!==undefined?(a.se_ejecutaria?' · <span class="good">se ejecutaría</span>':' · <span class="bad">bloqueada: '+(a.motivo||'')+'</span>'):''}</div></div>`).join('');
-  }catch(err){document.getElementById('mBody').innerHTML=`<div class="err">${err.message}</div>`;}
+/* ━━━ FILTER LAYER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function filterLayer(layerKey, risk, el) {
+  // update active chip
+  document.querySelectorAll(`.fc[data-layer="${layerKey}"]`).forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+
+  const piecesEl = document.getElementById(`${layerKey}Pieces`);
+  piecesEl.querySelectorAll('.piece-card').forEach(c => {
+    if (risk === 'all' || c.dataset.risk === risk) {
+      c.classList.remove('hidden');
+    } else {
+      c.classList.add('hidden');
+    }
+  });
 }
 
-function openModal(t){document.getElementById('mTitle').textContent=t;document.getElementById('modal').classList.add('show');}
-function closeModal(){document.getElementById('modal').classList.remove('show');}
+/* ━━━ DRY-RUN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function dryrun(layer, id, name) {
+  openModal('Ensayo — ' + name);
+  document.getElementById('mBody').innerHTML = '<div class="empty-state">Ejecutando ensayo (sin contactar a nadie)…</div>';
+  try {
+    const r = await fetch(q('/alma/control/api/dryrun'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ layer, id })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      document.getElementById('mBody').innerHTML = `<div class="err-state">${d.detail || 'Error en el ensayo'}</div>`;
+      return;
+    }
+    if (!d.n) {
+      document.getElementById('mBody').innerHTML =
+        `<div class="empty-state">Sin acciones para proponer ahora.${d.notes ? '<br><span style="font-size:11px">'+d.notes+'</span>' : ''}</div>`;
+      return;
+    }
+    document.getElementById('mBody').innerHTML =
+      `<p style="font-size:12.5px;color:var(--muted);margin-bottom:14px;font-weight:500">
+       <strong>${d.n}</strong> accion(es) que ejecutaria — nada se ejecuto:
+       </p>` +
+      d.acciones.map(a => `
+        <div class="acc-item">
+          <div class="ai-sum">${a.summary || '(accion)'}</div>
+          <div class="ai-why">
+            ${a.target ? '<strong>' + a.target + '</strong> · ' : ''}
+            riesgo ${a.risk || '—'}
+            ${a.se_ejecutaria !== undefined
+              ? (a.se_ejecutaria
+                  ? ' · <span class="good">se ejecutaria</span>'
+                  : ` · <span class="bad">bloqueada: ${a.motivo || ''}</span>`)
+              : ''}
+          </div>
+        </div>`).join('');
+  } catch(err) {
+    document.getElementById('mBody').innerHTML = `<div class="err-state">${err.message}</div>`;
+  }
+}
 
-document.getElementById('btnReset').addEventListener('click',async()=>{
-  if(!confirm('¿Restaurar todo a apagado? Limpia todos los interruptores manuales.'))return;
-  await fetch(q('/alma/control/api/reset'),{method:'POST'});
-  toast('Todo restaurado a apagado');load();
+function openModal(t) {
+  document.getElementById('mTitle').textContent = t;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
 });
 
+/* ━━━ RESET ALL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+document.getElementById('btnReset').addEventListener('click', async () => {
+  if (!confirm('Restablecer todo: limpia TODOS los overrides y vuelve a los valores del archivo .env.\n\n¿Confirmar?')) return;
+  if (!confirm('Segunda confirmacion: esto puede apagar piezas que estaban encendidas manualmente. ¿Continuar?')) return;
+  try {
+    await fetch(q('/alma/control/api/reset'), { method: 'POST' });
+    toast('Todos los overrides limpiados', 'ok');
+    await load();
+  } catch(e) {
+    toast('Error al restablecer', 'err');
+  }
+});
+
+/* ━━━ BOOT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 load();
 </script>
-</body></html>
+</body>
+</html>

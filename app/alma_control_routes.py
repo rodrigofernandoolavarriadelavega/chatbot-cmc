@@ -110,10 +110,33 @@ def _build_map() -> dict:
          "value": _ap_flag("AUTOPILOT_AUTOAPPLY"), "overridden": is_over("AUTOPILOT_AUTOAPPLY")},
     ]
 
-    # --- Candados legales (solo lectura) ---
+    # --- Rieles de mensajería (conmutables: leen switchboard en runtime) ---
     import os
     def _envbool(n, d="false"):
         return os.getenv(n, d).lower() in ("true", "1", "yes")
+
+    def _riel(flag, label, descr):
+        return {"flag": flag, "label": label, "descr": descr,
+                "value": sb.effective(flag, _envbool(flag)),
+                "overridden": is_over(flag)}
+
+    rieles = [
+        _riel("CONSENT_AGENDADOS_ACTIVE", "Consent en caliente",
+              "Barrido horario: pide consentimiento (utility) al que agendó por teléfono/recepción. Alimenta el pool de marketing."),
+        _riel("PROMO_POSTCONSENT_ACTIVE", "Promo post-atención",
+              "Aceptó consent + se atendió de verdad (cita Atendido / pago caja) → promo dental segmentada. 1 por paciente."),
+        _riel("ECO_PREP_ACTIVE", "Preparación de ecografía",
+              "Cita de eco entra a la ventana de 3 días → instrucciones de preparación (ayuno / vejiga llena)."),
+        # Solo-env (viven en flows/jobs leyendo config al import — no conmutables acá):
+        {"flag": "DENTAL_PROMO_FLYER_ACTIVE", "label": "Flyer dental al aceptar consent dental",
+         "descr": "Riel del pool dental (consent_dental_v1 → flyer inmediato). Solo por .env.",
+         "value": _envbool("DENTAL_PROMO_FLYER_ACTIVE"), "env_only": True},
+        {"flag": "MARKETING_CONSENT_BLAST_ACTIVE", "label": "Blast diario de consent (frío)",
+         "descr": "Envío L-V 11:12 a cohortes win-back sin consent. Solo por .env.",
+         "value": _envbool("MARKETING_CONSENT_BLAST_ACTIVE"), "env_only": True},
+    ]
+
+    # --- Candados legales (solo lectura) ---
     locks = [
         {"flag": "ALMA_BRAIN_ALLOW_MEDILINK_WRITES", "label": "Escritura en Medilink",
          "descr": "Permite que un agente cree/anule citas reales. Solo por .env.",
@@ -175,6 +198,7 @@ def _build_map() -> dict:
 
     return {
         "masters": masters,
+        "rieles": rieles,
         "locks": locks,
         "layers": [
             {"key": "flota", "label": f"Flota de Agentes ({len(fleet_pieces)})",
@@ -194,7 +218,9 @@ def _build_map() -> dict:
 
 def _toggleable_flags() -> set[str]:
     flags = {"ALMA_AGENTS_ENABLED", "ALMA_AGENTS_EXECUTE", "ALMA_OPERATIVA_ENABLED",
-             "AUTOPILOT_ENABLED", "AUTOPILOT_EXECUTE", "AUTOPILOT_AUTOAPPLY"}
+             "AUTOPILOT_ENABLED", "AUTOPILOT_EXECUTE", "AUTOPILOT_AUTOAPPLY",
+             # Rieles de mensajería (leen switchboard en runtime → conmutables en vivo)
+             "CONSENT_AGENDADOS_ACTIVE", "PROMO_POSTCONSENT_ACTIVE", "ECO_PREP_ACTIVE"}
     try:
         from alma_agents import registry
         flags |= {a.flag for a in registry.all_agents().values()}
