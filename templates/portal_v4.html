@@ -1828,7 +1828,11 @@ async function renderFamilyStrip() {
   try {
     if (!_famOverview) {
       const r = await fetch('/portal/api/family/overview', { credentials: 'same-origin' });
-      if (!r.ok) return;
+      if (!r.ok) {
+        // Reintento único (cubre la ventana de restart de un deploy)
+        if (!window._famRetry) { window._famRetry = 1; setTimeout(renderFamilyStrip, 4000); }
+        return;
+      }
       _famOverview = await r.json();
     }
     const mem = _famOverview.members || [];
