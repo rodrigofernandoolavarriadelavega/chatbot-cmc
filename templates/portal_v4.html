@@ -841,6 +841,23 @@ a{color:inherit; text-decoration:none}
 .ctrl-cta{flex:none; padding:9px 14px; border:0; border-radius:10px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:11.5px; font-weight:800; cursor:pointer; transition:filter .15s}
 .ctrl-cta:hover{filter:brightness(1.06)}
 
+/* Mi familia — strip horizontal de miembros */
+.fam-track{display:flex; gap:10px; overflow-x:auto; padding:2px; scrollbar-width:none; -webkit-overflow-scrolling:touch}
+.fam-track::-webkit-scrollbar{display:none}
+.fam-card{position:relative; flex:0 0 132px; border:1.5px solid var(--border-soft); border-radius:14px; padding:12px 10px; background:var(--panel-2); cursor:pointer; text-align:center; font-family:var(--font); transition:transform .15s, box-shadow .15s, border-color .15s}
+.fam-card:hover{transform:translateY(-2px); box-shadow:0 6px 16px rgba(15,63,104,.1)}
+.fam-card.act{border-color:var(--cmc-aqua); background:var(--cmc-aqua-soft)}
+.fam-ava{width:42px; height:42px; border-radius:50%; margin:0 auto 7px; background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff; display:grid; place-items:center; font-weight:800; font-size:17px}
+.fam-card.add .fam-ava{background:var(--panel); border:1.5px dashed var(--cmc-blue); color:var(--cmc-blue); font-size:20px}
+.fam-name{font-size:12.5px; font-weight:800; color:var(--cmc-navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.fam-rel{font-size:10px; color:var(--text-mute); font-weight:700; text-transform:capitalize; margin-top:1px}
+.fam-next{font-size:10.5px; font-weight:800; color:var(--green-dark); margin-top:6px; white-space:nowrap}
+.fam-next.none{color:var(--text-dim)}
+.fam-esp{font-size:10px; color:var(--text-mute); font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.fam-cta{font-size:10.5px; font-weight:800; color:var(--cmc-blue); margin-top:1px}
+.fam-badge{position:absolute; top:7px; right:7px; background:var(--cmc-aqua); color:var(--cmc-navy); font-size:8.5px; font-weight:800; padding:2px 6px; border-radius:8px; letter-spacing:.4px}
+.fam-note{font-size:10.5px; color:var(--text-dim); font-weight:600; margin-top:10px}
+
 /* Footer del centro (una sola vez, al final de la página) */
 .site-foot{margin-top:34px; padding:22px 12px calc(86px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); text-align:center}
 .site-foot .sf-name{font-size:12.5px; font-weight:800; color:var(--cmc-navy); letter-spacing:.3px}
@@ -1682,6 +1699,9 @@ function renderInicio() {
     </div>`;
   html += `</div>`;
 
+  // ── Mi familia: el titular ve las horas de todos sin cambiar de perfil ──
+  html += `<div id="fam-strip"></div>`;
+
   // ── Cross-sell: carrusel "Descubre el centro" (personalizado por dx/historial,
   //    auto-desliza; tocar una card lleva directo al agendador) ──
   const promoKeys = pickPromos(d);
@@ -1762,6 +1782,62 @@ function renderInicio() {
 
   el.innerHTML = html;
   initCrossCarousel();
+  renderFamilyStrip();
+}
+
+/* ═══ Mi familia: strip con próxima cita de cada miembro ═══ */
+let _famOverview = null;
+const _normRut = r => (r || '').replace(/\./g, '').toUpperCase();
+function _fmtFamFecha(p) {
+  const d = parseFecha(p.fecha); if (!d) return p.fecha;
+  return `${d.getDate()} ${MESES[d.getMonth()]} · ${p.hora_inicio}`;
+}
+async function renderFamilyStrip() {
+  const slot = document.getElementById('fam-strip');
+  if (!slot) return;
+  try {
+    if (!_famOverview) {
+      const r = await fetch('/portal/api/family/overview', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      _famOverview = await r.json();
+    }
+    const mem = _famOverview.members || [];
+    if (!mem.length) return;
+    const activo = _normRut((patientData && patientData.rut) || '');
+    let h = `<div class="panel">
+      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia</h2><span class="count">${mem.length}</span></div>
+      <div class="fam-track">`;
+    for (const m of mem) {
+      const first = (m.nombre || '').split(' ')[0] || '—';
+      const act = _normRut(m.rut) === activo;
+      h += `<div class="fam-card ${act ? 'act' : ''}" onclick="famTap('${m.rut}', ${m.proxima ? 'false' : 'true'})">
+        ${act ? '<div class="fam-badge">Viendo</div>' : ''}
+        <div class="fam-ava">${(first[0] || '?').toUpperCase()}</div>
+        <div class="fam-name">${first}</div>
+        <div class="fam-rel">${m.relation === 'titular' ? 'Titular' : (m.relation || 'familiar')}</div>
+        ${m.proxima
+          ? `<div class="fam-next">📅 ${_fmtFamFecha(m.proxima)}</div><div class="fam-esp">${m.proxima.especialidad || ''}</div>`
+          : `<div class="fam-next none">Sin citas</div><div class="fam-cta">Agendar →</div>`}
+      </div>`;
+    }
+    h += `<button class="fam-card add" onclick="openAddFamilyModal()">
+        <div class="fam-ava plus">+</div>
+        <div class="fam-name">Agregar</div>
+        <div class="fam-rel">familiar</div>
+      </button>
+    </div>
+    <div class="fam-note">Toca a un familiar para ver sus horas, controles y mediciones desde este mismo portal.</div></div>`;
+    slot.innerHTML = h;
+  } catch (e) { /* fail-safe: sin strip */ }
+}
+async function famTap(rut, quiereAgendar) {
+  const esActivo = _normRut(rut) === _normRut((patientData && patientData.rut) || '');
+  if (_famOverview && _famOverview.demo && !esActivo) {
+    toast('🧪 En la demo no se puede cambiar de perfil — con tu clave real sí');
+    return;
+  }
+  if (!esActivo) await switchPatient(rut);
+  if (quiereAgendar) scrollToAgenda();
 }
 
 /* Carrusel cross-sell: auto-desliza cada 3.5s; se pausa si el paciente lo toca */
@@ -1802,7 +1878,8 @@ async function mountInlineAgenda() {
     const st = await (await fetch('/agendar/api/status')).json();
     if (st && st.enabled) {
       if (!frame.src || frame.src === 'about:blank' || frame.src.indexOf('/agendar') === -1) {
-        const rut = encodeURIComponent(currentRut || (patientData && patientData.rut) || '');
+        // Preferir el paciente ACTIVO (puede ser un familiar), no el titular
+        const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
         frame.src = '/agendar?embed=1' + (rut ? '&rut=' + rut : '');
       }
       panel.style.display = '';

@@ -517,6 +517,67 @@ async def portal_family_list(portal_session: str | None = Cookie(None)):
     return {"ok": True, "owner_rut": owner_rut, "links": links}
 
 
+@router.get("/portal/api/family/overview")
+async def portal_family_overview(portal_session: str | None = Cookie(None)):
+    """Vista familiar: titular + dependientes, cada uno con su próxima cita.
+    Caso de uso central: quien agenda para toda la familia (típicamente la mamá)
+    abre SU portal y ve de un vistazo las horas de todos, sin cambiar de perfil."""
+    owner_rut, _owner_phone = _require_portal(portal_session)
+
+    # Modo demo: familia ficticia para mostrar la funcionalidad
+    if owner_rut == DEMO_RUT:
+        from datetime import datetime, timedelta
+        from zoneinfo import ZoneInfo
+        hoy = datetime.now(ZoneInfo("America/Santiago")).date()
+
+        def ymd(d):
+            return d.strftime("%Y-%m-%d")
+
+        return {"ok": True, "demo": True, "members": [
+            {"rut": DEMO_RUT, "nombre": "María Ejemplo Demo", "relation": "titular",
+             "proxima": {"especialidad": "Cardiología", "fecha": ymd(hoy + timedelta(days=3)),
+                         "hora_inicio": "11:00", "profesional": "Dr. Miguel Millán"}},
+            {"rut": "50000001-5", "nombre": "Tomás Ejemplo Demo", "relation": "hijo/a",
+             "proxima": {"especialidad": "Odontología General", "fecha": ymd(hoy + timedelta(days=5)),
+                         "hora_inicio": "16:30", "profesional": "Dra. Javiera Burgos"}},
+            {"rut": "50000002-3", "nombre": "Pedro Ejemplo Demo", "relation": "cónyuge", "proxima": None},
+            {"rut": "50000003-1", "nombre": "Rosa Ejemplo Demo", "relation": "madre/padre",
+             "proxima": {"especialidad": "Kinesiología", "fecha": ymd(hoy + timedelta(days=8)),
+                         "hora_inicio": "10:40", "profesional": "Luis Armijo"}},
+        ]}
+
+    import asyncio
+
+    links = list_family_links(owner_rut)[:6]
+    members_meta = [{"rut": owner_rut, "nombre": "", "relation": "titular"}] + [
+        {"rut": l["dependent_rut"], "nombre": l.get("dependent_nombre") or "",
+         "relation": l.get("relation") or "familiar"}
+        for l in links
+    ]
+
+    async def fetch_member(m):
+        # Fail-safe: cualquier error de Medilink degrada a "sin próxima cita",
+        # nunca rompe la vista familiar completa.
+        try:
+            pac = await buscar_paciente(m["rut"])
+            if not pac:
+                return {**m, "proxima": None}
+            citas = await listar_citas_paciente(pac["id"], rut=pac.get("rut") or "")
+            out = {**m, "nombre": pac.get("nombre") or m["nombre"], "proxima": None}
+            if citas:
+                prox = citas[0]
+                out["proxima"] = {"especialidad": prox.get("especialidad", ""),
+                                  "fecha": prox.get("fecha", ""),
+                                  "hora_inicio": prox.get("hora_inicio", ""),
+                                  "profesional": prox.get("profesional", "")}
+            return out
+        except Exception:
+            return {**m, "proxima": None}
+
+    members = await asyncio.gather(*(fetch_member(m) for m in members_meta))
+    return {"ok": True, "demo": False, "members": list(members)}
+
+
 @router.post("/portal/api/family/switch")
 async def portal_family_switch(request: Request,
                                portal_session: str | None = Cookie(None)):
