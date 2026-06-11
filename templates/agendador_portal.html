@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reservar hora · CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Agendador compacto para el Portal del Paciente: una sola pantalla, sin pasos.
+   Reusa la API real de /agendar/api (mismas salvaguardas del agendador público). */
+:root{
+  --aqua:#4FBECE; --aqua-soft:#E4F5F7; --blue:#1172AB; --navy:#0F3F68;
+  --bg:#f3f6f9; --panel:#fff; --border:#e3e9ef; --border-soft:#ecf1f5;
+  --text:#26343f; --mute:#6b7b88; --dim:#9aa7b2; --green:#128c7e; --red:#e53935;
+  --font:'Montserrat',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:12px;padding-bottom:128px}
+button{font-family:inherit;border:0;background:none;cursor:pointer;color:inherit}
+input{font-family:inherit;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:10px 10px 0}
+
+.idline{display:flex;align-items:center;gap:7px;padding:7px 11px;margin-bottom:9px;background:var(--aqua-soft);border:1px solid var(--aqua);border-radius:10px;font-size:11px;font-weight:700;color:var(--navy)}
+.idline.off{display:none}
+.idline .demo-tag{margin-left:auto;font-size:9px;font-weight:800;background:#fff4d6;color:#8b6508;padding:2px 7px;border-radius:8px;letter-spacing:.4px}
+
+.sec{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:11px 12px;margin-bottom:9px}
+.sec h3{font-size:9.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sec h3 .n{width:15px;height:15px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:8.5px;flex:none}
+.sec h3 .hint{margin-left:auto;font-size:9px;font-weight:700;color:var(--dim);text-transform:none;letter-spacing:0}
+
+.gl{font-size:8.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin:7px 0 5px}
+.gl:first-child{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:7px 11px;border:1.2px solid var(--border);border-radius:999px;background:var(--panel);font-size:11px;font-weight:700;color:var(--text);transition:.13s}
+.chip .pr{font-size:9px;font-weight:700;color:var(--mute);margin-left:4px}
+.chip:hover{border-color:var(--aqua)}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.chip.on .pr{color:#bcd9ea}
+
+.profs{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border-soft)}
+.profs:empty{display:none}
+.pchip{padding:6px 10px;border:1.2px solid var(--border);border-radius:9px;font-size:10.5px;font-weight:700;color:var(--mute)}
+.pchip.on{border-color:var(--aqua);background:var(--aqua-soft);color:var(--navy)}
+
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.days::-webkit-scrollbar{display:none}
+.day{flex:0 0 46px;padding:6px 2px;border:1.2px solid var(--border);border-radius:10px;text-align:center;background:var(--panel);transition:.13s}
+.day .dw{display:block;font-size:8.5px;font-weight:800;text-transform:uppercase;color:var(--dim);letter-spacing:.5px}
+.day .dn{display:block;font-size:15px;font-weight:800;color:var(--navy);line-height:1.15}
+.day .dm{display:block;font-size:8.5px;font-weight:700;color:var(--mute);text-transform:uppercase}
+.day.on{background:var(--navy);border-color:var(--navy)}
+.day.on .dw,.day.on .dm{color:#9fc3da}
+.day.on .dn{color:#fff}
+
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;margin-top:9px}
+.slot{padding:9px 2px;border:1.2px solid var(--border);border-radius:9px;background:var(--panel);font-size:11.5px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;transition:.13s}
+.slot:hover{border-color:var(--aqua)}
+.slot.on{background:var(--aqua);border-color:var(--aqua);color:var(--navy);box-shadow:0 3px 10px rgba(79,190,206,.45)}
+.empty{padding:14px;text-align:center;font-size:11px;font-weight:600;color:var(--mute)}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Datos paciente nuevo (solo si el RUT no existe) */
+#sec-nuevo{display:none}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.fld{margin-bottom:7px}
+.fld label{display:block;font-size:9px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
+.fld input{width:100%;padding:8px 10px;border:1.2px solid var(--border);border-radius:9px;font-size:12px;font-weight:600;background:#fff}
+.fld input:focus{outline:none;border-color:var(--aqua)}
+.seg{display:flex;gap:5px}
+.seg button{flex:1;padding:8px 4px;border:1.2px solid var(--border);border-radius:9px;font-size:10.5px;font-weight:700;color:var(--mute)}
+.seg button.on{border-color:var(--aqua);background:var(--aqua-soft);color:var(--navy)}
+
+/* Barra de confirmación fija */
+.bbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--border);
+  box-shadow:0 -6px 22px rgba(15,63,104,.1);padding:9px 12px calc(9px + env(safe-area-inset-bottom))}
+.bbar .in{max-width:560px;margin:0 auto}
+.sum{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--mute);min-height:17px}
+.sum b{color:var(--navy);font-weight:800}
+.brow{display:flex;gap:7px;margin-top:7px;align-items:stretch}
+.brow .cel{flex:1;display:flex;align-items:center;gap:5px;border:1.2px solid var(--border);border-radius:10px;padding:0 9px;background:#fff}
+.brow .cel span{font-size:11px;font-weight:700;color:var(--dim);white-space:nowrap}
+.brow .cel input{border:0;outline:none;width:100%;font-size:12.5px;font-weight:700;padding:9px 0;background:none}
+.brow .go{flex:none;padding:0 17px;border-radius:10px;background:var(--navy);color:#fff;font-size:12px;font-weight:800;letter-spacing:.2px;transition:.15s}
+.brow .go:disabled{opacity:.45}
+.brow .go:not(:disabled):hover{background:var(--blue)}
+.cons{display:flex;align-items:flex-start;gap:6px;margin-top:6px;font-size:8.8px;font-weight:600;color:var(--mute);line-height:1.45}
+.cons input{margin-top:1px;accent-color:var(--blue)}
+.cons a{color:var(--blue)}
+
+/* Éxito */
+.done{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;padding:20px;z-index:50}
+.done.show{display:grid}
+.dcard{background:#fff;border:1px solid var(--border);border-radius:18px;padding:26px 20px;text-align:center;max-width:380px;width:100%;box-shadow:0 14px 40px rgba(15,63,104,.14)}
+.dcard .ok{width:56px;height:56px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;margin:0 auto 12px;font-size:26px}
+.dcard h2{font-size:16px;font-weight:800;color:var(--navy)}
+.dcard .dw2{font-size:12.5px;font-weight:700;color:var(--text);margin-top:8px;line-height:1.5}
+.dcard .dnote{font-size:10px;font-weight:600;color:var(--mute);margin-top:8px}
+.dcard .acts{display:flex;gap:7px;margin-top:16px}
+.dcard .acts a,.dcard .acts button{flex:1;padding:10px;border-radius:10px;font-size:11px;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.dcard .b1{background:var(--navy);color:#fff}
+.dcard .b2{border:1.2px solid var(--border);color:var(--navy)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(132px + env(safe-area-inset-bottom));background:var(--navy);color:#fff;font-size:11px;font-weight:700;padding:9px 15px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.toast.err{background:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="idline off" id="idline"></div>
+
+  <div class="sec">
+    <h3><span class="n">1</span>Especialidad <span class="hint" id="esp-hint">precios referenciales</span></h3>
+    <div id="esp-box"><div class="empty"><span class="spin"></span>Cargando especialidades…</div></div>
+    <div class="profs" id="prof-row"></div>
+  </div>
+
+  <div class="sec" id="sec-day" style="display:none">
+    <h3><span class="n">2</span>Día y hora <span class="hint" id="day-hint"></span></h3>
+    <div class="days" id="day-row"></div>
+    <div class="slots" id="slot-grid"></div>
+  </div>
+
+  <div class="sec" id="sec-nuevo">
+    <h3><span class="n">3</span>Sus datos <span class="hint">paciente nuevo</span></h3>
+    <div class="f2">
+      <div class="fld"><label>Nombre</label><input id="nuevo-nombre" autocomplete="given-name"></div>
+      <div class="fld"><label>Apellidos</label><input id="nuevo-apellidos" autocomplete="family-name"></div>
+    </div>
+    <div class="f2">
+      <div class="fld"><label>Nacimiento (DD/MM/AAAA)</label><input id="nuevo-nac" inputmode="numeric" placeholder="01/01/1990"></div>
+      <div class="fld"><label>Sexo</label>
+        <div class="seg" id="nuevo-sexo">
+          <button data-v="F" onclick="pickSexo(this)">Femenino</button>
+          <button data-v="M" onclick="pickSexo(this)">Masculino</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bbar">
+  <div class="in">
+    <div class="sum" id="sum">Elija especialidad y hora — todo en esta pantalla.</div>
+    <div class="brow">
+      <div class="cel"><span>+56 9</span><input id="cel" inputmode="numeric" maxlength="8" placeholder="celular (8 dígitos)"></div>
+      <button class="go" id="go" disabled onclick="confirmar()">Confirmar</button>
+    </div>
+    <label class="cons"><input type="checkbox" id="consent" onchange="refreshGo()">
+      Acepto el tratamiento de mis datos para gestionar esta hora (Ley 21.719). <a href="/privacidad" target="_blank">Ver política</a>.</label>
+  </div>
+</div>
+
+<div class="done" id="done">
+  <div class="dcard">
+    <div class="ok">✓</div>
+    <h2>¡Hora reservada!</h2>
+    <div class="dw2" id="done-det">—</div>
+    <div class="dnote" id="done-note">Le llegará un recordatorio por WhatsApp. Llegue 10 minutos antes con su carnet.</div>
+    <div class="acts">
+      <a class="b1" id="done-gcal" href="#" target="_blank" rel="noopener">📅 Guardar</a>
+      <button class="b2" onclick="resetAll()">Agendar otra</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/agendar/api';
+const Q = new URLSearchParams(location.search);
+const DEMO = Q.get('demo') === '1';
+const RUT_IN = (Q.get('rut') || '').trim();
+const DEMO_NAMES = { '50000000-7':'María', '50000001-5':'Tomás', '50000002-3':'Pedro', '50000003-1':'Rosa' };
+const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+const S = { esp:null, profs:[], prof:null, fecha:null, slots:[], slot:null,
+            patient:{ rut:'', found:false, nombre:'' }, sexo:'' };
+let reserving = false;
+
+const $ = id => document.getElementById(id);
+function toast(msg, err) {
+  const t = $('toast'); t.textContent = msg; t.classList.toggle('err', !!err);
+  t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3200);
+}
+async function apiGet(p) {
+  const r = await fetch(API + p, { credentials:'same-origin' });
+  if (!r.ok) throw Object.assign(new Error((await r.json().catch(()=>({}))).detail || 'Error'), { status:r.status });
+  return r.json();
+}
+async function apiPost(p, body) {
+  const r = await fetch(API + p, { method:'POST', headers:{'Content-Type':'application/json'},
+                                   credentials:'same-origin', body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(j.detail || 'Error'), { status:r.status, conflict:r.status === 409 });
+  return j;
+}
+const normRut = r => (r||'').replace(/\./g,'').replace(/\s/g,'').toUpperCase();
+
+/* ── Identificación silenciosa por RUT (viene del portal) ── */
+async function identificar() {
+  if (!RUT_IN) return;
+  const rn = normRut(RUT_IN);
+  if (DEMO) {
+    const nom = DEMO_NAMES[rn] || 'Paciente Demo';
+    S.patient = { rut: rn, found:true, nombre: nom };
+    $('idline').innerHTML = `✓ Reservando para <b>&nbsp;${nom}</b><span class="demo-tag">DEMO — no se reserva de verdad</span>`;
+    $('idline').classList.remove('off');
+    $('cel').value = '87654321';
+    return;
+  }
+  try {
+    const r = await apiPost('/identificar', { rut: rn });
+    if (r.encontrado) {
+      S.patient = { rut: r.rut, found:true, nombre: r.nombre_corto || r.nombre || '' };
+      $('idline').innerHTML = `✓ Reservando para <b>&nbsp;${S.patient.nombre}</b>`;
+      $('idline').classList.remove('off');
+    } else {
+      S.patient = { rut: rn, found:false, nombre:'' };
+      $('sec-nuevo').style.display = 'block';
+      $('idline').innerHTML = `RUT ${rn}: complete sus datos más abajo (primera vez)`;
+      $('idline').classList.remove('off');
+    }
+  } catch (e) { /* sin identificación previa: la reserva igual valida el RUT */ S.patient = { rut: rn, found:true, nombre:'' }; }
+}
+
+/* ── Catálogo: chips por grupo, todo visible ── */
+async function loadCatalogo() {
+  try {
+    const r = await apiGet('/catalogo');
+    let h = '';
+    for (const g of (r.grupos || [])) {
+      h += `<div class="gl">${g.grupo}</div><div class="chips">`;
+      for (const e of g.especialidades) {
+        const pr = e.precio ? `<span class="pr">${e.precio}</span>` : '';
+        h += `<button class="chip" data-esp="${e.especialidad}" onclick='pickEsp(${JSON.stringify(e.especialidad)})'>${e.especialidad}${pr}</button>`;
+      }
+      h += `</div>`;
+    }
+    $('esp-box').innerHTML = h || '<div class="empty">Sin especialidades disponibles</div>';
+    window._CAT = r.grupos || [];
+  } catch (e) { $('esp-box').innerHTML = '<div class="empty">No pudimos cargar. Recargue la página.</div>'; }
+}
+function findEsp(nombre) {
+  for (const g of (window._CAT || [])) for (const e of g.especialidades) if (e.especialidad === nombre) return e;
+  return null;
+}
+function pickEsp(nombre) {
+  const e = findEsp(nombre); if (!e) return;
+  S.esp = e; S.slot = null; S.fecha = null;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.esp === nombre));
+  S.profs = e.profesionales || [];
+  S.prof = S.profs[0] || null;
+  $('prof-row').innerHTML = S.profs.length > 1
+    ? S.profs.map(p => `<button class="pchip ${p.id === S.prof.id ? 'on' : ''}" onclick="pickProf(${p.id})">${p.nombre}</button>`).join('')
+    : '';
+  $('sec-day').style.display = 'block';
+  $('day-hint').textContent = S.prof ? S.prof.nombre : '';
+  buildDays(null);
+  loadSlots(null);
+  refreshSum();
+}
+function pickProf(id) {
+  S.prof = S.profs.find(p => p.id === id) || S.prof;
+  S.slot = null;
+  document.querySelectorAll('.pchip').forEach(c => c.classList.remove('on'));
+  event.target.classList.add('on');
+  $('day-hint').textContent = S.prof.nombre;
+  loadSlots(S.fecha);
+  refreshSum();
+}
+
+/* ── Días: fila de 14 días (sin domingo); el primero con cupo se marca solo ── */
+function buildDays(selIso) {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let h = '';
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(hoy); d.setDate(d.getDate() + i);
+    if (d.getDay() === 0) continue;
+    const iso = d.toISOString().slice(0,10);
+    h += `<button class="day ${iso === selIso ? 'on' : ''}" data-iso="${iso}" onclick="pickDay('${iso}')">
+      <span class="dw">${DIAS[d.getDay()]}</span><span class="dn">${d.getDate()}</span><span class="dm">${MES[d.getMonth()]}</span></button>`;
+  }
+  $('day-row').innerHTML = h;
+}
+function markDay(iso) {
+  document.querySelectorAll('.day').forEach(d => d.classList.toggle('on', d.dataset.iso === iso));
+  const el = document.querySelector(`.day[data-iso="${iso}"]`);
+  if (el) el.scrollIntoView({ inline:'center', block:'nearest', behavior:'smooth' });
+}
+function pickDay(iso) { S.slot = null; refreshSum(); loadSlots(iso); }
+
+async function loadSlots(fecha) {
+  if (!S.prof) return;
+  $('slot-grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="spin"></span>Buscando horas…</div>';
+  try {
+    const r = await apiGet(`/slots?id_prof=${S.prof.id}${fecha ? '&fecha=' + fecha : ''}`);
+    S.fecha = r.fecha; S.slots = r.slots || [];
+    markDay(S.fecha);
+    if (!S.slots.length) {
+      $('slot-grid').innerHTML = '<div class="empty" style="grid-column:1/-1">Sin horas este día — pruebe otro 👆</div>';
+      return;
+    }
+    $('slot-grid').innerHTML = S.slots.map(s =>
+      `<button class="slot" data-h="${s.hora_inicio}" onclick="pickSlot('${s.hora_inicio}')">${s.hora_inicio}</button>`).join('');
+  } catch (e) {
+    $('slot-grid').innerHTML = `<div class="empty" style="grid-column:1/-1">${e.message || 'Error al buscar horas'}</div>`;
+  }
+}
+function pickSlot(h) {
+  S.slot = S.slots.find(s => s.hora_inicio === h) || null;
+  document.querySelectorAll('.slot').forEach(b => b.classList.toggle('on', b.dataset.h === h));
+  refreshSum();
+}
+
+/* ── Barra inferior: resumen vivo + confirmación ── */
+function fmtSel() {
+  if (!S.slot) return null;
+  const [y,m,d] = S.fecha.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return `${DIAS[dt.getDay()]} ${dt.getDate()} ${MES[dt.getMonth()]} · ${S.slot.hora_inicio} hrs`;
+}
+function refreshSum() {
+  const sel = fmtSel();
+  $('sum').innerHTML = sel
+    ? `<b>${S.esp.especialidad}</b>&nbsp;· ${S.prof.nombre} · <b>${sel}</b>`
+    : (S.esp ? `<b>${S.esp.especialidad}</b>&nbsp;— elija día y hora 👆` : 'Elija especialidad y hora — todo en esta pantalla.');
+  refreshGo();
+}
+function refreshGo() {
+  $('go').disabled = !(S.slot && $('consent').checked && $('cel').value.replace(/\D/g,'').length === 8);
+}
+$('cel').addEventListener('input', refreshGo);
+function pickSexo(btn) {
+  S.sexo = btn.dataset.v;
+  document.querySelectorAll('#nuevo-sexo button').forEach(b => b.classList.toggle('on', b === btn));
+}
+
+function gcalHref() {
+  const [y,m,d] = S.fecha.split('-').map(Number);
+  const p = n => String(n).padStart(2,'0');
+  const [h,mi] = S.slot.hora_inicio.split(':').map(Number);
+  const fin = h * 60 + mi + 30;
+  const ds = `${y}${p(m)}${p(d)}`;
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent(`${S.esp.especialidad} — Centro Médico Carampangue`)
+    + `&dates=${ds}T${p(h)}${p(mi)}00/${ds}T${p(Math.floor(fin/60))}${p(fin%60)}00&ctz=America/Santiago`
+    + '&location=' + encodeURIComponent('República 102, Carampangue, Arauco');
+}
+
+async function confirmar() {
+  if (reserving || !S.slot) return;
+  reserving = true;
+  const go = $('go'); const orig = go.textContent;
+  go.disabled = true; go.textContent = 'Reservando…';
+  try {
+    if (DEMO) {
+      await new Promise(r => setTimeout(r, 700));   // simulación: en demo NO se crea cita real
+      $('done-note').textContent = '🧪 Reserva simulada (modo demo): no se creó ninguna cita real.';
+    } else {
+      const body = {
+        rut: S.patient.rut || normRut(RUT_IN),
+        telefono: '569' + $('cel').value.replace(/\D/g,''),
+        id_profesional: S.prof.id,
+        fecha: S.fecha,
+        hora_inicio: S.slot.hora_inicio,
+        hora_fin: S.slot.hora_fin,
+        especialidad: S.esp.especialidad,
+        consent: true,
+      };
+      if (!S.patient.found) {
+        body.nombre = $('nuevo-nombre').value.trim();
+        body.apellidos = $('nuevo-apellidos').value.trim();
+        if ($('nuevo-nac').value.trim()) body.fecha_nacimiento = $('nuevo-nac').value.trim();
+        if (S.sexo) body.sexo = S.sexo;
+        if (!body.nombre) { toast('Complete su nombre (sección 3)', true); throw Object.assign(new Error(''), {silent:true}); }
+      }
+      await apiPost('/reservar', body);
+    }
+    $('done-det').innerHTML = `<b>${S.esp.especialidad}</b> · ${S.prof.nombre}<br>${fmtSel()}`;
+    $('done-gcal').href = gcalHref();
+    $('done').classList.add('show');
+  } catch (e) {
+    if (!e.silent) {
+      toast(e.message || 'No se pudo reservar', true);
+      if (e.conflict) { S.slot = null; refreshSum(); loadSlots(S.fecha); }
+    }
+  } finally {
+    reserving = false; go.textContent = orig; refreshGo();
+  }
+}
+function resetAll() {
+  $('done').classList.remove('show');
+  S.slot = null; refreshSum();
+  if (S.fecha) loadSlots(S.fecha);
+}
+
+identificar();
+loadCatalogo();
+</script>
+</body>
+</html>

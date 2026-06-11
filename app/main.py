@@ -3131,6 +3131,7 @@ _ALMA_HTML = (_TEMPLATE_DIR / "alma.html").read_text(encoding="utf-8") if (_TEMP
 _KINTU_HTML = (_TEMPLATE_DIR / "kintu.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "kintu.html").exists() else ""
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador.html").exists() else ""
+_AGENDADOR_PORTAL_HTML = (_TEMPLATE_DIR / "agendador_portal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador_portal.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_ABONOS_HTML = (_TEMPLATE_DIR / "alma_abonos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_abonos.html").exists() else ""
@@ -3812,6 +3813,21 @@ def agendador_publico_page(request: Request, preview: str | None = Query(None)):
     html = _AGENDADOR_HTML.replace("__PREVIEW__", preview if is_preview else "")
     # no-store: en preview/iteración el navegador siempre trae la última versión
     return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0"})
+
+
+@app.get("/agendar/portal", response_class=HTMLResponse)
+def agendador_portal_page(request: Request, preview: str | None = Query(None)):
+    """Agendador compacto para el Portal del Paciente: una pantalla, sin pasos.
+    Mismo gate y misma API que /agendar (las salvaguardas viven en la API)."""
+    import config as _cfg
+    enabled = _cfg.AGENDADOR_PUBLICO_ENABLED
+    is_preview = bool(preview) and preview == ADMIN_TOKEN
+    if not (enabled or is_preview):
+        raise HTTPException(404, "No encontrado")
+    if not _AGENDADOR_PORTAL_HTML:
+        raise HTTPException(404, "Agendador no disponible")
+    return HTMLResponse(_AGENDADOR_PORTAL_HTML,
+                        headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.get("/alma/agenda", response_class=HTMLResponse)

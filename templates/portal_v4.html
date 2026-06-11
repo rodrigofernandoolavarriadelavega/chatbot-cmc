@@ -1927,9 +1927,11 @@ async function mountInlineAgenda() {
     const st = await (await fetch('/agendar/api/status')).json();
     if (st && st.enabled) {
       if (!frame.src || frame.src === 'about:blank' || frame.src.indexOf('/agendar') === -1) {
-        // Preferir el paciente ACTIVO (puede ser un familiar), no el titular
+        // Preferir el paciente ACTIVO (puede ser un familiar), no el titular.
+        // UI compacta /agendar/portal: una pantalla, sin pasos; demo=1 simula la reserva.
         const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
-        frame.src = '/agendar?embed=1' + (rut ? '&rut=' + rut : '');
+        const demo = (patientData && patientData.demo) ? '&demo=1' : '';
+        frame.src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo;
       }
       panel.style.display = '';
     } else { panel.style.display = 'none'; }
