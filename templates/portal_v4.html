@@ -2030,20 +2030,37 @@ function _genHover() {
 let _genPin = null;
 function genTap(rut) { _genPin = rut; _genShowTip(rut, true); }   // 1er toque: tarjeta con acciones (clave en celular)
 function _genAbrir(rut) { _genPin = null; closeGenograma(); famTap(rut, false); }
+function _vbAnimate(svg, to, dur) {
+  cancelAnimationFrame(svg._vbRaf);
+  const vb = svg.viewBox.baseVal;
+  const from = { x: vb.x, y: vb.y, w: vb.width, h: vb.height };
+  const t0 = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 3);
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = ease(t);
+    svg.setAttribute('viewBox',
+      `${from.x + (to.x - from.x) * e} ${from.y + (to.y - from.y) * e} ${from.w + (to.w - from.w) * e} ${from.h + (to.h - from.h) * e}`);
+    if (t < 1) svg._vbRaf = requestAnimationFrame(step);
+  };
+  svg._vbRaf = requestAnimationFrame(step);
+}
 function _genAimCam(wrap, svg, g) {
-  // Cámara interna del SVG (vectorial = nítida en celular)
+  // Zoom por viewBox: el zoom NATIVO de SVG — vectorial puro, nítido en
+  // cualquier celular (el transform CSS se rasterizaba en iOS/Android).
+  const vb = svg.viewBox.baseVal;
+  if (!svg._vb0) svg._vb0 = { x: vb.x, y: vb.y, w: vb.width, h: vb.height };
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+  svg.style.width = '100%'; svg.style.height = '100%'; svg.style.display = 'block';
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    const cam = svg.querySelector('#gz-cam');
-    if (!cam) return;
-    cam.style.transform = 'none';
-    const sr = svg.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), gr = g.getBoundingClientRect();
-    const u = svg.viewBox.baseVal.width / sr.width;
+    const wr = wrap.getBoundingClientRect();
+    if (!wr.width || !wr.height) return;
     const k = 2;
-    const nx = (gr.left - sr.left + gr.width / 2) * u;
-    const ny = (gr.top - sr.top + gr.height / 2 - 6) * u;
-    const cx = (wr.width / 2 - (sr.left - wr.left)) * u;
-    const cy = (wr.height / 2 - (sr.top - wr.top)) * u;
-    cam.style.transform = `translate(${cx - k * nx}px, ${cy - k * ny}px) scale(${k})`;
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy) - 3;
+    const wT = svg._vb0.w / k, hT = wT * (wr.height / wr.width);
+    // arranque con el encuadre actual adaptado al aspecto del marco (sin salto feo)
+    const h0 = svg._vb0.w * (wr.height / wr.width);
+    svg.setAttribute('viewBox', `${svg._vb0.x} ${Math.max(svg._vb0.y, cy - h0 / 2)} ${svg._vb0.w} ${h0}`);
+    _vbAnimate(svg, { x: cx - wT / 2, y: cy - hT / 2, w: wT, h: hT }, 550);
   }));
 }
 function _genOpenSide(rut, html) {
@@ -2079,7 +2096,13 @@ function _genCerrarAgenda() {
   const wrap = document.getElementById('gen-svg');
   const svg = wrap ? wrap.querySelector('svg') : null;
   const f = document.getElementById('gen-ag-frame'); if (f) f.src = 'about:blank';
-  if (svg) { svg.style.transform = 'none'; const cam = svg.querySelector('#gz-cam'); if (cam) cam.style.transform = 'none'; }
+  if (svg) {
+    cancelAnimationFrame(svg._vbRaf);
+    if (svg._vb0) svg.setAttribute('viewBox', `${svg._vb0.x} ${svg._vb0.y} ${svg._vb0.w} ${svg._vb0.h}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.style.width = '100%'; svg.style.height = ''; svg.style.transform = 'none';
+    const cam = svg.querySelector('#gz-cam'); if (cam) cam.style.transform = 'none';
+  }
   if (card) card.classList.remove('zoom');
   if (wrap) wrap.querySelectorAll('g[data-rut]').forEach(x => x.classList.remove('gz-focus'));
   const leg = document.querySelector('#gen-backdrop .gen-leg'); if (leg) leg.style.display = '';
@@ -2229,7 +2252,7 @@ function buildGenSVG(mem) {
     const first = (m.nombre || '').split(' ')[0];
     const dx = (m.dx || []).slice(0, 2).join(' · ');
     const halo = 'stroke="#f8fbfd" stroke-width="3" paint-order="stroke"';
-    let g = `<g data-rut="${m.rut}" onclick="genTap('${m.rut}')" style="cursor:pointer">${shape}
+    let g = `<g data-rut="${m.rut}" data-cx="${p.x}" data-cy="${p.y}" onclick="genTap('${m.rut}')" style="cursor:pointer">${shape}
       <text x="${p.x}" y="${p.y + 5.5}" text-anchor="middle" font-size="15" font-weight="800" fill="#0F3F68">${(first[0] || '?').toUpperCase()}</text>
       <text x="${p.x}" y="${p.y + 39}" text-anchor="middle" font-size="11" font-weight="800" fill="#1f3344" ${halo}>${first}${m.edad != null ? ' (' + m.edad + ')' : ''}</text>
       <text x="${p.x}" y="${p.y + 51}" text-anchor="middle" font-size="7.6" font-weight="700" fill="#8a99a6" letter-spacing="1" ${halo}>${(m.relation === 'titular' ? 'TITULAR' : (m.relation || '')).toUpperCase()}</text>`;
