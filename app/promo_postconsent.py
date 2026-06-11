@@ -9,12 +9,15 @@ Cadena completa (idea del dueño 2026-06-10, refinada el mismo día):
      ya paciente dental.
 
 El gatillo es la ATENCIÓN REALIZADA, no un delay ciego: "gracias por venir" con
-promo minutos/1h después de salir del box se siente atención, no spam. Señal de
-atendido = pago en caja (Medilink no tiene estado no-show/atendido confiable):
-  - HOY: /pagos de Medilink en vivo (bi_pagos_caja local solo se sincroniza de
-    madrugada → sería tarde).
+promo poco después de salir del box se siente atención, no spam. Señal = pago
+en caja (Medilink no tiene estado no-show/atendido confiable). OJO (dato del
+dueño): en CMC el pago se hace AL LLEGAR, ANTES de atenderse → pago = "está en
+sala de espera/box", por eso:
+  - HOY: /pagos de Medilink en vivo (fecha_creacion trae hora CLT) y solo
+    cuentan pagos con más de BUFFER_MIN minutos (default 75 = espera + consulta)
+    → cuando sale la promo, ya salió del box.
   - Días previos (catch-up fin de semana, caídas): bi_pagos_caja local desde la
-    fecha de aceptación del consent.
+    fecha de aceptación del consent (ahí ya no hay duda: se atendió).
 
 Diferencias con el auto-trigger dental de flows.py (consent_dental_v1 → flyer
 inmediato): acá el pool es el consent de marketing GENERAL, el gatillo es la
@@ -74,6 +77,9 @@ def _cfg():
         # mensajes casi simultáneos. El que quede en silencio se desliza a la
         # corrida siguiente (el dedupe solo marca al ENVIAR, no se pierde).
         "quiet_hours": int(os.getenv("PROMO_POSTCONSENT_QUIET_HOURS", "2")),
+        # El pago en CMC se hace AL LLEGAR (antes de atenderse): solo cuentan
+        # pagos de hoy con esta antigüedad mínima → ya salió del box.
+        "buffer_min": int(os.getenv("PROMO_POSTCONSENT_BUFFER_MIN", "75")),
         # Solo aceptados desde esta fecha entran al riel (no blastear histórico).
         "since": os.getenv("PROMO_POSTCONSENT_SINCE", "2026-06-10"),
     }
@@ -164,22 +170,36 @@ def _candidatos_bi(cfg: dict) -> list[dict]:
 
 # ── señal "se atendió de verdad" (pago en caja) ──────────────────────────────
 
-async def _pagos_hoy_pids() -> set:
+async def _pagos_hoy_pids(buffer_min: int = 0) -> set:
     """id_paciente con pago en caja HOY, directo de Medilink /pagos (en vivo).
-    bi_pagos_caja local se sincroniza de madrugada → para HOY hay que ir al API."""
-    from datetime import datetime
+    bi_pagos_caja local se sincroniza de madrugada → para HOY hay que ir al API.
+
+    buffer_min: solo cuenta pagos con esa antigüedad mínima (fecha_creacion
+    viene en hora CLT). En CMC se paga AL LLEGAR → un pago recién hecho
+    significa "está en sala de espera o en el box", no "ya se atendió"."""
+    from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
     from bi_sync import _fetch_pagos_dia
     from medilink import _get_shared_client
 
-    fecha = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
+    now_cl = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
+    corte = now_cl - timedelta(minutes=buffer_min)
+    fecha = now_cl.strftime("%Y-%m-%d")
     pids: set = set()
     cli = _get_shared_client()
     async for page in _fetch_pagos_dia(cli, fecha):
         for p in page:
             pid = p.get("id_paciente")
-            if pid:
-                pids.add(int(pid))
+            if not pid:
+                continue
+            creado = str(p.get("fecha_creacion") or "")
+            if buffer_min and creado:
+                try:
+                    if datetime.strptime(creado, "%Y-%m-%d %H:%M:%S") > corte:
+                        continue  # pagó hace poco → probablemente sigue adentro
+                except ValueError:
+                    pass  # formato raro → no descartar por el buffer
+            pids.add(int(pid))
     return pids
 
 
@@ -237,7 +257,7 @@ async def job_promo_postconsent(dry_run: bool = False) -> dict:
         # Señal de atención realizada: pagos de HOY en vivo (una sola llamada
         # al API para toda la corrida) + catch-up local por candidato.
         try:
-            pagos_hoy = await _pagos_hoy_pids() if crudos else set()
+            pagos_hoy = await _pagos_hoy_pids(cfg["buffer_min"]) if crudos else set()
         except Exception as e_ph:
             log.warning("promo_postconsent: /pagos en vivo falló (%s) — solo catch-up local", e_ph)
             pagos_hoy = set()

@@ -43,7 +43,7 @@ def sin_pagos_hoy(monkeypatch):
     """Por defecto los tests no consultan Medilink: cero pagos en vivo."""
     import promo_postconsent as pp
 
-    async def _vacio():
+    async def _vacio(buffer_min=0):
         return set()
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _vacio)
@@ -92,7 +92,7 @@ def test_pago_hoy_en_vivo_gatilla(sqlite_db, monkeypatch):
                                      _cand("56955556666", pids=[202])])
     monkeypatch.setattr(winback_mod, "phone_in_opt_out", lambda p: False)
 
-    async def _pagos():
+    async def _pagos(buffer_min=0):
         return {101}  # solo el primero pagó (= se atendió) hoy
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _pagos)
@@ -137,7 +137,7 @@ def test_ventana_silencio_pospone(sqlite_db, monkeypatch):
                         lambda cfg: [_cand("56911112222", pids=[101])])
     monkeypatch.setattr(winback_mod, "phone_in_opt_out", lambda p: False)
 
-    async def _pagos():
+    async def _pagos(buffer_min=0):
         return {101}
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _pagos)
@@ -146,6 +146,36 @@ def test_ventana_silencio_pospone(sqlite_db, monkeypatch):
         pp.job_promo_postconsent(dry_run=True))
     assert out["candidatos"] == 0
     assert out["pospuestos_por_silencio"] == 1
+
+
+def test_buffer_pago_reciente_no_cuenta(monkeypatch):
+    """El pago se hace AL LLEGAR: un pago de hace 10 min = paciente en el box
+    → no cuenta. Uno de hace 2 horas = ya salió → cuenta."""
+    import promo_postconsent as pp
+    import bi_sync as bi_sync_mod
+    import medilink as medilink_mod
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    now_cl = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
+    fmt = "%Y-%m-%d %H:%M:%S"
+
+    async def _fake_fetch(cli, fecha):
+        yield [
+            {"id_paciente": 101,
+             "fecha_creacion": (now_cl - timedelta(minutes=10)).strftime(fmt)},
+            {"id_paciente": 202,
+             "fecha_creacion": (now_cl - timedelta(hours=2)).strftime(fmt)},
+        ]
+
+    monkeypatch.setattr(bi_sync_mod, "_fetch_pagos_dia", _fake_fetch)
+    monkeypatch.setattr(medilink_mod, "_get_shared_client", lambda: None)
+
+    pids = asyncio.get_event_loop().run_until_complete(pp._pagos_hoy_pids(75))
+    assert pids == {202}
+    # Sin buffer, cuentan los dos.
+    pids = asyncio.get_event_loop().run_until_complete(pp._pagos_hoy_pids(0))
+    assert pids == {101, 202}
 
 
 def test_ya_enviado_no_repite(sqlite_db, monkeypatch):
@@ -158,7 +188,7 @@ def test_ya_enviado_no_repite(sqlite_db, monkeypatch):
                         lambda cfg: [_cand("56911112222", pids=[101])])
     monkeypatch.setattr(winback_mod, "phone_in_opt_out", lambda p: False)
 
-    async def _pagos():
+    async def _pagos(buffer_min=0):
         return {101}
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _pagos)
