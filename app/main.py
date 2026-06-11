@@ -8489,13 +8489,21 @@ async def webhook(request: Request):
         except Exception:
             return "?"
     if not sig_header.startswith("sha256="):
-        log.warning("webhook firma faltante/malformada obj=%s sig=%r", _wh_diag(), sig_header[:24])
+        log.warning("webhook firma faltante/malformada obj=%s", _wh_diag())
         return Response(status_code=403)
     import hmac as _hmac_w, hashlib as _hl_w
-    expected = "sha256=" + _hmac_w.new(_MAS.encode(), body_bytes, _hl_w.sha256).hexdigest()
-    if not _hmac_w.compare_digest(sig_header, expected):
-        log.warning("webhook firma inválida obj=%s recibido=%s esperado=%s",
-                    _wh_diag(), sig_header[:20], expected[:20])
+    from config import INSTAGRAM_APP_SECRET as _IGS
+    def _sig_match(_secret):
+        if not _secret:
+            return False
+        _exp = "sha256=" + _hmac_w.new(_secret.encode(), body_bytes, _hl_w.sha256).hexdigest()
+        return _hmac_w.compare_digest(sig_header, _exp)
+    # WhatsApp/Messenger(page) firman con el Facebook App Secret (META_APP_SECRET);
+    # los webhooks del objeto `instagram` (IG con Instagram Login) firman con el
+    # Instagram App Secret. Aceptamos si CUALQUIERA valida — ambos son secretos de
+    # Meta, así que sigue siendo imposible forjar un webhook sin uno de ellos.
+    if not (_sig_match(_MAS) or _sig_match(_IGS)):
+        log.warning("webhook firma inválida obj=%s", _wh_diag())
         return Response(status_code=403)
     try:
         import json as _json_w

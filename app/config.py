@@ -17,6 +17,10 @@ META_VERIFY_TOKEN    = os.getenv("META_VERIFY_TOKEN", "cmc_webhook_2026")
 # X-Hub-Signature-256 de Meta. Si no está seteado, modo legacy (acepta todo).
 # Para activar: agregar META_APP_SECRET en .env del server.
 META_APP_SECRET      = os.getenv("META_APP_SECRET", "")
+# Instagram App Secret: los webhooks del objeto `instagram` (IG con Instagram
+# Login) se firman con ESTE secret, no con META_APP_SECRET. Sin él, las firmas
+# de los DM de Instagram no validan y el webhook los rechaza con 403.
+INSTAGRAM_APP_SECRET = os.getenv("INSTAGRAM_APP_SECRET", "")
 META_PAGE_ACCESS_TOKEN = os.getenv("META_PAGE_ACCESS_TOKEN", "") or os.getenv("META_ACCESS_TOKEN", "")
 META_MESSENGER_TOKEN = os.getenv("META_MESSENGER_TOKEN", "")  # Page token para Messenger Send API
 INSTAGRAM_USER_ID    = os.getenv("INSTAGRAM_USER_ID", "")   # ID del usuario de Instagram Business
