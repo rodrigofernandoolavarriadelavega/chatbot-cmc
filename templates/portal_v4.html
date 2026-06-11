@@ -925,6 +925,7 @@ a{color:inherit; text-decoration:none}
   .gen-card.zoom #gen-svg{height:150px}
   .gs-frame{height:390px}
 }
+#gz-cam{transition:transform .55s cubic-bezier(.22,.8,.3,1)}
 /* Aislamiento: el resto de la familia se desvanece durante el zoom */
 #gen-svg g[data-rut]{transition:opacity .45s var(--ease)}
 .gen-card.zoom #gen-svg g[data-rut]:not(.gz-focus){opacity:.14}
@@ -2045,16 +2046,21 @@ function _genAgendarP(rut) {
   side.innerHTML = `<div class="gs-head"><span>📅 Hora para <b>${first}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
     <iframe class="gs-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`;
   card.classList.add('zoom');
-  // Tras el reacomodo del layout, animar la cámara hacia el nodo
+  // Tras el reacomodo del layout, animar la cámara INTERNA del SVG hacia el
+  // nodo (en unidades del viewBox: re-render vectorial, nítido también en celular)
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    svg.style.transform = 'none';
-    const wr = wrap.getBoundingClientRect(), gr = g.getBoundingClientRect();
+    const cam = svg.querySelector('#gz-cam');
+    if (!cam) return;
+    cam.style.transform = 'none';
+    const sr = svg.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), gr = g.getBoundingClientRect();
+    const vbW = svg.viewBox.baseVal.width;
+    const u = vbW / sr.width;                       // unidades de viewBox por px
     const k = 2;
-    const nx = gr.left - wr.left + gr.width / 2;
-    const ny = gr.top - wr.top + gr.height / 2 - 8;
-    svg.style.transformOrigin = '0 0';
-    svg.style.transition = 'transform .55s cubic-bezier(.22,.8,.3,1)';
-    svg.style.transform = `translate(${wr.width / 2 - k * nx}px, ${wr.height / 2 - k * ny}px) scale(${k})`;
+    const nx = (gr.left - sr.left + gr.width / 2) * u;
+    const ny = (gr.top - sr.top + gr.height / 2 - 6) * u;
+    const cx = (wr.width / 2 - (sr.left - wr.left)) * u;
+    const cy = (wr.height / 2 - (sr.top - wr.top)) * u;
+    cam.style.transform = `translate(${cx - k * nx}px, ${cy - k * ny}px) scale(${k})`;
   }));
   const demo = (patientData && patientData.demo) ? '&demo=1' : '';
   document.getElementById('gen-ag-frame').src = '/agendar/portal?embed=1&rut=' + encodeURIComponent(rut) + demo;
@@ -2064,7 +2070,7 @@ function _genCerrarAgenda() {
   const wrap = document.getElementById('gen-svg');
   const svg = wrap ? wrap.querySelector('svg') : null;
   const f = document.getElementById('gen-ag-frame'); if (f) f.src = 'about:blank';
-  if (svg) svg.style.transform = 'none';
+  if (svg) { svg.style.transform = 'none'; const cam = svg.querySelector('#gz-cam'); if (cam) cam.style.transform = 'none'; }
   if (card) card.classList.remove('zoom');
   if (wrap) wrap.querySelectorAll('g[data-rut]').forEach(x => x.classList.remove('gz-focus'));
   const leg = document.querySelector('#gen-backdrop .gen-leg'); if (leg) leg.style.display = '';
@@ -2240,7 +2246,7 @@ function buildGenSVG(mem) {
     }
     N.push(g + '</g>');
   }
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="font-family:var(--font)">${defs}${fondo}${P.join('')}${N.join('')}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="font-family:var(--font)">${defs}${fondo}<g id="gz-cam" style="transform-origin:0 0">${P.join('')}${N.join('')}</g></svg>`;
 }
 
 async function famTap(rut, quiereAgendar) {
