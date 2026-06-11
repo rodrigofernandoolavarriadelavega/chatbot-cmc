@@ -573,6 +573,15 @@ async def send_dental_winback(candidato: dict) -> bool:
     cfg = SUBCOHORTES.get(subcohorte, {})
     template_name = cfg.get("template", "winback_dental_odonto_general_v1")
 
+    # Flyer visual: si DENTAL_PROMO_FLYER_ACTIVE, TODO el win-back dental manda la
+    # promo de limpieza (template header IMAGE, sin variables de body) en vez del
+    # texto plano — más visual, convierte mejor. Kill-switch por env.
+    import config as _cfg_wb
+    _es_promo_flyer = (bool(_cfg_wb.DENTAL_PROMO_FLYER_ACTIVE)
+                       and bool((_cfg_wb.DENTAL_PROMO_FLYER_TEMPLATE or "").strip()))
+    if _es_promo_flyer:
+        template_name = _cfg_wb.DENTAL_PROMO_FLYER_TEMPLATE.strip()
+
     template_ok = await is_template_approved(template_name)
     if not template_ok:
         log.warning(
@@ -587,7 +596,9 @@ async def send_dental_winback(candidato: dict) -> bool:
     }
     # Usar solo el primer nombre limpio (ej: "CARLOS ANDRES ROJAS" → "Carlos")
     first_name = nombre.strip().split()[0][:30].capitalize()
-    if template_name in _TWO_PARAM:
+    if _es_promo_flyer:
+        body_params = []  # el flyer no lleva variables de body
+    elif template_name in _TWO_PARAM:
         # Los de 2 params EXIGEN {{2}}; genérico si no hay profesional para no
         # romper con (#132000). Conteo verificado contra Meta 2026-05-30.
         body_params = [first_name, profesional or "nuestro equipo"]
@@ -602,6 +613,7 @@ async def send_dental_winback(candidato: dict) -> bool:
             to=telefono,
             template_name=template_name,
             body_params=body_params,
+            header_image_url=(_cfg_wb.DENTAL_PROMO_FLYER_IMG if _es_promo_flyer else None),
         )
         _lm(telefono, "out", _rtb(template_name, body_params), "IDLE")
         _registrar_envio_dental(
