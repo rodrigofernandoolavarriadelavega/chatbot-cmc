@@ -40,13 +40,14 @@ def sqlite_db(monkeypatch, tmp_path):
 
 @pytest.fixture()
 def sin_pagos_hoy(monkeypatch):
-    """Por defecto los tests no consultan Medilink: cero pagos en vivo."""
+    """Por defecto los tests no consultan Medilink: cero pagos ni atendidos."""
     import promo_postconsent as pp
 
     async def _vacio(buffer_min=0):
         return set()
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _vacio)
+    monkeypatch.setattr(pp, "_atendidos_hoy_pids", _vacio)
 
 
 def test_gating_off_no_envia(monkeypatch):
@@ -97,6 +98,11 @@ def test_pago_hoy_en_vivo_gatilla(sqlite_db, monkeypatch):
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _pagos)
 
+    async def _sin_atendidos(buffer_min=0):
+        return set()
+
+    monkeypatch.setattr(pp, "_atendidos_hoy_pids", _sin_atendidos)
+
     out = asyncio.get_event_loop().run_until_complete(
         pp.job_promo_postconsent(dry_run=True))
     assert out["candidatos"] == 1
@@ -142,10 +148,77 @@ def test_ventana_silencio_pospone(sqlite_db, monkeypatch):
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _pagos)
 
+    async def _sin_atendidos(buffer_min=0):
+        return set()
+
+    monkeypatch.setattr(pp, "_atendidos_hoy_pids", _sin_atendidos)
+
     out = asyncio.get_event_loop().run_until_complete(
         pp.job_promo_postconsent(dry_run=True))
     assert out["candidatos"] == 0
     assert out["pospuestos_por_silencio"] == 1
+
+
+def test_cita_atendida_gatilla(sqlite_db, monkeypatch):
+    """Señal PRIMARIA: cita marcada 'Atendido' en el panel Medilink → promo,
+    aunque el pago no aparezca (o no exista, ej. convenio)."""
+    import promo_postconsent as pp
+    import winback as winback_mod
+
+    monkeypatch.setattr(pp, "_candidatos_bi",
+                        lambda cfg: [_cand("56911112222", pids=[101]),
+                                     _cand("56955556666", pids=[202])])
+    monkeypatch.setattr(winback_mod, "phone_in_opt_out", lambda p: False)
+
+    async def _sin_pagos(buffer_min=0):
+        return set()
+
+    async def _atendidos(buffer_min=0):
+        return {101}  # solo el primero está marcado Atendido
+
+    monkeypatch.setattr(pp, "_pagos_hoy_pids", _sin_pagos)
+    monkeypatch.setattr(pp, "_atendidos_hoy_pids", _atendidos)
+
+    out = asyncio.get_event_loop().run_until_complete(
+        pp.job_promo_postconsent(dry_run=True))
+    assert out["candidatos"] == 1
+    assert out["esperando_atencion"] == 1
+    assert out["muestra"] == ["56911***22"]
+
+
+def test_atendido_buffer_recien_marcada_no_cuenta(monkeypatch):
+    """Cita marcada Atendido hace 5 min → puede seguir en recepción → espera.
+    Marcada hace 1 hora → cuenta."""
+    import promo_postconsent as pp
+    import medilink as medilink_mod
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    now_cl = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
+    fmt = "%Y-%m-%d %H:%M:%S"
+    citas = [
+        {"id_paciente": 101, "estado_cita": "Atendido",
+         "fecha_actualizacion": (now_cl - timedelta(minutes=5)).strftime(fmt)},
+        {"id_paciente": 202, "estado_cita": "Atendido",
+         "fecha_actualizacion": (now_cl - timedelta(hours=1)).strftime(fmt)},
+        {"id_paciente": 303, "estado_cita": "No asiste",
+         "fecha_actualizacion": (now_cl - timedelta(hours=2)).strftime(fmt)},
+    ]
+
+    class _FakeResp:
+        status_code = 200
+
+    class _FakeCli:
+        async def get(self, url, **kw):
+            return _FakeResp()
+
+    monkeypatch.setattr(medilink_mod, "_get_shared_client", lambda: _FakeCli())
+    monkeypatch.setattr(medilink_mod, "_safe_json", lambda r: {"data": citas})
+
+    pids = asyncio.get_event_loop().run_until_complete(pp._atendidos_hoy_pids(20))
+    assert pids == {202}  # la recién marcada espera; "No asiste" jamás entra
+    pids = asyncio.get_event_loop().run_until_complete(pp._atendidos_hoy_pids(0))
+    assert pids == {101, 202}
 
 
 def test_buffer_pago_reciente_no_cuenta(monkeypatch):
@@ -192,6 +265,11 @@ def test_ya_enviado_no_repite(sqlite_db, monkeypatch):
         return {101}
 
     monkeypatch.setattr(pp, "_pagos_hoy_pids", _pagos)
+
+    async def _sin_atendidos(buffer_min=0):
+        return set()
+
+    monkeypatch.setattr(pp, "_atendidos_hoy_pids", _sin_atendidos)
 
     out = asyncio.get_event_loop().run_until_complete(
         pp.job_promo_postconsent(dry_run=True))
