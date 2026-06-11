@@ -335,6 +335,21 @@ def registrar_consent_respuesta(phone: str, status: str, method: str) -> None:
         log.warning("winback: registrar_consent_respuesta error %s: %s", phone[-4:], e)
 
 
+def remover_opt_out_marketing(phone: str) -> None:
+    """Inverso de registrar_opt_out_marketing: el paciente pidió volver
+    (re-opt-in "aceptar" tras una baja). Borra por últimos 9 dígitos."""
+    from session import normalize_wa_id
+    phone = normalize_wa_id(phone)
+    with bi_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """DELETE FROM bi.opt_outs_marketing
+                   WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 9)
+                       = RIGHT(regexp_replace(%s, '[^0-9]', '', 'g'), 9)""",
+                (phone,))
+        conn.commit()
+
+
 def registrar_opt_out_marketing(phone: str, source: str = "baja", reason: str = "opt_out") -> None:
     """Opt-out de marketing en BI: inserta en bi.opt_outs_marketing y marca
     bi.marketing_consent como 'declined'. Idempotente, teléfono canónico.

@@ -1557,6 +1557,16 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
         reset_session(phone)
         return _doctor_mode_menu()
 
+    # ── "espera" (promesa antigua de la notificación de cancelación) ────────
+    # Auditoría promesas 2026-06-12: la notif al profesional decía "responde
+    # *espera*" pero el handler nunca existió. Hoy la oferta a lista de espera
+    # es AUTOMÁTICA (Alma Operativa); si un profesional responde el token viejo,
+    # respuesta honesta en vez de caer al asistente clínico.
+    if tl in ("espera", "lista de espera", "ofrecer espera"):
+        return ("✅ El cupo liberado ya se ofrece *automáticamente* a la lista "
+                "de espera (Alma Operativa). Si alguien lo toma, recepción "
+                "confirma la reserva — no necesitas hacer nada.")
+
     # ── Leer modo desde tag (persistente) ────────────────────────────────
     doctor_mode = _get_doctor_mode(phone)
     if not doctor_mode and state == "IDLE":
@@ -2559,6 +2569,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return None
         except Exception as e:
             log.warning("operativa: maybe_accept_offer falló phone=%s: %s", phone, e)
+    elif state != "HUMAN_TAKEOVER" and ("tomar" in tl or "tomo" in tl
+                                        or "la quiero" in tl or "lo quiero" in tl):
+        # Auditoría promesas 2026-06-12: la oferta de cupo llega proactiva y el
+        # paciente puede estar a medio flujo (WAIT_SLOT, etc.). Un "TOMAR"
+        # EXPLÍCITO (no un "sí" pelado, que ahí significa otra cosa) rescata la
+        # oferta desde cualquier estado no-takeover. Solo actúa si DE VERDAD
+        # tiene una oferta abierta — si no, cae al handler del estado normal.
+        try:
+            from alma_brain import operativa
+            from session import get_open_offer_for_phone as _goofp
+            if _goofp(phone) and await operativa.maybe_accept_offer(phone, tl):
+                return None
+        except Exception as e:
+            log.warning("operativa: rescate tomar falló phone=%s: %s", phone, e)
 
     # ── Comando admin: /status (y sinónimos) desde el celular del admin ───
     # Abre la ventana 24h de WhatsApp y devuelve el reporte EN VIVO. Útil
@@ -2869,7 +2893,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "no más avisos", "no quiero mas avisos", "no quiero más avisos",
         "dejar de avisar", "no me avisen", "no me avises",
     }
-    if state == "IDLE" and tl_norm in _TOKENS_NO_AVISAR:
+    if state != "HUMAN_TAKEOVER" and tl_norm in _TOKENS_NO_AVISAR:
         try:
             save_tag(phone, "marketing_opt_out")
             log_event(phone, "horas_vacias_optout", {"txt": txt[:60]})
@@ -3423,6 +3447,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     #   - "borrar mis datos"  → derecho al olvido (art. 12). Emite alerta al
     #                           admin para ejecutar DELETE /admin/api/patient.
     if phone != _doctor_phone:
+        # ── Re-opt-in "aceptar" (inverso del BAJA; auditoría promesas 2026-06-12:
+        #    el mensaje de baja promete "escribe *aceptar*" y el handler NO existía
+        #    → el paciente quedaba bloqueado para siempre aunque pidiera volver).
+        #    Solo si efectivamente está dado de baja; si no, cae al flujo normal.
+        if tl_norm in ("aceptar", "acepto volver", "quiero volver a recibir mensajes") \
+                and state == "IDLE":
+            try:
+                if "marketing_opt_out" in (get_tags(phone) or []):
+                    save_privacy_consent(phone, "accepted", method="re_optin_aceptar")
+                    delete_tag(phone, "marketing_opt_out")
+                    try:
+                        from winback import remover_opt_out_marketing, registrar_consent_respuesta
+                        remover_opt_out_marketing(phone)
+                        registrar_consent_respuesta(phone, "accepted", method="re_optin_aceptar")
+                    except Exception as _e_ro:
+                        log.warning("re-optin BI falló (no bloquea): %s", _e_ro)
+                    log_event(phone, "re_optin_aceptar", {})
+                    return ("¡Bienvenido/a de vuelta! 🙌 Volverás a recibir nuestros "
+                            "recordatorios y avisos.\n\n"
+                            "_Escribe *baja* si cambias de opinión, o *menu* para agendar._")
+            except Exception as _e_acc:
+                log.warning("re_optin_aceptar falló phone=...%s: %s", phone[-4:], _e_acc)
+
         if tl in ("stop", "detener", "baja") or tl_norm in ("stop", "detener", "baja"):
             # BUG-D: "baja" es opt-out de campañas, NO debe activarse si el
             # paciente está en flujo activo o con recepcionista. Ejemplos reales:

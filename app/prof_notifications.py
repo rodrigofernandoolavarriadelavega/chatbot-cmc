@@ -305,8 +305,8 @@ async def notify_cancelacion(
         f"❌ *Paciente canceló* — {nombre_corto}\n\n"
         f"👤 {paciente_nombre or 'Paciente'}\n"
         f"🗓 Tenía hora el {fecha_h} · {hora}\n\n"
-        f"_Tu slot quedó libre. Si quieres ofrecerlo a alguien en lista de espera, "
-        f"responde *espera*._"
+        f"_Tu slot quedó libre. Alma lo está ofreciendo automáticamente a la "
+        f"lista de espera; si alguien lo toma, recepción confirma._"
     )
     return await notify_prof(
         id_prof, "notif_cancelacion", body,
