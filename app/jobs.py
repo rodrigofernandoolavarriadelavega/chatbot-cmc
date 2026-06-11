@@ -251,6 +251,19 @@ async def _enviar_reenganche():
             log.info("Reenganche skip (estado terminal) phone=%s state=%s", phone, state)
             continue
 
+        # (d) Estados de OFERTA OPCIONAL post-acción (cross-sell tras reservar,
+        #     pregunta de referidos): no hay nada "pendiente" — la reserva ya
+        #     quedó hecha. Mandar "tienes una reserva pendiente" acá confunde
+        #     (caso real María 2026-06-11: reservó a las 10:02 y a las 10:16 el
+        #     bot le dijo que tenía una reserva pendiente). Ignorar la oferta ES
+        #     una respuesta válida → reset suave a IDLE, sin mensaje.
+        if state in ("WAIT_CROSS_SELL", "WAIT_REFERRAL_POST"):
+            log_event(phone, "reenganche_skip",
+                      {"motivo": "oferta_opcional_post_accion", "state": state})
+            log.info("Reenganche skip (oferta opcional) → reset IDLE phone=%s state=%s", phone, state)
+            save_session(phone, "IDLE", data)
+            continue
+
         # Límite de reintentos genérico: máximo 3 skips o TTL 2h desde el primer skip.
         # Cubre condiciones de skip presentes o futuras que no sean cita cancelada.
         # Persistencia: session.data["reenganche_skip_count"] y ["reenganche_first_skip_ts"].
