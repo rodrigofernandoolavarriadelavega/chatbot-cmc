@@ -1789,7 +1789,8 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
             return True
     # WAIT_SLOT: frases muy cortas de navegación
     if state == "WAIT_SLOT":
-        if tl in ("otro dia", "otro día", "ver todos", "todos", "ver mas",
+        if tl in ("otro dia", "otro día", "otra fecha", "cambiar fecha",
+                  "ver todos", "todos", "ver mas",
                   "ver más", "mañana", "manana", "hoy", "pasado mañana",
                   "pasado manana",
                   # BUG-G: "otros horarios" y variantes deben llegar al VER_TODOS set
@@ -2694,6 +2695,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             " en breve por acá.\n\n"
             f"_Si es urgente: 📞 *{CMC_TELEFONO}*_"
         )
+    # ── Datos bancarios / de pago → recepción ─────────────────────────────────
+    # Caso real Consuelo 2026-06-12: mandó cuenta corriente + banco + email y el
+    # bot respondió "¡Gracias por tus datos! ¿Qué especialidad quieres?" (canned).
+    # Datos de pago = gestión humana (y dato sensible): derivar de inmediato.
+    _BANK_KW = ("cuenta corriente", "cuenta rut", "cta cte", "cta. cte",
+                "banco santander", "santander", "bancoestado", "banco estado",
+                "banco de chile", "scotiabank", "banco bci", " bci",
+                "transferencia", "transferi", "deposite", "deposité")
+    if state != "HUMAN_TAKEOVER" and any(k in tl for k in _BANK_KW) \
+            and _re_url.search(r"\d{6,}", txt.replace(".", "").replace(" ", "").replace("-", "")):
+        save_session(phone, "HUMAN_TAKEOVER", data)
+        log_event(phone, "datos_bancarios_a_humano", {"len": len(txt)})
+        return (
+            "Recibí tus datos 🙏 Una recepcionista los revisará y te confirmará"
+            " por acá en breve.\n\n"
+            f"_Si es urgente: 📞 *{CMC_TELEFONO}*_"
+        )
+
     # ── Documento Word/PDF recibido ───────────────────────────────────────────
     # El webhook pre-procesa adjuntos Word/PDF y los inyecta con el prefijo
     # "[DOCUMENTO]" para que el bot los derive a recepción sin procesar el
@@ -2730,6 +2749,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "👤 otro profesional": "otro_prof",
         "otro dia": "otro_dia",
         "otro día": "otro_dia",
+        "otra fecha": "otro_dia",
+        "cambiar fecha": "otro_dia",
         "ver todos": "ver_todos",
         "ver más": "ver_otros",
         "ver mas": "ver_otros",
@@ -2772,7 +2793,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _fila_rc = _c_rc.execute(
                     "SELECT id_cita, especialidad, profesional, fecha, hora "
                     "FROM citas_bot "
-                    "WHERE phone=? AND fecha >= ? AND reminder_sent=1 "
+                    "WHERE phone=? AND fecha >= ? AND (reminder_sent=1 OR reminder_2h_sent=1) "
                     "AND (confirmation_status IS NULL OR confirmation_status='') "
                     "AND (cancel_detected_at IS NULL) "
                     "ORDER BY fecha ASC, hora ASC LIMIT 1",
@@ -6232,6 +6253,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # para que "abdominal", "renal", "hombro", "rodilla", etc. sean reconocidos.
         # Sin este guard, el normalizador general no sabe que estamos en contexto
         # de eco-tipo y llama a Claude que puede retornar cualquier cosa.
+        # Caso Consuelo 2026-06-12: en plena selección de especialidad preguntó
+        # "¿hacen ecotomografía mamaria?" → el FAQ contestaba "escribe 1" pero el
+        # estado seguía interpretando 1 = primera especialidad de la lista (MG) →
+        # quedó agendada en Medicina General queriendo una eco. Si el texto
+        # matchea un tipo de eco CONCRETO (estricto, requiere mención de eco),
+        # ES su elección de especialidad: rutear por el carril eco-tipo existente.
+        if not data.get("wait_eco_tipo"):
+            try:
+                from ecografias import route_ecografia as _reco_pre
+                _eco_pre = _reco_pre(txt)
+            except Exception:
+                _eco_pre = None
+            if _eco_pre is not None:
+                log_event(phone, "eco_en_wait_especialidad", {"txt": txt[:120]})
+                data["wait_eco_tipo"] = True
+                return await handle_message(phone, txt,
+                                            {"state": "WAIT_ESPECIALIDAD", "data": data})
+
         if data.get("wait_eco_tipo"):
             data.pop("wait_eco_tipo", None)
             try:
