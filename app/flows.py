@@ -6076,13 +6076,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _tl_wl = txt.strip().lower()
         if _tl_wl in AFIRMACIONES or _tl_wl in ("si", "sí", "si quiero", "sí quiero", "dale"):
             log_event(phone, "ctwa_waitlist_acepta", {"especialidad": _esp_wl})
-            save_tag(phone, f"waitlist:{_esp_wl}")
+            # FIX F003: inscribir DE VERDAD en la tabla waitlist (lo único que
+            # leen el cron _job_waitlist_check y el aviso post-cancelación).
+            # Antes solo se guardaba un tag "waitlist:esp" que ningún código lee
+            # → el paciente de anuncio quedaba botado con la promesa rota.
+            data["waitlist_especialidad"] = (_esp_wl or "").lower()
+            data["waitlist_id_prof_pref"] = None
             data.pop("meta_waitlist_esp", None)
-            save_session(phone, "IDLE", data)
+            _perfil_wl = get_profile(phone)
+            if _perfil_wl and _perfil_wl.get("rut") and _perfil_wl.get("nombre"):
+                data["rut"] = _perfil_wl["rut"]
+                data["paciente_nombre"] = _perfil_wl["nombre"]
+                return _inscribir_waitlist_y_responder(phone, data)
+            # Paciente nuevo (llegó desde un anuncio): pedir RUT y seguir el
+            # flujo estándar WAIT_WAITLIST_RUT → add_to_waitlist.
+            save_session(phone, "WAIT_WAITLIST_RUT", data)
             return (
-                f"Listo, te dejé anotado en la lista de espera para *{(_esp_wl or '').capitalize()}* 📋\n\n"
-                f"Te avisamos por acá en cuanto haya un cupo disponible.\n\n"
-                f"_Escribe *menu* si necesitas algo más._"
+                f"Perfecto 👍 Te inscribo en la lista de espera de "
+                f"*{(_esp_wl or '').capitalize()}*.\n\n"
+                "Para eso necesito tu RUT:\n"
+                "(ej: *12.345.678-9*)"
+                + _PRIVACY_NOTE
             )
         log_event(phone, "ctwa_waitlist_rechaza", {"especialidad": _esp_wl})
         data.pop("meta_waitlist_esp", None)
@@ -9006,10 +9020,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if not reagendar:
                 try:
                     existing_citas = await listar_citas_paciente(
-                        paciente["id"], rut=paciente.get("rut")
+                        paciente["id"], rut=paciente.get("rut"),
+                        raise_on_error=True,
                     )
                 except Exception as e:
-                    log.warning("dup-check listar_citas falló: %s", e)
+                    # Fail-open DELIBERADO: no bloqueamos el agendamiento por un
+                    # hiccup de Medilink. Pero queda observable: antes
+                    # listar_citas_paciente devolvía [] sin levantar nada y este
+                    # except era código muerto (el bypass del bloqueo
+                    # anti-duplicados ocurría en silencio total).
+                    log.warning("dup-check listar_citas falló phone=%s: %s", phone, e)
+                    log_event(phone, "dup_check_medilink_fallo", {"error": str(e)[:200]})
                     existing_citas = []
 
                 # 1) Bloqueo quirúrgico por RUT: el MISMO paciente (RUT) ya tiene
@@ -10443,7 +10464,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             ]
         )
 
-        citas = await listar_citas_paciente(paciente["id"], rut=paciente.get("rut"))
+        try:
+            citas = await listar_citas_paciente(
+                paciente["id"], rut=paciente.get("rut"), raise_on_error=True
+            )
+        except Exception as e:
+            # Medilink falló: NO decirle al paciente "no tienes citas" (falso).
+            log.warning("ver_reservas: listar_citas falló phone=%s: %s", phone, e)
+            log_event(phone, "ver_reservas_medilink_fallo", {"error": str(e)[:200]})
+            reset_session(phone)
+            return (
+                "No pude consultar tus citas en este momento porque el sistema "
+                "de agenda está lento 😕\n\n"
+                "Intenta de nuevo en unos minutos, o llama a recepción:\n"
+                f"📞 *{CMC_TELEFONO}*"
+            )
         reset_session(phone)
         nombre_corto = _first_name(paciente.get('nombre'))
         if not citas:

@@ -1258,13 +1258,29 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
     return None
 
 
-async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> list:
+class MedilinkUnavailable(Exception):
+    """Medilink falló consultando citas (HTTP no-200 o error de red).
+
+    Distinto de 'paciente sin citas' ([]). Solo se levanta cuando el caller
+    pide raise_on_error=True; el default mantiene el contrato histórico
+    (devolver []) para no romper los ~20 call sites existentes.
+    """
+
+
+async def listar_citas_paciente(id_paciente: int, rut: str | None = None,
+                                raise_on_error: bool = False) -> list:
     """Lista citas futuras de un paciente.
 
     Medilink devuelve HTTP 400 ('No puede buscar por id_paciente') al filtrar
     /citas por id_paciente. Si se provee `rut`, consultamos directamente por
     RUT. Dejamos `id_paciente` como intento inicial por compatibilidad, pero
     el camino real es por RUT.
+
+    raise_on_error=True: levanta MedilinkUnavailable (o re-levanta
+    httpx.RequestError) en vez de devolver [] cuando la consulta por RUT
+    falla — permite a callers críticos (ver reservas, bloqueo anti-duplicados)
+    distinguir 'sin citas' de 'Medilink caído'. Default False = contrato
+    histórico (devuelve [] en fallo).
     """
     hoy = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
     client = _get_shared_client()
@@ -1281,8 +1297,22 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None) -> lis
                            params={"q": _q(params)}, headers=HEADERS)
             if r.status_code == 200:
                 data = _safe_json(r).get("data", [])
+            else:
+                # HTTP 400/401/403…: NO es "paciente sin citas", es fallo de
+                # consulta. Antes este caso quedaba en silencio total (sin log)
+                # y devolvía [], indistinguible de "sin citas": el bot decía
+                # "No tienes citas futuras" con Medilink fallando y el bloqueo
+                # anti-duplicados de CONFIRMING_CITA quedaba bypasseado.
+                log.error("listar_citas_paciente rut=%s → HTTP %d: %s",
+                          _rut_safe(rut), r.status_code, (r.text or "")[:200])
+                if raise_on_error:
+                    raise MedilinkUnavailable(
+                        f"listar_citas_paciente HTTP {r.status_code}")
+                return []
         except httpx.RequestError as e:
             log.error("listar_citas_paciente rut=%s: %s", _rut_safe(rut), e)
+            if raise_on_error:
+                raise
             return []
     else:
         # Fallback: sin rut. Intenta id_paciente (fallará 400 hoy, pero
