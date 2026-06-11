@@ -8482,13 +8482,20 @@ async def webhook(request: Request):
         log.error("webhook RECHAZADO: META_APP_SECRET ausente, no se puede validar firma")
         return Response(status_code=503)
     sig_header = request.headers.get("x-hub-signature-256", "")
+    def _wh_diag():
+        try:
+            import json as _jd
+            return (_jd.loads(body_bytes.decode() or "{}") or {}).get("object")
+        except Exception:
+            return "?"
     if not sig_header.startswith("sha256="):
-        log.warning("webhook firma faltante o malformada")
+        log.warning("webhook firma faltante/malformada obj=%s sig=%r", _wh_diag(), sig_header[:24])
         return Response(status_code=403)
     import hmac as _hmac_w, hashlib as _hl_w
     expected = "sha256=" + _hmac_w.new(_MAS.encode(), body_bytes, _hl_w.sha256).hexdigest()
     if not _hmac_w.compare_digest(sig_header, expected):
-        log.warning("webhook firma inválida")
+        log.warning("webhook firma inválida obj=%s recibido=%s esperado=%s",
+                    _wh_diag(), sig_header[:20], expected[:20])
         return Response(status_code=403)
     try:
         import json as _json_w
