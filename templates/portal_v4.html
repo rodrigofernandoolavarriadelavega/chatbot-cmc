@@ -867,6 +867,12 @@ a{color:inherit; text-decoration:none}
 .fam-sug .fs-s{font-size:10.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
 .fam-sug .fs-go{flex:none; font-size:11px; font-weight:800; color:var(--cmc-blue); white-space:nowrap}
 
+/* Acciones directas en Mi salud (registrar / informe) */
+.salud-acts{display:flex; gap:8px; margin-top:12px}
+.sa-btn{flex:1; padding:12px 10px; border:0; border-radius:11px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:12px; font-weight:800; cursor:pointer; transition:filter .15s, transform .15s}
+.sa-btn:hover{filter:brightness(1.05); transform:translateY(-1px)}
+.sa-btn.ghost{background:var(--panel-2); border:1.2px solid var(--border); color:var(--cmc-navy)}
+
 /* Footer del centro (una sola vez, al final de la página) */
 .site-foot{margin-top:34px; padding:22px 12px calc(86px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); text-align:center}
 .site-foot .sf-name{font-size:12.5px; font-weight:800; color:var(--cmc-navy); letter-spacing:.3px}
@@ -1778,16 +1784,7 @@ function renderInicio() {
     html += `<div style="font-size:10.5px;color:var(--text-dim);margin-top:10px;font-weight:600">La frecuencia de tus controles la define tu profesional tratante.</div></div>`;
   }
 
-  // Resumen rápido: dx + última medición
-  if ((d.diagnosticos || []).length > 0) {
-    html += `<div class="panel">
-      <div class="panel-head">
-        <span class="dot" style="background:var(--amber); box-shadow:0 0 0 4px rgba(181,129,5,.2)"></span>
-        <h2>Mis diagnósticos</h2>
-      </div>
-      <div class="dx-chips">${d.diagnosticos.map(dx => `<span class="dx-chip">${dx}</span>`).join('')}</div>
-    </div>`;
-  }
+  // (Los diagnósticos viven SOLO en la sección Mi salud — sin duplicar en Inicio)
 
   el.innerHTML = html;
   initCrossCarousel();
@@ -2003,13 +2000,17 @@ function renderSalud() {
   const d = patientData; const el = document.getElementById('salud-content');
   let html = '';
 
-  // Dx
-  if ((d.diagnosticos||[]).length > 0) {
-    html += `<div class="panel">
-      <div class="panel-head"><span class="dot" style="background:var(--amber); box-shadow:0 0 0 4px rgba(181,129,5,.2)"></span><h2>Diagnósticos registrados</h2></div>
-      <div class="dx-chips">${d.diagnosticos.map(dx => `<span class="dx-chip">${dx}</span>`).join('')}</div>
-    </div>`;
-  }
+  // Primer panel de Mi salud: diagnósticos + acciones directas (registro / informe)
+  html += `<div class="panel">
+    <div class="panel-head"><span class="dot" style="background:var(--amber); box-shadow:0 0 0 4px rgba(181,129,5,.2)"></span><h2>Diagnósticos</h2></div>
+    ${(d.diagnosticos || []).length
+      ? `<div class="dx-chips">${d.diagnosticos.map(dx => `<span class="dx-chip">${dx}</span>`).join('')}</div>`
+      : `<div style="font-size:11.5px;color:var(--text-mute);font-weight:600">Sin diagnósticos registrados.</div>`}
+    <div class="salud-acts">
+      <button class="sa-btn" onclick="openVitalModal()">＋ Registrar medición</button>
+      <button class="sa-btn ghost" onclick="exportInforme()">📄 Descargar informe</button>
+    </div>
+  </div>`;
 
   // Vitals panel
   html += `<div class="panel">
