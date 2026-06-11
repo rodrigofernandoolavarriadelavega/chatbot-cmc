@@ -2086,6 +2086,18 @@ async def _job_horas_vacias_dia_siguiente():
         escribió recientemente) para no bloquearse. Cuando el template esté
         disponible, reemplazar send_whatsapp() por send_whatsapp_template().
     """
+    # Gobernable desde la Sala de Máquinas (flag agregado 2026-06-11; antes
+    # corría sin flag, invisible). Default ON para preservar el comportamiento.
+    import os as _os_hv
+    _env_hv = _os_hv.getenv("HORAS_VACIAS_ACTIVE", "true").lower() in ("true", "1", "yes")
+    try:
+        from alma_switchboard import effective as _sb_eff_hv
+        if not _sb_eff_hv("HORAS_VACIAS_ACTIVE", _env_hv):
+            log.debug("horas_vacias: HORAS_VACIAS_ACTIVE=false — skip")
+            return
+    except Exception:
+        if not _env_hv:
+            return
     from datetime import datetime as _dt, timedelta as _td
     from zoneinfo import ZoneInfo as _ZI
     import asyncio as _asyncio
@@ -2147,6 +2159,22 @@ async def _job_horas_vacias_dia_siguiente():
 
         # Obtener candidatos con opt-in y sin cooldown
         candidatos = get_candidatos_horas_vacias(esp_key, dias=30)
+        # Anti-encimoso (caso Nataly 2026-06-11): si el bot le OFRECIÓ un slot en
+        # las últimas 24h y lo declinó, no mandarle este aviso el mismo día.
+        try:
+            from session import _conn as _conn_hv
+            with _conn_hv() as _c_hv:
+                _recien_ofrecidos = {r[0] for r in _c_hv.execute(
+                    "SELECT DISTINCT phone FROM conversation_events "
+                    "WHERE event='funnel_slot_ofrecido' AND ts >= datetime('now','-1 day')"
+                ).fetchall()}
+            _n_antes = len(candidatos)
+            candidatos = [p for p in candidatos if p not in _recien_ofrecidos]
+            if _n_antes != len(candidatos):
+                log.info("horas_vacias: %s → %d candidatos excluidos (slot ofrecido <24h)",
+                         especialidad_label, _n_antes - len(candidatos))
+        except Exception as _e_hv_excl:
+            log.warning("horas_vacias: filtro slot-reciente falló: %s", _e_hv_excl)
         if not candidatos:
             log.info("horas_vacias: %s → 0 candidatos elegibles", especialidad_label)
             continue

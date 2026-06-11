@@ -115,9 +115,9 @@ def _build_map() -> dict:
     def _envbool(n, d="false"):
         return os.getenv(n, d).lower() in ("true", "1", "yes")
 
-    def _riel(flag, label, descr):
+    def _riel(flag, label, descr, default="false"):
         return {"flag": flag, "label": label, "descr": descr,
-                "value": sb.effective(flag, _envbool(flag)),
+                "value": sb.effective(flag, _envbool(flag, default)),
                 "overridden": is_over(flag)}
 
     rieles = [
@@ -127,6 +127,9 @@ def _build_map() -> dict:
               "Aceptó consent + se atendió de verdad (cita Atendido / pago caja) → promo dental segmentada. 1 por paciente."),
         _riel("ECO_PREP_ACTIVE", "Preparación de ecografía",
               "Cita de eco entra a la ventana de 3 días → instrucciones de preparación (ayuno / vejiga llena)."),
+        _riel("HORAS_VACIAS_ACTIVE", "Aviso de horas liberadas (D+1)",
+              "Diario 14:00: si mañana hay agenda holgada, avisa a quienes preguntaron por esa especialidad sin agendar (30d). Tope 30/día, cooldown 14d, opt-out 'No avisar'.",
+              default="true"),  # mismo default que el job (corría sin flag desde antes)
         # Solo-env (viven en flows/jobs leyendo config al import — no conmutables acá):
         {"flag": "DENTAL_PROMO_FLYER_ACTIVE", "label": "Flyer dental al aceptar consent dental",
          "descr": "Riel del pool dental (consent_dental_v1 → flyer inmediato). Solo por .env.",
@@ -220,7 +223,8 @@ def _toggleable_flags() -> set[str]:
     flags = {"ALMA_AGENTS_ENABLED", "ALMA_AGENTS_EXECUTE", "ALMA_OPERATIVA_ENABLED",
              "AUTOPILOT_ENABLED", "AUTOPILOT_EXECUTE", "AUTOPILOT_AUTOAPPLY",
              # Rieles de mensajería (leen switchboard en runtime → conmutables en vivo)
-             "CONSENT_AGENDADOS_ACTIVE", "PROMO_POSTCONSENT_ACTIVE", "ECO_PREP_ACTIVE"}
+             "CONSENT_AGENDADOS_ACTIVE", "PROMO_POSTCONSENT_ACTIVE", "ECO_PREP_ACTIVE",
+             "HORAS_VACIAS_ACTIVE"}
     try:
         from alma_agents import registry
         flags |= {a.flag for a in registry.all_agents().values()}
