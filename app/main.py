@@ -8595,7 +8595,7 @@ async def webhook(request: Request):
             n = existing.get("nombre", "")
             if not (n.startswith("ig_") or n.startswith("fb_")):
                 return  # ya tenemos un nombre real
-        from config import META_ACCESS_TOKEN, META_PAGE_ACCESS_TOKEN
+        from config import META_ACCESS_TOKEN, META_PAGE_ACCESS_TOKEN, META_MESSENGER_TOKEN
         # Instagram (Instagram Login API): el perfil del usuario se consulta en
         # graph.instagram.com con el token de PÁGINA — el mismo host/token que usa
         # el ENVÍO de IG (send_instagram). Pegarle a graph.facebook.com con el
@@ -8608,9 +8608,11 @@ async def webhook(request: Request):
         else:
             host = "https://graph.facebook.com/v22.0"
             fields = "name,first_name,last_name"
-            tokens = [META_ACCESS_TOKEN]
-            if META_PAGE_ACCESS_TOKEN and META_PAGE_ACCESS_TOKEN != META_ACCESS_TOKEN:
-                tokens.append(META_PAGE_ACCESS_TOKEN)
+            # Messenger: el User Profile API exige el token de Messenger/página
+            # (el MISMO que usa send_messenger). El system-user da #3 "no
+            # capability" y el page-token de IG da "cannot parse" en graph.facebook.
+            tokens = [t for t in (META_MESSENGER_TOKEN, META_ACCESS_TOKEN,
+                                  META_PAGE_ACCESS_TOKEN) if t]
         try:
             import httpx
             async with httpx.AsyncClient(timeout=5) as client:
