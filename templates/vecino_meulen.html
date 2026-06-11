@@ -371,6 +371,80 @@ section + section{margin-top:4px}
   .sn-foot{margin-top:auto; font-size:9.5px; color:var(--dim); font-weight:600; padding:8px 6px; line-height:1.6; font-style:italic}
 }
 
+/* ═══════════ PASADA PREMIUM: profundidad, luz y micro-detalle ═══════════ */
+@keyframes fadeUp{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+body{background:
+  radial-gradient(1000px 420px at 90% -160px, rgba(46,125,70,.09), transparent 70%),
+  radial-gradient(700px 360px at -10% 12%, rgba(255,193,7,.07), transparent 70%),
+  var(--crema)}
+.hero{animation:fadeUp .5s ease both; padding:22px 22px 20px}
+.barrio-hero{animation:fadeUp .5s .06s ease both; border-radius:20px}
+.panel{animation:fadeUp .5s .1s ease both; border-radius:22px; box-shadow:0 6px 24px rgba(27,72,39,.07)}
+.panel-head h2{font-size:15.5px}
+
+/* Hero: más luz y profundidad */
+.hero::after{width:260px; height:260px; right:-40px; bottom:-60px; opacity:.16}
+.hero::before{content:""; position:absolute; left:-70px; bottom:-90px; width:230px; height:230px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,213,79,.28), transparent 65%); pointer-events:none}
+.hero h1{font-size:25px}
+.pedido-card{border-radius:17px; background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.25);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 8px 22px rgba(27,72,39,.2)}
+.hero-chip{backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
+.h-btn.pedir{position:relative; overflow:hidden}
+.h-btn.pedir::after{content:""; position:absolute; inset:0; transform:translateX(-130%); transition:transform .6s;
+  background:linear-gradient(110deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%)}
+.h-btn.pedir:hover::after{transform:translateX(130%)}
+
+/* Ofertas: cards blancas con tile de producto */
+.of-card{background:#fff; border:1px solid var(--border-soft); border-radius:18px; box-shadow:0 4px 14px rgba(27,72,39,.06)}
+.of-card.alt{background:#fff}
+.of-emoji{width:52px; height:52px; border-radius:15px; display:grid; place-items:center; font-size:26px;
+  background:linear-gradient(150deg, var(--verde-soft), #fff); border:1px solid var(--border-soft); box-shadow:0 3px 8px rgba(27,72,39,.08)}
+.of-card.alt .of-emoji{background:linear-gradient(150deg, #FFF3D6, #fff)}
+.of-off{background:linear-gradient(135deg, #ff6f4e, #d8442d); box-shadow:0 3px 8px rgba(216,68,45,.35)}
+.of-name{margin-top:10px}
+.of-now{font-size:17px; color:var(--verde-osc)}
+.of-add{background:linear-gradient(135deg, var(--verde), var(--verde-osc)); box-shadow:0 4px 12px rgba(27,72,39,.25); border-radius:11px; padding:9px}
+.of-add:hover{filter:brightness(1.12)}
+
+/* Para mi gente: avatar con anillo */
+.fam-card{flex-basis:192px; background:#fff; border-radius:16px; box-shadow:0 4px 14px rgba(27,72,39,.06)}
+.fc-ava{width:42px; height:42px; font-size:16px;
+  box-shadow:0 0 0 3px #fff, 0 0 0 4.5px var(--cobre), 0 5px 12px rgba(168,127,75,.35)}
+.fc-btn{background:linear-gradient(135deg, var(--verde), var(--verde-osc)); box-shadow:0 4px 12px rgba(27,72,39,.25)}
+
+/* Lista de siempre */
+.li-emoji{background:linear-gradient(150deg, var(--verde-soft), #fff); box-shadow:0 2px 6px rgba(27,72,39,.06)}
+.li-add{border-radius:50%; background:linear-gradient(135deg, var(--verde), var(--verde-osc)); color:#fff; box-shadow:0 4px 10px rgba(27,72,39,.25)}
+.li-add:hover{filter:brightness(1.12)}
+.li-all{border-radius:13px; background:linear-gradient(135deg, #FFD54F, var(--arena)); color:#5d4506; box-shadow:0 6px 18px rgba(255,193,7,.35)}
+
+/* Pedidos y cuenta */
+.ped-card{background:#fff; border-radius:15px; box-shadow:0 3px 10px rgba(27,72,39,.05); transition:transform .15s}
+.ped-card:hover{transform:translateY(-1px)}
+.ped-estado.curso{background:linear-gradient(135deg, var(--cobre), var(--cobre-2))}
+.cu-box{background:#fff; border-radius:15px; box-shadow:0 3px 10px rgba(27,72,39,.05)}
+.cu-num{font-size:20px}
+
+/* Footer como tarjeta */
+.site-foot{background:#fff; border:1px solid var(--border-soft); border-radius:22px; margin-top:26px;
+  padding:24px 16px 20px; box-shadow:0 6px 24px rgba(27,72,39,.06)}
+
+/* Banda PWA + badges */
+.pwa-band{border-radius:14px; background:linear-gradient(135deg, #E8F5E9, #F3FAF1); box-shadow:0 3px 12px rgba(27,72,39,.07)}
+.tb-badge{background:linear-gradient(135deg, var(--verde-soft), #d8efda)}
+.bnav button.on{box-shadow:0 4px 10px rgba(27,72,39,.12)}
+
+/* Sidebar con acento */
+@media (min-width:861px){
+  .sidenav{background:linear-gradient(180deg, #fff, #FBFDF8)}
+  .sn-logo img{height:48px}
+  .sn-btn{position:relative}
+  .sn-btn.on{box-shadow:0 4px 12px rgba(27,72,39,.1)}
+  .sn-btn.on::before{content:""; position:absolute; left:-13px; top:8px; bottom:8px; width:3.5px; border-radius:3px;
+    background:linear-gradient(180deg, var(--verde), var(--arena))}
+}
+
 /* Toast */
 .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(86px + env(safe-area-inset-bottom));
   background:var(--verde-osc); color:#fff; font-size:11.5px; font-weight:700; padding:10px 16px; border-radius:11px;
