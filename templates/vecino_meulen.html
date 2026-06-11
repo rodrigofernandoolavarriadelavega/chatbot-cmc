@@ -7,7 +7,7 @@
 <link rel="icon" href="/static/meulen/icon-192.png">
 <link rel="manifest" href="/static/pwa/vecino-manifest.webmanifest">
 <link rel="apple-touch-icon" href="/static/meulen/icon-192.png">
-<meta name="theme-color" content="#2F3E34">
+<meta name="theme-color" content="#2E7D46">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -19,11 +19,11 @@
    identidad Meulen: verde bosque / cobre / arena. Mobile-first.
    ════════════════════════════════════════════════════════════════ */
 :root{
-  --verde:#2F3E34; --verde-2:#41584a; --verde-soft:#d4e9d8;
-  --cobre:#B86D3F; --cobre-2:#8B6B4E; --cobre-soft:#f4e6d8;
-  --arena:#D9C7A1; --crema:#F2EFE6; --panel:#fff; --panel-2:#faf8f2;
-  --border:#e4ded0; --border-soft:#ece7da;
-  --text:#2b352e; --mute:#6f7a6f; --dim:#9aa394;
+  --verde:#2E7D46; --verde-osc:#1B4827; --verde-2:#3C9A58; --verde-soft:#E8F5E9;
+  --cobre:#C89B63; --cobre-2:#a87f4b; --cobre-soft:#f6ecdc;
+  --arena:#FFC107; --crema:#FFFCF1; --panel:#fff; --panel-2:#f6faf4;
+  --border:#e0e8dc; --border-soft:#eaf0e6;
+  --text:#23402d; --mute:#5f7361; --dim:#94a795;
   --wa:#25D366; --wa-dark:#128c7e; --rojo:#b3402e; --ambar:#9a6e08;
   --font:'Montserrat',system-ui,sans-serif;
   --radius:14px; --radius-lg:20px;
@@ -59,15 +59,15 @@ a{color:var(--cobre); text-decoration:none; font-weight:700}
   font-size:11.5px; font-weight:600; color:var(--verde); text-align:left; cursor:pointer}
 .pwa-band span{flex:1; line-height:1.45}
 .pwa-band b{font-weight:800}
-.pwa-band .pb-x{flex:none; width:26px; height:26px; border-radius:8px; background:rgba(47,62,52,.1);
+.pwa-band .pb-x{flex:none; width:26px; height:26px; border-radius:8px; background:rgba(27,72,39,.1);
   color:var(--verde); font-size:15px; line-height:1}
 
 /* Hero */
 .hero{position:relative; overflow:hidden; border-radius:var(--radius-lg); padding:20px;
   margin-bottom:14px; color:#fff;
-  background:radial-gradient(500px 260px at 100% -20%, rgba(184,109,63,.4), transparent 62%),
-             linear-gradient(120deg, var(--verde) 0%, #3a4f40 55%, #54705d 100%);
-  box-shadow:0 10px 30px rgba(47,62,52,.3)}
+  background:radial-gradient(500px 260px at 100% -20%, rgba(255,193,7,.28), transparent 62%),
+             linear-gradient(120deg, var(--verde-osc) 0%, var(--verde) 60%, var(--verde-2) 100%);
+  box-shadow:0 10px 30px rgba(27,72,39,.3)}
 .hero::after{content:""; position:absolute; right:-30px; bottom:-46px; width:215px; height:215px;
   background:url('/static/meulen/meulen_isologo_sello_flat.svg') center/contain no-repeat;
   opacity:.14; pointer-events:none; filter:brightness(4)}
@@ -77,7 +77,7 @@ a{color:var(--cobre); text-decoration:none; font-weight:700}
   border-radius:15px; padding:13px 14px; backdrop-filter:blur(4px)}
 .pc-top{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
 .pc-estado{font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
-  background:var(--arena); color:#5d4a22; padding:4px 10px; border-radius:999px}
+  background:var(--arena); color:#5d4506; padding:4px 10px; border-radius:999px}
 .pc-eta{font-size:14.5px; font-weight:800}
 .pc-sub{font-size:11px; font-weight:600; opacity:.8; margin-top:3px}
 .pc-steps{display:flex; align-items:center; gap:0; margin-top:12px}
@@ -86,7 +86,7 @@ a{color:var(--cobre); text-decoration:none; font-weight:700}
 .pc-step:first-child::before{display:none}
 .pc-step.done::before{background:var(--arena)}
 .pc-dot{width:15px; height:15px; border-radius:50%; background:rgba(255,255,255,.3); position:relative; z-index:1}
-.pc-step.done .pc-dot{background:var(--arena); box-shadow:0 0 0 3px rgba(217,199,161,.3)}
+.pc-step.done .pc-dot{background:var(--arena); box-shadow:0 0 0 3px rgba(255,193,7,.3)}
 .pc-step.now .pc-dot{background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.3); animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(255,255,255,.3)}50%{box-shadow:0 0 0 7px rgba(255,255,255,.12)}}
 .pc-step span{font-size:8.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; opacity:.85}
@@ -99,7 +99,7 @@ a{color:var(--cobre); text-decoration:none; font-weight:700}
 .h-btn{flex:1 1 0; min-width:150px; display:inline-flex; align-items:center; justify-content:center; gap:8px;
   padding:14px 16px; border-radius:14px; font-size:13.5px; font-weight:800; letter-spacing:.2px;
   cursor:pointer; transition:transform .15s, box-shadow .15s}
-.h-btn.pedir{background:linear-gradient(135deg, var(--arena), #cdb88c); color:#4a3a18; box-shadow:0 6px 18px rgba(217,199,161,.4)}
+.h-btn.pedir{background:linear-gradient(135deg, #FFD54F, var(--arena)); color:#5d4506; box-shadow:0 6px 18px rgba(255,193,7,.4)}
 .h-btn.wa{background:linear-gradient(135deg, var(--wa), var(--wa-dark)); color:#fff; box-shadow:0 6px 18px rgba(37,211,102,.35)}
 .h-btn:hover{transform:translateY(-1px)}
 .hero-tip{margin-top:10px; font-size:10.5px; opacity:.78; font-weight:600}
@@ -108,22 +108,22 @@ a{color:var(--cobre); text-decoration:none; font-weight:700}
 /* Franja Pedidos del barrio */
 .barrio-hero{display:flex; align-items:center; gap:13px; width:100%; text-align:left; padding:15px 16px;
   margin-bottom:14px; border-radius:16px; cursor:pointer; color:#fff;
-  background:radial-gradient(420px 180px at 100% -40%, rgba(217,199,161,.4), transparent 60%),
-             linear-gradient(115deg, var(--cobre-2), var(--cobre));
-  box-shadow:0 8px 24px rgba(139,107,78,.35); transition:transform .18s, box-shadow .18s}
-.barrio-hero:hover{transform:translateY(-2px); box-shadow:0 12px 30px rgba(139,107,78,.45)}
+  background:radial-gradient(420px 180px at 100% -40%, rgba(255,193,7,.3), transparent 60%),
+             linear-gradient(115deg, var(--verde), var(--verde-2));
+  box-shadow:0 8px 24px rgba(46,125,70,.35); transition:transform .18s, box-shadow .18s}
+.barrio-hero:hover{transform:translateY(-2px); box-shadow:0 12px 30px rgba(46,125,70,.45)}
 .bh-ic{width:52px; height:40px; flex:none; display:grid; place-items:center;
   background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:12px}
 .bh-ic svg{width:38px; height:27px}
 .bh-tx{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
 .bh-t{font-size:14.5px; font-weight:800; letter-spacing:-.2px}
 .bh-s{font-size:10.5px; font-weight:600; opacity:.85; line-height:1.45}
-.bh-go{flex:none; font-size:11.5px; font-weight:800; background:var(--arena); color:#4a3a18;
+.bh-go{flex:none; font-size:11.5px; font-weight:800; background:var(--arena); color:#5d4506;
   padding:9px 14px; border-radius:999px}
 
 /* Paneles */
 .panel{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-lg);
-  padding:15px 16px; margin-bottom:14px; box-shadow:0 3px 14px rgba(47,62,52,.05)}
+  padding:15px 16px; margin-bottom:14px; box-shadow:0 3px 14px rgba(27,72,39,.05)}
 .panel-head{display:flex; align-items:center; gap:9px; margin-bottom:12px}
 .panel-head .dot{width:9px; height:9px; border-radius:50%; background:var(--cobre); box-shadow:0 0 0 4px var(--cobre-soft)}
 .panel-head h2{font-size:14px; font-weight:800; color:var(--verde); letter-spacing:-.2px; flex:1}
@@ -138,7 +138,7 @@ a{color:var(--cobre); text-decoration:none; font-weight:700}
   background:linear-gradient(150deg, var(--verde-soft), #fff); border:1px solid var(--border-soft);
   cursor:pointer; transition:transform .16s, box-shadow .16s}
 .of-card.alt{background:linear-gradient(150deg, var(--cobre-soft), #fff)}
-.of-card:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(47,62,52,.12)}
+.of-card:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(27,72,39,.12)}
 .of-emoji{font-size:30px; line-height:1}
 .of-off{float:right; font-size:10px; font-weight:800; background:var(--rojo); color:#fff; padding:3px 8px; border-radius:8px}
 .of-name{font-size:13px; font-weight:800; color:var(--verde); margin-top:8px}
@@ -198,14 +198,14 @@ a{color:var(--cobre); text-decoration:none; font-weight:700}
 .sf-line{font-size:11.5px; color:var(--mute); font-weight:600; margin-top:7px; line-height:1.6}
 .sf-install{display:inline-flex; align-items:center; gap:7px; margin-top:14px; padding:12px 22px; border-radius:999px;
   background:linear-gradient(135deg, var(--verde-2), var(--verde)); color:#fff; font-size:12.5px; font-weight:800;
-  box-shadow:0 6px 18px rgba(47,62,52,.3); transition:transform .15s}
+  box-shadow:0 6px 18px rgba(27,72,39,.3); transition:transform .15s}
 .sf-install:hover{transform:translateY(-1px)}
 
 /* Nav inferior */
 .bnav{position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; justify-content:space-around;
   padding:7px env(safe-area-inset-right) calc(7px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
   background:rgba(255,255,255,.96); backdrop-filter:blur(10px); border-top:1px solid var(--border);
-  box-shadow:0 -4px 14px rgba(47,62,52,.07)}
+  box-shadow:0 -4px 14px rgba(27,72,39,.07)}
 .bnav button{display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 12px;
   border-radius:10px; font-size:10px; font-weight:700; color:var(--mute)}
 .bnav button.on{background:var(--verde-soft); color:var(--verde)}
@@ -216,11 +216,11 @@ section + section{margin-top:4px}
 
 /* ── Pop-up tarjeta genérico ── */
 .pop{position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center;
-  padding:16px; background:rgba(47,62,52,.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
+  padding:16px; background:rgba(27,72,39,.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
 .pop.show{display:flex}
 @keyframes popIn{from{opacity:0; transform:scale(.92)}to{opacity:1; transform:scale(1)}}
 .pop-card{background:#fff; border-radius:20px; width:min(94vw, 500px); max-height:92vh; overflow:auto;
-  box-shadow:0 22px 60px rgba(47,62,52,.45); animation:popIn .22s ease both}
+  box-shadow:0 22px 60px rgba(27,72,39,.45); animation:popIn .22s ease both}
 .pop-head{position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:10px;
   padding:13px 15px; font-size:13.5px; font-weight:800; color:var(--verde); background:#fff; border-bottom:1px solid var(--border-soft)}
 .pop-x{width:30px; height:30px; border-radius:9px; background:var(--panel-2); font-size:18px; line-height:1; color:var(--verde)}
@@ -263,7 +263,7 @@ section + section{margin-top:4px}
 
 /* ── Árbol del barrio (pop-up con zoom) ── */
 .gen-card2{background:#fff; border-radius:20px; width:min(96vw, 700px); max-height:92vh; overflow:auto;
-  padding:17px 15px; box-shadow:0 22px 60px rgba(47,62,52,.45); animation:popIn .22s ease both}
+  padding:17px 15px; box-shadow:0 22px 60px rgba(27,72,39,.45); animation:popIn .22s ease both}
 .gh{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:5px}
 .gh h3{font-size:14.5px; font-weight:800; color:var(--verde)}
 .gh p{font-size:10px; font-weight:700; color:var(--mute); margin-top:2px}
@@ -273,9 +273,9 @@ section + section{margin-top:4px}
 .gleg i{display:inline-block; width:11px; height:11px; border-radius:4px; border:1.6px solid var(--cobre); background:#fff}
 .gleg .lg-ring{border-radius:50%; border:2px solid #1d8a50}
 .gleg .lg-dash{border:none; border-top:2px dashed #b3a78e; width:16px; height:0; margin-top:5px}
-.btip{position:absolute; width:200px; background:var(--verde); color:#fff; border-radius:12px; padding:10px 12px;
+.btip{position:absolute; width:200px; background:var(--verde-osc); color:#fff; border-radius:12px; padding:10px 12px;
   font-size:10px; opacity:0; pointer-events:none; transition:opacity .15s, transform .15s; z-index:5;
-  transform:translateY(-96%); box-shadow:0 10px 26px rgba(47,62,52,.45)}
+  transform:translateY(-96%); box-shadow:0 10px 26px rgba(27,72,39,.45)}
 .btip.show{opacity:1; transform:translateY(-100%)}
 .btip.below{transform:translateY(4%)}
 .btip.below.show{transform:translateY(0)}
@@ -342,7 +342,7 @@ section + section{margin-top:4px}
 /* Mapa Seguir pedido */
 .trk-info{padding:12px 15px 4px; font-size:12px; font-weight:600; color:var(--mute); line-height:1.5}
 .trk-info b{color:var(--verde)}
-.trk-map{margin:10px 15px 0; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow:inset 0 0 0 1px rgba(47,62,52,.04)}
+.trk-map{margin:10px 15px 0; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow:inset 0 0 0 1px rgba(27,72,39,.04)}
 .trk-note{padding:11px 15px 15px; font-size:10px; color:var(--ambar); font-weight:700; line-height:1.55}
 
 /* Sidebar desktop (paridad con el portal CMC) */
@@ -369,7 +369,7 @@ section + section{margin-top:4px}
 
 /* Toast */
 .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(86px + env(safe-area-inset-bottom));
-  background:var(--verde); color:#fff; font-size:11.5px; font-weight:700; padding:10px 16px; border-radius:11px;
+  background:var(--verde-osc); color:#fff; font-size:11.5px; font-weight:700; padding:10px 16px; border-radius:11px;
   opacity:0; pointer-events:none; transition:opacity .25s; z-index:400; max-width:90vw; text-align:center}
 .toast.show{opacity:1}
 @media (min-width:760px){ body{font-size:13.5px} .wrap{padding-top:18px} }
@@ -574,9 +574,9 @@ section + section{margin-top:4px}
         </g>
         <path id="trk-ruta" d="M52 190 L52 112 L170 112 L170 52 L300 52" fill="none" stroke="#B86D3F" stroke-width="4.5" stroke-dasharray="9 8" stroke-linecap="round" opacity=".9"/>
         <g>
-          <circle cx="52" cy="190" r="13" fill="#2F3E34"/>
+          <circle cx="52" cy="190" r="13" fill="#1B4827"/>
           <text x="52" y="195" text-anchor="middle" font-size="13">🏪</text>
-          <text x="52" y="216" text-anchor="middle" font-size="9" font-weight="800" fill="#2F3E34">MEULEN</text>
+          <text x="52" y="216" text-anchor="middle" font-size="9" font-weight="800" fill="#1B4827">MEULEN</text>
         </g>
         <g>
           <circle cx="300" cy="52" r="13" fill="#B86D3F"/>
@@ -584,7 +584,7 @@ section + section{margin-top:4px}
           <text x="300" y="32" text-anchor="middle" font-size="9" font-weight="800" fill="#8B6B4E">SU CASA</text>
         </g>
         <g>
-          <circle r="12" fill="#fff" stroke="#2F3E34" stroke-width="2.4"/>
+          <circle r="12" fill="#fff" stroke="#1B4827" stroke-width="2.4"/>
           <text y="4.5" text-anchor="middle" font-size="12">🛵</text>
           <animateMotion dur="10s" repeatCount="indefinite" path="M52 190 L52 112 L170 112 L170 52 L300 52"/>
         </g>
