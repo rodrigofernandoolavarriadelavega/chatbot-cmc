@@ -910,14 +910,14 @@ a{color:inherit; text-decoration:none}
 .gen-back{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; color:var(--cmc-blue); background:var(--cmc-aqua-soft); border:0; border-radius:9px; padding:8px 12px; margin:0 0 8px; cursor:pointer; font-family:var(--font)}
 .gen-para{font-size:10.5px; font-weight:700; color:var(--text-mute); margin-left:8px}
 .gen-para b{color:var(--cmc-navy)}
-/* Pop-up del pop-up: tarjeta chica flotando sobre el árbol (que queda visible detrás) */
-.gen-ag-ov{position:fixed; inset:0; z-index:340; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,63,104,.3); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
-.gen-ag-ov.show{display:flex}
+/* Agendita anclada al nodo: pop-up del pop-up, el árbol queda visible alrededor */
 @keyframes popIn{from{opacity:0; transform:scale(.9)}to{opacity:1; transform:scale(1)}}
-.gen-ag-card{background:#fff; border-radius:18px; width:min(86vw, 460px); overflow:hidden; box-shadow:0 24px 64px rgba(15,63,104,.5); animation:popIn .22s var(--ease) both}
-.gen-ag-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 14px; font-size:12.5px; font-weight:700; color:var(--cmc-navy); border-bottom:1px solid var(--border-soft)}
+.gen-ag-pop{position:absolute; z-index:7; background:#fff; border-radius:16px; border:1px solid var(--border); overflow:hidden; display:none; box-shadow:0 18px 48px rgba(15,63,104,.42); animation:popIn .2s var(--ease) both; transform-origin:top center}
+.gen-ag-pop.show{display:block}
+.gen-ag-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px; font-size:11.5px; font-weight:700; color:var(--cmc-navy); border-bottom:1px solid var(--border-soft); background:#fff}
 .gen-ag-head b{font-weight:800}
-.gen-ag-frame{display:block; width:100%; height:min(58vh, 500px); border:0; background:var(--bg)}
+.gen-x.sm{width:26px; height:26px; font-size:15px; border-radius:8px}
+.gen-ag-frame{display:block; width:100%; height:400px; border:0; background:var(--bg)}
 .gen-tip .gt-name{font-weight:800; font-size:11px; margin-bottom:3px}
 .gen-tip .gt-row{font-weight:600; line-height:1.5}
 .gen-tip .gt-row.ok{color:#9fe8d8}
@@ -2005,29 +2005,34 @@ function _genHover() {
   });
   // Tocar fuera de un nodo o de la tarjeta: cerrar la tarjeta (y seguir mirando el árbol)
   wrap.addEventListener('click', e => {
-    if (e.target.closest('g[data-rut]') || e.target.closest('.gen-tip')) return;
-    _genPin = null; tip.classList.remove('show');
+    if (e.target.closest('g[data-rut]') || e.target.closest('.gen-tip') || e.target.closest('.gen-ag-pop')) return;
+    _genPin = null; tip.classList.remove('show'); _genCerrarAgenda();
   });
 }
 let _genPin = null;
 function genTap(rut) { _genPin = rut; _genShowTip(rut, true); }   // 1er toque: tarjeta con acciones (clave en celular)
 function _genAbrir(rut) { _genPin = null; closeGenograma(); famTap(rut, false); }
 function _genAgendarP(rut) {
-  // Agenda como pop-up FLOTANTE sobre el árbol: el árbol queda visible detrás
+  // Pop-up del pop-up: agendita compacta ANCLADA junto a la persona, árbol visible alrededor
   _genPin = null;
   const tip = document.getElementById('gen-tip'); if (tip) tip.classList.remove('show');
+  const wrap = document.getElementById('gen-svg');
+  const g = wrap ? [...wrap.querySelectorAll('g[data-rut]')].find(x => x.dataset.rut === rut) : null;
   const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
   const first = m ? (m.nombre || '').split(' ')[0] : '';
+  if (!wrap) return;
   let ov = document.getElementById('gen-ag');
-  if (!ov) {
-    ov = document.createElement('div'); ov.id = 'gen-ag'; ov.className = 'gen-ag-ov';
-    ov.onclick = e => { if (e.target === ov) _genCerrarAgenda(); };
-    document.body.appendChild(ov);
-  }
-  ov.innerHTML = `<div class="gen-ag-card">
-    <div class="gen-ag-head"><span>📅 Agendando para <b>${first}</b></span><button class="gen-x" onclick="_genCerrarAgenda()">×</button></div>
-    <iframe class="gen-ag-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>
-  </div>`;
+  if (!ov) { ov = document.createElement('div'); ov.id = 'gen-ag'; ov.className = 'gen-ag-pop'; wrap.appendChild(ov); }
+  ov.innerHTML = `<div class="gen-ag-head"><span>📅 Hora para <b>${first}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
+    <iframe class="gen-ag-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`;
+  const wr = wrap.getBoundingClientRect(), gr = g ? g.getBoundingClientRect() : wr;
+  const W = Math.min(330, wr.width - 16), H = 442;
+  ov.style.width = W + 'px';
+  ov.style.left = Math.max(8, Math.min(wr.width - W - 8, gr.left - wr.left + gr.width / 2 - W / 2)) + 'px';
+  const nodeTop = gr.top - wr.top;
+  let top = nodeTop < wr.height * 0.5 ? (gr.bottom - wr.top + 8) : (nodeTop - H - 10);
+  top = Math.max(4, Math.min(top, Math.max(4, wr.height - H - 4)));
+  ov.style.top = top + 'px';
   ov.classList.add('show');
   const demo = (patientData && patientData.demo) ? '&demo=1' : '';
   document.getElementById('gen-ag-frame').src = '/agendar/portal?embed=1&rut=' + encodeURIComponent(rut) + demo;
