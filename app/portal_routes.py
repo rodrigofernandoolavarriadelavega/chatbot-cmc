@@ -103,6 +103,8 @@ DEMO_FAMILY = {
                    "sexo": "M", "fnac": "1981-01-20", "rut_fmt": "50.000.002-3"},
     "50000003-1": {"nombre": "Rosa Ejemplo Demo", "relation": "madre/padre",
                    "sexo": "F", "fnac": "1958-04-02", "rut_fmt": "50.000.003-1"},
+    "50000004-K": {"nombre": "Carmen Ejemplo Demo", "relation": "vecina",
+                   "sexo": "F", "fnac": "1952-09-18", "rut_fmt": "50.000.004-K"},
 }
 
 
@@ -149,6 +151,14 @@ def _demo_member_data(rut: str) -> dict:
                 aten(821, "Luis Armijo", "Kinesiología", 120, "17:20"),
                 aten(822, "Dr. Claudio Barraza", "Traumatología", 150, "12:20"),
                 aten(823, "Dr. Rodrigo Olavarría", "Medicina General", 400, "10:15"),
+            ],
+            "diagnosticos": ["HTA"],
+        },
+        "50000004-K": {  # Carmen, 74 años — vecina sin citas (le gestionan las horas)
+            "citas_futuras": [],
+            "historial": [
+                aten(841, "Dr. Andrés Abarca", "Medicina General", 60, "10:30"),
+                aten(842, "David Pardo", "Ecografía", 270, "12:45"),
             ],
             "diagnosticos": ["HTA"],
         },
