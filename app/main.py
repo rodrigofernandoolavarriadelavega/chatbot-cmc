@@ -232,6 +232,18 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
         misfire_grace_time=600,
     )
+    # Preparación pre-examen eco: barrido horario de citas de David Pardo en
+    # ventana hoy..+2 días → template UTILITY con la preparación por tipo.
+    # HORARIO al :11 (minuto libre del escalonado 429); el job se auto-limita
+    # a 08-21 CLT. Gated ECO_PREP_ACTIVE (default OFF) + template APPROVED.
+    from eco_prep import job_eco_prep as _job_eco_prep
+    scheduler.add_job(
+        _job_eco_prep,
+        CronTrigger(minute=11, timezone=_CLT),
+        id="eco_prep_horario",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
     # Autopilot marketing (Fase 1, dry-run diario 08:30 CLT).
     # Inerte salvo AUTOPILOT_ENABLED=true. NO ejecuta cambios en Meta (solo reporta).
     async def _job_autopilot_dryrun():
@@ -906,6 +918,7 @@ import liquidaciones_routes; app.include_router(liquidaciones_routes.router)
 import tablero_routes; app.include_router(tablero_routes.router)
 import patient_source_routes; app.include_router(patient_source_routes.router)  # Canal declarado ("¿cómo nos conoció?")
 import promo_postconsent; app.include_router(promo_postconsent.router)  # Riel consent aceptado → promo dental diferida (gated OFF)
+import eco_prep; app.include_router(eco_prep.router)  # Preparación pre-examen eco (gated OFF, template pendiente Meta)
 import grafo_routes; grafo_routes.register_grafo_routes(app)  # Cerebro Alma (grafo del organismo)
 
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
