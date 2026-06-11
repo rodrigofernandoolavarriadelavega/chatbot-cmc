@@ -867,6 +867,17 @@ a{color:inherit; text-decoration:none}
 .fam-sug .fs-s{font-size:10.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
 .fam-sug .fs-go{flex:none; font-size:11px; font-weight:800; color:var(--cmc-blue); white-space:nowrap}
 
+/* Genograma familiar (pop-up) */
+.gen-btn{margin-left:auto; font-size:10px; font-weight:800; color:var(--cmc-blue); border:1.2px solid var(--cmc-blue); border-radius:8px; padding:4px 9px; background:#fff; cursor:pointer; transition:.15s}
+.gen-btn:hover{background:var(--cmc-aqua-soft)}
+.gen-backdrop{position:fixed; inset:0; background:rgba(15,63,104,.45); z-index:300; display:none; align-items:center; justify-content:center; padding:18px; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
+.gen-backdrop.show{display:flex}
+.gen-card{background:#fff; border-radius:18px; max-width:440px; width:100%; padding:16px 14px; box-shadow:0 18px 50px rgba(15,63,104,.3); animation:fadeInUp .25s var(--ease) both}
+.gen-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px}
+.gen-head h3{font-size:14px; font-weight:800; color:var(--cmc-navy)}
+.gen-x{width:30px; height:30px; border-radius:9px; background:var(--panel-2); font-size:18px; line-height:1; color:var(--cmc-navy); cursor:pointer; border:0}
+.gen-leg{font-size:9.5px; color:var(--text-mute); font-weight:600; margin-top:4px; text-align:center; line-height:1.5}
+
 /* Nuestro equipo */
 .gl-team{font-size:9.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); margin:12px 0 7px}
 .gl-team:first-child{margin-top:0}
@@ -1816,7 +1827,7 @@ async function renderFamilyStrip() {
     if (!mem.length) return;
     const activo = _normRut((patientData && patientData.rut) || '');
     let h = `<div class="panel">
-      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia</h2><span class="count">${mem.length}</span></div>
+      <div class="panel-head"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Mi familia</h2><span class="count">${mem.length}</span>${mem.length > 1 ? '<button class="gen-btn" onclick="openGenograma()">🌳 Genograma</button>' : ''}</div>
       <div class="fam-track">`;
     for (const m of mem) {
       const first = (m.nombre || '').split(' ')[0] || '—';
@@ -1863,6 +1874,100 @@ async function renderFamilyStrip() {
     slot.innerHTML = h;
   } catch (e) { /* fail-safe: sin strip */ }
 }
+/* ═══ Genograma familiar (pop-up SVG, notación clásica) ═══ */
+function openGenograma() {
+  if (!_famOverview || (_famOverview.members || []).length < 2) return;
+  let bd = document.getElementById('gen-backdrop');
+  if (!bd) {
+    bd = document.createElement('div');
+    bd.id = 'gen-backdrop'; bd.className = 'gen-backdrop';
+    bd.onclick = e => { if (e.target === bd) closeGenograma(); };
+    bd.innerHTML = `<div class="gen-card">
+      <div class="gen-head"><h3>🌳 Genograma familiar</h3><button class="gen-x" onclick="closeGenograma()">×</button></div>
+      <div id="gen-svg"></div>
+      <div class="gen-leg">■ hombre · ● mujer · relleno aqua = perfil que estás viendo · toca a alguien para ver su salud</div>
+    </div>`;
+    document.body.appendChild(bd);
+  }
+  document.getElementById('gen-svg').innerHTML = buildGenSVG(_famOverview.members);
+  bd.classList.add('show');
+}
+function closeGenograma() { const b = document.getElementById('gen-backdrop'); if (b) b.classList.remove('show'); }
+async function genTap(rut) { closeGenograma(); await famTap(rut, false); }
+function buildGenSVG(mem) {
+  const act = _normRut((patientData && patientData.rut) || '');
+  const cls = m => {
+    const r = (m.relation || '').toLowerCase();
+    if (/madre|padre|abuel/.test(r)) return 'p';
+    if (/c[oó]nyuge|espos|pareja/.test(r)) return 'c';
+    if (/hij|niet/.test(r)) return 'h';
+    if (r === 'titular') return 't';
+    return 'o';
+  };
+  const padres = mem.filter(m => cls(m) === 'p');
+  const tit = mem.find(m => cls(m) === 't');
+  const pareja = mem.filter(m => cls(m) === 'c');
+  const otros = mem.filter(m => cls(m) === 'o');
+  const hijos = mem.filter(m => cls(m) === 'h');
+  const rows = [];
+  if (padres.length) rows.push(padres);
+  rows.push([tit, ...pareja, ...otros].filter(Boolean));
+  if (hijos.length) rows.push(hijos);
+  const W = 360, H = 100 * rows.length + 26;
+  const pos = new Map();
+  rows.forEach((row, ri) => {
+    const y = 56 + ri * 100;
+    row.forEach((m, i) => pos.set(m.rut, { x: W / (row.length + 1) * (i + 1), y }));
+  });
+  const L = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9fb4c4" stroke-width="1.4"/>`;
+  let svg = '';
+  // Padres: línea entre ellos + bajada al titular
+  if (padres.length && tit) {
+    const ps = padres.map(p => pos.get(p.rut)); const t = pos.get(tit.rut);
+    let midX = ps[0].x; const midY = ps[0].y;
+    if (ps.length > 1) { svg += L(ps[0].x + 20, midY, ps[1].x - 20, midY); midX = (ps[0].x + ps[1].x) / 2; }
+    svg += L(midX, midY + 20, midX, midY + 42) + L(midX, midY + 42, t.x, midY + 42) + L(t.x, midY + 42, t.x, t.y - 20);
+  }
+  // Unión titular—cónyuge y bajada a los hijos
+  let uX = null, uY = null;
+  if (tit) {
+    const t = pos.get(tit.rut);
+    if (pareja.length) {
+      const c = pos.get(pareja[0].rut);
+      svg += L(t.x, t.y + 20, t.x, t.y + 40) + L(c.x, c.y + 20, c.x, c.y + 40) + L(t.x, t.y + 40, c.x, c.y + 40);
+      uX = (t.x + c.x) / 2; uY = t.y + 40;
+    } else { uX = t.x; uY = t.y + 20; }
+  }
+  if (hijos.length && uX != null) {
+    const hs = hijos.map(h => pos.get(h.rut));
+    const yK = hs[0].y - 32;
+    svg += L(uX, uY, uX, yK);
+    if (hs.length > 1) svg += L(hs[0].x, yK, hs[hs.length - 1].x, yK);
+    for (const h of hs) svg += L(h.x, yK, h.x, h.y - 20);
+  }
+  // Nodos: cuadrado=hombre, círculo=mujer; activo relleno aqua
+  for (const m of mem) {
+    const p = pos.get(m.rut); if (!p) continue;
+    const esM = (m.sexo || '').toUpperCase().startsWith('M');
+    const esAct = _normRut(m.rut) === act;
+    const fill = esAct ? '#4FBECE' : '#fff';
+    const shape = esM
+      ? `<rect x="${p.x - 16}" y="${p.y - 16}" width="32" height="32" rx="6" fill="${fill}" stroke="#1172AB" stroke-width="2"/>`
+      : `<circle cx="${p.x}" cy="${p.y}" r="17" fill="${fill}" stroke="#1172AB" stroke-width="2"/>`;
+    const first = (m.nombre || '').split(' ')[0];
+    const dx = (m.dx || []).slice(0, 2).join(' · ');
+    svg += `<g onclick="genTap('${m.rut}')" style="cursor:pointer">
+      ${shape}
+      <text x="${p.x}" y="${p.y + 4.5}" text-anchor="middle" font-size="13" font-weight="800" fill="#0F3F68">${(first[0] || '?').toUpperCase()}</text>
+      <text x="${p.x}" y="${p.y + 32}" text-anchor="middle" font-size="10" font-weight="800" fill="#26343f">${first}${m.edad != null ? ' (' + m.edad + ')' : ''}</text>
+      <text x="${p.x}" y="${p.y + 43}" text-anchor="middle" font-size="8" font-weight="700" fill="#8a99a6">${m.relation === 'titular' ? 'titular' : (m.relation || '')}</text>
+      ${dx ? `<text x="${p.x}" y="${p.y + 54}" text-anchor="middle" font-size="7.6" font-weight="800" fill="#b58105">${dx}</text>` : ''}
+      ${esAct ? `<text x="${p.x}" y="${p.y - 23}" text-anchor="middle" font-size="7.6" font-weight="800" fill="#128c7e">VIENDO</text>` : ''}
+    </g>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="font-family:var(--font)">${svg}</svg>`;
+}
+
 async function famTap(rut, quiereAgendar) {
   const esActivo = _normRut(rut) === _normRut((patientData && patientData.rut) || '');
   if (!esActivo) await switchPatient(rut);

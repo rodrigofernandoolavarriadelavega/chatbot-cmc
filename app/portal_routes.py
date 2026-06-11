@@ -622,11 +622,13 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
         d0 = _demo_data()
         members.append({"rut": DEMO_RUT, "nombre": d0["nombre"], "relation": "titular",
                         "sexo": d0["sexo"], "edad": _age_years(d0["fecha_nacimiento"]),
+                        "dx": d0.get("diagnosticos") or [],
                         "proxima": d0["citas_futuras"][0] if d0["citas_futuras"] else None})
         for fr, meta in DEMO_FAMILY.items():
             dm = _demo_member_data(fr)
             members.append({"rut": fr, "nombre": meta["nombre"], "relation": meta["relation"],
                             "sexo": meta["sexo"], "edad": _age_years(meta["fnac"]),
+                            "dx": dm.get("diagnosticos") or [],
                             "proxima": dm["citas_futuras"][0] if dm["citas_futuras"] else None})
         return {"ok": True, "demo": True, "members": members}
 
@@ -649,6 +651,11 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
             citas = await listar_citas_paciente(pac["id"], rut=pac.get("rut") or "")
             out = {**m, "nombre": pac.get("nombre") or m["nombre"], "proxima": None,
                    "sexo": pac.get("sexo") or "", "edad": _age_years(pac.get("fecha_nacimiento") or "")}
+            try:
+                _ph = get_phone_by_rut(m["rut"])
+                out["dx"] = get_dx_tags(_ph) if _ph else []
+            except Exception:
+                out["dx"] = []
             if citas:
                 prox = citas[0]
                 out["proxima"] = {"especialidad": prox.get("especialidad", ""),
