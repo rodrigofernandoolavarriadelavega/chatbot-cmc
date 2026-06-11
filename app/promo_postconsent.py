@@ -1,15 +1,25 @@
 """Promo post-consent — riel: paciente acepta consent_marketing → (delay) → promo dental.
 
-Cadena completa (idea del dueño 2026-06-10):
+Cadena completa (idea del dueño 2026-06-10, refinada el mismo día):
   1. Paciente agenda por recepción → barrido consent_agendados le manda el utility.
   2. Paciente responde "Sí, acepto" → queda accepted en bi.marketing_consent.
-  3. ESTE módulo, al día siguiente (delay configurable), le manda la promo dental
-     (flyer MARKETING aprobado) — SOLO si no es ya paciente dental.
+  3. Paciente SE ATIENDE de verdad (señal: pago en caja Medilink — no la hora de
+     la cita, porque médicos y pacientes llegan tarde) → en la siguiente corrida
+     horaria le llega la promo dental (flyer MARKETING aprobado) — SOLO si no es
+     ya paciente dental.
+
+El gatillo es la ATENCIÓN REALIZADA, no un delay ciego: "gracias por venir" con
+promo minutos/1h después de salir del box se siente atención, no spam. Señal de
+atendido = pago en caja (Medilink no tiene estado no-show/atendido confiable):
+  - HOY: /pagos de Medilink en vivo (bi_pagos_caja local solo se sincroniza de
+    madrugada → sería tarde).
+  - Días previos (catch-up fin de semana, caídas): bi_pagos_caja local desde la
+    fecha de aceptación del consent.
 
 Diferencias con el auto-trigger dental de flows.py (consent_dental_v1 → flyer
-inmediato): acá el pool es el consent de marketing GENERAL, el envío es diferido
-(no se siente trampa "acepto → ad instantáneo") y va segmentado (quien ya se
-atiende en dental no recibe promo de limpieza: ya viene).
+inmediato): acá el pool es el consent de marketing GENERAL, el gatillo es la
+atención realizada y va segmentado (quien ya se atiende en dental no recibe
+promo de limpieza: ya viene).
 
 Guardrails:
   - Gated PROMO_POSTCONSENT_ACTIVE (default false) + override en vivo vía
@@ -59,7 +69,11 @@ def _active() -> bool:
 def _cfg():
     return {
         "cap": int(os.getenv("PROMO_POSTCONSENT_CAP", "15")),
-        "delay_hours": int(os.getenv("PROMO_POSTCONSENT_DELAY_HOURS", "18")),
+        # Ventana de silencio CORTA (2h): el recordatorio 2h-antes → atención →
+        # pago → promo es una cadencia natural; solo evitamos apilar dos
+        # mensajes casi simultáneos. El que quede en silencio se desliza a la
+        # corrida siguiente (el dedupe solo marca al ENVIAR, no se pierde).
+        "quiet_hours": int(os.getenv("PROMO_POSTCONSENT_QUIET_HOURS", "2")),
         # Solo aceptados desde esta fecha entran al riel (no blastear histórico).
         "since": os.getenv("PROMO_POSTCONSENT_SINCE", "2026-06-10"),
     }
@@ -106,18 +120,22 @@ def _registrar_envio(phone: str, template: str, segment: str) -> None:
 
 # ── candidatos ───────────────────────────────────────────────────────────────
 
-def _candidatos_bi(cfg: dict) -> list[str]:
-    """Teléfonos accepted en bi.marketing_consent que entran al riel, ya
-    excluyendo (en un solo query, set-based): opt-outs, pool dental propio y
-    pacientes con atención dental reciente (180d)."""
+def _candidatos_bi(cfg: dict) -> list[dict]:
+    """Aceptados en bi.marketing_consent que entran al riel, ya excluyendo
+    (en un solo query, set-based): opt-outs, pool dental propio y pacientes
+    con atención dental reciente (180d). Trae además sus paciente_id de BI
+    (match por últimos 9 dígitos) para cruzar contra pagos en caja."""
     from winback import bi_conn
 
     sql = """
-        SELECT mc.phone
+        SELECT mc.phone,
+               mc.response_at::date::text AS acepto_fecha,
+               ARRAY(SELECT dp2.paciente_id FROM bi.dim_paciente dp2
+                     WHERE RIGHT(regexp_replace(dp2.telefono, '[^0-9]', '', 'g'), 9)
+                         = RIGHT(regexp_replace(mc.phone, '[^0-9]', '', 'g'), 9)) AS pids
         FROM bi.marketing_consent mc
         WHERE mc.status = 'accepted'
           AND mc.response_at >= %s::timestamp
-          AND mc.response_at <= NOW() - (%s || ' hours')::interval
           AND NOT EXISTS (
               SELECT 1 FROM bi.opt_outs_marketing oo
               WHERE RIGHT(regexp_replace(oo.phone, '[^0-9]', '', 'g'), 9)
@@ -139,14 +157,57 @@ def _candidatos_bi(cfg: dict) -> list[str]:
     """
     with bi_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (cfg["since"], str(cfg["delay_hours"]), list(_DENTAL_ESP_IDS)))
-            return [r[0] for r in cur.fetchall() if r[0]]
+            cur.execute(sql, (cfg["since"], list(_DENTAL_ESP_IDS)))
+            return [{"phone": r[0], "acepto_fecha": r[1], "pids": list(r[2] or [])}
+                    for r in cur.fetchall() if r[0]]
+
+
+# ── señal "se atendió de verdad" (pago en caja) ──────────────────────────────
+
+async def _pagos_hoy_pids() -> set:
+    """id_paciente con pago en caja HOY, directo de Medilink /pagos (en vivo).
+    bi_pagos_caja local se sincroniza de madrugada → para HOY hay que ir al API."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from bi_sync import _fetch_pagos_dia
+    from medilink import _get_shared_client
+
+    fecha = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d")
+    pids: set = set()
+    cli = _get_shared_client()
+    async for page in _fetch_pagos_dia(cli, fecha):
+        for p in page:
+            pid = p.get("id_paciente")
+            if pid:
+                pids.add(int(pid))
+    return pids
+
+
+def _pago_local_desde(pids: list, desde_fecha: str) -> bool:
+    """¿Alguno de estos paciente_id tiene pago en bi_pagos_caja desde la fecha
+    de aceptación? Catch-up para atenciones de días previos (la tabla local se
+    refresca cada madrugada)."""
+    if not pids:
+        return False
+    from session import _conn
+    qmarks = ",".join("?" * len(pids))
+    try:
+        with _conn() as c:
+            row = c.execute(
+                f"SELECT 1 FROM bi_pagos_caja WHERE id_paciente IN ({qmarks}) "
+                f"AND fecha >= ? LIMIT 1",
+                (*[int(p) for p in pids], desde_fecha)).fetchone()
+        return row is not None
+    except Exception as e:
+        log.debug("promo_postconsent pago_local: %s", e)
+        return False
 
 
 # ── job principal ────────────────────────────────────────────────────────────
 
 async def job_promo_postconsent(dry_run: bool = False) -> dict:
-    """Corrida diaria (L-V mediodía). dry_run=True → solo lista candidatos."""
+    """Corrida HORARIA (L-V 09-21): manda la promo a quien aceptó el consent y
+    ya SE ATENDIÓ (pago en caja). dry_run=True → solo lista candidatos."""
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
@@ -155,7 +216,7 @@ async def job_promo_postconsent(dry_run: bool = False) -> dict:
         return {"status": "inactive"}
 
     now_cl = datetime.now(ZoneInfo("America/Santiago"))
-    if not dry_run and (now_cl.weekday() >= 5 or not (9 <= now_cl.hour < 20)):
+    if not dry_run and (now_cl.weekday() >= 5 or not (9 <= now_cl.hour < 21)):
         return {"status": "fuera_horario"}
 
     cfg = _cfg()
@@ -172,16 +233,48 @@ async def job_promo_postconsent(dry_run: bool = False) -> dict:
 
         crudos = _candidatos_bi(cfg)
         enviados_antes = _ya_enviados(template)
+
+        # Señal de atención realizada: pagos de HOY en vivo (una sola llamada
+        # al API para toda la corrida) + catch-up local por candidato.
+        try:
+            pagos_hoy = await _pagos_hoy_pids() if crudos else set()
+        except Exception as e_ph:
+            log.warning("promo_postconsent: /pagos en vivo falló (%s) — solo catch-up local", e_ph)
+            pagos_hoy = set()
+
         candidatos: list[str] = []
         seen: set[str] = set()
-        for tel in crudos:
-            teln = normalize_wa_id(tel)
+        pospuestos_quiet = 0
+        esperando_atencion = 0
+        from session import db as _db
+        for cand in crudos:
+            teln = normalize_wa_id(cand["phone"])
             if not teln or len(teln) < 11 or teln in seen:
                 continue
             if teln in enviados_antes:
                 continue  # 1 promo por teléfono+template, para siempre
             if phone_in_opt_out(teln):
                 continue  # cinturón extra al SQL
+            # GATILLO: ¿se atendió de verdad? (pago hoy en vivo, o pago local
+            # desde que aceptó). Si aún no → queda esperando, sin vencer nunca.
+            pids = cand.get("pids") or []
+            atendido = bool(set(int(p) for p in pids) & pagos_hoy) \
+                or _pago_local_desde(pids, cand.get("acepto_fecha") or cfg["since"])
+            if not atendido:
+                esperando_atencion += 1
+                continue
+            # Ventana de silencio corta: no apilar dos mensajes casi juntos.
+            try:
+                with _db() as s:
+                    reciente = s.execute(
+                        "SELECT 1 FROM messages WHERE phone = ? AND direction = 'out' "
+                        "AND ts >= datetime('now', ?) LIMIT 1",
+                        (teln, f"-{cfg['quiet_hours']} hours")).fetchone()
+                if reciente:
+                    pospuestos_quiet += 1
+                    continue
+            except Exception as e_q:
+                log.debug("promo_postconsent quiet check ...%s: %s", teln[-4:], e_q)
             seen.add(teln)
             candidatos.append(teln)
             if len(candidatos) >= cfg["cap"]:
@@ -193,6 +286,9 @@ async def job_promo_postconsent(dry_run: bool = False) -> dict:
                 "muestra": [t[:5] + "***" + t[-2:] for t in candidatos[:25]],
                 "pool_bruto_bi": len(crudos),
                 "ya_enviados": len(enviados_antes),
+                "esperando_atencion": esperando_atencion,
+                "pospuestos_por_silencio": pospuestos_quiet,
+                "pagos_hoy_detectados": len(pagos_hoy),
                 "template": template,
                 "config": cfg,
                 "active": _active(),

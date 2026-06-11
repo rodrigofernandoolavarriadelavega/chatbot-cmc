@@ -219,14 +219,16 @@ async def lifespan(app: FastAPI):
         id="consent_agendados_horario",
         replace_existing=True,
     )
-    # Promo post-consent: riel consent_marketing aceptado → (delay 18h) → promo
-    # dental segmentada. Diario L-V 12:41 CLT (minuto libre del escalonado 429).
-    # Gated PROMO_POSTCONSENT_ACTIVE (default OFF) + override switchboard.
+    # Promo post-consent: consent_marketing aceptado + ATENCIÓN REALIZADA (pago
+    # en caja, /pagos Medilink en vivo) → promo dental segmentada en la corrida
+    # siguiente. HORARIO al :48 L-V (minuto libre del escalonado 429); el job
+    # se auto-limita a 09-21 CLT. Gated PROMO_POSTCONSENT_ACTIVE (default OFF)
+    # + override switchboard.
     from promo_postconsent import job_promo_postconsent as _job_promo_postconsent
     scheduler.add_job(
         _job_promo_postconsent,
-        CronTrigger(day_of_week="mon-fri", hour=12, minute=41, timezone=_CLT),
-        id="promo_postconsent_diario",
+        CronTrigger(day_of_week="mon-fri", minute=48, timezone=_CLT),
+        id="promo_postconsent_horario",
         replace_existing=True,
         misfire_grace_time=600,
     )
