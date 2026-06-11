@@ -435,6 +435,17 @@ body{background:
 .tb-badge{background:linear-gradient(135deg, var(--verde-soft), #d8efda)}
 .bnav button.on{box-shadow:0 4px 10px rgba(27,72,39,.12)}
 
+/* Iconografía propia (tiles duotono, nada de emojis de sistema) */
+.sn-ic{width:34px; height:34px; flex:none; border-radius:10px; display:grid; place-items:center;
+  background:var(--panel-2); border:1px solid var(--border-soft); color:var(--verde); transition:.16s}
+.sn-ic svg{width:18px; height:18px}
+.sn-btn:hover .sn-ic{border-color:var(--verde)}
+.sn-btn.on .sn-ic{background:linear-gradient(135deg, var(--verde), var(--verde-osc)); border-color:transparent;
+  color:#fff; box-shadow:0 4px 10px rgba(27,72,39,.3)}
+.bnav .nic{width:24px; height:24px; display:grid; place-items:center; color:inherit}
+.bnav .nic svg{width:21px; height:21px}
+.bnav button.on .nic{color:var(--verde)}
+
 /* Sidebar con acento */
 @media (min-width:861px){
   .sidenav{background:linear-gradient(180deg, #fff, #FBFDF8)}
@@ -468,12 +479,12 @@ body{background:
     <img src="/static/meulen/logo-meulen-600.png" alt="Meulen">
     <div class="sn-t"><span class="a">Supermercado</span><span class="b">MEULEN</span></div>
   </div>
-  <button class="sn-btn on" data-s="s-inicio" onclick="irA('s-inicio')"><span class="ic">🏠</span>Inicio</button>
-  <button class="sn-btn" data-s="s-lista" onclick="irA('s-lista')"><span class="ic">📝</span>Mi lista de siempre</button>
-  <button class="sn-btn" data-s="s-pedidos" onclick="irA('s-pedidos')"><span class="ic">📦</span>Mis pedidos</button>
-  <button class="sn-btn" data-s="s-cuenta" onclick="irA('s-cuenta')"><span class="ic">💰</span>Mi cuenta</button>
-  <button class="sn-btn" onclick="abrirMes()"><span class="ic">🗓️</span>Pedidos del mes</button>
-  <button class="sn-btn" onclick="abrirPedido()"><span class="ic">🛒</span>Hacer pedido</button>
+  <button class="sn-btn on" data-s="s-inicio" onclick="irA('s-inicio')"><span class="sn-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L12 4l9 7.5V20a2 2 0 01-2 2h-4v-6h-6v6H5a2 2 0 01-2-2z" fill="currentColor" opacity=".14"/><path d="M3 11.5L12 4l9 7.5V20a2 2 0 01-2 2h-4v-6h-6v6H5a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Inicio</button>
+  <button class="sn-btn" data-s="s-lista" onclick="irA('s-lista')"><span class="sn-ic"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="17" rx="2.5" fill="currentColor" opacity=".14"/><rect x="5" y="4" width="14" height="17" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 9.5h6M9 13h6M9 16.5h3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="9" y="2.2" width="6" height="3.4" rx="1.4" fill="currentColor"/></svg></span>Mi lista de siempre</button>
+  <button class="sn-btn" data-s="s-pedidos" onclick="irA('s-pedidos')"><span class="sn-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M21 8l-9-4.6L3 8v8.4l9 4.6 9-4.6z" fill="currentColor" opacity=".14"/><path d="M21 8l-9-4.6L3 8v8.4l9 4.6 9-4.6V8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8l9 4.6L21 8M12 12.6V21" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Mis pedidos</button>
+  <button class="sn-btn" data-s="s-cuenta" onclick="irA('s-cuenta')"><span class="sn-ic"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="3" fill="currentColor" opacity=".14"/><rect x="3" y="7" width="18" height="13" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M16.5 4.5l-10 2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.2" cy="13.5" r="1.7" fill="currentColor"/></svg></span>Mi cuenta</button>
+  <button class="sn-btn" onclick="abrirMes()"><span class="sn-ic"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5.5" width="18" height="15.5" rx="3" fill="currentColor" opacity=".14"/><rect x="3" y="5.5" width="18" height="15.5" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 10.5h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="8.5" cy="15" r="1.4" fill="currentColor"/><circle cx="13" cy="15" r="1.4" fill="currentColor" opacity=".45"/></svg></span>Pedidos del mes</button>
+  <button class="sn-btn" onclick="abrirPedido()"><span class="sn-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M6.3 6h14.2l-2.1 8H8.1z" fill="currentColor" opacity=".14"/><path d="M3 4h2.2L7.9 16h10.6l2-7.5H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="20" r="1.7" fill="currentColor"/><circle cx="16.8" cy="20" r="1.7" fill="currentColor"/></svg></span>Hacer pedido</button>
   <div class="sn-foot">"Hacemos posible lo imposible"<br>Jardines del Mirador · Puerto Montt</div>
 </aside>
 
@@ -585,10 +596,10 @@ body{background:
 
 <!-- Nav inferior -->
 <nav class="bnav">
-  <button class="on" data-s="s-inicio" onclick="irA('s-inicio')"><span class="ic">🏠</span>Inicio</button>
-  <button data-s="s-lista" onclick="irA('s-lista')"><span class="ic">📝</span>Mi lista</button>
-  <button data-s="s-pedidos" onclick="irA('s-pedidos')"><span class="ic">📦</span>Pedidos</button>
-  <button data-s="s-cuenta" onclick="irA('s-cuenta')"><span class="ic">💰</span>Mi cuenta</button>
+  <button class="on" data-s="s-inicio" onclick="irA('s-inicio')"><span class="nic"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L12 4l9 7.5V20a2 2 0 01-2 2h-4v-6h-6v6H5a2 2 0 01-2-2z" fill="currentColor" opacity=".14"/><path d="M3 11.5L12 4l9 7.5V20a2 2 0 01-2 2h-4v-6h-6v6H5a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Inicio</button>
+  <button data-s="s-lista" onclick="irA('s-lista')"><span class="nic"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="17" rx="2.5" fill="currentColor" opacity=".14"/><rect x="5" y="4" width="14" height="17" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 9.5h6M9 13h6M9 16.5h3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="9" y="2.2" width="6" height="3.4" rx="1.4" fill="currentColor"/></svg></span>Mi lista</button>
+  <button data-s="s-pedidos" onclick="irA('s-pedidos')"><span class="nic"><svg viewBox="0 0 24 24" fill="none"><path d="M21 8l-9-4.6L3 8v8.4l9 4.6 9-4.6z" fill="currentColor" opacity=".14"/><path d="M21 8l-9-4.6L3 8v8.4l9 4.6 9-4.6V8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8l9 4.6L21 8M12 12.6V21" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Pedidos</button>
+  <button data-s="s-cuenta" onclick="irA('s-cuenta')"><span class="nic"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="3" fill="currentColor" opacity=".14"/><rect x="3" y="7" width="18" height="13" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M16.5 4.5l-10 2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.2" cy="13.5" r="1.7" fill="currentColor"/></svg></span>Mi cuenta</button>
 </nav>
 
 <!-- Pop-up Hacer pedido -->
