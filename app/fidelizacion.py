@@ -207,6 +207,11 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
                         },
                     },
                 }
+                # FIX F009 (morning): igual que el branch de tarde — solo enviar si ventana abierta
+                if not is_window_open(_cita_ref["phone"]):
+                    log.info("Seguimiento tardío combinado: ventana 24h cerrada → %s, omitido",
+                             _cita_ref["phone"])
+                    continue
                 _cita_ids = ",".join(str(c.get("id_cita", "")) for c in grupo_m)
                 save_fidelizacion_msg(_cita_ref["phone"], "postconsulta", _cita_ids)
                 await send_fn(_cita_ref["phone"], msg)
@@ -371,6 +376,13 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                         },
                     },
                 }
+                # FIX F009: el mensaje multi-cita es interactivo (texto libre);
+                # solo se puede enviar dentro de ventana 24h. Si está cerrada,
+                # saltamos este grupo para no rebotar 131047 silenciosamente.
+                if not is_window_open(_cita_ref["phone"]):
+                    log.info("Seguimiento combinado: ventana 24h cerrada → %s, omitido",
+                             _cita_ref["phone"])
+                    continue
                 # Registrar UN msg con cita_id = "id1,id2,..." para idempotencia
                 _cita_ids = ",".join(str(c.get("id_cita", "")) for c in grupo)
                 save_fidelizacion_msg(_cita_ref["phone"], "postconsulta", _cita_ids)

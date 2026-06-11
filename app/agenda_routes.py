@@ -273,6 +273,37 @@ async def post_crear_cita(
     except ValueError as e:
         raise HTTPException(400, f"Formato de fecha/hora inválido: {e}")
 
+    # FIX F050/F124: verificar disponibilidad del slot ANTES de crear +
+    # chequeo anti-duplicado (mismo paciente+prof+fecha = retry idempotente).
+    from medilink import verificar_slot_disponible, listar_citas_paciente
+    try:
+        slot_ok = await verificar_slot_disponible(
+            int(id_profesional), fecha, hora_inicio, hora_fin
+        )
+    except Exception as _ve:
+        log.warning("post_crear_cita: verificar_slot error (continúa): %s", _ve)
+        slot_ok = True  # degradado: dejar pasar si Medilink no responde
+    if not slot_ok:
+        raise HTTPException(409, "El slot ya no está disponible — elige otro horario")
+
+    # Anti-duplicado: si el mismo paciente ya tiene cita activa con este prof y fecha,
+    # rechazar para evitar doble-booking por retry tras timeout.
+    try:
+        _citas_existentes = await listar_citas_paciente(int(id_paciente))
+        for _ce in _citas_existentes:
+            if (str(_ce.get("id_profesional")) == str(id_profesional)
+                    and _ce.get("fecha") == fecha
+                    and _ce.get("hora_inicio", "")[:5] == hora_inicio[:5]):
+                log.warning(
+                    "post_crear_cita: duplicado detectado paciente=%d prof=%d fecha=%s hora=%s",
+                    id_paciente, id_profesional, fecha, hora_inicio,
+                )
+                raise HTTPException(409, "Ya existe una cita para este paciente con el mismo profesional, fecha y hora")
+    except HTTPException:
+        raise
+    except Exception as _de:
+        log.warning("post_crear_cita: anti-dup check error (continúa): %s", _de)
+
     try:
         resultado = await crear_cita(
             id_paciente=int(id_paciente),

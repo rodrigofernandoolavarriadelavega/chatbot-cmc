@@ -1353,6 +1353,9 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None,
             "hora_inicio": c.get("hora_inicio", "")[:5],
             "estado":      c.get("estado_cita", ""),
         })
+    # FIX F143: ordenar por fecha ASC antes de cortar para que el dup-check
+    # y cancelar siempre vean las citas más próximas (no 5 aleatorias).
+    citas.sort(key=lambda x: (x["fecha"] or "", x["hora_inicio"] or ""))
     return citas[:5]
 
 
@@ -1627,11 +1630,11 @@ async def sync_ortodoncia_rango(fecha_ini: str, fecha_fin: str, delay: float = 2
 
 async def sync_citas_dia(fecha: str, ids_prof: list[int]):
     """Descarga las citas de una fecha desde Medilink y las guarda en caché.
-    Borra primero las existentes para esa fecha/profesional para mantener consistencia."""
+    FIX F049: solo borra el caché DESPUÉS de obtener datos exitosamente para
+    evitar que una consulta fallida deje la agenda vacía con 200."""
     from session import upsert_citas_cache, delete_citas_cache_fecha
     client = _get_shared_client()
     for id_prof in ids_prof:
-        delete_citas_cache_fecha(id_prof, fecha)
         params = {
             "id_sucursal":      {"eq": int(MEDILINK_SUCURSAL)},
             "id_profesional":   {"eq": id_prof},
@@ -1642,6 +1645,8 @@ async def sync_citas_dia(fecha: str, ids_prof: list[int]):
             r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
                            params={"q": _q(params)}, headers=HEADERS)
             if r.status_code != 200:
+                log.warning("sync_citas_dia: prof=%d fecha=%s → HTTP %d, caché sin cambios",
+                            id_prof, fecha, r.status_code)
                 continue
             citas = [
                 {
@@ -1654,10 +1659,12 @@ async def sync_citas_dia(fecha: str, ids_prof: list[int]):
                 for c in _safe_json(r).get("data", [])
                 if c.get("id_paciente")
             ]
+            # Solo reemplaza el caché si la consulta fue exitosa
+            delete_citas_cache_fecha(id_prof, fecha)
             upsert_citas_cache(citas)
             log.info("sync_citas_dia: prof=%d fecha=%s → %d citas", id_prof, fecha, len(citas))
         except Exception as e:
-            log.error("sync_citas_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
+            log.error("sync_citas_dia prof=%d fecha=%s: %s (caché sin cambios)", id_prof, fecha, e)
 
 
 async def get_citas_seguimiento_mes(year: int, month: int, especialidad: str = "kinesiologia") -> list:

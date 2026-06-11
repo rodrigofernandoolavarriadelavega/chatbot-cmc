@@ -547,12 +547,20 @@ async def _capi_schedule(phone, rut, id_profesional, prof, fecha, hora_inicio, i
 
 
 async def _wa_confirm(phone, prof, esp, fecha, hora_inicio):
-    """Confirmación inmediata por WhatsApp. Requiere template aprobado; gated."""
+    """Confirmación inmediata por WhatsApp. Requiere template aprobado; gated.
+    FIX F064: usar body_params= (no params=) — kwarg correcto de send_whatsapp_template.
+    Template recordatorio_cita tiene 6 placeholders:
+      {{1}}=nombre {{2}}=especialidad {{3}}=profesional {{4}}=fecha {{5}}=hora {{6}}=prevision
+    """
     try:
         from messaging import send_whatsapp_template
-        # TODO: cablear al template real cuando esté aprobado en Meta.
-        await send_whatsapp_template(phone, "recordatorio_cita", params=[
-            prof.get("nombre", ""), f"{fecha} {hora_inicio}",
+        await send_whatsapp_template(phone, "recordatorio_cita", body_params=[
+            prof.get("nombre", ""),
+            esp or prof.get("especialidad", ""),
+            prof.get("nombre", ""),
+            fecha,
+            hora_inicio,
+            "Particular",
         ])
     except Exception as e:
         log.warning("_wa_confirm agendador: %s", e)
