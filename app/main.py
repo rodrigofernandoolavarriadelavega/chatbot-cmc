@@ -2248,12 +2248,15 @@ def admin_panel_v2(token: str | None = Query(None),
     # no-store: el panel se itera seguido; sin esto el navegador (y el iframe del
     # shell Alma) sirve una versión vieja en caché y los cambios de UI no se ven.
     _NOCACHE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"}
+    # Pill "Pendientes" (checklist+mural) en la barra: solo dueño por ahora.
+    # Inyectamos un booleano, NUNCA el token del dueño (no se filtra a recepción).
     if token and _is_admin_token(token):
-        return HTMLResponse(_ADMIN_V2_HTML.replace("__TOKEN__", token), headers=_NOCACHE)
+        _pill = "true" if (OLACORE_TOKEN and token == OLACORE_TOKEN) else "false"
+        return HTMLResponse(_ADMIN_V2_HTML.replace("__TOKEN__", token).replace("__CHECKLIST_PILL__", _pill), headers=_NOCACHE)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return HTMLResponse(_ADMIN_V2_HTML.replace("__TOKEN__", ""), headers=_NOCACHE)
+            return HTMLResponse(_ADMIN_V2_HTML.replace("__TOKEN__", "").replace("__CHECKLIST_PILL__", "false"), headers=_NOCACHE)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 

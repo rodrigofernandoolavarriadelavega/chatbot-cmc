@@ -1296,6 +1296,10 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
     <div class="kpi" id="kpiStalled"><span class="dot"></span><b>0</b> sin responder</div>
     <span class="divider"></span>
     <button class="topbar-btn" id="btnCrossSell" title="Funnel cross-sell">&#x1F501; cross-sell <b id="csPct">—</b></button>
+    <button class="topbar-btn" id="btnChecklist" title="Pendientes del equipo" style="display:none" onclick="chkToggle(event)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Pendientes <span class="chk-badge" id="chkBadge" style="display:none">0</span>
+    </button>
     <span class="divider"></span>
     <button class="topbar-btn" id="btnAgendarGlobal" title="Agendar cita (sin chat abierto)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 14v4M10 16h4"/></svg>
@@ -1552,6 +1556,7 @@ function toggleContext(){
  *  CONFIG & STATE
  * ========================================================================= */
 const TOKEN = "__TOKEN__";
+const CHK_ENABLED = __CHECKLIST_PILL__;
 const HEADERS = TOKEN ? {"Authorization": "Bearer " + TOKEN} : {};
 const QS     = TOKEN ? "?token=" + encodeURIComponent(TOKEN) : "";
 
@@ -4434,6 +4439,77 @@ document.addEventListener('keydown', function(e){
              if(hb){ hb.classList.add('active'); hb.textContent='▸'; hb.title='Mostrar los botones de arriba'; } }
     }
   }catch(e){}
+})();
+</script>
+
+<!-- ===== Pendientes del equipo (checklist + mural) — pill no intrusiva ===== -->
+<style>
+  .chk-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:var(--red,#e84545);color:#fff;font-size:10.5px;font-weight:800;margin-left:2px}
+  #btnChecklist.has-pend{background:var(--red-soft,#fdecec);color:var(--red,#e84545);border-color:#f6c9c9}
+  #btnChecklist.has-pend .chk-badge{animation:chkpulse 1.8s ease-in-out infinite}
+  @keyframes chkpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  #chkPop{position:fixed;top:54px;right:12px;width:360px;max-width:calc(100vw - 24px);max-height:76vh;overflow:auto;background:#fff;border:1.5px solid var(--border,#d6e4ec);border-radius:16px;box-shadow:0 18px 50px rgba(15,63,104,.22);z-index:600;display:none;font-family:inherit}
+  #chkPop.show{display:block;animation:chkdrop .14s ease}
+  @keyframes chkdrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  #chkPop .chk-top{display:flex;align-items:center;gap:8px;padding:13px 15px;border-bottom:1px solid var(--border,#d6e4ec);position:sticky;top:0;background:#fff;border-radius:16px 16px 0 0}
+  #chkPop .chk-top b{font-size:14px;color:var(--cmc-navy,#0F3F68);flex:1}
+  #chkPop .chk-x{cursor:pointer;color:var(--mute,#62788a);font-size:17px;line-height:1;padding:2px 4px}
+  #chkPop .chk-sec{padding:12px 15px;border-bottom:1px solid #eef4f8}
+  #chkPop .chk-mini b{font-size:13px;color:var(--cmc-navy,#0F3F68)}
+  #chkPop .chk-frac{float:right;font-size:12px;font-weight:800;color:var(--mute,#62788a)}
+  #chkPop .chk-bar{height:8px;border-radius:99px;background:#eef4f8;overflow:hidden;margin-top:7px}
+  #chkPop .chk-bar i{display:block;height:100%;background:var(--cmc-aqua,#4FBECE);border-radius:99px;transition:width .3s}
+  #chkPop .chk-h{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--mute,#62788a);margin-bottom:9px}
+  #chkPop .chk-pend{display:flex;align-items:flex-start;gap:9px;background:var(--red-soft,#fdecec);border:1px solid #f6c9c9;border-left:3px solid var(--red,#e84545);border-radius:10px;padding:9px 11px;margin-bottom:7px}
+  #chkPop .chk-pend .t{flex:1;font-size:13px;font-weight:600;color:var(--cmc-navy,#0F3F68);white-space:pre-wrap;word-break:break-word}
+  #chkPop .chk-pend .m{font-size:10.5px;color:var(--mute,#62788a);margin-top:2px}
+  #chkPop .chk-pend button{flex-shrink:0;background:#23c25e;color:#fff;border:none;border-radius:8px;width:28px;height:28px;font-size:14px;font-weight:800;cursor:pointer;align-self:center}
+  #chkPop .chk-empty{font-size:12.5px;color:var(--mute,#62788a);padding:4px 0}
+  #chkPop .chk-add{display:flex;gap:6px;align-items:center;padding:12px 15px}
+  #chkPop .chk-add input[type=text]{flex:1;border:1.5px solid var(--border,#d6e4ec);border-radius:9px;padding:7px 9px;font-family:inherit;font-size:13px;outline:none;color:var(--cmc-navy,#0F3F68)}
+  #chkPop .chk-add label{display:flex;align-items:center;gap:3px;font-size:13px;cursor:pointer;color:var(--mute,#62788a)}
+  #chkPop .chk-add label input{accent-color:var(--red,#e84545)}
+  #chkPop .chk-add .chk-go{background:var(--cmc-blue,#1172AB);color:#fff;border:none;border-radius:9px;width:30px;height:30px;font-size:18px;font-weight:700;cursor:pointer}
+  #chkPop .chk-open{display:block;text-align:center;padding:11px;font-size:12.5px;font-weight:700;color:var(--cmc-blue,#1172AB);text-decoration:none;border-top:1px solid #eef4f8}
+  #chkPop .chk-open:hover{background:var(--cmc-aqua-soft,#e8f8fb)}
+  #chkPop .chk-load{padding:24px;text-align:center;color:var(--mute,#62788a);font-size:13px}
+</style>
+<div id="chkPop">
+  <div class="chk-top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F3F68" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><b>Pendientes del equipo</b><span class="chk-x" onclick="chkToggle(event)">✕</span></div>
+  <div id="chkPopBody"></div>
+</div>
+<script>
+(function(){
+  if (typeof CHK_ENABLED === "undefined" || !CHK_ENABLED) return;
+  const CB = "/alma/api/checklist";
+  const pill = document.getElementById("btnChecklist");
+  const badge = document.getElementById("chkBadge");
+  pill.style.display = "";
+  const who = () => (localStorage.getItem("cmc_chk_turno") || "").trim();
+  const escc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  function setBadge(n){ if(n>0){badge.textContent=n;badge.style.display="";pill.classList.add("has-pend");} else {badge.style.display="none";pill.classList.remove("has-pend");} }
+  async function refresh(){ try{ const r = await api(CB+"/resumen"); setBadge(r.mural_pendientes||0); }catch(e){} }
+  window.chkToggle = function(e){ if(e){e.stopPropagation();} const p=document.getElementById("chkPop"); if(p.classList.contains("show")){p.classList.remove("show");} else {p.classList.add("show"); loadPop();} };
+  async function loadPop(){
+    const body = document.getElementById("chkPopBody");
+    body.innerHTML = '<div class="chk-load">Cargando…</div>';
+    try{
+      const [m,h] = await Promise.all([api(CB+"/mural"), api(CB+"/hoy")]);
+      let html = `<div class="chk-sec chk-mini"><b>Checklist del día</b><span class="chk-frac">${h.dia.hechos}/${h.dia.total}</span><div class="chk-bar"><i style="width:${h.dia.pct}%"></i></div></div>`;
+      html += `<div class="chk-sec"><div class="chk-h">📌 Pendientes${m.pendientes.length?" ("+m.pendientes.length+")":""}</div>`;
+      html += m.pendientes.length
+        ? m.pendientes.map(p=>`<div class="chk-pend"><div style="flex:1"><div class="t">${escc(p.texto)}</div><div class="m">${p.por?escc(p.por)+" · ":""}${escc(p.hora||"")}</div></div><button onclick="chkResolve(${p.id})" title="Resuelto">✓</button></div>`).join("")
+        : '<div class="chk-empty">Nada pendiente 🎉</div>';
+      html += `</div>`;
+      html += `<div class="chk-add"><input type="text" id="chkQuick" placeholder="Anotar algo del momento…" onkeydown="if(event.key==='Enter')chkAdd()"><label title="Es un pendiente"><input type="checkbox" id="chkQuickPend">📌</label><button class="chk-go" onclick="chkAdd()" title="Publicar">+</button></div>`;
+      html += `<a class="chk-open" href="/alma/checklist?token=${encodeURIComponent(TOKEN)}" target="_blank">Abrir checklist completo →</a>`;
+      body.innerHTML = html;
+    }catch(e){ body.innerHTML = '<div class="chk-load">No se pudo cargar</div>'; }
+  }
+  window.chkResolve = async function(id){ try{ await api(CB+"/mural/"+id+"/resolver",{method:"POST",body:JSON.stringify({por:who()})}); loadPop(); refresh(); }catch(e){ if(window.toast)toast("Error al resolver","err"); } };
+  window.chkAdd = async function(){ const i=document.getElementById("chkQuick"); const t=(i.value||"").trim(); if(!t)return; const pend=document.getElementById("chkQuickPend").checked; try{ await api(CB+"/mural",{method:"POST",body:JSON.stringify({texto:t,por:who(),pendiente:pend})}); loadPop(); refresh(); }catch(e){ if(window.toast)toast("No se pudo publicar","err"); } };
+  document.addEventListener("click", e=>{ const p=document.getElementById("chkPop"); if(p && p.classList.contains("show") && !p.contains(e.target) && !pill.contains(e.target)) p.classList.remove("show"); });
+  refresh(); setInterval(refresh, 30000);
 })();
 </script>
 </body>
