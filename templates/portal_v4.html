@@ -910,14 +910,26 @@ a{color:inherit; text-decoration:none}
 .gen-back{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; color:var(--cmc-blue); background:var(--cmc-aqua-soft); border:0; border-radius:9px; padding:8px 12px; margin:0 0 8px; cursor:pointer; font-family:var(--font)}
 .gen-para{font-size:10.5px; font-weight:700; color:var(--text-mute); margin-left:8px}
 .gen-para b{color:var(--cmc-navy)}
-/* Agendita anclada al nodo: pop-up del pop-up, el árbol queda visible alrededor */
-@keyframes popIn{from{opacity:0; transform:scale(.9)}to{opacity:1; transform:scale(1)}}
-.gen-ag-pop{position:absolute; z-index:7; background:#fff; border-radius:16px; border:1px solid var(--border); overflow:hidden; display:none; box-shadow:0 18px 48px rgba(15,63,104,.42); animation:popIn .2s var(--ease) both; transform-origin:top center}
-.gen-ag-pop.show{display:block}
-.gen-ag-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px; font-size:11.5px; font-weight:700; color:var(--cmc-navy); border-bottom:1px solid var(--border-soft); background:#fff}
-.gen-ag-head b{font-weight:800}
+/* Modo zoom: la cámara se acerca a la persona y la agenda aparece al lado */
 .gen-x.sm{width:26px; height:26px; font-size:15px; border-radius:8px}
-.gen-ag-frame{display:block; width:100%; height:400px; border:0; background:var(--bg)}
+#gen-side{display:none}
+.gen-card.zoom{display:grid; grid-template-columns:225px 1fr; grid-template-areas:"head head" "tree side"; gap:8px 14px; align-items:start}
+.gen-card.zoom .gen-head{grid-area:head}
+.gen-card.zoom #gen-svg{grid-area:tree; max-width:none; margin:0; height:440px; overflow:hidden; border-radius:16px}
+.gen-card.zoom #gen-side{display:block; grid-area:side}
+.gs-head{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; font-weight:700; color:var(--cmc-navy); padding:0 2px 8px}
+.gs-head b{font-weight:800}
+.gs-frame{display:block; width:100%; height:408px; border:1px solid var(--border); border-radius:14px; background:var(--bg)}
+@media (max-width:700px){
+  .gen-card.zoom{grid-template-columns:1fr; grid-template-areas:"head" "tree" "side"}
+  .gen-card.zoom #gen-svg{height:150px}
+  .gs-frame{height:390px}
+}
+/* Aislamiento: el resto de la familia se desvanece durante el zoom */
+#gen-svg g[data-rut]{transition:opacity .45s var(--ease)}
+.gen-card.zoom #gen-svg g[data-rut]:not(.gz-focus){opacity:.14}
+#gen-svg svg path, #gen-svg svg line{transition:opacity .45s var(--ease)}
+.gen-card.zoom #gen-svg svg path, .gen-card.zoom #gen-svg svg line{opacity:.22}
 .gen-tip .gt-name{font-weight:800; font-size:11px; margin-bottom:3px}
 .gen-tip .gt-row{font-weight:600; line-height:1.5}
 .gen-tip .gt-row.ok{color:#9fe8d8}
@@ -1963,6 +1975,7 @@ function openGenograma() {
 function closeGenograma() { _genCerrarAgenda(); const b = document.getElementById('gen-backdrop'); if (b) b.classList.remove('show'); }
 /* Tarjeta de persona: hover = vista previa; toque = fijada con botones */
 function _genShowTip(rut, pinned) {
+  if (document.querySelector('#gen-backdrop .gen-card.zoom')) return;  // en zoom no hay tooltips
   const wrap = document.getElementById('gen-svg');
   if (!wrap) return;
   const tip = document.getElementById('gen-tip');
@@ -2005,41 +2018,56 @@ function _genHover() {
   });
   // Tocar fuera de un nodo o de la tarjeta: cerrar la tarjeta (y seguir mirando el árbol)
   wrap.addEventListener('click', e => {
-    if (e.target.closest('g[data-rut]') || e.target.closest('.gen-tip') || e.target.closest('.gen-ag-pop')) return;
-    _genPin = null; tip.classList.remove('show'); _genCerrarAgenda();
+    if (e.target.closest('g[data-rut]') || e.target.closest('.gen-tip')) return;
+    _genPin = null; tip.classList.remove('show');
   });
 }
 let _genPin = null;
 function genTap(rut) { _genPin = rut; _genShowTip(rut, true); }   // 1er toque: tarjeta con acciones (clave en celular)
 function _genAbrir(rut) { _genPin = null; closeGenograma(); famTap(rut, false); }
 function _genAgendarP(rut) {
-  // Pop-up del pop-up: agendita compacta ANCLADA junto a la persona, árbol visible alrededor
+  // Zoom cinematográfico: la cámara se acerca a la persona (los demás se
+  // desvanecen) y a la derecha aparece el panel para agendar. Sin salir.
   _genPin = null;
   const tip = document.getElementById('gen-tip'); if (tip) tip.classList.remove('show');
+  const card = document.querySelector('#gen-backdrop .gen-card');
   const wrap = document.getElementById('gen-svg');
+  const svg = wrap ? wrap.querySelector('svg') : null;
   const g = wrap ? [...wrap.querySelectorAll('g[data-rut]')].find(x => x.dataset.rut === rut) : null;
   const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
-  const first = m ? (m.nombre || '').split(' ')[0] : '';
-  if (!wrap) return;
-  let ov = document.getElementById('gen-ag');
-  if (!ov) { ov = document.createElement('div'); ov.id = 'gen-ag'; ov.className = 'gen-ag-pop'; wrap.appendChild(ov); }
-  ov.innerHTML = `<div class="gen-ag-head"><span>📅 Hora para <b>${first}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
-    <iframe class="gen-ag-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`;
-  const wr = wrap.getBoundingClientRect(), gr = g ? g.getBoundingClientRect() : wr;
-  const W = Math.min(330, wr.width - 16), H = 442;
-  ov.style.width = W + 'px';
-  ov.style.left = Math.max(8, Math.min(wr.width - W - 8, gr.left - wr.left + gr.width / 2 - W / 2)) + 'px';
-  const nodeTop = gr.top - wr.top;
-  let top = nodeTop < wr.height * 0.5 ? (gr.bottom - wr.top + 8) : (nodeTop - H - 10);
-  top = Math.max(4, Math.min(top, Math.max(4, wr.height - H - 4)));
-  ov.style.top = top + 'px';
-  ov.classList.add('show');
+  if (!card || !svg || !g || !m) return;
+  const first = (m.nombre || '').split(' ')[0];
+  wrap.querySelectorAll('g[data-rut]').forEach(x => x.classList.toggle('gz-focus', x === g));
+  const res = document.getElementById('gen-res'); if (res) res.style.display = 'none';
+  const leg = card.querySelector('.gen-leg'); if (leg) leg.style.display = 'none';
+  let side = document.getElementById('gen-side');
+  if (!side) { side = document.createElement('div'); side.id = 'gen-side'; card.appendChild(side); }
+  side.innerHTML = `<div class="gs-head"><span>📅 Hora para <b>${first}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
+    <iframe class="gs-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`;
+  card.classList.add('zoom');
+  // Tras el reacomodo del layout, animar la cámara hacia el nodo
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    svg.style.transform = 'none';
+    const wr = wrap.getBoundingClientRect(), gr = g.getBoundingClientRect();
+    const k = 2;
+    const nx = gr.left - wr.left + gr.width / 2;
+    const ny = gr.top - wr.top + gr.height / 2 - 8;
+    svg.style.transformOrigin = '0 0';
+    svg.style.transition = 'transform .55s cubic-bezier(.22,.8,.3,1)';
+    svg.style.transform = `translate(${wr.width / 2 - k * nx}px, ${wr.height / 2 - k * ny}px) scale(${k})`;
+  }));
   const demo = (patientData && patientData.demo) ? '&demo=1' : '';
   document.getElementById('gen-ag-frame').src = '/agendar/portal?embed=1&rut=' + encodeURIComponent(rut) + demo;
 }
 function _genCerrarAgenda() {
-  const ov = document.getElementById('gen-ag');
-  if (ov) { ov.classList.remove('show'); const f = document.getElementById('gen-ag-frame'); if (f) f.src = 'about:blank'; }
+  const card = document.querySelector('#gen-backdrop .gen-card');
+  const wrap = document.getElementById('gen-svg');
+  const svg = wrap ? wrap.querySelector('svg') : null;
+  const f = document.getElementById('gen-ag-frame'); if (f) f.src = 'about:blank';
+  if (svg) svg.style.transform = 'none';
+  if (card) card.classList.remove('zoom');
+  if (wrap) wrap.querySelectorAll('g[data-rut]').forEach(x => x.classList.remove('gz-focus'));
+  const leg = document.querySelector('#gen-backdrop .gen-leg'); if (leg) leg.style.display = '';
 }
 function _genVolver() {
   _genCerrarAgenda();
