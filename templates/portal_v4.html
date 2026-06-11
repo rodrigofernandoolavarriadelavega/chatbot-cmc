@@ -993,6 +993,12 @@ a{color:inherit; text-decoration:none}
   background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff; font-family:var(--font); font-size:12.5px; font-weight:800;
   cursor:pointer; box-shadow:0 6px 18px rgba(15,63,104,.3); transition:transform .15s, box-shadow .15s}
 .sf-install:hover{transform:translateY(-1px); box-shadow:0 9px 24px rgba(15,63,104,.4)}
+.pwa-band{display:flex; align-items:center; gap:9px; width:100%; padding:10px 12px; margin-bottom:12px;
+  background:var(--cmc-aqua-soft); border:1.2px solid var(--cmc-aqua); border-radius:12px;
+  font-family:var(--font); font-size:11.5px; font-weight:600; color:var(--cmc-navy); text-align:left; cursor:pointer}
+.pwa-band span{flex:1; line-height:1.45}
+.pwa-band b{font-weight:800}
+.pwa-band .pb-x{flex:none; width:26px; height:26px; border:0; border-radius:8px; background:rgba(15,63,104,.08); color:var(--cmc-navy); font-size:15px; line-height:1; cursor:pointer}
 
 /* Acordeones de Recursos: secciones largas colapsadas por defecto */
 .acc .panel-head{cursor:pointer; -webkit-user-select:none; user-select:none}
@@ -1789,8 +1795,13 @@ function buildControles(d) {
 function renderInicio() {
   const d = patientData; const el = document.getElementById('inicio-content');
   const firstName = (d.nombre || '').split(' ')[0];
+  let bandaPwa = '';
+  if (!window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone
+      && localStorage.getItem('pwa_banner_off') !== '1') {
+    bandaPwa = `<div class="pwa-band" onclick="instalarApp()">📲 <span><b>Instale la app del centro</b> — un toque y queda en su pantalla de inicio</span><button class="pb-x" onclick="event.stopPropagation(); this.parentElement.style.display='none'; localStorage.setItem('pwa_banner_off','1')">×</button></div>`;
+  }
   const next = (d.citas_futuras || [])[0];
-  let html = `<div class="hero-card">
+  let html = bandaPwa + `<div class="hero-card">
     <div class="tag">Tu salud al día</div>
     <div class="greeting">${firstName ? 'Hola, ' + firstName : 'Hola'}</div>`;
   if (next) {
