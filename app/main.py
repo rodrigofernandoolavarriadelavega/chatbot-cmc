@@ -2295,6 +2295,25 @@ def admin_manifest(token: str | None = Query(None),
     return JSONResponse(base, media_type="application/manifest+json")
 
 
+@app.get("/vecino", response_class=HTMLResponse)
+def vecino_meulen_page():
+    """Mi Vecino Meulen — demo navegable del portal del vecino (datos ficticios).
+    Mismo ADN que el portal del paciente CMC, identidad Supermercado Meulen."""
+    if not _VECINO_MEULEN_HTML:
+        raise HTTPException(404, "No encontrado")
+    return HTMLResponse(_VECINO_MEULEN_HTML,
+                        headers={"Cache-Control": "no-store, max-age=0"})
+
+
+@app.get("/vecino/sw.js", include_in_schema=False)
+def vecino_service_worker():
+    return FileResponse(
+        str(Path(__file__).parent.parent / "static" / "pwa" / "portal-sw.js"),
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/vecino"},
+    )
+
+
 @app.get("/portal/sw.js", include_in_schema=False)
 def portal_service_worker():
     return FileResponse(
@@ -3148,6 +3167,7 @@ _KINTU_HTML = (_TEMPLATE_DIR / "kintu.html").read_text(encoding="utf-8") if (_TE
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador.html").exists() else ""
 _AGENDADOR_PORTAL_HTML = (_TEMPLATE_DIR / "agendador_portal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador_portal.html").exists() else ""
+_VECINO_MEULEN_HTML = (_TEMPLATE_DIR / "vecino_meulen.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "vecino_meulen.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
 _ALMA_ABONOS_HTML = (_TEMPLATE_DIR / "alma_abonos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_abonos.html").exists() else ""

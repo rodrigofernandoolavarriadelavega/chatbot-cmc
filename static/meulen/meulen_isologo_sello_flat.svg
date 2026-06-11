@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+<title>MEULEN Isólogo / Sello</title>
+<style>.serif{font-family:Georgia,'Times New Roman',serif;font-weight:700;letter-spacing:.14em}.sans{font-family:Montserrat,Arial,sans-serif;font-weight:700;letter-spacing:.20em}.line{fill:none;stroke-linecap:round;stroke-linejoin:round}</style>
+<rect width="1200" height="1200" fill="none"/>
+<circle cx="600" cy="600" r="500" fill="#FFFCEF" stroke="#2E7D46" stroke-width="28"/>
+<circle cx="600" cy="600" r="450" fill="none" stroke="#8BC34A" stroke-width="8" opacity=".65"/>
+<g transform="translate(344 310) scale(1)">
+  <g opacity=".78">
+    <path d="M72 243 C122 190,184 176,245 205" class="line" stroke="#26C6DA" stroke-width="13"/>
+    <path d="M62 284 C123 235,190 224,256 257" class="line" stroke="#26C6DA" stroke-width="9"/>
+    <path d="M440 243 C390 190,328 176,267 205" class="line" stroke="#26C6DA" stroke-width="13"/>
+    <path d="M450 284 C389 235,322 224,256 257" class="line" stroke="#8BC34A" stroke-width="9"/>
+  </g>
+  <path d="M94 419 C160 386,352 386,418 419" class="line" stroke="#2E7D46" stroke-width="16"/>
+  <path d="M132 445 C198 424,314 424,380 445" class="line" stroke="#2E7D46" stroke-width="8" opacity=".9"/>
+  <path d="M209 411 L303 411 L286 220 C284 198 268 184 256 184 C244 184 228 198 226 220 Z" fill="#2E7D46"/>
+  <path d="M230 397 L230 360 C230 340 242 326 256 326 C270 326 282 340 282 360 L282 397 Z" fill="#FFFFFF"/>
+  <path d="M244 274 C244 262 268 262 268 274 L268 291 L244 291 Z" fill="#FFFFFF"/>
+  <circle cx="256" cy="207" r="17" fill="#FFFFFF" stroke="#2E7D46" stroke-width="10"/>
+  <g fill="#FFFFFF" stroke="#2E7D46" stroke-width="10" stroke-linejoin="round">
+    <g transform="rotate(0 256 207)"><polygon points="256,207 273,199 310,87 282,75"/><line x1="272" y1="111" x2="293" y2="120" stroke="#2E7D46" stroke-width="5"/><line x1="267" y1="127" x2="289" y2="136" stroke="#2E7D46" stroke-width="5"/><line x1="263" y1="143" x2="284" y2="152" stroke="#2E7D46" stroke-width="5"/></g>
+    <g transform="rotate(90 256 207)"><polygon points="256,207 273,199 310,87 282,75"/><line x1="272" y1="111" x2="293" y2="120" stroke="#2E7D46" stroke-width="5"/><line x1="267" y1="127" x2="289" y2="136" stroke="#2E7D46" stroke-width="5"/><line x1="263" y1="143" x2="284" y2="152" stroke="#2E7D46" stroke-width="5"/></g>
+    <g transform="rotate(180 256 207)"><polygon points="256,207 273,199 310,87 282,75"/><line x1="272" y1="111" x2="293" y2="120" stroke="#2E7D46" stroke-width="5"/><line x1="267" y1="127" x2="289" y2="136" stroke="#2E7D46" stroke-width="5"/><line x1="263" y1="143" x2="284" y2="152" stroke="#2E7D46" stroke-width="5"/></g>
+    <g transform="rotate(270 256 207)"><polygon points="256,207 273,199 310,87 282,75"/><line x1="272" y1="111" x2="293" y2="120" stroke="#2E7D46" stroke-width="5"/><line x1="267" y1="127" x2="289" y2="136" stroke="#2E7D46" stroke-width="5"/><line x1="263" y1="143" x2="284" y2="152" stroke="#2E7D46" stroke-width="5"/></g>
+  </g>
+  <circle cx="256" cy="207" r="12" fill="#2E7D46"/>
+  <path d="M218 459 C232 436,252 438,257 455 C241 467,228 469,218 459Z" fill="#8BC34A"/>
+  <path d="M294 459 C280 436,260 438,255 455 C271 467,284 469,294 459Z" fill="#8BC34A"/>
+</g>
+<text x="600" y="205" text-anchor="middle" class="serif" font-size="102" fill="#2E7D46">MEULEN</text>
+<text x="600" y="1008" text-anchor="middle" class="sans" font-size="36" fill="#2E7D46">FRUTERÍA DE BARRIO · ABARROTES</text>
+<circle cx="240" cy="600" r="16" fill="#8BC34A"/>
+<circle cx="960" cy="600" r="16" fill="#8BC34A"/>
+</svg>

@@ -1,0 +1,19 @@
+{
+  "name": "Mi Vecino · Supermercado Meulen",
+  "short_name": "Mi Vecino",
+  "description": "El almacén del barrio en su bolsillo: pedidos, su lista de siempre y las casas que usted cuida",
+  "start_url": "/vecino",
+  "scope": "/vecino",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2EFE6",
+  "theme_color": "#2F3E34",
+  "lang": "es-CL",
+  "dir": "ltr",
+  "categories": ["shopping", "food"],
+  "icons": [
+    { "src": "/static/meulen/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/meulen/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/meulen/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
