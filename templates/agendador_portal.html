@@ -285,7 +285,7 @@ async function loadMisHoras() {
   if (!REAG || !RUT_IN) return;
   const rn = normRut(RUT_IN);
   if (DEMO) {
-    const f = d => { const x = new Date(); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); };
+    const f = d => { const x = new Date(); x.setDate(x.getDate() + d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };  // fecha LOCAL (toISOString corría un día en Chile)
     const map = {
       '50000000-7': [{ id_cita: 'demo-901', especialidad: 'Cardiología', profesional: 'Dr. Miguel Millán', fecha: f(3), hora_inicio: '11:00' }],
       '50000001-5': [{ id_cita: 'demo-911', especialidad: 'Odontología General', profesional: 'Dra. Javiera Burgos', fecha: f(5), hora_inicio: '16:30' }],
