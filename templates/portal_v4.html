@@ -2013,9 +2013,12 @@ function _genHover() {
   let tip = document.getElementById('gen-tip');
   if (!tip) { tip = document.createElement('div'); tip.id = 'gen-tip'; tip.className = 'gen-tip'; wrap.appendChild(tip); }
   _genPin = null;
+  // En táctil el tap dispara mouseenter+click seguidos → la tarjeta se abría
+  // y se "corría" al re-dibujarse. En táctil: solo la tarjeta fija del tap.
+  const esTactil = window.matchMedia('(hover: none)').matches;
   wrap.querySelectorAll('g[data-rut]').forEach(g => {
-    g.addEventListener('mouseenter', () => { if (!_genPin) _genShowTip(g.dataset.rut, false); });
-    g.addEventListener('mouseleave', () => { if (!_genPin) tip.classList.remove('show'); });
+    g.addEventListener('mouseenter', () => { if (!esTactil && !_genPin) _genShowTip(g.dataset.rut, false); });
+    g.addEventListener('mouseleave', () => { if (!esTactil && !_genPin) tip.classList.remove('show'); });
   });
   // Tocar fuera de un nodo o de la tarjeta: cerrar la tarjeta (y seguir mirando el árbol)
   wrap.addEventListener('click', e => {
