@@ -2750,7 +2750,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     }
     if state == "IDLE" and tl_norm in _TOKENS_CONFIRM_RECOD:
         try:
-            from session import _conn as _conn_rc
+            from session import db as _conn_rc
             import time as _time_rc
             # Buscar cita futura con recordatorio enviado y sin respuesta aún
             _hoy_rc = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
@@ -2883,7 +2883,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow \
             and (_tiene_marketing_pending or _tiene_dental_pending):
         try:
-            from session import _conn as _pc_conn
+            from session import db as _pc_conn
             with _pc_conn() as _c_pc:
                 _row_pc = _c_pc.execute(
                     "SELECT 1 FROM fidelizacion_msgs "
@@ -3356,7 +3356,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # especialidad del push precargada.
     if state == "IDLE" and tl_norm in ("si", "si", "s", "agendar", "quiero", "si quiero"):
         try:
-            from session import _conn as _hv_conn
+            from session import db as _hv_conn
             import time as _hv_time
             _hv_cutoff = int(_hv_time.time()) - 4 * 3600
             with _hv_conn() as _hv_c:
@@ -4273,7 +4273,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                          "no, no me interesa"}
         if (tl in _AFIRMATIVOS_CS or tl in _NEGATIVOS_CS) and tl not in ("xkine_si","xkine_no","xorlfono_si","xorlfono_no","xestetica_si","xestetica_info","xestetica_no","xmgcheck_si","xmgcheck_no","kine_adh_si","kine_adh_no","reac_si","reac_luego","wb_agendar","wb_info","upsell_si","no_control"):
             try:
-                from session import _conn as _cs_conn
+                from session import db as _cs_conn
                 with _cs_conn() as _ccs:
                     _row_cs = _ccs.execute(
                         "SELECT tipo FROM fidelizacion_msgs "
@@ -5528,7 +5528,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                              "preparación", "preparo", "prepararme", "me preparo")
                 if any(k in _txt_low_ayuno for k in _AYUNO_KW):
                     try:
-                        from session import _conn as _c_eco_ayuno
+                        from session import db as _c_eco_ayuno
                         with _c_eco_ayuno() as _cn_ay:
                             _row_eco = _cn_ay.execute(
                                 "SELECT 1 FROM citas_bot WHERE phone=? AND "
@@ -14018,7 +14018,7 @@ async def _admin_status_report_live() -> str:
         from zoneinfo import ZoneInfo as _ZI
         from medilink import get_stats_429, _proxima_cache
         from resilience import is_medilink_down as _is_down
-        from session import _conn as _conn_fn
+        from session import db as _conn_fn
         import sys as _sys
         ahora = _dt_now.now(_ZI("America/Santiago")).strftime("%H:%M")
         stats = get_stats_429()

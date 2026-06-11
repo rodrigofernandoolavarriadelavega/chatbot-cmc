@@ -54,7 +54,7 @@ def _min_to_h(m: int) -> str:
 
 
 def _ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cols = [r[1] for r in conn.execute("PRAGMA table_info(sobrecupos)").fetchall()]
         if cols and "capa" not in cols:
@@ -82,7 +82,7 @@ def _ensure_table() -> None:
 def count_dia(id_profesional: int, fecha: str, capa: int | None = None) -> int:
     """Sobrecupos creados ese día (total, o de una capa si se pasa)."""
     _ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         if capa is None:
             r = conn.execute("SELECT COUNT(*) FROM sobrecupos WHERE id_profesional=? AND fecha=?",
@@ -96,7 +96,7 @@ def count_dia(id_profesional: int, fecha: str, capa: int | None = None) -> int:
 def _ocupados(id_profesional: int, fecha: str) -> set:
     """Set de (hora_inicio, capa) ya creados ese día."""
     _ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute("SELECT hora_inicio, capa FROM sobrecupos WHERE id_profesional=? AND fecha=?",
                            (id_profesional, fecha)).fetchall()
@@ -108,7 +108,7 @@ def registrar(id_profesional: int, fecha: str, hora_inicio: str, capa: int = 2,
     """Anota un sobrecupo creado (para respetar el tope diario)."""
     _ensure_table()
     import time as _t
-    from session import _conn
+    from session import db as _conn
     try:
         with _conn() as conn:
             conn.execute(

@@ -542,7 +542,7 @@ async def _job_enrolar_atendidos_dia():
     from datetime import datetime
     from zoneinfo import ZoneInfo
     from medilink import _q, MEDILINK_SUCURSAL
-    from session import _conn
+    from session import db as _conn
 
     _TZ_CHILE = ZoneInfo("America/Santiago")
 
@@ -958,7 +958,7 @@ async def _job_bi_sync_diario():
     """BI v2: sincroniza atenciones + pagos del día anterior y hoy. Después
     re-cruza pagos huérfanos por si alguna atención llegó tarde."""
     from bi_sync import sync_diario, sync_pagos_rango, _resolver_profesional_pago
-    from session import _conn as _c_b
+    from session import db as _c_b
     from datetime import date, timedelta
     try:
         r1 = await sync_diario()
@@ -1809,7 +1809,7 @@ async def _job_admin_status_report():
         from zoneinfo import ZoneInfo
         from medilink import get_stats_429, _proxima_cache
         from resilience import is_medilink_down, is_claude_down, claude_down_reason
-        from session import _conn
+        from session import db as _conn
 
         ahora = datetime.now(ZoneInfo("America/Santiago")).strftime("%H:%M")
         stats = get_stats_429()
@@ -1897,7 +1897,7 @@ async def _job_regenerate_heatmap_cache():
         import sqlite3 as _sqlite3
         from pathlib import Path as _Path
         from collections import defaultdict as _dd
-        from session import _conn as _sc_heatmap
+        from session import db as _sc_heatmap
 
         _db_heatmap  = _Path(__file__).parent.parent / "data" / "heatmap_cache.db"
         _out_file    = _Path(__file__).parent.parent / "data" / "heatmap_cache.json"
@@ -2750,7 +2750,8 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
     try:
         from medilink import _get_shared_client, _q, _safe_json, HEADERS
         from config import MEDILINK_BASE_URL
-        from session import _conn, normalize_wa_id, log_message
+        from session import normalize_wa_id, log_message
+        from session import db as _conn
         from winback import (bi_conn, marketing_consent_status, phone_in_opt_out,
                              registrar_consent_enviado)
         from messaging import send_whatsapp_template, render_template_body
@@ -3459,7 +3460,8 @@ async def _job_waitlist_digest_semanal():
         return
 
     from datetime import datetime as _dt_wd, timezone as _tz_wd
-    from session import _conn as _conn_wd, log_event as _le_wd
+    from session import log_event as _le_wd
+    from session import db as _conn_wd
 
     try:
         with _conn_wd() as _c_wd:
@@ -3544,7 +3546,8 @@ async def _job_followup_info():
 
     import json as _json_fi
     from datetime import datetime as _dt_fi, timezone as _tz_fi
-    from session import _conn as _conn_fi, log_event as _le_fi, has_recent_event as _hre_fi
+    from session import log_event as _le_fi, has_recent_event as _hre_fi
+    from session import db as _conn_fi
 
     try:
         with _conn_fi() as _c_fi:

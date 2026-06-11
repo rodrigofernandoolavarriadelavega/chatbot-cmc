@@ -30,7 +30,7 @@ _LOCKED = ("confirmed", "revoked")
 
 
 def _conn():
-    from session import _conn as _c
+    from session import db as _c
     return _c()
 
 

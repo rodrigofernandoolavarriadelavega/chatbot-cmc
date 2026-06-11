@@ -28,7 +28,8 @@ def report() -> dict:
     }
     try:
         from winback import bi_conn
-        from session import _conn, normalize_wa_id as _norm
+        from session import normalize_wa_id as _norm
+        from session import db as _conn
 
         with bi_conn() as c:
             cur = c.cursor()

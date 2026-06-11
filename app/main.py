@@ -4506,7 +4506,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         # Fallback pagos: SQLite o BI Postgres si Medilink no los trajo
         if not pagos_por_pac:
             try:
-                from session import _conn as _sqc
+                from session import db as _sqc
                 with _sqc() as _sq:
                     _rows_pc = _sq.execute(
                         "SELECT id_paciente, SUM(monto) AS monto FROM bi_pagos_caja "
@@ -4930,7 +4930,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         citas_por_prof = {}
         if not is_today:
             try:
-                from session import _conn as _sqr
+                from session import db as _sqr
                 with _sqr() as _sq2:
                     _rows_r = _sq2.execute(
                         "SELECT id_profesional, SUM(monto) AS m, COUNT(*) AS n FROM bi_pagos_caja "
@@ -5276,7 +5276,7 @@ async def api_abarca_data(refresh: int = 0, desde: str = "2025-05-01"):
         await sync_abarca_atenciones(solo_hoy=True)
     else:
         # Delta liviano: refrescar hoy si la última sync de hoy es vieja (>30 min)
-        from session import _conn as _conn_ab
+        from session import db as _conn_ab
         from datetime import date as _date_chk
         hoy_iso = _date_chk.today().isoformat()
         with _conn_ab() as _c:
@@ -5486,7 +5486,7 @@ def _api_olavarria_data_from_bi(desde: str = "2024-01-01"):
     la misma estructura que devolvía el endpoint anterior. Tarifa real = avg(monto_bruto)."""
     from datetime import datetime as _dt_b, date as _date_b, timedelta as _td_b
     from collections import defaultdict as _dd_b
-    from session import _conn as _conn_b
+    from session import db as _conn_b
 
     with _conn_b() as _c:
         rows = _c.execute(
@@ -5634,7 +5634,7 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
     """
     from datetime import datetime as _dt_b, date as _date_b, timedelta as _td_b
     from collections import defaultdict as _dd_b, Counter as _ct_b
-    from session import _conn as _conn_b
+    from session import db as _conn_b
     with _conn_b() as _c:
         bi_count = _c.execute("SELECT COUNT(*) FROM olavarria_bi_ingresos WHERE fecha >= ?", (desde,)).fetchone()[0]
     if bi_count > 0:
@@ -5656,7 +5656,7 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
     else:
         # Detectar cache incompleto: si la fecha máxima en cache es más vieja
         # que hace 7 días, retomar seed completo. Si no, solo delta de hoy.
-        from session import _conn as _conn_ol
+        from session import db as _conn_ol
         hoy = _date_ol.today()
         with _conn_ol() as _c:
             row = _c.execute(
@@ -5895,7 +5895,7 @@ async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
     - bi_pagos_caja (CAJA REAL — fuente primaria de ingreso, igual a Medilink Cajas)
     """
     from bi_sync import sync_profesional, stats_profesional, stats_profesional_caja
-    from session import _conn as _c_p
+    from session import db as _c_p
     with _c_p() as c:
         n_rows = c.execute(
             "SELECT COUNT(*) FROM bi_atenciones WHERE id_profesional=?", (id_prof,)
@@ -6224,7 +6224,7 @@ def api_bi_rematch_pagos(desde: str = "2026-01-01", hasta: str | None = None):
     """Re-aplica el matcher heurístico sobre pagos del rango, respetando
     overrides manuales (nivel 0). Útil después de un sync de atenciones que
     haya actualizado campos total/abonado."""
-    from session import _conn
+    from session import db as _conn
     from bi_sync import _resolver_profesional_pago
     from datetime import date as _date
     if not hasta:
@@ -6284,7 +6284,7 @@ def _ensure_state_table(c):
 def api_state_get():
     """Carga el state del dashboard mensual (singleton row id=1)."""
     import json as _json_st
-    from session import _conn as _c_st
+    from session import db as _c_st
     with _c_st() as c:
         _ensure_state_table(c)
         row = c.execute(
@@ -6311,7 +6311,7 @@ def api_state_get():
 def api_state_put(body: dict):
     """Persiste el state. Solo guarda campos conocidos (whitelist)."""
     import json as _json_st
-    from session import _conn as _c_st
+    from session import db as _c_st
     payload = {
         "profesionales":     body.get("profesionales", []),
         "areas":             body.get("areas", []),
@@ -6335,7 +6335,7 @@ def api_state_put(body: dict):
 def api_cmc_mensual(mes: str | None = None):
     """Agrega bi_pagos_caja por profesional y por área para un mes (YYYY-MM).
     Si mes es None, usa el mes actual."""
-    from session import _conn as _c_m
+    from session import db as _c_m
     from medilink import PROFESIONALES
     from datetime import date as _d_m
 
@@ -6492,188 +6492,191 @@ async def api_atribucion_today():
     out: dict = {"fecha": today, "meta": {}, "bot": {}, "atribucion": {}, "funnel": {}}
 
     conn = _conn_atr()
-    c = conn.cursor()
+    try:
+        c = conn.cursor()
 
-    # Bot: actividad del día
-    c.execute("SELECT COUNT(*) FROM messages WHERE date(ts)=date('now')")
-    out["bot"]["mensajes_total"] = c.fetchone()[0]
+        # Bot: actividad del día
+        c.execute("SELECT COUNT(*) FROM messages WHERE date(ts)=date('now')")
+        out["bot"]["mensajes_total"] = c.fetchone()[0]
 
-    c.execute("""SELECT COUNT(DISTINCT phone) FROM messages WHERE date(ts)=date('now')
-                 AND phone NOT IN (SELECT DISTINCT phone FROM messages WHERE date(ts) < date('now'))""")
-    out["bot"]["phones_nuevos"] = c.fetchone()[0]
+        c.execute("""SELECT COUNT(DISTINCT phone) FROM messages WHERE date(ts)=date('now')
+                     AND phone NOT IN (SELECT DISTINCT phone FROM messages WHERE date(ts) < date('now'))""")
+        out["bot"]["phones_nuevos"] = c.fetchone()[0]
 
-    c.execute("""SELECT COUNT(*) FROM conversation_events
-                 WHERE event='cita_creada' AND date(ts)=date('now')""")
-    out["bot"]["citas_creadas"] = c.fetchone()[0]
+        c.execute("""SELECT COUNT(*) FROM conversation_events
+                     WHERE event='cita_creada' AND date(ts)=date('now')""")
+        out["bot"]["citas_creadas"] = c.fetchone()[0]
 
-    c.execute("""SELECT COUNT(*) FROM conversation_events
-                 WHERE event='registro_completo' AND date(ts)=date('now')""")
-    out["bot"]["registros_completos"] = c.fetchone()[0]
+        c.execute("""SELECT COUNT(*) FROM conversation_events
+                     WHERE event='registro_completo' AND date(ts)=date('now')""")
+        out["bot"]["registros_completos"] = c.fetchone()[0]
 
-    c.execute("""SELECT COUNT(*) FROM conversation_events
-                 WHERE event='cita_bloqueada_mismo_profesional' AND date(ts)=date('now')""")
-    out["bot"]["bloqueos_mismo_prof"] = c.fetchone()[0]
+        c.execute("""SELECT COUNT(*) FROM conversation_events
+                     WHERE event='cita_bloqueada_mismo_profesional' AND date(ts)=date('now')""")
+        out["bot"]["bloqueos_mismo_prof"] = c.fetchone()[0]
 
-    c.execute("""SELECT COUNT(*) FROM conversation_events
-                 WHERE event='derivado_humano' AND date(ts)=date('now')""")
-    out["bot"]["derivados_humano"] = c.fetchone()[0]
+        c.execute("""SELECT COUNT(*) FROM conversation_events
+                     WHERE event='derivado_humano' AND date(ts)=date('now')""")
+        out["bot"]["derivados_humano"] = c.fetchone()[0]
 
-    # Atribución por tags de referido
-    c.execute("""SELECT tag, COUNT(*) FROM contact_tags
-                 WHERE tag LIKE 'referido:%' AND date(ts)=date('now')
-                 GROUP BY tag ORDER BY 2 DESC""")
-    refs = {r[0].split(":", 1)[1]: r[1] for r in c.fetchall()}
-    out["atribucion"]["por_canal_hoy"] = refs
-    out["atribucion"]["respondieron_post"] = sum(refs.values())
+        # Atribución por tags de referido
+        c.execute("""SELECT tag, COUNT(*) FROM contact_tags
+                     WHERE tag LIKE 'referido:%' AND date(ts)=date('now')
+                     GROUP BY tag ORDER BY 2 DESC""")
+        refs = {r[0].split(":", 1)[1]: r[1] for r in c.fetchall()}
+        out["atribucion"]["por_canal_hoy"] = refs
+        out["atribucion"]["respondieron_post"] = sum(refs.values())
 
-    c.execute("""SELECT tag, COUNT(*) FROM contact_tags
-                 WHERE tag LIKE 'referido:%' AND ts > datetime('now','-30 days')
-                 GROUP BY tag ORDER BY 2 DESC""")
-    out["atribucion"]["por_canal_30d"] = {r[0].split(":", 1)[1]: r[1] for r in c.fetchall()}
+        c.execute("""SELECT tag, COUNT(*) FROM contact_tags
+                     WHERE tag LIKE 'referido:%' AND ts > datetime('now','-30 days')
+                     GROUP BY tag ORDER BY 2 DESC""")
+        out["atribucion"]["por_canal_30d"] = {r[0].split(":", 1)[1]: r[1] for r in c.fetchall()}
 
-    # Origen web (MEDIDO): marcador "(web)" / "(web: slug)" del link wa.me del sitio.
-    # Distinto de los tags referido:* (DECLARADO por el paciente post-cita).
-    # Cada visita web guarda 'referral_source:web' + opcional 'referral_source:web_<slug>'
-    # (home/blog), así que el total se cuenta con DISTINCT phone para no duplicar.
-    def _web_por_fuente(_window_sql):
-        c.execute(f"""SELECT tag, COUNT(DISTINCT phone) FROM contact_tags
-                      WHERE tag LIKE 'referral_source:web_%' AND {_window_sql}
-                      GROUP BY tag ORDER BY 2 DESC""")
-        return {r[0].split("referral_source:web_", 1)[1]: r[1] for r in c.fetchall()}
+        # Origen web (MEDIDO): marcador "(web)" / "(web: slug)" del link wa.me del sitio.
+        # Distinto de los tags referido:* (DECLARADO por el paciente post-cita).
+        # Cada visita web guarda 'referral_source:web' + opcional 'referral_source:web_<slug>'
+        # (home/blog), así que el total se cuenta con DISTINCT phone para no duplicar.
+        def _web_por_fuente(_window_sql):
+            c.execute(f"""SELECT tag, COUNT(DISTINCT phone) FROM contact_tags
+                          WHERE tag LIKE 'referral_source:web_%' AND {_window_sql}
+                          GROUP BY tag ORDER BY 2 DESC""")
+            return {r[0].split("referral_source:web_", 1)[1]: r[1] for r in c.fetchall()}
 
-    c.execute("""SELECT COUNT(DISTINCT phone) FROM contact_tags
-                 WHERE tag LIKE 'referral_source:web%' AND date(ts)=date('now')""")
-    _web_total_hoy = c.fetchone()[0]
-    c.execute("""SELECT COUNT(DISTINCT phone) FROM contact_tags
-                 WHERE tag LIKE 'referral_source:web%' AND ts > datetime('now','-30 days')""")
-    _web_total_30d = c.fetchone()[0]
-    out["origen_web"] = {
-        "total_hoy": _web_total_hoy,
-        "total_30d": _web_total_30d,
-        "por_fuente_hoy": _web_por_fuente("date(ts)=date('now')"),
-        "por_fuente_30d": _web_por_fuente("ts > datetime('now','-30 days')"),
-    }
+        c.execute("""SELECT COUNT(DISTINCT phone) FROM contact_tags
+                     WHERE tag LIKE 'referral_source:web%' AND date(ts)=date('now')""")
+        _web_total_hoy = c.fetchone()[0]
+        c.execute("""SELECT COUNT(DISTINCT phone) FROM contact_tags
+                     WHERE tag LIKE 'referral_source:web%' AND ts > datetime('now','-30 days')""")
+        _web_total_30d = c.fetchone()[0]
+        out["origen_web"] = {
+            "total_hoy": _web_total_hoy,
+            "total_30d": _web_total_30d,
+            "por_fuente_hoy": _web_por_fuente("date(ts)=date('now')"),
+            "por_fuente_30d": _web_por_fuente("ts > datetime('now','-30 days')"),
+        }
 
-    # Funnel del día: phones nuevos → cita
-    c.execute("""SELECT COUNT(DISTINCT ce.phone) FROM conversation_events ce
-                 WHERE ce.event='cita_creada' AND date(ce.ts)=date('now')
-                   AND ce.phone IN (
-                     SELECT phone FROM messages WHERE date(ts)=date('now')
-                       AND phone NOT IN (SELECT DISTINCT phone FROM messages WHERE date(ts) < date('now'))
-                   )""")
-    nuevos_con_cita = c.fetchone()[0]
-    out["funnel"]["phones_nuevos_con_cita"] = nuevos_con_cita
-    if out["bot"]["phones_nuevos"]:
-        out["funnel"]["conversion_pct"] = round(100.0 * nuevos_con_cita / out["bot"]["phones_nuevos"], 1)
-    else:
-        out["funnel"]["conversion_pct"] = 0
+        # Funnel del día: phones nuevos → cita
+        c.execute("""SELECT COUNT(DISTINCT ce.phone) FROM conversation_events ce
+                     WHERE ce.event='cita_creada' AND date(ce.ts)=date('now')
+                       AND ce.phone IN (
+                         SELECT phone FROM messages WHERE date(ts)=date('now')
+                           AND phone NOT IN (SELECT DISTINCT phone FROM messages WHERE date(ts) < date('now'))
+                       )""")
+        nuevos_con_cita = c.fetchone()[0]
+        out["funnel"]["phones_nuevos_con_cita"] = nuevos_con_cita
+        if out["bot"]["phones_nuevos"]:
+            out["funnel"]["conversion_pct"] = round(100.0 * nuevos_con_cita / out["bot"]["phones_nuevos"], 1)
+        else:
+            out["funnel"]["conversion_pct"] = 0
 
-    # Meta Ads del día — agregado + por campaña
-    import os as _os_atr, urllib.request as _ur_atr, urllib.parse as _up_atr
-    token = (_os_atr.getenv("META_ACCESS_TOKEN") or "").strip()
-    acct = "act_220608142267129"
-    if token:
-        try:
-            # Aggregate
-            params = {
-                "fields": "spend,impressions,reach,clicks,actions",
-                "time_range": _json_atr.dumps({"since": today, "until": today}),
-                "access_token": token,
-            }
-            url = f"https://graph.facebook.com/v19.0/{acct}/insights?" + _up_atr.urlencode(params)
-            with _ur_atr.urlopen(url, timeout=10) as resp:
-                d = _json_atr.loads(resp.read())
-                rows = d.get("data", [])
-                if rows:
-                    r = rows[0]
-                    out["meta"] = {
-                        "spend_clp": float(r.get("spend", 0)),
-                        "impresiones": int(r.get("impressions", 0)),
-                        "reach": int(r.get("reach", 0)),
-                        "clicks": int(r.get("clicks", 0)),
-                    }
-                    for a in (r.get("actions") or []):
-                        if a.get("action_type") == "link_click":
-                            out["meta"]["link_clicks"] = int(float(a.get("value", 0)))
-                        elif a.get("action_type") == "onsite_conversion.messaging_conversation_started_7d":
-                            out["meta"]["conversaciones_iniciadas"] = int(float(a.get("value", 0)))
-                else:
-                    out["meta"] = {"spend_clp": 0, "impresiones": 0, "reach": 0, "clicks": 0}
+        # Meta Ads del día — agregado + por campaña
+        import os as _os_atr, urllib.request as _ur_atr, urllib.parse as _up_atr
+        token = (_os_atr.getenv("META_ACCESS_TOKEN") or "").strip()
+        acct = "act_220608142267129"
+        if token:
+            try:
+                # Aggregate
+                params = {
+                    "fields": "spend,impressions,reach,clicks,actions",
+                    "time_range": _json_atr.dumps({"since": today, "until": today}),
+                    "access_token": token,
+                }
+                url = f"https://graph.facebook.com/v19.0/{acct}/insights?" + _up_atr.urlencode(params)
+                with _ur_atr.urlopen(url, timeout=10) as resp:
+                    d = _json_atr.loads(resp.read())
+                    rows = d.get("data", [])
+                    if rows:
+                        r = rows[0]
+                        out["meta"] = {
+                            "spend_clp": float(r.get("spend", 0)),
+                            "impresiones": int(r.get("impressions", 0)),
+                            "reach": int(r.get("reach", 0)),
+                            "clicks": int(r.get("clicks", 0)),
+                        }
+                        for a in (r.get("actions") or []):
+                            if a.get("action_type") == "link_click":
+                                out["meta"]["link_clicks"] = int(float(a.get("value", 0)))
+                            elif a.get("action_type") == "onsite_conversion.messaging_conversation_started_7d":
+                                out["meta"]["conversaciones_iniciadas"] = int(float(a.get("value", 0)))
+                    else:
+                        out["meta"] = {"spend_clp": 0, "impresiones": 0, "reach": 0, "clicks": 0}
 
-            # Per-campaign breakdown
-            params_camp = {
-                "fields": "campaign_id,campaign_name,objective,spend,impressions,reach,clicks,frequency,actions",
-                "level": "campaign",
-                "time_range": _json_atr.dumps({"since": today, "until": today}),
-                "limit": 50,
-                "access_token": token,
-            }
-            url_camp = f"https://graph.facebook.com/v19.0/{acct}/insights?" + _up_atr.urlencode(params_camp)
-            with _ur_atr.urlopen(url_camp, timeout=10) as resp:
-                dc = _json_atr.loads(resp.read())
-                campaigns = []
-                for r in dc.get("data", []):
-                    actions = r.get("actions") or []
-                    convs = sum(int(float(a.get("value", 0))) for a in actions
-                                if a.get("action_type") in ("onsite_conversion.messaging_conversation_started_7d",
-                                                              "onsite_conversion.total_messaging_connection"))
-                    link_clicks = next((int(float(a.get("value", 0))) for a in actions if a.get("action_type") == "link_click"), 0)
-                    spend = float(r.get("spend", 0))
-                    impressions = int(r.get("impressions", 0))
-                    reach = int(r.get("reach", 0))
-                    clicks = int(r.get("clicks", 0))
-                    campaigns.append({
-                        "id": r.get("campaign_id"),
-                        "name": r.get("campaign_name"),
-                        "objective": r.get("objective"),
-                        "spend_clp": spend,
-                        "impressions": impressions,
-                        "reach": reach,
-                        "clicks": clicks,
-                        "link_clicks": link_clicks,
-                        "frequency": float(r.get("frequency", 0)),
-                        "conversaciones": convs,
-                        "ctr_pct": round(100.0 * clicks / impressions, 2) if impressions else 0,
-                        "cpm_clp": round(spend * 1000 / impressions, 0) if impressions else 0,
-                        "cpc_clp": round(spend / clicks, 0) if clicks else 0,
-                        "costo_x_conversacion_clp": round(spend / convs, 0) if convs else 0,
-                    })
-                campaigns.sort(key=lambda x: -x["spend_clp"])
-                out["meta"]["campaigns"] = campaigns
-        except Exception as e:
-            out["meta"]["error"] = str(e)[:200]
+                # Per-campaign breakdown
+                params_camp = {
+                    "fields": "campaign_id,campaign_name,objective,spend,impressions,reach,clicks,frequency,actions",
+                    "level": "campaign",
+                    "time_range": _json_atr.dumps({"since": today, "until": today}),
+                    "limit": 50,
+                    "access_token": token,
+                }
+                url_camp = f"https://graph.facebook.com/v19.0/{acct}/insights?" + _up_atr.urlencode(params_camp)
+                with _ur_atr.urlopen(url_camp, timeout=10) as resp:
+                    dc = _json_atr.loads(resp.read())
+                    campaigns = []
+                    for r in dc.get("data", []):
+                        actions = r.get("actions") or []
+                        convs = sum(int(float(a.get("value", 0))) for a in actions
+                                    if a.get("action_type") in ("onsite_conversion.messaging_conversation_started_7d",
+                                                                  "onsite_conversion.total_messaging_connection"))
+                        link_clicks = next((int(float(a.get("value", 0))) for a in actions if a.get("action_type") == "link_click"), 0)
+                        spend = float(r.get("spend", 0))
+                        impressions = int(r.get("impressions", 0))
+                        reach = int(r.get("reach", 0))
+                        clicks = int(r.get("clicks", 0))
+                        campaigns.append({
+                            "id": r.get("campaign_id"),
+                            "name": r.get("campaign_name"),
+                            "objective": r.get("objective"),
+                            "spend_clp": spend,
+                            "impressions": impressions,
+                            "reach": reach,
+                            "clicks": clicks,
+                            "link_clicks": link_clicks,
+                            "frequency": float(r.get("frequency", 0)),
+                            "conversaciones": convs,
+                            "ctr_pct": round(100.0 * clicks / impressions, 2) if impressions else 0,
+                            "cpm_clp": round(spend * 1000 / impressions, 0) if impressions else 0,
+                            "cpc_clp": round(spend / clicks, 0) if clicks else 0,
+                            "costo_x_conversacion_clp": round(spend / convs, 0) if convs else 0,
+                        })
+                    campaigns.sort(key=lambda x: -x["spend_clp"])
+                    out["meta"]["campaigns"] = campaigns
+            except Exception as e:
+                out["meta"]["error"] = str(e)[:200]
 
-    # Google Ads — placeholder hasta que la cuenta esté creada
-    # Cuando esté: pull via Google Ads API con search_term_view + campaign report
-    out["google_ads"] = {"status": "no_configurado", "campaigns": []}
+        # Google Ads — placeholder hasta que la cuenta esté creada
+        # Cuando esté: pull via Google Ads API con search_term_view + campaign report
+        out["google_ads"] = {"status": "no_configurado", "campaigns": []}
 
-    # Comparación cross-channel
-    meta_spend = (out.get("meta", {}) or {}).get("spend_clp", 0)
-    meta_convs = (out.get("meta", {}) or {}).get("conversaciones_iniciadas", 0)
-    google_spend = sum(c.get("spend_clp", 0) for c in (out.get("google_ads", {}).get("campaigns") or []))
-    google_convs = sum(c.get("conversaciones", 0) for c in (out.get("google_ads", {}).get("campaigns") or []))
-    organic_phones = out["bot"].get("phones_nuevos", 0) - meta_convs - google_convs
-    out["comparacion"] = {
-        "meta": {
-            "spend_clp": meta_spend,
-            "conversaciones": meta_convs,
-            "costo_x_conv_clp": round(meta_spend / meta_convs, 0) if meta_convs else None,
-        },
-        "google_ads": {
-            "spend_clp": google_spend,
-            "conversaciones": google_convs,
-            "costo_x_conv_clp": round(google_spend / google_convs, 0) if google_convs else None,
-        },
-        "organico": {
-            "spend_clp": 0,
-            "phones_atribuibles": max(0, organic_phones),
-        },
-        "total_spend_clp": meta_spend + google_spend,
-        "total_phones_nuevos": out["bot"].get("phones_nuevos", 0),
-        "citas_creadas_total": out["bot"].get("citas_creadas", 0),
-    }
+        # Comparación cross-channel
+        meta_spend = (out.get("meta", {}) or {}).get("spend_clp", 0)
+        meta_convs = (out.get("meta", {}) or {}).get("conversaciones_iniciadas", 0)
+        google_spend = sum(c.get("spend_clp", 0) for c in (out.get("google_ads", {}).get("campaigns") or []))
+        google_convs = sum(c.get("conversaciones", 0) for c in (out.get("google_ads", {}).get("campaigns") or []))
+        organic_phones = out["bot"].get("phones_nuevos", 0) - meta_convs - google_convs
+        out["comparacion"] = {
+            "meta": {
+                "spend_clp": meta_spend,
+                "conversaciones": meta_convs,
+                "costo_x_conv_clp": round(meta_spend / meta_convs, 0) if meta_convs else None,
+            },
+            "google_ads": {
+                "spend_clp": google_spend,
+                "conversaciones": google_convs,
+                "costo_x_conv_clp": round(google_spend / google_convs, 0) if google_convs else None,
+            },
+            "organico": {
+                "spend_clp": 0,
+                "phones_atribuibles": max(0, organic_phones),
+            },
+            "total_spend_clp": meta_spend + google_spend,
+            "total_phones_nuevos": out["bot"].get("phones_nuevos", 0),
+            "citas_creadas_total": out["bot"].get("citas_creadas", 0),
+        }
 
-    return out
+        return out
+    finally:
+        conn.close()
 
 
 # ─────────────────────────────────────────────────────────────────────────

@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 
-from session import _conn
+from session import db as _conn
 
 log = logging.getLogger("bot.offline_match")
 

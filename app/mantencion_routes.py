@@ -46,7 +46,7 @@ def _add_months(d: date, months: int) -> date:
 
 
 def ensure_tables() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS equipos_clinicos (
@@ -70,7 +70,7 @@ def ensure_tables() -> None:
 
 def seed_if_empty() -> int:
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         n = conn.execute("SELECT COUNT(*) c FROM equipos_clinicos").fetchone()["c"]
         if n > 0:
@@ -101,7 +101,7 @@ def _estado_mant(prox: str) -> str:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     seed_if_empty()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT estado, proxima_mantencion FROM equipos_clinicos").fetchall()]
     oper = sum(1 for r in rows if r["estado"] == "operativo")
@@ -117,7 +117,7 @@ async def listar(estado: str | None = Query(None), token: str | None = Query(Non
     sql = "SELECT * FROM equipos_clinicos WHERE 1=1"; p = []
     if estado and estado != "todos": sql += " AND estado=?"; p.append(estado)
     sql += " ORDER BY tipo, nombre"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     for r in rows:
@@ -136,7 +136,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
     nombre = (b.get("nombre") or "").strip()
     if not nombre:
         raise HTTPException(400, "nombre requerido")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO equipos_clinicos (nombre, tipo, ubicacion, marca, modelo, serie, estado, frecuencia_meses, responsable, notas, proxima_mantencion)
@@ -168,7 +168,7 @@ async def editar(eid: int, request: Request, token: str | None = Query(None), cm
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(eid)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE equipos_clinicos SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -188,7 +188,7 @@ async def registrar_mant(eid: int, request: Request, token: str | None = Query(N
     tipo = (b.get("tipo") or "preventiva").lower()
     if tipo not in TIPO_MANT: tipo = "preventiva"
     fecha = (b.get("fecha") or datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")).strip()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         eq = conn.execute("SELECT frecuencia_meses FROM equipos_clinicos WHERE id=?", (eid,)).fetchone()
         if not eq:
@@ -217,7 +217,7 @@ async def registrar_mant(eid: int, request: Request, token: str | None = Query(N
 async def historial(eid: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM mantenciones WHERE equipo_id=? ORDER BY fecha DESC, id DESC LIMIT 100", (eid,)).fetchall()]
     return {"mantenciones": rows}
@@ -227,7 +227,7 @@ async def historial(eid: int, token: str | None = Query(None), cmc_session: str 
 async def eliminar(eid: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM equipos_clinicos WHERE id=?", (eid,))
         conn.commit()

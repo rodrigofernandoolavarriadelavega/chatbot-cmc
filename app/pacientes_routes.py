@@ -28,7 +28,7 @@ def _digits(s: str) -> str:
 @router.get("/resumen")
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
-    from session import _conn
+    from session import db as _conn
     now = datetime.now(_CHILE_TZ)
     mes = now.strftime("%Y-%m")
     with _conn() as conn:
@@ -48,7 +48,7 @@ async def buscar(q: str = Query("", description="nombre, RUT o teléfono"),
                  limit: int = Query(40),
                  token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
-    from session import _conn
+    from session import db as _conn
     like = f"%{q.lower()}%"
     with _conn() as conn:
         if q.strip():
@@ -92,7 +92,7 @@ async def buscar(q: str = Query("", description="nombre, RUT o teléfono"),
 async def ficha(phone: str = Query(...),
                 token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         prof = conn.execute("SELECT phone, rut, nombre, updated_at FROM contact_profiles WHERE phone=?", (phone,)).fetchone()
         if not prof:

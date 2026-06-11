@@ -82,7 +82,7 @@ SEED_ITEMS = [
 
 
 def ensure_tables() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS habilitacion_salas (
@@ -107,7 +107,7 @@ def ensure_tables() -> None:
 
 def seed_if_empty() -> int:
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         n = conn.execute("SELECT COUNT(*) c FROM habilitacion_items").fetchone()["c"]
         if n > 0:
@@ -128,7 +128,7 @@ def seed_if_empty() -> int:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     seed_if_empty()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         items = [dict(r) for r in conn.execute("SELECT categoria, hecho FROM habilitacion_items").fetchall()]
         salas = [dict(r) for r in conn.execute("SELECT estado FROM habilitacion_salas").fetchall()]
@@ -151,7 +151,7 @@ async def resumen(token: str | None = Query(None), cmc_session: str | None = Coo
 async def get_salas(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     seed_if_empty()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM habilitacion_salas ORDER BY id").fetchall()]
     return {"salas": rows}
@@ -165,7 +165,7 @@ async def get_items(categoria: str | None = Query(None),
     sql = "SELECT * FROM habilitacion_items WHERE 1=1"; p = []
     if categoria and categoria != "Todas": sql += " AND categoria=?"; p.append(categoria)
     sql += " ORDER BY CASE categoria WHEN 'Transversal' THEN 0 WHEN 'Por sala' THEN 1 WHEN 'Esterilización' THEN 2 WHEN 'Toma de muestras' THEN 3 WHEN 'Decisiones' THEN 4 ELSE 5 END, id"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"items": rows, "categorias": CATEGORIAS}
@@ -186,7 +186,7 @@ async def patch_item(item_id: int, request: Request, token: str | None = Query(N
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(item_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE habilitacion_items SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -208,7 +208,7 @@ async def add_item(request: Request, token: str | None = Query(None), cmc_sessio
         raise HTTPException(400, "item requerido")
     cat = (b.get("categoria") or "Transversal").strip()
     if cat not in CATEGORIAS: cat = "Transversal"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("INSERT INTO habilitacion_items (categoria, item, hecho, sala) VALUES (?,?,0,?)",
                            (cat, item, (b.get("sala") or "").strip()))
@@ -220,7 +220,7 @@ async def add_item(request: Request, token: str | None = Query(None), cmc_sessio
 async def del_item(item_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM habilitacion_items WHERE id=?", (item_id,))
         conn.commit()
@@ -246,7 +246,7 @@ async def patch_sala(sala_id: int, request: Request, token: str | None = Query(N
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(sala_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE habilitacion_salas SET {','.join(sets)} WHERE id=?", p)
         conn.commit()

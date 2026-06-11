@@ -1414,7 +1414,7 @@ async def enviar_crosssell_dx(send_fn, send_template_fn=None):
         return
 
     from datetime import date as _date, timedelta as _td
-    from session import _conn as _s_conn
+    from session import db as _s_conn
 
     hoy = _date.today()
     fecha_desde = (hoy - _td(days=8)).isoformat()
@@ -1490,7 +1490,7 @@ async def enviar_crosssell_dx(send_fn, send_template_fn=None):
 
 def _get_crosssell_post_dental_candidatos() -> list:
     """Phones con atención dental atendida hace 48-72h y sin cita futura con Castillo (66)."""
-    from session import _get_conn as _s_conn
+    from session import db as _s_conn
     import sqlite3 as _sqlite3
 
     hoy = date.today()

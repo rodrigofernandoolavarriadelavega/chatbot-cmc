@@ -17,7 +17,8 @@ import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from session import _conn, log_event
+from session import log_event
+from session import db as _conn
 from messaging import send_whatsapp
 
 log = logging.getLogger("bot.prof_notif")

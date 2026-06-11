@@ -120,7 +120,7 @@ class TestGetRecentPniEvent(unittest.TestCase):
         def fake_conn():
             yield conn
 
-        return patch("session._conn", fake_conn)
+        return patch("session.db", fake_conn)
 
     def test_retorna_evento_reciente(self):
         import session
@@ -173,7 +173,7 @@ class TestLogPniCitaGenerada(unittest.TestCase):
         def fake_conn():
             yield conn
 
-        return patch("session._conn", fake_conn)
+        return patch("session.db", fake_conn)
 
     def test_inserta_primer_vez(self):
         import session

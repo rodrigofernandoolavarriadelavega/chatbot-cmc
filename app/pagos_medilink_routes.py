@@ -76,7 +76,7 @@ def _fetch(d_desde: str, d_hasta: str, scope: int | None) -> list[dict]:
              ambiguo → se respeta una atención del día con monto exacto, o el heurístico.
 
     El filtro por profesional (scope, p.ej. Gisela) usa la atribución YA corregida."""
-    from session import _conn
+    from session import db as _conn
     try:
         with _conn() as c:
             rows = c.execute(
@@ -211,7 +211,7 @@ async def reasignar(pago_id: int, request: Request,
     from medilink import PROFESIONALES
     if id_prof not in PROFESIONALES:
         raise HTTPException(400, "Profesional inexistente")
-    from session import _conn
+    from session import db as _conn
     with _conn() as c:
         row = c.execute("SELECT atencion_id FROM bi_pagos_caja WHERE pago_id=?", (pago_id,)).fetchone()
         if not row:
@@ -236,7 +236,7 @@ def aplicar_repasada(d_desde: str, d_hasta: str, dry_run: bool = False) -> dict:
     dry_run=True → no escribe; solo reporta las discrepancias (para el informe).
     dry_run=False → persiste: escribe override (auditable) + actualiza bi_pagos_caja,
     corrigiendo también DB Mensual. NUNCA pisa un override manual existente. Idempotente."""
-    from session import _conn
+    from session import db as _conn
     try:
         from medilink import PROFESIONALES
     except Exception:

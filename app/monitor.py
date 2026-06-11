@@ -27,7 +27,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from session import _conn
+from session import db as _conn
 
 log = logging.getLogger("bot.monitor")
 

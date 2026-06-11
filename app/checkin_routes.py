@@ -51,7 +51,7 @@ def _enabled() -> bool:
 
 
 def ensure_checkin_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS checkin_cmc (
@@ -107,7 +107,7 @@ async def buscar_cita_hoy(rut: str = Query(...), request: Request = None):
     hoy = [c for c in citas if _es_hoy(c.get("fecha", ""))]
     # estado de check-in ya hecho hoy
     iso, _ = _hoy_variantes()
-    from session import _conn
+    from session import db as _conn
     ensure_checkin_table()
     with _conn() as conn:
         ya = {r["id_cita"] for r in conn.execute(
@@ -150,7 +150,7 @@ async def marcar_llegada(request: Request):
     hora    = (body.get("hora") or "").strip()
     iso, _ = _hoy_variantes()
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute(
             """INSERT INTO checkin_cmc
@@ -187,7 +187,7 @@ def lista_en_sala(
         raise HTTPException(401, "Token inválido")
     ensure_checkin_table()
     iso, _ = _hoy_variantes()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             """SELECT id, rut, paciente_nombre, id_cita, profesional, hora_cita,
@@ -209,7 +209,7 @@ def marcar_atendido(
 ):
     if not _is_admin(token, cmc_session):
         raise HTTPException(401, "Token inválido")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute(
             "UPDATE checkin_cmc SET estado='atendido', updated_at=datetime('now') WHERE id=?",

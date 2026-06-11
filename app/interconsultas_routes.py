@@ -24,7 +24,7 @@ ESTADOS = ["pendiente", "agendada", "completada", "rechazada"]
 
 
 def ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS interconsultas (
@@ -54,7 +54,7 @@ def ensure_table() -> None:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT estado, prioridad, destino_especialidad FROM interconsultas").fetchall()]
     pend = sum(1 for r in rows if r["estado"] == "pendiente")
@@ -76,7 +76,7 @@ async def listar(estado: str | None = Query(None), prioridad: str | None = Query
     if estado and estado != "todas": sql += " AND estado=?"; p.append(estado)
     if prioridad and prioridad != "todas": sql += " AND prioridad=?"; p.append(prioridad)
     sql += " ORDER BY CASE prioridad WHEN 'urgente' THEN 0 WHEN 'preferente' THEN 1 ELSE 2 END, fecha DESC, id DESC"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"interconsultas": rows, "total": len(rows)}
@@ -98,7 +98,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
     prioridad = (b.get("prioridad") or "rutina").lower()
     if prioridad not in PRIORIDADES: prioridad = "rutina"
     fecha = (b.get("fecha") or datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")).strip()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO interconsultas
@@ -133,7 +133,7 @@ async def editar(ic_id: int, request: Request, token: str | None = Query(None), 
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(ic_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE interconsultas SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -146,7 +146,7 @@ async def editar(ic_id: int, request: Request, token: str | None = Query(None), 
 async def eliminar(ic_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM interconsultas WHERE id=?", (ic_id,))
         conn.commit()

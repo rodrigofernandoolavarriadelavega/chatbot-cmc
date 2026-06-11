@@ -38,7 +38,7 @@ _PERIOD_DAYS = {"day": 1, "week": 7, "month": 30}
 
 
 def _conn():
-    from session import _conn as _c
+    from session import db as _c
     return _c()
 
 

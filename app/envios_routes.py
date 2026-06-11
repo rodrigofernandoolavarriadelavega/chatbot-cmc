@@ -77,7 +77,7 @@ async def get_envios(request: Request,
             where.append("m.text LIKE ?")
             params.append(f"[template: {safe}]%")
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             f"""
@@ -166,7 +166,7 @@ async def get_campanas(request: Request,
                        cmc_session: str | None = Cookie(None)):
     """Lista de campañas (templates) enviadas + cuántos destinatarios únicos."""
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             """SELECT m.text, m.phone FROM messages m
@@ -196,7 +196,7 @@ async def get_chat(request: Request,
     ph = re.sub(r"[^0-9]", "", phone or "")
     if not ph:
         raise HTTPException(400, "phone inválido")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         nombre_row = conn.execute(
             "SELECT nombre FROM contact_profiles WHERE phone = ? LIMIT 1", (ph,)

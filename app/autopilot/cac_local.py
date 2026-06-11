@@ -18,7 +18,7 @@ log = logging.getLogger("bot")
 def _attended_phones_window(cutoff_ts: int) -> dict:
     """{phone: {'booked': bool, 'rut': str}} para teléfonos que vinieron de un ad y
     agendaron (citas_bot) dentro de la ventana. Base local, sin Medilink."""
-    from session import _conn
+    from session import db as _conn
     out: dict = {}
     with _conn() as conn:
         # Pacientes con referral de ad (source_id) en la ventana.

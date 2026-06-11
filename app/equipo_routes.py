@@ -38,7 +38,7 @@ def _rol_de(esp: str) -> str:
 
 
 def ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS equipo_cmc (
@@ -75,7 +75,7 @@ HONORARIO_PCT_DEFAULT: dict[int, int] = {
 
 def seed_if_empty() -> int:
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     try:
         from medilink import PROFESIONALES
     except Exception:
@@ -111,7 +111,7 @@ def profesionales_en_licencia(fecha: str | None = None) -> set[int]:
     try:
         f = fecha or datetime.now(_CHILE_TZ).date().isoformat()
         ensure_table()
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             rows = conn.execute(
                 "SELECT id_medilink FROM equipo_cmc "
@@ -128,7 +128,7 @@ def profesionales_en_licencia(fecha: str | None = None) -> set[int]:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     seed_if_empty()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT estado, rol FROM equipo_cmc").fetchall()]
     activos = sum(1 for r in rows if r["estado"] == "activo")
@@ -148,7 +148,7 @@ async def listar(estado: str | None = Query(None), rol: str | None = Query(None)
     if estado and estado != "todos": sql += " AND estado=?"; p.append(estado)
     if rol and rol != "todos": sql += " AND rol=?"; p.append(rol)
     sql += " ORDER BY estado='inactivo', rol, nombre"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"equipo": rows, "total": len(rows)}
@@ -166,7 +166,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
     if not nombre:
         raise HTTPException(400, "nombre requerido")
     esp = (b.get("especialidad") or "").strip()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO equipo_cmc (id_medilink, nombre, especialidad, rol, tipo_contrato, pct_honorario, telefono, email, estado, notas)
@@ -198,7 +198,7 @@ async def editar(eid: int, request: Request, token: str | None = Query(None), cm
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(eid)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE equipo_cmc SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -211,7 +211,7 @@ async def editar(eid: int, request: Request, token: str | None = Query(None), cm
 async def eliminar(eid: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM equipo_cmc WHERE id=?", (eid,))
         conn.commit()

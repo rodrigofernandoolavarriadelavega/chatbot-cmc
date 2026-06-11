@@ -65,7 +65,7 @@ def report(days: int = 120) -> dict:
     pids = {s["paciente_id"] for s in sends if s["paciente_id"]}
     pagos: dict[int, list] = {}
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             rows = conn.execute(
                 "SELECT id_paciente, fecha, monto FROM bi_pagos_caja WHERE id_paciente IS NOT NULL"

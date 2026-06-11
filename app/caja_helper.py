@@ -73,7 +73,7 @@ def caja_visitas(prof_ids, meses: int) -> tuple[list[dict], str]:
       {paciente_id, paciente, telefono, lugar, fecha, profesional_id, profesional, monto}
     status: "ok" | "caja_unavailable".
     """
-    from session import _conn
+    from session import db as _conn
     prof_ids = tuple(prof_ids)
     if not prof_ids:
         return [], "ok"

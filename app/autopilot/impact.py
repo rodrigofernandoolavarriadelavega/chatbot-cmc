@@ -81,7 +81,7 @@ def _winback(days: int) -> dict | None:
 
 def _email(days: int) -> dict | None:
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             conn.execute("""CREATE TABLE IF NOT EXISTS email_envios (id INTEGER PRIMARY KEY)""")  # noop si ya existe
             row = conn.execute(

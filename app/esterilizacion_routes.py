@@ -25,7 +25,7 @@ INDICADORES = ["ok", "falla", "pendiente", "na"]
 
 
 def ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS esterilizacion_ciclos (
@@ -56,7 +56,7 @@ def ensure_table() -> None:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     mes = datetime.now(_CHILE_TZ).strftime("%Y-%m")
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(
@@ -80,7 +80,7 @@ async def listar(resultado: str | None = Query(None),
     sql = "SELECT * FROM esterilizacion_ciclos WHERE 1=1"; p = []
     if resultado and resultado != "todos": sql += " AND resultado=?"; p.append(resultado)
     sql += " ORDER BY fecha DESC, id DESC LIMIT 300"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"ciclos": rows, "total": len(rows)}
@@ -99,7 +99,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
     hora = (b.get("hora") or now.strftime("%H:%M")).strip()
     resultado = (b.get("resultado") or "en_proceso").lower()
     if resultado not in RESULTADOS: resultado = "en_proceso"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO esterilizacion_ciclos
@@ -134,7 +134,7 @@ async def editar(ciclo_id: int, request: Request, token: str | None = Query(None
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(ciclo_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE esterilizacion_ciclos SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -147,7 +147,7 @@ async def editar(ciclo_id: int, request: Request, token: str | None = Query(None
 async def eliminar(ciclo_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM esterilizacion_ciclos WHERE id=?", (ciclo_id,))
         conn.commit()

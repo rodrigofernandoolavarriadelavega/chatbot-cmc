@@ -17,7 +17,7 @@ class ReferralSinCerrarOrq(Orchestrator):
     cadencia = "cron:10:00"
 
     async def sense(self) -> dict:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             refs = conn.execute(
                 "SELECT phone, MAX(ts) AS ts, "

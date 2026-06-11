@@ -21,7 +21,7 @@ class ConversacionParadaOrq(Orchestrator):
     cadencia = "cron:cada_2h"
 
     async def sense(self) -> dict:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             rows = conn.execute(
                 """

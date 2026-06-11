@@ -66,7 +66,7 @@ def _is_auto(a) -> bool:
 
 
 def _conn():
-    from session import _conn as _c
+    from session import db as _c
     return _c()
 
 

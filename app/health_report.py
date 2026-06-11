@@ -14,7 +14,7 @@ log = logging.getLogger("health_report")
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _conn():
-    from session import _conn as _session_conn
+    from session import db as _session_conn
     return _session_conn()
 
 

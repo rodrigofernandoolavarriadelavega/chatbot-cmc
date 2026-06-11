@@ -30,7 +30,7 @@ ESTADOS = ["pendiente", "pagado"]
 
 
 def ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS liquidaciones (
@@ -49,7 +49,7 @@ def _generar(periodo: str) -> int:
     """Calcula/actualiza la liquidación del período desde pagos + equipo.
     Preserva ajuste/estado/notas de filas ya existentes. Devuelve nº de profesionales."""
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         # producción por profesional en el período (copago = caja real)
         prod = {}
@@ -100,7 +100,7 @@ async def resumen(periodo: str | None = Query(None), token: str | None = Query(N
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
     periodo = periodo or datetime.now(_CHILE_TZ).strftime("%Y-%m")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT monto_calculado, ajuste, estado FROM liquidaciones WHERE periodo=?", (periodo,)).fetchall()]
     total = sum((r["monto_calculado"] or 0) + (r["ajuste"] or 0) for r in rows)
@@ -114,7 +114,7 @@ async def listar(periodo: str | None = Query(None), token: str | None = Query(No
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
     periodo = periodo or datetime.now(_CHILE_TZ).strftime("%Y-%m")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM liquidaciones WHERE periodo=? ORDER BY (monto_calculado+ajuste) DESC", (periodo,)).fetchall()]
@@ -142,7 +142,7 @@ async def editar(liq_id: int, request: Request, token: str | None = Query(None),
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(liq_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         # si cambió pct, recalcular monto_calculado
         cur = conn.execute(f"UPDATE liquidaciones SET {','.join(sets)} WHERE id=?", p)
@@ -159,7 +159,7 @@ async def export_csv(periodo: str | None = Query(None), token: str | None = Quer
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
     periodo = periodo or datetime.now(_CHILE_TZ).strftime("%Y-%m")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM liquidaciones WHERE periodo=? ORDER BY (monto_calculado+ajuste) DESC", (periodo,)).fetchall()]
     buf = io.StringIO(); w = csv.writer(buf, delimiter=";")

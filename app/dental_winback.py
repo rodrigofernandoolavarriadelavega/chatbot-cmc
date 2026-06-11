@@ -395,7 +395,7 @@ def get_candidato_dental_por_phone(phone: str) -> dict | None:
 
     # ── Fuente 3: contact_profiles (sessions.db) ──────────────────────────────
     try:
-        from session import _conn as _session_conn
+        from session import db as _session_conn
         phone_variants = (phone, "+" + phone, tel_digits, "56" + tel_suffix, tel_suffix)
         seen: set[str] = set()
         variants_dedup: list[str] = []

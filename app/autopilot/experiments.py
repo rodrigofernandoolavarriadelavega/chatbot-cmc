@@ -33,7 +33,7 @@ EXPERIMENTS_LIVE = os.getenv("EXPERIMENTS_LIVE_ENABLED", "false").lower() in ("1
 
 
 def _conn():
-    from session import _conn as _c
+    from session import db as _c
     return _c()
 
 

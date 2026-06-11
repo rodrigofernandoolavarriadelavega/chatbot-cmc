@@ -102,7 +102,7 @@ def _resolve_abonos(request: Request,
 
 def ensure_abonos_table() -> None:
     """Crea la tabla abonos_cmc si no existe. Idempotente."""
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS abonos_cmc (
@@ -215,7 +215,7 @@ async def post_abono(request: Request,
     monto_abono  = int(body.get("monto_abono")  or 0)
     saldo = max(precio_total - monto_abono, 0)
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO abonos_cmc
@@ -250,7 +250,7 @@ async def post_abono(request: Request,
 
 def _fetch_abonos(estado: str | None, fecha_desde: str | None,
                   fecha_hasta: str | None) -> list[dict]:
-    from session import _conn
+    from session import db as _conn
     where, params = [], []
     if estado and estado in _ESTADOS:
         where.append("estado = ?")
@@ -319,7 +319,7 @@ async def put_abono(abono_id: int, request: Request,
     except Exception:
         raise HTTPException(400, "Body JSON inválido")
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         row = conn.execute("SELECT * FROM abonos_cmc WHERE id = ?", (abono_id,)).fetchone()
         if not row:
@@ -392,7 +392,7 @@ async def aplicar_abono(abono_id: int, request: Request,
     except Exception:
         body = {}
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         row = conn.execute("SELECT * FROM abonos_cmc WHERE id = ?", (abono_id,)).fetchone()
         if not row:
@@ -460,7 +460,7 @@ async def delete_abono(abono_id: int, request: Request,
                        cmc_session: str | None = Cookie(None)):
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_abonos_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("DELETE FROM abonos_cmc WHERE id = ?", (abono_id,))
         conn.commit()

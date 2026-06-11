@@ -61,7 +61,7 @@ def _require_admin_dep(request: Request,
 
 def ensure_caja_diaria_table() -> None:
     """Crea la tabla caja_diaria si no existe. Idempotente. Una fila por día."""
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS caja_diaria (
@@ -116,7 +116,7 @@ def _vfecha(v) -> str:
 def _efectivo_pagos_por_fecha(d_desde: str, d_hasta: str) -> dict[str, int]:
     """Suma del efectivo registrado en pagos_cmc por fecha en el rango.
     Es el MISMO número que muestra 'efectivo en caja' del módulo Pagos."""
-    from session import _conn
+    from session import db as _conn
     out: dict[str, int] = {}
     try:
         with _conn() as conn:
@@ -151,7 +151,7 @@ def get_caja_diaria(
     d_hasta = _vfecha(fecha_hasta) or now_cl.strftime("%Y-%m-%d")
     d_desde = _vfecha(fecha_desde) or now_cl.strftime("%Y-%m-01")
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             """SELECT id, fecha, monto_efectivo, comentario,
@@ -211,7 +211,7 @@ def calcular_saldo_caja() -> dict:
     Incluye días sin depositar desde el último depósito (señal de seguridad)."""
     ensure_caja_diaria_table()
     hoy = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         libro = {row["fecha"]: int(row["monto_efectivo"] or 0)
                  for row in conn.execute(
@@ -298,7 +298,7 @@ async def registrar_deposito(
     fecha_dep  = _vfecha(body.get("fecha_deposito")) or hoy
     dias       = (body.get("dias_corresponden") or "").strip()
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         ex = conn.execute(
             "SELECT id, valor_deposito, dias_corresponden FROM caja_diaria WHERE fecha = ?",
@@ -349,7 +349,7 @@ async def upsert_caja_diaria(
     valor_deposito    = _vint(body.get("valor_deposito"))
     dias_corresponden = (body.get("dias_corresponden") or "").strip()
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO caja_diaria
@@ -404,7 +404,7 @@ async def patch_caja_diaria(
         raise HTTPException(400, "Nada que actualizar")
 
     sets.append("updated_at = datetime('now')")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         try:
             conn.execute(f"UPDATE caja_diaria SET {', '.join(sets)} WHERE id = ?", vals + [row_id])
@@ -425,7 +425,7 @@ def delete_caja_diaria(
     cmc_session: str | None = Cookie(None),
 ):
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("DELETE FROM caja_diaria WHERE id = ?", (row_id,))
         conn.commit()
@@ -451,7 +451,7 @@ def export_caja_diaria(
     d_hasta = _vfecha(fecha_hasta) or now_cl.strftime("%Y-%m-%d")
     d_desde = _vfecha(fecha_desde) or now_cl.strftime("%Y-%m-01")
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             """SELECT fecha, monto_efectivo, comentario, fecha_deposito,

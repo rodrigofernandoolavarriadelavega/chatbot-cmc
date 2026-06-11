@@ -20,7 +20,7 @@ class GesBacklogOrq(Orchestrator):
     cadencia = "cron:09:00"
 
     async def sense(self) -> dict:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             evs = conn.execute(
                 "SELECT phone, meta, ts FROM conversation_events "

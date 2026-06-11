@@ -133,7 +133,7 @@ def _resolve_pagos(request: Request,
 
 def ensure_pagos_table() -> None:
     """Crea la tabla pagos_cmc si no existe. Idempotente."""
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS pagos_cmc (
@@ -210,7 +210,7 @@ def registrar_origen_cita(id_cita: str, canal: str, fuente: str = "") -> None:
         return
     try:
         ensure_pagos_table()
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             conn.execute(
                 """INSERT OR REPLACE INTO cita_origen (id_cita, canal, fuente, created_at)
@@ -227,7 +227,7 @@ def _buscar_origen_cita(id_cita: str) -> dict | None:
     if not id_cita:
         return None
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             row = conn.execute(
                 "SELECT canal, fuente FROM cita_origen WHERE id_cita = ? LIMIT 1",
@@ -296,7 +296,8 @@ def _derivar_canal_fuente(telefono_medilink: str) -> tuple[str, str]:
         return ("presencial", "")
 
     try:
-        from session import _conn, normalize_wa_id
+        from session import normalize_wa_id
+        from session import db as _conn
         # Normalizar al formato canónico del bot (569XXXXXXXX o ig_*/fb_*)
         phone = normalize_wa_id(str(telefono_medilink).strip())
 
@@ -373,7 +374,7 @@ def _buscar_telefono_por_id_cita(id_cita: str) -> str:
     if not id_cita:
         return ""
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             row = conn.execute(
                 "SELECT phone FROM citas_bot WHERE id_cita = ? LIMIT 1",
@@ -424,7 +425,7 @@ def _buscar_telefono_por_rut(rut: str) -> str:
     if not rut_norm:
         return ""
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             row = conn.execute(
                 """SELECT phone FROM contact_profiles
@@ -448,7 +449,7 @@ def _buscar_profile_por_nombre(nombre: str) -> tuple[str, str]:
     if not nombre_norm or len(nombre_norm) < 6:  # evita matches por nombres muy cortos
         return ("", "")
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as conn:
             rows = conn.execute(
                 """SELECT phone, rut, nombre FROM contact_profiles
@@ -731,7 +732,7 @@ async def get_sugerencia(
     # Si viene id_cita: buscar datos de la cita en cache local
     if id_cita:
         try:
-            from session import _conn
+            from session import db as _conn
             with _conn() as conn:
                 row = conn.execute(
                     """SELECT profesional, especialidad, id_cita,
@@ -771,7 +772,7 @@ async def get_sugerencia(
                 sugerencia["rut"] = paciente.get("rut", rut)
                 # Previsión desde perfil local si existe
                 try:
-                    from session import _conn
+                    from session import db as _conn
                     with _conn() as conn:
                         prof_row = conn.execute(
                             "SELECT prevision FROM contact_profiles WHERE rut = ? LIMIT 1",
@@ -891,7 +892,7 @@ async def post_pago(
     copago      = int(body.get("copago")      or 0)
     bonificacion = int(body.get("bonificacion") or 0)
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO pagos_cmc
@@ -972,7 +973,7 @@ async def get_pagos(
             raise HTTPException(400, "fecha debe ser YYYY-MM-DD")
         d_desde = d_hasta = d
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             """SELECT id, fecha, hora, paciente_nombre, rut,
@@ -1142,7 +1143,7 @@ async def patch_pago(
     set_clause = ", ".join(f"{k} = ?" for k in campos)
     values = list(campos.values()) + [pago_id]
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         # Verificar que el registro existe
         exists = conn.execute(
@@ -1195,7 +1196,7 @@ async def export_pagos_xlsx(
             raise HTTPException(400, "fecha debe ser YYYY-MM-DD")
         d_desde = d_hasta = d
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             """SELECT hora, paciente_nombre, profesional, area, prevision,
@@ -1392,7 +1393,7 @@ async def get_comision_mes(
     }
 
     try:
-        from session import _conn
+        from session import db as _conn
 
         # ── 1. Meses disponibles ──────────────────────────────────────────────
         with _conn() as conn:
@@ -1601,7 +1602,7 @@ async def cruzar_origen(
     else:
         fecha_iso = now_cl.strftime("%Y-%m-%d")
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             """SELECT id, id_cita, rut, paciente_nombre,
@@ -1727,7 +1728,7 @@ async def prellenar_pagos(
 
     # ── Cargar filas existentes en pagos_cmc para esa fecha ──────────────────
     # Necesitamos: id_cita, rut, procedimiento actual, bloqueado, canal, fuente y el id de la fila
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows_exist = conn.execute(
             """SELECT id, id_cita, rut,
@@ -2159,7 +2160,7 @@ async def toggle_lock_pago(
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_pagos_table()
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         row = conn.execute(
             "SELECT id, COALESCE(bloqueado, 0) as bloqueado FROM pagos_cmc WHERE id = ?",
@@ -2189,7 +2190,7 @@ async def delete_pago(
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_pagos_table()
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         exists = conn.execute(
             "SELECT id FROM pagos_cmc WHERE id = ?", (pago_id,)

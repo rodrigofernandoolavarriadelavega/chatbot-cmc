@@ -140,7 +140,7 @@ def _require_admin_dep(request: Request,
 
 def ensure_inventario_tables() -> None:
     """Crea las tablas de inventario si no existen. Idempotente."""
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS inventario_dental (
@@ -181,7 +181,7 @@ def ensure_inventario_tables() -> None:
 def seed_if_empty() -> int:
     """Siembra el catálogo MayorDent si la tabla está vacía. Devuelve nº insertado."""
     ensure_inventario_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         n = conn.execute("SELECT COUNT(*) AS c FROM inventario_dental").fetchone()["c"]
         if n > 0:
@@ -234,7 +234,7 @@ async def listar(
         params += [like, like]
     sql += " ORDER BY categoria, nombre"
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
 
@@ -258,7 +258,7 @@ async def resumen(
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_inventario_tables()
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM inventario_dental WHERE activo = 1"
@@ -301,7 +301,7 @@ async def orden_compra(
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_inventario_tables()
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM inventario_dental WHERE activo = 1 ORDER BY categoria, nombre"
@@ -358,7 +358,7 @@ async def crear(
 
     stock_inicial = int(body.get("stock_actual") or 0)
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO inventario_dental
@@ -423,7 +423,7 @@ async def editar(
     sets.append("updated_at = datetime('now')")
     params.append(producto_id)
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             f"UPDATE inventario_dental SET {', '.join(sets)} WHERE id = ?", params
@@ -462,7 +462,7 @@ async def movimiento(
     if cantidad < 0:
         raise HTTPException(400, "cantidad debe ser >= 0")
 
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         row = conn.execute(
             "SELECT stock_actual FROM inventario_dental WHERE id = ?", (producto_id,)
@@ -503,7 +503,7 @@ async def movimientos_producto(
     """Historial de movimientos de un producto (libro mayor)."""
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_inventario_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(
             """SELECT * FROM inventario_movimientos
@@ -523,7 +523,7 @@ async def eliminar(
     """Soft-delete (activo = 0)."""
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_inventario_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             "UPDATE inventario_dental SET activo = 0, updated_at = datetime('now') WHERE id = ?",
@@ -556,7 +556,7 @@ async def export_csv(
     """Exporta el inventario a CSV (Excel-friendly, separador ;)."""
     _require_admin_dep(request, token=token, cmc_session=cmc_session)
     ensure_inventario_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM inventario_dental WHERE activo = 1 ORDER BY categoria, nombre"

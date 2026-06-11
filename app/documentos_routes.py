@@ -36,7 +36,7 @@ SEED = [
 
 
 def ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS documentos_cmc (
@@ -57,7 +57,7 @@ def ensure_table() -> None:
 
 def seed_if_empty() -> int:
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         n = conn.execute("SELECT COUNT(*) c FROM documentos_cmc").fetchone()["c"]
         if n > 0:
@@ -89,7 +89,7 @@ def _estado_calc(vence: str, estado: str) -> str:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     seed_if_empty()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT vence, estado, categoria FROM documentos_cmc").fetchall()]
     por_venc = sum(1 for r in rows if _estado_calc(r["vence"], r["estado"]) == "por_vencer")
@@ -108,7 +108,7 @@ async def listar(categoria: str | None = Query(None),
     sql = "SELECT * FROM documentos_cmc WHERE 1=1"; p = []
     if categoria and categoria != "Todas": sql += " AND categoria=?"; p.append(categoria)
     sql += " ORDER BY categoria, titulo"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     for r in rows:
@@ -129,7 +129,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
         raise HTTPException(400, "titulo requerido")
     cat = (b.get("categoria") or "Otro").strip()
     if cat not in CATEGORIAS: cat = "Otro"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             "INSERT INTO documentos_cmc (titulo, categoria, descripcion, url, responsable, vence, estado) VALUES (?,?,?,?,?,?, 'vigente')",
@@ -156,7 +156,7 @@ async def editar(doc_id: int, request: Request, token: str | None = Query(None),
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(doc_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE documentos_cmc SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -169,7 +169,7 @@ async def editar(doc_id: int, request: Request, token: str | None = Query(None),
 async def eliminar(doc_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM documentos_cmc WHERE id=?", (doc_id,))
         conn.commit()

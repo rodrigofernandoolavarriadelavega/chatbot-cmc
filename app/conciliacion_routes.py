@@ -111,7 +111,7 @@ def _pagos_cmc_a_pagos(d_desde: date, d_hasta: date) -> list[Pago]:
       id_profesional  → Pago.id (reutilizado como referencia)
       bonificacion    → Pago.observacion (guardado para capa Imed)
     """
-    from session import _conn
+    from session import db as _conn
     try:
         with _conn() as conn:
             rows = conn.execute(
@@ -278,7 +278,7 @@ def _cruzar_imed(
     hallazgos: list[Hallazgo] = []
 
     # Leer registros Fonasa del período y calcular bonif desde arancel N3
-    from session import _conn
+    from session import db as _conn
     try:
         with _conn() as conn:
             rows = conn.execute(
@@ -433,7 +433,7 @@ class AuditorWeb(Auditor):
         """Suma de bonificaciones Fonasa del período (esperado Imed)."""
         d_desde = self.desde or date.today().replace(day=1)
         d_hasta = self.hasta or date.today()
-        from session import _conn
+        from session import db as _conn
         try:
             with _conn() as conn:
                 row = conn.execute(

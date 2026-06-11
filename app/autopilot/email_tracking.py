@@ -31,7 +31,7 @@ DEFAULT_COOLDOWN_DAYS = int(os.getenv("EMAIL_COOLDOWN_DAYS", "14"))
 
 
 def _conn():
-    from session import _conn as _c
+    from session import db as _c
     return _c()
 
 

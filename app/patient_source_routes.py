@@ -76,7 +76,7 @@ def _recent_checkin(rut: str | None) -> bool:
     if not r:
         return False
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as c:
             row = c.execute(
                 "SELECT 1 FROM checkin_cmc "

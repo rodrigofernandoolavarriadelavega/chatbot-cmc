@@ -40,7 +40,7 @@ from session import (get_session, reset_session, save_session, get_metricas,
                      get_next_cita_bot_by_phone, mark_reminder_sent,
                      snapshot_recepcion_context,
                      get_bonos_referral, marcar_bono_aplicado,
-                     _conn)
+                     _conn, db)
 from medilink import (buscar_paciente, crear_paciente, buscar_primer_dia,
                       buscar_slots_dia, crear_cita, listar_citas_paciente,
                       cancelar_cita, get_citas_seguimiento_mes, sync_citas_dia,
@@ -795,7 +795,7 @@ async def admin_agendar(request: Request, _: str = Depends(require_admin)):
     try:
         _wb_phone = (body.get("celular") or "").strip()
         if not _wb_phone and rut:
-            from session import _conn as _s_conn
+            from session import db as _s_conn
             with _s_conn() as _sc:
                 _pr = _sc.execute(
                     "SELECT phone FROM contact_profiles "
@@ -1792,7 +1792,7 @@ def api_patient_files(phone: str, _=Depends(require_admin)):
 @router.get("/admin/api/file/{file_id}")
 def api_serve_file(file_id: int, _=Depends(require_admin)):
     """Sirve un archivo almacenado por ID."""
-    from session import _conn
+    from session import db as _conn
     from pathlib import Path
     with _conn() as conn:
         row = conn.execute(
@@ -1863,7 +1863,7 @@ def api_last_seen(phone: str, _=Depends(require_admin)):
     """Retorna el timestamp en que se marcó por última vez como visto.
     Si nunca se marcó, retorna None. Útil para renderizar separador
     '↓ Mensajes nuevos ↓' justo antes del primer msg posterior."""
-    from session import _conn
+    from session import db as _conn
     with _conn() as c:
         row = c.execute("SELECT seen_at FROM admin_seen WHERE phone=?", (phone,)).fetchone()
         return {"phone": phone, "last_seen_at": row["seen_at"] if row else None}
@@ -2095,7 +2095,7 @@ async def api_delete_patient(rut: str | None = Query(None),
 def api_list_deletions(limit: int = Query(100, ge=1, le=500),
                        _=Depends(require_admin)):
     """Audit log de borrados ejecutados (tabla `gdpr_deletions`, inmutable)."""
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(
             "SELECT id, rut, phone, deleted_at, deleted_by, summary "
             "FROM gdpr_deletions ORDER BY deleted_at DESC LIMIT ?", (limit,)
@@ -2132,7 +2132,7 @@ def api_savings(period: str = Query("today", pattern="^(today|7d|30d)$"),
     counts = {e.split(":")[1]: 0 for e in _SAVINGS_EVENTS}
     usd_by_category = {k: 0.0 for k in counts}
 
-    with _conn() as conn:
+    with db() as conn:
         qmarks = ",".join("?" for _ in _SAVINGS_EVENTS)
         rows = conn.execute(
             f"SELECT event, COUNT(*) AS n FROM conversation_events "
@@ -2591,6 +2591,7 @@ def capi_stats(dias: int = 7, _auth=Depends(require_admin)):
     """
     from session import _conn
     import json as _json_capi
+    con = None
     try:
         con = _conn()
         cur = con.cursor()
@@ -2644,6 +2645,9 @@ def capi_stats(dias: int = 7, _auth=Depends(require_admin)):
         }
     except Exception as e:
         return {"error": str(e), "dias": dias}
+    finally:
+        if con is not None:
+            con.close()
 
 
 @router.get("/admin/api/referrals/recientes")
@@ -2729,7 +2733,7 @@ def api_cross_sell_funnel(
         ORDER BY ofrecidos DESC
     """
 
-    with _conn() as conn:
+    with db() as conn:
         rows = conn.execute(query, (intervalo,)).fetchall()
 
     pares = []

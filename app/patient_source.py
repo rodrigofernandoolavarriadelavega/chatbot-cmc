@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import re
 
-from session import _conn
+from session import db as _conn
 
 log = logging.getLogger("bot.patient_source")
 

@@ -81,7 +81,7 @@ def _require_admin(request: Request, token: str | None, cmc_session: str | None)
 
 def ensure_ortodoncia_plan_table() -> None:
     """Plan de pago por paciente (llaveado por bi.paciente_id). Idempotente."""
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS ortodoncia_plan (
@@ -99,7 +99,7 @@ def ensure_ortodoncia_plan_table() -> None:
 
 def _planes() -> dict[int, dict]:
     ensure_ortodoncia_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute("SELECT * FROM ortodoncia_plan").fetchall()
     return {r["paciente_id"]: dict(r) for r in rows}
@@ -155,7 +155,7 @@ def _identidad_bi(pids: list[int]) -> dict[int, dict]:
 def _bi_rows(meses: int) -> tuple[list[dict], str]:
     """Filas de visitas de ortodoncia desde la CAJA REAL (fresca), con identidad enriquecida.
     Mantiene el shape que espera _compute: {paciente_id, paciente, telefono, lugar, fecha, monto}."""
-    from session import _conn
+    from session import db as _conn
     desde = _meses_atras(meses)
     ph = ",".join("?" * len(ORTO_PROF_IDS))
     try:
@@ -351,7 +351,7 @@ async def set_plan(paciente_id: int, request: Request,
         estado_manual = ""
     notas = (body.get("notas") or "").strip()
     ensure_ortodoncia_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             INSERT INTO ortodoncia_plan (paciente_id, valor_total, cuota_mensual, abonado, estado_manual, notas, updated_at)

@@ -478,7 +478,8 @@ def resolve_recipients(segment: dict, *, limit: int = 200) -> list[dict]:
 
 def _resolve_sessions_fallback(crit, consented, opted_out, sample_size) -> dict:
     """Fallback a sessions.db cuando BI no responde (cobertura parcial)."""
-    from session import _conn, _normalize_phone_e164
+    from session import _normalize_phone_e164
+    from session import db as _conn
 
     with _conn() as conn:
         rows = conn.execute(

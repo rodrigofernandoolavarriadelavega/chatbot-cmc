@@ -55,7 +55,7 @@ def _clp(n) -> str:
 
 def cruce_dia(fecha: str) -> dict:
     """Cruza la caja oficial Medilink contra el registro de recepción para `fecha`."""
-    from session import _conn
+    from session import db as _conn
     medilink: list[dict] = []
     recepcion: list[dict] = []
     with _conn() as conn:

@@ -26,7 +26,7 @@ ESTADOS = ["abierto", "en_analisis", "cerrado"]
 
 
 def ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS calidad_eventos (
@@ -46,7 +46,7 @@ def ensure_table() -> None:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     mes = datetime.now(_CHILE_TZ).strftime("%Y-%m")
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT tipo, gravedad, estado, fecha FROM calidad_eventos").fetchall()]
@@ -68,7 +68,7 @@ async def listar(estado: str | None = Query(None), tipo: str | None = Query(None
     if estado and estado != "todos": sql += " AND estado=?"; p.append(estado)
     if tipo and tipo != "Todos": sql += " AND tipo=?"; p.append(tipo)
     sql += " ORDER BY CASE estado WHEN 'abierto' THEN 0 WHEN 'en_analisis' THEN 1 ELSE 2 END, fecha DESC, id DESC"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"eventos": rows, "total": len(rows)}
@@ -90,7 +90,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
     grav = (b.get("gravedad") or "leve").lower()
     if grav not in GRAVEDAD: grav = "leve"
     fecha = (b.get("fecha") or datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")).strip()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO calidad_eventos (fecha, tipo, titulo, descripcion, gravedad, area, paciente_nombre, estado, accion, responsable, creado_por)
@@ -121,7 +121,7 @@ async def editar(ev_id: int, request: Request, token: str | None = Query(None), 
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(ev_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE calidad_eventos SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -134,7 +134,7 @@ async def editar(ev_id: int, request: Request, token: str | None = Query(None), 
 async def eliminar(ev_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM calidad_eventos WHERE id=?", (ev_id,))
         conn.commit()

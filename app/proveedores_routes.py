@@ -30,7 +30,7 @@ SEED = [
 
 
 def ensure_tables() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS proveedores (
@@ -54,7 +54,7 @@ def ensure_tables() -> None:
 
 def seed_if_empty() -> int:
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         n = conn.execute("SELECT COUNT(*) c FROM proveedores").fetchone()["c"]
         if n > 0:
@@ -71,7 +71,7 @@ def seed_if_empty() -> int:
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     seed_if_empty()
-    from session import _conn
+    from session import db as _conn
     mes = datetime.now(_CHILE_TZ).strftime("%Y-%m")
     with _conn() as conn:
         activos = conn.execute("SELECT COUNT(*) c FROM proveedores WHERE activo=1").fetchone()["c"]
@@ -87,7 +87,7 @@ async def listar(rubro: str | None = Query(None), token: str | None = Query(None
     sql = "SELECT * FROM proveedores WHERE activo=1"; p = []
     if rubro and rubro != "Todos": sql += " AND rubro=?"; p.append(rubro)
     sql += " ORDER BY nombre"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"proveedores": rows, "total": len(rows)}
@@ -106,7 +106,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
         raise HTTPException(400, "nombre requerido")
     rubro = (b.get("rubro") or "Otro").strip()
     if rubro not in RUBROS: rubro = "Otro"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO proveedores (nombre, rubro, contacto, telefono, email, direccion, sitio_web, condiciones_pago, notas)
@@ -135,7 +135,7 @@ async def editar(pid: int, request: Request, token: str | None = Query(None), cm
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(pid)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE proveedores SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -148,7 +148,7 @@ async def editar(pid: int, request: Request, token: str | None = Query(None), cm
 async def eliminar(pid: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("UPDATE proveedores SET activo=0, updated_at=datetime('now') WHERE id=?", (pid,))
         conn.commit()
@@ -165,7 +165,7 @@ async def listar_oc(estado: str | None = Query(None), token: str | None = Query(
     sql = "SELECT * FROM ordenes_compra WHERE 1=1"; p = []
     if estado and estado != "todas": sql += " AND estado=?"; p.append(estado)
     sql += " ORDER BY fecha DESC, id DESC LIMIT 200"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"ordenes": rows, "total": len(rows)}
@@ -184,7 +184,7 @@ async def crear_oc(request: Request, token: str | None = Query(None), cmc_sessio
     if estado not in OC_ESTADOS: estado = "borrador"
     prov_id = b.get("proveedor_id")
     prov_nombre = (b.get("proveedor_nombre") or "").strip()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         if prov_id and not prov_nombre:
             r = conn.execute("SELECT nombre FROM proveedores WHERE id=?", (prov_id,)).fetchone()
@@ -215,7 +215,7 @@ async def editar_oc(oc_id: int, request: Request, token: str | None = Query(None
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(oc_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE ordenes_compra SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -228,7 +228,7 @@ async def editar_oc(oc_id: int, request: Request, token: str | None = Query(None
 async def eliminar_oc(oc_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_tables()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM ordenes_compra WHERE id=?", (oc_id,))
         conn.commit()

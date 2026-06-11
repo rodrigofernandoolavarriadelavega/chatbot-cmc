@@ -176,7 +176,7 @@ def _mode_table(conn) -> None:
 
 def get_mode(phone: str) -> str:
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as c:
             _mode_table(c)
             r = c.execute("SELECT mode FROM owner_assistant_mode WHERE phone=?", (phone,)).fetchone()
@@ -189,7 +189,7 @@ def set_mode(phone: str, mode: str) -> None:
     if mode not in _VALID_MODES:
         return
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as c:
             _mode_table(c)
             c.execute("""INSERT INTO owner_assistant_mode (phone, mode, updated_at)
@@ -221,7 +221,7 @@ def _cmc_menu() -> str:
 
 def _cmc_agenda() -> str:
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as c:
             hoy = c.execute("SELECT COUNT(*) n FROM citas_bot WHERE date(created_at)=date('now')").fetchone()["n"]
             sem = c.execute("SELECT COUNT(*) n FROM citas_bot WHERE created_at>=datetime('now','-7 days')").fetchone()["n"]
@@ -240,7 +240,7 @@ def _cmc_agenda() -> str:
 
 def _cmc_demanda() -> str:
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as c:
             rows = c.execute("""SELECT solicitud, COUNT(*) n FROM demanda_no_disponible
                 WHERE created_at>=datetime('now','-30 days')
@@ -258,7 +258,7 @@ def _cmc_demanda() -> str:
 
 def _cmc_actividad() -> str:
     try:
-        from session import _conn
+        from session import db as _conn
         with _conn() as c:
             convs = c.execute("SELECT COUNT(DISTINCT phone) n FROM messages WHERE date(ts)=date('now')").fetchone()["n"]
             regs = c.execute("""SELECT COUNT(*) n FROM contact_profiles

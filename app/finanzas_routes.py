@@ -29,7 +29,7 @@ METODOS = ["transferencia", "efectivo", "debito", "credito", "automatico"]
 
 
 def ensure_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS egresos_cmc (
@@ -65,7 +65,7 @@ async def flujo(mes: str | None = Query(None, description="YYYY-MM (default mes 
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
     mes = mes or datetime.now(_CHILE_TZ).strftime("%Y-%m")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         ingresos = _ingresos_mes(conn, mes)
         egresos_rows = [dict(r) for r in conn.execute(
@@ -98,7 +98,7 @@ async def listar(mes: str | None = Query(None), categoria: str | None = Query(No
     sql = "SELECT * FROM egresos_cmc WHERE substr(fecha,1,7)=?"; p = [mes]
     if categoria and categoria != "Todas": sql += " AND categoria=?"; p.append(categoria)
     sql += " ORDER BY fecha DESC, id DESC"
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute(sql, p).fetchall()]
     return {"egresos": rows, "total": len(rows), "suma": sum(r["monto"] or 0 for r in rows)}
@@ -118,7 +118,7 @@ async def crear(request: Request, token: str | None = Query(None), cmc_session: 
     categoria = (b.get("categoria") or "Otros").strip()
     if categoria not in CATEGORIAS: categoria = "Otros"
     fecha = (b.get("fecha") or datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")).strip()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(
             """INSERT INTO egresos_cmc (fecha, categoria, descripcion, monto, metodo_pago, proveedor, recurrente, notas, creado_por)
@@ -150,7 +150,7 @@ async def editar(eg_id: int, request: Request, token: str | None = Query(None), 
     if not sets:
         raise HTTPException(400, "Nada que actualizar")
     sets.append("updated_at=datetime('now')"); p.append(eg_id)
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute(f"UPDATE egresos_cmc SET {','.join(sets)} WHERE id=?", p)
         conn.commit()
@@ -163,7 +163,7 @@ async def editar(eg_id: int, request: Request, token: str | None = Query(None), 
 async def eliminar(eg_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         cur = conn.execute("DELETE FROM egresos_cmc WHERE id=?", (eg_id,))
         conn.commit()
@@ -177,7 +177,7 @@ async def export_csv(mes: str | None = Query(None), token: str | None = Query(No
     require_admin(request, token=token, cmc_session=cmc_session)
     ensure_table()
     mes = mes or datetime.now(_CHILE_TZ).strftime("%Y-%m")
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM egresos_cmc WHERE substr(fecha,1,7)=? ORDER BY fecha", (mes,)).fetchall()]
     buf = io.StringIO(); w = csv.writer(buf, delimiter=";")

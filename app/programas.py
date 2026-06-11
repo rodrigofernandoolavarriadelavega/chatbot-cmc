@@ -196,7 +196,7 @@ def _cfg(prog: str) -> dict:
 # ── Capa de gestión propia ───────────────────────────────────────────────────
 
 def ensure_programa_plan_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS programa_plan (
@@ -238,7 +238,7 @@ DEFAULT_OBJETIVOS = ["Bajar peso", "Subir peso", "Mantención", "Diabético", "D
 
 
 def ensure_medicion_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS programa_medicion (
@@ -260,7 +260,7 @@ def ensure_medicion_table() -> None:
 def ensure_categoria_table() -> None:
     """Categorías editables multi-dimensión (dim='objetivo' para el motivo clínico).
     La segmentación demográfica sigue en programa_segmento (sin tocar)."""
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS programa_categoria (
@@ -276,7 +276,7 @@ def ensure_categoria_table() -> None:
 
 def _categorias(prog: str, dim: str, defaults: list[str]) -> list[dict]:
     ensure_categoria_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute("SELECT nombre, orden FROM programa_categoria WHERE programa=? AND dim=? ORDER BY orden, nombre", (prog, dim)).fetchall()
         if not rows and defaults:
@@ -289,7 +289,7 @@ def _categorias(prog: str, dim: str, defaults: list[str]) -> list[dict]:
 
 def _mediciones(prog: str, pid: int) -> list[dict]:
     ensure_medicion_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute(
             "SELECT id, fecha, peso, cintura, grasa, nota FROM programa_medicion "
@@ -350,7 +350,7 @@ DEFAULT_SEGMENTOS = ["Adultos", "Niños", "Trabajadores"]
 
 
 def ensure_segmento_table() -> None:
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS programa_segmento (
@@ -367,7 +367,7 @@ def _segmentos(prog: str) -> list[dict]:
     """Categorías de un programa. Si no hay ninguna todavía, siembra las 3 por
     defecto (la profesional luego las renombra / agrega / borra)."""
     ensure_segmento_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute("SELECT nombre, orden FROM programa_segmento WHERE programa=? ORDER BY orden, nombre", (prog,)).fetchall()
         if not rows:
@@ -394,7 +394,7 @@ def _parse_pendientes(raw) -> list[dict]:
 
 def _planes(prog: str) -> dict[int, dict]:
     ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         rows = conn.execute("SELECT * FROM programa_plan WHERE programa=?", (prog,)).fetchall()
     return {r["paciente_id"]: dict(r) for r in rows}
@@ -500,7 +500,7 @@ def _compute(prog: str, meses: int = 6, scope_prof: int | None = None):
     meds_por_pac: dict[int, list] = {}
     if es_clinico:
         ensure_medicion_table()
-        from session import _conn as _c_med
+        from session import db as _c_med
         with _c_med() as _cm:
             for _m in _cm.execute(
                 "SELECT paciente_id, fecha, peso FROM programa_medicion "
@@ -913,7 +913,7 @@ async def set_plan(prog: str, paciente_id: int, request: Request,
         altura = None
     proximo_control = (body.get("proximo_control") or "").strip()[:10]
     ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             INSERT INTO programa_plan (programa, paciente_id, sesiones_plan, estado_manual, notas, resumen, plan, peso_meta, objetivo, altura, proximo_control, updated_at)
@@ -959,7 +959,7 @@ async def crear_segmento(prog: str, request: Request, token: str | None = Query(
     if not nombre:
         raise HTTPException(400, "Nombre vacío")
     ensure_segmento_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         nxt = conn.execute("SELECT COALESCE(MAX(orden),-1)+1 FROM programa_segmento WHERE programa=?", (prog,)).fetchone()[0]
         conn.execute("INSERT OR IGNORE INTO programa_segmento (programa, nombre, orden) VALUES (?,?,?)", (prog, nombre, nxt))
@@ -981,7 +981,7 @@ async def renombrar_segmento(prog: str, request: Request, token: str | None = Qu
     if not old or not new:
         raise HTTPException(400, "old/new requeridos")
     ensure_segmento_table(); ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         row = conn.execute("SELECT orden FROM programa_segmento WHERE programa=? AND nombre=?", (prog, old)).fetchone()
         if row is None:
@@ -1000,7 +1000,7 @@ async def borrar_segmento(prog: str, nombre: str = Query(...), token: str | None
     """Borra una categoría; los pacientes que la tenían quedan sin segmento."""
     prog = _resolve_editable(request, token, cmc_session, prog)
     ensure_segmento_table(); ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("DELETE FROM programa_segmento WHERE programa=? AND nombre=?", (prog, nombre))
         conn.execute("UPDATE programa_plan SET segmento='' WHERE programa=? AND segmento=?", (prog, nombre))
@@ -1018,7 +1018,7 @@ async def set_segmento(prog: str, paciente_id: int, request: Request,
     except Exception:
         raise HTTPException(400, "Body JSON inválido")
     ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             INSERT INTO programa_plan (programa, paciente_id, segmento, updated_at)
@@ -1040,7 +1040,7 @@ async def set_pendientes(prog: str, paciente_id: int, request: Request,
         raise HTTPException(400, "Body JSON inválido")
     clean = _parse_pendientes(items)[:50]
     ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             INSERT INTO programa_plan (programa, paciente_id, pendientes, updated_at)
@@ -1079,7 +1079,7 @@ async def agregar_medicion(prog: str, paciente_id: int, request: Request,
         raise HTTPException(400, "Ingresa al menos un valor (peso/cintura/grasa)")
     nota = (body.get("nota") or "").strip()[:200]
     ensure_medicion_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute(
             "INSERT INTO programa_medicion (programa, paciente_id, fecha, peso, cintura, grasa, nota) "
@@ -1093,7 +1093,7 @@ async def borrar_medicion(prog: str, paciente_id: int, medicion_id: int, token: 
                           cmc_session: str | None = Cookie(None), request: Request = None):
     prog = _resolve_editable(request, token, cmc_session, prog)
     ensure_medicion_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("DELETE FROM programa_medicion WHERE id=? AND programa=? AND paciente_id=?",
                      (medicion_id, prog, paciente_id))
@@ -1121,7 +1121,7 @@ async def crear_objetivo(prog: str, request: Request, token: str | None = Query(
     if not nombre:
         raise HTTPException(400, "Nombre vacío")
     ensure_categoria_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         nxt = conn.execute("SELECT COALESCE(MAX(orden),-1)+1 FROM programa_categoria WHERE programa=? AND dim='objetivo'", (prog,)).fetchone()[0]
         conn.execute("INSERT OR IGNORE INTO programa_categoria (programa, dim, nombre, orden) VALUES (?,?,?,?)", (prog, "objetivo", nombre, nxt))
@@ -1142,7 +1142,7 @@ async def renombrar_objetivo(prog: str, request: Request, token: str | None = Qu
     if not old or not new:
         raise HTTPException(400, "old/new requeridos")
     ensure_categoria_table(); ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         row = conn.execute("SELECT orden FROM programa_categoria WHERE programa=? AND dim='objetivo' AND nombre=?", (prog, old)).fetchone()
         if row is None:
@@ -1160,7 +1160,7 @@ async def borrar_objetivo(prog: str, nombre: str = Query(...), token: str | None
                           cmc_session: str | None = Cookie(None), request: Request = None):
     prog = _resolve_editable(request, token, cmc_session, prog)
     ensure_categoria_table(); ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("DELETE FROM programa_categoria WHERE programa=? AND dim='objetivo' AND nombre=?", (prog, nombre))
         conn.execute("UPDATE programa_plan SET objetivo='' WHERE programa=? AND objetivo=?", (prog, nombre))
@@ -1178,7 +1178,7 @@ async def set_objetivo(prog: str, paciente_id: int, request: Request,
     except Exception:
         raise HTTPException(400, "Body JSON inválido")
     ensure_programa_plan_table()
-    from session import _conn
+    from session import db as _conn
     with _conn() as conn:
         conn.execute("""
             INSERT INTO programa_plan (programa, paciente_id, objetivo, updated_at)

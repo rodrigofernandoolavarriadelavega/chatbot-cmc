@@ -41,7 +41,7 @@ def _q1(conn, sql, params=(), default=0):
 @router.get("/resumen")
 async def resumen(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
     require_admin(request, token=token, cmc_session=cmc_session)
-    from session import _conn
+    from session import db as _conn
     now = datetime.now(_CHILE_TZ)
     mes = now.strftime("%Y-%m")
     hoy = now.strftime("%Y-%m-%d")

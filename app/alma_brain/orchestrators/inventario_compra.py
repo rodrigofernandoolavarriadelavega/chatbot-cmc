@@ -22,7 +22,7 @@ class InventarioCompraOrq(Orchestrator):
 
     async def sense(self) -> dict:
         from inventario_routes import ensure_inventario_tables
-        from session import _conn
+        from session import db as _conn
         ensure_inventario_tables()
         with _conn() as conn:
             rows = [dict(r) for r in conn.execute(
