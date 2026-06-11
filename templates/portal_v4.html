@@ -920,6 +920,7 @@ a{color:inherit; text-decoration:none}
 .gs-head{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; font-weight:700; color:var(--cmc-navy); padding:0 2px 8px}
 .gs-head b{font-weight:800}
 .gs-frame{display:block; width:100%; height:408px; border:1px solid var(--border); border-radius:14px; background:var(--bg)}
+.gs-body{max-height:408px; overflow:auto; padding:2px}
 @media (max-width:700px){
   .gen-card.zoom{grid-template-columns:1fr; grid-template-areas:"head" "tree" "side"}
   .gen-card.zoom #gen-svg{height:150px}
@@ -2029,35 +2030,14 @@ function _genHover() {
 let _genPin = null;
 function genTap(rut) { _genPin = rut; _genShowTip(rut, true); }   // 1er toque: tarjeta con acciones (clave en celular)
 function _genAbrir(rut) { _genPin = null; closeGenograma(); famTap(rut, false); }
-function _genAgendarP(rut) {
-  // Zoom cinematográfico: la cámara se acerca a la persona (los demás se
-  // desvanecen) y a la derecha aparece el panel para agendar. Sin salir.
-  _genPin = null;
-  const tip = document.getElementById('gen-tip'); if (tip) tip.classList.remove('show');
-  const card = document.querySelector('#gen-backdrop .gen-card');
-  const wrap = document.getElementById('gen-svg');
-  const svg = wrap ? wrap.querySelector('svg') : null;
-  const g = wrap ? [...wrap.querySelectorAll('g[data-rut]')].find(x => x.dataset.rut === rut) : null;
-  const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
-  if (!card || !svg || !g || !m) return;
-  const first = (m.nombre || '').split(' ')[0];
-  wrap.querySelectorAll('g[data-rut]').forEach(x => x.classList.toggle('gz-focus', x === g));
-  const res = document.getElementById('gen-res'); if (res) res.style.display = 'none';
-  const leg = card.querySelector('.gen-leg'); if (leg) leg.style.display = 'none';
-  let side = document.getElementById('gen-side');
-  if (!side) { side = document.createElement('div'); side.id = 'gen-side'; card.appendChild(side); }
-  side.innerHTML = `<div class="gs-head"><span>📅 Hora para <b>${first}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
-    <iframe class="gs-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`;
-  card.classList.add('zoom');
-  // Tras el reacomodo del layout, animar la cámara INTERNA del SVG hacia el
-  // nodo (en unidades del viewBox: re-render vectorial, nítido también en celular)
+function _genAimCam(wrap, svg, g) {
+  // Cámara interna del SVG (vectorial = nítida en celular)
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const cam = svg.querySelector('#gz-cam');
     if (!cam) return;
     cam.style.transform = 'none';
     const sr = svg.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), gr = g.getBoundingClientRect();
-    const vbW = svg.viewBox.baseVal.width;
-    const u = vbW / sr.width;                       // unidades de viewBox por px
+    const u = svg.viewBox.baseVal.width / sr.width;
     const k = 2;
     const nx = (gr.left - sr.left + gr.width / 2) * u;
     const ny = (gr.top - sr.top + gr.height / 2 - 6) * u;
@@ -2065,6 +2045,32 @@ function _genAgendarP(rut) {
     const cy = (wr.height / 2 - (sr.top - wr.top)) * u;
     cam.style.transform = `translate(${cx - k * nx}px, ${cy - k * ny}px) scale(${k})`;
   }));
+}
+function _genOpenSide(rut, html) {
+  // Zoom a la persona + panel lateral (resumen o agenda): misma coreografía
+  _genPin = null;
+  const tip = document.getElementById('gen-tip'); if (tip) tip.classList.remove('show');
+  const card = document.querySelector('#gen-backdrop .gen-card');
+  const wrap = document.getElementById('gen-svg');
+  const svg = wrap ? wrap.querySelector('svg') : null;
+  const g = wrap ? [...wrap.querySelectorAll('g[data-rut]')].find(x => x.dataset.rut === rut) : null;
+  if (!card || !svg || !g) return false;
+  wrap.querySelectorAll('g[data-rut]').forEach(x => x.classList.toggle('gz-focus', x === g));
+  const leg = card.querySelector('.gen-leg'); if (leg) leg.style.display = 'none';
+  let side = document.getElementById('gen-side');
+  if (!side) { side = document.createElement('div'); side.id = 'gen-side'; card.appendChild(side); }
+  side.innerHTML = html;
+  card.classList.add('zoom');
+  _genAimCam(wrap, svg, g);
+  return true;
+}
+function _genAgendarP(rut) {
+  const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
+  if (!m) return;
+  const first = (m.nombre || '').split(' ')[0];
+  const ok = _genOpenSide(rut, `<div class="gs-head"><span>📅 Hora para <b>${first}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
+    <iframe class="gs-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`);
+  if (!ok) return;
   const demo = (patientData && patientData.demo) ? '&demo=1' : '';
   document.getElementById('gen-ag-frame').src = '/agendar/portal?embed=1&rut=' + encodeURIComponent(rut) + demo;
 }
@@ -2084,36 +2090,25 @@ function _genVolver() {
   const svgWrap = document.getElementById('gen-svg'); if (svgWrap) svgWrap.style.display = '';
   const leg = document.querySelector('#gen-backdrop .gen-leg'); if (leg) leg.style.display = '';
 }
-/* Mini-resumen del familiar DENTRO del pop-up (todo el portal en una imagen) */
+/* Resumen del familiar: mismo zoom cinematográfico, ficha al lado */
 function _genResumen(rut) {
-  _genPin = null;
-  const tip = document.getElementById('gen-tip'); if (tip) tip.classList.remove('show');
-  const card = document.querySelector('#gen-backdrop .gen-card');
   const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
-  if (!card || !m) return;
-  document.getElementById('gen-svg').style.display = 'none';
-  const leg = card.querySelector('.gen-leg'); if (leg) leg.style.display = 'none';
-  const ag = document.getElementById('gen-ag'); if (ag) ag.style.display = 'none';
-  let pane = document.getElementById('gen-res');
-  if (!pane) { pane = document.createElement('div'); pane.id = 'gen-res'; card.appendChild(pane); }
+  if (!m) return;
   const first = (m.nombre || '').split(' ')[0];
   const sug = famSugerencias(m)[0];
-  pane.innerHTML = `
-    <button class="gen-back" onclick="_genVolver()">← Volver al árbol</button>
-    <div class="gr-head"><span class="gr-ava">${(first[0] || '?').toUpperCase()}</span>
-      <div><div class="gr-name">${first}${m.edad != null ? ' (' + m.edad + ')' : ''}</div>
-      <div class="gr-rel">${m.relation === 'titular' ? 'Titular' : (m.relation || '')}</div></div></div>
-    ${m.proxima
-      ? `<div class="gr-box ok">📅 <b>Próxima hora:</b> ${m.proxima.especialidad} · ${_fmtFamFecha(m.proxima)}${m.proxima.profesional ? `<br><span>${m.proxima.profesional}</span>` : ''}</div>`
-      : `<div class="gr-box none">Sin horas agendadas</div>`}
-    ${m.ultima ? `<div class="gr-box">🕐 <b>Última atención:</b> ${m.ultima.especialidad} · ${hace(m.ultima.fecha)}${m.n_at ? `<br><span>${m.n_at} atenciones en los últimos 12 meses</span>` : ''}</div>` : ''}
-    ${(m.dx || []).length ? `<div class="gr-dx">${m.dx.map(d => `<span class="dx-chip">${d}</span>`).join('')}</div>` : ''}
-    ${sug ? `<div class="gr-box sug">${sug.ic} <b>Sugerida:</b> ${sug.t}<br><span>${sug.s}</span></div>` : ''}
-    <div class="salud-acts">
-      <button class="sa-btn" onclick="_genAgendarP('${rut}')">📅 Agendar una hora</button>
-      <button class="sa-btn ghost" onclick="_genAbrir('${rut}')">Abrir su portal</button>
-    </div>`;
-  pane.style.display = 'block';
+  _genOpenSide(rut, `<div class="gs-head"><span>👤 Resumen de <b>${first}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
+    <div class="gs-body">
+      ${m.proxima
+        ? `<div class="gr-box ok">📅 <b>Próxima hora:</b> ${m.proxima.especialidad} · ${_fmtFamFecha(m.proxima)}${m.proxima.profesional ? `<br><span>${m.proxima.profesional}</span>` : ''}</div>`
+        : `<div class="gr-box none">Sin horas agendadas</div>`}
+      ${m.ultima ? `<div class="gr-box">🕐 <b>Última atención:</b> ${m.ultima.especialidad} · ${hace(m.ultima.fecha)}${m.n_at ? `<br><span>${m.n_at} atenciones en los últimos 12 meses</span>` : ''}</div>` : ''}
+      ${(m.dx || []).length ? `<div class="gr-dx">${m.dx.map(d => `<span class="dx-chip">${d}</span>`).join('')}</div>` : ''}
+      ${sug ? `<div class="gr-box sug">${sug.ic} <b>Sugerida:</b> ${sug.t}<br><span>${sug.s}</span></div>` : ''}
+      <div class="salud-acts">
+        <button class="sa-btn" onclick="_genAgendarP('${rut}')">📅 Agendar una hora</button>
+        <button class="sa-btn ghost" onclick="_genAbrir('${rut}')">Abrir su portal</button>
+      </div>
+    </div>`);
 }
 /* Compartir el estado familiar por WhatsApp (texto, ideal para zona rural) */
 function compartirArbol() {
