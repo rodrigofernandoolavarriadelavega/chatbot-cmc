@@ -2060,9 +2060,13 @@ function _genAimCam(wrap, svg, g) {
     // Zoom adaptativo: acercarse lo MÁXIMO posible dejando siempre a la vista
     // el conjunto completo nodo + nombre + edad + diagnósticos (~136 unidades,
     // desde el badge VIENDO en cy-50 hasta el chip de dx en cy+78)
-    const NEED = 175;   // encuadre más aireado: nodo + etiquetas con margen
+    // Encuadre por dispositivo: en PC la cámara queda más lejos (columna alta,
+    // se ve la persona con aire y algo de contexto); en celular más cerca.
+    const esPC = window.matchMedia('(min-width: 700px)').matches;
+    const NEED = esPC ? 235 : 140;
+    const kMax = esPC ? 1.5 : 1.8;
     const aspect = wr.height / wr.width;
-    const k = Math.max(1.1, Math.min(1.65, (svg._vb0.w * aspect) / NEED));
+    const k = Math.max(1.1, Math.min(kMax, (svg._vb0.w * aspect) / NEED));
     const cx = parseFloat(g.dataset.cx);
     const cy = parseFloat(g.dataset.cy) + 14;   // centro del conjunto nodo+etiquetas
     const wT = svg._vb0.w / k, hT = wT * aspect;
