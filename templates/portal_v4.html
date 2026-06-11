@@ -1835,13 +1835,18 @@ async function renderFamilyStrip() {
         <div class="fam-rel">familiar</div>
       </button>
     </div>`;
-    // Sugerencias preventivas por miembro (cross-sell familiar, máx 4)
-    let sugs = [];
-    for (const m of mem) {
+    // Sugerencias preventivas por miembro (cross-sell familiar, máx 4).
+    // Round-robin: primero una por persona, así nadie queda fuera del tope.
+    const porMiembro = mem.map(m => {
       const first = (m.nombre || '').split(' ')[0] || '—';
-      for (const sg of famSugerencias(m)) sugs.push({ ...sg, rut: m.rut, quien: `${first}${m.edad != null ? ' (' + m.edad + ')' : ''}` });
+      return { quien: `${first}${m.edad != null ? ' (' + m.edad + ')' : ''}`, rut: m.rut, list: famSugerencias(m) };
+    });
+    const sugs = [];
+    for (let ronda = 0; ronda < 2 && sugs.length < 4; ronda++) {
+      for (const pm of porMiembro) {
+        if (pm.list[ronda] && sugs.length < 4) sugs.push({ ...pm.list[ronda], rut: pm.rut, quien: pm.quien });
+      }
     }
-    sugs = sugs.slice(0, 4);
     if (sugs.length) {
       h += `<div class="fam-sug-title">Recomendado para tu familia</div>`;
       for (const sg of sugs) {
