@@ -57,10 +57,24 @@ def ensure_table() -> None:
                 notas TEXT DEFAULT '',
                 created_at TEXT DEFAULT (datetime('now')))
         """)
+        # Mural del equipo: lo "del momento" (chat interno + pendientes de turno).
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS checklist_mural (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                texto TEXT NOT NULL,
+                por TEXT DEFAULT '',
+                estado TEXT DEFAULT 'nota',         -- nota | pendiente | resuelto
+                fecha TEXT DEFAULT '',
+                hora TEXT DEFAULT '',
+                resuelto_por TEXT DEFAULT '',
+                resuelto_at TEXT DEFAULT '',
+                created_at TEXT DEFAULT (datetime('now')))
+        """)
         # Una marca por item y periodo (idempotente: marcar 2 veces no duplica).
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_chk_item_periodo ON checklist_marcas(item_id, periodo)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_chk_periodo ON checklist_marcas(periodo)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_chk_item_cad ON checklist_items(cadencia, activo)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_chk_mural ON checklist_mural(estado, id)")
         conn.commit()
 
 
@@ -186,9 +200,11 @@ async def resumen(token: str | None = Query(None), cmc_session: str | None = Coo
             hechos = conn.execute(
                 f"SELECT COUNT(*) FROM checklist_marcas WHERE periodo=? AND item_id IN ({ph})",
                 [per_dia, *dia_ids]).fetchone()[0]
+        mural_pend = conn.execute("SELECT COUNT(*) FROM checklist_mural WHERE estado='pendiente'").fetchone()[0]
     total = len(dia_ids)
     return {"hechos": hechos, "total": total, "pendientes": total - hechos,
-            "pct": round(100 * hechos / total) if total else 0}
+            "pct": round(100 * hechos / total) if total else 0,
+            "mural_pendientes": mural_pend}
 
 
 @router.post("/{item_id}/marcar")
@@ -353,3 +369,93 @@ async def cumplimiento(dias: int = Query(14), token: str | None = Query(None),
             })
     prom = round(sum(d["pct"] for d in dias_out) / len(dias_out)) if dias_out else 0
     return {"dias": dias_out, "total_items_dia": total, "promedio_pct": prom}
+
+
+# ── Mural del equipo (chat interno + pendientes de turno) ────────────────────
+@router.get("/mural")
+async def mural(token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
+    """Pendientes (fijados arriba, los viejos primero para que 'molesten') + feed reciente."""
+    require_admin(request, token=token, cmc_session=cmc_session)
+    ensure_table()
+    from session import db as _conn
+    with _conn() as conn:
+        pend = [dict(r) for r in conn.execute(
+            "SELECT * FROM checklist_mural WHERE estado='pendiente' ORDER BY id ASC").fetchall()]
+        feed = [dict(r) for r in conn.execute(
+            "SELECT * FROM checklist_mural WHERE estado IN ('nota','resuelto') ORDER BY id DESC LIMIT 80").fetchall()]
+    return {"pendientes": pend, "feed": feed,
+            "fecha": datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")}
+
+
+@router.post("/mural")
+async def mural_post(request: Request, token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    require_admin(request, token=token, cmc_session=cmc_session)
+    ensure_table()
+    try:
+        b = await request.json()
+    except Exception:
+        raise HTTPException(400, "Body JSON inválido")
+    texto = (b.get("texto") or "").strip()[:1000]
+    if not texto:
+        raise HTTPException(400, "texto requerido")
+    por = (b.get("por") or "").strip()[:60]
+    estado = "pendiente" if b.get("pendiente") else "nota"
+    ahora = datetime.now(_CHILE_TZ)
+    from session import db as _conn
+    with _conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO checklist_mural (texto, por, estado, fecha, hora) VALUES (?,?,?,?,?)",
+            (texto, por, estado, ahora.strftime("%Y-%m-%d"), ahora.strftime("%H:%M")))
+        conn.commit()
+    return {"ok": True, "id": cur.lastrowid, "estado": estado, "hora": ahora.strftime("%H:%M")}
+
+
+def _mural_set_estado(item_id: int, estado: str, por: str):
+    ahora = datetime.now(_CHILE_TZ)
+    from session import db as _conn
+    with _conn() as conn:
+        if estado == "resuelto":
+            cur = conn.execute(
+                "UPDATE checklist_mural SET estado='resuelto', resuelto_por=?, resuelto_at=? WHERE id=?",
+                (por, ahora.strftime("%Y-%m-%d %H:%M"), item_id))
+        else:
+            cur = conn.execute(
+                "UPDATE checklist_mural SET estado=?, resuelto_por='', resuelto_at='' WHERE id=?",
+                (estado, item_id))
+        conn.commit()
+    if cur.rowcount == 0:
+        raise HTTPException(404, "No encontrado")
+
+
+@router.post("/mural/{item_id}/resolver")
+async def mural_resolver(item_id: int, request: Request, token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    require_admin(request, token=token, cmc_session=cmc_session)
+    ensure_table()
+    try:
+        b = await request.json()
+    except Exception:
+        b = {}
+    _mural_set_estado(item_id, "resuelto", (b.get("por") or "").strip()[:60])
+    return {"ok": True}
+
+
+@router.post("/mural/{item_id}/pendiente")
+async def mural_pendiente(item_id: int, request: Request, token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    """Convierte una nota (o reabre una resuelta) en pendiente."""
+    require_admin(request, token=token, cmc_session=cmc_session)
+    ensure_table()
+    _mural_set_estado(item_id, "pendiente", "")
+    return {"ok": True}
+
+
+@router.delete("/mural/{item_id}")
+async def mural_borrar(item_id: int, token: str | None = Query(None), cmc_session: str | None = Cookie(None), request: Request = None):
+    require_admin(request, token=token, cmc_session=cmc_session)
+    ensure_table()
+    from session import db as _conn
+    with _conn() as conn:
+        cur = conn.execute("DELETE FROM checklist_mural WHERE id=?", (item_id,))
+        conn.commit()
+    if cur.rowcount == 0:
+        raise HTTPException(404, "No encontrado")
+    return {"ok": True}

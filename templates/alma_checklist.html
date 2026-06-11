@@ -62,7 +62,37 @@
   .cmp-row .bar i{display:block;height:100%;border-radius:99px;transition:width .3s}
   .cmp-row .pc{width:42px;text-align:right;font-weight:800;font-size:13px;flex-shrink:0}
   .cmp-row .who{font-size:11.5px;color:var(--mute);width:140px;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  @media(max-width:640px){.cmp-row .who{display:none}.turno input{width:92px}}
+  /* tab badge */
+  .tbadge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--red);color:#fff;font-size:11px;font-weight:800;margin-left:3px;vertical-align:middle}
+  .tab.on .tbadge{background:#fff;color:var(--navy)}
+  /* mural */
+  .composer{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:12px;box-shadow:var(--sh-sm);margin-bottom:16px}
+  .composer textarea{width:100%;border:none;outline:none;resize:vertical;font-family:inherit;font-size:14.5px;color:var(--navy);min-height:46px;line-height:1.4}
+  .composer textarea::placeholder{color:var(--mute)}
+  .composer-foot{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .pend-check{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--mute);font-weight:600;cursor:pointer;flex:1;user-select:none}
+  .pend-check input{width:16px;height:16px;accent-color:var(--red);cursor:pointer}
+  .mu-head{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:4px 0 10px;display:flex;align-items:center;gap:7px}
+  .pend-card{display:flex;gap:11px;align-items:flex-start;background:var(--red-s);border:1.5px solid #f6c9c9;border-left:4px solid var(--red);border-radius:12px;padding:11px 13px;margin-bottom:8px}
+  .pend-card .ico{font-size:15px;line-height:1.4;flex-shrink:0}
+  .pend-card .body{flex:1;min-width:0}
+  .pend-card .txt{font-weight:600;color:var(--navy);font-size:14px;white-space:pre-wrap;word-break:break-word}
+  .pend-card .meta{font-size:11.5px;color:var(--mute);margin-top:3px}
+  .pend-card .ok{flex-shrink:0;display:flex;align-items:center;gap:5px;background:var(--green);color:#fff;border:none;border-radius:9px;padding:7px 11px;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
+  .pend-card .ok svg{width:13px;height:13px}
+  .post{background:#fff;border:1.5px solid var(--border);border-radius:13px;padding:10px 13px;margin-bottom:8px;position:relative}
+  .post .meta{font-size:11.5px;color:var(--mute);font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+  .post .who{color:var(--blue)}
+  .post .txt{color:var(--navy);font-size:14px;white-space:pre-wrap;word-break:break-word;line-height:1.4}
+  .post.resuelto{opacity:.7;background:var(--green-s);border-color:#bfe9cf}
+  .post.resuelto .txt{text-decoration:line-through;color:var(--mute)}
+  .post .pa{position:absolute;top:8px;right:9px;display:flex;gap:2px;opacity:0;transition:.15s}
+  .post:hover .pa{opacity:1}
+  .post .pa button{background:none;border:none;cursor:pointer;color:var(--mute);padding:3px;border-radius:6px;display:flex}
+  .post .pa button:hover{background:var(--bg);color:var(--navy)}
+  .post .pa button svg{width:15px;height:15px}
+  .post .done-by{font-size:11px;color:#119c45;font-weight:700;margin-top:4px}
+  @media(max-width:640px){.cmp-row .who{display:none}.turno input{width:92px}.post .pa{opacity:1}}
 </style>
 </head><body>
 <div class="pg-topbar">
@@ -77,6 +107,7 @@
 <div class="wrap">
   <div class="tabs">
     <div class="tab on" data-v="hoy" onclick="tab('hoy')">Hoy</div>
+    <div class="tab" data-v="mural" onclick="tab('mural')">Mural <span class="tbadge" id="mu-badge" style="display:none">0</span></div>
     <div class="tab" data-v="sistema" onclick="tab('sistema')">Sistema</div>
     <div class="tab" data-v="cumplimiento" onclick="tab('cumplimiento')">Cumplimiento</div>
   </div>
@@ -88,6 +119,19 @@
       <div style="flex:1"><div class="bar"><i id="h-bar" style="width:0"></i></div><div class="frac" id="h-frac">0 / 0 tareas</div></div>
     </div>
     <div id="hoy-grupos"></div>
+  </div>
+
+  <!-- MURAL -->
+  <div class="view" id="v-mural">
+    <div class="composer">
+      <textarea id="mu-text" rows="2" placeholder="Anota algo del momento: 'se acabó el toner', 'llamó la paciente Pérez, devolver llamada'…"></textarea>
+      <div class="composer-foot">
+        <label class="pend-check"><input type="checkbox" id="mu-pend"> <span>📌 Es un pendiente (se fija arriba hasta resolverlo)</span></label>
+        <button class="btn-primary" onclick="postMural()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/></svg> Publicar</button>
+      </div>
+    </div>
+    <div id="mu-pendientes"></div>
+    <div id="mu-feed"></div>
   </div>
 
   <!-- SISTEMA -->
@@ -147,7 +191,8 @@ turnoEl.addEventListener('input',()=>localStorage.setItem('cmc_chk_turno',turnoE
 
 function tab(v){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on')); F('v-'+v).classList.add('on');
-  if(v==='sistema')loadSys(); if(v==='cumplimiento')loadCmp();}
+  if(v==='sistema')loadSys(); if(v==='cumplimiento')loadCmp();
+  if(v==='mural'){loadMural();startMuralPoll();}else{stopMuralPoll();}}
 
 function barColor(p){return p>=100?'var(--green)':p>=60?'var(--aqua)':p>=30?'var(--orange)':'var(--red)';}
 
@@ -226,5 +271,55 @@ async function loadCmp(){
   }).join('');
 }
 
+// ── MURAL ──
+let MURAL_TIMER=null;
+function startMuralPoll(){ if(MURAL_TIMER)return; MURAL_TIMER=setInterval(()=>{ if(F('v-mural').classList.contains('on'))loadMural(true); },12000); }
+function stopMuralPoll(){ if(MURAL_TIMER){clearInterval(MURAL_TIMER);MURAL_TIMER=null;} }
+const DEL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg>';
+const PIN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M9 10.76V5a1 1 0 011-1h4a1 1 0 011 1v5.76l2 3.24H7l2-3.24z" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function setBadge(n){const b=F('mu-badge');if(n>0){b.textContent=n;b.style.display='inline-flex';}else{b.style.display='none';}}
+function postTime(p){return (p.por?esc(p.por)+' · ':'')+(p.fecha?fdate(p.fecha).slice(0,5)+' ':'')+esc(p.hora||'');}
+async function loadMural(silent){
+  try{
+    const r=await api('/mural'); setBadge(r.pendientes.length);
+    // pendientes (fijados)
+    const pw=F('mu-pendientes');
+    pw.innerHTML = r.pendientes.length ? `<div class="mu-head">📌 Pendientes (${r.pendientes.length})</div>`+r.pendientes.map(p=>`
+      <div class="pend-card"><div class="ico">📌</div>
+        <div class="body"><div class="txt">${esc(p.texto)}</div><div class="meta">${postTime(p)}</div></div>
+        <button class="ok" onclick="resolver(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6" stroke-linecap="round" stroke-linejoin="round"/></svg> Resuelto</button>
+      </div>`).join('') : '';
+    // feed
+    const fw=F('mu-feed');
+    if(!r.feed.length && !r.pendientes.length){ fw.innerHTML='<div class="empty">Todavía no hay nada en el muro. Escribí lo primero arriba.</div>'; return; }
+    fw.innerHTML = (r.feed.length?`<div class="mu-head">💬 Muro</div>`:'')+r.feed.map(p=>{
+      const res=p.estado==='resuelto';
+      return `<div class="post ${res?'resuelto':''}">
+        <div class="meta"><span class="who">${esc(p.por||'Equipo')}</span> · ${p.fecha?fdate(p.fecha).slice(0,5)+' ':''}${esc(p.hora||'')}</div>
+        <div class="txt">${esc(p.texto)}</div>
+        ${res?`<div class="done-by">✓ resuelto por ${esc(p.resuelto_por||'—')}</div>`:''}
+        <div class="pa">
+          ${res?`<button onclick="volverPend(${p.id})" title="Reabrir como pendiente">${PIN}</button>`:`<button onclick="volverPend(${p.id})" title="Marcar como pendiente">${PIN}</button>`}
+          <button onclick="borrarPost(${p.id})" title="Eliminar">${DEL}</button>
+        </div></div>`;
+    }).join('');
+  }catch(e){ if(!silent)toast(e.message,true); }
+}
+async function postMural(){
+  const t=F('mu-text').value.trim(); if(!t){toast('Escribí algo primero',true);return;}
+  const pend=F('mu-pend').checked, por=turnoEl.value.trim();
+  try{ await api('/mural',{method:'POST',body:JSON.stringify({texto:t,por,pendiente:pend})});
+    F('mu-text').value='';F('mu-pend').checked=false; loadMural();
+  }catch(e){toast(e.message,true);}
+}
+async function resolver(id){ const por=turnoEl.value.trim();
+  try{ await api('/mural/'+id+'/resolver',{method:'POST',body:JSON.stringify({por})}); loadMural(); }catch(e){toast(e.message,true);} }
+async function volverPend(id){ try{ await api('/mural/'+id+'/pendiente',{method:'POST'}); loadMural(); }catch(e){toast(e.message,true);} }
+async function borrarPost(id){ if(!confirm('¿Eliminar esta publicación?'))return;
+  try{ await api('/mural/'+id,{method:'DELETE'}); loadMural(); }catch(e){toast(e.message,true);} }
+// Enter envía, Shift+Enter salto de línea
+F('mu-text').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();postMural();} });
+
 loadHoy();
+api('/mural').then(r=>setBadge(r.pendientes.length)).catch(()=>{});
 </script></body></html>
