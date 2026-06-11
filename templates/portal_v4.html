@@ -883,6 +883,14 @@ a{color:inherit; text-decoration:none}
 .gen-leg .lg-sq{border-radius:3px}
 .gen-leg .lg-ci{border-radius:50%}
 .gen-leg .lg-act{border-radius:50%; background:var(--cmc-aqua); border-color:#0e8ea1}
+.gen-tip{position:absolute; width:184px; background:var(--cmc-navy); color:#fff; border-radius:11px; padding:9px 11px; font-size:10px; opacity:0; pointer-events:none; transition:opacity .15s, transform .15s; z-index:5; transform:translateY(-96%); box-shadow:0 10px 26px rgba(15,63,104,.4)}
+.gen-tip.show{opacity:1; transform:translateY(-100%)}
+.gen-tip .gt-name{font-weight:800; font-size:11px; margin-bottom:3px}
+.gen-tip .gt-row{font-weight:600; line-height:1.5}
+.gen-tip .gt-row.ok{color:#9fe8d8}
+.gen-tip .gt-row.none{color:#b9cddb}
+.gen-tip .gt-row.sug{color:#ffd98a}
+.gen-tip .gt-hint{margin-top:4px; font-size:8.5px; color:#8fb4cf; font-weight:700}
 #gen-svg g{transform-box:fill-box; transform-origin:center; transition:transform .18s var(--ease)}
 #gen-svg g:hover{transform:translateY(-3px) scale(1.04)}
 
@@ -1913,8 +1921,37 @@ function openGenograma() {
     </div>
   </div>`;
   bd.classList.add('show');
+  _genHover();
 }
 function closeGenograma() { const b = document.getElementById('gen-backdrop'); if (b) b.classList.remove('show'); }
+/* Tooltip al pasar el mouse por un nodo: próxima cita + cita sugerida */
+function _genHover() {
+  const wrap = document.getElementById('gen-svg');
+  if (!wrap) return;
+  wrap.style.position = 'relative';
+  let tip = document.getElementById('gen-tip');
+  if (!tip) { tip = document.createElement('div'); tip.id = 'gen-tip'; tip.className = 'gen-tip'; wrap.appendChild(tip); }
+  wrap.querySelectorAll('g[data-rut]').forEach(g => {
+    g.addEventListener('mouseenter', () => {
+      const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(g.dataset.rut));
+      if (!m) return;
+      const first = (m.nombre || '').split(' ')[0];
+      let h = `<div class="gt-name">${first}${m.edad != null ? ' (' + m.edad + ')' : ''}</div>`;
+      h += m.proxima
+        ? `<div class="gt-row ok">📅 Próxima: ${m.proxima.especialidad} · ${_fmtFamFecha(m.proxima)}</div>`
+        : `<div class="gt-row none">Sin citas próximas</div>`;
+      const sug = famSugerencias(m)[0];
+      if (sug) h += `<div class="gt-row sug">${sug.ic} Sugerida: ${sug.t}</div>`;
+      h += `<div class="gt-hint">toca para abrir su portal</div>`;
+      tip.innerHTML = h;
+      const wr = wrap.getBoundingClientRect(), gr = g.getBoundingClientRect();
+      tip.style.left = Math.max(6, Math.min(wr.width - 192, gr.left - wr.left + gr.width / 2 - 92)) + 'px';
+      tip.style.top = (gr.top - wr.top - 6) + 'px';
+      tip.classList.add('show');
+    });
+    g.addEventListener('mouseleave', () => tip.classList.remove('show'));
+  });
+}
 async function genTap(rut) { closeGenograma(); await famTap(rut, false); }
 function buildGenSVG(mem) {
   const act = _normRut((patientData && patientData.rut) || '');
@@ -2019,7 +2056,7 @@ function buildGenSVG(mem) {
     const first = (m.nombre || '').split(' ')[0];
     const dx = (m.dx || []).slice(0, 2).join(' · ');
     const halo = 'stroke="#f8fbfd" stroke-width="3" paint-order="stroke"';
-    let g = `<g onclick="genTap('${m.rut}')" style="cursor:pointer">${shape}
+    let g = `<g data-rut="${m.rut}" onclick="genTap('${m.rut}')" style="cursor:pointer">${shape}
       <text x="${p.x}" y="${p.y + 5.5}" text-anchor="middle" font-size="15" font-weight="800" fill="#0F3F68">${(first[0] || '?').toUpperCase()}</text>
       <text x="${p.x}" y="${p.y + 39}" text-anchor="middle" font-size="11" font-weight="800" fill="#1f3344" ${halo}>${first}${m.edad != null ? ' (' + m.edad + ')' : ''}</text>
       <text x="${p.x}" y="${p.y + 51}" text-anchor="middle" font-size="7.6" font-weight="700" fill="#8a99a6" letter-spacing="1" ${halo}>${(m.relation === 'titular' ? 'TITULAR' : (m.relation || '')).toUpperCase()}</text>`;
