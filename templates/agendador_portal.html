@@ -270,6 +270,9 @@ async function loadCatalogo() {
     }
     $('esp-box').innerHTML = h || '<div class="empty">Sin especialidades disponibles</div>';
     window._CAT = r.grupos || [];
+    // ?esp= preselecciona la especialidad (p.ej. al tocar un profesional en el portal)
+    const pre = Q.get('esp');
+    if (pre && findEsp(pre)) pickEsp(pre);
   } catch (e) { $('esp-box').innerHTML = '<div class="empty">No pudimos cargar. Recargue la página.</div>'; }
 }
 function findEsp(nombre) {

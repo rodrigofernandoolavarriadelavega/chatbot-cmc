@@ -867,6 +867,11 @@ a{color:inherit; text-decoration:none}
 .fam-sug .fs-s{font-size:10.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
 .fam-sug .fs-go{flex:none; font-size:11px; font-weight:800; color:var(--cmc-blue); white-space:nowrap}
 
+/* Nuestro equipo */
+.gl-team{font-size:9.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); margin:12px 0 7px}
+.gl-team:first-child{margin-top:0}
+.team-ava{background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff; font-size:11px; font-weight:800; border-radius:50%}
+
 /* Acciones directas en Mi salud (registrar / informe) */
 .salud-acts{display:flex; gap:8px; margin-top:12px}
 .sa-btn{flex:1; padding:12px 10px; border:0; border-radius:11px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:12px; font-weight:800; cursor:pointer; transition:filter .15s, transform .15s}
@@ -2455,6 +2460,9 @@ function renderRecursos() {
       Esta guía es educativa y no reemplaza la evaluación médica. Ante la duda, consulta. En caso de riesgo vital, llama al <strong>131</strong>.
     </div></div>`;
 
+  // Nuestro equipo (se llena async desde el catálogo real del agendador)
+  html += `<div id="equipo-slot"></div>`;
+
   // Guías relevantes según dx
   const dxStr = (d.diagnosticos || []).join(' | ').toLowerCase();
   const relevantes = GUIDES.filter(g => g.cond.length === 0 || g.cond.some(k => dxStr.includes(k)));
@@ -2505,6 +2513,51 @@ function renderRecursos() {
   html += `</div></div></div>`;
 
   el.innerHTML = html;
+  loadEquipo();
+}
+
+/* ═══ Nuestro equipo: roster real desde el catálogo del agendador ═══ */
+let _equipoCat = null;
+async function loadEquipo() {
+  const slot = document.getElementById('equipo-slot');
+  if (!slot) return;
+  try {
+    if (!_equipoCat) {
+      const r = await fetch('/agendar/api/catalogo', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      _equipoCat = (await r.json()).grupos || [];
+    }
+    let total = 0, h = '';
+    for (const g of _equipoCat) {
+      h += `<div class="gl-team">${g.grupo}</div>`;
+      for (const e of g.especialidades) {
+        for (const p of (e.profesionales || [])) {
+          total++;
+          const ini = (p.nombre || '').replace(/^Dra?\.\s*/i, '').split(' ').slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
+          h += `<button class="fam-sug" onclick="agendarEsp('${(e.especialidad || '').replace(/'/g, "\\'")}')">
+            <span class="fs-ic team-ava">${ini}</span>
+            <div class="fs-tx"><div class="fs-t">${p.nombre}</div><div class="fs-s">${e.especialidad}${p.precio ? ' · ' + p.precio : ''}</div></div>
+            <span class="fs-go">Agendar →</span>
+          </button>`;
+        }
+      }
+    }
+    if (!total) return;
+    slot.innerHTML = `<div class="panel acc closed">
+      <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot" style="background:var(--cmc-aqua); box-shadow:0 0 0 4px rgba(79,190,206,.25)"></span><h2>Nuestro equipo</h2><span class="count">${total}</span><span class="acc-caret">▾</span></div>
+      <div class="acc-body">${h}</div>
+    </div>`;
+  } catch (e) { /* fail-safe: sin roster */ }
+}
+function agendarEsp(esp) {
+  const frame = document.getElementById('ag-inline-frame');
+  const panel = document.getElementById('ag-inline-panel');
+  if (frame && panel && panel.style.display !== 'none') {
+    const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
+    const demo = (patientData && patientData.demo) ? '&demo=1' : '';
+    frame.src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo + '&esp=' + encodeURIComponent(esp);
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else { agendar(); }
 }
 
 /* ═══ Perfil (Mis datos) ═══ */
