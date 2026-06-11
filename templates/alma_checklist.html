@@ -1,0 +1,230 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Checklist — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>
+  .turno{display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:6px 10px;box-shadow:var(--sh-sm)}
+  .turno svg{width:17px;height:17px;color:var(--aqua);flex-shrink:0}
+  .turno input{border:none;outline:none;font-family:inherit;font-weight:700;color:var(--navy);width:120px;font-size:14px;background:transparent}
+  .turno input::placeholder{color:var(--mute);font-weight:600}
+  .tabs{display:flex;gap:6px;margin:0 0 18px;flex-wrap:wrap}
+  .tab{padding:9px 18px;border-radius:11px;border:1.5px solid var(--border);background:#fff;color:var(--mute);font-weight:700;font-size:14px;cursor:pointer;transition:.15s}
+  .tab.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--sh-sm)}
+  .view{display:none}.view.on{display:block}
+  /* hero progreso del día */
+  .hero{background:linear-gradient(135deg,var(--navy),var(--blue));border-radius:18px;padding:20px 22px;color:#fff;margin-bottom:18px;box-shadow:var(--sh-md);display:flex;align-items:center;gap:20px}
+  .hero .big{font-size:40px;font-weight:800;line-height:1}
+  .hero .lbl{font-size:13px;opacity:.85;font-weight:600;margin-top:3px}
+  .hero .bar{flex:1;height:12px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
+  .hero .bar i{display:block;height:100%;background:#fff;border-radius:99px;transition:width .4s}
+  .hero .frac{font-size:13px;opacity:.9;font-weight:700;margin-top:8px;text-align:right}
+  /* grupo de cadencia */
+  .grp{background:#fff;border:1.5px solid var(--border);border-radius:16px;box-shadow:var(--sh-sm);margin-bottom:14px;overflow:hidden}
+  .grp-h{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+  .grp-h .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .grp-h .ic svg{width:18px;height:18px}
+  .grp-h h3{font-size:15px;font-weight:800;color:var(--navy);margin:0;flex:1}
+  .grp-h .cnt{font-size:13px;font-weight:700;color:var(--mute);background:var(--bg);padding:3px 10px;border-radius:99px}
+  .grp-h .cnt.full{background:var(--green-s);color:#119c45}
+  .grp-h .chev{width:16px;height:16px;color:var(--mute);transition:.2s}
+  .grp.closed .chev{transform:rotate(-90deg)}
+  .grp.closed .grp-b{display:none}
+  .ic.amber{background:var(--orange-s);color:var(--orange)}
+  .ic.sun{background:#fff6db;color:#e0a106}
+  .ic.moon{background:#e9eefc;color:#5b6fd8}
+  .ic.week{background:var(--aqua-s);color:var(--aqua)}
+  .ic.month{background:var(--purple-s);color:var(--purple)}
+  /* fila de tarea */
+  .row{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #eef4f8;align-items:flex-start}
+  .row:last-child{border-bottom:none}
+  .chk{width:24px;height:24px;border-radius:8px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;margin-top:1px;transition:.12s}
+  .chk:hover{border-color:var(--aqua)}
+  .chk.on{background:var(--green);border-color:var(--green);color:#fff}
+  .chk svg{width:14px;height:14px;opacity:0}.chk.on svg{opacity:1}
+  .row .body{flex:1;min-width:0}
+  .row .ti{font-weight:700;color:var(--navy);font-size:14.5px;line-height:1.3}
+  .row.done .ti{color:var(--mute);text-decoration:line-through}
+  .row .de{font-size:12.5px;color:var(--mute);margin-top:2px;line-height:1.35}
+  .row .by{font-size:11.5px;color:#119c45;font-weight:700;margin-top:4px;display:flex;align-items:center;gap:4px}
+  .row .by svg{width:12px;height:12px}
+  /* sistema (editor) */
+  .sys-item{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border:1.5px solid var(--border);border-radius:12px;background:#fff;margin-bottom:8px;box-shadow:var(--sh-sm)}
+  .sys-item .body{flex:1;min-width:0}
+  .sys-item .ti{font-weight:700;color:var(--navy);font-size:14px}
+  .sys-item .de{font-size:12px;color:var(--mute);margin-top:2px}
+  .sys-h{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:18px 0 9px}
+  /* cumplimiento */
+  .cmp-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #eef4f8}
+  .cmp-row .d{width:84px;font-weight:700;color:var(--navy);font-size:13px;flex-shrink:0}
+  .cmp-row .bar{flex:1;height:10px;border-radius:99px;background:var(--bg);overflow:hidden;min-width:60px}
+  .cmp-row .bar i{display:block;height:100%;border-radius:99px;transition:width .3s}
+  .cmp-row .pc{width:42px;text-align:right;font-weight:800;font-size:13px;flex-shrink:0}
+  .cmp-row .who{font-size:11.5px;color:var(--mute);width:140px;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media(max-width:640px){.cmp-row .who{display:none}.turno input{width:92px}}
+</style>
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/></svg> Checklist de recepción</h1>
+  <div class="spacer"></div>
+  <div class="turno" title="Quién está de turno (se guarda en este dispositivo)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg>
+    <input id="turno" placeholder="¿Quién está de turno?" autocomplete="off">
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab on" data-v="hoy" onclick="tab('hoy')">Hoy</div>
+    <div class="tab" data-v="sistema" onclick="tab('sistema')">Sistema</div>
+    <div class="tab" data-v="cumplimiento" onclick="tab('cumplimiento')">Cumplimiento</div>
+  </div>
+
+  <!-- HOY -->
+  <div class="view on" id="v-hoy">
+    <div class="hero">
+      <div><div class="big" id="h-pct">0%</div><div class="lbl">del día completado</div></div>
+      <div style="flex:1"><div class="bar"><i id="h-bar" style="width:0"></i></div><div class="frac" id="h-frac">0 / 0 tareas</div></div>
+    </div>
+    <div id="hoy-grupos"></div>
+  </div>
+
+  <!-- SISTEMA -->
+  <div class="view" id="v-sistema">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <p style="color:var(--mute);font-size:13px;margin:0;flex:1">El sistema documentado: edita qué tareas existen y con qué frecuencia. Cualquier turno las ejecuta igual.</p>
+      <button class="btn-primary" onclick="openItem()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> Tarea</button>
+    </div>
+    <div id="sys-list"></div>
+  </div>
+
+  <!-- CUMPLIMIENTO -->
+  <div class="view" id="v-cumplimiento">
+    <div class="hero" style="background:linear-gradient(135deg,#119c45,#23c25e)">
+      <div><div class="big" id="c-prom">0%</div><div class="lbl">promedio últimos 14 días</div></div>
+      <div style="flex:1;font-size:13px;opacity:.92;font-weight:600">Cada barra = % de tareas del día que se marcaron ese día. Así ves si el sistema se está cumpliendo, no solo si existe.</div>
+    </div>
+    <div class="card"><div class="card-pad" style="padding:6px 16px 12px" id="cmp-list"></div></div>
+  </div>
+</div>
+
+<!-- modal item -->
+<div class="modal-bg" id="m-i"><div class="modal">
+  <div class="modal-head"><h2 id="i-title">Nueva tarea</h2><div class="x" onclick="AlmaKit.closeModal('m-i')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="i-id">
+    <div class="field"><label>Tarea</label><input id="i-titulo" placeholder="Ej: Cuadrar caja"></div>
+    <div class="field"><label>Cómo se hace / qué significa 'hecho'</label><textarea id="i-detalle" rows="2" placeholder="El detalle para que cualquiera la haga igual"></textarea></div>
+    <div class="field"><label>Cadencia</label><select id="i-cad">
+      <option value="apertura">Apertura (al abrir)</option>
+      <option value="dia">Durante el día</option>
+      <option value="cierre">Cierre (al cerrar)</option>
+      <option value="semanal">Semanal</option>
+      <option value="mensual">Mensual</option>
+    </select></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-i')">Cancelar</button><button class="btn-primary" onclick="saveItem()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/checklist";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,esc,toast,openModal,closeModal,fdate}=AlmaKit;
+const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const F=id=>document.getElementById(id);
+const META={apertura:{n:'Apertura',ic:'amber',svg:'<path d="M12 2v6m0 0l3-3m-3 3L9 5M5 12H2m20 0h-3M12 22v-3" stroke-linecap="round"/><circle cx="12" cy="13" r="4"/>'},
+  dia:{n:'Durante el día',ic:'sun',svg:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" stroke-linecap="round"/>'},
+  cierre:{n:'Cierre',ic:'moon',svg:'<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke-linecap="round" stroke-linejoin="round"/>'},
+  semanal:{n:'Semanal',ic:'week',svg:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/>'},
+  mensual:{n:'Mensual',ic:'month',svg:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 15h2M14 15h2" stroke-linecap="round"/>'}};
+const ORDER=['apertura','dia','cierre','semanal','mensual'];
+const CLOSED=JSON.parse(localStorage.getItem('cmc_chk_closed')||'{}');
+
+// turno persistente
+const turnoEl=F('turno');
+turnoEl.value=localStorage.getItem('cmc_chk_turno')||'';
+turnoEl.addEventListener('input',()=>localStorage.setItem('cmc_chk_turno',turnoEl.value.trim()));
+
+function tab(v){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on')); F('v-'+v).classList.add('on');
+  if(v==='sistema')loadSys(); if(v==='cumplimiento')loadCmp();}
+
+function barColor(p){return p>=100?'var(--green)':p>=60?'var(--aqua)':p>=30?'var(--orange)':'var(--red)';}
+
+// ── HOY ──
+async function loadHoy(){
+  const r=await api('/hoy');
+  F('h-pct').textContent=r.dia.pct+'%'; F('h-bar').style.width=r.dia.pct+'%';
+  F('h-frac').textContent=r.dia.hechos+' / '+r.dia.total+' tareas del día';
+  const cont=F('hoy-grupos'); cont.innerHTML='';
+  ORDER.forEach(cad=>{
+    const g=r.grupos[cad]; if(!g||!g.total)return;
+    const m=META[cad], full=g.hechos===g.total, closed=CLOSED[cad]?'closed':'';
+    const rows=g.items.map(it=>`<div class="row ${it.hecho?'done':''}">
+      <div class="chk ${it.hecho?'on':''}" onclick="toggle(${it.id},${it.hecho?1:0})">${CHK}</div>
+      <div class="body"><div class="ti">${esc(it.titulo)}</div>
+        ${it.detalle?`<div class="de">${esc(it.detalle)}</div>`:''}
+        ${it.hecho?`<div class="by"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${it.por?esc(it.por)+' · ':''}${it.hora}</div>`:''}
+      </div></div>`).join('');
+    cont.insertAdjacentHTML('beforeend',`<div class="grp ${closed}" id="grp-${cad}">
+      <div class="grp-h" onclick="fold('${cad}')">
+        <div class="ic ${m.ic}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${m.svg}</svg></div>
+        <h3>${m.n}</h3><span class="cnt ${full?'full':''}">${g.hechos}/${g.total}</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div><div class="grp-b">${rows}</div></div>`);
+  });
+}
+function fold(cad){CLOSED[cad]=!CLOSED[cad];localStorage.setItem('cmc_chk_closed',JSON.stringify(CLOSED));F('grp-'+cad).classList.toggle('closed');}
+async function toggle(id,hecho){
+  const por=turnoEl.value.trim();
+  try{
+    if(hecho){await api('/'+id+'/desmarcar',{method:'POST'});}
+    else{await api('/'+id+'/marcar',{method:'POST',body:JSON.stringify({por})});}
+    loadHoy();
+  }catch(e){toast(e.message,true);}
+}
+
+// ── SISTEMA ──
+async function loadSys(){
+  const r=await api('/items'); const cont=F('sys-list'); cont.innerHTML='';
+  ORDER.forEach(cad=>{
+    const its=r.items.filter(i=>i.cadencia===cad); if(!its.length)return;
+    cont.insertAdjacentHTML('beforeend',`<div class="sys-h">${META[cad].n}</div>`);
+    its.forEach(it=>cont.insertAdjacentHTML('beforeend',`<div class="sys-item">
+      <div class="body"><div class="ti">${esc(it.titulo)}</div>${it.detalle?`<div class="de">${esc(it.detalle)}</div>`:''}</div>
+      <div class="row-actions">
+        <button class="icon-btn" onclick='editItem(${it.id})' title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round"/></svg></button>
+        <button class="icon-btn danger" onclick='delItem(${it.id})' title="Quitar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke-linecap="round"/></svg></button>
+      </div></div>`));
+  });
+  if(!r.items.length)cont.innerHTML='<div class="empty">Sin tareas en el sistema</div>';
+  SYS=r.items;
+}
+let SYS=[];
+function openItem(){F('i-title').textContent='Nueva tarea';F('i-id').value='';F('i-titulo').value='';F('i-detalle').value='';F('i-cad').value='dia';openModal('m-i');}
+function editItem(id){const x=SYS.find(i=>i.id===id);if(!x)return;F('i-title').textContent='Editar tarea';F('i-id').value=id;F('i-titulo').value=x.titulo;F('i-detalle').value=x.detalle||'';F('i-cad').value=x.cadencia;openModal('m-i');}
+async function saveItem(){
+  const id=F('i-id').value,body={titulo:F('i-titulo').value.trim(),detalle:F('i-detalle').value.trim(),cadencia:F('i-cad').value};
+  if(!body.titulo){toast('La tarea necesita un nombre',true);return;}
+  try{ if(id)await api('/items/'+id,{method:'PATCH',body:JSON.stringify(body)}); else await api('/items',{method:'POST',body:JSON.stringify(body)});
+    closeModal('m-i');toast('Guardado');loadSys();}catch(e){toast(e.message,true);}
+}
+async function delItem(id){if(!confirm('¿Quitar esta tarea del sistema? (no borra el historial)'))return;
+  try{await api('/items/'+id,{method:'DELETE'});toast('Quitada');loadSys();}catch(e){toast(e.message,true);}}
+
+// ── CUMPLIMIENTO ──
+async function loadCmp(){
+  const r=await api('/cumplimiento?dias=14');
+  F('c-prom').textContent=r.promedio_pct+'%';
+  const wd=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  F('cmp-list').innerHTML=r.dias.map(d=>{
+    const dt=new Date(d.fecha+'T12:00:00'),lbl=wd[dt.getDay()]+' '+fdate(d.fecha).slice(0,5);
+    return `<div class="cmp-row"><div class="d">${lbl}</div>
+      <div class="bar"><i style="width:${d.pct}%;background:${barColor(d.pct)}"></i></div>
+      <div class="pc" style="color:${barColor(d.pct)}">${d.pct}%</div>
+      <div class="who">${d.por.length?esc(d.por.join(', ')):'—'}</div></div>`;
+  }).join('');
+}
+
+loadHoy();
+</script></body></html>

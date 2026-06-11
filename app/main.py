@@ -914,6 +914,7 @@ import mantencion_routes; app.include_router(mantencion_routes.router); mantenci
 import calidad_routes; app.include_router(calidad_routes.router)
 import examenes_routes; app.include_router(examenes_routes.router)
 import tareas_routes; app.include_router(tareas_routes.router)
+import checklist_routes; app.include_router(checklist_routes.router); checklist_routes.seed_if_empty()
 import liquidaciones_routes; app.include_router(liquidaciones_routes.router)
 import tablero_routes; app.include_router(tablero_routes.router)
 import patient_source_routes; app.include_router(patient_source_routes.router)  # Canal declarado ("¿cómo nos conoció?")
@@ -3199,6 +3200,7 @@ _ALMA_MANTENCION_HTML = (_TEMPLATE_DIR / "alma_mantencion.html").read_text(encod
 _ALMA_CALIDAD_HTML = (_TEMPLATE_DIR / "alma_calidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_calidad.html").exists() else ""
 _ALMA_EXAMENES_HTML = (_TEMPLATE_DIR / "alma_examenes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_examenes.html").exists() else ""
 _ALMA_TAREAS_HTML = (_TEMPLATE_DIR / "alma_tareas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_tareas.html").exists() else ""
+_ALMA_CHECKLIST_HTML = (_TEMPLATE_DIR / "alma_checklist.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_checklist.html").exists() else ""
 _ALMA_LIQUIDACIONES_HTML = (_TEMPLATE_DIR / "alma_liquidaciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_liquidaciones.html").exists() else ""
 _ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inicio.html").exists() else ""
 _ALMA_PROVEEDORES_HTML = (_TEMPLATE_DIR / "alma_proveedores.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_proveedores.html").exists() else ""
@@ -3231,6 +3233,7 @@ for _ap, _ah, _al in [
     ("/alma/calidad", _ALMA_CALIDAD_HTML, "Calidad"),
     ("/alma/examenes", _ALMA_EXAMENES_HTML, "Examenes"),
     ("/alma/tareas", _ALMA_TAREAS_HTML, "Tareas"),
+    ("/alma/checklist", _ALMA_CHECKLIST_HTML, "Checklist"),
     ("/alma/liquidaciones", _ALMA_LIQUIDACIONES_HTML, "Liquidaciones"),
     ("/alma/inicio", _ALMA_INICIO_HTML, "Inicio"),
     ("/alma/proveedores", _ALMA_PROVEEDORES_HTML, "Proveedores"),
