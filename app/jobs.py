@@ -2119,6 +2119,25 @@ async def _job_horas_vacias_dia_siguiente():
     log.info("horas_vacias: revisando slots para %s", manana_str)
     total_enviados = 0
 
+    # Exclusión "ya se atendió" (pedido dueño 2026-06-11): si la persona tuvo una
+    # atención REAL en los últimos 30 días (aunque haya agendado por recepción,
+    # que el bot no ve), su necesidad probablemente ya se resolvió — no avisarle.
+    # Fuente: bi.fact_atenciones (Postgres), match por últimos 9 dígitos.
+    _atendidos_r9: set = set()
+    try:
+        from winback import bi_conn as _bi_hv
+        with _bi_hv() as _cbi_hv:
+            with _cbi_hv.cursor() as _cur_hv:
+                _cur_hv.execute(
+                    "SELECT DISTINCT RIGHT(regexp_replace(dp.telefono, '[^0-9]', '', 'g'), 9) "
+                    "FROM bi.fact_atenciones fa "
+                    "JOIN bi.dim_paciente dp ON dp.paciente_id = fa.paciente_id "
+                    "WHERE fa.fecha >= CURRENT_DATE - 30 AND dp.telefono IS NOT NULL")
+                _atendidos_r9 = {r[0] for r in _cur_hv.fetchall() if r[0]}
+        log.info("horas_vacias: %d teléfonos con atención <30d (excluidos)", len(_atendidos_r9))
+    except Exception as _e_hv_at:
+        log.warning("horas_vacias: filtro atendidos no disponible (%s) — sigo sin él", _e_hv_at)
+
     for especialidad_label, prof_ids in _ESPECIALIDADES_HORAS_VACIAS:
         esp_key = especialidad_label.lower()
 
@@ -2169,9 +2188,10 @@ async def _job_horas_vacias_dia_siguiente():
                     "WHERE event='funnel_slot_ofrecido' AND ts >= datetime('now','-1 day')"
                 ).fetchall()}
             _n_antes = len(candidatos)
-            candidatos = [p for p in candidatos if p not in _recien_ofrecidos]
+            candidatos = [p for p in candidatos if p not in _recien_ofrecidos
+                          and p[-9:] not in _atendidos_r9]
             if _n_antes != len(candidatos):
-                log.info("horas_vacias: %s → %d candidatos excluidos (slot ofrecido <24h)",
+                log.info("horas_vacias: %s → %d candidatos excluidos (slot ofrecido <24h o atendido <30d)",
                          especialidad_label, _n_antes - len(candidatos))
         except Exception as _e_hv_excl:
             log.warning("horas_vacias: filtro slot-reciente falló: %s", _e_hv_excl)
