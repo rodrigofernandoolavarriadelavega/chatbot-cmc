@@ -883,6 +883,20 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
         return "💰 Sesión 20 min: $17.990"
     entry = PRECIOS_SLOT.get(esp)
     if not entry:
+        # F004 (auditoría 2026-06-10): data["especialidad"] viaja en MINÚSCULAS
+        # por el funnel de agendamiento (_iniciar_agendar guarda especialidad_lower
+        # en flows.py:13503), pero las claves de PRECIOS_SLOT son Title Case
+        # (espejo de PROFESIONALES en medilink.py). Sin este fallback,
+        # _precio_line("kinesiología") devolvía "" y el bot derivaba a recepción
+        # un precio que SÍ está en la tabla. Se recupera la clave canónica para
+        # que los mensajes que interpolan {esp} muestren la especialidad bien
+        # escrita.
+        for _k_ps in PRECIOS_SLOT:
+            if _k_ps.lower() == esp.lower():
+                esp = _k_ps
+                entry = PRECIOS_SLOT[_k_ps]
+                break
+    if not entry:
         return ""
     modalidad = entry[0]
     precio = entry[1]
