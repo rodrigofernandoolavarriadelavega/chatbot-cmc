@@ -218,6 +218,10 @@ section + section{margin-top:4px}
 .pop{position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center;
   padding:16px; background:rgba(27,72,39,.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
 .pop.show{display:flex}
+/* Jerarquía de capas: el pedido SIEMPRE sobre el calendario */
+#pop-pedido{z-index:320}
+#pop-track{z-index:330}
+#pop-done{z-index:340}
 @keyframes popIn{from{opacity:0; transform:scale(.92)}to{opacity:1; transform:scale(1)}}
 .pop-card{background:#fff; border-radius:20px; width:min(94vw, 500px); max-height:92vh; overflow:auto;
   box-shadow:0 22px 60px rgba(27,72,39,.45); animation:popIn .22s ease both}
