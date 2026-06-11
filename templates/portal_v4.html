@@ -774,11 +774,13 @@ a{color:inherit; text-decoration:none}
 /* CTA flotante WA */
 .cta-float{
   position:fixed; left:0; right:0; bottom:0;
+  /* en desktop se corre el ancho del sidebar: mismo eje que el contenido */
   padding:14px 16px calc(14px + env(safe-area-inset-bottom));
   pointer-events:none; z-index:15;
   background:linear-gradient(to top, var(--bg) 60%, rgba(243,246,249,0));
 }
 @media (max-width:860px){ .cta-float{bottom:60px; padding-bottom:10px} }
+@media (min-width:861px){ .cta-float{left:var(--sidebar-w)} .back-top{right:24px} }
 .cta-float > *{pointer-events:auto}
 .btn-wa-float{
   max-width:560px; margin:0 auto; width:100%; padding:14px 20px;
