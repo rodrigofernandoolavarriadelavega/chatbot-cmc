@@ -910,7 +910,12 @@ a{color:inherit; text-decoration:none}
 .gen-back{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; color:var(--cmc-blue); background:var(--cmc-aqua-soft); border:0; border-radius:9px; padding:8px 12px; margin:0 0 8px; cursor:pointer; font-family:var(--font)}
 .gen-para{font-size:10.5px; font-weight:700; color:var(--text-mute); margin-left:8px}
 .gen-para b{color:var(--cmc-navy)}
-.gen-ag-frame{width:100%; height:min(72vh, 660px); border:0; border-radius:12px; background:var(--bg); margin-top:2px}
+.gen-ag-ov{position:fixed; inset:0; z-index:340; display:none; align-items:center; justify-content:center; padding:14px; background:rgba(15,63,104,.38); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px)}
+.gen-ag-ov.show{display:flex}
+.gen-ag-card{background:#fff; border-radius:18px; width:min(96vw, 560px); overflow:hidden; box-shadow:0 24px 64px rgba(15,63,104,.45); animation:fadeInUp .25s var(--ease) both}
+.gen-ag-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 14px; font-size:12.5px; font-weight:700; color:var(--cmc-navy); border-bottom:1px solid var(--border-soft)}
+.gen-ag-head b{font-weight:800}
+.gen-ag-frame{display:block; width:100%; height:min(74vh, 640px); border:0; background:var(--bg)}
 .gen-tip .gt-name{font-weight:800; font-size:11px; margin-bottom:3px}
 .gen-tip .gt-row{font-weight:600; line-height:1.5}
 .gen-tip .gt-row.ok{color:#9fe8d8}
@@ -1953,7 +1958,7 @@ function openGenograma() {
   bd.classList.add('show');
   _genHover();
 }
-function closeGenograma() { const b = document.getElementById('gen-backdrop'); if (b) b.classList.remove('show'); }
+function closeGenograma() { _genCerrarAgenda(); const b = document.getElementById('gen-backdrop'); if (b) b.classList.remove('show'); }
 /* Tarjeta de persona: hover = vista previa; toque = fijada con botones */
 function _genShowTip(rut, pinned) {
   const wrap = document.getElementById('gen-svg');
@@ -2006,28 +2011,31 @@ let _genPin = null;
 function genTap(rut) { _genPin = rut; _genShowTip(rut, true); }   // 1er toque: tarjeta con acciones (clave en celular)
 function _genAbrir(rut) { _genPin = null; closeGenograma(); famTap(rut, false); }
 function _genAgendarP(rut) {
-  // Agendar SIN salir del árbol: el agendador compacto se abre dentro del pop-up
+  // Agenda como pop-up FLOTANTE sobre el árbol: el árbol queda visible detrás
   _genPin = null;
   const tip = document.getElementById('gen-tip'); if (tip) tip.classList.remove('show');
-  const card = document.querySelector('#gen-backdrop .gen-card');
-  const svgWrap = document.getElementById('gen-svg');
-  const leg = card.querySelector('.gen-leg');
   const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
   const first = m ? (m.nombre || '').split(' ')[0] : '';
-  svgWrap.style.display = 'none'; if (leg) leg.style.display = 'none';
-  const res = document.getElementById('gen-res'); if (res) res.style.display = 'none';
-  let pane = document.getElementById('gen-ag');
-  if (!pane) { pane = document.createElement('div'); pane.id = 'gen-ag'; card.appendChild(pane); }
-  pane.innerHTML = `<button class="gen-back" onclick="_genVolver()">← Volver al árbol</button>
-    <span class="gen-para">Agendando para <b>${first}</b></span>
-    <iframe class="gen-ag-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`;
-  pane.style.display = 'block';
+  let ov = document.getElementById('gen-ag');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'gen-ag'; ov.className = 'gen-ag-ov';
+    ov.onclick = e => { if (e.target === ov) _genCerrarAgenda(); };
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<div class="gen-ag-card">
+    <div class="gen-ag-head"><span>📅 Agendando para <b>${first}</b></span><button class="gen-x" onclick="_genCerrarAgenda()">×</button></div>
+    <iframe class="gen-ag-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>
+  </div>`;
+  ov.classList.add('show');
   const demo = (patientData && patientData.demo) ? '&demo=1' : '';
   document.getElementById('gen-ag-frame').src = '/agendar/portal?embed=1&rut=' + encodeURIComponent(rut) + demo;
 }
+function _genCerrarAgenda() {
+  const ov = document.getElementById('gen-ag');
+  if (ov) { ov.classList.remove('show'); const f = document.getElementById('gen-ag-frame'); if (f) f.src = 'about:blank'; }
+}
 function _genVolver() {
-  const pane = document.getElementById('gen-ag');
-  if (pane) { pane.style.display = 'none'; const f = document.getElementById('gen-ag-frame'); if (f) f.src = 'about:blank'; }
+  _genCerrarAgenda();
   const res = document.getElementById('gen-res'); if (res) res.style.display = 'none';
   const svgWrap = document.getElementById('gen-svg'); if (svgWrap) svgWrap.style.display = '';
   const leg = document.querySelector('#gen-backdrop .gen-leg'); if (leg) leg.style.display = '';
