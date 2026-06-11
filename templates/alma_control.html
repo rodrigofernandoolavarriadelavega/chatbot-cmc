@@ -143,6 +143,9 @@ body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:va
 .riel-name{font-size:13px;font-weight:700;flex:1;min-width:0}
 .riel-desc{font-size:11.5px;color:var(--muted);font-weight:500;line-height:1.4}
 .riel-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.riel-pnl{font-size:11px;font-weight:600;color:var(--navy);min-height:14px;display:flex;align-items:center;gap:6px}
+.riel-pnl:empty{display:none}
+.pnl-dot{width:6px;height:6px;border-radius:50%;background:var(--aqua,#4FBECE);flex:0 0 auto}
 .riel-flag{font-size:10px;font-family:ui-monospace,Menlo,monospace;color:var(--blue);opacity:.7}
 .env-only-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
      padding:3px 8px;border-radius:7px;background:var(--slate-bg);color:var(--slate);
@@ -594,6 +597,7 @@ function renderMasters() {
             ${inert ? `<span class="inert-chip">esperando al padre</span>` : ''}
           </div>
           <div class="mr-desc">${m.descr}</div>
+          <div class="riel-pnl" data-pnl="${m.flag}"></div>
           <div class="mr-flag">${m.flag}</div>
         </div>
         <div class="mr-ctrl">
@@ -680,12 +684,32 @@ function renderRieles() {
         <div class="riel-name">${r.label}${r.overridden ? `<span class="ovr-dot" style="display:inline-block;margin-left:5px" title="Override manual activo"></span>` : ''}</div>
       </div>
       <div class="riel-desc">${r.descr || ''}</div>
+      <div class="riel-pnl" data-pnl="${r.flag}"></div>
       <div class="riel-footer">
         <div class="riel-flag">${r.flag}</div>
         ${toggleOrLock}
       </div>`;
     grid.appendChild(card);
   }
+  loadRielesPnl();
+}
+
+/* Mini-P&L bajo cada riel: costo/beneficio justo donde se decide prender/apagar. */
+let _PNL_CACHE = null;
+async function loadRielesPnl() {
+  try {
+    if (!_PNL_CACHE) {
+      const r = await fetch(`/alma/api/rieles/pnl?token=${encodeURIComponent(TOKEN)}`);
+      if (!r.ok) return;
+      _PNL_CACHE = await r.json();
+      setTimeout(() => { _PNL_CACHE = null; }, 55000); // se refresca con el ciclo de 60s
+    }
+    for (const item of (_PNL_CACHE.rieles || [])) {
+      const el = document.querySelector(`[data-pnl="${item.flag}"]`);
+      if (el && item.resumen) el.innerHTML =
+        `<span class="pnl-dot"></span>${item.resumen}`;
+    }
+  } catch (_) { /* sin P&L no se rompe la sala */ }
 }
 
 /* ━━━ LAYERS (flota / orq) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */

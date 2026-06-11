@@ -613,6 +613,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
       Win-back
     </button>
+    <button class="tab" data-view="rieles">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M20 19V5"/><path d="M4 8h16M4 16h16M4 12h16"/></svg>
+      Rieles
+    </button>
     <button class="tab" data-view="plantillas">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4zM4 12h16v8H4z"/><path d="M8 16h8"/></svg>
       Plantillas <span class="tab-count" id="tabTplCount"></span>
@@ -856,6 +860,20 @@
           <div class="panel-b" id="seoOpps"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="viewRieles" style="display:none">
+    <div class="panel" style="margin-top:6px">
+      <div class="panel-h">
+        <span class="ph-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M20 19V5"/><path d="M4 8h16M4 16h16M4 12h16"/></svg></span>
+        <h2>Rieles de mensajería — P&L real</h2>
+        <span class="count" id="rielesSince"></span>
+      </div>
+      <div style="padding:4px 18px 8px;color:var(--muted);font-size:12.5px">
+        Plata y conversión de cada riel automático, medidos contra la caja real (bi_pagos_caja) — mismo criterio que el win-back. Los switches viven en la <a href="/alma/control" target="_blank" style="color:var(--blue)">Sala de Máquinas</a>.
+      </div>
+      <div id="rielesGridAp" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:6px 18px 18px"></div>
     </div>
   </div>
 
@@ -1578,6 +1596,46 @@ document.getElementById('tabs').addEventListener('click',e=>{
   if(v==='plantillas' && !TPL_LOADED) loadPlantillas();
   if(v==='plantillas' && !BIB_LOADED) loadBiblioteca();
 });
+
+/* ── Pestaña Rieles (P&L de mensajería automática) ── */
+let RIELES_LOADED=false;
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab'); if(!b)return;
+  const v=b.dataset.view;
+  const vr=document.getElementById('viewRieles'); if(!vr)return;
+  vr.style.display = v==='rieles'?'block':'none';
+  if(v==='rieles' && !RIELES_LOADED) loadRieles();
+});
+async function loadRieles(){
+  RIELES_LOADED=true;
+  const grid=document.getElementById('rielesGridAp'); if(!grid)return;
+  grid.innerHTML='<div style="padding:20px;color:var(--muted)">Cargando…</div>';
+  let d;
+  try{ d=await (await fetch(`/alma/api/rieles/pnl?token=${TOKEN}`)).json(); }
+  catch(_){ grid.innerHTML='<div style="padding:20px;color:var(--muted)">No se pudo cargar el P&L de rieles.</div>'; return; }
+  document.getElementById('rielesSince').textContent='desde '+(d.since||'');
+  const fmt=n=>'$'+Number(n||0).toLocaleString('es-CL');
+  const stat=(k,v)=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;border-bottom:1px dashed rgba(15,63,104,.08)"><span style="color:var(--muted)">${k}</span><b>${v}</b></div>`;
+  grid.innerHTML='';
+  for(const r of (d.rieles||[])){
+    const st=r.stats||{};
+    let rows='';
+    if(r.key==='consent_caliente'){
+      rows=stat('Enviados',st.enviados||0)+stat('Aceptaron',st.aceptados||0)+stat('Rechazaron',st.rechazados||0)+stat('Sin responder',st.pendientes||0)+(st.tasa_aceptacion!=null?stat('Tasa de aceptación',st.tasa_aceptacion+'%'):'');
+    }else if(r.key==='promo_postconsent'){
+      rows=stat('Promos enviadas',st.enviados||0)+stat('Respondieron',st.respondieron||0)+stat('Agendaron',st.agendaron||0)+stat('Pacientes con pago',st.pacientes_con_pago||0)+stat('Ingreso en caja',fmt(st.ingreso_clp));
+    }else if(r.key==='eco_prep'){
+      rows=stat('Preparaciones enviadas',st.enviados||0)+stat('Exámenes por venir cubiertos',st.examenes_futuros_cubiertos||0);
+    }else if(r.key==='operativa'){
+      rows=stat('Ofertas de cupo',st.ofertas_enviadas||0)+stat('Confirmadas',st.confirmadas||0)+stat('En recepción',st.apartadas_recepcion||0)+stat('Perdidas (carrera)',st.perdidas||0)+(st.ingreso_clp?stat('Ingreso en caja',fmt(st.ingreso_clp)):'');
+    }
+    grid.innerHTML+=`<div style="background:var(--card,#fff);border-radius:14px;box-shadow:0 1px 4px rgba(15,63,104,.10);padding:14px 16px">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:8px">${r.label}</div>
+      ${rows||'<div style="color:var(--muted);font-size:12px">Sin datos aún</div>'}
+      <div style="margin-top:8px;font-size:10.5px;color:var(--muted);font-family:ui-monospace,monospace">${r.flag}</div>
+    </div>`;
+  }
+}
 
 /* ── Biblioteca comercial por profesional (borradores Meta-ready) ── */
 let BIB_LOADED=false;

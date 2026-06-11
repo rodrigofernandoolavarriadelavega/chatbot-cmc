@@ -330,6 +330,53 @@ def decision_review() -> dict:
     return {"rol": "Optimizador de decisiones", "propuestas": notes}
 
 
+def rieles_review() -> dict:
+    """Vigía de los rieles de mensajería (consent caliente / promo post-atención /
+    eco prep / relleno de cupos): lee su P&L real y recomienda con reglas simples
+    y honestas — con muestra chica dice 'esperar', no inventa. READ-ONLY."""
+    try:
+        import sys as _sys
+        if "app" not in _sys.path:
+            _sys.path.insert(0, "app")
+        from rieles_pnl import pnl as _rieles_pnl
+        snap = _rieles_pnl()
+    except Exception as e:  # noqa: BLE001
+        return {"error": f"P&L rieles no disponible: {e}", "recommendations": []}
+
+    recs = []
+    for r in snap.get("rieles", []):
+        st, key = r.get("stats") or {}, r["key"]
+        accion, razon, conf = "esperar", "muestra aún chica para juzgar.", "baja"
+        if key == "consent_caliente":
+            resp = (st.get("aceptados") or 0) + (st.get("rechazados") or 0)
+            tasa = st.get("tasa_aceptacion")
+            if resp >= 10 and tasa is not None:
+                if tasa >= 55:
+                    accion, razon, conf = "mantener", f"acepta el {tasa}% de los que responden — el pool crece sano.", "alta"
+                elif tasa < 40:
+                    accion, razon, conf = "revisar", f"solo {tasa}% de aceptación ({resp} respuestas) — revisar copy/momento del envío.", "media"
+                else:
+                    accion, razon, conf = "mantener", f"aceptación {tasa}% — aceptable, seguir mirando.", "media"
+        elif key == "promo_postconsent":
+            env, ag, caja = st.get("enviados") or 0, st.get("agendaron") or 0, st.get("ingreso_clp") or 0
+            if caja > 0:
+                accion, razon, conf = "mantener", f"genera caja real: ${caja:,} de {env} promos.", "alta"
+            elif env >= 30 and ag == 0:
+                accion, razon, conf = "revisar", f"{env} promos sin ninguna agenda — revisar oferta/segmento antes de seguir.", "media"
+        elif key == "eco_prep":
+            accion, razon, conf = "mantener", "riel de servicio (protege horas de ecógrafo); su retorno es evitar exámenes perdidos, no caja directa.", "media"
+        elif key == "operativa":
+            of, conf_n = st.get("ofertas_enviadas") or 0, st.get("confirmadas") or 0
+            if conf_n > 0:
+                accion, razon, conf = "mantener", f"rescata cupos reales: {conf_n} confirmadas de {of} ofertas.", "alta"
+            elif of >= 10:
+                accion, razon, conf = "revisar", f"{of} ofertas sin ninguna confirmación — ¿lista de espera desactualizada o copy?", "media"
+        recs.append({"riel": r["label"], "flag": r["flag"], "resumen": r.get("resumen", ""),
+                     "accion": accion, "razon": razon, "confianza": conf})
+    return {"since": snap.get("since"), "recommendations": recs,
+            "nota": "Los switches de rieles viven en la Sala de Máquinas; esto solo recomienda."}
+
+
 def cabinet() -> dict:
     """El gabinete completo del Director: 4 roles que se vigilan entre sí.
       • Operador  — decide qué switch prender/apagar (dentro del presupuesto).
@@ -346,6 +393,7 @@ def cabinet() -> dict:
             "auditor": self_audit(),
             "inventor": suggest_new_agents(),
             "optimizador_decisiones": decision_review(),
+            "vigia_rieles": rieles_review(),
         },
         "mode": "propose-only",
         "autoexec_enabled": DIRECTOR_AUTOEXEC,

@@ -919,6 +919,7 @@ import tablero_routes; app.include_router(tablero_routes.router)
 import patient_source_routes; app.include_router(patient_source_routes.router)  # Canal declarado ("¿cómo nos conoció?")
 import promo_postconsent; app.include_router(promo_postconsent.router)  # Riel consent aceptado → promo dental diferida (gated OFF)
 import eco_prep; app.include_router(eco_prep.router)  # Preparación pre-examen eco (gated OFF, template pendiente Meta)
+import rieles_pnl; app.include_router(rieles_pnl.router)  # P&L unificado de rieles (Sala de Máquinas + Autopilot + Director)
 import grafo_routes; grafo_routes.register_grafo_routes(app)  # Cerebro Alma (grafo del organismo)
 
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
