@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comparador BI · CMC</title>
+<script src="/static/chart-4.4.1.umd.min.js"></script>
+<style>
+:root{--aqua:#4FBECE;--blue:#1172AB;--navy:#0F3F68;--ink:#15324a;--mute:#6b8198;--bg:#eef3f7;--card:#fff;--line:#e6edf3;--pos:#1a9c6b;--neg:#d05a4f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Montserrat',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;padding:20px 14px 70px}
+.wrap{max-width:1180px;margin:0 auto}
+.head{background:linear-gradient(120deg,var(--navy),var(--blue));color:#fff;border-radius:18px;padding:22px 26px;margin-bottom:18px;box-shadow:0 10px 30px rgba(15,63,104,.2)}
+.head h1{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.head p{opacity:.85;font-size:13px;margin-top:4px}
+.card{background:var(--card);border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:0 5px 16px rgba(15,63,104,.07)}
+.card h2{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:12px}
+.toolbar{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between}
+.seg{display:inline-flex;background:#eaf1f6;border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:7px 14px;border-radius:8px;font-weight:700;font-size:13px;color:var(--mute);cursor:pointer;font-family:inherit}
+.seg button.on{background:#fff;color:var(--navy);box-shadow:0 2px 6px rgba(15,63,104,.12)}
+.cols{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.col{background:#f6f9fb;border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:210px;position:relative}
+.col .lbl{font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.col input[type=date]{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:12.5px;color:var(--ink);margin-bottom:5px;background:#fff}
+.col .name{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--navy);background:#fff}
+.col .x{position:absolute;top:6px;right:8px;border:0;background:transparent;color:var(--mute);font-size:16px;cursor:pointer;line-height:1}
+.btn{border:0;border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.ghost{background:#eaf1f6;color:var(--navy)}
+.btn.add{background:#fff;border:1.5px dashed var(--aqua);color:var(--blue);min-width:120px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:#eaf1f6;border:0;border-radius:99px;padding:5px 11px;font-size:12px;font-weight:600;color:var(--navy);cursor:pointer;font-family:inherit}
+.chip:hover{background:#dceaf2}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 9px;border-bottom:1px solid #eef1f4;white-space:nowrap}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--mute);font-weight:700;text-align:right}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.tot td{font-weight:800;color:var(--navy);border-top:2px solid var(--line);border-bottom:0}
+.pos{color:var(--pos);font-weight:700}.neg{color:var(--neg);font-weight:700}
+.esp{display:block;font-size:10.5px;color:var(--mute);font-weight:400}
+.chartbox{position:relative;height:320px}
+.muted{font-size:12px;color:var(--mute);margin-top:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #cfe0ea;border-top-color:var(--blue);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body><div class="wrap">
+<div class="head">
+  <h1>Comparador BI</h1>
+  <p>Compará recaudación de caja (Medilink) entre rangos de fechas · por área o profesional · cada columna es un período libre</p>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <div>
+      <div class="lbl" style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;margin-bottom:5px">Agrupar por</div>
+      <div class="seg" id="segPor">
+        <button data-v="area" class="on">Área</button>
+        <button data-v="prof">Profesional</button>
+      </div>
+    </div>
+    <div>
+      <div class="lbl" style="font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;margin-bottom:5px">Eje de los gráficos de serie</div>
+      <div class="seg" id="segAlin">
+        <button data-v="habil" class="on">Día hábil (1º,2º…)</button>
+        <button data-v="semana">Día de semana</button>
+        <button data-v="fecha">Fecha</button>
+      </div>
+    </div>
+    <button class="btn primary" id="btnCmp">Comparar</button>
+  </div>
+  <div class="cols" id="cols"></div>
+  <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="btn add" id="btnAdd">+ Columna</button>
+    <span class="muted" style="margin:0">Atajos:</span>
+    <div class="chips" id="chips" style="margin:0"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Comparación <span id="porLbl">por área</span></h2>
+  <div style="overflow-x:auto"><table id="tabla"><thead></thead><tbody></tbody></table></div>
+  <p class="muted" id="tablaNote"></p>
+</div>
+
+<div class="grid2">
+  <div class="card"><h2>Recaudación · por <span class="alinLbl">día hábil</span></h2><div class="chartbox"><canvas id="chSerie"></canvas></div></div>
+  <div class="card"><h2>Total por grupo</h2><div class="chartbox"><canvas id="chBar"></canvas></div></div>
+</div>
+
+<script>
+const COLORS=['#1172AB','#4FBECE','#0F3F68','#7bc6a8','#e0a458','#b06fb0','#d05a4f','#5b8b96','#9c7bbf','#3da17a','#c98a3a','#6b8198'];
+let POR='area', ALIN='habil';
+let cols=[]; // {desde,hasta,name}
+let chSerie=null, chBar=null;
+
+function fmtMoney(n){const s=n<0?'-':'';return s+'$'+Math.abs(n).toLocaleString('es-CL');}
+function uid(){return 'c'+Math.random().toString(36).slice(2,7);}
+
+// ── columnas ──────────────────────────────────────────────
+function colHtml(c){return `<div class="col" data-id="${c.id}">
+  <button class="x" title="quitar">×</button>
+  <div class="lbl">Nombre</div>
+  <input class="name" value="${c.name}" placeholder="ej. Mayo">
+  <div class="lbl">Desde</div><input type="date" class="d" value="${c.desde}">
+  <div class="lbl">Hasta</div><input type="date" class="h" value="${c.hasta}">
+</div>`;}
+function renderCols(){
+  document.getElementById('cols').innerHTML=cols.map(colHtml).join('');
+  document.querySelectorAll('#cols .col').forEach(el=>{
+    const id=el.dataset.id, c=cols.find(x=>x.id===id);
+    el.querySelector('.x').onclick=()=>{cols=cols.filter(x=>x.id!==id);renderCols();};
+    el.querySelector('.name').oninput=e=>c.name=e.target.value;
+    el.querySelector('.d').onchange=e=>c.desde=e.target.value;
+    el.querySelector('.h').onchange=e=>c.hasta=e.target.value;
+  });
+}
+function addCol(desde,hasta,name){cols.push({id:uid(),desde:desde||'',hasta:hasta||'',name:name||('Col '+(cols.length+1))});renderCols();}
+
+// atajos: meses recientes + tramos comparables
+function ym(d){return d.toISOString().slice(0,10);}
+function firstMonday(y,m){let d=new Date(Date.UTC(y,m,1));while(d.getUTCDay()!==1)d.setUTCDate(d.getUTCDate()+1);return d;}
+const CHIPS=[
+ {t:'Mayo vs Junio (mes)',f:()=>{cols=[];addCol('2026-05-01','2026-05-31','Mayo');addCol('2026-06-01','2026-06-30','Junio');}},
+ {t:'Tramo 1–11',f:()=>{cols=[];addCol('2026-05-01','2026-05-11','Mayo 1–11');addCol('2026-06-01','2026-06-11','Junio 1–11');}},
+ {t:'Desde 1er lunes (2 sem)',f:()=>{cols=[];const a=firstMonday(2026,4),b=firstMonday(2026,5);
+    const a2=new Date(a);a2.setUTCDate(a.getUTCDate()+13);const b2=new Date(b);b2.setUTCDate(b.getUTCDate()+13);
+    addCol(ym(a),ym(a2),'Mayo (1er lun+2sem)');addCol(ym(b),ym(b2),'Junio (1er lun+2sem)');}},
+ {t:'Últimos 3 meses',f:()=>{cols=[];addCol('2026-04-01','2026-04-30','Abril');addCol('2026-05-01','2026-05-31','Mayo');addCol('2026-06-01','2026-06-30','Junio');}},
+];
+function renderChips(){document.getElementById('chips').innerHTML=CHIPS.map((c,i)=>`<button class="chip" data-i="${i}">${c.t}</button>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(b=>b.onclick=()=>{CHIPS[b.dataset.i].f();renderCols();compare();});}
+
+// ── segmentos ─────────────────────────────────────────────
+document.querySelectorAll('#segPor button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#segPor button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  POR=b.dataset.v;document.getElementById('porLbl').textContent='por '+(POR==='area'?'área':'profesional');compare();});
+document.querySelectorAll('#segAlin button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#segAlin button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  ALIN=b.dataset.v;document.querySelectorAll('.alinLbl').forEach(e=>e.textContent=b.textContent.toLowerCase());drawSerie();});
+document.getElementById('btnAdd').onclick=()=>addCol();
+document.getElementById('btnCmp').onclick=compare;
+
+// ── fetch + render ────────────────────────────────────────
+let DATA=[]; // por columna: {col, resp}
+async function compare(){
+  const valid=cols.filter(c=>c.desde&&c.hasta);
+  if(!valid.length){return;}
+  document.querySelector('#tabla tbody').innerHTML='<tr><td>Cargando… <span class="spin"></span></td></tr>';
+  DATA=await Promise.all(valid.map(async c=>{
+    const r=await fetch(`/api/cmc/comparador?desde=${c.desde}&hasta=${c.hasta}&por=${POR}`);
+    return {col:c, resp:await r.json()};
+  }));
+  drawTabla();drawBar();drawSerie();
+}
+
+function drawTabla(){
+  const keys={};
+  DATA.forEach(d=>d.resp.grupos.forEach(g=>{keys[g.key]={label:g.label,esp:g.esp};}));
+  // ordenar por total de la última columna
+  const last=DATA[DATA.length-1];
+  const totByKey=k=>{const g=(last?.resp.grupos||[]).find(x=>x.key===k);return g?g.total:0;};
+  const order=Object.keys(keys).sort((a,b)=>totByKey(b)-totByKey(a));
+  const val=(d,k)=>{const g=d.resp.grupos.find(x=>x.key===k);return g?g.total:0;};
+  const pac=(d,k)=>{const g=d.resp.grupos.find(x=>x.key===k);return g?g.pacientes:0;};
+  let th='<tr><th>'+(POR==='area'?'Área':'Profesional')+'</th>'+DATA.map(d=>`<th>${d.col.name}</th>`).join('');
+  if(DATA.length>=2)th+='<th>Δ (últ−1ª)</th>';th+='</tr>';
+  document.querySelector('#tabla thead').innerHTML=th;
+  let body=order.map(k=>{
+    const cells=DATA.map(d=>`<td class="num" title="${pac(d,k)} pac">${fmtMoney(val(d,k))}</td>`).join('');
+    let delta='';
+    if(DATA.length>=2){const dv=val(DATA[DATA.length-1],k)-val(DATA[0],k);delta=`<td class="num ${dv>=0?'pos':'neg'}">${dv>=0?'+':''}${fmtMoney(dv)}</td>`;}
+    return `<tr><td>${keys[k].label}${keys[k].esp?`<span class="esp">${keys[k].esp}</span>`:''}</td>${cells}${delta}</tr>`;
+  }).join('');
+  // fila total
+  const tcells=DATA.map(d=>`<td class="num">${fmtMoney(d.resp.total)}</td>`).join('');
+  let tdelta='';if(DATA.length>=2){const dv=DATA[DATA.length-1].resp.total-DATA[0].resp.total;tdelta=`<td class="num ${dv>=0?'pos':'neg'}">${dv>=0?'+':''}${fmtMoney(dv)}</td>`;}
+  body+=`<tr class="tot"><td>TOTAL</td>${tcells}${tdelta}</tr>`;
+  document.querySelector('#tabla tbody').innerHTML=body;
+  document.getElementById('tablaNote').textContent=DATA.map(d=>`${d.col.name}: ${d.resp.dias_activos} días activos · ${fmtMoney(d.resp.total)}`).join('  ·  ');
+}
+
+function drawBar(){
+  const keys={};DATA.forEach(d=>d.resp.grupos.forEach(g=>keys[g.key]=g.label));
+  const last=DATA[DATA.length-1];
+  const order=Object.keys(keys).sort((a,b)=>{const ga=(last?.resp.grupos||[]).find(x=>x.key===b),gb=(last?.resp.grupos||[]).find(x=>x.key===a);return (ga?ga.total:0)-(gb?gb.total:0);}).slice(0,12);
+  const labels=order.map(k=>keys[k]);
+  const ds=DATA.map((d,i)=>({label:d.col.name,backgroundColor:COLORS[i%COLORS.length],
+    data:order.map(k=>{const g=d.resp.grupos.find(x=>x.key===k);return g?g.total:0;})}));
+  if(chBar)chBar.destroy();
+  chBar=new Chart(document.getElementById('chBar'),{type:'bar',data:{labels,datasets:ds},
+   options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+    scales:{x:{ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M'}}},plugins:{legend:{position:'top'}}}});
+}
+
+function drawSerie(){
+  if(!DATA.length)return;
+  // construir eje según ALIN
+  let labels=[], datasets=[];
+  if(ALIN==='habil'){
+    // índice de día con actividad (salta domingos sin pagos): 1º,2º…
+    const maxLen=Math.max(...DATA.map(d=>d.resp.serie.filter(s=>s.total>0).length));
+    labels=Array.from({length:maxLen},(_,i)=>(i+1)+'º');
+    datasets=DATA.map((d,i)=>({label:d.col.name,borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',tension:.3,spanGaps:true,
+      data:d.resp.serie.filter(s=>s.total>0).map(s=>s.total)}));
+  }else if(ALIN==='semana'){
+    const DOW=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];labels=DOW;
+    datasets=DATA.map((d,i)=>{const acc=[0,0,0,0,0,0,0];d.resp.serie.forEach(s=>{if(s.dow!=null)acc[s.dow]+=s.total;});
+      return {label:d.col.name,borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',tension:.3,data:acc};});
+  }else{ // fecha: día del mes 1..31
+    labels=Array.from({length:31},(_,i)=>i+1);
+    datasets=DATA.map((d,i)=>{const arr=Array(31).fill(null);d.resp.serie.forEach(s=>{const dd=parseInt(s.fecha.slice(8,10));if(dd)arr[dd-1]=s.total;});
+      return {label:d.col.name,borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',tension:.3,spanGaps:true,data:arr};});
+  }
+  if(chSerie)chSerie.destroy();
+  chSerie=new Chart(document.getElementById('chSerie'),{type:'line',data:{labels,datasets},
+   options:{responsive:true,maintainAspectRatio:false,
+    scales:{y:{ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M'}}},plugins:{legend:{position:'top'}}}});
+}
+
+// init
+renderChips();
+addCol('2026-05-01','2026-05-11','Mayo 1–11');
+addCol('2026-06-01','2026-06-11','Junio 1–11');
+compare();
+</script>
+</div></body></html>
