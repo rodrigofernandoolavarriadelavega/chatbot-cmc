@@ -1209,9 +1209,13 @@ function renderPisos(boxes) {
     </section>`;
   }).join('');
 
-  // Init sortable
+  // Init sortable (drag-and-drop del modo edición). Si el CDN sortablejs no
+  // cargó (red/CSP/SW), NO romper el dashboard: omitir el D&D y seguir
+  // renderizando datos. Antes lanzaba "Sortable is not defined" y abortaba
+  // refresh() entero → KPIs en 0.
   container.querySelectorAll('.piso-grid').forEach(grid => {
     if (grid._sortable) return;
+    if (typeof Sortable === 'undefined') return;
     grid._sortable = new Sortable(grid, {
       animation: 180,
       ghostClass: 'sortable-ghost',
