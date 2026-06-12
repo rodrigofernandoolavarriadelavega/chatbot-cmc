@@ -927,7 +927,8 @@ async function startFlow(){
   await ensureCatalog(true);
 }
 
-function showStep(i){
+function showStep(i, push=true){
+  if (push) { try { history.pushState({agStep: i}, ''); } catch(_){} }
   S.step = i;
   PAGES.forEach((p,idx)=>document.getElementById(p).classList.toggle('on', idx===i));
   renderStepper();
@@ -942,6 +943,20 @@ function next(){
   if(S.step===4) fillConfirm();
 }
 function back(){ if(S.step>0 && S.step<5) showStep(S.step-1); }
+// Atrás del navegador / gesto atrás Android = retroceder un paso del wizard.
+window.addEventListener('popstate', (e) => {
+  const inFlow = document.getElementById('page-flow').classList.contains('on');
+  if (!inFlow) return;                       // home/mis: comportamiento normal
+  if (S.step >= 5) { go('home'); return; }   // reserva lista: no re-mostrar confirmación
+  const st = e.state || {};
+  if (typeof st.agStep === 'number' && st.agStep >= 0 && st.agStep < 5) {
+    showStep(st.agStep, false);
+  } else if (S.step > 0) {
+    showStep(S.step - 1, false);
+  } else {
+    go('home');
+  }
+});
 
 function renderStepper(){
   const wrap = document.getElementById('stepper');
@@ -950,7 +965,10 @@ function renderStepper(){
     const num = i<S.step ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : (i+1);
     let bar='';
     if(i<STEPS.length-1) bar = `<div class="step-bar ${i<S.step?'fill':''}"><i></i></div>`;
-    return `<div class="step ${cls}"><span class="num">${num}</span><span class="lbl">${lbl}</span></div>${bar}`;
+    // Pasos ya completados → clickeables para retroceder (UX: el ✓ invita al click)
+    const clickable = (i < S.step && S.step < 5);
+    const attrs = clickable ? ` role="button" tabindex="0" style="cursor:pointer" onclick="showStep(${i})" onkeydown="if(event.key==='Enter')showStep(${i})" title="Volver a ${escAttr(lbl)}"` : '';
+    return `<div class="step ${cls}"${attrs}><span class="num">${num}</span><span class="lbl">${lbl}</span></div>${bar}`;
   }).join('');
   // Progreso compacto para móvil (una sola línea, con aire)
   const cur = Math.min(S.step, STEPS.length-1);
