@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EBITDA / Resultado · CMC</title>
+<script src="/static/chart-4.4.1.umd.min.js"></script>
+<style>
+:root{--aqua:#4FBECE;--blue:#1172AB;--navy:#0F3F68;--ink:#15324a;--mute:#6b8198;--bg:#eef3f7;--card:#fff;--line:#e6edf3;--pos:#1a9c6b;--neg:#d05a4f;--purple:#6d28d9}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Montserrat',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;padding:20px 14px 70px}
+.wrap{max-width:1180px;margin:0 auto}
+.head{background:linear-gradient(120deg,var(--navy),var(--blue));color:#fff;border-radius:18px;padding:22px 26px;margin-bottom:16px;box-shadow:0 10px 30px rgba(15,63,104,.2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.head h1{font-size:21px;font-weight:800}.head p{opacity:.85;font-size:13px;margin-top:3px}
+select{border:0;border-radius:10px;padding:9px 14px;font-family:inherit;font-weight:700;font-size:14px;color:var(--navy);cursor:pointer}
+.card{background:var(--card);border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:0 5px 16px rgba(15,63,104,.07)}
+.card h2{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border-radius:14px;padding:15px 16px;box-shadow:0 5px 16px rgba(15,63,104,.07)}
+.kpi .l{font-size:10.5px;font-weight:700;letter-spacing:.4px;color:var(--mute);text-transform:uppercase}
+.kpi .v{font-size:20px;font-weight:800;color:var(--navy);margin-top:5px}
+.kpi .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.kpi.ebitda{background:linear-gradient(120deg,var(--navy),var(--blue));color:#fff}
+.kpi.ebitda .l,.kpi.ebitda .s{color:rgba(255,255,255,.8)}.kpi.ebitda .v{color:#fff;font-size:24px}
+.kpi .v.pos{color:var(--pos)}.kpi .v.neg{color:var(--neg)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 9px;border-bottom:1px solid #eef1f4;white-space:nowrap}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--mute);font-weight:700;text-align:right}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.tot td{font-weight:800;color:var(--navy);border-top:2px solid var(--line)}
+.pos{color:var(--pos)}.neg{color:var(--neg);font-weight:600}
+.esp{display:block;font-size:10px;color:var(--mute)}
+.pill{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:99px;background:#eef;color:var(--purple);margin-left:5px}
+.chartbox{position:relative;height:300px}
+.gasto-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.gasto-form input,.gasto-form select{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:13px}
+.gasto-form input.desc{flex:1;min-width:140px}
+.btn{border:0;border-radius:9px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;background:var(--blue);color:#fff}
+.btn.del{background:transparent;color:var(--neg);padding:4px 8px}
+.chk{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--mute);font-weight:600}
+.muted{font-size:12px;color:var(--mute);margin-top:8px}
+.waterfall{font-size:13px}
+.waterfall .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #eef1f4}
+.waterfall .row.big{font-weight:800;font-size:15px;color:var(--navy);border-bottom:0;padding-top:10px}
+</style>
+</head>
+<body><div class="wrap">
+<div class="head">
+  <div><h1>EBITDA / Resultado Operativo</h1><p>Ingresos − Honorarios − Gastos operativos · caja real Medilink</p></div>
+  <select id="mes"></select>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="card">
+  <h2>Cómo se forma el resultado <span id="mesLbl" style="color:var(--mute);font-weight:600"></span></h2>
+  <div class="waterfall" id="waterfall"></div>
+</div>
+
+<div class="card">
+  <h2>Honorarios por profesional</h2>
+  <div style="overflow-x:auto"><table id="tabla"><thead><tr>
+    <th>Profesional</th><th>Total</th><th>% / Fijo</th><th>Honorario (bruto)</th><th>Líquido (−15,25%)</th><th>CMC</th>
+  </tr></thead><tbody></tbody></table></div>
+  <p class="muted">Honorario bruto = lo que cuesta al CMC. Líquido = lo que recibe el profesional tras retención de boleta (15,25%). CMC = Total − honorario bruto. Abarca tiene honorario <b>fijo</b> (su CMC puede ser negativo).</p>
+</div>
+
+<div class="card">
+  <h2>Gastos operativos del mes</h2>
+  <div class="gasto-form">
+    <input type="date" id="g-fecha">
+    <select id="g-cat">
+      <option>Arriendo</option><option>Sueldos administrativos</option><option>Servicios básicos (luz/agua/internet)</option>
+      <option>Contador</option><option>Insumos clínicos</option><option>Aseo</option><option>Marketing</option>
+      <option>Software/sistemas</option><option>Mantención</option><option>Impuestos/patente</option><option>Otros</option>
+    </select>
+    <input class="desc" id="g-desc" placeholder="Descripción (ej. sueldo recepción)">
+    <input type="number" id="g-monto" placeholder="Monto $" style="width:120px">
+    <label class="chk"><input type="checkbox" id="g-rec" checked> Recurrente (todos los meses)</label>
+    <button class="btn" id="g-add">+ Agregar gasto</button>
+  </div>
+  <div style="overflow-x:auto"><table id="gastos"><thead><tr>
+    <th>Categoría</th><th>Descripción</th><th>Tipo</th><th>Monto</th><th></th>
+  </tr></thead><tbody></tbody></table></div>
+  <p class="muted" id="gastos-note"></p>
+</div>
+
+<div class="card"><h2>Evolución mensual</h2><div class="chartbox"><canvas id="chEvol"></canvas></div></div>
+
+<script>
+const TOKEN=new URLSearchParams(location.search).get('token')||'';
+const q=s=>'?token='+encodeURIComponent(TOKEN)+(s||'');
+let chEvol=null, MES=null;
+const money=n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('es-CL');
+
+async function load(){
+  const r=await fetch('/api/cmc/ebitda'+q(MES?'&mes='+MES:''));
+  const d=await r.json();
+  MES=d.mes;
+  // selector de meses
+  const sel=document.getElementById('mes');
+  if(!sel.options.length){
+    sel.innerHTML=d.meses_disponibles.map(m=>`<option value="${m}">${m}</option>`).join('');
+    sel.value=MES; sel.onchange=()=>{MES=sel.value;load();};
+  }
+  document.getElementById('mesLbl').textContent='· '+MES;
+  // KPIs
+  const ebClass=d.ebitda>=0?'pos':'neg';
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="l">Ingresos</div><div class="v">${money(d.ingresos)}</div><div class="s">caja real</div></div>
+    <div class="kpi"><div class="l">Honorarios (bruto)</div><div class="v">${money(d.honorarios_bruto)}</div><div class="s">${Math.round(100*d.honorarios_bruto/(d.ingresos||1))}% de ingresos</div></div>
+    <div class="kpi"><div class="l">Margen CMC</div><div class="v">${money(d.margen_cmc)}</div><div class="s">${d.margen_cmc_pct}% · antes de gastos</div></div>
+    <div class="kpi"><div class="l">Gastos operativos</div><div class="v">${money(d.gastos)}</div><div class="s">arriendo, sueldos, servicios…</div></div>
+    <div class="kpi ebitda"><div class="l">EBITDA</div><div class="v">${money(d.ebitda)}</div><div class="s">margen ${d.margen_ebitda_pct}%</div></div>`;
+  // waterfall
+  document.getElementById('waterfall').innerHTML=`
+    <div class="row"><span>Ingresos (caja Medilink)</span><b>${money(d.ingresos)}</b></div>
+    <div class="row"><span>− Honorarios profesionales (bruto)</span><b class="neg">${money(-d.honorarios_bruto)}</b></div>
+    <div class="row"><span>= Margen CMC</span><b>${money(d.margen_cmc)}</b></div>
+    <div class="row"><span>− Gastos operativos</span><b class="neg">${money(-d.gastos)}</b></div>
+    <div class="row big"><span>= EBITDA</span><span class="${ebClass}">${money(d.ebitda)} · ${d.margen_ebitda_pct}%</span></div>`;
+  // tabla profesionales
+  const tb=document.querySelector('#tabla tbody');
+  tb.innerHTML=d.profesionales.map(p=>`<tr>
+    <td>${p.nombre}${p.especialidad?`<span class="esp">${p.especialidad}</span>`:''}</td>
+    <td class="num">${money(p.ingreso)}</td>
+    <td class="num">${p.fijo?'<span class="pill">FIJO</span>':(p.pct+'%')}</td>
+    <td class="num">${money(p.bruto)}</td>
+    <td class="num">${money(p.liquido)}</td>
+    <td class="num ${p.cmc<0?'neg':''}">${money(p.cmc)}</td></tr>`).join('')
+    +`<tr class="tot"><td>TOTAL</td><td class="num">${money(d.ingresos)}</td><td></td>
+      <td class="num">${money(d.honorarios_bruto)}</td><td class="num">${money(d.liquido_total)}</td>
+      <td class="num">${money(d.margen_cmc)}</td></tr>`;
+  // gastos
+  const gb=document.querySelector('#gastos tbody');
+  if(!d.gastos_detalle.length){
+    gb.innerHTML='<tr><td colspan="5" style="color:var(--mute);padding:14px">Sin gastos cargados. Agregá los gastos fijos (arriendo, sueldos, servicios…) arriba — marcá "Recurrente" para que apliquen todos los meses.</td></tr>';
+  }else{
+    gb.innerHTML=d.gastos_detalle.map(g=>`<tr>
+      <td>${g.categoria}</td><td>${g.descripcion||'—'}</td>
+      <td>${g.recurrente?'<span class="pill">mensual</span>':'puntual'}</td>
+      <td class="num">${money(g.monto)}</td>
+      <td class="num"><button class="btn del" onclick="delGasto(${g.id})">✕</button></td></tr>`).join('');
+  }
+  document.getElementById('gastos-note').textContent=`Total gastos del mes: ${money(d.gastos)}`;
+  // evolución
+  drawEvol(d.evolucion);
+}
+
+function drawEvol(ev){
+  const labels=ev.map(e=>e.mes);
+  if(chEvol)chEvol.destroy();
+  chEvol=new Chart(document.getElementById('chEvol'),{data:{labels,datasets:[
+    {type:'bar',label:'Ingresos',data:ev.map(e=>e.ingresos),backgroundColor:'#cfe3ef',order:3},
+    {type:'bar',label:'Honorarios',data:ev.map(e=>e.honorarios),backgroundColor:'#9fcfe0',order:2},
+    {type:'line',label:'EBITDA',data:ev.map(e=>e.ebitda),borderColor:'#0F3F68',backgroundColor:'transparent',tension:.3,order:1,borderWidth:3}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M'}}},plugins:{legend:{position:'top'}}}});
+}
+
+async function addGasto(){
+  const monto=parseInt(document.getElementById('g-monto').value||'0');
+  if(monto<=0){alert('Ingresá un monto');return;}
+  await fetch('/api/cmc/ebitda/gasto'+q(),{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      fecha:document.getElementById('g-fecha').value||undefined,
+      categoria:document.getElementById('g-cat').value,
+      descripcion:document.getElementById('g-desc').value,
+      monto, recurrente:document.getElementById('g-rec').checked})});
+  document.getElementById('g-desc').value='';document.getElementById('g-monto').value='';
+  load();
+}
+async function delGasto(id){if(!confirm('¿Eliminar este gasto?'))return;
+  await fetch('/api/cmc/ebitda/gasto/'+id+q(),{method:'DELETE'});load();}
+window.delGasto=delGasto;
+document.getElementById('g-add').onclick=addGasto;
+load();
+</script>
+</div></body></html>
