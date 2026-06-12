@@ -1106,6 +1106,21 @@ async def _job_bi_sync_diario():
         log.warning("bi_sync_diario repasada fallo: %s", e)
 
 
+async def _job_bi_sync_intradia():
+    """Sync intradía LIGERO: solo pagos del día actual (1 día, sin atenciones ni
+    repasada pesada). Corre a las 14:00 y 19:00 CLT para que /cmc/mensual refleje
+    el día en curso sin esperar al sync nocturno de 23:59. force=True → upsert
+    idempotente por pago_id."""
+    from bi_sync import sync_pagos_rango
+    from datetime import date
+    try:
+        hoy = date.today().isoformat()
+        r = await sync_pagos_rango(desde=hoy, hasta=hoy, force=True)
+        log.info("bi_sync_intradia pagos hoy: %s", r)
+    except Exception as e:
+        log.warning("bi_sync_intradia fallo: %s", e)
+
+
 async def _job_repasada_historica():
     """Barrido HISTÓRICO completo (semanal): corre la repasada sobre toda la caja
     (desde 2024) para cazar errores de atribución viejos que quedan fuera de la

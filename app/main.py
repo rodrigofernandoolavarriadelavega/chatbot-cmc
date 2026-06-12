@@ -48,7 +48,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_detectar_cancelaciones,
                   _job_monitor_anomalias,
                   _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
-                  _job_bi_sync_diario, _job_cac_snapshot, _job_repasada_historica,
+                  _job_bi_sync_diario, _job_bi_sync_intradia, _job_cac_snapshot, _job_repasada_historica,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
@@ -463,6 +463,16 @@ async def lifespan(app: FastAPI):
         _job_bi_sync_diario,
         CronTrigger(hour=23, minute=59, timezone=_CLT),
         id="bi_sync_v2_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
+    # BI v2: sync intradía LIGERO (solo pagos del día) 14:00 y 19:00 CLT → el
+    # dashboard /cmc/mensual refleja el día en curso sin esperar a las 23:59.
+    scheduler.add_job(
+        _job_bi_sync_intradia,
+        CronTrigger(hour="14,19", minute=0, timezone=_CLT),
+        id="bi_sync_v2_intradia",
         replace_existing=True,
         misfire_grace_time=3600,
         coalesce=True,
