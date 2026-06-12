@@ -8706,7 +8706,9 @@ async def webhook(request: Request):
                         if info.get("error"):
                             continue
                         if platform == "instagram":
-                            nombre = info.get("username") or info.get("name", "")
+                            # Preferimos el nombre real ("María A") sobre el
+                            # username ("maria.marita.m") — más legible para recepción.
+                            nombre = info.get("name") or info.get("username", "")
                         else:
                             nombre = info.get("name") or f"{info.get('first_name', '')} {info.get('last_name', '')}".strip()
                         if nombre and nombre != sender_id:
