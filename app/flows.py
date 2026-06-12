@@ -9471,8 +9471,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _monto_fmt = f"${_ABO_AG:,}".replace(",", ".")
                 return (
                     f"Para confirmar tu hora de *Psiquiatría* pedimos un abono de "
-                    f"*{_monto_fmt} CLP* (se descuenta del valor total de la consulta; "
-                    "el saldo se paga el día de la atención).\n\n"
+                    f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
+                    "así que el día de la atención no pagas nada adicional.\n\n"
                     "*Datos para transferir:*\n"
                     f"{_CTF_AG['banco']}\n"
                     f"{_CTF_AG['tipo']} {_CTF_AG['numero']}\n"
@@ -9951,7 +9951,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         _abono_txt = (
                             "💳 *Importante — abono para confirmar tu hora de Psiquiatría*\n\n"
                             f"Pedimos un abono de *${_ABO:,} CLP* para asegurar tu hora "
-                            "(se descuenta del valor de la consulta; el saldo se paga el día de la atención).\n\n"
+                            "— corresponde al valor total de la consulta; el día de la atención no pagas nada adicional.\n\n"
                             "*Datos para transferir:*\n"
                             f"{_CTF['banco']}\n"
                             f"{_CTF['tipo']} {_CTF['numero']}\n"

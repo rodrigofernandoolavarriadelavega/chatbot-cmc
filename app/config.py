@@ -218,9 +218,9 @@ CMC_TRANSFERENCIA = {
     "rut":     "77.140.898-2",
     "correo":  "centromedicocarampangue@gmail.com",
 }
-# Monto del abono anticipado de Psiquiatría (mismo valor que la política del
-# módulo /alma/abonos — abono_sugerido; el saldo se paga el día de la atención).
-ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "20000"))
+# Monto del abono anticipado de Psiquiatría: la CONSULTA COMPLETA ($60.000,
+# dato dueño 2026-06-12) — no hay saldo el día de la atención.
+ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "60000"))
 
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.

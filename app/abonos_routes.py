@@ -45,8 +45,8 @@ router = APIRouter(prefix="/alma/api/abonos", tags=["abonos"])
 # Para agregar/quitar una prestación o cambiar montos: editar este dict.
 _ABONO_POLICY: dict[str, dict] = {
     "Psiquiatría": {
-        "abono_sugerido":  20_000,
-        "precio_sugerido": 45_000,
+        "abono_sugerido":  60_000,   # consulta completa por adelantado (dueño 2026-06-12)
+        "precio_sugerido": 60_000,   # particular vigente (saldo del día = 0)
         "id_profesional":  None,   # aún sin profesional fijo en Medilink
     },
     "Fonoaudiología": {
