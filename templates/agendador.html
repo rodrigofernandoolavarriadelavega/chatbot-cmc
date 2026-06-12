@@ -1280,14 +1280,6 @@ function renderProfs(){
     return;
   }
 
-  // Prestaciones SELECCIONABLES (pedido dueño: que elegir el examen sea accionable)
-  if (S.spec.prestaciones && S.spec.prestaciones.length){
-    html += `<div class="prest-panel">
-      <div class="prest-h">${ic('<path d="M9 5h6M9 9h6M9 13h4"/><rect x="5" y="3" width="14" height="18" rx="2"/>')}¿Qué atención necesita?</div>
-      ${S.spec.prestaciones.map((x,i)=>`<button class="prest-row sel${S.prest&&S.prest.n===x.n?' on':''}" onclick="pickPrest(${i})"><span>${esc(x.n)}</span><b class="tnum">${esc(x.p)}</b><span class="prest-chk">${ic('<path d="M20 6 9 17l-5-5"/>')}</span></button>`).join('')}
-      <div class="prest-note">Toque una opción (referencial — el profesional confirma el valor exacto) o elija directamente al profesional.</div>
-    </div>`;
-  }
   profs.forEach((p)=>{
     const priceTag = p.precio ? `<span class="mtag">${ic('<path d="M3 7h18v10H3z"/><circle cx="12" cy="12" r="2"/>')}${esc(p.precio)}</span>` : '';
     html += `<button class="prof" onclick="pickProf('${escAttr(String(p.id))}')">
@@ -1296,6 +1288,14 @@ function renderProfs(){
         <div class="meta">${priceTag}</div></div>
       <span class="go">${ic('<path d="M5 12h14M12 5l7 7-7 7"/>')}</span></button>`;
   });
+  // Prestaciones SELECCIONABLES (pedido dueño: que elegir el examen sea accionable)
+  if (S.spec.prestaciones && S.spec.prestaciones.length){
+    html += `<div class="prest-panel">
+      <div class="prest-h">${ic('<path d="M9 5h6M9 9h6M9 13h4"/><rect x="5" y="3" width="14" height="18" rx="2"/>')}¿Qué atención necesita?</div>
+      ${S.spec.prestaciones.map((x,i)=>`<button class="prest-row sel${S.prest&&S.prest.n===x.n?' on':''}" onclick="pickPrest(${i})"><span>${esc(x.n)}</span><b class="tnum">${esc(x.p)}</b><span class="prest-chk">${ic('<path d="M20 6 9 17l-5-5"/>')}</span></button>`).join('')}
+      <div class="prest-note">Toque una opción (referencial — el profesional confirma el valor exacto) o elija directamente al profesional.</div>
+    </div>`;
+  }
   list.innerHTML = html;
 }
 async function pickProf(idOrAuto){
