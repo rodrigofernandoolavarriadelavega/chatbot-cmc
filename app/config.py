@@ -440,3 +440,10 @@ AGENDADOR_WA_CONFIRM = os.getenv("AGENDADOR_WA_CONFIRM", "false").lower() in ("1
 # tomar el correo, dispara el correo de confirmación. Nadie recibe marketing sin
 # hacer clic en ese correo. OFF por defecto — el dueño decide cuándo encenderlo.
 EMAIL_OPTIN_ENABLED = os.getenv("EMAIL_OPTIN_ENABLED", "false").lower() in ("1", "true", "yes", "on")
+
+# ── Alma Print — impresion remota en recepcion ─────────────────────────────────
+# ALMA_PRINT_URL: URL del servidor Alma Print (print.agentecmc.cl).
+# ALMA_PRINT_USER_TOKEN: token del usuario en Alma Print (GET /api/printers + POST /api/jobs).
+#   Obtenerlo con: grep USER_TOKEN /opt/alma-print/alma-print.env
+ALMA_PRINT_URL        = os.getenv("ALMA_PRINT_URL", "https://print.agentecmc.cl").rstrip("/")
+ALMA_PRINT_USER_TOKEN = os.getenv("ALMA_PRINT_USER_TOKEN", "")

@@ -926,6 +926,8 @@ import grafo_routes; grafo_routes.register_grafo_routes(app)  # Cerebro Alma (gr
 import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
 app.include_router(audit_routes.router)
 
+import print_routes; app.include_router(print_routes.router)  # Impresion remota → Alma Print
+
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 _ADMIN_HTML = (_TEMPLATE_DIR / "admin.html").read_text(encoding="utf-8")
