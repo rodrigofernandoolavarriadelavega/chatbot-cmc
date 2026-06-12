@@ -4011,3 +4011,25 @@ async def _job_demanda_semanal():
 
     except Exception as e:
         log.error("_job_demanda_semanal falló: %s", e, exc_info=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Skills aprendidas (nivel 6) — destila reglas durables del optimizer
+# ─────────────────────────────────────────────────────────────────────────────
+async def _job_learned_skills():
+    """Pasada semanal: corre el optimizer, observa/gradúa/decae skills y persiste.
+    No-op si LEARNED_SKILLS_ACTIVE está OFF. Corre la parte síncrona (query al BI)
+    en un thread para no bloquear el event loop."""
+    try:
+        import asyncio
+        from autopilot import learned_skills
+        rep = await asyncio.to_thread(learned_skills.run)
+        if rep.get("active"):
+            grad = rep.get("graduated", [])
+            log.info("learned_skills: pasada semanal OK — %d skills, %d graduadas%s",
+                     len(rep.get("skills", [])), len(grad),
+                     (": " + ", ".join(grad)) if grad else "")
+        else:
+            log.debug("learned_skills: pasada semanal no-op (flag off)")
+    except Exception as e:  # noqa: BLE001
+        log.error("_job_learned_skills falló: %s", e, exc_info=True)

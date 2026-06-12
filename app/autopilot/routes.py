@@ -589,6 +589,114 @@ async def optimizer_apply(request: Request, token: str | None = Query(None)):
     return {"ok": True, "especialidad": esp, "margen_clp": margen, "overrides": ov}
 
 
+@router.get("/autopilot/api/learned-skills")
+def learned_skills_summary(token: str | None = Query(None), request: Request = None):
+    """Skills aprendidas (nivel 6): reglas durables destiladas del optimizer cuando un
+    patrón se repite y es estable. READ-ONLY: lee lo persistido, no corre nada."""
+    _check_token(token, request)
+    from . import learned_skills
+    return JSONResponse(learned_skills.summary())
+
+
+@router.post("/autopilot/api/learned-skills/run")
+def learned_skills_run(token: str | None = Query(None), request: Request = None):
+    """Corre una pasada manual: optimizer → observa/gradúa/decae → persiste. No-op si
+    LEARNED_SKILLS_ACTIVE está OFF. Solo aplica a policy si LEARNED_SKILLS_AUTOAPPLY=true."""
+    _check_token(token, request)
+    from . import learned_skills
+    try:
+        rep = learned_skills.run()
+        try:
+            from session import log_event
+            log_event("system", "learned_skills_run",
+                      {"active": rep.get("active"), "graduated": rep.get("graduated", [])})
+        except Exception:  # noqa: BLE001
+            pass
+        return JSONResponse(rep)
+    except Exception as e:  # noqa: BLE001
+        log.error("learned_skills run falló: %s", e)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/autopilot/skills", response_class=HTMLResponse)
+def learned_skills_page(token: str | None = Query(None), request: Request = None):
+    """Página autocontenida (no toca el template del salud) con la tabla de skills
+    aprendidas + botón de corrida manual. Mismo auth que /autopilot."""
+    _check_token(token, request)
+    tok = token or ""
+    return HTMLResponse(_SKILLS_PAGE.replace("__TOKEN__", tok))
+
+
+_SKILLS_PAGE = """<!doctype html><html lang=es><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>Skills aprendidas · Autopilot CMC</title>
+<style>
+ :root{--aqua:#4FBECE;--azul:#1172AB;--navy:#0F3F68;--bg:#f4f7fa;--card:#fff;--ink:#0F3F68}
+ *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Montserrat,-apple-system,Segoe UI,Roboto,sans-serif;padding:18px}
+ h1{font-size:19px;margin:0 0 2px}.sub{color:#5a728a;font-size:13px;margin:0 0 16px}
+ .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+ button{background:var(--azul);color:#fff;border:0;border-radius:10px;padding:9px 14px;
+  font-weight:600;font-size:13px;cursor:pointer}button:disabled{opacity:.5;cursor:wait}
+ .flag{font-size:12px;padding:4px 9px;border-radius:999px;font-weight:600}
+ .on{background:#dcfce7;color:#15803d}.off{background:#fee2e2;color:#b91c1c}
+ .card{background:var(--card);border:1px solid #e3eaf1;border-radius:16px;padding:14px 16px;
+  margin-bottom:11px;box-shadow:0 1px 3px rgba(15,63,104,.06)}
+ .row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+ .id{font-weight:700;font-size:14px}.pat{color:#41617e;font-size:13px;margin:4px 0 0}
+ .ev{color:#7689a0;font-size:12px;margin:6px 0 0}
+ .st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+ .active{background:#dcfce7;color:#15803d}.observing{background:#fef9c3;color:#a16207}
+ .retired{background:#f1f5f9;color:#64748b}
+ .meta{font-size:12px;color:#5a728a;margin-top:8px;display:flex;gap:14px;flex-wrap:wrap}
+ .val{font-weight:700;color:var(--azul)}.empty{color:#7689a0;padding:30px;text-align:center}
+</style></head><body>
+<h1>🧠 Skills aprendidas <span style=font-weight:400;color:#7689a0>· nivel 6</span></h1>
+<p class=sub>Reglas durables que el sistema destila del Optimizador cuando un patrón se
+ repite y es estable. Una skill <b>activa</b> es elegible para aplicarse en vivo;
+ <b>observando</b> aún acumula confirmaciones; <b>retirada</b> oscilaba (ruido).</p>
+<div class=bar>
+ <button id=run onclick=runOnce()>▶ Correr pasada ahora</button>
+ <span id=fActive class=flag>…</span><span id=fApply class=flag>…</span>
+ <span id=msg style="font-size:12px;color:#5a728a"></span>
+</div>
+<div id=list></div>
+<script>
+const T="__TOKEN__";
+const fmt=n=>"$"+(n||0).toLocaleString("es-CL");
+async function load(){
+ const r=await fetch(`/autopilot/api/learned-skills?token=${encodeURIComponent(T)}`);
+ const d=await r.json();
+ const fa=document.getElementById("fActive"),fp=document.getElementById("fApply");
+ fa.textContent=d.active?"observación ON":"observación OFF";fa.className="flag "+(d.active?"on":"off");
+ fp.textContent=d.autoapply?"auto-aplica ON":"auto-aplica OFF";fp.className="flag "+(d.autoapply?"on":"off");
+ const list=document.getElementById("list");const sk=d.skills||[];
+ if(!sk.length){list.innerHTML='<div class="card empty">Aún no hay skills. Cuando el Optimizador'+
+   ' detecte un patrón estable varias corridas seguidas, aparecerá acá.</div>';return}
+ list.innerHTML=sk.map(s=>{const e=s.effect||{};return `<div class=card>
+   <div class=row><div><div class=id>${s.id||"?"}</div>
+   <div class=pat>${s.pattern||""}</div>
+   ${s.evidence?`<div class=ev>${s.evidence}</div>`:""}</div>
+   <span class="st ${s.status||"observing"}">${(s.status||"?").toUpperCase()}</span></div>
+   <div class=meta><span>efecto: <span class=val>${e.param||""}[${e.scope||""}] = ${fmt(e.value_clp)}</span></span>
+   <span>✓ ${s.confirmations||0} confirmaciones</span>
+   <span>↺ ${s.reversals||0} reversiones</span>
+   <span>fuente: ${s.source||"optimizer"}</span></div></div>`}).join("");
+}
+async function runOnce(){
+ const b=document.getElementById("run"),m=document.getElementById("msg");
+ b.disabled=true;m.textContent="corriendo optimizer + destilando…";
+ try{const r=await fetch(`/autopilot/api/learned-skills/run?token=${encodeURIComponent(T)}`,{method:"POST"});
+   const d=await r.json();
+   m.textContent=d.active===false?"observación OFF (no-op): activá LEARNED_SKILLS_ACTIVE para que aprenda."
+     :`listo · ${(d.graduated||[]).length} graduadas`;
+ }catch(e){m.textContent="error: "+e}
+ b.disabled=false;load();
+}
+load();
+</script></body></html>"""
+
+
 @router.get("/autopilot/api/experiments")
 def experiments_ledger(token: str | None = Query(None), request: Request = None):
     """Champion/Challenger: ledger de experimentos de política + veredictos con

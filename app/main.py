@@ -41,7 +41,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      upsert_message_status, upsert_bsuid,
                      get_profile, save_profile)
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
-from jobs import (_enviar_reenganche, _sync_citas_hoy,
+from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
                   _job_postconsulta, _job_postconsulta_morning,
                   _job_enrolar_atendidos_dia,
@@ -369,6 +369,14 @@ async def lifespan(app: FastAPI):
         _enviar_reenganche,
         "interval", minutes=5,
         id="reenganche",
+        replace_existing=True,
+    )
+    # Skills aprendidas (nivel 6): lunes 09:35 CLT (hueco entre 9:12 y 10:00 para
+    # no engrosar clusters → 429). No-op si LEARNED_SKILLS_ACTIVE=false (default).
+    scheduler.add_job(
+        _job_learned_skills,
+        CronTrigger(day_of_week="mon", hour=9, minute=35, timezone=_CLT),
+        id="learned_skills_semanal",
         replace_existing=True,
     )
     # Post-consulta: 18:00 CLT (Item 33 — dentro de ventana 09:30-20:00 para evitar
