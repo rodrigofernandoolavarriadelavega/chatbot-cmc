@@ -428,7 +428,7 @@ PRECIOS_SLOT = {
     "Fonoaudiología":         ("particular", 25000),
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
-    "Ginecología":            ("particular", 35000),  # F034: precio real $35.000 (no $30.000)
+    "Ginecología":            ("particular", 30000, "eco ginecológica: $35.000"),  # dueño 2026-06-12: ATENCIÓN $30.000, ECO $35.000 (F034 había conflado la eco)
     # "Traumatología" — temporalmente deshabilitada (Dr. Barraza no disponible)
     "Otorrinolaringología":   ("particular", 35000),
     "Gastroenterología":      ("particular", 35000),
@@ -955,6 +955,9 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
         return f"💰 Evaluación: {precio_str}"
     if sufijo == "control":
         return f"💰 Control: {precio_str}"
+    if sufijo:
+        # Sufijo libre = nota aclaratoria (ej. gineco: la eco tiene otro valor)
+        return f"💰 Consulta: {precio_str} · _{sufijo}_"
     return f"💰 Consulta: {precio_str}"
 
 

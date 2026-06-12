@@ -154,6 +154,26 @@ _PRESTACIONES: dict[str, list[dict]] = {
         {"n": "Ecografía ginecológica / transvaginal / pélvica", "p": "$35.000"},
         {"n": "PAP", "p": "$20.000"},
     ],
+    "Estética Facial": [
+        {"n": "Evaluación / armonización (plan personalizado)", "p": "$15.000"},
+        {"n": "Toxina botulínica (3 zonas)", "p": "$159.990"},
+        {"n": "Ácido hialurónico (labios, pómulos, ojeras)", "p": "$159.990"},
+        {"n": "Mesoterapia facial (1 sesión)", "p": "$80.000"},
+        {"n": "Mesoterapia facial (3 sesiones)", "p": "$179.990"},
+        {"n": "Hilos tensores", "p": "$129.990"},
+        {"n": "Lipopapada (3 sesiones)", "p": "$139.990"},
+        {"n": "Exosomas (regeneración)", "p": "$349.900"},
+        {"n": "Bioestimulador de colágeno", "p": "$450.000"},
+    ],
+    "Nutrición": [
+        {"n": "Consulta nutricional", "p": "Fonasa $4.770 · Particular $20.000"},
+        {"n": "Bioimpedanciometría (composición corporal)", "p": "$20.000"},
+    ],
+    "Ortodoncia": [
+        {"n": "Evaluación dental previa (con dentista general)", "p": "$15.000"},
+        {"n": "Instalación brackets boca completa", "p": "$120.000"},
+        {"n": "Control mensual (ajuste arcos y elásticos)", "p": "$30.000"},
+    ],
 }
 
 _ESP_EXTRA: dict[str, list[int]] = {
