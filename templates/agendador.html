@@ -921,6 +921,13 @@ function go(view){
   if(view==='mis'){ resetMis(); }
 }
 async function startFlow(){
+  // Si el paciente salió a medias (atrás intuitivo) y vuelve a "Agendar",
+  // RETOMAMOS donde quedó — no se pierde lo que ya eligió (pedido dueño).
+  if (S && S.step > 0 && S.step < 5 && (S.spec || S.prof)) {
+    go('flow'); showStep(S.step); updateSummary();
+    await ensureCatalog(false);
+    return;
+  }
   S = {step:0, spec:null, prof:null, day:null, slot:null, patient:null, consent:false, reagId:null};
   resetIdForm();
   go('flow'); showStep(0); updateSummary();
@@ -943,6 +950,12 @@ function next(){
   if(S.step===4) fillConfirm();
 }
 function back(){ if(S.step>0 && S.step<5) showStep(S.step-1); }
+// Cerrar pestaña / salir del sitio con un flujo a medias → confirmar antes.
+window.addEventListener('beforeunload', (e) => {
+  const inFlow = document.getElementById('page-flow').classList.contains('on');
+  if (inFlow && S.step > 0 && S.step < 5) { e.preventDefault(); e.returnValue = ''; }
+});
+
 // Atrás del navegador / gesto atrás Android = retroceder un paso del wizard.
 window.addEventListener('popstate', (e) => {
   const inFlow = document.getElementById('page-flow').classList.contains('on');
