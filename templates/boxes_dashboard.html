@@ -14,7 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<!-- Sortable servido LOCAL: la CSP del sitio (script-src 'self') bloquea CDNs externos como jsdelivr → "Sortable is not defined". -->
+<script src="/static/sortable-1.15.2.min.js"></script>
 <style>
   :root {
     --cmc-aqua: #4FBECE;
