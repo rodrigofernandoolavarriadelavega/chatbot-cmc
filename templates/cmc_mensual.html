@@ -571,6 +571,7 @@ let barChart,doughnutChart,cmcDoughnutChart,medSubChart,dentSubChart,otroSubChar
 let simBarChart,simDoughnutChart,simCmcChart,simMedSubChart,simDentSubChart,simOtroSubChart,simAllSubChart,simMedSubCmcChart,simDentSubCmcChart,simOtroSubCmcChart,simAllSubCmcChart;
 
 function initCharts(){
+  if(barChart) return;          // idempotente: evita "Canvas is already in use" si dos caminos llaman initCharts (init() vs _cmcLoadMes)
   if(window.Chart){Chart.defaults.font.family="'Montserrat',system-ui,sans-serif";Chart.defaults.color='#6b8295';}
   barChart         = makeBar('barChart','#1172AB','#4FBECE');
   simBarChart      = makeBar('simBarChart','#6d28d9','#4FBECE',true);
@@ -865,6 +866,7 @@ function deleteSimCustomChart(id){
 
 /* ══════════ RENDER DASHBOARD ══════════ */
 function renderDashboard(){
+  if(!barChart) initCharts();   // carrera de arranque: _cmcLoadMes() puede llegar antes que init() cree los charts (await /api/state) → garantiza que existan
   const active=data.filter(d=>d.total>0);
   const sT=data.reduce((s,d)=>s+d.total,0), sP=data.reduce((s,d)=>s+d.prof,0), sC=data.reduce((s,d)=>s+d.cmc,0);
   document.getElementById('kpi-total').textContent=fmtPlain(sT);
@@ -2090,20 +2092,8 @@ async function init(){
     if(ind){ ind.textContent='Sin conexión con API'; ind.style.background='#fee2e2'; ind.style.color='#991b1b';
              setTimeout(()=>{ ind.style.opacity='0'; },3000); }
   }
-  // Debug temporal — se puede eliminar después
-  const dbg=document.createElement('div');
-  dbg.id='debug-init';
-  dbg.style.cssText='position:fixed;top:10px;right:10px;z-index:9999;background:#1e293b;color:#fff;font:11px monospace;padding:8px 12px;border-radius:8px;max-width:340px;white-space:pre-wrap';
-  dbg.textContent='⏳ Iniciando...';
-  document.body.appendChild(dbg);
-
-  try { initCharts(); dbg.textContent+=' ✓ initCharts'; } catch(e){ _showError('Error initCharts: '+e.message, e.stack||String(e)); return; }
-  try {
-    dbg.textContent+='\ndata.length='+data.length+' sT='+data.reduce((s,d)=>s+d.total,0);
-    renderDashboard();
-    dbg.textContent+=' ✓ renderDashboard';
-  } catch(e){ _showError('Error renderDashboard: '+e.message, e.stack||String(e)); return; }
-  setTimeout(()=>{ const el=document.getElementById('debug-init'); if(el) el.remove(); }, 8000);
+  try { initCharts(); } catch(e){ _showError('Error initCharts: '+e.message, e.stack||String(e)); return; }
+  try { renderDashboard(); } catch(e){ _showError('Error renderDashboard: '+e.message, e.stack||String(e)); return; }
   checkSheetsStatus();
 }
 init();
