@@ -760,7 +760,8 @@ function renderWl(){
   box.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>{closeWl();openChat(b.dataset.open);}));
   box.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",async()=>{
     if(!confirm("¿Sacar a esta persona de la lista de espera?"))return;
-    await api("/admin/api/waitlist/"+b.dataset.cancel+"/cancel",{method:"POST"});
+    const r=await api("/admin/api/waitlist/"+b.dataset.cancel+"/cancel",{method:"POST"});
+    if(!r.ok){toast("Error al quitar de la lista: HTTP "+r.status,true);return;}
     WL=WL.map(x=>x.id==b.dataset.cancel?{...x,canceled_at:"now"}:x);
     renderWl();renderWlBadge();toast("Quitado de la lista");
   }));
@@ -968,7 +969,9 @@ function wireContext(phone){
   const nb=document.getElementById("editNameBtn");
   if(nb)nb.addEventListener("click",async()=>{
     const nv=prompt("Nombre del paciente:",CURMETA.nombre||"");
-    if(nv&&nv.trim().length>=2){await api("/admin/api/profile/"+phone+"/name",{method:"PUT",body:JSON.stringify({nombre:nv.trim()})});
+    if(nv&&nv.trim().length>=2){
+      const rn=await api("/admin/api/profile/"+phone+"/name",{method:"PUT",body:JSON.stringify({nombre:nv.trim()})});
+      if(!rn.ok){toast("Error al renombrar: HTTP "+rn.status,true);return;}
       CURMETA.nombre=nv.trim();const c=CONV.find(x=>x.phone===phone);if(c)c.nombre=nv.trim();
       renderChatHeader();renderList();renderContext(phone,{last_cita:CURMETA._lc},document.getElementById("notesArea")?.value||"",CURMETA._tags||[]);toast("Nombre actualizado");}
   });
@@ -984,7 +987,9 @@ function wireContext(phone){
   }));
   const na=document.getElementById("notesArea");
   if(na){let nt;na.addEventListener("input",()=>{document.getElementById("noteStatus").textContent="escribiendo…";
-    clearTimeout(nt);nt=setTimeout(async()=>{await api("/admin/api/notes/"+phone,{method:"PUT",body:JSON.stringify({notes:na.value})});
+    clearTimeout(nt);nt=setTimeout(async()=>{
+      const rno=await api("/admin/api/notes/"+phone,{method:"PUT",body:JSON.stringify({notes:na.value})});
+      if(!rno.ok){document.getElementById("noteStatus").textContent="error al guardar";return;}
       document.getElementById("noteStatus").textContent="guardado ✓";setTimeout(()=>{const s=document.getElementById("noteStatus");if(s)s.textContent="";},1500);},700);});}
 }
 async function loadFiles(phone){
@@ -1005,7 +1010,8 @@ async function loadFiles(phone){
 // ===== Actions =====
 async function doTakeover(){
   if(!CUR)return;
-  await api("/admin/api/takeover/"+CUR,{method:"POST"});
+  const r=await api("/admin/api/takeover/"+CUR,{method:"POST"});
+  if(!r.ok){toast("Error al tomar control: HTTP "+r.status,true);return;}
   CURMETA.state="HUMAN_TAKEOVER";const c=CONV.find(x=>x.phone===CUR);if(c)c.state="HUMAN_TAKEOVER";
   renderChatHeader();renderCounts();renderList();toast("Tomaste el control");
   setTimeout(()=>refreshThread(),600);
@@ -1013,7 +1019,8 @@ async function doTakeover(){
 async function doResume(){
   if(!CUR)return;
   if(!confirm("¿Devolver esta conversación al bot?"))return;
-  await api("/admin/api/resume/"+CUR,{method:"POST"});
+  const r=await api("/admin/api/resume/"+CUR,{method:"POST"});
+  if(!r.ok){toast("Error al devolver al bot: HTTP "+r.status,true);return;}
   CURMETA.state="IDLE";const c=CONV.find(x=>x.phone===CUR);if(c)c.state="IDLE";
   renderChatHeader();renderCounts();renderList();toast("Devuelto al bot");
   setTimeout(()=>refreshThread(),600);
@@ -1046,10 +1053,11 @@ function closeBooked(){document.getElementById("bookedModal").classList.remove("
 async function saveBooked(){
   const esp=document.getElementById("bkEsp").value.trim(),fecha=document.getElementById("bkFecha").value,hora=document.getElementById("bkHora").value;
   if(!esp||!fecha||!hora){toast("Especialidad, fecha y hora son obligatorios",true);return;}
-  await api("/admin/api/patient/"+CUR+"/mark-booked",{method:"POST",body:JSON.stringify({
+  const rb=await api("/admin/api/patient/"+CUR+"/mark-booked",{method:"POST",body:JSON.stringify({
     especialidad:esp,profesional:document.getElementById("bkProf").value.trim(),
     fecha,hora,modalidad:document.getElementById("bkMod").value,
     rut:CURMETA.rut||"",nombre:CURMETA.nombre||""})});
+  if(!rb.ok){toast("Error al marcar cita: HTTP "+rb.status,true);return;}
   closeBooked();toast("Cita registrada");CURMETA.state="COMPLETED";
   const c=CONV.find(x=>x.phone===CUR);if(c)c.state="COMPLETED";
   renderChatHeader();renderCounts();renderList();openChat(CUR);
