@@ -9459,16 +9459,18 @@ async def webhook(request: Request):
             # Solo procesamos el primer mensaje de la sesión (cuando aún no hay
             # meta_referral guardado) para no sobreescribir si el paciente responde
             # múltiples veces desde el mismo anuncio.
+            # Cada clic en un ad (aunque el phone ya haya hablado antes) es una
+            # atribución válida → guardar SIEMPRE que llegue referral. El guard
+            # `if not _existing_ref` previo bloqueaba phones con sesión existente
+            # → ~288 conv/mes sin atribuir (fuga CAC mayo 2026). save_meta_referral
+            # hace INSERT con ts (no sobreescribe); dedup msg_id evita reprocesar.
             try:
                 _wa_referral = msg.get("referral") or {}
                 if _wa_referral:
-                    # P28: reusar session ya leida al inicio del lock
-                    _existing_ref = (session.get("data") or {}).get("meta_referral")
-                    if not _existing_ref:
-                        from session import save_meta_referral as _smr_wa
-                        _smr_wa(phone, _wa_referral, canal="whatsapp")
-                        log.info("META_REFERRAL WA capturado phone=%s headline=%r",
-                                 phone, _wa_referral.get("headline", "")[:60])
+                    from session import save_meta_referral as _smr_wa
+                    _smr_wa(phone, _wa_referral, canal="whatsapp")
+                    log.info("META_REFERRAL WA capturado phone=%s headline=%r",
+                             phone, _wa_referral.get("headline", "")[:60])
             except Exception as _wa_ref_err:
                 log.debug("meta_referral WA error: %s", _wa_ref_err)
             # ── fin captura referral ────────────────────────────────────────
