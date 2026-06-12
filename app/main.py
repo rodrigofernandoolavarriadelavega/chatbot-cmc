@@ -8494,6 +8494,27 @@ def _sanitize_upload_filename(orig: str, fallback: str = "file") -> str:
     safe = re.sub(r"[^\w.\-]", "_", base)[:120]
     return safe or fallback
 
+def _es_intent_rescate_takeover(texto: str) -> bool:
+    """¿El mensaje es una intención de AUTOSERVICIO inequívoca que justifica
+    sacar al paciente de HUMAN_TAKEOVER (solo si ningún humano respondió aún)?
+
+    Cubre: elegir especialidad (motivo_*), elegir profesional (agendar_prof_*),
+    agendar, volver al menú, ver/cambiar citas. NO incluye saludos sueltos
+    ("hola") ni pedir recepción de nuevo — esos se quedan en silencio."""
+    t = (texto or "").strip().lower()
+    if not t:
+        return False
+    if t.startswith("motivo_") or t.startswith("agendar_prof_"):
+        return True
+    _RESCATE = {
+        "agendar", "accion_agendar", "agendar_sugerido", "quick_book",
+        "menu", "menu_volver", "inicio",
+        "accion_otro", "accion_mis_citas", "accion_cambiar", "accion_waitlist",
+        "mis horas", "mis citas", "cat_medico", "cat_dental",
+    }
+    return t in _RESCATE
+
+
 @app.post("/webhook")
 async def webhook(request: Request):
     """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger).
@@ -8867,6 +8888,10 @@ async def webhook(request: Request):
 
         msg_id = msg.get("id", "")
         is_audio = False
+        # Título legible del botón/lista que tocó el paciente (para el panel de
+        # recepción). El routing usa el id crudo (`texto`); el log usa el title
+        # para que la conversación se lea como la ve el paciente.
+        _interactive_title = None
 
         # De-dup temprano
         if msg_id and is_duplicate(msg_id):
@@ -8950,8 +8975,10 @@ async def webhook(request: Request):
             itype = interactive.get("type", "")
             if itype == "button_reply":
                 texto = interactive["button_reply"]["id"]
+                _interactive_title = interactive["button_reply"].get("title")
             elif itype == "list_reply":
                 texto = interactive["list_reply"]["id"]
+                _interactive_title = interactive["list_reply"].get("title")
             else:
                 return Response(status_code=200)
         elif msg_type == "button":
@@ -9313,7 +9340,7 @@ async def webhook(request: Request):
         async with get_phone_lock(phone):
             session = get_session(phone)
             state_before = session.get("state", "IDLE")
-            log_text = f"🎤 {texto}" if is_audio else texto
+            log_text = f"🎤 {texto}" if is_audio else (_interactive_title or texto)
             log_message(phone, "in", log_text, state_before, canal="whatsapp")
 
             # ── Captura fbclid desde primer mensaje (una sola vez por sesión) ──
@@ -9364,8 +9391,30 @@ async def webhook(request: Request):
             # y generaran respuestas mientras un operador humano atendía.
             # Bug confirmado: 39 interrupciones en 48h por audios de pacientes.
             if state_before == "HUMAN_TAKEOVER":
-                log.info("HUMAN_TAKEOVER activo from=%s type=%s — silenciado", phone, msg_type)
-                return Response(status_code=200)
+                # Rescate seguro: si el paciente acaba de pedir recepción (o cayó
+                # en takeover) y NINGÚN humano respondió aún (human_replied=False),
+                # y toca un botón/intent de autoservicio inequívoco (elegir
+                # especialidad, agendar, menú, mis citas...), lo sacamos del
+                # takeover y lo atiende el bot. Caso real: paciente toca "Hablar
+                # con recepción" e inmediatamente "🦷 Revisión dental" → antes el
+                # bot lo dejaba mudo esperando a un humano que ni había entrado.
+                # Si la recepcionista YA habló, se respeta el silencio (no la
+                # interrumpe el bot).
+                _tk_data = session.get("data") or {}
+                if (not _tk_data.get("human_replied")
+                        and _es_intent_rescate_takeover(texto)):
+                    log.info("HUMAN_TAKEOVER rescate por intención clara from=%s txt=%r",
+                             phone, (texto or "")[:40])
+                    try:
+                        log_event(phone, "takeover_rescate_intent", {"texto": (texto or "")[:60]})
+                    except Exception:
+                        pass
+                    save_session(phone, "IDLE", {})
+                    session = get_session(phone)
+                    state_before = "IDLE"
+                else:
+                    log.info("HUMAN_TAKEOVER activo from=%s type=%s — silenciado", phone, msg_type)
+                    return Response(status_code=200)
             # ── fin guard HUMAN_TAKEOVER ────────────────────────────────────
 
             # ── Puente asistente Meulen ─────────────────────────────────────
