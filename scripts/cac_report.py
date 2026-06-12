@@ -200,9 +200,17 @@ def bot_funnel(cur, since: str, until: str) -> dict:
     )
     conversaron = cur.fetchone()[0] or 0
 
+    # Solo citas CREADAS DESPUÉS del clic del ad (referral ts por phone).
+    # Sin este filtro se atribuían citas antiguas del mismo número: un kine
+    # recurrente con sesiones viejas inflaba el ROAS del ad que lo hizo
+    # escribir hoy. El ts del referral es el timestamp del clic (unix epoch
+    # guardado en meta_referrals.ts); la cita debe tener created_at posterior.
     cur.execute(
         f"SELECT cb.phone, cb.id_cita, cb.especialidad, cb.fecha, cb.id_paciente_medilink, cb.cancel_detected_at "
-        f"FROM citas_bot cb WHERE cb.phone IN ({ph})",
+        f"FROM citas_bot cb "
+        f"JOIN (SELECT phone, datetime(ts,'unixepoch') AS ref_ts FROM meta_referrals "
+        f"      WHERE phone IN ({ph})) mr ON mr.phone = cb.phone "
+        f"WHERE cb.created_at >= mr.ref_ts",
         phones,
     )
     citas = cur.fetchall()

@@ -405,7 +405,9 @@ async def _enviar_reenganche():
                 log.exception("Reenganche %s falló phone=%s", canal, phone)
                 continue
         data["reenganche_sent"] = True
-        save_session(phone, state, data)
+        from resilience import get_phone_lock as _gpl_re
+        async with _gpl_re(phone):
+            save_session(phone, state, data)
         log_event(phone, "reenganche_enviado", {"state": state, "canal": canal})
         log.info("Reenganche enviado → %s (estado: %s, canal: %s)", phone, state, canal)
 
@@ -467,7 +469,10 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
         "prof_sugerido_id": alt_slots[0].get("id_profesional") if alt_slots else None,
         "from_cancel": True,
     }
-    save_session(phone, "WAIT_SLOT", data)
+    # Usar el lock por phone para no pisar sesiones en vuelo del paciente
+    from resilience import get_phone_lock as _gpl
+    async with _gpl(phone):
+        save_session(phone, "WAIT_SLOT", data)
 
     _cancel_hdr = (
         f"⚠️ *Aviso importante*\n\nTu hora del *{cita.get('fecha','')}* a las "
@@ -778,7 +783,10 @@ async def _job_enrolar_atendidos_dia():
                                 from winback import atribuir_cita_a_winback as _wb_attr_job
                                 _wb_attr_job(phone, cita_id)
                             except Exception as _wb_job_err:
-                                log.debug("enrolar: atribuir_cita_a_winback error: %s", _wb_job_err)
+                                log.warning("enrolar: atribuir_cita_a_winback error cita=%s phone=%s: %s",
+                                            cita_id, (phone or "")[:8], _wb_job_err)
+                                log_event(phone or "", "atribucion_winback_error",
+                                          {"cita_id": cita_id, "error": str(_wb_job_err)[:200]})
                         else:
                             # Tier C: sin opt-in WhatsApp → tabla pacientes_sin_optin
                             if celular_med:
@@ -2333,10 +2341,12 @@ async def _job_telemedicina_recordatorios():
                 await send_whatsapp_proactive(phone, msg)
                 log_message(phone, "out", msg, "IDLE")
             elif canal == "ig":
-                await send_instagram(phone, msg)
+                # strip "ig_" — send_instagram recibe el igsid sin prefijo
+                await send_instagram(phone[3:], msg)
                 log_message(phone, "out", msg, "IDLE")
             elif canal == "fb":
-                await send_messenger(phone, msg)
+                # strip "fb_" — send_messenger recibe el psid sin prefijo
+                await send_messenger(phone[3:], msg)
                 log_message(phone, "out", msg, "IDLE")
             else:
                 log.warning("telemedicina_recordatorio: canal desconocido phone=%s", phone[:8])
@@ -2926,6 +2936,11 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
                 except Exception:
                     pac = {}
                 pac_cache[id_pac] = pac
+                # Throttle: evitar ráfaga de GETs Medilink sin pausa.
+                # Este job corre en :25 (1 min después de detectar_cancelaciones en :24).
+                # Sin sleep, 30 citas = 30 GETs consecutivos → 429 en cascada.
+                import asyncio as _ai_cag
+                await _ai_cag.sleep(0.35)
             tel = (pac.get("celular") or pac.get("telefono") or "").strip()
             teln = normalize_wa_id(tel) if tel else ""
             if not teln or len(teln) < 11:

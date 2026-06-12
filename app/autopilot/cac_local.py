@@ -36,9 +36,14 @@ def _attended_phones_window(cutoff_ts: int) -> dict:
         # RUT por teléfono.
         profs = {row["phone"]: (row["rut"] or "") for row in conn.execute(
             "SELECT phone, rut FROM contact_profiles").fetchall()}
-        # ¿Agendó? (citas_bot futuras/recientes)
+        # ¿Agendó DENTRO de la ventana? Solo citas creadas desde el cutoff
+        # (unix ts). Sin este filtro, citas históricas de hace meses cuentan
+        # como "atendido actual" → CAC subestimado.
         booked = {row["phone"] for row in conn.execute(
-            "SELECT DISTINCT phone FROM citas_bot").fetchall()}
+            "SELECT DISTINCT phone FROM citas_bot "
+            "WHERE created_at >= datetime(?, 'unixepoch')",
+            (cutoff_ts,),
+        ).fetchall()}
     for phone, ad in ref_by_phone.items():
         out[phone] = {"ad": ad, "rut": profs.get(phone, ""), "booked": phone in booked}
     return out

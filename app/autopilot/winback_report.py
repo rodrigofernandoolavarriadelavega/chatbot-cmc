@@ -80,19 +80,30 @@ def report(days: int = 120) -> dict:
     except Exception as e:  # noqa: BLE001
         log.warning("winback_report caja: %s", e)
 
-    # 3) Ingreso atribuido por envío = pagos del paciente con fecha >= envío
+    # 3) Ingreso atribuido por envío = pagos del paciente con fecha >= envío.
+    # DEDUP POR PACIENTE: si un paciente recibió >1 envío y pagó, el ingreso
+    # se atribuye SOLO al envío más antiguo que precedió el pago. Los envíos
+    # posteriores al mismo paciente muestran ingreso=0. Sin este dedup, la
+    # misma visita de reactivación se contaba N veces (una por cada envío
+    # anterior), inflando el total de ingreso y el P&L de win-back.
+    ya_atribuido: dict = {}   # paciente_id -> ingreso ya asignado en un envío anterior
     by_day: dict[str, dict] = {}
-    for s in sends:
-        # Atribución CONSERVADORA: el win-back trae al paciente de vuelta UNA vez.
-        # Se cuenta solo la VISITA DE REACTIVACIÓN = los pagos del PRIMER día que
-        # volvió tras el envío. Las visitas posteriores son actividad normal de la
-        # clínica, no del mensaje → no se inflan (caso Olga: 3 visitas → 1 sola).
-        despues = [(f, m) for (f, m) in pagos.get(s["paciente_id"], []) if f >= s["dia"]]
-        if despues:
-            primer_dia = min(f for f, _ in despues)
-            ingreso = sum(m for f, m in despues if f == primer_dia)
-        else:
+    # Ordenar envíos por fecha ASC para que el primero que precedió el pago gane.
+    for s in sorted(sends, key=lambda x: x["dia"]):
+        pid = s["paciente_id"]
+        if pid and pid in ya_atribuido:
+            # Ya se atribuyó ingreso a este paciente en un envío anterior
             ingreso = 0
+        else:
+            # Atribución CONSERVADORA: solo el PRIMER día que volvió tras el envío.
+            despues = [(f, m) for (f, m) in pagos.get(pid, []) if pid and f >= s["dia"]]
+            if despues:
+                primer_dia = min(f for f, _ in despues)
+                ingreso = sum(m for f, m in despues if f == primer_dia)
+                if pid and ingreso > 0:
+                    ya_atribuido[pid] = ingreso
+            else:
+                ingreso = 0
         s["ingreso"] = ingreso
         s["pago"] = ingreso > 0
         s["telefono_masked"] = _mask_phone(s["telefono"])
