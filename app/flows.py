@@ -5446,11 +5446,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "  AND id_profesional = 66 "
                         "  AND fecha_atencion >= NOW() - INTERVAL '6 months'"
                     )
+                    # Query psycopg2 síncrona: usar asyncio.to_thread para no
+                    # bloquear el event loop (F137 auditoría 2026-06-10).
+                    import asyncio as _asyncio_orto
                     from winback import bi_conn as _bi_orto_conn
-                    with _bi_orto_conn() as _pg_orto:
-                        with _pg_orto.cursor() as _cur_orto:
-                            _cur_orto.execute(_sql_orto, (perfil["rut"],))
-                            _cnt_orto = (_cur_orto.fetchone() or [0])[0]
+
+                    def _query_orto_sync():
+                        with _bi_orto_conn() as _pg:
+                            with _pg.cursor() as _cur:
+                                _cur.execute(_sql_orto, (perfil["rut"],))
+                                return (_cur.fetchone() or [0])[0]
+
+                    _cnt_orto = await _asyncio_orto.to_thread(_query_orto_sync)
                     if _cnt_orto > 0:
                         log_event(phone, "ortodoncia_activo_menu_ofrecido",
                                   {"rut": perfil["rut"], "atenciones_6m": _cnt_orto})
