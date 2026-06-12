@@ -6060,7 +6060,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         prof_sugerido_id = mejor.get("id_profesional")
         data.update({"especialidad": "masoterapia", "slots": smart,
                      "todos_slots": todos, "fechas_vistas": [fecha],
-                     "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
+                     "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id,
+                     "slot_sugerido": mejor})
         save_session(phone, "WAIT_SLOT", data)
         precio_linea = _precio_line("Masoterapia", mejor)
         precio_bloque = f"{precio_linea}\n" if precio_linea else ""
@@ -6723,7 +6724,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"No encontré cupo con *{nombre_p}* en los próximos días 😕{chr(92)}n{chr(92)}n"
                     f"¿Te sirve con *{nombre_s}* (mismo día y hora)? Responde *sí* o escribe *otro día*."
                 )
-            slot = slots_mostrados[0]
+            # FIX Capa-1 (2026-06-12): si hay un slot_sugerido guardado (el que se
+            # mostró con ⭐), usarlo exactamente. Cuando SOBRECUPO_ENABLED=true, el
+            # bloque de inyección de sobrecupos puede reordenar slots_mostrados entre
+            # la primera oferta y el confirm, haciendo que slots_mostrados[0] sea un
+            # sobrecupo ≠ al slot mostrado al paciente. slot_sugerido ancla el slot
+            # correcto. Se hace pop para no contaminar reintentos posteriores.
+            _sugerido = data.pop("slot_sugerido", None)
+            slot = _sugerido if _sugerido else slots_mostrados[0]
             return await _slot_confirmed(phone, data, slot)
 
         # Pregunta-afirmación implícita cuando hay 1 solo slot mostrado:
@@ -10134,6 +10142,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Caso normal: main.py envía y loguea el mensaje de confirmación.
                 return confirmacion_msg + _conf_suffix
             else:
+                # FIX Capa-2 (2026-06-12): si el slot era un sobrecupo y Medilink lo
+                # rechazó (400 "tope con otra cita"), es una carrera — otro paciente lo
+                # tomó primero. En lugar del error genérico que pierde al paciente,
+                # re-salvar la sesión en WAIT_SLOT con el slot fallido filtrado para
+                # que pueda ver otros horarios sin re-intentar el slot ya ocupado.
+                # reset_session() ya se ejecutó arriba, así que salvamos de nuevo.
+                if slot.get("sobrecupo"):
+                    log_event(phone, "sobrecupo_rechazado_race", {
+                        "fecha": slot.get("fecha"),
+                        "hora": slot.get("hora_inicio"),
+                        "profesional": slot.get("profesional", ""),
+                    })
+                    _slot_key = (slot.get("fecha"), slot.get("hora_inicio"))
+                    _slots_ok = [s for s in (data.get("slots") or [])
+                                 if (s.get("fecha"), s.get("hora_inicio")) != _slot_key]
+                    _todos_ok = [s for s in (data.get("todos_slots") or [])
+                                 if (s.get("fecha"), s.get("hora_inicio")) != _slot_key]
+                    data["slots"] = _slots_ok
+                    data["todos_slots"] = _todos_ok
+                    data.pop("slot_sugerido", None)  # ya consumido antes de llegar aquí
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _btn_msg(
+                        "Esa hora ya fue reservada por otro paciente 😕\n\n"
+                        "¿Quieres ver otros horarios disponibles?",
+                        [
+                            {"id": "ver_otros", "title": "📋 Ver otros horarios"},
+                            {"id": "otro_dia",  "title": "📅 Otro día"},
+                        ]
+                    )
                 return (
                     "Hubo un problema al reservar la hora 😕\n"
                     f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
@@ -13897,7 +13934,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
 
     data.update({"especialidad": especialidad_lower, "slots": smart_sugerido,
                  "todos_slots": todos, "fechas_vistas": [fecha],
-                 "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id})
+                 "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id,
+                 "slot_sugerido": mejor})
     log_event(phone, "funnel_especialidad", {
         "esp": especialidad_lower,
         "paso": "especialidad_resuelta",
