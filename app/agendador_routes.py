@@ -127,6 +127,35 @@ _PRECIO_PROF_OVERRIDE = {13: ("ambas", 7880, None, 30000)}  # Dr. Márquez parti
 # atienden (el mismo profesional figura bajo otra etiqueta). Pedido dueño
 # 2026-06-12: Márquez en Medicina General Y Medicina Familiar; Montalba en
 # Psicología Adulto Y Psicología Infantil. PRECIOS_SLOT ya tiene ambas claves.
+# Etiqueta de precio especial cuando una especialidad agrupa servicios con
+# valores distintos (fuente: glosario de precios del bot en claude_helper.py).
+_PRECIO_ESP_LABEL = {
+    "Ginecología": "Consulta $30.000 · Eco ginecológica $35.000",
+}
+
+# Prestaciones con valor propio, mostradas al desplegar la especialidad
+# (pedido dueño 2026-06-12 para Fonoaudiología). Fuente: glosario del bot.
+_PRESTACIONES: dict[str, list[dict]] = {
+    "Fonoaudiología": [
+        {"n": "Evaluación infantil/adulto", "p": "$30.000"},
+        {"n": "Sesión de terapia", "p": "$25.000"},
+        {"n": "Audiometría", "p": "$25.000"},
+        {"n": "Audiometría + impedanciometría", "p": "$45.000"},
+        {"n": "Impedanciometría", "p": "$20.000"},
+        {"n": "Octavo par (audición y equilibrio)", "p": "$50.000"},
+        {"n": "Evaluación + maniobra VPPB (vértigo)", "p": "$50.000"},
+        {"n": "Terapia vestibular", "p": "$25.000"},
+        {"n": "Terapia tinnitus (zumbido)", "p": "$25.000"},
+        {"n": "Calibración de audífonos", "p": "$10.000"},
+        {"n": "Revisión de exámenes", "p": "$10.000"},
+    ],
+    "Ginecología": [
+        {"n": "Consulta ginecológica", "p": "$30.000"},
+        {"n": "Ecografía ginecológica / transvaginal / pélvica", "p": "$35.000"},
+        {"n": "PAP", "p": "$20.000"},
+    ],
+}
+
 _ESP_EXTRA: dict[str, list[int]] = {
     "Medicina Familiar":   [13],   # Dr. Alonso Márquez
     "Psicología Infantil": [74],   # Jorge Montalba
@@ -178,7 +207,8 @@ def _build_catalogo() -> list[dict]:
                 continue
             items.append({
                 "especialidad": esp,
-                "precio": _precio_label(esp, profs[0][0] if len(profs) == 1 else None),
+                "precio": _PRECIO_ESP_LABEL.get(esp) or _precio_label(esp, profs[0][0] if len(profs) == 1 else None),
+                "prestaciones": _PRESTACIONES.get(esp, []),
                 "dental": _es_dental(esp),
                 "metodos_pago": (["Efectivo", "Transferencia", "Débito", "Crédito"]
                                  if _es_dental(esp) else ["Efectivo", "Transferencia"]),

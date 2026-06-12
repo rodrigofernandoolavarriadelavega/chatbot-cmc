@@ -214,7 +214,14 @@ button{font-family:inherit}
 .spec .pr .from{font-size:11px;color:var(--ink-3);font-weight:600}
 .spec .pr .v{font-size:15px;font-weight:800;color:var(--ink)}
 .spec .badge-f{position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;letter-spacing:.4px;color:var(--ok);background:var(--ok-bg);padding:3px 7px;border-radius:6px}
-.spec:has(.badge-f) .nm{padding-right:64px}  /* el badge no tapa el nombre (caso "Psicología Ad...") */
+.spec:has(.badge-f) .nm{padding-right:64px}
+.prest-panel{background:var(--card,#fff);border:1px solid rgba(15,63,104,.10);border-radius:14px;padding:14px 16px;margin:4px 0 12px;box-shadow:0 1px 4px rgba(15,63,104,.06)}
+.prest-h{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.prest-h svg{width:15px;height:15px;stroke:var(--blue)}
+.prest-row{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:6px 0;border-bottom:1px dashed rgba(15,63,104,.08)}
+.prest-row:last-of-type{border-bottom:none}
+.prest-row b{color:var(--navy);white-space:nowrap}
+.prest-note{font-size:11px;color:var(--ink-2,#64748b);margin-top:8px}  /* el badge no tapa el nombre (caso "Psicología Ad...") */
 
 /* ---- professional cards ---- */
 .prof-list{display:grid;gap:11px}
@@ -1234,6 +1241,14 @@ function renderProfs(){
       <div class="info"><div class="n">Primer disponible</div><div class="sub">La hora más cercana de ${esc(S.spec.especialidad)}</div>
         <div class="meta"><span class="mtag">${ic('<path d="M12 2 4 5v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V5l-8-3Z"/>')}Recomendado</span></div></div>
       <span class="go">${ic('<path d="M5 12h14M12 5l7 7-7 7"/>')}</span></button>`;
+  }
+  // Prestaciones con valor propio (Fono: exámenes; Gineco: consulta vs eco)
+  if (S.spec.prestaciones && S.spec.prestaciones.length){
+    html += `<div class="prest-panel">
+      <div class="prest-h">${ic('<path d="M9 5h6M9 9h6M9 13h4"/><rect x="5" y="3" width="14" height="18" rx="2"/>')}Exámenes y valores de ${esc(S.spec.especialidad)}</div>
+      ${S.spec.prestaciones.map(x=>`<div class="prest-row"><span>${esc(x.n)}</span><b class="tnum">${esc(x.p)}</b></div>`).join('')}
+      <div class="prest-note">El valor exacto se confirma según lo que indique el profesional.</div>
+    </div>`;
   }
   profs.forEach((p)=>{
     const priceTag = p.precio ? `<span class="mtag">${ic('<path d="M3 7h18v10H3z"/><circle cx="12" cy="12" r="2"/>')}${esc(p.precio)}</span>` : '';
