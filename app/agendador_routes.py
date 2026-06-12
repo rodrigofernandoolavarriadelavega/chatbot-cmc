@@ -169,11 +169,36 @@ _PRESTACIONES: dict[str, list[dict]] = {
         {"n": "Consulta nutricional", "p": "Fonasa $4.770 · Particular $20.000"},
         {"n": "Bioimpedanciometría (composición corporal)", "p": "$20.000"},
     ],
-    "Ortodoncia": [
-        {"n": "Evaluación dental previa (con dentista general)", "p": "$15.000"},
-        {"n": "Instalación brackets boca completa", "p": "$120.000"},
-        {"n": "Control mensual (ajuste arcos y elásticos)", "p": "$30.000"},
+    "Odontología General": [
+        {"n": "Evaluación dental (diagnóstico + plan)", "p": "$15.000"},
+        {"n": "Restauración de resina (tapadura)", "p": "desde $35.000"},
+        {"n": "Destartraje + profilaxis (limpieza)", "p": "$30.000"},
+        {"n": "Exodoncia simple", "p": "$40.000"},
+        {"n": "Exodoncia compleja", "p": "$60.000"},
+        {"n": "Blanqueamiento dental", "p": "$75.000"},
+        {"n": "Carillas de resina", "p": "desde $50.000"},
     ],
+    "Ortodoncia": [
+        {"n": "Evaluación dental previa (gratis si inicias tratamiento ese día)", "p": "$15.000"},
+        {"n": "Instalación brackets boca completa", "p": "$120.000"},
+        {"n": "Instalación brackets 1 arcada", "p": "$60.000"},
+        {"n": "Control mensual ortodoncia", "p": "$30.000"},
+        {"n": "Control ortopedia (niños/adolescentes)", "p": "$20.000"},
+        {"n": "Retiro brackets + contención", "p": "$120.000"},
+    ],
+}
+
+# Especialidades que NO se agendan directo: el flujo clínico parte por otra
+# (ortodoncia: evaluación con dentista general que luego deriva — regla CMC).
+_AGENDAR_VIA = {
+    "Ortodoncia": {
+        "via": "Odontología General",
+        "nota": ("El tratamiento de ortodoncia parte con una *evaluación dental* "
+                 "con nuestro equipo de Odontología General ($15.000 — gratis si "
+                 "inicias un tratamiento ese mismo día). La dentista evalúa tu caso, "
+                 "solicita radiografías y gestiona tu derivación con la ortodoncista "
+                 "Dra. Daniela Castillo."),
+    },
 }
 
 _ESP_EXTRA: dict[str, list[int]] = {
@@ -229,6 +254,7 @@ def _build_catalogo() -> list[dict]:
                 "especialidad": esp,
                 "precio": _PRECIO_ESP_LABEL.get(esp) or _precio_label(esp, profs[0][0] if len(profs) == 1 else None),
                 "prestaciones": _PRESTACIONES.get(esp, []),
+                **(_AGENDAR_VIA.get(esp) or {}),
                 "dental": _es_dental(esp),
                 "metodos_pago": (["Efectivo", "Transferencia", "Débito", "Crédito"]
                                  if _es_dental(esp) else ["Efectivo", "Transferencia"]),
