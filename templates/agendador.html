@@ -219,6 +219,12 @@ button{font-family:inherit}
 .prest-h{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
 .prest-h svg{width:15px;height:15px;stroke:var(--blue)}
 .prest-row{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:6px 0;border-bottom:1px dashed rgba(15,63,104,.08)}
+button.prest-row.sel{width:100%;background:none;border:none;border-bottom:1px dashed rgba(15,63,104,.08);cursor:pointer;text-align:left;align-items:center;font:inherit;color:inherit;padding:9px 6px;border-radius:8px}
+button.prest-row.sel:hover{background:rgba(79,190,206,.07)}
+button.prest-row.sel .prest-chk{display:none;width:16px;flex:0 0 auto}
+button.prest-row.sel .prest-chk svg{width:15px;height:15px;stroke:var(--ok,#16a34a);stroke-width:3}
+button.prest-row.sel.on{background:rgba(79,190,206,.12);box-shadow:inset 0 0 0 1.5px var(--aqua,#4FBECE)}
+button.prest-row.sel.on .prest-chk{display:inline-block}
 .prest-row:last-of-type{border-bottom:none}
 .prest-row b{color:var(--navy);white-space:nowrap}
 .prest-note{font-size:11px;color:var(--ink-2,#64748b);margin-top:8px}  /* el badge no tapa el nombre (caso "Psicología Ad...") */
@@ -1216,6 +1222,7 @@ function filterSpec(f, el){
   renderSpecs();
 }
 function pickSpec(name){
+  S.prest = null;
   S.spec = SPEC_INDEX[name];
   S.prof=null; S.day=null; S.slot=null;
   updateSummary();
@@ -1229,6 +1236,11 @@ function pickSpec(name){
 function initials(name){
   const p = (name||'').replace(/^(Dr\.|Dra\.)\s*/,'').trim().split(/\s+/);
   return ((p[0]?.[0]||'')+(p[1]?.[0]||'')).toUpperCase();
+}
+function pickPrest(i){
+  const x = (S.spec.prestaciones||[])[i];
+  S.prest = (S.prest && S.prest.n===x.n) ? null : x;   // toque de nuevo = deseleccionar
+  renderProfs(); updateSummary();
 }
 function goVia(nombre){
   for (const g of (CATALOG?.grupos||[])){
@@ -1268,12 +1280,12 @@ function renderProfs(){
     return;
   }
 
-  // Prestaciones con valor propio (Fono: exámenes; Gineco: consulta vs eco)
+  // Prestaciones SELECCIONABLES (pedido dueño: que elegir el examen sea accionable)
   if (S.spec.prestaciones && S.spec.prestaciones.length){
     html += `<div class="prest-panel">
-      <div class="prest-h">${ic('<path d="M9 5h6M9 9h6M9 13h4"/><rect x="5" y="3" width="14" height="18" rx="2"/>')}Exámenes y valores de ${esc(S.spec.especialidad)}</div>
-      ${S.spec.prestaciones.map(x=>`<div class="prest-row"><span>${esc(x.n)}</span><b class="tnum">${esc(x.p)}</b></div>`).join('')}
-      <div class="prest-note">El valor exacto se confirma según lo que indique el profesional.</div>
+      <div class="prest-h">${ic('<path d="M9 5h6M9 9h6M9 13h4"/><rect x="5" y="3" width="14" height="18" rx="2"/>')}¿Qué atención necesita?</div>
+      ${S.spec.prestaciones.map((x,i)=>`<button class="prest-row sel${S.prest&&S.prest.n===x.n?' on':''}" onclick="pickPrest(${i})"><span>${esc(x.n)}</span><b class="tnum">${esc(x.p)}</b><span class="prest-chk">${ic('<path d="M20 6 9 17l-5-5"/>')}</span></button>`).join('')}
+      <div class="prest-note">Toque una opción (referencial — el profesional confirma el valor exacto) o elija directamente al profesional.</div>
     </div>`;
   }
   profs.forEach((p)=>{
@@ -1632,8 +1644,8 @@ function fillConfirm(){
   document.getElementById('cf-when').textContent = S.slot ? whenLong(S.slot.fecha, S.slot.hora_inicio) : '—';
   const pacName = S.patient.found ? (S.patient.name||S.patient.short||'Paciente') : (S.patient.name||'Paciente nuevo');
   document.getElementById('cf-pac').textContent = pacName + ' · ' + formatRut(S.patient.rut);
-  document.getElementById('cf-price').textContent = S.spec.precio || '—';
-  document.getElementById('cf-priceL').textContent = 'Valor consulta';
+  document.getElementById('cf-price').textContent = S.prest ? S.prest.p : (S.spec.precio || '—');
+  document.getElementById('cf-priceL').textContent = S.prest ? S.prest.n : 'Valor consulta';
   const metodos = (S.spec.metodos_pago && S.spec.metodos_pago.length) ? S.spec.metodos_pago.join(', ') : null;
   document.getElementById('cf-pay').textContent = metodos
     ? `Medios de pago: ${metodos}. El pago se realiza en el centro al momento de la atención.`
@@ -1679,6 +1691,7 @@ async function confirmReserva(){
     if(comuna) body.comuna=comuna;
     if(email) body.email=email;
   }
+  if (S.prest && S.prest.n) body.prestacion = S.prest.n;
   try{
     const r = await apiPost('/reservar', body);
     document.getElementById('dn-spec').textContent = (r.especialidad||S.spec.especialidad) + ' · ' + (r.profesional||profLabel());
@@ -1743,8 +1756,10 @@ function updateSummary(){
   setLine('su-prof', S.prof?profLabel():'Por elegir', S.prof);
   setLine('su-when', S.slot?summaryWhen():'Por elegir', !!S.slot);
   setLine('su-pac', pacLabel(), S.patient);
-  // Precio doble → una línea por modalidad (Fonasa / Particular), pedido dueño
-  document.getElementById('su-total').textContent = S.spec ? (S.spec.precio||'—').replace(/\s*·\s*/g, '\n') : '—';
+  // Prestación elegida manda sobre el precio genérico de la especialidad
+  document.getElementById('su-total').textContent = S.prest
+    ? (S.prest.n + '\n' + S.prest.p)
+    : (S.spec ? (S.spec.precio||'—').replace(/\s*·\s*/g, '\n') : '—');
   document.getElementById('su-note').textContent = S.spec
     ? 'Valor referencial. El pago se realiza en el centro.'
     : 'Se confirma al elegir la atención.';

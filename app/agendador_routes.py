@@ -482,9 +482,14 @@ async def reservar(request: Request, preview: str | None = Query(None)):
 
     # 6) Crear la cita REAL
     try:
+        # Prestación elegida en el agendador → observación visible en la agenda
+        # Medilink (recepción y el profesional saben a qué viene el paciente).
+        import re as _re_pr
+        _prest = _re_pr.sub(r"[^\w\sáéíóúñÁÉÍÓÚÑ+/().$·-]", "", str(body.get("prestacion") or ""))[:80].strip()
         resultado = await crear_cita(
             id_paciente=int(id_paciente), id_profesional=id_profesional,
             fecha=fecha, hora_inicio=hora_inicio, hora_fin=hora_fin,
+            observaciones_extra=(f"[{_prest}] " if _prest else ""),
         )
     except Exception as e:
         log.error("reservar crear_cita: %s", e)
