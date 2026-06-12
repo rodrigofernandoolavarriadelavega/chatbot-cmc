@@ -1103,9 +1103,13 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
         log.error("buscar_paciente: registro sin id para rut=%s: %s", _rut_safe(rut_clean), p)
         return None
     result = {
-        "id":     p["id"],
-        "nombre": _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
-        "rut":    p.get("rut", ""),
+        "id":        p["id"],
+        "nombre":    _fmt_nombre_apellidos(p.get('nombre'), p.get('apellidos')),
+        "apellidos": (p.get('apellidos') or "").strip(),
+        "rut":       p.get("rut", ""),
+        "email":     (p.get("email") or "").strip(),
+        "telefono":  (p.get("celular") or p.get("telefono") or "").strip(),
+        "celular":   (p.get("celular") or "").strip(),
     }
     if p.get("fecha_nacimiento"):
         result["fecha_nacimiento"] = p["fecha_nacimiento"]
@@ -1243,10 +1247,15 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
         if not cita_id:
             log.error("crear_cita: respuesta sin id — %s", data)
             return None
-        # Invalidar cache de próxima fecha tras booking: el slot ya no está
-        # disponible. Sin esto, con TTL 15 min el bot puede ofrecer el mismo
-        # slot a otros pacientes y provocar doble-booking.
+        # Invalidar caches tras booking: el slot ya no está disponible.
+        # Sin esto, con TTL 15 min el bot puede ofrecer el mismo slot a otro
+        # paciente y provocar doble-booking.
         _proxima_cache.clear()
+        # También invalidar _agendas_raw_cache (TTL 60s) para profesionales
+        # que usan usa_agendas=True (Pardo, Quijano, Millán, etc.) — sin
+        # invalidar, crear_cita y buscar_slots ven el mismo cupo "libre" hasta
+        # que expire el caché.
+        _agendas_raw_cache.pop(id_profesional, None)
         return {"id": cita_id, "confirmado": True}
     log.error("crear_cita falló: %s %s", r.status_code, r.text[:500])
     # Invalidar caché de horario si Medilink se queja de horario/duración:

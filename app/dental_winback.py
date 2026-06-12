@@ -282,14 +282,19 @@ def get_candidatos_dental(subcohorte: str, limite: int = 100) -> list[dict]:
                         dc.subcohorte
                     FROM bi.v_dental_cohortes_contactables dc
                     INNER JOIN bi.dental_consent mc
-                        ON mc.phone = dc.telefono
+                        -- Normalización: compara últimos 9 dígitos para resistir formatos
+                        -- distintos del mismo número (+56/56/9XXXXXXXX).
+                        ON RIGHT(REGEXP_REPLACE(mc.phone,   '[^0-9]', '', 'g'), 9)
+                         = RIGHT(REGEXP_REPLACE(dc.telefono,'[^0-9]', '', 'g'), 9)
                        AND mc.status = 'accepted'
                     WHERE dc.subcohorte = %s
                       AND dc.ultima_especialidad IS NOT NULL
                       AND TRIM(dc.ultima_especialidad) <> ''
                       AND NOT EXISTS (
                           SELECT 1 FROM bi.dental_winback_envios dwe
-                          WHERE dwe.telefono = dc.telefono
+                          -- Misma normalización en la exclusión de 90 días
+                          WHERE RIGHT(REGEXP_REPLACE(dwe.telefono,'[^0-9]','','g'), 9)
+                              = RIGHT(REGEXP_REPLACE(dc.telefono, '[^0-9]','','g'), 9)
                             AND dwe.enviado_at > NOW() - INTERVAL '90 days'
                       )
                     ORDER BY dc.dias_inactivo ASC

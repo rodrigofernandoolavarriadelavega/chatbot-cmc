@@ -2436,6 +2436,28 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
         text = _strip_markdown_json(resp.content[0].text)
         if resp.stop_reason == "max_tokens":
             log.warning("respuesta_faq truncado por max_tokens: %r", mensaje[:80])
+        # Misma sanitización defensiva que detect_intent: repara comillas dobles
+        # no escapadas y caracteres de control DENTRO del campo respuesta_directa.
+        # Sin esto, Haiku emite saltos de línea literales en respuestas FAQ largas
+        # (listas de precios, horarios) → raw_decode falla → fallback genérico.
+        try:
+            def _fix_faq_inner(m: "re.Match") -> str:
+                prefix, content, suffix = m.group(1), m.group(2), m.group(3)
+                fixed = re.sub(r'(?<!\\)"', r'\\"', content)
+                fixed = (fixed.replace("\n", "\\n")
+                              .replace("\r", "\\r").replace("\t", "\\t"))
+                return prefix + fixed + suffix
+            _san = re.sub(
+                r'("respuesta_directa"\s*:\s*")(.*?)("(?:\s*[,}]))',
+                _fix_faq_inner,
+                text,
+                flags=re.DOTALL,
+            )
+            if _san != text:
+                log.info("respuesta_faq: sanitizadas comillas/ctrl en respuesta_directa")
+                text = _san
+        except Exception as _faq_san_err:
+            log.warning("respuesta_faq: sanitización falló (ignorada): %s", _faq_san_err)
         try:
             data, _ = json.JSONDecoder().raw_decode(text.lstrip())
         except (json.JSONDecodeError, ValueError):
