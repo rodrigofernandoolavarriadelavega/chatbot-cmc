@@ -62,7 +62,13 @@ button{font-family:inherit}
 .shell{width:100%;max-width:1180px;margin:0 auto;padding:0 18px}
 
 /* ---- top bar ---- */
-.topbar{position:sticky;top:0;z-index:40;background:rgba(247,251,252,.82);backdrop-filter:saturate(140%) blur(12px);border-bottom:1px solid var(--line)}
+.topbar{
+  position:sticky;top:0;z-index:40;
+  background:rgba(247,251,252,.92);backdrop-filter:saturate(160%) blur(14px);
+  border-bottom:1px solid var(--line);
+  /* en standalone iOS el status bar queda dentro del viewport */
+  padding-top:env(safe-area-inset-top);
+}
 .topbar-in{display:flex;align-items:center;gap:14px;height:64px}
 .brand{display:flex;align-items:center;gap:11px;cursor:pointer;border:0;background:none;padding:4px}
 .tile{width:40px;height:40px;border-radius:11px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 16px -4px rgba(17,114,171,.5);flex:none}
@@ -414,71 +420,226 @@ a.fl:hover{color:var(--blue)}
 .foot-in .sep{flex:1;min-width:10px}
 .foot-in .addr{color:var(--ink-3);font-weight:500;letter-spacing:.1px}
 
+/* ============================== MOBILE STICKY BAR ============================== */
+.mbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:rgba(255,255,255,.94);backdrop-filter:saturate(160%) blur(14px);
+  border-top:1px solid var(--line);
+  /* safe-area: bottom para notch/home-bar, left/right para landscape */
+  padding:11px calc(14px + env(safe-area-inset-right)) calc(11px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+  display:none;align-items:center;gap:12px
+}
+.mbar.show{display:flex}
+.mbar .mb-info{flex:1;min-width:0}
+.mbar .mb-l{font-size:11px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.mbar .mb-v{font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 /* ============================== RESPONSIVE ============================== */
+
+/* ── >980px: sidebar escritorio visible, msum forzado a none ── */
+@media(min-width:981px){
+  .msum{display:none!important}
+  .has-mbar{padding-bottom:0}
+  .mbar{display:none!important}
+}
+
+/* ── 1024px: el sidebar empieza a crecer demasiado ── */
+@media(max-width:1024px){
+  .flow-grid{grid-template-columns:1fr 290px}
+}
+
+/* ── 980px: eliminar sidebar, activar msum ── */
 @media(max-width:980px){
   .flow-grid{grid-template-columns:1fr}
-  .summary{display:none}
+  /* sidebar escritorio: oculto */
+  #summary{display:none!important}
+  /* msum: visible cuando hay contenido (JS lo controla, CSS lo permite) */
   .msum{display:block}
+  .has-mbar{padding-bottom:84px}
   .hero-grid{grid-template-columns:1fr;gap:28px}
   .hero-card{order:-1;max-width:440px}
 }
-@media(max-width:640px){
-  .shell{padding:0 22px}
-  .topbar-in{height:58px;gap:8px}
-  .pill{display:none}
-  .lockup .l2{letter-spacing:2px}
-  .hero{padding-top:22px;padding-bottom:28px}
-  .hero .eyebrow{margin-bottom:13px;font-size:11px;letter-spacing:1.2px}
-  .hero h1{font-size:29px;line-height:1.14;letter-spacing:-.3px}
-  .hero h1 em::after{height:7px;bottom:3px}
-  .hero p.lead{font-size:15.5px;margin-top:14px;line-height:1.55;max-width:none}
-  .hero-cta{margin-top:24px;gap:10px}
-  .hero-cta .btn{flex:1}
-  .hero-feats{flex-direction:column;align-items:flex-start;gap:14px;margin-top:24px}
-  /* tarjeta DEBAJO del mensaje (no lidera) y compacta: llena el espacio sin apiñar arriba */
-  .hero-card{order:0;display:block;max-width:none;margin-top:26px;padding:16px}
-  .hero-card .hc-av{width:42px;height:42px}
-  .hero-card .hc-slots{gap:7px;margin-top:13px}
-  .hero-card .hc-slot{padding:9px 0;font-size:13px}
-  .hero-card .hc-foot{margin-top:13px;padding:11px 13px}
-  .tnav button{padding:8px 10px;font-size:12.5px}
-  /* stepper → progreso compacto con aire */
-  .stepper{display:block;overflow:visible;padding:15px 17px;margin:4px 0 24px}
-  .stepper .step,.stepper .step-bar{display:none}
-  .mstep{display:flex}
-  /* respiración general */
-  .flow{padding:20px 0 64px}
-  .phead{margin-bottom:22px}
-  .phead h2{font-size:21px}
-  .phead p{font-size:14px;margin-top:6px}
-  .chips{margin-bottom:22px}
-  .grouplbl{margin:30px 0 15px}
-  .group{margin-bottom:14px}
-  .spec-grid{grid-template-columns:1fr;gap:13px}
-  .spec{padding:17px}
-  .spec .sic{width:44px;height:44px}
-  .grid2{grid-template-columns:1fr}
-  .review-h{padding:20px}
-  .review-body,.fcard{padding:20px 16px}
-  /* footer ordenado: contactos arriba, dirección en su propia línea */
-  .foot-in{gap:13px 18px;padding:22px 0 26px}
-  .foot-in .sep{display:none}
-  .foot-in .addr{flex-basis:100%;margin-top:6px;padding-top:15px;border-top:1px solid var(--line);font-size:12px}
-}
-@media(max-width:400px){
-  .slots{grid-template-columns:repeat(3,1fr)}
+
+/* ── 768px: tablet portrait ── */
+@media(max-width:768px){
+  .shell{padding:0 16px}
+  .hero{padding-top:32px;padding-bottom:24px}
+  .hero h1{font-size:clamp(26px,6vw,38px)}
+  /* stepper: ocultar labels de pasos completados/futuros, solo activo */
+  .step:not(.active) .lbl{display:none}
+  .step-bar{min-width:12px}
 }
 
-/* mobile sticky CTA + summary */
-.mbar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:11px 14px calc(11px + env(safe-area-inset-bottom));display:none;align-items:center;gap:12px}
-.mbar.show{display:flex}
-.mbar .mb-info{flex:1;min-width:0}
-.mbar .mb-l{font-size:11px;color:var(--ink-3);font-weight:600}
-.mbar .mb-v{font-size:15px;font-weight:800;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media(max-width:980px){
-  .has-mbar{padding-bottom:84px}
+/* ── 640px: móvil landscape / teléfonos medianos ── */
+@media(max-width:640px){
+  .shell{padding:0 14px}
+
+  /* --- topbar --- */
+  .topbar-in{height:56px;gap:8px}
+  /* en 640px el pill desaparece pero el lockup se mantiene completo */
+  .pill{display:none}
+  .lockup .l2{letter-spacing:2px;font-size:13px}
+  .tnav{gap:2px}
+  .tnav button{padding:7px 10px;font-size:12px;border-radius:8px}
+
+  /* --- hero --- */
+  .hero{padding-top:20px;padding-bottom:24px}
+  .hero .eyebrow{margin-bottom:11px;font-size:10.5px;letter-spacing:1px}
+  .hero h1{font-size:clamp(24px,7.5vw,30px);line-height:1.12;letter-spacing:-.3px}
+  .hero h1 em::after{height:7px;bottom:3px}
+  .hero p.lead{font-size:15px;margin-top:12px;line-height:1.55;max-width:none}
+  .hero-cta{margin-top:20px;gap:10px}
+  .hero-cta .btn{flex:1;min-width:0}
+  .hero-feats{flex-direction:column;align-items:flex-start;gap:12px;margin-top:20px}
+  /* hero-card: debajo del texto, full-width */
+  .hero-card{order:0;display:block;max-width:none;margin-top:22px;padding:14px}
+  .hero-card .hc-av{width:40px;height:40px;font-size:13px}
+  .hero-card .hc-slots{grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}
+  .hero-card .hc-slot{padding:9px 0;font-size:12.5px}
+  .hero-card .hc-foot{margin-top:12px;padding:10px 12px}
+  .hero-card .hc-foot .pv{font-size:15px}
+
+  /* --- stepper: colapsa a barra de progreso compacta --- */
+  .stepper{display:block;overflow:visible;padding:13px 16px;margin:4px 0 20px;border-radius:12px}
+  .stepper .step,.stepper .step-bar{display:none}
+  .mstep{display:flex}
+
+  /* --- flow general --- */
+  .flow{padding:18px 0 60px}
+  .phead{margin-bottom:18px}
+  .phead h2{font-size:20px;letter-spacing:-.3px}
+  .phead p{font-size:13.5px;margin-top:5px}
+
+  /* --- chips de filtro --- */
+  .chips{gap:7px;margin-bottom:18px}
+  .chip{font-size:12px;padding:8px 12px;min-height:40px}
+
+  /* --- especialidades --- */
+  .grouplbl{margin:24px 0 12px;font-size:11.5px}
+  .group{margin-bottom:12px}
+  /* 1 col en móvil */
+  .spec-grid{grid-template-columns:1fr;gap:10px}
+  .spec{padding:15px;min-height:44px}
+  .spec .sic{width:42px;height:42px}
+  .spec .nm{font-size:14.5px}
+  /* touch: aumentar área táctil de las cards */
+  .spec:active{transform:none;opacity:.85}
+
+  /* --- profesionales --- */
+  .prof{padding:13px 14px;gap:12px}
+  .prof .av{width:44px;height:44px;font-size:14px;border-radius:12px}
+  .prof .info .n{font-size:14.5px}
+
+  /* --- daystrip --- */
+  .daystrip{gap:8px;padding:4px 0 10px}
+  .day{width:62px;padding:10px 0;border-radius:11px}
+  .day .dnum{font-size:19px}
+
+  /* --- slots de hora: precio en línea propia --- */
+  .slot-sub{font-size:11px;flex-wrap:wrap;gap:6px}
+  .slot-sub span[style*="margin-left:auto"]{margin-left:0!important;flex-basis:100%;padding-top:2px}
+  /* 3 columnas fijas en móvil (más cómodas que auto-fill con min 86px) */
+  .slots{grid-template-columns:repeat(3,1fr);gap:8px}
+  .slot{font-size:13.5px;padding:13px 0;min-height:48px;border-radius:10px}
+
+  /* --- formulario identificación --- */
+  .fcard{padding:18px 14px;border-radius:14px}
+  .grid2{grid-template-columns:1fr}
+  .inp{font-size:16px;padding:13px 12px} /* 16px previene zoom en iOS */
+  .seg button{padding:12px 0;font-size:13.5px}
+
+  /* --- confirmación --- */
+  .review-h{padding:18px 16px}
+  .review-body{padding:6px 16px}
+  .review-body .rrow{gap:12px;padding:13px 0}
+  .review-body .ri{width:34px;height:34px;border-radius:10px}
+  /* precio en la fila de lugar: apila debajo en móvil para no comprimir */
+  .rrow{flex-wrap:wrap}
+  .rprice{margin-left:0;margin-top:4px;flex-basis:100%;text-align:left}
+  .rprice .pv{font-size:20px}
+  /* div interior de confirmación */
+  div[style*="padding:0 24px"]{padding:0 16px 18px!important}
+  .pay-note{font-size:12px;padding:11px 12px}
+  .consent{padding:13px 12px;gap:10px}
+  .consent .ct{font-size:12px}
+
+  /* --- éxito --- */
+  .success{max-width:100%;padding:0 4px}
+  .suc-card{padding:4px 14px}
+  .suc-cta{flex-direction:column;gap:10px}
+  .suc-cta .btn{width:100%}
+  .wa-note{font-size:12.5px;padding:10px 14px;border-radius:10px}
+
+  /* --- mis horas --- */
+  .mh-top{gap:12px;padding:14px 14px}
+  .mh-date{width:54px}
+  .mh-date .md{font-size:20px}
+  .mh-info .ms{font-size:14.5px}
+  .mh-acts{gap:8px;padding:0 14px 14px;flex-wrap:wrap}
+  .mh-acts .btn{flex:1;min-width:120px}
+
+  /* --- footer --- */
+  .foot-in{gap:11px 14px;padding:20px 0 24px;flex-wrap:wrap}
+  .foot-in .sep{display:none}
+  .foot-in .addr{flex-basis:100%;margin-top:4px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px}
+
+  /* --- mbar: ligeramente más alto para touch --- */
+  .mbar{gap:10px}
+  .mbar .mb-v{font-size:13.5px}
 }
+
+/* ── 390px: iPhone 14 / Pixel 7 ── */
+@media(max-width:390px){
+  .shell{padding:0 12px}
+  .lockup .l1{font-size:11.5px}
+  .lockup .l2{font-size:12.5px;letter-spacing:1.5px}
+  .tnav button{padding:6px 9px;font-size:11.5px}
+  .hero h1{font-size:22px}
+  .hero p.lead{font-size:14px}
+  .spec{padding:13px 12px}
+  .spec .nm{font-size:13.5px}
+  .day{width:58px}
+  .day .dnum{font-size:18px}
+  .slots{grid-template-columns:repeat(3,1fr);gap:7px}
+  .slot{font-size:13px}
+  .phead h2{font-size:19px}
+  /* chips de filtro: 2 por fila en pantallas muy chicas */
+  .chips{gap:6px}
+  .chip{padding:7px 10px;font-size:11.5px}
+}
+
+/* ── 360px: Android gama baja ── */
+@media(max-width:360px){
+  .shell{padding:0 10px}
+  .hero h1{font-size:20px;line-height:1.15}
+  .btn{padding:12px 16px;font-size:14px}
+  .day{width:54px;padding:9px 0}
+  .day .dnum{font-size:17px}
+  .day .dow,.day .dmon{font-size:10px}
+  .slots{gap:6px}
+  .slot{font-size:12.5px;min-height:46px}
+  /* stepper compacto */
+  .mstep-l{font-size:13.5px}
+}
+
+/* ── Landscape en móvil: aprovechar espacio horizontal ── */
+@media(max-height:500px) and (max-width:900px){
+  .topbar{padding-top:0}
+  .topbar-in{height:48px}
+  .hero{padding-top:14px;padding-bottom:16px}
+  .flow{padding-top:12px;padding-bottom:48px}
+  .mbar{padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+}
+
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+/* ── tap highlight suave (táctil) ── */
+@media(hover:none){
+  .spec:active,.prof:active,.day:active,.slot:active,.btn:active,.chip:active{
+    opacity:.82;transition:opacity .1s
+  }
+}
+
 /* modo embebido en el portal: el portal pone su propio header */
 body.embed{background:transparent}
 body.embed .topbar,body.embed .foot{display:none}
