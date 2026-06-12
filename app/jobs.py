@@ -1051,9 +1051,13 @@ async def _job_bi_sync_diario():
     except Exception as e:
         log.warning("bi_sync_diario atenciones fallo: %s", e)
     try:
-        ayer = (date.today() - timedelta(days=1)).isoformat()
+        # Ventana de 7 días (no solo ayer/hoy): auto-cura huecos de noches en
+        # que el sync no corrió (deadlock 2026-06-10, divergencia prod 2026-06-07
+        # dejaron 7 y 9-jun sin sincronizar → bi_pagos_caja quedó ~$1.1M corta vs
+        # Medilink). force=True hace upsert idempotente por pago_id.
+        desde = (date.today() - timedelta(days=7)).isoformat()
         hoy = date.today().isoformat()
-        r2 = await sync_pagos_rango(desde=ayer, hasta=hoy, force=True)
+        r2 = await sync_pagos_rango(desde=desde, hasta=hoy, force=True)
         log.info("bi_sync_diario pagos: %s", r2)
     except Exception as e:
         log.warning("bi_sync_diario pagos fallo: %s", e)

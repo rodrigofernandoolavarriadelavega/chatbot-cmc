@@ -700,7 +700,10 @@ async def sync_pagos_rango(desde: str = "2024-01-01", hasta: str | None = None,
         async with httpx.AsyncClient(timeout=30) as cli:
             while d <= d_hasta:
                 fiso = d.isoformat()
-                if d.weekday() != 6 and (force or fiso not in fechas_existentes):
+                # NO excluir domingos: el CMC tiene actividad ocasional dom
+                # (urgencias, ecografías) y Medilink los cuenta. El filtro
+                # `weekday()!=6` perdía esos pagos (ej. dom 7-jun, $40.130).
+                if force or fiso not in fechas_existentes:
                     log.info("pagos sync %s", fiso)
                     pagos_dia: list[dict] = []
                     async for batch in _fetch_pagos_dia(cli, fiso):
