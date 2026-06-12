@@ -24,8 +24,12 @@ _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 RETENCION_BOLETA = 0.1525   # retención SII boleta de honorarios (Chile)
 PCT_DEFAULT = 70            # % honorario si el profesional no está en equipo_cmc
 # Honorario FIJO mensual (no % del ingreso). Único contrato fijo: Dr. Abarca (id 73).
-# Su CMC = ingreso − fijo puede ser negativo (riesgo del centro). Editable acá.
-HONORARIOS_FIJOS = {73: 1707063}   # Abarca contrato (la mitad de 3.414.126, como DB Mensual actual)
+# Su CMC = ingreso − fijo puede ser negativo (riesgo del centro). El fijo cambió:
+# hasta abril 2026 era $3.414.126; desde mayo 2026 es la mitad ($1.707.063).
+def honorario_fijo(pid: int, mes: str):
+    if pid == 73:  # Dr. Abarca contrato
+        return 1707063 if mes >= "2026-05" else 3414126
+    return None
 
 
 def _mes_bounds(mes: str):
@@ -84,9 +88,10 @@ def _ebitda_mes(c, mes: str) -> dict:
         ingreso = int(r["ingreso"] or 0)
         info = PROFESIONALES.get(pid, {})
         nombre = info.get("nombre") or f"Prof {pid}"
-        if pid in HONORARIOS_FIJOS:
+        _fijo = honorario_fijo(pid, mes)
+        if _fijo is not None:
             pct = None
-            bruto = HONORARIOS_FIJOS[pid]
+            bruto = _fijo
         else:
             pct = pct_map.get(pid, PCT_DEFAULT)
             bruto = round(ingreso * pct / 100)
@@ -95,7 +100,7 @@ def _ebitda_mes(c, mes: str) -> dict:
         cmc = ingreso - bruto
         profs.append({
             "id": pid, "nombre": nombre, "especialidad": info.get("especialidad", ""),
-            "ingreso": ingreso, "pct": pct, "fijo": pid in HONORARIOS_FIJOS, "bruto": bruto,
+            "ingreso": ingreso, "pct": pct, "fijo": _fijo is not None, "bruto": bruto,
             "liquido": liquido, "retencion": retencion, "cmc": cmc,
             "pacientes": r["pac"],
         })
