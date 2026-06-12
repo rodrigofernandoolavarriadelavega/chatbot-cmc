@@ -8619,14 +8619,53 @@ async def webhook(request: Request):
                 log_message(phone, "out", resp_text, state_after, canal=canal)
                 log.info("BOT %s to=%s state=%s reply=%r", canal.upper(), phone, state_after, resp_text[:80])
 
+    # ── Helper: ¿el perfil aún necesita un nombre real? ─────────────────────
+    def _profile_needs_name(phone: str) -> bool:
+        """True si NO tenemos un nombre real (no existe, está vacío, o es el
+        placeholder ig_/fb_). Un nombre vacío "" cuenta como faltante — antes
+        el guard lo trataba como nombre real y nunca reintentaba la captura."""
+        p = get_profile(phone)
+        if not p:
+            return True
+        n = (p.get("nombre") or "").strip()
+        return (not n) or n.startswith("ig_") or n.startswith("fb_")
+
+    # ── Helper: Page Access Token de la página FB (derivado del system-user) ──
+    _FB_PAGE_TOKEN_CACHE = {}
+    async def _get_fb_page_token():
+        """El User Profile API de Messenger SOLO acepta el Page Access Token de
+        la página que recibió el mensaje. META_MESSENGER_TOKEN en .env estaba
+        expirado; lo derivamos del system-user token (permanente) vía
+        /me/accounts y lo cacheamos en memoria."""
+        if _FB_PAGE_TOKEN_CACHE.get("token"):
+            return _FB_PAGE_TOKEN_CACHE["token"]
+        from config import META_ACCESS_TOKEN, META_PAGE_ID
+        if not META_ACCESS_TOKEN:
+            return None
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=5) as client:
+                r = await client.get(
+                    "https://graph.facebook.com/v22.0/me/accounts",
+                    params={"fields": "id,name,access_token"},
+                    headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"},
+                )
+            if r.status_code == 200:
+                for p in r.json().get("data", []):
+                    if not META_PAGE_ID or p.get("id") == META_PAGE_ID:
+                        tok = p.get("access_token")
+                        if tok:
+                            _FB_PAGE_TOKEN_CACHE["token"] = tok
+                            return tok
+        except Exception as e:
+            log.debug("no se pudo derivar page token FB: %s", e)
+        return None
+
     # ── Helper: obtener nombre de usuario IG/FB ─────────────────────────────
     async def _fetch_social_name(sender_id: str, phone: str, platform: str):
         """Obtiene nombre/username de IG o FB via Graph API y lo guarda en contact_profiles."""
-        existing = get_profile(phone)
-        if existing:
-            n = existing.get("nombre", "")
-            if not (n.startswith("ig_") or n.startswith("fb_")):
-                return  # ya tenemos un nombre real
+        if not _profile_needs_name(phone):
+            return  # ya tenemos un nombre real
         from config import META_ACCESS_TOKEN, META_PAGE_ACCESS_TOKEN, META_MESSENGER_TOKEN
         # Instagram (Instagram Login API): el perfil del usuario se consulta en
         # graph.instagram.com con el token de PÁGINA — el mismo host/token que usa
@@ -8640,11 +8679,15 @@ async def webhook(request: Request):
         else:
             host = "https://graph.facebook.com/v22.0"
             fields = "name,first_name,last_name"
-            # Messenger: el User Profile API exige el token de Messenger/página
-            # (el MISMO que usa send_messenger). El system-user da #3 "no
-            # capability" y el page-token de IG da "cannot parse" en graph.facebook.
-            tokens = [t for t in (META_MESSENGER_TOKEN, META_ACCESS_TOKEN,
-                                  META_PAGE_ACCESS_TOKEN) if t]
+            # Messenger: el User Profile API SOLO acepta el Page Access Token de
+            # la página. Lo derivamos del system-user (META_MESSENGER_TOKEN en
+            # .env estaba expirado → 400). El system-user da #3 "no capability"
+            # y el page-token de IG da "cannot parse" en graph.facebook.
+            # NOTA: requiere el permiso `pages_user_profile` (Advanced Access)
+            # aprobado en la app de Meta; sin él Graph responde 400 igual.
+            _fb_page_tok = await _get_fb_page_token()
+            tokens = [t for t in (_fb_page_tok, META_MESSENGER_TOKEN,
+                                  META_ACCESS_TOKEN) if t]
         try:
             import httpx
             async with httpx.AsyncClient(timeout=5) as client:
@@ -8698,11 +8741,13 @@ async def webhook(request: Request):
                         continue
                     log.info("INSTAGRAM from=%s name=%r text=%r sender=%s",
                              phone, sender_name, texto[:80], ev.get("sender", {}))
-                    # Guardar perfil si viene en el webhook
-                    if sender_name and not get_profile(phone):
-                        save_profile(phone, "", sender_name)
-                    elif not sender_name:
-                        await _fetch_social_name(sender_id, phone, "instagram")
+                    # Guardar/recuperar nombre: reintenta aunque ya exista un
+                    # perfil con nombre vacío (antes solo capturaba en el 1er msg).
+                    if _profile_needs_name(phone):
+                        if sender_name:
+                            save_profile(phone, (get_profile(phone) or {}).get("rut", "") or "", sender_name)
+                        else:
+                            await _fetch_social_name(sender_id, phone, "instagram")
                     # Capturar referral Meta (anuncio Click-to-Instagram DM)
                     _ig_referral = ev.get("referral") or {}
                     if not _ig_referral:
@@ -8747,10 +8792,11 @@ async def webhook(request: Request):
                     # Guardar nombre si viene en el webhook
                     sender_obj = ev.get("sender", {})
                     sender_name = sender_obj.get("name", "") or sender_obj.get("first_name", "")
-                    if sender_name and not get_profile(phone):
-                        save_profile(phone, "", sender_name)
-                    elif not sender_name:
-                        await _fetch_social_name(sender_id, phone, "facebook")
+                    if _profile_needs_name(phone):
+                        if sender_name:
+                            save_profile(phone, (get_profile(phone) or {}).get("rut", "") or "", sender_name)
+                        else:
+                            await _fetch_social_name(sender_id, phone, "facebook")
                     # Capturar referral Meta (anuncio Click-to-Messenger)
                     _fb_referral = ev.get("referral") or {}
                     if _fb_referral:
