@@ -193,7 +193,7 @@ _PRESTACIONES: dict[str, list[dict]] = {
 _AGENDAR_VIA = {
     "Ortodoncia": {
         "via": "Odontología General",
-        "nota": ("El tratamiento de ortodoncia parte con una *evaluación dental* "
+        "nota": ("El tratamiento de ortodoncia parte con una evaluación dental "
                  "con nuestro equipo de Odontología General ($15.000 — gratis si "
                  "inicias un tratamiento ese mismo día). La dentista evalúa tu caso, "
                  "solicita radiografías y gestiona tu derivación con la ortodoncista "
