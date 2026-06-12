@@ -475,8 +475,12 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
 def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
     """Cruza un pago contra bi_atenciones para inferir id_profesional.
 
-    NIVEL 0 (override manual): si existe en bi_pago_overrides, retornarlo.
-    Cascada heurística:
+    NIVEL 0   (override manual): si existe en bi_pago_overrides, retornarlo.
+    NIVEL 0.5 (pagos_cmc — verdad humana): cruce por fecha + nombre contra
+              la tabla pagos_cmc donde la recepción registra el profesional real.
+              Retorna solo cuando el match es inequívoco (un solo profesional
+              ese día para ese paciente, o desempate de monto con gap claro).
+    Cascada heurística (si 0.5 no resuelve):
     1. Mismo día + monto exacto match por atención.total
     2. Ventana ±60 días + monto exacto (atención más cercana en fecha)
     3. Ventana ±60 días + monto cercano
@@ -505,10 +509,72 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
         return None, None
     fecha_iso = fecha[:10]
 
+    # ------------------------------------------------------------------
+    # NIVEL 0.5 — pagos_cmc (verdad humana: profesional asignado por recepción)
+    # pagos_cmc está en la misma sessions.db que bi_atenciones, accesible
+    # con el mismo cursor c.  Cobertura esperada: ~77 % de los pagos de junio.
+    # Solo retorna cuando el match es inequívoco; ante ambigüedad cae a la
+    # cascada heurística sin penalizar el resultado.
+    # ------------------------------------------------------------------
+    nombre_pago = (pago.get("nombre_paciente") or "").strip()
+    if nombre_pago and fecha_iso:
+        try:
+            cmc_rows = c.execute(
+                """
+                SELECT id_profesional,
+                       COALESCE(copago, 0)      AS copago,
+                       COALESCE(bonificacion, 0) AS bonificacion
+                FROM   pagos_cmc
+                WHERE  fecha = ?
+                  AND  LOWER(REPLACE(paciente_nombre, '  ', ' '))
+                       = LOWER(REPLACE(?, '  ', ' '))
+                  AND  id_profesional IS NOT NULL
+                """,
+                (fecha_iso, nombre_pago),
+            ).fetchall()
+
+            if cmc_rows:
+                profs_cmc = set(r[0] for r in cmc_rows)
+
+                if len(profs_cmc) == 1:
+                    # Un único profesional ese día para ese paciente → match claro.
+                    # atencion_id lo deja None aquí; la heurística existente en el
+                    # bloque siguiente puede completarlo si coincide el profesional.
+                    return profs_cmc.pop(), None
+
+                # Varios profesionales ese día para ese paciente → desempatamos
+                # por monto: elegir el registro cuyo copago+bonificacion se acerque
+                # más a monto_pago.  Si dos registros empatan en distancia → ambiguo,
+                # no retornamos (dejamos caer a la cascada heurística).
+                if len(profs_cmc) > 1:
+                    ranked = sorted(
+                        cmc_rows,
+                        key=lambda r: abs((r[1] + r[2]) - monto)
+                    )
+                    best_dist  = abs((ranked[0][1] + ranked[0][2]) - monto)
+                    second_dist = abs((ranked[1][1] + ranked[1][2]) - monto) \
+                        if len(ranked) > 1 else best_dist + 1
+                    # Solo retornar si el ganador es claramente mejor que el segundo
+                    # (diferencia de al menos 2.000 pesos o 5 % del monto).
+                    gap_minimo = max(2000, monto * 0.05) if monto > 0 else 2000
+                    if second_dist - best_dist >= gap_minimo:
+                        return ranked[0][0], None
+                    # Ambiguo → caer a heurística
+        except Exception:
+            pass  # tabla ausente en entorno de test o error inesperado
+
+    # ------------------------------------------------------------------
     # Atenciones con total > 0 (preferidas para matching por monto)
     rows = c.execute(
         "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
         "FROM bi_atenciones WHERE id_paciente=? AND total>0 "
+        "ORDER BY fecha", (pid,)
+    ).fetchall()
+    # Todas las atenciones incluyendo total=0 (Medilink deja total=0 hasta que
+    # se registra el cobro; son candidatas naturales para los pasos 5 y 5b).
+    rows_incl_zero = c.execute(
+        "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
+        "FROM bi_atenciones WHERE id_paciente=? "
         "ORDER BY fecha", (pid,)
     ).fetchall()
 
@@ -517,7 +583,7 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
     except ValueError:
         return None, None
 
-    if rows:
+    if rows or rows_incl_zero:
         # 1. Mismo día + monto exacto
         same_day = [r for r in rows if r["fecha"] == fecha_iso and (r["total"] or 0) == monto]
         if same_day:
@@ -532,7 +598,7 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
             r = same_day[0]
             return r["id_profesional"], r["atencion_id"]
 
-        # 2. Ventana ±60d + monto exacto
+        # Construir ventana ±60d sobre total>0 (pasos 2/3) y sobre todos (pasos 5/5b).
         en_ventana = []
         for r in rows:
             try:
@@ -544,10 +610,27 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
                 en_ventana.append((delta_d, r))
         en_ventana.sort(key=lambda x: x[0])
 
+        en_ventana_all = []
+        for r in rows_incl_zero:
+            try:
+                f_at = date.fromisoformat(r["fecha"])
+            except (ValueError, TypeError):
+                continue
+            delta_d = abs((f_pago - f_at).days)
+            if delta_d <= 60:
+                en_ventana_all.append((delta_d, r))
+        en_ventana_all.sort(key=lambda x: x[0])
+
+        # 2. Ventana ±60d + monto exacto.
+        # Desempate: preferir atenciones con abonado<total (saldo pendiente) sobre
+        # las ya pagadas — un pago normalmente salda la atención impaga, no la ya
+        # cobrada. Solo si todas están pagadas, elegir por cercanía de fecha.
         monto_exacto = [t for t in en_ventana if (t[1]["total"] or 0) == monto]
         if monto_exacto:
-            r = monto_exacto[0][1]
-            return r["id_profesional"], r["atencion_id"]
+            with_pending = [t for t in monto_exacto
+                            if (t[1]["abonado"] or 0) < (t[1]["total"] or 0)]
+            candidate = with_pending[0][1] if with_pending else monto_exacto[0][1]
+            return candidate["id_profesional"], candidate["atencion_id"]
 
         # 3. Ventana ±60d + monto cercano (delta < 5%)
         if en_ventana:
@@ -577,34 +660,43 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
             r = deudoras[-1]  # la más reciente dentro de la ventana
             return r["id_profesional"], r["atencion_id"]
 
-        # 5. Si las atenciones del paciente DENTRO de ventana ±60d son de un
-        # mismo profesional → ese. SIN ventana, atenciones de hace 1 año
-        # absorberían pagos recientes (bug detectado 2026-05-13).
-        rows_ventana = []
-        for r in rows:
-            if not r["fecha"]:
-                continue
-            try:
-                f_at = date.fromisoformat(r["fecha"])
-            except (ValueError, TypeError):
-                continue
-            if abs((f_pago - f_at).days) <= 60:
-                rows_ventana.append(r)
-        profs = set(r["id_profesional"] for r in rows_ventana if r["id_profesional"])
-        if len(profs) == 1 and rows_ventana:
+        # 5. Si las atenciones DENTRO de ventana ±60d (incluyendo total=0) son de
+        # un único profesional → ese. Se incluyen total=0 porque Medilink deja ese
+        # valor hasta que se registra el cobro; ignorarlas causaba falsos "único prof"
+        # (bug original: Angelo/Ernesto → Márquez/Abarca en vez de Quijano).
+        # Al confirmar único prof, se prefiere la atención con total=0 como destino
+        # del pago (es la pendiente de cobro); si no hay, la más cercana.
+        rows_ventana_all = [r for _, r in en_ventana_all]
+        profs = set(r["id_profesional"] for r in rows_ventana_all if r["id_profesional"])
+        if len(profs) == 1 and rows_ventana_all:
             prof_unico = next(iter(profs))
-            rows_ranked = sorted(rows_ventana, key=lambda r: abs(
+            rows_ranked = sorted(rows_ventana_all, key=lambda r: abs(
                 (date.fromisoformat(r["fecha"]) - f_pago).days
             ))
-            return prof_unico, rows_ranked[0]["atencion_id"]
+            zero_total = [r for r in rows_ranked if (r["total"] or 0) == 0]
+            best = zero_total[0] if zero_total else rows_ranked[0]
+            return prof_unico, best["atencion_id"]
+
+        # 5b. Hay atenciones con total=0 en la ventana entre varios profesionales.
+        # Un pago sin match exacto de monto probablemente salda una de estas
+        # (Medilink aún no registró el monto). Elegir la más cercana al pago.
+        zero_in_window = [r for _, r in en_ventana_all if (r["total"] or 0) == 0]
+        if zero_in_window:
+            zero_ranked = sorted(zero_in_window, key=lambda r: abs(
+                (date.fromisoformat(r["fecha"]) - f_pago).days
+            ))
+            r = zero_ranked[0]
+            return r["id_profesional"], r["atencion_id"]
 
     # 6. Fallback: TODAS las atenciones del paciente (incluyendo total=$0).
     # Necesario porque Medilink a veces deja total=$0 en /atenciones hasta
     # que se cobra el pago. Estrategia: priorizar atenciones ANTERIORES al
     # pago (el flujo natural es atención → pago), dentro de ±60 días. Solo
     # si no hay anteriores, considerar posteriores ±14d como último recurso.
-    all_rows = c.execute(
-        "SELECT atencion_id, id_profesional, total, fecha "
+    # rows_incl_zero ya tiene todas las atenciones; si está vacío (paciente sin
+    # ninguna atención) la query está fuera del bloque if, así que la hacemos aquí.
+    all_rows = rows_incl_zero if rows_incl_zero else c.execute(
+        "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
         "FROM bi_atenciones WHERE id_paciente=? "
         "ORDER BY fecha", (pid,)
     ).fetchall()
