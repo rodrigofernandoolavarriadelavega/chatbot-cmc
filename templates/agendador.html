@@ -371,7 +371,7 @@ button{font-family:inherit}
 .sum-total{margin:6px 18px 0;padding:15px 0 6px;border-top:2px solid var(--line)}
 .sum-total .tt{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
 .sum-total .tt .tl{font-size:11.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
-.sum-total .tt .tv{font-size:19px;font-weight:800;color:var(--navy);line-height:1.3;text-align:left}
+.sum-total .tt .tv{font-size:19px;font-weight:800;color:var(--navy);line-height:1.35;text-align:left;white-space:pre-line}
 .sum-total .tnote{font-size:11px;color:var(--ink-3);margin-top:4px}
 .sum-foot{padding:16px 18px;background:var(--bg);border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--ink-3)}
 .sum-foot svg{width:16px;height:16px;color:var(--ok);flex:none}
@@ -1540,7 +1540,8 @@ function updateSummary(){
   setLine('su-prof', S.prof?profLabel():'Por elegir', S.prof);
   setLine('su-when', S.slot?summaryWhen():'Por elegir', !!S.slot);
   setLine('su-pac', pacLabel(), S.patient);
-  document.getElementById('su-total').textContent = S.spec ? (S.spec.precio||'—') : '—';
+  // Precio doble → una línea por modalidad (Fonasa / Particular), pedido dueño
+  document.getElementById('su-total').textContent = S.spec ? (S.spec.precio||'—').replace(/\s*·\s*/g, '\n') : '—';
   document.getElementById('su-note').textContent = S.spec
     ? 'Valor referencial. El pago se realiza en el centro.'
     : 'Se confirma al elegir la atención.';
