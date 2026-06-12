@@ -969,7 +969,8 @@ app.include_router(agenda_routes.router)
 import agendador_routes
 app.include_router(agendador_routes.router)  # agendador público (cada endpoint gateado)
 import checkin_routes; app.include_router(checkin_routes.router); checkin_routes.ensure_checkin_table()
-import comparador_routes; comparador_routes.register_comparador_routes(app)  # Comparador BI  # Check-in QR (gateado CHECKIN_ENABLED)
+import comparador_routes; comparador_routes.register_comparador_routes(app)  # Comparador BI
+import ebitda_routes; ebitda_routes.register_ebitda_routes(app)  # EBITDA / Resultado  # Check-in QR (gateado CHECKIN_ENABLED)
 
 import pagos_routes
 app.include_router(pagos_routes.router)

@@ -77,6 +77,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "boxes":       {"label": "Boxes",            "icon": "grid",      "title": "Boxes — Gemelo Digital",         "sub": "Ocupación y recaudación por box",                  "src": "/boxes"},
     "mensual":     {"label": "DB Mensual",       "icon": "chart",     "title": "Dashboard Mensual",              "sub": "Ingresos y honorarios por profesional",            "src": "/cmc/mensual"},
     "comparador":  {"label": "Comparador",       "icon": "chart",     "title": "Comparador BI",                  "sub": "Comparar rangos de fechas por área o profesional · columnas libres","src": "/cmc/comparador"},
+    "ebitda":      {"label": "EBITDA / Resultado","icon": "wallet",    "title": "EBITDA / Resultado Operativo",   "sub": "Ingresos − honorarios − gastos · rentabilidad real del mes","src": "/cmc/ebitda"},
     "autopilot":   {"label": "Autopilot Ads",    "icon": "target",    "title": "Autopilot de Marketing",         "sub": "Meta Ads · decisiones por rentabilidad real",      "src": "/autopilot"},
     "demanda":     {"label": "Demanda",          "icon": "search",    "title": "Demanda capturada",              "sub": "Qué piden los pacientes que no capturamos",        "src": "/demanda"},
     "canal":       {"label": "Canal declarado",  "icon": "search",    "title": "Canal declarado",                "sub": "Cómo dicen los pacientes que nos conocieron · captura recepción","src": "/alma/canal"},
