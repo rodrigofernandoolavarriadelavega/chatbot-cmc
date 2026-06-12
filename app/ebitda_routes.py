@@ -25,7 +25,7 @@ RETENCION_BOLETA = 0.1525   # retención SII boleta de honorarios (Chile)
 PCT_DEFAULT = 70            # % honorario si el profesional no está en equipo_cmc
 # Profesionales que FACTURAN (empresa) en vez de emitir boleta de honorarios:
 # no se les aplica la retención 15,25% → su líquido = honorario bruto.
-SIN_RETENCION = {65, 68}    # Dr. Quijano (gastro), David Pardo (ecografía)
+SIN_RETENCION = {65, 68, 73}    # Quijano (gastro), David Pardo (ecografía), Abarca (fijo) — facturan
 # Honorario FIJO mensual (no % del ingreso). Único contrato fijo: Dr. Abarca (id 73).
 # Su CMC = ingreso − fijo puede ser negativo (riesgo del centro). El fijo cambió:
 # hasta abril 2026 era $3.414.126; desde mayo 2026 es la mitad ($1.707.063).
