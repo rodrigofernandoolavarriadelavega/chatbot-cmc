@@ -154,6 +154,14 @@ _PRESTACIONES: dict[str, list[dict]] = {
         {"n": "Ecografía ginecológica / transvaginal / pélvica", "p": "$35.000"},
         {"n": "PAP", "p": "$20.000"},
     ],
+    "Matrona": [
+        {"n": "Consulta Fonasa preferencial", "p": "$16.000"},
+        {"n": "Consulta particular", "p": "$20.000"},
+        {"n": "Consulta + PAP (Fonasa preferencial)", "p": "$25.000"},
+        {"n": "Consulta + PAP (particular)", "p": "$30.000"},
+        {"n": "PAP / Papanicolau solo", "p": "$20.000"},
+        {"n": "Revisión de exámenes", "p": "$10.000"},
+    ],
     "Estética Facial": [
         {"n": "Evaluación / armonización (plan personalizado)", "p": "$15.000"},
         {"n": "Toxina botulínica (3 zonas)", "p": "$159.990"},
