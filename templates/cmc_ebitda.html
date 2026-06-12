@@ -141,7 +141,7 @@ async function load(){
       <td>${g.categoria}</td><td>${g.descripcion||'—'}</td>
       <td>${g.recurrente?'<span class="pill">mensual</span>':'puntual'}</td>
       <td class="num">${money(g.monto)}</td>
-      <td class="num"><button class="btn del" onclick="delGasto(${g.id})">✕</button></td></tr>`).join('');
+      <td class="num">${g.id?`<button class="btn del" onclick="delGasto(${g.id})">✕</button>`:'<span style="font-size:10px;color:var(--mute)">auto</span>'}</td></tr>`).join('');
   }
   document.getElementById('gastos-note').textContent=`Total gastos del mes: ${money(d.gastos)}`;
   // evolución

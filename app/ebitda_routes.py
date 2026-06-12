@@ -26,6 +26,46 @@ PCT_DEFAULT = 70            # % honorario si el profesional no está en equipo_c
 # Profesionales que FACTURAN (empresa) en vez de emitir boleta de honorarios:
 # no se les aplica la retención 15,25% → su líquido = honorario bruto.
 SIN_RETENCION = {65, 68, 73}    # Quijano (gastro), David Pardo (ecografía), Abarca (fijo) — facturan
+# Comisión Transbank por medio de pago (se calcula sola cruzando caja × medio del
+# módulo Pagos). Hoy la recepción registra el medio en pocos pagos → la comisión
+# sale baja; cuando se complete el medio en todos, queda exacta automáticamente.
+TRANSBANK_DEBITO = 0.006
+TRANSBANK_CREDITO = 0.013
+
+
+def _norm_nom(s: str) -> str:
+    import re
+    return re.sub(r"\s+", " ", (s or "").strip().lower())
+
+
+def _comision_transbank(c, mes: str):
+    """Comisión Transbank del mes = débito×0,6% + crédito×1,3%, donde el monto
+    por medio se obtiene cruzando bi_pagos_caja (monto real) con el medio de pago
+    de pagos_cmc (por paciente+fecha). Devuelve (comision, monto_debito, monto_credito)."""
+    inicio, fin = _mes_bounds(mes)
+    metodos = {}
+    for fe, nom, met in c.execute(
+        "SELECT fecha, paciente_nombre, metodo_pago FROM pagos_cmc WHERE fecha>=? AND fecha<?",
+        (inicio, fin),
+    ).fetchall():
+        metodos[(fe, _norm_nom(nom))] = (met or "").strip().lower()
+    nombres = {r["id_paciente"]: r["paciente_nombre"] for r in c.execute(
+        "SELECT DISTINCT id_paciente, paciente_nombre FROM bi_atenciones WHERE fecha>=? AND fecha<?",
+        (inicio, fin),
+    ).fetchall()}
+    deb = cred = 0
+    for r in c.execute(
+        "SELECT monto, fecha, id_paciente FROM bi_pagos_caja WHERE fecha>=? AND fecha<?",
+        (inicio, fin),
+    ).fetchall():
+        nom = nombres.get(r["id_paciente"])
+        met = metodos.get((r["fecha"], _norm_nom(nom))) if nom else None
+        if met == "debito":
+            deb += r["monto"] or 0
+        elif met in ("credito", "crédito"):
+            cred += r["monto"] or 0
+    com = round(deb * TRANSBANK_DEBITO + cred * TRANSBANK_CREDITO)
+    return com, deb, cred
 # Honorario FIJO mensual (no % del ingreso). Único contrato fijo: Dr. Abarca (id 73).
 # Su CMC = ingreso − fijo puede ser negativo (riesgo del centro). El fijo cambió:
 # hasta abril 2026 era $3.414.126; desde mayo 2026 es la mitad ($1.707.063).
@@ -113,6 +153,15 @@ def _ebitda_mes(c, mes: str) -> dict:
         tot_ing += ingreso; tot_bruto += bruto; tot_liq += liquido; tot_cmc += cmc
 
     gastos, gastos_detalle = _gastos_mes(c, mes)
+    # Comisión Transbank automática (calculada del cruce caja × medio de pago)
+    com_tbk, tbk_deb, tbk_cred = _comision_transbank(c, mes)
+    if com_tbk > 0:
+        gastos += com_tbk
+        gastos_detalle.append({
+            "id": None, "categoria": "Comisión Transbank",
+            "descripcion": f"Auto · débito ${tbk_deb:,}×0,6% + crédito ${tbk_cred:,}×1,3%",
+            "monto": com_tbk, "recurrente": 0, "auto": True,
+        })
     ebitda = tot_cmc - gastos
     return {
         "mes": mes,
