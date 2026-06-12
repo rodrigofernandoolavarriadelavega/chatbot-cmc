@@ -209,6 +209,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=9, minute=0, timezone=_CLT),
         id="recordatorios_diarios",
         replace_existing=True,
+        misfire_grace_time=3600,  # F046: si el proceso arrancó tarde, corre igual (hasta 1h después)
+        coalesce=True,            # F046: si se acumularon disparos perdidos, corre solo 1 vez
     )
     # Consent en caliente: barrido HORARIO de citas Medilink → consent_marketing_v2
     # a agendados por teléfono/presencial (no del bot). Gated CONSENT_AGENDADOS_ACTIVE.
@@ -218,6 +220,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute=25, timezone=_CLT),
         id="consent_agendados_horario",
         replace_existing=True,
+        misfire_grace_time=1800,  # F046: hasta 30 min de gracia (corre cada hora, 30 min es razonable)
+        coalesce=True,
     )
     # Promo post-consent: consent_marketing aceptado + ATENCIÓN REALIZADA (pago
     # en caja, /pagos Medilink en vivo) → promo dental segmentada en la corrida
@@ -346,6 +350,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour="7-21", minute="0,15,30,45", timezone=_CLT),
         id="recordatorios_2h",
         replace_existing=True,
+        misfire_grace_time=600,   # F046: 10 min de gracia (corre cada 15 min — gracia del 66%)
+        coalesce=True,
     )
     # Recordatorios 48h anti no-show: diario 10:00 CLT.
     # Solo envía a pacientes con historial de no-show o cita en peak 16-19h.
@@ -355,6 +361,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=10, minute=0, timezone=_CLT),
         id="recordatorios_48h",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Piloto recordatorios recepción (Márquez id=13): 08:00 CLT, antes de recordatorios 09:00.
     # Con RECORDATORIOS_RECEPCION_ENABLED=false (default) termina inmediatamente.
@@ -363,6 +371,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=8, minute=0, timezone=_CLT),
         id="sync_citas_recepcion",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Reenganche: cada 5 minutos revisa sesiones abandonadas
     scheduler.add_job(
@@ -389,6 +399,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=22, minute=0, timezone=_CLT),
         id="seguimiento_postconsulta",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Postconsulta morning: cubre citas tardías (>22:00) del día anterior
     # que el cron de las 22:00 no alcanzó (la cita aún no había ocurrido).
@@ -397,6 +409,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=9, minute=12, timezone=_CLT),  # 9:12 (era 9:00; cluster de 6 jobs → 429)
         id="seguimiento_postconsulta_morning",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Enrolar atendidos offline (recepción/presencial) a citas_bot para que
     # el cron postconsulta de las 22:00 los alcance. Corre 21:30 CLT, antes.
@@ -408,6 +422,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=21, minute=30, timezone=_CLT),
         id="enrolar_atendidos_dia",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Detectar cancelaciones hechas en Medilink: cada hora barre citas futuras
     # (hoy + 14 días), valida contra Medilink, marca canceladas y reagenda
@@ -448,6 +464,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=23, minute=59, timezone=_CLT),
         id="bi_sync_v2_diario",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
 
     # Repasada histórica completa (semanal): domingo 03:30 CLT, caza errores viejos
@@ -480,6 +498,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", hour=10, minute=30, timezone=_CLT),
         id="reactivacion_pacientes",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Adherencia kine: L/M/V a las 11:00 AM CLT (antes diario — bajamos 7→3/sem para reducir costo templates)
     scheduler.add_job(
@@ -538,6 +558,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=10, minute=18, timezone=_CLT),  # 10:18 (era 10:00; chocaba con recordatorios_48h)
         id="cumpleanos_diario",
         replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Win-back >90 días: primer lunes de cada mes a las 10:00 CLT
     scheduler.add_job(
@@ -569,6 +591,8 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=7, minute=0, timezone=_CLT),
         id="waitlist_check",
         replace_existing=True,
+        misfire_grace_time=3600,  # F046
+        coalesce=True,            # F046
     )
     # Doctor alerts: resumen pre-cita cada 5 min (lun-sáb 07:30-21:30 CLT)
     # Desfasado a :03/:08/.../:58 para no caer en :00/:15/:30/:45 junto a
@@ -794,6 +818,60 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="*/5", timezone=_CLT),
         id="followup_info",
         replace_existing=True,
+    )
+    # B6: Synthetic check del agendamiento — ejercita buscar_primer_dia("Medicina General")
+    # READ-ONLY (sin crear citas). Gateado por SYNTHETIC_CHECK_ENABLED (default true).
+    # Alertas via alerta_oob al 3er fallo consecutivo; silencio al recuperarse.
+    _synthetic_fails: list[int] = [0]   # contador mutable compartido en el cierre
+
+    async def _job_synthetic_check_agendar():
+        from config import SYNTHETIC_CHECK_ENABLED as _sc_enabled
+        if not _sc_enabled:
+            return
+        import asyncio as _aio
+        try:
+            from medilink import buscar_primer_dia as _bpd
+            # Timeout estricto: si tarda > 15s, es anomalía
+            _, slots = await _aio.wait_for(_bpd("Medicina General", dias_adelante=7), timeout=15)
+            if slots:
+                # Recuperación: si había fallos acumulados, avisar y resetear
+                if _synthetic_fails[0] >= 3:
+                    try:
+                        from alertas_oob import alerta_oob as _aob
+                        await _aob(
+                            f"*Synthetic check CMC recuperado* (Medicina General)\n"
+                            f"Volvio a devolver slots tras {_synthetic_fails[0]} fallo(s)"
+                        )
+                    except Exception:  # noqa: BLE001
+                        pass
+                _synthetic_fails[0] = 0
+                log.debug("synthetic_check: OK — %d slots disponibles", len(slots))
+            else:
+                # Slots vacíos puede ser normal (fin de semana largo, agenda llena)
+                # No es un fallo de infraestructura por sí solo; solo loguear
+                log.info("synthetic_check: buscar_primer_dia devolvio 0 slots — no anomalia")
+                _synthetic_fails[0] = 0
+        except Exception as exc:  # noqa: BLE001
+            _synthetic_fails[0] += 1
+            log.warning("synthetic_check: fallo %d — %s", _synthetic_fails[0], exc)
+            if _synthetic_fails[0] >= 3:
+                try:
+                    from alertas_oob import alerta_oob as _aob
+                    await _aob(
+                        f"*Synthetic agendar FALLA* (CMC)\n"
+                        f"buscar_primer_dia(Medicina General) falla {_synthetic_fails[0]} veces seguidas\n"
+                        f"Error: {str(exc)[:200]}"
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+
+    scheduler.add_job(
+        _job_synthetic_check_agendar,
+        CronTrigger(minute="*/15", timezone=_CLT),
+        id="synthetic_check_agendar",
+        replace_existing=True,
+        misfire_grace_time=600,
+        coalesce=True,
     )
     # Primera generación al arrancar (sin await — no bloquear startup)
     import asyncio as _asyncio_startup

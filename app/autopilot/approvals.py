@@ -353,7 +353,12 @@ def _send_stale_reminder(items: list[dict], ahorro_clp: int) -> None:
         log.info("[autopilot] recordatorio (texto) de %d pendientes viejas → %s",
                  len(items), phone)
 
-    asyncio.create_task(_send())
+    # F104: guardar referencia para que el GC no cancele la tarea; loguear si falla
+    _t = asyncio.create_task(_send())
+    _t.add_done_callback(
+        lambda fut: log.error("[autopilot] recordatorio pendientes: tarea falló: %s", fut.exception())
+        if fut.done() and not fut.cancelled() and fut.exception() else None
+    )
 
 
 def reject(pid: str, by: str = "recepción") -> dict | None:
@@ -535,6 +540,11 @@ def notify_owner(new_ids: list[str], auto_applied: list[dict] | None = None) -> 
             log.info("[autopilot] aviso (texto) → %s (%d pend · %d auto)",
                      phone, len(items), len(auto_applied))
 
-        asyncio.create_task(_send())
+        # F104: guardar referencia + callback para no perder la excepción si la tarea falla
+        _t2 = asyncio.create_task(_send())
+        _t2.add_done_callback(
+            lambda fut: log.error("[autopilot] aviso dueño: tarea falló: %s", fut.exception())
+            if fut.done() and not fut.cancelled() and fut.exception() else None
+        )
     except Exception as e:  # noqa: BLE001
         log.warning("[autopilot] no se pudo avisar al dueño: %s", e)

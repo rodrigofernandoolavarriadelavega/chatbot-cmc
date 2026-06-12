@@ -447,3 +447,25 @@ EMAIL_OPTIN_ENABLED = os.getenv("EMAIL_OPTIN_ENABLED", "false").lower() in ("1",
 #   Obtenerlo con: grep USER_TOKEN /opt/alma-print/alma-print.env
 ALMA_PRINT_URL        = os.getenv("ALMA_PRINT_URL", "https://print.agentecmc.cl").rstrip("/")
 ALMA_PRINT_USER_TOKEN = os.getenv("ALMA_PRINT_USER_TOKEN", "")
+
+# ── Alertas fuera de banda (Telegram) ─────────────────────────────────────────
+# Rompe dependencia circular: si WhatsApp/Meta caen, las alertas críticas igual llegan.
+# Activar pegando las claves en .env (sin ellas es no-op seguro):
+#   TELEGRAM_ALERT_TOKEN=<bot token>
+#   TELEGRAM_ALERT_CHAT_ID=<chat_id>
+TELEGRAM_ALERT_TOKEN   = os.getenv("TELEGRAM_ALERT_TOKEN", "")
+TELEGRAM_ALERT_CHAT_ID = os.getenv("TELEGRAM_ALERT_CHAT_ID", "")
+
+# ── Dead-man's switch (healthchecks.io) ───────────────────────────────────────
+# Cada cron crítico pingea su URL al terminar exitosamente.
+# Si el cron deja de correr, healthchecks.io envía alerta por email/Slack.
+# Activar pegando cada URL en .env (sin ella es no-op):
+#   HEALTHCHECKS_RECORDATORIOS_URL=https://hc-ping.com/<uuid>
+#   HEALTHCHECKS_WAITLIST_URL=https://hc-ping.com/<uuid>
+# (crear un check gratis en healthchecks.io por cada cron que quieras vigilar)
+
+# ── Synthetic check del agendamiento ──────────────────────────────────────────
+# Cron cada 15 min que ejerce buscar_primer_dia("Medicina General") sin crear citas.
+# Si falla N veces seguidas → alerta_oob. Read-only y barato.
+# default true porque es completamente inocuo sin las env de Telegram/healthchecks.
+SYNTHETIC_CHECK_ENABLED: bool = os.getenv("SYNTHETIC_CHECK_ENABLED", "true").lower() in ("true", "1", "yes")

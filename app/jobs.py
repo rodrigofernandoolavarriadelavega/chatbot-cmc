@@ -522,6 +522,12 @@ async def _job_recordatorios():
         )
     except Exception as e:
         log.error("_job_recordatorios_recepcion_24h falló: %s", e)
+    # B7: dead-man's switch — si este cron deja de correr, healthchecks.io avisa
+    try:
+        from alertas_oob import ping_deadman as _ping_dm
+        await _ping_dm("RECORDATORIOS")
+    except Exception:  # noqa: BLE001
+        pass
 
 async def _job_recordatorios_2h():
     await enviar_recordatorios_2h(send_whatsapp_proactive, send_template_fn=_tpl)
@@ -1601,6 +1607,18 @@ async def _job_medilink_watchdog_inner():
                 log.warning("watchdog: recepción notificada — Medilink sigue caído, cola=%d", depth)
             except Exception as e:
                 log.error("watchdog: no se pudo notificar a recepción: %s", e)
+        # B5: canal adicional OOB (Telegram) — si WhatsApp también está caído, igual llega
+        if should_notify_reception():
+            try:
+                from alertas_oob import alerta_oob as _alerta_oob
+                depth = intent_queue_depth()
+                since = medilink_down_since() or "?"
+                await _alerta_oob(
+                    f"*Medilink caido* (watchdog CMC)\n"
+                    f"Desde: {since} UTC · Cola: {depth} pacientes"
+                )
+            except Exception:  # noqa: BLE001
+                pass
         return
 
     # Medilink respondió OK → recuperación.
@@ -1850,6 +1868,12 @@ async def _job_waitlist_check():
             log.error("waitlist_check: fallo notificando %s: %s", phone_p, e)
 
     log.info("waitlist_check: notificados %d/%d pacientes", notificados, len(pendientes))
+    # B7: dead-man's switch — si este cron deja de correr, healthchecks.io avisa
+    try:
+        from alertas_oob import ping_deadman as _ping_dm
+        await _ping_dm("WAITLIST")
+    except Exception:  # noqa: BLE001
+        pass
 
     # Si Medilink falló en TODOS los intentos de búsqueda de slots (429 agotado
     # u otro error de red), reprogramar el job en 30 minutos para no perder

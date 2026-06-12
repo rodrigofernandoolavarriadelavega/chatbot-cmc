@@ -387,10 +387,21 @@ async def enviar_resumen_anomalias(send_fn) -> int:
             return 0
     except Exception:
         pass
+    wa_ok = False
     try:
         await send_fn(ADMIN_ALERT_PHONE, msg)
+        wa_ok = True
     except Exception as e:
-        log.exception("Monitor: falló envío al admin: %s", e)
+        log.exception("Monitor: falló envío WhatsApp al admin: %s", e)
+
+    if not wa_ok:
+        # B5: canal OOB (Telegram) — si WhatsApp está caído, el monitor igual llega
+        try:
+            from alertas_oob import alerta_oob as _aob
+            await _aob(f"*Monitor CMC* (via OOB — WA falló)\n{msg[:800]}")
+        except Exception:  # noqa: BLE001
+            pass
+        # No marcar como notificadas: dejar para reintento en el próximo ciclo (15 min)
         return 0
 
     # Marcar alertas como vistas solo si el envío fue OK
