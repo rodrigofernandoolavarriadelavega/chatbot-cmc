@@ -2434,6 +2434,26 @@ def vecino_service_worker():
     )
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon_global():
+    # Antes 404 en TODO el sitio (visto en consola 2026-06-11) — el isotipo
+    # oficial como favicon global; las páginas pueden sobreescribir con <link>.
+    return FileResponse(
+        str(Path(__file__).parent.parent / "static" / "isotipo.png"),
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@app.get("/agendar/sw.js", include_in_schema=False)
+def agendar_service_worker():
+    return FileResponse(
+        str(Path(__file__).parent.parent / "static" / "pwa" / "agendar-sw.js"),
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/agendar"},
+    )
+
+
 @app.get("/portal/sw.js", include_in_schema=False)
 def portal_service_worker():
     return FileResponse(
