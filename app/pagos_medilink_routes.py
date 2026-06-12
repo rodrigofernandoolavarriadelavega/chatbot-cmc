@@ -262,8 +262,7 @@ def aplicar_repasada(d_desde: str, d_hasta: str, dry_run: bool = False) -> dict:
             """SELECT p.pago_id, p.fecha, p.atencion_id, p.id_paciente, p.id_profesional, p.monto,
                       (SELECT a.paciente_nombre FROM bi_atenciones a
                          WHERE a.id_paciente=p.id_paciente
-                         ORDER BY CASE WHEN a.fecha=p.fecha THEN 0 ELSE 1 END,
-                                  a.atencion_id LIMIT 1) AS nombre_aten
+                         ORDER BY a.atencion_id LIMIT 1) AS nombre_aten
                FROM bi_pagos_caja p
                WHERE p.fecha >= ? AND p.fecha <= ?
                  AND NOT EXISTS (SELECT 1 FROM bi_pago_overrides o WHERE o.pago_id=p.pago_id)""",
