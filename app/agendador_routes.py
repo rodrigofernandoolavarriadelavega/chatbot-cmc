@@ -114,13 +114,23 @@ _GRUPOS = [
                               "Gastroenterología", "Otorrinolaringología"]),
     ("Salud de la mujer",    ["Ginecología", "Matrona"]),
     ("Terapias y bienestar", ["Kinesiología", "Nutrición", "Psicología Adulto",
-                              "Fonoaudiología", "Podología", "Masoterapia"]),
+                              "Psicología Infantil", "Fonoaudiología", "Podología",
+                              "Masoterapia"]),
     ("Imágenes",             ["Ecografía"]),
     ("Dentales",             ["Odontología General", "Ortodoncia", "Endodoncia",
                               "Implantología", "Estética Facial"]),
 ]
 # Override de precio por profesional (cuando difiere del de la especialidad).
 _PRECIO_PROF_OVERRIDE = {13: ("ambas", 7880, None, 30000)}  # Dr. Márquez particular $30.000
+
+# Especialidades que NO tienen profesional propio en PROFESIONALES pero SÍ se
+# atienden (el mismo profesional figura bajo otra etiqueta). Pedido dueño
+# 2026-06-12: Márquez en Medicina General Y Medicina Familiar; Montalba en
+# Psicología Adulto Y Psicología Infantil. PRECIOS_SLOT ya tiene ambas claves.
+_ESP_EXTRA: dict[str, list[int]] = {
+    "Medicina Familiar":   [13],   # Dr. Alonso Márquez
+    "Psicología Infantil": [74],   # Jorge Montalba
+}
 
 def _fmt_clp(n: int) -> str:
     return "$" + f"{int(n):,}".replace(",", ".")
@@ -161,6 +171,9 @@ def _build_catalogo() -> list[dict]:
         items = []
         for esp in esps:
             profs = por_esp.get(esp)
+            if not profs and esp in _ESP_EXTRA:
+                profs = [(pid, PROFESIONALES[pid]["nombre"], PROFESIONALES[pid].get("intervalo"))
+                         for pid in _ESP_EXTRA[esp] if pid in PROFESIONALES]
             if not profs:
                 continue
             items.append({
