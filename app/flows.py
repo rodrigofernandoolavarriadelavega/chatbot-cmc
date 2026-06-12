@@ -6619,6 +6619,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return [s for s in lst if (s.get("fecha") or "") >= _hoy_str_ws]
         slots_mostrados = _filtrar_slots_pasados(data.get("slots", []))
         todos_slots     = _filtrar_slots_pasados(data.get("todos_slots", slots_mostrados))
+        # P1-A: en reagendar, excluir la cita vieja de los slots ofrecidos para
+        # que el paciente no vea su propia hora como "disponible".
+        _reag_excluir = data.get("_reagendar_excluir")
+        if _reag_excluir:
+            _rex_fecha, _rex_hora = _reag_excluir
+            _rex_hora5 = _rex_hora[:5]
+            slots_mostrados = [s for s in slots_mostrados
+                               if not (s.get("fecha") == _rex_fecha
+                                       and s.get("hora_inicio", "")[:5] == _rex_hora5)]
+            todos_slots     = [s for s in todos_slots
+                               if not (s.get("fecha") == _rex_fecha
+                                       and s.get("hora_inicio", "")[:5] == _rex_hora5)]
         if slots_mostrados != data.get("slots"):
             data["slots"] = slots_mostrados
         if todos_slots != data.get("todos_slots"):
@@ -6640,9 +6652,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _primera_formal = todos_slots[0]["fecha"] if todos_slots else "9999-99-99"
                     for _s in _sobres:
                         _s.setdefault("fecha_display", _ff_sc(_s["fecha"]))
-                    # Anteponer SOLO los sobrecupos más cercanos que la 1ª hora formal.
-                    _sobres = [s for s in _sobres if s["fecha"] < _primera_formal] or _sobres
-                    todos_slots = _sobres + todos_slots
+                    # Anteponer SOLO los sobrecupos anteriores a la 1ª hora formal.
+                    # Sin el fallback "or _sobres": si no hay sobrecupos de fecha
+                    # anterior, no inyectar ninguno (evita duplicados cuando los
+                    # sobrecupos son del mismo día que los slots formales).
+                    _sobres = [s for s in _sobres if s["fecha"] < _primera_formal]
+                    if _sobres:
+                        todos_slots = _sobres + todos_slots
+                    # Dedup defensivo por (fecha, hora_inicio) — cubre casos donde
+                    # la misma hora aparece en sobrecupos y slots formales.
+                    _visto_slots: set = set()
+                    _todos_dedup = []
+                    for _s_dd in todos_slots:
+                        _k_dd = (_s_dd.get("fecha"), _s_dd.get("hora_inicio"))
+                        if _k_dd not in _visto_slots:
+                            _visto_slots.add(_k_dd)
+                            _todos_dedup.append(_s_dd)
+                    todos_slots = _todos_dedup
                     slots_mostrados = todos_slots[:5]
                     data["slots"] = slots_mostrados
                     data["todos_slots"] = todos_slots
@@ -7305,9 +7331,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Elige un número del listado, *ver todos* para más horarios, u *otro día*._"
             )
 
-        # ── BUG-05: Pregunta de cobertura/modalidad en WAIT_SLOT ──
+        # ── BUG-05 / P1-C: Pregunta de cobertura/modalidad en WAIT_SLOT ──
         # "Atiende con fonasa?", "cubre isapre?", "solo particular?" → responder
         # sin salir del flujo. Antes caía al fallback genérico y respondía la dirección.
+        # P1-C fix: permitir respuesta aunque todos_slots esté vacío (usa especialidad
+        # del contexto). Psiquiatría era el caso más común — paciente preguntaba
+        # "¿no atiende por Fonasa?" y el bot respondía con la dirección del CMC.
         _COBERTURA_KW = (
             "fonasa", "isapre", "dipreca", "capredena", "particular",
             "bono", "cubre", "cobertura", "atiende con", "acepta",
@@ -7317,23 +7346,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             and not tl_norm_slot.isdigit()
             and len(tl_norm_slot) >= 4
         )
-        if _es_pregunta_cobertura and todos_slots:
-            _esp_cob = todos_slots[0].get("especialidad", especialidad) or especialidad
-            _precio_cob = _precio_line(_esp_cob, todos_slots[0]) if _esp_cob else ""
-            # Determinar modalidad disponible para esta especialidad
-            _es_solo_particular = _esp_cob.lower() not in _FONASA_SPECIALTIES if _FONASA_SPECIALTIES else False
+        if _es_pregunta_cobertura and (todos_slots or especialidad):
+            _esp_cob = (todos_slots[0].get("especialidad", especialidad) if todos_slots
+                        else especialidad) or especialidad
+            _slot_cob = todos_slots[0] if todos_slots else None
+            _precio_cob = _precio_line(_esp_cob, _slot_cob) if _esp_cob else ""
+            # Determinar modalidad. _FONASA_SPECIALTIES es Title Case → comparar lowercase.
+            _esp_cob_lower = _esp_cob.lower()
+            _es_solo_particular = not any(
+                _fsp.lower() == _esp_cob_lower for _fsp in _FONASA_SPECIALTIES
+            )
             if _es_solo_particular:
-                _resp_cob = ("{esp} atiende solo *Particular* en el CMC.{precio}\n\n"
-                             "\u00bfTe sirve el horario? Elige un n\u00famero para reservar.").format(
-                                 esp="*" + str(_esp_cob or especialidad) + "*",
-                                 precio=("\n" + _precio_cob) if _precio_cob else "",
-                             )
+                # Incluir "No atiende por Fonasa" explícitamente (caso psiquiatría IG).
+                _resp_cob = (
+                    "*{esp}* no atiende por Fonasa en el CMC.\n"
+                    "Es atención *solo Particular*.{precio}\n\n"
+                    "\u00bfTe sirve el horario? Elige un n\u00famero para reservar."
+                ).format(
+                    esp=str(_esp_cob or especialidad),
+                    precio=("\n" + _precio_cob) if _precio_cob else "",
+                )
             else:
-                _resp_cob = ("{esp} acepta *Fonasa* (bono MLE) y *Particular*.{precio}\n\n"
-                             "\u00bfTe sirve el horario? Elige un n\u00famero para reservar.").format(
-                                 esp="*" + str(_esp_cob or especialidad) + "*",
-                                 precio=("\n" + _precio_cob) if _precio_cob else "",
-                             )
+                _resp_cob = (
+                    "*{esp}* acepta *Fonasa* (bono MLE) y *Particular*.{precio}\n\n"
+                    "\u00bfTe sirve el horario? Elige un n\u00famero para reservar."
+                ).format(
+                    esp=str(_esp_cob or especialidad),
+                    precio=("\n" + _precio_cob) if _precio_cob else "",
+                )
             save_session(phone, "WAIT_SLOT", data)
             return _resp_cob
 
@@ -9533,6 +9573,62 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
                     ), timeout=45)
             except Exception as _crear_err:
+                # P1-B: Medilink exige campo videoconsulta para ciertos slots
+                # (teleconsulta Dr. Olavarría y posiblemente otros). El slot sigue
+                # disponible — reintentamos automáticamente con modalidad TELEMEDICINA
+                # (ya usada para psiquiatría/Unibazo). Si el reintentar también falla,
+                # avisamos sin destruir la sesión (paciente puede elegir otro horario).
+                from medilink import MedilinkVideoconsultaRequired as _MlinkVidReq
+                if isinstance(_crear_err, _MlinkVidReq):
+                    log_event(phone, "crear_cita_videoconsulta_required", {
+                        "fecha": slot.get("fecha"),
+                        "hora": slot.get("hora_inicio"),
+                        "profesional": slot.get("profesional", ""),
+                    })
+                    try:
+                        resultado_video = await asyncio.wait_for(crear_cita(
+                            id_paciente=paciente["id"],
+                            id_profesional=slot["id_profesional"],
+                            fecha=slot["fecha"],
+                            hora_inicio=slot["hora_inicio"],
+                            hora_fin=slot["hora_fin"],
+                            id_recurso=slot.get("id_recurso", 1),
+                            modalidad="TELEMEDICINA",
+                        ), timeout=45)
+                    except Exception:
+                        resultado_video = None
+                    if resultado_video:
+                        # Éxito con TELEMEDICINA — continuar el flujo normal
+                        # marcando la modalidad para que la confirmación lo refleje
+                        data["telemedicina_modalidad"] = "TELEMEDICINA"
+                        resultado = resultado_video
+                        log_event(phone, "crear_cita_videoconsulta_retry_ok", {
+                            "fecha": slot.get("fecha"),
+                            "hora": slot.get("hora_inicio"),
+                            "id_cita": resultado_video.get("id"),
+                        })
+                    else:
+                        # El retry también falló — no destruir la sesión
+                        log_event(phone, "crear_cita_videoconsulta_retry_fail", {
+                            "fecha": slot.get("fecha"),
+                            "hora": slot.get("hora_inicio"),
+                        })
+                        log_event(phone, "reserva_resultado", {
+                            "ok": False, "causa": "videoconsulta_required",
+                            "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
+                        })
+                        # Ofrecer elegir otro horario sin perder la sesión
+                        data.pop("slot_elegido", None)
+                        data.pop("slots", None)
+                        data.pop("todos_slots", None)
+                        _esp_vid = data.get("especialidad", slot.get("especialidad", ""))
+                        return await _iniciar_agendar(
+                            phone, data, _esp_vid or None,
+                            saludo_prefix=(
+                                "Ese horario es de videoconsulta y no pude confirmarlo.\n\n"
+                                "Te muestro otros horarios disponibles:\n\n"
+                            ),
+                        )
                 # C3 fix: httpx.RequestError se lanza cuando Medilink persiste en
                 # 429 tras todos los reintentos de medilink._post. Antes este error
                 # subía al except genérico de main.py que llamaba reset_session(),
@@ -10548,6 +10644,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Pre-fill perfil para no volver a pedir RUT en el confirming
         data["rut_conocido"] = data.get("rut", "")
         data["nombre_conocido"] = data["paciente"]["nombre"]
+        # Guardar fecha+hora de la cita que se reagenda para excluirla de los
+        # slots ofrecidos (bug P1-A: la cita propia aparecía como disponible).
+        _hora_excluir = cita_old.get("hora_inicio", "")[:5]
+        _fecha_excluir = cita_old.get("fecha", "")
+        if _hora_excluir and _fecha_excluir:
+            data["_reagendar_excluir"] = (_fecha_excluir, _hora_excluir)
         log_event(phone, "reagendar_elegida_cita",
                   {"id_cita": cita_old["id"], "especialidad": esp_lower})
         return await _iniciar_agendar(phone, data, esp_lower)
@@ -13990,7 +14092,14 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         botones.append({"id": "otro_dia", "title": "📅 Otro día"})
 
     precio_linea = _precio_line(mejor.get("especialidad", ""), mejor)
-    precio_bloque = f"{precio_linea}\n" if precio_linea else ""
+    # P1-C bonus: para especialidades solo-particular, anotar "Solo Particular"
+    # junto al precio para evitar la pregunta Fonasa posterior.
+    _esp_bl = (mejor.get("especialidad") or especialidad_lower or "").lower()
+    _es_solo_part_bl = bool(_esp_bl) and not any(
+        _fsp.lower() == _esp_bl for _fsp in _FONASA_SPECIALTIES
+    )
+    _particular_nota = "_Solo Particular (no Fonasa)_\n" if _es_solo_part_bl and precio_linea else ""
+    precio_bloque = f"{precio_linea}\n{_particular_nota}" if precio_linea else ""
     # Señal de escasez cuando quedan pocas horas
     n_slots = len(todos)
     escasez = ""

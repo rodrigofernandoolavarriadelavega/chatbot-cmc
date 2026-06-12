@@ -1226,6 +1226,12 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
     ) if p).strip()
     if _obs:
         body["observaciones"] = _obs
+    # P1-B: ciertos slots (Dr. Olavarría y otros) están configurados como
+    # teleconsulta en Medilink y RECHAZAN la creación con 400 si falta el campo
+    # `videoconsulta`. Solo lo enviamos en TELEMEDICINA para no alterar el body
+    # de las citas presenciales (que ya funcionan sin el campo).
+    if modalidad == "TELEMEDICINA":
+        body["videoconsulta"] = 1
     client = _get_shared_client()
     try:
         r = await _post(client, f"{MEDILINK_BASE_URL}/citas", json=body, headers=HEADERS)
@@ -1264,7 +1270,24 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
         _horarios_cache.pop(id_profesional, None)
         _proxima_cache.clear()
         log.info("crear_cita 400 horario → caché invalidada para prof %s", id_profesional)
+    # P1-B: Medilink exige campo videoconsulta en ciertos slots de teleconsulta
+    # (Dr. Olavarría y posiblemente otros). Relanzar para que CONFIRMING_CITA
+    # pueda manejarlo sin destruir la sesión del paciente.
+    if r.status_code == 400 and "videoconsulta" in r.text.lower():
+        raise MedilinkVideoconsultaRequired(
+            f"Medilink exige parámetro videoconsulta (prof={id_profesional})"
+        )
     return None
+
+
+class MedilinkVideoconsultaRequired(Exception):
+    """Medilink devolvió 400 exigiendo el parámetro 'videoconsulta'.
+
+    Algunos slots del Dr. Olavarría (y posiblemente otros) tienen configurada
+    la modalidad de teleconsulta en Medilink y rechazan la creación sin ese campo.
+    Flows.py la captura en CONFIRMING_CITA para ofrecer al paciente continuar
+    como videoconsulta o elegir otro horario presencial — sin destruir la sesión.
+    """
 
 
 class MedilinkUnavailable(Exception):
