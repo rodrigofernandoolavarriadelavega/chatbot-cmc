@@ -127,6 +127,30 @@
   .kpi .value.green { color: var(--green); }
 
   /* ── Tabla de pagos ── */
+  /* Barra de filtros */
+  .pagos-filtros {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 0 20px 12px; padding: 0;
+  }
+  #filtroBuscar {
+    flex: 1; min-width: 200px; border: 1.5px solid var(--border); border-radius: 22px;
+    padding: 9px 16px; font-size: 13.5px; outline: none; color: var(--navy); background: #fff;
+  }
+  #filtroBuscar:focus { border-color: var(--aqua); }
+  .filtro-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fchip {
+    border: 1.5px solid var(--border); background: #fff; border-radius: 18px;
+    padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: #5b7290;
+  }
+  .fchip:hover { border-color: var(--aqua); }
+  .fchip.on { background: var(--navy); color: #fff; border-color: transparent; }
+  .filtro-count { font-size: 12px; color: #5b7290; font-weight: 600; white-space: nowrap; }
+  .th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+  .th-sort:hover { color: var(--aqua); }
+  .th-sort.sort-asc::after  { content: ' ▲'; font-size: 9px; opacity: .8; }
+  .th-sort.sort-desc::after { content: ' ▼'; font-size: 9px; opacity: .8; }
+  @media (max-width: 560px) { .pagos-filtros { margin: 0 12px 10px; } }
+
   .table-wrap {
     margin: 0 20px 24px;
     background: #fff; border-radius: 14px; border: 1px solid var(--border);
@@ -640,6 +664,20 @@
   </div>
 </div>
 
+<!-- Barra de filtros -->
+<div class="pagos-filtros" id="pagosFiltros">
+  <input type="text" id="filtroBuscar" placeholder="🔍 Buscar nombre, RUT, profesional, folio…" autocomplete="off">
+  <div class="filtro-chips" id="filtroMetodos">
+    <button class="fchip on" data-met="">Todos</button>
+    <button class="fchip" data-met="transferencia">Transferencia</button>
+    <button class="fchip" data-met="efectivo">Efectivo</button>
+    <button class="fchip" data-met="debito">Débito</button>
+    <button class="fchip" data-met="credito">Crédito</button>
+    <button class="fchip" data-met="bono">Bono/Fonasa</button>
+  </div>
+  <span class="filtro-count" id="filtroCount"></span>
+</div>
+
 <!-- Tabla planilla -->
 <div class="table-wrap">
   <table id="tablaPagos">
@@ -652,14 +690,14 @@
     <thead>
       <tr>
         <th>#</th>
-        <th>Hora</th>
-        <th>Paciente</th>
-        <th>RUT</th>
-        <th>Profesional</th>
-        <th>Area</th>
-        <th>Prevision</th>
-        <th>Pago</th>
-        <th>Metodo</th>
+        <th class="th-sort" data-sort="hora">Hora</th>
+        <th class="th-sort" data-sort="paciente_nombre">Paciente</th>
+        <th class="th-sort" data-sort="rut">RUT</th>
+        <th class="th-sort" data-sort="profesional">Profesional</th>
+        <th class="th-sort" data-sort="area">Area</th>
+        <th class="th-sort" data-sort="prevision">Prevision</th>
+        <th class="th-sort" data-sort="copago">Pago</th>
+        <th class="th-sort" data-sort="metodo_pago">Metodo</th>
         <th>Folio</th>
         <th>Prestacion</th>
         <th>Origen</th>
@@ -2164,7 +2202,8 @@ async function cargarPagos() {
     const d = await r.json();
     renderKPIs(d);
     renderCaja(d);
-    renderTabla(d.pagos || []);
+    _pagosFull = d.pagos || [];     // lista completa, base de los filtros
+    aplicarFiltros();
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="13" class="empty">Error al cargar pagos.</td></tr>';
     console.error(e);
@@ -2180,10 +2219,70 @@ function renderKPIs(d) {
 
 // ── Render tabla con filas guardadas ─────────────────────────────────────────
 let _pagosCache = [];
+let _pagosFull = [];          // lista sin filtrar (base)
+let _fMet = '';               // filtro de método activo
+let _fBuscar = '';            // texto de búsqueda
+let _sortCol = null, _sortDir = 1;
+
+function aplicarFiltros() {
+  let arr = _pagosFull.slice();
+  if (_fMet) {
+    arr = arr.filter(p => (p.metodo_pago || '').toLowerCase().includes(_fMet)
+      || (_fMet === 'bono' && /bono|fonasa|prevision/i.test((p.prevision || '') + (p.metodo_pago || ''))));
+  }
+  if (_fBuscar) {
+    const q = _fBuscar.toLowerCase();
+    arr = arr.filter(p => [(p.paciente_nombre||''),(p.rut||''),(p.profesional||''),
+      (p.folio||''),(p.area||''),(p.metodo_pago||'')].join(' ').toLowerCase().includes(q));
+  }
+  if (_sortCol) {
+    arr.sort((a, b) => {
+      let x = a[_sortCol], y = b[_sortCol];
+      if (_sortCol === 'copago') { x = +x||0; y = +y||0; return (x-y)*_sortDir; }
+      x = (x||'').toString().toLowerCase(); y = (y||'').toString().toLowerCase();
+      return x < y ? -_sortDir : x > y ? _sortDir : 0;
+    });
+  }
+  const cnt = document.getElementById('filtroCount');
+  if (cnt) {
+    const tot = arr.reduce((s,p)=>s+(+p.copago||0),0);
+    cnt.textContent = arr.length + ' de ' + _pagosFull.length + ' · $' + tot.toLocaleString('es-CL');
+  }
+  renderTabla(arr, true);   // true = viene de filtro, no reordenar por hora
+}
+
+// Listeners de la barra de filtros (se enganchan una vez al cargar)
+function initFiltrosPagos() {
+  const inp = document.getElementById('filtroBuscar');
+  if (inp && !inp._wired) {
+    inp._wired = true;
+    inp.addEventListener('input', e => { _fBuscar = e.target.value.trim(); aplicarFiltros(); });
+  }
+  document.querySelectorAll('#filtroMetodos .fchip').forEach(ch => {
+    if (ch._wired) return; ch._wired = true;
+    ch.addEventListener('click', () => {
+      _fMet = ch.dataset.met;
+      document.querySelectorAll('#filtroMetodos .fchip').forEach(x => x.classList.toggle('on', x === ch));
+      aplicarFiltros();
+    });
+  });
+  document.querySelectorAll('.th-sort').forEach(th => {
+    if (th._wired) return; th._wired = true;
+    th.addEventListener('click', () => {
+      const c = th.dataset.sort;
+      _sortDir = (_sortCol === c) ? -_sortDir : 1;
+      _sortCol = c;
+      document.querySelectorAll('.th-sort').forEach(x => x.classList.remove('sort-asc','sort-desc'));
+      th.classList.add(_sortDir === 1 ? 'sort-asc' : 'sort-desc');
+      aplicarFiltros();
+    });
+  });
+}
 let _editingRowId = null;
 
-function renderTabla(pagos) {
+function renderTabla(pagos, desdeFiltro) {
   const tbody = document.getElementById('tablaPagosBody');
+  initFiltrosPagos();   // asegura que la barra de filtros esté enganchada
 
   // Anti-pérdida: preservar la fila de paciente nuevo SIN guardar al recargar
   // (antes se borraba en silencio al apretar Prellenar / refrescar). Bug 2026-06-08.
@@ -2191,15 +2290,17 @@ function renderTabla(pagos) {
       && (_newRow.querySelector('#nr_nombre')?.value || '').trim())
       ? _newRow : null;
 
-  // Ordenar por hora ascendente; filas sin hora van al final
-  pagos = pagos.slice().sort((a, b) => {
-    const ha = (a.hora || '').slice(0, 5);
-    const hb = (b.hora || '').slice(0, 5);
-    if (!ha && !hb) return 0;
-    if (!ha) return 1;
-    if (!hb) return -1;
-    return ha < hb ? -1 : ha > hb ? 1 : 0;
-  });
+  // Orden por hora solo si NO viene de un filtro/orden manual (ahí ya viene ordenado)
+  if (!desdeFiltro || !_sortCol) {
+    pagos = pagos.slice().sort((a, b) => {
+      const ha = (a.hora || '').slice(0, 5);
+      const hb = (b.hora || '').slice(0, 5);
+      if (!ha && !hb) return 0;
+      if (!ha) return 1;
+      if (!hb) return -1;
+      return ha < hb ? -1 : ha > hb ? 1 : 0;
+    });
+  }
 
   _pagosCache = pagos;
   if (!pagos.length) {
