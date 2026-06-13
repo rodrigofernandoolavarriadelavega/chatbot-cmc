@@ -149,6 +149,25 @@
   .th-sort:hover { color: var(--aqua); }
   .th-sort.sort-asc::after  { content: ' ▲'; font-size: 9px; opacity: .8; }
   .th-sort.sort-desc::after { content: ' ▼'; font-size: 9px; opacity: .8; }
+  .th-filtro { position: relative; }
+  .col-funnel {
+    display: inline-block; margin-left: 5px; font-size: 11px; opacity: .55;
+    cursor: pointer; padding: 0 2px; border-radius: 4px;
+  }
+  .col-funnel:hover { opacity: 1; background: rgba(255,255,255,.2); }
+  .th-filtro.col-activa .col-funnel { opacity: 1; color: var(--aqua); }
+  .col-menu {
+    position: absolute; top: 100%; left: 0; z-index: 50; margin-top: 4px;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15,63,104,.18); min-width: 170px; max-height: 320px;
+    overflow-y: auto; padding: 5px; text-transform: none; letter-spacing: 0; font-weight: 500;
+  }
+  .cm-item {
+    padding: 8px 11px; font-size: 13px; color: var(--navy); border-radius: 7px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .cm-item:hover { background: var(--aqua-s); }
+  .cm-item.on { background: var(--navy); color: #fff; font-weight: 700; }
   @media (max-width: 560px) { .pagos-filtros { margin: 0 12px 10px; } }
 
   .table-wrap {
@@ -693,14 +712,14 @@
         <th class="th-sort" data-sort="hora">Hora</th>
         <th class="th-sort" data-sort="paciente_nombre">Paciente</th>
         <th class="th-sort" data-sort="rut">RUT</th>
-        <th class="th-sort" data-sort="profesional">Profesional</th>
-        <th class="th-sort" data-sort="area">Area</th>
-        <th class="th-sort" data-sort="prevision">Prevision</th>
+        <th class="th-sort th-filtro" data-sort="profesional" data-col="profesional">Profesional</th>
+        <th class="th-sort th-filtro" data-sort="area" data-col="area">Area</th>
+        <th class="th-sort th-filtro" data-sort="prevision" data-col="prevision">Prevision</th>
         <th class="th-sort" data-sort="copago">Pago</th>
-        <th class="th-sort" data-sort="metodo_pago">Metodo</th>
+        <th class="th-sort th-filtro" data-sort="metodo_pago" data-col="metodo_pago">Metodo</th>
         <th>Folio</th>
         <th>Prestacion</th>
-        <th>Origen</th>
+        <th class="th-filtro" data-col="origen">Origen</th>
         <th></th>
       </tr>
     </thead>
@@ -2223,12 +2242,19 @@ let _pagosFull = [];          // lista sin filtrar (base)
 let _fMet = '';               // filtro de método activo
 let _fBuscar = '';            // texto de búsqueda
 let _sortCol = null, _sortDir = 1;
+let _colFiltros = {};         // filtro por columna: {profesional: "Dr. X", area: "..."}
 
 function aplicarFiltros() {
   let arr = _pagosFull.slice();
   if (_fMet) {
     arr = arr.filter(p => (p.metodo_pago || '').toLowerCase().includes(_fMet)
       || (_fMet === 'bono' && /bono|fonasa|prevision/i.test((p.prevision || '') + (p.metodo_pago || ''))));
+  }
+  // Filtros por columna (Excel-style): cada columna activa exige su valor exacto
+  for (const col in _colFiltros) {
+    const v = _colFiltros[col];
+    if (v == null) continue;
+    arr = arr.filter(p => ((p[col] == null ? '' : String(p[col])).trim() || '—') === v);
   }
   if (_fBuscar) {
     const q = _fBuscar.toLowerCase();
@@ -2267,8 +2293,10 @@ function initFiltrosPagos() {
     });
   });
   document.querySelectorAll('.th-sort').forEach(th => {
-    if (th._wired) return; th._wired = true;
-    th.addEventListener('click', () => {
+    if (th._wiredSort) return; th._wiredSort = true;
+    th.addEventListener('click', (ev) => {
+      // El embudo (filtro por columna) tiene su propio handler — no ordenar al tocarlo
+      if (ev.target.closest('.col-funnel')) return;
       const c = th.dataset.sort;
       _sortDir = (_sortCol === c) ? -_sortDir : 1;
       _sortCol = c;
@@ -2277,6 +2305,45 @@ function initFiltrosPagos() {
       aplicarFiltros();
     });
   });
+  // Embudo de filtro por columna (Excel-style)
+  document.querySelectorAll('.th-filtro').forEach(th => {
+    if (th._wiredFun) return; th._wiredFun = true;
+    if (!th.querySelector('.col-funnel')) {
+      const f = document.createElement('span');
+      f.className = 'col-funnel'; f.textContent = '▾'; f.title = 'Filtrar esta columna';
+      th.appendChild(f);
+    }
+    th.querySelector('.col-funnel').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      abrirMenuColumna(th, th.dataset.col);
+    });
+  });
+}
+
+function abrirMenuColumna(th, col) {
+  document.querySelectorAll('.col-menu').forEach(m => m.remove());   // cerrar otros
+  // Valores distintos presentes en la lista completa
+  const vals = [...new Set(_pagosFull.map(p => (p[col] == null ? '' : String(p[col])).trim() || '—'))]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  const menu = document.createElement('div');
+  menu.className = 'col-menu';
+  const activo = _colFiltros[col] || null;
+  menu.innerHTML =
+    `<div class="cm-item${activo===null?' on':''}" data-v="">Todos</div>` +
+    vals.map(v => `<div class="cm-item${activo===v?' on':''}" data-v="${v.replace(/"/g,'&quot;')}">${v}</div>`).join('');
+  th.appendChild(menu);
+  menu.querySelectorAll('.cm-item').forEach(it => it.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const v = it.dataset.v;
+    if (v === '') delete _colFiltros[col]; else _colFiltros[col] = v;
+    th.classList.toggle('col-activa', v !== '');
+    menu.remove();
+    aplicarFiltros();
+  }));
+  // cerrar al hacer clic fuera
+  setTimeout(() => document.addEventListener('click', function _cl(e){
+    if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', _cl); }
+  }), 0);
 }
 let _editingRowId = null;
 
