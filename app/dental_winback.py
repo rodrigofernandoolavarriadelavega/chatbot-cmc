@@ -98,16 +98,28 @@ _LIMITE_DIARIO_DENTAL = 200
 # -- Dental consent -----------------------------------------------------------
 
 def has_dental_consent(phone: str) -> bool:
-    """Retorna True si phone tiene dental_consent.status='accepted'."""
+    """Retorna True si phone tiene dental_consent.status='accepted'.
+
+    Usa normalización de 9 dígitos finales para resistir formatos mixtos
+    (+56XXXXXXXXX vs 56XXXXXXXXX vs 9XXXXXXXX) — misma lógica que el JOIN
+    en get_candidatos_dental. Sin normalización, el 87% de los consents
+    con prefijo '+' no matchean y todo el batch cae en skip_no_consent.
+    """
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT status FROM bi.dental_consent WHERE phone = %s",
+                    """
+                    SELECT status FROM bi.dental_consent
+                    WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 9)
+                        = RIGHT(REGEXP_REPLACE(%s,   '[^0-9]', '', 'g'), 9)
+                    AND status = 'accepted'
+                    LIMIT 1
+                    """,
                     (phone,),
                 )
                 row = cur.fetchone()
-                return row is not None and row[0] == "accepted"
+                return row is not None
     except Exception as e:
         log.warning("dental_winback: has_dental_consent error phone=...%s: %s", phone[-4:], e)
         return False
