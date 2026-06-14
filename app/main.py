@@ -2785,6 +2785,26 @@ def meulen_dashboard_page():
     )
 
 
+@app.get("/alma/panel-dia", response_class=HTMLResponse)
+def alma_panel_dia_demo():
+    """Mockup del Panel del Día (v1) — datos FICTICIOS, para revisión de amigos.
+
+    Página pública (no expone datos reales: todo es mock embebido en el HTML).
+    Se re-lee desde disco con headers no-cache para reflejar cambios sin restart.
+    """
+    tpl_path = _TEMPLATE_DIR / "alma_panel_dia_v1.html"
+    if not tpl_path.exists():
+        raise HTTPException(404, "Panel del Día no disponible")
+    return HTMLResponse(
+        content=tpl_path.read_text(encoding="utf-8"),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
+
 @app.get("/meulen/kpis", response_class=HTMLResponse)
 def meulen_kpis_page():
     """Dashboard de KPIs del MVP Meulen — avance fases, módulos, tests, riesgos."""
