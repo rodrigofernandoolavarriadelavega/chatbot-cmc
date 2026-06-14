@@ -149,14 +149,19 @@ def register_panel_dia_routes(app):
 
     # ───────────────────────── NIVEL 1 · operativo ──────────────────────────
     @app.get("/api/panel-dia/operativo", tags=["panel-dia"], include_in_schema=False)
-    def panel_operativo(fecha: str | None = Query(None), token: str | None = Query(None),
-                        cmc_session: str | None = Cookie(None)):
+    def panel_operativo(fecha: str | None = Query(None), auto: int = Query(1),
+                        token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
         _auth(token, cmc_session)
         from session import db
         from medilink import PROFESIONALES
         if not fecha:
             fecha = date.today().isoformat()
         with db() as c:
+            # auto-fallback: si la fecha no tiene agenda, usar la última que sí (para no abrir vacío)
+            if auto and not c.execute("SELECT 1 FROM citas_cache WHERE fecha=? LIMIT 1", (fecha,)).fetchone():
+                r = c.execute("SELECT fecha FROM citas_cache WHERE fecha<=? ORDER BY fecha DESC LIMIT 1", (fecha,)).fetchone()
+                if r:
+                    fecha = r[0]
             citas: dict = {}
             for idp, idpac, nom, hora in c.execute(
                 "SELECT id_prof, id_paciente, paciente_nombre, hora_inicio FROM citas_cache "

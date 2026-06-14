@@ -1269,7 +1269,8 @@ function setupTopbar(){
     updateDateLabel(); refresh(true);
   });
   const inDia=document.getElementById('inDia'); inDia.value = toISO(STATE.fecha);
-  inDia.addEventListener('change',()=>{ STATE.fecha=new Date(inDia.value+'T12:00:00'); updateDateLabel(); refresh(true); });
+  inDia.addEventListener('change',()=>{ STATE.fecha=new Date(inDia.value+'T12:00:00'); updateDateLabel();
+    if(PANEL_TOKEN){ loadOperativo(inDia.value,0); } else { refresh(true); } });
   const d0=new Date(STATE.fecha); d0.setDate(d0.getDate()-6);
   document.getElementById('inDesde').value=toISO(d0); STATE.desde=toISO(d0);
   document.getElementById('inHasta').value=toISO(STATE.fecha); STATE.hasta=toISO(STATE.fecha);
@@ -1583,11 +1584,19 @@ function openActMenu(btn,p){
   actMenu.style.left=x+'px'; actMenu.style.top=y+'px';
   actMenu.querySelectorAll('button[data-act]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); quickAction(p,b.dataset.act); closeActMenu(); });
 }
+async function fetchConv(p){
+  try{
+    const r=await fetch('/api/panel-dia/conv?phone='+encodeURIComponent(p.id)+(PANEL_TOKEN?('&token='+encodeURIComponent(PANEL_TOKEN)):''),{credentials:'same-origin'});
+    p.msgs = r.ok ? ((await r.json()).msgs||[]) : [];
+  }catch(e){ p.msgs=p.msgs||[]; }
+  if(wpChat.el.classList.contains('show')) wpChat.update();
+}
 function bChat(p){
   const who=m=> m.de==='pac'?p.nombre.split(' ')[0] : m.de==='bot'?'Bot' : m.de==='rec'?'Recepción' : '';
-  const thread = p.msgs.map(m=> m.de==='sys'
+  const thread = p.msgs ? (p.msgs.length? p.msgs.map(m=> m.de==='sys'
     ? `<div class="wmsg sys">${m.txt}</div>`
-    : `<div class="wmsg ${m.de}"><div class="who">${who(m)}</div>${m.txt}<div class="tm">${m.t}</div></div>`).join('');
+    : `<div class="wmsg ${m.de}"><div class="who">${who(m)}</div>${m.txt}<div class="tm">${m.t}</div></div>`).join('') : '<div class="wempty" style="padding:18px">Sin mensajes</div>')
+    : '<div class="wempty" style="padding:18px">Cargando conversación…</div>';
   const ctx = p.contexto==='derivado'?'Derivado a recepción':p.contexto==='espera'?('Espera · '+p.profNombre):('Multiagente · '+p.profNombre);
   const e=ESTADOS[p.estado]||ESTADOS.contactado, pr=PRIOS[p.prioridad]||PRIOS.baja;
   const headBadge=` <span class="est" style="background:rgba(255,255,255,.22);color:#fff">${e.l}</span>`;
@@ -1598,10 +1607,11 @@ function bChat(p){
     footHTML:`<div class="wchat-input"><input placeholder="Escribe un mensaje…" data-ci><button class="actbtn" data-actions title="Acciones rápidas">⚡</button><button data-cs>Enviar</button></div>`,
     onMount: el=>{
       const inp=el.querySelector('[data-ci]'), btn=el.querySelector('[data-cs]'), abtn=el.querySelector('[data-actions]'), body=el.querySelector('.wbody');
-      const send=()=>{ const v=(inp.value||'').trim(); if(!v) return; p.msgs.push({de:'rec',t:nowHM(),txt:v}); p.hace=0; wpChat.update(); };
+      const send=()=>{ const v=(inp.value||'').trim(); if(!v) return; if(!p.msgs)p.msgs=[]; p.msgs.push({de:'rec',t:nowHM(),txt:v}); p.hace=0; wpChat.update(); };
       if(btn) btn.onclick=e=>{ e.stopPropagation(); send(); };
       if(inp) inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } };
       if(abtn) abtn.onclick=e=>{ e.stopPropagation(); actMenu.classList.contains('show')?closeActMenu():openActMenu(abtn,p); };
+      if(p._real && !p._convLoaded){ p._convLoaded=true; fetchConv(p); }
       if(body) body.scrollTop=body.scrollHeight;
     }};
 }
@@ -1744,55 +1754,64 @@ function bEbitda(){
         <tr><td>Gastos operativos</td><td class="n r">−${clp(FIN.gastos)}</td></tr>
         <tr><td><b>EBITDA (${FIN.ebitdaPct}%)</b></td><td class="n g"><b>${clp(FIN.ebitda)}</b></td></tr></table></div>` };
 }
-function bCaja(){
-  const metodoTab = (FIN_REAL && !FIN.metodos)
-    ? `<div class="sech">Por método de pago</div><div class="wempty" style="padding:14px">Desglose por método: ver módulo Caja (<b>/cmc/mensual</b>)</div>`
-    : `<div class="sech">Por método de pago${FIN_REAL?' (referencial)':''}</div><table class="fintab">${FIN.metodos.map(([m,v])=>`<tr><td>${m}</td><td class="n">${clp(v)}</td></tr>`).join('')}</table>`;
-  return {color:'var(--blue)', title:'Pagos por caja', sub:`Medilink = Caja · diferencia $0`,
+function bCaja(){ const co=FIN.conciliacion;
+  return {color:'var(--blue)', title:'Pagos por caja', sub:`Medilink (caja) ${clp(FIN.ingresos)}`,
     bodyHTML:`<div class="findash"><div class="fk">
       <div class="b"><div class="v">${clp(FIN.ingresos)}</div><div class="l">Medilink</div></div>
-      <div class="b"><div class="v">${clp(FIN.ingresos)}</div><div class="l">Caja diaria</div></div>
-      <div class="b"><div class="v g">$0</div><div class="l">Diferencia</div></div></div>
-      ${metodoTab}</div>` };
+      <div class="b"><div class="v">${clp(co?co.recepcion:FIN.ingresos)}</div><div class="l">Recepción</div></div>
+      <div class="b"><div class="v ${co&&co.dif?'o':'g'}">${clp(co?co.dif:0)}</div><div class="l">Diferencia</div></div></div>
+      <div class="sech">Por método${FIN_REAL?' (registrado en recepción)':''}</div><table class="fintab">${(FIN.metodos||[]).map(([m,v])=>`<tr><td>${m}</td><td class="n">${clp(v)}</td></tr>`).join('')}</table></div>` };
 }
-function bComp(){ const d=FIN.ingresos-FIN.prevIngresos;
-  return {color:'var(--purple)', title:'Comparador de periodos', sub:`Mayo vs abril · ${d>=0?'+':''}${clp(d)}`,
+function bComp(){ const d=FIN.ingresos-FIN.prevIngresos, ml=FIN.mes||'mes', pl=FIN.mesPrev||'mes ant.';
+  return {color:'var(--purple)', title:'Comparador de periodos', sub:`${ml} vs ${pl} · ${d>=0?'+':''}${clp(d)}`,
     bodyHTML:`<div class="findash"><div class="fk">
-      <div class="b"><div class="v">${clp(FIN.ingresos)}</div><div class="l">Mayo</div></div>
-      <div class="b"><div class="v">${clp(FIN.prevIngresos)}</div><div class="l">Abril</div></div>
+      <div class="b"><div class="v">${clp(FIN.ingresos)}</div><div class="l">${ml}</div></div>
+      <div class="b"><div class="v">${clp(FIN.prevIngresos)}</div><div class="l">${pl}</div></div>
       <div class="b"><div class="v ${d>=0?'g':'r'}">${d>=0?'+':''}${pct(d,FIN.prevIngresos).toFixed(1)}%</div><div class="l">Variación</div></div></div>
-      <div class="sech">Por área (mayo)</div><table class="fintab">${tabArea()}</table></div>` };
+      <div class="sech">Por área</div><table class="fintab">${tabArea()}</table></div>` };
 }
-function bConcil(){ const ok=FIN.fuentes.reduce((s,f)=>s+f[1],0);
-  return {color:'var(--blue)', title:'Conciliación de pagos', sub:`6 fuentes cruzadas · cuadre 100%`,
+function bConcil(){ const co=FIN.conciliacion; const f=co?co.fuentes:FIN.fuentes;
+  return {color:'var(--blue)', title:'Conciliación de pagos', sub: co?`Medilink vs recepción · ${co.pct}% capturado`:'6 fuentes · demo',
     bodyHTML:`<div class="findash"><div class="fk">
-      <div class="b"><div class="v g">${ok}</div><div class="l">Conciliadas</div></div>
-      <div class="b"><div class="v r">0</div><div class="l">Diferencias</div></div>
-      <div class="b"><div class="v">${clp(FIN.ingresos)}</div><div class="l">Total</div></div></div>
-      <div class="sech">Por fuente</div><table class="fintab">${FIN.fuentes.map(([f,n,v])=>`<tr><td>${f}</td><td class="n">${n}</td><td class="n">${clp(v)}</td></tr>`).join('')}</table></div>` };
+      <div class="b"><div class="v">${clp(co?co.medilink:FIN.ingresos)}</div><div class="l">Medilink</div></div>
+      <div class="b"><div class="v g">${clp(co?co.recepcion:FIN.ingresos)}</div><div class="l">Recepción</div></div>
+      <div class="b"><div class="v ${co&&co.dif?'o':'g'}">${clp(co?co.dif:0)}</div><div class="l">Sin capturar</div></div></div>
+      <div class="sech">Por fuente</div><table class="fintab">${(f||[]).map(([fn,n,v])=>`<tr><td>${fn}</td><td class="n">${n}</td><td class="n">${clp(v)}</td></tr>`).join('')}</table></div>` };
 }
-function bItau(){ const m=ITAU.filter(t=>t.match), u=ITAU.filter(t=>!t.match); const sumU=u.reduce((s,t)=>s+t.monto,0);
-  return {color:'var(--orange)', title:'Cartola Itaú vs Copago', sub:`${m.length}/${ITAU.length} transferencias conciliadas`,
-    bodyHTML:`<div class="findash"><div class="fk">
-      <div class="b"><div class="v g">${m.length}</div><div class="l">Conciliadas</div></div>
-      <div class="b"><div class="v o">${u.length}</div><div class="l">Sin match</div></div>
-      <div class="b"><div class="v r">${clp(sumU)}</div><div class="l">Por revisar</div></div></div>
-      <div class="sech">Cartola Itaú ↔ módulo copago</div><table class="fintab">${ITAU.map(t=>`<tr><td>${t.fecha} · ${t.ref}<div style="font-size:9px;color:var(--mute)">${t.pac}</div></td><td class="n">${clp(t.monto)}</td><td class="n"><span class="fmatch ${t.match?'y':'n'}">${t.match?'Match':'Revisar'}</span></td></tr>`).join('')}</table></div>` };
+function bItau(){ const it=FIN.itau; const tr=it?it.transferencias:ITAU; const cart=it&&it.cartola_disponible===false;
+  const con=it&&it.conciliadas!=null?it.conciliadas:tr.filter(t=>t.match).length;
+  return {color:'var(--orange)', title:'Cartola Itaú vs Copago', sub:`${tr.length} transferencias copago${cart?' · cartola: pendiente':''}`,
+    bodyHTML:`<div class="findash">${cart?'<div class="wsim" style="margin:0 0 8px">cartola del banco Itaú: sin fuente automatizada aún — se listan las transferencias del módulo copago</div>':''}<div class="fk">
+      <div class="b"><div class="v">${tr.length}</div><div class="l">Transferencias</div></div>
+      <div class="b"><div class="v g">${con}</div><div class="l">Con código</div></div>
+      <div class="b"><div class="v o">${tr.length-con}</div><div class="l">Sin código</div></div></div>
+      <div class="sech">Transferencias copago</div><table class="fintab">${tr.map(t=>`<tr><td>${t.fecha} · ${t.ref}<div style="font-size:9px;color:var(--mute)">${t.pac}</div></td><td class="n">${clp(t.monto)}</td><td class="n"><span class="fmatch ${t.match?'y':'n'}">${t.match?'Cód.':'—'}</span></td></tr>`).join('')}</table></div>` };
 }
 function renderN3Counts(){
   const $=id=>document.getElementById(id);
   $('finIngresosV').textContent=clpM(FIN.ingresos);
   $('finEbitdaV').textContent=clpM(FIN.ebitda)+' · '+FIN.ebitdaPct+'%';
-  $('finCajaV').textContent='dif $0'; $('finCajaV').style.color='var(--green)';
-  $('finCompV').textContent='+'+pct(FIN.ingresos-FIN.prevIngresos,FIN.prevIngresos).toFixed(1)+'%';
-  const concN=FIN.fuentes.reduce((s,f)=>s+f[1],0);
-  $('finConcN').textContent=concN; $('finConcOk').textContent=concN; $('finConcDif').textContent=0;
-  $('finConcPct').textContent='100%'; $('finConcMonto').textContent=clpM(FIN.ingresos);
-  const m=ITAU.filter(t=>t.match).length;
-  $('finItauV').textContent=m+'/'+ITAU.length; $('finItauDs').textContent=(ITAU.length-m)+' por revisar · '+m+' conciliadas';
+  const co=FIN.conciliacion;
+  $('finCajaV').textContent= co? (co.dif?('gap '+clpM(co.dif)):'cuadrado') : 'dif $0';
+  $('finCajaV').style.color= (co&&co.dif)?'var(--orange)':'var(--green)';
+  $('finCompV').textContent=(FIN.ingresos>=FIN.prevIngresos?'+':'')+pct(FIN.ingresos-FIN.prevIngresos,FIN.prevIngresos).toFixed(1)+'%';
+  if(co){
+    $('finConcN').textContent=co.n_medilink; $('finConcOk').textContent=co.n_recepcion;
+    $('finConcDif').textContent=Math.max(0,co.n_medilink-co.n_recepcion);
+    $('finConcPct').textContent=co.pct+'%'; $('finConcMonto').textContent=clpM(co.recepcion);
+    const st=$('finConcilSt'); if(st){ const ok=co.pct>=98; st.textContent=ok?'Cuadrado':(co.pct+'% capturado'); st.style.color=ok?'var(--green)':'var(--orange)'; st.style.background=ok?'var(--green-s)':'var(--orange-s)'; }
+  } else {
+    const concN=FIN.fuentes.reduce((s,f)=>s+f[1],0);
+    $('finConcN').textContent=concN; $('finConcOk').textContent=concN; $('finConcDif').textContent=0;
+    $('finConcPct').textContent='100%'; $('finConcMonto').textContent=clpM(FIN.ingresos);
+  }
+  const it=FIN.itau, tr=it?it.transferencias:ITAU;
+  const con=it&&it.conciliadas!=null?it.conciliadas:ITAU.filter(t=>t.match).length;
+  $('finItauV').textContent=con+'/'+tr.length;
+  $('finItauDs').textContent=(it&&it.cartola_disponible===false)?(tr.length+' transf. copago · cartola pendiente'):((tr.length-con)+' por revisar');
   $('finFlujoV').textContent=clpM(FIN.ebitda);
   $('finIn').textContent=clpM(FIN.ingresos); $('finOut').textContent=clpM(FIN.honorarios+FIN.gastos);
-  $('finAlert').textContent=ITAU.filter(t=>!t.match).length;
+  $('finAlert').textContent= co? Math.max(0,co.n_medilink-co.n_recepcion) : ITAU.filter(t=>!t.match).length;
 }
 /* — conexión a datos REALES (Fase 1: Nivel 3 financiero vía /api/cmc/ebitda) — */
 function aggArea(profs){
@@ -1802,25 +1821,78 @@ function aggArea(profs){
 function markFinReal(){
   const h=document.querySelector('#nivel3 .n2-head .hint'); if(!h) return;
   h.innerHTML = FIN_REAL
-    ? `● datos REALES ${FIN.mes||''} (ingresos · EBITDA · comparador) · conciliación/cartola: fuente pendiente`
+    ? `● datos REALES ${FIN.mes||''} · ingresos · EBITDA · métodos · conciliación · cartola Itaú: sin fuente`
     : 'DEMO · datos ficticios · conciliación de transferencias';
   h.style.color = FIN_REAL ? 'var(--green)' : 'var(--mute)';
   h.style.fontWeight = '800';
 }
 async function loadFinanciero(){
   try{
-    const url='/api/cmc/ebitda'+(PANEL_TOKEN?('?token='+encodeURIComponent(PANEL_TOKEN)):'');
+    const url='/api/panel-dia/financiero'+(PANEL_TOKEN?('?token='+encodeURIComponent(PANEL_TOKEN)):'');
     const r=await fetch(url,{credentials:'same-origin'}); if(!r.ok) throw 0;
     const d=await r.json(); if(!d || !d.ingresos) throw 0;
-    FIN.ingresos=d.ingresos; FIN.ebitda=d.ebitda; FIN.ebitdaPct=d.margen_ebitda_pct||0;
-    FIN.honorarios=d.honorarios_bruto; FIN.gastos=d.gastos; FIN.mes=d.mes;
-    const ev=d.evolucion||[], prev=ev.length>=2?ev[ev.length-2]:null;
-    FIN.prevIngresos = prev? prev.ingresos : Math.round(d.ingresos*0.95);
-    const pa=aggArea(d.profesionales||[]); if(pa.length) FIN.porArea=pa;
-    FIN.metodos=null; FIN_REAL=true;
-    renderN3Counts();
+    FIN.ingresos=d.ingresos; FIN.ebitda=d.ebitda; FIN.ebitdaPct=d.ebitdaPct||0;
+    FIN.honorarios=d.honorarios; FIN.gastos=d.gastos; FIN.mes=d.mes;
+    FIN.prevIngresos = d.prevIngresos || Math.round(d.ingresos*0.95);
+    if(d.porArea&&d.porArea.length) FIN.porArea=d.porArea;
+    if(d.metodos&&d.metodos.length) FIN.metodos=d.metodos;
+    FIN.conciliacion=d.conciliacion||null; FIN.itau=d.itau||null;
+    try{ const dd=new Date(d.mes+'-01T12:00'); dd.setMonth(dd.getMonth()-1); FIN.mesPrev=dd.toISOString().slice(0,7); }catch(e){}
+    FIN_REAL=true; renderN3Counts();
   }catch(e){ FIN_REAL=false; }
   markFinReal();
+}
+/* — conexión a datos REALES · Nivel 1 operativo (/api/panel-dia/operativo) — */
+let OP_REAL=false;
+function _mkProf(ap){
+  const a = AREAS[ap.area] ? ap.area : 'general';
+  const p = { id:ap.id, nombre:ap.nombre, area:a,
+    fonasaOpt: !!(AREAS[a] && AREAS[a].fonasa!=null), fonasaMix:.5,
+    tarifa: ap.ticket||null, ticket: ap.ticket||null, slot:20, jornada:[8,20],
+    hoy: !!ap.presente, ocup:0,
+    agenda:(ap.agenda||[]).map(c=>({hora:c.hora, paciente:c.paciente, tipo:c.tipo||'particular',
+      estado:c.estado, monto:c.monto||0, esperado:c.esperado||ap.ticket||18000, obs:''})) };
+  p._cap = ap.cap || p.agenda.length;
+  p._m = metricsDay(p);
+  return p;
+}
+async function loadOperativo(fecha, auto){
+  try{
+    const qs=[]; if(fecha)qs.push('fecha='+fecha); qs.push('auto='+(auto?1:0)); if(PANEL_TOKEN)qs.push('token='+encodeURIComponent(PANEL_TOKEN));
+    const r=await fetch('/api/panel-dia/operativo?'+qs.join('&'),{credentials:'same-origin'}); if(!r.ok) throw 0;
+    const d=await r.json(); if(!d||!d.profesionales) throw 0;
+    const nuevos=d.profesionales.map(_mkProf);
+    PROFS.length=0; nuevos.forEach(p=>PROFS.push(p));
+    OP_REAL=true;
+    if(d.fecha){ STATE.fecha=new Date(d.fecha+'T12:00:00'); const inD=document.getElementById('inDia'); if(inD)inD.value=d.fecha; updateDateLabel(); }
+    const h=document.querySelector('.central .col-head .badge')||document.getElementById('lblDispo');
+    renderAll();
+  }catch(e){ OP_REAL=false; }
+}
+/* — conexión a datos REALES · Nivel 2 chat (/api/panel-dia/chat + /conv) — */
+let CHAT_REAL=false;
+function _pacFrom(x, ctx, prof, area){
+  const ab={WhatsApp:'WA',Instagram:'IG',Facebook:'FB'}[x.canal]||'WA';
+  const p={ id:x.id, nombre:x.nombre||'Paciente', tel:x.id, canal:x.canal||'WhatsApp', canalCls:x.canalCls||'wa', canalAbr:ab,
+    hace:x.hace||0, contexto:ctx, profNombre:prof||null, areaKey:area||null,
+    agendado:false, resultado:null, slotOfrecido:x.slot||null, preferencia:(ctx==='espera'?(x.esp||'—'):null), fechaIngreso:(ctx==='espera'?'—':null),
+    motivo:(ctx==='derivado'?'derivado a recepción':null),
+    estado:(ctx==='derivado'?'derivado':ctx==='espera'?'en_espera':'contactado'),
+    msgs:null, _real:true, _last:x.ultimo||'' };
+  if(ctx==='agente'){ const e=(x.estado||'').toLowerCase(); p.agendado=(e==='recepcion'||e==='claimed'||e.indexOf('agenda')>=0); p.resultado=p.agendado?'agendado':'pendiente'; p.estado=p.agendado?'agendado':'pendiente'; }
+  p.prioridad=calcPrioridad(p); PAC_BY_ID[p.id]=p; return p;
+}
+async function loadChat(){
+  try{
+    const r=await fetch('/api/panel-dia/chat'+(PANEL_TOKEN?('?token='+encodeURIComponent(PANEL_TOKEN)):''),{credentials:'same-origin'}); if(!r.ok) throw 0;
+    const d=await r.json(); if(!d) throw 0;
+    DERIVADOS.length=0; (d.derivados||[]).forEach(x=>DERIVADOS.push(_pacFrom(x,'derivado')));
+    ESPERA.length=0; (d.espera||[]).forEach((g,i)=>ESPERA.push({prof:{nombre:g.prof,area:g.area,id:9000+i}, pacientes:(g.pacientes||[]).map(x=>_pacFrom(x,'espera',g.prof,g.area))}));
+    AGENTE.length=0; ((d.agente&&d.agente.grupos)||[]).forEach((g,i)=>{ const pcs=(g.pacientes||[]).map(x=>_pacFrom(x,'agente',g.prof,g.area)); AGENTE.push({prof:{nombre:g.prof,area:g.area,id:9500+i}, pacientes:pcs, slots:pcs.length}); });
+    CHAT_REAL=true; renderN2Counts();
+    const hint=document.querySelector('#nivel2 .n2-head .hint'); if(hint){ hint.textContent='datos REALES · '+DERIVADOS.length+' derivados · '+esperaTotal()+' en espera'; hint.style.color='var(--green)'; hint.style.fontWeight='800'; }
+    if(wpList.pinned) wpList.update();
+  }catch(e){ CHAT_REAL=false; }
 }
 function setupNivel3(){
   renderN3Counts();
@@ -1828,7 +1900,7 @@ function setupNivel3(){
   wireN2Card('finCaja',bCaja); wireN2Card('finComp',bComp);
   wireN2Card('finConcil',bConcil); wireN2Card('finItau',bItau);
 }
-document.addEventListener('DOMContentLoaded',()=>{ setupTopbar(); setupResizers(); setupColumnCollapse(); setupNivel2(); setupNivel3(); loadFinanciero(); lay2.setup(); lay3.setup(); wireCardCollapse(); setupGutter('levelGutter','grid','panelDiaV1N1h',()=>Math.round(innerHeight-48)); setupGutter('levelGutter2','nivel2','panelDiaV1N2h',null); updateDateLabel(); refresh(true); });
+document.addEventListener('DOMContentLoaded',()=>{ setupTopbar(); setupResizers(); setupColumnCollapse(); setupNivel2(); setupNivel3(); loadFinanciero(); loadOperativo(null,1); loadChat(); lay2.setup(); lay3.setup(); wireCardCollapse(); setupGutter('levelGutter','grid','panelDiaV1N1h',()=>Math.round(innerHeight-48)); setupGutter('levelGutter2','nivel2','panelDiaV1N2h',null); updateDateLabel(); refresh(true); });
 </script>
 </body>
 </html>
