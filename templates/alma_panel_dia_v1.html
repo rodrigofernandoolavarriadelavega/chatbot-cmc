@@ -1699,6 +1699,9 @@ function setupGutter(gutterId,targetId,hKey,defH){
 }
 
 /* ═══════════════ NIVEL 3 · datos financieros (mock realista) ═══════════════ */
+/* token inyectado por el backend al gatear la ruta (vacío en local/mock) */
+const PANEL_TOKEN = (function(){ var t="__PANEL_TOKEN__"; return t.indexOf("PANEL_TOKEN")>=0 ? "" : t; })();
+let FIN_REAL = false;
 const clpM=n=>'$'+(n/1e6).toFixed(1).replace('.',',')+'M';
 const FIN={
   ingresos:10965610, honorarios:3719196, gastos:1707021, ebitda:5539393, ebitdaPct:23, prevIngresos:10120000,
@@ -1742,12 +1745,15 @@ function bEbitda(){
         <tr><td><b>EBITDA (${FIN.ebitdaPct}%)</b></td><td class="n g"><b>${clp(FIN.ebitda)}</b></td></tr></table></div>` };
 }
 function bCaja(){
+  const metodoTab = (FIN_REAL && !FIN.metodos)
+    ? `<div class="sech">Por método de pago</div><div class="wempty" style="padding:14px">Desglose por método: ver módulo Caja (<b>/cmc/mensual</b>)</div>`
+    : `<div class="sech">Por método de pago${FIN_REAL?' (referencial)':''}</div><table class="fintab">${FIN.metodos.map(([m,v])=>`<tr><td>${m}</td><td class="n">${clp(v)}</td></tr>`).join('')}</table>`;
   return {color:'var(--blue)', title:'Pagos por caja', sub:`Medilink = Caja · diferencia $0`,
     bodyHTML:`<div class="findash"><div class="fk">
       <div class="b"><div class="v">${clp(FIN.ingresos)}</div><div class="l">Medilink</div></div>
       <div class="b"><div class="v">${clp(FIN.ingresos)}</div><div class="l">Caja diaria</div></div>
       <div class="b"><div class="v g">$0</div><div class="l">Diferencia</div></div></div>
-      <div class="sech">Por método de pago</div><table class="fintab">${FIN.metodos.map(([m,v])=>`<tr><td>${m}</td><td class="n">${clp(v)}</td></tr>`).join('')}</table></div>` };
+      ${metodoTab}</div>` };
 }
 function bComp(){ const d=FIN.ingresos-FIN.prevIngresos;
   return {color:'var(--purple)', title:'Comparador de periodos', sub:`Mayo vs abril · ${d>=0?'+':''}${clp(d)}`,
@@ -1788,13 +1794,41 @@ function renderN3Counts(){
   $('finIn').textContent=clpM(FIN.ingresos); $('finOut').textContent=clpM(FIN.honorarios+FIN.gastos);
   $('finAlert').textContent=ITAU.filter(t=>!t.match).length;
 }
+/* — conexión a datos REALES (Fase 1: Nivel 3 financiero vía /api/cmc/ebitda) — */
+function aggArea(profs){
+  const m={}; profs.forEach(p=>{ const a=p.especialidad||'Otros'; m[a]=(m[a]||0)+(p.ingreso||0); });
+  return Object.entries(m).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,9);
+}
+function markFinReal(){
+  const h=document.querySelector('#nivel3 .n2-head .hint'); if(!h) return;
+  h.innerHTML = FIN_REAL
+    ? `● datos REALES ${FIN.mes||''} (ingresos · EBITDA · comparador) · conciliación/cartola: fuente pendiente`
+    : 'DEMO · datos ficticios · conciliación de transferencias';
+  h.style.color = FIN_REAL ? 'var(--green)' : 'var(--mute)';
+  h.style.fontWeight = '800';
+}
+async function loadFinanciero(){
+  try{
+    const url='/api/cmc/ebitda'+(PANEL_TOKEN?('?token='+encodeURIComponent(PANEL_TOKEN)):'');
+    const r=await fetch(url,{credentials:'same-origin'}); if(!r.ok) throw 0;
+    const d=await r.json(); if(!d || !d.ingresos) throw 0;
+    FIN.ingresos=d.ingresos; FIN.ebitda=d.ebitda; FIN.ebitdaPct=d.margen_ebitda_pct||0;
+    FIN.honorarios=d.honorarios_bruto; FIN.gastos=d.gastos; FIN.mes=d.mes;
+    const ev=d.evolucion||[], prev=ev.length>=2?ev[ev.length-2]:null;
+    FIN.prevIngresos = prev? prev.ingresos : Math.round(d.ingresos*0.95);
+    const pa=aggArea(d.profesionales||[]); if(pa.length) FIN.porArea=pa;
+    FIN.metodos=null; FIN_REAL=true;
+    renderN3Counts();
+  }catch(e){ FIN_REAL=false; }
+  markFinReal();
+}
 function setupNivel3(){
   renderN3Counts();
   wireN2Card('finIngresos',bIngresos); wireN2Card('finEbitda',bEbitda);
   wireN2Card('finCaja',bCaja); wireN2Card('finComp',bComp);
   wireN2Card('finConcil',bConcil); wireN2Card('finItau',bItau);
 }
-document.addEventListener('DOMContentLoaded',()=>{ setupTopbar(); setupResizers(); setupColumnCollapse(); setupNivel2(); setupNivel3(); lay2.setup(); lay3.setup(); wireCardCollapse(); setupGutter('levelGutter','grid','panelDiaV1N1h',()=>Math.round(innerHeight-48)); setupGutter('levelGutter2','nivel2','panelDiaV1N2h',null); updateDateLabel(); refresh(true); });
+document.addEventListener('DOMContentLoaded',()=>{ setupTopbar(); setupResizers(); setupColumnCollapse(); setupNivel2(); setupNivel3(); loadFinanciero(); lay2.setup(); lay3.setup(); wireCardCollapse(); setupGutter('levelGutter','grid','panelDiaV1N1h',()=>Math.round(innerHeight-48)); setupGutter('levelGutter2','nivel2','panelDiaV1N2h',null); updateDateLabel(); refresh(true); });
 </script>
 </body>
 </html>

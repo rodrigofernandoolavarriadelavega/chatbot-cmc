@@ -2786,17 +2786,25 @@ def meulen_dashboard_page():
 
 
 @app.get("/alma/panel-dia", response_class=HTMLResponse)
-def alma_panel_dia_demo():
-    """Mockup del Panel del Día (v1) — datos FICTICIOS, para revisión de amigos.
+def alma_panel_dia_demo(token: str | None = Query(None),
+                        cmc_session: str | None = Cookie(None)):
+    """Panel del Día (v1) — GATEADO con token de Alma (datos reales conectándose).
 
-    Página pública (no expone datos reales: todo es mock embebido en el HTML).
-    Se re-lee desde disco con headers no-cache para reflejar cambios sin restart.
+    Antes era público (mock para amigos). Ahora exige auth porque el Nivel 3
+    (financiero) y, a futuro, el Nivel 2 (chat) consumen datos reales. Sin auth
+    el frontend cae a mock; con token/cookie válidos inyectamos el token y el
+    frontend llama /api/cmc/ebitda (real). Se re-lee de disco (no-cache).
     """
+    from admin_routes import _verify_cookie, _is_admin_token
+    authed_token = token if (token and _is_admin_token(token)) else None
+    if not (authed_token or (cmc_session and _verify_cookie(cmc_session))):
+        return RedirectResponse(url="/admin/login", status_code=302)
     tpl_path = _TEMPLATE_DIR / "alma_panel_dia_v1.html"
     if not tpl_path.exists():
         raise HTTPException(404, "Panel del Día no disponible")
+    html = tpl_path.read_text(encoding="utf-8").replace("__PANEL_TOKEN__", authed_token or "")
     return HTMLResponse(
-        content=tpl_path.read_text(encoding="utf-8"),
+        content=html,
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
