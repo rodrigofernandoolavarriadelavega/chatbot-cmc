@@ -167,9 +167,15 @@ def register_panel_dia_routes(app):
                 "SELECT id_profesional, id_paciente, SUM(monto) FROM bi_pagos_caja WHERE fecha=? "
                 "GROUP BY id_profesional, id_paciente", (fecha,)).fetchall():
                 pagos[(idp, idpac)] = int(monto or 0)
-            prev: dict = {}
-            for idpac, pv in c.execute("SELECT id_paciente, prevision FROM pagos_cmc WHERE fecha=?", (fecha,)).fetchall():
-                prev[idpac] = "fonasa" if "fonasa" in (pv or "").lower() else "particular"
+            # previsión (Fonasa/particular) por RUT — pagos_cmc no tiene id_paciente, se cruza por nombre↔citas no es fiable;
+            # se usa solo para los contadores, no para la valorización (que es por profesional).
+            prev_rut: dict = {}
+            try:
+                for nom, pv in c.execute("SELECT paciente_nombre, prevision FROM pagos_cmc WHERE fecha=?", (fecha,)).fetchall():
+                    if nom:
+                        prev_rut[" ".join(str(nom).split()).lower()] = "fonasa" if "fonasa" in (pv or "").lower() else "particular"
+            except Exception:
+                prev_rut = {}
             # ticket promedio 90 días por profesional
             desde = (date.fromisoformat(fecha) - timedelta(days=90)).strftime("%Y-%m-%d")
             ticket: dict = {}
@@ -182,10 +188,10 @@ def register_panel_dia_routes(app):
                 agenda = []
                 for cita in ag:
                     pago = pagos.get((idp, cita["id_pac"]), 0)
+                    tipo = prev_rut.get(cita["paciente"].lower(), "particular")
                     agenda.append({"hora": cita["hora"], "paciente": cita["paciente"],
                                    "estado": "atendido" if pago > 0 else "agendado",
-                                   "monto": pago, "esperado": tk,
-                                   "tipo": prev.get(cita["id_pac"], "particular")})
+                                   "monto": pago, "esperado": tk, "tipo": tipo})
                 profs.append({
                     "id": idp, "nombre": info.get("nombre", f"Prof {idp}"),
                     "area": _area_key(info.get("especialidad", "")),
