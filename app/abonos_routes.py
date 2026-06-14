@@ -215,8 +215,25 @@ async def post_abono(request: Request,
     monto_abono  = int(body.get("monto_abono")  or 0)
     saldo = max(precio_total - monto_abono, 0)
 
+    # Método aceptado en pagos_cmc (imed no es válido ahí → transferencia)
+    metodo_pago_pagos = metodo if metodo in ("efectivo", "transferencia", "debito", "credito") else "transferencia"
+    area_v        = (body.get("area") or "").strip()
+    folio_v       = (body.get("folio") or "").strip()
+    cod_trans_v   = (body.get("codigo_transferencia") or "").strip()
+    id_cita_v     = (body.get("id_cita") or "").strip()
+    creado_por_v  = (body.get("creado_por") or "recepcion").strip()
+    rut_v         = (body.get("rut") or "").strip()
+    proc_v        = (body.get("procedimiento") or "").strip()
+
     from session import db as _conn
     with _conn() as conn:
+        # Garantizar que pagos_cmc exista antes del INSERT vinculado
+        try:
+            import pagos_routes as _pr
+            _pr.ensure_pagos_table()
+        except Exception:
+            pass
+
         cur = conn.execute(
             """INSERT INTO abonos_cmc
                (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
@@ -225,25 +242,52 @@ async def post_abono(request: Request,
                 creado_por, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
             (
-                fecha, hora, paciente_nombre, (body.get("rut") or "").strip(),
+                fecha, hora, paciente_nombre, rut_v,
                 id_profesional, profesional,
-                (body.get("area") or "").strip(),
-                (body.get("procedimiento") or "").strip(),
+                area_v, proc_v,
                 (body.get("fecha_cita") or "").strip(),
                 precio_total, monto_abono, saldo,
-                metodo, (body.get("folio") or "").strip(),
-                (body.get("codigo_transferencia") or "").strip(),
-                estado, (body.get("id_cita") or "").strip(),
+                metodo, folio_v, cod_trans_v,
+                estado, id_cita_v,
                 (body.get("nota") or "").strip(),
-                (body.get("creado_por") or "recepcion").strip(),
+                creado_por_v,
             )
         )
         new_id = cur.lastrowid
+
+        # REQ-2: crear pago vinculado por monto_abono (lo que entró a caja hoy).
+        # Anti-doble-conteo: pago_abono=monto_abono; cuando se aplica la cita,
+        # aplicar_abono crea OTRO pago por el SALDO. monto_abono + saldo == precio_total.
+        pago_id = None
+        if monto_abono > 0:
+            pcur = conn.execute(
+                """INSERT INTO pagos_cmc
+                   (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
+                    area, prevision, copago, bonificacion, metodo_pago, folio,
+                    codigo_transferencia, procedimiento, origen, id_cita,
+                    creado_por, canal, fuente, created_at, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
+                (
+                    fecha, hora, paciente_nombre, rut_v,
+                    id_profesional, profesional,
+                    area_v, "particular",
+                    monto_abono, 0, metodo_pago_pagos, folio_v,
+                    cod_trans_v,
+                    "abono anticipado", "abono", id_cita_v,
+                    creado_por_v, "presencial", "",
+                )
+            )
+            pago_id = pcur.lastrowid
+            conn.execute(
+                "UPDATE abonos_cmc SET pago_id=? WHERE id=?",
+                (pago_id, new_id)
+            )
+
         conn.commit()
 
-    log.info("abonos.post id=%d paciente=%s area=%s abono=%d saldo=%d estado=%s",
-             new_id, paciente_nombre, body.get("area", ""), monto_abono, saldo, estado)
-    return {"ok": True, "id": new_id}
+    log.info("abonos.post id=%d pago_id=%s paciente=%s area=%s abono=%d saldo=%d estado=%s",
+             new_id, pago_id, paciente_nombre, area_v, monto_abono, saldo, estado)
+    return {"ok": True, "id": new_id, "pago_id": pago_id}
 
 
 # ── Listar abonos ────────────────────────────────────────────────────────────
@@ -367,6 +411,33 @@ async def put_abono(abono_id: int, request: Request,
              cur["codigo_transferencia"], cur["estado"], cur["id_cita"],
              cur["nota"], abono_id)
         )
+
+        # REQ-2: si hay pago vinculado (pago_id del abono original), actualizar su copago y método
+        pago_id_actual = cur.get("pago_id") or row.get("pago_id")  # type: ignore[attr-defined]
+        if pago_id_actual:
+            metodo_pago_pagos = cur["metodo_pago"] if cur["metodo_pago"] in ("efectivo", "transferencia", "debito", "credito") else "transferencia"
+            try:
+                import pagos_routes as _pr
+                _pr.ensure_pagos_table()
+            except Exception:
+                pass
+            conn.execute(
+                """UPDATE pagos_cmc SET
+                     copago=?, metodo_pago=?, folio=?, paciente_nombre=?,
+                     rut=?, profesional=?, area=?, updated_at=datetime('now')
+                   WHERE id=?""",
+                (
+                    int(cur["monto_abono"] or 0),
+                    metodo_pago_pagos,
+                    cur["folio"] or "",
+                    cur["paciente_nombre"],
+                    cur["rut"] or "",
+                    cur["profesional"] or "",
+                    cur["area"] or "",
+                    pago_id_actual,
+                )
+            )
+
         conn.commit()
     return {"ok": True, "id": abono_id, "saldo": cur["saldo"]}
 
@@ -405,17 +476,23 @@ async def aplicar_abono(abono_id: int, request: Request,
         crear_pago = body.get("crear_pago", True)
         saldo = int(ab.get("saldo") or 0)
 
-        if crear_pago and saldo > 0 and not pago_id:
+        # Si ya hay pago_id, verificar si apunta al anticipo (origen='abono') o al saldo ya cobrado.
+        # Si apunta al anticipo, aún hay que crear el pago del saldo; si apunta al saldo, ya se cobró.
+        pago_id_es_anticipo = False
+        if pago_id:
+            pg_row = conn.execute(
+                "SELECT origen FROM pagos_cmc WHERE id=?", (pago_id,)
+            ).fetchone()
+            if pg_row and dict(pg_row).get("origen") == "abono":
+                pago_id_es_anticipo = True  # el pago_id actual es del anticipo → crear pago saldo
+
+        if crear_pago and saldo > 0 and (not pago_id or pago_id_es_anticipo):
             metodo_saldo = (body.get("metodo_saldo") or ab.get("metodo_pago") or "efectivo").lower()
             if metodo_saldo == "imed":          # pagos_cmc no maneja 'imed' como método
                 metodo_saldo = "transferencia"
             if metodo_saldo not in ("efectivo", "transferencia", "debito", "credito"):
                 metodo_saldo = "efectivo"
             now_cl = _now_cl()
-            try:
-                from abonos_routes import ensure_abonos_table  # noqa (self ref guard)
-            except Exception:
-                pass
             # Inserta en pagos_cmc reutilizando su esquema (saldo = lo que entró hoy a caja)
             try:
                 import pagos_routes  # garantiza tabla pagos_cmc
@@ -462,6 +539,24 @@ async def delete_abono(abono_id: int, request: Request,
     ensure_abonos_table()
     from session import db as _conn
     with _conn() as conn:
+        row = conn.execute(
+            "SELECT pago_id, estado FROM abonos_cmc WHERE id = ?", (abono_id,)
+        ).fetchone()
+        if row:
+            ab = dict(row)
+            # REQ-2: borrar pago vinculado solo si el abono aún no fue aplicado.
+            # Si ya fue aplicado, el pago del saldo es real — NO borrar.
+            # Solo borramos el pago del anticipo (origen='abono') cuando el abono se cancela antes de la cita.
+            if ab.get("pago_id") and ab.get("estado") not in ("aplicado",):
+                try:
+                    import pagos_routes as _pr
+                    _pr.ensure_pagos_table()
+                except Exception:
+                    pass
+                conn.execute(
+                    "DELETE FROM pagos_cmc WHERE id = ? AND origen = 'abono'",
+                    (ab["pago_id"],)
+                )
         conn.execute("DELETE FROM abonos_cmc WHERE id = ?", (abono_id,))
         conn.commit()
     return {"ok": True}

@@ -9,149 +9,268 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0c3556;
-    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
-    --red:#e84545; --green:#23c25e; --amber:#f0a821; --violet:#7b61c9;
-    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  :root {
+    --aqua:   #4FBECE;
+    --aqua-s: #e8f8fb;
+    --blue:   #1172AB;
+    --navy:   #0F3F68;
+    --navy2:  #0c3556;
+    --bg:     #F7FBFD;
+    --border: #d6e4ec;
+    --text:   #0F3F68;
+    --mute:   #62788a;
+    --red:    #e84545;
+    --green:  #23c25e;
+    --sh-sm:  0 1px 3px rgba(15,63,104,.08);
+    --sh-md:  0 8px 30px rgba(15,63,104,.14);
   }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0}
-  body{font-family:'Montserrat',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: 'Montserrat', -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
 
   /* Topbar */
-  .pg-topbar{display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid var(--border);
-    padding:0 20px;height:54px;box-shadow:var(--sh-sm);position:sticky;top:0;z-index:20}
-  .pg-topbar h1{font-size:15px;font-weight:700;margin:0;color:var(--navy);display:flex;align-items:center;gap:8px}
-  .pg-topbar h1 .ico{width:20px;height:20px;color:var(--aqua)}
-  .pg-topbar .spacer{flex:1}
-  .btn-primary{display:inline-flex;align-items:center;gap:6px;background:var(--aqua);color:#fff;border:0;
-    border-radius:9px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
-    transition:all .15s;box-shadow:0 2px 8px rgba(79,190,206,.3)}
-  .btn-primary:hover{background:var(--blue);box-shadow:0 4px 14px rgba(17,114,171,.35)}
-  .btn-primary:disabled{opacity:.55;cursor:not-allowed}
-  .btn-primary svg{width:16px;height:16px;flex-shrink:0}
-  .btn-secondary{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--blue);
-    border:1px solid var(--border);border-radius:9px;padding:8px 14px;font-family:inherit;font-size:13px;
-    font-weight:700;cursor:pointer;transition:all .15s}
-  .btn-secondary:hover{background:var(--aqua-s);border-color:var(--aqua)}
-  .btn-secondary svg{width:16px;height:16px}
+  .pg-topbar {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 0 20px; height: 54px;
+    box-shadow: var(--sh-sm); position: sticky; top: 0; z-index: 20;
+  }
+  .pg-topbar h1 { font-size: 15px; font-weight: 700; margin: 0; color: var(--navy); display: flex; align-items: center; gap: 8px; }
+  .pg-topbar h1 .ico { width: 20px; height: 20px; color: var(--aqua); }
+  .pg-topbar .spacer { flex: 1; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--aqua); color: #fff; border: 0;
+    border-radius: 9px; padding: 8px 16px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s; box-shadow: 0 2px 8px rgba(79,190,206,.3);
+  }
+  .btn-primary:hover { background: var(--blue); box-shadow: 0 4px 14px rgba(17,114,171,.35); }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-primary svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff; color: var(--blue); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 14px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-secondary:hover { background: var(--aqua-s); border-color: var(--aqua); }
+  .btn-secondary svg { width: 16px; height: 16px; }
 
-  /* Layout */
-  .wrap{padding:18px 20px 60px;max-width:1200px;margin:0 auto}
+  /* KPI strip */
+  .kpi-strip { display: flex; gap: 12px; padding: 14px 20px; flex-wrap: wrap; }
+  .kpi { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px 18px; min-width: 140px; box-shadow: var(--sh-sm); flex: 1; }
+  .kpi .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--mute); margin-bottom: 4px; }
+  .kpi .value { font-size: 22px; font-weight: 800; color: var(--navy); }
+  .kpi .value.aqua { color: var(--aqua); }
+  .kpi .value.blue { color: var(--blue); }
 
-  /* Cards resumen */
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
-  .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:var(--sh-sm)}
-  .card .lbl{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
-  .card .val{font-size:24px;font-weight:800;color:var(--navy);margin-top:4px;line-height:1.1}
-  .card .sub{font-size:11px;color:var(--mute);margin-top:3px}
-  .card.accent{background:linear-gradient(135deg,var(--navy),var(--blue));border:0;color:#fff}
-  .card.accent .lbl,.card.accent .sub{color:rgba(255,255,255,.78)}
-  .card.accent .val{color:#fff}
+  /* Barra de filtros — mismo patron que Pagos */
+  .abonos-filtros {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 0 20px 12px; padding: 0;
+  }
+  #filtroBuscar {
+    flex: 1; min-width: 200px; border: 1.5px solid var(--border); border-radius: 22px;
+    padding: 9px 16px; font-size: 13.5px; outline: none; color: var(--navy); background: #fff;
+  }
+  #filtroBuscar:focus { border-color: var(--aqua); }
+  .filtro-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fchip {
+    border: 1.5px solid var(--border); background: #fff; border-radius: 18px;
+    padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: #5b7290;
+  }
+  .fchip:hover { border-color: var(--aqua); }
+  .fchip.on { background: var(--navy); color: #fff; border-color: transparent; }
+  .filtro-count { font-size: 12px; color: #5b7290; font-weight: 600; white-space: nowrap; }
 
-  /* Filtros */
-  .filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;align-items:center}
-  .chip{border:1px solid var(--border);background:#fff;color:var(--navy);border-radius:20px;
-    padding:6px 13px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .14s}
-  .chip:hover{background:var(--aqua-s);border-color:var(--aqua)}
-  .chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .chip .n{opacity:.7;margin-left:4px;font-weight:700}
+  /* Tabla planilla */
+  .th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+  .th-sort:hover { color: var(--aqua); }
+  .th-sort.sort-asc::after  { content: ' \25B2'; font-size: 9px; opacity: .8; }
+  .th-sort.sort-desc::after { content: ' \25BC'; font-size: 9px; opacity: .8; }
+  .th-filtro { position: relative; }
+  .col-funnel { display: inline-block; margin-left: 5px; font-size: 11px; opacity: .55; cursor: pointer; padding: 0 2px; border-radius: 4px; }
+  .col-funnel:hover { opacity: 1; background: rgba(255,255,255,.2); }
+  .th-filtro.col-activa .col-funnel { opacity: 1; color: var(--aqua); }
+  .col-menu {
+    position: absolute; top: 100%; left: 0; z-index: 50; margin-top: 4px;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15,63,104,.18); min-width: 170px; max-height: 320px;
+    overflow-y: auto; padding: 5px; text-transform: none; letter-spacing: 0; font-weight: 500;
+  }
+  .cm-item { padding: 8px 11px; font-size: 13px; color: var(--navy); border-radius: 7px; cursor: pointer; white-space: nowrap; }
+  .cm-item:hover { background: var(--aqua-s); }
+  .cm-item.on { background: var(--navy); color: #fff; font-weight: 700; }
 
-  /* Tabla */
-  .tbl-card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh-sm);overflow:hidden}
-  table{width:100%;border-collapse:collapse}
-  thead th{font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.03em;
-    text-align:left;padding:11px 14px;background:#fbfdfe;border-bottom:1px solid var(--border);white-space:nowrap}
-  tbody td{padding:11px 14px;border-bottom:1px solid #eef4f8;font-size:12.5px;vertical-align:middle}
-  tbody tr:last-child td{border-bottom:0}
-  tbody tr:hover{background:#fafdff}
-  .pac{font-weight:700;color:var(--navy)}
-  .rut{font-size:11px;color:var(--mute)}
-  .money{font-weight:700;font-variant-numeric:tabular-nums}
-  .saldo{color:var(--blue)}
-  .num{text-align:right;font-variant-numeric:tabular-nums}
-  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
-  .b-pendiente{background:#fff4e0;color:#9a6a05}
-  .b-aplicado{background:#e3f9ec;color:#147a3c}
-  .b-reembolsado{background:#eaf2fb;color:#1763b0}
-  .b-trasladado{background:#f0ecfb;color:#5a3fb0}
-  .b-perdido{background:#fdeaea;color:#b22}
-  .pres{display:inline-block;padding:2px 8px;border-radius:7px;background:var(--aqua-s);color:var(--blue);
-    font-size:11px;font-weight:700}
-  .acts{display:flex;gap:5px;justify-content:flex-end}
-  .ic-btn{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;
-    border:1px solid var(--border);background:#fff;color:var(--blue);cursor:pointer;transition:all .14s}
-  .ic-btn:hover{background:var(--aqua-s);border-color:var(--aqua)}
-  .ic-btn.go{color:#fff;background:var(--green);border-color:var(--green)}
-  .ic-btn.go:hover{filter:brightness(1.06)}
-  .ic-btn.del:hover{background:#fdecec;border-color:var(--red);color:var(--red)}
-  .ic-btn svg{width:15px;height:15px}
-  .empty{padding:48px 20px;text-align:center;color:var(--mute)}
-  .empty svg{width:46px;height:46px;color:var(--border);margin-bottom:8px}
+  .table-wrap {
+    margin: 0 20px 24px;
+    background: #fff; border-radius: 14px; border: 1px solid var(--border);
+    box-shadow: var(--sh-sm); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+  col.c-num   { width: 28px; }
+  col.c-hora  { width: 60px; }
+  col.c-pac   { width: 160px; }
+  col.c-rut   { width: 90px; }
+  col.c-prof  { width: 140px; }
+  col.c-area  { width: 110px; }
+  col.c-total { width: 86px; }
+  col.c-abono { width: 86px; }
+  col.c-saldo { width: 86px; }
+  col.c-met   { width: 90px; }
+  col.c-est   { width: 90px; }
+  col.c-cita  { width: 80px; }
+  col.c-act   { width: 80px; }
+
+  thead th {
+    background: linear-gradient(180deg, var(--navy), var(--navy2));
+    color: #b8d4e8; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em;
+    padding: 7px 6px; text-align: left; white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody tr:hover { background: var(--aqua-s); }
+  tbody td {
+    padding: 6px 6px; vertical-align: middle;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 0; font-size: 11.5px;
+  }
+  tbody td:last-child { overflow: visible; white-space: nowrap; max-width: none; }
+
+  .pac { font-weight: 700; color: var(--navy); }
+  .rut-sub { font-size: 10px; color: var(--mute); }
+  .money { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .saldo-val { color: var(--blue); font-weight: 700; }
+
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  .b-pendiente   { background: #fff4e0; color: #9a6a05; }
+  .b-aplicado    { background: #e3f9ec; color: #147a3c; }
+  .b-reembolsado { background: #eaf2fb; color: #1763b0; }
+  .b-trasladado  { background: #f0ecfb; color: #5a3fb0; }
+  .b-perdido     { background: #fdeaea; color: #b22; }
+  .badge-abono   { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 700; background: var(--aqua-s); color: var(--blue); margin-left: 4px; }
+
+  .pres { display: inline-block; padding: 2px 7px; border-radius: 7px; background: var(--aqua-s); color: var(--blue); font-size: 10px; font-weight: 700; }
+
+  .td-actions { display: flex; gap: 4px; }
+  .btn-icon {
+    background: none; border: 1px solid var(--border); border-radius: 7px;
+    padding: 5px 7px; cursor: pointer; color: var(--mute);
+    transition: all .13s; display: grid; place-items: center;
+  }
+  .btn-icon:hover { background: var(--aqua-s); border-color: var(--aqua); color: var(--blue); }
+  .btn-icon.del:hover { background: #fff0f0; border-color: var(--red); color: var(--red); }
+  .btn-icon.go { background: #e3f9ec; border-color: var(--green); color: #147a3c; }
+  .btn-icon.go:hover { background: #c7f5d9; }
+  .btn-icon svg { width: 14px; height: 14px; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--mute); font-size: 13px; font-weight: 600; }
 
   /* Modal */
-  .modal-bg{position:fixed;inset:0;background:rgba(15,63,104,.42);backdrop-filter:blur(2px);
-    display:none;align-items:flex-start;justify-content:center;z-index:60;padding:30px 14px;overflow-y:auto}
-  .modal-bg.open{display:flex}
-  .modal{background:#fff;border-radius:18px;box-shadow:var(--sh-md);width:100%;max-width:560px;
-    padding:22px 24px 24px;position:relative}
-  .modal h2{font-size:16px;font-weight:800;color:var(--navy);margin:0 0 4px}
-  .modal .msub{font-size:12px;color:var(--mute);margin:0 0 16px}
-  .modal-close{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
-    background:#fff;color:var(--mute);cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .modal-close:hover{background:#fdecec;color:var(--red);border-color:var(--red)}
-  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
-  .field{display:flex;flex-direction:column;gap:5px}
-  .field.full{grid-column:1/-1}
-  .field label{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.03em}
-  .field input,.field select,.field textarea{font-family:inherit;font-size:13px;color:var(--navy);
-    border:1px solid var(--border);border-radius:9px;padding:9px 11px;background:#fff;width:100%}
-  .field input:focus,.field select:focus,.field textarea:focus{outline:0;border-color:var(--aqua);
-    box-shadow:0 0 0 3px var(--aqua-s)}
-  .field .hint{font-size:11px;color:var(--mute)}
-  .saldo-box{grid-column:1/-1;background:var(--aqua-s);border:1px solid var(--aqua);border-radius:11px;
-    padding:11px 14px;display:flex;justify-content:space-between;align-items:center}
-  .saldo-box .k{font-size:12px;font-weight:700;color:var(--navy)}
-  .saldo-box .v{font-size:20px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums}
-  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
-  .btn-cancel{background:#fff;color:var(--mute);border:1px solid var(--border);border-radius:9px;
-    padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
-  .btn-cancel:hover{background:#f5f8fa}
-
-  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy);
-    color:#fff;padding:11px 20px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:var(--sh-md);
-    z-index:90;opacity:0;transition:all .3s}
-  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-  .toast.err{background:var(--red)}
-
-  @media(max-width:640px){
-    .form-grid{grid-template-columns:1fr}
-    thead{display:none}
-    tbody td{display:block;padding:6px 14px;border:0}
-    tbody tr{display:block;border-bottom:1px solid var(--border);padding:8px 0}
-    tbody td.num{text-align:left}
-    .acts{justify-content:flex-start;margin-top:4px}
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,63,104,.45); z-index: 100;
+    align-items: flex-start; justify-content: center;
+    padding: 30px 16px; overflow-y: auto;
   }
-  /* Modo SOLO LECTURA (perfil de profesional). Barrera real en el servidor (401 en escritura). */
-  body.readonly #btnNuevo,
-  body.readonly .acts { display: none !important; }
-  body.readonly::before { content: "Solo lectura"; position: fixed; top: 10px; right: 14px; z-index: 9999;
-    background: #0F3F68; color: #fff; font: 700 11px/1 'Montserrat',sans-serif; letter-spacing: .04em;
-    padding: 7px 11px; border-radius: 8px; box-shadow: 0 4px 14px rgba(15,63,104,.25); }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 18px;
+    box-shadow: var(--sh-md); width: 100%; max-width: 600px;
+    padding: 28px; position: relative;
+  }
+  .modal h2 { font-size: 17px; font-weight: 800; color: var(--navy); margin: 0 0 4px; }
+  .modal .msub { font-size: 12px; color: var(--mute); margin: 0 0 20px; }
+  .modal-close {
+    position: absolute; top: 18px; right: 18px;
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    width: 32px; height: 32px; display: grid; place-items: center;
+    cursor: pointer; color: var(--mute); transition: all .13s;
+  }
+  .modal-close:hover { background: #fff0f0; border-color: var(--red); color: var(--red); }
+  .modal-close svg { width: 16px; height: 16px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .field label { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); margin-bottom: 5px; }
+  .field input, .field select, .field textarea {
+    width: 100%; font-family: inherit; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 12px; color: var(--navy); background: #fff;
+    transition: border-color .13s; outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--aqua); box-shadow: 0 0 0 3px rgba(79,190,206,.15);
+  }
+  .field .hint { font-size: 10px; color: var(--mute); margin-top: 3px; }
+  .saldo-box {
+    grid-column: 1 / -1; background: var(--aqua-s); border: 1px solid var(--aqua);
+    border-radius: 11px; padding: 11px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .saldo-box .k { font-size: 12px; font-weight: 700; color: var(--navy); }
+  .saldo-box .v { font-size: 20px; font-weight: 800; color: var(--blue); font-variant-numeric: tabular-nums; }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+  .btn-cancel {
+    background: none; border: 1px solid var(--border); color: var(--mute);
+    border-radius: 9px; padding: 9px 18px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .13s;
+  }
+  .btn-cancel:hover { background: #f5f8fa; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    background: var(--navy); color: #fff; border-radius: 12px;
+    padding: 12px 20px; font-size: 13px; font-weight: 600;
+    box-shadow: var(--sh-md);
+    transform: translateY(80px); opacity: 0;
+    transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .25s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: #1a7a42; }
+  .toast.error   { background: var(--red); }
+
+  /* Modo solo lectura (perfil de profesional) */
+  body.readonly #btnNuevo, body.readonly .td-actions { display: none !important; }
+  body.readonly::before {
+    content: "Solo lectura"; position: fixed; top: 10px; right: 14px; z-index: 9999;
+    background: var(--navy); color: #fff; font: 700 11px/1 'Montserrat',sans-serif;
+    letter-spacing: .04em; padding: 7px 11px; border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(15,63,104,.25);
+  }
+
+  @media (max-width: 900px) {
+    .table-wrap { overflow-x: auto; }
+    table { table-layout: auto; min-width: 900px; }
+  }
+  @media (max-width: 640px) {
+    .kpi-strip { gap: 8px; padding: 12px; }
+    .kpi { min-width: 120px; }
+    .pg-topbar { padding: 0 12px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .full { grid-column: 1; }
+    .abonos-filtros { margin: 0 12px 10px; }
+  }
 </style>
 </head>
 <body>
 
+<!-- Topbar -->
 <div class="pg-topbar">
   <h1>
     <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     Abonos anticipados
   </h1>
   <div class="spacer"></div>
-  <button class="btn-secondary" id="btnExport" title="Descargar como Excel/CSV">
+  <button class="btn-secondary" id="btnExport" title="Descargar como CSV">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-    Excel
+    CSV
   </button>
   <button class="btn-primary" id="btnNuevo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
@@ -159,36 +278,68 @@
   </button>
 </div>
 
-<div class="wrap">
-  <div class="cards" id="cards"></div>
-  <div class="filters" id="filters"></div>
-
-  <div class="tbl-card">
-    <table>
-      <thead>
-        <tr>
-          <th>Paciente</th><th>Prestación</th><th>Cita</th>
-          <th class="num">Total</th><th class="num">Abono</th><th class="num">Saldo</th>
-          <th>Método</th><th>Estado</th><th></th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-    <div class="empty" id="empty" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <div>Sin abonos registrados con este filtro.</div>
-    </div>
-  </div>
+<!-- KPI strip -->
+<div class="kpi-strip" id="kpiStrip">
+  <div class="kpi"><div class="label">Pendientes</div><div class="value aqua" id="kpiN">--</div></div>
+  <div class="kpi"><div class="label">Monto retenido</div><div class="value" id="kpiMonto">--</div></div>
+  <div class="kpi"><div class="label">Saldo por cobrar</div><div class="value blue" id="kpiSaldo">--</div></div>
+  <div class="kpi"><div class="label">Aplicados / Perdidos</div><div class="value" id="kpiAplPerdi">--</div></div>
 </div>
 
-<!-- Modal crear/editar -->
+<!-- Barra de filtros -->
+<div class="abonos-filtros" id="abonosFiltros">
+  <input type="text" id="filtroBuscar" placeholder="Buscar nombre, RUT, prestacion, profesional..." autocomplete="off">
+  <div class="filtro-chips" id="filtroEstados">
+    <button class="fchip on" data-est="">Todos</button>
+    <button class="fchip" data-est="pendiente">Pendiente</button>
+    <button class="fchip" data-est="aplicado">Aplicado</button>
+    <button class="fchip" data-est="reembolsado">Reembolsado</button>
+    <button class="fchip" data-est="trasladado">Trasladado</button>
+    <button class="fchip" data-est="perdido">Perdido</button>
+  </div>
+  <span class="filtro-count" id="filtroCount"></span>
+</div>
+
+<!-- Tabla planilla -->
+<div class="table-wrap">
+  <table id="tablaAbonos">
+    <colgroup>
+      <col class="c-num"><col class="c-hora"><col class="c-pac"><col class="c-rut">
+      <col class="c-prof"><col class="c-area">
+      <col class="c-total"><col class="c-abono"><col class="c-saldo">
+      <col class="c-met"><col class="c-est"><col class="c-cita"><col class="c-act">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th class="th-sort" data-sort="hora">Hora</th>
+        <th class="th-sort" data-sort="paciente_nombre">Paciente</th>
+        <th class="th-sort" data-sort="rut">RUT</th>
+        <th class="th-sort th-filtro" data-sort="profesional" data-col="profesional">Profesional</th>
+        <th class="th-sort th-filtro" data-sort="area" data-col="area">Prestacion</th>
+        <th class="th-sort" data-sort="precio_total">Total</th>
+        <th class="th-sort" data-sort="monto_abono">Abono</th>
+        <th class="th-sort" data-sort="saldo">Saldo</th>
+        <th class="th-sort th-filtro" data-sort="metodo_pago" data-col="metodo_pago">Metodo</th>
+        <th class="th-sort th-filtro" data-sort="estado" data-col="estado">Estado</th>
+        <th>Cita futura</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tablaAbonosBody">
+      <tr><td colspan="13" class="empty">Cargando...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal crear/editar abono -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <button class="modal-close" id="modalClose">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="16" height="16"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
     <h2 id="modalTitle">Registrar abono</h2>
-    <p class="msub">El abono se descuenta del total el día de la atención.</p>
+    <p class="msub">El abono se descuenta del total el dia de la atencion.</p>
     <div class="form-grid">
       <div class="field full">
         <label>Paciente</label>
@@ -199,36 +350,36 @@
         <input type="text" id="fRut" placeholder="12.345.678-9" autocomplete="off">
       </div>
       <div class="field">
-        <label>Prestación</label>
-        <select id="fArea"><option value="">— Seleccionar —</option></select>
+        <label>Prestacion</label>
+        <select id="fArea"><option value="">-- Seleccionar --</option></select>
       </div>
       <div class="field">
         <label>Profesional</label>
-        <select id="fProf"><option value="">— Opcional —</option></select>
+        <select id="fProf"><option value="">-- Opcional --</option></select>
       </div>
       <div class="field">
         <label>Fecha de la cita</label>
         <input type="date" id="fFechaCita">
       </div>
       <div class="field">
-        <label>Precio total</label>
+        <label>Precio total ($)</label>
         <input type="number" id="fPrecio" min="0" step="500" placeholder="0">
       </div>
       <div class="field">
-        <label>Abono (anticipo)</label>
+        <label>Abono (anticipo) ($)</label>
         <input type="number" id="fAbono" min="0" step="500" placeholder="0">
       </div>
       <div class="saldo-box">
-        <span class="k">Saldo a pagar el día de la atención</span>
+        <span class="k">Saldo a pagar el dia de la atencion</span>
         <span class="v" id="fSaldo">$0</span>
       </div>
       <div class="field">
-        <label>Método de pago</label>
+        <label>Metodo de pago</label>
         <select id="fMetodo">
           <option value="transferencia">Transferencia</option>
           <option value="efectivo">Efectivo</option>
-          <option value="debito">Débito</option>
-          <option value="credito">Crédito</option>
+          <option value="debito">Debito</option>
+          <option value="credito">Credito</option>
           <option value="imed">Imed</option>
         </select>
       </div>
@@ -238,7 +389,7 @@
       </div>
       <div class="field full">
         <label>Procedimiento / nota</label>
-        <input type="text" id="fNota" placeholder="Ej: primera consulta, evaluación…">
+        <input type="text" id="fNota" placeholder="Ej: primera consulta, evaluacion...">
       </div>
       <div class="field" id="rowEstado" style="display:none">
         <label>Estado</label>
@@ -251,7 +402,7 @@
         </select>
       </div>
     </div>
-    <div class="modal-actions">
+    <div class="form-actions">
       <button class="btn-cancel" id="btnCancelar">Cancelar</button>
       <button class="btn-primary" id="btnGuardar">Guardar abono</button>
     </div>
@@ -262,242 +413,352 @@
 
 <script>
 const TOKEN = "__TOKEN__";
-const READONLY = __ABONOS_READONLY__;  // perfil de profesional: solo lectura, filtrado a su especialidad
+const READONLY = __ABONOS_READONLY__;
 if (READONLY) document.body.classList.add("readonly");
-const QP = "?token=" + encodeURIComponent(TOKEN);
-let POLICY = {prestaciones:[], estados:[], metodos:[]};
-let PROFES = [];
-let CURRENT_FILTER = "";   // '' = todos
-let EDIT_ID = null;
-let DATA = {abonos:[], resumen:{}, n_pendientes:0, total_pendiente_monto:0, total_pendiente_saldo:0};
+const qp = "?token=" + encodeURIComponent(TOKEN);
 
-const CLP = n => "$" + (Number(n)||0).toLocaleString("es-CL");
-const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const ESTADO_LBL = {pendiente:"Pendiente",aplicado:"Aplicado",reembolsado:"Reembolsado",trasladado:"Trasladado",perdido:"Perdido"};
+// ── Estado global (mismo patron que Pagos) ────────────────────────────────
+let POLICY  = { prestaciones: [], estados: [], metodos: [] };
+let PROFES  = [];
+let _abonosFull = [];   // lista sin filtrar — base de los filtros
+let _fEst    = '';      // filtro de estado activo
+let _fBuscar = '';      // texto de busqueda
+let _sortCol = null, _sortDir = 1;
+let _colFiltros = {};   // filtro por columna excel-style
+let EDIT_ID = null;     // abono en edicion (null = nuevo)
+let DATA = {};
 
-function toast(msg, err){
-  const t=document.getElementById("toast");
-  t.textContent=msg; t.className="toast show"+(err?" err":"");
-  setTimeout(()=>t.className="toast",2600);
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const fmt$ = n => n == null ? '--' : '$' + Number(n).toLocaleString('es-CL');
+const fmtHora = s => s ? s.slice(0,5) : '--';
+function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const ESTADO_LBL = { pendiente:'Pendiente', aplicado:'Aplicado', reembolsado:'Reembolsado', trasladado:'Trasladado', perdido:'Perdido' };
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(t._tmr); t._tmr = setTimeout(function(){ t.className='toast'; }, 2800);
 }
-async function api(path, opts){
-  const sep = path.includes("?") ? "&" : "?";
-  const r = await fetch("/alma/api/abonos"+path+sep+"token="+encodeURIComponent(TOKEN), opts);
-  if(!r.ok){ const e=await r.text().catch(()=>r.statusText); throw new Error(e); }
+
+async function api(path, opts) {
+  var sep = path.includes('?') ? '&' : '?';
+  var r = await fetch('/alma/api/abonos' + path + sep + 'token=' + encodeURIComponent(TOKEN), opts);
+  if (!r.ok) { var e = await r.text().catch(function(){ return r.statusText; }); throw new Error(e); }
   return r.json();
 }
 
-// ── Carga inicial ──
-async function init(){
-  try{
-    POLICY = await api("/policy");
-  }catch(e){ console.warn("policy",e); }
-  // profesionales (reutiliza endpoint de Agenda)
-  try{
-    const r = await fetch("/alma/api/agenda/profesionales"+QP);
-    if(r.ok){ const d=await r.json(); PROFES = d.profesionales || []; }
-  }catch(e){ console.warn("profes",e); }
+// ── Carga inicial ────────────────────────────────────────────────────────────
+async function init() {
+  try { POLICY = await api('/policy'); } catch(e) { console.warn('policy', e); }
+  try {
+    var r = await fetch('/alma/api/agenda/profesionales' + qp);
+    if (r.ok) { var d = await r.json(); PROFES = d.profesionales || []; }
+  } catch(e) { console.warn('profes', e); }
 
-  // dropdown prestaciones
-  const selArea = document.getElementById("fArea");
-  POLICY.prestaciones.forEach(p=>{
-    const o=document.createElement("option"); o.value=p.area; o.textContent=p.area;
-    o.dataset.abono=p.abono_sugerido; o.dataset.precio=p.precio_sugerido;
-    o.dataset.prof=p.id_profesional||""; selArea.appendChild(o);
+  var selArea = document.getElementById('fArea');
+  POLICY.prestaciones.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.area; o.textContent = p.area;
+    o.dataset.abono = p.abono_sugerido; o.dataset.precio = p.precio_sugerido;
+    o.dataset.prof = p.id_profesional || '';
+    selArea.appendChild(o);
   });
-  // dropdown profesionales
-  const selProf=document.getElementById("fProf");
-  PROFES.forEach(p=>{
-    const o=document.createElement("option");
-    o.value=p.id_profesional ?? p.id ?? "";
-    o.textContent=(p.nombre||p.profesional||"")+(p.especialidad?(" · "+p.especialidad):"");
+  var selProf = document.getElementById('fProf');
+  PROFES.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.id_profesional != null ? p.id_profesional : (p.id != null ? p.id : '');
+    o.textContent = (p.nombre || p.profesional || '') + (p.especialidad ? ' - '+p.especialidad : '');
     selProf.appendChild(o);
   });
-  await load();
+
+  initFiltros();
+  await cargar();
 }
 
-// ── Listar ──
-async function load(){
-  const q = CURRENT_FILTER ? ("?estado="+CURRENT_FILTER) : "";
-  DATA = await api(q);  // GET con o sin estado
-  renderCards(); renderFilters(); renderRows();
-}
-
-function renderCards(){
-  const r = DATA.resumen||{};
-  const c = document.getElementById("cards");
-  c.innerHTML = `
-    <div class="card accent">
-      <div class="lbl">Abonos pendientes</div>
-      <div class="val">${DATA.n_pendientes||0}</div>
-      <div class="sub">esperando atención</div>
-    </div>
-    <div class="card">
-      <div class="lbl">Monto retenido</div>
-      <div class="val">${CLP(DATA.total_pendiente_monto)}</div>
-      <div class="sub">anticipos en garantía</div>
-    </div>
-    <div class="card">
-      <div class="lbl">Saldo por cobrar</div>
-      <div class="val">${CLP(DATA.total_pendiente_saldo)}</div>
-      <div class="sub">se cobra al atender</div>
-    </div>
-    <div class="card">
-      <div class="lbl">Aplicados / Perdidos</div>
-      <div class="val">${(r.aplicado?.n||0)} <span style="color:var(--mute);font-size:16px">/ ${(r.perdido?.n||0)}</span></div>
-      <div class="sub">${CLP(r.perdido?.monto||0)} retenido por no-show</div>
-    </div>`;
-}
-
-function renderFilters(){
-  const r=DATA.resumen||{};
-  const all = Object.values(r).reduce((a,x)=>a+(x.n||0),0);
-  const f=document.getElementById("filters");
-  const chips=[["","Todos",all]].concat(
-    POLICY.estados.map(e=>[e,ESTADO_LBL[e]||e,(r[e]?.n||0)]));
-  f.innerHTML=chips.map(([v,lbl,n])=>
-    `<button class="chip ${CURRENT_FILTER===v?'active':''}" data-f="${v}">${lbl}<span class="n">${n}</span></button>`
-  ).join("");
-  f.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{CURRENT_FILTER=b.dataset.f;load();});
-}
-
-function renderRows(){
-  const tb=document.getElementById("tbody");
-  const empty=document.getElementById("empty");
-  const list=DATA.abonos||[];
-  if(!list.length){ tb.innerHTML=""; empty.style.display="block"; return; }
-  empty.style.display="none";
-  tb.innerHTML=list.map(a=>{
-    const aplicado = a.estado==="aplicado";
-    return `<tr data-id="${a.id}">
-      <td><div class="pac">${esc(a.paciente_nombre)}</div><div class="rut">${esc(a.rut||"—")}</div></td>
-      <td><span class="pres">${esc(a.area||"—")}</span>${a.procedimiento?`<div class="rut">${esc(a.procedimiento)}</div>`:""}</td>
-      <td>${a.fecha_cita?esc(a.fecha_cita):'<span class="rut">—</span>'}</td>
-      <td class="num money">${CLP(a.precio_total)}</td>
-      <td class="num money">${CLP(a.monto_abono)}</td>
-      <td class="num money saldo">${CLP(a.saldo)}</td>
-      <td>${esc(a.metodo_pago||"")}</td>
-      <td><span class="badge b-${a.estado}">${ESTADO_LBL[a.estado]||a.estado}</span></td>
-      <td>
-        <div class="acts">
-          ${aplicado?"":`<button class="ic-btn go" title="Atendido: aplicar abono y cobrar saldo" data-act="aplicar" data-id="${a.id}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></button>`}
-          <button class="ic-btn" title="Editar" data-act="editar" data-id="${a.id}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-          <button class="ic-btn del" title="Eliminar" data-act="borrar" data-id="${a.id}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
-        </div>
-      </td>
-    </tr>`;
-  }).join("");
-  tb.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>handleAct(b.dataset.act, +b.dataset.id));
-}
-
-// ── Acciones de fila ──
-async function handleAct(act, id){
-  const ab = (DATA.abonos||[]).find(x=>x.id===id);
-  if(act==="editar"){ openModal(ab); return; }
-  if(act==="borrar"){
-    if(!confirm("¿Eliminar este abono? No se puede deshacer.")) return;
-    try{ await api("/"+id,{method:"DELETE"}); toast("Abono eliminado"); load(); }
-    catch(e){ toast("Error al eliminar",true); }
-    return;
-  }
-  if(act==="aplicar"){
-    const crear = confirm(`Aplicar abono de ${esc(ab.paciente_nombre)}.\n\nSaldo a cobrar hoy: ${CLP(ab.saldo)}.\n\nAceptar = registrar ese saldo en el módulo Pagos.\nCancelar = solo marcar aplicado (sin registrar pago).`);
-    try{
-      const r = await api("/"+id+"/aplicar",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({crear_pago:crear})});
-      toast(crear && r.pago_id ? `Aplicado · saldo ${CLP(r.saldo_cobrado)} → Pagos` : "Abono aplicado");
-      load();
-    }catch(e){ toast("Error al aplicar",true); }
-    return;
+// ── Cargar desde API ─────────────────────────────────────────────────────────
+async function cargar() {
+  try {
+    DATA = await api('');
+    _abonosFull = DATA.abonos || [];
+    renderKPIs();
+    aplicarFiltros();
+  } catch(e) {
+    document.getElementById('tablaAbonosBody').innerHTML = '<tr><td colspan="13" class="empty">Error al cargar abonos.</td></tr>';
   }
 }
 
-// ── Modal ──
-function openModal(ab){
+function renderKPIs() {
+  var r = DATA.resumen || {};
+  document.getElementById('kpiN').textContent = DATA.n_pendientes || 0;
+  document.getElementById('kpiMonto').textContent = fmt$(DATA.total_pendiente_monto);
+  document.getElementById('kpiSaldo').textContent = fmt$(DATA.total_pendiente_saldo);
+  var apl = (r.aplicado && r.aplicado.n) || 0;
+  var per = (r.perdido  && r.perdido.n)  || 0;
+  document.getElementById('kpiAplPerdi').textContent = apl + ' / ' + per;
+}
+
+// ── Filtros (mismo patron que Pagos) ────────────────────────────────────────
+function aplicarFiltros() {
+  var arr = _abonosFull.slice();
+
+  if (_fEst) {
+    arr = arr.filter(function(a){ return (a.estado || '') === _fEst; });
+  }
+  Object.keys(_colFiltros).forEach(function(col) {
+    var v = _colFiltros[col];
+    if (v == null) return;
+    arr = arr.filter(function(a){ return ((a[col] == null ? '' : String(a[col])).trim() || '--') === v; });
+  });
+  if (_fBuscar) {
+    var q = _fBuscar.toLowerCase();
+    arr = arr.filter(function(a){
+      return [(a.paciente_nombre||''),(a.rut||''),(a.profesional||''),
+              (a.area||''),(a.metodo_pago||''),(a.folio||'')]
+             .join(' ').toLowerCase().includes(q);
+    });
+  }
+  if (_sortCol) {
+    arr.sort(function(a, b) {
+      var x = a[_sortCol], y = b[_sortCol];
+      if (['precio_total','monto_abono','saldo'].includes(_sortCol)) {
+        x = +x||0; y = +y||0; return (x-y)*_sortDir;
+      }
+      x = (x||'').toString().toLowerCase(); y = (y||'').toString().toLowerCase();
+      return x < y ? -_sortDir : x > y ? _sortDir : 0;
+    });
+  }
+
+  var cnt = document.getElementById('filtroCount');
+  if (cnt) {
+    var tot = arr.reduce(function(s,a){ return s + (+a.monto_abono||0); }, 0);
+    cnt.textContent = arr.length + ' de ' + _abonosFull.length + ' - ' + fmt$(tot);
+  }
+  renderTabla(arr);
+}
+
+function initFiltros() {
+  var inp = document.getElementById('filtroBuscar');
+  if (inp && !inp._wired) {
+    inp._wired = true;
+    inp.addEventListener('input', function(e){ _fBuscar = e.target.value.trim(); aplicarFiltros(); });
+  }
+  document.querySelectorAll('#filtroEstados .fchip').forEach(function(ch) {
+    if (ch._wired) return; ch._wired = true;
+    ch.addEventListener('click', function(){
+      _fEst = ch.dataset.est;
+      document.querySelectorAll('#filtroEstados .fchip').forEach(function(x){ x.classList.toggle('on', x === ch); });
+      aplicarFiltros();
+    });
+  });
+  document.querySelectorAll('.th-sort').forEach(function(th) {
+    if (th._wiredSort) return; th._wiredSort = true;
+    th.addEventListener('click', function(ev) {
+      if (ev.target.closest('.col-funnel')) return;
+      var c = th.dataset.sort;
+      _sortDir = (_sortCol === c) ? -_sortDir : 1;
+      _sortCol = c;
+      document.querySelectorAll('.th-sort').forEach(function(x){ x.classList.remove('sort-asc','sort-desc'); });
+      th.classList.add(_sortDir === 1 ? 'sort-asc' : 'sort-desc');
+      aplicarFiltros();
+    });
+  });
+  document.querySelectorAll('.th-filtro').forEach(function(th) {
+    if (th._wiredFun) return; th._wiredFun = true;
+    if (!th.querySelector('.col-funnel')) {
+      var f = document.createElement('span');
+      f.className = 'col-funnel'; f.textContent = '▾'; f.title = 'Filtrar esta columna';
+      th.appendChild(f);
+    }
+    th.querySelector('.col-funnel').addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      abrirMenuColumna(th, th.dataset.col);
+    });
+  });
+}
+
+function abrirMenuColumna(th, col) {
+  document.querySelectorAll('.col-menu').forEach(function(m){ m.remove(); });
+  var vals = Array.from(new Set(_abonosFull.map(function(a){
+    return (a[col] == null ? '' : String(a[col])).trim() || '--';
+  }))).sort(function(a, b){ return a.localeCompare(b, 'es'); });
+  var menu = document.createElement('div');
+  menu.className = 'col-menu';
+  var activo = _colFiltros[col] || null;
+  menu.innerHTML =
+    '<div class="cm-item' + (activo===null?' on':'') + '" data-v="">Todos</div>' +
+    vals.map(function(v){ return '<div class="cm-item' + (activo===v?' on':'') + '" data-v="' + v.replace(/"/g,'&quot;') + '">' + esc(v) + '</div>'; }).join('');
+  th.appendChild(menu);
+  menu.querySelectorAll('.cm-item').forEach(function(it) {
+    it.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      var v = it.dataset.v;
+      if (v === '') delete _colFiltros[col]; else _colFiltros[col] = v;
+      th.classList.toggle('col-activa', v !== '');
+      menu.remove();
+      aplicarFiltros();
+    });
+  });
+  setTimeout(function(){
+    document.addEventListener('click', function _cl(e) {
+      if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', _cl); }
+    });
+  }, 0);
+}
+
+// ── Render tabla ─────────────────────────────────────────────────────────────
+function renderTabla(abonos) {
+  var tbody = document.getElementById('tablaAbonosBody');
+  initFiltros();
+
+  if (!abonos.length) {
+    tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin abonos con este filtro.</td></tr>';
+    return;
+  }
+
+  if (!_sortCol) {
+    abonos = abonos.slice().sort(function(a, b) {
+      var ha = (a.hora || '').slice(0,5), hb = (b.hora || '').slice(0,5);
+      if (!ha && !hb) return 0; if (!ha) return 1; if (!hb) return -1;
+      return ha < hb ? -1 : ha > hb ? 1 : 0;
+    });
+  }
+
+  tbody.innerHTML = abonos.map(function(a, i) {
+    var aplicado = a.estado === 'aplicado';
+    var pagoBadge = a.pago_id
+      ? '<span class="badge-abono" title="Pago #' + a.pago_id + ' en Pagos">P#' + a.pago_id + '</span>'
+      : '';
+    return '<tr data-id="' + a.id + '">' +
+      '<td style="color:var(--mute)">' + (i+1) + '</td>' +
+      '<td>' + fmtHora(a.hora) + '</td>' +
+      '<td title="' + esc(a.paciente_nombre) + '"><div class="pac">' + esc(a.paciente_nombre) + '</div><div class="rut-sub">' + esc(a.rut||'--') + '</div></td>' +
+      '<td style="color:var(--mute);font-size:10px">' + esc(a.rut||'--') + '</td>' +
+      '<td title="' + esc(a.profesional) + '">' + esc(a.profesional||'--') + '</td>' +
+      '<td><span class="pres">' + esc(a.area||'--') + '</span></td>' +
+      '<td style="text-align:right;font-variant-numeric:tabular-nums">' + fmt$(a.precio_total) + '</td>' +
+      '<td style="text-align:right" class="money">' + fmt$(a.monto_abono) + pagoBadge + '</td>' +
+      '<td style="text-align:right" class="saldo-val">' + fmt$(a.saldo) + '</td>' +
+      '<td>' + esc(a.metodo_pago||'--') + '</td>' +
+      '<td><span class="badge b-' + esc(a.estado) + '">' + (ESTADO_LBL[a.estado]||esc(a.estado)) + '</span></td>' +
+      '<td style="font-size:10px;color:var(--mute)">' + esc(a.fecha_cita||'--') + '</td>' +
+      '<td><div class="td-actions">' +
+        (aplicado ? '' : '<button class="btn-icon go" title="Marcar atendido y cobrar saldo" data-act="aplicar" data-id="' + a.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg></button>') +
+        '<button class="btn-icon" title="Editar" data-act="editar" data-id="' + a.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>' +
+        '<button class="btn-icon del" title="Eliminar" data-act="borrar" data-id="' + a.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+
+  tbody.querySelectorAll('[data-act]').forEach(function(b) {
+    b.onclick = function(){ handleAct(b.dataset.act, +b.dataset.id); };
+  });
+}
+
+// ── Acciones de fila ─────────────────────────────────────────────────────────
+async function handleAct(act, id) {
+  var ab = (_abonosFull||[]).find(function(x){ return x.id === id; });
+  if (act === 'editar') { openModal(ab); return; }
+  if (act === 'borrar') {
+    var msg = 'Eliminar este abono' + (ab && ab.pago_id ? ' y el pago de anticipo vinculado en Pagos?' : '?') + ' No se puede deshacer.';
+    if (!confirm(msg)) return;
+    try { await api('/'+id, { method:'DELETE' }); showToast('Abono eliminado', 'success'); cargar(); }
+    catch(e) { showToast('Error al eliminar', 'error'); }
+    return;
+  }
+  if (act === 'aplicar') {
+    var crear = confirm('Aplicar abono de ' + esc(ab.paciente_nombre) + '.\n\nSaldo a cobrar hoy: ' + fmt$(ab.saldo) + '.\n\nAceptar = registrar ese saldo en el modulo Pagos.\nCancelar = solo marcar aplicado (sin registrar pago).');
+    try {
+      var r = await api('/'+id+'/aplicar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ crear_pago: crear }) });
+      showToast(crear && r.pago_id ? 'Aplicado - saldo ' + fmt$(r.saldo_cobrado) + ' en Pagos' : 'Abono aplicado', 'success');
+      cargar();
+    } catch(e) { showToast('Error al aplicar', 'error'); }
+    return;
+  }
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(ab) {
   EDIT_ID = ab ? ab.id : null;
-  document.getElementById("modalTitle").textContent = ab?"Editar abono":"Registrar abono";
-  document.getElementById("rowEstado").style.display = ab ? "flex" : "none";
-  document.getElementById("fNombre").value = ab?.paciente_nombre || "";
-  document.getElementById("fRut").value    = ab?.rut || "";
-  document.getElementById("fArea").value   = ab?.area || "";
-  document.getElementById("fProf").value   = ab?.id_profesional ?? "";
-  document.getElementById("fFechaCita").value = ab?.fecha_cita || "";
-  document.getElementById("fPrecio").value = ab?.precio_total ?? "";
-  document.getElementById("fAbono").value  = ab?.monto_abono ?? "";
-  document.getElementById("fMetodo").value = ab?.metodo_pago || "transferencia";
-  document.getElementById("fFolio").value  = ab?.folio || "";
-  document.getElementById("fNota").value   = ab?.procedimiento || ab?.nota || "";
-  document.getElementById("fEstado").value = ab?.estado || "pendiente";
+  document.getElementById('modalTitle').textContent = ab ? 'Editar abono' : 'Registrar abono';
+  document.getElementById('rowEstado').style.display = ab ? 'block' : 'none';
+  document.getElementById('fNombre').value    = (ab && ab.paciente_nombre) || '';
+  document.getElementById('fRut').value       = (ab && ab.rut) || '';
+  document.getElementById('fArea').value      = (ab && ab.area) || '';
+  document.getElementById('fProf').value      = (ab && ab.id_profesional != null) ? ab.id_profesional : '';
+  document.getElementById('fFechaCita').value = (ab && ab.fecha_cita) || '';
+  document.getElementById('fPrecio').value    = (ab && ab.precio_total != null) ? ab.precio_total : '';
+  document.getElementById('fAbono').value     = (ab && ab.monto_abono != null) ? ab.monto_abono : '';
+  document.getElementById('fMetodo').value    = (ab && ab.metodo_pago) || 'transferencia';
+  document.getElementById('fFolio').value     = (ab && ab.folio) || '';
+  document.getElementById('fNota').value      = (ab && (ab.procedimiento || ab.nota)) || '';
+  document.getElementById('fEstado').value    = (ab && ab.estado) || 'pendiente';
   recalcSaldo();
-  document.getElementById("modalBg").classList.add("open");
-  document.getElementById("fNombre").focus();
-}
-function closeModal(){ document.getElementById("modalBg").classList.remove("open"); }
-
-function recalcSaldo(){
-  const p=+document.getElementById("fPrecio").value||0;
-  const a=+document.getElementById("fAbono").value||0;
-  document.getElementById("fSaldo").textContent = CLP(Math.max(p-a,0));
+  document.getElementById('modalBg').classList.add('open');
+  document.getElementById('fNombre').focus();
 }
 
-// Auto-sugerencia al elegir prestación
-document.getElementById("fArea").addEventListener("change", function(){
-  const o=this.selectedOptions[0]; if(!o||!o.value) return;
-  // Solo rellena si los campos están vacíos (no pisa edición manual)
-  const fA=document.getElementById("fAbono"), fP=document.getElementById("fPrecio");
-  if(!fA.value && o.dataset.abono) fA.value=o.dataset.abono;
-  if(!fP.value && o.dataset.precio) fP.value=o.dataset.precio;
-  const fProf=document.getElementById("fProf");
-  if(!fProf.value && o.dataset.prof) fProf.value=o.dataset.prof;
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+
+function recalcSaldo() {
+  var p = +document.getElementById('fPrecio').value || 0;
+  var a = +document.getElementById('fAbono').value || 0;
+  document.getElementById('fSaldo').textContent = fmt$(Math.max(p-a,0));
+}
+
+document.getElementById('fArea').addEventListener('change', function() {
+  var o = this.selectedOptions[0]; if (!o || !o.value) return;
+  var fA = document.getElementById('fAbono'), fP = document.getElementById('fPrecio');
+  if (!fA.value && o.dataset.abono) fA.value = o.dataset.abono;
+  if (!fP.value && o.dataset.precio) fP.value = o.dataset.precio;
+  var fProf = document.getElementById('fProf');
+  if (!fProf.value && o.dataset.prof) fProf.value = o.dataset.prof;
   recalcSaldo();
 });
-["fPrecio","fAbono"].forEach(id=>document.getElementById(id).addEventListener("input",recalcSaldo));
+['fPrecio','fAbono'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalcSaldo); });
 
-async function guardar(){
-  const nombre=document.getElementById("fNombre").value.trim();
-  if(!nombre){ toast("Falta el nombre del paciente",true); return; }
-  const profSel=document.getElementById("fProf");
-  const payload={
-    paciente_nombre:nombre,
-    rut:document.getElementById("fRut").value.trim(),
-    area:document.getElementById("fArea").value,
-    id_profesional:profSel.value||null,
-    profesional:profSel.selectedOptions[0]?.textContent.split(" · ")[0]||"",
-    fecha_cita:document.getElementById("fFechaCita").value,
-    precio_total:+document.getElementById("fPrecio").value||0,
-    monto_abono:+document.getElementById("fAbono").value||0,
-    metodo_pago:document.getElementById("fMetodo").value,
-    folio:document.getElementById("fFolio").value.trim(),
-    procedimiento:document.getElementById("fNota").value.trim(),
+async function guardar() {
+  var nombre = document.getElementById('fNombre').value.trim();
+  if (!nombre) { showToast('Falta el nombre del paciente', 'error'); return; }
+  var profSel = document.getElementById('fProf');
+  var payload = {
+    paciente_nombre: nombre,
+    rut:         document.getElementById('fRut').value.trim(),
+    area:        document.getElementById('fArea').value,
+    id_profesional: profSel.value || null,
+    profesional: profSel.selectedOptions[0] ? profSel.selectedOptions[0].textContent.split(' - ')[0] : '',
+    fecha_cita:  document.getElementById('fFechaCita').value,
+    precio_total: +document.getElementById('fPrecio').value || 0,
+    monto_abono:  +document.getElementById('fAbono').value || 0,
+    metodo_pago:  document.getElementById('fMetodo').value,
+    folio:       document.getElementById('fFolio').value.trim(),
+    procedimiento: document.getElementById('fNota').value.trim(),
   };
-  const btn=document.getElementById("btnGuardar"); btn.disabled=true;
-  try{
-    if(EDIT_ID){
-      payload.estado=document.getElementById("fEstado").value;
-      await api("/"+EDIT_ID,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      toast("Abono actualizado");
-    }else{
-      await api("",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      toast("Abono registrado");
+  var btn = document.getElementById('btnGuardar'); btn.disabled = true;
+  try {
+    if (EDIT_ID) {
+      payload.estado = document.getElementById('fEstado').value;
+      await api('/'+EDIT_ID, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      showToast('Abono actualizado', 'success');
+    } else {
+      var r = await api('', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      showToast(r.pago_id ? 'Abono registrado - pago #'+r.pago_id+' creado en Pagos' : 'Abono registrado', 'success');
     }
-    closeModal(); load();
-  }catch(e){ toast("Error al guardar",true); console.error(e); }
-  finally{ btn.disabled=false; }
+    closeModal(); cargar();
+  } catch(e) { showToast('Error al guardar: ' + e.message, 'error'); }
+  finally { btn.disabled = false; }
 }
 
-document.getElementById("btnNuevo").onclick=()=>openModal(null);
-document.getElementById("btnCancelar").onclick=closeModal;
-document.getElementById("modalClose").onclick=closeModal;
-document.getElementById("btnGuardar").onclick=guardar;
-document.getElementById("modalBg").onclick=e=>{ if(e.target.id==="modalBg") closeModal(); };
-document.getElementById("btnExport").onclick=()=>{
-  const q = CURRENT_FILTER ? ("&estado="+CURRENT_FILTER) : "";
-  window.open("/alma/api/abonos/export"+QP+q,"_blank");
+// ── Eventos ──────────────────────────────────────────────────────────────────
+document.getElementById('btnNuevo').onclick = function(){ openModal(null); };
+document.getElementById('btnCancelar').onclick = closeModal;
+document.getElementById('modalClose').onclick = closeModal;
+document.getElementById('btnGuardar').onclick = guardar;
+document.getElementById('modalBg').onclick = function(e){ if (e.target.id === 'modalBg') closeModal(); };
+document.getElementById('btnExport').onclick = function(){
+  var q = _fEst ? ('&estado='+_fEst) : '';
+  window.open('/alma/api/abonos/export' + qp + q, '_blank');
 };
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
 
 init();
 </script>

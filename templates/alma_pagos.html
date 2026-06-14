@@ -598,10 +598,63 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
     Descargar Excel
   </button>
+  <button class="btn-secondary" id="btnNuevoAbono" title="Registrar un abono anticipado (también aparece en Abonos)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    + Abono
+  </button>
   <button class="btn-primary" id="btnNuevoPago">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     Nueva fila
   </button>
+</div>
+
+<!-- Modal Abono rápido (Req-3: desde Pagos se registra un abono) -->
+<div class="modal-bg" id="modalAbonoBg" style="display:none;position:fixed;inset:0;background:rgba(15,63,104,.45);z-index:150;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(15,63,104,.14);width:100%;max-width:560px;padding:28px;position:relative;">
+    <button id="modalAbonoCerrar" style="position:absolute;top:18px;right:18px;background:none;border:1px solid #d6e4ec;border-radius:8px;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;color:#62788a;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <h2 style="font-size:17px;font-weight:800;color:#0F3F68;margin:0 0 4px;">Registrar abono anticipado</h2>
+    <p style="font-size:12px;color:#62788a;margin:0 0 20px;">El anticipo aparece en Pagos (copago=monto_abono) y en el modulo Abonos.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;" id="abonoGrid">
+      <div style="grid-column:1/-1"><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">Paciente</label>
+        <input id="ab_nombre" type="text" placeholder="Nombre completo" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;" autocomplete="off"></div>
+      <div><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">RUT</label>
+        <input id="ab_rut" type="text" placeholder="12.345.678-9" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;"></div>
+      <div><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">Prestacion</label>
+        <select id="ab_area" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;">
+          <option value="">-- Seleccionar --</option>
+          <option value="Psiquiatria">Psiquiatria</option>
+          <option value="Fonoaudiologia">Fonoaudiologia</option>
+          <option value="Nutricion">Nutricion</option>
+          <option value="Otra">Otra</option>
+        </select></div>
+      <div><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">Precio total ($)</label>
+        <input id="ab_precio" type="number" min="0" step="500" placeholder="0" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;"></div>
+      <div><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">Abono ($)</label>
+        <input id="ab_monto" type="number" min="0" step="500" placeholder="0" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;"></div>
+      <div style="background:#e8f8fb;border:1px solid #4FBECE;border-radius:11px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;grid-column:1/-1;">
+        <span style="font-size:12px;font-weight:700;color:#0F3F68;">Saldo a cobrar el dia de la atencion</span>
+        <span id="ab_saldo_display" style="font-size:20px;font-weight:800;color:#1172AB;font-variant-numeric:tabular-nums;">$0</span>
+      </div>
+      <div><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">Metodo</label>
+        <select id="ab_metodo" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;">
+          <option value="transferencia">Transferencia</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="debito">Debito</option>
+          <option value="credito">Credito</option>
+          <option value="imed">Imed</option>
+        </select></div>
+      <div><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">Folio</label>
+        <input id="ab_folio" type="text" placeholder="Opcional" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;"></div>
+      <div style="grid-column:1/-1"><label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#62788a;margin-bottom:5px;">Fecha de cita</label>
+        <input id="ab_fecha_cita" type="date" style="width:100%;font-family:inherit;font-size:13px;border:1px solid #d6e4ec;border-radius:9px;padding:9px 12px;color:#0F3F68;outline:none;"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
+      <button id="modalAbonoCancelar" style="background:none;border:1px solid #d6e4ec;color:#62788a;border-radius:9px;padding:9px 18px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+      <button id="modalAbonoGuardar" style="background:#4FBECE;color:#fff;border:0;border-radius:9px;padding:9px 20px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Guardar abono</button>
+    </div>
+  </div>
 </div>
 
 <!-- KPI strip -->
@@ -3442,6 +3495,89 @@ function syncErFuente(canalSel) {
   fuenteSel.style.display = show ? '' : 'none';
   if (!show) fuenteSel.value = '';
 }
+
+// ── Modal "+ Abono" ───────────────────────────────────────────────────────────
+
+(function() {
+  const bg = document.getElementById('modalAbonoBg');
+  if (!bg) return; // guard por si el HTML no está
+
+  // Abrir
+  document.getElementById('btnNuevoAbono').addEventListener('click', function() {
+    // Limpiar campos
+    ['ab_nombre','ab_rut','ab_folio','ab_fecha_cita'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('ab_precio').value = '';
+    document.getElementById('ab_monto').value = '';
+    document.getElementById('ab_saldo_display').textContent = '$0';
+    document.getElementById('ab_area').value = 'Psiquiatria';
+    document.getElementById('ab_metodo').value = 'efectivo';
+    bg.style.display = 'flex';
+  });
+
+  // Cerrar
+  ['modalAbonoCerrar','modalAbonoCancelar'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function() { bg.style.display = 'none'; });
+  });
+  bg.addEventListener('click', function(e) {
+    if (e.target === bg) bg.style.display = 'none';
+  });
+
+  // Recalcular saldo en tiempo real
+  function recalcSaldo() {
+    var p = parseFloat(document.getElementById('ab_precio').value) || 0;
+    var a = parseFloat(document.getElementById('ab_monto').value) || 0;
+    var saldo = Math.max(p - a, 0);
+    document.getElementById('ab_saldo_display').textContent = '$' + saldo.toLocaleString('es-CL');
+  }
+  document.getElementById('ab_precio').addEventListener('input', recalcSaldo);
+  document.getElementById('ab_monto').addEventListener('input', recalcSaldo);
+
+  // Guardar
+  document.getElementById('modalAbonoGuardar').addEventListener('click', async function() {
+    var nombre = (document.getElementById('ab_nombre').value || '').trim();
+    if (!nombre) { showToast('Falta el nombre del paciente', 'error'); return; }
+    var precio = parseFloat(document.getElementById('ab_precio').value) || 0;
+    var monto  = parseFloat(document.getElementById('ab_monto').value) || 0;
+    if (monto <= 0) { showToast('El monto del abono debe ser mayor a 0', 'error'); return; }
+    if (monto > precio && precio > 0) { showToast('El abono no puede superar el precio total', 'error'); return; }
+
+    var payload = {
+      paciente_nombre : nombre,
+      rut             : (document.getElementById('ab_rut').value || '').trim(),
+      area            : document.getElementById('ab_area').value,
+      precio_total    : precio,
+      monto_abono     : monto,
+      metodo_pago     : document.getElementById('ab_metodo').value,
+      folio           : (document.getElementById('ab_folio').value || '').trim(),
+      fecha_cita      : (document.getElementById('ab_fecha_cita').value || '').trim()
+    };
+
+    try {
+      var r = await fetch('/alma/api/abonos' + qp, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify(payload)
+      });
+      if (!r.ok) {
+        var txt = await r.text();
+        throw new Error(txt);
+      }
+      var d = await r.json();
+      var msg = d.pago_id
+        ? 'Abono registrado — aparece en Pagos como P#' + d.pago_id
+        : 'Abono registrado';
+      showToast(msg, 'success');
+      bg.style.display = 'none';
+      cargarPagos(); // refrescar tabla de pagos
+    } catch(e) {
+      showToast('Error al guardar abono: ' + e.message, 'error');
+    }
+  });
+})();
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 setupTbodyDelegate();
