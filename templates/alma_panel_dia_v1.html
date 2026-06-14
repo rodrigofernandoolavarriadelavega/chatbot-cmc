@@ -179,9 +179,11 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none;}
 /* ───────── popup agenda ───────── */
 .apop{position:fixed;z-index:200;width:312px;background:#fff;border:1px solid var(--border);
   border-radius:15px;box-shadow:var(--sh-lg);padding:0;opacity:0;transform:translateY(6px) scale(.98);
-  pointer-events:none;transition:opacity .16s,transform .16s,width .18s;overflow:hidden;}
+  pointer-events:none;transition:opacity .16s,transform .16s;overflow:visible;display:flex;flex-direction:column;max-height:82vh;}
+.apop-inner{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-radius:14px;}
 .apop.show{opacity:1;transform:translateY(0) scale(1);}
-.apop.pinned{pointer-events:auto;box-shadow:0 0 0 2px var(--aqua),var(--sh-lg);}   /* fijado: interactivo */
+.apop.pinned{pointer-events:auto;box-shadow:0 0 0 2px var(--aqua),var(--sh-lg);max-height:none;}   /* fijado: interactivo */
+.apop.pinned .ah{cursor:move;}
 .apop.expanded{width:540px;}
 .apop .ah{padding:12px 15px;background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 62%,#0b2f4f));
   color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;}
@@ -193,8 +195,10 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none;}
 .apop .ah .apbtn{width:23px;height:23px;border-radius:7px;border:0;background:rgba(255,255,255,.2);color:#fff;
   font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;line-height:1;}
 .apop .ah .apbtn:hover{background:rgba(255,255,255,.42);}
-.apop .abody{max-height:316px;overflow-y:auto;padding:6px;}
-.apop.expanded .abody{max-height:72vh;}
+.apop .abody{flex:1;min-height:0;overflow-y:auto;padding:6px;}
+.apop:not(.pinned) .abody{max-height:316px;}
+.apop.expanded .abody{max-height:none;}
+.apop .ah,.apop .afoot{flex:none;}
 .apop .abody::-webkit-scrollbar{width:6px;} .apop .abody::-webkit-scrollbar-thumb{background:#cfe0ea;border-radius:8px;}
 .arow{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:10px;transition:background .12s;}
 .arow:hover{background:var(--bg);}
@@ -387,18 +391,18 @@ body.lg-busy,body.lg-busy *{cursor:row-resize!important;user-select:none;}
 .wpop.pinned{pointer-events:auto;box-shadow:0 0 0 2px var(--aqua),var(--sh-lg);max-height:none;}
 .wpop.pinned .wh{cursor:move;}
 .wpop.expanded{width:560px;}
-/* manijas de redimensión (visibles solo al fijar) */
-.wpop .rsz{position:absolute;z-index:6;}
-.wpop:not(.pinned) .rsz{display:none;}
-.wpop .rsz.n{top:-3px;left:12px;right:12px;height:8px;cursor:ns-resize;}
-.wpop .rsz.s{bottom:-3px;left:12px;right:12px;height:8px;cursor:ns-resize;}
-.wpop .rsz.e{right:-3px;top:12px;bottom:12px;width:8px;cursor:ew-resize;}
-.wpop .rsz.w{left:-3px;top:12px;bottom:12px;width:8px;cursor:ew-resize;}
-.wpop .rsz.ne{top:-4px;right:-4px;width:15px;height:15px;cursor:nesw-resize;}
-.wpop .rsz.nw{top:-4px;left:-4px;width:15px;height:15px;cursor:nwse-resize;}
-.wpop .rsz.se{bottom:-4px;right:-4px;width:15px;height:15px;cursor:nwse-resize;}
-.wpop .rsz.sw{bottom:-4px;left:-4px;width:15px;height:15px;cursor:nesw-resize;}
-.wpop.pinned .rsz.se::after{content:'';position:absolute;right:3px;bottom:3px;width:7px;height:7px;border-right:2px solid var(--mute2);border-bottom:2px solid var(--mute2);border-bottom-right-radius:2px;}
+/* manijas de redimensión (visibles solo al fijar) — wpop y apop */
+.wpop .rsz,.apop .rsz{position:absolute;z-index:6;}
+.wpop:not(.pinned) .rsz,.apop:not(.pinned) .rsz{display:none;}
+.wpop .rsz.n,.apop .rsz.n{top:-3px;left:12px;right:12px;height:8px;cursor:ns-resize;}
+.wpop .rsz.s,.apop .rsz.s{bottom:-3px;left:12px;right:12px;height:8px;cursor:ns-resize;}
+.wpop .rsz.e,.apop .rsz.e{right:-3px;top:12px;bottom:12px;width:8px;cursor:ew-resize;}
+.wpop .rsz.w,.apop .rsz.w{left:-3px;top:12px;bottom:12px;width:8px;cursor:ew-resize;}
+.wpop .rsz.ne,.apop .rsz.ne{top:-4px;right:-4px;width:15px;height:15px;cursor:nesw-resize;}
+.wpop .rsz.nw,.apop .rsz.nw{top:-4px;left:-4px;width:15px;height:15px;cursor:nwse-resize;}
+.wpop .rsz.se,.apop .rsz.se{bottom:-4px;right:-4px;width:15px;height:15px;cursor:nwse-resize;}
+.wpop .rsz.sw,.apop .rsz.sw{bottom:-4px;left:-4px;width:15px;height:15px;cursor:nesw-resize;}
+.wpop.pinned .rsz.se::after,.apop.pinned .rsz.se::after{content:'';position:absolute;right:3px;bottom:3px;width:7px;height:7px;border-right:2px solid var(--mute2);border-bottom:2px solid var(--mute2);border-bottom-right-radius:2px;}
 body.wp-busy,body.wp-busy *{user-select:none!important;}
 .wpop .wh{padding:11px 14px;background:linear-gradient(135deg,var(--ac,var(--blue)),color-mix(in srgb,var(--ac,var(--blue)) 60%,#0b2f4f));
   color:#fff;display:flex;align-items:center;gap:9px;flex:none;}
@@ -474,15 +478,45 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
 #actMenu .wsim{padding:0 2px 7px;}
 .wempty{text-align:center;padding:26px;color:var(--mute);font-size:11.5px;font-weight:600;}
 
-/* ───────── responsive ───────── */
-@media(max-width:1480px){#grid{grid-template-columns:290px minmax(320px,1fr) minmax(560px,1.4fr);gap:13px;padding:14px 18px;}}
+/* ═══════════════ RESPONSIVE ═══════════════ */
+/* — Tablet / abajo de 1200px: cada nivel apila sus 3 columnas — */
 @media(max-width:1200px){
-  body{overflow:auto;} #grid{position:static;display:flex;flex-direction:column;height:auto;padding:16px;}
-  .col{height:auto;} .col-scroll{overflow:visible;} .gutter{display:none;}
-  .central .col-scroll{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:13px;}
-  .tcard{min-height:520px;}
+  body{overflow-x:hidden;}
+  /* Nivel 1 (vence al height/columns inline del JS) */
+  #grid{position:static!important;display:flex!important;flex-direction:column;height:auto!important;
+    grid-template-columns:none!important;overflow:visible!important;padding:14px;gap:12px;}
+  .col{height:auto;overflow:visible;} .col-scroll{overflow:visible;}
+  .tcard{min-height:460px;}
+  .central .col-scroll{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+  /* Niveles 2 y 3 → una columna */
+  #n2grid,#n3grid{grid-template-columns:1fr!important;gap:10px;}
+  #nivel2,#nivel3{height:auto!important;overflow:visible!important;}
+  /* separadores y manijas de resize fuera (no aplican en táctil) */
+  .gutter,#levelGutter,#levelGutter2,.wpop .rsz,.apop .rsz{display:none!important;}
+  /* columnas colapsadas/plegadas: mostrar contenido al apilar (sin tiras) */
+  .col.collapsed>.col-head,.col.collapsed>.col-scroll,.col.collapsed>.tcard,
+  .col.folded>.col-scroll,.col.folded>.tcard,
+  .n2-col.collapsed>.n2-colhead,.n2-col.collapsed>.n2-colbody,.n2-col.folded>.n2-colbody{display:flex!important;}
+  .col-collapsed,.n2-collapsed{display:none!important;}
+  .col.folded>.col-head,.n2-col.folded>.n2-colhead{background:none;border:0;box-shadow:none;padding:0 2px;}
 }
-@media(max-width:560px){.seg button{padding:7px 10px;font-size:11px;} .central .col-scroll{grid-template-columns:1fr;}}
+/* — Teléfono / abajo de 640px — */
+@media(max-width:640px){
+  #top{height:auto;flex-wrap:wrap;gap:8px 10px;padding:8px 12px;}
+  .brand{order:1;} .spacer{display:none;}
+  .datebox{order:2;margin-left:auto;text-align:right;min-width:0;}
+  .seg{order:3;flex:1 1 100%;justify-content:space-between;}
+  .seg button{flex:1;padding:7px 6px;font-size:11px;}
+  .dpick{order:4;} #dpRango{flex-wrap:wrap;}
+  .brand h1{font-size:13px;} .brand .sub{display:none;}
+  .central .col-scroll{grid-template-columns:1fr;}
+  /* popups a ancho de pantalla */
+  .wpop,.apop{max-width:calc(100vw - 16px);}
+  .wpop.expanded{width:min(560px,calc(100vw - 16px));}
+  #actMenu{max-width:calc(100vw - 24px);}
+  .n2-grid{gap:9px;}
+  .n2agent .kpis{grid-template-columns:repeat(3,1fr);}
+}
 </style>
 </head>
 <body>
@@ -968,8 +1002,38 @@ function wireCenterDnD(){
 }
 let cdrag=null;
 
+/* drag (por header) + resize (8 manijas) reutilizable para apop y wpop */
+function addDragResize(el, isPinned){
+  el.addEventListener('mousedown',e=>{
+    if(!isPinned()) return;
+    const hdr=e.target.closest('.ah,.wh'); if(!hdr) return;
+    if(e.target.closest('.apbtn,.wbtn,.bk,.rsz')) return;
+    e.preventDefault();
+    const sx=e.clientX,sy=e.clientY,l=el.offsetLeft,t=el.offsetTop; document.body.classList.add('wp-busy');
+    const mv=ev=>{ el.style.left=Math.max(0,Math.min(innerWidth-70,l+ev.clientX-sx))+'px'; el.style.top=Math.max(0,Math.min(innerHeight-26,t+ev.clientY-sy))+'px'; };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); document.body.classList.remove('wp-busy'); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  });
+  el.querySelectorAll('.rsz').forEach(h=>h.addEventListener('mousedown',e=>{
+    if(!isPinned()) return; e.preventDefault(); e.stopPropagation();
+    const dir=h.dataset.dir, sx=e.clientX,sy=e.clientY,l=el.offsetLeft,t=el.offsetTop,w=el.offsetWidth,ht=el.offsetHeight;
+    const MINW=260,MINH=160; document.body.classList.add('wp-busy');
+    const mv=ev=>{ const dx=ev.clientX-sx,dy=ev.clientY-sy; let nl=l,nt=t,nw=w,nh=ht;
+      if(dir.includes('e')) nw=Math.max(MINW,w+dx);
+      if(dir.includes('s')) nh=Math.max(MINH,ht+dy);
+      if(dir.includes('w')){ nw=Math.max(MINW,w-dx); nl=l+(w-nw); }
+      if(dir.includes('n')){ nh=Math.max(MINH,ht-dy); nt=t+(ht-nh); }
+      el.style.width=nw+'px'; el.style.height=nh+'px'; el.style.left=nl+'px'; el.style.top=nt+'px'; };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); document.body.classList.remove('wp-busy'); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  }));
+}
 const apop=document.getElementById('apop');
+apop.innerHTML='<div class="apop-inner"></div>'+['n','s','e','w','ne','nw','se','sw'].map(d=>`<div class="rsz ${d}" data-dir="${d}"></div>`).join('');
+const apopInner=apop.querySelector('.apop-inner');
 let apopPinned=false, apopExpanded=false, apopProfId=null;
+addDragResize(apop, ()=>apopPinned);
+function applyApopSize(){ apop.style.width=(apopExpanded?540:344)+'px'; apop.style.height=(apopExpanded?Math.round(innerHeight*0.8):Math.min(470,Math.round(innerHeight*0.72)))+'px'; }
 function buildAgenda(p, pinned){
   const a=AREAS[p.area]; const m=p._m;
   const cap=p._cap||0; const ocup=m.ocupados;
@@ -992,7 +1056,7 @@ function buildAgenda(p, pinned){
   const acts = pinned
     ? `<button class="apbtn" id="apExpand" title="${apopExpanded?'Reducir':'Expandir'}">${apopExpanded?'⤡':'⤢'}</button><button class="apbtn" id="apClose" title="Cerrar (Esc)">✕</button>`
     : '';
-  apop.innerHTML = `
+  apopInner.innerHTML = `
     <div class="ah" style="--ac:${a.color}">
       <div class="hl"><div class="t">${p.nombre}</div><div class="s">${a.label} · ${p.jornada[0]}:00–${p.jornada[1]}:00${dia?'':' · día tipo'}</div></div>
       <div class="arr"><div class="cap">${ocup}/${cap}</div>${acts}</div>
@@ -1007,11 +1071,12 @@ function buildAgenda(p, pinned){
 function showAgenda(card){           // hover — no actúa si hay uno fijado
   if(apopPinned) return;
   const p=PROFS.find(x=>x.id==card.dataset.id); if(!p) return;
+  apop.style.width=''; apop.style.height='';   // preview = tamaño según contenido
   apopProfId=p.id; buildAgenda(p,false); apop.classList.add('show');
 }
 function pinAgenda(card){            // clic — fija el popup para trabajarlo
   const p=PROFS.find(x=>x.id==card.dataset.id); if(!p) return;
-  apopProfId=p.id; apopPinned=true; buildAgenda(p,true);
+  apopProfId=p.id; apopPinned=true; buildAgenda(p,true); applyApopSize();
   apop.classList.add('show','pinned');
   if(apopExpanded){ apop.classList.add('expanded'); centerPop(); } else positionPinned(card);
 }
@@ -1035,10 +1100,10 @@ function centerPop(){ const w=apop.offsetWidth||540, h=apop.offsetHeight||500;
 function toggleExpandAgenda(){
   apopExpanded=!apopExpanded; apop.classList.toggle('expanded',apopExpanded);
   const p=PROFS.find(x=>x.id==apopProfId); if(p) buildAgenda(p,true);   // refresca el glifo del botón
-  centerPop();
+  applyApopSize(); centerPop();
 }
 function hideAgenda(){ if(apopPinned) return; apop.classList.remove('show'); }
-function closeAgenda(){ apopPinned=false; apopExpanded=false; apopProfId=null; apop.classList.remove('show','pinned','expanded'); }
+function closeAgenda(){ apopPinned=false; apopExpanded=false; apopProfId=null; apop.style.width=''; apop.style.height=''; apop.classList.remove('show','pinned','expanded'); }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape'&&apopPinned) closeAgenda(); });
 document.addEventListener('mousedown',e=>{ if(apopPinned && !e.target.closest('#apop') && !e.target.closest('.pcard')) closeAgenda(); });
 
