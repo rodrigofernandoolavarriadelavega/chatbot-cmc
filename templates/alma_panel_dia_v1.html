@@ -320,6 +320,14 @@ tfoot td .real{color:var(--green);} tfoot td .pot{color:var(--orange);}
 .n2-head .t{font-size:13px;font-weight:800;color:var(--navy);} .n2-head .t b{color:var(--blue);}
 .n2-head .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
 .n2-head .hint{font-size:9.5px;font-weight:700;color:var(--mute);}
+.finsync{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;flex:none;}
+.finsync input{position:absolute;opacity:0;width:0;height:0;}
+.finsync .sw{width:30px;height:17px;border-radius:9px;background:var(--border);position:relative;transition:background .15s;flex:none;}
+.finsync .sw::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s;}
+.finsync input:checked + .sw{background:var(--blue);}
+.finsync input:checked + .sw::after{transform:translateX(13px);}
+.finsync .lbl{font-size:9.5px;font-weight:800;color:var(--mute);letter-spacing:.02em;}
+.finsync input:checked ~ .lbl{color:var(--blue);}
 .n2-grid{display:grid;grid-template-columns:300px minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;}
 .n2-col{display:flex;flex-direction:column;gap:9px;min-width:0;}
 .n2-colhead{display:flex;align-items:center;gap:7px;padding:0 2px;}
@@ -642,7 +650,10 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
 
 <!-- ═══════════════ NIVEL 3 · operación financiera ═══════════════ -->
 <div id="nivel3">
-  <div class="n2-head"><div class="t">Operación financiera · <b>Cierre del mes</b></div><div class="rule"></div><div class="hint">DB mensual · consolidación bancaria · conciliación de transferencias</div></div>
+  <div class="n2-head"><div class="t">Operación financiera · <b id="finMesLbl">Cierre del mes</b></div>
+    <label class="finsync" id="finSyncWrap" title="Sincronizar el período financiero con la fecha seleccionada en el Nivel 1 (o dejar su propio tiempo).">
+      <input type="checkbox" id="finSyncChk"><span class="sw"></span><span class="lbl">⇄ Sincr. Nivel 1</span></label>
+    <div class="rule"></div><div class="hint">DB mensual · consolidación bancaria · conciliación de transferencias</div></div>
   <div class="n2-grid" id="n3grid">
     <div class="n2-col" id="n3colL">
       <div class="n2-colhead"><span class="n2-coltitle">DB mensual</span><div class="sp"></div><button class="colfold" data-n3f="L" title="Plegar (vertical)">▾</button><button class="colcol" data-n3c="L" title="Colapsar a tira lateral">«</button></div>
@@ -873,6 +884,7 @@ const STATE = {
   collapsedAreas:new Set(),              // áreas colapsadas en la tabla
   kpiCollapsed:new Set(),                // tarjetas KPI colapsadas
   cardCollapsed:new Set(),               // cards de profesional colapsadas (por id)
+  finSync:false,                         // N3: sincronizar período financiero con la fecha del N1
 };
 const clp = n => '$'+Math.round(n).toLocaleString('es-CL');
 const clpc = n => { const s=clp(n); return `<span class="c">$</span>${s.slice(1)}`; };
@@ -1276,16 +1288,16 @@ function setupTopbar(){
     STATE.periodo=b.dataset.p;
     document.getElementById('dpDia').style.display = STATE.periodo==='dia'?'flex':'none';
     document.getElementById('dpRango').style.display = STATE.periodo==='rango'?'flex':'none';
-    updateDateLabel(); refresh(true);
+    updateDateLabel(); refresh(true); syncN3IfNeeded();
   });
   const inDia=document.getElementById('inDia'); inDia.value = toISO(STATE.fecha);
   inDia.addEventListener('change',()=>{ STATE.fecha=new Date(inDia.value+'T12:00:00'); updateDateLabel();
-    if(PANEL_TOKEN){ loadOperativo(inDia.value,0); } else { refresh(true); } });
+    if(PANEL_TOKEN){ loadOperativo(inDia.value,0); } else { refresh(true); } syncN3IfNeeded(); });
   const d0=new Date(STATE.fecha); d0.setDate(d0.getDate()-6);
   document.getElementById('inDesde').value=toISO(d0); STATE.desde=toISO(d0);
   document.getElementById('inHasta').value=toISO(STATE.fecha); STATE.hasta=toISO(STATE.fecha);
-  document.getElementById('inDesde').addEventListener('change',e=>{STATE.desde=e.target.value;updateDateLabel();refresh(true);});
-  document.getElementById('inHasta').addEventListener('change',e=>{STATE.hasta=e.target.value;updateDateLabel();refresh(true);});
+  document.getElementById('inDesde').addEventListener('change',e=>{STATE.desde=e.target.value;updateDateLabel();refresh(true);syncN3IfNeeded();});
+  document.getElementById('inHasta').addEventListener('change',e=>{STATE.hasta=e.target.value;updateDateLabel();refresh(true);syncN3IfNeeded();});
   document.getElementById('tgOnly').addEventListener('click',function(){
     this.classList.toggle('on'); STATE.soloDisponibles=this.classList.contains('on'); renderTable();
   });
@@ -1836,9 +1848,17 @@ function markFinReal(){
   h.style.color = FIN_REAL ? 'var(--green)' : 'var(--mute)';
   h.style.fontWeight = '800';
 }
-async function loadFinanciero(){
+const MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function mesLabel(mes){ if(!mes) return 'Cierre del mes'; const [y,m]=mes.split('-'); return cap(MESES_ES[(+m)-1]||'')+' '+y; }
+/* mes (YYYY-MM) derivado de la fecha/rango del Nivel 1 */
+function n1Mes(){ const d = (STATE.periodo==='rango' && STATE.desde) ? new Date(STATE.desde+'T12:00') : STATE.fecha;
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+/* re-carga el N3 al mes del N1 si el switch de sincronización está activo */
+function syncN3IfNeeded(){ if(STATE.finSync) loadFinanciero(n1Mes()); }
+async function loadFinanciero(mes){
   try{
-    const url='/api/panel-dia/financiero'+(PANEL_TOKEN?('?token='+encodeURIComponent(PANEL_TOKEN)):'');
+    const qs=[]; if(PANEL_TOKEN) qs.push('token='+encodeURIComponent(PANEL_TOKEN)); if(mes) qs.push('mes='+encodeURIComponent(mes));
+    const url='/api/panel-dia/financiero'+(qs.length?('?'+qs.join('&')):'');
     const r=await fetch(url,{credentials:'same-origin'}); if(!r.ok) throw 0;
     const d=await r.json(); if(!d || !d.ingresos) throw 0;
     FIN.ingresos=d.ingresos; FIN.ebitda=d.ebitda; FIN.ebitdaPct=d.ebitdaPct||0;
@@ -1849,6 +1869,7 @@ async function loadFinanciero(){
     FIN.conciliacion=d.conciliacion||null; FIN.itau=d.itau||null;
     try{ const dd=new Date(d.mes+'-01T12:00'); dd.setMonth(dd.getMonth()-1); FIN.mesPrev=dd.toISOString().slice(0,7); }catch(e){}
     FIN_REAL=true; renderN3Counts();
+    const lbl=document.getElementById('finMesLbl'); if(lbl) lbl.textContent = mesLabel(d.mes) + (STATE.finSync?' · ⇄ N1':'');
   }catch(e){ FIN_REAL=false; }
   markFinReal();
 }
@@ -1909,6 +1930,12 @@ function setupNivel3(){
   wireN2Card('finIngresos',bIngresos); wireN2Card('finEbitda',bEbitda);
   wireN2Card('finCaja',bCaja); wireN2Card('finComp',bComp);
   wireN2Card('finConcil',bConcil); wireN2Card('finItau',bItau);
+  const chk=document.getElementById('finSyncChk');
+  if(chk) chk.addEventListener('change',()=>{
+    STATE.finSync=chk.checked;
+    // ON → al mes del N1 · OFF → vuelve a su propio tiempo (mes corriente)
+    loadFinanciero(STATE.finSync ? n1Mes() : null);
+  });
 }
 document.addEventListener('DOMContentLoaded',()=>{ setupTopbar(); setupResizers(); setupColumnCollapse(); setupNivel2(); setupNivel3(); loadFinanciero(); loadOperativo(null,1); loadChat(); lay2.setup(); lay3.setup(); wireCardCollapse(); setupGutter('levelGutter','grid','panelDiaV1N1h',()=>Math.round(innerHeight-48)); setupGutter('levelGutter2','nivel2','panelDiaV1N2h',null); updateDateLabel(); refresh(true); });
 </script>
