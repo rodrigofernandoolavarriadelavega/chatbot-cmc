@@ -1047,43 +1047,53 @@ const apopInner=apop.querySelector('.apop-inner');
 let apopPinned=false, apopExpanded=false, apopProfId=null;
 addDragResize(apop, ()=>apopPinned);
 function applyApopSize(){ apop.style.width=(apopExpanded?540:344)+'px'; apop.style.height=(apopExpanded?Math.round(innerHeight*0.8):Math.min(470,Math.round(innerHeight*0.72)))+'px'; }
+const EST_LABEL = {atendido:'Atendido',agendado:'Agendado',cancelado:'Cancelado',anulado:'Anulado',cambio_hora:'Cambió hora',falto:'Faltó'};
+function _arow(c, p){
+  if(c.libre) return `<div class="arow muted"><div class="hr mono">${c.hora||'·'}</div><div class="info"><div class="slotfree">Cupo libre</div></div><div class="rt"><div class="bd" style="background:var(--line);color:var(--mute)">Disponible</div></div></div>`;
+  const mlab  = c.estado==='atendido' ? (c.monto?clp(c.monto):'—') : (NO_ATEND.has(c.estado)?'—':clp(c.esperado));
+  const tipoTxt = c.tipo==='fonasa'?'Fonasa':'Particular';
+  return `<div class="arow ${NO_ATEND.has(c.estado)?'muted':''}">
+    <div class="hr mono">${c.hora||'·'}</div>
+    <div class="info"><div class="nm">${c.paciente}</div><div class="ob">${tipoTxt}${c.obs?' · '+c.obs:''}</div></div>
+    <div class="rt"><div class="mt mono">${mlab}</div><div class="bd ${c.estado}">${EST_LABEL[c.estado]||c.estado}</div></div>
+  </div>`;
+}
 function buildAgenda(p, pinned){
   const a=AREAS[p.area]; const m=p._m;
-  const cap=p._cap||0; const ocup=m.ocupados;
   const dia = STATE.periodo==='dia';
-  // orden: atendidos → faltó/no-atendidos → resto (cronológico interno preservado)
-  const rank = c => c.estado==='atendido' ? 0 : (NO_ATEND.has(c.estado) ? 1 : 2);
-  const ordered = p.agenda.filter(c=>!c.libre).slice().sort((x,y)=> rank(x)-rank(y));
-  const nAt    = p.agenda.filter(c=>c.estado==='atendido').length;
-  const nFalto = p.agenda.filter(c=>c.estado==='falto').length;
-  const libres = Math.max(0, cap - ocup);   // cupos sin paciente (gris)
+  const ar = p._agendaReal;   // agenda REAL por horario (Medilink, lazy) si ya llegó
+  let cap, nAt, nFalto, rows;
   let realSum=0, espSum=0;
-  const rows = ordered.map(c=>{
-    if(c.estado==='atendido') realSum+=c.monto;
-    if(ACTIVOS.has(c.estado)) espSum += c.estado==='atendido'?c.monto:tarifaSlot(p);
-    const mlab  = c.estado==='atendido' ? clp(c.monto) : (NO_ATEND.has(c.estado)?'—':clp(c.esperado));
-    const tipoTxt = c.tipo==='fonasa'?'Fonasa':'Particular';
-    const estLabel = {atendido:'Atendido',agendado:'Agendado',cancelado:'Cancelado',anulado:'Anulado',cambio_hora:'Cambió hora',falto:'Faltó'}[c.estado];
-    return `<div class="arow ${NO_ATEND.has(c.estado)?'muted':''}">
-      <div class="hr mono">${c.hora||'·'}</div>
-      <div class="info"><div class="nm">${c.paciente}</div><div class="ob">${tipoTxt}${c.obs?' · '+c.obs:''}</div></div>
-      <div class="rt"><div class="mt mono">${mlab}</div><div class="bd ${c.estado}">${estLabel}</div></div>
-    </div>`;
-  }).join('');
-  // cupos libres (sin paciente) en gris, al final
-  const fillers = Array.from({length: Math.min(libres, 60)}, ()=>
-    `<div class="arow muted"><div class="hr mono">·</div><div class="info"><div class="slotfree">Cupo libre</div></div><div class="rt"><div class="bd" style="background:var(--line);color:var(--mute)">Disponible</div></div></div>`
-  ).join('');
+  const accum = c => { if(c.libre) return; if(c.estado==='atendido') realSum+=c.monto; if(ACTIVOS.has(c.estado)) espSum += c.estado==='atendido'?(c.monto||tarifaSlot(p)):tarifaSlot(p); };
+  if(ar){
+    // grilla REAL: cada cita en su hora + cupos libres en los huecos (ya viene ordenada)
+    cap=ar.cap; nAt=ar.nAt; nFalto=ar.nFalto;
+    ar.agenda.forEach(accum);
+    rows = ar.agenda.map(c=>_arow(c,p)).join('');
+  }else{
+    cap=p._cap||0; const ocup=m.ocupados;
+    nAt    = p.agenda.filter(c=>c.estado==='atendido').length;
+    nFalto = p.agenda.filter(c=>c.estado==='falto').length;
+    const rank = c => c.estado==='atendido' ? 0 : (NO_ATEND.has(c.estado) ? 1 : 2);
+    const ordered = p.agenda.filter(c=>!c.libre).slice().sort((x,y)=> rank(x)-rank(y));
+    ordered.forEach(accum);
+    const libres = Math.max(0, cap - ocup);   // cupos sin paciente (gris)
+    const fillers = Array.from({length: Math.min(libres, 60)}, ()=>
+      `<div class="arow muted"><div class="hr mono">·</div><div class="info"><div class="slotfree">Cupo libre</div></div><div class="rt"><div class="bd" style="background:var(--line);color:var(--mute)">Disponible</div></div></div>`
+    ).join('');
+    rows = ordered.map(c=>_arow(c,p)).join('') + fillers;
+  }
+  const loadHint = (pinned && PANEL_TOKEN && !ar) ? '<span style="opacity:.75;font-style:italic"> · cargando horario…</span>' : '';
   apop.style.setProperty('--ac',a.color);
   const acts = pinned
     ? `<button class="apbtn" id="apExpand" title="${apopExpanded?'Reducir':'Expandir'}">${apopExpanded?'⤡':'⤢'}</button><button class="apbtn" id="apClose" title="Cerrar (Esc)">✕</button>`
     : '';
   apopInner.innerHTML = `
     <div class="ah" style="--ac:${a.color}">
-      <div class="hl"><div class="t">${p.nombre}</div><div class="s">${a.label} · ${cap} cupos${dia?'':' · día tipo'}</div></div>
+      <div class="hl"><div class="t">${p.nombre}</div><div class="s">${a.label} · ${cap} cupos${dia?'':' · día tipo'}${loadHint}</div></div>
       <div class="arr"><div class="cap" title="Disponibles / Atendidos / Faltó">${cap}<i>/</i><b class="cok">${nAt}</b><i>/</i><b class="cno">${nFalto}</b></div>${acts}</div>
     </div>
-    <div class="abody">${(rows+fillers) || '<div class="arow muted" style="justify-content:center;padding:24px">Sin agenda registrada</div>'}</div>
+    <div class="abody">${rows || '<div class="arow muted" style="justify-content:center;padding:24px">Sin agenda registrada</div>'}</div>
     <div class="afoot"><span>Real: <b>${clp(realSum)}</b></span><span>Esperado: <b>${clp(espSum)}</b></span></div>`;
   if(pinned){
     apop.querySelector('#apClose')?.addEventListener('click',e=>{ e.stopPropagation(); closeAgenda(); });
@@ -1101,6 +1111,7 @@ function pinAgenda(card){            // clic — fija el popup para trabajarlo
   apopProfId=p.id; apopPinned=true; buildAgenda(p,true); applyApopSize();
   apop.classList.add('show','pinned');
   if(apopExpanded){ apop.classList.add('expanded'); centerPop(); } else positionPinned(card);
+  fetchAgendaReal(p);   // trae el horario real (Medilink) y re-renderiza al llegar
 }
 function positionPop(e){            // seguir el mouse (solo en hover)
   if(apopPinned || !apop.classList.contains('show')) return;
@@ -1874,7 +1885,21 @@ async function loadFinanciero(mes){
   markFinReal();
 }
 /* — conexión a datos REALES · Nivel 1 operativo (/api/panel-dia/operativo) — */
-let OP_REAL=false;
+let OP_REAL=false, OP_FECHA=null;
+const AGENDA_CACHE={};   // `${prof}_${fecha}` → {agenda,cap,nAt,nFalto} (agenda real por horario)
+/* al fijar el popup: trae la agenda real del día (Medilink, 1 llamada) y la cachea */
+async function fetchAgendaReal(p){
+  if(!PANEL_TOKEN || !OP_FECHA) return;
+  const key=p.id+'_'+OP_FECHA;
+  if(AGENDA_CACHE[key]){ p._agendaReal=AGENDA_CACHE[key]; if(apopPinned&&apopProfId==p.id) buildAgenda(p,true); return; }
+  try{
+    const url='/api/panel-dia/agenda?prof='+p.id+'&fecha='+OP_FECHA+'&token='+encodeURIComponent(PANEL_TOKEN);
+    const r=await fetch(url,{credentials:'same-origin'}); if(!r.ok) return;
+    const d=await r.json(); if(!d||!Array.isArray(d.agenda)) return;
+    AGENDA_CACHE[key]=d; p._agendaReal=d;
+    if(apopPinned && apopProfId==p.id) buildAgenda(p,true);   // re-render con horarios reales
+  }catch(e){}
+}
 function _mkProf(ap){
   const a = AREAS[ap.area] ? ap.area : 'general';
   const p = { id:ap.id, nombre:ap.nombre, area:a,
@@ -1894,7 +1919,7 @@ async function loadOperativo(fecha, auto){
     const d=await r.json(); if(!d||!d.profesionales) throw 0;
     const nuevos=d.profesionales.map(_mkProf);
     PROFS.length=0; nuevos.forEach(p=>PROFS.push(p));
-    OP_REAL=true;
+    OP_REAL=true; OP_FECHA=d.fecha||fecha||null;
     if(d.fecha){ STATE.fecha=new Date(d.fecha+'T12:00:00'); const inD=document.getElementById('inDia'); if(inD)inD.value=d.fecha; updateDateLabel(); }
     const h=document.querySelector('.central .col-head .badge')||document.getElementById('lblDispo');
     renderAll();

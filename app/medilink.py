@@ -1526,6 +1526,40 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
     return agenda
 
 
+async def citas_dia_lite(id_prof: int, fecha: str) -> list[dict]:
+    """Citas del día de un profesional con hora/estado/nombre — UNA sola llamada a /citas,
+    SIN fan-out de /pacientes (el nombre del paciente ya viene en la cita). Pensada para
+    uso on-demand (popup de agenda): segura contra el rate-limit que sí dispara el
+    fan-out de obtener_agenda_dia. Sirve para fechas pasadas (las citas son históricas)."""
+    params = {
+        "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
+        "id_profesional":   {"eq": id_prof},
+        "fecha":            {"eq": fecha},
+        "estado_anulacion": {"eq": 0},
+    }
+    client = _get_shared_client()
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                       params={"q": _q(params)}, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.error("citas_dia_lite prof=%d fecha=%s: %s", id_prof, fecha, e)
+        return []
+    if r.status_code != 200:
+        return []
+    out = []
+    for c in _safe_json(r).get("data", []):
+        out.append({
+            "hora":         (c.get("hora_inicio") or "")[:5],
+            "hora_fin":     (c.get("hora_fin") or "")[:5],
+            "paciente":     " ".join((c.get("nombre_paciente") or "Paciente").split()),
+            "id_paciente":  c.get("id_paciente"),
+            "estado_cita":  c.get("estado_cita") or "",
+            "duracion":     c.get("duracion"),
+        })
+    out.sort(key=lambda x: x["hora"])
+    return out
+
+
 async def get_cita(id_cita: int) -> dict | None:
     """Obtiene una cita por ID desde Medilink.
     Devuelve el dict crudo de Medilink (con estado_cita, id_estado, estado_anulacion, etc)

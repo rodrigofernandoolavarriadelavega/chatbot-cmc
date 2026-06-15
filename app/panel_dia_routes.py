@@ -267,6 +267,97 @@ def register_panel_dia_routes(app):
                 })
         return {"fecha": fecha, "profesionales": profs}
 
+    # ───── NIVEL 1 · agenda detallada de UN profesional (lazy, al fijar popup) ─────
+    # UNA sola llamada a Medilink /citas (sin fan-out de /pacientes → sin 429).
+    # Devuelve la grilla del día POR HORARIO: cada cita en su hora real + cupos
+    # libres rellenando los huecos de la ventana de trabajo observada.
+    @app.get("/api/panel-dia/agenda", tags=["panel-dia"], include_in_schema=False)
+    async def panel_agenda(prof: int = Query(...), fecha: str = Query(...),
+                           token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+        _auth(token, cmc_session)
+        from session import db
+        from medilink import citas_dia_lite, PROFESIONALES
+        citas = await citas_dia_lite(prof, fecha)
+        with db() as c:
+            pg: dict = {}
+            for idpac, monto in c.execute(
+                "SELECT id_paciente, SUM(monto) FROM bi_pagos_caja WHERE fecha=? AND id_profesional=? GROUP BY id_paciente",
+                (fecha, prof)).fetchall():
+                pg[idpac] = int(monto or 0)
+            desde90 = (date.fromisoformat(fecha) - timedelta(days=90)).strftime("%Y-%m-%d")
+            row = c.execute("SELECT AVG(monto) FROM bi_pagos_caja WHERE id_profesional=? AND monto>0 AND fecha>=?",
+                            (prof, desde90)).fetchone()
+            tk = int((row and row[0]) or 18000)
+            prev: dict = {}
+            try:
+                for nom, pv in c.execute("SELECT paciente_nombre, prevision FROM pagos_cmc WHERE fecha=?", (fecha,)).fetchall():
+                    if nom:
+                        prev[" ".join(str(nom).split()).lower()] = "fonasa" if "fonasa" in (pv or "").lower() else "particular"
+            except Exception:
+                prev = {}
+        hoy_iso = date.today().isoformat()
+        es_pasado = fecha < hoy_iso
+        intervalo = (PROFESIONALES.get(prof, {}) or {}).get("intervalo") or 15
+
+        def _h2m(h):
+            try:
+                a, b = str(h).split(":")[:2]
+                return int(a) * 60 + int(b)
+            except Exception:
+                return None
+
+        used_rows = []
+        paid_seen: set = set()
+        for ct in citas:
+            est_txt = (ct["estado_cita"] or "").lower()
+            monto = pg.get(ct["id_paciente"], 0)
+            if ct["id_paciente"] in pg:
+                paid_seen.add(ct["id_paciente"])
+            if monto > 0 or "atend" in est_txt:
+                estado = "atendido"
+            elif any(k in est_txt for k in ("anul", "cancel", "no asist", "no asiste", "ausente", "falt", "no lleg")):
+                estado = "falto"
+            elif es_pasado:
+                estado = "falto"   # cita pasada que no quedó atendida ni pagada
+            else:
+                estado = "agendado"
+            used_rows.append({"hora": ct["hora"], "paciente": ct["paciente"], "estado": estado,
+                              "monto": monto if estado == "atendido" else 0, "esperado": tk,
+                              "tipo": prev.get(ct["paciente"].lower(), "particular")})
+        # pagos sin cita registrada (walk-in) → atendidos sin hora
+        walkins = []
+        for idpac, monto in pg.items():
+            if idpac in paid_seen:
+                continue
+            walkins.append({"hora": "—", "paciente": "Atención", "estado": "atendido",
+                            "monto": monto, "esperado": tk, "tipo": "particular"})
+        # grilla por horario: ventana observada, huecos = cupos libres
+        from collections import defaultdict
+        by_hora: dict = defaultdict(list)
+        for r in used_rows:
+            m = _h2m(r["hora"])
+            by_hora[m if m is not None else -1].append(r)
+        mins = [m for m in by_hora if m is not None and m >= 0]
+        grid = []
+        if mins:
+            t0, t1 = min(mins), max(mins)
+            t = t0
+            while t <= t1:
+                if t in by_hora:
+                    grid.extend(by_hora.pop(t))
+                else:
+                    grid.append({"hora": f"{t // 60:02d}:{t % 60:02d}", "libre": True})
+                t += intervalo
+            for m in sorted(k for k in by_hora if k is not None and k >= 0):
+                grid.extend(by_hora[m])
+        else:
+            grid = list(used_rows)
+        grid.extend(walkins)
+        n_at = sum(1 for r in grid if r.get("estado") == "atendido")
+        n_falto = sum(1 for r in grid if r.get("estado") == "falto")
+        return {"prof": prof, "fecha": fecha, "agenda": grid, "cap": len(grid),
+                "nAt": n_at, "nFalto": n_falto, "fuente": "medilink" if citas else "pagos"}
+
     # ───────────────────────── NIVEL 2 · chat ───────────────────────────────
     @app.get("/api/panel-dia/chat", tags=["panel-dia"], include_in_schema=False)
     def panel_chat(token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
