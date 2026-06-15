@@ -832,13 +832,15 @@ const PROFS = BASE.map(p=>{
 
 /* 3 · MOTOR DE CÁLCULO */
 function metricsDay(p){
-  let real=0, esp=0, nAt=0,nFon=0,nPar=0,nNo=0, ocupados=0;
+  let real=0, esp=0, nAt=0,nFon=0,nPar=0,nNo=0, ocCount=0;
   for(const c of p.agenda){
-    if(c.libre) continue; ocupados++;
+    if(c.libre) continue; ocCount++;
     if(c.estado==='atendido'){ real+=c.monto; nAt++; (c.tipo==='fonasa'?nFon++:nPar++); }
     if(NO_ATEND.has(c.estado)){ nNo++; }
     if(ACTIVOS.has(c.estado)){ esp += (c.estado==='atendido'? c.monto : tarifaSlot(p)); }
   }
+  // ocupación real del día (cache Medilink) si vino del backend; si no, lo contado
+  const ocupados = (p._ocup!=null) ? p._ocup : ocCount;
   const cap=p._cap||0; const pot=cap*tarifaSlot(p);
   return {real, esp, pot, cap, nAt, nFon, nPar, nNo, ocupados};
 }
@@ -1909,6 +1911,7 @@ function _mkProf(ap){
     agenda:(ap.agenda||[]).map(c=>({hora:c.hora, paciente:c.paciente, tipo:c.tipo||'particular',
       estado:c.estado, monto:c.monto||0, esperado:c.esperado||ap.ticket||18000, obs:''})) };
   p._cap = ap.cap || p.agenda.length;
+  p._ocup = (ap.ocup!=null) ? ap.ocup : null;   // ocupación real (cache Medilink)
   p._m = metricsDay(p);
   return p;
 }

@@ -467,6 +467,19 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=3600,
         coalesce=True,
     )
+    # Panel del Día: cache de CAPACIDAD REAL por profesional (Medilink /citas,
+    # secuencial+throttle) 04:10 CLT — horario libre, off-peak. Alimenta el
+    # potencial/ocupación reales del N1 sin fan-out en vivo.
+    from panel_dia_jobs import refrescar_cap_cache
+    scheduler.add_job(
+        refrescar_cap_cache,
+        CronTrigger(hour=4, minute=10, timezone=_CLT),
+        id="panel_cap_cache_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
+    )
     # BI v2: sync intradía LIGERO (solo pagos del día) 14:00 y 19:00 CLT → el
     # dashboard /cmc/mensual refleja el día en curso sin esperar a las 23:59.
     scheduler.add_job(

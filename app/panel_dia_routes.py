@@ -214,7 +214,21 @@ def register_panel_dia_routes(app):
                 (cap_desde, fecha)).fetchall():
                 dcounts.setdefault(idp, []).append(int(n or 0))
 
+            # capacidad/ocupación REAL del día (cache nocturna Medilink, si existe)
+            # → preferida sobre el proxy de pagos, que subestima (Fonasa sin pago).
+            cap_real: dict = {}
+            try:
+                for idp, cp, ncit, nat in c.execute(
+                    "SELECT id_profesional, cap, n_citas, n_at FROM panel_cap_cache WHERE fecha=?",
+                    (fecha,)).fetchall():
+                    cap_real[idp] = {"cap": int(cp or 0), "n_citas": int(ncit or 0), "n_at": int(nat or 0)}
+            except Exception:
+                cap_real = {}
+
             def _cap_for(idp, used):
+                r = cap_real.get(idp)
+                if r and r["cap"]:                 # capacidad real (Medilink) — preferida
+                    return max(r["cap"], used)
                 arr = sorted(dcounts.get(idp, []))
                 base = 0
                 if arr:
@@ -259,10 +273,14 @@ def register_panel_dia_routes(app):
                 cap = _cap_for(idp, usados)
                 n_at = sum(1 for x in agenda if x["estado"] == "atendido")
                 n_falto = sum(1 for x in agenda if x["estado"] == "falto")
+                # ocupación real (cache Medilink) → coherente con cap; si no, lo pagado
+                r = cap_real.get(idp)
+                ocup = max(r["n_citas"], usados) if r and r["n_citas"] else usados
+                presente = bool(agenda) or bool(r and r["n_citas"])
                 profs.append({
                     "id": idp, "nombre": info.get("nombre", f"Prof {idp}"),
                     "area": _area_key(info.get("especialidad", "")),
-                    "ticket": tk, "presente": bool(agenda), "cap": cap,
+                    "ticket": tk, "presente": presente, "cap": cap, "ocup": ocup,
                     "usados": usados, "nAt": n_at, "nFalto": n_falto, "agenda": agenda,
                 })
         return {"fecha": fecha, "profesionales": profs}
@@ -357,6 +375,16 @@ def register_panel_dia_routes(app):
         n_falto = sum(1 for r in grid if r.get("estado") == "falto")
         return {"prof": prof, "fecha": fecha, "agenda": grid, "cap": len(grid),
                 "nAt": n_at, "nFalto": n_falto, "fuente": "medilink" if citas else "pagos"}
+
+    # ───── refresco manual del cache de capacidad real (backfill on-demand) ─────
+    @app.post("/api/panel-dia/cap-cache/refresh", tags=["panel-dia"], include_in_schema=False)
+    async def panel_cap_refresh(dias_atras: int = Query(21), dias_adelante: int = Query(3),
+                                fecha: str | None = Query(None), full: int = Query(0),
+                                token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+        _auth(token, cmc_session)
+        from panel_dia_jobs import refrescar_cap_cache
+        return await refrescar_cap_cache(dias_atras=dias_atras, dias_adelante=dias_adelante,
+                                         solo_fecha=fecha, full=bool(full))
 
     # ───────────────────────── NIVEL 2 · chat ───────────────────────────────
     @app.get("/api/panel-dia/chat", tags=["panel-dia"], include_in_schema=False)
