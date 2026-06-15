@@ -157,23 +157,39 @@ def register_panel_dia_routes(app):
         if not fecha:
             fecha = date.today().isoformat()
         with db() as c:
-            # auto-fallback: si la fecha no tiene agenda, usar la última que sí (para no abrir vacío)
-            if auto and not c.execute("SELECT 1 FROM citas_cache WHERE fecha=? LIMIT 1", (fecha,)).fetchone():
-                r = c.execute("SELECT fecha FROM citas_cache WHERE fecha<=? ORDER BY fecha DESC LIMIT 1", (fecha,)).fetchone()
+            # auto-fallback: si la fecha no tiene ACTIVIDAD (ni pagos ni citas), usar la última con pagos
+            if auto and not c.execute("SELECT 1 FROM bi_pagos_caja WHERE fecha=? LIMIT 1", (fecha,)).fetchone() \
+                     and not c.execute("SELECT 1 FROM citas_cache WHERE fecha=? LIMIT 1", (fecha,)).fetchone():
+                r = c.execute("SELECT fecha FROM bi_pagos_caja WHERE fecha<=? ORDER BY fecha DESC LIMIT 1", (fecha,)).fetchone()
                 if r:
                     fecha = r[0]
+            # citas del día (agenda programada, donde el caché del bot la tenga)
             citas: dict = {}
             for idp, idpac, nom, hora in c.execute(
                 "SELECT id_prof, id_paciente, paciente_nombre, hora_inicio FROM citas_cache "
                 "WHERE fecha=? ORDER BY hora_inicio", (fecha,)).fetchall():
                 citas.setdefault(idp, []).append({"id_pac": idpac, "paciente": " ".join((nom or "Paciente").split())[:24], "hora": (hora or "")[:5]})
-            pagos: dict = {}
+            # pagos del día = ATENCIONES REALES → fuente de verdad de "presente" y venta (NO citas_cache, que es parcial)
+            pagos: dict = {}        # idp -> {idpac: monto}
+            pac_ids: set = set()
             for idp, idpac, monto in c.execute(
                 "SELECT id_profesional, id_paciente, SUM(monto) FROM bi_pagos_caja WHERE fecha=? "
                 "GROUP BY id_profesional, id_paciente", (fecha,)).fetchall():
-                pagos[(idp, idpac)] = int(monto or 0)
-            # previsión (Fonasa/particular) por RUT — pagos_cmc no tiene id_paciente, se cruza por nombre↔citas no es fiable;
-            # se usa solo para los contadores, no para la valorización (que es por profesional).
+                pagos.setdefault(idp, {})[idpac] = int(monto or 0)
+                pac_ids.add(idpac)
+            # nombres por id_paciente (del caché de citas, cualquier fecha) para atenciones sin cita cacheada
+            nombres: dict = {}
+            if pac_ids:
+                ph = ",".join("?" * len(pac_ids))
+                try:
+                    for idpac, nom in c.execute(
+                        f"SELECT id_paciente, paciente_nombre FROM citas_cache WHERE id_paciente IN ({ph}) GROUP BY id_paciente",
+                        tuple(pac_ids)).fetchall():
+                        if nom:
+                            nombres[idpac] = " ".join(str(nom).split())[:24]
+                except Exception:
+                    pass
+            # previsión (Fonasa/particular) por nombre — solo para contadores (pagos_cmc no tiene id_paciente)
             prev_rut: dict = {}
             try:
                 for nom, pv in c.execute("SELECT paciente_nombre, prevision FROM pagos_cmc WHERE fecha=?", (fecha,)).fetchall():
@@ -188,19 +204,30 @@ def register_panel_dia_routes(app):
                 ticket[idp] = int(t or 0)
             profs = []
             for idp, info in PROFESIONALES.items():
-                ag = citas.get(idp, [])
+                cit = citas.get(idp, [])
+                pg = pagos.get(idp, {})
                 tk = ticket.get(idp) or 18000
                 agenda = []
-                for cita in ag:
-                    pago = pagos.get((idp, cita["id_pac"]), 0)
-                    tipo = prev_rut.get(cita["paciente"].lower(), "particular")
+                cited: set = set()
+                for cita in cit:
+                    pago = pg.get(cita["id_pac"], 0)
                     agenda.append({"hora": cita["hora"], "paciente": cita["paciente"],
                                    "estado": "atendido" if pago > 0 else "agendado",
-                                   "monto": pago, "esperado": tk, "tipo": tipo})
+                                   "monto": pago, "esperado": tk,
+                                   "tipo": prev_rut.get(cita["paciente"].lower(), "particular")})
+                    cited.add(cita["id_pac"])
+                # atenciones con pago pero sin cita cacheada (agendadas en recepción / walk-in) → atendidas
+                for idpac, monto in pg.items():
+                    if idpac in cited:
+                        continue
+                    nom = nombres.get(idpac, "Atención")
+                    agenda.append({"hora": "—", "paciente": nom, "estado": "atendido",
+                                   "monto": monto, "esperado": tk,
+                                   "tipo": prev_rut.get(nom.lower(), "particular")})
                 profs.append({
                     "id": idp, "nombre": info.get("nombre", f"Prof {idp}"),
                     "area": _area_key(info.get("especialidad", "")),
-                    "ticket": tk, "presente": len(ag) > 0, "cap": len(agenda), "agenda": agenda,
+                    "ticket": tk, "presente": bool(agenda), "cap": len(agenda), "agenda": agenda,
                 })
         return {"fecha": fecha, "profesionales": profs}
 
