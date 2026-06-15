@@ -202,6 +202,29 @@ def register_panel_dia_routes(app):
             ticket: dict = {}
             for idp, t in c.execute("SELECT id_profesional, AVG(monto) FROM bi_pagos_caja WHERE fecha>=? AND monto>0 GROUP BY id_profesional", (desde,)).fetchall():
                 ticket[idp] = int(t or 0)
+            # capacidad de slots por profesional = percentil ~85 de pacientes-distintos/día
+            # (su "día lleno" en los últimos 120 días ≈ su capacidad real de cupos).
+            # Medilink /agendas solo trae slots libres futuros (capados ~10) → inútil para
+            # fechas pasadas; este proxy data-driven funciona para cualquier fecha sin fan-out.
+            cap_desde = (date.fromisoformat(fecha) - timedelta(days=120)).strftime("%Y-%m-%d")
+            dcounts: dict = {}
+            for idp, _f, n in c.execute(
+                "SELECT id_profesional, fecha, COUNT(DISTINCT id_paciente) FROM bi_pagos_caja "
+                "WHERE fecha BETWEEN ? AND ? AND monto>0 GROUP BY id_profesional, fecha",
+                (cap_desde, fecha)).fetchall():
+                dcounts.setdefault(idp, []).append(int(n or 0))
+
+            def _cap_for(idp, used):
+                arr = sorted(dcounts.get(idp, []))
+                base = 0
+                if arr:
+                    k = max(0, min(len(arr) - 1, int(round(0.85 * (len(arr) - 1)))))
+                    base = arr[k]
+                # nunca menos que lo realmente usado ese día; piso 4 si el prof trabajó
+                return max(used, base, 4 if used else base)
+
+            hoy_iso = date.today().isoformat()
+            es_pasado = fecha < hoy_iso
             profs = []
             for idp, info in PROFESIONALES.items():
                 cit = citas.get(idp, [])
@@ -211,8 +234,15 @@ def register_panel_dia_routes(app):
                 cited: set = set()
                 for cita in cit:
                     pago = pg.get(cita["id_pac"], 0)
+                    # cita sin pago: en un día pasado = no se presentó (falto); hoy/futuro = agendado
+                    if pago > 0:
+                        est = "atendido"
+                    elif es_pasado:
+                        est = "falto"
+                    else:
+                        est = "agendado"
                     agenda.append({"hora": cita["hora"], "paciente": cita["paciente"],
-                                   "estado": "atendido" if pago > 0 else "agendado",
+                                   "estado": est,
                                    "monto": pago, "esperado": tk,
                                    "tipo": prev_rut.get(cita["paciente"].lower(), "particular")})
                     cited.add(cita["id_pac"])
@@ -224,10 +254,16 @@ def register_panel_dia_routes(app):
                     agenda.append({"hora": "—", "paciente": nom, "estado": "atendido",
                                    "monto": monto, "esperado": tk,
                                    "tipo": prev_rut.get(nom.lower(), "particular")})
+                # nº de cupos realmente ocupados (atendido/falto/agendado) ese día
+                usados = len(agenda)
+                cap = _cap_for(idp, usados)
+                n_at = sum(1 for x in agenda if x["estado"] == "atendido")
+                n_falto = sum(1 for x in agenda if x["estado"] == "falto")
                 profs.append({
                     "id": idp, "nombre": info.get("nombre", f"Prof {idp}"),
                     "area": _area_key(info.get("especialidad", "")),
-                    "ticket": tk, "presente": bool(agenda), "cap": len(agenda), "agenda": agenda,
+                    "ticket": tk, "presente": bool(agenda), "cap": cap,
+                    "usados": usados, "nAt": n_at, "nFalto": n_falto, "agenda": agenda,
                 })
         return {"fecha": fecha, "profesionales": profs}
 

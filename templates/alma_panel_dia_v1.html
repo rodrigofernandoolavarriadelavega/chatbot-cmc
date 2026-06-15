@@ -191,7 +191,8 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none;}
 .apop .ah .t{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .apop .ah .s{font-size:10px;font-weight:700;opacity:.9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .apop .ah .arr{display:flex;align-items:center;gap:6px;flex:none;}
-.apop .ah .cap{font-size:10px;font-weight:800;background:rgba(255,255,255,.22);padding:4px 9px;border-radius:8px;}
+.apop .ah .cap{font-size:10px;font-weight:800;background:rgba(255,255,255,.22);padding:4px 9px;border-radius:8px;display:inline-flex;align-items:center;gap:1px;}
+.apop .ah .cap i{opacity:.5;font-style:normal;margin:0 1px;} .apop .ah .cap b.cok{color:#c8f7d4;} .apop .ah .cap b.cno{color:#ffd2cf;}
 .apop .ah .apbtn{width:23px;height:23px;border-radius:7px;border:0;background:rgba(255,255,255,.2);color:#fff;
   font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;line-height:1;}
 .apop .ah .apbtn:hover{background:rgba(255,255,255,.42);}
@@ -211,7 +212,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none;}
 .arow .rt .bd{font-size:8.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 6px;border-radius:6px;margin-top:3px;display:inline-block;}
 .bd.atendido{background:var(--green-s);color:var(--green);} .bd.agendado{background:var(--aqua-s);color:var(--blue);}
 .bd.cancelado{background:var(--red-s);color:var(--red);} .bd.anulado{background:var(--red-s);color:var(--red);}
-.bd.cambio_hora{background:var(--orange-s);color:var(--orange);}
+.bd.cambio_hora{background:var(--orange-s);color:var(--orange);} .bd.falto{background:var(--red-s);color:var(--red);}
 .arow.muted{opacity:.5;}
 .arow .slotfree{font-size:10.5px;font-weight:700;color:var(--mute2);font-style:italic;}
 .apop .afoot{padding:10px 15px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;color:var(--mute);}
@@ -755,7 +756,7 @@ const pick = a => a[Math.floor(rnd()*a.length)];
 const NOW_MIN = 13*60+20;   // hora simulada "ahora"
 
 const ACTIVOS = new Set(['agendado','atendido']);
-const NO_ATEND = new Set(['cancelado','anulado','cambio_hora']);
+const NO_ATEND = new Set(['cancelado','anulado','cambio_hora','falto']);
 
 /* tarifaSlot — cadena de prioridad, a nivel profesional (hoisteada: invocable al materializar) */
 function tarifaSlot(p){
@@ -1038,30 +1039,39 @@ function buildAgenda(p, pinned){
   const a=AREAS[p.area]; const m=p._m;
   const cap=p._cap||0; const ocup=m.ocupados;
   const dia = STATE.periodo==='dia';
+  // orden: atendidos → faltó/no-atendidos → resto (cronológico interno preservado)
+  const rank = c => c.estado==='atendido' ? 0 : (NO_ATEND.has(c.estado) ? 1 : 2);
+  const ordered = p.agenda.filter(c=>!c.libre).slice().sort((x,y)=> rank(x)-rank(y));
+  const nAt    = p.agenda.filter(c=>c.estado==='atendido').length;
+  const nFalto = p.agenda.filter(c=>c.estado==='falto').length;
+  const libres = Math.max(0, cap - ocup);   // cupos sin paciente (gris)
   let realSum=0, espSum=0;
-  const rows = p.agenda.map(c=>{
-    if(c.libre) return `<div class="arow muted"><div class="hr mono">${c.hora}</div><div class="info"><div class="slotfree">Cupo libre</div></div><div class="rt"><div class="bd" style="background:var(--line);color:var(--mute)">Disponible</div></div></div>`;
+  const rows = ordered.map(c=>{
     if(c.estado==='atendido') realSum+=c.monto;
     if(ACTIVOS.has(c.estado)) espSum += c.estado==='atendido'?c.monto:tarifaSlot(p);
     const mlab  = c.estado==='atendido' ? clp(c.monto) : (NO_ATEND.has(c.estado)?'—':clp(c.esperado));
     const tipoTxt = c.tipo==='fonasa'?'Fonasa':'Particular';
-    const estLabel = {atendido:'Atendido',agendado:'Agendado',cancelado:'Cancelado',anulado:'Anulado',cambio_hora:'Cambió hora'}[c.estado];
+    const estLabel = {atendido:'Atendido',agendado:'Agendado',cancelado:'Cancelado',anulado:'Anulado',cambio_hora:'Cambió hora',falto:'Faltó'}[c.estado];
     return `<div class="arow ${NO_ATEND.has(c.estado)?'muted':''}">
-      <div class="hr mono">${c.hora}</div>
+      <div class="hr mono">${c.hora||'·'}</div>
       <div class="info"><div class="nm">${c.paciente}</div><div class="ob">${tipoTxt}${c.obs?' · '+c.obs:''}</div></div>
       <div class="rt"><div class="mt mono">${mlab}</div><div class="bd ${c.estado}">${estLabel}</div></div>
     </div>`;
   }).join('');
+  // cupos libres (sin paciente) en gris, al final
+  const fillers = Array.from({length: Math.min(libres, 60)}, ()=>
+    `<div class="arow muted"><div class="hr mono">·</div><div class="info"><div class="slotfree">Cupo libre</div></div><div class="rt"><div class="bd" style="background:var(--line);color:var(--mute)">Disponible</div></div></div>`
+  ).join('');
   apop.style.setProperty('--ac',a.color);
   const acts = pinned
     ? `<button class="apbtn" id="apExpand" title="${apopExpanded?'Reducir':'Expandir'}">${apopExpanded?'⤡':'⤢'}</button><button class="apbtn" id="apClose" title="Cerrar (Esc)">✕</button>`
     : '';
   apopInner.innerHTML = `
     <div class="ah" style="--ac:${a.color}">
-      <div class="hl"><div class="t">${p.nombre}</div><div class="s">${a.label} · ${p.jornada[0]}:00–${p.jornada[1]}:00${dia?'':' · día tipo'}</div></div>
-      <div class="arr"><div class="cap">${ocup}/${cap}</div>${acts}</div>
+      <div class="hl"><div class="t">${p.nombre}</div><div class="s">${a.label} · ${cap} cupos${dia?'':' · día tipo'}</div></div>
+      <div class="arr"><div class="cap" title="Disponibles / Atendidos / Faltó">${cap}<i>/</i><b class="cok">${nAt}</b><i>/</i><b class="cno">${nFalto}</b></div>${acts}</div>
     </div>
-    <div class="abody">${rows || '<div class="arow muted" style="justify-content:center;padding:24px">Sin agenda registrada</div>'}</div>
+    <div class="abody">${(rows+fillers) || '<div class="arow muted" style="justify-content:center;padding:24px">Sin agenda registrada</div>'}</div>
     <div class="afoot"><span>Real: <b>${clp(realSum)}</b></span><span>Esperado: <b>${clp(espSum)}</b></span></div>`;
   if(pinned){
     apop.querySelector('#apClose')?.addEventListener('click',e=>{ e.stopPropagation(); closeAgenda(); });
