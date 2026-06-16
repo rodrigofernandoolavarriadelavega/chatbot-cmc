@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Estudio de Marketing · CMC</title>
+<style>
+  :root{
+    --navy:#0F3F68;--blue:#1172AB;--aqua:#4FBECE;--aqua-s:#E5F6F9;
+    --cobre:#C97B4A;--cobre-s:#FBEDE4;--verde:#2E9E6B;--verde-s:#E6F5EE;
+    --ink:#15293b;--mute:#5b7186;--mute2:#8aa0b3;--line:#e4ecf2;
+    --bg:#f4f8fb;--card:#fff;--shadow:0 6px 22px -10px rgba(15,63,104,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 16px 60px;}
+  .top{background:linear-gradient(135deg,#0c3357,#1172AB 60%,#3a9fb4);color:#fff;
+    padding:22px 0;border-radius:0 0 22px 22px;box-shadow:var(--shadow);}
+  .brand{display:flex;align-items:center;gap:13px;}
+  .brand .iso{width:46px;height:46px;border-radius:13px;background:#fff;display:grid;place-items:center;
+    box-shadow:0 7px 18px -7px rgba(0,0,0,.35);flex:none;}
+  .brand .iso img{width:31px;height:31px;display:block;}
+  .brand h1{font-size:19px;font-weight:800;letter-spacing:-.01em;}
+  .brand .s{font-size:11.5px;opacity:.9;font-weight:600;margin-top:1px;}
+
+  nav{position:sticky;top:0;z-index:9;background:rgba(244,248,251,.94);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);margin-bottom:22px;}
+  nav .wrap{display:flex;gap:5px;padding:8px 16px;overflow-x:auto;}
+  .tabbtn{flex:none;font-size:12.5px;font-weight:700;color:var(--mute);padding:8px 13px;border-radius:999px;
+    white-space:nowrap;border:1px solid transparent;cursor:pointer;background:none;}
+  .tabbtn:hover{background:var(--aqua-s);}
+  .tabbtn.on{background:var(--navy);color:#fff;}
+
+  .tab{display:none;} .tab.on{display:block;animation:fade .2s;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;}}
+
+  .h2{font-size:17px;font-weight:800;color:var(--navy);margin:4px 0 4px;}
+  .sub{font-size:13px;color:var(--mute);margin-bottom:14px;}
+  .sect{margin-top:26px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow);}
+  .grid{display:grid;gap:12px;}
+  .g2{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+  .g3{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+
+  /* marca */
+  .swatches{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px;}
+  .sw{border-radius:10px;padding:10px 12px;color:#fff;font-size:11px;font-weight:700;min-width:92px;box-shadow:var(--shadow);}
+  .sw small{display:block;opacity:.85;font-weight:600;font-family:monospace;margin-top:2px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);font-weight:800;}
+  td .fon{color:var(--verde);font-weight:800;} td .par{color:var(--navy);font-weight:800;}
+  .nota{font-size:11px;color:var(--mute);}
+  .search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;margin-bottom:10px;}
+
+  /* generador */
+  .gen{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .gen label{font-size:11px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:4px;}
+  .gen select,.gen input,.gen textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;}
+  .promptbox{background:#0c2740;color:#dce9f3;font-size:12.5px;border-radius:12px;padding:14px;margin-top:12px;
+    white-space:pre-wrap;line-height:1.55;font-family:ui-monospace,Menlo,monospace;max-height:260px;overflow:auto;}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;border:0;border-radius:10px;
+    padding:9px 14px;cursor:pointer;background:var(--navy);color:#fff;}
+  .btn.aqua{background:var(--aqua);} .btn.ghost{background:var(--aqua-s);color:var(--blue);}
+  .btn.cobre{background:var(--cobre);}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+
+  /* galería */
+  .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px;}
+  .design{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);}
+  .design img{width:100%;aspect-ratio:1;object-fit:cover;background:var(--aqua-s);display:block;}
+  .design .meta{padding:8px 9px;}
+  .design .t{font-size:11.5px;font-weight:700;color:var(--navy);line-height:1.2;}
+  .design .st{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-top:4px;}
+  .st.borrador{color:var(--cobre);} .st.aprobado{color:var(--blue);} .st.publicado{color:var(--verde);}
+
+  /* editable rows */
+  .row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+  .row input,.row textarea{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;font-family:inherit;}
+  .row .del{background:var(--cobre-s);color:var(--cobre);border:0;border-radius:9px;padding:0 11px;cursor:pointer;font-weight:800;font-size:15px;flex:none;align-self:stretch;}
+  .pill{display:inline-block;background:var(--aqua-s);color:var(--blue);font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;margin:3px 4px 0 0;}
+
+  /* campañas calendario */
+  .camp{border-left:4px solid var(--aqua);}
+  .camp .ic{font-size:20px;} .camp .nm{font-size:13.5px;font-weight:800;color:var(--navy);}
+  .camp .mo{font-size:11px;color:var(--cobre);font-weight:700;} .camp .ds{font-size:12px;color:var(--mute);margin-top:3px;}
+
+  /* metricas links */
+  .lk{display:flex;align-items:center;gap:12px;padding:14px 16px;}
+  .lk .em{font-size:24px;flex:none;} .lk .t{font-size:14px;font-weight:800;color:var(--navy);}
+  .lk .d{font-size:12px;color:var(--mute);} .lk .go{margin-left:auto;color:var(--blue);font-weight:800;font-size:13px;}
+
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;
+    font-size:13px;font-weight:700;padding:11px 18px;border-radius:12px;box-shadow:var(--shadow);opacity:0;
+    transition:opacity .2s;pointer-events:none;z-index:99;}
+  .toast.show{opacity:1;}
+  .hint{font-size:11.5px;color:var(--mute2);margin-top:7px;}
+  @media(max-width:620px){ .gen{grid-template-columns:1fr;} .brand h1{font-size:17px;} }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap"><div class="brand">
+  <div class="iso"><img src="/static/isotipo.png" alt="CMC"></div>
+  <div><h1>Estudio de Marketing</h1><div class="s">Centro Médico Carampangue · publicidad y contenido</div></div>
+</div></div></header>
+
+<nav><div class="wrap">
+  <button class="tabbtn on" data-t="marca">🎨 Marca &amp; Verdad</button>
+  <button class="tabbtn" data-t="crea">🖼️ Creatividades</button>
+  <button class="tabbtn" data-t="cal">🗓️ Calendario</button>
+  <button class="tabbtn" data-t="metr">📈 Qué funciona</button>
+  <button class="tabbtn" data-t="copys">✍️ Copys</button>
+</div></nav>
+
+<div class="wrap">
+
+  <!-- TAB MARCA -->
+  <div class="tab on" id="t-marca">
+    <div class="h2">Marca &amp; Fuente de verdad</div>
+    <p class="sub">Todo lo que tus gráficas necesitan para estar correctas. <b>Nunca pongas un precio de memoria — cópialo de acá.</b></p>
+
+    <div class="card">
+      <div style="font-weight:800;color:var(--navy);font-size:13px">Paleta de marca</div>
+      <div class="swatches">
+        <div class="sw" style="background:#0F3F68">Navy<small>#0F3F68</small></div>
+        <div class="sw" style="background:#1172AB">Azul<small>#1172AB</small></div>
+        <div class="sw" style="background:#4FBECE">Aqua<small>#4FBECE</small></div>
+        <div class="sw" style="background:#C97B4A">Cobre<small>#C97B4A</small></div>
+        <div class="sw" style="background:#2E9E6B">Verde<small>#2E9E6B</small></div>
+      </div>
+      <div class="hint">Tipografía: Montserrat (o sans moderna). Logo: la cruz redondeada azul/aqua. Estilo: limpio, médico cálido, mucho blanco.</div>
+      <div class="btns"><a class="btn ghost" href="/static/logo.png" target="_blank">⬇ Logo horizontal</a><a class="btn ghost" href="/static/isotipo.png" target="_blank">⬇ Isotipo</a></div>
+    </div>
+
+    <div class="sect">
+      <div class="h2" style="font-size:15px">Precios reales (fuente del bot)</div>
+      <input class="search" id="precSearch" placeholder="Buscar especialidad…">
+      <div class="card" style="padding:4px 6px"><table id="precTable"><thead><tr><th>Prestación</th><th>Fonasa</th><th>Particular</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="sect">
+      <div class="h2" style="font-size:15px">Promos vigentes <button class="btn ghost" style="font-size:11px;padding:5px 10px" onclick="addPromo()">+ Agregar</button> <button class="btn" style="font-size:11px;padding:5px 10px" onclick="saveKv('promos',collectPromos())">Guardar</button></div>
+      <div id="promosBox"></div>
+    </div>
+
+    <div class="sect">
+      <div class="h2" style="font-size:15px">Profesionales</div>
+      <div class="card" style="padding:10px 6px"><div class="grid g3" id="profsBox"></div></div>
+    </div>
+  </div>
+
+  <!-- TAB CREATIVIDADES -->
+  <div class="tab" id="t-crea">
+    <div class="h2">Estudio de creatividades</div>
+    <p class="sub">Arma el flyer con ChatGPT usando el estilo de marca y el <b>precio real automático</b>. Copia el prompt o pídelo al motor.</p>
+
+    <div class="card">
+      <div class="gen">
+        <div><label>Prestación</label><select id="genEsp"></select></div>
+        <div><label>Formato</label><select id="genFmt">
+          <option value="post">Post cuadrado IG (1080×1080)</option>
+          <option value="story">Historia vertical (1080×1920)</option>
+          <option value="flyer">Flyer promocional vertical</option>
+        </select></div>
+        <div><label>Enfoque</label><select id="genFoco">
+          <option value="promo">Promoción / precio</option>
+          <option value="info">Informativo / educativo</option>
+          <option value="profesional">Presentar al profesional</option>
+        </select></div>
+        <div><label>Mensaje extra (opcional)</label><input id="genExtra" placeholder="Ej: agenda esta semana"></div>
+      </div>
+      <div class="promptbox" id="promptOut"></div>
+      <div class="btns">
+        <button class="btn aqua" onclick="copyPrompt()">📋 Copiar prompt</button>
+        <a class="btn ghost" href="https://chatgpt.com/" target="_blank">💬 Abrir ChatGPT</a>
+        <button class="btn cobre" onclick="pedirRunner()">🚀 Pedir al motor</button>
+      </div>
+      <div class="hint">El botón "Pedir al motor" deja el pedido en cola para el <b>alma-image-runner</b> (genera gratis con ChatGPT Pro y lo sube a la galería). Si el runner no está corriendo, usa "Copiar prompt".</div>
+    </div>
+
+    <div class="sect">
+      <div class="h2" style="font-size:15px">Galería de diseños</div>
+      <p class="sub">Lo que ya se generó (borrador / aprobado / publicado).</p>
+      <div class="gal" id="galBox"></div>
+    </div>
+  </div>
+
+  <!-- TAB CALENDARIO -->
+  <div class="tab" id="t-cal">
+    <div class="h2">Calendario editorial</div>
+    <p class="sub">Las campañas estacionales que ya existen + tu plan del mes.</p>
+    <div class="grid g2" id="campBox"></div>
+
+    <div class="sect">
+      <div class="h2" style="font-size:15px">Plan del mes <button class="btn ghost" style="font-size:11px;padding:5px 10px" onclick="addCal()">+ Agregar</button> <button class="btn" style="font-size:11px;padding:5px 10px" onclick="saveKv('calendario',collectCal())">Guardar</button></div>
+      <div id="calBox"></div>
+    </div>
+  </div>
+
+  <!-- TAB METRICAS -->
+  <div class="tab" id="t-metr">
+    <div class="h2">Qué funciona</div>
+    <p class="sub">Los tableros que ya miden la publicidad. Ábrelos para ver qué convierte.</p>
+    <div class="grid g2">
+      <a class="card lk" href="/atribucion" target="_blank"><div class="em">🎯</div><div><div class="t">Atribución</div><div class="d">Pacientes nuevos por canal (Ads × Bot)</div></div><div class="go">Abrir →</div></a>
+      <a class="card lk" href="/meta" target="_blank"><div class="em">📣</div><div><div class="t">Meta Ads</div><div class="d">Gasto, CAC y rendimiento de campañas</div></div><div class="go">Abrir →</div></a>
+      <a class="card lk" href="/winback" target="_blank"><div class="em">🔁</div><div><div class="t">Win-back</div><div class="d">Reactivación de pacientes dormidos</div></div><div class="go">Abrir →</div></a>
+      <a class="card lk" href="/crecimiento" target="_blank"><div class="em">📈</div><div><div class="t">Crecimiento</div><div class="d">Tablero de crecimiento del centro</div></div><div class="go">Abrir →</div></a>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div style="font-weight:800;color:var(--navy);font-size:13px">3 reglas para saber si una pieza funciona</div>
+      <ul style="margin:8px 0 0 18px;font-size:13px;color:var(--ink)">
+        <li>Mira <b>conversaciones que llegaron al WhatsApp</b> tras publicar, no solo "me gusta".</li>
+        <li>Una pieza buena baja el <b>costo por paciente (CAC)</b> — eso se ve en Atribución/Meta.</li>
+        <li>Si un anuncio convierte, <b>repítelo</b> con variaciones; si no, cámbialo.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- TAB COPYS -->
+  <div class="tab" id="t-copys">
+    <div class="h2">Banco de copys &amp; hashtags</div>
+    <p class="sub">Textos listos por área + hashtags. Edítalos y guarda.</p>
+    <div class="h2" style="font-size:15px">Copys <button class="btn ghost" style="font-size:11px;padding:5px 10px" onclick="addCopy()">+ Agregar</button> <button class="btn" style="font-size:11px;padding:5px 10px" onclick="saveKv('copys',collectCopys())">Guardar</button></div>
+    <div id="copysBox"></div>
+    <div class="sect">
+      <div class="h2" style="font-size:15px">Hashtags <button class="btn" style="font-size:11px;padding:5px 10px" onclick="saveHashtags()">Guardar</button></div>
+      <div class="card"><textarea id="hashIn" style="width:100%;border:0;font-size:13px;font-family:inherit;min-height:54px;resize:vertical" placeholder="#uno #dos #tres"></textarea></div>
+      <div id="hashPills" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = '__MKT_TOKEN__';
+const Q = TOKEN ? ('?token='+encodeURIComponent(TOKEN)) : '';
+let DATA = {};
+const clp = n => (n==null?'—':'$'+Number(n).toLocaleString('es-CL'));
+const el = id => document.getElementById(id);
+function toast(m){ const t=el('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+/* tabs */
+document.querySelectorAll('.tabbtn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabbtn').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.id==='t-'+b.dataset.t));
+}));
+
+async function load(){
+  try{
+    const r = await fetch('/api/marketing/data'+Q,{credentials:'same-origin'});
+    DATA = await r.json();
+  }catch(e){ DATA={precios:[],profesionales:[],campanas:[],disenos:[],kv:{}}; }
+  renderPrecios(); renderProfs(); renderPromos(); renderGenEsp(); buildPrompt();
+  renderGaleria(); renderCampanas(); renderCal(); renderCopys(); renderHashtags();
+}
+
+/* ---------- MARCA ---------- */
+function renderPrecios(){
+  const q=(el('precSearch').value||'').toLowerCase();
+  const tb=el('precTable').querySelector('tbody'); tb.innerHTML='';
+  (DATA.precios||[]).filter(p=>p.esp.toLowerCase().includes(q)).forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><b>${p.esp}</b>${p.nota?` <span class="nota">· ${p.nota}</span>`:''}</td>
+      <td>${p.fonasa!=null?`<span class="fon">${clp(p.fonasa)}</span>`:'<span class="nota">—</span>'}</td>
+      <td><span class="par">${clp(p.particular)}</span></td>`;
+    tb.appendChild(tr);
+  });
+}
+el('precSearch').addEventListener('input',renderPrecios);
+
+function renderProfs(){
+  el('profsBox').innerHTML=(DATA.profesionales||[]).map(p=>
+    `<div style="padding:7px 9px"><div style="font-size:12.5px;font-weight:700;color:var(--navy)">${p.nombre||''}</div><div class="nota">${p.esp||''}</div></div>`).join('');
+}
+
+/* promos editable */
+function renderPromos(){
+  const box=el('promosBox'); const promos=(DATA.kv&&DATA.kv.promos)||[];
+  box.innerHTML='';
+  promos.forEach((p,i)=>box.appendChild(promoRow(p)));
+}
+function promoRow(p){
+  const d=document.createElement('div'); d.className='row';
+  d.innerHTML=`<input data-f="titulo" placeholder="Título" value="${(p.titulo||'').replace(/"/g,'&quot;')}">
+    <input data-f="detalle" placeholder="Detalle (precio, condición)" value="${(p.detalle||'').replace(/"/g,'&quot;')}">
+    <button class="del" onclick="this.parentNode.remove()">×</button>`;
+  return d;
+}
+function addPromo(){ el('promosBox').appendChild(promoRow({})); }
+function collectPromos(){ return [...el('promosBox').querySelectorAll('.row')].map(r=>({
+  titulo:r.querySelector('[data-f=titulo]').value, detalle:r.querySelector('[data-f=detalle]').value, vigente:true})); }
+
+/* ---------- GENERADOR ---------- */
+function renderGenEsp(){
+  el('genEsp').innerHTML=(DATA.precios||[]).map(p=>`<option value="${p.esp}">${p.esp}</option>`).join('');
+}
+['genEsp','genFmt','genFoco','genExtra'].forEach(id=>{ const e=el(id); if(e) e.addEventListener('input',buildPrompt); });
+function precioDe(esp){ return (DATA.precios||[]).find(p=>p.esp===esp); }
+function buildPrompt(){
+  const esp=el('genEsp').value; const fmt=el('genFmt').value; const foco=el('genFoco').value; const extra=el('genExtra').value.trim();
+  const p=precioDe(esp)||{};
+  const fmtTxt={post:'formato cuadrado 1080x1080 px para feed de Instagram',
+    story:'formato vertical 1080x1920 px para historia de Instagram',
+    flyer:'flyer promocional vertical, llamativo'}[fmt];
+  let precioTxt='';
+  if(p.fonasa!=null) precioTxt=`Precio a mostrar EXACTO: Fonasa ${clp(p.fonasa)} / Particular ${clp(p.particular)}.`;
+  else if(p.particular!=null) precioTxt=`Precio a mostrar EXACTO: ${clp(p.particular)}${p.nota?' ('+p.nota+')':''}.`;
+  const focoTxt={promo:'Pieza promocional que destaque el precio y un llamado a agendar por WhatsApp.',
+    info:'Pieza informativa/educativa que genere confianza, sin saturar de texto.',
+    profesional:'Pieza que presente al profesional y la especialidad de forma cercana.'}[foco];
+  const out=`Crea una imagen de marketing para el Centro Médico Carampangue.
+
+ESPECIALIDAD: ${esp}.
+${precioTxt}
+OBJETIVO: ${focoTxt}
+FORMATO: ${fmtTxt}.
+${extra?('TEXTO EXTRA: '+extra+'.\n'):''}
+ESTILO DE MARCA (respétalo): limpio y profesional, médico cálido. Paleta azul navy #0F3F68, azul #1172AB, aqua #4FBECE y blanco. Tipografía sans-serif moderna. Mucho espacio en blanco, legible, sin texto cortado ni mal escrito. Incluye una cruz médica redondeada azul/aqua (estilo del logo). Texto en español de Chile.
+Incluye el llamado: "Agenda por WhatsApp · Carampangue".`;
+  el('promptOut').textContent=out;
+  return out;
+}
+function copyPrompt(){ navigator.clipboard.writeText(el('promptOut').textContent).then(()=>toast('Prompt copiado ✓')); }
+async function pedirRunner(){
+  const body={especialidad:el('genEsp').value,formato:el('genFmt').value,enfoque:el('genFoco').value,
+    extra:el('genExtra').value,prompt:el('promptOut').textContent};
+  try{
+    const r=await fetch('/api/marketing/design-request'+Q,{method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json(); toast('Pedido en cola ('+(d.en_cola||1)+') 🚀');
+  }catch(e){ toast('No se pudo encolar'); }
+}
+
+/* ---------- GALERIA ---------- */
+function renderGaleria(){
+  const box=el('galBox'); const ds=DATA.disenos||[];
+  if(!ds.length){ box.innerHTML='<div class="nota" style="padding:14px">Aún no hay diseños en la galería. Genera el primero arriba 👆</div>'; return; }
+  box.innerHTML=ds.map(d=>{
+    const img=d.image_url||d.thumbnail_url||'';
+    const st=(d.status||'borrador');
+    return `<div class="design">${img?`<img src="${img}" loading="lazy" alt="">`:'<div style="aspect-ratio:1;background:var(--aqua-s)"></div>'}
+      <div class="meta"><div class="t">${d.title||d.specialty||'Diseño'}</div><div class="st ${st}">${st}</div></div></div>`;
+  }).join('');
+}
+
+/* ---------- CALENDARIO ---------- */
+const MES=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function renderCampanas(){
+  el('campBox').innerHTML=(DATA.campanas||[]).map(c=>{
+    const meses=(c.meses||[]).map(m=>MES[m]).join('/');
+    return `<div class="card camp"><div style="display:flex;gap:9px;align-items:center"><span class="ic">${c.icono||'📅'}</span>
+      <div><div class="nm">${c.nombre||''}</div><div class="mo">${c.temporada||''} · ${meses}</div></div></div>
+      <div class="ds">${c.descripcion||''}</div></div>`;
+  }).join('');
+}
+function renderCal(){
+  const box=el('calBox'); const items=(DATA.kv&&DATA.kv.calendario)||[]; box.innerHTML='';
+  items.forEach(it=>box.appendChild(calRow(it)));
+}
+function calRow(it){
+  const d=document.createElement('div'); d.className='row';
+  d.innerHTML=`<input data-f="mes" style="max-width:64px" placeholder="Mes" value="${it.mes||''}">
+    <input data-f="titulo" placeholder="Qué publicar" value="${(it.titulo||'').replace(/"/g,'&quot;')}">
+    <input data-f="nota" placeholder="Nota" value="${(it.nota||'').replace(/"/g,'&quot;')}">
+    <button class="del" onclick="this.parentNode.remove()">×</button>`;
+  return d;
+}
+function addCal(){ el('calBox').appendChild(calRow({})); }
+function collectCal(){ return [...el('calBox').querySelectorAll('.row')].map(r=>({
+  mes:Number(r.querySelector('[data-f=mes]').value)||'', titulo:r.querySelector('[data-f=titulo]').value, nota:r.querySelector('[data-f=nota]').value})); }
+
+/* ---------- COPYS ---------- */
+function renderCopys(){
+  const box=el('copysBox'); const items=(DATA.kv&&DATA.kv.copys)||[]; box.innerHTML='';
+  items.forEach(it=>box.appendChild(copyRow(it)));
+}
+function copyRow(it){
+  const d=document.createElement('div'); d.className='row';
+  d.innerHTML=`<input data-f="area" style="max-width:130px" placeholder="Área" value="${(it.area||'').replace(/"/g,'&quot;')}">
+    <textarea data-f="texto" placeholder="Texto del copy">${it.texto||''}</textarea>
+    <button class="del" onclick="this.parentNode.remove()">×</button>`;
+  return d;
+}
+function addCopy(){ el('copysBox').appendChild(copyRow({})); }
+function collectCopys(){ return [...el('copysBox').querySelectorAll('.row')].map(r=>({
+  area:r.querySelector('[data-f=area]').value, texto:r.querySelector('[data-f=texto]').value, cta:'Agenda por WhatsApp'})); }
+
+/* ---------- HASHTAGS ---------- */
+function renderHashtags(){
+  const hs=(DATA.kv&&DATA.kv.hashtags)||[];
+  el('hashIn').value=hs.join(' ');
+  el('hashPills').innerHTML=hs.map(h=>`<span class="pill">${h}</span>`).join('');
+}
+function saveHashtags(){
+  const arr=el('hashIn').value.split(/\s+/).map(s=>s.trim()).filter(Boolean);
+  saveKv('hashtags',arr); el('hashPills').innerHTML=arr.map(h=>`<span class="pill">${h}</span>`).join('');
+}
+
+/* ---------- guardar ---------- */
+async function saveKv(k,value){
+  try{
+    const r=await fetch('/api/marketing/kv'+(Q?Q+'&':'?')+'k='+k,{method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});
+    if(r.ok){ toast('Guardado ✓'); DATA.kv=DATA.kv||{}; DATA.kv[k]=value; }
+    else toast('No se pudo guardar');
+  }catch(e){ toast('Error al guardar'); }
+}
+
+load();
+</script>
+</body>
+</html>

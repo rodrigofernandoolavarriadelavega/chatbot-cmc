@@ -986,6 +986,7 @@ import comparador_routes; comparador_routes.register_comparador_routes(app)  # C
 import ebitda_routes; ebitda_routes.register_ebitda_routes(app)  # EBITDA / Resultado  # Check-in QR (gateado CHECKIN_ENABLED)
 import panel_dia_routes; panel_dia_routes.register_panel_dia_routes(app)  # Panel del Día — datos reales (N1/N2/N3)
 import mg_abandono_routes; mg_abandono_routes.register_mg_abandono_routes(app)  # métrica abandono Medicina General
+import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estudio de Marketing (panel publicidad/contenido)
 
 import pagos_routes
 app.include_router(pagos_routes.router)
