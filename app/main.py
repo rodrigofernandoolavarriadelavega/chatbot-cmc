@@ -1062,6 +1062,7 @@ _EMPRESAS_HTML = (_TEMPLATE_DIR / "empresas.html").read_text(encoding="utf-8") i
 _PROYECTOS2026_HTML = (_TEMPLATE_DIR / "proyectos2026.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "proyectos2026.html").exists() else ""
 _LANDING_HTML = (_TEMPLATE_DIR / "landing.html").read_text(encoding="utf-8")
 _SALA_ESPERA_HTML = (_TEMPLATE_DIR / "sala_espera.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sala_espera.html").exists() else ""
+_ADMIN_FUNCIONES_HTML = (_TEMPLATE_DIR / "admin_cmc_funciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "admin_cmc_funciones.html").exists() else ""
 _SITIO_V3_HTML = (_TEMPLATE_DIR / "sitio-v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v3.html").exists() else ""
 _SITIO_V2_HTML = (_TEMPLATE_DIR / "sitio-v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-v2.html").exists() else ""
 _SITIO_FLAGSHIP_HTML = (_TEMPLATE_DIR / "sitio-flagship.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "sitio-flagship.html").exists() else ""
@@ -1140,6 +1141,12 @@ def landing():
 def sala_espera():
     """Pantalla ambiental para la TV de la sala de espera (cálida, cercana)."""
     return _SALA_ESPERA_HTML
+
+
+@app.get("/administradora", response_class=HTMLResponse)
+def administradora_funciones():
+    """Mapa del cargo Administradora del CMC × malla UTP Adm. de Empresas (formación)."""
+    return _ADMIN_FUNCIONES_HTML
 
 
 @app.get("/traumatologo-curanilahue", response_class=HTMLResponse)

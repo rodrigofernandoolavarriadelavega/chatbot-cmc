@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Administradora CMC · Funciones × Malla UTP</title>
+<style>
+  :root{
+    --navy:#0F3F68; --blue:#1172AB; --aqua:#4FBECE; --aqua-s:#E5F6F9;
+    --cobre:#C97B4A; --cobre-s:#FBEDE4; --verde:#2E9E6B; --verde-s:#E6F5EE;
+    --ink:#15293b; --mute:#5b7186; --mute2:#8aa0b3; --line:#e4ecf2;
+    --bg:#f4f8fb; --card:#ffffff; --shadow:0 6px 22px -10px rgba(15,63,104,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 18px 64px;}
+
+  /* topbar */
+  .top{background:linear-gradient(135deg,#0c3357,#1172AB 60%,#3a9fb4);color:#fff;
+    padding:34px 0 30px;border-radius:0 0 26px 26px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+  .top::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+    background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%);}
+  .top .wrap{padding-bottom:0;}
+  .badge{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);
+    font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:5px 12px;border-radius:999px;margin-bottom:14px;}
+  .top h1{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.15;}
+  .top p{font-size:14px;opacity:.92;margin-top:8px;max-width:680px;}
+
+  /* nav anclas */
+  nav{position:sticky;top:0;z-index:9;background:rgba(244,248,251,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);margin-bottom:26px;}
+  nav .wrap{display:flex;gap:6px;padding:9px 18px;overflow-x:auto;}
+  nav a{flex:none;font-size:12px;font-weight:700;color:var(--mute);padding:7px 13px;border-radius:999px;
+    white-space:nowrap;border:1px solid transparent;}
+  nav a:hover{background:var(--aqua-s);color:var(--blue);border-color:var(--line);}
+
+  section{margin-top:34px;scroll-margin-top:64px;}
+  .h{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .h .n{width:28px;height:28px;border-radius:9px;background:var(--navy);color:#fff;font-weight:800;
+    font-size:13px;display:grid;place-items:center;flex:none;}
+  .h h2{font-size:19px;font-weight:800;color:var(--navy);letter-spacing:-.01em;}
+  .sub{font-size:13.5px;color:var(--mute);margin:0 0 16px 38px;}
+
+  .intro{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+    box-shadow:var(--shadow);font-size:14.5px;color:var(--ink);}
+  .intro b{color:var(--blue);}
+
+  .cyc-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;
+    letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:8px;margin:18px 0 12px;}
+  .c5{background:var(--aqua-s);color:var(--blue);} .c6{background:var(--cobre-s);color:var(--cobre);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:13px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;
+    box-shadow:var(--shadow);border-left:4px solid var(--ac,var(--aqua));position:relative;}
+  .card .curso{font-size:14.5px;font-weight:800;color:var(--navy);}
+  .card .fn{font-size:13px;color:var(--ink);margin-top:6px;}
+  .card .tool{font-size:11.5px;color:var(--mute);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);}
+  .card .tool b{color:var(--cobre);font-weight:700;}
+  .card.aqua{--ac:var(--aqua);} .card.cobre{--ac:var(--cobre);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:9px;}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;
+    box-shadow:0 3px 12px -8px rgba(15,63,104,.2);min-width:0;flex:1 1 240px;}
+  .chip .t{font-size:13px;font-weight:800;color:var(--navy);}
+  .chip .d{font-size:12px;color:var(--mute);margin-top:3px;}
+  .chip.up{border-left:3px solid var(--verde);} .chip.up .t{color:#1d6e4c;}
+
+  /* proyectos */
+  .proj{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:13px;}
+  .pcard{background:linear-gradient(160deg,#fff,#f3f9fb);border:1px solid var(--line);border-radius:16px;
+    padding:17px 18px;box-shadow:var(--shadow);}
+  .pcard .num{font-size:12px;font-weight:800;color:var(--aqua);letter-spacing:.05em;}
+  .pcard .pt{font-size:15px;font-weight:800;color:var(--navy);margin:5px 0 7px;}
+  .pcard .pd{font-size:13px;color:var(--ink);}
+  .pcard .meta{font-size:11.5px;color:var(--verde);font-weight:700;margin-top:10px;}
+
+  /* timeline */
+  .tl{position:relative;margin-left:8px;padding-left:22px;border-left:2px solid var(--aqua);}
+  .tl .step{position:relative;padding:0 0 18px 4px;}
+  .tl .step::before{content:"";position:absolute;left:-29px;top:2px;width:13px;height:13px;border-radius:50%;
+    background:#fff;border:3px solid var(--blue);}
+  .tl .step .lab{font-size:12px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;}
+  .tl .step .txt{font-size:13.5px;color:var(--ink);margin-top:3px;}
+  .tl .step .txt b{color:var(--navy);}
+
+  footer{margin-top:46px;text-align:center;font-size:12px;color:var(--mute2);}
+  footer .src{margin-top:6px;font-size:11px;}
+  @media(max-width:640px){ .top h1{font-size:22px;} .grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="badge">Administración de Empresas · UTP · 3er año</span>
+    <h1>Administradora del Centro Médico Carampangue</h1>
+    <p>Mapa de funciones del cargo conectadas con la malla de la UTP. La idea: que cada cosa que hagas en el centro sea la práctica real del curso que estás llevando — tu trabajo y tu carrera empujan juntos.</p>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#ahora">🎯 3er año (ahora)</a>
+  <a href="#base">🧱 Base aprobada</a>
+  <a href="#crece">🚀 Crecimiento</a>
+  <a href="#proyectos">💡 Proyectos</a>
+  <a href="#plan">🗓️ Plan 90 días</a>
+</div></nav>
+
+<div class="wrap">
+
+  <div class="intro">
+    El cargo de administradora cubre <b>10 áreas</b> del centro. Casi todas ya tienen una herramienta construida (Medilink, paneles Alma, bot de WhatsApp, dashboards de BI y EBITDA), así que el desafío no es inventar sistemas: es <b>operarlos, medirlos y mejorarlos</b>. Abajo, cada función está anclada al curso de la UTP que le da la teoría.
+  </div>
+
+  <!-- AHORA -->
+  <section id="ahora">
+    <div class="h"><div class="n">1</div><h2>Lo que cursas ahora → función en el CMC</h2></div>
+    <p class="sub">3er año = Ciclo 5 + Ciclo 6. Encaja casi quirúrgico con operar el centro.</p>
+
+    <div class="cyc-tag c5">● Ciclo 5</div>
+    <div class="grid">
+      <div class="card aqua"><div class="curso">Investigación Operativa</div>
+        <div class="fn">Optimizar agenda, turnos y boxes; teoría de colas (salas de espera, no-shows), asignación de recursos.</div>
+        <div class="tool">🛠️ <b>Panel del Día</b> · llenado de cupos · lista de espera → <i>minimizar capacidad ociosa</i></div></div>
+      <div class="card aqua"><div class="curso">Investigación de Mercados</div>
+        <div class="fn">Estudio de demanda de Carampangue/Arauco, segmentación de pacientes, demanda no satisfecha.</div>
+        <div class="tool">🛠️ Dashboard de segmentación · <b>/api/mg-abandono</b> → <i>qué especialidad conviene abrir</i></div></div>
+      <div class="card aqua"><div class="curso">Investigación Académica</div>
+        <div class="fn">Metodología para informes: encuestas, muestreo, fuentes, citas.</div>
+        <div class="tool">🛠️ Aplicarla con rigor al estudio de mercado del CMC</div></div>
+      <div class="card aqua"><div class="curso">Curso Integrador en Adm. y Negocios</div>
+        <div class="fn">Capstone del semestre: diagnóstico 360° de una empresa.</div>
+        <div class="tool">🛠️ <b>Usar el CMC como caso integrador</b> — material de sobra</div></div>
+    </div>
+
+    <div class="cyc-tag c6">● Ciclo 6</div>
+    <div class="grid">
+      <div class="card cobre"><div class="curso">Gerencia de Evaluación Financiera</div>
+        <div class="fn">Evaluar inversiones con VAN / TIR: habilitar una sala nueva, comprar equipo, sumar un especialista.</div>
+        <div class="tool">🛠️ Módulo <b>/cmc/ebitda</b> · flujo de caja → <i>¿conviene la sala de eco? ¿el 2º dentista?</i></div></div>
+      <div class="card cobre"><div class="curso">Innovación y Transformación Empresarial</div>
+        <div class="fn">La capa digital del centro: bot de WhatsApp, paneles Alma, automatización de la operación.</div>
+        <div class="tool">🛠️ Documentar y proponer mejoras a la transformación digital (caso real ideal)</div></div>
+      <div class="card cobre"><div class="curso">Gestión del Talento Humano</div>
+        <div class="fn">RRHH: contratos, liquidaciones, turnos, licencias, reclutamiento, clima laboral.</div>
+        <div class="tool">🛠️ Módulo Equipo/RRHH · liquidaciones de honorarios médicos</div></div>
+      <div class="card cobre"><div class="curso">Taller de Habilidades Gerenciales</div>
+        <div class="fn">Liderazgo, manejo del equipo de recepción, reuniones, resolución de conflictos.</div>
+        <div class="tool">🛠️ Coordinación diaria del equipo</div></div>
+      <div class="card cobre"><div class="curso">Negocios Digitales</div>
+        <div class="fn">Marketing digital, Meta Ads, el bot como canal de venta y captación.</div>
+        <div class="tool">🛠️ Dashboards de CAC/atribución · win-back · campañas</div></div>
+      <div class="card cobre"><div class="curso">Gestión de Ventas</div>
+        <div class="fn">El embudo lead → cita → atención: conversión, cross-sell, retención.</div>
+        <div class="tool">🛠️ Funnel de agendamiento · cross-sell · recontacto de pacientes perdidos</div></div>
+    </div>
+  </section>
+
+  <!-- BASE -->
+  <section id="base">
+    <div class="h"><div class="n">2</div><h2>Base que ya tiene para aplicar</h2></div>
+    <p class="sub">Ciclos 1-4, ya aprobados — puede usarlos desde el día uno.</p>
+    <div class="chips">
+      <div class="chip"><div class="t">Contabilidad y Costos</div><div class="d">Cuadre de caja, conciliación, costo por atención, honorarios.</div></div>
+      <div class="chip"><div class="t">Estadística Aplicada</div><div class="d">Leer e interpretar todos los dashboards y reportes.</div></div>
+      <div class="chip"><div class="t">Derecho Empresarial</div><div class="d">Contratos, cumplimiento, base para habilitación SEREMI.</div></div>
+      <div class="chip"><div class="t">Finanzas / Micro-Macro</div><div class="d">Presupuesto, flujo de caja, pricing Fonasa vs particular.</div></div>
+      <div class="chip"><div class="t">Fundamentos de Marketing</div><div class="d">Captación, fidelización, convenios con empresas.</div></div>
+      <div class="chip"><div class="t">Comportamiento Organizacional</div><div class="d">Clima laboral y manejo del equipo.</div></div>
+    </div>
+  </section>
+
+  <!-- CRECIMIENTO -->
+  <section id="crece">
+    <div class="h"><div class="n">3</div><h2>Camino de crecimiento</h2></div>
+    <p class="sub">Ciclos 7-10 — funciones para asumir a medida que avanza la carrera.</p>
+    <div class="chips">
+      <div class="chip up"><div class="t">Administración de Operaciones · C7</div><div class="d">Operación integral del centro.</div></div>
+      <div class="chip up"><div class="t">Evaluación Presupuestal · C7</div><div class="d">Dueña del presupuesto anual.</div></div>
+      <div class="chip up"><div class="t">Gestión de Suministros · C8</div><div class="d">Logística e inventario (/alma/inventario).</div></div>
+      <div class="chip up"><div class="t">Analítica de Datos · C8</div><div class="d">Explotar el BI a fondo.</div></div>
+      <div class="chip up"><div class="t">Dirección Comercial / Negociación · C9</div><div class="d">Convenios, proveedores, precios.</div></div>
+      <div class="chip up"><div class="t">Dirección Financiera / Estratégica · C10</div><div class="d">Mano derecha en decisiones de fondo.</div></div>
+    </div>
+  </section>
+
+  <!-- PROYECTOS -->
+  <section id="proyectos">
+    <div class="h"><div class="n">4</div><h2>3 entregables académicos = proyectos reales</h2></div>
+    <p class="sub">Matar dos pájaros: nota en la U + valor para el centro.</p>
+    <div class="proj">
+      <div class="pcard"><div class="num">PROYECTO 1</div>
+        <div class="pt">Estudio de demanda de salud</div>
+        <div class="pd">Carampangue / Arauco: qué especialidad falta. Los datos ya muestran gastro, cardio y eco como demanda no satisfecha.</div>
+        <div class="meta">↳ Investigación de Mercados · Ciclo 5</div></div>
+      <div class="pcard"><div class="num">PROYECTO 2</div>
+        <div class="pt">Evaluación VAN/TIR de sala nueva</div>
+        <div class="pd">Habilitar ecografía o matrona (ya en proceso SEREMI), con los números reales del EBITDA.</div>
+        <div class="meta">↳ Gerencia de Evaluación Financiera · Ciclo 6</div></div>
+      <div class="pcard"><div class="num">PROYECTO 3</div>
+        <div class="pt">Caso de transformación digital</div>
+        <div class="pd">Cómo el bot + los paneles Alma cambiaron la operación del centro.</div>
+        <div class="meta">↳ Curso Integrador / Innovación · Ciclos 5-6</div></div>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section id="plan">
+    <div class="h"><div class="n">5</div><h2>Cómo arrancar (plan 90 días)</h2></div>
+    <p class="sub">No todo de golpe. Cada etapa con un KPI que ella reporta.</p>
+    <div class="tl">
+      <div class="step"><div class="lab">Mes 1-2 · Observar y operar</div>
+        <div class="txt"><b>Recepción, agenda, no-shows, checklist</b>, leer los dashboards. Bajo riesgo, aprende el negocio. <i>KPI: % ocupación de agenda.</i></div></div>
+      <div class="step"><div class="lab">Mes 3-4 · Datos y calidad</div>
+        <div class="txt">Dueña del <b>reporte semanal, NPS y recontacto de pacientes perdidos</b>. Empieza a proponer. <i>KPI: NPS, % recontactados que vuelven.</i></div></div>
+      <div class="step"><div class="lab">Mes 5-6 · Inventario y RRHH</div>
+        <div class="txt"><b>Compras, stock, turnos, licencias.</b> <i>KPI: quiebres de stock = 0.</i></div></div>
+      <div class="step"><div class="lab">Después · Finanzas y caja</div>
+        <div class="txt">Lo más sensible, cuando ya hay criterio y confianza: <b>cuadre, conciliación, honorarios, presupuesto.</b> <i>KPI: cuadre diario en $0 de diferencia.</i></div></div>
+    </div>
+    <div class="intro" style="margin-top:18px">
+      <b>Regla de oro:</b> cada función con un KPI que ella reporta. Así aprende administración de verdad — medir → decidir → mejorar — no a "ayudar".
+    </div>
+  </section>
+
+  <footer>
+    Centro Médico Carampangue · Mapa de cargo Administradora × Malla UTP Administración de Empresas
+    <div class="src">Malla: portal UTP · Administración de Empresas (ciclos 1-10)</div>
+  </footer>
+
+</div>
+</body>
+</html>
