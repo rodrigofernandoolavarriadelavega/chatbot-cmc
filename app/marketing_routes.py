@@ -19,6 +19,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 def _auth(token, cmc_session):
     from admin_routes import _verify_cookie, _is_admin_token
+    from config import MARKETING_TOKEN
+    # token dedicado de marketing (solo abre este panel), o admin/olacore, o cookie
+    if token and MARKETING_TOKEN and token == MARKETING_TOKEN:
+        return
     if not ((token and _is_admin_token(token)) or (cmc_session and _verify_cookie(cmc_session))):
         raise HTTPException(403, "No autorizado")
 
@@ -151,3 +155,20 @@ def register_marketing_routes(app):
             _ensure_kv(c)
             cola = _get_kv(c, "cola_disenos") or []
         return JSONResponse({"cola": cola})
+
+    @app.post("/api/marketing/design-done", tags=["marketing"], include_in_schema=False)
+    async def marketing_design_done(request: Request,
+                                    token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+        """El runner marca un pedido como generado (por su _ts) para no repetirlo."""
+        _auth(token, cmc_session)
+        body = await request.json()
+        ts = body.get("ts")
+        from session import db
+        with db() as c:
+            _ensure_kv(c)
+            cola = _get_kv(c, "cola_disenos") or []
+            for it in cola:
+                if it.get("_ts") == ts:
+                    it["status"] = "listo"
+            _set_kv(c, "cola_disenos", cola)
+        return {"ok": True}

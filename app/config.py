@@ -45,6 +45,9 @@ if "987834148" in CMC_TELEFONO.replace(" ", ""):
 
 ADMIN_TOKEN        = os.getenv("ADMIN_TOKEN", "")
 OLACORE_TOKEN      = os.getenv("OLACORE_TOKEN", "")
+# Token dedicado del Estudio de Marketing (/marketing) — acceso SOLO a ese panel,
+# para dárselo a la encargada de contenido sin exponer el token admin/olacore.
+MARKETING_TOKEN    = os.getenv("MARKETING_TOKEN", "cmc_marketing_8f3a2c")
 
 # Tokens de perfiles profesionales (cada uno accede solo a sus datos)
 KINE_ARMIJO_TOKEN      = os.getenv("KINE_ARMIJO_TOKEN", "")
