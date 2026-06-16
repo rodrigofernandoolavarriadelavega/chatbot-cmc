@@ -27,6 +27,12 @@
   .badge{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);
     font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
     padding:5px 12px;border-radius:999px;margin-bottom:14px;}
+  .brand{display:flex;align-items:center;gap:13px;margin-bottom:18px;position:relative;z-index:1;}
+  .brand .iso{width:50px;height:50px;border-radius:14px;background:#fff;display:grid;place-items:center;
+    box-shadow:0 7px 18px -7px rgba(0,0,0,.35);flex:none;}
+  .brand .iso img{width:34px;height:34px;display:block;}
+  .brand .nm{font-size:14px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#fff;line-height:1.25;}
+  .brand .nm small{display:block;font-size:10px;font-weight:700;letter-spacing:.2em;opacity:.82;}
   .top h1{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.15;}
   .top p{font-size:14px;opacity:.92;margin-top:8px;max-width:680px;}
 
@@ -97,6 +103,10 @@
 
 <header class="top">
   <div class="wrap">
+    <div class="brand">
+      <div class="iso"><img src="/static/isotipo.png" alt="Centro Médico Carampangue"></div>
+      <div class="nm">Carampangue<small>Centro Médico</small></div>
+    </div>
     <span class="badge">Administración de Empresas · UTP · 3er año</span>
     <h1>Administradora del Centro Médico Carampangue</h1>
     <p>Mapa de funciones del cargo conectadas con la malla de la UTP. La idea: que cada cosa que hagas en el centro sea la práctica real del curso que estás llevando — tu trabajo y tu carrera empujan juntos.</p>
