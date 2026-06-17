@@ -52,6 +52,13 @@ def _ensure_cols(c):
         pass
 
 
+def _ensure_estado(c):
+    c.execute("""CREATE TABLE IF NOT EXISTS remuneracion_estado (
+        id_profesional INTEGER NOT NULL, mes TEXT NOT NULL,
+        pagado INTEGER DEFAULT 0, pagado_at TEXT,
+        PRIMARY KEY (id_profesional, mes))""")
+
+
 def _backfill_telefonos(c):
     """Rellena equipo_cmc.telefono (vacío) cruzando STAFF_PHONES por nombre. Una vez."""
     from config import STAFF_PHONES
@@ -91,6 +98,7 @@ def register_remuneraciones_routes(app):
             mes = datetime.now().strftime("%Y-%m")
         with db() as c:
             _ensure_cols(c)
+            _ensure_estado(c)
             _backfill_telefonos(c)
             tel_map = {}
             try:
@@ -99,20 +107,30 @@ def register_remuneraciones_routes(app):
                         tel_map[r["id_medilink"]] = re.sub(r"\D", "", r["telefono"])
             except Exception:
                 tel_map = {}
+            pagados = {r["id_profesional"] for r in c.execute(
+                "SELECT id_profesional FROM remuneracion_estado WHERE mes=? AND pagado=1", (mes,)).fetchall()}
             e = _ebitda_mes(c, mes)
         out = []
+        tot_liq = tot_pagado = 0
         for p in e.get("profesionales", []):
             if not p.get("ingreso"):
                 continue
+            pagado = p["id"] in pagados
+            tot_liq += p["liquido"]
+            if pagado:
+                tot_pagado += p["liquido"]
             out.append({
                 "id": p["id"], "nombre": p["nombre"], "especialidad": p.get("especialidad", ""),
                 "ingreso": p["ingreso"], "pct": p.get("pct"), "fijo": p.get("fijo", False),
                 "bruto": p["bruto"], "liquido": p["liquido"], "pacientes": p.get("pacientes", 0),
                 "sin_retencion": p["id"] in SIN_RETENCION,
-                "telefono": tel_map.get(p["id"], ""),
+                "telefono": tel_map.get(p["id"], ""), "pagado": pagado,
             })
-        out.sort(key=lambda x: -x["ingreso"])
-        return {"mes": mes, "profesionales": out}
+        out.sort(key=lambda x: (x["pagado"], -x["ingreso"]))
+        return {"mes": mes, "profesionales": out,
+                "total_transferir": tot_liq, "total_pagado": tot_pagado,
+                "total_por_pagar": tot_liq - tot_pagado,
+                "n_pagados": len(pagados), "n_total": len(out)}
 
     @app.get("/api/panel-dia/remuneracion-detalle", tags=["panel-dia"], include_in_schema=False)
     def remuneracion_detalle(prof: int = Query(...), mes: str = Query(...),
@@ -165,3 +183,24 @@ def register_remuneraciones_routes(app):
             except Exception as ex:
                 raise HTTPException(500, f"no se pudo guardar: {ex}")
         return {"ok": True}
+
+    @app.post("/api/panel-dia/remuneracion-pagado", tags=["panel-dia"], include_in_schema=False)
+    async def remuneracion_pagado(request: Request,
+                                  token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+        """Marca/desmarca un profesional como pagado en un mes."""
+        _auth(token, cmc_session)
+        body = await request.json()
+        pid = body.get("id")
+        mes = body.get("mes")
+        pagado = 1 if body.get("pagado") else 0
+        if not pid or not mes:
+            raise HTTPException(400, "falta id/mes")
+        from session import db
+        with db() as c:
+            _ensure_estado(c)
+            c.execute(
+                "INSERT INTO remuneracion_estado (id_profesional, mes, pagado, pagado_at) "
+                "VALUES (?,?,?, datetime('now')) "
+                "ON CONFLICT(id_profesional, mes) DO UPDATE SET pagado=excluded.pagado, pagado_at=excluded.pagado_at",
+                (pid, mes, pagado))
+        return {"ok": True, "pagado": bool(pagado)}

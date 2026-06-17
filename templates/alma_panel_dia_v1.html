@@ -537,6 +537,10 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
 .remtot .rl{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;opacity:.85;}
 .remtot .rv{display:block;font-size:18px;font-weight:800;margin-top:2px;} .remtot .rv2{display:block;font-size:14px;font-weight:700;margin-top:3px;opacity:.92;}
 .rembtn.copy{background:var(--aqua-s);color:var(--blue);margin-top:7px;}
+.rembtn.pago{background:var(--green-s);color:var(--green);margin-top:7px;} .rembtn.pago.on{background:var(--green);color:#fff;}
+.remcard{position:relative;}
+.remcard.paid{border-left-color:var(--green);opacity:.72;}
+.remcard .rc-paid{position:absolute;top:8px;right:9px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--green);background:var(--green-s);padding:2px 7px;border-radius:999px;}
 .remempty{grid-column:1/-1;color:var(--mute);font-size:12px;padding:14px;}
 .remcard{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--ac,var(--aqua));border-radius:12px;padding:11px 12px;cursor:pointer;box-shadow:var(--shadow-sm,0 4px 14px -8px rgba(15,63,104,.2));transition:transform .1s,box-shadow .15s;}
 .remcard:hover{transform:translateY(-1px);box-shadow:0 8px 20px -10px rgba(15,63,104,.32);}
@@ -2030,6 +2034,7 @@ async function loadRemuneraciones(mes){
   try{
     const r=await fetch('/api/panel-dia/remuneraciones?mes='+mes+'&token='+encodeURIComponent(PANEL_TOKEN),{credentials:'same-origin'});
     const d=await r.json(); REM.profesionales=d.profesionales||[];
+    REM.tot={total_transferir:d.total_transferir||0,total_pagado:d.total_pagado||0,total_por_pagar:d.total_por_pagar||0,n_pagados:d.n_pagados||0,n_total:d.n_total||0};
   }catch(e){ box.innerHTML='<div class="remempty">No se pudo cargar.</div>'; return; }
   for(const k in REM_EDIT) delete REM_EDIT[k];
   renderRemList();
@@ -2037,10 +2042,13 @@ async function loadRemuneraciones(mes){
 function renderRemList(){
   const box=document.getElementById('remList');
   if(!REM.profesionales.length){ box.innerHTML='<div class="remempty">Sin pagos registrados este mes.</div>'; return; }
-  const totTr=REM.profesionales.reduce((s,p)=>s+(p.liquido||0),0);
-  const totIn=REM.profesionales.reduce((s,p)=>s+(p.ingreso||0),0);
-  const head=`<div class="remtot"><div><span class="rl">Total a transferir</span><span class="rv">${clp(totTr)}</span></div><div><span class="rl">Ingreso total</span><span class="rv2">${clp(totIn)}</span></div><div><span class="rl">Profesionales</span><span class="rv2">${REM.profesionales.length}</span></div></div>`;
-  box.innerHTML=head+REM.profesionales.map(p=>`<div class="remcard" data-id="${p.id}">
+  const t=REM.tot||{total_transferir:0,total_pagado:0,total_por_pagar:0,n_pagados:0,n_total:0};
+  const head=`<div class="remtot">
+    <div><span class="rl">Por pagar (${t.n_total-t.n_pagados})</span><span class="rv">${clp(t.total_por_pagar)}</span></div>
+    <div><span class="rl">Pagado (${t.n_pagados})</span><span class="rv2" style="color:#a8f0c8">${clp(t.total_pagado)}</span></div>
+    <div><span class="rl">Total del mes</span><span class="rv2">${clp(t.total_transferir)}</span></div></div>`;
+  box.innerHTML=head+REM.profesionales.map(p=>`<div class="remcard ${p.pagado?'paid':''}" data-id="${p.id}">
+      ${p.pagado?'<div class="rc-paid">✓ Pagado</div>':''}
       <div class="rc-nm">${p.nombre}</div><div class="rc-esp">${p.especialidad||''}</div>
       <div class="rc-nums">
         <div><div class="rc-l">Ingreso</div><div class="rc-v mono">${clp(p.ingreso)}</div></div>
@@ -2082,10 +2090,11 @@ function buildRem(p){
     title:p.nombre, sub:(p.especialidad||'')+' · '+remMesLabel(REM.mes), color:'var(--blue)',
     statusHTML:'<div style="padding:10px 12px 0">'+sumHTML+'</div>',
     bodyHTML:`<div style="padding:4px 12px">${editHTML}${detHTML}</div>`,
-    footHTML:`<div style="padding:10px 12px"><button class="rembtn" id="reSend" ${okTel?'':'disabled'}>📲 Enviar por WhatsApp</button>${okTel?'':'<div class="remwarn">Falta el teléfono para enviar</div>'}<button class="rembtn copy" id="reCopy">📋 Copiar texto</button></div>`,
+    footHTML:`<div style="padding:10px 12px"><button class="rembtn" id="reSend" ${okTel?'':'disabled'}>📲 Enviar por WhatsApp</button>${okTel?'':'<div class="remwarn">Falta el teléfono para enviar</div>'}<button class="rembtn copy" id="reCopy">📋 Copiar texto</button><button class="rembtn pago ${p.pagado?'on':''}" id="rePaid">${p.pagado?'✓ Pagado · marcar pendiente':'💸 Marcar como pagado'}</button></div>`,
     onMount:(inner)=>{
       const I=inner.querySelector('#reI'),P=inner.querySelector('#reP'),B=inner.querySelector('#reB'),Tn=inner.querySelector('#reT'),Tel=inner.querySelector('#reTel');
       const Cp=inner.querySelector('#reCopy'); if(Cp) Cp.addEventListener('click',ev=>{ ev.stopPropagation(); navigator.clipboard.writeText(remTexto(p)).then(()=>{ Cp.textContent='✓ Copiado'; setTimeout(()=>Cp.textContent='📋 Copiar texto',1400); }); });
+      const Pg=inner.querySelector('#rePaid'); if(Pg) Pg.addEventListener('click',ev=>{ ev.stopPropagation(); togglePagado(p); });
       if(I) I.addEventListener('input',()=>{ e.ingreso=+I.value||0; recomputeFromPct(p); wpRem.update(); });
       if(P) P.addEventListener('input',()=>{ e.pct=+P.value||0; recomputeFromPct(p); wpRem.update(); });
       if(B) B.addEventListener('input',()=>{ e.boleta=+B.value||0; e.transf=Math.round(e.boleta*factorRet(p)); wpRem.update(); });
@@ -2094,6 +2103,14 @@ function buildRem(p){
       const S=inner.querySelector('#reSend'); if(S) S.addEventListener('click',ev=>{ ev.stopPropagation(); enviarRem(p); });
     }
   };
+}
+function recomputeRemTotals(){
+  const a=REM.profesionales.reduce((o,p)=>{ o.tr+=p.liquido||0; if(p.pagado){o.pg+=p.liquido||0;o.np++;} return o; },{tr:0,pg:0,np:0});
+  REM.tot={total_transferir:a.tr,total_pagado:a.pg,total_por_pagar:a.tr-a.pg,n_pagados:a.np,n_total:REM.profesionales.length};
+}
+async function togglePagado(p){
+  const nuevo=!p.pagado; p.pagado=nuevo; recomputeRemTotals(); renderRemList(); if(wpRem.pinned) wpRem.update();
+  try{ await fetch('/api/panel-dia/remuneracion-pagado?token='+encodeURIComponent(PANEL_TOKEN),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,mes:REM.mes,pagado:nuevo})}); }catch(_){}
 }
 async function saveRemConfig(p){ const e=remEdit(p);
   try{ await fetch('/api/panel-dia/remuneracion-config?token='+encodeURIComponent(PANEL_TOKEN),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,pct:e.fijo?null:e.pct,telefono:e.telefono})}); }catch(_){}
