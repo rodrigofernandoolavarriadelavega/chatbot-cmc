@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Plan de Dirección · OLACORE</title>
+<style>
+  :root{
+    --navy:#0F3F68;--blue:#1172AB;--aqua:#4FBECE;--aqua-s:#E5F6F9;
+    --cobre:#C97B4A;--cobre-s:#FBEDE4;--verde:#2E9E6B;--verde-s:#E6F5EE;
+    --slate:#64788c;--slate-s:#eef2f6;
+    --ink:#15293b;--mute:#5b7186;--mute2:#8aa0b3;--line:#e4ecf2;
+    --bg:#f4f8fb;--card:#fff;--shadow:0 6px 22px -10px rgba(15,63,104,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 16px 64px;}
+  .top{background:linear-gradient(135deg,#0c2f50,#15324f 55%,#2a4a63);color:#fff;
+    padding:22px 0;border-radius:0 0 22px 22px;box-shadow:var(--shadow);}
+  .brand{display:flex;align-items:center;gap:13px;}
+  .brand .iso{width:46px;height:46px;border-radius:13px;background:#fff;display:grid;place-items:center;box-shadow:0 7px 18px -7px rgba(0,0,0,.35);flex:none;}
+  .brand .iso img{width:31px;height:31px;display:block;}
+  .brand h1{font-size:19px;font-weight:800;letter-spacing:-.01em;}
+  .brand .s{font-size:11.5px;opacity:.9;font-weight:600;margin-top:1px;}
+
+  .prog{margin-top:16px;background:rgba(255,255,255,.14);border-radius:12px;padding:12px 14px;}
+  .prog .lab{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#fff;margin-bottom:7px;}
+  .bar{height:9px;background:rgba(255,255,255,.22);border-radius:6px;overflow:hidden;}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,#4FBECE,#7ee0c0);border-radius:6px;transition:width .4s;}
+
+  .intro{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow);margin-top:22px;font-size:13.5px;}
+  .intro b{color:var(--blue);}
+
+  .pillar{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;border-left:5px solid var(--ac,var(--aqua));}
+  .ph{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;}
+  .ph .ic{font-size:23px;flex:none;}
+  .ph .tt{flex:1;min-width:0;}
+  .ph .tt .nm{font-size:15px;font-weight:800;color:var(--navy);}
+  .ph .tt .po{font-size:12px;color:var(--mute);margin-top:2px;}
+  .ph .cnt{font-size:11px;font-weight:800;color:var(--ac,var(--blue));background:var(--bg);padding:4px 9px;border-radius:999px;flex:none;}
+  .pbody{padding:2px 12px 12px;}
+  .item{display:flex;align-items:flex-start;gap:11px;padding:9px 8px;border-radius:11px;}
+  .item:hover{background:var(--bg);}
+  .chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;cursor:pointer;display:grid;place-items:center;font-size:13px;font-weight:900;color:#fff;background:#fff;transition:.15s;margin-top:1px;}
+  .chk.doing{border-color:var(--cobre);color:var(--cobre);background:var(--cobre-s);}
+  .chk.done{border-color:var(--verde);background:var(--verde);}
+  .it-main{flex:1;min-width:0;}
+  .it-main .tipo{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mute2);}
+  .it-main .ti{font-size:13.5px;font-weight:700;color:var(--ink);}
+  .item.done .ti{text-decoration:line-through;color:var(--mute);}
+  .it-main .de{font-size:11.5px;color:var(--mute);}
+  .it-main a.lk{font-size:11px;font-weight:800;color:var(--blue);}
+  .item.proj{background:var(--aqua-s);}.item.proj .ti{color:var(--navy);}
+
+  .sect{margin-top:30px;}
+  .h2{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+  .sub{font-size:12.5px;color:var(--mute);margin-bottom:12px;}
+  .tl{position:relative;margin-left:8px;padding-left:22px;border-left:2px solid var(--aqua);}
+  .tl .step{position:relative;padding:0 0 16px 4px;}
+  .tl .step::before{content:"";position:absolute;left:-29px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid var(--blue);}
+  .tl .step .lab{font-size:12px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.03em;}
+  .tl .step .txt{font-size:13px;color:var(--ink);margin-top:2px;}
+  .note{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow);font-size:13.5px;}
+  .note b{color:var(--navy);}
+  footer{margin-top:40px;text-align:center;font-size:11px;color:var(--mute2);}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:11px;box-shadow:var(--shadow);opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div class="iso"><img src="/static/isotipo.png" alt="OLACORE"></div>
+    <div><h1>Plan de Dirección</h1><div class="s">De operador-fundador a director de portafolio · OLACORE</div></div>
+  </div>
+  <div class="prog"><div class="lab"><span>Avance del plan</span><span id="progTxt">0%</span></div><div class="bar"><i id="progBar" style="width:0"></i></div></div>
+</div></header>
+
+<div class="wrap">
+  <div class="intro">Tu trabajo ya no es <b>hacer</b> el trabajo, es <b>asignar capital y atención</b> entre tus negocios y <b>liderar líderes</b>. Cada pilar trae libros, cursos/diplomados y un <b>proyecto aplicado en tu holding</b>. Toca el cuadro para marcar: ⬜ pendiente → 🟠 en curso → ✅ hecho. Se guarda solo.</div>
+
+  <div id="pillars"></div>
+
+  <div class="sect">
+    <div class="h2">Secuencia recomendada (12-18 meses)</div>
+    <p class="sub">No todo junto. Una pieza cada ~6-8 semanas, aplicando de inmediato.</p>
+    <div class="tl">
+      <div class="step"><div class="lab">Meses 1-3</div><div class="txt"><b>Finanzas + asignación de capital</b> — lo que más mueve la aguja para un dueño de holding.</div></div>
+      <div class="step"><div class="lab">Meses 3-6</div><div class="txt"><b>Liderazgo + estrategia</b> — en paralelo con tus contrataciones reales (admin, marketing).</div></div>
+      <div class="step"><div class="lab">Meses 6-9</div><div class="txt"><b>Sistemas de gestión/OKRs + gobierno y legal.</b></div></div>
+      <div class="step"><div class="lab">Meses 9-12</div><div class="txt"><b>Gestión en salud</b> (diplomado formal).</div></div>
+      <div class="step"><div class="lab">Continuo</div><div class="txt"><b>Mental models y negociación</b> — un libro cada tanto, audiolibro en el auto.</div></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="h2">Cómo estudiarlo</div>
+    <div class="note">
+      <b>3-5 hrs/semana.</b> Audiolibros en traslados. Regla de oro: <b>cada concepto se aplica de inmediato</b> en tu holding — no estudiás para saber, estudiás para decidir mejor.<br><br>
+      <b>Formal vs autodirigido:</b> un MBA completo no te conviene (caro, lento, ya tenés la empresa para practicar). Mejor <b>autodirigido (núcleo) + 1-2 diplomados puntuales</b> (Finanzas y Gestión en Salud). El MBA part-time queda para más adelante, por la red de contactos.
+    </div>
+  </div>
+
+  <footer>OLACORE · Plan de formación para la dirección del portafolio</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN='__DIR_TOKEN__';
+const Q=TOKEN?('?token='+encodeURIComponent(TOKEN)):'';
+let PROG={};
+const el=id=>document.getElementById(id);
+function toast(m){const t=el('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400);}
+
+const PLAN=[
+ {n:1,icon:'💰',ac:'var(--cobre)',titulo:'Finanzas para director + asignación de capital',
+  por:'Tu trabajo #1: mover el capital al de mayor retorno entre tus negocios.',
+  items:[
+   {id:'p1a',t:'libro',ti:'The Outsiders',de:'W. Thorndike — el libro clave para un dueño de holding'},
+   {id:'p1b',t:'libro',ti:'Financial Intelligence (Inteligencia Financiera)',de:'Berman & Knight'},
+   {id:'p1c',t:'libro',ti:'El inversor inteligente / Cartas de Buffett',de:'Graham · Buffett'},
+   {id:'p1d',t:'curso',ti:'Corporate Finance & Valuation',de:'Aswath Damodaran (NYU, gratis en YouTube)',link:'https://pages.stern.nyu.edu/~adamodar/'},
+   {id:'p1e',t:'diplomado',ti:'Dipl. Finanzas Corporativas',de:'Educación Continua UC',link:'https://educacioncontinua.uc.cl/programas/diplomado-en-finanzas-corporativas/'},
+   {id:'p1f',t:'diplomado',ti:'Dipl. en Finanzas',de:'Unegocios FEN · U. de Chile',link:'https://www.unegocios.uchile.cl/diplomados/diplomado-en-finanzas'},
+   {id:'p1p',t:'proyecto',ti:'P&L consolidado del holding + VAN/TIR de tus 3 próximas inversiones'},
+  ]},
+ {n:2,icon:'🎯',ac:'var(--aqua)',titulo:'Estrategia y dirección general',
+  por:'Pasar de apagar incendios a elegir dónde jugar y cómo ganar.',
+  items:[
+   {id:'p2a',t:'libro',ti:'Good Strategy / Bad Strategy',de:'Richard Rumelt'},
+   {id:'p2b',t:'libro',ti:'Playing to Win',de:'Lafley & Martin'},
+   {id:'p2c',t:'libro',ti:'7 Powers',de:'Hamilton Helmer'},
+   {id:'p2p',t:'proyecto',ti:'Estrategia a 3 años de cada negocio en 1 página: dónde jugar / cómo ganar / qué NO hacer'},
+  ]},
+ {n:3,icon:'🧭',ac:'var(--aqua)',titulo:'Liderazgo: de operador a líder de líderes',
+  por:'Lo estás viviendo ahora con tus contrataciones.',
+  items:[
+   {id:'p3a',t:'libro',ti:'High Output Management',de:'Andy Grove — biblia del operador→manager'},
+   {id:'p3b',t:'libro',ti:'The Great CEO Within',de:'Matt Mochary'},
+   {id:'p3c',t:'libro',ti:'Multipliers',de:'Liz Wiseman'},
+   {id:'p3d',t:'libro',ti:'What You Do Is Who You Are',de:'Ben Horowitz (cultura)'},
+   {id:'p3p',t:'proyecto',ti:'Organigrama del holding + sistema de 1:1 semanales con tus líderes'},
+  ]},
+ {n:4,icon:'📊',ac:'var(--verde)',titulo:'Sistemas de gestión y operaciones',
+  por:'Que cada negocio corra con KPIs, no con tu presencia.',
+  items:[
+   {id:'p4a',t:'libro',ti:'Measure What Matters',de:'John Doerr (OKRs)'},
+   {id:'p4b',t:'libro',ti:'The Goal',de:'Goldratt (novela de operaciones)'},
+   {id:'p4p',t:'proyecto',ti:'OKR trimestral + tablero de KPIs por negocio'},
+  ]},
+ {n:5,icon:'🛡️',ac:'var(--slate)',titulo:'Gobierno, legal, riesgo y tributación',
+  por:'La parte aburrida que protege todo lo demás.',
+  items:[
+   {id:'p5a',t:'aprender',ti:'Estructura holding + filiales, pacto de socios, tributación PYME, derecho laboral'},
+   {id:'p5b',t:'diplomado',ti:'Dipl. Gestión Financiera / Tributación',de:'Clase Ejecutiva UC',link:'https://www.claseejecutiva.uc.cl/programa/diplomado-en-gestion-financiera/'},
+   {id:'p5p',t:'proyecto',ti:'Revisar con contador/abogado si tu estructura societaria es la óptima para el portafolio'},
+  ]},
+ {n:6,icon:'🏥',ac:'var(--blue)',titulo:'Gestión en salud (tu core)',
+  por:'Específico de dirigir un centro médico.',
+  items:[
+   {id:'p6a',t:'libro',ti:"The Innovator's Prescription",de:'Clayton Christensen (modelos de negocio en salud)'},
+   {id:'p6b',t:'diplomado',ti:'Dipl. Gestión de organizaciones de salud',de:'Educación Continua UC',link:'https://educacioncontinua.uc.cl/programas/diplomado-en-gestion-de-organizaciones-de-salud/'},
+   {id:'p6c',t:'diplomado',ti:'Dipl. Gestión y liderazgo en instituciones de salud',de:'Educación Continua UC',link:'https://educacioncontinua.uc.cl/programas/diplomado-en-gestion-y-liderazgo-en-instituciones-de-salud/'},
+   {id:'p6d',t:'diplomado',ti:'Dipl. Administración y Gestión en Salud',de:'U. de Chile',link:'https://uchile.cl/cursos/173461/diplomado-de-extension-en-administracion-y-gestion-en-salud'},
+   {id:'p6p',t:'proyecto',ti:'Escribir el modelo de negocio clínico del CMC (cómo gana, qué lo diferencia)'},
+  ]},
+ {n:7,icon:'🧠',ac:'var(--cobre)',titulo:'Decisión, mental models y negociación',
+  por:'Transversal — todo el tiempo.',
+  items:[
+   {id:'p7a',t:'libro',ti:"Poor Charlie's Almanack",de:'Charlie Munger'},
+   {id:'p7b',t:'libro',ti:'Thinking in Bets',de:'Annie Duke'},
+   {id:'p7c',t:'libro',ti:'Never Split the Difference',de:'Chris Voss (negociación)'},
+  ]},
+];
+
+const NEXT={undefined:'doing','':'doing','todo':'doing','doing':'done','done':'todo'};
+const MARK={done:'✓',doing:'•'};
+
+function render(){
+  el('pillars').innerHTML='';
+  let done=0,total=0;
+  PLAN.forEach(p=>{
+    let pdone=0;
+    const rows=p.items.map(it=>{
+      total++; const st=PROG[it.id]||'todo'; if(st==='done'){done++;pdone++;}
+      const isProj=it.t==='proyecto';
+      const link=it.link?` · <a class="lk" href="${it.link}" target="_blank">Ver programa ↗</a>`:'';
+      return `<div class="item ${st} ${isProj?'proj':''}">
+        <div class="chk ${st}" data-id="${it.id}">${MARK[st]||''}</div>
+        <div class="it-main"><div class="tipo">${it.t}</div><div class="ti">${it.ti}</div>
+          <div class="de">${it.de||''}${link}</div></div></div>`;
+    }).join('');
+    const card=document.createElement('div'); card.className='pillar'; card.style.setProperty('--ac',p.ac);
+    card.innerHTML=`<div class="ph"><span class="ic">${p.icon}</span>
+        <div class="tt"><div class="nm">${p.n}. ${p.titulo}</div><div class="po">${p.por}</div></div>
+        <span class="cnt">${pdone}/${p.items.length}</span></div>
+      <div class="pbody">${rows}</div>`;
+    el('pillars').appendChild(card);
+  });
+  const pct=total?Math.round(done/total*100):0;
+  el('progBar').style.width=pct+'%'; el('progTxt').textContent=pct+'%';
+  document.querySelectorAll('.chk').forEach(c=>c.addEventListener('click',()=>{
+    const id=c.dataset.id; PROG[id]=NEXT[PROG[id]||'todo']; save(); render();
+  }));
+}
+let saveT;
+function save(){ clearTimeout(saveT); saveT=setTimeout(async()=>{
+  try{ await fetch('/api/direccion/progress'+Q,{method:'POST',credentials:'same-origin',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(PROG)}); toast('Guardado ✓'); }
+  catch(e){}
+},400); }
+async function load(){
+  try{ const r=await fetch('/api/direccion/progress'+Q,{credentials:'same-origin'}); PROG=await r.json()||{}; }
+  catch(e){ PROG={}; }
+  render();
+}
+load();
+</script>
+</body>
+</html>
