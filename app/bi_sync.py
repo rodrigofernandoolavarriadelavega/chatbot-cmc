@@ -735,6 +735,12 @@ def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
     n_ok = 0
     n_sin_prof = 0
     with _bi_conn() as c:
+        # columna de nombre del paciente (capturada de /pagos) — idempotente.
+        # La usa el módulo de Remuneraciones para listar atenciones con nombre.
+        try:
+            c.execute("ALTER TABLE bi_pagos_caja ADD COLUMN nombre_paciente TEXT")
+        except Exception:
+            pass
         for p in records:
             pago_id = p.get("id")
             if not pago_id:
@@ -745,8 +751,8 @@ def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
             c.execute("""
                 INSERT INTO bi_pagos_caja
                   (pago_id, atencion_id, fecha, id_profesional, id_paciente,
-                   monto, metodo_pago, n_folio, synced_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                   monto, metodo_pago, n_folio, nombre_paciente, synced_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                 ON CONFLICT(pago_id) DO UPDATE SET
                   atencion_id=excluded.atencion_id,
                   fecha=excluded.fecha,
@@ -755,11 +761,13 @@ def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
                   monto=excluded.monto,
                   metodo_pago=excluded.metodo_pago,
                   n_folio=excluded.n_folio,
+                  nombre_paciente=excluded.nombre_paciente,
                   synced_at=datetime('now')
             """, (pago_id, atencion_id,
                    (p.get("fecha_recepcion") or "")[:10], id_prof,
                    p.get("id_paciente"), p.get("monto_pago"),
-                   p.get("medio_pago"), p.get("numero_referencia")))
+                   p.get("medio_pago"), p.get("numero_referencia"),
+                   (p.get("nombre_paciente") or "").strip() or None))
             n_ok += 1
     return n_ok, n_sin_prof
 
