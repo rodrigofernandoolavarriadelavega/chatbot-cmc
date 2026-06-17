@@ -533,6 +533,10 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
 #nivel4{padding:6px 14px 30px;}
 .remmes{border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;color:var(--navy);font-family:inherit;}
 .remwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:10px;margin-top:8px;}
+.remtot{grid-column:1/-1;display:flex;gap:24px;background:linear-gradient(120deg,#0c3357,#1172AB);color:#fff;border-radius:12px;padding:11px 16px;box-shadow:var(--shadow);}
+.remtot .rl{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;opacity:.85;}
+.remtot .rv{display:block;font-size:18px;font-weight:800;margin-top:2px;} .remtot .rv2{display:block;font-size:14px;font-weight:700;margin-top:3px;opacity:.92;}
+.rembtn.copy{background:var(--aqua-s);color:var(--blue);margin-top:7px;}
 .remempty{grid-column:1/-1;color:var(--mute);font-size:12px;padding:14px;}
 .remcard{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--ac,var(--aqua));border-radius:12px;padding:11px 12px;cursor:pointer;box-shadow:var(--shadow-sm,0 4px 14px -8px rgba(15,63,104,.2));transition:transform .1s,box-shadow .15s;}
 .remcard:hover{transform:translateY(-1px);box-shadow:0 8px 20px -10px rgba(15,63,104,.32);}
@@ -2033,7 +2037,10 @@ async function loadRemuneraciones(mes){
 function renderRemList(){
   const box=document.getElementById('remList');
   if(!REM.profesionales.length){ box.innerHTML='<div class="remempty">Sin pagos registrados este mes.</div>'; return; }
-  box.innerHTML=REM.profesionales.map(p=>`<div class="remcard" data-id="${p.id}">
+  const totTr=REM.profesionales.reduce((s,p)=>s+(p.liquido||0),0);
+  const totIn=REM.profesionales.reduce((s,p)=>s+(p.ingreso||0),0);
+  const head=`<div class="remtot"><div><span class="rl">Total a transferir</span><span class="rv">${clp(totTr)}</span></div><div><span class="rl">Ingreso total</span><span class="rv2">${clp(totIn)}</span></div><div><span class="rl">Profesionales</span><span class="rv2">${REM.profesionales.length}</span></div></div>`;
+  box.innerHTML=head+REM.profesionales.map(p=>`<div class="remcard" data-id="${p.id}">
       <div class="rc-nm">${p.nombre}</div><div class="rc-esp">${p.especialidad||''}</div>
       <div class="rc-nums">
         <div><div class="rc-l">Ingreso</div><div class="rc-v mono">${clp(p.ingreso)}</div></div>
@@ -2075,9 +2082,10 @@ function buildRem(p){
     title:p.nombre, sub:(p.especialidad||'')+' · '+remMesLabel(REM.mes), color:'var(--blue)',
     statusHTML:'<div style="padding:10px 12px 0">'+sumHTML+'</div>',
     bodyHTML:`<div style="padding:4px 12px">${editHTML}${detHTML}</div>`,
-    footHTML:`<div style="padding:10px 12px"><button class="rembtn" id="reSend" ${okTel?'':'disabled'}>📲 Enviar por WhatsApp</button>${okTel?'':'<div class="remwarn">Falta el teléfono para enviar</div>'}</div>`,
+    footHTML:`<div style="padding:10px 12px"><button class="rembtn" id="reSend" ${okTel?'':'disabled'}>📲 Enviar por WhatsApp</button>${okTel?'':'<div class="remwarn">Falta el teléfono para enviar</div>'}<button class="rembtn copy" id="reCopy">📋 Copiar texto</button></div>`,
     onMount:(inner)=>{
       const I=inner.querySelector('#reI'),P=inner.querySelector('#reP'),B=inner.querySelector('#reB'),Tn=inner.querySelector('#reT'),Tel=inner.querySelector('#reTel');
+      const Cp=inner.querySelector('#reCopy'); if(Cp) Cp.addEventListener('click',ev=>{ ev.stopPropagation(); navigator.clipboard.writeText(remTexto(p)).then(()=>{ Cp.textContent='✓ Copiado'; setTimeout(()=>Cp.textContent='📋 Copiar texto',1400); }); });
       if(I) I.addEventListener('input',()=>{ e.ingreso=+I.value||0; recomputeFromPct(p); wpRem.update(); });
       if(P) P.addEventListener('input',()=>{ e.pct=+P.value||0; recomputeFromPct(p); wpRem.update(); });
       if(B) B.addEventListener('input',()=>{ e.boleta=+B.value||0; e.transf=Math.round(e.boleta*factorRet(p)); wpRem.update(); });
