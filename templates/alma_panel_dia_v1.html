@@ -526,6 +526,40 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
   .n2-grid{gap:9px;}
   .n2agent .kpis{grid-template-columns:repeat(3,1fr);}
 }
+/* ───────── Nivel 4 · Remuneraciones ───────── */
+#levelGutter3{height:14px;cursor:row-resize;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+#levelGutter3::before{content:'';width:46px;height:4px;border-radius:3px;background:var(--border);transition:background .15s,width .15s;}
+#levelGutter3:hover::before,#levelGutter3.active::before{background:var(--aqua);width:78px;}
+#nivel4{padding:6px 14px 30px;}
+.remmes{border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;color:var(--navy);font-family:inherit;}
+.remwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:10px;margin-top:8px;}
+.remempty{grid-column:1/-1;color:var(--mute);font-size:12px;padding:14px;}
+.remcard{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--ac,var(--aqua));border-radius:12px;padding:11px 12px;cursor:pointer;box-shadow:var(--shadow-sm,0 4px 14px -8px rgba(15,63,104,.2));transition:transform .1s,box-shadow .15s;}
+.remcard:hover{transform:translateY(-1px);box-shadow:0 8px 20px -10px rgba(15,63,104,.32);}
+.remcard .rc-nm{font-size:13px;font-weight:800;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.remcard .rc-esp{font-size:10.5px;color:var(--mute);margin-top:1px;}
+.remcard .rc-nums{display:flex;justify-content:space-between;gap:6px;margin-top:9px;}
+.remcard .rc-l{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--mute2);}
+.remcard .rc-v{font-size:12px;font-weight:800;color:var(--ink);} .remcard .rc-v.hot{color:var(--blue);}
+.remcard .rc-foot{font-size:9.5px;color:var(--mute);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;}
+.remcard .rc-foot .warn{color:var(--orange);font-weight:700;}
+/* popup remuneraciones */
+.remsum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;padding:10px;background:var(--bg);border-radius:11px;}
+.remsum .box{text-align:center;} .remsum .bl{font-size:8.5px;font-weight:800;text-transform:uppercase;color:var(--mute2);letter-spacing:.03em;}
+.remsum .bv{font-size:13px;font-weight:800;color:var(--navy);margin-top:2px;} .remsum .bv.hot{color:var(--blue);}
+.remrow{display:flex;align-items:center;gap:8px;margin:9px 0;}
+.remrow label{font-size:11px;font-weight:700;color:var(--mute);width:84px;flex:none;}
+.remrow input{flex:1;min-width:0;border:1px solid var(--border);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:inherit;text-align:right;}
+.remrow .pcti{max-width:64px;text-align:center;}
+.remdet{margin-top:6px;}
+.remdet .dh{font-size:10px;font-weight:800;text-transform:uppercase;color:var(--mute);letter-spacing:.04em;display:flex;justify-content:space-between;margin:4px 0;}
+.remdet table{width:100%;border-collapse:collapse;font-size:11px;}
+.remdet td{padding:5px 4px;border-bottom:1px solid var(--line,#eef2f6);}
+.remdet td.m{text-align:right;font-weight:700;color:var(--navy);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.remdet td .pn{color:var(--ink);} .remdet td .fc{font-size:9.5px;color:var(--mute);}
+.rembtn{width:100%;border:0;border-radius:11px;padding:11px;font-size:13px;font-weight:800;background:#25D366;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;}
+.rembtn:disabled{background:var(--border);color:var(--mute);cursor:not-allowed;}
+.remwarn{font-size:11px;color:var(--orange);font-weight:700;margin-top:6px;text-align:center;}
 </style>
 </head>
 <body>
@@ -722,6 +756,15 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
       <div class="n2-collapsed"><button class="exp" data-n3c="R" title="Expandir columna">»</button><div class="vtitle">Flujo & alertas</div></div>
     </div>
   </div>
+</div>
+
+<div id="levelGutter3" title="Arrastra para ajustar la altura del Nivel 3 · doble clic para restablecer"></div>
+
+<div id="nivel4">
+  <div class="n2-head"><div class="t">Pago de remuneraciones · <b id="remMesLbl">—</b></div>
+    <input type="month" id="remMes" class="remmes">
+    <div class="rule"></div><div class="hint">honorarios por profesional · boleta · transferencia · enviar por WhatsApp</div></div>
+  <div class="remwrap" id="remList"><div class="remempty">Cargando remuneraciones…</div></div>
 </div>
 
 <div class="apop" id="apop"></div>
@@ -1965,7 +2008,102 @@ function setupNivel3(){
     loadFinanciero(STATE.finSync ? n1Mes() : null);
   });
 }
-document.addEventListener('DOMContentLoaded',()=>{ setupTopbar(); setupResizers(); setupColumnCollapse(); setupNivel2(); setupNivel3(); loadFinanciero(); loadOperativo(null,1); loadChat(); lay2.setup(); lay3.setup(); wireCardCollapse(); setupGutter('levelGutter','grid','panelDiaV1N1h',()=>Math.round(innerHeight-48)); setupGutter('levelGutter2','nivel2','panelDiaV1N2h',null); updateDateLabel(); refresh(true); });
+/* ───────── Nivel 4 · Remuneraciones ───────── */
+let REM={mes:null,profesionales:[]}; const REM_EDIT={}, REM_DET={};
+const wpRem=createWorkPop();
+const MESES_R=['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function remMesLabel(m){ if(!m)return'—'; const[y,mo]=m.split('-'); return cap(MESES_R[+mo]||'')+' '+y; }
+function remPrevMonth(){ const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function factorRet(p){ return p.sin_retencion?1:0.8475; }
+function remEdit(p){ if(!REM_EDIT[p.id]) REM_EDIT[p.id]={pct:p.pct,ingreso:p.ingreso,boleta:p.bruto,transf:p.liquido,telefono:p.telefono,fijo:p.fijo,sin_retencion:p.sin_retencion}; return REM_EDIT[p.id]; }
+function recomputeFromPct(p){ const e=remEdit(p); if(!e.fijo) e.boleta=Math.round(e.ingreso*(e.pct||0)/100); e.transf=Math.round(e.boleta*factorRet(p)); }
+
+async function loadRemuneraciones(mes){
+  REM.mes=mes; document.getElementById('remMesLbl').textContent=remMesLabel(mes);
+  const box=document.getElementById('remList');
+  if(!PANEL_TOKEN){ box.innerHTML='<div class="remempty">Requiere acceso con token.</div>'; return; }
+  box.innerHTML='<div class="remempty">Cargando remuneraciones…</div>';
+  try{
+    const r=await fetch('/api/panel-dia/remuneraciones?mes='+mes+'&token='+encodeURIComponent(PANEL_TOKEN),{credentials:'same-origin'});
+    const d=await r.json(); REM.profesionales=d.profesionales||[];
+  }catch(e){ box.innerHTML='<div class="remempty">No se pudo cargar.</div>'; return; }
+  for(const k in REM_EDIT) delete REM_EDIT[k];
+  renderRemList();
+}
+function renderRemList(){
+  const box=document.getElementById('remList');
+  if(!REM.profesionales.length){ box.innerHTML='<div class="remempty">Sin pagos registrados este mes.</div>'; return; }
+  box.innerHTML=REM.profesionales.map(p=>`<div class="remcard" data-id="${p.id}">
+      <div class="rc-nm">${p.nombre}</div><div class="rc-esp">${p.especialidad||''}</div>
+      <div class="rc-nums">
+        <div><div class="rc-l">Ingreso</div><div class="rc-v mono">${clp(p.ingreso)}</div></div>
+        <div><div class="rc-l">Boleta ${p.fijo?'(fijo)':(p.pct+'%')}</div><div class="rc-v mono">${clp(p.bruto)}</div></div>
+        <div><div class="rc-l">Transferir</div><div class="rc-v mono hot">${clp(p.liquido)}</div></div>
+      </div>
+      <div class="rc-foot">${p.pacientes} pacientes · ${p.telefono?('📱 '+p.telefono):'<span class="warn">⚠️ sin teléfono</span>'}</div>
+    </div>`).join('');
+  box.querySelectorAll('.remcard').forEach(card=>{
+    const p=REM.profesionales.find(x=>x.id==card.dataset.id);
+    card.addEventListener('click',ev=>{ ev.stopPropagation(); wpRem.pin(card,()=>buildRem(p)); fetchRemDetalle(p); });
+  });
+}
+async function fetchRemDetalle(p){
+  const key=p.id+'_'+REM.mes; if(REM_DET[key]) return;
+  try{ const r=await fetch('/api/panel-dia/remuneracion-detalle?prof='+p.id+'&mes='+REM.mes+'&token='+encodeURIComponent(PANEL_TOKEN),{credentials:'same-origin'}); REM_DET[key]=await r.json(); }
+  catch(e){ REM_DET[key]={detalle:[],total:0,n:0}; }
+  if(wpRem.pinned) wpRem.update();
+}
+function buildRem(p){
+  const e=remEdit(p); const det=REM_DET[p.id+'_'+REM.mes];
+  const sumHTML=`<div class="remsum">
+    <div class="box"><div class="bl">Ingreso</div><div class="bv">${clp(e.ingreso)}</div></div>
+    <div class="box"><div class="bl">Boleta</div><div class="bv">${clp(e.boleta)}</div></div>
+    <div class="box"><div class="bl">Transferir</div><div class="bv hot">${clp(e.transf)}</div></div></div>`;
+  const editHTML=
+    `<div class="remrow"><label>Ingreso</label><input type="number" id="reI" value="${e.ingreso}"></div>`+
+    (e.fijo?`<div class="remrow"><label>Boleta (fijo)</label><input type="number" id="reB" value="${e.boleta}"></div>`
+           :`<div class="remrow"><label>% / Boleta</label><input type="number" id="reP" class="pcti" value="${e.pct||0}"><input type="number" id="reB" value="${e.boleta}"></div>`)+
+    `<div class="remrow"><label>Transferir</label><input type="number" id="reT" value="${e.transf}"></div>`+
+    `<div class="remrow"><label>📱 WhatsApp</label><input type="text" id="reTel" value="${e.telefono||''}" placeholder="569…"></div>`;
+  let detHTML='<div class="remdet"><div class="dh"><span>Atenciones del mes</span><span>cargando…</span></div></div>';
+  if(det){ const dif=(det.total||0)-e.ingreso;
+    detHTML=`<div class="remdet"><div class="dh"><span>${det.n} atenciones</span><span>caja ${clp(det.total||0)}${dif?` · dif ${clp(dif)}`:''}</span></div>`+
+      `<table>${(det.detalle||[]).map(r=>`<tr><td><div class="pn">${r.paciente}</div><div class="fc">${r.fecha} · ${r.metodo}</div></td><td class="m">${clp(r.monto)}</td></tr>`).join('')}</table></div>`;
+  }
+  const okTel=!!(e.telefono&&e.telefono.replace(/\D/g,'').length>=8);
+  return {
+    title:p.nombre, sub:(p.especialidad||'')+' · '+remMesLabel(REM.mes), color:'var(--blue)',
+    statusHTML:'<div style="padding:10px 12px 0">'+sumHTML+'</div>',
+    bodyHTML:`<div style="padding:4px 12px">${editHTML}${detHTML}</div>`,
+    footHTML:`<div style="padding:10px 12px"><button class="rembtn" id="reSend" ${okTel?'':'disabled'}>📲 Enviar por WhatsApp</button>${okTel?'':'<div class="remwarn">Falta el teléfono para enviar</div>'}</div>`,
+    onMount:(inner)=>{
+      const I=inner.querySelector('#reI'),P=inner.querySelector('#reP'),B=inner.querySelector('#reB'),Tn=inner.querySelector('#reT'),Tel=inner.querySelector('#reTel');
+      if(I) I.addEventListener('input',()=>{ e.ingreso=+I.value||0; recomputeFromPct(p); wpRem.update(); });
+      if(P) P.addEventListener('input',()=>{ e.pct=+P.value||0; recomputeFromPct(p); wpRem.update(); });
+      if(B) B.addEventListener('input',()=>{ e.boleta=+B.value||0; e.transf=Math.round(e.boleta*factorRet(p)); wpRem.update(); });
+      if(Tn) Tn.addEventListener('input',()=>{ e.transf=+Tn.value||0; });
+      if(Tel) Tel.addEventListener('change',()=>{ e.telefono=Tel.value.replace(/\D/g,''); saveRemConfig(p); wpRem.update(); });
+      const S=inner.querySelector('#reSend'); if(S) S.addEventListener('click',ev=>{ ev.stopPropagation(); enviarRem(p); });
+    }
+  };
+}
+async function saveRemConfig(p){ const e=remEdit(p);
+  try{ await fetch('/api/panel-dia/remuneracion-config?token='+encodeURIComponent(PANEL_TOKEN),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,pct:e.fijo?null:e.pct,telefono:e.telefono})}); }catch(_){}
+}
+function remTexto(p){ const e=remEdit(p); const det=REM_DET[p.id+'_'+REM.mes]||{detalle:[]}; const L=[];
+  L.push('Hola, ¿cómo estás? 👋',''); L.push('*Pago honorarios '+remMesLabel(REM.mes)+'* — '+p.nombre,'');
+  L.push('Ingreso: '+clp(e.ingreso)); L.push('Boleta'+(e.fijo?' (fijo)':' ('+e.pct+'%)')+': '+clp(e.boleta)); L.push('Transferencia: '+clp(e.transf),'');
+  L.push('*Atenciones del mes ('+(det.detalle||[]).length+'):*');
+  (det.detalle||[]).forEach(r=>L.push('• '+r.fecha+' · '+r.paciente+' · '+clp(r.monto)));
+  L.push('','Si ves que falta alguna atención, avísame. Saludos 🙌'); return L.join('\n'); }
+function enviarRem(p){ const e=remEdit(p); const tel=(e.telefono||'').replace(/\D/g,''); if(tel.length<8){ alert('Falta el teléfono'); return; }
+  window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(remTexto(p)),'_blank'); }
+function setupNivel4(){ const inp=document.getElementById('remMes'); const mes=remPrevMonth(); inp.value=mes;
+  inp.addEventListener('change',()=>{ if(inp.value) loadRemuneraciones(inp.value); }); loadRemuneraciones(mes); }
+window.addEventListener('keydown',e=>{ if(e.key==='Escape'&&wpRem.pinned) wpRem.close(); });
+document.addEventListener('mousedown',e=>{ if(!wpRem.pinned)return; if(e.target.closest('.wpop')||e.target.closest('.remcard'))return; wpRem.close(); });
+
+document.addEventListener('DOMContentLoaded',()=>{ setupTopbar(); setupResizers(); setupColumnCollapse(); setupNivel2(); setupNivel3(); setupNivel4(); loadFinanciero(); loadOperativo(null,1); loadChat(); lay2.setup(); lay3.setup(); wireCardCollapse(); setupGutter('levelGutter','grid','panelDiaV1N1h',()=>Math.round(innerHeight-48)); setupGutter('levelGutter2','nivel2','panelDiaV1N2h',null); setupGutter('levelGutter3','nivel3','panelDiaV1N3h',null); updateDateLabel(); refresh(true); });
 </script>
 </body>
 </html>
