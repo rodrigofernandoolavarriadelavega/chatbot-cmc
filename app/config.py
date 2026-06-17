@@ -84,6 +84,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "autopilot":   {"label": "Autopilot Ads",    "icon": "target",    "title": "Autopilot de Marketing",         "sub": "Meta Ads · decisiones por rentabilidad real",      "src": "/autopilot"},
     "demanda":     {"label": "Demanda",          "icon": "search",    "title": "Demanda capturada",              "sub": "Qué piden los pacientes que no capturamos",        "src": "/demanda"},
     "canal":       {"label": "Canal declarado",  "icon": "search",    "title": "Canal declarado",                "sub": "Cómo dicen los pacientes que nos conocieron · captura recepción","src": "/alma/canal"},
+    "captacion":   {"label": "Captación",        "icon": "search",    "title": "Captación de pacientes",         "sub": "¿Cómo se enteran? · tendencia · fuentes · tasa de respuesta","src": "/captacion"},
     "inventario":  {"label": "Inventario Dental","icon": "package",   "title": "Inventario Dental",              "sub": "Stock · costos MayorDent · orden de compra",       "src": "/alma/inventario"},
     "proveedores": {"label": "Proveedores",     "icon": "truck",     "title": "Proveedores y compras",          "sub": "Directorio · órdenes de compra · estado",          "src": "/alma/proveedores"},
     # ── Módulos Profesionales (analítica clínica BI-driven por especialidad) ──
