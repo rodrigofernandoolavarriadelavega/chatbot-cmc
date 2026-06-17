@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Captación · CMC</title>
+<style>
+  :root{
+    --navy:#0F3F68;--blue:#1172AB;--aqua:#4FBECE;--aqua-s:#E5F6F9;
+    --cobre:#C97B4A;--cobre-s:#FBEDE4;--verde:#2E9E6B;--verde-s:#E6F5EE;
+    --ink:#15293b;--mute:#5b7186;--mute2:#8aa0b3;--line:#e9eff4;
+    --bg:#f4f8fb;--card:#fff;--shadow:0 6px 22px -10px rgba(15,63,104,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 16px 60px;}
+  .top{background:linear-gradient(135deg,#0c3357,#1172AB 60%,#3a9fb4);color:#fff;padding:20px 0;border-radius:0 0 22px 22px;box-shadow:var(--shadow);}
+  .brand{display:flex;align-items:center;gap:13px;}
+  .brand .iso{width:46px;height:46px;border-radius:13px;background:#fff;display:grid;place-items:center;box-shadow:0 7px 18px -7px rgba(0,0,0,.35);flex:none;}
+  .brand .iso img{width:31px;height:31px;display:block;}
+  .brand h1{font-size:19px;font-weight:800;} .brand .s{font-size:11.5px;opacity:.9;font-weight:600;margin-top:1px;}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);border-top:3px solid var(--ac,var(--aqua));}
+  .kpi .v{font-size:24px;font-weight:800;color:var(--navy);} .kpi .l{font-size:11px;font-weight:700;color:var(--mute);margin-top:2px;}
+  .kpi .sub{font-size:10.5px;color:var(--mute2);margin-top:3px;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);margin-top:18px;}
+  .h2{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:3px;} .sub{font-size:12px;color:var(--mute);margin-bottom:14px;}
+
+  /* tendencia */
+  .trow{display:flex;align-items:center;gap:10px;margin:9px 0;}
+  .trow .ml{font-size:11px;font-weight:800;color:var(--navy);width:62px;flex:none;text-transform:capitalize;}
+  .trow .bars{flex:1;min-width:0;}
+  .bar{height:15px;border-radius:5px;display:flex;align-items:center;padding:0 7px;color:#fff;font-size:9.5px;font-weight:800;white-space:nowrap;margin:2px 0;min-width:24px;transition:width .5s;}
+  .bar.resp{background:linear-gradient(90deg,#1172AB,#4FBECE);} .bar.ads{background:linear-gradient(90deg,#C97B4A,#e0a07a);}
+  .leg{display:flex;gap:16px;font-size:11px;font-weight:700;color:var(--mute);margin-bottom:6px;}
+  .leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+
+  /* fuentes */
+  .frow{margin:11px 0;}
+  .frow .top{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;color:var(--ink);background:none;padding:0;border-radius:0;box-shadow:none;margin-bottom:4px;}
+  .frow .top b{color:var(--navy);} .frow .pct{color:var(--blue);font-weight:800;}
+  .track{height:13px;background:var(--bg);border-radius:7px;overflow:hidden;}
+  .track > i{display:block;height:100%;border-radius:7px;transition:width .5s;}
+  .c0{background:linear-gradient(90deg,#1172AB,#4FBECE);} .c1{background:linear-gradient(90deg,#4FBECE,#7ee0c0);} .c2{background:linear-gradient(90deg,#C97B4A,#e0a07a);} .c3{background:linear-gradient(90deg,#2E9E6B,#6fcf97);}
+
+  /* tasa */
+  .tasa{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+  .donut{--p:0;width:118px;height:118px;border-radius:50%;flex:none;background:conic-gradient(var(--verde) calc(var(--p)*1%), var(--line) 0);display:grid;place-items:center;position:relative;}
+  .donut::after{content:'';position:absolute;width:84px;height:84px;border-radius:50%;background:#fff;}
+  .donut .pv{position:relative;z-index:1;font-size:24px;font-weight:800;color:var(--navy);}
+  .tasa .info{font-size:13px;color:var(--ink);} .tasa .info b{color:var(--navy);}
+  .tasa .info .big{font-size:15px;font-weight:800;color:var(--verde);}
+
+  /* cross */
+  .crossgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+  .cbox{background:var(--bg);border-radius:12px;padding:12px 13px;}
+  .cbox .ct{font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .cl{display:flex;align-items:center;gap:8px;margin:5px 0;}
+  .cl .e{font-size:11px;color:var(--ink);width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cl .cb{flex:1;height:9px;background:#fff;border-radius:5px;overflow:hidden;} .cl .cb>i{display:block;height:100%;background:var(--ac,var(--aqua));border-radius:5px;}
+  .cl .cn{font-size:10.5px;font-weight:800;color:var(--mute);width:22px;text-align:right;flex:none;}
+  .insight{background:var(--aqua-s);border-left:4px solid var(--aqua);border-radius:10px;padding:11px 14px;font-size:13px;margin-top:14px;}
+  .insight b{color:var(--blue);}
+  footer{margin-top:30px;text-align:center;font-size:11px;color:var(--mute2);}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><div class="brand">
+  <div class="iso"><img src="/static/isotipo.png" alt="CMC"></div>
+  <div><h1>Captación de pacientes</h1><div class="s">¿Cómo se enteran del Centro Médico Carampangue?</div></div>
+</div></div></header>
+
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <div class="h2">Tendencia (últimos 6 meses)</div>
+    <div class="sub">Respuestas a la pregunta + pacientes captados por anuncios (click-to-WhatsApp).</div>
+    <div class="leg"><span><i style="background:#1172AB"></i>Respondieron la pregunta</span><span><i style="background:#C97B4A"></i>Vinieron por anuncio</span></div>
+    <div id="trend"></div>
+  </div>
+
+  <div class="card">
+    <div class="h2">¿Cómo nos conociste?</div>
+    <div class="sub">Lo que responden los pacientes nuevos.</div>
+    <div id="fuentes"></div>
+    <div class="insight" id="insightFuente"></div>
+  </div>
+
+  <div class="card">
+    <div class="h2">Tasa de respuesta (últimos 90 días)</div>
+    <div class="sub">Cuántos de los que se registran contestan la pregunta.</div>
+    <div class="tasa">
+      <div class="donut" id="donut"><div class="pv" id="donutPv">—</div></div>
+      <div class="info" id="tasaInfo"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="h2">Fuente × especialidad</div>
+    <div class="sub">Qué especialidades trae cada canal (primera cita del paciente).</div>
+    <div class="crossgrid" id="cross"></div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const TOKEN='__CAP_TOKEN__'; const Q=TOKEN?('?token='+encodeURIComponent(TOKEN)):'';
+const el=id=>document.getElementById(id);
+const clp=n=>Number(n||0).toLocaleString('es-CL');
+const MES=['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const mlab=m=>{const[y,mo]=m.split('-');return (MES[+mo]||'').slice(0,3)+' '+y.slice(2);};
+const FCLR=['c0','c1','c2','c3'];
+
+async function load(){
+  let d; try{ d=await (await fetch('/api/captacion/data'+Q,{credentials:'same-origin'})).json(); }
+  catch(e){ el('kpis').innerHTML='<div class="kpi">No se pudo cargar.</div>'; return; }
+
+  // KPIs
+  const t=d.tasa;
+  el('kpis').innerHTML=`
+    <div class="kpi" style="--ac:var(--blue)"><div class="v">${d.total_reportado}</div><div class="l">Respondieron la pregunta</div><div class="sub">histórico</div></div>
+    <div class="kpi" style="--ac:var(--cobre)"><div class="v">${d.ads_90d}</div><div class="l">Por anuncios (90d)</div><div class="sub">click-to-WhatsApp</div></div>
+    <div class="kpi" style="--ac:var(--verde)"><div class="v">${t.pct_de_registros}%</div><div class="l">Tasa de respuesta</div><div class="sub">${t.respondieron} de ${t.completos} registros</div></div>`;
+
+  // tendencia
+  const maxT=Math.max(1,...d.trend.map(m=>Math.max(m.resp,m.ads)));
+  el('trend').innerHTML=d.trend.map(m=>`<div class="trow"><div class="ml">${mlab(m.mes)}</div><div class="bars">
+    <div class="bar resp" style="width:${Math.max(6,m.resp/maxT*100)}%">${m.resp}</div>
+    <div class="bar ads" style="width:${Math.max(6,m.ads/maxT*100)}%">${m.ads}</div></div></div>`).join('');
+
+  // fuentes
+  const totF=d.total_reportado||1;
+  el('fuentes').innerHTML=d.fuentes.map((f,i)=>{const p=Math.round(f.n/totF*100);
+    return `<div class="frow"><div class="top"><span><b>${f.label}</b></span><span><span class="pct">${p}%</span> · ${f.n}</span></div>
+      <div class="track"><i class="${FCLR[i%4]}" style="width:${p}%"></i></div></div>`;}).join('');
+  const top=d.fuentes[0];
+  if(top) el('insightFuente').innerHTML=`<b>${top.label}</b> es tu canal #1 (${Math.round(top.n/totF*100)}%). ${top.key==='amigo'?'El boca a boca es señal directa de pacientes conformes que recomiendan — tu activo más valioso.':''}`;
+
+  // tasa donut
+  el('donut').style.setProperty('--p',t.pct_de_registros);
+  el('donutPv').textContent=t.pct_de_registros+'%';
+  el('tasaInfo').innerHTML=`<div class="big">${t.respondieron} de ${t.completos} registros contestan</div>
+    <div style="margin-top:6px">De los que llegan a la pregunta, <b>${t.pct_de_preguntados}%</b> responde (${t.respondieron} de ${t.preguntados}).</div>
+    <div style="margin-top:4px;color:var(--mute)">Solo ${t.skip} la saltaron.</div>`;
+
+  // cross
+  const ACC={amigo:'var(--blue)',rrss:'var(--aqua)',recurrente:'var(--cobre)'};
+  const ICO={amigo:'🗣️',rrss:'📱',recurrente:'🔁'};
+  const LBL={amigo:'Amigo / familiar',rrss:'Redes sociales',recurrente:'Ya era paciente'};
+  el('cross').innerHTML=['amigo','rrss','recurrente'].filter(s=>d.cross[s]).map(s=>{
+    const items=d.cross[s], mx=Math.max(1,...items.map(x=>x.n));
+    return `<div class="cbox" style="--ac:${ACC[s]}"><div class="ct">${ICO[s]} ${LBL[s]}</div>
+      ${items.map(x=>`<div class="cl"><div class="e" title="${x.esp}">${x.esp}</div><div class="cb"><i style="width:${x.n/mx*100}%"></i></div><div class="cn">${x.n}</div></div>`).join('')}</div>`;
+  }).join('');
+
+  el('foot').textContent='Centro Médico Carampangue · actualizado '+d.actualizado;
+}
+load();
+</script>
+</body>
+</html>
