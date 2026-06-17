@@ -533,7 +533,7 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
 #nivel4{padding:6px 14px 30px;}
 .remmes{border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;color:var(--navy);font-family:inherit;}
 .remwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:10px;margin-top:8px;}
-.remtot{grid-column:1/-1;display:flex;gap:24px;background:linear-gradient(120deg,#0c3357,#1172AB);color:#fff;border-radius:12px;padding:11px 16px;box-shadow:var(--shadow);}
+.remtot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:14px 26px;background:linear-gradient(120deg,#0c3357,#1172AB);color:#fff;border-radius:12px;padding:11px 16px;box-shadow:var(--shadow);}
 .remtot .rl{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;opacity:.85;}
 .remtot .rv{display:block;font-size:18px;font-weight:800;margin-top:2px;} .remtot .rv2{display:block;font-size:14px;font-weight:700;margin-top:3px;opacity:.92;}
 .rembtn.copy{background:var(--aqua-s);color:var(--blue);margin-top:7px;}
@@ -2043,10 +2043,12 @@ function renderRemList(){
   const box=document.getElementById('remList');
   if(!REM.profesionales.length){ box.innerHTML='<div class="remempty">Sin pagos registrados este mes.</div>'; return; }
   const t=REM.tot||{total_transferir:0,total_pagado:0,total_por_pagar:0,n_pagados:0,n_total:0};
+  const ventaTot=REM.profesionales.reduce((s,p)=>s+(p.ingreso||0),0);
   const head=`<div class="remtot">
+    <div><span class="rl">Venta total</span><span class="rv">${clp(ventaTot)}</span></div>
     <div><span class="rl">Por pagar (${t.n_total-t.n_pagados})</span><span class="rv">${clp(t.total_por_pagar)}</span></div>
     <div><span class="rl">Pagado (${t.n_pagados})</span><span class="rv2" style="color:#a8f0c8">${clp(t.total_pagado)}</span></div>
-    <div><span class="rl">Total del mes</span><span class="rv2">${clp(t.total_transferir)}</span></div></div>`;
+    <div><span class="rl">Honorarios del mes</span><span class="rv2">${clp(t.total_transferir)}</span></div></div>`;
   box.innerHTML=head+REM.profesionales.map(p=>`<div class="remcard ${p.pagado?'paid':''}" data-id="${p.id}">
       ${p.pagado?'<div class="rc-paid">✓ Pagado</div>':''}
       <div class="rc-nm">${p.nombre}</div><div class="rc-esp">${p.especialidad||''}</div>
