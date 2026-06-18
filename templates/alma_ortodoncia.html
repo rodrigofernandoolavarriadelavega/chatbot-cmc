@@ -142,6 +142,15 @@
   .vbtn.active { background:#fff; color:var(--navy); box-shadow:var(--sh-sm); }
 
   /* calendario */
+  .cal-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .cal-toolbar .ct-lbl { font-size:11px; font-weight:700; color:var(--mute); }
+  .rswitch { display:flex; gap:3px; background:#eef4f8; border:1px solid var(--border); border-radius:10px; padding:3px; }
+  .rbtn { font-family:inherit; font-size:11px; font-weight:700; color:var(--mute); background:transparent; border:none;
+    border-radius:7px; padding:6px 12px; cursor:pointer; transition:all .15s; }
+  .rbtn.active { background:#fff; color:var(--navy); box-shadow:var(--sh-sm); }
+  .ct-legend { font-size:10.5px; font-weight:600; color:var(--mute); display:flex; align-items:center; gap:5px; margin-left:auto; }
+  .lg-dot { width:9px; height:9px; border-radius:50%; background:var(--aqua); display:inline-block; }
+  .lg-dot.nuevo { background:var(--violet); }
   .cal-card { padding:18px; }
   .cal-month { margin-bottom:26px; }
   .cal-month:last-child { margin-bottom:0; }
@@ -163,7 +172,9 @@
   .cal-count small { font-size:10px; font-weight:600; color:var(--mute); }
   .cal-dots { display:flex; gap:3px; flex-wrap:wrap; margin-top:auto; }
   .cal-dot { width:6px; height:6px; border-radius:50%; background:var(--aqua); }
-  .cal-dot.inst { background:var(--blue); }
+  .cal-dot.nuevo { background:var(--violet); }
+  .cal-newbadge { font-size:9px; font-weight:800; color:var(--violet); background:var(--violet-s);
+    border-radius:6px; padding:1px 5px; align-self:flex-start; }
   .cal-total { font-size:9.5px; font-weight:700; color:var(--green); margin-top:auto; }
   /* day modal list */
   .day-list { display:flex; flex-direction:column; gap:7px; max-height:55vh; overflow-y:auto; }
@@ -174,6 +185,7 @@
   .day-tag.instalacion { background:var(--blue); color:#fff; }
   .day-tag.control { background:var(--aqua-s); color:var(--blue); }
   .day-tag.otro { background:var(--bg); color:var(--mute); }
+  .day-tag.nuevo { background:var(--violet); color:#fff; }
   .day-row .dr-monto { margin-left:auto; font-weight:700; color:var(--navy); font-size:12px; }
 
   @media (max-width:980px){ .kpis { grid-template-columns:repeat(2,1fr); } .hide-sm { display:none; }
@@ -216,6 +228,15 @@
     </div>
 
     <div id="view-cal" style="display:none">
+      <div class="cal-toolbar">
+        <span class="ct-lbl">Rango:</span>
+        <div class="rswitch" id="rswitch">
+          <button class="rbtn active" data-m="3" onclick="setRange(3)">3 meses</button>
+          <button class="rbtn" data-m="6" onclick="setRange(6)">6 meses</button>
+          <button class="rbtn" data-m="12" onclick="setRange(12)">12 meses</button>
+        </div>
+        <span class="ct-legend"><span class="lg-dot nuevo"></span>Nuevo / inicio &nbsp; <span class="lg-dot"></span>Control en curso</span>
+      </div>
       <div class="card cal-card" id="cal-mount"></div>
       <div style="font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5">
         Cada día muestra los pacientes que la Dra. Castillo <b>atendió</b> (caja real Medilink → BI). Un paciente cuenta una vez por día.
@@ -412,7 +433,7 @@ async function savePlan(){
 }
 
 /* ── Calendario por día ─────────────────────────────────────── */
-let CAL = { dias: [], byDate: {}, loaded: false };
+let CAL = { dias: [], byDate: {}, loaded: false, meses: 3 };
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
@@ -427,11 +448,18 @@ function setView(v){
   if(cal && !CAL.loaded) loadCalendario();
 }
 
+function setRange(m){
+  if(CAL.meses===m && CAL.loaded) return;
+  CAL.meses = m;
+  document.querySelectorAll('#rswitch .rbtn').forEach(b=>b.classList.toggle('active', +b.dataset.m===m));
+  loadCalendario();
+}
+
 async function loadCalendario(){
   const mount = document.getElementById('cal-mount');
   mount.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mute)">Cargando atenciones…</div>';
   try {
-    const r = await api("/calendario?meses=3");
+    const r = await api("/calendario?meses="+CAL.meses);
     CAL.dias = r.dias || [];
     CAL.byDate = {}; CAL.dias.forEach(d=>{ CAL.byDate[d.fecha]=d; });
     CAL.loaded = true;
@@ -451,18 +479,20 @@ function renderMonth(ym){
   const [Y,M] = ym.split('-').map(Number);
   const first = new Date(Y, M-1, 1), daysIn = new Date(Y, M, 0).getDate();
   let lead = (first.getDay()+6)%7; // lunes=0
-  let pacMes=0, instMes=0, totMes=0, diasMes=0;
+  let pacMes=0, nuevMes=0, totMes=0, diasMes=0;
   let cells = '';
   for(let i=0;i<lead;i++) cells += '<div class="cal-cell pad"></div>';
   for(let d=1; d<=daysIn; d++){
     const ds = `${Y}-${String(M).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const info = CAL.byDate[ds];
     if(info){
-      pacMes+=info.n_pacientes; instMes+=info.n_instalaciones; totMes+=info.total; diasMes++;
-      const dots = info.pacientes.slice(0,8).map(p=>`<span class="cal-dot ${p.tipo==='instalacion'?'inst':''}"></span>`).join('');
+      pacMes+=info.n_pacientes; nuevMes+=info.n_nuevos; totMes+=info.total; diasMes++;
+      const dots = info.pacientes.slice(0,8).map(p=>`<span class="cal-dot ${p.nuevo?'nuevo':''}"></span>`).join('');
+      const badge = info.n_nuevos ? `<span class="cal-newbadge">+${info.n_nuevos} nuevo${info.n_nuevos>1?'s':''}</span>` : '';
       cells += `<div class="cal-cell has" onclick="openDay('${ds}')">
         <div class="cal-dnum">${d}</div>
         <div class="cal-count">${info.n_pacientes}<small> pac.</small></div>
+        ${badge}
         <div class="cal-dots">${dots}</div></div>`;
     } else {
       cells += `<div class="cal-cell empty-day"><div class="cal-dnum">${d}</div></div>`;
@@ -471,7 +501,7 @@ function renderMonth(ym){
   const dows = DOW.map(x=>`<div class="cal-dow">${x}</div>`).join('');
   return `<div class="cal-month">
     <div class="cal-mhead"><h3>${MESES[M-1]} ${Y}</h3>
-      <span class="msum">${diasMes} días atención · ${pacMes} pacientes · ${instMes} instalaciones · ${clp(totMes)}</span></div>
+      <span class="msum">${diasMes} días atención · ${pacMes} pacientes (${nuevMes} nuevos · ${pacMes-nuevMes} en curso) · ${clp(totMes)}</span></div>
     <div class="cal-grid">${dows}${cells}</div></div>`;
 }
 
@@ -479,11 +509,12 @@ function openDay(ds){
   const info = CAL.byDate[ds]; if(!info) return;
   const dt = new Date(ds+'T12:00:00');
   document.getElementById('day-title').textContent =
-    `${DOW[(dt.getDay()+6)%7]} ${dt.getDate()} ${MESES[dt.getMonth()]} · ${info.n_pacientes} pacientes`;
+    `${DOW[(dt.getDay()+6)%7]} ${dt.getDate()} ${MESES[dt.getMonth()]} · ${info.n_pacientes} pac. (${info.n_nuevos} nuevos · ${info.n_encurso} en curso)`;
   document.getElementById('day-list').innerHTML = info.pacientes.map(p=>{
     const lbl = {instalacion:'Instalación',control:'Control',otro:'Otro'}[p.tipo]||p.tipo;
+    const flag = p.nuevo ? '<span class="day-tag nuevo">Nuevo</span>' : '';
     return `<div class="day-row">
-      <span class="day-tag ${p.tipo}">${lbl}</span>
+      ${flag}<span class="day-tag ${p.tipo}">${lbl}</span>
       <div><div class="dr-name">${esc(p.paciente)}</div>${p.telefono?`<div class="dr-meta">${esc(p.telefono)}</div>`:''}</div>
       <div class="dr-monto">${clp(p.monto)}</div></div>`;
   }).join('');

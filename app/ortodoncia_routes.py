@@ -30,7 +30,7 @@ source_status="bi_unavailable" (nunca 500).
 import csv
 import io
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request
@@ -344,33 +344,58 @@ def _tipo_visita(monto: float) -> str:
 
 def _calendario(meses: int = 3):
     """Agrupa las atenciones de la Dra. Castillo por día (caja real, prof 66).
-    Dedup: un paciente cuenta una vez por día; si pagó varias líneas el mismo
-    día se suma el monto (gana el tipo de mayor monto: instalación sobre control)."""
-    rows, status = _bi_rows(meses)
-    pordia: dict[str, dict] = {}
-    for r in rows:
+    - Dedup: un paciente cuenta una vez por día (varias líneas el mismo día se suman).
+    - 'Nuevo' = ese día arrancó un tratamiento (1ra visita o tras un hueco > GAP_NUEVO_TRAT);
+      'en curso' = visita de seguimiento. Se clasifica con historial ANCHO (24m) para no
+      marcar como nuevo a quien empezó antes de la ventana visible."""
+    hist, status = _bi_rows(max(meses, 24))  # ventana ancha solo para clasificar
+    corte = (_today() - timedelta(days=meses * 31)).isoformat()
+
+    # 1) visitas por paciente, ordenadas, para detectar inicios de tratamiento
+    porpac: dict[int, list] = {}
+    for r in hist:
         f = (r.get("fecha") or "")[:10]
         if not f:
             continue
+        porpac.setdefault(r["paciente_id"], []).append((f, float(r.get("monto") or 0), r))
+    es_inicio: dict[tuple, bool] = {}  # (pid, fecha) -> bool
+    for pid, visitas in porpac.items():
+        visitas.sort(key=lambda x: x[0])
+        prev = None
+        for f, _m, _r in visitas:
+            d = datetime.strptime(f, "%Y-%m-%d").date()
+            inicio = prev is None or (d - prev).days > GAP_NUEVO_TRAT
+            es_inicio[(pid, f)] = es_inicio.get((pid, f)) or inicio
+            prev = d
+
+    # 2) agrupar por día (solo días dentro de la ventana pedida)
+    pordia: dict[str, dict] = {}
+    for r in hist:
+        f = (r.get("fecha") or "")[:10]
+        if not f or f < corte:
+            continue
         pid = r["paciente_id"]
-        monto = float(r.get("monto") or 0)
         dia = pordia.setdefault(f, {"fecha": f, "pacientes": {}})
         p = dia["pacientes"].setdefault(pid, {
             "paciente_id": pid,
             "paciente": r.get("paciente") or f"Paciente {pid}",
             "telefono": r.get("telefono") or "",
             "monto": 0.0,
+            "nuevo": es_inicio.get((pid, f), False),
         })
-        p["monto"] += monto
+        p["monto"] += float(r.get("monto") or 0)
 
     dias = []
     for f, dia in pordia.items():
-        pacs = sorted(dia["pacientes"].values(), key=lambda x: -x["monto"])
+        pacs = sorted(dia["pacientes"].values(), key=lambda x: (not x["nuevo"], -x["monto"]))
         for p in pacs:
             p["tipo"] = _tipo_visita(p["monto"])
+        n_nuevos = sum(1 for p in pacs if p["nuevo"])
         dias.append({
             "fecha": f,
             "n_pacientes": len(pacs),
+            "n_nuevos": n_nuevos,
+            "n_encurso": len(pacs) - n_nuevos,
             "n_instalaciones": sum(1 for p in pacs if p["tipo"] == "instalacion"),
             "total": round(sum(p["monto"] for p in pacs)),
             "pacientes": pacs,
