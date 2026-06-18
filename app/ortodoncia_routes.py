@@ -334,6 +334,60 @@ async def pacientes(estado: str | None = Query(None),
             "source_status": data["source_status"]}
 
 
+def _tipo_visita(monto: float) -> str:
+    if monto >= MONTO_INSTALACION:
+        return "instalacion"
+    if monto >= MONTO_CONTROL_MIN:
+        return "control"
+    return "otro"
+
+
+def _calendario(meses: int = 3):
+    """Agrupa las atenciones de la Dra. Castillo por día (caja real, prof 66).
+    Dedup: un paciente cuenta una vez por día; si pagó varias líneas el mismo
+    día se suma el monto (gana el tipo de mayor monto: instalación sobre control)."""
+    rows, status = _bi_rows(meses)
+    pordia: dict[str, dict] = {}
+    for r in rows:
+        f = (r.get("fecha") or "")[:10]
+        if not f:
+            continue
+        pid = r["paciente_id"]
+        monto = float(r.get("monto") or 0)
+        dia = pordia.setdefault(f, {"fecha": f, "pacientes": {}})
+        p = dia["pacientes"].setdefault(pid, {
+            "paciente_id": pid,
+            "paciente": r.get("paciente") or f"Paciente {pid}",
+            "telefono": r.get("telefono") or "",
+            "monto": 0.0,
+        })
+        p["monto"] += monto
+
+    dias = []
+    for f, dia in pordia.items():
+        pacs = sorted(dia["pacientes"].values(), key=lambda x: -x["monto"])
+        for p in pacs:
+            p["tipo"] = _tipo_visita(p["monto"])
+        dias.append({
+            "fecha": f,
+            "n_pacientes": len(pacs),
+            "n_instalaciones": sum(1 for p in pacs if p["tipo"] == "instalacion"),
+            "total": round(sum(p["monto"] for p in pacs)),
+            "pacientes": pacs,
+        })
+    dias.sort(key=lambda d: d["fecha"], reverse=True)
+    return {"dias": dias, "source_status": status}
+
+
+@router.get("/calendario")
+async def calendario(meses: int = Query(3, ge=1, le=24),
+                     token: str | None = Query(None),
+                     cmc_session: str | None = Cookie(None),
+                     request: Request = None):
+    _require_admin(request, token, cmc_session)
+    return _calendario(meses)
+
+
 @router.put("/plan/{paciente_id}")
 async def set_plan(paciente_id: int, request: Request,
                    token: str | None = Query(None),

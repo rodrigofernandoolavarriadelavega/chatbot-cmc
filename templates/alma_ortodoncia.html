@@ -135,7 +135,50 @@
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   .toast.err { background:var(--red); }
 
-  @media (max-width:980px){ .kpis { grid-template-columns:repeat(2,1fr); } .hide-sm { display:none; } }
+  /* view switch */
+  .vswitch { display:flex; gap:4px; background:#eef4f8; border:1px solid var(--border); border-radius:11px; padding:3px; margin-left:auto; }
+  .vbtn { font-family:inherit; font-size:11.5px; font-weight:700; color:var(--mute); background:transparent; border:none;
+    border-radius:8px; padding:7px 13px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .vbtn.active { background:#fff; color:var(--navy); box-shadow:var(--sh-sm); }
+
+  /* calendario */
+  .cal-card { padding:18px; }
+  .cal-month { margin-bottom:26px; }
+  .cal-month:last-child { margin-bottom:0; }
+  .cal-mhead { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
+  .cal-mhead h3 { font-size:14px; font-weight:800; color:var(--navy); margin:0; text-transform:capitalize; }
+  .cal-mhead .msum { font-size:11px; font-weight:600; color:var(--mute); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .cal-dow { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--mute);
+    text-align:center; padding:2px 0 5px; }
+  .cal-cell { min-height:62px; border:1px solid var(--border); border-radius:10px; padding:6px 7px; background:#fff;
+    display:flex; flex-direction:column; gap:3px; position:relative; }
+  .cal-cell.empty-day { background:var(--bg); border-style:dashed; opacity:.55; }
+  .cal-cell.pad { background:transparent; border:none; }
+  .cal-cell.has { cursor:pointer; border-color:var(--aqua); transition:all .12s; }
+  .cal-cell.has:hover { box-shadow:var(--sh-md); transform:translateY(-1px); }
+  .cal-dnum { font-size:11px; font-weight:700; color:var(--mute); }
+  .cal-cell.has .cal-dnum { color:var(--navy); }
+  .cal-count { font-size:18px; font-weight:800; color:var(--blue); line-height:1; }
+  .cal-count small { font-size:10px; font-weight:600; color:var(--mute); }
+  .cal-dots { display:flex; gap:3px; flex-wrap:wrap; margin-top:auto; }
+  .cal-dot { width:6px; height:6px; border-radius:50%; background:var(--aqua); }
+  .cal-dot.inst { background:var(--blue); }
+  .cal-total { font-size:9.5px; font-weight:700; color:var(--green); margin-top:auto; }
+  /* day modal list */
+  .day-list { display:flex; flex-direction:column; gap:7px; max-height:55vh; overflow-y:auto; }
+  .day-row { display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:10px; }
+  .day-row .dr-name { font-weight:700; color:var(--navy); font-size:12.5px; }
+  .day-row .dr-meta { font-size:10.5px; color:var(--mute); }
+  .day-tag { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; padding:3px 8px; border-radius:20px; }
+  .day-tag.instalacion { background:var(--blue); color:#fff; }
+  .day-tag.control { background:var(--aqua-s); color:var(--blue); }
+  .day-tag.otro { background:var(--bg); color:var(--mute); }
+  .day-row .dr-monto { margin-left:auto; font-weight:700; color:var(--navy); font-size:12px; }
+
+  @media (max-width:980px){ .kpis { grid-template-columns:repeat(2,1fr); } .hide-sm { display:none; }
+    .vswitch { width:100%; margin-left:0; } .vbtn { flex:1; }
+    .cal-cell { min-height:50px; } .cal-count { font-size:15px; } }
 </style>
 </head>
 <body>
@@ -164,9 +207,23 @@
       La lista de <b>controles vencidos</b> son a quienes hay que citar para que no abandonen ni te queden saldos sin cobrar.</div>
     </div>
 
-    <div class="toolbar"><div class="chips" id="chips"></div></div>
+    <div class="toolbar">
+      <div class="chips" id="chips"></div>
+      <div class="vswitch">
+        <button id="vb-lista" class="vbtn active" onclick="setView('lista')">Lista de pacientes</button>
+        <button id="vb-cal" class="vbtn" onclick="setView('cal')">Calendario por día</button>
+      </div>
+    </div>
 
-    <div class="card">
+    <div id="view-cal" style="display:none">
+      <div class="card cal-card" id="cal-mount"></div>
+      <div style="font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5">
+        Cada día muestra los pacientes que la Dra. Castillo <b>atendió</b> (caja real Medilink → BI). Un paciente cuenta una vez por día.
+        Los puntos azules marcan <b>instalaciones</b> (monto alto); el resto son controles. Toca un día para ver el detalle de pacientes.
+      </div>
+    </div>
+
+    <div id="view-lista" class="card">
       <table>
         <thead><tr>
           <th>Paciente</th>
@@ -185,7 +242,7 @@
       </div>
     </div>
 
-    <div style="font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5">
+    <div id="lista-note" style="font-size:11px;color:var(--mute);margin-top:14px;line-height:1.5">
       Datos del historial real de atenciones de ortodoncia (Medilink → BI, Dra. Daniela Castillo). <b>Control vencido</b> = más de 45 días sin venir (el control es ~mensual).
       El plan de pago es opcional: cárgalo para ver el saldo pendiente y el valor de la cartera. Las visitas se clasifican por monto (instalación vs control).
     </div>
@@ -214,6 +271,16 @@
       <div class="modal-foot">
         <button class="btn-ghost" onclick="closeM('m-plan')">Cancelar</button>
         <button class="btn-primary" onclick="savePlan()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle del día -->
+  <div class="modal-bg" id="m-day">
+    <div class="modal">
+      <div class="modal-head"><h2 id="day-title">Atenciones del día</h2><div class="x" onclick="closeM('m-day')">✕</div></div>
+      <div class="modal-body">
+        <div class="day-list" id="day-list"></div>
       </div>
     </div>
   </div>
@@ -342,6 +409,85 @@ async function savePlan(){
   };
   try { await api("/plan/"+pid, {method:"PUT", body:JSON.stringify(body)}); closeM('m-plan'); toast("Plan guardado"); loadAll(); }
   catch(e){ toast("Error: "+e.message, true); }
+}
+
+/* ── Calendario por día ─────────────────────────────────────── */
+let CAL = { dias: [], byDate: {}, loaded: false };
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+function setView(v){
+  const cal = v==='cal';
+  document.getElementById('view-cal').style.display = cal?'block':'none';
+  document.getElementById('view-lista').style.display = cal?'none':'block';
+  document.getElementById('lista-note').style.display = cal?'none':'block';
+  document.getElementById('chips').style.display = cal?'none':'flex';
+  document.getElementById('vb-cal').classList.toggle('active', cal);
+  document.getElementById('vb-lista').classList.toggle('active', !cal);
+  if(cal && !CAL.loaded) loadCalendario();
+}
+
+async function loadCalendario(){
+  const mount = document.getElementById('cal-mount');
+  mount.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mute)">Cargando atenciones…</div>';
+  try {
+    const r = await api("/calendario?meses=3");
+    CAL.dias = r.dias || [];
+    CAL.byDate = {}; CAL.dias.forEach(d=>{ CAL.byDate[d.fecha]=d; });
+    CAL.loaded = true;
+    renderCalendario();
+  } catch(e){ mount.innerHTML = '<div style="padding:30px;text-align:center;color:var(--red)">Error: '+esc(e.message)+'</div>'; }
+}
+
+function renderCalendario(){
+  const mount = document.getElementById('cal-mount');
+  if(!CAL.dias.length){ mount.innerHTML='<div style="padding:30px;text-align:center;color:var(--mute)">Sin atenciones en el período.</div>'; return; }
+  // meses presentes (de más reciente a más antiguo), derivados de las fechas con datos
+  const months = [...new Set(CAL.dias.map(d=>d.fecha.slice(0,7)))].sort().reverse();
+  mount.innerHTML = months.map(renderMonth).join('');
+}
+
+function renderMonth(ym){
+  const [Y,M] = ym.split('-').map(Number);
+  const first = new Date(Y, M-1, 1), daysIn = new Date(Y, M, 0).getDate();
+  let lead = (first.getDay()+6)%7; // lunes=0
+  let pacMes=0, instMes=0, totMes=0, diasMes=0;
+  let cells = '';
+  for(let i=0;i<lead;i++) cells += '<div class="cal-cell pad"></div>';
+  for(let d=1; d<=daysIn; d++){
+    const ds = `${Y}-${String(M).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const info = CAL.byDate[ds];
+    if(info){
+      pacMes+=info.n_pacientes; instMes+=info.n_instalaciones; totMes+=info.total; diasMes++;
+      const dots = info.pacientes.slice(0,8).map(p=>`<span class="cal-dot ${p.tipo==='instalacion'?'inst':''}"></span>`).join('');
+      cells += `<div class="cal-cell has" onclick="openDay('${ds}')">
+        <div class="cal-dnum">${d}</div>
+        <div class="cal-count">${info.n_pacientes}<small> pac.</small></div>
+        <div class="cal-dots">${dots}</div></div>`;
+    } else {
+      cells += `<div class="cal-cell empty-day"><div class="cal-dnum">${d}</div></div>`;
+    }
+  }
+  const dows = DOW.map(x=>`<div class="cal-dow">${x}</div>`).join('');
+  return `<div class="cal-month">
+    <div class="cal-mhead"><h3>${MESES[M-1]} ${Y}</h3>
+      <span class="msum">${diasMes} días atención · ${pacMes} pacientes · ${instMes} instalaciones · ${clp(totMes)}</span></div>
+    <div class="cal-grid">${dows}${cells}</div></div>`;
+}
+
+function openDay(ds){
+  const info = CAL.byDate[ds]; if(!info) return;
+  const dt = new Date(ds+'T12:00:00');
+  document.getElementById('day-title').textContent =
+    `${DOW[(dt.getDay()+6)%7]} ${dt.getDate()} ${MESES[dt.getMonth()]} · ${info.n_pacientes} pacientes`;
+  document.getElementById('day-list').innerHTML = info.pacientes.map(p=>{
+    const lbl = {instalacion:'Instalación',control:'Control',otro:'Otro'}[p.tipo]||p.tipo;
+    return `<div class="day-row">
+      <span class="day-tag ${p.tipo}">${lbl}</span>
+      <div><div class="dr-name">${esc(p.paciente)}</div>${p.telefono?`<div class="dr-meta">${esc(p.telefono)}</div>`:''}</div>
+      <div class="dr-monto">${clp(p.monto)}</div></div>`;
+  }).join('');
+  document.getElementById('m-day').classList.add('show');
 }
 
 function exportCSV(){ window.open(API+"/export?token="+encodeURIComponent(TOKEN), "_blank"); }
