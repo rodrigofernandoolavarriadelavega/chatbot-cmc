@@ -415,51 +415,40 @@ def _build_next_cursor_url(current_url: str, last_records: int) -> str | None:
         return None
 
 
-async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[list[dict]]:
-    """Pagina /pagos?q={fecha_recepcion:eq fecha}.
+PAGOS_PAGE_CAP = 50   # Medilink tope duro por respuesta en /pagos
 
-    El endpoint NO devuelve links.next — solo links.current. Hay que construir
-    el cursor de la siguiente página decodificando base64 → JSON → page+1.
+
+async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[list[dict]]:
+    """Pagina /pagos?q={fecha_recepcion:eq fecha} POR ID (id < menor_visto).
+
+    El cursor de Medilink viene FIRMADO (`v2.<payload>.<firma>`, estilo JWT) y la
+    firma se valida server-side → no se puede forjar `page+1` (devuelve 0). El
+    endpoint tampoco acepta page/limit/offset (400) y NUNCA da `links.next`: cada
+    respuesta trae solo los 50 ids más altos que matchean. Resultado del bug viejo:
+    todo día con >50 pagos perdía el resto, dejando los totales por profesional
+    cortos vs Medilink (sin_asignar=0 porque ni se sincronizaban).
+
+    Fix determinista: pedir la 1ª página, y mientras venga llena (==CAP) re-pedir
+    con `id: {lt: menor_id_de_la_página}` hasta que una página venga < CAP. El
+    upsert es idempotente por pago_id, así que cualquier solape es inofensivo.
     """
-    q = {"fecha_recepcion": {"eq": fecha}}
-    pq = {"q": json.dumps(q, separators=(",", ":"))}
-    next_url: str | None = PAGOS_URL
-    first = True
-    while next_url:
+    last_min_id: int | None = None
+    while True:
+        filt: dict = {"fecha_recepcion": {"eq": fecha}}
+        if last_min_id is not None:
+            filt["id"] = {"lt": last_min_id}
+        pq = {"q": json.dumps(filt, separators=(",", ":"))}
+        data: list[dict] | None = None
         for attempt in range(12):
             try:
-                if first:
-                    r = await cli.get(next_url, params=pq, headers=HEADERS)
-                else:
-                    r = await cli.get(next_url, headers=HEADERS)
+                r = await cli.get(PAGOS_URL, params=pq, headers=HEADERS)
             except Exception as e:
                 log.warning("pagos %s attempt=%d excepción: %s", fecha, attempt, e)
                 await asyncio.sleep(min(60, 3 + attempt * 5))
                 continue
             if r.status_code == 200:
                 d = r.json()
-                if isinstance(d, list):
-                    yield d
-                    next_url = None
-                else:
-                    data = d.get("data", []) or []
-                    yield data
-                    links = d.get("links")
-                    next_link: str | None = None
-                    if isinstance(links, dict):
-                        next_link = links.get("next")
-                        current = links.get("current") or ""
-                    elif isinstance(links, list):
-                        next_link = next((l.get("href") for l in links
-                                          if isinstance(l, dict) and l.get("rel") == "next"), None)
-                        current = next((l.get("href") for l in links
-                                         if isinstance(l, dict) and l.get("rel") == "current"), "")
-                    else:
-                        current = ""
-                    if not next_link:
-                        next_link = _build_next_cursor_url(current, len(data))
-                    next_url = next_link
-                first = False
+                data = d if isinstance(d, list) else (d.get("data", []) or [])
                 break
             if r.status_code == 429:
                 await asyncio.sleep(min(90, 5 + attempt * 8))
@@ -469,6 +458,16 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
         else:
             log.warning("pagos %s sin éxito tras 12 intentos", fecha)
             return
+        if not data:
+            return
+        yield data
+        ids = [p.get("id") for p in data if p.get("id") is not None]
+        if len(data) < PAGOS_PAGE_CAP or not ids:
+            return
+        new_min = min(ids)
+        if last_min_id is not None and new_min >= last_min_id:
+            return  # sin progreso → corta para no loopear
+        last_min_id = new_min
         await asyncio.sleep(0.8)
 
 
