@@ -2059,11 +2059,11 @@ async function loadRemuneraciones(mes){
   renderRemList();
 }
 /* ── Agrupación por ÁREA (especialidad → área con color de AREAS) ── */
-const REM_AREA_RULES=[[/general|familiar/i,'general'],[/cardio/i,'cardio'],[/gastro/i,'gastro'],
+const REM_AREA_RULES=[[/odonto|dental|ortodon|endodon|implant/i,'dental'],[/estétic|estetic/i,'estetica'],
+  [/medicina|familiar/i,'general'],[/cardio/i,'cardio'],[/gastro/i,'gastro'],
   [/gineco/i,'gineco'],[/otorrino|orl/i,'orl'],[/traumato/i,'traumato'],[/ecograf/i,'eco'],
   [/matrona/i,'matrona'],[/kinesio/i,'kine'],[/masoterap/i,'maso'],[/nutri/i,'nutricion'],
-  [/psicolog/i,'psicologia'],[/psiquiatr/i,'psiquiatria'],[/fono/i,'fono'],
-  [/odonto|dental|ortodon|endodon|implant/i,'dental'],[/estétic|estetic/i,'estetica'],[/podolog/i,'podologia']];
+  [/psicolog/i,'psicologia'],[/psiquiatr/i,'psiquiatria'],[/fono/i,'fono'],[/podolog/i,'podologia']];
 const REM_AREA_EXTRA={maso:{label:'Masoterapia',color:'#9b6dd6'},podologia:{label:'Podología',color:'#3f8e8a'},otros:{label:'Otros',color:'#62788a'}};
 function remAreaKey(esp){ for(const [re,k] of REM_AREA_RULES) if(re.test(esp||'')) return k; return 'otros'; }
 function remArea(k){ return REM_AREA_EXTRA[k] || AREAS[k] || {label:k,color:'#1172AB'}; }
