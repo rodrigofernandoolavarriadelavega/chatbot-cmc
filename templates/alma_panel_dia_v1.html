@@ -551,12 +551,20 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
 .remcard .rc-v{font-size:12px;font-weight:800;color:var(--ink);} .remcard .rc-v.hot{color:var(--blue);}
 .remcard .rc-foot{font-size:9.5px;color:var(--mute);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;}
 .remcard .rc-foot .warn{color:var(--orange);font-weight:700;}
-/* tarjeta de ÁREA (agrupada) */
-.remcard.remarea .rc-paid{color:var(--green);background:var(--green-s);}
-.remcard.remarea .rc-paid.pend{color:var(--blue);background:var(--aqua-s);}
-.remcard.remarea .rc-nm{font-size:13.5px;}
-.remcard.remarea .rc-nums{grid-template-columns:1fr 1fr;}
-.remcard.remarea .rc-foot{display:flex;justify-content:space-between;align-items:center;}
+/* lista compacta de ÁREAS (izquierda) */
+.remareas{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;max-width:430px;margin-top:10px;}
+.remarow{display:flex;align-items:center;gap:11px;padding:9px 12px;background:var(--card);border:1px solid var(--border);
+  border-left:3px solid var(--ac,var(--blue));border-radius:10px;cursor:pointer;transition:background .12s,box-shadow .15s,transform .1s;}
+.remarow:hover{background:var(--bg);box-shadow:0 6px 16px -10px rgba(15,63,104,.3);transform:translateX(1px);}
+.remarow.paid{opacity:.62;}
+.remarow .ra-dot{width:9px;height:9px;border-radius:50%;background:var(--ac,var(--blue));flex:none;}
+.remarow .ra-main{flex:1;min-width:0;}
+.remarow .ra-nm{font-size:13px;font-weight:800;color:var(--navy);}
+.remarow .ra-sub{font-size:9.5px;color:var(--mute);margin-top:1px;}
+.remarow .ra-sub .warn{color:var(--orange);font-weight:700;}
+.remarow .ra-ok{color:var(--green);font-weight:800;} .remarow .ra-pend{color:var(--blue);font-weight:700;} .remarow .ra-due{color:var(--mute2);font-weight:700;}
+.remarow .ra-amt{font-size:13px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums;flex:none;}
+.remarow .ra-chev{color:var(--mute2);font-weight:800;flex:none;}
 /* popup de área: lista de profesionales */
 .raTot{display:flex;justify-content:space-between;align-items:center;margin:10px 12px 0;padding:9px 12px;background:var(--bg);border-radius:11px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);}
 .raTot b{font-size:15px;color:var(--blue);}
@@ -2058,18 +2066,20 @@ async function loadRemuneraciones(mes){
   for(const k in REM_EDIT) delete REM_EDIT[k];
   renderRemList();
 }
-/* ── Agrupación por ÁREA (especialidad → área con color de AREAS) ── */
-const REM_AREA_RULES=[[/odonto|dental|ortodon|endodon|implant/i,'dental'],[/estétic|estetic/i,'estetica'],
-  [/medicina|familiar/i,'general'],[/cardio/i,'cardio'],[/gastro/i,'gastro'],
-  [/gineco/i,'gineco'],[/otorrino|orl/i,'orl'],[/traumato/i,'traumato'],[/ecograf/i,'eco'],
-  [/matrona/i,'matrona'],[/kinesio/i,'kine'],[/masoterap/i,'maso'],[/nutri/i,'nutricion'],
-  [/psicolog/i,'psicologia'],[/psiquiatr/i,'psiquiatria'],[/fono/i,'fono'],[/podolog/i,'podologia']];
-const REM_AREA_EXTRA={maso:{label:'Masoterapia',color:'#9b6dd6'},podologia:{label:'Podología',color:'#3f8e8a'},otros:{label:'Otros',color:'#62788a'}};
-function remAreaKey(esp){ for(const [re,k] of REM_AREA_RULES) if(re.test(esp||'')) return k; return 'otros'; }
-function remArea(k){ return REM_AREA_EXTRA[k] || AREAS[k] || {label:k,color:'#1172AB'}; }
+/* ── Agrupación por ÁREA — mismo mapa que DB Mensual (profesional id → área) ── */
+const REM_AREA_BYID={1:'med',73:'med',13:'med',23:'med',60:'med',61:'med',65:'med',64:'med',
+  68:'tecmed',55:'dent',72:'dent',66:'dent',75:'dent',69:'dent',76:'dent',
+  59:'maso',77:'kine',21:'kine',52:'nutri',74:'psico',49:'psico',70:'fono',67:'matrona',56:'podo'};
+const REM_AREA_LABEL={med:'Medicina',dent:'Dental',kine:'Kinesiología',maso:'Masoterapia',nutri:'Nutrición',
+  psico:'Psicología',fono:'Fonoaudiología',matrona:'Matrona',podo:'Podología',tecmed:'Ecografía',otros:'Otras áreas'};
+const REM_AREA_COLOR={med:'#1172AB',dent:'#3aa0c7',kine:'#1fb257',maso:'#9b6dd6',nutri:'#caa11a',
+  psico:'#7c5cff',fono:'#13b5b1',matrona:'#d6488f',podo:'#3f8e8a',tecmed:'#0d8fb0',otros:'#62788a'};
+const REM_AREA_ORDER=['med','dent','tecmed','kine','maso','nutri','psico','fono','matrona','podo','otros'];
+function remAreaKey(p){ return REM_AREA_BYID[+p.id] || 'otros'; }
+function remArea(k){ return {label:REM_AREA_LABEL[k]||k, color:REM_AREA_COLOR[k]||'#1172AB'}; }
 function remIni(nm){ return (nm||'').replace(/^(Dra?\.?)\s+/i,'').split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase(); }
 function remTelOk(p){ return !!(p.telefono&&(''+p.telefono).replace(/\D/g,'').length>=8); }
-function remGroups(){ const g={}; REM.profesionales.forEach(p=>{ const k=remAreaKey(p.especialidad); (g[k]=g[k]||[]).push(p); }); return g; }
+function remGroups(){ const g={}; REM.profesionales.forEach(p=>{ const k=remAreaKey(p); (g[k]=g[k]||[]).push(p); }); return g; }
 
 function renderRemList(){
   const box=document.getElementById('remList');
@@ -2082,33 +2092,30 @@ function renderRemList(){
     <div><span class="rl">Pagado (${t.n_pagados})</span><span class="rv2" style="color:#a8f0c8">${clp(t.total_pagado)}</span></div>
     <div><span class="rl">Honorarios del mes</span><span class="rv2">${clp(t.total_transferir)}</span></div></div>`;
   const groups=remGroups();
-  const keys=Object.keys(groups).sort((a,b)=>remArea(a).label.localeCompare(remArea(b).label,'es'));
-  box.innerHTML=head+keys.map(k=>{
+  const keys=REM_AREA_ORDER.filter(k=>groups[k]);
+  box.innerHTML=head+`<div class="remareas">`+keys.map(k=>{
     const pros=groups[k], a=remArea(k);
-    const ing=pros.reduce((s,p)=>s+(p.ingreso||0),0);
     const tr=pros.reduce((s,p)=>s+(p.liquido||0),0);
     const npag=pros.filter(p=>p.pagado).length, all=npag===pros.length;
     const warnTel=pros.some(p=>!remTelOk(p));
-    return `<div class="remcard remarea ${all?'paid':''}" data-area="${k}" style="--ac:${a.color}">
-      ${all?'<div class="rc-paid">✓ Pagados</div>':(npag?`<div class="rc-paid pend">${npag}/${pros.length}</div>`:'')}
-      <div class="rc-nm">${a.label}</div>
-      <div class="rc-esp">${pros.length} profesional${pros.length>1?'es':''}</div>
-      <div class="rc-nums">
-        <div><div class="rc-l">Ingreso</div><div class="rc-v mono">${clp(ing)}</div></div>
-        <div><div class="rc-l">Transferir</div><div class="rc-v mono hot">${clp(tr)}</div></div>
-      </div>
-      <div class="rc-foot">${all?'todo pagado':(npag?`${pros.length-npag} por pagar`:'pendiente de pago')}${warnTel?' · <span class="warn">⚠️ falta teléfono</span>':''} ›</div>
+    const estado=all?'<span class="ra-ok">✓ pagado</span>'
+      :(npag?`<span class="ra-pend">${npag}/${pros.length} pagados</span>`:`<span class="ra-due">${pros.length} por pagar</span>`);
+    return `<div class="remarow ${all?'paid':''}" data-area="${k}" style="--ac:${a.color}">
+      <span class="ra-dot"></span>
+      <div class="ra-main"><div class="ra-nm">${a.label}</div>
+        <div class="ra-sub">${pros.length} profesional${pros.length>1?'es':''} · ${estado}${warnTel?' · <span class="warn">⚠️ falta tel.</span>':''}</div></div>
+      <div class="ra-amt">${clp(tr)}</div><span class="ra-chev">›</span>
     </div>`;
-  }).join('');
-  box.querySelectorAll('.remcard.remarea').forEach(card=>{
-    card.addEventListener('click',ev=>{ ev.stopPropagation(); wpRem.pin(card,()=>buildRemArea(card.dataset.area)); });
+  }).join('')+`</div>`;
+  box.querySelectorAll('.remarow').forEach(row=>{
+    row.addEventListener('click',ev=>{ ev.stopPropagation(); wpRem.pin(row,()=>buildRemArea(row.dataset.area)); });
   });
 }
 
 /* popup de área: lista de profesionales → clic abre la vista editable (con volver) */
 function buildRemArea(k){
   const a=remArea(k);
-  const pros=REM.profesionales.filter(p=>remAreaKey(p.especialidad)===k)
+  const pros=REM.profesionales.filter(p=>remAreaKey(p)===k)
     .sort((x,y)=>((x.pagado?1:0)-(y.pagado?1:0))||((y.liquido||0)-(x.liquido||0)));
   const tr=pros.reduce((s,p)=>s+(p.liquido||0),0);
   const npag=pros.filter(p=>p.pagado).length;
