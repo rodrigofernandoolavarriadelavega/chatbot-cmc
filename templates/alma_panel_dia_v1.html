@@ -551,6 +551,25 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
 .remcard .rc-v{font-size:12px;font-weight:800;color:var(--ink);} .remcard .rc-v.hot{color:var(--blue);}
 .remcard .rc-foot{font-size:9.5px;color:var(--mute);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;}
 .remcard .rc-foot .warn{color:var(--orange);font-weight:700;}
+/* tarjeta de ÁREA (agrupada) */
+.remcard.remarea .rc-paid{color:var(--green);background:var(--green-s);}
+.remcard.remarea .rc-paid.pend{color:var(--blue);background:var(--aqua-s);}
+.remcard.remarea .rc-nm{font-size:13.5px;}
+.remcard.remarea .rc-nums{grid-template-columns:1fr 1fr;}
+.remcard.remarea .rc-foot{display:flex;justify-content:space-between;align-items:center;}
+/* popup de área: lista de profesionales */
+.raTot{display:flex;justify-content:space-between;align-items:center;margin:10px 12px 0;padding:9px 12px;background:var(--bg);border-radius:11px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);}
+.raTot b{font-size:15px;color:var(--blue);}
+.raList{display:flex;flex-direction:column;gap:6px;padding:8px 12px 12px;}
+.raRow{display:flex;align-items:center;gap:10px;padding:8px 9px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:background .12s,border-color .12s,transform .1s;}
+.raRow:hover{background:var(--bg);border-color:var(--aqua);transform:translateX(1px);}
+.raRow.paid{opacity:.66;}
+.raAv{width:30px;height:30px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:800;}
+.raNm{flex:1;min-width:0;} .raNm .t{font-size:12.5px;font-weight:800;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.raNm .s{font-size:9.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.raAmt{text-align:right;flex:none;} .raAmt .v{font-size:12.5px;font-weight:800;color:var(--blue);}
+.raTag{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+.raTag.ok{color:var(--green);} .raTag.warn{color:var(--orange);}
 /* popup remuneraciones */
 .remsum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;padding:10px;background:var(--bg);border-radius:11px;}
 .remsum .box{text-align:center;} .remsum .bl{font-size:8.5px;font-weight:800;text-transform:uppercase;color:var(--mute2);letter-spacing:.03em;}
@@ -2039,6 +2058,19 @@ async function loadRemuneraciones(mes){
   for(const k in REM_EDIT) delete REM_EDIT[k];
   renderRemList();
 }
+/* ── Agrupación por ÁREA (especialidad → área con color de AREAS) ── */
+const REM_AREA_RULES=[[/general|familiar/i,'general'],[/cardio/i,'cardio'],[/gastro/i,'gastro'],
+  [/gineco/i,'gineco'],[/otorrino|orl/i,'orl'],[/traumato/i,'traumato'],[/ecograf/i,'eco'],
+  [/matrona/i,'matrona'],[/kinesio/i,'kine'],[/masoterap/i,'maso'],[/nutri/i,'nutricion'],
+  [/psicolog/i,'psicologia'],[/psiquiatr/i,'psiquiatria'],[/fono/i,'fono'],
+  [/odonto|dental|ortodon|endodon|implant/i,'dental'],[/estétic|estetic/i,'estetica'],[/podolog/i,'podologia']];
+const REM_AREA_EXTRA={maso:{label:'Masoterapia',color:'#9b6dd6'},podologia:{label:'Podología',color:'#3f8e8a'},otros:{label:'Otros',color:'#62788a'}};
+function remAreaKey(esp){ for(const [re,k] of REM_AREA_RULES) if(re.test(esp||'')) return k; return 'otros'; }
+function remArea(k){ return REM_AREA_EXTRA[k] || AREAS[k] || {label:k,color:'#1172AB'}; }
+function remIni(nm){ return (nm||'').replace(/^(Dra?\.?)\s+/i,'').split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase(); }
+function remTelOk(p){ return !!(p.telefono&&(''+p.telefono).replace(/\D/g,'').length>=8); }
+function remGroups(){ const g={}; REM.profesionales.forEach(p=>{ const k=remAreaKey(p.especialidad); (g[k]=g[k]||[]).push(p); }); return g; }
+
 function renderRemList(){
   const box=document.getElementById('remList');
   if(!REM.profesionales.length){ box.innerHTML='<div class="remempty">Sin pagos registrados este mes.</div>'; return; }
@@ -2049,20 +2081,53 @@ function renderRemList(){
     <div><span class="rl">Por pagar (${t.n_total-t.n_pagados})</span><span class="rv">${clp(t.total_por_pagar)}</span></div>
     <div><span class="rl">Pagado (${t.n_pagados})</span><span class="rv2" style="color:#a8f0c8">${clp(t.total_pagado)}</span></div>
     <div><span class="rl">Honorarios del mes</span><span class="rv2">${clp(t.total_transferir)}</span></div></div>`;
-  box.innerHTML=head+REM.profesionales.map(p=>`<div class="remcard ${p.pagado?'paid':''}" data-id="${p.id}">
-      ${p.pagado?'<div class="rc-paid">✓ Pagado</div>':''}
-      <div class="rc-nm">${p.nombre}</div><div class="rc-esp">${p.especialidad||''}</div>
+  const groups=remGroups();
+  const keys=Object.keys(groups).sort((a,b)=>remArea(a).label.localeCompare(remArea(b).label,'es'));
+  box.innerHTML=head+keys.map(k=>{
+    const pros=groups[k], a=remArea(k);
+    const ing=pros.reduce((s,p)=>s+(p.ingreso||0),0);
+    const tr=pros.reduce((s,p)=>s+(p.liquido||0),0);
+    const npag=pros.filter(p=>p.pagado).length, all=npag===pros.length;
+    const warnTel=pros.some(p=>!remTelOk(p));
+    return `<div class="remcard remarea ${all?'paid':''}" data-area="${k}" style="--ac:${a.color}">
+      ${all?'<div class="rc-paid">✓ Pagados</div>':(npag?`<div class="rc-paid pend">${npag}/${pros.length}</div>`:'')}
+      <div class="rc-nm">${a.label}</div>
+      <div class="rc-esp">${pros.length} profesional${pros.length>1?'es':''}</div>
       <div class="rc-nums">
-        <div><div class="rc-l">Ingreso</div><div class="rc-v mono">${clp(p.ingreso)}</div></div>
-        <div><div class="rc-l">Boleta ${p.fijo?'(fijo)':(p.pct+'%')}</div><div class="rc-v mono">${clp(p.bruto)}</div></div>
-        <div><div class="rc-l">Transferir</div><div class="rc-v mono hot">${clp(p.liquido)}</div></div>
+        <div><div class="rc-l">Ingreso</div><div class="rc-v mono">${clp(ing)}</div></div>
+        <div><div class="rc-l">Transferir</div><div class="rc-v mono hot">${clp(tr)}</div></div>
       </div>
-      <div class="rc-foot">${p.pacientes} pacientes · ${p.telefono?('📱 '+p.telefono):'<span class="warn">⚠️ sin teléfono</span>'}</div>
-    </div>`).join('');
-  box.querySelectorAll('.remcard').forEach(card=>{
-    const p=REM.profesionales.find(x=>x.id==card.dataset.id);
-    card.addEventListener('click',ev=>{ ev.stopPropagation(); wpRem.pin(card,()=>buildRem(p)); fetchRemDetalle(p); });
+      <div class="rc-foot">${all?'todo pagado':(npag?`${pros.length-npag} por pagar`:'pendiente de pago')}${warnTel?' · <span class="warn">⚠️ falta teléfono</span>':''} ›</div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.remcard.remarea').forEach(card=>{
+    card.addEventListener('click',ev=>{ ev.stopPropagation(); wpRem.pin(card,()=>buildRemArea(card.dataset.area)); });
   });
+}
+
+/* popup de área: lista de profesionales → clic abre la vista editable (con volver) */
+function buildRemArea(k){
+  const a=remArea(k);
+  const pros=REM.profesionales.filter(p=>remAreaKey(p.especialidad)===k)
+    .sort((x,y)=>((x.pagado?1:0)-(y.pagado?1:0))||((y.liquido||0)-(x.liquido||0)));
+  const tr=pros.reduce((s,p)=>s+(p.liquido||0),0);
+  const npag=pros.filter(p=>p.pagado).length;
+  const rows=pros.map(p=>`<div class="raRow ${p.pagado?'paid':''}" data-id="${p.id}">
+      <div class="raAv" style="background:${a.color}">${remIni(p.nombre)}</div>
+      <div class="raNm"><div class="t">${p.nombre}</div><div class="s">${p.especialidad||''} · ${p.pacientes} pac</div></div>
+      <div class="raAmt"><div class="v">${clp(p.liquido)}</div>${p.pagado?'<div class="raTag ok">✓ pagado</div>':(remTelOk(p)?'':'<div class="raTag warn">⚠️ sin tel</div>')}</div>
+    </div>`).join('');
+  return {
+    title:a.label, sub:`${pros.length} profesional${pros.length>1?'es':''} · ${npag}/${pros.length} pagados`, color:a.color,
+    statusHTML:`<div class="raTot"><span>Honorarios del área</span><b>${clp(tr)}</b></div>`,
+    bodyHTML:`<div class="raList">${rows}</div>`,
+    onMount:(inner)=>{ inner.querySelectorAll('.raRow').forEach(row=>{
+      const p=REM.profesionales.find(x=>x.id==row.dataset.id);
+      row.addEventListener('click',ev=>{ ev.stopPropagation();
+        wpRem.build=()=>buildRem(p,()=>{ wpRem.build=()=>buildRemArea(k); wpRem.update(); });
+        wpRem.update(); fetchRemDetalle(p); });
+    }); }
+  };
 }
 async function fetchRemDetalle(p){
   const key=p.id+'_'+REM.mes; if(REM_DET[key]) return;
@@ -2070,7 +2135,7 @@ async function fetchRemDetalle(p){
   catch(e){ REM_DET[key]={detalle:[],total:0,n:0}; }
   if(wpRem.pinned) wpRem.update();
 }
-function buildRem(p){
+function buildRem(p,onBack){
   const e=remEdit(p); const det=REM_DET[p.id+'_'+REM.mes];
   const sumHTML=`<div class="remsum">
     <div class="box"><div class="bl">Ingreso</div><div class="bv">${clp(e.ingreso)}</div></div>
@@ -2089,7 +2154,7 @@ function buildRem(p){
   }
   const okTel=!!(e.telefono&&e.telefono.replace(/\D/g,'').length>=8);
   return {
-    title:p.nombre, sub:(p.especialidad||'')+' · '+remMesLabel(REM.mes), color:'var(--blue)',
+    title:p.nombre, sub:(p.especialidad||'')+' · '+remMesLabel(REM.mes), color:'var(--blue)', onBack:onBack,
     statusHTML:'<div style="padding:10px 12px 0">'+sumHTML+'</div>',
     bodyHTML:`<div style="padding:4px 12px">${editHTML}${detHTML}</div>`,
     footHTML:`<div style="padding:10px 12px"><button class="rembtn" id="reSend" ${okTel?'':'disabled'}>📲 Enviar por WhatsApp</button>${okTel?'':'<div class="remwarn">Falta el teléfono para enviar</div>'}<button class="rembtn copy" id="reCopy">📋 Copiar texto</button><button class="rembtn pago ${p.pagado?'on':''}" id="rePaid">${p.pagado?'✓ Pagado · marcar pendiente':'💸 Marcar como pagado'}</button></div>`,
