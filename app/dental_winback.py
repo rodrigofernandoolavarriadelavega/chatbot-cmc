@@ -822,15 +822,25 @@ async def run_dental_consent_blast() -> dict:
     try:
         with bi_conn() as conn2:
             with conn2.cursor() as cur:
+                # ⚠️ Dedup por ÚLTIMOS 9 DÍGITOS (canónico), no por igualdad cruda.
+                # La vista de cohortes emite '+56XXXXXXXXX' (con +) o '9XXXXXXXX'
+                # (9 díg sin código país), pero bi.dental_consent.phone se guarda
+                # canónico '56XXXXXXXXX' (registrar_dental_consent_enviado usa
+                # normalize_wa_id). Comparar crudo hacía que el NOT IN NUNCA
+                # excluyera a esos teléfonos → se reenviaba el consent CADA DÍA
+                # (incidente 2026-06-23: 38 pacientes spameados 9 días seguidos).
+                # Mismo patrón que _ventana_24h_abierta_dental.
                 cur.execute(
                     """
                     SELECT dc.telefono, dc.nombre
                     FROM bi.v_dental_cohortes_contactables dc
-                    WHERE dc.telefono NOT IN (
-                        SELECT phone FROM bi.dental_consent
+                    WHERE RIGHT(regexp_replace(dc.telefono, '[^0-9]', '', 'g'), 9) NOT IN (
+                        SELECT RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 9)
+                        FROM bi.dental_consent
                     )
-                    AND dc.telefono NOT IN (
-                        SELECT phone FROM bi.dental_opt_outs
+                    AND RIGHT(regexp_replace(dc.telefono, '[^0-9]', '', 'g'), 9) NOT IN (
+                        SELECT RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 9)
+                        FROM bi.dental_opt_outs
                     )
                     LIMIT %s
                     """,
@@ -845,9 +855,15 @@ async def run_dental_consent_blast() -> dict:
     enviados = 0
 
     from messaging import send_whatsapp_template, render_template_body as _rtb
-    from session import log_message as _lm
+    from session import log_message as _lm, normalize_wa_id as _norm
 
+    _seen_run: set[str] = set()  # canónico — evita dos filas del mismo paciente (formatos distintos) en un run
     for phone, nombre in candidates:
+        _canon = _norm(phone)
+        if _canon in _seen_run:
+            log.info("dental_winback: consent blast — phone duplicado en run, skip ...%s", _canon[-4:])
+            continue
+        _seen_run.add(_canon)
         _now = datetime.now(TZ_CHILE)
         if not (10 <= _now.hour < 19) or _now.weekday() >= 5:
             log.info("dental_winback: consent blast ventana cerrada en %d enviados", enviados)
