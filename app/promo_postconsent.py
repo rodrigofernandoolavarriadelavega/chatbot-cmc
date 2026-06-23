@@ -253,10 +253,10 @@ def _pago_local_desde(pids: list, desde_fecha: str) -> bool:
     refresca cada madrugada)."""
     if not pids:
         return False
-    from session import _conn
+    from session import db
     qmarks = ",".join("?" * len(pids))
     try:
-        with _conn() as c:
+        with db() as c:
             row = c.execute(
                 f"SELECT 1 FROM bi_pagos_caja WHERE id_paciente IN ({qmarks}) "
                 f"AND fecha >= ? LIMIT 1",
