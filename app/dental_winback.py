@@ -625,6 +625,13 @@ async def send_dental_winback(candidato: dict) -> bool:
     try:
         from messaging import send_whatsapp_template, render_template_body as _rtb
         from session import log_message as _lm, save_campana_envio as _save_camp
+        from contact_budget import can_contact, record_contact
+
+        _cb_ok, _cb_motivo = can_contact(telefono, rail="dental_winback")
+        if not _cb_ok:
+            log.info("dental_winback: omitido por presupuesto phone=...%s (%s)",
+                     telefono[-4:], _cb_motivo)
+            return False
 
         await send_whatsapp_template(
             to=telefono,
@@ -640,6 +647,7 @@ async def send_dental_winback(candidato: dict) -> bool:
             template_name=template_name,
             especialidad=especialidad,
         )
+        record_contact(telefono, "dental_winback", {"subcohorte": subcohorte})
         # Registrar también en campanas_envios (SQLite) para medir conversión en panel admin
         try:
             _save_camp(telefono, f"dental_winback_{subcohorte}")
@@ -856,6 +864,7 @@ async def run_dental_consent_blast() -> dict:
 
     from messaging import send_whatsapp_template, render_template_body as _rtb
     from session import log_message as _lm, normalize_wa_id as _norm
+    from contact_budget import can_contact, record_contact
 
     _seen_run: set[str] = set()  # canónico — evita dos filas del mismo paciente (formatos distintos) en un run
     for phone, nombre in candidates:
@@ -868,6 +877,11 @@ async def run_dental_consent_blast() -> dict:
         if not (10 <= _now.hour < 19) or _now.weekday() >= 5:
             log.info("dental_winback: consent blast ventana cerrada en %d enviados", enviados)
             break
+        _cb_ok, _cb_motivo = can_contact(phone, rail="dental_consent")
+        if not _cb_ok:
+            log.info("dental_winback: consent blast omitido por presupuesto ...%s (%s)",
+                     _canon[-4:], _cb_motivo)
+            continue
         try:
             await send_whatsapp_template(
                 phone,
@@ -876,6 +890,7 @@ async def run_dental_consent_blast() -> dict:
             )
             _lm(phone, "out", _rtb("consent_dental_v2", [nombre]), "IDLE")
             registrar_dental_consent_enviado(phone)
+            record_contact(phone, "dental_consent", {})
             enviados += 1
             log.info("dental_winback: consent enviado phone=...%s (%d)", phone[-4:], enviados)
         except Exception as e:

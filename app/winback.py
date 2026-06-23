@@ -1010,6 +1010,11 @@ async def send_winback(candidato: dict) -> bool:
 
     try:
         from messaging import send_whatsapp_template, render_template_body as _rtb_wb
+        from contact_budget import can_contact, record_contact
+        _cb_ok, _cb_motivo = can_contact(telefono, rail="winback")
+        if not _cb_ok:
+            log.info("winback: omitido por presupuesto %s... (%s)", telefono[-4:], _cb_motivo)
+            return False
         await send_whatsapp_template(
             to=telefono,
             template_name=template_name,
@@ -1029,6 +1034,7 @@ async def send_winback(candidato: dict) -> bool:
             especialidad=especialidad,
             value_clp=value_clp,
         )
+        record_contact(telefono, "winback", {"cohorte": cohorte})
         log.info(
             "winback: enviado a %s... cohorte=%s template=%s arancel=%d",
             telefono[-4:], cohorte, template_name, value_clp,

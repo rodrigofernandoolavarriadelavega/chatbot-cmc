@@ -222,6 +222,7 @@ async def job_eco_prep(dry_run: bool = False) -> dict:
             }
 
         from messaging import send_whatsapp_template, render_template_body
+        from contact_budget import record_contact  # transaccional: contribuye al presupuesto, no se throttlea
 
         enviados = 0
         for c in candidatos:
@@ -236,6 +237,7 @@ async def job_eco_prep(dry_run: bool = False) -> dict:
                 log_event(c["phone"], _EVENT_ENVIADA,
                           {"id_cita": c["id_cita"], "fecha_cita": c["fecha"]})
                 _registrar_envio(c["id_cita"], c["phone"], c["fecha"])
+                record_contact(c["phone"], "eco_prep", {"id_cita": c["id_cita"]})
                 enviados += 1
                 log.info("eco_prep: enviado → ...%s cita=%s (%d/%d)",
                          c["phone"][-4:], c["id_cita"], enviados, len(candidatos))

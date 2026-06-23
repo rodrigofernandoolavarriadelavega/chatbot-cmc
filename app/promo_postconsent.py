@@ -369,10 +369,16 @@ async def job_promo_postconsent(dry_run: bool = False) -> dict:
             }
 
         from messaging import send_whatsapp_template, render_template_body
+        from contact_budget import can_contact, record_contact
 
         enviados = 0
         for teln in candidatos:
             try:
+                _cb_ok, _cb_motivo = can_contact(teln, rail="promo_postconsent")
+                if not _cb_ok:
+                    log.info("promo_postconsent: omitido por presupuesto ...%s (%s)",
+                             teln[-4:], _cb_motivo)
+                    continue
                 await send_whatsapp_template(
                     teln, template, header_image_url=DENTAL_PROMO_FLYER_IMG,
                 )
@@ -382,6 +388,7 @@ async def job_promo_postconsent(dry_run: bool = False) -> dict:
                             "IDLE")
                 log_event(teln, _EVENT_ENVIADA, {"template": template, "segment": "no_dental"})
                 _registrar_envio(teln, template, "no_dental")
+                record_contact(teln, "promo_postconsent", {"template": template})
                 enviados += 1
                 log.info("promo_postconsent: enviado → ...%s (%d/%d)",
                          teln[-4:], enviados, len(candidatos))
