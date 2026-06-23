@@ -2329,6 +2329,14 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             return None
         recordatorio = _recordatorio_prompt(state, data)
         save_session(phone, state, data)
+        # _responder_pregunta_horario puede devolver un DICT interactivo (lista de
+        # slots de OTRO profesional via _format_slots). NO interpolarlo en un
+        # f-string — eso mandaba el JSON crudo del payload al paciente (bug
+        # 2026-06-23 tel ...0467). Enrutar el dict tal cual a send_whatsapp_interactive.
+        if isinstance(resp, dict):
+            return resp
+        if not resp:
+            return recordatorio or None
         return f"{resp}\n\n{recordatorio}" if recordatorio else resp
 
     # ── Escape: cambio de tema ──
