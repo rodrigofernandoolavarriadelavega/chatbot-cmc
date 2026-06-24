@@ -7224,21 +7224,36 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     )
                 except Exception:
                     pass
-            if especialidad in _ESP_MED_GENERAL:
-                smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                    especialidad, excluir=fechas_vistas, solo_ids=_MED_AO_IDS)
-                if not todos_nuevo:  # overflow a Márquez
+            # Blindar las llamadas a Medilink igual que las ramas hermanas
+            # (ver_otros/ver_todos/dia_pedido). buscar_primer_dia hace `raise`
+            # deliberado ante error de Medilink; sin captura subía al catch-all de
+            # main.py que respondía "Tuve un problema técnico" + reset_session →
+            # el paciente perdía TODO el contexto (bug 2026-06-23 otorrino).
+            try:
+                if especialidad in _ESP_MED_GENERAL:
                     smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                        especialidad, excluir=fechas_vistas, solo_ids=[_MED_OVERFLOW_ID])
-            elif especialidad in _ESP_MED_FAMILIAR:
-                smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                    "medicina general", excluir=fechas_vistas, solo_ids=_MED_FAMILIAR_IDS)
-                for s in (todos_nuevo or []):
-                    if isinstance(s, dict):
-                        s["especialidad"] = "Medicina Familiar"
-            else:
-                smart_nuevo, todos_nuevo = await buscar_primer_dia(
-                    especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
+                        especialidad, excluir=fechas_vistas, solo_ids=_MED_AO_IDS)
+                    if not todos_nuevo:  # overflow a Márquez
+                        smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                            especialidad, excluir=fechas_vistas, solo_ids=[_MED_OVERFLOW_ID])
+                elif especialidad in _ESP_MED_FAMILIAR:
+                    smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                        "medicina general", excluir=fechas_vistas, solo_ids=_MED_FAMILIAR_IDS)
+                    for s in (todos_nuevo or []):
+                        if isinstance(s, dict):
+                            s["especialidad"] = "Medicina Familiar"
+                else:
+                    smart_nuevo, todos_nuevo = await buscar_primer_dia(
+                        especialidad, excluir=fechas_vistas, intervalo_override=_maso_override)
+            except Exception as _e_od:
+                log_event(phone, "otro_dia_medilink_error",
+                          {"especialidad": especialidad, "err": str(_e_od)[:120]})
+                save_session(phone, "WAIT_SLOT", data)
+                return (
+                    "No pude consultar otras fechas en este momento 😕\n"
+                    "Intenta de nuevo en unos segundos o llama a recepción: "
+                    f"📞 *{CMC_TELEFONO}*"
+                )
             if not todos_nuevo:
                 data["waitlist_especialidad"] = especialidad
                 data["waitlist_id_prof_pref"] = data.get("prof_sugerido_id")
@@ -11201,6 +11216,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "No reconocí el nombre 😕\n\n"
                 "Escríbelo separado por comas:\n"
+                "*Nombre Apellido, M o F, DD/MM/AAAA*\n\n"
+                f"_Ejemplo: {_ej}_{_tip}"
+            )
+        # Frase reservada de terceros ("otra persona", "mi hija", "mi esposo"…):
+        # NO es un nombre. Antes se registraba un paciente ficticio "Otra Persona"
+        # y se agendaba a ese nombre (bug 2026-06-23). Marcar tercero y pedir los
+        # datos REALES de esa persona (booking_for_other evita pisar el perfil del
+        # dueño del celular).
+        if _OTRA_PERSONA_RE.search(nombre_raw.lower()):
+            data["booking_for_other"] = True
+            save_session(phone, "WAIT_DATOS_NUEVO", data)
+            return (
+                "¡Entendido, la cita es para otra persona! 😊\n\n"
+                "Escríbeme el *nombre y datos de esa persona* separados por comas:\n"
                 "*Nombre Apellido, M o F, DD/MM/AAAA*\n\n"
                 f"_Ejemplo: {_ej}_{_tip}"
             )
