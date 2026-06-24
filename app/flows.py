@@ -25,6 +25,7 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
                      enqueue_intent, add_to_waitlist, cancel_waitlist,
                      get_cita_bot_by_id_cita, mark_cita_confirmation, get_phone_by_rut,
+                     get_cita_recepcion_by_id_cita, get_cita_recepcion_confirmable,
                      save_demanda_no_disponible, get_waitlist_by_especialidad,
                      mark_waitlist_notified, get_ultima_cita_paciente,
                      has_privacy_consent, save_privacy_consent, revoke_privacy_consent,
@@ -1656,6 +1657,13 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
 
     cita_bot = get_cita_bot_by_id_cita(id_cita, phone=phone)
     if not cita_bot:
+        # Fallback: las citas agendadas en RECEPCIÓN viven en
+        # citas_recepcion_reminders (no en citas_bot). Sin esto, confirmar/
+        # reagendar/cancelar desde el recordatorio de recepción devolvía
+        # "No encontré esa cita" (bug 2026-06-23). Mismo shape → resto del
+        # handler funciona igual (mark_cita_confirmation es no-op tolerante).
+        cita_bot = get_cita_recepcion_by_id_cita(id_cita, phone=phone)
+    if not cita_bot:
         log_event(phone, "confirmacion_precita_notfound", {"id_cita": id_cita, "accion": accion})
         return (
             "No encontré esa cita en nuestros registros 😕\n"
@@ -2848,6 +2856,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "ORDER BY fecha ASC, hora ASC LIMIT 1",
                     (phone, _hoy_rc),
                 ).fetchone()
+            if not _fila_rc:
+                # Fallback: cita agendada en RECEPCIÓN (vive en
+                # citas_recepcion_reminders, no en citas_bot) — bug 2026-06-23.
+                _fila_rc = get_cita_recepcion_confirmable(phone, _hoy_rc)
             if _fila_rc:
                 _id_cita_rc = str(_fila_rc["id_cita"])
                 mark_cita_confirmation(_id_cita_rc, phone, "confirmed")

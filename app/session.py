@@ -1799,6 +1799,53 @@ def get_cita_bot_by_id_cita(id_cita: str, phone: str = None) -> dict | None:
         return dict(row) if row else None
 
 
+def get_cita_recepcion_by_id_cita(id_cita: str, phone: str = None) -> dict | None:
+    """Fallback de confirmación: las citas agendadas en RECEPCIÓN (no por el bot)
+    viven en `citas_recepcion_reminders`, NO en `citas_bot`. Sin este lookup,
+    confirmar/reagendar/cancelar desde el recordatorio de recepción devolvía
+    'No encontré esa cita' (bug 2026-06-23). Devuelve un dict con el MISMO shape
+    que usa _handle_confirmacion_precita (especialidad/profesional/fecha/hora)."""
+    with db() as conn:
+        if phone:
+            row = conn.execute(
+                "SELECT * FROM citas_recepcion_reminders "
+                "WHERE id_cita_medilink=? AND phone=? LIMIT 1",
+                (str(id_cita), phone),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM citas_recepcion_reminders WHERE id_cita_medilink=? LIMIT 1",
+                (str(id_cita),),
+            ).fetchone()
+        if not row:
+            return None
+        r = dict(row)
+        return {
+            "id_cita": r.get("id_cita_medilink"),
+            "especialidad": r.get("especialidad", "") or "",
+            "profesional": r.get("profesional", "") or "",
+            "fecha": r.get("fecha", "") or "",
+            "hora": r.get("hora", "") or "",
+            "es_tercero": False,
+            "_source": "recepcion",
+        }
+
+
+def get_cita_recepcion_confirmable(phone: str, hoy: str) -> dict | None:
+    """Próxima cita de RECEPCIÓN con recordatorio ya enviado, para acusar una
+    confirmación por texto libre ('Confirmo') cuando la cita no está en citas_bot."""
+    with db() as conn:
+        row = conn.execute(
+            "SELECT id_cita_medilink AS id_cita, especialidad, profesional, fecha, hora "
+            "FROM citas_recepcion_reminders "
+            "WHERE phone=? AND fecha >= ? "
+            "AND (reminder_48h_sent=1 OR reminder_24h_sent=1 OR reminder_2h_sent=1) "
+            "ORDER BY fecha ASC, hora ASC LIMIT 1",
+            (phone, hoy),
+        ).fetchone()
+        return dict(row) if row else None
+
+
 def mark_cita_confirmation(id_cita: str, phone: str, status: str):
     """Guarda la respuesta del paciente al recordatorio pre-cita.
     status ∈ {'confirmed', 'reagendar', 'cancelar'}"""
