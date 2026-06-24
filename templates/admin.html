@@ -1844,22 +1844,45 @@ function waitLabel(mins) {
 
 /* ── DELIVERY STATUS (message read receipts) ── */
 const _deliveryStatusCache = {};  // phone -> {status, ts}
+function _bestDeliveryStatus(data) {
+  if (!data) return null;
+  if (data.failed) return "failed";
+  if (data.read) return "read";
+  if (data.delivered) return "delivered";
+  if (data.sent) return "sent";
+  return null;
+}
+// Dataloader: coalesce los N polls por-conversación en 1 request batch. Antes,
+// con el panel abierto y muchas conversaciones, se disparaban N fetch sync a
+// SQLite cada 30s → ahogaban el event loop y devolvían 502/504 (incidente
+// 2026-06-24). Ahora todas las llamadas de una misma vuelta se juntan en una.
+let _dsQueue = new Map();   // phone -> [resolvers]
+let _dsTimer = null;
+async function _flushDeliveryStatuses() {
+  const batch = _dsQueue; _dsQueue = new Map(); _dsTimer = null;
+  const phones = [...batch.keys()];
+  let map = {};
+  try {
+    for (let i = 0; i < phones.length; i += 200) {
+      const chunk = phones.slice(i, i + 200);
+      const r = await fetch(apiUrl(`/admin/api/message-statuses-batch?phones=${encodeURIComponent(chunk.join(","))}`));
+      if (r.ok) Object.assign(map, await r.json());
+    }
+  } catch {}
+  for (const [phone, resolvers] of batch) {
+    const best = _bestDeliveryStatus(map[phone]);
+    _deliveryStatusCache[phone] = { status: best, ts: Date.now() };
+    resolvers.forEach(res => res(best));
+  }
+}
 async function fetchLastDeliveryStatus(phone) {
   const cached = _deliveryStatusCache[phone];
   if (cached && Date.now() - cached.ts < 30000) return cached.status;
-  try {
-    const r = await fetch(apiUrl(`/admin/api/message-statuses?phone=${encodeURIComponent(phone)}`));
-    if (!r.ok) return null;
-    const data = await r.json();
-    // Determine the "best" status from summary: failed > read > delivered > sent
-    let best = null;
-    if (data.failed) best = "failed";
-    else if (data.read) best = "read";
-    else if (data.delivered) best = "delivered";
-    else if (data.sent) best = "sent";
-    _deliveryStatusCache[phone] = { status: best, ts: Date.now() };
-    return best;
-  } catch { return null; }
+  return new Promise(resolve => {
+    if (_dsQueue.has(phone)) _dsQueue.get(phone).push(resolve);
+    else _dsQueue.set(phone, [resolve]);
+    if (!_dsTimer) _dsTimer = setTimeout(_flushDeliveryStatuses, 60);
+  });
 }
 function deliveryIcon(status) {
   if (!status) return "";

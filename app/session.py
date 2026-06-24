@@ -2137,6 +2137,27 @@ def get_message_status_summary(phone: str) -> dict:
         return {r["status"]: r["cnt"] for r in rows}
 
 
+def get_message_status_summary_batch(phones: list[str]) -> dict:
+    """Resumen de estados de entrega para MUCHOS teléfonos en UNA sola query.
+    {phone: {status: cnt}}. Reemplaza N round-trips del panel (uno por
+    conversación) por uno solo — evita la presión de GIL/SQLite que ahogaba el
+    event loop y devolvía 502/504 con el panel abierto (incidente 2026-06-24)."""
+    if not phones:
+        return {}
+    out: dict[str, dict] = {p: {} for p in phones}
+    qmarks = ",".join("?" * len(phones))
+    with db() as conn:
+        rows = conn.execute(
+            f"SELECT phone, status, COUNT(*) AS cnt FROM message_statuses "
+            f"WHERE phone IN ({qmarks}) AND ts > datetime('now', '-24 hours') "
+            f"GROUP BY phone, status",
+            tuple(phones),
+        ).fetchall()
+    for r in rows:
+        out.setdefault(r["phone"], {})[r["status"]] = r["cnt"]
+    return out
+
+
 def get_last_message_status(phone: str) -> str | None:
     """Get the status of the last outgoing message to this phone."""
     with db() as conn:

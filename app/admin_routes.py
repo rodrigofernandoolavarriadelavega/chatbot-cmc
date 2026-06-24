@@ -1050,6 +1050,16 @@ def api_message_statuses(phone: str = Query(...), _=Depends(require_admin)):
     return get_message_status_summary(phone)
 
 
+@router.get("/admin/api/message-statuses-batch")
+def api_message_statuses_batch(phones: str = Query(""), _=Depends(require_admin)):
+    """Estados de entrega de MUCHOS teléfonos en una sola request (dataloader).
+    El panel coalesce sus N polls por-conversación aquí → 1 query, 1 slot del
+    threadpool, en vez de N. Cierra la causa del 502/504 con el panel abierto."""
+    from session import get_message_status_summary_batch
+    lst = [p for p in (phones or "").split(",") if p][:500]
+    return get_message_status_summary_batch(lst)
+
+
 @router.post("/admin/api/send-document")
 async def api_send_document(
     phone: str = Form(...),
