@@ -1570,6 +1570,70 @@ async def get_comision_mes(
         return JSONResponse(resp)
 
 
+async def _cruzar_origen_pass(fecha_iso: str) -> dict:
+    """Cruza las filas de pagos de la fecha contra el bot (sessions.db) para
+    resolver canal/fuente y RELLENAR el RUT vacío desde contact_profiles. NO
+    consulta Medilink → instantáneo, 429-safe, idempotente. Solo toca filas NO
+    bloqueadas y NUNCA pisa un RUT ya escrito (recepción manda).
+
+    Reusado por el endpoint /cruzar-origen Y como paso final de /prellenar: si la
+    ficha de Medilink no entregó el RUT (timeout/429/paciente sin RUT), el bot lo
+    completa desde sus propios registros — así un Medilink lento ya no deja RUTs
+    vacíos que recepción tenga que llenar a mano."""
+    from session import db as _conn
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT id, id_cita, rut, paciente_nombre,
+                      COALESCE(bloqueado, 0) AS bloqueado
+               FROM pagos_cmc WHERE fecha = ?""",
+            (fecha_iso,)
+        ).fetchall()
+
+    revisadas = exacto = probable = presencial = rut_rellenados = 0
+    for row in rows:
+        if row["bloqueado"]:
+            continue
+        revisadas += 1
+        att = _resolver_atribucion(
+            id_cita=row["id_cita"] or "",
+            rut=row["rut"] or "",
+            nombre=row["paciente_nombre"] or "",
+        )
+        origen_legacy = _canal_a_origen(att["canal"])
+        nuevo_rut = att["rut"]
+        if att["confianza"] == "exacto":
+            exacto += 1
+        elif att["confianza"] == "probable":
+            probable += 1
+        else:
+            presencial += 1
+        if nuevo_rut and not (row["rut"] or "").strip():
+            rut_rellenados += 1
+        try:
+            with _conn() as conn:
+                conn.execute(
+                    """UPDATE pagos_cmc
+                       SET canal = ?, fuente = ?, origen = ?, match_confianza = ?,
+                           rut = CASE WHEN COALESCE(rut,'') = '' THEN ? ELSE rut END,
+                           updated_at = datetime('now')
+                       WHERE id = ? AND COALESCE(bloqueado, 0) = 0""",
+                    (att["canal"], att["fuente"], origen_legacy, att["confianza"],
+                     nuevo_rut, row["id"])
+                )
+                conn.commit()
+        except Exception as e_upd:
+            log.warning("cruzar_origen: error UPDATE id=%s: %s", row["id"], e_upd)
+
+    log.info(
+        "cruzar_origen: fecha=%s revisadas=%d exacto=%d probable=%d presencial=%d rut_rellenados=%d",
+        fecha_iso, revisadas, exacto, probable, presencial, rut_rellenados,
+    )
+    return {
+        "revisadas": revisadas, "exacto": exacto, "probable": probable,
+        "presencial": presencial, "rut_rellenados": rut_rellenados,
+    }
+
+
 @router.post("/cruzar-origen")
 async def cruzar_origen(
     fecha: str | None = Query(None, description="YYYY-MM-DD; por defecto hoy"),
@@ -1602,61 +1666,7 @@ async def cruzar_origen(
     else:
         fecha_iso = now_cl.strftime("%Y-%m-%d")
 
-    from session import db as _conn
-    with _conn() as conn:
-        rows = conn.execute(
-            """SELECT id, id_cita, rut, paciente_nombre,
-                      COALESCE(bloqueado, 0) AS bloqueado
-               FROM pagos_cmc WHERE fecha = ?""",
-            (fecha_iso,)
-        ).fetchall()
-
-    revisadas = exacto = probable = presencial = rut_rellenados = 0
-    for row in rows:
-        if row["bloqueado"]:
-            continue
-        revisadas += 1
-        att = _resolver_atribucion(
-            id_cita=row["id_cita"] or "",
-            rut=row["rut"] or "",
-            nombre=row["paciente_nombre"] or "",
-        )
-        origen_legacy = _canal_a_origen(att["canal"])
-        nuevo_rut = att["rut"]
-        relleno = bool(nuevo_rut and not (row["rut"] or "").strip())
-
-        if att["confianza"] == "exacto":
-            exacto += 1
-        elif att["confianza"] == "probable":
-            probable += 1
-        else:
-            presencial += 1
-        if relleno:
-            rut_rellenados += 1
-
-        try:
-            with _conn() as conn:
-                conn.execute(
-                    """UPDATE pagos_cmc
-                       SET canal = ?, fuente = ?, origen = ?, match_confianza = ?,
-                           rut = CASE WHEN COALESCE(rut,'') = '' THEN ? ELSE rut END,
-                           updated_at = datetime('now')
-                       WHERE id = ? AND COALESCE(bloqueado, 0) = 0""",
-                    (att["canal"], att["fuente"], origen_legacy, att["confianza"],
-                     nuevo_rut, row["id"])
-                )
-                conn.commit()
-        except Exception as e_upd:
-            log.warning("cruzar_origen: error UPDATE id=%s: %s", row["id"], e_upd)
-
-    log.info(
-        "cruzar_origen: fecha=%s revisadas=%d exacto=%d probable=%d presencial=%d rut_rellenados=%d",
-        fecha_iso, revisadas, exacto, probable, presencial, rut_rellenados,
-    )
-    return {
-        "revisadas": revisadas, "exacto": exacto, "probable": probable,
-        "presencial": presencial, "rut_rellenados": rut_rellenados,
-    }
+    return await _cruzar_origen_pass(fecha_iso)
 
 
 @router.post("/prellenar")
@@ -2137,13 +2147,28 @@ async def prellenar_pagos(
             log.warning("prellenar_pagos: error INSERT cita %s: %s", id_cita_str, e_ins)
             errores += 1
 
+    # Paso final de ROBUSTEZ: completar cualquier RUT que la ficha de Medilink no
+    # entregó (timeout/429/paciente sin RUT en Medilink) desde la base del bot
+    # (contact_profiles). NO consulta Medilink, NO pisa RUTs ya escritos por
+    # recepción. Así un Medilink lento/caído ya no deja RUTs vacíos que la
+    # secretaria tenga que llenar a mano (incidente 2026-06-24).
+    rut_cruce = 0
+    try:
+        _cruce = await _cruzar_origen_pass(fecha_iso)
+        rut_cruce = _cruce.get("rut_rellenados", 0)
+        if rut_cruce:
+            log.info("prellenar_pagos: cruce final con el bot rellenó %d RUT(s) que Medilink no dio", rut_cruce)
+    except Exception as e_cruce:
+        log.warning("prellenar_pagos: cruce final de RUT falló (no crítico): %s", e_cruce)
+
     log.info(
         "prellenar_pagos: fecha=%s creadas=%d actualizadas=%d saltadas=%d "
-        "no_asiste=%d eliminadas=%d errores=%d",
-        fecha_iso, creadas, actualizadas, saltadas, no_asiste, eliminadas, errores,
+        "no_asiste=%d eliminadas=%d errores=%d rut_cruce=%d",
+        fecha_iso, creadas, actualizadas, saltadas, no_asiste, eliminadas, errores, rut_cruce,
     )
     return {"creadas": creadas, "actualizadas": actualizadas, "saltadas": saltadas,
-            "no_asiste": no_asiste, "eliminadas": eliminadas, "errores": errores}
+            "no_asiste": no_asiste, "eliminadas": eliminadas, "errores": errores,
+            "rut_cruce": rut_cruce}
 
 
 @router.patch("/{pago_id}/lock")
