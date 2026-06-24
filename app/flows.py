@@ -9171,7 +9171,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "¿La confirmo?",
             [
                 {"id": "si", "title": "✅ Sí, reservar"},
-                {"id": "no", "title": "❌ Cambiar"},
+                {"id": "cambiar_datos", "title": "❌ Cambiar"},
             ]
         )
 
@@ -10316,9 +10316,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
 
         return _btn_msg(
-            "Responde *Sí* para confirmar o *No* para cambiar.",
+            "Responde *Sí* para confirmar, o toca *❌ Cambiar* para modificar.",
             [{"id": "si", "title": "✅ Sí, reservar"},
-             {"id": "no", "title": "❌ Cambiar"}]
+             {"id": "cambiar_datos", "title": "❌ Cambiar"}]
         )
 
     # ── WAIT_RUT_CANCELAR ─────────────────────────────────────────────────────
@@ -11289,7 +11289,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             f"💳 *{modalidad}*",
             [
                 {"id": "si", "title": "✅ Confirmar"},
-                {"id": "no", "title": "❌ Cambiar"},
+                {"id": "cambiar_datos", "title": "❌ Cambiar"},
             ]
         )
 
@@ -11715,7 +11715,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "¿La confirmo?",
             [
                 {"id": "si", "title": "✅ Sí, reservar"},
-                {"id": "no", "title": "❌ Cambiar"},
+                {"id": "cambiar_datos", "title": "❌ Cambiar"},
             ]
         )
 
