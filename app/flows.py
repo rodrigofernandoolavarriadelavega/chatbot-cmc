@@ -6780,7 +6780,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # sobrecupo ≠ al slot mostrado al paciente. slot_sugerido ancla el slot
             # correcto. Se hace pop para no contaminar reintentos posteriores.
             _sugerido = data.pop("slot_sugerido", None)
-            slot = _sugerido if _sugerido else slots_mostrados[0]
+            # El ancla slot_sugerido solo es válida si AÚN coincide con un slot
+            # mostrado ahora. Si el paciente navegó a otro día o cambió de
+            # profesional, el ancla viejo apunta a otra cita y reservaba el slot
+            # equivocado (bug 2026-06-23: pidió Márquez/navegó pero reservaba el
+            # slot original de Abarca / del primer día). Si el ancla sigue en la
+            # lista (caso reordenamiento por sobrecupo) se respeta; si no, se usa
+            # el primero mostrado.
+            def _slot_key(s):
+                return (s.get("fecha"), (s.get("hora_inicio") or "")[:5], s.get("id_profesional"))
+            if _sugerido and any(_slot_key(s) == _slot_key(_sugerido) for s in slots_mostrados):
+                slot = _sugerido
+            else:
+                slot = slots_mostrados[0]
             return await _slot_confirmed(phone, data, slot)
 
         # Pregunta-afirmación implícita cuando hay 1 solo slot mostrado:
@@ -14592,9 +14604,14 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
         re.IGNORECASE,
     )
 
+    # Si el texto contiene una hora de reloj (HH:MM), NO dejar que la rama de
+    # "número suelto" consuma los dígitos de la hora: "19:00" matchea "19" → idx 18
+    # → reservaba un slot totalmente distinto (bug 2026-06-23: pidió 19:00, reservó
+    # 12:00). Saltar la rama de número y dejar que actúe el matcher de hora de abajo.
+    _es_hora_reloj = bool(re.search(r'\b\d{1,2}[:.]\d{2}\b', tl))
     # Número dentro del texto: "el 1", "opción 2", "quiero el 3"
     m = re.search(r'\b([1-9]\d?)\b', tl)
-    if m:
+    if m and not _es_hora_reloj:
         _palabras = [p for p in tl.split() if p.strip()]
         # Rechazar si hay keywords de cantidad/duración
         if any(k in tl for k in _CANTIDAD_KW):
