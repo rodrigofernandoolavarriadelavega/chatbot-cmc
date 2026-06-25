@@ -191,6 +191,10 @@ def ensure_pagos_table() -> None:
             "ALTER TABLE pagos_cmc ADD COLUMN recon_estado TEXT DEFAULT ''",
             "ALTER TABLE pagos_cmc ADD COLUMN recon_at TEXT DEFAULT ''",
             "ALTER TABLE pagos_cmc ADD COLUMN recon_medilink INTEGER DEFAULT 0",
+            # id_paciente de Medilink (lo trae prellenar de la cita) → llave EXACTA
+            # para reconciliar contra bi_atenciones.id_paciente (el match por nombre
+            # falla: bi_atenciones.paciente_nombre viene vacío en el ~93%).
+            "ALTER TABLE pagos_cmc ADD COLUMN id_paciente INTEGER",
         ]:
             try:
                 conn.execute(col_ddl)
@@ -1954,6 +1958,20 @@ async def prellenar_pagos(
             existing = existing_by_rut.get(rut_cita)
 
         if existing:
+            # Backfill id_paciente (llave de reconciliación) aunque la fila esté
+            # bloqueada: es metadata, NO toca el cobro. La recon necesita
+            # id_paciente también en filas con candado.
+            if id_paciente and existing.get("db_id") is not None:
+                try:
+                    with _conn() as conn:
+                        conn.execute(
+                            "UPDATE pagos_cmc SET id_paciente=? "
+                            "WHERE id=? AND COALESCE(id_paciente,0)=0",
+                            (int(id_paciente), existing["db_id"]),
+                        )
+                        conn.commit()
+                except Exception:
+                    pass
             # Fila ya existe y no está bloqueada → re-derivar canal/fuente + rellenar
             # hueco de prestación si corresponde.
             if existing["bloqueado"]:
@@ -2107,9 +2125,9 @@ async def prellenar_pagos(
                         area, prevision, copago, bonificacion, metodo_pago, folio,
                         codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
                         creado_por, bloqueado, canal, fuente, match_confianza, monto_medilink,
-                        created_at, updated_at)
+                        id_paciente, created_at, updated_at)
                        VALUES (?,?,?,?,?,?,?,?,?,0,'','','','',?,?,?,
-                               'prellenar', 0, ?, ?, ?, ?, datetime('now'), datetime('now'))""",
+                               'prellenar', 0, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))""",
                     (
                         fecha_iso,
                         hora_inicio,
@@ -2127,6 +2145,7 @@ async def prellenar_pagos(
                         fuente_cita,
                         att["confianza"],
                         int(_total or 0),   # monto real Medilink (arancel) — Fase B cuadre
+                        int(id_paciente) if id_paciente else None,  # llave de reconciliación
                     )
                 )
                 conn.commit()

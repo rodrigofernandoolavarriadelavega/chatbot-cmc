@@ -41,30 +41,30 @@ def _en_alcance(area: str, prevision: str) -> bool:
 
 
 def _reconciliar_fecha(fecha: str) -> dict:
-    """Reconcilia las filas en alcance de un día. Devuelve contadores."""
+    """Reconcilia las filas en alcance de un día por id_paciente. Contadores."""
     from session import db
-    from cuadre_caja import _tokens, _match
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     c = {"revisadas": 0, "ok": 0, "difiere": 0, "falta_medilink": 0}
 
     with db() as conn:
-        # Medilink oficial por paciente ese día (nombre desde bi_atenciones)
-        medilink = []
+        # Medilink: efectivo cobrado por id_paciente ese día (bi_pagos_caja es
+        # 100% efectivo → ese monto ES el copago que debería calzar el módulo).
+        med: dict[int, int] = {}
         try:
             for r in conn.execute(
-                """SELECT COALESCE(a.paciente_nombre,'') AS nom, SUM(k.monto) AS monto
+                """SELECT a.id_paciente AS idp, SUM(k.monto) AS monto
                      FROM bi_pagos_caja k
-                     LEFT JOIN bi_atenciones a ON a.atencion_id = k.atencion_id
-                    WHERE substr(k.fecha,1,10) = ?
-                    GROUP BY k.id_paciente""",
+                     JOIN bi_atenciones a ON a.atencion_id = k.atencion_id
+                    WHERE substr(k.fecha,1,10) = ? AND a.id_paciente IS NOT NULL
+                    GROUP BY a.id_paciente""",
                 (fecha,),
             ):
-                medilink.append({"monto": int(r["monto"] or 0), "tok": _tokens(r["nom"])})
+                med[int(r["idp"])] = int(r["monto"] or 0)
         except Exception as e:  # noqa: BLE001
             log.warning("recon %s: bi_pagos_caja error %s", fecha, e)
 
         rows = conn.execute(
-            """SELECT id, paciente_nombre, prevision, area, copago, bonificacion,
+            """SELECT id, COALESCE(id_paciente,0) AS idp, prevision, area, copago,
                       COALESCE(recon_estado,'') AS recon_estado,
                       COALESCE(recon_at,'')     AS recon_at,
                       COALESCE(updated_at,'')   AS updated_at
@@ -72,47 +72,43 @@ def _reconciliar_fecha(fecha: str) -> dict:
             (fecha,),
         ).fetchall()
 
-        # Agrupar las filas EN ALCANCE por nombre (un paciente puede tener varias
-        # filas ese día → se suman y se comparan contra el total de Medilink).
-        groups: dict[str, dict] = {}
+        # Agrupar EN ALCANCE por id_paciente (exacto). Sin id_paciente no se
+        # reconcilia (se deja 'pendiente' — no se marca en falso).
+        groups: dict[int, dict] = {}
         for row in rows:
             if not _en_alcance(row["area"], row["prevision"]):
                 continue
-            tok = _tokens(row["paciente_nombre"])
-            if not tok:
+            idp = int(row["idp"] or 0)
+            if not idp:
                 continue
-            # ¿necesita chequeo? sí si no está 'ok', o si se editó después del
-            # último recon (updated_at > recon_at), o si nunca se reconcilió.
             need = (
                 row["recon_estado"] != "ok"
                 or not row["recon_at"]
                 or (row["updated_at"] and row["recon_at"] and row["updated_at"] > row["recon_at"])
             )
-            key = " ".join(sorted(tok))
-            g = groups.setdefault(key, {"tok": tok, "ids": [], "total": 0, "need": False})
+            g = groups.setdefault(idp, {"ids": [], "copago": 0, "need": False})
             g["ids"].append(row["id"])
-            g["total"] += int(row["copago"] or 0) + int(row["bonificacion"] or 0)
+            g["copago"] += int(row["copago"] or 0)
             g["need"] = g["need"] or need
 
-        for g in groups.values():
-            if not g["need"] or g["total"] <= 0:
-                # total 0 = aún sin cobrar (draft) → nada que reconciliar todavía
-                continue
+        for idp, g in groups.items():
+            if not g["need"] or g["copago"] <= 0:
+                continue   # copago 0 = aún sin cobrar (draft) → nada que cuadrar
             c["revisadas"] += len(g["ids"])
-            hit = next((m for m in medilink if _match(g["tok"], m["tok"])), None)
-            if hit is None:
-                estado, mlink = "falta_medilink", 0
+            mlink = med.get(idp)
+            if mlink is None:
+                estado, mv = "falta_medilink", 0        # recepción cobró, Medilink no lo tiene
                 c["falta_medilink"] += len(g["ids"])
-            elif abs(hit["monto"] - g["total"]) <= _TOL:
-                estado, mlink = "ok", hit["monto"]
+            elif abs(mlink - g["copago"]) <= _TOL:
+                estado, mv = "ok", mlink
                 c["ok"] += len(g["ids"])
             else:
-                estado, mlink = "difiere", hit["monto"]
+                estado, mv = "difiere", mlink            # monto no coincide
                 c["difiere"] += len(g["ids"])
             for pid in g["ids"]:
                 conn.execute(
                     "UPDATE pagos_cmc SET recon_estado=?, recon_at=?, recon_medilink=? WHERE id=?",
-                    (estado, now, mlink, pid),
+                    (estado, now, mv, pid),
                 )
         conn.commit()
     return c

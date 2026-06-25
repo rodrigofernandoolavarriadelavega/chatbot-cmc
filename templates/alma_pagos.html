@@ -313,6 +313,12 @@
   }
   tbody tr.row-locked td.editable:hover::after { display: none; }
   tbody tr.row-locked { background: #f5faf5 !important; opacity: .82; }
+  /* Alerta de reconciliación: el pago del módulo no coincide con Medilink */
+  tbody tr.row-recon-alert { background: #fff1f0 !important; opacity: 1; }
+  tbody tr.row-recon-alert td:first-child { box-shadow: inset 3px 0 0 #e5484d; }
+  .recon-flag { font-size: 9px; font-weight: 700; color: #c0341f; background: #fde2e1;
+                border-radius: 10px; padding: 1px 7px; margin-left: 5px; white-space: nowrap;
+                vertical-align: middle; cursor: help; }
 
   /* Pill previsión */
   .pill {
@@ -2445,7 +2451,12 @@ function buildSavedRow(p, i) {
   const lockSvg = locked
     ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>`;
-  const trClass = locked ? 'row-saved row-locked' : 'row-saved';
+  const reconAlert = (p.recon_estado === 'difiere' || p.recon_estado === 'falta_medilink');
+  const trClass = (locked ? 'row-saved row-locked' : 'row-saved') + (reconAlert ? ' row-recon-alert' : '');
+  const reconBadge = !reconAlert ? '' :
+    (p.recon_estado === 'falta_medilink'
+      ? ` <span class="recon-flag" title="No aparece en la caja de Medilink — revisar y registrarlo en Medilink">⚠ falta en Medilink</span>`
+      : ` <span class="recon-flag" title="No coincide con Medilink — revisar qué falló">⚠ Medilink ${fmt$(p.recon_medilink)}</span>`);
   return `
     <tr class="${trClass}" data-id="${p.id}" data-locked="${locked?1:0}">
       <td style="color:var(--mute)">${i+1}</td>
@@ -2455,7 +2466,7 @@ function buildSavedRow(p, i) {
       <td class="editable" data-col="profesional" style="color:var(--mute)" title="${esc(p.profesional || '')}">${esc(p.profesional || '—')}</td>
       <td class="editable" data-col="area" style="color:var(--mute)" title="${esc(p.area || '')}">${esc(p.area || '—')}</td>
       <td class="editable" data-col="prevision" style="overflow:visible;max-width:none"><span class="pill ${p.prevision}">${p.prevision === 'fonasa' ? 'Fonasa' : 'Partic.'}</span></td>
-      <td class="editable" data-col="copago" style="font-weight:700;color:var(--navy)">${fmt$(p.copago)}</td>
+      <td class="editable" data-col="copago" style="font-weight:700;color:var(--navy);overflow:visible;max-width:none">${fmt$(p.copago)}${reconBadge}</td>
       <td class="editable" data-col="metodo_pago" style="overflow:visible;max-width:none"><span class="pill metodo">${capitalize((p.metodo_pago || 'efectivo').replace('_',' '))}</span></td>
       <td class="editable" data-col="folio" style="color:var(--mute)" title="${esc(p.folio || '')}">${esc(p.folio || '—')}</td>
       <td class="editable" data-col="procedimiento" style="color:var(--mute)" title="${esc(p.procedimiento || '')}">${esc(p.procedimiento || '—')}</td>
