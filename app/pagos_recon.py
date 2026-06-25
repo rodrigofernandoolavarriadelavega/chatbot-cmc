@@ -51,12 +51,13 @@ def _reconciliar_fecha(fecha: str) -> dict:
         # 100% efectivo → ese monto ES el copago que debería calzar el módulo).
         med: dict[int, int] = {}
         try:
+            # id_paciente PROPIO de bi_pagos_caja (NO joinear a bi_atenciones: esa
+            # tabla viene con id_paciente/nombre vacíos → perdía el 93% del enlace).
             for r in conn.execute(
-                """SELECT a.id_paciente AS idp, SUM(k.monto) AS monto
-                     FROM bi_pagos_caja k
-                     JOIN bi_atenciones a ON a.atencion_id = k.atencion_id
-                    WHERE substr(k.fecha,1,10) = ? AND a.id_paciente IS NOT NULL
-                    GROUP BY a.id_paciente""",
+                """SELECT id_paciente AS idp, SUM(monto) AS monto
+                     FROM bi_pagos_caja
+                    WHERE substr(fecha,1,10) = ? AND COALESCE(id_paciente,0) > 0
+                    GROUP BY id_paciente""",
                 (fecha,),
             ):
                 med[int(r["idp"])] = int(r["monto"] or 0)
@@ -64,7 +65,8 @@ def _reconciliar_fecha(fecha: str) -> dict:
             log.warning("recon %s: bi_pagos_caja error %s", fecha, e)
 
         rows = conn.execute(
-            """SELECT id, COALESCE(id_paciente,0) AS idp, prevision, area, copago,
+            """SELECT id, COALESCE(id_paciente,0) AS idp, lower(prevision) AS prev,
+                      area, copago, COALESCE(monto_medilink,0) AS mm,
                       COALESCE(recon_estado,'') AS recon_estado,
                       COALESCE(recon_at,'')     AS recon_at,
                       COALESCE(updated_at,'')   AS updated_at
@@ -76,7 +78,7 @@ def _reconciliar_fecha(fecha: str) -> dict:
         # reconcilia (se deja 'pendiente' — no se marca en falso).
         groups: dict[int, dict] = {}
         for row in rows:
-            if not _en_alcance(row["area"], row["prevision"]):
+            if not _en_alcance(row["area"], row["prev"]):
                 continue
             idp = int(row["idp"] or 0)
             if not idp:
@@ -86,9 +88,12 @@ def _reconciliar_fecha(fecha: str) -> dict:
                 or not row["recon_at"]
                 or (row["updated_at"] and row["recon_at"] and row["updated_at"] > row["recon_at"])
             )
-            g = groups.setdefault(idp, {"ids": [], "copago": 0, "need": False})
+            g = groups.setdefault(idp, {"ids": [], "copago": 0, "mm": 0,
+                                        "fonasa": False, "need": False})
             g["ids"].append(row["id"])
             g["copago"] += int(row["copago"] or 0)
+            g["mm"] = max(g["mm"], int(row["mm"] or 0))
+            g["fonasa"] = g["fonasa"] or (row["prev"] == "fonasa")
             g["need"] = g["need"] or need
 
         for idp, g in groups.items():
@@ -99,12 +104,18 @@ def _reconciliar_fecha(fecha: str) -> dict:
             if mlink is None:
                 estado, mv = "falta_medilink", 0        # recepción cobró, Medilink no lo tiene
                 c["falta_medilink"] += len(g["ids"])
-            elif abs(mlink - g["copago"]) <= _TOL:
-                estado, mv = "ok", mlink
-                c["ok"] += len(g["ids"])
             else:
-                estado, mv = "difiere", mlink            # monto no coincide
-                c["difiere"] += len(g["ids"])
+                # Medilink guarda el ARANCEL TOTAL. Se compara contra el arancel que
+                # capturó prellenar (monto_medilink); en particular = copago. En
+                # fonasa SIN arancel capturado no se puede validar el monto (el
+                # copago siempre es menor que el total) → basta con que EXISTA.
+                base = g["mm"] if g["mm"] > 0 else g["copago"]
+                if (g["fonasa"] and g["mm"] <= 0) or abs(mlink - base) <= _TOL:
+                    estado, mv = "ok", mlink
+                    c["ok"] += len(g["ids"])
+                else:
+                    estado, mv = "difiere", mlink         # monto no coincide
+                    c["difiere"] += len(g["ids"])
             for pid in g["ids"]:
                 conn.execute(
                     "UPDATE pagos_cmc SET recon_estado=?, recon_at=?, recon_medilink=? WHERE id=?",
