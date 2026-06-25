@@ -248,6 +248,16 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
         misfire_grace_time=600,
     )
+    # Reconciliación Pagos × Medilink cada 30 min (solo particular/fonasa MG/MF):
+    # refresca la caja Medilink de hoy/ayer y marca cada fila ok/difiere/falta.
+    from pagos_recon import job_reconciliar_pagos as _job_recon_pagos
+    scheduler.add_job(
+        _job_recon_pagos,
+        CronTrigger(minute="0,30", timezone=_CLT),
+        id="recon_pagos_30min",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
     # Autopilot marketing (Fase 1, dry-run diario 08:30 CLT).
     # Inerte salvo AUTOPILOT_ENABLED=true. NO ejecuta cambios en Meta (solo reporta).
     async def _job_autopilot_dryrun():

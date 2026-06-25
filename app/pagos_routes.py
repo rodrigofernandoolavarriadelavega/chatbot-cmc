@@ -184,6 +184,13 @@ def ensure_pagos_table() -> None:
             "ALTER TABLE pagos_cmc ADD COLUMN match_confianza TEXT DEFAULT ''",
             # Monto REAL de la atención traído de Medilink por prellenar (cuadre al peso). 0 = sin dato.
             "ALTER TABLE pagos_cmc ADD COLUMN monto_medilink INTEGER DEFAULT 0",
+            # ── Reconciliación con Medilink (cron 30min, solo particular/fonasa MG/MF) ──
+            # recon_estado: '' pendiente · 'ok' cuadra (no re-chequear) · 'difiere'
+            #   (monto del módulo ≠ Medilink) · 'falta_medilink' (recepción cobró pero
+            #   Medilink no tiene el pago). recon_medilink = monto hallado en Medilink.
+            "ALTER TABLE pagos_cmc ADD COLUMN recon_estado TEXT DEFAULT ''",
+            "ALTER TABLE pagos_cmc ADD COLUMN recon_at TEXT DEFAULT ''",
+            "ALTER TABLE pagos_cmc ADD COLUMN recon_medilink INTEGER DEFAULT 0",
         ]:
             try:
                 conn.execute(col_ddl)
@@ -985,7 +992,9 @@ async def get_pagos(
                       COALESCE(canal, 'presencial') as canal,
                       COALESCE(fuente, '') as fuente,
                       COALESCE(match_confianza, '') as match_confianza,
-                      COALESCE(monto_medilink, 0) as monto_medilink
+                      COALESCE(monto_medilink, 0) as monto_medilink,
+                      COALESCE(recon_estado, '') as recon_estado,
+                      COALESCE(recon_medilink, 0) as recon_medilink
                FROM pagos_cmc
                WHERE fecha BETWEEN ? AND ?""" + (" AND id_profesional = ?" if _scope is not None else "") + """
                ORDER BY fecha DESC, hora DESC""",
@@ -2169,6 +2178,27 @@ async def prellenar_pagos(
     return {"creadas": creadas, "actualizadas": actualizadas, "saltadas": saltadas,
             "no_asiste": no_asiste, "eliminadas": eliminadas, "errores": errores,
             "rut_cruce": rut_cruce}
+
+
+@router.get("/recon-resumen")
+async def api_recon_resumen(token: str | None = Query(None),
+                            cmc_session: str | None = Cookie(None),
+                            request: Request = None):
+    """Conteo por estado de reconciliación con Medilink (para el panel)."""
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    from pagos_recon import resumen
+    return resumen()
+
+
+@router.post("/recon-run")
+async def api_recon_run(token: str | None = Query(None),
+                        cmc_session: str | None = Cookie(None),
+                        request: Request = None):
+    """Dispara la reconciliación Pagos × Medilink AHORA (sin esperar el cron 30min)."""
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    from pagos_recon import job_reconciliar_pagos, resumen
+    await job_reconciliar_pagos()
+    return {"ok": True, "resumen": resumen()}
 
 
 @router.patch("/{pago_id}/lock")
