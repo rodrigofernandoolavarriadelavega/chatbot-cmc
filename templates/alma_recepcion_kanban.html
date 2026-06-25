@@ -104,6 +104,16 @@
   .rk-fld input:focus,.rk-fld select:focus{outline:2px solid var(--aqua)}
   .rk-pay-foot{padding:12px 16px;border-top:1px solid var(--line)}
   .rk-pay-foot button{width:100%;background:linear-gradient(135deg,var(--aqua),var(--blue));color:#fff;border:0;border-radius:11px;padding:11px;font-weight:800;cursor:pointer;font-size:14px}
+  /* lista de espera (bajo las columnas) */
+  #rk-waitlist{border-top:1px solid var(--line);background:#fff;padding:8px 12px 6px;max-height:150px;display:flex;flex-direction:column;flex:0 0 auto}
+  .rk-wl-head{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .rk-wl-head .n{background:var(--chip);color:var(--muted);border-radius:20px;padding:1px 8px;font-size:10.5px}
+  .rk-wl-strip{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px}
+  .rk-wl-card{flex:0 0 auto;min-width:152px;max-width:210px;background:#f5f8fc;border:1px solid var(--line);border-radius:10px;padding:7px 10px;cursor:pointer}
+  .rk-wl-card:hover{border-color:var(--aqua)}
+  .rk-wl-card.notified{background:#fdf6e8;border-color:#f0d9a8}
+  .rk-wl-name{font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-wl-meta{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   ::-webkit-scrollbar{height:9px;width:9px}
   ::-webkit-scrollbar-thumb{background:#cfdde9;border-radius:8px}
   ::-webkit-scrollbar-track{background:transparent}
@@ -112,6 +122,10 @@
 <body>
 <div id="rk-root">
   <div id="rk-board"><div class="rk-loading">Cargando tablero…</div></div>
+  <div id="rk-waitlist">
+    <div class="rk-wl-head">⏳ Lista de espera <span class="n" id="rk-wl-n">0</span></div>
+    <div class="rk-wl-strip" id="rk-wl-strip"><div style="color:#93a8ba;font-size:11px">—</div></div>
+  </div>
   <div id="rk-status">
     <span>Recepción Kanban</span>
     <span>· <b id="rk-total">0</b> conversaciones</span>
@@ -367,9 +381,26 @@ document.getElementById('rk-pay-save').onclick=async function(){
   }catch{ this.textContent='Error al guardar'; this.disabled=false; }
 };
 
+// ── Fase 5: lista de espera ──
+async function loadWaitlist(){
+  let arr=[];
+  try{ const r=await fetch(api('/admin/api/waitlist')); arr=await r.json(); }catch{}
+  if(!Array.isArray(arr)) arr=(arr&&arr.waitlist)||[];
+  const active=arr.filter(w=>!w.canceled_at);
+  document.getElementById('rk-wl-n').textContent=active.length;
+  const strip=document.getElementById('rk-wl-strip');
+  strip.innerHTML = active.length ? active.map(w=>`
+    <div class="rk-wl-card ${w.notified_at?'notified':''}" data-phone="${esc(w.phone)}" data-name="${esc(w.nombre||'')}">
+      <div class="rk-wl-name">${esc(w.nombre||w.phone)}</div>
+      <div class="rk-wl-meta">${esc(w.especialidad||'sin especialidad')}${w.notified_at?' · avisado':''}</div>
+    </div>`).join('') : '<div style="color:#93a8ba;font-size:11px">Sin pacientes en espera</div>';
+}
+document.getElementById('rk-wl-strip').addEventListener('click', e=>{ const c=e.target.closest('.rk-wl-card'); if(c) openConv(c.dataset.phone, c.dataset.name, true); });
+
 window.RK = { token: TOKEN, setRango:(r)=>{ RANGO=r; loadBoard(); } };
-loadBoard();
+loadBoard(); loadWaitlist();
 setInterval(loadBoard, 15000);   // auto-refresco
+setInterval(loadWaitlist, 30000);
 </script>
 </body>
 </html>
