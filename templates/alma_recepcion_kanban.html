@@ -114,10 +114,23 @@
   .rk-wl-card.notified{background:#fdf6e8;border-color:#f0d9a8}
   .rk-wl-name{font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rk-wl-meta{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* gráficos de fricción (drawer inferior) */
+  #rk-charts{position:fixed;left:0;right:0;bottom:0;height:332px;background:#fff;border-top:1px solid var(--line2);box-shadow:0 -10px 30px rgba(15,63,104,.13);z-index:74;transform:translateY(100%);transition:transform .22s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;padding:12px 16px}
+  #rk-charts.show{transform:translateY(0)}
+  .rk-charts-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .rk-charts-head h3{margin:0;font-size:13px;color:var(--navy);font-weight:800}
+  .rk-charts-kpi{font-size:12px;color:var(--muted);flex:1}
+  .rk-charts-kpi b{color:var(--blue);font-weight:800}
+  .rk-charts-grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;min-height:0}
+  .rk-chart-box{display:flex;flex-direction:column;min-height:0}
+  .rk-chart-box .t{font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+  .rk-chart-box canvas{flex:1;min-height:0}
+  @media(max-width:1100px){.rk-charts-grid{grid-template-columns:repeat(2,1fr)}#rk-charts{height:420px}}
   ::-webkit-scrollbar{height:9px;width:9px}
   ::-webkit-scrollbar-thumb{background:#cfdde9;border-radius:8px}
   ::-webkit-scrollbar-track{background:transparent}
 </style>
+<script src="/static/chart-4.4.1.umd.min.js"></script>
 </head>
 <body>
 <div id="rk-root">
@@ -130,7 +143,22 @@
     <span>Recepción Kanban</span>
     <span>· <b id="rk-total">0</b> conversaciones</span>
     <span>· <b id="rk-rango">hoy</b></span>
+    <span id="rk-charts-toggle" style="cursor:pointer;font-weight:700;color:var(--blue)">· 📊 Fricción</span>
     <span class="hint"><kbd>Ctrl+M</kbd> rango · <kbd>Ctrl+P</kbd> pagos · <span id="rk-updated"></span></span>
+  </div>
+</div>
+
+<div id="rk-charts">
+  <div class="rk-charts-head">
+    <h3>📊 Fricción de la agenda</h3>
+    <span class="rk-charts-kpi" id="rk-charts-kpi"></span>
+    <span class="rk-pop-ico" id="rk-charts-x" title="Cerrar">✕</span>
+  </div>
+  <div class="rk-charts-grid">
+    <div class="rk-chart-box"><div class="t">Embudo de agendamiento</div><canvas id="ch-embudo"></canvas></div>
+    <div class="rk-chart-box"><div class="t">Fricción por etapa (min)</div><canvas id="ch-trans"></canvas></div>
+    <div class="rk-chart-box"><div class="t">Fricción por área (min)</div><canvas id="ch-area"></canvas></div>
+    <div class="rk-chart-box"><div class="t">Fricción por profesional (min)</div><canvas id="ch-prof"></canvas></div>
   </div>
 </div>
 
@@ -396,6 +424,29 @@ async function loadWaitlist(){
     </div>`).join('') : '<div style="color:#93a8ba;font-size:11px">Sin pacientes en espera</div>';
 }
 document.getElementById('rk-wl-strip').addEventListener('click', e=>{ const c=e.target.closest('.rk-wl-card'); if(c) openConv(c.dataset.phone, c.dataset.name, true); });
+
+// ── Fase 6: gráficos de fricción ──
+let _charts={};
+function _baropts(horizontal){ return {responsive:true,maintainAspectRatio:false,indexAxis:horizontal?'y':'x',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}},beginAtZero:true}}}; }
+async function loadFriccion(){
+  if(typeof Chart==='undefined') return;
+  let d={};
+  try{ const q=CUSTOM?('desde='+CUSTOM.desde+'&hasta='+CUSTOM.hasta):('rango='+RANGO); const r=await fetch(api('/alma/api/recepcion-kanban/friccion?'+q)); d=await r.json(); }catch{ return; }
+  const E=d.embudo||{};
+  document.getElementById('rk-charts-kpi').innerHTML = `Conversión área→agendado: <b>${E.conv||0}%</b> · ${E.cita||0} agendados de ${E.area||0} que eligieron área`;
+  const AQ='#4FBECE', BL='#1172AB', NV='#0F3F68';
+  const mk=(id,cfg)=>{ const el=document.getElementById(id); if(!el) return; if(_charts[id]) _charts[id].destroy(); _charts[id]=new Chart(el,cfg); };
+  mk('ch-embudo',{type:'bar',data:{labels:['Área','Eligió hora','Agendó'],datasets:[{data:[E.area||0,E.slot||0,E.cita||0],backgroundColor:[AQ,BL,NV]}]},options:_baropts()});
+  const F=d.friccion_min||{};
+  mk('ch-trans',{type:'bar',data:{labels:['Área→hora','Hora→agendó','Área→agendó'],datasets:[{data:[(F.area_slot||{}).min,(F.slot_cita||{}).min,(F.area_cita||{}).min],backgroundColor:[AQ,BL,NV]}]},options:_baropts()});
+  const A=d.por_area||[];
+  mk('ch-area',{type:'bar',data:{labels:A.map(x=>x.k),datasets:[{data:A.map(x=>x.min),backgroundColor:BL}]},options:_baropts(true)});
+  const P=d.por_profesional||[];
+  mk('ch-prof',{type:'bar',data:{labels:P.map(x=>x.k.length>16?x.k.slice(0,15)+'…':x.k),datasets:[{data:P.map(x=>x.min),backgroundColor:NV}]},options:_baropts(true)});
+}
+function toggleCharts(){ const c=document.getElementById('rk-charts'); if(c.classList.contains('show')){ c.classList.remove('show'); } else { c.classList.add('show'); loadFriccion(); } }
+document.getElementById('rk-charts-toggle').onclick=toggleCharts;
+document.getElementById('rk-charts-x').onclick=()=>document.getElementById('rk-charts').classList.remove('show');
 
 window.RK = { token: TOKEN, setRango:(r)=>{ RANGO=r; loadBoard(); } };
 loadBoard(); loadWaitlist();

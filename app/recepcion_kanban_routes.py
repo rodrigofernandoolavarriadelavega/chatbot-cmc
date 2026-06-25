@@ -184,3 +184,96 @@ async def api_destacar(phone: str, on: int = Query(1),
     else:
         delete_tag(phone, "destacado")
     return {"ok": True, "phone": phone, "destacado": bool(on)}
+
+
+def _friccion(desde: str | None, hasta: str | None) -> dict:
+    """Embudo de agendamiento + fricción (minutos entre etapas) por área y
+    profesional. La agenda es el cuello de botella → esto la mide."""
+    import json
+    lo = (desde + " 00:00:00") if desde else "2000-01-01 00:00:00"
+    hi = (hasta + " 23:59:59") if hasta else "2100-01-01 00:00:00"
+    from session import db
+    with db() as conn:
+        rows = conn.execute(
+            """SELECT phone, event, meta, ts FROM conversation_events
+                WHERE event IN ('funnel_especialidad','funnel_slot_ofrecido','cita_creada')
+                  AND ts >= ? AND ts <= ?
+                ORDER BY phone, ts""",
+            (lo, hi),
+        ).fetchall()
+
+    per: dict[str, dict] = {}
+    for r in rows:
+        d = per.setdefault(r["phone"], {})
+        ev, ts = r["event"], r["ts"]
+        try:
+            meta = json.loads(r["meta"] or "{}")
+        except Exception:
+            meta = {}
+        if ev == "funnel_especialidad" and "area_ts" not in d:
+            d["area_ts"] = ts
+        elif ev == "funnel_slot_ofrecido" and "slot_ts" not in d:
+            d["slot_ts"] = ts
+        elif ev == "cita_creada" and "cita_ts" not in d:
+            d["cita_ts"] = ts
+            d["area"] = (meta.get("especialidad") or "").strip()
+            d["prof"] = (meta.get("profesional") or "").strip()
+
+    def secs(a, b):
+        try:
+            return (datetime.strptime(b, "%Y-%m-%d %H:%M:%S")
+                    - datetime.strptime(a, "%Y-%m-%d %H:%M:%S")).total_seconds()
+        except Exception:
+            return None
+
+    trans = {"area_slot": [], "slot_cita": [], "area_cita": []}
+    by_area: dict[str, list] = {}
+    by_prof: dict[str, list] = {}
+    n_area = n_slot = n_cita = 0
+    for d in per.values():
+        if d.get("area_ts"):
+            n_area += 1
+        if d.get("slot_ts"):
+            n_slot += 1
+        if d.get("cita_ts"):
+            n_cita += 1
+        if d.get("area_ts") and d.get("slot_ts"):
+            s = secs(d["area_ts"], d["slot_ts"])
+            if s is not None and s >= 0:
+                trans["area_slot"].append(s)
+        if d.get("slot_ts") and d.get("cita_ts"):
+            s = secs(d["slot_ts"], d["cita_ts"])
+            if s is not None and s >= 0:
+                trans["slot_cita"].append(s)
+        if d.get("area_ts") and d.get("cita_ts"):
+            s = secs(d["area_ts"], d["cita_ts"])
+            if s is not None and s >= 0:
+                trans["area_cita"].append(s)
+                by_area.setdefault(_macrogrupo(d.get("area") or "") or "Otra", []).append(s)
+                by_prof.setdefault(d.get("prof") or "Sin asignar", []).append(s)
+
+    def avg(l):
+        return round((sum(l) / len(l)) / 60, 1) if l else None
+
+    return {
+        "embudo": {"area": n_area, "slot": n_slot, "cita": n_cita,
+                   "conv": round(100 * n_cita / n_area, 1) if n_area else 0},
+        "friccion_min": {k: {"min": avg(v), "n": len(v)} for k, v in trans.items()},
+        "por_area": sorted([{"k": a, "min": avg(v), "n": len(v)} for a, v in by_area.items() if v],
+                           key=lambda x: -(x["min"] or 0))[:10],
+        "por_profesional": sorted([{"k": p, "min": avg(v), "n": len(v)} for p, v in by_prof.items() if v],
+                                  key=lambda x: -(x["min"] or 0))[:12],
+        "desde": desde, "hasta": hasta,
+    }
+
+
+@router.get("/friccion")
+async def api_friccion(rango: str | None = Query(None),
+                       desde: str | None = Query(None),
+                       hasta: str | None = Query(None),
+                       token: str | None = Query(None),
+                       cmc_session: str | None = Cookie(None),
+                       request: Request = None):
+    _auth(token, cmc_session, request)
+    d, h = _rango_a_fechas(rango, desde, hasta)
+    return _friccion(d, h)
