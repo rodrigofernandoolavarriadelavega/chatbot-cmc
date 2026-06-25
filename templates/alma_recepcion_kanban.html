@@ -7,32 +7,205 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/alma_kit.css">
 <style>
-  /* Recepción Kanban — Fase 0: lienzo limpio (sin nada arriba ni a los lados). */
-  html, body { margin: 0; height: 100%; background: #eef3f8; font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  #rk-root { height: 100vh; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
-  /* placeholder de Fase 0 — se reemplaza en Fase 2 por las 5 columnas */
-  .rk-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #93a8ba; gap: 8px; user-select: none; }
-  .rk-empty .mark { width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, #4FBECE, #1172AB); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 22px; box-shadow: 0 6px 16px rgba(79,190,206,.4); }
-  .rk-empty h1 { margin: 6px 0 0; font-size: 16px; font-weight: 700; color: #0F3F68; letter-spacing: -.01em; }
-  .rk-empty p { margin: 0; font-size: 12px; }
+  :root{
+    --bg:#eef3f8; --col:#f5f8fc; --card:#fff; --chip:#e9f0f6;
+    --ink:#0F3F68; --ink2:#27384a; --muted:#5b7184; --faint:#93a8ba;
+    --aqua:#4FBECE; --blue:#1172AB; --navy:#0F3F68;
+    --line:#e3ecf3; --line2:#cfdfea;
+    --no-visto:#1172AB; --visto:#93a8ba; --espera:#e08600; --util:#a78bfa; --atendido:#1a9c5b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink2);font-family:'Montserrat',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  #rk-root{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  /* tablero */
+  #rk-board{flex:1;display:flex;gap:10px;padding:12px;overflow-x:auto;overflow-y:hidden;min-height:0}
+  .rk-col{flex:0 0 288px;background:var(--col);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;max-height:100%;box-shadow:0 1px 3px rgba(15,63,104,.05)}
+  .rk-col-head{display:flex;align-items:center;gap:8px;padding:11px 13px 9px;border-bottom:1px solid var(--line)}
+  .rk-col-title{font-weight:800;font-size:13px;color:var(--navy);flex:1;letter-spacing:-.01em}
+  .rk-col-count{font-size:11px;font-weight:700;color:var(--muted);background:var(--chip);border-radius:20px;padding:2px 9px;min-width:24px;text-align:center}
+  .rk-col-body{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
+
+  /* grupo (subtarjeta) */
+  .rk-group{}
+  .rk-group-head{display:flex;align-items:center;gap:7px;padding:4px 6px;cursor:pointer;border-radius:8px;user-select:none}
+  .rk-group-head:hover{background:#fff}
+  .rk-group-dot{width:8px;height:8px;border-radius:3px;flex:0 0 auto}
+  .rk-group-name{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-group-n{font-size:10.5px;font-weight:700;color:var(--faint)}
+  .rk-group.collapsed .rk-group-cards{display:none}
+  .rk-group-cards{display:flex;flex-direction:column;gap:6px;padding:4px 0 6px}
+
+  /* tarjeta */
+  .rk-card{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--visto);border-radius:10px;padding:8px 10px;cursor:pointer;transition:box-shadow .12s,border-color .12s;position:relative;box-shadow:0 1px 2px rgba(15,63,104,.06)}
+  .rk-card:hover{box-shadow:0 5px 14px rgba(15,63,104,.13);border-color:var(--line2)}
+  .rk-card.e-no_visto{border-left-color:var(--no-visto)}
+  .rk-card.e-visto{border-left-color:var(--visto)}
+  .rk-card.e-en_espera{border-left-color:var(--espera);background:#fff8ee}
+  .rk-card-top{display:flex;align-items:center;gap:6px}
+  .rk-card-name{font-size:12.5px;font-weight:700;color:var(--ink);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-star{font-size:13px;line-height:1;color:#d6e0e8;cursor:pointer;flex:0 0 auto}
+  .rk-star.on{color:#f0a500}
+  .rk-card-text{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-card-meta{display:flex;gap:5px;align-items:center;margin-top:6px;flex-wrap:wrap}
+  .rk-badge{font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--muted);white-space:nowrap}
+  .rk-badge.canal-instagram{background:#fde2f1;color:#c026a3}
+  .rk-badge.canal-facebook{background:#e0ecfd;color:#1172AB}
+  .rk-badge.sinresp{background:#fde2e1;color:#c0341f}
+  .rk-badge.cita{background:#e2f5ea;color:#1a7a47}
+  .rk-card-time{font-size:9.5px;color:var(--faint);margin-left:auto}
+
+  /* estados de carga / hint */
+  .rk-loading,.rk-empty-col{padding:20px 8px;text-align:center;color:var(--faint);font-size:11.5px}
+
+  /* mini-barra de estado inferior (discreta, no es topbar) */
+  #rk-status{display:flex;align-items:center;gap:14px;padding:5px 14px;border-top:1px solid var(--line);background:#fff;font-size:11px;color:var(--faint)}
+  #rk-status b{color:var(--muted);font-weight:700}
+  #rk-status .hint{margin-left:auto}
+  kbd{font-family:ui-monospace,Menlo,monospace;font-size:10px;background:var(--chip);border:1px solid var(--line2);border-radius:4px;padding:0 4px;color:var(--muted)}
+  ::-webkit-scrollbar{height:9px;width:9px}
+  ::-webkit-scrollbar-thumb{background:#cfdde9;border-radius:8px}
+  ::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
 <div id="rk-root">
-  <div class="rk-empty">
-    <div class="mark">R</div>
-    <h1>Recepción Kanban</h1>
-    <p>Lienzo listo · Fase 0 — las columnas llegan en la Fase 2</p>
+  <div id="rk-board"><div class="rk-loading">Cargando tablero…</div></div>
+  <div id="rk-status">
+    <span>Recepción Kanban</span>
+    <span>· <b id="rk-total">0</b> conversaciones</span>
+    <span>· <b id="rk-rango">hoy</b></span>
+    <span class="hint"><kbd>Ctrl+M</kbd> rango · <kbd>Ctrl+P</kbd> pagos · <span id="rk-updated"></span></span>
   </div>
 </div>
 
 <script>
-  // Token del perfil (lo inyecta el handler de Alma). Base de todas las llamadas.
-  const TOKEN = "__TOKEN__";
-  window.RK = { token: TOKEN };
-  // Fase 1+ engancharán aquí el motor de columnas y el render.
+const TOKEN = "__TOKEN__";
+const api = (p) => p + (p.includes('?')?'&':'?') + 'token=' + encodeURIComponent(TOKEN);
+
+const COLS = [
+  { key:'primer_mensaje', title:'1º mensaje',           sub:'msg' },
+  { key:'area',           title:'Área',                  sub:'area' },
+  { key:'profesional',    title:'Profesional / horario', sub:'prof' },
+  { key:'agendado',       title:'Agendado',              sub:'cita' },
+  { key:'atendido',       title:'Atendido',              sub:'flat' },
+];
+const MSG = {
+  no_visto:  { label:'No visto',            color:'var(--no-visto)', ord:0 },
+  en_espera: { label:'En espera de recepción', color:'var(--espera)', ord:1 },
+  visto:     { label:'Visto',               color:'var(--visto)',    ord:2 },
+};
+let RANGO = 'dia';
+let COLLAPSED = {};   // key de grupo -> bool (persiste el colapso entre refrescos)
+
+function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function relTime(ts){
+  if(!ts) return '';
+  const t = new Date((ts.replace(' ','T'))+'Z'), now = new Date();
+  const m = Math.floor((now-t)/60000);
+  if(m<1) return 'ahora'; if(m<60) return m+'m'; const h=Math.floor(m/60);
+  if(h<24) return h+'h'; return Math.floor(h/24)+'d';
+}
+
+async function loadBoard(){
+  let data;
+  try{
+    const r = await fetch(api('/alma/api/recepcion-kanban/board?rango='+RANGO));
+    data = await r.json();
+  }catch(e){ document.getElementById('rk-board').innerHTML='<div class="rk-loading">Error al cargar.</div>'; return; }
+  render(data.cards||[]);
+  document.getElementById('rk-total').textContent = data.total||0;
+  document.getElementById('rk-rango').textContent = ({dia:'hoy',semana:'esta semana',mes:'este mes',todo:'todo'})[RANGO]||RANGO;
+  document.getElementById('rk-updated').textContent = 'act. '+(data.generado||'').slice(11);
+}
+
+function groupsFor(col, cards){
+  // separa destacados (van pinneados arriba) del resto, y agrupa el resto
+  const groups = [];
+  const star = cards.filter(c=>c.destacado);
+  if(star.length) groups.push({ id:col.key+':dest', name:'⭐ Destacados', color:'#f0a500', cards:star, ord:-1 });
+  const rest = cards.filter(c=>!c.destacado);
+  const by = {};
+  for(const c of rest){
+    let gk, gname, gcolor, gord;
+    if(col.sub==='msg'){ const m=MSG[c.msg_estado]||MSG.visto; gk=c.msg_estado; gname=m.label; gcolor=m.color; gord=m.ord; }
+    else if(col.sub==='area'){ gk=c.area_grupo||'Sin área'; gname=gk; gcolor='var(--blue)'; gord = gk.startsWith('Medicina')?0:gk==='Dental'?1:2; }
+    else if(col.sub==='prof'){ gk=c.profesional||'Sin asignar'; gname=gk; gcolor='var(--navy)'; gord=0; }
+    else if(col.sub==='cita'){ gk=(c.cita&&c.cita.fecha)||'Agendado'; gname='📅 '+gk; gcolor='var(--atendido)'; gord=0; }
+    else { gk='all'; gname='Atendidos'; gcolor='var(--atendido)'; gord=0; }
+    (by[gk] = by[gk] || { id:col.key+':'+gk, name:gname, color:gcolor, cards:[], ord:gord }).cards.push(c);
+  }
+  const arr = Object.values(by).sort((a,b)=> a.ord-b.ord || a.name.localeCompare(b.name));
+  return groups.concat(arr);
+}
+
+function cardHtml(c){
+  const cls = 'rk-card e-'+(c.msg_estado||'visto');
+  const canal = c.canal&&c.canal!=='whatsapp' ? `<span class="rk-badge canal-${c.canal}">${c.canal==='instagram'?'IG':'FB'}</span>` : '';
+  const area = c.area_grupo ? `<span class="rk-badge">${esc(c.area_grupo)}</span>` : '';
+  const sinresp = c.sin_resp>0 ? `<span class="rk-badge sinresp">${c.sin_resp} sin resp</span>` : '';
+  const cita = c.cita&&c.cita.fecha ? `<span class="rk-badge cita">${esc(c.cita.fecha)} ${esc(c.cita.hora||'')}</span>` : '';
+  return `<div class="${cls}" data-phone="${esc(c.phone)}" data-name="${esc(c.nombre)}" data-rut="${esc(c.rut)}">
+    <div class="rk-card-top">
+      <span class="rk-card-name">${esc(c.nombre||c.phone)}</span>
+      <span class="rk-star ${c.destacado?'on':''}" data-star="${esc(c.phone)}" title="Destacar">${c.destacado?'★':'☆'}</span>
+    </div>
+    ${c.last_text?`<div class="rk-card-text">${esc(c.last_text)}</div>`:''}
+    <div class="rk-card-meta">${canal}${area}${cita}${sinresp}<span class="rk-card-time">${relTime(c.last_ts)}</span></div>
+  </div>`;
+}
+
+function render(cards){
+  const board = document.getElementById('rk-board');
+  board.innerHTML = '';
+  for(const col of COLS){
+    const colCards = cards.filter(c=>c.etapa===col.key);
+    const groups = groupsFor(col, colCards);
+    const el = document.createElement('div'); el.className='rk-col';
+    let inner = `<div class="rk-col-head"><span class="rk-col-title">${col.title}</span><span class="rk-col-count">${colCards.length}</span></div><div class="rk-col-body">`;
+    if(!colCards.length){ inner += '<div class="rk-empty-col">—</div>'; }
+    for(const g of groups){
+      const collapsed = COLLAPSED[g.id] ? ' collapsed':'';
+      inner += `<div class="rk-group${collapsed}" data-gid="${g.id}">
+        <div class="rk-group-head" data-toggle="${g.id}">
+          <span class="rk-group-dot" style="background:${g.color}"></span>
+          <span class="rk-group-name">${esc(g.name)}</span><span class="rk-group-n">${g.cards.length}</span>
+        </div>
+        <div class="rk-group-cards">${g.cards.map(cardHtml).join('')}</div>
+      </div>`;
+    }
+    inner += '</div>';
+    el.innerHTML = inner;
+    board.appendChild(el);
+  }
+}
+
+// ── interacción ──
+document.getElementById('rk-board').addEventListener('click', async (e)=>{
+  const star = e.target.closest('[data-star]');
+  if(star){ e.stopPropagation();
+    const phone = star.dataset.star, on = star.classList.contains('on') ? 0 : 1;
+    star.classList.toggle('on'); star.textContent = on?'★':'☆';
+    try{ await fetch(api('/alma/api/recepcion-kanban/destacar/'+encodeURIComponent(phone)+'?on='+on), {method:'POST'}); }catch{}
+    return;
+  }
+  const tog = e.target.closest('[data-toggle]');
+  if(tog){ const id=tog.dataset.toggle; COLLAPSED[id]=!COLLAPSED[id]; tog.closest('.rk-group').classList.toggle('collapsed'); return; }
+  const card = e.target.closest('.rk-card');
+  if(card){ /* Fase 3: abrir popup de conversación */ window.RK_openConv && window.RK_openConv(card.dataset.phone, card.dataset.name); }
+});
+
+// atajos (se completan en Fase 4)
+document.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='m'){ e.preventDefault(); window.RK_toggleMenu && window.RK_toggleMenu(); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='p'){ e.preventDefault(); window.RK_togglePay && window.RK_togglePay(); }
+});
+
+window.RK = { token: TOKEN, setRango:(r)=>{ RANGO=r; loadBoard(); } };
+loadBoard();
+setInterval(loadBoard, 15000);   // auto-refresco
 </script>
 </body>
 </html>

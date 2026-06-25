@@ -72,7 +72,7 @@ def build_board(desde: str | None, hasta: str | None) -> dict:
         unread = {}
 
     citas: dict[str, dict] = {}
-    atendidos: set[str] = set()
+    paid_keys: set = set()
     destacados: set[str] = set()
     with db() as conn:
         try:
@@ -85,16 +85,15 @@ def build_board(desde: str | None, hasta: str | None) -> dict:
                 citas.setdefault(r["phone"], dict(r))   # la cita activa más próxima
         except Exception as e:  # noqa: BLE001
             log.warning("kanban: citas_bot %s", e)
+        # Pagos recientes (id_paciente, fecha) → "atendido" SOLO si la cita reciente
+        # del paciente ya tiene pago ese día (no cualquier pago histórico).
         try:
             for r in conn.execute(
-                """SELECT DISTINCT cb.phone
-                     FROM citas_bot cb
-                     JOIN bi_pagos_caja k
-                       ON k.id_paciente = cb.id_paciente_medilink AND k.fecha = cb.fecha
-                    WHERE cb.fecha >= date('now','localtime','-45 day') AND k.monto > 0"""):
-                atendidos.add(r["phone"])
+                """SELECT DISTINCT id_paciente, fecha FROM bi_pagos_caja
+                    WHERE monto > 0 AND fecha >= date('now','localtime','-3 day')"""):
+                paid_keys.add((r["id_paciente"], r["fecha"]))
         except Exception as e:  # noqa: BLE001
-            log.warning("kanban: atendidos %s", e)
+            log.warning("kanban: pagos %s", e)
         try:
             for r in conn.execute("SELECT DISTINCT phone FROM contact_tags WHERE tag='destacado'"):
                 destacados.add(r["phone"])
@@ -115,7 +114,8 @@ def build_board(desde: str | None, hasta: str | None) -> dict:
         esp = (fd.get("especialidad") or "").strip()
         cita = citas.get(phone)
 
-        if phone in atendidos:
+        cita_pagada = bool(cita and (cita.get("id_paciente_medilink"), cita.get("fecha")) in paid_keys)
+        if cita_pagada:
             etapa = "atendido"
         elif cita:
             etapa = "agendado"
