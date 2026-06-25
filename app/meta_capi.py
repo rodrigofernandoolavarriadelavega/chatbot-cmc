@@ -201,6 +201,16 @@ async def send_event(
             _clid_central = (_ref_central.get("ctwa_clid") or "").strip()
             if _clid_central:
                 ctwa_clid = _clid_central
+                # ts REAL del clic → el fbc lleva la hora del clic, no 'now'.
+                # Crítico para eventos backdateados (batch Purchase 22:00): si el
+                # fbc quedara con ts > event_time, Meta DESCARTA la atribución en
+                # silencio. Con el ts del referral el fbc siempre precede al evento.
+                _ref_ts_central = _ref_central.get("ts")
+                if _ref_ts_central and ctwa_clid_ts is None:
+                    try:
+                        ctwa_clid_ts = int(_ref_ts_central) * 1000
+                    except (ValueError, TypeError):
+                        pass
                 log.debug("CAPI %s: ctwa_clid recuperado de meta_referrals (fallback central)", event_name)
         except Exception as _e_central:
             log.debug("CAPI: fallback central ctwa_clid lookup falló: %s", _e_central)

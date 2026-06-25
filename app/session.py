@@ -5725,19 +5725,26 @@ def get_meta_referral_fresh(phone: str, ttl_horas: int = 168) -> dict | None:
         try:
             age_s = time.time() - float(ref_ts)
             if age_s <= ttl_horas * 3600:
-                return ref
+                return {**ref, "ts": int(float(ref_ts))}
         except Exception:
             pass
 
-    # Fallback: última fila en DB
+    # Fallback DB: emparejar por ÚLTIMOS 9 DÍGITOS (robusto a diferencias de
+    # formato de teléfono entre el evento y meta_referrals — un 'phone=?' exacto
+    # perdía la atribución si el formato no calzaba al dígito). Devuelve también
+    # el ts del clic para que el fbc del CAPI lleve la hora real del clic.
+    suf = "".join(ch for ch in (phone or "") if ch.isdigit())[-9:]
+    if not suf:
+        return None
     cutoff = int(time.time()) - ttl_horas * 3600
     with db() as conn:
         row = conn.execute(
-            """SELECT source_type, source_id, headline, body, ctwa_clid
+            """SELECT source_type, source_id, headline, body, ctwa_clid, ts
                FROM meta_referrals
-               WHERE phone=? AND ts >= ?
+               WHERE substr(replace(replace(replace(phone,'+',''),' ',''),'-',''), -9) = ?
+                 AND ts >= ?
                ORDER BY ts DESC LIMIT 1""",
-            (phone, cutoff),
+            (suf, cutoff),
         ).fetchone()
     if row:
         return {
@@ -5746,6 +5753,7 @@ def get_meta_referral_fresh(phone: str, ttl_horas: int = 168) -> dict | None:
             "headline": row["headline"] or "",
             "body": row["body"] or "",
             "ctwa_clid": row["ctwa_clid"] or "",
+            "ts": row["ts"],
         }
     return None
 
