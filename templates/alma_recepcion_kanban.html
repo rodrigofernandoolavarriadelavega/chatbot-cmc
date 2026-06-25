@@ -82,6 +82,28 @@
   .rk-pop-foot input{flex:1;border:1px solid var(--line2);border-radius:10px;padding:8px 11px;font-size:13px;font-family:inherit;outline:none}
   .rk-pop-foot input:focus{outline:2px solid var(--aqua)}
   .rk-pop-foot button{background:linear-gradient(135deg,var(--aqua),var(--blue));border:0;color:#fff;border-radius:10px;padding:0 15px;font-weight:800;cursor:pointer;font-size:15px}
+  /* menú temporal (izq) + panel pagos (der) */
+  #rk-hotzone{position:fixed;left:0;top:0;width:10px;height:100vh;z-index:55}
+  #rk-menu{position:fixed;left:0;top:0;height:100vh;width:232px;background:#fff;border-right:1px solid var(--line2);box-shadow:6px 0 28px rgba(15,63,104,.14);z-index:70;transform:translateX(-100%);transition:transform .2s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;padding:16px 14px}
+  #rk-menu.show{transform:translateX(0)}
+  #rk-menu h3{margin:4px 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:800}
+  .rk-rango-btn{display:block;width:100%;text-align:left;background:#f5f8fc;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:7px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit}
+  .rk-rango-btn:hover{border-color:var(--aqua)}
+  .rk-rango-btn.on{background:linear-gradient(135deg,var(--aqua),var(--blue));color:#fff;border:0}
+  .rk-range-custom{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+  .rk-range-custom input{border:1px solid var(--line2);border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:inherit}
+  .rk-range-custom button{background:var(--navy);color:#fff;border:0;border-radius:9px;padding:8px;font-weight:700;cursor:pointer;font-size:12.5px}
+  #rk-pay{position:fixed;right:0;top:0;height:100vh;width:362px;background:#fff;border-left:1px solid var(--line2);box-shadow:-8px 0 30px rgba(15,63,104,.16);z-index:72;transform:translateX(100%);transition:transform .2s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+  #rk-pay.show{transform:translateX(0)}
+  .rk-pay-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .rk-pay-head h3{margin:0;font-size:14px;color:var(--navy);font-weight:800;flex:1}
+  .rk-pay-body{flex:1;overflow-y:auto;padding:14px 16px}
+  .rk-fld{margin-bottom:11px}
+  .rk-fld label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;margin-bottom:4px}
+  .rk-fld input,.rk-fld select{width:100%;border:1px solid var(--line2);border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none}
+  .rk-fld input:focus,.rk-fld select:focus{outline:2px solid var(--aqua)}
+  .rk-pay-foot{padding:12px 16px;border-top:1px solid var(--line)}
+  .rk-pay-foot button{width:100%;background:linear-gradient(135deg,var(--aqua),var(--blue));color:#fff;border:0;border-radius:11px;padding:11px;font-weight:800;cursor:pointer;font-size:14px}
   ::-webkit-scrollbar{height:9px;width:9px}
   ::-webkit-scrollbar-thumb{background:#cfdde9;border-radius:8px}
   ::-webkit-scrollbar-track{background:transparent}
@@ -96,6 +118,25 @@
     <span>· <b id="rk-rango">hoy</b></span>
     <span class="hint"><kbd>Ctrl+M</kbd> rango · <kbd>Ctrl+P</kbd> pagos · <span id="rk-updated"></span></span>
   </div>
+</div>
+
+<div id="rk-hotzone"></div>
+<div id="rk-menu">
+  <h3>Temporalidad</h3>
+  <button class="rk-rango-btn on" data-r="dia">Hoy</button>
+  <button class="rk-rango-btn" data-r="semana">Esta semana</button>
+  <button class="rk-rango-btn" data-r="mes">Este mes</button>
+  <button class="rk-rango-btn" data-r="todo">Todo</button>
+  <div class="rk-range-custom">
+    <h3 style="margin-top:14px">Rango personalizado</h3>
+    <input type="date" id="rk-desde"><input type="date" id="rk-hasta">
+    <button id="rk-aplicar-rango">Aplicar rango</button>
+  </div>
+</div>
+<div id="rk-pay">
+  <div class="rk-pay-head"><h3>Registrar pago</h3><span class="rk-pop-ico" id="rk-pay-x" title="Cerrar (Ctrl+P)">✕</span></div>
+  <div class="rk-pay-body" id="rk-pay-body"><div style="color:#93a8ba;font-size:12px;text-align:center;padding:24px">Pasa el mouse sobre un paciente y abre con <kbd>Ctrl+P</kbd></div></div>
+  <div class="rk-pay-foot"><button id="rk-pay-save">Guardar pago</button></div>
 </div>
 
 <div id="rk-pop">
@@ -128,6 +169,8 @@ const MSG = {
   visto:     { label:'Visto',               color:'var(--visto)',    ord:2 },
 };
 let RANGO = 'dia';
+let CUSTOM = null;     // {desde,hasta} si se eligió un rango personalizado
+let RK_focus = null;   // paciente bajo el cursor (para Ctrl+P pagos)
 let COLLAPSED = {};   // key de grupo -> bool (persiste el colapso entre refrescos)
 
 function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -142,7 +185,8 @@ function relTime(ts){
 async function loadBoard(){
   let data;
   try{
-    const r = await fetch(api('/alma/api/recepcion-kanban/board?rango='+RANGO));
+    const q = CUSTOM ? ('desde='+CUSTOM.desde+'&hasta='+CUSTOM.hasta) : ('rango='+RANGO);
+    const r = await fetch(api('/alma/api/recepcion-kanban/board?'+q));
     data = await r.json();
   }catch(e){ document.getElementById('rk-board').innerHTML='<div class="rk-loading">Error al cargar.</div>'; return; }
   render(data.cards||[]);
@@ -263,7 +307,7 @@ async function sendReply(){
 }
 window.RK_openConv = (phone,name)=>openConv(phone,name,true);
 const _board=document.getElementById('rk-board');
-_board.addEventListener('mouseover', e=>{ const c=e.target.closest('.rk-card'); if(c&&!popPinned){ clearTimeout(popOpenT); const ph=c.dataset.phone, nm=c.dataset.name; popOpenT=setTimeout(()=>openConv(ph,nm,false),220); } });
+_board.addEventListener('mouseover', e=>{ const c=e.target.closest('.rk-card'); if(c){ RK_focus={phone:c.dataset.phone,name:c.dataset.name,rut:c.dataset.rut||''}; if(!popPinned){ clearTimeout(popOpenT); const ph=c.dataset.phone, nm=c.dataset.name; popOpenT=setTimeout(()=>openConv(ph,nm,false),220); } } });
 _board.addEventListener('mouseout', e=>{ if(e.target.closest('.rk-card')){ clearTimeout(popOpenT); hidePopSoon(); } });
 popEl().addEventListener('mouseenter', ()=>clearTimeout(popHideT));
 popEl().addEventListener('mouseleave', hidePopSoon);
@@ -271,6 +315,57 @@ document.getElementById('rk-pop-x').onclick=closePop;
 document.getElementById('rk-pop-pin').onclick=()=>{ popPinned=!popPinned; document.getElementById('rk-pop-pin').classList.toggle('on',popPinned); };
 document.getElementById('rk-pop-send').onclick=sendReply;
 document.getElementById('rk-pop-input').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendReply(); } });
+
+// ── Fase 4: menú temporal (izq) + pagos (der) ──
+window.RK_toggleMenu = ()=>document.getElementById('rk-menu').classList.toggle('show');
+document.getElementById('rk-hotzone').addEventListener('mouseenter',()=>document.getElementById('rk-menu').classList.add('show'));
+document.getElementById('rk-menu').addEventListener('mouseleave',()=>document.getElementById('rk-menu').classList.remove('show'));
+document.querySelectorAll('.rk-rango-btn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.rk-rango-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  CUSTOM=null; RANGO=b.dataset.r; loadBoard(); document.getElementById('rk-menu').classList.remove('show');
+});
+document.getElementById('rk-aplicar-rango').onclick=()=>{
+  const d=document.getElementById('rk-desde').value, h=document.getElementById('rk-hasta').value;
+  if(!d||!h){ return; } CUSTOM={desde:d,hasta:h};
+  document.querySelectorAll('.rk-rango-btn').forEach(x=>x.classList.remove('on'));
+  loadBoard(); document.getElementById('rk-menu').classList.remove('show');
+};
+
+window.RK_togglePay = ()=>{ const p=document.getElementById('rk-pay'); if(p.classList.contains('show')){ p.classList.remove('show'); } else { p.classList.add('show'); loadPayForm(); } };
+document.getElementById('rk-pay-x').onclick=()=>document.getElementById('rk-pay').classList.remove('show');
+async function loadPayForm(){
+  const body=document.getElementById('rk-pay-body');
+  if(!RK_focus){ body.innerHTML='<div style="color:#93a8ba;font-size:12px;text-align:center;padding:24px">Pasa el mouse sobre un paciente y abre con Ctrl+P</div>'; return; }
+  body.innerHTML='<div style="color:#93a8ba;font-size:12px;text-align:center;padding:24px">Cargando datos…</div>';
+  let s={};
+  try{ const r=await fetch(api('/alma/api/pagos/sugerencia?rut='+encodeURIComponent(RK_focus.rut||''))); s=await r.json(); }catch{}
+  s.paciente_nombre = s.paciente_nombre || RK_focus.name || '';
+  s.rut = s.rut || RK_focus.rut || '';
+  const sel=(v,o)=> v===o?' selected':'';
+  body.innerHTML = `
+    <div class="rk-fld"><label>Paciente</label><input id="pf-nombre" value="${esc(s.paciente_nombre)}"></div>
+    <div class="rk-fld"><label>RUT</label><input id="pf-rut" value="${esc(s.rut)}"></div>
+    <div class="rk-fld"><label>Profesional</label><input id="pf-prof" value="${esc(s.profesional||'')}"></div>
+    <div class="rk-fld"><label>Área</label><input id="pf-area" value="${esc(s.area||'')}"></div>
+    <div class="rk-fld"><label>Previsión</label><select id="pf-prev"><option value="particular"${sel(s.prevision,'particular')||(s.prevision!=='fonasa'?' selected':'')}>Particular</option><option value="fonasa"${sel(s.prevision,'fonasa')}>Fonasa</option></select></div>
+    <div class="rk-fld"><label>Copago $</label><input id="pf-copago" type="number" value="${s.copago_sugerido||0}"></div>
+    <div class="rk-fld"><label>Método</label><select id="pf-metodo"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="debito">Débito</option><option value="credito">Crédito</option></select></div>
+    <div class="rk-fld"><label>Folio / comprobante</label><input id="pf-folio" value=""></div>`;
+  body.dataset.idcita=s.id_cita||''; body.dataset.idprof=(s.id_profesional==null?'':s.id_profesional);
+}
+document.getElementById('rk-pay-save').onclick=async function(){
+  const g=id=>document.getElementById(id); const body=document.getElementById('rk-pay-body');
+  if(!g('pf-nombre')){ return; }
+  const nombre=g('pf-nombre').value.trim(); if(!nombre){ alert('Falta el nombre del paciente'); return; }
+  const payload={ paciente_nombre:nombre, rut:g('pf-rut').value.trim(), profesional:g('pf-prof').value.trim(),
+    area:g('pf-area').value.trim(), prevision:g('pf-prev').value, copago:parseInt(g('pf-copago').value||'0',10)||0,
+    metodo_pago:g('pf-metodo').value, folio:g('pf-folio').value.trim(), id_cita:body.dataset.idcita||'',
+    id_profesional:body.dataset.idprof?parseInt(body.dataset.idprof,10):null, creado_por:'recepcion_kanban', canal:'presencial' };
+  this.textContent='Guardando…'; this.disabled=true;
+  try{ await fetch(api('/alma/api/pagos'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    this.textContent='✓ Guardado'; setTimeout(()=>{ this.textContent='Guardar pago'; this.disabled=false; document.getElementById('rk-pay').classList.remove('show'); },900);
+  }catch{ this.textContent='Error al guardar'; this.disabled=false; }
+};
 
 window.RK = { token: TOKEN, setRango:(r)=>{ RANGO=r; loadBoard(); } };
 loadBoard();
