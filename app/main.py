@@ -1003,6 +1003,8 @@ import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan
 
 import pagos_routes
 app.include_router(pagos_routes.router)
+import recepcion_kanban_routes
+app.include_router(recepcion_kanban_routes.router)
 import caja_diaria_routes; app.include_router(caja_diaria_routes.router); caja_diaria_routes.ensure_caja_diaria_table()  # Caja Diaria (libro de caja + depósitos)
 pagos_routes.ensure_pagos_table()  # DDL idempotente al arrancar
 
