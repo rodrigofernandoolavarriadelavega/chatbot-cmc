@@ -126,10 +126,17 @@ def build_board(desde: str | None, hasta: str | None) -> dict:
         else:
             etapa = "primer_mensaje"
 
+        # "Utility" = último mensaje es un template saliente sin respuesta del
+        # paciente (esperando que conteste). Inferido del texto (sin tocar el envío).
+        last_dir = c.get("last_dir") or ""
+        ltl = (c.get("last_text") or "").lower()
+        es_template = last_dir == "out" and ("[template" in ltl or "template:" in ltl)
         if state == "HUMAN_TAKEOVER":
             msg_estado = "en_espera"
         elif unread.get(phone, 0) > 0:
             msg_estado = "no_visto"
+        elif es_template:
+            msg_estado = "utility"
         else:
             msg_estado = "visto"
 
