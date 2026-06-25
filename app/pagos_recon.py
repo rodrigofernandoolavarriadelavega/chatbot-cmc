@@ -104,18 +104,19 @@ def _reconciliar_fecha(fecha: str) -> dict:
             if mlink is None:
                 estado, mv = "falta_medilink", 0        # recepción cobró, Medilink no lo tiene
                 c["falta_medilink"] += len(g["ids"])
+            elif g["fonasa"]:
+                # Medilink guarda el ARANCEL TOTAL (copago + bonif Imed), no el
+                # copago suelto → en fonasa no se puede validar el monto del copago.
+                # Basta con que el pago EXISTA en la caja de Medilink.
+                estado, mv = "ok", mlink
+                c["ok"] += len(g["ids"])
+            elif abs(mlink - g["copago"]) <= _TOL:
+                # Particular: el copago ES el total → debe calzar con Medilink.
+                estado, mv = "ok", mlink
+                c["ok"] += len(g["ids"])
             else:
-                # Medilink guarda el ARANCEL TOTAL. Se compara contra el arancel que
-                # capturó prellenar (monto_medilink); en particular = copago. En
-                # fonasa SIN arancel capturado no se puede validar el monto (el
-                # copago siempre es menor que el total) → basta con que EXISTA.
-                base = g["mm"] if g["mm"] > 0 else g["copago"]
-                if (g["fonasa"] and g["mm"] <= 0) or abs(mlink - base) <= _TOL:
-                    estado, mv = "ok", mlink
-                    c["ok"] += len(g["ids"])
-                else:
-                    estado, mv = "difiere", mlink         # monto no coincide
-                    c["difiere"] += len(g["ids"])
+                estado, mv = "difiere", mlink            # particular con monto distinto
+                c["difiere"] += len(g["ids"])
             for pid in g["ids"]:
                 conn.execute(
                     "UPDATE pagos_cmc SET recon_estado=?, recon_at=?, recon_medilink=? WHERE id=?",
