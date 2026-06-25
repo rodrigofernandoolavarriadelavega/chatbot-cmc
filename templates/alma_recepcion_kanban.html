@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recepción Kanban</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>
+  /* Recepción Kanban — Fase 0: lienzo limpio (sin nada arriba ni a los lados). */
+  html, body { margin: 0; height: 100%; background: #eef3f8; font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  #rk-root { height: 100vh; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  /* placeholder de Fase 0 — se reemplaza en Fase 2 por las 5 columnas */
+  .rk-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #93a8ba; gap: 8px; user-select: none; }
+  .rk-empty .mark { width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, #4FBECE, #1172AB); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 22px; box-shadow: 0 6px 16px rgba(79,190,206,.4); }
+  .rk-empty h1 { margin: 6px 0 0; font-size: 16px; font-weight: 700; color: #0F3F68; letter-spacing: -.01em; }
+  .rk-empty p { margin: 0; font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="rk-root">
+  <div class="rk-empty">
+    <div class="mark">R</div>
+    <h1>Recepción Kanban</h1>
+    <p>Lienzo listo · Fase 0 — las columnas llegan en la Fase 2</p>
+  </div>
+</div>
+
+<script>
+  // Token del perfil (lo inyecta el handler de Alma). Base de todas las llamadas.
+  const TOKEN = "__TOKEN__";
+  window.RK = { token: TOKEN };
+  // Fase 1+ engancharán aquí el motor de columnas y el render.
+</script>
+</body>
+</html>

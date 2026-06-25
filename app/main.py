@@ -3391,6 +3391,7 @@ _ALMA_ENVIOS_HTML = (_TEMPLATE_DIR / "alma_envios.html").read_text(encoding="utf
 _ALMA_PAGOS_MEDILINK_HTML = (_TEMPLATE_DIR / "alma_pagos_medilink.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_medilink.html").exists() else ""
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
 _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
+_ALMA_RECEPCION_KANBAN_HTML = (_TEMPLATE_DIR / "alma_recepcion_kanban.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_recepcion_kanban.html").exists() else ""
 _ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
 _ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_kine.html").exists() else ""
 _ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
@@ -4293,6 +4294,22 @@ def alma_inventario_page(token: str | None = Query(None),
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
             return _ALMA_INVENTARIO_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+    return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/alma/recepcion-kanban", response_class=HTMLResponse)
+def alma_recepcion_kanban_page(token: str | None = Query(None),
+                               cmc_session: str | None = Cookie(None)):
+    """Recepción Kanban — panel de recepción unificado (conversaciones por etapa)."""
+    from admin_routes import _verify_cookie, _is_admin_token
+    if not _ALMA_RECEPCION_KANBAN_HTML:
+        raise HTTPException(404, "Recepción Kanban no disponible")
+    if token and _is_admin_token(token):
+        return _ALMA_RECEPCION_KANBAN_HTML.replace("__TOKEN__", token)
+    if cmc_session:
+        role = _verify_cookie(cmc_session)
+        if role in ("admin", "ortodoncia"):
+            return _ALMA_RECEPCION_KANBAN_HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
