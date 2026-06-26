@@ -68,6 +68,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "panel":       {"label": "Panel Recepción",  "icon": "inbox",     "title": "Panel de Recepción v2",          "sub": "Conversaciones · WhatsApp · Agenda",              "src": "/admin/v2"},
     "panel2":      {"label": "Panel Recepción 2","icon": "inbox",     "title": "Panel de Recepción v3 (beta)",   "sub": "Nuevo · cola de atención priorizada · en pruebas","src": "/admin/v3"},
     "recepcion_kanban":{"label":"Recepción Kanban","icon":"listcheck","title":"Recepción Kanban","sub":"Conversaciones por etapa · pagos · lista de espera","src":"/alma/recepcion-kanban"},
+    "roas":        {"label": "ROAS Campañas",    "icon": "trending-up","title": "ROAS por campaña · Meta Ads × Caja real", "sub": "Retorno de cada campaña vs ingreso real (caja)", "src": "/alma/roas"},
     "agenda":      {"label": "Agenda",           "icon": "calendar",  "title": "Agenda",                         "sub": "Ver citas del dia · Agendar nueva hora",           "src": "/alma/agenda"},
     "sala":        {"label": "En sala",          "icon": "users",     "title": "En sala de espera",              "sub": "Pacientes que avisaron que llegaron (check-in QR)", "src": "/alma/sala"},
     "pagos_olacore":{"label": "Pagos OLACORE",   "icon": "banknote",  "title": "Pagos del dia (completo)",       "sub": "Registro · copagos · bonif. Imed · Caja/Cierre",   "src": "/alma/pagos"},

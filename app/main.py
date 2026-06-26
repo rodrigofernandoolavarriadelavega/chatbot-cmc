@@ -212,6 +212,18 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=3600,  # F046: si el proceso arrancó tarde, corre igual (hasta 1h después)
         coalesce=True,            # F046: si se acumularon disparos perdidos, corre solo 1 vez
     )
+    # ROAS diario 05:30 CLT — recalcula ROAS 30d, persiste snapshot y alerta
+    # (WhatsApp ventana-abierta + email) si alguna campaña cae bajo ROAS 1.
+    # Corre post bi_sync de madrugada (bi_pagos_caja ya actualizada).
+    from roas_routes import roas_daily_job
+    scheduler.add_job(
+        roas_daily_job,
+        CronTrigger(hour=5, minute=30, timezone=_CLT),
+        id="roas_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
     # Consent en caliente: barrido HORARIO de citas Medilink → consent_marketing_v2
     # a agendados por teléfono/presencial (no del bot). Gated CONSENT_AGENDADOS_ACTIVE.
     # El job se auto-limita a L-V 09-20 CLT aunque el cron dispare cada hora.
@@ -999,6 +1011,7 @@ import remuneraciones_routes; remuneraciones_routes.register_remuneraciones_rout
 import captacion_routes; captacion_routes.register_captacion_routes(app)  # Dashboard captación (cómo nos conociste)
 import mg_abandono_routes; mg_abandono_routes.register_mg_abandono_routes(app)  # métrica abandono Medicina General
 import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estudio de Marketing (panel publicidad/contenido)
+import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
 
 import pagos_routes
