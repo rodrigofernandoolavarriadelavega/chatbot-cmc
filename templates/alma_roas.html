@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>ROAS Campañas — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0a2e4d;
+  --bg:#F4F7FA; --card:#fff; --border:#e6edf3; --text:#13202e; --mute:#64798c;
+  --slate:#5b7186; --slate-bg:#eef2f6;
+  --green:#1f9d6b; --green-bg:#e7f7f0;
+  --amber:#c98a14; --amber-bg:#fdf4e3;
+  --red:#d94c4c;   --red-bg:#fdecec;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --r:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  -webkit-font-smoothing:antialiased;line-height:1.45;font-size:13px}
+
+/* ── Layout ── */
+.wrap{max-width:1300px;margin:0 auto;padding:20px 20px 64px}
+
+/* ── Estado de carga / error ── */
+.state-wrap{display:flex;align-items:center;justify-content:center;
+  min-height:340px;flex-direction:column;gap:12px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.spinner{width:36px;height:36px;border:3px solid var(--border);
+  border-top-color:var(--aqua);border-radius:50%;animation:rot .85s linear infinite}
+.state-msg{font-size:12.5px;color:var(--mute);font-weight:600}
+.btn-retry{font-family:inherit;font-size:12px;font-weight:700;border:1px solid var(--border);
+  background:var(--card);color:var(--blue);border-radius:9px;padding:8px 16px;
+  cursor:pointer;transition:all .15s;margin-top:4px}
+.btn-retry:hover{background:var(--aqua-s);border-color:var(--aqua)}
+
+/* ── Banner de alerta ── */
+.alert-banner{display:flex;align-items:flex-start;gap:13px;
+  background:var(--red-bg);border:1px solid rgba(217,76,76,.22);
+  border-left:4px solid var(--red);border-radius:var(--r);
+  padding:14px 18px;margin-bottom:18px}
+.alert-banner svg{width:20px;height:20px;color:var(--red);flex-shrink:0;margin-top:1px}
+.ab-title{font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px}
+.ab-list{list-style:none}
+.ab-list li{font-size:12px;color:var(--text);font-weight:500;line-height:1.65}
+.ab-list li::before{content:"• ";color:var(--red);font-weight:700}
+
+/* ── KPIs ── */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;
+  transition:box-shadow .2s,transform .2s}
+.kpi:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+.kpi::after{content:'';position:absolute;right:-18px;top:-18px;width:68px;height:68px;
+  border-radius:50%;background:var(--aqua-s);opacity:.55}
+.k-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--mute);position:relative;z-index:1}
+.k-val{font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--navy);
+  margin-top:5px;line-height:1;position:relative;z-index:1}
+.k-val.roas-verde{color:var(--green)}
+.k-val.roas-neutro{color:var(--amber)}
+.k-val.roas-rojo{color:var(--red)}
+.k-val.roas-null{color:var(--mute)}
+.k-sub{font-size:10px;color:var(--mute);font-weight:500;margin-top:4px;
+  position:relative;z-index:1;line-height:1.4}
+.k-nota{font-size:9px;color:var(--mute);font-weight:500;margin-top:5px;
+  position:relative;z-index:1;line-height:1.4;opacity:.8}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.period-btns{display:flex;gap:6px}
+.period-btn{font-family:inherit;font-size:12px;font-weight:600;
+  border:1px solid var(--border);background:var(--card);color:var(--blue);
+  border-radius:9px;padding:8px 14px;cursor:pointer;transition:all .15s;min-height:36px}
+.period-btn:hover{background:var(--aqua-s);border-color:var(--aqua)}
+.period-btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.toolbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lbl-periodo{font-size:11px;font-weight:600;color:var(--mute)}
+.btn-refresh{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;
+  background:var(--aqua);color:var(--navy2);font-family:inherit;font-weight:700;
+  font-size:12px;padding:9px 15px;border-radius:10px;min-height:36px;
+  box-shadow:0 4px 12px rgba(79,190,206,.35);transition:.16s}
+.btn-refresh:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(79,190,206,.45)}
+.btn-refresh svg{width:15px;height:15px}
+.btn-refresh.spin svg{animation:rot 1s linear infinite}
+
+/* ── Panel card ── */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:var(--sh-sm);overflow:hidden;margin-bottom:18px}
+.panel-h{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  border-bottom:1px solid var(--border)}
+.ph-ico{width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,#e3f5f8,#cfeef3);
+  display:grid;place-items:center}
+.ph-ico svg{width:14px;height:14px;color:var(--blue);stroke-width:2}
+.panel-h h2{font-size:13.5px;font-weight:700;letter-spacing:-.2px;color:var(--navy)}
+.count-pill{margin-left:auto;font-size:11px;font-weight:700;color:var(--mute);
+  background:var(--bg);padding:3px 10px;border-radius:999px;white-space:nowrap}
+
+/* ── Tabla ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:700px}
+thead th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.4px;color:var(--mute);padding:10px 13px;
+  background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+thead th.num{text-align:right}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:0}
+tbody tr:hover{background:#f8fcfe}
+tbody td{padding:11px 13px;font-size:12.5px;vertical-align:middle}
+tbody td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.camp-name{font-weight:700;color:var(--navy)}
+.camp-sub{font-size:10.5px;font-weight:500;color:var(--mute);margin-top:2px;
+  white-space:normal;max-width:200px}
+
+/* Acento lateral por estado */
+tbody tr.e-rojo  td:first-child{border-left:3px solid var(--red);padding-left:10px}
+tbody tr.e-verde td:first-child{border-left:3px solid var(--green);padding-left:10px}
+tbody tr.e-neutro td:first-child{border-left:3px solid var(--amber);padding-left:10px}
+tbody tr.e-pausada{opacity:.62}
+tbody tr.e-pausada td:first-child{border-left:3px solid var(--mute);padding-left:10px}
+
+/* Badges inline */
+.roas-badge{display:inline-block;padding:3px 9px;border-radius:7px;
+  font-size:12px;font-weight:800;letter-spacing:-.2px;white-space:nowrap}
+.roas-badge.verde{background:var(--green-bg);color:var(--green)}
+.roas-badge.neutro{background:var(--amber-bg);color:var(--amber)}
+.roas-badge.rojo{background:var(--red-bg);color:var(--red)}
+.roas-badge.pausada{background:var(--slate-bg);color:var(--slate)}
+
+.badge-pend{display:inline-block;font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;
+  background:var(--amber-bg);color:var(--amber);
+  border:1px solid rgba(201,138,20,.25);padding:2px 7px;
+  border-radius:6px;margin-left:5px;vertical-align:middle}
+
+.estado-pill{display:inline-block;padding:3px 9px;border-radius:7px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.estado-pill.verde{background:var(--green-bg);color:var(--green)}
+.estado-pill.neutro{background:var(--amber-bg);color:var(--amber)}
+.estado-pill.rojo{background:var(--red-bg);color:var(--red)}
+.estado-pill.pausada{background:var(--slate-bg);color:var(--slate)}
+
+/* ── Gráfico ── */
+.chart-wrap{padding:16px 18px 18px;height:260px;position:relative}
+.chart-no-data{display:flex;align-items:center;justify-content:center;
+  height:200px;font-size:12px;color:var(--mute);font-weight:500;
+  text-align:center;padding:20px;line-height:1.6}
+
+/* ── Pie ── */
+.page-foot{font-size:10.5px;color:var(--mute);font-weight:500;
+  padding:0 2px;margin-top:6px;line-height:1.55}
+
+/* ── Mobile ── */
+@media (max-width:960px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:640px){
+  .wrap{padding:14px 14px 56px}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:10px}
+  .k-val{font-size:21px}
+  .toolbar{flex-direction:column;align-items:flex-start;gap:9px}
+  .toolbar-right{margin-left:0;width:100%;justify-content:space-between}
+  .chart-wrap{height:210px}
+  .panel-h h2{font-size:12.5px}
+}
+@media (max-width:400px){
+  .kpis{grid-template-columns:1fr 1fr;gap:9px}
+  .k-val{font-size:19px}
+  .period-btn{padding:7px 11px;font-size:11.5px}
+}
+@media (hover:none){
+  .kpi:hover{box-shadow:var(--sh-sm);transform:none}
+  .btn-refresh:hover{transform:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="state-wrap">
+    <div class="spinner"></div>
+    <div class="state-msg">Calculando ROAS…</div>
+  </div>
+</div>
+
+<script src="/static/chart-4.4.1.umd.min.js"></script>
+<script>
+'use strict';
+/* Token inyectado server-side. __TOKEN__ es reemplazado antes de servir. */
+const _TOKEN = "__TOKEN__";
+
+let _dias = 30;
+let _chart = null;
+
+/* ── Formato CLP: $1.258.510 ── */
+function clp(n) {
+  if (n == null || n === '' || isNaN(Number(n))) return '—';
+  return '$' + Math.round(Number(n)).toLocaleString('es-CL');
+}
+function num(n) {
+  if (n == null || n === '' || isNaN(Number(n))) return '—';
+  return Math.round(Number(n)).toLocaleString('es-CL');
+}
+function roasStr(r) {
+  if (r == null || isNaN(r)) return '—';
+  return Number(r).toFixed(2) + 'x';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'}) +
+      ' ' + d.toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+  } catch { return iso; }
+}
+
+/* ── Clase semáforo por estado ── */
+function sc(estado) {
+  return {verde:'verde', neutro:'neutro', rojo:'rojo', pausada:'pausada'}[estado] || 'pausada';
+}
+
+/* ── Plugin inline: línea de referencia horizontal en ROAS = 1 ── */
+const _refLinePlugin = {
+  id: 'refLine',
+  afterDraw(chart, _args, opts) {
+    const { ctx, chartArea: ca, scales } = chart;
+    if (!ca || !scales.y) return;
+    const val = (opts && opts.value != null) ? opts.value : 1;
+    const y = scales.y.getPixelForValue(val);
+    if (y < ca.top || y > ca.bottom) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = (opts && opts.color) || '#d94c4c';
+    ctx.lineWidth = (opts && opts.lineWidth) || 1.5;
+    ctx.setLineDash((opts && opts.dash) || [5, 5]);
+    ctx.moveTo(ca.left, y);
+    ctx.lineTo(ca.right, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = (opts && opts.color) || '#d94c4c';
+    ctx.font = '700 10px Montserrat,system-ui,sans-serif';
+    ctx.fillText('break-even', ca.left + 4, y - 5);
+    ctx.restore();
+  }
+};
+
+/* ── Banner de alerta (solo si hay campañas en rojo) ── */
+function buildAlert(alertas, dias) {
+  if (!alertas || !alertas.length) return '';
+  const items = alertas.map(a =>
+    `<li>${a.label}: ROAS ${roasStr(a.roas)} — Gasto ${clp(a.spend)} · Ingreso ${clp(a.ingreso)}</li>`
+  ).join('');
+  return `
+<div class="alert-banner">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"/>
+  </svg>
+  <div>
+    <div class="ab-title">${alertas.length} campaña${alertas.length !== 1 ? 's' : ''} con pérdida — últimos ${dias} días</div>
+    <ul class="ab-list">${items}</ul>
+  </div>
+</div>`;
+}
+
+/* ── Fila de KPIs globales ── */
+function buildKpis(tot, umbrales, nota) {
+  let rClass = 'roas-null', rSub = '';
+  if (tot.roas != null) {
+    if (tot.roas >= umbrales.verde) { rClass = 'roas-verde'; rSub = 'Por encima del objetivo'; }
+    else if (tot.roas < umbrales.rojo) { rClass = 'roas-rojo'; rSub = 'Por debajo del break-even'; }
+    else { rClass = 'roas-neutro'; rSub = 'Entre break-even y objetivo'; }
+  } else {
+    rSub = 'Sin datos suficientes';
+  }
+  return `
+<div class="kpis">
+  <div class="kpi">
+    <div class="k-label">Gasto ${_dias}d</div>
+    <div class="k-val" style="font-size:20px;color:var(--navy)">${clp(tot.spend)}</div>
+    <div class="k-sub">Inversión Meta Ads</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Ingreso atribuido</div>
+    <div class="k-val" style="font-size:20px;color:var(--blue)">${clp(tot.ingreso)}</div>
+    <div class="k-sub">Caja real Medilink</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">ROAS Global</div>
+    <div class="k-val ${rClass}">${roasStr(tot.roas)}</div>
+    <div class="k-sub">${rSub}</div>
+    <div class="k-nota">${nota}</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">CAC Promedio</div>
+    <div class="k-val" style="font-size:20px">${clp(tot.cac)}</div>
+    <div class="k-sub">Costo por atendido</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Atendidos</div>
+    <div class="k-val" style="color:var(--green)">${tot.atendidos != null ? tot.atendidos : '—'}</div>
+    <div class="k-sub">Pacientes con pago real</div>
+  </div>
+</div>`;
+}
+
+/* ── Selector de período + botón actualizar ── */
+function buildToolbar(periodo) {
+  const d = _dias;
+  return `
+<div class="toolbar">
+  <div class="period-btns">
+    <button class="period-btn ${d===7?'active':''}" onclick="loadDias(7)">7 días</button>
+    <button class="period-btn ${d===30?'active':''}" onclick="loadDias(30)">30 días</button>
+    <button class="period-btn ${d===90?'active':''}" onclick="loadDias(90)">90 días</button>
+  </div>
+  <div class="toolbar-right">
+    <span class="lbl-periodo">${periodo.desde} — ${periodo.hasta}</span>
+    <button class="btn-refresh" id="btnRefresh" onclick="doLoad()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M23 4v6h-6M1 20v-6h6"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      </svg>
+      Actualizar
+    </button>
+  </div>
+</div>`;
+}
+
+/* ── Tabla de campañas ── */
+function buildTable(campanas) {
+  const rows = campanas.map(c => {
+    const cl = sc(c.estado);
+    const pendBadge = c.pendiente
+      ? '<span class="badge-pend">pendiente</span>'
+      : '';
+    const roasCell = c.roas != null
+      ? `<span class="roas-badge ${cl}">${roasStr(c.roas)}</span>`
+      : `<span class="roas-badge pausada">—</span>`;
+    return `
+<tr class="e-${cl}">
+  <td>
+    <div class="camp-name">${esc(c.label)}${pendBadge}</div>
+    <div class="camp-sub">${esc(c.sub)}</div>
+  </td>
+  <td class="num">${clp(c.spend)}</td>
+  <td class="num">${num(c.phones)}</td>
+  <td class="num">${num(c.citas)}</td>
+  <td class="num">${num(c.atendidos)}</td>
+  <td class="num">${clp(c.ingreso)}</td>
+  <td class="num">${roasCell}</td>
+  <td class="num">${clp(c.cac)}</td>
+  <td><span class="estado-pill ${cl}">${esc(c.estado)}</span></td>
+</tr>`;
+  }).join('');
+
+  return `
+<div class="panel">
+  <div class="panel-h">
+    <div class="ph-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M7 14l3-3 3 3 5-6"/>
+      </svg>
+    </div>
+    <h2>Campañas · Meta Ads</h2>
+    <span class="count-pill">${campanas.length} campaña${campanas.length !== 1 ? 's' : ''}</span>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Campaña</th>
+          <th class="num">Gasto</th>
+          <th class="num">Leads</th>
+          <th class="num">Citas</th>
+          <th class="num">Atendidos</th>
+          <th class="num">Ingreso</th>
+          <th class="num">ROAS</th>
+          <th class="num">CAC</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+/* ── Gráfico de tendencia ROAS ── */
+function buildChartPanel(serie) {
+  const tenData = serie && serie.length >= 2;
+  return `
+<div class="panel">
+  <div class="panel-h">
+    <div class="ph-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="3" y="4" width="18" height="18" rx="2" stroke-linecap="round"/>
+        <path stroke-linecap="round" d="M16 2v4M8 2v4M3 10h18"/>
+      </svg>
+    </div>
+    <h2>Evolución ROAS global (60 días)</h2>
+  </div>
+  <div class="chart-wrap">
+    ${tenData
+      ? '<canvas id="roasChart"></canvas>'
+      : '<div class="chart-no-data">Aún sin historial suficiente — el snapshot diario se registra a las 05:30.</div>'}
+  </div>
+</div>`;
+}
+
+function initChart(serie) {
+  if (!serie || serie.length < 2) return;
+  const canvas = document.getElementById('roasChart');
+  if (!canvas) return;
+  if (_chart) { _chart.destroy(); _chart = null; }
+
+  const labels = serie.map(s => s.fecha);
+  const values = serie.map(s => (s.roas != null ? Number(s.roas) : null));
+
+  _chart = new Chart(canvas, {
+    type: 'line',
+    plugins: [_refLinePlugin],
+    data: {
+      labels,
+      datasets: [{
+        label: 'ROAS',
+        data: values,
+        borderColor: '#1172AB',
+        backgroundColor: 'rgba(79,190,206,.07)',
+        borderWidth: 2.5,
+        tension: 0.3,
+        fill: true,
+        pointBackgroundColor: '#1172AB',
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        spanGaps: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => 'ROAS: ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) + 'x' : '—'),
+          }
+        },
+        refLine: { value: 1, color: '#d94c4c', lineWidth: 1.5, dash: [5, 5] }
+      },
+      scales: {
+        x: {
+          ticks: {
+            font: { family: 'Montserrat, system-ui, sans-serif', size: 10, weight: '600' },
+            color: '#64798c',
+            maxRotation: 45,
+            maxTicksLimit: 12,
+          },
+          grid: { color: 'rgba(0,0,0,.04)' }
+        },
+        y: {
+          min: 0,
+          ticks: {
+            font: { family: 'Montserrat, system-ui, sans-serif', size: 10, weight: '600' },
+            color: '#64798c',
+            callback: v => v.toFixed(1) + 'x',
+          },
+          grid: { color: 'rgba(0,0,0,.04)' }
+        }
+      }
+    }
+  });
+}
+
+/* ── Pie de página ── */
+function buildFoot(generado) {
+  return `<div class="page-foot">Generado ${fmtDate(generado)} · datos de Meta Ads × caja real Medilink</div>`;
+}
+
+/* ── Escape HTML ── */
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Renderizado completo ── */
+function render(data, serie) {
+  const root = document.getElementById('root');
+  root.innerHTML =
+    buildAlert(data.alertas, data.periodo.dias) +
+    buildKpis(data.totales, data.umbrales, data.cobertura_nota) +
+    buildToolbar(data.periodo) +
+    buildTable(data.campanas) +
+    buildChartPanel(serie) +
+    buildFoot(data.generado);
+
+  if (serie && serie.length >= 2) {
+    requestAnimationFrame(() => initChart(serie));
+  }
+
+  /* Auto-refresh cada 5 min */
+  clearTimeout(window._roasTimer);
+  window._roasTimer = setTimeout(doLoad, 5 * 60 * 1000);
+}
+
+/* ── Estado de carga (spinner dentro del root ya renderizado) ── */
+function showLoading() {
+  document.getElementById('root').innerHTML =
+    '<div class="state-wrap"><div class="spinner"></div>' +
+    '<div class="state-msg">Calculando ROAS…</div></div>';
+}
+
+function showError(msg) {
+  document.getElementById('root').innerHTML =
+    '<div class="state-wrap">' +
+    '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2">' +
+    '<circle cx="12" cy="12" r="10"/>' +
+    '<path stroke-linecap="round" d="M15 9l-6 6M9 9l6 6"/></svg>' +
+    '<div class="state-msg">' + esc(msg) + '</div>' +
+    '<button class="btn-retry" onclick="doLoad()">Reintentar</button></div>';
+}
+
+/* ── Carga principal ── */
+async function doLoad() {
+  const btn = document.getElementById('btnRefresh');
+  if (btn) btn.classList.add('spin');
+
+  try {
+    const [rMain, rHist] = await Promise.all([
+      fetch('/alma/api/roas?token=__TOKEN__&dias=' + _dias),
+      fetch('/alma/api/roas/history?token=__TOKEN__'),
+    ]);
+
+    if (!rMain.ok) throw new Error('Error ' + rMain.status + ' al obtener datos ROAS.');
+    if (!rHist.ok) throw new Error('Error ' + rHist.status + ' al obtener historial.');
+
+    const data = await rMain.json();
+    const hist = await rHist.json();
+
+    render(data, hist.serie || []);
+  } catch (e) {
+    showError('No se pudo cargar el dashboard. ' + (e.message || 'Error desconocido.'));
+  }
+}
+
+function loadDias(d) {
+  _dias = d;
+  showLoading();
+  doLoad();
+}
+
+/* Carga inicial */
+doLoad();
+</script>
+</body>
+</html>
