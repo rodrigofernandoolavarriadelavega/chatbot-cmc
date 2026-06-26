@@ -84,12 +84,13 @@ async def _meta_campaign_spend(since: str, until: str) -> dict[str, dict]:
         "level": "campaign",
         "time_range": json.dumps({"since": since, "until": until}),
         "limit": 100,
-        "access_token": token,
     }
+    # Token por header Bearer, NUNCA en la URL: httpx loggea la URL completa a
+    # nivel INFO → un access_token en query param termina en /var/log/cmc-bot.log.
     url = f"https://graph.facebook.com/v21.0/{acct}/insights"
     try:
         async with httpx.AsyncClient(timeout=20) as cli:
-            r = await cli.get(url, params=params)
+            r = await cli.get(url, params=params, headers={"Authorization": f"Bearer {token}"})
         data = r.json()
     except Exception as e:  # noqa: BLE001
         log.error("ROAS: fallo Meta insights: %s", e)
