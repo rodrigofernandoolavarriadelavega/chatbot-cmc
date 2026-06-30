@@ -4295,16 +4295,46 @@ def set_offer_estado(offer_id: int, estado: str, *, id_cita: str | None = None) 
 
 
 def expire_stale_offers() -> int:
-    """Vence holds 'apartado' cuyo TTL pasó sin que recepción/auto confirmara, y
-    ofertas 'enviada' del mismo slot que quedaron colgadas. Devuelve cuántas venció.
-    Idempotente — lo llama el cron."""
+    """Vence ofertas que ya no deben bloquear al paciente. Devuelve cuántas venció.
+    Idempotente — lo llama el cron (job de detección de cancelaciones, frecuente).
+
+      - holds 'apartado' cuyo TTL (expires_at) pasó sin confirmación de recepción/auto.
+      - invitaciones 'enviada' COLGADAS: su slot ya pasó (fecha < hoy) o llevan
+        >3 días sin respuesta. Vencerlas LIBERA al paciente para que el cron de
+        waitlist vuelva a ofrecerle. Sin esto, una invitación ignorada lo dejaría
+        bloqueado para siempre (silent drop) — es lo que hace seguro el candado
+        anti-doble-mensaje de phones_with_open_offers()."""
     with db() as conn:
         cur = conn.execute(
             "UPDATE waitlist_offers SET estado='expirada', resolved_at=datetime('now') "
-            "WHERE estado='apartado' AND expires_at IS NOT NULL AND expires_at < datetime('now')")
+            "WHERE (estado='apartado' AND expires_at IS NOT NULL AND expires_at < datetime('now')) "
+            "   OR (estado='enviada' AND (fecha < date('now') "
+            "        OR created_at < datetime('now', '-3 days')))")
         n = cur.rowcount or 0
         conn.commit()
         return n
+
+
+# Estados de oferta que indican una conversación de cupo VIVA con el paciente:
+# mientras tenga una oferta en uno de estos estados, NI el cron de waitlist (07:00)
+# NI un nuevo fan-out de Fase 4 deben volver a contactarlo (candado anti-doble-mensaje).
+# Las ofertas muertas NO bloquean: 'confirmada' ya cerró con cita (lo cubren
+# notified_at + el chequeo "ya tiene cita" del cron), y 'perdida'/'expirada'/'cancelada'
+# devuelven al paciente al pool. La frescura la garantiza expire_stale_offers().
+_OFFER_BLOCKING_STATES = ("enviada", "apartado", "recepcion")
+
+
+def phones_with_open_offers() -> set[str]:
+    """Teléfonos con una oferta de cupo VIVA (ver _OFFER_BLOCKING_STATES). Es la
+    fuente única ('memoria común') del candado anti-doble-mensaje que comparten el
+    cron de waitlist y el fan-out por evento de Fase 4. Llamar UNA vez por corrida
+    y filtrar en memoria — evita un query por candidato."""
+    placeholders = ",".join("?" for _ in _OFFER_BLOCKING_STATES)
+    with db() as conn:
+        rows = conn.execute(
+            f"SELECT DISTINCT phone FROM waitlist_offers WHERE estado IN ({placeholders})",
+            _OFFER_BLOCKING_STATES).fetchall()
+        return {r["phone"] for r in rows if r["phone"]}
 
 
 def get_offers_pendientes_recepcion(limit: int = 100) -> list[dict]:

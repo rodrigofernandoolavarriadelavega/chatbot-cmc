@@ -54,12 +54,15 @@ def _esp_canonical(s: str) -> str:
 
 # ── PASO 1+2: cancelación → match de candidatos compatibles ──────────────────
 
-def _match_candidatos(especialidad: str, id_prof, *, excluir_phone: str = "") -> list[dict]:
+def _match_candidatos(especialidad: str, id_prof, *, excluir_phone: str = "",
+                      excluir_phones: set | None = None) -> list[dict]:
     """Candidatos de la lista de espera compatibles con un cupo liberado, FIFO.
 
     Compatible = misma especialidad (canónica) Y (sin profesional preferido O el
-    preferido es justo el del cupo). Excluye a quien acaba de cancelar."""
+    preferido es justo el del cupo). Excluye a quien acaba de cancelar y a quien ya
+    tiene una oferta de cupo VIVA (excluir_phones) — candado anti-doble-mensaje."""
     from session import get_waitlist_pending
+    excluir_phones = excluir_phones or set()
     esp_canon = _esp_canonical(especialidad)
     out = []
     for row in get_waitlist_pending():  # ya viene FIFO (created_at ASC)
@@ -70,6 +73,8 @@ def _match_candidatos(especialidad: str, id_prof, *, excluir_phone: str = "") ->
             continue  # quiere otro profesional específico
         if excluir_phone and row.get("phone") == excluir_phone:
             continue
+        if row.get("phone") in excluir_phones:
+            continue  # ya tiene una oferta de cupo viva — no lo invites de nuevo
         out.append(row)
     return out
 
@@ -98,7 +103,16 @@ async def fill_freed_slot(slot: dict, *, send_fn=None, top_n: int | None = None)
     if slot_has_winner(slot_key):
         return {"ok": True, "slot_key": slot_key, "invitados": 0, "motivo": "ya tiene ganador"}
 
-    candidatos = _match_candidatos(esp, id_prof, excluir_phone=slot.get("phone_cancelador", ""))
+    # Candado anti-doble-mensaje: excluye a quien ya tiene una oferta de cupo viva
+    # (de otra cancelación o del cron) — fail-open si la consulta falla.
+    try:
+        from session import phones_with_open_offers
+        _busy = phones_with_open_offers()
+    except Exception:
+        _busy = set()
+    candidatos = _match_candidatos(esp, id_prof,
+                                   excluir_phone=slot.get("phone_cancelador", ""),
+                                   excluir_phones=_busy)
     n = top_n if top_n is not None else TOP_N_INVITADOS
     elegidos = candidatos[:max(0, n)]
     if not elegidos:

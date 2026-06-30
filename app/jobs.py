@@ -1814,6 +1814,17 @@ async def _job_waitlist_check():
     # a UNA sola persona por corrida. Las que no alcancen quedan pendientes
     # para la próxima ejecución del cron diario.
     _slots_consumidos_run = {}
+    # Candado anti-doble-mensaje (cron ↔ Fase 4): no le ofrezcas un cupo a quien ya
+    # tiene una oferta de cupo VIVA pendiente de respuesta (invitada/apartada/en
+    # recepción). Sin esto, una invitación de Fase 4 sin aceptar haría que este cron
+    # le mande OTRO cupo al día siguiente. expire_stale_offers() (job de cancelaciones)
+    # garantiza que una oferta ignorada no lo bloquee para siempre. Se lee UNA vez.
+    try:
+        from session import phones_with_open_offers
+        _con_oferta_viva = phones_with_open_offers()
+    except Exception as _e_oo:
+        log.warning("waitlist_check: phones_with_open_offers falló (sigo sin candado): %s", _e_oo)
+        _con_oferta_viva = set()
     for row in pendientes:
         wl_id = row["id"]
         phone_p = row["phone"]
@@ -1821,6 +1832,14 @@ async def _job_waitlist_check():
         id_prof_pref = row.get("id_prof_pref")
         nombre = row.get("nombre") or ""
         rut_p = (row.get("rut") or "").strip()
+
+        # Candado anti-doble-mensaje: si ya tiene una oferta de cupo viva, no lo
+        # contactamos de nuevo (lo cubre Fase 4 hasta que responda o expire).
+        if phone_p in _con_oferta_viva:
+            log_event(phone_p, "waitlist_skip_oferta_viva",
+                      {"waitlist_id": wl_id, "especialidad": esp})
+            log.info("waitlist_check: skip wl_id=%d (ya tiene oferta de cupo viva)", wl_id)
+            continue
 
         # Traumatología: SÍ se acumulan pacientes en la lista (por si pronto hay
         # traumatólogo), pero NO se notifica "se liberó un cupo" — hoy no hay
