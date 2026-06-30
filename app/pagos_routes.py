@@ -103,7 +103,7 @@ def _require_admin_dep(request: Request,
     from config import ADMIN_TOKEN
     from admin_routes import _verify_cookie
 
-    auth_header = request.headers.get("authorization", "")
+    auth_header = request.headers.get("authorization", "") if request is not None else ""
     if auth_header.lower().startswith("bearer "):
         tk = auth_header.split(None, 1)[1].strip()
         if _hmac.compare_digest(tk, ADMIN_TOKEN):

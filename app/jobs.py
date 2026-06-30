@@ -1121,6 +1121,22 @@ async def _job_bi_sync_intradia():
         log.warning("bi_sync_intradia fallo: %s", e)
 
 
+async def _job_pagos_prellenar_intradia():
+    """Mantiene la tabla pagos_cmc (panel /alma#pagos) SIEMPRE completa: trae todas
+    las citas del día desde Medilink (paginadas) y rellena RUT/prestación/monto.
+    Así cualquier recarga del panel ya muestra todos los agendados con su RUT, sin
+    depender de que alguien apriete 'Actualizar desde Medilink'. Idempotente:
+    nunca pisa filas con cobro/bloqueadas (solo crea faltantes y rellena huecos)."""
+    from pagos_routes import prellenar_pagos
+    from config import ADMIN_TOKEN
+    try:
+        # request=None: _require_admin_dep acepta el token directo (guard server-side).
+        r = await prellenar_pagos(fecha=None, token=ADMIN_TOKEN, cmc_session=None, request=None)
+        log.info("pagos_prellenar_intradia: %s", r)
+    except Exception as e:
+        log.warning("pagos_prellenar_intradia fallo: %s", e)
+
+
 async def _job_repasada_historica():
     """Barrido HISTÓRICO completo (semanal): corre la repasada sobre toda la caja
     (desde 2024) para cazar errores de atribución viejos que quedan fuera de la
