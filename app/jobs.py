@@ -2807,7 +2807,15 @@ async def _job_sync_citas_recepcion():
     from datetime import date, timedelta as _td
 
     hoy = date.today()
-    fechas = [(hoy + _td(days=d)).isoformat() for d in range(1, 4)]
+    # Semana completa por delante (+1..+7): la "base de datos de la agenda de la
+    # semana" que se refresca cada noche. range(1,4) cubría solo 24h/48h; con 7
+    # días la tabla queda lista para toda la semana (y da redundancia si una noche
+    # de sync falla). Corre off-peak (05:30 CLT) para no competir con el bot.
+    fechas = [(hoy + _td(days=d)).isoformat() for d in range(1, 8)]
+
+    # Caché de celular por id_paciente dentro de esta corrida: con 7 días un mismo
+    # paciente aparece en varias citas → evita re-pedir su ficha cada vez.
+    _phone_cache: dict[int, tuple[str | None, str]] = {}
 
     _HEADERS = {
         "Authorization": f"Token {MEDILINK_TOKEN}",
@@ -2865,7 +2873,24 @@ async def _job_sync_citas_recepcion():
                     if not id_pac:
                         continue
 
-                    # Resolver celular del paciente vía /pacientes/{id}
+                    # Resolver celular del paciente vía /pacientes/{id} (cacheado
+                    # por corrida: el mismo paciente puede tener varias citas en la
+                    # semana → una sola consulta de ficha).
+                    if id_pac in _phone_cache:
+                        phone_resuelto, phone_source = _phone_cache[id_pac]
+                        citas_a_insertar.append({
+                            "id_cita_medilink": c["id"],
+                            "id_profesional":   id_prof,
+                            "id_paciente":      id_pac,
+                            "paciente_nombre":  (c.get("nombre_paciente") or "").strip(),
+                            "especialidad":     especialidad,
+                            "profesional":      prof_nombre,
+                            "fecha":            fecha,
+                            "hora":             (c.get("hora_inicio") or "")[:5],
+                            "phone":            phone_resuelto,
+                            "phone_source":     phone_source,
+                        })
+                        continue
                     phone_resuelto = None
                     phone_source   = "sin_celular"
                     try:
@@ -2902,6 +2927,7 @@ async def _job_sync_citas_recepcion():
 
                     await asyncio.sleep(0.5)  # anti-429 entre llamadas a /pacientes
 
+                    _phone_cache[id_pac] = (phone_resuelto, phone_source)
                     citas_a_insertar.append({
                         "id_cita_medilink": c["id"],
                         "id_profesional":   id_prof,

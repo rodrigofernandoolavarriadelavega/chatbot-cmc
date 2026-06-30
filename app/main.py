@@ -393,7 +393,7 @@ async def lifespan(app: FastAPI):
     # Con RECORDATORIOS_RECEPCION_ENABLED=false (default) termina inmediatamente.
     scheduler.add_job(
         _job_sync_citas_recepcion,
-        CronTrigger(hour=8, minute=0, timezone=_CLT),
+        CronTrigger(hour=5, minute=30, timezone=_CLT),
         id="sync_citas_recepcion",
         replace_existing=True,
         misfire_grace_time=3600,
