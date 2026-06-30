@@ -1667,6 +1667,19 @@ async def _job_cierre_caja_diario():
         log.error("_job_cierre_caja_diario falló: %s", e)
 
 
+async def _job_agenda_dia():
+    """Cada mañana (07:45 CLT) empuja al dueño la agenda del día: cupos totales,
+    ocupados y libres por profesional. Se espeja a Telegram vía send_whatsapp.
+    Reusa telegram_console.reporte_agenda (rate-limit-safe)."""
+    try:
+        from telegram_console import reporte_agenda
+        txt, _btns = await reporte_agenda()
+        if txt and ADMIN_ALERT_PHONE:
+            await send_whatsapp(ADMIN_ALERT_PHONE, txt)
+    except Exception as e:
+        log.error("_job_agenda_dia falló: %s", e)
+
+
 async def _job_medilink_watchdog_inner():
     if not is_medilink_down():
         return

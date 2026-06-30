@@ -53,7 +53,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
                   _job_medilink_watchdog, _job_claude_watchdog, _job_cierre_caja_diario,
-                  _job_admin_status_report,
+                  _job_agenda_dia, _job_admin_status_report,
                   _job_cleanup_stuck_sessions,
                   _job_waitlist_check,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
@@ -644,6 +644,13 @@ async def lifespan(app: FastAPI):
         _job_cierre_caja_diario,
         CronTrigger(hour=9, minute=5, timezone=_CLT),
         id="cierre_caja_diario",
+        replace_existing=True,
+    )
+    # Agenda del día: 07:45 CLT empuja cupos/ocupados/libres por profesional
+    scheduler.add_job(
+        _job_agenda_dia,
+        CronTrigger(hour=7, minute=45, timezone=_CLT),
+        id="agenda_dia",
         replace_existing=True,
     )
     # Lista de espera: diario a las 07:00 CLT

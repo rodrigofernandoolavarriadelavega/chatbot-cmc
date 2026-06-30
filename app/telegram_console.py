@@ -11,6 +11,7 @@ Fuente de datos: bi_pagos_caja (caja real Medilink), vía bi_sync._bi_conn().
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from datetime import date, datetime, timedelta
@@ -134,9 +135,40 @@ def reporte_comparador() -> tuple[str, list]:
     return "\n".join(txt), [[{"text": "📊 Abrir Comparador", "url": _URL_COMPARADOR}]]
 
 
+async def reporte_agenda() -> tuple[str, list]:
+    """Agenda del día por profesional: cupos totales, ocupados y libres.
+    Reusa /api/panel-dia/operativo (rate-limit-safe: capacidad por percentil
+    histórico + caché nocturna; NO hace fan-out a Medilink)."""
+    try:
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.get("http://127.0.0.1:8001/api/panel-dia/operativo",
+                            params={"token": "cmc_admin_2026", "auto": 1})
+        data = r.json()
+    except Exception as e:  # noqa: BLE001
+        return "No pude leer la agenda del día (%s)." % str(e)[:80], []
+    profs = data.get("profesionales", []) or []
+    activos = [p for p in profs if (p.get("cap") or p.get("ocup") or p.get("agenda"))]
+    if not activos:
+        return "📋 Hoy no hay profesionales con agenda cargada.", []
+    activos.sort(key=lambda p: int(p.get("ocup") or 0), reverse=True)
+    lines = ["📋 *Agenda de hoy* — %s" % data.get("fecha", ""), ""]
+    tcap = tocup = 0
+    for p in activos:
+        cap = int(p.get("cap") or 0); ocup = int(p.get("ocup") or 0)
+        libre = max(0, cap - ocup)
+        tcap += cap; tocup += ocup
+        ic = "🟢" if libre > 0 else "🔴"
+        lines.append("%s *%s* — %d cupos · %d ocup · *%d libres*"
+                     % (ic, p.get("nombre", "?"), cap, ocup, libre))
+    lines += ["", "Σ *%d cupos* · %d ocupados · *%d libres*" % (tcap, tocup, max(0, tcap - tocup))]
+    return "\n".join(lines), [[{"text": "📅 Abrir Panel del Día",
+                                "url": "https://agentecmc.cl/alma/panel-dia?token=cmc_admin_2026"}]]
+
+
 def menu() -> tuple[str, list]:
     txt = ("🤖 *Consola CMC* — tu asistente de dueño\n\n"
            "*Comandos* (instantáneos, gratis):\n"
+           "• /agenda — cupos por profesional hoy (totales/ocupados/libres)\n"
            "• /hoy — caja del día\n"
            "• /mes — DB mensual + top profesionales\n"
            "• /comparador — variación vs mes anterior\n"
@@ -207,6 +239,7 @@ async def _send(text: str, buttons: list | None = None) -> bool:
 
 _COMANDOS = {
     "ayuda": menu, "start": menu, "menu": menu, "help": menu,
+    "agenda": reporte_agenda, "cupos": reporte_agenda,
     "hoy": reporte_hoy, "caja": reporte_hoy,
     "mes": reporte_mes, "mensual": reporte_mes,
     "comparador": reporte_comparador, "comparacion": reporte_comparador,
@@ -227,7 +260,10 @@ async def handle_update(update: dict) -> None:
         cmd = text.lower().lstrip("/").split()[0] if text else ""
         fn = _COMANDOS.get(cmd)
         if fn is not None:
-            txt, btns = fn()
+            res = fn()
+            if asyncio.iscoroutine(res):
+                res = await res
+            txt, btns = res
             await _send(txt, btns)
         else:
             await _send(await _ai_answer(text))
