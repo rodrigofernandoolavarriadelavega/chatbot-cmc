@@ -244,14 +244,24 @@ def _dental_enviados_hoy() -> int:
 
 
 def ya_enviado_dental_winback_hoy(phone: str) -> bool:
-    """Rate limit per-phone: máximo 1 winback dental por día."""
+    """Rate limit per-phone: máximo 1 winback dental por día.
+
+    Usa normalización de 9 dígitos para resistir formatos mixtos — la comparación
+    cruda falla cuando dental_winback_envios guarda '56XXXXXXXXX' y el candidato
+    viene de la vista como '+56XXXXXXXXX'.
+    """
     hoy = date.today().isoformat()
     try:
         with bi_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT 1 FROM bi.dental_winback_envios "
-                    "WHERE telefono = %s AND DATE(enviado_at) = %s LIMIT 1",
+                    """
+                    SELECT 1 FROM bi.dental_winback_envios
+                    WHERE RIGHT(REGEXP_REPLACE(telefono::text,'[^0-9]','','g'), 9)
+                        = RIGHT(REGEXP_REPLACE(%s::text,'[^0-9]','','g'), 9)
+                      AND DATE(enviado_at AT TIME ZONE 'America/Santiago') = %s
+                    LIMIT 1
+                    """,
                     (phone, hoy),
                 )
                 return cur.fetchone() is not None
@@ -296,20 +306,23 @@ def get_candidatos_dental(subcohorte: str, limite: int = 100) -> list[dict]:
                     INNER JOIN bi.dental_consent mc
                         -- Normalización: compara últimos 9 dígitos para resistir formatos
                         -- distintos del mismo número (+56/56/9XXXXXXXX).
-                        ON RIGHT(REGEXP_REPLACE(mc.phone,   '[^0-9]', '', 'g'), 9)
-                         = RIGHT(REGEXP_REPLACE(dc.telefono,'[^0-9]', '', 'g'), 9)
+                        -- BUG-2026-06-29: telefono es VARCHAR(100) en dim_paciente.
+                        -- REGEXP_REPLACE sobre VARCHAR devuelve VARCHAR(n) y RIGHT()
+                        -- no casa con TEXT de dental_consent → 0 matches sin ::text.
+                        ON RIGHT(REGEXP_REPLACE(mc.phone::text,   '[^0-9]', '', 'g'), 9)
+                         = RIGHT(REGEXP_REPLACE(dc.telefono::text,'[^0-9]', '', 'g'), 9)
                        AND mc.status = 'accepted'
                     WHERE dc.subcohorte = %s
                       AND dc.ultima_especialidad IS NOT NULL
                       AND TRIM(dc.ultima_especialidad) <> ''
                       AND NOT EXISTS (
                           SELECT 1 FROM bi.dental_winback_envios dwe
-                          -- Misma normalización en la exclusión de 90 días
-                          WHERE RIGHT(REGEXP_REPLACE(dwe.telefono,'[^0-9]','','g'), 9)
-                              = RIGHT(REGEXP_REPLACE(dc.telefono, '[^0-9]','','g'), 9)
+                          -- Misma normalización + ::text en la exclusión de 90 días
+                          WHERE RIGHT(REGEXP_REPLACE(dwe.telefono::text,'[^0-9]','','g'), 9)
+                              = RIGHT(REGEXP_REPLACE(dc.telefono::text,'[^0-9]','','g'), 9)
                             AND dwe.enviado_at > NOW() - INTERVAL '90 days'
                       )
-                    ORDER BY dc.dias_inactivo ASC
+                    ORDER BY dc.dias_inactivo ASC, dc.paciente_id ASC
                     LIMIT %s
                     """,
                     (subcohorte, limite),
@@ -562,6 +575,17 @@ async def send_dental_winback(candidato: dict) -> bool:
         log.warning("dental_winback: telefono inválido para paciente_id=%s", paciente_id)
         return False
 
+    # Guard idempotente: no enviar si ya hay un envío hoy (normalización canónica).
+    # Cobertura adicional al dedup intra-batch de run_dental_batch — protege contra
+    # llamadas directas a esta función y contra duplicados de dim_paciente que hayan
+    # sobrevivido otros filtros (caso real: ids 81/82, 2026-06-29).
+    if ya_enviado_dental_winback_hoy(telefono):
+        log.info(
+            "dental_winback: skip_ya_enviado_hoy paciente_id=%s phone=...%s",
+            paciente_id, telefono[-4:],
+        )
+        return False
+
     if phone_in_dental_opt_out(telefono):
         log.info("dental_winback: skip opt-out paciente_id=%s phone=...%s", paciente_id, telefono[-4:])
         return False
@@ -738,7 +762,25 @@ async def run_dental_batch(subcohorte: str) -> dict:
     candidatos = get_candidatos_dental(subcohorte=subcohorte, limite=restante * 2)
     candidatos = [c for c in candidatos
                   if (c.get("telefono") or "").lstrip("+") not in con_cita]
-    candidatos = candidatos[:restante]
+
+    # BUG-2026-06-29: la vista puede tener el mismo teléfono con dos paciente_id
+    # distintos (duplicados de dim_paciente). Sin dedup, el batch envía 2 mensajes
+    # al mismo número en la misma corrida (caso real: ids 81/82 en 31s).
+    # Dedup por sufijo canónico de 9 dígitos — primer registro gana.
+    _seen_tel: set[str] = set()
+    candidatos_dedup: list[dict] = []
+    for _c in candidatos:
+        _tel_raw = (_c.get("telefono") or "").strip()
+        _tel_9 = "".join(d for d in _tel_raw if d.isdigit())[-9:]
+        if _tel_9 in _seen_tel:
+            log.info(
+                "dental_winback: dedup intra-batch skip phone=...%s subcohorte=%s",
+                _tel_9[-4:], subcohorte,
+            )
+            continue
+        _seen_tel.add(_tel_9)
+        candidatos_dedup.append(_c)
+    candidatos = candidatos_dedup[:restante]
 
     log.info("dental_winback: %d candidatos elegibles subcohorte=%s", len(candidatos), subcohorte)
 
