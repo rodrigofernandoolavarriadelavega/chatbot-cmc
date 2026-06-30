@@ -1708,7 +1708,7 @@ async def prellenar_pagos(
 
     import asyncio
     from medilink import (
-        _get_shared_client, _q, _safe_json, HEADERS,
+        _get_shared_client, _get, _q, _safe_json, HEADERS,
         PROFESIONALES,
     )
     from config import MEDILINK_BASE_URL
@@ -1736,7 +1736,9 @@ async def prellenar_pagos(
     })}
     for _ in range(50):  # tope duro anti-bucle (50 pág × 50 = 2.500 citas/día)
         try:
-            r = await client.get(url, params=params, headers=HEADERS, timeout=15)
+            # _get serializa con semáforo y reintenta 429 con backoff (3/6/12s):
+            # sin esto la 2ª página suele pegar rate limit y abortaba el sync.
+            r = await _get(client, url, params=params, headers=HEADERS, timeout=15)
         except Exception as e:
             log.error("prellenar_pagos: error GET /citas fecha=%s: %s", fecha_iso, e)
             raise HTTPException(502, "Error al contactar Medilink")
