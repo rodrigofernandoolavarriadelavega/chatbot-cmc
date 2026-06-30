@@ -81,7 +81,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_dental_winback,
                   _job_crosssell_post_dental_ortodoncia,
                   _job_sync_citas_recepcion,
-                  _job_demanda_semanal)
+                  _job_demanda_semanal,
+                  _job_watchdog_entrega)
 import admin_routes
 import portal_routes
 
@@ -806,6 +807,15 @@ async def lifespan(app: FastAPI):
         _job_watchdog_blast,
         CronTrigger(hour="*/4", minute=15, timezone=_CLT),
         id="watchdog_blast",
+        replace_existing=True,
+    )
+    # Watchdog entrega real de templates: cada 30 min a los :20/:50
+    # Detecta apagones de facturación Meta (error 131042). Canal email primario
+    # (no depende de templates WA). Histéresis simétrica — alerta solo al cambiar estado.
+    scheduler.add_job(
+        _job_watchdog_entrega,
+        CronTrigger(minute="20,50", timezone=_CLT),
+        id="watchdog_entrega",
         replace_existing=True,
     )
     # Dental win-back: L-V 10:35 CLT — campanas dentales focalizadas.
@@ -8751,6 +8761,52 @@ def seo_cruce_pacientes_api(prof_a: int, prof_b: int, periodo: str = "todos",
         "total_atenciones": total_citas,
         "monto_total_estimado": total_monto,
     }
+
+
+@app.get("/api/watchdog/entrega-status")
+def api_watchdog_entrega_status(
+    token: str | None = Query(None),
+    cmc_session: str | None = Cookie(None),
+):
+    """Estado actual del watchdog de entrega real de templates WhatsApp.
+
+    Lee /var/log/cmc-entrega-watchdog-state.json (escrito por _job_watchdog_entrega
+    cada 30 min). Gateado por OLACORE_TOKEN — solo el dueño.
+
+    Respuesta JSON:
+      is_bad (bool): hay apagón activo
+      total, delivered, delivered_pct, failed, err_131042: métricas de la última ventana
+      ventana_h: horas de la ventana de análisis
+      ts: ISO timestamp de la última evaluación
+      last_alert_ts, last_recovery_ts: floats Unix de los últimos eventos
+    """
+    import hmac as _hm_we
+    import json as _json_we
+    from pathlib import Path
+    eff = token or cmc_session or ""
+    if not (eff and OLACORE_TOKEN and _hm_we.compare_digest(eff, OLACORE_TOKEN)):
+        raise HTTPException(404, "No encontrado")
+    _state_file = Path("/var/log/cmc-entrega-watchdog-state.json")
+    if not _state_file.exists():
+        # Aún no corrió el primer ciclo
+        return {
+            "is_bad": False,
+            "total": 0,
+            "delivered": 0,
+            "delivered_pct": 100.0,
+            "failed": 0,
+            "err_131042": 0,
+            "ventana_h": 6,
+            "ts": None,
+            "last_alert_ts": 0.0,
+            "last_recovery_ts": 0.0,
+            "no_data": True,
+        }
+    try:
+        return _json_we.loads(_state_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        log.warning("api_watchdog_entrega_status: error leyendo state file: %s", e)
+        raise HTTPException(500, "Error leyendo estado del watchdog")
 
 
 @app.get("/proyectos2026", response_class=HTMLResponse)

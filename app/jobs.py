@@ -3563,6 +3563,341 @@ async def _job_watchdog_blast() -> None:
             log.warning("_job_watchdog_blast: no pudo escribir alert log: %s", e)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Watchdog de entrega real de templates WhatsApp
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_watchdog_email(subject: str, body_text: str, is_alert: bool) -> str:
+    """HTML mínimo para alerta operacional del watchdog de entrega WA.
+    No usa CDN — estilos inline completos."""
+    _NAVY = "#0F3F68"
+    _AQUA = "#4FBECE"
+    _BG = "#f4f7fa"
+    _INK = "#13202e"
+    _MUTED = "#64798c"
+    _header_bg = "#dc2626" if is_alert else "#16a34a"
+    _header_label = "ALERTA OPERACIONAL" if is_alert else "SISTEMA NORMALIZADO"
+    import html as _html_mod
+    body_html = "".join(
+        f'<p style="margin:0 0 14px;font-size:14px;line-height:1.65;color:{_INK}">'
+        f'{_html_mod.escape(para.strip())}</p>'
+        for para in body_text.split("\n\n") if para.strip()
+    )
+    return f"""<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{_html_mod.escape(subject)}</title></head>
+<body style="margin:0;padding:0;background:{_BG}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+       style="background:{_BG}">
+<tr><td align="center" style="padding:24px 12px">
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0"
+         style="width:560px;max-width:100%;background:#fff;border-radius:14px;
+                overflow:hidden;font-family:Arial,Helvetica,sans-serif;
+                box-shadow:0 4px 18px rgba(15,63,104,.08)">
+    <tr><td style="background:{_NAVY};padding:18px 24px 14px">
+      <div style="color:{_AQUA};font-size:11px;font-weight:bold;letter-spacing:.08em;
+                  text-transform:uppercase;margin-bottom:3px">Centro Médico Carampangue</div>
+      <div style="display:inline-block;background:{_header_bg};color:#fff;
+                  font-size:11px;font-weight:bold;letter-spacing:.06em;
+                  text-transform:uppercase;padding:3px 9px;border-radius:5px;
+                  margin-bottom:8px">{_header_label}</div>
+      <div style="color:#fff;font-size:17px;font-weight:bold;line-height:1.3">
+        {_html_mod.escape(subject)}</div>
+    </td></tr>
+    <tr><td style="padding:24px 24px 10px">{body_html}</td></tr>
+    <tr><td style="padding:16px 24px;background:#f0f5f9;border-top:1px solid #e6edf3">
+      <p style="margin:0;font-size:11px;line-height:1.5;color:{_MUTED}">
+        Este es un correo operacional automático del sistema CMC — no responder.<br>
+        Centro Médico Carampangue · agentecmc.cl · WhatsApp +56 9 6661 0737
+      </p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>"""
+
+
+async def _job_watchdog_entrega() -> None:
+    """Cada 30 min: vigila la tasa de entrega real de templates via message_statuses.
+
+    Detecta apagones de facturación Meta (error 131042 = Business eligibility
+    payment issue): Meta acepta el POST (HTTP 200) pero luego marca la entrega
+    como 'failed' con code=131042 vía webhook asíncrono. Sin este watchdog el
+    apagón pasa desapercibido indefinidamente (el bot solo mide el 200 inicial).
+
+    Umbrales (ventana 6h, mínimo 8 mensajes):
+      - Alerta si delivered_pct < 50% O errores 131042 >= 5
+    Histéresis simétrica (sin zona muerta):
+      - Alerta UNA vez al entrar en estado malo (transición bueno→malo)
+      - Alerta UNA vez al recuperarse (transición malo→bueno)
+      - Estado persistido en /var/log/cmc-entrega-watchdog-state.json
+
+    Canales (en orden, sin depender de templates WA — justo cuando hay que
+    alertar, los templates pueden estar caídos):
+      1. Email vía Resend/SMTP directo (bypass del gate EMAIL_SENDING_ENABLED)
+         Destinatario: variable ALERT_EMAIL en .env
+      2. Banner: endpoint GET /api/watchdog/entrega-status lee el state file
+      3. Log CRITICAL / INFO con texto claro
+      4. WA free-form al owner SOLO si ventana 24h abierta (best-effort)
+    """
+    import os as _os_wd
+    import json as _json_wd
+    from datetime import datetime, timedelta
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    _STATE_FILE = Path("/var/log/cmc-entrega-watchdog-state.json")
+    _VENTANA_H = 6
+    _MIN_MUESTRA = 8
+    _UMBRAL_DELIVERED_PCT = 50.0
+    _UMBRAL_131042 = 5
+
+    _NOW = datetime.now(ZoneInfo("America/Santiago"))
+    _ts_label = _NOW.strftime("%Y-%m-%d %H:%M CLT")
+
+    # ── 1. Leer estado previo (histéresis) ───────────────────────────────────
+    prev_state: dict = {"is_bad": False, "last_alert_ts": 0.0, "last_recovery_ts": 0.0}
+    try:
+        if _STATE_FILE.exists():
+            prev_state = _json_wd.loads(_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception as e:
+        log.warning("_job_watchdog_entrega: no pudo leer state file: %s", e)
+
+    fue_bad = bool(prev_state.get("is_bad", False))
+
+    # ── 2. Consultar message_statuses últimas N horas ─────────────────────────
+    # ts se almacena como TEXT en formato SQLite datetime (UTC). Usamos
+    # datetime('now', '-Xhours') para la comparación (mismo patrón que
+    # get_message_status_summary en session.py).
+    total = delivered = failed = err_131042 = 0
+    try:
+        from session import db as _db_wd
+        with _db_wd() as conn:
+            rows = conn.execute(
+                """
+                SELECT status, error_code, COUNT(*) AS cnt
+                FROM message_statuses
+                WHERE ts >= datetime('now', ?)
+                GROUP BY status, error_code
+                """,
+                (f"-{_VENTANA_H} hours",),
+            ).fetchall()
+        for row in rows:
+            cnt = int(row["cnt"])
+            status = (row["status"] or "").lower()
+            err_code = str(row["error_code"] or "")
+            total += cnt
+            if status in ("delivered", "read"):
+                delivered += cnt
+            elif status == "failed":
+                failed += cnt
+                if err_code == "131042":
+                    err_131042 += cnt
+    except Exception as e:
+        log.error("_job_watchdog_entrega: error consultando message_statuses: %s", e)
+        return
+
+    delivered_pct = round(delivered / total * 100, 1) if total > 0 else 100.0
+
+    log.info(
+        "_job_watchdog_entrega: ventana=%dh total=%d delivered=%d(%.1f%%) "
+        "failed=%d err_131042=%d",
+        _VENTANA_H, total, delivered, delivered_pct, failed, err_131042,
+    )
+
+    # ── 3. Evaluar condición de apagón ───────────────────────────────────────
+    muestra_suficiente = total >= _MIN_MUESTRA
+    is_bad = muestra_suficiente and (
+        delivered_pct < _UMBRAL_DELIVERED_PCT
+        or err_131042 >= _UMBRAL_131042
+    )
+
+    # ── 4. Persistir estado (endpoint /api/watchdog/entrega-status lo lee) ───
+    new_state: dict = {
+        "is_bad": is_bad,
+        "total": total,
+        "delivered": delivered,
+        "delivered_pct": delivered_pct,
+        "failed": failed,
+        "err_131042": err_131042,
+        "ventana_h": _VENTANA_H,
+        "ts": _NOW.isoformat(),
+        "last_alert_ts": prev_state.get("last_alert_ts", 0.0),
+        "last_recovery_ts": prev_state.get("last_recovery_ts", 0.0),
+    }
+
+    # ── 5. Histéresis simétrica: actuar solo en transición de estado ─────────
+    # (Replica el patrón corregido de _job_watchdog_blast: umbral de entrada ==
+    # umbral de salida → sin zona muerta. Bug histórico 2026-05-28→06-08 documentado.)
+    transicion_a_malo = is_bad and not fue_bad
+    transicion_a_bueno = (not is_bad) and fue_bad
+
+    if not transicion_a_malo and not transicion_a_bueno:
+        # Sin cambio de estado — solo persistir métricas actualizadas
+        try:
+            _STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _STATE_FILE.write_text(_json_wd.dumps(new_state, ensure_ascii=False, indent=2),
+                                   encoding="utf-8")
+        except Exception as e:
+            log.warning("_job_watchdog_entrega: no pudo escribir state file: %s", e)
+        return
+
+    # ── 6. Construir mensaje según transición ────────────────────────────────
+    if transicion_a_malo:
+        razones: list[str] = []
+        if err_131042 >= _UMBRAL_131042:
+            razones.append(
+                f"{err_131042} fallas con error 131042 "
+                f"(problema de pago/elegibilidad de la cuenta Meta)"
+            )
+        if delivered_pct < _UMBRAL_DELIVERED_PCT:
+            razones.append(
+                f"tasa de entrega {delivered_pct}% (umbral: {_UMBRAL_DELIVERED_PCT}%)"
+            )
+        razones_txt = " | ".join(razones) if razones else "parámetros de umbral superados"
+        asunto = (
+            f"ALERTA CMC: WhatsApp NO entrega templates "
+            f"({err_131042} errores 131042)"
+        )
+        cuerpo = (
+            f"WhatsApp NO está entregando templates: {razones_txt}.\n\n"
+            f"Estadísticas (últimas {_VENTANA_H}h): "
+            f"Total={total} | Delivered={delivered} ({delivered_pct}%) | "
+            f"Failed={failed} | Errores 131042={err_131042}\n\n"
+            f"Acción requerida: revisa el método de pago en "
+            f"business.facebook.com/billing → WhatsApp Business → método de pago.\n"
+            f"Tarjeta en uso: MASTERCARD *9176 (vence 8/2028)\n\n"
+            f"Timestamp: {_ts_label}"
+        )
+        log.critical(
+            "_job_watchdog_entrega: APAGON DETECTADO — %s "
+            "(total=%d delivered=%.1f%% failed=%d err_131042=%d)",
+            razones_txt, total, delivered_pct, failed, err_131042,
+        )
+        new_state["last_alert_ts"] = _NOW.timestamp()
+    else:  # transicion_a_bueno
+        asunto = "CMC: Entrega de templates WhatsApp normalizada"
+        cuerpo = (
+            f"La entrega de templates WhatsApp se normalizó.\n\n"
+            f"Estadísticas (últimas {_VENTANA_H}h): "
+            f"Total={total} | Delivered={delivered} ({delivered_pct}%) | "
+            f"Failed={failed} | Errores 131042={err_131042}\n\n"
+            f"Timestamp: {_ts_label}"
+        )
+        log.info(
+            "_job_watchdog_entrega: RECUPERACION — entrega normalizada "
+            "(total=%d delivered=%.1f%% err_131042=%d)",
+            total, delivered_pct, err_131042,
+        )
+        new_state["last_recovery_ts"] = _NOW.timestamp()
+
+    # ── 7. Persistir estado actualizado ──────────────────────────────────────
+    try:
+        _STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _STATE_FILE.write_text(_json_wd.dumps(new_state, ensure_ascii=False, indent=2),
+                               encoding="utf-8")
+    except Exception as e:
+        log.warning("_job_watchdog_entrega: no pudo escribir state file: %s", e)
+
+    # ── 8. Canal 1: Email (primario — independiente de templates WA) ─────────
+    # Bypass del gate EMAIL_SENDING_ENABLED: ese gate es para marketing;
+    # las alertas operacionales deben salir siempre que haya proveedor configurado.
+    _alert_email = _os_wd.getenv("ALERT_EMAIL", "").strip()
+    _email_sent = False
+    if _alert_email:
+        try:
+            from autopilot.email_render import (
+                EMAIL_PROVIDER as _ep_wd,
+                EMAIL_FROM_ADDRESS as _efrom_wd,
+            )
+            _html_body = _render_watchdog_email(asunto, cuerpo, transicion_a_malo)
+
+            if _ep_wd == "resend" and _os_wd.getenv("RESEND_API_KEY"):
+                async with httpx.AsyncClient(timeout=30) as _hx_em:
+                    _r = await _hx_em.post(
+                        "https://api.resend.com/emails",
+                        json={
+                            "from": f"Centro Médico Carampangue <{_efrom_wd}>",
+                            "to": [_alert_email],
+                            "subject": asunto,
+                            "html": _html_body,
+                        },
+                        headers={
+                            "Authorization": f"Bearer {_os_wd.getenv('RESEND_API_KEY')}",
+                            "Content-Type": "application/json",
+                        },
+                    )
+                if _r.status_code in (200, 201):
+                    _email_sent = True
+                    log.info("_job_watchdog_entrega: email enviado via Resend → %s",
+                             _alert_email)
+                else:
+                    log.warning("_job_watchdog_entrega: Resend %d: %s",
+                                _r.status_code, _r.text[:150])
+
+            elif _ep_wd == "smtp" and _os_wd.getenv("SMTP_HOST"):
+                import smtplib as _smtplib_wd
+                from email.mime.multipart import MIMEMultipart as _MIMEMulti_wd
+                from email.mime.text import MIMEText as _MIMEText_wd
+                _msg = _MIMEMulti_wd("alternative")
+                _msg["Subject"] = asunto
+                _msg["From"] = f"Centro Médico Carampangue <{_efrom_wd}>"
+                _msg["To"] = _alert_email
+                _msg.attach(_MIMEText_wd(_html_body, "html", "utf-8"))
+                with _smtplib_wd.SMTP(
+                    _os_wd.getenv("SMTP_HOST"),
+                    int(_os_wd.getenv("SMTP_PORT", "587")),
+                    timeout=30,
+                ) as _s_wd:
+                    _s_wd.starttls()
+                    if _os_wd.getenv("SMTP_USER"):
+                        _s_wd.login(
+                            _os_wd.getenv("SMTP_USER"),
+                            _os_wd.getenv("SMTP_PASSWORD", ""),
+                        )
+                    _s_wd.sendmail(_efrom_wd, [_alert_email], _msg.as_string())
+                _email_sent = True
+                log.info("_job_watchdog_entrega: email enviado via SMTP → %s",
+                         _alert_email)
+
+            else:
+                log.warning(
+                    "_job_watchdog_entrega: ALERT_EMAIL configurado pero sin "
+                    "proveedor activo (EMAIL_PROVIDER=%s, RESEND_KEY=%s, SMTP_HOST=%s). "
+                    "Configura RESEND_API_KEY o SMTP_HOST en .env",
+                    _ep_wd,
+                    bool(_os_wd.getenv("RESEND_API_KEY")),
+                    bool(_os_wd.getenv("SMTP_HOST")),
+                )
+        except Exception as e:
+            log.warning("_job_watchdog_entrega: email falló: %s", e)
+    else:
+        log.warning(
+            "_job_watchdog_entrega: ALERT_EMAIL no configurado en .env — "
+            "agrega ALERT_EMAIL=tu@correo.cl para recibir alertas por email"
+        )
+
+    # Canal 2: Banner persistente (estado ya en state file — endpoint lo expone)
+
+    # ── 9. Canal 3: WA free-form al owner (best-effort, solo si ventana abierta) ──
+    if ADMIN_ALERT_PHONE:
+        try:
+            from session import is_window_open as _is_win_wd
+            _admin_ph = ADMIN_ALERT_PHONE.lstrip("+")
+            if _is_win_wd(_admin_ph):
+                _wamid = await send_whatsapp(_admin_ph, f"*{asunto}*\n\n{cuerpo}")
+                if _wamid:
+                    log.info("_job_watchdog_entrega: WA free-form enviado → wamid=%s",
+                             _wamid)
+        except Exception as e:
+            log.warning("_job_watchdog_entrega: WA free-form falló: %s", e)
+
+    log.info(
+        "_job_watchdog_entrega: ciclo completo — email_sent=%s estado=%s",
+        _email_sent,
+        "APAGON" if transicion_a_malo else "RECUPERACION",
+    )
+
+
 # ── Reporte diario win-back a Rodrigo ─────────────────────────────────────────
 
 async def _job_winback_daily_report() -> None:

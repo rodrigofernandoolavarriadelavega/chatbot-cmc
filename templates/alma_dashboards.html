@@ -5,6 +5,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/alma_kit.css">
 <style>
+  /* ── Tile salud de entrega ── */
+  .wd-section{margin-bottom:22px}
+  .wd-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+            color:#64748b;margin:0 0 10px}
+  .wd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+  .wd-card{background:#fff;border:1px solid #e6edf3;border-radius:14px;padding:14px 16px}
+  .wd-card-alert{border-color:#fca5a5;background:#fff5f5}
+  .wd-card-ok{border-color:#bbf7d0;background:#f0fdf4}
+  .wd-card-neutral{border-color:#e2e8f0;background:#fff}
+  .wd-label{font-size:11px;color:#64748b;font-weight:600;letter-spacing:.04em;
+            text-transform:uppercase;margin-bottom:4px}
+  .wd-value{font-size:22px;font-weight:800;color:#0f3f68;line-height:1.1}
+  .wd-sub{font-size:12px;color:#64798c;margin-top:3px}
+  .wd-pill{display:inline-block;padding:3px 10px;border-radius:20px;
+           font-size:12px;font-weight:700;margin-top:6px}
+  .wd-pill-red{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+  .wd-pill-green{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+  .wd-pill-gray{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+  .wd-ts{font-size:11px;color:#94a3b8;margin-top:6px}
+  .wd-card-exp{display:flex;flex-direction:column;gap:3px}
+  .wd-exp-label{font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;
+                letter-spacing:.04em}
+  .wd-exp-val{font-size:14px;font-weight:700;color:#0f3f68}
+  .wd-exp-sub{font-size:11px;color:#64798c}
+  /* ── Accesos ── */
   .acc-note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px}
   .acc-note b{color:#7c2d12}
   .grp-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:22px 0 10px}
@@ -31,6 +56,34 @@
   <span class="badge" id="count-badge">—</span>
 </div>
 <div class="wrap">
+  <!-- ── Tile salud de entrega WhatsApp ── -->
+  <div class="wd-section">
+    <div class="wd-title">Salud de entrega WhatsApp — templates</div>
+    <div class="wd-grid" id="wd-grid">
+      <div class="wd-card wd-card-neutral">
+        <div class="wd-label">Estado</div>
+        <div class="wd-value" id="wd-status-val">—</div>
+        <div id="wd-pill-wrap"></div>
+        <div class="wd-ts" id="wd-ts">Cargando…</div>
+      </div>
+      <div class="wd-card wd-card-neutral" id="wd-card-delivered">
+        <div class="wd-label">Entregados (últimas 6 h)</div>
+        <div class="wd-value" id="wd-delivered">—</div>
+        <div class="wd-sub" id="wd-delivered-pct"></div>
+      </div>
+      <div class="wd-card wd-card-neutral" id="wd-card-failed">
+        <div class="wd-label">Fallidos (error 131042)</div>
+        <div class="wd-value" id="wd-failed">—</div>
+        <div class="wd-sub" id="wd-failed-131042"></div>
+      </div>
+      <div class="wd-card wd-card-neutral wd-card-exp">
+        <div class="wd-exp-label">Tarjeta de pago WABA</div>
+        <div class="wd-exp-val">MASTERCARD *9176</div>
+        <div class="wd-exp-sub">Vence: 08 / 2028</div>
+        <span class="wd-pill wd-pill-green" style="margin-top:8px;width:fit-content">Vigente</span>
+      </div>
+    </div>
+  </div>
   <div class="acc-note">
     <b>Solo para el dueño.</b> Acá viven todos los links de entrada a Alma por persona.
     No los compartas fuera de quien corresponde — el token <i>es</i> la contraseña.
@@ -45,6 +98,57 @@
 <script src="/static/alma_kit.js"></script>
 <script>
 const {esc,toast}=AlmaKit;
+
+// ── Tile salud de entrega ─────────────────────────────────────────────────
+async function loadWatchdogStatus(){
+  try{
+    const r=await fetch(`/api/watchdog/entrega-status?token=${encodeURIComponent(window.ALMA_TOKEN)}`);
+    if(!r.ok) return;
+    const d=await r.json();
+    const isBad=!!d.is_bad;
+    const noData=!!d.no_data;
+
+    // Tarjeta estado
+    const statusVal=document.getElementById('wd-status-val');
+    const pillWrap=document.getElementById('wd-pill-wrap');
+    const wdTs=document.getElementById('wd-ts');
+    const cardDelivered=document.getElementById('wd-card-delivered');
+    const cardFailed=document.getElementById('wd-card-failed');
+
+    if(noData){
+      statusVal.textContent='Sin datos';
+      pillWrap.innerHTML='<span class="wd-pill wd-pill-gray">Aún no corrió el watchdog</span>';
+      wdTs.textContent='';
+    } else if(isBad){
+      statusVal.textContent='Apagón';
+      pillWrap.innerHTML='<span class="wd-pill wd-pill-red">ERROR 131042 — Revisar método de pago</span>';
+      document.querySelectorAll('.wd-card').forEach(c=>{
+        c.classList.remove('wd-card-neutral','wd-card-ok');
+        c.classList.add('wd-card-alert');
+      });
+      if(d.ts) wdTs.textContent='Última evaluación: '+new Date(d.ts).toLocaleString('es-CL',{timeZone:'America/Santiago'});
+    } else {
+      statusVal.textContent='Normal';
+      pillWrap.innerHTML='<span class="wd-pill wd-pill-green">Entregando correctamente</span>';
+      document.querySelectorAll('.wd-card').forEach(c=>{
+        c.classList.remove('wd-card-neutral','wd-card-alert');
+        c.classList.add('wd-card-ok');
+      });
+      if(d.ts) wdTs.textContent='Última evaluación: '+new Date(d.ts).toLocaleString('es-CL',{timeZone:'America/Santiago'});
+    }
+
+    // Tarjeta delivered
+    if(!noData){
+      document.getElementById('wd-delivered').textContent=d.delivered+' / '+d.total;
+      document.getElementById('wd-delivered-pct').textContent=d.delivered_pct+'% de entrega (ventana '+d.ventana_h+'h)';
+      document.getElementById('wd-failed').textContent=d.failed;
+      document.getElementById('wd-failed-131042').textContent='Errores 131042: '+d.err_131042;
+    }
+  }catch(e){
+    console.warn('watchdog status error',e);
+  }
+}
+loadWatchdogStatus();
 const GRP_ORDER=["Dueño","Recepción","Profesionales","Otros accesos"];
 
 function mask(t){ if(!t) return ""; if(t.length<=10) return t; return t.slice(0,4)+"•".repeat(Math.max(4,t.length-7))+t.slice(-3); }
