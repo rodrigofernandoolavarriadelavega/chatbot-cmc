@@ -66,6 +66,31 @@ async def alerta_oob(texto: str) -> bool:
         return False
 
 
+async def enviar_telegram(texto: str, header: str | None = None) -> bool:
+    """Envío robusto a Telegram con formato. Intenta Markdown (negritas *…*,
+    itálicas _…_ — mismo marcado que WhatsApp); si la API rechaza el parseo
+    (entidad mal cerrada), reintenta como texto plano para no perder el aviso.
+    Usado para espejar a Telegram los avisos que el bot manda al dueño."""
+    token   = os.getenv("TELEGRAM_ALERT_TOKEN", "").strip()
+    chat_id = os.getenv("TELEGRAM_ALERT_CHAT_ID", "").strip()
+    if not token or not chat_id:
+        return False
+    cuerpo = (f"{header}\n\n{texto}" if header else texto)[:4000]
+    url = _TELEGRAM_SEND_URL.format(token=token)
+    base = {"chat_id": chat_id, "text": cuerpo, "disable_web_page_preview": True}
+    try:
+        async with httpx.AsyncClient(timeout=_TELEGRAM_TIMEOUT) as client:
+            resp = await client.post(url, json={**base, "parse_mode": "Markdown"})
+            if resp.status_code == 200:
+                return True
+            # Markdown roto → reintento en texto plano (mejor llega feo que no llega)
+            resp = await client.post(url, json=base)
+            return resp.status_code == 200
+    except Exception as exc:  # noqa: BLE001
+        log.warning("enviar_telegram: error enviando a Telegram: %s", exc)
+        return False
+
+
 # ── Dead-man's switch (healthchecks.io) ──────────────────────────────────────
 
 _DEADMAN_TIMEOUT = 5.0   # segundos

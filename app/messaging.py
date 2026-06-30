@@ -328,6 +328,26 @@ async def send_whatsapp_proactive(to: str, body, **kwargs) -> str | None:
     return await send_whatsapp(to, body)
 
 
+def _is_owner_number(to: str) -> bool:
+    """True si `to` es el número del dueño (ADMIN_ALERT_PHONE). Compara por los
+    últimos 9 dígitos para tolerar prefijos +/56."""
+    admin = re.sub(r"\D", "", os.getenv("ADMIN_ALERT_PHONE", "") or "")
+    t = re.sub(r"\D", "", str(to or ""))
+    return bool(admin) and bool(t) and t[-9:] == admin[-9:]
+
+
+def _mirror_owner_to_telegram(body: str) -> None:
+    """Espejo a Telegram de los avisos que el bot le manda al dueño. Transición:
+    se mantiene TAMBIÉN el WhatsApp (duplicado por mientras). Best-effort y no
+    bloqueante — nunca afecta el envío de WhatsApp si Telegram falla."""
+    try:
+        from alertas_oob import enviar_telegram
+        from resilience import spawn_task
+        spawn_task(enviar_telegram(body, header="🤖 *CMC · aviso del bot*"))
+    except Exception as e:  # noqa: BLE001
+        log.warning("mirror Telegram dueño falló: %s", e)
+
+
 async def send_whatsapp(to: str, body) -> str | None:
     """Envía mensaje de texto (o interactivo) vía Meta Cloud API.
     Retorna wamid o None si falla.
@@ -358,6 +378,12 @@ async def send_whatsapp(to: str, body) -> str | None:
     if isinstance(body, str) and "**" in body:
         log.warning("MARKDOWN_GUARD send_whatsapp ** sin normalizar snippet=%r", body[:120])
     body = _normalize_markdown_for_chat(body)
+    # Espejo a Telegram (duplicado durante la transición): si el destinatario es
+    # el dueño, mandamos también el aviso a Telegram con formato. No bloquea ni
+    # afecta el envío de WhatsApp. Captura TODO lo que pasa por send_whatsapp
+    # (reportes, alertas, estado diario, proactive → todos rutean por acá).
+    if isinstance(body, str) and _is_owner_number(to):
+        _mirror_owner_to_telegram(body)
     # FIX-8: WhatsApp rechaza mensajes >4096 chars. Si es largo, dividir en chunks
     # como IG/FB (usando _split_long_msg). Evita error 131009 silencioso de Meta.
     if isinstance(body, str) and len(body) > 4000:
