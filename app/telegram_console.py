@@ -26,7 +26,7 @@ _HAIKU = "claude-haiku-4-5-20251001"
 
 # Dashboards (para botones)
 _URL_MENSUAL = "https://agentecmc.cl/bi/mensual"
-_URL_COMPARADOR = "https://agentecmc.cl/cmc/comparador?token=cmc_admin_2026"
+_URL_COMPARADOR_BASE = "https://agentecmc.cl/cmc/comparador?token="
 
 
 def _token() -> str:
@@ -35,6 +35,12 @@ def _token() -> str:
 
 def _owner_chat() -> str:
     return os.getenv("TELEGRAM_ALERT_CHAT_ID", "").strip()
+
+
+def _admin_token() -> str:
+    """Token admin vigente (desde env; tolera rotación). Para llamadas internas
+    y para los botones a dashboards."""
+    return os.getenv("ADMIN_TOKEN", "").strip() or os.getenv("OLACORE_TOKEN", "").strip()
 
 
 def _clp(n) -> str:
@@ -132,7 +138,7 @@ def reporte_comparador() -> tuple[str, list]:
     txt.append("🔴 *Bajaron*")
     for nm, d in [x for x in deltas if x[1] < 0][:3]:
         txt.append("▼ %s  −%s" % (nm, _clp(abs(d))))
-    return "\n".join(txt), [[{"text": "📊 Abrir Comparador", "url": _URL_COMPARADOR}]]
+    return "\n".join(txt), [[{"text": "📊 Abrir Comparador", "url": _URL_COMPARADOR_BASE + _admin_token()}]]
 
 
 async def reporte_agenda() -> tuple[str, list]:
@@ -142,7 +148,7 @@ async def reporte_agenda() -> tuple[str, list]:
     try:
         async with httpx.AsyncClient(timeout=20) as c:
             r = await c.get("http://127.0.0.1:8001/api/panel-dia/operativo",
-                            params={"token": "cmc_admin_2026", "auto": 1})
+                            params={"token": _admin_token(), "auto": 1})
         data = r.json()
     except Exception as e:  # noqa: BLE001
         return "No pude leer la agenda del día (%s)." % str(e)[:80], []
@@ -162,7 +168,7 @@ async def reporte_agenda() -> tuple[str, list]:
                      % (ic, p.get("nombre", "?"), cap, ocup, libre))
     lines += ["", "Σ *%d cupos* · %d ocupados · *%d libres*" % (tcap, tocup, max(0, tcap - tocup))]
     return "\n".join(lines), [[{"text": "📅 Abrir Panel del Día",
-                                "url": "https://agentecmc.cl/alma/panel-dia?token=cmc_admin_2026"}]]
+                                "url": "https://agentecmc.cl/alma/panel-dia?token=" + _admin_token()}]]
 
 
 def menu() -> tuple[str, list]:
