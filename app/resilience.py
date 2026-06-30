@@ -181,6 +181,44 @@ def claude_down_since() -> str | None:
     return system_state_get(_KEY_CLAUDE_DOWN_AT)
 
 
+# Alerta de IA caída al dueño. Idempotente por racha: usamos el timestamp de
+# inicio de la racha (claude_down_since) como id — alertamos máximo 1 vez por
+# racha. Cierra el agujero del apagón silencioso de saldo (caso 2026-06-29:
+# ~10h sin cerebro sin aviso). Ver _job_claude_watchdog en jobs.py.
+_KEY_CLAUDE_ALERTED = "claude_down_alerted_for"
+
+
+def should_alert_claude_down(min_minutes: float = 3.0) -> bool:
+    """True si Claude está caído y aún NO alertamos al dueño por esta racha.
+
+    Saldo agotado / API key inválida → alerta inmediata (requieren acción humana).
+    Fallas transitorias (timeout, overload, rate limit) → espera `min_minutes` de
+    caída sostenida, para no alertar por un blip que se recupera solo."""
+    if not is_claude_down():
+        return False
+    down_at = claude_down_since()
+    if not down_at:
+        return False
+    if system_state_get(_KEY_CLAUDE_ALERTED) == down_at:
+        return False  # ya alertamos por esta racha
+    reason = (claude_down_reason() or "").lower()
+    if ("saldo" in reason) or ("key" in reason) or ("billing" in reason):
+        return True  # urgente: acción humana necesaria
+    try:
+        dt = datetime.fromisoformat(down_at)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        mins = (datetime.now(timezone.utc) - dt).total_seconds() / 60
+        return mins >= min_minutes
+    except Exception:
+        return True
+
+
+def mark_claude_down_alerted():
+    """Registra que ya alertamos por la racha actual (idempotente)."""
+    system_state_set(_KEY_CLAUDE_ALERTED, claude_down_since() or "")
+
+
 def _classify_claude_error(err: str) -> str:
     """Traduce el error crudo de Anthropic a una causa legible para el admin."""
     e = (err or "").lower()

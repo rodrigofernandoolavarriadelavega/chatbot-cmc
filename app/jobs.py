@@ -1586,6 +1586,57 @@ async def _job_medilink_watchdog():
         log.error("_job_medilink_watchdog falló inesperadamente (BUG-07): %s", e)
 
 
+async def _job_claude_watchdog():
+    """Cada 2 min: si la IA del bot (Claude) está caída y aún no avisamos por esta
+    racha, alerta al dueño. Canal primario = Telegram OOB (no depende de WhatsApp
+    NI de Anthropic → llega aunque ambos estén caídos); WhatsApp como secundario.
+    Cierra el apagón silencioso de saldo (caso 2026-06-29: ~10h sin cerebro)."""
+    try:
+        from resilience import (should_alert_claude_down, mark_claude_down_alerted,
+                                 claude_down_reason, claude_down_since)
+        if not should_alert_claude_down():
+            return
+        reason = claude_down_reason() or "desconocido"
+        since = claude_down_since() or "?"
+        depth = intent_queue_depth()
+        msg = ("🔴 *IA del bot CMC caída*\n"
+               f"Causa: {reason}\n"
+               f"Desde: {since} UTC · Conversaciones en cola: {depth}\n\n"
+               "El bot está respondiendo con menú genérico (no detecta intención).\n"
+               "Si es saldo: recargar en console.anthropic.com/settings/billing")
+        delivered = False
+        # Canal OOB (Telegram) — el más confiable cuando está configurado (no
+        # depende de WhatsApp ni Anthropic). Hoy es no-op si faltan los env vars.
+        try:
+            from alertas_oob import alerta_oob as _oob
+            delivered = await _oob(msg)
+        except Exception as e:
+            log.error("claude watchdog: OOB falló: %s", e)
+        if ADMIN_ALERT_PHONE:
+            # Template: entrega garantizada fuera de la ventana 24h (igual que el
+            # watchdog de Medilink). Reusa alerta_tecnica_admin [hora, cola].
+            if USE_TEMPLATES:
+                try:
+                    await send_whatsapp_template(
+                        ADMIN_ALERT_PHONE, "alerta_tecnica_admin",
+                        body_params=[since, str(depth)])
+                    delivered = True
+                except Exception as e:
+                    log.error("claude watchdog: template falló: %s", e)
+            # Free-text con el detalle (solo llega si hay ventana 24h abierta)
+            try:
+                await send_whatsapp(ADMIN_ALERT_PHONE, msg)
+                delivered = True
+            except Exception as e:
+                log.error("claude watchdog: WhatsApp texto falló: %s", e)
+        # Solo marcamos si al menos un canal entregó → si ambos fallan, reintenta
+        if delivered:
+            mark_claude_down_alerted()
+            log.warning("claude watchdog: dueño alertado — IA caída (%s), cola=%d", reason, depth)
+    except Exception as e:
+        log.error("_job_claude_watchdog falló inesperadamente: %s", e)
+
+
 async def _job_medilink_watchdog_inner():
     if not is_medilink_down():
         return
