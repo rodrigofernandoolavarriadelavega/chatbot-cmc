@@ -1817,10 +1817,13 @@ async def prellenar_pagos(
     no_asiste = eliminadas = 0   # no-shows detectados / placeholders borradas
 
     async def _fetch_prestacion(id_aten) -> str:
-        """Obtiene prestaciones desde /atenciones/{id}/detalles. Throttleado."""
+        """Obtiene prestaciones desde /atenciones/{id}/detalles. Throttleado.
+        Usa _get (retry 429 + semáforo): sin esto el rate limit del sync grande
+        dejaba la prestación vacía silenciosamente."""
         try:
             await asyncio.sleep(0.15)
-            rd = await client.get(
+            rd = await _get(
+                client,
                 f"{MEDILINK_BASE_URL}/atenciones/{id_aten}/detalles",
                 headers=HEADERS,
                 timeout=8,
@@ -1849,7 +1852,8 @@ async def prellenar_pagos(
         res = ("", 0)
         try:
             await asyncio.sleep(0.15)
-            ra = await client.get(
+            ra = await _get(
+                client,
                 f"{MEDILINK_BASE_URL}/atenciones/{id_aten}",
                 headers=HEADERS, timeout=8,
             )
@@ -1858,7 +1862,10 @@ async def prellenar_pagos(
                 res = ((at.get("nombre_convenio") or "").strip(), int(at.get("total") or 0))
         except Exception as e_at:
             log.debug("prellenar_pagos: atencion id=%s error: %s", id_aten, e_at)
-        _aten_meta_cache[id_aten] = res
+        # Solo cachear resultados con dato real: un 429 transitorio no debe quedar
+        # pegado como ("",0) para el resto de la corrida.
+        if res != ("", 0):
+            _aten_meta_cache[id_aten] = res
         return res
 
     _ficha_cache: dict = {}
@@ -1874,7 +1881,10 @@ async def prellenar_pagos(
         rut_tel = ("", "")
         try:
             await asyncio.sleep(0.18)
-            rp = await client.get(
+            # _get: retry 429 + semáforo. Antes era client.get directo y un rate
+            # limit dejaba el RUT vacío (y cacheado) → filas sin RUT en el sync grande.
+            rp = await _get(
+                client,
                 f"{MEDILINK_BASE_URL}/pacientes/{id_paciente}",
                 headers=HEADERS, timeout=8,
             )
@@ -1885,7 +1895,9 @@ async def prellenar_pagos(
                 rut_tel = (rut, tel)
         except Exception as e_fic:
             log.debug("prellenar_pagos: ficha id_paciente=%s error: %s", id_paciente, e_fic)
-        _ficha_cache[id_paciente] = rut_tel
+        # Solo cachear si trajimos RUT real: no congelar un 429 transitorio como vacío.
+        if rut_tel[0]:
+            _ficha_cache[id_paciente] = rut_tel
         return rut_tel
 
     def _telefono_para_cita(id_cita_str: str, rut_cita: str) -> str:
