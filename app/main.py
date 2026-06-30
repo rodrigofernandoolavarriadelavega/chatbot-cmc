@@ -3410,6 +3410,7 @@ _ALMA_RECEPCION_KANBAN_HTML = (_TEMPLATE_DIR / "alma_recepcion_kanban.html").rea
 _ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
 _ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_kine.html").exists() else ""
 _ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
+_ALMA_DASHBOARDS_HTML = (_TEMPLATE_DIR / "alma_dashboards.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_dashboards.html").exists() else ""
 _OLACORE_ESTRUCTURA_HTML = (_TEMPLATE_DIR / "olacore_estructura.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_estructura.html").exists() else ""
 _OLACORE_HOLDING_HTML = (_TEMPLATE_DIR / "olacore_holding.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_holding.html").exists() else ""
 _OLACORE_REUNION_HTML = (_TEMPLATE_DIR / "olacore_reunion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_reunion.html").exists() else ""
@@ -4384,6 +4385,78 @@ def alma_programas_page(token: str | None = Query(None),
                 .replace("__PROG_VER_INGRESO__", ver_ingreso)
                 .replace("__PROF_DASHBOARD_URL__", dash_url))
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+def _build_alma_accesos() -> list[dict]:
+    """Lista de accesos (persona → token + link de entrada a Alma).
+
+    Fuente canónica: ALMA_PROFILES en vivo (token→perfil) + algunos tokens extra
+    de config. Los VALORES de token se leen del entorno en tiempo de request —
+    NUNCA se hardcodean en el repo (la rotación los sacó de git a propósito)."""
+    import config as _cfg
+    base = os.getenv("ALMA_PUBLIC_BASE", "https://agentecmc.cl").rstrip("/")
+    out: list[dict] = []
+    for tk, prof in ALMA_PROFILES.items():
+        if not tk:
+            continue
+        variante = (prof.get("variante") or "").strip()
+        mods = prof.get("modulos")
+        if mods is None:
+            grupo, rol = "Dueño", "Acceso total"
+            nombre = variante or "Adkun · Dueño"
+            mod_label = "Todos los módulos"
+        elif tk == ADMIN_TOKEN:
+            grupo, rol = "Recepción", "Recepción"
+            nombre = variante or "Recepción"
+            mod_label = f"{len(mods)} módulos"
+        else:
+            grupo, rol = "Profesionales", "Profesional"
+            nombre = variante or "Profesional"
+            mod_label = f"{len(mods)} módulos"
+        out.append({
+            "grupo": grupo, "rol": rol, "nombre": nombre,
+            "token": tk, "url": f"{base}/alma?token={tk}", "modulos": mod_label,
+        })
+    # Accesos extra: links reales de entrada que no son perfiles de Alma.
+    extra = [
+        (OLACORE_HOLDING_TOKEN, "Documentos holding",
+         "Estructura tributaria / Holding (compartible con contador)",
+         f"{base}/olacore/holding?token={OLACORE_HOLDING_TOKEN}"),
+    ]
+    if getattr(_cfg, "ORTODONCIA_TOKEN", ""):
+        extra.append((_cfg.ORTODONCIA_TOKEN, "Ortodoncia",
+                      "Módulo Ortodoncia (panel admin)",
+                      f"{base}/admin?token={_cfg.ORTODONCIA_TOKEN}"))
+    if getattr(_cfg, "MARKETING_TOKEN", ""):
+        extra.append((_cfg.MARKETING_TOKEN, "Marketing",
+                      "Estudio de Marketing (recepción)",
+                      f"{base}/marketing?token={_cfg.MARKETING_TOKEN}"))
+    for tk, rol, nombre, url in extra:
+        if tk:
+            out.append({"grupo": "Otros accesos", "rol": rol,
+                        "nombre": nombre, "token": tk, "url": url, "modulos": "—"})
+    return out
+
+
+@app.get("/alma/dashboards", response_class=HTMLResponse)
+def alma_dashboards_page(token: str | None = Query(None),
+                         cmc_session: str | None = Cookie(None)):
+    """Módulo Accesos — todos los tokens y links de entrada a Alma, por persona.
+
+    SOLO el dueño (OLACORE_TOKEN): lista incluye el token de recepción y el suyo,
+    así que es el módulo más sensible. 404 (no redirect) para no revelar que
+    existe a quien no lo porta. Los valores de token se inyectan en vivo."""
+    import hmac as _hm, json as _json_acc
+    is_owner = bool(token) and bool(OLACORE_TOKEN) and _hm.compare_digest(token, OLACORE_TOKEN)
+    if not is_owner:
+        raise HTTPException(404, "No encontrado")
+    if not _ALMA_DASHBOARDS_HTML:
+        raise HTTPException(404, "Accesos no disponible")
+    accesos = _build_alma_accesos()
+    html = (_ALMA_DASHBOARDS_HTML
+            .replace("__TOKEN__", token)
+            .replace("__ACCESOS_JSON__", _json_acc.dumps(accesos, ensure_ascii=False)))
+    return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 def _olacore_holding_ok(token: str | None) -> bool:

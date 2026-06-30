@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Accesos — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>
+  .acc-note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px}
+  .acc-note b{color:#7c2d12}
+  .grp-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:22px 0 10px}
+  .grp-title:first-of-type{margin-top:4px}
+  .acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  .acc-card{background:#fff;border:1px solid #e6edf3;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .acc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .acc-name{font-weight:700;font-size:15px;color:#0f3f68;line-height:1.25}
+  .acc-mods{font-size:12px;color:#64748b;margin-top:2px}
+  .tok-row{display:flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9px;padding:6px 8px}
+  .tok-val{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#0f172a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ico-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;background:#fff;border:1px solid #d8e2ea;border-radius:8px;cursor:pointer;color:#1172ab;flex:0 0 auto}
+  .ico-btn:hover{background:#eaf6f9}
+  .ico-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+  .acc-actions{display:flex;gap:8px}
+  .acc-actions .btn-ghost,.acc-actions .btn-primary{flex:1;justify-content:center;font-size:13px;padding:8px 10px}
+  .filter-row{margin-bottom:6px}
+  .filter-row input{width:100%;max-width:420px;padding:10px 12px;border:1px solid #d8e2ea;border-radius:10px;font-size:14px;font-family:inherit}
+</style>
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z" stroke-linecap="round" stroke-linejoin="round"/></svg> Accesos</h1>
+  <div class="spacer"></div>
+  <span class="badge" id="count-badge">—</span>
+</div>
+<div class="wrap">
+  <div class="acc-note">
+    <b>Solo para el dueño.</b> Acá viven todos los links de entrada a Alma por persona.
+    No los compartas fuera de quien corresponde — el token <i>es</i> la contraseña.
+    Si rotás un token (cambia el <code>.env</code> de prod), esta vista se actualiza sola.
+  </div>
+  <div class="filter-row"><input id="q" placeholder="Buscar por nombre, rol o token…" oninput="render()"></div>
+  <div id="groups"></div>
+  <div class="empty" id="empty" style="display:none">Sin accesos para mostrar</div>
+</div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ACCESOS=__ACCESOS_JSON__;</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {esc,toast}=AlmaKit;
+const GRP_ORDER=["Dueño","Recepción","Profesionales","Otros accesos"];
+
+function mask(t){ if(!t) return ""; if(t.length<=10) return t; return t.slice(0,4)+"•".repeat(Math.max(4,t.length-7))+t.slice(-3); }
+
+async function copyText(txt,what){
+  try{ await navigator.clipboard.writeText(txt); toast((what||"Copiado")+" ✓"); }
+  catch(e){
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+    ta.select(); try{document.execCommand('copy'); toast((what||"Copiado")+" ✓");}catch(_){toast("No se pudo copiar");}
+    document.body.removeChild(ta);
+  }
+}
+function toggleTok(id,full){
+  const el=document.getElementById(id);
+  const shown=el.dataset.shown==="1";
+  el.textContent = shown ? mask(full) : full;
+  el.dataset.shown = shown ? "0" : "1";
+}
+
+function card(a,idx){
+  const tid="tk"+idx;
+  return `<div class="acc-card">
+    <div class="acc-head">
+      <div><div class="acc-name">${esc(a.nombre)}</div><div class="acc-mods">${esc(a.modulos||"")}</div></div>
+      <span class="badge">${esc(a.rol)}</span>
+    </div>
+    <div class="tok-row">
+      <span class="tok-val" id="${tid}" data-shown="0">${esc(mask(a.token))}</span>
+      <button class="ico-btn" title="Ver/ocultar" onclick="toggleTok('${tid}', ${JSON.stringify(a.token)})">
+        <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="ico-btn" title="Copiar token" onclick='copyText(${JSON.stringify(a.token)},"Token")'>
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="acc-actions">
+      <button class="btn-ghost" onclick='copyText(${JSON.stringify(a.url)},"Link")'>Copiar link</button>
+      <a class="btn-primary" href="${esc(a.url)}" target="_blank" rel="noopener" style="text-decoration:none">Abrir</a>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const q=(document.getElementById('q').value||"").toLowerCase().trim();
+  const data=(window.ACCESOS||[]).filter(a=>!q ||
+    (a.nombre+" "+a.rol+" "+a.token+" "+(a.grupo||"")).toLowerCase().includes(q));
+  document.getElementById('count-badge').textContent = (window.ACCESOS||[]).length+" accesos";
+  const groups={}; data.forEach(a=>{ (groups[a.grupo]=groups[a.grupo]||[]).push(a); });
+  const order=[...GRP_ORDER.filter(g=>groups[g]), ...Object.keys(groups).filter(g=>!GRP_ORDER.includes(g))];
+  let html=""; let idx=0;
+  order.forEach(g=>{
+    html+=`<div class="grp-title">${esc(g)}</div><div class="acc-grid">`;
+    groups[g].forEach(a=>{ html+=card(a,idx++); });
+    html+=`</div>`;
+  });
+  document.getElementById('groups').innerHTML=html;
+  document.getElementById('empty').style.display=data.length?"none":"block";
+}
+render();
+</script>
+</body></html>
