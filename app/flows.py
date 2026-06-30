@@ -3655,6 +3655,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "retomar_menu", "title": "📋 Ver menú"},
             ]
         )
+    # Fix psiquiatría 2026-06-30 (caso Carolina): una oferta de reserva sin
+    # confirmar ("¿Te la reservo?") vive como state=IDLE + especialidad_sugerida
+    # (TTL 2min). NO está en _FLUJO_RETOMABLE, así que un saludo puro ("Saludos
+    # Carolina") caía al reset de bienvenida y borraba el contexto de la
+    # especialidad ofrecida. Aquí, si el saludo llega con una sugerencia fresca,
+    # re-emitimos la oferta en vez de resetear.
+    if _es_saludo_puro and state == "IDLE":
+        _esp_pend = data.get("especialidad_sugerida")
+        _esp_pend_ts = data.get("especialidad_sugerida_ts")
+        _pend_fresh = False
+        if _esp_pend and _esp_pend_ts:
+            try:
+                _tg = datetime.fromisoformat(_esp_pend_ts)
+                if _tg.tzinfo is None:
+                    _tg = _tg.replace(tzinfo=timezone.utc)
+                _pend_fresh = (datetime.now(timezone.utc) - _tg).total_seconds() <= 120
+            except (ValueError, TypeError):
+                _pend_fresh = False
+        if _pend_fresh:
+            log_event(phone, "saludo_preserva_sugerida", {"esp": _esp_pend})
+            return _btn_msg(
+                f"¡Hola! 👋 Quedó pendiente reservar tu hora de *{_esp_pend}*.\n\n"
+                "¿Te la reservo?",
+                [
+                    {"id": "agendar_sugerido", "title": "✅ Sí, agendar"},
+                    {"id": "no_agendar",      "title": "No por ahora"},
+                ]
+            )
     # Handler de los botones de retomar (llega antes del reset_session general)
     if tl in ("retomar_si",):
         data.pop("_retomar_ofrecido", None)
@@ -5680,6 +5708,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Apellido explícito tiene prioridad sobre especialidad genérica de Claude
             _ap_explicito_disp = _detectar_apellido_profesional(txt)
             especialidad = _ap_explicito_disp or result.get("especialidad") or _detectar_especialidad_en_texto(txt)
+            # Fix Carolina 2026-06-30: si la pregunta de disponibilidad no nombra
+            # especialidad ("¿en qué horario?", "¿y después del 9 de julio?"),
+            # hereda la recién ofrecida (last_esp_context, TTL 5min) en vez de caer
+            # al fallback "dime qué especialidad" que rompía el hilo.
+            if not especialidad:
+                _le = data.get("last_esp_context")
+                _le_ts = data.get("last_esp_context_ts")
+                if _le and _le_ts:
+                    try:
+                        _t = datetime.fromisoformat(_le_ts)
+                        if _t.tzinfo is None:
+                            _t = _t.replace(tzinfo=timezone.utc)
+                        if (datetime.now(timezone.utc) - _t).total_seconds() < 300:
+                            especialidad = _le
+                            log_event(phone, "disp_esp_heredada", {"esp": _le})
+                    except (ValueError, TypeError):
+                        pass
             # Si tenemos especialidad pero consultar_proxima_fecha falla, redirigir
             # al flujo completo de agendar (que busca día por día) en vez de caer
             # al fallback feo 'dime qué especialidad'.
@@ -5696,6 +5741,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if fecha:
                     data["especialidad_sugerida"] = especialidad.lower()
                     data["especialidad_sugerida_ts"] = datetime.now(timezone.utc).isoformat()
+                    # Fix Carolina 2026-06-30: además de la sugerencia, sembrar
+                    # last_esp_context (TTL 5min) para que un follow-up vago en el
+                    # siguiente turno ("¿en qué horario?", "¿y después del 9?")
+                    # herede la especialidad ya ofrecida en vez de perder el hilo.
+                    data["last_esp_context"] = especialidad.lower()
+                    data["last_esp_context_ts"] = datetime.now(timezone.utc).isoformat()
                     # Si es ecografía, persistir el órgano del texto original para
                     # que el click en "Sí, agendar" no re-pregunte el tipo (menu-loop).
                     try:

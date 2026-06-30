@@ -608,7 +608,8 @@ Si el mensaje contiene CUALQUIER señal de:
   no mandarlo a recepción como si fuera un trámite.
 
 🎯 ORDEN DE PRIORIDAD PARA CLASIFICAR (lee de arriba a abajo, la primera regla que aplique gana):
-1. Verbos de CANCELACIÓN/ANULACIÓN conjugados en cualquier tiempo o persona ("cancelo/cancelaré/cancelé/anulo/anulé/anularé/voy a cancelar/quiero cancelar/no puedo ir/no voy a poder asistir/doy de baja mi hora") → SIEMPRE intent "cancelar", AUNQUE el mensaje contenga "hora", "hoy", una especialidad, una fecha, o un nombre de profesional.
+1. Verbos de CANCELACIÓN/ANULACIÓN donde el PACIENTE decide no asistir a SU PROPIA hora, en primera persona ("cancelo/cancelaré/cancelé/voy a cancelar/quiero cancelar/anulo mi hora/no puedo ir/no voy a poder asistir/doy de baja mi hora") → SIEMPRE intent "cancelar", AUNQUE el mensaje contenga "hora", "hoy", una especialidad, una fecha, o un nombre de profesional.
+   ⚠️ NO es "cancelar" cuando "cancela/cancelar" aparece en una PREGUNTA o en forma impersonal/pasiva sobre cómo atiende el centro: "¿se cancela?", "¿está cancelada la hora del jueves?", "se cancela particular o atiende por Fonasa?", "¿cancelaron al doctor?". Eso es una CONSULTA, no una solicitud de cancelar. Si pregunta por Fonasa/particular/valor/precio → intent "precio". Si pregunta si un profesional atiende o viene tal día → intent "disponibilidad" o "info". El gatillo de "cancelar" es que el paciente exprese SU voluntad de no asistir, no la sola presencia de la palabra.
 2. Verbos de REAGENDAR ("mover/cambiar/reprogramar/correr la hora/cambiar de día") → SIEMPRE intent "reagendar", aunque después mencione una nueva especialidad o fecha.
 3. Verbos de AGENDAR ("agendar/pedir/reservar/tomar/sacar una hora/necesito consulta"). Solo aplica si no hubo verbo de cancelación/reagendar antes.
 4. Solo nombre o abreviación de especialidad sin verbo ("kine", "gine", "cardio") → intent "agendar".
@@ -621,6 +622,9 @@ Output: {{"intent": "cancelar", "especialidad": null, "respuesta_directa": null}
 
 Input: "Tengo hora con Dr Abarca pero me surgió un imprevisto, no voy a poder ir"
 Output: {{"intent": "cancelar", "especialidad": null, "respuesta_directa": null}}
+
+Input: "La consulta con la psiquiatra que atiende el jueves, ¿se cancela particular o atiende por Fonasa?"
+Output: {{"intent": "precio", "especialidad": "psiquiatría", "respuesta_directa": "La psiquiatra (Dra. Cecilia Unibazo) atiende los jueves por teleconsulta. La consulta es *particular, $60.000* — no trabaja con Fonasa. Por la alta demanda y los cupos limitados, la hora se confirma con el *abono del valor total ($60.000) al momento de reservar*; así el cupo queda para quien realmente lo usará y más personas de la zona pueden acceder. El día de la atención no pagas nada adicional. ¿Te ayudo a agendar?"}}
 
 Input: "Quiero cambiar mi hora del viernes al lunes"
 Output: {{"intent": "reagendar", "especialidad": null, "respuesta_directa": null}}
@@ -681,7 +685,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, solo jueves 16-20, $60.000 particular). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
+- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, solo jueves 16-20, $60.000 particular, NO Fonasa). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
 - Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
 - Ecografía mamaria / de mamas / ecotomografía mamaria → "ecografía" (David Pardo, ID 68, $40.000). Es partes blandas, NO ginecológica. NUNCA Rejón para mamaria.
@@ -890,7 +894,7 @@ MEDICINA GENERAL / SÍNTOMAS
 
 SALUD MENTAL
 - Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular.
-- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, **solo los jueves de 16:00 a 20:00**, **$60.000 particular**. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia). Hay pocos cupos por semana.
+- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, **solo los jueves de 16:00 a 20:00**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que la hora se confirma con un **abono del valor total ($60.000) al momento de reservar** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no pagas nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
