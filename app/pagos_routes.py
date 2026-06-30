@@ -1997,6 +1997,21 @@ async def prellenar_pagos(
                         conn.commit()
                 except Exception:
                     pass
+            # Backfill RUT aunque la fila esté bloqueada: es metadata (identifica al
+            # paciente), NO toca el cobro. Sin esto, una fila cobrada+bloqueada sin
+            # RUT quedaba sin RUT para siempre (el sync la saltaba entera).
+            if rut_ficha and not (existing.get("rut") or "").strip() and existing.get("db_id") is not None:
+                try:
+                    with _conn() as conn:
+                        conn.execute(
+                            "UPDATE pagos_cmc SET rut=? "
+                            "WHERE id=? AND COALESCE(rut,'')=''",
+                            (rut_ficha, existing["db_id"]),
+                        )
+                        conn.commit()
+                    existing["rut"] = rut_ficha
+                except Exception:
+                    pass
             # Fila ya existe y no está bloqueada → re-derivar canal/fuente + rellenar
             # hueco de prestación si corresponde.
             if existing["bloqueado"]:
