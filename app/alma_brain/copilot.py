@@ -79,6 +79,16 @@ async def run_turn(history: list[dict], allow_actions: bool = False) -> dict:
             tools=specs,
             messages=messages,
         )
+        try:  # INSTRUMENTACIÓN gasto Sonnet — quitar tras diagnóstico
+            _u = getattr(resp, "usage", None)
+            if _u is not None:
+                log.info("CLAUDE_CALL fn=copilot model=%s in=%s cache_r=%s cache_w=%s out=%s",
+                         _MODEL, getattr(_u, "input_tokens", "?"),
+                         getattr(_u, "cache_read_input_tokens", 0),
+                         getattr(_u, "cache_creation_input_tokens", 0),
+                         getattr(_u, "output_tokens", "?"))
+        except Exception:
+            pass
 
         # Acumular texto y detectar tool_use.
         tool_uses = [b for b in resp.content if getattr(b, "type", None) == "tool_use"]

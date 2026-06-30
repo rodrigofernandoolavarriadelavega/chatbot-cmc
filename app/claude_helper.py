@@ -27,6 +27,17 @@ async def _claude_create(**kwargs):
     try:
         resp = await client.messages.create(**kwargs)
         note_claude_ok()
+        try:  # INSTRUMENTACIÓN gasto por modelo — quitar tras diagnóstico
+            _u = getattr(resp, "usage", None)
+            if _u is not None:
+                logging.getLogger("bot").info(
+                    "CLAUDE_CALL fn=helper model=%s in=%s cache_r=%s cache_w=%s out=%s",
+                    kwargs.get("model", "?"), getattr(_u, "input_tokens", "?"),
+                    getattr(_u, "cache_read_input_tokens", 0),
+                    getattr(_u, "cache_creation_input_tokens", 0),
+                    getattr(_u, "output_tokens", "?"))
+        except Exception:
+            pass
         return resp
     except Exception as e:
         note_claude_failure(_classify_claude_error(str(e)))
@@ -1940,7 +1951,7 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
             system=[{
                 "type": "text",
                 "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
+                "cache_control": {"type": "ephemeral", "ttl": "1h"},
             }],
             messages=[
                 {"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + _referral_ctx15 + mensaje},
@@ -2429,7 +2440,7 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
             system=[{
                 "type": "text",
                 "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
+                "cache_control": {"type": "ephemeral", "ttl": "1h"},
             }],
             messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + _referral_ctx15f + _json_instruct_f + mensaje}],
         )

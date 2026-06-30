@@ -95,6 +95,16 @@ async def advise(ws: WorldState, actions: list[ProposedAction],
             ),
             timeout=_TIMEOUT_S,
         )
+        try:  # INSTRUMENTACIÓN gasto Sonnet — quitar tras diagnóstico
+            _u = getattr(resp, "usage", None)
+            if _u is not None:
+                log.info("CLAUDE_CALL fn=advisor model=%s in=%s cache_r=%s cache_w=%s out=%s",
+                         _MODEL, getattr(_u, "input_tokens", "?"),
+                         getattr(_u, "cache_read_input_tokens", 0),
+                         getattr(_u, "cache_creation_input_tokens", 0),
+                         getattr(_u, "output_tokens", "?"))
+        except Exception:
+            pass
         text = resp.content[0].text.strip()
         if text.startswith("```"):
             text = text.split("```")[1].lstrip("json").strip()
