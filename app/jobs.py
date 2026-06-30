@@ -2805,6 +2805,7 @@ async def _job_sync_citas_recepcion():
 
     import asyncio
     from datetime import date, timedelta as _td
+    from medilink import _get   # wrapper con semáforo global + reintentos 429
 
     hoy = date.today()
     # Semana completa por delante (+1..+7): la "base de datos de la agenda de la
@@ -2849,19 +2850,19 @@ async def _job_sync_citas_recepcion():
                     "estado_anulacion": {"eq": 0},
                 }
                 try:
-                    r = await client.get(
+                    # _get: semáforo global + reintentos 429 (3/6/12s). Antes era
+                    # client.get crudo que ante 429 SALTABA la fecha sin reintentar
+                    # → pacientes sin recordatorio en silencio.
+                    r = await _get(
+                        client,
                         f"{MEDILINK_BASE_URL}/citas",
                         params={"q": _q(params)},
                         headers=_HEADERS,
                     )
-                except httpx.RequestError as e:
+                except Exception as e:
                     log.warning("sync_recepcion prof=%d fecha=%s: %s", id_prof, fecha, e)
                     continue
 
-                if r.status_code == 429:
-                    log.warning("sync_recepcion prof=%d: 429 Medilink, skip fecha %s", id_prof, fecha)
-                    await asyncio.sleep(30)
-                    continue
                 if r.status_code != 200:
                     log.warning("sync_recepcion prof=%d fecha=%s: HTTP %d", id_prof, fecha, r.status_code)
                     continue
@@ -2894,7 +2895,8 @@ async def _job_sync_citas_recepcion():
                     phone_resuelto = None
                     phone_source   = "sin_celular"
                     try:
-                        rp = await client.get(
+                        rp = await _get(
+                            client,
                             f"{MEDILINK_BASE_URL}/pacientes/{id_pac}",
                             headers=_HEADERS,
                         )
