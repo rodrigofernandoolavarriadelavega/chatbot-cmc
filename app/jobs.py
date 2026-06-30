@@ -1637,6 +1637,36 @@ async def _job_claude_watchdog():
         log.error("_job_claude_watchdog falló inesperadamente: %s", e)
 
 
+async def _job_cierre_caja_diario():
+    """Cada mañana (09:05 CLT) empuja al dueño el cierre de caja del día anterior.
+    Pasa por send_whatsapp(ADMIN_ALERT_PHONE) → se espeja solo a Telegram. Datos:
+    bi_pagos_caja (ya cuadrada por el sync de las 23:59)."""
+    try:
+        from datetime import datetime, timedelta
+        from zoneinfo import ZoneInfo
+        import bi_sync
+        ayer = datetime.now(ZoneInfo("America/Santiago")).date() - timedelta(days=1)
+        d1 = ayer.isoformat(); d2 = (ayer + timedelta(days=1)).isoformat()
+        c = bi_sync._bi_conn()
+        tot, n = c.execute("SELECT COALESCE(SUM(monto),0), COUNT(*) FROM bi_pagos_caja "
+                           "WHERE fecha>=? AND fecha<?", (d1, d2)).fetchone()
+        if not n:
+            return  # sin pagos ese día → no molestar
+        nom = {r[0]: r[1] for r in c.execute("SELECT id_medilink, nombre FROM equipo_cmc").fetchall()}
+        top = c.execute("SELECT id_profesional, SUM(monto), COUNT(*) FROM bi_pagos_caja "
+                        "WHERE fecha>=? AND fecha<? GROUP BY id_profesional ORDER BY 2 DESC LIMIT 3",
+                        (d1, d2)).fetchall()
+        clp = lambda x: "$" + format(int(x or 0), ",d").replace(",", ".")
+        lines = ["💰 *Cierre de caja* — %s" % ayer.strftime("%d/%m"),
+                 "", "Total: *%s*" % clp(tot), "Pagos: *%d*" % int(n), "", "*Top 3 del día*"]
+        for idp, s, cnt in top:
+            lines.append("• %s — %s (%d)" % (nom.get(idp, "id %s" % idp), clp(s), int(cnt)))
+        if ADMIN_ALERT_PHONE:
+            await send_whatsapp(ADMIN_ALERT_PHONE, "\n".join(lines))
+    except Exception as e:
+        log.error("_job_cierre_caja_diario falló: %s", e)
+
+
 async def _job_medilink_watchdog_inner():
     if not is_medilink_down():
         return

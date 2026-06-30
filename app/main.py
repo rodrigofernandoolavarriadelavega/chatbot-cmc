@@ -52,7 +52,8 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_adherencia_kine, _job_control_especialidad,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
-                  _job_medilink_watchdog, _job_claude_watchdog, _job_admin_status_report,
+                  _job_medilink_watchdog, _job_claude_watchdog, _job_cierre_caja_diario,
+                  _job_admin_status_report,
                   _job_cleanup_stuck_sessions,
                   _job_waitlist_check,
                   _job_doctor_resumen_precita, _job_doctor_reporte_progreso,
@@ -638,6 +639,13 @@ async def lifespan(app: FastAPI):
         id="claude_watchdog",
         replace_existing=True,
     )
+    # Cierre de caja diario: 09:05 CLT empuja al dueño el cierre del día anterior
+    scheduler.add_job(
+        _job_cierre_caja_diario,
+        CronTrigger(hour=9, minute=5, timezone=_CLT),
+        id="cierre_caja_diario",
+        replace_existing=True,
+    )
     # Lista de espera: diario a las 07:00 CLT
     scheduler.add_job(
         _job_waitlist_check,
@@ -1174,6 +1182,24 @@ async def health():
         "waitlist_depth":     waitlist_depth(),
         "bsuid_mapped": bsuid["total"],
     }
+
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    """Recibe updates del bot de Telegram (consola de dueño). Valida el secret
+    de Telegram (header) y procesa en background para responder rápido (Telegram
+    reintenta si el webhook tarda)."""
+    expected = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+    secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not expected or secret != expected:
+        return Response(status_code=403)
+    try:
+        update = await request.json()
+    except Exception:
+        return Response(status_code=400)
+    from telegram_console import handle_update
+    _spawn_bg(handle_update(update), name="telegram_update")
+    return {"ok": True}
 
 
 @app.get("/landing", response_class=HTMLResponse)
