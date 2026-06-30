@@ -1658,6 +1658,17 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
         _re_w.IGNORECASE,
     )
     _CANCEL_EXPLICITO_RE = _re_w.compile(r"\bcancel\w*|\banul\w*", _re_w.IGNORECASE)
+    # Guard COBERTURA/MODALIDAD (caso real psiquiatría 2026-06-30): "se cancela
+    # particular o atiende por Fonasa?", "¿la psiquiatra se cancela o atiende
+    # fonasa?". El paciente PREGUNTA por la modalidad de pago/cobertura, NO quiere
+    # anular su hora. Aquí "cancela" aparece junto a fonasa/particular/isapre/bono
+    # → es consulta de precio. No disparamos el prefilter de cancelación: dejamos
+    # caer a Claude, que con el contexto de especialidad responde la modalidad.
+    _CANCEL_COBERTURA_RE = _re_w.compile(
+        r"cancel\w*[^?]*\b(fonasa|particular|isapre|dipreca|capredena|bono|convenio)\b"
+        r"|\b(fonasa|particular|isapre|dipreca|capredena|bono|convenio)\b[^?]*cancel\w*",
+        _re_w.IGNORECASE,
+    )
     if _CANCELAR_INFO_RE.search(clave_norm) or _CANCELAR_INFO_RE.search(clave):
         log.info("cancelar-info prefilter: %r", clave[:80])
         try:
@@ -1791,9 +1802,13 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
         (_CANCEL_AMBIGUO_RE.search(clave_norm) or _CANCEL_AMBIGUO_RE.search(clave))
         and not (_CANCEL_EXPLICITO_RE.search(clave_norm) or _CANCEL_EXPLICITO_RE.search(clave))
     )
+    _cancel_cobertura = (
+        _CANCEL_COBERTURA_RE.search(clave_norm) or _CANCEL_COBERTURA_RE.search(clave)
+    )
     if (_CANCEL_VERB_RE.search(clave_norm) or _CANCEL_VERB_RE.search(clave)) \
             and not (_CANCEL_NEGADO_RE.search(clave_norm) or _CANCEL_NEGADO_RE.search(clave)) \
-            and not _cancel_ambiguo:
+            and not _cancel_ambiguo \
+            and not _cancel_cobertura:
         log.info("cancel-verb prefilter: %r", clave[:80])
         try:
             from session import log_event as _log_event
