@@ -1723,27 +1723,38 @@ async def prellenar_pagos(
     else:
         fecha_iso = now_cl.strftime("%Y-%m-%d")
 
-    # ── 1 request: todas las citas del día ───────────────────────────────────
+    # ── Todas las citas del día (Medilink pagina de a 50 con cursor) ─────────
+    # /citas devuelve solo 50 filas por página y un links.next con el cursor
+    # firmado de la siguiente. Hay que seguir el cursor o se pierden los
+    # pacientes agendados a partir del nº 51 (días grandes quedaban a medias).
     client = _get_shared_client()
-    try:
-        r = await client.get(
-            f"{MEDILINK_BASE_URL}/citas",
-            params={"q": _q({
-                "fecha":            {"eq": fecha_iso},
-                "estado_anulacion": {"eq": 0},
-            })},
-            headers=HEADERS,
-            timeout=15,
-        )
-    except Exception as e:
-        log.error("prellenar_pagos: error GET /citas fecha=%s: %s", fecha_iso, e)
-        raise HTTPException(502, "Error al contactar Medilink")
+    citas: list = []
+    url = f"{MEDILINK_BASE_URL}/citas"
+    params = {"q": _q({
+        "fecha":            {"eq": fecha_iso},
+        "estado_anulacion": {"eq": 0},
+    })}
+    for _ in range(50):  # tope duro anti-bucle (50 pág × 50 = 2.500 citas/día)
+        try:
+            r = await client.get(url, params=params, headers=HEADERS, timeout=15)
+        except Exception as e:
+            log.error("prellenar_pagos: error GET /citas fecha=%s: %s", fecha_iso, e)
+            raise HTTPException(502, "Error al contactar Medilink")
 
-    if r.status_code != 200:
-        log.warning("prellenar_pagos: GET /citas HTTP %d fecha=%s", r.status_code, fecha_iso)
-        raise HTTPException(502, f"Medilink devolvió HTTP {r.status_code}")
+        if r.status_code != 200:
+            log.warning("prellenar_pagos: GET /citas HTTP %d fecha=%s", r.status_code, fecha_iso)
+            raise HTTPException(502, f"Medilink devolvió HTTP {r.status_code}")
 
-    citas = _safe_json(r).get("data", [])
+        payload = _safe_json(r)
+        pagina = payload.get("data", [])
+        citas.extend(pagina)
+        nxt = (payload.get("links") or {}).get("next")
+        if not nxt or not pagina:
+            break
+        # El cursor lleva la query embebida: seguir la URL tal cual, sin re-enviar params.
+        url, params = nxt, None
+
+    log.info("prellenar_pagos: fecha=%s → %d citas (con paginación)", fecha_iso, len(citas))
     if not citas:
         return {"creadas": 0, "actualizadas": 0, "saltadas": 0, "errores": 0, "mensaje": "Sin citas para esa fecha en Medilink"}
 
