@@ -459,11 +459,10 @@
 const TOKEN = "__TOKEN__";
 const qp = TOKEN ? ("?token=" + encodeURIComponent(TOKEN)) : "";
 
-// Limpiar el token de la URL una vez que el JS lo leyó (vive en memoria, no necesita quedar en barra).
-if (TOKEN && location.search.includes("token=")) {
-  const clean = location.pathname + location.search.replace(/[?&]token=[^&]*/g, "").replace(/^&/, "?").replace(/^\?$/, "") + location.hash;
-  history.replaceState(null, "", clean || location.pathname);
-}
+// El token SE QUEDA en la URL a propósito: así el favorito y el refresh
+// conservan el perfil activo (dueño/OLACORE vs recepción). Si se borra, al
+// refrescar la sesión cae a la cookie de recepción y el panel del dueño
+// "vuelve" a Recepción — regresión operativa reportada 2026-06-29.
 
 // PWA: manifest con token (para que el launcher abra autenticado) + service worker
 (function(){
