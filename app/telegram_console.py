@@ -171,6 +171,45 @@ async def reporte_agenda() -> tuple[str, list]:
                                 "url": "https://agentecmc.cl/alma/panel-dia?token=" + _admin_token()}]]
 
 
+def reporte_templates() -> tuple[str, list]:
+    """Salud de entrega de templates de hoy: global (message_statuses) + por
+    template (template_sends × statuses, se puebla desde el nuevo tracking)."""
+    from session import db
+    hoy = datetime.now(_CLT).date().isoformat()
+    lines = ["📤 *Templates de hoy* — %s" % datetime.now(_CLT).strftime("%d/%m")]
+    with db() as c:
+        st = {s: n for s, n in c.execute(
+            "SELECT status, COUNT(*) FROM message_statuses WHERE substr(ts,1,10)=? GROUP BY status",
+            (hoy,)).fetchall()}
+        deliv = st.get("delivered", 0) + st.get("read", 0)
+        lines += ["", "*Entrega global*",
+                  "✅ Entregado/leído: *%d*" % deliv,
+                  "📤 Enviado (sin confirmar): %d" % st.get("sent", 0),
+                  "❌ Falló: *%d*" % st.get("failed", 0)]
+        errs = c.execute(
+            "SELECT error_code, COUNT(*) FROM message_statuses WHERE substr(ts,1,10)=? "
+            "AND status='failed' GROUP BY error_code ORDER BY 2 DESC", (hoy,)).fetchall()
+        if errs:
+            lines.append("Errores: " + " · ".join("%s×%d" % (e or "?", n) for e, n in errs))
+        try:
+            rows = c.execute(
+                "SELECT t.template_name, COUNT(*), "
+                "SUM(CASE WHEN s.status IN ('delivered','read') THEN 1 ELSE 0 END), "
+                "SUM(CASE WHEN s.status='failed' THEN 1 ELSE 0 END) "
+                "FROM template_sends t LEFT JOIN message_statuses s ON t.wamid=s.wamid "
+                "WHERE substr(t.ts,1,10)=? GROUP BY t.template_name ORDER BY 2 DESC",
+                (hoy,)).fetchall()
+        except Exception:  # noqa: BLE001 — tabla aún no existe hasta el 1er envío
+            rows = []
+        if rows:
+            lines += ["", "*Por template*"]
+            for name, tot, ok, fail in rows:
+                lines.append("• %s — %d env · %d✅ · %d❌" % (name, tot, ok or 0, fail or 0))
+        else:
+            lines += ["", "_Desglose por template: se activa desde el próximo envío (tracking nuevo)._"]
+    return "\n".join(lines), []
+
+
 def menu() -> tuple[str, list]:
     txt = ("🤖 *Consola CMC* — tu asistente de dueño\n\n"
            "*Comandos* (instantáneos, gratis):\n"
@@ -178,6 +217,7 @@ def menu() -> tuple[str, list]:
            "• /hoy — caja del día\n"
            "• /mes — DB mensual + top profesionales\n"
            "• /comparador — variación vs mes anterior\n"
+           "• /templates — entrega de templates de hoy\n"
            "• /ayuda — este menú\n\n"
            "También puedes *escribirme en tus palabras* "
            "(ej: _¿cuánto vendió Olavarría este mes?_) y te respondo.")
@@ -249,6 +289,7 @@ _COMANDOS = {
     "hoy": reporte_hoy, "caja": reporte_hoy,
     "mes": reporte_mes, "mensual": reporte_mes,
     "comparador": reporte_comparador, "comparacion": reporte_comparador,
+    "templates": reporte_templates, "template": reporte_templates,
 }
 
 

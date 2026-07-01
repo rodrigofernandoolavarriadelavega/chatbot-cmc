@@ -718,7 +718,7 @@ async def send_whatsapp_template(to: str, template_name: str,
             to, template_name,
         )
         return None
-    return await _post_meta({
+    _wamid = await _post_meta({
         "messaging_product": "whatsapp",
         "to": to_norm,
         "type": "template",
@@ -728,6 +728,13 @@ async def send_whatsapp_template(to: str, template_name: str,
             "components": components,
         },
     })
+    if _wamid:  # registrar wamid→template para poder reportar entrega POR template
+        try:
+            from session import record_template_send
+            record_template_send(_wamid, template_name, to_norm)
+        except Exception:  # noqa: BLE001 — nunca romper el envío por el tracking
+            pass
+    return _wamid
 
 
 # ── Multimodal: descarga de media + transcripción Whisper ───────────────────

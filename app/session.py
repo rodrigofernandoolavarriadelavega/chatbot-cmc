@@ -2125,6 +2125,27 @@ def upsert_message_status(wamid: str, phone: str, status: str,
         conn.commit()
 
 
+def record_template_send(wamid: str, template_name: str, phone: str) -> None:
+    """Registra (wamid → template) al enviar un template, para poder cruzar con
+    message_statuses y reportar entrega POR template. Mejor-esfuerzo; nunca lanza.
+    ts en hora Chile para filtrar por 'hoy' sin líos de zona horaria."""
+    if not wamid:
+        return
+    try:
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo as _ZI
+        ts = _dt.now(_ZI("America/Santiago")).isoformat()
+        with db() as conn:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS template_sends ("
+                "wamid TEXT PRIMARY KEY, template_name TEXT, phone TEXT, ts TEXT)")
+            conn.execute(
+                "INSERT OR IGNORE INTO template_sends (wamid, template_name, phone, ts) "
+                "VALUES (?,?,?,?)", (wamid, template_name, phone, ts))
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def get_message_status_summary(phone: str) -> dict:
     """Get delivery status summary for a phone's outgoing messages (last 24h)."""
     with db() as conn:
