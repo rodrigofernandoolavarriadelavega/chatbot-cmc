@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te saludamos desde el Centro Médico Carampangue.\n\nEl Dr. Manuel Borrego, otorrinolaringólogo, tiene disponibilidad para controles de seguimiento. Muchas afecciones del oído, nariz y garganta requieren revisión periódica para confirmar que la evolución va bien.\n\nSi tienes algún control pendiente o una consulta nueva, puedes escribirnos por este WhatsApp o llamar al (41) 296 5226.",
+      "text": "Hola {{1}}, te saludamos desde el Centro Médico Carampangue.\n\nEl Dr. Manuel Borrego, otorrinolaringólogo, tiene disponibilidad para controles de seguimiento. Muchas afecciones del oído, nariz y garganta requieren revisión periódica para confirmar que la evolución va bien.\n\nSi tienes algún control pendiente o una consulta nueva, puedes escribirnos por este WhatsApp o llamar al (44) 296 5226.",
       "example": {
         "body_text": [["Pedro"]]
       }

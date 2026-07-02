@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nNos dimos cuenta de que llevas un tiempo sin pasar a consulta con {{2}}. Si tienes algún control pendiente o un motivo nuevo que te preocupa, podemos ayudarte a agendar con facilidad.\n\nEstamos en Carampangue de lunes a viernes. Si prefieres, escríbenos por este mismo WhatsApp o llámanos al (41) 296 5226.",
+      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nNos dimos cuenta de que llevas un tiempo sin pasar a consulta con {{2}}. Si tienes algún control pendiente o un motivo nuevo que te preocupa, podemos ayudarte a agendar con facilidad.\n\nEstamos en Carampangue de lunes a viernes. Si prefieres, escríbenos por este mismo WhatsApp o llámanos al (44) 296 5226.",
       "example": {
         "body_text": [["Juan", "el Dr. Olavarría"]]
       }

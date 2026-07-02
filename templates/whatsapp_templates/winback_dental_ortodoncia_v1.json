@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nSi quedaste con controles pendientes de ortodoncia con la Dra. Castillo, podemos ayudarte a retomar el seguimiento. Los controles regulares son clave para que el tratamiento avance bien.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.",
+      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nSi quedaste con controles pendientes de ortodoncia con la Dra. Castillo, podemos ayudarte a retomar el seguimiento. Los controles regulares son clave para que el tratamiento avance bien.\n\nEscríbenos por este WhatsApp o llama al (44) 296 5226.",
       "example": {
         "body_text": [["Carlos"]]
       }

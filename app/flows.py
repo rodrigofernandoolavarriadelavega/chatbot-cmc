@@ -194,9 +194,15 @@ async def _buscar_slots_dia_con_retry(especialidad: str, fecha: str, **kwargs):
 
 EMERGENCIAS  = {
     # generales
-    "emergencia", "urgencia", "dolor muy fuerte", "no puedo respirar",
+    "emergencia", "urgencia", "no puedo respirar",
     "estoy grave", "me estoy muriendo", "perdí el conocimiento", "perdi el conocimiento",
-    "mucho dolor", "accidente", "desmayo", "convulsion", "convulsión",
+    "accidente", "desmayo", "convulsion", "convulsión",
+    # NOTA (2026-07-01): "mucho dolor" y "dolor muy fuerte" se RETIRARON de este
+    # set. Eran gatillos SAMU por substring y disparaban ambulancia ante
+    # "mucho dolor de cabeza/muela/regla/espalda" — dolor sin localización vital
+    # NO es SAMU (caso real: paciente pedía reagendar su kine por cefalea → SAMU).
+    # El dolor genérico ahora pasa por el triage GES normal. Las frases realmente
+    # vitales (pecho, cefalea en trueno, ACV, hemorragia) siguen abajo, enumeradas.
     # respiratorio severo
     "me ahogo", "no me entra aire", "ahogo fuerte",
     # cardiovascular severo
@@ -426,6 +432,7 @@ PRECIOS_SLOT = {
     "Nutrición":              ("ambas",     4770, None, 20000),   # Fonasa $4.770 / Particular $20.000 (F035)
     "Matrona":                ("ambas",     16000,  None, 20000),  # Fonasa $16.000 / Particular $20.000
     "Psiquiatría":            ("particular", 60000),
+    "Neurología":             ("particular", 65000),
     "Fonoaudiología":         ("particular", 25000),
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
@@ -3418,10 +3425,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         and not _URGENCIA_PRESENTE.search(tl)
         and not _VITAL_SIGNAL.search(tl)
     )
+    # FIX 3 (2026-07-01): inhibir cuando el mensaje claramente pide MOVER/CAMBIAR
+    # una hora futura (reagendar) y NO hay señal vital ni gravedad inmediata. El
+    # paciente que explica "tengo dolor de cabeza, ¿puede cambiar mi hora para el
+    # viernes?" está planificando a futuro — lo opuesto a una urgencia aguda. Un
+    # keyword de emergencia que aparezca de pasada no debe secuestrar el flujo de
+    # reagendamiento. CONSERVADOR: cualquier señal vital o gravedad presente lo
+    # deja disparar igual (mejor un SAMU de más que suprimir uno real).
+    _REAGENDAR_CTX = re.compile(
+        r"(reagend|reprogram"
+        r"|cambiar\s+(la|mi|de)\s+(hora|cita|d[ií]a)|cambiar\s+para"
+        r"|mover\s+(la|mi)\s+(hora|cita)|correr\s+(la|mi)\s+(hora|cita)"
+        r"|pasar\s+(la|mi)\s+(hora|cita)|dejar\w*\s+(la\s+hora\s+)?para\s+(el|la|otro)"
+        r"|no\s+(voy\s+a\s+)?(podr[ée]|puedo|pude)\s+(ir|asistir|llegar)"
+        r"|para\s+(el|la|este|el\s+pr[oó]ximo)\s+"
+        r"(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|otro\s+d[ií]a))",
+        re.IGNORECASE,
+    )
+    _inhibir_por_reagendar = (
+        _REAGENDAR_CTX.search(tl)
+        and not _VITAL_SIGNAL.search(tl)
+        and not _GRAVEDAD_INMEDIATA.search(tl)
+    )
     _inhibir_emergencia = (
         (_solo_urgencia_trigger and _URGENCIA_EXCUSA.search(tl) and not _GRAVEDAD_INMEDIATA.search(tl))
         or _urgencia_dental_falso_positivo
         or _inhibir_por_pasado
+        or _inhibir_por_reagendar
     )
 
     if not _inhibir_emergencia and (
@@ -6614,6 +6644,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if any(k in tl_norm for k in ("psiquiatra", "psiquiatria", "psiquiatría",
                                        "psiquiatras")):
             return await _iniciar_agendar(phone, data, "psiquiatría")
+        # Neurología: Dra. Franca González (prof 79), TELEMEDICINA. Mismo
+        # bypass explícito que psiquiatría para no depender del fallback genérico.
+        if any(k in tl_norm for k in ("neurologo", "neurologa", "neurología",
+                                       "neurologia", "neurólogo", "neuróloga")):
+            return await _iniciar_agendar(phone, data, "neurología")
         from medilink import _ids_para_especialidad
         # Traducir ID de lista interactiva al nombre real de especialidad
         especialidad_candidata = _ESP_ID_MAP.get(tl, tl)
@@ -8425,6 +8460,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     [{"id": "1", "title": "Fonasa"},
                      {"id": "2", "title": "Particular"}]
                 )
+            # FIX (2026-07-01): reacción corta de sorpresa/entusiasmo ("¿será
+            # posible?!", "en serio?!", "de verdad?!", "genial!", "que bueno")
+            # NO es una pregunta informativa. Mandarla a respuesta_faq() hace que
+            # Haiku devuelva un "No entiendo bien tu pregunta…" confuso (caso real:
+            # paciente reacciona al slot ofrecido con "Será posible ?!?!!"). Mejor
+            # confirmar con calidez y re-pedir la modalidad, sin gastar un llamado
+            # a Claude. Conservador: solo ≤4 palabras + regex de reacción (una
+            # pregunta real como "será posible pagar con tarjeta?" tiene >4 y pasa).
+            _REACCION_CORTA_RE = re.compile(
+                r"^\W*(ser[áa]\s+posible|posible|en\s+serio|enserio|de\s+verdad"
+                r"|deverdad|wow|gua+u|genial|buen[íi]simo|excelente|perfecto"
+                r"|que\s+bueno|qu[ée]\s+bueno|incre[íi]ble|no\s+puede\s+ser)\b",
+                re.IGNORECASE,
+            )
+            if len(tl.split()) <= 4 and _REACCION_CORTA_RE.search(tl.strip()):
+                save_session(phone, "WAIT_MODALIDAD", data)
+                return _btn_msg(
+                    "¡Sí! 🙌 Para reservarte el horario, dime cómo será la atención:",
+                    [{"id": "1", "title": "Fonasa"},
+                     {"id": "2", "title": "Particular"}]
+                )
             # BUG-03: Pregunta libre (contiene "?") → responder y volver a pedir modalidad
             if "?" in txt and len(txt) >= 5:
                 try:
@@ -9598,6 +9654,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Psiquiatría (Dra. Cecilia Unibazo, prof 78) es SOLO teleconsulta → forzar
             # modalidad TELEMEDICINA (marca [ONLINE] en Medilink), sin preguntar presencial.
             if str(slot.get("id_profesional")) == "78" or "psiquiatr" in (slot.get("especialidad", "") or "").lower():
+                data["telemedicina_modalidad"] = "TELEMEDICINA"
+
+            # Neurología (Dra. Franca González, prof 79) es SOLO telemedicina → forzar
+            # modalidad TELEMEDICINA igual que psiquiatría, sin abono-gate (no lo pidió el dueño).
+            if str(slot.get("id_profesional")) == "79" or "neurolog" in (slot.get("especialidad", "") or "").lower():
                 data["telemedicina_modalidad"] = "TELEMEDICINA"
 
             # ── Abono-Gate Psiquiatría (feature 2026-06-11) ───────────────────
@@ -12317,6 +12378,7 @@ _ESP_ID_MAP = {
     "esp_trauma":  "medicina general",  # traumatología redirigida
     "esp_gineco":  "ginecología",
     "esp_gastro":  "gastroenterología",
+    "esp_neuro":   "neurología",
     "esp_psico":   "psicología",
     "esp_fono":    "fonoaudiología",
     "esp_matrona": "matrona",
@@ -12357,6 +12419,7 @@ def _especialidades_medico_msg() -> dict:
                 # Traumatología temporalmente deshabilitada (Dr. Barraza no disponible)
                 {"id": "esp_gineco",  "title": "Ginecología"},
                 {"id": "esp_gastro",  "title": "Gastroenterología"},
+                {"id": "esp_neuro",   "title": "Neurología"},
                 {"id": "esp_psico",   "title": "Psicología"},
                 {"id": "esp_fono",    "title": "Fonoaudiología"},
                 {"id": "esp_matrona", "title": "Matrona"},
@@ -13241,6 +13304,7 @@ _ESPECIALIDADES_TEXTO = (
     # "• Traumatología\n"  # temporalmente deshabilitada
     "• Ginecología\n"
     "• Gastroenterología\n"
+    "• Neurología\n"
     "• Odontología General\n"
     "• Ortodoncia\n"
     "• Endodoncia\n"

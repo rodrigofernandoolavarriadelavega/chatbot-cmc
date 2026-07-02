@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi te interesa retomar o consultar sobre tratamientos de estética facial, la Dra. Fuentealba está disponible esta semana.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226 para ver los horarios disponibles.",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi te interesa retomar o consultar sobre tratamientos de estética facial, la Dra. Fuentealba está disponible esta semana.\n\nEscríbenos por este WhatsApp o llama al (44) 296 5226 para ver los horarios disponibles.",
       "example": {
         "body_text": [["Claudia"]]
       }

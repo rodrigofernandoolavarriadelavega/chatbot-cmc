@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi pensaste en empezar tratamiento de ortodoncia con la Dra. Daniela Castillo, el primer paso es una evaluación inicial con uno de nuestros odontólogos generales.\n\nCostos referenciales:\n- Evaluación inicial (odonto general): $15.000\n- Instalación brackets: desde $120.000\n- Controles mensuales: $30.000\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi pensaste en empezar tratamiento de ortodoncia con la Dra. Daniela Castillo, el primer paso es una evaluación inicial con uno de nuestros odontólogos generales.\n\nCostos referenciales:\n- Evaluación inicial (odonto general): $15.000\n- Instalación brackets: desde $120.000\n- Controles mensuales: $30.000\n\nEscríbenos por este WhatsApp o llama al (44) 296 5226.",
       "example": {
         "body_text": [["María"]]
       }

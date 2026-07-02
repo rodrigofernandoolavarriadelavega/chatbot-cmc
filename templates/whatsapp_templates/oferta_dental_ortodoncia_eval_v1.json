@@ -6,7 +6,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi alguna vez has pensado en mejorar tu sonrisa o alinear tus dientes, la Dra. Daniela Castillo realiza evaluaciones de ortodoncia en nuestro centro.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226 para consultar disponibilidad.",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi alguna vez has pensado en mejorar tu sonrisa o alinear tus dientes, la Dra. Daniela Castillo realiza evaluaciones de ortodoncia en nuestro centro.\n\nEscríbenos por este WhatsApp o llama al (44) 296 5226 para consultar disponibilidad.",
       "example": {
         "body_text": [["Pedro"]]
       }

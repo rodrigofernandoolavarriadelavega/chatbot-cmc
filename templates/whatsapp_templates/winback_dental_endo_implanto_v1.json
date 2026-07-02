@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi tienes un tratamiento dental pendiente o quieres revisar el estado de tu tratamiento con {{2}}, estamos disponibles para coordinar una hora.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.",
+      "text": "Hola {{1}}, te saluda el Centro Médico Carampangue.\n\nSi tienes un tratamiento dental pendiente o quieres revisar el estado de tu tratamiento con {{2}}, estamos disponibles para coordinar una hora.\n\nEscríbenos por este WhatsApp o llama al (44) 296 5226.",
       "example": {
         "body_text": [["Ana", "el Dr. Fredes"]]
       }

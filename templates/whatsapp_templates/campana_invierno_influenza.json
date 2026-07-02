@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nSe acerca la temporada de invierno y es importante vacunarse contra la influenza.\n\nContamos con stock de vacunas. Escribe al bot o llámanos al (41) 296 5226 para agendar.",
+      "text": "Hola {{1}}, del Centro Médico Carampangue.\n\nSe acerca la temporada de invierno y es importante vacunarse contra la influenza.\n\nContamos con stock de vacunas. Escribe al bot o llámanos al (44) 296 5226 para agendar.",
       "example": {
         "body_text": [["Rosa"]]
       }

@@ -114,6 +114,12 @@ _INTENT_CACHE: dict[str, dict] = {
     "psiquiatría":    {"intent": "agendar", "especialidad": "psiquiatría"},
     "psiquiatria":    {"intent": "agendar", "especialidad": "psiquiatría"},
     "psiquiatrico":   {"intent": "agendar", "especialidad": "psiquiatría"},
+    "neurologo":      {"intent": "agendar", "especialidad": "neurología"},
+    "neurólogo":      {"intent": "agendar", "especialidad": "neurología"},
+    "neurologa":      {"intent": "agendar", "especialidad": "neurología"},
+    "neuróloga":      {"intent": "agendar", "especialidad": "neurología"},
+    "neurología":     {"intent": "agendar", "especialidad": "neurología"},
+    "neurologia":     {"intent": "agendar", "especialidad": "neurología"},
     "nutri":          {"intent": "agendar", "especialidad": "nutrición"},
     "nutrición":      {"intent": "agendar", "especialidad": "nutrición"},
     "nutricion":      {"intent": "agendar", "especialidad": "nutrición"},
@@ -686,6 +692,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
 - Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, solo jueves 16-20, $60.000 particular, NO Fonasa). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
+- Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños.
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
 - Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
 - Ecografía mamaria / de mamas / ecotomografía mamaria → "ecografía" (David Pardo, ID 68, $40.000). Es partes blandas, NO ginecológica. NUNCA Rejón para mamaria.
@@ -868,6 +875,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Podología | ❌ Solo particular | $20.000+ | NO acepta Fonasa |
 | Masoterapia | ❌ Solo particular | $17.990–$26.990 | NO acepta Fonasa |
 | Ecografía (David Pardo) | ❌ Solo particular | $40.000 | NO acepta Fonasa en ninguna modalidad ni tramo |
+| Neurología (Dra. Franca González) | ❌ Solo particular | $65.000 | NO acepta Fonasa · atención SOLO por telemedicina, desde 15 años |
 
 REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay Fonasa para [X especialidad]?", RESPONDE EXPLÍCITAMENTE SÍ/NO según la tabla. NO contestes con "tenemos Fonasa MLE en otras especialidades" sin antes responder lo que preguntan.
 - ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición, Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo).
@@ -898,6 +906,16 @@ SALUD MENTAL
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
+
+NEUROLOGÍA (Dra. Franca González)
+El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDICINA (videollamada)**, **$65.000 particular** (no atiende por Fonasa), consulta de **30 minutos**. Atiende SOLO desde los **15 años en adelante** (adolescentes y adultos) — no ve niños. Áreas de interés: epilepsia, trastornos neurológicos funcionales, trastornos de memoria, déficit atencional, ansiedad y estrés (de causa neurológica), cefaleas y neurología general.
+- Piden explícitamente "neurólogo"/"neuróloga"/"neurología" → **Neurología** directo.
+- Epilepsia / convulsiones / episodio de pérdida de conciencia con movimientos anormales (ya evaluado o diagnosticado, no en curso) → **Neurología**. Si el episodio está ocurriendo ahora o es reciente, prioriza la derivación a urgencia (ver DOLOR/CABEZA y FAST más abajo).
+- Pérdida de memoria / olvidos frecuentes en adulto / le cuesta concentrarse y quiere evaluación específica → **Neurología**.
+- Déficit atencional en adultos (TDAH adulto) → **Neurología**. En niños con TDAH o problemas de conducta sigue siendo **Psicología Infantil** (Jorge Montalba).
+- Cefalea o jaqueca recurrente/crónica que el paciente ya trató con Medicina General sin mejora, o pide evaluación por especialista → **Neurología**. El primer episodio de dolor de cabeza simple sigue siendo **Medicina General** (ver bloque DOLOR/CABEZA).
+- Mareos o síntomas neurológicos persistentes sin causa clara (trastorno neurológico funcional) → **Neurología**.
+- Menor de 15 años con estos síntomas → Neurología NO aplica; ofrece **Medicina General** o deriva al CESFAM Carampangue/Hospital de Arauco para evaluación pediátrica.
 
 ESTÉTICA / ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba)
 - Arrugas / rejuvenecer / botox / toxina botulínica / entrecejo / patas de gallo → Toxina botulínica en 3 zonas, relaja los músculos de la cara para suavizar arrugas, ~20 min, efecto dura 4–6 meses. $159.990 con **Estética Facial**.
@@ -1338,14 +1356,14 @@ _PRECIOS_CONOCIDOS: frozenset[str] = frozenset({
     "$13.000", "$14.420", "$14.990", "$15.000", "$16.000", "$17.500",
     "$17.990", "$18.000", "$20.000", "$25.000", "$26.990", "$30.000",
     "$34.990", "$35.000", "$40.000", "$45.000", "$50.000", "$54.990",
-    "$60.000", "$75.000", "$80.000", "$83.360", "$90.000", "$110.000",
+    "$60.000", "$65.000", "$75.000", "$80.000", "$83.360", "$90.000", "$110.000",
     "$120.000", "$125.000", "$129.990", "$139.990", "$150.000", "$159.990",
     "$179.990", "$180.000", "$220.000", "$349.900", "$450.000", "$650.000",
 })
 
 # Especialidades que NO se atienden en el CMC.
+# Neurología SÍ se atiende desde 2026 (Dra. Franca González) — no incluir acá.
 _ESP_NO_ATENDIDAS: tuple[tuple[str, ...], ...] = (
-    ("neurólog", "neurolog"),
     ("pediatr",),
     ("oftalmólog", "oftalmolog"),
     ("dermató", "dermato"),
@@ -1376,11 +1394,12 @@ _NOMBRES_PROF_CONOCIDOS: frozenset[str] = frozenset({
     "rejon", "quijano", "burgos", "jimenez", "castillo", "fredes",
     "valdes", "fuentealba", "acosta", "armijo", "etcheverry", "pinto",
     "montalba", "rodriguez", "arratia", "gomez", "guevara", "pardo",
+    "gonzalez",
     # Primeros nombres (uso conversacional frecuente)
     "rodrigo", "andres", "alonso", "manuel", "miguel", "claudio", "tirso",
     "nicolas", "javiera", "carlos", "daniela", "fernando", "aurora",
     "valentina", "paola", "luis", "leonardo", "gisela", "jorge",
-    "juan", "juana", "sarai", "andrea", "david",
+    "juan", "juana", "sarai", "andrea", "david", "franca",
 })
 
 _RX_PRECIO_FAQ = re.compile(r"\$\d{1,3}(?:\.\d{3})+(?:\.\d+)?")

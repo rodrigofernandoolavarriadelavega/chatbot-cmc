@@ -771,6 +771,52 @@ def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
     return n_ok, n_sin_prof
 
 
+def _purge_anulados_dia(fecha: str, live_ids: set) -> int:
+    """Reconcilia: borra de bi_pagos_caja los pagos de `fecha` que YA NO existen
+    en Medilink (anulados/eliminados tras una sync previa). El upsert nunca borra,
+    así que sin esto los anulados quedaban inflando el total local (caso 2026-06:
+    3 folios = $97.960 de más). Solo se llama con `live_ids` NO vacío (respuesta
+    válida de Medilink) → nunca borra masivamente sobre un fetch fallido o un día
+    sin pagos."""
+    if not live_ids:
+        return 0
+    with _bi_conn() as c:
+        existing = {r[0] for r in c.execute(
+            "SELECT pago_id FROM bi_pagos_caja WHERE fecha=?", (fecha,)).fetchall()}
+        sobran = existing - live_ids
+        if not sobran:
+            return 0
+        ph = ",".join("?" for _ in sobran)
+        c.execute(f"DELETE FROM bi_pagos_caja WHERE fecha=? AND pago_id IN ({ph})",
+                  (fecha, *sobran))
+        log.info("pagos reconcilia %s: purgados %d anulados %s",
+                 fecha, len(sobran), sorted(sobran))
+        return len(sobran)
+
+
+def _alertar_profesionales_sin_nomina() -> list[dict]:
+    """Auto-detección: profesionales con pagos del mes en curso cuyo id_profesional
+    NO está en equipo_cmc. Su ingreso queda fuera del DB Mensual hasta darlos de
+    alta (caso Cecilia Unibazo, id 78). Loggea WARNING accionable por cada uno."""
+    desde = date.today().replace(day=1).isoformat()
+    faltan: list[dict] = []
+    with _bi_conn() as c:
+        nomina = {r[0] for r in c.execute(
+            "SELECT id_medilink FROM equipo_cmc").fetchall()}
+        rows = c.execute(
+            "SELECT id_profesional, SUM(monto), COUNT(*) FROM bi_pagos_caja "
+            "WHERE fecha>=? AND id_profesional IS NOT NULL GROUP BY id_profesional",
+            (desde,)).fetchall()
+        for idp, suma, n in rows:
+            if idp not in nomina:
+                faltan.append({"id_profesional": idp, "monto": int(suma or 0), "pagos": n})
+                log.warning(
+                    "NOMINA: id_profesional=%s tiene $%s en %d pagos este mes y NO "
+                    "está en equipo_cmc → su ingreso queda FUERA del DB Mensual",
+                    idp, f"{int(suma or 0):,}", n)
+    return faltan
+
+
 async def sync_pagos_rango(desde: str = "2024-01-01", hasta: str | None = None,
                             force: bool = False) -> dict:
     """Sincroniza pagos día por día. Skip incremental si la fecha ya está cacheada

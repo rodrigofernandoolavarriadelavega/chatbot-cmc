@@ -4394,6 +4394,7 @@ _PRECIO_ESP: dict[str, int] = {
     "estética facial":        15000,
     "matrona":                20000,
     "psiquiatría":            60000,
+    "neurología":             65000,
     "masoterapia":            22000,
 }
 

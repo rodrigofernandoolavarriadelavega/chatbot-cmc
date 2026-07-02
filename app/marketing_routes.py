@@ -34,7 +34,7 @@ _DEFAULTS = {
     "promos": [
         {"titulo": "Nutricionista bono Fonasa", "detalle": "$4.770 con bono · particular $20.000", "vigente": True},
         {"titulo": "Ortodoncia", "detalle": "Instalación completa $120.000 · controles $30.000", "vigente": True},
-        {"titulo": "Limpieza dental", "detalle": "Evaluación $15.000 · promo del mes", "vigente": True},
+        {"titulo": "Limpieza dental", "detalle": "Evaluación $15.000", "vigente": False},
     ],
     "copys": [
         {"area": "Dental", "texto": "Tu sonrisa también es salud 🦷 Agenda tu evaluación dental en Carampangue. Escríbenos por WhatsApp.", "cta": "Agenda por WhatsApp"},

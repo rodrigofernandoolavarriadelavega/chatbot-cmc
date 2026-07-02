@@ -342,6 +342,10 @@ EDAD_MIN_ESPECIALIDAD: dict[str, int] = {
     "implantologia":      18,
     "ginecologia":        12,
     "otorrinolaringologia": 5,
+    # data["especialidad"] viaja con tilde ("neurología") — ver flows.py:_precio_line
+    # para el mismo detalle en PRECIOS_SLOT. Se agregan ambas formas por seguridad.
+    "neurología":         15,
+    "neurologia":         15,
 }
 
 EDAD_MAX_ESPECIALIDAD: dict[str, int] = {
@@ -400,6 +404,8 @@ ARANCELES_CLP: dict[str, int] = {
     "psicologia":                   35000,
     "psiquiatría":                  60000,
     "psiquiatria":                  60000,
+    "neurología":                   65000,
+    "neurologia":                   65000,
     "ginecología":                  40000,
     "ginecologia":                  40000,
     "matrona":                      20000,  # F172: particular $20.000 (Fonasa $16.000); era 25000 incorrecto

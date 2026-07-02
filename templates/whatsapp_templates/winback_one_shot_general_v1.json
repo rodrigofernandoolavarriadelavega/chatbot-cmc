@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te saludamos desde el Centro Médico Carampangue.\n\nHa pasado más de un año desde tu última visita. Queremos que sepas que seguimos en Carampangue con el mismo equipo, atendiendo medicina general, dental, kinesiología, psicología y otros servicios.\n\nSi en algún momento necesitas atención o tienes algo que revisar, no dudes en escribirnos por este WhatsApp o llamar al (41) 296 5226. Sin apuro, cuando tú lo decidas.",
+      "text": "Hola {{1}}, te saludamos desde el Centro Médico Carampangue.\n\nHa pasado más de un año desde tu última visita. Queremos que sepas que seguimos en Carampangue con el mismo equipo, atendiendo medicina general, dental, kinesiología, psicología y otros servicios.\n\nSi en algún momento necesitas atención o tienes algo que revisar, no dudes en escribirnos por este WhatsApp o llamar al (44) 296 5226. Sin apuro, cuando tú lo decidas.",
       "example": {
         "body_text": [["Luis"]]
       }

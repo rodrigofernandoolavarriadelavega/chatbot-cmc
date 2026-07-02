@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nNos dimos cuenta de que llevas un tiempo desde tu último control en CMC. Si tienes algo pendiente de revisar o simplemente quieres retomar un seguimiento, estamos disponibles para orientarte.\n\nPuedes escribirnos por este mismo WhatsApp o llamarnos al (41) 296 5226. Atendemos con discreción y respeto.",
+      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nNos dimos cuenta de que llevas un tiempo desde tu último control en CMC. Si tienes algo pendiente de revisar o simplemente quieres retomar un seguimiento, estamos disponibles para orientarte.\n\nPuedes escribirnos por este mismo WhatsApp o llamarnos al (44) 296 5226. Atendemos con discreción y respeto.",
       "example": {
         "body_text": [["Ana"]]
       }

@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nSi tienes controles de kinesiología pendientes o quieres retomar sesiones con {{2}}, podemos ayudarte a agendar.\n\nEscríbenos por este WhatsApp o llama al (41) 296 5226.\n\nPolítica de privacidad: agentecmc.cl/privacidad",
+      "text": "Hola {{1}}, te contactamos del Centro Médico Carampangue.\n\nSi tienes controles de kinesiología pendientes o quieres retomar sesiones con {{2}}, podemos ayudarte a agendar.\n\nEscríbenos por este WhatsApp o llama al (44) 296 5226.\n\nPolítica de privacidad: agentecmc.cl/privacidad",
       "example": {
         "body_text": [
           [
