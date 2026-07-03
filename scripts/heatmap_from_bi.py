@@ -18,6 +18,11 @@ import os
 import sqlite3
 
 import psycopg2
+from dotenv import load_dotenv
+
+# Cargar .env (BI_DB_*). load_dotenv() busca .env desde el cwd (/opt/chatbot-cmc
+# al correr por cron/refresh). Necesario porque este script NO importa config.
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger(__name__)
