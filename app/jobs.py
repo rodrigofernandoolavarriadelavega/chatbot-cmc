@@ -2180,20 +2180,32 @@ async def _job_regenerate_heatmap_cache():
             if arauco_phones and "ARAUCO" not in comunas:
                 comunas["ARAUCO"]["pacientes"] += arauco_phones
 
-        # Sumar citas desde heatmap_cache.db si existe
+        # Sumar pacientes + citas desde heatmap_cache.db (poblado desde el BI).
+        # OJO: la comuna vive en pacientes_heatmap, NO en citas_heatmap → hay que
+        # hacer JOIN. El bug previo consultaba `comuna` sobre citas_heatmap (columna
+        # inexistente) y el `except: pass` lo escondía → el JSON salía siempre vacío.
         if _db_heatmap.exists():
             conn2 = _sqlite3.connect(str(_db_heatmap))
             conn2.row_factory = _sqlite3.Row
             try:
-                rows2 = conn2.execute(
+                # Pacientes por comuna de residencia
+                for r in conn2.execute(
                     "SELECT UPPER(TRIM(comuna)) AS c, COUNT(*) AS n "
-                    "FROM citas_heatmap WHERE comuna IS NOT NULL AND comuna != '' "
+                    "FROM pacientes_heatmap "
+                    "WHERE comuna IS NOT NULL AND TRIM(comuna) NOT IN ('', '0') "
                     "GROUP BY UPPER(TRIM(comuna))"
-                ).fetchall()
-                for r in rows2:
+                ).fetchall():
+                    comunas[r["c"]]["pacientes"] += r["n"]
+                # Citas por comuna (JOIN: la comuna está en pacientes_heatmap)
+                for r in conn2.execute(
+                    "SELECT UPPER(TRIM(p.comuna)) AS c, COUNT(*) AS n "
+                    "FROM citas_heatmap ch JOIN pacientes_heatmap p ON p.id = ch.id_paciente "
+                    "WHERE p.comuna IS NOT NULL AND TRIM(p.comuna) NOT IN ('', '0') "
+                    "GROUP BY UPPER(TRIM(p.comuna))"
+                ).fetchall():
                     comunas[r["c"]]["citas"] += r["n"]
-            except Exception:
-                pass
+            except Exception as _e_hm:
+                log.warning("heatmap regen: error leyendo heatmap_cache.db: %s", _e_hm)
             finally:
                 conn2.close()
 
