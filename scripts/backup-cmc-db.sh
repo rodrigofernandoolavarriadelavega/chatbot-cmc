@@ -70,3 +70,24 @@ if [ -d "${UPLOADS_SRC}" ]; then
 else
     echo "[$(date -Iseconds)] WARN: no existe ${UPLOADS_SRC}, skip uploads backup" >&2
 fi
+
+# ── Backup de heatmap_cache.db (geo-agregados, plaintext) ─────────────────────
+# Añadido 2026-07-02: el incidente del symlink data/ (2026-06-10) borró las tablas
+# del heatmap (citas_heatmap/pacientes_heatmap/geocode_cache) y NO había backup →
+# hubo que reconstruir desde Medilink (~1h). Esto lo previene. Es plaintext (solo
+# agregados geográficos, sin PII sensible), .backup online-safe + gzip.
+HM_SRC=/opt/chatbot-cmc/data/heatmap_cache.db
+if [ -f "${HM_SRC}" ]; then
+    HMDST=${DST_DIR}/heatmap_cache_${TS}.db
+    if sqlite3 "${HM_SRC}" ".backup '${HMDST}'" 2>/dev/null; then
+        gzip -f "${HMDST}"
+        chmod 600 "${HMDST}.gz"
+        HMSIZE=$(du -h "${HMDST}.gz" 2>/dev/null | cut -f1)
+        echo "[$(date -Iseconds)] OK heatmap: ${HMDST}.gz (${HMSIZE})"
+        ls -1t "${DST_DIR}"/heatmap_cache_*.db.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
+    else
+        echo "[$(date -Iseconds)] ERROR: falló .backup de ${HM_SRC}" >&2
+    fi
+else
+    echo "[$(date -Iseconds)] WARN: no existe ${HM_SRC}, skip heatmap backup" >&2
+fi
