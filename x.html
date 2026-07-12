@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="es">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="author" content="Sutter-Line .S.A.">
+        <title>Siscop || Software de médicos, atención de pacientes, agenda medica</title>
+        <meta name="title" content="Siscop.cl || software para medicos, agenda medica, atención de pacientes, fichas clinicas, consultas medicas, concepcion" />
+        <meta name="DC.Title" content="Siscop.cl || software para medicos, agenda medica, atención de pacientes, fichas clinicas, consultas medicas, concepcion" />
+        <meta http-equiv="title" content="Siscop.cl || software para medicos, agenda medica, consultas medicas, atención de pacientes, fichas clinicas, consultas medicas, Concepción" />
+        <meta name="keywords" content="agenda medica, fichas clínicas, software de medicos, consultas medicas, sistema de pacientes, examenes clínicos, recetas, atención de pacientes, pacientes, pediatras, medicos, sistemas de gestion médico, Concepción" />
+        <meta http-equiv="keywords" content="agenda medica, fichas clínicas, software de medicos, consultas medicas, sistema de pacientes, examenes clínicos, recetas, atención de pacientes, pacientes, pediatras, medicos, sistemas de gestion médico, Concepción" />
+        <meta name="description" content="Agenda médica y fichas clinicas, de gestion de pacientes, software para medicos, consultas medicas, control de fichas, exámenes clínicos, recetas y atención de pacientes ">
+        <meta http-equiv="description" content="Agenda médica y fichas clinicas, de gestion de pacientes, software para medicos, consultas medicas, control de fichas, exámenes clínicos, recetas y atención de pacientes">
+        <meta http-equiv="DC.Description" content="Agenda médica y fichas clinicas, de gestion de pacientes, software para medicos, consultas medicas, control de fichas, exámenes clínicos, recetas y atención de pacientes">
+        <meta name="author" content="Sutter-Line S.A.">
+        <meta name="robots" content="all, index, follow" />
+        <meta name="revisit" content="1 days" />
+
+        <!-- css -->
+        <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css">
+        <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+        <link href="css/nivo-lightbox.css" rel="stylesheet" />
+        <link href="css/nivo-lightbox-theme/default/default.css" rel="stylesheet" type="text/css" />
+        <link href="css/owl.carousel.css" rel="stylesheet" media="screen" />
+        <link href="css/owl.theme.css" rel="stylesheet" media="screen" />
+        <link href="css/animate.css" rel="stylesheet" />
+        <link href="css/style.css" rel="stylesheet">
+        <link rel="shortcut icon" href="img/favicon.ico">        
+        <script src='https://www.google.com/recaptcha/api.js'></script>
+		
+        <!-- template skin -->
+        <link id="t-colors" href="color/default.css" rel="stylesheet">
+        <script type="text/javascript">
+            (function (i, s, o, g, r, a, m) {
+                i['GoogleAnalyticsObject'] = r;
+                i[r] = i[r] || function () {
+                    (i[r].q = i[r].q || []).push(arguments)
+                }, i[r].l = 1 * new Date();
+                a = s.createElement(o),
+                        m = s.getElementsByTagName(o)[0];
+                a.async = 1;
+                a.src = g;
+                m.parentNode.insertBefore(a, m)
+            })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+            ga('create', 'UA-66385147-1', 'auto');
+            ga('send', 'pageview');
+        </script>
+    </head>
+    <body id="page-top" data-spy="scroll" data-target=".navbar-custom">
+        <div id="wrapper">
+            <nav class="navbar navbar-custom navbar-fixed-top" role="navigation">
+                <div class="top-area">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm-6 col-md-6">
+                                <ul class="list-inline t-header">
+                                    <li><i class="fa fa-phone"></i> +56 966 77 1307</li>
+                                    <li>|</li>
+                                    <li><a style="color: white;" href="mailto:contacto@siscop.cl?subject=Contacto%20desde%20el%20sitio%20web%20siscop "><i class="fa fa-envelope-o"></i> contacto@siscop.cl</li></a>
+                                </ul>
+                            </div>
+                            <div class="col-sm-6 col-md-6">
+                                <ul class="list-inline t-header text-right">
+                                    <li><a style="color: white;" href="http://www.sutter-line.cl/descargas/soporte.exe"><i class="fa fa-download"></i> Soporte</li></a>
+                                    <li>|</li>
+                                    <li><a style="color: white;" href="http://www.sbu.cl/track/clientes"><i class="fa fa-user"></i> Usuarios</li></a>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="container navigation">
+                    <div class="navbar-header page-scroll">
+                        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-main-collapse">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <a class="navbar-brand" href="/">
+                            <img src="img/logo-siscop.png" alt="fichas clinicas" title="fichas clinicas" width="150" height="40" />
+                        </a>
+                    </div>
+                    <div class="collapse navbar-collapse navbar-right navbar-main-collapse">
+                        <ul class="nav navbar-nav">
+                            <li class="active"><a href="#inicio">Inicio</a></li>
+                            <li><a href="#software">Software</a></li>
+                            <li><a href="#funcionamiento">General</a></li>
+							<li class="dropdown">
+								 <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Especialidades<span class="caret"></span></a>
+								  <ul class="dropdown-menu">
+								    <li><a href="#general">Atención General</a></li>
+									<li role="separator" class="divider"></li>
+								    <li><a href="#kinesiologos">Kinesiólogos</a></li>
+									<li><a href="#psicologos">Psicólogos</a></li>
+									<li><a href="#nutricionistas">Nutricionistas</a></li>
+								<!-- 	<li><a href="#fonoaudiologos">Fonoaudiólogos</a></li> -->
+									<li><a href="#ginecologos">Ginecólogos</a></li>									
+								 </ul>
+							</li>
+							<li><a href="#planes">Planes</a></li>
+                            <li><a href="#preguntas">FAQ</a></li>
+                            <li><a href="#galeria">Galería</a></li>
+                            <li><a href="#contacto">Contacto</a></li>
+
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <section id="inicio" class="intro">
+                <div class="intro-content">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm-12 col-lg-6 col-md-7">
+                                <div class="wow fadeInDown" data-wow-offset="0" data-wow-delay="0.1s">
+                                    <h2 class="h-ultra">Software para médicos</h2>
+                                </div>
+                                <div class="wow fadeInUp" data-wow-offset="0" data-wow-delay="0.1s">
+                                    <h4 class="h-light">Gestión médica y administrativa</h4>
+                                </div>
+                                <div class="well well-trans">
+                                    <div class="wow fadeInRight" data-wow-delay="0.1s">
+                                        <ul class="lead-list">
+                                            <li><span class="fa fa-check fa-2x icon-success"></span> <span class="list"><strong>Agenda médica</strong><br />Alimentada y gestionada por teléfono y solicitudes web</span></li>
+                                            <li><span class="fa fa-check fa-2x icon-success"></span> <span class="list"><strong>Ficha electrónica</strong><br />Didáctico formulario de atención que genera el historial</span></li>
+                                            <li><span class="fa fa-check fa-2x icon-success"></span> <span class="list"><strong>Gestión financiera y producción</strong><br />Pool de informes y reportes de producción y financieros</span></li>
+                                        </ul>
+                                        <p class="text-right wow bounceIn page-scroll" data-wow-delay="0.4s">
+                                            <a href="#contacto" class="btn btn-skin btn-lg ">Solicitar demo  <i class="fa fa-angle-right"></i></a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-12 col-lg-6 col-md-5">
+                                <div class="wow fadeInUp" data-wow-duration="2s" data-wow-delay="0.2s">
+                                    <img src="img/img-1.png" class="img-responsive" alt="agenda medica" title="agenda medica"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section id="callaction-1" class="home-section paddingtop-40">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="callaction bg-intro"> 
+                                <div class="row">
+								    <div class="col-md-5" style="border-right: 5px solid #32f7dc;">
+										<div class="wow fadeInLeft" data-wow-delay="0.1s">
+                                            <div class="text-center">
+												<h3 class="white">Gestión</h3>
+												<p>
+													 <ul class="text-left ">
+													 <li>Multiconsulta</li>
+													 <li>Ficha integrada global</li>
+													 <li>Formulario por especialidad</li>
+													 <li>Producción por profesional</li>
+													 <li>Control de caja</li>
+													 <li>Presupuestos</li>
+													 <li>Estadísticas</li>
+													 <li>Administración de comisiones</li>
+													 <li>... y muchísimo más</li>
+													 </ul>
+												</p>
+											</div>
+                                         </div>
+									</div>
+                                    <div class="col-md-7">
+                                        <div class="wow fadeInUp" data-wow-delay="0.1s">
+                                            <div class="text-center ">
+                                                <h3 class="white">Simpleza y fácilidad</h3>										
+                                                <p class="lead p-info">Tecnología 100% WEB orientado a:</p> 
+												<p class="lead p-info">Centros Médicos</p>
+												<p class="lead p-info">Clínicas - Consultas Particulares</p>	
+                                                <p class="lead p-info">Profesionales Independientes de la Salud</p>
+												<br>
+												<p class="lead p-info">Historia Clínica para todas las especialidades</p>
+                                            </div>
+                                        </div>
+                                    </div>
+									<div class="col-md-12">
+									
+									   <p class="lead p-info mt-15">Pensado para una fácil administración de su tiempo y recursos</p>
+									   <p class="text-center mb-5" style="font-weight:500;">Agenda Médica | Ficha Clínica Electrónica | Reserva Web</p>
+									   <p class="text-center pt-10">un valioso apoyo en su labor médica</p>
+									</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12 col-sm-12 pt20 mb0">
+                                <p class="lead text-center pt20"> Siscop esta estructurado para gestionar múltiples especialidades</p>
+                                <div class="col-md-4 col-sm-12 mb20 pt15 pb20 bg-gray">
+                                    <h6 class="pt10">Especialidades tecnológicas</h6>
+										<ul>
+											<li> Kinesiólogos</li>
+											<li> Psicólogos</li> 
+											<li> Nutricionistas</li> 
+											<li> Fonoaudiólogos</li>
+										</ul>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb20 pt15 pb20 bg-dark text-white">
+                                    <h6 class="text-white pt10">Especialidades Médicas</h6>   
+                                    <ul>
+                                        <li>Medicina interna</li>
+                                        <li>Medicina familiar</li>
+                                        <li>Ginecólogos</li> 
+                                        <li>Especialidades</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb20 pt15 pb20 bg-gray">
+                                    <h6 class="pt10">Estética y Salud</h6>
+									<ul>
+                                        <li>Esteticistas</li>
+										<li>Podólogos</li>
+										<li>Medicina alternativa</li>
+                                        <li>Medicina natural</li> 
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="software" class="home-section pt0">
+                <div class="container pt55">
+                    <h2 class="h-light vent"><i class="fa fa-cloud"></i> Software</h2> 
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="callaction bg-gray">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="wow fadeInUp" data-wow-delay="0.1s">
+                                            <div class="cta-text">
+                                                <h4>... Que puedo hacer con SISCOP?</h4>
+                                                <p>Siscop le permitirá gestionar su consulta de manera integral con acceso a: </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="wow lightSpeedIn" data-wow-delay="0.1s">
+                                            <div class="cta-btn page-scroll">
+                                                <a href="#contacto" class="btn btn-skin btn-lg">Solicitar demostración</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="service" class="home-section nopadding paddingtop-60">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-sm-6 col-md-6">
+                            <div class="wow fadeInUp" data-wow-delay="0.2s">
+                                <img src="img/img-1.jpg" class="img-responsive" alt="pacientes" title="pacientes" />
+                            </div>
+                        </div>
+                        <div class="col-sm-3 col-md-3">
+
+                            <div class="wow fadeInRight" data-wow-delay="0.1s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-calendar fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">Reservas</h5>
+                                        <p>Via web o en forma telefónica</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="wow fadeInRight" data-wow-delay="0.2s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-user-md fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">atenciones </h5>
+                                        <p>Registro de cada atención realizada</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wow fadeInRight" data-wow-delay="0.3s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-medkit fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">Vademecum</h5>
+                                        <p>Acceso directo a Vademecum </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wow fadeInRight" data-wow-delay="0.3s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-files-o fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">Certificados</h5>
+                                        <p>Emisión de certificados ocupacionales, de licencias, etc.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="col-sm-3 col-md-3">
+                            <div class="wow fadeInRight" data-wow-delay="0.1s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-usd fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">Pagos</h5>
+                                        <p>Gestionar recaudaciones por consultas</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="wow fadeInRight" data-wow-delay="0.2s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-wheelchair fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">Licencias</h5>
+                                        <p>Registrar la emisión de licencias</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wow fadeInRight" data-wow-delay="0.3s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-file-text-o fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">Recetas</h5>
+                                        <p>Emisión de recetas electrónicas</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="wow fadeInRight" data-wow-delay="0.3s">
+                                <div class="service-box">
+                                    <div class="service-icon">
+                                        <span class="fa fa-stethoscope fa-3x"></span>
+                                    </div>
+                                    <div class="service-desc">
+                                        <h5 class="h-light">Exámenes</h5>
+                                        <p>Solicitar y registrar exámenes </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row pt30">
+                        <div class="col-md-4 col-sm-6">
+                            <img class="img-responsive center-block" src="img/laptop2.png" alt="agenda medica" title="agenda medica"/>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                            <img class="img-responsive center-block" src="img/laptop3.png" alt="reseva de horas" title="reserva de horas"/>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                            <img class="img-responsive center-block" src="img/tablet2.png" alt="fichas clinicas" title="fichas clinicas"/>
+                        </div>
+                        <div class="col-md-12 col-sm-12 text-center">
+                            <h5 class="h-light text-center pt15 mb-15"> Siscop incluye Capacitación - Asistencia técnica - Soporte en línea</h5>
+							<p>Sistema de tickets para soporte para resolución de dudas o funcionamiento </p>
+                        </div>
+                    </div> 
+
+                </div>
+            </section><section id="funcionamiento" class="home-section pt0">
+                <div class="container pt55">
+                    <h2 class="h-light vent"><i class="fa fa-cogs"></i> Funcionamiento</h2>
+                    <div class="callaction bg-gray mb20">
+                        <div class="wow fadeInUp" data-wow-delay="0.1s">
+                            <div class="cta-text">
+                                <h4>Esquema general de funcionamiento</h4>
+                                <p>SISCOP funciona con distintos módulos que encierran todo el proceso productivo de un Centro Médico o de una consulta independiente. Su diseño intuitivo le permitirá llevar el control de sus expedientes clínicos de una manera fácil y eficaz.</p>
+                            </div>
+                        </div>
+                    </div>  
+                    <div class="row">
+                        <div class="col-sm-4 col-md-4">
+                            <img class="img-responsive" src="img/ficha.png" alt="software de medicos" title="software de medicos" class="person img-circle" />
+                        </div>
+                        <div class="col-sm-4 col-md-5">
+
+                            <div class="wow fadeInUp" data-wow-delay="0.2s">
+                                <div class="box text-center">
+                                    <i class="fa fa-calendar fa-2x circled bg-skin"></i>
+                                    <h4 class="h-bold mb15">Agenda médica</h4>
+                                    <p>
+                                        Se crea con las solicitudes de atenciones  recopiladas por teléfono o vía Web. Genera el calendario de profesional
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="wow fadeInUp" data-wow-delay="0.2s">
+                                <div class="box text-center">
+                                    <i class="fa fa-list-alt fa-2x circled bg-skin"></i>
+                                    <h4 class="h-bold mb15">atenciones  </h4>
+                                    <p>
+                                        Módulo que permite registrar cada atención realizada, con detalles especificos de Anamnésis, diagnósticos, recetas, etc.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="wow fadeInUp" data-wow-delay="0.2s">
+                                <div class="box text-center">
+                                    <i class="fa fa-user-md fa-2x circled bg-skin"></i>
+                                    <h4 class="h-bold mb15">Historia clínica</h4>
+                                    <p>
+                                        Se conforma con la recopilación de atenciones  que el paciente ha tenido. Este historial incluye todos los antecedentes del paciente
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="wow fadeInUp" data-wow-delay="0.2s">
+                                <div class="box text-center">
+
+                                    <i class="fa fa-bar-chart-o fa-2x circled bg-skin"></i>
+                                    <h4 class="h-bold mb15">Gestión</h4>
+                                    <p>
+                                        Módulo que permite tener distintos tipos de informes de producción y financieros, a fin de gestionar la producción
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="col-sm-4 col-md-3 bg-gray">
+                            <h5 class="mb15 pt30 text-center">El sistema</h5>
+                            <p>SISCOP es una plataforma Web de atención de pacientes de última generación que combina: <br>
+                                Accesibilidad, Rapidez y Funcionalidad, herramientas que el profesional de hoy requiere en su desempeño profesional</p>
+                            <p class="mb15"><strong>Características</strong><br>			 
+                                <i class="fa fa-circle-thin orange" aria-hidden="true"></i> Es fácil de usar<br>
+                                <i class="fa fa-circle-thin orange" aria-hidden="true"></i> No requiere instalación.<br>
+                                <i class="fa fa-circle-thin orange" aria-hidden="true"></i> No necesita mantención.<br>
+                                <i class="fa fa-circle-thin orange" aria-hidden="true"></i> Es seguro, rápido, práctico<br>
+                                <i class="fa fa-circle-thin orange" aria-hidden="true"></i> Reduce errores<br>
+                                <i class="fa fa-circle-thin orange" aria-hidden="true"></i> Tiene soporte en línea<br>
+                                <i class="fa fa-circle-thin orange" aria-hidden="true"></i> Multidispositivo<br></p>
+
+                            <p class="mb15"><strong>Que aporta</strong><br>
+                                <i class="fa fa-circle-thin green" aria-hidden="true"></i> Más tiempo libre<br>
+                                <i class="fa fa-circle-thin green" aria-hidden="true"></i> Información segura y ordenada<br>
+                                <i class="fa fa-circle-thin green" aria-hidden="true"></i> Mejora en la imagen<br>
+                                <i class="fa fa-circle-thin green" aria-hidden="true"></i> Mejora la relación paciente-profesional</p>
+                            <p>Pensado especialmente para personas con poca experiencia en el mundo digital.</p>
+                        </div>
+                        
+						<div class="col-sm-12 col-md-12 mt-20 mb-20"> 
+						    <hr>
+						  <h5 class="text-center" style="padding-top: 30px;">Todos nuestros planes cuentan con</h5>
+						</div>
+						<div class="col-sm-12 col-md-12 mb-30"> 
+							<div class="col-sm-4 col-md-4">
+									<i class="fa fa-check-square pb-10"></i> Capacitación
+								<br><i class="fa fa-check-square pb-10"></i> Asistencia Técnica
+								<br><i class="fa fa-check-square pb-10"></i> Soporte
+								<br><i class="fa fa-check-square pb-10"></i> Mantención
+								<br><i class="fa fa-check-square pb-10"></i> Videos tutoriales
+							</div>
+							 <div class="col-sm-4 col-md-4">
+									<i class="fa fa-check-square pb-10"></i> Formulario de reserva online
+								<br><i class="fa fa-check-square pb-10"></i> Agenda Médica
+								<br><i class="fa fa-check-square pb-10"></i> Informes de producción
+								<br><i class="fa fa-check-square pb-10"></i> Informes Estadísticos
+								<br><i class="fa fa-check-square pb-10"></i> Control de sesiones
+
+							</div>
+							 <div class="col-sm-4 col-md-4">
+									<i class="fa fa-check-square pb-10"></i> Respaldos automatizados
+								<br><i class="fa fa-check-square pb-10"></i> Carga masiva de pacientes
+								<br><i class="fa fa-check-square pb-10"></i> Traspaso de información a Excel
+								<br><i class="fa fa-check-square pb-10"></i> Multiplataforma - Multidispositivo
+								<br><i class="fa fa-check-square pb-10"></i> Protección SSL
+							</div>
+					  </div>
+                     </div>
+					   <hr>
+                </div>
+            </section>
+			
+			
+			<!-- ============ESPECIALIDADES====================== -->
+			<section id="general" class="bg-white pb50">
+			  <div class="container pt55">
+			   <h2 class="h-light vent pb-15"><i class="fa fa-flag"></i> Atención General </h2>
+			  </div>
+				  <div class="container">
+					<div class="row">
+					  <div class="col-sm-3 col-md-3">
+						<div class="wow fadeInUp" data-wow-delay="0.2s">
+						  <img src="img/general.png" class="img-responsive" alt="psicologo " title="psicologo " width="80%" />
+						</div>
+					  </div>
+					  <div class="col-sm-6 col-md-6">
+					    	<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa  fa-user-md fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Registro de atención</h5>
+							  <p>Registro integral de la atención</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-stethoscope fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Anamnésis</h5>
+							  <p>Diagnósticos por tipo y paciente</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.3s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-clipboard fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Diagnósticos</h5>
+							  <p>Diagnóstico principal y secundario, sospechas y hallazgos </p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-medkit fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Tratamiento</h5>
+							  <p>Prescripción de recetas y solicitud de exámenes</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.3s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-file-text fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Alergias e intolerancias</h5>
+							  <p>Registro de alérgias, contraindicaciones e intolerancias </p>
+							</div>
+						  </div>
+						</div>		
+					  </div>
+					  <div class="col-sm-3 col-md-3">
+					  
+						<h6 class="pt10">Atención Integral</h6>
+							  <ul style="padding-left:5px;">
+								 <li>Lista de Patologías CIE-10</li>
+								 <li>Diagnóstico Sintomático</li>
+								 <li>Registro de licencias</li>
+								 <li>Historial de recetas</li>
+								 <li>Histórico de atenciones </li>
+								 <li>Conducta y derivaciones</li>
+								 <li>Evolución y epicrisis </li>
+								 
+							  </ul>
+							
+					  </div>
+					</div> 
+				 </div>			  
+			</section>
+			
+			<section id="kinesiologos" class="bg-gray paddingbot-60">
+				  <div class="container pt55">
+					<h2 class="h-light vent pb-15"><i class="fa fa-flag"></i> Kinesiólogos</h2>
+				  </div>
+				  <div class="container">
+					<div class="row">
+						  <div class="col-sm-3 col-md-3">
+							<div class="wow fadeInUp" data-wow-delay="0.2s">
+							  <img src="img/kinesiologo.png" class="img-responsive" alt="software para kinesiologos" title="software para kinesiologos" width="80%" />
+							</div>
+						  </div>
+						  <div class="col-sm-6 col-md-6">
+							   <div class="wow fadeInRight" data-wow-delay="0.3s">
+								  <div class="service-box">
+									<div class="service-icon">
+									  <span class="fa fa-blind fa-3x"></span>
+									</div>
+									<div class="service-desc">
+									  <h5 class="h-light">Evaluación articular</h5>
+									  <p>Evaluación de estructuras y lesiones</p>
+									</div>
+								  </div>
+								</div>
+
+								<div class="wow fadeInRight" data-wow-delay="0.2s">
+								  <div class="service-box">
+									<div class="service-icon">
+									  <span class="fa fa-file-text-o fa-3x"></span>
+									</div>
+									<div class="service-desc">
+									  <h5 class="h-light">D. K.</h5>
+									  <p>Diagnóstico Kinesiológico integral</p>
+									</div>
+								  </div>
+								</div>
+								
+								<div class="wow fadeInRight" data-wow-delay="0.3s">
+								  <div class="service-box">
+									<div class="service-icon">
+									  <span class="fa fa-calendar fa-3x"></span>
+									</div>
+									<div class="service-desc">
+									  <h5 class="h-light">Sesiones</h5>
+									  <p>Control de sesiones por paciente</p>
+									</div>
+								  </div>
+								</div>
+			                 </div>
+						  <div class="col-sm-3 col-md-3">
+							<div class="wow fadeInRight" data-wow-delay="0.1s">
+							  <div class="service-box">
+								
+								<div class="service-desc">
+								  <!-- <h5 class="h-light">Pagos</h5> -->
+								  <p>Ficha especial para el DK</p>
+								  <p>Ficha diseñada para recoger la evaluación integral del paciente, adulto o niño, y diseñar el plan de trabajo y el programa kinesiológico.</p><p> La información ingresada se integra y consolida en la Historia Clínica del Paciente</p>
+								</div>
+							  </div>
+							</div>
+						  </div>
+			         </div>
+		          </div>
+			</section>
+			
+			<section id="psicologos" class="bg-white pb50">
+			  <div class="container pt55">
+			   <h2 class="h-light vent pb-15"><i class="fa fa-flag"></i> Psicólogos </h2>
+			  </div>
+				  <div class="container">
+					<div class="row">
+					  <div class="col-sm-3 col-md-3">
+						<div class="wow fadeInUp" data-wow-delay="0.2s">
+						  <img src="img/psicologo2.png" class="img-responsive" alt="software para psicologos " title="software para psicologos " width="80%" />
+						</div>
+					  </div>
+					  <div class="col-sm-6 col-md-6">
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa  fa fa-clone fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Diagnósticos</h5>
+							  <p>Diagnósticos por tipo y paciente</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.3s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-calendar-check-o fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Sesiones</h5>
+							  <p>Control de sesiones por paciente</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-smile-o fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">EFY</h5>
+							  <p>Evaluación especial de funciones</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.3s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-file-text fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Informe Psicológico</h5>
+							  <p>Detalle de evolución del paciente</p>
+							</div>
+						  </div>
+						</div>		
+					  </div>
+					  <div class="col-sm-3 col-md-3">
+					  
+						<h6 class="pt10">Diagnósticos Psicológicos</h6>
+							  <ul style="padding-left:5px;">
+								 <li>Diagnóstico Multiaxial</li>
+								 <li>Diagnóstico Sintomático</li>
+								 <li>Diagnóstico Estructural</li>
+								 <li>Evaluación del Estado Mental</li>
+								 <li>Evaluación de la conducta</li>
+								 <li>Control de sintomas</li>
+								 <li>Evolución del estado mental </li>
+								 <li>Evolución general</li>
+							  </ul>
+							
+					  </div>
+					</div> 
+				 </div>			  
+			</section>
+			
+			<section id="nutricionistas" class="bg-gray paddingbot-60">
+			  <div class="container pt55">
+			    <h2 class="h-light vent pb-15"><i class="fa fa-flag"></i> Nutricionistas</h2>
+			  </div>
+			     <div class="container">
+                    <div class="row">
+					  <div class="col-sm-3 col-md-3">
+						<div class="wow fadeInUp" data-wow-delay="0.2s">
+						  <img src="img/nutricionista.png" class="img-responsive" alt="software para nutricionistas" title="software para nutricionistas" width="80%" />
+						</div>
+					  </div>
+					  <div class="col-sm-6 col-md-6">
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-beer fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Habitos</h5>
+							  <p>Determinación de hábitos y actividad física</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa fa-balance-scale fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Parámetros</h5>
+							  <p>Cálculo de parámetros ICM - ICC - PC/E, IPT, etc</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.3s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-spoon fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Intervención</h5>
+							  <p>Creación y asignacion de dietas y calorías</p>
+							</div>
+						  </div>
+						</div>
+						 <div class="wow fadeInRight" data-wow-delay="0.2s">
+              <div class="service-box">
+                <div class="service-icon">
+                  <span class="fa fa-line-chart fa-3x"></span>
+                </div>
+                <div class="service-desc">
+                  <h5 class="h-light">Evolución</h5>
+                  <p>Control de evolución de la intervención</p>
+                </div>
+              </div>
+            </div>
+          </div>
+		  
+          <div class="col-sm-3 col-md-3">
+          <h6 class=" pt10">Captura y Control de</h6>   
+				  <ul style="padding-left:5px;">
+				     <li>Estilo de vida</li>
+					 <li>Rutinas de alimentación</li>
+					 <li>Intolerancias</li>
+					 <li>Consumo de drogas</li>
+					 <li>Consumo de fármacos</li>
+					 <li>Actividad física</li>
+					 <li>Metabolismo Basal</li>
+					 <li>Grasa Corporal</li>
+					 <li>Índice de Masa Corporal</li>
+					
+				  </ul>				  
+          </div>
+        </div>
+	 
+	 </div> 
+			</section>
+			
+         <!--    <section id="fonoaudiologos" class="bg-white pb50">
+			  <div class="container pt55">
+			   <h2 class="h-light vent pb-15"><i class="fa fa-flag"></i> Fonoaudiólogos </h2>
+			  </div>
+				  <div class="container">
+					<div class="row">
+					  <div class="col-sm-3 col-md-3">
+						<div class="wow fadeInUp" data-wow-delay="0.2s">
+						  <img src="img/fonoaudiologo.png" class="img-responsive" alt="software para fonoaudiologo " title="software para fonoaudiologo " width="80%" />
+						</div>
+					  </div>
+					  <div class="col-sm-6 col-md-6">
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-clipboard fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Diagnósticos</h5>
+							  <p>Diagnósticos por tipo y paciente</p>
+							</div>
+						  </div>
+						</div>						
+						<div class="wow fadeInRight" data-wow-delay="0.3s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-calendar-check-o fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Plan de intervención</h5>
+							  <p>Control de sesiones por paciente</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-smile-o fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Evaluaciones</h5>
+							  <p> Registro de evaluación al inicio y dentro del proceso de tratamiento,</p>
+							</div>
+						  </div>
+						</div>
+						
+					  </div>
+					  <div class="col-sm-3 col-md-3">
+					  
+						<h6 class=" pt10">Formulario libre </h6>
+						<p>Registro de las actividades y evolución de los distintos niveles</p>
+							  <ul>
+							    <li>Nivel fonético </li>
+								<li>Nivel fonológico</li>
+								<li>Nivel semántico </li>
+								<li>Nivel morfosemántico</li>
+								<li>Nivel pragmático</li>
+							  </ul>
+							
+					  </div>
+					</div> 
+				 </div>			  
+			</section>		
+		 -->
+	        <section id="ginecologos" class="bg-gray paddingbot-60">
+			  <div class="container pt55">
+			    <h2 class="h-light vent pb-15"><i class="fa fa-flag"></i> Ginecólogos</h2>
+			  </div>
+			     <div class="container">
+                    <div class="row">
+					  <div class="col-sm-3 col-md-3">
+						<div class="wow fadeInUp" data-wow-delay="0.2s">
+						  <img src="img/gineco.png" class="img-responsive" alt="software para ginecologos" title="software para ginecologos" width="80%" />
+						</div>
+					  </div>
+					  <div class="col-sm-6 col-md-6">
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-female fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Control general</h5>
+							  <p>Chequeos y revisiones</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.2s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-venus fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Control de embarazos</h5>
+							  <p>Control del feto y de la madre</p>
+							</div>
+						  </div>
+						</div>
+						<div class="wow fadeInRight" data-wow-delay="0.3s">
+						  <div class="service-box">
+							<div class="service-icon">
+							  <span class="fa fa-copy fa-3x"></span>
+							</div>
+							<div class="service-desc">
+							  <h5 class="h-light">Prescripciones</h5>
+							  <p>Tratamientos de fertilidad y natalidad</p>
+							</div>
+						  </div>
+						</div>
+						 <div class="wow fadeInRight" data-wow-delay="0.2s">
+              <div class="service-box">
+                <div class="service-icon">
+                  <span class="fa fa-line-chart fa-3x"></span>
+                </div>
+                <div class="service-desc">
+                  <h5 class="h-light">Evolución</h5>
+                  <p>Evolución de tratamientos y embarazos</p>
+                </div>
+              </div>
+            </div>
+          </div>
+		  
+          <div class="col-sm-3 col-md-3">
+          <h6 class=" pt10">Captura de información</h6>  
+					 <p>Siscop cuenta con un formulario especialmente diseñado para facilitar el ingreso de la información relevante que el Ginecólogo necesita registrar</p>
+					 <p>Esta información se integra completamente a la ficha clínica del paciente</p>
+								  
+          </div>
+        </div>
+	 
+	 </div> 
+			</section>
+			
+
+	<!-- ==============FIN ESPECIALIDADES ======================== -->
+			
+            <section id="planes" class="bg-white pb50 pt0">
+                <div class="container pt55">
+                    <h2 class="h-light vent"><i class="fa fa-certificate"></i> Planes</h2>
+                    <div class="callaction bg-gray mb15">
+                        <p class="lead"> Todos lo planes incluyen Capacitación - Asistencia técnica - Soporte en línea</hp>
+                    </div>  
+                    <div class="col-md-7">
+                        <div class="">
+                            <div class="panel-group" id="accordionPlanes">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1" >
+                                            <a data-toggle="collapse" id="link2" data-parent="#accordionPlanes" href="#plan1"><i class="fa fa-list-alt pr10" style="color: #4ACCD1;"></i> Plan por Consultas individuales</a>
+                                        </p>
+                                    </div>
+                                    <div id="plan1" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <p style="margin-left: 40px;">Este plan posibilita la contratación de consultas  o lugares de atención por médico.<br /><br />Al contratar este plan, una consulta es el lugar de atención de un médico, y el profesional puede generar atenciones  de pacientes sin límite en el período contratado. <br /><br />Este plan no tiene restricciones de pacientes ni atenciones .<br /><br />Período de contratación: Mensual - Semestral -Anual</p>                                    </div>
+                                    </div>
+                                </div>
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1">
+                                            <a data-toggle="collapse" data-parent="#accordionPlanes" id="link2" href="#plan2"><i class="fa fa-clone pr10" style="color: #4ACCD1;"></i> Plan por cantidad de atenciones </a>
+                                        </p>
+                                    </div>
+                                    <div id="plan2" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <p style="margin-left: 40px;"> 
+                                                En esta modalidad lo que se contrata son paquetes de atenciones  mensuales. <br /><br />Al contratar este plan no importa la cantidad de consultas o lugares de atención que se abran, ni los profesionales que atienden.  El único tope que tienen es la cantidad de atenciones  contratadas  para el período, las que se reparten en las consultas según se requieran.<br /><br />Este plan es óptimo para Centros Médicos o agrupaciones de médicos. <br /><br />Este plan no tiene restricciones de pacientes ni profesionales.<br /><br />Período de contratación: Mensual - Semestral -Anual
+                                            </p>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1">
+                                            <a data-toggle="collapse" data-parent="#accordionPlanes" id="link2" href="#plan3"><i class="fa fa-user-md pr10" style="color: #4ACCD1;"></i> Plan por profesional</a>
+                                        </p>
+                                    </div>
+                                    <div id="plan3" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <p  style="margin-left: 40px;">Este plan es similar al plan por consulta, es decir se contrata la cantidad de profesionales que trabajaran con el sistema. La gran diferencia es que cada profesional  puede atender en diferentes consultas.<br /><br />Este plan es óptimo para Centros Médicos o agrupaciones de médicos o para médicos independientes<br /><br />Este plan no tiene restricciones de pacientes ni atenciones .<br /><br />Período de contratación: Mensual - Semestral -Anual </p> 
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1">
+                                            <a data-toggle="collapse" data-parent="#accordionPlanes" id="link2" href="#plan4"><i class="fa fa-medkit pr10" style="color: #4ACCD1;"></i> Plan especial según requerimientos </a>
+                                        </p>
+                                    </div>
+                                    <div id="plan4" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <p  style="margin-left: 40px;">Si Ud. o su agrupación de profesionales, o su clínica o consulta requieren de un plan especial, … tenemos un plan especial para Ud. <br />Solo contáctenos y le atenderemos a la brevedad.</p> 
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1">
+                                            <a data-toggle="collapse" data-parent="#accordionPlanes" id="link2" href="#plan5"><i class="fa fa-thumbs-o-up pr10" style="color: #4ACCD1;"></i> Me gustaría probarlo por una semana, ..se puede?</a>
+                                        </p>
+                                    </div>
+                                    <div id="plan5" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <p  style="margin-left: 40px;">Pero por supuesto, solo envíenos su solicitud para crear su cuenta desde nuestro <a style="color:red;" href="#contacto">FORMULARIO DE CONTACTO</a> o bien a desarrollo@sutter-line.cl y le crearemos su cuenta para que lo pruebe sin costo ni compromiso</p> 
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+					<div class="center pt55">
+						<h2 class="h-light vent pb25"><i class="fa fa-coffee"></i> Ventajas</h2>
+						<p class="lead" ><span class="h-light" style="font-size:24px; font-family: 'Roboto', sans-serif;" >SISCOP</span> proporciona distintas ventajas dependiendo del lado en que se utilice</p>
+					</div>
+                        <div class="">
+                            <div class="panel-group" id="accordionVentajas">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1" >
+                                            <a data-toggle="collapse" id="link2" data-parent="#accordionVentajas" href="#collapseOne"><i class="fa fa-coffee pr10" style="color: #4ACCD1;"></i> Ventajas para los Profesionales</a>
+                                        </p>
+                                    </div>
+                                    <div id="collapseOne" class="panel-collapse collapse">
+                                        <div class="panel-body">
+
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> No necesita costosos sistemas para realizar sus atenciones </p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> No requiere de instalaciones previas</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Sencillo, rápido y fácil de usar</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Adaptable a la metodología de trabajo del médico</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Tienen un formulario de atención rápido y fácil de usar</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Permite generar certificados médicos de distintos tipos</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Registro de licencias médicas de forma clara y rápida</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Gestión completa de la prescripción médica</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Consolida sus atenciones  en un solo sistema sin importar donde atienda</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Historial clínico completo del paciente</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Puede gestionar sus propios pagos y recaudaciones</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Pueden emitir recetas y solicitar exámenes asociados a la consulta</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Prescripción de tratamiento registrada electrónicamente </p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Absoluto control sobre pacientes e Historiales médicos y clínicos  </p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Pueden registrar en forma directa las licencias médicas asociada a la consulta</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Gestión automática de informes</p>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1">
+                                            <a data-toggle="collapse" data-parent="#accordionVentajas" id="link2" href="#collapseTwo"><i class="fa fa-coffee pr10" style="color: #4ACCD1;"></i>  Ventajas para las Clínicas o Centros Médicos</a>
+                                        </p>
+                                    </div>
+                                    <div id="collapseTwo" class="panel-collapse collapse">
+                                        <div class="panel-body">  
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista i-lista"></i> Genera una percepción de Gestión GLOBAL y la realiza</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista i-lista"></i> Genera una percepción de un Centro Médico actualizado por parte de los pacientes</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista i-lista"></i> Mejora la calidad y capacidad de respuesta ante solicitudes de información</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista i-lista"></i> Tiene Costos de implementación muy bajos</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Gran velocidad de puesta en marcha</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Baja la carga de trabajo de los funcionarios preconsulta</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Permite administrar varias consultas agrupadas en una misma ciudad o dirección</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Genera los reportes de producción por día</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Genera reportes de producción por profesional</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Maneja varios puntos de atención</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Permite gestionar las consultas de cada profesional de manera fácil y clara</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Permite el análisis financieros de distintos tipos</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Incrementan la confianza médico - paciente</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Los pacientes perciben una gestión administrativa de calidad</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Los pacientes captan una correcta y provechosa custodia de sus datos </p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Los pacientes perciben un eficaz control de los acontecimientos</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Se evitan o disminuyen los errores humanos con la automatización de los procesos </p>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <p class="panel-title-1">
+                                            <a data-toggle="collapse" data-parent="#accordionVentajas" id="link2" href="#collapseThree"><i class="fa fa-coffee pr10" style="color: #4ACCD1;"></i>  Ventajas para los Pacientes</a>
+                                        </p>
+                                    </div>
+                                    <div id="collapseThree" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Reduce los costos y el tiempo de solicitud de horas</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Rápida y fácil obtención de resultados clínicos de exámenes</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Seguridad de encotrar todo su historial médico y clínico en cada atención</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Cuenta con atención integral inerconsultas al tener su ficha centralizada</p>
+                                            <p class="p-lista"><i class="fa fa-check-square-o i-lista"></i> Fácil acceso a sus reportes de exámenes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="center">
+                                <br>
+                                <p class="lead">Las ventajas  anteriormente listadas  son solo enunciativas y su real beneficio en general  redunda en mayor productividad y baja en los costos de producción.</p>
+                            </div>
+                        </div>
+
+
+                    </div> 
+                    <div class="col-md-5 thumbnail">
+                        <h5 class="text-center">Módulos<br>
+                            <small>Todos nuestros planes cuenta con</small></h5>
+                        <div class="wow fadeInUp" data-wow-delay="0.2s">
+                            <div class="text-center">
+                                <img class="img-responsive center-block" src="img/call.png" alt="" width="70"/>
+                                <p class="lead mb0">Call Center- Reserva Web</p>
+                                <p>
+                                    Módulo que permite registrar las solicitudes de horas realizadas via web o por teléfono
+                                </p>
+                            </div>
+                        </div>
+                        <div class="wow fadeInUp" data-wow-delay="0.2s">
+                            <div class=" text-center">
+                                <img class="img-responsive center-block" src="img/caja.png" alt="agenda medica online" title="agenda medica online" width="70"/>
+                                <p class="lead mb0">Caja</p>
+                                <p>
+                                    Módulo que posibilita realizar la recaudación de cada profesional, en forma separada por uno o varios cajeros
+                                </p>
+                            </div>
+                        </div>
+                        <div class="wow fadeInUp" data-wow-delay="0.2s">
+                            <div class="text-center">
+                                <img class="img-responsive center-block" src="img/admin.png" alt="gestion de medicos" title="gestion de medicos" width="70"/>
+                                <p class="lead mb0">Administración</p>
+                                <p>
+                                    Módulo de configuración general del sistema, permite crear las consultas, cajeros, profesionales, administrar convenios, etc
+                                </p>
+                            </div>
+                        </div>
+                        <div class="wow fadeInUp" data-wow-delay="0.2s">
+                            <div class="text-center">
+                                <img class="img-responsive center-block" src="img/atencion.png" alt="fichas medicas" title="fichas medicas" width="70"/>
+                                <p class="lead mb0">atenciones </p>
+                                <p>
+                                    Módulo que permite registrar cada atención en forma detallada. Cuenta con vínculo directo al Vademecum y a las patologías CIE-10
+                                </p>
+                            </div>
+                        </div>
+                        <div class="wow fadeInUp" data-wow-delay="0.2s">
+                            <div class="text-center">
+                                <img class="img-responsive center-block" src="img/gestion.png" alt="sistema de pacientes" title="sistema de pacientes" width="70"/>
+                                <p class="lead mb0">Gestión</p>
+                                <p>
+                                    Módulo de informes y gráficos que pemite gestionar liquidaciones a los profesional, equilibrar cargas horarias, etc
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="preguntas" class="pb50 bg-white pt0">
+                <div class="container pt55">
+                    <h2 class="h-light vent pb25"><i class="fa fa-question-circle-o"></i> Preguntas Frecuentes</h2>
+                    <div class="panel-group" id="accordionFaq" >
+                        <div class="panel panel-default">
+                            <div class="panel-heading ">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col1"><i class="fa fa-circle pr10"  style="color: #059FFD;"></i>  Soy un profesional independiente ¿puedo usarlo?</a>
+                                </p>
+                            </div>
+                            <div id="col1" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Efectivamente, solo se requiere contratar un plan individual básico, omitiendo el módulo de cajas y podrá comenzar a utilizar el sistema de forma inmediata</p>  
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading ">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col22"><i class="fa fa-circle" style="color: #ac9dff;"></i> ¿Que necesito para usar este sistema?</a>
+                                </p>
+                            </div>
+                            <div id="col22" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> 
+                                        Lo único que se requiere es un computador conectado a internet y una impresora.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col23"><i class="fa fa-circle" style="color: #059FFD;"></i> ¿Es muy difícil de usar el sistema?</a>
+                                </p>
+                            </div>
+                            <div id="col23" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> 
+                                        No, en lo absoluto, es un software de última generación por lo que es fácil, intuitivo y rápido; no requiere de largas horas de capacitación ni soporte continuo, es solo abrir y comenzar a trabajar.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col2"><i class="fa fa-circle" style="color: #ac9dff;"></i> ¿Cuántas atenciones  puedo realizar por día?</a>
+                                </p>
+                            </div>
+                            <div id="col2" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> 
+                                        Las que necesite, dependiendo del plan contratado, no tiene límite.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col24"><i class="fa fa-circle" style="color: #059FFD;"></i> ¿Debo configurar muchos parámetros antes de usarlo?</a>
+                                </p>
+                            </div>
+                            <div id="col24" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> 
+                                        No no no nooooo, el sistema lleva incorporado una cantidad de parámetros por defecto, por lo que no es necesario cargar valores adicionales para comenzar a trabajar. De requerirlo le asistimos en la carga y solo debe enviarnos una planilla Excel con la información que desea subir y listo; esto es válido también para sus pacientes.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col25"><i class="fa fa-circle" style="color: #ac9dff;"></i> Somos dos profesionales y necesitamos una sola consulta,...¿se puede?</a>
+                                </p>
+                            </div>
+                            <div id="col25" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> 
+                                        Por supuesto que se puede, ya que Siscop es multi consulta. Para este caso solo se debe definir la consulta y asignar los profesionales que prestarán sus servicios en ella, para posteriormente comenzar a trabajar.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col3"><i class="fa fa-circle" style="color: #059FFD;"></i> Trabajo en dos consultas en el día pero no quieren usar un sistema, ¿puedo independizar mis consultas?</a>
+                                </p>
+                            </div>
+                            <div id="col3" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Por supuesto que sí, solo necesita ingresar las dos consultas al sistema y comenzar a trabajar, solo requerirá un computador con internet y listo.</p> 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col4"><i class="fa fa-circle" style="color: #ac9dff;"></i> Trabajo en dos consultas en el día, ¿puedo unificar las fichas de mis pacientes?</a>
+                                </p>
+                            </div>
+                            <div id="col4" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Por supuesto que sí, solo necesita crear la ficha de sus pacientes de forma compartidas y no importa la consulta donde atienda (lugar de atención) siempre va a tener el historial completo de sus pacientes.</p> 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col5"><i class="fa fa-circle" style="color: #059FFD;"></i> Trabajo en una  consulta con tarjetas de cartón para las fichas, ¿puedo independizar mis atenciones ?</a>
+                                </p>
+                            </div>
+                            <div id="col5" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Por supuesto que si, solo necesita contratar el plan básico y tener un equipo con internet y comenzar  a trabajar.</p> 
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq"id="link2"  href="#col6"><i class="fa fa-circle" style="color: #ac9dff;"></i> Somos un centro médico de varias especialidades, ¿podemos habilitar el sistema separando las consultas?</a>
+                                </p>
+                            </div>
+                            <div id="col6" class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Por supuesto que sí, solo necesita definir cada consulta (lugar de atención) y después definir los profesionales según su especialidad que usarán cada consulta y comenzar  a trabajar. Al loguearse o ingresar al sistema con sus credenciales, en forma automática el sistema le habilitará la consulta que tienen asignada o predefinida.</p> 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col7"><i class="fa fa-circle" style="color: #059FFD;"></i> Somos varios profesionales en un C.M., ¿podemos tener la producción por profesional para prorratear los gastos?</a>
+                                </p>
+                            </div>
+                            <div id="col7" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Por supuesto que sí, SISCOP le permite obtener el detalle de producción de cada profesional desde su menú de administración</p> 
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col8"><i class="fa fa-circle" style="color: #ac9dff;"></i> Nuestro centro médico tiene sucursales, ¿podemos usar el sistema separando las sucursales?</a>
+                                </p>
+                            </div>
+                            <div id="col8" class="panel-collapse collapse">
+                                <div class="panel-body" >
+
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Por supuesto que sí, solo necesita definir las consultas (lugares de atención)  por sucursal y definir los profesionales de cada consulta y comenzar  a trabajar.</p> 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col9"><i class="fa fa-circle" style="color: #059FFD;"></i> Trabajamos con un laboratorio y tenemos que informar los exámenes, ¿pueden subir ellos los resultados?</a>
+                                </p>
+                            </div>
+                            <div id="col9" class="panel-collapse collapse">
+                                <div class="panel-body" >
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Por supuesto que sí, solo necesita habilitar el acceso al laboratorio para que ellos puedan publicar los resultados de cada muestra.</p> 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col10"><i class="fa fa-circle" style="color: #ac9dff;"></i> ¿Es muy caro?</a>
+                                </p>
+                            </div>
+                            <div id="col10" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Nooo, en lo absoluto, … tenemos un plan especial par Ud. Solo contáctenos le atenderemos</p> 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col26"><i class="fa fa-circle" style="color: #059FFD;"></i> ¿Cuánto es el tiempo mínimo de uso?</a>
+                                </p>
+                            </div>
+                            <div id="col26" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> 
+                                        El mínimo es de un mes.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col27"><i class="fa fa-circle" style="color: #ac9dff;"></i> ¿Demora mucho la habilitación para comenzar a trabajar?</a>
+                                </p>
+                            </div>
+                            <div id="col27" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> 
+                                        La habilitación es automática y demora lo que demora en contratar el servicio; es decir, minutos.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <p class="panel-title-1" style="margin-bottom: 0px; padding-top: 5px;">
+                                    <a data-toggle="collapse" data-parent="#accordionFaq" id="link2" href="#col11"><i class="fa fa-circle" style="color: #059FFD;"></i> Me gustaría probarlo por una semana, ..se puede?</a>
+                                </p>
+                            </div>
+                            <div id="col11" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <p  style="margin-left: 40px;"><i class="fa fa-check-square-o i-lista"></i> Pero por supuesto, solo envíenos su solicitud para crear su cuenta desde nuestro <a id="link2" href="#contacto"><strong>FORMULARIO DE CONTACTO</strong></a> o bien a<br> desarrollo@sutter-line.cl <br> y le crearemos su cuenta para que lo pruebe sin costo ni compromiso</p> 
+                                </div>
+                            </div>
+                        </div>
+                    </div> 
+                </div>
+            </section>
+
+            <section id="galeria" class="bg-white pb50" >
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class=" pt55">
+                                <h2 class="h-light vent pb25"><i class="fa fa-sun-o"></i> Galería de imágenes</h2>
+                            </div>  
+                            <p>Siscop en imágenes</p>
+
+                            <div class="divider-short"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container">
+                    <div class="row">				  
+                        <div class="col-sm-6 col-md-3">
+                            <img class="img-responsive zoom pt15" src="img/siscop/admin.png" title="programa para medicos" alt="programa para medicos" />
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <img class="img-responsive zoom pt15"  src="img/siscop/agenda.png" title="fichas clinicas"  alt="fichas clinicas" />
+                        </div>
+                        <div class="col-sm-6 col-md-3">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/agenda1.png" title="reserva de horas via web"  alt="reserva de horas via web" />				
+                        </div>
+                        <div class="col-sm-6 col-md-3">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/antecedentes.png" title="agenda medica"  alt="agenda medica" />				
+                        </div>			  
+                    </div>
+                    <div class="row pt30">
+                        <div class="col-sm-6 col-md-3">				
+                            <img class="img-responsive zoom pt15" src="img/siscop/ficha.png" title="agenda clinica"  alt="agenda clinica" />				
+                        </div>
+                        <div class="col-sm-6 col-md-3">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/patologias.png" title="atencion de pacientes"  alt="atencion de pacientes" />				
+                        </div>
+                        <div class="col-sm-6 col-md-3">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/profesional.png" title="agenda web"  alt="agenda web" />				
+                        </div>
+                        <div class="col-sm-6 col-md-3">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/vademecum.png" title="software clinico"  alt="software clinico" />				
+                        </div>
+
+                    </div>
+                    <div class="row pt30">
+                        <div class="col-sm-6 col-md-3 ">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/grafico.png" title="programa para medicos"  alt="programa para medicos" />				
+                        </div>
+                        <div class="col-sm-6 col-md-3 ">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/examen.png" title="software de pacientes"  alt="software de pacientes" />				
+                        </div>
+                        <div class="col-sm-6 col-md-3 ">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/atencion.png" title="atencion web"  alt="atencion web" />				
+                        </div>
+                        <div class="col-sm-6 col-md-3 ">				
+                            <img class="img-responsive zoom pt15"  src="img/siscop/consultas.png" title="medicos, doctores"  alt="medicos, doctores" />				
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contacto" class="bg-gray paddingbot-60">
+                <div class="container">
+                    <div class="center pt55">
+                        <h2 class="h-light vent pb25"><i class="fa fa-envelope"></i> Formulario de contacto</h2>
+                    </div>   
+                    <div class="col-sm-6">
+                        <p>Por que es bueno estar Comunicados...</p>
+                        <div class="status alert alert-success" style="display: none"></div>
+                        <form id="frmContacto" method="post" action="process.php" role="form">
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <div class="form-group">
+                                        <input type="text" class="form-control" name="name" id="name" required="required" placeholder="Nombre">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <input type="text" id="email" name="email" class="form-control" required="required" placeholder="Email">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <input type="number" id="telefono" name="telefono" class="form-control" required="required" placeholder="Teléfono">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <div class="form-group">
+                                        <textarea name="message" id="message" required="required" class="form-control" rows="8" placeholder="Mensaje"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <div class="g-recaptcha" data-sitekey="6LcsTGYUAAAAAPXLZOp8-5f06LzJI5yNDRH4P6jf"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-danger btn-lg"><i class="fa fa-paper-plane-o"></i> Enviar Mensaje</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>Acerca de Sutter-Line S.A. </h4>
+                        <p class="lead">Misión</p>
+                        <p>	Nuestra misión es  <strong>Constituirnos en Socios Tecnológicos Estratégicos</strong> de nuestros clientes.
+                            <br>Para ello, Sutter-Line S.A. entrega plataformas y sistemas altamente parametrizados y fáciles de usar, que le permiten a nuestrros clientes y asociados administrar en forma integral sus recursos y proyectar con seguridad su imágen y crecimiento
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <footer>
+
+                <div class="container">
+                    <div class="row">
+                        <div class="col-sm-6 col-md-4">
+                            <div class="wow fadeInDown" data-wow-delay="0.1s">
+                                <div class="widget">
+                                    <h5>Acerca de SISCOP</h5>
+                                    <p>
+                                        Siscop es parte de un grupo de aplicaciones web, desarrollados por Sutter-Line S.A. con el fin de potenciar o revitalizar el servicio médico de atención de pacientes.
+                                    </p>
+                                </div>
+                            </div>
+                           
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="wow fadeInDown" data-wow-delay="0.1s">
+                                <div class="widget">
+                                    <h5>Soporte de SISCOP</h5>
+                                    <p>
+                                        El soporte y la asistencia técnica de Siscop se realiza en el siguiente horario
+                                    </p>
+                                    <ul>
+                                        <li>
+                                            <span class="fa-stack fa-lg">
+                                                <i class="fa fa-circle fa-stack-2x"></i>
+                                                <i class="fa fa-calendar-o fa-stack-1x fa-inverse"></i>
+                                            </span> De Lunes a Viernes, 9am a 18,30pm
+                                        </li>
+                                        <li>
+                                            <span class="fa-stack fa-lg">
+                                                <i class="fa fa-circle fa-stack-2x"></i>
+                                                <i class="fa fa-phone fa-stack-1x fa-inverse"></i>
+                                            </span> +56 9 66 77 1307
+                                        </li>
+                                        <li>
+                                            <span class="fa-stack fa-lg">
+                                                <i class="fa fa-circle fa-stack-2x"></i>
+                                                <i class="fa fa-envelope-o fa-stack-1x fa-inverse"></i>
+                                            </span> contacto@siscop.cl
+                                        </li>
+
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="wow fadeInDown" data-wow-delay="0.1s">
+                                <div class="widget">
+                                    <h5>Nuestra dirección</h5>
+                                    <p>Anibal Pínto 531 Of 34 <br>
+                                        Concepción<br>
+                                        Chile</p>
+
+                                </div>
+                            </div>
+							 <div class="wow  fadeInDown" data-wow-delay="0.1s">
+                                <div class="widget page-scroll">
+                                    <h5>Navegación</h5>
+                                    <ul class="pl-10" >
+                                        <li><a id="link3"  href="#inicio">Inicio</a></li>
+                                        <li><a id="link3" href="#software">Sofwtare</a></li>
+                                        <li><a id="link3" href="#funcionamiento">Funcionamiento</a></li>
+										<li><a id="link3" href="#general">Especialidades</a></li>
+                                        <li><a id="link3" href="#planes">Planes</a></li>
+										<li><a id="link3" href="#preguntas">Faq´s</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!-- <div class="wow fadeInDown" data-wow-delay="0.1s">
+                                <div class="widget">
+                                    <h5>Follow us</h5>
+                                    <ul class="company-social">
+                                        <li class="social-facebook"><a href="#"><i class="fa fa-facebook"></i></a></li>
+                                        <li class="social-twitter"><a href="#"><i class="fa fa-twitter"></i></a></li>
+                                        <li class="social-google"><a href="#"><i class="fa fa-google-plus"></i></a></li>
+                                        <li class="social-vimeo"><a href="#"><i class="fa fa-vimeo-square"></i></a></li>
+                                        <li class="social-dribble"><a href="#"><i class="fa fa-dribbble"></i></a></li>
+                                    </ul>
+                                </div>
+                            </div> -->
+                        </div>
+                    </div>
+                </div>
+                <div class="sub-footer">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm-5 col-md-5 col-lg-5">
+                                <div class="wow fadeInLeft" data-wow-delay="0.1s">
+                                    <div class="text-left">
+
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-7 col-md-7 col-lg-7">
+                                <div class="wow fadeInRight" data-wow-delay="0.1s">
+                                    <div class="text-right">
+                                        <p>Sitio habilitado por &copy;Sutter-Line S.A. - SISCOP Software. All rights reserved.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+
+        </div>
+        <a href="#" class="scrollup"><i class="fa fa-angle-up active"></i></a>
+        <script src="js/jquery.min.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <script src="js/jquery.easing.min.js"></script>
+        <script src="js/wow.min.js"></script>
+        <script src="js/jquery.scrollTo.js"></script> 
+        <script src="js/custom.js"></script>
+        <script src="js/jquery.isotope.min.js"></script>
+        <script src="js/jquery.prettyPhoto.js"></script>
+        <script src="js/main.js"></script>
+        <script src="js/jquery.Rut.js"></script>
+    </body>
+
+</html>
