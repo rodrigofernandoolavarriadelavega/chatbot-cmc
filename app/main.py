@@ -1152,7 +1152,22 @@ _ARQUETIX_MEMO_HTML = (_TEMPLATE_DIR / "arquetix_memo.html").read_text(encoding=
 _ARQUETIX_PITCH_HTML = (_TEMPLATE_DIR / "arquetix_pitch.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "arquetix_pitch.html").exists() else ""
 _BLOG_DIR = _TEMPLATE_DIR / "blog"
 _HEATMAP_COMUNAS_HTML = (_TEMPLATE_DIR / "heatmap_comunas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_comunas.html").exists() else ""
-_HEATMAP_DIRECCIONES_HTML = (_TEMPLATE_DIR / "heatmap_direcciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "heatmap_direcciones.html").exists() else ""
+# Mapa de direcciones: es un ARTEFACTO GENERADO (scripts/geocode_direcciones.py,
+# refresh diario 05:00), no un template. Vive en data/ (gitignored) para no dejar
+# el árbol de prod sucio, y se lee EN CADA REQUEST — antes se leía acá al importar,
+# así que el refresh nocturno no se veía hasta reiniciar el servicio.
+_HEATMAP_DIRECCIONES_FILE = _TEMPLATE_DIR.parent / "data" / "heatmap_direcciones.html"
+
+
+def _leer_heatmap_direcciones() -> str:
+    """HTML del mapa de direcciones, fresco del disco. '' si aún no se generó."""
+    try:
+        return _HEATMAP_DIRECCIONES_FILE.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+    except OSError as e:
+        log.warning("No se pudo leer el mapa de direcciones: %s", e)
+        return ""
 _SEO_DASHBOARD_HTML = (_TEMPLATE_DIR / "seo_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "seo_dashboard.html").exists() else ""
 _CRECIMIENTO_PERSONAL_HTML = (_TEMPLATE_DIR / "crecimiento_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "crecimiento_personal.html").exists() else ""
 _RUTA_PERSONAL_HTML = (_TEMPLATE_DIR / "ruta_personal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ruta_personal.html").exists() else ""
@@ -2628,15 +2643,17 @@ def admin_mapa_direcciones(token: str | None = Query(None),
                            cmc_session: str | None = Cookie(None)):
     """Mapa de direcciones exactas geocodificadas. Misma auth que /admin."""
     from admin_routes import _verify_cookie
-    if not _HEATMAP_DIRECCIONES_HTML:
-        raise HTTPException(404, "Mapa no generado aún. Ejecutar: python scripts/geocode_direcciones.py")
-    if token and token == ADMIN_TOKEN:
-        return _HEATMAP_DIRECCIONES_HTML
-    if cmc_session:
-        role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
-            return _HEATMAP_DIRECCIONES_HTML
-    return RedirectResponse(url="/admin/login", status_code=302)
+    # Autorizar ANTES de leer del disco: son direcciones de pacientes.
+    _autorizado = bool(token and token == ADMIN_TOKEN)
+    if not _autorizado and cmc_session:
+        _autorizado = _verify_cookie(cmc_session) in ("admin", "ortodoncia")
+    if not _autorizado:
+        return RedirectResponse(url="/admin/login", status_code=302)
+
+    _html = _leer_heatmap_direcciones()
+    if not _html:
+        raise HTTPException(404, "Mapa no generado aún. Ejecutar: bash scripts/heatmap_refresh.sh")
+    return _html
 
 
 def _serve_portal(html: str, request: Request, demo: str):

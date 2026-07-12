@@ -9,6 +9,7 @@ Uso:
 import asyncio
 import json
 import logging
+import re
 import sqlite3
 import urllib.parse
 from pathlib import Path
@@ -450,210 +451,37 @@ def generate_address_map(points: list[dict]):
     total_pacs = sum(p['pacientes'] for p in points)
     total_citas = sum(p['citas'] for p in points)
 
-    html = f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa de Direcciones — Pacientes CMC — Abril 2026</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; }}
-  .header {{ text-align: center; padding: 20px 16px 10px; }}
-  .header h1 {{ font-size: 1.5rem; color: #38bdf8; }}
-  .header p {{ color: #94a3b8; margin-top: 4px; font-size: 0.9rem; }}
-  .nav-links {{ display: flex; gap: 12px; justify-content: center; margin-top: 10px; }}
-  .nav-links a {{ color: #38bdf8; text-decoration: none; font-size: 0.85rem; padding: 5px 14px; border: 1px solid #334155; border-radius: 6px; transition: all 0.2s; }}
-  .nav-links a:hover {{ background: #334155; }}
-  .stats {{ display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 10px 16px; }}
-  .stat-card {{ background: #1e293b; border-radius: 8px; padding: 10px 20px; text-align: center; }}
-  .stat-card .num {{ font-size: 1.5rem; font-weight: 700; color: #38bdf8; }}
-  .stat-card .label {{ font-size: 0.75rem; color: #94a3b8; }}
-  #map {{ width: 100%; height: 75vh; margin: 10px auto; max-width: 1400px; border-radius: 12px; }}
-  .controls {{ display: flex; gap: 10px; justify-content: center; margin: 10px; flex-wrap: wrap; }}
-  .btn {{ background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px;
-          padding: 6px 14px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }}
-  .btn:hover {{ background: #475569; }}
-  .btn.active {{ background: #2563eb; border-color: #3b82f6; }}
-  .legend {{ text-align: center; padding: 8px; color: #64748b; font-size: 0.75rem; }}
-  .leaflet-popup-content {{ font-size: 13px; max-width: 340px; max-height: 350px; overflow-y: auto; }}
-  .leaflet-tooltip {{ font-size: 12px; max-width: 280px; white-space: normal; line-height: 1.4; }}
-  .marker-cluster-small {{ background-color: rgba(56,189,248,0.6); }}
-  .marker-cluster-small div {{ background-color: rgba(56,189,248,0.8); }}
-  .marker-cluster-medium {{ background-color: rgba(251,191,36,0.6); }}
-  .marker-cluster-medium div {{ background-color: rgba(251,191,36,0.8); }}
-  .marker-cluster-large {{ background-color: rgba(239,68,68,0.6); }}
-  .marker-cluster-large div {{ background-color: rgba(239,68,68,0.8); }}
-  .pac-name {{ font-weight: 600; color: #1e293b; margin-top: 6px; }}
-  .atencion {{ color: #555; font-size: 11px; padding-left: 10px; }}
-  .atencion .fecha {{ color: #2563eb; font-weight: 500; }}
-  .atencion .prof {{ color: #7c3aed; }}
-</style>
-</head>
-<body>
+    # El HTML ya NO se construye acá. Vivía duplicado (este f-string + el
+    # template commiteado) y las dos copias divergieron: el panel de filtros por
+    # profesional y el favicon existían solo en el template, así que CADA corrida
+    # de este script los borraba.
+    #
+    # Ahora hay una sola fuente: templates/heatmap_direcciones.shell.html (la
+    # cáscara, versionada y editable a mano). Acá solo le inyectamos los datos.
+    #
+    # La salida va a data/ (que está en .gitignore) y NO a templates/: escribir un
+    # archivo trackeado dejaba el árbol de prod sucio todas las noches y la guarda
+    # G1 de deploy.sh abortaba cualquier deploy hasta limpiarlo a mano.
+    raiz = Path(__file__).resolve().parent.parent
+    shell_path = raiz / "templates" / "heatmap_direcciones.shell.html"
+    out_path = raiz / "data" / "heatmap_direcciones.html"
 
-<div class="header">
-  <h1>Mapa de Direcciones — Pacientes CMC</h1>
-  <p>Abril 2026 — Hover para resumen, click para detalle de atenciones</p>
-  <div class="nav-links">
-    <a href="/admin/mapa-comunas">Mapa comunas</a>
-    <a href="/admin/dashboard">Dashboard KPIs</a>
-    <a href="/admin">Panel admin</a>
-  </div>
-</div>
+    shell = shell_path.read_text(encoding="utf-8")
+    pts_json = json.dumps(points, ensure_ascii=False)
+    html, n = re.subn(r"const pts = /\*__PTS__\*/\[\];",
+                      lambda _m: f"const pts = {pts_json};",
+                      shell, count=1)
+    if n != 1:
+        raise RuntimeError(
+            f"No se encontró el placeholder __PTS__ en {shell_path}. "
+            "No se escribe nada (mejor un mapa viejo que uno vacío)."
+        )
 
-<div class="stats">
-  <div class="stat-card"><div class="num">{total_dirs}</div><div class="label">Direcciones</div></div>
-  <div class="stat-card"><div class="num">{total_pacs}</div><div class="label">Pacientes</div></div>
-  <div class="stat-card"><div class="num">{total_citas}</div><div class="label">Citas</div></div>
-</div>
-
-<div class="controls">
-  <button class="btn active" onclick="toggleLayer('clusters')">Clusters</button>
-  <button class="btn" onclick="toggleLayer('heat')">Calor</button>
-  <button class="btn" onclick="toggleLayer('points')">Puntos</button>
-</div>
-
-<div id="map"></div>
-
-<div class="legend">
-  Datos geocodificados desde Nominatim (OpenStreetMap) + coordenadas manuales de sectores.
-  Hover para ver nombres, click para detalle completo de atenciones.
-</div>
-
-<script>
-const pts = {json.dumps(points, ensure_ascii=False)};
-
-// ── Helpers para construir tooltip y popup ──
-function buildTooltip(p) {{
-  let html = '<b>' + p.direccion + '</b><br>';
-  html += '<span style="color:#888">' + (p.comuna || 'Sin comuna') + '</span> · ';
-  html += '<b>' + p.pacientes + '</b> pac · <b>' + p.citas + '</b> citas<br>';
-  if (p.detalle && p.detalle.length > 0) {{
-    html += '<hr style="margin:4px 0;border-color:#ddd">';
-    p.detalle.forEach(function(d) {{
-      html += '<b>' + d.n + '</b>';
-      if (d.a && d.a.length > 0) {{
-        html += ' — <span style="color:#7c3aed">' + d.a[0].split(' — ')[1] + '</span>';
-      }}
-      html += '<br>';
-    }});
-  }}
-  return html;
-}}
-
-function buildPopup(p) {{
-  let html = '<div style="min-width:220px">';
-  html += '<b style="font-size:14px">' + p.direccion + '</b><br>';
-  html += '<span style="color:#888">' + (p.comuna || 'Sin comuna') + '</span><br>';
-  html += '<b>' + p.pacientes + '</b> paciente(s), <b>' + p.citas + '</b> cita(s)';
-  if (p.detalle && p.detalle.length > 0) {{
-    html += '<hr style="margin:8px 0;border-color:#eee">';
-    p.detalle.forEach(function(d) {{
-      html += '<div class="pac-name">' + d.n + ' <span style="color:#888;font-weight:400">(' + d.c + ' cita' + (d.c > 1 ? 's' : '') + ')</span></div>';
-      if (d.a && d.a.length > 0) {{
-        d.a.forEach(function(at) {{
-          var parts = at.split(' — ');
-          html += '<div class="atencion"><span class="fecha">' + parts[0] + '</span>';
-          if (parts[1]) html += ' — <span class="prof">' + parts[1] + '</span>';
-          html += '</div>';
-        }});
-      }}
-    }});
-  }}
-  html += '</div>';
-  return html;
-}}
-
-const map = L.map('map').setView([-37.25, -73.28], 13);
-
-// Capas base
-const osm = L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-  attribution: '&copy; OpenStreetMap', maxZoom: 19
-}});
-const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}', {{
-  attribution: 'Esri World Imagery', maxZoom: 19
-}});
-osm.addTo(map);
-L.control.layers({{'Mapa': osm, 'Satelite': satellite}}).addTo(map);
-
-// Cluster layer
-const clusters = L.markerClusterGroup({{
-  maxClusterRadius: 40,
-  spiderfyOnMaxZoom: true,
-  showCoverageOnHover: false,
-}});
-
-pts.forEach(function(p) {{
-  const marker = L.circleMarker([p.lat, p.lng], {{
-    radius: Math.max(5, Math.min(12, p.pacientes * 4)),
-    fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
-    color: '#1e293b',
-    weight: 1.5,
-    fillOpacity: 0.8,
-  }});
-
-  marker.bindTooltip(buildTooltip(p), {{ sticky: true, direction: 'top', offset: [0, -10] }});
-  marker.bindPopup(buildPopup(p), {{ maxWidth: 360, maxHeight: 400 }});
-  clusters.addLayer(marker);
-}});
-
-clusters.addTo(map);
-
-// Heat layer (oculto por defecto)
-const heatData = pts.map(function(p) {{ return [p.lat, p.lng, p.pacientes]; }});
-const heatLayer = L.heatLayer(heatData, {{
-  radius: 25, blur: 20, maxZoom: 16, max: 5,
-  gradient: {{0.2:'#2563eb', 0.4:'#38bdf8', 0.6:'#fbbf24', 0.8:'#f97316', 1:'#ef4444'}},
-}});
-
-// Points layer (oculto por defecto)
-const pointsLayer = L.layerGroup();
-pts.forEach(function(p) {{
-  const dot = L.circleMarker([p.lat, p.lng], {{
-    radius: Math.max(4, Math.min(10, p.pacientes * 3)),
-    fillColor: p.pacientes > 2 ? '#ef4444' : p.pacientes > 1 ? '#fbbf24' : '#38bdf8',
-    color: '#fff', weight: 1, fillOpacity: 0.85,
-  }});
-  dot.bindTooltip(buildTooltip(p), {{ sticky: true, direction: 'top', offset: [0, -10] }});
-  dot.bindPopup(buildPopup(p), {{ maxWidth: 360, maxHeight: 400 }});
-  pointsLayer.addLayer(dot);
-}});
-
-let activeLayer = 'clusters';
-function toggleLayer(name) {{
-  map.removeLayer(clusters);
-  map.removeLayer(heatLayer);
-  map.removeLayer(pointsLayer);
-  if (name === 'clusters') clusters.addTo(map);
-  else if (name === 'heat') heatLayer.addTo(map);
-  else if (name === 'points') pointsLayer.addTo(map);
-  activeLayer = name;
-  document.querySelectorAll('.btn').forEach(function(b) {{ b.classList.remove('active'); }});
-  event.target.classList.add('active');
-}}
-
-// Fit bounds
-if (pts.length > 0) {{
-  const bounds = pts.map(function(p) {{ return [p.lat, p.lng]; }});
-  map.fitBounds(bounds, {{ padding: [30, 30] }});
-}}
-</script>
-</body>
-</html>"""
-
-    path = "templates/heatmap_direcciones.html"
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(html)
-    log.info("Mapa de direcciones generado: %s", path)
-    print(f"\nMapa generado: {path}")
-    print(f"Abrir con: open {path}")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(html, encoding="utf-8")
+    log.info("Mapa de direcciones generado: %s (%d direcciones, %d pacientes, %d citas)",
+             out_path, total_dirs, total_pacs, total_citas)
+    print(f"\nMapa generado: {out_path}")
 
 
 if __name__ == "__main__":
