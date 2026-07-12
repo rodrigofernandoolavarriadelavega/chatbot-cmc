@@ -28,6 +28,7 @@ SVC="chatbot-cmc"
 LOG="/var/log/cmc-healthcheck.log"
 ALERTLOG="/var/log/cmc-watchdog-alerts.log"
 STATE="/var/lib/cmc-ops/healthcheck_state"   # runs consecutivas con breaker pegado
+FAILED_STATE="/var/lib/cmc-ops/failed_units" # "epoch|unidad1 unidad2 ..." ya alertadas
 ENVFILE="/opt/chatbot-cmc/.env"
 
 TIMEOUT=10
@@ -35,6 +36,7 @@ RETRIES=3
 RETRY_SLEEP=15
 MIN_UPTIME_SECS=600      # no reiniciar si arrancó hace menos de esto
 BREAKER_RUNS=2           # corridas consecutivas con state=down antes de actuar
+REALERT_SECS=86400       # si una unidad sigue caída, re-avisar 1×/día (no cada hora)
 
 mkdir -p "$(dirname "$STATE")"
 ts() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
@@ -88,6 +90,43 @@ restart_guarded() {
     alert "$reason. Reinicié y /health SIGUE sin responder — revisar a mano."
   fi
 }
+
+# ── 0) ¿Quién vigila a los vigilantes? ───────────────────────────────────────
+# El propio cmc-healthcheck estuvo en `failed` 31 días (10-jun → 11-jul) sin que
+# nadie se enterara: un servicio muerto no grita. Acá revisamos TODAS las unidades
+# systemd y avisamos. Corre PRIMERO, porque los chequeos de abajo hacen `exit 0`.
+#
+# Anti-spam: solo alerta cuando el CONJUNTO de unidades caídas cambia (aparece una
+# nueva). Si sigue igual, re-avisa 1×/día — ni silencio ni ruido horario.
+check_failed_units() {
+  local failed now prev last_ts
+  failed=$(systemctl list-units --state=failed --no-legend --plain 2>/dev/null \
+             | awk '{print $1}' | sort | tr '\n' ' ' | sed 's/ *$//')
+
+  if [ -z "$failed" ]; then
+    if [ -f "$FAILED_STATE" ]; then
+      prev=$(cut -d'|' -f2- "$FAILED_STATE" 2>/dev/null)
+      alert "Servicios recuperados, ya no hay unidades en failed (estaban: ${prev})"
+      rm -f "$FAILED_STATE"
+    fi
+    return 0
+  fi
+
+  now=$(date +%s)
+  prev=""; last_ts=0
+  if [ -f "$FAILED_STATE" ]; then
+    last_ts=$(cut -d'|' -f1 "$FAILED_STATE" 2>/dev/null || echo 0)
+    prev=$(cut -d'|' -f2- "$FAILED_STATE" 2>/dev/null)
+  fi
+
+  if [ "$failed" != "$prev" ] || [ $(( now - last_ts )) -ge "$REALERT_SECS" ]; then
+    alert "Servicios systemd en FAILED: ${failed}"
+    echo "${now}|${failed}" > "$FAILED_STATE"
+  else
+    log "unidades en failed (ya alertado, sin cambios): ${failed}"
+  fi
+}
+check_failed_units
 
 # ── 1) ¿Responde /health? con reintentos ─────────────────────────────────────
 body=""
