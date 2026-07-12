@@ -172,6 +172,31 @@
   .ev-n{font-size:15px; font-weight:800; color:var(--navy); white-space:nowrap; text-align:right;}
   .ev-n.bad{color:var(--crit);} .ev-n.good{color:var(--good);}
 
+  /* ── Fichas ── */
+  .fi{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); margin-bottom:12px; overflow:hidden;}
+  .fi[data-open="1"]{box-shadow:var(--shadow-lg);}
+  .fi-head{display:grid; grid-template-columns:auto 1fr auto; gap:13px; align-items:center; padding:14px 17px;
+    width:100%; background:none; border:0; font:inherit; color:inherit; text-align:left; cursor:pointer;}
+  .fi-head:focus-visible{outline:2px solid var(--aqua); outline-offset:-3px;}
+  .fi-t{font-weight:750; font-size:15.5px; letter-spacing:-.012em;}
+  .fi-s{font-size:12px; color:var(--muted); margin-top:2px;}
+  .fi-body{display:none; border-top:1px solid var(--line); padding:16px 17px;}
+  .fi[data-open="1"] .fi-body{display:block;}
+  .fi-sec{margin-bottom:15px;}
+  .fi-sec:last-child{margin-bottom:0;}
+  .fi-sec h5{margin:0 0 6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--faint);}
+  .fi-sec p, .fi-sec li{font-size:13.5px; margin:0 0 6px;}
+  .fi-sec ul{margin:0; padding-left:17px;}
+  .fi-sec.danger{background:var(--crit-bg); border-radius:9px; padding:11px 13px;}
+  .fi-sec.danger h5{color:var(--crit);}
+  .fi-steps{counter-reset:st; list-style:none; padding:0; margin:0;}
+  .fi-steps li{counter-increment:st; position:relative; padding-left:28px; margin-bottom:7px; font-size:13.5px;}
+  .fi-steps li::before{content:counter(st); position:absolute; left:0; top:1px; width:19px; height:19px;
+    border-radius:50%; background:var(--aqua-soft); color:var(--aqua-deep); font-size:10.5px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;}
+  pre{background:var(--slab-2); border:1px solid var(--line); border-radius:8px; padding:11px 13px;
+    overflow-x:auto; font-size:11.5px; line-height:1.5; margin:6px 0;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
   .srcs{font-size:12.5px; color:var(--muted); line-height:1.8;}
   .srcs a{color:var(--aqua-deep);}
   code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px;
@@ -198,6 +223,7 @@
   <nav class="tabs" role="tablist">
     <button role="tab" aria-selected="true"  data-p="mapa">Mapa CDHI</button>
     <button role="tab" aria-selected="false" data-p="plan">Plan</button>
+    <button role="tab" aria-selected="false" data-p="fichas">Fichas</button>
     <button role="tab" aria-selected="false" data-p="ev">Evidencia</button>
     <button role="tab" aria-selected="false" data-p="ejec">Ejecución</button>
     <button role="tab" aria-selected="false" data-p="marco">Marco</button>
@@ -239,6 +265,28 @@
         <tbody id="backlog"></tbody>
       </table>
     </div>
+  </section>
+
+  <section class="panel" id="p-fichas">
+    <div class="block alarm">
+      <h3>Tres cosas que aparecieron investigando y que nadie estaba mirando</h3>
+      <p>
+        <strong>1. El bono Fonasa caduca a los 180 días.</strong> El copago entra a tu caja al tiro, pero la
+        parte que paga Fonasa <em>no llega sola</em>: hay que ir a cobrarla al Portal Prestador. Si nadie
+        ejecuta ese paso, la plata se vence sola (Res. 49/2009 MLE). Nunca se verificó que alguien lo esté haciendo.
+      </p>
+      <p style="margin-top:8px;">
+        <strong>2. Anthropic, OpenAI y Meta son «encargados de tratamiento» bajo la Ley 21.719.</strong>
+        El bot manda datos de salud a EE.UU. Eso exige contrato (DPA) firmado y consentimiento explícito
+        y <em>separado</em> para la transferencia internacional. Hoy no existe ninguno de los dos.
+      </p>
+      <p style="margin-top:8px;">
+        <strong>3. El score de riesgo de inasistencia es «elaboración de perfiles»</strong> según la misma ley.
+        Antes de construirlo hay que hacer una Evaluación de Impacto, y el modelo tiene que ser explicable
+        — por eso regresión logística, no gradient boosting.
+      </p>
+    </div>
+    <div id="fichas"></div>
   </section>
 
   <section class="panel" id="p-ev">
@@ -510,6 +558,105 @@ const BACKLOG = [
     e:"Ley 21.668 ya obliga a interoperar · pero todavía no hay a qué conectarse" },
 ];
 
+/* ═══ FICHAS — planificación exhaustiva por punto ═══ */
+const FICHAS = [
+  {
+    t:"F0 · 569 atenciones que nunca se cerraron — y la curva se está disparando",
+    s:"CDISAH 3.5 · MEDIDO contra Medilink · ~$25M/año · lo más urgente",
+    est:"curso",
+    problema:"Una atención con <code>finalizado = 0</code> y <code>total = 0</code> nunca se cerró: el profesional atendió, pero nadie le puso valor. Y el ETL la <strong>descarta en silencio</strong> (<code>transform.py:307</code>). No aparece en facturado ni en cobrado. <strong>Es plata que se fuga sin dejar rastro, y por diseño nadie se entera.</strong>",
+    consecuencia:"De 1.738 atenciones sin valorizar en 180 días, <strong>1.169 son legítimas</strong> (cerradas a propósito con valor cero: controles incluidos, sesiones de paquete) y <strong>569 nunca se cerraron</strong>. A ticket promedio ($22.429) eso son <strong>$12,7M en seis meses ≈ $25,5M al año</strong>.<br><br><strong>Pero lo grave es la tasa, no el monto.</strong> La línea base era 2%. Hoy va en 15%:<br><code>dic 2,2% · ene 1,6% · feb 1,7% · mar 2,3% · abr 4,2% · <strong>may 9,2% · jun 9,5% · jul 15,2%</strong></code><br>No es que se atienda más — <strong>es que se cierra peor</strong>.",
+    diseno:[
+      "<strong>Ya está construido y probado:</strong> <code>health-bi-project/scripts/atenciones_no_cerradas.py</code>. Corre <code>--dias 90</code> para el reporte y <code>--csv triaje.csv</code> para el detalle.",
+      "Tiene <strong>período de gracia</strong> (default 7 días): una atención de anteayer todavía puede cerrarse, y no cuenta como fuga. Sin eso, el número se infla solo.",
+      "<strong>Siguiente paso: alerta diaria.</strong> Esto no se arregla con un rediseño — se arregla con que alguien lo vea todos los días. Cron + WhatsApp al profesional con su lista de atenciones abiertas.",
+      "Y dejar de descartar en silencio en el ETL: que las no cerradas vayan a <code>fact_atenciones_sin_valorizar</code> en vez de desaparecer."
+    ],
+    riesgo:"<strong>El principal responsable es el dueño.</strong> Rodrigo estuvo en CERO tres meses (dic, ene, feb) y desde marzo se disparó: 4 → 17 → 54 → <strong>78 en junio</strong>, el 43% del total del mes. Alonso Márquez muestra el mismo salto en mayo (6 → 29), así que puede ser un cambio de proceso y no solo de una persona. <strong>Qué cambió en marzo es la primera pregunta a responder.</strong>",
+    exito:"Tasa de no-cierre de vuelta bajo el 2% (la línea base real de diciembre-febrero). Se mide con el mismo script."
+  },
+  {
+    t:"F1 · El BI de pagos está vacío — y nadie lo sabía",
+    s:"CDISAH 4.1/4.2 · MEDIDO contra la API real · invalida el «18%»",
+    est:"curso",
+    problema:"Se consultó <code>/api/v5/pagos</code> de Medilink en vivo, sin filtros. <strong>Devuelve 50 pagos. En total.</strong> Todos de los últimos 3 días, todos de la misma caja (<code>id_caja=3</code>), y el cursor de paginación no trae <code>next</code>. Ese endpoint <strong>no es un libro de pagos: es la caja abierta del día.</strong> No expone historial.",
+    consecuencia:"Tres consecuencias, en cascada. <strong>(1)</strong> <code>bi.fact_pagos</code> nunca tuvo datos históricos — tiene ~50 filas y siempre las mismas. <strong>(2)</strong> El bug de <code>ingreso_id</code> NULL (que sí existe: <code>etl/transform.py:347</code> pide un campo <code>id_atencion</code> que el propio docstring dice que no existe) resulta <em>irrelevante</em>: no hay pagos históricos que unir. <strong>(3)</strong> Y la más grave: <strong>«la brecha del 18% entre facturado y cobrado» no puede haber salido de comparar <code>fact_ingresos</code> contra <code>fact_pagos</code></strong>, porque uno tiene 180 días de datos y el otro tiene tres. Ese número hay que rehacerlo desde cero.",
+    diseno:[
+      "<strong>Cambiar la fuente de verdad.</strong> La reconciliación real NO es <code>fact_pagos ↔ fact_ingresos</code>. Es <strong><code>pagos_cmc</code> (lo que teclea recepción) ↔ <code>atenciones</code> (Medilink)</strong>. Eso reescribe el ETL de pagos entero.",
+      "Y eso explica por qué el bug débito/crédito es tan grave: <code>pagos_cmc</code> no es <em>una</em> fuente contaminada — <strong>es la ÚNICA fuente de caja que existe</strong>.",
+      "Dejar de descartar en silencio: <code>transform.py:307</code> hace <code>if not total or total &lt;= 0: continue</code>. Esas atenciones deben ir a <code>fact_atenciones_sin_valorizar</code> en vez de desaparecer.",
+      "Tests de calidad con Pandera dentro del ETL (no Great Expectations — exige Docker + Airflow + 5 contenedores para esto).",
+      "Preguntar a HealthAtom si existe un endpoint de pagos históricos, o si <code>/api/v5/cajas</code> (que sí existe, 5 registros) permite recorrer cajas cerradas."
+    ],
+    riesgo:"<strong>MEDIDO, no supuesto:</strong> 9.043 atenciones en 180 días, de las cuales <strong>1.738 (19,2%) tienen <code>total &lt;= 0</code></strong> y desaparecen del BI. A ticket promedio ($22.429) eso son <strong>$38,9 millones en seis meses</strong>. <em>Pero ojo: NO es plata perdida confirmada.</em> Un total en cero puede ser legítimo (control incluido en un plan de ortodoncia, sesión dentro de un paquete de kinesiología, atención anulada). <strong>El problema es que hoy nadie puede distinguir cuál es legítima y cuál es plata que se escapó</strong> — porque las 1.738 se descartan antes de que alguien las mire.",
+    exito:"Que exista un número de caja histórico confiable. Hoy no existe. Todo lo demás del frente pagador depende de esto."
+  },
+  {
+    t:"F2 · El bono que caduca solo — 180 días",
+    s:"CDISAH 3.5.2 · el hallazgo más caro de la noche · esfuerzo: medio",
+    est:"pend",
+    problema:"El cobro Fonasa MLE tiene <strong>dos circuitos de dinero distintos</strong>, y solo uno es automático. El copago del paciente entra a tu caja en el momento. <strong>Pero la parte que paga Fonasa NO llega sola:</strong> hay que ir a cobrarla activamente al Portal Prestador (fonasa.cl → «Emitir Cuenta Médica»), emitiendo factura con folio de referencia.",
+    consecuencia:"<strong>Hay 180 días desde la emisión del bono para cobrarlo, o Fonasa lo rechaza</strong> (Res. 49/2009 MLE, punto 6.2). Si nadie ejecuta ese paso sistemáticamente, <em>la plata se vence sola</em>. Nunca se verificó que alguien en el CMC lo esté haciendo. Y en el otro extremo: Fonasa da hasta <strong>5 años (persona jurídica)</strong> para pedir revisión de bonos ya rechazados — un activo dormido sobre 53.000 citas de historia.",
+    diseno:[
+      "<strong>Paso humano primero, no software:</strong> entrar al portal del operador (i-Med → cobranza3.bonoelectronico.cl) y bajar el reporte de bonos «sin documentar». Escribir a <code>pagoprestadoresmle@fonasa.cl</code> pidiendo el histórico de rechazos del CMC.",
+      "Cargar el CSV a <code>bi.bonos_rechazados</code>, cruzar contra <code>fact_ingresos</code> por RUT + fecha + monto.",
+      "Panel con <strong>reloj de prescripción</strong>: priorizado por (monto × días restantes antes de caducar).",
+      "Alerta preventiva: bono emitido hace >150 días sin cobrar → aparece en rojo antes de que se venza."
+    ],
+    riesgo:"No hay API ni en Fonasa ni en i-Med — todo es portal web manual. El primer paso lo tiene que hacer una persona con Clave Única. <strong>Sin ese paso, no se puede construir nada.</strong>",
+    exito:"$ recuperados de bonos rechazados + cero bonos caducados por no cobrar."
+  },
+  {
+    t:"F3 · Cumplimiento Ley 21.719 — el único con multa y fecha",
+    s:"CDISAH 4.5 / 1.8 · vigencia 1-dic-2026 · esfuerzo: medio",
+    est:"pend",
+    problema:"Faltan menos de 5 meses. Datos de salud = sensibles. Pero el hallazgo que nadie estaba mirando es otro: <strong>el bot manda conversaciones de pacientes (datos de salud) a la API de Anthropic y a Whisper de OpenAI, en Estados Unidos.</strong>",
+    consecuencia:"Bajo el <strong>art. 15 bis</strong> (texto verificado), Anthropic, OpenAI y Meta son <strong>«encargados de tratamiento»</strong>: procesan datos de salud por cuenta del CMC. Eso exige contrato que fije objeto, duración, finalidad y tipo de dato. Y bajo los arts. 27-29, es además una <strong>transferencia internacional</strong>, que exige garantías: cláusulas contractuales tipo, o <strong>consentimiento explícito y separado del titular para esa transferencia específica</strong>. Hoy no existe ninguno de los dos. El art. 14 ter letra h obliga literalmente a informarlo en la política de privacidad.",
+    diseno:[
+      "Firmar el <strong>DPA</strong> (Data Processing Addendum) con Anthropic y OpenAI. Lo ofrecen estándar; no basta usar la API sin más.",
+      "Consentimiento <strong>separado</strong> para la transferencia internacional, no empaquetado en el opt-in general.",
+      "Tabla <code>consent_records</code> versionada: finalidad, tipo de dato, versión de la política, <strong>snapshot del texto exacto mostrado</strong>, medio, timestamp, revocación.",
+      "<code>access_log_sensibles</code>: middleware en <code>claude_helper.py</code> y <code>medilink.py</code> que registre cada vez que sale payload de salud hacia un tercero.",
+      "RAT, flujo de brechas, política de retención (conciliando los <strong>15 años</strong> de ficha de la Ley 20.584), y ARCO + portabilidad con plazo de 30+30 días.",
+      "Documentar formalmente la categoría PYME (Ley 20.416) para poder invocar la ventana de amonestación."
+    ],
+    riesgo:"<strong>Corrección a lo que se creía:</strong> la ley NO fija un plazo de 72 horas para notificar brechas — el art. 14 sexies dice «sin dilaciones indebidas», sin número. Y el DPO es <strong>voluntario</strong> (art. 50), no obligatorio. Tampoco existe una obligación llamada «RAT» — lo más cercano es el art. 14 ter, que es de cara al público.",
+    exito:"Los 10 ítems del checklist cerrados antes del 1-dic-2026. La ventana PYME (amonestación en vez de multa) dura solo 12 meses y es discrecional."
+  },
+  {
+    t:"F4 · Llamada telefónica para no-shows — el mayor ROI",
+    s:"CDISAH 1.1 · evidencia chilena dura · esfuerzo: bajo-medio",
+    est:"pend",
+    problema:"El bot ya manda recordatorios por WhatsApp. Pero el CMM de la Universidad de Chile midió sobre <strong>18.000 citas</strong> que la llamada telefónica reduce la inasistencia <strong>−7,8 puntos</strong> (20,3% → 12,5%) contra <strong>−5,4</strong> de WhatsApp. Y el <strong>60% de los pacientes prefiere la llamada</strong> — perciben el mensaje como impersonal.",
+    consecuencia:"El margen que le queda al CMC no está en construir un portal: está en <strong>escalar a llamada humana los no-shows de alto riesgo</strong>. No es un producto nuevo, es el siguiente paso del bot.",
+    diseno:[
+      "<strong>Regresión logística, NO gradient boosting.</strong> Con el volumen de un centro chico la ganancia es marginal, y la explicabilidad es un requisito legal (ver riesgo).",
+      "El predictor más fuerte de la literatura es el <strong>historial de inasistencias previas</strong> (importancia 0,35 en XGBoost, la más alta). Segundo: el <strong>lead time</strong> — 0-15 días → 4,3% de no-show; >60 días → 7,7%.",
+      "<strong>Doble recordatorio 3 días + 1 día</strong> antes: 4,4% de no-show contra 5,8% (solo a 3d) y 5,3% (solo a 1d). RCT con n=54.066. Esto es barato y no requiere modelo.",
+      "Llamar <strong>solo al decil de mayor riesgo</strong>. El valor predictivo positivo de estos modelos es ~0,18: de cada 100 marcados «alto riesgo», solo 18 faltan de verdad. Llamar a todos satura a recepción con falsos positivos.",
+      "Worklist diaria: paciente, teléfono, motivo del score («3 inasistencias previas»), estado de contacto. Ese estado <strong>retroalimenta el modelo</strong>.",
+      "Medir con <strong>A/B aleatorizado dentro del grupo de alto riesgo</strong> (80% se llama, 20% control). El pre/post se confunde con estacionalidad."
+    ],
+    riesgo:"<strong>Un score de riesgo de inasistencia es «elaboración de perfiles» bajo la Ley 21.719</strong> → exige Evaluación de Impacto previa, supervisión humana explicable (recepción decide, no el algoritmo), y ampliar el consentimiento existente. Esto se construye <em>después</em> de F3, no antes.",
+    exito:"Diferencial de no-show entre el grupo llamado y el control, controlando por score. Base pública chilena: 16,1% de inasistencia en especialidad."
+  },
+  {
+    t:"F5 · «Mis exámenes» — con gate clínico, no un portal",
+    s:"CDISAH 1.4.4 · esfuerzo: medio · dos reglas duras",
+    est:"pend",
+    problema:"Ver resultados es la función #1 de todo portal del paciente (86% de uso). Pero el CMC <strong>no tiene cobertura médica de fin de semana</strong>, y solo el 19% de las personas acepta enterarse de un cáncer por un portal. Un hallazgo grave publicado un viernes a las 19:00 es daño evitable.",
+    consecuencia:"No se construye un portal. Se construye <strong>un link con token que el bot manda por WhatsApp cuando el resultado está listo</strong>. Sin login, sin app, sin registro — porque el 25% de los hogares chilenos se conecta solo por celular y el registro es la barrera #1 de abandono.",
+    diseno:[
+      "<strong>Tier 1 — auto-publica:</strong> examen de rutina, valor en rango, categoría no restringida.",
+      "<strong>Tier 2 — espera revisión médica:</strong> valor fuera de rango pero no crítico, y <em>toda</em> imagen. El paciente ve «tu médico lo está revisando», nunca el valor crudo.",
+      "<strong>Tier 3 — gatilla llamada obligatoria:</strong> valor crítico (potasio ≤2,5 o ≥6,5 · glucosa ≤40 o ≥500 · hemoglobina ≤7 · plaquetas &lt;20.000 · INR ≥8 · troponina elevada) o categoría restringida.",
+      "Seguridad: token de 256 bits, <strong>hash almacenado</strong> (no el token), expiración a 7 días (no 15 minutos — la conexión rural es intermitente), y <strong>segundo factor liviano</strong>: últimos 4 dígitos del RUT en cada apertura. Rate-limit y botón «no fui yo» que revoca."
+    ],
+    riesgo:"<strong>DOS REGLAS DURAS, no de diseño sino legales.</strong> (1) <strong>VIH:</strong> la Ley 19.779 y el DS 182/2005 exigen que el resultado se entregue «en forma personal y reservada, por personal debidamente capacitado». Nunca por link, nunca por WhatsApp — sin excepción, y bloqueado en el servidor, no solo en la UI. Lo mismo anatomía patológica. (2) <strong>WhatsApp Business Policy de Meta prohíbe mandar contenido de salud en el cuerpo del mensaje.</strong> El mensaje solo puede decir «tu resultado está listo, entra aquí»; el contenido clínico vive siempre en un servidor propio del CMC.",
+    exito:"% de resultados publicados cuyo link se abre y verifica en 7 días. <strong>Umbral de muerte:</strong> si a los 90 días (con ≥50 resultados) la apertura está bajo 40%, el problema no son las features — no agregarle más, rediseñar el canal."
+  },
+];
+
 const EVIDENCIA = [
   { c:"El portal del paciente clásico es una trampa para el CMC: el perfil de tu paciente (rural, mayor, baja alfabetización digital) es exactamente el de menor adopción.",
     s:"HINTS 2019: acceso al portal 35,9% rural vs 48,4% urbano. Y el 7,4% de los hogares del Biobío no tiene internet.", n:"35,9%", k:"bad" },
@@ -636,6 +783,29 @@ function renderPlan(){
       <td><span class="pill ${b.est}">${b.est === 'curso' ? 'en curso' : 'pendiente'}</span></td>
     </tr>`).join('');
 }
+function renderFichas(){
+  $('#fichas').innerHTML = FICHAS.map(f => `
+    <div class="fi" data-open="0">
+      <button class="fi-head" aria-expanded="false">
+        <span class="pill ${f.est}">${f.est === 'curso' ? 'en curso' : 'pendiente'}</span>
+        <span><span class="fi-t">${esc(f.t)}</span><span class="fi-s">${esc(f.s)}</span></span>
+        <span class="chev">▸</span>
+      </button>
+      <div class="fi-body">
+        <div class="fi-sec"><h5>El problema</h5><p>${f.problema}</p></div>
+        <div class="fi-sec"><h5>Por qué importa</h5><p>${f.consecuencia}</p></div>
+        <div class="fi-sec"><h5>Diseño</h5><ol class="fi-steps">${f.diseno.map(d => `<li>${d}</li>`).join('')}</ol></div>
+        <div class="fi-sec danger"><h5>Riesgo / lo que puede salir mal</h5><p>${f.riesgo}</p></div>
+        <div class="fi-sec"><h5>Criterio de éxito</h5><p>${f.exito}</p></div>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('.fi-head').forEach(b => b.addEventListener('click', () => {
+    const f = b.closest('.fi'), open = f.dataset.open === '1';
+    f.dataset.open = open ? '0' : '1';
+    b.setAttribute('aria-expanded', String(!open));
+  }));
+}
+
 function renderEv(){
   $('#evidence').innerHTML = EVIDENCIA.map(e => `
     <div class="ev-row">
@@ -683,5 +853,5 @@ $('#themeBtn').addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme', now === 'dark' ? 'light' : 'dark');
 });
 $('#gen').textContent = 'Generado el ' + GEN;
-renderMapa(); renderPlan(); renderEv(); renderEjec(); renderMarco();
+renderMapa(); renderPlan(); renderFichas(); renderEv(); renderEjec(); renderMarco();
 </script>
