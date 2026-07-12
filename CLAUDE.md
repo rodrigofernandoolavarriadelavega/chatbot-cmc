@@ -218,6 +218,7 @@ El campo `intervalo` es la duración de cita por WhatsApp (en minutos). El bot *
 | 68 | David Pardo | Ecografía | 15 |
 | 78 | Dra. Cecilia Unibazo | Psiquiatría | 30 (TELECONSULTA, solo jueves 16-20, $60.000 particular, abono) |
 | 79 | Dra. Franca González | Neurología | 30 (TELEMEDICINA, $65.000 particular, solo desde 15 años) |
+| 80 | TM Ana Celedón | Tecnología Médica Oftalmológica | 20 (PRESENCIAL, $15.000 particular a todos, sin Fonasa) |
 
 ## Cancelación de citas en Medilink
 Usar `PUT /citas/{id}` con body `{"id_estado": 1}` — esto pone la cita en estado "Anulado" con `estado_anulacion=1`.

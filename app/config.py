@@ -390,6 +390,9 @@ ARANCELES_CLP: dict[str, int] = {
     "odontologia general":          48000,
     "nutrición":                    20000,
     "nutricion":                    20000,
+    "bioimpedanciometría":          15000,   # examen aparte (Gisela Pinto), sin bono Fonasa
+    "bioimpedanciometria":          15000,
+    "bioimpedancia":                15000,
     "podología":                    17000,
     "podologia":                    17000,
     "fonoaudiología":               26000,
@@ -406,6 +409,12 @@ ARANCELES_CLP: dict[str, int] = {
     "psiquiatria":                  60000,
     "neurología":                   65000,
     "neurologia":                   65000,
+    "tecnología médica oftalmológica": 15000,
+    "tecnologia medica oftalmologica": 15000,
+    "oftalmología":                 15000,
+    "oftalmologia":                 15000,
+    "optometría":                   15000,
+    "optometria":                   15000,
     "ginecología":                  40000,
     "ginecologia":                  40000,
     "matrona":                      20000,  # F172: particular $20.000 (Fonasa $16.000); era 25000 incorrecto

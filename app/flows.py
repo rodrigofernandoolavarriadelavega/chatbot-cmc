@@ -430,9 +430,12 @@ PRECIOS_SLOT = {
     "Psicología Adulto":      ("ambas",    14420, None, 20000),   # Fonasa $14.420 / Particular $20.000 (F035)
     "Psicología Infantil":    ("ambas",    14420, None, 20000),   # Fonasa $14.420 / Particular $20.000 (F035)
     "Nutrición":              ("ambas",     4770, None, 20000),   # Fonasa $4.770 / Particular $20.000 (F035)
+    "Bioimpedanciometría":    ("particular", 15000),  # Gisela Pinto — examen aparte, sin bono Fonasa
+
     "Matrona":                ("ambas",     16000,  None, 20000),  # Fonasa $16.000 / Particular $20.000
     "Psiquiatría":            ("particular", 60000),
     "Neurología":             ("particular", 65000),
+    "Tecnología Médica Oftalmológica": ("particular", 15000),  # TM Ana Celedón, $15.000 a TODOS (sin Fonasa)
     "Fonoaudiología":         ("particular", 25000),
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
@@ -448,6 +451,33 @@ PRECIOS_SLOT = {
     "Estética Facial":        ("particular", 15000, "evaluación"),
     # Masoterapia se resuelve dinámicamente según la duración real del slot.
 }
+
+# ── Bioimpedanciometría (Gisela Pinto, 52) ───────────────────────────────────
+# Prestación aparte de la consulta nutricional: $15.000, bloque de 15 min, sin
+# bono Fonasa. Se agenda sola (no requiere consulta) y también se ofrece como
+# complemento a quien agenda Nutrición.
+_BIA_KEYS: set[str] = {
+    "bioimpedanciometría", "bioimpedanciometria",
+    "bioimpedancia", "bio impedancia",
+    "composición corporal", "composicion corporal",
+}
+
+# Indicaciones de preparación. Se envían AL AGENDAR (no sirven el día antes:
+# el paciente necesita saber que no debe comer 3 h antes ni entrenar ese día).
+# Validadas contra protocolos de fabricante (Tanita/InBody) y ESPEN 2004.
+_BIA_PREPARACION = (
+    "📋 *Cómo prepararte para tu bioimpedanciometría*\n\n"
+    "• *No comas* nada las *3 horas* antes. No necesitas ayuno de toda la noche.\n"
+    "• Toma tu agua normal el día anterior. *Evita alcohol y café* el día previo.\n"
+    "• *No hagas ejercicio* fuerte ese día, ni sauna ni ducha muy caliente antes.\n"
+    "• *Pasa al baño* justo antes del examen.\n"
+    "• Ven con *ropa liviana*. El examen se hace *descalzo* (sin zapatos ni calcetines).\n"
+    "• Sácate *reloj, celular, cinturón y joyas*.\n"
+    "• *No te pongas cremas ni aceites* en manos ni pies ese día.\n"
+    "• Al medir: quieto, sin hablar y con los brazos separados del cuerpo.\n\n"
+    "Si tienes *marcapasos*, *desfibrilador implantado* o estás *embarazada*, "
+    "avísanos: en esos casos no realizamos este examen."
+)
 
 # ── Mensajes personalizados de sin-disponibilidad por especialidad ────────────
 # Cuando _iniciar_agendar no encuentra slots, consulta esta tabla antes de
@@ -484,6 +514,18 @@ CROSS_REFERENCE: dict[str, str] = {
         "Muchas atenciones de ORL se complementan con fonoaudiología. "
         "Si te interesa, escribe *menu* y agenda con ella 😊"
     ),
+    # Todo paciente que agenda con la nutricionista recibe la oferta del examen
+    # (decisión dueño 2026-07-11). Es la prestación que hace medible su plan:
+    # sin ella, el control siguiente solo compara kilos en la pesa.
+    "Nutrición": (
+        "\n\n📊 *¿Sabías que hacemos Bioimpedanciometría?*\n"
+        "Es un examen rápido e indoloro que mide *de qué están hechos tus kilos*: "
+        "cuánta grasa, cuánto músculo y cuánta agua tienes.\n\n"
+        "Sirve para saber si lo que bajas es *grasa* (lo que buscamos) o *músculo* "
+        "(lo que hay que evitar) — algo que la pesa sola no puede decirte.\n\n"
+        "💰 *$15.000* · dura 15 minutos · lo realiza la misma *Gisela Pinto*\n\n"
+        "Si quieres agregarlo, escribe *bioimpedanciometría* y te doy hora 😊"
+    ),
     "Fonoaudiología": (
         "\n\n💡 *¿Sabías que tenemos Otorrinolaringólogo?*\n"
         "Dr. Manuel Borrego atiende en el CMC y puede ayudarte con:\n"
@@ -496,7 +538,7 @@ CROSS_REFERENCE: dict[str, str] = {
     ),
     "Odontología General": (
         "\n\n✨ *¿Sabías que hacemos Blanqueamiento Dental?*\n"
-        "Dra. Javiera Burgos y Dr. Carlos Jiménez realizan:\n"
+        "Dra. Javiera Burgos realiza:\n"  # 2026-07-08: solo Burgos agenda odontología general
         "• Blanqueamiento dental ($75.000)\n"  # F033: precio real $75.000 (no $120.000)
         "• Carillas de resina (desde $50.000)\n\n"
         "Aprovecha tu visita y mejora tu sonrisa. "
@@ -3041,7 +3083,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_WAITLIST_CONFIRM", "WAIT_WAITLIST_RUT", "WAIT_WAITLIST_NOMBRE",
         "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
         "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
-        "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA", "WAIT_ORTODONCIA_ACTIVO",
+        "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA", "WAIT_BIA_SCREENING",
+        "WAIT_ORTODONCIA_ACTIVO",
         "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
         "WAIT_CROSS_SELL",
         "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
@@ -5513,49 +5556,36 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Evidencia: 4 phones activos escribieron 1-3 veces sin resultado
             # (reimpresión boletas, pago control, próxima cita, retiro brackets).
             _esp_orto_activo = (especialidad or "").lower().strip()
-            _keywords_orto = ("ortodoncia", "bracket", "ortodonc", "control")
+            _keywords_orto = ("ortodoncia", "bracket", "frenillo", "ortodonc", "control")
             _txt_orto = tl_norm
             _es_posible_activo = (
                 _esp_orto_activo in ("ortodoncia", "brackets")
                 or any(k in _txt_orto for k in _keywords_orto)
             )
             if _es_posible_activo and perfil and perfil.get("rut"):
-                try:
-                    _sql_orto = (
-                        "SELECT COUNT(*) FROM bi.fact_atenciones "
-                        "WHERE rut = %s "
-                        "  AND id_profesional = 66 "
-                        "  AND fecha_atencion >= NOW() - INTERVAL '6 months'"
-                    )
-                    # Query psycopg2 síncrona: usar asyncio.to_thread para no
-                    # bloquear el event loop (F137 auditoría 2026-06-10).
-                    import asyncio as _asyncio_orto
-                    from winback import bi_conn as _bi_orto_conn
-
-                    def _query_orto_sync():
-                        with _bi_orto_conn() as _pg:
-                            with _pg.cursor() as _cur:
-                                _cur.execute(_sql_orto, (perfil["rut"],))
-                                return (_cur.fetchone() or [0])[0]
-
-                    _cnt_orto = await _asyncio_orto.to_thread(_query_orto_sync)
-                    if _cnt_orto > 0:
-                        log_event(phone, "ortodoncia_activo_menu_ofrecido",
-                                  {"rut": perfil["rut"], "atenciones_6m": _cnt_orto})
-                        save_session(phone, "WAIT_ORTODONCIA_ACTIVO", data)
-                        nombre_orto = _first_name(perfil.get("nombre", ""))
-                        saludo_orto = f"Hola *{nombre_orto}* " if nombre_orto else "Hola "
-                        return _btn_msg(
+                _cnt_orto = await _paciente_ortodoncia_activo(phone)
+                if _cnt_orto > 0:
+                    log_event(phone, "ortodoncia_activo_menu_ofrecido",
+                              {"rut": perfil["rut"], "atenciones_6m": _cnt_orto})
+                    save_session(phone, "WAIT_ORTODONCIA_ACTIVO", data)
+                    nombre_orto = _first_name(perfil.get("nombre", ""))
+                    saludo_orto = f"Hola *{nombre_orto}* " if nombre_orto else "Hola "
+                    return _list_msg(
+                        body_text=(
                             f"{saludo_orto}— como paciente de ortodoncia con la Dra. Castillo, "
-                            "¿en qué te podemos ayudar?",
-                            [
+                            "¿en qué te podemos ayudar?"
+                        ),
+                        button_label="Ver opciones",
+                        sections=[{
+                            "title": "Ortodoncia",
+                            "rows": [
+                                {"id": "orto_agendar",  "title": "Agendar hora/control"},
                                 {"id": "orto_ver_cita", "title": "Mi próxima cita"},
                                 {"id": "orto_boleta",   "title": "Reimpresión de boleta"},
                                 {"id": "orto_urgencia", "title": "Bracket suelto / urgencia"},
-                            ]
-                        )
-                except Exception as _e_orto4:
-                    log.warning("ortodoncia activo check phone=%s: %s", phone, _e_orto4)
+                            ],
+                        }],
+                    )
 
             # Si Claude detectó pediatría y el normalizador la mapeó a MG,
             # marcar para que _iniciar_agendar muestre aclaración.
@@ -6050,6 +6080,50 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _nm_fb = _first_name((_pf_fb or {}).get("nombre", "")) if _pf_fb else ""
         return _menu_msg(nombre=_nm_fb)
 
+    # ── WAIT_BIA_SCREENING ────────────────────────────────────────────────────
+    # Tamizaje de seguridad de la bioimpedanciometría. Contraindicada por los
+    # fabricantes del equipo en marcapasos/DAI, y no se realiza en embarazo.
+    # Si el paciente declara alguno, NO se agenda: se deriva a recepción.
+    if state == "WAIT_BIA_SCREENING":
+        _bia_si = (
+            tl == "bia_si_riesgo"
+            or tl in ("si", "sí", "sip", "yes", "tengo", "estoy embarazada", "embarazada")
+            or any(k in tl for k in ("marcapaso", "desfibrilador", "embaraz", "encinta"))
+        )
+        _bia_no = (
+            tl == "bia_no_riesgo"
+            or tl in ("no", "nop", "ninguno", "ninguna", "no tengo", "nada")
+        )
+        if _bia_si:
+            log_event(phone, "bia_screening_bloqueado", {"txt": txt[:120]})
+            save_tag(phone, "bia-contraindicada")
+            reset_session(phone)
+            return (
+                "Gracias por avisar 🙏\n\n"
+                "Con *marcapasos*, *desfibrilador implantado* o en *embarazo* no "
+                "realizamos la bioimpedanciometría: los fabricantes del equipo lo "
+                "contraindican, y en el embarazo además el resultado no sería confiable.\n\n"
+                "Igual podemos ayudarte: la *nutricionista Gisela Pinto* puede hacerte "
+                "una evaluación nutricional completa sin este examen "
+                "(consulta $20.000 particular · *bono Fonasa $4.770*).\n\n"
+                "¿Quieres que te dé hora con ella? Responde *nutrición*.\n"
+                "Si tienes dudas, escribe *recepción* y te contactamos."
+            )
+        if _bia_no:
+            log_event(phone, "bia_screening_ok", {})
+            data["_bia_screening_ok"] = True
+            return await _iniciar_agendar(phone, data, "bioimpedanciometría")
+        save_session(phone, "WAIT_BIA_SCREENING", data)
+        return _btn_msg(
+            "Perdón, no te entendí. Para poder darte hora necesito saberlo:\n\n"
+            "¿Tienes *marcapasos*, *desfibrilador implantado* u otro dispositivo "
+            "médico electrónico implantado, o estás *embarazada*?",
+            [
+                {"id": "bia_no_riesgo", "title": "No, ninguno"},
+                {"id": "bia_si_riesgo", "title": "Sí"},
+            ]
+        )
+
     # ── WAIT_DURACION_MASOTERAPIA ──────────────────────────────────────────────
     # ── WAIT_CONFIRMAR_ADULTO ────────────────────────────────────────────────
     # Paciente mencionó menor en flujo de MG/MF — confirmar si la cita es para adulto
@@ -6185,10 +6259,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── WAIT_ORTODONCIA_ACTIVO ───────────────────────────────────────────────
     # Patrón 4 (2026-05-19): paciente activo en tratamiento de ortodoncia.
-    # Botones: ver próxima cita / reimpresión boleta / urgencia bracket suelto.
-    # Opciones 1-2-3 derivan a HUMAN_TAKEOVER (recepción atiende).
+    # Lista: agendar hora/control (directo con Castillo) / ver próxima cita /
+    # reimpresión boleta / urgencia bracket suelto (2026-07-08: se agregó la
+    # primera opción — antes el menú solo cubría trámites administrativos y
+    # no dejaba agendar).
     if state == "WAIT_ORTODONCIA_ACTIVO":
         tl_oa = txt.strip().lower()
+        if tl_oa in ("orto_agendar", "agendar hora/control", "agendar hora",
+                     "agendar", "quiero agendar", "quiero hora", "hora",
+                     "control", "4"):
+            log_event(phone, "ortodoncia_activo_opcion", {"opcion": "agendar_castillo"})
+            data["_orto_bypass_evaluacion"] = True
+            return await _iniciar_agendar(
+                phone, data, "ortodoncia",
+                saludo_prefix=(
+                    "Como ya estás en tratamiento con la Dra. Daniela Castillo "
+                    "(ortodoncista), te muestro tus horas directamente con ella 👇\n\n"
+                    "⚠️ Las horas están sujetas a cambios, porque a veces debemos "
+                    "ajustar los horarios.\n\n"
+                ),
+            )
         if tl_oa in ("orto_ver_cita", "mi próxima cita", "mi proxima cita",
                      "ver cita", "próxima cita", "1"):
             reset_session(phone)
@@ -6649,6 +6739,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if any(k in tl_norm for k in ("neurologo", "neurologa", "neurología",
                                        "neurologia", "neurólogo", "neuróloga")):
             return await _iniciar_agendar(phone, data, "neurología")
+        # Oftalmología: TM Ana Celedón (prof 80), PRESENCIAL. Mismo bypass
+        # explícito que psiquiatría/neurología para no depender del fallback genérico.
+        if any(k in tl_norm for k in ("oftalmologo", "oftalmologa", "oftalmología",
+                                       "oftalmologia", "oftalmólogo", "oftalmóloga",
+                                       "optometra", "optometria", "optometría",
+                                       "optometrista", "celedon", "celedón")):
+            return await _iniciar_agendar(phone, data, "tecnología médica oftalmológica")
         from medilink import _ids_para_especialidad
         # Traducir ID de lista interactiva al nombre real de especialidad
         especialidad_candidata = _ESP_ID_MAP.get(tl, tl)
@@ -9725,6 +9822,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # el deadline casi siempre corta una ESPERA (semáforo/cola),
                     # no un POST en vuelo — minimiza el riesgo de cita creada
                     # pero reportada como fallida.
+                    # Bioimpedanciometría: la cita cae en la agenda de Gisela (52),
+                    # cuya especialidad en Medilink es "Nutrición". Sin esta marca
+                    # recepción la vería como consulta y cobraría $20.000 en vez de
+                    # $15.000. observaciones_extra la hace visible en la agenda.
+                    _obs_prestacion = (
+                        "[BIOIMPEDANCIOMETRÍA $15.000]"
+                        if data.get("especialidad") in _BIA_KEYS else ""
+                    )
                     resultado = await asyncio.wait_for(crear_cita(
                         id_paciente=paciente["id"],
                         id_profesional=slot["id_profesional"],
@@ -9733,6 +9838,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         hora_fin=slot["hora_fin"],
                         id_recurso=slot.get("id_recurso", 1),
                         modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
+                        observaciones_extra=_obs_prestacion,
                     ), timeout=45)
             except Exception as _crear_err:
                 # P1-B: Medilink exige campo videoconsulta para ciertos slots
@@ -9875,6 +9981,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     save_profile(phone, data.get("rut", ""), paciente["nombre"])
                 # Registrar tag y cita para tracking/recordatorios
                 esp = slot["especialidad"]
+                # La bioimpedanciometría se agenda en la agenda de la nutricionista,
+                # así que slot["especialidad"] dice "Nutrición". Corregirlo acá hace
+                # que el tag, la cita guardada, el recordatorio y el value del evento
+                # Purchase (CAPI) usen la prestación real y su arancel ($15.000).
+                if data.get("especialidad") in _BIA_KEYS:
+                    esp = "Bioimpedanciometría"
                 save_tag(phone, f"cita-{esp.lower()}")
                 save_tag(phone, f"modalidad-{data.get('modalidad','particular')}")
                 id_cita = str(resultado.get("id", "")) if isinstance(resultado, dict) else ""
@@ -10108,6 +10220,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # ── fin referral bono ──────────────────────────────────────
 
                 cross_ref = _cross_reference_msg(esp)
+                # Bioimpedanciometría: las indicaciones van AL AGENDAR, no el día
+                # antes — el paciente tiene que saber hoy que no debe comer 3 h antes
+                # ni entrenar ese día. Reemplazan al cross-sell (no ofrecerle el
+                # examen a quien acaba de agendarlo).
+                if esp == "Bioimpedanciometría":
+                    cross_ref = f"\n\n{_BIA_PREPARACION}"
                 # Recordatorio PNI para pacientes pediátricos
                 fecha_nac = (data.get("reg_fecha_nacimiento")
                              or paciente.get("fecha_nacimiento", ""))
@@ -13296,28 +13414,88 @@ def _detectar_especialidad_en_texto(txt: str) -> str | None:
     return None
 
 
-_ESPECIALIDADES_TEXTO = (
-    "• Medicina General\n"
-    "• Medicina Familiar\n"
-    "• Otorrinolaringología\n"
-    "• Cardiología\n"
-    # "• Traumatología\n"  # temporalmente deshabilitada
-    "• Ginecología\n"
-    "• Gastroenterología\n"
-    "• Neurología\n"
-    "• Odontología General\n"
-    "• Ortodoncia\n"
-    "• Endodoncia\n"
-    "• Implantología\n"
-    "• Estética Facial\n"
-    "• Kinesiología\n"
-    "• Nutrición\n"
-    "• Psicología\n"
-    "• Fonoaudiología\n"
-    "• Matrona\n"
-    "• Podología\n"
-    "• Ecografía"
-)
+# ── Catálogo de especialidades que ve el paciente ────────────────────────────
+# DERIVADO de PROFESIONALES (medilink.py), no hardcodeado. Antes era una lista
+# manual y se desincronizó tres veces seguidas: Psiquiatría (78), Masoterapia
+# (59) y Oftalmología (80) quedaron invisibles para el paciente que pedía hora
+# sin nombrar especialidad. Al derivarla, toda alta futura aparece sola.
+#
+# _ESP_ORDEN fija el orden de presentación (médicas → dental → terapias).
+# Lo que NO esté en _ESP_ORDEN se agrega al final, así una especialidad nueva
+# nunca desaparece por olvido: a lo más queda mal ordenada.
+_ESP_OCULTAS: set[str] = {
+    "Traumatología",  # Dr. Barraza no disponible → se redirige a Medicina General
+}
+
+_ESP_ORDEN: list[str] = [
+    "Medicina General", "Medicina Familiar", "Otorrinolaringología", "Cardiología",
+    "Ginecología", "Gastroenterología", "Neurología", "Psiquiatría",
+    "Tecnología Médica Oftalmológica",
+    "Odontología General", "Ortodoncia", "Endodoncia", "Implantología",
+    "Estética Facial",
+    "Kinesiología", "Masoterapia", "Nutrición", "Psicología", "Fonoaudiología",
+    "Matrona", "Podología", "Ecografía",
+]
+
+# Prestaciones agendables que NO son la especialidad propia de un profesional
+# en PROFESIONALES, pero que el bot sí agenda (cuelgan de la agenda de alguien).
+# Sin esto la lista derivada las perdería:
+#   · Medicina Familiar → Dr. Márquez (13) figura como "Medicina General".
+#   · Bioimpedanciometría → la realiza la nutricionista (Gisela Pinto, 52).
+_PRESTACIONES_EXTRA: list[tuple[str, str]] = [
+    ("Medicina Familiar", "Medicina General"),   # (etiqueta, se muestra después de…)
+    ("Bioimpedanciometría", "Nutrición"),
+]
+
+# Etiquetas más legibles para el paciente que el nombre interno de la
+# especialidad. Clave = PROFESIONALES[id]["especialidad"].
+_ESP_ETIQUETA: dict[str, str] = {
+    # NO llamarla "Oftalmología": Ana Celedón es TECNÓLOGA MÉDICA, no oftalmóloga,
+    # y el CMC no tiene oftalmólogo médico. Anunciarla como oftalmología sería
+    # publicidad engañosa. Las keywords del paciente ("oftalmología") sí rutean
+    # acá — lo que no puede pasar es que el bot se autodenomine así.
+    "Tecnología Médica Oftalmológica": "Tecnología Médica Oftalmológica (examen de la vista y lentes)",
+    "Psicología Adulto": "Psicología",
+    "Psicología Infantil": "Psicología",
+}
+
+
+def _build_especialidades_texto() -> str:
+    """Lista de especialidades para el paciente, derivada de PROFESIONALES."""
+    from medilink import PROFESIONALES as _PROFS_CAT
+
+    vivas: list[str] = []
+    for _info in _PROFS_CAT.values():
+        esp = _info.get("especialidad", "").strip()
+        if not esp or esp in _ESP_OCULTAS:
+            continue
+        etiqueta = _ESP_ETIQUETA.get(esp, esp)
+        if etiqueta not in vivas:
+            vivas.append(etiqueta)
+
+    # Ordenar según _ESP_ORDEN; lo desconocido va al final (visible igual).
+    def _rank(etiqueta: str) -> int:
+        for i, esp in enumerate(_ESP_ORDEN):
+            if _ESP_ETIQUETA.get(esp, esp) == etiqueta:
+                return i
+        return len(_ESP_ORDEN)
+
+    vivas.sort(key=_rank)
+
+    # Insertar prestaciones extra justo después de su especialidad ancla.
+    for etiqueta, ancla in _PRESTACIONES_EXTRA:
+        ancla_lbl = _ESP_ETIQUETA.get(ancla, ancla)
+        if etiqueta in vivas:
+            continue
+        if ancla_lbl in vivas:
+            vivas.insert(vivas.index(ancla_lbl) + 1, etiqueta)
+        else:
+            vivas.append(etiqueta)
+
+    return "\n".join(f"• {e}" for e in vivas)
+
+
+_ESPECIALIDADES_TEXTO = _build_especialidades_texto()
 
 
 def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | dict:
@@ -13561,6 +13739,45 @@ def _es_adolescente_en_texto(txt: str) -> bool:
         if 14 <= edad <= 17:
             return True
     return False
+
+
+async def _paciente_ortodoncia_activo(phone: str) -> int:
+    """Cuenta atenciones (6 meses) del paciente con la Dra. Castillo (id 66).
+
+    Señal de que el paciente YA está en tratamiento de ortodoncia (grupos
+    2/3/4: instalación parcial, instalación completa, en control) — a
+    diferencia del grupo 1 (nunca evaluado, quiere brackets pero primero
+    necesita evaluación con odontología general).
+
+    Identifica al paciente por phone → rut (contact_profiles/get_profile) →
+    consulta BI real. Única fuente para esta pregunta: reutilizada por el
+    gate WAIT_ORTODONCIA_ACTIVO (Patrón 4) y por _iniciar_agendar (ruteo
+    dental/ortodoncia). Retorna 0 si no hay perfil, RUT, o falla la consulta.
+    """
+    perfil = get_profile(phone)
+    if not perfil or not perfil.get("rut"):
+        return 0
+    try:
+        # Query psycopg2 síncrona: usar asyncio.to_thread para no bloquear
+        # el event loop (F137 auditoría 2026-06-10).
+        from winback import bi_conn as _bi_orto_conn
+
+        def _query_orto_sync():
+            with _bi_orto_conn() as _pg:
+                with _pg.cursor() as _cur:
+                    _cur.execute(
+                        "SELECT COUNT(*) FROM bi.fact_atenciones "
+                        "WHERE rut = %s "
+                        "  AND id_profesional = 66 "
+                        "  AND fecha_atencion >= NOW() - INTERVAL '6 months'",
+                        (perfil["rut"],),
+                    )
+                    return (_cur.fetchone() or [0])[0]
+
+        return await asyncio.to_thread(_query_orto_sync)
+    except Exception as e:
+        log.warning("_paciente_ortodoncia_activo phone=%s: %s", phone, e)
+        return 0
 
 
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
@@ -13856,50 +14073,76 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             f"📞 Recepción: *{CMC_TELEFONO}*\n\n"
             "_Escribe *menu* para ver opciones._"
         )
-    # ── Ortodoncia, Endodoncia e Implantología: requieren evaluación previa ──────
-    # Regla de negocio: estos tres servicios NO se agendan directo con el
-    # especialista. Primero va odontología general ($15.000 evaluación), que
-    # revisa salud bucal, toma registros y deriva al especialista si corresponde.
-    # EXCEPCIÓN ortodoncia: si el paciente pide "control" (ya está en tratamiento),
-    # no necesita re-evaluación — va directo a odontología general como control.
-    if especialidad_lower in ("ortodoncia", "ortodoncista", "brackets", "frenillos"):
+    # ── Ortodoncia/dental: rutea según si el paciente YA está en tratamiento ──
+    # 4 macrogrupos de negocio, 2 destinos (dueño 2026-07-08):
+    #   Grupo 1 (nunca evaluado, quiere brackets)              → odontología
+    #     general (Dra. Burgos, $15.000 evaluación/presupuesto, gratis si
+    #     empieza tratamiento previo ese día).
+    #   Grupos 2/3/4 (instalación parcial/completa, en control) → YA están
+    #     con la Dra. Castillo (66) → horas directo con ELLA, con aviso de
+    #     que pueden ajustarse.
+    # Identidad: phone → rut → BI (_paciente_ortodoncia_activo, misma consulta
+    # que el gate WAIT_ORTODONCIA_ACTIVO/Patrón 4). También dispara con la
+    # palabra "control" cuando piden ortodoncia explícita (grupo 4 sin perfil
+    # con RUT todavía). Aplica también a pedidos de "dental" genéricos — un
+    # paciente activo que escribe "necesito hora dental" va con Castillo, no
+    # con Burgos.
+    _orto_bypass = data.pop("_orto_bypass_evaluacion", False)
+    _es_pedido_ortodoncia = especialidad_lower in ("ortodoncia", "ortodoncista", "brackets", "frenillos")
+    _es_pedido_dental_generico = especialidad_lower in (
+        "odontología", "odontologia", "dentista", "dental",
+        "odontólogo", "odontologo", "odontología general", "odontologia general",
+    )
+    if not _orto_bypass and (_es_pedido_ortodoncia or _es_pedido_dental_generico):
         _txt_raw_orto = (_txt_raw or "").lower()
-        _es_control_orto = any(
+        _es_control_orto = _es_pedido_ortodoncia and any(
             k in _txt_raw_orto
             for k in ("control", "seguimiento", "mantención", "mantencion",
                       "ajuste", "cita de control", "mi control")
         )
-        log_event(phone, "ortodoncia_redirigida_odonto", {
-            "especialidad_original": especialidad,
-            "es_control": _es_control_orto,
-        })
-        # Persistir origen dental para que otro_dia/otro_prof no pierdan contexto
-        data["_dental_origen"] = "ortodoncia"
-        data["ortodoncia_redirigida"] = True
-        if _es_control_orto:
-            # Paciente ya en tratamiento — control de ortodoncia, sin re-evaluación
+        _activo_orto = (await _paciente_ortodoncia_activo(phone)) > 0
+        if _es_control_orto or _activo_orto:
+            # Grupos 2/3/4 — ya en tratamiento con la Dra. Castillo.
+            log_event(phone, "ortodoncia_activo_directo_castillo", {
+                "especialidad_original": especialidad,
+                "es_control_texto": _es_control_orto,
+                "activo_bi": _activo_orto,
+            })
+            data["_dental_origen"] = "ortodoncia"
+            data["ortodoncia_redirigida"] = True
+            data["_orto_bypass_evaluacion"] = True
+            return await _iniciar_agendar(
+                phone, data, "ortodoncia",
+                saludo_prefix=(
+                    "Como ya estás en tratamiento con la Dra. Daniela Castillo "
+                    "(ortodoncista), te muestro tus horas directamente con ella 👇\n\n"
+                    "⚠️ Las horas están sujetas a cambios, porque a veces debemos "
+                    "ajustar los horarios.\n\n"
+                ),
+            )
+        if _es_pedido_ortodoncia:
+            # Grupo 1 — nunca evaluado, quiere brackets. Requiere evaluación
+            # previa con odontología general (Dra. Burgos). Mensaje textual
+            # exacto acordado con el dueño (2026-07-08).
+            log_event(phone, "ortodoncia_redirigida_odonto", {"especialidad_original": especialidad})
+            data["_dental_origen"] = "ortodoncia"
+            data["ortodoncia_redirigida"] = True
             return await _iniciar_agendar(
                 phone, data, "odontología",
                 saludo_prefix=(
-                    "Para tu control de ortodoncia, agenda con *odontología general*. "
-                    "La dentista coordina los controles con la Dra. Castillo "
-                    "(ortodoncista).\n\n"
-                    "💰 Control: *$30.000*\n\n"
-                    "Te muestro horas disponibles 👇\n\n"
+                    "¿Quieres empezar tu tratamiento de ortodoncia? 🦷✨\n\n"
+                    "Primero debes agendar una cita con nuestra dentista general.\n"
+                    "Ella evaluará tu caso, verá si necesitas algún tratamiento previo, "
+                    "te dará la orden para radiografías y tomará fotografías.\n"
+                    "Después, ¡ella misma gestionará tu derivación con la ortodoncista! 😁\n\n"
+                    "El valor del presupuesto es de $15.000, pero si decides comenzar tu "
+                    "tratamiento previo en ese momento, el presupuesto te sale gratis y "
+                    "solo pagas la acción que se realice ese día.\n\n"
+                    "Quedamos atentos si quieres agendar tu hora. 😊\n\n"
                 ),
             )
-        # Paciente nuevo — requiere evaluación previa
-        return await _iniciar_agendar(
-            phone, data, "odontología",
-            saludo_prefix=(
-                "Para tratamiento de ortodoncia (brackets), primero necesitamos "
-                "una *evaluación con odontología general*. La dentista revisa "
-                "caries, encías y salud bucal, toma registros y luego coordina "
-                "la derivación a la Dra. Castillo (ortodoncista) si corresponde.\n\n"
-                "💰 Evaluación: *$15.000*\n\n"
-                "Te muestro horas disponibles para la evaluación 👇\n\n"
-            ),
-        )
+        # _es_pedido_dental_generico sin señal de tratamiento activo → sigue
+        # el flujo normal de odontología general más abajo (solo Dra. Burgos).
 
     # Endodoncia (tratamiento de conducto): requiere evaluación previa con
     # odontología general. La dentista evalúa, toma radiografías y confirma
@@ -13941,6 +14184,27 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 "Te muestro horas disponibles para la evaluación 👇\n\n"
             ),
         )
+
+    # ── Bioimpedanciometría: tamizaje de seguridad ANTES de mostrar horas ─────
+    # Los fabricantes de los equipos (Tanita, InBody) contraindican la BIA en
+    # portadores de marcapasos/desfibrilador implantado, y no se realiza en
+    # embarazo (además el resultado no sería confiable: cambia el agua corporal).
+    # Un paciente con marcapasos NO puede llegar a agendar solo por WhatsApp:
+    # se le corta acá y se deriva a recepción.
+    if especialidad_lower in _BIA_KEYS:
+        data["especialidad"] = "bioimpedanciometría"
+        if not data.pop("_bia_screening_ok", False):
+            save_session(phone, "WAIT_BIA_SCREENING", data)
+            return _btn_msg(
+                "Antes de darte hora para la *bioimpedanciometría* necesito hacerte "
+                "una pregunta de seguridad.\n\n"
+                "¿Tienes *marcapasos*, *desfibrilador implantado* u otro dispositivo "
+                "médico electrónico implantado, o estás *embarazada*?",
+                [
+                    {"id": "bia_no_riesgo", "title": "No, ninguno"},
+                    {"id": "bia_si_riesgo", "title": "Sí"},
+                ]
+            )
 
     # Masoterapia tiene duración variable — preguntar antes de buscar slots
     if especialidad_lower in ("masoterapia", "masaje", "masajes"):

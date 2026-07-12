@@ -1370,7 +1370,7 @@ async def sitio_v7_1():
 @app.get("/blog", response_class=HTMLResponse)
 @app.get("/blog/", response_class=HTMLResponse)
 async def blog_index():
-    """Índice del blog: lista las 20 especialidades."""
+    """Índice del blog: lista las 22 especialidades."""
     p = _TEMPLATE_DIR / "blog_index.html"
     if p.exists():
         return p.read_text(encoding="utf-8")
@@ -1394,6 +1394,9 @@ _COMUNA_SPECIALTIES = [
     ("matrona", "Matrona", "Tarifa Fonasa $16.000", "Sarai Gómez", "Salud Mujer"),
     ("podologia", "Podología", "$20.000–$35.000", "Andrea Guevara", "Bienestar"),
     ("ecografia", "Ecografía", "$35.000", "Dr. David Pardo", "Diagnóstico"),
+    ("neurologia", "Neurología", "Particular $65.000", "Dra. Franca González", "Especialidades"),
+    ("psiquiatria", "Psiquiatría", "Particular $60.000", "Dra. Cecilia Unibazo", "Salud Mental"),
+    ("oftalmologia", "Oftalmología", "$15.000 (todos)", "TM Ana Celedón", "Diagnóstico"),
     ("masoterapia", "Masoterapia", "$17.990 (20 min)", "Paola Acosta", "Bienestar"),
     ("odontologia-general", "Odontología General", "Limpieza desde $30.000", "Dra. Burgos · Dr. Jiménez", "Dental"),
     ("ortodoncia", "Ortodoncia", "Brackets metálicos/estéticos", "Dra. Daniela Castillo", "Dental"),
@@ -1421,19 +1424,19 @@ async def comuna_hub(slug: str):
         km_txt = "en el centro de la localidad"
         min_txt = ""
         lead = (f"Centro Médico Carampangue está físicamente en {nombre}, en República 102. "
-                f"23 profesionales y 19 especialidades médicas y dentales. Bono Fonasa MLE en sucursal con huella biométrica.")
+                f"23 profesionales y 22 especialidades médicas y dentales. Bono Fonasa MLE en sucursal con huella biométrica.")
     else:
         title = f"Médico y Dentista en {nombre} · CMC a {km} km ({minutos} min)"
         km_txt = f"a {km} km"
         min_txt = f" · {minutos} min" if minutos else ""
         lead = (f"Atendemos pacientes desde {nombre} ({c['tipo'] if 'tipo' in c else 'Provincia de Arauco'}). "
                 f"Centro Médico Carampangue está a {km} km vía {ruta}. "
-                f"23 profesionales · 19 especialidades · Bono Fonasa MLE · Agenda WhatsApp 24/7.")
+                f"23 profesionales · 22 especialidades · Bono Fonasa MLE · Agenda WhatsApp 24/7.")
 
     description = (f"Médico y dentista para pacientes de {nombre} (Provincia de Arauco). "
-                   f"23 profesionales, 19 especialidades · Bono Fonasa MLE · "
+                   f"23 profesionales, 22 especialidades · Bono Fonasa MLE · "
                    f"a {km} km del centro" if km > 0 else
-                   f"Médico y dentista en {nombre}: 23 profesionales, 19 especialidades. Bono Fonasa MLE.")
+                   f"Médico y dentista en {nombre}: 23 profesionales, 22 especialidades. Bono Fonasa MLE.")
 
     wa_text = f"quiero%20agendar%20una%20hora%20desde%20{nombre.replace(' ', '%20')}"
 
@@ -1610,13 +1613,13 @@ async def comuna_index():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Servicios médicos por comuna · Provincia de Arauco | CMC</title>
-<meta name="description" content="Centro Médico Carampangue atiende pacientes de toda la Provincia de Arauco: Carampangue, Arauco, Lebu, Cañete, Curanilahue, Los Álamos, Tirúa, Contulmo, Laraquete, Ramadilla. 23 profesionales · 19 especialidades · Bono Fonasa MLE.">
+<meta name="description" content="Centro Médico Carampangue atiende pacientes de toda la Provincia de Arauco: Carampangue, Arauco, Lebu, Cañete, Curanilahue, Los Álamos, Tirúa, Contulmo, Laraquete, Ramadilla. 23 profesionales · 22 especialidades · Bono Fonasa MLE.">
 <meta name="keywords" content="centro médico Carampangue, médico Arauco, dentista Provincia Arauco, kinesiología Lebu, ginecología Curanilahue, ortodoncia Cañete, ecografía Los Álamos, agenda WhatsApp">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://centromedicocarampangue.cl/comuna/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Servicios médicos por comuna · Provincia de Arauco | CMC">
-<meta property="og:description" content="23 profesionales y 19 especialidades médicas y dentales para toda la Provincia de Arauco.">
+<meta property="og:description" content="23 profesionales y 22 especialidades médicas y dentales para toda la Provincia de Arauco.">
 <meta property="og:url" content="https://centromedicocarampangue.cl/comuna/">
 <meta property="og:image" content="https://agentecmc.cl/static/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -1625,7 +1628,7 @@ async def comuna_index():
 <meta property="og:locale" content="es_CL">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Servicios médicos por comuna · Provincia de Arauco">
-<meta name="twitter:description" content="23 profesionales · 19 especialidades · Bono Fonasa MLE · Agenda WhatsApp 24/7">
+<meta name="twitter:description" content="23 profesionales · 22 especialidades · Bono Fonasa MLE · Agenda WhatsApp 24/7">
 <meta name="twitter:image" content="https://agentecmc.cl/static/og-image.png">
 <meta name="twitter:site" content="@CMCarampangue">
 <script type="application/ld+json">
@@ -1680,7 +1683,7 @@ footer{{text-align:center;padding:24px;font-size:13px;color:#5e7183;border-top:1
 <section class="hero">
   <span class="eyebrow">Servicios médicos por comuna</span>
   <h1>Atendemos toda la <em>Provincia de Arauco</em></h1>
-  <p class="lead">23 profesionales y 19 especialidades médicas y dentales para pacientes de Carampangue, Arauco, Curanilahue, Lebu, Cañete, Los Álamos, Tirúa, Contulmo y comunas cercanas. Bono Fonasa MLE en sucursal con huella biométrica.</p>
+  <p class="lead">23 profesionales y 22 especialidades médicas y dentales para pacientes de Carampangue, Arauco, Curanilahue, Lebu, Cañete, Los Álamos, Tirúa, Contulmo y comunas cercanas. Bono Fonasa MLE en sucursal con huella biométrica.</p>
 </section>
 <section class="section">
   <h2>Sede principal</h2>
@@ -1842,6 +1845,9 @@ def _specialty_label(base_slug: str) -> str:
         "fonoaudiologia": "fonoaudiología",
         "matrona": "matrona",
         "podologia": "podología",
+        "neurologia": "neurología",
+        "psiquiatria": "psiquiatría",
+        "oftalmologia": "oftalmología",
     }.get(base_slug, base_slug.replace("-", " "))
 
 
@@ -2015,7 +2021,7 @@ def _localize_blog(html: str, base_slug: str, comuna_slug: str) -> str:
 
 @app.get("/sitemap.xml")
 async def sitemap_xml():
-    """Sitemap dinámico con todas las URLs (home + 19 especialidades + localidades + topic blogs + /blog index)."""
+    """Sitemap dinámico con todas las URLs (home + 22 especialidades + localidades + topic blogs + /blog index)."""
     from fastapi.responses import Response
     from datetime import datetime
     BLOGS_BASE = ["cardiologia", "medicina-general", "ortodoncia", "ecografia",
@@ -2023,7 +2029,8 @@ async def sitemap_xml():
                   "otorrinolaringologia", "ginecologia",
                   "gastroenterologia", "endodoncia", "implantologia",
                   "masoterapia", "nutricion", "psicologia-adulto",
-                  "psicologia-infantil", "fonoaudiologia", "matrona", "podologia"]
+                  "psicologia-infantil", "fonoaudiologia", "matrona", "podologia",
+                  "neurologia", "psiquiatria", "oftalmologia"]
     BLOGS_TOPICS = [
         "cefalea-tipos-tratamiento", "diabetes-tipo-2-control",
         "dolor-lumbar-cuando-consultar", "embarazo-controles-mensuales",
@@ -2161,7 +2168,7 @@ async def blog_rss_feed():
              '<title>Blog Centro Médico Carampangue</title>',
              f'<link>{base}/blog</link>',
              f'<atom:link href="{base}/feed.xml" rel="self" type="application/rss+xml" />',
-             '<description>Artículos médicos y dentales del Centro Médico Carampangue. 19 especialidades en la Provincia de Arauco.</description>',
+             '<description>Artículos médicos y dentales del Centro Médico Carampangue. 22 especialidades en la Provincia de Arauco.</description>',
              '<language>es-CL</language>',
              f'<lastBuildDate>{now}</lastBuildDate>',
              '<copyright>Centro Médico Carampangue</copyright>',
@@ -2307,9 +2314,9 @@ def _render_sitio_dynamic(html: str, rating_data: dict) -> str:
         )
     else:
         pill = (
-            '<i class="fas fa-shield-halved" style="color:var(--c-blue)"></i>'
-            '<span class="rn">Acreditados</span>'
-            '<span class="rt">· Superintendencia de Salud</span>'
+            '<i class="fas fa-house-medical" style="color:var(--c-blue)"></i>'
+            '<span class="rn">Centro Médico y Dental</span>'
+            '<span class="rt">· Provincia de Arauco</span>'
         )
     html = html.replace("<!--CMC_RATING_PILL-->", pill)
 
@@ -3107,8 +3114,8 @@ _COMUNAS_DATA = {
     "curanilahue": {
         "name": "Curanilahue",
         "title": "Médicos en Curanilahue · Centro Médico Carampangue",
-        "description": "Atención médica completa para pacientes de Curanilahue. 19 especialidades médicas y dentales a 25 minutos del centro. Bono Fonasa, agendamiento por WhatsApp.",
-        "hero_lead": "Si vives en Curanilahue, el CMC está a 25 minutos. 19 especialidades médicas y dentales: medicina general, kinesiología, ginecología, pediatría, odontología, psicología, ecografías y más. Bono Fonasa MLE en consultas elegibles.",
+        "description": "Atención médica completa para pacientes de Curanilahue. 22 especialidades médicas y dentales a 25 minutos del centro. Bono Fonasa, agendamiento por WhatsApp.",
+        "hero_lead": "Si vives en Curanilahue, el CMC está a 25 minutos. 22 especialidades médicas y dentales: medicina general, kinesiología, ginecología, pediatría, odontología, psicología, ecografías y más. Bono Fonasa MLE en consultas elegibles.",
         "km": "25", "time": "25 minutos", "bus": "Buses regulares Curanilahue–Arauco pasan por Carampangue",
         "transport": "Toma cualquier bus que vaya a Arauco o que pase por la Ruta 160 — todos hacen parada en Carampangue. Tiempo estimado en transporte público: 35-45 minutos.",
         "kine_note": "Ya atendemos pacientes recurrentes desde Curanilahue.",
@@ -3116,8 +3123,8 @@ _COMUNAS_DATA = {
     "los-alamos": {
         "name": "Los Álamos",
         "title": "Médicos cerca de Los Álamos · Centro Médico Carampangue",
-        "description": "Atención médica integral para pacientes de Los Álamos. CMC a 35 km, 19 especialidades, agendamiento por WhatsApp.",
-        "hero_lead": "Si estás en Los Álamos, el Centro Médico Carampangue es la opción más cercana fuera de tu comuna. 19 especialidades médicas y dentales con tarifa Fonasa donde aplica.",
+        "description": "Atención médica integral para pacientes de Los Álamos. CMC a 35 km, 22 especialidades, agendamiento por WhatsApp.",
+        "hero_lead": "Si estás en Los Álamos, el Centro Médico Carampangue es la opción más cercana fuera de tu comuna. 22 especialidades médicas y dentales con tarifa Fonasa donde aplica.",
         "km": "35", "time": "40 minutos", "bus": "Buses Los Álamos–Concepción pasan cerca de Carampangue",
         "transport": "Buses Los Álamos a Concepción/Talcahuano vía Arauco pasan cerca del centro. También accesible en auto vía Ruta 160.",
         "kine_note": "Bono Fonasa MLE en kinesiología: 10 sesiones por $83.360.",
@@ -3125,8 +3132,8 @@ _COMUNAS_DATA = {
     "canete": {
         "name": "Cañete",
         "title": "Médicos cerca de Cañete · Centro Médico Carampangue",
-        "description": "Atención médica integral para pacientes de Cañete. 19 especialidades a 45 km, agendamiento por WhatsApp, Fonasa y particular.",
-        "hero_lead": "Atendemos pacientes desde Cañete y comunas cercanas (Tirúa, Contulmo). 19 especialidades médicas y dentales. Bono Fonasa MLE disponible. Si necesitas algo que no encontraste en tu comuna, te esperamos.",
+        "description": "Atención médica integral para pacientes de Cañete. 22 especialidades a 45 km, agendamiento por WhatsApp, Fonasa y particular.",
+        "hero_lead": "Atendemos pacientes desde Cañete y comunas cercanas (Tirúa, Contulmo). 22 especialidades médicas y dentales. Bono Fonasa MLE disponible. Si necesitas algo que no encontraste en tu comuna, te esperamos.",
         "km": "45", "time": "55 minutos", "bus": "Buses Cañete–Concepción pasan por la zona",
         "transport": "Buses interregionales (Cañete a Concepción) hacen parada en Arauco, desde ahí 10 minutos a Carampangue. En auto, vía Ruta 160.",
         "kine_note": "Tratamientos extensos disponibles: kinesiología, psicología, ortodoncia.",
@@ -3134,11 +3141,11 @@ _COMUNAS_DATA = {
     "lebu": {
         "name": "Lebu",
         "title": "Médicos cerca de Lebu · Centro Médico Carampangue",
-        "description": "Atención médica integral para pacientes de Lebu. CMC en provincia de Arauco, 19 especialidades, agendamiento por WhatsApp.",
-        "hero_lead": "Si estás en Lebu, capital de la provincia de Arauco, el CMC en Carampangue ofrece 19 especialidades médicas y dentales que pueden no estar disponibles en tu comuna. Bono Fonasa MLE en consultas elegibles.",
+        "description": "Atención médica integral para pacientes de Lebu. CMC en provincia de Arauco, 22 especialidades, agendamiento por WhatsApp.",
+        "hero_lead": "Si estás en Lebu, capital de la provincia de Arauco, el CMC en Carampangue ofrece 22 especialidades médicas y dentales que pueden no estar disponibles en tu comuna. Bono Fonasa MLE en consultas elegibles.",
         "km": "55", "time": "1 hora 10 minutos", "bus": "Buses Lebu–Concepción vía Cañete y Arauco",
         "transport": "Buses Lebu a Concepción pasan por Cañete y Arauco. Desde Arauco son 10 minutos a Carampangue.",
-        "kine_note": "19 especialidades disponibles en una sola visita.",
+        "kine_note": "22 especialidades disponibles en una sola visita.",
     },
 }
 

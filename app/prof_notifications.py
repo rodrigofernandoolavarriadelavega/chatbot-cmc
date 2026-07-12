@@ -41,6 +41,7 @@ PROF_ID_TO_PHONE: dict[int, str] = {
     74: "56993140124",   # Jorge Montalba
     49: "56941529674",   # Juan Pablo Rodríguez
     68: "56992201931",   # David Pardo
+    80: "56975875059",   # TM Ana Celedón
     # Profesionales sin WA registrado (kine, masoterapia, nutrición, etc.):
     # 13, 69, 76, 59, 77, 21, 52, 70, 67, 56 — pendientes de agregar a STAFF_PHONES.
 }

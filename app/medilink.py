@@ -119,6 +119,9 @@ PROFESIONALES = {
     61: {"nombre": "Dr. Tirso Rejón",          "especialidad": "Ginecología",           "intervalo": 20},
     65: {"nombre": "Dr. Nicolás Quijano",      "especialidad": "Gastroenterología",     "intervalo": 20},
     55: {"nombre": "Dra. Javiera Burgos",      "especialidad": "Odontología General",   "intervalo": 60},
+    # 72: Dr. Carlos Jiménez — Odontología General — YA NO se agenda por el bot
+    # (decisión dueño 2026-07-08, solo Burgos). Entrada viva para histórico
+    # (ortodoncia_cache/reportes); no se referencia en ESPECIALIDADES_MAP.
     72: {"nombre": "Dr. Carlos Jiménez",       "especialidad": "Odontología General",   "intervalo": 30},
     66: {"nombre": "Dra. Daniela Castillo",    "especialidad": "Ortodoncia",            "intervalo": 30},
     75: {"nombre": "Dr. Fernando Fredes",      "especialidad": "Endodoncia",            "intervalo": 30},
@@ -140,6 +143,10 @@ PROFESIONALES = {
     # Neurología TELEMEDICINA — Lun/Mar/Jue/Vie (horario real en Medilink,
     # sucursal 1). Consulta adultos/adolescentes desde 15 años. $65.000 particular.
     79: {"nombre": "Dra. Franca González",     "especialidad": "Neurología",            "intervalo": 30},
+    # Tecnología Médica Oftalmológica PRESENCIAL. $15.000 particular a TODOS
+    # (sin Fonasa actualmente). Examen optométrico, fondo de ojo preventivo,
+    # presión intraocular, receta de lentes.
+    80: {"nombre": "TM Ana Celedón",           "especialidad": "Tecnología Médica Oftalmológica", "intervalo": 20},
 }
 
 # Mapa de palabras clave → IDs de profesionales
@@ -159,17 +166,29 @@ ESPECIALIDADES_MAP = {
     "armijo": [77], "luis armijo": [77],
     "paola acosta": [59], "paola": [59],
     "burgos": [55], "javiera burgos": [55], "dra burgos": [55],
-    "jimenez": [72], "jiménez": [72], "carlos jimenez": [72], "dr jimenez": [72],
+    # Dr. Carlos Jiménez (72) YA NO agenda odontología general (decisión
+    # dueño 2026-07-08). Si el paciente lo pide explícitamente, redirige a
+    # Burgos (55) sin error — no borrar la entrada 72 de PROFESIONALES,
+    # se sigue usando en histórico (ortodoncia_cache, reportes).
+    "jimenez": [55], "jiménez": [55], "carlos jimenez": [55], "dr jimenez": [55],
     "montalba": [74], "jorge montalba": [74],
     "rodriguez": [49], "rodríguez": [49], "juan pablo": [49], "juan pablo rodriguez": [49],
     # ── Especialidades genéricas (cuando el paciente no nombra a nadie) ──
-    "odontología": [72, 55], "odontologia": [72, 55],
-    "dentista": [72, 55], "dental": [72, 55],
-    "odontólogo": [72, 55], "odontologo": [72, 55],
-    "odontología general": [72, 55], "odontologia general": [72, 55],
+    # Odontología general SOLO Dra. Javiera Burgos (55) — decisión dueño
+    # 2026-07-08. Antes incluía a Jiménez (72) en el pool.
+    "odontología": [55], "odontologia": [55],
+    "dentista": [55], "dental": [55],
+    "odontólogo": [55], "odontologo": [55],
+    "odontología general": [55], "odontologia general": [55],
     "endodoncia": [75], "endodoncista": [75],
     "estética facial": [76], "estetica facial": [76], "estética": [76],
     "fonoaudiología": [70], "fonoaudiólogo": [70], "fonoaudiologa": [70],
+    # Exámenes de fonoaudiología nombrados por el paciente. "impedanciometría"
+    # (oído, $20.000) DEBE estar acá: sin la key exacta, el match por substring
+    # de _ids_para_especialidad la capturaría con "bioimpedanciometría" (¡que es
+    # de la nutricionista!) y mandaría al paciente al profesional equivocado.
+    "impedanciometría": [70], "impedanciometria": [70],
+    "audiometría": [70], "audiometria": [70],
     "implantología": [69], "implantes": [69],
     "matrona": [67], "ginecología": [61], "ginecólogo": [61],
     # traumatología deshabilitada → redirigir a medicina general
@@ -182,7 +201,27 @@ ESPECIALIDADES_MAP = {
     "psiquiatría": [78], "psiquiatria": [78], "psiquiatra": [78], "psiquiátrica": [78],
     "neurología": [79], "neurologia": [79], "neurólogo": [79], "neurologo": [79],
     "neuróloga": [79], "neurologa": [79],
+    "tecnología médica oftalmológica": [80], "tecnologia medica oftalmologica": [80],
+    "oftalmología": [80], "oftalmologia": [80],
+    "oftalmólogo": [80], "oftalmologo": [80], "oftalmóloga": [80], "oftalmologa": [80],
+    "optometría": [80], "optometria": [80], "optometra": [80], "optometrista": [80],
+    "tecnólogo médico": [80], "tecnologo medico": [80],
+    "celedón": [80], "celedon": [80],
     "nutrición": [52], "nutricionista": [52],
+    # Bioimpedanciometría — prestación aparte ($15.000), NO requiere consulta
+    # nutricional. La realiza Gisela Pinto (52) sobre su propia agenda, en un
+    # bloque de 15 min (vs 60 de la consulta) → intervalo_override en flows.py.
+    #
+    # OJO: solo nombres INEQUÍVOCOS del examen. Frases ambiguas ("quiero bajar
+    # la grasa", "perdí masa muscular") NO van acá a propósito: esas deben
+    # seguir yendo a consulta nutricional (decisión clínica de la nutricionista,
+    # y vale más), y el cross-sell post-confirmación ofrece la bioimpedancia.
+    # Tampoco usar "impedanciometría" a secas: ese es el examen de OÍDO de
+    # fonoaudiología ($20.000) — _ids_para_especialidad hace match por substring
+    # bidireccional y las confundiría.
+    "bioimpedanciometría": [52], "bioimpedanciometria": [52],
+    "bioimpedancia": [52], "bio impedancia": [52],
+    "composición corporal": [52], "composicion corporal": [52],
     "podología": [56], "podólogo": [56],
     "ortodoncia": [66], "ortodoncista": [66],
     "ecografía": [68], "ecografista": [68], "tecnólogo": [68],
@@ -198,6 +237,8 @@ ESPECIALIDADES_ID = {
     "odontólogo": 9, "odontologo": 9,
     "odontología general": 9, "odontologia general": 9,
     "fonoaudiología": 8, "fonoaudiólogo": 8, "fonoaudiologa": 8,
+    "impedanciometría": 8, "impedanciometria": 8,   # examen de OÍDO (≠ bioimpedanciometría)
+    "audiometría": 8, "audiometria": 8,
     "implantología": 20, "implantes": 20,
     "matrona": 11,
     "ginecología": 14, "ginecólogo": 14,
@@ -208,8 +249,19 @@ ESPECIALIDADES_ID = {
     "psiquiatría": 22, "psiquiatria": 22, "psiquiatra": 22,
     "neurología": 23, "neurologia": 23, "neurólogo": 23, "neurologo": 23,
     "neuróloga": 23, "neurologa": 23,
+    "tecnología médica oftalmológica": 24, "tecnologia medica oftalmologica": 24,
+    "oftalmología": 24, "oftalmologia": 24,
+    "oftalmólogo": 24, "oftalmologo": 24, "oftalmóloga": 24, "oftalmologa": 24,
+    "optometría": 24, "optometria": 24, "optometra": 24, "optometrista": 24,
+    "tecnólogo médico": 24, "tecnologo medico": 24,
+    "celedón": 24, "celedon": 24,
     "psicología adulto": 5, "psicología infantil": 5,
     "nutrición": 4, "nutricionista": 4,
+    # Bioimpedanciometría cuelga de la agenda de Nutrición (misma especialidad
+    # Medilink = 4, mismo profesional 52). Solo cambian precio y duración.
+    "bioimpedanciometría": 4, "bioimpedanciometria": 4,
+    "bioimpedancia": 4, "bio impedancia": 4,
+    "composición corporal": 4, "composicion corporal": 4,
     "podología": 12, "podólogo": 12,
     "ortodoncia": 19, "ortodoncista": 19,
     "ecografía": 13, "ecografista": 13, "tecnólogo": 13,
@@ -866,6 +918,35 @@ def _id_especialidad(especialidad: str) -> Optional[int]:
 
 # Especialidades donde los profesionales se llenan en orden de prioridad (no mezclados)
 _ESPECIALIDADES_PRIORIDAD = {"medicina general", "medicina familiar"}
+
+
+# ── Duración del bloque por PRESTACIÓN (no por profesional) ──────────────────
+# Por defecto el bloque de una cita = PROFESIONALES[id]["intervalo"]. Pero hay
+# prestaciones que cuelgan de la agenda de un profesional y duran otra cosa:
+# la bioimpedanciometría la hace la nutricionista (52, bloques de 60 min para
+# consulta) pero el examen dura 15 min.
+#
+# Vive acá y no en flows.py a propósito: buscar_primer_dia/buscar_slots_dia son
+# el cuello de botella por el que pasan TODOS los caminos que muestran horas
+# (agendar, quick-book, reagendar, "otro día", lista de espera). Poniéndolo acá,
+# ninguno se puede olvidar de aplicarlo. El override explícito del caller
+# (masoterapia, que la elige el paciente) siempre gana.
+_DURACION_PRESTACION: dict[str, dict[int, int]] = {
+    "bioimpedanciometría":  {52: 15},
+    "bioimpedanciometria":  {52: 15},
+    "bioimpedancia":        {52: 15},
+    "bio impedancia":       {52: 15},
+    "composición corporal": {52: 15},
+    "composicion corporal": {52: 15},
+}
+
+
+def _intervalo_para(especialidad: str | None, override: dict | None) -> dict | None:
+    """Override de intervalo efectivo. El del caller manda; si no hay, se usa
+    la duración propia de la prestación (si la tiene)."""
+    if override:
+        return override
+    return _DURACION_PRESTACION.get((especialidad or "").lower().strip())
 
 
 async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,

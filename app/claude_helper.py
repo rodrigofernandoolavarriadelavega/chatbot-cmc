@@ -120,9 +120,30 @@ _INTENT_CACHE: dict[str, dict] = {
     "neuróloga":      {"intent": "agendar", "especialidad": "neurología"},
     "neurología":     {"intent": "agendar", "especialidad": "neurología"},
     "neurologia":     {"intent": "agendar", "especialidad": "neurología"},
+    "oftalmologo":    {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "oftalmólogo":    {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "oftalmologa":    {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "oftalmóloga":    {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "oftalmología":   {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "oftalmologia":   {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "optometria":     {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "optometría":     {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "optometra":      {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "optometrista":   {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "celedon":        {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
+    "celedón":        {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
     "nutri":          {"intent": "agendar", "especialidad": "nutrición"},
     "nutrición":      {"intent": "agendar", "especialidad": "nutrición"},
     "nutricion":      {"intent": "agendar", "especialidad": "nutrición"},
+    # Bioimpedanciometría: prestación aparte ($15.000), la hace Gisela Pinto.
+    # OJO: NO agregar "impedanciometría" a secas — ese es el examen de OÍDO de
+    # fonoaudiología ($20.000).
+    "bioimpedanciometría": {"intent": "agendar", "especialidad": "bioimpedanciometría"},
+    "bioimpedanciometria": {"intent": "agendar", "especialidad": "bioimpedanciometría"},
+    "bioimpedancia":       {"intent": "agendar", "especialidad": "bioimpedanciometría"},
+    "bio impedancia":      {"intent": "agendar", "especialidad": "bioimpedanciometría"},
+    "composición corporal": {"intent": "agendar", "especialidad": "bioimpedanciometría"},
+    "composicion corporal": {"intent": "agendar", "especialidad": "bioimpedanciometría"},
     # F037: devolver "traumatología" para que _iniciar_agendar presente la oferta
     # MG-vs-waitlist. Antes llegaba como "medicina general" y el check de línea
     # 12934 de flows.py nunca se ejecutaba → paciente no veía la opción de waitlist.
@@ -693,6 +714,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
 - Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, solo jueves 16-20, $60.000 particular, NO Fonasa). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
 - Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños.
+- Oftalmólogo / oftalmóloga / oftalmología / optometrista / optometría / TM Ana Celedón / Celedón (tecnólogo médico) → "tecnología médica oftalmológica" (TM Ana Celedón, PRESENCIAL, $15.000 particular a TODOS los pacientes — no tiene Fonasa actualmente, consulta de 20 min; prestación: *Evaluación oftalmológica y optométrica*).
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
 - Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
 - Ecografía mamaria / de mamas / ecotomografía mamaria → "ecografía" (David Pardo, ID 68, $40.000). Es partes blandas, NO ginecológica. NUNCA Rejón para mamaria.
@@ -723,7 +745,7 @@ Además, cuando el intent sea "info" por un término del glosario, SIEMPRE compl
 
 EJEMPLO:
 Input: "quiero tapadura"
-Output: {{"intent": "info", "especialidad": "odontología", "respuesta_directa": "Una *tapadura* (empaste) es la reparación de una muela con caries 🦷. La Dra. Javiera Burgos o el Dr. Carlos Jiménez limpian la zona picada y la rellenan con resina del mismo color del diente. Dura ~30 min, usamos anestesia local, no duele. Desde $35.000."}}
+Output: {{"intent": "info", "especialidad": "odontología", "respuesta_directa": "Una *tapadura* (empaste) es la reparación de una muela con caries 🦷. La Dra. Javiera Burgos limpia la zona picada y la rellena con resina del mismo color del diente. Dura ~30 min, usamos anestesia local, no duele. Desde $35.000."}}
 
 Input: "necesito un botox"
 Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_directa": "El *botox* relaja los músculos de la cara para suavizar arrugas de frente, entrecejo y patas de gallo ✨. La Dra. Valentina Fuentealba lo aplica con micro-inyecciones, ~20 min, efecto dura 4–6 meses."}}
@@ -731,7 +753,7 @@ Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_direc
 No inventes términos que no estén acá; si no aparece, deriva a recepción.
 
 ODONTOLOGÍA / DENTAL
-- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. La dentista limpia la zona picada y la rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $35.000.
+- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. La dentista limpia la zona picada y la rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos). Desde $35.000.
 - Limpieza dental / sarro / profilaxis / me sangran las encías → destartraje + profilaxis, $30.000 en **Odontología General**. Duración ~40 min, sin dolor.
 - Sacar muela / sacar diente / muela del juicio / muela picada que no se puede arreglar → exodoncia simple $40.000, compleja $60.000 en **Odontología General**. Se usa anestesia local, ~30–45 min.
 - Matar el nervio / tratamiento de conducto / dolor fuerte de muela / caries profunda que llega al nervio → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente). Se limpia y sella el interior del diente para evitar extraerlo.
@@ -876,6 +898,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Masoterapia | ❌ Solo particular | $17.990–$26.990 | NO acepta Fonasa |
 | Ecografía (David Pardo) | ❌ Solo particular | $40.000 | NO acepta Fonasa en ninguna modalidad ni tramo |
 | Neurología (Dra. Franca González) | ❌ Solo particular | $65.000 | NO acepta Fonasa · atención SOLO por telemedicina, desde 15 años |
+| Tecnología Médica Oftalmológica · *Evaluación oftalmológica y optométrica* (TM Ana Celedón) | ❌ Solo particular | $15.000 | NO acepta Fonasa · precio único para todos los pacientes, atención PRESENCIAL |
 
 REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay Fonasa para [X especialidad]?", RESPONDE EXPLÍCITAMENTE SÍ/NO según la tabla. NO contestes con "tenemos Fonasa MLE en otras especialidades" sin antes responder lo que preguntan.
 - ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición, Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo).
@@ -916,6 +939,34 @@ El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDI
 - Cefalea o jaqueca recurrente/crónica que el paciente ya trató con Medicina General sin mejora, o pide evaluación por especialista → **Neurología**. El primer episodio de dolor de cabeza simple sigue siendo **Medicina General** (ver bloque DOLOR/CABEZA).
 - Mareos o síntomas neurológicos persistentes sin causa clara (trastorno neurológico funcional) → **Neurología**.
 - Menor de 15 años con estos síntomas → Neurología NO aplica; ofrece **Medicina General** o deriva al CESFAM Carampangue/Hospital de Arauco para evaluación pediátrica.
+
+BIOIMPEDANCIOMETRÍA (Gisela Pinto, nutricionista) — $15.000, PRESTACIÓN APARTE
+Es un examen de composición corporal. **Se agenda solo, NO requiere consulta con nutricionista.** Lo realiza la misma Gisela Pinto en un bloque de **15 minutos**, cuesta **$15.000 particular a todos** (NO tiene bono Fonasa, a diferencia de la consulta nutricional que sí lo tiene).
+- QUÉ ES (explicación simple): el paciente se para descalzo en un equipo especial que en un par de minutos mide de qué están hechos sus kilos. No duele, no hay pinchazos, no tiene radiación. Pasa una corriente eléctrica muy suave que no se siente.
+- QUÉ MIDE: masa grasa (kg y %), masa muscular, masa libre de grasa, agua corporal (total, intra y extracelular), metabolismo basal estimado, ángulo de fase.
+- PARA QUÉ SIRVE: distingue si los kilos que el paciente bajó fueron **grasa** (lo que se busca) o **músculo** (lo que hay que evitar) — algo que la pesa sola no puede decir. Útil en control de peso y obesidad, seguimiento del plan nutricional, diabetes y síndrome metabólico, sarcopenia/adulto mayor, deportistas, y evaluación de retención de líquidos.
+- DIFERENCIA CON PESARSE: la pesa dice cuántos kilos pesas; la bioimpedanciometría dice de qué están hechos esos kilos.
+- RESULTADOS: salen en el momento y Gisela los explica ahí mismo.
+- CONTRAINDICACIONES — REGLA DURA, NO NEGOCIABLE:
+  · **Marcapasos, desfibrilador implantado u otro dispositivo médico electrónico implantado → NO se realiza el examen.** Los fabricantes del equipo lo contraindican. NUNCA le digas al paciente que "es seguro, hágaselo". Respuesta correcta: no lo realizamos en ese caso; que lo converse con la nutricionista y su cardiólogo.
+  · **Embarazo → NO se realiza.** Por precaución y porque además el resultado no sería confiable (en el embarazo cambia mucho el agua del cuerpo).
+  · Prótesis metálicas, placas o clavos: SÍ se puede hacer, no hay riesgo. Solo hay que avisar para interpretarlo bien.
+  · Diuréticos ("pastillas para botar líquido"), hinchazón importante de piernas, diálisis: se puede hacer, pero hay que avisarle a la nutricionista porque altera la lectura.
+- PREPARACIÓN: no comer las 3 horas antes (NO necesita ayuno de toda la noche — este es el error más común), evitar alcohol y café el día previo, no hacer ejercicio fuerte ese día, ni sauna ni ducha muy caliente antes, pasar al baño justo antes, ropa liviana y descalzo (sin zapatos ni calcetines), sin reloj/celular/cinturón/joyas, sin cremas ni aceites en manos ni pies.
+- LÍMITES: NO es un diagnóstico, es una estimación de composición corporal. NUNCA interpretes resultados por WhatsApp — eso lo hace la nutricionista. El valor del examen está en comparar controles hechos con el mismo equipo y la misma preparación.
+- Quiero saber mi % de grasa / cuánto músculo tengo / medir mi composición corporal / bioimpedancia → **Bioimpedanciometría**.
+- OJO: "impedanciometría" A SECAS (sin el "bio") es el examen de OÍDO de fonoaudiología ($20.000). No las confundas.
+- Si el paciente solo dice que quiere bajar de peso o comer mejor, sin nombrar el examen → eso es **Nutrición** (consulta), no bioimpedanciometría.
+
+TECNOLOGÍA MÉDICA OFTALMOLÓGICA (TM Ana Celedón)
+El CMC SÍ tiene atención oftalmológica / examen de la vista: **TM Ana Celedón**, atención **PRESENCIAL** en el CMC, **$15.000 particular** para TODOS los pacientes (no tiene Fonasa actualmente), consulta de **20 minutos**. Diplomada en Refracción Clínica (Universidad de Chile). Incluye: examen optométrico completo, exploración preventiva de retina y nervio óptico, toma de presión intraocular, y receta de lentes con respaldo clínico. La prestación se agenda/nombra como **Evaluación oftalmológica y optométrica** ($15.000).
+- Piden explícitamente "oftalmólogo"/"oftalmóloga"/"oftalmología"/"optometrista"/"optometría" → **Tecnología Médica Oftalmológica** directo.
+- No veo bien / veo borroso / se me nubla la vista / vista cansada → **Tecnología Médica Oftalmológica**.
+- Necesito lentes / necesito anteojos / receta de lentes / cambiar la receta de mis lentes / se me rompieron los lentes → **Tecnología Médica Oftalmológica**.
+- Quiero un control visual / examen de la vista / chequeo de los ojos / revisión de la vista → **Tecnología Médica Oftalmológica**.
+- Me duele el ojo al leer / dolor de cabeza al leer o usar el celular mucho rato (sospecha de vicio de refracción, no cefalea neurológica) → **Tecnología Médica Oftalmológica**.
+- Presión ocular / presión del ojo / me quiero hacer el examen de la presión ocular → **Tecnología Médica Oftalmológica** (toma de presión intraocular, screening preventivo, NO es tratamiento de glaucoma diagnosticado).
+- Sospecha de patología ocular aguda o compleja (dolor ocular intenso, pérdida súbita de visión, trauma ocular, cuerpo extraño, infección purulenta) → esto excede el alcance de un examen optométrico; deriva a **Medicina General** para evaluación inicial y, si corresponde, derivación a oftalmólogo médico en un centro con esa especialidad (el CMC no tiene oftalmólogo médico, solo tecnóloga médica oftalmológica para examen optométrico y salud visual preventiva).
 
 ESTÉTICA / ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba)
 - Arrugas / rejuvenecer / botox / toxina botulínica / entrecejo / patas de gallo → Toxina botulínica en 3 zonas, relaja los músculos de la cara para suavizar arrugas, ~20 min, efecto dura 4–6 meses. $159.990 con **Estética Facial**.
@@ -1012,7 +1063,7 @@ PSICOLOGÍA ADULTO (Juan Pablo Rodríguez — bono Fonasa disponible):
 NUTRICIÓN (Gisela Pinto — bono Fonasa disponible):
 - Consulta nutricionista bono Fonasa: $4.770 — evaluación nutricional, plan alimentario personalizado, control de peso, manejo de diabetes, hipertensión u otras patologías dietéticas.
 - Consulta nutricionista particular: $20.000 — misma consulta sin bono Fonasa.
-- Bioimpedanciometría: $20.000 — examen que mide composición corporal (% grasa, músculo, agua) mediante una balanza especial. Indoloro, toma 5 min.
+- Bioimpedanciometría: $15.000 — SE AGENDA SOLA, NO requiere consulta nutricional previa. Examen indoloro que mide composición corporal (masa grasa, masa muscular, agua corporal, metabolismo basal). Lo realiza la misma Gisela Pinto en un bloque de 15 min. NO tiene bono Fonasa (es particular para todos).
 
 PODOLOGÍA (Andrea Guevara):
 - Atención pediátrica: $13.000 — cuidado de pies en niños: corte de uñas, revisión de callosidades o alteraciones del pie infantil.
@@ -1065,7 +1116,7 @@ OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular):
 - Consulta ORL: $35.000 — evaluación de oído, nariz y garganta: sinusitis, amigdalitis, otitis, ronquidos, pólipos nasales, desviación de tabique, vértigo.
 - Control ORL: $8.000 — control post-consulta o seguimiento de tratamiento ORL.
 
-ODONTOLOGÍA GENERAL (Dra. Javiera Burgos, Dr. Carlos Jiménez — solo particular):
+ODONTOLOGÍA GENERAL (Dra. Javiera Burgos — solo particular):
 - Evaluación dental: $15.000 — revisión completa de dientes, encías y mordida. Incluye diagnóstico y plan de tratamiento.
 - Restauración de resina (tapadura): desde $35.000 — reparación de caries o dientes rotos con resina del color del diente. Con anestesia local, sin dolor.
 - Exodoncia simple: $40.000 — extracción de diente con anestesia local. Para dientes que ya no se pueden reparar.
@@ -1074,7 +1125,7 @@ ODONTOLOGÍA GENERAL (Dra. Javiera Burgos, Dr. Carlos Jiménez — solo particul
 - Destartraje + profilaxis: $30.000 — limpieza dental profesional: retiro de sarro y placa bacteriana con ultrasonido + pulido. Se recomienda cada 6 meses.
 
 ORTODONCIA (Dra. Daniela Castillo — solo particular):
-⚠️ IMPORTANTE: NO se agenda directamente con ortodoncia. El paciente SIEMPRE debe primero agendar una evaluación con ODONTOLOGÍA GENERAL (Dra. Javiera Burgos o Dr. Carlos Jiménez). La dentista evalúa el caso, solicita radiografías, toma fotografías y luego ella gestiona la derivación a la ortodoncista. El presupuesto dental es $15.000, pero si el paciente decide empezar tratamiento previo ese día, el presupuesto sale gratis. La especialidad para agendar es "odontología" (NO "ortodoncia").
+⚠️ IMPORTANTE: NO se agenda directamente con ortodoncia. El paciente SIEMPRE debe primero agendar una evaluación con ODONTOLOGÍA GENERAL (Dra. Javiera Burgos). La dentista evalúa el caso, solicita radiografías, toma fotografías y luego ella gestiona la derivación a la ortodoncista. El presupuesto dental es $15.000, pero si el paciente decide empezar tratamiento previo ese día, el presupuesto sale gratis. La especialidad para agendar es "odontología" (NO "ortodoncia").
 Precios referenciales de ortodoncia (solo después de la evaluación dental):
 - Instalación brackets boca completa: $120.000 — brackets metálicos arriba y abajo. Incluye arco inicial.
 - Instalación brackets 1 arcada: $60.000 — brackets solo arriba o solo abajo.
@@ -1363,9 +1414,9 @@ _PRECIOS_CONOCIDOS: frozenset[str] = frozenset({
 
 # Especialidades que NO se atienden en el CMC.
 # Neurología SÍ se atiende desde 2026 (Dra. Franca González) — no incluir acá.
+# Oftalmología SÍ se atiende desde 2026 (TM Ana Celedón, examen optométrico) — no incluir acá.
 _ESP_NO_ATENDIDAS: tuple[tuple[str, ...], ...] = (
     ("pediatr",),
-    ("oftalmólog", "oftalmolog"),
     ("dermató", "dermato"),
     ("oncólog", "oncolog"),
     ("reumató", "reumatol"),
@@ -1394,12 +1445,12 @@ _NOMBRES_PROF_CONOCIDOS: frozenset[str] = frozenset({
     "rejon", "quijano", "burgos", "jimenez", "castillo", "fredes",
     "valdes", "fuentealba", "acosta", "armijo", "etcheverry", "pinto",
     "montalba", "rodriguez", "arratia", "gomez", "guevara", "pardo",
-    "gonzalez",
+    "gonzalez", "celedon", "navarrete",
     # Primeros nombres (uso conversacional frecuente)
     "rodrigo", "andres", "alonso", "manuel", "miguel", "claudio", "tirso",
     "nicolas", "javiera", "carlos", "daniela", "fernando", "aurora",
     "valentina", "paola", "luis", "leonardo", "gisela", "jorge",
-    "juan", "juana", "sarai", "andrea", "david", "franca",
+    "juan", "juana", "sarai", "andrea", "david", "franca", "ana",
 })
 
 _RX_PRECIO_FAQ = re.compile(r"\$\d{1,3}(?:\.\d{3})+(?:\.\d+)?")
@@ -2233,21 +2284,32 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("cuando", "resultado"),
      "⏱ Los resultados de ecografía son el *mismo día*. Para exámenes externos: 2-3 días hábiles.\n\n"
      "Envíame tu RUT si quieres que revise el estado de tu examen."),
+    # 2026-07-11: esta respuesta decía "solo presencial", que ya era FALSO —
+    # Psiquiatría (Dra. Unibazo) y Neurología (Dra. González) son telemedicina.
     (("telemedicin", "teleconsult", "videollamada", "video llamada", "online", "virtual", "a distancia"),
-     "Por ahora atendemos solo de forma *presencial* en el centro 🏥\n\n"
+     "La mayoría de nuestras atenciones son *presenciales* en el centro 🏥\n\n"
+     "Por videollamada atendemos:\n"
+     "• *Psiquiatría* — Dra. Cecilia Unibazo ($60.000)\n"
+     "• *Neurología* — Dra. Franca González ($65.000, desde 15 años)\n\n"
      "📍 Monsalve 102, Carampangue\n"
      "🕐 Lun-Vie 08:00-21:00 · Sáb 09:00-14:00\n\n"
      "Si quieres agendar, escribe *agendar*."),
+    # 2026-07-11: este catálogo omitía Psiquiatría, Neurología, Oftalmología y
+    # Masoterapia — especialidades vivas que el paciente no podía descubrir.
     (("servicios", "ofrec"),
      "🏥 *Centro Médico Carampangue*\n\n"
      "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología, otorrino\n"
+     "🧠 *Salud mental y neuro:* psiquiatría y neurología (por videollamada), psicología\n"
+     "👁️ *Vista:* examen de la vista y receta de lentes — *Tecnología Médica Oftalmológica* (TM Ana Celedón)\n"
      "🦷 *Dental:* odontología, ortodoncia, endodoncia, implantología\n"
      "✨ *Estética:* estética facial, toxina, hilos, bioestimuladores\n"
-     "🏃 *Kinesiología · Masoterapia · Nutrición · Psicología · Fonoaudiología · Podología · Matrona · Ecografía*\n\n"
+     "🏃 *Kinesiología · Masoterapia · Nutrición · Bioimpedanciometría · Fonoaudiología · Podología · Matrona · Ecografía*\n\n"
      "Escribe *1* o *agendar* para reservar hora 📅"),
     (("que servicios",),
      "🏥 Atendemos: Medicina General, Odontología, Cardiología, Ginecología, "
-     "Gastroenterología, Otorrino, Kinesiología, Nutrición, Psicología, Fonoaudiología, "
+     "Gastroenterología, Otorrino, Neurología, Psiquiatría, "
+     "Tecnología Médica Oftalmológica (examen de la vista y lentes), "
+     "Kinesiología, Masoterapia, Nutrición, Bioimpedanciometría, Psicología, Fonoaudiología, "
      "Podología, Matrona, Ecografía, Estética Facial, Ortodoncia, Endodoncia, Implantología.\n\n"
      "Escribe *agendar* o *1* para reservar hora 📅"),
     (("donde", "ubica"),
