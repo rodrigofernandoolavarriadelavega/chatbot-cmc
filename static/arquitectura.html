@@ -576,20 +576,34 @@ const FICHAS = [
     exito:"Tasa de no-cierre de vuelta bajo el 2% (la línea base real de diciembre-febrero). Se mide con el mismo script."
   },
   {
-    t:"F1 · El BI de pagos está vacío — y nadie lo sabía",
-    s:"CDISAH 4.1/4.2 · MEDIDO contra la API real · invalida el «18%»",
+    t:"F1 · Las tarjetas: el mix real es 92/8, no 86/14",
+    s:"CDISAH 3.5 · MEDIDO en producción · debilita la decisión Transbank",
     est:"curso",
-    problema:"Se consultó <code>/api/v5/pagos</code> de Medilink en vivo, sin filtros. <strong>Devuelve 50 pagos. En total.</strong> Todos de los últimos 3 días, todos de la misma caja (<code>id_caja=3</code>), y el cursor de paginación no trae <code>next</code>. Ese endpoint <strong>no es un libro de pagos: es la caja abierta del día.</strong> No expone historial.",
-    consecuencia:"Tres consecuencias, en cascada. <strong>(1)</strong> <code>bi.fact_pagos</code> nunca tuvo datos históricos — tiene ~50 filas y siempre las mismas. <strong>(2)</strong> El bug de <code>ingreso_id</code> NULL (que sí existe: <code>etl/transform.py:347</code> pide un campo <code>id_atencion</code> que el propio docstring dice que no existe) resulta <em>irrelevante</em>: no hay pagos históricos que unir. <strong>(3)</strong> Y la más grave: <strong>«la brecha del 18% entre facturado y cobrado» no puede haber salido de comparar <code>fact_ingresos</code> contra <code>fact_pagos</code></strong>, porque uno tiene 180 días de datos y el otro tiene tres. Ese número hay que rehacerlo desde cero.",
+    problema:"El dashboard <code>tarjetas-analisis.html</code> dice «14% crédito · 86% débito (según datos reales)». Ese número salió de <strong>309 registros de una ventana de seis días</strong>. Con la muestra completa —1.956 pagos entre el 1 de junio y el 11 de julio— <strong>el mix real es 92% débito / 8% crédito</strong>. El crédito es la mitad de lo que se creía.",
+    consecuencia:"Tres cosas debilitan la decisión Transbank vs Mercado Pago, y son peores que el número en sí. <strong>(1) El crédito son SIETE transacciones.</strong> Siete, en 40 días. Comparar comisiones de dos adquirentes sobre siete operaciones no dice nada. <strong>(2) 91 de las 92 tarjetas no tienen N° de comprobante</strong> — y el tipo de tarjeta viene impreso en ese voucher del POS y en ningún otro lado. Sin él, el mix <em>no se puede verificar contra la liquidación de Transbank</em>: es lo que recepción recuerda haber clickeado. <strong>(3) Tarjeta es solo el 18% de la caja de copago</strong> (efectivo 42%, transferencia 38%). Crédito, el 2,4%.<br><br>Quedarse con Transbank probablemente sigue siendo correcto — pero el número que lo sostiene no aguanta escrutinio.",
     diseno:[
-      "<strong>Cambiar la fuente de verdad.</strong> La reconciliación real NO es <code>fact_pagos ↔ fact_ingresos</code>. Es <strong><code>pagos_cmc</code> (lo que teclea recepción) ↔ <code>atenciones</code> (Medilink)</strong>. Eso reescribe el ETL de pagos entero.",
-      "Y eso explica por qué el bug débito/crédito es tan grave: <code>pagos_cmc</code> no es <em>una</em> fuente contaminada — <strong>es la ÚNICA fuente de caja que existe</strong>.",
-      "Dejar de descartar en silencio: <code>transform.py:307</code> hace <code>if not total or total &lt;= 0: continue</code>. Esas atenciones deben ir a <code>fact_atenciones_sin_valorizar</code> en vez de desaparecer.",
-      "Tests de calidad con Pandera dentro del ETL (no Great Expectations — exige Docker + Airflow + 5 contenedores para esto).",
-      "Preguntar a HealthAtom si existe un endpoint de pagos históricos, o si <code>/api/v5/cajas</code> (que sí existe, 5 registros) permite recorrer cajas cerradas."
+      "<strong>Ya construido, sin deployar:</strong> se sacaron los <strong>tres defaults silenciosos</strong> de «efectivo» en <code>alma_pagos.html</code> (botón preseleccionado, reset del modal, y estado inicial). Ahora recepción <em>debe</em> elegir el método.",
+      "Y si es tarjeta, <strong>debe anotar el N° de comprobante</strong> — que es el único papel donde dice si fue débito o crédito. En tres meses eso da un mix <em>verificable</em> en vez de uno recordado.",
+      "El backend (<code>pagos_routes.py</code>) mantiene el default —quitarlo rompería flujos del bot— pero <strong>deja de ser silencioso</strong>: loguea <code>PAGO_METODO_INFERIDO</code> cada vez que lo inventa. Hay 93 pagos con método vacío que van a empezar a tener nombre.",
+      "<code>scripts/qa_pagos.py</code>: chequeo de conformance / completeness / plausibility sobre <code>pagos_cmc</code> (framework de Kahn 2016).",
+      "Corregir el 86/14 en <code>tarjetas-analisis.html</code>."
     ],
-    riesgo:"<strong>MEDIDO, no supuesto:</strong> 9.043 atenciones en 180 días, de las cuales <strong>1.738 (19,2%) tienen <code>total &lt;= 0</code></strong> y desaparecen del BI. A ticket promedio ($22.429) eso son <strong>$38,9 millones en seis meses</strong>. <em>Pero ojo: NO es plata perdida confirmada.</em> Un total en cero puede ser legítimo (control incluido en un plan de ortodoncia, sesión dentro de un paquete de kinesiología, atención anulada). <strong>El problema es que hoy nadie puede distinguir cuál es legítima y cuál es plata que se escapó</strong> — porque las 1.738 se descartan antes de que alguien las mire.",
-    exito:"Que exista un número de caja histórico confiable. Hoy no existe. Todo lo demás del frente pagador depende de esto."
+    riesgo:"<strong>Medilink NO sirve para esto.</strong> Su caja registra <strong>36.543 de 36.698 pagos como «Efectivo» (99,7% del monto)</strong> — cuatro tarjetas de débito en toda la historia, cero de crédito. No es que se cobre todo en efectivo: <em>nadie marca el medio de pago en Medilink</em>. Por eso el módulo de Alma es la única fuente del mix, y por eso su calidad de captura importa tanto.",
+    exito:"Que en 3 meses el mix se pueda cruzar contra la liquidación real de Transbank. Hoy es imposible."
+  },
+  {
+    t:"F1b · Las dos fuentes de plata (corrección de un error mío)",
+    s:"CDISAH 4.1 · qué sirve para qué",
+    est:"pend",
+    problema:"Anoche afirmé que «el BI de pagos está vacío» y que «el CMC no puede saber cuánta plata entró». <strong>Ambas cosas eran falsas.</strong> Miré <code>/api/v5/pagos</code> de Medilink —que solo devuelve la caja abierta del día, ~50 filas— y saqué una conclusión sobre todo el sistema.",
+    consecuencia:"La verdad es más simple: <strong>hay dos fuentes y cada una sirve para una cosa distinta.</strong><br><br>· <strong><code>bi_pagos_caja</code> = VENTA TOTAL.</strong> Es la fuente de DB Mensual. La llena el bot por cron. Junio: <strong>$26.039.530</strong> (el dueño confirmó $26.004.530). Y tiene <code>atencion_id</code> poblado al <strong>96%</strong> — el join pago→atención que dije que era imposible <em>ya existe</em>.<br><br>· <strong><code>pagos_cmc</code> = COPAGO y MEDIO DE PAGO.</strong> Lo que teclea recepción en Alma. No cubre la venta total, y no debe hacerlo.",
+    diseno:[
+      "No hay nada que construir acá. Solo dejar de confundir las fuentes.",
+      "<strong>Regla:</strong> ¿cuánto vendimos? → <code>bi_pagos_caja</code> / DB Mensual. ¿Cómo pagó el paciente? → <code>pagos_cmc</code>.",
+      "Queda anotado en memoria para que la próxima sesión no repita el error."
+    ],
+    riesgo:"El error de origen fue mirar un endpoint y generalizar sobre el sistema entero, sin preguntar. Costó varias horas y produjo tres conclusiones falsas que ya están corregidas.",
+    exito:"Que nadie vuelva a decir que «no se puede medir la caja». Sí se puede, y está en DB Mensual."
   },
   {
     t:"F2 · El bono que caduca solo — 180 días",
