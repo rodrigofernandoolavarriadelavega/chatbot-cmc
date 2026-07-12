@@ -1,0 +1,311 @@
+<meta charset="utf-8">
+<title>Óptica Carampangue · Plan Maestro (Alma + Ecommerce)</title>
+<style>
+  :root{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --navy:#0f2740; --navy-2:#173a5e; --aqua:#1b9aaa; --aqua-deep:#127885;
+    --gold:#c8922b; --violet:#6a4c93;
+    --good:#2e8b57; --good-bg:#e2f2e9; --warn:#c8922b; --warn-bg:#f8efdc;
+    --crit:#c0453b; --crit-bg:#f8e3e0;
+    --shadow:0 1px 2px rgba(15,39,64,.06),0 6px 20px rgba(15,39,64,.06);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0b1720; --surface:#122430; --surface-2:#0e1e29; --line:#223a49;
+    --ink:#e8f0f4; --muted:#9db1bd; --faint:#6a808d; --aqua:#3bb9c9; --aqua-deep:#2aa0b0;
+    --good:#48b87e; --good-bg:#123024; --warn:#e0b04a; --warn-bg:#332711; --crit:#e07068; --crit-bg:#331a17;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.28);}}
+  :root[data-theme="dark"]{
+    --bg:#0b1720; --surface:#122430; --surface-2:#0e1e29; --line:#223a49;
+    --ink:#e8f0f4; --muted:#9db1bd; --faint:#6a808d; --aqua:#3bb9c9; --aqua-deep:#2aa0b0;
+    --good:#48b87e; --good-bg:#123024; --warn:#e0b04a; --warn-bg:#332711; --crit:#e07068; --crit-bg:#331a17;}
+  :root[data-theme="light"]{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae; --aqua:#1b9aaa;
+    --good:#2e8b57; --good-bg:#e2f2e9; --warn:#c8922b; --warn-bg:#f8efdc; --crit:#c0453b; --crit-bg:#f8e3e0;}
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:26px 20px 60px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  a{ color:var(--aqua-deep); }
+
+  header.top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  .eyebrow{ text-transform:uppercase; letter-spacing:.2em; font-size:11px; font-weight:700; color:var(--aqua); }
+  h1{ margin:5px 0 6px; font-size:27px; letter-spacing:-.02em; line-height:1.1; text-wrap:balance; }
+  header p{ margin:0; color:var(--muted); font-size:13.5px; max-width:70ch; }
+  .tbtn{ cursor:pointer; background:var(--surface); border:1px solid var(--line); color:var(--muted); border-radius:20px; width:34px; height:30px; font-size:14px; box-shadow:var(--shadow); }
+
+  /* Two-product vision */
+  .vision{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:18px 0; }
+  .vcard{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; border-top:3px solid var(--aqua); }
+  .vcard.b{ border-top-color:var(--violet); }
+  .vcard h3{ margin:0 0 4px; font-size:15.5px; }
+  .vcard .tag{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--aqua-deep); }
+  .vcard.b .tag{ color:var(--violet); }
+  .vcard p{ margin:6px 0 0; font-size:12.8px; color:var(--muted); }
+
+  h2.sec{ font-size:16px; margin:26px 0 12px; display:flex; align-items:center; gap:9px; }
+  h2.sec::before{ content:""; width:4px; height:17px; background:var(--aqua); border-radius:3px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .pad{ padding:16px 20px; }
+
+  /* Progress */
+  .prog{ background:var(--navy); color:#eaf2f6; border-radius:var(--radius); padding:16px 20px; margin-bottom:8px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+  .prog .n{ font-size:34px; font-weight:800; color:#fff; line-height:1; }
+  .prog .lab{ font-size:12.5px; color:#a9c4d0; }
+  .prog .bar{ flex:1; min-width:180px; height:9px; background:rgba(255,255,255,.15); border-radius:6px; overflow:hidden; }
+  .prog .fill{ height:100%; width:0; background:linear-gradient(90deg,var(--aqua),#54c9b6); border-radius:6px; transition:width .4s; }
+
+  /* Etapas */
+  .etapa{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; margin-bottom:10px; break-inside:avoid; }
+  .et-head{ display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .et-num{ flex:0 0 auto; width:38px; height:38px; border-radius:10px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+  .etapa.e0 .et-num{ background:var(--faint); } .etapa.e7 .et-num{ background:var(--gold); }
+  .et-head h3{ margin:0; font-size:16px; }
+  .et-head .when{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+  .et-head .cnt{ margin-left:auto; font-size:11.5px; color:var(--faint); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .et-goal{ font-size:12.5px; color:var(--muted); margin:8px 0 10px 50px; }
+  ul.tasks{ list-style:none; margin:0 0 0 50px; padding:0; }
+  ul.tasks li{ display:flex; gap:10px; align-items:flex-start; padding:5px 0; font-size:13.3px; }
+  ul.tasks input{ margin-top:2px; width:16px; height:16px; accent-color:var(--aqua); cursor:pointer; flex:0 0 auto; }
+  ul.tasks label{ cursor:pointer; }
+  li.done label{ color:var(--faint); text-decoration:line-through; }
+  .gate{ margin:10px 0 2px 50px; background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px; padding:7px 12px; font-size:12px; }
+  .gate b{ color:var(--warn); }
+
+  /* Module grid */
+  .mods{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .modcol h4{ margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--aqua-deep); }
+  .modcol ul{ list-style:none; margin:0; padding:0; }
+  .modcol li{ font-size:12.3px; padding:4px 0; color:var(--ink); border-bottom:1px dashed var(--line); }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.6px; }
+  th,td{ padding:7px 9px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .pill{ display:inline-block; padding:1.5px 8px; border-radius:20px; font-size:10px; font-weight:700; }
+  .pill.rec{ background:var(--good-bg); color:var(--good); }
+  .pill.alt{ background:var(--surface-2); color:var(--muted); }
+
+  .decs li{ font-size:13px; margin:7px 0; }
+  .decs b{ color:var(--navy); }
+  :root[data-theme="dark"] .decs b{ color:var(--aqua); }
+  @media (prefers-color-scheme:dark){ .decs b{ color:var(--aqua); } }
+
+  .reset{ margin-top:16px; text-align:center; }
+  .reset button{ background:transparent; border:1px solid var(--line); color:var(--faint); border-radius:20px; padding:6px 14px; font-size:12px; cursor:pointer; }
+  footer{ margin-top:22px; font-size:11.5px; color:var(--faint); text-align:center; }
+
+  @media print{ @page{ size:A4; margin:13mm; } .tbtn,.reset{ display:none; } .etapa,.card,.vcard,.prog{ box-shadow:none; } .wrap{ padding:0; max-width:none; } *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } ul.tasks{ margin-left:34px; } }
+  @media (max-width:860px){ .vision,.mods{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:560px){ .vision,.mods{ grid-template-columns:1fr; } ul.tasks,.et-goal,.gate{ margin-left:0; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Óptica Carampangue · Plan Maestro</div>
+      <h1>Alma Óptica + Ecommerce + Portal del comprador</h1>
+      <p>Dos productos en un programa por etapas: el sistema de gestión (<b>Alma Óptica</b>) y la tienda online de lentes con pasarela de pago, portal del comprador y visualizador. Pensado desde el día uno como vertical replicable de OLACORE (Carampangue → Puerto Montt).</p>
+    </div>
+    <button class="tbtn" id="themeBtn" title="Tema" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <div class="vision">
+    <div class="vcard a">
+      <span class="tag">Producto 1 · Gestión interna</span>
+      <h3>Alma Óptica Carampangue</h3>
+      <p>El cerebro operativo: recetas y graduaciones, catálogo de armazones y cristales, cotizador, órdenes al laboratorio, POS, inventario, comisiones (el % del acuerdo), CRM y BI. Corre en el shell Alma, embebido, igual que dental/farmacia/taller.</p>
+    </div>
+    <div class="vcard b">
+      <span class="tag">Producto 2 · Cara al cliente</span>
+      <h3>Sitio + Tienda Óptica Carampangue</h3>
+      <p>optica.agentecmc.cl: catálogo, ficha de producto con <b>visualizador (probador virtual)</b>, configurador de lentes con receta, carrito, <b>pasarela de pago (Webpay)</b>, y <b>portal del comprador</b> (mis pedidos, seguimiento, mis recetas, recompra, garantía).</p>
+    </div>
+  </div>
+
+  <!-- Progreso -->
+  <div class="prog">
+    <div><div class="n" id="pctBig">0%</div><div class="lab">avance del programa</div></div>
+    <div class="bar"><div class="fill" id="pfill"></div></div>
+    <div class="lab" id="pcount" style="min-width:120px;text-align:right;">0 de 0 hitos</div>
+  </div>
+
+  <h2 class="sec">Las 8 etapas</h2>
+
+  <div class="etapa e0">
+    <div class="et-head"><span class="et-num">0</span><div><h3>Fundaciones &amp; decisiones</h3><span class="when">Semana 1</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Base legal, marca, infraestructura y decisiones-gate resueltas antes de escribir código de producto.</p>
+    <ul class="tasks" data-e="0">
+      <li><input type="checkbox"><label>Marca + dominio <b>optica.agentecmc.cl</b> + INAPI + redes, a tu empresa/holding</label></li>
+      <li><input type="checkbox"><label>Empresa/RUT que factura y cobra online definida (tuya) + cuenta bancaria</label></li>
+      <li><input type="checkbox"><label>Repo <b>optica-carampangue</b> creado; stack confirmado (FastAPI + shell Alma + DO)</label></li>
+      <li><input type="checkbox"><label>Convenio inicial con laboratorio óptico (proveedor de cristales)</label></li>
+    </ul>
+    <div class="gate"><b>Gate:</b> estructura legal (empresa tuya) + dueño de la pasarela de pago confirmados.</div>
+  </div>
+
+  <div class="etapa e1">
+    <div class="et-head"><span class="et-num">1</span><div><h3>Alma Óptica — MVP de gestión</h3><span class="when">Semanas 2–5</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Operar la óptica del CMC internamente: desde la receta hasta la entrega y la caja.</p>
+    <ul class="tasks" data-e="1">
+      <li><input type="checkbox"><label>Ficha de cliente + <b>historial de recetas/graduación</b> (OD/OI, esfera, cilindro, eje, adición, DP)</label></li>
+      <li><input type="checkbox"><label>Catálogo de <b>armazones</b> (marca, modelo, color, stock) y de <b>cristales</b> (tipo, índice, tratamientos)</label></li>
+      <li><input type="checkbox"><label><b>Cotizador/presupuesto</b>: armazón + cristal + tratamientos → precio, en segundos</label></li>
+      <li><input type="checkbox"><label><b>Orden de trabajo al laboratorio</b> + seguimiento de estado (pedido → montaje → listo)</label></li>
+      <li><input type="checkbox"><label><b>POS / caja</b> + boleta, y CRM básico</label></li>
+    </ul>
+    <div class="gate"><b>Gate:</b> catálogo real de productos + lista de precios del laboratorio.</div>
+  </div>
+
+  <div class="etapa e2">
+    <div class="et-head"><span class="et-num">2</span><div><h3>Sitio vitrina + catálogo + SEO</h3><span class="when">Semanas 4–6</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Presencia web y catálogo navegable — todavía sin venta, para posicionar la marca.</p>
+    <ul class="tasks" data-e="2">
+      <li><input type="checkbox"><label>Landing de marca (propuesta de valor, respaldo clínico del CMC)</label></li>
+      <li><input type="checkbox"><label>Catálogo: armazones, lentes de sol, de contacto, accesorios (fichas de producto)</label></li>
+      <li><input type="checkbox"><label>SEO base + blog óptico (visión, cuidado visual)</label></li>
+      <li><input type="checkbox"><label>Agenda de evaluación online (enlazada a la oftalmología del CMC)</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e3">
+    <div class="et-head"><span class="et-num">3</span><div><h3>Ecommerce + pasarela de pago</h3><span class="when">Semanas 6–9</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Vender online de verdad, con la fórmula del paciente y stock sincronizado con Alma.</p>
+    <ul class="tasks" data-e="3">
+      <li><input type="checkbox"><label>Carrito + checkout</label></li>
+      <li><input type="checkbox"><label><b>Pasarela de pago</b> (Transbank Webpay Plus principal + Flow/transferencia)</label></li>
+      <li><input type="checkbox"><label><b>Configurador de lentes</b>: elige tipo de cristal/tratamiento y <b>sube su receta</b></label></li>
+      <li><input type="checkbox"><label>Stock sincronizado sitio ↔ Alma Óptica; emisión de boleta/factura</label></li>
+    </ul>
+    <div class="gate"><b>Gate:</b> cuenta Transbank/Flow activa (requiere RUT empresa).</div>
+  </div>
+
+  <div class="etapa e4">
+    <div class="et-head"><span class="et-num">4</span><div><h3>Portal del comprador</h3><span class="when">Semanas 9–11</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Postventa y recompra: donde el cliente queda tuyo, no de nadie más.</p>
+    <ul class="tasks" data-e="4">
+      <li><input type="checkbox"><label>Login comprador + <b>mis pedidos</b></label></li>
+      <li><input type="checkbox"><label><b>Seguimiento de estado</b> (recibido → laboratorio → listo → entregado)</label></li>
+      <li><input type="checkbox"><label><b>Mis recetas</b> guardadas + <b>recompra en 1 clic</b></label></li>
+      <li><input type="checkbox"><label>Garantía/reclamo + recordatorio de control anual</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e5">
+    <div class="et-head"><span class="et-num">5</span><div><h3>Visualizador de lentes</h3><span class="when">Semanas 11–14</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Que el cliente vea y "se pruebe" los lentes antes de comprar.</p>
+    <ul class="tasks" data-e="5">
+      <li><input type="checkbox"><label><b>Probador virtual</b> de armazones (cámara/foto + detección facial, overlay del marco)</label></li>
+      <li><input type="checkbox"><label>Visor de producto 360° / zoom</label></li>
+      <li><input type="checkbox"><label>Simulador de tratamientos (antirreflejo, fotocromático, filtro azul)</label></li>
+      <li><input type="checkbox"><label>Medición aproximada de distancia pupilar (DP) por foto</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e6">
+    <div class="et-head"><span class="et-num">6</span><div><h3>Integración embudo CMC + comisiones + BI</h3><span class="when">Semanas 12–15</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Cerrar el circuito clínica→óptica y medirlo todo.</p>
+    <ul class="tasks" data-e="6">
+      <li><input type="checkbox"><label>Receta de la oftalmología del CMC entra directo a Alma Óptica</label></li>
+      <li><input type="checkbox"><label><b>Conversión receta → venta</b> medible (cuánto del embudo compra)</label></li>
+      <li><input type="checkbox"><label><b>Liquidación de comisiones</b> (el % del acuerdo con la prestadora), auditable</label></li>
+      <li><input type="checkbox"><label>BI: ventas, margen, ranking de productos; integración Alma Ads/CAPI</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e7">
+    <div class="et-head"><span class="et-num">7</span><div><h3>Multi-sucursal &amp; replicación Puerto Montt</h3><span class="when">Mes 4+</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Convertirlo en producto replicable — tu tesis OLACORE.</p>
+    <ul class="tasks" data-e="7">
+      <li><input type="checkbox"><label>Multi-sucursal en Alma Óptica (stock/agenda/caja por sede)</label></li>
+      <li><input type="checkbox"><label>Plantilla de despliegue (nueva óptica en horas, no meses)</label></li>
+      <li><input type="checkbox"><label>Óptica en Ríomonte (Puerto Montt) con <b>su propio técnico</b></label></li>
+    </ul>
+  </div>
+
+  <!-- Módulos Alma Óptica -->
+  <h2 class="sec">Alma Óptica — mapa de módulos</h2>
+  <div class="card pad">
+    <div class="mods">
+      <div class="modcol"><h4>Clínico</h4><ul>
+        <li>Fichas de cliente</li><li>Recetas / graduación</li><li>Agenda de evaluación</li><li>Integración oftalmología CMC</li><li>Responsable técnico / trazabilidad</li>
+      </ul></div>
+      <div class="modcol"><h4>Comercial</h4><ul>
+        <li>Catálogo armazones</li><li>Catálogo cristales</li><li>Cotizador / presupuesto</li><li>POS / caja</li><li>Sync ecommerce</li>
+      </ul></div>
+      <div class="modcol"><h4>Operaciones</h4><ul>
+        <li>Órdenes al laboratorio</li><li>Inventario / consignación</li><li>Proveedores / labs</li><li>Garantías y postventa</li><li>Estados de pedido</li>
+      </ul></div>
+      <div class="modcol"><h4>Gestión</h4><ul>
+        <li>CRM / recompra</li><li>Comisiones / liquidación</li><li>BI / reportes</li><li>Marketing (Alma Ads)</li><li>Multi-sucursal</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- Pasarela -->
+  <h2 class="sec">Pasarela de pago (Chile)</h2>
+  <div class="card pad" style="overflow-x:auto;">
+    <table>
+      <tr><th>Opción</th><th>Qué cubre</th><th>Rol</th></tr>
+      <tr><td><b>Transbank Webpay Plus</b></td><td>Tarjetas de crédito/débito (Redcompra), el estándar chileno</td><td><span class="pill rec">Principal</span></td></tr>
+      <tr><td><b>Flow</b></td><td>Agregador: Webpay + Servipag + transferencia + multicaja; integración simple</td><td><span class="pill rec">Complemento</span></td></tr>
+      <tr><td>Mercado Pago</td><td>Tarjetas + cuotas + billetera; rápido de activar</td><td><span class="pill alt">Alternativa</span></td></tr>
+      <tr><td>Khipu</td><td>Transferencia bancaria de bajo costo</td><td><span class="pill alt">Opcional</span></td></tr>
+    </table>
+    <p style="font-size:12px;color:var(--muted);margin:10px 0 0;">Recomendación: <b>Webpay Plus</b> como medio principal (confianza + tarjetas) y <b>Flow</b> como agregador para sumar transferencia sin integrar cada banco. Requiere RUT de empresa y cuenta — por eso es gate de la Etapa 0/3.</p>
+  </div>
+
+  <!-- Visualizador -->
+  <h2 class="sec">Visualizador de lentes — enfoque</h2>
+  <div class="card pad">
+    <ul class="decs" style="margin:0;padding-left:18px;">
+      <li><b>Probador virtual de armazones</b> (recomendado): cámara o foto + malla facial (MediaPipe/face-api) y se superpone el marco sobre el rostro. Alto impacto de conversión.</li>
+      <li><b>Visor 360° / zoom</b> de cada armazón: fotos en secuencia; simple y efectivo.</li>
+      <li><b>Simulador de tratamientos</b>: mostrar el efecto de antirreflejo / fotocromático / filtro azul sobre una imagen.</li>
+      <li><b>Medición de DP por foto</b> (con referencia, ej. tarjeta): ayuda a comprar lentes con fórmula online.</li>
+    </ul>
+  </div>
+
+  <!-- Decisiones gate -->
+  <h2 class="sec">Decisiones-gate (necesito tu confirmación antes de ejecutar)</h2>
+  <div class="card pad">
+    <ol class="decs" style="margin:0;padding-left:18px;">
+      <li><b>Empresa que cobra online:</b> la tuya (Óptica Carampangue) — confirmado según lo conversado, falta formalizar RUT.</li>
+      <li><b>Pasarela:</b> ¿Webpay Plus + Flow, o partimos solo con uno?</li>
+      <li><b>Construcción:</b> a medida en tu stack (recomendado, control total + replicable) vs. plataforma tipo Jumpseller (más rápido, menos control).</li>
+      <li><b>Alcance del arranque:</b> ¿lanzamos primero Alma Óptica (gestión) y vitrina, dejando ecommerce/pasarela para después? (recomendado: ingreso más rápido, menos riesgo).</li>
+      <li><b>Laboratorio(s) proveedor(es):</b> cuál(es), para cargar catálogo y precios reales.</li>
+      <li><b>Responsable técnico registrado</b> de la óptica (hoy Ana; ver hoja de ruta de independencia).</li>
+    </ol>
+  </div>
+
+  <div class="reset"><button id="resetBtn">Reiniciar progreso</button></div>
+  <footer>Óptica Carampangue · Plan maestro por etapas · Marca los hitos a medida que avanzas — se guarda en este navegador.</footer>
+</div>
+
+<script>
+const KEY="optica_plan_v1";
+const boxes=[...document.querySelectorAll('ul.tasks input')];
+const saved=JSON.parse(localStorage.getItem(KEY)||"{}");
+boxes.forEach((cb,i)=>{ cb.dataset.i=i; if(saved[i]) cb.checked=true; cb.addEventListener('change',()=>{save();render();}); });
+function save(){ const st={}; boxes.forEach((cb,i)=>{ if(cb.checked) st[i]=1; }); localStorage.setItem(KEY,JSON.stringify(st)); }
+function render(){
+  let done=0;
+  boxes.forEach(cb=>{ cb.closest('li').classList.toggle('done',cb.checked); if(cb.checked)done++; });
+  document.querySelectorAll('.etapa').forEach(et=>{
+    const cbs=[...et.querySelectorAll('ul.tasks input')]; const d=cbs.filter(c=>c.checked).length;
+    et.querySelector('.cnt').textContent=d+'/'+cbs.length;
+  });
+  const pct=boxes.length?Math.round(done/boxes.length*100):0;
+  document.getElementById('pctBig').textContent=pct+'%';
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('pcount').textContent=done+' de '+boxes.length+' hitos';
+}
+document.getElementById('resetBtn').onclick=()=>{ if(confirm('¿Reiniciar el progreso?')){ localStorage.removeItem(KEY); boxes.forEach(cb=>cb.checked=false); render(); } };
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{ const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); root.setAttribute('data-theme',cur==='dark'?'light':'dark'); };
+render();
+</script>
