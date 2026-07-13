@@ -2412,13 +2412,35 @@ def get_cita_bot_by_id_for_rebook(id_cita: str) -> dict | None:
 
 
 def phone_tiene_solo_citas_canceladas(phone: str) -> bool:
-    """True si el phone solo tiene citas canceladas (o ninguna) en citas_bot.
+    """True si el phone TUVO al menos una cita y todas sus citas futuras están
+    canceladas — es decir, "tenía algo y se le cayó", NO "nunca tuvo nada".
 
     Usado por el job de reenganche para no insistir a un paciente cuya cita
     ya no existe — evita el mensaje "tienes una reserva pendiente" cuando
     cancel_detected_at está poblado en todas sus citas futuras.
+
+    BUG 2026-07-13 (medición embudo persistencia): el docstring original decía
+    "o ninguna" y el código lo cumplía al pie de la letra — un paciente SIN
+    ninguna fila en citas_bot (el caso más común: abandonó en WAIT_SLOT antes
+    de llegar a crear la cita) también daba True. El caller (jobs.py
+    `_enviar_reenganche`) toma esa rama como "tenía una cita y se canceló, no
+    insistir con 'reserva pendiente'" y, si no hay cancelación reciente que
+    reinvitar, solo loguea `reenganche_skip_cita_cancelada` sin enviar nada —
+    para siempre. Auditoría sobre 30 días de prod: 394 teléfonos se quedaron
+    viendo horarios (WAIT_SLOT) sin confirmar; de los 230 que además nunca
+    volvieron a escribir (abandono silencioso puro), 214 (93%) cayeron en
+    este bug — CERO reenganche real, pese a que el cron corre cada 5 min.
+    Este es probablemente el mayor agujero único de conversión del bot.
+    Fix: exigir que el phone tenga AL MENOS una fila histórica en citas_bot
+    antes de considerar "solo canceladas". Sin historial → False → sigue el
+    camino normal de reenganche (sí se le escribe).
     """
     with db() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) FROM citas_bot WHERE phone=?", (phone,)
+        ).fetchone()
+        if not total or int(total[0]) == 0:
+            return False
         # Citas futuras o de hoy no canceladas
         row = conn.execute(
             "SELECT COUNT(*) FROM citas_bot "
