@@ -70,6 +70,31 @@ def ensure_agenda_ticker_table() -> None:
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_agenda_ticker_seen ON agenda_ticker(seen_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_agenda_ticker_prof ON agenda_ticker(id_profesional)")
+        # fecha_creacion_real: hora EXACTA de creación, tomada del correo que
+        # Medilink manda al Gmail del centro (ver email_ticker.py) — cabecera
+        # `Date`, convertida a hora de Chile. `fecha_actualizacion` (Medilink)
+        # es solo un proxy (última modificación); esta columna, cuando está
+        # poblada, es la fuente de verdad y `_fmt_hace`/`get_feed` la
+        # priorizan. NULL hasta que el correo correspondiente se cruza.
+        try:
+            conn.execute("ALTER TABLE agenda_ticker ADD COLUMN fecha_creacion_real TEXT")
+        except Exception:
+            pass  # columna ya existe
+        conn.commit()
+
+
+def set_fecha_creacion_real(id_cita, email_ts: str) -> None:
+    """Alimentado por email_ticker.poll_email_ticker() cuando un correo
+    'Cita agendada' se logra cruzar contra una fila de este ticker.
+    `email_ts` ya viene en hora de Chile, formato 'YYYY-MM-DD HH:MM:SS'
+    (mismo formato que usa _fmt_hace para fecha_actualizacion)."""
+    from session import db
+    ensure_agenda_ticker_table()  # garantiza la columna antes del UPDATE (carrera de arranque en frío)
+    with db() as conn:
+        conn.execute(
+            "UPDATE agenda_ticker SET fecha_creacion_real = ? WHERE id_cita = ?",
+            (email_ts, id_cita),
+        )
         conn.commit()
 
 
@@ -295,7 +320,7 @@ def get_feed(limit: int = 60) -> list[dict]:
         rows = conn.execute("""
             SELECT id_cita, id_profesional, profesional, especialidad, paciente_nombre,
                    fecha_cita, hora_inicio, estado_cita, fecha_actualizacion,
-                   canal, canal_detalle, seen_at
+                   fecha_creacion_real, canal, canal_detalle, seen_at
             FROM agenda_ticker
             ORDER BY id_cita DESC
             LIMIT ?
@@ -304,7 +329,15 @@ def get_feed(limit: int = 60) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["canal_label"] = CANAL_LABELS.get(d["canal"], d["canal"])
-        d["hace"] = _fmt_hace(d["fecha_actualizacion"])
+        # Prioriza la hora real de creación (correo Medilink, exacta) sobre
+        # fecha_actualizacion (Medilink, es solo la última modificación —
+        # buen proxy para una cita recién creada, pero no exacto).
+        if d.get("fecha_creacion_real"):
+            d["hace"] = _fmt_hace(d["fecha_creacion_real"])
+            d["fuente_hora"] = "correo"
+        else:
+            d["hace"] = _fmt_hace(d["fecha_actualizacion"])
+            d["fuente_hora"] = "medilink"
         out.append(d)
     return out
 

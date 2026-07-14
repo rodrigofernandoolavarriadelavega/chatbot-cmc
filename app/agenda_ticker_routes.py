@@ -55,10 +55,12 @@ def register_agenda_ticker_routes(app):
                            limit: int = Query(60, ge=1, le=200)):
         _auth(token, cmc_session)
         from agenda_ticker import get_feed, get_contadores_hoy, get_aviso_sin_cerrar
+        from email_ticker import get_stats as get_email_stats
         return JSONResponse({
             "feed": get_feed(limit),
             "contadores_hoy": get_contadores_hoy(),
             "aviso_sin_cerrar": get_aviso_sin_cerrar(),
+            "email_ticker_stats": get_email_stats(),
         })
 
     @app.post("/api/agenda-ticker/sync", tags=["agenda-ticker"], include_in_schema=False)
