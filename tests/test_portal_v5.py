@@ -108,3 +108,52 @@ def test_demo_tiene_cita_hoy():
 
 def test_demo_perfil_incluye_phone():
     assert pr.DEMO_PHONE == "56900000000"
+
+
+# ── Puente de exámenes reales (estructurar → revisar → publicar) ─────────────
+
+def _mini_client():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    app = FastAPI()
+    app.include_router(pr.router)
+    return TestClient(app)
+
+
+def test_examenes_admin_gate():
+    c = _mini_client()
+    assert c.get("/portal/examenes-admin").status_code == 401
+    assert c.get("/portal/api/examenes/lista").status_code == 401
+    from config import ADMIN_TOKEN
+    assert c.get(f"/portal/examenes-admin?token={ADMIN_TOKEN}").status_code == 200
+
+
+def test_examenes_guardar_publicar_ciclo():
+    from config import ADMIN_TOKEN
+    c = _mini_client()
+    ex = {"nombre": "Prueba pytest (glicemia)", "fecha": "2026-07-01", "valor": 95,
+          "unidad": "mg/dL", "rango_min": 70, "rango_max": 100, "escala_min": 40,
+          "escala_max": 200, "nivel": "normal", "etiqueta": "Normal",
+          "conclusion": "Su azúcar está dentro de lo normal.",
+          "que_hacer": "Nada que hacer: siga con sus controles."}
+    r = c.post(f"/portal/api/examenes/guardar?token={ADMIN_TOKEN}",
+               json={"rut": "50000000-7", "examenes": [ex], "publicar": False})
+    assert r.status_code == 200 and r.json()["guardados"] == 1
+    r2 = c.get(f"/portal/api/examenes/lista?token={ADMIN_TOKEN}&rut=50000000-7")
+    filas = [e for e in r2.json()["examenes"] if e["nombre"].startswith("Prueba pytest")]
+    assert filas and filas[0]["publicado"] == 0
+    ids = [f["id"] for f in filas]
+    r3 = c.post(f"/portal/api/examenes/publicar?token={ADMIN_TOKEN}",
+                json={"ids": ids, "accion": "publicar"})
+    assert r3.status_code == 200
+    # limpieza
+    c.post(f"/portal/api/examenes/publicar?token={ADMIN_TOKEN}",
+           json={"ids": ids, "accion": "eliminar"})
+
+
+def test_examenes_guardar_rut_invalido():
+    from config import ADMIN_TOKEN
+    c = _mini_client()
+    r = c.post(f"/portal/api/examenes/guardar?token={ADMIN_TOKEN}",
+               json={"rut": "11111111-9", "examenes": [{"valor": 1}], "publicar": False})
+    assert r.status_code == 400

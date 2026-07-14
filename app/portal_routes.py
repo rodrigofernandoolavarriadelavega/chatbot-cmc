@@ -1152,12 +1152,28 @@ def _demo_examenes() -> list[dict]:
 @router.get("/portal/api/examenes")
 async def portal_examenes(portal_session: str | None = Cookie(None),
                           portal_active: str | None = Cookie(None)):
-    """Resultados de exámenes del paciente activo (demo: ejemplos de diseño)."""
+    """Resultados de exámenes del paciente activo.
+
+    Demo: ejemplos de diseño. Pacientes reales: SOLO lo que el staff revisó y
+    PUBLICÓ desde /portal/examenes-admin (nunca sale nada directo de la IA)."""
     _o, _op, rut, _phone = _resolve_context(portal_session, portal_active)
     if rut == DEMO_RUT:
         return {"ok": True, "demo": True, "disponible": True, "examenes": _demo_examenes()}
-    # Pacientes reales: los resultados aún no están integrados al portal.
-    return {"ok": True, "disponible": False, "examenes": []}
+    if rut in DEMO_FAMILY:
+        return {"ok": True, "demo": True, "disponible": False, "examenes": []}
+    try:
+        _ensure_tabla_examenes()
+        from session import db as _db
+        with _db() as conn:
+            rows = conn.execute(
+                """SELECT * FROM portal_examenes WHERE rut=? AND publicado=1
+                   ORDER BY COALESCE(fecha, created_at) DESC, id DESC LIMIT 30""",
+                (rut,)).fetchall()
+        exs = [_fila_examen(r) for r in rows]
+        return {"ok": True, "disponible": bool(exs), "examenes": exs}
+    except Exception as e:
+        log.error("portal examenes rut=%s: %s", rut, e)
+        return {"ok": True, "disponible": False, "examenes": []}
 
 
 # ═══ Check-in del día ("voy en camino") ═══════════════════════════════════════
@@ -1294,3 +1310,307 @@ def portal_uso(token: str = ""):
     if token != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="No autorizado")
     return _HTMLResponse(_USO_HTML)
+
+
+# ═══ Exámenes REALES: estructurar (IA) → revisar (humano) → publicar ══════════
+# Puente entre el pipeline existente de transcripción (examenes_transcribe /
+# tool ~/examen-a-ficha) y el semáforo del portal. La IA solo PROPONE la
+# estructura; NADA llega al paciente sin revisión y publicación explícita de
+# un humano (Ley 21.719 + seguridad clínica).
+
+def _ensure_tabla_examenes():
+    from session import db as _db
+    with _db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS portal_examenes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                rut         TEXT NOT NULL,
+                nombre      TEXT NOT NULL,
+                fecha       TEXT,
+                valor       REAL,
+                unidad      TEXT DEFAULT '',
+                rango_min   REAL,
+                rango_max   REAL,
+                escala_min  REAL,
+                escala_max  REAL,
+                nivel       TEXT DEFAULT 'normal',
+                etiqueta    TEXT DEFAULT '',
+                conclusion  TEXT DEFAULT '',
+                que_hacer   TEXT DEFAULT '',
+                publicado   INTEGER DEFAULT 0,
+                fuente      TEXT DEFAULT 'manual',
+                created_at  TEXT DEFAULT (datetime('now'))
+            )""")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_portal_examenes_rut ON portal_examenes(rut, publicado)")
+        conn.commit()
+
+
+_PROMPT_ESTRUCTURAR = """Eres un asistente clínico del Centro Médico Carampangue (Chile).
+Recibirás el TEXTO de un examen de laboratorio ya transcrito. Conviértelo en un
+arreglo JSON para mostrárselo al PACIENTE (población rural, baja alfabetización
+en salud) con un semáforo. REGLAS DURAS:
+- NO inventes valores ni analitos que no estén en el texto. Si un rango de
+  referencia no viene, usa el rango estándar del laboratorio chileno y márcalo
+  igual (es referencial).
+- "conclusion": 1-2 frases en usted, lenguaje simple (nivel 6º básico), sin
+  siglas sin explicar, sin diagnosticar enfermedades — solo describir el valor
+  frente a su rango.
+- "que_hacer": 1 frase accionable y calmada ("Muéstrele este resultado a su
+  médico en el próximo control", "Pida una hora este mes", etc.). Ante valores
+  de riesgo vital evidente, indicar contactar al centro hoy.
+- "nivel": "normal" | "atencion" (leve fuera de rango) | "alto" (claramente fuera).
+- "etiqueta": palabra corta para el paciente ("Normal", "Algo alta", "Alta", "Baja").
+- "escala_min"/"escala_max": límites para dibujar la barra (holgados: ~40% bajo
+  el rango mínimo y ~60% sobre el máximo, redondeados).
+Responde SOLO el JSON (array), sin comentarios ni markdown. Campos por ítem:
+nombre (en lenguaje del paciente, con el término técnico entre paréntesis),
+fecha (YYYY-MM-DD si aparece, sino null), valor (número), unidad, rango_min,
+rango_max, escala_min, escala_max, nivel, etiqueta, conclusion, que_hacer."""
+
+
+@router.post("/portal/api/examenes/estructurar")
+async def examenes_estructurar(request: Request, token: str = ""):
+    """IA propone la estructura del semáforo desde el texto transcrito (staff)."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    body = await request.json()
+    texto = (body.get("texto") or "").strip()
+    if len(texto) < 20:
+        raise HTTPException(status_code=400, detail="Pegue el texto del examen (mínimo 20 caracteres)")
+    import anthropic as _an
+    from config import ANTHROPIC_API_KEY
+    client = _an.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+    try:
+        msg = await client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=3000,
+            system=_PROMPT_ESTRUCTURAR,
+            messages=[{"role": "user", "content": texto[:8000]}])
+        raw = msg.content[0].text.strip()
+    except Exception as e:
+        log.error("estructurar examen: %s", e)
+        raise HTTPException(status_code=503, detail="La IA no respondió. Intente de nuevo.")
+    import json as _json, re as _re
+    m = _re.search(r"\[.*\]", raw, _re.S)
+    try:
+        exs = _json.loads(m.group(0) if m else raw)
+        assert isinstance(exs, list)
+    except Exception:
+        raise HTTPException(status_code=502, detail="La IA devolvió un formato inesperado. Reintente.")
+    return {"ok": True, "examenes": exs}
+
+
+def _fila_examen(r) -> dict:
+    keys = ["id", "rut", "nombre", "fecha", "valor", "unidad", "rango_min", "rango_max",
+            "escala_min", "escala_max", "nivel", "etiqueta", "conclusion", "que_hacer",
+            "publicado", "fuente", "created_at"]
+    return {k: r[k] for k in keys}
+
+
+@router.post("/portal/api/examenes/guardar")
+async def examenes_guardar(request: Request, token: str = ""):
+    """Guarda exámenes revisados por el staff (borrador o publicados)."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    body = await request.json()
+    rut_raw = (body.get("rut") or "").strip()
+    rut = rut_raw.replace(".", "").replace("-", "").upper()
+    rut = (rut[:-1] + "-" + rut[-1]) if len(rut) > 1 else ""
+    if not valid_rut(rut):
+        raise HTTPException(status_code=400, detail="RUT inválido")
+    exs = body.get("examenes") or []
+    publicar = 1 if body.get("publicar") else 0
+    if not exs:
+        raise HTTPException(status_code=400, detail="Sin exámenes que guardar")
+    _ensure_tabla_examenes()
+    from session import db as _db
+    n = 0
+    with _db() as conn:
+        for e in exs[:30]:
+            try:
+                valor = float(e.get("valor"))
+                rmin = float(e.get("rango_min") if e.get("rango_min") is not None else 0)
+                rmax = float(e.get("rango_max") if e.get("rango_max") is not None else 0)
+                emin = float(e.get("escala_min") if e.get("escala_min") is not None else min(valor, rmin) * 0.6)
+                emax = float(e.get("escala_max") if e.get("escala_max") is not None else max(valor, rmax) * 1.6)
+                if emin >= emax:
+                    emin, emax = min(valor, rmin) * 0.6, max(valor, rmax) * 1.6 or valor + 1
+                nivel = e.get("nivel") if e.get("nivel") in ("normal", "atencion", "alto") else "normal"
+                conn.execute(
+                    """INSERT INTO portal_examenes
+                       (rut, nombre, fecha, valor, unidad, rango_min, rango_max,
+                        escala_min, escala_max, nivel, etiqueta, conclusion, que_hacer,
+                        publicado, fuente)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (rut, str(e.get("nombre") or "")[:120], str(e.get("fecha") or "")[:10] or None,
+                     valor, str(e.get("unidad") or "")[:20], rmin, rmax, emin, emax, nivel,
+                     str(e.get("etiqueta") or "")[:30], str(e.get("conclusion") or "")[:400],
+                     str(e.get("que_hacer") or "")[:300], publicar, "staff"))
+                n += 1
+            except (TypeError, ValueError):
+                continue
+        conn.commit()
+    log_event("staff", "portal_examen_cargado", {"rut": rut, "n": n, "publicado": bool(publicar)})
+    return {"ok": True, "guardados": n, "publicados": publicar == 1}
+
+
+@router.get("/portal/api/examenes/lista")
+async def examenes_lista(token: str = "", rut: str = ""):
+    """Lista para el panel admin: todos los del RUT, o los 50 más recientes."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    _ensure_tabla_examenes()
+    from session import db as _db
+    with _db() as conn:
+        if rut:
+            r = rut.replace(".", "").replace("-", "").upper()
+            r = (r[:-1] + "-" + r[-1]) if len(r) > 1 else r
+            rows = conn.execute(
+                "SELECT * FROM portal_examenes WHERE rut=? ORDER BY id DESC LIMIT 100", (r,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM portal_examenes ORDER BY id DESC LIMIT 50").fetchall()
+    return {"ok": True, "examenes": [_fila_examen(x) for x in rows]}
+
+
+@router.post("/portal/api/examenes/publicar")
+async def examenes_publicar(request: Request, token: str = ""):
+    """Publica/despublica o elimina exámenes ya cargados."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    body = await request.json()
+    ids = [int(i) for i in (body.get("ids") or []) if str(i).isdigit()][:100]
+    accion = body.get("accion")
+    if not ids or accion not in ("publicar", "despublicar", "eliminar"):
+        raise HTTPException(status_code=400, detail="Datos inválidos")
+    _ensure_tabla_examenes()
+    from session import db as _db
+    ph = ",".join("?" * len(ids))
+    with _db() as conn:
+        if accion == "eliminar":
+            conn.execute(f"DELETE FROM portal_examenes WHERE id IN ({ph})", ids)
+        else:
+            conn.execute(f"UPDATE portal_examenes SET publicado=? WHERE id IN ({ph})",
+                         [1 if accion == "publicar" else 0] + ids)
+        conn.commit()
+    return {"ok": True, "accion": accion, "n": len(ids)}
+
+
+_EXAMENES_ADMIN_HTML = """<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exámenes → Portal — CMC</title><style>
+body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#f3f6f9;color:#0F3F68;margin:0;padding:20px}
+.wrap{max-width:980px;margin:0 auto}h1{font-size:21px}p.sub{color:#546776;font-size:14px;line-height:1.5}
+.card{background:#fff;border:1px solid #e3ebf1;border-radius:12px;padding:16px;margin:14px 0}
+label{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#546776;margin:10px 0 4px}
+textarea,input,select{width:100%;border:1.5px solid #7d97ac;border-radius:9px;padding:10px;font-size:15px;font-family:inherit;box-sizing:border-box}
+textarea{min-height:140px}
+button{background:linear-gradient(135deg,#1172AB,#0F3F68);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:800;cursor:pointer;margin:10px 8px 0 0}
+button.ghost{background:#f7fafc;color:#0F3F68;border:1px solid #e3ebf1}
+button.ok{background:linear-gradient(135deg,#0b8043,#0f766e)}
+button.danger{background:linear-gradient(135deg,#c62828,#b71c1c)}
+button:disabled{opacity:.5}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px}
+th{background:#0F3F68;color:#fff;padding:6px 8px;text-align:left;font-size:11.5px}
+td{padding:6px 8px;border-top:1px solid #e3ebf1;vertical-align:top}
+td input, td select{padding:6px;font-size:13.5px}
+.pill{font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px}
+.pill.pub{background:#e8f5e9;color:#0e6e5c}.pill.borr{background:#fff4d6;color:#8b6508}
+.msg{font-weight:700;margin-top:8px}.msg.err{color:#b71c1c}.msg.ok{color:#0e6e5c}
+.aviso{background:#fff4d6;border-radius:9px;padding:10px 12px;font-size:13.5px;font-weight:600;color:#8b6508;margin-top:8px}
+</style></head><body><div class="wrap">
+<h1>Exámenes → Portal del Paciente</h1>
+<p class="sub">Flujo: pegue el texto del examen (del tool Examen→Ficha o del módulo Alma) → la IA propone la estructura →
+<b>revise y corrija cada campo</b> → guarde como borrador o publique. El paciente SOLO ve lo publicado, explicado con semáforo.</p>
+
+<div class="card">
+  <label for="rut">RUT del paciente</label><input id="rut" placeholder="12.345.678-9">
+  <label for="texto">Texto del examen (transcripción)</label>
+  <textarea id="texto" placeholder="Pegue aquí el texto clínico del examen…"></textarea>
+  <button onclick="estructurar()" id="btn-ia">🧠 Estructurar con IA</button>
+  <div class="msg" id="msg1"></div>
+</div>
+
+<div class="card" id="rev" style="display:none">
+  <b>Revisión (edite lo que haga falta — usted es el control de calidad)</b>
+  <div class="aviso">Nada llega al paciente sin que usted lo publique. Verifique valores, rangos y redacción.</div>
+  <div style="overflow-x:auto"><table id="tabla-rev"></table></div>
+  <button class="ghost" onclick="guardar(false)">Guardar como borrador</button>
+  <button class="ok" onclick="guardar(true)">Guardar y PUBLICAR al paciente</button>
+  <div class="msg" id="msg2"></div>
+</div>
+
+<div class="card">
+  <b>Cargados recientemente</b>
+  <label for="frut">Filtrar por RUT (opcional)</label>
+  <div style="display:flex;gap:8px"><input id="frut" placeholder="12.345.678-9" style="flex:1">
+  <button class="ghost" onclick="listar()" style="margin:0">Buscar</button></div>
+  <div style="overflow-x:auto"><table id="tabla-lista"></table></div>
+</div>
+</div><script>
+const token = new URLSearchParams(location.search).get('token') || '';
+let propuestos = [];
+const CAMPOS = ['nombre','fecha','valor','unidad','rango_min','rango_max','nivel','etiqueta','conclusion','que_hacer'];
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+async function estructurar(){
+  const b=document.getElementById('btn-ia'); const m=document.getElementById('msg1');
+  b.disabled=true; b.textContent='Estructurando…'; m.textContent='';
+  try{
+    const r=await fetch('/portal/api/examenes/estructurar?token='+encodeURIComponent(token),{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:document.getElementById('texto').value})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||'Error');
+    propuestos=d.examenes||[];
+    renderRev(); m.className='msg ok'; m.textContent='La IA propuso '+propuestos.length+' resultado(s). Revíselos abajo.';
+  }catch(e){ m.className='msg err'; m.textContent=e.message; }
+  b.disabled=false; b.textContent='🧠 Estructurar con IA';
+}
+function renderRev(){
+  const t=document.getElementById('tabla-rev');
+  t.innerHTML='<tr><th>Nombre</th><th>Fecha</th><th>Valor</th><th>Unidad</th><th>Rango mín</th><th>Rango máx</th><th>Nivel</th><th>Etiqueta</th><th>Conclusión (paciente)</th><th>Qué hacer</th></tr>'+
+    propuestos.map((e,i)=>'<tr>'+CAMPOS.map(c=>{
+      if(c==='nivel') return `<td><select data-i="${i}" data-c="nivel"><option ${e.nivel==='normal'?'selected':''}>normal</option><option ${e.nivel==='atencion'?'selected':''}>atencion</option><option ${e.nivel==='alto'?'selected':''}>alto</option></select></td>`;
+      const w=(c==='conclusion'||c==='que_hacer')?'style="min-width:220px"':(c==='nombre'?'style="min-width:170px"':'style="min-width:70px"');
+      return `<td><input ${w} data-i="${i}" data-c="${c}" value="${esc(e[c])}"></td>`;
+    }).join('')+'</tr>').join('');
+  t.oninput=(ev)=>{const el=ev.target; if(el.dataset.i!==undefined) propuestos[+el.dataset.i][el.dataset.c]=el.value;};
+  document.getElementById('rev').style.display='';
+}
+async function guardar(publicar){
+  const m=document.getElementById('msg2'); m.textContent='Guardando…'; m.className='msg';
+  try{
+    const r=await fetch('/portal/api/examenes/guardar?token='+encodeURIComponent(token),{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({rut:document.getElementById('rut').value, examenes:propuestos, publicar:publicar})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||'Error');
+    m.className='msg ok'; m.textContent=d.guardados+' guardado(s)'+(publicar?' y PUBLICADOS — el paciente ya los ve en su portal.':' como borrador.');
+    listar();
+  }catch(e){ m.className='msg err'; m.textContent=e.message; }
+}
+async function accion(ids, a){
+  await fetch('/portal/api/examenes/publicar?token='+encodeURIComponent(token),{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:ids, accion:a})});
+  listar();
+}
+async function listar(){
+  const rut=document.getElementById('frut').value.trim();
+  const r=await fetch('/portal/api/examenes/lista?token='+encodeURIComponent(token)+(rut?'&rut='+encodeURIComponent(rut):''));
+  const d=await r.json(); const t=document.getElementById('tabla-lista');
+  t.innerHTML='<tr><th>RUT</th><th>Examen</th><th>Valor</th><th>Nivel</th><th>Estado</th><th>Acciones</th></tr>'+
+    (d.examenes||[]).map(e=>`<tr><td>${esc(e.rut)}</td><td>${esc(e.nombre)}</td><td>${esc(e.valor)} ${esc(e.unidad)}</td>
+      <td>${esc(e.nivel)}</td><td><span class="pill ${e.publicado?'pub':'borr'}">${e.publicado?'PUBLICADO':'borrador'}</span></td>
+      <td>${e.publicado
+        ?`<button class="ghost" style="padding:4px 10px;margin:0" onclick="accion([${e.id}],'despublicar')">Despublicar</button>`
+        :`<button class="ok" style="padding:4px 10px;margin:0" onclick="accion([${e.id}],'publicar')">Publicar</button>`}
+       <button class="danger" style="padding:4px 10px;margin:0" onclick="if(confirm('¿Eliminar?'))accion([${e.id}],'eliminar')">Eliminar</button></td></tr>`).join('')
+    || '<tr><td colspan="6">Sin exámenes cargados aún.</td></tr>';
+}
+listar();
+</script></body></html>"""
+
+
+@router.get("/portal/examenes-admin", response_class=_HTMLResponse)
+def portal_examenes_admin(token: str = ""):
+    """Panel del staff: texto de examen → IA estructura → humano revisa → publica."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    return _HTMLResponse(_EXAMENES_ADMIN_HTML)
