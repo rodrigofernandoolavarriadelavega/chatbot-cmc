@@ -53,6 +53,11 @@ def _demo_data() -> dict:
         return f"{dias[d.weekday()]} {d.day} de {meses[d.month-1]}"
 
     citas_futuras = [
+        {"id": 900, "id_profesional": 73, "profesional": "Dr. Andrés Abarca",
+         "especialidad": "Medicina General",
+         "fecha": ymd(hoy),
+         "fecha_display": fmt_es(hoy),
+         "hora_inicio": "17:30", "estado": "Confirmada"},
         {"id": 901, "id_profesional": 60, "profesional": "Dr. Miguel Millán",
          "especialidad": "Cardiología",
          "fecha": ymd(hoy + timedelta(days=3)),
@@ -315,7 +320,7 @@ async def portal_request_code(request: Request):
 
     # Rate limit: max 3 OTPs por hora
     if count_portal_otps(rut_norm) >= 3:
-        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera unos minutos.")
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espere unos minutos.")
 
     # Buscar teléfono en contact_profiles
     phone = get_phone_by_rut(rut_norm)
@@ -329,7 +334,7 @@ async def portal_request_code(request: Request):
         if pac:
             raise HTTPException(
                 status_code=404,
-                detail="Para activar tu portal, escríbenos primero al WhatsApp: +56 9 4588 6628"
+                detail="Para activar su portal, escríbanos primero al WhatsApp: +56 9 6661 0737"
             )
         raise HTTPException(status_code=404, detail="RUT no encontrado")
 
@@ -340,9 +345,9 @@ async def portal_request_code(request: Request):
     # Enviar por WhatsApp
     await send_whatsapp(
         phone,
-        f"🔐 Tu código de acceso al Portal del Paciente es: *{code}*\n\n"
-        "Expira en 5 minutos.\n"
-        "Si no solicitaste este código, ignora este mensaje."
+        f"🔐 Su código de acceso al Portal del Paciente es: *{code}*\n\n"
+        "Vence en 10 minutos.\n"
+        "Si usted no pidió este código, ignore este mensaje."
     )
 
     # Enmascarar RUT para respuesta
@@ -791,7 +796,7 @@ async def portal_family_request_otp(request: Request,
 
     # Rate limit por RUT familiar
     if count_portal_otps(dep_rut) >= 3:
-        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera unos minutos.")
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espere unos minutos.")
 
     paciente = await buscar_paciente(dep_raw)
     if not paciente:
@@ -969,3 +974,206 @@ def portal_page_v5(request: Request, demo: str = ""):
         or main._PORTAL_V2_HTML or main._PORTAL_HTML,
         request, demo,
     )
+
+
+# ═══ Magic link de LOGIN — alternativa al OTP (WCAG 3.3.8) ════════════════════
+# El OTP transcrito es la barrera #1 para adultos mayores. Este link firmado
+# entra directo: HMAC dedicado, TTL 30 min, mismo cookie de sesión que el OTP.
+# (El magic link de /mis-citas es OTRO token, con otra clave y otro payload.)
+
+_LOGIN_LINK_TTL = 1800  # 30 minutos
+
+# Rate limit en memoria (mismo patrón sliding-window del agendador)
+from collections import deque as _deque
+import time as _time
+_link_buckets: dict[str, "_deque"] = {}
+
+
+def _link_rate_ok(key: str, limit: int, window_s: int) -> bool:
+    now = _time.time()
+    dq = _link_buckets.setdefault(key, _deque())
+    while dq and dq[0] < now - window_s:
+        dq.popleft()
+    if len(dq) >= limit:
+        return False
+    dq.append(now)
+    return True
+
+
+def _login_key() -> bytes:
+    secret = PORTAL_SESSION_SECRET or ADMIN_TOKEN
+    return hashlib.sha256(f"cmc-portal-login:{secret}".encode()).digest()
+
+
+def generar_login_token(rut: str, phone: str) -> str:
+    exp = int(time.time()) + _LOGIN_LINK_TTL
+    payload = f"{rut}|{phone}|{exp}"
+    sig = hmac.new(_login_key(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}|{sig}"
+
+
+def verificar_login_token(token: str) -> tuple[str, str] | None:
+    """Retorna (rut, phone) si el token es válido y vigente; None si no."""
+    try:
+        parts = token.split("|")
+        if len(parts) != 4:
+            return None
+        rut, phone, exp_str, sig = parts
+        payload = f"{rut}|{phone}|{exp_str}"
+        expected = hmac.new(_login_key(), payload.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return None
+        if time.time() > int(exp_str):
+            return None
+        return rut, phone
+    except Exception:
+        return None
+
+
+@router.post("/portal/api/request-link")
+async def portal_request_link(request: Request):
+    """Envía por WhatsApp un link que entra directo al portal (sin código)."""
+    body = await request.json()
+    rut = (body.get("rut") or "").strip()
+
+    if is_demo_rut(rut):
+        return {"ok": True, "demo": True,
+                "hint": f"En modo demo use el código {DEMO_CODE} (el link es solo para pacientes reales)."}
+
+    if not rut or not valid_rut(rut):
+        raise HTTPException(status_code=400, detail="RUT inválido")
+
+    rut_clean = rut.replace(".", "").replace("-", "").strip().upper()
+    rut_norm = rut_clean[:-1] + "-" + rut_clean[-1]
+
+    ip = (request.headers.get("x-real-ip")
+          or (request.client.host if request.client else "?"))
+    if not _link_rate_ok(f"lnk-rut:{rut_norm}", 3, 3600) or not _link_rate_ok(f"lnk-ip:{ip}", 10, 3600):
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espere unos minutos.")
+
+    phone = get_phone_by_rut(rut_norm) or get_phone_by_rut(rut_clean)
+    if not phone:
+        pac = await buscar_paciente(rut)
+        if pac:
+            raise HTTPException(
+                status_code=404,
+                detail="Para activar su portal, escríbanos primero al WhatsApp: +56 9 6661 0737")
+        raise HTTPException(status_code=404, detail="RUT no encontrado")
+
+    import urllib.parse
+    token = generar_login_token(rut_norm, phone)
+    url = f"https://agentecmc.cl/portal/entrar?t={urllib.parse.quote(token, safe='')}"
+    await send_whatsapp(
+        phone,
+        "🔐 Toque este link para entrar a su Portal del Paciente:\n\n"
+        f"{url}\n\n"
+        "Vence en 30 minutos. Si usted no lo pidió, ignore este mensaje.")
+    log_event(phone, "portal_login_link_enviado", {"rut": rut_norm})
+    rut_masked = rut_norm[:2] + ".***." + rut_norm[-3:]
+    return {"ok": True, "rut_masked": rut_masked}
+
+
+@router.get("/portal/entrar", response_class=_HTMLResponse)
+def portal_entrar(request: Request, t: str = ""):
+    """Login por magic link: valida el token y entra directo a /portal/v5."""
+    from fastapi.responses import RedirectResponse
+    res = verificar_login_token(t)
+    if not res:
+        return _HTMLResponse(
+            """<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>Link vencido — CMC</title></head>
+            <body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#f3f6f9;
+                         display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
+            <div style="background:#fff;border-radius:16px;padding:30px 24px;max-width:380px;text-align:center;
+                        box-shadow:0 6px 18px rgba(15,63,104,.08)">
+              <div style="font-size:40px">⏰</div>
+              <h2 style="color:#0F3F68;font-size:21px;margin:10px 0 6px">Este link ya venció</h2>
+              <p style="color:#546776;font-size:16px;line-height:1.5;margin:0 0 18px">
+                Por su seguridad, los links duran 30 minutos. Pida uno nuevo desde la página de entrada.</p>
+              <a href="/portal/v5" style="display:block;background:#1172AB;color:#fff;border-radius:12px;
+                 padding:15px;font-size:17px;font-weight:700;text-decoration:none">Ir a la página de entrada</a>
+            </div></body></html>""",
+            status_code=401)
+    rut_norm, phone = res
+    is_https = (request.url.scheme == "https"
+                or request.headers.get("x-forwarded-proto") == "https")
+    resp = RedirectResponse(url="/portal/v5", status_code=302)
+    resp.set_cookie(
+        key=_COOKIE_NAME,
+        value=_sign_portal_cookie(rut_norm, phone),
+        max_age=_COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=is_https,
+        path="/",
+    )
+    resp.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
+    log_event(phone, "portal_login_magic_link", {"rut": rut_norm})
+    log.info("Portal login por magic link rut=%s", rut_norm)
+    return resp
+
+
+# ═══ Exámenes con semáforo (Fase 3) ═══════════════════════════════════════════
+# Patrón basado en evidencia: barra de color + valor + palabra + conclusión en
+# lenguaje simple. Hoy los resultados reales NO están integrados al portal
+# (se entregan en el centro / WhatsApp): para pacientes reales la API es honesta
+# (disponible=False) y la UI muestra ese estado. La demo trae 3 ejemplos para
+# validar el diseño con pacientes.
+
+def _demo_examenes() -> list[dict]:
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+    hoy = datetime.now(ZoneInfo("America/Santiago")).date()
+    f = (hoy - timedelta(days=12)).strftime("%Y-%m-%d")
+    return [
+        {"id": 1, "nombre": "Azúcar en la sangre (glicemia en ayunas)",
+         "fecha": f, "valor": 118, "unidad": "mg/dL",
+         "rango_min": 70, "rango_max": 100, "escala_min": 40, "escala_max": 200,
+         "nivel": "atencion", "etiqueta": "Algo alta",
+         "conclusion": "Su azúcar está un poco sobre lo normal (lo normal en ayunas es 70 a 100).",
+         "que_hacer": "No es una urgencia. Muéstrele este resultado a su médico en el próximo control."},
+        {"id": 2, "nombre": "Colesterol total",
+         "fecha": f, "valor": 232, "unidad": "mg/dL",
+         "rango_min": 0, "rango_max": 200, "escala_min": 100, "escala_max": 320,
+         "nivel": "alto", "etiqueta": "Alto",
+         "conclusion": "Su colesterol está sobre el nivel recomendado (menos de 200).",
+         "que_hacer": "Pida una hora con su médico este mes para revisar este resultado."},
+        {"id": 3, "nombre": "Hemoglobina (sangre)",
+         "fecha": f, "valor": 13.8, "unidad": "g/dL",
+         "rango_min": 12, "rango_max": 16, "escala_min": 8, "escala_max": 20,
+         "nivel": "normal", "etiqueta": "Normal",
+         "conclusion": "Su hemoglobina está dentro de lo normal (12 a 16). Sin señales de anemia.",
+         "que_hacer": "Nada que hacer: siga con sus controles habituales."},
+    ]
+
+
+@router.get("/portal/api/examenes")
+async def portal_examenes(portal_session: str | None = Cookie(None),
+                          portal_active: str | None = Cookie(None)):
+    """Resultados de exámenes del paciente activo (demo: ejemplos de diseño)."""
+    _o, _op, rut, _phone = _resolve_context(portal_session, portal_active)
+    if rut == DEMO_RUT:
+        return {"ok": True, "demo": True, "disponible": True, "examenes": _demo_examenes()}
+    # Pacientes reales: los resultados aún no están integrados al portal.
+    return {"ok": True, "disponible": False, "examenes": []}
+
+
+# ═══ Check-in del día ("voy en camino") ═══════════════════════════════════════
+@router.post("/portal/api/checkin")
+async def portal_checkin(request: Request,
+                         portal_session: str | None = Cookie(None),
+                         portal_active: str | None = Cookie(None)):
+    """El paciente confirma que viene a su hora de HOY. Queda registrado como
+    evento (visible en la línea de tiempo de recepción); no toca Medilink."""
+    owner_rut, owner_phone, rut, _phone = _resolve_context(portal_session, portal_active)
+    body = await request.json()
+    if rut == DEMO_RUT or rut in DEMO_FAMILY:
+        return {"ok": True, "demo": True}
+    log_event(owner_phone, "portal_checkin_confirmado", {
+        "rut": rut,
+        "id_cita": str(body.get("id_cita") or ""),
+        "especialidad": (body.get("especialidad") or "")[:60],
+        "hora": (body.get("hora") or "")[:5],
+    })
+    return {"ok": True}

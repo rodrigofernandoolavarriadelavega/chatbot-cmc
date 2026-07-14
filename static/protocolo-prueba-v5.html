@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prueba de usabilidad Portal v5 — Materiales imprimibles · CMC</title>
+<style>
+  /* ── Autónomo: sin CDN, sin fuentes externas (CSP del CMC) ── */
+  :root{
+    --navy:#123a5c; --teal:#0e7c7b; --red:#b71c1c; --ink:#1a1a1a;
+    --line:#9aa5b1; --soft:#eef2f6;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+  body{
+    font-family:Georgia, "Times New Roman", serif;
+    color:var(--ink); background:#d7dde3;
+    font-size:12.5pt; line-height:1.42;
+  }
+  .sans{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+
+  /* ── Páginas ── */
+  .page{
+    background:#fff; width:216mm; min-height:272mm; margin:10mm auto;
+    padding:16mm 18mm; box-shadow:0 2px 14px rgba(0,0,0,.25);
+    position:relative;
+  }
+  .page-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:3px solid var(--navy); padding-bottom:5px; margin-bottom:14px;
+  }
+  .page-head .brand{font-weight:bold; color:var(--navy); font-size:12pt; letter-spacing:.4px}
+  .page-head .doc{font-size:10.5pt; color:#555}
+  h1{font-size:19pt; color:var(--navy); margin:4px 0 10px}
+  h2{font-size:14.5pt; color:var(--navy); margin:14px 0 6px}
+  h3{font-size:12.5pt; color:var(--teal); margin:10px 0 4px}
+  p{margin:0 0 8px}
+  ul,ol{margin:0 0 8px 22px}
+  li{margin-bottom:3px}
+  strong{color:#000}
+  .small{font-size:10.5pt; color:#444}
+  .tag{
+    display:inline-block; background:var(--soft); border:1px solid var(--line);
+    border-radius:4px; padding:1px 8px; font-size:10.5pt; margin-right:6px;
+  }
+
+  /* ── Casillas ── */
+  .cb{
+    display:inline-block; width:13pt; height:13pt; border:1.6pt solid #222;
+    border-radius:2pt; vertical-align:-2.5pt; margin-right:4pt;
+  }
+  .blank{display:inline-block; border-bottom:1pt solid #333; min-width:60pt; height:12pt}
+  .blank.w-lg{min-width:170pt}
+  .blank.w-md{min-width:110pt}
+  .blank.w-sm{min-width:36pt}
+  .writeline{border-bottom:1pt solid #666; height:20pt; margin:5pt 0}
+
+  /* ── Cajas ── */
+  .say{
+    border-left:5px solid var(--teal); background:#f2f9f8;
+    padding:9px 13px; margin:8px 0; font-size:12.5pt;
+  }
+  .say .who{font-family:-apple-system,"Segoe UI",Roboto,sans-serif; font-size:9.5pt;
+    text-transform:uppercase; letter-spacing:1px; color:var(--teal); font-weight:bold; display:block; margin-bottom:3px}
+  .note{
+    background:var(--soft); border:1px solid var(--line); border-radius:6px;
+    padding:8px 12px; margin:8px 0; font-size:11pt;
+  }
+  .danger{
+    background:#fdecea; border:1.6pt solid var(--red); border-radius:6px;
+    padding:9px 13px; margin:8px 0;
+  }
+  .danger .t{color:var(--red); font-weight:bold}
+
+  /* ── Tablas ── */
+  table{border-collapse:collapse; width:100%; margin:8px 0; font-size:11pt}
+  th,td{border:1pt solid #555; padding:5pt 6pt; text-align:left; vertical-align:top}
+  th{background:var(--soft); color:var(--navy); font-family:-apple-system,"Segoe UI",Roboto,sans-serif; font-size:10pt}
+
+  /* ── Tarjetas de tarea ── */
+  .task-card{
+    border:2.4pt solid var(--navy); border-radius:10px; padding:13px 16px;
+    margin:0 0 12px; page-break-inside:avoid;
+  }
+  .task-card .t-head{
+    display:flex; align-items:baseline; gap:10px; border-bottom:1.4pt solid var(--navy);
+    padding-bottom:5px; margin-bottom:8px;
+  }
+  .task-card .t-num{
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif; font-weight:800;
+    font-size:17pt; color:#fff; background:var(--navy); border-radius:7px; padding:2px 11px;
+  }
+  .task-card.safety .t-num{background:var(--red)}
+  .task-card.safety{border-color:var(--red)}
+  .task-card .t-title{font-size:14.5pt; font-weight:bold; color:var(--navy)}
+  .task-card .scenario{
+    font-size:15.5pt; line-height:1.5; margin:7px 0 9px; color:#000;
+  }
+  .task-card .meta{font-size:10.5pt; color:#333; font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+  .task-card .meta b{color:var(--navy)}
+
+  /* ── Escala SEQ ── */
+  .seq{
+    display:flex; gap:6pt; justify-content:center; margin:10px 0 4px;
+  }
+  .seq div{
+    width:42pt; height:42pt; border:2pt solid var(--navy); border-radius:8pt;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20pt; font-weight:bold; color:var(--navy);
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .seq-labels{display:flex; justify-content:space-between; font-size:11.5pt; margin:0 4pt 6px; font-weight:bold}
+
+  /* ── Firmas ── */
+  .sig-grid{display:flex; gap:24pt; margin-top:14pt}
+  .sig-grid>div{flex:1}
+  .sig-line{border-top:1pt solid #333; margin-top:34pt; padding-top:3pt; font-size:10.5pt; text-align:center}
+
+  /* ── Impresión ── */
+  .screen-only{max-width:216mm; margin:12mm auto 4mm; font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:var(--navy); color:#fff; border-radius:10px; padding:14px 20px; font-size:11pt}
+  .screen-only a{color:#9fe3e2}
+  @media print{
+    body{background:#fff; font-size:12pt}
+    .screen-only{display:none}
+    .page{width:auto; min-height:0; margin:0; padding:0; box-shadow:none; page-break-after:always}
+    .page:last-child{page-break-after:auto}
+    @page{size:letter; margin:13mm 15mm}
+  }
+</style>
+</head>
+<body>
+
+<div class="screen-only">
+  <strong>Materiales imprimibles — Prueba de usabilidad Portal del Paciente v5 · Centro Médico Carampangue.</strong><br>
+  Imprima este documento completo (Ctrl/Cmd+P, tamaño carta). La <em>planilla de registro</em> (última página) se imprime <strong>5 veces</strong>, una por participante.
+  El protocolo metodológico completo está en <code>docs/protocolo_prueba_pacientes_v5.md</code>.
+</div>
+
+<!-- ═══════════════ PÁGINA 1 · PORTADA + CHECKLIST ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Prueba de usabilidad · Portal del Paciente v5</span></div>
+  <h1>Prueba de usabilidad con pacientes<br>Portal del Paciente v5 — modo demo</h1>
+  <p><span class="tag">5 participantes 60+</span><span class="tag">Sesiones de 30–40 min</span><span class="tag">Moderada, 1 a 1</span><span class="tag">Datos ficticios (MODO DEMO)</span></p>
+
+  <h2>Datos fijos de la prueba</h2>
+  <table>
+    <tr><th style="width:38%">Portal (modo demo)</th><td><strong>agentecmc.cl/portal/v5?demo=1</strong></td></tr>
+    <tr><th>RUT de prueba (paciente ficticio)</th><td><strong>50.000.000-7</strong></td></tr>
+    <tr><th>Código de acceso demo</th><td><strong>123456</strong> (se envía por WhatsApp al celular de prueba antes de la Tarea 1)</td></tr>
+    <tr><th>WhatsApp del centro</th><td>+56 9 6661 0737</td></tr>
+    <tr><th>Teléfono fijo del centro</th><td>(44) 296 5226</td></tr>
+    <tr><th>Emergencias (solo simulado en T5)</th><td>SAMU 131 — <strong>nunca llamar de verdad</strong></td></tr>
+  </table>
+
+  <div class="danger"><span class="t">Regla de oro:</span> todo se hace en <strong>modo demo</strong>, con el paciente ficticio.
+  Jamás se abre la ficha real del participante ni se escribe nada en Medilink. El banner
+  <strong>“MODO DEMO · Datos ficticios”</strong> debe estar visible en pantalla durante toda la sesión.</div>
+
+  <h2>Checklist de materiales (marcar antes de cada día de sesiones)</h2>
+  <p>
+    <span class="cb"></span> 6 consentimientos impresos (2 copias c/u) &nbsp;·&nbsp;
+    <span class="cb"></span> Guion del moderador (páginas 3–4)<br>
+    <span class="cb"></span> Tarjetas de tarea T1–T5 + bonus (páginas 5–7) &nbsp;·&nbsp;
+    <span class="cb"></span> Tarjeta RUT de prueba en letra grande<br>
+    <span class="cb"></span> Tarjeta escala 1–7 (página 7) &nbsp;·&nbsp;
+    <span class="cb"></span> 5 planillas de registro (página 8, impresa ×5)<br>
+    <span class="cb"></span> Celular de prueba cargado + cargador &nbsp;·&nbsp;
+    <span class="cb"></span> Acceso al WhatsApp del centro<br>
+    <span class="cb"></span> Lápices (2) &nbsp;·&nbsp;
+    <span class="cb"></span> Cronómetro (celular del moderador, en silencio)<br>
+    <span class="cb"></span> Vaso de agua &nbsp;·&nbsp;
+    <span class="cb"></span> Compensación lista (5 unidades): <span class="blank w-lg"></span><br>
+    <span class="cb"></span> Toallas desinfectantes &nbsp;·&nbsp;
+    <span class="cb"></span> Señal / WiFi verificada hoy en el box
+  </p>
+
+  <h2>Reseteo entre participantes</h2>
+  <p class="small">
+    <span class="cb"></span> Cerrar sesión del portal y recargar <strong>?demo=1</strong> (verificar banner MODO DEMO) ·
+    <span class="cb"></span> Borrar el código anterior del chat ·
+    <span class="cb"></span> Limpiar pantalla ·
+    <span class="cb"></span> Revisar batería ·
+    <span class="cb"></span> Enviar de nuevo el WhatsApp con el código 123456 justo antes de la T1 siguiente.
+  </p>
+
+  <div class="note"><strong>Escalera de ayuda del moderador</strong> (usar siempre el peldaño más bajo; cada “Nivel 3” convierte la tarea en “éxito con ayuda”):
+  <strong>0</strong> silencio 10–15 s → <strong>1</strong> eco (“¿qué esperaría que pasara ahí?”) → <strong>2</strong> recordar la meta → <strong>3</strong> ayuda directa (solo tras &gt;60 s bloqueado o si la pide 2 veces). Si aun así no avanza: cerrar la tarea con amabilidad y marcar “no logró”.</div>
+</div>
+
+<!-- ═══════════════ PÁGINA 2 · CONSENTIMIENTO ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Consentimiento informado — copia 1 de 2</span></div>
+  <h1 style="font-size:16.5pt">Consentimiento informado<br><span style="font-size:12.5pt; font-weight:normal">Prueba de uso del nuevo portal del paciente · Carampangue, comuna de Arauco</span></h1>
+
+  <h3>¿Qué le estamos pidiendo?</h3>
+  <p>Le invitamos a probar una página nueva del Centro Médico Carampangue, pensada para que los pacientes puedan ver sus horas, pedir citas y anotar sus mediciones desde el celular. Queremos observar cómo la usa una persona real, para encontrar y arreglar lo que resulte confuso <strong>antes</strong> de ofrecerla a todos los pacientes.</p>
+
+  <h3>¿Qué va a pasar en la sesión?</h3>
+  <p>Durante 30 a 40 minutos, una persona del equipo le pedirá realizar algunas acciones simples en la página usando un celular (el suyo o uno del centro), mientras usted comenta en voz alta lo que va pensando. No es un examen ni una atención médica: <strong>aquí se evalúa la página, no a usted</strong>. No hay respuestas buenas ni malas, y equivocarse es justamente lo que más nos ayuda.</p>
+
+  <h3>Sus datos están protegidos</h3>
+  <p>La prueba se hace en un <strong>modo de demostración con datos inventados</strong> (un paciente ficticio). <strong>No usaremos su ficha clínica real ni sus datos de salud</strong>, y nada de lo que haga en la prueba quedará en su historial médico. Las notas de la sesión se guardan con un código (por ejemplo “P3”), sin su nombre. Conforme a la <strong>Ley N.º&nbsp;21.719</strong> de protección de datos personales, el responsable del tratamiento es el Centro Médico Carampangue; los datos se usan solo para mejorar el portal; y usted puede en cualquier momento pedir acceso, rectificación o eliminación de sus datos escribiendo al WhatsApp del centro (+56&nbsp;9&nbsp;6661&nbsp;0737) o llamando al (44)&nbsp;296&nbsp;5226.</p>
+
+  <h3>Grabación (opcional)</h3>
+  <p>Si usted lo autoriza, podemos grabar <strong>la pantalla del celular</strong> y/o <strong>el audio</strong> de la conversación, solo para revisar los detalles después. Nunca se graba su cara. Las grabaciones se eliminan a más tardar 30 días después del análisis. Puede participar perfectamente <strong>sin</strong> grabación.</p>
+  <p style="margin-left:14pt">
+    <span class="cb"></span> <strong>SÍ</strong> autorizo grabar la <strong>pantalla</strong> &nbsp;&nbsp;<span class="cb"></span> NO
+    &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+    <span class="cb"></span> <strong>SÍ</strong> autorizo grabar la <strong>voz</strong> &nbsp;&nbsp;<span class="cb"></span> NO
+  </p>
+
+  <h3>Participación voluntaria</h3>
+  <p>Su participación es completamente voluntaria. Puede hacer preguntas en cualquier momento, saltarse cualquier actividad o <strong>retirarse cuando quiera, sin dar explicaciones</strong>. Retirarse no afecta en nada su atención en el Centro Médico Carampangue, y el agradecimiento comprometido se le entrega igual.</p>
+
+  <h3>Agradecimiento</h3>
+  <p>Por su tiempo recibirá: <span class="blank w-lg"></span> (se entrega aunque no complete la sesión).</p>
+
+  <p style="margin-top:8pt">Declaro que leí (o me leyeron en voz alta <span class="cb"></span>) este documento, que pude hacer preguntas y que acepto participar.</p>
+
+  <div class="sig-grid">
+    <div>
+      <div class="sig-line">Nombre y RUT del participante</div>
+      <div class="sig-line">Firma del participante</div>
+    </div>
+    <div>
+      <div class="sig-line">Fecha (día / mes / 2026)</div>
+      <div class="sig-line">Nombre y firma de quien modera</div>
+    </div>
+  </div>
+  <p class="small" style="margin-top:8pt">Se firma en dos copias: una queda con usted y otra en el centro, guardada bajo llave.</p>
+</div>
+
+<!-- ═══════════════ PÁGINA 3 · GUION DEL MODERADOR (1/2) ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Guion del moderador · página 1 de 2 — leer palabra por palabra</span></div>
+  <h1 style="font-size:16pt">Guion del moderador</h1>
+  <p class="small">Trato de <strong>usted</strong>, chileno formal cercano. Lo que está en caja verde se lee <strong>tal cual</strong>. Entre paréntesis, acciones del moderador.</p>
+
+  <h2>1 · Bienvenida (3 min)</h2>
+  <div class="say"><span class="who">Decir</span>
+    “Don/Señora [nombre], bienvenido(a), y muchas gracias por venir a ayudarnos. Yo soy [nombre] y trabajo con el equipo del centro.
+    <br><br>
+    Le cuento en qué consiste esto. Estamos preparando una página nueva para que los pacientes puedan ver sus horas, pedir citas y anotar sus mediciones desde el celular. Antes de ofrecérsela a todos, necesitamos que la prueben pacientes de verdad, como usted.
+    <br><br>
+    Quiero dejarle algo muy claro desde ya: <strong>hoy no lo(a) estamos evaluando a usted; estamos evaluando la página.</strong> Si algo le resulta difícil o confuso, la culpa es de la página, no suya — y encontrar esas cosas es exactamente para lo que lo(a) invitamos. Aquí no se puede ‘echar a perder’ nada, y no hay respuestas buenas ni malas.
+    <br><br>
+    La sesión dura más o menos media hora. Le voy a pedir que haga algunas cosas en el celular, como pedir una hora de mentira, y yo voy a ir mirando y tomando notas. Todo se hace con un <strong>paciente inventado</strong>: no vamos a tocar su ficha ni sus datos reales para nada.
+    <br><br>
+    Antes de partir, le voy a leer este documento que explica todo esto por escrito, y si está de acuerdo, lo firmamos.”
+  </div>
+  <p class="small">(Leer o dar a leer el consentimiento. Marcar casillas de grabación. Firmar 2 copias, entregarle una. Si autorizó: iniciar grabación de pantalla y/o grabadora de voz AHORA.)</p>
+
+  <h2>2 · Calentamiento (3 min)</h2>
+  <div class="say"><span class="who">Preguntar</span>
+    “Antes de mirar la página, cuénteme un poquito:<br>
+    — ¿Usa harto el celular? ¿Para qué lo ocupa más?<br>
+    — ¿Y WhatsApp? ¿Con quién habla más por ahí?<br>
+    — Cuando necesita una hora médica con nosotros, ¿cómo la pide hoy?<br>
+    — ¿Alguna vez ha usado el celular para algo del banco, o para comprar algo?”
+  </div>
+  <p class="small">(Anotar en la planilla: alfabetización digital observada y cómo pide horas hoy.)</p>
+
+  <h2>3 · Pensar en voz alta (2 min)</h2>
+  <div class="say"><span class="who">Decir</span>
+    “Ahora sí, vamos a la página. Le voy a pedir un favor especial: mientras use el celular, <strong>vaya contándome en voz alta lo que va pensando</strong>, como si estuviera solo(a) en su casa hablándose a sí mismo(a). Por ejemplo: ‘aquí veo un botón verde… lo voy a apretar porque creo que es para pedir la hora… uy, no era lo que pensaba’. Todo eso a mí me sirve muchísimo.
+    <br><br>
+    Otra cosa importante: como la que está a prueba es la página, <strong>yo no le voy a poder ayudar</strong> como le ayudaría un hijo o un nieto. Si se traba, intente arreglárselas como lo haría en su casa. Si de verdad no se puede, me dice y lo vemos, pero primero inténtelo usted. ¿Le parece?
+    <br><br>
+    Y de nuevo: aquí no se puede echar nada a perder. Es todo de mentira. ¿Alguna pregunta antes de partir?”
+  </div>
+</div>
+
+<!-- ═══════════════ PÁGINA 4 · GUION DEL MODERADOR (2/2) ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Guion del moderador · página 2 de 2</span></div>
+
+  <h2>4 · Tareas (18–22 min)</h2>
+  <p class="small">(Leer cada tarjeta de tarea palabra por palabra, entregarla impresa, partir el cronómetro al terminar de leer. Después de <strong>cada</strong> tarea:)</p>
+  <div class="say"><span class="who">Después de cada tarea (SEQ)</span>
+    “En una escala de 1 a 7, donde 1 es ‘muy difícil’ y 7 es ‘muy fácil’, ¿qué tan fácil o difícil le resultó esto que acaba de hacer?”
+    <br><br>(Mostrar la tarjeta de la escala; anotar el número.)<br><br>
+    “¿Qué fue lo que más le costó de esta parte?”
+  </div>
+  <div class="note"><strong>Recordatorios de neutralidad:</strong> no mirar el botón correcto · no asentir hacia la pantalla · si pregunta “¿aprieto aquí?” responder “¿usted qué cree? haga lo que haría en su casa” · si se disculpa (“qué torpe soy”), responder: <em>“si esto cuesta, la culpa es de la página, no suya — y encontrarlo es exactamente lo que necesitamos”</em> · nunca comentar el tiempo.</div>
+
+  <h2>5 · Cuestionario final (5 min)</h2>
+  <div class="say"><span class="who">Decir</span>
+    “Ya terminamos con las tareas. Lo hizo muy bien y nos ayudó un montón. Ahora le voy a leer cuatro frases, y usted me dice qué tan de acuerdo está con cada una, de 1 a 5: 1 es ‘muy en desacuerdo’ y 5 es ‘muy de acuerdo’.”
+  </div>
+  <table>
+    <tr><th style="width:6%">N.º</th><th>Frase (leer en voz alta)</th><th style="width:22%">Respuesta 1–5</th></tr>
+    <tr><td>1</td><td>“Me gustaría usar esta página para mis horas y mis controles.”</td><td></td></tr>
+    <tr><td>2</td><td>“La página me pareció fácil de usar.”</td><td></td></tr>
+    <tr><td>3</td><td>“Creo que necesitaría que alguien me ayudara cada vez que quiera usarla.” <em>(inversa: anotar y luego invertir 6−x)</em></td><td></td></tr>
+    <tr><td>4</td><td>“Usándola me sentí seguro(a) y en confianza.”</td><td></td></tr>
+  </table>
+  <div class="say"><span class="who">Preguntas abiertas</span>
+    “Y para terminar, tres preguntas de conversación:<br>
+    1. ¿Qué fue lo que <strong>más le gustó</strong> de la página?<br>
+    2. ¿Qué fue lo <strong>más difícil o confuso</strong>?<br>
+    3. Si pudiera cambiar <strong>una sola cosa</strong> de la página, ¿cuál sería? ¿Y se la recomendaría a un vecino o vecina de su edad?”
+  </div>
+
+  <h2>6 · Cierre (2 min)</h2>
+  <div class="say"><span class="who">Decir</span>
+    “Eso era todo. De verdad, muchas gracias: lo que usted hizo hoy va a hacer que esta página sea más fácil para todos los pacientes del centro. Aquí está [compensación], como le habíamos dicho, y su copia del consentimiento.
+    <br><br>
+    Cuando la página esté lista de verdad, ¿le gustaría que le avisáramos por WhatsApp para que sea de los primeros en usarla?”
+  </div>
+  <p class="small">(Anotar sí/no. Detener grabaciones. Acompañar a la salida. Resetear el celular antes de la siguiente sesión.)</p>
+</div>
+
+<!-- ═══════════════ PÁGINA 5 · TAREAS 1 Y 2 ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Tarjetas de tarea · 1 de 3</span></div>
+
+  <div class="task-card">
+    <div class="t-head"><span class="t-num">T1</span><span class="t-title">Entrar al portal con el código</span></div>
+    <p class="small">Antes de leer: portal en pantalla de inicio de sesión (?demo=1) · WhatsApp con el código 123456 ya enviado · entregar tarjeta con el RUT.</p>
+    <p class="scenario">“Imagine que el centro le mandó un mensaje contándole de esta página nueva, y usted quiere entrar a verla. Para esta prueba usamos un paciente inventado: su RUT es este que está en la tarjeta <strong>[50.000.000-7]</strong>. Entre al portal con ese RUT. El código para entrar le va a llegar por WhatsApp, a este mismo celular.”</p>
+    <p class="meta"><b>Éxito:</b> llega al home con sesión iniciada · <b>Objetivo:</b> &lt;3 min solo · <b>Tope:</b> 5 min<br>
+    <b>Observar:</b> campo RUT (puntos/guion) · botón “Enviar código por WhatsApp” · cambio navegador↔WhatsApp (¿memoriza, copia, se pierde?) · escribir los 6 dígitos · “Reenviar código” · ¿lee el banner MODO DEMO?</p>
+  </div>
+
+  <div class="task-card">
+    <div class="t-head"><span class="t-num">T2</span><span class="t-title">¿Cuándo y con quién es su próxima hora?</span></div>
+    <p class="small">Continúa desde T1 con el home a la vista (si T1 falló, el moderador deja la sesión iniciada antes de leer).</p>
+    <p class="scenario">“Ya está adentro de la página. Ahora dígame, mirando el celular: ¿cuándo es su próxima hora en el centro, a qué hora, y con quién le toca?”</p>
+    <p class="meta"><b>Éxito:</b> dice fecha + hora + profesional tal como salen en pantalla · <b>Objetivo:</b> &lt;1 min solo · <b>Tope:</b> 2 min<br>
+    <b>Observar:</b> ¿lo ve al tiro en el bloque principal o navega? · ¿confunde especialidad con profesional? · ¿entiende “llegue 10 minutos antes”? · ¿acerca/aleja el teléfono para leer? (anotar: alimenta la tarea bonus).</p>
+  </div>
+</div>
+
+<!-- ═══════════════ PÁGINA 6 · TAREAS 3 Y 4 ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Tarjetas de tarea · 2 de 3</span></div>
+
+  <div class="task-card">
+    <div class="t-head"><span class="t-num">T3</span><span class="t-title">Pedir una hora de kinesiología para la próxima semana</span></div>
+    <p class="scenario">“Ahora imagine que hace unos días le empezó a molestar una rodilla, y su médico le dijo que necesita <strong>kinesiología</strong>. Usando la página, pida una hora de kinesiología para la <strong>próxima semana</strong>, en el día y horario que más le acomoden. Recuerde que es todo de mentira: la hora no queda tomada de verdad.”</p>
+    <p class="meta"><b>Éxito:</b> completa el asistente (especialidad → profesional → día/hora → revisar → confirmar) con una hora de kinesiología de la próxima semana · <b>Objetivo:</b> &lt;4 min solo · <b>Tope:</b> 6 min<br>
+    <b>Observar:</b> ¿encuentra “Pedir una hora”? · ¿entiende “kinesiología” en la lista? · <b>punto crítico:</b> selector de día/hora — ¿logra moverse a la próxima semana o toma la primera hora que ve? · ¿lee la pantalla de revisar o pasa de largo? · al final preguntar: <em>“¿quedó tomada su hora? ¿cómo lo sabe?”</em> · uso del botón atrás.</p>
+  </div>
+
+  <div class="task-card">
+    <div class="t-head"><span class="t-num">T4</span><span class="t-title">Anotar la presión de esta mañana</span></div>
+    <p class="scenario">“Ahora otra cosa. Imagine que esta mañana usted se tomó la presión en su casa y le salió <strong>135 la alta y 85 la baja</strong>. Deje anotada esa medición en la página, para que quede en su registro.”</p>
+    <p class="meta"><b>Éxito:</b> guarda presión 135/85 (visible en el historial) · <b>Objetivo:</b> &lt;3 min solo · <b>Tope:</b> 5 min<br>
+    <b>Observar:</b> ¿encuentra “Registrar medición”? · ¿elige bien el tipo “Presión”? · ¿sabe qué número va en qué campo (“la alta” / “la baja”)? · teclado numérico · reacción al mensaje de clasificación (¿lo tranquiliza, lo asusta, lo ignora? — anotar textual) · ¿verifica que quedó guardada?</p>
+  </div>
+</div>
+
+<!-- ═══════════════ PÁGINA 7 · TAREA 5 + BONUS + ESCALA ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Tarjetas de tarea · 3 de 3</span></div>
+
+  <div class="task-card safety">
+    <div class="t-head"><span class="t-num">T5</span><span class="t-title">Dolor fuerte en el pecho (seguridad — criterio duro)</span></div>
+    <div class="danger"><span class="t">Frase de seguridad — decirla SIEMPRE antes del escenario:</span><br>
+    “La que viene es distinta, y ojo: es <strong>pura imaginación</strong>, aquí nadie está enfermo y <strong>no vamos a llamar a nadie de verdad</strong>. Si llega a una pantalla de llamada, me la muestra pero <strong>no aprieta el botón verde de llamar</strong>. ¿Ya?”</div>
+    <p class="scenario">“Imagine que está en su casa, solo(a), y de repente siente un <strong>dolor fuerte y apretado en el pecho</strong>, que no se le pasa. Tiene el celular en la mano, con esta página abierta. Muéstreme qué haría.”</p>
+    <p class="meta"><b>Éxito:</b> llega a “llamar al SAMU 131” — vía Banderas rojas, vía enlace SAMU 131 del pie, o verbalizando claro “llamo al 131 / a la ambulancia” · <b>Objetivo:</b> &lt;1 min · <b>Tope:</b> 2 min<br>
+    <b>Observar:</b> primera reacción (¿portal, WhatsApp, botón Llamar, “llamo a mi hija”?) · <b>corazón de la tarea:</b> ¿distingue “Llamar” (que llama al CENTRO) de “SAMU 131”? — si toca “Llamar” creyendo que corresponde en emergencia, anotarlo como <b>hallazgo grave</b> con cita textual · ¿el banner rojo SAMU comunica urgencia al tiro?<br>
+    <b>Jamás dejar que se complete una llamada real al 131.</b> Al cerrar, descomprimir: <em>“Muy bien. Y en la vida real, ojo: dolor fuerte al pecho es 131 al tiro.”</em></p>
+  </div>
+
+  <div class="task-card">
+    <div class="t-head"><span class="t-num">B</span><span class="t-title">Bonus — Agrandar la letra (si queda tiempo y ánimo)</span></div>
+    <p class="scenario">“Última cosita, cortita. Imagine que la letra de la página le parece muy chica para leerla cómodo. Haga que la página se vea con la <strong>letra más grande</strong>.”</p>
+    <p class="meta"><b>Éxito:</b> usa el botón <b>A+</b> de la barra superior y la letra aumenta · <b>Tope:</b> 2 min, cerrar con amabilidad · No entra en las hipótesis.<br>
+    <b>Observar:</b> ¿descubre el A+ solo? · ¿entiende el ícono? · ¿usa en cambio el gesto de pellizcar/zoom? (si pellizca: hallazgo — el botón no se descubre).</p>
+  </div>
+
+  <h2 style="margin-top:14px">Tarjeta para mostrar al participante — escala de cada tarea</h2>
+  <p style="text-align:center; font-size:14pt; margin-bottom:2px"><strong>¿Qué tan fácil o difícil le resultó?</strong></p>
+  <div class="seq">
+    <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div>
+  </div>
+  <div class="seq-labels"><span>MUY DIFÍCIL</span><span>MUY FÁCIL</span></div>
+</div>
+
+<!-- ═══════════════ PÁGINA 8 · PLANILLA DE REGISTRO (imprimir ×5) ═══════════════ -->
+<div class="page">
+  <div class="page-head"><span class="brand">CENTRO MÉDICO CARAMPANGUE</span><span class="doc">Planilla de registro — imprimir 5 copias (1 por participante)</span></div>
+  <h1 style="font-size:15pt">Planilla de registro · Participante&nbsp;&nbsp;P <span class="blank w-sm"></span></h1>
+
+  <table style="font-size:10.5pt">
+    <tr>
+      <td style="width:34%"><strong>Fecha/hora:</strong> ____/____/2026 · ____:____</td>
+      <td style="width:33%"><strong>Moderador:</strong> ______________</td>
+      <td><strong>Edad:</strong> ______ · <strong>Género:</strong> ______</td>
+    </tr>
+    <tr>
+      <td><strong>Alfab. digital:</strong> <span class="cb"></span> Baja (solo WhatsApp) <span class="cb"></span> Media/alta</td>
+      <td><strong>Celular:</strong> <span class="cb"></span> Propio <span class="cb"></span> Del centro</td>
+      <td><strong>Grabación:</strong> pantalla <span class="cb"></span> · voz <span class="cb"></span> · <strong>Consent.</strong> <span class="cb"></span></td>
+    </tr>
+    <tr>
+      <td colspan="3"><strong>Hoy pide horas por:</strong> <span class="cb"></span> Presencial &nbsp;<span class="cb"></span> Teléfono &nbsp;<span class="cb"></span> WhatsApp/bot &nbsp;<span class="cb"></span> Otro: ______________</td>
+    </tr>
+  </table>
+
+  <table style="font-size:10.5pt">
+    <tr>
+      <th style="width:27%">Tarea</th><th style="width:31%">Resultado</th>
+      <th style="width:12%">Tiempo</th><th style="width:10%">Ayudas N3</th><th style="width:10%">Errores</th><th style="width:10%">SEQ 1–7</th>
+    </tr>
+    <tr><td><strong>T1</strong> Entrar con código</td><td><span class="cb"></span> Solo <span class="cb"></span> C/ayuda <span class="cb"></span> No logró</td><td>___:___</td><td></td><td></td><td></td></tr>
+    <tr><td><strong>T2</strong> Próxima cita</td><td><span class="cb"></span> Solo <span class="cb"></span> C/ayuda <span class="cb"></span> No logró</td><td>___:___</td><td></td><td></td><td></td></tr>
+    <tr><td><strong>T3</strong> Agendar kinesiología</td><td><span class="cb"></span> Solo <span class="cb"></span> C/ayuda <span class="cb"></span> No logró</td><td>___:___</td><td></td><td></td><td></td></tr>
+    <tr><td><strong>T4</strong> Presión 135/85</td><td><span class="cb"></span> Solo <span class="cb"></span> C/ayuda <span class="cb"></span> No logró</td><td>___:___</td><td></td><td></td><td></td></tr>
+    <tr><td><strong>T5</strong> Dolor pecho → 131</td><td><span class="cb"></span> Solo <span class="cb"></span> C/ayuda <span class="cb"></span> No logró</td><td>___:___</td><td></td><td></td><td></td></tr>
+    <tr><td><strong>Bonus</strong> Letra A+</td><td><span class="cb"></span> Solo <span class="cb"></span> C/ayuda <span class="cb"></span> No logró <span class="cb"></span> No se hizo</td><td>___:___</td><td></td><td></td><td>—</td></tr>
+  </table>
+
+  <p class="small" style="margin:4px 0"><strong>T5 — vía usada:</strong>
+    <span class="cb"></span> Banderas rojas → 131 &nbsp;
+    <span class="cb"></span> Pie SAMU 131 &nbsp;
+    <span class="cb"></span> Verbal “llamo al 131” &nbsp;
+    <span class="cb"></span> <strong>Tocó “Llamar” (centro) creyendo emergencia</strong> &nbsp;
+    <span class="cb"></span> Otro: __________
+  </p>
+
+  <h3>Observaciones por tarea (errores, citas textuales, confusiones)</h3>
+  <p class="small" style="margin-bottom:0"><strong>T1</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-bottom:0"><strong>T2</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-bottom:0"><strong>T3</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-bottom:0"><strong>T4</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-bottom:0"><strong>T5</strong></p><div class="writeline"></div>
+
+  <h3>Cuestionario final</h3>
+  <p class="small"><strong>SUS-corto (1–5):</strong> Ítem 1 ____ · Ítem 2 ____ · Ítem 3 ____ (invertir 6−x) · Ítem 4 ____ · <strong>Total /20: ____</strong></p>
+  <p class="small" style="margin-bottom:0"><strong>Lo que más le gustó:</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-bottom:0"><strong>Lo más difícil o confuso:</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-bottom:0"><strong>Cambiaría una cosa / ¿recomendaría?:</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-bottom:0"><strong>Mejor cita textual de la sesión:</strong></p><div class="writeline"></div>
+  <p class="small" style="margin-top:6px"><strong>¿Avisarle cuando esté lista?</strong> <span class="cb"></span> Sí &nbsp;<span class="cb"></span> No</p>
+</div>
+
+</body>
+</html>

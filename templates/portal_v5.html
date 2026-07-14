@@ -23,7 +23,7 @@ html{color-scheme:light only}
   --border:#e3ebf1; --border-soft:#eef3f7;
   --text:#0F3F68; --text-mute:#546776; --text-dim:#5d7284;
   --green:#25d366; --green-dark:#128c7e; --green-soft:#dcf8c6;
-  --red:#e53935; --red-soft:#ffebee; --amber:#b58105; --amber-soft:#fff4d6;
+  --red:#e53935; --red-text:#b71c1c; --red-soft:#ffebee; --amber:#8b6508; --amber-soft:#fff4d6; --green-text:#0e6e5c; --border-input:#7d97ac;
   --shadow-xs:0 1px 2px rgba(15,63,104,.04);
   --shadow-sm:0 1px 2px rgba(15,63,104,.05), 0 1px 3px rgba(15,63,104,.04);
   --shadow-md:0 2px 6px rgba(15,63,104,.05), 0 6px 18px rgba(15,63,104,.06);
@@ -36,6 +36,12 @@ html{color-scheme:light only}
   --sidebar-w:224px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* Foco visible SIEMPRE (WCAG 2.4.7): 3px azul 5.2:1, gana a los outline:none */
+input:focus-visible, select:focus-visible, textarea:focus-visible,
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible{
+  outline:3px solid var(--cmc-blue) !important; outline-offset:2px;
+}
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
 body{
   background:var(--bg); color:var(--text); font-family:var(--font);
   font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
@@ -100,7 +106,7 @@ a{color:inherit; text-decoration:none}
 }
 .login-brand .logo img{width:100%;height:100%;object-fit:contain}
 .login-brand h1{font-size:18px; font-weight:800; color:var(--cmc-navy); margin-top:14px; letter-spacing:-.2px}
-.login-brand .tag{font-size:13px; color:var(--cmc-aqua); font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-top:4px}
+.login-brand .tag{font-size:13px; color:#2b7f8c; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-top:4px}
 .login-brand .v2badge{
   display:inline-block; margin-top:8px; font-size:12px; padding:2px 8px;
   background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue));
@@ -110,7 +116,7 @@ a{color:inherit; text-decoration:none}
 .form-group{margin-bottom:14px}
 .form-group label{display:block; font-size:13.5px; font-weight:700; letter-spacing:.8px; color:var(--text-mute); margin-bottom:7px; text-transform:uppercase}
 .form-group input{
-  width:100%; padding:13px 15px; border:1.5px solid var(--border);
+  width:100%; padding:13px 15px; border:1.5px solid var(--border-input);
   border-radius:12px; font-size:17px; color:var(--text); background:var(--panel-2);
   transition:border-color .18s, box-shadow .18s, background-color .18s;
   font-weight:500; letter-spacing:.3px;
@@ -132,7 +138,7 @@ a{color:inherit; text-decoration:none}
 .btn-ghost:hover{background:#fff; color:var(--cmc-navy); border-color:var(--cmc-aqua-dark)}
 
 .message{margin-top:12px; padding:11px 14px; border-radius:10px; font-size:14px; font-weight:600; text-align:center; display:none}
-.message.error{background:var(--red-soft); color:var(--red)}
+.message.error{background:var(--red-soft); color:var(--red-text)}
 .message.info{background:var(--cmc-aqua-soft); color:var(--cmc-blue)}
 .message.show{display:block}
 
@@ -143,7 +149,7 @@ a{color:inherit; text-decoration:none}
 .otp-single{
   display:block; width:100%; height:60px; text-align:center;
   font-size:28px; font-weight:800; letter-spacing:10px; color:var(--cmc-navy);
-  border:1.5px solid var(--border); border-radius:12px;
+  border:1.5px solid var(--border-input); border-radius:12px;
   background:var(--panel-2); transition:all .18s var(--ease);
   margin-bottom:8px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
 }
@@ -190,7 +196,7 @@ a{color:inherit; text-decoration:none}
 }
 .tb-logo img{width:100%;height:100%;object-fit:contain}
 .tb-text{display:flex; flex-direction:column; line-height:1.1; gap:2px}
-.tb-text .top{font-size:12px; color:var(--cmc-aqua); letter-spacing:2.2px; text-transform:uppercase; font-weight:800}
+.tb-text .top{font-size:12px; color:#2b7f8c; letter-spacing:2.2px; text-transform:uppercase; font-weight:800}
 .tb-text .bot{font-size:16px; font-weight:800; color:var(--cmc-navy); letter-spacing:.9px; text-transform:uppercase; display:flex; align-items:center; gap:6px}
 .tb-text .v2{
   font-size:12px; padding:1px 6px; border-radius:4px;
@@ -279,7 +285,7 @@ a{color:inherit; text-decoration:none}
 .af-field{display:flex; flex-direction:column; gap:6px; margin-bottom:12px}
 .af-field label{font-size:13px; font-weight:800; letter-spacing:.6px; color:var(--text-mute); text-transform:uppercase}
 .af-field input, .af-field select{
-  padding:11px 13px; border:1px solid var(--border); border-radius:10px;
+  padding:11px 13px; border:1px solid var(--border-input); border-radius:10px;
   font-size:16px; background:#fff;
 }
 .af-field input:focus, .af-field select:focus{outline:none; border-color:var(--cmc-aqua); box-shadow:var(--ring)}
@@ -434,11 +440,11 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
   letter-spacing:.2px; transition:all .18s var(--ease);
 }
 .btn-sm svg{width:13px;height:13px}
-.btn-sm.primary{background:linear-gradient(135deg, var(--cmc-aqua), var(--cmc-blue)); color:#fff; box-shadow:0 2px 6px rgba(17,114,171,.25)}
+.btn-sm.primary{background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff; box-shadow:0 2px 6px rgba(17,114,171,.25)}
 .btn-sm.primary:hover{box-shadow:0 4px 12px rgba(17,114,171,.35)}
 .btn-sm.ghost{background:var(--panel-2); color:var(--cmc-blue); border:1px solid var(--border)}
 .btn-sm.ghost:hover{background:#fff; border-color:var(--cmc-aqua)}
-.btn-sm.wa{background:linear-gradient(135deg, var(--cmc-aqua-dark), var(--cmc-blue)); color:#fff; box-shadow:0 2px 8px rgba(17,114,171,.3)}
+.btn-sm.wa{background:linear-gradient(135deg, var(--cmc-blue), var(--cmc-navy)); color:#fff; box-shadow:0 2px 8px rgba(17,114,171,.3)}
 
 /* ═══ Inicio (hero + quick) ═══ */
 .hero-card{
@@ -560,7 +566,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
   font-size:13px; font-weight:800; letter-spacing:.4px; text-transform:uppercase;
   width:fit-content; margin-top:1px;
 }
-.appt-card .when.today{background:var(--green); color:#fff}
+.appt-card .when.today{background:var(--green); color:var(--cmc-navy)}
 .appt-card .when.tomorrow{background:#fff3cd; color:#8b6508}
 .appt-card .when.soon{background:var(--cmc-aqua-soft); color:var(--cmc-blue)}
 .appt-card .when.later{background:var(--panel); color:var(--text-mute)}
@@ -628,7 +634,8 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .vital-stat .v{font-size:17px; font-weight:800; color:var(--cmc-navy); font-feature-settings:"tnum"}
 .vital-stat .v .u{font-size:13px; font-weight:600; color:var(--text-dim); margin-left:3px}
 .vital-stat.alert{background:var(--red-soft); border-color:#fcd6d4}
-.vital-stat.alert .v{color:var(--red)}
+.vrow .vx, .vx{min-width:32px; min-height:32px}
+.vital-stat.alert .v{color:var(--red-text)}
 .vital-stat.warn{background:var(--amber-soft); border-color:#f0e1b4}
 .vital-stat.warn .v{color:#8b6508}
 .vital-stat.ok{background:#e6f7ef; border-color:#bfe8d3}
@@ -653,15 +660,15 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .vrow .vv{font-size:16px; font-weight:800; color:var(--cmc-navy); font-feature-settings:"tnum"}
 .vrow .vv .ctx{font-size:12px; color:var(--text-dim); font-weight:700; margin-left:6px; letter-spacing:.3px; text-transform:uppercase}
 .vrow .vb{font-size:12px; font-weight:800; padding:3px 9px; border-radius:12px; letter-spacing:.5px; text-transform:uppercase}
-.vb.ok{background:#dcf8c6; color:var(--green-dark)}
+.vb.ok{background:#dcf8c6; color:var(--green-text)}
 .vb.warn{background:var(--amber-soft); color:#8b6508}
-.vb.alert{background:var(--red-soft); color:var(--red)}
+.vb.alert{background:var(--red-soft); color:var(--red-text)}
 .vrow .vx{color:var(--text-dim); padding:4px 6px; font-size:16px; line-height:1}
 .vrow .vx:hover{color:var(--red)}
 
 /* ═══ Tips + Guías + Promos (Recursos) ═══ */
 /* ── Banderas rojas (educación: cuándo pedir ayuda) ── */
-.samu-banner{display:flex; align-items:center; gap:12px; background:linear-gradient(135deg,#e53935,#b71c1c); color:#fff; border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:12px; box-shadow:0 4px 14px rgba(183,28,28,.28)}
+.samu-banner{display:flex; align-items:center; gap:12px; background:linear-gradient(135deg,#c62828,#b71c1c); color:#fff; border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:12px; box-shadow:0 4px 14px rgba(183,28,28,.28)}
 .samu-ic{font-size:26px; line-height:1}
 .samu-tx{flex:1; display:flex; flex-direction:column; line-height:1.25}
 .samu-tx strong{font-size:16px; font-weight:800}
@@ -696,7 +703,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .tip.green .ic{background:#dcf8c6; color:var(--green-dark)}
 .tip.amber .ic{background:var(--amber-soft); color:#8b6508}
 .tip.navy .ic{background:var(--cmc-navy-soft); color:var(--cmc-navy)}
-.tip .cat{font-size:12px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--cmc-aqua-dark)}
+.tip .cat{font-size:12px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#2b7f8c}
 .tip .t{font-size:14px; font-weight:700; color:var(--cmc-navy); line-height:1.2; letter-spacing:-.1px}
 .tip .d{font-size:13.5px; color:var(--text-mute); line-height:1.55; margin-top:4px}
 
@@ -730,7 +737,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .promo .h{display:flex; align-items:center; gap:10px; margin-bottom:6px}
 .promo .ic{width:34px; height:34px; border-radius:10px; background:var(--cmc-aqua-soft); color:var(--cmc-blue); display:flex; align-items:center; justify-content:center; flex:0 0 34px}
 .promo .ic svg{width:17px;height:17px}
-.promo .cat{font-size:12px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:var(--cmc-aqua-dark)}
+.promo .cat{font-size:12px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:#2b7f8c}
 .promo .t{font-size:15px; font-weight:700; color:var(--cmc-navy); line-height:1.2; letter-spacing:-.1px}
 .promo .d{font-size:14px; color:var(--text-mute); line-height:1.55; margin-top:4px}
 .promo .price{display:inline-block; margin-top:8px; font-size:13.5px; font-weight:800; color:var(--cmc-blue); background:var(--cmc-aqua-soft); padding:3px 9px; border-radius:12px}
@@ -756,7 +763,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .perfil-field{display:flex; flex-direction:column; gap:6px}
 .perfil-field label{font-size:13px; font-weight:800; letter-spacing:.6px; color:var(--text-mute); text-transform:uppercase}
 .perfil-field input, .perfil-field select{
-  padding:11px 13px; border:1.5px solid var(--border); border-radius:10px;
+  padding:11px 13px; border:1.5px solid var(--border-input); border-radius:10px;
   background:var(--panel-2); font-size:16px; font-weight:600; color:var(--text);
   transition:border-color .15s, box-shadow .15s, background-color .15s;
 }
@@ -790,7 +797,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .field{display:flex; flex-direction:column; gap:5px; margin-bottom:10px}
 .field label{font-size:13px; font-weight:800; letter-spacing:.6px; color:var(--text-mute); text-transform:uppercase}
 .field input, .field select, .field textarea{
-  padding:11px 13px; border:1.5px solid var(--border); border-radius:10px;
+  padding:11px 13px; border:1.5px solid var(--border-input); border-radius:10px;
   background:var(--panel-2); font-size:16px; font-weight:600; color:var(--text);
 }
 .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--cmc-aqua); background:#fff; box-shadow:var(--ring)}
@@ -859,7 +866,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .xs-title{font-size:16px; font-weight:800; color:var(--cmc-navy); margin-top:2px; letter-spacing:-.2px}
 .xs-desc{font-size:13.5px; color:var(--text-mute); font-weight:600; margin-top:5px; line-height:1.55; min-height:32px}
 .xs-foot{display:flex; align-items:center; justify-content:space-between; margin-top:10px; gap:8px}
-.xs-price{font-size:13.5px; font-weight:800; color:var(--green-dark); background:rgba(18,140,126,.1); padding:4px 10px; border-radius:20px}
+.xs-price{font-size:13.5px; font-weight:800; color:var(--green-text); background:rgba(18,140,126,.1); padding:4px 10px; border-radius:20px}
 .xs-cta{font-size:13.5px; font-weight:800; color:var(--cmc-blue)}
 .xs-dots{display:flex; gap:5px; justify-content:center; margin-top:10px}
 .xs-dots span{width:6px; height:6px; border-radius:50%; background:var(--border); transition:.2s}
@@ -873,7 +880,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .ctrl-info{flex:1; min-width:0}
 .ctrl-esp{font-size:15px; font-weight:800; color:var(--cmc-navy)}
 .ctrl-last{font-size:13.5px; color:var(--text-mute); font-weight:600; margin-top:1px}
-.ctrl-next{display:inline-flex; align-items:center; gap:5px; font-size:13.5px; font-weight:800; color:var(--green-dark); background:rgba(18,140,126,.1); padding:3px 9px; border-radius:20px; margin-top:4px}
+.ctrl-next{display:inline-flex; align-items:center; gap:5px; font-size:13.5px; font-weight:800; color:var(--green-text); background:rgba(18,140,126,.1); padding:3px 9px; border-radius:20px; margin-top:4px}
 .ctrl-due{color:var(--amber); background:rgba(181,129,5,.12)}
 .ctrl-cta{flex:none; padding:9px 14px; border:0; border-radius:10px; background:var(--cmc-aqua); color:var(--cmc-navy); font-family:var(--font); font-size:13.5px; font-weight:800; cursor:pointer; transition:filter .15s}
 .ctrl-cta:hover{filter:brightness(1.06)}
@@ -906,7 +913,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .fam-name{font-size:14px; font-weight:800; color:var(--cmc-navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .fam-rel{font-size:13px; color:var(--text-mute); font-weight:700; margin-top:1px}
 .fam-rel::first-letter{text-transform:uppercase}
-.fam-next{font-size:13px; font-weight:800; color:var(--green-dark); margin-top:6px; white-space:nowrap}
+.fam-next{font-size:13px; font-weight:800; color:var(--green-text); margin-top:6px; white-space:nowrap}
 .fam-next.none{color:var(--text-dim)}
 .fam-esp{font-size:13px; color:var(--text-mute); font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .fam-cta{font-size:13px; font-weight:800; color:var(--cmc-blue); margin-top:1px}
@@ -935,6 +942,129 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
   .agpop-head{padding-top:calc(12px + env(safe-area-inset-top))}
   .agpop-frame{height:auto; flex:1}
 }
+/* ═══ Wizard de agendamiento nativo — una pregunta por pantalla ═══
+   Patrón GOV.UK/NHS App: sin selects, targets grandes, back siempre visible,
+   revisar antes de confirmar, confirmación verde con "qué pasa después". */
+.wiz{position:fixed; inset:0; z-index:300; background:var(--bg); display:none; flex-direction:column}
+.wiz.show{display:flex}
+.wiz-top{
+  display:flex; align-items:center; gap:8px; background:var(--panel);
+  border-bottom:1px solid var(--border); padding:10px 12px;
+  padding-top:calc(10px + env(safe-area-inset-top)); flex:none;
+}
+.wiz-back{
+  display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:8px 12px;
+  border-radius:10px; font-size:16px; font-weight:700; color:var(--cmc-blue); background:none; border:0;
+}
+.wiz-back:hover{background:var(--cmc-aqua-soft)}
+.wiz-step-lbl{flex:1; text-align:center; font-size:14px; font-weight:800; color:var(--text-mute); letter-spacing:.3px}
+.wiz-x{min-width:44px; min-height:44px; border-radius:10px; background:var(--panel-2); border:0; font-size:20px; color:var(--cmc-navy); cursor:pointer}
+.wiz-body{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:18px 16px calc(28px + env(safe-area-inset-bottom)); max-width:560px; width:100%; margin:0 auto}
+.wiz-q{font-size:22px; font-weight:800; color:var(--cmc-navy); line-height:1.3; margin-bottom:4px}
+.wiz-sub{font-size:15px; color:var(--text-mute); font-weight:600; margin-bottom:16px}
+.wiz-group{font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--cmc-blue); margin:18px 0 8px}
+.wiz-opt{
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  background:var(--panel); border:1.5px solid var(--border); border-radius:14px;
+  padding:15px 16px; margin-bottom:10px; min-height:60px; cursor:pointer;
+  font-family:var(--font); transition:border-color .15s, box-shadow .15s;
+}
+.wiz-opt:hover{border-color:var(--cmc-aqua); box-shadow:var(--shadow-sm)}
+.wiz-opt .wo-tx{flex:1; min-width:0}
+.wiz-opt .wo-t{display:block; font-size:17px; font-weight:800; color:var(--cmc-navy)}
+.wiz-opt .wo-s{display:block; font-size:14px; color:var(--text-mute); font-weight:600; margin-top:2px}
+.wiz-opt .wo-go{flex:none; color:var(--cmc-blue); font-size:18px; font-weight:800}
+.wiz-opt.sel{border-color:var(--cmc-aqua); background:var(--cmc-aqua-soft)}
+.wiz-days{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 10px; -webkit-overflow-scrolling:touch}
+.wiz-day{
+  flex:0 0 auto; min-width:74px; min-height:74px; border-radius:14px; border:1.5px solid var(--border);
+  background:var(--panel); display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; font-family:var(--font); cursor:pointer; padding:8px 10px;
+}
+.wiz-day .wd-dow{font-size:13px; font-weight:800; text-transform:uppercase; color:var(--text-mute)}
+.wiz-day .wd-n{font-size:21px; font-weight:800; color:var(--cmc-navy)}
+.wiz-day .wd-m{font-size:12.5px; font-weight:700; color:var(--text-mute)}
+.wiz-day.sel{border-color:var(--cmc-blue); background:var(--cmc-blue); }
+.wiz-day.sel .wd-dow,.wiz-day.sel .wd-n,.wiz-day.sel .wd-m{color:#fff}
+.wiz-hours{display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:9px; margin-top:6px}
+.wiz-hour{
+  min-height:56px; border-radius:12px; border:1.5px solid var(--border); background:var(--panel);
+  font-family:var(--font); font-size:18px; font-weight:800; color:var(--cmc-navy); cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:6px;
+}
+.wiz-hour .wh-p{font-size:11.5px; font-weight:700; color:var(--text-mute); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.wiz-hour:hover{border-color:var(--cmc-aqua)}
+.wiz-empty{background:var(--panel); border:1.5px dashed var(--border); border-radius:14px; padding:22px 16px; text-align:center; font-size:15.5px; color:var(--text-mute); font-weight:600; margin-top:8px}
+.wiz-review{background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:16px}
+.wiz-row{display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--border-soft)}
+.wiz-row:last-child{border-bottom:0}
+.wiz-row .wr-l{flex:0 0 96px; font-size:13.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--text-mute)}
+.wiz-row .wr-v{flex:1; font-size:16.5px; font-weight:700; color:var(--cmc-navy)}
+.wiz-row .wr-edit{flex:none; min-height:44px; display:inline-flex; align-items:center; padding:6px 10px; font-size:14.5px; font-weight:800; color:var(--cmc-blue); background:none; border:0; cursor:pointer; text-decoration:underline}
+.wiz-consent{display:flex; gap:12px; align-items:flex-start; background:var(--panel); border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:16px; cursor:pointer}
+.wiz-consent input{width:26px; height:26px; flex:none; margin-top:2px; accent-color:var(--cmc-blue)}
+.wiz-consent .wc-tx{font-size:14.5px; color:var(--text-mute); font-weight:600; line-height:1.5}
+.wiz-consent .wc-tx a{color:var(--cmc-blue); text-decoration:underline}
+.wiz-cta{width:100%; min-height:58px; font-size:18px}
+.wiz-err{background:var(--red-soft); border:1.5px solid var(--red); border-radius:14px; padding:14px 16px; font-size:15.5px; color:var(--red-text); font-weight:700; margin-bottom:14px; line-height:1.5}
+.wiz-ok{
+  background:linear-gradient(135deg,#0b8043,#0f766e); color:#fff; border-radius:18px;
+  padding:26px 20px; text-align:center; margin-bottom:18px;
+}
+.wiz-ok .wo-ic{font-size:44px; line-height:1}
+.wiz-ok h3{font-size:23px; margin:10px 0 4px}
+.wiz-ok .wo-main{font-size:18px; font-weight:800}
+.wiz-ok .wo-sub{font-size:15.5px; opacity:.94; margin-top:3px}
+.wiz-ok .wo-demo{display:inline-block; margin-top:12px; background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.5); border-radius:999px; padding:5px 14px; font-size:13.5px; font-weight:800}
+.wiz-next{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px}
+.wiz-next h4{font-size:15px; text-transform:uppercase; letter-spacing:.6px; color:var(--cmc-blue); margin-bottom:10px}
+.wiz-next li{list-style:none; padding:7px 0 7px 30px; position:relative; font-size:15.5px; color:var(--text); font-weight:600}
+.wiz-next li::before{content:"✓"; position:absolute; left:4px; color:var(--green-dark); font-weight:800}
+.wiz-acts{display:flex; flex-direction:column; gap:10px}
+.wiz-acts .btn{min-height:54px}
+.wiz-load{display:flex; flex-direction:column; align-items:center; gap:14px; padding:40px 0; color:var(--text-mute); font-weight:700; font-size:15.5px}
+
+.hero-samu{margin-top:12px; font-size:14px; font-weight:700; color:rgba(255,255,255,.92)}
+.hero-samu a{color:#ffd9d6; text-decoration:underline; font-weight:800; padding:6px 2px; display:inline-block}
+
+/* ═══ Check-in del día (hero) ═══ */
+.hero-checkin{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px;
+  background:rgba(255,255,255,.14); border:1.5px solid rgba(255,255,255,.4);
+  border-radius:14px; padding:13px 15px; font-size:15.5px; font-weight:700; color:#fff;
+}
+.hero-checkin.done{background:rgba(18,140,126,.35); border-color:rgba(255,255,255,.5); font-size:15px; line-height:1.5}
+.hero-checkin .hc-t{flex:1; min-width:150px}
+.hero-checkin .hc-btn{
+  flex:none; min-height:48px; padding:10px 18px; border-radius:12px; border:0;
+  background:#fff; color:var(--cmc-navy); font-family:var(--font); font-size:16px; font-weight:800; cursor:pointer;
+}
+
+/* ═══ Mis exámenes (semáforo) ═══ */
+.ex-demo-note{font-size:13.5px; font-weight:700; color:var(--amber); background:var(--amber-soft); border-radius:10px; padding:8px 12px; margin-bottom:12px}
+.ex-empty{font-size:15.5px; color:var(--text-mute); font-weight:600; line-height:1.6; background:var(--panel-2); border-radius:12px; padding:16px}
+.ex-card{border:1.5px solid var(--border); border-radius:14px; padding:15px 16px; margin-bottom:12px; background:var(--panel-2)}
+.ex-card.alto{border-color:rgba(229,57,53,.4)}
+.ex-card.atencion{border-color:rgba(181,129,5,.4)}
+.ex-head{display:flex; justify-content:space-between; gap:10px; align-items:baseline; flex-wrap:wrap}
+.ex-name{font-size:16px; font-weight:800; color:var(--cmc-navy)}
+.ex-fecha{font-size:13.5px; color:var(--text-dim); font-weight:600}
+.ex-val{font-size:26px; font-weight:800; color:var(--cmc-navy); margin:8px 0 4px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.ex-un{font-size:14px; color:var(--text-mute); font-weight:700}
+.ex-badge{font-size:13.5px; font-weight:800; padding:4px 12px; border-radius:999px}
+.ex-badge.normal{background:#e8f5e9; color:var(--green-text)}
+.ex-badge.atencion{background:var(--amber-soft); color:var(--amber)}
+.ex-badge.alto{background:var(--red-soft); color:var(--red-text)}
+.ex-bar{position:relative; height:14px; border-radius:8px; background:linear-gradient(90deg,#f3c1bd, #f6e3b4 30%, #f6e3b4 70%, #f3c1bd); margin:10px 0 6px; overflow:visible}
+.ex-zone{position:absolute; top:0; bottom:0; background:#9fdcb4; border-radius:8px}
+.ex-mark{position:absolute; top:-5px; width:4px; height:24px; border-radius:3px; background:var(--cmc-navy); transform:translateX(-50%); box-shadow:0 0 0 2px #fff}
+.ex-mark.alto{background:var(--red)}
+.ex-mark.atencion{background:var(--amber)}
+.ex-rango{font-size:13.5px; color:var(--text-mute); font-weight:600}
+.ex-concl{font-size:15.5px; color:var(--text); font-weight:600; margin-top:8px; line-height:1.5}
+.ex-hacer{font-size:15px; background:#e5f5f8; border-radius:10px; padding:10px 12px; margin-top:8px; color:var(--cmc-navy); font-weight:600; line-height:1.5}
+.ex-disclaimer{font-size:13px; color:var(--text-dim); font-weight:600; margin-top:6px}
+
 /* CTA y fallbacks del panel Agenda online */
 .ag-cta-big{width:100%; min-height:58px; font-size:18px}
 .ag-cta-alt{margin-top:12px; font-size:15px; color:var(--text-mute); font-weight:600; text-align:center; line-height:1.7}
@@ -1303,7 +1433,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .h-btn.tel:hover{background:rgba(255,255,255,.28); transform:translateY(-1px)}
 .h-btn.primary{background:var(--cmc-aqua); color:var(--cmc-navy); box-shadow:0 6px 18px rgba(79,190,206,.42)}
 .h-btn.primary:hover{background:#fff; transform:translateY(-1px)}
-.h-btn.wa{background:linear-gradient(135deg, var(--green), var(--green-dark)); color:#fff; box-shadow:0 6px 18px rgba(37,211,102,.4)}
+.h-btn.wa{background:linear-gradient(135deg, #128c7e, #075e54); color:#fff; box-shadow:0 6px 18px rgba(18,140,126,.4)}
 .h-btn.wa svg{fill:#fff}
 .h-btn.wa:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(37,211,102,.5)}
 .ag-inline-wrap{border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--bg)}
@@ -1342,6 +1472,9 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
       <button class="btn btn-primary" id="btn-send-code" onclick="requestCode()">
         Enviar código por WhatsApp
       </button>
+      <button class="btn btn-ghost" id="btn-send-link" onclick="requestLink()" style="margin-top:10px">
+        🔗 Prefiero un link para entrar sin código
+      </button>
       <div style="text-align:center; margin-top:14px; padding:10px; background:#fff4d6; border-radius:10px; font-size:13.5px; color:#8b6508; font-weight:600; line-height:1.5;">
         🧪 <strong>¿Probar sin clave real?</strong><br>
         RUT: <code style="background:#fff; padding:2px 6px; border-radius:4px; font-family:ui-monospace,monospace; font-size:13.5px">50.000.000-7</code> · Código: <code style="background:#fff; padding:2px 6px; border-radius:4px; font-family:ui-monospace,monospace; font-size:13.5px">123456</code>
@@ -1356,10 +1489,10 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
              aria-label="Código de 6 dígitos">
       <div class="otp-help">Copie el código que le llegó a WhatsApp y péguelo aquí</div>
       <button class="btn btn-primary" id="btn-verify" onclick="verifyCode()">Verificar</button>
-      <span class="resend-link" onclick="requestCode()">Reenviar código</span>
+      <button type="button" class="resend-link" onclick="requestCode()">Reenviar código</button>
     </div>
-    <div class="message error" id="error-msg"></div>
-    <div class="message info" id="info-msg"></div>
+    <div class="message error" id="error-msg" role="alert"></div>
+    <div class="message info" id="info-msg" role="status"></div>
   </div>
 </div>
 
@@ -1377,14 +1510,14 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
       </div>
     </div>
     <div class="tb-spacer"></div>
-    <div class="tb-patient" id="tb-patient" onclick="togglePatientMenu()" title="Cambiar paciente o agregar familiar">
+    <button type="button" class="tb-patient" id="tb-patient" onclick="togglePatientMenu()" title="Cambiar paciente o agregar familiar" aria-haspopup="menu">
       <div class="avatar" id="tb-avatar">—</div>
       <div class="who">
         <span class="name" id="tb-name">—</span>
         <span class="rut" id="tb-rut">—</span>
       </div>
-      <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
+      <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
     <div class="patient-menu" id="patient-menu"></div>
     <button class="tb-fz" id="tb-fz" onclick="cycleFontSize()" aria-label="Cambiar tamaño de letra" title="Tamaño de letra">A<span class="fz-plus">+</span></button>
     <button class="tb-logout" onclick="doLogout()" aria-label="Cerrar sesión">
@@ -1395,6 +1528,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 
   <div class="shell">
     <aside class="sidebar">
+      <nav aria-label="Secciones del portal" style="display:contents">
       <div class="nav-group">
         <div class="label">Menú</div>
         <button class="navbtn active" data-view="inicio" onclick="switchView('inicio')">
@@ -1418,9 +1552,11 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
           Recursos
         </button>
       </div>
+    </nav>
     </aside>
 
     <main class="main">
+      <h1 class="sr-only">Portal del Paciente — Centro Médico Carampangue</h1>
       <!-- View: Inicio -->
       <section class="view active" id="view-inicio">
         <div id="inicio-content"></div>
@@ -1430,7 +1566,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
       <section class="view" id="view-agenda">
         <div class="page-head-v2">
           <div>
-            <div class="title">Mi agenda</div>
+            <h2 class="title">Mi agenda</h2>
             <div class="subtitle">Próximas citas y atenciones anteriores</div>
           </div>
           <div class="page-actions">
@@ -1447,7 +1583,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
       <section class="view" id="view-salud">
         <div class="page-head-v2">
           <div>
-            <div class="title">Mi salud</div>
+            <h2 class="title">Mi salud</h2>
             <div class="subtitle">Diagnósticos y auto-monitoreo</div>
           </div>
           <div class="page-actions">
@@ -1468,7 +1604,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
       <section class="view" id="view-perfil">
         <div class="page-head-v2">
           <div>
-            <div class="title">Mis datos</div>
+            <h2 class="title">Mis datos</h2>
             <div class="subtitle">Actualice su información de contacto y emergencia</div>
           </div>
         </div>
@@ -1479,7 +1615,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
       <section class="view" id="view-recursos">
         <div class="page-head-v2">
           <div>
-            <div class="title">Recursos</div>
+            <h2 class="title">Recursos</h2>
             <div class="subtitle">Guías, consejos y servicios recomendados</div>
           </div>
         </div>
@@ -1507,11 +1643,11 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
   </button>
 
   <!-- Modal vital -->
-  <div class="modal-backdrop" id="vital-modal" onclick="if(event.target===this)closeVitalModal()">
+  <div class="modal-backdrop" id="vital-modal" role="dialog" aria-modal="true" aria-label="Registrar medición" onclick="if(event.target===this)closeVitalModal()">
     <div class="modal">
       <div class="modal-head">
         <h3>Nuevo registro</h3>
-        <button class="modal-close" onclick="closeVitalModal()">×</button>
+        <button class="modal-close" aria-label="Cerrar" onclick="closeVitalModal()">×</button>
       </div>
       <div class="tipo-grid" id="vital-tipo-sel">
         <button class="tipo-btn" data-tipo="presion" onclick="selectTipo('presion')">
@@ -1539,7 +1675,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
 <script>
@@ -1692,6 +1828,23 @@ async function requestCode() {
   btn.disabled = false;
 }
 
+async function requestLink() {
+  // Magic link: para quien le cuesta transcribir el código (WCAG 3.3.8).
+  const rut = document.getElementById('rut-input').value.trim();
+  if (!rut || rut.length < 9) { showError('Ingrese su RUT completo, con dígito verificador'); return; }
+  const btn = document.getElementById('btn-send-link');
+  btn.disabled = true; btn.textContent = 'Enviando link…';
+  hideMessages();
+  try {
+    const r = await pfetch('/portal/api/request-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rut }) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) { showError(data.detail || 'No pudimos enviar el link'); }
+    else if (data.demo) { showInfo(data.hint || 'En demo use el código 123456.'); }
+    else { showInfo('Listo. Le enviamos un link a su WhatsApp' + (data.rut_masked ? ' (' + data.rut_masked + ')' : '') + '. Tóquelo para entrar — vence en 30 minutos.'); }
+  } catch { showError('Sin conexión — revise su señal e intente de nuevo'); }
+  btn.disabled = false; btn.innerHTML = '🔗 Prefiero un link para entrar sin código';
+}
+
 async function verifyCode() {
   const code = otpInput.value.trim();
   if (code.length !== 6) { showError('Ingrese los 6 dígitos del código'); return; }
@@ -1719,14 +1872,12 @@ async function doLogout() {
 }
 
 async function agendar() {
-  try {
-    const s = await (await fetch('/agendar/api/status')).json();
-    if (s && s.enabled) { abrirAgendadorEmbed(); return; }
-  } catch (e) {}
-  if (patientData && patientData.whatsapp_url) window.open(patientData.whatsapp_url, '_blank');
+  // El wizard nativo maneja status/fallback internamente (wizLoadCat →
+  // wizFatal ofrece WhatsApp y teléfono si el agendador está apagado).
+  openWizard();
 }
 function abrirAgendadorEmbed() {
-  _abrirAgendadorPopup('');
+  openWizard();
 }
 function cerrarAgendar() {
   document.getElementById('agendar-overlay').classList.remove('show');
@@ -1948,7 +2099,7 @@ function renderInicio() {
   let bandaPwa = '';
   if (!window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone
       && localStorage.getItem('pwa_banner_off') !== '1') {
-    bandaPwa = `<div class="pwa-band" onclick="instalarApp()">📲 <span><b>Instale la app del centro</b> — un toque y queda en su pantalla de inicio</span><button class="pb-x" onclick="event.stopPropagation(); this.parentElement.style.display='none'; localStorage.setItem('pwa_banner_off','1')">×</button></div>`;
+    bandaPwa = `<div class="pwa-band" role="button" tabindex="0" onclick="instalarApp()">📲 <span><b>Instale la app del centro</b> — un toque y queda en su pantalla de inicio</span><button class="pb-x" aria-label="Cerrar aviso" onclick="event.stopPropagation(); this.parentElement.style.display='none'; localStorage.setItem('pwa_banner_off','1')">×</button></div>`;
   }
   const next = (d.citas_futuras || [])[0];
   let html = bandaPwa + `<div class="hero-card">
@@ -1974,6 +2125,21 @@ function renderInicio() {
       <button class="hero-chip" onclick="compartirCita(_nextCita)">↗️ Compartir</button>
     </div>
     <div class="hero-prep">Llegue 10 minutos antes · Traiga su carnet${/kine|masoter/i.test(next.especialidad||'') ? ' · Venga con ropa cómoda' : ''}${/nutri/i.test(next.especialidad||'') ? ' · Si tiene exámenes recientes, tráigalos' : ''}</div>`;
+    // Check-in del día: si la hora es HOY, un toque avisa a recepción que viene
+    if (daysUntil(next.fecha) === 0) {
+      const ciKey = `cmc_v5_ci_${next.fecha}_${next.id || ''}`;
+      let ciDone = false;
+      try { ciDone = localStorage.getItem(ciKey) === '1'; } catch (e) {}
+      const esDental = /odonto|ortodon|endodon|implant|estética/i.test(next.especialidad || '');
+      const pagoTxt = esDental ? 'Puede pagar con efectivo, transferencia o tarjeta'
+                               : 'Puede pagar con efectivo o transferencia';
+      html += ciDone
+        ? `<div class="hero-checkin done" id="hero-checkin">✅ Asistencia confirmada — lo esperamos a las ${escapeHTML(next.hora_inicio)} hrs. ${pagoTxt}.</div>`
+        : `<div class="hero-checkin" id="hero-checkin">
+            <span class="hc-t">Su hora es <b>hoy</b>. ¿Confirma que viene?</span>
+            <button class="hc-btn" onclick='portalCheckin(${JSON.stringify({ id: next.id || "", esp: next.especialidad || "", hora: next.hora_inicio || "", fecha: next.fecha, pago: pagoTxt })})'>✅ Sí, voy a mi hora</button>
+          </div>`;
+    }
   } else {
     const ult = (d.historial || [])[0];
     html += `<div class="next-appt empty">
@@ -1984,7 +2150,8 @@ function renderInicio() {
       <button class="h-btn primary full" onclick="scrollToAgenda()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Pedir una hora</button>
       <button class="h-btn wa" onclick="abrirWhatsApp()"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp</button>
       <a class="h-btn tel" href="tel:+56442965226"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg> Llamar</a>
-    </div>`;
+    </div>
+    <div class="hero-samu">🚑 ¿Es una emergencia? No use este portal: <a href="tel:131">llame al SAMU 131</a></div>`;
   html += `</div>`;
 
   // ── Mi familia: el titular ve las horas de todos sin cambiar de perfil ──
@@ -1999,7 +2166,7 @@ function renderInicio() {
       <div class="xs-track" id="xs-track">`;
     promoKeys.forEach((k, i) => {
       const p = PROMO_CATALOG[k];
-      html += `<div class="xs-card ${i % 2 ? 'alt' : ''}" onclick="scrollToAgenda()">
+      html += `<div class="xs-card ${i % 2 ? 'alt' : ''}" role="button" tabindex="0" onclick="scrollToAgenda()">
         <div class="xs-ic">${p.svg}</div>
         <div class="xs-label">${p.label}</div>
         <div class="xs-title">${p.title}</div>
@@ -2159,7 +2326,7 @@ function openGenograma() {
       <div><h3>Agenda familiar</h3><p class="gen-sub">${gens} generaciones · ${mem.length} integrantes — toque a alguien para ver, agendar o cambiar sus horas</p></div>
       <div style="display:flex;gap:7px;align-items:center">
         <button class="gen-share" onclick="compartirArbol()">↗ Compartir</button>
-        <button class="gen-x" onclick="genHeaderClose()">×</button>
+        <button class="gen-x" onclick="genHeaderClose()" aria-label="Cerrar">×</button>
       </div>
     </div>
     <div id="gen-svg">${buildGenSVG(mem)}</div>
@@ -2302,11 +2469,8 @@ function _genAgendarP(rut) {
   const m = (_famOverview.members || []).find(x => _normRut(x.rut) === _normRut(rut));
   if (!m) return;
   const first = (m.nombre || '').split(' ')[0];
-  const ok = _genOpenSide(rut, `<div class="gs-head"><span>📅 Hora para <b>${escapeHTML(first)}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
-    <iframe class="gs-frame" id="gen-ag-frame" title="Agendar hora" src="about:blank"></iframe>`);
-  if (!ok) return;
-  const demo = (patientData && patientData.demo) ? '&demo=1' : '';
-  document.getElementById('gen-ag-frame').src = '/agendar/portal?embed=1&rut=' + encodeURIComponent(rut) + demo;
+  closeGenograma();
+  openWizard({ rut: rut, nombre: first });
 }
 function _genCerrarAgenda() {
   const card = document.querySelector('#gen-backdrop .gen-card');
@@ -2336,7 +2500,7 @@ function _genResumen(rut) {
   if (!m) return;
   const first = (m.nombre || '').split(' ')[0];
   const sug = famSugerencias(m)[0];
-  _genOpenSide(rut, `<div class="gs-head"><span>👤 Resumen de <b>${escapeHTML(first)}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()">×</button></div>
+  _genOpenSide(rut, `<div class="gs-head"><span>👤 Resumen de <b>${escapeHTML(first)}</b></span><button class="gen-x sm" onclick="_genCerrarAgenda()" aria-label="Cerrar">×</button></div>
     <div class="gs-body">
       ${m.proxima
         ? `<div class="gr-box ok">📅 <b>Próxima hora:</b> ${escapeHTML(m.proxima.especialidad || '')} · ${_fmtFamFecha(m.proxima)}${m.proxima.profesional ? `<br><span>${escapeHTML(m.proxima.profesional)}</span>` : ''}</div>`
@@ -2533,64 +2697,143 @@ function initCrossCarousel() {
 
 function vitalCount() { return Object.values(allVitals).reduce((s,a)=>s+a.length, 0); }
 
+/* ═══ Check-in del día ═══ */
+async function portalCheckin(info) {
+  const box = document.getElementById('hero-checkin');
+  if (box) box.innerHTML = '<span class="hc-t">Confirmando…</span>';
+  try {
+    const r = await pfetch('/portal/api/checkin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_cita: info.id, especialidad: info.esp, hora: info.hora }),
+    }, { auth: true });
+    if (!r.ok) throw new Error('checkin');
+    try { localStorage.setItem(`cmc_v5_ci_${info.fecha}_${info.id}`, '1'); } catch (e) {}
+    if (box) {
+      box.classList.add('done');
+      box.innerHTML = `✅ Asistencia confirmada — lo esperamos a las ${escapeHTML(info.hora)} hrs. ${escapeHTML(info.pago)}.`;
+    }
+    toast('Recepción quedó avisada. ¡Buen viaje!');
+  } catch (e) {
+    if (box) box.innerHTML = `<span class="hc-t">No pudimos avisar (¿sin señal?).</span>
+      <button class="hc-btn" onclick='portalCheckin(${JSON.stringify(info)})'>Reintentar</button>`;
+  }
+}
+
+/* ═══ Exámenes con semáforo (barra de color + palabra + conclusión) ═══ */
+let _examCache = null;
+async function loadExamenes() {
+  const slot = document.getElementById('examenes-slot');
+  if (!slot) return;
+  try {
+    if (!_examCache) {
+      const r = await pfetch('/portal/api/examenes', {}, { auth: true });
+      if (!r.ok) throw new Error('examenes');
+      _examCache = await r.json();
+    }
+    const d = _examCache;
+    if (!d.disponible || !(d.examenes || []).length) {
+      slot.innerHTML = `<div class="panel">
+        <div class="panel-head"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Mis exámenes</h2></div>
+        <div class="ex-empty">Sus resultados de exámenes todavía no llegan a este portal.
+        Por ahora se entregan en el centro o por WhatsApp. Estamos trabajando para que pronto aparezcan aquí, explicados en palabras simples.</div>
+      </div>`;
+      return;
+    }
+    let h = `<div class="panel">
+      <div class="panel-head"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Mis exámenes</h2><span class="count">${d.examenes.length}</span></div>
+      ${d.demo ? '<div class="ex-demo-note">🧪 Ejemplos de muestra (demo) — así se verán sus resultados reales.</div>' : ''}`;
+    for (const ex of d.examenes) {
+      const span = ex.escala_max - ex.escala_min;
+      const pct = v => Math.max(2, Math.min(98, ((v - ex.escala_min) / span) * 100));
+      const okIni = pct(ex.rango_min), okFin = pct(ex.rango_max), mark = pct(ex.valor);
+      h += `<div class="ex-card ${ex.nivel}">
+        <div class="ex-head"><span class="ex-name">${escapeHTML(ex.nombre)}</span><span class="ex-fecha">${fmtHistDate(ex.fecha)}</span></div>
+        <div class="ex-val">${ex.valor} <span class="ex-un">${escapeHTML(ex.unidad)}</span>
+          <span class="ex-badge ${ex.nivel}">${escapeHTML(ex.etiqueta)}</span></div>
+        <div class="ex-bar" role="img" aria-label="Su valor es ${ex.valor} ${escapeHTML(ex.unidad)}; el rango normal es ${ex.rango_min} a ${ex.rango_max}">
+          <div class="ex-zone" style="left:${okIni}%; width:${okFin - okIni}%"></div>
+          <div class="ex-mark ${ex.nivel}" style="left:${mark}%"></div>
+        </div>
+        <div class="ex-rango">Rango normal: ${ex.rango_min} – ${ex.rango_max} ${escapeHTML(ex.unidad)}</div>
+        <div class="ex-concl">${escapeHTML(ex.conclusion)}</div>
+        <div class="ex-hacer"><b>¿Qué hacer?</b> ${escapeHTML(ex.que_hacer)}</div>
+      </div>`;
+    }
+    h += `<div class="ex-disclaimer">Esta explicación es educativa y no reemplaza a su médico. Ante dudas, consulte.</div></div>`;
+    slot.innerHTML = h;
+  } catch (e) {
+    slot.innerHTML = `<div class="panel"><div class="ag-fallback">
+      <p>No pudimos cargar sus exámenes.</p>
+      <button class="btn btn-ghost" onclick="_examCache=null; loadExamenes()">Reintentar</button>
+    </div></div>`;
+  }
+}
+
+/* ═══ Carta de representación imprimible (apoyo Ley 20.584) ═══ */
+function printCartaRepresentacion() {
+  const owner = (patientData && patientData.nombre) || '';
+  const rut = (patientData && patientData.rut) || '';
+  const links = (familyCache || []).map(l =>
+    `<tr><td>${escapeHTML(l.dependent_nombre || '')}</td><td>${escapeHTML(l.dependent_rut || '')}</td><td>${escapeHTML(l.relation || '')}</td><td class="firma"></td></tr>`
+  ).join('') || '<tr><td></td><td></td><td></td><td class="firma"></td></tr><tr><td></td><td></td><td></td><td class="firma"></td></tr>';
+  const w = window.open('', '_blank');
+  if (!w) { toast('Permita las ventanas emergentes para imprimir'); return; }
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Autorización de representación — CMC</title>
+  <style>body{font-family:Georgia,serif;font-size:13pt;line-height:1.7;max-width:700px;margin:40px auto;color:#111;padding:0 20px}
+  h1{font-size:16pt;text-align:center} .meta{text-align:right;margin:20px 0} table{width:100%;border-collapse:collapse;margin:16px 0}
+  td,th{border:1px solid #333;padding:10px;font-size:12pt;min-height:30px} th{background:#eee;text-align:left}
+  .firma{width:150px} .firmas{display:flex;justify-content:space-between;margin-top:70px;gap:40px}
+  .firmas div{flex:1;border-top:1px solid #333;padding-top:6px;text-align:center;font-size:11pt}
+  .nota{font-size:10.5pt;color:#444;margin-top:26px;border-top:1px dashed #999;padding-top:10px}
+  @media print{body{margin:15mm}}</style></head><body>
+  <h1>Autorización de representación para gestiones de salud<br>Centro Médico Carampangue</h1>
+  <p class="meta">Carampangue, ______ de ______________ de 20____</p>
+  <p>Yo, <b>${escapeHTML(owner)}</b>, RUT <b>${escapeHTML(rut)}</b>, autorizo a que las siguientes personas gestionen
+  a través mío —y yo en representación de ellas— la solicitud, cambio y anulación de horas de atención en el
+  Centro Médico Carampangue, y la recepción de información administrativa asociada, conforme al artículo 14 de la
+  Ley 20.584 sobre derechos y deberes de los pacientes y a la Ley 21.719 sobre protección de datos personales:</p>
+  <table><tr><th>Nombre</th><th>RUT</th><th>Parentesco / relación</th><th>Firma</th></tr>${links}</table>
+  <p>Esta autorización no incluye el acceso a la ficha clínica ni a resultados de exámenes de terceros, salvo
+  autorización expresa y por separado de cada titular. Puede revocarse en cualquier momento en recepción.</p>
+  <div class="firmas"><div>Firma del titular</div><div>Recepción CMC (timbre y fecha)</div></div>
+  <p class="nota">Documento de apoyo generado desde el Portal del Paciente. BORRADOR — revise y complete en recepción.
+  No constituye asesoría legal.</p>
+  <script>window.print();<\/script></body></html>`);
+  w.document.close();
+}
+
 function abrirWhatsApp() {
   const url = (patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737';
   window.open(url, '_blank');
 }
 async function mountInlineAgenda() {
+  // Wizard-first: el panel "Agenda online" es un CTA que abre el asistente
+  // paso a paso (sin iframe → sin scroll anidado, en ningún tamaño de pantalla).
   const panel = document.getElementById('ag-inline-panel');
-  const frame = document.getElementById('ag-inline-frame');
-  if (!panel || !frame) return;
-  const esMovil = window.matchMedia('(max-width:860px)').matches;
+  const box = document.getElementById('ag-inline-box');
+  if (!panel || !box) return;
   try {
     const st = await (await pfetch('/agendar/api/status')).json();
     if (st && st.enabled) {
-      if (esMovil) {
-        // En móvil NO se embebe el iframe (scroll dentro de scroll = trampa).
-        // Un botón grande abre el agendador a pantalla completa.
-        frame.style.display = 'none';
-        let cta = document.getElementById('ag-inline-cta');
-        if (!cta) {
-          cta = document.createElement('div'); cta.id = 'ag-inline-cta';
-          cta.innerHTML = `<button class="btn btn-primary ag-cta-big" onclick="agendar()">📅 Pedir una hora aquí</button>
-            <div class="ag-cta-alt">¿Prefiere hablar con una persona?
-              <a href="${(patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737'}" target="_blank" rel="noopener">WhatsApp</a> ·
-              <a href="tel:+56442965226">Llamar al (44) 296 5226</a></div>`;
-          frame.parentElement.appendChild(cta);
-        }
-      } else if (!frame.src || frame.src === 'about:blank' || frame.src.indexOf('/agendar') === -1) {
-        // Preferir el paciente ACTIVO (puede ser un familiar), no el titular.
-        const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
-        const demo = (patientData && patientData.demo) ? '&demo=1' : '';
-        frame.src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo;
-      }
       panel.style.display = '';
+      box.innerHTML = `<button class="btn btn-primary ag-cta-big" onclick="openWizard()">📅 Pedir una hora aquí</button>
+        <div class="ag-cta-alt">Elija especialidad, día y hora en 4 pasos simples.<br>
+        ¿Prefiere hablar con una persona?
+        <a href="${(patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737'}" target="_blank" rel="noopener">WhatsApp</a> ·
+        <a href="tel:+56442965226">Llamar al (44) 296 5226</a></div>`;
     } else {
-      // Agendador apagado: no esconder en silencio — ofrecer el camino humano.
       panel.style.display = '';
-      frame.style.display = 'none';
-      let off = document.getElementById('ag-inline-off');
-      if (!off) {
-        off = document.createElement('div'); off.id = 'ag-inline-off';
-        off.className = 'ag-fallback';
-        off.innerHTML = `<p>La agenda en línea no está disponible en este momento.</p>
-          <a class="btn btn-primary" href="${(patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737'}" target="_blank" rel="noopener">Pedir hora por WhatsApp</a>
-          <a class="ag-fallback-tel" href="tel:+56442965226">📞 O llame al (44) 296 5226</a>`;
-        frame.parentElement.appendChild(off);
-      }
+      box.innerHTML = `<div class="ag-fallback">
+        <p>La agenda en línea no está disponible en este momento.</p>
+        <a class="btn btn-primary" href="${(patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737'}" target="_blank" rel="noopener">Pedir hora por WhatsApp</a>
+        <a class="ag-fallback-tel" href="tel:+56442965226">📞 O llame al (44) 296 5226</a></div>`;
     }
   } catch (e) {
     panel.style.display = '';
-    frame.style.display = 'none';
-    let err = document.getElementById('ag-inline-err');
-    if (!err) {
-      err = document.createElement('div'); err.id = 'ag-inline-err';
-      err.className = 'ag-fallback';
-      err.innerHTML = `<p>No pudimos cargar la agenda (¿sin señal?).</p>
-        <button class="btn btn-ghost" onclick="this.parentElement.remove(); mountInlineAgenda()">Reintentar</button>
-        <a class="ag-fallback-tel" href="tel:+56442965226">📞 O llame al (44) 296 5226</a>`;
-      frame.parentElement.appendChild(err);
-    }
+    box.innerHTML = `<div class="ag-fallback">
+      <p>No pudimos cargar la agenda (¿sin señal?).</p>
+      <button class="btn btn-ghost" onclick="mountInlineAgenda()">Reintentar</button>
+      <a class="ag-fallback-tel" href="tel:+56442965226">📞 O llame al (44) 296 5226</a></div>`;
   }
   _onSpyScroll();  // el panel aparece async: recalcular CTA flotante recién aquí
 }
@@ -2598,10 +2841,10 @@ function _abrirAgendadorPopup(extra) {
   // Pop-up tarjeta (como el de la Agenda familiar): la página queda detrás, difuminada
   let bd = document.getElementById('agpop');
   if (!bd) {
-    bd = document.createElement('div'); bd.id = 'agpop'; bd.className = 'agpop';
+    bd = document.createElement('div'); bd.id = 'agpop'; bd.className = 'agpop'; bd.setAttribute('role','dialog'); bd.setAttribute('aria-modal','true'); bd.setAttribute('aria-label','Agendar una hora');
     bd.onclick = e => { if (e.target === bd) cerrarAgendadorPopup(); };
     bd.innerHTML = `<div class="agpop-card">
-      <div class="agpop-head"><span id="agpop-title">📅 Agendar una hora</span><button class="gen-x" onclick="cerrarAgendadorPopup()">×</button></div>
+      <div class="agpop-head"><span id="agpop-title">📅 Agendar una hora</span><button class="gen-x" onclick="cerrarAgendadorPopup()" aria-label="Cerrar">×</button></div>
       <iframe id="agpop-frame" class="agpop-frame" title="Agendar hora" src="about:blank"></iframe>
     </div>`;
     document.body.appendChild(bd);
@@ -2617,7 +2860,7 @@ function cerrarAgendadorPopup() {
   const bd = document.getElementById('agpop');
   if (bd) { bd.classList.remove('show'); const f = document.getElementById('agpop-frame'); if (f) f.src = 'about:blank'; }
 }
-function scrollToAgenda() { _abrirAgendadorPopup(''); }
+function scrollToAgenda() { openWizard(); }
 
 /* ═══ Agenda ═══ */
 function renderAgenda() {
@@ -2649,7 +2892,7 @@ function renderAgenda() {
   // Agenda online embebida — fusionada con "Próximas citas": ver y reservar en un solo bloque
   html += `<div class="panel" id="ag-inline-panel" style="display:none">
     <div class="panel-head"><span class="dot"></span><h2>Agenda online</h2><span class="count">en vivo</span></div>
-    <div class="ag-inline-wrap"><iframe id="ag-inline-frame" class="ag-inline" title="Agendar una hora" src="about:blank" allow="clipboard-write" loading="lazy"></iframe></div>
+    <div id="ag-inline-box"></div>
   </div>`;
 
   html += `<div class="panel">
@@ -2690,6 +2933,9 @@ function renderSalud() {
     </div>
   </div>`;
 
+  // Mis exámenes (semáforo + explicación simple) — carga async en su slot
+  html += `<div id="examenes-slot"></div>`;
+
   // Vitals panel
   html += `<div class="panel">
     <div class="panel-head"><span class="dot"></span><h2>Mis mediciones</h2><span class="count">${vitalCount()}</span></div>
@@ -2702,6 +2948,7 @@ function renderSalud() {
   </div>`;
   el.innerHTML = html;
   renderVitalView();
+  loadExamenes();
 }
 
 function vitalTabLabel(t) {
@@ -2794,7 +3041,7 @@ function renderVitalRow(tipo, v) {
     <span class="vd">${fmtVitalDate(v.ts)}</span>
     <span class="vv">${valStr}${ctxStr?`<span class="ctx">${ctxStr}</span>`:''}</span>
     ${badge ? `<span class="vb ${badge.cls}">${badge.lbl}</span>` : '<span></span>'}
-    <button class="vx" onclick="deleteVital('${tipo}', ${v.id})" title="Eliminar">×</button>
+    <button class="vx" onclick="deleteVital('${tipo}', ${v.id})" title="Eliminar" aria-label="Eliminar registro">×</button>
   </div>`;
 }
 
@@ -2854,25 +3101,25 @@ function selectTipo(t) {
   let html = '';
   if (t === 'presion') {
     html = `<div class="field-row">
-      <div class="field"><label>La alta (sistólica)</label><input type="number" id="f-valor" placeholder="120" min="50" max="260"></div>
-      <div class="field"><label>La baja (diastólica)</label><input type="number" id="f-valor2" placeholder="80" min="30" max="180"></div>
+      <div class="field"><label for="f-valor">La alta (sistólica)</label><input type="number" id="f-valor" placeholder="120" min="50" max="260"></div>
+      <div class="field"><label for="f-valor2">La baja (diastólica)</label><input type="number" id="f-valor2" placeholder="80" min="30" max="180"></div>
     </div>
-    <div class="field"><label>Contexto</label><select id="f-ctx">
+    <div class="field"><label for="f-ctx">Contexto</label><select id="f-ctx">
       <option value="">—</option><option>Reposo</option><option>Mañana</option><option>Tarde</option><option>Noche</option><option>Después ejercicio</option>
     </select></div>`;
   } else if (t === 'glicemia') {
-    html = `<div class="field"><label>mg/dL</label><input type="number" id="f-valor" placeholder="100" min="20" max="600" step="1"></div>
-    <div class="field"><label>Contexto</label><select id="f-ctx">
+    html = `<div class="field"><label for="f-valor">mg/dL</label><input type="number" id="f-valor" placeholder="100" min="20" max="600" step="1"></div>
+    <div class="field"><label for="f-ctx">Contexto</label><select id="f-ctx">
       <option value="">—</option><option>Ayunas</option><option>Antes comida</option><option>2h post-comida</option><option>Antes dormir</option><option>Síntomas</option>
     </select></div>`;
   } else if (t === 'peso') {
-    html = `<div class="field"><label>Peso (kg)</label><input type="number" id="f-valor" placeholder="70.5" min="20" max="300" step="0.1"></div>`;
+    html = `<div class="field"><label for="f-valor">Peso (kg)</label><input type="number" id="f-valor" placeholder="70.5" min="20" max="300" step="0.1"></div>`;
   } else if (t === 'temperatura') {
-    html = `<div class="field"><label>°C</label><input type="number" id="f-valor" placeholder="36.5" min="30" max="43" step="0.1"></div>
-    <div class="field"><label>Sitio</label><select id="f-ctx"><option value="">—</option><option>Axilar</option><option>Oral</option><option>Timpánico</option><option>Frente</option></select></div>`;
+    html = `<div class="field"><label for="f-valor">°C</label><input type="number" id="f-valor" placeholder="36.5" min="30" max="43" step="0.1"></div>
+    <div class="field"><label for="f-ctx">Sitio</label><select id="f-ctx"><option value="">—</option><option>Axilar</option><option>Oral</option><option>Timpánico</option><option>Frente</option></select></div>`;
   }
-  html += `<div class="field"><label>Fecha y hora</label><input type="datetime-local" id="f-ts" value="${defaultDt}"></div>
-  <div class="field"><label>Nota (opcional)</label><input type="text" id="f-nota" placeholder="Ej. en ayunas, dolor de cabeza..."></div>`;
+  html += `<div class="field"><label for="f-ts">Fecha y hora</label><input type="datetime-local" id="f-ts" value="${defaultDt}"></div>
+  <div class="field"><label for="f-nota">Nota (opcional)</label><input type="text" id="f-nota" placeholder="Ej. en ayunas, dolor de cabeza..."></div>`;
   el.innerHTML = html;
 }
 
@@ -3143,10 +3390,10 @@ function renderRecursos() {
   const ordered = [...relevantes, ...generales];
 
   html += `<div class="panel acc closed">
-    <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot"></span><h2>Guías rápidas de autocuidado</h2><span class="count">${ordered.length}</span><span class="acc-caret">▾</span></div>
+    <div class="panel-head" role="button" tabindex="0" onclick="this.parentElement.classList.toggle('closed'); this.setAttribute('aria-expanded', String(!this.parentElement.classList.contains('closed')))" aria-expanded="false"><span class="dot"></span><h2>Guías rápidas de autocuidado</h2><span class="count">${ordered.length}</span><span class="acc-caret">▾</span></div>
     <div class="acc-body"><div class="grid-2">`;
   for (const g of ordered) {
-    html += `<div class="guide" onclick="this.classList.toggle('open')">
+    html += `<div class="guide" role="button" tabindex="0" onclick="this.classList.toggle('open')">
       <div class="h"><span class="ic">${g.icon}</span>
         <div style="flex:1;min-width:0"><div class="sub">${g.cat} · ${g.sub}</div><div class="t">${g.title}</div></div>
       </div>
@@ -3158,7 +3405,7 @@ function renderRecursos() {
   // Tips
   const tips = pickTips(d);
   html += `<div class="panel acc closed">
-    <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Consejos para usted</h2><span class="count">${tips.length}</span><span class="acc-caret">▾</span></div>
+    <div class="panel-head" role="button" tabindex="0" onclick="this.parentElement.classList.toggle('closed'); this.setAttribute('aria-expanded', String(!this.parentElement.classList.contains('closed')))" aria-expanded="false"><span class="dot" style="background:var(--green-dark); box-shadow:0 0 0 4px rgba(18,140,126,.2)"></span><h2>Consejos para usted</h2><span class="count">${tips.length}</span><span class="acc-caret">▾</span></div>
     <div class="acc-body"><div class="grid-2">`;
   for (const k of tips) {
     const t = TIPS_CATALOG[k]; if (!t) continue;
@@ -3172,11 +3419,11 @@ function renderRecursos() {
   // Promos
   const promos = pickPromos(d);
   html += `<div class="panel acc closed">
-    <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Servicios recomendados</h2><span class="acc-caret">▾</span></div>
+    <div class="panel-head" role="button" tabindex="0" onclick="this.parentElement.classList.toggle('closed'); this.setAttribute('aria-expanded', String(!this.parentElement.classList.contains('closed')))" aria-expanded="false"><span class="dot" style="background:var(--cmc-blue); box-shadow:0 0 0 4px rgba(17,114,171,.2)"></span><h2>Servicios recomendados</h2><span class="acc-caret">▾</span></div>
     <div class="acc-body"><div class="grid-2">`;
   for (const k of promos) {
     const p = PROMO_CATALOG[k]; if (!p) continue;
-    html += `<div class="promo" onclick="agendar()">
+    html += `<div class="promo" role="button" tabindex="0" onclick="agendar()">
       <div class="h"><span class="ic">${p.svg}</span><div style="flex:1;min-width:0"><div class="cat">${p.label}</div><div class="t">${p.title}</div></div></div>
       <div class="d">${p.desc}</div>
       ${p.price ? `<span class="price">${p.price}</span>` : ''}
@@ -3217,7 +3464,7 @@ async function loadEquipo() {
     }
     if (!total) return;
     slot.innerHTML = `<div class="panel acc closed">
-      <div class="panel-head" onclick="this.parentElement.classList.toggle('closed')"><span class="dot" style="background:var(--cmc-aqua); box-shadow:0 0 0 4px rgba(79,190,206,.25)"></span><h2>Nuestro equipo</h2><span class="count">${total}</span><span class="acc-caret">▾</span></div>
+      <div class="panel-head" role="button" tabindex="0" onclick="this.parentElement.classList.toggle('closed'); this.setAttribute('aria-expanded', String(!this.parentElement.classList.contains('closed')))" aria-expanded="false"><span class="dot" style="background:var(--cmc-aqua); box-shadow:0 0 0 4px rgba(79,190,206,.25)"></span><h2>Nuestro equipo</h2><span class="count">${total}</span><span class="acc-caret">▾</span></div>
       <div class="acc-body">${h}</div>
     </div>`;
   } catch (e) { _equipoRetryUI(slot); }
@@ -3230,19 +3477,8 @@ function _equipoRetryUI(slot) {
   </div></div>`;
 }
 function agendarEsp(esp) {
-  const frame = document.getElementById('ag-inline-frame');
-  const panel = document.getElementById('ag-inline-panel');
-  // Solo usar el iframe embebido si está realmente VISIBLE (en móvil se
-  // oculta y se reemplaza por CTA → ahí corresponde el popup fullscreen
-  // con la especialidad precargada).
-  const frameVisible = frame && panel && panel.style.display !== 'none'
-    && frame.style.display !== 'none' && frame.offsetParent !== null;
-  if (frameVisible) {
-    const rut = encodeURIComponent((patientData && patientData.rut) || currentRut || '');
-    const demo = (patientData && patientData.demo) ? '&demo=1' : '';
-    frame.src = '/agendar/portal?embed=1' + (rut ? '&rut=' + rut : '') + demo + '&esp=' + encodeURIComponent(esp);
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } else { _abrirAgendadorPopup('&esp=' + encodeURIComponent(esp)); }
+  // Wizard nativo con la especialidad precargada (salta directo a profesional/hora)
+  openWizard({ espNombre: esp });
 }
 
 /* ═══ Perfil (Mis datos) ═══ */
@@ -3264,20 +3500,20 @@ async function renderPerfil() {
       <div class="group-title">Datos básicos</div>
       <div class="perfil-grid">
         <div class="perfil-field">
-          <label>Nombre completo</label>
+          <label for="pf-nombre">Nombre completo</label>
           <input type="text" id="pf-nombre" value="${(d.nombre||'').replace(/"/g,'&quot;')}" readonly>
           <span class="hint">Editable solo en recepción del CMC</span>
         </div>
         <div class="perfil-field">
-          <label>RUT</label>
-          <input type="text" value="${d.rut||''}" readonly>
+          <label for="pf-rut">RUT</label>
+          <input id="pf-rut" type="text" value="${d.rut||''}" readonly>
         </div>
         <div class="perfil-field">
-          <label>Fecha de nacimiento</label>
-          <input type="date" id="pf-fecha" value="${val('fecha_nacimiento') || (d.fecha_nacimiento||'')}">
+          <label for="pf-fecha">Fecha de nacimiento</label>
+          <input type="date" id="pf-fecha" autocomplete="bday" value="${val('fecha_nacimiento') || (d.fecha_nacimiento||'')}">
         </div>
         <div class="perfil-field">
-          <label>Sexo</label>
+          <label for="pf-sexo">Sexo</label>
           <select id="pf-sexo">
             <option value="">—</option>
             <option value="F" ${(p.sexo||d.sexo)==='F'?'selected':''}>Femenino</option>
@@ -3292,21 +3528,21 @@ async function renderPerfil() {
       <div class="group-title">Contacto</div>
       <div class="perfil-grid">
         <div class="perfil-field">
-          <label>Teléfono / WhatsApp</label>
-          <input type="text" value="${escapeHTML(fmtPhone(p.phone || ''))}" readonly>
+          <label for="pf-phone">Teléfono / WhatsApp</label>
+          <input id="pf-phone" type="text" value="${escapeHTML(fmtPhone(p.phone || ''))}" readonly>
           <span class="hint">Es el número con el que inicia sesión · Se cambia en recepción</span>
         </div>
         <div class="perfil-field">
-          <label>Email</label>
-          <input type="email" id="pf-email" value="${val('email')}" placeholder="tu@correo.cl">
+          <label for="pf-email">Email</label>
+          <input type="email" id="pf-email" autocomplete="email" value="${val('email')}" placeholder="tu@correo.cl">
         </div>
         <div class="perfil-field">
-          <label>Comuna</label>
-          <input type="text" id="pf-comuna" value="${val('comuna')}" placeholder="Ej. Arauco">
+          <label for="pf-comuna">Comuna</label>
+          <input type="text" id="pf-comuna" autocomplete="address-level2" value="${val('comuna')}" placeholder="Ej. Arauco">
         </div>
         <div class="perfil-field wide">
-          <label>Dirección</label>
-          <input type="text" id="pf-direccion" value="${val('direccion')}" placeholder="Calle, número, sector">
+          <label for="pf-direccion">Dirección</label>
+          <input type="text" id="pf-direccion" autocomplete="street-address" value="${val('direccion')}" placeholder="Calle, número, sector">
         </div>
       </div>
     </div>
@@ -3315,7 +3551,7 @@ async function renderPerfil() {
       <div class="group-title">Previsión de salud</div>
       <div class="perfil-grid">
         <div class="perfil-field wide">
-          <label>Previsión</label>
+          <label for="pf-prevision">Previsión</label>
           <select id="pf-prevision">
             <option value="">—</option>
             <option ${p.prevision==='Fonasa A'?'selected':''}>Fonasa A</option>
@@ -3341,11 +3577,11 @@ async function renderPerfil() {
       <div class="group-title">Contacto de emergencia</div>
       <div class="perfil-grid">
         <div class="perfil-field">
-          <label>Nombre</label>
+          <label for="pf-emerg-nombre">Nombre</label>
           <input type="text" id="pf-emerg-nombre" value="${val('contacto_emerg_nombre')}" placeholder="Familiar, pareja, etc.">
         </div>
         <div class="perfil-field">
-          <label>Teléfono</label>
+          <label for="pf-emerg-tel">Teléfono</label>
           <input type="text" id="pf-emerg-tel" value="${val('contacto_emerg_telefono')}" placeholder="+56 9 ...">
         </div>
       </div>
@@ -3361,8 +3597,9 @@ async function renderPerfil() {
         Personas cuyas citas usted puede gestionar desde su portal.
       </div>
       <div id="family-list-container"></div>
-      <div class="perfil-actions">
+      <div class="perfil-actions" style="flex-wrap:wrap">
         <button class="btn btn-primary" onclick="openAddFamilyModal()">+ Agregar familiar</button>
+        <button class="btn btn-ghost" onclick="printCartaRepresentacion()">🖨 Autorización de representación</button>
       </div>
     </div>`}
   `;
@@ -3413,10 +3650,43 @@ async function savePerfil() {
   } catch { toast('Error de conexión'); }
 }
 
+/* ═══ Accesibilidad: ESC cierra el overlay superior; foco al abrir/cerrar ═══ */
+let _prevFocus = null;
+function _focusInto(sel) {
+  _prevFocus = document.activeElement;
+  const el = document.querySelector(sel);
+  if (el) { el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: false }); }
+}
+function _restoreFocus() {
+  if (_prevFocus && _prevFocus.focus) { try { _prevFocus.focus(); } catch (e) {} }
+  _prevFocus = null;
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const wiz = document.getElementById('wiz');
+    if (wiz && wiz.classList.contains('show')) { wizClose(); return; }
+    const agp = document.getElementById('agpop');
+    if (agp && agp.classList.contains('show')) { cerrarAgendadorPopup(); return; }
+    const gb = document.getElementById('gen-backdrop');
+    if (gb && gb.classList.contains('show')) { genHeaderClose(); return; }
+    const vm = document.getElementById('vital-modal');
+    if (vm && vm.classList.contains('show')) { closeVitalModal(); return; }
+    const af = document.getElementById('af-backdrop');
+    if (af && af.classList.contains('show')) { closeAddFamilyModal(); return; }
+    const ago = document.getElementById('agendar-overlay');
+    if (ago && ago.classList.contains('show')) { cerrarAgendar(); return; }
+  }
+  // Enter/Espacio activan los "botones" hechos con div (acordeones, cards)
+  if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.getAttribute
+      && e.target.getAttribute('role') === 'button' && e.target.tagName !== 'BUTTON') {
+    e.preventDefault(); e.target.click();
+  }
+});
+
 /* ═══ Helpers ═══ */
 function toast(msg) {
   const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2200);
+  setTimeout(() => el.classList.remove('show'), 3500);
 }
 function showError(m) { const e = document.getElementById('error-msg'); e.textContent = m; e.classList.add('show'); document.getElementById('info-msg').classList.remove('show'); }
 function showInfo(m) { const e = document.getElementById('info-msg'); e.textContent = m; e.classList.add('show'); document.getElementById('error-msg').classList.remove('show'); }
@@ -3661,16 +3931,16 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
       <button class="af-tab" data-tab="adult" onclick="setAfTab('adult')">Adulto</button>
     </div>
 
-    <div class="af-msg" id="af-msg" style="display:none"></div>
+    <div class="af-msg" id="af-msg" style="display:none" role="alert"></div>
 
     <!-- Menor -->
     <div id="af-pane-minor">
       <div class="af-field">
-        <label>RUT del menor</label>
+        <label for="af-minor-rut">RUT del menor</label>
         <input type="text" id="af-minor-rut" placeholder="12.345.678-9" inputmode="text" maxlength="12" oninput="formatRutInput(this)">
       </div>
       <div class="af-field">
-        <label>Relación</label>
+        <label for="af-minor-relation">Relación</label>
         <select id="af-minor-relation">
           <option value="hijo">Hijo</option>
           <option value="hija">Hija</option>
@@ -3693,7 +3963,7 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
     <div id="af-pane-adult" style="display:none">
       <div id="af-adult-step1">
         <div class="af-field">
-          <label>RUT de la persona (adulto)</label>
+          <label for="af-adult-rut">RUT de la persona (adulto)</label>
           <input type="text" id="af-adult-rut" placeholder="12.345.678-9" inputmode="text" maxlength="12" oninput="formatRutInput(this)">
         </div>
         <div class="af-check" style="background:var(--cmc-aqua-soft); color:var(--cmc-navy)">
@@ -3706,11 +3976,11 @@ function capitalize(s) { s = String(s||''); return s ? s[0].toUpperCase() + s.sl
       </div>
       <div id="af-adult-step2" style="display:none">
         <div class="af-field">
-          <label>Código que recibió esa persona (6 dígitos)</label>
+          <label for="af-adult-code">Código que recibió esa persona (6 dígitos)</label>
           <input type="text" id="af-adult-code" placeholder="123456" inputmode="numeric" maxlength="6">
         </div>
         <div class="af-field">
-          <label>Relación</label>
+          <label for="af-adult-relation">Relación</label>
           <select id="af-adult-relation">
             <option value="padre">Padre</option>
             <option value="madre">Madre</option>
@@ -3778,5 +4048,365 @@ if ("serviceWorker" in navigator) {
   </div>
   <iframe id="agendar-frame" class="ag-frame" title="Agendar una hora" src="about:blank" allow="clipboard-write"></iframe>
 </div>
+
+<!-- ============ WIZARD DE AGENDAMIENTO NATIVO (una pregunta por pantalla) ============ -->
+<div id="wiz" class="wiz" role="dialog" aria-modal="true" aria-label="Pedir una hora">
+  <div class="wiz-top">
+    <button class="wiz-back" id="wiz-back" onclick="wizBack()">← Volver</button>
+    <span class="wiz-step-lbl" id="wiz-step-lbl" aria-live="polite"></span>
+    <button class="wiz-x" onclick="wizClose()" aria-label="Cerrar el asistente">×</button>
+  </div>
+  <div class="wiz-body" id="wiz-body"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Wizard de agendamiento — patrón GOV.UK "one thing per page" + NHS App:
+   especialidad → profesional → día y hora → revisar → confirmación verde.
+   Llama directo a /agendar/api/* (catálogo, slots, reservar). En modo demo
+   TODO el recorrido es real salvo el POST final, que se simula.
+   ═══════════════════════════════════════════════════════════════════════════ */
+let _wiz = null;
+let _wizCat = null;
+
+function openWizard(opts = {}) {
+  _wiz = {
+    step: 'esp', esp: null, prof: null, fecha: null, slot: null,
+    slots: [], dias: [], phone: '', consent: false, err: '',
+    rut: opts.rut || (patientData && patientData.rut) || '',
+    paraNombre: opts.nombre || '',
+    demo: !!(patientData && patientData.demo),
+    preEsp: opts.espNombre || '',
+  };
+  document.getElementById('wiz').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  _focusInto('#wiz .wiz-x');
+  wizLoadCat();
+}
+function wizClose() {
+  document.getElementById('wiz').classList.remove('show');
+  document.body.style.overflow = '';
+  _wiz = null;
+  _restoreFocus();
+}
+const _WIZ_ORDER = ['esp', 'prof', 'hora', 'revisar', 'exito'];
+function wizBack() {
+  if (!_wiz) return;
+  const i = _WIZ_ORDER.indexOf(_wiz.step);
+  if (_wiz.step === 'exito' || i <= 0) { wizClose(); return; }
+  let prev = _WIZ_ORDER[i - 1];
+  // si la especialidad tiene 1 solo profesional, el paso prof se saltó
+  if (prev === 'prof' && _wiz.esp && _wiz.esp.profesionales.length === 1) prev = 'esp';
+  _wiz.step = prev; _wiz.err = '';
+  wizRender();
+}
+
+async function wizLoadCat() {
+  wizShowLoading('Cargando especialidades…');
+  try {
+    if (!_wizCat) {
+      const st = await (await pfetch('/agendar/api/status')).json();
+      if (!st || !st.enabled) { wizFatal('La agenda en línea no está disponible en este momento.'); return; }
+      _wizCat = (await (await pfetch('/agendar/api/catalogo')).json()).grupos || [];
+    }
+    // pre-selección (viene de "Nuestro equipo" o promos)
+    if (_wiz.preEsp) {
+      for (const g of _wizCat) for (const e of g.especialidades) {
+        if (e.especialidad.toLowerCase() === _wiz.preEsp.toLowerCase()) { wizPickEsp(e); return; }
+      }
+    }
+    wizRender();
+  } catch (e) { wizFatal('No pudimos cargar la agenda (¿sin señal?).'); }
+}
+function wizShowLoading(msg) {
+  document.getElementById('wiz-step-lbl').textContent = '';
+  document.getElementById('wiz-body').innerHTML =
+    `<div class="wiz-load"><div class="spinner"></div>${escapeHTML(msg)}</div>`;
+}
+function wizFatal(msg) {
+  document.getElementById('wiz-body').innerHTML = `
+    <div class="wiz-err">${escapeHTML(msg)}</div>
+    <div class="wiz-acts">
+      <button class="btn btn-ghost" onclick="wizLoadCat()">Reintentar</button>
+      <a class="btn btn-primary" href="${(patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737'}" target="_blank" rel="noopener">Pedir hora por WhatsApp</a>
+      <a class="btn btn-ghost" href="tel:+56442965226">📞 Llamar al (44) 296 5226</a>
+    </div>`;
+}
+
+function wizRender() {
+  if (!_wiz) return;
+  const lblMap = { esp: 'Paso 1 de 4', prof: 'Paso 2 de 4', hora: 'Paso 3 de 4', revisar: 'Paso 4 de 4', exito: '' };
+  document.getElementById('wiz-step-lbl').textContent = lblMap[_wiz.step] || '';
+  document.getElementById('wiz-back').style.visibility = _wiz.step === 'exito' ? 'hidden' : 'visible';
+  const fn = { esp: wizViewEsp, prof: wizViewProf, hora: wizViewHora, revisar: wizViewRevisar, exito: wizViewExito }[_wiz.step];
+  if (fn) fn();
+  document.querySelector('.wiz-body').scrollTop = 0;
+}
+
+/* ── Paso 1: especialidad ── */
+function wizViewEsp() {
+  const quien = _wiz.paraNombre || (patientData && (patientData.nombre || '').split(' ')[0]) || '';
+  let h = `<div class="wiz-q">¿Qué hora necesita${quien ? ' para ' + escapeHTML(quien) : ''}?</div>
+    <div class="wiz-sub">Elija la especialidad. Los precios son referenciales.</div>`;
+  _wizCat.forEach((g, gi) => {
+    h += `<div class="wiz-group">${escapeHTML(g.grupo)}</div>`;
+    g.especialidades.forEach((e, ei) => {
+      h += `<button class="wiz-opt" onclick="wizPickEspIdx(${gi},${ei})">
+        <span class="wo-tx"><span class="wo-t">${escapeHTML(e.especialidad)}</span>
+        <span class="wo-s">${escapeHTML(e.precio || '')}</span></span>
+        <span class="wo-go" aria-hidden="true">→</span>
+      </button>`;
+    });
+  });
+  document.getElementById('wiz-body').innerHTML = h;
+}
+function wizPickEspIdx(gi, ei) { wizPickEsp(_wizCat[gi].especialidades[ei]); }
+function wizPickEsp(e) {
+  _wiz.esp = e;
+  if ((e.profesionales || []).length === 1) {
+    _wiz.prof = e.profesionales[0];
+    _wiz.step = 'hora'; wizRender(); wizLoadDia(null);
+  } else {
+    _wiz.step = 'prof'; wizRender();
+  }
+}
+
+/* ── Paso 2: profesional ── */
+function wizViewProf() {
+  const e = _wiz.esp;
+  let h = `<div class="wiz-q">¿Con quién quiere atenderse?</div>
+    <div class="wiz-sub">${escapeHTML(e.especialidad)}</div>
+    <button class="wiz-opt" onclick="wizPickProf(null)">
+      <span class="wo-tx"><span class="wo-t">⚡ El primero disponible</span>
+      <span class="wo-s">Le mostramos la hora más cercana, con cualquier profesional</span></span>
+      <span class="wo-go" aria-hidden="true">→</span>
+    </button>`;
+  e.profesionales.forEach((p, i) => {
+    h += `<button class="wiz-opt" onclick="wizPickProf(${i})">
+      <span class="wo-tx"><span class="wo-t">${escapeHTML(p.nombre)}</span>
+      <span class="wo-s">${escapeHTML(p.precio || '')}</span></span>
+      <span class="wo-go" aria-hidden="true">→</span>
+    </button>`;
+  });
+  document.getElementById('wiz-body').innerHTML = h;
+}
+function wizPickProf(i) {
+  _wiz.prof = i === null ? null : _wiz.esp.profesionales[i];
+  _wiz.step = 'hora'; wizRender(); wizLoadDia(null);
+}
+
+/* ── Paso 3: día y hora ── */
+function _wizProfIds() {
+  return _wiz.prof ? [_wiz.prof.id] : _wiz.esp.profesionales.map(p => p.id).slice(0, 4);
+}
+async function wizLoadDia(fecha) {
+  const ids = _wizProfIds();
+  wizShowLoading(fecha ? 'Buscando horas para ese día…' : 'Buscando la hora más cercana…');
+  document.getElementById('wiz-step-lbl').textContent = 'Paso 3 de 4';
+  try {
+    let slots = [], f = fecha;
+    if (!fecha) {
+      // primer día disponible: por profesional en paralelo, gana el más cercano
+      const rs = await Promise.all(ids.map(id =>
+        pfetch(`/agendar/api/slots?id_prof=${id}`).then(r => r.ok ? r.json() : null).catch(() => null)));
+      const conDia = rs.filter(r => r && r.fecha);
+      if (conDia.length) {
+        f = conDia.map(r => r.fecha).sort()[0];
+        slots = conDia.filter(r => r.fecha === f).flatMap(r => r.slots || []);
+      }
+    } else {
+      const rs = await Promise.all(ids.map(id =>
+        pfetch(`/agendar/api/slots?id_prof=${id}&fecha=${fecha}`).then(r => r.ok ? r.json() : null).catch(() => null)));
+      slots = rs.filter(Boolean).flatMap(r => r.slots || []);
+    }
+    slots.sort((a, b) => (a.hora_inicio || '').localeCompare(b.hora_inicio || ''));
+    _wiz.fecha = f; _wiz.slots = slots;
+    wizViewHora();
+  } catch (e) {
+    _wiz.slots = []; _wiz.fecha = fecha;
+    wizViewHora('No pudimos consultar las horas (¿sin señal?). Intente de nuevo.');
+  }
+}
+function _wizDias() {
+  // 10 días corridos desde hoy, sin domingos
+  const out = []; const hoy = new Date();
+  for (let i = 0; out.length < 8 && i < 12; i++) {
+    const d = new Date(hoy); d.setDate(hoy.getDate() + i);
+    if (d.getDay() === 0) continue;
+    out.push(d);
+  }
+  return out;
+}
+function wizViewHora(err) {
+  const e = _wiz.esp;
+  let h = `<div class="wiz-q">Elija día y hora</div>
+    <div class="wiz-sub">${escapeHTML(e.especialidad)}${_wiz.prof ? ' · ' + escapeHTML(_wiz.prof.nombre) : ' · el primero disponible'}</div>`;
+  h += `<div class="wiz-days" aria-label="Elegir día">`;
+  for (const d of _wizDias()) {
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const sel = iso === _wiz.fecha;
+    h += `<button class="wiz-day ${sel ? 'sel' : ''}" aria-pressed="${sel}" onclick="wizLoadDia('${iso}')">
+      <span class="wd-dow">${DIAS[d.getDay()]}</span><span class="wd-n">${d.getDate()}</span><span class="wd-m">${MESES[d.getMonth()]}</span>
+    </button>`;
+  }
+  h += `</div>`;
+  if (err) h += `<div class="wiz-err">${escapeHTML(err)} <button class="wr-edit" onclick="wizLoadDia(${_wiz.fecha ? `'${_wiz.fecha}'` : 'null'})">Reintentar</button></div>`;
+  const am = _wiz.slots.filter(s => (s.hora_inicio || '') < '13:00');
+  const pm = _wiz.slots.filter(s => (s.hora_inicio || '') >= '13:00');
+  if (!_wiz.slots.length && !err) {
+    h += `<div class="wiz-empty">No quedan horas libres para este día.<br>Pruebe otro día de la lista de arriba 👆</div>`;
+  }
+  const bloque = (titulo, arr) => {
+    if (!arr.length) return '';
+    let b = `<div class="wiz-group">${titulo}</div><div class="wiz-hours">`;
+    arr.forEach((s) => {
+      const idx = _wiz.slots.indexOf(s);
+      b += `<button class="wiz-hour" onclick="wizPickSlot(${idx})">${escapeHTML(s.hora_inicio)}${!_wiz.prof ? `<span class="wh-p">${escapeHTML(_wizShortName(s.profesional))}</span>` : ''}</button>`;
+    });
+    return b + `</div>`;
+  };
+  h += bloque('Mañana', am) + bloque('Tarde', pm);
+  document.getElementById('wiz-body').innerHTML = h;
+}
+function _wizShortName(n) {
+  return String(n || '').replace(/^(Dra?\.|TM|Sr\.|Sra\.)\s*/i, '').split(' ').slice(0, 2).join(' ');
+}
+async function wizPickSlot(idx) {
+  _wiz.slot = _wiz.slots[idx];
+  if (!_wiz.slot) return;
+  // teléfono para la reserva: perfil del paciente activo
+  if (!_wiz.phone) {
+    try {
+      if (!perfilCache) {
+        const r = await pfetch('/portal/api/perfil', {}, { auth: true });
+        if (r.ok) perfilCache = (await r.json()).profile || {};
+      }
+      _wiz.phone = (perfilCache && perfilCache.phone) || '';
+    } catch (e) { /* editable en revisar */ }
+  }
+  _wiz.step = 'revisar'; wizRender();
+}
+
+/* ── Paso 4: revisar antes de confirmar ── */
+function wizViewRevisar() {
+  const s = _wiz.slot, e = _wiz.esp;
+  const d = parseFecha(s.fecha);
+  const fechaTxt = d ? `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}` : s.fecha;
+  const quien = _wiz.paraNombre || (patientData && patientData.nombre) || '';
+  const precio = (_wiz.prof && _wiz.prof.precio) || e.precio || '';
+  const telOK = /^\+?56\s?9/.test(_wiz.phone || '') || /^9?\d{8}$/.test(String(_wiz.phone || '').replace(/\D/g, ''));
+  let h = `<div class="wiz-q">Revise antes de confirmar</div>
+    <div class="wiz-sub">Puede cambiar lo que necesite. Todavía no se reserva nada.</div>
+    <div class="wiz-review">
+      <div class="wiz-row"><span class="wr-l">Para</span><span class="wr-v">${escapeHTML(quien)}</span></div>
+      <div class="wiz-row"><span class="wr-l">Atención</span><span class="wr-v">${escapeHTML(e.especialidad)}</span>
+        <button class="wr-edit" onclick="_wiz.step='esp';wizRender()">Cambiar</button></div>
+      <div class="wiz-row"><span class="wr-l">Profesional</span><span class="wr-v">${escapeHTML(s.profesional)}</span>
+        ${e.profesionales.length > 1 ? `<button class="wr-edit" onclick="_wiz.step='prof';wizRender()">Cambiar</button>` : ''}</div>
+      <div class="wiz-row"><span class="wr-l">Día y hora</span><span class="wr-v">${escapeHTML(fechaTxt)} · ${escapeHTML(s.hora_inicio)} hrs</span>
+        <button class="wr-edit" onclick="_wiz.step='hora';wizRender();wizLoadDia(_wiz.fecha)">Cambiar</button></div>
+      ${precio ? `<div class="wiz-row"><span class="wr-l">Precio ref.</span><span class="wr-v">${escapeHTML(precio)}</span></div>` : ''}
+      <div class="wiz-row"><span class="wr-l">Su celular</span>
+        ${telOK && _wiz.phone
+          ? `<span class="wr-v">${escapeHTML(fmtPhone(_wiz.phone))}</span>`
+          : `<span class="wr-v" style="display:flex;align-items:center;gap:6px">+56 9 <input id="wiz-tel" type="tel" inputmode="numeric" maxlength="8" placeholder="8 dígitos" aria-label="Su celular: los 8 dígitos después del +56 9" autocomplete="tel-national" style="flex:1;min-height:44px;border:1.5px solid var(--border);border-radius:9px;padding:6px 10px;font-size:17px;width:130px"></span>`}
+      </div>
+    </div>
+    ${_wiz.err ? `<div class="wiz-err">${escapeHTML(_wiz.err)}</div>` : ''}
+    <label class="wiz-consent"><input type="checkbox" id="wiz-consent" ${_wiz.consent ? 'checked' : ''} aria-describedby="wiz-consent-txt">
+      <span class="wc-tx" id="wiz-consent-txt">Acepto que el centro use mis datos para gestionar esta hora (Ley 21.719). <a href="/privacidad" target="_blank" rel="noopener">Ver política</a>.</span>
+    </label>
+    <button class="btn btn-primary wiz-cta" id="wiz-confirm" onclick="wizConfirmar()">Confirmar esta hora</button>
+    <div class="ag-cta-alt" style="margin-top:14px">¿Duda con la hora? <a href="${(patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737'}" target="_blank" rel="noopener">Escríbanos por WhatsApp</a></div>`;
+  document.getElementById('wiz-body').innerHTML = h;
+  if (_wiz.err) {
+    const eb = document.querySelector('.wiz-err');
+    if (eb) { eb.setAttribute('tabindex', '-1'); eb.setAttribute('role', 'alert'); eb.focus(); }
+  }
+}
+async function wizConfirmar() {
+  const chk = document.getElementById('wiz-consent');
+  _wiz.consent = !!(chk && chk.checked);
+  if (!_wiz.consent) { _wiz.err = 'Para reservar, marque la casilla de aceptación de datos.'; wizViewRevisar(); return; }
+  const telInput = document.getElementById('wiz-tel');
+  if (telInput) {
+    const dig = telInput.value.replace(/\D/g, '');
+    if (dig.length !== 8) { _wiz.err = 'Ingrese los 8 dígitos de su celular (después del +56 9).'; wizViewRevisar(); return; }
+    _wiz.phone = '569' + dig;
+  }
+  _wiz.err = '';
+  const btn = document.getElementById('wiz-confirm');
+  btn.disabled = true; btn.textContent = 'Reservando…';
+  const s = _wiz.slot;
+  if (_wiz.demo) {
+    // DEMO: recorrido completo, pero la reserva se simula — nada toca Medilink
+    await new Promise(r => setTimeout(r, 900));
+    _wiz.resultado = {
+      ok: true, demo: true, especialidad: _wiz.esp.especialidad, profesional: s.profesional,
+      fecha: s.fecha, hora_inicio: s.hora_inicio,
+      metodos_pago: _wiz.esp.metodos_pago || ['Efectivo', 'Transferencia'],
+    };
+    _wiz.step = 'exito'; wizRender(); return;
+  }
+  try {
+    const r = await pfetch('/agendar/api/reservar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        consent: true, rut: _wiz.rut, telefono: _wiz.phone,
+        id_profesional: s.id_profesional, fecha: s.fecha,
+        hora_inicio: s.hora_inicio, hora_fin: s.hora_fin,
+        // Tercero: reserva para un RUT distinto del paciente activo (p.ej.
+        // un familiar desde el genograma) o cuando el activo es dependiente.
+        es_tercero: (_wiz.rut !== ((patientData && patientData.rut) || '')) || !!(patientData && patientData.is_dependent),
+      }),
+    }, { timeout: 20000 });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) {
+      _wiz.err = (data && data.detail) || 'No pudimos reservar esa hora. Puede que se haya ocupado — elija otra.';
+      wizViewRevisar(); return;
+    }
+    _wiz.resultado = data;
+    _wiz.step = 'exito'; wizRender();
+    // refrescar los datos del portal para que la cita nueva aparezca al tiro
+    try {
+      const r2 = await pfetch('/portal/api/datos');
+      if (r2.ok) { patientData = await r2.json(); cacheCitas(patientData); renderAll(); }
+    } catch (e) {}
+  } catch (e) {
+    _wiz.err = 'Se cortó la conexión al reservar. Revise en "Mi agenda" si la hora quedó tomada antes de intentar de nuevo.';
+    wizViewRevisar();
+  }
+}
+
+/* ── Paso 5: confirmación verde + qué pasa después ── */
+function wizViewExito() {
+  const rte = _wiz.resultado;
+  const d = parseFecha(rte.fecha);
+  const fechaTxt = d ? `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}` : rte.fecha;
+  const pagos = (rte.metodos_pago || []).join(', ');
+  const citaObj = { especialidad: rte.especialidad, profesional: rte.profesional, fecha: rte.fecha, hora_inicio: rte.hora_inicio };
+  const waTxt = encodeURIComponent(`✅ Hora confirmada — Centro Médico Carampangue\n${rte.especialidad} · ${fechaTxt} · ${rte.hora_inicio} hrs\n${rte.profesional}\n📍 República 102, Carampangue`);
+  let h = `<div class="wiz-ok" role="status">
+      <div class="wo-ic" aria-hidden="true">✅</div>
+      <h3>Hora confirmada</h3>
+      <div class="wo-main">${escapeHTML(rte.especialidad)} · ${escapeHTML(fechaTxt)} · ${escapeHTML(rte.hora_inicio)} hrs</div>
+      <div class="wo-sub">${escapeHTML(rte.profesional)}</div>
+      ${rte.demo ? '<span class="wo-demo">🧪 DEMO — esta hora NO quedó reservada de verdad</span>' : ''}
+    </div>
+    <div class="wiz-next"><h4>Qué pasa después</h4><ul>
+      <li>Llegue 10 minutos antes con su carnet</li>
+      <li>Dirección: República 102, Carampangue</li>
+      ${pagos ? `<li>Puede pagar con: ${escapeHTML(pagos)}</li>` : ''}
+      <li>Si no puede venir, cambie o anule su hora desde este portal o por WhatsApp</li>
+    </ul></div>
+    <div class="wiz-acts">
+      <a class="btn btn-primary" href="https://wa.me/?text=${waTxt}" target="_blank" rel="noopener">↗️ Enviar comprobante por WhatsApp</a>
+      <a class="btn btn-ghost" href="${gcalUrl(citaObj)}" target="_blank" rel="noopener">📅 Guardar en mi calendario</a>
+      <a class="btn btn-ghost" href="${CMC_MAPS_URL}" target="_blank" rel="noopener">📍 Cómo llegar</a>
+      <button class="btn btn-ghost" onclick="wizClose()">Listo, volver al portal</button>
+    </div>`;
+  document.getElementById('wiz-body').innerHTML = h;
+}
+</script>
 </body>
 </html>
