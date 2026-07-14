@@ -660,6 +660,21 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=3600,
         coalesce=True,
     )
+    # Lector de correos de Medilink (IMAP, solo lectura): cada 60s revisa el
+    # Gmail del centro por notificaciones nuevas de agendamiento/anulación/
+    # reagendamiento y alimenta agenda_ticker con la hora EXACTA de creación
+    # (la API de Medilink no la entrega). Ver app/email_ticker.py. Degrada
+    # con gracia si GMAIL_CMC_USER/GMAIL_CMC_APP_PASSWORD no están seteados.
+    from email_ticker import poll_email_ticker
+    scheduler.add_job(
+        poll_email_ticker,
+        "interval", seconds=60,
+        id="email_ticker_poll",
+        replace_existing=True,
+        misfire_grace_time=30,
+        coalesce=True,
+        max_instances=1,
+    )
     # Retención desactivada: mensajes y eventos se mantienen indefinidamente.
     # El crecimiento es ~90 MB/año para el volumen del CMC, manejable en SQLite.
     # Para purgar manualmente: purge_old_data(msgs_days=N, events_days=N)

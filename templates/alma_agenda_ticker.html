@@ -217,7 +217,7 @@ function buildFeedRow(r, isNew){
     </div>
   </div>
   ${badge}
-  <div class="f-hace">${esc(r.hace||'')}</div>
+  <div class="f-hace"${r.fuente_hora==='correo' ? ' title="Hora exacta: correo Medilink"' : ' title="Estimado: última modificación Medilink"'}>${r.fuente_hora==='correo' ? '✉ ' : ''}${esc(r.hace||'')}</div>
 </div>`;
 }
 

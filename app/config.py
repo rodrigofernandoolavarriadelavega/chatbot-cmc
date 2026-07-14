@@ -10,6 +10,13 @@ MEDILINK_SUCURSAL  = int(os.getenv("MEDILINK_SUCURSAL", "1"))
 ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY", "")   # Whisper para transcripción de audios
 
+# Lector de correos de Medilink (ver app/email_ticker.py) — buzón Gmail al que
+# Medilink notifica cada agendamiento/anulación/reagendamiento, con hora exacta
+# de creación en la cabecera Date (la API de Medilink NO la entrega). Vacío en
+# dev local; solo debe estar seteado en el .env del servidor (permisos 600).
+GMAIL_CMC_USER          = os.getenv("GMAIL_CMC_USER", "")
+GMAIL_CMC_APP_PASSWORD  = os.getenv("GMAIL_CMC_APP_PASSWORD", "")
+
 META_ACCESS_TOKEN    = os.getenv("META_ACCESS_TOKEN", "")
 META_PHONE_NUMBER_ID = os.getenv("META_PHONE_NUMBER_ID", "")
 META_VERIFY_TOKEN    = os.getenv("META_VERIFY_TOKEN", "cmc_webhook_2026")

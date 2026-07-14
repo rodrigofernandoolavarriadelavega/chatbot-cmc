@@ -1,0 +1,46 @@
+Paciente De Prueba Tres
+ Cita reagendada
+
+ La fecha de tu cita fue modificada. Te enviamos el detalle de tu nueva
+cita:
+
+
+
+ Fecha
+ 25 de julio
+
+
+ Hora
+ 11:20 hrs
+
+
+
+
+
+ Paciente
+ Paciente De Prueba Tres
+
+
+ Profesional
+ Miguel Millan
+
+
+ Dirección
+ Monsalve, esquina República S/N, Carampangue, Arauco
+
+
+
+
+ Si no puedes asistir o necesitas reagendar tu cita, ponte en contacto con
+Centro Médico Carampangue llamando al +56 44 296 5226 - +569 6661 0737
+
+
+
+ Centro Médico Carampangue
+ Centro Médico Carampangue
+ Monsalve, esquina República S/N, Carampangue, Arauco
+
+
+
+ Este email fue enviado de forma automática, por favor no lo respondas.
+ Powered by Healthatom
