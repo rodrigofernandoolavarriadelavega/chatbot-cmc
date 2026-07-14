@@ -1177,3 +1177,38 @@ async def portal_checkin(request: Request,
         "hora": (body.get("hora") or "")[:5],
     })
     return {"ok": True}
+
+
+# ═══ Telemetría mínima del portal (embudo de uso) ═════════════════════════════
+# El cliente manda eventos de un catálogo cerrado; quedan como log_event y se
+# consultan con SQL sobre conversation_events (patrón "medir → decidir").
+_EVENTOS_PORTAL = {
+    "wiz_abre", "wiz_esp", "wiz_slot", "wiz_exito", "wiz_error",
+    "cita_cambia_inicia", "cita_cambia_exito", "cita_anula",
+    "checkin", "fz", "examenes_ver", "offline", "magic_link_pide",
+}
+
+
+@router.post("/portal/api/evento")
+async def portal_evento(request: Request,
+                        portal_session: str | None = Cookie(None),
+                        portal_active: str | None = Cookie(None)):
+    """Registra un evento de uso del portal (whitelist, payload acotado)."""
+    owner_rut, owner_phone, rut, _phone = _resolve_context(portal_session, portal_active)
+    if not _link_rate_ok(f"evt:{owner_phone}", 60, 300):
+        return {"ok": True}  # silencioso: la telemetría jamás molesta al usuario
+    try:
+        body = await request.json()
+    except Exception:
+        return {"ok": True}
+    e = str(body.get("e") or "")
+    if e not in _EVENTOS_PORTAL:
+        return {"ok": True}
+    d = body.get("d") or {}
+    datos = {"rut": rut, "demo": rut == DEMO_RUT or rut in DEMO_FAMILY}
+    if isinstance(d, dict):
+        for k, v in list(d.items())[:5]:
+            if isinstance(v, (str, int, float, bool)):
+                datos[str(k)[:24]] = str(v)[:80]
+    log_event(owner_phone, f"portal_{e}", datos)
+    return {"ok": True}

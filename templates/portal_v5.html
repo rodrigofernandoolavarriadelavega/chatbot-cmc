@@ -1065,6 +1065,26 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
 .ex-hacer{font-size:15px; background:#e5f5f8; border-radius:10px; padding:10px 12px; margin-top:8px; color:var(--cmc-navy); font-weight:600; line-height:1.5}
 .ex-disclaimer{font-size:13px; color:var(--text-dim); font-weight:600; margin-top:6px}
 
+/* ═══ Gestionar hora (cambiar/anular) ═══ */
+.co-card{max-width:420px}
+.co-body{padding:16px; display:flex; flex-direction:column; gap:10px}
+.co-cita{background:var(--panel-2); border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; text-align:center; margin-bottom:4px}
+.co-cita.danger{border-color:rgba(198,40,40,.35); background:var(--red-soft)}
+.co-esp{font-size:17px; font-weight:800; color:var(--cmc-navy)}
+.co-fh{font-size:16px; font-weight:700; color:var(--text); margin-top:3px}
+.co-prof{font-size:14.5px; color:var(--text-mute); font-weight:600; margin-top:2px}
+.co-btn{min-height:54px; font-size:16.5px}
+.co-danger{color:var(--red-text); border-color:rgba(198,40,40,.4)}
+.co-danger-btn{background:linear-gradient(135deg,#c62828,#b71c1c)}
+.co-ok{font-size:17px; font-weight:800; color:var(--green-text); text-align:center; padding:12px 0; line-height:1.6}
+.appt-gest{
+  flex:none; align-self:center; min-height:48px; min-width:76px; padding:8px 10px;
+  border:1.5px solid var(--border); border-radius:11px; background:var(--panel);
+  font-family:var(--font); font-size:13px; font-weight:800; color:var(--cmc-blue);
+  cursor:pointer; line-height:1.35; text-align:center;
+}
+.appt-gest:hover{border-color:var(--cmc-aqua); background:var(--cmc-aqua-soft)}
+
 /* CTA y fallbacks del panel Agenda online */
 .ag-cta-big{width:100%; min-height:58px; font-size:18px}
 .ag-cta-alt{margin-top:12px; font-size:15px; color:var(--text-mute); font-weight:600; text-align:center; line-height:1.7}
@@ -1762,6 +1782,7 @@ function cycleFontSize() {
   const next = _FZ_STEPS[(_FZ_STEPS.indexOf(cur) + 1) % _FZ_STEPS.length];
   try { localStorage.setItem('cmc_v5_fz', next); } catch (e) {}
   applyFontSize();
+  track('fz');
   toast('Tamaño de letra: ' + (next === '100' ? 'normal' : next === '115' ? 'grande' : 'muy grande'));
 }
 applyFontSize();
@@ -1770,7 +1791,7 @@ applyFontSize();
 (async function init() {
   try {
     const r = await pfetch('/portal/api/datos');
-    if (r.ok) { patientData = await r.json(); cacheCitas(patientData); await loadAllVitals(); showDashboard(); }
+    if (r.ok) { patientData = await r.json(); cacheCitas(patientData); await loadAllVitals(); showDashboard(); flushVitalsQueue(); }
     else showLogin();
   } catch { showOffline(); }
 })();
@@ -2069,8 +2090,102 @@ function compartirCita(c) {
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 function avisarReagendar(c) {
-  // Pop-up en modo "cambiar hora": muestra la cita actual y la libera al confirmar
-  _abrirAgendadorPopup('&reag=1');
+  openCitaOpciones(c);
+}
+
+/* ═══ Gestionar una hora existente: cambiar o anular (ciclo completo) ═══
+   Orden SEGURO al cambiar: primero se reserva la hora nueva y solo después
+   se anula la antigua — el paciente nunca queda sin hora por un corte. */
+let _citaGest = null;
+function openCitaOpciones(c) {
+  if (!c) return;
+  _citaGest = c;
+  let bd = document.getElementById('cita-opts');
+  if (!bd) {
+    bd = document.createElement('div'); bd.id = 'cita-opts'; bd.className = 'agpop';
+    bd.setAttribute('role', 'dialog'); bd.setAttribute('aria-modal', 'true');
+    bd.setAttribute('aria-label', 'Cambiar o anular su hora');
+    bd.onclick = e => { if (e.target === bd) closeCitaOpciones(); };
+    document.body.appendChild(bd);
+  }
+  const d = parseFecha(c.fecha);
+  const fTxt = d ? `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}` : c.fecha;
+  bd.innerHTML = `<div class="agpop-card co-card">
+    <div class="agpop-head"><span>Su hora</span><button class="gen-x" onclick="closeCitaOpciones()" aria-label="Cerrar">×</button></div>
+    <div class="co-body" id="co-body">
+      <div class="co-cita">
+        <div class="co-esp">${escapeHTML(c.especialidad || '')}</div>
+        <div class="co-fh">${escapeHTML(fTxt)} · ${escapeHTML(c.hora_inicio || '')} hrs</div>
+        <div class="co-prof">${escapeHTML(c.profesional || '')}</div>
+      </div>
+      <button class="btn btn-primary co-btn" onclick="citaCambiar()">📅 Cambiar esta hora por otra</button>
+      <button class="btn btn-ghost co-btn co-danger" onclick="citaAnularPregunta()">Anular esta hora</button>
+      <button class="btn btn-ghost co-btn" onclick="closeCitaOpciones()">Volver</button>
+      <div class="ag-cta-alt">¿Prefiere hablar con una persona?
+        <a href="${(patientData && patientData.whatsapp_url) || 'https://wa.me/56966610737'}" target="_blank" rel="noopener">WhatsApp</a> ·
+        <a href="tel:+56442965226">Llamar</a></div>
+    </div>
+  </div>`;
+  bd.classList.add('show');
+  _focusInto('#cita-opts .gen-x');
+}
+function closeCitaOpciones() {
+  const bd = document.getElementById('cita-opts');
+  if (bd) bd.classList.remove('show');
+  _restoreFocus();
+}
+function citaCambiar() {
+  const c = _citaGest;
+  closeCitaOpciones();
+  track('cita_cambia_inicia');
+  openWizard({ cambio: c });
+}
+function citaAnularPregunta() {
+  const c = _citaGest;
+  const body = document.getElementById('co-body');
+  if (!body || !c) return;
+  const d = parseFecha(c.fecha);
+  const fTxt = d ? `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}` : c.fecha;
+  body.innerHTML = `
+    <div class="co-cita danger">
+      <div class="co-esp">¿Seguro que quiere anular esta hora?</div>
+      <div class="co-fh">${escapeHTML(c.especialidad || '')} · ${escapeHTML(fTxt)} · ${escapeHTML(c.hora_inicio || '')} hrs</div>
+      <div class="co-prof">El cupo se libera para otro paciente.</div>
+    </div>
+    <button class="btn btn-primary co-btn co-danger-btn" id="co-anular" onclick="citaAnular()">Sí, anular mi hora</button>
+    <button class="btn btn-ghost co-btn" onclick="openCitaOpciones(_citaGest)">No, volver</button>
+    <div class="wiz-err" id="co-err" style="display:none"></div>`;
+}
+async function citaAnular() {
+  const c = _citaGest;
+  const btn = document.getElementById('co-anular');
+  if (btn) { btn.disabled = true; btn.textContent = 'Anulando…'; }
+  const errBox = document.getElementById('co-err');
+  try {
+    if (patientData && patientData.demo) {
+      await new Promise(r => setTimeout(r, 800));
+    } else {
+      const r = await pfetch('/agendar/api/cancelar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rut: (patientData && patientData.rut) || '', id_cita: String(c.id || '') }),
+      }, { timeout: 20000 });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok) throw new Error((data && data.detail) || 'No pudimos anular la hora.');
+    }
+    track('cita_anula');
+    const body = document.getElementById('co-body');
+    if (body) body.innerHTML = `
+      <div class="co-ok" role="status">✅ Su hora quedó anulada${(patientData && patientData.demo) ? ' <span class="wo-demo" style="color:#0b5c50">🧪 demo — no se anuló de verdad</span>' : ''}.</div>
+      <button class="btn btn-primary co-btn" onclick="closeCitaOpciones(); openWizard()">📅 Pedir otra hora</button>
+      <button class="btn btn-ghost co-btn" onclick="closeCitaOpciones()">Listo</button>`;
+    // refrescar citas para que desaparezca de Mi agenda
+    if (!(patientData && patientData.demo)) {
+      try { const r2 = await pfetch('/portal/api/datos'); if (r2.ok) { patientData = await r2.json(); cacheCitas(patientData); renderAll(); } } catch (e) {}
+    }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sí, anular mi hora'; }
+    if (errBox) { errBox.style.display = ''; errBox.textContent = (e && e.message) || 'No pudimos anular (¿sin señal?). Intente de nuevo o escríbanos por WhatsApp.'; }
+  }
 }
 const _ESP_EMOJI = [[/odont|dental|endodon|implant|ortodon/i,'🦷'],[/kine|masoter/i,'💪'],[/nutri/i,'🥗'],[/psic|psiqu/i,'🧠'],[/matron|gine|obst/i,'🤰'],[/cardio/i,'❤️'],[/trauma/i,'🦴'],[/fono/i,'🗣️'],[/eco|imagen/i,'🩻'],[/podo/i,'🦶'],[/otorrino/i,'👂'],[/estética|estetica/i,'✨']];
 function espEmoji(e) { for (const [r, x] of _ESP_EMOJI) if (r.test(e || '')) return x; return '🩺'; }
@@ -2697,6 +2812,17 @@ function initCrossCarousel() {
 
 function vitalCount() { return Object.values(allVitals).reduce((s,a)=>s+a.length, 0); }
 
+/* ═══ Telemetría mínima (embudo del portal) — fire and forget ═══ */
+function track(e, d) {
+  try {
+    fetch('/portal/api/evento', {
+      method: 'POST', credentials: 'same-origin', keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ e: e, d: d || {} }),
+    }).catch(() => {});
+  } catch (err) {}
+}
+
 /* ═══ Check-in del día ═══ */
 async function portalCheckin(info) {
   const box = document.getElementById('hero-checkin');
@@ -2713,6 +2839,7 @@ async function portalCheckin(info) {
       box.innerHTML = `✅ Asistencia confirmada — lo esperamos a las ${escapeHTML(info.hora)} hrs. ${escapeHTML(info.pago)}.`;
     }
     toast('Recepción quedó avisada. ¡Buen viaje!');
+    track('checkin');
   } catch (e) {
     if (box) box.innerHTML = `<span class="hc-t">No pudimos avisar (¿sin señal?).</span>
       <button class="hc-btn" onclick='portalCheckin(${JSON.stringify(info)})'>Reintentar</button>`;
@@ -2876,6 +3003,7 @@ function renderAgenda() {
   } else {
     for (const c of d.citas_futuras) {
       const chip = dateChip(c.fecha); const when = whenBadge(c.fecha);
+      const ci = (d.citas_futuras || []).indexOf(c);
       html += `<div class="appt-card">
         <div class="date-chip"><span class="dow">${chip.dow}</span><span class="day">${chip.day}</span><span class="month">${chip.month}</span></div>
         <div class="info">
@@ -2884,6 +3012,7 @@ function renderAgenda() {
           <span class="prof">${escapeHTML(c.profesional || '')}</span>
           ${when ? `<span class="when ${when.cls}">${when.lbl}</span>` : ''}
         </div>
+        <button class="appt-gest" onclick="openCitaOpciones(patientData.citas_futuras[${ci}])">Cambiar<br>o anular</button>
       </div>`;
     }
   }
@@ -3145,9 +3274,50 @@ async function saveVital() {
     closeVitalModal();
     toast('Registro guardado');
     renderSalud(); renderInicio();  // one-page: ambas secciones están visibles
-  } catch (e) { toast(e.message || 'Error al guardar'); }
+  } catch (e) {
+    if (e && (e.name === 'AbortError' || e instanceof TypeError)) {
+      // Sin señal: guardar en el teléfono y enviar solo cuando vuelva (rural)
+      if (!payload.ts) payload.ts = new Date().toISOString().slice(0, 19) + 'Z';
+      _vqPush(payload);
+      closeVitalModal();
+      toast('Sin señal — su medición quedó guardada en el teléfono y se enviará sola');
+    } else {
+      toast(e.message || 'Error al guardar');
+    }
+  }
   btn.disabled = false; btn.textContent = 'Guardar';
 }
+
+/* ═══ Cola offline de mediciones: se guarda local y se envía al volver la señal ═══ */
+const _VQ_KEY = 'cmc_v5_vitals_q';
+function _vqPush(p) {
+  try {
+    const q = JSON.parse(localStorage.getItem(_VQ_KEY) || '[]');
+    q.push(p);
+    localStorage.setItem(_VQ_KEY, JSON.stringify(q.slice(-30)));
+  } catch (e) {}
+}
+async function flushVitalsQueue() {
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem(_VQ_KEY) || '[]'); } catch (e) {}
+  if (!q.length || !patientData) return;
+  const pendientes = [];
+  for (const p of q) {
+    try {
+      const r = await pfetch('/portal/api/vitals', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p),
+      }, { auth: true });
+      if (!r.ok && r.status >= 500) pendientes.push(p);
+      // 4xx (dato inválido) se descarta: reintentar no lo arregla
+    } catch (e) { if (e.message !== 'auth') pendientes.push(p); }
+  }
+  try { localStorage.setItem(_VQ_KEY, JSON.stringify(pendientes)); } catch (e) {}
+  if (q.length > pendientes.length) {
+    toast('Se enviaron sus mediciones guardadas sin señal');
+    await loadAllVitals(); renderSalud();
+  }
+}
+window.addEventListener('online', () => { setTimeout(flushVitalsQueue, 1500); });
 
 /* ═══ Export informe ═══ */
 function exportInforme() {
@@ -3190,7 +3360,7 @@ const GUIDES = [
            'Bote el aire despacio antes de inhalar.',
            'Apriete el inhalador y, al mismo tiempo, <strong>tome aire profundo y lento</strong>. Aguante el aire 10 segundos.',
            'Espere 30 segundos entre una aplicación y otra.',
-           'Enjuague su boca si usa inhaladores con corticoides (remedios antiinflamatorios como budesonida o fluticasona).'] },
+           'Si su inhalador es de uso diario (corticoides), enjuáguese la boca con agua después de usarlo.'] },
   { id:'insulina', cat:'Fármacos', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2l4 4-8 8H2v-4z"/><path d="M14 6l4 4-4 4-4-4z"/><path d="M18 10l4 4v4h-4l-4-4z"/></svg>`,
     title:'Cómo ponerse la insulina',
     sub:'3 minutos', cond:['dm2','insulin'],
@@ -3206,7 +3376,7 @@ const GUIDES = [
     steps:['Lave sus manos antes. Use guantes si tiene.',
            'Lave la herida con <strong>suero fisiológico</strong> o con agua potable, a chorro suave.',
            'Seque con una gasa limpia, tocando con suavidad, sin arrastrar.',
-           'Aplique povidona o clorhexidina (desinfectantes) si hay riesgo de infección.',
+           'Si hay riesgo de infección, limpie con un desinfectante como la povidona.',
            'Cubra con gasa y vendaje. Cambie la curación al menos 1 vez al día, o si se moja.',
            'Consulte si ve: pus, fiebre, la zona roja cada vez más grande, o una herida que no cierra en 7 días.'] },
 ];
@@ -3308,7 +3478,7 @@ const PROMO_CATALOG = {
     svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c4-3 6-7 6-11a6 6 0 00-12 0c0 4 2 8 6 11z"/></svg>` },
   matrona: { label:'Matrona', title:'Control ginecológico + PAP', desc:'Sarai atiende con bono preferencial. PAP: examen que detecta a tiempo el cáncer de cuello uterino.', price:'Bono $25.000',
     svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>` },
-  estetica: { label:'Estética facial', title:'Armonización facial', desc:'Dra. Fuentealba: hilos tensores, bioestimuladores y exosomas (tratamientos para rejuvenecer la piel).', price:'Consulta',
+  estetica: { label:'Estética facial', title:'Armonización facial', desc:'Dra. Fuentealba: tratamientos para rejuvenecer y cuidar la piel.', price:'Consulta',
     svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 00-7 7c0 3.5 2 5.5 3 7s1 3 4 3 3-1.5 4-3 3-3.5 3-7a7 7 0 00-7-7z"/></svg>` },
 };
 
@@ -4077,7 +4247,9 @@ function openWizard(opts = {}) {
     paraNombre: opts.nombre || '',
     demo: !!(patientData && patientData.demo),
     preEsp: opts.espNombre || '',
+    cambio: opts.cambio || null,
   };
+  track('wiz_abre');
   document.getElementById('wiz').classList.add('show');
   document.body.style.overflow = 'hidden';
   _focusInto('#wiz .wiz-x');
@@ -4147,7 +4319,9 @@ function wizRender() {
 function wizViewEsp() {
   const quien = _wiz.paraNombre || (patientData && (patientData.nombre || '').split(' ')[0]) || '';
   let h = `<div class="wiz-q">¿Qué hora necesita${quien ? ' para ' + escapeHTML(quien) : ''}?</div>
-    <div class="wiz-sub">Elija la especialidad. Los precios son referenciales.</div>`;
+    <div class="wiz-sub">${_wiz.cambio
+      ? 'Está cambiando su hora de <b>' + escapeHTML(_wiz.cambio.especialidad || '') + '</b>. Primero elija la hora nueva; la antigua se anula sola al final.'
+      : 'Elija la especialidad. Los precios son referenciales.'}</div>`;
   _wizCat.forEach((g, gi) => {
     h += `<div class="wiz-group">${escapeHTML(g.grupo)}</div>`;
     g.especialidades.forEach((e, ei) => {
@@ -4163,6 +4337,7 @@ function wizViewEsp() {
 function wizPickEspIdx(gi, ei) { wizPickEsp(_wizCat[gi].especialidades[ei]); }
 function wizPickEsp(e) {
   _wiz.esp = e;
+  track('wiz_esp', { esp: e.especialidad });
   if ((e.profesionales || []).length === 1) {
     _wiz.prof = e.profesionales[0];
     _wiz.step = 'hora'; wizRender(); wizLoadDia(null);
@@ -4284,6 +4459,7 @@ async function wizPickSlot(idx) {
       _wiz.phone = (perfilCache && perfilCache.phone) || '';
     } catch (e) { /* editable en revisar */ }
   }
+  track('wiz_slot');
   _wiz.step = 'revisar'; wizRender();
 }
 
@@ -4345,7 +4521,9 @@ async function wizConfirmar() {
       ok: true, demo: true, especialidad: _wiz.esp.especialidad, profesional: s.profesional,
       fecha: s.fecha, hora_inicio: s.hora_inicio,
       metodos_pago: _wiz.esp.metodos_pago || ['Efectivo', 'Transferencia'],
+      cambio: _wiz.cambio || null,
     };
+    track(_wiz.cambio ? 'cita_cambia_exito' : 'wiz_exito');
     _wiz.step = 'exito'; wizRender(); return;
   }
   try {
@@ -4366,6 +4544,21 @@ async function wizConfirmar() {
       wizViewRevisar(); return;
     }
     _wiz.resultado = data;
+    _wiz.resultado.cambio = _wiz.cambio || null;
+    if (_wiz.cambio && _wiz.cambio.id) {
+      // Hora nueva asegurada → recién ahora se anula la antigua.
+      try {
+        const rc = await pfetch('/agendar/api/cancelar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rut: _wiz.rut, id_cita: String(_wiz.cambio.id) }),
+        }, { timeout: 20000 });
+        const dc = await rc.json().catch(() => ({}));
+        if (!rc.ok || !dc.ok) throw new Error('cancel');
+      } catch (e) {
+        _wiz.resultado.cambioAviso = 'Su hora NUEVA quedó tomada, pero no pudimos anular la anterior. Anúlela desde Mi agenda o escríbanos por WhatsApp y lo hacemos por usted.';
+      }
+    }
+    track(_wiz.cambio ? 'cita_cambia_exito' : 'wiz_exito');
     _wiz.step = 'exito'; wizRender();
     // refrescar los datos del portal para que la cita nueva aparezca al tiro
     try {
@@ -4386,13 +4579,16 @@ function wizViewExito() {
   const pagos = (rte.metodos_pago || []).join(', ');
   const citaObj = { especialidad: rte.especialidad, profesional: rte.profesional, fecha: rte.fecha, hora_inicio: rte.hora_inicio };
   const waTxt = encodeURIComponent(`✅ Hora confirmada — Centro Médico Carampangue\n${rte.especialidad} · ${fechaTxt} · ${rte.hora_inicio} hrs\n${rte.profesional}\n📍 República 102, Carampangue`);
+  const esCambio = !!rte.cambio;
   let h = `<div class="wiz-ok" role="status">
       <div class="wo-ic" aria-hidden="true">✅</div>
-      <h3>Hora confirmada</h3>
+      <h3>${esCambio ? 'Hora cambiada' : 'Hora confirmada'}</h3>
       <div class="wo-main">${escapeHTML(rte.especialidad)} · ${escapeHTML(fechaTxt)} · ${escapeHTML(rte.hora_inicio)} hrs</div>
       <div class="wo-sub">${escapeHTML(rte.profesional)}</div>
+      ${esCambio ? `<div class="wo-sub" style="text-decoration:line-through; opacity:.75">Antes: ${escapeHTML(rte.cambio.especialidad || '')} · ${escapeHTML(rte.cambio.hora_inicio || '')} hrs</div>` : ''}
       ${rte.demo ? '<span class="wo-demo">🧪 DEMO — esta hora NO quedó reservada de verdad</span>' : ''}
     </div>
+    ${rte.cambioAviso ? `<div class="wiz-err" role="alert">${escapeHTML(rte.cambioAviso)}</div>` : ''}
     <div class="wiz-next"><h4>Qué pasa después</h4><ul>
       <li>Llegue 10 minutos antes con su carnet</li>
       <li>Dirección: República 102, Carampangue</li>
