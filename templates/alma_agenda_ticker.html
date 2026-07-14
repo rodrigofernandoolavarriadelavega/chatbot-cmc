@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Monitor de Agendamientos — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --aqua:#4FBECE; --aqua-s:#e8f8fb; --teal-700:#0E7C86; --blue:#1172AB; --navy:#0F3F68; --navy2:#0a2e4d;
+  --bg:#F4F7FA; --card:#fff; --border:#e6edf3; --text:#13202e; --mute:#64798c;
+  --slate:#5b7186; --slate-bg:#eef2f6;
+  --green:#1f9d6b; --green-bg:#e7f7f0;
+  --amber:#c98a14; --amber-bg:#fdf4e3;
+  --red:#d94c4c;   --red-bg:#fdecec;
+  --violet:#6b5ecb; --violet-bg:#efedfb;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --r:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  -webkit-font-smoothing:antialiased;line-height:1.45;font-size:13px}
+
+.wrap{max-width:1200px;margin:0 auto;padding:20px 20px 64px}
+
+/* ── Header ── */
+.hd{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.hd h1{font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.3px}
+.hd .sub{font-size:11.5px;color:var(--mute);font-weight:500;margin-top:2px}
+.live-pill{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);
+  color:var(--green);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;
+  margin-left:auto}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.live-pill.stale{background:var(--amber-bg);color:var(--amber)}
+.live-pill.stale .live-dot{background:var(--amber)}
+
+/* ── Estado de carga ── */
+.state-wrap{display:flex;align-items:center;justify-content:center;
+  min-height:240px;flex-direction:column;gap:12px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.spinner{width:32px;height:32px;border:3px solid var(--border);
+  border-top-color:var(--teal-700);border-radius:50%;animation:rot .85s linear infinite}
+.state-msg{font-size:12.5px;color:var(--mute);font-weight:600}
+
+/* ── KPIs ── */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;right:-18px;top:-18px;width:60px;height:60px;
+  border-radius:50%;background:var(--aqua-s);opacity:.55}
+.k-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--mute);position:relative;z-index:1}
+.k-val{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--navy);
+  margin-top:4px;line-height:1;position:relative;z-index:1}
+.k-sub{font-size:10px;color:var(--mute);font-weight:500;margin-top:5px;position:relative;z-index:1}
+.k-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;position:relative;z-index:1}
+.k-chip{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--slate-bg);color:var(--slate)}
+
+/* ── Banner aviso sin cerrar ── */
+.alert-banner{display:flex;align-items:flex-start;gap:13px;
+  background:var(--amber-bg);border:1px solid rgba(201,138,20,.25);
+  border-left:4px solid var(--amber);border-radius:var(--r);
+  padding:14px 18px;margin-bottom:16px}
+.alert-banner svg{width:19px;height:19px;color:var(--amber);flex-shrink:0;margin-top:1px}
+.ab-title{font-size:12.5px;font-weight:700;color:#8a6108;margin-bottom:5px}
+.ab-sub{font-size:11px;color:var(--mute);font-weight:500;margin-bottom:8px}
+.ab-list{list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.ab-list li{font-size:11px;color:var(--text);font-weight:600;background:#fff;
+  border:1px solid rgba(201,138,20,.3);border-radius:8px;padding:4px 9px}
+.ab-list b{color:#8a6108}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar h2{font-size:13.5px;font-weight:700;color:var(--navy)}
+.btn{font-family:inherit;font-size:11.5px;font-weight:700;
+  border:1px solid var(--border);background:var(--card);color:var(--teal-700);
+  border-radius:9px;padding:7px 13px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--aqua-s);border-color:var(--aqua)}
+.btn-primary{background:var(--teal-700);border-color:var(--teal-700);color:#fff}
+.btn-primary:hover{filter:brightness(1.08)}
+.toolbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* ── Feed / ticker ── */
+.feed{display:flex;flex-direction:column;gap:8px}
+.feed-empty{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:28px;text-align:center;color:var(--mute);font-size:12px;font-weight:500}
+.f-row{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh-sm);
+  transition:box-shadow .15s}
+.f-row:hover{box-shadow:var(--sh-md)}
+.f-row.f-new{animation:flashnew 2.4s ease-out}
+@keyframes flashnew{0%{background:var(--aqua-s);border-color:var(--aqua)}100%{background:var(--card)}}
+.f-main{flex:1;min-width:0}
+.f-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.f-paciente{font-size:12.5px;font-weight:700;color:var(--text)}
+.f-esp{font-size:11px;color:var(--mute);font-weight:500}
+.f-bottom{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap}
+.f-prof{font-size:11px;color:var(--slate);font-weight:600}
+.f-hora{font-size:11px;color:var(--mute)}
+.f-badge{font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.f-badge.bot_whatsapp{background:var(--aqua-s);color:var(--teal-700)}
+.f-badge.agenda_online{background:#e8f0fb;color:var(--blue)}
+.f-badge.recepcion_telefono,.f-badge.recepcion_presencial,.f-badge.recepcion_chat,.f-badge.recepcion{background:var(--slate-bg);color:var(--slate)}
+.f-badge.desconocido{background:var(--red-bg);color:var(--red)}
+.f-hace{font-size:10.5px;color:var(--mute);font-weight:600;white-space:nowrap;min-width:64px;text-align:right}
+.f-estado{font-size:9.5px;color:var(--mute);font-weight:600}
+
+.page-foot{text-align:center;font-size:10px;color:var(--mute);margin-top:22px}
+
+@media(max-width:820px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .f-row{flex-wrap:wrap}
+  .f-hace{text-align:left}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div>
+      <h1>Monitor de Agendamientos</h1>
+      <div class="sub">Orden real de llegada de las citas nuevas · WhatsApp, agenda online y recepción</div>
+    </div>
+    <div class="live-pill" id="livePill"><span class="live-dot"></span><span id="liveTxt">en vivo</span></div>
+  </div>
+
+  <div id="root"><div class="state-wrap"><div class="spinner"></div><div class="state-msg">Cargando…</div></div></div>
+
+  <div class="page-foot" id="foot"></div>
+</div>
+
+<script>
+const _TOKEN = "__TOKEN__";
+let _lastMaxId = 0;
+let _firstLoad = true;
+let _pollTimer = null;
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function fmtFechaCita(f, h){
+  if(!f) return h||'';
+  const [y,m,d]=f.split('-');
+  return (d&&m ? `${d}/${m}` : f) + (h? ' · '+h : '');
+}
+
+function buildKpis(c){
+  const porCanal = c.por_canal||[];
+  const chips = porCanal.map(p=>`<span class="k-chip">${esc(p.canal_label)}: ${p.n}</span>`).join('');
+  const bot = porCanal.find(p=>p.canal==='bot_whatsapp');
+  const online = porCanal.find(p=>p.canal==='agenda_online');
+  const otros = c.total - (bot?bot.n:0) - (online?online.n:0);
+  return `
+<div class="kpis">
+  <div class="kpi">
+    <div class="k-label">Agendamientos hoy</div>
+    <div class="k-val">${c.total}</div>
+    <div class="k-sub">desde que el monitor está encendido</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Bot WhatsApp</div>
+    <div class="k-val">${bot?bot.n:0}</div>
+    <div class="k-sub">${c.total? Math.round(100*(bot?bot.n:0)/c.total)+'% del total':'—'}</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Agenda online / recepción</div>
+    <div class="k-val">${otros}</div>
+    <div class="k-sub">web self-service + a mano</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Por canal</div>
+    <div class="k-chips">${chips || '<span class="k-chip">sin datos aún</span>'}</div>
+  </div>
+</div>
+<div class="kpi" style="margin-bottom:16px">
+  <div class="k-label">Por especialidad hoy</div>
+  <div class="k-chips">${(c.por_especialidad||[]).map(p=>`<span class="k-chip">${esc(p.especialidad)}: ${p.n}</span>`).join('') || '<span class="k-chip">sin datos aún</span>'}</div>
+</div>`;
+}
+
+function buildAvisoSinCerrar(a){
+  if(!a || !a.por_profesional || !a.por_profesional.length) return '';
+  const top = a.por_profesional.slice(0, 8);
+  const items = top.map(p=>`<li><b>${p.sin_cerrar}</b> · ${esc(p.profesional)}</li>`).join('');
+  return `
+<div class="alert-banner">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+  </svg>
+  <div>
+    <div class="ab-title">Citas pasadas sin cerrar en Medilink (últimos ${a.dias} días)</div>
+    <div class="ab-sub">Ni "Atendido" ni "No asiste" — cierre administrativo pendiente, no inasistencia. Cada una sin cerrar es venta que puede no estar facturada. Actualizado ${esc(a.generado_at||'')}.</div>
+    <ul class="ab-list">${items}</ul>
+  </div>
+</div>`;
+}
+
+function buildFeedRow(r, isNew){
+  const badge = `<span class="f-badge ${esc(r.canal)}">${esc(r.canal_label)}</span>`;
+  return `
+<div class="f-row ${isNew?'f-new':''}" data-id="${r.id_cita}">
+  <div class="f-main">
+    <div class="f-top">
+      <span class="f-paciente">${esc(r.paciente_nombre||'Paciente')}</span>
+      <span class="f-esp">${esc(r.especialidad||'')}</span>
+    </div>
+    <div class="f-bottom">
+      <span class="f-prof">${esc(r.profesional||'')}</span>
+      <span class="f-hora">${esc(fmtFechaCita(r.fecha_cita, r.hora_inicio))}</span>
+      <span class="f-estado">${esc(r.estado_cita||'')}</span>
+    </div>
+  </div>
+  ${badge}
+  <div class="f-hace">${esc(r.hace||'')}</div>
+</div>`;
+}
+
+function buildFeed(feed, flashNew){
+  if(!feed || !feed.length){
+    return '<div class="feed-empty">Sin agendamientos nuevos todavía. Apenas entre una cita — por cualquier canal — aparece acá arriba.</div>';
+  }
+  return '<div class="feed">' + feed.map(r => buildFeedRow(r, flashNew && r.id_cita > _lastMaxId)).join('') + '</div>';
+}
+
+function render(data){
+  const root = document.getElementById('root');
+  // La primera carga NUNCA "flashea" (no es que hayan entrado 48 citas en
+  // este instante) — solo se resalta lo que llegó DESPUÉS del primer render.
+  const flashNew = !_firstLoad;
+  root.innerHTML =
+    buildAvisoSinCerrar(data.aviso_sin_cerrar) +
+    buildKpis(data.contadores_hoy) +
+    `<div class="toolbar"><h2>Orden de llegada</h2>
+      <div class="toolbar-right">
+        <button class="btn" onclick="syncAhora()">Sincronizar ahora</button>
+      </div>
+    </div>` +
+    buildFeed(data.feed, flashNew);
+
+  if(data.feed && data.feed.length){
+    _lastMaxId = Math.max(_lastMaxId, data.feed[0].id_cita);
+  }
+  _firstLoad = false;
+  document.getElementById('foot').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-CL');
+}
+
+async function syncAhora(){
+  try {
+    await fetch('/api/agenda-ticker/sync?token=' + encodeURIComponent(_TOKEN), {method:'POST'});
+  } catch(e) {}
+  doLoad();
+}
+
+function setLive(ok){
+  const pill = document.getElementById('livePill');
+  const txt = document.getElementById('liveTxt');
+  if(ok){ pill.classList.remove('stale'); txt.textContent = 'en vivo'; }
+  else { pill.classList.add('stale'); txt.textContent = 'sin conexión'; }
+}
+
+async function doLoad(){
+  try {
+    const r = await fetch('/api/agenda-ticker/feed?token=' + encodeURIComponent(_TOKEN) + '&limit=80');
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    render(data);
+    setLive(true);
+  } catch(e) {
+    setLive(false);
+  }
+}
+
+doLoad();
+_pollTimer = setInterval(doLoad, 8000);
+</script>
+</body>
+</html>

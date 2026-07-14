@@ -36,22 +36,25 @@ AREA_LABELS = {
 
 def _datos_rango(desde: str, hasta: str, por: str) -> dict:
     """Agrega bi_pagos_caja en [desde, hasta] (ambos inclusive) por área o
-    profesional, y devuelve también la serie diaria con día de semana."""
+    profesional, y devuelve también la serie diaria con día de semana.
+
+    El desglose por profesional/área viene de `verdad.plata_por_profesional`
+    (Libro de la Verdad) — MISMA query que antes vivía acá duplicada
+    (SUM(monto)/COUNT(*)/COUNT(DISTINCT id_paciente) GROUP BY id_profesional
+    sobre bi_pagos_caja), verificada byte a byte contra la versión anterior
+    antes de migrar (mismos totales, mismos grupos). La serie diaria del
+    gráfico no es una "pregunta de negocio" canónica — sigue con su query
+    propia acá."""
     from session import db
     from medilink import PROFESIONALES
+    import verdad
     # validar y normalizar fechas (hasta inclusive → +1 día para el < SQL)
     d_desde = date.fromisoformat(desde)
     d_hasta = date.fromisoformat(hasta)
     fin_excl = (d_hasta + timedelta(days=1)).isoformat()
 
+    plata = verdad.plata_por_profesional(desde, hasta, incluir_sin_asignar=True)
     with db() as c:
-        rows = c.execute(
-            "SELECT id_profesional, SUM(monto) AS total, "
-            "       COUNT(*) AS n, COUNT(DISTINCT id_paciente) AS pac "
-            "FROM bi_pagos_caja WHERE fecha>=? AND fecha<? "
-            "GROUP BY id_profesional",
-            (desde, fin_excl),
-        ).fetchall()
         serie_rows = c.execute(
             "SELECT fecha, SUM(monto) AS total, COUNT(DISTINCT id_paciente) AS pac "
             "FROM bi_pagos_caja WHERE fecha>=? AND fecha<? "
@@ -63,11 +66,11 @@ def _datos_rango(desde: str, hasta: str, por: str) -> dict:
     total = 0
     pac_total = 0
     n_total = 0
-    for r in rows:
+    for r in plata["profesionales"]:
         pid = r["id_profesional"]
-        t = int(r["total"] or 0)
+        t = int(r["ingreso"] or 0)
         total += t
-        n_total += r["n"]
+        n_total += r["n_pagos"]
         if por == "prof":
             if pid is None:
                 key, label, esp = "sin_asignar", "Sin asignar", "(sin cruce)"
@@ -83,8 +86,8 @@ def _datos_rango(desde: str, hasta: str, por: str) -> dict:
         g = grupos.setdefault(key, {"key": key, "label": label, "esp": esp,
                                     "total": 0, "pacientes": 0, "n": 0})
         g["total"] += t
-        g["pacientes"] += r["pac"] or 0
-        g["n"] += r["n"]
+        g["pacientes"] += r["pacientes_distintos"] or 0
+        g["n"] += r["n_pagos"]
 
     # serie diaria con día de semana (0=lunes … 6=domingo)
     serie = []

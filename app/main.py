@@ -636,6 +636,30 @@ async def lifespan(app: FastAPI):
         id="sync_citas_cache",
         replace_existing=True,
     )
+    # Monitor de Agendamientos en vivo: poll cada 45s, UNA sola consulta base
+    # (id_sucursal + cursor por id, sin filtro de profesional — ver
+    # docs/medilink_gotchas.md §6, antecedente del fan-out de agenda-dia).
+    from agenda_ticker import poll_agenda_ticker, sync_atenciones_sin_cerrar
+    scheduler.add_job(
+        poll_agenda_ticker,
+        "interval", seconds=45,
+        id="agenda_ticker_poll",
+        replace_existing=True,
+        misfire_grace_time=30,
+        coalesce=True,
+        max_instances=1,
+    )
+    # Barrido diario (horario valle) de citas pasadas sin cerrar en Medilink —
+    # alimenta el aviso pasivo del monitor. Baja frecuencia a propósito:
+    # pagina varias decenas de veces (30 días de agenda completa).
+    scheduler.add_job(
+        sync_atenciones_sin_cerrar,
+        CronTrigger(hour=6, minute=20, timezone=_CLT),
+        id="agenda_ticker_sin_cerrar_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
     # Retención desactivada: mensajes y eventos se mantienen indefinidamente.
     # El crecimiento es ~90 MB/año para el volumen del CMC, manejable en SQLite.
     # Para purgar manualmente: purge_old_data(msgs_days=N, events_days=N)
@@ -1070,6 +1094,7 @@ import mg_abandono_routes; mg_abandono_routes.register_mg_abandono_routes(app)  
 import persistencia_routes; persistencia_routes.register_persistencia_routes(app)  # carril de persistencia (GATED PERSISTENCIA_ACTIVE)
 import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estudio de Marketing (panel publicidad/contenido)
 import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
+import agenda_ticker_routes; agenda_ticker_routes.register_agenda_ticker_routes(app)  # Monitor de agendamientos en vivo (/alma/agenda-en-vivo)
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
 
 import pagos_routes

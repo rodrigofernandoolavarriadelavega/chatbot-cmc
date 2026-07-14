@@ -471,116 +471,122 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
         await asyncio.sleep(0.8)
 
 
-def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
-    """Cruza un pago contra bi_atenciones para inferir id_profesional.
+def _resolver_profesional_pagos_cmc(c, fecha_iso: str, nombre_pago: str, monto: int
+                                     ) -> int | None:
+    """NIVEL 0.5 — pagos_cmc (verdad humana: profesional asignado por recepción).
 
-    NIVEL 0   (override manual): si existe en bi_pago_overrides, retornarlo.
-    NIVEL 0.5 (pagos_cmc — verdad humana): cruce por fecha + nombre contra
-              la tabla pagos_cmc donde la recepción registra el profesional real.
-              Retorna solo cuando el match es inequívoco (un solo profesional
-              ese día para ese paciente, o desempate de monto con gap claro).
-    Cascada heurística (si 0.5 no resuelve):
+    Responsabilidad ÚNICA: resolver `id_profesional`, nunca `atencion_id`. Antes
+    (commit b090e9c0, 2026-06-12) esta lógica vivía inline en
+    `_resolver_profesional_pago` y hacía `return profs_cmc.pop(), None` apenas
+    encontraba match — cortaba la ejecución ANTES de llegar a la cascada que
+    busca `atencion_id`, dejando huérfano cualquier pago que matcheara acá (el
+    caso más común y creciente: 0% en abril 2026 → 87% en junio → 93% en julio,
+    ver docs/LIBRO_DE_LA_VERDAD.md sección 3). Separado en su propia función
+    para que quien la llame NUNCA pueda repetir ese error por accidente: esta
+    función no tiene forma de devolver un atencion_id porque no lo busca.
+
+    pagos_cmc está en la misma sessions.db que bi_atenciones, accesible con el
+    mismo cursor `c`. Cobertura esperada: ~77% de los pagos de junio.
+    Retorna `id_profesional` solo cuando el match es inequívoco (un solo
+    profesional ese día para ese paciente, o desempate de monto con gap
+    claro). `None` si no hay match o es ambiguo — el llamador decide si sigue
+    con la cascada heurística de `bi_atenciones` para inferir profesional.
+    """
+    if not nombre_pago or not fecha_iso:
+        return None
+    try:
+        cmc_rows = c.execute(
+            """
+            SELECT id_profesional,
+                   COALESCE(copago, 0)      AS copago,
+                   COALESCE(bonificacion, 0) AS bonificacion
+            FROM   pagos_cmc
+            WHERE  fecha = ?
+              AND  LOWER(REPLACE(paciente_nombre, '  ', ' '))
+                   = LOWER(REPLACE(?, '  ', ' '))
+              AND  id_profesional IS NOT NULL
+            """,
+            (fecha_iso, nombre_pago),
+        ).fetchall()
+
+        if not cmc_rows:
+            return None
+        profs_cmc = set(r[0] for r in cmc_rows)
+
+        if len(profs_cmc) == 1:
+            # Un único profesional ese día para ese paciente → match claro.
+            return profs_cmc.pop()
+
+        # Varios profesionales ese día para ese paciente → desempatamos
+        # por monto: elegir el registro cuyo copago+bonificacion se acerque
+        # más a monto_pago. Si dos registros empatan en distancia → ambiguo,
+        # no retornamos (dejamos caer a la cascada heurística).
+        ranked = sorted(cmc_rows, key=lambda r: abs((r[1] + r[2]) - monto))
+        best_dist = abs((ranked[0][1] + ranked[0][2]) - monto)
+        second_dist = abs((ranked[1][1] + ranked[1][2]) - monto) \
+            if len(ranked) > 1 else best_dist + 1
+        # Solo retornar si el ganador es claramente mejor que el segundo
+        # (diferencia de al menos 2.000 pesos o 5% del monto).
+        gap_minimo = max(2000, monto * 0.05) if monto > 0 else 2000
+        if second_dist - best_dist >= gap_minimo:
+            return ranked[0][0]
+        # Ambiguo → caer a heurística
+        return None
+    except Exception:
+        return None  # tabla ausente en entorno de test o error inesperado
+
+
+def _resolver_atencion_id(c, pid, fecha_iso: str, monto: int,
+                           id_profesional: int | None = None
+                           ) -> tuple[int | None, int | None]:
+    """Cascada heurística que busca la atención de Medilink (`atencion_id`)
+    que corresponde a un pago, cruzando contra `bi_atenciones`.
+
+    Si `id_profesional` viene dado (ya resuelto por NIVEL 0/0.5), la búsqueda
+    se ACOTA a las atenciones de ESE profesional — nunca se usa para inferir
+    un profesional distinto. Esto es lo que evita reabrir el bug que el NIVEL
+    0.5 corrigió (pago cruzado al profesional equivocado cuando el paciente
+    tenía atenciones de varios profesionales el mismo día — memoria
+    `cmc-comparador-y-atribucion-2026-06-12`).
+
+    Si `id_profesional` es `None`, la cascada además INFIERE el profesional a
+    partir del match (comportamiento histórico, usado cuando NIVEL 0/0.5 no
+    resolvieron nada).
+
     1. Mismo día + monto exacto match por atención.total
     2. Ventana ±60 días + monto exacto (atención más cercana en fecha)
     3. Ventana ±60 días + monto cercano
     4. Ventana ±60 días + atención con deuda > 0 (FIFO)
     5. Si paciente tiene un único profesional histórico → ese
     6. Fallback: atención más cercana ANTERIOR al pago (±60d antes, ±14d post)
-    Retorna (id_profesional, atencion_id) o (None, None).
+
+    Retorna (id_profesional, atencion_id). El primer elemento es siempre
+    `id_profesional` si vino dado (nunca lo cambia); si no vino dado, es lo
+    que la cascada haya inferido (o `None` si nada matchea).
     """
-    pago_id_for_override = pago.get("id")
-    if pago_id_for_override:
-        try:
-            ov = c.execute(
-                "SELECT id_profesional, atencion_id FROM bi_pago_overrides WHERE pago_id=?",
-                (pago_id_for_override,)
-            ).fetchone()
-            if ov:
-                return ov["id_profesional"], ov["atencion_id"]
-        except Exception:
-            pass
+    from datetime import date
 
-    from datetime import date, timedelta
-    pid = pago.get("id_paciente")
-    fecha = pago.get("fecha_recepcion") or pago.get("fecha")
-    monto = int(pago.get("monto_pago") or 0)
-    if not pid or not fecha:
-        return None, None
-    fecha_iso = fecha[:10]
+    filtro_prof = "" if id_profesional is None else " AND id_profesional=?"
+    params = (pid,) if id_profesional is None else (pid, id_profesional)
 
-    # ------------------------------------------------------------------
-    # NIVEL 0.5 — pagos_cmc (verdad humana: profesional asignado por recepción)
-    # pagos_cmc está en la misma sessions.db que bi_atenciones, accesible
-    # con el mismo cursor c.  Cobertura esperada: ~77 % de los pagos de junio.
-    # Solo retorna cuando el match es inequívoco; ante ambigüedad cae a la
-    # cascada heurística sin penalizar el resultado.
-    # ------------------------------------------------------------------
-    nombre_pago = (pago.get("nombre_paciente") or "").strip()
-    if nombre_pago and fecha_iso:
-        try:
-            cmc_rows = c.execute(
-                """
-                SELECT id_profesional,
-                       COALESCE(copago, 0)      AS copago,
-                       COALESCE(bonificacion, 0) AS bonificacion
-                FROM   pagos_cmc
-                WHERE  fecha = ?
-                  AND  LOWER(REPLACE(paciente_nombre, '  ', ' '))
-                       = LOWER(REPLACE(?, '  ', ' '))
-                  AND  id_profesional IS NOT NULL
-                """,
-                (fecha_iso, nombre_pago),
-            ).fetchall()
-
-            if cmc_rows:
-                profs_cmc = set(r[0] for r in cmc_rows)
-
-                if len(profs_cmc) == 1:
-                    # Un único profesional ese día para ese paciente → match claro.
-                    # atencion_id lo deja None aquí; la heurística existente en el
-                    # bloque siguiente puede completarlo si coincide el profesional.
-                    return profs_cmc.pop(), None
-
-                # Varios profesionales ese día para ese paciente → desempatamos
-                # por monto: elegir el registro cuyo copago+bonificacion se acerque
-                # más a monto_pago.  Si dos registros empatan en distancia → ambiguo,
-                # no retornamos (dejamos caer a la cascada heurística).
-                if len(profs_cmc) > 1:
-                    ranked = sorted(
-                        cmc_rows,
-                        key=lambda r: abs((r[1] + r[2]) - monto)
-                    )
-                    best_dist  = abs((ranked[0][1] + ranked[0][2]) - monto)
-                    second_dist = abs((ranked[1][1] + ranked[1][2]) - monto) \
-                        if len(ranked) > 1 else best_dist + 1
-                    # Solo retornar si el ganador es claramente mejor que el segundo
-                    # (diferencia de al menos 2.000 pesos o 5 % del monto).
-                    gap_minimo = max(2000, monto * 0.05) if monto > 0 else 2000
-                    if second_dist - best_dist >= gap_minimo:
-                        return ranked[0][0], None
-                    # Ambiguo → caer a heurística
-        except Exception:
-            pass  # tabla ausente en entorno de test o error inesperado
-
-    # ------------------------------------------------------------------
     # Atenciones con total > 0 (preferidas para matching por monto)
     rows = c.execute(
-        "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
-        "FROM bi_atenciones WHERE id_paciente=? AND total>0 "
-        "ORDER BY fecha", (pid,)
+        f"SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
+        f"FROM bi_atenciones WHERE id_paciente=?{filtro_prof} AND total>0 "
+        f"ORDER BY fecha", params
     ).fetchall()
     # Todas las atenciones incluyendo total=0 (Medilink deja total=0 hasta que
     # se registra el cobro; son candidatas naturales para los pasos 5 y 5b).
     rows_incl_zero = c.execute(
-        "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
-        "FROM bi_atenciones WHERE id_paciente=? "
-        "ORDER BY fecha", (pid,)
+        f"SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
+        f"FROM bi_atenciones WHERE id_paciente=?{filtro_prof} "
+        f"ORDER BY fecha", params
     ).fetchall()
 
     try:
         f_pago = date.fromisoformat(fecha_iso)
     except ValueError:
-        return None, None
+        return id_profesional, None
 
     if rows or rows_incl_zero:
         # 1. Mismo día + monto exacto
@@ -695,9 +701,9 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
     # rows_incl_zero ya tiene todas las atenciones; si está vacío (paciente sin
     # ninguna atención) la query está fuera del bloque if, así que la hacemos aquí.
     all_rows = rows_incl_zero if rows_incl_zero else c.execute(
-        "SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
-        "FROM bi_atenciones WHERE id_paciente=? "
-        "ORDER BY fecha", (pid,)
+        f"SELECT atencion_id, id_profesional, total, abonado, deuda, fecha "
+        f"FROM bi_atenciones WHERE id_paciente=?{filtro_prof} "
+        f"ORDER BY fecha", params
     ).fetchall()
     prev = []   # atenciones anteriores o iguales al pago (las más probables)
     post = []   # posteriores (raro, pero posible si Medilink registra después)
@@ -723,7 +729,65 @@ def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
         r = post[0][1]
         return r["id_profesional"], r["atencion_id"]
 
-    return None, None
+    return id_profesional, None
+
+
+def _resolver_profesional_pago(c, pago: dict) -> tuple[int | None, int | None]:
+    """Cruza un pago contra pagos_cmc / bi_atenciones para resolver
+    (id_profesional, atencion_id). Orquesta 3 niveles, cada uno con
+    responsabilidad única (ver docstrings de las funciones que llama):
+
+    NIVEL 0   (override manual): `bi_pago_overrides`. Autoridad absoluta —
+              retorna profesional Y atencion_id tal cual quedaron guardados.
+    NIVEL 0.5 (`_resolver_profesional_pagos_cmc`): resuelve SOLO el
+              profesional contra `pagos_cmc` (verdad de recepción).
+    Cascada  (`_resolver_atencion_id`): busca el `atencion_id` en
+              `bi_atenciones`. Si NIVEL 0.5 ya resolvió el profesional, la
+              cascada se acota a las atenciones de ESE profesional (nunca lo
+              reemplaza); si no, la cascada también infiere el profesional.
+
+    IMPORTANTE — no reintroducir el bug de b090e9c0 (2026-06-12): esa versión
+    hacía `return profs_cmc.pop(), None` en cuanto NIVEL 0.5 resolvía el
+    profesional, cortando la ejecución antes de buscar `atencion_id` (dejó
+    huérfano el 87-93% de los pagos de junio/julio 2026 — ver
+    docs/LIBRO_DE_LA_VERDAD.md sección 3). Esta función SIEMPRE continúa
+    hasta `_resolver_atencion_id`, resuelva o no el profesional antes.
+
+    Retorna (id_profesional, atencion_id). `atencion_id` puede ser `None`
+    incluso con `id_profesional` resuelto, si de verdad no hay ninguna
+    atención de ese profesional que matchee (paciente sin atenciones
+    registradas, por ejemplo) — un `None` genuino, no uno por atajo.
+    """
+    pago_id_for_override = pago.get("id")
+    if pago_id_for_override:
+        try:
+            ov = c.execute(
+                "SELECT id_profesional, atencion_id FROM bi_pago_overrides WHERE pago_id=?",
+                (pago_id_for_override,)
+            ).fetchone()
+            if ov:
+                return ov["id_profesional"], ov["atencion_id"]
+        except Exception:
+            pass
+
+    pid = pago.get("id_paciente")
+    fecha = pago.get("fecha_recepcion") or pago.get("fecha")
+    monto = int(pago.get("monto_pago") or 0)
+    if not pid or not fecha:
+        return None, None
+    fecha_iso = fecha[:10]
+
+    nombre_pago = (pago.get("nombre_paciente") or "").strip()
+    id_prof_0_5 = _resolver_profesional_pagos_cmc(c, fecha_iso, nombre_pago, monto)
+
+    id_prof_cascada, atencion_id = _resolver_atencion_id(
+        c, pid, fecha_iso, monto, id_profesional=id_prof_0_5
+    )
+
+    # id_prof_cascada es idéntico a id_prof_0_5 cuando este último no es None
+    # (la cascada no lo cambia, solo lo usa como filtro); cuando id_prof_0_5
+    # es None, id_prof_cascada es lo que la cascada haya inferido por su cuenta.
+    return id_prof_cascada, atencion_id
 
 
 def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
