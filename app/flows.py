@@ -1105,6 +1105,16 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     Si no hay perfil o el paciente está agendando para un tercero, sigue el
     flujo normal por WAIT_MODALIDAD.
     """
+    # Medición sistémica del embudo: chokepoint único de "eligió slot" (11
+    # sitios de llamada). Ver nota en _iniciar_agendar sobre _funnel_id.
+    try:
+        log_event(phone, "funnel_slot_elegido", {
+            "esp": (slot.get("especialidad") or data.get("especialidad") or "").strip().lower(),
+            "fecha": slot.get("fecha", ""),
+            "funnel_id": data.get("_funnel_id", ""),
+        })
+    except Exception:  # noqa: BLE001 — medición nunca debe romper el agendamiento
+        pass
     # Defensa sistémica: revalidar que el slot no esté en el pasado al momento
     # de confirmar. Cubre el caso donde la conversación quedó abierta horas
     # (sesión vigente) y el paciente confirma una hora que ya pasó. Sin este
@@ -8290,6 +8300,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "esp": especialidad,
                 "paso": "slot_no_elegido",
                 "txt": txt[:80],
+                "funnel_id": data.get("_funnel_id", ""),
             })
             # M2: Rescate de slot rechazado — detectar negación explícita y ofrecer
             # botones de rescate en vez del mensaje genérico "no te entendí".
@@ -8326,6 +8337,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "esp": especialidad,
                         "hay_otro_prof": _hay_otro_prof,
                         "txt": txt[:80],
+                        "funnel_id": data.get("_funnel_id", ""),
                     })
                     save_session(phone, "WAIT_SLOT", data)
                     return _btn_msg(
@@ -9374,6 +9386,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         log_event(phone, "funnel_confirmacion", {
             "esp": (data.get("slot_elegido") or {}).get("especialidad", data.get("especialidad", "")),
             "paso": "llegando_confirming_cita",
+            "funnel_id": data.get("_funnel_id", ""),
         })
         save_session(phone, "CONFIRMING_CITA", data)
 
@@ -10029,6 +10042,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "fecha": slot["fecha"],
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
+                    "funnel_id": data.get("_funnel_id", ""),
                 })
                 # ── Guardar vínculo familiar si la cita fue para tercero ─────
                 # Solo en citas nuevas (no reagendar). Secundario: un fallo aquí
@@ -13785,6 +13799,29 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     if is_medilink_down():
         return _modo_degradado(phone, "agendar", state_snap=especialidad or "",
                                especialidad=especialidad or "")
+    # ── Medición sistémica del embudo (2026-07-13) ──────────────────────────
+    # `_iniciar_agendar` es el CHOKEPOINT único: las ~84 rutas de entrada al
+    # agendamiento (texto libre vía detect_intent, atajos numéricos, botones,
+    # quick-book, CTWA/Meta referral, cross-sell, waitlist, reagendar-doctor,
+    # etc.) convergen todas acá. Antes, el único evento de "intención de
+    # agendar" (`intent_agendar`) se logueaba en UN solo sitio (el branch de
+    # detect_intent en texto libre) — subcontaba: 424 intents vs 992 citas
+    # creadas en 30 días (imposible, >100% "conversión"). Con este evento acá
+    # se cuenta UNA vez por intento real sin importar el canal de entrada.
+    # `_funnel_id` viaja en `data` (persiste entre turnos de la misma sesión)
+    # y se propaga a funnel_especialidad/funnel_slot_ofrecido/
+    # funnel_slot_elegido/funnel_confirmacion/cita_creada para poder
+    # reconstruir el recorrido completo de una persona con un solo query.
+    if not data.get("_funnel_id"):
+        import uuid as _uuid_fi_start
+        data["_funnel_id"] = _uuid_fi_start.uuid4().hex[:12]
+        try:
+            log_event(phone, "funnel_intent_agendar", {
+                "especialidad_pedida": (especialidad or "").strip().lower(),
+                "funnel_id": data["_funnel_id"],
+            })
+        except Exception:  # noqa: BLE001 — medición nunca debe romper el agendamiento
+            pass
     # ── Detección de menor: aplica a especialidades adultas, NO a MG/MF/Odonto/Fono/Psico ──
     # MG (Abarca, Olavarría, Márquez), MF (Márquez), Odontología, Fonoaudiología y
     # Psicología Infantil (Montalba) atienden niños y adultos por igual — no interrumpir.
@@ -14485,6 +14522,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         "esp": especialidad_lower,
         "paso": "especialidad_resuelta",
         "n_slots": len(todos),
+        "funnel_id": data.get("_funnel_id", ""),
     })
     save_session(phone, "WAIT_SLOT", data)
     log_event(phone, "funnel_slot_ofrecido", {
@@ -14493,6 +14531,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         "fecha": fecha,
         "profesional": mejor.get("profesional", ""),
         "hora": mejor.get("hora_inicio", "")[:5],
+        "funnel_id": data.get("_funnel_id", ""),
     })
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = _first_name(nombre_conocido) if nombre_conocido else ""

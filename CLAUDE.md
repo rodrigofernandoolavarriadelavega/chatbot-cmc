@@ -358,7 +358,58 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-06-09
+**Última actualización**: 2026-07-13
+
+### 2026-07-13 — Carril de persistencia: medición del embudo + fix de raíz (SIN DEPLOY, sin commit)
+- **Medición estaba rota**: `intent_agendar` se logueaba en solo 1 de ~84 sitios
+  que llaman a `_iniciar_agendar` → 424 "intents" vs 992 citas creadas en 30d
+  (>100% conversión, imposible). Fix sistémico: `_iniciar_agendar` (chokepoint
+  único, todas las rutas de entrada convergen ahí) ahora logea
+  `funnel_intent_agendar` UNA vez por intento real, con un `_funnel_id` (uuid)
+  que viaja en `data` y se propaga a `funnel_especialidad`/`funnel_slot_ofrecido`
+  (ya existían)/`funnel_slot_elegido` (nuevo, en `_slot_confirmed`)/
+  `funnel_confirmacion`/`cita_creada` — permite reconstruir el recorrido
+  completo de una persona con un solo query por `funnel_id`.
+- **Embudo real reconstruido** (30 días, prod, vía `messages.state` — funciona
+  para cualquier rango histórico sin depender de la instrumentación rota):
+  1051 entraron → 960 vieron slots → 579 llegaron a confirmar → 582 citas
+  (conversión punta a punta 50.8%). El agujero más grande: 394 vieron un
+  horario y nunca confirmaron; de esos, 230 en silencio total (nunca volvieron
+  a escribir) — la "lista de espera del hoy" (disclaimer "no tengo para HOY")
+  es un modo real pero chico (45 casos/30d, 84% no agenda después).
+- **BUG DE RAÍZ encontrado y corregido**: `session.py::phone_tiene_solo_citas_canceladas`
+  decía "o ninguna" en el docstring y lo cumplía literal — un paciente SIN
+  ninguna cita (el caso más común, abandonó antes de crear una) también daba
+  `True`. El reenganche (`jobs._enviar_reenganche`, cron cada 5 min) toma esa
+  rama como "tenía cita y se canceló, no insistir" y, sin cancelación que
+  reinvitar, solo loguea `reenganche_skip_cita_cancelada` sin enviar nada —
+  para siempre. Medido: 214 de los 230 silencios puros (93%) caían acá. Fix
+  de una línea: exigir que el phone tenga ≥1 fila histórica en `citas_bot`
+  antes de considerar "solo canceladas". Sin historial → `False` → sigue el
+  reenganche normal. Probablemente el mayor agujero único de conversión del bot.
+- **Carril nuevo** `app/persistencia.py` + `app/persistencia_routes.py`
+  (`GET/POST /api/persistencia*`, mismo patrón auth que `mg_abandono_routes.py`):
+  máquina de estados por CONSULTA (no por sesión) `ABIERTA→CONTACTADA→
+  AGENDADA|NO_EXPLICITO|EXPIRADA` en tabla `consultas_persistencia`. Segundo
+  toque único (2-26h desde apertura, después de que el reenganche ya tuvo su
+  oportunidad), reusa `contact_budget.py` (no crea presupuesto nuevo),
+  `phones_with_open_offers()`, detecta "no"/stop explícito → cierre inmediato
+  sin más contacto. Fuera de ventana 24h NO envía nada (falta template
+  `seguimiento_consulta_pendiente`, borrador en
+  `templates/whatsapp_templates/seguimiento_consulta_pendiente.DRAFT.json`,
+  NO subido a Meta). **GATED OFF por `PERSISTENCIA_ACTIVE`** (default false) —
+  cron registrado cada 15 min en `main.py` pero inerte hasta que se encienda.
+- **Tests**: harness_50 76/103, stress_200 169/200, normalizer 52/52 — idéntico
+  al baseline (comparado con `git stash` antes/después). 0 regresiones.
+- **NO deployado.** `app/flows.py`/`app/session.py`/`app/main.py` modificados
+  localmente (instrumentación + fix + registro del carril, todo aditivo/gated).
+  Falta: revisar, `git add` selectivo (hay WIP ajeno de otra sesión en
+  `app/pagos_routes.py`/`templates/alma_pagos.html` — NO tocar), deploy con
+  `scripts/deploy.sh`, y decidir si subir el template borrador a Meta.
+- Script de medición reusable: `scripts/embudo_persistencia.py` (solo lectura,
+  corre con `venv/bin/python3` en el VPS).
+
+### 2026-06-09 — Deploy 9 bugfixes críticos (commit 5c59702)
 
 ### 2026-06-09 — Deploy 9 bugfixes críticos (commit 5c59702)
 - **B1** `flows.py:6981/6988` — NameError en tiempo de ejecución: `PROFESIONALES` bare → `_PROFS_AP` (causa de 66 resets confirmados en logs)

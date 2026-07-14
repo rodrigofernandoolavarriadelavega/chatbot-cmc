@@ -897,6 +897,7 @@ async def lifespan(app: FastAPI):
     )
     # M4: digest semanal a recepción de pacientes >14 días en waitlist (lunes 09:30 CLT)
     from jobs import _job_waitlist_digest_semanal, _job_followup_info
+    from persistencia import job_persistencia_contacto as _job_persistencia_contacto
     scheduler.add_job(
         _job_waitlist_digest_semanal,
         CronTrigger(day_of_week="mon", hour=9, minute=30, timezone=_CLT),
@@ -908,6 +909,16 @@ async def lifespan(app: FastAPI):
         _job_followup_info,
         CronTrigger(minute="*/5", timezone=_CLT),
         id="followup_info",
+        replace_existing=True,
+    )
+    # Carril de persistencia (2026-07-13): segundo toque a consultas de
+    # agendamiento abiertas que el reenganche existente no rescató. GATED OFF
+    # por defecto (PERSISTENCIA_ACTIVE) — la función retorna de inmediato si
+    # el flag no está encendido, así que registrar el job es inerte/seguro.
+    scheduler.add_job(
+        _job_persistencia_contacto,
+        CronTrigger(minute="*/15", timezone=_CLT),
+        id="persistencia_contacto",
         replace_existing=True,
     )
     # B6: Synthetic check del agendamiento — ejercita buscar_primer_dia("Medicina General")
@@ -1056,6 +1067,7 @@ import panel_dia_routes; panel_dia_routes.register_panel_dia_routes(app)  # Pane
 import remuneraciones_routes; remuneraciones_routes.register_remuneraciones_routes(app)  # Panel del Día N4 — remuneraciones
 import captacion_routes; captacion_routes.register_captacion_routes(app)  # Dashboard captación (cómo nos conociste)
 import mg_abandono_routes; mg_abandono_routes.register_mg_abandono_routes(app)  # métrica abandono Medicina General
+import persistencia_routes; persistencia_routes.register_persistencia_routes(app)  # carril de persistencia (GATED PERSISTENCIA_ACTIVE)
 import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estudio de Marketing (panel publicidad/contenido)
 import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)

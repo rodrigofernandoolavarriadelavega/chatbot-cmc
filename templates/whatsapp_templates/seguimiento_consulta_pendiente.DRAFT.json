@@ -1,0 +1,39 @@
+{
+  "_nota": "BORRADOR — NO subido a Meta todavía. Sufijo .DRAFT.json para que el loader de messaging.py (_load_template_from_json) no lo confunda con un template aprobado. Renombrar a seguimiento_consulta_pendiente.json recien despues de que Meta lo apruebe, y agregar la fila correspondiente en README.md.",
+  "name": "seguimiento_consulta_pendiente",
+  "category": "UTILITY",
+  "language": "es",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}} 👋 Hace un rato estabas revisando horas de *{{2}}* en el Centro Médico Carampangue y quedó pendiente.\n\n¿Sigues necesitando la hora? Puedo ayudarte a agendarla ahora.",
+      "example": {
+        "body_text": [
+          [
+            "Pedro",
+            "Medicina General"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Responde STOP para no recibir más mensajes"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, ver horas"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No, gracias"
+        }
+      ]
+    }
+  ],
+  "_justificacion_utility": "Seguimiento de una transacción que el propio paciente inició (buscar una hora) en las últimas horas — no es una campaña de marketing ni requiere opt-in de marketing (Ley 21.719: es transaccional, continuación de un servicio pedido). Se usa SOLO para el segundo toque del carril de persistencia (app/persistencia.py::job_persistencia_contacto), y solo cuando la ventana de 24h ya cerró (si está abierta, se manda texto libre, sin necesidad de template). Meta podría reclasificarla como MARKETING al revisarla — si eso pasa, no usarla sin opt-in de marketing.",
+  "_flujo_que_la_usaria": "app/persistencia.py::job_persistencia_contacto — rama 'ventana cerrada', hoy deliberadamente INERTE (no envía nada, solo loguea persistencia_template_pendiente) hasta que este template esté APPROVED y el dueño lo active."
+}
