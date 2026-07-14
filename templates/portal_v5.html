@@ -36,6 +36,7 @@ html{color-scheme:light only}
   --sidebar-w:224px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;scroll-behavior:auto !important}}
 /* Foco visible SIEMPRE (WCAG 2.4.7): 3px azul 5.2:1, gana a los outline:none */
 input:focus-visible, select:focus-visible, textarea:focus-visible,
 button:focus-visible, a:focus-visible, [tabindex]:focus-visible{
@@ -1483,6 +1484,7 @@ html[data-fz="130"] #dashboard-screen .main{zoom:1.3}
       <div class="logo"><img src="/static/isotipo.png" alt="CMC" onerror="this.onerror=null;this.src='/static/logo.png'"></div>
       <h1>Mi Salud</h1>
       <span class="tag">Centro Médico Carampangue</span>
+      <p style="font-size:15px;color:var(--text-mute);font-weight:600;line-height:1.5;margin-top:10px;text-align:center">Aquí puede ver sus horas, pedir o cambiar una hora, y llevar el control de su salud y la de su familia.</p>
     </div>
     <div id="step-rut">
       <div class="form-group">
@@ -1791,7 +1793,9 @@ applyFontSize();
 (async function init() {
   try {
     const r = await pfetch('/portal/api/datos');
-    if (r.ok) { patientData = await r.json(); cacheCitas(patientData); await loadAllVitals(); showDashboard(); flushVitalsQueue(); }
+    if (r.ok) { patientData = await r.json(); cacheCitas(patientData); await loadAllVitals(); showDashboard(); flushVitalsQueue();
+      if (new URLSearchParams(location.search).get('action') === 'agendar') setTimeout(() => openWizard(), 600);
+    }
     else showLogin();
   } catch { showOffline(); }
 })();

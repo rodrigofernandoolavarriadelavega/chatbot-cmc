@@ -401,6 +401,7 @@ async def portal_verify_code(request: Request):
     # Limpiar cookie de paciente activo de sesiones previas
     response.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
     log.info("Portal login OK rut=%s", rut_norm)
+    log_event(phone, "portal_login", {"rut": rut_norm, "demo": rut_norm == DEMO_RUT})
     return response
 
 
@@ -1212,3 +1213,84 @@ async def portal_evento(request: Request,
                 datos[str(k)[:24]] = str(v)[:80]
     log_event(owner_phone, f"portal_{e}", datos)
     return {"ok": True}
+
+
+# ═══ Panel de uso del portal (medir → decidir) ════════════════════════════════
+# Token-gated con ADMIN_TOKEN. Agrega el embudo real: wiz_abre→wiz_exito,
+# check-ins, anulaciones, cambios, logins, A+. SQL sobre conversation_events.
+
+@router.get("/portal/api/uso-stats")
+async def portal_uso_stats(token: str = ""):
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    from session import db as _db
+    out = {"por_evento": {}, "por_dia": {}, "demo_vs_real": {"demo": 0, "real": 0}}
+    with _db() as conn:
+        rows = conn.execute(
+            """SELECT event, meta, substr(ts,1,10) AS dia FROM conversation_events
+               WHERE event LIKE 'portal_%' AND ts >= datetime('now','-30 days')"""
+        ).fetchall()
+    import json as _json
+    for r in rows:
+        ev = r["event"] if not isinstance(r, tuple) else r[0]
+        meta = r["meta"] if not isinstance(r, tuple) else r[1]
+        dia = r["dia"] if not isinstance(r, tuple) else r[2]
+        out["por_evento"][ev] = out["por_evento"].get(ev, 0) + 1
+        out["por_dia"].setdefault(dia, {})
+        out["por_dia"][dia][ev] = out["por_dia"][dia].get(ev, 0) + 1
+        try:
+            es_demo = _json.loads(meta or "{}").get("demo")
+        except Exception:
+            es_demo = False
+        out["demo_vs_real"]["demo" if es_demo else "real"] += 1
+    return {"ok": True, **out}
+
+
+_USO_HTML = """<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Uso del Portal — CMC</title><style>
+body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#f3f6f9;color:#0F3F68;margin:0;padding:24px}
+.wrap{max-width:900px;margin:0 auto}h1{font-size:22px}p.sub{color:#546776;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+.kpi{background:#fff;border:1px solid #e3ebf1;border-radius:12px;padding:14px}
+.kpi .n{font-size:28px;font-weight:800}.kpi .l{font-size:13px;color:#546776;font-weight:700}
+.funnel{background:#fff;border:1px solid #e3ebf1;border-radius:12px;padding:16px;margin-bottom:14px}
+.frow{display:flex;align-items:center;gap:10px;margin:8px 0}
+.fl{flex:0 0 190px;font-size:14px;font-weight:700}
+.fb{height:26px;background:linear-gradient(90deg,#4FBECE,#1172AB);border-radius:6px;min-width:2px}
+.fv{font-size:14px;font-weight:800}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;font-size:14px}
+th{background:#0F3F68;color:#fff;text-align:left;padding:8px 10px;font-size:12px}
+td{padding:8px 10px;border-top:1px solid #e3ebf1}
+</style></head><body><div class="wrap">
+<h1>Uso del Portal del Paciente (últimos 30 días)</h1>
+<p class="sub">Eventos reales del portal v5. La demo se cuenta aparte. Se actualiza al recargar.</p>
+<div class="grid" id="kpis"></div>
+<div class="funnel"><b>Embudo de agendamiento</b><div id="funnel"></div></div>
+<table><thead><tr><th>Evento</th><th>Total 30d</th></tr></thead><tbody id="tabla"></tbody></table>
+</div><script>
+const token = new URLSearchParams(location.search).get('token') || '';
+fetch('/portal/api/uso-stats?token=' + encodeURIComponent(token)).then(r=>r.json()).then(d=>{
+  const pe = d.por_evento || {};
+  const g = (k)=>pe['portal_'+k]||0;
+  const kpis = [['Sesiones OTP', g('login')],['Logins por link', g('login_magic_link')],
+    ['Check-ins', g('checkin')],['Horas anuladas', g('cita_anula')],['Horas cambiadas', g('cita_cambia_exito')],
+    ['Letra grande (A+)', g('fz')],['Eventos demo', (d.demo_vs_real||{}).demo||0],['Eventos reales', (d.demo_vs_real||{}).real||0]];
+  document.getElementById('kpis').innerHTML = kpis.map(k=>`<div class="kpi"><div class="n">${k[1]}</div><div class="l">${k[0]}</div></div>`).join('');
+  const pasos=[['Abrió el asistente','wiz_abre'],['Eligió especialidad','wiz_esp'],['Eligió una hora','wiz_slot'],['Confirmó (éxito)','wiz_exito']];
+  const max = Math.max(1, ...pasos.map(p=>g(p[1])));
+  document.getElementById('funnel').innerHTML = pasos.map(p=>{
+    const v=g(p[1]); return `<div class="frow"><span class="fl">${p[0]}</span><div class="fb" style="width:${Math.round(340*v/max)}px"></div><span class="fv">${v}</span></div>`;
+  }).join('');
+  document.getElementById('tabla').innerHTML = Object.entries(pe).sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join('') || '<tr><td colspan="2">Sin eventos aún — recién estamos midiendo.</td></tr>';
+}).catch(()=>{ document.getElementById('kpis').innerHTML = '<div class="kpi"><div class="l">Token inválido o sin conexión</div></div>'; });
+</script></body></html>"""
+
+
+@router.get("/portal/uso", response_class=_HTMLResponse)
+def portal_uso(token: str = ""):
+    """Panel interno de uso del portal. Requiere ?token=ADMIN_TOKEN."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    return _HTMLResponse(_USO_HTML)
