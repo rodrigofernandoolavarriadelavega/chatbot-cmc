@@ -41,7 +41,7 @@
   .tab[aria-selected="true"]{background:var(--gold);border-color:var(--gold);color:#1a1305}
 
   .tblwrap{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:820px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:850px}
   th{text-align:right;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2);
     font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
   th:first-child{text-align:left}
@@ -54,7 +54,20 @@
   .bar{height:6px;border-radius:3px;background:#22304d;overflow:hidden;min-width:70px}
   .bar > i{display:block;height:100%;border-radius:3px}
 
-  .spark{display:block}
+  .spark{display:block;cursor:crosshair}
+
+  #tip{position:fixed;z-index:50;pointer-events:none;opacity:0;transition:opacity .09s;
+    background:#0d1526;border:1px solid #35496f;border-radius:10px;padding:10px 12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.55);font-size:12.5px;min-width:172px}
+  #tip .t-nom{font-weight:640;font-size:12.5px;margin-bottom:2px}
+  #tip .t-mes{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);
+    font-weight:650;margin-bottom:8px}
+  #tip .t-row{display:flex;justify-content:space-between;gap:16px;padding:2.5px 0;
+    font-variant-numeric:tabular-nums}
+  #tip .t-row span:first-child{color:var(--dim)}
+  #tip .t-row b{font-weight:600}
+  #tip .t-sep{border-top:1px solid #22304d;margin:6px 0 2px}
+  #tip .t-off{color:var(--red);font-size:12px}
 
   .gapcell{font-weight:600}
   .ok{color:var(--green)}
@@ -145,7 +158,9 @@
     </table>
   </div>
   <div class="legend">
-    <span><i style="background:var(--teal)"></i>ganancia mensual CMC (sparkline ene→jun)</span>
+    <span><i style="background:#6b8fd0"></i>venta mensual</span>
+    <span><i style="background:var(--teal)"></i>ganancia CMC</span>
+    <span style="color:var(--dim2)">— pasa el mouse sobre la línea para ver mes, monto y % del techo</span>
     <span><i style="background:var(--green)"></i>≥90% del techo</span>
     <span><i style="background:var(--gold)"></i>40–90%</span>
     <span><i style="background:var(--red)"></i>&lt;40% o en cero</span>
@@ -204,7 +219,8 @@ const D = [
  ["Dra. Unibazo",         [null,null,null,null,null,[360000,0]]],
 ];
 
-const clp = n => "$" + Math.round(n).toLocaleString("es-CL");
+// el signo va FUERA del $ (Abarca tiene ganancia negativa ene–abr): −$1.678.166
+const clp = n => (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString("es-CL");
 
 const rows = D.map(([nom, ms]) => {
   const v = ms.map(m => m ? m[0] : 0), g = ms.map(m => m ? m[1] : 0);
@@ -216,17 +232,38 @@ const rows = D.map(([nom, ms]) => {
   return {nom, v, g, techoG, mesG: MESES[iG], techoV, mesV: MESES[iV], jun, junV, gap, pct, activoJun: !!ms[5]};
 });
 
-// sparkline: ganancia mensual, escala propia
-function spark(g){
-  const W=86,H=24,max=Math.max(...g.map(Math.abs),1);
-  const pts = g.map((y,i)=>[i*(W/5), H/2 - (y/max)*(H/2-2)]);
-  const d = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
-  const zeros = g.map((y,i)=> y===0 ? `<circle cx="${(i*(W/5)).toFixed(1)}" cy="${(H/2).toFixed(1)}" r="1.8" fill="#f2695f"/>` : "").join("");
-  return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="#22304d" stroke-width="1"/>
-    <path d="${d}" fill="none" stroke="#4fd1c5" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+// sparkline: 2 líneas (venta + ganancia CMC), escala COMPARTIDA por profesional.
+// Compartir escala hace que la separación vertical entre ambas = honorario del profesional.
+// El mínimo puede ser negativo (Abarca ene–abr), así que la base no es cero.
+const SW=104, SH=30, SP=4;                       // ancho, alto, padding vertical
+const SX = i => i*(SW/5);
+
+function spark(v, g, nom){
+  const all = [...v, ...g];
+  const max = Math.max(...all, 1);
+  const min = Math.min(...all, 0);
+  const rng = (max - min) || 1;
+  const Y   = val => SH - SP - ((val - min) / rng) * (SH - SP*2);
+
+  const path = arr => arr.map((y,i)=>(i?"L":"M")+SX(i).toFixed(1)+" "+Y(y).toFixed(1)).join(" ");
+
+  // meses sin actividad: marca roja sobre la línea de ganancia
+  const zeros = g.map((y,i)=> y===0 && v[i]===0
+    ? `<circle cx="${SX(i).toFixed(1)}" cy="${Y(0).toFixed(1)}" r="1.9" fill="#f2695f"/>` : "").join("");
+
+  return `<svg class="spark" width="${SW}" height="${SH}" viewBox="0 0 ${SW} ${SH}" data-nom="${nom}">
+    <line x1="0" y1="${Y(0).toFixed(1)}" x2="${SW}" y2="${Y(0).toFixed(1)}" stroke="#22304d" stroke-width="1"/>
+    <path d="${path(v)}" fill="none" stroke="#6b8fd0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${path(g)}" fill="none" stroke="#4fd1c5" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
     ${zeros}
-    <circle cx="${W}" cy="${pts[5][1].toFixed(1)}" r="2.4" fill="#4fd1c5"/>
+    <circle cx="${SW}" cy="${Y(v[5]).toFixed(1)}" r="2.1" fill="#6b8fd0"/>
+    <circle cx="${SW}" cy="${Y(g[5]).toFixed(1)}" r="2.4" fill="#4fd1c5"/>
+    <g class="hov" style="display:none" pointer-events="none">
+      <line y1="0" y2="${SH}" stroke="#8ea0bd" stroke-width="1" stroke-dasharray="2 2"/>
+      <circle class="hv" r="3" fill="#0b1220" stroke="#6b8fd0" stroke-width="1.8"/>
+      <circle class="hg" r="3" fill="#0b1220" stroke="#4fd1c5" stroke-width="1.8"/>
+    </g>
+    <rect width="${SW}" height="${SH}" fill="transparent"/>
   </svg>`;
 }
 
@@ -242,7 +279,7 @@ function render(sortBy){
     const pctTxt = x.techoG<=0 ? "—" : (p*100).toFixed(0)+"%";
     return `<tr class="${x.activoJun?"":"zero"}">
       <td>${x.nom}</td>
-      <td>${spark(x.g)}</td>
+      <td>${spark(x.v, x.g, x.nom)}</td>
       <td>${x.activoJun ? clp(x.junV) : '<span class="red">sin actividad</span>'}</td>
       <td>${x.activoJun ? clp(x.jun) : '—'}</td>
       <td>${clp(x.techoV)}<span class="mes">${x.mesV}</span></td>
@@ -262,6 +299,75 @@ document.getElementById("tabs").addEventListener("click", e=>{
   render(b.dataset.sort);
 });
 render("gap");
+
+// ── tooltip de la sparkline ─────────────────────────────────────────────
+const MES_LARGO = {ene:"Enero",feb:"Febrero",mar:"Marzo",abr:"Abril",may:"Mayo",jun:"Junio"};
+const byNom = Object.fromEntries(rows.map(r=>[r.nom, r]));
+const tip = Object.assign(document.createElement("div"), {id:"tip"});
+document.body.appendChild(tip);
+
+const tbody = document.getElementById("tbody");
+
+tbody.addEventListener("mousemove", e=>{
+  const svg = e.target.closest(".spark");
+  if(!svg){ hideTip(); return; }
+
+  const r = byNom[svg.dataset.nom];
+  const box = svg.getBoundingClientRect();
+  // el svg se dibuja a tamaño natural, pero normalizamos por si el navegador lo escala
+  const i = Math.max(0, Math.min(5, Math.round(((e.clientX - box.left) / box.width) * 5)));
+
+  const venta = r.v[i], gan = r.g[i];
+  const activo = venta !== 0 || gan !== 0;
+
+  // % del techo: cuánto de su mejor mes alcanzó ESE mes (100% = ese mes ES su techo)
+  const pv = r.techoV > 0 ? venta / r.techoV * 100 : null;
+  const pg = r.techoG > 0 ? gan   / r.techoG * 100 : null;
+  const colPct = p => p===null ? "" : p>=90 ? "green" : p>=40 ? "gold" : "red";
+  const fmtPct = p => p===null ? "—" : p.toFixed(0)+"%";
+
+  tip.innerHTML = `
+    <div class="t-nom">${r.nom}</div>
+    <div class="t-mes">${MES_LARGO[MESES[i]]} 2026</div>` + (activo ? `
+    <div class="t-row"><span>Venta</span><b style="color:#6b8fd0">${clp(venta)}</b></div>
+    <div class="t-row"><span>· % de su techo</span><b class="${colPct(pv)}">${fmtPct(pv)}</b></div>
+    <div class="t-sep"></div>
+    <div class="t-row"><span>Ganancia CMC</span><b class="${gan<0?"red":"teal"}">${clp(gan)}</b></div>
+    <div class="t-row"><span>· % de su techo</span><b class="${colPct(pg)}">${fmtPct(pg)}</b></div>`
+    : `<div class="t-off">Sin actividad este mes</div>`);
+
+  // marcadores sobre la línea
+  const hov = svg.querySelector(".hov");
+  const x = i*(SW/5);
+  hov.style.display = "";
+  hov.querySelector("line").setAttribute("x1", x);
+  hov.querySelector("line").setAttribute("x2", x);
+
+  // misma escala que spark(): compartida entre venta y ganancia, base en el mínimo
+  const all = [...r.v, ...r.g];
+  const max = Math.max(...all,1), min = Math.min(...all,0), rng = (max-min)||1;
+  const Y = val => SH - SP - ((val-min)/rng)*(SH-SP*2);
+  hov.querySelector(".hv").setAttribute("cx", x);
+  hov.querySelector(".hv").setAttribute("cy", Y(venta));
+  hov.querySelector(".hg").setAttribute("cx", x);
+  hov.querySelector(".hg").setAttribute("cy", Y(gan));
+
+  // posición: a la derecha del cursor, salvo que se salga de la pantalla
+  const TW = 190, TH = tip.offsetHeight || 130;
+  let left = e.clientX + 16, top = e.clientY - TH/2;
+  if(left + TW > window.innerWidth - 10)  left = e.clientX - TW - 16;
+  top = Math.max(10, Math.min(window.innerHeight - TH - 10, top));
+  tip.style.left = left + "px";
+  tip.style.top  = top + "px";
+  tip.style.opacity = 1;
+});
+
+tbody.addEventListener("mouseleave", hideTip);
+
+function hideTip(){
+  tip.style.opacity = 0;
+  document.querySelectorAll(".spark .hov").forEach(h => h.style.display = "none");
+}
 
 // ── gráfico de evolución ────────────────────────────────────────────────
 (function(){
