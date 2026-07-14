@@ -1,14 +1,16 @@
-// CMC Portal Paciente v2 — Service Worker
+// CMC Portal Paciente — Service Worker (shells v2 y v5)
 
-const CACHE_VERSION = 'cmc-portal-v2';
+const CACHE_VERSION = 'cmc-portal-v3';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const ASSETS_CACHE = `${CACHE_VERSION}-assets`;
 
 const SHELL_URLS = [
   '/portal/v2',
+  '/portal/v5',
   '/static/pwa/icon-192.png',
   '/static/pwa/icon-512.png',
   '/static/pwa/portal-manifest.webmanifest',
+  '/static/pwa/portal-v5-manifest.webmanifest',
 ];
 
 self.addEventListener('install', (event) => {
@@ -58,15 +60,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname === '/portal/v2' || url.pathname === '/portal/v2/') {
+  // Network-first con fallback a caché para los shells HTML (v2 y v5):
+  // con señal se sirve siempre lo último; sin señal, la PWA instalada abre igual.
+  const shell = (url.pathname === '/portal/v2' || url.pathname === '/portal/v2/') ? '/portal/v2'
+              : (url.pathname === '/portal/v5' || url.pathname === '/portal/v5/') ? '/portal/v5'
+              : null;
+  if (shell) {
     event.respondWith(
       fetch(req).then((res) => {
         if (res && res.status === 200) {
           const copy = res.clone();
-          caches.open(SHELL_CACHE).then((c) => c.put('/portal/v2', copy));
+          caches.open(SHELL_CACHE).then((c) => c.put(shell, copy));
         }
         return res;
-      }).catch(() => caches.match('/portal/v2'))
+      }).catch(() => caches.match(shell))
     );
   }
 });

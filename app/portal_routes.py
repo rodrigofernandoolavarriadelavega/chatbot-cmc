@@ -523,6 +523,7 @@ async def portal_get_perfil(portal_session: str | None = Cookie(None),
                 "nombre": "María Ejemplo Demo",
                 "fecha_nacimiento": "1975-06-15",
                 "sexo": "F",
+                "phone": DEMO_PHONE,
                 "email": "demo@cmc.cl",
                 "comuna": "Arauco",
                 "direccion": "Calle Ficticia 123",
@@ -535,11 +536,15 @@ async def portal_get_perfil(portal_session: str | None = Cookie(None),
         meta = DEMO_FAMILY[rut]
         return {"ok": True, "demo": True, "profile": {
             "nombre": meta["nombre"], "fecha_nacimiento": meta["fnac"],
-            "sexo": meta["sexo"], "email": "", "comuna": "Arauco",
+            "sexo": meta["sexo"], "phone": DEMO_PHONE, "email": "", "comuna": "Arauco",
             "direccion": "Calle Ficticia 123", "prevision": "Fonasa B",
             "contacto_emerg_nombre": "María Ejemplo Demo",
             "contacto_emerg_telefono": "+56 9 8765 4321"}}
     prof = get_profile_full(phone)
+    # El teléfono de la sesión siempre disponible para mostrar en "Mis datos"
+    # (fix del campo que quedaba vacío para pacientes reales).
+    if not prof.get("phone"):
+        prof["phone"] = phone
     return {"ok": True, "profile": prof}
 
 
@@ -931,3 +936,36 @@ async def enviar_magic_link(phone: str) -> bool:
     except Exception as e:
         log.warning("enviar_magic_link falló phone=%s: %s", phone, e)
         return False
+
+
+# ═══ Portal v5 — rediseño rural mobile-first ══════════════════════════════════
+# La ruta vive aquí (y no en main.py) para no mezclar este cambio con trabajo
+# en vuelo de otras sesiones sobre main.py. Usa el mismo _serve_portal de main
+# (import perezoso: a la hora del request main ya está cargado).
+
+from pathlib import Path as _Path
+from fastapi.responses import HTMLResponse as _HTMLResponse
+
+_TEMPLATES_DIR = _Path(__file__).resolve().parent.parent / "templates"
+_PORTAL_V5_HTML = (
+    (_TEMPLATES_DIR / "portal_v5.html").read_text(encoding="utf-8")
+    if (_TEMPLATES_DIR / "portal_v5.html").exists() else ""
+)
+
+
+@router.get("/portal/v5", response_class=_HTMLResponse)
+def portal_page_v5(request: Request, demo: str = ""):
+    """Portal v5 — rediseño UX rural (tipografía 16px+, targets 48px, offline,
+    usted, lenguaje claro). ?demo=1 -> modo demo sin clave (PORTAL_DEMO_OPEN)."""
+    import sys
+    # Reusar el módulo main ya cargado (app.main bajo uvicorn) en vez de
+    # re-importarlo como "main": evita re-ejecutar side effects de módulo.
+    main = sys.modules.get("app.main") or sys.modules.get("main")
+    if main is None:  # pragma: no cover — sólo si se sirve sin app cargada
+        import main  # noqa: F401
+        main = sys.modules["main"]
+    return main._serve_portal(
+        _PORTAL_V5_HTML or main._PORTAL_V4_HTML or main._PORTAL_V3_HTML
+        or main._PORTAL_V2_HTML or main._PORTAL_HTML,
+        request, demo,
+    )
