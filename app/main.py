@@ -636,6 +636,30 @@ async def lifespan(app: FastAPI):
         id="sync_citas_cache",
         replace_existing=True,
     )
+    # Monitor de Agendamientos en vivo: poll cada 45s, UNA sola consulta base
+    # (id_sucursal + cursor por id, sin filtro de profesional — ver
+    # docs/medilink_gotchas.md §6, antecedente del fan-out de agenda-dia).
+    from agenda_ticker import poll_agenda_ticker, sync_atenciones_sin_cerrar
+    scheduler.add_job(
+        poll_agenda_ticker,
+        "interval", seconds=45,
+        id="agenda_ticker_poll",
+        replace_existing=True,
+        misfire_grace_time=30,
+        coalesce=True,
+        max_instances=1,
+    )
+    # Barrido diario (horario valle) de citas pasadas sin cerrar en Medilink —
+    # alimenta el aviso pasivo del monitor. Baja frecuencia a propósito:
+    # pagina varias decenas de veces (30 días de agenda completa).
+    scheduler.add_job(
+        sync_atenciones_sin_cerrar,
+        CronTrigger(hour=6, minute=20, timezone=_CLT),
+        id="agenda_ticker_sin_cerrar_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
     # Retención desactivada: mensajes y eventos se mantienen indefinidamente.
     # El crecimiento es ~90 MB/año para el volumen del CMC, manejable en SQLite.
     # Para purgar manualmente: purge_old_data(msgs_days=N, events_days=N)
@@ -897,6 +921,7 @@ async def lifespan(app: FastAPI):
     )
     # M4: digest semanal a recepción de pacientes >14 días en waitlist (lunes 09:30 CLT)
     from jobs import _job_waitlist_digest_semanal, _job_followup_info
+    from persistencia import job_persistencia_contacto as _job_persistencia_contacto
     scheduler.add_job(
         _job_waitlist_digest_semanal,
         CronTrigger(day_of_week="mon", hour=9, minute=30, timezone=_CLT),
@@ -908,6 +933,16 @@ async def lifespan(app: FastAPI):
         _job_followup_info,
         CronTrigger(minute="*/5", timezone=_CLT),
         id="followup_info",
+        replace_existing=True,
+    )
+    # Carril de persistencia (2026-07-13): segundo toque a consultas de
+    # agendamiento abiertas que el reenganche existente no rescató. GATED OFF
+    # por defecto (PERSISTENCIA_ACTIVE) — la función retorna de inmediato si
+    # el flag no está encendido, así que registrar el job es inerte/seguro.
+    scheduler.add_job(
+        _job_persistencia_contacto,
+        CronTrigger(minute="*/15", timezone=_CLT),
+        id="persistencia_contacto",
         replace_existing=True,
     )
     # B6: Synthetic check del agendamiento — ejercita buscar_primer_dia("Medicina General")
@@ -1056,8 +1091,10 @@ import panel_dia_routes; panel_dia_routes.register_panel_dia_routes(app)  # Pane
 import remuneraciones_routes; remuneraciones_routes.register_remuneraciones_routes(app)  # Panel del Día N4 — remuneraciones
 import captacion_routes; captacion_routes.register_captacion_routes(app)  # Dashboard captación (cómo nos conociste)
 import mg_abandono_routes; mg_abandono_routes.register_mg_abandono_routes(app)  # métrica abandono Medicina General
+import persistencia_routes; persistencia_routes.register_persistencia_routes(app)  # carril de persistencia (GATED PERSISTENCIA_ACTIVE)
 import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estudio de Marketing (panel publicidad/contenido)
 import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
+import agenda_ticker_routes; agenda_ticker_routes.register_agenda_ticker_routes(app)  # Monitor de agendamientos en vivo (/alma/agenda-en-vivo)
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
 
 import pagos_routes
