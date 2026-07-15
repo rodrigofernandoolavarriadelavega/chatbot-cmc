@@ -232,6 +232,13 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none;}
   border:1px solid #cfeaf1;border-radius:8px;padding:5px 10px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
 .tbtn:hover{background:#d8f2f7;}
 .tbtn svg{width:12px;height:12px;}
+.chcard{flex:0 0 auto;margin-bottom:10px;}
+.chcard #chartWrap{padding:8px 12px 10px;}
+.chcard .chsel{max-width:170px;appearance:auto;}
+.chlegend{display:flex;gap:14px;flex-wrap:wrap;font-size:9.5px;font-weight:700;color:var(--mute);padding:0 4px 2px;}
+.chlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+.chlegend em{font-style:normal;display:inline-block;width:14px;border-top:2px dashed;margin-right:4px;vertical-align:3px;}
+.num.hist{color:#b07b1e;}
 .twrap{flex:1;overflow:auto;}
 .twrap::-webkit-scrollbar{width:8px;height:8px;} .twrap::-webkit-scrollbar-thumb{background:#cfe0ea;border-radius:8px;}
 table{width:100%;border-collapse:collapse;font-size:11.5px;}
@@ -645,6 +652,14 @@ body.wp-busy,body.wp-busy *{user-select:none!important;}
   <div class="col" id="colRight">
     <div class="col-head"><div class="col-title">Rendimiento por profesional</div><div class="rule"></div><button class="colfold" data-fold="right" title="Plegar (vertical)">▾</button><button class="colcol" data-col="right" title="Colapsar a tira lateral">«</button></div>
     <div class="col-collapsed"><button class="exp" data-col="right" title="Expandir columna">»</button><div class="vtitle">Rendimiento por profesional</div></div>
+    <div class="tcard chcard" id="chartCard">
+      <div class="tbar">
+        <div class="tt">Real vs cupos vs techo histórico <span id="chSpan" style="color:var(--dim,#7d97a8);font-weight:500"></span></div>
+        <div class="spacer" style="flex:1"></div>
+        <select id="chProf" class="tbtn chsel" title="Ver la serie de un profesional"><option value="0">Todos</option></select>
+      </div>
+      <div id="chartWrap"></div>
+    </div>
     <div class="tcard">
       <div class="tbar">
         <div class="tt">Comparativa <span id="tSpan">— profesionales</span></div>
@@ -930,33 +945,48 @@ function avance(){
   if(STATE.periodo==='dia') return Math.min(1, Math.max(.15, NOW_MIN/(21*60)));
   return CONFIG.avancePeriodo[STATE.periodo] ?? 0.5;
 }
-/* métricas de display ya escaladas al período activo */
+/* métricas de display ya escaladas al período activo.
+   Si COMP (comparativa histórica real, bi_pagos_caja) está cargada para este
+   período: real/potencial de semana-mes dejan de ser EXTRAPOLACIÓN y pasan a
+   ser dato REAL; y todos los períodos ganan m.hist (techo histórico). */
 function dm(p){
   const m=p._m;
+  const comp = (COMP.modo===STATE.periodo) ? COMP.byId[p.id] : null;
   if(STATE.periodo==='dia'){
-    if(!p.hoy) return {real:0,esperada:0,potencial:0,cap:0,nAt:0,nFon:0,nPar:0,nNo:0,ocupados:0};
-    return {real:m.real,esperada:m.esp,potencial:m.pot,cap:m.cap,nAt:m.nAt,nFon:m.nFon,nPar:m.nPar,nNo:m.nNo,ocupados:m.ocupados};
+    const base = (!p.hoy)
+      ? {real:0,esperada:0,potencial:0,cap:0,nAt:0,nFon:0,nPar:0,nNo:0,ocupados:0}
+      : {real:m.real,esperada:m.esp,potencial:m.pot,cap:m.cap,nAt:m.nAt,nFon:m.nFon,nPar:m.nPar,nNo:m.nNo,ocupados:m.ocupados};
+    base.hist = comp ? (comp.hist||0) : null;
+    base.histKey = comp ? comp.hist_key : null;
+    return base;
+  }
+  if(comp){
+    const dias=diasPeriodo(), av=avance(), R=Math.round;
+    return {real:comp.real||0, esperada:R(m.esp*dias), potencial:comp.pot||0,
+      cap:R(m.cap*dias), nAt:R(m.nAt*dias*av), nFon:R(m.nFon*dias*av),
+      nPar:R(m.nPar*dias*av), nNo:R(m.nNo*dias*av), ocupados:R(m.ocupados*dias),
+      hist:comp.hist||0, histKey:comp.hist_key};
   }
   const dias=diasPeriodo(), av=avance(), R=Math.round;
   const esperada=R(m.esp*dias), potencial=R(m.pot*dias), real=R(esperada*av);
   return {real,esperada,potencial,cap:R(m.cap*dias),
     nAt:R(m.nAt*dias*av), nFon:R(m.nFon*dias*av), nPar:R(m.nPar*dias*av), nNo:R(m.nNo*dias*av),
-    ocupados:R(m.ocupados*dias)};
+    ocupados:R(m.ocupados*dias), hist:null, histKey:null};
 }
 /* población visible según período: hoy = presentes · período = todos */
 function periodProfs(){ return STATE.periodo==='dia' ? PROFS.filter(p=>p.hoy) : PROFS.slice(); }
 const pct = (dif, base) => base ? (dif/base*100) : 0;
 function totales(list){
   return list.reduce((t,p)=>{ const m=dm(p); t.real+=m.real;t.esp+=m.esperada;t.pot+=m.potencial;t.cap+=m.cap;
-    t.nAt+=m.nAt;t.nFon+=m.nFon;t.nPar+=m.nPar;t.nNo+=m.nNo; return t; },
-    {real:0,esp:0,pot:0,cap:0,nAt:0,nFon:0,nPar:0,nNo:0});
+    t.nAt+=m.nAt;t.nFon+=m.nFon;t.nPar+=m.nPar;t.nNo+=m.nNo; t.hist+=(m.hist||0); return t; },
+    {real:0,esp:0,pot:0,cap:0,nAt:0,nFon:0,nPar:0,nNo:0,hist:0});
 }
 
 /* 4 · ESTADO + formato */
 const STATE = {
   periodo:'dia', fecha:new Date(), desde:null, hasta:null,
   soloDisponibles:false, ordenFilas:null, centerOrder:BASE.map(p=>p.id),
-  ordenCols:['real','esp','dif1','pot','dif2'],
+  ordenCols:['real','esp','dif1','pot','dif2','hist','dif3'],
   sortCol:null, sortDir:'desc',          // orden por columna (null = agrupado por área)
   c1:288, c2:360,                        // anchos de macrocolumnas (resize)
   collapsed:{left:false,center:false,right:false}, // colapso a tira lateral
@@ -1221,12 +1251,18 @@ window.addEventListener('keydown',e=>{ if(e.key==='Escape'&&apopPinned) closeAge
 document.addEventListener('mousedown',e=>{ if(apopPinned && !e.target.closest('#apop') && !e.target.closest('.pcard')) closeAgenda(); });
 
 /* 7 · RENDER · tabla comparativa + drag filas/columnas */
+const HIST_LBL = ()=>({dia:'Techo hist. (mismo día sem.)',semana:'Techo hist. (mejor semana)',mes:'Techo hist. (mejor mes)',rango:'Techo histórico'}[STATE.periodo]);
 const COL_DEFS = {
   real:{lab:'Venta real',  val:m=>`<span class="num real mono">${clp(m.real)}</span>`},
   esp: {lab:'V. esperada', val:m=>`<span class="num mono">${clp(m.esperada)}</span>`},
   dif1:{lab:'Real vs esp.',val:m=>diffCell(m.real-m.esperada,m.esperada)},
   pot: {lab:'Potencial',   val:m=>`<span class="num pot mono">${clp(m.potencial)}</span>`},
   dif2:{lab:'Real vs pot.',val:m=>diffCell(m.real-m.potencial,m.potencial)},
+  hist:{get lab(){return HIST_LBL();}, val:m=> m.hist!=null
+        ? `<span class="num hist mono" ${m.histKey?`title="logrado el ${m.histKey}"`:''}>${clp(m.hist)}</span>`
+        : '<span class="num mono" style="opacity:.35">—</span>'},
+  dif3:{lab:'Real vs techo', val:m=> (m.hist!=null && m.hist>0) ? diffCell(m.real-m.hist,m.hist)
+        : '<span class="num mono" style="opacity:.35">—</span>'},
 };
 function diffCell(dif,base){
   const p=pct(dif,base); const sign = dif>0?'pos':dif<0?'neg':'zero'; const arrow = dif>0?'+':'';
@@ -1252,7 +1288,8 @@ function rowHTML(p){
 /* valor numérico de una columna para ordenar */
 function sortVal(p,k){ const m=dm(p);
   switch(k){ case 'real':return m.real; case 'esp':return m.esperada; case 'dif1':return m.real-m.esperada;
-    case 'pot':return m.potencial; case 'dif2':return m.real-m.potencial; default:return 0; } }
+    case 'pot':return m.potencial; case 'dif2':return m.real-m.potencial;
+    case 'hist':return m.hist||0; case 'dif3':return (m.hist!=null&&m.hist>0)?(m.real-m.hist):-Infinity; default:return 0; } }
 const sortLabel = ()=> STATE.sortCol==='nombre' ? 'nombre' : (COL_DEFS[STATE.sortCol]?.lab||'');
 /* clic en encabezado: descendente → ascendente → vuelve a agrupado por área */
 function cycleSort(col){
@@ -1296,6 +1333,8 @@ function renderTable(){
     if(k==='pot')  return `<td><span class="pot mono">${clp(t.pot)}</span></td>`;
     if(k==='dif1') return `<td>${diffCell(t.real-t.esp,t.esp)}</td>`;
     if(k==='dif2') return `<td>${diffCell(t.real-t.pot,t.pot)}</td>`;
+    if(k==='hist') return `<td><span class="hist mono">${t.hist?clp(t.hist):'—'}</span></td>`;
+    if(k==='dif3') return `<td>${t.hist?diffCell(t.real-t.hist,t.hist):'—'}</td>`;
     return '<td></td>';
   }).join('');
   wrap.innerHTML = `<table>
@@ -1380,6 +1419,7 @@ function setupTopbar(){
     document.getElementById('dpDia').style.display = STATE.periodo==='dia'?'flex':'none';
     document.getElementById('dpRango').style.display = STATE.periodo==='rango'?'flex':'none';
     updateDateLabel(); refresh(true); syncN3IfNeeded();
+    if(typeof loadComparativa==='function') loadComparativa();
   });
   const inDia=document.getElementById('inDia'); inDia.value = toISO(STATE.fecha);
   inDia.addEventListener('change',()=>{ STATE.fecha=new Date(inDia.value+'T12:00:00'); updateDateLabel();
@@ -1393,7 +1433,7 @@ function setupTopbar(){
     this.classList.toggle('on'); STATE.soloDisponibles=this.classList.contains('on'); renderTable();
   });
   document.getElementById('btnReset').addEventListener('click',()=>{
-    STATE.ordenFilas=null; STATE.ordenCols=['real','esp','dif1','pot','dif2']; STATE.centerOrder=BASE.map(p=>p.id);
+    STATE.ordenFilas=null; STATE.ordenCols=['real','esp','dif1','pot','dif2','hist','dif3']; STATE.centerOrder=BASE.map(p=>p.id);
     STATE.sortCol=null; STATE.sortDir='desc';
     STATE.collapsedAreas.clear(); STATE.kpiCollapsed.clear(); STATE.cardCollapsed.clear();
     STATE.collapsed={left:false,center:false,right:false}; STATE.folded={left:false,center:false,right:false}; applyCols(); saveColState();
@@ -2005,7 +2045,84 @@ async function loadOperativo(fecha, auto){
     const h=document.querySelector('.central .col-head .badge')||document.getElementById('lblDispo');
     renderAll();
   }catch(e){ OP_REAL=false; }
+  loadComparativa();
 }
+
+/* — comparativa histórica REAL (bi_pagos_caja): real vs cupos vs techo histórico —
+   modo dia    → mejor MISMO día de semana en 2 años (el mejor lunes, martes, …)
+   modo semana → mejor semana completa en 2 años
+   modo mes    → mejor mes completo en 2 años */
+let COMP={modo:null, fecha:null, byId:{}, serie:[], hist:0, histKey:null, prof:0};
+const DIAS_SEM=['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+const MES_ABR=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function compLabel(k){
+  if(COMP.modo==='mes'){ const [y,m]=k.split('-'); return MES_ABR[+m-1]+' '+y.slice(2); }
+  const d=new Date(k+'T12:00:00'); return d.getDate()+' '+MES_ABR[d.getMonth()];
+}
+async function loadComparativa(){
+  const modo=STATE.periodo;
+  if(!PANEL_TOKEN || modo==='rango'){ COMP.modo=null; renderChart(); return; }
+  const fecha = OP_FECHA || toISO(STATE.fecha);
+  try{
+    const qs=['modo='+modo,'fecha='+fecha,'prof='+(COMP.prof||0),'token='+encodeURIComponent(PANEL_TOKEN)];
+    const r=await fetch('/api/panel-dia/comparativa?'+qs.join('&'),{credentials:'same-origin'}); if(!r.ok) throw 0;
+    const d=await r.json();
+    COMP.modo=d.modo; COMP.fecha=d.fecha; COMP.serie=d.serie||[];
+    COMP.hist=d.hist_total||0; COMP.histKey=d.hist_total_key||null;
+    COMP.byId={}; (d.profesionales||[]).forEach(x=>COMP.byId[x.id]=x);
+    fillChartSelect();
+    renderTable(); renderKPI(); renderChart();
+  }catch(e){ COMP.modo=null; renderChart(); }
+}
+function fillChartSelect(){
+  const sel=document.getElementById('chProf'); if(!sel||sel.dataset.filled) return;
+  const opts=PROFS.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre))
+    .map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  sel.innerHTML='<option value="0">Todos</option>'+opts; sel.dataset.filled='1';
+  sel.addEventListener('change',()=>{ COMP.prof=+sel.value; loadComparativa(); });
+}
+function renderChart(){
+  const wrap=document.getElementById('chartWrap'), span=document.getElementById('chSpan');
+  if(!wrap) return;
+  if(COMP.modo==null || !COMP.serie.length){
+    wrap.innerHTML=''; if(span) span.textContent = STATE.periodo==='rango'?'— no disponible en rango':'';
+    return;
+  }
+  const nPer={dia:'últimos '+COMP.serie.length+' '+DIAS_SEM[new Date(COMP.fecha+'T12:00:00').getDay()===0?6:new Date(COMP.fecha+'T12:00:00').getDay()-1]+'s',
+              semana:'últimas '+COMP.serie.length+' semanas', mes:'últimos '+COMP.serie.length+' meses'}[COMP.modo];
+  if(span) span.textContent='· '+nPer+(COMP.histKey?(' · techo '+clp(COMP.hist)+' ('+compLabel(COMP.histKey)+')'):'');
+  const S=COMP.serie, W=880, H=170, PL=56, PR=10, PT=12, PB=26;
+  const iw=W-PL-PR, ih=H-PT-PB;
+  const maxV=Math.max(COMP.hist, ...S.map(s=>Math.max(s.real,s.pot)), 1)*1.08;
+  const y=v=>PT+ih-(v/maxV)*ih;
+  const step=iw/S.length, bw=Math.min(34, step*0.52);
+  let g='';
+  for(let t=0;t<4;t++){ const v=maxV*t/3.33;
+    g+=`<line x1="${PL}" y1="${y(v)}" x2="${W-PR}" y2="${y(v)}" stroke="#e8f1f6"/>
+        <text x="${PL-6}" y="${y(v)+3}" fill="#9db3c0" font-size="8.5" text-anchor="end">${v>=1e6?(v/1e6).toFixed(1)+'M':Math.round(v/1e3)+'k'}</text>`; }
+  // barras: venta real por período (el período actual resaltado)
+  S.forEach((s,i)=>{ const cx=PL+step*i+step/2;
+    const cur=(i===S.length-1);
+    g+=`<rect x="${cx-bw/2}" y="${y(s.real)}" width="${bw}" height="${Math.max(0,ih-(y(s.real)-PT))}" rx="3"
+         fill="${cur?'#1172AB':'#8fc6dd'}"><title>${compLabel(s.k)} · real ${clp(s.real)} · cupos ${clp(s.pot)}</title></rect>
+        <text x="${cx}" y="${H-8}" fill="#7d97a8" font-size="8.5" text-anchor="middle">${compLabel(s.k)}</text>`;
+  });
+  // línea: máximo posible por cupos (potencial del período)
+  const pts=S.map((s,i)=>[PL+step*i+step/2, y(s.pot)]);
+  g+=`<path d="${pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ')}"
+       fill="none" stroke="#2f9e8f" stroke-width="1.8" stroke-linejoin="round"/>`;
+  pts.forEach(p=>{ g+=`<circle cx="${p[0]}" cy="${p[1]}" r="2" fill="#2f9e8f"/>`; });
+  // línea discontinua: techo histórico del período equivalente
+  if(COMP.hist>0){ g+=`<line x1="${PL}" y1="${y(COMP.hist)}" x2="${W-PR}" y2="${y(COMP.hist)}"
+       stroke="#c98a2d" stroke-width="1.8" stroke-dasharray="6 4"/>`; }
+  wrap.innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block">${g}</svg>
+    <div class="chlegend">
+      <span><i style="background:#1172AB"></i>venta real por período</span>
+      <span><em style="border-color:#2f9e8f;border-top-style:solid"></em>máximo posible por cupos</span>
+      <span><em style="border-color:#c98a2d"></em>techo histórico (${{dia:'mejor mismo día de semana',semana:'mejor semana',mes:'mejor mes'}[COMP.modo]}, 2 años)</span>
+    </div>`;
+}
+
 /* — conexión a datos REALES · Nivel 2 chat (/api/panel-dia/chat + /conv) — */
 let CHAT_REAL=false;
 function _pacFrom(x, ctx, prof, area){

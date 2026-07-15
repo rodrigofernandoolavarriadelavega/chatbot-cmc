@@ -285,6 +285,148 @@ def register_panel_dia_routes(app):
                 })
         return {"fecha": fecha, "profesionales": profs}
 
+    # ───── NIVEL 1 · comparativa histórica: real vs cupos vs techo histórico ─────
+    # Fuente: bi_pagos_caja (libro de la verdad — VENTA). Períodos comparables:
+    #   dia    → el MISMO día de la semana en 2 años (ej: el mejor LUNES histórico)
+    #   semana → semanas lunes-domingo, mejor semana COMPLETA en 2 años
+    #   mes    → meses calendario, mejor mes COMPLETO en 2 años
+    # Potencial (máximo por cupos) = cap_día × ticket × días típicos trabajados en
+    # el período (p85 histórico) — data-driven, sin depender de la agenda futura.
+    # ?prof=ID → la serie es de ese profesional; sin prof → serie del total.
+    @app.get("/api/panel-dia/comparativa", tags=["panel-dia"], include_in_schema=False)
+    def panel_comparativa(modo: str = Query("dia"), fecha: str | None = Query(None),
+                          prof: int = Query(0), n: int = Query(12),
+                          token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+        _auth(token, cmc_session)
+        from session import db
+        from medilink import PROFESIONALES
+        if modo not in ("dia", "semana", "mes"):
+            raise HTTPException(400, "modo inválido (dia|semana|mes)")
+        try:
+            f = date.fromisoformat(fecha) if fecha else date.today()
+        except ValueError:
+            raise HTTPException(400, "fecha inválida")
+        n = max(4, min(24, n))
+        desde = (f - timedelta(days=730)).isoformat()
+        hasta = f.isoformat()
+
+        with db() as c:
+            # venta diaria por profesional — UNA query, se agrega en Python
+            daily: dict = {}            # idp -> {fecha_iso: monto}
+            for idp, fe, m in c.execute(
+                "SELECT id_profesional, fecha, SUM(monto) FROM bi_pagos_caja "
+                "WHERE fecha BETWEEN ? AND ? AND monto>0 GROUP BY id_profesional, fecha",
+                (desde, hasta)).fetchall():
+                daily.setdefault(idp, {})[fe] = int(m or 0)
+            t_desde = (f - timedelta(days=90)).isoformat()
+            ticket = {idp: int(t or 0) for idp, t in c.execute(
+                "SELECT id_profesional, AVG(monto) FROM bi_pagos_caja "
+                "WHERE fecha>=? AND monto>0 GROUP BY id_profesional", (t_desde,)).fetchall()}
+            cap_desde = (f - timedelta(days=120)).isoformat()
+            dcounts: dict = {}
+            for idp, _fe, cnt in c.execute(
+                "SELECT id_profesional, fecha, COUNT(DISTINCT id_paciente) FROM bi_pagos_caja "
+                "WHERE fecha BETWEEN ? AND ? AND monto>0 GROUP BY id_profesional, fecha",
+                (cap_desde, hasta)).fetchall():
+                dcounts.setdefault(idp, []).append(int(cnt or 0))
+            cap_cache: dict = {}
+            try:
+                for idp, cp in c.execute(
+                    "SELECT id_profesional, cap FROM panel_cap_cache WHERE fecha=?", (hasta,)).fetchall():
+                    if cp:
+                        cap_cache[idp] = int(cp)
+            except Exception:
+                pass
+
+        def p85(arr):
+            if not arr:
+                return 0
+            a = sorted(arr)
+            return a[max(0, min(len(a) - 1, int(round(0.85 * (len(a) - 1)))))]
+
+        def cap_for(idp):
+            return cap_cache.get(idp) or p85(dcounts.get(idp, []))
+
+        # clave de período para una fecha + pertenencia al conjunto comparable
+        if modo == "dia":
+            def keyf(d): return d.isoformat()
+            def member(d): return d.weekday() == f.weekday()
+        elif modo == "semana":
+            def keyf(d): return (d - timedelta(days=d.weekday())).isoformat()   # lunes
+            def member(d): return True
+        else:
+            def keyf(d): return d.strftime("%Y-%m")
+            def member(d): return True
+        target_key = keyf(f)
+
+        # agregación por (profesional, período) + días activos por período
+        per: dict = {}                  # idp -> {key: monto}
+        pdays: dict = {}                # idp -> {key: n_dias_activos}
+        for idp, dd in daily.items():
+            for fe, m in dd.items():
+                d = date.fromisoformat(fe)
+                if not member(d):
+                    continue
+                k = keyf(d)
+                per.setdefault(idp, {})
+                per[idp][k] = per[idp].get(k, 0) + m
+                pdays.setdefault(idp, {})
+                pdays[idp][k] = pdays[idp].get(k, 0) + 1
+
+        # techo honesto: el período EN CURSO (target_key) nunca compite consigo mismo;
+        # los períodos pasados están completos por construcción (la ventana parte 730d atrás)
+        profs_out = []
+        for idp, info in PROFESIONALES.items():
+            mine = per.get(idp, {})
+            real = mine.get(target_key, 0)
+            hist_k, hist_v = None, 0
+            for k, v in mine.items():
+                if k == target_key:
+                    continue
+                if v > hist_v:
+                    hist_v, hist_k = v, k
+            tk = ticket.get(idp, 0)
+            cp = cap_for(idp)
+            if modo == "dia":
+                dias_tip = 1
+            else:
+                dvals = [v for k, v in pdays.get(idp, {}).items() if k != target_key]
+                dias_tip = p85(dvals)
+            pot = cp * tk * dias_tip
+            profs_out.append({"id": idp, "real": real, "pot": pot,
+                              "hist": hist_v, "hist_key": hist_k})
+
+        # serie de los últimos n períodos (total o de un profesional)
+        def prev_key(d, i):
+            if modo == "dia":
+                return keyf(d - timedelta(days=7 * i))
+            if modo == "semana":
+                return keyf(d - timedelta(days=7 * i))
+            mth = (d.year * 12 + d.month - 1) - i
+            return f"{mth // 12:04d}-{mth % 12 + 1:02d}"
+        keys = [prev_key(f, i) for i in range(n - 1, -1, -1)]
+        src = {prof: per.get(prof, {})} if prof else per
+        serie = []
+        for k in keys:
+            tot = sum(mine.get(k, 0) for mine in src.values())
+            if prof:
+                p_pot = next((x["pot"] for x in profs_out if x["id"] == prof), 0)
+                pot_k = p_pot if tot > 0 or k == target_key else 0
+            else:
+                pot_k = sum(x["pot"] for x in profs_out
+                            if per.get(x["id"], {}).get(k, 0) > 0 or k == target_key)
+            serie.append({"k": k, "real": tot, "pot": pot_k})
+        # techo histórico del agregado de la serie (excluye el período en curso)
+        agg: dict = {}
+        for mine in src.values():
+            for k, v in mine.items():
+                if k != target_key:
+                    agg[k] = agg.get(k, 0) + v
+        hist_total_key = max(agg, key=agg.get) if agg else None
+        return {"modo": modo, "fecha": hasta, "target_key": target_key,
+                "profesionales": profs_out, "serie": serie,
+                "hist_total": agg.get(hist_total_key, 0), "hist_total_key": hist_total_key}
+
     # ───── NIVEL 1 · agenda detallada de UN profesional (lazy, al fijar popup) ─────
     # UNA sola llamada a Medilink /citas (sin fan-out de /pacientes → sin 429).
     # Devuelve la grilla del día POR HORARIO: cada cita en su hora real + cupos
