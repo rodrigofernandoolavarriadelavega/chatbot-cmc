@@ -139,7 +139,7 @@ PROFESIONALES = {
     68: {"nombre": "David Pardo",              "especialidad": "Ecografía",             "intervalo": 15},
     # Psiquiatría TELECONSULTA — solo jueves (weekday 3) 16:00-20:00. Bloque de 60 min
     # (45 min consulta + 15 min descanso) → cupos 16:00/17:00/18:00/19:00.
-    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 30, "dias": [3]},  # 30 = duración real de su consulta (2026-07-13). Verificado en Medilink: jueves 16:00-20:00 con cupos en :00 Y :30 (8 por jornada). NO subir a 60: el bot dejaría de mostrar la mitad de sus horas. (El comentario viejo decía "descanso en :30" — quedó obsoleto cuando pasó a atender cada 30 min.)
+    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 40, "dias": [3]},  # 40 = duración pedida por el dueño (2026-07-15; antes 30). Jueves 16:00-20:00 → 6 cupos/jornada (16:00, 16:40, 17:20, 18:00, 18:40, 19:20). OJO transición: citas viejas de 30 min en :30 pueden bloquear ventanas de 40 por solape — se normaliza solo a medida que la agenda se renueva.
     # Neurología TELEMEDICINA — Lun/Mar/Jue/Vie (horario real en Medilink,
     # sucursal 1). Consulta adultos/adolescentes desde 15 años. $65.000 particular.
     79: {"nombre": "Dra. Franca González",     "especialidad": "Neurología",            "intervalo": 30},
