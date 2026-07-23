@@ -90,6 +90,14 @@ _PACIENTE_CACHE_TTL = 600  # 10 min
 _proxima_cache: dict = {}
 _PROXIMA_CACHE_TTL = 900  # 15 min — aguanta picos de carga sin saturar Medilink
 
+# Caché de estado de citas por (id_profesional, fecha) — batch por día.
+# Los rieles de recordatorios (bot y recepción) corren en el mismo tick de cron
+# (09:00, cada 15min, 10:00) y suelen compartir profesional/fecha: 1 sola
+# llamada a /citas cubre a TODOS los pacientes de ese profesional ese día,
+# en vez de 1 llamada por cita. TTL corto (cubre un mismo tick, no más).
+_estados_dia_cache: dict = {}
+_ESTADOS_DIA_TTL = 300  # 5 min
+
 # Contador simple de 429s (para diagnóstico rápido)
 _STATS_429 = {"total": 0, "last_ts": 0.0, "last_url": ""}
 
@@ -1150,12 +1158,19 @@ async def crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs) -> Opt
     return result
 
 
-async def buscar_paciente(rut: str) -> Optional[dict]:
+async def buscar_paciente(rut: str, strict: bool = False) -> Optional[dict]:
     """Busca paciente por RUT. Devuelve dict con id, nombre, rut o None.
 
     Cacheado por 10 min: el mismo RUT se consulta 2-5 veces en un flujo
     (WAIT_RUT_AGENDAR → confirmaciones → CONFIRMING_CITA). Reduce carga
     Medilink y latencia de la conversación.
+
+    strict=True: si Medilink NO respondió (error de red o status != 200),
+    levanta en vez de devolver None, para que el caller distinga "no existe"
+    de "no se pudo consultar". Sin esto, el agendador web trataría a un
+    paciente registrado como nuevo durante un 429/caída y le crearía una
+    ficha DUPLICADA en el HIS. Default False = comportamiento histórico
+    del bot (fallback silencioso).
     """
     # Normalización robusta: remover puntos, guiones, underscores, espacios,
     # tabs y cualquier separador raro que pacientes rurales usan (p. ej.
@@ -1180,8 +1195,12 @@ async def buscar_paciente(rut: str) -> Optional[dict]:
                        params={"q": _q(params)}, headers=HEADERS, timeout=5)
     except httpx.RequestError as e:
         log.error("No se pudo buscar paciente rut=%s: %s", _rut_safe(rut_clean), e)
+        if strict:
+            raise
         return None
     if r.status_code != 200:
+        if strict:
+            raise RuntimeError(f"buscar_paciente: Medilink respondió {r.status_code}")
         return None
     data = _safe_json(r).get("data", [])
     if not data:
@@ -1670,16 +1689,115 @@ async def get_cita(id_cita: int) -> dict | None:
         return None
 
 
+def _estado_cita_from_raw(c: dict) -> dict:
+    """Normaliza el estado crudo de una cita Medilink (`/citas`) a lo que le
+    importa a los recordatorios.
+
+    - anulada: `estado_anulacion == 1`. Cubre "Anulado", "Anulado por pcte. via
+      email" y también "Cambio de fecha" (id_estado=14) — Medilink marca la
+      cita vieja como anulada cuando se reagenda, así que el slot original ya
+      no es válido para efectos de recordatorio.
+    - confirmada: `id_estado == 3` ("Confirmado por teléfono", el valor real
+      que usa la recepción) o `estado_cita` empieza con "confirmad" (evita el
+      falso positivo de "No confirmado", que contiene la palabra "confirmado"
+      como substring).
+
+    Verificado contra datos reales de producción 2026-07-23 (ver
+    docs/medilink_gotchas.md #11): `id_estado` observados = 1 Anulado,
+    2 Atendido, 3 Confirmado por teléfono, 5 En sala de espera, 7 No
+    confirmado, 10 Anulado por pcte. via email, 12 Notificado via email,
+    14 Cambio de fecha, 18 Notificado por WhatsApp.
+    """
+    estado_txt = (c.get("estado_cita") or "").strip().lower()
+    return {
+        "anulada":     c.get("estado_anulacion") == 1,
+        "confirmada":  c.get("id_estado") == 3 or estado_txt.startswith("confirmad"),
+        "estado_cita": c.get("estado_cita") or "",
+        "id_estado":   c.get("id_estado"),
+        "id_paciente": c.get("id_paciente"),
+    }
+
+
 def cita_esta_confirmada(cita: dict | None) -> bool:
-    """True si la cita ya fue marcada como confirmada por la recepcion en Medilink.
-    Detecta los valores tipicos en `estado_cita` (case-insensitive) porque Medilink
-    no documenta los id_estado numericos y pueden variar por cuenta."""
+    """True si la cita ya fue marcada como confirmada por la recepción en Medilink
+    (típicamente "Confirmado por teléfono", id_estado=3). Ver `_estado_cita_from_raw`."""
     if not cita:
         return False
-    estado = (cita.get("estado_cita") or "").strip().lower()
-    if estado in ("confirmada", "confirmado", "asistira", "asiste"):
-        return True
-    return False
+    return _estado_cita_from_raw(cita)["confirmada"]
+
+
+async def estados_citas_dia(id_prof: int, fecha: str) -> dict[int, dict]:
+    """Batch: UNA llamada a `/citas` por (profesional, fecha) con el estado
+    normalizado de TODAS las citas de ese profesional ese día (incluidas las
+    anuladas — no filtra `estado_anulacion` porque justo necesitamos verlas).
+
+    Pensada para los recordatorios: en vez de un `get_cita` por cada paciente,
+    se trae la agenda completa del profesional una sola vez y se resuelve cada
+    id_cita contra ese dict. Cacheada 5 min — el riel del bot y el de
+    recepción corren en el mismo tick de cron y suelen compartir
+    (profesional, fecha).
+
+    Retorna {id_cita: {"anulada", "confirmada", "estado_cita", "id_estado", "id_paciente"}}.
+    Dict vacío si la llamada falla (fail-safe: el caller debe tratar "no encontrado"
+    como "no enviar", nunca como "enviar igual").
+    """
+    cache_key = (id_prof, fecha)
+    cached = _estados_dia_cache.get(cache_key)
+    if cached and (time.monotonic() - cached["_ts"]) < _ESTADOS_DIA_TTL:
+        return cached["data"]
+
+    params = {
+        "id_sucursal":    {"eq": MEDILINK_SUCURSAL},
+        "id_profesional": {"eq": id_prof},
+        "fecha":          {"eq": fecha},
+    }
+    client = _get_shared_client()
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                       params={"q": _q(params)}, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.error("estados_citas_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
+        return {}
+    if r.status_code != 200:
+        return {}
+
+    out: dict[int, dict] = {}
+    for c in _safe_json(r).get("data", []):
+        # Gotcha #5: el filtro `fecha` de Medilink a veces devuelve registros
+        # fuera de rango — se verifica explícitamente en el cliente.
+        if c.get("fecha") != fecha:
+            continue
+        cid = c.get("id")
+        if cid is None:
+            continue
+        out[int(cid)] = _estado_cita_from_raw(c)
+
+    _estados_dia_cache[cache_key] = {"data": out, "_ts": time.monotonic()}
+    return out
+
+
+async def estado_cita_actual(id_cita: int, id_prof: int | None = None,
+                              fecha: str | None = None) -> dict | None:
+    """Devuelve el estado normalizado y actual de una cita puntual:
+    `{"anulada", "confirmada", "estado_cita", "id_estado", "id_paciente"}`,
+    o `None` si no se pudo determinar (cita no encontrada o llamada fallida —
+    fail-safe: el caller NO debe enviar el recordatorio en ese caso).
+
+    Si se conocen `id_prof` y `fecha`, reusa el batch cacheado de
+    `estados_citas_dia` (1 sola llamada Medilink por profesional/día en vez de
+    1 por cita — preferido cuando se procesan varias citas del mismo
+    profesional/día, como en los recordatorios). Sin esos datos, o si la cita
+    no aparece en el listado del día (pudo moverse de profesional/fecha), cae
+    a `get_cita` (1 llamada puntual)."""
+    if id_prof and fecha:
+        estados = await estados_citas_dia(id_prof, fecha)
+        estado = estados.get(int(id_cita))
+        if estado is not None:
+            return estado
+    cita = await get_cita(int(id_cita))
+    if cita is None:
+        return None
+    return _estado_cita_from_raw(cita)
 
 
 async def cancelar_cita(id_cita: int) -> bool:

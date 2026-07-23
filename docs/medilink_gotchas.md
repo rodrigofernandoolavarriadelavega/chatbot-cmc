@@ -81,6 +81,39 @@ Servidor corre en UTC pero Chile es America/Santiago. `medilink.py` usa `ZoneInf
 
 Diccionario keyword → id_esp Medilink. Cuando sumes una especialidad nueva, actualízalo acá. Ecografía = 13, medicina general = 10, etc.
 
+## 11. `id_estado` de `/citas` — valores reales observados en producción (2026-07-23)
+
+Medilink no documenta estos códigos. Verificados contra prod pidiendo `/citas` de
+6 profesionales × 10 días:
+
+| id_estado | estado_cita | estado_anulacion |
+|---|---|---|
+| 1 | Anulado | 1 |
+| 2 | Atendido | 0 |
+| 3 | **Confirmado por teléfono** | 0 |
+| 5 | En sala de espera | 0 |
+| 7 | No confirmado (default) | 0 |
+| 10 | Anulado por pcte. via email | 1 |
+| 12 | Notificado via email | 0 |
+| 14 | Cambio de fecha | 1 |
+| 18 | Notificado por WhatsApp | 0 |
+
+Notar: "Cambio de fecha" (reagendado) también deja `estado_anulacion=1` en el
+registro viejo — para "¿esta cita sigue vigente?" basta con `estado_anulacion==1`,
+no hace falta enumerar `id_estado` uno por uno.
+
+"Confirmado por teléfono" es el valor real que usa la recepción al confirmar
+por llamada — **no** "confirmada"/"confirmado" a secas. Un match exacto contra
+esas dos palabras (como tenía `cita_esta_confirmada` antes del fix 2026-07-23)
+nunca matchea en la práctica. Usar `id_estado==3` o `estado_cita` con
+`.startswith("confirmad")` (cuidado: "No confirmado" contiene la palabra
+"confirmado" como substring — por eso `startswith`, no `in`).
+
+Helpers en `medilink.py`: `_estado_cita_from_raw()`, `estados_citas_dia()` (batch
+por profesional/fecha, cacheado 5 min), `estado_cita_actual()` (resuelve 1 cita,
+prefiere el batch si se le pasa profesional+fecha). Usados por `reminders.py`
+para decidir, justo antes de enviar, si una cita sigue vigente/confirmada.
+
 ---
 
 **Si tocas este archivo, actualiza también** `CLAUDE.md` si cambia la cita o referencia.

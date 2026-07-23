@@ -3,6 +3,7 @@ Recordatorios automáticos:
 - 24h antes (mensaje interactivo con 3 botones): diario a las 9:00 CLT
 - 2h antes (mensaje texto corto, fresh-in-mind): cron interval 15 min
 """
+import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -29,10 +30,39 @@ from session import (
     mark_recepcion_reminder_2h_sent,
     mark_recepcion_reminder_48h_sent,
 )
-from medilink import get_cita, cita_esta_confirmada
+from medilink import estado_cita_actual, PROFESIONALES
 
 log = logging.getLogger("bot.reminders")
 _TZ_CL = ZoneInfo("America/Santiago")
+
+# Reverso nombre→id de PROFESIONALES. citas_bot no guarda id_profesional (solo
+# el nombre en texto), pero para pedirle a Medilink el estado de TODAS las
+# citas de un profesional/día en una sola llamada (en vez de una por cita)
+# necesitamos el ID. Se construye una sola vez al importar el módulo.
+_PROF_NOMBRE_A_ID = {info["nombre"]: pid for pid, info in PROFESIONALES.items()}
+
+
+async def _estado_pre_envio(id_cita, id_prof: int | None, fecha: str) -> dict | None:
+    """Consulta el estado ACTUAL de una cita en Medilink justo antes de enviar
+    un recordatorio (la recepción confirma/anula por teléfono durante el día,
+    y eso puede pasar en cualquier momento entre el sync y el envío).
+
+    Devuelve `{"anulada", "confirmada", "estado_cita", "id_estado", "id_paciente"}`.
+    Si `id_cita` no es un ID numérico de Medilink (reservas manuales tipo
+    "manual-PHONE-TS" del panel admin, sin registro en Medilink) devuelve un
+    estado neutro — no hay nada que anular/confirmar, se envía igual.
+    Si la consulta a Medilink falla, devuelve `None` (fail-safe: el caller NO
+    debe enviar ante duda)."""
+    if not id_cita:
+        return None
+    id_cita_str = str(id_cita)
+    if not id_cita_str.isdigit():
+        return {"anulada": False, "confirmada": False, "estado_cita": "", "id_estado": None, "id_paciente": None}
+    try:
+        return await estado_cita_actual(int(id_cita_str), id_prof=id_prof, fecha=fecha)
+    except Exception as e:
+        log.warning("Pre-envío: consulta Medilink id_cita=%s falló: %s", id_cita, e)
+        return None
 
 
 def _dedup_citas(citas: list[dict]) -> list[dict]:
@@ -133,11 +163,17 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
         return
 
     # ── PRE-VALIDACIÓN contra Medilink ────────────────────────────────────────
-    # Antes de mandar cada recordatorio, verificar que la cita siga activa
-    # en Medilink. Caso real 2026-05-03: Sebastian recibió recordatorio de
-    # cita 54874 (Quijano lunes 4-may 10:00) que en Medilink figura
-    # estado_anulacion=1 hace 20 días con otro paciente reasignado.
-    # El bot no detectaba la cancelación y mandaba el recordatorio igual.
+    # Antes de mandar cada recordatorio, verificar el estado ACTUAL de la cita
+    # en Medilink (no el que tenía al sincronizar) — la recepción confirma o
+    # anula por teléfono durante el día. Caso real 2026-05-03: Sebastian
+    # recibió recordatorio de cita 54874 (Quijano lunes 4-may 10:00) que en
+    # Medilink figura estado_anulacion=1 hace 20 días con otro paciente
+    # reasignado. El bot no detectaba la cancelación y mandaba el recordatorio
+    # igual.
+    #
+    # Regla (2026-07-23): ANULADA → no se envía NINGÚN recordatorio (24h/48h/2h).
+    # CONFIRMADA por teléfono → no se envía el de 24h ni el de 48h (ya sabemos
+    # que va a venir), pero SÍ el de 2h (recordatorio del día, siempre útil).
     try:
         from session import mark_cita_cancel_detected
         citas_validas = []
@@ -145,23 +181,27 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
             id_cita = c.get("id_cita")
             if not id_cita:
                 continue
-            try:
-                cita_ml = await get_cita(int(id_cita))
-            except Exception as e:
-                log.warning("Recordatorio pre-validación falló id_cita=%s: %s", id_cita, e)
-                # Ante fallo de Medilink, NO mandamos (fail-safe).
+            id_prof = _PROF_NOMBRE_A_ID.get(c.get("profesional"))
+            estado = await _estado_pre_envio(id_cita, id_prof, c.get("fecha"))
+            await asyncio.sleep(0.7)  # throttle Medilink (evita 429-tormenta)
+            if estado is None:
+                log.warning("Recordatorio: cita %s no encontrada/consulta falló en Medilink, salto", id_cita)
                 continue
-            if cita_ml is None:
-                log.warning("Recordatorio: cita %s no encontrada en Medilink, salto", id_cita)
-                continue
-            if cita_ml.get("id_estado") == 1 or cita_ml.get("estado_anulacion") == 1:
+            if estado["anulada"]:
                 log.warning("Recordatorio: cita %s ANULADA en Medilink, no se envía y se marca local",
                             id_cita)
                 mark_cita_cancel_detected(str(id_cita))
                 continue
+            if estado["confirmada"]:
+                log.info("Recordatorio 24h: cita %s CONFIRMADA por recepción, skip (queda 2h)", id_cita)
+                log_event(c["phone"], "recordatorio_skip_confirmada", {
+                    "id_cita": id_cita, "riel": "bot", "ventana": "24h",
+                })
+                mark_reminder_sent(c["id"])
+                continue
             # Verificar que el paciente siga siendo el mismo (slot reasignado)
             id_pac_local = c.get("id_paciente_medilink")
-            id_pac_ml = cita_ml.get("id_paciente")
+            id_pac_ml = estado.get("id_paciente")
             if id_pac_local and id_pac_ml and str(id_pac_local) != str(id_pac_ml):
                 log.warning("Recordatorio: cita %s reasignada en Medilink (paciente %s→%s), salto",
                             id_cita, id_pac_local, id_pac_ml)
@@ -295,7 +335,12 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
         return
 
     # Pre-validación contra Medilink (igual que recordatorio diario).
-    # Si la cita está anulada o reasignada, no manda y marca local.
+    # Si la cita está anulada o reasignada, no manda y marca local. A
+    # diferencia del recordatorio de 24h/48h, aquí NO se saltea por estar
+    # "confirmada" — el recordatorio de 2h se envía siempre que la cita siga
+    # vigente, incluso si la recepción ya la confirmó por teléfono (regla
+    # 2026-07-23: el de 2h es el único que se manda pase lo que pase, salvo
+    # anulación).
     try:
         from session import mark_cita_cancel_detected
         validas = []
@@ -303,18 +348,17 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
             id_c = c.get("id_cita")
             if not id_c:
                 continue
-            try:
-                _ml = await get_cita(int(id_c))
-            except (TypeError, ValueError, Exception):
+            id_prof = _PROF_NOMBRE_A_ID.get(c.get("profesional"))
+            estado = await _estado_pre_envio(id_c, id_prof, c.get("fecha"))
+            await asyncio.sleep(0.7)  # throttle Medilink (evita 429-tormenta)
+            if estado is None:
                 continue
-            if _ml is None:
-                continue
-            if _ml.get("id_estado") == 1 or _ml.get("estado_anulacion") == 1:
+            if estado["anulada"]:
                 log.warning("Recordatorio 2h: cita %s anulada, marca local", id_c)
                 mark_cita_cancel_detected(str(id_c))
                 continue
             id_pac_local = c.get("id_paciente_medilink")
-            id_pac_ml = _ml.get("id_paciente")
+            id_pac_ml = estado.get("id_paciente")
             if id_pac_local and id_pac_ml and str(id_pac_local) != str(id_pac_ml):
                 log.warning("Recordatorio 2h: cita %s reasignada (%s→%s), marca local",
                             id_c, id_pac_local, id_pac_ml)
@@ -347,27 +391,7 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
             nombre_pac = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
             nombre_own = _nombre_corto(cita.get("phone_owner"))
             es_terc = cita.get("es_tercero", 0)
-
-            # Skip si la cita ya fue confirmada manualmente en Medilink
-            # (recepcion envio confirmacion por el WA Business prepago y marco estado)
             id_cita_medilink = cita.get("id_cita")
-            # Citas manuales (admin_routes) usan id tipo "manual-PHONE-TS", no int.
-            _id_es_num = (
-                isinstance(id_cita_medilink, int)
-                or (isinstance(id_cita_medilink, str) and id_cita_medilink.isdigit())
-            )
-            if id_cita_medilink and _id_es_num:
-                cita_md = await get_cita(int(id_cita_medilink))
-                if cita_esta_confirmada(cita_md):
-                    mark_reminder_2h_sent(cita["id"])
-                    log.info("Recordatorio 2h omitido (ya confirmada en Medilink) → %s cita_id=%s",
-                             cita["phone"], id_cita_medilink)
-                    try:
-                        log_event(cita["phone"], "savings:skip_reminder_2h_medilink_confirmed",
-                                  {"id_cita": id_cita_medilink})
-                    except Exception:
-                        pass
-                    continue
 
             # Decide si usar template (pagado) o texto plano (gratis si hay service window)
             # Meta abre service window de 24h cuando el paciente envia un mensaje.
@@ -538,7 +562,8 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
         log.info("Recordatorios 48h: sin citas para %s", pasado_manana)
         return
 
-    # Validar contra Medilink
+    # Validar contra Medilink. Regla 2026-07-23: ANULADA → no se envía nada;
+    # CONFIRMADA por recepción → no se envía el 48h (queda igual el de 2h).
     try:
         from session import mark_cita_cancel_detected as _mcc
         validas = []
@@ -546,18 +571,24 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
             id_c = c.get("id_cita")
             if not id_c:
                 continue
-            try:
-                cita_ml = await get_cita(int(id_c))
-            except Exception:
+            id_prof = _PROF_NOMBRE_A_ID.get(c.get("profesional"))
+            estado = await _estado_pre_envio(id_c, id_prof, c.get("fecha"))
+            await asyncio.sleep(0.7)  # throttle Medilink (evita 429-tormenta)
+            if estado is None:
                 continue
-            if cita_ml is None:
-                continue
-            if cita_ml.get("id_estado") == 1 or cita_ml.get("estado_anulacion") == 1:
+            if estado["anulada"]:
                 _mcc(str(id_c))
+                continue
+            if estado["confirmada"]:
+                log.info("Recordatorio 48h: cita %s CONFIRMADA por recepción, skip", id_c)
+                log_event(c["phone"], "recordatorio_skip_confirmada", {
+                    "id_cita": id_c, "riel": "bot", "ventana": "48h",
+                })
+                mark_reminder_48h_sent(c["id"])
                 continue
             # Verificar que el paciente siga siendo el mismo (slot reasignado)
             id_pac_local = c.get("id_paciente_medilink")
-            id_pac_ml = cita_ml.get("id_paciente")
+            id_pac_ml = estado.get("id_paciente")
             if id_pac_local and id_pac_ml and str(id_pac_local) != str(id_pac_ml):
                 log.warning("Recordatorio 48h: cita %s reasignada en Medilink "
                             "(paciente %s→%s), salto", id_c, id_pac_local, id_pac_ml)
@@ -693,14 +724,21 @@ async def enviar_recordatorios_recepcion_24h(
         if not phone:
             continue
         id_cita = cita["id_cita_medilink"]
-        try:
-            cita_ml = await get_cita(int(id_cita))
-            if cita_ml is None or cita_ml.get("id_estado") == 1 or cita_ml.get("estado_anulacion") == 1:
-                log.info("Recepción 24h: cita %s anulada/no existe en Medilink, skip", id_cita)
-                mark_recepcion_reminder_24h_sent(cita["id"])
-                continue
-        except Exception as e:
-            log.warning("Recepción 24h: pre-validación id=%s falló: %s — skip", id_cita, e)
+        estado = await _estado_pre_envio(id_cita, cita.get("id_profesional"), cita["fecha"])
+        await asyncio.sleep(0.7)  # throttle Medilink (evita 429-tormenta)
+        if estado is None:
+            log.warning("Recepción 24h: pre-validación id=%s falló/no encontrada — skip (sin marcar, reintenta)", id_cita)
+            continue
+        if estado["anulada"]:
+            log.info("Recepción 24h: cita %s anulada en Medilink, skip", id_cita)
+            mark_recepcion_reminder_24h_sent(cita["id"])
+            continue
+        if estado["confirmada"]:
+            log.info("Recepción 24h: cita %s CONFIRMADA por recepción, skip (queda 2h)", id_cita)
+            log_event(phone, "recordatorio_skip_confirmada", {
+                "id_cita": id_cita, "riel": "recepcion", "ventana": "24h",
+            })
+            mark_recepcion_reminder_24h_sent(cita["id"])
             continue
 
         nombre = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
@@ -813,6 +851,21 @@ async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None)
         prof    = cita.get("profesional", "")
         hora    = _fmt_hora(cita["hora"])
 
+        # Pre-envío: si la recepción anuló la cita durante el día, no se manda
+        # (a diferencia del 24h/48h, aquí NO se saltea por "confirmada" — el
+        # recordatorio de 2h siempre se envía si la cita sigue vigente).
+        estado = await _estado_pre_envio(id_cita, cita.get("id_profesional"), cita["fecha"])
+        await asyncio.sleep(0.7)  # throttle Medilink (evita 429-tormenta)
+        if estado is None:
+            log.warning("Recepción 2h: pre-validación id=%s falló/no encontrada — skip envío", id_cita)
+            continue
+        if estado["anulada"]:
+            log.info("Recepción 2h: cita %s anulada en Medilink, skip", id_cita)
+            log_event(phone, "recordatorio_skip_anulada", {
+                "id_cita": id_cita, "riel": "recepcion", "ventana": "2h",
+            })
+            continue
+
         try:
             last_in = get_last_inbound_ts(phone)
             _now_utc = datetime.now(timezone.utc)
@@ -887,6 +940,25 @@ async def enviar_recordatorios_recepcion_48h(send_text_fn, send_interactive_fn=N
         prof    = cita.get("profesional", "")
         hora    = _fmt_hora(cita["hora"])
         fecha_display = _fmt_fecha_display(cita["fecha"])
+
+        # Pre-envío: ANULADA → no se manda nada; CONFIRMADA por recepción →
+        # no se manda el 48h (queda el de 2h más adelante).
+        estado = await _estado_pre_envio(id_cita, cita.get("id_profesional"), cita["fecha"])
+        await asyncio.sleep(0.7)  # throttle Medilink (evita 429-tormenta)
+        if estado is None:
+            log.warning("Recepción 48h: pre-validación id=%s falló/no encontrada — skip (sin marcar, reintenta)", id_cita)
+            continue
+        if estado["anulada"]:
+            log.info("Recepción 48h: cita %s anulada en Medilink, skip", id_cita)
+            mark_recepcion_reminder_48h_sent(cita["id"])
+            continue
+        if estado["confirmada"]:
+            log.info("Recepción 48h: cita %s CONFIRMADA por recepción, skip", id_cita)
+            log_event(phone, "recordatorio_skip_confirmada", {
+                "id_cita": id_cita, "riel": "recepcion", "ventana": "48h",
+            })
+            mark_recepcion_reminder_48h_sent(cita["id"])
+            continue
 
         # Piloto Márquez: enviamos 48h a todos (el Dr. quiere cobertura máxima)
         try:
