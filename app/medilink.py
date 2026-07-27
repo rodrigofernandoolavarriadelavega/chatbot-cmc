@@ -135,17 +135,31 @@ async def _lane_slot():
             yield
 
 
+class MedilinkRateLimited(httpx.RequestError):
+    """Medilink contestó 429 en todos los intentos: está VIVO, solo nos frena.
+
+    Subclase de httpx.RequestError a propósito — los ~40 callers que ya hacen
+    `except httpx.RequestError` siguen funcionando igual. Los que necesitan
+    distinguir "saturado" de "caído" atrapan esta.
+    """
+
+
 async def probe_up(timeout: float = 3.0) -> bool:
     """Sonda barata y directa: ¿Medilink responde AHORA?
 
     No pasa por _get (sin reintentos ni semáforo) para que el costo esté acotado
     a una request. Sincroniza el breaker con la realidad: sirve para no confiar
     en un flag "down" que quedó viejo por una tormenta de 429 ya pasada.
+
+    Un 429 cuenta como VIVO (2026-07-27): la primera versión de esta sonda lo
+    trataba como caída y por eso el paciente Nelson terminó en lista de espera
+    de Psicología en plena tormenta de rate limit, con agenda disponible. Un
+    servidor que se toma el trabajo de contestar "vas muy rápido" está de pie.
     """
     try:
         async with httpx.AsyncClient(timeout=timeout) as cli:
             r = await cli.get(f"{MEDILINK_BASE_URL}/sucursales", headers=HEADERS)
-        ok = r.status_code < 500 and r.status_code != 429
+        ok = r.status_code < 500          # 429 incluido: respondió = está vivo
     except Exception:
         ok = False
     if ok:
@@ -421,6 +435,29 @@ async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
     los 3-12s de espera (cascada 429 → semáforo bloqueado → todos los pacientes
     esperando → crash total).
     """
+    return await _get_loop(client, url, kwargs)
+
+
+def _agotado(url: str, verbo: str, hubo_falla_real: bool):
+    """Se acabaron los reintentos. Distinguir SATURADO de CAÍDO.
+
+    Meterlos en la misma bolsa fue la causa del incidente 2026-07-27: un 429
+    (rate limit) apagaba el circuit breaker igual que una caída, y el paciente
+    que pedía hora terminaba en lista de espera con la agenda disponible.
+    Un 429 es el servidor diciendo "más lento", no "estoy muerto".
+    """
+    if hubo_falla_real:
+        _report_down(f"{verbo} {url} sin respuesta tras varios intentos")
+        raise httpx.RequestError(f"Medilink no respondió: {url}")
+    # Solo 429: Medilink contestó siempre → está VIVO. No se apaga nada.
+    log.warning("Medilink SATURADO (429 sostenido) en %s — el HIS está vivo, "
+                "el breaker NO se apaga", url)
+    _report_up()
+    raise MedilinkRateLimited(f"Medilink saturado (429) en {url}")
+
+
+async def _get_loop(client, url, kwargs):
+    hubo_falla_real = False
     for attempt in range(3):
         async with _lane_slot():
             try:
@@ -434,8 +471,10 @@ async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
                     _report_up()
                     return r
                 else:
+                    hubo_falla_real = True
                     log.warning("Medilink GET %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
             except (httpx.TimeoutException, httpx.NetworkError) as e:
+                hubo_falla_real = True
                 log.warning("Medilink GET %s error red: %s (intento %d/3)", url, e, attempt + 1)
                 r = None
         # Backoff fuera del semáforo
@@ -444,13 +483,13 @@ async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
                 await asyncio.sleep(3.0 * (2 ** attempt))
             else:
                 await asyncio.sleep(1.5 ** attempt)
-    _report_down(f"GET {url} sin respuesta tras 3 intentos")
-    raise httpx.RequestError(f"Medilink no respondió tras 3 intentos: {url}")
+    return _agotado(url, "GET", hubo_falla_real)
 
 
 async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
     """POST con 1 reintento ante errores de red, 5xx o 429 (rate limit).
     Serializado por _MEDILINK_SEM (ver _get). El sleep ocurre FUERA del semáforo."""
+    hubo_falla_real = False
     for attempt in range(2):
         async with _lane_slot():
             try:
@@ -464,8 +503,10 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
                     _report_up()
                     return r
                 else:
+                    hubo_falla_real = True
                     log.warning("Medilink POST %s → %s (intento %d/2)", url, r.status_code, attempt + 1)
             except (httpx.TimeoutException, httpx.NetworkError) as e:
+                hubo_falla_real = True
                 log.warning("Medilink POST %s error red: %s (intento %d/2)", url, e, attempt + 1)
                 r = None
         # Backoff fuera del semáforo
@@ -474,8 +515,7 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
                 await asyncio.sleep(3.0 * (2 ** attempt))
             else:
                 await asyncio.sleep(1.5)
-    _report_down(f"POST {url} sin respuesta tras 2 intentos")
-    raise httpx.RequestError(f"Medilink no respondió tras 2 intentos: {url}")
+    return _agotado(url, "POST", hubo_falla_real)
 
 
 async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
@@ -697,11 +737,22 @@ async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: s
     return libres
 
 
-async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
-    """Retorna lista de rangos bloqueados (hora_inicio, hora_fin) para ese profesional y fecha.
-    La API solo filtra por id_sucursal y fecha — filtramos id_profesional en código.
-    Incluye bloqueos sin id_profesional (aplican a toda la sucursal).
-    """
+# Caché de /horariosbloqueados por FECHA (2026-07-27).
+# La API solo filtra por id_sucursal+fecha: la respuesta es IDÉNTICA para todos
+# los profesionales. Como el filtro por profesional se hace en código, buscar
+# en 3 médicos × 7 días disparaba 21 requests iguales — pura amplificación, y
+# fue la fuente principal de los 429 que terminaban mandando pacientes a lista
+# de espera. Con esta caché es 1 request por fecha. TTL corto porque recepción
+# carga bloqueos durante el día y espera verlos reflejados al toque.
+_bloqueos_dia_cache: dict = {}
+_BLOQUEOS_DIA_TTL = 60  # segundos
+
+
+async def _get_bloqueos_dia(client: httpx.AsyncClient, fecha: str) -> list:
+    """Bloqueos crudos de la sucursal para una fecha (compartidos entre profs)."""
+    cached = _bloqueos_dia_cache.get(fecha)
+    if cached and (time.monotonic() - cached["_ts"]) < _BLOQUEOS_DIA_TTL:
+        return cached["data"]
     params = {
         "id_sucursal": {"eq": MEDILINK_SUCURSAL},
         "fecha":       {"eq": fecha},
@@ -710,12 +761,35 @@ async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> 
         r = await _get(client, f"{MEDILINK_BASE_URL}/horariosbloqueados",
                        params={"q": _q(params)}, headers=HEADERS)
     except httpx.RequestError as e:
+        # Stale antes que nada: un bloqueo de hace 60s es infinitamente mejor
+        # que asumir "sin bloqueos" y ofrecer una hora que no existe.
+        if cached:
+            log.warning("Bloqueos fecha %s: usando caché stale (%s)", fecha, e)
+            return cached["data"]
+        raise
+    if r.status_code != 200:
+        if cached:
+            return cached["data"]
+        return []
+    data = _safe_json(r).get("data", [])
+    if len(_bloqueos_dia_cache) > 200:      # poda simple, las fechas se acumulan
+        _bloqueos_dia_cache.clear()
+    _bloqueos_dia_cache[fecha] = {"data": data, "_ts": time.monotonic()}
+    return data
+
+
+async def _get_bloqueos(client: httpx.AsyncClient, id_prof: int, fecha: str) -> list:
+    """Retorna lista de rangos bloqueados (hora_inicio, hora_fin) para ese profesional y fecha.
+    La API solo filtra por id_sucursal y fecha — filtramos id_profesional en código.
+    Incluye bloqueos sin id_profesional (aplican a toda la sucursal).
+    """
+    try:
+        data = await _get_bloqueos_dia(client, fecha)
+    except httpx.RequestError as e:
         log.error("No se pudo obtener bloqueos para prof %d fecha %s: %s", id_prof, fecha, e)
         return []
-    if r.status_code != 200:
-        return []
     bloqueos = []
-    for b in _safe_json(r).get("data", []):
+    for b in data:
         b_prof = b.get("id_profesional")
         # Incluir bloqueos del profesional O sin profesional (bloqueo de sucursal)
         if b_prof == id_prof or b_prof is None or b_prof == 0:

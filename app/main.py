@@ -41,6 +41,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      upsert_message_status, upsert_bsuid,
                      get_profile, save_profile)
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
+from medilink import MedilinkRateLimited
 from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
                   _job_postconsulta, _job_postconsulta_morning,
@@ -9101,6 +9102,19 @@ async def webhook(request: Request):
                 pass
             try:
                 respuesta = await handle_message(phone, texto, session)
+            except MedilinkRateLimited as e:
+                # Medilink SATURADO, no caído (2026-07-27). NO resetear la sesión:
+                # el paciente sigue donde estaba y con un "hola" retoma. Y sobre
+                # todo NO ofrecerle lista de espera — su hora probablemente existe,
+                # solo no alcanzamos a leerla. Ver medilink._agotado().
+                log.warning("Medilink saturado atendiendo %s from=%s: %s", canal, phone, e)
+                log_event(phone, "respuesta_medilink_saturado", {})
+                respuesta = (
+                    "Estoy con la agenda muy pedida en este momento y no alcancé "
+                    "a leerla 😅\n\n"
+                    "Escríbeme *de nuevo en un minuto* y te muestro las horas.\n"
+                    f"Si prefieres, llámanos: 📞 {CMC_TELEFONO}"
+                )
             except Exception as e:
                 log.error("Error procesando %s msg from=%s: %s", canal, phone, e, exc_info=True)
                 reset_session(phone)
