@@ -13783,8 +13783,19 @@ async def _paciente_ortodoncia_activo(phone: str) -> int:
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
     if is_medilink_down():
-        return _modo_degradado(phone, "agendar", state_snap=especialidad or "",
-                               especialidad=especialidad or "")
+        # Fail-open VERIFICADO (2026-07-27). El flag puede estar viejo: los 429
+        # del cron de pagos lo dejaban en "down" mientras /citas y /agendas
+        # respondían 200, y el paciente se iba a lista de espera con la agenda
+        # llena (caso Jessica 08:31: waitlist de MG; 40 min después el mismo bot
+        # le reservó las 10:30 del MISMO día con Abarca). Antes de cortar, se le
+        # pregunta a Medilink: 1 request (~200 ms) contra regalar una hora real.
+        from medilink import probe_up as _probe_medilink
+        if await _probe_medilink():
+            log_event(phone, "breaker_falso_positivo",
+                      {"especialidad": (especialidad or "").strip().lower()})
+        else:
+            return _modo_degradado(phone, "agendar", state_snap=especialidad or "",
+                                   especialidad=especialidad or "")
     # ── Detección de menor: aplica a especialidades adultas, NO a MG/MF/Odonto/Fono/Psico ──
     # MG (Abarca, Olavarría, Márquez), MF (Márquez), Odontología, Fonoaudiología y
     # Psicología Infantil (Montalba) atienden niños y adultos por igual — no interrumpir.
@@ -14358,6 +14369,15 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         pass
 
     if not todos or not mejor:
+        # Segunda baranda (2026-07-27): búsqueda vacía + breaker caído NO es
+        # "no hay horas", es "no pudimos consultar". Inscribir en lista de
+        # espera a alguien cuya agenda quizá está llena de cupos es la peor
+        # respuesta posible: le cierra la puerta y encima le promete un aviso.
+        if is_medilink_down():
+            log_event(phone, "agendar_vacio_con_breaker_caido",
+                      {"especialidad": especialidad_lower or ""})
+            return _modo_degradado(phone, "agendar", state_snap=especialidad or "",
+                                   especialidad=especialidad_lower or especialidad or "")
         log_event(phone, "sin_disponibilidad", {"especialidad": (especialidad or "").strip().lower()})
         save_tag(phone, "sin-disponibilidad")
         # Si la especialidad resuelve a un único profesional (ej. "olavarria",

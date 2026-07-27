@@ -1709,8 +1709,14 @@ async def prellenar_pagos(
     import asyncio
     from medilink import (
         _get_shared_client, _get, _q, _safe_json, HEADERS,
-        PROFESIONALES,
+        PROFESIONALES, use_batch_lane,
     )
+
+    # Carril batch: este barrido es la fuente #1 de 429 (recorre /atenciones y
+    # /pacientes cita por cita). Marcarlo acá cubre tanto el cron como el botón
+    # "Actualizar desde Medilink" del panel — sus 429 ya no apagan el
+    # agendamiento del paciente. Ver medilink.lane_batch().
+    use_batch_lane()
     from config import MEDILINK_BASE_URL
 
     now_cl = datetime.now(_CHILE_TZ)

@@ -3,11 +3,13 @@ Wrapper para la API de Medilink 2 (healthatom).
 Base URL: https://api.medilink2.healthatom.com/api/v5
 """
 import asyncio
+import contextvars
 import json
 import re
 import logging
 import time
 import urllib.parse
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -75,6 +77,84 @@ _HORARIO_CACHE_TTL = 3600  # 1 hora — si cambian horarios en Medilink, se refr
 # Con N=4 las requests se serializan lo suficiente para no saturar y el circuit breaker
 # no oscila. Si se necesita más throughput, subir con cuidado probando rate limit real.
 _MEDILINK_SEM = asyncio.Semaphore(8)
+
+# ── Carriles: paciente vs batch (2026-07-27) ─────────────────────────────────
+# Incidente: el cron de pagos (cada 30 min, 08-21 CLT) recorre /atenciones/{id}
+# y /pacientes/{id} cita por cita → 105-114 429s por hora. Al agotar reintentos
+# llamaba a _report_down() y el circuit breaker GLOBAL quedaba "down" — con lo
+# que `_iniciar_agendar` cortaba antes de consultar y mandaba a los pacientes a
+# lista de espera AUNQUE hubiera cupos (Abarca tenía 33 libres ese día; 34
+# pacientes recibieron "problema técnico", 17 terminaron en lista de espera).
+#
+# Regla: un 429 de un job de fondo NO puede apagar el carril comercial. El
+# breaker que ve el paciente solo lo mueven las fallas del carril "patient".
+# El carril batch además usa un semáforo propio y angosto para no comerse la
+# cuota de Medilink (el rate limit es por cuenta, compartido entre carriles).
+_LANE: contextvars.ContextVar[str] = contextvars.ContextVar("medilink_lane", default="patient")
+_BATCH_SEM = asyncio.Semaphore(2)
+
+
+@contextmanager
+def lane_batch():
+    """Marca el bloque como tráfico de fondo (crons, syncs, dashboards pesados).
+
+    Dentro: concurrencia limitada a 2 y las fallas NO tocan el circuit breaker
+    que consulta el flujo del paciente. Los contextvars se propagan a las tasks
+    creadas dentro del bloque, así que envolver el job completo alcanza.
+    """
+    token = _LANE.set("batch")
+    try:
+        yield
+    finally:
+        _LANE.reset(token)
+
+
+def use_batch_lane() -> None:
+    """Marca TODA la task/request actual como carril batch (sin bloque `with`).
+
+    Cada job de APScheduler y cada request de FastAPI corre en su propia copia
+    del contexto, así que llamarlo al inicio no se filtra a otras tasks. Es la
+    variante cómoda para funciones largas; para bloques acotados usar lane_batch().
+    """
+    _LANE.set("batch")
+
+
+def current_lane() -> str:
+    return _LANE.get()
+
+
+@asynccontextmanager
+async def _lane_slot():
+    """Semáforo según carril: batch pasa además por su propio cuello angosto."""
+    if _LANE.get() == "batch":
+        async with _BATCH_SEM:
+            async with _MEDILINK_SEM:
+                yield
+    else:
+        async with _MEDILINK_SEM:
+            yield
+
+
+async def probe_up(timeout: float = 3.0) -> bool:
+    """Sonda barata y directa: ¿Medilink responde AHORA?
+
+    No pasa por _get (sin reintentos ni semáforo) para que el costo esté acotado
+    a una request. Sincroniza el breaker con la realidad: sirve para no confiar
+    en un flag "down" que quedó viejo por una tormenta de 429 ya pasada.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as cli:
+            r = await cli.get(f"{MEDILINK_BASE_URL}/sucursales", headers=HEADERS)
+        ok = r.status_code < 500 and r.status_code != 429
+    except Exception:
+        ok = False
+    if ok:
+        # Forzar el reporte aunque el cache in-process crea que ya estaba up:
+        # el breaker vive en session_state y puede haberlo marcado otro worker.
+        global _last_reported_status
+        _last_reported_status = None
+        _report_up()
+    return ok
 
 # Caché de pacientes por RUT — ~200 pacientes activos, datos casi inmutables.
 # Paciente se re-consulta 2-5 veces por flujo de agendar/cancelar/reagendar.
@@ -314,6 +394,11 @@ def _report_up() -> None:
 
 def _report_down(reason: str) -> None:
     global _last_reported_status
+    # Carril batch: sus fallas (típicamente 429 por fan-out del cron de pagos)
+    # se registran pero NO apagan el agendamiento del paciente. Ver lane_batch().
+    if _LANE.get() == "batch":
+        log.warning("Medilink falla en carril batch (no toca el breaker): %s", reason)
+        return
     if _last_reported_status == "down":
         return
     try:
@@ -337,7 +422,7 @@ async def _get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
     esperando → crash total).
     """
     for attempt in range(3):
-        async with _MEDILINK_SEM:
+        async with _lane_slot():
             try:
                 r = await client.get(url, **kwargs)
                 if r.status_code == 429:
@@ -367,7 +452,7 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
     """POST con 1 reintento ante errores de red, 5xx o 429 (rate limit).
     Serializado por _MEDILINK_SEM (ver _get). El sleep ocurre FUERA del semáforo."""
     for attempt in range(2):
-        async with _MEDILINK_SEM:
+        async with _lane_slot():
             try:
                 r = await client.post(url, **kwargs)
                 if r.status_code == 429:

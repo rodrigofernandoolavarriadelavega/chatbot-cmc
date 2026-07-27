@@ -516,12 +516,18 @@ async def lifespan(app: FastAPI):
         coalesce=True,
     )
     # Panel Pagos: mantener pagos_cmc del día SIEMPRE completo (todas las citas +
-    # RUT) sin depender del botón manual. Cada 30 min en horario de atención
-    # (08:00–21:30 CLT). Idempotente y serializado por el semáforo de Medilink;
-    # max_instances=1 evita solapes si una corrida se alarga.
+    # RUT) sin depender del botón manual. Idempotente, carril batch (semáforo
+    # angosto, sus 429 no tocan el breaker del paciente); max_instances=1 evita
+    # solapes si una corrida se alarga.
+    #
+    # 2026-07-27: era cada 30 min y ARRANCABA EN EL MINUTO 0, justo encima del
+    # resto de los crons de la hora en punto. El pico de concurrencia contra
+    # Medilink devolvía 105-114 429/hora y tumbaba el agendamiento. Ahora corre
+    # 1 vez por hora y en el minuto 45, lejos del amontonamiento; el barrido
+    # pesado real ya lo hace el sync nocturno.
     scheduler.add_job(
         _job_pagos_prellenar_intradia,
-        CronTrigger(minute="0,30", hour="8-21", timezone=_CLT),
+        CronTrigger(minute="45", hour="8-21", timezone=_CLT),
         id="pagos_prellenar_intradia",
         replace_existing=True,
         misfire_grace_time=600,

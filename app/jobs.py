@@ -1042,6 +1042,8 @@ async def _job_olavarria_sync():
 async def _job_bi_sync_diario():
     """BI v2: sincroniza atenciones + pagos del día anterior y hoy. Después
     re-cruza pagos huérfanos por si alguna atención llegó tarde."""
+    from medilink import use_batch_lane
+    use_batch_lane()
     from bi_sync import sync_diario, sync_pagos_rango, _resolver_profesional_pago
     from session import db as _c_b
     from datetime import date, timedelta
@@ -1111,6 +1113,8 @@ async def _job_bi_sync_intradia():
     repasada pesada). Corre a las 14:00 y 19:00 CLT para que /cmc/mensual refleje
     el día en curso sin esperar al sync nocturno de 23:59. force=True → upsert
     idempotente por pago_id."""
+    from medilink import use_batch_lane
+    use_batch_lane()
     from bi_sync import sync_pagos_rango
     from datetime import date
     try:
@@ -1126,7 +1130,14 @@ async def _job_pagos_prellenar_intradia():
     las citas del día desde Medilink (paginadas) y rellena RUT/prestación/monto.
     Así cualquier recarga del panel ya muestra todos los agendados con su RUT, sin
     depender de que alguien apriete 'Actualizar desde Medilink'. Idempotente:
-    nunca pisa filas con cobro/bloqueadas (solo crea faltantes y rellena huecos)."""
+    nunca pisa filas con cobro/bloqueadas (solo crea faltantes y rellena huecos).
+
+    Carril batch (2026-07-27): este job era el que disparaba las tormentas de
+    429 (105-114/hora) que tumbaban el circuit breaker y mandaban pacientes a
+    lista de espera con la agenda llena. Ahora sus fallas no tocan el breaker
+    del paciente y su concurrencia va por el semáforo angosto."""
+    from medilink import use_batch_lane
+    use_batch_lane()
     from pagos_routes import prellenar_pagos
     from config import ADMIN_TOKEN
     try:
@@ -1141,6 +1152,8 @@ async def _job_repasada_historica():
     """Barrido HISTÓRICO completo (semanal): corre la repasada sobre toda la caja
     (desde 2024) para cazar errores de atribución viejos que quedan fuera de la
     ventana de 120 días del job nocturno. Conservador, respeta overrides manuales."""
+    from medilink import use_batch_lane
+    use_batch_lane()
     try:
         from pagos_medilink_routes import aplicar_repasada
         rr = aplicar_repasada("2024-01-01", _date_today_iso())
