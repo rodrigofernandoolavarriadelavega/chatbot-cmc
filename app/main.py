@@ -9969,6 +9969,17 @@ async def webhook(request: Request):
 
             try:
                 respuesta = await handle_message(phone, texto, session)
+            except MedilinkRateLimited as e:
+                # Saturado ≠ caído: mismo criterio que el otro webhook (ver arriba).
+                # Sin reset de sesión y sin lista de espera.
+                log.warning("Medilink saturado procesando msg from=%s: %s", phone, e)
+                log_event(phone, "respuesta_medilink_saturado", {})
+                respuesta = (
+                    "Estoy con la agenda muy pedida en este momento y no alcancé "
+                    "a leerla 😅\n\n"
+                    "Escríbeme *de nuevo en un minuto* y te muestro las horas.\n"
+                    f"Si prefieres, llámanos: 📞 {CMC_TELEFONO}"
+                )
             except Exception as e:
                 log.error("Error inesperado procesando msg from=%s: %s", phone, e, exc_info=True)
                 reset_session(phone)

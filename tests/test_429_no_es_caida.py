@@ -220,6 +220,41 @@ def test_probe_up_lee_429_como_vivo():
         "un 429 en la sonda significa VIVO (contestó), no caído")
 
 
+def test_rate_limit_no_se_traduce_a_sin_horas():
+    """El mismo bug con otro disfraz, cazado en producción a las 14:31.
+
+    `_iniciar_agendar` tenía un `except Exception` que convertía cualquier fallo
+    de `buscar_primer_dia` en `smart, todos = [], []` → "no hay horas" → lista de
+    espera. Con un rate limit la búsqueda quedó A MEDIAS: no autoriza a concluir
+    nada sobre la disponibilidad. Debe propagarse, no inventarse un resultado.
+    """
+    import flows  # noqa: E402
+    import session as _s  # noqa: E402
+
+    phone = "56900000009"
+    orig = flows.buscar_primer_dia
+
+    async def _saturado(*a, **k):
+        raise medilink.MedilinkRateLimited("429 en /citas")
+
+    flows.buscar_primer_dia = _saturado
+    resilience.mark_medilink_up()
+    try:
+        _s.reset_session(phone)
+        try:
+            asyncio.run(flows._iniciar_agendar(phone, {}, "otorrinolaringología"))
+            salio = "devolvió un mensaje (se tragó el error)"
+        except medilink.MedilinkRateLimited:
+            salio = "propagó"
+        except Exception as e:
+            salio = f"otra excepción: {type(e).__name__}"
+    finally:
+        flows.buscar_primer_dia = orig
+
+    _ok(salio == "propagó",
+        f"un rate limit NO se traduce a 'no hay horas' (salió: {salio})")
+
+
 if __name__ == "__main__":
     for _n, _f in sorted(globals().items()):
         if _n.startswith("test_") and callable(_f):

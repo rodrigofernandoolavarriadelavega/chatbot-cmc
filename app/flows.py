@@ -19,7 +19,8 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       buscar_paciente, buscar_paciente_por_nombre, crear_paciente, crear_cita,
                       listar_citas_paciente, cancelar_cita, obtener_agenda_dia,
                       valid_rut, clean_rut, hint_rut_error, especialidades_disponibles,
-                      consultar_proxima_fecha, verificar_slot_disponible)
+                      consultar_proxima_fecha, verificar_slot_disponible,
+                      MedilinkRateLimited)
 from session import (save_session, reset_session, get_session, save_tag, delete_tag, get_tags,
                      save_cita_bot, log_event, has_recent_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
@@ -14329,6 +14330,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 data["_aviso_sin_fecha_pedida"] = _fecha_pref
                 try:
                     smart, todos = await buscar_primer_dia(especialidad_lower)
+                except MedilinkRateLimited:
+                    raise      # saturado ≠ sin horas — ver el otro except abajo
                 except Exception as _e_bp:
                     log.warning("buscar_primer_dia excepción esp=%s: %s", especialidad_lower, _e_bp)
                     smart, todos = [], []
@@ -14341,6 +14344,17 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             # except del webhook y mostraba "Tuve un problema técnico".
             try:
                 smart, todos = await buscar_primer_dia(especialidad_lower)
+            except MedilinkRateLimited:
+                # 2026-07-27: este `except` tragaba TODO y convertía "no pude
+                # consultar" en "no hay horas" → lista de espera con la agenda
+                # posiblemente llena de cupos. Es el mismo error original con
+                # otro disfraz. Un rate limit deja la búsqueda A MEDIAS: no
+                # autoriza a concluir nada sobre la disponibilidad. Se propaga
+                # y el webhook responde "escríbeme en un minuto".
+                # El resto de excepciones sí siguen tratándose como 0 slots
+                # (FIX 4 abajo: ORL sin agenda abierta levanta y debe ofrecer
+                # lista de espera, que ahí es la respuesta correcta).
+                raise
             except Exception as _e_bp:
                 log.warning("buscar_primer_dia excepción esp=%s: %s", especialidad_lower, _e_bp)
                 smart, todos = [], []
