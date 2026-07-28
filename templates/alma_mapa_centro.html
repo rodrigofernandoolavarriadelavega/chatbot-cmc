@@ -4,158 +4,331 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mapa del Centro · Alma</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --navy:#0F3F68; --blue:#1172AB; --aqua:#4FBECE;
-  --ink:#122430; --muted:#5C7080; --line:#E3EAEF; --bg:#F5F8FA; --card:#FFF;
-  --ok:#1E8E5A; --warn:#B7791F; --danger:#C0392B;
-  --ok-bg:#E7F5EE; --warn-bg:#FDF3E0; --danger-bg:#FBEAE7;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  --sh:0 1px 2px rgba(15,63,104,.06),0 4px 16px rgba(15,63,104,.07);
+  --aqua:#4FBECE; --blue:#1172AB; --navy:#0F3F68; --navy-deep:#0a2e4d;
+  --ink:#13202e; --muted:#64798c; --line:#e6edf3; --bg:#f4f7fa; --card:#fff;
+  --green:#1E8E5A; --green-bg:#e7f5ee;
+  --amber:#B7791F; --amber-bg:#fdf3e0;
+  --red:#C0392B;   --red-bg:#fbeae7;
+  --slate:#64798c; --slate-bg:#eef2f6;
+  --sh-sm:0 1px 2px rgba(15,63,104,.05),0 2px 8px rgba(15,63,104,.05);
+  --sh-md:0 2px 6px rgba(15,63,104,.07),0 10px 28px rgba(15,63,104,.08);
+  --sh-lg:0 4px 12px rgba(15,63,104,.1),0 18px 44px rgba(15,63,104,.13);
+  --r:16px;
 }
 @media (prefers-color-scheme:dark){
-  :root{--ink:#E6EDF3;--muted:#9FB3C0;--line:#22333F;--bg:#0C1A24;--card:#122430;
-        --ok-bg:#123024;--warn-bg:#332810;--danger-bg:#361C18;--sh:0 1px 2px rgba(0,0,0,.4)}
+  :root{--ink:#e8eef4;--muted:#93a7b8;--line:#1e3244;--bg:#081726;--card:#0f2536;
+        --green-bg:#0f2e22;--amber-bg:#2f2711;--red-bg:#331a16;--slate-bg:#14293a;
+        --sh-sm:0 1px 2px rgba(0,0,0,.35);--sh-md:0 8px 28px rgba(0,0,0,.45);
+        --sh-lg:0 14px 44px rgba(0,0,0,.55)}
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
-.wrap{max-width:1240px;margin:0 auto;padding:0 18px 70px}
-header{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;padding:26px 0 22px}
-h1{margin:0 0 3px;font-size:1.45rem;letter-spacing:-.02em}
-.sub{opacity:.88;font-size:.88rem;margin:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:18px}
-.kpi{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
-     border-radius:9px;padding:10px 12px;cursor:pointer;transition:background .15s}
-.kpi:hover{background:rgba(255,255,255,.2)}
-.kpi b{display:block;font-size:1.35rem;line-height:1.1}
-.kpi span{font-size:.7rem;opacity:.85;text-transform:uppercase;letter-spacing:.04em}
-.barra{margin:20px 0 8px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-.chip{border:1px solid var(--line);background:var(--card);color:var(--muted);
-  border-radius:99px;padding:5px 13px;font-size:.79rem;cursor:pointer;font-family:inherit}
-.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-.chip.alerta.on{background:var(--danger);border-color:var(--danger)}
-.chip.dueno.on{background:var(--warn);border-color:var(--warn)}
-.grupo{margin:26px 0 8px;font-size:.76rem;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:6px}
-.item{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);
-  border-radius:10px;padding:13px 16px;margin-bottom:9px;box-shadow:var(--sh)}
-.item.e-medido,.item.e-produccion{border-left-color:var(--ok)}
-.item.e-prueba{border-left-color:var(--aqua)}
-.item.e-desplegado_apagado{border-left-color:var(--warn)}
-.item.e-construido{border-left-color:var(--blue)}
-.item.e-idea{border-left-color:var(--muted)}
-.item.tiene-alerta{border-left-color:var(--danger);background:var(--danger-bg)}
-.it-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
-.it-n{font-weight:650;font-size:.97rem}
-.pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:.69rem;font-weight:700;
-  white-space:nowrap}
-.p-medido,.p-produccion{background:var(--ok-bg);color:var(--ok)}
-.p-prueba{background:rgba(79,190,206,.2);color:var(--blue)}
-.p-desplegado_apagado{background:var(--warn-bg);color:var(--warn)}
-.p-construido{background:rgba(17,114,171,.14);color:var(--blue)}
-.p-idea{background:var(--line);color:var(--muted)}
-.p-dueno{background:var(--warn-bg);color:var(--warn)}
-.p-plata{background:var(--ok-bg);color:var(--ok)}
-.p-conf{background:var(--line);color:var(--muted)}
-.falta{color:var(--muted);font-size:.87rem;margin:6px 0 0}
-.falta b{color:var(--ink);font-weight:600}
-.alerta{color:var(--danger);font-size:.85rem;font-weight:650;margin:6px 0 0}
-.sonda{font-family:var(--mono);font-size:.75rem;color:var(--muted);margin-top:5px}
-.contra{background:var(--danger-bg);color:var(--danger);font-size:.8rem;padding:5px 9px;
-  border-radius:6px;margin-top:6px;font-weight:600}
-.vacio{text-align:center;color:var(--muted);padding:38px;font-size:.9rem}
-footer{margin-top:32px;padding-top:14px;border-top:1px solid var(--line);
-  color:var(--muted);font-size:.79rem}
-@media(max-width:640px){h1{font-size:1.2rem}.wrap{padding:0 12px 50px}}
+*{box-sizing:border-box} html,body{margin:0;padding:0}
+body{font-family:'Montserrat',system-ui,-apple-system,sans-serif;background:var(--bg);
+     color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1300px;margin:0 auto;padding:0 22px 74px}
+svg{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--navy-deep),var(--blue));color:#fff;padding:30px 0 0}
+.hero::before{content:"";position:absolute;top:-160px;right:-100px;width:460px;height:460px;
+  background:radial-gradient(circle,rgba(79,190,206,.34),transparent 62%);pointer-events:none}
+.hero .wrap{position:relative;padding-bottom:0}
+.hero-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.badge-ico{width:44px;height:44px;border-radius:13px;background:rgba(79,190,206,.18);
+  border:1px solid rgba(79,190,206,.42);display:grid;place-items:center;flex:none}
+.badge-ico svg{width:22px;height:22px;stroke:var(--aqua)}
+.hero h1{margin:0;font-size:1.5rem;font-weight:800;letter-spacing:-.025em}
+.hero p{margin:2px 0 0;font-size:.85rem;opacity:.82;font-weight:500}
+.mode-pill{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:.72rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:7px 14px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--aqua);animation:pulso 2.2s infinite}
+@keyframes pulso{0%{box-shadow:0 0 0 0 rgba(79,190,206,.6)}70%{box-shadow:0 0 0 9px rgba(79,190,206,0)}100%{box-shadow:0 0 0 0 rgba(79,190,206,0)}}
+.tabs{display:flex;gap:3px;margin-top:22px;overflow-x:auto}
+.tab{background:transparent;border:0;border-bottom:3px solid transparent;color:rgba(255,255,255,.72);
+  font-family:inherit;font-weight:700;font-size:.83rem;padding:11px 16px;cursor:pointer;white-space:nowrap;
+  transition:color .15s,border-color .15s}
+.tab:hover{color:#fff}
+.tab.on{color:#fff;border-bottom-color:var(--aqua)}
+.tab .n{background:rgba(255,255,255,.18);border-radius:99px;padding:1px 7px;font-size:.7rem;margin-left:6px}
+.tab.on .n{background:var(--aqua);color:var(--navy-deep)}
+
+/* ── Titular ──────────────────────────────────────────────────── */
+.titular{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--red);
+  border-radius:var(--r);padding:17px 20px;margin:22px 0 18px;box-shadow:var(--sh-md);
+  display:flex;gap:15px;align-items:flex-start}
+.titular svg{width:20px;height:20px;stroke:var(--red);flex:none;margin-top:2px}
+.titular b{display:block;font-size:1.02rem;font-weight:800;margin-bottom:2px}
+.titular span{font-size:.87rem;color:var(--muted);font-weight:500}
+
+/* ── Cartas de acción ─────────────────────────────────────────── */
+.acciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}
+.acc{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:20px;box-shadow:var(--sh-md);transition:transform .18s,box-shadow .18s;overflow:hidden}
+.acc:hover{transform:translateY(-3px);box-shadow:var(--sh-lg)}
+.acc.top::after{content:"";position:absolute;inset:0 0 auto 0;height:4px;
+  background:linear-gradient(90deg,var(--aqua),var(--blue))}
+.acc-rank{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.acc-num{width:29px;height:29px;border-radius:9px;background:var(--navy);color:#fff;display:grid;
+  place-items:center;font-weight:800;font-size:.87rem;flex:none}
+.acc.top .acc-num{background:linear-gradient(135deg,var(--aqua),var(--blue))}
+.acc-score{margin-left:auto;font-size:.68rem;font-weight:800;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em}
+.acc h3{margin:0 0 8px;font-size:1.03rem;font-weight:800;letter-spacing:-.015em;line-height:1.3}
+.acc p{margin:0;font-size:.87rem;color:var(--muted);font-weight:500}
+.acc-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+
+/* ── Etiquetas ────────────────────────────────────────────────── */
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;
+  font-size:.68rem;font-weight:700;white-space:nowrap}
+.tag svg{width:11px;height:11px}
+.g-medido,.g-produccion{background:var(--green-bg);color:var(--green)}
+.g-prueba{background:rgba(79,190,206,.18);color:var(--blue)}
+.g-desplegado_apagado{background:var(--amber-bg);color:var(--amber)}
+.g-construido{background:rgba(17,114,171,.13);color:var(--blue)}
+.g-idea{background:var(--slate-bg);color:var(--slate)}
+.g-dueno{background:var(--amber-bg);color:var(--amber)} .g-dueno svg{stroke:var(--amber)}
+.g-plata{background:var(--green-bg);color:var(--green)} .g-plata svg{stroke:var(--green)}
+.g-conf{background:var(--slate-bg);color:var(--muted)} .g-conf svg{stroke:var(--muted)}
+.g-edad{background:var(--slate-bg);color:var(--muted)} .g-edad svg{stroke:var(--muted)}
+.g-edad.viejo{background:var(--red-bg);color:var(--red)} .g-edad.viejo svg{stroke:var(--red)}
+
+/* ── Matriz ───────────────────────────────────────────────────── */
+.matriz{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+.q{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:17px 19px;
+  box-shadow:var(--sh-sm);min-height:180px}
+.q.ya{border-color:var(--green);box-shadow:0 0 0 3px rgba(30,142,90,.09),var(--sh-sm)}
+.q h3{margin:0 0 3px;font-size:.95rem;font-weight:800}
+.q .qs{font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:13px;display:block}
+.q.ya h3{color:var(--green)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:var(--slate-bg);border-radius:9px;padding:6px 11px;font-size:.78rem;font-weight:600;
+  cursor:default;transition:transform .14s}
+.chip:hover{transform:translateY(-1px)}
+.chip.alerta{background:var(--red-bg);color:var(--red)}
+.chip.dueno{background:var(--amber-bg);color:var(--amber)}
+.ejes{display:flex;justify-content:space-between;font-size:.68rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em;margin:14px 2px 0}
+
+/* ── Tablero de flujo ─────────────────────────────────────────── */
+.flujo{display:grid;grid-template-columns:repeat(6,minmax(180px,1fr));gap:11px;overflow-x:auto;
+  padding-bottom:8px}
+.col{background:var(--slate-bg);border-radius:14px;padding:12px 11px;min-width:180px}
+.col-h{display:flex;align-items:center;gap:7px;margin-bottom:11px;padding:0 3px}
+.col-h b{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.col-h .n{margin-left:auto;font-size:.72rem;font-weight:800;color:var(--muted)}
+.col-h i{width:8px;height:8px;border-radius:3px;flex:none}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 12px;
+  margin-bottom:8px;box-shadow:var(--sh-sm);transition:transform .14s,box-shadow .14s}
+.mini:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.mini b{display:block;font-size:.82rem;font-weight:700;line-height:1.32}
+.mini .m-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.mini.viejo{border-color:var(--red);box-shadow:0 0 0 2px rgba(192,57,43,.1)}
+
+/* ── Inventario ───────────────────────────────────────────────── */
+.grupo{display:flex;align-items:center;gap:12px;margin:28px 0 12px}
+.grupo h2{margin:0;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.11em;
+  color:var(--muted);white-space:nowrap}
+.grupo .regla{flex:1;height:1px;background:var(--line)}
+.grupo .n{font-size:.7rem;font-weight:700;color:var(--muted);background:var(--slate-bg);
+  border-radius:99px;padding:2px 9px}
+.item{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px 18px 15px 21px;margin-bottom:10px;box-shadow:var(--sh-sm);
+  transition:transform .16s,box-shadow .16s}
+.item:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.item::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--slate)}
+.item.e-medido::before,.item.e-produccion::before{background:var(--green)}
+.item.e-prueba::before{background:var(--aqua)}
+.item.e-desplegado_apagado::before{background:var(--amber)}
+.item.e-construido::before{background:var(--blue)}
+.item.con-alerta::before{background:var(--red)}
+.it-h{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.it-n{font-weight:700;font-size:1rem;letter-spacing:-.01em}
+.falta{margin:9px 0 0;font-size:.87rem;color:var(--muted);font-weight:500}
+.falta b{color:var(--ink);font-weight:700}
+.banda{display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding:9px 12px;border-radius:11px;
+  font-size:.83rem;font-weight:600}
+.banda svg{width:15px;height:15px;flex:none;margin-top:1px}
+.b-alerta{background:var(--red-bg);color:var(--red)} .b-alerta svg{stroke:var(--red)}
+.b-contra{background:var(--amber-bg);color:var(--amber)} .b-contra svg{stroke:var(--amber)}
+.sonda{display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:9px;
+  border-top:1px dashed var(--line);font-size:.76rem;color:var(--muted);font-weight:600}
+.sonda .dot{width:6px;height:6px;background:var(--green)}
+.vacio{text-align:center;color:var(--muted);padding:52px 20px;font-weight:600;font-size:.9rem}
+.pie{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);
+  font-size:.78rem;font-weight:500;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.pie code{font-family:ui-monospace,Menlo,monospace}
+.nota-metodo{background:var(--slate-bg);border-radius:12px;padding:13px 16px;margin-top:18px;
+  font-size:.79rem;color:var(--muted);font-weight:500;line-height:1.55}
+.nota-metodo b{color:var(--ink);font-weight:700}
+.vista{display:none} .vista.on{display:block}
+@media(max-width:900px){ .matriz{grid-template-columns:1fr} .flujo{grid-template-columns:repeat(6,200px)} }
+@media(max-width:520px){ .wrap{padding:0 14px 56px} .hero h1{font-size:1.2rem} }
 </style>
 </head>
 <body>
-<header><div class="wrap">
-  <h1>Mapa del Centro</h1>
-  <p class="sub">Todo lo que hay en marcha, en qué etapa y qué falta · Centro Médico Carampangue</p>
-  <div class="kpis" id="kpis"></div>
-</div></header>
+
+<div class="hero"><div class="wrap">
+  <div class="hero-top">
+    <div class="badge-ico"><svg viewBox="0 0 24 24"><path d="M9 20l-5.4 2.7A1 1 0 0 1 2 21.8V6.6a1 1 0 0 1 .6-.9L9 3m0 17V3m0 17l6 3m0 0l5.4-2.7a1 1 0 0 0 .6-.9V3.2a1 1 0 0 0-1.4-.9L15 5m0 18V5"/></svg></div>
+    <div><h1>Mapa del Centro</h1><p>Portafolio de iniciativas · priorizado por costo de demora</p></div>
+    <div class="mode-pill"><span class="dot"></span><span id="pill">cargando</span></div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</div></div>
 
 <div class="wrap">
-  <div class="barra" id="filtros"></div>
-  <div id="lista"></div>
-  <footer id="pie"></footer>
+  <div id="titular"></div>
+  <div class="vista on" id="v-ahora"></div>
+  <div class="vista" id="v-matriz"></div>
+  <div class="vista" id="v-flujo"></div>
+  <div class="vista" id="v-todo"></div>
+  <div class="pie" id="pie"></div>
 </div>
 
 <script>
 const TOKEN = "__TOKEN__";
-let DATA = null, filtroEtapa = null, filtroEspecial = null;
+let D = null, vista = 'ahora';
 
-function pill(txt, clase){ return `<span class="pill ${clase}">${txt}</span>`; }
+const ICO = {
+  alerta:'<path d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  dueno:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3m-3.5-6.5l-2 2m-7 7l-2 2m0-11l2 2m7 7l2 2"/>',
+  caja:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+  reloj:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  duda:'<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>'
+};
+const ic = k => `<svg viewBox="0 0 24 24">${ICO[k]}</svg>`;
+const byId = id => D.items.find(i => i.id === id);
+const dias = i => i.edad ? `${i.edad} ${i.edad===1?'día':'días'}` : null;
 
-function render(){
-  const d = DATA;
-  document.getElementById('kpis').innerHTML = [
-    ['total', d.total, 'frentes en total', null],
-    ['dueno', d.esperan_dueno, 'esperan tu decisión', 'dueno'],
-    ['alerta', d.con_alerta, 'con alerta', 'alerta'],
-    ['medido', d.por_etapa.medido || 0, 'medidos de verdad', 'medido'],
-    ['apagado', d.por_etapa.desplegado_apagado || 0, 'listos y apagados', 'desplegado_apagado'],
-    ['construido', d.por_etapa.construido || 0, 'sin subir', 'construido'],
-  ].map(([k,n,t,f]) => `<div class="kpi" data-f="${f||''}"><b>${n}</b><span>${t}</span></div>`).join('');
+function tags(i, opts={}){
+  let h = '';
+  if (opts.etapa !== false) h += `<span class="tag g-${i.etapa}">${D.etapa_label[i.etapa]}</span>`;
+  if (i.edad) h += `<span class="tag g-edad ${i.envejecido?'viejo':''}">${ic('reloj')}${dias(i)}</span>`;
+  if (i.decide === 'dueño') h += `<span class="tag g-dueno">${ic('dueno')}decides tú</span>`;
+  if (i.plata) h += `<span class="tag g-plata">${ic('caja')}${i.plata}</span>`;
+  if (i.confirmar) h += `<span class="tag g-conf">${ic('duda')}por confirmar</span>`;
+  return h;
+}
 
-  document.getElementById('filtros').innerHTML =
-    `<button class="chip ${!filtroEtapa&&!filtroEspecial?'on':''}" data-e="">Todo</button>` +
-    d.etapas.map(e => `<button class="chip ${filtroEtapa===e?'on':''}" data-e="${e}">${d.etapa_label[e]}</button>`).join('') +
-    `<button class="chip dueno ${filtroEspecial==='dueno'?'on':''}" data-s="dueno">Espera tu decisión</button>` +
-    `<button class="chip alerta ${filtroEspecial==='alerta'?'on':''}" data-s="alerta">Con alerta</button>`;
+function vAhora(){
+  const r = D.ranking.map(byId);
+  return `<div class="acciones">` + r.map((i,n) => `
+    <article class="acc ${n===0?'top':''}">
+      <div class="acc-rank">
+        <span class="acc-num">${n+1}</span>
+        <span class="tag g-${i.etapa}">${D.etapa_label[i.etapa]}</span>
+        <span class="acc-score">prioridad ${i.wsjf}</span>
+      </div>
+      <h3>${i.nombre}</h3>
+      <p>${i.falta}</p>
+      <div class="acc-meta">${tags(i,{etapa:false})}</div>
+    </article>`).join('') + `</div>
+    <div class="nota-metodo"><b>Cómo se ordena.</b> Prioridad = costo de demora ÷ tamaño del trabajo
+    (<b>WSJF</b>, el método de SAFe). El costo de demora sube con el impacto, con los días que lleva
+    detenido, si tiene alerta y si está esperando una decisión tuya. Dividir por el esfuerzo es lo que
+    hace que una cosa chica y valiosa le gane a un proyecto grande: se cobra antes.</div>`;
+}
 
-  let items = d.items;
-  if (filtroEtapa) items = items.filter(i => i.etapa === filtroEtapa);
-  if (filtroEspecial === 'dueno') items = items.filter(i => i.decide === 'dueño');
-  if (filtroEspecial === 'alerta') items = items.filter(i => i.alerta);
+function vMatriz(){
+  const q = k => D.items.filter(i => i.cuadrante === k && i.etapa !== 'medido');
+  const caja = (k, titulo, sub, cls='') => {
+    const items = q(k);
+    return `<div class="q ${cls}"><h3>${titulo}</h3><span class="qs">${sub} · ${items.length}</span>
+      <div class="chips">${items.map(i =>
+        `<span class="chip ${i.alerta?'alerta':(i.decide==='dueño'?'dueno':'')}">${i.nombre}</span>`
+      ).join('') || '<span class="qs">nada acá</span>'}</div></div>`;
+  };
+  return `<div class="matriz">
+      ${caja('ya','Hazlo ya','Mucho impacto, poco trabajo','ya')}
+      ${caja('planificar','Planifícalo','Mucho impacto, mucho trabajo')}
+      ${caja('relleno','Relleno barato','Poco impacto, poco trabajo')}
+      ${caja('no_ahora','No ahora','Poco impacto, mucho trabajo')}
+    </div>
+    <div class="ejes"><span>← menos esfuerzo</span><span>más esfuerzo →</span></div>
+    <div class="nota-metodo"><b>La matriz de impacto × esfuerzo.</b> Lo del cuadrante
+    <b>“Hazlo ya”</b> es donde está el dinero fácil: vale mucho y cuesta poco. Si algo lleva semanas
+    ahí sin hacerse, el problema no es de capacidad — es de atención. En rojo lo que tiene alerta,
+    en ámbar lo que espera decisión tuya.</div>`;
+}
 
-  let html = '';
-  for (const g of d.grupos){
-    const del = items.filter(i => i.grupo === g);
+function vFlujo(){
+  const color = {idea:'var(--slate)',construido:'var(--blue)',desplegado_apagado:'var(--amber)',
+                 prueba:'var(--aqua)',produccion:'var(--green)',medido:'var(--green)'};
+  return `<div class="flujo">` + D.etapas.map(e => {
+    const del = D.items.filter(i => i.etapa === e).sort((a,b) => (b.edad||0)-(a.edad||0));
+    return `<div class="col">
+      <div class="col-h"><i style="background:${color[e]}"></i><b>${D.etapa_label[e]}</b><span class="n">${del.length}</span></div>
+      ${del.map(i => `<div class="mini ${i.envejecido?'viejo':''}">
+          <b>${i.nombre}</b>
+          <div class="m-meta">
+            ${i.edad ? `<span class="tag g-edad ${i.envejecido?'viejo':''}">${ic('reloj')}${dias(i)}</span>`:''}
+            ${i.decide==='dueño'?`<span class="tag g-dueno">${ic('dueno')}tú</span>`:''}
+          </div></div>`).join('')}
+    </div>`;
+  }).join('') + `</div>
+  <div class="nota-metodo"><b>El tablero de flujo (Portfolio Kanban).</b> Cada frente avanza de
+  izquierda a derecha. Lo marcado en rojo lleva demasiado tiempo detenido en su etapa — es el
+  <b>aging</b>, la señal más honesta de un portafolio: no dice qué es importante, dice qué está
+  atascado. Las columnas del medio llenas significan que se construye más rápido de lo que se decide.</div>`;
+}
+
+function vTodo(){
+  let h = '';
+  for (const g of D.grupos){
+    const del = D.items.filter(i => i.grupo === g);
     if (!del.length) continue;
-    html += `<div class="grupo">${g} · ${del.length}</div>`;
+    h += `<div class="grupo"><h2>${g}</h2><span class="n">${del.length}</span><span class="regla"></span></div>`;
     for (const i of del){
-      html += `<div class="item e-${i.etapa} ${i.alerta?'tiene-alerta':''}">
-        <div class="it-h">
-          <span class="it-n">${i.nombre}</span>
-          ${pill(d.etapa_label[i.etapa], 'p-'+i.etapa)}
-          ${i.decide === 'dueño' ? pill('decides tú','p-dueno') : ''}
-          ${i.plata ? pill(i.plata,'p-plata') : ''}
-          ${i.confirmar ? pill('por confirmar','p-conf') : ''}
-        </div>
-        ${i.alerta ? `<div class="alerta">⚠ ${i.alerta}</div>` : ''}
-        ${i.falta && i.falta !== '—' ? `<p class="falta"><b>Falta:</b> ${i.falta}</p>` : ''}
-        ${i.contradiccion ? `<div class="contra">⚠ ${i.contradiccion}</div>` : ''}
-        ${i.sonda_valor ? `<div class="sonda">● ${i.sonda_valor}</div>` : ''}
-      </div>`;
+      h += `<article class="item e-${i.etapa} ${i.alerta?'con-alerta':''}">
+        <div class="it-h"><span class="it-n">${i.nombre}</span>${tags(i)}</div>
+        ${i.alerta ? `<div class="banda b-alerta">${ic('alerta')}<span>${i.alerta}</span></div>`:''}
+        ${i.falta && i.falta!=='—' ? `<p class="falta"><b>Falta:</b> ${i.falta}</p>`:''}
+        ${i.contradiccion ? `<div class="banda b-contra">${ic('alerta')}<span>${i.contradiccion}</span></div>`:''}
+        ${i.sonda_valor ? `<div class="sonda"><span class="dot"></span>${i.sonda_valor}</div>`:''}
+      </article>`;
     }
   }
-  document.getElementById('lista').innerHTML = html || '<div class="vacio">Nada en este filtro.</div>';
-  document.getElementById('pie').textContent =
-    `${d.por_confirmar} frentes marcados "por confirmar" — los deduje del código o de notas viejas y falta que los revises. `
-    + (d.commit ? `Corriendo: ${d.commit}` : '');
+  return h;
+}
 
-  document.querySelectorAll('#filtros .chip').forEach(b => b.onclick = () => {
-    if (b.dataset.s){ filtroEspecial = filtroEspecial===b.dataset.s?null:b.dataset.s; filtroEtapa=null; }
-    else { filtroEtapa = b.dataset.e || null; filtroEspecial=null; }
-    render();
-  });
-  document.querySelectorAll('.kpi').forEach(k => k.onclick = () => {
-    const f = k.dataset.f;
-    if (!f){ filtroEtapa=null; filtroEspecial=null; }
-    else if (f==='dueno'||f==='alerta'){ filtroEspecial=f; filtroEtapa=null; }
-    else { filtroEtapa=f; filtroEspecial=null; }
-    render();
-  });
+function render(){
+  document.getElementById('pill').textContent = D.total + ' frentes';
+  const defs = [['ahora','Qué hacer ahora',D.ranking.length],
+                ['matriz','Impacto × esfuerzo',null],
+                ['flujo','Flujo',D.envejecidos],
+                ['todo','Todo el inventario',D.total]];
+  document.getElementById('tabs').innerHTML = defs.map(([k,t,n]) =>
+    `<button class="tab ${vista===k?'on':''}" data-v="${k}">${t}${n?`<span class="n">${n}</span>`:''}</button>`).join('');
+
+  const dec = D.decisiones.map(byId).filter(i => i.edad);
+  document.getElementById('titular').innerHTML = dec.length ? `<div class="titular">
+      ${ic('alerta')}
+      <div><b>${D.esperan_dueno} frentes están esperando una decisión tuya</b>
+      <span>El más antiguo lleva ${D.espera_mas_vieja} días detenido: ${dec[0].nombre}.
+      No están trabados por falta de trabajo — el trabajo ya está hecho.</span></div>
+    </div>` : '';
+
+  document.getElementById('v-ahora').innerHTML = vAhora();
+  document.getElementById('v-matriz').innerHTML = vMatriz();
+  document.getElementById('v-flujo').innerHTML = vFlujo();
+  document.getElementById('v-todo').innerHTML = vTodo();
+  document.querySelectorAll('.vista').forEach(v => v.classList.toggle('on', v.id === 'v-'+vista));
+
+  document.getElementById('pie').innerHTML =
+    `<span>${D.por_confirmar} frentes “por confirmar”: los deduje del código, falta que los revises. ` +
+    `Impacto y esfuerzo son estimaciones mías — se corrigen en una línea.</span>` +
+    (D.commit ? `<span>Corriendo <code>${D.commit}</code></span>` : '');
+
+  document.querySelectorAll('.tab').forEach(b => b.onclick = () => { vista = b.dataset.v; render(); });
 }
 
 fetch('/api/mapa-centro?token=' + encodeURIComponent(TOKEN))
-  .then(r => r.json())
-  .then(d => { DATA = d; render(); })
-  .catch(e => { document.getElementById('lista').innerHTML =
-    '<div class="vacio">No se pudo cargar: ' + e + '</div>'; });
+  .then(r => r.json()).then(d => { D = d; render(); })
+  .catch(e => { document.getElementById('v-ahora').innerHTML =
+    '<div class="vacio">No se pudo cargar el mapa: ' + e + '</div>'; });
 </script>
 </body>
 </html>
