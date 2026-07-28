@@ -7,113 +7,148 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --aqua:#4FBECE; --blue:#1172AB; --navy:#0F3F68; --navy-deep:#0a2e4d;
-  --ink:#13202e; --muted:#64798c; --line:#e6edf3; --bg:#f4f7fa; --card:#fff;
-  --green:#1E8E5A; --green-bg:#e7f5ee;
-  --amber:#B7791F; --amber-bg:#fdf3e0;
-  --red:#C0392B;   --red-bg:#fbeae7;
-  --slate:#64798c; --slate-bg:#eef2f6;
-  --sh-sm:0 1px 2px rgba(15,63,104,.05),0 2px 8px rgba(15,63,104,.05);
-  --sh-md:0 2px 6px rgba(15,63,104,.07),0 10px 28px rgba(15,63,104,.08);
+  --aqua:#4FBECE; --aqua-soft:#7ed3df; --blue:#1172AB; --navy:#0F3F68; --navy-deep:#0a2e4d;
+  --ink:#0f1d2a; --ink-2:#33475c; --muted:#6b8095; --line:#e8eef4; --line-2:#f1f5f9;
+  --bg:#f2f6fa; --card:#fff;
+  --green:#12805a; --green-bg:#e4f4ec;
+  --amber:#a86a12; --amber-bg:#fdf2df;
+  --red:#c0392b;   --red-bg:#fceceA;
+  --slate-bg:#eef3f8;
+  --s1:0 1px 1px rgba(11,42,68,.04), 0 2px 4px rgba(11,42,68,.04);
+  --s2:0 1px 2px rgba(11,42,68,.05), 0 6px 16px rgba(11,42,68,.07);
+  --s3:0 2px 4px rgba(11,42,68,.06), 0 14px 34px rgba(11,42,68,.11);
+  --ease:cubic-bezier(.22,1,.36,1);
 }
 @media (prefers-color-scheme:dark){
-  :root{--ink:#e8eef4;--muted:#93a7b8;--line:#1e3244;--bg:#081726;--card:#0f2536;
-        --green-bg:#0f2e22;--amber-bg:#2f2711;--red-bg:#331a16;--slate-bg:#14293a;
-        --sh-sm:0 1px 2px rgba(0,0,0,.35);--sh-md:0 8px 28px rgba(0,0,0,.45)}
+  :root{--ink:#eaf1f7;--ink-2:#c3d2df;--muted:#8ea3b7;--line:#1d3145;--line-2:#16273a;
+        --bg:#060f1a;--card:#0d1f30;--slate-bg:#122336;
+        --green-bg:#0c2b1f;--amber-bg:#2b2410;--red-bg:#2f1a16;
+        --s1:0 1px 2px rgba(0,0,0,.4);--s2:0 4px 14px rgba(0,0,0,.45);--s3:0 12px 36px rgba(0,0,0,.6)}
 }
 *{box-sizing:border-box} html,body{margin:0}
 body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--ink);
-     line-height:1.45;-webkit-font-smoothing:antialiased;font-size:14px}
-.wrap{max-width:1480px;margin:0 auto;padding:0 18px 56px}
+  font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums}
+.wrap{max-width:1520px;margin:0 auto;padding:0 20px 60px}
 svg{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* Header compacto: el tablero es lo importante, no el encabezado */
-.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--navy-deep),var(--blue));
-  color:#fff;padding:18px 0 16px}
-.hero::before{content:"";position:absolute;top:-130px;right:-80px;width:380px;height:380px;
-  background:radial-gradient(circle,rgba(79,190,206,.3),transparent 62%);pointer-events:none}
+/* ── Cabecera ─────────────────────────────────────────────────── */
+.hero{position:relative;overflow:hidden;color:#fff;padding:22px 0 20px;
+  background:linear-gradient(120deg,#08243c 0%,var(--navy) 46%,#15618f 100%)}
+.hero::before{content:"";position:absolute;top:-220px;right:-120px;width:560px;height:560px;
+  background:radial-gradient(circle,rgba(79,190,206,.34) 0%,transparent 60%);pointer-events:none}
+.hero::after{content:"";position:absolute;left:-90px;bottom:-190px;width:400px;height:400px;
+  background:radial-gradient(circle,rgba(17,114,171,.5) 0%,transparent 62%);pointer-events:none}
 .hero .wrap{position:relative;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:0}
-.b-ico{width:38px;height:38px;border-radius:11px;background:rgba(79,190,206,.18);
-  border:1px solid rgba(79,190,206,.42);display:grid;place-items:center;flex:none}
-.b-ico svg{width:19px;height:19px;stroke:var(--aqua)}
-.hero h1{margin:0;font-size:1.18rem;font-weight:800;letter-spacing:-.02em}
-.hero .sub{font-size:.76rem;opacity:.8;font-weight:500}
-.stats{margin-left:auto;display:flex;gap:9px;flex-wrap:wrap}
-.st{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.18);border-radius:10px;
-  padding:7px 13px;min-width:78px}
-.st b{display:block;font-size:1.22rem;font-weight:800;line-height:1.1}
-.st span{font-size:.62rem;opacity:.85;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
-.st.mal b{color:#ffd3cc}
+.b-ico{width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(145deg,rgba(79,190,206,.3),rgba(79,190,206,.08));
+  border:1px solid rgba(126,211,223,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.b-ico svg{width:19px;height:19px;stroke:var(--aqua-soft)}
+.hero h1{margin:0;font-size:1.16rem;font-weight:800;letter-spacing:-.03em}
+.hero .sub{font-size:.74rem;opacity:.72;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:1px}
+.live{width:6px;height:6px;border-radius:50%;background:var(--aqua);animation:latido 2.4s infinite}
+@keyframes latido{0%{box-shadow:0 0 0 0 rgba(79,190,206,.65)}70%{box-shadow:0 0 0 8px rgba(79,190,206,0)}100%{box-shadow:0 0 0 0 rgba(79,190,206,0)}}
 
-/* Carril expedite */
-.carril{background:var(--card);border:1px solid var(--red);border-radius:14px;margin:16px 0 14px;
-  box-shadow:0 0 0 3px rgba(192,57,43,.09),var(--sh-sm);overflow:hidden}
-.carril-h{display:flex;align-items:center;gap:10px;padding:11px 16px;background:var(--red-bg)}
-.carril-h svg{width:16px;height:16px;stroke:var(--red)}
-.carril-h b{font-size:.82rem;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.06em}
-.carril-h .pol{font-size:.74rem;color:var(--red);opacity:.85;font-weight:600;margin-left:auto}
-.carril .filas{padding:8px}
+.stats{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.st{position:relative;overflow:hidden;border-radius:13px;padding:9px 15px 8px;min-width:92px;
+  background:linear-gradient(160deg,rgba(255,255,255,.15),rgba(255,255,255,.06));
+  border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.st b{display:block;font-size:1.34rem;font-weight:800;line-height:1.05;letter-spacing:-.03em}
+.st span{font-size:.6rem;opacity:.78;text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+.st.alerta{background:linear-gradient(160deg,rgba(255,138,120,.26),rgba(255,138,120,.1));
+  border-color:rgba(255,160,145,.4)}
+.st.alerta b{color:#ffd9d2}
+.st.bien b{color:var(--aqua-soft)}
 
-/* Columnas */
-.board{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:12px;overflow-x:auto;
-  padding-bottom:6px;align-items:start}
-.col{background:var(--slate-bg);border-radius:14px;padding:11px 10px 8px;min-width:240px}
-.col-h{padding:0 5px 9px}
-.col-t{display:flex;align-items:center;gap:8px}
-.col-t b{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.wipbar{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:800;color:var(--muted)}
-.wipbar em{font-style:normal;opacity:.55}
-.col.excedido .wipbar{color:var(--red)}
-.medidor{height:3px;border-radius:2px;background:var(--line);margin-top:7px;overflow:hidden}
-.medidor i{display:block;height:100%;background:var(--aqua);border-radius:2px}
-.col.excedido .medidor i{background:var(--red)}
-.pol{font-size:.7rem;color:var(--muted);font-weight:500;line-height:1.35;margin-top:7px;opacity:.9}
+/* ── Carril expedite ──────────────────────────────────────────── */
+.carril{position:relative;background:var(--card);border-radius:17px;margin:18px 0 16px;
+  box-shadow:var(--s3);overflow:hidden;border:1px solid var(--line)}
+.carril::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+  background:linear-gradient(90deg,var(--red),#e8836f)}
+.carril-h{display:flex;align-items:center;gap:11px;padding:14px 18px 12px}
+.carril-ico{width:30px;height:30px;border-radius:9px;background:var(--red-bg);display:grid;place-items:center;flex:none}
+.carril-ico svg{width:15px;height:15px;stroke:var(--red)}
+.carril-h b{font-size:.85rem;font-weight:800;color:var(--red);letter-spacing:-.01em}
+.carril-h .cnt{background:var(--red);color:#fff;border-radius:99px;padding:1px 9px;font-size:.7rem;font-weight:800}
+.carril-h .pol{font-size:.75rem;color:var(--muted);font-weight:500;margin-left:auto;text-align:right;max-width:46%}
+.carril .filas{padding:0 12px 12px}
 
-/* Fila compacta — densidad tipo Linear, no tarjetas grandes */
-.fila{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
-  border-radius:9px;padding:8px 10px;margin-bottom:6px;cursor:pointer;
-  transition:transform .12s,box-shadow .12s,border-color .12s;text-decoration:none;color:inherit}
-.fila:hover,.fila:focus{transform:translateX(2px);box-shadow:var(--sh-md);border-color:var(--aqua);outline:none}
-.fila:focus{box-shadow:0 0 0 3px rgba(79,190,206,.3)}
-.avatar{width:26px;height:26px;border-radius:8px;background:var(--slate-bg);display:grid;place-items:center;
-  font-size:.62rem;font-weight:800;color:var(--muted);flex:none}
-.fila.c-expedite .avatar{background:var(--red-bg);color:var(--red)}
-.fila.c-fecha_fija .avatar{background:var(--amber-bg);color:var(--amber)}
+/* ── Columnas ─────────────────────────────────────────────────── */
+.board{display:grid;grid-template-columns:repeat(3,minmax(280px,1fr));gap:14px;
+  overflow-x:auto;padding-bottom:6px;align-items:start}
+.col{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:0 0 10px;
+  min-width:280px;box-shadow:var(--s1);transition:box-shadow .25s var(--ease)}
+.col:hover{box-shadow:var(--s2)}
+.col-h{padding:15px 16px 12px;border-bottom:1px solid var(--line-2)}
+.col-t{display:flex;align-items:center;gap:9px}
+.col-punto{width:7px;height:7px;border-radius:2px;flex:none}
+.col-t b{font-size:.78rem;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.wipn{margin-left:auto;font-size:.74rem;font-weight:800;color:var(--ink-2);letter-spacing:-.02em}
+.wipn em{font-style:normal;color:var(--muted);font-weight:600}
+.col.excedido .wipn{color:var(--red)}
+.medidor{display:flex;gap:2px;margin-top:9px}
+.medidor i{flex:1;height:3px;border-radius:2px;background:var(--line);transition:background .3s var(--ease)}
+.medidor i.on{background:var(--aqua)}
+.col.excedido .medidor i.on{background:var(--red)}
+.pol{font-size:.71rem;color:var(--muted);font-weight:500;line-height:1.4;margin-top:10px}
+.col .filas{padding:10px 12px 0}
+
+/* ── Fila ─────────────────────────────────────────────────────── */
+.fila{display:flex;align-items:center;gap:10px;border-radius:11px;padding:9px 11px;margin-bottom:5px;
+  cursor:pointer;text-decoration:none;color:inherit;border:1px solid transparent;
+  transition:background .18s var(--ease),transform .18s var(--ease),box-shadow .18s var(--ease),border-color .18s;
+  animation:entra .34s var(--ease) both}
+@keyframes entra{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.fila:hover{background:var(--card);border-color:var(--line);box-shadow:var(--s2);transform:translateY(-1px)}
+.fila:focus{outline:none;background:var(--card);border-color:var(--aqua);
+  box-shadow:0 0 0 3px rgba(79,190,206,.28),var(--s2)}
+.carril .fila:hover,.carril .fila:focus{background:var(--slate-bg)}
+.avatar{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;flex:none;
+  font-size:.63rem;font-weight:800;letter-spacing:-.02em;color:#fff;
+  background:linear-gradient(145deg,#8ea3b7,#6b8095);box-shadow:var(--s1)}
+.fila.c-expedite .avatar{background:linear-gradient(145deg,#e0705c,var(--red))}
+.fila.c-fecha_fija .avatar{background:linear-gradient(145deg,#d9a24a,var(--amber))}
 .f-cuerpo{min-width:0;flex:1}
-.f-n{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-n{font-size:.83rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .f-s{font-size:.71rem;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;margin-top:1px}
-.f-der{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}
-.edad{font-size:.68rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.f-der{display:flex;align-items:center;gap:8px;flex:none}
+.edad{font-size:.7rem;font-weight:800;color:var(--muted);letter-spacing:-.02em;white-space:nowrap}
 .edad.alta{color:var(--red)}
-.mini-tag{font-size:.6rem;font-weight:800;padding:1px 6px;border-radius:99px;
-  text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
-.mt-expedite{background:var(--red-bg);color:var(--red)}
-.mt-fecha_fija{background:var(--amber-bg);color:var(--amber)}
-.mt-estandar{background:var(--slate-bg);color:var(--muted)}
-.vacia{text-align:center;color:var(--muted);font-size:.74rem;font-weight:600;padding:18px 8px;opacity:.7}
+.brasa{width:3px;height:19px;border-radius:2px;background:var(--line);flex:none}
+.brasa.n1{background:var(--aqua)} .brasa.n2{background:var(--amber)} .brasa.n3{background:var(--red)}
+.flecha{width:14px;height:14px;stroke:var(--muted);opacity:0;transition:opacity .18s,transform .18s}
+.fila:hover .flecha,.fila:focus .flecha{opacity:.75;transform:translateX(2px)}
+.vacia{display:flex;flex-direction:column;align-items:center;gap:7px;padding:26px 10px;
+  color:var(--muted);font-size:.73rem;font-weight:600;opacity:.6}
+.vacia svg{width:19px;height:19px;stroke:var(--muted)}
 
-.fuera{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px;margin-top:20px}
-.f-card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 16px;
-  box-shadow:var(--sh-sm)}
-.f-card b{display:block;font-size:1.3rem;font-weight:800}
-.f-card span{font-size:.72rem;color:var(--muted);font-weight:600;line-height:1.3;display:block;margin-top:2px}
-.nota{background:var(--slate-bg);border-radius:12px;padding:12px 15px;margin-top:16px;font-size:.76rem;
-  color:var(--muted);font-weight:500;line-height:1.55}
+/* ── Fuera del tablero ────────────────────────────────────────── */
+.fuera{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:22px}
+.fc{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px 17px;
+  box-shadow:var(--s1);transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.fc:hover{transform:translateY(-2px);box-shadow:var(--s2)}
+.fc b{display:block;font-size:1.5rem;font-weight:800;letter-spacing:-.035em;line-height:1}
+.fc span{font-size:.71rem;color:var(--muted);font-weight:600;line-height:1.35;display:block;margin-top:5px}
+.fc.destacada b{color:var(--green)}
+.nota{background:linear-gradient(160deg,var(--slate-bg),transparent);border:1px solid var(--line);
+  border-radius:15px;padding:15px 18px;margin-top:18px;font-size:.77rem;color:var(--muted);
+  font-weight:500;line-height:1.65}
 .nota b{color:var(--ink);font-weight:700}
 kbd{background:var(--card);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
-  padding:0 5px;font-family:inherit;font-size:.68rem;font-weight:700;color:var(--ink)}
-.cargando{text-align:center;padding:60px;color:var(--muted);font-weight:600}
-@media(max-width:900px){.board{grid-template-columns:repeat(4,250px)}.stats{margin-left:0;width:100%}}
+  padding:1px 6px;font-family:inherit;font-size:.68rem;font-weight:800;color:var(--ink-2)}
+.cargando{text-align:center;padding:70px;color:var(--muted);font-weight:600;font-size:.85rem}
+@media(max-width:960px){.board{grid-template-columns:repeat(3,290px)}.stats{margin-left:0;width:100%}}
+@media(max-width:560px){.wrap{padding:0 13px 48px}.carril-h .pol{display:none}}
 </style>
 </head>
 <body>
 
 <div class="hero"><div class="wrap">
-  <div class="b-ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h10"/></svg></div>
+  <div class="b-ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h9"/></svg></div>
   <div>
     <h1>Cola de Recepción</h1>
-    <div class="sub">A quién le toca ahora · actualizada <span id="hora">—</span></div>
+    <div class="sub"><span class="live"></span>a quién le toca ahora · <span id="hora">—</span></div>
   </div>
   <div class="stats" id="stats"></div>
 </div></div>
@@ -129,104 +164,102 @@ kbd{background:var(--card);border:1px solid var(--line);border-bottom-width:2px;
 const TOKEN = "__TOKEN__";
 let D = null, foco = -1;
 
-const inic = (n, p) => {
-  const s = (n || '').trim();
-  if (!s) return (p || '').slice(-2);
-  return s.split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase();
+const PUNTO = {responder:'var(--red)', eligiendo:'var(--aqua)', agendado:'var(--amber)'};
+const inic = (n,p) => {
+  const s=(n||'').trim();
+  return s ? s.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase() : (p||'').slice(-2);
 };
-const edad = m => {
-  if (!m) return null;
-  if (m < 60) return m + ' min';
-  const h = Math.floor(m/60);
-  return h < 24 ? h + ' h' : Math.floor(h/24) + ' d';
-};
-// Link directo al panel de recepción: la cola dice a quién, el panel deja atender.
+const edad = m => !m ? null : m<60 ? m+' min' : (m<1440 ? Math.floor(m/60)+' h' : Math.floor(m/1440)+' d');
+const brasa = m => !m ? '' : m>240 ? 'n3' : m>60 ? 'n2' : 'n1';
 const linkConv = p => `/admin/v2?token=${encodeURIComponent(TOKEN)}#c=${encodeURIComponent(p)}`;
+const FLECHA = '<svg class="flecha" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>';
 
-function fila(i, idx){
-  const e = edad(i.espera_min);
-  const alta = i.espera_min && i.espera_min > 60;
-  const sub = [i.area || null, (i.cita ? `${i.cita.fecha} ${i.cita.hora}` : null),
-               i.last_text ? '“'+i.last_text.slice(0,42)+'”' : null].filter(Boolean).join(' · ');
-  return `<a class="fila c-${i.clase}" href="${linkConv(i.phone)}" target="_top" data-idx="${idx}" tabindex="0">
-    <span class="avatar">${inic(i.nombre, i.phone)}</span>
+function fila(i, n){
+  const e = edad(i.espera_min), alta = i.espera_min > 60;
+  const sub = [i.area || null,
+               i.cita ? `${i.cita.fecha} · ${i.cita.hora}` : null,
+               i.last_text ? '“'+i.last_text.slice(0,40)+'”' : null].filter(Boolean).join(' · ');
+  return `<a class="fila c-${i.clase}" href="${linkConv(i.phone)}" target="_top" tabindex="0"
+             style="animation-delay:${Math.min(n*22,260)}ms">
+    <span class="avatar">${inic(i.nombre,i.phone)}</span>
     <span class="f-cuerpo">
       <span class="f-n">${i.nombre || i.phone}</span>
       <span class="f-s">${sub || 'sin detalle'}</span>
     </span>
     <span class="f-der">
-      ${e ? `<span class="edad ${alta?'alta':''}">${e}</span>` : ''}
-      ${i.clase!=='estandar' ? `<span class="mini-tag mt-${i.clase}">${D.clases[i.clase].label}</span>` : ''}
-    </span>
-  </a>`;
+      ${e ? `<span class="edad ${alta?'alta':''}">${e}</span><span class="brasa ${brasa(i.espera_min)}"></span>` : ''}
+      ${FLECHA}
+    </span></a>`;
 }
 
 function render(){
   document.getElementById('hora').textContent = D.generado;
-
-  const espMax = edad(D.espera_max) || '—';
+  const espMax = edad(D.espera_max) || 'nadie';
   document.getElementById('stats').innerHTML = `
-    <div class="st ${D.esperando>0?'mal':''}"><b>${D.esperando}</b><span>esperan</span></div>
-    <div class="st ${D.espera_max>60?'mal':''}"><b>${espMax}</b><span>la más vieja</span></div>
+    <div class="st ${D.esperando ? 'alerta':'bien'}"><b>${D.esperando}</b><span>esperan</span></div>
+    <div class="st ${D.espera_max>60?'alerta':''}"><b>${espMax}</b><span>la más vieja</span></div>
     <div class="st"><b>${D.total_vivas}</b><span>en la cola</span></div>
-    <div class="st"><b>${D.fuera_cerradas}</b><span>atendidas hoy</span></div>`;
+    <div class="st bien"><b>${D.fuera_cerradas}</b><span>atendidas hoy</span></div>`;
 
   const exp = D.columnas.find(c => c.id === 'sin_cerrar');
   document.getElementById('carril').innerHTML = (exp && exp.n) ? `
     <div class="carril">
       <div class="carril-h">
-        <svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
-        <b>${exp.label} · ${exp.n}</b>
+        <div class="carril-ico"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg></div>
+        <b>${exp.label}</b><span class="cnt">${exp.n}</span>
         <span class="pol">${exp.politica}</span>
       </div>
-      <div class="filas">${exp.items.map((i,n) => fila(i,'x'+n)).join('')}</div>
+      <div class="filas">${exp.items.map((i,n)=>fila(i,n)).join('')}</div>
     </div>` : '';
 
   document.getElementById('board').innerHTML = `<div class="board">` +
     D.columnas.filter(c => c.id !== 'sin_cerrar').map(c => {
-      const pct = c.wip ? Math.min(100, c.n / c.wip * 100) : 0;
+      const seg = c.wip || 10;
+      const llenos = Math.min(c.n, seg);
       return `<div class="col ${c.excedido?'excedido':''}">
         <div class="col-h">
-          <div class="col-t"><b>${c.label}</b>
-            <span class="wipbar">${c.n}${c.wip?`<em>/${c.wip}</em>`:''}</span></div>
-          ${c.wip ? `<div class="medidor"><i style="width:${pct}%"></i></div>` : ''}
+          <div class="col-t"><span class="col-punto" style="background:${PUNTO[c.id]}"></span>
+            <b>${c.label}</b><span class="wipn">${c.n}${c.wip?`<em>/${c.wip}</em>`:''}</span></div>
+          ${c.wip ? `<div class="medidor">${Array.from({length:seg},(_,k)=>
+              `<i class="${k<llenos?'on':''}"></i>`).join('')}</div>` : ''}
           <div class="pol">${c.politica}</div>
         </div>
-        ${c.items.length ? c.items.map((i,n) => fila(i,c.id+n)).join('')
-                         : '<div class="vacia">nada pendiente</div>'}
+        <div class="filas">${c.items.length ? c.items.map((i,n)=>fila(i,n)).join('')
+          : `<div class="vacia"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>nada pendiente</div>`}</div>
       </div>`;
     }).join('') + `</div>`;
 
   document.getElementById('fuera').innerHTML = `
-    <div class="f-card"><b>${D.fuera_cerradas}</b><span>atendidas hoy · el rendimiento del día</span></div>
-    <div class="f-card"><b>${D.fuera_agendadas}</b><span>con hora para más adelante · no requieren nada</span></div>
-    <div class="f-card"><b>${D.fuera_sin_intencion}</b><span>escribieron sin decir a qué · sin costo de demora</span></div>
-    <div class="f-card"><b>${D.total_crudo}</b><span>conversaciones en total · de ahí sale la cola</span></div>`;
+    <div class="fc destacada"><b>${D.fuera_cerradas}</b><span>atendidas hoy · el rendimiento del día</span></div>
+    <div class="fc"><b>${D.fuera_agendadas}</b><span>con hora más adelante · no requieren nada</span></div>
+    <div class="fc"><b>${D.fuera_sin_intencion}</b><span>escribieron sin decir a qué · sin costo de demora</span></div>
+    <div class="fc"><b>${D.total_crudo}</b><span>conversaciones en total · de ahí sale la cola</span></div>`;
 
   document.getElementById('nota').innerHTML =
     `<b>Cómo está ordenada.</b> Primero lo que más cuesta perder: quien vio horarios y no cerró va en el
      carril rojo, arriba de todo. Después quien tiene hora hoy o mañana. El resto se atiende
-     <b>de la más vieja a la más nueva</b> — la regla del método Kanban es sacar siempre la que lleva más
-     rato esperando, no la más reciente. Los topes por columna no son metas: si “Responder ahora” pasa de
-     10, es que recepción está sobrepasada. Un clic en cualquier fila abre esa conversación en el panel.
-     Con <kbd>J</kbd> y <kbd>K</kbd> te mueves, <kbd>Enter</kbd> abre.`;
+     <b>de la más vieja a la más nueva</b> — la regla del método es sacar siempre la que lleva más rato
+     esperando, no la más reciente. La barrita al lado del tiempo es la temperatura de la espera.
+     Los topes por columna no son metas: si “Responder ahora” pasa de 10, recepción está sobrepasada.
+     Un clic en cualquier fila abre esa conversación en el panel · <kbd>J</kbd> <kbd>K</kbd> mueven,
+     <kbd>Enter</kbd> abre.`;
 
   const filas = [...document.querySelectorAll('.fila')];
   document.onkeydown = ev => {
-    if (ev.target.tagName === 'INPUT') return;
-    if (ev.key === 'j' || ev.key === 'ArrowDown'){ foco = Math.min(foco+1, filas.length-1); filas[foco]?.focus(); ev.preventDefault(); }
-    if (ev.key === 'k' || ev.key === 'ArrowUp'){ foco = Math.max(foco-1, 0); filas[foco]?.focus(); ev.preventDefault(); }
+    if (['INPUT','TEXTAREA'].includes(ev.target.tagName)) return;
+    if (ev.key==='j'||ev.key==='ArrowDown'){ foco=Math.min(foco+1,filas.length-1); filas[foco]?.focus(); ev.preventDefault(); }
+    if (ev.key==='k'||ev.key==='ArrowUp'){ foco=Math.max(foco-1,0); filas[foco]?.focus(); ev.preventDefault(); }
   };
 }
 
 function cargar(){
   fetch('/alma/api/recepcion-kanban/cola?token=' + encodeURIComponent(TOKEN))
-    .then(r => r.json()).then(d => { D = d; render(); })
-    .catch(e => { document.getElementById('board').innerHTML =
-      '<div class="cargando">No se pudo cargar: ' + e + '</div>'; });
+    .then(r=>r.json()).then(d=>{ D=d; render(); })
+    .catch(e=>{ document.getElementById('board').innerHTML =
+      '<div class="cargando">No se pudo cargar: '+e+'</div>'; });
 }
 cargar();
-setInterval(cargar, 60000);   // la cola se mueve sola; 60 s es suficiente
+setInterval(cargar, 60000);
 </script>
 </body>
 </html>
