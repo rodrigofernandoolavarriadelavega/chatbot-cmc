@@ -70,6 +70,26 @@ svg{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .hero .sub{font-size:.74rem;opacity:.75;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:1px}
 .live{width:6px;height:6px;border-radius:50%;background:var(--aqua);animation:latido 2.4s infinite}
 @keyframes latido{0%{box-shadow:0 0 0 0 rgba(79,190,206,.65)}70%{box-shadow:0 0 0 8px rgba(79,190,206,0)}100%{box-shadow:0 0 0 0 rgba(79,190,206,0)}}
+.vistas{display:flex;gap:3px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+  border-radius:11px;padding:3px}
+.vistas button{background:transparent;border:0;border-radius:8px;padding:7px 14px;font-family:inherit;
+  font-size:.75rem;font-weight:800;color:rgba(255,255,255,.72);cursor:pointer;transition:background .18s,color .18s}
+.vistas button:hover{color:#fff}
+.vistas button.on{background:var(--aqua);color:var(--navy-deep)}
+.emb-col{background:var(--card);border:1px solid var(--line);border-radius:17px;box-shadow:var(--s1);
+  min-width:210px;padding:0 0 10px}
+.emb-h{padding:14px 15px 11px;border-bottom:1px solid var(--line-2)}
+.emb-h .en{display:flex;align-items:baseline;gap:8px}
+.emb-h b{font-size:1.5rem;font-weight:800;letter-spacing:-.035em}
+.emb-h .pc{font-size:.72rem;font-weight:700;color:var(--muted)}
+.emb-h .lb{font-size:.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-2);margin-top:3px}
+.emb-h .pl{font-size:.68rem;color:var(--muted);font-weight:500;line-height:1.35;margin-top:6px}
+.emb-bar{height:4px;border-radius:3px;background:var(--line);margin-top:10px;overflow:hidden}
+.emb-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--aqua),var(--blue))}
+.board.embudo{grid-template-columns:repeat(5,minmax(210px,1fr))}
+.aviso-emb{background:var(--amber-bg);border:1px solid rgba(168,106,18,.25);border-radius:13px;
+  padding:11px 15px;margin-bottom:14px;font-size:.76rem;color:var(--amber);font-weight:600;line-height:1.5}
 .stats{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 .st{border-radius:13px;padding:9px 15px 8px;min-width:92px;
   background:linear-gradient(160deg,rgba(255,255,255,.15),rgba(255,255,255,.06));
@@ -276,6 +296,7 @@ kbd{background:var(--card);border:1px solid var(--line);border-bottom-width:2px;
     <h1>Cola de Recepción</h1>
     <div class="sub"><span class="live"></span><span id="periodo">hoy</span> · <span id="hora">—</span></div>
   </div>
+  <div class="vistas" id="vistas"></div>
   <div class="stats" id="stats"></div>
 </div></div>
 
@@ -320,6 +341,7 @@ kbd{background:var(--card);border:1px solid var(--line);border-bottom-width:2px;
 
 <script>
 const TOKEN = "__TOKEN__";
+let vista = 'trabajo';
 let D = null, F = null, rango = 'dia', desde = null, hasta = null, foco = -1, convActual = null;
 const RANGOS = [['dia','Hoy'],['semana','Esta semana'],['mes','Este mes'],['todo','Todo']];
 const q = s => document.querySelector(s);
@@ -430,7 +452,7 @@ q('#wp-env').onclick = async () => {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({phone: wpPhone, message: txt})});
     q('#wp-txt').value = '';
-    const c = D.columnas.flatMap(x=>x.items).find(x=>x.phone===wpPhone) || {phone:wpPhone};
+    const c = (vista==='embudo'?D.embudo:D.columnas).flatMap(x=>x.items).find(x=>x.phone===wpPhone) || {phone:wpPhone};
     const guardado = wpPhone; wpPhone = null; await pintarConv({...c, phone:guardado});
   } finally { b.disabled = false; b.textContent = 'Enviar'; }
 };
@@ -517,7 +539,8 @@ function fila(i, n){
 
 function enlazarFilas(){
   document.querySelectorAll('.fila').forEach(b => {
-    const dato = () => D.columnas.flatMap(x => x.items).find(x => x.phone === b.dataset.phone);
+    const fuente = () => (vista==='embudo' ? D.embudo : D.columnas).flatMap(x => x.items);
+    const dato = () => fuente().find(x => x.phone === b.dataset.phone);
     b.onmouseenter = () => { const c = dato(); if (c) verConv(c, b); };
     b.onmouseleave = () => setTimeout(() => { if (!wp.matches(':hover')) ocultarConv(); }, 90);
     b.onclick = () => { const c = dato(); if (c) fijarConv(c, b); };
@@ -557,6 +580,26 @@ function graficos(){
   </div>`;
 }
 
+function renderEmbudo(){
+  q('#carril').innerHTML = `<div class="aviso-emb">Esta es una <b>foto de dónde está cada persona ahora</b>,
+    no una conversión. Los agendados de hoy no salieron de los que en este momento están eligiendo horario:
+    pasaron por ahí hace días. La conversión real —siguiendo a la misma gente en el tiempo— está en los
+    gráficos de fricción, más abajo.</div>`;
+  const max = Math.max(...D.embudo.map(e => e.n), 1);
+  q('#board').innerHTML = `<div class="board embudo">` + D.embudo.map(e => `
+    <div class="emb-col">
+      <div class="emb-h">
+        <div class="en"><b>${e.n}</b><span class="pc">${e.pct}%</span></div>
+        <div class="lb">${e.label}</div>
+        <div class="emb-bar"><i style="width:${Math.max(e.n/max*100,2)}%"></i></div>
+        <div class="pl">${e.politica}</div>
+      </div>
+      <div class="filas">${e.items.length ? e.items.slice(0,40).map((i,n)=>fila(i,n)).join('')
+        : '<div class="vacia">sin nadie acá</div>'}</div>
+    </div>`).join('') + `</div>`;
+  enlazarFilas();
+}
+
 async function pintarEspera(){
   try{
     const filas = await api('/admin/api/waitlist');
@@ -585,6 +628,13 @@ function render(){
     <div class="st"><b>${D.total_vivas}</b><span>en la cola</span></div>
     <div class="st bien"><b>${D.fuera_cerradas}</b><span>atendidas</span></div>`;
 
+  q('#vistas').innerHTML = [['trabajo','Trabajo'],['embudo','Embudo']].map(([k,t]) =>
+    `<button class="${vista===k?'on':''}" data-v="${k}">${t}</button>`).join('');
+  document.querySelectorAll('#vistas button').forEach(b =>
+    b.onclick = () => { vista = b.dataset.v; render(); });
+
+  if (vista === 'embudo'){ renderEmbudo(); return; }
+
   const exp = D.columnas.find(c => c.id==='sin_cerrar');
   q('#carril').innerHTML = (exp && exp.n) ? `<div class="carril"><div class="carril-h">
       <div class="carril-ico"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg></div>
@@ -594,9 +644,9 @@ function render(){
   const PUNTO = {responder:'var(--red)', eligiendo:'var(--aqua)', agendado:'var(--amber)'};
   q('#board').innerHTML = `<div class="board">` + D.columnas.filter(c=>c.id!=='sin_cerrar').map(c=>{
     const seg = c.wip||10, llenos = Math.min(c.n,seg);
-    return `<div class="col ${c.excedido?'excedido':''}"><div class="col-h">
+    return `<div class="col ${(c.alarma||c.excedido)?'excedido':''}"><div class="col-h">
       <div class="col-t"><span class="col-punto" style="background:${PUNTO[c.id]}"></span>
-      <b>${c.label}</b><span class="wipn">${c.n}${c.wip?`<em>/${c.wip}</em>`:''}</span></div>
+      <b>${c.label}</b><span class="wipn">${c.n}${c.wip?`<em>/${c.wip}</em>`:''}</span></div>${c.alarma?`<div class="pol" style="color:var(--red);font-weight:700">Hay algo esperando hace ${edad(c.mas_vieja)}</div>`:''}
       ${c.wip?`<div class="medidor">${Array.from({length:seg},(_,k)=>`<i class="${k<llenos?'on':''}"></i>`).join('')}</div>`:''}
       <div class="pol">${c.politica}</div></div>
       <div class="filas">${c.items.length ? c.items.map((i,n)=>fila(i,n)).join('')
@@ -612,7 +662,7 @@ function render(){
   q('#graf').innerHTML = graficos();
   q('#nota').innerHTML = `<b>Cómo está ordenada.</b> Primero quien vio horarios y no cerró (carril rojo),
     después quien tiene hora hoy o mañana, y el resto <b>de la más vieja a la más nueva</b>. La barrita
-    junto al tiempo es la temperatura de la espera. Los topes por columna son alarmas, no metas.
+    junto al tiempo es la temperatura de la espera. La columna se enciende cuando algo lleva más de ${D.minutos_alarma||30} min esperando — medimos que la mediana de respuesta es de 7 minutos, así que el problema nunca es el volumen, es lo que se hunde y nadie ve.
     <br><br><b>Atajos.</b> <kbd>Ctrl</kbd>+<kbd>M</kbd> periodo · <kbd>Ctrl</kbd>+<kbd>P</kbd> pagos ·
     <kbd>J</kbd> <kbd>K</kbd> moverse · clic en una fila abre la conversación y deja responder ahí mismo.`;
   enlazarFilas();

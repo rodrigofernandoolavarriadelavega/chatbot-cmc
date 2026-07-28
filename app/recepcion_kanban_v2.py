@@ -43,8 +43,27 @@ from zoneinfo import ZoneInfo
 log = logging.getLogger("recepcion_kanban_v2")
 _CLT = ZoneInfo("America/Santiago")
 
-# Topes de WIP por columna. No son metas: son alarmas. Si "responder" pasa de
-# 10, recepción está sobrepasada y hay que mirar por qué, no correr más rápido.
+# ALARMA POR ANTIGÜEDAD, no por cantidad (2026-07-28, medido).
+#
+# El tope de 10 de la primera versión estaba inventado. Al medirlo contra 30 días
+# de producción (1.751 respuestas humanas reales, excluyendo al bot que contesta
+# en segundos y ahogaba la medición) apareció esto:
+#
+#     mediana de respuesta de recepción ....  7 minutos
+#     p90 .................................. ~3 días
+#
+# O sea el problema del centro NO es el volumen ni la velocidad: la mediana es
+# excelente. El problema es la cola larga — un puñado de conversaciones que
+# simplemente nunca se contestan y arrastran el p90 a días.
+#
+# Un límite de cantidad no detecta eso: 3 conversaciones pueden estar perfectas o
+# llevar dos días esperando, y el número es el mismo. Por eso el umbral es de
+# TIEMPO. Se fija en 30 min ≈ 4 veces la mediana: suficiente para no gritar por
+# el ritmo normal, y suficiente para que nada se hunda un día entero sin que se
+# note.
+MINUTOS_ALARMA = 30
+
+# Tope de cantidad como referencia secundaria (se muestra, no alarma solo).
 WIP = {"responder": 10, "sin_cerrar": 15, "eligiendo": 20}
 
 COLUMNAS = [
@@ -56,6 +75,23 @@ COLUMNAS = [
      "politica": "En conversación con el bot. No tocar salvo que se trabe."},
     {"id": "agendado",   "label": "Con hora tomada",
      "politica": "Ya tiene hora. Solo aparece si es para hoy o mañana."},
+]
+
+# Las 5 etapas del diseño original del dueño: el recorrido del PACIENTE.
+# Conviven con las columnas de trabajo, no compiten: responden preguntas
+# distintas. Las columnas dicen "a quién atiendo ahora"; estas etapas dicen
+# "dónde se cae la gente". El panel las ofrece como dos vistas del mismo dato.
+ETAPAS_EMBUDO = [
+    {"id": "primer_mensaje", "label": "1º mensaje",
+     "politica": "Escribió y todavía no dijo a qué viene."},
+    {"id": "area",           "label": "Eligió área",
+     "politica": "Ya dijo qué especialidad necesita."},
+    {"id": "profesional",    "label": "Eligiendo horario",
+     "politica": "Tiene profesional y está viendo horas."},
+    {"id": "agendado",       "label": "Agendado",
+     "politica": "Cerró la hora."},
+    {"id": "atendido",       "label": "Atendido",
+     "politica": "Vino y quedó cobrado. Cruzado con el panel de pagos."},
 ]
 
 CLASES = {
@@ -200,11 +236,37 @@ def construir(cards: list[dict]) -> dict:
     for meta in COLUMNAS:
         items = por_col.get(meta["id"], [])
         tope = WIP.get(meta["id"])
+        # La columna se enciende si ALGO lleva demasiado esperando — no por
+        # tener muchas tarjetas. Ver MINUTOS_ALARMA.
+        vieja = max((i.get("espera_min") or 0) for i in items) if items else 0
         columnas.append({**meta, "items": items, "n": len(items), "wip": tope,
+                         "mas_vieja": vieja,
+                         "alarma": vieja > MINUTOS_ALARMA,
                          "excedido": bool(tope and len(items) > tope)})
+
+    # ── Vista embudo: TODAS las tarjetas por etapa del paciente ──────────
+    # Acá no se filtra nada: el sentido del embudo es justamente ver cuántos se
+    # quedan en el camino. Filtrar sería borrar la respuesta.
+    por_etapa = {e["id"]: [] for e in ETAPAS_EMBUDO}
+    for c in cards:
+        por_etapa.setdefault(c.get("etapa") or "primer_mensaje", []).append({
+            **c, "espera_min": _espera_min(c), "clase": clasificar(c)[1]})
+    # OJO: esto es una FOTO de dónde está cada quien ahora, NO una conversión.
+    # Calcular "cuántos pasaron de una etapa a la siguiente" dividiendo estos
+    # números da disparates (los agendados de hoy no salieron de los que ahora
+    # están eligiendo horario: pasaron por ahí hace días). La conversión real se
+    # mide siguiendo cohortes en el tiempo y vive en el endpoint /friccion.
+    base = len(cards) or 1
+    embudo = [{**e,
+               "items": sorted(por_etapa.get(e["id"], []),
+                               key=lambda x: -(x["espera_min"] or 0)),
+               "n": len(por_etapa.get(e["id"], [])),
+               "pct": round(len(por_etapa.get(e["id"], [])) / base * 100, 1)}
+              for e in ETAPAS_EMBUDO]
 
     esperas = [v["espera_min"] for v in vivas if v["espera_min"]]
     return {
+        "embudo": embudo,
         "columnas": columnas,
         "clases": CLASES,
         "total_vivas": len(vivas),
@@ -214,6 +276,7 @@ def construir(cards: list[dict]) -> dict:
         "espera_max": max(esperas) if esperas else 0,
         "espera_mediana": sorted(esperas)[len(esperas) // 2] if esperas else 0,
         "esperando": len(esperas),
+        "minutos_alarma": MINUTOS_ALARMA,
         "expedite": sum(1 for v in vivas if v["clase"] == "expedite"),
         "generado": ahora.strftime("%H:%M"),
     }
