@@ -697,16 +697,25 @@ async def lifespan(app: FastAPI):
     from config import CONCILIACION_TRANSFERENCIAS_ACTIVE as _CONCIL_ACTIVE
     if _CONCIL_ACTIVE:
         from conciliacion_transferencias import poll_conciliacion_transferencias
+        # 60 s, no 10 min (2026-07-28, decisión del dueño). Con 10 minutos la
+        # sugerencia llegaba tarde para el único momento en que sirve: el
+        # paciente transfiere en el mesón y recepción cobra al tiro. Si la
+        # sugerencia aparece después de que ya cobró, no aporta nada — el
+        # sistema solo propone sobre filas SIN cobrar.
+        # No cuesta más: `email_ticker_poll` lleva meses consultando este mismo
+        # buzón cada 60 s. Son conexiones IMAP cortas y secuenciales
+        # (max_instances=1, nunca se solapan), Gmail no cobra por request, y
+        # este carril no toca ni Medilink ni la IA.
         scheduler.add_job(
             poll_conciliacion_transferencias,
-            "interval", minutes=10,
+            "interval", seconds=60,
             id="conciliacion_transferencias_poll",
             replace_existing=True,
-            misfire_grace_time=300,
+            misfire_grace_time=45,
             coalesce=True,
             max_instances=1,
         )
-        log.info("conciliación de transferencias ACTIVA (poll cada 10 min)")
+        log.info("conciliación de transferencias ACTIVA (poll cada 60 s)")
     else:
         log.info("conciliación de transferencias apagada "
                  "(CONCILIACION_TRANSFERENCIAS_ACTIVE=false) — sin IMAP")
@@ -1174,6 +1183,7 @@ import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña M
 import agenda_ticker_routes; agenda_ticker_routes.register_agenda_ticker_routes(app)  # Monitor de agendamientos en vivo (/alma/agenda-en-vivo)
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
 import conciliacion_transferencias_routes; conciliacion_transferencias_routes.register_conciliacion_transferencias_routes(app)  # Conciliación transferencias × correos banco + sugerencias de pago (/alma/conciliacion-transferencias)
+import mapa_centro_routes; mapa_centro_routes.register_mapa_centro_routes(app)  # Mapa del Centro: inventario de TODO lo que hay en marcha, con sondas en vivo (/alma/mapa)
 
 import pagos_routes
 app.include_router(pagos_routes.router)

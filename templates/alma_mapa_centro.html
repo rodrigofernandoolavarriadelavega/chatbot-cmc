@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa del Centro · Alma</title>
+<style>
+:root{
+  --navy:#0F3F68; --blue:#1172AB; --aqua:#4FBECE;
+  --ink:#122430; --muted:#5C7080; --line:#E3EAEF; --bg:#F5F8FA; --card:#FFF;
+  --ok:#1E8E5A; --warn:#B7791F; --danger:#C0392B;
+  --ok-bg:#E7F5EE; --warn-bg:#FDF3E0; --danger-bg:#FBEAE7;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sh:0 1px 2px rgba(15,63,104,.06),0 4px 16px rgba(15,63,104,.07);
+}
+@media (prefers-color-scheme:dark){
+  :root{--ink:#E6EDF3;--muted:#9FB3C0;--line:#22333F;--bg:#0C1A24;--card:#122430;
+        --ok-bg:#123024;--warn-bg:#332810;--danger-bg:#361C18;--sh:0 1px 2px rgba(0,0,0,.4)}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:0 18px 70px}
+header{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;padding:26px 0 22px}
+h1{margin:0 0 3px;font-size:1.45rem;letter-spacing:-.02em}
+.sub{opacity:.88;font-size:.88rem;margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:18px}
+.kpi{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+     border-radius:9px;padding:10px 12px;cursor:pointer;transition:background .15s}
+.kpi:hover{background:rgba(255,255,255,.2)}
+.kpi b{display:block;font-size:1.35rem;line-height:1.1}
+.kpi span{font-size:.7rem;opacity:.85;text-transform:uppercase;letter-spacing:.04em}
+.barra{margin:20px 0 8px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--muted);
+  border-radius:99px;padding:5px 13px;font-size:.79rem;cursor:pointer;font-family:inherit}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip.alerta.on{background:var(--danger);border-color:var(--danger)}
+.chip.dueno.on{background:var(--warn);border-color:var(--warn)}
+.grupo{margin:26px 0 8px;font-size:.76rem;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:6px}
+.item{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);
+  border-radius:10px;padding:13px 16px;margin-bottom:9px;box-shadow:var(--sh)}
+.item.e-medido,.item.e-produccion{border-left-color:var(--ok)}
+.item.e-prueba{border-left-color:var(--aqua)}
+.item.e-desplegado_apagado{border-left-color:var(--warn)}
+.item.e-construido{border-left-color:var(--blue)}
+.item.e-idea{border-left-color:var(--muted)}
+.item.tiene-alerta{border-left-color:var(--danger);background:var(--danger-bg)}
+.it-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.it-n{font-weight:650;font-size:.97rem}
+.pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:.69rem;font-weight:700;
+  white-space:nowrap}
+.p-medido,.p-produccion{background:var(--ok-bg);color:var(--ok)}
+.p-prueba{background:rgba(79,190,206,.2);color:var(--blue)}
+.p-desplegado_apagado{background:var(--warn-bg);color:var(--warn)}
+.p-construido{background:rgba(17,114,171,.14);color:var(--blue)}
+.p-idea{background:var(--line);color:var(--muted)}
+.p-dueno{background:var(--warn-bg);color:var(--warn)}
+.p-plata{background:var(--ok-bg);color:var(--ok)}
+.p-conf{background:var(--line);color:var(--muted)}
+.falta{color:var(--muted);font-size:.87rem;margin:6px 0 0}
+.falta b{color:var(--ink);font-weight:600}
+.alerta{color:var(--danger);font-size:.85rem;font-weight:650;margin:6px 0 0}
+.sonda{font-family:var(--mono);font-size:.75rem;color:var(--muted);margin-top:5px}
+.contra{background:var(--danger-bg);color:var(--danger);font-size:.8rem;padding:5px 9px;
+  border-radius:6px;margin-top:6px;font-weight:600}
+.vacio{text-align:center;color:var(--muted);padding:38px;font-size:.9rem}
+footer{margin-top:32px;padding-top:14px;border-top:1px solid var(--line);
+  color:var(--muted);font-size:.79rem}
+@media(max-width:640px){h1{font-size:1.2rem}.wrap{padding:0 12px 50px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Mapa del Centro</h1>
+  <p class="sub">Todo lo que hay en marcha, en qué etapa y qué falta · Centro Médico Carampangue</p>
+  <div class="kpis" id="kpis"></div>
+</div></header>
+
+<div class="wrap">
+  <div class="barra" id="filtros"></div>
+  <div id="lista"></div>
+  <footer id="pie"></footer>
+</div>
+
+<script>
+const TOKEN = "__TOKEN__";
+let DATA = null, filtroEtapa = null, filtroEspecial = null;
+
+function pill(txt, clase){ return `<span class="pill ${clase}">${txt}</span>`; }
+
+function render(){
+  const d = DATA;
+  document.getElementById('kpis').innerHTML = [
+    ['total', d.total, 'frentes en total', null],
+    ['dueno', d.esperan_dueno, 'esperan tu decisión', 'dueno'],
+    ['alerta', d.con_alerta, 'con alerta', 'alerta'],
+    ['medido', d.por_etapa.medido || 0, 'medidos de verdad', 'medido'],
+    ['apagado', d.por_etapa.desplegado_apagado || 0, 'listos y apagados', 'desplegado_apagado'],
+    ['construido', d.por_etapa.construido || 0, 'sin subir', 'construido'],
+  ].map(([k,n,t,f]) => `<div class="kpi" data-f="${f||''}"><b>${n}</b><span>${t}</span></div>`).join('');
+
+  document.getElementById('filtros').innerHTML =
+    `<button class="chip ${!filtroEtapa&&!filtroEspecial?'on':''}" data-e="">Todo</button>` +
+    d.etapas.map(e => `<button class="chip ${filtroEtapa===e?'on':''}" data-e="${e}">${d.etapa_label[e]}</button>`).join('') +
+    `<button class="chip dueno ${filtroEspecial==='dueno'?'on':''}" data-s="dueno">Espera tu decisión</button>` +
+    `<button class="chip alerta ${filtroEspecial==='alerta'?'on':''}" data-s="alerta">Con alerta</button>`;
+
+  let items = d.items;
+  if (filtroEtapa) items = items.filter(i => i.etapa === filtroEtapa);
+  if (filtroEspecial === 'dueno') items = items.filter(i => i.decide === 'dueño');
+  if (filtroEspecial === 'alerta') items = items.filter(i => i.alerta);
+
+  let html = '';
+  for (const g of d.grupos){
+    const del = items.filter(i => i.grupo === g);
+    if (!del.length) continue;
+    html += `<div class="grupo">${g} · ${del.length}</div>`;
+    for (const i of del){
+      html += `<div class="item e-${i.etapa} ${i.alerta?'tiene-alerta':''}">
+        <div class="it-h">
+          <span class="it-n">${i.nombre}</span>
+          ${pill(d.etapa_label[i.etapa], 'p-'+i.etapa)}
+          ${i.decide === 'dueño' ? pill('decides tú','p-dueno') : ''}
+          ${i.plata ? pill(i.plata,'p-plata') : ''}
+          ${i.confirmar ? pill('por confirmar','p-conf') : ''}
+        </div>
+        ${i.alerta ? `<div class="alerta">⚠ ${i.alerta}</div>` : ''}
+        ${i.falta && i.falta !== '—' ? `<p class="falta"><b>Falta:</b> ${i.falta}</p>` : ''}
+        ${i.contradiccion ? `<div class="contra">⚠ ${i.contradiccion}</div>` : ''}
+        ${i.sonda_valor ? `<div class="sonda">● ${i.sonda_valor}</div>` : ''}
+      </div>`;
+    }
+  }
+  document.getElementById('lista').innerHTML = html || '<div class="vacio">Nada en este filtro.</div>';
+  document.getElementById('pie').textContent =
+    `${d.por_confirmar} frentes marcados "por confirmar" — los deduje del código o de notas viejas y falta que los revises. `
+    + (d.commit ? `Corriendo: ${d.commit}` : '');
+
+  document.querySelectorAll('#filtros .chip').forEach(b => b.onclick = () => {
+    if (b.dataset.s){ filtroEspecial = filtroEspecial===b.dataset.s?null:b.dataset.s; filtroEtapa=null; }
+    else { filtroEtapa = b.dataset.e || null; filtroEspecial=null; }
+    render();
+  });
+  document.querySelectorAll('.kpi').forEach(k => k.onclick = () => {
+    const f = k.dataset.f;
+    if (!f){ filtroEtapa=null; filtroEspecial=null; }
+    else if (f==='dueno'||f==='alerta'){ filtroEspecial=f; filtroEtapa=null; }
+    else { filtroEtapa=f; filtroEspecial=null; }
+    render();
+  });
+}
+
+fetch('/api/mapa-centro?token=' + encodeURIComponent(TOKEN))
+  .then(r => r.json())
+  .then(d => { DATA = d; render(); })
+  .catch(e => { document.getElementById('lista').innerHTML =
+    '<div class="vacio">No se pudo cargar: ' + e + '</div>'; });
+</script>
+</body>
+</html>

@@ -72,6 +72,7 @@ FONO_ARRATIA_TOKEN     = os.getenv("FONO_ARRATIA_TOKEN", "")
 ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "control":     {"label": "Sala de Máquinas", "icon": "shield",   "title": "Sala de Máquinas — control agéntico", "sub": "Mapa y encendido de la flota y orquestadores", "src": "/alma/control"},
     "inicio":      {"label": "Inicio",           "icon": "home",      "title": "Inicio — Resumen del día",       "sub": "Alertas y KPIs de todos los módulos",              "src": "/alma/inicio"},
+    "mapa":        {"label": "Mapa del Centro",  "icon": "map",       "title": "Mapa del Centro — todo lo que hay en marcha", "sub": "Etapa de cada frente · qué falta · qué espera tu decisión", "src": "/alma/mapa"},
     "dashboards":  {"label": "Accesos",          "icon": "shield",    "title": "Accesos — tokens y links por persona", "sub": "Todos los links de entrada a Alma · solo dueño",  "src": "/alma/dashboards"},
     "panel":       {"label": "Panel Recepción",  "icon": "inbox",     "title": "Panel de Recepción v2",          "sub": "Conversaciones · WhatsApp · Agenda",              "src": "/admin/v2"},
     "panel2":      {"label": "Panel Recepción 2","icon": "inbox",     "title": "Panel de Recepción v3 (beta)",   "sub": "Nuevo · cola de atención priorizada · en pruebas","src": "/admin/v3"},
