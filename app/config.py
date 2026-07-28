@@ -239,6 +239,39 @@ CMC_TRANSFERENCIA = {
 # dato dueño 2026-06-12) — no hay saldo el día de la atención.
 ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "60000"))
 
+# Confirmación automática de abonos por transferencia (app/abono_transferencia.py,
+# 2026-07-14). Lee el Gmail del centro (solo lectura IMAP) y empareja el correo
+# del banco contra los abonos pendientes por monto+ventana+nombre. GATEADO —
+# con el flag en false no se abre ninguna conexión IMAP ni se registra el cron;
+# el flujo de siempre (WAIT_ABONO_COMPROBANTE con foto) sigue exactamente igual.
+# Lo enciende el dueño cuando lo revise.
+ABONO_AUTO_ACTIVE   = os.getenv("ABONO_AUTO_ACTIVE", "false").lower() in ("true", "1", "yes")
+# Minutos que se espera el correo del banco antes de pedirle proactivamente
+# la foto del comprobante (fallback — nunca deja al paciente sin salida).
+# Calibrado con correos históricos reales (2026-07-14): Falabella y Banco de
+# Chile notifican con p90 < 1 minuto tras la transacción — 12 min da margen
+# de sobra para la latencia del correo + el ciclo del poller (60s).
+ABONO_AUTO_WAIT_MIN = int(os.getenv("ABONO_AUTO_WAIT_MIN", "12"))
+# Base pública para el link de la página de transferencia (/abono/{token}).
+ABONO_BASE_URL = os.getenv("ABONO_BASE_URL", "https://agentecmc.cl")
+
+# Conciliación de transferencias × correos del banco (app/conciliacion_transferencias.py).
+# GATEADO igual que ABONO_AUTO_ACTIVE, y por la misma razón: con el flag en false
+# NO se registra el cron y no se abre ninguna conexión IMAP.
+#
+# 2026-07-28: este flag NO existía. El cron `conciliacion_transferencias_poll` se
+# registraba SIEMPRE, así que el solo hecho de deployar el bloque ponía al bot a
+# leer el Gmail del centro cada 10 minutos sin ninguna decisión explícita — y sin
+# forma de apagarlo que no fuera otro deploy. Su gemelo de abonos sí estaba
+# gateado; la asimetría no era intencional, era un olvido.
+#
+# La diferencia importa: leer el correo del centro es una decisión de negocio y de
+# datos (quedan almacenados nombre, banco y monto de gente que ni siquiera es
+# paciente del CMC), no un detalle de despliegue.
+CONCILIACION_TRANSFERENCIAS_ACTIVE = os.getenv(
+    "CONCILIACION_TRANSFERENCIAS_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

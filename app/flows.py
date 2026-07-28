@@ -9784,6 +9784,43 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "monto_requerido": _ABO_AG,
                 })
                 _monto_fmt = f"${_ABO_AG:,}".replace(",", ".")
+
+                # Confirmación automática por transferencia (2026-07-14, GATEADO
+                # ABONO_AUTO_ACTIVE). Con el flag ON generamos un link a la página
+                # de transferencia (datos + botones de copiar) y un registro en
+                # `abono_pendientes` que el poller de correo bancario usa para
+                # emparejar solo. Con el flag OFF (default) el mensaje de siempre
+                # con los datos bancarios en texto plano sigue igual — cero cambio
+                # de comportamiento. Ver app/abono_transferencia.py.
+                from config import ABONO_AUTO_ACTIVE as _AA_AG
+                if _AA_AG:
+                    try:
+                        from abono_transferencia import crear_abono_pendiente as _crear_ap
+                        _link_ap = _crear_ap(
+                            phone=phone,
+                            paciente_id=paciente.get("id"),
+                            paciente_nombre=paciente.get("nombre", ""),
+                            rut=data.get("rut", ""),
+                            monto=_ABO_AG,
+                            especialidad=slot.get("especialidad", "Psiquiatría"),
+                            id_profesional=slot.get("id_profesional"),
+                            slot=slot,
+                            wait_min=90,
+                        )
+                        return (
+                            f"Para confirmar tu hora de *Psiquiatría* pedimos un abono de "
+                            f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
+                            "así que el día de la atención no pagas nada adicional.\n\n"
+                            f"Aquí están los datos para transferir, con botón de copiar:\n"
+                            f"{_link_ap['url']}\n\n"
+                            "Tu hora queda *apartada por 90 minutos*. No necesitas mandarnos "
+                            "el comprobante — confirmamos solos apenas nos llegue tu transferencia "
+                            "y te avisamos por acá.\n\n"
+                            "_Si prefieres abonar en recepción, escribe *recepcion* y te orientamos._"
+                        )
+                    except Exception as _e_link_ap:
+                        log.warning("abono_gate: no se pudo crear link de pago, fallback a texto: %s", _e_link_ap)
+
                 return (
                     f"Para confirmar tu hora de *Psiquiatría* pedimos un abono de "
                     f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
@@ -12073,6 +12110,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # un msg_type="image" con el estado WAIT_ABONO_COMPROBANTE. Cuando el paciente
     # escribe texto el handler llega acá vía el pipeline normal de handle_message.
     # El timeout de 90 min se verifica perezosamente al llegar cualquier mensaje.
+
+    # ── WAIT_ABONO_PAGADOR_CONFIRM (2026-07-14, ABONO_AUTO_ACTIVE) ────────────
+    # El poller de correo bancario (app/abono_transferencia.py) encontró una
+    # transferencia con el monto y la ventana correctos pero el nombre no
+    # calzaba con certeza — le pregunta al paciente si es la persona que pagó
+    # su reserva (la plata YA llegó; esto solo asocia un pago existente a una
+    # hora, nunca "regala" una confirmación). Sí/No de un toque.
+    if state == "WAIT_ABONO_PAGADOR_CONFIRM":
+        _abono_id_pc = data.get("abono_pregunta_id")
+        _transf_id_pc = data.get("abono_pregunta_transferencia_id")
+        _es_si_pc = tl in ("abono_pagador_si",) or tl in AFIRMACIONES or tl_norm in AFIRMACIONES
+        _es_no_pc = tl in ("abono_pagador_no",) or tl in NEGACIONES or tl_norm in NEGACIONES
+        if not (_abono_id_pc and _transf_id_pc) or not (_es_si_pc or _es_no_pc):
+            save_session(phone, "WAIT_ABONO_PAGADOR_CONFIRM", data)
+            return "Responde *Sí* si esa es la persona que pagó tu reserva, o *No* si no la conoces."
+        from abono_transferencia import resolver_confirmacion_paciente
+        texto_resp = await resolver_confirmacion_paciente(_abono_id_pc, _transf_id_pc, _es_si_pc)
+        if _es_no_pc:
+            save_session(phone, "WAIT_ABONO_COMPROBANTE", data)
+        else:
+            reset_session(phone)
+        # texto_resp vacío = éxito: _crear_cita_y_confirmar ya mandó la
+        # confirmación completa por su cuenta (mismo patrón que "silencio
+        # intencional" en HUMAN_TAKEOVER — ver main.py `if not respuesta: pass`).
+        return texto_resp
+
     if state == "WAIT_ABONO_COMPROBANTE":
         from datetime import datetime as _dt_ag, timezone as _tz_ag_utc
         from zoneinfo import ZoneInfo as _ZI_ag
@@ -15186,6 +15249,32 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     if not sess or sess.get("state") != "WAIT_ABONO_COMPROBANTE":
         # Ya no estamos en el estado correcto — no hacer nada
         return ""
+
+    # Convivencia con la confirmación automática por correo (2026-07-14,
+    # ABONO_AUTO_ACTIVE): si el poller de correo bancario ya confirmó este
+    # abono (o está en medio de confirmarlo) mientras el paciente mandaba la
+    # foto, no duplicar la cita — avisarle que ya quedó listo. Guardado en
+    # try/except: si algo falla acá, se sigue con el camino normal de la foto
+    # (nunca bloquea al paciente por un problema de este chequeo extra).
+    try:
+        from config import ABONO_AUTO_ACTIVE as _AA_PIA
+        if _AA_PIA:
+            from abono_transferencia import get_abono_pendiente_activo_por_phone
+            _ap_pia = get_abono_pendiente_activo_por_phone(phone)
+            if _ap_pia and _ap_pia.get("estado") in ("confirmado", "confirmando"):
+                if _ap_pia["estado"] == "confirmado":
+                    reset_session(phone)
+                    return (
+                        "Ya confirmamos tu hora con la transferencia que recibimos — "
+                        "no necesitas mandarnos el comprobante. _Escribe *menu* si necesitas algo más._"
+                    )
+                # 'confirmando': la carrera está en curso en el otro camino — dejar
+                # que termine, no procesar la foto en paralelo.
+                return (
+                    "Estoy verificando tu transferencia — dame un momento y te confirmo por acá."
+                )
+    except Exception as _e_conviv:
+        log.debug("procesar_imagen_abono: chequeo de convivencia con email falló (no bloquea): %s", _e_conviv)
 
     data = sess.get("data") or {}
     slot    = data.get("abono_gate_slot") or {}

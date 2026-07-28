@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Abono — Centro Médico Carampangue</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --teal-700:#0E7C86;
+    --teal-800:#0B616A;
+    --navy:#0F3F68;
+    --ink:#1F2937;
+    --muted:#5B6B76;
+    --bg:#F5F9FA;
+    --card:#FFFFFF;
+    --border:#DCE6E8;
+    --ok:#177A45;
+    --warn:#8A5300;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:480px; margin:0 auto; padding:20px 16px 40px; }
+  .brand{ display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+  .brand-mark{
+    width:40px; height:40px; border-radius:10px; background:var(--teal-700);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px;
+    flex-shrink:0;
+  }
+  .brand-name{ font-size:15px; font-weight:600; color:var(--navy); line-height:1.25; }
+  .brand-sub{ font-size:12px; color:var(--muted); }
+
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:18px 16px; margin-bottom:14px;
+  }
+  h1{ font-size:19px; margin:0 0 6px; color:var(--navy); }
+  .lead{ font-size:14px; color:var(--muted); margin:0 0 4px; line-height:1.45; }
+
+  .monto-box{
+    text-align:center; padding:18px 10px; margin:14px 0;
+    background:var(--teal-700); border-radius:12px; color:#fff;
+  }
+  .monto-label{ font-size:12px; opacity:.9; letter-spacing:.02em; text-transform:uppercase; }
+  .monto-valor{ font-size:34px; font-weight:700; margin-top:2px; }
+
+  .campo{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 0; border-bottom:1px solid var(--border);
+    gap:10px;
+  }
+  .campo:last-child{ border-bottom:none; }
+  .campo-txt{ min-width:0; }
+  .campo-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+  .campo-valor{ font-size:15px; font-weight:600; color:var(--ink); word-break:break-word; }
+
+  button.copy-btn{
+    flex-shrink:0; border:1.5px solid var(--teal-700); background:#fff; color:var(--teal-700);
+    font-size:13px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer;
+    min-height:38px; min-width:64px;
+    transition:background .15s, color .15s;
+  }
+  button.copy-btn:active{ background:var(--teal-700); color:#fff; }
+  button.copy-btn.copied{ background:var(--ok); border-color:var(--ok); color:#fff; }
+
+  .pasos{ margin:0; padding-left:18px; font-size:14px; color:var(--ink); line-height:1.6; }
+  .pasos li{ margin-bottom:6px; }
+
+  .aviso{
+    display:flex; gap:10px; align-items:flex-start;
+    background:#EAF6F3; border:1px solid #BFE3D7; border-radius:10px;
+    padding:12px 14px; font-size:13.5px; color:#0B4D3A; line-height:1.5;
+  }
+  .aviso b{ color:#083C2D; }
+
+  .estado-pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:999px;
+    background:#FFF4E0; color:var(--warn); border:1px solid #F0D9A8;
+  }
+  .estado-pill.confirmado{ background:#E7F6EC; color:var(--ok); border-color:#BFE3CB; }
+  .estado-pill .dot{ width:7px; height:7px; border-radius:50%; background:currentColor; }
+
+  .footer-note{ text-align:center; font-size:12px; color:var(--muted); margin-top:18px; line-height:1.5; }
+  .footer-note a{ color:var(--teal-700); }
+
+  .expirado-box{ text-align:center; padding:30px 10px; }
+  .expirado-box h1{ font-size:18px; }
+  .expirado-box p{ font-size:14px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-mark">CMC</div>
+    <div>
+      <div class="brand-name">Centro Médico Carampangue</div>
+      <div class="brand-sub">Abono para confirmar tu hora</div>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="card"><p class="lead">Cargando…</p></div>
+  </div>
+
+  <p class="footer-note">
+    ¿Dudas? Llama al 📞 <b>(44) 296 5226</b><br>
+    <a href="https://agentecmc.cl/privacidad">Política de privacidad</a>
+  </p>
+</div>
+
+<script>
+(function(){
+  var TOKEN = window.location.pathname.split("/").filter(Boolean).pop();
+  var app = document.getElementById("app");
+
+  function money(n){
+    return "$" + Number(n).toLocaleString("es-CL");
+  }
+
+  function copiar(valor, btn){
+    var restore = function(){
+      btn.textContent = "Copiar";
+      btn.classList.remove("copied");
+    };
+    var marcar = function(){
+      btn.textContent = "Copiado";
+      btn.classList.add("copied");
+      setTimeout(restore, 1600);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(valor).then(marcar).catch(function(){ fallbackCopy(valor); marcar(); });
+    } else {
+      fallbackCopy(valor);
+      marcar();
+    }
+  }
+
+  function fallbackCopy(valor){
+    var ta = document.createElement("textarea");
+    ta.value = valor;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand("copy"); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function campo(label, valor){
+    var row = document.createElement("div");
+    row.className = "campo";
+    var txt = document.createElement("div");
+    txt.className = "campo-txt";
+    var l = document.createElement("div"); l.className = "campo-label"; l.textContent = label;
+    var v = document.createElement("div"); v.className = "campo-valor"; v.textContent = valor;
+    txt.appendChild(l); txt.appendChild(v);
+    var btn = document.createElement("button");
+    btn.className = "copy-btn"; btn.type = "button"; btn.textContent = "Copiar";
+    btn.addEventListener("click", function(){ copiar(valor, btn); });
+    row.appendChild(txt); row.appendChild(btn);
+    return row;
+  }
+
+  function render(data){
+    if (!data || data.error === "no_encontrado") {
+      app.innerHTML = "";
+      var box = document.createElement("div");
+      box.className = "card expirado-box";
+      box.innerHTML = "<h1>Este link no es válido</h1><p>Escríbenos por WhatsApp para pedir uno nuevo.</p>";
+      app.appendChild(box);
+      return;
+    }
+    if (data.estado === "expirado" || data.error === "expirado") {
+      app.innerHTML = "";
+      var box2 = document.createElement("div");
+      box2.className = "card expirado-box";
+      box2.innerHTML = "<h1>El tiempo para transferir venció</h1><p>Escríbenos por WhatsApp (*menu*) para volver a buscar tu hora.</p>";
+      app.appendChild(box2);
+      return;
+    }
+
+    app.innerHTML = "";
+
+    var confirmado = data.estado === "confirmado";
+
+    var pill = document.createElement("div");
+    pill.className = "estado-pill" + (confirmado ? " confirmado" : "");
+    pill.innerHTML = "<span class='dot'></span> " + (confirmado ? "Confirmado" : "Esperando tu transferencia");
+    app.appendChild(pill);
+
+    var card1 = document.createElement("div");
+    card1.className = "card";
+    card1.style.marginTop = "12px";
+    var h1 = document.createElement("h1");
+    h1.textContent = confirmado ? "Tu hora ya está confirmada" : "Abono para tu hora de Psiquiatría";
+    var lead = document.createElement("p");
+    lead.className = "lead";
+    lead.textContent = confirmado
+      ? "Recibimos tu transferencia. No necesitas hacer nada más."
+      : "Transfiere el monto exacto y te avisamos por WhatsApp apenas lo recibamos — no hace falta que nos mandes el comprobante.";
+    card1.appendChild(h1); card1.appendChild(lead);
+
+    var montoBox = document.createElement("div");
+    montoBox.className = "monto-box";
+    montoBox.innerHTML = "<div class='monto-label'>Monto a transferir</div><div class='monto-valor'>" + money(data.monto) + "</div>";
+    card1.appendChild(montoBox);
+    app.appendChild(card1);
+
+    if (!confirmado) {
+      var card2 = document.createElement("div");
+      card2.className = "card";
+      card2.appendChild(campo("Banco", data.cuenta.banco));
+      card2.appendChild(campo("Tipo de cuenta", data.cuenta.tipo));
+      card2.appendChild(campo("Número de cuenta", data.cuenta.numero));
+      card2.appendChild(campo("Titular", data.cuenta.titular));
+      card2.appendChild(campo("RUT", data.cuenta.rut));
+      card2.appendChild(campo("Monto exacto", money(data.monto)));
+      app.appendChild(card2);
+
+      var card3 = document.createElement("div");
+      card3.className = "card";
+      var pasosTitle = document.createElement("div");
+      pasosTitle.style.fontWeight = "600"; pasosTitle.style.marginBottom = "8px"; pasosTitle.style.fontSize = "14px";
+      pasosTitle.textContent = "Cómo hacerlo";
+      var ol = document.createElement("ol");
+      ol.className = "pasos";
+      ["Abre la app de tu banco.",
+       "Copia los datos de arriba y transfiere el monto exacto.",
+       "Listo — te avisamos por WhatsApp apenas confirmemos tu pago."]
+        .forEach(function(p){ var li = document.createElement("li"); li.textContent = p; ol.appendChild(li); });
+      card3.appendChild(pasosTitle); card3.appendChild(ol);
+
+      var aviso = document.createElement("div");
+      aviso.className = "aviso";
+      aviso.style.marginTop = "12px";
+      aviso.innerHTML = "<span>ℹ️</span><span><b>No necesitas mandarnos una foto del comprobante.</b> " +
+        "Si por algún motivo no confirmamos solos, te la pedimos nosotros por WhatsApp.</span>";
+      card3.appendChild(aviso);
+      app.appendChild(card3);
+    }
+  }
+
+  function cargar(){
+    fetch("/api/abono/" + encodeURIComponent(TOKEN) + "/estado")
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        render(data);
+        if (data && data.estado !== "confirmado" && data.estado !== "expirado" && !data.error) {
+          setTimeout(cargar, 8000);
+        }
+      })
+      .catch(function(){
+        app.innerHTML = "<div class='card'><p class='lead'>No pudimos cargar tu abono. Refresca la página o escríbenos por WhatsApp.</p></div>";
+      });
+  }
+
+  cargar();
+})();
+</script>
+</body>
+</html>

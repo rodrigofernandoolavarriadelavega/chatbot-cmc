@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Conciliación de Transferencias — Alma CMC</title>
+<style>
+:root {
+  --aqua:#4FBECE; --aqua-s:#e8f8fb; --teal-700:#0E7C86; --blue:#1172AB; --navy:#0F3F68; --navy2:#0a2e4d;
+  --bg:#F4F7FA; --card:#fff; --border:#e6edf3; --text:#13202e; --mute:#64798c;
+  --slate:#5b7186; --slate-bg:#eef2f6;
+  --green:#1f9d6b; --green-bg:#e7f7f0;
+  --amber:#c98a14; --amber-bg:#fdf4e3;
+  --red:#d94c4c;   --red-bg:#fdecec;
+  --violet:#6b5ecb; --violet-bg:#efedfb;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06),0 1px 3px rgba(15,63,104,.08);
+  --sh-md:0 4px 12px rgba(15,63,104,.08),0 2px 4px rgba(15,63,104,.06);
+  --r:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Montserrat',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);
+  -webkit-font-smoothing:antialiased;line-height:1.45;font-size:13px}
+
+.wrap{max-width:1240px;margin:0 auto;padding:20px 20px 64px}
+
+.hd{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.hd h1{font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.3px}
+.hd .sub{font-size:11.5px;color:var(--mute);font-weight:500;margin-top:2px}
+
+.state-wrap{display:flex;align-items:center;justify-content:center;
+  min-height:160px;flex-direction:column;gap:12px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.spinner{width:28px;height:28px;border:3px solid var(--border);
+  border-top-color:var(--teal-700);border-radius:50%;animation:rot .85s linear infinite}
+.state-msg{font-size:12.5px;color:var(--mute);font-weight:600}
+
+/* ── KPIs ── */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+.kpi.destacado{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset, var(--sh-sm)}
+.k-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--mute)}
+.k-val{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--navy);margin-top:4px;line-height:1}
+.k-val.rojo{color:var(--red)}
+.k-sub{font-size:10px;color:var(--mute);font-weight:500;margin-top:5px}
+
+/* ── Secciones ── */
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:16px;box-shadow:var(--sh-sm)}
+.section h2{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.section .desc{font-size:11px;color:var(--mute);font-weight:500;margin-bottom:12px}
+
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar input[type=date]{font-family:inherit;font-size:12px;border:1px solid var(--border);
+  border-radius:8px;padding:6px 9px;color:var(--text)}
+.btn{font-family:inherit;font-size:11.5px;font-weight:700;
+  border:1px solid var(--border);background:var(--card);color:var(--teal-700);
+  border-radius:9px;padding:7px 13px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--aqua-s);border-color:var(--aqua)}
+.btn-primary{background:var(--teal-700);border-color:var(--teal-700);color:#fff}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-danger{color:var(--red);border-color:rgba(217,76,76,.35)}
+.btn-danger:hover{background:var(--red-bg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Tabla ── */
+table.t{width:100%;border-collapse:collapse}
+table.t th{text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.3px;color:var(--mute);padding:8px 10px;border-bottom:2px solid var(--border)}
+table.t td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text)}
+table.t tr:last-child td{border-bottom:none}
+table.t tr:hover td{background:var(--aqua-s)}
+.mono{font-variant-numeric:tabular-nums}
+.right{text-align:right}
+.badge{font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;display:inline-block}
+.badge.exacto{background:var(--green-bg);color:var(--green)}
+.badge.exacto_codigo{background:var(--green-bg);color:var(--green)}
+.badge.probable{background:var(--amber-bg);color:var(--amber)}
+.badge.exacto_fecha_desfasada{background:var(--aqua-s);color:var(--teal-700)}
+.badge.probable_fecha_desfasada{background:var(--amber-bg);color:var(--amber)}
+.badge.rojo{background:var(--red-bg);color:var(--red)}
+.badge.gris{background:var(--slate-bg);color:var(--slate)}
+
+.empty{padding:24px;text-align:center;color:var(--mute);font-size:12px;font-weight:500}
+
+/* ── Sugerencias ── */
+.sug-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;box-shadow:var(--sh-sm)}
+.sug-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.sug-nombre{font-size:12.5px;font-weight:700;color:var(--text)}
+.sug-monto{font-size:14px;font-weight:800;color:var(--navy)}
+.sug-banco{font-size:10.5px;color:var(--mute);font-weight:600}
+.sug-cand{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;
+  border:1px solid var(--border);margin-bottom:5px}
+.sug-cand:hover{background:var(--aqua-s)}
+.sug-cand-info{flex:1;min-width:0}
+.sug-cand-nombre{font-size:11.5px;font-weight:700;color:var(--text)}
+.sug-cand-meta{font-size:10px;color:var(--mute)}
+.sug-actions{display:flex;gap:6px;margin-top:8px}
+
+.page-foot{text-align:center;font-size:10px;color:var(--mute);margin-top:22px}
+
+@media(max-width:820px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  table.t{font-size:11px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div>
+      <h1>Conciliación de Transferencias</h1>
+      <div class="sub">Cuánto entró realmente por transferencia y dónde están las diferencias — correos de banco × pagos registrados</div>
+    </div>
+  </div>
+
+  <!-- ── Sugerencias de hoy ── -->
+  <div class="section">
+    <h2>Sugerencias de pago de hoy</h2>
+    <div class="desc">Correo de banco de hoy + paciente con atención hoy sin cobrar. Nunca se aplica solo — confirmá o descartá.</div>
+    <div id="sugRoot"><div class="empty">Cargando…</div></div>
+  </div>
+
+  <!-- ── Conciliación por rango ── -->
+  <div class="section">
+    <h2>Conciliación por período</h2>
+    <div class="desc">Cruce monto + fecha (±1 día de tolerancia) entre <code>pagos_cmc</code> (transferencia) y los avisos de banco. El nombre es señal de confianza, no filtro — quien transfiere no siempre es el paciente.</div>
+    <div class="toolbar">
+      <label style="font-size:11px;color:var(--mute);font-weight:600">Desde <input type="date" id="fDesde"></label>
+      <label style="font-size:11px;color:var(--mute);font-weight:600">Hasta <input type="date" id="fHasta"></label>
+      <button class="btn btn-primary" onclick="cargarConciliacion()">Consultar</button>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn" onclick="verEstadoBackfill()">Estado del backfill</button>
+        <button class="btn btn-danger" onclick="lanzarBackfill()">Correr backfill histórico</button>
+      </div>
+    </div>
+    <div id="estadoBackfill"></div>
+    <div id="root"><div class="state-wrap"><div class="spinner"></div><div class="state-msg">Cargando…</div></div></div>
+  </div>
+
+  <div class="page-foot" id="foot"></div>
+</div>
+
+<script>
+const _TOKEN = "__TOKEN__";
+const qs = (k,v) => `${k}=${encodeURIComponent(v)}`;
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtMonto(n){return '$' + (n||0).toLocaleString('es-CL');}
+function fmtFecha(f){
+  if(!f) return '';
+  const [y,m,d]=f.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+const CONFIANZA_LABEL = {
+  exacto_codigo: 'Exacto · código', exacto: 'Exacto', probable: 'Probable',
+  exacto_fecha_desfasada: 'Exacto · ±1 día', probable_fecha_desfasada: 'Probable · ±1 día',
+};
+
+// ═══════════════ Sugerencias de hoy ═══════════════
+async function cargarSugerencias(){
+  try{
+    const r = await fetch(`/api/pagos-sugeridos?${qs('token',_TOKEN)}`);
+    const j = await r.json();
+    renderSugerencias(j.pendientes || []);
+  }catch(e){
+    document.getElementById('sugRoot').innerHTML = '<div class="empty">No se pudo cargar (¿Gmail o red caídos?)</div>';
+  }
+}
+
+function renderSugerencias(items){
+  const root = document.getElementById('sugRoot');
+  if(!items.length){
+    root.innerHTML = '<div class="empty">Sin sugerencias pendientes ahora mismo.</div>';
+    return;
+  }
+  root.innerHTML = items.map(it => {
+    const cands = (it.candidatos || []).map(c => `
+      <div class="sug-cand">
+        <div class="sug-cand-info">
+          <div class="sug-cand-nombre">${esc(c.paciente_nombre || 'Paciente')}</div>
+          <div class="sug-cand-meta">${esc(c.profesional||'')} · similitud nombre ${Math.round((c.sim||0)*100)}%${c.monto_ok?' · monto Medilink coincide':''}</div>
+        </div>
+        <button class="btn btn-primary" onclick="confirmarSugerencia(${it.id}, ${c.id})">Confirmar</button>
+      </div>
+    `).join('');
+    return `
+    <div class="sug-card">
+      <div class="sug-top">
+        <span class="sug-monto">${fmtMonto(it.monto)}</span>
+        <span class="sug-banco">${esc(it.banco)} · ${esc(it.nombre_transfiere)} · ${it.hora||''}</span>
+      </div>
+      ${cands}
+      <div class="sug-actions">
+        <button class="btn btn-danger" onclick="descartarSugerencia(${it.id})">Descartar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function confirmarSugerencia(sugId, pagoCmcId){
+  try{
+    const r = await fetch(`/api/pagos-sugeridos/${sugId}/confirmar?${qs('token',_TOKEN)}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pago_cmc_id: pagoCmcId}),
+    });
+    if(!r.ok){ const j = await r.json().catch(()=>({})); alert(j.detail || 'No se pudo confirmar'); }
+    cargarSugerencias();
+  }catch(e){ alert('Error de red al confirmar'); }
+}
+
+async function descartarSugerencia(sugId){
+  try{
+    await fetch(`/api/pagos-sugeridos/${sugId}/descartar?${qs('token',_TOKEN)}`, {method:'POST'});
+    cargarSugerencias();
+  }catch(e){}
+}
+
+// ═══════════════ Conciliación por rango ═══════════════
+function initFechas(){
+  const hoy = new Date();
+  const hace30 = new Date(hoy.getTime() - 30*86400000);
+  document.getElementById('fHasta').value = hoy.toISOString().slice(0,10);
+  document.getElementById('fDesde').value = hace30.toISOString().slice(0,10);
+}
+
+function buildKpis(t){
+  const destacado = t.correo_sin_registro_monto > 0 ? 'destacado' : '';
+  return `
+<div class="kpis">
+  <div class="kpi ${destacado}">
+    <div class="k-label">Correo de banco SIN registrar</div>
+    <div class="k-val rojo">${fmtMonto(t.correo_sin_registro_monto)}</div>
+    <div class="k-sub">${t.correo_sin_registro_n} correo(s) — plata que entró y nadie anotó</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Registrado sin respaldo</div>
+    <div class="k-val">${fmtMonto(t.registrado_sin_correo_monto)}</div>
+    <div class="k-sub">${t.registrado_sin_correo_n} pago(s) — la plata quizás nunca llegó</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Conciliado</div>
+    <div class="k-val">${fmtMonto(t.conciliado_monto)}</div>
+    <div class="k-sub">${t.conciliado_n} cruce(s) exacto/probable</div>
+  </div>
+  <div class="kpi">
+    <div class="k-label">Ambiguo</div>
+    <div class="k-val">${t.ambiguo_grupos}</div>
+    <div class="k-sub">grupo(s) con empate de monto+fecha — no asignado</div>
+  </div>
+</div>`;
+}
+
+function buildTablaSinRegistro(rows){
+  if(!rows.length) return '<div class="empty">Ningún correo de banco sin registrar en el período — buena señal.</div>';
+  const trs = rows.map(e => `
+    <tr>
+      <td>${fmtFecha(e.fecha)}</td>
+      <td>${esc(e.banco)}</td>
+      <td>${esc(e.nombre_transfiere)}</td>
+      <td class="right mono">${fmtMonto(e.monto)}</td>
+      <td>${esc(e.hora||'')}</td>
+    </tr>`).join('');
+  return `<table class="t"><thead><tr><th>Fecha</th><th>Banco</th><th>Quien transfirió</th><th class="right">Monto</th><th>Hora</th></tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+function buildTablaSinCorreo(rows){
+  if(!rows.length) return '<div class="empty">Ningún pago registrado sin respaldo bancario en el período.</div>';
+  const trs = rows.map(p => `
+    <tr>
+      <td>${fmtFecha(p.fecha)}</td>
+      <td>${esc(p.paciente_nombre)}</td>
+      <td>${esc(p.profesional||'')}</td>
+      <td class="right mono">${fmtMonto(p.copago)}</td>
+    </tr>`).join('');
+  return `<table class="t"><thead><tr><th>Fecha</th><th>Paciente</th><th>Profesional</th><th class="right">Monto</th></tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+function buildTablaMatches(rows){
+  if(!rows.length) return '<div class="empty">Sin cruces en el período.</div>';
+  const trs = rows.slice(0,200).map(m => `
+    <tr>
+      <td>${fmtFecha(m.fecha_pago)}</td>
+      <td>${esc(m.paciente)}</td>
+      <td>${esc(m.nombre_transfiere)}</td>
+      <td class="right mono">${fmtMonto(m.monto)}</td>
+      <td>${esc(m.banco_label)}</td>
+      <td><span class="badge ${esc(m.confianza)}">${esc(CONFIANZA_LABEL[m.confianza]||m.confianza)}</span></td>
+    </tr>`).join('');
+  return `<table class="t"><thead><tr><th>Fecha</th><th>Paciente</th><th>Quien transfirió</th><th class="right">Monto</th><th>Banco</th><th>Confianza</th></tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+function buildAmbiguos(grupos){
+  if(!grupos.length) return '';
+  const items = grupos.map(g => `
+    <div class="sug-card">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px">${fmtMonto(g.monto)} — ${esc(g.nota)}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mute);margin-bottom:4px">Pagos registrados</div>
+          ${g.pagos.map(p=>`<div class="sug-cand-meta">${fmtFecha(p.fecha)} · ${esc(p.paciente)} · ${esc(p.profesional||'')}</div>`).join('')}
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mute);margin-bottom:4px">Correos de banco</div>
+          ${g.correos.map(c=>`<div class="sug-cand-meta">${fmtFecha(c.fecha)} · ${esc(c.nombre_transfiere)} · ${esc(c.banco_label)}</div>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+  return `<h2 style="margin-top:18px;margin-bottom:8px">Grupos ambiguos</h2>${items}`;
+}
+
+async function cargarConciliacion(){
+  const desde = document.getElementById('fDesde').value;
+  const hasta = document.getElementById('fHasta').value;
+  const root = document.getElementById('root');
+  root.innerHTML = '<div class="state-wrap"><div class="spinner"></div><div class="state-msg">Conciliando…</div></div>';
+  try{
+    const r = await fetch(`/api/conciliacion-transferencias/data?${qs('token',_TOKEN)}&desde=${desde}&hasta=${hasta}`);
+    const j = await r.json();
+    root.innerHTML =
+      buildKpis(j.totales) +
+      '<h2 style="margin-bottom:8px">Correos de banco SIN registrar (el número más importante)</h2>' +
+      buildTablaSinRegistro(j.correo_sin_registro) +
+      '<h2 style="margin:18px 0 8px">Registrado sin respaldo bancario</h2>' +
+      buildTablaSinCorreo(j.registrado_sin_correo) +
+      buildAmbiguos(j.ambiguos) +
+      '<h2 style="margin:18px 0 8px">Cruces conciliados</h2>' +
+      buildTablaMatches(j.matches);
+    document.getElementById('foot').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-CL');
+  }catch(e){
+    root.innerHTML = '<div class="empty">Error consultando la conciliación.</div>';
+  }
+}
+
+async function verEstadoBackfill(){
+  const el = document.getElementById('estadoBackfill');
+  el.innerHTML = '<div class="state-msg">Consultando…</div>';
+  try{
+    const r = await fetch(`/api/conciliacion-transferencias/estado?${qs('token',_TOKEN)}`);
+    const j = await r.json();
+    const porBanco = (j.por_banco||[]).map(b=>`<span class="badge gris">${esc(b.banco)}: ${b.n}</span>`).join(' ');
+    el.innerHTML = `<div class="sug-cand-meta" style="margin:8px 0">
+      ${j.running?'<b>Corriendo ahora…</b> ':''}${j.total_parseados} correos parseados · ${j.total_errores} sin parsear.<br>${porBanco}
+    </div>`;
+  }catch(e){ el.innerHTML = ''; }
+}
+
+async function lanzarBackfill(){
+  if(!confirm('Esto recorre TODO el buzón de correos del centro (puede tomar varios minutos). ¿Continuar?')) return;
+  try{
+    await fetch(`/api/conciliacion-transferencias/backfill?${qs('token',_TOKEN)}`, {method:'POST'});
+    alert('Backfill lanzado en segundo plano. Consultá "Estado del backfill" en un rato.');
+  }catch(e){ alert('No se pudo lanzar'); }
+}
+
+initFechas();
+cargarSugerencias();
+cargarConciliacion();
+setInterval(cargarSugerencias, 30000);
+</script>
+</body>
+</html>

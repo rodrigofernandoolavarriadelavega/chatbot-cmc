@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plan de despliegue · Conciliación de transferencias</title>
+<style>
+:root{
+  --navy:#0F3F68; --blue:#1172AB; --aqua:#4FBECE;
+  --ink:#122430; --muted:#5C7080; --line:#E3EAEF;
+  --bg:#F5F8FA; --card:#FFFFFF;
+  --ok:#1E8E5A; --warn:#B7791F; --danger:#C0392B;
+  --ok-bg:#E7F5EE; --warn-bg:#FDF3E0; --danger-bg:#FBEAE7;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --radius:12px;
+  --sh:0 1px 2px rgba(15,63,104,.06),0 4px 16px rgba(15,63,104,.07);
+}
+@media (prefers-color-scheme:dark){
+  :root{--ink:#E6EDF3;--muted:#9FB3C0;--line:#22333F;--bg:#0C1A24;--card:#122430;
+        --ok-bg:#123024;--warn-bg:#332810;--danger-bg:#361C18;--sh:0 1px 2px rgba(0,0,0,.4);}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+     line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+header{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;padding:34px 0 30px;margin-bottom:26px}
+header .wrap{padding-bottom:0}
+h1{margin:0 0 6px;font-size:1.7rem;letter-spacing:-.02em}
+.sub{opacity:.9;font-size:.95rem;margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:22px}
+.kpi{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+     border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:1.5rem;line-height:1.1}
+.kpi span{font-size:.76rem;opacity:.85;text-transform:uppercase;letter-spacing:.04em}
+h2{font-size:1.18rem;margin:34px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line);
+   letter-spacing:-.01em}
+h3{font-size:1rem;margin:22px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      padding:18px 20px;box-shadow:var(--sh);margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.grid2>.card{min-width:0}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+th{text-align:left;background:var(--navy);color:#fff;padding:9px 10px;font-weight:600;
+   font-size:.8rem;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code,.mono{font-family:var(--mono);font-size:.85em;background:rgba(79,190,206,.14);
+     padding:1px 5px;border-radius:4px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.72rem;
+      font-weight:700;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)}
+.p-warn{background:var(--warn-bg);color:var(--warn)}
+.p-danger{background:var(--danger-bg);color:var(--danger)}
+.p-info{background:rgba(79,190,206,.18);color:var(--blue)}
+.alert{border-left:4px solid;border-radius:8px;padding:13px 16px;margin:12px 0}
+.a-danger{border-color:var(--danger);background:var(--danger-bg)}
+.a-warn{border-color:var(--warn);background:var(--warn-bg)}
+.a-ok{border-color:var(--ok);background:var(--ok-bg)}
+.alert b{display:block;margin-bottom:3px}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin:14px 0}
+.node{flex:1 1 150px;min-width:140px;border:1.5px solid var(--aqua);border-radius:10px;
+      padding:11px 13px;background:var(--card);font-size:.82rem}
+.node b{display:block;color:var(--blue);font-size:.86rem;margin-bottom:3px}
+.node.src{border-color:var(--muted)}
+.node.out{border-color:var(--ok)}
+.arrow{align-self:center;color:var(--aqua);font-size:1.3rem;font-weight:700}
+ol.fases{list-style:none;counter-reset:f;padding:0;margin:0}
+ol.fases>li{counter-increment:f;position:relative;padding:0 0 0 46px;margin-bottom:16px}
+ol.fases>li::before{content:counter(f);position:absolute;left:0;top:2px;width:32px;height:32px;
+  background:var(--navy);color:#fff;border-radius:50%;display:grid;place-items:center;
+  font-weight:700;font-size:.9rem}
+.chk{list-style:none;padding:0;margin:8px 0 0}
+.chk li{padding:5px 0 5px 26px;position:relative;font-size:.89rem;border-bottom:1px dashed var(--line)}
+.chk li:last-child{border-bottom:none}
+.chk li::before{content:"☐";position:absolute;left:4px;color:var(--blue);font-size:1rem}
+.chk li.done::before{content:"☑";color:var(--ok)}
+pre{background:var(--navy);color:#DCE9F2;padding:13px 15px;border-radius:9px;
+    overflow-x:auto;font-family:var(--mono);font-size:.8rem;line-height:1.5;margin:10px 0}
+pre .c{color:#7FB3CC}
+.muted{color:var(--muted);font-size:.85rem}
+.tag{font-family:var(--mono);font-size:.76rem;color:var(--muted)}
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+       color:var(--muted);font-size:.82rem}
+@media(max-width:640px){
+  h1{font-size:1.32rem} .wrap{padding:0 14px 60px} .card{padding:14px}
+  table{font-size:.82rem} .arrow{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Conciliación de transferencias × correos del banco</h1>
+    <p class="sub">Plan de despliegue del bloque parkeado desde el 14-jul-2026 · Centro Médico Carampangue</p>
+    <div class="kpis">
+      <div class="kpi"><b>4.838</b><span>líneas de código</span></div>
+      <div class="kpi"><b>68</b><span>tests · 0 fallos</span></div>
+      <div class="kpi"><b>6</b><span>módulos nuevos</span></div>
+      <div class="kpi"><b>4</b><span>tablas nuevas</span></div>
+      <div class="kpi"><b>10</b><span>endpoints</span></div>
+      <div class="kpi"><b>3</b><span>crons</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="alert a-ok">
+  <b>Estado al 28-jul 14:30 · Fase 1 cerrada, Fase 2 en curso</b>
+  El hueco del flag que abría este documento <strong>ya está tapado</strong>. En el camino aparecieron dos
+  bugs más en el mismo endpoint, también corregidos. Nada de esto está commiteado todavía: sigue todo
+  en el árbol de trabajo, esperando la Fase 3.
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Fase</th><th>Estado</th><th>Qué pasó</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1 · Cerrar el hueco del flag</strong></td>
+          <td><span class="pill p-ok">LISTA</span></td>
+          <td>Flag <code>CONCILIACION_TRANSFERENCIAS_ACTIVE</code> creado y aplicado al cron
+              <em>y</em> al backfill. Test <code>test_conciliacion_gating.py</code>: 11/11.</td></tr>
+      <tr><td><strong>2 · Auditar superficies sensibles</strong></td>
+          <td><span class="pill p-warn">EN CURSO</span></td>
+          <td>Página pública <code>/abono/{token}</code>: <strong>aprobada</strong>.
+              Falta <code>confirmar_sugerencia()</code>, la que escribe sobre la caja.</td></tr>
+      <tr><td>3 · Commit quirúrgico y deploy inerte</td><td><span class="pill p-info">pendiente</span></td><td>—</td></tr>
+      <tr><td>4 · Encender solo lectura</td><td><span class="pill p-info">pendiente</span></td><td>—</td></tr>
+      <tr><td>5 · Encender lo que escribe</td><td><span class="pill p-info">decisión del dueño</span></td><td>—</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Hallazgos de la ejecución</h2>
+<div class="card">
+  <p style="margin-top:0">Tres cosas que el plan en papel no anticipaba, encontradas al ejecutarlo:</p>
+  <table class="scroll">
+    <thead><tr><th>#</th><th>Hallazgo</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill p-ok">H1</span></td>
+          <td><strong>El flag no bastaba.</strong> Gatear solo el cron dejaba abierto
+              <code>POST /backfill</code>, que recorre el buzón completo por HTTP. “Apagado” no era apagado.</td>
+          <td>Guard <code>_requiere_flag()</code> → 503</td></tr>
+      <tr><td><span class="pill p-ok">H2</span></td>
+          <td><strong>Sin guarda de concurrencia.</strong> <code>backfill_transferencias_banco</code> marca
+              running/idle pero no comprueba si ya hay uno corriendo: dos clics en el panel lanzaban dos
+              barridos del buzón compitiendo por la misma conexión IMAP y la misma tabla.</td>
+          <td>409 si ya hay uno en curso</td></tr>
+      <tr><td><span class="pill p-ok">H3</span></td>
+          <td><strong>Task fantasma.</strong> <code>asyncio.create_task()</code> sin guardar referencia: el
+              recolector puede llevarse la task a media ejecución y cualquier excepción muere en silencio.</td>
+          <td>Referencia viva + <code>add_done_callback</code> que loguea el resultado</td></tr>
+    </tbody>
+  </table>
+  <div class="alert a-ok" style="margin-bottom:0">
+    <b>Auditoría de la página pública <code>/abono/{token}</code> — aprobada</b>
+    Token <code>secrets.token_urlsafe(24)</code> = 192 bits. El JSON expone solo estado, monto y la cuenta
+    del centro: <strong>ni nombre, ni RUT, ni teléfono</strong>. El HTML es estático, sin datos incrustados.
+    Expira a los 90 min y la página consulta cada 8 s.
+    <br><br>Única observación, menor: el <code>except</code> devuelve 404 ante cualquier error, así que una
+    caída de base de datos se ve igual que un token inexistente. No es riesgo de seguridad, pero esconde fallas.
+  </div>
+</div>
+
+<h2>1 · Qué resuelve</h2>
+<div class="card">
+  <p style="margin-top:0">Hoy nadie sabe cuánto entró <em>realmente</em> por transferencia. Existen dos fuentes y
+  ninguna es la verdad por sí sola:</p>
+  <div class="flow">
+    <div class="node src"><b>pagos_cmc</b>Lo que <strong>recepción anotó</strong> como transferencia.
+      Puede incluir plata que nunca llegó (el paciente dijo que transfirió).</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>Cruce</b>Llave = <strong>monto + fecha</strong> (±1 día).
+      El nombre es <em>señal de confianza</em>, nunca filtro.</div>
+    <div class="arrow">←</div>
+    <div class="node src"><b>transferencias_banco</b>Avisos que el banco <strong>del paciente</strong> manda
+      al Gmail del centro. Puede haber plata que nadie anotó.</div>
+  </div>
+  <p>La decisión de diseño que sostiene todo: <strong>quien transfiere no siempre es el paciente</strong> —
+  un hijo paga la consulta de la madre, una empresa la de un trabajador. Por eso el nombre no filtra.
+  Si monto y fecha calzan pero el nombre no, se reporta como <span class="pill p-warn">probable</span>,
+  no como “sin registrar”. Y cuando dos pagos comparten monto y fecha, el cruce se declara
+  <strong>ambiguo por diseño</strong> en vez de adivinar.</p>
+  <p class="muted" style="margin-bottom:0">Bancos que el parser reconoce hoy: BancoEstado, Falabella, Banco de Chile,
+  Scotiabank, Santander, BCI, Ripley, Coopeuch, Tenpo, Mach, Caja Los Andes, Prepago Los Héroes.</p>
+</div>
+
+<h2>2 · Inventario de piezas</h2>
+<div class="card scroll">
+  <table>
+    <thead><tr><th>Archivo</th><th>Líneas</th><th>Rol</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">app/conciliacion_transferencias.py</td><td>814</td>
+          <td>Orquestador: IMAP, backfill, cruce, cursor propio en <code>system_state</code></td>
+          <td><span class="pill p-warn">sin flag</span></td></tr>
+      <tr><td class="mono">app/abono_transferencia.py</td><td>886</td>
+          <td>Confirmación automática de abonos (hoy solo Psiquiatría, $60.000)</td>
+          <td><span class="pill p-ok">gateado</span></td></tr>
+      <tr><td class="mono">app/transferencias_email_parser.py</td><td>517</td>
+          <td>Parser puro de correos por banco. Sin I/O, sin estado</td>
+          <td><span class="pill p-ok">puro</span></td></tr>
+      <tr><td class="mono">app/pagos_transferencia_sugeridos.py</td><td>361</td>
+          <td>Sugerencias de emparejamiento para que recepción confirme con un clic</td>
+          <td><span class="pill p-info">humano decide</span></td></tr>
+      <tr><td class="mono">app/conciliacion_transferencias_routes.py</td><td>128</td>
+          <td>6 endpoints + página <code>/alma/conciliacion-transferencias</code></td>
+          <td><span class="pill p-info">admin-auth</span></td></tr>
+      <tr><td class="mono">app/abono_pago_routes.py</td><td>70</td>
+          <td>Página <strong>pública</strong> <code>/abono/{token}</code></td>
+          <td><span class="pill p-danger">público</span></td></tr>
+      <tr><td class="mono">templates/alma_conciliacion_transferencias.html</td><td>367</td><td>Panel de recepción</td><td>—</td></tr>
+      <tr><td class="mono">templates/abono_pago.html</td><td>267</td><td>Página que ve el paciente</td><td>—</td></tr>
+      <tr><td class="mono">tests/ (4 archivos)</td><td>1.219</td><td>68 tests · 24 subtests</td><td><span class="pill p-ok">verdes</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Además, cambios dentro de archivos que ya existen</h3>
+<div class="card scroll">
+  <table>
+    <thead><tr><th>Archivo</th><th>Qué le agrega este bloque</th><th>Cuidado</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">app/main.py</td><td>2 imports de router, 3 <code>add_job</code>, loader del template</td>
+          <td class="p-danger">Tiene además WIP del agendador v2 y del carril de persistencia</td></tr>
+      <tr><td class="mono">app/config.py</td><td><code>ABONO_AUTO_ACTIVE</code>, <code>ABONO_AUTO_WAIT_MIN</code>, <code>ABONO_BASE_URL</code></td>
+          <td class="p-warn">También trae <code>AGENDADOR_V2_ENABLED</code>, que es de otro bloque</td></tr>
+      <tr><td class="mono">app/flows.py</td><td>Estados de abono por transferencia (~32 líneas)</td>
+          <td class="p-danger">Mezclado con las 26 líneas de instrumentación del embudo</td></tr>
+      <tr><td class="mono">app/pagos_routes.py</td><td>Enganche de sugerencias en el panel de pagos</td><td>Bajo</td></tr>
+      <tr><td class="mono">templates/alma_pagos.html</td><td>Columna y acciones de sugerencias</td><td>Bajo</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="alert a-warn">
+  <b>Dependencia dura: esto va todo junto o no va</b>
+  <code>main.py</code> ya tiene escritos <code>import conciliacion_transferencias_routes</code> y
+  <code>import abono_pago_routes</code>. Si se commitea <code>main.py</code> sin los 6 módulos nuevos,
+  <strong>el servicio no arranca</strong>. La guarda G3 del <code>deploy.sh</code> (deep-import antes de
+  reiniciar) lo atajaría, pero el commit ya estaría en <code>origin/main</code>.
+</div>
+
+<h2>3 · Superficie nueva en producción</h2>
+<div class="grid2">
+  <div class="card">
+    <h3 style="margin-top:0">Tablas (SQLite, <code>ensure_*</code> idempotente)</h3>
+    <table>
+      <tbody>
+        <tr><td class="mono">transferencias_banco</td><td>Un correo de banco parseado</td></tr>
+        <tr><td class="mono">transferencias_banco_errores</td><td>Correos que no se pudieron parsear</td></tr>
+        <tr><td class="mono">abono_pendientes</td><td>Abonos a la espera de confirmación</td></tr>
+        <tr><td class="mono">pagos_sugeridos</td><td>Emparejamientos propuestos a recepción</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-bottom:0">Las cuatro guardan <strong>datos financieros de terceros</strong>
+    (nombre de quien transfiere, monto, banco). Eso entra en el alcance de la Ley 21.719.</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Crons</h3>
+    <table>
+      <tbody>
+        <tr><td class="mono">conciliacion_transferencias_poll</td><td>cada 10 min</td>
+            <td><span class="pill p-danger">SIN FLAG</span></td></tr>
+        <tr><td class="mono">abono_transferencia_poll</td><td>cada 60 s</td>
+            <td><span class="pill p-ok">gateado</span></td></tr>
+        <tr><td class="mono">abono_transferencia_nudge_foto</td><td>cada 2 min</td>
+            <td><span class="pill p-ok">gateado</span></td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-bottom:0">Los tres con <code>max_instances=1</code> y <code>coalesce=True</code>.
+    El de conciliación usa cursor propio (<code>transferencias_banco_last_uid</code>), separado del de
+    <code>email_ticker</code> para no acoplar dos dominios sobre el mismo buzón.</p>
+  </div>
+</div>
+
+<div class="card scroll">
+  <h3 style="margin-top:0">Endpoints</h3>
+  <table>
+    <thead><tr><th>Ruta</th><th>Quién entra</th><th>Efecto</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">GET /alma/conciliacion-transferencias</td><td>admin</td><td>Panel</td></tr>
+      <tr><td class="mono">GET /api/conciliacion-transferencias/data</td><td>admin</td><td>Lectura</td></tr>
+      <tr><td class="mono">GET /api/conciliacion-transferencias/estado</td><td>admin</td><td>Lectura</td></tr>
+      <tr><td class="mono">POST /api/conciliacion-transferencias/backfill</td><td>admin</td><td><span class="pill p-warn">Escribe · barrido IMAP largo</span></td></tr>
+      <tr><td class="mono">GET /api/pagos-sugeridos</td><td>admin</td><td>Lectura</td></tr>
+      <tr><td class="mono">GET /api/pagos-sugeridos/cobertura-historica</td><td>admin</td><td>Lectura</td></tr>
+      <tr><td class="mono">POST /api/pagos-sugeridos/{id}/confirmar</td><td>admin</td><td><span class="pill p-danger">Toca plata</span></td></tr>
+      <tr><td class="mono">POST /api/pagos-sugeridos/{id}/descartar</td><td>admin</td><td>Escribe</td></tr>
+      <tr><td class="mono">GET /abono/{token}</td><td><strong>público</strong></td><td>Página del paciente</td></tr>
+      <tr><td class="mono">GET /api/abono/{token}/estado</td><td><strong>público</strong></td><td>Lectura por token</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>4 · Riesgos, ordenados por lo que cuesta equivocarse</h2>
+<div class="card">
+  <table class="scroll">
+    <thead><tr><th>#</th><th>Riesgo</th><th>Por qué importa</th><th>Mitigación propuesta</th></tr></thead>
+    <tbody>
+      <tr style="opacity:.55"><td><span class="pill p-ok">R1 ✓</span></td>
+          <td>Cron de conciliación sin flag</td>
+          <td>Empieza a leer el Gmail del centro apenas se deploye, sin decisión explícita</td>
+          <td><strong>RESUELTO</strong> — flag creado, aplicado al cron y al backfill, con test que lo fija</td></tr>
+      <tr style="opacity:.55"><td><span class="pill p-ok">R2 ✓</span></td>
+          <td><code>/abono/{token}</code> es público</td>
+          <td>Superficie nueva sin auth que muestra datos de un pago</td>
+          <td><strong>AUDITADO Y APROBADO</strong> — 192 bits de entropía, expira a 90 min, no expone datos del paciente</td></tr>
+      <tr><td><span class="pill p-danger">R3</span></td>
+          <td>Confirmar una sugerencia escribe sobre <code>pagos_cmc</code></td>
+          <td>Es la fuente del medio de pago del Libro de la Verdad. Un emparejamiento malo ensucia la caja</td>
+          <td>Verificar que respeta filas bloqueadas y que deja rastro en auditoría con <code>resuelto_por</code></td></tr>
+      <tr><td><span class="pill p-warn">R4</span></td>
+          <td>Backfill IMAP largo por endpoint HTTP</td>
+          <td>Un barrido de meses dentro de un request puede colgar el worker</td>
+          <td>Correrlo primero por consola con <code>limite</code>, medir, y recién ahí exponerlo</td></tr>
+      <tr><td><span class="pill p-warn">R5</span></td>
+          <td>Datos financieros de terceros</td>
+          <td>Ley 21.719: se almacena nombre y monto de gente que ni siquiera es paciente</td>
+          <td>Definir retención y si corresponde incluirlas en el borrado en cascada del derecho al olvido</td></tr>
+      <tr><td><span class="pill p-warn">R6</span></td>
+          <td>Commit contaminado</td>
+          <td><code>flows.py</code>, <code>main.py</code> y <code>config.py</code> traen además el agendador v2 y el embudo</td>
+          <td>Commit por hunks (mismo método de los 3 fixes de ayer), nunca <code>git add</code> por archivo</td></tr>
+      <tr><td><span class="pill p-info">R7</span></td>
+          <td>Presión sobre Medilink</td>
+          <td>Las sugerencias consultan pagos; ayer el rate limit dejó pacientes en lista de espera</td>
+          <td>Que todo barrido llame <code>medilink.use_batch_lane()</code> primero</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>5 · Despliegue en 5 fases</h2>
+<div class="card">
+<ol class="fases">
+
+  <li>
+    <h3 style="margin-top:0">Cerrar el hueco del flag <span class="tag">~30 min · sin deploy</span></h3>
+    <p>Antes de tocar git: agregar <code>CONCILIACION_TRANSFERENCIAS_ACTIVE</code> en <code>config.py</code>
+    y envolver el <code>add_job</code> igual que el de abonos. Que el bloque completo pueda vivir en
+    producción <strong>inerte</strong>.</p>
+    <ul class="chk">
+      <li class="done">Flag creado, default <code>false</code></li>
+      <li class="done">Con el flag apagado: cero <code>add_job</code>, cero conexiones IMAP <em>(verificable con <code>grep imaplib</code> en los logs tras reiniciar)</em></li>
+      <li class="done">Test que lo fije, al estilo de <code>test_429_no_es_caida.py</code></li>
+    </ul>
+  </li>
+
+  <li>
+    <h3>Auditoría de las dos superficies sensibles <span class="tag">~1 h · sin deploy</span></h3>
+    <p>Leer con lupa <code>abono_pago_routes.py</code> (R2) y <code>confirmar_sugerencia()</code> (R3).
+    Son los dos únicos puntos donde el código toca el mundo real: uno expone al público, el otro escribe plata.</p>
+    <ul class="chk">
+      <li class="done">Token: entropía, expiración, ¿reusable?, ¿rate-limit?</li>
+      <li class="done"><code>/api/abono/{token}/estado</code>: enumerar campo por campo qué devuelve</li>
+      <li><code>confirmar_sugerencia</code>: ¿respeta <code>bloqueado=1</code>? ¿escribe auditoría? ¿es idempotente si se aprieta dos veces?</li>
+    </ul>
+  </li>
+
+  <li>
+    <h3>Commit quirúrgico y deploy inerte <span class="tag">~45 min · CON deploy</span></h3>
+    <p>Todo el bloque a producción con los dos flags apagados. Nada cambia para nadie: es solo dejar
+    el código donde se pueda encender.</p>
+    <pre><span class="c"># 1. patch solo con los hunks de este bloque (no por archivo)</span>
+git apply --cached --recount bloque1.patch
+git add app/conciliacion_transferencias.py app/transferencias_email_parser.py \
+        app/abono_transferencia.py app/abono_pago_routes.py \
+        app/pagos_transferencia_sugeridos.py app/conciliacion_transferencias_routes.py \
+        templates/alma_conciliacion_transferencias.html templates/abono_pago.html \
+        tests/test_*transferencia*.py tests/test_conciliacion_transferencias.py tests/fixtures/
+
+<span class="c"># 2. verificar que lo staged arranca SOLO (sin el WIP del resto)</span>
+git checkout-index -a --prefix=/tmp/verif/
+cd /tmp/verif &amp;&amp; venv/bin/python3 -c "import sys;sys.path.insert(0,'app');import main"
+
+<span class="c"># 3. deploy desde un worktree limpio (no toca el WIP del árbol)</span>
+git worktree add --detach /tmp/dt HEAD &amp;&amp; cd /tmp/dt &amp;&amp; bash scripts/deploy.sh</pre>
+    <ul class="chk">
+      <li><code>git diff --cached</code> no contiene ni una línea del agendador v2 ni del embudo</li>
+      <li>Deep-import del árbol staged, aislado</li>
+      <li>Suites en baseline: 76/103 · 169/200 · 52/52</li>
+      <li>Post-deploy: <code>/health</code> 200, servicio activo, <strong>sin conexiones IMAP nuevas</strong></li>
+    </ul>
+  </li>
+
+  <li>
+    <h3>Encender solo la lectura <span class="tag">1 semana en observación</span></h3>
+    <p><code>CONCILIACION_TRANSFERENCIAS_ACTIVE=true</code>. Con esto el sistema <strong>solo mira</strong>:
+    lee correos, parsea, cruza y muestra el panel. No escribe en <code>pagos_cmc</code>, no le habla a ningún
+    paciente. Es el modo en que se puede equivocar sin costo.</p>
+    <ul class="chk">
+      <li>Backfill acotado por consola primero (<code>limite=200</code>), midiendo cuánto demora</li>
+      <li>Revisar <code>transferencias_banco_errores</code>: qué correos no parsea y de qué banco</li>
+      <li>Medir cobertura histórica con <code>medir_cobertura_historica(60)</code></li>
+      <li>Contrastar un mes ya cerrado contra el <code>auditor.py</code> — si no coinciden, el cruce está mal</li>
+      <li>Sin sugerencias confirmadas todavía: solo mirar</li>
+    </ul>
+  </li>
+
+  <li>
+    <h3>Encender lo que escribe <span class="tag">decisión del dueño</span></h3>
+    <p>Recién con una semana de evidencia se habilita que recepción confirme sugerencias (toca caja) y,
+    por separado, <code>ABONO_AUTO_ACTIVE</code> (le habla a pacientes de psiquiatría).
+    <strong>Son dos decisiones distintas y no tienen por qué ir juntas.</strong></p>
+    <ul class="chk">
+      <li>Recepción entrenada en qué significa “probable” y “ambiguo”</li>
+      <li>Definido quién puede confirmar (¿cualquiera con token admin?)</li>
+      <li>Para abonos: probar primero con un caso real acompañado, no en automático</li>
+      <li>Plan de reversa: apagar el flag deja el flujo de foto del comprobante intacto</li>
+    </ul>
+  </li>
+
+</ol>
+</div>
+
+<h2>6 · Cómo se revierte</h2>
+<div class="grid2">
+  <div class="card">
+    <h3 style="margin-top:0">Si falla después de encender</h3>
+    <p>Los flags son la reversa real: <code>false</code> + reinicio y el sistema vuelve a estar inerte,
+    sin perder lo ya conciliado. <strong>No requiere deploy.</strong></p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Si falla el deploy mismo</h3>
+    <p><code>deploy.sh</code> hace rollback automático en G4 si <code>/health</code> no responde 200.
+    Las tablas nuevas quedan creadas pero vacías y sin lectores: son inertes.</p>
+  </div>
+</div>
+
+<h2>7 · Preguntas que no puedo responder yo</h2>
+<div class="card">
+  <ol style="margin:0;padding-left:20px">
+    <li><strong>¿El centro puede almacenar los datos bancarios de quien transfiere</strong> aunque no sea paciente? Es una definición legal, no técnica (R5).</li>
+    <li><strong>¿Quién queda autorizado a confirmar una sugerencia?</strong> Hoy basta el token admin, que es el mismo de recepción.</li>
+    <li><strong>¿Se corre el backfill sobre todo el histórico del buzón</strong> o solo desde una fecha? Define cuánta plata vieja se puede reconciliar y cuánto se demora.</li>
+    <li><strong>¿Los abonos automáticos se encienden con psiquiatría</strong> o se espera a tener más prestaciones con abono?</li>
+  </ol>
+</div>
+
+<footer>
+  Generado el 28-jul-2026, actualizado con el avance de la ejecución · Basado en lectura directa del código en <code>~/chatbot-cmc</code>,
+  no en la documentación. Producción a esta fecha: <code>abef8a1</code>.
+  Este bloque sigue sin commitear.
+</footer>
+
+</div>
+</body>
+</html>

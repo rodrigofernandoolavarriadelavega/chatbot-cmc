@@ -682,6 +682,61 @@ async def lifespan(app: FastAPI):
         coalesce=True,
         max_instances=1,
     )
+    # Conciliación de transferencias (IMAP, solo lectura): cada 10 min revisa
+    # el Gmail del centro por avisos NUEVOS de transferencia bancaria (12
+    # bancos, ver app/transferencias_email_parser.py) y los guarda en
+    # transferencias_banco (tabla COMPARTIDA con abono_transferencia.py — ver
+    # docstring de conciliacion_transferencias.ensure_conciliacion_tables).
+    # Cursor propio (transferencias_banco_last_uid), independiente del de
+    # email_ticker/abono_transferencia. Degrada con gracia si las
+    # credenciales no están seteadas o Gmail no responde.
+    # GATEADO por CONCILIACION_TRANSFERENCIAS_ACTIVE (2026-07-28). Antes se
+    # registraba siempre: deployar el bloque bastaba para empezar a leer el
+    # Gmail del centro cada 10 min, sin decisión y sin apagado que no fuera
+    # otro deploy. Con el flag en false ni siquiera se importa el módulo.
+    from config import CONCILIACION_TRANSFERENCIAS_ACTIVE as _CONCIL_ACTIVE
+    if _CONCIL_ACTIVE:
+        from conciliacion_transferencias import poll_conciliacion_transferencias
+        scheduler.add_job(
+            poll_conciliacion_transferencias,
+            "interval", minutes=10,
+            id="conciliacion_transferencias_poll",
+            replace_existing=True,
+            misfire_grace_time=300,
+            coalesce=True,
+            max_instances=1,
+        )
+        log.info("conciliación de transferencias ACTIVA (poll cada 10 min)")
+    else:
+        log.info("conciliación de transferencias apagada "
+                 "(CONCILIACION_TRANSFERENCIAS_ACTIVE=false) — sin IMAP")
+    # Confirmación automática de abonos por transferencia (Psiquiatría, $60.000,
+    # única prestación con abono hoy). GATEADO por ABONO_AUTO_ACTIVE: mientras
+    # esté en false ni siquiera se registra el cron (cero conexiones IMAP
+    # nuevas) — el flujo actual de foto del comprobante sigue intacto. Ver
+    # app/abono_transferencia.py para el diseño completo.
+    from config import ABONO_AUTO_ACTIVE as _ABONO_AUTO_ACTIVE
+    if _ABONO_AUTO_ACTIVE:
+        from abono_transferencia import poll_abonos_transferencia, job_nudge_foto_fallback
+        scheduler.add_job(
+            poll_abonos_transferencia,
+            "interval", seconds=60,
+            id="abono_transferencia_poll",
+            replace_existing=True,
+            misfire_grace_time=30,
+            coalesce=True,
+            max_instances=1,
+        )
+        scheduler.add_job(
+            job_nudge_foto_fallback,
+            "interval", minutes=2,
+            id="abono_transferencia_nudge_foto",
+            replace_existing=True,
+            misfire_grace_time=60,
+            coalesce=True,
+            max_instances=1,
+        )
+
     # Retención desactivada: mensajes y eventos se mantienen indefinidamente.
     # El crecimiento es ~90 MB/año para el volumen del CMC, manejable en SQLite.
     # Para purgar manualmente: purge_old_data(msgs_days=N, events_days=N)
@@ -1118,6 +1173,7 @@ import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estu
 import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
 import agenda_ticker_routes; agenda_ticker_routes.register_agenda_ticker_routes(app)  # Monitor de agendamientos en vivo (/alma/agenda-en-vivo)
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
+import conciliacion_transferencias_routes; conciliacion_transferencias_routes.register_conciliacion_transferencias_routes(app)  # Conciliación transferencias × correos banco + sugerencias de pago (/alma/conciliacion-transferencias)
 
 import pagos_routes
 app.include_router(pagos_routes.router)
@@ -1174,6 +1230,8 @@ import audit_routes  # vista /admin/auditoria — hallazgos del enjambre horario
 app.include_router(audit_routes.router)
 
 import print_routes; app.include_router(print_routes.router)  # Impresion remota → Alma Print
+
+import abono_pago_routes; app.include_router(abono_pago_routes.router)  # Página pública /abono/{token} — confirmación auto de abonos por transferencia (gated ABONO_AUTO_ACTIVE, ver abono_transferencia.py)
 
 # Cargar HTML del panel admin y portal paciente
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
