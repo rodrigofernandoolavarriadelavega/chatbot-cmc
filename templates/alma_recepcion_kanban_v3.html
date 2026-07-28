@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cola de Recepción · Alma</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --aqua:#4FBECE; --aqua-soft:#7ed3df; --blue:#1172AB; --navy:#0F3F68; --navy-deep:#0a2e4d;
+  --ink:#0f1d2a; --ink-2:#33475c; --muted:#6b8095; --line:#e8eef4; --line-2:#f1f5f9;
+  --bg:#f2f6fa; --card:#fff;
+  --green:#12805a; --green-bg:#e4f4ec;
+  --amber:#a86a12; --amber-bg:#fdf2df;
+  --red:#c0392b;   --red-bg:#fceceA;
+  --slate-bg:#eef3f8;
+  --s1:0 1px 1px rgba(11,42,68,.04),0 2px 4px rgba(11,42,68,.04);
+  --s2:0 1px 2px rgba(11,42,68,.05),0 6px 16px rgba(11,42,68,.07);
+  --s3:0 2px 4px rgba(11,42,68,.06),0 14px 34px rgba(11,42,68,.11);
+  --s4:0 8px 20px rgba(11,42,68,.12),0 30px 70px rgba(11,42,68,.2);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{--ink:#eaf1f7;--ink-2:#c3d2df;--muted:#8ea3b7;--line:#1d3145;--line-2:#16273a;
+        --bg:#060f1a;--card:#0d1f30;--slate-bg:#122336;
+        --green-bg:#0c2b1f;--amber-bg:#2b2410;--red-bg:#2f1a16;
+        --s1:0 1px 2px rgba(0,0,0,.4);--s2:0 4px 14px rgba(0,0,0,.45);
+        --s3:0 12px 36px rgba(0,0,0,.6);--s4:0 20px 60px rgba(0,0,0,.7)}
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font-family:'Montserrat',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+  font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.wrap{max-width:1560px;margin:0 auto;padding:0 20px 60px}
+svg{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Rail izquierdo: temporalidad (hover borde o Ctrl+M) ─────── */
+#zona-rail{position:fixed;left:0;top:0;bottom:0;width:14px;z-index:60}
+#rail{position:fixed;left:0;top:0;bottom:0;width:212px;background:var(--card);
+  border-right:1px solid var(--line);box-shadow:var(--s4);z-index:61;padding:20px 16px;
+  transform:translateX(-100%);transition:transform .28s var(--ease)}
+#rail.abierto{transform:none}
+#rail h4{margin:0 0 4px;font-size:.68rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--muted)}
+#rail .hint{font-size:.68rem;color:var(--muted);font-weight:500;margin-bottom:16px}
+.rango{display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;
+  border-radius:10px;padding:9px 12px;font-family:inherit;font-size:.82rem;font-weight:600;
+  color:var(--ink-2);cursor:pointer;margin-bottom:3px;transition:background .16s,color .16s}
+.rango:hover{background:var(--slate-bg)}
+.rango.on{background:var(--navy);color:#fff}
+.rail-sep{height:1px;background:var(--line);margin:14px 0}
+.rail-f{display:flex;flex-direction:column;gap:7px}
+.rail-f input{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-family:inherit;
+  font-size:.78rem;background:var(--bg);color:var(--ink)}
+.rail-f button{background:var(--aqua);color:var(--navy-deep);border:0;border-radius:9px;padding:8px;
+  font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer}
+
+/* ── Cabecera ─────────────────────────────────────────────────── */
+.hero{position:relative;overflow:hidden;color:#fff;padding:22px 0 20px;
+  background:linear-gradient(120deg,#08243c 0%,var(--navy) 46%,#15618f 100%)}
+.hero::before{content:"";position:absolute;top:-220px;right:-120px;width:560px;height:560px;
+  background:radial-gradient(circle,rgba(79,190,206,.34),transparent 60%);pointer-events:none}
+.hero::after{content:"";position:absolute;left:-90px;bottom:-190px;width:400px;height:400px;
+  background:radial-gradient(circle,rgba(17,114,171,.5),transparent 62%);pointer-events:none}
+.hero .wrap{position:relative;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:0}
+.b-ico{width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(145deg,rgba(79,190,206,.3),rgba(79,190,206,.08));
+  border:1px solid rgba(126,211,223,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.b-ico svg{width:19px;height:19px;stroke:var(--aqua-soft)}
+.hero h1{margin:0;font-size:1.16rem;font-weight:800;letter-spacing:-.03em}
+.hero .sub{font-size:.74rem;opacity:.75;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:1px}
+.live{width:6px;height:6px;border-radius:50%;background:var(--aqua);animation:latido 2.4s infinite}
+@keyframes latido{0%{box-shadow:0 0 0 0 rgba(79,190,206,.65)}70%{box-shadow:0 0 0 8px rgba(79,190,206,0)}100%{box-shadow:0 0 0 0 rgba(79,190,206,0)}}
+.stats{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.st{border-radius:13px;padding:9px 15px 8px;min-width:92px;
+  background:linear-gradient(160deg,rgba(255,255,255,.15),rgba(255,255,255,.06));
+  border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.st b{display:block;font-size:1.34rem;font-weight:800;line-height:1.05;letter-spacing:-.03em}
+.st span{font-size:.6rem;opacity:.78;text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+.st.alerta{background:linear-gradient(160deg,rgba(255,138,120,.26),rgba(255,138,120,.1));
+  border-color:rgba(255,160,145,.4)} .st.alerta b{color:#ffd9d2}
+.st.bien b{color:var(--aqua-soft)}
+
+/* ── Carril expedite y columnas ───────────────────────────────── */
+.carril{position:relative;background:var(--card);border:1px solid var(--line);border-radius:17px;
+  margin:18px 0 16px;box-shadow:var(--s3);overflow:hidden}
+.carril::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+  background:linear-gradient(90deg,var(--red),#e8836f)}
+.carril-h{display:flex;align-items:center;gap:11px;padding:14px 18px 12px}
+.carril-ico{width:30px;height:30px;border-radius:9px;background:var(--red-bg);display:grid;place-items:center;flex:none}
+.carril-ico svg{width:15px;height:15px;stroke:var(--red)}
+.carril-h b{font-size:.85rem;font-weight:800;color:var(--red)}
+.carril-h .cnt{background:var(--red);color:#fff;border-radius:99px;padding:1px 9px;font-size:.7rem;font-weight:800}
+.carril-h .pol{font-size:.75rem;color:var(--muted);font-weight:500;margin-left:auto;text-align:right;max-width:46%}
+.carril .filas{padding:0 12px 12px}
+.board{display:grid;grid-template-columns:repeat(3,minmax(280px,1fr));gap:14px;overflow-x:auto;
+  padding-bottom:6px;align-items:start}
+.col{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:0 0 10px;
+  min-width:280px;box-shadow:var(--s1);transition:box-shadow .25s var(--ease)}
+.col:hover{box-shadow:var(--s2)}
+.col-h{padding:15px 16px 12px;border-bottom:1px solid var(--line-2)}
+.col-t{display:flex;align-items:center;gap:9px}
+.col-punto{width:7px;height:7px;border-radius:2px;flex:none}
+.col-t b{font-size:.78rem;font-weight:800;color:var(--ink)}
+.wipn{margin-left:auto;font-size:.74rem;font-weight:800;color:var(--ink-2)}
+.wipn em{font-style:normal;color:var(--muted);font-weight:600}
+.col.excedido .wipn{color:var(--red)}
+.medidor{display:flex;gap:2px;margin-top:9px}
+.medidor i{flex:1;height:3px;border-radius:2px;background:var(--line)}
+.medidor i.on{background:var(--aqua)}
+.col.excedido .medidor i.on{background:var(--red)}
+.pol{font-size:.71rem;color:var(--muted);font-weight:500;line-height:1.4;margin-top:10px}
+.col .filas{padding:10px 12px 0;max-height:min(52vh,560px);overflow-y:auto}
+
+/* ── Filas ────────────────────────────────────────────────────── */
+.fila{display:flex;align-items:center;gap:10px;border-radius:11px;padding:9px 11px;margin-bottom:5px;
+  cursor:pointer;border:1px solid transparent;width:100%;text-align:left;background:transparent;
+  font-family:inherit;color:inherit;
+  transition:background .18s var(--ease),transform .18s var(--ease),box-shadow .18s var(--ease);
+  animation:entra .34s var(--ease) both}
+@keyframes entra{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.fila:hover{background:var(--card);border-color:var(--line);box-shadow:var(--s2);transform:translateY(-1px)}
+.fila:focus{outline:none;border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.28),var(--s2)}
+.carril .fila:hover{background:var(--slate-bg)}
+.avatar{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;flex:none;
+  font-size:.63rem;font-weight:800;color:#fff;background:linear-gradient(145deg,#8ea3b7,#6b8095);box-shadow:var(--s1)}
+.fila.c-expedite .avatar{background:linear-gradient(145deg,#e0705c,var(--red))}
+.fila.c-fecha_fija .avatar{background:linear-gradient(145deg,#d9a24a,var(--amber))}
+.f-cuerpo{min-width:0;flex:1}
+.f-n{font-size:.83rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-s{font-size:.71rem;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;margin-top:1px}
+.f-der{display:flex;align-items:center;gap:8px;flex:none}
+.edad{font-size:.7rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.edad.alta{color:var(--red)}
+.brasa{width:3px;height:19px;border-radius:2px;background:var(--line);flex:none}
+.brasa.n1{background:var(--aqua)} .brasa.n2{background:var(--amber)} .brasa.n3{background:var(--red)}
+.vacia{display:flex;flex-direction:column;align-items:center;gap:7px;padding:26px 10px;
+  color:var(--muted);font-size:.73rem;font-weight:600;opacity:.6}
+.vacia svg{width:19px;height:19px;stroke:var(--muted)}
+
+/* ── Secciones ────────────────────────────────────────────────── */
+.sec{display:flex;align-items:center;gap:12px;margin:30px 0 13px}
+.sec h2{margin:0;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:var(--muted)}
+.sec .regla{flex:1;height:1px;background:var(--line)}
+.sec .n{font-size:.7rem;font-weight:800;color:var(--muted);background:var(--slate-bg);border-radius:99px;padding:2px 10px}
+.fuera{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.fc{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px 17px;box-shadow:var(--s1);
+  transition:transform .2s var(--ease)}
+.fc:hover{transform:translateY(-2px)}
+.fc b{display:block;font-size:1.5rem;font-weight:800;letter-spacing:-.035em;line-height:1}
+.fc span{font-size:.71rem;color:var(--muted);font-weight:600;display:block;margin-top:5px;line-height:1.35}
+.fc.destacada b{color:var(--green)}
+
+/* ── Gráficos ─────────────────────────────────────────────────── */
+.graf{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.g{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px 19px;box-shadow:var(--s1)}
+.g h3{margin:0 0 3px;font-size:.85rem;font-weight:800}
+.g .gsub{font-size:.71rem;color:var(--muted);font-weight:500;margin-bottom:14px;display:block}
+.barra{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.barra .et{font-size:.73rem;font-weight:600;color:var(--ink-2);width:112px;flex:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barra .pista{flex:1;height:20px;background:var(--slate-bg);border-radius:6px;overflow:hidden}
+.barra .pista i{display:block;height:100%;border-radius:6px;
+  background:linear-gradient(90deg,var(--aqua),var(--blue));transition:width .6s var(--ease)}
+.barra .val{font-size:.73rem;font-weight:800;width:56px;text-align:right;flex:none}
+.embudo-p{display:flex;align-items:flex-end;gap:9px;height:110px;margin-bottom:12px}
+.ep{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}
+.ep i{display:block;width:100%;border-radius:8px 8px 3px 3px;
+  background:linear-gradient(180deg,var(--aqua),var(--blue));min-height:4px;transition:height .6s var(--ease)}
+.ep b{font-size:.9rem;font-weight:800}
+.ep span{font-size:.64rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Lista de espera ──────────────────────────────────────────── */
+.we{background:var(--card);border:1px solid var(--line);border-radius:17px;box-shadow:var(--s1);overflow:hidden}
+.we table{width:100%;border-collapse:collapse;font-size:.79rem}
+.we th{text-align:left;padding:10px 14px;background:var(--slate-bg);font-size:.66rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.we td{padding:9px 14px;border-top:1px solid var(--line-2);font-weight:500}
+.we tr:hover td{background:var(--slate-bg)}
+.we .vieja{color:var(--red);font-weight:800}
+
+/* ── Popup trabajable — patrón del Panel Día ──────────────────
+   hover = vistazo intocable · clic = se fija y se puede trabajar ·
+   fijado = arrastrable por la cabecera y redimensionable por 8 manijas. */
+.wpop{position:fixed;z-index:300;width:340px;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;box-shadow:var(--s4);opacity:0;transform:translateY(8px) scale(.98);
+  pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);
+  display:flex;flex-direction:column;max-height:82vh}
+.wpop.show{opacity:1;transform:none}
+.wpop.pinned{pointer-events:auto;box-shadow:0 0 0 2px var(--aqua),var(--s4);max-height:none}
+.wpop.pinned .wh{cursor:move}
+.wpop.expanded{width:580px}
+.wpop .rsz{position:absolute;z-index:6}
+.wpop:not(.pinned) .rsz{display:none}
+.wpop .rsz.n{top:-3px;left:14px;right:14px;height:8px;cursor:ns-resize}
+.wpop .rsz.s{bottom:-3px;left:14px;right:14px;height:8px;cursor:ns-resize}
+.wpop .rsz.e{right:-3px;top:14px;bottom:14px;width:8px;cursor:ew-resize}
+.wpop .rsz.w{left:-3px;top:14px;bottom:14px;width:8px;cursor:ew-resize}
+.wpop .rsz.ne{top:-4px;right:-4px;width:15px;height:15px;cursor:nesw-resize}
+.wpop .rsz.nw{top:-4px;left:-4px;width:15px;height:15px;cursor:nwse-resize}
+.wpop .rsz.se{bottom:-4px;right:-4px;width:15px;height:15px;cursor:nwse-resize}
+.wpop .rsz.sw{bottom:-4px;left:-4px;width:15px;height:15px;cursor:nesw-resize}
+.wpop.pinned .rsz.se::after{content:'';position:absolute;right:3px;bottom:3px;width:7px;height:7px;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);border-bottom-right-radius:2px}
+body.wp-busy,body.wp-busy *{user-select:none!important}
+.wpop .wh{padding:12px 15px;border-radius:15px 15px 0 0;flex:none;display:flex;align-items:center;gap:10px;
+  color:#fff;background:linear-gradient(135deg,var(--ac,var(--blue)),var(--navy-deep))}
+.wpop .wh .hl{flex:1;min-width:0}
+.wpop .wh .t{font-size:.83rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wpop .wh .s{font-size:.65rem;font-weight:700;opacity:.85;margin-top:1px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.wpop .wh .wbtn{width:24px;height:24px;border-radius:7px;border:0;background:rgba(255,255,255,.2);
+  color:#fff;font-size:.72rem;font-weight:800;cursor:pointer;flex:none;font-family:inherit;
+  display:grid;place-items:center}
+.wpop .wh .wbtn:hover{background:rgba(255,255,255,.4)}
+.wbody{overflow-y:auto;padding:13px 14px;flex:1;min-height:120px;display:flex;flex-direction:column;gap:8px}
+.wbody::-webkit-scrollbar{width:6px}
+.wbody::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.msg{max-width:86%;padding:8px 12px;border-radius:13px;font-size:.78rem;font-weight:500;line-height:1.45;
+  word-break:break-word}
+.msg.in{background:var(--slate-bg);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.out{background:linear-gradient(145deg,var(--blue),var(--navy));color:#fff;align-self:flex-end;
+  border-bottom-right-radius:4px}
+.msg .t{display:block;font-size:.61rem;opacity:.7;margin-top:3px;font-weight:600}
+.wfoot{border-top:1px solid var(--line);padding:10px 12px;display:none;gap:8px;flex:none}
+.wpop.pinned .wfoot{display:flex}
+.wfoot textarea{flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-family:inherit;
+  font-size:.79rem;resize:none;height:38px;background:var(--bg);color:var(--ink)}
+.wfoot button{background:var(--aqua);color:var(--navy-deep);border:0;border-radius:10px;padding:0 15px;
+  font-family:inherit;font-weight:800;font-size:.79rem;cursor:pointer}
+.wfoot button:disabled{opacity:.45;cursor:default}
+.wpin-hint{font-size:.63rem;color:var(--muted);font-weight:600;padding:0 14px 11px;text-align:center}
+.wpop.pinned .wpin-hint{display:none}
+
+/* Panel de pagos lateral (Ctrl+P) */
+.lat{position:fixed;top:0;right:0;bottom:0;width:min(460px,94vw);background:var(--card);
+  border-left:1px solid var(--line);box-shadow:var(--s4);z-index:70;display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s var(--ease)}
+.lat.abierto{transform:none}
+.lat-h{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.lat-h b{font-size:.92rem;font-weight:800;flex:1}
+.lat-h .x{background:var(--slate-bg);border:0;border-radius:9px;width:30px;height:30px;cursor:pointer;
+  font-size:1rem;color:var(--muted);font-family:inherit}
+.lat-b{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:9px}
+.velo{position:fixed;inset:0;background:rgba(8,25,40,.3);backdrop-filter:blur(2px);z-index:65;
+  opacity:0;pointer-events:none;transition:opacity .28s}
+.velo.on{opacity:1;pointer-events:auto}
+.nota{background:linear-gradient(160deg,var(--slate-bg),transparent);border:1px solid var(--line);
+  border-radius:15px;padding:15px 18px;margin-top:18px;font-size:.77rem;color:var(--muted);
+  font-weight:500;line-height:1.65}
+.nota b{color:var(--ink);font-weight:700}
+kbd{background:var(--card);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+  padding:1px 6px;font-family:inherit;font-size:.68rem;font-weight:800;color:var(--ink-2)}
+.cargando{text-align:center;padding:70px;color:var(--muted);font-weight:600;font-size:.85rem}
+@media(max-width:960px){.board{grid-template-columns:repeat(3,290px)}.stats{margin-left:0;width:100%}}
+</style>
+</head>
+<body>
+
+<div id="zona-rail"></div>
+<nav id="rail">
+  <h4>Periodo</h4>
+  <div class="hint">Ctrl+M abre y cierra</div>
+  <div id="rangos"></div>
+  <div class="rail-sep"></div>
+  <h4>Rango propio</h4>
+  <div class="rail-f">
+    <input type="date" id="f-desde"><input type="date" id="f-hasta">
+    <button id="f-ok">Aplicar</button>
+  </div>
+</nav>
+
+<div class="hero"><div class="wrap">
+  <div class="b-ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h9"/></svg></div>
+  <div>
+    <h1>Cola de Recepción</h1>
+    <div class="sub"><span class="live"></span><span id="periodo">hoy</span> · <span id="hora">—</span></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</div></div>
+
+<div class="wrap">
+  <div id="carril"></div>
+  <div id="board"><div class="cargando">Armando la cola…</div></div>
+
+  <div class="sec"><h2>Fuera del tablero</h2><span class="regla"></span></div>
+  <div class="fuera" id="fuera"></div>
+
+  <div class="sec"><h2>Fricción del embudo</h2><span class="regla"></span></div>
+  <div class="graf" id="graf"></div>
+
+  <div class="sec"><h2>Lista de espera</h2><span class="n" id="we-n">—</span><span class="regla"></span></div>
+  <div class="we" id="we"></div>
+
+  <div class="nota" id="nota"></div>
+</div>
+
+<div class="velo" id="velo"></div>
+
+<div class="wpop" id="wp">
+  <div class="rsz n"></div><div class="rsz s"></div><div class="rsz e"></div><div class="rsz w"></div>
+  <div class="rsz ne"></div><div class="rsz nw"></div><div class="rsz se"></div><div class="rsz sw"></div>
+  <div class="wh" id="wp-h">
+    <div class="hl"><div class="t" id="wp-t">—</div><div class="s" id="wp-s"></div></div>
+    <button class="wbtn" id="wp-exp" title="Expandir">⤢</button>
+    <button class="wbtn" id="wp-x" title="Cerrar">✕</button>
+  </div>
+  <div class="wbody" id="wp-b"></div>
+  <div class="wpin-hint">clic para fijar y responder</div>
+  <div class="wfoot">
+    <textarea id="wp-txt" placeholder="Escribe la respuesta…"></textarea>
+    <button id="wp-env">Enviar</button>
+  </div>
+</div>
+
+<aside class="lat" id="pagos">
+  <div class="lat-h"><b>Pagos del día</b><button class="x" id="pagos-x">✕</button></div>
+  <div class="lat-b" id="pagos-b"></div>
+</aside>
+
+<script>
+const TOKEN = "__TOKEN__";
+let D = null, F = null, rango = 'dia', desde = null, hasta = null, foco = -1, convActual = null;
+const RANGOS = [['dia','Hoy'],['semana','Esta semana'],['mes','Este mes'],['todo','Todo']];
+const q = s => document.querySelector(s);
+const api = p => fetch(p + (p.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN)).then(r => r.json());
+
+const inic = (n,p) => { const s=(n||'').trim();
+  return s ? s.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase() : (p||'').slice(-2); };
+const edad = m => !m ? null : m<60 ? m+' min' : (m<1440 ? Math.floor(m/60)+' h' : Math.floor(m/1440)+' d');
+const brasa = m => !m ? '' : m>240?'n3' : m>60?'n2' : 'n1';
+
+/* ── Rail ─────────────────────────────────────────────────────── */
+function pintarRangos(){
+  q('#rangos').innerHTML = RANGOS.map(([k,t]) =>
+    `<button class="rango ${rango===k?'on':''}" data-r="${k}">${t}</button>`).join('');
+  document.querySelectorAll('.rango').forEach(b => b.onclick = () => {
+    rango = b.dataset.r; desde = hasta = null; cargar(); cerrarRail();
+  });
+}
+const abrirRail = () => q('#rail').classList.add('abierto');
+const cerrarRail = () => q('#rail').classList.remove('abierto');
+q('#zona-rail').onmouseenter = abrirRail;
+q('#rail').onmouseleave = cerrarRail;
+q('#f-ok').onclick = () => {
+  desde = q('#f-desde').value || null; hasta = q('#f-hasta').value || null;
+  if (desde || hasta){ rango = null; cargar(); cerrarRail(); }
+};
+
+/* ── Popup trabajable ─────────────────────────────────────────
+   Patrón tomado del Panel Día: hover = vistazo intocable que sigue al mouse,
+   clic = se fija (se puede escribir, arrastrar y redimensionar). Que el vistazo
+   NO sea interactivo es lo que permite recorrer la cola con el mouse sin que el
+   popup se meta en el camino. */
+const wp = q('#wp');
+let wpPin = false, wpExp = false, wpPhone = null;
+
+const wpSize = () => { try{ return JSON.parse(localStorage.getItem('colaWpop')||'{}'); }catch(e){ return {}; } };
+function aplicarSize(){ const z = wpSize();
+  if (z.w) wp.style.width = z.w+'px'; if (z.h) wp.style.height = z.h+'px'; }
+function guardarSize(){ try{ localStorage.setItem('colaWpop',
+  JSON.stringify({w:wp.offsetWidth, h:wp.offsetHeight})); }catch(e){} }
+
+function seguirMouse(e){
+  if (wpPin || !wp.classList.contains('show')) return;
+  const w = wp.offsetWidth||340, h = wp.offsetHeight||300;
+  let x = e.clientX+18, y = e.clientY-20;
+  if (x+w > innerWidth-12) x = e.clientX-w-18;
+  if (y+h > innerHeight-12) y = innerHeight-h-12;
+  wp.style.left = Math.max(12,x)+'px'; wp.style.top = Math.max(12,y)+'px';
+}
+function junto(el){
+  const r = el.getBoundingClientRect(), w = wp.offsetWidth||340, h = wp.offsetHeight||340;
+  let x = r.right+12; if (x+w > innerWidth-12) x = r.left-w-12;
+  let y = r.top-6;    if (y+h > innerHeight-12) y = innerHeight-h-12;
+  wp.style.left = Math.max(12,x)+'px'; wp.style.top = Math.max(12,y)+'px';
+}
+function centrar(){ wp.style.left = Math.max(12,(innerWidth-wp.offsetWidth)/2)+'px';
+  wp.style.top = Math.max(12,(innerHeight-wp.offsetHeight)/2)+'px'; }
+
+const ACENTO = {expedite:'#c0392b', fecha_fija:'#a86a12', estandar:'var(--blue)', intangible:'#6b8095'};
+
+async function pintarConv(card){
+  q('#wp-t').textContent = card.nombre || card.phone;
+  q('#wp-s').textContent = [card.area, card.cita ? `${card.cita.fecha} ${card.cita.hora}` : null,
+    card.espera_min ? 'espera '+edad(card.espera_min) : null].filter(Boolean).join(' · ') || card.phone;
+  wp.style.setProperty('--ac', ACENTO[card.clase] || 'var(--blue)');
+  const cuerpo = q('#wp-b');
+  if (wpPhone !== card.phone) cuerpo.innerHTML = '<div class="cargando">Cargando…</div>';
+  wpPhone = card.phone;
+  try{
+    const msgs = await api('/admin/api/conversations/' + encodeURIComponent(card.phone));
+    if (wpPhone !== card.phone) return;               // el mouse ya se movió a otra
+    cuerpo.innerHTML = (msgs||[]).slice(-50).map(m => {
+      const dir = (m.direction || m.dir) === 'in' ? 'in' : 'out';
+      return `<div class="msg ${dir}">${(m.text||'').replace(/</g,'&lt;')}
+        <span class="t">${(m.ts||'').slice(11,16)}</span></div>`;
+    }).join('') || '<div class="cargando">Sin mensajes</div>';
+    cuerpo.scrollTop = cuerpo.scrollHeight;
+  }catch(e){ cuerpo.innerHTML = '<div class="cargando">No se pudo cargar</div>'; }
+}
+
+function verConv(card, el){        // hover
+  if (wpPin) return;
+  wp.style.width = ''; wp.style.height = '';
+  wp.classList.add('show');
+  pintarConv(card);
+}
+function fijarConv(card, el){      // clic
+  wpPin = true; wp.classList.add('show','pinned');
+  aplicarSize(); pintarConv(card);
+  wpExp ? (wp.classList.add('expanded'), centrar()) : junto(el);
+  setTimeout(() => q('#wp-txt').focus(), 120);
+}
+function ocultarConv(){ if (!wpPin) { wp.classList.remove('show'); wpPhone = null; } }
+function cerrarConv(){ wpPin = false; wpExp = false; wpPhone = null;
+  wp.style.width = ''; wp.style.height = '';
+  wp.classList.remove('show','pinned','expanded'); }
+
+q('#wp-x').onclick = cerrarConv;
+q('#wp-exp').onclick = () => { wpExp = !wpExp; wp.classList.toggle('expanded',wpExp); centrar(); };
+wp.addEventListener('mouseleave', () => { if (!wpPin) ocultarConv(); });
+document.addEventListener('mousemove', seguirMouse);
+
+q('#wp-env').onclick = async () => {
+  const txt = q('#wp-txt').value.trim(); if (!txt || !wpPhone) return;
+  const b = q('#wp-env'); b.disabled = true; b.textContent = '…';
+  try{
+    await fetch('/admin/api/reply?token=' + encodeURIComponent(TOKEN), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone: wpPhone, message: txt})});
+    q('#wp-txt').value = '';
+    const c = D.columnas.flatMap(x=>x.items).find(x=>x.phone===wpPhone) || {phone:wpPhone};
+    const guardado = wpPhone; wpPhone = null; await pintarConv({...c, phone:guardado});
+  } finally { b.disabled = false; b.textContent = 'Enviar'; }
+};
+q('#wp-txt').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); q('#wp-env').click(); }
+});
+
+/* Arrastrar por la cabecera y redimensionar por las manijas */
+(function(){
+  let modo = null, x0, y0, L, T, W, H;
+  q('#wp-h').addEventListener('mousedown', e => {
+    if (!wpPin || e.target.classList.contains('wbtn')) return;
+    modo = 'mover'; x0 = e.clientX; y0 = e.clientY;
+    L = wp.offsetLeft; T = wp.offsetTop; document.body.classList.add('wp-busy'); e.preventDefault();
+  });
+  wp.querySelectorAll('.rsz').forEach(h => h.addEventListener('mousedown', e => {
+    if (!wpPin) return;
+    modo = 'rsz:' + [...h.classList].find(c => c !== 'rsz');
+    x0 = e.clientX; y0 = e.clientY; L = wp.offsetLeft; T = wp.offsetTop;
+    W = wp.offsetWidth; H = wp.offsetHeight;
+    document.body.classList.add('wp-busy'); e.preventDefault(); e.stopPropagation();
+  }));
+  document.addEventListener('mousemove', e => {
+    if (!modo) return;
+    const dx = e.clientX-x0, dy = e.clientY-y0;
+    if (modo === 'mover'){ wp.style.left = (L+dx)+'px'; wp.style.top = (T+dy)+'px'; return; }
+    const d = modo.slice(4);
+    if (d.includes('e')) wp.style.width  = Math.max(280, W+dx)+'px';
+    if (d.includes('s')) wp.style.height = Math.max(220, H+dy)+'px';
+    if (d.includes('w')){ const w = Math.max(280, W-dx); wp.style.width = w+'px'; wp.style.left = (L+W-w)+'px'; }
+    if (d.includes('n')){ const h = Math.max(220, H-dy); wp.style.height = h+'px'; wp.style.top = (T+H-h)+'px'; }
+  });
+  document.addEventListener('mouseup', () => {
+    if (modo && modo.startsWith('rsz')) guardarSize();
+    modo = null; document.body.classList.remove('wp-busy');
+  });
+})();
+
+/* Panel de pagos (Ctrl+P) */
+function cerrarPagos(){ q('#pagos').classList.remove('abierto'); q('#velo').classList.remove('on'); }
+q('#velo').onclick = cerrarPagos; q('#pagos-x').onclick = cerrarPagos;
+async function abrirPagos(){
+  q('#pagos').classList.add('abierto'); q('#velo').classList.add('on');
+  q('#pagos-b').innerHTML = '<div class="cargando">Cargando…</div>';
+  try{
+    const p = await api('/alma/api/pagos');
+    const filas = (p.pagos || p.rows || (Array.isArray(p)?p:[])).slice(0,60);
+    q('#pagos-b').innerHTML = filas.length ? filas.map(x => `
+      <div class="fc"><b>${x.paciente_nombre||x.paciente||'—'}</b>
+      <span>${x.hora||''} · ${x.procedimiento||x.area||''} · ${x.metodo_pago||''} ·
+      ${x.copago?'$'+Number(x.copago).toLocaleString('es-CL'):'sin cobrar'}</span></div>`).join('')
+      : '<div class="cargando">Sin pagos en el día</div>';
+  }catch(e){
+    q('#pagos-b').innerHTML = `<div class="cargando">Abre el módulo completo<br><br>
+      <a href="/alma/pagos?token=${encodeURIComponent(TOKEN)}" target="_top">Ir a Pagos</a></div>`;
+  }
+}
+
+document.addEventListener('keydown', ev => {
+  if (['INPUT','TEXTAREA'].includes(ev.target.tagName)) return;
+  if (ev.ctrlKey && ev.key.toLowerCase() === 'm'){ ev.preventDefault();
+    q('#rail').classList.toggle('abierto'); }
+  if (ev.ctrlKey && ev.key.toLowerCase() === 'p'){ ev.preventDefault();
+    q('#pagos').classList.contains('abierto') ? cerrarPagos() : abrirPagos(); }
+  if (ev.key === 'Escape'){ cerrarConv(); cerrarPagos(); }
+  const filas = [...document.querySelectorAll('.fila')];
+  if (ev.key === 'j' || ev.key === 'ArrowDown'){ foco = Math.min(foco+1, filas.length-1); filas[foco]?.focus(); ev.preventDefault(); }
+  if (ev.key === 'k' || ev.key === 'ArrowUp'){ foco = Math.max(foco-1, 0); filas[foco]?.focus(); ev.preventDefault(); }
+});
+
+/* ── Render ───────────────────────────────────────────────────── */
+function fila(i, n){
+  const e = edad(i.espera_min);
+  const sub = [i.area||null, i.cita?`${i.cita.fecha} · ${i.cita.hora}`:null,
+               i.last_text?'“'+i.last_text.slice(0,40)+'”':null].filter(Boolean).join(' · ');
+  return `<button class="fila c-${i.clase}" data-phone="${i.phone}" tabindex="0"
+            style="animation-delay:${Math.min(n*22,260)}ms">
+    <span class="avatar">${inic(i.nombre,i.phone)}</span>
+    <span class="f-cuerpo"><span class="f-n">${i.nombre||i.phone}</span>
+      <span class="f-s">${sub||'sin detalle'}</span></span>
+    <span class="f-der">${e?`<span class="edad ${i.espera_min>60?'alta':''}">${e}</span>
+      <span class="brasa ${brasa(i.espera_min)}"></span>`:''}</span></button>`;
+}
+
+function enlazarFilas(){
+  document.querySelectorAll('.fila').forEach(b => {
+    const dato = () => D.columnas.flatMap(x => x.items).find(x => x.phone === b.dataset.phone);
+    b.onmouseenter = () => { const c = dato(); if (c) verConv(c, b); };
+    b.onmouseleave = () => setTimeout(() => { if (!wp.matches(':hover')) ocultarConv(); }, 90);
+    b.onclick = () => { const c = dato(); if (c) fijarConv(c, b); };
+    b.onfocus = () => { const c = dato(); if (c) verConv(c, b); };
+  });
+}
+
+function graficos(){
+  if (!F) return '';
+  const emb = F.embudo || {}, fr = F.friccion_min || {};
+  const pasos = [['area','Dijo área',emb.area],['slot','Vio horarios',emb.slot],['cita','Agendó',emb.cita]];
+  const max = Math.max(...pasos.map(p => p[2]||0), 1);
+  const barras = (arr, unidad) => arr.slice(0,6).map(x => {
+    const m = Math.max(...arr.map(y => y.min||0), 1);
+    return `<div class="barra"><span class="et">${x.k}</span>
+      <span class="pista"><i style="width:${Math.max((x.min||0)/m*100,2)}%"></i></span>
+      <span class="val">${(x.min||0).toFixed(0)} ${unidad}</span></div>`;
+  }).join('') || '<div class="vacia">sin datos en el periodo</div>';
+
+  return `
+  <div class="g"><h3>Embudo del periodo</h3>
+    <span class="gsub">Cuántos llegan a cada paso · conversión ${(emb.conv||0).toFixed(1)}%</span>
+    <div class="embudo-p">${pasos.map(([k,t,v]) => `<div class="ep">
+      <b>${v||0}</b><i style="height:${Math.max((v||0)/max*72,4)}px"></i><span>${t}</span></div>`).join('')}</div>
+  </div>
+  <div class="g"><h3>Fricción entre pasos</h3>
+    <span class="gsub">Minutos promedio que tarda el paciente en avanzar</span>
+    ${barras(Object.entries(fr).map(([k,v]) => ({k:k.replace('_',' → '), min:v.min})), 'min')}
+  </div>
+  <div class="g"><h3>Fricción por área</h3>
+    <span class="gsub">Dónde se demora más la gente</span>
+    ${barras(F.por_area||[], 'min')}
+  </div>
+  <div class="g"><h3>Fricción por profesional</h3>
+    <span class="gsub">Quién concentra la demora</span>
+    ${barras(F.por_profesional||[], 'min')}
+  </div>`;
+}
+
+async function pintarEspera(){
+  try{
+    const filas = await api('/admin/api/waitlist');
+    const act = (filas||[]).filter(x => !x.canceled_at);
+    q('#we-n').textContent = act.length;
+    const dias = x => Math.floor((Date.now() - new Date((x.created_at||'').replace(' ','T')))/86400000);
+    q('#we').innerHTML = `<table><thead><tr><th>Paciente</th><th>Especialidad</th>
+      <th>Esperando</th><th>Avisado</th></tr></thead><tbody>` +
+      act.sort((a,b) => dias(b)-dias(a)).slice(0,14).map(x => {
+        const d = dias(x);
+        return `<tr><td>${x.nombre||x.phone}</td><td>${x.especialidad||''}</td>
+          <td class="${d>30?'vieja':''}">${d} días</td>
+          <td>${x.notified_at ? 'sí' : '—'}</td></tr>`;
+      }).join('') + `</tbody></table>`;
+  }catch(e){ q('#we').innerHTML = '<div class="cargando">No se pudo cargar</div>'; }
+}
+
+function render(){
+  q('#hora').textContent = D.generado;
+  q('#periodo').textContent = desde ? `${desde} → ${hasta||'hoy'}`
+    : (RANGOS.find(r => r[0]===rango)||['','todo'])[1].toLowerCase();
+  const espMax = edad(D.espera_max) || 'nadie';
+  q('#stats').innerHTML = `
+    <div class="st ${D.esperando?'alerta':'bien'}"><b>${D.esperando}</b><span>esperan</span></div>
+    <div class="st ${D.espera_max>60?'alerta':''}"><b>${espMax}</b><span>la más vieja</span></div>
+    <div class="st"><b>${D.total_vivas}</b><span>en la cola</span></div>
+    <div class="st bien"><b>${D.fuera_cerradas}</b><span>atendidas</span></div>`;
+
+  const exp = D.columnas.find(c => c.id==='sin_cerrar');
+  q('#carril').innerHTML = (exp && exp.n) ? `<div class="carril"><div class="carril-h">
+      <div class="carril-ico"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg></div>
+      <b>${exp.label}</b><span class="cnt">${exp.n}</span><span class="pol">${exp.politica}</span></div>
+      <div class="filas">${exp.items.map((i,n)=>fila(i,n)).join('')}</div></div>` : '';
+
+  const PUNTO = {responder:'var(--red)', eligiendo:'var(--aqua)', agendado:'var(--amber)'};
+  q('#board').innerHTML = `<div class="board">` + D.columnas.filter(c=>c.id!=='sin_cerrar').map(c=>{
+    const seg = c.wip||10, llenos = Math.min(c.n,seg);
+    return `<div class="col ${c.excedido?'excedido':''}"><div class="col-h">
+      <div class="col-t"><span class="col-punto" style="background:${PUNTO[c.id]}"></span>
+      <b>${c.label}</b><span class="wipn">${c.n}${c.wip?`<em>/${c.wip}</em>`:''}</span></div>
+      ${c.wip?`<div class="medidor">${Array.from({length:seg},(_,k)=>`<i class="${k<llenos?'on':''}"></i>`).join('')}</div>`:''}
+      <div class="pol">${c.politica}</div></div>
+      <div class="filas">${c.items.length ? c.items.map((i,n)=>fila(i,n)).join('')
+        : '<div class="vacia"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>nada pendiente</div>'}</div></div>`;
+  }).join('') + `</div>`;
+
+  q('#fuera').innerHTML = `
+    <div class="fc destacada"><b>${D.fuera_cerradas}</b><span>atendidas · el rendimiento del periodo</span></div>
+    <div class="fc"><b>${D.fuera_agendadas}</b><span>con hora más adelante · no requieren nada</span></div>
+    <div class="fc"><b>${D.fuera_sin_intencion}</b><span>escribieron sin decir a qué</span></div>
+    <div class="fc"><b>${D.total_crudo}</b><span>conversaciones en total</span></div>`;
+
+  q('#graf').innerHTML = graficos();
+  q('#nota').innerHTML = `<b>Cómo está ordenada.</b> Primero quien vio horarios y no cerró (carril rojo),
+    después quien tiene hora hoy o mañana, y el resto <b>de la más vieja a la más nueva</b>. La barrita
+    junto al tiempo es la temperatura de la espera. Los topes por columna son alarmas, no metas.
+    <br><br><b>Atajos.</b> <kbd>Ctrl</kbd>+<kbd>M</kbd> periodo · <kbd>Ctrl</kbd>+<kbd>P</kbd> pagos ·
+    <kbd>J</kbd> <kbd>K</kbd> moverse · clic en una fila abre la conversación y deja responder ahí mismo.`;
+  enlazarFilas();
+}
+
+async function cargar(){
+  pintarRangos();
+  const qs = desde ? `desde=${desde}&hasta=${hasta||''}` : `rango=${rango||'dia'}`;
+  try{
+    [D, F] = await Promise.all([
+      api('/alma/api/recepcion-kanban/cola?' + qs),
+      api('/alma/api/recepcion-kanban/friccion?' + qs).catch(() => null)]);
+    render(); pintarEspera();
+  }catch(e){ q('#board').innerHTML = '<div class="cargando">No se pudo cargar: '+e+'</div>'; }
+}
+cargar();
+setInterval(cargar, 60000);
+</script>
+</body>
+</html>

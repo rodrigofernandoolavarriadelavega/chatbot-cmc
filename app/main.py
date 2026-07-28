@@ -3623,6 +3623,7 @@ _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(e
 _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
 _ALMA_RECEPCION_KANBAN_HTML = (_TEMPLATE_DIR / "alma_recepcion_kanban.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_recepcion_kanban.html").exists() else ""
 _ALMA_RECEPCION_KANBAN_V2_HTML = (_TEMPLATE_DIR / "alma_recepcion_kanban_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_recepcion_kanban_v2.html").exists() else ""
+_ALMA_RECEPCION_KANBAN_V3_HTML = (_TEMPLATE_DIR / "alma_recepcion_kanban_v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_recepcion_kanban_v3.html").exists() else ""
 _ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
 _ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_kine.html").exists() else ""
 _ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
@@ -4558,8 +4559,11 @@ def alma_recepcion_kanban_page(token: str | None = Query(None),
     salida y clases de servicio (ver app/recepcion_kanban_v2.py).
     """
     from admin_routes import _verify_cookie, _is_admin_token
-    _HTML = _ALMA_RECEPCION_KANBAN_HTML if v == "1" else (
-        _ALMA_RECEPCION_KANBAN_V2_HTML or _ALMA_RECEPCION_KANBAN_HTML)
+    # v3 por defecto; ?v=1 y ?v=2 conservan las anteriores para comparar.
+    _HTML = (_ALMA_RECEPCION_KANBAN_HTML if v == "1"
+             else _ALMA_RECEPCION_KANBAN_V2_HTML if v == "2"
+             else (_ALMA_RECEPCION_KANBAN_V3_HTML or _ALMA_RECEPCION_KANBAN_V2_HTML
+                   or _ALMA_RECEPCION_KANBAN_HTML))
     if not _HTML:
         raise HTTPException(404, "Recepción Kanban no disponible")
     if token and _is_admin_token(token):
