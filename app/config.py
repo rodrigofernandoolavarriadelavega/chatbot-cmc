@@ -76,7 +76,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "dashboards":  {"label": "Accesos",          "icon": "shield",    "title": "Accesos — tokens y links por persona", "sub": "Todos los links de entrada a Alma · solo dueño",  "src": "/alma/dashboards"},
     "panel":       {"label": "Panel Recepción",  "icon": "inbox",     "title": "Panel de Recepción v2",          "sub": "Conversaciones · WhatsApp · Agenda",              "src": "/admin/v2"},
     "panel2":      {"label": "Panel Recepción 2","icon": "inbox",     "title": "Panel de Recepción v3 (beta)",   "sub": "Nuevo · cola de atención priorizada · en pruebas","src": "/admin/v3"},
-    "recepcion_kanban":{"label":"Recepción Kanban","icon":"listcheck","title":"Recepción Kanban","sub":"Conversaciones por etapa · pagos · lista de espera","src":"/alma/recepcion-kanban"},
+    "recepcion_kanban":{"label":"Cola de Recepción","icon":"listcheck","title":"Cola de Recepción","sub":"A quién le toca responder ahora y por qué","src":"/alma/recepcion-kanban"},
     "roas":        {"label": "ROAS Campañas",    "icon": "trending-up","title": "ROAS por campaña · Meta Ads × Caja real", "sub": "Retorno de cada campaña vs ingreso real (caja)", "src": "/alma/roas"},
     "agenda_ticker":{"label": "Agendamientos en vivo","icon":"activity","title": "Monitor de Agendamientos en vivo", "sub": "Orden real de llegada · canal · citas pasadas sin cerrar", "src": "/alma/agenda-en-vivo"},
     "agenda":      {"label": "Agenda",           "icon": "calendar",  "title": "Agenda",                         "sub": "Ver citas del dia · Agendar nueva hora",           "src": "/alma/agenda"},

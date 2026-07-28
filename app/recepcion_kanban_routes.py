@@ -178,6 +178,27 @@ async def api_board(rango: str | None = Query(None),
     return build_board(d, h)
 
 
+@router.get("/cola")
+async def api_cola(rango: str | None = Query(None),
+                   desde: str | None = Query(None),
+                   hasta: str | None = Query(None),
+                   token: str | None = Query(None),
+                   cmc_session: str | None = Cookie(None),
+                   request: Request = None):
+    """v2: la misma data del board, pero convertida en COLA DE TRABAJO.
+
+    Aplica política de salida, clases de servicio y orden FIFO por espera.
+    Ver el docstring de `recepcion_kanban_v2` para el porqué de cada regla.
+    """
+    _auth(token, cmc_session, request)
+    d, h = _rango_a_fechas(rango, desde, hasta)
+    base = build_board(d, h)
+    import recepcion_kanban_v2 as v2
+    cola = v2.construir(base.get("cards", []))
+    cola["total_crudo"] = base.get("total", 0)
+    return cola
+
+
 @router.post("/destacar/{phone}")
 async def api_destacar(phone: str, on: int = Query(1),
                        token: str | None = Query(None),

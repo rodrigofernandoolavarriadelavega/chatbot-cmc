@@ -3622,6 +3622,7 @@ _ALMA_PAGOS_MEDILINK_HTML = (_TEMPLATE_DIR / "alma_pagos_medilink.html").read_te
 _ALMA_CONCILIACION_HTML = (_TEMPLATE_DIR / "alma_conciliacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_conciliacion.html").exists() else ""
 _ALMA_INVENTARIO_HTML = (_TEMPLATE_DIR / "alma_inventario.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inventario.html").exists() else ""
 _ALMA_RECEPCION_KANBAN_HTML = (_TEMPLATE_DIR / "alma_recepcion_kanban.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_recepcion_kanban.html").exists() else ""
+_ALMA_RECEPCION_KANBAN_V2_HTML = (_TEMPLATE_DIR / "alma_recepcion_kanban_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_recepcion_kanban_v2.html").exists() else ""
 _ALMA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "alma_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_ortodoncia.html").exists() else ""
 _ALMA_KINE_HTML = (_TEMPLATE_DIR / "alma_kine.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_kine.html").exists() else ""
 _ALMA_PROGRAMAS_HTML = (_TEMPLATE_DIR / "alma_programas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_programas.html").exists() else ""
@@ -4297,6 +4298,24 @@ def agendador_publico_page(request: Request, preview: str | None = Query(None)):
     return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0"})
 
 
+@app.get("/agendar/v2", response_class=HTMLResponse)
+def agendador_v2_page(request: Request, preview: str | None = Query(None)):
+    """Agendador v2 (rediseño con evidencia de conversión, 2026-07-14).
+    Misma API que /agendar, pero llave propia (AGENDADOR_V2_ENABLED) para que
+    el dueño decida cuándo exponerlo. OJO: la API exige además que
+    AGENDADOR_PUBLICO_ENABLED esté prendido (o preview) — como ya lo está en
+    prod, encender la v2 es solo agregar su flag."""
+    import config as _cfg
+    enabled = _cfg.AGENDADOR_V2_ENABLED and _cfg.AGENDADOR_PUBLICO_ENABLED
+    is_preview = bool(preview) and preview == ADMIN_TOKEN
+    if not (enabled or is_preview):
+        raise HTTPException(404, "No encontrado")
+    if not _AGENDADOR_V2_HTML:
+        raise HTTPException(404, "Agendador no disponible")
+    html = _AGENDADOR_V2_HTML.replace("__PREVIEW__", preview if is_preview else "")
+    return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0"})
+
+
 @app.get("/agendar/portal", response_class=HTMLResponse)
 def agendador_portal_page(request: Request, preview: str | None = Query(None)):
     """Agendador compacto para el Portal del Paciente: una pantalla, sin pasos.
@@ -4530,17 +4549,25 @@ def alma_inventario_page(token: str | None = Query(None),
 
 @app.get("/alma/recepcion-kanban", response_class=HTMLResponse)
 def alma_recepcion_kanban_page(token: str | None = Query(None),
+                               v: str | None = Query(None),
                                cmc_session: str | None = Cookie(None)):
-    """Recepción Kanban — panel de recepción unificado (conversaciones por etapa)."""
+    """Cola de Recepción (v2) — a quién le toca responder ahora y por qué.
+
+    Sirve la v2 por defecto. `?v=1` devuelve el tablero original, que se conserva
+    para poder comparar: la v2 pasa de 220 tarjetas a ~34 aplicando política de
+    salida y clases de servicio (ver app/recepcion_kanban_v2.py).
+    """
     from admin_routes import _verify_cookie, _is_admin_token
-    if not _ALMA_RECEPCION_KANBAN_HTML:
+    _HTML = _ALMA_RECEPCION_KANBAN_HTML if v == "1" else (
+        _ALMA_RECEPCION_KANBAN_V2_HTML or _ALMA_RECEPCION_KANBAN_HTML)
+    if not _HTML:
         raise HTTPException(404, "Recepción Kanban no disponible")
     if token and _is_admin_token(token):
-        return _ALMA_RECEPCION_KANBAN_HTML.replace("__TOKEN__", token)
+        return _HTML.replace("__TOKEN__", token)
     if cmc_session:
         role = _verify_cookie(cmc_session)
         if role in ("admin", "ortodoncia"):
-            return _ALMA_RECEPCION_KANBAN_HTML.replace("__TOKEN__", ADMIN_TOKEN)
+            return _HTML.replace("__TOKEN__", ADMIN_TOKEN)
     return RedirectResponse(url="/admin/login", status_code=302)
 
 
