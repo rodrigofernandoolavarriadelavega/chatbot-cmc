@@ -214,6 +214,12 @@ def _parse_falabella(text: str, subject: str) -> dict:
 def _parse_bancochile(text: str, subject: str) -> dict:
     m_nombre = re.search(
         rf'nuestro\(a\)\s+cliente\s+({_NOMBRE})\s+ha\s+efectuado', text)
+    if not m_nombre:
+        # Plantilla "Le informamos que\nNOMBRE\n le ha transferido": el nombre
+        # va en su PROPIA línea, no pegado a la frase. Buscarlo en la misma
+        # línea descartaba estos avisos aunque el texto estuviera completo.
+        m_nombre = re.search(
+            rf'Le informamos que\s*\n\s*({_NOMBRE})\s*\n\s*le ha transferido', text)
     m_op = re.search(r'Número de comprobante\s*\n?\s*(\S+)', text)
     m_fechahora = re.search(
         r'Fecha y Hora:\s*\n?\s*\w+ (\d{1,2}) de (\w+) de (\d{4}) (\d{1,2}:\d{2})', text)
@@ -260,8 +266,12 @@ def _parse_bancoestado(text: str, subject: str) -> dict:
     # Plantilla legada (hasta ~2023): "Aviso de Transferencia de Fondos".
     m_nombre2 = re.search(
         rf'de nuestro\(a\) cliente\s+({_NOMBRE})\s*\nDatos', text)
+    # Los segundos son OPCIONALES (2026-07-28). El correo llega indistintamente
+    # como "Fecha y hora26/08/2025 14:59:57" y como "Fecha y hora05/05/2025 14:45";
+    # exigir :SS descartaba silenciosamente la segunda forma. Era la causa de 34
+    # de los 54 avisos del CMC que el cruce no veía.
     m_fechahora2 = re.search(
-        r'Fecha y hora(\d{1,2}/\d{1,2}/\d{4}) (\d{1,2}:\d{2}):\d{2}', text)
+        r'Fecha y hora\s*(\d{1,2}/\d{1,2}/\d{4})\s+(\d{1,2}:\d{2})(?::\d{2})?', text)
     m_op2 = re.search(r'N° transaccion(\d+)', text)
     m_msg2 = re.search(r'Mensaje(.*)', text)
     monto2 = _monto(text, r'Monto\$\s*([\d\.]{1,15})')
@@ -269,6 +279,24 @@ def _parse_bancoestado(text: str, subject: str) -> dict:
     if m_fechahora2:
         fecha2 = _fecha_ddmmyyyy(m_fechahora2.group(1))
         hora2 = m_fechahora2.group(2)
+    # Tercera plantilla: "Hemos realizado una Transferencia instruida por nuestro
+    # cliente X". Llega con el HTML SIN limpiar (el texto plano viene vacío y el
+    # extractor cae al html crudo), así que el nombre viene envuelto en <strong>
+    # y la fecha en su propia línea como "Fecha DD/MM/YYYY - HH:MM".
+    if not (m_nombre2 and monto2 and fecha2):
+        m_n3 = re.search(r'instruida por nuestro cliente\s*(?:<[^>]+>)*\s*'
+                         rf'({_NOMBRE})\s*(?:</[^>]+>|<)', text)
+        m_f3 = re.search(r'Fecha\s+(\d{1,2}/\d{1,2}/\d{4})\s*-\s*(\d{1,2}:\d{2})', text)
+        m_m3 = _monto(text, r'Monto\s*(?:<[^>]+>)*\s*\$?\s*([\d\.]{1,15})')
+        if m_n3 and m_f3:
+            return {
+                "banco": "bancoestado", "nombre": m_n3.group(1).strip(),
+                "monto": m_m3 or monto2,
+                "fecha": _fecha_ddmmyyyy(m_f3.group(1)), "hora": m_f3.group(2),
+                "num_operacion": m_op2.group(1) if m_op2 else None,
+                "mensaje": None,
+            }
+
     return {
         "banco": "bancoestado",
         "nombre": m_nombre2.group(1).strip() if m_nombre2 else None,

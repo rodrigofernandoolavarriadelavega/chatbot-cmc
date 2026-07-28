@@ -168,12 +168,25 @@ def _parse_y_guardar(uid: int, banco: str, remitente: str, subject: str,
             c.commit()
             nuevo = cur.rowcount > 0
         else:
+            # MOTIVO REAL, no uno genérico (2026-07-28). Antes todo caía como
+            # "no se pudo extraer el cuerpo", y eso mezclaba dos cosas muy
+            # distintas: correos que NO son de la cuenta del centro (transferencias
+            # a otras cuentas del dueño — descartarlas es correcto) con correos que
+            # sí lo son y el parser no supo leer (esos SÍ son plata invisible).
+            # Medido: de 389 "errores", 308 eran del primer tipo. El número
+            # genérico hizo sonar una alarma cuatro veces mayor que el problema.
+            from transferencias_email_parser import _es_cuenta_cmc as _cta
+            try:
+                motivo = ("no es una cuenta del CMC (transferencia a otra cuenta)"
+                          if not _cta(body)
+                          else "es del CMC pero el parser no extrajo nombre/monto/fecha")
+            except Exception:
+                motivo = "no se pudo evaluar el cuerpo"
             c.execute("""
                 INSERT OR IGNORE INTO transferencias_banco_errores
                     (uid, banco, remitente, subject, motivo, email_date)
                 VALUES (?,?,?,?,?,?)
-            """, (uid, banco or "", remitente, subject,
-                  "no se pudo extraer nombre/monto/fecha del cuerpo", email_date))
+            """, (uid, banco or "", remitente, subject, motivo, email_date))
             c.commit()
 
     if r and nuevo:
