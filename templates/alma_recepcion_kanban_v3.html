@@ -146,8 +146,14 @@ svg{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .fila.c-expedite .avatar{background:linear-gradient(145deg,#e0705c,var(--red))}
 .fila.c-fecha_fija .avatar{background:linear-gradient(145deg,#d9a24a,var(--amber))}
 .f-cuerpo{min-width:0;flex:1}
-.f-n{font-size:.83rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.f-s{font-size:.71rem;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;
+/* `display:block` no es cosmético: .f-n y .f-s son <span>, y `overflow:hidden`
+   + `text-overflow:ellipsis` NO aplican a elementos inline — el navegador los
+   ignora sin avisar. El recorte estaba escrito pero nunca se ejecutó. En
+   escritorio no se veía porque la columna es ancha y el texto cabía; a 390px
+   el subtítulo se desbordaba 86px y se metía bajo la insignia de tiempo.
+   Va en la regla base, no en el @media: el defecto era de todos los anchos. */
+.f-n{display:block;font-size:.83rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-s{display:block;font-size:.71rem;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;margin-top:1px}
 .f-der{display:flex;align-items:center;gap:8px;flex:none}
 .edad{font-size:.7rem;font-weight:800;color:var(--muted);white-space:nowrap}
@@ -333,7 +339,124 @@ body.wp-busy,body.wp-busy *{user-select:none!important}
 kbd{background:var(--card);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
   padding:1px 6px;font-family:inherit;font-size:.68rem;font-weight:800;color:var(--ink-2)}
 .cargando{text-align:center;padding:70px;color:var(--muted);font-weight:600;font-size:.85rem}
-@media(max-width:960px){.board{grid-template-columns:repeat(3,290px)}.stats{margin-left:0;width:100%}}
+/* Tablet (701–960): las columnas siguen a 290px y el tablero scrollea. Se le
+   suma snap `proximity` —no `mandatory`— porque acá sí sirve descansar entre
+   dos columnas para compararlas; mandatory lo impediría. En teléfono es al
+   revés y por eso allá es mandatory. */
+@media(max-width:960px){
+  .board{grid-template-columns:repeat(3,290px);scroll-snap-type:x proximity}
+  .col,.emb-col{scroll-snap-align:start}
+  .stats{margin-left:0;width:100%}
+}
+
+/* ══ MÓVIL: el tablero se recorre de a una columna ═════════════════════════
+   La columna ES el estado del paciente ("responder ahora" / "eligiendo" /
+   "con hora"), así que apilarlas en vertical borraría la información. Se
+   mantiene la tira horizontal, pero cada columna pasa a ocupar casi todo el
+   ancho CON scroll-snap: antes eran 290px fijos en 350px útiles, o sea una
+   columna y una astilla de 46px que el dedo dejaba siempre a medias.
+   El asomo de ~14vw que queda no es adorno: es la única señal de que hay
+   más columnas a la derecha. */
+@media(max-width:700px){
+  .board{
+    grid-auto-flow:column; grid-auto-columns:86vw;
+    grid-template-columns:none !important;
+    scroll-snap-type:x mandatory;
+    gap:10px; margin-inline:-14px; padding-inline:14px;   /* sangra al borde */
+    scroll-padding-left:14px;
+  }
+  .board.embudo{grid-auto-columns:80vw}
+  .col, .emb-col{min-width:0; scroll-snap-align:start}
+  /* el dedo es más gordo que el puntero: filas y objetivos más altos */
+  .fila{padding:12px 11px; gap:11px}
+  .col-h{padding:14px 15px 11px}
+  .emb-h{padding:13px 14px 10px}
+  .emb-h b{font-size:1.3rem}
+  /* La cabecera se comía 234px (28% de la pantalla) antes del primer paciente.
+     El carril de urgentes que viene abajo NO se toca: eso es contenido —justo
+     el que recepción vino a ver— y recortarlo escondería al 8º paciente que
+     lleva rato esperando. Lo que se recorta es cromo: el ícono decorativo y el
+     aire de las tarjetas de conteo. */
+  .hero{padding:12px 0 10px}
+  .hero h1{font-size:1.1rem; line-height:1.2}
+  .hero .b-ico{display:none}          /* ícono decorativo: no informa nada */
+  .hero .sub{font-size:.72rem}
+  .wrap{padding-inline:14px}
+  .vistas{width:100%; margin-top:9px}
+  .vistas button{flex:1; padding:8px 6px; font-size:.78rem}
+  /* Los 4 contadores en fila (flex:1) quedaban a 84px y el texto "la más vieja"
+     se partía en 3 líneas → 80px de alto. En 2×2 sobra ancho, así que el número
+     y su etiqueta van EN LÍNEA: dos filas de ~34px en vez de columnas altas. */
+  .stats{margin-left:0; width:100%; gap:6px; display:grid; grid-template-columns:1fr 1fr}
+  .st{min-width:0; padding:7px 11px; display:flex; align-items:baseline; gap:6px}
+  .st b{display:inline; font-size:1.05rem}
+  .st span{font-size:.58rem; letter-spacing:.06em; white-space:nowrap;
+           overflow:hidden; text-overflow:ellipsis}
+  .aviso-emb{font-size:.72rem; padding:10px 12px}
+  /* "Vio horarios, no cerró" se partía en 3 líneas porque la explicación de la
+     política le robaba el 46% del ancho. En móvil la explicación baja completa. */
+  .carril-h{flex-wrap:wrap; padding:13px 14px 10px}
+  .carril-h .pol{max-width:100%; width:100%; margin-left:0; text-align:left; margin-top:6px}
+  .carril .filas{padding:0 10px 10px}
+  /* El cajón de periodo: a ancho casi completo y con objetivos táctiles de 42px.
+     Venían de 31–36px, que en el dedo se falla seguido. */
+  #rail{width:min(88vw,320px)}
+  #rail .rango{min-height:42px}
+  .rail-f input{min-height:42px; font-size:16px}   /* 16px evita el zoom de iOS */
+  .rail-f button{min-height:42px}
+}
+
+/* ══ MÓVIL: los popups dejan de ser ventanas y pasan a hoja inferior ═══════
+   En escritorio los tres niveles conviven en tira (área → profesional →
+   paciente) y eso es lo que los hace útiles: se comparan de un vistazo. En un
+   teléfono de 390px esa misma tira son tres cajas de 290px apiladas en cascada
+   — solo se ve la de arriba y a las de atrás se llega por una astilla de
+   cabecera. Acá se invierte el patrón: UNA hoja a la vez, a pantalla casi
+   completa, y las de atrás se ocultan (el botón ‹ vuelve al nivel anterior). */
+@media(max-width:700px){
+  .wpop{
+    position:fixed!important;
+    left:0!important; right:0!important; bottom:0!important; top:auto!important;
+    width:100%!important; max-width:100%!important;
+    height:88dvh!important; max-height:88dvh!important;
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -10px 40px rgba(15,63,104,.28);
+    transform:translateY(100%); transition:transform .22s var(--ease);
+  }
+  .wpop.show{transform:translateY(0)}
+  /* solo la hoja de más arriba queda visible */
+  .wpop.tapada{display:none!important}
+  /* redimensionar no aplica en una hoja anclada al borde; expandir tampoco,
+     porque la hoja YA ocupa el 88% de la pantalla */
+  .wpop .rsz{display:none!important}
+  #wp-exp{display:none!important}
+  .wpop .wh{position:relative;border-radius:19px 19px 0 0;padding:14px 16px;cursor:default!important}
+  /* asa visual de hoja inferior */
+  .wpop .wh::before{
+    content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);
+    width:38px;height:4px;border-radius:3px;background:rgba(255,255,255,.45);
+  }
+  .wpop .wh .t{font-size:.9rem}
+  .wpop .wbody{padding:14px 15px;-webkit-overflow-scrolling:touch}
+  /* objetivos táctiles cómodos */
+  .wpop .wbtn{width:34px;height:34px;font-size:.85rem}
+  .drow{padding:13px 6px}
+  .drow .davatar{width:36px;height:36px}
+  .drow .dn{font-size:.9rem}
+  .drow .ds{font-size:.74rem}
+  .msg{max-width:92%;font-size:.85rem}
+  /* compositor: al alcance del pulgar y sin que el teclado lo tape */
+  .wfoot{padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+  .wfoot textarea{height:44px;font-size:16px}   /* 16px evita el zoom de iOS */
+  .wfoot button{padding:0 18px;font-size:.85rem}
+  /* velo detrás de la hoja */
+  .wpop.show::after{content:none}
+}
+#velo-hoja{position:fixed;inset:0;background:rgba(15,63,104,.35);z-index:290;display:none}
+@media(max-width:700px){
+  #velo-hoja.on{display:block}
+  body.con-hoja{overflow:hidden}   /* el tablero no se mueve detrás de la hoja */
+}
 </style>
 </head>
 <body>
@@ -490,7 +613,7 @@ async function pintarConv(card){
 }
 
 function verConv(card, el){        // hover
-  if (wpPin) return;
+  if (wpPin || esMovil()) return;   // en táctil el "hover" es un tap: no hay vistazo, se fija directo
   wp.style.width = ''; wp.style.height = '';
   wp.classList.add('show');
   pintarConv(card);
@@ -501,7 +624,7 @@ function fijarConv(card, el){      // clic
   wp.style.zIndex = ++_zTop;          // siempre por delante de los de drill-down
   // Si viene del drill-down (nivel 3), se suma a la tira en vez de taparla.
   const delDrill = el && el.classList.contains('drow');
-  if (delDrill){
+  if (delDrill || esMovil()){
     if (!_pops.includes(wp)){ wp._anchoPref = 400; wp._nivel = 4; _pops.push(wp); }
     delete wp.dataset.movido; acomodarPops(); return;
   }
@@ -513,7 +636,8 @@ function ocultarConv(){ if (!wpPin) { wp.classList.remove('show'); wpPhone = nul
 function cerrarConv(){ wpPin = false; wpExp = false; wpPhone = null;
   const iw = _pops.indexOf(wp); if (iw >= 0){ _pops.splice(iw, 1); acomodarPops(); }
   wp.style.width = ''; wp.style.height = '';
-  wp.classList.remove('show','pinned','expanded'); }
+  wp.classList.remove('show','pinned','expanded','tapada');
+  acomodarPops(); }
 
 q('#wp-x').onclick = cerrarConv;
 q('#wp-exp').onclick = () => { wpExp = !wpExp; wp.classList.toggle('expanded',wpExp); centrar(); };
@@ -547,9 +671,33 @@ const _pops = [];   // popups abiertos, EN ORDEN de nivel (área → prof → pa
    Si caben a lo ancho se reparten la pantalla; si no, hacen cascada dejando
    siempre la cabecera de los de atrás asomada para poder agarrarlos.
    Un popup que el usuario movió a mano queda marcado y ya no se reacomoda. */
-function acomodarPops(){
+const esMovil = () => matchMedia('(max-width:700px)').matches;
+
+/* En móvil no hay tira: hay una PILA. Solo la última hoja abierta se ve; las de
+   atrás se marcan .tapada para no dejar cascadas ilegibles de 290px sobre 390.
+   El botón ‹ del encabezado vuelve al nivel anterior. */
+function acomodarHojas(){
   const vivos = _pops.filter(p => document.body.contains(p));
   _pops.length = 0; _pops.push(...vivos);
+  vivos.forEach((p, i) => {
+    p.classList.toggle('tapada', i < vivos.length - 1);
+    p.style.left = p.style.top = p.style.width = p.style.height = '';
+    const btn = p.querySelector('[data-atras]');
+    if (btn) btn.style.display = (i > 0) ? 'grid' : 'none';
+  });
+  const velo = document.getElementById('velo-hoja');
+  if (velo) velo.classList.toggle('on', vivos.length > 0);
+  document.body.classList.toggle('con-hoja', vivos.length > 0);
+}
+
+function acomodarPops(){
+  if (esMovil()) return acomodarHojas();
+  const velo = document.getElementById('velo-hoja');
+  if (velo) velo.classList.remove('on');
+  document.body.classList.remove('con-hoja');
+  const vivos = _pops.filter(p => document.body.contains(p));
+  _pops.length = 0; _pops.push(...vivos);
+  vivos.forEach(p => p.classList.remove('tapada'));
   const libres = vivos.filter(p => !p.dataset.movido);
   if (!libres.length) return;
 
@@ -589,6 +737,14 @@ function acomodarPops(){
   }
 }
 addEventListener('resize', acomodarPops);
+addEventListener('orientationchange', () => setTimeout(acomodarPops, 120));
+// Velo detrás de la hoja: tocar fuera cierra la de arriba.
+(function(){
+  const v = document.createElement('div'); v.id = 'velo-hoja';
+  v.onclick = () => { const u = _pops[_pops.length-1]; if (!u) return;
+                      u === wp ? cerrarConv() : u.querySelector('[data-x]')?.click(); };
+  document.body.appendChild(v);
+})();
 
 function crearPop({ id, titulo, sub, color, ancho = 360, alto = 460, cerca = null, nivel = 0 }){
   const previo = document.getElementById(id);
@@ -604,6 +760,7 @@ function crearPop({ id, titulo, sub, color, ancho = 360, alto = 460, cerca = nul
   el.innerHTML =
     ['n','s','e','w','ne','nw','se','sw'].map(d => `<div class="rsz ${d}"></div>`).join('') +
     `<div class="wh" data-h>
+       <button class="wbtn" data-atras title="Volver" style="display:none">‹</button>
        <div class="hl"><div class="t"></div><div class="s"></div></div>
        <button class="wbtn" data-x title="Cerrar">✕</button>
      </div>
@@ -611,10 +768,12 @@ function crearPop({ id, titulo, sub, color, ancho = 360, alto = 460, cerca = nul
   document.body.appendChild(el);
   el.querySelector('.t').textContent = titulo;
   el.querySelector('.s').textContent = sub || '';
-  el.querySelector('[data-x]').onclick = () => {
+  const cerrarEste = () => {
     const i = _pops.indexOf(el); if (i >= 0) _pops.splice(i, 1);
     el.remove(); acomodarPops();
   };
+  el.querySelector('[data-x]').onclick = cerrarEste;
+  el.querySelector('[data-atras]').onclick = cerrarEste;   // en móvil: volver = cerrar esta hoja
 
   el._anchoPref = ancho;
   el._nivel = nivel;
