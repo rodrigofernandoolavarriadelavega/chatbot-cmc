@@ -86,8 +86,12 @@ def _detectar_fecha_pedida_idle(txt: str) -> str | None:
     if not txt:
         return None
     t = txt.lower()
-    franjas = ("en la mañana", "en la manana", "por la mañana", "por la manana")
-    es_franja = any(p in t for p in franjas)
+    # La regla "¿este 'mañana' es día o franja?" vive en app/franja.py. Antes
+    # era una lista de 4 strings acá que dejaba fuera "durante la mañana" y
+    # "para la mañana" → el paciente que pedía HOY temprano quedaba agendado
+    # para el día siguiente (caso Sara Bustamante, 2026-05-14).
+    import franja as _franja_mod
+    es_franja = _franja_mod.es_franja_no_dia(t)
     hoy = datetime.now(_CHILE_TZ).date()
     if t.strip() in ("hoy", "hoy mismo", "hoy dia", "hoy día"):
         return hoy.strftime("%Y-%m-%d")
@@ -130,29 +134,16 @@ def _first_name(nombre) -> str:
 
 def _detectar_franja_horaria(txt: str) -> "tuple[int, int] | None":
     """Retorna (hora_min, hora_max) si detecta franja horaria en el texto, None si no.
-    Ejemplos: "despues de las 5 de la tarde" -> (17, 23), "en la manana" -> (8, 12).
     Se guarda en data["franja_horaria"] para filtrar slots al presentarlos.
+
+    Delega en app/franja.py — fuente única. Este cuerpo tenía su propia tabla
+    de rangos (mañana 8-12) distinta de la del intent buscar_fecha (7-13) y de
+    _PERIODOS (0-12); el mismo slot de las 12:30 era "mañana" o "tarde" según
+    qué handler lo procesara. Y solo conocía "en la"/"por la", así que
+    "durante la mañana" pasaba de largo (caso Sara Bustamante, 2026-05-14).
     """
-    tl = txt.lower()
-    m = re.search(r"despu[e\xe9]s\s+de\s+las\s+(\d{1,2})", tl)
-    if m:
-        h = int(m.group(1))
-        if h <= 12 and any(k in tl for k in ("tarde", "noche", "pm", "p.m")):
-            h += 12
-        return (h, 23)
-    m = re.search(r"antes\s+de\s+las\s+(\d{1,2})", tl)
-    if m:
-        h = int(m.group(1))
-        if h <= 12 and any(k in tl for k in ("tarde", "pm", "p.m")):
-            h += 12
-        return (8, h)
-    if re.search(r"(?:en|por)\s+la\s+ma[\xf1n]ana", tl):
-        return (8, 12)
-    if re.search(r"(?:en|por)\s+la\s+tarde", tl):
-        return (12, 18)
-    if re.search(r"(?:en|por)\s+la\s+noche", tl):
-        return (18, 22)
-    return None
+    import franja as _franja_mod
+    return _franja_mod.parse(txt)
 
 
 def _proxima_fecha_dia(weekday: int) -> str:
@@ -1106,6 +1097,16 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     Si no hay perfil o el paciente está agendando para un tercero, sigue el
     flujo normal por WAIT_MODALIDAD.
     """
+    # Medición sistémica del embudo: chokepoint único de "eligió slot" (11
+    # sitios de llamada). Ver nota en _iniciar_agendar sobre _funnel_id.
+    try:
+        log_event(phone, "funnel_slot_elegido", {
+            "esp": (slot.get("especialidad") or data.get("especialidad") or "").strip().lower(),
+            "fecha": slot.get("fecha", ""),
+            "funnel_id": data.get("_funnel_id", ""),
+        })
+    except Exception:  # noqa: BLE001 — medición nunca debe romper el agendamiento
+        pass
     # Defensa sistémica: revalidar que el slot no esté en el pasado al momento
     # de confirmar. Cubre el caso donde la conversación quedó abierta horas
     # (sesión vigente) y el paciente confirma una hora que ya pasó. Sin este
@@ -2501,25 +2502,17 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
                     log.warning("buscar_fecha falló: %s", e)
             if preferencia:
                 todos_slots = data.get("todos_slots", [])
-                def _hora_in(sl, franja):
-                    # Slots usan "hora_inicio" — el código original leía "hora"
-                    # (siempre None) → todos los slots quedaban filtrados out
-                    # y el filtro nunca aplicaba.
-                    raw = sl.get("hora_inicio") or sl.get("hora") or "00:00"
-                    try:
-                        h = int(raw.split(":")[0])
-                    except (ValueError, AttributeError):
-                        return False
-                    if franja == "mañana":
-                        return 7 <= h < 13
-                    if franja == "tarde":
-                        return 13 <= h < 19
-                    if franja == "noche":
-                        return h >= 19
-                    if franja == "tarde-noche":
-                        return h >= 13
-                    return True
-                filtrados = [s for s in todos_slots if _hora_in(s, preferencia)]
+                # Rangos desde app/franja.py — antes esta función tenía su
+                # propia tabla (mañana 7-13) que no coincidía con las otras dos
+                # del archivo. "tarde-noche" no es franja nominal: es todo
+                # desde el inicio de la tarde.
+                import franja as _franja_mod
+                _rango = (
+                    (_franja_mod.FRANJAS["tarde"][0], 23)
+                    if preferencia == "tarde-noche"
+                    else _franja_mod.FRANJAS.get(preferencia)
+                )
+                filtrados = _franja_mod.filtrar(todos_slots, _rango)
                 if filtrados:
                     data["slots"] = filtrados[:5]
                     save_session(phone, "WAIT_SLOT", data)
@@ -3597,6 +3590,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
                 "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
                 "WAIT_ABONO_COMPROBANTE",  # abono-gate psiquiatría
+                "WAIT_ABONO_PAGADOR_CONFIRM",  # confirmación auto por correo bancario (¿es esa persona?)
             )
             if state in _estados_activos:
                 # No interpretar como opt-out — dejar que el handler del estado decida
@@ -7329,14 +7323,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     if _yy:
                         _yy_int = int(_yy)
                         if _yy_int < 100:
-                            _yy_int += 2000
+                            # Ventana de siglo: "80" es 1980, no 2080. El +2000
+                            # ciego mandó a Mackarena Binimelis (56984110506,
+                            # 2026-07-21) al 4 de diciembre de 2080 — escribió
+                            # su fecha de nacimiento "4/12/80" y el bot la leyó
+                            # como fecha de cita. Un 2 dígitos por sobre el año
+                            # actual (+1, para que "27" siga siendo 2027) solo
+                            # puede ser del siglo pasado.
+                            _yy_int += (
+                                2000 if _yy_int <= _hoy_dt.year % 100 + 1 else 1900
+                            )
                         _anio = _yy_int
                     else:
                         _anio = _hoy_dt.year
                         if (_mm, _d) < (_hoy_dt.month, _hoy_dt.day):
                             _anio += 1
                     if 1 <= _d <= 31 and 1 <= _mm <= 12:
-                        _fecha_objetivo = f"{_anio:04d}-{_mm:02d}-{_d:02d}"
+                        _cand = f"{_anio:04d}-{_mm:02d}-{_d:02d}"
+                        # Cota de sanidad — la baranda que faltaba. Una cita no
+                        # puede estar en el pasado ni a más de 12 meses (la
+                        # agenda de Medilink no llega tan lejos). Vale para
+                        # CUALQUIER parseo malo, no solo el del siglo: en prod
+                        # había además saltos a 2001-01-16 y 2009-12-21, las
+                        # dos también fechas de nacimiento.
+                        # strptime y no _dt_mod2.date(): ese alias se importa en
+                        # la rama del nombre-de-mes y acá puede no existir.
+                        _cand_dt = datetime.strptime(_cand, "%Y-%m-%d").date()
+                        if _hoy_dt <= _cand_dt <= _hoy_dt + timedelta(days=365):
+                            _fecha_objetivo = _cand
+                        else:
+                            log_event(phone, "fecha_absurda_descartada", {
+                                "texto": tl_norm_slot[:60], "parseada": _cand,
+                            })
                 except (ValueError, IndexError):
                     pass
         # 3) "próxima semana" / "la otra semana" / "en X semanas"
@@ -7778,62 +7796,25 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         # ── Filtro por período horario (mañana/tarde/noche) ──
         # NOTA: "mañana" suelto ya se manejó arriba como día relativo.
-        _PERIODOS = {
-            # Más específico primero (orden importa para el primer match)
-            "tarde noche":    (17, 24), "tarde-noche": (17, 24),
-            "tardecita":      (17, 22),
-            "mas tarde":      (17, 24), "más tarde": (17, 24),
-            "mas tardecito":  (17, 22), "más tardecito": (17, 22),
-            "mas temprano":   (0, 11),  "más temprano": (0, 11),
-            "mas tempranito": (0, 10),  "más tempranito": (0, 10),
-            "en la mañana":   (0, 12),  "en la manana": (0, 12),
-            "por la mañana":  (0, 12),  "por la manana": (0, 12),
-            "temprano":       (0, 12),
-            "mediodía":       (12, 14), "mediodia": (12, 14), "al mediodia": (12, 14),
-            "en la tarde":    (14, 19), "por la tarde": (14, 19),
-            "tarde":          (14, 19),
-            "en la noche":    (19, 24), "por la noche": (19, 24),
-            "noche":          (19, 24),
-            # 'mañana' solo NO se incluye aquí — el día relativo (línea 3079+)
-            # ya lo interpreta como "tomorrow". Solo "en la mañana" / "por la
-            # mañana" caen como franja horaria.
-        }
-        periodo = None
-        for kw, rango in _PERIODOS.items():
-            if kw in tl_norm_slot and tl != "otro_prof":
-                periodo = (kw, rango)
-                break
+        # Rangos y keywords desde app/franja.py — fuente única. Este bloque
+        # tenía su propia tabla (mañana 0-12, tarde 14-19) que no coincidía ni
+        # con _detectar_franja_horaria ni con el intent buscar_fecha, y le
+        # faltaban "durante la mañana" / "para la mañana".
+        # 'mañana' suelto NO cae acá: el día relativo ya lo consumió arriba, y
+        # franja.parse() solo lo trata como franja si viene con preposición.
+        import franja as _franja_mod
+        periodo = None if tl == "otro_prof" else _franja_mod.parse(tl_norm_slot)
         if periodo:
-            kw, (h_min, h_max) = periodo
-            slots_filtrados = [
-                s for s in todos_slots
-                if h_min <= int(s.get("hora_inicio", "99:00")[:2]) < h_max
-            ]
+            slots_filtrados = _franja_mod.filtrar(todos_slots, periodo)
             if slots_filtrados:
                 data["slots"] = slots_filtrados[:10]
                 save_session(phone, "WAIT_SLOT", data)
                 return _format_slots(slots_filtrados[:10], mostrar_todos=True)
             # No hay slots en ese período → responder con los disponibles
             horas_disp = sorted({s.get("hora_inicio", "")[:5] for s in todos_slots if s.get("hora_inicio")})
-            # Mapa kw → label gramaticalmente correcto (evita "en la en la mañana",
-            # "en la mediodía", "en la mas tarde", etc.)
-            _PERIODO_LABEL = {
-                "tarde noche": "la tarde-noche", "tarde-noche": "la tarde-noche",
-                "tardecita": "la tardecita",
-                "mas tarde": "el horario más tarde", "más tarde": "el horario más tarde",
-                "mas tardecito": "el horario más tardecito", "más tardecito": "el horario más tardecito",
-                "mas temprano": "la mañana temprano", "más temprano": "la mañana temprano",
-                "mas tempranito": "la mañana tempranito", "más tempranito": "la mañana tempranito",
-                "en la mañana": "la mañana", "en la manana": "la mañana",
-                "por la mañana": "la mañana", "por la manana": "la mañana",
-                "temprano": "la mañana temprano",
-                "mediodía": "el mediodía", "mediodia": "el mediodía", "al mediodia": "el mediodía",
-                "en la tarde": "la tarde", "por la tarde": "la tarde",
-                "tarde": "la tarde",
-                "en la noche": "la noche", "por la noche": "la noche",
-                "noche": "la noche",
-            }
-            _label = _PERIODO_LABEL.get(kw, kw)
+            # Etiqueta gramatical desde franja.label() — evita "en la en la
+            # mañana" / "en la mas tarde" que producía el mapa kw→label viejo.
+            _label = _franja_mod.label(periodo)
             return (
                 f"No tengo horas en {_label} para este profesional 😕\n\n"
                 f"Horarios disponibles:\n{', '.join(horas_disp[:12])}"
@@ -8291,6 +8272,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "esp": especialidad,
                 "paso": "slot_no_elegido",
                 "txt": txt[:80],
+                "funnel_id": data.get("_funnel_id", ""),
             })
             # M2: Rescate de slot rechazado — detectar negación explícita y ofrecer
             # botones de rescate en vez del mensaje genérico "no te entendí".
@@ -8327,6 +8309,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "esp": especialidad,
                         "hay_otro_prof": _hay_otro_prof,
                         "txt": txt[:80],
+                        "funnel_id": data.get("_funnel_id", ""),
                     })
                     save_session(phone, "WAIT_SLOT", data)
                     return _btn_msg(
@@ -9375,6 +9358,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         log_event(phone, "funnel_confirmacion", {
             "esp": (data.get("slot_elegido") or {}).get("especialidad", data.get("especialidad", "")),
             "paso": "llegando_confirming_cita",
+            "funnel_id": data.get("_funnel_id", ""),
         })
         save_session(phone, "CONFIRMING_CITA", data)
 
@@ -10067,6 +10051,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "fecha": slot["fecha"],
                     "modalidad": data.get("modalidad", "particular"),
                     "id_cita_old": cita_old.get("id") if reagendar else None,
+                    "funnel_id": data.get("_funnel_id", ""),
                 })
                 # ── Guardar vínculo familiar si la cita fue para tercero ─────
                 # Solo en citas nuevas (no reagendar). Secundario: un fallo aquí
@@ -10596,6 +10581,60 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "No hay problema 😊\n\n"
                 "• Escribe *otro día* para ver otros horarios\n"
                 "• Escribe *menu* para volver al inicio"
+            )
+
+        # El paciente pide OTRO DÍA en vez de responder sí/no. Mismo patrón que
+        # la corrección de datos de arriba (caso Paula Alejandra): un mensaje
+        # que no es sí/no NO es ruido — casi siempre dice qué quiere.
+        # Caso real (Irma Sepúlveda, 56931434082, 2026-07-28 16:28): el bot le
+        # ofreció el martes 28, ella escribió "Miércoles" y recibió "Responde
+        # Sí para confirmar". Abandonó; 6 h después una recepcionista agendó a
+        # mano exactamente el miércoles que ella había pedido.
+        _dia_conf = next(
+            (wd for nombre, wd in _DIAS_SEMANA.items() if nombre in tl), None
+        )
+        _fecha_conf = (
+            _proxima_fecha_dia(_dia_conf) if _dia_conf is not None
+            else _detectar_fecha_pedida_idle(txt)
+        )
+        if _fecha_conf:
+            _esp_conf = (data.get("especialidad")
+                         or (data.get("slot_elegido") or {}).get("especialidad", ""))
+            _maso_conf = (
+                {59: data["maso_duracion"]}
+                if _esp_conf == "masoterapia" and data.get("maso_duracion") else None
+            )
+            try:
+                _smart_conf, _todos_conf = await _buscar_slots_dia_con_retry(
+                    _esp_conf, _fecha_conf, intervalo_override=_maso_conf)
+            except Exception as _e_conf:
+                log.warning("CONFIRMING_CITA cambio de día falló: %s", _e_conf)
+                _smart_conf, _todos_conf = [], []
+            log_event(phone, "confirming_cambio_dia", {
+                "texto": txt[:40], "fecha": _fecha_conf,
+                "esp": _esp_conf, "n_slots": len(_todos_conf),
+            })
+            if _todos_conf:
+                # franja_horaria viaja sola en data — no se toca acá.
+                data.update({
+                    "slots": (_smart_conf or _todos_conf)[:5],
+                    "todos_slots": _todos_conf,
+                    "fechas_vistas": (data.get("fechas_vistas") or []) + [_fecha_conf],
+                    "expansion_stage": 1,
+                })
+                data.pop("slot_elegido", None)  # el anterior ya no aplica
+                save_session(phone, "WAIT_SLOT", data)
+                return _format_slots((_smart_conf or _todos_conf)[:5])
+            # Sin cupos ese día: decirlo, sin soltar la hora que ya tenía.
+            _slot_conf = data.get("slot_elegido", {})
+            return _btn_msg(
+                f"No tengo horas disponibles para ese día 😕\n\n"
+                f"Tu hora sigue apartada:\n"
+                f"📅 *{_slot_conf.get('fecha_display', '')}* "
+                f"🕐 *{(_slot_conf.get('hora_inicio') or '')[:5]}*\n\n"
+                "¿La confirmo o prefieres buscar otro día?",
+                [{"id": "si", "title": "✅ Sí, reservar"},
+                 {"id": "otro_dia", "title": "📅 Otro día"}]
             )
 
         return _btn_msg(
@@ -13860,6 +13899,29 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         else:
             return _modo_degradado(phone, "agendar", state_snap=especialidad or "",
                                    especialidad=especialidad or "")
+    # ── Medición sistémica del embudo (2026-07-13) ──────────────────────────
+    # `_iniciar_agendar` es el CHOKEPOINT único: las ~84 rutas de entrada al
+    # agendamiento (texto libre vía detect_intent, atajos numéricos, botones,
+    # quick-book, CTWA/Meta referral, cross-sell, waitlist, reagendar-doctor,
+    # etc.) convergen todas acá. Antes, el único evento de "intención de
+    # agendar" (`intent_agendar`) se logueaba en UN solo sitio (el branch de
+    # detect_intent en texto libre) — subcontaba: 424 intents vs 992 citas
+    # creadas en 30 días (imposible, >100% "conversión"). Con este evento acá
+    # se cuenta UNA vez por intento real sin importar el canal de entrada.
+    # `_funnel_id` viaja en `data` (persiste entre turnos de la misma sesión)
+    # y se propaga a funnel_especialidad/funnel_slot_ofrecido/
+    # funnel_slot_elegido/funnel_confirmacion/cita_creada para poder
+    # reconstruir el recorrido completo de una persona con un solo query.
+    if not data.get("_funnel_id"):
+        import uuid as _uuid_fi_start
+        data["_funnel_id"] = _uuid_fi_start.uuid4().hex[:12]
+        try:
+            log_event(phone, "funnel_intent_agendar", {
+                "especialidad_pedida": (especialidad or "").strip().lower(),
+                "funnel_id": data["_funnel_id"],
+            })
+        except Exception:  # noqa: BLE001 — medición nunca debe romper el agendamiento
+            pass
     # ── Detección de menor: aplica a especialidades adultas, NO a MG/MF/Odonto/Fono/Psico ──
     # MG (Abarca, Olavarría, Márquez), MF (Márquez), Odontología, Fonoaudiología y
     # Psicología Infantil (Montalba) atienden niños y adultos por igual — no interrumpir.
@@ -14530,24 +14592,31 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     prof_sugerido_id = mejor.get("id_profesional")
     slots_sugerido_todos = [s for s in todos if s.get("id_profesional") == prof_sugerido_id]
     smart_sugerido = slots_sugerido_todos[:5] if slots_sugerido_todos else smart
-    # BUG-4 FIX: filtrar por franja horaria si el paciente la indicó
-    _franja = data.pop("franja_horaria", None)
+    # BUG-4 FIX: filtrar por franja horaria si el paciente la indicó.
+    # get() y no pop(): la preferencia sobrevive a "otro día" / "ver todos".
+    # Con pop() se consumía en el primer render, así que el paciente que pedía
+    # "en la mañana" y luego cambiaba de día volvía a recibir horas de tarde.
+    # Se limpia al confirmar la cita, no acá.
+    import franja as _franja_mod
+    _franja = data.get("franja_horaria")
     if _franja:
-        _h_min, _h_max = _franja
-        def _slot_en_franja(s):
-            try:
-                _h = int(s.get("hora_inicio", "00:00")[:2])
-                return _h_min <= _h <= _h_max
-            except Exception:
-                return True
-        _smart_f = [s for s in smart_sugerido if _slot_en_franja(s)]
-        _todos_f  = [s for s in todos if _slot_en_franja(s)]
-        if _smart_f:
-            smart_sugerido = _smart_f
+        _smart_f = _franja_mod.filtrar(smart_sugerido, _franja)
+        _todos_f = _franja_mod.filtrar(todos, _franja)
         if _todos_f:
+            smart_sugerido = _smart_f or _todos_f[:5]
             todos = _todos_f
-            if not mejor or not _slot_en_franja(mejor):
+            if not mejor or mejor not in _todos_f:
                 mejor = _todos_f[0]
+        else:
+            # Sin cupo en la franja pedida. La política de qué ofrecer acá la
+            # decide franja.sin_cupo_en_franja(); hasta que esté implementada
+            # se marca para que el mensaje AVISE, en vez de mostrar horas de
+            # tarde en silencio como le pasó a Sara.
+            data["_franja_sin_cupo"] = _franja_mod.label(_franja)
+            log_event(phone, "franja_sin_cupo", {
+                "esp": especialidad_lower, "fecha": fecha,
+                "franja": list(_franja),
+            })
     # SOBRECUPO en la PRIMERA oferta: si la especialidad sobrecupea (eco) y la hora
     # formal está LEJOS, anteponer cupos cercanos ANTES de persistir/mostrar, para no
     # perder al paciente. Sin esto la 1ª oferta mostraba el formal lejano (caso real:
@@ -14582,6 +14651,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         "esp": especialidad_lower,
         "paso": "especialidad_resuelta",
         "n_slots": len(todos),
+        "funnel_id": data.get("_funnel_id", ""),
     })
     save_session(phone, "WAIT_SLOT", data)
     log_event(phone, "funnel_slot_ofrecido", {
@@ -14590,6 +14660,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         "fecha": fecha,
         "profesional": mejor.get("profesional", ""),
         "hora": mejor.get("hora_inicio", "")[:5],
+        "funnel_id": data.get("_funnel_id", ""),
     })
     nombre_conocido = data.get("nombre_conocido", "")
     nombre_corto = _first_name(nombre_conocido) if nombre_conocido else ""
@@ -14613,6 +14684,23 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         # BUG-08: cuando hay aviso de redireccion, omitir saludo "Hola de nuevo"
         # para no mezclar "No tengo horarios para hoy" + "Hola de nuevo, Jaime! Te encontre hora"
         header = f"\u26a0\ufe0f No tengo horarios para *{_lbl_av}* \U0001f615\nTe muestro la *proxima disponible*:\n\n"
+    # Aviso de franja: el paciente pidi\u00f3 una franja horaria y ese d\u00eda no tiene
+    # cupo en ella. Sin esto el bot mostraba horas de tarde a quien pidi\u00f3 la
+    # ma\u00f1ana, sin decir palabra (caso Sara Bustamante 2026-05-14: pidi\u00f3 el
+    # viernes por la ma\u00f1ana, recibi\u00f3 17:20, insisti\u00f3 "Quiero viernes", volvi\u00f3
+    # a chocar y termin\u00f3 en recepci\u00f3n).
+    _franja_avisar = data.pop("_franja_sin_cupo", None)
+    if _franja_avisar:
+        _cabeza_franja = (
+            f"\u26a0\ufe0f No tengo horas en *{_franja_avisar}* \U0001f615\n"
+            "Esto es lo m\u00e1s cercano:\n\n"
+        )
+        # Si ya hay aviso de fecha, encadenar sin repetir "no tengo": el
+        # paciente pidi\u00f3 d\u00eda Y franja, y fall\u00f3 la franja dentro del d\u00eda.
+        header = (
+            header + f"_Tampoco en {_franja_avisar}._\n\n"
+            if _fecha_avisar else _cabeza_franja
+        )
     # Tercer botón: "Otro profesional" si hay >1 doctor; si no, "Otro día"
     from medilink import _ids_para_especialidad
     ids_esp = _ids_para_especialidad(especialidad_lower)
