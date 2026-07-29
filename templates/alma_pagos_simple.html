@@ -1709,8 +1709,8 @@ function updateMetodoHint() {
   //    anotarlo es lo que permite verificar después si débito/crédito fue correcto.
   const area = (document.getElementById('fArea') || {}).value || '';
   const esDental = _AREA_DENTAL.test(area);
-  hint.style.color = esDental ? '' : 'var(--red)';
-  hint.textContent = (esDental ? '' : '⚠️ Tarjetas solo en área dental. ')
+  hint.style.color = esDental ? '' : 'var(--amber-ink, #b26a00)';
+  hint.textContent = (esDental ? '' : 'Tarjeta fuera de dental — se permite, pero es poco habitual. ')
     + 'Copia el N° del comprobante: ahí dice si fue débito o crédito.';
 }
 

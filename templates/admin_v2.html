@@ -4023,8 +4023,8 @@ function _pgUpdateMetodoHint(){
   if (!esTarjeta){ h.textContent = ""; h.style.color = ""; return; }
   const area = (document.getElementById("pgArea") || {}).value || "";
   const esDental = _PG_AREA_DENTAL.test(area);
-  h.style.color = esDental ? "" : "var(--cmc-red, #d33)";
-  h.textContent = (esDental ? "" : "⚠️ Tarjetas solo en área dental. ")
+  h.style.color = esDental ? "" : "var(--cmc-amber, #b26a00)";
+  h.textContent = (esDental ? "" : "Tarjeta fuera de dental — se permite, pero es poco habitual. ")
     + "Copia el N° del comprobante: ahí dice si fue débito o crédito.";
 }
 
