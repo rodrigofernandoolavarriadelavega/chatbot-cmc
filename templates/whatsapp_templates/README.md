@@ -126,3 +126,11 @@ Respuesta exitosa:
 - **Rechazos frecuentes**: lenguaje excesivamente promocional, mencionar precios sin ser UTILITY, templates identicos a uno existente con otro nombre.
 - **Limite de templates**: el free tier tiene tope de templates activos. Con el payment method activo (USD 20 cargados en abril 2026) no deberia haber restriccion.
 - **Cooldown de campanas**: los cooldowns estan en `fidelizacion.py` (`puede_enviar_campana`). Los templates aprobados no eximen del cooldown logico del bot.
+
+---
+
+## Borradores sin subir (sufijo `.DRAFT.json`, no confundir con aprobados)
+
+| Archivo | Nombre | Categoria propuesta | Para que |
+|---|---|---|---|
+| `seguimiento_consulta_pendiente.DRAFT.json` | seguimiento_consulta_pendiente | UTILITY | Carril de persistencia (`app/persistencia.py`) — segundo toque a alguien que dejó una consulta de agendamiento a medias, cuando la ventana de 24h ya cerró. Hoy esa rama del código está INERTE (no envía nada) hasta que este template esté APPROVED. Quitar los campos `_nota`/`_justificacion_utility`/`_flujo_que_la_usaria` antes de hacer el submit a Meta (son solo documentación interna, no son parte del schema).

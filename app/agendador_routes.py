@@ -203,8 +203,8 @@ _AGENDAR_VIA = {
         "via": "Odontología General",
         "nota": ("El tratamiento de ortodoncia parte con una evaluación dental "
                  "con nuestro equipo de Odontología General ($15.000 — gratis si "
-                 "inicias un tratamiento ese mismo día). La dentista evalúa tu caso, "
-                 "solicita radiografías y gestiona tu derivación con la ortodoncista "
+                 "inicia un tratamiento ese mismo día). La dentista evalúa su caso, "
+                 "solicita radiografías y gestiona su derivación con la ortodoncista "
                  "Dra. Daniela Castillo."),
     },
 }
@@ -354,7 +354,7 @@ async def identificar(request: Request, preview: str | None = Query(None)):
     if not valid_rut(rut):
         raise HTTPException(400, "RUT inválido. Revise el dígito verificador.")
     try:
-        pac = await buscar_paciente(rut)
+        pac = await buscar_paciente(rut, strict=True)
     except Exception as e:
         log.error("identificar: %s", e)
         raise HTTPException(503, "No pudimos validar el RUT. Intente nuevamente.")
@@ -429,7 +429,7 @@ async def reservar(request: Request, preview: str | None = Query(None)):
 
     # 3) Buscar / crear paciente
     try:
-        pac = await buscar_paciente(rut)
+        pac = await buscar_paciente(rut, strict=True)
     except Exception as e:
         log.error("reservar buscar_paciente: %s", e)
         raise HTTPException(503, "No pudimos validar el RUT. Intente nuevamente.")
@@ -565,7 +565,7 @@ async def mis_horas(request: Request, preview: str | None = Query(None)):
     if not valid_rut(rut):
         raise HTTPException(400, "RUT inválido.")
     try:
-        pac = await buscar_paciente(rut)
+        pac = await buscar_paciente(rut, strict=True)
     except Exception as e:
         log.error("mis_horas: %s", e)
         raise HTTPException(503, "No pudimos consultar sus horas. Intente nuevamente.")
@@ -608,7 +608,7 @@ async def cancelar(request: Request, preview: str | None = Query(None)):
     if not valid_rut(rut) or not id_cita:
         raise HTTPException(400, "Datos inválidos.")
     try:
-        pac = await buscar_paciente(rut)
+        pac = await buscar_paciente(rut, strict=True)
         citas = await listar_citas_paciente(pac.get("id"), rut=rut) if pac else []
     except Exception as e:
         log.error("cancelar lookup: %s", e)

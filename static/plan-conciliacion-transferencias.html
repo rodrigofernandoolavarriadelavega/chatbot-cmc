@@ -109,10 +109,10 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
 <div class="wrap">
 
 <div class="alert a-ok">
-  <b>Estado al 28-jul 14:30 · Fase 1 cerrada, Fase 2 en curso</b>
-  El hueco del flag que abría este documento <strong>ya está tapado</strong>. En el camino aparecieron dos
-  bugs más en el mismo endpoint, también corregidos. Nada de esto está commiteado todavía: sigue todo
-  en el árbol de trabajo, esperando la Fase 3.
+  <b>Estado al 28-jul 19:30 · Fases 1, 2 y 3 cerradas — el bloque está EN PRODUCCIÓN, inerte</b>
+  Commit <code>eca17de</code> desplegado y verificado: servicio activo, <code>/health</code> 200, y el log
+  confirma <em>"conciliación de transferencias apagada — sin IMAP"</em>. El endpoint de backfill responde
+  <strong>503</strong> con el flag apagado, probado contra producción. No lee ni un correo hasta que se decida.
 </div>
 
 <div class="card">
@@ -124,11 +124,15 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
           <td>Flag <code>CONCILIACION_TRANSFERENCIAS_ACTIVE</code> creado y aplicado al cron
               <em>y</em> al backfill. Test <code>test_conciliacion_gating.py</code>: 11/11.</td></tr>
       <tr><td><strong>2 · Auditar superficies sensibles</strong></td>
-          <td><span class="pill p-warn">EN CURSO</span></td>
-          <td>Página pública <code>/abono/{token}</code>: <strong>aprobada</strong>.
-              Falta <code>confirmar_sugerencia()</code>, la que escribe sobre la caja.</td></tr>
-      <tr><td>3 · Commit quirúrgico y deploy inerte</td><td><span class="pill p-info">pendiente</span></td><td>—</td></tr>
-      <tr><td>4 · Encender solo lectura</td><td><span class="pill p-info">pendiente</span></td><td>—</td></tr>
+          <td><span class="pill p-ok">LISTA</span></td>
+          <td>Las dos aprobadas. <code>confirmar_sugerencia()</code> fijada con 18 tests
+              (<code>test_confirmar_sugerencia_seguridad.py</code>).</td></tr>
+      <tr><td><strong>3 · Commit quirúrgico y deploy inerte</strong></td>
+          <td><span class="pill p-ok">LISTA</span></td>
+          <td><code>eca17de</code> en producción. Cero líneas de WIP ajeno en el commit.
+              El deploy abortó una vez por archivos sin trackear en el VPS — ver H4.</td></tr>
+      <tr><td>4 · Encender solo lectura</td><td><span class="pill p-warn">ESPERA DECISIÓN</span></td>
+          <td>Poner <code>CONCILIACION_TRANSFERENCIAS_ACTIVE=true</code> empieza a leer el Gmail del centro</td></tr>
       <tr><td>5 · Encender lo que escribe</td><td><span class="pill p-info">decisión del dueño</span></td><td>—</td></tr>
     </tbody>
   </table>
@@ -149,6 +153,13 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
               running/idle pero no comprueba si ya hay uno corriendo: dos clics en el panel lanzaban dos
               barridos del buzón compitiendo por la misma conexión IMAP y la misma tabla.</td>
           <td>409 si ya hay uno en curso</td></tr>
+      <tr><td><span class="pill p-warn">H4</span></td>
+          <td><strong>Prod tenía 4 de estos archivos copiados a mano</strong>, del 14-jul, sin trackear.
+              El deploy abortó antes de pisarlos (la guarda hizo su trabajo). Dos eran idénticos; el parser
+              del servidor era <em>peor</em>: no manejaba el <code>$</code> de Scotiabank
+              (<code>Monto: $7.880</code>), que sí está cubierto por un test. Respaldados en
+              <code>/root/backup-untracked-20260728/</code> antes de reemplazarlos.</td>
+          <td>Recordatorio: el VPS es destino de deploy, nunca de edición</td></tr>
       <tr><td><span class="pill p-ok">H3</span></td>
           <td><strong>Task fantasma.</strong> <code>asyncio.create_task()</code> sin guardar referencia: el
               recolector puede llevarse la task a media ejecución y cualquier excepción muere en silencio.</td>

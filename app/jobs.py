@@ -1683,11 +1683,11 @@ async def _job_cierre_caja_diario():
             return  # sin pagos ese día → no molestar
         nom = {r[0]: r[1] for r in c.execute("SELECT id_medilink, nombre FROM equipo_cmc").fetchall()}
         top = c.execute("SELECT id_profesional, SUM(monto), COUNT(*) FROM bi_pagos_caja "
-                        "WHERE fecha>=? AND fecha<? GROUP BY id_profesional ORDER BY 2 DESC LIMIT 3",
+                        "WHERE fecha>=? AND fecha<? GROUP BY id_profesional ORDER BY 2 DESC",
                         (d1, d2)).fetchall()
         clp = lambda x: "$" + format(int(x or 0), ",d").replace(",", ".")
         lines = ["💰 *Cierre de caja* — %s" % ayer.strftime("%d/%m"),
-                 "", "Total: *%s*" % clp(tot), "Pagos: *%d*" % int(n), "", "*Top 3 del día*"]
+                 "", "Total: *%s*" % clp(tot), "Pagos: *%d*" % int(n), "", "*Por profesional*"]
         for idp, s, cnt in top:
             lines.append("• %s — %s (%d)" % (nom.get(idp, "id %s" % idp), clp(s), int(cnt)))
         if ADMIN_ALERT_PHONE:
