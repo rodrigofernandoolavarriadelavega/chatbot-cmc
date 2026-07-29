@@ -691,7 +691,16 @@ let AREAS_FONASA  = [];
 let _editingId        = null;
 let _prevision        = "particular";
 let _previsionManual  = false;
+// Default POR ÁREA (misma regla que /alma/pagos, medida sobre 2.902 pagos de
+// pagos_cmc may–jul 2026): médico 57,0% efectivo · dental 46,9% DÉBITO.
+// OJO: 'Odontología' NO contiene 'dent' (es o-DONT-ología) — buscar sólo /dent/
+// se salta el área con MÁS tarjetas (74 de 130).
+// ESTA es la pantalla que abre recepción (config.py:85 "pagos" → /alma/pagos-simple);
+// /alma/pagos es la variante OLACORE. Toda regla de cobro tiene que estar en las dos.
+const _AREA_DENTAL = /odont|dent|ortod|endod|implant/i;
+const metodoPorArea = a => _AREA_DENTAL.test(a || '') ? 'debito' : 'efectivo';
 let _metodo           = "efectivo";
+let _metodoManual     = false;  // true si recepción eligió a mano; el área no lo pisa
 let _newRow           = null;
 let _newPrev          = "particular";
 let _newPrevManual    = false;
@@ -1652,7 +1661,8 @@ function resetForm() {
   if (_fFuenteEl) _fFuenteEl.value = '';
   _previsionManual = false;
   setPrevision('particular');
-  setMetodo('efectivo');
+  _metodoManual = false;
+  setMetodo(metodoPorArea(document.getElementById('fArea')?.value));
   document.getElementById('hintCopago').textContent = '';
 }
 
@@ -1671,8 +1681,9 @@ function setPrevision(p) {
   updateMetodoHint();
 }
 
-function setMetodo(m) {
+function setMetodo(m, manual) {
   _metodo = m;
+  if (manual) _metodoManual = true;
   document.querySelectorAll('.metodo-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.metodo === m);
   });
@@ -1699,8 +1710,18 @@ document.getElementById('btnFonasa').addEventListener('click', () => {
   _previsionManual = true; setPrevision('fonasa'); recalcSugerenciaModal();
 });
 document.querySelectorAll('.metodo-btn').forEach(b => {
-  b.addEventListener('click', () => setMetodo(b.dataset.metodo));
+  b.addEventListener('click', () => setMetodo(b.dataset.metodo, true));
 });
+
+// Al escribir el área, el default se ajusta solo — salvo elección manual.
+(function(){
+  const fa = document.getElementById('fArea');
+  if (!fa) return;
+  const ajustar = () => { if (!_metodoManual) setMetodo(metodoPorArea(fa.value)); };
+  fa.addEventListener('input', ajustar);
+  fa.addEventListener('change', ajustar);
+})();
+
 document.getElementById('fProf').addEventListener('change', function() {
   const opt = this.options[this.selectedIndex];
   if (opt && opt.dataset.esp) {
