@@ -876,8 +876,20 @@ async def post_pago(
     if prevision not in ("fonasa", "particular"):
         prevision = "particular"
 
-    metodo_pago = (body.get("metodo_pago") or "efectivo").lower()
-    if metodo_pago not in ("efectivo", "transferencia", "debito", "credito", "bono_web"):
+    # `pagos_cmc` es la ÚNICA fuente de caja real que existe: Medilink /api/v5/pagos
+    # solo expone la caja abierta del día (~50 filas, sin historial), así que bi.fact_pagos
+    # está vacío. Un método inventado acá contamina el único dato de caja que tenemos —
+    # y es el que sostiene el mix débito/crédito de la decisión Transbank vs Mercado Pago.
+    #
+    # El default se mantiene (quitarlo rompería los flujos del bot que no mandan método),
+    # pero deja de ser silencioso: se registra en el log para poder medirlo.
+    _METODOS_VALIDOS = ("efectivo", "transferencia", "debito", "credito", "bono_web")
+    metodo_pago = (body.get("metodo_pago") or "").lower().strip()
+    if metodo_pago not in _METODOS_VALIDOS:
+        log.warning(
+            "PAGO_METODO_INFERIDO metodo=%r → efectivo · creado_por=%r · rut=%r",
+            metodo_pago or "(vacío)", body.get("creado_por"), body.get("rut"),
+        )
         metodo_pago = "efectivo"
 
     origen = (body.get("origen") or "presencial").lower()

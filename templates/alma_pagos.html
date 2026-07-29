@@ -839,7 +839,7 @@
       <div class="field full">
         <label>Metodo de pago</label>
         <div class="metodo-grid">
-          <button class="metodo-btn active" data-metodo="efectivo">Efectivo</button>
+          <button class="metodo-btn" data-metodo="efectivo">Efectivo</button>
           <button class="metodo-btn" data-metodo="transferencia">Transferencia</button>
           <button class="metodo-btn" data-metodo="debito">Debito</button>
           <button class="metodo-btn" data-metodo="credito">Credito</button>
@@ -2144,7 +2144,10 @@ let AREAS_FONASA  = [];
 let _editingId        = null;
 let _prevision        = "particular";
 let _previsionManual  = false;  // true cuando el usuario elige manualmente; evita que la sugerencia sobreescriba
-let _metodo           = "efectivo";
+// Sin default: recepción DEBE elegir. `pagos_cmc` es la única fuente de caja real
+// que existe (Medilink /pagos solo expone la caja del día), así que un método
+// inventado por el sistema contamina el único dato de caja que tenemos.
+let _metodo           = "";
 // Fila nueva inline
 let _newRow           = null;   // referencia al <tr> de nueva fila
 let _newPrev          = "particular";
@@ -3119,7 +3122,7 @@ function resetForm() {
   if (_fFuenteEl) _fFuenteEl.value = '';
   _previsionManual = false;
   setPrevision('particular');
-  setMetodo('efectivo');
+  setMetodo('');   // sin preselección: obliga a elegir
   document.getElementById('hintCopago').textContent = '';
 }
 
@@ -3156,8 +3159,17 @@ function setMetodo(m) {
 
 function updateMetodoHint() {
   const hint = document.getElementById('hintMetodo');
+  if (!_metodo) {
+    hint.textContent = 'Elige el metodo — no hay opcion por defecto.';
+    hint.style.color = 'var(--red)';
+    return;
+  }
+  hint.style.color = '';
+  // El tipo de tarjeta viene IMPRESO en el comprobante del POS. Anotarlo es lo que
+  // permite verificar despues si la clasificacion debito/credito fue correcta.
   hint.textContent = (_metodo === 'credito' || _metodo === 'debito')
-    ? 'Tarjetas solo disponibles en area dental.' : '';
+    ? 'Copia el N° del comprobante: ahi dice si fue debito o credito.'
+    : '';
 }
 
 
@@ -3248,6 +3260,22 @@ document.getElementById('btnGuardarPago').addEventListener('click', guardarModal
 async function guardarModal() {
   const nombre = document.getElementById('fNombre').value.trim();
   if (!nombre) { showToast('Ingresa el nombre del paciente', 'error'); return; }
+
+  // Forcing function: sin metodo no se guarda. Antes venia "efectivo" preseleccionado
+  // y un olvido quedaba registrado como efectivo, en silencio.
+  if (!_metodo) { showToast('Elige el metodo de pago', 'error'); return; }
+
+  // Tarjeta sin N° de comprobante = imposible verificar despues si fue debito o
+  // credito. Ese mix sostiene la decision Transbank vs Mercado Pago.
+  if (_metodo === 'debito' || _metodo === 'credito') {
+    const comp = document.getElementById('fCodTransf').value.trim();
+    if (!comp) {
+      showToast('Anota el N° del comprobante (lo trae impreso el voucher)', 'error');
+      document.getElementById('fCodTransf').focus();
+      return;
+    }
+  }
+
   const idProfRaw = document.getElementById('fProf').value;
   const profOpt   = document.querySelector(`#fProf option[value="${idProfRaw}"]`);
   const body = {
