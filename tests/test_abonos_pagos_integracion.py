@@ -198,6 +198,14 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
         ).fetchone()
         return dict(row) if row else None
 
+    def _contar_pagos_de(self, paciente_nombre: str) -> int:
+        """Cuántos pagos hay en caja a nombre de este paciente. Sirve para
+        verificar que un abono NO entra a caja hasta que la atención ocurre."""
+        return self._conn.execute(
+            "SELECT COUNT(*) FROM pagos_cmc WHERE paciente_nombre=?",
+            (paciente_nombre,)
+        ).fetchone()[0]
+
     def _pagos_con_origen(self, origen: str) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM pagos_cmc WHERE origen=?", (origen,)
@@ -226,19 +234,20 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
         self.assertTrue(result["ok"])
         abono_id = result["id"]
         pago_id = result["pago_id"]
-        self.assertIsNotNone(pago_id, "Debe crearse un pago vinculado")
+        # REGLA 2026-07-29: registrar un abono NO lo mete a caja. Es plata
+        # retenida hasta que la atención ocurra (si no, un reembolso obliga a
+        # revertir una venta ya contada).
+        self.assertIsNone(pago_id, "Registrar un abono NO debe crear pago")
 
         ab = self._abono_row(abono_id)
-        self.assertEqual(ab["pago_id"], pago_id)
+        self.assertIsNone(ab["pago_id"])
         self.assertEqual(ab["estado"], "pendiente")
         self.assertEqual(ab["saldo"], 0)  # precio==abono → saldo=0
 
-        pg = self._pago_row(pago_id)
-        self.assertIsNotNone(pg)
-        self.assertEqual(pg["copago"], 60000, "copago debe ser monto_abono, no precio_total")
-        self.assertEqual(pg["origen"], "abono")
-        self.assertEqual(pg["paciente_nombre"], "Juan Perez")
-        self.assertEqual(pg["metodo_pago"], "transferencia")
+        # No hay pago todavía: aparece recién al aplicar (ver test_04b_*).
+        self.assertEqual(
+            self._contar_pagos_de("Juan Perez"), 0,
+            "no debe existir ningún pago en caja antes de la atención")
 
     def test_01b_abono_sin_monto_no_crea_pago(self):
         """Si monto_abono=0 no se debe crear pago vinculado."""
@@ -273,8 +282,13 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
         })
 
         result = _run(ar.post_abono(request=req, token="test_token", cmc_session=None))
+        self.assertIsNone(result["pago_id"], "el abono no entra a caja al registrarlo")
 
-        pg = self._pago_row(result["pago_id"])
+        # 'imed' se normaliza recién cuando el pago se crea, o sea al aplicar.
+        res_ap = _run(ar.aplicar_abono(abono_id=result["id"],
+                                       request=self._fake_request({}),
+                                       token="test_token", cmc_session=None))
+        pg = self._pago_row(res_ap["pago_id"])
         self.assertEqual(pg["metodo_pago"], "transferencia",
                          "'imed' debe convertirse a 'transferencia' en pagos_cmc")
 
@@ -296,7 +310,7 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
         res_c = _run(ar.post_abono(request=req_c, token="test_token", cmc_session=None))
         abono_id = res_c["id"]
         pago_id = res_c["pago_id"]
-        self.assertIsNotNone(pago_id)
+        self.assertIsNone(pago_id, "sin pago hasta la atención")
 
         # Editar → cambiar monto_abono a 45000 y metodo a 'debito'
         req_e = self._fake_request({
@@ -308,8 +322,15 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
         self.assertTrue(res_e["ok"])
         self.assertEqual(res_e["saldo"], 15000)  # 60000 - 45000
 
-        pg = self._pago_row(pago_id)
-        self.assertEqual(pg["copago"], 45000, "pago vinculado debe reflejar nuevo monto")
+        # Editar un abono PENDIENTE no toca caja: todavía no hay pago.
+        self.assertEqual(self._contar_pagos_de("Maria Soto"), 0,
+                         "editar un abono pendiente no debe crear ni tocar caja")
+
+        # Al aplicarlo (la atención ocurrió) el pago sale con el monto EDITADO.
+        res_ap = _run(ar.aplicar_abono(abono_id=abono_id, request=self._fake_request({}),
+                                       token="test_token", cmc_session=None))
+        pg = self._pago_row(res_ap["pago_id"])
+        self.assertIsNotNone(pg, "aplicar debe crear el pago")
         self.assertEqual(pg["metodo_pago"], "debito")
 
     # ── Test 3: borrar abono → pago eliminado ────────────────────────────────
@@ -329,10 +350,9 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
         res_c = _run(ar.post_abono(request=req_c, token="test_token", cmc_session=None))
         abono_id = res_c["id"]
         pago_id = res_c["pago_id"]
-        self.assertIsNotNone(pago_id)
-
-        # Verificar pago existe antes de borrar
-        self.assertIsNotNone(self._pago_row(pago_id))
+        # Un abono pendiente nunca llegó a caja, así que no hay pago que borrar.
+        self.assertIsNone(pago_id, "sin pago hasta la atención")
+        self.assertEqual(self._contar_pagos_de("Luis Vera"), 0)
 
         # Crear request DELETE fake
         req_d = MagicMock()
@@ -342,11 +362,36 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
                                       token="test_token", cmc_session=None))
         self.assertTrue(res_d["ok"])
 
-        # Abono eliminado
+        # Abono eliminado y, sobre todo, cero plata fantasma en caja.
         self.assertIsNone(self._abono_row(abono_id))
-        # Pago también eliminado
-        self.assertIsNone(self._pago_row(pago_id),
-                          "El pago vinculado debe eliminarse al borrar el abono")
+        self.assertEqual(self._contar_pagos_de("Luis Vera"), 0,
+                         "borrar un abono pendiente no debe dejar pagos huérfanos")
+
+    def test_04c_pago_se_fecha_el_dia_de_la_atencion_no_el_del_abono(self):
+        """REGLA DEL DUEÑO (2026-07-29): la venta se reconoce el día que el
+        paciente SE ATIENDE, no el día que dejó el abono. Si no, una consulta
+        de agosto aparece vendida en julio y la caja del mes queda mal."""
+        ar = self._ar
+        ar.ensure_abonos_table = lambda: None
+
+        req_c = self._fake_request({
+            "paciente_nombre": "Elena Ruiz",
+            "area": "Psiquiatría",
+            "precio_total": 60000,
+            "monto_abono": 60000,
+            "metodo_pago": "transferencia",
+            "fecha_cita": "2026-09-15",     # la atención es en SEPTIEMBRE
+        })
+        res_c = _run(ar.post_abono(request=req_c, token="test_token", cmc_session=None))
+        self.assertIsNone(res_c["pago_id"])
+
+        res_a = _run(ar.aplicar_abono(abono_id=res_c["id"],
+                                      request=self._fake_request({}),
+                                      token="test_token", cmc_session=None))
+        pg = self._pago_row(res_a["pago_id"])
+        self.assertEqual(pg["fecha"], "2026-09-15",
+                         "el pago debe quedar fechado el día de la ATENCIÓN")
+        self.assertEqual(pg["copago"], 60000)
 
     def test_03b_borrar_abono_aplicado_no_elimina_pago(self):
         """DELETE abono APLICADO → el pago real de saldo NO debe borrarse."""
@@ -401,12 +446,9 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
         })
         res_c = _run(ar.post_abono(request=req_c, token="test_token", cmc_session=None))
         abono_id = res_c["id"]
-        pago_id_anticipo = res_c["pago_id"]
-        self.assertIsNotNone(pago_id_anticipo)
-
-        # pago del anticipo ya está en pagos_cmc con copago=30000
-        pg_anticipo = self._pago_row(pago_id_anticipo)
-        self.assertEqual(pg_anticipo["copago"], 30000)
+        # Nada en caja todavía: el anticipo entra recién con la atención.
+        self.assertIsNone(res_c["pago_id"])
+        self.assertEqual(self._contar_pagos_de("Rosa Torres"), 0)
 
         # Aplicar abono
         req_a = MagicMock()
@@ -420,23 +462,22 @@ class AbonosPagosIntegracionTest(unittest.TestCase):
                                        token="test_token", cmc_session=None))
         self.assertTrue(res_a["ok"])
 
-        # El abono debe apuntar a un NUEVO pago (el del saldo)
         ab = self._abono_row(abono_id)
         self.assertEqual(ab["estado"], "aplicado")
-        pago_id_saldo = ab["pago_id"]
-        self.assertIsNotNone(pago_id_saldo)
-        # El pago de saldo debe ser DISTINTO al del anticipo
-        self.assertNotEqual(pago_id_saldo, pago_id_anticipo,
-                            "El pago del saldo debe ser un registro nuevo, no el del anticipo")
+        self.assertIsNotNone(ab["pago_id"])
 
-        pg_saldo = self._pago_row(pago_id_saldo)
-        self.assertIsNotNone(pg_saldo)
-        self.assertEqual(pg_saldo["copago"], 30000, "El pago de saldo debe ser el saldo (30000)")
+        # LA INVARIANTE QUE IMPORTA: al aplicar, la caja recibe exactamente el
+        # precio_total — ni más (doble conteo) ni menos (anticipo perdido).
+        pagos = self._conn.execute(
+            "SELECT copago FROM pagos_cmc WHERE paciente_nombre=?", ("Rosa Torres",)
+        ).fetchall()
+        self.assertEqual(len(pagos), 2, "anticipo + saldo = 2 pagos")
+        self.assertEqual(sum(x[0] for x in pagos), 60000,
+                         "la caja debe recibir el precio_total, sin doble conteo")
 
-        # Anti-doble-conteo: anticipo + saldo == precio_total
-        total_caja = pg_anticipo["copago"] + pg_saldo["copago"]
-        self.assertEqual(total_caja, 60000,
-                         f"anticipo ({pg_anticipo['copago']}) + saldo ({pg_saldo['copago']}) debe == precio_total (60000)")
+        # Y que sean los dos montos correctos, no dos veces el mismo.
+        self.assertEqual(sorted(x[0] for x in pagos), [30000, 30000],
+                         "un pago por el anticipo y otro por el saldo")
 
         # Cantidad de pagos con origen='abono' debe ser exactamente 1 (solo el anticipo)
         pagos_abono = self._pagos_con_origen("abono")

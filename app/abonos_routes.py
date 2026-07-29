@@ -255,33 +255,21 @@ async def post_abono(request: Request,
         )
         new_id = cur.lastrowid
 
-        # REQ-2: crear pago vinculado por monto_abono (lo que entró a caja hoy).
-        # Anti-doble-conteo: pago_abono=monto_abono; cuando se aplica la cita,
-        # aplicar_abono crea OTRO pago por el SALDO. monto_abono + saldo == precio_total.
+        # REGLA DEL DUEÑO (2026-07-29): el abono NO entra a caja al recibirlo.
+        # Un abono es plata RETENIDA, no ingreso: hasta que el paciente se
+        # atienda puede pedir reembolso, y si ya se contó como venta la caja
+        # queda inflada y hay que revertirla. El ingreso se reconoce cuando la
+        # atención OCURRE, y se fecha el DÍA DE LA ATENCIÓN, no el del abono
+        # (si no, una consulta de agosto aparece vendida en julio).
+        #
+        # Antes acá se insertaba de inmediato un pago por monto_abono fechado
+        # hoy. En psiquiatría eso es el 100% del valor ($60.000 = consulta
+        # completa, saldo $0), así que toda la plata caía en caja semanas antes
+        # de la consulta. Ahora el pago lo crea `aplicar_abono`, con fecha_cita.
+        #
+        # Sin migración: al hacer el cambio abonos_cmc tenía 0 filas y no había
+        # ningún pago con origen='abono'. El módulo nunca se había usado.
         pago_id = None
-        if monto_abono > 0:
-            pcur = conn.execute(
-                """INSERT INTO pagos_cmc
-                   (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
-                    area, prevision, copago, bonificacion, metodo_pago, folio,
-                    codigo_transferencia, procedimiento, origen, id_cita,
-                    creado_por, canal, fuente, created_at, updated_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
-                (
-                    fecha, hora, paciente_nombre, rut_v,
-                    id_profesional, profesional,
-                    area_v, "particular",
-                    monto_abono, 0, metodo_pago_pagos, folio_v,
-                    cod_trans_v,
-                    "abono anticipado", "abono", id_cita_v,
-                    creado_por_v, "presencial", "",
-                )
-            )
-            pago_id = pcur.lastrowid
-            conn.execute(
-                "UPDATE abonos_cmc SET pago_id=? WHERE id=?",
-                (pago_id, new_id)
-            )
 
         conn.commit()
 
@@ -412,8 +400,21 @@ async def put_abono(abono_id: int, request: Request,
              cur["nota"], abono_id)
         )
 
-        # REQ-2: si hay pago vinculado (pago_id del abono original), actualizar su copago y método
-        pago_id_actual = cur.get("pago_id") or row.get("pago_id")  # type: ignore[attr-defined]
+        # Si ya hay pago vinculado (o sea el abono YA se aplicó y entró a caja),
+        # se le sincroniza el monto y el método. Mientras el abono siga
+        # pendiente no hay pago que tocar.
+        #
+        # BUG LATENTE ARREGLADO (2026-07-29): acá había `cur.get("pago_id")` y
+        # `cur`/`row` son sqlite3.Row, que NO tiene .get() → editar CUALQUIER
+        # abono reventaba con AttributeError. Nunca se notó porque el módulo
+        # jamás se usó en producción (abonos_cmc tenía 0 filas). Los Row se
+        # indexan con [], y para el default hay que ver si la columna existe.
+        def _col(r, k):
+            try:
+                return r[k]
+            except (IndexError, KeyError):
+                return None
+        pago_id_actual = _col(cur, "pago_id") or _col(row, "pago_id")
         if pago_id_actual:
             metodo_pago_pagos = cur["metodo_pago"] if cur["metodo_pago"] in ("efectivo", "transferencia", "debito", "credito") else "transferencia"
             try:
@@ -486,6 +487,49 @@ async def aplicar_abono(abono_id: int, request: Request,
             if pg_row and dict(pg_row).get("origen") == "abono":
                 pago_id_es_anticipo = True  # el pago_id actual es del anticipo → crear pago saldo
 
+        # El ingreso se reconoce ACÁ (la atención ocurrió) y se fecha el DÍA DE
+        # LA ATENCIÓN — `fecha_cita`, no hoy. Si recepción aplica el abono con
+        # días de atraso, la venta igual queda en el día que se atendió.
+        # Fallback a hoy sólo si el abono no trae fecha_cita.
+        _f_atencion = (ab.get("fecha_cita") or "").strip()[:10]
+        if len(_f_atencion) != 10 or _f_atencion[4] != "-":
+            _f_atencion = _now_cl().strftime("%Y-%m-%d")
+
+        # El ANTICIPO entra a caja recién ahora. Al registrar el abono no se
+        # creó ningún pago a propósito (ver el POST): mientras no haya atención
+        # es plata retenida que se puede tener que devolver.
+        if crear_pago and int(ab.get("monto_abono") or 0) > 0 and not pago_id:
+            _m_ant = (ab.get("metodo_pago") or "transferencia").lower()
+            if _m_ant == "imed":
+                _m_ant = "transferencia"
+            if _m_ant not in ("efectivo", "transferencia", "debito", "credito"):
+                _m_ant = "transferencia"
+            try:
+                import pagos_routes
+                pagos_routes.ensure_pagos_table()
+            except Exception:
+                pass
+            _cur_ant = conn.execute(
+                """INSERT INTO pagos_cmc
+                   (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
+                    area, prevision, copago, bonificacion, metodo_pago, folio,
+                    codigo_transferencia, procedimiento, origen, id_cita,
+                    creado_por, canal, fuente, created_at, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
+                (
+                    _f_atencion, (ab.get("hora") or "")[:5] or _now_cl().strftime("%H:%M"),
+                    ab["paciente_nombre"], ab.get("rut") or "",
+                    ab.get("id_profesional"), ab.get("profesional") or "",
+                    ab.get("area") or "", "particular",
+                    int(ab.get("monto_abono") or 0), 0, _m_ant, ab.get("folio") or "",
+                    ab.get("codigo_transferencia") or "",
+                    "abono aplicado", "abono", ab.get("id_cita") or "",
+                    "recepcion", "presencial", "",
+                )
+            )
+            pago_id = _cur_ant.lastrowid
+            pago_id_es_anticipo = True
+
         if crear_pago and saldo > 0 and (not pago_id or pago_id_es_anticipo):
             metodo_saldo = (body.get("metodo_saldo") or ab.get("metodo_pago") or "efectivo").lower()
             if metodo_saldo == "imed":          # pagos_cmc no maneja 'imed' como método
@@ -507,7 +551,7 @@ async def aplicar_abono(abono_id: int, request: Request,
                     created_at, updated_at)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))""",
                 (
-                    now_cl.strftime("%Y-%m-%d"), now_cl.strftime("%H:%M"),
+                    _f_atencion, now_cl.strftime("%H:%M"),
                     ab["paciente_nombre"], ab.get("rut") or "",
                     ab.get("id_profesional"), ab.get("profesional") or "",
                     ab.get("area") or "", "particular",
