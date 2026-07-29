@@ -207,7 +207,11 @@ svg{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);
   display:flex;flex-direction:column;max-height:82vh}
 .wpop.show{opacity:1;transform:none}
-.wpop.pinned{pointer-events:auto;box-shadow:0 0 0 2px var(--aqua),var(--s4);max-height:none}
+/* OJO: acá había `max-height:none`. Al fijar el popup se le quitaba el techo,
+   la columna flex crecía hasta contener toda la conversación (medido: 5.849px)
+   y el compositor quedaba fuera de pantalla → no se podía escribir ni enviar,
+   y el scroll interno de .wbody nunca se activaba porque nada lo recortaba. */
+.wpop.pinned{pointer-events:auto;box-shadow:0 0 0 2px var(--aqua),var(--s4);max-height:86vh}
 .wpop.pinned .wh{cursor:move}
 .wpop.expanded{width:580px}
 .wpop .rsz{position:absolute;z-index:6}
@@ -379,7 +383,13 @@ let wpPin = false, wpExp = false, wpPhone = null;
 
 const wpSize = () => { try{ return JSON.parse(localStorage.getItem('colaWpop')||'{}'); }catch(e){ return {}; } };
 function aplicarSize(){ const z = wpSize();
-  if (z.w) wp.style.width = z.w+'px'; if (z.h) wp.style.height = z.h+'px'; }
+  // Siempre altura explícita y ACOTADA al viewport: sin esto la columna flex
+  // crece con la conversación y el compositor se va fuera de pantalla. Un
+  // tamaño viejo guardado en localStorage también se acota (antes se aplicaba
+  // crudo y reintroducía el bug en pantallas más chicas).
+  const maxH = Math.round(innerHeight * .86), maxW = Math.round(innerWidth * .94);
+  wp.style.width  = Math.max(300, Math.min(z.w || (wpExp ? 580 : 340), maxW)) + 'px';
+  wp.style.height = Math.max(280, Math.min(z.h || Math.min(560, maxH), maxH)) + 'px'; }
 function guardarSize(){ try{ localStorage.setItem('colaWpop',
   JSON.stringify({w:wp.offsetWidth, h:wp.offsetHeight})); }catch(e){} }
 
