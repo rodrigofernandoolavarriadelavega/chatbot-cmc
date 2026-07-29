@@ -1,0 +1,530 @@
+{
+  "version": "1.0",
+  "generado": "2026-07-14",
+  "contexto": {
+    "sistema": "Alma es la plataforma clinica de Adkun/OLACORE para el Centro Medico Carampangue (Dr. Rodrigo Olavarria). Este roadmap cubre la CAPA CLINICA DE IA de Alma: transcripcion de consultas (STT), verificacion de notas (alucinacion/omision) y salvaguardas de seguridad. NO cubre el shell operativo /alma de chatbot-cmc (agendamiento, KPIs de caja, etc.) ni otras verticales de Alma (dental, farmacia, optica).",
+    "componentes": {
+      "nucleo": "alma_clinico, paquete Python compartido: vocabulario clinico chileno, catalogo GES (103 patologias), salvaguardas, verificador de 2a pasada, trazas (Linked Evidence), y el cliente del servicio STT. Vive en /Users/rodrigoolavarria/alma-clinico. Version declarada 1.0.0 (CHANGELOG.md, 2026-07-12). 63 tests (pytest --collect-only, verificado 2026-07-14), 0 de ellos pasa audio real por Whisper.",
+      "alma-stt": "Servicio HTTP interno en el puerto 8970 (faster-whisper 1.2.1, modelo 'base' u homologo, ~552 MB de RSS medidos). Vive dentro de /Users/rodrigoolavarria/alma-clinico/alma_stt. Se consume por loopback HTTP con token Bearer. systemd unit: alma-clinico/deploy/alma-stt.service.",
+      "escriba": "App de psiquiatria (Dra. Unibazo), documenta la consulta DESPUES de que ocurre. Vive en /Users/rodrigoolavarria/alma-escriba. Corre SOLO LOCAL hoy (run.sh, puerto 8960) - no tiene pipeline de deploy remoto. Aun usa su propio stt.py y su propio vocab_clinico (no migrada al nucleo compartido). 330 tests (pytest --collect-only, verificado 2026-07-14; el material de origen citaba 319, cifra ya desactualizada).",
+      "copiloto-ficha": "App de medicina general (Dr. Olavarria), acompana la consulta MIENTRAS ocurre. Vive en /Users/rodrigoolavarria/copiloto-ficha. En PRODUCCION en https://ficha.agentecmc.cl, VPS 157.245.13.107 (el mismo droplet de agentecmc.cl/chatbot-cmc), /opt/copiloto-ficha, desplegado con deploy/deploy.sh (rsync + systemd). 28 tests backend (pytest --collect-only, verificado 2026-07-14); el propio repo reporta 188 'tests pasando' en su plan de rediseno, cifra que probablemente incluye otras suites/checks no capturadas por esta coleccion.",
+      "alma-escriba-v2": "Repo nuevo, presumible destino de la migracion de alma-escriba al nucleo compartido. Vive en /Users/rodrigoolavarria/alma-escriba-v2. Tiene 'git init' hecho pero CERO commits (verificado 2026-07-14: 'your current branch main does not have any commits yet')."
+    },
+    "arquitectura": "Nucleo como PAQUETE Python (import directo, mismo proceso, sin salto de red) porque no tiene memoria pesada que compartir; STT como SERVICIO HTTP separado porque el modelo Whisper (552 MB de RSS) no puede cargarse una vez por cada app sin arriesgar OOM en un droplet de 961 MB. Detalle completo en alma-clinico-arquitectura.html (documento hermano de este roadmap, ya publicado, fechado 2026-07-12).",
+    "despliegue": {
+      "copiloto-ficha": "VPS 157.245.13.107, /opt/copiloto-ficha, deploy/deploy.sh (rsync con excludes de .env/data/.venv), systemd, produccion en ficha.agentecmc.cl.",
+      "alma-stt": "systemd alma-stt.service, mismo droplet 157.245.13.107 (loopback :8970 hacia copiloto-ficha).",
+      "alma-escriba": "SOLO LOCAL (run.sh, puerto 8960). Piloto con la Dra. Unibazo, no productivizado en VPS todavia.",
+      "chatbot-cmc": "Repositorio DISTINTO (este mismo, /Users/rodrigoolavarria/chatbot-cmc), sirve agentecmc.cl y el shell /alma. Este roadmap se publica ahi como pagina estatica (agentecmc.cl/static/alma-roadmap.html) pero NO forma parte del codigo que ejecuta las tareas de este documento."
+    },
+    "documentos_relacionados": [
+      "~/copiloto-rediseno-plan.html - plan de rediseno del Copiloto de Ficha, fechado 2026-07-12, ya con Fases A-D en produccion.",
+      "~/alma-clinico-arquitectura.html - arquitectura del nucleo compartido, fechado 2026-07-12.",
+      "agentecmc.cl/static/alma-escriba-plan.html - plan de Alma-Escriba."
+    ],
+    "fecha_verificacion_directa": "2026-07-14",
+    "metodologia": "Este documento sintetiza: (1) una auditoria de codigo con hallazgos verificados linea por linea; (2) un experimento reproducible de alucinacion de Whisper sobre un corpus sintetico de 68 audios (20 'droga-cero' sin farmacos + 3 guiones con-farmaco en 3 niveles de ruido); (3) un panel adversarial de 3 revisores independientes que voto sobre 7 propuestas de arreglo, generando correcciones obligatorias antes de que cada una sobreviviera. Un 8vo item (NUC-02) se agrego FUERA del panel, al detectar durante la construccion de este roadmap que el 'bug abierto' mencionado por las otras tareas nunca tuvo su propia ficha en el material recibido - ver su campo revision_panel."
+  },
+  "reglas_globales": [
+    "Ningun cambio de codigo a un repo clinico (alma-clinico, alma-escriba, copiloto-ficha, alma-escriba-v2) se aplica sin que el repo este bajo git primero (tarea NUC-01) - sin eso no hay forma de revertir un arreglo que salga mal.",
+    "Ningun agente ejecuta 'git commit', 'git tag' o 'git push' en nombre del dueno sin autorizacion explicita y puntual para esa accion concreta. Preparar el arbol (init, .gitignore, add, verificacion anti-secretos) es aceptable sin pedir permiso; el commit y el push finales los autoriza o ejecuta el dueno (regla de memoria del proyecto: los agentes de fix no hacen git commit).",
+    "Ninguna bandera de seguridad clinica critica (ideacion suicida/autolesion, alergia/anafilaxia, embarazo, anticoagulacion, interaccion grave) se suprime automaticamente bajo ninguna circunstancia. Ante la duda, se conserva y se muestra al profesional: sobre-alertar es la falla segura, sub-alertar no lo es.",
+    "Ningun dato de paciente (audio, transcripcion, nombre, RUT, farmaco mencionado) sale de la maquina o servidor propio hacia un canal de terceros (WhatsApp, webhook externo, servicio en la nube) sin cifrado y sin que el dueno lo haya decidido explicitamente. El audio se transcribe en la maquina propia, nunca en la nube (principio de diseno ya vigente en alma_stt/engine.py).",
+    "Ningun cambio a la configuracion de transcripcion (VAD, umbrales de descarte, hotwords, modelo) se despliega a produccion sin antes correr el harness de regresion (tarea NUC-04) contra el corpus de referencia y sin que el dueno haya visto los numeros de alucinacion-vs-captura.",
+    "Ninguna asercion de test sobre alucinacion se escribe como '0 absoluto' si la medicion actual no es 0 - se escribe como regresion contra un baseline medido y documentado, y se aprieta a 0 solo cuando una medicion nueva lo respalde.",
+    "Ninguna tarea de este documento se marca 'hecha' sin sus criterios de aceptacion verificados y sus tests corridos - no basta con que el codigo exista.",
+    "Toda cifra de este roadmap y de cualquier reporte derivado distingue MEDIDO (se corrio ahora) / VERIFICADO (se leyo en el codigo o los logs) / ANUNCIADO (lo dice un tercero: paper, proveedor, norma) / NO VERIFICADO (no se pudo confirmar en esta ronda). No se presenta una cifra de mercado como si fuera una medicion local, ni viceversa.",
+    "El bug de alucinacion de farmacos (tarea NUC-02) se considera ABIERTO hasta que una medicion nueva lo demuestre resuelto sobre el mismo corpus. La Etapa 0 'Hecho y verificado' de copiloto-rediseno-plan.html (2026-07-12) cubria una prueba mas liviana (12s de silencio puro, 5 terminos en voz con silencios) y no contradice este hallazgo posterior sobre el perfil completo de medicina general con audio de duracion real: ambos documentos son validos, describen alcances de verificacion distintos."
+  ],
+  "estado_actual_medido": {
+    "descripcion": "KPIs verificados de forma directa el 2026-07-14, sin maquillaje.",
+    "items": [
+      {
+        "metrica": "Repos clinicos bajo control de versiones",
+        "valor": "0 de 4",
+        "detalle": "alma-clinico, alma-escriba y copiloto-ficha no tienen .git propio (git rev-parse --show-toplevel resuelve al HOME); alma-escriba-v2 tiene .git pero 0 commits.",
+        "fuente": "VERIFICADO"
+      },
+      {
+        "metrica": "Tests que pasan audio real por Whisper",
+        "valor": "0 de 63 (nucleo) y 0 de 330 (escriba)",
+        "detalle": "pytest --collect-only corre en menos de 0,25s en ambos repos - ningun test invoca model.transcribe.",
+        "fuente": "VERIFICADO"
+      },
+      {
+        "metrica": "Tasa de alucinacion de farmacos, perfil completo de medicina general, audio sin farmacos",
+        "valor": "25% (5 de 20 consultas simuladas)",
+        "detalle": "Config PROD_full_MG (la que corre hoy), corpus droga-cero de 60-70s con ruido realista.",
+        "fuente": "MEDIDO 2026-07-14"
+      },
+      {
+        "metrica": "Cobertura de tests de la funcion que decide que alertas NO ve la doctora (_filtrar_omisiones_falsas)",
+        "valor": "0 tests",
+        "detalle": "grep -rn en alma-escriba solo encuentra la definicion (linea 850) y su unico punto de llamada (linea 1015).",
+        "fuente": "VERIFICADO"
+      },
+      {
+        "metrica": "Tamano combinado de los 4 repos sin versionar",
+        "valor": "~1,3 GB",
+        "detalle": "alma-clinico 248M + alma-escriba 477M + copiloto-ficha 309M + alma-escriba-v2 266M (du -sh); dominado por entornos .venv, no por codigo.",
+        "fuente": "MEDIDO 2026-07-14"
+      },
+      {
+        "metrica": "Logging de que se descarta al recortar el vocabulario o al filtrar segmentos de audio",
+        "valor": "0 llamadas de log",
+        "detalle": "grep de 'logging' y 'logger.' en engine.py y vocab/__init__.py: sin resultados.",
+        "fuente": "VERIFICADO"
+      }
+    ]
+  },
+  "bug_abierto_farmacos": {
+    "titulo": "Whisper sigue inventando farmacos que nadie dijo, en el perfil de medicina general",
+    "estado": "ABIERTO - no resuelto por este material",
+    "resumen": "Un experimento reproducible (corpus sintetico de 20 consultas 'droga-cero' de 60-70s con 3 niveles de ruido, mas 3 guiones con-farmaco) midio 3 configuraciones del motor de transcripcion. Ninguna logra a la vez cero alucinacion Y buena captura de farmacos reales - es un trade-off medido, no resuelto.",
+    "configuraciones_medidas": [
+      {
+        "config": "PROD_full_MG (la que corre HOY en produccion para medicina general)",
+        "alucinacion_droga_cero": "25% (5/20)",
+        "captura_farmacos_reales": "79% (38/48)",
+        "nota": "ademas 6 farmacos extra inventados dentro del propio corpus con-farmaco (halu_cf=6)"
+      },
+      {
+        "config": "SAFE_base (hotwords de examenes, SIN hotwords de farmacos)",
+        "alucinacion_droga_cero": "0% (0/20)",
+        "captura_farmacos_reales": "42% (20/48)",
+        "nota": "elimina la alucinacion pero mas que duplica la tasa de farmacos reales que se pierden"
+      },
+      {
+        "config": "SAFE_base_nohw (sin hotwords en absoluto)",
+        "alucinacion_droga_cero": "0% (0/20)",
+        "captura_farmacos_reales": "42% (20/48)",
+        "nota": "identico a SAFE_base - sugiere que son los hotwords de FARMACOS especificamente los que causan la alucinacion, no los hotwords en general"
+      }
+    ],
+    "casos_ejemplo_medidos": [
+      "dc2_lumbago (consulta de dolor lumbar, CERO farmacos en el guion) -> inventado: 'losartan'",
+      "dc3_certificado (control sano/certificado, CERO farmacos) -> inventado: 'losartan'",
+      "dc4_control_examenes (revision de examenes normales, CERO farmacos) -> inventado en una corrida: 'atorvastatina'; en otra: 'ciprofloxacino'",
+      "dc5_mareos (vertigo, CERO farmacos) -> inventados EN LA MISMA consulta: 'atorvastatina' y 'amoxicilina'"
+    ],
+    "hallazgo_auxiliar": "Un experimento distinto (corrector fonetico de farmacos ya existente en el codigo) recupero correctamente 10 de 10 nombres de farmacos reales deliberadamente fragmentados por el reconocimiento de voz ('lo sartan'->'losartan', 'met formina'->'metformina', 'amoxi cilina'->'amoxicilina', etc.), con 0 falsos positivos sobre 30 frases inocentes.",
+    "hipotesis_no_probada": "Combinar SAFE_base (sin hotwords de farmacos, para no alucinar) con el corrector fonetico ya existente (para recuperar farmacos reales mal transcritos) podria lograr baja alucinacion Y buena captura a la vez. Esta combinacion especifica NO fue parte de las 3 configuraciones medidas y debe probarse antes de adoptarse - ver tarea NUC-02.",
+    "por_que_no_lo_detecto_la_verificacion_anterior": "La Etapa 0 de copiloto-rediseno-plan.html (2026-07-12) verifico con una prueba mas liviana: 12s de silencio puro (0 texto inventado) y voz real con silencios intercalados (5/5 terminos capturados, muestra pequena). No probo el perfil COMPLETO de medicina general (con hotwords de farmacos activos) sobre audio de duracion real (60-70s) con ruido realista en 3 niveles. Ambas verificaciones son validas; cubren alcances distintos.",
+    "fuente": "MEDIDO 2026-07-14 por el autor de este roadmap, leyendo directamente los resultados del experimento (exp4_fix.json, exp3_corrector.json) que tambien referencian las tareas NUC-04/NUC-07 del material de origen."
+  },
+  "tareas": [
+    {
+      "id": "NUC-01",
+      "titulo": "Poner los 4 repos clinicos bajo control de versiones antes de tocar codigo",
+      "componente": "transversal",
+      "prioridad": 1,
+      "problema": "alma-clinico, alma-escriba y copiloto-ficha no tienen .git propio: 'git rev-parse --show-toplevel' desde cualquiera de los 3 resuelve a /Users/rodrigoolavarria (el repo raiz del HOME, que en realidad trackea el proyecto chatbot-cmc); 'git -C ~ ls-files alma-clinico|alma-escriba|copiloto-ficha | wc -l' da 0 en los tres (verificado 2026-07-14). alma-escriba-v2 tiene su propio .git pero 0 commits ('your current branch main does not have any commits yet', verificado). Tamano combinado sin versionar: ~1,3 GB (medido con du -sh), dominado por entornos .venv, no por codigo. Sin git no hay diff, no hay rollback, no hay forma de responder 'que cambio el dia que fallo'. Todas las demas tareas de este roadmap tocan codigo clinico en produccion o semi-produccion; ejecutarlas sin esto primero es operar sin red.",
+      "solucion": "git init por repo + .gitignore endurecido (extendiendo el que ya existe en escriba y copiloto-ficha, creando uno nuevo y mas estricto para alma-clinico) + verificacion anti-PII ANTES de cualquier commit + commit baseline con tag + decision del dueno sobre el remoto + gate de arbol limpio en el unico script de deploy que existe hoy (copiloto-ficha/deploy/deploy.sh).",
+      "evidencia": "Verificacion directa 2026-07-14 (comandos de git y du -sh listados en el problema). Regla de memoria del proyecto: 'arreglos sistematicos, no parches' y 'los agentes de fix no hacen git commit'.",
+      "impacto": "transformador",
+      "esfuerzo": "horas por repo (~1 dia los 4 repos + tiempo de decision del dueno sobre el remoto)",
+      "riesgo": "bajo si se sigue el orden exacto de los pasos (gitignore y verificacion ANTES del commit); medio si el commit inicial se hace sin verificar, por riesgo de filtrar PHI (voz o datos de paciente) al historial de git de forma permanente.",
+      "archivos": [
+        "/Users/rodrigoolavarria/alma-clinico/.gitignore",
+        "/Users/rodrigoolavarria/alma-clinico/.git",
+        "/Users/rodrigoolavarria/alma-escriba/.gitignore",
+        "/Users/rodrigoolavarria/alma-escriba/.git",
+        "/Users/rodrigoolavarria/copiloto-ficha/.gitignore",
+        "/Users/rodrigoolavarria/copiloto-ficha/.git",
+        "/Users/rodrigoolavarria/copiloto-ficha/deploy/deploy.sh",
+        "/Users/rodrigoolavarria/alma-escriba-v2/.git",
+        "/Users/rodrigoolavarria/.gitignore"
+      ],
+      "pasos": [
+        "1. En cada uno de los 4 repos, confirmar/crear .gitignore. alma-escriba y copiloto-ficha YA tienen uno razonable (excluyen .venv/, data/*.db, data/audio/ o data/recetas/, __pycache__/, *.pyc) - EXTENDERLO, no sobrescribirlo. alma-clinico tiene uno minimo (.venv/, __pycache__/, *.egg-info/, *.pyc) que NO excluye data/ ni *.db: agregar data/, *.db, *.db-wal, *.db-shm. alma-escriba-v2: crear uno equivalente al de alma-escriba (ya tiene un archivo de base de datos en el arbol de trabajo - confirmar que no quede indexado). Agregar en los 4: .DS_Store, .pytest_cache/, .env.",
+        "2. git init en los 3 repos que no lo tienen (alma-clinico, alma-escriba, copiloto-ficha). alma-escriba-v2 ya tiene .git - solo falta el primer commit.",
+        "3. En el repo del HOME (/Users/rodrigoolavarria, remoto de chatbot-cmc): correr 'git -C ~ status --short -- alma-clinico/ alma-escriba/ copiloto-ficha/ alma-escriba-v2/'. Si aparece cualquier cosa, anadir las 4 carpetas a ~/.gitignore para que el repo del HOME nunca intente trackearlas.",
+        "4. git add -A en cada uno de los 4 repos. ANTES de commitear, verificar con 'git status --short' y 'git diff --cached --name-only' que NINGUN archivo de estos aparece staged: *.db, data/audio/*, data/recetas/*, *.env, cualquier ruta con 'token'. Si aparece alguno, sacarlo del stage (git restore --staged <archivo>) y corregir el .gitignore antes de continuar. No avanzar al paso 5 sin este chequeo en verde.",
+        "5. (Requiere confirmacion puntual del dueno - un agente no commitea en su nombre sin autorizacion para este baseline especifico) Commit inicial 'baseline: estado congelado pre-roadmap 2026-07-14' + git tag v-baseline en cada uno de los 4 repos.",
+        "6. (Decision del dueno, no automatizable - ver seccion de decisiones) Elegir host y visibilidad del remoto privado (por ejemplo GitHub, que organizacion, que convencion de nombres) para cada uno de los 4 repos. Crear los remotos y hacer 'git push -u origin main --tags' recien despues de tener esa decision Y de haber verificado el paso 4.",
+        "7. Anadir la verificacion de arbol limpio al deploy: en copiloto-ficha/deploy/deploy.sh (el UNICO de los 4 repos con script de deploy real, hacia el VPS 157.245.13.107) insertar, antes del rsync, un chequeo que aborte si 'git status --porcelain' no esta vacio o si 'git rev-parse HEAD' falla. Para alma-clinico (alma-stt.service + run-stt.sh) y alma-escriba (solo run.sh, corre local) documentar en su README que aun no tienen pipeline de deploy remoto - el gate se agrega cuando lo tengan.",
+        "8. Documentar el procedimiento de rollback en el README de cada repo: 'git revert <hash> && bash deploy/deploy.sh' (o el equivalente local para los repos sin deploy remoto) restaura el estado anterior.",
+        "9. Anotar en la memoria del proyecto que los 4 repos clinicos quedaron versionados, con fecha y remoto elegido."
+      ],
+      "criterios_aceptacion": [
+        "git -C ~/alma-clinico rev-parse --show-toplevel devuelve /Users/rodrigoolavarria/alma-clinico (no el HOME) - y equivalente para alma-escriba, copiloto-ficha, alma-escriba-v2.",
+        "git -C ~/alma-clinico ls-files | grep -cE '\\.py$' es mayor o igual a 10 (el nucleo tiene ~15 archivos .py).",
+        "En los 4 repos, 'git ls-files | grep -ciE .db$|audio/|token|.env$' da 0 (cero secretos/PII trackeados) - verificado ANTES de cualquier push.",
+        "git -C ~ status --short -- alma-clinico/ alma-escriba/ copiloto-ficha/ alma-escriba-v2/ no muestra estas carpetas como pendientes en el repo del HOME.",
+        "Los 4 repos tienen un commit inicial confirmado por el dueno, con tag v-baseline.",
+        "Existe una decision documentada del dueno sobre el destino del remoto antes de cualquier git push."
+      ],
+      "tests": [
+        "scripts/check_no_secrets.sh (a crear, uno por repo o compartido): falla si 'git ls-files' contiene *.db, data/audio, *.env o la palabra token; correrlo antes de cada commit.",
+        "Verificacion manual: 'git log --oneline | head -1' no vacio en los 4 repos tras el commit baseline."
+      ],
+      "dependencias": [],
+      "rollback": "Si el commit inicial resulta tener PII/secretos (fallo detectado despues del commit): si NO se hizo push todavia, 'git reset --mixed HEAD~1' y corregir antes de volver a commitear. Si ya se hizo push, el remoto debe recrearse (reescritura de historia) porque un revert normal no borra el blob del historial - no basta con un commit nuevo que 'borre' el archivo. Una vez establecido el baseline, cualquier tarea posterior de este roadmap se deshace con 'git revert <commit> && redeploy' segun el procedimiento documentado en el README de cada repo (paso 8).",
+      "revision_panel": "Fusiona NUC-01 y TRANS-03 (propuestas casi identicas del material original, mismo problema, mismo remedio). NUC-01 (2/3, con correcciones) cubria los 4 repos con verificacion mas precisa; TRANS-03 (2/3, con correcciones) cubria 3 de los 4 y aportaba la idea del gate en el script de deploy y la documentacion de rollback en el README, ya incorporadas en los pasos 7-8."
+    },
+    {
+      "id": "TRANS-03",
+      "titulo": "[FUSIONADA EN NUC-01] Poner los repos clinicos bajo control de versiones",
+      "componente": "transversal",
+      "prioridad": 1,
+      "estado": "fusionada",
+      "problema": "Ver NUC-01. Esta propuesta original cubria 3 de los 4 repos (le faltaba alma-escriba-v2) y llegaba a una solucion equivalente a partir del mismo material de auditoria.",
+      "solucion": "No se ejecuta por separado. Su contenido valido (documentar el rollback en el README de cada repo, agregar un gate de arbol limpio en el script de deploy) quedo incorporado en los pasos 7 y 8 de NUC-01.",
+      "evidencia": "Ver NUC-01.",
+      "impacto": "transformador",
+      "esfuerzo": "horas",
+      "riesgo": "bajo",
+      "archivos": [],
+      "pasos": [
+        "Ejecutar NUC-01. Esta ficha se conserva solo para trazabilidad del panel adversarial."
+      ],
+      "criterios_aceptacion": [
+        "Ver criterios de aceptacion de NUC-01."
+      ],
+      "tests": [],
+      "dependencias": [
+        "NUC-01"
+      ],
+      "rollback": "No aplica (tarea fusionada, sin ejecucion propia).",
+      "revision_panel": "Aprobada por mayoria (2/3) con correcciones; fusionada en NUC-01 al construir este roadmap por ser la misma tarea vista desde dos propuestas distintas del panel."
+    },
+    {
+      "id": "ESC-01",
+      "titulo": "Nunca suprimir banderas de riesgo suicida ni de alergia en el verificador de omisiones",
+      "componente": "escriba",
+      "prioridad": 2,
+      "problema": "'_filtrar_omisiones_falsas' (alma-escriba/app/ai.py, funcion definida en la linea 850, linea decisiva 878: 'if dato and any(w in nota_txt for w in dato): continue') descarta una bandera de omision si CUALQUIER palabra de contenido que comparte con la transcripcion aparece como substring en cualquier parte de la nota, sin distinguir negacion. Verificado ejecutando la logica contra el codigo real (2026-07-14, linea 878 confirmada byte a byte): bandera 'refiere ideacion suicida, no quedo registrada' + nota 'Paciente niega ideacion suicida' -> SUPRIMIDA (comparten las palabras 'ideacion'/'suicida'); bandera 'declara alergia a penicilina' + nota 'Sin alergias conocidas' -> SUPRIMIDA (comparten 'alergia' via substring de 'alergias'). Son los items #1 (alergias) y #2 (ideacion o intencion suicida) de la lista de prioridad que el propio prompt del verificador declara textualmente en la funcion '_verificacion_system' del mismo archivo. Corre HOY en produccion con la Dra. Unibazo (psiquiatria) - la especialidad donde perder una ideacion suicida es lo mas grave que puede pasar.",
+      "solucion": "Lista blanca de categorias CRITICAS que se conservan SIEMPRE, saltando el filtro de descarte ANTES de calcular que palabras comparte con la nota. NO se agrega ningun requisito de '2 palabras o mas' de coincidencia (el panel lo evaluo y lo rechazo por unanimidad: el caso legitimo que motivo el filtro -sertralina consignada en la receta pero marcada como omitida en la anamnesis- comparte 1 sola palabra de contenido con la nota; exigir 2 resucitaria exactamente el falso positivo que el filtro existe para evitar). Tampoco se implementa deteccion de negacion en esta tarea: el panel la marco opcional y de mayor riesgo porque cambiaria el comportamiento de TODAS las omisiones, no solo las criticas.",
+      "evidencia": "Verificado ejecutando la logica de app/ai.py contra los dos casos criticos (2026-07-14): ambas banderas se suprimen con el codigo actual. WHO Patient Safety Solutions, Solucion 1 (medicamentos de nombre o sonido parecido) y la practica del ISMP (Institute for Safe Medication Practices) establecen que un sistema automatizado no debe ocultar alertas de seguridad medica - norma reconocida internacionalmente (ANUNCIADO, no medicion local). El propio comentario del prompt del verificador en ai.py ya declara alergias e ideacion suicida como prioridad #1 y #2 de lo que no se puede perder (VERIFICADO en codigo).",
+      "impacto": "transformador",
+      "esfuerzo": "horas (la parte que se ejecuta: solo la whitelist). El panel corrigio la estimacion original de 'dias', que incluia la deteccion de negacion, descartada de esta tarea.",
+      "riesgo": "bajo - sobre-conservar una bandera critica es la falla segura (el peor caso posible es que la doctora vea una alerta de mas, nunca una de menos).",
+      "archivos": [
+        "/Users/rodrigoolavarria/alma-escriba/app/ai.py",
+        "/Users/rodrigoolavarria/alma-clinico/alma_clinico/verificador.py"
+      ],
+      "pasos": [
+        "1. En alma-escriba/app/ai.py, definir una constante CATEGORIAS_CRITICAS con patrones regex (sobre texto sin tildes, usando el helper _sin_tildes ya existente en el archivo) que jamas deben poder suprimirse: suicidio/autolesion/ideacion (suicid|autolesi|autol[i]tic|ideaci[o]n), alergia/anafilaxia (alergi|anafilax), embarazo (embaraz|gestaci), anticoagulacion (anticoagul), interaccion grave (interaccion grave).",
+        "2. Dentro del bucle 'for b in banderas:' de _filtrar_omisiones_falsas, inmediatamente despues del chequeo existente 'if b.get(tipo) != omision: continue' y ANTES de calcular las variables 'palabras'/'dato', insertar: si _sin_tildes(b.get('afirmacion','')) coincide con alguna de CATEGORIAS_CRITICAS, hacer 'out.append(b); continue' - la bandera se conserva siempre, sin evaluar el resto del filtro.",
+        "3. NO tocar el resto de la funcion: el corte por 'any(w in nota_txt for w in dato)' con 1 sola palabra de coincidencia se mantiene igual para las omisiones NO criticas, para que el caso sertralina se siga suprimiendo.",
+        "4. NO implementar deteccion de negacion en esta tarea. Si en el futuro se decide hacerlo, debe ir en una tarea aparte con su propio test de 'sertralina, 1 palabra, sin negador' que siga suprimida.",
+        "5. Auditar alma-clinico/alma_clinico/verificador.py (el nucleo compartido, usado por copiloto-ficha y por la futura migracion de alma-escriba): confirmar si su logica de corte tiene el mismo problema de ceguera a la negacion; si lo tiene, aplicar la MISMA whitelist critica ahi, saltando el corte antes de evaluarlo."
+      ],
+      "criterios_aceptacion": [
+        "Con el codigo corregido: bandera de omision de ideacion suicida + nota que contiene 'niega ideacion suicida' -> la bandera SIGUE llegando a la doctora (no se suprime).",
+        "Con el codigo corregido: bandera de omision de alergia a penicilina + nota 'Sin alergias conocidas' -> la bandera SIGUE llegando a la doctora.",
+        "El caso que motivo el filtro originalmente (sertralina consignada en la receta, marcada como omitida en la anamnesis, 1 sola palabra compartida con la nota) SIGUE suprimido - sin esto, ESC-01 resucita el falso positivo que la funcion existe para evitar.",
+        "0 regresiones en la suite de tests de alma-escriba (330 tests recolectados el 2026-07-14; confirmar con 'pytest --collect-only -q' antes y despues del cambio)."
+      ],
+      "tests": [
+        "test_conserva_bandera_suicida_negada: bandera de omision de ideacion suicida + nota que contiene 'niega ideacion suicida' -> conservada (se formaliza en la tarea ESC-03, pero debe poder ejecutarse manualmente antes de cerrar esta tarea).",
+        "test_conserva_alergia_contradicha: bandera de omision de alergia a penicilina + nota 'Sin alergias conocidas' -> conservada.",
+        "test_suprime_dato_real_en_otra_seccion: sertralina en receta, bandera 'omitida en anamnesis', 1 sola palabra compartida -> sigue suprimida (regresion del comportamiento bueno preexistente)."
+      ],
+      "dependencias": [
+        "NUC-01"
+      ],
+      "rollback": "git revert del commit de este fix + reinicio del servicio de alma-escriba. Como la whitelist solo AGREGA conservacion de banderas (nunca elimina una supresion existente para casos no criticos), el peor efecto de un rollback mal ejecutado es volver a suprimir de mas - no inventa un dato nuevo. De todas formas, revertir por git es la via estandar una vez NUC-01 este aplicada.",
+      "revision_panel": "Aprobada por panel adversarial (3/3, unanime) con correcciones obligatorias: se elimino el requisito de '2 palabras o mas' de coincidencia (contradecia el propio criterio de aceptacion y test del caso sertralina), se acoto el esfuerzo de 'dias' a 'horas' para la parte que realmente se ejecuta, y se dejo fuera de alcance la deteccion de negacion (mayor riesgo, cambia el comportamiento de todas las omisiones)."
+    },
+    {
+      "id": "NUC-02",
+      "titulo": "Resolver el trade-off alucinacion-vs-captura de farmacos en el perfil de medicina general (bug ABIERTO)",
+      "componente": "nucleo",
+      "prioridad": 3,
+      "problema": "El motor de transcripcion (alma_clinico/alma_stt/engine.py) sigue alucinando farmacos que nadie dijo cuando usa el perfil completo de medicina general (hotwords que incluyen nombres de farmacos). Medido en este roadmap (2026-07-14, corpus de 20 consultas simuladas sin ningun farmaco -'droga-cero'-, de 60 a 70 segundos cada una, en 3 niveles de ruido, con la configuracion PROD_full_MG que es la que corre HOY para medicina general): 5 de 20 consultas sin farmacos (25%) alucinaron al menos uno. Casos exactos: guion dc2_lumbago (dolor lumbar, cero farmacos) invento 'losartan'; dc3_certificado (control sano, cero farmacos) invento 'losartan'; dc4_control_examenes (revision de examenes normales, cero farmacos) invento 'atorvastatina' en una corrida y 'ciprofloxacino' en otra; dc5_mareos (vertigo, cero farmacos) invento 'atorvastatina' Y 'amoxicilina' en la misma consulta. Esto contradice el estado 'Hecho y verificado' de la Etapa 0 del plan de rediseno del 12 de julio de 2026, cuya verificacion fue mas liviana (12s de silencio puro, y 5 terminos clinicos en voz con silencios intercalados) y no incluyo el perfil completo de medicina general con hotwords de farmacos sobre audio de duracion real y ruido realista.",
+      "solucion": "No hay una solucion limpia todavia: hay un trade-off medido que el dueno debe resolver con mas trabajo, no con un interruptor on/off. Se midieron 3 configuraciones: PROD_full_MG (la actual, hotwords completos de medicina general) da 25% de alucinacion y 79% de captura de farmacos reales (38/48), mas 6 farmacos extra inventados dentro del propio corpus con-farmaco. SAFE_base (hotwords sin farmacos, solo examenes) da 0% de alucinacion pero la captura de farmacos reales CAE a 42% (20/48) - cambia alucinacion por omision, y omitir un farmaco real tambien es peligroso. SAFE_base_nohw (sin hotwords en absoluto) da un resultado identico a SAFE_base, lo que sugiere que son los hotwords de FARMACOS especificamente los que causan la alucinacion. Hallazgo auxiliar de un experimento distinto: el corrector fonetico de farmacos ya existente en el codigo recupero correctamente 10 de 10 nombres de farmacos reales deliberadamente fragmentados por el reconocimiento de voz, con 0 falsos positivos sobre 30 frases inocentes. Esto sugiere una hipotesis NO PROBADA todavia: combinar SAFE_base (sin hotwords de farmacos, para no alucinar) con el corrector fonetico (para recuperar farmacos reales mal transcritos) podria lograr baja alucinacion y buena captura a la vez - pero esa combinacion especifica no fue parte de las 3 configuraciones medidas y debe probarse antes de adoptarse.",
+      "evidencia": "MEDIDO directamente por el autor de este roadmap el 2026-07-14, leyendo los archivos de resultados del experimento (exp4_fix.json, exp3_corrector.json) que tambien referencian las tareas NUC-04/NUC-07 del material de origen. NOTA IMPORTANTE DE PROVENIENCIA: a diferencia de las otras 7 tareas de este roadmap, ESTA tarea NO paso por el panel adversarial de 3 revisores - fue agregada al detectar, mientras se verificaba el material recibido, que el 'bug abierto' que otras tareas dan por senalado (NUC-04 depende explicitamente de una 'NUC-02' que nunca llego con su propia ficha completa a este material) no tenia una tarea de arreglo concreta.",
+      "impacto": "transformador",
+      "esfuerzo": "dias a semanas (investigacion y validacion; no es un cambio de una linea de configuracion)",
+      "riesgo": "medio-alto si se ejecuta sin pasar por el panel: cada una de las 3 configuraciones medidas tiene un costo real (alucinar farmacos O sub-detectarlos); adoptar cualquiera sin validar la hipotesis del corrector puede simplemente cambiar un dano clinico por otro.",
+      "archivos": [
+        "/Users/rodrigoolavarria/alma-clinico/alma_stt/engine.py",
+        "/Users/rodrigoolavarria/alma-clinico/alma_clinico/vocab/__init__.py",
+        "/Users/rodrigoolavarria/alma-clinico/experimentos/exp-alucinacion-2026-07-14/ (destino propuesto para rescatar el corpus del scratchpad, ver paso 1)"
+      ],
+      "pasos": [
+        "1. URGENTE, antes que nada: copiar el experimento completo (corpus de audio, guiones, resultados en formato JSON) desde el directorio temporal de trabajo donde se genero hacia un directorio versionado dentro de alma-clinico. El directorio temporal es efimero y esta evidencia (incluidos los archivos .wav) se pierde si no se rescata a tiempo.",
+        "2. Someter esta ficha (NUC-02) al mismo panel adversarial de 3 revisores que evaluo las otras 7 tareas, con foco en: (a) si la hipotesis 'corrector + sin hotwords de farmacos' es razonable antes de gastar tiempo probandola; (b) que umbral de captura minima es clinicamente aceptable (¿es 42% tolerable si el verificador de 2a pasada igual marca la omision cuando el farmaco quedo fuera de la nota? ¿o es inaceptable por si mismo?).",
+        "3. Probar la 4a configuracion que todavia no se midio: SAFE_base + corrector fonetico de farmacos activo, sobre el mismo corpus con-farmaco (3 guiones) y droga-cero (20 casos) ya usado, reutilizando el arnes de medicion existente como base.",
+        "4. Llevar el resultado del paso 3 al dueno con los 4 numeros lado a lado (alucinacion en droga-cero, captura en con-farmaco de cada configuracion) para decidir cual pasa a produccion - es una decision de riesgo clinico, no solo tecnica (ver seccion de decisiones del dueno).",
+        "5. Una vez decidida la configuracion, aplicarla en engine.py/vocab/__init__.py, bajo git (requiere NUC-01 ya aplicada) y desplegar el servicio alma-stt (systemd alma-stt.service).",
+        "6. Recalibrar el harness de CI (tarea NUC-04) contra la configuracion final antes de fijar sus umbrales de aceptacion."
+      ],
+      "criterios_aceptacion": [
+        "El corpus de referencia queda versionado (no vive solo en un directorio temporal efimero) antes de tomar cualquier decision.",
+        "Existe una medicion de la configuracion candidata (SAFE_base + corrector) sobre los mismos 20 casos droga-cero y 48 menciones con-farmaco, directamente comparable con las 3 configuraciones ya medidas.",
+        "La decision final queda documentada por escrito: quien la tomo, cuando, y con que numeros - no es un cambio silencioso de configuracion.",
+        "La tasa de alucinacion de la configuracion adoptada en produccion es medible y menor o igual a la de SAFE_base (0/20), o el dueno acepto explicitamente un numero mayor con su justificacion por escrito."
+      ],
+      "tests": [
+        "Los mismos tipos de test que definira NUC-04 (droga-cero, con-farmaco, servicio), corridos contra la configuracion candidata antes de adoptarla en produccion."
+      ],
+      "dependencias": [
+        "NUC-01"
+      ],
+      "rollback": "Si la configuracion adoptada resulta peor en produccion real que en el laboratorio (falso negativo o positivo con un paciente real), revertir a PROD_full_MG (la configuracion actual, ya conocida: 79% de captura, 25% de riesgo de alucinacion) via git revert + reinicio de alma-stt.service, mientras se reinvestiga. Ninguna configuracion candidata se adopta sin que la anterior quede etiquetada en git para volver a ella en minutos.",
+      "revision_panel": "NO REVISADA POR EL PANEL ADVERSARIAL. Agregada por el autor de este roadmap a partir de evidencia medida directamente el 2026-07-14, para no dejar sin ficha el hallazgo mas importante de todo el material. Requiere pasar por el mismo proceso de revision de 3 voces independientes que las otras 7 tareas antes de ejecutarse - no ejecutar a ciegas dado que es un cambio en el pipeline de produccion con un trade-off de riesgo clinico real."
+    },
+    {
+      "id": "ESC-03",
+      "titulo": "Cobertura unitaria determinista de la funcion que decide que alertas NO ve la doctora",
+      "componente": "escriba",
+      "prioridad": 4,
+      "problema": "'_filtrar_omisiones_falsas' (alma-escriba/app/ai.py, linea 850) es la funcion que descarta banderas de seguridad antes de que la doctora las vea, y tiene CERO tests directos. Verificado 2026-07-14: 'grep -rn _filtrar_omisiones_falsas alma-escriba/' solo encuentra la definicion (linea 850) y su unico punto de llamada (linea 1015) - ningun archivo de tests/ la menciona. Los tests de tests/test_ai_verificador.py que tocan omision estan marcados como 'live' (se saltan sin clave de API) y prueban el PROMPT contra la IA real, no este filtro determinista que corre DESPUES y puede tirar una bandera correcta a la basura.",
+      "solucion": "Bateria de tests unitarios deterministas (sin red, sin API) que importan app.ai y ejercitan _filtrar_omisiones_falsas directamente, escritos DESPUES de que ESC-01 este aplicada (varios de estos tests quedan en rojo con el codigo actual sin ESC-01) y reflejando exactamente la logica final de ESC-01 - la whitelist de categorias criticas, SIN el umbral de '2 palabras o mas' que el panel rechazo.",
+      "evidencia": "Verificacion directa 2026-07-14 (grep confirmo 0 tests). alma-escriba tiene 330 tests recolectados hoy ('pytest --collect-only -q'); la cifra de 319 que cita el material original de la propuesta quedo desactualizada.",
+      "impacto": "alto",
+      "esfuerzo": "horas (una vez ESC-01 este aplicada; no se puede empezar antes: 3 de los 6 tests fallarian contra el codigo sin corregir)",
+      "riesgo": "bajo (solo agrega tests, no toca codigo de produccion)",
+      "archivos": [
+        "/Users/rodrigoolavarria/alma-escriba/tests/test_ai_verificador.py"
+      ],
+      "pasos": [
+        "1. Confirmar que ESC-01 ya esta aplicada (la whitelist de CATEGORIAS_CRITICAS existe en app/ai.py) antes de empezar - si no, estos tests no tienen forma de pasar.",
+        "2. tests/test_ai_verificador.py YA EXISTE y ya hace 'from app import ai' - esto es un AGREGADO al archivo, no un archivo nuevo. Llamar directo a ai._filtrar_omisiones_falsas(banderas, nota, transcripcion, especialidad).",
+        "3. Usar como molde la forma de 'nota' de los fixtures de conftest.py para que las aserciones de 'dato en otra seccion' sean reproducibles.",
+        "4. Escribir 6 o mas tests deterministas (ver la lista completa en el campo tests de esta misma ficha), todos en la suite normal (sin marcar 'live').",
+        "5. Correr la suite completa de alma-escriba (pytest) y confirmar 0 regresiones sobre los 330 tests preexistentes."
+      ],
+      "criterios_aceptacion": [
+        "6 o mas tests unitarios deterministas sobre _filtrar_omisiones_falsas, todos ejecutables sin clave de API (suite offline).",
+        "Cubren los dos casos criticos de ESC-01 (bandera suicida negada en la nota, alergia contradicha) - ambos deben quedar CONSERVADOS.",
+        "Cubren el caso de control (sertralina, 1 palabra compartida, en otra seccion) - debe quedar SUPRIMIDO, igual que hoy.",
+        "0 regresiones sobre los 330 tests existentes de alma-escriba."
+      ],
+      "tests": [
+        "test_conserva_bandera_suicida_negada: bandera de omision de ideacion suicida + nota que contiene 'niega ideacion suicida' -> conservada.",
+        "test_conserva_alergia_contradicha: bandera de omision de alergia a penicilina + nota 'Sin alergias conocidas' -> conservada.",
+        "test_conserva_categoria_critica_adicional: al menos un caso mas de las categorias criticas restantes (embarazo o anticoagulacion) -> conservada.",
+        "test_suprime_dato_en_otra_seccion: sertralina en receta, bandera 'omitida en anamnesis', 1 sola palabra compartida -> sigue suprimida (sin el umbral de 2 palabras que el panel rechazo).",
+        "test_alucinacion_nunca_pasa_por_este_filtro: una bandera con tipo distinto de 'omision' sale intacta sin evaluar nada mas.",
+        "test_entradas_vacias_no_lanzan: nota None, banderas vacias o transcripcion vacia -> no lanza excepcion, conserva por defecto."
+      ],
+      "dependencias": [
+        "ESC-01"
+      ],
+      "rollback": "Los tests son aditivos y no tocan codigo de produccion; revertir es simplemente 'git revert' del commit que los agrega, sin ningun efecto en el comportamiento del sistema.",
+      "revision_panel": "Aprobada por panel adversarial (3/3, unanime) con correcciones aplicadas: se elimino la dependencia de un umbral de '2 palabras o mas' (ya rechazado en ESC-01) y se corrigio el conteo de tests preexistentes de 319 a 330."
+    },
+    {
+      "id": "NUC-04",
+      "titulo": "Harness de audio real en CI: fixtures doradas que pasan por Whisper de verdad",
+      "componente": "nucleo",
+      "prioridad": 5,
+      "problema": "Ninguno de los 63 tests de alma-clinico (ni los 330 de alma-escriba) hace pasar un solo audio por Whisper - corren en fracciones de segundo (verificado 2026-07-14: 'pytest --collect-only' sobre alma-clinico da '63 tests collected' sin que ninguno invoque model.transcribe). engine.transcribir(), _vocab_kwargs (que llega REALMENTE al modelo), el VAD, y el servicio HTTP (alma_stt/main.py: autenticacion Bearer, limite de 60 MB, borrado del audio en finally) tienen cero cobertura automatizada. Es exactamente la capa donde vive el bug que NUC-02 cuantifico (25% de alucinacion de farmacos en droga-cero con la configuracion actual).",
+      "solucion": "Dos frentes deliberadamente separados por costo y velocidad. FRENTE A (barato, determinista, corre en cada push): smoke test del servicio alma_stt/main.py con TestClient de FastAPI y engine.transcribir mockeado - 401 sin Bearer, 413 sobre el limite de tamano, y verificacion de que el archivo temporal no existe tras la request (bloque finally). FRENTE B (caro, con audio real, corre nightly o pre-deploy): fixtures de audio versionadas y COMMITTEADAS (no generadas en CI con la herramienta 'say', que es exclusiva de macOS) del corpus droga-cero y con-farmaco ya usado por NUC-02, con aserciones calibradas contra la configuracion que NUC-02 termine adoptando - NO contra un '0 absoluto' que hoy es falso (la configuracion de produccion actual tiene 5 de 20 alucinaciones medidas).",
+      "evidencia": "Verificacion directa 2026-07-14. El corpus reproducible existe hoy en el mismo directorio de trabajo que uso NUC-02 - nombres de archivo confirmados: cf1_hta_dm, cf2_infeccion, cf3_tiroides (con-farmaco), dc1_resfrio a dc5_mareos (droga-cero), niveles clean/medium/heavy, mas audio de silencio puro y de ruido ambiente. alma_stt/main.py confirmado linea por linea: linea 41 MAX_BYTES, linea 56 verificacion Bearer, linea 83 'raise HTTPException(413,...)', linea 97 'os.unlink(tmp.name)' dentro de finally.",
+      "impacto": "alto",
+      "esfuerzo": "Frente A: horas. Frente B: dias - y solo tiene sentido calibrarlo despues de NUC-02.",
+      "riesgo": "bajo (son tests; el unico riesgo es un job nightly poco confiable que el equipo aprenda a ignorar si no se fijan versiones exactas y no se usan fixtures committeadas en vez de generadas al vuelo).",
+      "archivos": [
+        "/Users/rodrigoolavarria/alma-clinico/tests/test_servicio.py",
+        "/Users/rodrigoolavarria/alma-clinico/tests/test_acustica.py",
+        "/Users/rodrigoolavarria/alma-clinico/tests/audio/",
+        "/Users/rodrigoolavarria/alma-clinico/alma_stt/main.py",
+        "/Users/rodrigoolavarria/alma-clinico/alma_stt/engine.py",
+        "/Users/rodrigoolavarria/alma-clinico/pytest.ini"
+      ],
+      "pasos": [
+        "1. FRENTE A primero, no depende de nada: crear tests/test_servicio.py con TestClient de alma_stt/main.py, mockeando engine.transcribir. Casos: sin header Authorization -> 401; payload mayor al limite configurado (fijar el limite bajo por variable de entorno antes de importar main, no subir un archivo de 60 MB de verdad) -> 413; tras una request exitosa, el archivo temporal creado ya no existe (verificar el bloque finally).",
+        "2. Registrar el marcador 'audio' en pytest.ini para poder correr esa suite por separado o excluirla por defecto.",
+        "3. FRENTE B, despues de NUC-02: elegir un subconjunto MINIMO del corpus (2 o 3 casos droga-cero + 2 o 3 con-farmaco, no el corpus completo) y COMMITEARLO como binario en tests/audio/ - no regenerar con la herramienta 'say' en CI, porque es exclusiva de macOS y el runner nightly puede no serlo.",
+        "4. tests/test_acustica.py, marcado como test lento: droga-cero -> 0 farmacos del catalogo (una vez NUC-02 haya llevado la configuracion de produccion a ese numero; mientras tanto, usar un umbral de REGRESION contra el valor medido, no un 0 absoluto que hoy es falso); con-farmaco -> captura mayor o igual al umbral que arroje la configuracion final de NUC-02.",
+        "5. Fijar la version exacta de faster-whisper (hoy 1.2.1, verificado) y no depender de comparaciones exactas de texto - solo presencia o ausencia del farmaco en el catalogo.",
+        "6. Correr el Frente A en cada push (rapido, sin Whisper) y el Frente B en un job nightly o pre-deploy - decidir el mecanismo (no existe integracion continua hoy en estos repos) y NO correrlo en el VPS de produccion 157.245.13.107 si eso implica cargar un segundo modelo de 552 MB junto al servicio en vivo (riesgo de falta de memoria)."
+      ],
+      "criterios_aceptacion": [
+        "La suite normal de pytest (sin el marcador audio) sigue corriendo en menos de 1 segundo e incluye el Frente A.",
+        "La suite marcada como audio ejecuta model.transcribe de verdad (duracion mayor a 5 segundos, no menor a 1) y falla si la tasa de alucinacion en droga-cero empeora respecto del baseline medido por NUC-02.",
+        "El test de servicio cubre las 3 garantias de seguridad documentadas en el propio main.py: autenticacion, limite de tamano, borrado del audio.",
+        "El job que corre el Frente B no compite por memoria con el servicio alma-stt en produccion."
+      ],
+      "tests": [
+        "tests/test_servicio.py (Frente A, 3 o mas casos: 401, 413, borrado del archivo).",
+        "tests/test_acustica.py (Frente B, marcado como test de audio lento)."
+      ],
+      "dependencias": [
+        "NUC-01",
+        "NUC-02"
+      ],
+      "rollback": "Los tests son aditivos. Si el job nightly resulta poco confiable y genera ruido, desactivarlo (quitarlo del cron o de la integracion continua) sin revertir ningun codigo de produccion - es una tarea de observacion, no de cambio de comportamiento.",
+      "revision_panel": "Fusiona NUC-04 y NUC-07 (propuestas casi identicas del material original, mismo objetivo, dos rondas de panel distintas). NUC-04 (3/3, unanime) tenia verificacion de codigo mas precisa; NUC-07 (2/3) proponia ademas un test de 'modo ambient por trozos' que el panel constato que NO EXISTE en el codigo - esa parte se descarto, no se fusiono (ver seccion de descartadas)."
+    },
+    {
+      "id": "NUC-07",
+      "titulo": "[FUSIONADA EN NUC-04] Harness de audio en CI: corpus golden droga-cero",
+      "componente": "nucleo",
+      "prioridad": 5,
+      "estado": "fusionada",
+      "problema": "Ver NUC-04. Cubre el mismo objetivo (fixtures de audio real en integracion continua) con menor precision de verificacion de codigo; ademas proponia un test de 'modo ambient por trozos' que no corresponde a ninguna funcion existente en el codigo (busqueda sin resultados en alma_stt/scripts).",
+      "solucion": "No se ejecuta por separado. Ejecutar NUC-04. La parte de 'modo ambient' se descarto explicitamente (ver seccion descartadas, item NUC-07-DESCARTE-MODO-AMBIENT).",
+      "evidencia": "Ver NUC-04.",
+      "impacto": "alto",
+      "esfuerzo": "dias",
+      "riesgo": "bajo",
+      "archivos": [],
+      "pasos": [
+        "Ejecutar NUC-04. Esta ficha se conserva solo para trazabilidad del panel adversarial."
+      ],
+      "criterios_aceptacion": [
+        "Ver criterios de aceptacion de NUC-04."
+      ],
+      "tests": [],
+      "dependencias": [
+        "NUC-04"
+      ],
+      "rollback": "No aplica (tarea fusionada, sin ejecucion propia).",
+      "revision_panel": "Aprobada por mayoria (2/3, un revisor la marco no ejecutable por inventar infraestructura de integracion continua inexistente); fusionada en NUC-04 al construir este roadmap."
+    },
+    {
+      "id": "TRANS-02",
+      "titulo": "Telemetria pasiva de la capa acustica: que se descarta y que farmaco aparece con evidencia debil",
+      "componente": "transversal",
+      "prioridad": 6,
+      "problema": "Hoy nadie se entera si el bug de NUC-02 reaparece o empeora fuera del laboratorio. engine.transcribir() arma una lista de 'descartados' en sus metadatos (verificado: alma_stt/engine.py, lineas 201, 209 y 240) pero NINGUN consumidor la persiste ni la mira (0 resultados de 'logging' o 'logger.' en engine.py). vocab/_recorta_hotwords (linea 149, con un 'break' en la linea 155) recorta el vocabulario en silencio, sin loguear cuanto. El incidente que motivo este roadmap se detecto por casualidad en un experimento ad hoc, no por un monitor - y el audio ya se pierde a los 7 dias de retencion.",
+      "solucion": "SOLO telemetria pasiva y local. El panel rechazo explicitamente la propuesta original de alertar en vivo por WhatsApp o webhook cuando aparece un farmaco con evidencia acustica debil, porque: (a) el motor corre con vad_filter=True, asi que todo segmento devuelto YA paso el VAD - la senal 'sin voz adyacente' nunca dispara para el modo de falla real (ruido que engana al VAD, con confianza de modelo ALTA segun la literatura de alucinaciones de Whisper); (b) el propio codigo documenta 'no_speech_prob mayor a 0,6' como generador de falsos positivos sobre voz legitima (medido y ya publicado en alma-clinico-arquitectura.html: la frase real 'Me cuesta mucho levantarme en las mananas' tiene no_speech_prob=0,691 pero es voz genuina); (c) empujar 'farmaco + contexto de paciente' por WhatsApp es una fuga de datos de salud que contradice el principio de diseno explicito del motor (el audio se transcribe en la maquina propia, nunca en la nube); (d) no existe ninguna funcion de notificacion en estos repos hoy - habria sido una integracion cruzada con chatbot-cmc sin interfaz, credenciales ni plantilla de Meta aprobada. Lo que SI se construye: persistir por consulta los segmentos descartados, las metricas (no_speech_prob, avg_logprob) tambien de los segmentos EMITIDOS (hoy solo las tienen los descartados), y un contador de cuanto vocabulario se recorta al cargar cada perfil - todo en un registro estructurado local, sin salir de la maquina.",
+      "evidencia": "Verificacion directa 2026-07-14 (0 resultados de logging en engine.py; _recorta_hotwords confirmado en linea 149 con break en linea 155, sin log). Correccion del panel: 2 de 3 revisores aprobaron con este alcance recortado; el tercero rechazo la propuesta completa por invenciones de integracion (dos motores STT distintos en el ecosistema, funcion de notificacion inexistente) que ya no aplican a esta version reducida.",
+      "impacto": "medio (bajo desde 'transformador' tras la correccion del panel - ya no es un sistema de alerta, es un registro de auditoria)",
+      "esfuerzo": "dias",
+      "riesgo": "bajo, siempre que NO se implemente ningun canal de notificacion externo con datos de paciente (ver seccion de descartadas).",
+      "archivos": [
+        "/Users/rodrigoolavarria/alma-clinico/alma_stt/engine.py",
+        "/Users/rodrigoolavarria/alma-clinico/alma_clinico/vocab/__init__.py",
+        "/Users/rodrigoolavarria/alma-escriba/app/stt.py"
+      ],
+      "pasos": [
+        "1. En engine.transcribir, adjuntar a cada segmento EMITIDO (no solo a los descartados) sus metricas no_speech_prob y avg_logprob - hoy solo se guardan inicio, fin y texto de los segmentos conservados.",
+        "2. Definir que cuenta como 'farmaco detectado en un segmento': coincidencia contra el catalogo de vocab.farmacos(perfil) normalizado sin tildes - no inventar un mecanismo nuevo de deteccion.",
+        "3. Persistir por consulta, en un registro estructurado LOCAL (archivo o tabla SQLite local, NO un servicio externo), los segmentos descartados mas las metricas de los farmacos detectados mas el contador de recorte del vocabulario.",
+        "4. En vocab/_recorta_hotwords y la funcion equivalente de recorte de cola, emitir un log informativo con la proporcion de terminos incluidos sobre el total al cargar cada perfil.",
+        "5. Verificar si alma-escriba/app/stt.py (motor de transcripcion propio y separado del nucleo compartido) necesita la misma instrumentacion - si alma-escriba migra al nucleo compartido (ver seccion de decisiones del dueno), esta instrumentacion se hereda gratis; si no migra, hay que replicarla ahi tambien.",
+        "6. Exponer una vista de solo lectura (resumen semanal, no en tiempo real) con: cuantos farmacos con evidencia acustica debil aparecieron, cuanto vocabulario se recorto por perfil. Dejar explicito en esa vista: 'deteccion parcial, no verificacion' - un reporte limpio NO significa ausencia de alucinaciones."
+      ],
+      "criterios_aceptacion": [
+        "Cada consulta transcrita deja un registro local con sus segmentos descartados y las metricas de sus farmacos detectados.",
+        "El log de carga de un perfil informa la proporcion de vocabulario recortado.",
+        "Cero integraciones de notificacion externa (WhatsApp, webhook) con datos de paciente - verificar que no se agrego ninguna dependencia nueva de red saliente con datos clinicos.",
+        "El reporte semanal existe y es legible, pero en ningun punto se presenta como garantia de ausencia de alucinaciones."
+      ],
+      "tests": [
+        "test_segmento_emitido_incluye_metricas: un segmento conservado trae no_speech_prob y avg_logprob.",
+        "test_recorte_vocab_logueado: cargar un perfil emite el contador de recorte.",
+        "test_sin_notificacion_externa: verificacion de que este cambio no agrega ninguna llamada de red saliente con datos de paciente."
+      ],
+      "dependencias": [
+        "NUC-01"
+      ],
+      "rollback": "Es telemetria aditiva de solo lectura; revertir es 'git revert' del commit correspondiente, sin efecto en el comportamiento clinico del sistema.",
+      "revision_panel": "Aprobada por mayoria (2/3) con alcance fuertemente recortado respecto de la propuesta original. El voto disidente completo se preserva en la seccion de descartadas porque senalo invenciones reales (dos motores STT distintos en el ecosistema, funcion de notificacion inexistente) que esta version ya no requiere."
+    }
+  ],
+  "descartadas": [
+    {
+      "id": "ESC-01-DESCARTE-UMBRAL-2-PALABRAS",
+      "titulo": "Exigir 2 palabras de contenido o mas, compartidas con la nota, antes de suprimir una omision",
+      "de_la_propuesta": "ESC-01",
+      "por_que_se_descarto": "El caso legitimo que motivo el filtro original (sertralina consignada en la receta, marcada como omitida en la anamnesis) comparte exactamente 1 palabra de contenido ('sertralina') con la nota. Exigir 2 palabras habria hecho que ese caso YA NO se suprima, resucitando el falso positivo canonico que el filtro existe para evitar - y violando el propio criterio de aceptacion y test de la propuesta original. Rechazado por unanimidad de los 3 revisores del panel."
+    },
+    {
+      "id": "TRANS-02-DESCARTE-ALERTA-WHATSAPP",
+      "titulo": "Alertar por WhatsApp o webhook al dueno cuando un farmaco aparece en un segmento con evidencia acustica debil",
+      "de_la_propuesta": "TRANS-02",
+      "por_que_se_descarto": "Refutado por el propio codigo en varios frentes: (1) el motor corre con vad_filter=True, asi que todo segmento emitido ya paso el VAD - la senal 'sin voz adyacente' nunca dispara para el modo de falla real (ruido que engana al VAD, con confianza de modelo alta); (2) 'no_speech_prob mayor a 0,6' esta documentado en el propio codigo como generador de falsos positivos sobre voz legitima (caso medido: 'Me cuesta mucho levantarme en las mananas', no_speech_prob=0,691, voz real); (3) enviar 'farmaco + contexto de paciente' por WhatsApp es una fuga de datos de salud que contradice el principio de diseno explicito del motor (el audio nunca sale de la maquina propia); (4) no existe ninguna funcion de notificacion en estos repos - habria sido una integracion cruzada con chatbot-cmc sin interfaz, credenciales ni plantilla de Meta aprobada."
+    },
+    {
+      "id": "NUC-07-DESCARTE-MODO-AMBIENT",
+      "titulo": "Test de que N trozos de 10 segundos (modo 'ambient') no amplifican la invencion mas que 1 llamada larga",
+      "de_la_propuesta": "NUC-07",
+      "por_que_se_descarto": "No existe ningun modo de transcripcion por trozos o 'ambient' en el codigo (busqueda sin resultados en alma_stt/scripts para chunking). Es un test disenado para una funcionalidad que no esta construida. Se descarta hasta que esa funcionalidad exista; si se construye en el futuro, debe volver a proponerse con su propia especificacion."
+    },
+    {
+      "id": "NUC-07-DESCARTE-CI-NIGHTLY-DESDE-CERO-CON-SAY",
+      "titulo": "Pipeline de integracion continua nightly construido desde cero, regenerando el audio con la herramienta 'say' en cada corrida, con asercion absoluta de 0 alucinaciones",
+      "de_la_propuesta": "NUC-07",
+      "por_que_se_descarto": "Tres problemas simultaneos: no existe infraestructura de integracion continua en estos repos hoy; 'say' es una herramienta exclusiva de macOS y un runner nightly tipico no lo es; y la asercion de '0 alucinaciones absolutas' contradice la evidencia medida (la configuracion de produccion actual tiene 5 de 20, ver NUC-02) - el arnes naceria en rojo el primer dia. Reemplazado en NUC-04 por: fixtures de audio COMMITTEADAS (no regeneradas en cada corrida) y aserciones de regresion contra un baseline medido, no contra un 0 absoluto prematuro."
+    }
+  ],
+  "decisiones_dueno": [
+    {
+      "id": "DEC-01",
+      "titulo": "Host y visibilidad del remoto git privado para los 4 repos clinicos",
+      "detalle": "NUC-01 deja los 4 repos listos para pushear, pero no puede decidir donde: que proveedor (GitHub u otro), que organizacion o cuenta, que convencion de nombres, y confirmar que los repos queden privados. Sin esto, el paso 6 de NUC-01 no se ejecuta."
+    },
+    {
+      "id": "DEC-02",
+      "titulo": "Que configuracion de transcripcion adoptar para medicina general: alucinacion vs. captura de farmacos",
+      "detalle": "Es la decision mas importante de este roadmap. PROD_full_MG (hoy) captura 79% de los farmacos reales pero alucina en 25% de las consultas sin farmacos. SAFE_base elimina la alucinacion pero solo captura 42% de los farmacos reales. Ninguna de las dos es 'segura' sin matices: una inventa medicamentos, la otra los pierde. La hipotesis del corrector fonetico (NUC-02, paso 3) podria mejorar ambas cifras a la vez, pero no esta probada. El dueno debe decidir si tolera el riesgo actual mientras se investiga, o si prefiere adoptar SAFE_base de inmediato (perdiendo captura) como medida provisoria."
+    },
+    {
+      "id": "DEC-03",
+      "titulo": "Migrar alma-escriba (psiquiatria) al nucleo compartido alma_clinico ahora, o esperar",
+      "detalle": "alma-escriba todavia usa su propio stt.py y su propio vocab_clinico, separados del nucleo. Si no migra, el arreglo de ESC-01 (y cualquier arreglo futuro del nucleo, incluido NUC-02) debe aplicarse a mano en dos lugares - exactamente el patron que ya genero una brecha de semanas una vez, segun el propio comentario de cabecera dejado adrede en alma_clinico/alma_stt/engine.py. alma-clinico-arquitectura.html ya deja esta decision pendiente ('despues del piloto con la psiquiatra, no antes'); este roadmap agrega evidencia nueva (ESC-01) que aumenta el costo de seguir postergandola."
+    },
+    {
+      "id": "DEC-04",
+      "titulo": "Donde corre el job nightly del harness de audio (NUC-04) sin arriesgar el servicio de produccion",
+      "detalle": "El VPS de produccion (157.245.13.107) ya corre el servicio alma-stt con el modelo Whisper cargado (552 MB medidos, droplet con memoria ajustada). Cargar un segundo modelo para testear en el mismo droplet arriesga quedarse sin memoria justo en el sistema que atiende consultas reales. Definir si el harness corre en el Mac de desarrollo, en un droplet aparte, o se posterga hasta redimensionar el droplet (decision ya pendiente en alma-clinico-arquitectura.html)."
+    },
+    {
+      "id": "DEC-05",
+      "titulo": "Politica de retencion para los nuevos registros de telemetria de TRANS-02",
+      "detalle": "TRANS-02 crea un registro local nuevo (segmentos descartados, metricas de farmacos detectados). Es informacion derivada de audio clinico. Definir si hereda la misma politica de retencion de 7 dias que el audio, o si al ser metadatos (sin el audio en si) puede conservarse mas tiempo para detectar tendencias - y documentar esa decision explicitamente, no dejarla implicita."
+    },
+    {
+      "id": "DEC-06",
+      "titulo": "Prioridad de ejecucion frente a la carga clinica real",
+      "detalle": "Este roadmap asume que hay tiempo de ingenieria disponible para ejecutar 6 tareas activas (NUC-01, ESC-01, NUC-02, ESC-03, NUC-04, TRANS-02) mas la validacion de NUC-02 por un panel. El dueno debe decidir el ritmo real dado que tambien atiende pacientes - que tareas se hacen en paralelo (NUC-01 y ESC-01 pueden ir juntas, distintos repos) y cuales esperan."
+    }
+  ],
+  "metricas_de_exito": [
+    {
+      "metrica": "Tasa de alucinacion de farmacos en droga-cero (medicina general, perfil completo)",
+      "hoy": "25% (5/20), MEDIDO 2026-07-14",
+      "objetivo": "0%, sin que la captura de farmacos reales baje de 70%",
+      "como_se_mide": "Harness de NUC-04 sobre el corpus de referencia, corrido regularmente."
+    },
+    {
+      "metrica": "Tasa de captura de farmacos reales mencionados (medicina general)",
+      "hoy": "79% en la config actual (que alucina) / 42% en la config segura conocida (que no alucina)",
+      "objetivo": "80% o mas, simultaneo con 0% de alucinacion",
+      "como_se_mide": "Mismo harness, corpus con-farmaco."
+    },
+    {
+      "metrica": "Supresion de banderas criticas (suicidio, alergia) por el filtro de omisiones",
+      "hoy": "no medida en absoluto, 0 tests",
+      "objetivo": "0% de supresion de categorias criticas, verificado en cada corrida de CI",
+      "como_se_mide": "Tests de ESC-03 corriendo en la suite normal."
+    },
+    {
+      "metrica": "Cobertura de tests que tocan audio real pasando por Whisper",
+      "hoy": "0% (0 de 63 + 0 de 330)",
+      "objetivo": "Suite de audio corriendo en cada pre-deploy como minimo",
+      "como_se_mide": "NUC-04, marcador de test 'audio'."
+    },
+    {
+      "metrica": "Repos clinicos bajo control de versiones con remoto",
+      "hoy": "0 de 4",
+      "objetivo": "4 de 4, con baseline etiquetado y remoto privado",
+      "como_se_mide": "Criterios de aceptacion de NUC-01."
+    },
+    {
+      "metrica": "Tiempo para revertir un cambio de codigo clinico que sale mal",
+      "hoy": "indefinido / no es posible sin git",
+      "objetivo": "menor a 1 hora desde que se detecta el problema hasta que el servicio vuelve al estado anterior",
+      "como_se_mide": "Simulacro de rollback documentado en el README de cada repo (paso 8 de NUC-01)."
+    },
+    {
+      "metrica": "Proporcion de vocabulario recortado silenciosamente al cargar un perfil",
+      "hoy": "desconocida (0 logging)",
+      "objetivo": "visible en cada carga de perfil, sin umbral objetivo fijo (es informativa, no un limite)",
+      "como_se_mide": "Log agregado por TRANS-02."
+    },
+    {
+      "metrica": "Farmacos con evidencia acustica debil detectados por la nueva telemetria",
+      "hoy": "0 (no existe la telemetria)",
+      "objetivo": "Reporte semanal legible, sin falsa sensacion de garantia",
+      "como_se_mide": "Vista de solo lectura de TRANS-02."
+    }
+  ]
+}

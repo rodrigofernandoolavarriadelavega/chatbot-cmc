@@ -3599,8 +3599,14 @@ _ATRIBUCION_DASHBOARD_HTML = (_TEMPLATE_DIR / "atribucion_dashboard.html").read_
 _ARQUITECTURA_SAAS_HTML = (_TEMPLATE_DIR / "arquitectura_saas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "arquitectura_saas.html").exists() else ""
 _PORTADA_OLACORE_HTML = (_TEMPLATE_DIR / "portada_olacore.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portada_olacore.html").exists() else ""
 _ABARCA_DASHBOARD_HTML = (_TEMPLATE_DIR / "abarca_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "abarca_dashboard.html").exists() else ""
+_REEMPLAZO_INGRESO_DASHBOARD_HTML = (_TEMPLATE_DIR / "reemplazo_ingreso_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "reemplazo_ingreso_dashboard.html").exists() else ""
 _OLAVARRIA_DASHBOARD_HTML = (_TEMPLATE_DIR / "olavarria_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olavarria_dashboard.html").exists() else ""
 _PROF_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_dashboard.html").exists() else ""
+# Genérico por id (BI v2, sin token) — VIVE APARTE del de token a propósito:
+# fc7db14 sobrescribió profesional_dashboard.html (que era este genérico, creado
+# en b246e84) con el dashboard semanal HMAC, y /profesional/{id} quedó sirviendo
+# el front equivocado → pantalla en blanco. Restaurado con nombre propio.
+_PROF_BI_DASHBOARD_HTML = (_TEMPLATE_DIR / "profesional_bi_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesional_bi_dashboard.html").exists() else ""
 _WINBACK_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dashboard.html").exists() else ""
 _WINBACK_DENTAL_DASHBOARD_HTML = (_TEMPLATE_DIR / "winback_dental_dashboard.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "winback_dental_dashboard.html").exists() else ""
 _BOXES_DASHBOARD_HTML = (_TEMPLATE_DIR / "boxes_dashboard.html").read_text(encoding="utf-8")
@@ -3609,6 +3615,7 @@ _KINTU_HTML = (_TEMPLATE_DIR / "kintu.html").read_text(encoding="utf-8") if (_TE
 _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_agenda.html").exists() else ""
 _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador.html").exists() else ""
 _AGENDADOR_PORTAL_HTML = (_TEMPLATE_DIR / "agendador_portal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador_portal.html").exists() else ""
+_AGENDADOR_V2_HTML = (_TEMPLATE_DIR / "agendador_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador_v2.html").exists() else ""
 _VECINO_MEULEN_HTML = (_TEMPLATE_DIR / "vecino_meulen.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "vecino_meulen.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
@@ -5785,6 +5792,16 @@ def abarca_dashboard_page():
     return _ABARCA_DASHBOARD_HTML
 
 
+@app.get("/reemplazo-ingreso", response_class=HTMLResponse)
+@app.get("/reemplazo-ingreso/dashboard", response_class=HTMLResponse)
+def reemplazo_ingreso_dashboard_page():
+    """Reemplazo de ingreso — cuánto del honorario clínico personal de Rodrigo
+    ($5,03M/mes) puede reemplazar el CMC creciendo, sin que él atienda."""
+    if not _REEMPLAZO_INGRESO_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard Reemplazo de ingreso no disponible")
+    return _REEMPLAZO_INGRESO_DASHBOARD_HTML
+
+
 async def _fetch_abarca_dia(cli: httpx.AsyncClient, fecha_iso: str) -> list[dict] | None:
     """Fetch atenciones del Dr. Abarca para una fecha. Retorna None si el fetch
     falla (preserva cache existente); [] o lista poblada si tuvo éxito."""
@@ -6498,12 +6515,22 @@ def profesional_dashboard_token_page():
     return _PROF_DASHBOARD_HTML
 
 
+@app.get("/centro", response_class=HTMLResponse)
+def centro_dashboard_page():
+    """Consolidado de TODO el centro — mismo dashboard genérico con id 0."""
+    if not _PROF_BI_DASHBOARD_HTML:
+        raise HTTPException(404, "Dashboard profesional no disponible")
+    return _PROF_BI_DASHBOARD_HTML
+
+
 @app.get("/profesional/{id_prof}", response_class=HTMLResponse)
 def profesional_dashboard_page(id_prof: int):
-    """Dashboard genérico por profesional. Reemplaza /abarca y /olavarria."""
-    if not _PROF_DASHBOARD_HTML:
+    """Dashboard genérico por profesional (BI v2). Come de
+    /api/profesional/{id}/data y resuelve el id desde el pathname.
+    Sirve `profesional_bi_dashboard.html`, NO el de token."""
+    if not _PROF_BI_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard profesional no disponible")
-    return _PROF_DASHBOARD_HTML
+    return _PROF_BI_DASHBOARD_HTML
 
 
 @app.get("/api/profesional/{id_prof}/data")
@@ -6515,15 +6542,18 @@ async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
     """
     from bi_sync import sync_profesional, stats_profesional, stats_profesional_caja
     from session import db as _c_p
-    with _c_p() as c:
-        n_rows = c.execute(
-            "SELECT COUNT(*) FROM bi_atenciones WHERE id_profesional=?", (id_prof,)
-        ).fetchone()[0]
-    if n_rows == 0:
-        log.info("BI v2: prof=%d cache vacío → kickoff seed en background", id_prof)
-        _spawn_bg(sync_profesional(id_prof, desde=desde), name=f"seed_prof_{id_prof}")
-    elif refresh:
-        _spawn_bg(sync_profesional(id_prof, desde=desde, force=False), name=f"refresh_prof_{id_prof}")
+    # id_prof=0 → CONSOLIDADO del centro. No hay "profesional 0" que sincronizar:
+    # se lee lo que ya cargaron los syncs individuales + el cron diario.
+    if id_prof != 0:
+        with _c_p() as c:
+            n_rows = c.execute(
+                "SELECT COUNT(*) FROM bi_atenciones WHERE id_profesional=?", (id_prof,)
+            ).fetchone()[0]
+        if n_rows == 0:
+            log.info("BI v2: prof=%d cache vacío → kickoff seed en background", id_prof)
+            _spawn_bg(sync_profesional(id_prof, desde=desde), name=f"seed_prof_{id_prof}")
+        elif refresh:
+            _spawn_bg(sync_profesional(id_prof, desde=desde, force=False), name=f"refresh_prof_{id_prof}")
 
     base = stats_profesional(id_prof, desde=desde)
     caja = stats_profesional_caja(id_prof, desde=desde)

@@ -1,0 +1,800 @@
+<meta charset="utf-8">
+<title>Roadmap Alma Clinico · Centro Medico Carampangue</title>
+<!-- Sin CDNs: la CSP del sitio los bloquea. Tipografias = stack del sistema (Montserrat/Inter si estan instaladas). -->
+<!-- Coherente con ~/copiloto-rediseno-plan.html y ~/alma-clinico-arquitectura.html: mismos tokens, misma gramatica visual. -->
+<style>
+  :root{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --navy:#0F3F68; --navy-deep:#0a2e4d;
+    /* Paleta con contraste WCAG AA verificado */
+    --teal-700:#0E7C86;  /* texto/accion sobre claro -- 4,95:1 AA */
+    --teal-500:#2A9AAB;  /* bordes / iconos / foco -- 3,33:1 AA componentes */
+    --teal-400:#4FBECE;  /* acento de marca -- SOLO fondo, grafico, o texto sobre navy (2,19:1 sobre blanco, FALLA) */
+    --teal-050:#eaf6f8;
+    --gold:#c98a14; --violet:#6a4c93;
+    --good:#067647; --good-bg:#ecfdf3;
+    --warn:#b54708; --warn-bg:#fffaeb;
+    --crit:#b42318; --crit-bg:#fef3f2;
+    --info:#175cd3; --info-bg:#eff8ff;
+    --shadow:0 1px 2px rgba(15,63,104,.07),0 6px 22px rgba(15,63,104,.08);
+    --shadow-lg:0 14px 34px rgba(15,63,104,.14),0 4px 10px rgba(15,63,104,.07);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de; --teal-050:rgba(79,190,206,.14);
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.32);}}
+  :root[data-theme="dark"]{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de; --teal-050:rgba(79,190,206,.14);
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036;}
+  :root[data-theme="light"]{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --teal-700:#0E7C86; --teal-500:#2A9AAB; --teal-400:#4FBECE; --teal-050:#eaf6f8;
+    --good:#067647; --good-bg:#ecfdf3; --warn:#b54708; --warn-bg:#fffaeb; --crit:#b42318; --crit-bg:#fef3f2;
+    --info:#175cd3; --info-bg:#eff8ff;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,h4,.eyebrow,.et-head h3,.vcard h3,.tag,.pill,th,.kpi .kv,.cfg-card h4,.tocbar a,.task-card h3{
+    font-family:'Montserrat','Avenir Next','Helvetica Neue',-apple-system,BlinkMacSystemFont,sans-serif; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:28px 20px 70px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  a{ color:var(--teal-700); }
+  b{ color:var(--ink); }
+
+  .reveal{ opacity:0; transform:translateY(14px); transition:opacity .55s ease, transform .55s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  header.top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(135deg,var(--navy) 0%,#155f92 100%); border-radius:18px; padding:26px 28px;
+    color:#fff; box-shadow:var(--shadow-lg); position:relative; overflow:hidden; margin-bottom:14px;}
+  header.top::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+    background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%); pointer-events:none;}
+  .eyebrow{ text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:700; color:#bfe9ef; position:relative;}
+  h1{ margin:6px 0 8px; font-size:27px; font-weight:800; letter-spacing:-.4px; line-height:1.14; color:#fff; position:relative; max-width:720px;}
+  header.top p{ margin:0; color:#d3e4ec; font-size:13.4px; max-width:76ch; position:relative;}
+  header.top p b{ color:#fff; }
+  .hdr-right{ display:flex; align-items:center; gap:10px; position:relative; }
+  .tbtn{ cursor:pointer; background:rgba(255,255,255,.14); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
+    color:#fff; border-radius:20px; width:36px; height:32px; font-size:15px; flex:0 0 auto;}
+  .datechip{ display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px; font-size:11.5px; font-weight:700;
+    background:rgba(255,255,255,.14); color:#eaf6f8; white-space:nowrap; }
+  .datechip .dot{ width:7px; height:7px; border-radius:50%; background:var(--teal-400); box-shadow:0 0 0 3px rgba(79,190,206,.3);}
+
+  .tocbar{ display:flex; flex-wrap:wrap; gap:7px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; margin-bottom:20px; box-shadow:var(--shadow); }
+  .tocbar a{ font-size:11.6px; font-weight:700; color:var(--muted); text-decoration:none; padding:6px 11px; border-radius:8px; white-space:nowrap; }
+  .tocbar a:hover{ background:var(--surface-2); color:var(--teal-700); }
+  .tocbar a b{ color:inherit; font-weight:700; }
+  .tocbar span.n{ display:inline-block; width:16px; height:16px; border-radius:5px; background:var(--teal-050); color:var(--teal-700);
+    font-size:9.5px; font-weight:800; text-align:center; line-height:16px; margin-right:5px; }
+
+  .vision{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:20px 0; }
+  .vcard{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; border-top:3px solid var(--teal-500); }
+  .vcard.b{ border-top-color:var(--gold); } .vcard.c{ border-top-color:var(--crit); }
+  .vcard h3{ margin:0 0 4px; font-size:15px; font-weight:700; letter-spacing:-.2px;}
+  .vcard .tag{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--teal-700); }
+  .vcard.b .tag{ color:var(--gold); } .vcard.c .tag{ color:var(--crit); }
+  .vcard p{ margin:7px 0 0; font-size:12.6px; color:var(--muted); }
+
+  h2.sec{ font-size:18px; font-weight:800; letter-spacing:-.2px; margin:34px 0 6px; display:flex; align-items:center; gap:9px; scroll-margin-top:14px; }
+  h2.sec::before{ content:""; width:4px; height:19px; background:var(--teal-400); border-radius:3px; }
+  h2.sec .num{ font-size:11px; font-weight:800; color:var(--faint); letter-spacing:.05em; }
+  p.sec-sub{ font-size:12.8px; color:var(--muted); margin:0 0 15px; max-width:80ch; }
+  h3.sub{ font-size:14.5px; font-weight:700; margin:22px 0 10px; letter-spacing:-.1px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .pad{ padding:20px 22px; }
+  .card:hover{ box-shadow:var(--shadow-lg); }
+  .pad p{ margin:0 0 11px; font-size:13.4px; color:var(--ink); }
+  .pad p:last-child{ margin-bottom:0; }
+  .pad p.muted{ color:var(--muted); }
+
+  /* tag de procedencia de cifra */
+  .src-tag{ display:inline-flex; align-items:center; gap:4px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em;
+    padding:2px 8px; border-radius:6px; white-space:nowrap; }
+  .src-tag.medido{ background:var(--good-bg); color:var(--good); }
+  .src-tag.verificado{ background:var(--info-bg); color:var(--info); }
+  .src-tag.anunciado{ background:var(--surface-2); color:var(--muted); border:1px solid var(--line); }
+  .src-tag.noverif{ background:var(--warn-bg); color:var(--warn); }
+
+  /* KPI grid -- donde estamos */
+  .kpi-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:13px; }
+  .kpi{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px;
+    border-left:3px solid var(--crit); transition:.2s; }
+  .kpi:hover{ box-shadow:var(--shadow-lg); transform:translateY(-1px); }
+  .kpi.ok{ border-left-color:var(--good); }
+  .kpi.warn{ border-left-color:var(--warn); }
+  .kpi .kl{ font-size:10.6px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .kpi .kv{ font-size:24px; font-weight:800; letter-spacing:-.5px; margin-top:6px; color:var(--ink); }
+  .kpi.crit .kv{ color:var(--crit); } .kpi.ok .kv{ color:var(--good); } .kpi.warn .kv{ color:var(--warn); }
+  .kpi .kd{ font-size:11.6px; color:var(--muted); margin-top:5px; line-height:1.45; }
+
+  /* bug abierto */
+  .verdict{ background:linear-gradient(150deg,var(--crit) 0%,#7c1810 100%); color:#fff; border-radius:var(--radius);
+    padding:20px 24px; margin:14px 0 18px; box-shadow:var(--shadow-lg); position:relative; overflow:hidden; }
+  .verdict::after{ content:""; position:absolute; right:-50px; top:-50px; width:200px; height:200px;
+    background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%); }
+  .verdict .vlabel{ font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:#ffd7cf; position:relative; }
+  .verdict h3{ color:#fff; margin:6px 0 8px; font-size:20px; font-weight:800; letter-spacing:-.3px; position:relative; }
+  .verdict p{ font-size:13.6px; margin:8px 0 0; color:#ffe4de; line-height:1.6; position:relative; }
+  .verdict p b{ color:#fff; }
+
+  .cfg-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin:14px 0; }
+  .cfg-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:15px 16px; box-shadow:var(--shadow); }
+  .cfg-card.hoy{ border:2px solid var(--crit); }
+  .cfg-card h4{ font-size:12.8px; font-weight:800; margin:0 0 3px; letter-spacing:-.1px; }
+  .cfg-card .hoy-badge{ display:inline-block; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.05em;
+    background:var(--crit-bg); color:var(--crit); padding:2px 7px; border-radius:6px; margin-bottom:6px; }
+  .cfg-card .cf-row{ display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-top:1px solid var(--line); }
+  .cfg-card .cf-row:first-of-type{ border-top:0; }
+  .cfg-card .cf-lab{ font-size:11.3px; color:var(--muted); }
+  .cfg-card .cf-val{ font-size:17px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .cfg-card .cf-val.bad{ color:var(--crit); } .cfg-card .cf-val.good{ color:var(--good); } .cfg-card .cf-val.mid{ color:var(--warn); }
+  .cfg-card .cf-note{ font-size:11px; color:var(--faint); margin-top:8px; line-height:1.4; }
+
+  .examples{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:12px 0; }
+  .ex-item{ background:var(--crit-bg); border-radius:10px; padding:11px 14px; font-size:12.3px; color:var(--ink); }
+  .ex-item b{ color:var(--crit); }
+
+  .hypothesis{ background:var(--info-bg); border-left:3px solid var(--info); border-radius:0 12px 12px 0; padding:14px 17px; margin:14px 0; }
+  .hypothesis b.t{ color:var(--info); font-size:13px; text-transform:uppercase; letter-spacing:.04em; }
+  .hypothesis p{ margin:6px 0 0; font-size:12.6px; color:var(--ink); line-height:1.6; }
+
+  /* estado del arte */
+  .arte-grid{ display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+  .arte-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:15px 17px; box-shadow:var(--shadow); }
+  .arte-card h4{ font-size:13.4px; font-weight:700; margin:0 0 7px; display:flex; align-items:center; gap:8px; }
+  .arte-card .num{ font-size:20px; font-weight:800; color:var(--teal-700); font-variant-numeric:tabular-nums; }
+  .arte-card p{ font-size:12.3px; color:var(--muted); margin:6px 0 0; line-height:1.55; }
+  .arte-card .src{ font-size:10.5px; color:var(--faint); margin-top:8px; }
+  .arte-card.gap{ background:var(--surface-2); border-style:dashed; }
+
+  /* roadmap task cards */
+  .fase-head{ display:flex; align-items:center; gap:10px; margin:26px 0 12px; }
+  .fase-head .fnum{ width:30px; height:30px; border-radius:9px; background:var(--navy); color:#fff; display:flex; align-items:center;
+    justify-content:center; font-weight:800; font-size:13px; flex:0 0 auto; }
+  .fase-head h3{ margin:0; font-size:15.5px; font-weight:700; }
+  .fase-head .fdesc{ font-size:11.8px; color:var(--muted); margin-left:auto; text-align:right; max-width:46ch; }
+
+  .task-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:19px 21px; margin-bottom:13px; scroll-margin-top:14px; }
+  .task-card:hover{ box-shadow:var(--shadow-lg); }
+  .task-head{ display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .task-id{ flex:0 0 auto; font-size:11px; font-weight:800; background:var(--navy); color:#fff; padding:5px 10px; border-radius:8px;
+    letter-spacing:.03em; font-variant-numeric:tabular-nums; }
+  .task-head h3{ margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.2px; flex:1 1 300px; }
+  .tag-pill{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; padding:4px 9px; border-radius:20px; white-space:nowrap; }
+  .tag-pill.impacto-transformador{ background:#f3e8ff; color:var(--violet); }
+  .tag-pill.impacto-alto{ background:var(--teal-050); color:var(--teal-700); }
+  .tag-pill.impacto-medio{ background:var(--surface-2); color:var(--muted); border:1px solid var(--line); }
+  .tag-pill.esf-horas{ background:var(--good-bg); color:var(--good); }
+  .tag-pill.esf-dias{ background:var(--warn-bg); color:var(--warn); }
+  .tag-pill.esf-semanas{ background:var(--crit-bg); color:var(--crit); }
+  .tag-pill.riesgo-bajo{ background:var(--good-bg); color:var(--good); }
+  .tag-pill.riesgo-medio{ background:var(--warn-bg); color:var(--warn); }
+  .tag-pill.riesgo-alto{ background:var(--crit-bg); color:var(--crit); }
+  .task-tags{ display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 0; }
+  .task-body{ margin-top:13px; }
+  .task-body h5{ font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); margin:14px 0 5px; }
+  .task-body h5:first-child{ margin-top:0; }
+  .task-body p{ font-size:12.9px; color:var(--ink); line-height:1.6; margin:0; }
+  .task-body ul{ margin:4px 0 0; padding-left:19px; }
+  .task-body li{ font-size:12.6px; color:var(--ink); line-height:1.65; margin-bottom:3px; }
+  .task-meta{ display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+  .task-meta .tm{ font-size:11.3px; color:var(--muted); }
+  .task-meta .tm b{ color:var(--ink); }
+  .dep-chip{ display:inline-flex; align-items:center; font-size:10.8px; font-weight:700; background:var(--teal-050); color:var(--teal-700);
+    padding:3px 9px; border-radius:7px; text-decoration:none; margin-right:4px; }
+  .revpanel{ font-size:11.3px; color:var(--faint); background:var(--surface-2); border-radius:8px; padding:9px 12px; margin-top:12px; line-height:1.5; }
+  .revpanel b{ color:var(--muted); }
+  .fused-note{ font-size:11.5px; color:var(--muted); background:var(--surface-2); border:1px dashed var(--line); border-radius:9px;
+    padding:8px 12px; margin-top:9px; }
+
+  /* descartadas */
+  .noharm{ background:var(--crit-bg); border-left:3px solid var(--crit); border-radius:0 12px 12px 0; padding:13px 16px; margin-bottom:10px; }
+  .noharm b.t{ color:var(--crit); font-size:13.2px; }
+  .noharm p{ margin:5px 0 0; font-size:12.4px; color:var(--ink); }
+  .noharm .src{ margin:5px 0 0; font-size:11px; color:var(--faint); }
+  .noharm .of{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--faint); }
+
+  /* decisiones dueno */
+  .dec{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--line); }
+  .dec:last-child{ border-bottom:0; }
+  .dec .ic{ flex:0 0 auto; width:24px; height:24px; border-radius:7px; background:var(--warn-bg); color:var(--warn);
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .dec .tx{ font-size:12.8px; color:var(--muted); }
+  .dec .tx b{ color:var(--ink); display:block; font-size:13.4px; margin-bottom:3px; }
+
+  /* competencia */
+  .compet-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .compet-col h4{ font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin:0 0 12px;
+    display:flex; align-items:center; gap:7px; }
+  .compet-col.tenemos h4{ color:var(--good); }
+  .compet-col.notenemos h4{ color:var(--faint); }
+  .compet-item{ display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:12.5px; color:var(--ink); line-height:1.55; }
+  .compet-item:last-child{ border-bottom:0; }
+  .compet-item .ck{ flex:0 0 auto; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .compet-col.tenemos .ck{ background:var(--good-bg); color:var(--good); }
+  .compet-col.notenemos .ck{ background:var(--surface-2); color:var(--faint); }
+
+  /* metricas de exito */
+  table{ width:100%; border-collapse:collapse; font-size:12.7px; }
+  th,td{ padding:9px 11px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700;}
+  td.hd{ font-weight:700; width:24%; }
+  td.tnum-cell{ font-variant-numeric:tabular-nums; }
+
+  .edge{ background:var(--navy); background:linear-gradient(150deg,var(--navy) 0%,var(--navy-deep) 100%); color:#eaf2f6; border-radius:var(--radius); padding:20px 24px; margin-top:8px; box-shadow:var(--shadow-lg);}
+  .edge h3{ color:#fff; margin:0 0 4px; font-size:18px; font-weight:800; letter-spacing:-.3px; }
+  .edge p{ font-size:13.2px; margin:9px 0 0; color:#dbeaf0; line-height:1.6; }
+  .edge p b{ color:#7fe0d0; }
+  .edge .foot{ margin-top:12px; font-size:11.3px; color:#a9c6d6; }
+
+  .downloads{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+  .downloads a{ display:inline-flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line);
+    border-radius:11px; padding:9px 15px; font-size:12.3px; font-weight:700; color:var(--teal-700); text-decoration:none; box-shadow:var(--shadow); }
+  .downloads a:hover{ box-shadow:var(--shadow-lg); }
+
+  footer{ margin-top:28px; font-size:11.5px; color:var(--faint); text-align:center; line-height:1.7; }
+
+  @media print{ @page{ size:A4; margin:11mm; }
+    .tbtn,.tocbar,.downloads{ display:none; }
+    .card,.vcard,.edge,.kpi,.cfg-card,.arte-card,.task-card,.verdict{ box-shadow:none; }
+    .wrap{ padding:0; max-width:none; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .reveal{ opacity:1!important; transform:none!important; }
+    .card,.foso-grid,.vision,.kpi-grid,.cfg-grid,.arte-grid,.task-card,.verdict,.examples,.compet-grid,.dec,.noharm{ break-inside:avoid; }
+    h2.sec{ break-after:avoid; } h2.sec{ margin-top:20px; }
+    .fase-head{ break-after:avoid; }
+    table{ break-inside:auto; } tr{ break-inside:avoid; } thead{ display:table-header-group; }
+  }
+  @media (max-width:900px){ .vision,.kpi-grid,.cfg-grid,.arte-grid,.compet-grid{ grid-template-columns:1fr; } .fase-head{ flex-wrap:wrap;} .fase-head .fdesc{ margin-left:44px; text-align:left; } }
+  @media (max-width:560px){ h1{ font-size:21px; } .wrap{ padding:16px 12px 50px; } .pad{ padding:16px 16px; } header.top{ padding:20px 18px; }
+    td.hd{ width:auto; } table,thead{ display:block; } thead{ display:none; }
+    tbody tr{ display:block; border-bottom:2px solid var(--line); padding:8px 0; }
+    tbody td{ display:block; border-bottom:0; padding:3px 0; }
+    tbody td.hd{ color:var(--teal-700); font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding-top:8px; }
+    .task-head{ flex-direction:column; } .task-meta{ flex-direction:column; gap:6px; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Centro Medico Carampangue · Capa clinica de Alma</div>
+      <h1>Roadmap de mejora — Alma Clinico</h1>
+      <p>Auditoria de codigo, un experimento reproducible de alucinacion de Whisper, y un panel adversarial de 3 revisores sobre cada propuesta de arreglo. <b>8 tareas, ordenadas por dano evitado primero.</b> El hallazgo central: el bug de farmacos inventados por la IA <b>sigue abierto</b> — no es una promesa de arquitectura resuelta, es un numero medido hoy.</p>
+    </div>
+    <div class="hdr-right">
+      <span class="datechip"><span class="dot"></span>14 jul 2026</span>
+      <button class="tbtn" id="themeBtn" title="Tema" aria-label="Cambiar tema">◐</button>
+    </div>
+  </header>
+
+  <nav class="tocbar reveal" aria-label="Indice">
+    <a href="#s1"><span class="n">1</span>Donde estamos</a>
+    <a href="#s2"><span class="n">2</span>El bug abierto</a>
+    <a href="#s3"><span class="n">3</span>Estado del arte</a>
+    <a href="#s4"><span class="n">4</span>El roadmap</a>
+    <a href="#s5"><span class="n">5</span>Que NO hacemos</a>
+    <a href="#s6"><span class="n">6</span>Decisiones del dueno</a>
+    <a href="#s7"><span class="n">7</span>La competencia</a>
+    <a href="#s8"><span class="n">8</span>Como medimos exito</a>
+  </nav>
+
+  <div class="vision reveal">
+    <div class="vcard c">
+      <span class="tag">El hallazgo</span>
+      <h3>El bug de farmacos sigue abierto</h3>
+      <p>1 de cada 4 consultas SIN farmacos, transcritas con el perfil que corre hoy en produccion, inventa un medicamento. Medido el 14 de julio de 2026, no en una fecha antigua.</p>
+    </div>
+    <div class="vcard">
+      <span class="tag">El metodo</span>
+      <h3>Panel adversarial, no una lista de deseos</h3>
+      <p>7 propuestas, 3 revisores independientes por propuesta, obligados a intentar refutarlas contra el codigo real. Todas sobrevivieron solo con correcciones — ninguna paso intacta.</p>
+    </div>
+    <div class="vcard b">
+      <span class="tag">El resultado</span>
+      <h3>8 tareas ejecutables, 4 ideas descartadas</h3>
+      <p>Cada tarea trae pasos sin ambiguedad, criterios medibles y rollback. Las ideas que el panel mato quedan documentadas para que nadie las reproponga sin ver por que murieron.</p>
+    </div>
+  </div>
+
+  <!-- ================= SECCION 1 ================= -->
+  <h2 class="sec reveal" id="s1"><span class="num">01</span>&nbsp;Donde estamos de verdad</h2>
+  <p class="sec-sub reveal">Sin maquillaje. Verificado de forma directa el 14 de julio de 2026 contra los 4 repos que sostienen la capa clinica de Alma.</p>
+
+  <div class="kpi-grid reveal">
+    <div class="kpi crit">
+      <div class="kl">Repos bajo control de versiones</div>
+      <div class="kv tnum">0 <span style="font-size:14px;color:var(--muted);font-weight:600;">de 4</span></div>
+      <div class="kd">alma-clinico, alma-escriba y copiloto-ficha no tienen <code>.git</code> propio — resuelven al repo de otro proyecto. alma-escriba-v2 tiene <code>.git</code> con 0 commits. <span class="src-tag verificado">verificado</span></div>
+    </div>
+    <div class="kpi crit">
+      <div class="kl">Alucinacion de farmacos, perfil MG completo, audio sin farmacos</div>
+      <div class="kv tnum">25%</div>
+      <div class="kd">5 de 20 consultas simuladas sin ningun medicamento inventaron uno. Config que corre HOY en produccion. <span class="src-tag medido">medido</span></div>
+    </div>
+    <div class="kpi crit">
+      <div class="kl">Tests que pasan audio real por Whisper</div>
+      <div class="kv tnum">0 <span style="font-size:14px;color:var(--muted);font-weight:600;">de 393</span></div>
+      <div class="kd">63 tests en alma-clinico + 330 en alma-escriba, todos corren en fracciones de segundo — cero toca el modelo. <span class="src-tag verificado">verificado</span></div>
+    </div>
+    <div class="kpi crit">
+      <div class="kl">Cobertura de la funcion que filtra alertas de seguridad</div>
+      <div class="kv tnum">0 <span style="font-size:14px;color:var(--muted);font-weight:600;">tests</span></div>
+      <div class="kd"><code>_filtrar_omisiones_falsas</code> (alma-escriba/app/ai.py:850) suprime banderas de suicidio y alergia hoy, y nadie lo prueba. Corre en produccion con psiquiatria. <span class="src-tag verificado">verificado</span></div>
+    </div>
+    <div class="kpi warn">
+      <div class="kl">Tamano sin versionar de los 4 repos clinicos</div>
+      <div class="kv tnum">~1,3 GB</div>
+      <div class="kd">248M + 477M + 309M + 266M, dominado por entornos <code>.venv</code>, no por codigo (unos 15-45 archivos .py por repo). <span class="src-tag medido">medido</span></div>
+    </div>
+    <div class="kpi warn">
+      <div class="kl">Logging de lo que se descarta al transcribir</div>
+      <div class="kv tnum">0 <span style="font-size:14px;color:var(--muted);font-weight:600;">llamadas</span></div>
+      <div class="kd">El motor arma una lista de segmentos descartados y un recorte silencioso de vocabulario — ningun consumidor los mira. <span class="src-tag verificado">verificado</span></div>
+    </div>
+  </div>
+
+  <div class="card pad reveal" style="margin-top:16px;">
+    <p><b>Lo que SI funciona hoy, medido y en produccion</b> (para no perder de vista lo bueno mientras se lee lo malo): el Copiloto de Ficha tiene su verificador de 2a pasada corriendo en <code>ficha.agentecmc.cl</code>, y una prueba de sabotaje corrida en produccion el 12 de julio de 2026 detecto tanto una posologia inventada ("Metformina 850 mg cada 12 horas") como una alergia a penicilina omitida. Ese verificador es una red DESPUES del hecho — no reemplaza arreglar la causa en la capa acustica, que es exactamente lo que la Seccion 2 muestra que sigue sin resolverse. Detalle completo de esa arquitectura en el documento <code>alma-clinico-arquitectura.html</code> (uso local del Dr. Olavarria).</p>
+  </div>
+
+  <!-- ================= SECCION 2 : EL BUG ABIERTO ================= -->
+  <h2 class="sec reveal" id="s2"><span class="num">02</span>&nbsp;El bug abierto: farmacos inventados</h2>
+  <p class="sec-sub reveal">El hallazgo mas importante de este documento. No es una hipotesis: es un experimento reproducible corrido el 14 de julio de 2026.</p>
+
+  <div class="verdict reveal">
+    <div class="vlabel">Veredicto</div>
+    <h3>ABIERTO — no resuelto por ningun trabajo anterior</h3>
+    <p>El perfil completo de medicina general (el que usa <b>copiloto-ficha</b>, en produccion hoy con pacientes reales) alucina al menos un farmaco en <b>1 de cada 4 consultas donde nadie mencion&oacute; ninguno</b>. La unica configuracion medida que llega a 0% de alucinacion sacrifica <b>mas de un tercio de la captura de farmacos reales</b> (79% &rarr; 42%). Cambiar alucinacion por omision no es un arreglo: es otro dano, distinto pero igual de serio para un sistema clinico.</p>
+  </div>
+
+  <h3 class="sub reveal">El experimento</h3>
+  <div class="card pad reveal">
+    <p>Corpus sintetico de 20 consultas <b>"droga-cero"</b> (guiones clinicos completos — resfrio, lumbago, certificado de salud, control de examenes, mareos — en los que NINGUN farmaco se menciona nunca) mas 3 guiones <b>con-farmaco</b> reales (hipertension/diabetes, infeccion, tiroides), cada uno en 3 niveles de ruido de fondo (limpio, medio, intenso) y con audio de 60 a 70 segundos — la duracion de una consulta real, no un clip de laboratorio. Se corrieron 3 configuraciones del motor de transcripcion sobre el mismo corpus exacto.</p>
+  </div>
+
+  <div class="cfg-grid reveal">
+    <div class="cfg-card hoy">
+      <span class="hoy-badge">Corre hoy en produccion</span>
+      <h4>PROD_full_MG</h4>
+      <div class="cf-row"><span class="cf-lab">Alucinacion (droga-cero)</span><span class="cf-val bad tnum">25%</span></div>
+      <div class="cf-row"><span class="cf-lab">Captura (farmacos reales)</span><span class="cf-val good tnum">79%</span></div>
+      <div class="cf-note">5 de 20 consultas sin farmacos inventaron uno. 38 de 48 menciones reales de farmacos se capturaron. Ademas 6 farmacos extra inventados dentro del propio corpus con-farmaco.</div>
+    </div>
+    <div class="cfg-card">
+      <h4>SAFE_base</h4>
+      <div class="cf-row"><span class="cf-lab">Alucinacion (droga-cero)</span><span class="cf-val good tnum">0%</span></div>
+      <div class="cf-row"><span class="cf-lab">Captura (farmacos reales)</span><span class="cf-val bad tnum">42%</span></div>
+      <div class="cf-note">Hotwords sin nombres de farmacos (solo examenes). Elimina la alucinacion pero pierde mas de la mitad de los farmacos reales mencionados (20 de 48).</div>
+    </div>
+    <div class="cfg-card">
+      <h4>SAFE_base_nohw</h4>
+      <div class="cf-row"><span class="cf-lab">Alucinacion (droga-cero)</span><span class="cf-val good tnum">0%</span></div>
+      <div class="cf-row"><span class="cf-lab">Captura (farmacos reales)</span><span class="cf-val bad tnum">42%</span></div>
+      <div class="cf-note">Sin hotwords en absoluto. Identico a SAFE_base — indica que son los hotwords de FARMACOS especificamente los que causan la alucinacion, no los hotwords en general.</div>
+    </div>
+  </div>
+  <p style="font-size:11.3px;color:var(--faint);margin:2px 2px 0;">dc_n=20 (consultas droga-cero) · tot=48 (menciones de farmaco esperadas en el corpus con-farmaco) · <span class="src-tag medido">medido 2026-07-14</span>, corpus y resultados en formato JSON conservados junto a este roadmap.</p>
+
+  <h3 class="sub reveal">Los 4 casos exactos</h3>
+  <div class="examples reveal">
+    <div class="ex-item"><b>dc2_lumbago</b> — dolor lumbar, CERO farmacos en el guion &rarr; invento <b>"losartan"</b>.</div>
+    <div class="ex-item"><b>dc3_certificado</b> — control sano / certificado, CERO farmacos &rarr; invento <b>"losartan"</b>.</div>
+    <div class="ex-item"><b>dc4_control_examenes</b> — revision de examenes normales, CERO farmacos &rarr; invento <b>"atorvastatina"</b> en una corrida y <b>"ciprofloxacino"</b> en otra.</div>
+    <div class="ex-item"><b>dc5_mareos</b> — vertigo, CERO farmacos &rarr; invento <b>"atorvastatina" Y "amoxicilina"</b> en la misma consulta.</div>
+  </div>
+
+  <div class="hypothesis reveal">
+    <b class="t">Hallazgo auxiliar — una pista, no una solucion probada</b>
+    <p>Un experimento distinto, sobre el corrector fonetico de farmacos que YA existe en el codigo, recupero correctamente <b>10 de 10</b> nombres de farmacos reales deliberadamente fragmentados por el reconocimiento de voz ("lo sartan" &rarr; "losartan", "met formina" &rarr; "metformina", "amoxi cilina" &rarr; "amoxicilina"...), con <b>0 falsos positivos</b> sobre 30 frases inocentes. Esto sugiere que combinar <b>SAFE_base</b> (sin hotwords de farmacos, para no alucinar) <b>con el corrector fonetico</b> (para recuperar farmacos reales mal transcritos) podria lograr baja alucinacion Y buena captura a la vez. Esa combinacion especifica <b>no fue medida todavia</b> — es la tarea <b>NUC-02</b> del roadmap, y es la unica de las 8 que no paso por el panel adversarial: se agrego para no dejar este hallazgo sin una tarea de arreglo.</p>
+  </div>
+
+  <div class="card pad reveal" style="margin-top:14px; border-left:3px solid var(--info); border-radius:0 var(--radius) var(--radius) 0;">
+    <p><b>Por que esto no se detecto en la verificacion anterior.</b> El plan de rediseno del 12 de julio de 2026 (<code>copiloto-rediseno-plan.html</code>) marca su "Etapa 0 — Fix de seguridad Whisper" como <i>Hecho y verificado</i>, con una prueba real: 12 segundos de silencio puro sin texto inventado, y 5 de 5 terminos clinicos capturados en voz con silencios intercalados. Esa prueba sigue siendo valida — pero es mas liviana: no uso el perfil COMPLETO de medicina general con hotwords de farmacos activos, ni audio de duracion real (60-70s) con ruido en 3 niveles. Ambos documentos son correctos; describen alcances de verificacion distintos. Este roadmap no contradice el trabajo de julio 12 — lo profundiza, y lo que encuentra es que el problema no esta cerrado para el caso que mas importa: una consulta real, con el perfil que de verdad corre en produccion.</p>
+  </div>
+
+  <!-- ================= SECCION 3 : ESTADO DEL ARTE ================= -->
+  <h2 class="sec reveal" id="s3"><span class="num">03</span>&nbsp;Que dice el estado del arte 2026</h2>
+  <p class="sec-sub reveal">ASR, diarizacion, grounding y verificacion — con los numeros que respaldan cada decision de diseno de Alma. Etiquetado por procedencia: <span class="src-tag medido">medido</span> es este roadmap, <span class="src-tag verificado">verificado</span> es codigo leido, <span class="src-tag anunciado">anunciado</span> es un tercero (paper, norma, proveedor), <span class="src-tag noverif">no verificado</span> es direccion de mercado sin cifra propia confirmada.</p>
+
+  <div class="arte-grid reveal">
+    <div class="arte-card">
+      <h4>Alucinacion de Whisper en salud <span class="src-tag anunciado">anunciado</span></h4>
+      <div class="num">38%</div>
+      <p>Koenecke et al., "Careless Whisper: Speech-to-Text Hallucination Harms", ACM FAccT 2024: ~1% de las transcripciones de Whisper estudiadas contienen alucinaciones, y <b>38% de esas alucinaciones tienen dano explicito</b> (violencia, autoridad falsa, farmacos y posologias inexistentes). Las alucinaciones se concentran en los tramos de silencio y ruido — exactamente donde el experimento de la Seccion 2 las reprodujo.</p>
+      <div class="src">Ya citado en copiloto-rediseno-plan.html y alma-clinico-arquitectura.html (12 jul 2026).</div>
+    </div>
+    <div class="arte-card">
+      <h4>Omision vs. alucinacion en notas clinicas <span class="src-tag anunciado">anunciado</span></h4>
+      <div class="num">3,45% <span style="font-size:12px;color:var(--muted);">vs 1,47%</span></div>
+      <p>Framework CREOLA, npj Digital Medicine 2025, sobre 12.999 frases anotadas por clinicos: la <b>omision (3,45%) es mas frecuente que la alucinacion (1,47%)</b> — y es la que nadie mira. Abridge subio su deteccion combinada de 82% a 97% con una arquitectura de verificador de 2 pasadas, la misma que Alma ya implemento (ver tarjeta de trazabilidad abajo).</p>
+      <div class="src">Ya citado en copiloto-rediseno-plan.html.</div>
+    </div>
+    <div class="arte-card">
+      <h4>Grounding / Linked Evidence <span class="src-tag verificado">verificado en Alma</span></h4>
+      <div class="num">Ya implementado</div>
+      <p>Anclar cada frase de la nota al segmento de audio/transcripcion que la respalda (citar la fuente, en vez de prosa suelta) es el patron mas copiado del sector 2026 — y Alma ya lo tiene en produccion (<code>alma_clinico</code>/trazas). Lo que NO cubre: farmacos alucinados DENTRO del propio transcrito (no en la nota generada por el LLM) tienen un segmento fuente valido — por eso el arreglo de la Seccion 2 tiene que vivir en la capa acustica, no solo en el verificador de texto.</p>
+      <div class="src">Patron: Abridge "Linked Evidence"; implementacion propia verificada 2026-07-14.</div>
+    </div>
+    <div class="arte-card">
+      <h4>Fatiga de alertas <span class="src-tag anunciado">anunciado</span></h4>
+      <div class="num">46-96%</div>
+      <p>Meta-analisis de alertas de soporte de decision clinica (CDS): entre 46% y 96% se descartan sin leer. Reemplazar una alerta interruptiva por CDS pasivo bajo el volumen de alertas 80% (8.206&rarr;1.449/semana) y subio la adherencia de 23% a 61%. Es la razon de fondo por la que TRANS-02 (Seccion 4) se recorto a telemetria pasiva y NO a una alerta en vivo.</p>
+      <div class="src">JMIR Human Factors 2019 / JMIR Med Inform 2020, ya citado en copiloto-rediseno-plan.html.</div>
+    </div>
+    <div class="arte-card">
+      <h4>Diarizacion de hablantes <span class="src-tag noverif">no verificado localmente</span></h4>
+      <div class="num">Gap identificado</div>
+      <p>Las canalizaciones clinicas de ASR de punta suelen combinar transcripcion con diarizacion (separar la voz del profesional de la del paciente) para estructurar mejor la nota y dar una senal adicional de alucinacion (un turno fabricado que no se puede atribuir a ningun hablante es sospechoso). El motor de Alma hoy transcribe en un solo flujo, sin diarizacion — es una brecha real frente al estado del arte, pero NO forma parte de las 8 tareas aprobadas de este roadmap; queda como candidato para una proxima iteracion.</p>
+      <div class="src">Direccion general de mercado — sin cifra propia confirmada en esta auditoria.</div>
+    </div>
+    <div class="arte-card">
+      <h4>Guias de seguridad de medicamentos <span class="src-tag anunciado">anunciado</span></h4>
+      <div class="num">OMS · ISMP</div>
+      <p>La Solucion 1 de las Patient Safety Solutions de la OMS (medicamentos de nombre o sonido parecido) y la practica del ISMP (Institute for Safe Medication Practices) establecen que un sistema automatizado NO debe ocultar alertas de seguridad medica. Es la norma detras de la tarea ESC-01: sobre-alertar es la falla segura, nunca al reves.</p>
+      <div class="src">Normas internacionales reconocidas, no medicion local.</div>
+    </div>
+  </div>
+
+  <div class="card pad reveal arte-card gap" style="margin-top:13px;">
+    <p class="muted" style="margin:0;"><b style="color:var(--ink)">Nota de honestidad sobre esta seccion:</b> las cifras de Koenecke, CREOLA, Abridge y CDS ya estaban citadas en los documentos hermanos de este roadmap (fechados 12 de julio de 2026) — se repiten aqui por consistencia, no se re-verificaron de forma independiente en esta ronda. Las unicas cifras 100% nuevas de este documento son las de la Seccion 2 (bug abierto), medidas directamente el 14 de julio de 2026.</p>
+  </div>
+
+  <!-- ================= SECCION 4 : EL ROADMAP ================= -->
+  <h2 class="sec reveal" id="s4"><span class="num">04</span>&nbsp;El roadmap</h2>
+  <p class="sec-sub reveal">7 propuestas originales del panel adversarial colapsan a <b>6 tareas ejecutables</b> (2 pares resultaron ser la misma tarea vista dos veces) mas <b>1 tarea nueva</b> (NUC-02) que tapa el hueco critico que las demas daban por resuelto. Las 2 fusionadas quedan documentadas dentro de la tarjeta de su tarea maestra, y completas en <code>alma-roadmap.json</code> para trazabilidad. Ordenadas por dano evitado primero, luego valor clinico, luego deuda tecnica.</p>
+
+  <div class="fase-head reveal">
+    <div class="fnum">0</div>
+    <h3>Fase 0 — Cimientos</h3>
+    <div class="fdesc">Sin esto, ningun otro arreglo de esta lista es reversible si sale mal.</div>
+  </div>
+
+  <div class="task-card reveal" id="tarea-NUC-01">
+    <div class="task-head">
+      <span class="task-id">NUC-01 · P1</span>
+      <h3>Poner los 4 repos clinicos bajo control de versiones antes de tocar codigo</h3>
+    </div>
+    <div class="task-tags">
+      <span class="tag-pill impacto-transformador">Impacto transformador</span>
+      <span class="tag-pill esf-horas">Esfuerzo: horas</span>
+      <span class="tag-pill riesgo-bajo">Riesgo bajo</span>
+      <span class="tag-pill impacto-medio">Componente: transversal</span>
+    </div>
+    <div class="task-body">
+      <h5>Problema</h5>
+      <p>alma-clinico, alma-escriba y copiloto-ficha no tienen <code>.git</code> propio (resuelven a otro repo). alma-escriba-v2 tiene <code>.git</code> con 0 commits. ~1,3 GB sin versionar. Sin git no hay diff ni forma de responder "que cambio el dia que fallo" — y todas las tareas siguientes tocan codigo clinico en produccion o semi-produccion.</p>
+      <h5>Solucion</h5>
+      <p>git init + .gitignore endurecido (extendiendo el que ya existe en 2 de los 4 repos) + verificacion anti-PII ANTES de cualquier commit + commit baseline con tag + decision del dueno sobre el remoto + gate de arbol limpio en el unico script de deploy real que existe hoy.</p>
+      <h5>Pasos clave</h5>
+      <ul>
+        <li>Extender <code>.gitignore</code> en los 4 repos (alma-clinico hoy NO excluye <code>data/</code> ni <code>*.db</code> — hay que agregarlo).</li>
+        <li><code>git init</code> en los 3 que faltan; verificar que el repo del HOME no intente trackearlos.</li>
+        <li><code>git add -A</code> y verificar CERO archivos <code>*.db</code>, <code>data/audio/</code> o tokens antes de commitear.</li>
+        <li><b>Requiere confirmacion puntual del dueno:</b> el commit, el tag y el push finales no los hace un agente por su cuenta.</li>
+        <li>Gate de arbol limpio en <code>copiloto-ficha/deploy/deploy.sh</code> antes del <code>rsync</code>.</li>
+      </ul>
+      <h5>Criterios de aceptacion</h5>
+      <ul>
+        <li><code>git rev-parse --show-toplevel</code> devuelve la carpeta del propio repo, no el HOME, en los 4.</li>
+        <li>Cero secretos/PII en <code>git ls-files</code> — verificado antes de cualquier push.</li>
+        <li>Commit baseline + tag <code>v-baseline</code> confirmados por el dueno en los 4 repos.</li>
+      </ul>
+    </div>
+    <div class="task-meta">
+      <span class="tm"><b>Dependencias:</b> ninguna (tarea raiz)</span>
+      <span class="tm"><b>Rollback:</b> si el commit filtra PII antes del push, <code>git reset --mixed HEAD~1</code>; si ya hubo push, el remoto se recrea. Tareas posteriores se deshacen con <code>git revert</code>.</span>
+    </div>
+    <div class="revpanel"><b>Panel:</b> fusiona NUC-01 y TRANS-03 (misma propuesta vista dos veces por el panel, ambas aprobadas 2/3 con correcciones). Ver ficha TRANS-03 fusionada mas abajo.</div>
+    <div class="fused-note">Fusionada aqui: <b>TRANS-03</b> — cubria 3 de los 4 repos y llegaba a la misma solucion; su aporte (rollback documentado en el README, gate en el deploy) ya esta en los pasos de esta tarjeta.</div>
+  </div>
+
+  <div class="fase-head reveal">
+    <div class="fnum">1</div>
+    <h3>Fase 1 — Detener el dano activo</h3>
+    <div class="fdesc">Los dos bugs de seguridad clinica confirmados y corriendo en produccion HOY.</div>
+  </div>
+
+  <div class="task-card reveal" id="tarea-ESC-01">
+    <div class="task-head">
+      <span class="task-id">ESC-01 · P2</span>
+      <h3>Nunca suprimir banderas de riesgo suicida ni de alergia en el verificador de omisiones</h3>
+    </div>
+    <div class="task-tags">
+      <span class="tag-pill impacto-transformador">Impacto transformador</span>
+      <span class="tag-pill esf-horas">Esfuerzo: horas</span>
+      <span class="tag-pill riesgo-bajo">Riesgo bajo</span>
+      <span class="tag-pill impacto-medio">Componente: escriba</span>
+    </div>
+    <div class="task-body">
+      <h5>Problema</h5>
+      <p><code>_filtrar_omisiones_falsas</code> (alma-escriba/app/ai.py:850, linea decisiva 878) descarta una bandera de omision si CUALQUIER palabra de contenido compartida con la transcripcion aparece como substring en cualquier parte de la nota — ciego a la negacion. Verificado ejecutando el codigo real: bandera de ideacion suicida + nota "Paciente niega ideacion suicida" &rarr; <b>SUPRIMIDA</b>. Bandera de alergia a penicilina + nota "Sin alergias conocidas" &rarr; <b>SUPRIMIDA</b>. Son los items #1 y #2 de prioridad que el propio prompt del verificador declara. Corre HOY en produccion con psiquiatria.</p>
+      <h5>Solucion</h5>
+      <p>Lista blanca de categorias CRITICAS (suicidio/autolesion, alergia/anafilaxia, embarazo, anticoagulacion, interaccion grave) que se conservan SIEMPRE, saltando el filtro antes de evaluarlo. <b>Sin ningun requisito de "2 palabras o mas"</b> — el panel lo rechazo por unanimidad: el caso legitimo que motivo el filtro (sertralina omitida, 1 sola palabra compartida) dejaria de suprimirse, resucitando el falso positivo original. Tampoco se implementa deteccion de negacion en esta tarea (mayor riesgo, queda fuera de alcance).</p>
+      <h5>Criterios de aceptacion</h5>
+      <ul>
+        <li>Bandera de ideacion suicida negada en la nota &rarr; llega a la doctora.</li>
+        <li>Bandera de alergia contradicha en la nota &rarr; llega a la doctora.</li>
+        <li>El caso sertralina (1 palabra, otra seccion) SIGUE suprimido.</li>
+        <li>0 regresiones sobre los 330 tests de alma-escriba.</li>
+      </ul>
+    </div>
+    <div class="task-meta">
+      <span class="tm"><b>Dependencias:</b> <a class="dep-chip" href="#tarea-NUC-01">NUC-01</a></span>
+      <span class="tm"><b>Rollback:</b> git revert + reinicio del servicio. Sobre-conservar es la falla segura.</span>
+    </div>
+    <div class="revpanel"><b>Panel:</b> aprobada 3/3 unanime con correcciones. Se elimino el umbral de "2 palabras" y se bajo el esfuerzo estimado de dias a horas.</div>
+  </div>
+
+  <div class="task-card reveal" id="tarea-NUC-02">
+    <div class="task-head">
+      <span class="task-id">NUC-02 · P3</span>
+      <h3>Resolver el trade-off alucinacion-vs-captura de farmacos en medicina general</h3>
+    </div>
+    <div class="task-tags">
+      <span class="tag-pill impacto-transformador">Impacto transformador</span>
+      <span class="tag-pill esf-semanas">Esfuerzo: dias a semanas</span>
+      <span class="tag-pill riesgo-alto">Riesgo medio-alto sin panel</span>
+      <span class="tag-pill impacto-medio">Componente: nucleo</span>
+    </div>
+    <div class="task-body">
+      <h5>Problema</h5>
+      <p>El bug de la Seccion 2, en forma de tarea: la configuracion de produccion alucina 25% de las veces sobre audio sin farmacos; la unica alternativa medida sin alucinacion pierde 58% de los farmacos reales. Ninguna de las dos es aceptable sin matices.</p>
+      <h5>Solucion</h5>
+      <p>No hay arreglo de una linea. Investigar y validar la hipotesis del corrector fonetico + SAFE_base (ver Seccion 2) sobre el mismo corpus, llevar los 4 numeros al dueno, decidir por escrito, desplegar bajo git, y recalibrar el harness de NUC-04 contra la configuracion final.</p>
+      <h5>Pasos clave</h5>
+      <ul>
+        <li><b>Urgente:</b> rescatar el corpus del experimento (audio + resultados) de su directorio temporal a un lugar versionado — se pierde si no se copia a tiempo.</li>
+        <li>Someter esta ficha al mismo panel adversarial de 3 revisores antes de ejecutar el cambio de configuracion.</li>
+        <li>Medir la 4a configuracion (SAFE_base + corrector fonetico) sobre el mismo corpus.</li>
+        <li>Decision del dueno con los 4 numeros lado a lado (ver Seccion 6).</li>
+      </ul>
+      <h5>Criterios de aceptacion</h5>
+      <ul>
+        <li>Corpus versionado antes de decidir nada.</li>
+        <li>Configuracion candidata medida y comparable con las 3 ya conocidas.</li>
+        <li>Decision final documentada por escrito, con numeros, no un cambio silencioso.</li>
+      </ul>
+    </div>
+    <div class="task-meta">
+      <span class="tm"><b>Dependencias:</b> <a class="dep-chip" href="#tarea-NUC-01">NUC-01</a></span>
+      <span class="tm"><b>Rollback:</b> volver a PROD_full_MG (conocida) via git revert + reinicio de alma-stt.service mientras se reinvestiga.</span>
+    </div>
+    <div class="revpanel"><b>Panel:</b> <b>NO REVISADA.</b> Agregada al construir este roadmap a partir de evidencia medida directamente, porque NUC-04 dependia de una "NUC-02" que nunca llego con ficha propia al material de origen. Requiere pasar por el mismo panel de 3 revisores antes de ejecutarse — no ejecutar a ciegas.</div>
+  </div>
+
+  <div class="fase-head reveal">
+    <div class="fnum">2</div>
+    <h3>Fase 2 — Blindar y observar</h3>
+    <div class="fdesc">Tests de regresion, arnes de CI para audio real, y telemetria pasiva.</div>
+  </div>
+
+  <div class="task-card reveal" id="tarea-ESC-03">
+    <div class="task-head">
+      <span class="task-id">ESC-03 · P4</span>
+      <h3>Cobertura unitaria determinista de la funcion que decide que alertas NO ve la doctora</h3>
+    </div>
+    <div class="task-tags">
+      <span class="tag-pill impacto-alto">Impacto alto</span>
+      <span class="tag-pill esf-horas">Esfuerzo: horas</span>
+      <span class="tag-pill riesgo-bajo">Riesgo bajo</span>
+      <span class="tag-pill impacto-medio">Componente: escriba</span>
+    </div>
+    <div class="task-body">
+      <h5>Problema</h5>
+      <p><code>_filtrar_omisiones_falsas</code> tiene CERO tests directos — verificado por grep. Los unicos tests relacionados estan marcados <code>live</code> (se saltan sin clave de API) y prueban el prompt, no este filtro determinista.</p>
+      <h5>Solucion</h5>
+      <p>6 tests unitarios deterministas, sin red, que fijan el comportamiento correcto de ESC-01 en piedra: banderas criticas negadas se conservan, el caso sertralina se sigue suprimiendo, entradas vacias no rompen nada.</p>
+      <h5>Tests a escribir</h5>
+      <ul>
+        <li><code>test_conserva_bandera_suicida_negada</code>, <code>test_conserva_alergia_contradicha</code></li>
+        <li><code>test_conserva_categoria_critica_adicional</code> (embarazo o anticoagulacion)</li>
+        <li><code>test_suprime_dato_en_otra_seccion</code> (sertralina, sin el umbral de 2 palabras)</li>
+        <li><code>test_alucinacion_nunca_pasa_por_este_filtro</code>, <code>test_entradas_vacias_no_lanzan</code></li>
+      </ul>
+    </div>
+    <div class="task-meta">
+      <span class="tm"><b>Dependencias:</b> <a class="dep-chip" href="#tarea-ESC-01">ESC-01</a> (bloqueante estricto: 3 de 6 tests fallan sin ella)</span>
+      <span class="tm"><b>Rollback:</b> tests aditivos, sin efecto en produccion.</span>
+    </div>
+    <div class="revpanel"><b>Panel:</b> aprobada 3/3 unanime. Se corrigio el conteo de tests preexistentes (319&rarr;330, cifra desactualizada) y se elimino la dependencia del umbral de 2 palabras ya rechazado en ESC-01.</div>
+  </div>
+
+  <div class="task-card reveal" id="tarea-NUC-04">
+    <div class="task-head">
+      <span class="task-id">NUC-04 · P5</span>
+      <h3>Harness de audio real en CI: fixtures doradas que pasan por Whisper de verdad</h3>
+    </div>
+    <div class="task-tags">
+      <span class="tag-pill impacto-alto">Impacto alto</span>
+      <span class="tag-pill esf-dias">Esfuerzo: horas (frente A) + dias (frente B)</span>
+      <span class="tag-pill riesgo-bajo">Riesgo bajo</span>
+      <span class="tag-pill impacto-medio">Componente: nucleo</span>
+    </div>
+    <div class="task-body">
+      <h5>Problema</h5>
+      <p>Ninguno de los 393 tests combinados (nucleo + escriba) hace pasar un solo audio por Whisper. <code>engine.transcribir()</code>, el VAD y el servicio HTTP (auth, limite de tamano, borrado del audio) tienen cero cobertura automatizada — exactamente la capa donde vive el bug de NUC-02.</p>
+      <h5>Solucion — dos frentes separados por costo</h5>
+      <p><b>Frente A</b> (horas, corre en cada push): smoke test del servicio con el motor mockeado — 401 sin token, 413 sobre el limite, y verificacion de que el audio se borra siempre. <b>Frente B</b> (dias, corre nightly/pre-deploy, DESPUES de NUC-02): fixtures de audio committeadas (no regeneradas en CI) con aserciones de regresion contra el baseline medido — nunca un "0 absoluto" que hoy seria falso.</p>
+      <h5>Criterios de aceptacion</h5>
+      <ul>
+        <li>La suite normal sigue corriendo en menos de 1 segundo e incluye el Frente A.</li>
+        <li>La suite de audio ejecuta el modelo de verdad y falla si la alucinacion empeora respecto del baseline de NUC-02.</li>
+        <li>El job del Frente B no compite por memoria con el servicio en produccion.</li>
+      </ul>
+    </div>
+    <div class="task-meta">
+      <span class="tm"><b>Dependencias:</b> <a class="dep-chip" href="#tarea-NUC-01">NUC-01</a>, <a class="dep-chip" href="#tarea-NUC-02">NUC-02</a></span>
+      <span class="tm"><b>Rollback:</b> tests aditivos; si el nightly resulta poco confiable, se desactiva sin tocar produccion.</span>
+    </div>
+    <div class="revpanel"><b>Panel:</b> fusiona NUC-04 y NUC-07 (misma propuesta, dos rondas). Se descarto explicitamente un test de "modo ambient por trozos" que no corresponde a ninguna funcion existente en el codigo (ver Seccion 5).</div>
+    <div class="fused-note">Fusionada aqui: <b>NUC-07</b> — mismo objetivo, verificacion de codigo menos precisa; su parte de "modo ambient" se descarto, no se fusiono.</div>
+  </div>
+
+  <div class="task-card reveal" id="tarea-TRANS-02">
+    <div class="task-head">
+      <span class="task-id">TRANS-02 · P6</span>
+      <h3>Telemetria pasiva de la capa acustica</h3>
+    </div>
+    <div class="task-tags">
+      <span class="tag-pill impacto-medio">Impacto medio</span>
+      <span class="tag-pill esf-dias">Esfuerzo: dias</span>
+      <span class="tag-pill riesgo-bajo">Riesgo bajo</span>
+      <span class="tag-pill impacto-medio">Componente: transversal</span>
+    </div>
+    <div class="task-body">
+      <h5>Problema</h5>
+      <p>Hoy nadie se entera si el bug de NUC-02 reaparece o empeora fuera del laboratorio. El motor arma una lista de segmentos descartados que nadie persiste ni mira, y el recorte de vocabulario es silencioso.</p>
+      <h5>Solucion (alcance recortado por el panel)</h5>
+      <p>SOLO telemetria pasiva y local: persistir por consulta los segmentos descartados y las metricas de los farmacos detectados, mas un contador de cuanto vocabulario se recorta. <b>Sin ningun canal de notificacion externo</b> — la propuesta original de alertar por WhatsApp fue rechazada explicitamente (ver Seccion 5): la senal que proponia usar no dispara para el modo de falla real, y enviar "farmaco + paciente" por WhatsApp es una fuga de datos de salud.</p>
+      <h5>Criterios de aceptacion</h5>
+      <ul>
+        <li>Cada consulta deja un registro local con sus descartes y metricas.</li>
+        <li>Cero integraciones de notificacion externa con datos de paciente.</li>
+        <li>El reporte semanal nunca se presenta como garantia de ausencia de alucinaciones.</li>
+      </ul>
+    </div>
+    <div class="task-meta">
+      <span class="tm"><b>Dependencias:</b> <a class="dep-chip" href="#tarea-NUC-01">NUC-01</a></span>
+      <span class="tm"><b>Rollback:</b> telemetria aditiva de solo lectura; git revert sin efecto clinico.</span>
+    </div>
+    <div class="revpanel"><b>Panel:</b> aprobada 2/3 con alcance fuertemente recortado. El voto disidente completo (invenciones de integracion reales) se preserva en la Seccion 5.</div>
+  </div>
+
+  <!-- ================= SECCION 5 : DESCARTADAS ================= -->
+  <h2 class="sec reveal" id="s5"><span class="num">05</span>&nbsp;Lo que decidimos NO hacer, y por que</h2>
+  <p class="sec-sub reveal">Informacion valiosa: evita que alguien reproponga una idea que el panel ya mato con evidencia. Ninguna de las 7 propuestas originales fue rechazada COMPLETA — pero estos 4 mecanismos especificos, dentro de propuestas que sobrevivieron, si lo fueron.</p>
+
+  <div class="reveal">
+    <div class="noharm">
+      <span class="of">De la propuesta ESC-01</span>
+      <b class="t">Exigir 2 palabras de contenido o mas antes de suprimir una omision</b>
+      <p>El caso legitimo que motivo el filtro (sertralina omitida) comparte exactamente 1 palabra con la nota. Exigir 2 habria hecho que ese caso YA NO se suprima — resucitando el falso positivo que el filtro existe para evitar. Rechazado por unanimidad de los 3 revisores.</p>
+    </div>
+    <div class="noharm">
+      <span class="of">De la propuesta TRANS-02</span>
+      <b class="t">Alertar por WhatsApp o webhook cuando un farmaco aparece con evidencia acustica debil</b>
+      <p>Refutado por el propio codigo en 3 frentes: el VAD ya filtra el silencio, asi que "sin voz adyacente" nunca dispara para el modo de falla real (ruido que engana al VAD); <code>no_speech_prob &gt; 0,6</code> esta documentado como generador de falsos positivos sobre voz legitima (medido: "Me cuesta mucho levantarme en las mananas", no_speech_prob=0,691, voz real); y enviar "farmaco + paciente" por WhatsApp contradice el principio de que el audio nunca sale de la maquina propia. Ademas, no existe ninguna funcion de notificacion en estos repos hoy.</p>
+    </div>
+    <div class="noharm">
+      <span class="of">De la propuesta NUC-07</span>
+      <b class="t">Test de que N trozos de 10s ("modo ambient") no amplifican la invencion mas que 1 llamada larga</b>
+      <p>No existe ningun modo de transcripcion por trozos en el codigo — es un test para una funcionalidad que no esta construida. Se descarta hasta que esa funcionalidad exista.</p>
+    </div>
+    <div class="noharm">
+      <span class="of">De la propuesta NUC-07</span>
+      <b class="t">Pipeline de CI nightly desde cero, regenerando audio en cada corrida, con asercion absoluta de 0 alucinaciones</b>
+      <p>Tres problemas a la vez: no existe integracion continua hoy en estos repos; la herramienta de sintesis de voz usada para regenerar el audio es exclusiva de macOS y un runner nightly tipico no lo es; y la asercion de "0 absoluto" contradice la evidencia medida (la config de produccion tiene 5 de 20 hoy) — el arnes naceria en rojo. Reemplazado por fixtures committeadas y aserciones de regresion contra un baseline medido.</p>
+    </div>
+  </div>
+
+  <!-- ================= SECCION 6 : DECISIONES DEL DUENO ================= -->
+  <h2 class="sec reveal" id="s6"><span class="num">06</span>&nbsp;Lo que exige una decision del dueno</h2>
+  <p class="sec-sub reveal">No se automatiza. Ningun agente puede tomar estas decisiones en nombre del Dr. Olavarria.</p>
+  <div class="card pad reveal">
+    <div class="dec">
+      <div class="ic">1</div>
+      <div class="tx"><b>Host y visibilidad del remoto git privado para los 4 repos.</b>NUC-01 deja todo listo para pushear, pero no puede elegir proveedor, organizacion ni convencion de nombres.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">2</div>
+      <div class="tx"><b>Que configuracion de transcripcion adoptar: alucinacion vs. captura de farmacos.</b>La decision mas importante de este roadmap. 79% de captura con 25% de riesgo de inventar, o 42% de captura con 0% de invencion. Ninguna es "segura" sin matices — una inventa medicamentos, la otra los pierde.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">3</div>
+      <div class="tx"><b>Migrar alma-escriba al nucleo compartido ahora, o esperar.</b>Si no migra, cada arreglo del nucleo (incluidos ESC-01 y NUC-02) hay que aplicarlo a mano en dos lugares — el mismo patron que ya genero una brecha de semanas una vez, segun el propio comentario dejado adrede en el codigo del motor.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">4</div>
+      <div class="tx"><b>Donde corre el harness nightly de audio sin arriesgar el servicio de produccion.</b>El VPS de produccion ya corre el modelo Whisper con memoria ajustada; cargar un segundo modelo ahi para testear es jugar con el sistema que atiende consultas reales.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">5</div>
+      <div class="tx"><b>Politica de retencion para los nuevos registros de telemetria.</b>¿Heredan la retencion de 7 dias del audio, o pueden conservarse mas tiempo al ser solo metadatos? Debe quedar explicito, no implicito.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">6</div>
+      <div class="tx"><b>Ritmo de ejecucion frente a la carga clinica real.</b>6 tareas activas mas una validacion de panel es trabajo de ingenieria real, y el dueno tambien atiende pacientes. Que se hace en paralelo, que espera.</div>
+    </div>
+  </div>
+  <p class="sec-sub reveal" style="margin-top:12px;">Estas decisiones se suman, no reemplazan, a las ya documentadas en <code>alma-clinico-arquitectura.html</code> (redimensionar el droplet, retencion de audio a 7 dias, cifrado en reposo, VPS vs. Mac para fichas clinicas) — ninguna de esas 4 esta resuelta todavia.</p>
+
+  <!-- ================= SECCION 7 : COMPETENCIA ================= -->
+  <h2 class="sec reveal" id="s7"><span class="num">07</span>&nbsp;La competencia</h2>
+  <p class="sec-sub reveal">Que tienen ellos que Alma no, y que tiene Alma que ellos no. Sin inflar: lo verificado se marca verificado, lo general de mercado se marca como tal.</p>
+  <div class="card pad reveal">
+    <div class="compet-grid">
+      <div class="compet-col tenemos">
+        <h4>Lo que Alma tiene y la mayoria no <span class="src-tag verificado">verificado</span></h4>
+        <div class="compet-item"><span class="ck">&#10003;</span>Lectura de Medilink (HIS chileno) por RUT y agenda, en produccion — ningun competidor internacional lo hace, y la API de Medilink no ofrece escritura de fichas a nadie.</div>
+        <div class="compet-item"><span class="ck">&#10003;</span>Catalogo GES completo y real: 103 patologias, 85 garantias, 227 banderas rojas — no una lista generica inventada por un modelo.</div>
+        <div class="compet-item"><span class="ck">&#10003;</span>Vocabulario clinico chileno (modismos incluidos) integrado al motor de transcripcion via hotwords.</div>
+        <div class="compet-item"><span class="ck">&#10003;</span>Constancia GES como 5to documento generado — obligacion legal chilena (Ley 19.966, DS 136/2005) que ningun producto internacional ofrece.</div>
+        <div class="compet-item"><span class="ck">&#10003;</span>Nucleo clinico compartido entre especialidades (arquitectura), no copy-paste de codigo por app.</div>
+        <div class="compet-item"><span class="ck">&#10003;</span>Trazabilidad "Linked Evidence" ya en produccion — el mismo patron mas copiado del sector 2026.</div>
+      </div>
+      <div class="compet-col notenemos">
+        <h4>Lo que el sector tiene y Alma todavia no <span class="src-tag noverif">general de mercado</span></h4>
+        <div class="compet-item"><span class="ck">&#8212;</span>Diarizacion nativa de hablantes (separar voz del profesional y del paciente) — brecha real, no incluida en las 8 tareas de este roadmap.</div>
+        <div class="compet-item"><span class="ck">&#8212;</span>Integraciones EHR de escritura bidireccional con sistemas grandes (Epic, Oracle Health) — en Chile esto es una limitacion estructural del sector, no solo de Alma.</div>
+        <div class="compet-item"><span class="ck">&#8212;</span>Escala de validacion clinica publicada y equipos de ingenieria mucho mayores, que permiten iterar mas rapido sobre modelos propios.</div>
+        <div class="compet-item"><span class="ck">&#8212;</span>Cobertura multi-pais con aprobaciones regulatorias en varias jurisdicciones.</div>
+        <div class="compet-item"><span class="ck">&#8212;</span>Ya existe al menos un competidor operando en Chile con distribucion instalada ("Noa", de Doctoralia) — la diferencia de Alma no es la IA en si, es vivir dentro del flujo real del centro (Medilink, GES, el vocabulario del paciente chileno).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SECCION 8 : METRICAS DE EXITO ================= -->
+  <h2 class="sec reveal" id="s8"><span class="num">08</span>&nbsp;Como se mide el exito</h2>
+  <p class="sec-sub reveal">Las metricas que hoy NO existen, y que este roadmap obliga a empezar a medir. Sin esto, "arreglado" es una sensacion, no un hecho.</p>
+  <div class="card pad reveal">
+    <table>
+      <thead><tr><th style="width:26%">Metrica</th><th>Hoy</th><th>Objetivo</th><th>Como se mide</th></tr></thead>
+      <tbody>
+        <tr><td class="hd">Alucinacion de farmacos en droga-cero (MG, perfil completo)</td><td class="tnum-cell">25% (5/20) <span class="src-tag medido">medido</span></td><td>0%, sin bajar la captura de 70%</td><td>Harness NUC-04 sobre el corpus de referencia</td></tr>
+        <tr><td class="hd">Captura de farmacos reales mencionados (MG)</td><td class="tnum-cell">79% (config que alucina) / 42% (config segura)</td><td>80%+ simultaneo con 0% de alucinacion</td><td>Mismo harness, corpus con-farmaco</td></tr>
+        <tr><td class="hd">Supresion de banderas criticas (suicidio, alergia)</td><td class="tnum-cell">no medida, 0 tests</td><td>0% de supresion, verificado en cada corrida</td><td>Tests de ESC-03 en la suite normal</td></tr>
+        <tr><td class="hd">Cobertura de tests que tocan audio real</td><td class="tnum-cell">0% (0 de 393)</td><td>Suite de audio en cada pre-deploy</td><td>NUC-04, marcador de test "audio"</td></tr>
+        <tr><td class="hd">Repos clinicos con control de versiones y remoto</td><td class="tnum-cell">0 de 4</td><td>4 de 4, baseline + remoto privado</td><td>Criterios de aceptacion de NUC-01</td></tr>
+        <tr><td class="hd">Tiempo para revertir un cambio de codigo clinico que sale mal</td><td class="tnum-cell">indefinido</td><td>menor a 1 hora</td><td>Simulacro de rollback documentado</td></tr>
+        <tr><td class="hd">Vocabulario recortado silenciosamente al cargar un perfil</td><td class="tnum-cell">desconocida</td><td>visible en cada carga (informativa)</td><td>Log agregado por TRANS-02</td></tr>
+        <tr><td class="hd">Farmacos con evidencia acustica debil detectados</td><td class="tnum-cell">0 (no existe la telemetria)</td><td>Reporte semanal legible, sin falsa garantia</td><td>Vista de solo lectura de TRANS-02</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="edge reveal" style="margin-top:26px;">
+    <h3>Este documento sirve para decidir, no para sentirse bien.</h3>
+    <p>El bug de farmacos inventados <b>sigue abierto</b>. Sobre-alertar cuesta menos que sub-alertar. Sin control de versiones, ningun arreglo de esta lista es reversible si sale mal. Las 6 tareas ejecutables tienen pasos, criterios y rollback — la unica que no paso por el panel adversarial (NUC-02) es, precisamente, la que resuelve el hallazgo mas importante, y por eso exige pasar por el panel antes de tocar produccion.</p>
+    <div class="foot">Roadmap generado el 14 de julio de 2026 · Fuente completa y ejecutable: <code>alma-roadmap.json</code> · Documentos hermanos: <code>copiloto-rediseno-plan.html</code>, <code>alma-clinico-arquitectura.html</code>.</div>
+  </div>
+
+  <div class="downloads reveal">
+    <a href="/static/alma-roadmap.json" target="_blank" rel="noopener">&#8681;&nbsp;Descargar alma-roadmap.json (version ejecutable)</a>
+    <a href="/static/alma-roadmap.pdf" target="_blank" rel="noopener">&#8681;&nbsp;Descargar PDF</a>
+  </div>
+
+  <footer>Roadmap Alma Clinico · Centro Medico Carampangue · Estado verificado al 14 de julio de 2026 · Documento del Dr. Rodrigo Olavarria.<br>Cada cifra distingue MEDIDO / VERIFICADO / ANUNCIADO / NO VERIFICADO. Ninguna cifra de este documento reemplaza el criterio clinico. Documentos hermanos (<code>copiloto-rediseno-plan.html</code>, <code>alma-clinico-arquitectura.html</code>) son de uso local, no publicados.</footer>
+</div>
+
+<script>
+const root=document.documentElement;
+const themeBtn=document.getElementById('themeBtn');
+if(themeBtn){ themeBtn.onclick=()=>{ const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); root.setAttribute('data-theme',cur==='dark'?'light':'dark'); }; }
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+},{threshold:.06, rootMargin:'0px 0px -30px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>

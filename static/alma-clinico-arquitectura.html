@@ -1,0 +1,448 @@
+<meta charset="utf-8">
+<title>Arquitectura Clínica Alma · Centro Médico Carampangue</title>
+<!-- Sin CDNs: la CSP del sitio los bloquea. Tipografías = stack del sistema (Montserrat/Inter si están instaladas). -->
+<style>
+  :root{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --navy:#0F3F68; --navy-deep:#0a2e4d;
+    /* Paleta con contraste WCAG AA corregido — el propio ejemplo del bloque §5. */
+    --teal-700:#0E7C86;  /* texto/acción sobre claro — 4,95:1 AA */
+    --teal-500:#2A9AAB;  /* bordes / iconos / foco — 3,33:1 AA componentes */
+    --teal-400:#4FBECE;  /* acento de marca — SOLO fondo, gráfico, o texto sobre navy */
+    --teal-050:#eaf6f8;
+    --gold:#c98a14; --violet:#6a4c93;
+    --good:#067647; --good-bg:#ecfdf3;
+    --warn:#b54708; --warn-bg:#fffaeb;
+    --crit:#b42318; --crit-bg:#fef3f2;
+    --info:#175cd3; --info-bg:#eff8ff;
+    --shadow:0 1px 2px rgba(15,63,104,.07),0 6px 22px rgba(15,63,104,.08);
+    --shadow-lg:0 14px 34px rgba(15,63,104,.14),0 4px 10px rgba(15,63,104,.07);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de; --teal-050:rgba(79,190,206,.14);
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.32);}}
+  :root[data-theme="dark"]{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de; --teal-050:rgba(79,190,206,.14);
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036;}
+  :root[data-theme="light"]{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --teal-700:#0E7C86; --teal-500:#2A9AAB; --teal-400:#4FBECE; --teal-050:#eaf6f8;
+    --good:#067647; --good-bg:#ecfdf3; --warn:#b54708; --warn-bg:#fffaeb; --crit:#b42318; --crit-bg:#fef3f2;
+    --info:#175cd3; --info-bg:#eff8ff;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,h4,.eyebrow,.et-head h3,.vcard h3,.tag,.pill,th,.arch-card h4,.arch-card .k{
+    font-family:'Montserrat','Avenir Next','Helvetica Neue',-apple-system,BlinkMacSystemFont,sans-serif; }
+  .wrap{ max-width:1120px; margin:0 auto; padding:28px 20px 64px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  a{ color:var(--teal-700); }
+  b{ color:var(--ink); }
+
+  .reveal{ opacity:0; transform:translateY(14px); transition:opacity .55s ease, transform .55s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  header.top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(135deg,var(--navy) 0%,#155f92 100%); border-radius:18px; padding:26px 28px;
+    color:#fff; box-shadow:var(--shadow-lg); position:relative; overflow:hidden; margin-bottom:20px;}
+  header.top::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+    background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%); pointer-events:none;}
+  .eyebrow{ text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:700; color:#bfe9ef; position:relative;}
+  h1{ margin:6px 0 8px; font-size:27px; font-weight:800; letter-spacing:-.4px; line-height:1.14; color:#fff; position:relative; max-width:700px;}
+  header.top p{ margin:0; color:#d3e4ec; font-size:13.3px; max-width:74ch; position:relative;}
+  header.top p b{ color:#fff; }
+  .tbtn{ cursor:pointer; background:rgba(255,255,255,.14); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
+    color:#fff; border-radius:20px; width:36px; height:32px; font-size:15px; position:relative; flex:0 0 auto;}
+
+  .vision{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:20px 0; }
+  .vcard{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; border-top:3px solid var(--teal-500); }
+  .vcard.b{ border-top-color:var(--gold); } .vcard.c{ border-top-color:var(--navy); }
+  .vcard h3{ margin:0 0 4px; font-size:15px; font-weight:700; letter-spacing:-.2px;}
+  .vcard .tag{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--teal-700); }
+  .vcard.b .tag{ color:var(--gold); } .vcard.c .tag{ color:var(--navy); }
+  :root[data-theme="dark"] .vcard.c .tag{ color:var(--teal-400); }
+  @media (prefers-color-scheme:dark){ .vcard.c .tag{ color:var(--teal-400); } }
+  .vcard p{ margin:7px 0 0; font-size:12.6px; color:var(--muted); }
+
+  h2.sec{ font-size:17px; font-weight:800; letter-spacing:-.2px; margin:30px 0 13px; display:flex; align-items:center; gap:9px; }
+  h2.sec::before{ content:""; width:4px; height:18px; background:var(--teal-400); border-radius:3px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .pad{ padding:20px 22px; }
+  .card:hover{ box-shadow:var(--shadow-lg); }
+  .pad p{ margin:0 0 11px; font-size:13.4px; color:var(--ink); }
+  .pad p:last-child{ margin-bottom:0; }
+  .pad p.muted{ color:var(--muted); }
+
+  .quote{ margin:12px 0; font-size:12.6px; color:var(--ink); background:var(--surface-2); border-left:3px solid var(--teal-500);
+    border-radius:0 10px 10px 0; padding:11px 15px; font-style:italic; }
+  .quote .src{ display:block; margin-top:6px; font-size:11px; font-style:normal; color:var(--faint); }
+
+  /* diagrama de arquitectura */
+  .arch{ margin-top:6px; }
+  .arch-tier{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .arch-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow);
+    padding:13px 15px; flex:1 1 190px; min-width:170px; max-width:260px; }
+  .arch-card .k{ font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--teal-700);}
+  .arch-card h4{ margin:4px 0 3px; font-size:13.6px; font-weight:700; letter-spacing:-.1px; }
+  .arch-card p{ margin:0; font-size:11.3px; color:var(--muted); line-height:1.45; }
+  .arch-card .badge{ display:inline-block; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+    padding:2px 8px; border-radius:20px; margin-top:8px; }
+  .arch-card .badge.live{ background:var(--good-bg); color:var(--good); }
+  .arch-card .badge.pilot{ background:var(--warn-bg); color:var(--warn); }
+  .arch-card .badge.future{ background:var(--surface-2); color:var(--faint); border:1px solid var(--line); }
+  .arch-card.app{ border-top:3px solid var(--teal-500); }
+  .arch-card.app.future{ border-top-style:dashed; border-top-color:var(--faint); opacity:.82; }
+  .arch-card.core{ border-top:3px solid var(--navy); max-width:680px; flex:1 1 100%; }
+  :root[data-theme="dark"] .arch-card.core{ border-top-color:var(--teal-400); }
+  @media (prefers-color-scheme:dark){ .arch-card.core{ border-top-color:var(--teal-400); } }
+  .arch-card.svc{ border-top:3px solid var(--gold); max-width:520px; flex:1 1 100%; background:linear-gradient(180deg,var(--surface),var(--surface-2)); }
+  .core-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .core-chips span{ font-size:10px; font-weight:700; background:var(--teal-050); color:var(--teal-700); padding:4px 9px; border-radius:8px; }
+  .svc-stats{ display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; }
+  .svc-stats div{ font-size:10.6px; color:var(--muted); }
+  .svc-stats b{ display:block; font-size:15px; color:var(--ink); font-weight:800; }
+
+  .arch-link{ display:flex; flex-direction:column; align-items:center; margin:2px auto; }
+  .arch-link .line{ width:0; height:20px; border-left:2px solid var(--teal-500); }
+  .arch-link.net .line{ border-left-style:dashed; }
+  .arch-link .arrow{ width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent;
+    border-top:7px solid var(--teal-500); margin-top:-1px; }
+  .arch-link .lbl{ font-size:9.6px; font-weight:700; color:var(--muted); background:var(--surface-2); border:1px solid var(--line);
+    border-radius:20px; padding:3px 11px; margin:4px 0 2px; white-space:nowrap; text-align:center; }
+  .arch-legend{ display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-top:14px; font-size:11px; color:var(--muted); }
+  .arch-legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .arch-legend i{ display:inline-block; width:20px; height:0; border-top:2px solid var(--teal-500); }
+  .arch-legend i.dashed{ border-top-style:dashed; }
+
+  /* callout de matemática de memoria */
+  .mathbox{ background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:14px 18px; margin:12px 0;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13.6px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .mathbox .op{ color:var(--faint); font-weight:400; }
+  .mathbox .oom{ color:var(--crit); }
+  .mathbox .ok{ color:var(--good); }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.7px; }
+  th,td{ padding:9px 11px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700;}
+  td.hd{ font-weight:700; width:26%; }
+
+  /* NO vamos a hacer / salvaguardas */
+  .noharm{ background:var(--crit-bg); border-left:3px solid var(--crit); border-radius:0 12px 12px 0; padding:13px 16px; margin-bottom:10px; }
+  .noharm b.t{ color:var(--crit); font-size:13.2px; }
+  .noharm p{ margin:5px 0 0; font-size:12.4px; color:var(--ink); }
+  .noharm .src{ margin:5px 0 0; font-size:11px; color:var(--faint); }
+
+  /* foso */
+  .foso-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .foso-item{ background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:13px 15px; }
+  .foso-item .n{ display:inline-flex; width:22px; height:22px; border-radius:6px; background:var(--teal-050); color:var(--teal-700); font-size:11px; font-weight:800; align-items:center; justify-content:center; margin-bottom:6px;}
+  .foso-item p{ margin:0; font-size:12.4px; color:var(--muted); line-height:1.55; }
+  .foso-item b{ color:var(--ink); }
+
+  .edge{ background:var(--navy); background:linear-gradient(150deg,var(--navy) 0%,var(--navy-deep) 100%); color:#eaf2f6; border-radius:var(--radius); padding:20px 24px; margin-top:8px; box-shadow:var(--shadow-lg);}
+  .edge h3{ color:#fff; margin:0 0 4px; font-size:19px; font-weight:800; letter-spacing:-.3px; }
+  .edge p{ font-size:13.4px; margin:9px 0 0; color:#dbeaf0; line-height:1.6; }
+  .edge p b{ color:#7fe0d0; }
+  .edge .foot{ margin-top:12px; font-size:11.3px; color:#a9c6d6; }
+
+  /* evidencia medida: antes → después */
+  .ev{ border:1px solid var(--line); border-radius:12px; background:var(--surface-2); overflow:hidden; margin-bottom:10px; }
+  .ev h4{ margin:0; padding:9px 14px; font-size:11px; text-transform:uppercase; letter-spacing:.07em;
+    color:var(--good); background:var(--good-bg); border-bottom:1px solid var(--line); font-weight:800; }
+  .ev .row{ display:flex; align-items:baseline; gap:10px; padding:9px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .ev .row:last-child{ border-bottom:0; }
+  .ev .m{ flex:1 1 230px; font-size:12.4px; color:var(--muted); }
+  .ev .m b{ color:var(--ink); }
+  .ev .ba{ flex:0 0 auto; font-size:12.4px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .ev .ba .before{ color:var(--crit); }
+  .ev .ba .arrow{ color:var(--faint); margin:0 6px; }
+  .ev .ba .after{ color:var(--good); }
+  .ev .note{ padding:9px 14px; font-size:12px; color:var(--muted); background:var(--surface); border-top:1px solid var(--line); }
+  .ev .note b{ color:var(--ink); }
+
+  /* pendientes del dueño */
+  .dec{ display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--line); }
+  .dec:last-child{ border-bottom:0; }
+  .dec .ic{ flex:0 0 auto; width:22px; height:22px; border-radius:6px; background:var(--warn-bg); color:var(--warn);
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .dec .tx{ font-size:12.8px; color:var(--muted); }
+  .dec .tx b{ color:var(--ink); display:block; font-size:13.2px; margin-bottom:2px; }
+
+  footer{ margin-top:24px; font-size:11.5px; color:var(--faint); text-align:center; }
+
+  @media print{ @page{ size:A4; margin:12mm; } .tbtn{ display:none; } .card,.vcard,.edge,.arch-card{ box-shadow:none; } .wrap{ padding:0; max-width:none; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } .reveal{ opacity:1!important; transform:none!important; }
+    .card,.foso-grid,.vision,.ev,.arch{ break-inside:avoid; } h2.sec{ break-after:avoid; } }
+  @media (max-width:860px){ .vision{ grid-template-columns:1fr; } .foso-grid{ grid-template-columns:1fr; } }
+  @media (max-width:560px){ h1{ font-size:21px; } .wrap{ padding:18px 14px 50px; } .pad{ padding:16px 16px; }
+    td.hd{ width:auto; } table,thead{ display:block; } thead{ display:none; }
+    tbody tr{ display:block; border-bottom:2px solid var(--line); padding:8px 0; }
+    tbody td{ display:block; border-bottom:0; padding:3px 0; }
+    tbody td.hd{ color:var(--teal-700); font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding-top:8px; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Centro Médico Carampangue · Arquitectura clínica Alma</div>
+      <h1>Un núcleo clínico compartido, no código duplicado</h1>
+      <p>Cómo está construido el sistema que transcribe, verifica y documenta las consultas del centro — para el Dr. Rodrigo Olavarría, y para mostrárselo a quien tenga que entenderlo: la psiquiatra, un futuro médico del CMC, un eventual socio. <b>Estado al 12 de julio de 2026:</b> <code>alma-clinico</code> v1.0.0 extraído y en producción detrás de Copiloto de Ficha (188 tests, 0 regresiones). Alma-Escriba aún corre con su copia propia — se migra después del piloto con la psiquiatra.</p>
+    </div>
+    <button class="tbtn" id="themeBtn" title="Tema" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <div class="vision">
+    <div class="vcard reveal">
+      <div class="tag">Núcleo</div>
+      <h3>alma_clinico v1.0.0</h3>
+      <p>Vocabulario chileno, GES completo, salvaguardas, verificador de 2ª pasada y trazabilidad. Escrito una vez, usado por todas las apps.</p>
+    </div>
+    <div class="vcard b reveal">
+      <div class="tag">Servicio</div>
+      <h3>alma-stt · :8970</h3>
+      <p>Whisper cargado UNA vez (552 MB medidos). Todas las apps lo consumen por HTTP local, nadie lo carga por su cuenta.</p>
+    </div>
+    <div class="vcard c reveal">
+      <div class="tag">Apps delgadas</div>
+      <h3>Escriba · Copiloto · Nutrición</h3>
+      <p>Psiquiatría, medicina general y las que vengan. Cada una solo escribe lo propio de su especialidad.</p>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">1 · El problema que lo detonó</h2>
+  <div class="card pad reveal">
+    <p>Hasta ayer, el mismo código clínico vivía escrito <b>dos veces</b>: una en <code>copiloto-ficha</code> (medicina general), otra en <code>alma-escriba</code> (psiquiatría). Cada aplicación tenía su propio <code>stt.py</code>, su propio <code>vocab_clinico.py</code>, su propio <code>verificador.py</code>, sus propias salvaguardas escritas a mano dentro de <code>ai.py</code>.</p>
+    <p>Se encontró y se corrigió un bug de seguridad real en la defensa anti-alucinación de Whisper de una de las dos apps. La otra —con el mismo bug, escrito con las mismas líneas semanas antes— quedó expuesta. <b>En silencio. Durante semanas.</b> Nadie decidió dejarla vulnerable: nadie se acordó de copiar el arreglo a mano a la segunda aplicación, porque copiar arreglos a mano es exactamente el tipo de paso que se olvida.</p>
+    <div class="quote">"Si alguna app vuelve a tener su propio <code>stt.py</code>, volvemos al bug de origen: la configuración anti-alucinación se arregló en el copiloto y el scribe quedó vulnerable durante semanas, porque el mismo código estaba escrito dos veces."
+      <span class="src">— comentario de cabecera dejado adrede en <code>alma_stt/engine.py</code>, para que no se repita.</span>
+    </div>
+    <p><b>Cuando el código se copia, los arreglos no viajan solos.</b> En una herramienta que transcribe consultas médicas, eso no es un problema de estilo de programación: es un riesgo clínico.</p>
+  </div>
+
+  <h2 class="sec reveal">2 · La arquitectura</h2>
+  <div class="card pad reveal">
+    <p class="muted">Un núcleo clínico compartido, y apps delgadas encima que solo escriben lo propio de su especialidad.</p>
+    <div class="arch">
+      <div class="arch-tier">
+        <div class="arch-card app">
+          <div class="k">App · psiquiatría</div>
+          <h4>Alma-Escriba</h4>
+          <p>Escucha la consulta completa y escribe la nota después. Usuaria: la psiquiatra.</p>
+          <span class="badge pilot">Piloto — no migrada</span>
+        </div>
+        <div class="arch-card app">
+          <div class="k">App · medicina general</div>
+          <h4>Copiloto de Ficha</h4>
+          <p>Acompaña mientras ocurre la consulta. Usuario: Dr. Olavarría.</p>
+          <span class="badge live">En producción</span>
+        </div>
+        <div class="arch-card app future">
+          <div class="k">App · próxima</div>
+          <h4>Nutrición y las que vengan</h4>
+          <p>Hereda el núcleo completo. Solo agrega su propio pack de vocabulario.</p>
+          <span class="badge future">Futura</span>
+        </div>
+      </div>
+
+      <div class="arch-link">
+        <div class="line"></div>
+        <div class="lbl">import de Python · mismo proceso</div>
+        <div class="arrow"></div>
+      </div>
+
+      <div class="arch-tier">
+        <div class="arch-card core">
+          <div class="k">Paquete</div>
+          <h4>alma_clinico</h4>
+          <p>El núcleo clínico. No tiene memoria pesada que compartir, así que va como código y texto — sin salto de red, sin punto único de falla en el camino clínico.</p>
+          <div class="core-chips">
+            <span>vocab (chileno + packs)</span><span>ges (103 patologías)</span>
+            <span>salvaguardas</span><span>verificador 2ª pasada</span>
+            <span>trazas (Linked Evidence)</span><span>stt (cliente)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-link net">
+        <div class="line"></div>
+        <div class="lbl">HTTP :8970 · llamada de red, Bearer token</div>
+        <div class="arrow"></div>
+      </div>
+
+      <div class="arch-tier">
+        <div class="arch-card svc">
+          <div class="k">Servicio</div>
+          <h4>alma-stt</h4>
+          <p>Whisper (faster-whisper, CTranslate2) cargado de forma perezosa y con doble verificación bajo lock: dos requests simultáneos no cargan dos modelos.</p>
+          <div class="svc-stats">
+            <div><b>552 MB</b>RSS al cargar</div>
+            <div><b>1</b>sola carga, para todas las apps</div>
+            <div><b>:8970</b>loopback, con token</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arch-legend">
+      <span><i></i> import de Python — en el mismo proceso, sin red</span>
+      <span><i class="dashed"></i> llamada HTTP — proceso aparte, con degradación con gracia</span>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">3 · Por qué STT es servicio y el resto paquete</h2>
+  <div class="card pad reveal">
+    <p>La razón es memoria, medida, no preferencia de diseño. El modelo Whisper "small" pesa <b>552 MB de RSS</b> al cargarse.</p>
+    <div class="mathbox">
+      <span>552 MB</span><span class="op">×</span><span>2 apps cargando cada una el suyo</span><span class="op">=</span>
+      <span class="oom">1.104 MB</span><span class="op">&gt;</span><span>961 MB del droplet</span><span class="op">→</span>
+      <span class="oom">OOM garantizado</span>
+    </div>
+    <p>Como <b>servicio</b>, el modelo se carga <b>una sola vez</b> y todas las apps lo consumen por HTTP local (loopback, milisegundos). El costo es ese salto de red; el beneficio es no multiplicar medio giga de RAM por cada app que quiera dictado.</p>
+    <p>El resto del núcleo —vocabulario, GES, salvaguardas, verificador, trazas— va como <b>paquete</b> justamente porque <b>no</b> tiene ese problema: es código y texto, no memoria compartida. Meterlo en un servicio agregaría un salto de red y un punto único de falla en el camino clínico sin ganar nada a cambio.</p>
+    <div class="quote">"El costo es un salto de red en loopback (milisegundos) contra el beneficio de no multiplicar medio giga por app."
+      <span class="src">— docstring de <code>alma_clinico/stt.py</code>, el cliente que consume el servicio.</span>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">4 · Qué comparten y qué NO</h2>
+  <div class="card pad reveal">
+    <table>
+      <thead><tr><th style="width:26%">&nbsp;</th><th>Escriba (psiquiatría)</th><th>Copiloto de Ficha (medicina general)</th></tr></thead>
+      <tbody>
+        <tr><td class="hd">Interacción</td><td>Documenta lo que <b>ya pasó</b>: transcribe la consulta completa y arma la nota después.</td><td>Acompaña <b>mientras pasa</b>: dictado en vivo, sugerencias que aparecen durante la consulta.</td></tr>
+        <tr><td class="hd">Usuaria/o</td><td>La psiquiatra.</td><td>Dr. Olavarría (y los médicos generales que se sumen).</td></tr>
+        <tr><td class="hd">Momento</td><td>Después de la consulta.</td><td>Durante la consulta.</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14px"><b>Idéntico en ambas, porque es del núcleo:</b> transcripción (mismo motor, mismas defensas anti-alucinación), vocabulario clínico chileno (base + pack por especialidad), salvaguardas de IA (posología / urgencia / hedging / borrador-no-firma), verificador de 2ª pasada (alucinación y omisión), catálogo GES completo, documentos con membrete y marca del CMC, lectura de Medilink (RUT y agenda), autenticación, retención de 7 días.</p>
+    <p><b>Nada de eso es "de psiquiatría" ni "de medicina general": es de medicina.</b></p>
+  </div>
+
+  <h2 class="sec reveal">5 · Lo que el sistema NUNCA hace</h2>
+  <div class="reveal">
+    <div class="noharm">
+      <b class="t">Nunca auto-completa posología, dosis, frecuencia o vía sin que el médico la haya dicho.</b>
+      <p>Si el médico dictó la dosis, se transcribe tal cual; si no la dictó, no se inventa ni se "completa" con lo habitual.</p>
+      <p class="src">Fuente: <i>Nature Medicine</i> (MEDIC) — un LLM crudo es peor que las reglas de farmacia en indicaciones de medicamentos, 50–400% más errores. A la función de pérdida del modelo casi no le duele cambiar "semanal" por "diario": el error de dosis es sistemáticamente invisible para el entrenamiento.</p>
+    </div>
+    <div class="noharm">
+      <b class="t">Nunca recomienda conducta ante una urgencia o bandera roja: alerta y se detiene.</b>
+      <p>Bajo presión de tiempo la revisión independiente del médico es imposible, y el software que sugiere manejo en ese momento deja de ser una herramienta de documentación.</p>
+      <p class="src">Fuente: guía FDA de soporte de decisión clínica — criterio de decisión tiempo-crítico. La misma línea que separa "herramienta de documentación" de "dispositivo médico".</p>
+    </div>
+    <div class="noharm">
+      <b class="t">No sugiere diagnósticos — a propósito.</b>
+      <p>El copiloto entrega checklist de completitud, banderas rojas y garantías GES; no impresiones diagnósticas. Es la misma línea que traza Abridge.</p>
+      <p class="src">Fuente: un consejo de IA errado bajó el razonamiento diagnóstico global de médicos <b>−14,0 pp</b> y el acierto del diagnóstico de primera elección <b>−18,3 pp</b> — incluso en médicos con entrenamiento formal en IA (automation bias persiste, BJH).</p>
+    </div>
+    <div class="noharm">
+      <b class="t">La IA redacta borradores; no firma ni decide.</b>
+      <p>El médico revisa y copia a Medilink. El copiloto nunca reemplaza el acto de firmar.</p>
+      <p class="src">Fuente: es la línea que separa una herramienta de documentación de un dispositivo médico — criterio de diseño del núcleo, <code>alma_clinico/salvaguardas.py</code>.</p>
+    </div>
+    <div class="noharm">
+      <b class="t">Alertas pasivas y persistentes, nunca modales.</b>
+      <p>Ninguna bandera roja interrumpe con un popup que hay que cerrar para seguir escribiendo.</p>
+      <p class="src">Fuente: reemplazar una alerta interruptiva por soporte de decisión pasivo bajó el volumen de alertas <b>80%</b> (8.206 → 1.449/semana) y subió la adherencia de <b>23% a 61%</b> (JMIR Human Factors 2019 / JMIR Med Inform 2020). Entre 46% y 96% de las alertas de este tipo se descartan sin leer.</p>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">6 · Una advertencia, no un disclaimer</h2>
+  <div class="edge reveal">
+    <h3>"El silencio del copiloto no es un alta."</h3>
+    <p>El sistema marca lo que reconoce: una bandera roja, una garantía GES, un dato que falta. Que no marque nada <b>no</b> significa que el paciente esté bien — significa que, con la información que tuvo, no encontró nada que marcar. Es una diferencia enorme y fácil de olvidar en un día ocupado.</p>
+    <p><b>Si alguna vez te sorprendes confiando en que el copiloto no dijo nada, la herramienta empezó a hacerte daño en vez de ayudarte.</b> Este texto tiene que quedar escrito en el producto — no solo en esta página.</p>
+    <div class="foot">Criterio de diseño, no cláusula legal. Aplica a Copiloto de Ficha, a Alma-Escriba y a toda app que se construya sobre el núcleo.</div>
+  </div>
+
+  <h2 class="sec reveal">7 · Lo que ya se logró (medido, no estimado)</h2>
+  <div class="reveal">
+    <div class="ev">
+      <h4>Seguridad de la transcripción</h4>
+      <div class="row"><div class="m">Whisper inventaba frases en los silencios <b>(Koenecke et al., ACM FAccT 2024: ~1% de las transcripciones, 38% de esas alucinaciones con daño explícito, incluidos fármacos inexistentes)</b></div><div class="ba"><span class="after">ya no inventa — dos defensas exigidas EN CONJUNTO</span></div></div>
+      <div class="note"><b>Y ojo: cambiar alucinación por omisión no es un arreglo.</b> El primer intento exigía <code>no_speech_prob &gt; 0,60</code> <b>o</b> <code>avg_logprob &lt; −1,0</code> (un OR), y se comía voz real: medido, la frase "Me cuesta mucho levantarme en las mañanas" tiene <code>no_speech_prob=0,691</code> (alto) pero <code>avg_logprob=−0,160</code> (confianza excelente) — es voz legítima, y el OR la borraba de la ficha. Se corrigió a <b>AND</b>: ambas señales deben coincidir en que no había voz.</div>
+    </div>
+    <div class="ev">
+      <h4>Rediseño de la ficha</h4>
+      <div class="row"><div class="m"><b>Banderas rojas</b> — visibilidad en pantalla al escribir el Plan</div><div class="ba"><span class="before">top: −707px (fuera de pantalla)</span><span class="arrow">→</span><span class="after">visibles y fijas</span></div></div>
+      <div class="row"><div class="m"><b>Tabs</b> hasta el primer campo de la ficha</div><div class="ba"><span class="before">48</span><span class="arrow">→</span><span class="after">1</span></div></div>
+      <div class="row"><div class="m"><b>Atajos de teclado</b></div><div class="ba"><span class="before">0</span><span class="arrow">→</span><span class="after">17 + paleta ⌘K</span></div></div>
+      <div class="row"><div class="m"><b>Contraste</b> del teal de acción sobre blanco (WCAG AA exige 4,5:1)</div><div class="ba"><span class="before">2,19:1 (falla)</span><span class="arrow">→</span><span class="after">4,95:1 (cumple)</span></div></div>
+    </div>
+    <div class="ev">
+      <h4>Velocidad percibida y calidad</h4>
+      <div class="row"><div class="m"><b>Primer ítem</b> del panel copiloto visible (streaming)</div><div class="ba"><span class="before">5,4 s</span><span class="arrow">→</span><span class="after">1,6 s</span></div></div>
+      <div class="row"><div class="m"><b>Tests</b></div><div class="ba"><span class="before">0</span><span class="arrow">→</span><span class="after">188, 0 regresiones</span></div></div>
+      <div class="row"><div class="m"><b>Trazabilidad</b> — cada frase de la nota</div><div class="ba"><span class="after">anclada a su segmento de audio; lo no anclado se pinta ámbar</span></div></div>
+    </div>
+    <div class="ev">
+      <h4>Prueba de sabotaje en producción — 12 de julio de 2026, ficha.agentecmc.cl</h4>
+      <div class="row"><div class="m"><b>Posología inventada</b> — "Metformina 850 mg cada 12 horas", que nadie dictó</div><div class="ba"><span class="after">detectada: ALUCINACIÓN</span></div></div>
+      <div class="row"><div class="m"><b>Alergia a penicilina omitida</b> — estaba en la fuente, no llegó a la nota</div><div class="ba"><span class="after">detectada: OMISIÓN, severidad mayor</span></div></div>
+      <div class="note">No es una promesa de arquitectura: se corrió con las dos trampas puestas a mano, en producción, y el verificador detectó ambas.</div>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">8 · Nuestro foso (por qué esto no es una copia de Abridge)</h2>
+  <div class="card pad reveal">
+    <div class="foso-grid">
+      <div class="foso-item"><span class="n">1</span><p><b>Ya leemos Medilink</b>, por RUT y agenda, en producción, solo lectura. Ningún competidor en Chile lo hace; la API de Medilink no tiene escritura de fichas para nadie, así que el copy-paste final es estructural para todo el sector, no un defecto nuestro.</p></div>
+      <div class="foso-item"><span class="n">2</span><p><b>GES completo y real:</b> 103 patologías, 85 garantías, 227 banderas rojas — el mismo motor que corre en el CMC, no una lista genérica inventada por el modelo.</p></div>
+      <div class="foso-item"><span class="n">3</span><p><b>Vocabulario clínico chileno</b> — base más packs por especialidad, ya integrado en Whisper vía hotwords. "Le da la puntada", "la guata": un producto entrenado en inglés o español neutro no los transcribe ni los interpreta.</p></div>
+      <div class="foso-item"><span class="n">4</span><p><b>NuvaMed</b> apunta a psiquiatras y psicólogos, no a medicina general, y no menciona integración con ningún HIS chileno.</p></div>
+      <div class="foso-item"><span class="n">5</span><p><b>Lo único operando en Chile es Noa (Doctoralia)</b>, con distribución instalada. La diferencia no es la IA: es vivir dentro del flujo real del centro — Medilink, GES, el vocabulario del paciente chileno.</p></div>
+      <div class="foso-item"><span class="n">6</span><p><b>Un solo núcleo, muchas apps.</b> Cada especialidad nueva hereda transcripción, GES, salvaguardas y trazabilidad ya construidas — solo agrega su propio pack de vocabulario y sus propias secciones de nota.</p></div>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">9 · Decisiones pendientes del dueño</h2>
+  <div class="card pad reveal">
+    <p class="muted" style="margin-bottom:6px">Son suyas. No se toman solas.</p>
+    <div class="dec">
+      <div class="ic">1</div>
+      <div class="tx"><b>Redimensionar el droplet.</b>Whisper corre al filo: 552 MB necesarios, ~340 MB libres hoy.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">2</div>
+      <div class="tx"><b>¿Guardar el audio 7 días?</b>Evidencia reproducible (poder re-escuchar si hay una duda) contra dato sensible que hay que proteger.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">3</div>
+      <div class="tx"><b>¿Cifrar la base en reposo?</b>Hoy SQLite plano. FileVault en el Mac ya cubre el 80% del riesgo real (robo o pérdida del equipo) y es gratis.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">4</div>
+      <div class="tx"><b>¿El VPS debe guardar fichas clínicas, o eso debe vivir solo en su Mac?</b>Son superficies de riesgo distintas.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">5</div>
+      <div class="tx"><b>¿Conservar más allá de 7 días?</b>Eso deja de ser borrador transitorio y pasa a ser ficha clínica bajo la Ley 20.584 (derechos del paciente) y la Ley 21.719 (datos personales sensibles): exige consentimiento, cifrado y auditoría.</div>
+    </div>
+    <div class="dec">
+      <div class="ic">6</div>
+      <div class="tx"><b>Migrar Alma-Escriba al núcleo.</b>Después del piloto con la psiquiatra en pacientes reales, no antes.</div>
+    </div>
+  </div>
+
+  <footer>Núcleo <code>alma-clinico</code> v1.0.0 · Arquitectura clínica Alma · Centro Médico Carampangue · Estado al 12 de julio de 2026 · Documento del Dr. Rodrigo Olavarría.</footer>
+</div>
+
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{ const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); root.setAttribute('data-theme',cur==='dark'?'light':'dark'); };
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+},{threshold:.08, rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>

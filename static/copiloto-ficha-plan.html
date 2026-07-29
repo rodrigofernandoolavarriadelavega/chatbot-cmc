@@ -1,0 +1,425 @@
+<meta charset="utf-8">
+<title>Copiloto de Ficha · Plan por etapas — Centro Médico Carampangue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --navy:#0F3F68; --navy-2:#153served; --navy-deep:#0a2e4d;
+    --aqua:#4FBECE; --aqua-deep:#2f95a4;
+    --gold:#c98a14; --violet:#6a4c93;
+    --good:#1f9d6b; --good-bg:#e7f7f0;
+    --warn:#c98a14; --warn-bg:#fdf4e3;
+    --crit:#d94c4c; --crit-bg:#fdecec;
+    --shadow:0 1px 2px rgba(15,63,104,.07),0 6px 22px rgba(15,63,104,.08);
+    --shadow-lg:0 14px 34px rgba(15,63,104,.14),0 4px 10px rgba(15,63,104,.07);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d; --aqua:#5fd0de; --aqua-deep:#40a9ba;
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.32);}}
+  :root[data-theme="dark"]{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d; --aqua:#5fd0de; --aqua-deep:#40a9ba;
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;}
+  :root[data-theme="light"]{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae; --aqua:#4FBECE;
+    --good:#1f9d6b; --good-bg:#e7f7f0; --warn:#c98a14; --warn-bg:#fdf4e3; --crit:#d94c4c; --crit-bg:#fdecec;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,h4,.eyebrow,.et-head h3,.vcard h3,.tag,.stpill,.pill,.kpi .kv,.prog .n,th{
+    font-family:'Montserrat',-apple-system,sans-serif; }
+  .wrap{ max-width:1100px; margin:0 auto; padding:28px 20px 64px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  a{ color:var(--aqua-deep); }
+
+  /* reveal on scroll */
+  .reveal{ opacity:0; transform:translateY(14px); transition:opacity .55s ease, transform .55s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  header.top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(135deg,var(--navy) 0%,#155f92 100%); border-radius:18px; padding:26px 28px;
+    color:#fff; box-shadow:var(--shadow-lg); position:relative; overflow:hidden; margin-bottom:20px;}
+  header.top::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+    background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%); pointer-events:none;}
+  .eyebrow{ text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:700; color:#bfe9ef; position:relative;}
+  h1{ margin:6px 0 8px; font-size:29px; font-weight:800; letter-spacing:-.4px; line-height:1.12; color:#fff; position:relative; max-width:640px;}
+  header.top p{ margin:0; color:#d3e4ec; font-size:13.5px; max-width:66ch; position:relative;}
+  .tbtn{ cursor:pointer; background:rgba(255,255,255,.14); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
+    color:#fff; border-radius:20px; width:36px; height:32px; font-size:15px; position:relative; flex:0 0 auto;}
+
+  .vision{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:20px 0; }
+  .vcard{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 20px; border-top:3px solid var(--aqua); }
+  .vcard.b{ border-top-color:var(--gold); }
+  .vcard h3{ margin:0 0 4px; font-size:16px; font-weight:700; letter-spacing:-.2px;}
+  .vcard .tag{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--aqua-deep); }
+  .vcard.b .tag{ color:var(--gold); }
+  .vcard p{ margin:7px 0 0; font-size:12.8px; color:var(--muted); }
+
+  h2.sec{ font-size:17px; font-weight:800; letter-spacing:-.2px; margin:30px 0 13px; display:flex; align-items:center; gap:9px; }
+  h2.sec::before{ content:""; width:4px; height:18px; background:var(--aqua); border-radius:3px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .pad{ padding:18px 22px; }
+  .card:hover{ box-shadow:var(--shadow-lg); }
+
+  /* pipeline */
+  .pipe{ display:flex; align-items:stretch; gap:0; flex-wrap:wrap; }
+  .pstep{ flex:1; min-width:140px; background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:13px 14px; margin:5px; position:relative;}
+  .pstep .k{ font-size:10px; font-weight:800; color:var(--aqua-deep); text-transform:uppercase; letter-spacing:.07em;}
+  .pstep .t{ font-size:13.5px; font-weight:700; margin:5px 0 3px;}
+  .pstep .d{ font-size:11.5px; color:var(--muted);}
+  .pstep.ai{ border-color:var(--aqua); background:linear-gradient(180deg,var(--surface-2),rgba(79,190,206,.10)); }
+
+  /* estado actual */
+  .mods{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .modcol h4{ margin:0 0 9px; font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--aqua-deep); font-weight:700;}
+  .modcol ul{ list-style:none; margin:0; padding:0; }
+  .modcol li{ font-size:12.3px; padding:5px 0; color:var(--ink); border-bottom:1px dashed var(--line); }
+  .modcol li b{ color:var(--navy); }
+  :root[data-theme="dark"] .modcol li b{ color:var(--aqua); }
+  @media (prefers-color-scheme:dark){ .modcol li b{ color:var(--aqua); } }
+
+  /* economia */
+  .econ-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:14px;}
+  .econ-tile{ background:var(--navy); background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%);
+    border-radius:var(--radius); padding:18px 20px; color:#fff; box-shadow:var(--shadow-lg); position:relative; overflow:hidden;}
+  .econ-tile::after{ content:""; position:absolute; right:-30px; bottom:-30px; width:120px; height:120px;
+    background:radial-gradient(circle,rgba(79,190,206,.28),transparent 70%);}
+  .econ-tile .ev{ font-size:26px; font-weight:800; letter-spacing:-.5px; position:relative;}
+  .econ-tile .el{ font-size:11.5px; color:#c6dde6; margin-top:5px; font-weight:500; position:relative;}
+  .econ-note{ font-size:12.6px; color:var(--muted); line-height:1.65; }
+  .econ-note b{ color:var(--navy); }
+  :root[data-theme="dark"] .econ-note b{ color:var(--aqua); }
+  @media (prefers-color-scheme:dark){ .econ-note b{ color:var(--aqua); } }
+
+  /* progreso */
+  .prog{ background:var(--navy); background:linear-gradient(135deg,var(--navy) 0%,#155f92 100%); color:#eaf2f6;
+    border-radius:var(--radius); padding:18px 22px; margin-bottom:8px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; box-shadow:var(--shadow-lg);}
+  .prog .n{ font-size:36px; font-weight:800; color:#fff; line-height:1; }
+  .prog .lab{ font-size:12.5px; color:#bcd7e2; }
+  .prog .bar{ flex:1; min-width:180px; height:10px; background:rgba(255,255,255,.16); border-radius:6px; overflow:hidden; }
+  .prog .fill{ height:100%; width:0; background:linear-gradient(90deg,var(--aqua),#7fe0d0); border-radius:6px; transition:width .8s cubic-bezier(.2,.8,.2,1); }
+
+  /* etapas */
+  .etapa{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 20px; margin-bottom:11px; }
+  .etapa:hover{ box-shadow:var(--shadow-lg); }
+  .et-head{ display:flex; align-items:center; gap:13px; cursor:pointer; flex-wrap:wrap; }
+  .et-num{ flex:0 0 auto; width:40px; height:40px; border-radius:11px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+  .etapa.done .et-num{ background:var(--good); } .etapa.curso .et-num{ background:var(--aqua-deep); }
+  .etapa.pend .et-num{ background:var(--faint); } .etapa.decision .et-num{ background:var(--warn); }
+  .etapa.futuro .et-num{ background:var(--violet); }
+  .et-head h3{ margin:0; font-size:16.5px; font-weight:700; letter-spacing:-.2px;}
+  .et-head .when{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:700; }
+  .stpill{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; padding:3px 9px; border-radius:20px; white-space:nowrap;}
+  .stpill.done{ background:var(--good-bg); color:var(--good);} .stpill.curso{ background:rgba(79,190,206,.15); color:var(--aqua-deep);}
+  .stpill.pend{ background:var(--surface-2); color:var(--faint); border:1px solid var(--line);} .stpill.decision{ background:var(--warn-bg); color:var(--warn);}
+  .stpill.futuro{ background:rgba(106,76,147,.13); color:var(--violet);}
+  .et-head .cnt{ margin-left:auto; font-size:11.5px; color:var(--faint); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .et-goal{ font-size:12.6px; color:var(--muted); margin:9px 0 10px 53px; }
+  ul.tasks{ list-style:none; margin:0 0 0 53px; padding:0; }
+  ul.tasks li{ display:flex; gap:10px; align-items:flex-start; padding:5px 0; font-size:13.3px; }
+  ul.tasks input{ margin-top:2px; width:17px; height:17px; accent-color:var(--aqua); cursor:pointer; flex:0 0 auto; }
+  ul.tasks label{ cursor:pointer; }
+  li.done label{ color:var(--faint); text-decoration:line-through; }
+  .gate{ margin:10px 0 2px 53px; background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px; padding:8px 13px; font-size:12px; }
+  .gate b{ color:var(--warn); }
+  .gate.legal{ background:var(--crit-bg); border-left-color:var(--crit); } .gate.legal b{ color:var(--crit); }
+  .gate.ok{ background:var(--good-bg); border-left-color:var(--good); } .gate.ok b{ color:var(--good); }
+
+  /* dos caminos E8 */
+  .caminos{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0 6px 53px; }
+  .camino{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--surface-2); }
+  .camino.b{ border-color:rgba(201,138,20,.4); background:var(--warn-bg); }
+  .camino .tag{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--aqua-deep);}
+  .camino.b .tag{ color:var(--warn); }
+  .camino h4{ margin:5px 0 7px; font-size:13.5px; font-weight:700;}
+  .camino ul{ margin:0; padding-left:16px; font-size:12.2px; color:var(--muted); line-height:1.6;}
+  .camino ul li{ margin-bottom:2px;}
+
+  table{ width:100%; border-collapse:collapse; font-size:12.6px; }
+  th,td{ padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700;}
+  .pill{ display:inline-block; padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700; }
+  .pill.rec{ background:var(--good-bg); color:var(--good); } .pill.alt{ background:var(--surface-2); color:var(--muted); }
+
+  .edge{ background:var(--navy); background:linear-gradient(150deg,var(--navy) 0%,var(--navy-deep) 100%); color:#eaf2f6; border-radius:var(--radius); padding:18px 22px; margin-top:8px; box-shadow:var(--shadow-lg);}
+  .edge h3{ color:#fff; margin:0 0 9px; font-size:15.5px; font-weight:700;} .edge .r{ font-size:13px; margin:8px 0; color:#dbeaf0;} .edge b{ color:#7fe0d0;}
+
+  .reset{ margin-top:18px; text-align:center; }
+  .reset button{ background:transparent; border:1px solid var(--line); color:var(--faint); border-radius:20px; padding:7px 16px; font-size:12px; cursor:pointer; }
+  footer{ margin-top:24px; font-size:11.5px; color:var(--faint); text-align:center; }
+
+  @media print{ @page{ size:A4; margin:12mm; } .tbtn,.reset{ display:none; } .etapa,.card,.vcard,.prog,.edge,.econ-tile{ box-shadow:none; } .wrap{ padding:0; max-width:none; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } ul.tasks{ margin-left:36px; } .reveal{ opacity:1!important; transform:none!important; }
+    .etapa{ break-inside:avoid; } .econ-grid,.mods,.caminos{ break-inside:avoid; } }
+  @media (max-width:860px){ .vision,.mods,.econ-grid{ grid-template-columns:1fr 1fr; } .caminos{ grid-template-columns:1fr; } }
+  @media (max-width:560px){ .vision,.mods,.econ-grid{ grid-template-columns:1fr; } ul.tasks,.et-goal,.gate,.caminos{ margin-left:0; }
+    h1{ font-size:23px; } .prog{ padding:16px 18px;} .prog .n{ font-size:28px;} .wrap{ padding:18px 14px 50px;} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Centro Médico Carampangue · Herramienta personal</div>
+      <h1>Copiloto de Ficha — borrador clínico con IA</h1>
+      <p>Ordena la información del paciente (anamnesis, antecedentes, examen, impresión, plan) con IA, atajos y dictado, para <b>copiar y pegar en Medilink</b> — que no tiene API de escritura. Uso personal del Dr. Rodrigo Olavarría, medicina general de box y urgencia menor. Los datos son <b>transitorios: se autoborran a los 7 días</b> por minimización de dato sensible.</p>
+    </div>
+    <button class="tbtn" id="themeBtn" title="Tema" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <div class="vision reveal">
+    <div class="vcard a">
+      <span class="tag">Qué resuelve</span>
+      <h3>El borrador antes de Medilink</h3>
+      <p>Escribe o dicta desordenado mientras atiende; la IA reparte el texto en 12 secciones clínicas sin inventar nada, marca GES y banderas rojas en vivo, y sugiere escalas. El médico revisa y copia — <b>nunca reemplaza a Medilink ni firma por él</b>.</p>
+    </div>
+    <div class="vcard b">
+      <span class="tag">Por qué es transitorio</span>
+      <h3>Borrador, no ficha clínica</h3>
+      <p>Se autoborra a los 7 días. Es el camino legalmente más limpio mientras sea un apunte personal de trabajo: minimización de dato sensible, sin las obligaciones plenas de una ficha clínica del CMC. Ver la decisión abierta en la <b>Etapa 8</b>.</p>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">Estado actual · 11 jul 2026</h2>
+  <div class="card pad reveal">
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 13px;">El núcleo (E1) está <b>verificado en uso real</b>; la capa de velocidad (E2) tiene el motor de dictado y las escalas ya en el backend, falta enganchar la interfaz:</p>
+    <div class="mods">
+      <div class="modcol"><h4>Anamnesis y atajos</h4><ul>
+        <li><b>12 secciones</b> clínicas (motivo → plan)</li>
+        <li><b>31 atajos</b> / dot-phrases de medicina general</li>
+        <li>"Ordenar con IA": Claude reparte el texto sin inventar</li>
+        <li>Copiar por sección y ficha completa</li>
+      </ul></div>
+      <div class="modcol"><h4>GES real + seguridad</h4><ul>
+        <li><b>103 patologías</b> GES · 85 garantías</li>
+        <li><b>227 banderas rojas</b> (motor GES del VPS)</li>
+        <li>Banderas rojas transversales de MG</li>
+        <li>Autoborrado a 7 días — <b>verificado</b></li>
+      </ul></div>
+      <div class="modcol"><h4>Copilot en vivo, medido</h4><ul>
+        <li>Debounce: <b>78 pulsaciones → 0 llamadas</b></li>
+        <li>1 sola llamada al pausar de escribir</li>
+        <li>Haiku 4.5 + prompt caching</li>
+        <li>Briefing Medilink por RUT (solo lectura)</li>
+      </ul></div>
+      <div class="modcol"><h4>En curso (E2)</h4><ul>
+        <li>Dictado — faster-whisper local instalado</li>
+        <li>Diccionario clínico chileno (~280 términos)</li>
+        <li>8 escalas ya calculadas en el backend</li>
+        <li>Login por clave — falta sesión multi-usuario</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">Cómo funciona (el flujo)</h2>
+  <div class="card pad reveal">
+    <div class="pipe">
+      <div class="pstep"><div class="k">1 · Antes</div><div class="t">Briefing</div><div class="d">Resumen del paciente por RUT desde Medilink (solo lectura).</div></div>
+      <div class="pstep"><div class="k">2 · Consulta</div><div class="t">Captura desordenada</div><div class="d">Tipea o dicta notas sueltas mientras atiende, sin preocuparse del orden.</div></div>
+      <div class="pstep ai"><div class="k">3 · IA</div><div class="t">Ordena + vigila</div><div class="d">Claude reparte el texto en las 12 secciones; el copilot en vivo marca GES, banderas rojas y escalas.</div></div>
+      <div class="pstep"><div class="k">4 · Médico</div><div class="t">Revisa y corrige</div><div class="d">Edita, completa, decide. La responsabilidad y la firma son del médico.</div></div>
+      <div class="pstep"><div class="k">5 · Después</div><div class="t">A Medilink</div><div class="d">Copia por sección o completa. El borrador se autoborra a los 7 días.</div></div>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">Economía real medida (no estimada)</h2>
+  <div class="reveal">
+    <div class="econ-grid">
+      <div class="econ-tile"><div class="ev tnum">US$0,001</div><div class="el">por sugerencia del copilot en vivo</div></div>
+      <div class="econ-tile"><div class="ev tnum">~US$0,025</div><div class="el">por consulta completa (varias sugerencias + ordenar)</div></div>
+      <div class="econ-tile"><div class="ev tnum">~US$15 / mes</div><div class="el">con 20 pacientes al día, box de medicina general</div></div>
+    </div>
+    <div class="card pad">
+      <p class="econ-note">Hallazgo técnico: el mínimo cacheable de <b>Haiku 4.5 es 4.096 tokens</b>. El bloque GES completo que se inyecta en el copilot (~9.900 tokens) supera ese mínimo y <b>sí cachea</b> — se escribe una vez a 1,25× y se lee después a 0,1× del costo. Un bloque más chico usado antes (1.405 tokens) quedaba bajo ese umbral y <b>el caché no se activaba nunca, en silencio</b> — ese fue el hallazgo que corrigió el costo real.</p>
+    </div>
+  </div>
+
+  <div class="prog reveal" style="margin-top:20px;">
+    <div><div class="n tnum" id="pctBig">0%</div><div class="lab">avance del plan</div></div>
+    <div class="bar"><div class="fill" id="pfill"></div></div>
+    <div class="lab tnum" id="pcount" style="min-width:120px;text-align:right;">0 de 0 hitos</div>
+  </div>
+
+  <h2 class="sec reveal">Las 9 etapas</h2>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">1</span><div><h3>Núcleo de anamnesis</h3><span class="when">Listo</span></div><span class="stpill done">Lista · verificada</span><span class="cnt"></span></div>
+    <p class="et-goal">El corazón del copiloto: ordenar la ficha con IA sin inventar nada, y probado en uso real.</p>
+    <ul class="tasks" data-e="1">
+      <li><input type="checkbox" checked><label><b>12 secciones</b> clínicas estructuradas (motivo de consulta → plan e indicaciones)</label></li>
+      <li><input type="checkbox" checked><label><b>31 atajos</b> / dot-phrases de medicina general (negativos, crónicos, examen, cuadros frecuentes, plan)</label></li>
+      <li><input type="checkbox" checked><label>"Ordenar con IA": Claude reparte texto desordenado en las secciones <b>sin inventar</b></label></li>
+      <li><input type="checkbox" checked><label>Copiar por sección y ficha completa, listo para pegar en Medilink</label></li>
+      <li><input type="checkbox" checked><label>Briefing Medilink por RUT (solo lectura, header <code>Token</code>)</label></li>
+      <li><input type="checkbox" checked><label><b>GES completo</b>: 103 patologías, 85 garantías, 227 banderas rojas, exportado del motor GES real del VPS</label></li>
+      <li><input type="checkbox" checked><label>Copilot en vivo con <b>debounce</b> (78 pulsaciones → 0 llamadas mientras escribe, 1 sola al pausar)</label></li>
+      <li><input type="checkbox" checked><label>Autoborrado a los 7 días — <b>verificado</b></label></li>
+    </ul>
+    <div class="gate ok"><b>Verificado:</b> en uso real por el dueño, no es un piloto de laboratorio.</div>
+  </div>
+
+  <div class="etapa curso reveal">
+    <div class="et-head"><span class="et-num">2</span><div><h3>Velocidad</h3><span class="when">En curso</span></div><span class="stpill curso">En curso</span><span class="cnt"></span></div>
+    <p class="et-goal">Lo que falta para que el copiloto sea más rápido que tipear directo en Medilink.</p>
+    <ul class="tasks" data-e="2">
+      <li><input type="checkbox"><label><b>Dictado por voz</b>: faster-whisper local (ya instalado) + diccionario clínico chileno (~280 términos) — falta el micrófono en pantalla</label></li>
+      <li><input type="checkbox"><label><b>Escalas interactivas</b>: CURB-65, Wells (TVP), qSOFA, HEART, Centor, riesgo CV, PHQ-9, GAD-7, AUDIT-C — ya se calculan en el backend, falta la UI que autocalcula e inserta la conclusión</label></li>
+      <li><input type="checkbox"><label>Copilot afinado por motivo de consulta (ya recibe el motivo como eje del análisis)</label></li>
+      <li><input type="checkbox"><label>Continuidad por paciente dentro de los 7 días (endpoint de fichas previas ya existe, falta engancharlo al flujo)</label></li>
+      <li><input type="checkbox"><label>Login por clave — ya implementado, falta sesión más robusta</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">3</span><div><h3>Deploy privado</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Usarlo desde el box sin depender del Mac.</p>
+    <ul class="tasks" data-e="3">
+      <li><input type="checkbox"><label>Subdominio <b>ficha.agentecmc.cl</b> en Cloudflare (DNS)</label></li>
+      <li><input type="checkbox"><label>systemd + nginx + certbot en el VPS</label></li>
+      <li><input type="checkbox"><label>Acceso por clave, disponible desde cualquier equipo del CMC</label></li>
+    </ul>
+    <div class="gate"><b>Gate:</b> requiere entrada de DNS en Cloudflare — depende del dueño, no del código.</div>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">4</span><div><h3>Atajos a la medida</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Los 31 atajos actuales son una base genérica de MG — el valor real está en tus frases propias.</p>
+    <ul class="tasks" data-e="4">
+      <li><input type="checkbox"><label>Revisar los atajos actuales y ajustar la redacción a como realmente escribes</label></li>
+      <li><input type="checkbox"><label>Agregar tu examen físico normal, tal como lo describes</label></li>
+      <li><input type="checkbox"><label>Indicaciones típicas y formato de derivación real</label></li>
+      <li><input type="checkbox"><label>Todo vive en <code>app/config.py → ATAJOS</code>: agregar uno propio es agregar una línea</label></li>
+    </ul>
+    <div class="gate"><b>Gate:</b> requiere al Dr. Olavarría — nadie más puede escribir "sus" frases.</div>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">5</span><div><h3>Documentos</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Lo que hoy se escribe aparte, dentro del mismo flujo.</p>
+    <ul class="tasks" data-e="5">
+      <li><input type="checkbox"><label>Orden de examen (PDF)</label></li>
+      <li><input type="checkbox"><label>Licencia médica (PDF)</label></li>
+      <li><input type="checkbox"><label>Interconsulta / carta de derivación (PDF)</label></li>
+      <li><input type="checkbox"><label>Indicaciones al paciente, para imprimir o enviar</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">6</span><div><h3>Puente Medilink</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Hacer el briefing y el copiado todavía más útiles, sin escritura directa (Medilink no la ofrece).</p>
+    <ul class="tasks" data-e="6">
+      <li><input type="checkbox"><label>Briefing más rico: últimas atenciones y exámenes previos</label></li>
+      <li><input type="checkbox"><label>Copiado inteligente por bloque, no solo ficha completa</label></li>
+      <li><input type="checkbox"><label>Explorar si Medilink habilita alguna vía de escritura a futuro</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">7</span><div><h3>Copilot clínico avanzado</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Subir la capa de inteligencia una vez que lo básico ya ahorra tiempo todos los días.</p>
+    <ul class="tasks" data-e="7">
+      <li><input type="checkbox"><label>Diagnósticos diferenciales sugeridos</label></li>
+      <li><input type="checkbox"><label>Chequeo de interacciones y dosis de fármacos</label></li>
+      <li><input type="checkbox"><label>GES proactivo, no solo reactivo al texto ya escrito</label></li>
+      <li><input type="checkbox"><label>Guías clínicas MINSAL como referencia</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa decision reveal">
+    <div class="et-head"><span class="et-num">8</span><div><h3>Decisión de retención</h3><span class="when">Decisión abierta</span></div><span class="stpill decision">Decisión abierta</span><span class="cnt"></span></div>
+    <p class="et-goal">Hoy es un borrador transitorio de 7 días. Conservarlo más allá de eso cambia lo que es — legalmente y en la práctica. No es una tarea técnica, es una decisión del dueño.</p>
+    <div class="caminos">
+      <div class="camino a">
+        <span class="tag">Camino A</span>
+        <h4>Seguir transitorio (hoy)</h4>
+        <ul>
+          <li>Sigue siendo un apunte personal de trabajo</li>
+          <li>Minimización de dato sensible: se autoborra a los 7 días</li>
+          <li>No exige las obligaciones plenas de una ficha clínica</li>
+          <li>Límite: no sirve como respaldo ni historial más allá de 7 días</li>
+        </ul>
+      </div>
+      <div class="camino b">
+        <span class="tag">Camino B</span>
+        <h4>Conservarlo como ficha clínica</h4>
+        <ul>
+          <li>Deja de poder llamarse "personal" si se conserva</li>
+          <li>Pasa a tratarse como ficha clínica del CMC — Ley 20.584</li>
+          <li>Exige consentimiento informado, cifrado, control de acceso y auditoría</li>
+          <li>Exige política de retención formal — Ley 21.719</li>
+        </ul>
+      </div>
+    </div>
+    <div class="gate legal"><b>Regla dura:</b> nunca sostener que es "personal" si la información se conserva más allá de los 7 días.</div>
+  </div>
+
+  <div class="etapa futuro reveal">
+    <div class="et-head"><span class="et-num">9</span><div><h3>Multi-médico</h3><span class="when">Futuro</span></div><span class="stpill futuro">Futuro</span><span class="cnt"></span></div>
+    <p class="et-goal">Abrirlo al resto de los médicos del CMC si el uso propio demuestra que funciona.</p>
+    <ul class="tasks" data-e="9">
+      <li><input type="checkbox"><label>Definir si se abre a otros médicos del CMC (medicina general y otras especialidades)</label></li>
+      <li><input type="checkbox"><label>Aislar datos por profesional</label></li>
+      <li><input type="checkbox"><label>Medir si el ahorro de tiempo se sostiene fuera del uso personal</label></li>
+    </ul>
+  </div>
+
+  <h2 class="sec reveal">Decisiones-gate (necesitan tu confirmación)</h2>
+  <div class="card pad reveal" style="overflow-x:auto;">
+    <table>
+      <tr><th>Decisión</th><th>Opciones</th><th>Recomendación</th></tr>
+      <tr><td><b>Retención de datos (E8)</b></td><td>7 días transitorio (hoy) · ficha clínica permanente (Ley 20.584 / 21.719)</td><td><span class="pill rec">Mantener 7 días mientras sea personal</span></td></tr>
+      <tr><td><b>Deploy (E3)</b></td><td>Seguir en el Mac · VPS con subdominio propio</td><td><span class="pill rec">Mover a ficha.agentecmc.cl cuando el DNS esté listo</span></td></tr>
+      <tr><td><b>Motor de dictado</b></td><td>faster-whisper local (privado) · servicio en la nube</td><td><span class="pill rec">Mantener local — sin salida de audio a terceros</span></td></tr>
+      <tr><td><b>Multi-médico (E9)</b></td><td>Uso personal · abrir a otros médicos del CMC</td><td><span class="pill alt">Validar 60-90 días de uso propio antes</span></td></tr>
+    </table>
+  </div>
+
+  <div class="edge reveal">
+    <h3>Por qué este enfoque, y no otro</h3>
+    <div class="r"><b>No reinventa la ficha, la ordena.</b> Medilink sigue siendo el sistema de verdad; el copiloto solo deja el texto listo para pegar.</div>
+    <div class="r"><b>GES real, no genérico.</b> Mismo motor y misma base que corre para el CMC (103 patologías, 85 garantías, 227 banderas rojas) — no una lista inventada por el modelo.</div>
+    <div class="r"><b>Economía medida, no estimada.</b> ~US$15 al mes con 20 pacientes al día, con la mecánica de caché verificada y documentada.</div>
+    <div class="r"><b>Camino legal limpio desde el día 1.</b> Dato transitorio y minimización — sin necesidad de tratarlo como ficha clínica formal, salvo que se decida lo contrario en la Etapa 8.</div>
+  </div>
+
+  <div class="reset"><button id="resetBtn">Reiniciar progreso</button></div>
+  <footer>Copiloto de Ficha · Plan por etapas · Herramienta personal del Dr. Rodrigo Olavarría — Centro Médico Carampangue. El progreso se guarda en este navegador.</footer>
+</div>
+
+<script>
+const KEY="copiloto_ficha_plan_v1";
+const boxes=[...document.querySelectorAll('ul.tasks input')];
+const saved=JSON.parse(localStorage.getItem(KEY)||"{}");
+boxes.forEach((cb,i)=>{ cb.dataset.i=i; if(saved[i]===0) cb.checked=false; else if(saved[i]) cb.checked=true; cb.addEventListener('change',()=>{save();render();}); });
+function save(){ const st={}; boxes.forEach((cb,i)=>{ st[i]=cb.checked?1:0; }); localStorage.setItem(KEY,JSON.stringify(st)); }
+function render(){
+  let done=0;
+  boxes.forEach(cb=>{ cb.closest('li').classList.toggle('done',cb.checked); if(cb.checked)done++; });
+  document.querySelectorAll('.etapa').forEach(et=>{
+    const cbs=[...et.querySelectorAll('ul.tasks input')]; const d=cbs.filter(c=>c.checked).length;
+    et.querySelector('.cnt').textContent=d+'/'+cbs.length;
+  });
+  const pct=boxes.length?Math.round(done/boxes.length*100):0;
+  document.getElementById('pctBig').textContent=pct+'%';
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('pcount').textContent=done+' de '+boxes.length+' hitos';
+}
+document.getElementById('resetBtn').onclick=()=>{ if(confirm('¿Reiniciar el progreso?')){ localStorage.removeItem(KEY); location.reload(); } };
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{ const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); root.setAttribute('data-theme',cur==='dark'?'light':'dark'); };
+render();
+
+// reveal on scroll
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+},{threshold:.08, rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>

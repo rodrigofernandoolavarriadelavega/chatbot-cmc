@@ -1,0 +1,619 @@
+<meta charset="utf-8">
+<title>Copiloto de Ficha · Plan de rediseño — Centro Médico Carampangue</title>
+<!-- Sin CDNs: la CSP del sitio los bloquea. Tipografías = stack del sistema. -->
+<style>
+  :root{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --navy:#0F3F68; --navy-deep:#0a2e4d;
+    /* Paleta corregida a WCAG AA — ver bloque de accesibilidad en Etapa 1.
+       #4FBECE sobre blanco = 2,19:1 (FALLA). Nunca se usa como texto sobre claro. */
+    --teal-700:#0E7C86;  /* texto/acción sobre claro — 4.95:1 AA */
+    --teal-500:#2A9AAB;  /* bordes / iconos / foco — 3.33:1 AA componentes */
+    --teal-400:#4FBECE;  /* acento de marca — SOLO fondo, gráfico, o texto sobre navy */
+    --teal-050:#eaf6f8;
+    --gold:#c98a14; --violet:#6a4c93;
+    --good:#067647; --good-bg:#ecfdf3;     /* 5.69:1 */
+    --warn:#b54708; --warn-bg:#fffaeb;     /* 5.43:1 */
+    --crit:#b42318; --crit-bg:#fef3f2;     /* 6.57:1 */
+    --info:#175cd3; --info-bg:#eff8ff;     /* 5.13:1 — GES */
+    --shadow:0 1px 2px rgba(15,63,104,.07),0 6px 22px rgba(15,63,104,.08);
+    --shadow-lg:0 14px 34px rgba(15,63,104,.14),0 4px 10px rgba(15,63,104,.07);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de;
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.32);}}
+  :root[data-theme="dark"]{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de;
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036;}
+  :root[data-theme="light"]{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --teal-700:#0E7C86; --teal-500:#2A9AAB; --teal-400:#4FBECE;
+    --good:#067647; --good-bg:#ecfdf3; --warn:#b54708; --warn-bg:#fffaeb; --crit:#b42318; --crit-bg:#fef3f2;
+    --info:#175cd3; --info-bg:#eff8ff;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,h4,.eyebrow,.et-head h3,.vcard h3,.tag,.stpill,.pill,.kpi .kv,.prog .n,th{
+    font-family:'Montserrat','Avenir Next','Helvetica Neue',-apple-system,BlinkMacSystemFont,sans-serif; }
+  .wrap{ max-width:1120px; margin:0 auto; padding:28px 20px 64px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  a{ color:var(--teal-700); }
+
+  .reveal{ opacity:0; transform:translateY(14px); transition:opacity .55s ease, transform .55s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  header.top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(135deg,var(--navy) 0%,#155f92 100%); border-radius:18px; padding:26px 28px;
+    color:#fff; box-shadow:var(--shadow-lg); position:relative; overflow:hidden; margin-bottom:20px;}
+  header.top::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+    background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%); pointer-events:none;}
+  .eyebrow{ text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:700; color:#bfe9ef; position:relative;}
+  h1{ margin:6px 0 8px; font-size:28px; font-weight:800; letter-spacing:-.4px; line-height:1.14; color:#fff; position:relative; max-width:680px;}
+  header.top p{ margin:0; color:#d3e4ec; font-size:13.5px; max-width:70ch; position:relative;}
+  .tbtn{ cursor:pointer; background:rgba(255,255,255,.14); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
+    color:#fff; border-radius:20px; width:36px; height:32px; font-size:15px; position:relative; flex:0 0 auto;}
+
+  .vision{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:20px 0; }
+  .vcard{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; border-top:3px solid var(--teal-500); }
+  .vcard.b{ border-top-color:var(--gold); } .vcard.c{ border-top-color:var(--crit); }
+  .vcard h3{ margin:0 0 4px; font-size:15px; font-weight:700; letter-spacing:-.2px;}
+  .vcard .tag{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--teal-700); }
+  .vcard.b .tag{ color:var(--gold); } .vcard.c .tag{ color:var(--crit); }
+  .vcard p{ margin:7px 0 0; font-size:12.6px; color:var(--muted); }
+
+  h2.sec{ font-size:17px; font-weight:800; letter-spacing:-.2px; margin:30px 0 13px; display:flex; align-items:center; gap:9px; }
+  h2.sec::before{ content:""; width:4px; height:18px; background:var(--teal-400); border-radius:3px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .pad{ padding:18px 22px; }
+  .card:hover{ box-shadow:var(--shadow-lg); }
+
+  /* demo de contraste — E1 */
+  .swatches{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-top:12px; }
+  .swatch{ border-radius:11px; padding:14px 16px; border:1px solid var(--line); }
+  .swatch .big{ font-size:14.5px; font-weight:700; }
+  .swatch .ratio{ font-size:11.5px; margin-top:6px; font-weight:700; }
+  .swatch.fail{ background:#fff; }
+  .swatch.fail .big{ color:#4FBECE; }
+  .swatch.fail .ratio{ color:var(--crit); }
+  .swatch.pass{ background:#fff; }
+  .swatch.pass .big{ color:var(--teal-700); }
+  .swatch.pass .ratio{ color:var(--good); }
+  .swatch.navy{ background:var(--navy); }
+  .swatch.navy .big{ color:#4FBECE; }
+  .swatch.navy .ratio{ color:#9fe3ea; }
+  .swatch .lab{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); margin-bottom:4px; }
+  .swatch.navy .lab{ color:#9fbfd6; }
+
+  /* pipeline */
+  .pipe{ display:flex; align-items:stretch; gap:0; flex-wrap:wrap; }
+  .pstep{ flex:1; min-width:140px; background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:13px 14px; margin:5px; position:relative;}
+  .pstep .k{ font-size:10px; font-weight:800; color:var(--teal-700); text-transform:uppercase; letter-spacing:.07em;}
+  .pstep .t{ font-size:13.5px; font-weight:700; margin:5px 0 3px;}
+  .pstep .d{ font-size:11.5px; color:var(--muted);}
+  .pstep.ai{ border-color:var(--teal-500); background:linear-gradient(180deg,var(--surface-2),rgba(79,190,206,.10)); }
+
+  /* progreso */
+  .prog{ background:var(--navy); background:linear-gradient(135deg,var(--navy) 0%,#155f92 100%); color:#eaf2f6;
+    border-radius:var(--radius); padding:18px 22px; margin-bottom:8px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; box-shadow:var(--shadow-lg);}
+  .prog .n{ font-size:36px; font-weight:800; color:#fff; line-height:1; }
+  .prog .lab{ font-size:12.5px; color:#bcd7e2; }
+  .prog .bar{ flex:1; min-width:180px; height:10px; background:rgba(255,255,255,.16); border-radius:6px; overflow:hidden; }
+  .prog .fill{ height:100%; width:0; background:linear-gradient(90deg,#4FBECE,#7fe0d0); border-radius:6px; transition:width .8s cubic-bezier(.2,.8,.2,1); }
+
+  /* etapas */
+  .etapa{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 20px; margin-bottom:11px; }
+  .etapa:hover{ box-shadow:var(--shadow-lg); }
+  .et-head{ display:flex; align-items:center; gap:13px; cursor:pointer; flex-wrap:wrap; }
+  .et-num{ flex:0 0 auto; width:40px; height:40px; border-radius:11px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+  .etapa.done .et-num{ background:var(--good); }
+  .etapa.pend .et-num{ background:var(--faint); }
+  .et-head h3{ margin:0; font-size:16.5px; font-weight:700; letter-spacing:-.2px;}
+  .et-head .when{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:700; }
+  .stpill{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; padding:3px 9px; border-radius:20px; white-space:nowrap;}
+  .stpill.done{ background:var(--good-bg); color:var(--good);}
+  .stpill.pend{ background:var(--surface-2); color:var(--faint); border:1px solid var(--line);}
+  .et-head .cnt{ margin-left:auto; font-size:11.5px; color:var(--faint); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .et-goal{ font-size:12.8px; color:var(--muted); margin:9px 0 4px 53px; }
+  .et-why{ font-size:12.3px; color:var(--ink); margin:0 0 2px 53px; background:var(--surface-2); border-left:3px solid var(--teal-500); border-radius:0 8px 8px 0; padding:8px 12px; }
+  .et-why b{ color:var(--teal-700); }
+  .et-impact{ font-size:12px; color:var(--muted); margin:8px 0 10px 53px; }
+  .et-impact b{ color:var(--navy); }
+  :root[data-theme="dark"] .et-impact b{ color:var(--teal-400); }
+  @media (prefers-color-scheme:dark){ .et-impact b{ color:var(--teal-400); } }
+  ul.tasks{ list-style:none; margin:0 0 0 53px; padding:0; }
+  ul.tasks li{ display:flex; gap:10px; align-items:flex-start; padding:5px 0; font-size:13.2px; }
+  ul.tasks input{ margin-top:2px; width:17px; height:17px; accent-color:var(--teal-500); cursor:pointer; flex:0 0 auto; }
+  ul.tasks label{ cursor:pointer; }
+  li.done label{ color:var(--faint); text-decoration:line-through; }
+  .fuente{ font-size:11px; color:var(--faint); margin:6px 0 0 53px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.6px; }
+  th,td{ padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700;}
+  .pill{ display:inline-block; padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700; }
+  .pill.rec{ background:var(--good-bg); color:var(--good); } .pill.alt{ background:var(--surface-2); color:var(--muted); }
+
+  /* NO vamos a hacer */
+  .noharm{ background:var(--crit-bg); border-left:3px solid var(--crit); border-radius:0 12px 12px 0; padding:13px 16px; margin-bottom:10px; }
+  .noharm b.t{ color:var(--crit); font-size:13.2px; }
+  .noharm p{ margin:5px 0 0; font-size:12.4px; color:var(--ink); }
+  .noharm .src{ margin:5px 0 0; font-size:11px; color:var(--faint); }
+
+  /* foso */
+  .foso-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .foso-item{ background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:13px 15px; }
+  .foso-item .n{ display:inline-flex; width:22px; height:22px; border-radius:6px; background:var(--teal-050); color:var(--teal-700); font-size:11px; font-weight:800; align-items:center; justify-content:center; margin-bottom:6px;}
+  :root[data-theme="dark"] .foso-item .n{ background:rgba(79,190,206,.18); }
+  @media (prefers-color-scheme:dark){ .foso-item .n{ background:rgba(79,190,206,.18); } }
+  .foso-item p{ margin:0; font-size:12.4px; color:var(--muted); line-height:1.55; }
+  .foso-item b{ color:var(--ink); }
+
+  .edge{ background:var(--navy); background:linear-gradient(150deg,var(--navy) 0%,var(--navy-deep) 100%); color:#eaf2f6; border-radius:var(--radius); padding:18px 22px; margin-top:8px; box-shadow:var(--shadow-lg);}
+  .edge h3{ color:#fff; margin:0 0 9px; font-size:15.5px; font-weight:700;} .edge .r{ font-size:13px; margin:8px 0; color:#dbeaf0;} .edge b{ color:#4FBECE;}
+
+  /* estado parcial */
+  .stpill.part{ background:var(--warn-bg); color:var(--warn); }
+  .etapa.part .et-num{ background:var(--warn); }
+
+  /* evidencia medida: antes → después */
+  .ev{ margin:10px 0 2px 53px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); overflow:hidden; }
+  .ev h4{ margin:0; padding:9px 14px; font-size:11px; text-transform:uppercase; letter-spacing:.07em;
+    color:var(--good); background:var(--good-bg); border-bottom:1px solid var(--line); font-weight:800; }
+  .ev .row{ display:flex; align-items:baseline; gap:10px; padding:9px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .ev .row:last-child{ border-bottom:0; }
+  .ev .m{ flex:1 1 210px; font-size:12.4px; color:var(--muted); }
+  .ev .m b{ color:var(--ink); }
+  .ev .ba{ flex:0 0 auto; font-size:12.4px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .ev .ba .before{ color:var(--crit); }
+  .ev .ba .arrow{ color:var(--faint); margin:0 6px; }
+  .ev .ba .after{ color:var(--good); }
+  .ev .note{ padding:9px 14px; font-size:12px; color:var(--muted); background:var(--surface); border-top:1px solid var(--line); }
+  .ev .note b{ color:var(--ink); }
+
+  /* fase D — hallazgos */
+  .find{ background:var(--info-bg); border-left:3px solid var(--info); border-radius:0 12px 12px 0; padding:13px 16px; margin-bottom:10px; }
+  .find b.t{ color:var(--info); font-size:13.2px; }
+  .find p{ margin:5px 0 0; font-size:12.4px; color:var(--ink); }
+  .find .src{ margin:5px 0 0; font-size:11px; color:var(--faint); }
+
+  /* pendientes del dueño */
+  .dec{ display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--line); }
+  .dec:last-child{ border-bottom:0; }
+  .dec .ic{ flex:0 0 auto; width:22px; height:22px; border-radius:6px; background:var(--warn-bg); color:var(--warn);
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .dec .tx{ font-size:12.8px; color:var(--muted); }
+  .dec .tx b{ color:var(--ink); display:block; font-size:13.2px; margin-bottom:2px; }
+
+  .reset{ margin-top:18px; text-align:center; }
+  .reset button{ background:transparent; border:1px solid var(--line); color:var(--faint); border-radius:20px; padding:7px 16px; font-size:12px; cursor:pointer; }
+  footer{ margin-top:24px; font-size:11.5px; color:var(--faint); text-align:center; }
+
+  @media print{ @page{ size:A4; margin:12mm; } .tbtn,.reset{ display:none; } .etapa,.card,.vcard,.prog,.edge,.swatch{ box-shadow:none; } .wrap{ padding:0; max-width:none; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } ul.tasks{ margin-left:36px; } .reveal{ opacity:1!important; transform:none!important; }
+    .etapa{ break-inside:avoid; } .foso-grid,.vision,.swatches,.ev,.find{ break-inside:avoid; } .ev{ margin-left:36px; } }
+  @media (max-width:860px){ .vision{ grid-template-columns:1fr; } .foso-grid{ grid-template-columns:1fr; } }
+  @media (max-width:560px){ .swatches{ grid-template-columns:1fr; } ul.tasks,.et-goal,.et-why,.et-impact,.fuente,.ev{ margin-left:0; }
+    h1{ font-size:22px; } .prog{ padding:16px 18px;} .prog .n{ font-size:28px;} .wrap{ padding:18px 14px 50px;} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Centro Médico Carampangue · Copiloto de Ficha</div>
+      <h1>Plan de rediseño — evidencia clínica + diseño premium</h1>
+      <p>Plan para llevar el copiloto del prototipo funcional al estándar de Abridge/Heidi/Corti, adaptado a un médico general chileno que pega el resultado en Medilink. Cada etapa cita el hallazgo y la fuente que la justifica. <b>Estado al 12 de julio de 2026: las Fases A (seguridad), B (rediseño), C (trazabilidad y verificador) y D (Constancia GES, aprendizaje de estilo y deploy) están ejecutadas y en producción en ficha.agentecmc.cl.</b> Cada afirmación de esta página va con el número medido que la respalda.</p>
+    </div>
+    <button class="tbtn" id="themeBtn" title="Tema" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <div class="vision reveal">
+    <div class="vcard a">
+      <span class="tag">La tesis</span>
+      <h3>El costo se traslada, no desaparece</h3>
+      <p>"El clínico gasta esfuerzo verificando en vez de documentando, lo que anula el propósito." Una UI que dice "revisa la nota completa" ya perdió; la que dice "revisa estas 3 cosas" gana. Todo el plan gira en torno a eso.</p>
+    </div>
+    <div class="vcard c">
+      <span class="tag">La prueba que importa</span>
+      <h3>La prueba de sabotaje pasó hoy</h3>
+      <p>En producción, con una posología inventada que nadie dictó ("Metformina 850 mg cada 12 horas") y una alergia a penicilina omitida: el verificador marcó la primera como <b>alucinación</b> y la segunda como <b>omisión de severidad mayor</b>. No es una promesa de arquitectura: se corrió y detectó ambas.</p>
+    </div>
+    <div class="vcard b">
+      <span class="tag">Lo que ya está hecho</span>
+      <h3>Fases A, B, C y D en producción</h3>
+      <p>Seguridad cerrada, rediseño aplicado, trazabilidad y verificador de 2ª pasada funcionando, Constancia GES emitiéndose y aprendizaje de estilo destilando reglas reales. <b>188 tests pasando</b> (eran 144), 0 regresiones, deployado en ficha.agentecmc.cl.</p>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">Cómo se lee este plan</h2>
+  <div class="card pad reveal">
+    <div class="pipe">
+      <div class="pstep"><div class="k">Qué</div><div class="t">El cambio concreto</div><div class="d">Componente, flujo o regla nueva — no una idea vaga.</div></div>
+      <div class="pstep ai"><div class="k">Por qué</div><div class="t">Hallazgo + fuente</div><div class="d">Cada etapa cita el estudio o el dato que la obliga.</div></div>
+      <div class="pstep"><div class="k">Impacto</div><div class="t">Qué mejora, medible</div><div class="d">La métrica que se mueve si la etapa funciona.</div></div>
+      <div class="pstep"><div class="k">Estado</div><div class="t">Hecho, parcial o pendiente</div><div class="d">Lo hecho lleva su bloque de evidencia con el número antes y después. Sin adjetivos.</div></div>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">Las cuatro fases ejecutadas</h2>
+  <div class="card pad reveal">
+    <div class="foso-grid">
+      <div class="foso-item"><span class="n">A</span><p><b>Seguridad.</b> La app se niega a arrancar si queda expuesta a la red sin clave. Retención de 7 días con VACUUM real: el dato borrado ya no aparece en el archivo. Validación de edad y RUT. El autosave dejó de tragarse los errores en silencio.</p></div>
+      <div class="foso-item"><span class="n">B</span><p><b>Rediseño.</b> Banderas rojas de −707 px (fuera de pantalla) a +52 px (panel sticky visible). Del teclado: 48 tabulaciones para llegar al primer campo, ahora 1. Contraste de 2,19:1 (falla) a 4,95:1 (cumple AA).</p></div>
+      <div class="foso-item"><span class="n">C</span><p><b>Trazabilidad y verificador.</b> Cada frase cita el segmento que la respalda; lo sin respaldo se pinta ámbar. Verificador de 2ª pasada que audita alucinación <i>y</i> omisión. Primer ítem visible en 1,6 s (era 5,4 s).</p></div>
+      <div class="foso-item"><span class="n">D</span><p><b>Constancia GES, estilo y deploy.</b> 5º documento con validez legal, checklist de interconsulta, y el copiloto aprendiendo cómo escribe usted. Deployado y verificado hoy en ficha.agentecmc.cl.</p></div>
+    </div>
+  </div>
+
+  <div class="prog reveal" style="margin-top:20px;">
+    <div><div class="n tnum" id="pctBig">0%</div><div class="lab">avance del plan</div></div>
+    <div class="bar"><div class="fill" id="pfill"></div></div>
+    <div class="lab tnum" id="pcount" style="min-width:120px;text-align:right;">0 de 0 hitos</div>
+  </div>
+
+  <h2 class="sec reveal">Las etapas</h2>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">0</span><div><h3>Fix de seguridad Whisper</h3><span class="when">Hecho</span></div><span class="stpill done">Hecho y verificado</span><span class="cnt"></span></div>
+    <p class="et-goal">Whisper alucina en los silencios: inventa frases enteras, incluidos fármacos que nunca se dijeron. Una consulta real es medio silencio (examen físico, tiempo de escritura), así que esto no era un riesgo teórico.</p>
+    <p class="et-why"><b>Por qué:</b> Koenecke et al., ACM FAccT 2024 midió ~1% de transcripciones de Whisper con alucinación, y <b>38% de esas alucinaciones contienen daño explícito</b> (violencia, autoridad falsa, medicamentos y posologías inexistentes). Las alucinaciones se concentran específicamente en los tramos de silencio.</p>
+    <ul class="tasks" data-e="0">
+      <li><input type="checkbox" checked><label><code>condition_on_previous_text=False</code> — corta la propagación en cadena (sin esto, una frase inventada se convierte en contexto de la ventana siguiente)</label></li>
+      <li><input type="checkbox" checked><label>VAD estricto: <code>vad_filter=True</code>, <code>threshold 0.5</code>, <code>min_silence_duration_ms 500</code>, <code>speech_pad_ms 200</code> — el silencio no llega al decoder</label></li>
+      <li><input type="checkbox" checked><label>Descarte por confianza propia del modelo: <code>no_speech_prob &gt; 0.60</code> o <code>avg_logprob &lt; -1.0</code></label></li>
+      <li><input type="checkbox" checked><label><code>compression_ratio_threshold 2.4</code> (corta bucles repetitivos) + <code>temperature</code> acotada a <code>[0.0, 0.2, 0.4]</code></label></li>
+      <li><input type="checkbox" checked><label><b>Verificado:</b> 12 s de silencio puro → 0 texto inventado. Voz real con silencios intercalados → 5/5 términos clínicos capturados</label></li>
+    </ul>
+    <p class="et-impact"><b>Impacto:</b> cierra el riesgo más grave y más barato de todo el copiloto antes de construir nada más encima.</p>
+    <p class="fuente">Fuente: Koenecke et al., "Careless Whisper: Speech-to-Text Hallucination Harms", ACM FAccT 2024 · código: <code>app/stt.py</code> líneas 117–191.</p>
+  </div>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">A</span><div><h3>Cerrar la seguridad de la aplicación</h3><span class="when">Fase A · hecha</span></div><span class="stpill done">Hecho y verificado</span><span class="cnt"></span></div>
+    <p class="et-goal">Antes de cualquier rediseño: que la ficha no se pueda leer sin clave, que lo borrado quede realmente borrado, que un dato imposible no entre, y que el médico nunca pierda una consulta sin enterarse.</p>
+    <p class="et-why"><b>Por qué:</b> la aplicación corría en <code>0.0.0.0</code> sin clave. <b>Cualquier equipo conectado al wifi del CMC podía leer, editar y borrar todas las fichas.</b> Y la retención de 7 días no borraba: <code>strings copiloto.db</code> seguía mostrando nombre, RUT y anamnesis de fichas ya "eliminadas". No es un riesgo teórico: es lo que estaba pasando.</p>
+    <ul class="tasks" data-e="A">
+      <li><input type="checkbox" checked><label>La app <b>se niega a arrancar</b> si queda expuesta a la red sin clave — no advierte, no arranca</label></li>
+      <li><input type="checkbox" checked><label>Retención de 7 días con <code>VACUUM</code> real: el dato desaparece del archivo, no solo de la tabla (hay test que lo prueba)</label></li>
+      <li><input type="checkbox" checked><label>Validación Pydantic: edad 0–120 y RUT con dígito verificador (antes edad −5000 devolvía <code>201 OK</code>)</label></li>
+      <li><input type="checkbox" checked><label>Autosave honesto: el <code>.catch(() =&gt; {})</code> se tragaba los 401 y el médico perdía la consulta entera en silencio</label></li>
+    </ul>
+    <div class="ev">
+      <h4>Evidencia medida</h4>
+      <div class="row"><div class="m"><b>Exposición sin clave</b> — app escuchando en toda la red local</div><div class="ba"><span class="before">cualquiera del wifi</span><span class="arrow">→</span><span class="after">no arranca</span></div></div>
+      <div class="row"><div class="m"><b>Dato borrado</b> — nombre, RUT y anamnesis en el archivo de base</div><div class="ba"><span class="before">visible con strings</span><span class="arrow">→</span><span class="after">ya no está</span></div></div>
+      <div class="row"><div class="m"><b>Edad inválida</b> — respuesta del servidor a edad −5000</div><div class="ba"><span class="before">201 OK</span><span class="arrow">→</span><span class="after">rechazada</span></div></div>
+      <div class="row"><div class="m"><b>Fallo de guardado</b> — qué ve el médico cuando el autosave falla</div><div class="ba"><span class="before">nada</span><span class="arrow">→</span><span class="after">aviso</span></div></div>
+    </div>
+    <p class="et-impact"><b>Impacto:</b> las tres cosas que un dato clínico exige — que no se filtre, que se borre de verdad, y que no se pierda — quedaron cerradas antes de construir nada encima.</p>
+  </div>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">1</span><div><h3>Sistema visual premium</h3><span class="when">Fase B · hecha</span></div><span class="stpill done">Hecho y verificado</span><span class="cnt"></span></div>
+    <p class="et-goal">Tokens completos: tipografía con tracking negativo, espaciado base 4px, sombras en 3 capas con tinte navy solo en lo que flota, border-first para el resto, foco sin salto de layout, motion 70/120/160/220ms, y la paleta corregida a WCAG AA.</p>
+    <p class="et-why"><b>Por qué:</b> Melnick et al., Mayo Clin Proc 2020 — el SUS medio de usabilidad de los EHR de EE.UU. es <b>45,9 (percentil 9, grado F)</b>, y cada punto de SUS más favorable se asocia a <b>3% menos odds de burnout</b> (OR 0,97). La usabilidad no es estética: es una variable de salud ocupacional con efecto medido.</p>
+    <div class="swatches">
+      <div class="swatch fail"><div class="lab">Hoy — texto sobre blanco</div><div class="big">#4FBECE</div><div class="ratio">2,19:1 — FALLA AA (mínimo 3:1 en componentes)</div></div>
+      <div class="swatch pass"><div class="lab">Corregido — texto/acción sobre blanco</div><div class="big">--teal-700 #0E7C86</div><div class="ratio">4,95:1 — pasa AA texto normal</div></div>
+      <div class="swatch navy"><div class="lab">#4FBECE sobre navy (uso permitido)</div><div class="big">#4FBECE</div><div class="ratio">4,97:1 — pasa AA solo sobre oscuro</div></div>
+    </div>
+    <ul class="tasks" data-e="1">
+      <li><input type="checkbox" checked><label>Paleta corregida: <code>--teal-700 #0E7C86</code> texto/acción, <code>--teal-500 #2A9AAB</code> bordes/foco, <code>#4FBECE</code> solo como acento de fondo o texto sobre navy</label></li>
+      <li><input type="checkbox" checked><label><b>Banderas rojas visibles:</b> estaban a −707 px del viewport (o sea, fuera de la pantalla) — ahora viven en un panel sticky a +52 px</label></li>
+      <li><input type="checkbox" checked><label>Navegación por teclado: 48 tabulaciones para llegar al primer campo de la ficha, ahora 1</label></li>
+      <li><input type="checkbox" checked><label>Foco visible con <code>box-shadow</code> (nunca <code>outline</code>, se corta con overflow) — sin salto de layout</label></li>
+      <li><input type="checkbox" checked><label><code>tabular-nums</code> en toda cifra clínica: dosis, presión arterial, timer, edad, escalas</label></li>
+    </ul>
+    <div class="ev">
+      <h4>Evidencia medida</h4>
+      <div class="row"><div class="m"><b>Banderas rojas</b> — posición vertical respecto del viewport</div><div class="ba"><span class="before">−707 px</span><span class="arrow">→</span><span class="after">+52 px</span></div></div>
+      <div class="row"><div class="m"><b>Teclado</b> — tabulaciones hasta el primer campo de la ficha</div><div class="ba"><span class="before">48</span><span class="arrow">→</span><span class="after">1</span></div></div>
+      <div class="row"><div class="m"><b>Contraste</b> — texto de acción sobre fondo claro (WCAG AA exige 4,5:1)</div><div class="ba"><span class="before">2,19:1</span><span class="arrow">→</span><span class="after">4,95:1</span></div></div>
+      <div class="note">Una alerta de bandera roja a −707 px no es una alerta discreta: <b>es una alerta que nadie ve nunca.</b></div>
+    </div>
+    <p class="et-impact"><b>Impacto:</b> es la base de todas las etapas siguientes — sin esto ninguna otra pantalla es válida en accesibilidad ni se lee como "instrumento profesional".</p>
+    <p class="fuente">Fuente: Melnick ER, et al., Mayo Clin Proc 2020;95(3) · contrastes calculados en <code>copiloto-evidencia.md</code> (fórmula WCAG de luminancia relativa).</p>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">2</span><div><h3>Matar el wizard</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">De 4 pantallas a 2: Captura y Nota. El consentimiento pasa de 9 campos bloqueantes a un toggle con atestación. La captura queda en un botón + timer + waveform real — que además prueba que el micrófono está captando.</p>
+    <p class="et-why"><b>Por qué:</b> ninguno de los productos que los médicos quieren (Abridge, Heidi, Freed) tiene una pantalla de grabación compleja: un solo control héroe, nada más. "Olvidé activar el micrófono" es uno de los fallos operativos más reportados del sector — la waveform real lo resuelve, un spinner no.</p>
+    <ul class="tasks" data-e="2">
+      <li><input type="checkbox"><label>Colapsar el flujo de 4 pantallas actual (consentimiento → captura → generando → editor) a 2: Captura y Nota</label></li>
+      <li><input type="checkbox"><label>Consentimiento: de 9 campos bloqueantes a un toggle + una línea auto-estampada en la nota (patrón Abridge)</label></li>
+      <li><input type="checkbox"><label>Pantalla de captura: nombre del paciente + botón grabar + timer tabular + waveform real del micrófono, nada más</label></li>
+      <li><input type="checkbox"><label>Todo lo demás (presencial/tele, dictar, pegar transcripción) detrás de un menú <code>⋯</code></label></li>
+    </ul>
+    <p class="et-impact"><b>Impacto:</b> baja la fricción de inicio de consulta a segundos; elimina el mayor punto de abandono del flujo actual.</p>
+    <p class="fuente">Fuente: benchmark de Abridge/Heidi/Freed/Doximity, <code>copiloto-benchmark.md</code> patrón P1.</p>
+  </div>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">3</span><div><h3>Trazabilidad — Linked Evidence</h3><span class="when">Fase C · hecha</span></div><span class="stpill done">Hecho y verificado</span><span class="cnt"></span></div>
+    <p class="et-goal">Cada frase de la nota queda anclada a su segmento de audio/texto. Seleccionar una frase resalta su origen y reproduce ese segundo exacto. Lo que la IA NO puede anclar se subraya en ámbar, en vez de esconderse.</p>
+    <p class="et-why"><b>Por qué:</b> es el patrón más copiado del sector y el que más confianza genera, porque ataca de frente el error #1 documentado: hallazgos normales inventados que nadie exploró (9 de 20 vendors auditados por el Auditor General de Ontario alucinaron datos del paciente). Nadie más lo hace bien — es el hueco del mercado.</p>
+    <ul class="tasks" data-e="3">
+      <li><input type="checkbox" checked><label>El generador devuelve <i>claims</i> anclados (<code>{sección, texto, segmentos:[idx]}</code>) en vez de prosa suelta</label></li>
+      <li><input type="checkbox" checked><label>Cada frase de la nota <b>cita el segmento de lo que se dijo</b> que la respalda</label></li>
+      <li><input type="checkbox" checked><label>Frase sin respaldo → se pinta en ámbar, en vez de esconderse entre las demás</label></li>
+    </ul>
+    <div class="ev">
+      <h4>Evidencia medida</h4>
+      <div class="row"><div class="m"><b>Frase sin respaldo en la fuente</b> — qué ve el médico</div><div class="ba"><span class="before">idéntica al resto</span><span class="arrow">→</span><span class="after">ámbar</span></div></div>
+      <div class="note">La trazabilidad es lo que hace posible el verificador de la Etapa 4: sin ancla, no hay contra qué comparar.</div>
+    </div>
+    <p class="et-impact"><b>Impacto:</b> convierte una nota opaca en un objeto auditable; es el diferenciador defendible frente a todo el resto del mercado, incluido NuvaMed.</p>
+    <p class="fuente">Fuente: Abridge "Linked Evidence" (<a href="https://support.abridge.com/hc/en-us/articles/30235128433811-Verify-a-Note-With-Linked-Evidence">soporte Abridge</a>); DeepScribe "Clinical Moments" · <code>copiloto-capacidades.md</code> §1 fila 1.</p>
+  </div>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">4</span><div><h3>Verificador de 2ª pasada — ambas direcciones</h3><span class="when">Fase C · hecha</span></div><span class="stpill done">Hecho y verificado</span><span class="cnt"></span></div>
+    <p class="et-goal">Una segunda llamada a Haiku compara el borrador contra la transcripción con la taxonomía de Abridge (5 niveles de soporte × 3 de severidad). Detecta alucinación Y omisión. Una barra "N puntos por revisar" que al llegar a cero dice "listo para firmar".</p>
+    <p class="et-why"><b>Por qué:</b> sobre 12.999 frases anotadas por clínicos (framework CREOLA, npj Digital Medicine 2025), la alucinación es 1,47% pero la <b>omisión es 3,45% — más frecuente, y nadie la mira</b>. Abridge subió su detección de 82% a 97% con exactamente esta arquitectura de 2 pasadas, sin necesitar un modelo propietario.</p>
+    <ul class="tasks" data-e="4">
+      <li><input type="checkbox" checked><label>Segunda pasada que audita en las <b>dos direcciones</b>: alucinación (está en la nota, no en la fuente) y omisión (estaba en la fuente, no llegó a la nota)</label></li>
+      <li><input type="checkbox" checked><label>La omisión es la más frecuente de las dos — y es la que nadie mira</label></li>
+      <li><input type="checkbox" checked><label>Streaming SSE: el panel muestra el primer ítem apenas lo tiene, en vez de un esqueleto hasta el final</label></li>
+      <li><input type="checkbox" checked><label><b>Prueba de sabotaje corrida hoy en producción</b> (ficha.agentecmc.cl), con las dos trampas puestas a mano</label></li>
+    </ul>
+    <div class="ev">
+      <h4>Evidencia medida — prueba de sabotaje, 12 de julio de 2026, en producción</h4>
+      <div class="row"><div class="m"><b>Posología inventada</b> — "Metformina 850 mg cada 12 horas", que nadie dictó</div><div class="ba"><span class="after">detectada: ALUCINACIÓN</span></div></div>
+      <div class="row"><div class="m"><b>Alergia a penicilina omitida</b> — estaba en la fuente, no llegó a la nota</div><div class="ba"><span class="after">detectada: OMISIÓN, severidad mayor</span></div></div>
+      <div class="row"><div class="m"><b>Primer ítem visible</b> del panel copiloto</div><div class="ba"><span class="before">5,4 s</span><span class="arrow">→</span><span class="after">1,6 s</span></div></div>
+      <div class="note">Antes del streaming el médico veía un esqueleto de carga <b>hasta 13 s</b>. En una consulta de 15 minutos, eso es una herramienta que se apaga sola.</div>
+    </div>
+    <p class="et-impact"><b>Impacto:</b> ataca directo el "cliff de revisión" que mata el ROI del producto — dirigir la atención a los puntos concretos en vez de "revisa toda la nota".</p>
+    <p class="fuente">Fuente: <a href="https://www.nature.com/articles/s41746-025-01670-7">npj Digital Medicine 2025, framework CREOLA</a>; Abridge, "Science of Confabulation Elimination".</p>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">5</span><div><h3>Alertas según la evidencia</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Pasivas y persistentes, nunca modales. Máximo 3 activas a la vez (el resto se agrupa "+N más"). Un único checkpoint obligatorio al copiar a Medilink. Nunca codificar gravedad solo por color.</p>
+    <p class="et-why"><b>Por qué:</b> reemplazar una alerta interruptiva por CDS pasivo bajó el volumen de alertas 80% (8.206 → 1.449/semana) y <b>subió la adherencia de 23% a 61%</b>. Meta-análisis: entre 46% y 96% de las alertas CDS se overridean. Y el color solo no basta: ~8% de los hombres tiene daltonismo rojo-verde, y etiquetar con ícono+palabra sube la exactitud de comprensión de 62% a 80%.</p>
+    <ul class="tasks" data-e="5">
+      <li><input type="checkbox"><label>Cero modales en todo el copiloto — panel lateral persistente de 3 niveles: crítico / atención / sugerencia</label></li>
+      <li><input type="checkbox"><label>Presupuesto duro: máximo 3 sugerencias activas simultáneas, el resto agrupado</label></li>
+      <li><input type="checkbox"><label>Único checkpoint (no modal) en el botón "Copiar a Medilink" si hay banderas sin reconocer</label></li>
+      <li><input type="checkbox"><label>Triple codificación de todo estado de riesgo: color + ícono + palabra, nunca solo color</label></li>
+    </ul>
+    <p class="et-impact"><b>Impacto:</b> sube la adherencia real a lo que sí importa en vez de entrenar al médico a descartar sin leer.</p>
+    <p class="fuente">Fuente: <a href="https://pubmed.ncbi.nlm.nih.gov/38086417/">PubMed 38086417</a>, Addressing Alert Fatigue by Replacing a Burdensome Interruptive Alert with Passive CDS · <a href="https://medinform.jmir.org/2020/7/e15653">JMIR Med Inform 2020</a> · MDPI Healthcare 2025 (daltonismo).</p>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">6</span><div><h3>Teclado primero</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Command palette (Cmd/Ctrl+K), dot-phrases con ".", Tab entre placeholders de una plantilla, atajos dedicados para banderas rojas y para GES.</p>
+    <p class="et-why"><b>Por qué:</b> un médico en box no suelta el teclado — Epic corre en Arial 11pt y los médicos están calibrados a esa densidad. Principios de Superhuman: una sola paleta, universal, omnipotente (toda acción ejecutable desde ahí), con fuzzy matching y el atajo visible al lado de cada comando, para que el médico se gradúe del mouse solo.</p>
+    <ul class="tasks" data-e="6">
+      <li><input type="checkbox"><label>Command palette <code>Cmd/Ctrl+K</code>: omnipotente, toda acción del producto ejecutable desde ahí, fuzzy matching</label></li>
+      <li><input type="checkbox"><label>Dot-phrases con "." sobre los 31 atajos ya existentes en <code>app/config.py → ATAJOS</code></label></li>
+      <li><input type="checkbox"><label><code>Tab</code> / <code>Shift+Tab</code> entre placeholders de una plantilla</label></li>
+      <li><input type="checkbox"><label>Atajos dedicados: <code>Cmd+Shift+F</code> próxima bandera roja sin revisar, <code>Cmd+Shift+G</code> generar Constancia GES</label></li>
+    </ul>
+    <p class="et-impact"><b>Impacto:</b> elimina el "un click más" que se come la ganancia real de tiempo — el mismo mecanismo que penalizó a Nabla en el RCT por no integrar bien con el flujo.</p>
+    <p class="fuente">Fuente: <a href="https://blog.superhuman.com/how-to-build-a-remarkable-command-palette/">Superhuman, "How to build a remarkable command palette"</a> · base ya existente en <code>app/config.py</code>.</p>
+  </div>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">7</span><div><h3>Constancia GES — 5º documento</h3><span class="when">Fase D · hecha</span></div><span class="stpill done">Hecho y verificado</span><span class="cnt"></span></div>
+    <p class="et-goal">El Formulario de Constancia de Información al Paciente GES de la Superintendencia de Salud, pre-llenado desde el flag GES que el copiloto ya detecta. Se emite en <b>dos ejemplares</b> (paciente y prestador), con día y hora y los dos espacios de firma. Más un checklist de los campos que exige la interconsulta para que la red pública no la rechace.</p>
+    <p class="et-why"><b>Por qué:</b> es una <b>obligación legal</b> — artículo 24 de la Ley 19.966 y artículos 24 a 27 del DS 136/2005. No emitirla se sanciona con amonestación o suspensión de hasta 180 días para otorgar prestaciones GES. Ningún producto internacional lo ofrece: es una ventaja chilena estructural.</p>
+    <ul class="tasks" data-e="7">
+      <li><input type="checkbox" checked><label>Formulario de Constancia GES pre-llenado desde el motor GES existente (103 patologías, 227 banderas rojas)</label></li>
+      <li><input type="checkbox" checked><label>Emisión en <b>2 ejemplares</b> — paciente y prestador — con día, hora y los dos espacios de firma</label></li>
+      <li><input type="checkbox" checked><label>Checklist de interconsulta (SIC): avisa cuáles de los <b>9 campos exigidos</b> faltan <i>antes</i> de emitir, con el motivo de cada uno. Informa, no bloquea</label></li>
+      <li><input type="checkbox" checked><label>Un solo acto de confirmación del médico — el sistema nunca emite nada sin ese acto</label></li>
+    </ul>
+    <div class="ev">
+      <h4>Evidencia medida</h4>
+      <div class="row"><div class="m"><b>Documentos que genera el copiloto</b></div><div class="ba"><span class="before">4</span><span class="arrow">→</span><span class="after">5</span></div></div>
+      <div class="row"><div class="m"><b>Antecedentes faltantes en una interconsulta</b> — cuándo se entera el médico</div><div class="ba"><span class="before">cuando la rechazan</span><span class="arrow">→</span><span class="after">antes de emitirla</span></div></div>
+      <div class="note">Las derivaciones a la red pública se rechazan por antecedentes incompletos. Ahora el copiloto dice <b>qué falta y por qué se exige</b>, antes de que el papel salga.</div>
+    </div>
+    <p class="et-impact"><b>Impacto:</b> reduce riesgo médico-legal real (no solo tiempo), y es el foso más difícil de copiar por un competidor extranjero.</p>
+    <p class="fuente">Fuente: Ley 19.966 art. 24 · DS 136/2005 arts. 24–27 · <a href="https://www.superdesalud.gob.cl/tramites/formulario-de-constancia-al-paciente-ges/">Superintendencia de Salud — Formulario de Constancia GES</a> · Circular IF/469 (mayo 2024) · Compendio de Beneficios de la Superintendencia · Ley 21.656 (derecho al olvido oncológico).</p>
+  </div>
+
+  <h2 class="sec reveal">Fase D — los dos hallazgos normativos que cambian el producto</h2>
+  <div class="card pad reveal">
+    <div class="find">
+      <b class="t">La patología GES no oncológica se notifica en la CONFIRMACIÓN, no en la sospecha.</b>
+      <p>Es una creencia extendida que hay que emitir la constancia al sospechar. Desde la <b>Circular IF/469 (mayo de 2024)</b> de la Superintendencia, la confirmación es la única casilla que el formulario tiene para las patologías no oncológicas. Las <b>oncológicas</b> son la excepción: llevan un formulario por <b>cada hito</b> — sospecha, confirmación, etapificación, tratamiento, seguimiento y rehabilitación — por el derecho al olvido oncológico de la Ley 21.656.</p>
+      <p class="src">Regla que quedó implementada: un formulario = un problema de salud.</p>
+    </div>
+    <div class="find">
+      <b class="t">El formulario NO lleva la marca del CMC — a propósito.</b>
+      <p>El Compendio de Beneficios de la Superintendencia dice literalmente que "el formato del Formulario no podrá ser alterado ni contener distintivos del prestador". Ponerle el logo del centro sería incumplir exactamente la norma que el documento existe para cumplir. Por la misma razón <b>no se ofrece en Word</b>: un <code>.docx</code> es una invitación a editarlo.</p>
+      <p class="src">Es la única pantalla del producto donde la respuesta correcta de diseño fue no diseñar nada.</p>
+    </div>
+  </div>
+
+  <div class="etapa pend reveal">
+    <div class="et-head"><span class="et-num">8</span><div><h3>La IA escribe demasiado asertiva</h3><span class="when">Pendiente</span></div><span class="stpill pend">Pendiente</span><span class="cnt"></span></div>
+    <p class="et-goal">Hedging por defecto: "refiere", "no consignado", "no evaluado" en vez de afirmaciones categóricas. Chips de un click sobre cualquier frase seleccionada para cambiar el grado de certeza.</p>
+    <p class="et-why"><b>Por qué:</b> analizando 62.811 pares borrador→nota final, los médicos <b>agregan lenguaje de incertidumbre más de lo que lo quitan</b>. La IA escribe demasiado asertiva y el médico se pasa el rato suavizando — hedgear por defecto le ahorra exactamente el trabajo que sabemos que hace.</p>
+    <ul class="tasks" data-e="8">
+      <li><input type="checkbox"><label>El generador usa por defecto "refiere / no consignado / no evaluado" cuando no hay confirmación textual explícita</label></li>
+      <li><input type="checkbox"><label>Chips de un click sobre cualquier frase: refiere · niega · no evaluado · confirmado</label></li>
+      <li><input type="checkbox"><label>Nunca convertir una duda del médico ("impresiona como") en una certeza ("presenta")</label></li>
+    </ul>
+    <p class="et-impact"><b>Impacto:</b> reduce el tiempo de edición de estilo, que es la métrica que de verdad explica el ahorro de tiempo real (el RCT NEJM AI explica la diferencia entre -9,5% y -1,7% por cuánto hay que editar).</p>
+    <p class="fuente">Fuente: análisis de 62.811 ediciones reales, <a href="https://arxiv.org/pdf/2606.00018">arXiv 2606.00018</a>.</p>
+  </div>
+
+  <div class="etapa done reveal">
+    <div class="et-head"><span class="et-num">9</span><div><h3>Aprender el estilo del médico</h3><span class="when">Fase D · hecha</span></div><span class="stpill done">Hecho y verificado</span><span class="cnt"></span></div>
+    <p class="et-goal">Se guarda el diff entre el borrador de la IA y la nota final del médico. Cada 20 notas se destilan reglas de estilo durables y se inyectan en el prompt de "Ordenar con IA". El médico <b>ve y borra</b> cada regla en la pantalla "Esto aprendí de su forma de escribir": no es una caja negra.</p>
+    <p class="et-why"><b>Por qué:</b> es una brecha abierta en TODA la industria — Heidi y Abridge declaran explícitamente que no tienen aprendizaje adaptativo al estilo del clínico. Con un solo médico y su corpus completo, es alcanzable: es el mismo patrón ya probado en las Skills aprendidas N6 de Alma.</p>
+    <ul class="tasks" data-e="9">
+      <li><input type="checkbox" checked><label>Se guarda el diff (borrador de la IA → nota final del médico) en cada consulta</label></li>
+      <li><input type="checkbox" checked><label>Cada 20 notas se destilan reglas de estilo durables con Claude, y se inyectan en el prompt de "Ordenar con IA"</label></li>
+      <li><input type="checkbox" checked><label>Pantalla <b>"Esto aprendí de su forma de escribir"</b>: el médico ve cada regla y la borra si no le gusta</label></li>
+      <li><input type="checkbox" checked><label>Retención: los <b>diffs crudos son dato clínico</b> → viven 7 días, se borran con la ficha y se destruyen al destilarse (con VACUUM verificado)</label></li>
+      <li><input type="checkbox" checked><label>Las <b>reglas destiladas sí persisten</b> — son estilo, no dato de paciente — y se filtran para que no arrastren RUT ni cifras clínicas</label></li>
+    </ul>
+    <div class="ev">
+      <h4>Evidencia medida — ciclo completo corrido contra la API real</h4>
+      <div class="row"><div class="m">Regla destilada 1</div><div class="ba"><span class="after">"Usa 'Refiere' en lugar de 'El paciente relata'"</span></div></div>
+      <div class="row"><div class="m">Regla destilada 2</div><div class="ba"><span class="after">"No completa Revisión por sistemas; la deja vacía"</span></div></div>
+      <div class="row"><div class="m">Regla destilada 3</div><div class="ba"><span class="after">"Elimina descripciones genéricas de estado general"</span></div></div>
+      <div class="row"><div class="m"><b>Texto del paciente tras destilar</b> — se buscó en el archivo de base</div><div class="ba"><span class="before">quedaba</span><span class="arrow">→</span><span class="after">ya no está</span></div></div>
+      <div class="note">Las tres reglas salieron del ciclo real, no de un ejemplo escrito a mano. <b>El aprendizaje se queda con el estilo y bota el dato del paciente</b> — que es exactamente el reparto que la ley exige.</div>
+    </div>
+    <p class="et-impact"><b>Impacto:</b> es la única capacidad de todo el plan que se compone con el tiempo y que ningún competidor internacional puede replicar para este médico específico.</p>
+    <p class="fuente">Fuente: Heidi y Abridge, ausencia declarada de aprendizaje adaptativo · patrón validado en Skills aprendidas N6 (memoria del proyecto).</p>
+  </div>
+
+  <div class="etapa part reveal">
+    <div class="et-head"><span class="et-num">10</span><div><h3>Rendimiento y accesibilidad</h3><span class="when">Parcial — falta el box real</span></div><span class="stpill part">Parcial</span><span class="cnt"></span></div>
+    <p class="et-goal">Menos de 150 KB de JS. Primer ítem del panel copiloto visible en menos de 1 segundo. Contraste AA verificado en cada componente, no solo en el token. Probado en el PC modesto de un box real.</p>
+    <p class="et-why"><b>Por qué:</b> Nielsen fija 1 segundo como el límite del flujo de pensamiento sin interrupción; Bates (JAMIA 2003) lo resume como "speed is everything" — la meta son sub-second screen flips. En el contexto chileno, la norma MINSAL de 4 pacientes/hora en APS deja un presupuesto real de ~90 segundos de los 15 minutos de consulta para todo lo que haga el copiloto.</p>
+    <ul class="tasks" data-e="10">
+      <li><input type="checkbox" checked><label>Streaming SSE del panel copiloto: <b>primer ítem visible en 1,6 s</b> (antes 5,4 s, con esqueleto de carga hasta 13 s)</label></li>
+      <li><input type="checkbox" checked><label>Contraste AA verificado en el render final: 4,95:1 medido, no solo el token de diseño</label></li>
+      <li><input type="checkbox"><label>Presupuesto duro: &lt;150 KB de JS total, sin frameworks pesados, sin CDN de terceros</label></li>
+      <li><input type="checkbox"><label>Probado en el PC modesto de un box real, no solo en el equipo de desarrollo</label></li>
+    </ul>
+    <div class="ev">
+      <h4>Evidencia medida</h4>
+      <div class="row"><div class="m"><b>Primer ítem visible</b> del panel copiloto</div><div class="ba"><span class="before">5,4 s</span><span class="arrow">→</span><span class="after">1,6 s</span></div></div>
+      <div class="row"><div class="m"><b>Esqueleto de carga</b> — cuánto miraba el médico una pantalla vacía</div><div class="ba"><span class="before">hasta 13 s</span><span class="arrow">→</span><span class="after">1,6 s</span></div></div>
+      <div class="note">Queda pendiente lo único que no se puede medir desde el escritorio: <b>correrlo en el PC del box</b>.</div>
+    </div>
+    <p class="et-impact"><b>Impacto:</b> sin esto el copiloto "se apaga solo" en la práctica — una herramienta lenta en un box de 15 minutos no se usa, por buena que sea la idea.</p>
+    <p class="fuente">Fuente: <a href="https://www.nngroup.com/articles/response-times-3-important-limits/">NN/g, Response Time Limits</a> · Bates DW et al., JAMIA 2003;10(6):523 · Colegio Médico de Chile, norma MINSAL de agendamiento APS.</p>
+  </div>
+
+  <h2 class="sec reveal">El deploy — qué se verificó, uno por uno</h2>
+  <div class="card pad reveal" style="overflow-x:auto;">
+    <table>
+      <tr><th>Verificación en producción · 12 de julio de 2026 · ficha.agentecmc.cl</th><th>Resultado</th></tr>
+      <tr><td>Tests de la suite</td><td><b class="tnum">188 pasando</b> (eran 144) — 44 nuevos: Constancia GES, checklist SIC, retención del aprendizaje. <b>0 regresiones</b></td></tr>
+      <tr><td>Pantalla de acceso</td><td>El login bloquea</td></tr>
+      <tr><td>API sin sesión (<code>/api/*</code>)</td><td>Responde <b class="tnum">401</b></td></tr>
+      <tr><td><code>/health</code></td><td>Reporta <code>auth:true</code></td></tr>
+      <tr><td>HTTPS</td><td>Certificado válido hasta el <b>9 de octubre de 2026</b></td></tr>
+      <tr><td>Los 5 documentos</td><td>Los 5 generan</td></tr>
+      <tr><td>Copiloto y verificador</td><td>Ambos responden</td></tr>
+      <tr><td>Dictado (Whisper)</td><td><b>Apagado en el servidor, a propósito:</b> el droplet tiene 961 MB de RAM y ahí vive el bot del CMC en producción. El dictado sigue funcionando en local</td></tr>
+      <tr><td>Bot del CMC (el que atiende pacientes)</td><td><b>Intacto:</b> responde 200, no se reinició, quedaron 267 MB libres</td></tr>
+    </table>
+  </div>
+
+  <h2 class="sec reveal">Pendiente — lo que decide el dueño, no un agente</h2>
+  <div class="card pad reveal">
+    <div class="dec"><span class="ic">1</span><div class="tx"><b>La base no está cifrada en reposo.</b> Usar SQLCipher es una decisión suya, no técnica. En el Mac basta con FileVault. En el VPS la pregunta de fondo es otra: ¿el servidor debe guardar fichas, o no debería guardarlas nunca?</div></div>
+    <div class="dec"><span class="ic">2</span><div class="tx"><b>El login no tiene rate limit.</b> La instancia está expuesta a internet: nada impide intentar la clave muchas veces seguidas.</div></div>
+    <div class="dec"><span class="ic">3</span><div class="tx"><b>No hay log de auditoría.</b> Con un solo médico usando la herramienta es tolerable. Deja de serlo el día que sean dos.</div></div>
+    <div class="dec"><span class="ic">4</span><div class="tx"><b>Custodia legal de la constancia GES: 15 años.</b> La norma exige conservar el ejemplar firmado durante 15 años. <b>Esta aplicación no lo guarda</b> — no persiste documentos y la ficha se autoborra a los 7 días. El archivo del ejemplar firmado es responsabilidad del centro: papel o Medilink. Hay que decidir dónde se archiva.</div></div>
+    <div class="dec"><span class="ic">5</span><div class="tx"><b>El RUN de quien notifica sale del <code>.env</code></b> (<code>COPILOTO_PROF_RUT</code>). Si está vacío, ese campo sale en blanco en el formulario.</div></div>
+    <div class="dec"><span class="ic">6</span><div class="tx"><b>Falta comparar el formulario contra el PDF oficial impreso.</b> Se reprodujo campo a campo desde la fuente oficial de la Superintendencia, pero nadie lo ha puesto al lado del papel para verificarlo.</div></div>
+  </div>
+
+  <h2 class="sec reveal">Qué NO vamos a hacer, y por qué</h2>
+  <div class="card pad reveal">
+    <div class="noharm">
+      <b class="t">Nunca auto-completar posología, dosis, frecuencia o vía sin confirmación explícita del médico.</b>
+      <p>Que el modelo <i>extraiga</i> la dosis que el médico dijo — sí. Que <i>proponga</i> una que no dijo — no.</p>
+      <p class="src">Fuente: <i>Nature Medicine</i> (MEDIC) — los LLM crudos son peores que reglas en indicaciones de medicamentos, 50–400% más errores; la pérdida del modelo casi no penaliza cambiar "semanal" por "diario".</p>
+    </div>
+    <div class="noharm">
+      <b class="t">Nunca recomendar conducta terapéutica en un contexto de urgencia o tiempo-crítico.</b>
+      <p>El copiloto solo alerta y detiene. No trata, no decide.</p>
+      <p class="src">Fuente: guía CDS revisada de la FDA (2026) — bajo presión de tiempo la revisión independiente es imposible, y ahí el software pasa a ser dispositivo médico (criterio 4 de la excepción CDS).</p>
+    </div>
+    <div class="noharm">
+      <b class="t">La IA redacta borradores; nunca firma ni decide.</b>
+      <p>El médico revisa y copia. El copiloto nunca reemplaza a Medilink ni al acto de firmar.</p>
+      <p class="src">Fuente: consenso del sector — "no guardrail is considered fully reliable" (whitepaper Abridge) · responsabilidad del profesional tratante, Ley 20.584.</p>
+    </div>
+    <div class="noharm">
+      <b class="t">Nunca sugerir un diagnóstico directo — solo checklist de completitud.</b>
+      <p>"Falta preguntar: irradiación, factores de riesgo CV" es seguro; "Probable SCA" es exactamente el tipo de consejo que degrada el razonamiento del médico cuando está errado.</p>
+      <p class="src">Fuente: consejo de IA erróneo degradó el razonamiento diagnóstico global -14,0 pp y el diagnóstico de primera elección -18,3 pp, incluso en médicos con entrenamiento formal en IA (automation bias, BJH).</p>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">Nuestro foso</h2>
+  <div class="card pad reveal">
+    <div class="foso-grid">
+      <div class="foso-item"><span class="n">1</span><p><b>NuvaMed apunta a psiquiatría y psicología</b>, no a medicina general, y no menciona integración con ningún HIS chileno — quiere reemplazar la ficha, no convivir con ella.</p></div>
+      <div class="foso-item"><span class="n">2</span><p><b>Ya leemos Medilink por RUT y agenda</b>, en producción, solo lectura. La API de Medilink no tiene escritura para fichas ni evoluciones — el copy-paste es estructural para todo el sector, no un defecto nuestro.</p></div>
+      <div class="foso-item"><span class="n">3</span><p><b>GES completo y real:</b> 103 patologías, 85 garantías, 227 banderas rojas — el mismo motor que corre en el CMC, no una lista genérica inventada por el modelo.</p></div>
+      <div class="foso-item"><span class="n">4</span><p><b>Vocabulario clínico chileno</b> (~280 términos) ya integrado en Whisper vía hotwords. "Le da la puntada", "está apretado del pecho", "la guata" — un producto entrenado en inglés o español neutro no los transcribe ni los interpreta.</p></div>
+      <div class="foso-item"><span class="n">5</span><p><b>Obligaciones legales chilenas específicas</b> — Constancia GES, receta SNRE, LME, interconsulta SIC — que ningún producto internacional va a construir nunca para un mercado de este tamaño. <b>La Constancia GES ya se emite</b> (Fase D), en 2 ejemplares y sin distintivos del prestador, como manda la norma.</p></div>
+      <div class="foso-item"><span class="n">6</span><p><b>Un solo médico, un solo corpus.</b> El aprendizaje de estilo (Etapa 9) <b>ya está andando</b> y es una brecha abierta en toda la industria — Heidi y Abridge lo declaran explícitamente ausente. Ya destiló sus 3 primeras reglas contra la API real.</p></div>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">Evidencia — los datos duros</h2>
+  <div class="card pad reveal" style="overflow-x:auto;">
+    <table>
+      <tr><th>Dato</th><th>Fuente</th></tr>
+      <tr><td>Whisper alucina en ~<b class="tnum">1%</b> de las transcripciones; <b class="tnum">38%</b> de esas alucinaciones contienen daño explícito (incl. medicamentos inexistentes), concentrado en los silencios</td><td>Koenecke et al., ACM FAccT 2024</td></tr>
+      <tr><td>Omisión <b class="tnum">3,45%</b> &gt; alucinación <b class="tnum">1,47%</b> en notas de IA ambiental — la omisión es más frecuente y nadie la mira</td><td>npj Digital Medicine 2025, framework CREOLA</td></tr>
+      <tr><td>Entre <b class="tnum">46%</b> y <b class="tnum">96%</b> de las alertas CDS se overridean; pasar de interruptivo a pasivo bajó el volumen de alertas <b class="tnum">80%</b> y subió la adherencia de <b class="tnum">23% a 61%</b></td><td>JMIR Med Inform 2020 · PubMed 38086417</td></tr>
+      <tr><td>SUS medio de usabilidad de EHR en EE.UU.: <b class="tnum">45,9</b> (percentil 9, grado F). Cada punto de SUS = <b class="tnum">-3%</b> odds de burnout</td><td>Melnick et al., Mayo Clin Proc 2020</td></tr>
+      <tr><td>Sobre 62.811 pares borrador→nota final, los médicos agregan incertidumbre más de lo que la quitan</td><td>arXiv 2606.00018</td></tr>
+      <tr><td>LLM crudo en posología: <b class="tnum">50–400%</b> más errores que métodos basados en reglas de farmacia</td><td><i>Nature Medicine</i> (MEDIC)</td></tr>
+      <tr><td>Consejo de IA erróneo: razonamiento diagnóstico <b class="tnum">-14,0 pp</b>, diagnóstico de primera elección <b class="tnum">-18,3 pp</b>, incluso en médicos entrenados en IA</td><td>Automation bias, BJH</td></tr>
+      <tr><td>Teal <code>#4FBECE</code> sobre blanco = <b class="tnum">2,19:1</b> (falla AA); navy <code>#0F3F68</code> sobre blanco = <b class="tnum">10,87:1</b> (AAA)</td><td>Cálculo WCAG propio, <code>copiloto-evidencia.md</code></td></tr>
+      <tr><td>Heidi y Abridge declaran explícitamente <b>no tener</b> aprendizaje adaptativo al estilo del clínico</td><td>Reviews de producto, <code>copiloto-capacidades.md</code></td></tr>
+      <tr><td>1 segundo = límite del flujo de pensamiento sin interrupción; "speed is everything" es el mandamiento #1 de CDS efectivo</td><td>NN/g · Bates, JAMIA 2003</td></tr>
+    </table>
+  </div>
+
+  <div class="edge reveal">
+    <h3>Por qué este orden, y no otro</h3>
+    <div class="r"><b>Seguridad primero (E0), sistema visual segundo (E1).</b> Ninguna pantalla nueva vale la pena si el motor de transcripción puede inventar un fármaco, y ningún componente visual es válido si falla el contraste mínimo.</div>
+    <div class="r"><b>Trazabilidad (E3) antes que velocidad (E6-E8).</b> Es el único patrón que ataca la raíz de la alucinación en vez de parchearla — y ya tenemos los timestamps de Whisper como materia prima.</div>
+    <div class="r"><b>Lo legal chileno (E7) no es un "nice to have".</b> Es una obligación con formulario oficial y el foso más difícil de copiar por cualquier competidor internacional.</div>
+    <div class="r"><b>Lo legal chileno (E7) resultó ser también un hallazgo.</b> Al construir la Constancia GES apareció que la notificación va en la confirmación, no en la sospecha (Circular IF/469), y que el formulario no puede llevar la marca del centro. Construirlo enseñó algo que leerlo no enseñaba.</div>
+    <div class="r"><b>Cada etapa cita su fuente</b> porque el plan no se sostiene en gusto de diseño — se sostiene en evidencia clínica, regulatoria y de producto, medida y citada. <b>Y lo hecho cita su número: antes y después.</b></div>
+  </div>
+
+  <div class="reset"><button id="resetBtn">Reiniciar progreso</button></div>
+  <footer>Copiloto de Ficha · Plan de rediseño · Estado al 12 de julio de 2026 · Herramienta personal del Dr. Rodrigo Olavarría — Centro Médico Carampangue. El progreso se guarda en este navegador.</footer>
+</div>
+
+<script>
+const KEY="copiloto_rediseno_plan_v2";
+const boxes=[...document.querySelectorAll('ul.tasks input')];
+const saved=JSON.parse(localStorage.getItem(KEY)||"{}");
+boxes.forEach((cb,i)=>{ cb.dataset.i=i; if(saved[i]===0) cb.checked=false; else if(saved[i]) cb.checked=true; cb.addEventListener('change',()=>{save();render();}); });
+function save(){ const st={}; boxes.forEach((cb,i)=>{ st[i]=cb.checked?1:0; }); localStorage.setItem(KEY,JSON.stringify(st)); }
+function render(){
+  let done=0;
+  boxes.forEach(cb=>{ cb.closest('li').classList.toggle('done',cb.checked); if(cb.checked)done++; });
+  document.querySelectorAll('.etapa').forEach(et=>{
+    const cbs=[...et.querySelectorAll('ul.tasks input')]; const d=cbs.filter(c=>c.checked).length;
+    et.querySelector('.cnt').textContent=d+'/'+cbs.length;
+  });
+  const pct=boxes.length?Math.round(done/boxes.length*100):0;
+  document.getElementById('pctBig').textContent=pct+'%';
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('pcount').textContent=done+' de '+boxes.length+' hitos';
+}
+document.getElementById('resetBtn').onclick=()=>{ if(confirm('¿Reiniciar el progreso?')){ localStorage.removeItem(KEY); location.reload(); } };
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{ const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); root.setAttribute('data-theme',cur==='dark'?'light':'dark'); };
+render();
+
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+},{threshold:.08, rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>

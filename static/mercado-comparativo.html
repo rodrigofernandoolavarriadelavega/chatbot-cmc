@@ -1,0 +1,796 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Mapa competitivo — Copiloto clínico y agentes de IA · Centro Médico Carampangue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Sin CDNs: la CSP del sitio los bloquea. Tipografías = stack del sistema (Montserrat en
+     títulos / Inter en cuerpo si el sistema operativo las tiene instaladas; si no, cae a la
+     familia sans-serif nativa — nunca se pide nada por red). -->
+<style>
+  :root{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --navy:#0F3F68; --navy-deep:#0a2e4d;
+    --teal-700:#0E7C86;  /* texto/acción sobre claro — 4.95:1 AA */
+    --teal-500:#2A9AAB;  /* bordes / iconos / foco — 3.33:1 AA componentes */
+    --teal-400:#4FBECE;  /* acento de marca — SOLO fondo, gráfico, o texto sobre navy */
+    --teal-050:#eaf6f8;
+    --gold:#c98a14; --violet:#6a4c93;
+    --good:#067647; --good-bg:#ecfdf3;
+    --warn:#b54708; --warn-bg:#fffaeb;
+    --crit:#b42318; --crit-bg:#fef3f2;
+    --info:#175cd3; --info-bg:#eff8ff;
+    --slate:#5b7186; --slate-bg:#eef2f6;
+    --shadow:0 1px 2px rgba(15,63,104,.07),0 6px 22px rgba(15,63,104,.08);
+    --shadow-lg:0 14px 34px rgba(15,63,104,.14),0 4px 10px rgba(15,63,104,.07);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de;
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036; --slate:#9bb0bd; --slate-bg:#16283a;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.32);}}
+  :root[data-theme="dark"]{
+    --bg:#0a1620; --surface:#101f2c; --surface-2:#0c1a25; --line:#1f3646;
+    --ink:#e7eff4; --muted:#9bb0bd; --faint:#67808d;
+    --teal-700:#7dd3e0; --teal-500:#5fc3d3; --teal-400:#5fd0de;
+    --good:#4bc190; --good-bg:#0f2b21; --warn:#e2b355; --warn-bg:#2f2510; --crit:#e2726a; --crit-bg:#301715;
+    --info:#7aa8f0; --info-bg:#122036; --slate:#9bb0bd; --slate-bg:#16283a;}
+  :root[data-theme="light"]{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --teal-700:#0E7C86; --teal-500:#2A9AAB; --teal-400:#4FBECE;
+    --good:#067647; --good-bg:#ecfdf3; --warn:#b54708; --warn-bg:#fffaeb; --crit:#b42318; --crit-bg:#fef3f2;
+    --info:#175cd3; --info-bg:#eff8ff; --slate:#5b7186; --slate-bg:#eef2f6;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  h1,h2,h3,h4,.eyebrow,.et-head h3,.vcard h3,.tag,.pill,.kpi .kv,th,.grp h3,.gap h3,.mx h4{
+    font-family:'Montserrat','Avenir Next','Helvetica Neue',-apple-system,BlinkMacSystemFont,sans-serif; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:22px 20px 70px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  a{ color:var(--teal-700); }
+  img{max-width:100%;}
+
+  .reveal{ opacity:0; transform:translateY(14px); transition:opacity .55s ease, transform .55s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  header.top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(135deg,var(--navy) 0%,#155f92 100%); border-radius:18px; padding:26px 28px;
+    color:#fff; box-shadow:var(--shadow-lg); position:relative; overflow:hidden; margin-bottom:20px;}
+  header.top > div:first-child{ min-width:0; flex:1 1 auto; }
+  header.top::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+    background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%); pointer-events:none;}
+  .eyebrow{ text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:700; color:#bfe9ef; position:relative;}
+  h1{ margin:6px 0 8px; font-size:27px; font-weight:800; letter-spacing:-.4px; line-height:1.16; color:#fff; position:relative; max-width:720px;}
+  header.top p{ margin:0; color:#d3e4ec; font-size:13.3px; max-width:76ch; position:relative;}
+  .tbtn{ cursor:pointer; background:rgba(255,255,255,.14); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
+    color:#fff; border-radius:20px; width:36px; height:32px; font-size:15px; position:relative; flex:0 0 auto;}
+
+  .vision{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:20px 0; }
+  .vcard{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; border-top:3px solid var(--teal-500); }
+  .vcard.b{ border-top-color:var(--gold); } .vcard.c{ border-top-color:var(--crit); }
+  .vcard h3{ margin:0 0 4px; font-size:15px; font-weight:700; letter-spacing:-.2px;}
+  .vcard .tag{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--teal-700); }
+  .vcard.b .tag{ color:var(--gold); } .vcard.c .tag{ color:var(--crit); }
+  .vcard p{ margin:7px 0 0; font-size:12.6px; color:var(--muted); }
+
+  .kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:18px 0; }
+  .kpi{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; transition:.2s; }
+  .kpi:hover{ box-shadow:var(--shadow-lg); transform:translateY(-2px); }
+  .kpi .kl{ font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .kpi .kv{ font-size:22px; font-weight:800; letter-spacing:-.5px; margin-top:4px; color:var(--navy); }
+  :root[data-theme="dark"] .kpi .kv{ color:var(--teal-400); }
+  @media (prefers-color-scheme:dark){ .kpi .kv{ color:var(--teal-400); } }
+  .kpi .kh{ font-size:11px; color:var(--muted); margin-top:3px; }
+
+  h2.sec{ font-size:18px; font-weight:800; letter-spacing:-.2px; margin:32px 0 13px; display:flex; align-items:center; gap:9px; scroll-margin-top:14px; }
+  h2.sec::before{ content:""; width:4px; height:19px; background:var(--teal-400); border-radius:3px; flex:0 0 auto;}
+  h2.sec .n{ font-size:12px; color:var(--faint); font-weight:700; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .pad{ padding:18px 22px; }
+  .card:hover{ box-shadow:var(--shadow-lg); }
+
+  .toc{ display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 4px; }
+  .toc a{ text-decoration:none; font-size:11.5px; font-weight:700; color:var(--teal-700); background:var(--teal-050);
+    border:1px solid var(--line); border-radius:20px; padding:6px 12px; white-space:nowrap; }
+  :root[data-theme="dark"] .toc a{ background:rgba(79,190,206,.1); }
+  @media (prefers-color-scheme:dark){ .toc a{ background:rgba(79,190,206,.1); } }
+
+  /* leyenda de rigor */
+  .legend{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; font-size:11.6px; color:var(--muted); }
+  .tg{ display:inline-block; font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    padding:2.5px 8px; border-radius:20px; white-space:nowrap; }
+  .tg-v{ background:var(--good-bg); color:var(--good); }
+  .tg-m{ background:var(--info-bg); color:var(--info); }
+  .tg-a{ background:var(--slate-bg); color:var(--slate); }
+  .tg-h{ background:var(--crit-bg); color:var(--crit); }
+
+  /* grupos del mapa (sección 1) */
+  .grp-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+  .grp{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+  .grp-h{ padding:13px 18px; font-weight:800; font-size:13px; color:#fff; display:flex; align-items:center; gap:8px; }
+  .grp-h .n{ margin-left:auto; font-size:10.5px; font-weight:700; opacity:.85; text-transform:none; letter-spacing:0; }
+  .grp.g1 .grp-h{ background:linear-gradient(135deg,var(--crit),#8f1c14); }
+  .grp.g2 .grp-h{ background:linear-gradient(135deg,var(--navy),#155f92); }
+  .grp.g3 .grp-h{ background:linear-gradient(135deg,var(--teal-700),#0a5a62); }
+  .grp.g4 .grp-h{ background:linear-gradient(135deg,var(--gold),#8a5c07); }
+  .grp-b{ padding:6px 0; }
+  .comp{ padding:11px 18px; border-bottom:1px solid var(--line); }
+  .comp:last-child{ border-bottom:0; }
+  .comp .row1{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .comp .name{ font-weight:700; font-size:13.4px; }
+  .comp .price{ margin-left:auto; font-size:12px; font-weight:700; color:var(--teal-700); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .comp p{ margin:4px 0 0; font-size:12.3px; color:var(--muted); }
+  .comp .tags{ margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; }
+
+  /* tabla comparativa */
+  .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  .scroll-hint{ display:block; font-size:11px; color:var(--faint); margin:6px 2px 0; }
+  table{ width:100%; border-collapse:collapse; font-size:12.2px; min-width:1080px; }
+  th,td{ padding:9px 11px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th{ position:sticky; top:0; background:var(--surface-2); z-index:1; }
+  th{ font-size:10.2px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700;}
+  td.prod{ font-weight:700; position:sticky; left:0; background:var(--surface); min-width:150px; }
+  thead th:first-child{ position:sticky; left:0; z-index:2; background:var(--surface-2);}
+  tr.us td{ background:var(--teal-050); }
+  :root[data-theme="dark"] tr.us td{ background:rgba(79,190,206,.08); }
+  @media (prefers-color-scheme:dark){ tr.us td{ background:rgba(79,190,206,.08); } }
+  tr.us td.prod{ background:var(--teal-050); color:var(--teal-700); }
+  :root[data-theme="dark"] tr.us td.prod{ background:rgba(79,190,206,.1); }
+  @media (prefers-color-scheme:dark){ tr.us td.prod{ background:rgba(79,190,206,.1); } }
+  .y{ color:var(--good); font-weight:800; }
+  .n{ color:var(--crit); font-weight:800; }
+  .p{ color:var(--warn); font-weight:800; }
+  .mut{ color:var(--faint); }
+
+  /* brechas — sección 3 */
+  .gap{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:17px 20px; margin-bottom:12px; }
+  .gap:hover{ box-shadow:var(--shadow-lg); }
+  .gap-h{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .gap-num{ flex:0 0 auto; width:34px; height:34px; border-radius:10px; background:var(--crit-bg); color:var(--crit); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .gap h3{ margin:0; font-size:15px; font-weight:700; letter-spacing:-.2px; flex:1; min-width:200px;}
+  .gap .estado{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; padding:3px 9px; border-radius:20px; white-space:nowrap;}
+  .gap .estado.cerrando{ background:var(--good-bg); color:var(--good);}
+  .gap .estado.abierta{ background:var(--warn-bg); color:var(--warn);}
+  .gap .estado.nodecision{ background:var(--slate-bg); color:var(--slate);}
+  .gap-body{ margin:10px 0 0 46px; font-size:13px; color:var(--ink); }
+  .gap-body .brecha{ font-size:12.6px; color:var(--muted); margin-bottom:8px; }
+  .gap-plan{ background:var(--surface-2); border-left:3px solid var(--teal-500); border-radius:0 10px 10px 0; padding:10px 14px; font-size:12.6px; color:var(--ink); }
+  .gap-plan b{ color:var(--teal-700); }
+  .gap-src{ font-size:11px; color:var(--faint); margin-top:8px; }
+
+  /* foso nuestro — sección 4 */
+  .foso-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .foso-item{ background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:13px 15px; }
+  .foso-item .n{ display:inline-flex; width:22px; height:22px; border-radius:6px; background:var(--teal-050); color:var(--teal-700); font-size:11px; font-weight:800; align-items:center; justify-content:center; margin-bottom:6px;}
+  :root[data-theme="dark"] .foso-item .n{ background:rgba(79,190,206,.18); }
+  @media (prefers-color-scheme:dark){ .foso-item .n{ background:rgba(79,190,206,.18); } }
+  .foso-item p{ margin:0; font-size:12.4px; color:var(--muted); line-height:1.55; }
+  .foso-item b{ color:var(--ink); }
+  .foso-item .src{ font-size:10.6px; color:var(--faint); margin-top:6px; display:block;}
+
+  /* números medidos — sección 5 */
+  .num-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .num-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:15px 17px; box-shadow:var(--shadow); }
+  .num-card .v{ font-size:24px; font-weight:800; color:var(--navy); letter-spacing:-.5px; }
+  :root[data-theme="dark"] .num-card .v{ color:var(--teal-400); }
+  @media (prefers-color-scheme:dark){ .num-card .v{ color:var(--teal-400); } }
+  .num-card .l{ font-size:12.4px; color:var(--ink); font-weight:600; margin-top:4px; }
+  .num-card .s{ font-size:11px; color:var(--faint); margin-top:6px; }
+
+  .noharm{ background:var(--crit-bg); border-left:3px solid var(--crit); border-radius:0 12px 12px 0; padding:13px 16px; margin-bottom:10px; }
+  .noharm b.t{ color:var(--crit); font-size:13.2px; }
+  .noharm p{ margin:5px 0 0; font-size:12.4px; color:var(--ink); }
+  .noharm .src{ margin:5px 0 0; font-size:11px; color:var(--faint); }
+
+  .find{ background:var(--info-bg); border-left:3px solid var(--info); border-radius:0 12px 12px 0; padding:13px 16px; margin-bottom:10px; }
+  .find b.t{ color:var(--info); font-size:13.2px; }
+  .find p{ margin:5px 0 0; font-size:12.4px; color:var(--ink); }
+  .find .src{ margin:5px 0 0; font-size:11px; color:var(--faint); }
+
+  /* matriz impacto x esfuerzo — sección 6 */
+  .mx-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .mx{ border-radius:14px; padding:15px 17px; border:1px solid var(--line); }
+  .mx h4{ margin:0 0 3px; font-size:13px; font-weight:800; display:flex; align-items:center; gap:7px; }
+  .mx .sub{ font-size:11px; color:var(--muted); margin-bottom:9px; }
+  .mx ul{ margin:0; padding-left:18px; font-size:12.5px; color:var(--ink); }
+  .mx ul li{ margin-bottom:6px; }
+  .mx.q1{ background:var(--good-bg); }
+  .mx.q2{ background:var(--info-bg); }
+  .mx.q3{ background:var(--warn-bg); }
+  .mx.q4{ background:var(--slate-bg); }
+  .mx h4.q1{ color:var(--good);} .mx h4.q2{color:var(--info);} .mx h4.q3{color:var(--warn);} .mx h4.q4{color:var(--slate);}
+
+  /* estratégico — sección 7 */
+  .edge{ background:var(--navy); background:linear-gradient(150deg,var(--navy) 0%,var(--navy-deep) 100%); color:#eaf2f6; border-radius:var(--radius); padding:20px 24px; margin-top:8px; box-shadow:var(--shadow-lg);}
+  .edge h3{ color:#fff; margin:0 0 9px; font-size:16px; font-weight:700;} .edge .r{ font-size:13.4px; margin:9px 0; color:#dbeaf0; line-height:1.6;} .edge b{ color:#4FBECE;}
+  .math{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; }
+  .mrow{ background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:13px 15px; }
+  .mrow .mv{ font-size:20px; font-weight:800; color:#fff; }
+  .mrow .ml{ font-size:11.4px; color:#bcd7e2; margin-top:3px;}
+
+  table.simple{ min-width:0; }
+  table.simple td, table.simple th{ vertical-align:middle; }
+
+  footer{ margin-top:30px; font-size:11.3px; color:var(--faint); text-align:center; line-height:1.7; }
+  .sources{ font-size:11px; color:var(--faint); margin-top:10px; }
+  .sources summary{ cursor:pointer; font-weight:700; color:var(--teal-700); }
+  .sources ul{ columns:2; -webkit-columns:2; margin:10px 0 0; padding-left:18px; }
+  .sources li{ margin-bottom:5px; break-inside:avoid; }
+
+  @media print{
+    @page{ size:A4; margin:11mm; }
+    .tbtn,.toc{ display:none; }
+    .grp,.gap,.card,.vcard,.kpi,.num-card,.edge{ box-shadow:none; }
+    .wrap{ padding:0; max-width:none; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .gap,.grp,.mx{ break-inside:avoid; }
+    .table-wrap{ overflow:visible; }
+    table{ min-width:0; font-size:9.6px; }
+    th,td{ padding:5px 6px; }
+    .reveal{ opacity:1!important; transform:none!important; }
+    h2.sec{ margin-top:20px; }
+  }
+  @media (max-width:900px){
+    .vision{ grid-template-columns:1fr; }
+    .kpis{ grid-template-columns:repeat(2,1fr); }
+    .grp-grid{ grid-template-columns:1fr; }
+    .foso-grid{ grid-template-columns:1fr; }
+    .num-grid{ grid-template-columns:1fr 1fr; }
+    .mx-grid{ grid-template-columns:1fr; }
+    .math{ grid-template-columns:1fr; }
+    .scroll-hint{ display:block; }
+  }
+  @media (max-width:560px){
+    h1{ font-size:21px; } .wrap{ padding:16px 12px 56px; }
+    .eyebrow{ letter-spacing:.1em; }
+    header.top{ padding:18px 16px; }
+    .kpis{ grid-template-columns:1fr 1fr; }
+    .num-grid{ grid-template-columns:1fr; }
+    .gap-body{ margin-left:0; }
+    .sources ul{ columns:1; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Centro Médico Carampangue · Inteligencia de mercado</div>
+      <h1>Mapa competitivo — copiloto clínico y agentes de IA</h1>
+      <p>Qué tienen los competidores que nosotros no, y cómo cerramos cada brecha. Incluye el HIS del propio centro (Medilink AI), los copilotos clínicos chilenos e internacionales, y los agentes conversacionales de venta (Nexor, Vambe) que compiten con el chatbot del CMC. Cada cifra distingue lo <span class="tg tg-v" style="vertical-align:1px;">verificado</span>, lo <span class="tg tg-m" style="vertical-align:1px;">medido</span> y lo <span class="tg tg-a" style="vertical-align:1px;">anunciado</span>. 13 de julio de 2026.</p>
+    </div>
+    <button class="tbtn" id="themeBtn" title="Tema" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <div class="vision reveal">
+    <div class="vcard c">
+      <span class="tag">La amenaza que no buscábamos</span>
+      <h3>No es la nota clínica de Medilink. Es su Contact Center IA</h3>
+      <p>Atiende llamadas y WhatsApp 24/7 sobre Vapi, agenda y confirma solo. Un centro que contrata Medilink Titanium + Contact Center IA obtiene, en un solo contrato, algo parecido al 70% de lo que hace el chatbot del CMC — con agenda nativa, sin integración. Eso compite con la plata, no con la nota.</p>
+    </div>
+    <div class="vcard b">
+      <span class="tag">El hallazgo nuevo de este informe</span>
+      <h3>Vambe ya vende agentes de WhatsApp a clínicas chilenas</h3>
+      <p>"Centro Médico Formed" y "Clínica Ramis" son casos de éxito publicados por Vambe en su vertical "Salud y Bienestar": agendamiento automático por WhatsApp. No hace nada clínico (ficha, nota, GES) — pero ataca exactamente el mismo trabajo que el bot del CMC.</p>
+    </div>
+    <div class="vcard">
+      <span class="tag">Nuestro foso real</span>
+      <h3>No es tener un agente. Es agente + clínica propia + Medilink + GES + datos reales</h3>
+      <p>Ningún competidor de este mapa integra con Medilink, ninguno tiene las 103 patologías GES, ninguno tiene una clínica propia donde iterar en horas. La capa de agente se está volviendo commodity (a16z financia agentes genéricos en semanas). Lo difícil de copiar es el resto.</p>
+    </div>
+  </div>
+
+  <div class="kpis reveal">
+    <div class="kpi"><div class="kl">Créditos IA Medilink/mes</div><div class="kv tnum">300</div><div class="kh">Plan Titanium, <b>todo</b> el centro (27 profesionales) — ~11 notas/prof./mes</div></div>
+    <div class="kpi"><div class="kl">Precio Noa Notes Chile</div><div class="kv tnum">$39.000</div><div class="kh">CLP/mes por médico — el techo de precio que el mercado chileno ya conoce</div></div>
+    <div class="kpi"><div class="kl">Nuestro costo medido</div><div class="kv tnum">$63</div><div class="kh">CLP por paciente, Copiloto de Ficha — infraestructura de costeo real en <code>app/costos.py</code></div></div>
+    <div class="kpi"><div class="kl">Extensión a Medilink</div><div class="kv tnum">22/22</div><div class="kh">Verificado en Chrome real contra réplica del DOM. Falta probar en Medilink real</div></div>
+    <div class="kpi"><div class="kl">Competidores mapeados</div><div class="kv tnum">20+</div><div class="kh">Clínicos CL e internacionales, agentes conversacionales, cola larga</div></div>
+  </div>
+
+  <div class="card pad reveal" style="margin-bottom:6px;">
+    <div class="legend">
+      <b style="color:var(--ink);font-size:12px;">Cómo leer las etiquetas:</b>
+      <span><span class="tg tg-v">Verificado</span> confirmado en código propio o fuente oficial primaria (precio, docs técnicos)</span>
+      <span><span class="tg tg-m">Medido</span> cifra de producción propia, con infraestructura de medición confirmada</span>
+      <span><span class="tg tg-a">Anunciado</span> viene del sitio o prensa del competidor, sin verificación independiente</span>
+      <span><span class="tg tg-h">Hueco</span> se buscó y no se encontró — declarado, no inventado</span>
+    </div>
+  </div>
+
+  <div class="toc reveal">
+    <a href="#mapa">1 · El mapa completo</a>
+    <a href="#tabla">2 · Tabla comparativa</a>
+    <a href="#brechas">3 · Qué tienen ellos y nosotros no</a>
+    <a href="#foso">4 · Qué tenemos nosotros y ellos no</a>
+    <a href="#numeros">5 · Números del CMC</a>
+    <a href="#plan">6 · Plan priorizado</a>
+    <a href="#estrategia">7 · Construir o comprar</a>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 class="sec reveal" id="mapa">1 · El mapa completo <span class="n">agrupado con honestidad</span></h2>
+  <div class="grp-grid reveal">
+
+    <div class="grp g1">
+      <div class="grp-h">Amenaza estructural <span class="n">el HIS del propio CMC</span></div>
+      <div class="grp-b">
+        <div class="comp">
+          <div class="row1"><span class="name">Medilink AI (HealthAtom)</span><span class="price">Sin precio público</span></div>
+          <p>Notas Clínicas IA <b>escribe directo en la ficha</b> — botón dentro del editor de evolución, cero copy-paste. Pero es <b>dictado, no ambiental</b> (no escucha la consulta completa) y está <b>racionado por créditos</b>: 300/mes en el plan más caro, para <b>todo</b> el centro (27 profesionales) y repartido entre todas las herramientas IA. El módulo peligroso de verdad es <b>Contact Center IA</b>: atiende llamadas y WhatsApp 24/7 sobre Vapi — compite de frente con el bot del CMC.</p>
+          <div class="tags"><span class="tg tg-v">Verificado en su centro de ayuda</span><span class="tg tg-h">Sin evidencia GES</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grp g2">
+      <div class="grp-h">Competidores clínicos chilenos <span class="n">5 productos</span></div>
+      <div class="grp-b">
+        <div class="comp">
+          <div class="row1"><span class="name">Speaknosis</span><span class="price">US$27,9 – 57,9/mes</span></div>
+          <p>El único con <b>evidencia clínica publicada</b>: 2 ensayos (Sant Joan de Déu Barcelona + FALP Santiago). API real (iframe/webhook/REST) — si Medilink la embebe algún día, nos pasa por encima. Resuelve el copy-paste <b>solo en plan Corporativo</b>.</p>
+          <div class="tags"><span class="tg tg-v">2 ensayos publicados</span><span class="tg tg-h">Sin integración Medilink</span></div>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Encuadrado</span><span class="price">~$40.000/mes</span></div>
+          <p>Resuelve el copy-paste, pero solo <b>dentro de su propia ficha</b> (jardín cerrado: hay que abandonar Medilink). Única con <b>certificación CENS</b> del grupo. Foco: psicólogos/psiquiatras independientes.</p>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Midulabs</span><span class="price">$79.990 – 279.990/mes</span></div>
+          <p>El único que hace <b>apoyo diagnóstico</b> explícito ("sugiere diagnósticos y tratamientos"), escudado en "human-in-the-loop" retórico. Cumplimiento = 3 íconos en la landing, sin respaldo verificable. 19× más caro que Doctáfono.</p>
+          <div class="tags"><span class="tg tg-h">Apoyo diagnóstico sin respaldo</span></div>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Noa (Doctoralia/Docplanner)</span><span class="price tnum">$39.000/mes</span></div>
+          <p>El más peligroso por <b>distribución</b>: vive dentro de Doctoralia, donde ya están miles de médicos chilenos. La extensión Chrome <b>no escribe en la ficha</b>, solo flota al lado — el médico sigue pegando a mano.</p>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Doctáfono (Puppeteer AI)</span><span class="price">US$8/mes</span></div>
+          <p>Precio de penetración (lanzado LatAm mayo 2026). No guarda audio del paciente. Cero anclaje chileno: sin integración, sin ley chilena citada, sin soporte local.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grp g3">
+      <div class="grp-h">Internacionales usables desde Chile <span class="n">4 productos</span></div>
+      <div class="grp-b">
+        <div class="comp">
+          <div class="row1"><span class="name">Telepatía</span><span class="price">Gratis (consulta privada)</span></div>
+          <p>US$42M levantados, Serie A liderada por <b>a16z</b>. Ya opera en Chile. Su AI Advisor es la única internacional con apoyo a decisiones en el mismo flujo (calculadoras de dosis, protocolos). Integra 50+ sistemas brasileños/gringos — no Medilink.</p>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Heidi Health</span><span class="price">Free · ~US$150/mes</span></div>
+          <p>El mejor template builder y la mejor extensión "magic paste" del mercado. Retención de transcripción por defecto: <b>nunca borrar</b> — riesgo bajo Ley 21.719. Sin integración Medilink.</p>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Itaca</span><span class="price">Free + premium</span></div>
+          <p>"Diseñado para LatAm" desde México. Tracción de 20-30 mil profesionales <span class="tg tg-a">anunciada</span>, sin financiamiento público conocido. Sin integración chilena.</p>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Nabla</span><span class="price">Free · ~US$119/mes</span></div>
+          <p>La nota sale <b>en inglés</b> aunque la consulta sea en español (decisión de diseño, no bug). Descalificante para un médico chileno. Sin presencia comercial en Chile.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grp g4">
+      <div class="grp-h">Agentes conversacionales <span class="n">no clínicos — el espacio del bot</span></div>
+      <div class="grp-b">
+        <div class="comp">
+          <div class="row1"><span class="name">Nexor</span><span class="price">US$500/mes (500 leads)</span></div>
+          <p>Fundada por <b>Ian Lee</b> (ex-Examedi, US$17M levantados con General Catalyst antes de sus 25) y Gabriel Cid. <b>US$340.000 facturados en 6 meses</b>, inversión de <b>a16z</b> vía Speedrun. Agente de ventas por llamada+WhatsApp+email+Instagram con "modelo auditor" que revisa y reescribe la estrategia del agente frontline. No es clínico.</p>
+          <div class="tags"><span class="tg tg-v">DF + prensa, no clínico</span></div>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Vambe</span><span class="price">US$413 – 2.647+/mes</span></div>
+          <p>Chilena (Las Condes), fundada 2023, +1.500-2.300 empresas (cifra varía según página del sitio, fetch 13-jul-2026), SOC 2 + ISO 27001. <b>SÍ toca salud</b>: casos publicados "Centro Médico Formed" y "Clínica Ramis" (agendamiento por WhatsApp). Resultados promedio declarados: x3 conversaciones, −70% tiempo, +50% ROI en pauta.</p>
+          <div class="tags"><span class="tg tg-v">Sitio propio, 13-jul-2026</span><span class="tg tg-h">Toca salud — riesgo directo</span></div>
+        </div>
+        <div class="comp">
+          <div class="row1"><span class="name">Medilink Contact Center IA</span><span class="price">Sin precio público</span></div>
+          <p>Ver grupo "Amenaza estructural". Se repite acá porque compite en la misma categoría que Nexor y Vambe: agente de voz/WhatsApp, no copiloto clínico. Montado sobre <b>Vapi</b> (EE.UU.).</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 class="sec reveal" id="tabla">2 · Tabla comparativa dura <span class="n">las columnas que de verdad deciden</span></h2>
+  <div class="card pad reveal" style="margin-bottom:8px;">
+    <p style="margin:0;font-size:12.6px;color:var(--muted);">Solo copilotos <b>clínicos</b> (excluye Nexor/Vambe/Contact Center IA, que son agentes de venta/agendamiento, no escriben fichas). "Alma (nosotros)" = Copiloto de Ficha + Alma Escriba + extensión de Chrome, tratados como un solo sistema porque comparten núcleo (<code>alma-clinico</code>).</p>
+  </div>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Escribe en ficha<br>sin copy-paste</th>
+          <th>Ambiental o<br>dictado</th>
+          <th>Diariza<br>hablantes</th>
+          <th>GES<br>chileno</th>
+          <th>Vocab. clínico<br>chileno</th>
+          <th>Verificador<br>alucin. + omisión</th>
+          <th>Trazabilidad<br>frase→audio</th>
+          <th>Audio<br>local</th>
+          <th>Apoyo<br>diagnóstico</th>
+          <th>Precio</th>
+          <th>Integra<br>Medilink</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="prod">Medilink AI</td>
+          <td><span class="y">Sí</span> — es la ficha</td>
+          <td>Dictado</td>
+          <td><span class="n">No</span></td>
+          <td><span class="n">No</span> <span class="mut">(sin evidencia)</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span></td>
+          <td><span class="n">No</span></td>
+          <td><span class="n">No</span> — AssemblyAI, EE.UU.</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">Sin precio público</td>
+          <td>Es el HIS</td>
+        </tr>
+        <tr>
+          <td class="prod">Speaknosis</td>
+          <td><span class="p">Solo Corporativo</span></td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span> — Google Cloud</td>
+          <td><span class="n">No</span></td>
+          <td class="tnum">US$27,9–57,9/mes</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Encuadrado</td>
+          <td><span class="p">Solo su ficha</span></td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td>Salud mental CL</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span> — nube</td>
+          <td><span class="n">No</span></td>
+          <td class="tnum">~$40.000/mes</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Doctáfono</td>
+          <td><span class="n">No</span> — ficha propia</td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td>Marco legal AR</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="y">Parcial</span> — no guarda audio</td>
+          <td><span class="n">No</span></td>
+          <td class="tnum">US$8/mes</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Noa (Doctoralia)</td>
+          <td><span class="n">No</span> — flota, se pega a mano</td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td class="tnum">$39.000/mes</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Midulabs</td>
+          <td><span class="n">No</span></td>
+          <td>Ambiental</td>
+          <td><span class="p">Solo 2 canales, no acústica</span></td>
+          <td><span class="n">No</span></td>
+          <td class="mut">Declarado, sin evidencia</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span> — nube sin documentar</td>
+          <td><span class="y">Sí</span> <span class="mut">(riesgo)</span></td>
+          <td class="tnum">$79.990–279.990/mes</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Heidi Health</td>
+          <td><span class="n">No</span> — extensión magic paste</td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No verificado con acento CL</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="p">No guarda, retención default "nunca borrar"</span></td>
+          <td><span class="n">No</span></td>
+          <td class="tnum">Free · ~US$150/mes</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Telepatía</td>
+          <td><span class="n">No</span></td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No verificado con acento CL</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span> — nube</td>
+          <td><span class="y">Sí</span> (AI Advisor)</td>
+          <td>Gratis consulta privada</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Itaca</td>
+          <td><span class="n">No</span></td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td>Nativo LatAm</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="n">No</span> — nube</td>
+          <td class="mut">No declarado</td>
+          <td>Free + premium s/p</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr>
+          <td class="prod">Nabla</td>
+          <td><span class="n">No</span></td>
+          <td>Ambiental</td>
+          <td class="mut">No declarado</td>
+          <td><span class="n">No</span></td>
+          <td><span class="n">No</span> — nota en inglés</td>
+          <td><span class="n">No</span></td>
+          <td class="mut">No documentado</td>
+          <td><span class="y">No guarda</span></td>
+          <td><span class="n">No</span></td>
+          <td class="tnum">Free · ~US$119/mes</td>
+          <td><span class="n">No</span></td>
+        </tr>
+        <tr class="us">
+          <td class="prod">Alma (nosotros)</td>
+          <td><span class="p">Extensión lista, 22/22 en Chrome — falta prod</span></td>
+          <td>Ambiental (Escriba) + dictado (Ficha)</td>
+          <td><span class="p">Solo teleconsulta (2 pistas)</span></td>
+          <td><span class="y">Sí</span> — 103 patologías</td>
+          <td><span class="y">Sí</span> — chilenismos + fármacos</td>
+          <td><span class="y">Sí</span> — bidireccional, con tests</td>
+          <td><span class="y">Sí</span> — segmentos + anclajes en BD</td>
+          <td><span class="p">Transcribe en nuestro VPS</span> <span class="mut">(no en tercero cloud)</span></td>
+          <td><span class="y">No, a propósito</span></td>
+          <td class="tnum">$63 CLP/paciente</td>
+          <td><span class="p">Solo lectura API + escritura por extensión</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="scroll-hint">Desliza la tabla hacia los lados para ver todas las columnas →</div>
+
+  <!-- ============================================================ -->
+  <h2 class="sec reveal" id="brechas">3 · Qué tienen ellos que nosotros no <span class="n">sin autoengaño</span></h2>
+
+  <div class="gap reveal">
+    <div class="gap-h"><span class="gap-num">1</span><h3>Escritura directa en la ficha, sin copy-paste</h3><span class="estado cerrando">Cerrando</span></div>
+    <div class="gap-body">
+      <p class="brecha">Medilink AI y Encuadrado escriben directo en su propia ficha. Nosotros dependíamos 100% del copy-paste manual del médico — la única desventaja estructural real frente a "Medilink AI".</p>
+      <div class="gap-plan"><b>Plan de cierre:</b> la extensión de Chrome ya construida (<code>~/alma-extension</code>) resuelve esto. Medilink es jQuery + <code>&lt;textarea id="evolucion_clinica"&gt;</code> — reconocimiento hecho <b>sobre la ficha real del CMC</b> (13-jul-2026), no una suposición. Inserta con <code>execCommand('insertText')</code> para preservar Ctrl+Z y disparar el <code>input</code>/<code>change</code> que jQuery escucha. <b>Estado: construida y verificada 22/22 contra una réplica exacta del DOM de Medilink en Chrome real. Falta cargarla dentro de Medilink de verdad</b> — 5 puntos concretos sin probar: inyección real en el dominio, si el campo vive en un iframe, si Medilink usa Tab/Enter para algo propio, si el autosave real capta el evento, y cuál <code>text1</code>…<code>text4</code> es cuál (por diseño, no se adivina: se pega donde está el cursor o donde el médico elija).</div>
+      <p class="gap-src">Fuente: <code>~/alma-extension/README.md</code> (líneas 22-45, 205-266), <code>test/e2e.py</code>, capturas en <code>test/evidencia/</code>.</p>
+    </div>
+  </div>
+
+  <div class="gap reveal">
+    <div class="gap-h"><span class="gap-num">2</span><h3>Diarización — separar médico de paciente en consulta presencial</h3><span class="estado abierta">Abierta</span></div>
+    <div class="gap-body">
+      <p class="brecha">Un error de diarización es un error clínico: pone el síntoma del paciente en boca del médico o viceversa (9,5% de los reportes de daño en la literatura). En <b>teleconsulta</b> ya lo resolvemos con 2 pistas de audio separadas por diseño (cada participante en su canal). En <b>consulta presencial de un solo micrófono</b>, no lo tenemos — igual que casi toda la industria: nadie lo publicita como diferenciador porque es difícil en la práctica.</p>
+      <div class="gap-plan"><b>Plan de cierre:</b> no partir por <code>pyannote.audio</code> (diarización acústica, cara en CPU, requiere token de HuggingFace). Empezar por <b>inferencia de hablante por contenido</b> con Claude (costo marginal ~cero, funciona sorprendentemente bien porque los roles son obvios: "me duele hace 3 días" es paciente, "vamos a partir con un inhalador" es médico) y agregar <code>pyannote</code> solo si aparecen errores reales medidos. Regla dura mientras tanto: si la diarización no es confiable, <b>marcar "hablante indeterminado"</b> — nunca adivinar en silencio.</div>
+      <p class="gap-src">Fuente: <code>~/copiloto-capacidades.md</code> §1 fila 7, arXiv 2512.04118 (misattribución 9,5% del feedback de seguridad).</p>
+    </div>
+  </div>
+
+  <div class="gap reveal">
+    <div class="gap-h"><span class="gap-num">3</span><h3>Evidencia clínica publicada (Speaknosis tiene 2 ensayos)</h3><span class="estado nodecision">Decisión pendiente</span></div>
+    <div class="gap-body">
+      <p class="brecha">Speaknosis tiene un ensayo en Hospital Sant Joan de Déu (Barcelona, 375 interacciones, BERT Score 96,5%) y otro en Instituto FALP (Santiago: 93,6% de pacientes más cómodos, satisfacción médica 4,6/5). Nosotros tenemos cero papers. No se compra con código: es tiempo, pacientes y coautoría con alguien que sepa publicar.</p>
+      <div class="gap-plan"><b>¿Vale la pena?</b> Argumento a favor: es lo único de todo este mapa que abre puertas institucionales (Clínica Alemana, FALP mencionan a Speaknosis en prensa por esto). Argumento en contra: nuestro copiloto es una herramienta interna de un centro médico de Arauco-Curanilahue, no un producto que se vende a clínicas grandes — un paper no cambia el negocio del CMC hoy. <b>Recomendación: no perseguir un ensayo formal ahora.</b> En cambio, instrumentar y publicar internamente los números que ya medimos (PDSQI-9 mensual sobre 20 notas, tasa de alucinación/omisión real) — si algún día Alma se vende fuera del CMC, esos datos longitudinales son la base de un paper futuro sin haber invertido en él antes de tiempo.</div>
+      <p class="gap-src">Fuente: <code>~/competencia-chile.md</code> §1.</p>
+    </div>
+  </div>
+
+  <div class="gap reveal">
+    <div class="gap-h"><span class="gap-num">4</span><h3>Distribución (Noa vive dentro de Doctoralia)</h3><span class="estado nodecision">No la vamos a tener</span></div>
+    <div class="gap-body">
+      <p class="brecha">Noa no tiene que conseguir al médico: ya lo tiene, porque Doctoralia está instalada en la rutina de miles de médicos chilenos. Nosotros tenemos que ir a buscar a cada médico uno por uno.</p>
+      <div class="gap-plan"><b>Plan de cierre: ninguno, y está bien.</b> Construir una plataforma de distribución de médicos no es el negocio del CMC. Nuestra distribución es distinta y ya la tenemos: <b>27 profesionales de una sola clínica, todos accesibles hoy, sin canal de adquisición que construir.</b> Si Alma se vende a otras clínicas en el futuro, la distribución se resuelve por relación directa (como Alma Dental, Alma Farmacia, Alma Óptica), no por integrarse a un directorio de médicos.</div>
+    </div>
+  </div>
+
+  <div class="gap reveal">
+    <div class="gap-h"><span class="gap-num">5</span><h3>Certificación CENS, ICD-10/SNOMED, app móvil</h3><span class="estado abierta">Evaluado — parcial</span></div>
+    <div class="gap-body">
+      <p class="brecha">Encuadrado tiene certificación CENS. Speaknosis y Noa tienen ICD-10/SNOMED en plan Corporativo. Todos los competidores serios tienen app móvil o extensión — nosotros somos web en un puerto.</p>
+      <div class="gap-plan"><b>Cuáles importan:</b> (a) <b>App/extensión: sí importa, y ya lo resolvimos</b> con la extensión de Chrome (brecha 1) — es más relevante que una app móvil nativa porque el médico ya vive en el navegador con Medilink abierto. (b) <b>ICD-10/SNOMED: importa poco en Chile.</b> El sistema de salud chileno no factura por CPT ni exige SNOMED en la práctica diaria — es el análogo del "revenue cycle" gringo, que no aplica acá. El código que sí importa es <b>prestación Fonasa + arancel + GES</b>, que es nuestro y nadie más lo tiene. (c) <b>Certificación CENS: es ruido para una herramienta de uso interno de una sola clínica</b> — CENS certifica fichas clínicas electrónicas que se comercializan como sistema de registro; nuestro copiloto es explícitamente un borrador que se pega a Medilink, no un registro paralelo. Certificar algo que no es el registro oficial no resuelve nada legal (y la propia auditoría interna advierte contra acumular un segundo registro clínico no declarado — ver sección 4).</div>
+      <p class="gap-src">Fuente: <code>~/competencia-chile.md</code> §"Qué tienen ellos", <code>~/auditoria-legal-nuestra.md</code> punto 8.</p>
+    </div>
+  </div>
+
+  <div class="gap reveal">
+    <div class="gap-h"><span class="gap-num">6</span><h3>Marketing de seguridad como función (Nexor: "aislado, encriptado, nunca entrena, exporta o elimina")</h3><span class="estado abierta">Abierta — la más grave</span></div>
+    <div class="gap-body">
+      <p class="brecha">Nexor vende la seguridad de datos como feature del producto. Nosotros, cuando nos aplicamos el mismo checklist que le exigiríamos a un proveedor externo, <b>reprobamos varios puntos</b> que le exigiríamos a cualquiera: <b>sin cifrado en reposo</b> (SQLite en claro, <code>chmod 644</code>, legible por cualquier proceso del VPS), <b>sin registro de accesos del personal clínico</b> (una clave compartida, la cookie de sesión ES la contraseña), y <b>sin mecanismo de borrado a petición</b> en Alma Escriba (no hay endpoint de supresión; habría que entrar por SSH). Además, Escriba <b>no borra nunca</b> la transcripción — queda indefinidamente, contradiciendo su propio consentimiento.</p>
+      <div class="gap-plan"><b>Plan de cierre (auditoría del 13-jul-2026, ~2-3 días de trabajo total):</b> retención + purga real con <code>VACUUM</code> en Escriba (portar el patrón ya correcto del Copiloto de Ficha, 3-4h); endpoint <code>DELETE</code> de consulta + borrado por RUT (2h); log de auditoría de accesos + usuarios individuales + cookie distinta de la clave (4-6h); rate-limit en <code>/login</code> (1-2h); <code>chmod 600</code> de las bases + activar <code>ufw</code> (20 min); quitar Google Fonts de Escriba (1h); CSP/<code>no-store</code> en nginx (30 min); dejar de mandar el nombre del paciente a Anthropic en el briefing (30 min). <b>Decisiones que le corresponden al dueño, no a un agente:</b> ¿Escriba debe persistir la transcripción y por cuántos días? ¿SQLCipher sí o no? ¿se firma DPA + Zero Data Retention con Anthropic? ¿quién responde por datos del CMC?</div>
+      <p class="gap-src">Fuente: <code>~/auditoria-legal-nuestra.md</code>, tabla completa e-veredicto final. La ventana para arreglarlo barato: hoy la base de producción de Escriba tiene <b>2 filas de demo, 0 pacientes reales</b>.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 class="sec reveal" id="foso">4 · Qué tenemos nosotros que ellos no <span class="n">verificado en el código, no aspiracional</span></h2>
+  <div class="card pad reveal">
+    <div class="foso-grid">
+      <div class="foso-item">
+        <span class="n">1</span>
+        <p><b>Lectura de Medilink + escritura por extensión.</b> Ningún competidor de este mapa lee Medilink por API ni tiene un camino de escritura construido. Nosotros leemos RUT, agenda y antecedentes hoy, y la extensión (brecha 1) cierra el ciclo de escritura.</p>
+        <span class="src">app/medilink.py, ~/alma-extension</span>
+      </div>
+      <div class="foso-item">
+        <span class="n">2</span>
+        <p><b>GES completo — 103 patologías.</b> Ninguno de los 15+ competidores mapeados menciona GES una sola vez. El copiloto marca cualquier patología del catálogo (no solo salud mental) y genera la <b>Constancia GES</b> como documento formal.</p>
+        <span class="src">app/ai.py:406 ("103, no sólo salud mental"), tests/test_ges.py</span>
+      </div>
+      <div class="foso-item">
+        <span class="n">3</span>
+        <p><b>Vocabulario clínico chileno + corrección fonética de fármacos.</b> "Le da la puntada", "está apretado del pecho", "el remedio de la presión" — un producto entrenado en español neutro o inglés (Nabla, Heidi, Doctáfono) no lo transcribe ni lo interpreta.</p>
+        <span class="src">alma_clinico/vocab/</span>
+      </div>
+      <div class="foso-item">
+        <span class="n">4</span>
+        <p><b>Verificador bidireccional: alucinación Y omisión.</b> La omisión es más frecuente (18% en el RCT NEJM AI) que la alucinación (11,5%) y nadie la mira. El nuestro detecta ambas, con severidad, y quedó probado con sabotaje real: posología inventada → alucinación mayor; alergia omitida → omisión mayor.</p>
+        <span class="src">tests/test_trazabilidad.py (test_detecta_una_alucinacion_plantada, test_detecta_una_omision_plantada)</span>
+      </div>
+      <div class="foso-item">
+        <span class="n">5</span>
+        <p><b>Trazabilidad frase→audio.</b> Cada frase de la nota guarda el índice del segmento de audio que la respalda (<code>segmentos_json</code>, <code>anclajes_json</code>). Ninguno de los 15+ competidores documenta esto salvo Abridge (que no está en Chile).</p>
+        <span class="src">app/db.py:107-114 (comentario y columnas de fichas)</span>
+      </div>
+      <div class="foso-item">
+        <span class="n">6</span>
+        <p><b>Transcripción en nuestro propio servidor.</b> El audio no va a un tercero cloud de STT — Medilink lo manda a AssemblyAI (EE.UU.); nosotros transcribimos con Whisper en nuestro VPS. <b>Precisión importante:</b> el audio sí sale del consultorio hacia el VPS — decir "nunca sale de la máquina" tal como está escrito hoy en la UI es impreciso, y la propia auditoría legal (13-jul-2026) lo señala. La arquitectura es mejor que la de todos; el copy del consentimiento hay que corregirlo.</p>
+        <span class="src">auditoria-legal-nuestra.md punto 1</span>
+      </div>
+      <div class="foso-item">
+        <span class="n">7</span>
+        <p><b>Una clínica propia donde iterar en horas.</b> Ningún competidor tiene un prestador real donde probar con pacientes reales, ficha real, agenda real. Nuestro ciclo de feedback es de horas; el de ellos, de trimestres.</p>
+      </div>
+      <div class="foso-item">
+        <span class="n">8</span>
+        <p><b>42.839 conversaciones reales de pacientes</b> acumuladas en el bot del CMC — contexto chileno, chilenismos, patrones de agendamiento reales que ningún competidor genérico tiene.</p>
+        <span class="src">Cifra reportada por sistemas de producción del CMC (BI)</span>
+      </div>
+      <div class="foso-item">
+        <span class="n">9</span>
+        <p><b>El bot con triage, órdenes por foto, abonos y reglas por profesional.</b> Nada de esto lo tiene Nexor ni Vambe de fábrica para un centro médico chileno específico — son plataformas genéricas de ventas, no conocen Fonasa/Isapre ni la agenda real del CMC.</p>
+      </div>
+      <div class="foso-item">
+        <span class="n">10</span>
+        <p><b>No hacemos apoyo diagnóstico, a propósito.</b> Un consejo de IA errado baja el razonamiento diagnóstico del médico −14,0 pp y la exactitud del diagnóstico top −18,3 pp. Abridge tampoco lo hace. Midulabs sí, y se escuda en "human-in-the-loop" retórico — nosotros tenemos la razón articulada y la compañía correcta.</p>
+        <span class="src">Automation Bias Persists in AI-Trained Physicians (BJH); copiloto-evidencia.md §4</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 class="sec reveal" id="numeros">5 · Los números del CMC, medidos <span class="n">no inventados</span></h2>
+  <div class="num-grid reveal">
+    <div class="num-card"><div class="v tnum">55,6</div><div class="l">personas escriben al WhatsApp por día</div><div class="s">De las cuales 34,9% termina agendando → ~1.086 personas/mes escriben y no agendan</div></div>
+    <div class="num-card"><div class="v tnum">1.190</div><div class="l">personas distintas escribieron fuera de horario en 90 días</div><div class="s">~397/mes, ~13/día. A las 22h escriben más que a las 21h.</div></div>
+    <div class="num-card"><div class="v tnum">$63</div><div class="l">CLP por paciente — costo del copiloto</div><div class="s">Medido, infraestructura real en app/costos.py (/api/costos)</div></div>
+    <div class="num-card"><div class="v tnum">~$47</div><div class="l">CLP por llamada — agente de voz con Azure</div><div class="s">Verificado en alma-voz/README.md §8 (voz Azure es-CL, ~US$19/mes con 390 llamadas)</div></div>
+    <div class="num-card"><div class="v tnum">300</div><div class="l">créditos IA/mes de Medilink Titanium</div><div class="s">Para todo el centro — ~11 notas por profesional al mes</div></div>
+    <div class="num-card"><div class="v tnum">ROTA</div><div class="l">la medición de intención del bot</div><div class="s">El conteo de "intentaron agendar" da menos que el de "agendaron" — hoy no podemos medir el propio embudo. En reparación.</div></div>
+  </div>
+  <div class="noharm reveal" style="margin-top:12px;">
+    <b class="t">Hueco declarado</b>
+    <p>Las cifras de esta sección vienen de los sistemas de producción del CMC (BI, WhatsApp, panel de costos). No se recalcularon en vivo dentro de este informe — se reportan tal como las entregó el dueño, con la infraestructura de medición confirmada donde se pudo verificar en el código (<code>app/costos.py</code>, <code>alma-voz/README.md</code>). Donde no hay cifra viva verificable en este momento, se declara así en vez de inventar precisión.</p>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 class="sec reveal" id="plan">6 · Plan priorizado de cierre de brechas <span class="n">impacto × esfuerzo</span></h2>
+  <div class="mx-grid reveal">
+    <div class="mx q1">
+      <h4 class="q1">Alto impacto · Bajo esfuerzo — HACER YA</h4>
+      <div class="sub">Días, no semanas</div>
+      <ul>
+        <li><b>Probar la extensión en Medilink real</b> (brecha 1). El código ya está; falta cargarla en la ficha real y verificar los 5 puntos abiertos (iframe, autosave, Tab/Enter propios de Medilink).</li>
+        <li><b>Cerrar los huecos legales baratos</b> (brecha 6): purga real en Escriba, endpoint de borrado, <code>chmod 600</code>, quitar Google Fonts, CSP. ~2-3 días, todo ejecución conocida.</li>
+        <li><b>Corregir el copy del consentimiento de Escriba</b>: decir con precisión a dónde va el audio y por cuánto se guarda.</li>
+        <li><b>Pedir la demo y cotización de Medilink AI esta semana</b>: cuántos créditos reales trae el plan, si van a abrir escritura en la API, cómo cumplen Ley 21.719.</li>
+      </ul>
+    </div>
+    <div class="mx q2">
+      <h4 class="q2">Alto impacto · Alto esfuerzo — PLANIFICAR</h4>
+      <div class="sub">Semanas</div>
+      <ul>
+        <li><b>Diarización por inferencia de contenido</b> (brecha 2), empezando con Claude antes que <code>pyannote</code>.</li>
+        <li><b>Defender el canal de voz del bot.</b> Es donde Medilink, Nexor y Vambe ya están o van a estar. La evidencia dice que la llamada le gana al WhatsApp (−7,8pp) — vale más que cualquier mejora de nota.</li>
+        <li><b>DPA + Zero Data Retention con Anthropic</b>, y decisión del dueño sobre retención de transcripción en Escriba.</li>
+        <li><b>Arreglar la medición del embudo del bot</b> — sin esto no sabemos si el copiloto o el bot están funcionando de verdad.</li>
+      </ul>
+    </div>
+    <div class="mx q3">
+      <h4 class="q3">Bajo impacto · Bajo esfuerzo — OPORTUNISTA</h4>
+      <div class="sub">Si sobra tiempo</div>
+      <ul>
+        <li>Instrumentar PDSQI-9 mensual sobre 20 notas — barato y es la base de un futuro paper sin comprometerse a escribirlo ahora.</li>
+        <li>Publicar "no hacemos apoyo diagnóstico, y por qué" como posición explícita frente a Midulabs.</li>
+        <li>Documentar la lista de subencargados tecnológicos (Ley 21.719) — es un documento, no código.</li>
+      </ul>
+    </div>
+    <div class="mx q4">
+      <h4 class="q4">Bajo impacto · Alto esfuerzo — NO HACER</h4>
+      <div class="sub">Y por qué</div>
+      <ul>
+        <li><b>Ensayo clínico publicado</b> (brecha 3): no cambia el negocio de una sola clínica hoy.</li>
+        <li><b>Certificación CENS</b>: certifica registro oficial, y explícitamente no lo somos — certificar lo contrario del propio diseño no resuelve nada.</li>
+        <li><b>ICD-10/CPT/SNOMED</b>: no aplica al sistema de salud chileno. El código que importa es Fonasa + GES.</li>
+        <li><b>Competir con Doctáfono en precio</b> (US$8/mes): probablemente insostenible para ellos; no hay que anclar la estrategia a un precio de penetración ajeno.</li>
+        <li><b>Construir distribución tipo Doctoralia</b>: no es el negocio del CMC.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 class="sec reveal" id="estrategia">7 · La conversación estratégica honesta <span class="n">¿construir o comprar?</span></h2>
+  <div class="edge reveal">
+    <h3>La respuesta real, aunque incomode</h3>
+    <div class="math">
+      <div class="mrow"><div class="mv tnum">~$1.053.000</div><div class="ml">CLP/mes si el CMC pagara Noa Notes a los 27 profesionales ($39.000 × 27)</div></div>
+      <div class="mrow"><div class="mv tnum">$63</div><div class="ml">CLP/paciente — nuestro costo medido. A volumen de uso real hoy, la brecha es de un orden de magnitud, no marginal</div></div>
+    </div>
+    <p class="r"><b>A nivel de costo unitario, comprar pierde por goleada.</b> Pero el costo no es el argumento completo, y sería deshonesto presentarlo como si lo fuera: no tenemos el volumen exacto de consultas mensuales del CMC para calcular el costo total comparable de "todo el copiloto, todos los profesionales, todo el mes" — esa cifra es un <span class="tg tg-h">hueco</span> declarado, no inventado.</p>
+    <p class="r">El argumento real no es el precio. Es que <b>ningún producto de este mapa hace lo que el CMC necesita completo</b>: Noa no escribe en Medilink, Speaknosis no tiene GES, Telepatía no conoce Fonasa, Midulabs toma un riesgo regulatorio que no queremos asumir. Comprar resolvería como máximo el 60-70% de un solo problema (la nota) y dejaría sin resolver el resto (integración, GES, verificación, la capa de negocio que cruza Medilink + caja + Meta Ads).</p>
+    <p class="r"><b>El dato que sí hay que tomar en serio, y que incomoda:</b> Ian Lee dejó la healthtech (Examedi, US$17M levantados) para construir <b>agentes genéricos</b>, y a16z lo respaldó con US$340K facturados en 6 meses. Eso es una señal de mercado: <b>la capa agéntica se está volviendo commodity</b> — hoy cualquiera con presupuesto puede montar un agente de llamada+WhatsApp razonable en semanas (Nexor, Vambe, el propio Contact Center IA de Medilink lo demuestran). Si el foso de Alma fuera "tener un agente conversacional", ese foso ya se secó.</p>
+    <p class="r"><b>Nuestro foso no es tener un agente.</b> Es <b>agente + clínica propia + Medilink + GES + datos reales</b> — cuatro cosas que ningún competidor de este mapa junta, y que un competidor nuevo no puede comprar con una ronda de a16z: la clínica propia toma años de construir confianza, el conocimiento de Medilink toma meses de operarlo todos los días, el GES es una obligación legal chilena que a nadie de afuera le conviene resolver, y los datos reales son del CMC, no se licencian.</p>
+    <p class="r"><b>Veredicto:</b> seguir construyendo lo que compone con el tiempo (extensión, verificador, GES, aprendizaje del estilo del médico) y comprar/evaluar lo que es commodity puro y no vale la pena reinventar (voz genérica, si algún día hace falta un canal de Instagram DM que Vambe ya resuelve barato). No construir un competidor de Nexor o Vambe desde cero — sería reconstruir una capa que ya se volvió barata en el mercado. Sí defender, con inversión real, el canal de voz del bot, porque ahí es donde Medilink, Nexor y Vambe ya están parados y nosotros no.</p>
+  </div>
+
+  <footer class="reveal">
+    Mapa competitivo · Copiloto clínico y agentes de IA · Centro Médico Carampangue — Dr. Rodrigo Olavarría · 13 de julio de 2026.
+    Construido sobre <code>competencia-medilink-ai.md</code>, <code>competencia-chile.md</code>, <code>competencia-internacional.md</code>,
+    <code>copiloto-benchmark.md</code>, <code>copiloto-evidencia.md</code>, <code>copiloto-capacidades.md</code>, <code>auditoria-legal-nuestra.md</code>,
+    y verificación directa del código de <code>copiloto-ficha</code>, <code>alma-escriba</code>, <code>alma-clinico</code>, <code>alma-extension</code>, <code>alma-voz</code>.
+    <details class="sources">
+      <summary>Fuentes de Nexor y Vambe (investigadas para este informe, 13-jul-2026)</summary>
+      <ul>
+        <li>getnexor.ai (pricing, FAQ, ficha estructurada de la empresa)</li>
+        <li>ecosistemastartup.com — "Nexor factura US$340K en 6 meses con inversión de a16z" (31-may-2026)</li>
+        <li>Diario Financiero — "Nexor, la nueva startup de Ian Lee debuta con inversión de Andreessen Horowitz"</li>
+        <li>vambe.ai — /about, /pricing, /client-stories (fetch directo, 13-jul-2026)</li>
+        <li>Casos publicados por Vambe: "Centro Médico Formed", "Clínica Ramis" (vertical Salud y Bienestar)</li>
+      </ul>
+    </details>
+  </footer>
+</div>
+
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{ const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); root.setAttribute('data-theme',cur==='dark'?'light':'dark'); };
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+},{threshold:.06, rootMargin:'0px 0px -30px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>

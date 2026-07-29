@@ -215,18 +215,22 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
     Monto cobrado = SUM bi_pagos_caja (caja real Medilink).
     Monto facturado = SUM bi_atenciones.total (lo registrado en sistema)."""
     from collections import defaultdict
+    # id_profesional=0 (o None) → TODO EL CENTRO consolidado.
+    todos = id_profesional in (0, None)
+    filtro = "" if todos else "id_profesional=? AND "
+    args: tuple = (desde,) if todos else (id_profesional, desde)
     with _bi_conn() as c:
         # Pacientes únicos por día desde bi_atenciones
-        atens = c.execute("""
+        atens = c.execute(f"""
             SELECT fecha, id_paciente, total
             FROM bi_atenciones
-            WHERE id_profesional=? AND fecha>=?
-        """, (id_profesional, desde)).fetchall()
+            WHERE {filtro}fecha>=?
+        """, args).fetchall()
         # Cobrado real desde bi_pagos_caja
-        pagos = c.execute("""
+        pagos = c.execute(f"""
             SELECT fecha, id_paciente, monto FROM bi_pagos_caja
-            WHERE id_profesional=? AND fecha>=?
-        """, (id_profesional, desde)).fetchall()
+            WHERE {filtro}fecha>=?
+        """, args).fetchall()
 
     # PAGARON: pacientes únicos por día/mes desde bi_pagos_caja (CSV oficial)
     pacientes_dia_pago: dict = defaultdict(set)
@@ -349,14 +353,20 @@ def stats_profesional(id_profesional: int, desde: str = "2024-01-01") -> dict:
             proyeccion[key] = {"atend": est, "ingreso": round(est * tarifa_real)}
 
     prof_info = PROFESIONALES.get(id_profesional, {})
+    if todos:
+        nombre_prof = "Centro Médico Carampangue"
+        esp_prof = f"Consolidado · {len(PROFESIONALES)} profesionales"
+    else:
+        nombre_prof = prof_info.get("nombre", f"Profesional {id_profesional}")
+        esp_prof = prof_info.get("especialidad", "")
     # NOTA: post-procesado en main.py inyecta caja_real por mes desde bi_pagos_caja
     return {
         "fecha_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "fuente": "bi_atenciones (Medilink × validación cobrado)",
         "por_dia_detalle": por_dia_detalle,
         "id_profesional": id_profesional,
-        "nombre_profesional": prof_info.get("nombre", f"Profesional {id_profesional}"),
-        "especialidad": prof_info.get("especialidad", ""),
+        "nombre_profesional": nombre_prof,
+        "especialidad": esp_prof,
         "tarifa_real_promedio": round(tarifa_real),
         "cobertura_pct": cobertura_pct,
         "por_dia": por_dia,
@@ -938,15 +948,19 @@ def stats_profesional_caja(id_profesional: int, desde: str = "2024-01-01") -> di
     """Sumas mensuales de bi_pagos_caja para un profesional. Ese es el INGRESO REAL
     al CMC (módulo Cajas Medilink)."""
     from collections import defaultdict
+    # id_profesional=0 (o None) → TODO EL CENTRO consolidado.
+    todos = id_profesional in (0, None)
+    filtro = "" if todos else "id_profesional=? AND "
+    args: tuple = (desde,) if todos else (id_profesional, desde)
     with _bi_conn() as c:
-        rows = c.execute("""
+        rows = c.execute(f"""
             SELECT fecha, SUM(monto) AS total, COUNT(*) AS n,
                    GROUP_CONCAT(DISTINCT metodo_pago) AS medios
             FROM bi_pagos_caja
-            WHERE id_profesional=? AND fecha>=?
+            WHERE {filtro}fecha>=?
             GROUP BY fecha
             ORDER BY fecha
-        """, (id_profesional, desde)).fetchall()
+        """, args).fetchall()
 
     por_mes = defaultdict(lambda: {"caja": 0, "n_pagos": 0})
     total_caja = 0

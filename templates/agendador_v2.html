@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agendar hora · Centro Médico Carampangue</title>
+<meta name="description" content="Agende su hora médica o dental en línea en el Centro Médico Carampangue, Comuna de Arauco. Horas reales, confirmación inmediata, sin crear cuenta.">
+<meta name="theme-color" content="#0F3F68">
+<meta property="og:title" content="Agendar hora · Centro Médico Carampangue">
+<meta property="og:description" content="Agenda en línea, las 24 horas. Confirmación inmediata.">
+<meta property="og:image" content="https://agentecmc.cl/static/og-image.png">
+<link rel="icon" href="/static/isotipo.png">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   AGENDAR V2 — diseñado con evidencia para el paciente CMC:
+   mayor, rural, Android gama media-baja, conexión irregular.
+   Reglas: cero CDN · texto ≥16px · taps ≥48px · contraste AA ·
+   lenguaje llano "usted" · escasez solo real · WhatsApp como rescate.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --navy:#0F3F68; --navy-2:#0b3054; --aqua:#4FBECE; --aqua-deep:#127885;
+  --aqua-soft:#e4f5f9; --data:#1172AB;
+  --paper:#f2f7fa; --card:#ffffff; --line:#d8e6ee; --line-2:#b9cfdc;
+  --ink:#0f2a40; --muted:#4e6478; --soft:#eef6f9;
+  --good:#1e7a46; --good-bg:#e7f4ec;
+  --warn:#8a5e0a; --warn-bg:#fdf3dc;
+  --crit:#b03a30; --crit-bg:#fdeae8;
+  --wa:#177a40;   /* 5.4:1 con blanco y sobre blanco — AA en ambos usos */
+  --shadow:0 1px 2px rgba(15,63,104,.06), 0 8px 26px rgba(15,63,104,.09);
+  --r:16px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:rgba(79,190,206,.25);}
+html{font-size:100%;}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:1.0625rem; /* 17px */ line-height:1.55;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+img{max-width:100%;}
+a{color:var(--data);}
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;}
+.skip{position:absolute; left:-9999px; top:0; background:var(--navy); color:#fff; padding:10px 16px; border-radius:0 0 10px 0; z-index:100;}
+.skip:focus{left:0;}
+:focus-visible{outline:3px solid var(--data); outline-offset:2px; border-radius:6px;}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none!important; transition:none!important; scroll-behavior:auto!important;} }
+
+/* ── Header ─────────────────────────────────────────────────────── */
+header.top{background:var(--card); border-bottom:1px solid var(--line);}
+.top-in{max-width:860px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px;}
+.brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); min-width:0;}
+.brand img{width:42px; height:42px; flex:none;}
+.brand b{font-size:1rem; line-height:1.25; letter-spacing:-.01em; display:block;}
+.brand small{display:block; color:var(--muted); font-size:.875rem; font-weight:600;}
+.top-nav{margin-left:auto; display:flex; gap:8px; flex:none;}
+.nav-btn{display:inline-flex; align-items:center; gap:7px; min-height:48px; padding:8px 14px;
+  border:1.5px solid var(--line-2); border-radius:12px; background:var(--card); color:var(--navy);
+  font-weight:700; font-size:1rem; text-decoration:none; cursor:pointer;}
+.nav-btn.on{background:var(--navy); border-color:var(--navy); color:#fff;}
+.nav-btn svg{width:19px; height:19px; flex:none;}
+
+/* barra de ayuda: el teléfono NO canibaliza, rescata (evidencia seniors) */
+.helpbar{background:var(--aqua-soft); border-bottom:1px solid var(--line);}
+.helpbar-in{max-width:860px; margin:0 auto; padding:2px 16px; display:flex; align-items:center; flex-wrap:wrap; gap:0 16px; font-size:1rem; color:var(--ink);}
+.helpbar a{display:inline-flex; align-items:center; gap:6px; color:var(--navy); font-weight:800; text-decoration:none; min-height:48px;}
+.helpbar svg{width:18px; height:18px;}
+
+main{max-width:860px; margin:0 auto; padding:18px 16px 140px;}
+
+/* ── Progreso ───────────────────────────────────────────────────── */
+.prog{margin:2px 0 16px;}
+.prog-label{font-size:.9375rem; font-weight:800; color:var(--aqua-deep); letter-spacing:.02em;}
+.prog-bar{height:8px; background:#dcebf2; border-radius:99px; margin-top:7px; overflow:hidden;}
+.prog-bar i{display:block; height:100%; background:linear-gradient(90deg,var(--aqua),var(--data)); border-radius:99px; transition:width .35s ease;}
+
+/* ── Vistas ─────────────────────────────────────────────────────── */
+.view{display:none;}
+.view.on{display:block; animation:vin .25s ease;}
+@keyframes vin{from{opacity:.35; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+h1{font-size:1.75rem; line-height:1.18; letter-spacing:-.02em; margin:4px 0 6px; color:var(--navy); text-wrap:balance;}
+h2{font-size:1.375rem; line-height:1.22; letter-spacing:-.015em; margin:0 0 4px; color:var(--navy);}
+.lead{color:var(--muted); font-size:1.0625rem; margin:0 0 18px;}
+.trust{display:flex; flex-wrap:wrap; gap:6px 16px; margin:10px 0 20px; padding:0; list-style:none;}
+.trust li{display:flex; align-items:center; gap:7px; font-size:1rem; font-weight:700; color:var(--aqua-deep);}
+.trust svg{width:18px; height:18px; flex:none;}
+
+.back{display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:6px 10px 6px 4px; margin:0 0 6px -4px;
+  background:none; border:none; color:var(--data); font-size:1rem; font-weight:800; cursor:pointer; font-family:inherit;}
+.back svg{width:20px; height:20px;}
+
+/* ── Tarjetas de especialidad ───────────────────────────────────── */
+.group{margin:22px 0 8px;}
+.group-h{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+.group-h svg{width:22px; height:22px; color:var(--aqua-deep); flex:none;}
+.group-h b{font-size:1.125rem; color:var(--navy); letter-spacing:-.01em;}
+.cards{display:grid; grid-template-columns:1fr; gap:10px;}
+@media(min-width:640px){ .cards{grid-template-columns:1fr 1fr;} }
+.card{position:relative; display:flex; align-items:center; gap:13px; width:100%; text-align:left;
+  background:var(--card); border:1.5px solid var(--line); border-radius:var(--r);
+  padding:15px 16px; min-height:76px; cursor:pointer; font-family:inherit; color:var(--ink);
+  box-shadow:var(--shadow); transition:border-color .15s, transform .12s;}
+.card:active{transform:scale(.99);}
+.card:hover{border-color:var(--aqua);}
+.card .ic{flex:none; width:46px; height:46px; border-radius:13px; background:var(--aqua-soft); color:var(--aqua-deep);
+  display:flex; align-items:center; justify-content:center;}
+.card .ic svg{width:25px; height:25px;}
+.card .tx{min-width:0; flex:1;}
+.card .tx b{display:block; font-size:1.0938rem; line-height:1.3;}
+.card .tx .price{display:block; color:var(--muted); font-size:1rem; font-weight:600; margin-top:2px;}
+.card .go{flex:none; color:var(--line-2);}
+.card .go svg{width:22px; height:22px;}
+.card.wa-card .ic{background:#e7f6ec; color:var(--wa);}
+.badge-wa{display:inline-flex; align-items:center; gap:5px; margin-top:5px; font-size:.875rem; font-weight:800; color:var(--wa);}
+.badge-wa svg{width:15px; height:15px;}
+
+/* ── Profesional (chips) ────────────────────────────────────────── */
+.prof-row{display:flex; gap:9px; overflow-x:auto; padding:2px 2px 10px; scrollbar-width:thin;}
+.prof-chip{flex:none; display:flex; align-items:center; gap:9px; min-height:56px; padding:9px 16px 9px 10px;
+  border:1.5px solid var(--line-2); border-radius:14px; background:var(--card); cursor:pointer;
+  font-family:inherit; font-size:.9688rem; font-weight:700; color:var(--ink);}
+.prof-chip .av{width:36px; height:36px; border-radius:50%; background:var(--aqua-soft); color:var(--aqua-deep);
+  display:flex; align-items:center; justify-content:center; font-size:.875rem; font-weight:800; flex:none;}
+.prof-chip small{display:block; font-weight:600; color:var(--muted); font-size:.875rem;}
+.prof-chip[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#fff;}
+.prof-chip[aria-pressed="true"] small{color:#bcd7ea;}
+.prof-chip[aria-pressed="true"] .av{background:rgba(255,255,255,.18); color:#fff;}
+
+/* ── Días ───────────────────────────────────────────────────────── */
+.days{display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; scroll-snap-type:x proximity; scrollbar-width:thin;}
+.day{flex:none; scroll-snap-align:start; width:72px; min-height:78px; border:1.5px solid var(--line-2); border-radius:14px;
+  background:var(--card); cursor:pointer; font-family:inherit; color:var(--ink);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:8px 4px;}
+.day .dw{font-size:.875rem; font-weight:800; letter-spacing:.06em; color:var(--muted); text-transform:uppercase;}
+.day .dn{font-size:1.375rem; font-weight:800; line-height:1.1;}
+.day .dm{font-size:.875rem; font-weight:700; color:var(--muted);}
+.day[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#fff;}
+.day[aria-pressed="true"] .dw,.day[aria-pressed="true"] .dm{color:#bcd7ea;}
+.day.today::after{content:"HOY"; font-size:.75rem; font-weight:900; color:var(--aqua-deep); letter-spacing:.08em;}
+.day[aria-pressed="true"].today::after{color:#9fe3ec;}
+
+/* ── Slots ──────────────────────────────────────────────────────── */
+.slot-note{display:flex; align-items:center; gap:8px; margin:2px 0 12px; padding:10px 13px;
+  background:var(--warn-bg); color:var(--warn); border-radius:12px; font-weight:700; font-size:1rem;}
+.slot-note svg{width:20px; height:18px; flex:none;}
+.slot-date{margin:4px 0 10px; font-size:1.125rem; color:var(--navy); font-weight:800;}
+.slot-h{font-size:1rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin:14px 0 8px;}
+.slots{display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:9px;}
+.slot{min-height:56px; border:1.5px solid var(--line-2); border-radius:13px; background:var(--card);
+  font-family:inherit; cursor:pointer; color:var(--ink); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; padding:6px 4px;}
+.slot b{font-size:1.1875rem; font-variant-numeric:tabular-nums; letter-spacing:.01em;}
+.slot small{font-size:.875rem; font-weight:700; color:var(--muted); line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.slot[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#fff;}
+.slot[aria-pressed="true"] small{color:#bcd7ea;}
+
+/* ── Cajas de estado ────────────────────────────────────────────── */
+.box{border-radius:var(--r); padding:18px 16px; margin:10px 0;}
+.box.info{background:var(--soft); border:1.5px solid var(--line);}
+.box.err{background:var(--crit-bg); border:1.5px solid #f0c4bf;}
+.box.ok{background:var(--good-bg); border:1.5px solid #bfe3cc;}
+.box h3{margin:0 0 6px; font-size:1.0938rem; color:var(--navy);}
+.box.err h3{color:var(--crit);}
+.box p{margin:0 0 12px; color:var(--ink);}
+.box .row{display:flex; flex-wrap:wrap; gap:9px;}
+
+/* ── Botones ────────────────────────────────────────────────────── */
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  min-height:54px; padding:12px 20px; border-radius:14px; border:1.5px solid transparent;
+  font-family:inherit; font-size:1.0938rem; font-weight:800; cursor:pointer; text-decoration:none; text-align:center;}
+.btn svg{width:20px; height:20px; flex:none;}
+.btn-primary{background:var(--navy); color:#fff;}
+.btn-primary:hover{background:var(--navy-2);}
+.btn-primary:disabled{background:#9fb4c6; cursor:not-allowed;}
+.btn-ghost{background:var(--card); color:var(--navy); border-color:var(--line-2);}
+.btn-wa{background:var(--wa); color:#fff;}
+.btn-danger{background:var(--crit); color:#fff;}
+.btn-block{display:flex; width:100%;}
+.btn .spin{display:none;}
+.btn.loading .spin{display:inline-block; width:18px; height:18px; border:2.5px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:sp 1s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* ── Barra fija de acción — SIEMPRE visible, en TODOS los tamaños.
+     (El bug nº1 de la v1: en escritorio no había forma de continuar) ── */
+.abar{position:fixed; left:0; right:0; bottom:0; z-index:40; background:var(--card);
+  border-top:1.5px solid var(--line); box-shadow:0 -6px 24px rgba(15,63,104,.10);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom)); display:none;}
+.abar.show{display:block;}
+.abar-in{max-width:860px; margin:0 auto; display:flex; align-items:center; gap:14px;}
+.abar-sum{min-width:0; flex:1;}
+.abar-sum b{display:block; font-size:1rem; line-height:1.3; color:var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.abar-sum small{color:var(--muted); font-weight:600; font-size:.9375rem;}
+.abar .btn{flex:none; min-width:44%; margin-left:auto;}
+@media(min-width:640px){ .abar .btn{min-width:280px;} }
+
+/* ── Formulario ─────────────────────────────────────────────────── */
+.sum-card{display:flex; gap:13px; align-items:flex-start; background:var(--card); border:1.5px solid var(--aqua);
+  border-radius:var(--r); padding:15px 16px; margin:0 0 18px; box-shadow:var(--shadow);}
+.sum-card .ic{flex:none; width:44px; height:44px; border-radius:12px; background:var(--aqua-soft); color:var(--aqua-deep); display:flex; align-items:center; justify-content:center;}
+.sum-card .ic svg{width:24px; height:24px;}
+.sum-card .tx{flex:1; min-width:0;}
+.sum-card .tx b{display:block; font-size:1.0938rem; line-height:1.35;}
+.sum-card .tx span{display:block; color:var(--ink); font-size:1rem; margin-top:2px;}
+.sum-card .tx .pay{color:var(--muted); font-size:1rem; font-weight:600; margin-top:4px;}
+.sum-card .chg{flex:none; align-self:center;}
+.chg{background:none; border:none; color:var(--data); font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer; min-height:48px; padding:4px 8px; text-decoration:underline;}
+
+.fgroup{margin:0 0 18px;}
+label.flabel{display:block; font-size:1rem; font-weight:800; color:var(--navy); margin-bottom:7px;}
+label.flabel .opt{color:var(--muted); font-weight:600;}
+.finput{width:100%; min-height:56px; padding:13px 15px; font-family:inherit; font-size:1.125rem; color:var(--ink);
+  background:var(--card); border:1.5px solid var(--line-2); border-radius:13px;}
+.finput::placeholder{color:var(--muted);} /* 6.1:1 — el ejemplo de formato debe LEERSE */
+.finput:focus{border-color:var(--data); outline:2px solid var(--data); outline-offset:0;}
+.finput[aria-invalid="true"]{border-color:var(--crit); outline-color:var(--crit);}
+.fhint{font-size:1rem; color:var(--muted); margin-top:6px;}
+.ferr{display:none; font-size:1rem; color:var(--crit); font-weight:700; margin-top:6px;}
+.ferr.show{display:block;}
+.tel-wrap{display:flex; gap:8px;}
+.tel-cc{flex:none; display:flex; align-items:center; padding:0 13px; min-height:56px; background:var(--soft);
+  border:1.5px solid var(--line-2); border-radius:13px; font-weight:800; font-size:1.125rem; color:var(--muted);}
+
+.seg{display:flex; gap:8px; margin-bottom:4px;}
+.seg button{flex:1; min-height:54px; border:1.5px solid var(--line-2); background:var(--card); border-radius:13px;
+  font-family:inherit; font-size:1rem; font-weight:800; color:var(--ink); cursor:pointer; padding:8px;}
+.seg button[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#fff;}
+
+.ident{display:none; margin-top:10px; padding:12px 14px; border-radius:12px; font-size:1rem; font-weight:700;}
+.ident.show{display:flex; align-items:flex-start; gap:9px;}
+.ident svg{width:20px; height:20px; flex:none; margin-top:2px;}
+.ident.ok{background:var(--good-bg); color:var(--good);}
+.ident.new{background:var(--aqua-soft); color:var(--aqua-deep);}
+.ident.load{background:var(--soft); color:var(--muted);}
+
+details.prest{margin:0 0 18px; background:var(--card); border:1.5px solid var(--line); border-radius:13px; padding:4px 15px;}
+details.prest summary{min-height:52px; display:flex; align-items:center; font-weight:800; color:var(--navy); cursor:pointer; font-size:1rem;}
+.prest-list{padding:2px 0 12px;}
+.prest-it{display:flex; align-items:center; gap:11px; min-height:50px; padding:6px 2px; cursor:pointer;}
+.prest-it input{width:22px; height:22px; accent-color:var(--navy); flex:none;}
+.prest-it .n{flex:1; font-size:1rem;}
+.prest-it .p{flex:none; font-weight:800; color:var(--aqua-deep); font-size:1rem;}
+
+.consent{display:flex; gap:12px; align-items:flex-start; background:var(--card); border:1.5px solid var(--line);
+  border-radius:13px; padding:14px 15px; margin:0 0 8px; cursor:pointer;}
+.consent input{width:24px; height:24px; margin-top:2px; accent-color:var(--navy); flex:none; cursor:pointer;}
+.consent span{font-size:1rem; line-height:1.5;}
+
+.need{font-size:1rem; color:var(--muted); font-weight:600; margin:8px 0 0; min-height:1.4em;}
+
+/* ── Éxito ──────────────────────────────────────────────────────── */
+.done-hero{text-align:center; padding:12px 0 4px;}
+.done-check{width:84px; height:84px; margin:6px auto 12px; border-radius:50%; background:var(--good-bg);
+  display:flex; align-items:center; justify-content:center; animation:pop .45s cubic-bezier(.2,1.6,.4,1);}
+.done-check svg{width:46px; height:46px; color:var(--good);}
+@keyframes pop{from{transform:scale(.5); opacity:0;} to{transform:scale(1); opacity:1;}}
+.done-card{background:var(--card); border:1.5px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 17px; margin:14px 0; text-align:left;}
+.done-card dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:7px 14px;}
+.done-card dt{color:var(--muted); font-size:1rem; font-weight:700;}
+.done-card dd{margin:0; font-weight:800; font-size:1rem;}
+.next-list{margin:8px 0 0; padding:0; list-style:none; text-align:left;}
+.next-list li{display:flex; gap:11px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); font-size:1rem;}
+.next-list li:last-child{border-bottom:none;}
+.next-list svg{width:21px; height:21px; flex:none; color:var(--aqua-deep); margin-top:2px;}
+
+/* ── Mis horas ──────────────────────────────────────────────────── */
+.cita{background:var(--card); border:1.5px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:16px; margin:0 0 12px;}
+.cita b{display:block; font-size:1.0938rem; color:var(--navy);}
+.cita .meta{color:var(--ink); margin:3px 0 12px; font-size:1rem;}
+.cita .row{display:flex; gap:9px; flex-wrap:wrap;}
+.cita .row .btn{min-height:50px; flex:1; font-size:1rem;}
+.confirm-inline{background:var(--crit-bg); border-radius:12px; padding:13px; margin-top:12px;}
+.confirm-inline p{margin:0 0 10px; font-weight:700; color:var(--crit);}
+
+/* ── Skeleton ───────────────────────────────────────────────────── */
+.skel{border-radius:13px; background:linear-gradient(100deg,#e3edf3 40%,#eef6fa 50%,#e3edf3 60%); background-size:200% 100%; animation:sk 1.2s linear infinite;}
+@keyframes sk{to{background-position:-200% 0;}}
+.skel.s-card{height:76px; margin-bottom:10px;}
+.skel.s-slot{height:56px;}
+.skel.s-day{width:72px; height:78px; flex:none;}
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+footer{border-top:1px solid var(--line); background:var(--card); margin-top:30px;}
+body.has-abar footer{padding-bottom:96px;} /* la barra fija no tapa el teléfono del footer */
+.foot-in{max-width:860px; margin:0 auto; padding:22px 16px 26px; color:var(--muted); font-size:1rem;}
+.foot-in b{color:var(--navy);}
+.foot-links{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:10px;}
+.foot-links a{display:inline-flex; align-items:center; min-height:44px; font-weight:700;}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Ir al contenido</a>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="/agendar/v2" onclick="return goHome(event)">
+      <img src="/static/isotipo.png" alt="" width="42" height="42">
+      <span><b>Centro Médico Carampangue</b><small>Agenda en línea · las 24 horas</small></span>
+    </a>
+    <nav class="top-nav" aria-label="Secciones">
+      <button class="nav-btn" id="nav-mis" onclick="showMis()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Mis horas
+      </button>
+    </nav>
+  </div>
+</header>
+
+<div class="helpbar">
+  <div class="helpbar-in">
+    <span>¿Prefiere que le ayudemos?</span>
+    <a id="hb-wa" href="https://wa.me/56966610737" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.9-1.4A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.5.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.1.1.6-.1 1Z"/></svg>
+      WhatsApp
+    </a>
+    <a href="tel:+56442965226">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2Z"/></svg>
+      Llamar (44)&nbsp;296&nbsp;5226
+    </a>
+  </div>
+</div>
+
+<main id="main">
+  <div class="prog" id="prog" hidden>
+    <span class="prog-label" id="prog-label">Paso 1 de 3</span>
+    <div class="prog-bar" aria-hidden="true"><i id="prog-fill" style="width:33%"></i></div>
+  </div>
+
+  <!-- aria-live para lectores de pantalla -->
+  <div class="sr-only" aria-live="polite" id="sr-status"></div>
+
+  <!-- ═══════════ VISTA 1 · ESPECIALIDAD ═══════════ -->
+  <section class="view on" id="v-home" aria-labelledby="h-home">
+    <h1 id="h-home">Agende su hora</h1>
+    <p class="lead">Elija la atención que necesita. El valor se muestra antes de reservar.</p>
+    <ul class="trust" aria-label="Cómo funciona">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Horas reales del centro</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Confirmación inmediata</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Sin crear cuenta</li>
+    </ul>
+    <div id="catalog"><div class="skel s-card"></div><div class="skel s-card"></div><div class="skel s-card"></div><div class="skel s-card"></div></div>
+  </section>
+
+  <!-- ═══════════ VISTA 2 · DÍA Y HORA ═══════════ -->
+  <section class="view" id="v-time" aria-labelledby="h-time">
+    <button class="back" onclick="backToHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Especialidades</button>
+    <h2 id="h-time">—</h2>
+    <p class="lead" id="time-price">—</p>
+    <div id="reag-note" class="box info" hidden>
+      <p style="margin:0"><b>Está eligiendo una hora nueva.</b> Su hora actual se mantiene hasta que la nueva quede confirmada.</p>
+    </div>
+    <div id="prof-row" class="prof-row" role="group" aria-label="Elegir profesional"></div>
+    <div id="via-note" class="box info" hidden><p id="via-note-tx" style="margin:0"></p></div>
+    <div class="days" id="days" role="group" aria-label="Elegir día"></div>
+    <div id="slot-area"></div>
+  </section>
+
+  <!-- ═══════════ VISTA 3 · SUS DATOS ═══════════ -->
+  <section class="view" id="v-datos" aria-labelledby="h-datos">
+    <button class="back" onclick="backToTime()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Cambiar la hora</button>
+    <h2 id="h-datos">Sus datos</h2>
+    <p class="lead">Solo lo necesario para reservar. Nada más.</p>
+
+    <div class="sum-card">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+      <div class="tx">
+        <b id="sum-what">—</b>
+        <span id="sum-when">—</span>
+        <span class="pay" id="sum-pay">—</span>
+      </div>
+      <button class="chg" onclick="backToTime()">Cambiar</button>
+    </div>
+
+    <div class="fgroup">
+      <span class="flabel" id="who-label">¿Para quién es la hora?</span>
+      <div class="seg" role="group" aria-labelledby="who-label">
+        <button type="button" id="seg-yo" aria-pressed="true" onclick="setTercero(false)">Para mí</button>
+        <button type="button" id="seg-otro" aria-pressed="false" onclick="setTercero(true)">Para otra persona</button>
+      </div>
+      <p class="fhint" id="tercero-hint" hidden>Escriba los datos de la persona que se atenderá. El celular es para enviar los avisos de la hora.</p>
+    </div>
+
+    <div class="fgroup">
+      <label class="flabel" for="rut" id="rut-label">Su RUT</label>
+      <input class="finput" id="rut" type="text" inputmode="text" autocapitalize="characters" autocomplete="off"
+             placeholder="12.345.678-9" maxlength="12" aria-describedby="rut-hint rut-err">
+      <p class="fhint" id="rut-hint">Con dígito verificador. Si termina en K, escriba la K.</p>
+      <p class="ferr" id="rut-err" role="alert">Ese RUT no es válido. Revise el dígito verificador, por favor.</p>
+      <div class="ident load" id="ident-load"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg> Verificando su RUT…</div>
+      <div class="ident ok" id="ident-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> <span id="ident-ok-tx">Le tenemos registrado.</span></div>
+      <div class="ident new" id="ident-new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> <span id="ident-new-tx">Primera vez en el centro: solo necesitamos su nombre.</span></div>
+    </div>
+
+    <div id="names" hidden>
+      <div class="fgroup">
+        <label class="flabel" for="nombre">Nombre</label>
+        <input class="finput" id="nombre" type="text" autocomplete="given-name" autocapitalize="words" placeholder="Ej: María Elena">
+      </div>
+      <div class="fgroup">
+        <label class="flabel" for="apellidos">Apellidos</label>
+        <input class="finput" id="apellidos" type="text" autocomplete="family-name" autocapitalize="words" placeholder="Ej: Soto Fuentes">
+      </div>
+    </div>
+
+    <div class="fgroup">
+      <label class="flabel" for="tel">Celular para avisos <span class="opt">(WhatsApp o llamada)</span></label>
+      <div class="tel-wrap">
+        <span class="tel-cc" aria-hidden="true">+56</span>
+        <input class="finput" id="tel" type="tel" inputmode="numeric" autocomplete="tel-national"
+               placeholder="9 1234 5678" maxlength="11" aria-describedby="tel-hint tel-err" style="flex:1">
+      </div>
+      <p class="fhint" id="tel-hint">A este número llegan la confirmación y los recordatorios.</p>
+      <p class="ferr" id="tel-err" role="alert">Escriba un celular chileno de 9 dígitos, empezando con 9.</p>
+    </div>
+
+    <details class="prest" id="prest" hidden>
+      <summary id="prest-sum">¿Cuál es el motivo de su visita? (opcional)</summary>
+      <div class="prest-list" id="prest-list" role="radiogroup" aria-label="Motivo de la consulta"></div>
+    </details>
+
+    <label class="consent">
+      <input type="checkbox" id="consent">
+      <span>Autorizo al Centro Médico Carampangue a usar estos datos para gestionar mi hora y enviarme recordatorios. <a href="/privacidad" target="_blank" rel="noopener">Cómo cuidamos sus datos</a>.</span>
+    </label>
+    <p class="need" id="need" aria-live="polite"></p>
+    <div id="reservar-err"></div>
+  </section>
+
+  <!-- ═══════════ VISTA 4 · LISTO ═══════════ -->
+  <section class="view" id="v-done" aria-labelledby="h-done">
+    <div class="done-hero">
+      <div class="done-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h2 id="h-done">Su hora quedó confirmada</h2>
+      <p class="lead" id="done-name" style="margin-bottom:4px">—</p>
+    </div>
+    <div id="reag-result"></div>
+    <div class="done-card">
+      <dl>
+        <dt>Atención</dt><dd id="d-what">—</dd>
+        <dt>Profesional</dt><dd id="d-prof">—</dd>
+        <dt>Día y hora</dt><dd id="d-when">—</dd>
+        <dt>Valor</dt><dd id="d-price">—</dd>
+        <dt>N° de reserva</dt><dd id="d-id">—</dd>
+      </dl>
+    </div>
+    <div class="done-card">
+      <b style="color:var(--navy)">Para su visita</b>
+      <ul class="next-list">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Llegue 10 minutos antes para pasar por recepción.</li>
+        <li id="li-pay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> <span id="li-pay-tx">El pago se realiza en el centro.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Monsalve 102, esquina con República, Carampangue.</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2Z"/></svg> Le enviaremos un recordatorio a su celular antes de la cita.</li>
+      </ul>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px">
+      <a class="btn btn-ghost btn-block" id="btn-gcal" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg>
+        Agregar a mi calendario
+      </a>
+      <button class="btn btn-ghost btn-block" onclick="showMis(S.rut)">Ver todas mis horas</button>
+      <button class="btn btn-primary btn-block" onclick="resetFlow()">Agendar otra hora</button>
+    </div>
+  </section>
+
+  <!-- ═══════════ VISTA 5 · MIS HORAS ═══════════ -->
+  <section class="view" id="v-mis" aria-labelledby="h-mis">
+    <button class="back" onclick="goHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Agendar una hora</button>
+    <h2 id="h-mis">Mis horas</h2>
+    <p class="lead">Escriba su RUT para ver, cambiar o cancelar sus horas.</p>
+    <div class="fgroup" style="max-width:420px">
+      <label class="flabel" for="mis-rut">Su RUT</label>
+      <input class="finput" id="mis-rut" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="12.345.678-9" maxlength="12">
+      <p class="ferr" id="mis-rut-err" role="alert">Ese RUT no es válido. Revise el dígito verificador, por favor.</p>
+    </div>
+    <button class="btn btn-primary" id="mis-go" onclick="loadMis()">
+      <span class="spin" aria-hidden="true"></span> Ver mis horas
+    </button>
+    <div id="mis-list" style="margin-top:18px" aria-live="polite"></div>
+  </section>
+</main>
+
+<!-- Barra de acción fija -->
+<div class="abar" id="abar">
+  <div class="abar-in">
+    <div class="abar-sum" id="abar-sum" hidden><b id="abar-b">—</b><small id="abar-s">—</small></div>
+    <button class="btn btn-primary" id="abar-btn" disabled onclick="abarGo()">
+      <span class="spin" aria-hidden="true"></span><span id="abar-btn-tx">Continuar</span>
+    </button>
+  </div>
+</div>
+
+<footer>
+  <div class="foot-in">
+    <b>Centro Médico Carampangue</b><br>
+    Monsalve 102, esquina con República · Carampangue, Comuna de Arauco, Región del Biobío.<br>
+    Teléfono <a href="tel:+56442965226">(44) 296 5226</a> · WhatsApp <a href="https://wa.me/56966610737" target="_blank" rel="noopener">+56 9 6661 0737</a>
+    <div class="foot-links">
+      <a href="/privacidad" target="_blank" rel="noopener">Política de privacidad</a>
+      <a href="https://centromedicocarampangue.cl" target="_blank" rel="noopener">Sitio del centro</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   API — mismo backend que /agendar (contrato en app/agendador_routes.py)
+   + timeout con AbortController (evidencia: conexión rural inestable;
+   un skeleton infinito es abandono mudo)
+   ════════════════════════════════════════════════════════════════ */
+const PREVIEW = "__PREVIEW__";              // "" en producción pública
+const API = '/agendar/api';
+const WA  = '56966610737';
+// 20s: el servidor reintenta con backoff ante 429 de Medilink (3+6+12s);
+// un timeout menor abortaría justo antes de que el server logre responder.
+const TIMEOUT_MS = 20000;
+
+function apiURL(p){
+  let u = API + p;
+  if (PREVIEW) u += (u.includes('?') ? '&' : '?') + 'preview=' + encodeURIComponent(PREVIEW);
+  return u;
+}
+async function apiFetch(p, opts){
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), TIMEOUT_MS);
+  let r;
+  try{
+    r = await fetch(apiURL(p), Object.assign({signal:ctl.signal}, opts||{}));
+  }catch(e){
+    clearTimeout(t);
+    const err = new Error('Parece que no hay señal en este momento.');
+    err.offline = true;
+    throw err;
+  }
+  clearTimeout(t);
+  let data = null;
+  try{ data = await r.json(); }catch(e){ data = null; }
+  if(!r.ok){
+    const detail = data && data.detail !== undefined ? data.detail : null;
+    let msg = 'No pudimos completar la operación. Intente nuevamente, por favor.';
+    let code = null;
+    if (detail && typeof detail === 'object'){ msg = detail.mensaje || msg; code = detail.error || null; }
+    else if (typeof detail === 'string'){ msg = detail; }
+    const err = new Error(msg);
+    err.status = r.status; err.code = code;
+    throw err;
+  }
+  return data;
+}
+const apiGet  = p => apiFetch(p, {headers:{'Accept':'application/json'}});
+const apiPost = (p,b) => apiFetch(p, {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(b||{})});
+
+/* ════════════════════════════════════════════════════════════════
+   HELPERS
+   ════════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const DOW = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+const DOWL = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MONL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MON = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function parseISO(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fechaLarga(iso){ const d = parseISO(iso); return DOWL[d.getDay()].charAt(0).toUpperCase()+DOWL[d.getDay()].slice(1)+' '+d.getDate()+' de '+MONL[d.getMonth()]; }
+function fechaCorta(iso){ const d = parseISO(iso); return DOW[d.getDay()].toLowerCase()+' '+d.getDate()+' '+MON[d.getMonth()]; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function announce(msg){ $('sr-status').textContent = msg; }
+function waLink(txt){ return 'https://wa.me/'+WA+'?text='+encodeURIComponent(txt); }
+function apellido(nombre){ const p = String(nombre||'').trim().split(/\s+/); return p.length > 1 ? p[p.length-1] : p[0] || ''; }
+function nombreCortoProf(n){
+  // "Dr. Rodrigo Olavarría" → "Dr. Olavarría" · "Juana Arratia" → "Juana Arratia"
+  const m = String(n||'').match(/^(Dr\.|Dra\.|TM)\s+(.+)$/);
+  if (m){ return m[1]+' '+apellido(m[2]); }
+  return n || '';
+}
+
+/* RUT: formateo con puntos y guión + validación módulo 11 */
+function rutClean(v){ return String(v||'').replace(/[^0-9kK]/g,'').toUpperCase(); }
+function rutFormat(v){
+  const c = rutClean(v);
+  if (c.length < 2) return c;
+  const cuerpo = c.slice(0,-1), dv = c.slice(-1);
+  let out = '', n = 0;
+  for (let i = cuerpo.length-1; i >= 0; i--){
+    out = cuerpo[i] + out;
+    if (++n % 3 === 0 && i > 0) out = '.' + out;
+  }
+  return out + '-' + dv;
+}
+function rutValido(v){
+  const c = rutClean(v);
+  if (c.length < 8 || c.length > 9) return false;
+  const cuerpo = c.slice(0,-1), dv = c.slice(-1);
+  if (!/^\d+$/.test(cuerpo)) return false;
+  let suma = 0, mul = 2;
+  for (let i = cuerpo.length-1; i >= 0; i--){
+    suma += Number(cuerpo[i]) * mul;
+    mul = mul === 7 ? 2 : mul + 1;
+  }
+  const res = 11 - (suma % 11);
+  const dvOk = res === 11 ? '0' : res === 10 ? 'K' : String(res);
+  return dv === dvOk;
+}
+function telClean(v){ return String(v||'').replace(/\D/g,''); }
+function telValido(v){ const d = telClean(v); return d.length === 9 && d[0] === '9'; }
+function telFormat(v){
+  const d = telClean(v).slice(0,9);
+  if (d.length <= 1) return d;
+  if (d.length <= 5) return d[0]+' '+d.slice(1);
+  return d[0]+' '+d.slice(1,5)+' '+d.slice(5);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ESTADO — persiste en sessionStorage: si se corta la señal o se
+   recarga, el paciente no pierde lo que ya eligió (evidencia Baymard)
+   ════════════════════════════════════════════════════════════════ */
+let CATALOG = null;            // {grupos:[...]}
+let SPEC_BY_NAME = {};
+let S = {
+  view:'home', spec:null, profSel:'auto', day:null, firstDay:null, slot:null,
+  tercero:false, prestacion:null, rut:'', tel:'', nombre:'', apellidos:'',
+  identFound:null,             // null=desconocido · true/false tras /identificar
+  reag:null                    // {id_cita, especialidad, fecha, hora} al reagendar
+};
+function saveS(){
+  try{
+    sessionStorage.setItem('agv2', JSON.stringify({ts:Date.now(), S:{
+      view:S.view, spec:S.spec ? S.spec.especialidad : null, profSel:S.profSel,
+      day:S.day, slot:S.slot, tercero:S.tercero, prestacion:S.prestacion,
+      rut:S.rut, tel:S.tel, nombre:S.nombre, apellidos:S.apellidos, reag:S.reag,
+      viaNota:S.viaNota || ''
+    }}));
+  }catch(e){}
+}
+function tryRestore(){
+  try{
+    const raw = sessionStorage.getItem('agv2');
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (!p.ts || Date.now()-p.ts > 45*60*1000){ sessionStorage.removeItem('agv2'); return null; }
+    return p.S;
+  }catch(e){ return null; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   NAVEGACIÓN
+   ════════════════════════════════════════════════════════════════ */
+const VIEWS = ['home','time','datos','done','mis'];
+const STEP_OF = {home:1, time:2, datos:3};
+let bootShown = false;
+function show(view){
+  S.view = view;
+  VIEWS.forEach(v => $('v-'+v).classList.toggle('on', v === view));
+  $('nav-mis').classList.toggle('on', view === 'mis');
+  const st = STEP_OF[view];
+  $('prog').hidden = !st;
+  if (st){
+    $('prog-label').textContent = st === 3 ? 'Último paso' : 'Paso '+st+' de 3';
+    $('prog-fill').style.width = (st/3*100)+'%';
+  }
+  updateAbar();
+  window.scrollTo({top:0});
+  // foco al título de la vista: el teclado y el lector de pantalla saben
+  // dónde quedaron (sin esto el foco cae a <body> y no se anuncia nada)
+  if (bootShown){
+    const head = $('v-'+view).querySelector('h1, h2');
+    if (head){ head.setAttribute('tabindex','-1'); head.focus({preventScroll:true}); }
+  }
+  bootShown = true;
+  saveS();
+}
+function goHome(ev){ if (ev) ev.preventDefault(); resetFlow(); return false; }
+function resetFlow(){
+  S = Object.assign(S, {spec:null, profSel:'auto', day:null, firstDay:null, slot:null,
+    tercero:false, prestacion:null, identFound:null, reag:null});
+  show('home'); loadCatalog();
+}
+function backToHome(){ S.slot = null; S.day = null; S.firstDay = null; S.profSel = 'auto'; show('home'); }
+function backToTime(){ S.slot = null; show('time'); loadDay(S.day, false); }
+function showMis(rutPrefill){
+  show('mis');
+  if (rutPrefill){ $('mis-rut').value = rutFormat(rutPrefill); loadMis(); }
+}
+
+/* ── Barra de acción fija ───────────────────────────────────────── */
+let enviando = false;   // request de reserva/verificación EN VUELO: congela el botón
+function updateAbar(){
+  const bar = $('abar'), btn = $('abar-btn'), tx = $('abar-btn-tx'), sum = $('abar-sum');
+  if (S.view === 'datos'){
+    // el hint de faltantes se actualiza siempre (no toca el botón en vuelo)
+    const falta = faltantes();
+    $('need').textContent = falta.length ? 'Falta: '+falta.join(' · ') : '';
+  }
+  if (enviando) return;  // jamás re-habilitar el botón con un POST en vuelo
+  btn.classList.remove('loading');
+  if (S.view === 'time'){
+    bar.classList.add('show');
+    document.body.classList.add('has-abar');
+    sum.hidden = false;
+    if (S.slot){
+      $('abar-b').textContent = S.slot.hora_inicio+' h · '+fechaCorta(S.slot.fecha);
+      $('abar-s').textContent = nombreCortoProf(S.slot.profesional);
+      btn.disabled = false;
+    } else {
+      // la instrucción vive FUERA del botón deshabilitado (contraste legible)
+      $('abar-b').textContent = 'Elija una hora';
+      $('abar-s').textContent = 'de la lista de arriba';
+      btn.disabled = true;
+    }
+    tx.textContent = 'Continuar';
+  } else if (S.view === 'datos'){
+    bar.classList.add('show');
+    document.body.classList.add('has-abar');
+    sum.hidden = true;
+    btn.disabled = faltantes().length > 0;
+    tx.textContent = 'Confirmar mi hora';
+  } else {
+    bar.classList.remove('show');
+    document.body.classList.remove('has-abar');
+  }
+}
+function abarGo(){
+  if (S.view === 'time') gotoDatos();
+  else if (S.view === 'datos') reservar();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VISTA 1 · CATÁLOGO
+   Especialidades que se atienden pero AÚN no se agendan online →
+   tarjeta honesta con WhatsApp (venta que hoy se pierde en silencio)
+   ════════════════════════════════════════════════════════════════ */
+const WA_ONLY = {
+  'Médicas':[
+    {n:'Psiquiatría', d:'Dra. Cecilia Unibazo · Atención por videollamada · $60.000', msg:'Hola, quiero agendar una hora de Psiquiatría (atención por videollamada).'},
+    {n:'Neurología', d:'Dra. Franca González · Por videollamada, para personas de 15 años o más · $65.000', msg:'Hola, quiero agendar una hora de Neurología (atención por videollamada).'},
+    {n:'Oftalmología (tecnólogo médico)', d:'TM Ana Celedón · Atención presencial · $15.000', msg:'Hola, quiero agendar una hora de Oftalmología con la tecnóloga médico.'}
+  ]
+};
+const GROUP_ICON = {
+  'Médicas':'<path d="M10 3.5h4a1.5 1.5 0 0 1 1.5 1.5V8.5H19A1.5 1.5 0 0 1 20.5 10v4A1.5 1.5 0 0 1 19 15.5h-3.5V19a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 8.5 19v-3.5H5A1.5 1.5 0 0 1 3.5 14v-4A1.5 1.5 0 0 1 5 8.5h3.5V5A1.5 1.5 0 0 1 10 3.5Z"/>',
+  'Salud de la mujer':'<circle cx="12" cy="7" r="4"/><path d="M12 11v7M9 15h6"/>',
+  'Terapias y bienestar':'<path d="M12 21s-7-4.6-9.3-9A5.4 5.4 0 0 1 12 6.6 5.4 5.4 0 0 1 21.3 12C19 16.4 12 21 12 21Z"/>',
+  'Imágenes':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/>',
+  'Dentales':'<path d="M8 3c-2 0-3.5 1.5-3.5 4 0 1.5.5 3 1 5s1 9 2.5 9 1.5-4 2-4 .5 4 2 4 2-7 2.5-9 1-3.5 1-5C19.5 4.5 18 3 16 3c-1.5 0-2.5 1-4 1S9.5 3 8 3Z"/>'
+};
+function icon(path){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+path+'</svg>'; }
+const IC_CHEV = icon('<path d="M9 18l6-6-6-6"/>');
+const IC_WA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.9-1.4A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.5.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.1.1.6-.1 1Z"/></svg>';
+
+let catalogPending = false;
+async function loadCatalog(){
+  if (CATALOG){ renderCatalog(); return; }
+  if (catalogPending) return;
+  catalogPending = true;
+  try{
+    const d = await apiGet('/catalogo');
+    CATALOG = d;
+    SPEC_BY_NAME = {};
+    d.grupos.forEach(g => g.especialidades.forEach(e => { e.grupo = g.grupo; SPEC_BY_NAME[e.especialidad] = e; }));
+    renderCatalog();
+  }catch(e){
+    $('catalog').innerHTML = errBox(
+      'No pudimos cargar las especialidades',
+      e.message,
+      'loadCatalog()',
+      'Hola, quiero agendar una hora y la página no me cargó.'
+    );
+  }finally{
+    catalogPending = false;
+  }
+}
+function renderCatalog(){
+  const root = $('catalog');
+  let html = '';
+  CATALOG.grupos.forEach(g => {
+    html += '<div class="group"><div class="group-h">'+icon(GROUP_ICON[g.grupo]||GROUP_ICON['Médicas'])+'<b>'+esc(g.grupo)+'</b></div><div class="cards">';
+    g.especialidades.forEach(e => {
+      html += '<button class="card" data-spec="'+esc(e.especialidad)+'" onclick="pickSpec(this.dataset.spec)">'
+        + '<span class="ic">'+icon(GROUP_ICON[g.grupo]||GROUP_ICON['Médicas'])+'</span>'
+        + '<span class="tx"><b>'+esc(e.especialidad)+'</b><span class="price">'+esc(e.precio)+'</span></span>'
+        + '<span class="go">'+IC_CHEV+'</span></button>';
+    });
+    (WA_ONLY[g.grupo]||[]).forEach(w => {
+      html += '<a class="card wa-card" href="'+waLink(w.msg)+'" target="_blank" rel="noopener">'
+        + '<span class="ic">'+IC_WA+'</span>'
+        + '<span class="tx"><b>'+esc(w.n)+'</b><span class="price">'+esc(w.d)+'</span>'
+        + '<span class="badge-wa">'+IC_WA+' Se agenda por WhatsApp</span></span>'
+        + '<span class="go">'+IC_CHEV+'</span></a>';
+    });
+    html += '</div></div>';
+  });
+  root.innerHTML = html;
+}
+
+function pickSpec(nombre){
+  const e = SPEC_BY_NAME[nombre];
+  if (!e) return;
+  // Especialidad con derivación (ej. Ortodoncia parte por evaluación dental)
+  if (e.via){
+    const dest = SPEC_BY_NAME[e.via];
+    if (dest){
+      S.spec = dest;
+      S.viaNota = e.nota || '';
+      startTime();
+      return;
+    }
+  }
+  S.spec = e; S.viaNota = '';
+  startTime();
+}
+function startTime(){
+  S.profSel = 'auto'; S.day = null; S.firstDay = null; S.slot = null;
+  $('h-time').textContent = S.spec.especialidad;
+  $('time-price').textContent = S.spec.precio + ' · pago en el centro';
+  $('via-note').hidden = !S.viaNota;
+  if (S.viaNota) $('via-note-tx').textContent = S.viaNota;
+  $('reag-note').hidden = !S.reag;
+  renderProfRow();
+  show('time');
+  loadDay(null);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VISTA 2 · DÍA Y HORA
+   "Primera hora disponible" por defecto (Zocdoc: la prontitud manda);
+   los días son reales y la escasez se calcula, jamás se inventa.
+   ════════════════════════════════════════════════════════════════ */
+function profIds(){
+  if (S.profSel !== 'auto') return [Number(S.profSel)];
+  return S.spec.profesionales.map(p => p.id);
+}
+function renderProfRow(){
+  const row = $('prof-row');
+  const profs = S.spec.profesionales;
+  if (profs.length <= 1){ row.innerHTML = ''; row.hidden = true; return; }
+  row.hidden = false;
+  let html = '<button class="prof-chip" aria-pressed="'+(S.profSel==='auto')+'" onclick="setProf(\'auto\')">'
+    + '<span class="av">★</span><span>Primera hora<br><small>disponible</small></span></button>';
+  profs.forEach(p => {
+    const ini = p.nombre.replace(/^(Dr\.|Dra\.|TM)\s+/,'').split(/\s+/).slice(0,2).map(x=>x[0]||'').join('');
+    html += '<button class="prof-chip" aria-pressed="'+(String(S.profSel)===String(p.id))+'" onclick="setProf('+p.id+')">'
+      + '<span class="av">'+esc(ini)+'</span><span>'+esc(nombreCortoProf(p.nombre))+'<br><small>'+esc(p.precio)+'</small></span></button>';
+  });
+  row.innerHTML = html;
+}
+function setProf(sel){
+  S.profSel = sel; S.slot = null; S.day = null; S.firstDay = null;
+  renderProfRow(); updateAbar();
+  loadDay(null);
+}
+
+function renderDays(){
+  const wrap = $('days');
+  if (!S.firstDay){ wrap.innerHTML = ''; return; }
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const hoyISO = fmtISO(hoy);
+  // 18 días hábiles ≈ 21 días corridos: la MISMA ventana que busca el backend
+  // (si el primer cupo cae al día 20, tiene que existir en esta tira)
+  let html = '', d = new Date(hoy), count = 0;
+  while (count < 18){
+    if (d.getDay() !== 0){ // domingo: cerrado
+      const iso = fmtISO(d);
+      html += '<button class="day'+(iso===hoyISO?' today':'')+'" aria-pressed="'+(iso===S.day)+'" onclick="loadDay(\''+iso+'\')">'
+        + '<span class="dw">'+DOW[d.getDay()]+'</span><span class="dn">'+d.getDate()+'</span><span class="dm">'+MON[d.getMonth()]+'</span></button>';
+      count++;
+    }
+    d.setDate(d.getDate()+1);
+  }
+  wrap.innerHTML = html;
+  const sel = wrap.querySelector('[aria-pressed="true"]');
+  if (sel) sel.scrollIntoView({block:'nearest', inline:'center'});
+}
+
+let loadSeq = 0;
+let LOAD_FAILED = 0;   // consultas por profesional que fallaron en la última carga
+async function loadDay(iso, keepSel){
+  const seq = ++loadSeq;
+  const area = $('slot-area');
+  if (!keepSel){ S.slot = null; updateAbar(); }
+  area.innerHTML = '<div class="slot-h">Buscando horas…</div><div class="slots">'+'<div class="skel s-slot"></div>'.repeat(6)+'</div>';
+  const retryCall = 'loadDay('+(iso?('\''+iso+'\''):'null')+')';
+  const waMsg = 'Hola, quiero agendar '+S.spec.especialidad+' y la página no me cargó las horas.';
+  try{
+    const ids = profIds();
+    // Un fallo de señal NO es "no hay horas": se marca y se reporta distinto
+    const fetchOne = id => apiGet('/slots?id_prof='+id+(iso?('&fecha='+iso):'')).catch(()=>({_fail:true}));
+    let dia = iso;
+    let results = await Promise.all(ids.map(fetchOne));
+    if (seq !== loadSeq) return;
+    LOAD_FAILED = results.filter(r => r && r._fail).length;
+    const ok = results.filter(r => r && !r._fail);
+    if (!ok.length){
+      // Todas fallaron: es un problema de conexión, JAMÁS decir "agenda llena"
+      area.innerHTML = errBox('No pudimos consultar la agenda', 'Parece que no hay señal en este momento.', retryCall, waMsg);
+      return;
+    }
+    if (!dia){
+      const conFecha = ok.filter(r => r.fecha);
+      if (!conFecha.length){
+        S.day = null; S.firstDay = null; renderDays();
+        if (LOAD_FAILED){ area.innerHTML = errBox('No pudimos consultar toda la agenda', 'Parece que la señal está débil.', retryCall, waMsg); }
+        else { renderEmpty21(); }
+        return;
+      }
+      dia = conFecha.map(r => r.fecha).sort()[0];
+      S.firstDay = dia;
+      results = ok.map(r => (r.fecha === dia) ? r : {slots:[]});
+    } else {
+      results = ok;
+      if (!S.firstDay) S.firstDay = dia;
+    }
+    S.day = dia;
+    renderDays();
+    const slots = [];
+    results.forEach(r => { if (r && Array.isArray(r.slots)) slots.push(...r.slots); });
+    slots.sort((a,b) => a.hora_inicio < b.hora_inicio ? -1 : 1);
+    if (!slots.length && LOAD_FAILED){
+      // No podemos afirmar "no quedan horas" si parte del equipo no respondió
+      area.innerHTML = errBox('No pudimos consultar toda la agenda', 'Parece que la señal está débil.', retryCall, waMsg);
+      return;
+    }
+    renderSlots(slots);
+  }catch(e){
+    if (seq !== loadSeq) return;
+    area.innerHTML = errBox('No pudimos cargar las horas', e.message, retryCall, waMsg);
+  }
+}
+let CURRENT_SLOTS = [];
+function renderSlots(slots){
+  CURRENT_SLOTS = slots;
+  const area = $('slot-area');
+  if (!slots.length){
+    area.innerHTML =
+      '<div class="box info"><h3>No quedan horas para el '+esc(S.day?fechaLarga(S.day).toLowerCase():'día elegido')+'</h3>'
+      + '<p>Puede mirar otro día en el calendario de arriba, o le buscamos una por WhatsApp.</p>'
+      + '<div class="row">'
+      + '<a class="btn btn-wa" href="'+waLink('Hola, no encontré hora de '+S.spec.especialidad+' para el '+(S.day?fechaLarga(S.day):'los próximos días')+'. ¿Me pueden ayudar?')+'" target="_blank" rel="noopener">'+IC_WA+' Buscar por WhatsApp</a>'
+      + '</div></div>';
+    return;
+  }
+  const am = slots.filter(s => s.hora_inicio < '13:00');
+  const pm = slots.filter(s => s.hora_inicio >= '13:00');
+  const multi = S.profSel === 'auto' && S.spec.profesionales.length > 1;
+  // La fecha SIEMPRE visible sobre las horas (no solo en la tira de días)
+  let html = '<h3 class="slot-date">Horas para el '+esc(fechaLarga(S.day).toLowerCase())+'</h3>';
+  // Escasez HONESTA: conteo real de cupos del día (regla: jamás inventar).
+  // Si alguna consulta del equipo falló, el conteo está incompleto → no se muestra.
+  if (slots.length <= 4 && !LOAD_FAILED){
+    html += '<div class="slot-note">'+icon('<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>')
+      + (slots.length === 1 ? ' Queda 1 hora libre este día' : ' Quedan '+slots.length+' horas libres este día')+'</div>';
+  }
+  const block = (title, list) => {
+    if (!list.length) return '';
+    let h = '<div class="slot-h">'+title+'</div><div class="slots" role="group" aria-label="Horas disponibles '+title.toLowerCase()+'">';
+    list.forEach(s => {
+      const idx = CURRENT_SLOTS.indexOf(s);
+      const on = S.slot && S.slot.id_profesional === s.id_profesional && S.slot.hora_inicio === s.hora_inicio && S.slot.fecha === s.fecha;
+      h += '<button class="slot" aria-pressed="'+(!!on)+'" onclick="pickSlotIdx('+idx+')">'
+        + '<b>'+esc(s.hora_inicio)+'</b>'
+        + (multi ? '<small>'+esc(apellido(s.profesional))+'</small>' : '')
+        + '</button>';
+    });
+    return h + '</div>';
+  };
+  html += block('En la mañana', am) + block('En la tarde', pm);
+  area.innerHTML = html;
+  announce(slots.length + ' horas disponibles para el ' + fechaLarga(S.day));
+}
+function pickSlotIdx(i){ if (CURRENT_SLOTS[i]) pickSlot(CURRENT_SLOTS[i]); }
+function renderEmpty21(){
+  $('slot-area').innerHTML =
+    '<div class="box info"><h3>No encontramos horas en los próximos 21 días</h3>'
+    + '<p>La agenda de '+esc(S.spec.especialidad)+' está llena por ahora. Escríbanos y le avisamos apenas se libere un cupo.</p>'
+    + '<div class="row">'
+    + '<a class="btn btn-wa" href="'+waLink('Hola, quiero una hora de '+S.spec.especialidad+' y no hay cupos en la agenda online. ¿Me avisan si se libera una?')+'" target="_blank" rel="noopener">'+IC_WA+' Avisar por WhatsApp</a>'
+    + '<a class="btn btn-ghost" href="tel:+56442965226">Llamar (44) 296 5226</a>'
+    + '</div></div>';
+}
+function pickSlot(s){
+  S.slot = s;
+  renderSlots(CURRENT_SLOTS.length ? CURRENT_SLOTS : [s]);
+  // devolver el foco al cupo elegido (el re-render lo destruyó)
+  const btn = $('slot-area').querySelector('.slot[aria-pressed="true"]');
+  if (btn) btn.focus({preventScroll:true});
+  updateAbar();
+  announce('Hora seleccionada: '+s.hora_inicio+' del '+fechaLarga(s.fecha)+'. Pulse Continuar.');
+  saveS();
+}
+
+/* Antes de pedir datos: re-verificar que el cupo siga libre
+   (evita pedir RUT y celular para una hora que ya voló) */
+async function gotoDatos(){
+  if (!S.slot || enviando) return;
+  const btn = $('abar-btn'), tx = $('abar-btn-tx');
+  enviando = true;
+  btn.classList.add('loading'); btn.disabled = true;
+  tx.textContent = 'Comprobando el cupo…';
+  try{
+    const r = await apiGet('/slots?id_prof='+S.slot.id_profesional+'&fecha='+S.slot.fecha);
+    const libre = (r.slots||[]).some(x => x.hora_inicio === S.slot.hora_inicio);
+    if (!libre){
+      enviando = false;
+      S.slot = null; updateAbar();
+      $('slot-area').insertAdjacentHTML('afterbegin',
+        '<div class="box err"><h3>Esa hora se acaba de ocupar</h3><p>Le mostramos las horas que siguen libres.</p></div>');
+      loadDay(S.day, false);
+      return;
+    }
+  }catch(e){ /* si no pudimos verificar, el servidor re-chequea igual al reservar */ }
+  enviando = false;
+  renderDatos();
+  show('datos');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VISTA 3 · DATOS + CONFIRMACIÓN (una sola pantalla, mínimo tipeo)
+   ════════════════════════════════════════════════════════════════ */
+function renderDatos(){
+  $('sum-what').textContent = S.spec.especialidad + ' · ' + nombreCortoProf(S.slot.profesional);
+  $('sum-when').textContent = fechaLarga(S.slot.fecha) + ' · ' + S.slot.hora_inicio + ' h';
+  const precioProf = (S.spec.profesionales.find(p => p.id === S.slot.id_profesional) || {}).precio || S.spec.precio;
+  $('sum-pay').textContent = precioProf + ' · ' + S.spec.metodos_pago.join(' / ');
+  // prestaciones (opcional)
+  const pr = S.spec.prestaciones || [];
+  $('prest').hidden = pr.length === 0;
+  if (pr.length){
+    $('prest-list').innerHTML = pr.map((p,i) =>
+      '<label class="prest-it"><input type="radio" name="prest" value="'+esc(p.n)+'" '+(S.prestacion===p.n?'checked':'')+' onchange="S.prestacion=this.value; saveS()">'
+      + '<span class="n">'+esc(p.n)+'</span><span class="p">'+esc(p.p)+'</span></label>'
+    ).join('')
+    + '<label class="prest-it"><input type="radio" name="prest" value="" '+(!S.prestacion?'checked':'')+' onchange="S.prestacion=null; saveS()">'
+    + '<span class="n">Prefiero decirlo en el centro</span></label>';
+  }
+  // restaurar campos si venían de una sesión cortada
+  if (S.rut) $('rut').value = rutFormat(S.rut);
+  if (S.tel) $('tel').value = telFormat(S.tel);
+  if (S.nombre) $('nombre').value = S.nombre;
+  if (S.apellidos) $('apellidos').value = S.apellidos;
+  setTercero(S.tercero, true);
+  if (rutValido(S.rut)) identificar();
+  updateAbar();
+}
+function setTercero(v, silent){
+  S.tercero = v;
+  $('seg-yo').setAttribute('aria-pressed', String(!v));
+  $('seg-otro').setAttribute('aria-pressed', String(v));
+  $('tercero-hint').hidden = !v;
+  $('rut-label').textContent = v ? 'RUT de quien se atiende' : 'Su RUT';
+  if (!silent) saveS();
+  updateAbar();
+}
+
+let identSeq = 0;
+async function identificar(){
+  const seq = ++identSeq;
+  ['ident-load','ident-ok','ident-new'].forEach(id => $(id).classList.remove('show'));
+  $('ident-load').classList.add('show');
+  try{
+    const r = await apiPost('/identificar', {rut:S.rut});
+    if (seq !== identSeq) return;
+    $('ident-load').classList.remove('show');
+    if (r.encontrado){
+      S.identFound = true;
+      $('names').hidden = true;
+      $('ident-ok-tx').textContent = (r.nombre_corto ? r.nombre_corto + ', ya' : 'Ya') + ' está en nuestros registros.'
+        + (r.telefono_parcial ? ' Su celular guardado termina en ' + r.telefono_parcial.replace(/[^0-9]/g,'') + '.' : '');
+      $('ident-ok').classList.add('show');
+    } else {
+      S.identFound = false;
+      $('names').hidden = false;
+      $('ident-new-tx').textContent = S.tercero
+        ? 'Esa persona no está registrada: escriba su nombre y apellidos.'
+        : 'Primera vez en el centro: solo necesitamos su nombre.';
+      $('ident-new').classList.add('show');
+    }
+  }catch(e){
+    if (seq !== identSeq) return;
+    // Si la verificación falla (señal, 429), no bloqueamos: pedimos el nombre
+    $('ident-load').classList.remove('show');
+    S.identFound = false;
+    $('names').hidden = false;
+    $('ident-new-tx').textContent = 'No pudimos verificar el RUT ahora. Escriba el nombre igual, por si acaso.';
+    $('ident-new').classList.add('show');
+  }
+  updateAbar();
+}
+
+function faltantes(){
+  const f = [];
+  if (!rutValido(S.rut)) f.push('el RUT');
+  if (S.identFound === false && !String(S.nombre).trim()) f.push('el nombre');
+  if (!telValido(S.tel)) f.push('el celular');
+  if (!$('consent') || !$('consent').checked) f.push('aceptar el uso de datos');
+  return f;
+}
+
+async function reservar(){
+  const btn = $('abar-btn');
+  if (btn.disabled || enviando || !S.slot) return;
+  enviando = true;
+  btn.classList.add('loading'); btn.disabled = true;
+  $('abar-btn-tx').textContent = 'Reservando su hora…';
+  $('reservar-err').innerHTML = '';
+  const body = {
+    consent: true,
+    rut: S.rut,
+    telefono: telClean(S.tel),
+    id_profesional: S.slot.id_profesional,
+    fecha: S.slot.fecha,
+    hora_inicio: S.slot.hora_inicio,
+    hora_fin: S.slot.hora_fin,
+    es_tercero: S.tercero
+  };
+  if (S.prestacion) body.prestacion = S.prestacion;
+  if (S.identFound === false){
+    body.nombre = String(S.nombre).trim();
+    body.apellidos = String(S.apellidos).trim();
+  }
+  try{
+    const r = await apiPost('/reservar', body);
+    enviando = false;
+    S.rut = rutClean(S.rut);
+    renderDone(r);
+    // Reagendar en ORDEN SEGURO: la nueva ya está confirmada → recién ahora
+    // se cancela la anterior (la v1 cancelaba primero y podía dejar sin nada)
+    if (S.reag){
+      try{
+        await apiPost('/cancelar', {rut:S.rut, id_cita:String(S.reag.id_cita)});
+        $('reag-result').innerHTML = '<div class="box ok"><p style="margin:0"><b>Su hora anterior quedó cancelada</b> ('+esc(S.reag.especialidad)+' del '+esc(S.reag.fecha_display||S.reag.fecha)+').</p></div>';
+      }catch(e){
+        $('reag-result').innerHTML = '<div class="box info"><p style="margin:0"><b>Su hora nueva quedó confirmada.</b> No pudimos cancelar la anterior en línea: cancélela en “Mis horas” o avísenos por <a href="'+waLink('Hola, cambié mi hora por internet y necesito cancelar la anterior ('+S.reag.especialidad+' del '+S.reag.fecha+').')+'" target="_blank" rel="noopener">WhatsApp</a>.</p></div>';
+      }
+      S.reag = null;
+    }
+    show('done');
+    try{ sessionStorage.removeItem('agv2'); }catch(e){}
+  }catch(e){
+    enviando = false;
+    btn.classList.remove('loading');
+    $('abar-btn-tx').textContent = 'Confirmar mi hora';
+    updateAbar();
+    handleReservaError(e);
+  }
+}
+function handleReservaError(e){
+  const box = $('reservar-err');
+  if (e.status === 409 && e.code === 'cupo_tomado'){
+    box.innerHTML = '<div class="box err"><h3>Esa hora se acaba de ocupar</h3><p>'+esc(e.message)+'</p>'
+      + '<div class="row"><button class="btn btn-primary" onclick="backToTime()">Elegir otra hora</button></div></div>';
+  } else if (e.status === 409){
+    box.innerHTML = '<div class="box err"><h3>Ya tiene una hora ese día</h3><p>'+esc(e.message)+'</p>'
+      + '<div class="row"><button class="btn btn-ghost" onclick="showMis(S.rut)">Ver mis horas</button>'
+      + '<button class="btn btn-primary" onclick="backToTime()">Elegir otro día</button></div></div>';
+  } else if (e.status === 429){
+    box.innerHTML = '<div class="box err"><h3>Demasiados intentos por ahora</h3><p>'+esc(e.message)+'</p>'
+      + '<div class="row"><a class="btn btn-wa" href="'+waLink('Hola, intenté agendar '+S.spec.especialidad+' por la página y me pidió esperar. ¿Me pueden agendar ustedes? Mi RUT es '+rutFormat(S.rut)+'.')+'" target="_blank" rel="noopener">'+IC_WA+' Agendar por WhatsApp</a></div></div>';
+  } else {
+    box.innerHTML = '<div class="box err"><h3>No pudimos reservar</h3><p>'+esc(e.message)+' Sus datos siguen guardados.</p>'
+      + '<div class="row"><button class="btn btn-primary" onclick="reservar()">Reintentar</button>'
+      + '<a class="btn btn-wa" href="'+waLink('Hola, la página no pudo confirmar mi hora de '+S.spec.especialidad+' ('+fechaLarga(S.slot.fecha)+' a las '+S.slot.hora_inicio+'). ¿Me la pueden confirmar?')+'" target="_blank" rel="noopener">'+IC_WA+' Confirmar por WhatsApp</a></div>'
+      + '<p style="margin:10px 0 0; font-size:.9375rem; color:var(--muted)">O llame al <a href="tel:+56442965226">(44) 296 5226</a>.</p></div>';
+  }
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  box.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'center'});
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VISTA 4 · LISTO
+   ════════════════════════════════════════════════════════════════ */
+function renderDone(r){
+  $('done-name').textContent = r.nombre ? 'Le esperamos, '+r.nombre.split(' ')[0]+'.' : 'Le esperamos.';
+  $('d-what').textContent = r.especialidad;
+  $('d-prof').textContent = r.profesional;
+  $('d-when').textContent = fechaLarga(r.fecha)+' · '+r.hora_inicio+' h';
+  const precioProf = (S.spec.profesionales.find(p => p.id === S.slot.id_profesional) || {}).precio || S.spec.precio;
+  $('d-price').textContent = precioProf;
+  $('d-id').textContent = r.id_cita || '—';
+  $('li-pay-tx').textContent = 'Pago en el centro: ' + (r.metodos_pago || S.spec.metodos_pago).join(' o ').toLowerCase() + '.';
+  // Google Calendar (en Android gama baja abre directo la app)
+  const dt = r.fecha.replace(/-/g,'');
+  const hIni = r.hora_inicio.replace(':','') + '00';
+  const hFin = (r.hora_fin || r.hora_inicio).replace(':','') + '00';
+  $('btn-gcal').href = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent('Hora médica: '+r.especialidad+' — Centro Médico Carampangue')
+    + '&dates=' + dt+'T'+hIni+'/'+dt+'T'+hFin
+    + '&ctz=America/Santiago'
+    + '&location=' + encodeURIComponent('Monsalve 102, esquina con República, Carampangue')
+    + '&details=' + encodeURIComponent('Con '+r.profesional+'. Llegue 10 minutos antes. Teléfono (44) 296 5226.');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VISTA 5 · MIS HORAS — cancelar SIEMPRE pide confirmación
+   ════════════════════════════════════════════════════════════════ */
+async function loadMis(){
+  const rut = rutClean($('mis-rut').value);
+  const err = $('mis-rut-err');
+  if (!rutValido(rut)){ err.classList.add('show'); $('mis-rut').setAttribute('aria-invalid','true'); return; }
+  err.classList.remove('show'); $('mis-rut').removeAttribute('aria-invalid');
+  const btn = $('mis-go'); btn.classList.add('loading'); btn.disabled = true;
+  const btnTx = btn.lastChild; btnTx.textContent = ' Buscando…';
+  const list = $('mis-list');
+  list.innerHTML = '<div class="skel s-card"></div><div class="skel s-card"></div>';
+  try{
+    const r = await apiPost('/mis-horas', {rut});
+    btn.classList.remove('loading'); btn.disabled = false; btnTx.textContent = ' Ver mis horas';
+    S.rut = rut; saveS();
+    if (!r.encontrado || !r.citas.length){
+      list.innerHTML = '<div class="box info"><h3>'+(r.encontrado ? 'No tiene horas próximas' : 'No encontramos ese RUT')+'</h3>'
+        + '<p>'+(r.encontrado ? 'Puede agendar una nueva hora ahora mismo.' : 'Si cree que es un error, escríbanos por WhatsApp.')+'</p>'
+        + '<div class="row"><button class="btn btn-primary" onclick="goHome()">Agendar una hora</button>'
+        + '<a class="btn btn-wa" href="'+waLink('Hola, quiero consultar por mis horas. Mi RUT es '+rutFormat(rut)+'.')+'" target="_blank" rel="noopener">'+IC_WA+' WhatsApp</a></div></div>';
+      return;
+    }
+    MIS_CITAS = {};
+    r.citas.forEach(c => { MIS_CITAS[String(c.id_cita)] = c; });
+    list.innerHTML = (r.nombre_corto ? '<p class="lead" style="margin-bottom:12px">Hola, '+esc(r.nombre_corto)+'. Estas son sus próximas horas:</p>' : '')
+      + r.citas.map(c =>
+        '<div class="cita" id="cita-'+esc(String(c.id_cita))+'">'
+        + '<b>'+esc(c.especialidad || 'Atención')+'</b>'
+        + '<div class="meta">'+esc(nombreCortoProf(c.profesional))+' · '+fechaLarga(c.fecha)+' · '+esc(c.hora_inicio)+' h</div>'
+        + '<div class="row">'
+        + '<button class="btn btn-ghost" data-id="'+esc(String(c.id_cita))+'" onclick="reagendarById(this.dataset.id)">Cambiar hora</button>'
+        + '<button class="btn btn-ghost" style="color:var(--crit); border-color:#f0c4bf" data-id="'+esc(String(c.id_cita))+'" onclick="askCancel(this.dataset.id)">Cancelar</button>'
+        + '</div><div class="cx" id="cx-'+esc(String(c.id_cita))+'"></div></div>'
+      ).join('');
+  }catch(e){
+    btn.classList.remove('loading'); btn.disabled = false; btnTx.textContent = ' Ver mis horas';
+    list.innerHTML = errBox('No pudimos consultar sus horas', e.message, 'loadMis()',
+      'Hola, quiero consultar mis horas y la página no me respondió. Mi RUT es '+rutFormat(rut)+'.');
+  }
+}
+let MIS_CITAS = {};
+function askCancel(id){
+  const c = MIS_CITAS[id];
+  if (!c) return;
+  $('cx-'+id).innerHTML = '<div class="confirm-inline">'
+    + '<p>¿Seguro que desea cancelar su hora de '+esc(c.especialidad)+' del '+fechaLarga(c.fecha)+'?</p>'
+    + '<div class="row" style="display:flex; gap:9px; flex-wrap:wrap">'
+    + '<button class="btn btn-danger" style="flex:1" data-id="'+esc(id)+'" onclick="doCancel(this.dataset.id)">Sí, cancelar</button>'
+    + '<button class="btn btn-ghost" style="flex:1" data-id="'+esc(id)+'" onclick="$(\'cx-\'+this.dataset.id).innerHTML=\'\'">No, mantener</button>'
+    + '</div></div>';
+}
+async function doCancel(id){
+  const cx = $('cx-'+id);
+  cx.innerHTML = '<div class="box info"><p style="margin:0">Cancelando…</p></div>';
+  try{
+    await apiPost('/cancelar', {rut:S.rut, id_cita:id});
+    $('cita-'+id).innerHTML = '<div class="box ok" style="margin:0"><p style="margin:0"><b>Su hora quedó cancelada.</b> Gracias por avisar: ese cupo puede servirle a otro paciente.</p></div>';
+  }catch(e){
+    cx.innerHTML = '<div class="box err"><p>'+esc(e.message)+'</p>'
+      + '<div class="row"><a class="btn btn-wa" href="'+waLink('Hola, necesito cancelar una hora y la página no me dejó. Mi RUT es '+rutFormat(S.rut)+'.')+'" target="_blank" rel="noopener">'+IC_WA+' Cancelar por WhatsApp</a></div></div>';
+  }
+}
+function reagendarById(id){
+  const c = MIS_CITAS[id];
+  if (!c) return;
+  // ORDEN SEGURO: primero la nueva, la actual se mantiene hasta el final
+  S.reag = c;
+  const spec = SPEC_BY_NAME[c.especialidad];
+  if (spec){
+    S.spec = spec; S.viaNota = '';
+    startTime();
+  } else {
+    // la especialidad de Medilink no calza con el catálogo: que elija
+    show('home'); loadCatalog();
+    $('sr-status').textContent = 'Elija la especialidad para su nueva hora.';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CAJA DE ERROR ESTÁNDAR: Reintentar + WhatsApp + teléfono.
+   Ningún callejón sin salida (cada error es venta rescatable).
+   ════════════════════════════════════════════════════════════════ */
+function errBox(titulo, msg, retryCall, waMsg){
+  return '<div class="box err"><h3>'+esc(titulo)+'</h3><p>'+esc(msg)+'</p>'
+    + '<div class="row">'
+    + '<button class="btn btn-primary" onclick="'+retryCall+'">Reintentar</button>'
+    + '<a class="btn btn-wa" href="'+waLink(waMsg)+'" target="_blank" rel="noopener">'+IC_WA+' Seguir por WhatsApp</a>'
+    + '</div>'
+    + '<p style="margin:10px 0 0; font-size:.9375rem; color:var(--muted)">O llame al <a href="tel:+56442965226">(44) 296 5226</a>.</p></div>';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   INPUTS — formateo en vivo, validación amable (nunca gritar
+   mientras la persona todavía está escribiendo)
+   ════════════════════════════════════════════════════════════════ */
+function bindRut(inputId, errId, onValid){
+  const inp = $(inputId), err = $(errId);
+  inp.addEventListener('input', () => {
+    const c = rutClean(inp.value);
+    inp.value = rutFormat(c);
+    err.classList.remove('show'); inp.removeAttribute('aria-invalid');
+    if (inputId === 'rut'){ S.rut = c; saveS(); }
+    if (c.length >= 8 && rutValido(c)){
+      if (onValid) onValid(c);
+    }
+    updateAbar();
+  });
+  inp.addEventListener('blur', () => {
+    const c = rutClean(inp.value);
+    if (c.length >= 7 && !rutValido(c)){
+      err.classList.add('show'); inp.setAttribute('aria-invalid','true');
+    }
+  });
+}
+function init(){
+  // links de WhatsApp del header con contexto
+  $('hb-wa').href = waLink('Hola, quiero agendar una hora en el Centro Médico Carampangue.');
+
+  bindRut('rut', 'rut-err', () => identificar());
+  bindRut('mis-rut', 'mis-rut-err', null);
+  $('mis-rut').addEventListener('keydown', e => { if (e.key === 'Enter') loadMis(); });
+
+  const tel = $('tel'), telErr = $('tel-err');
+  tel.addEventListener('input', () => {
+    tel.value = telFormat(tel.value);
+    S.tel = telClean(tel.value); saveS();
+    telErr.classList.remove('show'); tel.removeAttribute('aria-invalid');
+    updateAbar();
+  });
+  tel.addEventListener('blur', () => {
+    if (telClean(tel.value).length > 0 && !telValido(tel.value)){
+      telErr.classList.add('show'); tel.setAttribute('aria-invalid','true');
+    }
+  });
+  $('nombre').addEventListener('input', e => { S.nombre = e.target.value; saveS(); updateAbar(); });
+  $('apellidos').addEventListener('input', e => { S.apellidos = e.target.value; saveS(); updateAbar(); });
+  $('consent').addEventListener('change', updateAbar);
+
+  // Gesto "atrás" del teléfono navega entre pasos (no bota el flujo).
+  // Durante un popstate NO se agregan entradas nuevas (evita atrapar al
+  // usuario en un historial que crece con cada "atrás").
+  history.replaceState({v:'home'}, '');
+  let popping = false;
+  window.addEventListener('popstate', () => {
+    popping = true;
+    try{
+      if (S.view === 'datos') { backToTime(); }
+      else if (S.view === 'time') { backToHome(); }
+      else if (S.view === 'mis' || S.view === 'done') { show('home'); loadCatalog(); }
+    } finally { popping = false; }
+  });
+  const pushOn = ['time','datos','mis','done'];
+  const _show = show;
+  show = function(v){ if (!popping && pushOn.includes(v) && S.view !== v) history.pushState({v}, ''); _show(v); };
+
+  // restaurar sesión cortada (misma pestaña, <45 min)
+  const saved = tryRestore();
+  loadCatalog();
+  if (saved && saved.slot && saved.spec && (saved.view === 'datos' || saved.view === 'time')){
+    // re-armamos lo elegido cuando llegue el catálogo
+    const timer = setInterval(() => {
+      if (!CATALOG) return;
+      clearInterval(timer);
+      const spec = SPEC_BY_NAME[saved.spec];
+      if (!spec) return;
+      S.spec = spec; S.profSel = saved.profSel || 'auto'; S.day = saved.day;
+      S.slot = saved.slot; S.tercero = !!saved.tercero; S.prestacion = saved.prestacion;
+      S.rut = saved.rut || ''; S.tel = saved.tel || ''; S.nombre = saved.nombre || ''; S.apellidos = saved.apellidos || '';
+      S.reag = saved.reag || null; S.viaNota = saved.viaNota || '';
+      $('h-time').textContent = spec.especialidad;
+      $('time-price').textContent = spec.precio + ' · pago en el centro';
+      $('via-note').hidden = !S.viaNota;
+      if (S.viaNota) $('via-note-tx').textContent = S.viaNota;
+      $('reag-note').hidden = !S.reag;
+      renderProfRow();
+      if (saved.view === 'datos'){ renderDatos(); show('datos'); }
+      else { show('time'); loadDay(S.day, true); }
+    }, 150);
+    setTimeout(() => clearInterval(timer), 8000);
+  }
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -502,6 +502,10 @@ AGENDADOR_PUBLICO_ENABLED = os.getenv("AGENDADOR_PUBLICO_ENABLED", "false").lowe
 # aprobado). OFF por ahora; los recordatorios automáticos del cron igual salen
 # porque la reserva se registra en citas_bot.
 AGENDADOR_WA_CONFIRM = os.getenv("AGENDADOR_WA_CONFIRM", "false").lower() in ("1", "true", "yes", "on")
+# Agendador v2 (/agendar/v2, rediseño 2026-07-14). Llave PROPIA para que un
+# deploy no lo exponga sin decisión del dueño: OFF = 404 salvo ?preview=ADMIN_TOKEN.
+# La API es la misma de /agendar (sigue gateada por AGENDADOR_PUBLICO_ENABLED).
+AGENDADOR_V2_ENABLED = os.getenv("AGENDADOR_V2_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 # Captura de doble opt-in de canal email (Ley 21.719) durante el registro: al
 # tomar el correo, dispara el correo de confirmación. Nadie recibe marketing sin
 # hacer clic en ese correo. OFF por defecto — el dueño decide cuándo encenderlo.

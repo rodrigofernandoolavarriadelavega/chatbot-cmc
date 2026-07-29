@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMC — Reemplazo de ingreso · CMC a su techo</title>
+<link rel="stylesheet" href="/static/tw/reemplazo_ingreso_dashboard.css">
+<script src="/static/chart-4.4.1.umd.min.js"></script>
+<style>
+  :root{
+    --fiordo:#1F3340; --cobre:#B86D3F; --neblina:#EFE9DD; --musgo:#4A5F3A;
+    --lacre:#8C2A2A; --agua:#5B8B96; --noche:#122028; --lenga:#D4A87A;
+    --font-serif: Georgia,'Times New Roman',serif;
+    --font-sans: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono: 'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  body{ font-family:var(--font-sans); background:var(--neblina); color:var(--fiordo); }
+  h1,h2,h3,.serif{ font-family:var(--font-serif); }
+  .mono{ font-family:var(--font-mono); }
+  .kpi-card{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:18px 22px; }
+  .kpi-num{ font-family:var(--font-serif); font-size:30px; font-weight:600; line-height:1; color:var(--fiordo); }
+  .kpi-label{ font-family:var(--font-mono); font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .kpi-sub{ font-size:11px; color:rgba(31,51,64,.6); margin-top:4px; }
+  .section-head{ font-family:var(--font-mono); font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--cobre); margin-bottom:8px; }
+  .section-title{ font-family:var(--font-serif); font-size:30px; font-weight:600; line-height:1.05; margin-bottom:18px; }
+  .panel{ background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; padding:22px; }
+  .pos{ color:var(--musgo); }
+  .neg{ color:var(--lacre); }
+  table.tidy{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.tidy th{ text-align:left; font-family:var(--font-mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--cobre); border-bottom:1px solid rgba(31,51,64,.15); padding:8px 6px; }
+  table.tidy td{ padding:8px 6px; border-bottom:1px solid rgba(31,51,64,.05); }
+  table.tidy tr:hover td{ background:rgba(184,109,63,.05); }
+  table.tidy tr.total-row td{ border-top:2px solid rgba(31,51,64,.2); font-weight:600; background:rgba(31,51,64,.03); }
+  .gauge-track{ position:relative; height:34px; background:rgba(31,51,64,.08); border-radius:6px; overflow:visible; }
+  .gauge-fill{ position:absolute; top:0; left:0; height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; font-family:var(--font-mono); font-size:12px; font-weight:600; color:white; white-space:nowrap; transition:width .8s ease; }
+  .gauge-marker{ position:absolute; top:-6px; bottom:-6px; width:2px; background:var(--fiordo); }
+  .gauge-marker-label{ position:absolute; top:-22px; transform:translateX(-50%); font-family:var(--font-mono); font-size:10px; color:var(--fiordo); white-space:nowrap; }
+  .caveat-box{ background:#FBF3E6; border:1px solid rgba(184,109,63,.35); border-left:4px solid var(--cobre); border-radius:6px; padding:16px 20px; }
+  .caveat-num{ font-family:var(--font-serif); font-size:20px; font-weight:600; color:var(--cobre); min-width:28px; }
+  .check-item{ display:flex; gap:12px; align-items:flex-start; padding:14px 16px; background:white; border:1px solid rgba(31,51,64,.1); border-radius:6px; }
+  .check-box{ width:20px; height:20px; border:2px solid var(--musgo); border-radius:4px; flex-shrink:0; margin-top:2px; }
+  .tag{ font-family:var(--font-mono); font-size:9px; letter-spacing:1px; text-transform:uppercase; padding:2px 8px; border-radius:10px; }
+  .tag-incremental{ background:rgba(74,95,58,.12); color:var(--musgo); }
+  .tag-piloto{ background:rgba(184,109,63,.12); color:var(--cobre); }
+  .tag-admin{ background:rgba(91,139,150,.15); color:var(--agua); }
+  .closing-panel{ background:linear-gradient(180deg,var(--fiordo) 0%,var(--noche) 100%); color:var(--neblina); border-radius:6px; padding:40px; }
+</style>
+</head>
+<body>
+
+<nav class="border-b border-stone-300 sticky top-0 bg-white/90 backdrop-blur z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm flex-wrap">
+    <span class="serif text-lg font-semibold" style="color:var(--fiordo)">CMC</span>
+    <span class="mono text-xs opacity-50">Reemplazo de ingreso · CMC a su techo</span>
+    <a href="/horizonte" class="opacity-70 hover:opacity-100">Horizonte</a>
+    <a href="/abarca" class="opacity-70 hover:opacity-100">Abarca</a>
+    <a href="/seo/dashboard" class="opacity-70 hover:opacity-100">SEO</a>
+    <a href="/meta/dashboard" class="opacity-70 hover:opacity-100">Meta</a>
+    <a href="/crecimientopersonal" class="opacity-70 hover:opacity-100">Crecimiento</a>
+    <a href="/admin" class="ml-auto opacity-50 hover:opacity-100">Admin</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <header class="mb-10">
+    <p class="section-head">CMC · Economía del dueño · Reemplazo de ingreso clínico</p>
+    <h1 class="text-5xl md:text-6xl font-semibold leading-none mb-3" style="color:var(--fiordo)">Reemplazo de ingreso<em class="italic" style="color:var(--cobre)">.</em></h1>
+    <p class="serif italic text-xl opacity-75 max-w-3xl">¿Cuánto del ingreso clínico personal de Rodrigo (~$5,03M/mes) puede reemplazar el CMC creciendo, sin que él atienda?</p>
+    <p class="mono text-xs opacity-60 mt-4">Cifras congeladas y verificadas contra sessions.db (jul-2026) — no se recalculan en vivo. Dos escenarios: conservador y optimista.</p>
+  </header>
+
+  <!-- KPIs centrales -->
+  <section class="mb-10">
+    <div class="grid md:grid-cols-4 gap-3">
+      <div class="kpi-card" style="border-top:3px solid var(--lacre)">
+        <div class="kpi-label">Hueco a tapar / mes</div>
+        <div class="kpi-num neg">$5.033.524</div>
+        <div class="kpi-sub">Honorario de Rodrigo — 71% de $7.089.470 que produce. Ya está en su techo personal; no crece atendiendo más.</div>
+      </div>
+      <div class="kpi-card" style="border-top:3px solid var(--agua)">
+        <div class="kpi-label">Escenario conservador</div>
+        <div class="kpi-num" style="color:var(--agua)">$4.583.890</div>
+        <div class="kpi-sub"><strong>91%</strong> del hueco tapado — margen neto/mes sin que Rodrigo atienda</div>
+      </div>
+      <div class="kpi-card" style="border-top:3px solid var(--musgo)">
+        <div class="kpi-label">Escenario optimista</div>
+        <div class="kpi-num pos">$9.364.520</div>
+        <div class="kpi-sub"><strong>186%</strong> del hueco tapado — techo teórico, ver caveats</div>
+      </div>
+      <div class="kpi-card" style="border-top:3px solid var(--cobre)">
+        <div class="kpi-label">Venta total CMC hoy</div>
+        <div class="kpi-num">$26.039.530</div>
+        <div class="kpi-sub">Punto de partida, mes de referencia</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 01 Medidor del hueco -->
+  <section class="mb-10 panel">
+    <p class="section-head">01 — El hueco y su cobertura</p>
+    <h2 class="section-title">¿Cuánto tapa cada escenario del hueco de $5.033.524?</h2>
+    <div class="space-y-8 mt-6">
+      <div>
+        <div class="flex justify-between items-baseline mb-2">
+          <span class="mono text-xs uppercase tracking-wider opacity-70">Conservador</span>
+          <span class="mono text-sm font-semibold" style="color:var(--agua)">$4.583.890 · 91%</span>
+        </div>
+        <div class="gauge-track">
+          <div class="gauge-fill" style="width:45.5%; background:var(--agua);">91%</div>
+          <div class="gauge-marker" style="left:50%;"></div>
+          <div class="gauge-marker-label" style="left:50%;">100% = hueco</div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between items-baseline mb-2">
+          <span class="mono text-xs uppercase tracking-wider opacity-70">Optimista</span>
+          <span class="mono text-sm font-semibold" style="color:var(--musgo)">$9.364.520 · 186%</span>
+        </div>
+        <div class="gauge-track">
+          <div class="gauge-fill" style="width:93%; background:var(--musgo);">186%</div>
+          <div class="gauge-marker" style="left:50%;"></div>
+          <div class="gauge-marker-label" style="left:50%;">100% = hueco</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="tidy mt-8">
+      <thead><tr><th>Métrica</th><th>Hoy</th><th>Conservador</th><th>Optimista</th></tr></thead>
+      <tbody>
+        <tr><td>Venta total CMC/mes</td><td>$26.039.530</td><td>$32.978.536</td><td>$48.643.270</td></tr>
+        <tr><td>Margen dueño bruto (sin Rodrigo)</td><td>—</td><td>$9.173.890</td><td>$14.494.520</td></tr>
+        <tr><td>Opex estimado</td><td>~$4,29M (mayo real)</td><td>$4.590.000</td><td>$5.130.000</td></tr>
+        <tr class="total-row"><td>EBITDA / margen dueño neto</td><td>~$4-5M</td><td class="pos">$4.583.890</td><td class="pos">$9.364.520</td></tr>
+        <tr class="total-row"><td>% del hueco $5,03M que tapa</td><td>—</td><td>91%</td><td>186%</td></tr>
+      </tbody>
+    </table>
+    <p class="text-xs opacity-60 mt-3">"Sin Rodrigo" = margen que le queda al dueño del CMC como negocio, sin sumar el honorario clínico personal de Rodrigo (ver sección 06, tratado aparte).</p>
+  </section>
+
+  <!-- 02 + 03 Charts -->
+  <section class="mb-10 grid md:grid-cols-2 gap-6">
+    <div class="panel">
+      <p class="section-head">02 — Venta total CMC</p>
+      <h2 class="section-title">Por escenario.</h2>
+      <canvas id="chartVenta" height="220"></canvas>
+    </div>
+    <div class="panel">
+      <p class="section-head">03 — Origen del margen del dueño</p>
+      <h2 class="section-title">Por bloque, sin Rodrigo.</h2>
+      <canvas id="chartMargen" height="220"></canvas>
+      <p class="text-xs opacity-60 mt-3">Staff existente (20 prof.) · Dr. Abarca (contrato especial) · 3 líneas nuevas (Trauma, Otorrino, Eco Fonasa).</p>
+    </div>
+  </section>
+
+  <!-- 04 Tres líneas nuevas -->
+  <section class="mb-10 panel">
+    <p class="section-head">04 — Las 3 líneas nuevas</p>
+    <h2 class="section-title">Margen 100% de dueño — operadas por otros.</h2>
+    <table class="tidy">
+      <thead><tr><th>Línea</th><th>Estado hoy</th><th>Venta conservador</th><th>Margen conservador</th><th>Venta optimista</th><th>Margen optimista</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Trauma <span class="tag tag-incremental ml-1">Barraza · hoy $0</span></td>
+          <td>Reactivar Dr. Barraza</td>
+          <td>$998.333</td><td class="pos">$285.423</td>
+          <td>$1.575.000</td><td class="pos">$450.293</td>
+        </tr>
+        <tr>
+          <td>Otorrino <span class="tag tag-incremental ml-1">Borrego · hoy $0</span></td>
+          <td>Reactivar Dr. Borrego</td>
+          <td>$1.250.413</td><td class="pos">$312.603</td>
+          <td>$2.391.000</td><td class="pos">$597.750</td>
+        </tr>
+        <tr>
+          <td>Eco con Fonasa <span class="tag tag-piloto ml-1">×3</span></td>
+          <td>David Pardo, triplicar volumen</td>
+          <td>$7.035.390</td><td class="pos">$2.110.617</td>
+          <td>$7.200.000</td><td class="pos">$2.160.000</td>
+        </tr>
+        <tr class="total-row">
+          <td>Subtotal 3 líneas</td><td>—</td>
+          <td>$9.284.136</td><td class="pos">$2.708.644</td>
+          <td>$11.166.000</td><td class="pos">$3.208.043</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text-xs opacity-60 mt-3">Trauma y Otorrino son <strong>100% incrementales</strong>: hoy venden $0, cualquier venta es ganancia neta de capacidad ociosa reactivada. Eco Fonasa requiere triplicar el volumen actual de David Pardo — ver caveat 1.</p>
+  </section>
+
+  <!-- 05 Staff existente + Abarca -->
+  <section class="mb-10 grid md:grid-cols-3 gap-6">
+    <div class="panel md:col-span-2">
+      <p class="section-head">05 — Staff existente (20 profesionales, sin Rodrigo/Barraza/Borrego/Pardo)</p>
+      <h2 class="section-title">Parejo, con roles concentradores.</h2>
+      <table class="tidy">
+        <thead><tr><th>Profesional</th><th>Especialidad</th><th>% margen dueño</th><th>Nota</th></tr></thead>
+        <tbody>
+          <tr><td>Márquez</td><td>Medicina General</td><td class="mono">75%</td><td>—</td></tr>
+          <tr><td>Unibazo</td><td>Psiquiatría</td><td class="mono">90%</td><td>Mayor margen del staff</td></tr>
+          <tr><td>Rejón</td><td>Ginecología</td><td class="mono">70%</td><td>—</td></tr>
+          <tr><td>Arratia</td><td>Fonoaudiología</td><td class="mono">70%</td><td>—</td></tr>
+          <tr><td>Millán</td><td>Cardiología</td><td class="mono">69%</td><td class="neg">Hoy vende $0</td></tr>
+          <tr><td>Castillo</td><td>Ortodoncia</td><td class="mono">60%</td><td>—</td></tr>
+          <tr><td>Burgos</td><td>Odontología general</td><td class="mono">51%</td><td>—</td></tr>
+          <tr><td>Etcheverry</td><td>Kinesiología</td><td class="mono">52%</td><td>—</td></tr>
+          <tr><td>Jiménez</td><td>Odontología general</td><td class="mono">45%</td><td>—</td></tr>
+          <tr><td>Armijo</td><td>Kinesiología</td><td class="mono">41%</td><td>Menor margen del staff</td></tr>
+          <tr><td class="opacity-60">Otros 10 profesionales</td><td class="opacity-60">Mix especialidades</td><td class="opacity-60 mono">—</td><td class="opacity-60">Detalle en informe completo</td></tr>
+        </tbody>
+      </table>
+      <table class="tidy mt-4">
+        <thead><tr><th>Bloque</th><th>Venta actual</th><th>Margen actual</th><th>Venta mejor mes</th><th>Margen mejor mes</th></tr></thead>
+        <tbody>
+          <tr class="total-row">
+            <td>Total 20 profesionales</td>
+            <td>$13.743.460</td><td class="pos">$5.377.887</td>
+            <td>$24.767.710</td><td class="pos">$9.150.843</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <p class="section-head">Dr. Abarca</p>
+      <h2 class="section-title text-2xl">Contrato especial.</h2>
+      <p class="text-xs opacity-70 mb-4">max($1.707.063 fijo, 62% de venta) — 8 horas. No es fijo puro: sobre cierto volumen el % gana.</p>
+      <table class="tidy">
+        <tbody>
+          <tr><td>Venta actual</td><td class="text-right mono">$2.861.470</td></tr>
+          <tr><td>Margen actual</td><td class="text-right mono pos">$1.087.359</td></tr>
+          <tr><td colspan="2" class="pt-3 pb-1 opacity-60 text-xs">Optimista (récord nov-25)</td></tr>
+          <tr><td>Venta optimista</td><td class="text-right mono">$5.620.090</td></tr>
+          <tr><td>Margen optimista</td><td class="text-right mono pos">$2.135.634</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 06 Rodrigo aparte -->
+  <section class="mb-10 panel" style="border-left:4px solid var(--lacre)">
+    <p class="section-head">06 — Rodrigo, tratado aparte</p>
+    <h2 class="section-title">El hueco es él mismo, no un bloque de crecimiento.</h2>
+    <div class="grid md:grid-cols-3 gap-6 mt-4">
+      <div>
+        <div class="kpi-label">Venta que produce</div>
+        <div class="kpi-num">$7.089.470</div>
+      </div>
+      <div>
+        <div class="kpi-label">Honorario (71%)</div>
+        <div class="kpi-num neg">$5.033.524</div>
+      </div>
+      <div>
+        <div class="kpi-label">Margen que deja al CMC (29%)</div>
+        <div class="kpi-num pos">$2.055.946</div>
+      </div>
+    </div>
+    <p class="text-sm opacity-80 mt-4 max-w-3xl">Rodrigo produce a su techo personal — no crece atendiendo más horas. Por eso se trata <strong>separado</strong> del resto del staff: no cuenta como "ingreso sin que él atienda", es exactamente el hueco que este análisis busca reemplazar con las otras líneas.</p>
+  </section>
+
+  <!-- 07 Caveats -->
+  <section class="mb-10">
+    <p class="section-head">07 — Caveats — léelos antes de decidir</p>
+    <h2 class="section-title">Lo que este análisis NO garantiza.</h2>
+    <div class="space-y-4">
+      <div class="caveat-box flex gap-4">
+        <span class="caveat-num">1</span>
+        <p class="text-sm">El <strong>×3 de eco Fonasa</strong> (David Pardo) es un supuesto sin validar — pilotar 1 trimestre antes de proyectarlo a régimen. Fonasa baja el ticket unitario por atención; además hay riesgo de tener que renegociar el 70% de margen actual si el volumen sube tanto.</p>
+      </div>
+      <div class="caveat-box flex gap-4">
+        <span class="caveat-num">2</span>
+        <p class="text-sm">El escenario <strong>optimista es un techo teórico</strong>: nunca todos los profesionales coinciden en su pico al mismo tiempo. Incluye récords de 2022/2024 que hoy están dormidos — tratarlo como objetivo de régimen, no como proyección realista de un mes cualquiera.</p>
+      </div>
+      <div class="caveat-box flex gap-4">
+        <span class="caveat-num">3</span>
+        <p class="text-sm">El <strong>opex solo tiene 1 mes completo cargado</strong> (mayo real, ~$4,29M). Los $4,59M y $5,13M de los escenarios son estimaciones proyectadas sobre ese único mes — cargar <code class="mono">egresos_cmc</code> mensualmente para afinar el EBITDA real.</p>
+      </div>
+      <div class="caveat-box flex gap-4">
+        <span class="caveat-num">4</span>
+        <p class="text-sm"><strong>Barraza no está en <code class="mono">equipo_cmc</code></strong> — su 28,6% de margen es un valor <strong>derivado</strong> (no medido directamente), calculado por analogía con contratos comparables. Confirmar contra su contrato real antes de reactivarlo.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 Checklist -->
+  <section class="mb-10">
+    <p class="section-head">08 — Checklist de acciones</p>
+    <h2 class="section-title">La jugada, en orden.</h2>
+    <div class="grid md:grid-cols-2 gap-3">
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <p class="font-medium">Reactivar Dr. Barraza (Trauma) <span class="tag tag-incremental">100% incremental</span></p>
+          <p class="text-xs opacity-70 mt-1">Hoy vende $0 — cualquier venta es ganancia neta de capacidad ociosa.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <p class="font-medium">Reactivar Dr. Borrego (Otorrino) <span class="tag tag-incremental">100% incremental</span></p>
+          <p class="text-xs opacity-70 mt-1">Hoy vende $0 — mismo argumento que Barraza.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <p class="font-medium">Pilotar eco Fonasa 1 trimestre <span class="tag tag-piloto">piloto</span></p>
+          <p class="text-xs opacity-70 mt-1">Validar el ×3 de David Pardo antes de proyectarlo a régimen (caveat 1).</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <p class="font-medium">Cargar <code class="mono">egresos_cmc</code> mensual <span class="tag tag-admin">admin</span></p>
+          <p class="text-xs opacity-70 mt-1">El opex hoy es 1 mes (mayo). Afinar EBITDA real mes a mes (caveat 3).</p>
+        </div>
+      </div>
+      <div class="check-item md:col-span-2">
+        <div class="check-box"></div>
+        <div>
+          <p class="font-medium">Definir criterio de autopago del honorario de Rodrigo <span class="tag tag-admin">decisión dueño</span></p>
+          <p class="text-xs opacity-70 mt-1">Con el hueco 91-186% cubierto por el CMC creciendo, decidir en qué punto el honorario personal de Rodrigo se paga solo con margen del negocio versus producción clínica directa.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cierre -->
+  <section class="mb-16 closing-panel">
+    <p class="section-head" style="color:var(--lenga)">Cierre</p>
+    <p class="serif text-2xl md:text-3xl leading-snug max-w-4xl">
+      El CMC bien gestionado <strong style="color:var(--lenga)">casi reemplaza solo</strong> el ingreso clínico de Rodrigo — Alma y los berries pasan a ser el <strong style="color:var(--lenga)">upside</strong> para superarlo, no para alcanzarlo.
+    </p>
+  </section>
+
+</main>
+
+<script>
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+
+Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+Chart.defaults.color = '#1F3340';
+
+// 02 — Venta total por escenario
+new Chart(document.getElementById('chartVenta'), {
+  type: 'bar',
+  data: {
+    labels: ['Hoy', 'Conservador', 'Optimista'],
+    datasets: [{
+      label: 'Venta total CMC/mes',
+      data: [26039530, 32978536, 48643270],
+      backgroundColor: ['#B86D3F', '#5B8B96', '#4A5F3A'],
+      borderRadius: 4,
+      maxBarThickness: 90
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => fmt(ctx.parsed.y) } }
+    },
+    scales: {
+      y: { ticks: { callback: v => fmt(v) }, grid: { color: 'rgba(31,51,64,.08)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// 03 — Aporte de margen de dueño por bloque, apilado por escenario
+new Chart(document.getElementById('chartMargen'), {
+  type: 'bar',
+  data: {
+    labels: ['Conservador', 'Optimista'],
+    datasets: [
+      {
+        label: 'Staff existente (20 prof.)',
+        data: [5377887, 9150843],
+        backgroundColor: '#1F3340',
+        borderRadius: 4
+      },
+      {
+        label: 'Dr. Abarca',
+        data: [1087359, 2135634],
+        backgroundColor: '#B86D3F',
+        borderRadius: 4
+      },
+      {
+        label: '3 líneas nuevas',
+        data: [2708644, 3208043],
+        backgroundColor: '#4A5F3A',
+        borderRadius: 4
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.parsed.y) } }
+    },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, ticks: { callback: v => fmt(v) }, grid: { color: 'rgba(31,51,64,.08)' } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
