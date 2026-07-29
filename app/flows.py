@@ -15341,8 +15341,22 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     _CHILE_TZ_pc = _ZI_pc("America/Santiago")
 
     sess = get_session(phone)
-    if not sess or sess.get("state") != "WAIT_ABONO_COMPROBANTE":
-        # Ya no estamos en el estado correcto — no hacer nada
+    # La sesión es un artefacto CONVERSACIONAL; el abono es un hecho FINANCIERO
+    # que vive en `abono_pendientes` con su propio ciclo y su propio expira_at.
+    # Atar la foto al estado de sesión fue el bug del 29-jul: la sesión moría y
+    # el comprobante de una paciente terminó archivado como documento clínico.
+    # Ahora basta con que exista un abono pendiente suyo.
+    _en_gate = bool(sess and sess.get("state") == "WAIT_ABONO_COMPROBANTE")
+    _abono_vivo = None
+    if not _en_gate:
+        try:
+            from abono_transferencia import get_abono_pendiente_activo_por_phone
+            _ap0 = get_abono_pendiente_activo_por_phone(phone)
+            if _ap0 and _ap0.get("estado") == "pendiente":
+                _abono_vivo = _ap0
+        except Exception as _e_av:
+            log.warning("procesar_imagen_abono: no se pudo buscar abono vivo: %s", _e_av)
+    if not _en_gate and not _abono_vivo:
         return ""
 
     # Convivencia con la confirmación automática por correo (2026-07-14,
@@ -15371,9 +15385,33 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     except Exception as _e_conviv:
         log.debug("procesar_imagen_abono: chequeo de convivencia con email falló (no bloquea): %s", _e_conviv)
 
-    data = sess.get("data") or {}
+    data = (sess.get("data") if sess else None) or {}
     slot    = data.get("abono_gate_slot") or {}
     paciente = data.get("abono_gate_paciente") or {}
+
+    # Si la sesión ya no trae el contexto, sale del abono: ahí está el slot
+    # completo (slot_json), el id de paciente, el nombre y el RUT.
+    if not slot or not paciente:
+        try:
+            import json as _j_ab
+            from abono_transferencia import get_abono_pendiente_activo_por_phone
+            _ap = _abono_vivo or get_abono_pendiente_activo_por_phone(phone)
+            if _ap and _ap.get("estado") == "pendiente":
+                if not slot:
+                    slot = _j_ab.loads(_ap.get("slot_json") or "{}") or {}
+                if not paciente:
+                    _pid = _ap.get("paciente_id") or ""
+                    paciente = {"id": int(_pid) if str(_pid).isdigit() else _pid,
+                                "nombre": _ap.get("paciente_nombre") or "",
+                                "rut": _ap.get("rut") or ""}
+                log_event(phone, "abono_foto_rescatada_sin_sesion",
+                          {"abono_id": _ap.get("id"), "fecha": slot.get("fecha")})
+        except Exception as _e_rec:
+            log.warning("procesar_imagen_abono: no se pudo reconstruir desde el abono: %s", _e_rec)
+    if not slot or not paciente:
+        log_event(phone, "abono_foto_sin_contexto", {})
+        return ("Recibí tu comprobante, pero no encontré a qué hora corresponde. "
+                "Le avisé a recepción para que lo revise contigo.")
 
     # Verificar timeout 90 min (mismo check que en el handler de texto)
     _gate_ts_str = data.get("abono_gate_ts", "")
@@ -15384,12 +15422,14 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
                 _gate_dt = _gate_dt.replace(tzinfo=_CHILE_TZ_pc)
             _elapsed = (_dt_pc.now(_CHILE_TZ_pc) - _gate_dt).total_seconds() / 60
             if _elapsed > 90:
-                log_event(phone, "abono_gate_timeout", {"gate_ts": _gate_ts_str})
-                reset_session(phone)
-                return (
-                    "El tiempo para enviar el comprobante venció y el aparte fue liberado.\n\n"
-                    "Escribe *menu* si quieres volver a buscar una hora de Psiquiatría."
-                )
+                # ANTES acá se rechazaba la foto y se resetaba la sesión. Eso es
+                # botar el comprobante de alguien que YA TRANSFIRIÓ la plata: se
+                # le decía "el aparte fue liberado" a quien ya pagó $60.000. El
+                # aparte sí venció, pero el pago existe. Se sigue adelante: se
+                # lee el comprobante igual y, si el cupo ya no está, más abajo
+                # el flujo rebusca otra hora y se la ofrece con el abono hecho.
+                log_event(phone, "abono_gate_timeout_pero_pago_existe",
+                          {"gate_ts": _gate_ts_str, "minutos": int(_elapsed)})
         except Exception:
             pass
 

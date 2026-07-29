@@ -9690,7 +9690,20 @@ async def webhook(request: Request):
             # enviaría a HUMAN_TAKEOVER y perdería el contexto del gate).
             if msg_type == "image":
                 _ag_sess = get_session(phone)
-                if (_ag_sess or {}).get("state") == "WAIT_ABONO_COMPROBANTE":
+                _ag_gate = (_ag_sess or {}).get("state") == "WAIT_ABONO_COMPROBANTE"
+                if not _ag_gate:
+                    # La sesión pudo vencer mientras el paciente iba al banco.
+                    # El hecho que manda es que tenga un abono PENDIENTE, no en
+                    # qué estado conversacional quedó. Sin esto, su comprobante
+                    # cae al pipeline genérico y se archiva como documento
+                    # clínico en su ficha (pasó de verdad el 29-jul).
+                    try:
+                        from abono_transferencia import get_abono_pendiente_activo_por_phone
+                        _ag_ap = get_abono_pendiente_activo_por_phone(phone)
+                        _ag_gate = bool(_ag_ap and _ag_ap.get("estado") == "pendiente")
+                    except Exception as _ag_e:
+                        log.warning("abono-gate: no se pudo consultar abono vivo: %s", _ag_e)
+                if _ag_gate:
                     _ag_media_id = msg.get("image", {}).get("id", "")
                     _ag_caption  = msg.get("image", {}).get("caption", "")
                     log_text_ag  = "[imagen comprobante abono]" + (f" {_ag_caption}" if _ag_caption else "")
