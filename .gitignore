@@ -14,3 +14,4 @@ sessions.db
 # Artefacto generado por scripts/geocode_direcciones.py (la fuente es
 # templates/heatmap_direcciones.shell.html; la salida va a data/).
 templates/heatmap_direcciones.html
+static/ad_designs/

@@ -1,0 +1,871 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitectura Alma · CDHI · Mapa, Plan y Ejecución</title>
+<style>
+  :root{
+    --paper:#eef4f8; --slab:#ffffff; --slab-2:#f5fafc; --line:#d8e6ee; --line-2:#c3d7e3;
+    --ink:#0f2a40; --muted:#5b7488; --faint:#8aa3b4;
+    --navy:#0F3F68; --blue:#1172AB; --aqua:#4FBECE; --aqua-deep:#127885; --aqua-soft:#e4f5f9;
+    --good:#2e8b57; --good-bg:#e4f2ea;
+    --warn:#c8922b; --warn-bg:#f9f0dc;
+    --crit:#c0453b; --crit-bg:#f9e5e2;
+    --void:#8aa3b4; --void-bg:#eaf1f5;
+    --shadow:0 1px 2px rgba(15,63,104,.05), 0 6px 22px rgba(15,63,104,.07);
+    --shadow-lg:0 2px 6px rgba(15,63,104,.08), 0 18px 44px rgba(15,63,104,.12);
+    --r:13px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#08151e; --slab:#10222f; --slab-2:#0c1c27; --line:#203a4a; --line-2:#2c4b5f;
+    --ink:#e6eff4; --muted:#93aabb; --faint:#65808f;
+    --navy:#8fc4e6; --blue:#4aa3d4; --aqua:#48c3d3; --aqua-deep:#6fd6e4; --aqua-soft:#0f2f3a;
+    --good:#45b57c; --good-bg:#0f2c20; --warn:#dcae4c; --warn-bg:#2f2411;
+    --crit:#df6a62; --crit-bg:#2f1815; --void:#65808f; --void-bg:#132530;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 26px rgba(0,0,0,.3);
+    --shadow-lg:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.4);
+  }}
+  :root[data-theme="dark"]{
+    --paper:#08151e; --slab:#10222f; --slab-2:#0c1c27; --line:#203a4a; --line-2:#2c4b5f;
+    --ink:#e6eff4; --muted:#93aabb; --faint:#65808f;
+    --navy:#8fc4e6; --blue:#4aa3d4; --aqua:#48c3d3; --aqua-deep:#6fd6e4; --aqua-soft:#0f2f3a;
+    --good:#45b57c; --good-bg:#0f2c20; --warn:#dcae4c; --warn-bg:#2f2411;
+    --crit:#df6a62; --crit-bg:#2f1815; --void:#65808f; --void-bg:#132530;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 26px rgba(0,0,0,.3);
+    --shadow-lg:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.4);
+  }
+  :root[data-theme="light"]{
+    --paper:#eef4f8; --slab:#ffffff; --slab-2:#f5fafc; --line:#d8e6ee; --line-2:#c3d7e3;
+    --ink:#0f2a40; --muted:#5b7488; --faint:#8aa3b4;
+    --navy:#0F3F68; --blue:#1172AB; --aqua:#4FBECE; --aqua-deep:#127885; --aqua-soft:#e4f5f9;
+    --good:#2e8b57; --good-bg:#e4f2ea; --warn:#c8922b; --warn-bg:#f9f0dc;
+    --crit:#c0453b; --crit-bg:#f9e5e2; --void:#8aa3b4; --void-bg:#eaf1f5;
+    --shadow:0 1px 2px rgba(15,63,104,.05), 0 6px 22px rgba(15,63,104,.07);
+    --shadow-lg:0 2px 6px rgba(15,63,104,.08), 0 18px 44px rgba(15,63,104,.12);
+  }
+
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;}
+  .tnum{font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1140px; margin:0 auto; padding:24px 20px 72px;}
+
+  header.top{display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap; margin-bottom:18px;}
+  .eyebrow{text-transform:uppercase; letter-spacing:.19em; font-size:10.5px; font-weight:700; color:var(--aqua-deep);}
+  h1{margin:6px 0 7px; font-size:28px; letter-spacing:-.022em; line-height:1.12; text-wrap:balance; font-weight:800;}
+  header p.lede{margin:0; color:var(--muted); font-size:13.5px; max-width:66ch;}
+  .tbtn{cursor:pointer; background:var(--slab); border:1px solid var(--line); color:var(--muted);
+    border-radius:20px; min-width:34px; height:31px; font-size:13px; box-shadow:var(--shadow); padding:0 10px;}
+  .tbtn:hover{border-color:var(--aqua); color:var(--aqua-deep);}
+  .tbtn:focus-visible{outline:2px solid var(--aqua); outline-offset:2px;}
+
+  nav.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:20px 0 22px; overflow-x:auto;}
+  nav.tabs button{appearance:none; background:none; border:0; border-bottom:2px solid transparent;
+    padding:10px 14px; font:inherit; font-size:13.5px; font-weight:600; color:var(--muted);
+    cursor:pointer; white-space:nowrap; margin-bottom:-1px;}
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button[aria-selected="true"]{color:var(--navy); border-bottom-color:var(--aqua);}
+  nav.tabs button:focus-visible{outline:2px solid var(--aqua); outline-offset:-2px; border-radius:4px;}
+  .panel{display:none;} .panel.on{display:block;}
+
+  .strip{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;}
+  @media (max-width:760px){ .strip{grid-template-columns:repeat(2,1fr);} }
+  .stat{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); padding:13px 15px; box-shadow:var(--shadow);}
+  .stat .s-l{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--faint);}
+  .stat .s-v{font-size:25px; font-weight:800; line-height:1.1; margin-top:4px; color:var(--navy);}
+  .stat .s-s{font-size:11.5px; color:var(--muted); margin-top:3px;}
+  .stat.is-crit .s-v{color:var(--crit);} .stat.is-warn .s-v{color:var(--warn);}
+
+  /* ── Grupos CDHI ── */
+  .grp{background:var(--slab); border:1px solid var(--line); border-radius:var(--r);
+    box-shadow:var(--shadow); margin-bottom:11px; overflow:hidden;}
+  .grp.outside{border-style:dashed; border-color:var(--warn); background:var(--slab-2);}
+  .grp.data{border-width:2px; border-color:var(--aqua);}
+  .g-head{display:grid; grid-template-columns:44px 1fr auto; gap:14px; align-items:center;
+    padding:14px 16px; width:100%; background:none; border:0; font:inherit; color:inherit;
+    text-align:left; cursor:pointer;}
+  .g-head:focus-visible{outline:2px solid var(--aqua); outline-offset:-3px;}
+  .g-num{font-size:19px; font-weight:800; color:var(--aqua-deep); text-align:center;}
+  .grp.outside .g-num{color:var(--warn); font-size:15px;}
+  .g-name{font-weight:750; font-size:16px; letter-spacing:-.012em;}
+  .g-alias{font-size:12px; color:var(--muted); margin-top:1px;}
+  .g-right{display:flex; align-items:center; gap:12px;}
+  .g-count{font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap;}
+  .chev{color:var(--faint); font-size:11px; transition:transform .16s;}
+  .grp[data-open="1"] .chev{transform:rotate(90deg);}
+  .g-body{display:none; border-top:1px solid var(--line); padding:4px 0 0;}
+  .grp[data-open="1"] .g-body{display:block;}
+  .g-note{padding:12px 16px; font-size:13px; background:var(--slab-2); border-bottom:1px solid var(--line);}
+  .g-note strong{color:var(--navy);}
+  .grp.outside .g-note strong{color:var(--warn);}
+
+  /* ── Filas de intervención ── */
+  .iv{display:grid; grid-template-columns:56px 1fr 96px 74px; gap:12px; align-items:start;
+    padding:11px 16px; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .iv:last-child{border-bottom:0;}
+  .iv:hover{background:var(--slab-2);}
+  @media (max-width:700px){ .iv{grid-template-columns:52px 1fr 66px; } .iv .iv-meter{display:none;} }
+  .iv-code{font-weight:800; font-size:12px; color:var(--aqua-deep); padding-top:1px;}
+  .iv.gap0 .iv-code{color:var(--crit);}
+  .iv-name{font-weight:650;}
+  .iv-has{display:block; font-size:12px; color:var(--muted); margin-top:2px;}
+  .iv-has em{color:var(--crit); font-style:normal; font-weight:650;}
+  .iv-meter{display:flex; gap:2px; padding-top:5px;}
+  .sg{width:14px; height:8px; border-radius:2px; background:var(--void-bg);}
+  .sg.on{background:var(--aqua);}
+  .iv.gap0 .sg.on{background:var(--crit);}
+  .iv-lvl{font-size:11px; font-weight:700; text-align:right; color:var(--muted); padding-top:3px;}
+  .iv.gap0 .iv-lvl{color:var(--crit);}
+
+  /* ── Tablas ── */
+  .tbl-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); background:var(--slab);}
+  table{border-collapse:collapse; width:100%; min-width:820px;}
+  thead th{text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.09em;
+    color:var(--faint); padding:11px 13px; border-bottom:1px solid var(--line); background:var(--slab-2); white-space:nowrap;}
+  tbody td{padding:12px 13px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:top;}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:hover{background:var(--slab-2);}
+  .rank{font-weight:800; color:var(--faint);}
+  .t-title{font-weight:650; display:block;}
+  .t-why{font-size:12px; color:var(--muted); margin-top:2px; display:block; max-width:52ch;}
+  .t-ev{font-size:11.5px; color:var(--aqua-deep); margin-top:3px; display:block; font-weight:600;}
+
+  .pill{display:inline-block; padding:2px 8px; border-radius:11px; font-size:10.5px; font-weight:700; white-space:nowrap;}
+  .pill.f{background:var(--aqua-soft); color:var(--aqua-deep);}
+  .pill.hecho{background:var(--good-bg); color:var(--good);}
+  .pill.curso{background:var(--warn-bg); color:var(--warn);}
+  .pill.pend{background:var(--void-bg); color:var(--void);}
+  .pill.alto{background:var(--crit-bg); color:var(--crit);}
+  .pill.medio{background:var(--warn-bg); color:var(--warn);}
+  .pill.bajo{background:var(--good-bg); color:var(--good);}
+
+  .rubric{display:grid; grid-template-columns:repeat(5,1fr); gap:9px; margin:16px 0 8px;}
+  @media (max-width:820px){ .rubric{grid-template-columns:1fr;} }
+  .rb{background:var(--slab); border:1px solid var(--line); border-radius:11px; padding:12px 13px; box-shadow:var(--shadow);}
+  .rb .rb-n{font-size:20px; font-weight:800; color:var(--aqua); line-height:1;}
+  .rb .rb-t{font-size:12.5px; font-weight:700; margin:5px 0 3px;}
+  .rb .rb-d{font-size:11.5px; color:var(--muted); line-height:1.45;}
+
+  .socio{display:flex; flex-direction:column; gap:6px; margin-top:14px;}
+  .sd{display:grid; grid-template-columns:190px 1fr 42px; gap:12px; align-items:center;}
+  @media (max-width:640px){ .sd{grid-template-columns:120px 1fr 38px; gap:8px;} }
+  .sd-n{font-size:12.5px; font-weight:600;}
+  .sd-bar{height:8px; border-radius:5px; background:var(--void-bg); overflow:hidden;}
+  .sd-fill{height:100%; border-radius:5px; background:var(--aqua);}
+  .sd-fill.weak{background:var(--crit);} .sd-fill.mid{background:var(--warn);}
+  .sd-v{font-size:11.5px; font-weight:700; color:var(--muted); text-align:right;}
+
+  .block{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); padding:17px 19px; box-shadow:var(--shadow); margin-bottom:16px;}
+  .block h3{margin:0 0 6px; font-size:16px; font-weight:750; letter-spacing:-.01em;}
+  .block p{margin:0 0 10px; color:var(--muted); font-size:13.5px; max-width:72ch;}
+  .block p:last-child{margin-bottom:0;}
+  .block.alarm{border-left:3px solid var(--crit); background:var(--crit-bg);}
+  .block.alarm h3{color:var(--crit);} .block.alarm p{color:var(--ink); opacity:.87;}
+  .block.kill{border-left:3px solid var(--warn); background:var(--warn-bg);}
+  .block.kill h3{color:var(--warn);} .block.kill p{color:var(--ink); opacity:.87;}
+  h2.sec{font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--faint); font-weight:700; margin:26px 0 12px;}
+  h2.sec:first-child{margin-top:0;}
+
+  .ev-row{display:grid; grid-template-columns:1fr auto; gap:14px; padding:11px 0; border-bottom:1px solid var(--line); align-items:start;}
+  .ev-row:last-child{border-bottom:0;}
+  .ev-claim{font-size:13.5px;}
+  .ev-claim .src{display:block; font-size:11.5px; color:var(--faint); margin-top:2px;}
+  .ev-n{font-size:15px; font-weight:800; color:var(--navy); white-space:nowrap; text-align:right;}
+  .ev-n.bad{color:var(--crit);} .ev-n.good{color:var(--good);}
+
+  /* ── Fichas ── */
+  .fi{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); margin-bottom:12px; overflow:hidden;}
+  .fi[data-open="1"]{box-shadow:var(--shadow-lg);}
+  .fi-head{display:grid; grid-template-columns:auto 1fr auto; gap:13px; align-items:center; padding:14px 17px;
+    width:100%; background:none; border:0; font:inherit; color:inherit; text-align:left; cursor:pointer;}
+  .fi-head:focus-visible{outline:2px solid var(--aqua); outline-offset:-3px;}
+  .fi-t{font-weight:750; font-size:15.5px; letter-spacing:-.012em;}
+  .fi-s{font-size:12px; color:var(--muted); margin-top:2px;}
+  .fi-body{display:none; border-top:1px solid var(--line); padding:16px 17px;}
+  .fi[data-open="1"] .fi-body{display:block;}
+  .fi-sec{margin-bottom:15px;}
+  .fi-sec:last-child{margin-bottom:0;}
+  .fi-sec h5{margin:0 0 6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--faint);}
+  .fi-sec p, .fi-sec li{font-size:13.5px; margin:0 0 6px;}
+  .fi-sec ul{margin:0; padding-left:17px;}
+  .fi-sec.danger{background:var(--crit-bg); border-radius:9px; padding:11px 13px;}
+  .fi-sec.danger h5{color:var(--crit);}
+  .fi-steps{counter-reset:st; list-style:none; padding:0; margin:0;}
+  .fi-steps li{counter-increment:st; position:relative; padding-left:28px; margin-bottom:7px; font-size:13.5px;}
+  .fi-steps li::before{content:counter(st); position:absolute; left:0; top:1px; width:19px; height:19px;
+    border-radius:50%; background:var(--aqua-soft); color:var(--aqua-deep); font-size:10.5px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;}
+  pre{background:var(--slab-2); border:1px solid var(--line); border-radius:8px; padding:11px 13px;
+    overflow-x:auto; font-size:11.5px; line-height:1.5; margin:6px 0;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .srcs{font-size:12.5px; color:var(--muted); line-height:1.8;}
+  .srcs a{color:var(--aqua-deep);}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px;
+    background:var(--slab-2); border:1px solid var(--line); border-radius:5px; padding:1px 5px;}
+  footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--faint);}
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Centro Médico Carampangue · Alma</div>
+      <h1>Arquitectura digital, según la clasificación de la OMS</h1>
+      <p class="lede">
+        Mapeado contra la <strong>WHO CDISAH, 2.ª edición (octubre 2023)</strong> — la vigente.
+        Cuatro grupos por usuario primario, con los códigos oficiales. Los niveles están
+        verificados contra el código real, no estimados. El quinto grupo <strong>no existe en la
+        OMS</strong>: es la extensión que un prestador privado necesita y que nadie ha escrito.
+      </p>
+    </div>
+    <button class="tbtn" id="themeBtn" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true"  data-p="mapa">Mapa CDHI</button>
+    <button role="tab" aria-selected="false" data-p="plan">Plan</button>
+    <button role="tab" aria-selected="false" data-p="fichas">Fichas</button>
+    <button role="tab" aria-selected="false" data-p="ev">Evidencia</button>
+    <button role="tab" aria-selected="false" data-p="ejec">Ejecución</button>
+    <button role="tab" aria-selected="false" data-p="marco">Marco</button>
+  </nav>
+
+  <section class="panel on" id="p-mapa">
+    <div class="strip" id="strip"></div>
+    <div id="grupos"></div>
+    <p style="font-size:12px;color:var(--faint);margin-top:14px;">
+      Click en un grupo para ver sus intervenciones. Cada código es oficial de la CDISAH 2.ª ed. (2023).
+      <strong>✦ = categoría nueva</strong>, no existía en la edición de 2018. Barras = nivel de madurez 0–4.
+      El grupo 5.0 no es de la OMS: es la extensión que falta.
+    </p>
+  </section>
+
+  <section class="panel" id="p-plan">
+    <div class="block alarm">
+      <h3>El reloj que manda: 1 de diciembre de 2026</h3>
+      <p>
+        La <strong>Ley 21.719</strong> entra en plena vigencia en menos de cinco meses. Es lo único con
+        <strong>multa cuantificable y fecha cierta</strong> (hasta 20.000 UTM). Los datos de salud son
+        sensibles: consentimiento explícito y separado, registro de actividades de tratamiento, notificación
+        de brechas en 72 horas. Hay ventana PYME —amonestación en vez de multa el primer año—, que es tiempo
+        para regularizar, no excusa para postergar.
+      </p>
+    </div>
+    <div class="block kill">
+      <h3>Y la regla que ordena el resto: 3.0 es la fuente de 4.1.3</h3>
+      <p>
+        Tus dashboards (4.1.3) leen lo que recepción anotó (3.0). Un dashboard con datos sucios es peor que
+        no tener dashboard: da confianza falsa. Por eso la captura y la capa de datos van antes que el
+        trabajo vistoso de arriba.
+      </p>
+    </div>
+    <h2 class="sec">Backlog priorizado por riesgo × evidencia</h2>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>#</th><th>Qué</th><th>CDHI</th><th>Impacto</th><th>Esfuerzo</th><th>Estado</th></tr></thead>
+        <tbody id="backlog"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" id="p-fichas">
+    <div class="block alarm">
+      <h3>Tres cosas que aparecieron investigando y que nadie estaba mirando</h3>
+      <p>
+        <strong>1. El bono Fonasa caduca a los 180 días.</strong> El copago entra a tu caja al tiro, pero la
+        parte que paga Fonasa <em>no llega sola</em>: hay que ir a cobrarla al Portal Prestador. Si nadie
+        ejecuta ese paso, la plata se vence sola (Res. 49/2009 MLE). Nunca se verificó que alguien lo esté haciendo.
+      </p>
+      <p style="margin-top:8px;">
+        <strong>2. Anthropic, OpenAI y Meta son «encargados de tratamiento» bajo la Ley 21.719.</strong>
+        El bot manda datos de salud a EE.UU. Eso exige contrato (DPA) firmado y consentimiento explícito
+        y <em>separado</em> para la transferencia internacional. Hoy no existe ninguno de los dos.
+      </p>
+      <p style="margin-top:8px;">
+        <strong>3. El score de riesgo de inasistencia es «elaboración de perfiles»</strong> según la misma ley.
+        Antes de construirlo hay que hacer una Evaluación de Impacto, y el modelo tiene que ser explicable
+        — por eso regresión logística, no gradient boosting.
+      </p>
+    </div>
+    <div id="fichas"></div>
+  </section>
+
+  <section class="panel" id="p-ev">
+    <h2 class="sec">Lo que la evidencia internacional obliga a cambiar de opinión</h2>
+    <div class="block"><div id="evidence"></div></div>
+  </section>
+
+  <section class="panel" id="p-ejec">
+    <div class="strip" id="ejecStrip"></div>
+    <h2 class="sec">Construyéndose ahora</h2>
+    <div id="building"></div>
+    <h2 class="sec">Correcciones que salieron del inventario</h2>
+    <div class="block">
+      <p style="margin-bottom:7px;">· <code>alma-optica</code>, <code>alma-escriba</code> y <code>alma-print</code> figuraban como «sin deploy» en la memoria, pero sus dominios responden en vivo. El deploy existe fuera de un script versionado.</p>
+      <p style="margin-bottom:7px;">· El <strong>frente regulador no estaba vacío</strong>: <code>/alma/habilitacion</code>, <code>/alma/documentos</code>, <code>/alma/calidad</code>, <code>/alma/esterilizacion</code> ya existen (CDHI 3.6 / 3.7).</p>
+      <p style="margin-bottom:7px;">· El <strong>portal del paciente ya existe en parte</strong>: <code>/portal</code>, <code>/portal/v2-v4</code>, <code>/mis-citas</code> con OTP (CDHI 1.4.1).</p>
+      <p>· Los <strong>25 orquestadores están escritos y apagados</strong>, cada uno con su kill-switch fail-closed. El nivel 3 ya está construido; falta encender el primero con datos limpios debajo.</p>
+    </div>
+    <h2 class="sec">Estado de los repos</h2>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Repo</th><th>Sucios</th><th>Riesgo</th><th>Último commit</th></tr></thead>
+        <tbody id="repos"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" id="p-marco">
+    <h2 class="sec">Rúbrica de madurez (0–4)</h2>
+    <p style="color:var(--muted);font-size:13.5px;margin:0 0 4px;max-width:70ch;">
+      Criterio <strong>observable</strong> por nivel. El salto que importa no es del 1 al 2 (digitalizar),
+      es del 2 al 3: que el sistema <em>decida</em> y el humano apruebe.
+    </p>
+    <div class="rubric" id="rubric"></div>
+
+    <div class="block alarm" style="margin-top:20px;">
+      <h3>Data Services (4.0) es una compuerta, no un grupo más</h3>
+      <p>
+        <strong>Ningún grupo puede declararse sobre el nivel 2 si la capa de datos está en 0 o 1.</strong>
+        Sin dato confiable, un agente autónomo no automatiza el trabajo: <em>automatiza el error</em>, más
+        rápido de lo que un humano lo corrige.
+      </p>
+      <p style="margin-top:8px;">
+        Y el techo es <strong>nivel 4, no 5</strong>: la autonomía total queda fuera a propósito
+        (Yang et al., <em>Science Robotics</em> 2017; Cloud Security Alliance). En el grupo 2.0 (profesional)
+        y el 3.0 (gestión), nivel 4 significa «todo automatizado <em>salvo</em> la firma y el consentimiento».
+        Para reclamar nivel 4: <strong>límites escritos + kill-switch + log auditable</strong>.
+      </p>
+    </div>
+
+    <h2 class="sec">Las dos numeraciones de la OMS (no confundirlas)</h2>
+    <div class="block">
+      <p>
+        El documento trae <strong>dos taxonomías distintas con números que se pisan</strong> — y confundirlas
+        es fácil (a mí me pasó):
+      </p>
+      <p style="margin-top:8px;">
+        · <strong>Intervenciones (DHI)</strong> — lo que <em>construyes</em>. Ej: <code>3.5</code> = Health financing,
+        <code>2.6</code> = Referral coordination, <code>4.1.3</code> = Data synthesis and visualizations.
+      </p>
+      <p>
+        · <strong>Health System Challenges (HSC)</strong> — el <em>problema</em> que resuelves. Ej: <code>HSC 3.5</code> =
+        «Insufficient continuity of care», <code>HSC 6.2</code> = «Lack of or inappropriate referrals»,
+        <code>HSC 1.3</code> = «Lack of quality/reliable data».
+      </p>
+      <p style="margin-top:8px;">
+        Un mismo «3.5» significa cosas distintas en cada eje. Para un pitch, el eje HSC es el más fuerte:
+        citar <em>HSC 7.1, alto costo de procesos manuales</em> pega más que describir un módulo.
+      </p>
+    </div>
+
+    <h2 class="sec">El hueco que nadie llenó</h2>
+    <div class="block kill">
+      <h3>La OMS cubre todo un centro médico, salvo cómo consigue pacientes</h3>
+      <p>
+        Se buscó explícitamente si algún gremio de prestadores privados extendió esta clasificación
+        con las funciones que un privado necesita. Se revisaron uno por uno: <strong>International
+        Hospital Federation</strong> (tiene un marco propio, «SOFT», que ni siquiera cita a la OMS),
+        <strong>IFC del Banco Mundial</strong>, <strong>HIMSS</strong>, <strong>MGMA</strong>,
+        <strong>JCI</strong>, <strong>NABH</strong> (India, orientado a hospitales privados) y
+        <strong>PAHO IS4H</strong>. En Chile: <strong>Clínicas de Chile A.G.</strong> —el gremio que
+        debería tenerlo— <strong>no tiene absolutamente nada</strong> de salud digital.
+      </p>
+      <p style="margin-top:8px;">
+        <strong>Nadie lo ha hecho.</strong> Un <em>scoping review</em> de 2026 compara todos los
+        marcos de madurez digital contra el estándar indio para privados: los vacíos que identifica
+        son gobernanza de IA, ciberseguridad y equidad. La brecha comercial <em>ni aparece como tema</em>.
+      </p>
+      <p style="margin-top:8px;">
+        Dos anclas reales en Chile: <strong>CENS / B-PRACSIS</strong> (6 dimensiones, 171 preguntas,
+        abierto a privados de cualquier tamaño, 25 UF; cofundado por la Universidad de Concepción) y el
+        <strong>HIMSS Executive Summit Chile del 21 de julio de 2026</strong>. Nota histórica: una sola
+        clínica chilena se certificó con HIMSS EMRAM — Las Condes, Stage 6, en 2013. No hay ningún
+        Stage 7 en el país.
+      </p>
+    </div>
+
+    <h2 class="sec">El eje que no se ve en el mapa</h2>
+    <div class="block">
+      <h3>Sociotécnico — Sittig &amp; Singh, 8 dimensiones</h3>
+      <p>
+        El software es <strong>1 de 8 dimensiones</strong>. Las otras siete son gente, flujo, política y
+        medición. La CDHI clasifica software; los fracasos no van a ser de software.
+      </p>
+      <div class="socio" id="socio"></div>
+    </div>
+
+    <h2 class="sec">Fuentes</h2>
+    <div class="block">
+      <div class="srcs">
+        <strong>Marco</strong><br>
+        · <a href="https://www.who.int/publications/i/item/9789240081949">WHO — Classification of digital interventions, services and applications in health, <strong>2.ª ed. (24-oct-2023)</strong></a> — <strong>la vigente</strong>. Fuente de todos los códigos de esta página. No existe 3.ª edición<br>
+        · <a href="https://iris.who.int/server/api/core/bitstreams/5ed36c71-bc74-41e9-8751-ca8bd9a8d823/content">WHO — CDHI v1.0 (2018)</a> — superada, útil solo para comparar qué cambió<br>
+        · <a href="https://cdn.who.int/media/docs/default-source/digital-health-documents/summary-of-changes-to-the-who-cdhi.pdf">WHO — CDHI Update Summary</a> (el changelog, con la tabla de Health System Challenges)<br>
+        · <a href="https://cens.cl/b-pracsis-buenas-practicas-en-sistemas-de-informacion-en-salud/">CENS — B-PRACSIS</a>, único modelo de madurez digital chileno; abierto a privados de cualquier tamaño<br>
+        · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3120130/">Sittig &amp; Singh — Sociotechnical model (BMJ Qual Saf, 2010)</a><br>
+        · <a href="https://www.science.org/doi/10.1126/scirobotics.aam8638">Yang et al. — Levels of autonomy (Science Robotics, 2017)</a><br>
+        · <a href="https://jamanetwork.com/journals/jama/fullarticle/2788483">Nundy, Cooper &amp; Mate — Quintuple Aim (JAMA, 2022)</a><br><br>
+        <strong>Paciente (1.0)</strong><br>
+        · <a href="https://www.acpjournals.org/doi/10.7326/0003-4819-159-10-201311190-00006">Goldzweig et al. — Patient portals (Annals, 2013)</a><br>
+        · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8741580/">Aceptación de resultados según gravedad del hallazgo</a><br>
+        · <a href="https://uchile.cl/noticias/188605/inteligencia-artificial-predice-que-pacientes-faltaran-a-citas-medicas">CMM U. de Chile — 18.000 citas: llamada −7,8pp vs WhatsApp −5,4pp</a><br><br>
+        <strong>Profesional (2.0)</strong><br>
+        · <a href="https://www.acpjournals.org/doi/10.7326/M16-0961">Sinsky et al. — 49,2% del tiempo en el EHR (Annals, 2016)</a><br>
+        · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12768499/">RCT UCLA — DAX no redujo el tiempo significativamente (NEJM AI, 2025)</a><br>
+        · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12605248/">26,3% de elementos clínicos omitidos por scribes (Mayo Clin Proc, 2025)</a><br><br>
+        <strong>Gestión (3.0)</strong><br>
+        · <a href="https://www.hfma.org/revenue-cycle/financial-counseling/100-estimate-100-ask-increases-point-of-service-collections/">HFMA — «100% estimate, 100% ask»: +27% en cobro en punto de servicio</a><br>
+        · <a href="https://www.chileatiende.gob.cl/fichas/4940-revision-de-bonos-rechazados-por-fonasa-a-prestadores-de-libre-eleccion">Fonasa — revisión de bonos rechazados: hasta 5 años</a><br>
+        · <a href="https://bcn.cl/leychile/navegar?idNorma=1209272">Ley 21.719 — protección de datos (vigencia 1-dic-2026)</a><br>
+        · <a href="https://www.bcn.cl/leychile/navegar?idNorma=1141549">Decreto 7/2019 — ENO, delegado de epidemiología</a><br><br>
+        <strong>Datos (4.0)</strong><br>
+        · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5051581/">Kahn et al. — Harmonized data quality framework (eGEMs, 2016)</a><br>
+        · <a href="https://www.leychile.cl/Consulta/obtxml?opt=7&amp;idNorma=1203827">Ley 21.668 — interoperabilidad de fichas clínicas</a><br>
+        · <a href="https://interoperabilidad.minsal.cl/fhir/ig/nid/0.4.6/">MINSAL — NID, guía FHIR R4</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span id="gen"></span> · Alma / OLACORE · códigos CDHI leídos del documento oficial; niveles verificados contra el código.
+  </footer>
+</div>
+
+<script>
+const GEN = "12 de julio de 2026";
+
+/* ═══ MAPA — CDISAH 2.ª ed. (2023): 4 grupos OMS + 1 extensión propia ═══ */
+const GRUPOS = [
+  {
+    num:"1.0", cls:"", nombre:"Health Service Users",
+    alias:"El paciente · en 2018 se llamaba «Clients»",
+    note:"La 2.ª edición borró la palabra «cliente»: ahora son <strong>Health Service Users</strong> y «Persons». Y agregó <strong>1.8 gestión del consentimiento</strong> — que es justo lo que la Ley 21.719 te va a exigir. Tu bot tiene código propio: <strong>1.6.2, «Simulated human-like conversations»</strong>, que en 2018 no existía.",
+    ivs:[
+      {c:"1.1", n:"Targeted communication to persons", lvl:3, has:"Recordatorios 09:00 y 2h antes · reenganche · win-back · campañas estacionales"},
+      {c:"1.2", n:"Untargeted communication to persons", lvl:1, has:"Blast masivo — gateado OFF"},
+      {c:"1.3", n:"Person-to-person communication", lvl:0, has:"<em>No aplica al CMC</em>"},
+      {c:"1.4", n:"Personal health tracking", lvl:1, has:"<code>/portal</code>, <code>/mis-citas</code> con OTP. <strong>1.4.4 «Access by the individual to own record» = el «Mis exámenes» por construir</strong>"},
+      {c:"1.5", n:"Person-based reporting", lvl:2, has:"NPS por profesional · encuestas post-consulta"},
+      {c:"1.6", n:"On-demand communication with persons", lvl:3, has:"<strong>1.6.2 = tu bot.</strong> FAQ con Claude · precios · triage GES · derivación SAMU"},
+      {c:"1.7", n:"Person-centred financial transactions", lvl:0, has:"<em>Nada. El paciente paga en el mostrador, no hay pago digital</em>"},
+      {c:"1.8", n:"Person-centred consent management ✦", lvl:2, has:"<code>privacy_consents</code> · <code>/privacidad</code> · botón en recepción. <strong>La Ley 21.719 lo eleva a explícito y separado</strong>"},
+    ]
+  },
+  {
+    num:"2.0", cls:"", nombre:"Healthcare Providers",
+    alias:"El profesional · aquí vive también tu «frente 7» de derivación",
+    note:"<strong>Hallazgo:</strong> la derivación (2.6) y el laboratorio (2.10) NO son un frente aparte — son capacidades del profesional. Tu «frente 3» y tu «frente 7» son el mismo grupo. La 2.ª edición agregó <strong>2.11 Healthcare provider financial transactions</strong> (el prestador cobrando) y metió <strong>IA generativa</strong> como intervención propia (2.5.6, 2.9.1) — categoría que en 2018 no existía y donde cae tu Copiloto.",
+    ivs:[
+      {c:"2.1", n:"Identification and registration of persons", lvl:3, has:"RUT + registro automático de paciente nuevo en Medilink"},
+      {c:"2.2", n:"Person-centred health records", lvl:2, has:"Copiloto de Ficha · Alma Escriba · Ficha 360 · Examen→Ficha"},
+      {c:"2.3", n:"Healthcare provider decision support", lvl:2, has:"Motor GES de triage. <strong>Cuidado: no construir alertas interruptivas</strong> (90% de override)"},
+      {c:"2.4", n:"Telemedicine", lvl:2, has:"Psiquiatría (Unibazo) · Neurología (Franca González)"},
+      {c:"2.5", n:"Healthcare provider communication", lvl:2, has:"Alertas pre-cita al doctor. <strong>2.5.6 = IA generativa ✦</strong> — nueva en 2023"},
+      {c:"2.6", n:"Referral coordination", lvl:1, has:"<code>/alma/interconsultas</code> (solo interno). <em>Sin cierre de loop: el paciente sale y no vuelve dato</em>"},
+      {c:"2.7", n:"Scheduling and activity planning", lvl:3, has:"Bot agenda contra Medilink · smart_select · lista de espera"},
+      {c:"2.8", n:"Healthcare provider training", lvl:0, has:"<em>Nada</em>"},
+      {c:"2.9", n:"Prescription and medication management", lvl:1, has:"Receta en el copiloto. <em>SNRE no integrado — pero no es obligatorio para el médico</em>"},
+      {c:"2.10", n:"Laboratory and diagnostics imaging", lvl:1, has:"Examen→Ficha (foto→texto). <em>Sin integración con el laboratorio externo</em>"},
+      {c:"2.11", n:"Healthcare provider financial transactions ✦", lvl:0, has:"<em>Nuevo en 2023. El prestador cobrando: verificación de cobertura y financiamiento. Nada construido</em>"},
+    ]
+  },
+  {
+    num:"3.0", cls:"", nombre:"Health Management &amp; Support Personnel",
+    alias:"La gestión · recepción, pagador, regulador, insumos",
+    note:"Aquí vive tu <strong>orden operativo</strong>. Y el pagador tiene número exacto: <strong>3.5 Health system financial management</strong>. Léelo como tu backlog: <strong>3.5.1</strong> verificar la cobertura del paciente · <strong>3.5.2 «insurance billing and claims»</strong> = tu brecha del 18% · <strong>3.5.3</strong> pagos al prestador · <strong>3.5.4</strong> remuneraciones (eso ya lo tienes).",
+    ivs:[
+      {c:"3.1", n:"Human resource management", lvl:2, has:"<code>/alma/equipo</code> · remuneraciones · liquidaciones · honorarios ×0,8475"},
+      {c:"3.2", n:"Supply chain management", lvl:1, has:"<code>/alma/inventario</code> (dental) · <code>/alma/proveedores</code>"},
+      {c:"3.3", n:"Public health event notification", lvl:0, has:"<em>Nada. Es la ENO (Decreto 7/2019): obligación legal activa, falta nombrar delegado de epidemiología</em>"},
+      {c:"3.4", n:"Civil registration and vital statistics", lvl:0, has:"<em>No aplica al CMC</em>"},
+      {c:"3.5", n:"Health system financial management", lvl:1, has:"Pagos, caja, abonos, EBITDA — pero <em>solo hacia adentro</em>. <strong>Nada del trámite con Fonasa/isapre: ni bono, ni cobranza, ni apelación de rechazos</strong>"},
+      {c:"3.6", n:"Equipment and asset management", lvl:1, has:"<code>/alma/mantencion</code> · <code>/alma/calidad</code> · <code>/alma/esterilizacion</code>"},
+      {c:"3.7", n:"Facility management", lvl:1, has:"<code>/alma/habilitacion</code> (expediente SEREMI) · <code>/alma/documentos</code>"},
+      {c:"3.8", n:"Health certificate management ✦", lvl:0, has:"<em>Nuevo en 2023. Certificados, licencias, reposos. Nada construido</em>"},
+    ]
+  },
+  {
+    num:"4.0", cls:"data", nombre:"Data Services",
+    alias:"La losa · y aquí viven tus dashboards, no en «gestión»",
+    note:"<strong>Hallazgo grande:</strong> tus dashboards son <strong>4.1.3 «Data synthesis and visualizations»</strong> — la OMS los pone <em>en la capa de datos</em>, no en un frente. Eso resuelve tu división gerencial/operativo mejor de lo que la resolvimos: no son dos mitades de un frente, son <strong>dos capas distintas</strong>. Y la 2.ª edición agregó el grupo <strong>4.5 Data governance compliance</strong>, que en 2018 la OMS decía explícitamente que quedaba <em>fuera</em> de alcance. Ahí cae toda tu Ley 21.719.",
+    ivs:[
+      {c:"4.1", n:"Data management", lvl:2, has:"ETL Medilink→Postgres · <strong>4.1.3 = EBITDA, ROAS, comparador, panel del día</strong>"},
+      {c:"4.2", n:"Data coding", lvl:1, has:"<em><code>fact_pagos.ingreso_id</code> = NULL en el 100%: no se puede trazar un pago hasta la atención que lo originó. La falla vive acá</em>"},
+      {c:"4.3", n:"Geo-spatial information management", lvl:3, has:"Heatmap con 53k citas · <code>dim_paciente.localidad</code>"},
+      {c:"4.4", n:"Data exchange and interoperability", lvl:0, has:"<em>Nada. La Ley 21.668 ya obliga a interoperar; el estándar es FHIR R4 (NID del MINSAL)</em>"},
+      {c:"4.5", n:"Data governance compliance ✦", lvl:1, has:"<strong>Grupo nuevo en 2023.</strong> 4.5.1 autenticación · 4.5.2 protección de datos sensibles · 4.5.3 procedencia y consentimiento · 4.5.4 arquitectura de confianza. <em>Aquí cae la Ley 21.719 completa</em>"},
+    ]
+  },
+  {
+    num:"5.0", cls:"outside", nombre:"Captación y demanda — extensión Alma",
+    alias:"NO EXISTE en la OMS · nadie en el mundo lo ha escrito",
+    note:"En las <strong>4.826 líneas</strong> de la clasificación, las palabras <em>marketing</em>, <em>advertising</em>, <em>patient acquisition</em>, <em>for-profit</em> y <em>competitor</em> aparecen <strong>cero veces</strong>. No es un descuido: la OMS le habla a ministerios de salud, y un ministerio no compite por pacientes. La 2.ª edición sí cerró el lado del <em>dinero</em> (2.11, 3.5) — pero el lado de la <strong>demanda</strong> sigue vacío. Se revisaron IHF, HIMSS, IFC, MGMA, JCI, NABH y Clínicas de Chile A.G.: <strong>nadie extendió la CDISAH con esto</strong>. El hueco está abierto.",
+    ivs:[
+      {c:"5.1", n:"Adquisición de pacientes (ads pagados)", lvl:2, has:"Meta Ads + CAPI · pixel activo · ROAS · atribución ~60-70%"},
+      {c:"5.2", n:"Demanda orgánica (SEO y contenido)", lvl:2, has:"Blog por especialidad · landings por comuna · sitemap"},
+      {c:"5.3", n:"Orquestación autónoma de campañas", lvl:2, has:"Autopilot: 70 endpoints. <em><code>AUTOPILOT_EXECUTE</code> = OFF</em>"},
+      {c:"5.4", n:"Retención y recuperación comercial", lvl:1, has:"Win-back general + dental · Custom Audiences con consent — gateados OFF"},
+      {c:"5.5", n:"Precio y posicionamiento competitivo", lvl:1, has:"Simulador de punto de equilibrio · análisis Transbank vs Mercado Pago"},
+    ]
+  },
+];
+
+const BACKLOG = [
+  { t:"Cumplimiento Ley 21.719", f:"4.5 / 1.8", imp:"alto", esf:"medio", est:"pend",
+    w:"Registro de actividades de tratamiento auto-generado, consentimiento explícito y separado, flujo de brechas con reloj de 72h, log de accesos a datos sensibles.",
+    e:"Vigencia 1-dic-2026 · hasta 20.000 UTM · única tarea con fecha cierta" },
+  { t:"Descomponer el 18% de brecha facturado↔cobrado", f:"3.5.2", imp:"alto", esf:"bajo", est:"pend",
+    w:"No es un producto, es una tarde de SQL sobre el DW. ¿Atención nunca facturada? ¿Bono nunca emitido? ¿Copago no cobrado? ¿Bono rechazado? Cada rama tiene solución distinta.",
+    e:"MGMA: el primer paso NO es comprar herramienta, es diagnosticar dónde ocurre el error" },
+  { t:"Llamada telefónica para no-shows de alto riesgo", f:"1.1", imp:"alto", esf:"bajo", est:"pend",
+    w:"Usar el modelo de riesgo que ya está en el BI para decidir a quién llamar. No es un portal, es el siguiente paso del bot.",
+    e:"CMM U. de Chile, 18.000 citas: llamada −7,8pp vs WhatsApp −5,4pp · 60% la prefiere" },
+  { t:"Arreglar el join pago ↔ ingreso ↔ atención", f:"4.2", imp:"alto", esf:"medio", est:"pend",
+    w:"ingreso_id está 100% NULL. Sin ese join ningún módulo de 3.5 puede medir nada. Es infraestructura, no la intervención rentable en sí.",
+    e:"Los sistemas automatizados logran 90–95% de auto-match; el resto va a revisión humana" },
+  { t:"Detector de charge capture leakage", f:"3.5", imp:"alto", esf:"bajo", est:"pend",
+    w:"Alerta diaria: citas «atendidas» en Medilink SIN registro en fact_ingresos. Es una query. La fuga que nunca aparece como rechazo.",
+    e:"HFMA: 1–5% del ingreso neto · Medilink parece exigir ingreso MANUAL de bonos" },
+  { t:"Quitarle a recepción la decisión débito/crédito", f:"3.5 → 4.2", imp:"alto", esf:"bajo", est:"curso",
+    w:"Capturar el N° de voucher del POS (que trae impreso el tipo de tarjeta) + chequeo de plausibilidad que grite si el mix diario se desvía del histórico.",
+    e:"Kahn 2016: hoy pasa el value conformance pero falla la validación contra fuente externa" },
+  { t:"Cobro del copago en el punto de servicio", f:"3.5.1", imp:"alto", esf:"medio", est:"pend",
+    w:"Estimador de copago pre-atención (en Chile es determinista por nivel del prestador) + alerta en recepción antes de que el paciente cruce la puerta.",
+    e:"HFMA (independiente): +27% en cobros el primer mes con «100% estimate, 100% ask»" },
+  { t:"Recuperar bonos rechazados sin apelar", f:"3.5.2", imp:"alto", esf:"medio", est:"pend",
+    w:"Cruzar el histórico de 53k citas contra el portal de cobranza. Worklist priorizada por monto × probabilidad.",
+    e:"Fonasa da hasta 5 años para pedir revisión (persona jurídica). Activo dormido" },
+  { t:"Delegado de epidemiología + recordatorio ENO", f:"3.3.1", imp:"medio", esf:"bajo", est:"pend",
+    w:"El art. 3° del Decreto 7/2019 obliga al director a nombrar un delegado. Más un aviso en el flujo clínico al registrar un diagnóstico de la lista ENO.",
+    e:"Obligación legal activa, con responsable nominado. Costo casi cero" },
+  { t:"«Mis exámenes» por link de WhatsApp + gate médico", f:"1.4.1", imp:"medio", esf:"medio", est:"pend",
+    w:"NO es un portal: es un link con token que el bot manda cuando el resultado está listo. Sin login. Los resultados sensibles NUNCA se publican solos: gatillan una llamada.",
+    e:"Ver resultados = 86% de uso (la función #1) · pero solo 19% acepta saber de un cáncer por portal" },
+  { t:"Copiloto: transcript crudo + checklist anti-omisión", f:"2.2", imp:"medio", esf:"medio", est:"pend",
+    w:"Panel dividido transcript ↔ nota. Si el médico dijo algo que el modelo no supo clasificar, que aparezca en «sin clasificar» en vez de desaparecer.",
+    e:"76,3% de los errores de los scribes son OMISIONES · y es el criterio 4 de exención de la FDA" },
+  { t:"Medir adopción del Copiloto de Ficha", f:"2.2", imp:"medio", esf:"bajo", est:"pend",
+    w:"% de notas aceptadas sin edición mayor · tiempo de edición · uso semanal sostenido a 30/60/90 días · un ítem de burnout pre/post.",
+    e:"15% de los médicos del RCT de UCLA nunca abrieron la herramienta asignada" },
+  { t:"Tests de calidad de datos en el ETL (Pandera)", f:"4.1", imp:"medio", esf:"bajo", est:"pend",
+    w:"Validar el DataFrame antes de insertar: valores en lista cerrada, sin nulos en campos clave, plausibilidad del mix diario.",
+    e:"Kahn: conformance · completeness · plausibility. Pandera cabe en el ETL Python que ya existe" },
+  { t:"Cierre del loop de derivación", f:"2.6", imp:"medio", esf:"medio", est:"pend",
+    w:"Estado de cada derivación: emitida → agendada → atendida → contrarreferencia recibida. Alerta de loop abierto a los N días. Funciona incluso con PDF.",
+    e:"OMS: en casi la mitad de las derivaciones nunca vuelve el informe del especialista" },
+  { t:"Exportador FHIR R4 / NID (solo la capa de mapeo)", f:"4.4", imp:"bajo", esf:"medio", est:"pend",
+    w:"NO construir la integración completa: el reglamento de la Ley 21.668 está vencido y sin publicar. Solo el mapeo a los perfiles MINSAL. Barato hoy, listo cuando salga.",
+    e:"Ley 21.668 ya obliga a interoperar · pero todavía no hay a qué conectarse" },
+];
+
+/* ═══ FICHAS — planificación exhaustiva por punto ═══ */
+const FICHAS = [
+  {
+    t:"F0 · 569 atenciones que nunca se cerraron — y la curva se está disparando",
+    s:"CDISAH 3.5 · MEDIDO contra Medilink · ~$25M/año · lo más urgente",
+    est:"curso",
+    problema:"Una atención con <code>finalizado = 0</code> y <code>total = 0</code> nunca se cerró: el profesional atendió, pero nadie le puso valor. Y el ETL la <strong>descarta en silencio</strong> (<code>transform.py:307</code>). No aparece en facturado ni en cobrado. <strong>Es plata que se fuga sin dejar rastro, y por diseño nadie se entera.</strong>",
+    consecuencia:"De 1.738 atenciones sin valorizar en 180 días, <strong>1.169 son legítimas</strong> (cerradas a propósito con valor cero: controles incluidos, sesiones de paquete) y <strong>569 nunca se cerraron</strong>. A ticket promedio ($22.429) eso son <strong>$12,7M en seis meses ≈ $25,5M al año</strong>.<br><br><strong>Pero lo grave es la tasa, no el monto.</strong> La línea base era 2%. Hoy va en 15%:<br><code>dic 2,2% · ene 1,6% · feb 1,7% · mar 2,3% · abr 4,2% · <strong>may 9,2% · jun 9,5% · jul 15,2%</strong></code><br>No es que se atienda más — <strong>es que se cierra peor</strong>.",
+    diseno:[
+      "<strong>Ya está construido y probado:</strong> <code>health-bi-project/scripts/atenciones_no_cerradas.py</code>. Corre <code>--dias 90</code> para el reporte y <code>--csv triaje.csv</code> para el detalle.",
+      "Tiene <strong>período de gracia</strong> (default 7 días): una atención de anteayer todavía puede cerrarse, y no cuenta como fuga. Sin eso, el número se infla solo.",
+      "<strong>Siguiente paso: alerta diaria.</strong> Esto no se arregla con un rediseño — se arregla con que alguien lo vea todos los días. Cron + WhatsApp al profesional con su lista de atenciones abiertas.",
+      "Y dejar de descartar en silencio en el ETL: que las no cerradas vayan a <code>fact_atenciones_sin_valorizar</code> en vez de desaparecer."
+    ],
+    riesgo:"<strong>El principal responsable es el dueño.</strong> Rodrigo estuvo en CERO tres meses (dic, ene, feb) y desde marzo se disparó: 4 → 17 → 54 → <strong>78 en junio</strong>, el 43% del total del mes. Alonso Márquez muestra el mismo salto en mayo (6 → 29), así que puede ser un cambio de proceso y no solo de una persona. <strong>Qué cambió en marzo es la primera pregunta a responder.</strong>",
+    exito:"Tasa de no-cierre de vuelta bajo el 2% (la línea base real de diciembre-febrero). Se mide con el mismo script."
+  },
+  {
+    t:"F1 · Las tarjetas: el mix real es 92/8, no 86/14",
+    s:"CDISAH 3.5 · MEDIDO en producción · debilita la decisión Transbank",
+    est:"curso",
+    problema:"El dashboard <code>tarjetas-analisis.html</code> dice «14% crédito · 86% débito (según datos reales)». Ese número salió de <strong>309 registros de una ventana de seis días</strong>. Con la muestra completa —1.956 pagos entre el 1 de junio y el 11 de julio— <strong>el mix real es 92% débito / 8% crédito</strong>. El crédito es la mitad de lo que se creía.",
+    consecuencia:"Tres cosas debilitan la decisión Transbank vs Mercado Pago, y son peores que el número en sí. <strong>(1) El crédito son SIETE transacciones.</strong> Siete, en 40 días. Comparar comisiones de dos adquirentes sobre siete operaciones no dice nada. <strong>(2) 91 de las 92 tarjetas no tienen N° de comprobante</strong> — y el tipo de tarjeta viene impreso en ese voucher del POS y en ningún otro lado. Sin él, el mix <em>no se puede verificar contra la liquidación de Transbank</em>: es lo que recepción recuerda haber clickeado. <strong>(3) Tarjeta es solo el 18% de la caja de copago</strong> (efectivo 42%, transferencia 38%). Crédito, el 2,4%.<br><br>Quedarse con Transbank probablemente sigue siendo correcto — pero el número que lo sostiene no aguanta escrutinio.",
+    diseno:[
+      "<strong>Ya construido, sin deployar:</strong> se sacaron los <strong>tres defaults silenciosos</strong> de «efectivo» en <code>alma_pagos.html</code> (botón preseleccionado, reset del modal, y estado inicial). Ahora recepción <em>debe</em> elegir el método.",
+      "Y si es tarjeta, <strong>debe anotar el N° de comprobante</strong> — que es el único papel donde dice si fue débito o crédito. En tres meses eso da un mix <em>verificable</em> en vez de uno recordado.",
+      "El backend (<code>pagos_routes.py</code>) mantiene el default —quitarlo rompería flujos del bot— pero <strong>deja de ser silencioso</strong>: loguea <code>PAGO_METODO_INFERIDO</code> cada vez que lo inventa. Hay 93 pagos con método vacío que van a empezar a tener nombre.",
+      "<code>scripts/qa_pagos.py</code>: chequeo de conformance / completeness / plausibility sobre <code>pagos_cmc</code> (framework de Kahn 2016).",
+      "Corregir el 86/14 en <code>tarjetas-analisis.html</code>."
+    ],
+    riesgo:"<strong>Medilink NO sirve para esto.</strong> Su caja registra <strong>36.543 de 36.698 pagos como «Efectivo» (99,7% del monto)</strong> — cuatro tarjetas de débito en toda la historia, cero de crédito. No es que se cobre todo en efectivo: <em>nadie marca el medio de pago en Medilink</em>. Por eso el módulo de Alma es la única fuente del mix, y por eso su calidad de captura importa tanto.",
+    exito:"Que en 3 meses el mix se pueda cruzar contra la liquidación real de Transbank. Hoy es imposible."
+  },
+  {
+    t:"F1b · Las dos fuentes de plata (corrección de un error mío)",
+    s:"CDISAH 4.1 · qué sirve para qué",
+    est:"pend",
+    problema:"Anoche afirmé que «el BI de pagos está vacío» y que «el CMC no puede saber cuánta plata entró». <strong>Ambas cosas eran falsas.</strong> Miré <code>/api/v5/pagos</code> de Medilink —que solo devuelve la caja abierta del día, ~50 filas— y saqué una conclusión sobre todo el sistema.",
+    consecuencia:"La verdad es más simple: <strong>hay dos fuentes y cada una sirve para una cosa distinta.</strong><br><br>· <strong><code>bi_pagos_caja</code> = VENTA TOTAL.</strong> Es la fuente de DB Mensual. La llena el bot por cron. Junio: <strong>$26.039.530</strong> (el dueño confirmó $26.004.530). Y tiene <code>atencion_id</code> poblado al <strong>96%</strong> — el join pago→atención que dije que era imposible <em>ya existe</em>.<br><br>· <strong><code>pagos_cmc</code> = COPAGO y MEDIO DE PAGO.</strong> Lo que teclea recepción en Alma. No cubre la venta total, y no debe hacerlo.",
+    diseno:[
+      "No hay nada que construir acá. Solo dejar de confundir las fuentes.",
+      "<strong>Regla:</strong> ¿cuánto vendimos? → <code>bi_pagos_caja</code> / DB Mensual. ¿Cómo pagó el paciente? → <code>pagos_cmc</code>.",
+      "Queda anotado en memoria para que la próxima sesión no repita el error."
+    ],
+    riesgo:"El error de origen fue mirar un endpoint y generalizar sobre el sistema entero, sin preguntar. Costó varias horas y produjo tres conclusiones falsas que ya están corregidas.",
+    exito:"Que nadie vuelva a decir que «no se puede medir la caja». Sí se puede, y está en DB Mensual."
+  },
+  {
+    t:"F2 · El bono que caduca solo — 180 días",
+    s:"CDISAH 3.5.2 · el hallazgo más caro de la noche · esfuerzo: medio",
+    est:"pend",
+    problema:"El cobro Fonasa MLE tiene <strong>dos circuitos de dinero distintos</strong>, y solo uno es automático. El copago del paciente entra a tu caja en el momento. <strong>Pero la parte que paga Fonasa NO llega sola:</strong> hay que ir a cobrarla activamente al Portal Prestador (fonasa.cl → «Emitir Cuenta Médica»), emitiendo factura con folio de referencia.",
+    consecuencia:"<strong>Hay 180 días desde la emisión del bono para cobrarlo, o Fonasa lo rechaza</strong> (Res. 49/2009 MLE, punto 6.2). Si nadie ejecuta ese paso sistemáticamente, <em>la plata se vence sola</em>. Nunca se verificó que alguien en el CMC lo esté haciendo. Y en el otro extremo: Fonasa da hasta <strong>5 años (persona jurídica)</strong> para pedir revisión de bonos ya rechazados — un activo dormido sobre 53.000 citas de historia.",
+    diseno:[
+      "<strong>Paso humano primero, no software:</strong> entrar al portal del operador (i-Med → cobranza3.bonoelectronico.cl) y bajar el reporte de bonos «sin documentar». Escribir a <code>pagoprestadoresmle@fonasa.cl</code> pidiendo el histórico de rechazos del CMC.",
+      "Cargar el CSV a <code>bi.bonos_rechazados</code>, cruzar contra <code>fact_ingresos</code> por RUT + fecha + monto.",
+      "Panel con <strong>reloj de prescripción</strong>: priorizado por (monto × días restantes antes de caducar).",
+      "Alerta preventiva: bono emitido hace >150 días sin cobrar → aparece en rojo antes de que se venza."
+    ],
+    riesgo:"No hay API ni en Fonasa ni en i-Med — todo es portal web manual. El primer paso lo tiene que hacer una persona con Clave Única. <strong>Sin ese paso, no se puede construir nada.</strong>",
+    exito:"$ recuperados de bonos rechazados + cero bonos caducados por no cobrar."
+  },
+  {
+    t:"F3 · Cumplimiento Ley 21.719 — el único con multa y fecha",
+    s:"CDISAH 4.5 / 1.8 · vigencia 1-dic-2026 · esfuerzo: medio",
+    est:"pend",
+    problema:"Faltan menos de 5 meses. Datos de salud = sensibles. Pero el hallazgo que nadie estaba mirando es otro: <strong>el bot manda conversaciones de pacientes (datos de salud) a la API de Anthropic y a Whisper de OpenAI, en Estados Unidos.</strong>",
+    consecuencia:"Bajo el <strong>art. 15 bis</strong> (texto verificado), Anthropic, OpenAI y Meta son <strong>«encargados de tratamiento»</strong>: procesan datos de salud por cuenta del CMC. Eso exige contrato que fije objeto, duración, finalidad y tipo de dato. Y bajo los arts. 27-29, es además una <strong>transferencia internacional</strong>, que exige garantías: cláusulas contractuales tipo, o <strong>consentimiento explícito y separado del titular para esa transferencia específica</strong>. Hoy no existe ninguno de los dos. El art. 14 ter letra h obliga literalmente a informarlo en la política de privacidad.",
+    diseno:[
+      "Firmar el <strong>DPA</strong> (Data Processing Addendum) con Anthropic y OpenAI. Lo ofrecen estándar; no basta usar la API sin más.",
+      "Consentimiento <strong>separado</strong> para la transferencia internacional, no empaquetado en el opt-in general.",
+      "Tabla <code>consent_records</code> versionada: finalidad, tipo de dato, versión de la política, <strong>snapshot del texto exacto mostrado</strong>, medio, timestamp, revocación.",
+      "<code>access_log_sensibles</code>: middleware en <code>claude_helper.py</code> y <code>medilink.py</code> que registre cada vez que sale payload de salud hacia un tercero.",
+      "RAT, flujo de brechas, política de retención (conciliando los <strong>15 años</strong> de ficha de la Ley 20.584), y ARCO + portabilidad con plazo de 30+30 días.",
+      "Documentar formalmente la categoría PYME (Ley 20.416) para poder invocar la ventana de amonestación."
+    ],
+    riesgo:"<strong>Corrección a lo que se creía:</strong> la ley NO fija un plazo de 72 horas para notificar brechas — el art. 14 sexies dice «sin dilaciones indebidas», sin número. Y el DPO es <strong>voluntario</strong> (art. 50), no obligatorio. Tampoco existe una obligación llamada «RAT» — lo más cercano es el art. 14 ter, que es de cara al público.",
+    exito:"Los 10 ítems del checklist cerrados antes del 1-dic-2026. La ventana PYME (amonestación en vez de multa) dura solo 12 meses y es discrecional."
+  },
+  {
+    t:"F4 · Llamada telefónica para no-shows — el mayor ROI",
+    s:"CDISAH 1.1 · evidencia chilena dura · esfuerzo: bajo-medio",
+    est:"pend",
+    problema:"El bot ya manda recordatorios por WhatsApp. Pero el CMM de la Universidad de Chile midió sobre <strong>18.000 citas</strong> que la llamada telefónica reduce la inasistencia <strong>−7,8 puntos</strong> (20,3% → 12,5%) contra <strong>−5,4</strong> de WhatsApp. Y el <strong>60% de los pacientes prefiere la llamada</strong> — perciben el mensaje como impersonal.",
+    consecuencia:"El margen que le queda al CMC no está en construir un portal: está en <strong>escalar a llamada humana los no-shows de alto riesgo</strong>. No es un producto nuevo, es el siguiente paso del bot.",
+    diseno:[
+      "<strong>Regresión logística, NO gradient boosting.</strong> Con el volumen de un centro chico la ganancia es marginal, y la explicabilidad es un requisito legal (ver riesgo).",
+      "El predictor más fuerte de la literatura es el <strong>historial de inasistencias previas</strong> (importancia 0,35 en XGBoost, la más alta). Segundo: el <strong>lead time</strong> — 0-15 días → 4,3% de no-show; >60 días → 7,7%.",
+      "<strong>Doble recordatorio 3 días + 1 día</strong> antes: 4,4% de no-show contra 5,8% (solo a 3d) y 5,3% (solo a 1d). RCT con n=54.066. Esto es barato y no requiere modelo.",
+      "Llamar <strong>solo al decil de mayor riesgo</strong>. El valor predictivo positivo de estos modelos es ~0,18: de cada 100 marcados «alto riesgo», solo 18 faltan de verdad. Llamar a todos satura a recepción con falsos positivos.",
+      "Worklist diaria: paciente, teléfono, motivo del score («3 inasistencias previas»), estado de contacto. Ese estado <strong>retroalimenta el modelo</strong>.",
+      "Medir con <strong>A/B aleatorizado dentro del grupo de alto riesgo</strong> (80% se llama, 20% control). El pre/post se confunde con estacionalidad."
+    ],
+    riesgo:"<strong>Un score de riesgo de inasistencia es «elaboración de perfiles» bajo la Ley 21.719</strong> → exige Evaluación de Impacto previa, supervisión humana explicable (recepción decide, no el algoritmo), y ampliar el consentimiento existente. Esto se construye <em>después</em> de F3, no antes.",
+    exito:"Diferencial de no-show entre el grupo llamado y el control, controlando por score. Base pública chilena: 16,1% de inasistencia en especialidad."
+  },
+  {
+    t:"F5 · «Mis exámenes» — con gate clínico, no un portal",
+    s:"CDISAH 1.4.4 · esfuerzo: medio · dos reglas duras",
+    est:"pend",
+    problema:"Ver resultados es la función #1 de todo portal del paciente (86% de uso). Pero el CMC <strong>no tiene cobertura médica de fin de semana</strong>, y solo el 19% de las personas acepta enterarse de un cáncer por un portal. Un hallazgo grave publicado un viernes a las 19:00 es daño evitable.",
+    consecuencia:"No se construye un portal. Se construye <strong>un link con token que el bot manda por WhatsApp cuando el resultado está listo</strong>. Sin login, sin app, sin registro — porque el 25% de los hogares chilenos se conecta solo por celular y el registro es la barrera #1 de abandono.",
+    diseno:[
+      "<strong>Tier 1 — auto-publica:</strong> examen de rutina, valor en rango, categoría no restringida.",
+      "<strong>Tier 2 — espera revisión médica:</strong> valor fuera de rango pero no crítico, y <em>toda</em> imagen. El paciente ve «tu médico lo está revisando», nunca el valor crudo.",
+      "<strong>Tier 3 — gatilla llamada obligatoria:</strong> valor crítico (potasio ≤2,5 o ≥6,5 · glucosa ≤40 o ≥500 · hemoglobina ≤7 · plaquetas &lt;20.000 · INR ≥8 · troponina elevada) o categoría restringida.",
+      "Seguridad: token de 256 bits, <strong>hash almacenado</strong> (no el token), expiración a 7 días (no 15 minutos — la conexión rural es intermitente), y <strong>segundo factor liviano</strong>: últimos 4 dígitos del RUT en cada apertura. Rate-limit y botón «no fui yo» que revoca."
+    ],
+    riesgo:"<strong>DOS REGLAS DURAS, no de diseño sino legales.</strong> (1) <strong>VIH:</strong> la Ley 19.779 y el DS 182/2005 exigen que el resultado se entregue «en forma personal y reservada, por personal debidamente capacitado». Nunca por link, nunca por WhatsApp — sin excepción, y bloqueado en el servidor, no solo en la UI. Lo mismo anatomía patológica. (2) <strong>WhatsApp Business Policy de Meta prohíbe mandar contenido de salud en el cuerpo del mensaje.</strong> El mensaje solo puede decir «tu resultado está listo, entra aquí»; el contenido clínico vive siempre en un servidor propio del CMC.",
+    exito:"% de resultados publicados cuyo link se abre y verifica en 7 días. <strong>Umbral de muerte:</strong> si a los 90 días (con ≥50 resultados) la apertura está bajo 40%, el problema no son las features — no agregarle más, rediseñar el canal."
+  },
+];
+
+const EVIDENCIA = [
+  { c:"El portal del paciente clásico es una trampa para el CMC: el perfil de tu paciente (rural, mayor, baja alfabetización digital) es exactamente el de menor adopción.",
+    s:"HINTS 2019: acceso al portal 35,9% rural vs 48,4% urbano. Y el 7,4% de los hogares del Biobío no tiene internet.", n:"35,9%", k:"bad" },
+  { c:"Cuando EE.UU. intentó forzar la adopción por regulación, fracasó y tuvo que retroceder.",
+    s:"Meaningful Use Stage 2 exigía que >5% de los pacientes usara el portal. En 2015, CMS bajó el umbral a UN paciente.", n:"5% → 1", k:"bad" },
+  { c:"La llamada telefónica le gana a WhatsApp en reducir inasistencia — y es el mayor ROI disponible hoy.",
+    s:"CMM Universidad de Chile, 18.000 citas en 3 centros. El 60% de los pacientes prefiere la llamada.", n:"−7,8 pp", k:"good" },
+  { c:"Los ambient scribes NO ahorran el tiempo que prometen. Vender el copiloto por minutos es prepararse para fallar.",
+    s:"RCT UCLA (NEJM AI 2025): DAX redujo el tiempo de nota 1,7%, no significativo. Estudio ACDC (8.581 clínicos): 16 min por jornada de 8h.", n:"1,7%", k:"bad" },
+  { c:"Pero el efecto sobre burnout SÍ es real y reproducible. Ese es el argumento de venta correcto.",
+    s:"JAMA Network Open 2025, 263 clínicos en 6 sistemas: burnout 51,9% → 38,8% a 30 días.", n:"−13 pp", k:"good" },
+  { c:"El riesgo del copiloto clínico no son las alucinaciones: son las OMISIONES silenciosas.",
+    s:"Mayo Clinic Proc 2025, 5 plataformas comerciales: 26,3% de elementos clínicos omitidos; las omisiones fueron el 76,3% de los errores.", n:"76,3%", k:"bad" },
+  { c:"No construyas alertas interruptivas. La evidencia contra el pop-up clínico es demoledora.",
+    s:"Meta-análisis 2024: 90% de override en alertas de interacción medicamentosa. Se necesitan ~300 recordatorios para prevenir un evento adverso.", n:"90%", k:"bad" },
+  { c:"La intervención con mejor evidencia independiente de todo el frente pagador es cobrar el copago en el momento.",
+    s:"HFMA, Health First: política «100% estimate, 100% ask». A nivel industria el cobro en el momento cayó de ~90% (2019) a 56% (2022).", n:"+27%", k:"good" },
+  { c:"Una vez que el saldo se va a cobranza externa, casi no se recupera.",
+    s:"MGMA vía Phreesia: probabilidad de recuperación total del saldo derivado a cobranza.", n:"7,4%", k:"bad" },
+  { c:"Tienes una ventana larguísima para recuperar bonos rechazados — mucho más generosa que en EE.UU.",
+    s:"Fonasa: revisión de bonos rechazados hasta 2 años (persona natural) o 5 años (persona jurídica).", n:"5 años", k:"good" },
+  { c:"La receta electrónica NO es obligatoria para el médico. Es obligatoria para la farmacia.",
+    s:"Decreto 11/2025: el verbo para el prescriptor es «podrá». Y ahora basta Clave Única, no firma electrónica avanzada.", n:"«podrá»", k:"good" },
+  { c:"La ley que sí tiene fecha y multa es la de datos personales.",
+    s:"Ley 21.719, plena vigencia 1-dic-2026. Datos de salud = sensibles. Ventana PYME: amonestación en vez de multa el primer año.", n:"1-dic-26", k:"bad" },
+];
+
+const RUBRICA = [
+  { n:0, t:"Papel / ausente", d:"El proceso no existe digitalmente. Si borras el sistema, no cambia nada." },
+  { n:1, t:"Digital manual", d:"Existe en software, pero cada acción la dispara un humano. No hay métrica del proceso." },
+  { n:2, t:"Digital + medido", d:"Hay un número que alguien mira con periodicidad definida. Respondes cuántos, cuándo y cuánto sin abrir el sistema fuente." },
+  { n:3, t:"Propone, humano aprueba", d:"El sistema prepara la acción solo; un humano la aprueba antes de que ocurra. Hay cola y tasa de aprobación medible. (HITL)" },
+  { n:4, t:"Autónomo supervisado", d:"Actúa sin aprobación previa dentro de límites explícitos, escala por excepción. Exige límites escritos + kill-switch + log. (HOTL)" },
+];
+
+const SOCIO = [
+  { n:"Hardware / software", v:4 }, { n:"Contenido clínico", v:4 },
+  { n:"Interfaz humano-computador", v:3 }, { n:"Personas (entrenamiento)", v:1 },
+  { n:"Flujo de trabajo", v:2 }, { n:"Políticas internas", v:1 },
+  { n:"Regulación externa", v:1 }, { n:"Medición y monitoreo", v:2 },
+];
+
+const BUILDING = [
+  { t:"Dashboard de arquitectura (esta página)", s:"curso", d:"Reconstruido sobre la nomenclatura oficial de la OMS, con los códigos leídos del documento CDHI v1.0." },
+  { t:"Investigación internacional (6 frentes)", s:"hecho", d:"Pagador/RCM · portal del paciente · frente clínico · calidad de datos · interoperabilidad y regulador Chile · modelos de madurez. Todas con fuentes citadas." },
+  { t:"Inventario real del código", s:"hecho", d:"54 módulos en el registry, 25 orquestadores (todos OFF), 112 endpoints de recepción, 70 del Autopilot. Tres discrepancias con la memoria, corregidas." },
+  { t:"Fix captura débito/crédito", s:"curso", d:"Diagnosticado: dos botones idénticos en alma_pagos.html:844, y un default «asume débito» en auditor.py:67. La liquidación real de Transbank nunca se cargó — solo hay un CSV de ejemplo con 2 filas inventadas." },
+];
+
+const REPOS = [
+  { n:"chatbot-cmc", d:10, r:"amber", c:"28db545 · bioimpedanciometría + catálogo especialidades" },
+  { n:"olacore-dental", d:2, r:"amber", c:"1153618 · módulos estética + pulso" },
+  { n:"alma-image-runner", d:10, r:"amber", c:"edff58a · fill_library + make_web" },
+  { n:"health-bi-project", d:0, r:"clean", c:"bd5c1f0 · ETL + API + dashboards" },
+  { n:"supermercado-meulen", d:0, r:"green", c:"—" },
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ALL_IVS = GRUPOS.flatMap(g => g.ivs);
+
+function segs(lvl){
+  let h = '<span class="iv-meter" role="img" aria-label="Nivel ' + lvl + ' de 4">';
+  for(let i=0;i<5;i++) h += '<span class="sg' + (i <= lvl ? ' on' : '') + '"></span>';
+  return h + '</span>';
+}
+function stats(el, rows){
+  $(el).innerHTML = rows.map(([l,v,s,c]) =>
+    '<div class="stat ' + (c||'') + '"><div class="s-l">' + l + '</div><div class="s-v tnum">' + v + '</div><div class="s-s">' + s + '</div></div>'
+  ).join('');
+}
+
+function renderMapa(){
+  const vacios = ALL_IVS.filter(i => i.lvl === 0).length;
+  const avg = (ALL_IVS.reduce((a,i) => a + i.lvl, 0) / ALL_IVS.length).toFixed(1);
+  stats('#strip', [
+    ['Intervenciones mapeadas', ALL_IVS.length, '4 grupos OMS + 1 extensión propia', ''],
+    ['En cero', vacios, 'ENO · interoperabilidad · cobro al pagador', 'is-crit'],
+    ['Madurez promedio', avg, 'de 4 · rúbrica en Marco', 'is-warn'],
+    ['Nivel 3 o más', ALL_IVS.filter(i => i.lvl >= 3).length, 'bot · agenda · recordatorios · heatmap · registro', ''],
+  ]);
+  $('#grupos').innerHTML = GRUPOS.map(g => {
+    const done = g.ivs.filter(i => i.lvl > 0).length;
+    return `
+    <div class="grp ${g.cls}" data-open="0">
+      <button class="g-head" aria-expanded="false">
+        <span class="g-num">${esc(g.num)}</span>
+        <span>
+          <span class="g-name">${esc(g.nombre)}</span>
+          <span class="g-alias">${esc(g.alias)}</span>
+        </span>
+        <span class="g-right">
+          <span class="g-count tnum">${done}/${g.ivs.length}</span>
+          <span class="chev">▸</span>
+        </span>
+      </button>
+      <div class="g-body">
+        <div class="g-note">${g.note}</div>
+        ${g.ivs.map(i => `
+          <div class="iv ${i.lvl === 0 ? 'gap0' : ''}">
+            <span class="iv-code">${esc(i.c)}</span>
+            <span><span class="iv-name">${esc(i.n)}</span><span class="iv-has">${i.has}</span></span>
+            ${segs(i.lvl)}
+            <span class="iv-lvl tnum">${i.lvl}/4</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.g-head').forEach(b => b.addEventListener('click', () => {
+    const g = b.closest('.grp'), open = g.dataset.open === '1';
+    g.dataset.open = open ? '0' : '1';
+    b.setAttribute('aria-expanded', String(!open));
+  }));
+}
+
+function renderPlan(){
+  $('#backlog').innerHTML = BACKLOG.map((b,i) => `
+    <tr>
+      <td class="rank tnum">${i+1}</td>
+      <td><span class="t-title">${esc(b.t)}</span><span class="t-why">${esc(b.w)}</span><span class="t-ev">▸ ${esc(b.e)}</span></td>
+      <td><span class="pill f">${esc(b.f)}</span></td>
+      <td><span class="pill ${b.imp}">${esc(b.imp)}</span></td>
+      <td><span class="pill ${b.esf}">${esc(b.esf)}</span></td>
+      <td><span class="pill ${b.est}">${b.est === 'curso' ? 'en curso' : 'pendiente'}</span></td>
+    </tr>`).join('');
+}
+function renderFichas(){
+  $('#fichas').innerHTML = FICHAS.map(f => `
+    <div class="fi" data-open="0">
+      <button class="fi-head" aria-expanded="false">
+        <span class="pill ${f.est}">${f.est === 'curso' ? 'en curso' : 'pendiente'}</span>
+        <span><span class="fi-t">${esc(f.t)}</span><span class="fi-s">${esc(f.s)}</span></span>
+        <span class="chev">▸</span>
+      </button>
+      <div class="fi-body">
+        <div class="fi-sec"><h5>El problema</h5><p>${f.problema}</p></div>
+        <div class="fi-sec"><h5>Por qué importa</h5><p>${f.consecuencia}</p></div>
+        <div class="fi-sec"><h5>Diseño</h5><ol class="fi-steps">${f.diseno.map(d => `<li>${d}</li>`).join('')}</ol></div>
+        <div class="fi-sec danger"><h5>Riesgo / lo que puede salir mal</h5><p>${f.riesgo}</p></div>
+        <div class="fi-sec"><h5>Criterio de éxito</h5><p>${f.exito}</p></div>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('.fi-head').forEach(b => b.addEventListener('click', () => {
+    const f = b.closest('.fi'), open = f.dataset.open === '1';
+    f.dataset.open = open ? '0' : '1';
+    b.setAttribute('aria-expanded', String(!open));
+  }));
+}
+
+function renderEv(){
+  $('#evidence').innerHTML = EVIDENCIA.map(e => `
+    <div class="ev-row">
+      <div class="ev-claim">${esc(e.c)}<span class="src">${esc(e.s)}</span></div>
+      <div class="ev-n ${e.k}">${esc(e.n)}</div>
+    </div>`).join('');
+}
+function renderEjec(){
+  stats('#ejecStrip', [
+    ['En curso', BACKLOG.filter(b => b.est === 'curso').length, 'trabajándose ahora', 'is-warn'],
+    ['Backlog', BACKLOG.length, 'tareas priorizadas por evidencia', ''],
+    ['Repos sucios', '31', 'archivos sin commitear, 12 repos', 'is-warn'],
+    ['Sin deployar', '6', 'commits en local', 'is-warn'],
+  ]);
+  $('#building').innerHTML = BUILDING.map(b => `
+    <div class="block">
+      <h3>${esc(b.t)} <span class="pill ${b.s}" style="vertical-align:middle;margin-left:4px;">${b.s === 'curso' ? 'en curso' : 'hecho'}</span></h3>
+      <p>${esc(b.d)}</p>
+    </div>`).join('');
+  $('#repos').innerHTML = REPOS.map(r => `
+    <tr><td><strong>${esc(r.n)}</strong></td><td class="tnum">${r.d}</td>
+    <td><span class="pill ${r.r === 'amber' ? 'medio' : 'bajo'}">${r.r === 'amber' ? 'medio' : 'ok'}</span></td>
+    <td style="font-size:12px;color:var(--muted);">${esc(r.c)}</td></tr>`).join('');
+}
+function renderMarco(){
+  $('#rubric').innerHTML = RUBRICA.map(r => `
+    <div class="rb"><div class="rb-n tnum">${r.n}</div><div class="rb-t">${esc(r.t)}</div><div class="rb-d">${esc(r.d)}</div></div>`).join('');
+  $('#socio').innerHTML = SOCIO.map(s => {
+    const cls = s.v <= 1 ? 'weak' : s.v <= 2 ? 'mid' : '';
+    return `<div class="sd"><span class="sd-n">${esc(s.n)}</span>
+      <span class="sd-bar"><span class="sd-fill ${cls}" style="width:${(s.v/4)*100}%"></span></span>
+      <span class="sd-v tnum">${s.v}/4</span></div>`;
+  }).join('');
+}
+
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav.tabs button').forEach(x => x.setAttribute('aria-selected','false'));
+  b.setAttribute('aria-selected','true');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  $('#p-' + b.dataset.p).classList.add('on');
+}));
+$('#themeBtn').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const now = cur ? cur : (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', now === 'dark' ? 'light' : 'dark');
+});
+$('#gen').textContent = 'Generado el ' + GEN;
+renderMapa(); renderPlan(); renderFichas(); renderEv(); renderEjec(); renderMarco();
+</script>

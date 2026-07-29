@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transbank vs Mercado Pago · Alma · CMC</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB;
+    --navy:#0F3F68; --navy2:#0c3556; --bg:#F7FBFD;
+    --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --green:#23c25e; --amber:#e8a33d;
+    --tbk:#1172AB; --mp:#e8a33d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif;
+       font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1140px;margin:0 auto;padding:26px 18px 80px}
+
+  /* ── Header ── */
+  .hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,#0a2b47 100%);
+        color:#fff;border-radius:18px;padding:30px 30px 26px;margin-bottom:22px;
+        position:relative;overflow:hidden}
+  .hero::after{content:'';position:absolute;right:-70px;top:-70px;width:280px;height:280px;
+        border-radius:50%;background:radial-gradient(circle,rgba(79,190,206,.22),transparent 70%)}
+  .hero .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+        color:var(--aqua);font-weight:700;margin-bottom:9px}
+  .hero h1{margin:0 0 10px;font-size:27px;font-weight:800;letter-spacing:-.3px;line-height:1.2}
+  .hero p{margin:0;color:#c3dceb;font-size:14px;max-width:660px}
+  .hero .stamp{margin-top:16px;display:inline-flex;align-items:center;gap:8px;
+        background:rgba(255,255,255,.1);border:1px solid rgba(79,190,206,.35);
+        padding:7px 13px;border-radius:9px;font-size:12px;font-weight:600}
+
+  /* ── Verdict banner ── */
+  .verdict{border-radius:16px;padding:22px 24px;margin-bottom:22px;
+        background:#fff;border:2px solid var(--green);
+        box-shadow:0 2px 14px rgba(15,63,104,.06)}
+  .verdict h2{margin:0 0 8px;font-size:18px;font-weight:800;color:var(--navy);
+        display:flex;align-items:center;gap:9px}
+  .verdict .tag{background:var(--green);color:#fff;font-size:10.5px;font-weight:800;
+        padding:3px 9px;border-radius:6px;letter-spacing:.06em;text-transform:uppercase}
+  .verdict p{margin:0 0 6px;color:#3d5a72;font-size:13.5px}
+  .verdict b{color:var(--navy)}
+
+  /* ── Sections ── */
+  section{background:#fff;border:1px solid var(--border);border-radius:16px;
+        padding:24px 26px;margin-bottom:20px;box-shadow:0 1px 6px rgba(15,63,104,.04)}
+  section > h2{margin:0 0 4px;font-size:17px;font-weight:800;color:var(--navy);
+        display:flex;align-items:center;gap:9px}
+  section > h2 .n{width:25px;height:25px;border-radius:7px;background:var(--aqua);
+        color:#fff;font-size:12.5px;display:grid;place-items:center;flex:none;font-weight:800}
+  .sub{color:var(--mute);font-size:12.5px;margin:0 0 18px;padding-left:34px}
+  h3{font-size:13.5px;font-weight:700;color:var(--navy);margin:22px 0 10px}
+
+  /* ── Tables ── */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-weight:700;color:var(--mute);font-size:11px;
+     text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;
+     border-bottom:2px solid var(--border)}
+  td{padding:9px 10px;border-bottom:1px solid #eef4f8}
+  tr:last-child td{border-bottom:0}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .tot td{border-top:2px solid var(--navy);font-weight:800;color:var(--navy);
+     background:var(--aqua-s)}
+  .neg{color:var(--red)} .pos{color:var(--green)}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* ── Waterfall recon ── */
+  .wf{display:flex;flex-direction:column;gap:9px;margin:6px 0 4px}
+  .wf-row{display:flex;align-items:center;gap:12px}
+  .wf-lbl{flex:1;font-size:13px;color:#3d5a72}
+  .wf-bar{height:26px;border-radius:6px;display:flex;align-items:center;
+     justify-content:flex-end;padding-right:9px;color:#fff;font-size:11.5px;
+     font-weight:700;font-variant-numeric:tabular-nums;min-width:60px}
+  .wf-note{font-size:11.5px;color:var(--mute);padding-left:2px;font-style:italic}
+
+  /* ── Simulator ── */
+  .sim{background:linear-gradient(160deg,#0F3F68,#0c3556);border-radius:16px;
+       padding:26px;color:#fff;margin-bottom:20px}
+  .sim h2{margin:0 0 4px;font-size:18px;font-weight:800;color:#fff;
+       display:flex;align-items:center;gap:9px}
+  .sim .sub{color:#9fc2d8;padding-left:0;margin-bottom:20px}
+  .ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+       gap:18px;margin-bottom:24px}
+  .ctrl{background:rgba(255,255,255,.06);border:1px solid rgba(79,190,206,.22);
+       border-radius:11px;padding:14px 16px}
+  .ctrl label{display:flex;justify-content:space-between;align-items:baseline;
+       font-size:12px;font-weight:600;color:#c3dceb;margin-bottom:9px}
+  .ctrl .val{font-size:15px;font-weight:800;color:var(--aqua);
+       font-variant-numeric:tabular-nums}
+  .ctrl .hint{font-size:10.5px;color:#7fa3bd;margin-top:7px;line-height:1.4}
+  input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:3px;
+       background:rgba(255,255,255,.18);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;
+       border-radius:50%;background:var(--aqua);cursor:pointer;
+       box-shadow:0 0 0 3px rgba(79,190,206,.25)}
+  input[type=range]::-moz-range-thumb{width:17px;height:17px;border:0;border-radius:50%;
+       background:var(--aqua);cursor:pointer}
+
+  /* ── Tasas editables ── */
+  .rates{background:rgba(255,255,255,.06);border:1px solid rgba(79,190,206,.22);
+       border-radius:11px;padding:15px 16px;margin-bottom:22px}
+  .rates-hd{display:flex;justify-content:space-between;align-items:center;
+       flex-wrap:wrap;gap:10px;margin-bottom:13px;font-size:12px;font-weight:700;color:#c3dceb}
+  .presets{display:flex;gap:6px;flex-wrap:wrap}
+  .presets button{background:rgba(255,255,255,.08);border:1px solid rgba(79,190,206,.3);
+       color:#c3dceb;font-family:inherit;font-size:10.5px;font-weight:700;padding:5px 10px;
+       border-radius:7px;cursor:pointer}
+  .presets button:hover{background:rgba(79,190,206,.22);color:#fff}
+  .presets button.pon{background:var(--aqua);color:#0F3F68;border-color:var(--aqua)}
+  .rates-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px}
+  .rr label{display:block;font-size:10.5px;color:#9fc2d8;font-weight:600;margin-bottom:5px}
+  .rr input{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(79,190,206,.3);
+       border-radius:7px;padding:7px 9px;color:#fff;font-family:inherit;font-size:14px;
+       font-weight:700;font-variant-numeric:tabular-nums}
+  .rr input:focus{outline:none;border-color:var(--aqua);background:rgba(255,255,255,.16)}
+  .rates-note{margin-top:12px;font-size:11.5px;color:#ffd9a3;line-height:1.6;
+       background:rgba(232,163,61,.12);border-left:3px solid var(--amber);
+       padding:9px 12px;border-radius:0 7px 7px 0}
+  .rates-note b{color:#ffc978}
+
+  /* ── Result cards ── */
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+  .card{background:#fff;border-radius:13px;padding:19px 20px;color:var(--navy);
+       border-top:4px solid var(--tbk);position:relative}
+  .card.mp{border-top-color:var(--mp)}
+  .card .who{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+       color:var(--tbk);margin-bottom:3px}
+  .card.mp .who{color:var(--mp)}
+  .card .rate{font-size:11px;color:var(--mute);margin-bottom:13px;font-weight:500}
+  .card .big{font-size:29px;font-weight:800;font-variant-numeric:tabular-nums;
+       letter-spacing:-.6px;line-height:1.1}
+  .card .big small{font-size:13px;font-weight:600;color:var(--mute)}
+  .card .yr{font-size:12px;color:var(--mute);margin-top:5px;font-variant-numeric:tabular-nums}
+  .card .brk{margin-top:13px;padding-top:12px;border-top:1px solid #eef4f8;
+       font-size:11.5px;color:var(--mute);line-height:1.75}
+  .card .brk span{float:right;font-weight:700;color:var(--navy);
+       font-variant-numeric:tabular-nums}
+  .badge-win{position:absolute;top:-11px;right:14px;background:var(--green);color:#fff;
+       font-size:10px;font-weight:800;padding:3px 9px;border-radius:6px;
+       letter-spacing:.05em;text-transform:uppercase}
+
+  .delta{background:rgba(255,255,255,.07);border:1px solid rgba(79,190,206,.28);
+       border-radius:13px;padding:18px 20px;text-align:center}
+  .delta .lbl{font-size:11.5px;color:#9fc2d8;font-weight:600;
+       text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+  .delta .amt{font-size:32px;font-weight:800;letter-spacing:-.8px;
+       font-variant-numeric:tabular-nums;line-height:1.15}
+  .delta .amt.win{color:#5fe08d} .delta .amt.lose{color:#ff7b7b}
+  .delta .exp{font-size:12.5px;color:#c3dceb;margin-top:8px}
+
+  /* ── Breakeven ── */
+  .be{margin-top:22px;background:rgba(255,255,255,.05);border-radius:12px;padding:18px 20px;
+       border:1px solid rgba(79,190,206,.2)}
+  .be h3{color:#fff;margin:0 0 4px;font-size:13.5px}
+  .be p{margin:0 0 14px;font-size:12px;color:#9fc2d8}
+  .be-line{font-size:13px;color:#c3dceb;line-height:1.9}
+  .be-line b{color:var(--aqua);font-variant-numeric:tabular-nums}
+
+  svg{display:block;max-width:100%}
+  .chart-wrap{background:#fff;border-radius:11px;padding:14px;margin-top:14px}
+
+  /* ── Callouts ── */
+  .call{border-left:4px solid var(--aqua);background:var(--aqua-s);
+       padding:13px 16px;border-radius:0 9px 9px 0;margin:16px 0;font-size:13px;
+       color:#25546f}
+  .call b{color:var(--navy)}
+  .call.warn{border-left-color:var(--amber);background:#fdf5e9;color:#7a5518}
+  .call.warn b{color:#5c3f0f}
+  .call.bad{border-left-color:var(--red);background:#fdeded;color:#8a2b2b}
+  .call.bad b{color:#6d1f1f}
+
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;
+       border-radius:5px;letter-spacing:.03em}
+  .pill.ok{background:#e6f8ed;color:#16813f}
+  .pill.no{background:#fdeded;color:var(--red)}
+  .pill.mid{background:#fdf5e9;color:#96651b}
+
+  footer{text-align:center;color:var(--mute);font-size:11.5px;margin-top:30px;
+       line-height:1.8}
+  @media(max-width:760px){
+    .cards{grid-template-columns:1fr}
+    .hero h1{font-size:21px}
+    .wrap{padding:16px 12px 60px}
+    section{padding:18px 16px}
+    .sim{padding:18px 16px}
+    .sub{padding-left:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">Alma · OLACORE · Centro Médico Carampangue</div>
+    <h1>Transbank vs Mercado Pago</h1>
+    <p>Qué pasaría con el costo de comisión si todo el efectivo y las transferencias
+       del CMC se pagaran con tarjeta. Análisis sobre caja real, no sobre supuestos.</p>
+    <div class="stamp">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4FBECE" stroke-width="2.4">
+        <path d="M20 6L9 17l-5-5"/></svg>
+      Base: 1.454 pagos reales de junio 2026 · módulo Pagos de Alma
+    </div>
+  </div>
+
+  <!-- VEREDICTO -->
+  <div class="verdict">
+    <h2><span class="tag">Veredicto</span> Quédate con Transbank en el POS</h2>
+    <p><b>La oferta que te hicieron pierde incluso en su mejor caso.</b> Con el 1,19% / 1,99%
+       promocional, Mercado Pago te cobra <b>el doble en débito</b> (vs tu 0,6%) y <b>53% más en
+       crédito</b> (vs 1,3%). Como es más caro en <i>ambas</i> tasas, <b>más volumen lo empeora, no
+       lo mejora</b>: no existe un punto donde te convenga por escala.</p>
+    <p><b>Y esa tasa es una promo de captación, no el precio real.</b> No aparece en ningún
+       tarifario público de MP. Cuando venza, caes al escalonado oficial (1,59%–2,19% débito),
+       <b>que se recalcula cada mes según tu volumen</b>. La brecha se duplica.</p>
+    <p>Los $39.000 de la máquina son una distracción — un costo de una vez jamás compensa pagar
+       el doble de tasa todos los meses. <b>MP solo te convendría si Transbank te cobrara más de
+       <span id="vIndif">$114.703</span> mensuales de arriendo</b>, y su arriendo tope es $31.107.</p>
+    <p style="margin-top:10px">Y <b>tampoco gana por internet</b>, que es donde uno esperaría que
+       ganara: online cobra <b>3,19% + IVA a todo medio de pago</b>, contra <b>1,75% + IVA</b> del
+       débito en Webpay. Como en Chile casi todo se paga con débito RedCompra, MP sale
+       <b>82% más caro por transacción</b>. Ver sección 5.</p>
+    <p style="margin-top:10px"><b>Lo único que Mercado Pago te da y Transbank no:</b> el link de
+       pago <b>generable por API</b>, para que el bot emita un cobro distinto por cita
+       automáticamente. Eso vale, pero cuesta ~6 horas de desarrollo replicarlo en Webpay —
+       una vez. No $1,6M al año, para siempre.</p>
+  </div>
+
+  <!-- 1. RECONCILIACIÓN -->
+  <section>
+    <h2><span class="n">1</span> De dónde sale la base de cálculo</h2>
+    <p class="sub">Antes de calcular comisiones hay que saber sobre qué plata se cobran.
+       Y no es la que uno creería.</p>
+
+    <div class="call bad">
+      <b>Trampa evitada:</b> la caja de Medilink de junio dice <b>$26.039.530</b>. Pero
+      Medilink registra el <b>arancel completo</b> — incluida la bonificación Fonasa que
+      <b>reembolsa Imed por transferencia bancaria semanas después</b>. Esa plata
+      <b>jamás pasa por la máquina POS</b>. Cobrar comisión sobre ella sería inventar un costo
+      que no existe: habría inflado el análisis un <b>40%</b>.
+    </div>
+
+    <div class="wf">
+      <div class="wf-row">
+        <div class="wf-lbl">Caja Medilink (arancel total facturado)</div>
+        <div class="wf-bar" style="width:100%;background:#8fb4cc">$26.039.530</div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-lbl">(−) Bonificación Fonasa/Imed <span class="wf-note">— la reembolsa Imed, no toca el POS</span></div>
+        <div class="wf-bar" style="width:28.4%;background:var(--red)">−$7.396.853</div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-lbl"><b>(=) Copago de bolsillo — BASE REAL DE COMISIÓN</b></div>
+        <div class="wf-bar" style="width:71.6%;background:var(--green)">$18.642.677</div>
+      </div>
+    </div>
+
+    <h3>La prueba, con pacientes reales de junio</h3>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Previsión</th><th>n</th><th class="num">Copago promedio<br>(lo que paga el paciente)</th>
+        <th class="num">Monto Medilink<br>(arancel completo)</th><th class="num">Delta</th><th>Lectura</th></tr></thead>
+      <tbody>
+        <tr><td><b>Fonasa</b></td><td>380</td><td class="num">$6.714</td><td class="num">$14.412</td>
+          <td class="num neg">$7.698</td><td style="font-size:12px;color:var(--mute)">= la bonificación Imed</td></tr>
+        <tr><td><b>Particular</b></td><td>140</td><td class="num">$36.557</td><td class="num">$35.254</td>
+          <td class="num pos">−$1.302</td><td style="font-size:12px;color:var(--mute)">calzan (no hay bonificación)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="call">
+      Un paciente Fonasa de Medicina General paga <b>$190, $3.040 o $7.880</b> según su tramo —
+      pero Medilink anota <b>$15.130</b> en los tres casos. El particular calza al peso.
+      Eso <b>demuestra</b> que el módulo guarda el bolsillo y Medilink el arancel.
+    </div>
+  </section>
+
+  <!-- 2. MEZCLA -->
+  <section>
+    <h2><span class="n">2</span> Cómo te pagan hoy</h2>
+    <p class="sub">Fuente: tabla <code>pagos_cmc</code> (módulo Pagos de Alma). Es el único lugar
+       donde existe el medio de pago real — el campo de Medilink dice "Efectivo" en el 99,6%
+       de los casos, es su valor por defecto y no sirve.</p>
+
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Medio</th><th class="num">Junio 2026</th><th class="num">%</th>
+        <th class="num">Julio 2026 (parcial)</th><th class="num">%</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td>Efectivo</td><td class="num">$8.010.611</td><td class="num">43,8%</td>
+            <td class="num">$2.602.760</td><td class="num">40,9%</td>
+            <td><span class="pill mid">migrable</span></td></tr>
+        <tr><td>Transferencia</td><td class="num">$6.910.286</td><td class="num">37,8%</td>
+            <td class="num">$2.638.342</td><td class="num">41,5%</td>
+            <td><span class="pill mid">migrable</span></td></tr>
+        <tr><td>Débito</td><td class="num">$2.973.000</td><td class="num">16,2%</td>
+            <td class="num">$939.990</td><td class="num">14,8%</td>
+            <td><span class="pill ok">ya en tarjeta</span></td></tr>
+        <tr><td>Crédito</td><td class="num">$408.000</td><td class="num">2,2%</td>
+            <td class="num">$180.000</td><td class="num">2,8%</td>
+            <td><span class="pill ok">ya en tarjeta</span></td></tr>
+        <tr class="tot"><td>Base copago</td><td class="num">$18.301.897</td><td class="num">100%</td>
+            <td class="num">$6.361.092</td><td class="num">100%</td><td></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="call">
+      <b>81,5% de tu caja de bolsillo es migrable</b> a tarjeta ($14,9M en junio). Ya tienes
+      <b>18,5%</b> en plástico. Y dentro de la tarjeta, el <b>88% es débito</b> — dato decisivo,
+      porque el débito es justo donde Transbank te gana más feo: <b>0,6% vs 1,19%, casi la mitad</b>.
+    </div>
+    <h3>Validado contra el informe real de Transbank</h3>
+    <p class="sub" style="padding-left:0">Crucé el informe de ventas de Transbank (1–11 de junio)
+       contra lo que registró recepción. No calzan — y Transbank tiene la razón.</p>
+    <div class="scroll">
+    <table>
+      <thead><tr><th></th><th class="num">Transbank (verdad)</th><th class="num">Módulo Pagos</th>
+        <th>Qué pasó</th></tr></thead>
+      <tbody>
+        <tr><td><b>Débito</b></td><td class="num">17 tx · $1.095.000</td>
+            <td class="num">18 tx · $1.010.000</td>
+            <td style="font-size:12px;color:var(--mute)">se perdió una venta de $150.000</td></tr>
+        <tr><td><b>Crédito</b></td><td class="num">3 tx · $195.000</td>
+            <td class="num neg">1 tx · $130.000</td>
+            <td style="font-size:12px;color:var(--mute)">2 créditos anotados como débito</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="call">
+      <b>Recepción está clasificando mal algunos pagos con tarjeta.</b> Transbank registra créditos
+      de $35.000 y $30.000 que el módulo no tiene — y el módulo tiene exactamente un $35.000 y un
+      $30.000 de más en débito. Son los mismos pagos, mal etiquetados.<br><br>
+      <b>Esto refuerza el veredicto:</b> el crédito real es <b>15,1% de la tarjeta</b>, no 12%. Y como
+      la brecha de Mercado Pago es más ancha en crédito (0,69 pp) que en débito (0,59 pp),
+      <b>más crédito lo empeora todavía más</b>.
+    </div>
+
+    <div class="call warn">
+      <b>Nota de calidad de dato:</b> el módulo Pagos cubre el <b>72% de la caja en junio</b> y
+      69% en julio — antes cubría 4-25% (registro manual esporádico). El salto coincide con el cron
+      de prellenado automático cada 30 min. <b>Junio y julio son la base honesta</b>; los meses
+      anteriores tienen mezclas sesgadas y no se usaron.
+    </div>
+  </section>
+
+  <!-- 3. SIMULADOR -->
+  <div class="sim">
+    <h2>3 · Simulador — mueve los números</h2>
+    <p class="sub">Todos los controles son vivos. El caso base es el que pediste:
+       <b>todo el efectivo y transferencia migran a tarjeta</b>.</p>
+
+    <div class="ctrls">
+      <div class="ctrl">
+        <label>Caja de bolsillo / mes <span class="val" id="lCaja">$18.600.000</span></label>
+        <input type="range" id="sCaja" min="2000000" max="40000000" step="100000" value="18600000">
+        <div class="hint">Copago real, sin bonificación Imed. Junio fue $18,6M.</div>
+      </div>
+      <div class="ctrl">
+        <label>% que se paga con tarjeta <span class="val" id="lMig">100%</span></label>
+        <input type="range" id="sMig" min="18" max="100" step="1" value="100">
+        <div class="hint">Hoy es 18,5%. Al 100% todo el efectivo y transferencia migran.</div>
+      </div>
+      <div class="ctrl">
+        <label>% crédito dentro de la tarjeta <span class="val" id="lCred">15%</span></label>
+        <input type="range" id="sCred" min="0" max="60" step="1" value="15">
+        <div class="hint">85% débito / 15% crédito — <b>verificado contra el informe de ventas
+           de Transbank</b>, no contra el módulo (recepción clasificó 2 créditos como débito).</div>
+      </div>
+      <div class="ctrl">
+        <label>Arriendo mensual Transbank <span class="val" id="lArr">$0</span></label>
+        <input type="range" id="sArr" min="0" max="150000" step="1000" value="0">
+        <div class="hint">Smart POS = $31.107/mes desde el 4º mes. Mobile POS = $0.
+           Súbelo hasta que MP gane.</div>
+      </div>
+    </div>
+
+    <!-- TASAS EDITABLES -->
+    <div class="rates">
+      <div class="rates-hd">
+        <span>Tasas (%) — editables, sin IVA</span>
+        <div class="presets">
+          <button data-p="cotiz" class="pon">La oferta (promo)</button>
+          <button data-p="oficial">Cuando venza la promo</button>
+          <button data-p="nuevo">Si perdieras tu tasa TBK</button>
+        </div>
+      </div>
+      <div class="rates-grid">
+        <div class="rr"><label>Transbank débito</label>
+          <input type="number" id="rTbkD" value="0.60" step="0.01" min="0" max="10"></div>
+        <div class="rr"><label>Transbank crédito</label>
+          <input type="number" id="rTbkC" value="1.30" step="0.01" min="0" max="10"></div>
+        <div class="rr"><label>Mercado Pago débito</label>
+          <input type="number" id="rMpD" value="1.19" step="0.01" min="0" max="10"></div>
+        <div class="rr"><label>Mercado Pago crédito</label>
+          <input type="number" id="rMpC" value="1.99" step="0.01" min="0" max="10"></div>
+      </div>
+      <div class="rates-note" id="rateNote">
+        <b>Cuidado:</b> el 1,19% / 1,99% que te cotizaron <b>no aparece en ningún tarifario público
+        de Mercado Pago Chile</b>. El oficial de la Point Smart 2 es escalonado: 2,19%/2,69% bajo
+        $2M/mes, y solo baja a 1,59%/2,39% sobre $8M/mes — <b>y se recalcula cada mes según tu
+        volumen</b>. Pide la tasa por escrito antes de comprar la máquina.
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card" id="cTbk">
+        <div class="badge-win" id="winTbk">Más barato</div>
+        <div class="who">Transbank</div>
+        <div class="rate">0,60% débito · 1,30% crédito · máquina ya la tienes</div>
+        <div class="big" id="tbkMes">$151.397 <small>/mes</small></div>
+        <div class="yr" id="tbkAno">$1.816.764 al año</div>
+        <div class="brk">
+          Comisión neta <span id="tbkNeta">$127.224</span><br>
+          IVA 19% (no recuperable) <span id="tbkIva">$24.173</span><br>
+          Arriendo + IVA <span id="tbkArr">$0</span><br>
+          Tasa efectiva sobre caja <span id="tbkEff">0,81%</span>
+        </div>
+      </div>
+      <div class="card mp" id="cMp">
+        <div class="badge-win" id="winMp" style="display:none">Más barato</div>
+        <div class="who">Mercado Pago</div>
+        <div class="rate">1,19% débito · 1,99% crédito · máquina $39.000 (una vez)</div>
+        <div class="big" id="mpMes">$284.643 <small>/mes</small></div>
+        <div class="yr" id="mpAno">$3.415.716 al año + $39.000 máquina</div>
+        <div class="brk">
+          Comisión neta <span id="mpNeta">$239.196</span><br>
+          IVA 19% (no recuperable) <span id="mpIva">$45.447</span><br>
+          Máquina (amortizada 12m) <span id="mpMaq">$3.250</span><br>
+          Tasa efectiva sobre caja <span id="mpEff">1,53%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="delta">
+      <div class="lbl" id="dLbl">Sobrecosto de irse a Mercado Pago</div>
+      <div class="amt lose" id="dAmt">+$133.246 / mes</div>
+      <div class="exp" id="dExp">Son <b>$1.598.952 al año</b> que pagarías de más por el mismo servicio.</div>
+    </div>
+
+    <div class="be">
+      <h3>Punto de cruce</h3>
+      <p>¿A partir de qué volumen conviene uno u otro?</p>
+      <div class="be-line" id="beText">
+        Con arriendo Transbank de <b>$0</b>, la brecha de tasa es <b>0,602%</b> a favor de Transbank
+        en <i>cada peso</i>. <b>No existe punto de cruce: Transbank gana a cualquier volumen.</b>
+      </div>
+      <div class="chart-wrap">
+        <svg id="chart" viewBox="0 0 720 260" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. CRÉDITOS -->
+  <section id="secCred">
+    <h2><span class="n">4</span> Los "créditos" de Mercado Pago</h2>
+    <p class="sub">Lo que te ofreció el vendedor, revisado.</p>
+    <div id="credBody">
+      <div class="call">
+        <b>El vendedor no te mintió: el producto existe en Chile y es real.</b> Mercado Pago colocó
+        +120.000 créditos a comercios chilenos en 2025, con fondeo de un fondo Frontal Trust de
+        US$60M. No es humo. <b>El problema es otro.</b>
+      </div>
+
+      <div class="scroll">
+      <table>
+        <thead><tr><th>Producto</th><th class="num">Monto máximo</th><th>Plazo</th><th>Tasa</th></tr></thead>
+        <tbody>
+          <tr><td><b>Dinero Plus</b></td><td class="num">$5.000.000</td><td>28 días, pago único</td>
+              <td><span class="pill no">No publicada</span></td></tr>
+          <tr><td><b>Préstamo en cuotas fijas</b></td><td class="num">$75.000.000</td>
+              <td>18 cuotas (su web dice 24 en otra página)</td>
+              <td><span class="pill no">No publicada</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="call bad">
+        <b>Mercado Pago no publica la tasa. En ninguna parte.</b> Textual de su centro de ayuda:
+        <i>"tasa de interés fija, calculada de acuerdo con tu volumen de ventas. Puedes consultar
+        el monto de la tasa al hacer la simulación, antes de aceptarlo."</i><br><br>
+        Traducción: <b>la tasa recién aparece cuando ya compraste la máquina y llevas 3 meses
+        facturando con ellos.</b> No la puedes comparar antes de comprometerte. Un producto que
+        compite por precio publica su precio. Este no lo hace.
+      </div>
+
+      <h3>El techo legal, que sí es público</h3>
+      <p class="sub" style="padding-left:0">Tasa Máxima Convencional vigente — Certificado CMF N°6/2026,
+         Diario Oficial N°44.475 del 15-jun-2026.</p>
+      <div class="scroll">
+      <table>
+        <thead><tr><th>Tramo</th><th class="num">Interés corriente<br>(promedio bancos)</th>
+          <th class="num">TMC (techo legal)</th></tr></thead>
+        <tbody>
+          <tr style="background:#fdeded"><td>&lt; 90 días ← <b>aquí cae Dinero Plus</b></td>
+              <td class="num">35,06%</td><td class="num neg"><b>52,59% anual</b></td></tr>
+          <tr><td>≥ 90 días · 50–200 UF ($1,9M–$7,7M)</td><td class="num">29,67%</td>
+              <td class="num">34,42% anual</td></tr>
+          <tr><td>≥ 90 días · 200–5.000 UF ($7,7M–$193M)</td><td class="num">20,42%</td>
+              <td class="num">30,63% anual</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Cómo se paga (y dónde está el amarre)</h3>
+      <p style="font-size:13px;color:#3d5a72">
+        <b>No es un % de cada venta</b> — esa es la versión argentina/brasileña. En Chile es
+        <b>cuota fija con débito automático del saldo de tu cuenta Mercado Pago</b>. Pero el
+        lock-in existe igual, por dos vías: (1) ese saldo se llena con lo que cobras por la Point,
+        así que si te llevas la recaudación a otro adquirente la cuenta queda seca y tienes que ir
+        a depositar a mano; y (2) —el amarre de verdad— <b>tu línea de crédito futura depende de tu
+        volumen de ventas por MP</b>. Bajas el volumen, se te cae la oferta.
+      </p>
+
+      <div class="call warn">
+        <b>Requisito de entrada:</b> vender ≥$15.000/mes por 3 meses seguidos y al menos una venta
+        semanal. Trivial para el CMC. <b>El filtro real no es calificar — es qué precio te asignen.</b>
+        Y eso lo sabes solo después de estar adentro.
+      </div>
+
+      <h3>Tu alternativa correcta: FOGAPE</h3>
+      <div class="call">
+        <b>Este producto está diseñado para el comercio que NO puede acceder a la banca. Tú sí puedes.</b>
+        El CMC tiene RUT, facturación estable, contabilidad y 4 años de historia. Tu comparable es un
+        crédito <b>FOGAPE</b> (BancoEstado / BCI / Santander / Itaú): garantía estatal hasta 80%,
+        comisión 1% anual, plazos hasta 10 años, negociable contra un interés corriente de
+        <b>20,42%</b>. Te van a pedir papeles y vas a esperar 2-3 semanas, en vez de 2 minutos —
+        pero es plata estructuralmente más barata y <b>no te ata al adquirente</b>.
+      </div>
+
+      <div class="call bad">
+        <b>El orden está invertido.</b> Elegir con qué máquina cobras — una decisión de $1,6M al año,
+        para siempre — en función de un crédito cuya tasa no puedes ver antes de comprometerte, es
+        exactamente al revés. <b>Toma la máquina por lo que vale la máquina.</b> El crédito
+        evalúalo después, con la oferta concreta en pantalla, contra una cotización FOGAPE real.
+      </div>
+
+      <div class="call warn">
+        <b>La pregunta exacta para el vendedor:</b> <i>"¿Cuál es la CAE del crédito y me la dejas
+        por escrito antes de que yo instale la máquina?"</i><br>
+        No va a poder. Y esa respuesta te dice todo lo que necesitas saber sobre cuánto vale la promesa.
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. PASARELA ONLINE -->
+  <section id="secOnline">
+    <h2><span class="n">5</span> Cobro por internet — la pasarela</h2>
+    <p class="sub">Aquí esperaba que Mercado Pago ganara. No gana.</p>
+
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Criterio</th><th>Transbank · Webpay Plus</th><th>Mercado Pago · Checkout</th></tr></thead>
+      <tbody>
+        <tr><td><b>Comisión débito</b> (RedCompra)</td>
+            <td class="pos"><b>1,75% + IVA = 2,08%</b></td>
+            <td class="neg">3,19% + IVA = 3,80%</td></tr>
+        <tr><td><b>Comisión crédito</b></td>
+            <td class="pos"><b>2,35% + IVA = 2,80%</b></td>
+            <td class="neg">3,19% + IVA = 3,80%</td></tr>
+        <tr><td>Afiliación / mantención</td><td>$0 / $0</td><td>$0 / $0</td></tr>
+        <tr><td>Tiempo de alta</td><td>24–72 h hábiles</td><td class="pos"><b>Minutos</b></td></tr>
+        <tr><td>Abono del dinero</td><td>Débito 24h háb. / crédito 48h háb., directo al banco</td>
+            <td>Instantáneo a cuenta MP, +2 días hábiles para retirar al banco</td></tr>
+        <tr><td>Link de pago sin código</td><td>Sí (portal Webpay.cl)</td><td>Sí (panel)</td></tr>
+        <tr><td><b>Link generable por API</b> (bot emite uno por cita)</td>
+            <td class="neg">No — hay que construir <code>/pagar/{cita}</code></td>
+            <td class="pos"><b>Sí, nativo</b></td></tr>
+        <tr><td>Webhook de confirmación</td><td class="neg">No (commit en return_url + reconciliación)</td>
+            <td class="pos">Sí</td></tr>
+        <tr><td>Horas de integración (FastAPI)</td><td>8–14 h</td><td class="pos"><b>4–8 h</b></td></tr>
+        <tr><td>Débito RedCompra online</td><td>Sí</td><td>Sí</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="call bad">
+      <b>El detalle que decide:</b> Mercado Pago dice textualmente <i>"la comisión que pagues es la
+      misma para todos los medios de pago"</i>. Suena justo, pero es lo peor que te puede pasar en
+      Chile: <b>aquí casi todo se paga con débito</b>, y el débito es la tasa barata en Transbank.
+      MP te cobra tarifa de crédito por una transacción de débito.<br><br>
+      <b>En una consulta de $30.000:</b> Transbank $625 · Mercado Pago $1.139. A 200 cobros online
+      al mes, son <b>$103.000/mes</b> de sobrecosto.
+    </div>
+
+    <div class="call">
+      <b>Lo que sí gana Mercado Pago:</b> el link de pago <b>por API</b>. Con una llamada creas una
+      <code>preference</code> y te devuelve una URL pagable que el bot manda por WhatsApp con el
+      monto exacto de la cita. En Transbank el link manual existe (portal Webpay.cl) pero
+      <b>no hay API pública para generarlo</b> — hay que armar un endpoint
+      <code>/pagar/{cita_id}</code> propio. Son ~6 horas de plomería <b>una sola vez</b>, contra
+      $1,6M al año para siempre. No compensa.
+    </div>
+
+    <h3>Plan recomendado, por etapas</h3>
+    <table>
+      <tbody>
+        <tr><td style="width:90px"><b>Etapa 0</b><br><span style="font-size:11px;color:var(--mute)">esta semana</span></td>
+            <td>Firmar Webpay.cl y cobrar con <b>links manuales desde el portal</b>, enviados por
+                recepción o el bot. <b>Cero código.</b> Valida si los pacientes realmente pagan
+                anticipado antes de invertir horas.</td></tr>
+        <tr><td><b>Etapa 1</b><br><span style="font-size:11px;color:var(--mute)">1 día</span></td>
+            <td>Webpay Plus + endpoint <code>/pagar/{cita_id}</code> con el monto precargado. El bot
+                manda <code>agentecmc.cl/pagar/ab12cd</code>. Job de reconciliación por
+                <code>Transaction.status()</code> para pagos abandonados. Se puede construir y probar
+                <b>hoy</b> con las credenciales públicas de integración, sin contrato.</td></tr>
+        <tr><td><b>Etapa 2</b><br><span style="font-size:11px;color:var(--mute)">opcional</span></td>
+            <td>Mercado Pago <b>solo si</b> aparece demanda de cuotas sin tarjeta o wallet. Como
+                segundo botón, nunca como default.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="call warn">
+      <b>Antes de decidir, un dato que te falta:</b> las tasas de 1,75%/2,35% son las de
+      <b>comercio nuevo</b>. El CMC ya es cliente Transbank, y Transbank dice que "para clientes
+      existentes las tasas varían según rubro y canal". <b>Pide en el Portal de Clientes la tarifa
+      de internet vigente de tu código de comercio</b> — podría ser mejor o peor que la publicada.
+    </div>
+  </section>
+
+  <!-- 6. QUÉ HACER -->
+  <section>
+    <h2><span class="n">6</span> Qué hacer</h2>
+    <p class="sub">Tres acciones concretas, en orden de plata.</p>
+
+    <table>
+      <tbody>
+        <tr>
+          <td style="width:34px;vertical-align:top"><b style="color:var(--aqua);font-size:17px">1</b></td>
+          <td><b>Verifica tu tasa real de Transbank en la liquidación.</b><br>
+            <span style="font-size:12.5px;color:#3d5a72">Dices 0,6% / 1,3%. El tarifario público
+            para comercios nuevos es <b>1,75% / 2,35%</b> — tres veces más. Si tu 0,6% es real,
+            tienes un contrato legacy excelente y <b>es un activo que no debes regalar</b>. Si
+            resulta que tu tasa real es la pública, el análisis cambia y Mercado Pago pasa a
+            ganar (usa el preset "Si perdieras tu tasa TBK" para verlo).
+            <b>Este es el dato de mayor impacto y lo tienes a un click en el Portal de Clientes.</b></span></td>
+        </tr>
+        <tr>
+          <td style="vertical-align:top"><b style="color:var(--aqua);font-size:17px">2</b></td>
+          <td><b>Si pagas arriendo de POS, mátalo sin cambiar de adquirente.</b><br>
+            <span style="font-size:12.5px;color:#3d5a72">El <b>Smart POS</b> de Transbank cuesta
+            <b>$31.107/mes con IVA</b> desde el 4º mes (0,64 UF). El <b>Mobile POS</b> cuesta
+            <b>$19.990 una sola vez, arriendo $0</b>. Si estás en Smart POS y no necesitas que
+            imprima, cambiarte al Mobile te ahorra <b>~$373.000 al año</b> — sin tocar tus tasas
+            ni tu contrato. <b>Esto es plata gratis, independiente de toda la discusión con
+            Mercado Pago.</b></span></td>
+        </tr>
+        <tr>
+          <td style="vertical-align:top"><b style="color:var(--aqua);font-size:17px">3</b></td>
+          <td><b>Al vendedor de Mercado Pago, dos preguntas.</b><br>
+            <span style="font-size:12.5px;color:#3d5a72">
+            <i>"¿Cuántos meses dura el 1,19% y qué tasa queda después — por escrito?"</i><br>
+            <i>"¿Cuál es la CAE del crédito y me la dejas por escrito antes de que yo instale
+            la máquina?"</i><br>
+            No va a poder responder la segunda. Y esa <b>no-respuesta</b> te dice todo lo que
+            necesitas saber sobre cuánto vale la promesa del crédito.</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="call">
+      <b>¿Y si igual quieres una Point?</b> Tiene un uso legítimo: <b>respaldo</b>. Si el POS de
+      Transbank se cae un día, una Point Mini de $12.900 sin arriendo te salva la caja. Como
+      <b>segunda máquina</b> tiene sentido. Como <b>adquirente principal</b>, no.
+    </div>
+  </section>
+
+  <!-- 7. SUPUESTOS -->
+  <section>
+    <h2><span class="n">7</span> Supuestos y qué puede estar mal</h2>
+    <p class="sub">Lo que sostiene el análisis, y dónde es frágil.</p>
+    <table>
+      <thead><tr><th>Supuesto</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td>La comisión se cobra solo sobre el <b>copago</b>, no sobre el arancel Fonasa completo</td>
+            <td><span class="pill ok">Probado con datos</span></td></tr>
+        <tr><td>Mezcla 88% débito / 12% crédito dentro de la tarjeta</td>
+            <td><span class="pill ok">Observado jun-jul</span></td></tr>
+        <tr><td>El <b>IVA 19% sobre la comisión no se recupera</b> (salud es exenta → sin crédito fiscal)</td>
+            <td><span class="pill mid">Confirmar con contador</span></td></tr>
+        <tr><td>Tasas Transbank 0,6% / 1,3% son las vigentes de tu contrato</td>
+            <td><span class="pill mid">Las diste tú — verificar en liquidación</span></td></tr>
+        <tr><td>Arriendo mensual Transbank</td>
+            <td><span class="pill mid">Dato pendiente — es el slider</span></td></tr>
+        <tr><td>Módulo Pagos cubre 72% de la caja; la mezcla del 28% restante se asume igual</td>
+            <td><span class="pill mid">Riesgo bajo, pero es un supuesto</span></td></tr>
+      </tbody>
+    </table>
+    <div class="call">
+      <b>El IVA es el detalle que casi nadie mira.</b> El CMC presta servicios de salud, que son
+      <b>exentos de IVA</b>. Por eso el 19% que el adquirente cobra sobre su comisión
+      <b>no se puede imputar como crédito fiscal</b> — es costo puro. Encarece toda comisión un 19%
+      real, y castiga más al que cobra más tasa. Es decir: <b>castiga más a Mercado Pago</b>.
+    </div>
+  </section>
+
+  <footer>
+    Alma · OLACORE — Centro Médico Carampangue<br>
+    Datos: <code>pagos_cmc</code> + <code>bi_pagos_caja</code> · junio-julio 2026 · generado 11-jul-2026
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var IVA    = 0.19;
+  var MP_MAQ = 39000;
+
+  // Presets de tasas (%, sin IVA). Fuentes: cotización del vendedor,
+  // tarifario público MP Chile (JS de su landing, 11-jul-2026),
+  // tarifario público Transbank comercios nuevos (20-may-2026).
+  var PRESETS = {
+    cotiz:   {tbkD:0.60, tbkC:1.30, mpD:1.19, mpC:1.99,
+      note:'<b>Esta es la OFERTA promocional</b> que te hicieron — y es el <b>mejor caso posible</b> ' +
+           'de Mercado Pago. Aun así pierde. El 1,19%/1,99% <b>no aparece en ningún tarifario ' +
+           'público de MP Chile</b>: es una promo de captación. Su propia letra chica dice que las ' +
+           'tasas promocionales son "exclusivas para clientes que no hayan cobrado con máquinas ' +
+           'Smart en los últimos 12 meses". <b>Cuando venza, caes al tarifario de al lado →</b>'},
+    oficial: {tbkD:0.60, tbkC:1.30, mpD:1.59, mpC:2.39,
+      note:'<b>Aquí caes cuando se acabe la promo.</b> Tarifario oficial de la Point Smart 2, tramo ' +
+           'de más de $8M/mes — su <b>mejor</b> escalón, y aun así el doble de tu Transbank. ' +
+           'Ojo: <b>el escalón se recalcula TODOS los meses</b> según lo que vendiste el mes ' +
+           'anterior. Si tu venta con tarjeta cae bajo $8M, subes a 1,79%/2,49% al mes siguiente. ' +
+           '<b>Tu comisión deja de ser tuya y pasa a depender de tu peor mes.</b>'},
+    nuevo:   {tbkD:1.75, tbkC:2.35, mpD:1.59, mpC:2.39,
+      note:'<b>Escenario de comercio nuevo:</b> así se vería si no tuvieras tu contrato legacy y ' +
+           'Transbank te aplicara su tarifario público (1,75%/2,35%). <b>Aquí Mercado Pago ganaría.</b> ' +
+           'Es exactamente por qué vale la pena confirmar tu tasa real en la liquidación: tu 0,6%/1,3% ' +
+           'es un activo que no conviene regalar.'}
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var clp = function(n){
+    return '$' + Math.round(n).toLocaleString('es-CL');
+  };
+
+  var els = {
+    caja:$('sCaja'), mig:$('sMig'), cred:$('sCred'), arr:$('sArr')
+  };
+  var rIn = {
+    tbkD:$('rTbkD'), tbkC:$('rTbkC'), mpD:$('rMpD'), mpC:$('rMpC')
+  };
+
+  function calc(){
+    var caja = +els.caja.value;
+    var mig  = +els.mig.value / 100;     // % de la caja que va en tarjeta
+    var credS= +els.cred.value / 100;    // % crédito DENTRO de la tarjeta
+    var arr  = +els.arr.value;
+
+    var enTarjeta = caja * mig;
+    var debS = 1 - credS;
+
+    // Tasas desde los inputs (vienen en %, sin IVA)
+    var TBK_DEB = (+rIn.tbkD.value || 0)/100, TBK_CRE = (+rIn.tbkC.value || 0)/100;
+    var MP_DEB  = (+rIn.mpD.value  || 0)/100, MP_CRE  = (+rIn.mpC.value  || 0)/100;
+
+    // Tasa mezclada de cada adquirente
+    var rTbk = TBK_DEB * debS + TBK_CRE * credS;
+    var rMp  = MP_DEB  * debS + MP_CRE  * credS;
+
+    $('cTbk').querySelector('.rate').textContent =
+      (TBK_DEB*100).toFixed(2).replace('.',',') + '% débito · ' +
+      (TBK_CRE*100).toFixed(2).replace('.',',') + '% crédito · máquina ya la tienes';
+    $('cMp').querySelector('.rate').textContent =
+      (MP_DEB*100).toFixed(2).replace('.',',') + '% débito · ' +
+      (MP_CRE*100).toFixed(2).replace('.',',') + '% crédito · máquina $39.000 (una vez)';
+
+    // Costo mensual (comisión + IVA no recuperable + fijos)
+    var tbkNeta = enTarjeta * rTbk;
+    var tbkIva  = tbkNeta * IVA;
+    var tbkArr  = arr * (1 + IVA);
+    var tbkTot  = tbkNeta + tbkIva + tbkArr;
+
+    var mpNeta  = enTarjeta * rMp;
+    var mpIva   = mpNeta * IVA;
+    var mpMaq   = MP_MAQ / 12;           // amortizada a 12 meses
+    var mpTot   = mpNeta + mpIva + mpMaq;
+
+    var delta = mpTot - tbkTot;          // >0 → MP más caro
+
+    // ── Render tarjetas ──
+    $('tbkMes').innerHTML = clp(tbkTot) + ' <small>/mes</small>';
+    $('tbkAno').textContent = clp(tbkTot*12) + ' al año';
+    $('tbkNeta').textContent = clp(tbkNeta);
+    $('tbkIva').textContent  = clp(tbkIva);
+    $('tbkArr').textContent  = clp(tbkArr);
+    $('tbkEff').textContent  = caja ? ((tbkTot/caja)*100).toFixed(2).replace('.',',')+'%' : '—';
+
+    $('mpMes').innerHTML = clp(mpTot) + ' <small>/mes</small>';
+    $('mpAno').textContent = clp(mpTot*12 - mpMaq*12) + ' al año + ' + clp(MP_MAQ) + ' máquina';
+    $('mpNeta').textContent = clp(mpNeta);
+    $('mpIva').textContent  = clp(mpIva);
+    $('mpMaq').textContent  = clp(mpMaq);
+    $('mpEff').textContent  = caja ? ((mpTot/caja)*100).toFixed(2).replace('.',',')+'%' : '—';
+
+    var tbkWins = delta > 0;
+    $('winTbk').style.display = tbkWins ? 'block' : 'none';
+    $('winMp').style.display  = tbkWins ? 'none'  : 'block';
+    $('cTbk').style.boxShadow = tbkWins ? '0 0 0 2px var(--green)' : 'none';
+    $('cMp').style.boxShadow  = tbkWins ? 'none' : '0 0 0 2px var(--green)';
+
+    // ── Delta ──
+    var d = $('dAmt');
+    if (Math.abs(delta) < 500) {
+      $('dLbl').textContent = 'Empate técnico';
+      d.textContent = '≈ $0 / mes';
+      d.className = 'amt';
+      $('dExp').innerHTML = 'Estás justo en el <b>punto de cruce</b>: da lo mismo cuál elijas.';
+    } else if (tbkWins) {
+      $('dLbl').textContent = 'Sobrecosto de irse a Mercado Pago';
+      d.textContent = '+' + clp(delta) + ' / mes';
+      d.className = 'amt lose';
+      $('dExp').innerHTML = 'Son <b>' + clp(delta*12) + ' al año</b> que pagarías de más por el mismo servicio.';
+    } else {
+      $('dLbl').textContent = 'Ahorro al cambiarse a Mercado Pago';
+      d.textContent = clp(-delta) + ' / mes';
+      d.className = 'amt win';
+      $('dExp').innerHTML = 'Son <b>' + clp(-delta*12) + ' al año</b> a favor de Mercado Pago — ' +
+        'porque el arriendo de Transbank pesa más que su mejor tasa.';
+    }
+
+    // ── Punto de cruce ──
+    var brecha = rMp - rTbk;             // por peso transado
+    var vStar  = brecha > 0 ? (arr*(1+IVA) - mpMaq) / (brecha*(1+IVA)) : Infinity;
+    // Arriendo de indiferencia al volumen actual
+    var arrIndif = brecha > 0
+      ? (enTarjeta * brecha * (1+IVA) + mpMaq) / (1+IVA)
+      : 0;
+    $('vIndif').textContent = clp(arrIndif);
+
+    var bt = $('beText');
+    if (brecha <= 0) {
+      bt.innerHTML = 'Con esta mezcla Mercado Pago no es más caro por tasa. Caso atípico.';
+    } else if (vStar <= 0) {
+      bt.innerHTML = 'Con arriendo Transbank de <b>' + clp(arr) + '</b>, la brecha de tasa es <b>' +
+        (brecha*100).toFixed(3).replace('.',',') + '%</b> a favor de Transbank en <i>cada peso</i>. ' +
+        '<b>No existe punto de cruce: Transbank gana a cualquier volumen.</b>';
+    } else {
+      bt.innerHTML = 'Con arriendo Transbank de <b>' + clp(arr) + '</b>, el punto de cruce está en <b>' +
+        clp(vStar) + ' al mes</b> de venta con tarjeta.<br>' +
+        'Bajo ese volumen conviene <b>Mercado Pago</b> (no pagas arriendo). Sobre él conviene ' +
+        '<b>Transbank</b> (su mejor tasa compensa el arriendo).<br>' +
+        'Hoy transas <b>' + clp(enTarjeta) + '</b> → ' +
+        (enTarjeta > vStar
+          ? 'estás <b>' + (enTarjeta/vStar).toFixed(1).replace('.',',') + '× por encima</b> del cruce. Gana Transbank.'
+          : 'estás <b>por debajo</b> del cruce. Gana Mercado Pago.');
+    }
+
+    drawChart(vStar, enTarjeta, rTbk, rMp, arr, mpMaq);
+  }
+
+  // ── Gráfico: costo mensual vs volumen ──
+  function drawChart(vStar, actual, rTbk, rMp, arr, mpMaq){
+    var W=720, H=260, P={l:64,r:16,t:14,b:34};
+    var xMax = Math.max(actual*1.6, (isFinite(vStar)?vStar*1.8:0), 5000000);
+    var costT = function(v){ return (v*rTbk + arr)*(1+IVA); };
+    var costM = function(v){ return v*rMp*(1+IVA) + mpMaq; };
+    var yMax = Math.max(costT(xMax), costM(xMax)) * 1.12;
+
+    var X = function(v){ return P.l + (v/xMax)*(W-P.l-P.r); };
+    var Y = function(c){ return H-P.b - (c/yMax)*(H-P.t-P.b); };
+
+    var s = '';
+    // grid + eje Y
+    for (var i=0;i<=4;i++){
+      var c = yMax*i/4, y = Y(c);
+      s += '<line x1="'+P.l+'" y1="'+y+'" x2="'+(W-P.r)+'" y2="'+y+'" stroke="#eef4f8" stroke-width="1"/>';
+      s += '<text x="'+(P.l-8)+'" y="'+(y+3.5)+'" text-anchor="end" font-size="9.5" fill="#62788a" font-family="Montserrat,sans-serif">'+
+           (c>=1000 ? '$'+Math.round(c/1000)+'k' : '$0')+'</text>';
+    }
+    // eje X
+    for (var j=0;j<=4;j++){
+      var v = xMax*j/4, x = X(v);
+      s += '<text x="'+x+'" y="'+(H-P.b+16)+'" text-anchor="middle" font-size="9.5" fill="#62788a" font-family="Montserrat,sans-serif">$'+
+           (v/1e6).toFixed(0)+'M</text>';
+    }
+    // líneas
+    s += '<line x1="'+X(0)+'" y1="'+Y(costT(0))+'" x2="'+X(xMax)+'" y2="'+Y(costT(xMax))+
+         '" stroke="#1172AB" stroke-width="2.6" stroke-linecap="round"/>';
+    s += '<line x1="'+X(0)+'" y1="'+Y(costM(0))+'" x2="'+X(xMax)+'" y2="'+Y(costM(xMax))+
+         '" stroke="#e8a33d" stroke-width="2.6" stroke-linecap="round"/>';
+
+    // punto de cruce
+    if (isFinite(vStar) && vStar>0 && vStar<xMax){
+      s += '<line x1="'+X(vStar)+'" y1="'+P.t+'" x2="'+X(vStar)+'" y2="'+(H-P.b)+
+           '" stroke="#23c25e" stroke-width="1.4" stroke-dasharray="4 3"/>';
+      s += '<circle cx="'+X(vStar)+'" cy="'+Y(costT(vStar))+'" r="4.5" fill="#23c25e"/>';
+      s += '<text x="'+(X(vStar)+7)+'" y="'+(P.t+11)+'" font-size="10" font-weight="700" fill="#23c25e" font-family="Montserrat,sans-serif">cruce '+
+           '$'+(vStar/1e6).toFixed(1).replace('.',',')+'M</text>';
+    }
+    // tu volumen actual
+    if (actual < xMax){
+      s += '<line x1="'+X(actual)+'" y1="'+P.t+'" x2="'+X(actual)+'" y2="'+(H-P.b)+
+           '" stroke="#0F3F68" stroke-width="1.4" stroke-dasharray="2 3" opacity=".55"/>';
+      s += '<text x="'+(X(actual)-7)+'" y="'+(P.t+11)+'" text-anchor="end" font-size="10" font-weight="700" fill="#0F3F68" font-family="Montserrat,sans-serif">tú</text>';
+    }
+    // leyenda
+    s += '<rect x="'+(P.l+8)+'" y="'+(H-P.b-40)+'" width="9" height="9" rx="2" fill="#1172AB"/>';
+    s += '<text x="'+(P.l+22)+'" y="'+(H-P.b-32)+'" font-size="10" fill="#0F3F68" font-weight="600" font-family="Montserrat,sans-serif">Transbank</text>';
+    s += '<rect x="'+(P.l+95)+'" y="'+(H-P.b-40)+'" width="9" height="9" rx="2" fill="#e8a33d"/>';
+    s += '<text x="'+(P.l+109)+'" y="'+(H-P.b-32)+'" font-size="10" fill="#0F3F68" font-weight="600" font-family="Montserrat,sans-serif">Mercado Pago</text>';
+
+    $('chart').innerHTML = s;
+  }
+
+  // ── Wiring ──
+  function sync(){
+    $('lCaja').textContent = clp(+els.caja.value);
+    $('lMig').textContent  = els.mig.value + '%';
+    $('lCred').textContent = els.cred.value + '%';
+    $('lArr').textContent  = clp(+els.arr.value);
+    calc();
+  }
+  ['caja','mig','cred','arr'].forEach(function(k){
+    els[k].addEventListener('input', sync);
+  });
+  ['tbkD','tbkC','mpD','mpC'].forEach(function(k){
+    rIn[k].addEventListener('input', function(){
+      document.querySelectorAll('.presets button').forEach(function(b){
+        b.classList.remove('pon');
+      });
+      calc();
+    });
+  });
+
+  // Presets de tasas
+  document.querySelectorAll('.presets button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var p = PRESETS[btn.dataset.p];
+      if (!p) return;
+      rIn.tbkD.value = p.tbkD.toFixed(2);
+      rIn.tbkC.value = p.tbkC.toFixed(2);
+      rIn.mpD.value  = p.mpD.toFixed(2);
+      rIn.mpC.value  = p.mpC.toFixed(2);
+      $('rateNote').innerHTML = p.note;
+      document.querySelectorAll('.presets button').forEach(function(b){
+        b.classList.remove('pon');
+      });
+      btn.classList.add('pon');
+      calc();
+    });
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

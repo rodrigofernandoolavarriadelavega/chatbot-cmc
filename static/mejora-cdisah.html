@@ -1,0 +1,743 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mejora CDISAH · CMC — roadmap ejecutable</title>
+<style>
+  :root{
+    --paper:#eef4f8; --slab:#ffffff; --slab-2:#f5fafc; --line:#d8e6ee; --line-2:#c3d7e3;
+    --ink:#0f2a40; --muted:#5b7488; --faint:#8aa3b4;
+    --navy:#0F3F68; --aqua:#4FBECE; --aqua-deep:#127885; --aqua-soft:#e4f5f9;
+    --data:#1172AB;              /* color de datos VALIDADO (modo claro) */
+    --data-soft:rgba(17,114,171,.16);
+    --good:#2e8b57; --good-bg:#e4f2ea;
+    --warn:#c8922b; --warn-bg:#f9f0dc;
+    --crit:#c0453b; --crit-bg:#f9e5e2;
+    --void:#8aa3b4; --void-bg:#eaf1f5;
+    --shadow:0 1px 2px rgba(15,63,104,.05), 0 6px 22px rgba(15,63,104,.07);
+    --shadow-lg:0 2px 6px rgba(15,63,104,.08), 0 18px 44px rgba(15,63,104,.12);
+    --r:13px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#08151e; --slab:#10222f; --slab-2:#0c1c27; --line:#203a4a; --line-2:#2c4b5f;
+    --ink:#e6eff4; --muted:#93aabb; --faint:#65808f;
+    --navy:#8fc4e6; --aqua:#48c3d3; --aqua-deep:#6fd6e4; --aqua-soft:#0f2f3a;
+    --data:#2FA3BC;              /* color de datos VALIDADO (modo oscuro) */
+    --data-soft:rgba(47,163,188,.20);
+    --good:#45b57c; --good-bg:#0f2c20; --warn:#dcae4c; --warn-bg:#2f2411;
+    --crit:#df6a62; --crit-bg:#2f1815; --void:#65808f; --void-bg:#132530;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 26px rgba(0,0,0,.3);
+    --shadow-lg:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.4);
+  }}
+  :root[data-theme="dark"]{
+    --paper:#08151e; --slab:#10222f; --slab-2:#0c1c27; --line:#203a4a; --line-2:#2c4b5f;
+    --ink:#e6eff4; --muted:#93aabb; --faint:#65808f;
+    --navy:#8fc4e6; --aqua:#48c3d3; --aqua-deep:#6fd6e4; --aqua-soft:#0f2f3a;
+    --data:#2FA3BC; --data-soft:rgba(47,163,188,.20);
+    --good:#45b57c; --good-bg:#0f2c20; --warn:#dcae4c; --warn-bg:#2f2411;
+    --crit:#df6a62; --crit-bg:#2f1815; --void:#65808f; --void-bg:#132530;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 26px rgba(0,0,0,.3);
+    --shadow-lg:0 2px 8px rgba(0,0,0,.4), 0 20px 50px rgba(0,0,0,.4);
+  }
+  :root[data-theme="light"]{
+    --paper:#eef4f8; --slab:#ffffff; --slab-2:#f5fafc; --line:#d8e6ee; --line-2:#c3d7e3;
+    --ink:#0f2a40; --muted:#5b7488; --faint:#8aa3b4;
+    --navy:#0F3F68; --aqua:#4FBECE; --aqua-deep:#127885; --aqua-soft:#e4f5f9;
+    --data:#1172AB; --data-soft:rgba(17,114,171,.16);
+    --good:#2e8b57; --good-bg:#e4f2ea; --warn:#c8922b; --warn-bg:#f9f0dc;
+    --crit:#c0453b; --crit-bg:#f9e5e2; --void:#8aa3b4; --void-bg:#eaf1f5;
+    --shadow:0 1px 2px rgba(15,63,104,.05), 0 6px 22px rgba(15,63,104,.07);
+    --shadow-lg:0 2px 6px rgba(15,63,104,.08), 0 18px 44px rgba(15,63,104,.12);
+  }
+
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;}
+  .tnum{font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1140px; margin:0 auto; padding:24px 20px 80px;}
+
+  header.top{display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:6px;}
+  .eyebrow{text-transform:uppercase; letter-spacing:.19em; font-size:10.5px; font-weight:700; color:var(--aqua-deep);}
+  h1{margin:6px 0 7px; font-size:28px; letter-spacing:-.022em; line-height:1.12; text-wrap:balance; font-weight:800;}
+  p.lede{margin:0 0 4px; color:var(--muted); font-size:13.5px; max-width:68ch;}
+  .tbtn{cursor:pointer; background:var(--slab); border:1px solid var(--line); color:var(--muted);
+    border-radius:20px; min-width:34px; height:31px; font-size:13px; box-shadow:var(--shadow); padding:0 10px; align-self:flex-start;}
+  .tbtn:hover{border-color:var(--aqua); color:var(--aqua-deep);}
+  .tbtn:focus-visible{outline:2px solid var(--aqua); outline-offset:2px;}
+
+  nav.secs{position:sticky; top:0; z-index:30; background:var(--paper); display:flex; gap:4px;
+    border-bottom:1px solid var(--line); padding:8px 0 0; margin:14px 0 24px; overflow-x:auto;}
+  nav.secs a{color:var(--muted); text-decoration:none; font-size:13px; font-weight:600;
+    padding:8px 13px; border-bottom:2px solid transparent; white-space:nowrap;}
+  nav.secs a:hover{color:var(--ink);}
+  nav.secs a.on{color:var(--navy); border-bottom-color:var(--aqua);}
+
+  h2.sec{font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--faint); font-weight:700; margin:34px 0 14px;}
+  h2.sec:first-of-type{margin-top:0;}
+
+  /* ── stat tiles ── */
+  .tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media (max-width:820px){ .tiles{grid-template-columns:repeat(2,1fr);} }
+  .tile{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; box-shadow:var(--shadow);}
+  .tile .t-l{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--faint); display:flex; align-items:center; gap:6px;}
+  .tile .t-v{font-size:26px; font-weight:800; line-height:1.08; margin-top:5px; color:var(--navy);}
+  .tile .t-s{font-size:11.5px; color:var(--muted); margin-top:4px;}
+  .tile.crit .t-v{color:var(--crit);} .tile.good .t-v{color:var(--good);} .tile.warn .t-v{color:var(--warn);}
+  .dotico{width:9px; height:9px; border-radius:50%; display:inline-block; flex:0 0 9px;}
+  .dotico.crit{background:var(--crit);} .dotico.good{background:var(--good);} .dotico.warn{background:var(--warn);} .dotico.data{background:var(--data);}
+
+  /* ── tesis ── */
+  .tesis{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;}
+  @media (max-width:820px){ .tesis{grid-template-columns:1fr;} }
+  .te{background:var(--slab); border:1px solid var(--line); border-left:3px solid var(--aqua);
+    border-radius:var(--r); padding:14px 16px; box-shadow:var(--shadow);}
+  .te h3{margin:0 0 5px; font-size:14.5px; font-weight:750; letter-spacing:-.01em;}
+  .te p{margin:0; font-size:13px; color:var(--muted);}
+  .te p strong{color:var(--ink);}
+  .te.crit{border-left-color:var(--crit);}
+
+  /* ── radar ── */
+  .radar-wrap{display:grid; grid-template-columns:auto 1fr; gap:22px; align-items:center;
+    background:var(--slab); border:1px solid var(--line); border-radius:var(--r); padding:18px; box-shadow:var(--shadow);}
+  @media (max-width:820px){ .radar-wrap{grid-template-columns:1fr;} }
+  .radar-svg{position:relative; width:min(440px,100%);}
+  .radar-svg svg{display:block; width:100%; height:auto;}
+  .rleg{display:flex; gap:18px; font-size:12px; color:var(--muted); margin-top:8px; flex-wrap:wrap;}
+  .rleg .sw{display:inline-block; width:16px; height:9px; border-radius:2px; vertical-align:middle; margin-right:5px;}
+  .rleg .sw.actual{background:var(--data);}
+  .rleg .sw.meta{background:none; border:1.5px dashed var(--muted);}
+  .rnotes{font-size:13px; color:var(--muted);}
+  .rnotes strong{color:var(--ink);}
+  .rnotes li{margin-bottom:7px;}
+  #radarTip{position:absolute; pointer-events:none; background:var(--slab); border:1px solid var(--line-2);
+    border-radius:8px; box-shadow:var(--shadow-lg); padding:7px 10px; font-size:12px; display:none; z-index:5; white-space:nowrap;}
+  #radarTip b{color:var(--navy);}
+
+  /* ── filtros ── */
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
+  .chip{appearance:none; border:1px solid var(--line); background:var(--slab); color:var(--muted);
+    font:inherit; font-size:12px; font-weight:650; padding:5px 12px; border-radius:16px; cursor:pointer;}
+  .chip:hover{border-color:var(--aqua);}
+  .chip.on{background:var(--navy); color:var(--paper); border-color:var(--navy);}
+  :root[data-theme="dark"] .chip.on, .dark-chip-fix{color:var(--slab);}
+  .chip:focus-visible{outline:2px solid var(--aqua); outline-offset:2px;}
+
+  /* ── matriz ── */
+  .mx{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden;}
+  .mxrow{border-bottom:1px solid var(--line);}
+  .mxrow:last-child{border-bottom:0;}
+  .mxh{display:grid; grid-template-columns:56px 1fr 128px 92px 52px; gap:12px; align-items:center;
+    width:100%; padding:11px 16px; background:none; border:0; font:inherit; color:inherit; text-align:left; cursor:pointer;}
+  .mxh:hover{background:var(--slab-2);}
+  .mxh:focus-visible{outline:2px solid var(--aqua); outline-offset:-3px;}
+  @media (max-width:640px){ .mxh{grid-template-columns:50px 1fr 84px;} .mxh .meter, .mxh .mono-lvl{display:none;} }
+  .mxc{font-weight:800; font-size:12px; color:var(--aqua-deep);}
+  .mxrow.p0 .mxc{color:var(--crit);}
+  .mxn{font-size:13.5px; font-weight:650;}
+  .mxn .nuevo{color:var(--aqua-deep); font-weight:800;}
+  .meter{display:flex; gap:2px;}
+  .seg{width:17px; height:9px; border-radius:2px; background:var(--void-bg); border:1px solid transparent;}
+  .seg.on{background:var(--data);}
+  .seg.goal{border:1.5px dashed var(--muted); background:transparent;}
+  .mono-lvl{font-size:11.5px; font-weight:700; color:var(--muted); text-align:right;}
+  .pill{display:inline-block; padding:2px 8px; border-radius:11px; font-size:10.5px; font-weight:700; white-space:nowrap; text-align:center;}
+  .pill.P0{background:var(--crit-bg); color:var(--crit);}
+  .pill.P1{background:var(--warn-bg); color:var(--warn);}
+  .pill.P2{background:var(--aqua-soft); color:var(--aqua-deep);}
+  .pill.P3, .pill.mant{background:var(--void-bg); color:var(--void);}
+  .mxb{display:none; padding:4px 16px 15px 84px; font-size:13px;}
+  @media (max-width:640px){ .mxb{padding-left:16px;} }
+  .mxrow[data-open="1"] .mxb{display:block;}
+  .mxb .fld{margin-bottom:7px;}
+  .mxb .fld b{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--faint); display:block; margin-bottom:1px;}
+  .mxb .money{color:var(--good); font-weight:750;}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px;
+    background:var(--slab-2); border:1px solid var(--line); border-radius:5px; padding:1px 5px;}
+
+  /* ── movimientos ── */
+  .mv{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); margin-bottom:10px; overflow:hidden;}
+  .mv.p0{border-left:3px solid var(--crit);}
+  .mv.p1{border-left:3px solid var(--warn);}
+  .mv.p2{border-left:3px solid var(--aqua);}
+  .mv.hum{border-left:3px solid var(--void); background:var(--slab-2);}
+  .mvh{display:grid; grid-template-columns:46px 1fr auto auto; gap:12px; align-items:center; width:100%;
+    padding:12px 16px; background:none; border:0; font:inherit; color:inherit; text-align:left; cursor:pointer;}
+  .mvh:hover{background:var(--slab-2);}
+  .mvh:focus-visible{outline:2px solid var(--aqua); outline-offset:-3px;}
+  .mvid{font-weight:800; font-size:13px; color:var(--navy);}
+  .mvt{font-size:14px; font-weight:700; letter-spacing:-.01em;}
+  .mvs{font-size:11.5px; color:var(--muted); margin-top:1px; display:block; font-weight:500;}
+  .mvmoney{font-size:13px; font-weight:800; color:var(--good); white-space:nowrap;}
+  .chev{color:var(--faint); font-size:11px; transition:transform .16s;}
+  .mv[data-open="1"] .chev{transform:rotate(90deg);}
+  .mvb{display:none; border-top:1px solid var(--line); padding:13px 16px 15px; font-size:13px;}
+  .mv[data-open="1"] .mvb{display:block;}
+  .mvb ol{margin:4px 0 10px; padding-left:20px;}
+  .mvb li{margin-bottom:5px;}
+  .mvb .tagline{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--faint); margin:9px 0 3px; font-weight:700;}
+  .mvb .guard{background:var(--crit-bg); border-radius:8px; padding:8px 11px; font-size:12.5px;}
+
+  /* ── 90 días ── */
+  .cal{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  @media (max-width:820px){ .cal{grid-template-columns:1fr;} }
+  .col90{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; box-shadow:var(--shadow);}
+  .col90 h3{margin:0 0 3px; font-size:13.5px; font-weight:750;}
+  .col90 .sub{font-size:11px; color:var(--faint); margin-bottom:9px;}
+  .col90 ul{margin:0; padding-left:16px;}
+  .col90 li{font-size:13px; margin-bottom:6px;}
+  .col90 li b{color:var(--navy);}
+
+  .block{background:var(--slab); border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; box-shadow:var(--shadow); margin-bottom:14px;}
+  .block h3{margin:0 0 6px; font-size:15.5px; font-weight:750;}
+  .block p{margin:0 0 9px; color:var(--muted); font-size:13.5px; max-width:74ch;}
+  .block p:last-child{margin-bottom:0;}
+  .block.alarm{border-left:3px solid var(--crit); background:var(--crit-bg);}
+  .block.alarm h3{color:var(--crit);} .block.alarm p{color:var(--ink); opacity:.87;}
+  .srcs{font-size:12.5px; color:var(--muted); line-height:1.8;}
+  .srcs a{color:var(--aqua-deep);}
+  footer{margin-top:36px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--faint);}
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Centro Médico Carampangue · Alma · WHO CDISAH 2.ª ed.</div>
+      <h1>Plan de mejora — ejecutable por cualquier modelo</h1>
+      <p class="lede">
+        Cada intervención de la clasificación OMS con su nivel <strong>medido contra producción</strong>,
+        la brecha, la plata en juego y la orden de trabajo que la cierra. Las órdenes viven en
+        <code>docs/ROADMAP_CDISAH.md</code> — autocontenidas, con pasos, criterios y guardrails —
+        y esta página las lleva embebidas como JSON parseable.
+      </p>
+    </div>
+    <button class="tbtn" id="themeBtn" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <nav class="secs" id="secnav">
+    <a href="#diag" class="on">Diagnóstico</a>
+    <a href="#radar">Radar</a>
+    <a href="#matriz">Matriz</a>
+    <a href="#mov">Órdenes</a>
+    <a href="#dias90">90 días</a>
+    <a href="#metodo">Método</a>
+  </nav>
+
+  <!-- ═══ DIAGNÓSTICO ═══ -->
+  <section id="diag">
+    <h2 class="sec">Diagnóstico — números medidos, no estimados</h2>
+    <div class="tiles">
+      <div class="tile">
+        <div class="t-l"><span class="dotico data"></span>Venta base · junio</div>
+        <div class="t-v tnum">$26,0M</div>
+        <div class="t-s">bi_pagos_caja (caja real Medilink) · confirmado por el dueño</div>
+      </div>
+      <div class="tile crit">
+        <div class="t-l"><span class="dotico crit"></span>Fuga anual · no-cierre</div>
+        <div class="t-v tnum">~$25,5M</div>
+        <div class="t-s">569 atenciones sin cerrar en 180d · tasa 2% → 15% desde marzo</div>
+      </div>
+      <div class="tile good">
+        <div class="t-l"><span class="dotico good"></span>Cobrable ya · validado</div>
+        <div class="t-v tnum">$1,70M</div>
+        <div class="t-s">48 atenciones con deuda confirmada por DOS fuentes (atenciones × caja)</div>
+      </div>
+      <div class="tile warn">
+        <div class="t-l"><span class="dotico warn"></span>Reloj legal</div>
+        <div class="t-v tnum">1-dic-26</div>
+        <div class="t-s">Ley 21.719 · multas hasta 20.000 UTM · ventana PYME solo el 1er año</div>
+      </div>
+    </div>
+
+    <div class="tesis">
+      <div class="te crit">
+        <h3>1 · La plata no está en construir más. Está en cerrar.</h3>
+        <p>El grupo más débil de todo el mapa es <strong>3.0 Gestión financiera (≈0,9/4)</strong> — y ahí vive
+        toda la plata medida: atenciones que no se cierran, deuda que nadie cobra, bonos Fonasa que
+        caducan a los 180 días. Antes de escribir una línea de código nuevo, cerrar lo abierto.</p>
+      </div>
+      <div class="te crit">
+        <h3>2 · La ley fija el orden técnico.</h3>
+        <p>Nada de perfilamiento (score de no-show) ni contacto masivo antes de cerrar <strong>4.5 + 1.8
+        (Ley 21.719)</strong>. El bot manda datos de salud a Anthropic y OpenAI sin DPA ni consentimiento
+        separado. El 1-dic-2026 convierte la prioridad en calendario.</p>
+      </div>
+      <div class="te">
+        <h3>3 · La capa de datos es compuerta, no un frente.</h3>
+        <p>Con captura sucia, un agente autónomo <strong>automatiza el error</strong>. Regla dura: ningún grupo
+        declara nivel &gt;2 mientras 4.x esté en 0–1. Y la regla de las dos fuentes ya es canon:
+        venta = <code>bi_pagos_caja</code>, copago/medio = <code>pagos_cmc</code>, deuda = siempre cruzada.</p>
+      </div>
+      <div class="te">
+        <h3>4 · Lo agéntico no es el déficit — es la gobernanza de encendido.</h3>
+        <p><strong>25 orquestadores escritos y apagados</strong>: el código ya existe. Y apareció un flag prendido
+        que la memoria creía apagado (<code>AUTOPILOT_EXECUTE=true</code> en prod) — auditar antes de
+        encender nada más. El switchboard es el producto, no el orquestador.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ RADAR ═══ -->
+  <section id="radar">
+    <h2 class="sec">Madurez por grupo — actual vs meta 12 meses</h2>
+    <div class="radar-wrap">
+      <div class="radar-svg" id="radarBox">
+        <svg id="radarSvg" viewBox="0 0 540 430" role="img" aria-label="Radar de madurez por grupo CDISAH, nivel actual contra meta a 12 meses"></svg>
+        <div id="radarTip"></div>
+        <div class="rleg">
+          <span><span class="sw actual"></span>Actual (promedio del grupo)</span>
+          <span><span class="sw meta"></span>Meta 12 m (referencia)</span>
+        </div>
+      </div>
+      <div class="rnotes">
+        <ul>
+          <li><strong>3.0 Gestión es el valle</strong> — y concentra la plata. Subirlo no requiere producto nuevo: alerta de no-cierre, lista de cobranza, reloj de bonos.</li>
+          <li><strong>4.0 Datos sube por compliance</strong> (4.5 es grupo nuevo en la 2.ª ed.) más que por ingeniería: DPA, consent, log de accesos.</li>
+          <li><strong>1.0 y 2.0 ya están altos donde importa</strong> (bot 1.6.2, agenda 2.7). Su mejora es de precisión, no de construcción.</li>
+          <li><strong>5.0 no existe en la OMS</strong> — es la extensión propia de captación. Nadie en el mundo la escribió; es el diferenciador de Alma.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MATRIZ ═══ -->
+  <section id="matriz">
+    <h2 class="sec">Matriz de mejora — 34 intervenciones CDISAH</h2>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="g" data-v="*">Todos los grupos</button>
+      <button class="chip" data-f="g" data-v="1">1.0 Paciente</button>
+      <button class="chip" data-f="g" data-v="2">2.0 Profesional</button>
+      <button class="chip" data-f="g" data-v="3">3.0 Gestión</button>
+      <button class="chip" data-f="g" data-v="4">4.0 Datos</button>
+      <button class="chip" data-f="g" data-v="5">5.0 Captación</button>
+      <span style="width:10px"></span>
+      <button class="chip" data-f="p" data-v="*">Toda prioridad</button>
+      <button class="chip" data-f="p" data-v="P0">Solo P0</button>
+      <button class="chip" data-f="p" data-v="P1">P1</button>
+      <button class="chip" data-f="p" data-v="P2">P2</button>
+    </div>
+    <div class="mx" id="mx"></div>
+    <p style="font-size:12px;color:var(--faint);margin-top:10px;">
+      Click en una fila para abrir brecha, próxima acción y evidencia. Barras llenas = nivel actual ·
+      contorno punteado = meta 12 m · ✦ = categoría nueva en la 2.ª edición (2023).
+    </p>
+  </section>
+
+  <!-- ═══ ÓRDENES ═══ -->
+  <section id="mov">
+    <h2 class="sec">Órdenes de trabajo — cualquier modelo puede ejecutarlas</h2>
+    <div class="block alarm">
+      <h3>Contrato de ejecución (leer antes de tocar cualquier orden)</h3>
+      <p>
+        <strong>1.</strong> El VPS jamás se edita a mano — deploy solo vía <code>scripts/ship.sh</code> con revisión del dueño.
+        <strong>2.</strong> Los agentes no hacen <code>git commit</code> — dejan el working tree listo.
+        <strong>3.</strong> La API de Medilink tiene rate limit real (429 el 13-jul): para análisis usar las cachés
+        locales <code>bi_atenciones</code> / <code>bi_pagos_caja</code>, nunca fetch masivo.
+        <strong>4.</strong> Nada customer-facing sin consent mientras M3 no cierre.
+        El detalle completo, con comandos y SQL exacto, está en <code>docs/ROADMAP_CDISAH.md</code>.
+      </p>
+    </div>
+    <div id="movs"></div>
+  </section>
+
+  <!-- ═══ 90 DÍAS ═══ -->
+  <section id="dias90">
+    <h2 class="sec">Secuencia de 90 días</h2>
+    <div class="cal">
+      <div class="col90">
+        <h3>Ahora · semanas 1–2</h3>
+        <div class="sub">plata inmediata y riesgo, sin dependencias</div>
+        <ul>
+          <li><b>M1</b> Lista de cobranza validada — $1,7M</li>
+          <li><b>M2</b> Alerta diaria de no-cierre — frena $25,5M/año</li>
+          <li><b>M4</b> Delegado ENO (papel, costo cero)</li>
+          <li><b>M5</b> Auditar <code>AUTOPILOT_EXECUTE=true</code></li>
+          <li><b>M6</b> Embarcar fix método de pago (ya escrito)</li>
+        </ul>
+      </div>
+      <div class="col90">
+        <h3>Luego · mes 1–2</h3>
+        <div class="sub">compliance y captura</div>
+        <ul>
+          <li><b>M3</b> Ley 21.719 — empezar YA por el DPA (es trámite)</li>
+          <li><b>M7</b> Doble recordatorio 3d + 1d</li>
+          <li><b>M8</b> Copago en el momento (arancel MLE)</li>
+          <li><b>M9</b> Medir adopción del Copiloto</li>
+        </ul>
+      </div>
+      <div class="col90">
+        <h3>Después · mes 2–3</h3>
+        <div class="sub">requieren lo anterior</div>
+        <ul>
+          <li><b>M10</b> «Mis exámenes» con gate clínico</li>
+          <li><b>M11</b> Llamada a no-shows de alto riesgo <em>(tras M3)</em></li>
+          <li><b>M12</b> Cierre del loop de derivación</li>
+          <li><b>H1–H3</b> En paralelo, solo humano: bonos Fonasa · pediatría · ¿qué cambió en marzo?</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MÉTODO ═══ -->
+  <section id="metodo">
+    <h2 class="sec">Método</h2>
+    <div class="block">
+      <h3>Rúbrica 0–4 (techo deliberado en 4)</h3>
+      <p>
+        <strong>0</strong> papel/ausente · <strong>1</strong> digital manual · <strong>2</strong> digital + medido ·
+        <strong>3</strong> propone y humano aprueba (HITL) · <strong>4</strong> autónomo supervisado (HOTL: límites
+        escritos + kill-switch + log). El nivel 5 (autonomía total) queda fuera a propósito — Yang et al.
+        (<em>Science Robotics</em> 2017) y la CSA lo marcan como no desplegable con responsabilidad en clínica.
+        En 2.0 y 3.0, nivel 4 = todo automatizado <em>salvo la firma y el consentimiento</em>.
+      </p>
+      <p style="margin-top:8px;">
+        <strong>Compuerta de datos:</strong> ningún grupo puede declararse sobre nivel 2 si 4.x está en 0–1.
+        <strong>Dos numeraciones OMS:</strong> las intervenciones (DHI) y los Health System Challenges (HSC)
+        se pisan — «3.5» significa <em>Health system financial management</em> en una y
+        <em>continuidad de cuidado insuficiente</em> en la otra. No mezclarlas.
+      </p>
+    </div>
+    <div class="block">
+      <h3>Fuentes primarias</h3>
+      <div class="srcs">
+        · <a href="https://www.who.int/publications/i/item/9789240081949">WHO CDISAH 2.ª ed. (24-oct-2023)</a> — la vigente; no existe 3.ª edición (verificado jul-2026)<br>
+        · Datos de producción CMC: <code>bi_pagos_caja</code>, <code>bi_atenciones</code>, <code>pagos_cmc</code>, <code>demanda_no_disponible</code> (2026-07-12/14, solo lectura)<br>
+        · <a href="https://bcn.cl/leychile/navegar?idNorma=1209272">Ley 21.719</a> (arts. 15 bis, 14 ter/sexies, 6.º transitorio verificados) · Decreto 7/2019 (ENO) · Res. 49/2009 MLE (180 días)<br>
+        · CMM U. de Chile 18.000 citas (llamada −7,8pp) · RCT AJMC n=54.066 (doble recordatorio) · HFMA «100% estimate, 100% ask» (+27%) · Mayo Clin Proc 2025 (omisiones 76,3%)<br>
+        · Runbook ejecutable: <code>chatbot-cmc/docs/ROADMAP_CDISAH.md</code> · Mapa completo: <code>static/arquitectura.html</code>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Generado el 14 de julio de 2026 · Alma / OLACORE · niveles verificados contra código y datos de producción ·
+    payload máquina-legible: <code>&lt;script id="cdisah-data"&gt;</code> en esta misma página.
+  </footer>
+</div>
+
+<script type="application/json" id="cdisah-data">
+{"version":"2026-07-14","fuente_runbook":"chatbot-cmc/docs/ROADMAP_CDISAH.md","kpis":{"venta_junio_clp":26039530,"fuga_anual_clp":25524338,"deuda_confirmada_clp":1695780,"deuda_dudosa_clp":1360330,"deadline_legal":"2026-12-01"},"nota":"La matriz y las órdenes se definen en el script principal (const MATRIZ, const MOVS) y son la misma data que renderiza la página."}
+</script>
+
+<script>
+/* ══ MATRIZ — 34 intervenciones CDISAH 2.ª ed., niveles verificados ══ */
+const MATRIZ = [
+ {c:"1.1",g:1,n:"Targeted communication",lvl:3,meta:3,pri:"P1",
+  brecha:"Un solo patrón de recordatorio (día + 2h antes). El doble toque 3d+1d rinde más.",
+  next:"Orden M7 — doble recordatorio.",money:null,
+  ev:"RCT n=54.066 (AJMC): 4,4% de no-show con 3d+1d vs 5,8% con un toque."},
+ {c:"1.2",g:1,n:"Untargeted communication",lvl:1,meta:1,pri:"mant",
+  brecha:"Blast masivo deliberadamente OFF.",next:"No mover hasta cerrar M3 (Ley 21.719).",money:null,ev:"Decisión legal, no técnica."},
+ {c:"1.4",g:1,n:"Personal health tracking",lvl:1,meta:2,pri:"P2",
+  brecha:"El portal existe (/portal, /mis-citas) y nadie lo usa. La evidencia mata el portal clásico con login.",
+  next:"Orden M10 — «Mis exámenes» por link de WhatsApp con gate clínico.",money:null,
+  ev:"Ver resultados = 86% del uso de todo portal; solo 19% acepta un dx grave por portal; adopción rural 35,9%."},
+ {c:"1.5",g:1,n:"Person-based reporting",lvl:2,meta:2,pri:"mant",
+  brecha:"NPS por profesional operando.",next:"Mantener.",money:null,ev:"—"},
+ {c:"1.6",g:1,n:"On-demand communication · 1.6.2 = el bot",lvl:3,meta:4,pri:"P2",
+  brecha:"El bot decide y actúa solo, pero calla cuando no hay hora para HOY (caso María).",
+  next:"Carril «no hay para hoy» + medir conversión del aviso.",money:null,
+  ev:"1.6.2 «Simulated human-like conversations» — categoría nueva 2023: el bot tiene código OMS propio."},
+ {c:"1.7",g:1,n:"Person-centred financial transactions",lvl:0,meta:1,pri:"P1",
+  brecha:"El paciente solo puede pagar en el mostrador.",
+  next:"Link de pago para deudas/abonos — apoya la cobranza M1.",money:"parte de $1,7M",
+  ev:"HFMA: tras irse a cobranza externa, solo 7,4% de recuperación total."},
+ {c:"1.8",g:1,n:"Consent management ✦",lvl:2,meta:3,pri:"P0",
+  brecha:"El consent actual no separa la transferencia internacional de datos de salud (Claude/Whisper en EE.UU.).",
+  next:"Orden M3 — consent explícito y separado, versionado con snapshot del texto.",money:null,
+  ev:"Art. 14 ter letra h (texto verificado): obliga a informar la transferencia y sus garantías."},
+
+ {c:"2.1",g:2,n:"Identification & registration",lvl:3,meta:3,pri:"mant",
+  brecha:"RUT + registro automático en Medilink operando.",next:"Mantener.",money:null,ev:"—"},
+ {c:"2.2",g:2,n:"Person-centred health records",lvl:2,meta:3,pri:"P1",
+  brecha:"Copiloto de Ficha desplegado sin medición de adopción ni defensa anti-omisión.",
+  next:"Orden M9 — instrumentar adopción; después panel transcript↔nota.",money:null,
+  ev:"76,3% de los errores de los scribes son OMISIONES (Mayo Clin Proc 2025); burnout sí baja −13pp (JAMA 2025)."},
+ {c:"2.3",g:2,n:"Decision support",lvl:2,meta:2,pri:"mant",
+  brecha:"Motor GES operando. Regla: JAMÁS alertas interruptivas.",next:"Mantener pasivo y embebido.",money:null,
+  ev:"Override de alertas interruptivas: 90% (meta-análisis 2024); ~300 alertas por evento adverso evitado."},
+ {c:"2.4",g:2,n:"Telemedicine",lvl:2,meta:2,pri:"mant",
+  brecha:"Psiquiatría y neurología operando.",next:"Mantener.",money:null,ev:"—"},
+ {c:"2.5",g:2,n:"Provider communication · 2.5.6 gen-AI ✦",lvl:2,meta:2,pri:"mant",
+  brecha:"Alertas pre-cita al doctor operando.",next:"Mantener.",money:null,ev:"2.5.6 IA generativa: categoría nueva 2023."},
+ {c:"2.6",g:2,n:"Referral coordination",lvl:1,meta:2,pri:"P2",
+  brecha:"Interconsultas solo internas; cuando el paciente sale, no vuelve ningún dato.",
+  next:"Orden M12 — estado del loop: emitida → contrarreferencia, con alerta a N días.",money:null,
+  ev:"OMS (High-value referrals, 2023): en ~la mitad de los casos el informe nunca vuelve."},
+ {c:"2.7",g:2,n:"Scheduling & activity planning",lvl:3,meta:4,pri:"P2",
+  brecha:"El bot agenda solo (smart_select, lista de espera); el relleno de cupos liberados es parcial.",
+  next:"Subir a HOTL con la tripleta: límites escritos + kill-switch + log.",money:null,ev:"Fase 4 ya encendida con AUTOCONFIRM off."},
+ {c:"2.8",g:2,n:"Provider training",lvl:0,meta:0,pri:"mant",brecha:"Fuera de alcance para un centro de este tamaño.",next:"No construir.",money:null,ev:"—"},
+ {c:"2.9",g:2,n:"Prescription management",lvl:1,meta:1,pri:"P3",
+  brecha:"Receta en el copiloto; SNRE nacional sin integrar.",
+  next:"Esperar: la receta electrónica es voluntaria para el médico («podrá», Decreto 11/2025).",money:null,ev:"Obligatoria solo para la farmacia desde dic-2025."},
+ {c:"2.10",g:2,n:"Lab & diagnostics imaging",lvl:1,meta:1,pri:"P3",
+  brecha:"Examen→Ficha (foto→texto) existe; sin integración con laboratorio externo.",
+  next:"Registrar orden/resultado como objetos estructurados (forma FHIR), sin integración todavía.",money:null,
+  ev:"Sin evidencia de que los labs regionales chicos expongan HL7."},
+ {c:"2.11",g:2,n:"Provider financial transactions ✦",lvl:0,meta:2,pri:"P0",
+  brecha:"El cobro al paciente no tiene sistema: hay deuda viva que nadie persigue.",
+  next:"Orden M1 — lista de cobranza validada a recepción.",money:"$1.695.780 confirmados",
+  ev:"48 atenciones con deuda confirmada por DOS fuentes (atenciones × caja, 2026-07-14). Otras 13 ($1,36M) requieren revisión manual."},
+
+ {c:"3.1",g:3,n:"Human resources",lvl:2,meta:2,pri:"mant",
+  brecha:"Remuneraciones y liquidaciones operando (×0,8475).",next:"Mantener.",money:null,ev:"—"},
+ {c:"3.2",g:3,n:"Supply chain",lvl:1,meta:1,pri:"P3",brecha:"Inventario dental básico.",next:"No prioritario.",money:null,ev:"—"},
+ {c:"3.3",g:3,n:"Public health event notification",lvl:0,meta:1,pri:"P0",
+  brecha:"ENO sin delegado de epidemiología nombrado — obligación legal activa.",
+  next:"Orden M4 — nombrar delegado (papel) + recordatorio en el flujo clínico.",money:null,
+  ev:"Decreto 7/2019 art. 3. Costo ≈ cero. Preguntar además a la SEREMI si el CMC tiene código DEIS."},
+ {c:"3.5",g:3,n:"Health system financial management",lvl:1,meta:3,pri:"P0",
+  brecha:"Las atenciones quedan sin cerrar y nadie lo ve: la tasa pasó de 2% a 15% desde marzo. Y los bonos Fonasa caducan a los 180 días sin que exista un reloj.",
+  next:"Orden M2 — alerta diaria de no-cierre (detector ya construido) + H1 bonos (paso humano con Clave Única).",
+  money:"~$25,5M/año imputados",
+  ev:"569 atenciones en 180d con finalizado=0 ∧ total=0. Rodrigo = 43% de junio (78). Res. 49/2009: 180 días para cobrar el bono; 5 años para revisar rechazados."},
+ {c:"3.6",g:3,n:"Equipment & asset",lvl:1,meta:1,pri:"mant",brecha:"Mantención/esterilización base.",next:"Mantener.",money:null,ev:"—"},
+ {c:"3.7",g:3,n:"Facility management",lvl:1,meta:2,pri:"mant",
+  brecha:"Expediente SEREMI en curso (habilitación).",next:"Seguir el expediente; no es software.",money:null,ev:"—"},
+ {c:"3.8",g:3,n:"Health certificate management ✦",lvl:0,meta:1,pri:"P3",
+  brecha:"Certificados y reposos a mano — y el copiloto ya genera documentos clínicos.",
+  next:"Conectar la generación de documentos del copiloto a certificados.",money:null,ev:"Categoría nueva 2023."},
+
+ {c:"4.1",g:4,n:"Data management",lvl:2,meta:3,pri:"P0",
+  brecha:"El ETL descarta en silencio las atenciones con total≤0 (transform.py:307) — la fuga es invisible por diseño. Cero tests de calidad.",
+  next:"Tabla fact_atenciones_sin_valorizar en vez de descartar + tests Pandera + regla de dos fuentes como canon.",
+  money:null,
+  ev:"1.738 atenciones invisibles medidas en 180d (1.169 legítimas, 569 fuga). Kahn 2016: conformance/completeness/plausibility."},
+ {c:"4.2",g:4,n:"Data coding",lvl:1,meta:2,pri:"P2",
+  brecha:"bi_pagos_caja.atencion_id está poblado al 96% y casi nadie lo usa.",
+  next:"Vista permanente deuda×caja (la que validó los $1,7M) como parte del BI.",money:null,
+  ev:"El cruce redujo la deuda aparente de $3,0M a $1,7M reales — 45% era obsoleta."},
+ {c:"4.3",g:4,n:"Geo-spatial",lvl:3,meta:3,pri:"mant",brecha:"Heatmap 53k citas operando.",next:"Mantener.",money:null,ev:"—"},
+ {c:"4.4",g:4,n:"Interoperability",lvl:0,meta:1,pri:"P3",
+  brecha:"La Ley 21.668 ya obliga a interoperar, pero el reglamento está vencido y sin publicar — no hay a qué conectarse.",
+  next:"SOLO la capa de mapeo a perfiles NID (FHIR R4). No construir integración completa.",money:null,
+  ev:"NID del MINSAL = FHIR R4; no existe ficha clínica nacional."},
+ {c:"4.5",g:4,n:"Data governance compliance ✦",lvl:1,meta:3,pri:"P0",
+  brecha:"Sin DPA con Anthropic/OpenAI, sin RAT, sin log de accesos a datos sensibles, sin flujo de brechas.",
+  next:"Orden M3 — el paquete mínimo completo antes del 1-dic-2026.",money:"riesgo hasta 20.000 UTM",
+  ev:"Art. 15 bis verificado: son «encargados de tratamiento». Grupo 4.5 es nuevo en la 2.ª ed. — en 2018 la OMS excluía esto de su alcance."},
+
+ {c:"5.1",g:5,n:"Adquisición pagada (ads)",lvl:2,meta:2,pri:"P0",
+  brecha:"⚠️ AUTOPILOT_EXECUTE=true en el .env de prod contradice la memoria del proyecto (se creía OFF).",
+  next:"Orden M5 — auditar HOY si está ejecutando cambios de campañas solo.",money:null,
+  ev:"Hallazgo 2026-07-13 leyendo el .env de producción."},
+ {c:"5.2",g:5,n:"Demanda orgánica (SEO)",lvl:2,meta:2,pri:"mant",brecha:"Blog + landings por comuna operando.",next:"Mantener.",money:null,ev:"—"},
+ {c:"5.3",g:5,n:"Orquestación autónoma",lvl:2,meta:3,pri:"P2",
+  brecha:"25 orquestadores escritos, todos con kill-switch en OFF.",
+  next:"Encender primero Loop 1 (cero contacto con pacientes), tras M3 y M5.",money:null,
+  ev:"El déficit no es código: es gobernanza de encendido."},
+ {c:"5.4",g:5,n:"Retención / win-back",lvl:2,meta:3,pri:"P2",
+  brecha:"WINBACK y DENTAL_WINBACK ya encendidos; cross-sell esperando piloto N=5.",
+  next:"Cerrar el piloto de cross-sell y decidir con datos.",money:null,ev:"—"},
+ {c:"5.5",g:5,n:"Demanda insatisfecha (señal)",lvl:1,meta:2,pri:"P1",
+  brecha:"El bot captura lo que la gente pide y no hay — y nadie mira esa tabla.",
+  next:"Orden H2 — pediatría: 13 solicitudes con teléfono. Decisión de contratación.",money:"franja nueva con demanda probada",
+  ev:"demanda_no_disponible: pediatría es #1 por 3× sobre el siguiente."}
+];
+
+/* ══ ÓRDENES — resumen ejecutable (detalle completo en docs/ROADMAP_CDISAH.md) ══ */
+const MOVS = [
+ {id:"M1",pri:"p0",t:"Cobranza validada — entregar lista a recepción",s:"P0 · horas · solo lectura",money:"$1,70M",
+  pasos:["Query deuda×caja en prod (SQL exacto en el runbook).","Filtrar deuda confirmada por ambas fuentes (48 at.); lo dudoso a pestaña aparte.","Teléfonos vía contact_profiles.","CSV ordenado por deuda × frescura (2026 primero)."],
+  exito:"CSV entregado; a 30 días hay pagos en caja contra esas atenciones.",
+  guard:"El contacto lo hace RECEPCIÓN (humano). Cero mensajes automáticos de cobranza — Ley 21.719."},
+ {id:"M2",pri:"p0",t:"Alerta diaria de atenciones sin cerrar",s:"P0 · bajo · detector ya construido",money:"frena ~$25,5M/año",
+  pasos:["Portar atenciones_no_cerradas.py a leer bi_atenciones local (NO la API — rate limit).","Cron diario con resumen por profesional (patrón jobs.py).","Enviar al canal admin del dueño (patrón doctor_alerts.py)."],
+  exito:"Tasa de no-cierre bajo 2% (línea base dic–feb) en 60 días.",
+  guard:"Nada a pacientes. Dejar listo sin deploy; embarca el dueño con ship.sh."},
+ {id:"M3",pri:"p0",t:"Ley 21.719 — paquete mínimo de cumplimiento",s:"P0 legal · deadline 1-dic-2026",money:"evita multa (hasta 20.000 UTM)",
+  pasos:["DPA con Anthropic y OpenAI (trámite del dueño — empezar YA).","Consent separado para transferencia internacional + tabla consent_records versionada.","access_log_sensibles en claude_helper.py y messaging.py.","Política /privacidad con la transferencia (art. 14 ter h) · ARCO 30+30 · flujo de brechas · doc PYME."],
+  exito:"Checklist 10/10 antes del 1-dic-2026.",
+  guard:"Bloquea M11 y todo contacto masivo. La ventana PYME (amonestación) dura solo el primer año."},
+ {id:"M4",pri:"p0",t:"ENO — nombrar delegado de epidemiología",s:"P0 · costo ≈ cero · obligación activa",money:null,
+  pasos:["Papel firmado por el director (Decreto 7/2019 art. 3).","Recordatorio en el flujo clínico ante diagnóstico de la lista ENO.","Preguntar a la SEREMI Biobío si el CMC tiene código DEIS."],
+  exito:"Delegado nombrado y documentado.",guard:"—"},
+ {id:"M5",pri:"p0",t:"Auditar AUTOPILOT_EXECUTE=true en prod",s:"P0 · minutos · contradicción memoria↔prod",money:null,
+  pasos:["Leer app/autopilot/engine.py (dónde se consume el flag).","Revisar el log de acciones del Autopilot en prod.","Si ejecuta solo y el dueño no lo sabía: apagar EXECUTE y reportar qué hizo."],
+  exito:"Contradicción resuelta y documentada en memoria.",guard:"Solo lectura hasta hablar con el dueño."},
+ {id:"M6",pri:"p1",t:"Embarcar el fix de método de pago",s:"P1 · ya escrito y validado en working tree",money:"hace verificable el mix 92/8",
+  pasos:["El dueño revisa alma_pagos.html + pagos_routes.py + qa_pagos.py.","ship.sh con esos 3 archivos.","Corregir 86/14 → 92/8 en tarjetas-analisis.html (n=1.956; crédito n=7 no soporta conclusiones)."],
+  exito:"En 90 días, >90% de tarjetas con N° de comprobante (hoy: 1%). Medible con qa_pagos.py.",
+  guard:"No deployar sin revisión del dueño."},
+ {id:"M7",pri:"p1",t:"Doble recordatorio 3 días + 1 día",s:"P1 · evidencia RCT n=54.066",money:null,
+  pasos:["Modificar reminders.py (archivo core).","Correr tests/harness_50.py antes de proponer deploy."],
+  exito:"No-show medible a la baja vs línea base (4,4% vs 5,8% en el RCT).",
+  guard:"Sin perfilamiento — no requiere M3."},
+ {id:"M8",pri:"p1",t:"Copago en el momento (arancel MLE)",s:"P1 · evidencia HFMA +27%",money:"+27% cobro punto de servicio (benchmark)",
+  pasos:["Cargar el Excel oficial del arancel MLE 2026 a tabla local.","Estimador copago por prestación × nivel.","Hint en alma_pagos cuando lo cobrado difiera del arancel."],
+  exito:"Diferencias copago-arancel visibles en el momento, no a fin de mes.",
+  guard:"Prerrequisito humano: confirmar el nivel MLE (1/2/3) del CMC."},
+ {id:"M9",pri:"p1",t:"Medir adopción del Copiloto de Ficha",s:"P1 · repo aparte, sin colisión",money:null,
+  pasos:["Log por nota: % sin edición mayor (Levenshtein >15%), tiempo a firma, uso semanal por médico.","Ítem único de burnout (Dolan 1–5) trimestral."],
+  exito:"Dato de uso real a 30/60/90 días por médico.",
+  guard:"El 15% de médicos de un RCT nunca abrió la herramienta — sin este número, todo es fe."},
+ {id:"M10",pri:"p2",t:"«Mis exámenes» — link con gate clínico",s:"P2 · NO es un portal",money:null,
+  pasos:["Link tokenizado por WhatsApp (hash, 7d, verificación 4 dígitos RUT).","Gate en el SERVIDOR: Tier 1 auto / Tier 2 revisión médica / Tier 3 llamada obligatoria."],
+  exito:">40% de apertura verificada a 90 días — si no, rediseñar canal, no agregar features.",
+  guard:"VIH y anatomía patológica JAMÁS por link (Ley 19.779/DS 182). El contenido clínico nunca va en el mensaje de WhatsApp (política Meta)."},
+ {id:"M11",pri:"p2",t:"Llamada telefónica a no-shows de alto riesgo",s:"P2 · BLOQUEADO por M3",money:null,
+  pasos:["EIPD previa (es «elaboración de perfiles»).","Regresión logística explicable — NO boosting.","Llamar solo el decil superior (VPP ~0,18) · A/B dentro del grupo de riesgo."],
+  exito:"Diferencial de no-show llamado vs control.",
+  guard:"Evidencia chilena: llamada −7,8pp vs WhatsApp −5,4pp (CMM U. de Chile, 18.000 citas)."},
+ {id:"M12",pri:"p2",t:"Cierre del loop de derivación",s:"P2 · funciona con PDF",money:null,
+  pasos:["Registro: emitida → agendada → atendida → contrarreferencia.","Alerta de loop abierto a N días."],
+  exito:"% de loops cerrados medible (OMS: hoy ~la mitad no vuelve).",guard:"—"},
+ {id:"H1",pri:"hum",t:"Bonos Fonasa — bajar reporte del portal",s:"SOLO HUMANO · Clave Única",money:"bonos por caducar (180d) + rechazados (5 años)",
+  pasos:["Entrar a cobranza3.bonoelectronico.cl (si el operador es i-Med).","Bajar bonos sin documentar / rechazados.","Con el CSV, un modelo arma el reloj de prescripción."],
+  exito:"Cero bonos caducados por no cobrar.",guard:"Ningún modelo tiene (ni debe tener) la Clave Única."},
+ {id:"H2",pri:"hum",t:"Pediatría — decisión de contratación",s:"SOLO HUMANO · demanda probada",money:"franja nueva",
+  pasos:["13 solicitudes con teléfono en demanda_no_disponible.","Evaluar media jornada: lista de espera desde el día uno."],
+  exito:"Decisión tomada con el dato en la mano.",guard:"—"},
+ {id:"H3",pri:"hum",t:"¿Qué cambió en marzo?",s:"SOLO HUMANO · explica la curva de no-cierre",money:null,
+  pasos:["La tasa de no-cierre pasó de 2% a 15% desde marzo; Rodrigo de 0 a 78/mes.","Probable cambio de proceso, no de software. Responderlo puede valer más que M2."],
+  exito:"Causa identificada y corregida en el proceso.",guard:"—"}
+];
+
+/* ══════════ render ══════════ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const GN={1:"1.0 Paciente",2:"2.0 Profesional",3:"3.0 Gestión",4:"4.0 Datos",5:"5.0 Captación"};
+
+/* — radar — */
+function radar(){
+  const svg=$('#radarSvg'), NS='http://www.w3.org/2000/svg';
+  const cx=270, cy=215, R=148, N=5;
+  const groups=[1,2,3,4,5].map(g=>{
+    const rows=MATRIZ.filter(r=>r.g===g);
+    const a=rows.reduce((s,r)=>s+r.lvl,0)/rows.length;
+    const m=rows.reduce((s,r)=>s+r.meta,0)/rows.length;
+    return {g,a,m};
+  });
+  const ang=i=>(-90+i*(360/N))*Math.PI/180;
+  const pt=(i,v)=>[cx+Math.cos(ang(i))*R*(v/4), cy+Math.sin(ang(i))*R*(v/4)];
+  const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+  const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  svg.innerHTML='';
+  // grid rings 1..4
+  for(let lv=1;lv<=4;lv++){
+    const p=[...Array(N)].map((_,i)=>pt(i,lv).join(',')).join(' ');
+    svg.appendChild(el('polygon',{points:p,fill:'none',stroke:css('--line'),'stroke-width':lv===4?1.4:1}));
+    svg.appendChild(el('text',{x:cx+4,y:cy-R*(lv/4)-3,'font-size':9,fill:css('--faint'),class:'tnum'})).textContent=lv;
+  }
+  // axes + labels
+  const LBL=["1.0 Paciente","2.0 Profesional","3.0 Gestión","4.0 Datos","5.0 Captación"];
+  for(let i=0;i<N;i++){
+    const [x,y]=pt(i,4);
+    svg.appendChild(el('line',{x1:cx,y1:cy,x2:x,y2:y,stroke:css('--line'),'stroke-width':1}));
+    const [lx,ly]=pt(i,4.55);
+    const t=el('text',{x:lx,y:ly,'font-size':11.5,'font-weight':700,fill:css('--ink'),
+      'text-anchor':Math.abs(lx-cx)<8?'middle':(lx>cx?'start':'end'),'dominant-baseline':'middle'});
+    t.textContent=LBL[i]; svg.appendChild(t);
+  }
+  // META (referencia neutra punteada)
+  const pm=groups.map((g,i)=>pt(i,g.m).join(',')).join(' ');
+  svg.appendChild(el('polygon',{points:pm,fill:'none',stroke:css('--muted'),'stroke-width':1.6,'stroke-dasharray':'5 4'}));
+  // ACTUAL (serie de datos validada)
+  const pa=groups.map((g,i)=>pt(i,g.a).join(',')).join(' ');
+  svg.appendChild(el('polygon',{points:pa,fill:css('--data-soft'),stroke:css('--data'),'stroke-width':2}));
+  groups.forEach((g,i)=>{
+    const [x,y]=pt(i,g.a);
+    svg.appendChild(el('circle',{cx:x,cy:y,r:4.5,fill:css('--data'),stroke:css('--slab'),'stroke-width':2}));
+    const [vx,vy]=pt(i,g.a+0.55);
+    const t=el('text',{x:vx,y:vy,'font-size':10.5,'font-weight':800,fill:css('--data'),'text-anchor':'middle',class:'tnum'});
+    t.textContent=g.a.toFixed(1); svg.appendChild(t);
+  });
+  // hover layer: eje más cercano
+  const tip=$('#radarTip'), box=$('#radarBox');
+  svg.addEventListener('mousemove',e=>{
+    const r=svg.getBoundingClientRect(), sx=540/r.width;
+    const mx=(e.clientX-r.left)*sx, my=(e.clientY-r.top)*(430/r.height);
+    let best=0,bd=1e9;
+    for(let i=0;i<N;i++){const[a,b]=pt(i,3);const d=(a-mx)**2+(b-my)**2;if(d<bd){bd=d;best=i;}}
+    const g=groups[best];
+    tip.innerHTML=`<b>${LBL[best]}</b><br>actual ${g.a.toFixed(1)} · meta ${g.m.toFixed(1)}`;
+    tip.style.display='block';
+    const br=box.getBoundingClientRect();
+    tip.style.left=Math.min(e.clientX-br.left+12, br.width-150)+'px';
+    tip.style.top=(e.clientY-br.top+12)+'px';
+  });
+  svg.addEventListener('mouseleave',()=>tip.style.display='none');
+}
+
+/* — matriz — */
+let F={g:'*',p:'*'};
+function meter(lvl,meta){
+  let h='<span class="meter" role="img" aria-label="nivel '+lvl+' de 4, meta '+meta+'">';
+  for(let i=0;i<4;i++){
+    let cls='seg'; if(i<lvl)cls+=' on'; else if(i<meta)cls+=' goal';
+    h+='<span class="'+cls+'"></span>';
+  }
+  return h+'</span>';
+}
+function renderMx(){
+  const rows=MATRIZ.filter(r=>(F.g==='*'||r.g===+F.g)&&(F.p==='*'||r.pri===F.p));
+  $('#mx').innerHTML=rows.map((r,i)=>`
+   <div class="mxrow ${r.pri==='P0'?'p0':''}" data-open="0">
+    <button class="mxh" aria-expanded="false">
+      <span class="mxc">${esc(r.c)}</span>
+      <span class="mxn">${r.n.replace('✦','<span class="nuevo">✦</span>')}<span style="color:var(--faint);font-weight:500;font-size:11.5px;"> · ${GN[r.g]}</span></span>
+      ${meter(r.lvl,r.meta)}
+      <span class="pill ${r.pri}">${r.pri==='mant'?'mantener':r.pri}</span>
+      <span class="mono-lvl tnum">${r.lvl}→${r.meta}</span>
+    </button>
+    <div class="mxb">
+      <div class="fld"><b>Brecha</b>${r.brecha}</div>
+      <div class="fld"><b>Próxima acción</b>${r.next}</div>
+      ${r.money?`<div class="fld"><b>Plata en juego</b><span class="money">${esc(r.money)}</span></div>`:''}
+      <div class="fld"><b>Evidencia</b>${r.ev}</div>
+    </div>
+   </div>`).join('');
+  document.querySelectorAll('.mxh').forEach(b=>b.addEventListener('click',()=>{
+    const p=b.closest('.mxrow'), o=p.dataset.open==='1';
+    p.dataset.open=o?'0':'1'; b.setAttribute('aria-expanded',String(!o));
+  }));
+}
+document.querySelectorAll('#chips .chip').forEach(ch=>ch.addEventListener('click',()=>{
+  F[ch.dataset.f]=ch.dataset.v;
+  document.querySelectorAll(`#chips .chip[data-f="${ch.dataset.f}"]`).forEach(x=>x.classList.toggle('on',x===ch));
+  renderMx();
+}));
+
+/* — órdenes — */
+function renderMovs(){
+  $('#movs').innerHTML=MOVS.map(m=>`
+   <div class="mv ${m.pri}" data-open="0">
+    <button class="mvh" aria-expanded="false">
+      <span class="mvid">${m.id}</span>
+      <span><span class="mvt">${esc(m.t)}</span><span class="mvs">${esc(m.s)}</span></span>
+      ${m.money?`<span class="mvmoney tnum">${esc(m.money)}</span>`:'<span></span>'}
+      <span class="chev">▸</span>
+    </button>
+    <div class="mvb">
+      <div class="tagline">Pasos</div>
+      <ol>${m.pasos.map(p=>`<li>${p}</li>`).join('')}</ol>
+      <div class="tagline">Criterio de éxito</div>
+      <div>${m.exito}</div>
+      ${m.guard&&m.guard!=='—'?`<div class="tagline">Guardrail</div><div class="guard">${m.guard}</div>`:''}
+    </div>
+   </div>`).join('');
+  document.querySelectorAll('.mvh').forEach(b=>b.addEventListener('click',()=>{
+    const p=b.closest('.mv'), o=p.dataset.open==='1';
+    p.dataset.open=o?'0':'1'; b.setAttribute('aria-expanded',String(!o));
+  }));
+}
+
+/* — nav activa + tema — */
+const links=[...document.querySelectorAll('#secnav a')];
+const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+addEventListener('scroll',()=>{
+  let i=secs.findLastIndex(s=>s.getBoundingClientRect().top<120);
+  if(i<0)i=0;
+  links.forEach((a,j)=>a.classList.toggle('on',j===i));
+},{passive:true});
+$('#themeBtn').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const now=cur||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  document.documentElement.setAttribute('data-theme',now==='dark'?'light':'dark');
+  radar();
+});
+matchMedia('(prefers-color-scheme:dark)').addEventListener?.('change',()=>radar());
+if(location.hash==='#dark') document.documentElement.setAttribute('data-theme','dark');
+
+radar(); renderMx(); renderMovs();
+</script>

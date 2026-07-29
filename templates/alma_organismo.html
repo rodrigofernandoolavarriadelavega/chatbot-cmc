@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMC · Organismo Vivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --aqua:#4FBECE; --aqua-bright:#8af0fb; --blue:#1172AB; --navy:#0F3F68;
+    --gold:#ffcf5c; --gold-soft:#f5c451; --green:#3ee08a; --rose:#ff6b81; --purple:#a99bff;
+    --ink:#dbeef6; --mute:#7ea6bd; --line:rgba(127,227,240,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;background:#04101c;
+    font-family:'Montserrat',-apple-system,sans-serif;color:var(--ink);
+    -webkit-font-smoothing:antialiased;cursor:default;}
+  .mono{font-family:'Space Grotesk','Montserrat',sans-serif;font-variant-numeric:tabular-nums;}
+  #stage{position:fixed;inset:0;}
+  canvas.layer{position:absolute;inset:0;width:100%;height:100%;display:block;}
+
+  /* ---------- post FX ---------- */
+  .vignette{position:fixed;inset:0;pointer-events:none;z-index:3;
+    background:radial-gradient(120% 120% at 50% 46%,rgba(0,0,0,0) 38%,rgba(2,8,16,.5) 78%,rgba(1,5,11,.92) 100%);}
+  .grain{position:fixed;inset:-50%;pointer-events:none;z-index:4;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:grain 1.6s steps(4) infinite;}
+  @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-2%)}100%{transform:translate(2%,2%)}}
+  .scan{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:.5;
+    background:repeating-linear-gradient(0deg,rgba(127,227,240,.025) 0 1px,transparent 1px 3px);}
+
+  /* ---------- glass card with gradient hairline + corner brackets ---------- */
+  .glass{position:relative;border-radius:18px;
+    background:linear-gradient(155deg,rgba(14,46,74,.66),rgba(6,20,34,.5));
+    backdrop-filter:blur(16px) saturate(125%);-webkit-backdrop-filter:blur(16px) saturate(125%);
+    box-shadow:0 30px 70px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);}
+  .glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+    background:linear-gradient(150deg,rgba(138,240,251,.55),rgba(79,190,206,.08) 38%,rgba(127,227,240,0) 62%,rgba(138,240,251,.25));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;}
+  .glass::after{content:'';position:absolute;top:9px;left:9px;width:15px;height:15px;pointer-events:none;
+    border-top:1.5px solid rgba(138,240,251,.5);border-left:1.5px solid rgba(138,240,251,.5);border-radius:4px 0 0 0;}
+  .cnr-br{position:absolute;right:9px;bottom:9px;width:15px;height:15px;pointer-events:none;
+    border-bottom:1.5px solid rgba(138,240,251,.35);border-right:1.5px solid rgba(138,240,251,.35);border-radius:0 0 4px 0;}
+
+  /* ---------- top bar ---------- */
+  #topbar{position:absolute;top:24px;left:30px;right:30px;display:flex;align-items:center;
+    justify-content:space-between;pointer-events:none;z-index:6;}
+  .brand{display:flex;align-items:center;gap:16px;}
+  .brand .orb{position:relative;width:52px;height:52px;border-radius:16px;
+    background:radial-gradient(circle at 32% 26%,var(--aqua-bright),var(--blue) 58%,#0a2a47);
+    box-shadow:0 0 34px rgba(79,190,206,.65),inset 0 2px 8px rgba(255,255,255,.35);
+    display:flex;align-items:center;justify-content:center;font-weight:900;color:#04101c;font-size:21px;}
+  .brand .orb::after{content:'';position:absolute;inset:-6px;border-radius:20px;
+    border:1.5px solid rgba(138,240,251,.35);border-top-color:transparent;border-right-color:transparent;
+    animation:spin 5s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .brand h1{font-size:19px;font-weight:800;letter-spacing:.4px;color:#f0fbff;line-height:1.1;
+    text-shadow:0 2px 18px rgba(79,190,206,.3);}
+  .brand h1 b{color:var(--aqua-bright);font-weight:900;}
+  .brand .sub{font-size:10.5px;font-weight:700;color:var(--mute);letter-spacing:.26em;text-transform:uppercase;margin-top:5px;}
+
+  .estado{display:flex;align-items:center;gap:18px;}
+  .pill{display:flex;align-items:center;gap:10px;padding:11px 18px;border-radius:999px;
+    font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;}
+  .pill .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green);
+    animation:pulseDot 1.6s ease-in-out infinite;}
+  @keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+  .clock{text-align:right;}
+  .clock .t{font-size:30px;font-weight:600;color:#f0fbff;letter-spacing:2px;line-height:1;
+    text-shadow:0 0 22px rgba(79,190,206,.35);}
+  .clock small{display:block;font-size:9.5px;font-weight:700;color:var(--mute);letter-spacing:.24em;
+    text-transform:uppercase;margin-top:6px;}
+
+  /* ---------- left vitals ---------- */
+  #vitals{position:absolute;left:30px;top:116px;width:294px;z-index:6;display:flex;flex-direction:column;gap:14px;}
+  .vital{padding:17px 19px;border-radius:17px;position:relative;overflow:hidden;}
+  .vital .lab{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);
+    display:flex;align-items:center;gap:8px;}
+  .vital .lab .ic{width:6px;height:6px;border-radius:50%;}
+  .vital .val{font-size:34px;font-weight:600;color:#f0fbff;margin-top:9px;line-height:.95;letter-spacing:-.5px;}
+  .vital .val .cur{font-size:16px;font-weight:700;color:var(--gold);margin-right:3px;vertical-align:8px;
+    font-family:'Montserrat';}
+  .vital .meta{font-size:11px;font-weight:600;color:var(--mute);margin-top:9px;}
+  .vital .meta b{color:var(--aqua-bright);font-weight:800;}
+  .vital.money .val{color:var(--gold);text-shadow:0 0 26px rgba(255,207,92,.45);}
+  .bar{height:4px;border-radius:999px;background:rgba(127,227,240,.12);margin-top:12px;overflow:hidden;}
+  .bar i{display:block;height:100%;border-radius:999px;
+    background:linear-gradient(90deg,var(--aqua),var(--aqua-bright));box-shadow:0 0 12px var(--aqua);transition:width .6s;}
+  .vital.money .bar i{background:linear-gradient(90deg,var(--gold-soft),var(--gold));box-shadow:0 0 12px var(--gold);}
+  .spark{position:absolute;right:14px;top:16px;width:96px;height:34px;opacity:.9;}
+
+  /* ---------- right column ---------- */
+  #heart{position:absolute;right:30px;top:116px;width:262px;z-index:6;padding:18px 20px;border-radius:17px;}
+  #heart .lab{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);}
+  #heart .bpm{font-size:42px;font-weight:600;color:var(--rose);line-height:1;margin-top:6px;
+    text-shadow:0 0 26px rgba(255,107,129,.5);}
+  #heart .bpm small{font-size:13px;font-weight:600;color:var(--mute);margin-left:6px;letter-spacing:.1em;}
+  #ecg{display:block;width:100%;height:58px;margin-top:10px;}
+
+  #legend{position:absolute;right:30px;top:356px;width:262px;z-index:6;padding:17px 20px;border-radius:17px;}
+  #legend h3{font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--aqua-bright);
+    margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  #legend h3::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(138,240,251,.4),transparent);}
+  .leg-row{display:flex;align-items:center;gap:11px;margin-bottom:11px;font-size:12.5px;font-weight:700;color:var(--ink);}
+  .leg-row .sw{width:11px;height:11px;border-radius:4px;flex:none;box-shadow:0 0 12px currentColor;}
+  .leg-row span{color:var(--mute);font-weight:600;margin-left:auto;font-size:13px;}
+  .leg-row:last-child{margin-bottom:0;}
+
+  /* ---------- ticker ---------- */
+  #ticker{position:absolute;left:30px;right:30px;bottom:26px;z-index:6;height:60px;border-radius:17px;
+    display:flex;align-items:center;padding:0 8px 0 22px;overflow:hidden;gap:18px;}
+  #ticker::before{z-index:1;}
+  #ticker .live{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:900;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--rose);flex:none;padding-right:18px;border-right:1px solid var(--line);z-index:2;}
+  #ticker .live .d{width:8px;height:8px;border-radius:50%;background:var(--rose);box-shadow:0 0 12px var(--rose);animation:pulseDot 1.2s infinite;}
+  .feed-wrap{position:relative;flex:1;overflow:hidden;height:100%;display:flex;align-items:center;}
+  .feed-wrap::before,.feed-wrap::after{content:'';position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none;}
+  .feed-wrap::before{left:0;background:linear-gradient(90deg,rgba(8,24,40,.95),transparent);}
+  .feed-wrap::after{right:0;background:linear-gradient(270deg,rgba(8,24,40,.95),transparent);}
+  #feed{display:flex;gap:34px;white-space:nowrap;will-change:transform;}
+  #feed .ev{display:inline-flex;align-items:center;gap:10px;font-size:12.5px;font-weight:600;color:var(--ink);}
+  #feed .ev .tag{font-size:9.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:7px;}
+  #feed .ev b{color:#f0fbff;font-weight:800;}
+
+  .hint{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--mute);
+    letter-spacing:.14em;text-transform:uppercase;z-index:5;opacity:.5;font-weight:600;}
+
+  /* ---------- popup de agenda por especialidad ---------- */
+  #pop{position:absolute;width:296px;z-index:8;padding:0;border-radius:16px;opacity:0;pointer-events:none;
+    transform:translateY(10px) scale(.96);transition:opacity .18s ease,transform .18s ease;overflow:hidden;}
+  #pop.show{opacity:1;transform:translateY(0) scale(1);}
+  #pop .ph{display:flex;align-items:center;gap:10px;padding:15px 17px 13px;border-bottom:1px solid var(--line);}
+  #pop .ph .pd{width:9px;height:9px;border-radius:50%;background:var(--aqua);box-shadow:0 0 12px var(--aqua);flex:none;}
+  #pop .ph h4{font-size:15.5px;font-weight:800;color:#f0fbff;margin:0;flex:1;letter-spacing:.2px;}
+  #pop .ph .pp{font-size:11px;font-weight:700;color:var(--aqua-bright);white-space:nowrap;}
+  #pop .pst{display:flex;padding:12px 14px;border-bottom:1px solid var(--line);}
+  #pop .pst div{flex:1;text-align:center;position:relative;}
+  #pop .pst div+div::before{content:'';position:absolute;left:0;top:3px;bottom:3px;width:1px;background:var(--line);}
+  #pop .pst .n{font-size:20px;font-weight:700;color:#f0fbff;line-height:1;font-family:'Space Grotesk',sans-serif;}
+  #pop .pst .l{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:5px;}
+  #pop .psc{max-height:248px;overflow:hidden;padding:9px 11px;}
+  #pop .row{display:flex;align-items:center;gap:10px;padding:6px 7px;border-radius:9px;}
+  #pop .row+.row{margin-top:1px;}
+  #pop .row .hr{font-size:12px;font-weight:600;color:var(--aqua-bright);font-family:'Space Grotesk',sans-serif;width:40px;flex:none;}
+  #pop .row .nm{font-size:12px;font-weight:600;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #pop .row .nm.free{color:var(--mute);font-style:italic;font-weight:500;}
+  #pop .row .bg{font-size:8.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:6px;flex:none;}
+  #pop .pf{padding:10px 16px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--mute);border-top:1px solid var(--line);text-align:center;}
+
+  @media(max-width:1180px){#vitals{width:240px}#heart,#legend{width:214px}.brand h1{font-size:16px}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg" class="layer"></canvas>
+  <canvas id="net" class="layer"></canvas>
+  <div class="scan"></div>
+  <div class="vignette"></div>
+  <div class="grain"></div>
+
+  <div id="topbar">
+    <div class="brand">
+      <div class="orb">α</div>
+      <div>
+        <h1>Centro Médico Carampangue · <b>Organismo Vivo</b></h1>
+        <div class="sub">operado por Alma — capa agéntica autónoma</div>
+      </div>
+    </div>
+    <div class="estado">
+      <div class="pill glass"><span class="dot" id="stateDot"></span><span id="stateLabel">Ritmo sano</span><span class="cnr-br"></span></div>
+      <div class="clock"><span class="t mono" id="clock">--:--:--</span><small id="dateLabel">—</small></div>
+    </div>
+  </div>
+
+  <div id="vitals">
+    <div class="vital money glass">
+      <div class="lab"><span class="ic" style="background:var(--gold);box-shadow:0 0 9px var(--gold)"></span>Ingresos del mes</div>
+      <div class="val mono"><span class="cur">$</span><span id="vMoney">0</span></div>
+      <div class="meta">meta $25M · <b id="vMetaPct">0%</b></div>
+      <div class="bar"><i id="barMeta" style="width:0%"></i></div>
+      <canvas class="spark" id="sparkMoney"></canvas>
+      <span class="cnr-br"></span>
+    </div>
+    <div class="vital glass">
+      <div class="lab"><span class="ic" style="background:var(--aqua);box-shadow:0 0 9px var(--aqua)"></span>Pacientes en flujo</div>
+      <div class="val mono" id="vFlow">0</div>
+      <div class="meta">atendidos hoy <b id="vSeen">0</b> · ticket <b id="vTicket">$0</b></div>
+      <span class="cnr-br"></span>
+    </div>
+    <div class="vital glass">
+      <div class="lab"><span class="ic" style="background:var(--purple);box-shadow:0 0 9px var(--purple)"></span>Agentes Alma activos</div>
+      <div class="val mono"><span id="vAgents">0</span><small style="font-size:16px;font-weight:600;color:var(--mute)"> / 18</small></div>
+      <div class="meta">acciones autónomas hoy <b id="vActions">0</b></div>
+      <span class="cnr-br"></span>
+    </div>
+    <div class="vital glass">
+      <div class="lab"><span class="ic" style="background:var(--green);box-shadow:0 0 9px var(--green)"></span>EBITDA del mes</div>
+      <div class="val mono"><span class="cur">$</span><span id="vEbitda">0</span></div>
+      <div class="meta">margen operativo <b id="vMargin">23%</b></div>
+      <span class="cnr-br"></span>
+    </div>
+  </div>
+
+  <div id="heart" class="glass">
+    <div class="lab">Pulso del organismo</div>
+    <div class="bpm mono"><span id="bpm">72</span><small>lpm</small></div>
+    <canvas id="ecg"></canvas>
+    <span class="cnr-br"></span>
+  </div>
+
+  <div id="legend" class="glass">
+    <h3>Anatomía</h3>
+    <div class="leg-row"><span class="sw" style="background:var(--aqua);color:var(--aqua)"></span>Especialidades<span class="mono" id="cSpec">—</span></div>
+    <div class="leg-row"><span class="sw" style="background:var(--purple);color:var(--purple)"></span>Agentes Alma<span class="mono" id="cAg">—</span></div>
+    <div class="leg-row"><span class="sw" style="background:var(--gold);color:var(--gold)"></span>Orquestadores<span class="mono" id="cOrq">—</span></div>
+    <div class="leg-row"><span class="sw" style="background:var(--rose);color:var(--rose)"></span>Núcleo CMC<span>corazón</span></div>
+    <span class="cnr-br"></span>
+  </div>
+
+  <div class="hint">cada partícula es un paciente real moviéndose por el centro · la plata vuela al cerebro</div>
+
+  <div id="ticker" class="glass">
+    <div class="live"><span class="d"></span>en vivo</div>
+    <div class="feed-wrap"><div id="feed"></div></div>
+    <span class="cnr-br"></span>
+  </div>
+
+  <div id="pop" class="glass">
+    <div class="ph"><span class="pd" id="popDot"></span><h4 id="popName">—</h4><span class="pp" id="popProf"></span></div>
+    <div class="pst">
+      <div><div class="n" id="popAg">0</div><div class="l">Agendados</div></div>
+      <div><div class="n" id="popAt">0</div><div class="l">Atendidos</div></div>
+      <div><div class="n" id="popLi">0</div><div class="l">Libres</div></div>
+    </div>
+    <div class="psc" id="popSched"></div>
+    <div class="pf">agenda del día · pasa al siguiente paciente</div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   CMC · ORGANISMO VIVO — edición premium
+   Mural cinematográfico autocontenido. Sin servidor: abrir con doble clic.
+   Data real opcional vía fetchLiveData() (endpoint /alma/api/organismo).
+   ============================================================================ */
+const NAVY='#0F3F68', AQUA='#4FBECE', AQUAB='#8af0fb', GOLD='#ffcf5c',
+      GREEN='#3ee08a', ROSE='#ff6b81', PURPLE='#a99bff', BLUE='#1172AB';
+
+const ESPECIALIDADES = ['Dental','Ginecología','Kinesiología','Psicología','Nutrición',
+  'Traumatología','Cardiología','Psiquiatría','Fonoaudiología','Medicina General','Matrona','Ecografía'];
+const AGENTES = ['briefing','yield_agenda','reactivacion_winback','cobranza','ads_executor',
+  'pricing_analyst','demanda_estrategia','postconsulta_smart','adherencia_kine','control_cronico',
+  'inventario_auto','reputacion','seo_content','creativos','conciliacion_auto',
+  'abandono_recovery','sre_watchdog','supervisor'];
+const ORQUESTADORES = ['confirmaciones','hueco_proactivo','no_show_recovery','crosssell_postconsulta',
+  'cumpleanos','resultados_examenes','reputacion_nps','controles_ortodoncia','demanda_abrir_agenda',
+  'preventivo_edad','ges_backlog','referral_sin_cerrar'];
+const TICKET = {'Dental':28000,'Ginecología':25000,'Kinesiología':18000,'Psicología':22000,
+  'Nutrición':20000,'Traumatología':30000,'Cardiología':35000,'Psiquiatría':45000,
+  'Fonoaudiología':22000,'Medicina General':15000,'Matrona':18000,'Ecografía':32000};
+const META_MES = 25_000_000;
+
+/* agenda del día por especialidad (fallback embebido; se conecta a Medilink vía fetchLiveData) */
+const PROF={'Dental':'Dr. Quijano','Ginecología':'Dra. Soto','Kinesiología':'Klgo. Ríos',
+  'Psicología':'Ps. Herrera','Nutrición':'Nut. Vega','Traumatología':'Dr. Márquez',
+  'Cardiología':'Dr. Fuentes','Psiquiatría':'Dr. Unibazo','Fonoaudiología':'Flga. Lagos',
+  'Medicina General':'Dr. Abarca','Matrona':'Mat. Cifuentes','Ecografía':'Dr. Pardo'};
+const NAMES=['María González','José Muñoz','Camila Rojas','Luis Pérez','Antonia Díaz','Matías Soto',
+  'Valentina Torres','Diego Fuentes','Javiera Castro','Benjamín Reyes','Catalina Vera','Tomás Araya',
+  'Fernanda Pino','Sebastián Ortiz','Isidora Lagos','Cristóbal Sáez','Martina Bravo','Nicolás Riquelme',
+  'Florencia Núñez','Vicente Cortés','Emilia Vargas','Joaquín Salinas','Trinidad Maldonado','Agustín Poblete'];
+const EST={atendido:['Atendido','#3ee08a'],ensala:['En sala','#ff6b81'],confirmada:['Confirmada','#4FBECE'],porllegar:['Por llegar','#ffcf5c']};
+const pad=n=>String(n).padStart(2,'0');
+function buildSchedules(){
+  const now=new Date(),nm=now.getHours()*60+now.getMinutes();const data={};let ni=0;
+  ESPECIALIDADES.forEach((sp,si)=>{
+    const slots=[];let mins=9*60;const n=7+(si%3);          // 7–9 cupos
+    for(let i=0;i<n;i++){
+      const h=pad((mins/60)|0)+':'+pad(mins%60);
+      const free=((si*7+i*3)%5===0);                         // ~20% libres (determinista)
+      let name=null,e='libre';
+      if(!free){name=NAMES[ni++%NAMES.length];
+        if(mins<nm-20)e='atendido';else if(Math.abs(mins-nm)<=22)e='ensala';
+        else if(mins<nm+90)e='confirmada';else e='porllegar';}
+      slots.push({h,nm:name,e});mins+=45;}
+    data[sp]={prof:PROF[sp]||'Equipo CMC',slots};});
+  return data;
+}
+const SPEC_DATA=buildSchedules();
+
+const STATE = { ingresosMes:8_640_000, ingresosHoy:0, atendidosHoy:0, accionesHoy:0,
+  ticketProm:24000, ebitdaPct:0.23 };
+
+/* ============================================================================
+   ★ organismVitals() — traduce los signos del negocio en cómo LATE el organismo.
+   Ajusta los umbrales a tu realidad CMC (qué es reposo / sano / peak).
+   ============================================================================ */
+function organismVitals(s){
+  const carga = s.flow*1.4 + s.agents*0.8 + (s.ingresosHoy/120000);
+  let estado, color, bpm, glow;
+  if (carga < 8){ estado='En reposo'; color=AQUA; bpm=64; glow=0.6; }
+  else if (carga < 20){ estado='Ritmo sano'; color=GREEN; bpm=78; glow=0.95; }
+  else { estado='Peak — a tope'; color=ROSE; bpm=104; glow=1.3; }
+  if (s.hora>=22 || s.hora<7){ bpm=Math.min(bpm,58); estado='Descanso nocturno'; glow=Math.min(glow,0.7); }
+  bpm += Math.round(Math.sin(performance.now()/2400)*3);
+  return { estado, color, bpm, glow };
+}
+
+/* ===================== canvas infra ===================== */
+const bg=document.getElementById('bg'),bgx=bg.getContext('2d');
+const net=document.getElementById('net'),nx=net.getContext('2d');
+let W,H,CX,CY,DPR=Math.min(window.devicePixelRatio||1,2);
+let mx=0,my=0,tmx=0,tmy=0;   // parallax (target + smoothed)
+let pmx=0,pmy=0,hasMouse=false;  // posición del cursor en píxeles
+window.addEventListener('mousemove',e=>{
+  tmx=(e.clientX/window.innerWidth-0.5);tmy=(e.clientY/window.innerHeight-0.5);
+  pmx=e.clientX;pmy=e.clientY;hasMouse=true;});
+window.addEventListener('mouseleave',()=>hasMouse=false);
+// bloom offscreen + secuencia de arranque + arcos eléctricos
+const glow=document.createElement('canvas'),gx2=glow.getContext('2d');let GW=1,GH=1;
+let bootStart=null,boot=0;const smooth=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
+let bolts=[];
+function resize(){
+  W=innerWidth;H=innerHeight;CX=W/2;CY=H/2+30;
+  for(const c of [bg,net]){c.width=W*DPR;c.height=H*DPR;c.getContext('2d').setTransform(DPR,0,0,DPR,0,0);}
+  GW=Math.max(2,Math.round(W/2));GH=Math.max(2,Math.round(H/2));glow.width=GW;glow.height=GH;
+  buildNodes();buildField();buildOrbit();
+}
+addEventListener('resize',resize);
+
+/* ===================== nodos ===================== */
+let nodes=[],R1,R2,R3;
+function buildNodes(){
+  nodes=[];const base=Math.min(W,H);
+  R1=base*0.205;R2=base*0.315;R3=base*0.425;
+  const mk=(list,ring,r,color)=>list.forEach((label,i)=>nodes.push({
+    label,ring,color,r,ang:(i/list.length)*Math.PI*2-Math.PI/2,act:0,x:0,y:0,count:0,
+    bootDelay:(ring-1)*0.16+(i/list.length)*0.16,
+    baseSize:ring===1?6:ring===2?4.5:3.5}));
+  mk(ESPECIALIDADES,1,R1,AQUA);mk(AGENTES,2,R2,PURPLE);mk(ORQUESTADORES,3,R3,GOLD);
+  cSpec.textContent=ESPECIALIDADES.length;cAg.textContent=AGENTES.length;cOrq.textContent=ORQUESTADORES.length;
+}
+const ROT={1:0.00020,2:-0.00013,3:0.00009};
+function nodePos(n,t){const a=n.ang+t*ROT[n.ring];n.x=CX+Math.cos(a)*n.r;n.y=CY+Math.sin(a)*n.r;return n;}
+function specialtyNodes(){return nodes.filter(n=>n.ring===1);}
+const pick=a=>a[(Math.random()*a.length)|0];
+
+/* ===================== fondo: nebulosa + bokeh + estrellas (3 planos) ===================== */
+let stars=[],bokeh=[],nebula=[];
+function buildField(){
+  stars=Array.from({length:160},()=>({x:Math.random()*W,y:Math.random()*H,
+    z:Math.random(),s:Math.random()*1.5+0.3,tw:Math.random()*6}));
+  bokeh=Array.from({length:14},()=>({x:Math.random()*W,y:Math.random()*H,
+    r:Math.random()*120+50,z:Math.random()*0.5+0.2,
+    c:pick([AQUA,BLUE,PURPLE,GOLD]),vx:(Math.random()-0.5)*0.06,vy:(Math.random()-0.5)*0.06}));
+  nebula=[
+    {x:0.28,y:0.32,r:0.55,c:'17,114,171'},
+    {x:0.74,y:0.66,r:0.5,c:'79,190,206'},
+    {x:0.6,y:0.2,r:0.4,c:'124,92,255'},
+    {x:0.4,y:0.8,r:0.42,c:'255,207,92'},
+  ];
+}
+function drawBg(t){
+  bgx.clearRect(0,0,W,H);
+  bgx.fillStyle='#04101c';bgx.fillRect(0,0,W,H);
+  // nebulosa (blobs radiales suaves que respiran)
+  bgx.globalCompositeOperation='lighter';
+  for(let i=0;i<nebula.length;i++){
+    const nb=nebula[i];const br=(Math.sin(t/4000+i)*0.06+0.94);
+    const gx=nb.x*W+mx*110*nb.r, gy=nb.y*H+my*110*nb.r, rad=Math.max(W,H)*nb.r*br;
+    const g=bgx.createRadialGradient(gx,gy,0,gx,gy,rad);
+    g.addColorStop(0,`rgba(${nb.c},0.16)`);g.addColorStop(0.5,`rgba(${nb.c},0.05)`);g.addColorStop(1,`rgba(${nb.c},0)`);
+    bgx.fillStyle=g;bgx.beginPath();bgx.arc(gx,gy,rad,0,7);bgx.fill();
+  }
+  // bokeh (círculos desenfocados, parallax)
+  for(const b of bokeh){
+    b.x+=b.vx;b.y+=b.vy;
+    if(b.x<-b.r)b.x=W+b.r;if(b.x>W+b.r)b.x=-b.r;if(b.y<-b.r)b.y=H+b.r;if(b.y>H+b.r)b.y=-b.r;
+    const px=b.x+mx*150*b.z,py=b.y+my*150*b.z;
+    const g=bgx.createRadialGradient(px,py,0,px,py,b.r);
+    g.addColorStop(0,b.c+'00');
+    g.addColorStop(0.82,hexA(b.c,0.05*b.z));
+    g.addColorStop(0.96,hexA(b.c,0.12*b.z));
+    g.addColorStop(1,b.c+'00');
+    bgx.fillStyle=g;bgx.beginPath();bgx.arc(px,py,b.r,0,7);bgx.fill();
+  }
+  bgx.globalCompositeOperation='source-over';
+  // grilla radial de perspectiva (rayos tenues desde el núcleo)
+  bgx.save();bgx.translate(CX,CY);
+  for(let i=0;i<24;i++){
+    bgx.rotate(Math.PI*2/24);
+    const g=bgx.createLinearGradient(0,0,0,-Math.max(W,H)*0.6);
+    g.addColorStop(0,'rgba(79,190,206,0.05)');g.addColorStop(1,'rgba(79,190,206,0)');
+    bgx.strokeStyle=g;bgx.lineWidth=1;bgx.beginPath();bgx.moveTo(0,0);bgx.lineTo(0,-Math.max(W,H)*0.6);bgx.stroke();
+  }
+  bgx.restore();
+  // estrellas en 3 planos con twinkle + parallax
+  for(const s of stars){
+    const px=s.x+mx*70*s.z,py=s.y+my*70*s.z;
+    const tw=0.4+0.6*Math.abs(Math.sin(t/700+s.tw));
+    bgx.globalAlpha=(0.15+s.z*0.5)*tw;
+    bgx.fillStyle=s.z>0.7?AQUAB:'#cfe6ef';
+    bgx.beginPath();bgx.arc(px,py,s.s*(0.5+s.z),0,7);bgx.fill();
+  }
+  bgx.globalAlpha=1;
+}
+function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+
+/* ===================== partículas orbitando el núcleo (3D fake) ===================== */
+let orbit=[];
+function buildOrbit(){
+  orbit=Array.from({length:18},(_,i)=>({
+    a:Math.random()*7,sp:(Math.random()*0.4+0.3)*0.004*(Math.random()<0.5?1:-1),
+    rx:Math.min(W,H)*(0.11+Math.random()*0.05),tilt:0.25+Math.random()*0.4,
+    rot:Math.random()*Math.PI,s:Math.random()*1.6+1,
+    c:pick([AQUAB,AQUA,'#cfe6ef'])}));
+}
+
+/* ===================== flujos ===================== */
+let patients=[],money=[],pulses=[],pulseRings=[];
+function spawnPatient(){
+  const e=(Math.random()*4)|0;let x,y;
+  if(e===0){x=Math.random()*W;y=-20;}else if(e===1){x=W+20;y=Math.random()*H;}
+  else if(e===2){x=Math.random()*W;y=H+20;}else{x=-20;y=Math.random()*H;}
+  patients.push({x,y,phase:'toCore',target:{x:CX,y:CY},spd:0.02+Math.random()*0.01,spec:null,trail:[],hue:AQUA});
+}
+function spawnMoney(fx,fy,amount){const d=moneyAnchor();
+  money.push({sx:fx,sy:fy,dx:d.x,dy:d.y,t:0,spd:0.018+Math.random()*0.01,amount});}
+function moneyAnchor(){const r=document.querySelector('#vitals .money').getBoundingClientRect();return {x:r.right-26,y:r.top+34};}
+function firePulse(n){n.act=1;pulses.push({node:n,t:0,spd:0.028+Math.random()*0.02,dir:Math.random()<0.5?1:-1,color:n.color});
+  if(n.ring>1&&Math.random()<0.55)bolts.push({node:n,life:1});}
+
+/* ===================== ticker ===================== */
+const feedEl=document.getElementById('feed');let feedItems=[];
+function addEvent(tag,color,text){feedItems.push({tag,color,text});if(feedItems.length>14)feedItems.shift();
+  feedEl.innerHTML=feedItems.map(e=>`<span class="ev"><span class="tag" style="background:${e.color}22;color:${e.color}">${e.tag}</span>${e.text}</span>`).join('');}
+const AGENT_LINES={yield_agenda:['rellenó un hueco de agenda','movió un cupo a hora premium'],
+  reactivacion_winback:['reactivó un paciente dormido','recuperó a alguien de 6 meses'],
+  cobranza:['cobró una transferencia pendiente','concilió un abono'],
+  no_show_recovery:['rescató un no-show','reagendó una falta'],
+  hueco_proactivo:['ofreció un cupo liberado','llenó un espacio vacío'],
+  confirmaciones:['confirmó citas de mañana','recordó a 8 pacientes'],
+  crosssell_postconsulta:['ofreció control post-consulta','sumó un cross-sell'],
+  cumpleanos:['saludó un cumpleaños','envió un beneficio'],reputacion_nps:['pidió una reseña a un promotor','midió NPS'],
+  ads_executor:['ajustó pauta Meta Ads','pausó un anuncio caro'],pricing_analyst:['revisó margen de un servicio'],
+  demanda_estrategia:['detectó demanda no satisfecha'],resultados_examenes:['avisó un resultado listo']};
+function agentEvent(n){const l=AGENT_LINES[n.label]||['ejecutó una acción autónoma'];STATE.accionesHoy++;
+  addEvent(n.ring===2?'agente':'orquestador',n.color,`<b>${n.label}</b> ${pick(l)}`);}
+
+/* ===================== red + núcleo ===================== */
+let curBpm=72,curGlow=0.9,heartBump=0,metaProg=0;
+function drawNet(t){
+  nx.clearRect(0,0,W,H);
+  // barrido de arranque (onda de energización que recorre el organismo)
+  if(boot<1){const sr=smooth(boot)*Math.max(W,H)*0.62;
+    nx.strokeStyle=`rgba(138,240,251,${(1-boot)*0.5})`;nx.lineWidth=2.5;nx.shadowBlur=20;nx.shadowColor=AQUAB;
+    nx.beginPath();nx.arc(CX,CY,sr,0,7);nx.stroke();nx.shadowBlur=0;}
+  // aura de luz siguiendo el cursor
+  if(hasMouse){const ag=nx.createRadialGradient(pmx,pmy,0,pmx,pmy,190);
+    ag.addColorStop(0,'rgba(138,240,251,0.12)');ag.addColorStop(0.5,'rgba(79,190,206,0.05)');ag.addColorStop(1,'rgba(138,240,251,0)');
+    nx.fillStyle=ag;nx.beginPath();nx.arc(pmx,pmy,190,0,7);nx.fill();}
+  // conexiones bezier con gradiente
+  for(const n of nodes){
+    nodePos(n,t);
+    const mxp=(CX+n.x)/2+(n.y-CY)*0.12, myp=(CY+n.y)/2-(n.x-CX)*0.12; // control perpendicular
+    n._cx=mxp;n._cy=myp;
+    const g=nx.createLinearGradient(CX,CY,n.x,n.y);
+    const rgb=n.ring===1?'79,190,206':n.ring===2?'169,155,255':'255,207,92';
+    g.addColorStop(0,`rgba(${rgb},0)`);g.addColorStop(1,`rgba(${rgb},${0.1+n.act*0.5})`);
+    nx.strokeStyle=g;nx.lineWidth=1+n.act*1.5;
+    nx.beginPath();nx.moveTo(CX,CY);nx.quadraticCurveTo(mxp,myp,n.x,n.y);nx.stroke();
+  }
+  // pulsos viajando por la bezier
+  for(let i=pulses.length-1;i>=0;i--){const p=pulses[i];p.t+=p.spd;const n=p.node;
+    const k=p.dir>0?p.t:1-p.t,u=1-k;
+    const px=u*u*CX+2*u*k*n._cx+k*k*n.x, py=u*u*CY+2*u*k*n._cy+k*k*n.y;
+    nx.globalAlpha=Math.sin(p.t*Math.PI);nx.fillStyle=p.color;nx.shadowBlur=16;nx.shadowColor=p.color;
+    nx.beginPath();nx.arc(px,py,3.4,0,7);nx.fill();nx.shadowBlur=0;nx.globalAlpha=1;
+    if(p.t>=1)pulses.splice(i,1);}
+  // arcos eléctricos del núcleo a los agentes que acaban de disparar
+  for(let i=bolts.length-1;i>=0;i--){const b=bolts[i];b.life-=0.045;
+    if(b.life<=0){bolts.splice(i,1);continue;}
+    drawBolt(CX,CY,b.node.x,b.node.y,b.node.color,b.life);}
+  // nodos
+  for(const n of nodes){
+    const rev=smooth((boot-n.bootDelay)/0.22);if(rev<=0)continue;
+    n.act*=0.94;
+    // resaltado por proximidad del cursor
+    n.hover=hasMouse?Math.max(0,1-Math.hypot(pmx-n.x,pmy-n.y)/150):0;
+    if(n.hover>0.04){nx.globalAlpha=n.hover*0.7;nx.strokeStyle=n.color;nx.lineWidth=1.2;
+      nx.shadowBlur=10;nx.shadowColor=n.color;
+      nx.beginPath();nx.moveTo(pmx,pmy);nx.lineTo(n.x,n.y);nx.stroke();nx.shadowBlur=0;nx.globalAlpha=1;}
+    const a=Math.max(n.act,n.hover*0.9);const size=(n.baseSize+a*7)*rev;
+    // halo
+    const hg=nx.createRadialGradient(n.x,n.y,0,n.x,n.y,size*3);
+    hg.addColorStop(0,hexA(n.color,(0.4+a*0.45)*rev));hg.addColorStop(1,hexA(n.color,0));
+    nx.fillStyle=hg;nx.beginPath();nx.arc(n.x,n.y,size*3,0,7);nx.fill();
+    // core
+    nx.shadowBlur=8+a*22;nx.shadowColor=n.color;nx.fillStyle=n.color;nx.globalAlpha=(0.6+a*0.4)*rev;
+    nx.beginPath();nx.arc(n.x,n.y,size,0,7);nx.fill();
+    nx.fillStyle='#eaffff';nx.globalAlpha=(0.5+a*0.5)*rev;nx.beginPath();nx.arc(n.x,n.y,size*0.4,0,7);nx.fill();
+    nx.shadowBlur=0;nx.globalAlpha=1;
+    if((n.ring===1||a>0.22)&&rev>0.6){
+      const side=n.x<CX?-1:1;const lx=n.x+side*(size+9);
+      nx.font=`${n.ring===1||n.hover>0.3?700:600} ${n.ring===1?12.5:10.5}px Montserrat`;
+      nx.fillStyle=n.ring===1?'rgba(240,251,255,0.92)':`rgba(240,251,255,${0.35+a*0.65})`;
+      nx.textAlign=n.x<CX?'right':'left';nx.textBaseline='middle';
+      nx.shadowBlur=6;nx.shadowColor='rgba(0,0,0,.6)';
+      nx.fillText(n.label,lx,n.count>0&&n.ring===1?n.y-6:n.y);
+      if(n.ring===1&&n.count>0){nx.shadowBlur=0;nx.font='700 10px Space Grotesk,Montserrat';
+        nx.fillStyle=hexA(AQUAB,0.85);nx.fillText('× '+n.count+' atendidos',lx,n.y+8);}
+      nx.shadowBlur=0;}
+  }
+  nx.textAlign='start';
+  // pacientes
+  for(let i=patients.length-1;i>=0;i--){const p=patients[i];
+    p.x+=(p.target.x-p.x)*p.spd;p.y+=(p.target.y-p.y)*p.spd;
+    p.trail.push({x:p.x,y:p.y});if(p.trail.length>12)p.trail.shift();
+    for(let j=0;j<p.trail.length;j++){nx.globalAlpha=(j/p.trail.length)*0.5;nx.fillStyle=p.hue;
+      nx.beginPath();nx.arc(p.trail[j].x,p.trail[j].y,1.9,0,7);nx.fill();}
+    nx.globalAlpha=1;nx.shadowBlur=12;nx.shadowColor=p.hue;nx.fillStyle='#f0fbff';
+    nx.beginPath();nx.arc(p.x,p.y,2.8,0,7);nx.fill();nx.shadowBlur=0;
+    if(Math.hypot(p.target.x-p.x,p.target.y-p.y)<7){
+      if(p.phase==='toCore'){const sp=pick(specialtyNodes());p.spec=sp;p.phase='toSpec';p.target=sp;p.hue=AQUAB;heartBump=1;}
+      else{firePulse(p.spec);p.spec.count++;const amt=TICKET[p.spec.label]||22000;
+        STATE.ingresosMes+=amt;STATE.ingresosHoy+=amt;STATE.atendidosHoy++;
+        spawnMoney(p.spec.x,p.spec.y,amt);
+        addEvent('atención',AQUA,`<b>${p.spec.label}</b> · +$${amt.toLocaleString('es-CL')}`);patients.splice(i,1);}}}
+  // plata volando
+  for(let i=money.length-1;i>=0;i--){const m=money[i];m.t+=m.spd;
+    const mxx=(1-m.t)*m.sx+m.t*m.dx,myy=(1-m.t)*m.sy+m.t*m.dy-Math.sin(m.t*Math.PI)*80;
+    nx.globalAlpha=0.95;nx.shadowBlur=14;nx.shadowColor=GOLD;nx.fillStyle=GOLD;
+    nx.beginPath();nx.arc(mxx,myy,3.2,0,7);nx.fill();nx.shadowBlur=0;nx.globalAlpha=1;
+    if(m.t>=1){money.splice(i,1);flashMoney();}}
+  drawCore(t);
+  applyBloom();
+}
+
+// post-proceso: bloom (luz que sangra). Copia el frame a 1/2 res, lo desenfoca
+// y lo vuelve a pintar con 'lighter' → glow cinematográfico de una sola pasada.
+function applyBloom(){
+  if(GW<2)return;
+  gx2.clearRect(0,0,GW,GH);
+  gx2.drawImage(net,0,0,GW,GH);
+  nx.save();
+  nx.globalCompositeOperation='lighter';nx.globalAlpha=0.5;nx.filter='blur(6px)';
+  nx.drawImage(glow,0,0,W,H);
+  nx.filter='none';nx.restore();
+}
+
+// rayo eléctrico irregular entre dos puntos (line displacement recursivo simple)
+function drawBolt(x1,y1,x2,y2,color,life){
+  const seg=7,pts=[[x1,y1]];
+  for(let i=1;i<seg;i++){const k=i/seg;
+    const px=x1+(x2-x1)*k,py=y1+(y2-y1)*k;
+    const off=(Math.random()-0.5)*22*(1-Math.abs(k-0.5)*1.4);
+    pts.push([px-(y2-y1)/Math.hypot(x2-x1,y2-y1)*off, py+(x2-x1)/Math.hypot(x2-x1,y2-y1)*off]);}
+  pts.push([x2,y2]);
+  nx.globalAlpha=life*0.9;nx.strokeStyle=color;nx.lineWidth=1.4;nx.shadowBlur=12;nx.shadowColor=color;
+  nx.beginPath();nx.moveTo(pts[0][0],pts[0][1]);for(const p of pts)nx.lineTo(p[0],p[1]);nx.stroke();
+  nx.shadowBlur=0;nx.globalAlpha=1;
+}
+
+function drawCore(t){
+  const coreRev=smooth((boot-0.26)/0.32);if(coreRev<=0)return;
+  const beat=(Math.sin(t/1000*(curBpm/60)*Math.PI*2)+1)/2,pump=beat*beat;
+  const baseR=Math.min(W,H)*0.078,r=baseR*coreRev*(1+pump*0.1+heartBump*0.05);heartBump*=0.9;
+  // glow volumétrico multicapa
+  for(const [m,a] of [[4.2,0.1],[2.8,0.18],[1.7,0.28]]){
+    const g=nx.createRadialGradient(CX,CY,r*0.4,CX,CY,r*m);
+    g.addColorStop(0,`rgba(79,190,206,${a*curGlow})`);g.addColorStop(1,'rgba(17,114,171,0)');
+    nx.fillStyle=g;nx.beginPath();nx.arc(CX,CY,r*m,0,7);nx.fill();}
+  // partículas en órbita (detrás)
+  drawOrbit(t,r,true);
+  // anillo exterior segmentado (ticks) girando
+  nx.save();nx.translate(CX,CY);nx.rotate(t*0.00012);
+  for(let i=0;i<60;i++){nx.rotate(Math.PI*2/60);const big=i%5===0;
+    nx.strokeStyle=`rgba(138,240,251,${big?0.5:0.2})`;nx.lineWidth=big?2:1;
+    nx.beginPath();nx.moveTo(0,-r*1.85);nx.lineTo(0,-r*(big?1.72:1.78));nx.stroke();}
+  nx.restore();
+  // anillo de progreso de meta mensual
+  const prog=Math.min(1,metaProg);const a0=-Math.PI/2,a1=a0+prog*Math.PI*2;
+  nx.strokeStyle='rgba(127,227,240,0.1)';nx.lineWidth=4;
+  nx.beginPath();nx.arc(CX,CY,r*1.55,0,7);nx.stroke();
+  const pg=nx.createLinearGradient(CX-r,CY-r,CX+r,CY+r);pg.addColorStop(0,AQUA);pg.addColorStop(1,AQUAB);
+  nx.strokeStyle=pg;nx.lineWidth=4;nx.lineCap='round';nx.shadowBlur=14;nx.shadowColor=AQUA;
+  nx.beginPath();nx.arc(CX,CY,r*1.55,a0,a1);nx.stroke();nx.shadowBlur=0;nx.lineCap='butt';
+  // cabeza luminosa del progreso
+  const hx=CX+Math.cos(a1)*r*1.55,hy=CY+Math.sin(a1)*r*1.55;
+  nx.fillStyle='#f0fbff';nx.shadowBlur=16;nx.shadowColor=AQUAB;nx.beginPath();nx.arc(hx,hy,4,0,7);nx.fill();nx.shadowBlur=0;
+  // cuerpo del núcleo (esfera sombreada)
+  const body=nx.createRadialGradient(CX-r*0.35,CY-r*0.35,r*0.1,CX,CY,r);
+  body.addColorStop(0,'#bff6ff');body.addColorStop(0.35,AQUAB);body.addColorStop(0.7,AQUA);
+  body.addColorStop(0.9,BLUE);body.addColorStop(1,'#072437');
+  nx.shadowBlur=40+pump*34;nx.shadowColor=AQUA;nx.fillStyle=body;
+  nx.beginPath();nx.arc(CX,CY,r,0,7);nx.fill();nx.shadowBlur=0;
+  // filamentos de energía internos (girando dentro de la esfera)
+  nx.save();nx.beginPath();nx.arc(CX,CY,r*0.96,0,7);nx.clip();
+  for(let f=0;f<3;f++){const ph=t/900+f*2.1;
+    nx.strokeStyle=`rgba(255,255,255,${0.12-f*0.03})`;nx.lineWidth=1.2;nx.beginPath();
+    for(let a=-1;a<=1;a+=0.08){const xx=CX+a*r,yy=CY+Math.sin(a*3+ph)*r*0.32*Math.cos(ph*0.5);
+      a===-1?nx.moveTo(xx,yy):nx.lineTo(xx,yy);}nx.stroke();}
+  nx.restore();
+  // highlight especular
+  const hl=nx.createRadialGradient(CX-r*0.32,CY-r*0.36,0,CX-r*0.32,CY-r*0.36,r*0.7);
+  hl.addColorStop(0,'rgba(255,255,255,0.5)');hl.addColorStop(1,'rgba(255,255,255,0)');
+  nx.fillStyle=hl;nx.beginPath();nx.arc(CX,CY,r,0,7);nx.fill();
+  // anillos de pulso en el latido
+  if(beat>0.95)pulseRings.push({r:r*1.55,a:0.5});
+  for(let i=pulseRings.length-1;i>=0;i--){const p=pulseRings[i];p.r+=3.2;p.a*=0.955;
+    nx.strokeStyle=`rgba(138,240,251,${p.a})`;nx.lineWidth=2;nx.beginPath();nx.arc(CX,CY,p.r,0,7);nx.stroke();
+    if(p.a<0.02)pulseRings.splice(i,1);}
+  // partículas en órbita (delante)
+  drawOrbit(t,r,false);
+  // etiqueta
+  nx.fillStyle='#04101c';nx.font='900 '+Math.round(r*0.4)+'px Montserrat';
+  nx.textAlign='center';nx.textBaseline='middle';
+  nx.shadowBlur=10;nx.shadowColor='rgba(255,255,255,.5)';nx.fillText('CMC',CX,CY-r*0.04);nx.shadowBlur=0;
+  nx.font='700 '+Math.round(r*0.13)+'px Montserrat';nx.fillStyle='rgba(4,16,28,0.55)';
+  nx.fillText('NÚCLEO',CX,CY+r*0.32);nx.textAlign='start';
+}
+function drawOrbit(t,r,behind){
+  for(const o of orbit){
+    o.a+=o.sp;const ca=Math.cos(o.a),sa=Math.sin(o.a);
+    // elipse rotada por o.rot
+    let ex=ca*o.rx, ey=sa*o.rx*o.tilt;
+    const rx=ex*Math.cos(o.rot)-ey*Math.sin(o.rot), ry=ex*Math.sin(o.rot)+ey*Math.cos(o.rot);
+    const depth=sa; // >0 delante
+    if(behind===(depth>0))continue;
+    const px=CX+rx,py=CY+ry,br=0.4+0.6*((depth+1)/2);
+    nx.globalAlpha=br;nx.shadowBlur=8*br;nx.shadowColor=o.c;nx.fillStyle=o.c;
+    nx.beginPath();nx.arc(px,py,o.s*br,0,7);nx.fill();nx.shadowBlur=0;nx.globalAlpha=1;}
+}
+
+/* ===================== HUD ===================== */
+let dispMoney=0,dispToday=0,dispEbitda=0;
+function flashMoney(){const el=document.querySelector('#vitals .money .val');
+  el.style.transition='none';el.style.textShadow='0 0 40px rgba(255,207,92,.95)';
+  requestAnimationFrame(()=>{el.style.transition='text-shadow .5s';el.style.textShadow='0 0 26px rgba(255,207,92,.45)';});}
+const fmt=n=>Math.round(n).toLocaleString('es-CL');
+function updateHUD(){
+  dispMoney+=(STATE.ingresosMes-dispMoney)*0.08;dispToday+=(STATE.ingresosHoy-dispToday)*0.1;
+  const eb=STATE.ingresosMes*STATE.ebitdaPct;dispEbitda+=(eb-dispEbitda)*0.08;
+  metaProg+=((STATE.ingresosMes/META_MES)-metaProg)*0.05;
+  vMoney.textContent=fmt(dispMoney);vEbitda.textContent=fmt(dispEbitda);
+  vFlow.textContent=patients.length;vSeen.textContent=STATE.atendidosHoy;vActions.textContent=STATE.accionesHoy;
+  vTicket.textContent='$'+fmt(STATE.ingresosHoy/Math.max(1,STATE.atendidosHoy)||STATE.ticketProm);
+  const pct=Math.round(metaProg*100);vMetaPct.textContent=pct+'%';barMeta.style.width=Math.min(100,pct)+'%';
+  vAgents.textContent=nodes.filter(n=>n.ring===2&&n.act>0.3).length;
+}
+
+/* ===================== popup de agenda ===================== */
+const pop=document.getElementById('pop');let lastSpec=null,popHideAt=0;
+function renderPopup(n){
+  const d=SPEC_DATA[n.label];
+  popName.textContent=n.label;popProf.textContent=d.prof;
+  popDot.style.background=n.color;popDot.style.boxShadow='0 0 12px '+n.color;
+  popAg.textContent=d.slots.filter(s=>s.nm).length;
+  popLi.textContent=d.slots.filter(s=>!s.nm).length;
+  popSched.innerHTML=d.slots.map(s=>{
+    if(!s.nm)return `<div class="row"><span class="hr">${s.h}</span><span class="nm free">Libre</span></div>`;
+    const [lab,col]=EST[s.e];
+    return `<div class="row" style="${s.e==='ensala'?'background:rgba(255,107,129,.09)':''}">`+
+      `<span class="hr">${s.h}</span><span class="nm">${s.nm}</span>`+
+      `<span class="bg" style="background:${col}22;color:${col}">${lab}</span></div>`;}).join('');
+}
+function updatePopup(){
+  let best=null;for(const n of specialtyNodes())if(n.hover>0.5&&(!best||n.hover>best.hover))best=n;
+  if(best){
+    popHideAt=0;
+    const w=296;let x=best.x<CX?best.x+34:best.x-34-w;
+    x=Math.max(14,Math.min(W-w-14,x));
+    let y=Math.max(96,Math.min(H-330,best.y-100));
+    pop.style.left=x+'px';pop.style.top=y+'px';
+    if(best.label!==lastSpec){renderPopup(best);lastSpec=best.label;}
+    const sa=SPEC_DATA[best.label].slots.filter(s=>s.e==='atendido').length;
+    popAt.textContent=sa+best.count;                 // atendidos agendados + simulados en vivo
+    pop.classList.add('show');
+  }else{
+    if(!popHideAt)popHideAt=performance.now();
+    if(performance.now()-popHideAt>400){pop.classList.remove('show');lastSpec=null;}
+  }
+}
+
+/* ===================== ECG ===================== */
+const ecg=document.getElementById('ecg'),ex2=ecg.getContext('2d');let ecgData=new Array(120).fill(0),ecgT=0;
+function drawEcg(){const w=ecg.clientWidth,h=ecg.clientHeight;
+  if(ecg.width!==w*DPR){ecg.width=w*DPR;ecg.height=h*DPR;ex2.setTransform(DPR,0,0,DPR,0,0);}
+  ex2.clearRect(0,0,w,h);
+  ex2.strokeStyle='rgba(127,227,240,0.06)';ex2.lineWidth=1;
+  for(let gx=0;gx<w;gx+=14){ex2.beginPath();ex2.moveTo(gx,0);ex2.lineTo(gx,h);ex2.stroke();}
+  ecgT+=(curBpm/60)/60;const ph=ecgT%1;let v=0;
+  if(ph<0.08)v=Math.sin(ph/0.08*Math.PI)*0.15;else if(ph<0.14)v=-(ph-0.08)/0.06*0.3;
+  else if(ph<0.2)v=((ph-0.14)/0.06)*1.4-0.3;else if(ph<0.26)v=1.1-((ph-0.2)/0.06)*1.5;
+  else if(ph<0.45)v=Math.sin((ph-0.26)/0.19*Math.PI)*0.22;
+  ecgData.push(v);ecgData.shift();
+  ex2.strokeStyle=ROSE;ex2.lineWidth=2;ex2.shadowBlur=10;ex2.shadowColor=ROSE;ex2.beginPath();
+  for(let i=0;i<ecgData.length;i++){const x=i/ecgData.length*w,y=h/2-ecgData[i]*h*0.42;i?ex2.lineTo(x,y):ex2.moveTo(x,y);}
+  ex2.stroke();ex2.shadowBlur=0;}
+
+/* ===================== sparkline ingresos ===================== */
+const spk=document.getElementById('sparkMoney'),sx=spk.getContext('2d');let spkData=[];
+function drawSpark(){const w=spk.clientWidth,h=spk.clientHeight;
+  if(spk.width!==w*DPR){spk.width=w*DPR;spk.height=h*DPR;sx.setTransform(DPR,0,0,DPR,0,0);}
+  sx.clearRect(0,0,w,h);if(spkData.length<2)return;
+  const mn=Math.min(...spkData),mxv=Math.max(...spkData),rng=mxv-mn||1;
+  const g=sx.createLinearGradient(0,0,0,h);g.addColorStop(0,'rgba(255,207,92,0.4)');g.addColorStop(1,'rgba(255,207,92,0)');
+  sx.beginPath();spkData.forEach((d,i)=>{const x=i/(spkData.length-1)*w,y=h-((d-mn)/rng)*h*0.8-2;i?sx.lineTo(x,y):sx.moveTo(x,y);});
+  sx.lineTo(w,h);sx.lineTo(0,h);sx.closePath();sx.fillStyle=g;sx.fill();
+  sx.beginPath();spkData.forEach((d,i)=>{const x=i/(spkData.length-1)*w,y=h-((d-mn)/rng)*h*0.8-2;i?sx.lineTo(x,y):sx.moveTo(x,y);});
+  sx.strokeStyle=GOLD;sx.lineWidth=1.5;sx.shadowBlur=8;sx.shadowColor=GOLD;sx.stroke();sx.shadowBlur=0;}
+
+/* ===================== reloj ===================== */
+function tickClock(){const d=new Date();
+  clock.textContent=d.toLocaleTimeString('es-CL',{hour12:false});
+  dateLabel.textContent=d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'short'});}
+
+/* ===================== loop ===================== */
+let last=0,pt=0,at=0,spkT=0;
+function loop(t){const dt=t-last;last=t;
+  if(bootStart===null)bootStart=t;boot=Math.min(1,(t-bootStart)/2600);
+  mx+=(tmx-mx)*0.05;my+=(tmy-my)*0.05;
+  const hora=new Date().getHours();
+  const v=organismVitals({flow:patients.length,agents:nodes.filter(n=>n.ring===2&&n.act>0.3).length,ingresosHoy:STATE.ingresosHoy,hora});
+  curBpm+=(v.bpm-curBpm)*0.05;curGlow+=(v.glow-curGlow)*0.05;
+  bpm.textContent=Math.round(curBpm);stateLabel.textContent=v.estado;
+  stateDot.style.background=v.color;stateDot.style.boxShadow='0 0 14px '+v.color;
+  pt+=dt;const iv=(hora>=22||hora<7)?3400:900+Math.random()*650;if(boot>=1&&pt>iv){pt=0;spawnPatient();}
+  at+=dt;if(boot>=1&&at>1400+Math.random()*1300){at=0;const n=pick(nodes.filter(x=>x.ring===2||x.ring===3));firePulse(n);agentEvent(n);}
+  spkT+=dt;if(spkT>1500){spkT=0;spkData.push(STATE.ingresosHoy);if(spkData.length>30)spkData.shift();}
+  drawBg(t);drawNet(t);drawEcg();drawSpark();updateHUD();updatePopup();
+  requestAnimationFrame(loop);
+}
+
+/* ===================== data en vivo (opcional) ===================== */
+async function fetchLiveData(){try{
+  const token=new URLSearchParams(location.search).get('token')||'';
+  const r=await fetch('/alma/api/organismo?token='+token);if(!r.ok)return;const d=await r.json();
+  if(d.ingresos_mes)STATE.ingresosMes=d.ingresos_mes;if(d.ingresos_hoy)STATE.ingresosHoy=d.ingresos_hoy;
+  if(d.atendidos_hoy)STATE.atendidosHoy=d.atendidos_hoy;if(d.ebitda_pct){STATE.ebitdaPct=d.ebitda_pct;vMargin.textContent=Math.round(d.ebitda_pct*100)+'%';}
+}catch(e){}}
+
+/* ===================== arranque ===================== */
+resize();
+tickClock();setInterval(tickClock,1000);
+fetchLiveData();setInterval(fetchLiveData,60000);
+addEvent('sistema',AQUAB,'Organismo CMC <b>en línea</b>');
+addEvent('agente',PURPLE,'<b>briefing</b> preparó el resumen del día');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

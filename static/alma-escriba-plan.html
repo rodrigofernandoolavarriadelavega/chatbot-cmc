@@ -1,0 +1,346 @@
+<meta charset="utf-8">
+<title>Alma Escriba · Plan Maestro (Copiloto clínico con IA)</title>
+<style>
+  :root{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae;
+    --navy:#0f2740; --navy-2:#173a5e; --aqua:#1b9aaa; --aqua-deep:#127885;
+    --gold:#c8922b; --violet:#6a4c93; --rx:#2e7d6b;
+    --good:#2e8b57; --good-bg:#e2f2e9; --warn:#c8922b; --warn-bg:#f8efdc;
+    --crit:#c0453b; --crit-bg:#f8e3e0;
+    --shadow:0 1px 2px rgba(15,39,64,.06),0 6px 20px rgba(15,39,64,.06);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0b1720; --surface:#122430; --surface-2:#0e1e29; --line:#223a49;
+    --ink:#e8f0f4; --muted:#9db1bd; --faint:#6a808d; --aqua:#3bb9c9; --aqua-deep:#2aa0b0;
+    --good:#48b87e; --good-bg:#123024; --warn:#e0b04a; --warn-bg:#332711; --crit:#e07068; --crit-bg:#331a17;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.28);}}
+  :root[data-theme="dark"]{
+    --bg:#0b1720; --surface:#122430; --surface-2:#0e1e29; --line:#223a49;
+    --ink:#e8f0f4; --muted:#9db1bd; --faint:#6a808d; --aqua:#3bb9c9; --aqua-deep:#2aa0b0;
+    --good:#48b87e; --good-bg:#123024; --warn:#e0b04a; --warn-bg:#332711; --crit:#e07068; --crit-bg:#331a17;}
+  :root[data-theme="light"]{
+    --bg:#eef3f6; --surface:#fff; --surface-2:#f6f9fb; --line:#dce5eb;
+    --ink:#12242f; --muted:#5c6f7c; --faint:#8fa2ae; --aqua:#1b9aaa;
+    --good:#2e8b57; --good-bg:#e2f2e9; --warn:#c8922b; --warn-bg:#f8efdc; --crit:#c0453b; --crit-bg:#f8e3e0;}
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:26px 20px 60px; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  header.top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .eyebrow{ text-transform:uppercase; letter-spacing:.2em; font-size:11px; font-weight:700; color:var(--aqua); }
+  h1{ margin:5px 0 6px; font-size:27px; letter-spacing:-.02em; line-height:1.1; text-wrap:balance; }
+  header p{ margin:0; color:var(--muted); font-size:13.5px; max-width:72ch; }
+  .tbtn{ cursor:pointer; background:var(--surface); border:1px solid var(--line); color:var(--muted); border-radius:20px; width:34px; height:30px; font-size:14px; box-shadow:var(--shadow); }
+
+  .vision{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:18px 0; }
+  .vcard{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; border-top:3px solid var(--aqua); }
+  .vcard.b{ border-top-color:var(--violet); }
+  .vcard h3{ margin:0 0 4px; font-size:15.5px; }
+  .vcard .tag{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--aqua-deep); }
+  .vcard.b .tag{ color:var(--violet); }
+  .vcard p{ margin:6px 0 0; font-size:12.8px; color:var(--muted); }
+
+  h2.sec{ font-size:16px; margin:26px 0 12px; display:flex; align-items:center; gap:9px; }
+  h2.sec::before{ content:""; width:4px; height:17px; background:var(--aqua); border-radius:3px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .pad{ padding:16px 20px; }
+
+  /* Pipeline IA */
+  .pipe{ display:flex; align-items:stretch; gap:0; flex-wrap:wrap; }
+  .pstep{ flex:1; min-width:130px; background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:12px 13px; margin:5px; position:relative;}
+  .pstep .k{ font-size:10px; font-weight:800; color:var(--aqua-deep); text-transform:uppercase; letter-spacing:.06em;}
+  .pstep .t{ font-size:13px; font-weight:700; margin:4px 0 3px;}
+  .pstep .d{ font-size:11.5px; color:var(--muted);}
+  .pstep.ai{ border-color:var(--aqua); background:linear-gradient(180deg,var(--surface-2),rgba(27,154,170,.09)); }
+
+  .prog{ background:var(--navy); color:#eaf2f6; border-radius:var(--radius); padding:16px 20px; margin-bottom:8px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+  .prog .n{ font-size:34px; font-weight:800; color:#fff; line-height:1; }
+  .prog .lab{ font-size:12.5px; color:#a9c4d0; }
+  .prog .bar{ flex:1; min-width:180px; height:9px; background:rgba(255,255,255,.15); border-radius:6px; overflow:hidden; }
+  .prog .fill{ height:100%; width:0; background:linear-gradient(90deg,var(--aqua),#54c9b6); border-radius:6px; transition:width .4s; }
+
+  .etapa{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; margin-bottom:10px; break-inside:avoid; }
+  .et-head{ display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .et-num{ flex:0 0 auto; width:38px; height:38px; border-radius:10px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+  .etapa.e0 .et-num{ background:var(--faint); } .etapa.e7 .et-num{ background:var(--rx); } .etapa.e8 .et-num{ background:var(--gold); }
+  .et-head h3{ margin:0; font-size:16px; }
+  .et-head .when{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+  .et-head .cnt{ margin-left:auto; font-size:11.5px; color:var(--faint); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .et-goal{ font-size:12.5px; color:var(--muted); margin:8px 0 10px 50px; }
+  ul.tasks{ list-style:none; margin:0 0 0 50px; padding:0; }
+  ul.tasks li{ display:flex; gap:10px; align-items:flex-start; padding:5px 0; font-size:13.3px; }
+  ul.tasks input{ margin-top:2px; width:16px; height:16px; accent-color:var(--aqua); cursor:pointer; flex:0 0 auto; }
+  ul.tasks label{ cursor:pointer; }
+  li.done label{ color:var(--faint); text-decoration:line-through; }
+  .gate{ margin:10px 0 2px 50px; background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px; padding:7px 12px; font-size:12px; }
+  .gate b{ color:var(--warn); }
+  .gate.legal{ background:var(--crit-bg); border-left-color:var(--crit); } .gate.legal b{ color:var(--crit); }
+
+  .mods{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .modcol h4{ margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--aqua-deep); }
+  .modcol ul{ list-style:none; margin:0; padding:0; }
+  .modcol li{ font-size:12.3px; padding:4px 0; color:var(--ink); border-bottom:1px dashed var(--line); }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.6px; }
+  th,td{ padding:7px 9px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .pill{ display:inline-block; padding:1.5px 8px; border-radius:20px; font-size:10px; font-weight:700; }
+  .pill.rec{ background:var(--good-bg); color:var(--good); } .pill.alt{ background:var(--surface-2); color:var(--muted); }
+  .decs li{ font-size:13px; margin:7px 0; } .decs b{ color:var(--navy); }
+  :root[data-theme="dark"] .decs b{ color:var(--aqua); }
+  @media (prefers-color-scheme:dark){ .decs b{ color:var(--aqua); } }
+  .edge{ background:var(--navy); color:#eaf2f6; border-radius:var(--radius); padding:16px 20px; margin-top:8px;}
+  .edge h3{ color:#fff; margin:0 0 8px; font-size:15px;} .edge .r{ font-size:13px; margin:7px 0;} .edge b{ color:#ffd98a;}
+  .reset{ margin-top:16px; text-align:center; }
+  .reset button{ background:transparent; border:1px solid var(--line); color:var(--faint); border-radius:20px; padding:6px 14px; font-size:12px; cursor:pointer; }
+  footer{ margin-top:22px; font-size:11.5px; color:var(--faint); text-align:center; }
+  @media print{ @page{ size:A4; margin:13mm; } .tbtn,.reset{ display:none; } .etapa,.card,.vcard,.prog,.edge{ box-shadow:none; } .wrap{ padding:0; max-width:none; } *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } ul.tasks{ margin-left:34px; } }
+  @media (max-width:860px){ .vision,.mods{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:560px){ .vision,.mods{ grid-template-columns:1fr; } ul.tasks,.et-goal,.gate{ margin-left:0; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">OLACORE · Alma · Plan Maestro</div>
+      <h1>Alma Escriba — Copiloto clínico con IA</h1>
+      <p>La IA escucha (o toma el dictado de) la consulta y deja lista la <b>ficha, la receta y las escalas</b> para que el profesional solo revise y firme. Inspirado en NuvaMed, pero adaptado y superior: multi-especialidad, integrado a Medilink, y sobre toda la plataforma Alma. Piloto en el CMC → producto SaaS OLACORE.</p>
+    </div>
+    <button class="tbtn" id="themeBtn" title="Tema" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <div class="vision">
+    <div class="vcard a">
+      <span class="tag">Para el profesional</span>
+      <h3>El escriba + copiloto</h3>
+      <p>Grabar/dictar la consulta → transcripción → nota clínica estructurada, receta y escalas listas para revisar y firmar. Briefing del paciente antes de atender, copiloto diagnóstico y chequeo de interacciones. <b>La IA nunca firma por ti.</b> Devuelve tiempo: menos "pajama time", más mirar al paciente.</p>
+    </div>
+    <div class="vcard b">
+      <span class="tag">Para la clínica / el paciente</span>
+      <h3>Integrado a Alma + Medilink</h3>
+      <p>Todo cae en Medilink (ficha, receta, atención) sin doble tipeo. Portal del paciente para seguimiento entre sesiones (escalas, tareas). Y como vertical <b>OLACORE/Adkun</b>: se vende por profesional a otras clínicas, con el CMC como piloto y credibilidad.</p>
+    </div>
+  </div>
+
+  <!-- Estado actual -->
+  <h2 class="sec">Estado actual · 11 jul 2026</h2>
+  <div class="card pad">
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Sesión autónoma del 11 jul — <b>todo desplegado y en vivo</b> en escriba.agentecmc.cl:</p>
+    <div class="mods">
+      <div class="modcol"><h4>✅ Núcleo</h4><ul>
+        <li>Escriba: consulta → nota con Claude</li>
+        <li>Whisper local (privado)</li>
+        <li><b>Teleconsulta</b> (mic + audio llamada)</li>
+        <li>Briefing Medilink (lectura)</li>
+        <li><b>Panel premium rediseñado</b></li>
+      </ul></div>
+      <div class="modcol"><h4>✅ Seguridad &amp; GES</h4><ul>
+        <li>Chequeo antes de cerrar</li>
+        <li><b>Badge GES</b> (6 patologías psiq.)</li>
+        <li><b>Verificación anti-alucinación</b></li>
+        <li>Vocabulario clínico chileno → Whisper</li>
+      </ul></div>
+      <div class="modcol"><h4>✅ Documentos &amp; paciente</h4><ul>
+        <li>Informe PDF + Word brandeado</li>
+        <li><b>Indicaciones al paciente</b> (simple)</li>
+        <li><b>Carta de derivación</b></li>
+        <li>Adjuntar receta del SNRE</li>
+        <li><b>Portal del paciente</b> (archivos)</li>
+        <li>Envío por WhatsApp</li>
+      </ul></div>
+      <div class="modcol"><h4>📘 Para la Dra. Unibazo</h4><ul>
+        <li>Manual con imágenes (generándose)</li>
+        <li>Dashboard de funcionalidades</li>
+        <li><b>Listo para el piloto</b></li>
+        <li>Pendiente: login por profesional</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- Pipeline IA -->
+  <h2 class="sec">Cómo funciona (el flujo)</h2>
+  <div class="card pad">
+    <div class="pipe">
+      <div class="pstep"><div class="k">1 · Antes</div><div class="t">Briefing</div><div class="d">Resumen del paciente desde Medilink/BI antes de entrar.</div></div>
+      <div class="pstep"><div class="k">2 · Consulta</div><div class="t">Captura</div><div class="d">Graba el audio o toma el dictado (con consentimiento del paciente).</div></div>
+      <div class="pstep ai"><div class="k">3 · IA</div><div class="t">Transcribe + estructura</div><div class="d">Voz→texto y Claude arma nota (SOAP), receta y escalas.</div></div>
+      <div class="pstep"><div class="k">4 · Profesional</div><div class="t">Revisa y firma</div><div class="d">Edita, corrige, aprueba. La responsabilidad es del médico.</div></div>
+      <div class="pstep"><div class="k">5 · Después</div><div class="t">A Medilink</div><div class="d">Ficha, receta y atención quedan registradas. Portal al paciente.</div></div>
+    </div>
+  </div>
+
+  <!-- Progreso -->
+  <div class="prog" style="margin-top:14px;">
+    <div><div class="n" id="pctBig">0%</div><div class="lab">avance del programa</div></div>
+    <div class="bar"><div class="fill" id="pfill"></div></div>
+    <div class="lab" id="pcount" style="min-width:120px;text-align:right;">0 de 0 hitos</div>
+  </div>
+
+  <h2 class="sec">Las 9 etapas</h2>
+
+  <div class="etapa e0">
+    <div class="et-head"><span class="et-num">0</span><div><h3>Fundaciones &amp; decisiones</h3><span class="when">Semana 1</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Arquitectura, transcripción, consentimiento legal y marca resueltos antes de codear.</p>
+    <ul class="tasks" data-e="0">
+      <li><input type="checkbox"><label>Instancia <b>alma-escriba</b> (FastAPI + shell Alma), subdominio (ej. escriba.agentecmc.cl); marca</label></li>
+      <li><input type="checkbox"><label>Elegir motor de <b>transcripción</b> (STT) — ver decisiones-gate</label></li>
+      <li><input type="checkbox"><label>Clave Anthropic (Claude) para estructurar; estimar costo por consulta</label></li>
+      <li><input type="checkbox"><label>Acceso a <b>Medilink</b> (leer historial / escribir ficha-receta) confirmado</label></li>
+    </ul>
+    <div class="gate legal"><b>Gate legal:</b> flujo de <b>consentimiento del paciente para grabar</b> (Ley 20.584 / 21.719) definido — es obligatorio antes de capturar audio.</div>
+  </div>
+
+  <div class="etapa e1">
+    <div class="et-head"><span class="et-num">1</span><div><h3>Escriba MVP — el corazón</h3><span class="when">Semanas 2–4</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Consulta → transcripción → nota clínica estructurada y editable. Lo que ahorra tiempo de verdad.</p>
+    <ul class="tasks" data-e="1">
+      <li><input type="checkbox"><label><b>Captura</b>: grabar audio en el navegador o dictar/pegar transcripción</label></li>
+      <li><input type="checkbox"><label><b>Transcripción</b> voz→texto (español clínico)</label></li>
+      <li><input type="checkbox"><label><b>Nota estructurada con Claude</b>: motivo, anamnesis, examen, diagnóstico, plan (SOAP), por especialidad</label></li>
+      <li><input type="checkbox"><label>Editor donde el profesional <b>revisa, corrige y aprueba</b> (copia lista para pegar)</label></li>
+    </ul>
+    <div class="gate"><b>Gate:</b> plantillas de nota por especialidad (psiquiatría primero, luego medicina general).</div>
+  </div>
+
+  <div class="etapa e2">
+    <div class="et-head"><span class="et-num">2</span><div><h3>Receta digital + escalas validadas</h3><span class="when">Semanas 4–6</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Genera la receta desde la consulta y aplica/puntúa escalas clínicas automáticamente.</p>
+    <ul class="tasks" data-e="2">
+      <li><input type="checkbox"><label><b>Receta</b> sugerida desde la consulta (fármaco, dosis, indicaciones), editable</label></li>
+      <li><input type="checkbox"><label><b>Escalas validadas</b>: PHQ-9, GAD-7, AUDIT (psiquiatría/psicología) + escalas de otras especialidades, auto-puntuadas</label></li>
+      <li><input type="checkbox"><label>Adjuntar escalas y receta a la nota / al paciente</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e3">
+    <div class="et-head"><span class="et-num">3</span><div><h3>Integración Medilink</h3><span class="when">Semanas 6–8</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Que todo caiga en el sistema clínico sin doble tipeo — el gran diferenciador vs NuvaMed.</p>
+    <ul class="tasks" data-e="3">
+      <li><input type="checkbox"><label>Empujar <b>ficha/atención</b> a Medilink desde la nota aprobada</label></li>
+      <li><input type="checkbox"><label>Registrar la <b>receta</b> en Medilink</label></li>
+      <li><input type="checkbox"><label>Traer el <b>historial del paciente</b> desde Medilink para el briefing</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e4">
+    <div class="et-head"><span class="et-num">4</span><div><h3>Briefing + copiloto diagnóstico + interacciones</h3><span class="when">Semanas 8–10</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Las capas de inteligencia que suben el valor (planes altos de NuvaMed).</p>
+    <ul class="tasks" data-e="4">
+      <li><input type="checkbox"><label><b>Briefing pre-consulta</b>: resumen del paciente antes de atender</label></li>
+      <li><input type="checkbox"><label><b>Copiloto diagnóstico</b> CIE-10/CIE-11 (sugerencia, no vinculante)</label></li>
+      <li><input type="checkbox"><label><b>Chequeo de interacciones farmacológicas</b></label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e5">
+    <div class="et-head"><span class="et-num">5</span><div><h3>Portal del paciente</h3><span class="when">Semanas 10–12</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Seguimiento entre sesiones — el otro lado del producto.</p>
+    <ul class="tasks" data-e="5">
+      <li><input type="checkbox"><label>Login del paciente + sus escalas/tareas asignadas</label></li>
+      <li><input type="checkbox"><label>Recordatorios y monitoreo entre consultas</label></li>
+      <li><input type="checkbox"><label>Mensajería/resúmenes hacia el profesional</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e6">
+    <div class="et-head"><span class="et-num">6</span><div><h3>Cumplimiento legal + firma electrónica</h3><span class="when">Semanas 11–13</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Lo que hace vendible y defendible el producto (NuvaMed lo pone al centro).</p>
+    <ul class="tasks" data-e="6">
+      <li><input type="checkbox"><label><b>Consentimiento de grabación</b> del paciente registrado (Ley 20.584 / 21.719)</label></li>
+      <li><input type="checkbox"><label><b>Firma electrónica</b> del profesional en receta/documentos</label></li>
+      <li><input type="checkbox"><label>Retención/borrado de audio y datos; encuadre Ley 21.331 (salud mental) y GES</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e7">
+    <div class="et-head"><span class="et-num">7</span><div><h3>Piloto en el CMC</h3><span class="when">Mes 3–4</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Tu laboratorio real — probarlo con profesionales de verdad y medir el ahorro.</p>
+    <ul class="tasks" data-e="7">
+      <li><input type="checkbox"><label>Piloto con <b>Dra. Unibazo</b> (psiquiatría, quien lo pidió) + Montalba/Rodríguez (psicología)</label></li>
+      <li><input type="checkbox"><label>Extender a <b>medicina general</b> (Olavarría/Abarca/Márquez)</label></li>
+      <li><input type="checkbox"><label>Medir <b>tiempo ahorrado</b> por consulta y satisfacción del profesional</label></li>
+    </ul>
+  </div>
+
+  <div class="etapa e8">
+    <div class="et-head"><span class="et-num">8</span><div><h3>Producto SaaS OLACORE</h3><span class="when">Mes 4+</span></div><span class="cnt"></span></div>
+    <p class="et-goal">Convertirlo en vertical replicable — vender a otras clínicas.</p>
+    <ul class="tasks" data-e="8">
+      <li><input type="checkbox"><label>Multi-clínica / multi-profesional; planes (tipo 0,5 / 1,5 / 2 UF por profesional)</label></li>
+      <li><input type="checkbox"><label>Onboarding, cobro y soporte</label></li>
+      <li><input type="checkbox"><label>Landing de venta + material clínico (validación, ahorro de tiempo)</label></li>
+    </ul>
+  </div>
+
+  <!-- Módulos -->
+  <h2 class="sec">Alma Escriba — mapa de módulos</h2>
+  <div class="card pad">
+    <div class="mods">
+      <div class="modcol"><h4>Captura & IA</h4><ul>
+        <li>Grabación / dictado</li><li>Transcripción (STT)</li><li>Nota estructurada (Claude)</li><li>Copiloto diagnóstico</li>
+      </ul></div>
+      <div class="modcol"><h4>Clínico</h4><ul>
+        <li>Ficha / historial</li><li>Receta digital</li><li>Escalas validadas</li><li>Interacciones fármacos</li>
+      </ul></div>
+      <div class="modcol"><h4>Alrededor del paciente</h4><ul>
+        <li>Briefing pre-consulta</li><li>Portal del paciente</li><li>Seguimiento / tareas</li><li>Recordatorios</li>
+      </ul></div>
+      <div class="modcol"><h4>Plataforma</h4><ul>
+        <li>Integración Medilink</li><li>Cumplimiento & firma</li><li>Panel / tiempo ahorrado</li><li>Multi-clínica (SaaS)</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- Decisiones gate -->
+  <h2 class="sec">Decisiones-gate (necesito tu confirmación antes de ejecutar)</h2>
+  <div class="card pad" style="overflow-x:auto;">
+    <table>
+      <tr><th>Decisión</th><th>Opciones</th><th>Recomendación</th></tr>
+      <tr><td><b>Transcripción (STT)</b></td><td>Navegador (gratis, MVP) · Whisper API (mejor, ~costo bajo) · local/privado</td><td><span class="pill rec">Arrancar navegador/dictado, luego Whisper</span></td></tr>
+      <tr><td><b>Dónde vive</b></td><td>Instancia standalone (replicable) · módulo dentro del CMC</td><td><span class="pill rec">Standalone (escriba.agentecmc.cl)</span></td></tr>
+      <tr><td><b>Consentimiento grabación</b></td><td>Obligatorio por ley — pantalla de consentimiento del paciente</td><td><span class="pill rec">Incluido desde el día 1</span></td></tr>
+      <tr><td><b>Especialidad piloto</b></td><td>Psiquiatría (lo pidió Unibazo) · medicina general · dental</td><td><span class="pill rec">Psiquiatría primero</span></td></tr>
+      <tr><td><b>Modelo IA</b></td><td>Claude (ya lo usas en el CMC)</td><td><span class="pill rec">Claude + caché</span></td></tr>
+    </table>
+  </div>
+
+  <!-- Ventaja -->
+  <div class="edge">
+    <h3>Por qué lo haremos mejor que NuvaMed</h3>
+    <div class="r"><b>Tienes la clínica.</b> El CMC es tu laboratorio y tu primer cliente — ellos tienen que *conseguir* clínicas; tú *eres* una.</div>
+    <div class="r"><b>Tienes Medilink.</b> La nota y la receta caen solas en el sistema — ellos son una isla, tú cierras el círculo.</div>
+    <div class="r"><b>Tienes toda Alma alrededor.</b> Agenda, pagos, BI, marketing, agentes ya existen; el escriba es una capa más, no un producto suelto.</div>
+    <div class="r"><b>Multi-especialidad.</b> Ellos son solo psiquiatría; tú cubres medicina general, dental y más.</div>
+  </div>
+
+  <div class="reset"><button id="resetBtn">Reiniciar progreso</button></div>
+  <footer>Alma Escriba · Plan maestro por etapas · Inspirado en NuvaMed, construido sobre Alma + Medilink. El progreso se guarda en este navegador.</footer>
+</div>
+
+<script>
+const KEY="alma_escriba_plan_v1";
+const boxes=[...document.querySelectorAll('ul.tasks input')];
+const saved=JSON.parse(localStorage.getItem(KEY)||"{}");
+boxes.forEach((cb,i)=>{ cb.dataset.i=i; if(saved[i]) cb.checked=true; cb.addEventListener('change',()=>{save();render();}); });
+function save(){ const st={}; boxes.forEach((cb,i)=>{ if(cb.checked) st[i]=1; }); localStorage.setItem(KEY,JSON.stringify(st)); }
+function render(){
+  let done=0;
+  boxes.forEach(cb=>{ cb.closest('li').classList.toggle('done',cb.checked); if(cb.checked)done++; });
+  document.querySelectorAll('.etapa').forEach(et=>{
+    const cbs=[...et.querySelectorAll('ul.tasks input')]; const d=cbs.filter(c=>c.checked).length;
+    et.querySelector('.cnt').textContent=d+'/'+cbs.length;
+  });
+  const pct=boxes.length?Math.round(done/boxes.length*100):0;
+  document.getElementById('pctBig').textContent=pct+'%';
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('pcount').textContent=done+' de '+boxes.length+' hitos';
+}
+document.getElementById('resetBtn').onclick=()=>{ if(confirm('¿Reiniciar el progreso?')){ localStorage.removeItem(KEY); boxes.forEach(cb=>cb.checked=false); render(); } };
+const root=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{ const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); root.setAttribute('data-theme',cur==='dark'?'light':'dark'); };
+render();
+</script>
