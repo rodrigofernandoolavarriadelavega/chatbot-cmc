@@ -239,9 +239,24 @@ PROFESIONALES = {
     67: {"nombre": "Sarai Gómez",              "especialidad": "Matrona",               "intervalo": 30},
     56: {"nombre": "Andrea Guevara",           "especialidad": "Podología",             "intervalo": 60},
     68: {"nombre": "David Pardo",              "especialidad": "Ecografía",             "intervalo": 15},
-    # Psiquiatría TELECONSULTA — solo jueves (weekday 3) 16:00-20:00. Bloque de 60 min
-    # (45 min consulta + 15 min descanso) → cupos 16:00/17:00/18:00/19:00.
-    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 40, "dias": [3]},  # 40 = duración pedida por el dueño (2026-07-15; antes 30). Jueves 16:00-20:00 → 6 cupos/jornada (16:00, 16:40, 17:20, 18:00, 18:40, 19:20). OJO transición: citas viejas de 30 min en :30 pueden bloquear ventanas de 40 por solape — se normaliza solo a medida que la agenda se renueva.
+    # Psiquiatría TELECONSULTA. Atención de 40 min (dueño, 2026-07-15; ratificado
+    # 2026-07-29). NO volver a 30 ni a bloques de 60.
+    # Horario REAL leído de Medilink 2026-07-29 — son DOS días, no uno:
+    #   martes 16:00-20:00 → 6 cupos: 16:00 16:40 17:20 18:00 18:40 19:20
+    #   jueves 15:00-20:00 → 7 cupos: 15:00 15:40 16:20 17:00 17:40 18:20 19:00
+    # ⚠️ PENDIENTE EN MEDILINK (decisión dueño 2026-07-29): mover el inicio del
+    # jueves de 15:00 a **15:20**. Con 15:00 la grilla termina 19:40 y deja 20 min
+    # muertos; con 15:20 da 15:20 16:00 16:40 17:20 18:00 18:40 19:20 — mismos 7
+    # cupos, último paciente 19:20, cierre exacto a las 20:00 y misma grilla que el
+    # martes. El bot NO puede escribir horarios (sólo POST a /pacientes y /citas):
+    # se cambia a mano en Medilink y el bot lo toma solo en ≤1h (_HORARIO_CACHE_TTL).
+    # OJO: `dias` acá NO filtra nada — el filtro real sale de _get_horario(), que
+    # lee `dias`/`horario_dia` de Medilink. Se deja al día sólo para que la tabla
+    # no mienta (decía [3] cuando en Medilink son {1,3}).
+    # Citas viejas de la era de 30 min quedan en :30 y pueden bloquear ventanas de
+    # 40 por solape; se normaliza sola al renovarse la agenda. Verificado 2026-07-29:
+    # las 19 citas fuera de grilla se crearon ANTES del 15-jul; las posteriores calzan.
+    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 40, "dias": [1, 3]},
     # Neurología TELEMEDICINA — Lun/Mar/Jue/Vie (horario real en Medilink,
     # sucursal 1). Consulta adultos/adolescentes desde 15 años. $65.000 particular.
     79: {"nombre": "Dra. Franca González",     "especialidad": "Neurología",            "intervalo": 30},
@@ -2206,13 +2221,22 @@ async def get_citas_kine_mes(year: int, month: int) -> list:
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _fmt_fecha(fecha: str) -> str:
-    """'2026-03-25' → 'Miércoles 25 de marzo'"""
+    """'2026-03-25' → 'Miércoles 25 de marzo'
+
+    Incluye el AÑO cuando no es el año en curso. Sin esto una fecha absurda
+    quedaba indistinguible de una buena: a Mackarena Binimelis (2026-07-21) el
+    bot le ofreció horas del 4 de diciembre de 2080 y el mensaje decía
+    "Miércoles 4 de diciembre" — el año, único dato que delataba el error,
+    era justamente el que se omitía.
+    """
     try:
         d = datetime.strptime(fecha, "%Y-%m-%d")
         dias = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
         meses = ["enero","febrero","marzo","abril","mayo","junio",
                  "julio","agosto","septiembre","octubre","noviembre","diciembre"]
-        return f"{dias[d.weekday()]} {d.day} de {meses[d.month-1]}"
+        base = f"{dias[d.weekday()]} {d.day} de {meses[d.month-1]}"
+        anio_actual = datetime.now(_CHILE_TZ).year
+        return base if d.year == anio_actual else f"{base} de {d.year}"
     except (ValueError, TypeError):
         return fecha
 
