@@ -651,7 +651,7 @@ Input: "Tengo hora con Dr Abarca pero me surgió un imprevisto, no voy a poder i
 Output: {{"intent": "cancelar", "especialidad": null, "respuesta_directa": null}}
 
 Input: "La consulta con la psiquiatra que atiende el jueves, ¿se cancela particular o atiende por Fonasa?"
-Output: {{"intent": "precio", "especialidad": "psiquiatría", "respuesta_directa": "La psiquiatra (Dra. Cecilia Unibazo) atiende los martes de 16:00 a 20:00 y los jueves de 15:20 a 20:00, por teleconsulta. La consulta es *particular, $60.000* — no trabaja con Fonasa. Por la alta demanda y los cupos limitados, la hora se confirma con el *abono del valor total ($60.000) al momento de reservar*; así el cupo queda para quien realmente lo usará y más personas de la zona pueden acceder. El día de la atención no pagas nada adicional. ¿Te ayudo a agendar?"}}
+Output: {{"intent": "precio", "especialidad": "psiquiatría", "respuesta_directa": "La psiquiatra (Dra. Cecilia Unibazo) atiende por teleconsulta en los días y horas del bloque HORARIOS REALES. La consulta es *particular, $60.000* — no trabaja con Fonasa. Por la alta demanda y los cupos limitados, la hora se confirma con el *abono del valor total ($60.000) al momento de reservar*; así el cupo queda para quien realmente lo usará y más personas de la zona pueden acceder. El día de la atención no pagas nada adicional. ¿Te ayudo a agendar?"}}
 
 Input: "Quiero cambiar mi hora del viernes al lunes"
 Output: {{"intent": "reagendar", "especialidad": null, "respuesta_directa": null}}
@@ -712,7 +712,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, martes 16:00-20:00 y jueves 15:20-20:00, $60.000 particular, NO Fonasa). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
+- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, $60.000 particular, NO Fonasa; horario SOLO del bloque HORARIOS REALES). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
 - Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños.
 - Oftalmólogo / oftalmóloga / oftalmología / optometrista / optometría / TM Ana Celedón / Celedón (tecnólogo médico) → "tecnología médica oftalmológica" (TM Ana Celedón, PRESENCIAL, $15.000 particular a TODOS los pacientes — no tiene Fonasa actualmente, consulta de 20 min; prestación: *Evaluación oftalmológica y optométrica*).
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
@@ -925,7 +925,7 @@ MEDICINA GENERAL / SÍNTOMAS
 
 SALUD MENTAL
 - Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular.
-- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, **los martes de 16:00 a 20:00 y los jueves de 15:20 a 20:00**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que la hora se confirma con un **abono del valor total ($60.000) al momento de reservar** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no pagas nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
+- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, en los días y horas del **bloque HORARIOS REALES**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que la hora se confirma con un **abono del valor total ($60.000) al momento de reservar** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no pagas nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
@@ -1426,7 +1426,26 @@ def _sistema_con_horarios(horarios: str) -> list:
     }]
     if horarios:
         bloques.append({"type": "text", "text": horarios})
+    else:
+        # Medilink cayó con caché frío. Antes acá no se agregaba nada — y como
+        # la regla de precedencia vivía DENTRO del bloque de horarios, se iban
+        # las dos cosas juntas: los horarios reales y la regla que decía que
+        # mandaban. El prompt estático quedaba como única fuente, sin nada que
+        # lo contradiga. O sea el fallback caía en el dato viejo con total
+        # confianza. Ahora, cuando no hay horario, se ordena CALLAR.
+        bloques.append({"type": "text", "text": _SIN_HORARIOS})
     return bloques
+
+
+# Qué decir cuando no se pudo leer el horario. Mismo criterio que
+# `_fmt_horario_legible`, que prefiere devolver "" antes que emitir un día sin
+# rango: mejor callar que afirmar algo falso.
+_SIN_HORARIOS = (
+    "AVISO: no se pudo leer el horario real desde Medilink en esta consulta.\n"
+    "NO afirmes días ni horas de atención de ningún profesional — ni siquiera "
+    "si crees recordarlos. Di que confirmas el horario al agendar, ofrece "
+    "buscar cupos (que sí salen de Medilink en vivo) o deriva a recepción."
+)
 
 
 # Precios conocidos del CMC (exactamente como aparecen en el SYSTEM_PROMPT).
