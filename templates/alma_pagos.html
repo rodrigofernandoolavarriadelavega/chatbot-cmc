@@ -2586,7 +2586,10 @@ function insertarFilaNueva(preData = {}) {
 
   _newPrev       = preData.prevision  || 'particular';
   _newPrevManual = false;
-  _newMetodo     = preData.metodo_pago || 'efectivo';
+  // Mismo default por área que el modal: el botón «Nuevo pago» entra por acá,
+  // no por el modal, así que sin esto la regla medida no aplicaba al camino
+  // que más se usa (dental cobra 46,9% en débito).
+  _newMetodo     = preData.metodo_pago || metodoPorArea(preData.area);
 
   const tr = document.createElement('tr');
   tr.className = 'row-new';
@@ -2878,7 +2881,7 @@ function activarEdicionFila(id, colFocus) {
 
   _editingRowId = id;
   const ePrev   = p.prevision   || 'particular';
-  const eMetodo = p.metodo_pago || 'efectivo';
+  const eMetodo = p.metodo_pago || metodoPorArea(p.area);
 
   tr.className = 'row-editing';
   tr.innerHTML = `
@@ -3173,12 +3176,19 @@ function setMetodo(m, manual) {
 
 function updateMetodoHint() {
   const hint = document.getElementById('hintMetodo');
-  hint.style.color = '';
-  // El tipo de tarjeta viene IMPRESO en el comprobante del POS. Anotarlo es lo que
-  // permite verificar despues si la clasificacion debito/credito fue correcta.
-  hint.textContent = (_metodo === 'credito' || _metodo === 'debito')
-    ? 'Copia el N° del comprobante: ahi dice si fue debito o credito.'
-    : '';
+  const esTarjeta = (_metodo === 'credito' || _metodo === 'debito');
+  if (!esTarjeta) { hint.textContent = ''; hint.style.color = ''; return; }
+  // Dos avisos distintos que antes se pisaban entre pantallas:
+  //  · POLÍTICA: tarjetas solo en dental. Ahora solo alerta cuando SE VIOLA
+  //    (medido: 70 pagos con tarjeta en área médica por trimestre — o la regla
+  //    se rompe o el área viene mal etiquetada; en ambos casos hay que verlo).
+  //  · CAPTURA: el tipo de tarjeta viene impreso en el comprobante del POS;
+  //    anotarlo es lo que permite verificar después si débito/crédito fue correcto.
+  const area = (document.getElementById('fArea') || {}).value || '';
+  const esDental = _AREA_DENTAL.test(area);
+  hint.style.color = esDental ? '' : 'var(--red)';
+  hint.textContent = (esDental ? '' : '⚠️ Tarjetas solo en área dental. ')
+    + 'Copia el N° del comprobante: ahí dice si fue débito o crédito.';
 }
 
 
@@ -3197,7 +3207,13 @@ document.querySelectorAll('.metodo-btn').forEach(b => {
 (function(){
   const fa = document.getElementById('fArea');
   if (!fa) return;
-  const ajustar = () => { if (!_metodoManual) setMetodo(metodoPorArea(fa.value)); };
+  const ajustar = () => {
+    if (!_metodoManual) { setMetodo(metodoPorArea(fa.value)); return; }
+    // Eligió método a mano: no se lo pisamos, pero el aviso SÍ debe recalcularse
+    // (si corrige el área a dental, la alerta de "tarjetas solo dental" tiene que
+    // desaparecer; antes quedaba pegada con el texto del área anterior).
+    updateMetodoHint();
+  };
   fa.addEventListener('input',  ajustar);
   fa.addEventListener('change', ajustar);
 })();
@@ -3283,7 +3299,6 @@ async function guardarModal() {
 
   // Forcing function: sin metodo no se guarda. Antes venia "efectivo" preseleccionado
   // y un olvido quedaba registrado como efectivo, en silencio.
-  if (!_metodo) { showToast('Elige el metodo de pago', 'error'); return; }
 
   // Tarjeta sin N° de comprobante = imposible verificar despues si fue debito o
   // credito. Ese mix sostiene la decision Transbank vs Mercado Pago.

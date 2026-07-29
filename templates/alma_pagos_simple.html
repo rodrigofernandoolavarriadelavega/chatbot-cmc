@@ -1699,8 +1699,19 @@ function setMetodo(m, manual) {
 
 function updateMetodoHint() {
   const hint = document.getElementById('hintMetodo');
-  hint.textContent = (_metodo === 'credito' || _metodo === 'debito')
-    ? 'Tarjetas solo disponibles en area dental.' : '';
+  const esTarjeta = (_metodo === 'credito' || _metodo === 'debito');
+  if (!esTarjeta) { hint.textContent = ''; hint.style.color = ''; return; }
+  // Dos avisos distintos que antes se pisaban entre pantallas:
+  //  · POLÍTICA: tarjetas solo en dental. Ahora solo alerta cuando SE VIOLA
+  //    (medido: 70 pagos con tarjeta en área médica por trimestre — o la regla
+  //    se rompe o el área viene mal etiquetada; en ambos casos hay que verlo).
+  //  · CAPTURA: el tipo de tarjeta viene impreso en el comprobante del POS;
+  //    anotarlo es lo que permite verificar después si débito/crédito fue correcto.
+  const area = (document.getElementById('fArea') || {}).value || '';
+  const esDental = _AREA_DENTAL.test(area);
+  hint.style.color = esDental ? '' : 'var(--red)';
+  hint.textContent = (esDental ? '' : '⚠️ Tarjetas solo en área dental. ')
+    + 'Copia el N° del comprobante: ahí dice si fue débito o crédito.';
 }
 
 document.getElementById('btnParticular').addEventListener('click', () => {
@@ -1717,7 +1728,13 @@ document.querySelectorAll('.metodo-btn').forEach(b => {
 (function(){
   const fa = document.getElementById('fArea');
   if (!fa) return;
-  const ajustar = () => { if (!_metodoManual) setMetodo(metodoPorArea(fa.value)); };
+  const ajustar = () => {
+    if (!_metodoManual) { setMetodo(metodoPorArea(fa.value)); return; }
+    // Eligió método a mano: no se lo pisamos, pero el aviso SÍ debe recalcularse
+    // (si corrige el área a dental, la alerta de "tarjetas solo dental" tiene que
+    // desaparecer; antes quedaba pegada con el texto del área anterior).
+    updateMetodoHint();
+  };
   fa.addEventListener('input', ajustar);
   fa.addEventListener('change', ajustar);
 })();

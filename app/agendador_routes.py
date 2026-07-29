@@ -187,7 +187,7 @@ _PRESTACIONES: dict[str, list[dict]] = {
         {"n": "Carillas de resina", "p": "desde $50.000"},
     ],
     "Ortodoncia": [
-        {"n": "Evaluación dental previa (gratis si inicias tratamiento ese día)", "p": "$15.000"},
+        {"n": "Evaluación dental previa (gratis si inicia tratamiento ese día)", "p": "$15.000"},
         {"n": "Instalación brackets boca completa", "p": "$120.000"},
         {"n": "Instalación brackets 1 arcada", "p": "$60.000"},
         {"n": "Control mensual ortodoncia", "p": "$30.000"},
@@ -573,8 +573,15 @@ async def mis_horas(request: Request, preview: str | None = Query(None)):
         return {"encontrado": False, "citas": []}
     try:
         citas = await listar_citas_paciente(pac.get("id"), rut=rut)
-    except Exception:
-        citas = []
+    except Exception as e:
+        # Antes acá había `citas = []`: bajo un 429 de Medilink el endpoint
+        # devolvía {"encontrado": true, "nombre_corto": "Juan", "citas": []},
+        # indistinguible del paciente que de verdad no tiene horas. El paciente
+        # veía su nombre, cero horas, y o no se presentaba o agendaba de nuevo
+        # (duplicado). Es el mismo failure-open que `strict=True` vino a cerrar
+        # una línea más arriba. Mismo patrón que `cancelar` (503, no vacío).
+        log.error("mis_horas listar: %s", e)
+        raise HTTPException(503, "No pudimos consultar sus horas. Intente nuevamente.")
     hoy = date.today().isoformat()
     futuras = [c for c in (citas or []) if (c.get("fecha") or "") >= hoy]
     futuras.sort(key=lambda c: (c.get("fecha", ""), c.get("hora_inicio", "")))
