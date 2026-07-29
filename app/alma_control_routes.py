@@ -128,7 +128,7 @@ def _build_map() -> dict:
         _riel("ECO_PREP_ACTIVE", "Preparación de ecografía",
               "Cita de eco entra a la ventana de 3 días → instrucciones de preparación (ayuno / vejiga llena)."),
         _riel("ABONO_GATE_PSIQ_ACTIVE", "Abono-gate Psiquiatría",
-              "La hora de Psiquiatría se aparta 90 min y se crea SOLO al recibir el comprobante del abono ($20.000, leído por visión). Registra en /alma/abonos."),
+              "La hora de Psiquiatría se aparta 90 min y se crea SOLO al recibir el comprobante del abono ($60.000 = consulta completa, leído por visión). Registra en /alma/abonos."),
         _riel("HORAS_VACIAS_ACTIVE", "Aviso de horas liberadas (D+1)",
               "Diario 14:00: si mañana hay agenda holgada, avisa a quienes preguntaron por esa especialidad sin agendar (30d). Tope 30/día, cooldown 14d, opt-out 'No avisar'.",
               default="true"),  # mismo default que el job (corría sin flag desde antes)
