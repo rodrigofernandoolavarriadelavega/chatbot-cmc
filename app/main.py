@@ -9717,10 +9717,54 @@ async def webhook(request: Request):
                                 _ag_blob, _ag_mime = _ag_res
                         except Exception as _ag_dl_err:
                             log.warning("abono-gate: error descargando imagen: %s", _ag_dl_err)
+                    # Guardar el comprobante en la ficha ANTES de intentar
+                    # leerlo. Si la visión falla, si Medilink está caído o si el
+                    # handler devuelve vacío, la imagen ya está guardada y
+                    # recepción puede verificar el pago a mano. Antes se
+                    # procesaba en memoria y se descartaba: cuando algo fallaba
+                    # no quedaba NADA — ni para verificar ni para reintentar
+                    # (pasó el 29-jul con un paciente y no se pudo reproducir).
+                    if _ag_blob:
+                        try:
+                            # OJO: save_patient_file NO está importado a nivel de
+                            # módulo; el pipeline genérico lo importa localmente
+                            # más abajo (línea ~9800). Sin este import acá esto
+                            # revienta con NameError en el primer comprobante.
+                            from session import save_patient_file
+                            _ab_dir = Path(__file__).parent.parent / "data" / "uploads" / phone
+                            _ab_dir.mkdir(parents=True, exist_ok=True)
+                            _ab_ext = {"image/jpeg": ".jpg", "image/png": ".png",
+                                       "image/webp": ".webp"}.get(_ag_mime, ".jpg")
+                            from datetime import datetime as _dt_ab
+                            from zoneinfo import ZoneInfo as _ZI_ab
+                            _ab_ts = _dt_ab.now(_ZI_ab("America/Santiago")).strftime("%Y%m%d_%H%M%S")
+                            _ab_name = f"comprobante_abono_{_ab_ts}{_ab_ext}"
+                            (_ab_dir / _ab_name).write_bytes(_ag_blob)
+                            save_patient_file(
+                                phone, _ab_name, "image", _ag_mime,
+                                f"data/uploads/{phone}/{_ab_name}", len(_ag_blob),
+                                (_ag_caption or "Comprobante de abono Psiquiatría")[:200])
+                            log.info("ABONO comprobante guardado from=%s file=%s size=%d",
+                                     phone, _ab_name, len(_ag_blob))
+                            log_event(phone, "abono_comprobante_guardado",
+                                      {"archivo": _ab_name, "bytes": len(_ag_blob)})
+                        except Exception as _ab_e:
+                            log.error("ABONO: no se pudo guardar el comprobante de %s: %s", phone, _ab_e)
+
                     if _ag_blob:
                         from flows import procesar_imagen_abono
                         async with get_phone_lock(phone):
                             _ag_respuesta = await procesar_imagen_abono(phone, _ag_blob, _ag_mime)
+                        if not _ag_respuesta:
+                            # Falla silenciosa: el handler devolvió vacío y el
+                            # paciente quedaba sin respuesta y sin cita, creyendo
+                            # que pagó y quedó. Ahora se le contesta y se avisa.
+                            log.error("ABONO: procesar_imagen_abono devolvió vacío para %s", phone)
+                            log_event(phone, "abono_comprobante_sin_respuesta", {})
+                            _ag_respuesta = (
+                                "Recibí tu comprobante ✅ y quedó guardado.\n\n"
+                                "No pude confirmarlo automáticamente, así que recepción "
+                                "lo va a revisar y te confirma la hora a la brevedad.")
                         if _ag_respuesta:
                             await send_whatsapp(phone, _ag_respuesta)
                             log_message(phone, "out", _ag_respuesta,
