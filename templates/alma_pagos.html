@@ -839,7 +839,7 @@
       <div class="field full">
         <label>Metodo de pago</label>
         <div class="metodo-grid">
-          <button class="metodo-btn" data-metodo="efectivo">Efectivo</button>
+          <button class="metodo-btn active" data-metodo="efectivo">Efectivo</button>
           <button class="metodo-btn" data-metodo="transferencia">Transferencia</button>
           <button class="metodo-btn" data-metodo="debito">Debito</button>
           <button class="metodo-btn" data-metodo="credito">Credito</button>
@@ -2144,10 +2144,22 @@ let AREAS_FONASA  = [];
 let _editingId        = null;
 let _prevision        = "particular";
 let _previsionManual  = false;  // true cuando el usuario elige manualmente; evita que la sugerencia sobreescriba
-// Sin default: recepción DEBE elegir. `pagos_cmc` es la única fuente de caja real
-// que existe (Medilink /pagos solo expone la caja del día), así que un método
-// inventado por el sistema contamina el único dato de caja que tenemos.
-let _metodo           = "";
+// Default POR ÁREA, medido sobre may–jul 2026 (2.902 pagos de pagos_cmc):
+//   médico y resto (2.772 pagos) → efectivo 57,0% · transferencia 34,7% · débito 2,5%
+//   dental          (130 pagos)  → DÉBITO 46,9% · efectivo 29,2% · transferencia 18,5%
+// Un default único de "efectivo" acierta en médico pero se equivoca en dental, que es
+// justo donde el ticket es más alto. Por eso el default sigue el área.
+// (No se quita el default: `pagos_cmc` NO está corrupta — a diferencia de bi_pagos_caja,
+//  que es 100% "Efectivo" e inservible. Recepción sí registra bien: 985 transferencias
+//  y $6,1M en débito lo demuestran. Quitarlo sería fricción sin problema que resolver.)
+// OJO: 'Odontología' NO contiene 'dent' (es o-DONT-ología). Buscar solo /dent/
+// se saltaba 'Odontología General', que es el área con MÁS pagos con tarjeta
+// (74 de 130). Áreas reales vistas en pagos_cmc: Odontología General, Ortodoncia,
+// Ortodoncista, Endodoncia, Implantología, Dentista.
+const _AREA_DENTAL = /odont|dent|ortod|endod|implant/i;
+const metodoPorArea = a => _AREA_DENTAL.test(a || '') ? 'debito' : 'efectivo';
+let _metodo           = "efectivo";
+let _metodoManual     = false;  // true si recepción eligió a mano; el área ya no lo pisa
 // Fila nueva inline
 let _newRow           = null;   // referencia al <tr> de nueva fila
 let _newPrev          = "particular";
@@ -3122,7 +3134,8 @@ function resetForm() {
   if (_fFuenteEl) _fFuenteEl.value = '';
   _previsionManual = false;
   setPrevision('particular');
-  setMetodo('');   // sin preselección: obliga a elegir
+  _metodoManual = false;
+  setMetodo(metodoPorArea(document.getElementById('fArea')?.value));
   document.getElementById('hintCopago').textContent = '';
 }
 
@@ -3142,8 +3155,9 @@ function setPrevision(p) {
   updateMetodoHint();
 }
 
-function setMetodo(m) {
+function setMetodo(m, manual) {
   _metodo = m;
+  if (manual) _metodoManual = true;
   document.querySelectorAll('.metodo-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.metodo === m);
   });
@@ -3159,11 +3173,6 @@ function setMetodo(m) {
 
 function updateMetodoHint() {
   const hint = document.getElementById('hintMetodo');
-  if (!_metodo) {
-    hint.textContent = 'Elige el metodo — no hay opcion por defecto.';
-    hint.style.color = 'var(--red)';
-    return;
-  }
   hint.style.color = '';
   // El tipo de tarjeta viene IMPRESO en el comprobante del POS. Anotarlo es lo que
   // permite verificar despues si la clasificacion debito/credito fue correcta.
@@ -3180,8 +3189,19 @@ document.getElementById('btnFonasa').addEventListener('click', () => {
   _previsionManual = true; setPrevision('fonasa'); recalcSugerenciaModal();
 });
 document.querySelectorAll('.metodo-btn').forEach(b => {
-  b.addEventListener('click', () => setMetodo(b.dataset.metodo));
+  b.addEventListener('click', () => setMetodo(b.dataset.metodo, true));
 });
+
+// Al escribir/elegir el área, el default se ajusta solo — salvo que recepción
+// ya haya elegido método a mano, en cuyo caso su elección manda.
+(function(){
+  const fa = document.getElementById('fArea');
+  if (!fa) return;
+  const ajustar = () => { if (!_metodoManual) setMetodo(metodoPorArea(fa.value)); };
+  fa.addEventListener('input',  ajustar);
+  fa.addEventListener('change', ajustar);
+})();
+
 document.getElementById('fProf').addEventListener('change', function() {
   const opt = this.options[this.selectedIndex];
   if (opt && opt.dataset.esp) {
