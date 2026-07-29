@@ -651,7 +651,7 @@ Input: "Tengo hora con Dr Abarca pero me surgió un imprevisto, no voy a poder i
 Output: {{"intent": "cancelar", "especialidad": null, "respuesta_directa": null}}
 
 Input: "La consulta con la psiquiatra que atiende el jueves, ¿se cancela particular o atiende por Fonasa?"
-Output: {{"intent": "precio", "especialidad": "psiquiatría", "respuesta_directa": "La psiquiatra (Dra. Cecilia Unibazo) atiende los jueves por teleconsulta. La consulta es *particular, $60.000* — no trabaja con Fonasa. Por la alta demanda y los cupos limitados, la hora se confirma con el *abono del valor total ($60.000) al momento de reservar*; así el cupo queda para quien realmente lo usará y más personas de la zona pueden acceder. El día de la atención no pagas nada adicional. ¿Te ayudo a agendar?"}}
+Output: {{"intent": "precio", "especialidad": "psiquiatría", "respuesta_directa": "La psiquiatra (Dra. Cecilia Unibazo) atiende los martes de 16:00 a 20:00 y los jueves de 15:20 a 20:00, por teleconsulta. La consulta es *particular, $60.000* — no trabaja con Fonasa. Por la alta demanda y los cupos limitados, la hora se confirma con el *abono del valor total ($60.000) al momento de reservar*; así el cupo queda para quien realmente lo usará y más personas de la zona pueden acceder. El día de la atención no pagas nada adicional. ¿Te ayudo a agendar?"}}
 
 Input: "Quiero cambiar mi hora del viernes al lunes"
 Output: {{"intent": "reagendar", "especialidad": null, "respuesta_directa": null}}
@@ -712,7 +712,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, solo jueves 16-20, $60.000 particular, NO Fonasa). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
+- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, martes 16:00-20:00 y jueves 15:20-20:00, $60.000 particular, NO Fonasa). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
 - Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños.
 - Oftalmólogo / oftalmóloga / oftalmología / optometrista / optometría / TM Ana Celedón / Celedón (tecnólogo médico) → "tecnología médica oftalmológica" (TM Ana Celedón, PRESENCIAL, $15.000 particular a TODOS los pacientes — no tiene Fonasa actualmente, consulta de 20 min; prestación: *Evaluación oftalmológica y optométrica*).
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
@@ -925,7 +925,7 @@ MEDICINA GENERAL / SÍNTOMAS
 
 SALUD MENTAL
 - Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular.
-- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, **solo los jueves de 16:00 a 20:00**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que la hora se confirma con un **abono del valor total ($60.000) al momento de reservar** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no pagas nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
+- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, **los martes de 16:00 a 20:00 y los jueves de 15:20 a 20:00**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que la hora se confirma con un **abono del valor total ($60.000) al momento de reservar** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no pagas nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
@@ -1400,6 +1400,34 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
 # Evita que precios alucinados, profesionales inventados o especialidades que
 # no se atienden lleguen al paciente.
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _horarios_vivos() -> str:
+    """Horarios reales de Medilink para inyectar en el prompt. Nunca revienta."""
+    try:
+        from medilink import horarios_vivos_prompt
+        return await horarios_vivos_prompt()
+    except Exception as e:  # noqa: BLE001 — el bot debe responder igual
+        log.warning("horarios vivos no disponibles: %s", e)
+        return ""
+
+
+def _sistema_con_horarios(horarios: str) -> list:
+    """Bloques `system` para la API.
+
+    El SYSTEM_PROMPT grande conserva su `cache_control` de 1 h; los horarios van
+    en un bloque APARTE y sin cache para que un cambio de agenda no invalide el
+    caché completo (son ~5 líneas vs ~2.000 del prompt).
+    """
+    bloques = [{
+        "type": "text",
+        "text": SYSTEM_PROMPT,
+        "cache_control": {"type": "ephemeral", "ttl": "1h"},
+    }]
+    if horarios:
+        bloques.append({"type": "text", "text": horarios})
+    return bloques
+
 
 # Precios conocidos del CMC (exactamente como aparecen en el SYSTEM_PROMPT).
 _PRECIOS_CONOCIDOS: frozenset[str] = frozenset({
@@ -2037,11 +2065,7 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
         resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            system=[{
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral", "ttl": "1h"},
-            }],
+            system=_sistema_con_horarios(await _horarios_vivos()),
             messages=[
                 {"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + _referral_ctx15 + mensaje},
                 {"role": "assistant", "content": "{"},
@@ -2537,11 +2561,7 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
         resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            system=[{
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral", "ttl": "1h"},
-            }],
+            system=_sistema_con_horarios(await _horarios_vivos()),
             messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + _referral_ctx15f + _json_instruct_f + mensaje}],
         )
         text = _strip_markdown_json(resp.content[0].text)

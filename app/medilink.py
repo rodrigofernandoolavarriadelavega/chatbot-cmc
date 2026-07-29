@@ -2658,3 +2658,85 @@ async def proxima_fecha_especialidad(especialidad: str) -> Optional[str]:
             _proxima_cache[id_esp] = {"fecha": fecha_dt, "_ts": time.monotonic()}
             return fecha_dt
     return None
+
+
+# ── Horarios en vivo para el prompt del bot ──────────────────────────────────
+# Nace de un desfase real: el prompt decía "psiquiatría solo jueves 16-20" y la
+# agenda (que sí lee Medilink) ofrecía martes. El bot se contradecía dentro del
+# mismo chat. Cualquier horario que el bot AFIRME tiene que salir de la misma
+# fuente que usa para AGENDAR — si no, se desfasa apenas alguien mueve la agenda.
+_horarios_prompt_cache: dict = {"texto": "", "_ts": 0.0}
+_HORARIOS_PROMPT_TTL = 3600  # 1 h — igual que _HORARIO_CACHE_TTL
+
+# Solo los que tienen horario ACOTADO y que el paciente pregunta. Los de jornada
+# amplia (medicina general, dental) no aportan: "lunes a viernes" no informa.
+PROFS_HORARIO_EN_PROMPT = [78, 79, 80, 60, 13]
+
+
+def _fmt_horario_legible(h: dict) -> str:
+    """Horario Medilink → 'martes 16:00-20:00, jueves 15:20-20:00'.
+    Agrupa días con el mismo rango. Gemelo de flows._format_horario_prof, acá
+    para no crear un import circular flows↔medilink."""
+    DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+    dias = sorted(d for d in (h.get("dias") or []) if isinstance(d, int) and 0 <= d < 7)
+    hd = h.get("horario_dia") or {}
+    if not dias:
+        return ""
+    # Si NINGÚN día trae rango horario, Medilink no tiene horario configurado y
+    # `dias` viene del fallback set(range(5|6)) — o sea "lunes a sábado" inventado.
+    # Emitirlo le mentiría al bot (caso medido: Dr. Millán, que atiende solo sábado
+    # y salía como lunes-a-sábado). Mejor callar que afirmar algo falso.
+    if not any((hd.get(d) or hd.get(str(d))) for d in dias):
+        return ""
+    partes, grupo, rango_prev = [], [], None
+    for d in dias:
+        r = hd.get(d) or hd.get(str(d))
+        rango = f"{r[0][:5]}-{r[1][:5]}" if r and len(r) >= 2 and r[0] and r[1] else None
+        if rango != rango_prev and grupo:
+            partes.append((grupo, rango_prev)); grupo = []
+        grupo.append(DIAS[d]); rango_prev = rango
+    if grupo:
+        partes.append((grupo, rango_prev))
+    out = []
+    for nombres, rango in partes:
+        etq = " y ".join(nombres) if len(nombres) <= 2 else f"{', '.join(nombres[:-1])} y {nombres[-1]}"
+        out.append(f"{etq} {rango}" if rango else etq)
+    return ", ".join(out)
+
+
+async def horarios_vivos_prompt() -> str:
+    """Bloque de texto con los horarios REALES leídos de Medilink, para inyectar
+    en el system prompt. Cacheado 1 h.
+
+    Va como bloque SEPARADO del SYSTEM_PROMPT a propósito: el prompt grande
+    conserva su `cache_control` de 1 h de Anthropic y solo este pedazo chico
+    varía. Si se mezclaran, cada cambio de agenda invalidaría todo el caché.
+
+    Nunca revienta ni bloquea: si Medilink falla devuelve el último texto bueno,
+    o "" (y el bot sigue con lo que dice el prompt estático).
+    """
+    import time as _t
+    if _horarios_prompt_cache["texto"] and (_t.monotonic() - _horarios_prompt_cache["_ts"]) < _HORARIOS_PROMPT_TTL:
+        return _horarios_prompt_cache["texto"]
+    lineas = []
+    try:
+        async with httpx.AsyncClient(timeout=15) as cli:
+            for pid in PROFS_HORARIO_EN_PROMPT:
+                info = PROFESIONALES.get(pid)
+                if not info:
+                    continue
+                try:
+                    h = await _get_horario(cli, pid)
+                    txt = _fmt_horario_legible(h)
+                except Exception:
+                    continue
+                if txt:
+                    lineas.append(f"- {info['nombre']} ({info['especialidad']}): {txt}")
+    except Exception as e:
+        log.warning("horarios_vivos_prompt falló: %s", e)
+    if not lineas:
+        return _horarios_prompt_cache["texto"]  # último bueno, o ""
+    texto = ("HORARIOS REALES leídos de Medilink recién (mandan sobre cualquier "
+             "horario escrito más arriba; si contradicen algo, gana esto):\n" + "\n".join(lineas))
+    _horarios_prompt_cache.update({"texto": texto, "_ts": _t.monotonic()})
+    return texto

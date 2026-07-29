@@ -203,7 +203,7 @@ BIBLIOTECA: list[dict] = [
         "area": "Médica", "emoji": "🧠",
         "template_name": "prof_psiq_unibazo_v1",
         "precio_line": "Particular $60.000 · Teleconsulta",
-        "angle": "Psiquiatra por teleconsulta: privacidad total y cero viaje. Atiende jueves.",
+        "angle": "Psiquiatra por teleconsulta: privacidad total y cero viaje. Atiende martes y jueves.",
         "header": "Psiquiatra por teleconsulta",
         "body": (
             "Hola {{1}} 👋\n\n"

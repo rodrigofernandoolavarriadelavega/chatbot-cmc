@@ -653,7 +653,7 @@ _CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
         # (evaluación de fármacos). Teleconsulta con la Dra. Cecilia Unibazo (jueves).
         ("Psiquiatría",
          "Como complemento a tu terapia, el CMC ahora tiene *psiquiatría* por "
-         "teleconsulta (Dra. Cecilia Unibazo, los jueves). El psiquiatra puede evaluar "
+         "teleconsulta (Dra. Cecilia Unibazo, martes y jueves). El psiquiatra puede evaluar "
          "si un apoyo con medicamentos te ayudaría junto a tu proceso.\n\n"
          "¿Quieres que te agende una evaluación psiquiátrica?"),
         ("Medicina General",
