@@ -9745,7 +9745,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
             # ── Abono-Gate Psiquiatría (feature 2026-06-11) ───────────────────
             # Cuando ABONO_GATE_PSIQ_ACTIVE está ON, NO creamos la cita todavía:
-            # pedimos el comprobante de transferencia ($20.000) primero. La hora
+            # pedimos el comprobante de transferencia ($60.000, la consulta
+            # completa — ver ABONO_PSIQUIATRIA_CLP) primero. La hora
             # queda "apartada" 90 min en la sesión; el handler WAIT_ABONO_COMPROBANTE
             # procesa la imagen y crea la cita al validar el monto.
             # Con flag OFF el flujo sigue igual que antes (crea cita directamente).
@@ -14748,7 +14749,13 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         _ids_a = _ids_check_a(especialidad_lower)
         if len(_ids_a) == 1:
             _prof_pedido_id = _ids_a[0]
-    if _prof_pedido_id and not _fecha_avisar and not saludo_prefix:
+    # `not _franja_avisar` por la misma razón que `not _fecha_avisar`: más abajo
+    # este bloque hace header = "" para sacar el "¡Hola de nuevo!", y de paso se
+    # llevaba el disclaimer de franja recién construido — el paciente que pedía
+    # la mañana volvía a recibir horas de tarde sin aviso, que es justo lo que
+    # el disclaimer venía a evitar. Detectado en prod (56959883429, 29-jul):
+    # el log registró franja_sin_cupo pero el mensaje salió sin el aviso.
+    if _prof_pedido_id and not _fecha_avisar and not _franja_avisar and not saludo_prefix:
         _hoy_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         _slot_fecha = mejor.get("fecha", "")
         if _slot_fecha and _slot_fecha != _hoy_str:
