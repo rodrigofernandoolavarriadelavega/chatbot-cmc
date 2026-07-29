@@ -256,6 +256,63 @@ body.wp-busy,body.wp-busy *{user-select:none!important}
 .wpin-hint{font-size:.63rem;color:var(--muted);font-weight:600;padding:0 14px 11px;text-align:center}
 .wpop.pinned .wpin-hint{display:none}
 
+/* ── Vista Áreas: tarjeta por especialidad (nivel 1) ───────────────────── */
+.areas{display:flex;flex-direction:column;gap:10px;max-width:960px;margin:0 auto}
+.acard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;
+  background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ac,var(--blue));
+  border-radius:14px;padding:14px 16px;font-family:inherit;box-shadow:var(--s1);
+  transition:transform .12s var(--ease),box-shadow .12s var(--ease),border-color .12s}
+.acard:hover{transform:translateY(-1px);box-shadow:var(--s3);border-color:var(--ac,var(--blue))}
+.acard:focus-visible{outline:2px solid var(--aqua);outline-offset:2px}
+.acard .apunto{width:11px;height:11px;border-radius:50%;background:var(--ac,var(--blue));flex:none}
+.acard .acuerpo{flex:1;min-width:0}
+.acard .atit{font-size:1.05rem;font-weight:800;color:var(--navy-deep);letter-spacing:-.01em}
+.acard .asub{font-size:.78rem;color:var(--muted);font-weight:600;margin-top:2px}
+.acard .asub .alerta{color:var(--amber-ink,#b26a00);font-weight:800}
+.acard .ader{font-size:1.15rem;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;gap:10px;flex:none}
+.acard .achev{color:var(--muted);font-size:1.1rem;font-weight:400}
+@media(max-width:620px){
+  .acard{padding:12px 13px;gap:10px}
+  .acard .atit{font-size:.95rem}
+  .acard .ader{font-size:1rem}
+}
+
+/* ── Filas dentro de los popups de drill-down (niveles 2 y 3) ──────────── */
+.drow{display:flex;align-items:center;gap:11px;width:100%;text-align:left;cursor:pointer;
+  background:transparent;border:0;border-bottom:1px solid var(--line);padding:10px 4px;
+  font-family:inherit;border-radius:8px;transition:background .12s}
+.drow:last-child{border-bottom:0}
+.drow:hover{background:var(--slate-bg)}
+.drow:focus-visible{outline:2px solid var(--aqua);outline-offset:-2px}
+.drow .davatar{width:30px;height:30px;border-radius:9px;background:var(--slate-bg);flex:none;
+  display:grid;place-items:center;font-size:.66rem;font-weight:800;color:var(--navy)}
+.drow .dcuerpo{flex:1;min-width:0}
+.drow .dn{font-size:.83rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.drow .ds{font-size:.68rem;color:var(--muted);font-weight:600;margin-top:1px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.drow .dcnt{font-size:.74rem;font-weight:800;color:var(--blue);flex:none;
+  background:var(--slate-bg);border-radius:20px;padding:2px 9px;font-variant-numeric:tabular-nums}
+.drow .dcnt.viejo{background:#fdecea;color:var(--red)}
+.dvacio{font-size:.75rem;color:var(--muted);text-align:center;padding:18px 0;font-weight:600}
+
+/* ── Embudo: fila agrupada por área dentro de cada etapa ───────────────── */
+.earea{display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--ac,var(--blue));
+  border-radius:10px;padding:9px 10px;margin-bottom:6px;font-family:inherit;
+  transition:transform .1s var(--ease),box-shadow .1s var(--ease)}
+.earea:hover{transform:translateX(2px);box-shadow:var(--s2)}
+.earea:focus-visible{outline:2px solid var(--aqua);outline-offset:1px}
+.earea .epunto{width:8px;height:8px;border-radius:50%;background:var(--ac,var(--blue));flex:none}
+.earea .ecuerpo{flex:1;min-width:0}
+.earea .en2{display:block;font-size:.78rem;font-weight:800;color:var(--navy-deep);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.earea .es2{display:block;font-size:.65rem;color:var(--muted);font-weight:600;margin-top:1px}
+.earea .ecnt{font-size:.74rem;font-weight:800;color:var(--blue);flex:none;background:var(--slate-bg);
+  border-radius:20px;padding:2px 8px;font-variant-numeric:tabular-nums}
+.earea .ecnt.viejo{background:#fdecea;color:var(--red)}
+
 /* Panel de pagos lateral (Ctrl+P) */
 .lat{position:fixed;top:0;right:0;bottom:0;width:min(460px,94vw);background:var(--card);
   border-left:1px solid var(--line);box-shadow:var(--s4);z-index:70;display:flex;flex-direction:column;
@@ -441,11 +498,20 @@ function verConv(card, el){        // hover
 function fijarConv(card, el){      // clic
   wpPin = true; wp.classList.add('show','pinned');
   aplicarSize(); pintarConv(card);
+  wp.style.zIndex = ++_zTop;          // siempre por delante de los de drill-down
+  // Si viene del drill-down (nivel 3), se suma a la tira en vez de taparla.
+  const delDrill = el && el.classList.contains('drow');
+  if (delDrill){
+    if (!_pops.includes(wp)){ wp._anchoPref = 400; wp._nivel = 4; _pops.push(wp); }
+    delete wp.dataset.movido; acomodarPops(); return;
+  }
+  const iw = _pops.indexOf(wp); if (iw >= 0) _pops.splice(iw, 1);
   wpExp ? (wp.classList.add('expanded'), centrar()) : junto(el);
   setTimeout(() => q('#wp-txt').focus(), 120);
 }
 function ocultarConv(){ if (!wpPin) { wp.classList.remove('show'); wpPhone = null; } }
 function cerrarConv(){ wpPin = false; wpExp = false; wpPhone = null;
+  const iw = _pops.indexOf(wp); if (iw >= 0){ _pops.splice(iw, 1); acomodarPops(); }
   wp.style.width = ''; wp.style.height = '';
   wp.classList.remove('show','pinned','expanded'); }
 
@@ -469,6 +535,131 @@ q('#wp-env').onclick = async () => {
 q('#wp-txt').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); q('#wp-env').click(); }
 });
+
+/* ═══ Popups trabajables genéricos (niveles 2 y 3 de la vista Áreas) ═══════
+   Reutilizan el CSS .wpop ya existente y su arrastre/redimensión, pero nacen
+   fijados (no hay hover-preview que gestionar). Cada uno es independiente:
+   se pueden tener abiertos a la vez y compararlos. */
+let _zTop = 320;
+const _pops = [];   // popups abiertos, EN ORDEN de nivel (área → prof → paciente)
+
+/* Acomoda los popups en una tira horizontal para que TODOS queden visibles.
+   Si caben a lo ancho se reparten la pantalla; si no, hacen cascada dejando
+   siempre la cabecera de los de atrás asomada para poder agarrarlos.
+   Un popup que el usuario movió a mano queda marcado y ya no se reacomoda. */
+function acomodarPops(){
+  const vivos = _pops.filter(p => document.body.contains(p));
+  _pops.length = 0; _pops.push(...vivos);
+  const libres = vivos.filter(p => !p.dataset.movido);
+  if (!libres.length) return;
+
+  const M = 12, GAP = 10, TOPE = 74;              // margen, separación, bajo la barra
+  const dispW = innerWidth - M * 2;
+  const alto  = Math.min(Math.round(innerHeight * .80), innerHeight - TOPE - M);
+  const suma  = libres.reduce((a, p) => a + (p._anchoPref || 360), 0) + GAP * (libres.length - 1);
+
+  if (suma <= dispW){
+    // Caben todos: se colocan uno al lado del otro, centrados en la pantalla.
+    let x = Math.round((innerWidth - suma) / 2);
+    libres.forEach(p => {
+      const w = p._anchoPref || 360;
+      p.style.width = w + 'px'; p.style.height = alto + 'px';
+      p.style.left = x + 'px';  p.style.top = TOPE + 'px';
+      x += w + GAP;
+    });
+  } else {
+    // No caben: se comprimen hasta un mínimo usable y, si aún no alcanza,
+    // cascada con la cabecera de cada uno siempre alcanzable.
+    const wComp = Math.floor((dispW - GAP * (libres.length - 1)) / libres.length);
+    if (wComp >= 270){
+      let x = M;
+      libres.forEach(p => {
+        p.style.width = wComp + 'px'; p.style.height = alto + 'px';
+        p.style.left = x + 'px'; p.style.top = TOPE + 'px';
+        x += wComp + GAP;
+      });
+    } else {
+      const paso = Math.max(38, Math.floor((dispW - 300) / Math.max(1, libres.length - 1)));
+      libres.forEach((p, i) => {
+        const w = Math.min(p._anchoPref || 360, dispW - paso * (libres.length - 1));
+        p.style.width = Math.max(270, w) + 'px'; p.style.height = alto + 'px';
+        p.style.left = (M + paso * i) + 'px'; p.style.top = (TOPE + i * 8) + 'px';
+      });
+    }
+  }
+}
+addEventListener('resize', acomodarPops);
+
+function crearPop({ id, titulo, sub, color, ancho = 360, alto = 460, cerca = null, nivel = 0 }){
+  const previo = document.getElementById(id);
+  if (previo){ const i = _pops.indexOf(previo); if (i >= 0) _pops.splice(i, 1); previo.remove(); }
+  // Abrir un nivel N cierra los niveles >= N: el camino de drill-down es uno solo.
+  if (nivel) _pops.filter(p => (p._nivel || 0) >= nivel).forEach(p => {
+    const i = _pops.indexOf(p); if (i >= 0) _pops.splice(i, 1); p.remove();
+  });
+  const el = document.createElement('div');
+  el.className = 'wpop show pinned';
+  el.id = id;
+  if (color) el.style.setProperty('--ac', color);
+  el.innerHTML =
+    ['n','s','e','w','ne','nw','se','sw'].map(d => `<div class="rsz ${d}"></div>`).join('') +
+    `<div class="wh" data-h>
+       <div class="hl"><div class="t"></div><div class="s"></div></div>
+       <button class="wbtn" data-x title="Cerrar">✕</button>
+     </div>
+     <div class="wbody" data-b></div>`;
+  document.body.appendChild(el);
+  el.querySelector('.t').textContent = titulo;
+  el.querySelector('.s').textContent = sub || '';
+  el.querySelector('[data-x]').onclick = () => {
+    const i = _pops.indexOf(el); if (i >= 0) _pops.splice(i, 1);
+    el.remove(); acomodarPops();
+  };
+
+  el._anchoPref = ancho;
+  el._nivel = nivel;
+  el.style.zIndex = ++_zTop;
+  // El orden en _pops ES el orden en pantalla: área → profesional → paciente.
+  _pops.push(el);
+  acomodarPops();          // acomoda TODOS, no sólo este
+  el.addEventListener('mousedown', () => { el.style.zIndex = ++_zTop; }, true);
+
+  hacerArrastrable(el, el.querySelector('[data-h]'));
+  return { el, cuerpo: el.querySelector('[data-b]') };
+}
+
+/* Arrastre + redimensión para CUALQUIER popup (extraído del singleton #wp
+   para que los popups de drill-down lo reutilicen sin duplicar código). */
+function hacerArrastrable(el, cabecera, puedeMover = () => true){
+  let modo = null, x0, y0, L, T, W, H;
+  cabecera.addEventListener('mousedown', e => {
+    if (!puedeMover() || e.target.classList.contains('wbtn')) return;
+    el.dataset.movido = '1';   // el usuario manda: no lo reacomodo más
+    modo = 'mover'; x0 = e.clientX; y0 = e.clientY;
+    L = el.offsetLeft; T = el.offsetTop; document.body.classList.add('wp-busy'); e.preventDefault();
+  });
+  el.querySelectorAll('.rsz').forEach(hh => hh.addEventListener('mousedown', e => {
+    if (!puedeMover()) return;
+    el.dataset.movido = '1';
+    modo = 'rsz:' + [...hh.classList].find(c => c !== 'rsz');
+    x0 = e.clientX; y0 = e.clientY; L = el.offsetLeft; T = el.offsetTop;
+    W = el.offsetWidth; H = el.offsetHeight;
+    document.body.classList.add('wp-busy'); e.preventDefault(); e.stopPropagation();
+  }));
+  const mover = e => {
+    if (!modo) return;
+    const dx = e.clientX-x0, dy = e.clientY-y0;
+    if (modo === 'mover'){ el.style.left = (L+dx)+'px'; el.style.top = (T+dy)+'px'; return; }
+    const d = modo.slice(4);
+    if (d.includes('e')) el.style.width  = Math.max(280, W+dx)+'px';
+    if (d.includes('s')) el.style.height = Math.max(220, H+dy)+'px';
+    if (d.includes('w')){ const w2 = Math.max(280, W-dx); el.style.width = w2+'px'; el.style.left = (L+W-w2)+'px'; }
+    if (d.includes('n')){ const h2 = Math.max(220, H-dy); el.style.height = h2+'px'; el.style.top = (T+H-h2)+'px'; }
+  };
+  const soltar = () => { modo = null; document.body.classList.remove('wp-busy'); };
+  document.addEventListener('mousemove', mover);
+  document.addEventListener('mouseup', soltar);
+}
 
 /* Arrastrar por la cabecera y redimensionar por las manijas */
 (function(){
@@ -604,10 +795,42 @@ function renderEmbudo(){
         <div class="emb-bar"><i style="width:${Math.max(e.n/max*100,2)}%"></i></div>
         <div class="pl">${e.politica}</div>
       </div>
-      <div class="filas">${e.items.length ? e.items.slice(0,40).map((i,n)=>fila(i,n)).join('')
-        : '<div class="vacia">sin nadie acá</div>'}</div>
+      <div class="filas">${cuerpoEtapa(e)}</div>
     </div>`).join('') + `</div>`;
   enlazarFilas();
+  enlazarAreasEmbudo();
+}
+
+/* En el embudo, DESDE la etapa "Eligió área" en adelante se agrupa por
+   especialidad. Antes de esa etapa (1º mensaje) el paciente todavía no eligió
+   —`area_grupo` viene vacío— así que ahí no hay nada que agrupar y se mantiene
+   la lista plana. */
+const ETAPAS_AGRUPADAS = new Set(['area', 'profesional', 'agendado', 'atendido']);
+
+function cuerpoEtapa(e){
+  if (!e.items.length) return '<div class="vacia">sin nadie acá</div>';
+  if (!ETAPAS_AGRUPADAS.has(e.id)) return e.items.slice(0,40).map((i,n)=>fila(i,n)).join('');
+  const grupos = agrupar(e.items, i => i.area_grupo || i.area);
+  return grupos.map(g => {
+    const viejas = g.items.filter(i => (i.espera_min||0) >= ALARMA()).length;
+    return `<button class="earea" data-etapa="${e.id}" data-area="${g.clave}"
+              style="--ac:${colorArea(g.nombre)}">
+      <span class="epunto"></span>
+      <span class="ecuerpo"><span class="en2">${g.nombre}</span>
+        <span class="es2">${g.nProfs} ${g.nProfs===1?'prof.':'profs.'}${viejas?` · ⚠️ ${viejas}`:''}</span></span>
+      <span class="ecnt ${viejas?'viejo':''}">${g.items.length}</span></button>`;
+  }).join('');
+}
+
+function enlazarAreasEmbudo(){
+  document.querySelectorAll('.earea').forEach(b => {
+    b.onclick = () => {
+      const et = (D.embudo||[]).find(x => x.id === b.dataset.etapa);
+      if (!et) return;
+      const g = agrupar(et.items, i => i.area_grupo || i.area).find(x => x.clave === b.dataset.area);
+      if (g) abrirProfesionales({ ...g, nombre: `${g.nombre} · ${et.label}` }, b);
+    };
+  });
 }
 
 async function pintarEspera(){
@@ -627,6 +850,130 @@ async function pintarEspera(){
   }catch(e){ q('#we').innerHTML = '<div class="cargando">No se pudo cargar</div>'; }
 }
 
+/* ═══ Vista ÁREAS — especialidad → profesional → paciente ════════════════ */
+
+// Los datos traen "Kinesiologia" y "Kinesiología" como grupos distintos.
+// Se agrupa por clave sin tildes y se muestra la variante más frecuente.
+const _sinTilde = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+
+const COLOR_AREA = {
+  'medicina general/familiar':'#1172AB', 'medicina general':'#1172AB', 'dentista':'#4FBECE',
+  'odontologia':'#4FBECE', 'ecografia':'#2C7BE5', 'kinesiologia':'#3fb950',
+  'masoterapia':'#8b5cf6', 'nutricion':'#d29922', 'psicologia adulto':'#7c3aed',
+  'psicologia':'#7c3aed', 'fonoaudiologia':'#14b8a6', 'matrona':'#ec4899',
+  'podologia':'#0f766e', 'psiquiatria':'#6366f1', 'neurologia':'#0ea5e9',
+  'gastroenterologia':'#f97316', 'otorrinolaringologia':'#06b6d4',
+  'tecnologia medica oftalmologica':'#64748b', 'ginecologia':'#db2777',
+  'cardiologia':'#dc2626', 'estetica facial':'#a855f7',
+};
+const colorArea = n => COLOR_AREA[_sinTilde(n)] || '#64748b';
+
+function itemsVivos(){ return (D.columnas||[]).flatMap(c => c.items || []); }
+
+function agrupar(items, obtener){
+  const m = new Map();
+  items.forEach(i => {
+    const bruto = (obtener(i) || '').trim() || '—';
+    const k = _sinTilde(bruto) || '—';
+    if (!m.has(k)) m.set(k, { clave:k, etiquetas:new Map(), items:[] });
+    const g = m.get(k);
+    g.etiquetas.set(bruto, (g.etiquetas.get(bruto)||0) + 1);
+    g.items.push(i);
+  });
+  // nombre visible = la variante más usada
+  return [...m.values()].map(g => ({
+    ...g,
+    nombre: [...g.etiquetas.entries()].sort((a,b) => b[1]-a[1])[0][0],
+    esperaMax: Math.max(0, ...g.items.map(i => i.espera_min || 0)),
+    nProfs: new Set(g.items.map(i => _sinTilde(i.profesional) || '—')).size,
+  })).sort((a,b) => b.items.length - a.items.length);
+}
+
+const ALARMA = () => (D.minutos_alarma || 30);
+
+function renderAreas(){
+  q('#carril').innerHTML = '';
+  const grupos = agrupar(itemsVivos(), i => i.area_grupo || i.area);
+  if (!grupos.length){
+    q('#board').innerHTML = `<div class="dvacio">Sin conversaciones en la cola para este rango.</div>`;
+    return;
+  }
+  q('#board').innerHTML = `<div class="areas">` + grupos.map(g => {
+    const viejas = g.items.filter(i => (i.espera_min||0) >= ALARMA()).length;
+    const sub = [
+      `${g.nProfs} ${g.nProfs===1?'profesional':'profesionales'}`,
+      `${g.items.length} ${g.items.length===1?'esperando':'esperando'}`,
+      viejas ? `<span class="alerta">⚠️ ${viejas} sobre ${ALARMA()} min</span>` : null,
+    ].filter(Boolean).join(' · ');
+    return `<button class="acard" data-area="${g.clave}" style="--ac:${colorArea(g.nombre)}">
+      <span class="apunto"></span>
+      <span class="acuerpo"><span class="atit">${g.nombre}</span>
+        <span class="asub">${sub}</span></span>
+      <span class="ader">${g.items.length}<span class="achev">›</span></span></button>`;
+  }).join('') + `</div>`;
+
+  document.querySelectorAll('.acard').forEach(b => {
+    b.onclick = () => {
+      const g = grupos.find(x => x.clave === b.dataset.area);
+      if (g) abrirProfesionales(g, b);
+    };
+  });
+}
+
+/* NIVEL 2 — popup trabajable con los profesionales del área */
+function abrirProfesionales(grupo, origen){
+  const profs = agrupar(grupo.items, i => i.profesional);
+  const { cuerpo } = crearPop({
+    id: 'pop-prof-' + grupo.clave.replace(/[^a-z0-9]/g,''),
+    titulo: grupo.nombre,
+    sub: `${profs.length} ${profs.length===1?'profesional':'profesionales'} · ${grupo.items.length} en espera`,
+    color: colorArea(grupo.nombre), ancho: 380, alto: 440, cerca: origen, nivel: 2,
+  });
+  cuerpo.innerHTML = profs.map(p => {
+    const viejas = p.items.filter(i => (i.espera_min||0) >= ALARMA()).length;
+    return `<button class="drow" data-p="${p.clave}">
+      <span class="davatar">${inic(p.nombre, '')}</span>
+      <span class="dcuerpo"><span class="dn">${p.nombre}</span>
+        <span class="ds">${p.items.length} ${p.items.length===1?'paciente':'pacientes'}${viejas?` · ${viejas} sobre ${ALARMA()} min`:''}</span></span>
+      <span class="dcnt ${viejas?'viejo':''}">${p.items.length}</span></button>`;
+  }).join('') || `<div class="dvacio">Sin profesionales.</div>`;
+
+  cuerpo.querySelectorAll('.drow').forEach(b => {
+    b.onclick = () => {
+      const p = profs.find(x => x.clave === b.dataset.p);
+      if (p) abrirPacientes(grupo, p, b);
+    };
+  });
+}
+
+/* NIVEL 3 — popup trabajable con los pacientes/números del profesional */
+function abrirPacientes(grupo, prof, origen){
+  const { cuerpo } = crearPop({
+    id: 'pop-pac-' + (grupo.clave + prof.clave).replace(/[^a-z0-9]/g,''),
+    titulo: prof.nombre,
+    sub: `${grupo.nombre} · ${prof.items.length} ${prof.items.length===1?'paciente':'pacientes'}`,
+    color: colorArea(grupo.nombre), ancho: 400, alto: 480, cerca: origen, nivel: 3,
+  });
+  const orden = [...prof.items].sort((a,b) => (b.espera_min||0) - (a.espera_min||0));
+  cuerpo.innerHTML = orden.map(i => {
+    const e = edad(i.espera_min);
+    const viejo = (i.espera_min||0) >= ALARMA();
+    return `<button class="drow" data-phone="${i.phone}">
+      <span class="davatar">${inic(i.nombre, i.phone)}</span>
+      <span class="dcuerpo"><span class="dn">${i.nombre || i.phone}</span>
+        <span class="ds">${i.phone}${i.last_text?' · “'+i.last_text.slice(0,28)+'”':''}</span></span>
+      ${e ? `<span class="dcnt ${viejo?'viejo':''}">${e}</span>` : ''}</button>`;
+  }).join('') || `<div class="dvacio">Sin pacientes.</div>`;
+
+  // Clic en un paciente → abre la conversación en el popup trabajable de siempre
+  cuerpo.querySelectorAll('.drow').forEach(b => {
+    b.onclick = () => {
+      const c = prof.items.find(x => x.phone === b.dataset.phone);
+      if (c) fijarConv(c, b);
+    };
+  });
+}
+
 function render(){
   q('#hora').textContent = D.generado;
   q('#periodo').textContent = desde ? `${desde} → ${hasta||'hoy'}`
@@ -638,11 +985,12 @@ function render(){
     <div class="st"><b>${D.total_vivas}</b><span>en la cola</span></div>
     <div class="st bien"><b>${D.fuera_cerradas}</b><span>atendidas</span></div>`;
 
-  q('#vistas').innerHTML = [['trabajo','Trabajo'],['embudo','Embudo']].map(([k,t]) =>
+  q('#vistas').innerHTML = [['trabajo','Trabajo'],['areas','Áreas'],['embudo','Embudo']].map(([k,t]) =>
     `<button class="${vista===k?'on':''}" data-v="${k}">${t}</button>`).join('');
   document.querySelectorAll('#vistas button').forEach(b =>
     b.onclick = () => { vista = b.dataset.v; render(); });
 
+  if (vista === 'areas'){ renderAreas(); return; }
   if (vista === 'embudo'){ renderEmbudo(); return; }
 
   const exp = D.columnas.find(c => c.id==='sin_cerrar');
