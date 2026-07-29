@@ -40,6 +40,15 @@ _FLUJO_ACTIVO_STATES = {
     # 30 min en lugar de 240 min, pacientes perdían contexto mid-flujo.
     "WAIT_RUT_VER", "WAIT_WAITLIST_CONFIRM", "WAIT_WAITLIST_RUT",
     "WAIT_REFERRAL_POST",
+    # 2026-07-29: mismo bug que FIX-6, con consecuencia peor. El abono-gate
+    # aparta la hora 90 min y el recordatorio pide la foto a los 12 — o sea se
+    # invita al paciente a tomarse su tiempo — pero la sesión moría a los 30.
+    # Quien transfería, esperaba al banco y mandaba la foto al minuto 35 caía a
+    # IDLE: la intercepción de main.py (que exige state==WAIT_ABONO_COMPROBANTE)
+    # no disparaba y su COMPROBANTE BANCARIO se archivaba como documento clínico
+    # en su ficha, con HUMAN_TAKEOVER. Verificado en producción con 3 pacientes
+    # el mismo día que se encendió el gate.
+    "WAIT_ABONO_COMPROBANTE", "WAIT_ABONO_PAGADOR_CONFIRM",
 }
 
 # ── SQLCipher opcional ───────────────────────────────────────────────────────
