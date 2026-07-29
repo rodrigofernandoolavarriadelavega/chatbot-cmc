@@ -6,6 +6,9 @@
 # destruye trabajo de prod sin commitear (ver memory cmc_prod_divergencia).
 #
 # Cuatro guardas, todas con mensaje claro y salida ≠0 si fallan:
+#   G0  Deps que no viajan    → imports locales a función y constantes de config
+#                                sin commitear. Son los que G3 NO ve: revientan EN
+#                                CALIENTE, no al arrancar (ver check_deps_sin_trackear.sh).
 #   G1  Árbol de prod LIMPIO  → si hay trabajo sin commitear, ABORTA (no lo borra).
 #   G2  Fast-forward posible  → si prod divergió de origin/main, ABORTA (hay que
 #                               reconciliar, no pull — un pull a la fuerza rompe).
@@ -41,6 +44,16 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$BRANCH" != "main" ]; then
   c_ylw "Aviso: estás en '$BRANCH', no en main. Continúo, pero el deploy usa origin/main."
 fi
+
+# G0 — dependencias que no viajan (lo que G3 NO ve: imports locales a función y
+# constantes de config sin commitear; ambos revientan EN CALIENTE, no al arrancar).
+echo "→ deps sin trackear…"
+if ! bash "$(dirname "${BASH_SOURCE[0]}")/check_deps_sin_trackear.sh"; then
+  c_red "ABORT (G0): hay dependencias que no viajarían en este deploy."
+  c_red "            Agrégalas al commit o el bot se rompe en caliente."
+  exit 1
+fi
+
 echo "→ push a origin/main…"
 git push origin "$BRANCH":main
 

@@ -3854,11 +3854,20 @@ function closeAgendarModal(){
  * sin salir de la conversacion activa.
  */
 
+// Default de método POR ÁREA — misma regla y misma medición que /alma/pagos y
+// /alma/pagos-simple (2.902 pagos may–jul 2026: médico 57,0% efectivo · dental
+// 46,9% DÉBITO). OJO: "Odontología" NO contiene "dent" (es o-DONT-ología).
+// Tercera pantalla de cobro del sistema: mientras no se unifiquen, cada regla
+// hay que escribirla tres veces.
+const _PG_AREA_DENTAL = /odont|dent|ortod|endod|implant/i;
+const _pgMetodoPorArea = a => _PG_AREA_DENTAL.test(a || "") ? "debito" : "efectivo";
+
 // Estado del modal pago
 const _pg = {
   prevision: "particular",
   previsionManual: false,   // true cuando el usuario elige manualmente; evita que la sugerencia sobreescriba
   metodo: "efectivo",
+  metodoManual: false,      // true si eligió a mano; el área ya no lo pisa
   sugerenciaAplicada: false,
 };
 
@@ -3990,8 +3999,9 @@ function _pgSetPrevision(p){
   _pgUpdateMetodoHint();
 }
 
-function _pgSetMetodo(m){
+function _pgSetMetodo(m, manual){
   _pg.metodo = m;
+  if (manual) _pg.metodoManual = true;
   document.querySelectorAll(".pg-metodo-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.metodo === m)
   );
@@ -4009,9 +4019,13 @@ function _pgSetMetodo(m){
 function _pgUpdateMetodoHint(){
   const h = document.getElementById("pgHintMetodo");
   if(!h) return;
-  h.textContent = (_pg.metodo === "credito" || _pg.metodo === "debito")
-    ? "Tarjetas solo disponibles en area dental."
-    : "";
+  const esTarjeta = (_pg.metodo === "credito" || _pg.metodo === "debito");
+  if (!esTarjeta){ h.textContent = ""; h.style.color = ""; return; }
+  const area = (document.getElementById("pgArea") || {}).value || "";
+  const esDental = _PG_AREA_DENTAL.test(area);
+  h.style.color = esDental ? "" : "var(--cmc-red, #d33)";
+  h.textContent = (esDental ? "" : "⚠️ Tarjetas solo en área dental. ")
+    + "Copia el N° del comprobante: ahí dice si fue débito o crédito.";
 }
 
 async function _pgCargarSugerencia(rut, idCita){
@@ -4166,8 +4180,18 @@ function _pgSetupModal(){
 
   // Botones método
   document.querySelectorAll(".pg-metodo-btn").forEach(b =>
-    b.addEventListener("click", () => _pgSetMetodo(b.dataset.metodo))
+    b.addEventListener("click", () => _pgSetMetodo(b.dataset.metodo, true))
   );
+
+  // El área manda el default del método (salvo elección manual). Se engancha al
+  // input directo y al autocompletado por profesional, que son los dos caminos.
+  const _pgAjustarMetodo = () => {
+    const a = (document.getElementById("pgArea") || {}).value || "";
+    if (!_pg.metodoManual) _pgSetMetodo(_pgMetodoPorArea(a));
+    else _pgUpdateMetodoHint();   // el aviso sí se recalcula
+  };
+  document.getElementById("pgArea")?.addEventListener("input", _pgAjustarMetodo);
+  document.getElementById("pgArea")?.addEventListener("change", _pgAjustarMetodo);
 
   // Cambio profesional → sugerir area
   document.getElementById("pgProf")?.addEventListener("change", function(){
@@ -4175,6 +4199,7 @@ function _pgSetupModal(){
     if (opt?.dataset?.esp) {
       const fA = document.getElementById("pgArea");
       if (fA) fA.value = opt.dataset.esp;
+      _pgAjustarMetodo();
     }
     const rut = document.getElementById("pgRut")?.value.trim();
     const ic  = document.getElementById("pgIdCita")?.value.trim();
