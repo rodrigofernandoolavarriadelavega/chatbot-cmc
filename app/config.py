@@ -239,6 +239,108 @@ CMC_TRANSFERENCIA = {
 # Monto del abono anticipado de Psiquiatría: la CONSULTA COMPLETA ($60.000,
 # dato dueño 2026-06-12) — no hay saldo el día de la atención.
 ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "60000"))
+ABONO_GASTRO_CLP = int(os.getenv("ABONO_GASTRO_CLP", "35000"))
+
+# Horas que se le dan al paciente para transferir. Eran 90 MINUTOS y el primer
+# caso real quedó fuera por 5: transfirió y mandó el comprobante a los 95 min.
+# Se recorta al horario del centro (ver calcular_expira en abono_transferencia).
+ABONO_VENTANA_HORAS = int(os.getenv("ABONO_VENTANA_HORAS", "4"))
+
+# ── REGISTRO DE ABONOS ──────────────────────────────────────────────────────
+# UNA sola fuente. Sumar una prestación al abono = agregar una entrada acá y
+# nada más: el gate del bot, el mensaje al paciente, la ventana, el registro
+# contable y la conciliación por correo leen todos de este diccionario.
+#
+# Antes esto estaba disperso: "psiquiatr" escrito a mano en flows.py, un
+# _ABONO_POLICY aparte en abonos_routes.py, y la constante del monto en otro
+# lado. Agregar gastroenterología obligaba a tocar los tres y era cuestión de
+# tiempo que quedaran en desacuerdo.
+#
+# Lo GENERAL es igual para todas (pedir abono antes de crear la cita, apartar
+# la hora, leer el comprobante con visión, confirmar por correo del banco,
+# reconocer el ingreso recién con la atención). Acá van solo las
+# PARTICULARIDADES de cada una.
+#
+#   claves:  monto  = lo que se pide por adelantado
+#            precio = valor total de la prestación (saldo = precio - monto)
+#            profesionales = ids Medilink a los que aplica ([] = toda el área)
+#            ventana_horas = opcional; si falta usa ABONO_VENTANA_HORAS
+#   gate_bot = True  → el BOT exige el abono ANTES de crear la cita
+#              False → abono que registra recepción a mano (sin puerta)
+ABONO_REGLAS: dict[str, dict] = {
+    "psiquiatría": {
+        "etiqueta":      "Psiquiatría",
+        "monto":         ABONO_PSIQUIATRIA_CLP,   # consulta completa
+        "precio":        ABONO_PSIQUIATRIA_CLP,   # → saldo del día = 0
+        "profesionales": [78],                    # Dra. Cecilia Unibazo
+        "gate_bot":      True,
+    },
+    "gastroenterología": {
+        "etiqueta":      "Gastroenterología",
+        "monto":         ABONO_GASTRO_CLP,        # consulta completa (dueño 29-jul)
+        "precio":        ABONO_GASTRO_CLP,        # → saldo del día = 0
+        "profesionales": [65],                    # Dr. Quijano
+        "gate_bot":      True,
+    },
+    # Estas dos son abono PARCIAL y las registra recepción en el mesón: el bot
+    # no las bloquea al agendar. Viven acá igual para que el monto sugerido, la
+    # contabilidad y el ciclo pendiente→aplicado sean los mismos.
+    "fonoaudiología": {
+        "etiqueta":      "Fonoaudiología",
+        "monto":         10_000,
+        "precio":        20_000,
+        "profesionales": [70],                    # Juana Arratia
+        "gate_bot":      False,
+    },
+    "nutrición": {
+        "etiqueta":      "Nutrición",
+        "monto":         10_000,
+        "precio":        20_000,
+        "profesionales": [52],                    # Gisela Pinto
+        "gate_bot":      False,
+    },
+}
+
+
+def _sin_tilde(t: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", (t or "").lower())
+                   if unicodedata.category(c) != "Mn").strip()
+
+
+def abono_regla(especialidad: str | None = None,
+                id_profesional=None, solo_gate: bool = True) -> dict | None:
+    """La regla de abono que aplica, o None si esa prestación no lleva abono.
+
+    `solo_gate=True` (por defecto) devuelve SOLO las que el bot debe bloquear
+    antes de agendar — que es el uso peligroso, el que le pide plata a un
+    paciente. Para listar montos sugeridos en el panel de recepción se llama
+    con solo_gate=False y aparecen también las de abono parcial.
+
+    Busca por profesional primero (es exacto) y después por nombre de
+    especialidad sin tildes y por prefijo, para que "Gastroenterologia",
+    "gastroenterología" y "gastro" caigan todas en la misma entrada.
+    """
+    def _ok(cfg):
+        return (not solo_gate) or bool(cfg.get("gate_bot"))
+
+    if id_profesional is not None:
+        try:
+            pid = int(id_profesional)
+            for clave, cfg in ABONO_REGLAS.items():
+                if pid in (cfg.get("profesionales") or []) and _ok(cfg):
+                    return {**cfg, "clave": clave}
+        except (TypeError, ValueError):
+            pass
+    if especialidad:
+        e = _sin_tilde(especialidad)
+        for clave, cfg in ABONO_REGLAS.items():
+            if not _ok(cfg):
+                continue
+            k = _sin_tilde(clave)
+            if e == k or e.startswith(k[:8]) or k.startswith(e[:8]):
+                return {**cfg, "clave": clave}
+    return None
 
 # Confirmación automática de abonos por transferencia (app/abono_transferencia.py,
 # 2026-07-14). Lee el Gmail del centro (solo lectura IMAP) y empareja el correo

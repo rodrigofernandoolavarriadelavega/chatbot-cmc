@@ -270,7 +270,11 @@ async def _enviar_reenganche():
                     _ab_dt = _dt_abj.fromisoformat(_ab_ts_str)
                     if _ab_dt.tzinfo is None:
                         _ab_dt = _ab_dt.replace(tzinfo=_ZI_abj("America/Santiago"))
-                    _ab_expirado = (_dt_abj.now(_ZI_abj("America/Santiago")) - _ab_dt).total_seconds() > 5400  # 90 min
+                    # Misma ventana que el resto (config.ABONO_VENTANA_HORAS,
+                    # recortada al horario del centro). Acá había 5400 segundos
+                    # escritos a mano.
+                    from abono_transferencia import calcular_expira as _cexp_j
+                    _ab_expirado = _dt_abj.now(_ZI_abj("America/Santiago")) > _cexp_j(_ab_dt)
                 except Exception:
                     pass
             if _ab_expirado:

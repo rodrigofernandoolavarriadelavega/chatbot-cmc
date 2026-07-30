@@ -9743,19 +9743,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if str(slot.get("id_profesional")) == "79" or "neurolog" in (slot.get("especialidad", "") or "").lower():
                 data["telemedicina_modalidad"] = "TELEMEDICINA"
 
-            # ── Abono-Gate Psiquiatría (feature 2026-06-11) ───────────────────
-            # Cuando ABONO_GATE_PSIQ_ACTIVE está ON, NO creamos la cita todavía:
-            # pedimos el comprobante de transferencia ($60.000, la consulta
-            # completa — ver ABONO_PSIQUIATRIA_CLP) primero. La hora
-            # queda "apartada" 90 min en la sesión; el handler WAIT_ABONO_COMPROBANTE
-            # procesa la imagen y crea la cita al validar el monto.
-            # Con flag OFF el flujo sigue igual que antes (crea cita directamente).
-            _es_psiquiatria_gate = (
-                "psiquiatr" in (slot.get("especialidad", "") or "").lower()
-                and not reagendar  # reagendas ya tienen cita → no pedir abono de nuevo
+            # ── Abono-Gate ────────────────────────────────────────────────────
+            # Con el flag ON y una prestación que lleve abono, NO se crea la
+            # cita todavía: primero se pide el abono. La hora queda apartada en
+            # la sesión y el handler WAIT_ABONO_COMPROBANTE la crea al validar
+            # el monto (o la crea sola el poller del correo bancario).
+            # Con flag OFF el flujo sigue igual que antes (crea cita directo).
+            #
+            # QUÉ prestaciones llevan abono sale de config.ABONO_REGLAS — antes
+            # acá decía `"psiquiatr" in especialidad` escrito a mano, así que
+            # sumar gastroenterología obligaba a editar esta línea, el
+            # _ABONO_POLICY de abonos_routes y la constante del monto por
+            # separado. Ahora agregar una prestación es una entrada en el
+            # registro y nada más.
+            from config import abono_regla as _abono_regla_ag
+            _regla_ag = None if reagendar else _abono_regla_ag(   # reagendar ya tiene cita → no se cobra de nuevo
+                especialidad=slot.get("especialidad"),
+                id_profesional=slot.get("id_profesional"),
             )
-            if _es_psiquiatria_gate and _abono_gate_psiq_activo():
-                from config import CMC_TRANSFERENCIA as _CTF_AG, ABONO_PSIQUIATRIA_CLP as _ABO_AG
+            if _regla_ag and _abono_gate_psiq_activo():
+                from config import CMC_TRANSFERENCIA as _CTF_AG
+                _ABO_AG = int(_regla_ag["monto"])
+                _AREA_AG = _regla_ag["etiqueta"]
                 # Guardar TODO lo necesario para crear la cita después
                 data["abono_gate_slot"]     = slot
                 data["abono_gate_paciente"] = paciente
@@ -9787,13 +9796,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             paciente_nombre=paciente.get("nombre", ""),
                             rut=data.get("rut", ""),
                             monto=_ABO_AG,
-                            especialidad=slot.get("especialidad", "Psiquiatría"),
+                            especialidad=slot.get("especialidad") or _AREA_AG,
                             id_profesional=slot.get("id_profesional"),
                             slot=slot,
                             wait_min=90,
                         )
                         return (
-                            f"Para confirmar tu hora de *Psiquiatría* pedimos un abono de "
+                            f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
                             f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
                             "así que el día de la atención no pagas nada adicional.\n\n"
                             f"Aquí están los datos para transferir, con botón de copiar:\n"
@@ -9807,7 +9816,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         log.warning("abono_gate: no se pudo crear link de pago, fallback a texto: %s", _e_link_ap)
 
                 return (
-                    f"Para confirmar tu hora de *Psiquiatría* pedimos un abono de "
+                    f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
                     f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
                     "así que el día de la atención no pagas nada adicional.\n\n"
                     "*Datos para transferir:*\n"
@@ -10360,11 +10369,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # confirma con un abono por transferencia. Segundo mensaje aparte
                 # (mismo patrón PNI: evita el truncamiento "ver más" de WA).
                 # Solo presencial — telemedicina ya trae su propio bloque de pago.
-                if not _link_video and "psiquiatr" in (slot.get("especialidad") or "").lower():
+                from config import abono_regla as _reg_ab2
+                _r_ab2 = _reg_ab2(especialidad=slot.get("especialidad"),
+                                  id_profesional=slot.get("id_profesional"))
+                if not _link_video and _r_ab2:
                     try:
-                        from config import CMC_TRANSFERENCIA as _CTF, ABONO_PSIQUIATRIA_CLP as _ABO
+                        from config import CMC_TRANSFERENCIA as _CTF
+                        _ABO = int(_r_ab2["monto"])
                         _abono_txt = (
-                            "💳 *Importante — abono para confirmar tu hora de Psiquiatría*\n\n"
+                            f"💳 *Importante — abono para confirmar tu hora de {_r_ab2['etiqueta']}*\n\n"
                             f"Pedimos un abono de *${_ABO:,} CLP* para asegurar tu hora "
                             "— corresponde al valor total de la consulta; el día de la atención no pagas nada adicional.\n\n"
                             "*Datos para transferir:*\n"
@@ -12180,6 +12193,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         from datetime import datetime as _dt_ag, timezone as _tz_ag_utc
         from zoneinfo import ZoneInfo as _ZI_ag
         _CHILE_TZ_ag = _ZI_ag("America/Santiago")
+        # El área sale del slot apartado: el abono ya no es solo de psiquiatría.
+        _area_ab = ((data.get("abono_gate_slot") or {}).get("especialidad")
+                    or "tu especialidad")
 
         # ── Verificar timeout 90 min ─────────────────────────────────────────
         _gate_ts_str = data.get("abono_gate_ts", "")
@@ -12190,7 +12206,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if _gate_dt.tzinfo is None:
                     _gate_dt = _gate_dt.replace(tzinfo=_CHILE_TZ_ag)
                 _elapsed_min = (_dt_ag.now(_CHILE_TZ_ag) - _gate_dt).total_seconds() / 60
-                _gate_expirado = _elapsed_min > 90
+                # La ventana la decide UNA función (config.ABONO_VENTANA_HORAS,
+                # recortada al horario del centro). Acá había un 90 escrito a
+                # mano, igual que en jobs.py y en procesar_imagen_abono: tres
+                # copias que había que acordarse de cambiar juntas.
+                from abono_transferencia import calcular_expira as _cexp
+                _gate_expirado = _dt_ag.now(_CHILE_TZ_ag) > _cexp(_gate_dt)
             except Exception:
                 pass  # fromisoformat falla → ignorar, no bloquear
 
@@ -12201,7 +12222,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return (
                 "El tiempo para enviar el comprobante venció y el aparte fue liberado.\n\n"
-                "Escribe *menu* si quieres volver a buscar una hora de Psiquiatría."
+                f"Escribe *menu* si quieres volver a buscar una hora de {_area_ab}."
             )
 
         # ── Caso C: quiere abonar en recepción / no puede transferir ─────────
@@ -12257,11 +12278,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # ── Caso D: texto libre genérico ──────────────────────────────────────
         # (El caso A —imagen— no llega aquí; main.py lo intercepta antes.)
         save_session(phone, "WAIT_ABONO_COMPROBANTE", data)
-        from config import ABONO_PSIQUIATRIA_CLP as _ABO_D
+        from config import ABONO_PSIQUIATRIA_CLP, abono_regla as _reg_d
+        _sl_d = data.get("abono_gate_slot") or {}
+        _r_d = _reg_d(especialidad=_sl_d.get("especialidad"),
+                      id_profesional=_sl_d.get("id_profesional"))
+        _ABO_D = int(_r_d["monto"]) if _r_d else ABONO_PSIQUIATRIA_CLP
         _monto_d = f"${_ABO_D:,}".replace(",", ".")
         return (
             f"Estoy esperando el comprobante de la transferencia de *{_monto_d} CLP* "
-            "para confirmar tu hora de Psiquiatría.\n\n"
+            f"para confirmar tu hora de {_area_ab}.\n\n"
             "Envía una *foto* del comprobante por este chat 📎\n\n"
             "_Si no puedes hacer la transferencia, escribe *recepcion* y te ayudamos._"
         )
@@ -15413,6 +15438,18 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
         return ("Recibí tu comprobante, pero no encontré a qué hora corresponde. "
                 "Le avisé a recepción para que lo revise contigo.")
 
+    # Área real de la reserva — el abono ya no es solo de psiquiatría.
+    _area_pc = slot.get("especialidad") or "tu especialidad"
+    # Y el monto exigido sale de la REGLA de esa área. Con ABONO_PSIQUIATRIA_CLP
+    # fijo, un paciente de gastroenterología que pagara sus $35.000 correctos
+    # habría sido rechazado por "monto insuficiente" contra los $60.000 de
+    # psiquiatría, y derivado a recepción con la plata ya transferida.
+    from config import abono_regla as _reg_pc
+    _r_pc = _reg_pc(especialidad=slot.get("especialidad"),
+                    id_profesional=slot.get("id_profesional"))
+    _MONTO_REQ = int(_r_pc["monto"]) if _r_pc else ABONO_PSIQUIATRIA_CLP
+    _PRECIO_TOT = int(_r_pc["precio"]) if _r_pc else ABONO_PSIQUIATRIA_CLP
+
     # Verificar timeout 90 min (mismo check que en el handler de texto)
     _gate_ts_str = data.get("abono_gate_ts", "")
     if _gate_ts_str:
@@ -15421,7 +15458,8 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
             if _gate_dt.tzinfo is None:
                 _gate_dt = _gate_dt.replace(tzinfo=_CHILE_TZ_pc)
             _elapsed = (_dt_pc.now(_CHILE_TZ_pc) - _gate_dt).total_seconds() / 60
-            if _elapsed > 90:
+            from abono_transferencia import calcular_expira as _cexp_pc
+            if _dt_pc.now(_CHILE_TZ_pc) > _cexp_pc(_gate_dt):
                 # ANTES acá se rechazaba la foto y se resetaba la sesión. Eso es
                 # botar el comprobante de alguien que YA TRANSFIRIÓ la plata: se
                 # le decía "el aparte fue liberado" a quien ya pagó $60.000. El
@@ -15446,13 +15484,13 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     })
 
     # Validación suave: monto suficiente Y legible
-    if not legible or monto < ABONO_PSIQUIATRIA_CLP:
+    if not legible or monto < _MONTO_REQ:
         # Derivar a humano con contexto — la cita NO se crea
-        motivo = "monto_insuficiente" if (legible and monto < ABONO_PSIQUIATRIA_CLP) else "ilegible"
+        motivo = "monto_insuficiente" if (legible and monto < _MONTO_REQ) else "ilegible"
         log_event(phone, "abono_comprobante_fallo", {
             "motivo": motivo,
             "monto_leido": monto,
-            "monto_requerido": ABONO_PSIQUIATRIA_CLP,
+            "monto_requerido": _MONTO_REQ,
         })
         save_session(phone, "HUMAN_TAKEOVER", {
             "hold_sent": True,
@@ -15471,7 +15509,7 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
                     f"Paciente: {_nom_pf} · WA: {phone}\n"
                     f"Cita: {_slot_fd} {_hora_pf}\n"
                     f"Comprobante recibido. Monto leído: ${monto:,} "
-                    f"(requerido: ${ABONO_PSIQUIATRIA_CLP:,}). Monto no calza — verificar con el banco."
+                    f"(requerido: ${_MONTO_REQ:,}). Monto no calza — verificar con el banco."
                 )
             else:
                 _aviso_pf = (
@@ -15487,11 +15525,11 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
             _spawn(_notif_recep_fallo())
 
         if motivo == "monto_insuficiente":
-            _monto_req_fmt = f"${ABONO_PSIQUIATRIA_CLP:,}".replace(",", ".")
+            _monto_req_fmt = f"${_MONTO_REQ:,}".replace(",", ".")
             _monto_leido_fmt = f"${monto:,}".replace(",", ".")
             return (
                 f"Vi que el monto en el comprobante es *{_monto_leido_fmt}* y necesitamos "
-                f"*{_monto_req_fmt}* para confirmar la hora de Psiquiatría.\n\n"
+                f"*{_monto_req_fmt}* para confirmar la hora de {_area_pc}.\n\n"
                 "Le avisé a recepción para que te contacte y lo aclaren.\n\n"
                 f"Si tienes dudas, llama al 📞 *{CMC_TELEFONO_FIJO}*"
             )
@@ -15558,7 +15596,7 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
 
     # ── Cita creada → INSERT en abonos_cmc ───────────────────────────────────
     now_cl = _dt_pc.now(_CHILE_TZ_pc)
-    precio_total = 60000  # valor consulta psiquiatría
+    precio_total = _PRECIO_TOT   # valor de la prestación, según su regla de abono
     saldo = max(precio_total - monto, 0)
     fecha_cita_str = slot.get("fecha_display", slot.get("fecha", ""))
     try:
@@ -15605,7 +15643,7 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     saludo = f"*{nombre_corto}*" if nombre_corto else "Tu hora"
     _saldo_fmt = f"${saldo:,}".replace(",", ".")
     confirmacion = (
-        f"✅ *{saludo}, tu hora de Psiquiatría quedó confirmada.*\n\n"
+        f"✅ *{saludo}, tu hora de {_area_pc} quedó confirmada.*\n\n"
         f"👤 {paciente.get('nombre', '')}\n"
         f"🏥 Psiquiatría — {slot.get('profesional', '')}\n"
         f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"

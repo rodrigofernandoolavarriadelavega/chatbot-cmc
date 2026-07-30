@@ -43,23 +43,25 @@ router = APIRouter(prefix="/alma/api/abonos", tags=["abonos"])
 #   precio_sugerido = valor total de referencia de la prestación (editable).
 # El saldo del día = precio_total − monto_abono (se calcula, no se hardcodea).
 # Para agregar/quitar una prestación o cambiar montos: editar este dict.
-_ABONO_POLICY: dict[str, dict] = {
-    "Psiquiatría": {
-        "abono_sugerido":  60_000,   # consulta completa por adelantado (dueño 2026-06-12)
-        "precio_sugerido": 60_000,   # particular vigente (saldo del día = 0)
-        "id_profesional":  None,   # aún sin profesional fijo en Medilink
-    },
-    "Fonoaudiología": {
-        "abono_sugerido":  10_000,
-        "precio_sugerido": 20_000,
-        "id_profesional":  70,     # Juana Arratia
-    },
-    "Nutrición": {
-        "abono_sugerido":  10_000,
-        "precio_sugerido": 20_000,
-        "id_profesional":  52,     # Gisela Pinto
-    },
-}
+# DERIVADO de config.ABONO_REGLAS — no se edita acá. Sumar una prestación al
+# abono es agregar una entrada en ese registro y nada más; antes había que
+# tocar este diccionario Y el gate de flows.py Y la constante del monto, y era
+# cuestión de tiempo que quedaran en desacuerdo (de hecho ya lo estaban: acá
+# Psiquiatría tenía id_profesional=None cuando en Medilink es el 78).
+def _policy_desde_registro() -> dict[str, dict]:
+    from config import ABONO_REGLAS
+    out: dict[str, dict] = {}
+    for cfg in ABONO_REGLAS.values():
+        profs = cfg.get("profesionales") or []
+        out[cfg["etiqueta"]] = {
+            "abono_sugerido":  int(cfg["monto"]),
+            "precio_sugerido": int(cfg["precio"]),
+            "id_profesional":  profs[0] if profs else None,
+        }
+    return out
+
+
+_ABONO_POLICY: dict[str, dict] = _policy_desde_registro()
 
 _ESTADOS = ("pendiente", "aplicado", "reembolsado", "trasladado", "perdido")
 _METODOS = ("efectivo", "transferencia", "debito", "credito", "imed")

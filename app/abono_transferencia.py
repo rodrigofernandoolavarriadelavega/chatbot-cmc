@@ -363,9 +363,52 @@ def ensure_transferencias_table() -> None:
 
 # ── Creación de un abono pendiente (llamado desde flows.py) ───────────────
 
+# Horario en que hay alguien en el centro. Fuera de esto nadie está mirando:
+# si la ventana del abono venciera de madrugada, el paciente que transfirió a
+# las 22:00 se encuentra a la mañana con que perdió la hora y no había nadie a
+# quien reclamarle. Decisión del dueño 2026-07-29.
+_CIERRA_H = 21
+_ABRE_H = 9
+
+
+def calcular_expira(creado: datetime, horas: int | None = None) -> datetime:
+    """Cuándo vence la ventana del abono.
+
+    Base: `ABONO_VENTANA_HORAS` (4 h por defecto). La de 90 min quedó corta con
+    el primer caso real: un paciente transfirió y mandó el comprobante a los
+    95 minutos — quedó fuera por 5.
+
+    Si el vencimiento cae con el centro cerrado (21:00–09:00), se corre a las
+    09:00 del día en que vuelve a haber alguien. Vale también para el abono
+    tomado de madrugada: vence a las 09:00 de ese mismo día, no a las 04:00.
+    """
+    from config import ABONO_VENTANA_HORAS
+    exp = creado + timedelta(hours=int(horas or ABONO_VENTANA_HORAS))
+    if exp.hour >= _CIERRA_H:
+        exp = (exp + timedelta(days=1)).replace(hour=_ABRE_H, minute=0, second=0, microsecond=0)
+    elif exp.hour < _ABRE_H:
+        exp = exp.replace(hour=_ABRE_H, minute=0, second=0, microsecond=0)
+    return exp
+
+
+def abono_vencido(expira_at: str, ahora: datetime | None = None) -> bool:
+    """Único lugar que decide si un abono venció. Antes cada archivo comparaba
+    contra un 90 escrito a mano (flows, jobs, abono_transferencia) y bastaba
+    cambiar uno para que quedaran en desacuerdo."""
+    if not expira_at:
+        return False
+    try:
+        exp = datetime.fromisoformat(expira_at)
+    except Exception:
+        return False
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=_CL)
+    return (ahora or datetime.now(_CL)) > exp
+
+
 def crear_abono_pendiente(*, phone: str, paciente_id, paciente_nombre: str, rut: str,
                           monto: int, especialidad: str, id_profesional, slot: dict,
-                          wait_min: int = 90) -> dict:
+                          wait_min: int | None = None) -> dict:
     """Crea el registro y devuelve {'token':, 'url':}. La URL se arma con
     ABONO_BASE_URL (config.py) + el token — el link que va en el mensaje de
     WhatsApp."""
@@ -375,7 +418,7 @@ def crear_abono_pendiente(*, phone: str, paciente_id, paciente_nombre: str, rut:
     ensure_abono_pendiente_table()
     token = secrets.token_urlsafe(24)
     now = datetime.now(_CL)
-    expira = now + timedelta(minutes=wait_min)
+    expira = calcular_expira(now, horas=(wait_min / 60) if wait_min else None)
     with db() as conn:
         conn.execute("""
             INSERT INTO abono_pendientes
