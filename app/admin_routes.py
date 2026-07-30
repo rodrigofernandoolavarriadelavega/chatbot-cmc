@@ -366,13 +366,26 @@ _CONV_CACHE: dict = {"ts": 0.0, "body": None}
 _CONV_CACHE_TTL = 2.0
 
 
+# Cuántas conversaciones manda el panel de entrada. Medido 2026-07-29 sobre la
+# base real: 254 con actividad en 1 día, 841 en 7, 1.338 en 15, 2.255 en 30 y
+# 5.943 en total. Se mandaban las 5.943 CADA 5 SEGUNDOS (3,7 MB crudos; 397 KB
+# comprimidos, pero igual ~4,8 MB/min en el navegador de recepción) y el panel
+# se sentía trabado. 1.500 cubre más de dos semanas de actividad —lo que
+# recepción realmente usa— y las viejas siguen alcanzables por
+# /admin/api/search, que ya existe. Se puede pedir más con ?limit=.
+_CONV_LIMIT_DEFAULT = 1500
+
+
 @router.get("/admin/api/conversations")
-def admin_conversations(_: str = Depends(require_admin)):
+def admin_conversations(_: str = Depends(require_admin),
+                        limit: int = _CONV_LIMIT_DEFAULT):
+    limit = max(50, min(int(limit or _CONV_LIMIT_DEFAULT), 10000))
     now = _t_conv_cache.monotonic()
     body = _CONV_CACHE.get("body")
-    if body is not None and (now - _CONV_CACHE["ts"]) < _CONV_CACHE_TTL:
+    if (body is not None and _CONV_CACHE.get("limit") == limit
+            and (now - _CONV_CACHE["ts"]) < _CONV_CACHE_TTL):
         return _Resp_conv(content=body, media_type="application/json")
-    convs = get_conversations(limit=10000)
+    convs = get_conversations(limit=limit)
     for c in convs:
         role = STAFF_PHONES.get(c.get("phone", ""), "")
         if role:
@@ -381,6 +394,7 @@ def admin_conversations(_: str = Depends(require_admin)):
     body = _json_conv_cache.dumps(convs, ensure_ascii=False).encode("utf-8")
     _CONV_CACHE["body"] = body
     _CONV_CACHE["ts"] = now
+    _CONV_CACHE["limit"] = limit   # el caché es por tamaño: no servir 1.500 a quien pidió 10.000
     return _Resp_conv(content=body, media_type="application/json")
 
 
