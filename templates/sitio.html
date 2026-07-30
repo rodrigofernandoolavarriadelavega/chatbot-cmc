@@ -447,12 +447,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 html {
   scroll-behavior: smooth;
-  /* Overscroll bounce: arriba = rojo SAMU, abajo = navy footer.
-     El gradiente fixed se ve solo cuando hay rebote elástico (iOS, trackpad). */
+  /* Overscroll bounce: arriba = el celeste de la barra de horarios, abajo = navy
+     del pie. Se ve solo con rebote elástico (iOS, trackpad). Antes el tope era
+     rojo para calzar con la barra SAMU; al sacarla, ese rojo quedaba apareciendo
+     de la nada al tirar hacia arriba. */
   background:
     linear-gradient(to bottom,
-      #dc2626 0,
-      #dc2626 50%,
+      #E8F2F9 0,
+      #E8F2F9 50%,
       #0A1A28 50%,
       #0A1A28 100%) fixed;
 }
@@ -740,12 +742,14 @@ section.compact { padding: 64px 0; }
 
 html {
   scroll-behavior: smooth;
-  /* Overscroll bounce: arriba = rojo SAMU, abajo = navy footer.
-     El gradiente fixed se ve solo cuando hay rebote elástico (iOS, trackpad). */
+  /* Overscroll bounce: arriba = el celeste de la barra de horarios, abajo = navy
+     del pie. Se ve solo con rebote elástico (iOS, trackpad). Antes el tope era
+     rojo para calzar con la barra SAMU; al sacarla, ese rojo quedaba apareciendo
+     de la nada al tirar hacia arriba. */
   background:
     linear-gradient(to bottom,
-      #dc2626 0,
-      #dc2626 50%,
+      #E8F2F9 0,
+      #E8F2F9 50%,
       #0A1A28 50%,
       #0A1A28 100%) fixed;
 }
@@ -1040,18 +1044,6 @@ section.compact { padding: 64px 0; }
   .hours-bar .hb-label { width: 100%; text-align: center; }
   .hours-bar .hb-led { display: none; }
 }
-
-/* ========== ALERT BAR (SAMU 131) ========== */
-.alert-bar {
-  background: linear-gradient(90deg, #DC2626 0%, #B91C1C 100%);
-  color: white;
-  padding: 8px 16px;
-  font-size: 13px;
-  text-align: center;
-  font-weight: 600;
-  font-family: var(--font-display);
-}
-.alert-bar a { text-decoration: underline; font-weight: 800; }
 
 /* ========== NAV ========== */
 .nav-wrap {
@@ -2701,6 +2693,7 @@ section.compact { padding: 64px 0; }
   .specs-tabs { font-size: 13px; }
   .hor-table th, .hor-table td { padding: 9px 8px; font-size: 12px; }
   .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+  .ft-urgencias { flex-direction: column; text-align: center; gap: 7px; }
 }
 
 /* Safe-area iOS notch / dynamic island — solo aplica en mobile (donde existe la mob-bar fija) */
@@ -3234,10 +3227,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <a href="#main" class="skip-link">Saltar al contenido principal</a>
 
-<!-- ALERT BAR (SAMU) -->
-<div class="alert-bar" role="alert">
-  <strong>Emergencias:</strong> llama al SAMU <a href="tel:131">131</a> · No somos servicio de urgencias
-</div>
 
 <!-- HOURS BAR — estado dinámico (abierto/cerrado según hora real America/Santiago) + tag WhatsApp 24/7 -->
 <a class="hours-bar" id="hoursBar" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora.%20(web%3A%20home)&utm_source=home&utm_medium=organic" target="_blank" rel="noopener" aria-label="Agendar por WhatsApp">
@@ -4462,12 +4451,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </ul>
       </div>
     </div>
+    <div class="ft-urgencias">
+      <span class="ft-urg-punto" aria-hidden="true"></span>
+      <span>No somos servicio de urgencias. Ante una emergencia llama al
+        <a href="tel:131">SAMU 131</a>.</span>
+    </div>
     <div class="footer-foot">
       <div>© 2026 Centro Médico Carampangue. Todos los derechos reservados.</div>
       <div>Provincia de Arauco · Región del Biobío</div>
     </div>
   </div>
 </footer>
+
+<style>
+/* Aviso de urgencias — antes era una barra roja a todo lo ancho arriba de todo.
+   Se veía chocante: lo primero que encontraba alguien que entra a agendar una
+   consulta de rutina era una alerta en rojo. La información importa y por eso
+   no se eliminó, pero vive donde se busca —el pie, junto a teléfonos y
+   dirección— y en tono sereno. Sigue además respondida en Preguntas frecuentes. */
+.ft-urgencias{
+  display:flex; align-items:center; justify-content:center; gap:9px;
+  margin-top:26px; padding:13px 18px;
+  border:1px solid rgba(220,38,38,.22); border-radius:11px;
+  background:rgba(220,38,38,.05);
+  font-family:var(--font-body); font-size:13.5px; line-height:1.5;
+  color:var(--ink-300, #64748B);
+}
+.ft-urg-punto{
+  width:8px; height:8px; border-radius:50%; background:var(--accent-danger);
+  flex:none; box-shadow:0 0 0 3px rgba(220,38,38,.14);
+}
+.ft-urgencias a{ color:var(--accent-danger); font-weight:700; text-decoration:underline; }
+.ft-urgencias a:hover{ text-decoration:none; }
+</style>
 
 <!-- ========== WHATSAPP FLOAT ========== -->
 <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20(web%3A%20home)&utm_source=home&utm_medium=organic" class="wa-float" id="waFloat" aria-label="Escribir por WhatsApp" target="_blank" rel="noopener">
