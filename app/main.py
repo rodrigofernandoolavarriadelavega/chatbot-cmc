@@ -3728,6 +3728,26 @@ def _bi_pool() -> "psycopg2.pool.ThreadedConnectionPool":  # type: ignore[name-d
 # "pool" = cualquier profesional listado en default_profs entra al box; el primero
 # con cita activa ocupa este box, el segundo el siguiente del mismo tipo.
 # "fijo" = solo este profesional ocupa este box (kine 1 = Armijo, kine 2 = Etcheverry).
+# Estados que devuelve Medilink en `estado_cita`, medidos sobre citas reales
+# (2026-07-31, muestra de 50): "No confirmado" 70%, "Atendido" 16%, "Anulado"
+# 10%, "No asiste" 2%, "Cambio de fecha" 2%.
+#
+# OJO: son en ESPAÑOL. El filtro viejo buscaba ("agendada","atendida",
+# "confirmada","en_curso") y NINGUNO calza. Eso no se notaba porque el campo se
+# leía como `estado` —que Medilink no devuelve— y todo caía al default
+# "agendada", que sí estaba en la lista. Arreglar sólo la lectura habría hecho
+# desaparecer TODAS las citas del gemelo.
+#
+# Ocupan la sala: la agendada que aún no se confirma y la ya atendida.
+# NO ocupan: anulada, no asiste (justamente el no-show que antes pintaba la
+# sala llena) y cambio de fecha.
+ESTADOS_OCUPAN_SALA = {
+    "no confirmado", "confirmado", "atendido", "en curso",
+    # nombres del filtro anterior, por si otra ruta los sigue usando
+    "agendada", "atendida", "confirmada", "en_curso",
+}
+ESTADOS_NO_ASISTIO = {"no asiste", "no asistio", "no asistió"}
+
 BOXES_CONFIG = [
     # default_profs = pool de OCUPACIÓN física (quién puede estar en la sala; box1/box2 son
     #   intercambiables, el spreading en vivo reparte hasta 2 médicos por box).
@@ -3738,9 +3758,16 @@ BOXES_CONFIG = [
     {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77]},
     {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21]},
     {"id": "boxdental", "piso": 2, "orden": 1, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76]},
-    {"id": "box3",      "piso": 2, "orden": 2, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56]},
+    {"id": "box3",      "piso": 2, "orden": 2, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56, 80], "revenue_profs": [67, 68, 56, 80]},
     {"id": "box4",      "piso": 2, "orden": 3, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52]},
     {"id": "box5",      "piso": 2, "orden": 4, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59]},
+    # Telemedicina: Unibazo (psiquiatría) y Franca González (neurología) atienden
+    # por videollamada. Ocupan AGENDA pero no metros cuadrados, así que van en su
+    # propio carril con `virtual: True` — no compiten por sala y no deben contar
+    # como capacidad física cuando se calcule cuánto se puede crecer sin construir.
+    # Antes no estaban en ningún box: sus citas se descartaban en silencio y su
+    # plata no entraba en el revenue del día.
+    {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [78, 79], "revenue_profs": [78, 79], "virtual": True},
 ]
 
 @app.get("/atribucion")
@@ -5063,7 +5090,14 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                         "paciente_id": cita.get("id_paciente") or pac_obj.get("id"),
                         "hora_inicio": _parse_h(cita.get("hora") or cita.get("hora_inicio")),
                         "hora_fin": _parse_h(cita.get("hora_fin")),
-                        "estado": (cita.get("estado") or "agendada").lower(),
+                        # Medilink devuelve este campo como `estado_cita` (ver
+                        # medilink.py:1667, 1804, 1837). Leyendo "estado" siempre
+                        # salía None y TODA cita caía al default "agendada": el
+                        # gemelo no distinguía quién llegó de quién no, y un
+                        # no-show pintaba la sala ocupada.
+                        "estado": (cita.get("estado_cita") or cita.get("estado") or "agendada").lower(),
+                        # Medilink marca la anulación en un campo aparte del estado.
+                        "anulada": str(cita.get("estado_anulacion") or "0") not in ("0", "None", ""),
                         "profesional": prof_info[0],
                         "especialidad": prof_info[1],
                         "paciente": pac_nombre or None,
@@ -5166,7 +5200,10 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 return False
             if now_t < c["hora_inicio"]:
                 return False
-            return c["estado"] in ("agendada", "atendida", "confirmada", "en_curso")
+            # Una cita anulada no ocupa la sala aunque su hora esté en curso.
+            if c.get("anulada"):
+                return False
+            return c["estado"] in ESTADOS_OCUPAN_SALA
 
         def _is_proximo(c):
             if not c["hora_inicio"] or now_t >= c["hora_inicio"]:
@@ -5253,6 +5290,11 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         # cuyas citas (activas o no) hayan caído en este box.
         # Para esto, primero asignar TODAS las citas del día a su box predeterminado.
         citas_del_box = {b["id"]: [] for b in BOXES_CONFIG}
+        # Bucket de huérfanas: citas cuyo profesional no está en NINGÚN box.
+        # Antes el `break` sin `else` las descartaba en silencio, así que su plata
+        # no entraba en "Revenue del día" pero sí en "Citas hoy" — los dos KPI
+        # nunca cuadraban y nadie explicaba la diferencia. Ahora se muestran.
+        citas_sin_sala = []
         for c in citas_hoy:
             # box destino contable: primer box donde el prof está en revenue_profs
             # (o default_profs si el box no reparte el pool). Evita doble conteo box1/box2.
@@ -5260,6 +5302,13 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 if c["profesional_id"] in box.get("revenue_profs", box["default_profs"]):
                     citas_del_box[box["id"]].append(c)
                     break
+            else:
+                citas_sin_sala.append(c)
+        if citas_sin_sala:
+            _profs_hf = sorted({c["profesional_id"] for c in citas_sin_sala})
+            log.warning("boxes: %d cita(s) sin sala asignada — profesionales %s "
+                        "(agregarlos a BOXES_CONFIG o crearles carril)",
+                        len(citas_sin_sala), _profs_hf)
 
         for box_id, ctas in citas_del_box.items():
             rev = 0
@@ -5486,6 +5535,10 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             })
 
         # Totales
+        rev_sin_sala = 0
+        for c in citas_sin_sala:
+            _n = pac_cita_count.get(c["paciente_id"], 1)
+            rev_sin_sala += (pagos_por_pac.get(c["paciente_id"], 0) / max(1, _n))
         total_revenue = sum(b["revenue_dia"] for b in boxes_out)
         total_ocupados = sum(1 for b in boxes_out if b["estado"] == "ocupado")
         total_profs_activos = sum(len(b["profesionales_activos"]) for b in boxes_out)
@@ -5600,8 +5653,13 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "boxes_ocupados": total_ocupados,
                 "profesionales_activos": total_profs_activos,
                 "citas_dia": total_citas,
+                # Cuántas de esas citas no tienen sala. Si es > 0, la suma de las
+                # tarjetas NO va a cuadrar con "Citas hoy" y el tablero tiene que
+                # decir por qué en vez de dejar la diferencia sin explicar.
+                "citas_sin_sala": len(citas_sin_sala),
                 **({} if not _boxes_financiero else {
                     "revenue_dia": total_revenue,
+                    "revenue_sin_sala": int(rev_sin_sala),
                     "fc_realizado": sum(h["fc_realizado"] for h in historial),
                     "fc_pendiente_n": sum(h["fc_pendiente_n"] for h in historial),
                     "fc_proyectado": sum(h["fc_proyectado"] for h in historial),

@@ -577,26 +577,36 @@ let filterMode = 'todos'; // 'todos' | 'activos'
 let selectedDate = null; // null = hoy
 
 function getSelectedDate() {
-  if (!selectedDate) return new Date().toISOString().slice(0,10);
+  if (!selectedDate) return hoyLocal();
   return selectedDate;
 }
 function isToday(d) {
-  return d === new Date().toISOString().slice(0,10);
+  return d === hoyLocal();
 }
 
 document.getElementById('btnDate').addEventListener('click', () => {
-  const today = new Date().toISOString().slice(0,10);
+  const today = hoyLocal();
   document.getElementById('dateInput').value = selectedDate || today;
   document.getElementById('modalDate').classList.add('open');
 });
+// El servidor corre en UTC y el centro en America/Santiago (−4). toISOString()
+// convierte a UTC, así que después de las 20:00 CLT —con el centro todavía
+// abierto, cierra a las 21— "Hoy" y "Ayer" saltaban al día siguiente.
+// Se arma la fecha con los componentes LOCALES, sin pasar por UTC.
+function fechaLocal(d) {
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function hoyLocal() { return fechaLocal(new Date()); }
+
 function setDate(offsetDays) {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
-  document.getElementById('dateInput').value = d.toISOString().slice(0,10);
+  document.getElementById('dateInput').value = fechaLocal(d);
 }
 document.getElementById('dateApply').addEventListener('click', () => {
   const val = document.getElementById('dateInput').value;
-  const today = new Date().toISOString().slice(0,10);
+  const today = hoyLocal();
   selectedDate = (val === today) ? null : val;
   document.getElementById('dateLabel').textContent = selectedDate ? selectedDate : 'Hoy';
   closeModal('modalDate');
@@ -761,7 +771,7 @@ function resetLayout() {
 // ---------- Override manual de profesional por box (backend) ----------
 function getManualOverrides() {
   const data = CONFIG.manual_overrides || {};
-  const today = new Date().toISOString().slice(0,10);
+  const today = hoyLocal();
   // Filtrar solo overrides de hoy (los viejos quedan en BD pero se ignoran)
   const out = {};
   for (const k of Object.keys(data)) {
@@ -772,12 +782,12 @@ function getManualOverrides() {
 function setManualOverride(boxId, prof) {
   if (!CONFIG.manual_overrides) CONFIG.manual_overrides = {};
   if (prof === null) delete CONFIG.manual_overrides[boxId];
-  else CONFIG.manual_overrides[boxId] = { ...prof, date: new Date().toISOString().slice(0,10), set_at: new Date().toISOString() };
+  else CONFIG.manual_overrides[boxId] = { ...prof, date: hoyLocal(), set_at: new Date().toISOString() };
   scheduleSave();
 }
 
 // ---------- Schedules: override per-date > weekly template > BI fallback ----------
-function getActiveDate() { return selectedDate || new Date().toISOString().slice(0,10); }
+function getActiveDate() { return selectedDate || hoyLocal(); }
 function getDayOfWeek(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   return (d.getDay() + 6) % 7; // 0=lunes
@@ -832,6 +842,17 @@ function findBoxForCita(cita, layout) {
   for (const boxId in overrides) for (const e of (overrides[boxId] || [])) if (e.prof_id === cita.profesional_id && _slotIncludes(e, t)) return boxId;
   const wk = (CONFIG.weekly_template || {})[dow] || {};
   for (const boxId in wk) for (const e of (wk[boxId] || [])) if (e.prof_id === cita.profesional_id && _slotIncludes(e, t)) return boxId;
+  // Atribución CONTABLE: primero revenue_profs (que particiona el pool sin
+  // solape), y sólo si el box no reparte, default_profs. Antes iba directo a
+  // default_profs, que en box1 y box2 es LA MISMA lista de 9 personas: ganaba
+  // el primero y Box 2 quedaba siempre libre y en $0, ignorando la partición
+  // que el servidor sí hacía bien.
+  for (const b of layout) {
+    const acct = (b.revenue_profs && b.revenue_profs.length) ? b.revenue_profs : (b.default_profs || []);
+    if (acct.includes(cita.profesional_id)) return b.id;
+  }
+  // Ocupación FÍSICA como último recurso: un profesional puede estar en la sala
+  // aunque su plata se atribuya a otro box.
   for (const b of layout) if ((b.default_profs || []).includes(cita.profesional_id)) return b.id;
   return null;
 }
@@ -1181,16 +1202,22 @@ function renderPisos(boxes) {
     byPiso[b.piso].push(b);
   }
   // Pisos custom desde localStorage
+  // El piso 0 no es un piso: es el carril de lo que ocupa agenda pero no metros
+  // cuadrados (telemedicina). Se etiqueta aparte para que nadie lo lea como una
+  // sala física ni lo cuente como capacidad al calcular cuánto se puede crecer.
+  const nombrePiso = n => (parseInt(n) === 0 ? 'Sin sala física · Telemedicina' : 'Piso ' + n);
   let pisosList = JSON.parse(localStorage.getItem('boxes_pisos_v2') || 'null');
   if (!pisosList) {
-    pisosList = Object.keys(byPiso).map(p => ({ num: parseInt(p), nombre: 'Piso ' + p })).sort((a,b)=>a.num-b.num);
+    pisosList = Object.keys(byPiso).map(p => ({ num: parseInt(p), nombre: nombrePiso(p) })).sort((a,b)=>a.num-b.num);
   }
   // Asegurar que pisos en boxes están en lista
   for (const p of Object.keys(byPiso)) {
     if (!pisosList.find(x => x.num === parseInt(p))) {
-      pisosList.push({ num: parseInt(p), nombre: 'Piso ' + p });
+      pisosList.push({ num: parseInt(p), nombre: nombrePiso(p) });
     }
   }
+  // Un layout guardado antes de que existiera el carril puede traer 'Piso 0'.
+  for (const x of pisosList) if (x.num === 0 && /^Piso 0$/.test(x.nombre || '')) x.nombre = nombrePiso(0);
   pisosList.sort((a,b)=>a.num-b.num);
 
   const container = document.getElementById('pisosContainer');
