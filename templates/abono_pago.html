@@ -270,7 +270,7 @@
     }
     if (data.estado === "expirado" || data.error === "expirado") {
       app.appendChild(cajaEstado("⏳", "El tiempo para transferir venció",
-        "Tu hora se liberó, pero podemos buscarte otra al toque."));
+        "Tu hora se liberó, pero podemos buscarte otra."));
       return;
     }
 
@@ -292,7 +292,7 @@
       : saludo + (esp ? "este es el abono de tu hora de " + esp : "este es el abono de tu hora")));
     hero.appendChild(el("p", "lead", confirmado
       ? "Recibimos tu transferencia. No necesitas hacer nada más — te esperamos."
-      : "Transfiere el monto exacto y te avisamos por WhatsApp apenas lo recibamos. No hace falta que mandes el comprobante."));
+      : "Transfiere el monto exacto y mándanos el comprobante por WhatsApp: con eso te confirmamos la hora."));
 
     if (cita.fecha_display || cita.hora || cita.profesional) {
       var c = el("div", "cita");
@@ -342,16 +342,25 @@
     var ol = el("ol", "pasos");
     ["Abre la app de tu banco.",
      "Copia los datos de arriba y transfiere el monto exacto.",
-     "Listo — te avisamos por WhatsApp apenas confirmemos tu pago."
+     "Sácale una foto o captura al comprobante.",
+     "Mándanoslo por WhatsApp y te confirmamos la hora."
     ].forEach(function(p){ ol.appendChild(el("li", null, p)); });
     pasos.appendChild(ol);
     var aviso = el("div", "aviso");
-    aviso.appendChild(el("span", null, "ℹ️"));
+    aviso.appendChild(el("span", null, "📎"));
     var t = el("span");
-    t.appendChild(el("b", null, "No necesitas mandarnos una foto del comprobante. "));
-    t.appendChild(document.createTextNode("Si por algún motivo no lo confirmamos solos, te la pedimos nosotros por WhatsApp."));
+    t.appendChild(el("b", null, "El comprobante es lo que confirma tu hora. "));
+    t.appendChild(document.createTextNode("Mándalo por el mismo chat de WhatsApp donde te llegó este link."));
     aviso.appendChild(t);
     pasos.appendChild(aviso);
+    // Botón directo al chat: el paciente llega acá desde WhatsApp y tiene que
+    // volver justo ahí para mandar la foto — sin esto queda buscando la app.
+    var waBtn = el("a", "btn-wa", "📎 Enviar comprobante por WhatsApp");
+    waBtn.href = "https://wa.me/56966610737";
+    waBtn.style.display = "block";
+    waBtn.style.textAlign = "center";
+    waBtn.style.marginTop = "14px";
+    pasos.appendChild(waBtn);
     app.appendChild(pasos);
   }
 

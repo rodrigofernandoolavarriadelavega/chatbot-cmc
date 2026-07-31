@@ -9816,9 +9816,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             "así que el día de la atención no pagas nada adicional.\n\n"
                             f"Aquí están los datos para transferir, con botón de copiar:\n"
                             f"{_link_ap['url']}\n\n"
-                            f"Tu hora queda apartada {_plazo_ag}. No necesitas mandarnos "
-                            "el comprobante — confirmamos solos apenas nos llegue tu transferencia "
-                            "y te avisamos por acá.\n\n"
+                            f"Tu hora queda apartada {_plazo_ag}.\n"
+                            "Cuando transfieras, *envíanos el comprobante por este chat* 📎 "
+                            "y te confirmamos la hora.\n\n"
                             "_Si prefieres abonar en recepción, escribe *recepcion* y te orientamos._"
                         )
                     except Exception as _e_link_ap:
