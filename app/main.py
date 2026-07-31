@@ -3788,6 +3788,75 @@ BOXES_CONFIG = [
     {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [78, 79], "revenue_profs": [78, 79], "virtual": True, "uso_autorizado": "teleconsulta (sin sala física)"},
 ]
 
+def boxes_config_efectiva(layout_guardado) -> list[dict]:
+    """Fusiona la planta que editó el usuario con la semántica del código.
+
+    Ninguna de las dos fuentes basta sola:
+
+    · El layout guardado en bi.boxes_state_global lo escribe el dashboard y trae
+      lo que el usuario controla —nombre, piso, orden, tipo, quién puede estar—
+      pero NO trae la semántica interna: `revenue_profs` (la partición contable
+      que evita el doble conteo de box1/box2), `virtual` ni `uso_autorizado`.
+      El layout que hay hoy es del 31-may-2026 y es anterior a todo eso.
+
+    · BOXES_CONFIG tiene la semántica al día, pero ignora que el dueño movió
+      salas, las renombró o cambió de piso. Hasta ahora el backend usaba SOLO
+      esto: editar la planta no cambiaba ni Revenue ni Eficiencia, así que media
+      pantalla mostraba la planta nueva y la otra media la de junio.
+
+    Se toma el código como base y se le aplican encima los campos que el usuario
+    edita. Los boxes que el usuario creó y no existen en el código entran igual.
+    `revenue_profs` se intersecta con los `default_profs` efectivos: nunca se
+    atribuye plata a alguien que ya no está en esa sala.
+    """
+    base = {b["id"]: dict(b) for b in BOXES_CONFIG}
+    if not layout_guardado:
+        return [dict(b) for b in BOXES_CONFIG]
+
+    EDITABLES = ("nombre", "piso", "orden", "tipo", "modo", "pool_group", "default_profs")
+    salida, vistos = [], set()
+    for guardado in layout_guardado:
+        bid = guardado.get("id")
+        if not bid:
+            continue
+        vistos.add(bid)
+        box = base.get(bid, {}).copy()
+        nuevo = not box
+        _profs_codigo = list(box.get("default_profs") or [])
+        box.update({k: guardado[k] for k in EDITABLES if k in guardado})
+        box.setdefault("id", bid)
+        box.setdefault("default_profs", [])
+        # La planta guardada puede ser vieja y no traer a los profesionales que
+        # se agregaron después en el código (la del 31-may no tiene a Celedón en
+        # box3). Se suman los del código que falten, conservando el orden del
+        # usuario: quitar a alguien de una sala tiene que ser una edición
+        # deliberada en el dashboard, no un efecto de tener el layout desfasado.
+        for _pid in _profs_codigo:
+            if _pid not in box["default_profs"]:
+                box["default_profs"].append(_pid)
+        box.setdefault("modo", "pool")
+        box.setdefault("pool_group", None)
+        rp = box.get("revenue_profs")
+        if rp:
+            rp_ok = [x for x in rp if x in box["default_profs"]]
+            if len(rp_ok) != len(rp):
+                log.warning("boxes: %s tenía revenue_profs fuera de su sala (%s) — se recortan",
+                            bid, sorted(set(rp) - set(rp_ok)))
+            box["revenue_profs"] = rp_ok
+        if nuevo:
+            log.info("boxes: %s existe solo en la planta guardada, sin semántica en código", bid)
+        salida.append(box)
+
+    # Boxes que el código define y la planta guardada no menciona (p. ej. el
+    # carril de telemedicina, creado después del último guardado): se agregan,
+    # si no desaparecerían sus citas y su plata.
+    for bid, box in base.items():
+        if bid not in vistos:
+            salida.append(dict(box))
+    salida.sort(key=lambda b: (b.get("piso", 9), b.get("orden", 99)))
+    return salida
+
+
 @app.get("/atribucion")
 @app.get("/atribucion/dashboard")
 def atribucion_dashboard_page(token: str | None = Query(None)):
@@ -5039,6 +5108,17 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         raise HTTPException(401, "No autorizado")
     _boxes_financiero = ALMA_PROFILES.get(token, {}).get("boxes_financiero", True)
 
+    # Planta EFECTIVA: la que editó el dueño, fusionada con la semántica del
+    # código. Hasta ahora todo este endpoint calculaba contra BOXES_CONFIG fijo,
+    # así que mover o renombrar una sala en el dashboard no cambiaba ni Revenue
+    # ni Eficiencia: media pantalla mostraba la planta nueva y la otra la vieja.
+    try:
+        _cfg_guardada = api_boxes_config_get(token=token) or {}
+        BOXES = boxes_config_efectiva(_cfg_guardada.get("layout") or [])
+    except Exception as _e_pl:
+        log.warning("boxes: no se pudo leer la planta guardada (%s) — se usa la del código", _e_pl)
+        BOXES = [dict(b) for b in BOXES_CONFIG]
+
     from datetime import datetime, timedelta, time as _dtime, date as _date
     import zoneinfo as _zib
 
@@ -5224,7 +5304,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         # 2) pasada por pools: dental, general, proced, psiconut → ordenan por hora_inicio.
         box_assignments = {b["id"]: {"profesionales_activos": [], "proximo": None,
                                       "citas_hoy_ids": set(), "revenue_dia": 0,
-                                      "citas_dia_count": 0} for b in BOXES_CONFIG}
+                                      "citas_dia_count": 0} for b in BOXES}
 
         # Filter active citas: in progress now
         def _is_active(c):
@@ -5251,7 +5331,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         # Asignación: por cada cita activa, encontrar el box que la admita.
         # Boxes fijos primero (modo='fijo' y prof_id en default_profs)
         citas_asignadas = set()
-        for box in BOXES_CONFIG:
+        for box in BOXES:
             if box["modo"] != "fijo":
                 continue
             for c in activas:
@@ -5272,7 +5352,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
 
         # Pools: por cada cita activa restante, asignar al primer box libre del pool
         pool_boxes = {}  # group → [box_ids in order]
-        for box in BOXES_CONFIG:
+        for box in BOXES:
             if box["modo"] == "pool":
                 pool_boxes.setdefault(box["pool_group"], []).append(box["id"])
 
@@ -5281,7 +5361,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 continue
             # Encontrar grupo del profesional
             target_group = None
-            for box in BOXES_CONFIG:
+            for box in BOXES:
                 if box["modo"] == "pool" and c["profesional_id"] in box["default_profs"]:
                     target_group = box["pool_group"]
                     break
@@ -5312,7 +5392,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         for c in activas:
             if c["cita_id"] in citas_asignadas:
                 continue
-            _grupo = next((b["pool_group"] for b in BOXES_CONFIG
+            _grupo = next((b["pool_group"] for b in BOXES
                            if b["modo"] == "pool" and c["profesional_id"] in b["default_profs"]), None)
             choques.append({
                 "profesional": c["profesional"],
@@ -5328,7 +5408,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         # Próximas: el primer prof "próximo" se asigna como preview al box correspondiente
         for c in proximas:
             target_box_id = None
-            for box in BOXES_CONFIG:
+            for box in BOXES:
                 if c["profesional_id"] in box["default_profs"]:
                     target_box_id = box["id"]
                     break
@@ -5345,7 +5425,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         # Revenue del día por box: sumar todos los pagos del día de los pacientes
         # cuyas citas (activas o no) hayan caído en este box.
         # Para esto, primero asignar TODAS las citas del día a su box predeterminado.
-        citas_del_box = {b["id"]: [] for b in BOXES_CONFIG}
+        citas_del_box = {b["id"]: [] for b in BOXES}
         # Bucket de huérfanas: citas cuyo profesional no está en NINGÚN box.
         # Antes el `break` sin `else` las descartaba en silencio, así que su plata
         # no entraba en "Revenue del día" pero sí en "Citas hoy" — los dos KPI
@@ -5354,7 +5434,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         for c in citas_hoy:
             # box destino contable: primer box donde el prof está en revenue_profs
             # (o default_profs si el box no reparte el pool). Evita doble conteo box1/box2.
-            for box in BOXES_CONFIG:
+            for box in BOXES:
                 if c["profesional_id"] in box.get("revenue_profs", box["default_profs"]):
                     citas_del_box[box["id"]].append(c)
                     break
@@ -5363,7 +5443,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         if citas_sin_sala:
             _profs_hf = sorted({c["profesional_id"] for c in citas_sin_sala})
             log.warning("boxes: %d cita(s) sin sala asignada — profesionales %s "
-                        "(agregarlos a BOXES_CONFIG o crearles carril)",
+                        "(agregarlos a la planta o crearles carril)",
                         len(citas_sin_sala), _profs_hf)
 
         for box_id, ctas in citas_del_box.items():
@@ -5376,7 +5456,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
 
         # Estado del box
         boxes_out = []
-        for box in BOXES_CONFIG:
+        for box in BOXES:
             bid = box["id"]
             asign = box_assignments[bid]
             if asign["profesionales_activos"]:
@@ -5536,7 +5616,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 return round((cur_v - prev_v) / prev_v * 100)
             return None
 
-        for box in BOXES_CONFIG:
+        for box in BOXES:
             acct_profs = box.get("revenue_profs", box["default_profs"])
             stats = [prof_stats_30d[pid] for pid in acct_profs if pid in prof_stats_30d]
             stats.sort(key=lambda x: x["n_30"], reverse=True)
@@ -5758,7 +5838,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         return {
             "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
             "totales": {
-                "boxes_totales": len(BOXES_CONFIG),
+                "boxes_totales": len(BOXES),
                 "boxes_ocupados": total_ocupados,
                 "profesionales_activos": total_profs_activos,
                 "citas_dia": total_citas,
@@ -5781,7 +5861,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             },
             "choques_detalle": choques,
             "boxes": boxes_out,
-            "boxes_config_default": BOXES_CONFIG,
+            "boxes_config_default": BOXES,
             "profesionales_all": profesionales_all,
             "citas_raw": citas_raw,
             "citas_dia_full": citas_dia_full,
