@@ -3741,12 +3741,24 @@ def _bi_pool() -> "psycopg2.pool.ThreadedConnectionPool":  # type: ignore[name-d
 # Ocupan la sala: la agendada que aún no se confirma y la ya atendida.
 # NO ocupan: anulada, no asiste (justamente el no-show que antes pintaba la
 # sala llena) y cambio de fecha.
-ESTADOS_OCUPAN_SALA = {
-    "no confirmado", "confirmado", "atendido", "en curso",
-    # nombres del filtro anterior, por si otra ruta los sigue usando
-    "agendada", "atendida", "confirmada", "en_curso",
-}
-ESTADOS_NO_ASISTIO = {"no asiste", "no asistio", "no asistió"}
+# Se define por EXCLUSIÓN, no por lista blanca. Medilink tiene más variantes de
+# las que se ven en una muestra chica: además de "No confirmado" y "Atendido"
+# aparecen "Confirmado por email", "Confirmado por teléfono" y "Notificado via
+# email". Con lista blanca, cada variante nueva hacía desaparecer citas en
+# silencio — que es justo el modo de fallar que hay que evitar en un tablero.
+# Acá la cita OCUPA la sala salvo que su estado diga explícitamente que no.
+_NO_OCUPAN_FRAGMENTOS = ("anulad", "no asiste", "no asistio", "no asistió",
+                         "cambio de fecha", "cancelad", "reagendad")
+
+def estado_ocupa_sala(estado: str | None) -> bool:
+    e = (estado or "").strip().lower()
+    if not e:
+        return True                      # sin dato → se muestra, no se esconde
+    return not any(f in e for f in _NO_OCUPAN_FRAGMENTOS)
+
+def estado_es_no_show(estado: str | None) -> bool:
+    e = (estado or "").strip().lower()
+    return any(f in e for f in ("no asiste", "no asistio", "no asistió"))
 
 BOXES_CONFIG = [
     # default_profs = pool de OCUPACIÓN física (quién puede estar en la sala; box1/box2 son
@@ -5203,7 +5215,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             # Una cita anulada no ocupa la sala aunque su hora esté en curso.
             if c.get("anulada"):
                 return False
-            return c["estado"] in ESTADOS_OCUPAN_SALA
+            return estado_ocupa_sala(c["estado"])
 
         def _is_proximo(c):
             if not c["hora_inicio"] or now_t >= c["hora_inicio"]:
