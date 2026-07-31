@@ -1545,7 +1545,7 @@ function mkThread(contexto, profNombre, nombre){
     msgs.push({de:'pac',t:t(),txt:`Quiero hora con ${profNombre}`});
     msgs.push({de:'bot',t:t(),txt:`${profNombre} no tiene cupos disponibles ahora. ¿Te dejo en lista de espera y te aviso apenas se libere uno?`});
     msgs.push({de:'pac',t:t(),txt:pickn2(['Sí, por favor','Ya, dale','Bueno, espero entonces'])});
-    msgs.push({de:'bot',t:t(),txt:'¡Listo! Quedaste en lista de espera ✅ Te avisamos al toque.'});
+    msgs.push({de:'bot',t:t(),txt:'¡Listo! Quedaste en lista de espera ✅ Te avisamos apenas se libere una hora.'});
   } else {
     msgs.push({de:'bot',t:t(),txt:'Por ahora no hay cupos, te dejo en lista de espera 👍'});
     msgs.push({de:'rec',t:t(),txt:`Hola ${first}, soy del Centro Médico. Se liberó un cupo con ${profNombre}. ¿Te sirve mañana?`});

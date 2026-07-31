@@ -4598,3 +4598,74 @@ async def _job_learned_skills():
             log.debug("learned_skills: pasada semanal no-op (flag off)")
     except Exception as e:  # noqa: BLE001
         log.error("_job_learned_skills falló: %s", e, exc_info=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Guardrail: duración del bot × intervalo de Medilink
+# ─────────────────────────────────────────────────────────────────────────────
+async def _job_verificar_intervalos():
+    """Avisa si la duración de cita que usa el bot dejó de ser múltiplo del
+    intervalo que el profesional tiene en Medilink.
+
+    Por qué existe: al GENERAR slots el bot impone su propia duración e ignora
+    la de Medilink (decisión de diseño). Pero al CREAR la cita manda `duracion`
+    y ahí Medilink SÍ valida contra su intervalo — si no divide, responde
+    400 "Duración no es compatible con el intervalo de atención" y el paciente
+    ve el error en el ÚLTIMO paso, después de haber confirmado.
+
+    Caso real (jun–jul 2026): Dra. Unibazo con 40 en el bot y 15 en Medilink.
+    40 % 15 = 10 → 46 reservas caídas contra 31 exitosas (60% de fallo),
+    37 pacientes distintos, siete semanas. Nada lo advirtió porque el desajuste
+    es invisible hasta el POST. Ver memoria cmc_intervalo_medilink_guardrail.
+
+    Diario y no al arranque: son ~25 requests a Medilink y el bot reinicia en
+    cada deploy; hacerlo al arranque sería el camino corto al 429.
+    """
+    import asyncio   # jobs.py no lo importa a nivel de módulo
+    from medilink import (PROFESIONALES, intervalo_en_medilink,
+                          _get_shared_client, use_batch_lane)
+    use_batch_lane()   # guardrail 429: este cron no compite con los pacientes
+
+    desajustes, sin_dato = [], 0
+    cli = _get_shared_client()
+    for pid, info in PROFESIONALES.items():
+        bot = info.get("intervalo")
+        if not bot:
+            continue
+        try:
+            ml = await intervalo_en_medilink(cli, int(pid))
+        except Exception as e:  # noqa: BLE001 — un profesional no rompe la pasada
+            log.debug("verificar_intervalos prof %s: %s", pid, e)
+            ml = None
+        if ml is None:
+            sin_dato += 1
+        elif int(bot) % int(ml) != 0:
+            desajustes.append((int(pid), info.get("nombre", f"id {pid}"), int(bot), int(ml)))
+        await asyncio.sleep(0.4)   # espaciar: el HIS es compartido con recepción
+
+    if not desajustes:
+        log.info("verificar_intervalos: OK — %d profesionales, %d sin dato",
+                 len(PROFESIONALES) - sin_dato, sin_dato)
+        return
+
+    for pid, nom, bot, ml in desajustes:
+        log.error("INTERVALO_DESAJUSTADO prof=%d (%s) bot=%d medilink=%d — "
+                  "las reservas de este profesional van a fallar con 400",
+                  pid, nom, bot, ml)
+    log_event("", "intervalos_desajustados", {
+        "n": len(desajustes),
+        "profesionales": [{"id": p, "bot": b, "medilink": m} for p, _, b, m in desajustes],
+    })
+
+    if ADMIN_ALERT_PHONE:
+        lineas = "\n".join(
+            f"• *{nom}*: el bot usa {bot} min, Medilink {ml} min" for _, nom, bot, ml in desajustes
+        )
+        await send_whatsapp(
+            ADMIN_ALERT_PHONE,
+            "⚠️ *Intervalos desajustados*\n\n"
+            f"{lineas}\n\n"
+            "Las reservas de estos profesionales van a fallar al confirmar "
+            "(_Duración no es compatible con el intervalo de atención_).\n"
+            "Se arregla cambiando el intervalo en Medilink o en PROFESIONALES."
+        )

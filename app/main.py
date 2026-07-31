@@ -43,6 +43,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from medilink import MedilinkRateLimited
 from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
+                  _job_verificar_intervalos,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
                   _job_postconsulta, _job_postconsulta_morning,
                   _job_enrolar_atendidos_dia,
@@ -414,6 +415,19 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", hour=9, minute=35, timezone=_CLT),
         id="learned_skills_semanal",
         replace_existing=True,
+    )
+    # Guardrail intervalos: 06:20 CLT, antes de que abra el centro y fuera de
+    # los clusters de la mañana (429). Compara la duración de cita del bot
+    # contra el intervalo real de cada profesional en Medilink y alerta si
+    # dejó de ser múltiplo — ese desajuste hace fallar la reserva en el ÚLTIMO
+    # paso y costó 46 citas de psiquiatría entre junio y julio de 2026.
+    scheduler.add_job(
+        _job_verificar_intervalos,
+        CronTrigger(hour=6, minute=20, timezone=_CLT),
+        id="verificar_intervalos_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Post-consulta: 18:00 CLT (Item 33 — dentro de ventana 09:30-20:00 para evitar
     # mensajes de madrugada; 44% sin respuesta cuando corría a las 22:00).

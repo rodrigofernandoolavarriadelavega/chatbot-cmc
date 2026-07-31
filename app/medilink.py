@@ -608,6 +608,38 @@ async def _get_horario(client: httpx.AsyncClient, id_prof: int) -> dict:
     return horario
 
 
+async def intervalo_en_medilink(client: httpx.AsyncClient, id_prof: int) -> int | None:
+    """Intervalo que el profesional tiene configurado EN MEDILINK. None si no se pudo leer.
+
+    `_get_horario` pide este mismo endpoint pero descarta el campo `intervalo`
+    y devuelve el del dict PROFESIONALES — decisión correcta para GENERAR slots
+    (el bot impone su propia duración de cita), pero deja ciego al sistema:
+    al CREAR la cita se manda `duracion` y Medilink sí valida contra su propio
+    intervalo, así que un desajuste solo se manifiesta en el POST final.
+
+    Caso real (jun-jul 2026): la Dra. Unibazo tenía intervalo 15 en Medilink y
+    el bot mandaba 40. 40 % 15 = 10 → 46 reservas caídas contra 31 exitosas,
+    37 pacientes distintos, siete semanas sin que nada lo advirtiera.
+    """
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/profesionales/{id_prof}/horarios",
+                       headers=HEADERS)
+    except httpx.RequestError as e:
+        log.debug("intervalo_en_medilink prof %d: %s", id_prof, e)
+        return None
+    if r.status_code != 200:
+        return None
+    data = _safe_json(r).get("data", [])
+    suc = next((x for x in data if x.get("id_sucursal") == int(MEDILINK_SUCURSAL)), None)
+    if not suc:
+        return None
+    try:
+        val = int(suc.get("intervalo") or 0)
+    except (TypeError, ValueError):
+        return None
+    return val or None
+
+
 # Cache de horarios_especiales (excepciones por fecha cargadas en Medilink web).
 # Endpoint: /profesionales/{id}/horariosespeciales. Devuelve lista de dicts
 # con {id, id_profesional, id_sucursal, fecha (YYYY-MM-DD), hora_inicio, hora_fin,
