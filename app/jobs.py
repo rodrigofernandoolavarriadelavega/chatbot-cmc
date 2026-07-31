@@ -4641,7 +4641,11 @@ async def _job_verificar_intervalos():
             sin_dato += 1
         elif int(bot) % int(ml) != 0:
             desajustes.append((int(pid), info.get("nombre", f"id {pid}"), int(bot), int(ml)))
-        await asyncio.sleep(0.4)   # espaciar: el HIS es compartido con recepción
+        # Espaciado generoso: el HIS lo comparte recepción y con 0.4s la
+        # pasada ya sacaba algún 429 (se reintenta solo, pero es presión
+        # gratis). A 0.8s la pasada completa toma ~20s — irrelevante para un
+        # cron de las 06:20 y mucho más amable con Medilink.
+        await asyncio.sleep(0.8)
 
     if not desajustes:
         log.info("verificar_intervalos: OK — %d profesionales, %d sin dato",
