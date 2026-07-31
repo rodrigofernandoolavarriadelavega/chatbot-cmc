@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Errores del bot · semana 24–31 jul 2026</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/static/isotipo.png">
+<style>
+  @font-face{
+    font-family:'Montserrat';
+    src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations');
+    font-weight:400 800; font-display:swap;
+  }
+  :root{
+    --aqua:#4FBECE; --azul:#1172AB; --navy:#0F3F68; --navy-deep:#092A47;
+    --ink:#16232E; --muted:#65788A; --hairline:#E3EDF1; --bg:#EEF4F7; --card:#fff;
+    --p1:#B3261E; --p1-bg:#FDECEA;
+    --p2:#8A5300; --p2-bg:#FDF5E7;
+    --p3:#0F7040; --p3-bg:#E8F5ED;
+    --sombra:0 2px 4px rgba(9,42,71,.05), 0 8px 24px rgba(9,42,71,.07);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:'Montserrat',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    background:radial-gradient(120% 140% at 88% -20%, #17568C 0%, transparent 58%),
+               linear-gradient(158deg,var(--navy) 0%,var(--navy-deep) 100%);
+    color:#fff; padding:26px 20px 30px;
+    border-bottom:3px solid var(--aqua);
+  }
+  .topbar-in{max-width:1080px;margin:0 auto}
+  .topbar h1{margin:0;font-size:23px;font-weight:750;letter-spacing:-.02em}
+  .topbar .sub{font-size:12px;letter-spacing:.10em;text-transform:uppercase;color:var(--aqua);margin-top:6px;font-weight:600}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 20px 60px}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:-46px 0 26px;position:relative;z-index:2}
+  .kpi{background:var(--card);border-radius:14px;padding:15px 16px;box-shadow:var(--sombra)}
+  .kpi .n{font-size:29px;font-weight:800;letter-spacing:-.03em;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.1}
+  .kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-top:3px}
+  .kpi.alerta .n{color:var(--p1)}
+
+  h2{font-size:13px;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin:32px 0 12px;font-weight:700}
+
+  /* Embudo */
+  .embudo{background:var(--card);border-radius:16px;padding:20px;box-shadow:var(--sombra)}
+  .paso{display:flex;align-items:center;gap:14px;margin-bottom:11px}
+  .paso:last-child{margin-bottom:0}
+  .paso .et{width:150px;font-size:13px;font-weight:600;flex-shrink:0}
+  .paso .barra{flex:1;height:32px;background:#F2F7F9;border-radius:7px;overflow:hidden;position:relative}
+  .paso .fill{height:100%;background:linear-gradient(90deg,var(--azul),var(--aqua));border-radius:7px;display:flex;align-items:center;padding-left:11px;color:#fff;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+  .paso .caida{width:118px;font-size:12px;color:var(--p1);font-weight:650;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+  /* Hallazgos */
+  .item{background:var(--card);border-radius:16px;padding:0;margin-bottom:14px;box-shadow:var(--sombra);overflow:hidden}
+  .item.hecho{opacity:.55}
+  .item-head{display:flex;align-items:flex-start;gap:13px;padding:17px 19px;cursor:pointer}
+  .item-head:hover{background:#FAFCFD}
+  .chk{width:23px;height:23px;flex-shrink:0;margin-top:2px;accent-color:var(--azul);cursor:pointer}
+  .item-t{flex:1;min-width:0}
+  .item-t h3{margin:0 0 4px;font-size:16px;font-weight:700;letter-spacing:-.015em;color:var(--navy)}
+  .item.hecho h3{text-decoration:line-through}
+  .item-t .meta{font-size:12.5px;color:var(--muted);font-weight:500}
+  .prio{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:4px 9px;border-radius:6px;flex-shrink:0;text-transform:uppercase}
+  .prio.p1{background:var(--p1-bg);color:var(--p1)}
+  .prio.p2{background:var(--p2-bg);color:var(--p2)}
+  .prio.p3{background:var(--p3-bg);color:var(--p3)}
+  .item-body{display:none;padding:0 19px 19px 55px;font-size:13.5px}
+  .item.abierto .item-body{display:block}
+  .item-body h4{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:15px 0 6px;font-weight:700}
+  .item-body p{margin:0 0 8px}
+  .ev{background:#F7FBFC;border-left:3px solid var(--aqua);padding:11px 13px;border-radius:0 8px 8px 0;font-size:12.5px;white-space:pre-wrap;overflow-x:auto}
+  code{background:#EEF4F7;padding:2px 6px;border-radius:4px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .accion{background:#EDF7F4;border-radius:9px;padding:12px 14px;font-weight:550;box-shadow:inset 0 0 0 1px rgba(15,112,64,.14)}
+  .tag{display:inline-block;background:#EEF4F7;color:var(--muted);font-size:11px;font-weight:650;padding:3px 9px;border-radius:5px;margin:0 5px 5px 0}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:7px 9px;border-bottom:1.5px solid var(--hairline)}
+  td{padding:8px 9px;border-bottom:1px solid var(--hairline);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+
+  .barra-prog{height:9px;background:#DFE9EE;border-radius:5px;overflow:hidden;margin-top:9px}
+  .barra-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--azul),var(--aqua));width:0;transition:width .35s ease}
+  .nota{font-size:12px;color:var(--muted);margin-top:26px;text-align:center;line-height:1.8}
+  @media(max-width:700px){
+    .paso .et{width:96px;font-size:12px}
+    .paso .caida{width:78px;font-size:11px}
+    .item-body{padding-left:19px}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <h1>Errores del bot — semana del 24 al 31 de julio</h1>
+    <div class="sub">Centro Médico Carampangue · tablero de trabajo</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="kpis">
+    <div class="kpi"><div class="n">12.605</div><div class="l">mensajes</div></div>
+    <div class="kpi"><div class="n">715</div><div class="l">personas</div></div>
+    <div class="kpi"><div class="n">169</div><div class="l">citas creadas</div></div>
+    <div class="kpi"><div class="n">23,6%</div><div class="l">conversión</div></div>
+    <div class="kpi alerta"><div class="n">137</div><div class="l">perdidos por el apagón</div></div>
+  </div>
+
+  <h2>Dónde se cae la gente</h2>
+  <div class="embudo">
+    <div class="paso"><div class="et">Escribieron</div><div class="barra"><div class="fill" style="width:100%">715</div></div><div class="caida"></div></div>
+    <div class="paso"><div class="et">Vieron horarios</div><div class="barra"><div class="fill" style="width:45.9%">328</div></div><div class="caida">−387 (54%)</div></div>
+    <div class="paso"><div class="et">Confirmaron</div><div class="barra"><div class="fill" style="width:24.5%">175</div></div><div class="caida">−153 (47%)</div></div>
+    <div class="paso"><div class="et">Cita creada</div><div class="barra"><div class="fill" style="width:23.6%">169</div></div><div class="caida">−6 (3%)</div></div>
+  </div>
+
+  <h2>Hallazgos <span id="prog" style="color:var(--azul);font-weight:700"></span></h2>
+  <div class="barra-prog"><i id="progbar"></i></div>
+  <div id="lista" style="margin-top:14px"></div>
+
+  <p class="nota">
+    Datos de <code>sessions.db</code> en producción · ventana 24–31 jul 2026<br>
+    Lo que marques queda guardado en este navegador.
+  </p>
+</div>
+
+<script>
+// Cada hallazgo salió de una consulta concreta a producción; la evidencia va
+// citada para que se pueda re-verificar sin volver a analizar todo.
+var HALLAZGOS = [
+ {
+  id:"apagon-saldo", prio:1,
+  t:"El bot estuvo 6 días sin entender a nadie por saldo agotado de la API",
+  meta:"193 personas afectadas · 137 no agendaron · 21 al 27 de julio",
+  que:"Se acabó el saldo de la API de Anthropic. Sin ella el bot no detecta intención: a cualquier mensaje respondía «Disculpa, justo estoy con un problema técnico para entender tu mensaje». Duró desde el 21-jul 18:02 hasta el 27-jul 14:36.",
+  ev:"1.020 fallos de API en 6 días:\n  21-jul: 80   22-jul: 207   23-jul: 182\n  24-jul: 214  25-jul: 139   26-jul: 66   27-jul: 132\n\n'Your credit balance is too low to access the Anthropic API'\n\nDe las 193 personas que vieron el mensaje de error, solo 56 llegaron\na agendar. 137 se perdieron.",
+  causa:"La alerta SÍ existe y SÍ funcionó: el watchdog avisó a los 16 segundos del primer fallo (21-jul 18:02:25, «dueño alertado — IA caída, saldo agotado»). El problema es que avisa <b>una sola vez por racha</b> — <code>should_alert_claude_down()</code> marca la racha como alertada y no vuelve a insistir. Seis días sin recordatorio.",
+  accion:"Re-alertar mientras el apagón siga: repetir cada 6 h (o escalando) en vez de una sola vez. Un fallo que exige acción humana y no se resuelve debe seguir molestando. Alternativa complementaria: chequeo de saldo antes de que llegue a cero.",
+  tags:["resilience.py","jobs.py:_job_claude_watchdog","YA RESUELTO el saldo — falta la insistencia"]
+ },
+ {
+  id:"nunca-ven-horario", prio:1,
+  t:"54% de los que escriben nunca llegan a ver un horario",
+  meta:"387 de 715 personas · 126 escribieron 4+ mensajes",
+  que:"De 715 personas que escribieron, 387 jamás llegaron al estado WAIT_SLOT. No es todo pérdida: 144 mandaron un solo mensaje (muchos responden campañas, no quieren agendar). Pero 126 escribieron cuatro o más mensajes y aun así nunca vieron una hora.",
+  ev:"último estado de los 387:\n  IDLE ................ 282\n  HUMAN_TAKEOVER ....... 68\n  WAIT_ESPECIALIDAD .... 13\n  WAIT_WAITLIST_CONFIRM . 8\n\ncuántos mensajes escribieron:\n  1 solo mensaje ...... 144\n  2-3 ................. 117\n  4 o más ............. 126   ← acá están los que sí querían algo",
+  causa:"Parte es el apagón de saldo (se solapa con el hallazgo anterior). El resto se reparte entre especialidades sin cupo, preguntas de precio que nunca derivan a agendar, y los loops de los hallazgos de abajo.",
+  accion:"Separar los 126 por causa una vez descontado el apagón, y medir de nuevo la semana del 1 al 7 de agosto — con la API sana el número debería bajar solo. Si no baja, el problema es de flujo.",
+  tags:["medir de nuevo post-apagón"]
+ },
+ {
+  id:"loop-traumatologia", prio:2,
+  t:"Traumatología deja al paciente dando vueltas sin poder agendar",
+  meta:"caso real 56940792871 · 8 mensajes sin resultado",
+  que:"El paciente pide traumatología. El bot explica que se atiende con medicina general y lo devuelve al menú. Vuelve a pedir traumatología, misma explicación, mismo menú. La explicación nunca ofrece el botón para agendar medicina general, así que no hay salida salvo que el paciente adivine escribir «agendar».",
+  ev:">> 'Traumatólogia'\n   'Traumatología: atendemos lesiones musculoesqueléticas con\n    nuestros médicos generales...'\n>> '1'                      ← intenta elegir, no se interpreta\n   [menú de especialidades otra vez]\n>> 'Traumatólogia'          ← repite\n   [misma explicación]\n>> 'agendar'                ← tuvo que adivinar la palabra",
+  causa:"El mensaje de derivación termina el turno en IDLE sin botones de acción. El «1» que escribió el paciente tampoco se interpreta como «sí, agéndame con medicina general».",
+  accion:"Que la explicación de traumatología (y cualquier especialidad derivada a MG) cierre con botones: «✅ Agendar con Medicina General» / «Otra especialidad». Es el mismo patrón que ya se arregló para ecografía en el fix del menu-loop de junio.",
+  tags:["flows.py","mismo patrón que el menu-loop de eco (2026-06-07)"]
+ },
+ {
+  id:"eco-sin-tipo", prio:2,
+  t:"Ecografía: 41 veces el bot no logró resolver qué tipo era",
+  meta:"evento ecografia_sin_tipo · 41 en la semana",
+  que:"El paciente pide una ecografía, el bot pregunta de qué tipo y la respuesta no cae en ninguna categoría conocida, así que vuelve a preguntar. Es el evento de fricción más frecuente de la semana.",
+  ev:"ecografia_sin_tipo ......... 41\nsin_disponibilidad (eco) .... 9\n\nEjemplo real de la semana:\n  'Buenos días una consulta sacan eco grafía de tobillo'\n  → 4 mensajes, nunca vio un horario",
+  causa:"El router de ecografías mapea por palabras clave de órgano. «Tobillo», «rodilla» y otras zonas de partes blandas no están cubiertas, o quedan fuera del diccionario.",
+  accion:"Revisar el diccionario de ecografías contra los 41 casos reales y agregar las zonas que faltan. Como red: si tras dos intentos no se resuelve el tipo, ofrecer directamente la eco de partes blandas con David Pardo en vez de re-preguntar.",
+  tags:["ecografias.py","flows.py"]
+ },
+ {
+  id:"429-al-paciente", prio:2,
+  t:"El paciente ve el problema técnico de Medilink y tiene que reescribir",
+  meta:"12 personas · 14 veces",
+  que:"Cuando Medilink responde 429 (rate limit), el bot le pide al paciente que escriba de nuevo en un minuto. Le traslada un problema de infraestructura a alguien que solo quiere una hora.",
+  ev:"'Estoy con la agenda muy pedida en este momento y no alcancé a leerla 😅\n Escríbeme de nuevo en un minuto y te muestro las horas.'\n\n12 personas distintas · 14 veces en la semana\n\nCaso 56966422962: pidió otorrino, recibió esto, tuvo que repetir el\nmensaje entero.",
+  causa:"El 429 no se reintenta en ese punto del flujo — se convierte en mensaje al paciente. Un 429 significa «más lento», no «caído»: el HIS está vivo.",
+  accion:"Reintentar con backoff antes de rendirse (el patrón ya existe en <code>_buscar_slots_dia_con_retry</code>). Si tras los reintentos sigue fallando, ofrecer lista de espera o recepción, nunca «escríbeme de nuevo».",
+  tags:["flows.py","guardrail: 429 ≠ caída"]
+ },
+ {
+  id:"demanda-no-satisfecha", prio:3,
+  t:"Otorrino, gastro y ecografía se quedan sin cupos",
+  meta:"47 rechazos por falta de agenda · 16 inscritos en lista de espera",
+  que:"No es un error del bot: es demanda real que no tiene dónde caer. El bot la maneja bien (ofrece lista de espera), pero son pacientes que querían hora y no la hubo.",
+  ev:"sin_disponibilidad por especialidad:\n  otorrinolaringología .... 17\n  gastroenterología ....... 10\n  ecografía ................ 9\n  cardiología .............. 5\n\ninscritos en lista de espera: 16",
+  causa:"Agenda insuficiente para esas cuatro especialidades en la semana medida.",
+  accion:"Decisión de agenda, no de código: evaluar si conviene sumar horas de otorrino (el más pedido) o si la lista de espera ya está absorbiendo bien. Vale la pena mirar cuántos de los 16 inscritos terminaron agendando.",
+  tags:["decisión del dueño","no es bug"]
+ },
+ {
+  id:"meta-slot-residual", prio:3,
+  t:"Un «Hola» cae en el flujo de anuncios de Meta y suelta el disclaimer largo",
+  meta:"caso 56966422962",
+  que:"El paciente escribe «Hola» y recibe el disclaimer largo de «asistente automático, no entrego consejo médico», porque la sesión quedó en WAIT_META_SLOT_CHOICE de una interacción previa con un anuncio. Recién al segundo mensaje aparece el menú normal.",
+  ev:">> 'Hola'\n   [WAIT_META_SLOT_CHOICE] 'Hola 👋 Soy el asistente automático...\n                            No entrego consejo médico ni evalúo síntomas...'\n>> 'Buenas'\n   [IDLE] [menú normal]",
+  causa:"El estado de la sesión Meta sobrevive más de lo que debería y un saludo suelto no lo resetea.",
+  accion:"Un saludo simple (hola/buenas/buenos días) en WAIT_META_* debería resetear al menú normal, igual que ya lo hace en otros estados.",
+  tags:["flows.py","WAIT_META_SLOT_CHOICE"]
+ }
+];
+
+var lista = document.getElementById("lista");
+var LS = "cmc_errores_semana_24jul";
+
+function estado(){
+  try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch(e){ return {}; }
+}
+function guardar(st){ try { localStorage.setItem(LS, JSON.stringify(st)); } catch(e){} }
+
+function pintarProgreso(){
+  var st = estado();
+  var hechos = HALLAZGOS.filter(function(h){ return st[h.id]; }).length;
+  document.getElementById("prog").textContent = hechos + " de " + HALLAZGOS.length + " resueltos";
+  document.getElementById("progbar").style.width = (hechos / HALLAZGOS.length * 100) + "%";
+}
+
+HALLAZGOS.forEach(function(h){
+  var st = estado();
+  var div = document.createElement("div");
+  div.className = "item" + (st[h.id] ? " hecho" : "");
+
+  var head = document.createElement("div");
+  head.className = "item-head";
+
+  var chk = document.createElement("input");
+  chk.type = "checkbox"; chk.className = "chk"; chk.checked = !!st[h.id];
+  chk.addEventListener("click", function(e){ e.stopPropagation(); });
+  chk.addEventListener("change", function(){
+    var s = estado(); s[h.id] = chk.checked; guardar(s);
+    div.classList.toggle("hecho", chk.checked);
+    pintarProgreso();
+  });
+
+  var txt = document.createElement("div");
+  txt.className = "item-t";
+  var t = document.createElement("h3"); t.textContent = h.t;
+  var m = document.createElement("div"); m.className = "meta"; m.textContent = h.meta;
+  txt.appendChild(t); txt.appendChild(m);
+
+  var p = document.createElement("span");
+  p.className = "prio p" + h.prio;
+  p.textContent = h.prio === 1 ? "Alta" : h.prio === 2 ? "Media" : "Baja";
+
+  head.appendChild(chk); head.appendChild(txt); head.appendChild(p);
+  head.addEventListener("click", function(){ div.classList.toggle("abierto"); });
+
+  var body = document.createElement("div");
+  body.className = "item-body";
+  function bloque(titulo, html, cls){
+    var h4 = document.createElement("h4"); h4.textContent = titulo;
+    var d = document.createElement("div"); if (cls) d.className = cls;
+    d.innerHTML = html;
+    body.appendChild(h4); body.appendChild(d);
+  }
+  bloque("Qué pasa", "<p>" + h.que + "</p>");
+  bloque("Evidencia", h.ev, "ev");
+  bloque("Causa", "<p>" + h.causa + "</p>");
+  bloque("Qué hacer", h.accion, "accion");
+  var tg = document.createElement("div"); tg.style.marginTop = "13px";
+  h.tags.forEach(function(x){
+    var s = document.createElement("span"); s.className = "tag"; s.textContent = x; tg.appendChild(s);
+  });
+  body.appendChild(tg);
+
+  div.appendChild(head); div.appendChild(body);
+  lista.appendChild(div);
+});
+
+pintarProgreso();
+</script>
+</body>
+</html>
