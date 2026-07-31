@@ -3724,6 +3724,12 @@ def _bi_pool() -> "psycopg2.pool.ThreadedConnectionPool":  # type: ignore[name-d
     return _BI_POOL
 
 # ── Boxes CMC — gemelo digital ────────────────────────────────────────────────
+# uso_autorizado: para qué está autorizada cada sala. El expediente de
+# habilitación SEREMI declara un uso por recinto y el gemelo ya sabe qué pasa de
+# verdad en cada uno: con este campo el módulo pasa a ser evidencia de uso real
+# para la tramitación, y puede avisar si una sala se está ocupando para algo
+# distinto de lo declarado.
+#
 # Config inicial: 8 boxes en 2 pisos. Pool dinámico vs profesional fijo.
 # "pool" = cualquier profesional listado en default_profs entra al box; el primero
 # con cita activa ocupa este box, el segundo el siguiente del mismo tipo.
@@ -3765,21 +3771,21 @@ BOXES_CONFIG = [
     #   intercambiables, el spreading en vivo reparte hasta 2 médicos por box).
     # revenue_profs = atribución CONTABLE (de quién es la plata). box1=MG, box2=especialistas.
     #   Particiona el pool general sin solape ni hueco → cada cita cuenta una sola vez.
-    {"id": "box1",      "piso": 1, "orden": 1, "nombre": "Box 1",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [1, 73, 13]},
-    {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [23, 60, 64, 61, 65, 70]},
-    {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77]},
-    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21]},
-    {"id": "boxdental", "piso": 2, "orden": 1, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76]},
-    {"id": "box3",      "piso": 2, "orden": 2, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56, 80], "revenue_profs": [67, 68, 56, 80]},
-    {"id": "box4",      "piso": 2, "orden": 3, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52]},
-    {"id": "box5",      "piso": 2, "orden": 4, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59]},
+    {"id": "box1",      "piso": 1, "orden": 1, "nombre": "Box 1",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [1, 73, 13], "uso_autorizado": "consulta médica general"},
+    {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [23, 60, 64, 61, 65, 70], "uso_autorizado": "consulta médica de especialidad"},
+    {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77], "uso_autorizado": "kinesiología"},
+    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21], "uso_autorizado": "kinesiología"},
+    {"id": "boxdental", "piso": 2, "orden": 1, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76], "uso_autorizado": "odontología"},
+    {"id": "box3",      "piso": 2, "orden": 2, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56, 80], "revenue_profs": [67, 68, 56, 80], "uso_autorizado": "procedimientos y toma de muestras"},
+    {"id": "box4",      "piso": 2, "orden": 3, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52], "uso_autorizado": "consulta psicológica y nutricional"},
+    {"id": "box5",      "piso": 2, "orden": 4, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59], "uso_autorizado": "masoterapia"},
     # Telemedicina: Unibazo (psiquiatría) y Franca González (neurología) atienden
     # por videollamada. Ocupan AGENDA pero no metros cuadrados, así que van en su
     # propio carril con `virtual: True` — no compiten por sala y no deben contar
     # como capacidad física cuando se calcule cuánto se puede crecer sin construir.
     # Antes no estaban en ningún box: sus citas se descartaban en silencio y su
     # plata no entraba en el revenue del día.
-    {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [78, 79], "revenue_profs": [78, 79], "virtual": True},
+    {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [78, 79], "revenue_profs": [78, 79], "virtual": True, "uso_autorizado": "teleconsulta (sin sala física)"},
 ]
 
 @app.get("/atribucion")
@@ -4857,11 +4863,27 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
     if token != ADMIN_TOKEN:
         raise HTTPException(401, "No autorizado")
     body = await request.json()
-    layout = body.get("layout", [])
-    pisos = body.get("pisos", [])
-    overrides = body.get("manual_overrides", {})
-    schedules = body.get("schedules", {})
-    weekly = body.get("weekly_template", {})
+    # MERGE por clave, no reemplazo total. Antes cualquier cliente que mandara un
+    # body parcial borraba lo que no incluía: el dashboard nunca enviaba
+    # `weekly_template`, así que CADA guardado de layout/override/horario dejaba
+    # la columna del patrón semanal en {}. Ahora una clave ausente NO se toca;
+    # para borrarla hay que mandarla explícitamente vacía.
+    _actual = {}
+    try:
+        _actual = api_boxes_config_get(token=token) or {}
+    except Exception as _e_merge:
+        # Si no se pudo leer lo guardado, es preferible NO borrar nada: se
+        # escribe solo lo que vino en el body y el resto queda como esté.
+        log.warning("boxes-config: no se pudo leer para merge (%s)", _e_merge)
+
+    def _campo(nombre, vacio):
+        return body[nombre] if nombre in body else (_actual.get(nombre) or vacio)
+
+    layout = _campo("layout", [])
+    pisos = _campo("pisos", [])
+    overrides = _campo("manual_overrides", {})
+    schedules = _campo("schedules", {})
+    weekly = _campo("weekly_template", {})
     import json as _js
     pool = _bi_pool()
     conn = None
@@ -5281,6 +5303,28 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                     citas_asignadas.add(c["cita_id"])
                     break
 
+        # CHOQUES: citas activas que no encontraron sala. Ocurre cuando todos los
+        # boxes de su grupo están al tope (2 profesionales simultáneos) o cuando
+        # el profesional no pertenece a ningún pool. Antes el `continue` las
+        # descartaba sin dejar rastro — o sea el gemelo tiraba a la basura justo
+        # el evento que debería gritar: dos personas peleando la misma sala.
+        choques = []
+        for c in activas:
+            if c["cita_id"] in citas_asignadas:
+                continue
+            _grupo = next((b["pool_group"] for b in BOXES_CONFIG
+                           if b["modo"] == "pool" and c["profesional_id"] in b["default_profs"]), None)
+            choques.append({
+                "profesional": c["profesional"],
+                "especialidad": c["especialidad"],
+                "hora_inicio": c["hora_inicio"].strftime("%H:%M") if c["hora_inicio"] else None,
+                "motivo": "sin cupo en el grupo" if _grupo else "profesional sin pool asignado",
+                "grupo": _grupo,
+            })
+        if choques:
+            log.warning("boxes: %d cita(s) activa(s) sin sala — %s", len(choques),
+                        [f'{x["profesional"]} ({x["motivo"]})' for x in choques])
+
         # Próximas: el primer prof "próximo" se asigna como preview al box correspondiente
         for c in proximas:
             target_box_id = None
@@ -5428,6 +5472,11 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         #    (08:00–20:00), igual que el load-bar del dashboard. AJUSTA si tus boxes
         #    operan otra franja real (ej. 600 = 10h, 540 = 9h).
         VENTANA_DIA_MIN = 720
+        # Días con el centro abierto en la ventana de 30 días. Lun–sáb; domingo
+        # cerrado (weekday 6). Es el denominador honesto de la capacidad: contra
+        # los días que la sala se usó, la ociosidad es invisible por construcción.
+        dias_abiertos_30 = sum(1 for _i in range((today - desde_30).days + 1)
+                               if (desde_30 + timedelta(days=_i)).weekday() < 6)
 
         # Días activos por profesional (distinct fechas con atención, 30d) → para
         # agregar a nivel box (un día cuenta una vez aunque varios profs atiendan).
@@ -5493,7 +5542,35 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 dias_set |= dias_por_prof.get(pid, set())
             dias_activos = len(dias_set)
             avail_min = dias_activos * VENTANA_DIA_MIN
+            # Intensidad: qué tan lleno estuvo LOS DÍAS QUE SE USÓ. Sirve para ver
+            # si el día que trabaja rinde, pero NO revela ociosidad: una sala
+            # usada un solo día del mes, ese día lleno, da 100%.
             utilizacion = round(occ_min / avail_min * 100) if avail_min else None
+
+            # Utilización contra CAPACIDAD: los mismos minutos ocupados, pero
+            # divididos por todos los días que el centro estuvo abierto en la
+            # ventana (lun–sáb; domingo cerrado). Ésta sí muestra el hueco, que es
+            # la pregunta del dueño: cuánto se puede crecer sin construir.
+            cap_min = dias_abiertos_30 * VENTANA_DIA_MIN
+            utilizacion_cap = round(occ_min / cap_min * 100) if cap_min else None
+            libres_min = max(0, cap_min - occ_min)
+
+            # Cupos que caben en ese hueco, al intervalo típico de esta sala, y
+            # cuánto valdrían al ticket promedio de sus profesionales.
+            _intervalos = [_intervalo(pid) for pid in acct_profs] or [30]
+            interv_box = max(5, int(sum(_intervalos) / len(_intervalos)))
+            _tickets = [prof_extra[pid]["ticket"] for pid in acct_profs
+                        if pid in prof_extra and prof_extra[pid]["ticket"]]
+            ticket_box = int(sum(_tickets) / len(_tickets)) if _tickets else 0
+            cupos_libres = int(libres_min // interv_box)
+            plata_hueco = cupos_libres * ticket_box
+            # Una sala VIRTUAL (telemedicina) no tiene metros cuadrados: su hueco
+            # no es capacidad instalada que se pueda llenar mudando pacientes, así
+            # que no suma al total físico. Se informa su utilización igual, pero
+            # con el hueco en cero para no inflar el "cuánto cabe sin construir".
+            if box.get("virtual"):
+                cupos_libres = 0
+                plata_hueco = 0
             yield_hora = round(rev_30 / occ_h) if occ_h else None
             # Ociosidad: días desde la última atención de cualquier prof del box.
             ultimas = [prof_extra[pid]["ultima"] for pid in acct_profs
@@ -5536,6 +5613,12 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 "horas_ocup_30d": round(occ_h, 1),
                 "dias_activos_30d": dias_activos,
                 "utilizacion_30d": utilizacion,      # % horas ocupadas vs franja disponible
+                "utilizacion_cap_30d": utilizacion_cap,  # % contra TODOS los días abiertos
+                "dias_abiertos_30d": dias_abiertos_30,
+                "cupos_libres_30d": cupos_libres,        # cuántos pacientes más caben
+                "plata_hueco_30d": plata_hueco,          # cuánto valdría llenarlos
+                "intervalo_box_min": interv_box,
+                "ticket_box": ticket_box,
                 "yield_hora": yield_hora,            # $ por hora ocupada
                 "dias_sin_citas": dias_sin_citas,    # ociosidad
                 "sin_pago_30d": np_sin,              # nº citas sin registro de pago
@@ -5669,6 +5752,11 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 # tarjetas NO va a cuadrar con "Citas hoy" y el tablero tiene que
                 # decir por qué en vez de dejar la diferencia sin explicar.
                 "citas_sin_sala": len(citas_sin_sala),
+                "choques": len(choques),
+                # Capacidad ociosa del CENTRO en 30 días, sumando solo salas
+                # físicas. Es la respuesta a "cuánto puedo crecer sin construir".
+                "cupos_libres_30d": sum(h.get("cupos_libres_30d") or 0 for h in historial),
+                "plata_hueco_30d": sum(h.get("plata_hueco_30d") or 0 for h in historial),
                 **({} if not _boxes_financiero else {
                     "revenue_dia": total_revenue,
                     "revenue_sin_sala": int(rev_sin_sala),
@@ -5677,6 +5765,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                     "fc_proyectado": sum(h["fc_proyectado"] for h in historial),
                 }),
             },
+            "choques_detalle": choques,
             "boxes": boxes_out,
             "boxes_config_default": BOXES_CONFIG,
             "profesionales_all": profesionales_all,

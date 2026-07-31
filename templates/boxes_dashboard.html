@@ -570,7 +570,11 @@
 <script>
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
 let STATE = { boxes_config_default: [], profesionales_all: [], citas_raw: [], citas_dia_full: [], rev_por_prof: {}, citas_por_prof: {}, historial: [] };
-let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {} };
+// weekly_template faltaba en los TRES puntos —init, lectura y envío— así que el
+// patrón semanal ("los martes el Box 4 es psicología de 15 a 19") nunca
+// sobrevivía: se escribía solo en memoria y el guardado siguiente lo borraba de
+// la base. Era la pieza que convierte la tabla en gemelo.
+let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {}, weekly_template: {} };
 let editMode = false;
 let editingBoxId = null;
 let filterMode = 'todos'; // 'todos' | 'activos'
@@ -720,6 +724,7 @@ async function fetchConfig() {
       pisos: (d.pisos && d.pisos.length) ? d.pisos : null,
       manual_overrides: d.manual_overrides || {},
       schedules: d.schedules || {},
+      weekly_template: d.weekly_template || {},
     };
   } catch {}
 }
@@ -742,6 +747,7 @@ function scheduleSave() {
           pisos: CONFIG.pisos || [],
           manual_overrides: CONFIG.manual_overrides || {},
           schedules: CONFIG.schedules || {},
+          weekly_template: CONFIG.weekly_template || {},
         }),
       });
       if (!r.ok) throw new Error(r.status);
@@ -765,6 +771,10 @@ function resetLayout() {
   CONFIG.pisos = null;
   CONFIG.manual_overrides = {};
   CONFIG.schedules = {};
+  // Ahora que el guardado hace merge por clave, "resetear" tiene que limpiar el
+  // patrón semanal EXPLÍCITAMENTE: si no, quedarían patrones huérfanos
+  // apuntando a boxes que ya no existen.
+  CONFIG.weekly_template = {};
   scheduleSave();
 }
 
