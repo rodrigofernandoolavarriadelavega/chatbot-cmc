@@ -5472,6 +5472,18 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         #    (08:00–20:00), igual que el load-bar del dashboard. AJUSTA si tus boxes
         #    operan otra franja real (ej. 600 = 10h, 540 = 9h).
         VENTANA_DIA_MIN = 720
+
+        # Días activos por profesional (distinct fechas con atención, 30d) → para
+        # agregar a nivel box (un día cuenta una vez aunque varios profs atiendan).
+        cur.execute("""
+            SELECT DISTINCT fecha, profesional_id
+            FROM bi.fact_atenciones
+            WHERE fecha BETWEEN %(desde_30)s AND %(today)s
+        """, params)
+        dias_por_prof: dict = {}
+        for f, pid in cur.fetchall():
+            dias_por_prof.setdefault(pid, set()).add(f)
+
         # Días con el centro abierto en la ventana. Base: lun–sáb (domingo cerrado).
         # Es el denominador honesto de la capacidad — contra los días que la sala
         # se usó, la ociosidad es invisible por construcción.
@@ -5488,17 +5500,6 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         for _s in dias_por_prof.values():
             _con_atencion |= _s
         dias_abiertos_30 = len(_cal_abiertos | _con_atencion) or 1
-
-        # Días activos por profesional (distinct fechas con atención, 30d) → para
-        # agregar a nivel box (un día cuenta una vez aunque varios profs atiendan).
-        cur.execute("""
-            SELECT DISTINCT fecha, profesional_id
-            FROM bi.fact_atenciones
-            WHERE fecha BETWEEN %(desde_30)s AND %(today)s
-        """, params)
-        dias_por_prof: dict = {}
-        for f, pid in cur.fetchall():
-            dias_por_prof.setdefault(pid, set()).add(f)
 
         # Última atención (ociosidad) + ticket promedio 90d (forecast), por prof.
         cur.execute("""
