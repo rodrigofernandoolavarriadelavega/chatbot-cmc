@@ -5472,11 +5472,22 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
         #    (08:00–20:00), igual que el load-bar del dashboard. AJUSTA si tus boxes
         #    operan otra franja real (ej. 600 = 10h, 540 = 9h).
         VENTANA_DIA_MIN = 720
-        # Días con el centro abierto en la ventana de 30 días. Lun–sáb; domingo
-        # cerrado (weekday 6). Es el denominador honesto de la capacidad: contra
-        # los días que la sala se usó, la ociosidad es invisible por construcción.
-        dias_abiertos_30 = sum(1 for _i in range((today - desde_30).days + 1)
-                               if (desde_30 + timedelta(days=_i)).weekday() < 6)
+        # Días con el centro abierto en la ventana. Base: lun–sáb (domingo cerrado).
+        # Es el denominador honesto de la capacidad — contra los días que la sala
+        # se usó, la ociosidad es invisible por construcción.
+        #
+        # PERO hay atenciones en domingo (medido: 3 domingos con 26 atenciones en
+        # los últimos 30 días). Si el numerador las incluye y el denominador no,
+        # la utilización "contra capacidad" sale MAYOR que la de días usados, que
+        # es imposible. Por eso el denominador es la unión: los días de calendario
+        # más cualquier día en que de hecho se atendió.
+        _cal_abiertos = {desde_30 + timedelta(days=_i)
+                         for _i in range((today - desde_30).days + 1)
+                         if (desde_30 + timedelta(days=_i)).weekday() < 6}
+        _con_atencion = set()
+        for _s in dias_por_prof.values():
+            _con_atencion |= _s
+        dias_abiertos_30 = len(_cal_abiertos | _con_atencion) or 1
 
         # Días activos por profesional (distinct fechas con atención, 30d) → para
         # agregar a nivel box (un día cuenta una vez aunque varios profs atiendan).
@@ -5563,7 +5574,9 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                         if pid in prof_extra and prof_extra[pid]["ticket"]]
             ticket_box = int(sum(_tickets) / len(_tickets)) if _tickets else 0
             cupos_libres = int(libres_min // interv_box)
-            plata_hueco = cupos_libres * ticket_box
+            # Sin ticket conocido, el hueco es DESCONOCIDO, no cero: mostrar
+            # "970 cupos · $0" invita a leer que no vale nada llenarlos.
+            plata_hueco = cupos_libres * ticket_box if ticket_box else None
             # Una sala VIRTUAL (telemedicina) no tiene metros cuadrados: su hueco
             # no es capacidad instalada que se pueda llenar mudando pacientes, así
             # que no suma al total físico. Se informa su utilización igual, pero
