@@ -383,7 +383,12 @@ def calcular_expira(creado: datetime, horas: int | None = None) -> datetime:
     tomado de madrugada: vence a las 09:00 de ese mismo día, no a las 04:00.
     """
     from config import ABONO_VENTANA_HORAS
-    exp = creado + timedelta(hours=int(horas or ABONO_VENTANA_HORAS))
+    # timedelta en MINUTOS y sin int(): con int(horas) un wait_min=90 (=1,5 h)
+    # se truncaba a 1 h, así que el mensaje prometía 90 minutos y el abono
+    # vencía a los 60. Verificado en prod: los 3 abonos de Gastroenterología
+    # del 30-jul tienen exactamente 60 min entre creado_at y expira_at.
+    minutos = round(float(horas) * 60) if horas else int(ABONO_VENTANA_HORAS) * 60
+    exp = creado + timedelta(minutes=minutos)
     if exp.hour >= _CIERRA_H:
         exp = (exp + timedelta(days=1)).replace(hour=_ABRE_H, minute=0, second=0, microsecond=0)
     elif exp.hour < _ABRE_H:
@@ -409,9 +414,14 @@ def abono_vencido(expira_at: str, ahora: datetime | None = None) -> bool:
 def crear_abono_pendiente(*, phone: str, paciente_id, paciente_nombre: str, rut: str,
                           monto: int, especialidad: str, id_profesional, slot: dict,
                           wait_min: int | None = None) -> dict:
-    """Crea el registro y devuelve {'token':, 'url':}. La URL se arma con
-    ABONO_BASE_URL (config.py) + el token — el link que va en el mensaje de
-    WhatsApp."""
+    """Crea el registro y devuelve {'token':, 'url':, 'expira_at':, 'expira_hhmm':}.
+
+    La URL se arma con ABONO_BASE_URL (config.py) + el token — el link que va
+    en el mensaje de WhatsApp. `expira_hhmm` ("18:30") sale de acá para que el
+    mensaje diga la hora REAL de vencimiento: antes tenía "90 minutos" escrito
+    a mano y el plazo efectivo era otro, así que el paciente no tenía forma de
+    saber hasta cuándo le servía transferir.
+    """
     from session import db
     from config import ABONO_BASE_URL
 
@@ -432,7 +442,17 @@ def crear_abono_pendiente(*, phone: str, paciente_id, paciente_nombre: str, rut:
             now.isoformat(), expira.isoformat(),
         ))
         conn.commit()
-    return {"token": token, "url": f"{ABONO_BASE_URL.rstrip('/')}/abono/{token}"}
+    return {
+        "token": token,
+        "url": f"{ABONO_BASE_URL.rstrip('/')}/abono/{token}",
+        "expira_at": expira.isoformat(),
+        "expira_hhmm": expira.strftime("%H:%M"),
+        # True si vence otro día (calcular_expira corre el vencimiento a las
+        # 09:00 cuando caería con el centro cerrado) — el mensaje necesita
+        # decir "mañana a las 09:00", no un "09:00" a secas que se leería como
+        # una hora que ya pasó.
+        "expira_otro_dia": expira.date() != now.date(),
+    }
 
 
 def get_abono_pendiente(token: str) -> dict | None:

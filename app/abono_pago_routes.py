@@ -62,9 +62,38 @@ async def estado_abono(token: str):
         except Exception:
             pass
 
+    # Especialidad y datos de la cita. Antes esto NO se enviaba y la plantilla
+    # tenía "Psiquiatría" escrito a mano — los 3 abonos de Gastroenterología
+    # del 30-jul mostraron la especialidad equivocada en la pantalla de pago.
+    # Y sin fecha/hora/profesional el paciente transfería sin ver a qué cita
+    # correspondía. El token ya es el secreto; quien lo tiene es el paciente.
+    import json as _json
+
+    slot = {}
+    try:
+        slot = _json.loads(abono.get("slot_json") or "{}")
+    except (ValueError, TypeError):
+        slot = {}
+
+    especialidad = (abono.get("especialidad")
+                    or slot.get("especialidad") or "").strip()
+    # Solo el primer nombre: alcanza para que se reconozca sin exponer de más.
+    primer_nombre = (abono.get("paciente_nombre") or "").strip().split(" ")[0].title()
+
     resp = {
         "estado": "confirmado" if estado == "confirmado" else ("expirado" if estado == "expirado" else "pendiente"),
         "monto": abono["monto"],
         "cuenta": CMC_TRANSFERENCIA,
+        "especialidad": especialidad,
+        "paciente": primer_nombre,
+        "cita": {
+            "fecha_display": slot.get("fecha_display", ""),
+            "hora": (slot.get("hora_inicio") or "")[:5],
+            "profesional": slot.get("profesional", ""),
+        },
+        # ISO con offset — el navegador arma la cuenta regresiva. El WhatsApp
+        # decía "90 minutos" (falso, son ABONO_VENTANA_HORAS) y la página no
+        # mostraba nada: los dos datos del plazo eran uno erróneo y uno ausente.
+        "expira_at": abono.get("expira_at", ""),
     }
     return JSONResponse(resp)

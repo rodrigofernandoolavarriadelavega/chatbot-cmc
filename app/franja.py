@@ -81,6 +81,27 @@ _RE_ANTES = re.compile(r"antes\s+de\s+las?\s+(\d{1,2})")
 _RE_MANANA_DIA = re.compile(r"\b(?:para\s+)?ma[ñn]ana\b")
 
 
+# Aplazamiento de la CONVERSACIÓN, no preferencia de HORARIO. En Chile las
+# expresiones temporales son ambiguas por defecto y lo que desambigua es el
+# verbo que las sigue: "más tarde le confirmo" / "en la tarde le aviso" son
+# cortesía para cortar, no una hora pedida.
+# Caso real (56959883429, 2026-07-29 12:56): escribió "Más tarde le confirmo"
+# y quedó con franja 15-23 pegada en la sesión; dos minutos después el bot le
+# filtró los slots del 3 de agosto con una preferencia que nunca pidió.
+_RE_APLAZAMIENTO = re.compile(
+    r"\b(?:m[áa]s\s+tarde|en\s+la\s+tarde|por\s+la\s+tarde|despu[ée]s|"
+    r"en\s+la\s+ma[ñn]ana|ma[ñn]ana)\b"
+    r"(?:\s+(?:se|le|te|les|me|nos|lo|la))?"
+    r"\s+(?:confirm|avis|dig|dec|llam|habl|respond|contest|escrib|"
+    r"coment|decid|pregunt|consult|convers)\w*"
+)
+
+
+def _es_aplazamiento(tl: str) -> bool:
+    """True si la expresión temporal aplaza la conversación en vez de pedir hora."""
+    return bool(_RE_APLAZAMIENTO.search(tl))
+
+
 def _pm(hora: int, texto: str) -> int:
     """Convierte a 24h una hora ambigua ('después de las 5' → 17 si dice tarde)."""
     if hora <= 12 and re.search(r"tarde|noche|\bpm\b|p\.m", texto):
@@ -97,6 +118,9 @@ def parse(txt: str) -> tuple[int, int] | None:
     if not txt:
         return None
     tl = txt.lower()
+    # "Más tarde le confirmo" no pide una hora — corta la conversación.
+    if _es_aplazamiento(tl):
+        return None
 
     m = _RE_DESPUES.search(tl)
     if m:

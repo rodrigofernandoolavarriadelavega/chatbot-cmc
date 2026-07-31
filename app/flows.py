@@ -9801,19 +9801,43 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             slot=slot,
                             wait_min=90,
                         )
+                        # Hora REAL de vencimiento, no un "90 minutos" fijo: la
+                        # ventana efectiva depende de wait_min y además se corre
+                        # a las 09:00 si caería con el centro cerrado. El texto
+                        # viejo prometía 90 min cuando el abono vencía a los 60.
+                        _exp_ag = _link_ap.get("expira_hhmm", "")
+                        _plazo_ag = (
+                            f"*mañana hasta las {_exp_ag}*" if _link_ap.get("expira_otro_dia")
+                            else f"*hasta las {_exp_ag}*"
+                        ) if _exp_ag else "*por un rato*"
                         return (
                             f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
                             f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
                             "así que el día de la atención no pagas nada adicional.\n\n"
                             f"Aquí están los datos para transferir, con botón de copiar:\n"
                             f"{_link_ap['url']}\n\n"
-                            "Tu hora queda *apartada por 90 minutos*. No necesitas mandarnos "
+                            f"Tu hora queda apartada {_plazo_ag}. No necesitas mandarnos "
                             "el comprobante — confirmamos solos apenas nos llegue tu transferencia "
                             "y te avisamos por acá.\n\n"
                             "_Si prefieres abonar en recepción, escribe *recepcion* y te orientamos._"
                         )
                     except Exception as _e_link_ap:
                         log.warning("abono_gate: no se pudo crear link de pago, fallback a texto: %s", _e_link_ap)
+
+                # Fallback SIN link (flag off, o falló crear el abono): no hay
+                # `_link_ap`, así que la hora de vencimiento se calcula con la
+                # misma función que usa el registro, para que ambos caminos
+                # prometan exactamente el mismo plazo.
+                try:
+                    from abono_transferencia import calcular_expira as _calc_exp_fb
+                    _exp_fb_dt = _calc_exp_fb(datetime.now(_CHILE_TZ), horas=90 / 60)
+                    _plazo_fb = (
+                        f"*mañana hasta las {_exp_fb_dt.strftime('%H:%M')}*"
+                        if _exp_fb_dt.date() != datetime.now(_CHILE_TZ).date()
+                        else f"*hasta las {_exp_fb_dt.strftime('%H:%M')}*"
+                    )
+                except Exception:
+                    _plazo_fb = "*por 90 minutos*"
 
                 return (
                     f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
@@ -9825,7 +9849,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"{_CTF_AG['titular']}\n"
                     f"RUT: {_CTF_AG['rut']}\n"
                     f"Correo: {_CTF_AG['correo']}\n\n"
-                    "Tu hora queda *apartada por 90 minutos*.\n"
+                    f"Tu hora queda apartada {_plazo_fb}.\n"
                     "Envía el comprobante por este chat 📎 y confirmo tu reserva de inmediato.\n\n"
                     "_Si prefieres abonar en recepción, escribe *recepcion* y te orientamos._"
                 )

@@ -71,6 +71,38 @@ def test_manana_en_la_manana_conserva_ambos():
     assert fr == franja.FRANJAS["mañana"]
 
 
+# ── Aplazamiento de la conversación ≠ preferencia de horario ─────────────────
+# Regresión real: 56959883429 (2026-07-29 12:56) escribió "Más tarde le
+# confirmo" — cortesía para cortar, no una hora pedida. Quedó con franja 15-23
+# pegada en la sesión y dos minutos después el bot le filtró los slots del 3 de
+# agosto con una preferencia que nunca pidió.
+
+@pytest.mark.parametrize("txt", [
+    "Más tarde le confirmo",
+    "En la tarde le confirmo",
+    "mas tarde te aviso",
+    "en la tarde le aviso",
+    "mañana le confirmo",
+    "despues le digo",
+    "más tarde converso con mi marido",
+    "por la tarde le respondo",
+    "más tarde lo consulto",
+])
+def test_aplazar_la_conversacion_no_es_franja(txt):
+    assert franja.parse(txt) is None, f"{txt!r} se leyó como franja horaria"
+
+
+@pytest.mark.parametrize("txt,esperado", [
+    ("quiero algo mas tarde", (15, 23)),
+    ("prefiero en la tarde", (13, 19)),
+    ("tiene hora en la mañana", (8, 13)),
+    ("una hora más tarde por favor", (15, 23)),
+])
+def test_pedir_hora_sigue_siendo_franja(txt, esperado):
+    """El guard de aplazamiento no debe comerse las peticiones legítimas."""
+    assert franja.parse(txt) == esperado
+
+
 # ── Cobertura del resto de las franjas ───────────────────────────────────────
 
 @pytest.mark.parametrize("txt,esperado", [
