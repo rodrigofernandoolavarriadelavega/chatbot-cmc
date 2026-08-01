@@ -6582,29 +6582,71 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if _sk_n <= 1 or not _sk_base.get("id_paciente"):
             return ("Perfecto 👍 Quedaste con tu primera sesión agendada.\n\n"
                     "Cuando quieras agendar las siguientes, escríbeme no más 😊")
+        # NO crear nada todavía: armar el calendario y MOSTRARLO — el paciente
+        # confirma el calendario concreto antes de reservar (fix 2026-08-01,
+        # test real: eligió "las 10" pero nunca vio las fechas antes de que
+        # se crearan). ofrecer_plan deja la sesión en WAIT_SERIE_KINE_CONFIRM.
         try:
-            from serie_kine import agendar_resto_serie as _sk_resto
+            from serie_kine import ofrecer_plan as _sk_ofrecer
             import asyncio as _aio_sk
-            _aio_sk.create_task(_sk_resto(
-                phone,
-                n_total=_sk_n,
-                id_paciente=_sk_base["id_paciente"],
-                id_profesional=_sk_base["id_profesional"],
-                profesional=_sk_base.get("profesional", ""),
-                especialidad=_sk_base.get("especialidad", "Kinesiología"),
-                fecha_base=_sk_base.get("fecha_base", ""),
-                hora_base=_sk_base.get("hora_base", ""),
-                modalidad=_sk_base.get("modalidad", "particular"),
-                paciente_nombre=_sk_base.get("paciente_nombre", ""),
-                es_tercero=bool(_sk_base.get("es_tercero")),
-            ))
-            log_event(phone, "serie_kine_lanzada", {"n_total": _sk_n})
+            _sk_base["n_total"] = _sk_n
+            _aio_sk.create_task(_sk_ofrecer(phone, _sk_base))
         except Exception as _e_sk:  # noqa: BLE001
             log_event(phone, "serie_kine_lanzar_error", {"error": str(_e_sk)[:150]})
             return ("Tuve un problema armando la serie 😕 — recepción te va a "
                     "ayudar a dejar el resto agendado.")
-        return (f"¡Perfecto! Voy armando tu calendario de *{_sk_n} sesiones* "
-                "día por medio 📅\n\nTe lo mando en un momento ✨")
+        return (f"Déjame armar tu calendario de *{_sk_n} sesiones* día por "
+                "medio 📅\n\nTe lo muestro en un momento para que lo "
+                "confirmes ✨")
+
+    # ── WAIT_SERIE_KINE_CONFIRM ───────────────────────────────────────────────
+    # El bot ya mostró el calendario propuesto (fechas y horas concretas).
+    # Solo con la confirmación explícita se crean las citas.
+    if state == "WAIT_SERIE_KINE_CONFIRM":
+        _skc_base = data.get("serie_kine_base") or {}
+        _skc_plan = data.get("serie_kine_plan") or []
+        _skc_si = (tl == "serie_cal_ok" or tl in AFIRMACIONES
+                   or tl_norm in AFIRMACIONES)
+        _skc_no = (tl == "serie_cal_no" or tl in NEGACIONES
+                   or tl_norm in NEGACIONES)
+        if _skc_si and _skc_plan and _skc_base.get("id_paciente"):
+            reset_session(phone)
+            try:
+                from serie_kine import crear_serie as _sk_crear
+                import asyncio as _aio_skc
+                _aio_skc.create_task(_sk_crear(phone, _skc_base, _skc_plan))
+                log_event(phone, "serie_kine_calendario_confirmado",
+                          {"n_total": _skc_base.get("n_total"),
+                           "propuestas": len(_skc_plan)})
+            except Exception as _e_skc:  # noqa: BLE001
+                log_event(phone, "serie_kine_lanzar_error",
+                          {"error": str(_e_skc)[:150]})
+                return ("Tuve un problema reservando la serie 😕 — recepción "
+                        "te va a ayudar a dejarla agendada.")
+            return ("¡Perfecto! Voy reservando tus sesiones ✨\n\n"
+                    "En un momento te llega la confirmación con todas las "
+                    "horas 📅")
+        if _skc_no:
+            reset_session(phone)
+            log_event(phone, "serie_kine_calendario_rechazado", {})
+            return ("Sin problema 👍 Quedaste solo con tu primera sesión "
+                    "reservada.\n\nCuando quieras agendar las siguientes, "
+                    "escríbeme no más 😊")
+        # Respuesta libre (ej: "¿puede ser más tarde?") — una aclaración y
+        # de ahí a recepción para armarlo a la medida.
+        if data.get("_skc_reintento"):
+            reset_session(phone)
+            save_session(phone, "HUMAN_TAKEOVER", {})
+            log_event(phone, "serie_kine_calendario_a_recepcion",
+                      {"txt": txt[:100]})
+            return ("Entiendo — mejor que recepción te arme el calendario a "
+                    "tu medida 🙋 Te escribirán en breve. Tu primera sesión "
+                    "sigue reservada.")
+        data["_skc_reintento"] = True
+        save_session(phone, "WAIT_SERIE_KINE_CONFIRM", data)
+        return ("¿Te reservo el calendario tal como te lo mostré?\n\n"
+                "Responde *sí* para reservarlo, o *no* para quedarte solo "
+                "con la primera sesión 😊")
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
