@@ -56,7 +56,11 @@ Distinción clave: "orden_medica" SOLICITA un examen a futuro;
 "resultado_examen" es el INFORME o resultado de un examen ya realizado
 (valores de laboratorio, informe de ecografía/radiografía). Para
 resultado_examen llena "titulo_examen" con el nombre del examen (ej:
-"Hemograma", "Informe ecografía abdominal") y NO transcribas los valores.
+"Hemograma", "Informe ecografía abdominal") y además llena
+"contenido_texto" con la transcripción LITERAL y completa del contenido
+(parámetros, valores y unidades tal como aparecen — es para uso del
+médico tratante). Transcribe, NO interpretes ni resumas ni marques
+valores como normales/anormales.
 - "diagnostico": el diagnóstico/hipótesis escrito en órdenes o recetas,
   literal (ej: "Sospecha de HPB, Nefropatía diabética"); "" si no aparece.
 - "medicamentos": SOLO para receta_medicamentos — cada fármaco con su dosis
@@ -122,7 +126,7 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
             # leía el primer bloque como texto y explotaba con None).
             # Vía extra_body porque el SDK instalado no tipa `thinking`.
             extra_body={"thinking": {"type": "disabled"}},
-            max_tokens=1200,
+            max_tokens=2000,
             timeout=_VISION_TIMEOUT,
             messages=[{
                 "role": "user",
@@ -157,6 +161,7 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
         data.setdefault("diagnostico", "")
         data.setdefault("medicamentos", [])
         data.setdefault("titulo_examen", "")
+        data.setdefault("contenido_texto", "")
         data.setdefault("confianza", "baja")
         data.setdefault("paciente", None)
         data.setdefault("comprobante", None)

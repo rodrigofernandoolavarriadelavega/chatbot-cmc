@@ -10315,6 +10315,54 @@ async def webhook(request: Request):
                                 if _ocr_tipo_doc == "resultado_examen":
                                     _titulo_dc = ((_ocr_ext or {}).get("titulo_examen")
                                                   or "tu examen")
+                                    # ── Reenvío al MÉDICO (Telegram): foto +
+                                    # transcripción completa lista para copiar
+                                    # a la ficha. Canal profesional — el
+                                    # paciente NUNCA recibe estos valores.
+                                    try:
+                                        _blob_dr = blob
+                                        _cont_dr = ((_ocr_ext or {}).get(
+                                            "contenido_texto") or "").strip()
+                                        _nom_dr = ((_ocr_identidad.get("ocr_paciente")
+                                                    or {}).get("nombre") or "")
+                                        if not _nom_dr:
+                                            try:
+                                                from session import get_profile as _gp_dr
+                                                _p_dr = _gp_dr(phone)
+                                                _nom_dr = (_p_dr or {}).get("nombre", "")
+                                            except Exception:  # noqa: BLE001
+                                                pass
+                                        _rut_dr = ((_ocr_identidad.get("ocr_paciente")
+                                                    or {}).get("rut") or "")
+                                        _cab_dr = (
+                                            f"📄 Resultado recibido por WhatsApp\n"
+                                            f"👤 {_nom_dr or '(sin nombre)'}"
+                                            f"{' · ' + _rut_dr if _rut_dr else ''}"
+                                            f" · +{phone}\n"
+                                            f"🧪 {_titulo_dc[:80]}"
+                                        )
+                                        _txt_dr = (
+                                            _cab_dr + "\n\n" + (_cont_dr or
+                                            "(sin transcripción — ver foto)") +
+                                            "\n\n_Transcripción automática para "
+                                            "copiar — verificar contra la imagen._"
+                                        )
+                                        from alertas_oob import (
+                                            enviar_telegram, enviar_telegram_foto)
+
+                                        async def _enviar_dr(b=_blob_dr, t=_txt_dr,
+                                                             c=_cab_dr):
+                                            await enviar_telegram_foto(b, c)
+                                            await enviar_telegram(t)
+
+                                        import asyncio as _aio_dr
+                                        _aio_dr.create_task(_enviar_dr())
+                                        log_event(phone, "resultado_enviado_doctor",
+                                                  {"titulo": _titulo_dc[:80],
+                                                   "chars": len(_cont_dr)})
+                                    except Exception as _e_dr:  # noqa: BLE001
+                                        log.warning("reenvio doctor fallo: %s",
+                                                    str(_e_dr)[:150])
                                     _ofrecer_control_dc = (
                                         f"Recibí tu resultado 📄 (*{_titulo_dc[:60]}*). "
                                         "Quedó guardado en tu ficha.\n\n"

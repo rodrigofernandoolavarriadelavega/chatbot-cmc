@@ -121,3 +121,30 @@ async def ping_deadman(nombre: str) -> bool:
     except Exception as exc:  # noqa: BLE001
         log.warning("ping_deadman[%s]: error: %s", nombre, exc)
         return False
+
+
+async def enviar_telegram_foto(imagen: bytes, caption: str = "") -> bool:
+    """Envía una FOTO a Telegram (sendPhoto, multipart). Caption máx 1024
+    chars — el texto largo va aparte con enviar_telegram(). Usado para
+    reenviar al médico los resultados de exámenes que llegan por WhatsApp
+    (ver docs_clinicos / main.py). Retorna False si no hay credenciales."""
+    token   = os.getenv("TELEGRAM_ALERT_TOKEN", "").strip()
+    chat_id = os.getenv("TELEGRAM_ALERT_CHAT_ID", "").strip()
+    if not token or not chat_id:
+        return False
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                url,
+                data={"chat_id": chat_id, "caption": caption[:1024]},
+                files={"photo": ("documento.jpg", imagen, "image/jpeg")},
+            )
+            if resp.status_code == 200:
+                return True
+            log.warning("enviar_telegram_foto: %s — %s",
+                        resp.status_code, resp.text[:200])
+            return False
+    except Exception as exc:  # noqa: BLE001
+        log.warning("enviar_telegram_foto error: %s", exc)
+        return False
