@@ -3943,21 +3943,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         save_tag(phone, "arauco")
 
     # ── Detección pasiva de patologías crónicas ────────────────────────────────
-    _PATOLOGIAS_KEYWORDS = {
-        "dm2":  ["diabete", "diabetico", "diabetica", "diabetes", "insulina", "glicemia alta", "azucar alta", "azucar en la sangre"],
-        "hta":  ["hipertens", "presion alta", "presión alta", "hipertenso", "hipertensa", "antihipertensivo"],
-        "asma": ["asma", "asmatico", "asmatica", "inhalador", "salbutamol", "broncodilatador"],
-        "epoc": ["epoc", "enfisema", "bronquitis cronica"],
-        "hipotiroidismo": ["hipotiroid", "levotiroxina", "eutirox", "tiroides baja"],
-        "dislipidemia": ["colesterol alto", "trigliceridos alto", "dislipidemia", "estatina", "atorvastatina"],
-        "depresion": ["depresion", "antidepresivo", "sertralina", "fluoxetina", "escitalopram"],
-        "epilepsia": ["epilepsia", "epileptico", "convulsion", "anticonvulsivante"],
-        "artrosis": ["artrosis", "desgaste articular", "osteoartrosis"],
-        "irc": ["insuficiencia renal", "dialisis", "hemodialisis"],
-    }
-    for tag, keywords in _PATOLOGIAS_KEYWORDS.items():
-        if any(kw in tl_norm for kw in keywords):
+    # Diccionario ÚNICO en docs_clinicos.py (2026-08-01): lo comparten el chat
+    # y los documentos leídos por visión (recetas/órdenes). Incluye nombres de
+    # medicamentos, que antes no se detectaban acá.
+    try:
+        from docs_clinicos import detectar_dx_tags as _dx_tags_fn
+        for tag in _dx_tags_fn(tl_norm):
             save_tag(phone, f"dx:{tag}")
+    except Exception:  # noqa: BLE001 — detección secundaria, jamás rompe el flujo
+        pass
 
     # ── IDLE + hora suelta + snapshot reciente → reabrir WAIT_SLOT ──
     # Si el paciente vio una lista de horarios hace <60 min y ahora escribe

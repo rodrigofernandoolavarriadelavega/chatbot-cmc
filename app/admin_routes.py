@@ -1809,8 +1809,24 @@ def admin_map_data(desde: str = Query(None), hasta: str = Query(None),
 
 @router.get("/admin/api/patient-files/{phone}")
 def api_patient_files(phone: str, _=Depends(require_admin)):
-    """Lista archivos recibidos de un paciente."""
-    return get_patient_files(phone)
+    """Lista archivos recibidos de un paciente.
+
+    created_at se guarda en UTC (datetime('now') de SQLite): se convierte a
+    hora de Chile ACÁ para que ambos paneles muestren la hora real (reporte
+    del dueño 2026-08-01: las imágenes aparecían 4 h adelantadas)."""
+    archivos = get_patient_files(phone)
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    _cl = ZoneInfo("America/Santiago")
+    for a in archivos:
+        ts = a.get("created_at") or ""
+        try:
+            dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone.utc).astimezone(_cl)
+            a["created_at"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError):
+            pass
+    return archivos
 
 
 @router.get("/admin/api/file/{file_id}")

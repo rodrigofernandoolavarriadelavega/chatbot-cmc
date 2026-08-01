@@ -400,6 +400,15 @@ SERIE_KINE_ACTIVE = os.getenv(
     "SERIE_KINE_ACTIVE", "false"
 ).lower() in ("true", "1", "yes", "on")
 
+# Explotación clínica de documentos leídos por visión (2026-08-01):
+# resultado de examen → oferta de control (el bot JAMÁS interpreta valores);
+# receta → tags dx:* + tabla + oferta de control; órdenes de exámenes que el
+# CMC no realiza → demanda_examenes_ocr; diagnóstico de la orden → tags dx:*.
+# Ver app/docs_clinicos.py. Requiere ECO_ORDEN_OCR_ACTIVE.
+DOCS_CLINICOS_ACTIVE = os.getenv(
+    "DOCS_CLINICOS_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

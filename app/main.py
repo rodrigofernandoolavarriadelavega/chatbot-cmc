@@ -10241,9 +10241,27 @@ async def webhook(request: Request):
                             from eco_orden_ocr import rut_normalizado as _rutn_fn
                             import time as _t_ident
                             _rutn = _rutn_fn(_pac_ocr.get("rut") or "")
+                            _nom_ocr = (_pac_ocr.get("nombre") or "").strip()[:80]
+                            # Conciliar contra los nombres CONOCIDOS del número:
+                            # la letra manuscrita produce lecturas imperfectas
+                            # ("Anyie Ruby" por "Anguie Rondoy", caso real) — si
+                            # se parece a alguien conocido, usar el nombre bueno;
+                            # si no, probablemente es la orden de un tercero.
+                            if _nom_ocr:
+                                try:
+                                    from docs_clinicos import nombre_mas_probable
+                                    _nom_fin, _nom_fuente = nombre_mas_probable(
+                                        phone, _nom_ocr)
+                                    if _nom_fuente == "conocido" and _nom_fin != _nom_ocr:
+                                        log_event(phone, "ocr_nombre_conciliado", {
+                                            "leido": _nom_ocr[:60],
+                                            "conocido": _nom_fin[:60]})
+                                    _nom_ocr = _nom_fin
+                                except Exception:  # noqa: BLE001
+                                    pass
                             _ocr_identidad = {
                                 "ocr_paciente": {
-                                    "nombre": (_pac_ocr.get("nombre") or "").strip()[:80],
+                                    "nombre": _nom_ocr,
                                     "rut": _rutn or "",
                                     "fecha_nacimiento":
                                         (_pac_ocr.get("fecha_nacimiento") or "").strip()[:12],
@@ -10259,6 +10277,93 @@ async def webhook(request: Request):
                             "confianza": (_ocr_ext or {}).get("confianza", ""),
                             "filename": saved_filename,
                         })
+                        # ── Docs clínicos (gated DOCS_CLINICOS_ACTIVE) ─────
+                        # dx escrito → tags crónicos · exámenes que no hacemos
+                        # → demanda estructurada · resultado/receta → oferta de
+                        # control. El bot JAMÁS interpreta valores clínicos.
+                        from config import DOCS_CLINICOS_ACTIVE
+                        if (DOCS_CLINICOS_ACTIVE and _ocr_tipo_doc in
+                                ("orden_medica", "receta_medicamentos",
+                                 "resultado_examen")):
+                            try:
+                                from docs_clinicos import (
+                                    detectar_dx_tags, clasificar_examen_externo,
+                                    registrar_receta, registrar_demanda_examen)
+                                from session import save_tag as _save_tag_dc
+                                _exs_dc = (_ocr_ext or {}).get(
+                                    "examenes_solicitados") or []
+                                _meds_dc = (_ocr_ext or {}).get("medicamentos") or []
+                                _texto_dc = " ".join(
+                                    [str(x) for x in list(_exs_dc) + list(_meds_dc)]
+                                    + [(_ocr_ext or {}).get("diagnostico") or ""])
+                                _tags_dc = detectar_dx_tags(_texto_dc)
+                                for _t_dc in _tags_dc:
+                                    _save_tag_dc(phone, f"dx:{_t_dc}")
+                                if _tags_dc:
+                                    log_event(phone, "ocr_dx_tags",
+                                              {"tags": _tags_dc})
+                                if _ocr_tipo_doc == "orden_medica":
+                                    for _ex_dc in _exs_dc:
+                                        _cat_dc = clasificar_examen_externo(str(_ex_dc))
+                                        if _cat_dc:
+                                            registrar_demanda_examen(
+                                                phone, str(_ex_dc), _cat_dc)
+                                            log_event(phone, "demanda_examen_externo",
+                                                      {"examen": str(_ex_dc)[:100],
+                                                       "categoria": _cat_dc})
+                                _ofrecer_control_dc = None
+                                if _ocr_tipo_doc == "resultado_examen":
+                                    _titulo_dc = ((_ocr_ext or {}).get("titulo_examen")
+                                                  or "tu examen")
+                                    _ofrecer_control_dc = (
+                                        f"Recibí tu resultado 📄 (*{_titulo_dc[:60]}*). "
+                                        "Quedó guardado en tu ficha.\n\n"
+                                        "Para que el médico lo revise contigo, "
+                                        "¿te agendo una hora de control?"
+                                    )
+                                elif _ocr_tipo_doc == "receta_medicamentos":
+                                    registrar_receta(phone, list(_meds_dc),
+                                                     _tags_dc, saved_filename)
+                                    _ofrecer_control_dc = (
+                                        "Recibí tu receta 💊 Quedó guardada en "
+                                        "tu ficha.\n\n"
+                                        "Las recetas de tratamiento permanente "
+                                        "suelen durar 30 días — ¿te agendo un "
+                                        "control médico para renovarla a tiempo?"
+                                    )
+                                if _ofrecer_control_dc:
+                                    from datetime import datetime as _dt_dc, \
+                                        timezone as _tz_dc
+                                    save_session(phone, "IDLE", {
+                                        "especialidad_sugerida": "medicina general",
+                                        "especialidad_sugerida_ts":
+                                            _dt_dc.now(_tz_dc.utc).isoformat(),
+                                        **_ocr_identidad,
+                                    })
+                                    _msg_dc = {
+                                        "type": "interactive",
+                                        "interactive": {
+                                            "type": "button",
+                                            "body": {"text": _ofrecer_control_dc},
+                                            "action": {"buttons": [
+                                                {"type": "reply", "reply": {
+                                                    "id": "agendar_sugerido",
+                                                    "title": "✅ Agendar control"}},
+                                                {"type": "reply", "reply": {
+                                                    "id": "no_agendar",
+                                                    "title": "Por ahora no"}},
+                                            ]},
+                                        },
+                                    }
+                                    await send_whatsapp(phone, _msg_dc)
+                                    log_message(phone, "out", _ofrecer_control_dc,
+                                                "IDLE", canal="whatsapp")
+                                    log_event(phone, "docs_clinicos_oferta_control",
+                                              {"tipo": _ocr_tipo_doc})
+                                    return Response(status_code=200)
+                            except Exception as _e_dc:  # noqa: BLE001
+                                log.warning("docs_clinicos fallo from=%s: %s",
+                                            phone, str(_e_dc)[:200])
                         # Orden de kine con N sesiones → agendar DIRECTO la
                         # primera sesión (cero fricción — decisión del dueño
                         # 2026-08-01); la oferta de la serie completa llega

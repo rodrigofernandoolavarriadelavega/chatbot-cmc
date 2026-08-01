@@ -42,14 +42,27 @@ solo clasifica y transcribe.
 
 Responde SOLO un JSON válido, sin texto adicional:
 {
-  "tipo_documento": "orden_medica" | "comprobante_pago" | "receta_medicamentos" | "otro",
+  "tipo_documento": "orden_medica" | "resultado_examen" | "receta_medicamentos" | "comprobante_pago" | "otro",
   "examenes_solicitados": ["transcripción literal de cada examen solicitado"],
+  "diagnostico": "",
+  "medicamentos": [],
+  "titulo_examen": "",
   "confianza": "alta" | "media" | "baja",
   "paciente": null,
   "comprobante": null
 }
 
-Si tipo_documento es "orden_medica" y el documento muestra los datos del
+Distinción clave: "orden_medica" SOLICITA un examen a futuro;
+"resultado_examen" es el INFORME o resultado de un examen ya realizado
+(valores de laboratorio, informe de ecografía/radiografía). Para
+resultado_examen llena "titulo_examen" con el nombre del examen (ej:
+"Hemograma", "Informe ecografía abdominal") y NO transcribas los valores.
+- "diagnostico": el diagnóstico/hipótesis escrito en órdenes o recetas,
+  literal (ej: "Sospecha de HPB, Nefropatía diabética"); "" si no aparece.
+- "medicamentos": SOLO para receta_medicamentos — cada fármaco con su dosis
+  tal como aparece (ej: "Metformina 850 mg cada 12 horas").
+
+Si el documento es orden, resultado o receta y muestra los datos del
 paciente, "paciente" deja de ser null y lleva (cada campo "" si no aparece):
 {
   "nombre": "Katherine Campos",     // nombre del PACIENTE tal como aparece
@@ -141,6 +154,9 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
             return None
         data.setdefault("tipo_documento", "otro")
         data.setdefault("examenes_solicitados", [])
+        data.setdefault("diagnostico", "")
+        data.setdefault("medicamentos", [])
+        data.setdefault("titulo_examen", "")
         data.setdefault("confianza", "baja")
         data.setdefault("paciente", None)
         data.setdefault("comprobante", None)
