@@ -392,6 +392,14 @@ COMPROBANTES_WHATSAPP_ACTIVE = os.getenv(
     "COMPROBANTES_WHATSAPP_ACTIVE", "false"
 ).lower() in ("true", "1", "yes", "on")
 
+# Series de kinesiología: orden con N sesiones → preguntar cuántas agendar →
+# 1ª sesión por el flujo normal → resto día por medio en background.
+# El paciente elige SIEMPRE el número; requiere ECO_ORDEN_OCR_ACTIVE.
+# Ver app/serie_kine.py.
+SERIE_KINE_ACTIVE = os.getenv(
+    "SERIE_KINE_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

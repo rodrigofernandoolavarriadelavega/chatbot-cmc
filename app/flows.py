@@ -6542,6 +6542,44 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "_Escribe *menu* para ver las opciones._"
         )
 
+    # ── WAIT_SERIE_KINE_N ─────────────────────────────────────────────────────
+    # El OCR leyó una orden de kine con N sesiones y preguntó cuántas quiere
+    # dejar agendadas (botones serie_k_* o número libre). La elección se
+    # arrastra como serie_kine_n por el flujo normal de agendamiento; al
+    # confirmarse la 1ª cita, serie_kine.agendar_resto_serie crea el resto
+    # día por medio. Ver app/serie_kine.py.
+    if state == "WAIT_SERIE_KINE_N":
+        _sk_max = int(data.get("serie_kine_max") or 10)
+        _sk_n = None
+        if tl == "serie_k_todas":
+            _sk_n = _sk_max
+        elif tl == "serie_k_una":
+            _sk_n = 1
+        elif tl == "serie_k_menos":
+            save_session(phone, "WAIT_SERIE_KINE_N", data)
+            return (f"¿Cuántas sesiones quieres dejar agendadas ahora?\n\n"
+                    f"Escribe un número del *1* al *{_sk_max}* 😊\n"
+                    "_(las demás las puedes agendar después)_")
+        else:
+            import re as _re_sk
+            _m_sk = _re_sk.search(r"\d{1,2}", tl)
+            if _m_sk:
+                _sk_n = max(1, min(_sk_max, int(_m_sk.group())))
+            elif any(k in tl for k in ("todas", "todos", "completo", "si")):
+                _sk_n = _sk_max
+        if _sk_n is None:
+            save_session(phone, "WAIT_SERIE_KINE_N", data)
+            return (f"No te entendí 😅 ¿Cuántas de las {_sk_max} sesiones "
+                    "quieres agendar? Escribe un número (ej: *10* o *3*).")
+        log_event(phone, "serie_kine_n_elegida", {"n": _sk_n, "max": _sk_max})
+        _sk_carry = {"serie_kine_n": _sk_n}
+        _sk_perfil = get_profile(phone)
+        if _sk_perfil:
+            _sk_carry["rut_conocido"] = _sk_perfil["rut"]
+            _sk_carry["nombre_conocido"] = _sk_perfil["nombre"]
+        reset_session(phone)
+        return await _iniciar_agendar(phone, _sk_carry, "kinesiología")
+
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
         # Fix I: si el bot preguntó el tipo de ecografía, el próximo mensaje
@@ -10166,6 +10204,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                     "funnel_id": data.get("_funnel_id", ""),
                 })
+                # ── Serie kine: la 1ª sesión quedó confirmada → agendar el
+                # resto día por medio en background (ver app/serie_kine.py).
+                # serie_kine_n viaja en data desde WAIT_SERIE_KINE_N.
+                _serie_n = int(data.get("serie_kine_n") or 0)
+                if (not reagendar) and _serie_n > 1 and "kinesi" in esp.lower():
+                    data.pop("serie_kine_n", None)
+                    try:
+                        from serie_kine import agendar_resto_serie as _sk_resto
+                        import asyncio as _aio_sk
+                        _aio_sk.create_task(_sk_resto(
+                            phone,
+                            n_total=_serie_n,
+                            id_paciente=paciente["id"],
+                            id_profesional=slot["id_profesional"],
+                            profesional=slot["profesional"],
+                            especialidad=esp,
+                            fecha_base=slot["fecha"],
+                            hora_base=slot["hora_inicio"],
+                            modalidad=data.get("modalidad", "particular"),
+                            paciente_nombre=paciente["nombre"],
+                            es_tercero=es_tercero,
+                        ))
+                        log_event(phone, "serie_kine_lanzada", {
+                            "n_total": _serie_n,
+                            "base": f"{slot['fecha']} {slot['hora_inicio']}",
+                        })
+                    except Exception as _e_sk:  # noqa: BLE001
+                        log_event(phone, "serie_kine_lanzar_error",
+                                  {"error": str(_e_sk)[:150]})
                 # ── Guardar vínculo familiar si la cita fue para tercero ─────
                 # Solo en citas nuevas (no reagendar). Secundario: un fallo aquí
                 # nunca debe interrumpir la confirmación de la cita.

@@ -10240,6 +10240,51 @@ async def webhook(request: Request):
                             "confianza": (_ocr_ext or {}).get("confianza", ""),
                             "filename": saved_filename,
                         })
+                        # Orden de kine con N sesiones → preguntar cuántas
+                        # agendar (serie día por medio, ver app/serie_kine.py).
+                        if (_ocr_tipo_doc == "orden_medica"
+                                and _ocr_dec.get("accion") == "recepcion"):
+                            from config import SERIE_KINE_ACTIVE
+                            if SERIE_KINE_ACTIVE:
+                                from serie_kine import detectar_sesiones_kine
+                                _sk_det = detectar_sesiones_kine(
+                                    (_ocr_ext or {}).get("examenes_solicitados") or [])
+                                if _sk_det:
+                                    _sk_n = _sk_det["n"]
+                                    save_session(phone, "WAIT_SERIE_KINE_N", {
+                                        "serie_kine_max": _sk_n,
+                                        "serie_kine_texto": _sk_det["texto"][:120],
+                                    })
+                                    _msg_sk = {
+                                        "type": "interactive",
+                                        "interactive": {
+                                            "type": "button",
+                                            "body": {"text": (
+                                                f"Leí tu orden: *{_sk_det['texto'][:90]}* 📄\n\n"
+                                                f"¿Quieres dejar agendadas las *{_sk_n} sesiones* "
+                                                "altiro (día por medio, mismo horario), o prefieres "
+                                                "agendar menos por ahora?"
+                                            )},
+                                            "action": {"buttons": [
+                                                {"type": "reply", "reply": {
+                                                    "id": "serie_k_todas",
+                                                    "title": f"✅ Las {_sk_n} sesiones"}},
+                                                {"type": "reply", "reply": {
+                                                    "id": "serie_k_menos",
+                                                    "title": "Agendar menos"}},
+                                                {"type": "reply", "reply": {
+                                                    "id": "serie_k_una",
+                                                    "title": "Solo la primera"}},
+                                            ]},
+                                        },
+                                    }
+                                    await send_whatsapp(phone, _msg_sk)
+                                    log_message(phone, "out",
+                                                _msg_sk["interactive"]["body"]["text"],
+                                                "WAIT_SERIE_KINE_N", canal="whatsapp")
+                                    log_event(phone, "serie_kine_oferta", {
+                                        "n": _sk_n, "texto": _sk_det["texto"][:120]})
+                                    return Response(status_code=200)
                         # Comprobante de transferencia → encolar en el panel
                         # de pagos con validaciones pre-cruzadas (gated).
                         if _ocr_tipo_doc == "comprobante_pago":
