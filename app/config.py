@@ -375,6 +375,14 @@ CONCILIACION_TRANSFERENCIAS_ACTIVE = os.getenv(
     "CONCILIACION_TRANSFERENCIAS_ACTIVE", "false"
 ).lower() in ("true", "1", "yes", "on")
 
+# Lectura automática de órdenes médicas de eco (foto → tipo → oferta de agenda).
+# Práctica 2026-08-01: 15/15 órdenes reales leídas bien. El paciente SIEMPRE
+# confirma antes de agendar; si la lectura falla, cae a recepción (flujo actual).
+# Ver app/eco_orden_ocr.py.
+ECO_ORDEN_OCR_ACTIVE = os.getenv(
+    "ECO_ORDEN_OCR_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

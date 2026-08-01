@@ -10196,6 +10196,53 @@ async def webhook(request: Request):
                 return Response(status_code=200)
             # ── fin guard media HUMAN_TAKEOVER ─────────────────────────────
 
+            # ── OCR de orden de eco (gated ECO_ORDEN_OCR_ACTIVE) ───────────
+            # Foto con wait_eco_tipo activo → leer la orden con Claude visión,
+            # rutear con route_ecografia y OFRECER la hora (el paciente siempre
+            # confirma). Cualquier fallo cae al flujo actual (recepción).
+            # Validado 2026-08-01: 15/15 órdenes reales leídas correctamente.
+            if _media_es_orden_eco and msg_type == "image" and blob:
+                from config import ECO_ORDEN_OCR_ACTIVE
+                if ECO_ORDEN_OCR_ACTIVE:
+                    try:
+                        from eco_orden_ocr import (leer_orden_medica, decidir_accion,
+                                                   msg_oferta, MSG_OBSTETRICA)
+                        _ocr_ext = await leer_orden_medica(blob, mime)
+                        _ocr_dec = decidir_accion(_ocr_ext)
+                        log_event(phone, "eco_orden_ocr", {
+                            "decision": _ocr_dec.get("accion"),
+                            "motivo": _ocr_dec.get("motivo", ""),
+                            "examenes": (_ocr_ext or {}).get("examenes_solicitados", [])[:4],
+                            "confianza": (_ocr_ext or {}).get("confianza", ""),
+                            "filename": saved_filename,
+                        })
+                        if _ocr_dec["accion"] == "ofrecer_agenda":
+                            from datetime import datetime as _dt_ocr, timezone as _tz_ocr
+                            save_session(phone, "IDLE", {
+                                "especialidad_sugerida": "ecografía",
+                                "especialidad_sugerida_ts":
+                                    _dt_ocr.now(_tz_ocr.utc).isoformat(),
+                                "eco_tipo_text": _ocr_dec["tipo_texto"],
+                            })
+                            _msg_ocr = msg_oferta(_ocr_dec["tipo_texto"],
+                                                  _ocr_dec["routing"])
+                            await send_whatsapp(phone, _msg_ocr)
+                            log_message(phone, "out",
+                                        _msg_ocr["interactive"]["body"]["text"],
+                                        "IDLE", canal="whatsapp")
+                            return Response(status_code=200)
+                        if _ocr_dec["accion"] == "obstetrica":
+                            save_session(phone, "IDLE", {})
+                            await send_whatsapp(phone, MSG_OBSTETRICA)
+                            log_message(phone, "out", MSG_OBSTETRICA, "IDLE",
+                                        canal="whatsapp")
+                            return Response(status_code=200)
+                        # accion == "recepcion" → sigue el flujo actual de abajo
+                    except Exception as _e_ocr:  # noqa: BLE001
+                        log.warning("eco_orden_ocr fallo from=%s: %s",
+                                    phone, str(_e_ocr)[:200])
+            # ── fin OCR orden de eco ───────────────────────────────────────
+
             save_session(phone, "HUMAN_TAKEOVER", {
                 "hold_sent": True,
                 "handoff_reason": "media:orden_eco" if _media_es_orden_eco
