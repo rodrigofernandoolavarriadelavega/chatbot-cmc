@@ -130,6 +130,39 @@ def _lineas_calendario(base: dict, plan: list[dict]) -> str:
     return "\n".join(lineas)
 
 
+def msg_calendario(base: dict, plan: list[dict], nota: str = "") -> dict:
+    """Mensaje interactivo con el calendario propuesto y los 3 botones:
+    reservar / cambiar alguna sesión / no. Reutilizado por la propuesta
+    inicial y por cada re-muestra tras editar una sesión."""
+    n_total = int(base.get("n_total") or 0)
+    faltan = n_total - 1 - len(plan)
+    cuerpo = (
+        f"Este sería tu calendario con {base.get('profesional', '')} 📅\n\n"
+        + _lineas_calendario(base, plan) + "\n\n"
+    )
+    if faltan > 0:
+        cuerpo += (f"_(Encontré cupo para {len(plan) + 1} de las {n_total}; "
+                   "el resto lo coordina recepción)_\n\n")
+    if nota:
+        cuerpo += nota + "\n\n"
+    cuerpo += "¿Te reservo estas horas?"
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": cuerpo},
+            "action": {"buttons": [
+                {"type": "reply", "reply": {"id": "serie_cal_ok",
+                                            "title": "✅ Sí, resérvalas"}},
+                {"type": "reply", "reply": {"id": "serie_cal_editar",
+                                            "title": "✏️ Cambiar alguna"}},
+                {"type": "reply", "reply": {"id": "serie_cal_no",
+                                            "title": "❌ Mejor no"}},
+            ]},
+        },
+    }
+
+
 async def ofrecer_plan(phone: str, base: dict) -> None:
     """Background: arma el calendario propuesto y lo MUESTRA con botones de
     confirmación — NO crea ninguna cita (fix 2026-08-01: el paciente eligió
@@ -160,36 +193,126 @@ async def ofrecer_plan(phone: str, base: dict) -> None:
         "serie_kine_base": base,
         "serie_kine_plan": plan,
     })
-    faltan = n_total - 1 - len(plan)
-    cuerpo = (
-        f"Este sería tu calendario con {base.get('profesional', '')} 📅\n\n"
-        + _lineas_calendario(base, plan) + "\n\n"
-    )
-    if faltan > 0:
-        cuerpo += (f"_(Encontré cupo para {len(plan) + 1} de las {n_total}; "
-                   "el resto lo coordina recepción)_\n\n")
-    cuerpo += "¿Te reservo estas horas?"
-    msg_btn = {
-        "type": "interactive",
-        "interactive": {
-            "type": "button",
-            "body": {"text": cuerpo},
-            "action": {"buttons": [
-                {"type": "reply", "reply": {"id": "serie_cal_ok",
-                                            "title": "✅ Sí, resérvalas"}},
-                {"type": "reply", "reply": {"id": "serie_cal_no",
-                                            "title": "❌ Mejor no"}},
-            ]},
-        },
-    }
+    msg_btn = msg_calendario(base, plan)
     try:
         await send_whatsapp(phone, msg_btn)
-        log_message(phone, "out", cuerpo, "WAIT_SERIE_KINE_CONFIRM",
-                    canal="whatsapp")
+        log_message(phone, "out", msg_btn["interactive"]["body"]["text"],
+                    "WAIT_SERIE_KINE_CONFIRM", canal="whatsapp")
     except Exception as e:  # noqa: BLE001
         log.error("serie_kine ofrecer_plan envio fallo: %s", e)
     log_event(phone, "serie_kine_plan_propuesto", {
         "n_total": n_total, "propuestas": len(plan)})
+
+
+async def buscar_alternativas(base: dict, plan: list[dict], idx0: int,
+                              filtro: str = "") -> list[dict]:
+    """Alternativas REALES (solo lectura) para la sesión plan[idx0]: otras
+    horas del mismo día y de los días vecinos, evitando chocar con las demás
+    sesiones del plan. filtro: "" | "manana" | "tarde"."""
+    from medilink import buscar_slots_dia_por_ids
+
+    objetivo = _parse_fecha(plan[idx0]["fecha"])
+    if not objetivo:
+        return []
+    base_m = _mins(base.get("hora_base", "") or plan[idx0]["hora_inicio"])
+    ocupadas = {(p["fecha"], p["hora_inicio"])
+                for i, p in enumerate(plan) if i != idx0}
+    ocupadas.add((base.get("fecha_base", ""), base.get("hora_base", "")))
+
+    candidatos: list[dict] = []
+    for delta in (0, -1, 1, 2):
+        f = objetivo + timedelta(days=delta)
+        if f.weekday() == 6:  # domingo
+            continue
+        await asyncio.sleep(0.9)  # pacing — guardrail 429 Medilink
+        try:
+            smart, todos = await buscar_slots_dia_por_ids(
+                [base["id_profesional"]], f.strftime("%Y-%m-%d"))
+        except Exception as e:  # noqa: BLE001
+            log.warning("serie_kine alternativas %s fallo: %s", f, str(e)[:120])
+            continue
+        for s in (todos or smart or []):
+            if s.get("sobrecupo"):
+                continue
+            h = s.get("hora_inicio", "")
+            if (s.get("fecha"), h) in ocupadas:
+                continue
+            hm = _mins(h)
+            if filtro == "manana" and hm >= 13 * 60:
+                continue
+            if filtro == "tarde" and hm < 13 * 60:
+                continue
+            candidatos.append({
+                "fecha": s["fecha"], "hora_inicio": h,
+                "hora_fin": s.get("hora_fin", ""),
+                "id_recurso": s.get("id_recurso", 1),
+                "_orden": (abs(delta), abs(hm - base_m)),
+            })
+    # Dedupe por (fecha, hora), ordenar por cercanía de día y de hora, cap 8
+    vistos, unicos = set(), []
+    for c in sorted(candidatos, key=lambda c: c["_orden"]):
+        k = (c["fecha"], c["hora_inicio"])
+        if k in vistos:
+            continue
+        vistos.add(k)
+        c.pop("_orden", None)
+        unicos.append(c)
+        if len(unicos) >= 8:
+            break
+    return unicos
+
+
+async def ofrecer_alternativas(phone: str, base: dict, plan: list[dict],
+                               idx0: int, filtro: str = "") -> None:
+    """Background: busca alternativas para la sesión idx0 y las muestra
+    numeradas. Deja la sesión en WAIT_SERIE_KINE_EDIT_PICK."""
+    from messaging import send_whatsapp
+    from session import save_session, log_event, log_message
+
+    alts = await buscar_alternativas(base, plan, idx0, filtro)
+    sesion_num = idx0 + 2
+    if not alts:
+        # Sin alternativas cerca → volver al calendario tal cual
+        save_session(phone, "WAIT_SERIE_KINE_CONFIRM", {
+            "serie_kine_base": base, "serie_kine_plan": plan})
+        msg_btn = msg_calendario(
+            base, plan,
+            nota=(f"_No encontré otras horas cerca de la sesión {sesion_num} 😕 "
+                  "— si ninguna te acomoda, recepción puede armarlo contigo._"))
+        try:
+            await send_whatsapp(phone, msg_btn)
+            log_message(phone, "out", msg_btn["interactive"]["body"]["text"],
+                        "WAIT_SERIE_KINE_CONFIRM", canal="whatsapp")
+        except Exception:  # noqa: BLE001
+            pass
+        log_event(phone, "serie_kine_edit_sin_alternativas",
+                  {"sesion": sesion_num})
+        return
+
+    save_session(phone, "WAIT_SERIE_KINE_EDIT_PICK", {
+        "serie_kine_base": base,
+        "serie_kine_plan": plan,
+        "serie_kine_edit_idx": idx0,
+        "serie_kine_alts": alts,
+    })
+    actual = plan[idx0]
+    lineas = "\n".join(
+        f"  {i}. {_display(a['fecha'])} · {a['hora_inicio'][:5]}"
+        for i, a in enumerate(alts, start=1))
+    msg = (
+        f"Opciones para la *sesión {sesion_num}* "
+        f"(hoy propuesta {_display(actual['fecha'])} · "
+        f"{actual['hora_inicio'][:5]}):\n\n{lineas}\n\n"
+        "Elige un *número*, o escribe *volver* para dejarla como estaba."
+    )
+    try:
+        await send_whatsapp(phone, msg)
+        log_message(phone, "out", msg, "WAIT_SERIE_KINE_EDIT_PICK",
+                    canal="whatsapp")
+    except Exception as e:  # noqa: BLE001
+        log.error("serie_kine ofrecer_alternativas envio fallo: %s", e)
+    log_event(phone, "serie_kine_edit_alternativas", {
+        "sesion": sesion_num, "opciones": len(alts), "filtro": filtro})
 
 
 async def crear_serie(phone: str, base: dict, plan: list[dict]) -> None:

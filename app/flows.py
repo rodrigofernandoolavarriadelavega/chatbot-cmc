@@ -6632,6 +6632,42 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return ("Sin problema 👍 Quedaste solo con tu primera sesión "
                     "reservada.\n\nCuando quieras agendar las siguientes, "
                     "escríbeme no más 😊")
+        # "Cambiar alguna" (botón o texto libre tipo "cambiar la 3") →
+        # armado sesión por sesión. Si el texto ya trae el número, saltar
+        # directo a buscar alternativas para esa sesión.
+        if tl == "serie_cal_editar" or "cambi" in tl_norm:
+            import re as _re_skc
+            _n_plan = len(_skc_plan)
+            _m_skc = _re_skc.search(r"\d{1,2}", tl)
+            _filtro_skc = ("tarde" if "tarde" in tl_norm
+                           else "manana" if ("mañana" in tl or "manana" in tl_norm)
+                           else "")
+            if _m_skc:
+                _ses_skc = int(_m_skc.group())
+                if _ses_skc == 1:
+                    save_session(phone, "WAIT_SERIE_KINE_CONFIRM", data)
+                    return ("La sesión 1 ya está reservada — para cambiarla "
+                            "usa *cambiar/cancelar hora* del menú al final 😊\n\n"
+                            "¿Quieres cambiar alguna de las otras? Escribe su "
+                            "número.")
+                if 2 <= _ses_skc <= _n_plan + 1:
+                    try:
+                        from serie_kine import ofrecer_alternativas as _sk_alts
+                        import asyncio as _aio_alts
+                        _aio_alts.create_task(_sk_alts(
+                            phone, _skc_base, _skc_plan, _ses_skc - 2,
+                            _filtro_skc))
+                    except Exception as _e_alts:  # noqa: BLE001
+                        log_event(phone, "serie_kine_lanzar_error",
+                                  {"error": str(_e_alts)[:150]})
+                    save_session(phone, "IDLE", {})
+                    return (f"Buscando opciones para la sesión {_ses_skc} 🔎\n\n"
+                            "Te las muestro en un momento…")
+            save_session(phone, "WAIT_SERIE_KINE_EDIT", data)
+            return (f"¿Cuál sesión quieres cambiar? Escribe su número "
+                    f"(del *2* al *{_n_plan + 1}*) 😊\n"
+                    "_Puedes agregar «mañana» o «tarde» para filtrar, "
+                    "ej: 3 tarde_")
         # Respuesta libre (ej: "¿puede ser más tarde?") — una aclaración y
         # de ahí a recepción para armarlo a la medida.
         if data.get("_skc_reintento"):
@@ -6645,8 +6681,80 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         data["_skc_reintento"] = True
         save_session(phone, "WAIT_SERIE_KINE_CONFIRM", data)
         return ("¿Te reservo el calendario tal como te lo mostré?\n\n"
-                "Responde *sí* para reservarlo, o *no* para quedarte solo "
-                "con la primera sesión 😊")
+                "Responde *sí* para reservarlo, *cambiar* si quieres ajustar "
+                "alguna sesión, o *no* para quedarte solo con la primera 😊")
+
+    # ── WAIT_SERIE_KINE_EDIT ──────────────────────────────────────────────────
+    # El paciente pidió cambiar una sesión: espera el número (opcional
+    # «mañana»/«tarde» como filtro de horario).
+    if state == "WAIT_SERIE_KINE_EDIT":
+        _ske_base = data.get("serie_kine_base") or {}
+        _ske_plan = data.get("serie_kine_plan") or []
+        import re as _re_ske
+        _m_ske = _re_ske.search(r"\d{1,2}", tl)
+        if tl in NEGACIONES or tl_norm in NEGACIONES or "volver" in tl_norm:
+            save_session(phone, "WAIT_SERIE_KINE_CONFIRM", {
+                "serie_kine_base": _ske_base, "serie_kine_plan": _ske_plan})
+            from serie_kine import msg_calendario as _sk_cal_e
+            return _sk_cal_e(_ske_base, _ske_plan)
+        if not _m_ske:
+            save_session(phone, "WAIT_SERIE_KINE_EDIT", data)
+            return (f"Escribe el número de la sesión que quieres cambiar "
+                    f"(del *2* al *{len(_ske_plan) + 1}*), o *volver* 😊")
+        _ses_ske = int(_m_ske.group())
+        if _ses_ske == 1:
+            save_session(phone, "WAIT_SERIE_KINE_EDIT", data)
+            return ("La sesión 1 ya está reservada — para cambiarla usa "
+                    "*cambiar/cancelar hora* del menú al final 😊\n\n"
+                    "¿Cuál de las otras quieres cambiar?")
+        if not (2 <= _ses_ske <= len(_ske_plan) + 1):
+            save_session(phone, "WAIT_SERIE_KINE_EDIT", data)
+            return (f"Ese número no está en el calendario 😅 Escribe uno "
+                    f"del *2* al *{len(_ske_plan) + 1}*, o *volver*.")
+        _filtro_ske = ("tarde" if "tarde" in tl_norm
+                       else "manana" if ("mañana" in tl or "manana" in tl_norm)
+                       else "")
+        try:
+            from serie_kine import ofrecer_alternativas as _sk_alts_e
+            import asyncio as _aio_alts_e
+            _aio_alts_e.create_task(_sk_alts_e(
+                phone, _ske_base, _ske_plan, _ses_ske - 2, _filtro_ske))
+        except Exception as _e_alts_e:  # noqa: BLE001
+            log_event(phone, "serie_kine_lanzar_error",
+                      {"error": str(_e_alts_e)[:150]})
+        save_session(phone, "IDLE", {})
+        return (f"Buscando opciones para la sesión {_ses_ske} 🔎\n\n"
+                "Te las muestro en un momento…")
+
+    # ── WAIT_SERIE_KINE_EDIT_PICK ─────────────────────────────────────────────
+    # El bot mostró alternativas numeradas para UNA sesión; el paciente elige
+    # y el calendario se re-muestra actualizado (sin crear nada todavía).
+    if state == "WAIT_SERIE_KINE_EDIT_PICK":
+        _skp_base = data.get("serie_kine_base") or {}
+        _skp_plan = data.get("serie_kine_plan") or []
+        _skp_idx = int(data.get("serie_kine_edit_idx") or 0)
+        _skp_alts = data.get("serie_kine_alts") or []
+        from serie_kine import msg_calendario as _sk_cal_p
+        if "volver" in tl_norm or tl in NEGACIONES or tl_norm in NEGACIONES:
+            save_session(phone, "WAIT_SERIE_KINE_CONFIRM", {
+                "serie_kine_base": _skp_base, "serie_kine_plan": _skp_plan})
+            return _sk_cal_p(_skp_base, _skp_plan)
+        import re as _re_skp
+        _m_skp = _re_skp.search(r"\d{1,2}", tl)
+        if _m_skp and 1 <= int(_m_skp.group()) <= len(_skp_alts):
+            _elegida = dict(_skp_alts[int(_m_skp.group()) - 1])
+            if 0 <= _skp_idx < len(_skp_plan):
+                _skp_plan[_skp_idx] = _elegida
+            log_event(phone, "serie_kine_sesion_cambiada", {
+                "sesion": _skp_idx + 2, "fecha": _elegida.get("fecha"),
+                "hora": _elegida.get("hora_inicio")})
+            save_session(phone, "WAIT_SERIE_KINE_CONFIRM", {
+                "serie_kine_base": _skp_base, "serie_kine_plan": _skp_plan})
+            return _sk_cal_p(_skp_base, _skp_plan,
+                             nota=f"_Sesión {_skp_idx + 2} actualizada ✏️_")
+        save_session(phone, "WAIT_SERIE_KINE_EDIT_PICK", data)
+        return (f"Elige un número del *1* al *{len(_skp_alts)}*, o escribe "
+                "*volver* para dejar la sesión como estaba 😊")
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
