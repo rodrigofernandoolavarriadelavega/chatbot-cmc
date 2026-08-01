@@ -547,7 +547,9 @@ ECO_INFO: dict[str, dict] = {
     },
     "renal": {
         "nombre": "Ecografía renal / urinaria",
-        "keywords": ["renal", "rinon", "riñon", "urinaria", "vias urinarias", "eco renal"],
+        # OJO: NO poner "urinaria" suelta — "infección urinaria" es una condición,
+        # no un pedido de examen (falso positivo real, caso 56973911058 2026-07-17).
+        "keywords": ["renal", "rinon", "riñon", "vias urinarias", "eco renal"],
         "evalua": "los riñones y la vejiga",
         "sirve": "buscar cálculos (piedras), quistes, infecciones a repetición o alteraciones del flujo de orina",
         "preparacion": "Vejiga llena: toma 4-6 vasos de agua 1 hora antes y no orines hasta el examen.",
@@ -611,7 +613,9 @@ ECO_INFO: dict[str, dict] = {
     },
     "doppler": {
         "nombre": "Ecografía Doppler",
-        "keywords": ["doppler", "eco doppler", "flujo", "venas", "varices", "arterial"],
+        # OJO: NO poner "arterial"/"flujo" sueltas — "Holter de presión arterial"
+        # recibía info de eco Doppler (falso positivo real, caso 56982517780 2026-06-12).
+        "keywords": ["doppler", "eco doppler", "venas", "varices"],
         "evalua": "el flujo de sangre en vasos y órganos",
         "sirve": "estudiar várices, trombosis, circulación de las piernas u órganos",
         "preparacion": "Depende de la zona; en general no requiere preparación especial. Te confirmamos al agendar.",
