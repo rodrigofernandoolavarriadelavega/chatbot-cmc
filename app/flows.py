@@ -6576,6 +6576,48 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["_txt_raw"] = txt
                 return await _iniciar_agendar(phone, data, _esp_eco_fi)
             else:
+                # FIX corpus 2026-08-01: si la respuesta no es un tipo sino una
+                # pregunta legítima (precio/Fonasa, horas, "no tengo la orden"),
+                # responderla y seguir esperando el tipo SIN quemar reintento.
+                # Antes contaba como intento fallido: al 2° la conversación
+                # terminaba en recepción con la pregunta sin responder.
+                _tl_eco_sq = txt.lower()
+                _eco_side_resp = None
+                if any(k in _tl_eco_sq for k in ("fonasa", "isapre", "bono", "precio",
+                                                 "valor", "cuanto", "cuánto", "vale",
+                                                 "cuesta")):
+                    _eco_side_resp = (
+                        "Los valores particulares de ecografía son:\n"
+                        "• Abdominal / renal / tiroides / partes blandas / mamaria → "
+                        "$40.000 (David Pardo)\n"
+                        "• Transvaginal / pélvica / ginecológica → $35.000 (Dr. Rejón)\n"
+                        "• Ecocardiograma → $110.000 (Dr. Millán)\n\n"
+                        "Los convenios y copagos te los confirma recepción.\n\n"
+                        "¿De qué tipo es la ecografía que necesitas?"
+                    )
+                elif "orden" in _tl_eco_sq:
+                    _eco_side_resp = (
+                        "No hay problema 🙂 Cuando tengas la orden a mano, "
+                        "escríbeme el tipo de ecografía que indica (por ejemplo: "
+                        "abdominal, mamaria, transvaginal) y seguimos con la hora."
+                    )
+                elif any(k in _tl_eco_sq for k in ("hora", "cuando", "cuándo", "dispon")):
+                    _eco_side_resp = (
+                        "Para mostrarte las horas primero necesito saber el tipo de "
+                        "ecografía — cada tipo la realiza un profesional distinto.\n\n"
+                        "¿De qué tipo es? Por ejemplo: abdominal, mamaria, "
+                        "transvaginal, hombro…"
+                    )
+                if _eco_side_resp:
+                    log_event(phone, "eco_tipo_side_question", {"txt": txt[:120]})
+                    data["wait_eco_tipo"] = True   # NO incrementa eco_tipo_reintentos
+                    save_session(phone, "WAIT_ESPECIALIDAD", data)
+                    return _eco_side_resp
+
+                # Corpus continuo: ni tipo reconocible ni pregunta lateral.
+                # Revisar mensualmente para ampliar vocabulario/fuzzy.
+                log_event(phone, "eco_tipo_nomatch", {"txt": txt[:200]})
+
                 # Texto no reconocido como tipo de eco — volver a preguntar.
                 # FIX 1b: max 2 reintentos antes de escalar a recepcionista.
                 _eco_reintentos = data.get("eco_tipo_reintentos", 0) + 1

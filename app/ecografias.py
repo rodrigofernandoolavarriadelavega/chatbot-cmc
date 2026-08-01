@@ -66,10 +66,17 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             # Vaginal genérico
             "eco vaginal",
             "ecografia vaginal",
-            # Pélvica
+            # Pélvica — también la palabra sola: "Ecotomagrias pélvica femenina"
+            # no contiene "eco pelvica" y quedaba sin match (corpus 2026-08-01).
+            "pelvica",
+            "pelvis",
             "eco pelvica",
             "ecografia pelvica",
-            # Ginecológica
+            # Ginecológica — raíz sola: en prod los pacientes contestan
+            # "Ginecóloga"/"Ginecológia" a la pregunta de tipo (corpus 2026-08-01).
+            # Seguro: el gate de contexto eco impide que "hora con ginecología"
+            # (sin mención de eco) caiga acá.
+            "ginecolog",
             "eco ginecologica",
             "ecografia ginecologica",
             # Ovarios / útero
@@ -97,6 +104,7 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
         "keywords": [
             "obstetrica",
             "obstétrica",
+            "obstretic",     # typo con letras cambiadas: "obstretica" (corpus 2026-08-01)
             "eco obstetrica",
             "ecografia obstetrica",
             "embarazo",
@@ -280,6 +288,11 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "gemelo",  # músculo gastrocnemio
             "de gemelo",
             # Zona lumbar / columna (partes blandas paravertebrales)
+            # Lumbosacra y variantes reales de órdenes médicas (corpus 2026-08-01):
+            # "Lumbrosaca", "lumbo sacr?", "lumbosacra"
+            "lumbosacr",
+            "lumbo sacr",
+            "lumbrosac",
             "lumbar",
             "de lumbar",
             "eco lumbar",
@@ -316,10 +329,12 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "de articulacion",
             # Doppler genérico (no cardíaco)
             "doppler",
+            "dopler",           # typo una sola p (corpus 2026-08-01)
             "eco doppler",
             "ecografia doppler",
             # Inguinal
             "inguinal",
+            "unguinal",         # typo frecuente: "ecografia unguinal bilateral" (corpus 2026-08-01)
             "eco inguinal",
             "ecografia inguinal",
             # Variantes pegadas / typos frecuentes de pacientes (portavión 2026-06-09)
@@ -378,12 +393,12 @@ _ECO_CONTEXT_RE = _re_eco.compile(
     r"eco|"                         # token suelto: "eco abdominal", "eco de rodilla"
     r"ecograf\w*|"                  # ecografia, ecografias, ecografista, ecografico
     r"ecocardio\w*|"                # ecocardiograma, ecocardiografia
-    r"ecotomograf\w*|ecotomo\w*|"   # ecotomografia, ecotomografo, ecotomo
+    r"ecotom\w*|"                   # ecotomografia, ecotomografo, ecotomo, ecotomagria(s) (typo)
     r"ecotograf\w*|"                # ecotografia (typo sin -mo-)
     r"ecodoppler|"
     r"ecomamaria|"                  # variante pegada
     r"ultrasonido\w*|"
-    r"doppler|"
+    r"doppler|dopler|"              # dopler = typo una p
     r"transvaginal|transvajinal|intravaginal|intravajinal|endovaginal"
     r")\b"
 )
@@ -404,6 +419,43 @@ MSG_PREGUNTAR_TIPO = (
     "• Ecocardiograma (corazón) → Cardiología (Dr. Millán), $110.000\n\n"
     "Escribe el tipo que necesitas."
 )
+
+
+# ── Capa fuzzy (fallback del match exacto) ──────────────────────────────────
+# El matcher principal es substring exacto: cada typo nuevo exigía una línea
+# nueva de vocabulario. Esta capa cierra la clase completa de errores de 1-2
+# letras ("dopler", "unguinal", "muscoesqueletica") con difflib (stdlib, sin
+# dependencia nueva en el VPS). Solo corre si el match exacto no encontró nada.
+#
+# Guardas anti-falso-positivo:
+#   - solo tokens y keywords de ≥5 letras (evita "pie"≈"por", "eco"≈"esa")
+#   - solo keywords de UNA palabra (las multi-palabra exigen exactitud)
+#   - umbral 0.85 de SequenceMatcher.ratio
+#   - respeta la misma prioridad de grupos que el match exacto
+from difflib import SequenceMatcher as _SeqMatcher
+
+_FUZZY_MIN_LEN = 5
+_FUZZY_THRESHOLD = 0.85
+_TOKEN_RE = _re_eco.compile(r"[a-zñ]+")
+
+
+def _fuzzy_route(txt_norm: str) -> dict | None:
+    """Match difuso token-a-keyword. Retorna el routing del primer grupo
+    (en orden de prioridad) con algún keyword ≥ umbral, o None."""
+    tokens = [t for t in _TOKEN_RE.findall(txt_norm) if len(t) >= _FUZZY_MIN_LEN]
+    if not tokens:
+        return None
+    for key in ("obstetrica_no_disponible", "ginecologia_rejon",
+                "cardiologia_millan_waitlist", "ecografia_general_pardo"):
+        routing = ECOGRAFIA_ROUTING[key]
+        for kw in routing["keywords"]:
+            kwn = _norm(kw)
+            if " " in kwn or len(kwn) < _FUZZY_MIN_LEN:
+                continue
+            for tok in tokens:
+                if _SeqMatcher(None, tok, kwn).ratio() >= _FUZZY_THRESHOLD:
+                    return routing
+    return None
 
 
 def route_ecografia(texto: str, assume_context: bool = False) -> dict | None:
@@ -442,6 +494,13 @@ def route_ecografia(texto: str, assume_context: bool = False) -> dict | None:
         for kw in routing["keywords"]:
             if _norm(kw) in txt_norm:
                 return routing
+
+    # Fallback difuso: typos de 1-2 letras que el substring exacto no ve
+    # ("dopler" ya es exacto, pero "avdominal", "tiroydes", "muscoesqueletica"
+    # caen acá). Ver _fuzzy_route y sus guardas anti-falso-positivo.
+    fuzzy = _fuzzy_route(txt_norm)
+    if fuzzy is not None:
+        return fuzzy
 
     # El texto menciona "ecografía" pero sin órgano especificado → preguntar
     for kw in _SOLO_ECO_KEYWORDS:

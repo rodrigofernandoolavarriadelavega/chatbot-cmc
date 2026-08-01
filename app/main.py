@@ -10167,7 +10167,21 @@ async def webhook(request: Request):
             log_text = f"[{msg_type}]" + (f" {caption}" if caption else "")
             if saved_filename:
                 log_text = f"[{msg_type}:{saved_filename}]" + (f" {caption}" if caption and caption != saved_filename else "")
-            state_before = get_session(phone).get("state", "IDLE")
+            _sess_before_media = get_session(phone)
+            state_before = _sess_before_media.get("state", "IDLE")
+            # ¿Estaba el bot esperando el tipo de ecografía? En Arauco la
+            # respuesta natural es mandar la FOTO de la orden médica (corpus
+            # 2026-08-01). Conservar ese contexto para recepción en vez de
+            # perderlo en el takeover genérico.
+            _data_before_media = _sess_before_media.get("data") or {}
+            if isinstance(_data_before_media, str):
+                import json as _json_media
+                try:
+                    _data_before_media = _json_media.loads(_data_before_media)
+                except Exception:
+                    _data_before_media = {}
+            _media_es_orden_eco = bool(_data_before_media.get("wait_eco_tipo")) \
+                and msg_type in ("image", "document")
             # Logging de entrada SIEMPRE: la recepcionista debe ver que llegó
             # una imagen/documento independiente del estado de la sesión.
             log_message(phone, "in", log_text, state_before, canal="whatsapp")
@@ -10184,11 +10198,16 @@ async def webhook(request: Request):
 
             save_session(phone, "HUMAN_TAKEOVER", {
                 "hold_sent": True,
-                "handoff_reason": f"media:{msg_type}",
+                "handoff_reason": "media:orden_eco" if _media_es_orden_eco
+                                  else f"media:{msg_type}",
                 "media_caption": caption,
             })
             log_event(phone, "media_recibido", {"tipo": msg_type, "caption": caption[:200],
                                                  "filename": saved_filename})
+            if _media_es_orden_eco:
+                log_event(phone, "eco_orden_foto_recepcion", {
+                    "tipo": msg_type, "filename": saved_filename,
+                })
             # Dedupe: si el paciente manda varias imágenes/PDFs en ráfaga (ej. 3 fotos
             # seguidas), solo responder al PRIMERO dentro de una ventana de 60s.
             # Evita el spam "Recibí tu imagen × 3".
@@ -10210,11 +10229,19 @@ async def webhook(request: Request):
                 _data_curr["_last_media_ack_ts"] = _now
                 save_session(phone, _sess_curr.get("state") or "HUMAN_TAKEOVER", _data_curr)
             else:
-                reply = (
-                    f"Recibí tu {label}, gracias.\n\n"
-                    "Lo guardé en tu ficha y una recepcionista lo va a revisar 🙏\n"
-                    "Si es urgente, puedes llamar al 📞 (44) 296 5226"
-                )
+                if _media_es_orden_eco:
+                    reply = (
+                        "Recibí la foto, gracias 📄\n\n"
+                        "Si es tu orden médica, una recepcionista la va a revisar "
+                        "y te escribirá para agendar la ecografía que corresponde.\n"
+                        "Si necesitas algo más rápido, puedes llamar al 📞 (44) 296 5226"
+                    )
+                else:
+                    reply = (
+                        f"Recibí tu {label}, gracias.\n\n"
+                        "Lo guardé en tu ficha y una recepcionista lo va a revisar 🙏\n"
+                        "Si es urgente, puedes llamar al 📞 (44) 296 5226"
+                    )
                 await send_whatsapp(phone, reply)
                 log_message(phone, "out", reply, "HUMAN_TAKEOVER", canal="whatsapp")
                 # Guardar timestamp del ack en session data
