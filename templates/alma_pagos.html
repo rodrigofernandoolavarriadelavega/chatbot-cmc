@@ -574,6 +574,8 @@
 <!-- Topbar -->
 <div class="pg-topbar">
   <h1>Pagos</h1>
+  <a id="lnkComprobantes" href="#" style="font-size:.78rem;text-decoration:none;background:#eef3f6;color:#1172AB;border-radius:14px;padding:5px 12px;font-weight:600;margin-left:10px">📱 Comprobantes WhatsApp</a>
+  <script>document.getElementById('lnkComprobantes').href='/alma/comprobantes?token='+(new URLSearchParams(location.search).get('token')||'');</script>
   <div class="seg" id="modoSeg">
     <button id="btnModoDia" class="seg-on">Día</button>
     <button id="btnModoRango">Rango</button>

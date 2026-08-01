@@ -1201,6 +1201,7 @@ import mapa_centro_routes; mapa_centro_routes.register_mapa_centro_routes(app)  
 
 import pagos_routes
 app.include_router(pagos_routes.router)
+import comprobantes_routes; app.include_router(comprobantes_routes.router)  # Cola comprobantes WhatsApp (/alma/comprobantes)
 import recepcion_kanban_routes
 app.include_router(recepcion_kanban_routes.router)
 import caja_diaria_routes; app.include_router(caja_diaria_routes.router); caja_diaria_routes.ensure_caja_diaria_table()  # Caja Diaria (libro de caja + depósitos)
@@ -10239,6 +10240,24 @@ async def webhook(request: Request):
                             "confianza": (_ocr_ext or {}).get("confianza", ""),
                             "filename": saved_filename,
                         })
+                        # Comprobante de transferencia → encolar en el panel
+                        # de pagos con validaciones pre-cruzadas (gated).
+                        if _ocr_tipo_doc == "comprobante_pago":
+                            from config import COMPROBANTES_WHATSAPP_ACTIVE
+                            if COMPROBANTES_WHATSAPP_ACTIVE:
+                                try:
+                                    from comprobantes_pagos import registrar_comprobante
+                                    _fila_comp = registrar_comprobante(
+                                        phone,
+                                        (_ocr_ext or {}).get("comprobante") or {},
+                                        saved_filename,
+                                        confianza=(_ocr_ext or {}).get("confianza", ""),
+                                    )
+                                    log_event(phone, "comprobante_whatsapp_encolado",
+                                              _fila_comp)
+                                except Exception as _e_comp:  # noqa: BLE001
+                                    log.warning("comprobante encolar fallo from=%s: %s",
+                                                phone, str(_e_comp)[:200])
                         if _ocr_dec["accion"] == "ofrecer_agenda":
                             from datetime import datetime as _dt_ocr, timezone as _tz_ocr
                             save_session(phone, "IDLE", {

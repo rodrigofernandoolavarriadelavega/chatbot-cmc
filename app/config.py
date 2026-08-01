@@ -383,6 +383,15 @@ ECO_ORDEN_OCR_ACTIVE = os.getenv(
     "ECO_ORDEN_OCR_ACTIVE", "false"
 ).lower() in ("true", "1", "yes", "on")
 
+# Cola de comprobantes de transferencia recibidos por WhatsApp: el clasificador
+# de imágenes extrae monto/N° operación/cuenta destino y los encola PRE-cruzados
+# (cuenta CMC, duplicados, paciente+cita) en /alma/comprobantes. Recepción
+# registra el pago con un click — la plata NUNCA se registra sola.
+# Requiere ECO_ORDEN_OCR_ACTIVE (el clasificador). Ver app/comprobantes_pagos.py.
+COMPROBANTES_WHATSAPP_ACTIVE = os.getenv(
+    "COMPROBANTES_WHATSAPP_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

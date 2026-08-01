@@ -44,7 +44,22 @@ Responde SOLO un JSON válido, sin texto adicional:
 {
   "tipo_documento": "orden_medica" | "comprobante_pago" | "receta_medicamentos" | "otro",
   "examenes_solicitados": ["transcripción literal de cada examen solicitado"],
-  "confianza": "alta" | "media" | "baja"
+  "confianza": "alta" | "media" | "baja",
+  "comprobante": null
+}
+
+Si tipo_documento es "comprobante_pago" (transferencia bancaria, pago en app),
+"comprobante" deja de ser null y lleva:
+{
+  "monto": 7880,                      // entero en pesos, sin puntos ni signos
+  "fecha": "17/07/2026",              // tal como aparece
+  "hora": "16:16",                    // "" si no aparece
+  "banco": "Banco Estado",            // banco o app de ORIGEN; "" si no aparece
+  "num_operacion": "8005079",         // "" si no aparece
+  "nombre_pagador": "",               // titular de la cuenta de origen si aparece
+  "destinatario_nombre": "",          // a quién se transfirió
+  "destinatario_cuenta": "221708538", // solo dígitos; "" si no aparece
+  "destinatario_rut": ""              // RUT del destinatario si aparece
 }
 
 Reglas:
@@ -75,7 +90,7 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
         from claude_helper import client  # AsyncAnthropic ya configurado
         resp = await client.messages.create(
             model=_VISION_MODEL,
-            max_tokens=500,
+            max_tokens=800,
             timeout=_VISION_TIMEOUT,
             messages=[{
                 "role": "user",
@@ -98,6 +113,7 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
         data.setdefault("tipo_documento", "otro")
         data.setdefault("examenes_solicitados", [])
         data.setdefault("confianza", "baja")
+        data.setdefault("comprobante", None)
         return data
     except Exception as e:  # noqa: BLE001 — cualquier fallo cae a recepción
         log.warning("leer_orden_medica fallo: %s", str(e)[:200])
