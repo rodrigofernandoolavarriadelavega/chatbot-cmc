@@ -358,7 +358,28 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-07-14
+**Última actualización**: 2026-08-01
+
+### 2026-08-01 — Fix comprensión de ecografías (DEPLOYADO, commit fddc0e5)
+- **Diagnóstico con data real** (60d de prod): 213 `ecografia_sin_tipo` vs 126
+  `ecografia_tipo_matched`. Los fallos: (a) vocabulario/typos ~12% ("Ginecóloga"
+  sola, "Dopler", "unguinal", "obstretica", "Lumbrosaca", "pélvica" sola),
+  (b) respuestas laterales ~12% (precio/Fonasa/"no tengo la orden") que quemaban
+  reintentos, (c) foto de la orden médica que perdía contexto.
+- **`app/ecografias.py`**: keywords nuevos del corpus + **capa fuzzy difflib**
+  (fallback del substring exacto; tokens ≥5 letras, ratio ≥0.85, solo keywords
+  de 1 palabra, misma prioridad de grupos) — mata la clase entera de typos de
+  1-2 letras. Gate ampliado: `ecotom\w*`, `dopler`.
+- **`app/flows.py` (wait_eco_tipo)**: preguntas laterales (precio/fonasa/bono,
+  "orden", hora/cuándo) se responden y se re-pregunta el tipo SIN incrementar
+  `eco_tipo_reintentos`. Evento nuevo **`eco_tipo_nomatch`** (txt crudo 200c) =
+  corpus continuo → revisar mensual para ampliar vocabulario.
+- **`app/main.py` (media handler)**: imagen/documento con `wait_eco_tipo` activo
+  → `handoff_reason="media:orden_eco"`, evento `eco_orden_foto_recepcion`, ack
+  específico "si es tu orden médica, recepción te agenda la eco".
+- **Tests**: `tests/test_eco_vocab_fuzzy.py` 27/27 (corpus real + anti-falso-
+  positivo + regresión). Suites eco existentes 92+15+2 OK. harness_50 76/103
+  (= baseline). Smoke en prod post-deploy: 6/6 OK.
 
 ### 2026-07-14 — Agendar v2 + dashboard de mejora (SIN DEPLOY, sin commit)
 - **Investigación**: 10 agentes (3 auditoría del agendador actual + 6 evidencia
