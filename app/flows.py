@@ -2883,7 +2883,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "ahí estoy", "ahi estoy",
         "confirmo mi hora", "confirmo asistencia",
     }
-    if state == "IDLE" and tl_norm in _TOKENS_CONFIRM_RECOD:
+    # FIX 2026-08-01 (caso Dayan 56988538373): la mamá confirmó EN TERCERA
+    # PERSONA ("Si asistira", "Confirmando la hora de dayan") y el set exacto
+    # solo cubre primera persona → cayó al menú y terminó en "no reconozco ese
+    # RUT". Regex acotado sobre tl_norm (sin tildes); el gate real sigue siendo
+    # que exista cita futura con recordatorio enviado y sin respuesta. Se exige
+    # ausencia de "no" para no robarle el caso al bloque negativo de abajo.
+    _RE_CONFIRM_RECOD = re.compile(
+        r"\b(confirmand\w*|confirmo|confirmar|confirmad[oa]|"
+        r"asistir[ae]\w*|va a (ir|asistir|llegar)|si va\b|"
+        r"(ahi|alli|alla) estar[ae]\b)"
+    )
+    _es_confirmacion_recod = (
+        tl_norm in _TOKENS_CONFIRM_RECOD
+        or (_RE_CONFIRM_RECOD.search(tl_norm)
+            and not re.search(r"\bno\b", tl_norm)
+            and len(txt) <= 80)
+    )
+    if state == "IDLE" and _es_confirmacion_recod:
         try:
             from session import db as _conn_rc
             import time as _time_rc
@@ -2911,7 +2928,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "especialidad": _fila_rc["especialidad"],
                     "txt": txt[:80],
                 })
-                return "Perfecto, te esperamos. Hasta pronto."
+                # Eco con los datos de la cita: si el matcher amplio disparara
+                # mal, el paciente lo ve al tiro y puede corregir.
+                try:
+                    _cuando_rc = ("hoy" if _fila_rc["fecha"] == _hoy_rc
+                                  else f"el {_fila_rc['fecha']}")
+                    return (f"¡Perfecto! Queda confirmada tu hora de "
+                            f"*{_fila_rc['especialidad']}* {_cuando_rc} a las "
+                            f"*{_fila_rc['hora']}* con {_fila_rc['profesional']}. "
+                            "Te esperamos 👋")
+                except Exception:
+                    return "Perfecto, te esperamos. Hasta pronto."
         except Exception as _e_rc:
             log.warning("confirm_recordatorio_texto_libre falló: %s", _e_rc)
         # Si no hay cita con recordatorio pendiente, dejar caer al flujo normal
@@ -2928,7 +2955,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "no podre", "no podré", "no asistire", "no asistiré",
         "no voy a poder", "no voy a poder ir", "no alcanzo",
     }
-    if state == "IDLE" and tl_norm in _TOKENS_NO_RECOD:
+    # Espejo del fix de tercera persona: "no va a poder", "no asistira",
+    # "no podra ir" (la mamá avisa por el hijo).
+    _RE_NO_RECOD = re.compile(
+        r"\bno\s+(va a (ir|poder|asistir|llegar)|asistir[ae]\w*|"
+        r"podra\b|ira\b|alcanza\b)"
+    )
+    _es_negativa_recod = (
+        tl_norm in _TOKENS_NO_RECOD
+        or (_RE_NO_RECOD.search(tl_norm) and len(txt) <= 80)
+    )
+    if state == "IDLE" and _es_negativa_recod:
         try:
             from session import db as _conn_nr
             _hoy_nr = datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
@@ -11325,6 +11362,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Primero necesito tu *RUT* para buscar tu cita 😊\n"
                 "(ej: *12.345.678-9*)"
             )
+        # FIX 2026-08-01 (caso Dayan): "Q si asistira" acá no es un intento de
+        # RUT — es la respuesta al recordatorio que cayó en el flujo equivocado.
+        # Sin dígitos y con verbo de asistencia/confirmación → re-despachar en
+        # IDLE, donde el handler de confirmación de recordatorios lo procesa.
+        # (Mismo patrón que BUG-5 FIX de WAIT_RUT_AGENDAR: reset + re-dispatch.)
+        if (len([c for c in txt if c.isdigit()]) < 4
+                and _re_time.search(
+                    r"\b(confirm\w*|asistir\w*|va a (ir|asistir)|no (voy|puedo|ire))\b",
+                    tl_norm)):
+            log_event(phone, "rut_ver_era_respuesta_recordatorio", {"texto": txt[:80]})
+            reset_session(phone)
+            return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
         rut = clean_rut(txt)
         if not valid_rut(rut):
             # BUG-C: 96% abandono en WAIT_RUT_VER. Tras 2 intentos fallidos,
@@ -15023,6 +15072,14 @@ async def _iniciar_ver(phone: str, data: dict, txt: str = "") -> str:
     if is_medilink_down():
         return _modo_degradado(phone, "ver_reservas")
     save_session(phone, "WAIT_RUT_VER", data)
+    # Mismo patrón que _iniciar_reagendar: si ya conocemos el RUT, no volver a
+    # pedirlo (caso Dayan 2026-08-01: el bot le pidió RUT 25 min después de
+    # agendarle con "¿Agendo con tus datos anteriores, Dayan?").
+    perfil_ver = get_profile(phone)
+    if perfil_ver and perfil_ver.get("rut"):
+        log_event(phone, "ver_reservas_rut_conocido", {})
+        return await handle_message(phone, perfil_ver["rut"],
+                                    {"state": "WAIT_RUT_VER", "data": data})
     # Mismo defensivo: extraer RUT del mensaje si está embebido.
     if txt:
         from medilink import clean_rut as _cr, valid_rut as _vr
