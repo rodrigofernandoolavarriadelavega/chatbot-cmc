@@ -10196,22 +10196,45 @@ async def webhook(request: Request):
                 return Response(status_code=200)
             # ── fin guard media HUMAN_TAKEOVER ─────────────────────────────
 
-            # ── OCR de orden de eco (gated ECO_ORDEN_OCR_ACTIVE) ───────────
-            # Foto con wait_eco_tipo activo → leer la orden con Claude visión,
-            # rutear con route_ecografia y OFRECER la hora (el paciente siempre
-            # confirma). Cualquier fallo cae al flujo actual (recepción).
-            # Validado 2026-08-01: 15/15 órdenes reales leídas correctamente.
-            if _media_es_orden_eco and msg_type == "image" and blob:
+            # ── OCR de imágenes entrantes (gated ECO_ORDEN_OCR_ACTIVE) ─────
+            # GATILLO AMPLIADO (2026-08-01): TODA imagen entrante se clasifica
+            # con Claude visión (antes: solo con wait_eco_tipo activo, y en la
+            # práctica no leía casi ninguna — las fotos llegan ANTES de que el
+            # bot pregunte). Orden de eco única → ofrecer la hora (el paciente
+            # siempre confirma). Obstétrica → responder que no se realiza.
+            # Todo lo demás (comprobantes, órdenes no-eco, memes, ilegible) →
+            # flujo actual de recepción, con handoff_reason enriquecido.
+            # Validado con 19 imágenes reales: 0 falsos positivos.
+            # Costo medido: ~$0.007 USD/imagen · ~400 img/mes ≈ $3 USD/mes.
+            _ocr_tipo_doc = None
+            if msg_type == "image" and blob:
                 from config import ECO_ORDEN_OCR_ACTIVE
                 if ECO_ORDEN_OCR_ACTIVE:
                     try:
                         from eco_orden_ocr import (leer_orden_medica, decidir_accion,
                                                    msg_oferta, MSG_OBSTETRICA)
+                        # Dedupe: si hace <3 min ya ofrecimos agenda por otra
+                        # foto (paciente manda la misma orden 2 veces, caso real
+                        # ...3079), no re-ofrecer ni pisar la oferta pendiente.
+                        import time as _t_ocr
+                        try:
+                            _prev_oferta_ts = float(
+                                _data_before_media.get("_ocr_oferta_ts") or 0)
+                        except Exception:  # noqa: BLE001
+                            _prev_oferta_ts = 0
+                        if _t_ocr.time() - _prev_oferta_ts < 180:
+                            log_event(phone, "eco_orden_ocr", {
+                                "decision": "skip_oferta_reciente",
+                                "filename": saved_filename,
+                            })
+                            return Response(status_code=200)
                         _ocr_ext = await leer_orden_medica(blob, mime)
                         _ocr_dec = decidir_accion(_ocr_ext)
+                        _ocr_tipo_doc = (_ocr_ext or {}).get("tipo_documento")
                         log_event(phone, "eco_orden_ocr", {
                             "decision": _ocr_dec.get("accion"),
                             "motivo": _ocr_dec.get("motivo", ""),
+                            "tipo_documento": _ocr_tipo_doc or "",
                             "examenes": (_ocr_ext or {}).get("examenes_solicitados", [])[:4],
                             "confianza": (_ocr_ext or {}).get("confianza", ""),
                             "filename": saved_filename,
@@ -10223,6 +10246,7 @@ async def webhook(request: Request):
                                 "especialidad_sugerida_ts":
                                     _dt_ocr.now(_tz_ocr.utc).isoformat(),
                                 "eco_tipo_text": _ocr_dec["tipo_texto"],
+                                "_ocr_oferta_ts": _t_ocr.time(),
                             })
                             _msg_ocr = msg_oferta(_ocr_dec["tipo_texto"],
                                                   _ocr_dec["routing"])
@@ -10241,12 +10265,19 @@ async def webhook(request: Request):
                     except Exception as _e_ocr:  # noqa: BLE001
                         log.warning("eco_orden_ocr fallo from=%s: %s",
                                     phone, str(_e_ocr)[:200])
-            # ── fin OCR orden de eco ───────────────────────────────────────
+            # ── fin OCR imágenes ───────────────────────────────────────────
 
+            if _media_es_orden_eco:
+                _handoff_media = "media:orden_eco"
+            elif _ocr_tipo_doc in ("comprobante_pago", "orden_medica",
+                                   "receta_medicamentos"):
+                # El clasificador leyó la imagen: recepción ve QUÉ llegó
+                _handoff_media = f"media:{_ocr_tipo_doc}"
+            else:
+                _handoff_media = f"media:{msg_type}"
             save_session(phone, "HUMAN_TAKEOVER", {
                 "hold_sent": True,
-                "handoff_reason": "media:orden_eco" if _media_es_orden_eco
-                                  else f"media:{msg_type}",
+                "handoff_reason": _handoff_media,
                 "media_caption": caption,
             })
             log_event(phone, "media_recibido", {"tipo": msg_type, "caption": caption[:200],
@@ -10282,6 +10313,20 @@ async def webhook(request: Request):
                         "Si es tu orden médica, una recepcionista la va a revisar "
                         "y te escribirá para agendar la ecografía que corresponde.\n"
                         "Si necesitas algo más rápido, puedes llamar al 📞 (44) 296 5226"
+                    )
+                elif _ocr_tipo_doc == "orden_medica":
+                    # Orden leída pero no auto-agendable (no-eco, varias, ilegible)
+                    reply = (
+                        "Recibí tu orden médica 📄, gracias.\n\n"
+                        "Una recepcionista la va a revisar y te escribirá para "
+                        "coordinar la hora o el examen que indica.\n"
+                        "Si es urgente, puedes llamar al 📞 (44) 296 5226"
+                    )
+                elif _ocr_tipo_doc == "comprobante_pago":
+                    reply = (
+                        "Recibí tu comprobante, gracias 🙏\n\n"
+                        "Una recepcionista lo va a verificar y te confirmará "
+                        "en este mismo chat."
                     )
                 else:
                     reply = (
