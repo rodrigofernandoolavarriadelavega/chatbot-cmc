@@ -360,6 +360,55 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 ## Sesión en curso
 **Última actualización**: 2026-08-01
 
+### 2026-08-01 — OCR de órdenes de eco (DEPLOYADO commit cf91da1, GATED OFF)
+- **`app/eco_orden_ocr.py`** (nuevo): foto de orden médica en `wait_eco_tipo` →
+  Claude **Sonnet** visión (Haiku leyó mal 3/3 manuscritas de hospital) clasifica
+  el documento + transcribe exámenes → `decidir_accion()` (pura, testeada) cruza
+  con `route_ecografia` → botones "Sí, agendar" vía mecanismo
+  `especialidad_sugerida`+`eco_tipo_text` existente. El paciente SIEMPRE confirma.
+- **Guard clave**: solo se rutea un examen con raíz ecográfica (`_parece_eco`,
+  regex + fuzzy) — sin él, "Escoliosis lumbar (radiografía)" ofrecía eco por el
+  keyword suelto "lumbar" (pasó en la validación e2e).
+- **Validación con 19 imágenes reales de prod (90d)**: 13 acciones automáticas
+  correctas (incl. 2 obstétricas respondidas al tiro), 5 caídas seguras a
+  recepción (2 letra ilegible con confianza baja, multi-examen, comprobante de
+  pago, Holter), 1 parcial, **0 falsos positivos**.
+- **Flag `ECO_ORDEN_OCR_ACTIVE`** (config.py, default false) → encender:
+  `.env` del VPS + restart. Sin flag el flujo actual (recepción) no cambia.
+- Tests: `tests/test_eco_orden_ocr.py` 16/16. Evento nuevo `eco_orden_ocr`
+  (decision/motivo/examenes/confianza) para auditar antes de encender.
+
+### 2026-08-01 — Fix confirmación recordatorio 3ª persona + RUT conocido en ver-reservas + previsión declarativa (DEPLOYADO, commit 8429dc9)
+- Caso real Dayan 56988538373: la mamá confirmó en 3ª persona/gerundio
+  ("Si asistira", "Confirmando la hora de dayan") → caía al menú genérico →
+  flujo ver-reservas pedía el RUT que el bot ya tenía → el texto se parseó
+  como RUT inválido ("no reconozco ese RUT"). Recepción rescató a mano.
+- **`app/flows.py`**: `_RE_CONFIRM_RECOD`/`_RE_NO_RECOD` (regex 3ª persona/
+  gerundio) junto a los sets exactos de confirmación/negativa de recordatorio
+  (~línea 2892). Gate intacto: solo dispara si hay cita futura con
+  `reminder_sent=1`/`reminder_2h_sent=1` y sin `confirmation_status` en
+  `citas_bot` — si no hay fila, cae al flujo normal (verificado que "quiero
+  confirmar una hora para mañana" en IDLE sin cita recordada NO se roba por
+  el gate). La confirmación ahora hace eco de especialidad/fecha/hora/
+  profesional. `_iniciar_ver`: si `get_profile(phone)` tiene RUT, re-despacha
+  directo a `WAIT_RUT_VER` con el RUT conocido (mismo patrón que
+  `_iniciar_reagendar`). `WAIT_RUT_VER`: texto sin dígitos (<4) que matchea
+  verbo de asistencia/confirmación → `reset_session` + re-dispatch a IDLE
+  (patrón BUG-5 de `WAIT_RUT_AGENDAR`), evento `rut_ver_era_respuesta_recordatorio`
+  — verificado sin loop (IDLE reprocesa con el bloque de confirmación, que
+  responde directo sin volver a `WAIT_RUT_VER`).
+- **`app/claude_helper.py`**: SYSTEM_PROMPT — pregunta declarativa de
+  previsión/cobertura ("El cardiólogo atiende por Fonasa", caso 56989975963,
+  verificado `intent="otro"` en `conversation_events`) → intent `info` con
+  `respuesta_directa`, nunca menú genérico.
+- **Tests**: deep-import 13 módulos OK · harness_50 76/103 (=baseline) ·
+  normalizer 52/52 · stress_200 169/200 (=baseline, comparado contra
+  2462b72 con revert temporal de los 2 archivos) · suites eco (92+15+2+27) y
+  recordatorios_recepcion (11+2) OK. 0 regresiones.
+- **Deploy**: `scripts/deploy.sh` (G0-G4 + auto-rollback), sin intervención
+  manual en VPS. `/health` 200 · `systemctl is-active` active · logs limpios
+  (sin ERROR/Traceback) en los primeros minutos post-restart.
+
 ### 2026-08-01 — Fix comprensión de ecografías (DEPLOYADO, commit fddc0e5)
 - **Diagnóstico con data real** (60d de prod): 213 `ecografia_sin_tipo` vs 126
   `ecografia_tipo_matched`. Los fallos: (a) vocabulario/typos ~12% ("Ginecóloga"
