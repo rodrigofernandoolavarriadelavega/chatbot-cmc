@@ -6543,42 +6543,68 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         )
 
     # ── WAIT_SERIE_KINE_N ─────────────────────────────────────────────────────
-    # El OCR leyó una orden de kine con N sesiones y preguntó cuántas quiere
-    # dejar agendadas (botones serie_k_* o número libre). La elección se
-    # arrastra como serie_kine_n por el flujo normal de agendamiento; al
-    # confirmarse la 1ª cita, serie_kine.agendar_resto_serie crea el resto
-    # día por medio. Ver app/serie_kine.py.
+    # La 1ª sesión de kine YA está confirmada y el bot ofreció agendar el
+    # resto de la serie de la orden (botones serie_k_* o número libre).
+    # data["serie_kine_base"] trae todo lo necesario (paciente Medilink,
+    # profesional, fecha/hora base). Al elegir N ≥ 2 se lanza
+    # serie_kine.agendar_resto_serie en background: crea las N-1 restantes
+    # día por medio y manda el calendario completo. Ver app/serie_kine.py.
     if state == "WAIT_SERIE_KINE_N":
-        _sk_max = int(data.get("serie_kine_max") or 10)
+        _sk_base = data.get("serie_kine_base") or {}
+        _sk_max = int(_sk_base.get("n_max") or 10)
         _sk_n = None
         if tl == "serie_k_todas":
             _sk_n = _sk_max
-        elif tl == "serie_k_una":
+        elif tl == "serie_k_no":
             _sk_n = 1
         elif tl == "serie_k_menos":
             save_session(phone, "WAIT_SERIE_KINE_N", data)
-            return (f"¿Cuántas sesiones quieres dejar agendadas ahora?\n\n"
-                    f"Escribe un número del *1* al *{_sk_max}* 😊\n"
+            return (f"¿Cuántas sesiones en total quieres dejar agendadas "
+                    f"(contando la que ya tienes)?\n\n"
+                    f"Escribe un número del *2* al *{_sk_max}* 😊\n"
                     "_(las demás las puedes agendar después)_")
         else:
             import re as _re_sk
             _m_sk = _re_sk.search(r"\d{1,2}", tl)
             if _m_sk:
                 _sk_n = max(1, min(_sk_max, int(_m_sk.group())))
-            elif any(k in tl for k in ("todas", "todos", "completo", "si")):
+            elif any(k in tl for k in ("todas", "todos", "completo", "si", "sí")):
                 _sk_n = _sk_max
+            elif any(k in tl for k in ("no", "despues", "después", "luego")):
+                _sk_n = 1
         if _sk_n is None:
             save_session(phone, "WAIT_SERIE_KINE_N", data)
             return (f"No te entendí 😅 ¿Cuántas de las {_sk_max} sesiones "
-                    "quieres agendar? Escribe un número (ej: *10* o *3*).")
+                    "quieres dejar agendadas? Escribe un número (ej: "
+                    f"*{_sk_max}* o *3*), o *no* si prefieres después.")
         log_event(phone, "serie_kine_n_elegida", {"n": _sk_n, "max": _sk_max})
-        _sk_carry = {"serie_kine_n": _sk_n}
-        _sk_perfil = get_profile(phone)
-        if _sk_perfil:
-            _sk_carry["rut_conocido"] = _sk_perfil["rut"]
-            _sk_carry["nombre_conocido"] = _sk_perfil["nombre"]
         reset_session(phone)
-        return await _iniciar_agendar(phone, _sk_carry, "kinesiología")
+        if _sk_n <= 1 or not _sk_base.get("id_paciente"):
+            return ("Perfecto 👍 Quedaste con tu primera sesión agendada.\n\n"
+                    "Cuando quieras agendar las siguientes, escríbeme no más 😊")
+        try:
+            from serie_kine import agendar_resto_serie as _sk_resto
+            import asyncio as _aio_sk
+            _aio_sk.create_task(_sk_resto(
+                phone,
+                n_total=_sk_n,
+                id_paciente=_sk_base["id_paciente"],
+                id_profesional=_sk_base["id_profesional"],
+                profesional=_sk_base.get("profesional", ""),
+                especialidad=_sk_base.get("especialidad", "Kinesiología"),
+                fecha_base=_sk_base.get("fecha_base", ""),
+                hora_base=_sk_base.get("hora_base", ""),
+                modalidad=_sk_base.get("modalidad", "particular"),
+                paciente_nombre=_sk_base.get("paciente_nombre", ""),
+                es_tercero=bool(_sk_base.get("es_tercero")),
+            ))
+            log_event(phone, "serie_kine_lanzada", {"n_total": _sk_n})
+        except Exception as _e_sk:  # noqa: BLE001
+            log_event(phone, "serie_kine_lanzar_error", {"error": str(_e_sk)[:150]})
+            return ("Tuve un problema armando la serie 😕 — recepción te va a "
+                    "ayudar a dejar el resto agendado.")
+        return (f"¡Perfecto! Voy armando tu calendario de *{_sk_n} sesiones* "
+                "día por medio 📅\n\nTe lo mando en un momento ✨")
 
     # ── WAIT_ESPECIALIDAD ─────────────────────────────────────────────────────
     if state == "WAIT_ESPECIALIDAD":
@@ -10204,35 +10230,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                     "funnel_id": data.get("_funnel_id", ""),
                 })
-                # ── Serie kine: la 1ª sesión quedó confirmada → agendar el
-                # resto día por medio en background (ver app/serie_kine.py).
-                # serie_kine_n viaja en data desde WAIT_SERIE_KINE_N.
-                _serie_n = int(data.get("serie_kine_n") or 0)
-                if (not reagendar) and _serie_n > 1 and "kinesi" in esp.lower():
-                    data.pop("serie_kine_n", None)
-                    try:
-                        from serie_kine import agendar_resto_serie as _sk_resto
-                        import asyncio as _aio_sk
-                        _aio_sk.create_task(_sk_resto(
-                            phone,
-                            n_total=_serie_n,
-                            id_paciente=paciente["id"],
-                            id_profesional=slot["id_profesional"],
-                            profesional=slot["profesional"],
-                            especialidad=esp,
-                            fecha_base=slot["fecha"],
-                            hora_base=slot["hora_inicio"],
-                            modalidad=data.get("modalidad", "particular"),
-                            paciente_nombre=paciente["nombre"],
-                            es_tercero=es_tercero,
-                        ))
-                        log_event(phone, "serie_kine_lanzada", {
-                            "n_total": _serie_n,
-                            "base": f"{slot['fecha']} {slot['hora_inicio']}",
-                        })
-                    except Exception as _e_sk:  # noqa: BLE001
-                        log_event(phone, "serie_kine_lanzar_error",
-                                  {"error": str(_e_sk)[:150]})
+                # ── Serie kine: la 1ª sesión quedó confirmada SIN fricción.
+                # Guardar la base de la serie; la OFERTA ("¿agendamos las N?")
+                # va como segundo mensaje post-confirmación, más abajo (mismo
+                # patrón que la pregunta de referido). Ver app/serie_kine.py.
+                _serie_max = int(data.get("serie_kine_max") or 0)
+                if (not reagendar) and _serie_max > 1 and "kinesi" in esp.lower():
+                    data["serie_kine_base"] = {
+                        "n_max": _serie_max,
+                        "id_paciente": paciente["id"],
+                        "id_profesional": slot["id_profesional"],
+                        "profesional": slot["profesional"],
+                        "especialidad": esp,
+                        "fecha_base": slot["fecha"],
+                        "hora_base": slot["hora_inicio"],
+                        "modalidad": data.get("modalidad", "particular"),
+                        "paciente_nombre": paciente["nombre"],
+                        "es_tercero": bool(es_tercero),
+                    }
                 # ── Guardar vínculo familiar si la cita fue para tercero ─────
                 # Solo en citas nuevas (no reagendar). Secundario: un fallo aquí
                 # nunca debe interrumpir la confirmación de la cita.
@@ -10591,6 +10606,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         log_event(phone, "referral_source_auto", {"source": f"seo_{_blog_slug}"})
                 # ── fin tracking referral_source ──────────────────────────────
 
+                # ── Serie kine: oferta post-confirmación (2º mensaje) ─────────
+                # La 1ª sesión ya está confirmada; recién AHORA ofrecemos el
+                # resto de la serie (decisión del dueño 2026-08-01: cero
+                # fricción antes de la 1ª hora). Prioridad sobre la pregunta
+                # de referido — la serie vale más y el estado no convive.
+                _sk_base = data.get("serie_kine_base")
+                if _sk_base and not reagendar:
+                    _sk_nmax = int(_sk_base.get("n_max") or 0)
+                    save_session(phone, "WAIT_SERIE_KINE_N",
+                                 {"serie_kine_base": _sk_base})
+                    await send_whatsapp(phone, confirmacion_msg)
+                    from session import log_message as _log_msg_sk
+                    _log_msg_sk(phone, "out", confirmacion_msg, "CONFIRMING_CITA")
+                    log_event(phone, "serie_kine_oferta", {
+                        "n_max": _sk_nmax,
+                        "base": f"{_sk_base.get('fecha_base')} {_sk_base.get('hora_base')}",
+                    })
+                    return _btn_msg(
+                        f"Una cosa más 😊 Tu orden indica *{_sk_nmax} sesiones* "
+                        "de kinesiología.\n\n"
+                        f"¿Quieres que te deje agendadas las {_sk_nmax} altiro? "
+                        "Sería *día por medio, en el mismo horario* (te mando el "
+                        "calendario completo), y puedes cambiar cualquiera después.",
+                        [{"id": "serie_k_todas", "title": f"✅ Las {_sk_nmax} sesiones"},
+                         {"id": "serie_k_menos", "title": "Agendar menos"},
+                         {"id": "serie_k_no", "title": "Por ahora no"}]
+                    )
                 # Si es paciente nuevo registrado en este flujo, pedir referido
                 # como segundo mensaje con botones (post-confirmación, baja fricción).
                 # En este caso debemos enviar confirmacion_msg directamente porque

@@ -10240,8 +10240,11 @@ async def webhook(request: Request):
                             "confianza": (_ocr_ext or {}).get("confianza", ""),
                             "filename": saved_filename,
                         })
-                        # Orden de kine con N sesiones → preguntar cuántas
-                        # agendar (serie día por medio, ver app/serie_kine.py).
+                        # Orden de kine con N sesiones → agendar DIRECTO la
+                        # primera sesión (cero fricción — decisión del dueño
+                        # 2026-08-01); la oferta de la serie completa llega
+                        # como 2º mensaje DESPUÉS de confirmarse esa cita.
+                        # serie_kine_max viaja en data hasta el hook de flows.
                         if (_ocr_tipo_doc == "orden_medica"
                                 and _ocr_dec.get("accion") == "recepcion"):
                             from config import SERIE_KINE_ACTIVE
@@ -10250,40 +10253,43 @@ async def webhook(request: Request):
                                 _sk_det = detectar_sesiones_kine(
                                     (_ocr_ext or {}).get("examenes_solicitados") or [])
                                 if _sk_det:
-                                    _sk_n = _sk_det["n"]
-                                    save_session(phone, "WAIT_SERIE_KINE_N", {
-                                        "serie_kine_max": _sk_n,
+                                    _sk_carry = {
+                                        "serie_kine_max": _sk_det["n"],
                                         "serie_kine_texto": _sk_det["texto"][:120],
-                                    })
-                                    _msg_sk = {
-                                        "type": "interactive",
-                                        "interactive": {
-                                            "type": "button",
-                                            "body": {"text": (
-                                                f"Leí tu orden: *{_sk_det['texto'][:90]}* 📄\n\n"
-                                                f"¿Quieres dejar agendadas las *{_sk_n} sesiones* "
-                                                "altiro (día por medio, mismo horario), o prefieres "
-                                                "agendar menos por ahora?"
-                                            )},
-                                            "action": {"buttons": [
-                                                {"type": "reply", "reply": {
-                                                    "id": "serie_k_todas",
-                                                    "title": f"✅ Las {_sk_n} sesiones"}},
-                                                {"type": "reply", "reply": {
-                                                    "id": "serie_k_menos",
-                                                    "title": "Agendar menos"}},
-                                                {"type": "reply", "reply": {
-                                                    "id": "serie_k_una",
-                                                    "title": "Solo la primera"}},
-                                            ]},
-                                        },
                                     }
-                                    await send_whatsapp(phone, _msg_sk)
-                                    log_message(phone, "out",
-                                                _msg_sk["interactive"]["body"]["text"],
-                                                "WAIT_SERIE_KINE_N", canal="whatsapp")
-                                    log_event(phone, "serie_kine_oferta", {
-                                        "n": _sk_n, "texto": _sk_det["texto"][:120]})
+                                    try:
+                                        from session import get_profile as _gp_sk
+                                        _perf_sk = _gp_sk(phone)
+                                        if _perf_sk:
+                                            _sk_carry["rut_conocido"] = _perf_sk.get("rut", "")
+                                            _sk_carry["nombre_conocido"] = _perf_sk.get("nombre", "")
+                                    except Exception:  # noqa: BLE001
+                                        pass
+                                    _intro_sk = (
+                                        f"Leí tu orden 📄: *{_sk_det['texto'][:90]}*\n\n"
+                                        "Te busco la primera hora disponible de "
+                                        "kinesiología 👇"
+                                    )
+                                    await send_whatsapp(phone, _intro_sk)
+                                    log_message(phone, "out", _intro_sk, "IDLE",
+                                                canal="whatsapp")
+                                    from flows import _iniciar_agendar as _ini_ag_sk
+                                    _resp_sk = await _ini_ag_sk(
+                                        phone, _sk_carry, "kinesiología")
+                                    if isinstance(_resp_sk, dict):
+                                        await send_whatsapp_interactive(
+                                            phone, _resp_sk["interactive"])
+                                        _log_sk = _interactive_to_text(
+                                            _resp_sk, include_promo=False)
+                                    else:
+                                        await send_whatsapp(phone, _resp_sk)
+                                        _log_sk = _resp_sk or ""
+                                    log_message(phone, "out", _log_sk,
+                                                get_session(phone).get("state", "IDLE"),
+                                                canal="whatsapp")
+                                    log_event(phone, "serie_kine_detectada", {
+                                        "n": _sk_det["n"],
+                                        "texto": _sk_det["texto"][:120]})
                                     return Response(status_code=200)
                         # Comprobante de transferencia → encolar en el panel
                         # de pagos con validaciones pre-cruzadas (gated).
