@@ -103,7 +103,13 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
         from claude_helper import client  # AsyncAnthropic ya configurado
         resp = await client.messages.create(
             model=_VISION_MODEL,
-            max_tokens=800,
+            # Sonnet 5 piensa por defecto: para extracción pura lo apagamos —
+            # sin esto, el thinking consume el max_tokens y/o antepone un
+            # bloque de razonamiento (bug real 2026-08-01 18:21: el parser
+            # leía el primer bloque como texto y explotaba con None).
+            # Vía extra_body porque el SDK instalado no tipa `thinking`.
+            extra_body={"thinking": {"type": "disabled"}},
+            max_tokens=1200,
             timeout=_VISION_TIMEOUT,
             messages=[{
                 "role": "user",
@@ -116,7 +122,17 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
                 ],
             }],
         )
-        raw = resp.content[0].text.strip()
+        # Buscar el PRIMER bloque de texto real — nunca asumir que content[0]
+        # es texto (puede venir un bloque de thinking primero).
+        raw = ""
+        for _bloque in resp.content or []:
+            if getattr(_bloque, "type", "") == "text" and getattr(_bloque, "text", None):
+                raw = _bloque.text.strip()
+                break
+        if not raw:
+            log.warning("leer_orden_medica sin bloque de texto (stop=%s)",
+                        getattr(resp, "stop_reason", "?"))
+            return None
         # Tolerar fences ```json ... ```
         if raw.startswith("```"):
             raw = raw.strip("`").removeprefix("json").strip()
