@@ -9387,6 +9387,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _msg_medilink_transient()
         if not paciente:
             data["rut"] = rut
+            # ── Prefill desde la ORDEN (OCR): mostrar los datos leídos y pedir
+            # UNA confirmación en vez del interrogatorio de registro (decisión
+            # del dueño 2026-08-01: bajar fricción, el paciente valida).
+            _ocr_p_reg = data.get("ocr_paciente") or {}
+            if _ocr_p_reg.get("nombre"):
+                save_session(phone, "WAIT_DATOS_NUEVO", data)
+                _lineas_reg = [f"👤 {_ocr_p_reg['nombre']}"]
+                if _ocr_p_reg.get("fecha_nacimiento"):
+                    _lineas_reg.append(f"📅 Nacimiento: {_ocr_p_reg['fecha_nacimiento']}")
+                if _ocr_p_reg.get("sexo") in ("M", "F"):
+                    _lineas_reg.append(
+                        "⚤ " + ("Masculino" if _ocr_p_reg["sexo"] == "M" else "Femenino"))
+                log_event(phone, "registro_ocr_prefill_ofrecido",
+                          {"campos": len(_lineas_reg)})
+                return _btn_msg(
+                    "Es tu primera vez con nosotros 🙌\n\n"
+                    "Según tu orden médica, tus datos son:\n\n"
+                    + "\n".join(_lineas_reg) +
+                    "\n\n¿Están correctos para registrarte?",
+                    [{"id": "datos_ocr_ok", "title": "✅ Sí, están bien"},
+                     {"id": "datos_ocr_editar", "title": "✏️ Corregir"}]
+                )
             is_social = phone.startswith("ig_") or phone.startswith("fb_")
             save_session(phone, "WAIT_DATOS_NUEVO", data)
             if is_social:
@@ -10626,7 +10648,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return _btn_msg(
                         f"Una cosa más 😊 Tu orden indica *{_sk_nmax} sesiones* "
                         "de kinesiología.\n\n"
-                        f"¿Quieres que te deje agendadas las {_sk_nmax} altiro? "
+                        f"¿Quieres que te deje agendadas las {_sk_nmax} de una vez? "
                         "Sería *día por medio, en el mismo horario* (te mando el "
                         "calendario completo), y puedes cambiar cualquiera después.",
                         [{"id": "serie_k_todas", "title": f"✅ Las {_sk_nmax} sesiones"},
@@ -11687,6 +11709,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_DATOS_NUEVO (registro en un solo mensaje) ────────────────────────
     if state == "WAIT_DATOS_NUEVO":
         raw = txt.strip()
+
+        # ── Prefill OCR confirmado: sintetizar el mensaje compacto que el
+        # parser de abajo ya entiende ("Nombre, Sexo, Fecha") — cero lógica
+        # duplicada, mismas validaciones de siempre.
+        _ocr_p_dn = data.get("ocr_paciente") or {}
+        if tl == "datos_ocr_ok" and _ocr_p_dn.get("nombre"):
+            _partes_dn = [_ocr_p_dn["nombre"]]
+            if _ocr_p_dn.get("sexo") in ("M", "F"):
+                _partes_dn.append(_ocr_p_dn["sexo"])
+            if _ocr_p_dn.get("fecha_nacimiento"):
+                _partes_dn.append(_ocr_p_dn["fecha_nacimiento"])
+            raw = ", ".join(_partes_dn)
+            log_event(phone, "registro_ocr_prefill_aceptado",
+                      {"campos": len(_partes_dn)})
+        elif tl == "datos_ocr_editar":
+            data.pop("ocr_paciente", None)
+            data.pop("ocr_ident_ts", None)
+            save_session(phone, "WAIT_DATOS_NUEVO", data)
+            log_event(phone, "registro_ocr_prefill_rechazado", {})
+            return (
+                "Perfecto, escríbeme tus datos en *un solo mensaje*:\n\n"
+                "👤 Nombre completo\n"
+                "⚤ Sexo (M o F)\n"
+                "📅 Fecha de nacimiento\n\n"
+                "_Ejemplo: *María González López, F, 15/03/1990*_"
+            )
 
         # ── Filtrar prefijos que son respuesta a la pregunta "¿es primera vez?" ──
         # Caso real: paciente escribe "Si primera vez\nLeonor Eduvijes\n..."
@@ -14193,6 +14241,32 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     # recupere "abdominal"/"renal"/... y route_ecografia NO vuelva a preguntar el
     # tipo (menu-loop dominante de ecografía, auditoría 2026-06-07).
     _eco_tipo_sugerido = data.pop("eco_tipo_text", "") or ""
+    # ── Identidad leída de la ORDEN médica (OCR) ─────────────────────────────
+    # La orden define AL PACIENTE (una mamá manda la orden de la hija): si trae
+    # RUT válido (módulo 11 verificado en main), pisa el perfil del teléfono
+    # como rut_conocido. Dos puertas de seguridad: un RUT mal leído no valida
+    # y jamás llega acá, y la confirmación final del flujo muestra el nombre
+    # real de Medilink antes de reservar. TTL 15 min para no contaminar
+    # reservas posteriores sin relación con la orden.
+    _ocr_p_ini = data.get("ocr_paciente") or {}
+    if _ocr_p_ini:
+        import time as _t_ocr_ini
+        try:
+            _ocr_fresco = (_t_ocr_ini.time()
+                           - float(data.get("ocr_ident_ts") or 0)) < 900
+        except (TypeError, ValueError):
+            _ocr_fresco = False
+        if not _ocr_fresco:
+            data.pop("ocr_paciente", None)
+            data.pop("ocr_ident_ts", None)
+            _ocr_p_ini = {}
+    if _ocr_p_ini.get("rut"):
+        data["rut_conocido"] = _ocr_p_ini["rut"]
+        if _ocr_p_ini.get("nombre"):
+            data["nombre_conocido"] = _ocr_p_ini["nombre"]
+        log_event(phone, "agendar_identidad_ocr", {
+            "rut": _ocr_p_ini["rut"][:4] + "***",
+        })
     # ── Detección SISTÉMICA de tercero (fix 2026-05-29) ──────────────────────
     # Antes _OTRA_PERSONA_RE solo se evaluaba en WAIT_MODALIDAD, así que
     # "quiero agendar para mi hijo" desde el primer mensaje (o por audio

@@ -45,8 +45,21 @@ Responde SOLO un JSON válido, sin texto adicional:
   "tipo_documento": "orden_medica" | "comprobante_pago" | "receta_medicamentos" | "otro",
   "examenes_solicitados": ["transcripción literal de cada examen solicitado"],
   "confianza": "alta" | "media" | "baja",
+  "paciente": null,
   "comprobante": null
 }
+
+Si tipo_documento es "orden_medica" y el documento muestra los datos del
+paciente, "paciente" deja de ser null y lleva (cada campo "" si no aparece):
+{
+  "nombre": "Katherine Campos",     // nombre del PACIENTE tal como aparece
+  "rut": "22.742.084-7",            // RUT/RUN del PACIENTE
+  "fecha_nacimiento": "06/06/2008", // tal como aparece; NO la calcules desde la edad
+  "sexo": "F",                      // "M" | "F" | "" — solo si el documento lo dice
+  "direccion": "Pichilo s/n, Arauco" // dirección/comuna si aparece
+}
+No confundas al paciente con el médico que firma la orden. Si dudas de a
+quién corresponde el nombre, deja "paciente" en null.
 
 Si tipo_documento es "comprobante_pago" (transferencia bancaria, pago en app),
 "comprobante" deja de ser null y lleva:
@@ -113,6 +126,7 @@ async def leer_orden_medica(image_bytes: bytes, mime: str) -> dict | None:
         data.setdefault("tipo_documento", "otro")
         data.setdefault("examenes_solicitados", [])
         data.setdefault("confianza", "baja")
+        data.setdefault("paciente", None)
         data.setdefault("comprobante", None)
         return data
     except Exception as e:  # noqa: BLE001 — cualquier fallo cae a recepción
@@ -139,6 +153,31 @@ def _parece_eco(texto: str) -> bool:
             if SequenceMatcher(None, tok, raiz).ratio() >= 0.8:
                 return True
     return False
+
+
+def rut_normalizado(rut: str) -> str | None:
+    """Valida módulo 11 y normaliza a '12345678-9'. None si inválido/ilegible.
+
+    Se usa sobre el RUT leído de la orden ANTES de arrastrarlo al flujo de
+    agendamiento: un RUT mal leído por visión no debe entrar jamás — y aun
+    entrando válido, la confirmación final del flujo muestra el nombre de
+    Medilink y el paciente confirma antes de reservar (2ª puerta)."""
+    import re as _re
+    limpio = _re.sub(r"[^0-9kK]", "", rut or "")
+    if not 8 <= len(limpio) <= 9:
+        return None
+    cuerpo, dv = limpio[:-1], limpio[-1].upper()
+    if not cuerpo.isdigit():
+        return None
+    suma, factor = 0, 2
+    for c in reversed(cuerpo):
+        suma += int(c) * factor
+        factor = 2 if factor == 7 else factor + 1
+    resto = 11 - (suma % 11)
+    dv_ok = "0" if resto == 11 else "K" if resto == 10 else str(resto)
+    if dv != dv_ok:
+        return None
+    return f"{cuerpo}-{dv}"
 
 
 def decidir_accion(extraccion: dict | None) -> dict:

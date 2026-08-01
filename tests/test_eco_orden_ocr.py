@@ -20,7 +20,32 @@ sys.path.insert(0, str(ROOT / "app"))
 
 os.environ.setdefault("SQLCIPHER_KEY", "")
 
-from eco_orden_ocr import decidir_accion, msg_oferta, MSG_OBSTETRICA  # noqa: E402
+from eco_orden_ocr import (decidir_accion, msg_oferta, rut_normalizado,  # noqa: E402
+                           MSG_OBSTETRICA)
+
+
+class TestRutNormalizado(unittest.TestCase):
+    """RUTs reales del corpus de órdenes (módulo 11)."""
+
+    def test_rut_corpus_valido(self):
+        # Katherine Campos, orden matrona Sarai (corpus 2026-08-01)
+        self.assertEqual(rut_normalizado("22.742.084-7"), "22742084-7")
+
+    def test_rut_corpus_nes(self):
+        # José Carvallo, receta Clínica NES
+        self.assertEqual(rut_normalizado("14235830-1"), "14235830-1")
+
+    def test_rut_con_k(self):
+        self.assertEqual(rut_normalizado("20.988.271-K"), "20988271-K")
+
+    def test_dv_malo_rechazado(self):
+        # Un dígito mal leído por visión NO debe pasar
+        self.assertIsNone(rut_normalizado("22.742.084-8"))
+
+    def test_basura_rechazada(self):
+        self.assertIsNone(rut_normalizado("no aparece"))
+        self.assertIsNone(rut_normalizado(""))
+        self.assertIsNone(rut_normalizado("123"))
 
 
 def _orden(examenes, confianza="alta"):

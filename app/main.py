@@ -10232,6 +10232,25 @@ async def webhook(request: Request):
                         _ocr_ext = await leer_orden_medica(blob, mime)
                         _ocr_dec = decidir_accion(_ocr_ext)
                         _ocr_tipo_doc = (_ocr_ext or {}).get("tipo_documento")
+                        # Identidad del paciente leída de la orden (si trae).
+                        # El RUT solo se arrastra si valida módulo 11 — un RUT
+                        # mal leído por visión NUNCA entra al flujo.
+                        _ocr_identidad = {}
+                        _pac_ocr = (_ocr_ext or {}).get("paciente") or {}
+                        if _pac_ocr.get("nombre") or _pac_ocr.get("rut"):
+                            from eco_orden_ocr import rut_normalizado as _rutn_fn
+                            import time as _t_ident
+                            _rutn = _rutn_fn(_pac_ocr.get("rut") or "")
+                            _ocr_identidad = {
+                                "ocr_paciente": {
+                                    "nombre": (_pac_ocr.get("nombre") or "").strip()[:80],
+                                    "rut": _rutn or "",
+                                    "fecha_nacimiento":
+                                        (_pac_ocr.get("fecha_nacimiento") or "").strip()[:12],
+                                    "sexo": (_pac_ocr.get("sexo") or "").strip().upper()[:1],
+                                },
+                                "ocr_ident_ts": _t_ident.time(),
+                            }
                         log_event(phone, "eco_orden_ocr", {
                             "decision": _ocr_dec.get("accion"),
                             "motivo": _ocr_dec.get("motivo", ""),
@@ -10256,19 +10275,29 @@ async def webhook(request: Request):
                                     _sk_carry = {
                                         "serie_kine_max": _sk_det["n"],
                                         "serie_kine_texto": _sk_det["texto"][:120],
+                                        **_ocr_identidad,
                                     }
                                     try:
                                         from session import get_profile as _gp_sk
                                         _perf_sk = _gp_sk(phone)
                                         if _perf_sk:
-                                            _sk_carry["rut_conocido"] = _perf_sk.get("rut", "")
-                                            _sk_carry["nombre_conocido"] = _perf_sk.get("nombre", "")
+                                            # Fallback: la identidad de la ORDEN
+                                            # (si trae RUT válido) pisa a este
+                                            # perfil en _iniciar_agendar.
+                                            _sk_carry.setdefault(
+                                                "rut_conocido", _perf_sk.get("rut", ""))
+                                            _sk_carry.setdefault(
+                                                "nombre_conocido", _perf_sk.get("nombre", ""))
                                     except Exception:  # noqa: BLE001
                                         pass
+                                    _nom_ocr_sk = (_ocr_identidad.get("ocr_paciente")
+                                                   or {}).get("nombre", "")
                                     _intro_sk = (
-                                        f"Leí tu orden 📄: *{_sk_det['texto'][:90]}*\n\n"
-                                        "Te busco la primera hora disponible de "
-                                        "kinesiología 👇"
+                                        f"Leí tu orden 📄: *{_sk_det['texto'][:90]}*"
+                                        + (f"\n👤 A nombre de *{_nom_ocr_sk}*"
+                                           if _nom_ocr_sk else "")
+                                        + "\n\nTe busco la primera hora disponible "
+                                          "de kinesiología 👇"
                                     )
                                     await send_whatsapp(phone, _intro_sk)
                                     log_message(phone, "out", _intro_sk, "IDLE",
@@ -10317,6 +10346,7 @@ async def webhook(request: Request):
                                     _dt_ocr.now(_tz_ocr.utc).isoformat(),
                                 "eco_tipo_text": _ocr_dec["tipo_texto"],
                                 "_ocr_oferta_ts": _t_ocr.time(),
+                                **_ocr_identidad,
                             })
                             _msg_ocr = msg_oferta(_ocr_dec["tipo_texto"],
                                                   _ocr_dec["routing"])
