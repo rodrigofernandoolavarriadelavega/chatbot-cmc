@@ -409,6 +409,13 @@ DOCS_CLINICOS_ACTIVE = os.getenv(
     "DOCS_CLINICOS_ACTIVE", "false"
 ).lower() in ("true", "1", "yes", "on")
 
+# Pre-carga de resultados al Copiloto de Ficha ~15 min antes de la cita
+# (cron 4 min). Requiere COPILOTO_CLAVE en .env (misma del Copiloto).
+# Ver app/copiloto_bridge.py.
+COPILOTO_PRELOAD_ACTIVE = os.getenv(
+    "COPILOTO_PRELOAD_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+
 # Secreto para firmar cookies de sesión admin.
 # Si no se define, se deriva automáticamente del ADMIN_TOKEN.
 COOKIE_SECRET      = os.getenv("COOKIE_SECRET", "")

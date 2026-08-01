@@ -128,6 +128,63 @@ def ensure_docs_tables() -> None:
                      "ON demanda_examenes_ocr(categoria)")
 
 
+def ensure_resultados_table() -> None:
+    from session import db
+    with db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS resultados_examen_whatsapp (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                phone           TEXT NOT NULL,
+                paciente_nombre TEXT DEFAULT '',
+                paciente_rut    TEXT DEFAULT '',
+                titulo          TEXT DEFAULT '',
+                contenido       TEXT DEFAULT '',
+                filename        TEXT DEFAULT '',
+                ficha_id        INTEGER,
+                cargado_ts      TEXT,
+                created_at      TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_rex_phone "
+                     "ON resultados_examen_whatsapp(phone)")
+
+
+def registrar_resultado(phone: str, nombre: str, rut: str, titulo: str,
+                        contenido: str, filename: str = "") -> int:
+    """Persiste un resultado recibido para la pre-carga al Copiloto de Ficha
+    (además del reenvío Telegram inmediato). Retorna el id."""
+    ensure_resultados_table()
+    from session import db
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO resultados_examen_whatsapp "
+            "(phone, paciente_nombre, paciente_rut, titulo, contenido, filename) "
+            "VALUES (?,?,?,?,?,?)",
+            (phone, nombre[:80], rut[:15], titulo[:120], contenido[:6000],
+             filename))
+        return cur.lastrowid
+
+
+def resultados_pendientes(phone: str, max_dias: int = 30) -> list[dict]:
+    """Resultados de este teléfono aún NO cargados al Copiloto (últimos N días)."""
+    ensure_resultados_table()
+    from session import db
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM resultados_examen_whatsapp WHERE phone=? "
+            "AND ficha_id IS NULL AND created_at >= datetime('now', ?) "
+            "ORDER BY id", (phone, f"-{max_dias} days")).fetchall()
+        return [dict(r) for r in rows]
+
+
+def marcar_resultado_cargado(res_id: int, ficha_id: int) -> None:
+    from session import db
+    with db() as conn:
+        conn.execute(
+            "UPDATE resultados_examen_whatsapp SET ficha_id=?, "
+            "cargado_ts=datetime('now') WHERE id=?", (ficha_id, res_id))
+
+
 def registrar_receta(phone: str, medicamentos: list, dx_tags: list,
                      filename: str = "") -> None:
     ensure_docs_tables()
@@ -138,6 +195,52 @@ def registrar_receta(phone: str, medicamentos: list, dx_tags: list,
             "VALUES (?,?,?,?)",
             (phone, "; ".join(str(m)[:60] for m in medicamentos[:10]),
              ",".join(dx_tags), filename))
+
+
+async def sugerencias_ges(titulo: str, contenido: str,
+                          edad: str = "", sexo: str = "") -> str:
+    """Bloque de apoyo GES/MINSAL para el CANAL DEL MÉDICO (Telegram).
+
+    Apoyo a la decisión clínica del profesional — NUNCA va al paciente.
+    Sonnet texto (~$0.003/llamada). Retorna "" si falla o no aplica."""
+    try:
+        from claude_helper import client
+        prompt = (
+            "Eres apoyo de decisión clínica para un MÉDICO chileno (medicina "
+            "general, centro médico de Arauco). Te paso la transcripción de un "
+            "resultado de examen de su paciente. Según las guías clínicas "
+            "MINSAL/GES vigentes en Chile, entrégale en viñetas breves:\n"
+            "1) Si algún hallazgo configura o sugiere un problema de salud GES "
+            "(nómbralo y número si lo sabes) y qué implica: notificación/IPD, "
+            "garantías de oportunidad.\n"
+            "2) Confirmación diagnóstica que corresponde (criterios).\n"
+            "3) Estudio inicial / evaluación de complicaciones sugerida.\n"
+            "4) Conducta terapéutica inicial según severidad.\n"
+            "5) Seguimiento y metas.\n"
+            "Si no hay hallazgos accionables, dilo en una línea. Máximo ~180 "
+            "palabras, directo, terminología médica. NO des diagnósticos "
+            "definitivos: son sugerencias a validar por el tratante.\n\n"
+            f"Paciente: {edad or '?'} años, sexo {sexo or '?'}.\n"
+            f"Examen: {titulo}\n\nTranscripción:\n{contenido[:3000]}"
+        )
+        resp = await client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=600,
+            extra_body={"thinking": {"type": "disabled"}},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        texto = ""
+        for b in resp.content or []:
+            if getattr(b, "type", "") == "text" and getattr(b, "text", None):
+                texto = b.text.strip()
+                break
+        if not texto:
+            return ""
+        return ("🧭 Apoyo GES/MINSAL (generado por IA — validar contra guía "
+                "vigente):\n" + texto)
+    except Exception as e:  # noqa: BLE001
+        log.warning("sugerencias_ges fallo: %s", str(e)[:150])
+        return ""
 
 
 def nombre_mas_probable(phone: str, nombre_ocr: str) -> tuple[str, str]:

@@ -708,6 +708,23 @@ async def lifespan(app: FastAPI):
     # registraba siempre: deployar el bloque bastaba para empezar a leer el
     # Gmail del centro cada 10 min, sin decisión y sin apagado que no fuera
     # otro deploy. Con el flag en false ni siquiera se importa el módulo.
+    # Pre-carga de resultados de exámenes al Copiloto de Ficha ~15 min antes
+    # de la cita (pedido del Dr. 2026-08-01). Cada 4 min revisa citas próximas
+    # de los profesionales configurados y crea la ficha con las transcripciones
+    # ya puestas. Idempotente (marca cargado). Ver app/copiloto_bridge.py.
+    from config import COPILOTO_PRELOAD_ACTIVE as _COPI_ACTIVE
+    if _COPI_ACTIVE:
+        from copiloto_bridge import precargar_para_citas
+        scheduler.add_job(
+            precargar_para_citas,
+            "interval", minutes=4,
+            id="copiloto_preload",
+            replace_existing=True,
+            misfire_grace_time=60,
+            coalesce=True,
+            max_instances=1,
+        )
+
     from config import CONCILIACION_TRANSFERENCIAS_ACTIVE as _CONCIL_ACTIVE
     if _CONCIL_ACTIVE:
         from conciliacion_transferencias import poll_conciliacion_transferencias
@@ -10349,17 +10366,42 @@ async def webhook(request: Request):
                                         )
                                         from alertas_oob import (
                                             enviar_telegram, enviar_telegram_foto)
+                                        _edad_dr = ((_ocr_identidad.get("ocr_paciente")
+                                                     or {}).get("fecha_nacimiento") or "")
+                                        _sexo_dr = ((_ocr_identidad.get("ocr_paciente")
+                                                     or {}).get("sexo") or "")
 
                                         async def _enviar_dr(b=_blob_dr, t=_txt_dr,
-                                                             c=_cab_dr):
+                                                             c=_cab_dr,
+                                                             ti=_titulo_dc,
+                                                             co=_cont_dr,
+                                                             ed=_edad_dr,
+                                                             sx=_sexo_dr):
                                             await enviar_telegram_foto(b, c)
                                             await enviar_telegram(t)
+                                            # Bloque GES para el médico (2ª
+                                            # llamada, solo canal profesional)
+                                            try:
+                                                from docs_clinicos import sugerencias_ges
+                                                _ges = await sugerencias_ges(
+                                                    ti, co, ed, sx)
+                                                if _ges:
+                                                    await enviar_telegram(_ges)
+                                            except Exception:  # noqa: BLE001
+                                                pass
 
                                         import asyncio as _aio_dr
                                         _aio_dr.create_task(_enviar_dr())
                                         log_event(phone, "resultado_enviado_doctor",
                                                   {"titulo": _titulo_dc[:80],
                                                    "chars": len(_cont_dr)})
+                                        # Persistir para la pre-carga al
+                                        # Copiloto 15 min antes de la cita
+                                        # (ver app/copiloto_bridge.py).
+                                        from docs_clinicos import registrar_resultado
+                                        registrar_resultado(
+                                            phone, _nom_dr, _rut_dr,
+                                            _titulo_dc, _cont_dr, saved_filename)
                                     except Exception as _e_dr:  # noqa: BLE001
                                         log.warning("reenvio doctor fallo: %s",
                                                     str(_e_dr)[:150])
