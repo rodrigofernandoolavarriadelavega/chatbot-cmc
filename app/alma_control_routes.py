@@ -226,7 +226,10 @@ def _toggleable_flags() -> set[str]:
              "AUTOPILOT_ENABLED", "AUTOPILOT_EXECUTE", "AUTOPILOT_AUTOAPPLY",
              # Rieles de mensajería (leen switchboard en runtime → conmutables en vivo)
              "CONSENT_AGENDADOS_ACTIVE", "PROMO_POSTCONSENT_ACTIVE", "ECO_PREP_ACTIVE",
-             "HORAS_VACIAS_ACTIVE", "ABONO_GATE_PSIQ_ACTIVE"}
+             "HORAS_VACIAS_ACTIVE", "ABONO_GATE_PSIQ_ACTIVE",
+             # Carril de persistencia (2º toque a consultas abandonadas) — lee
+             # switchboard vía autopilot.flags en cada tick → conmutable en vivo
+             "PERSISTENCIA_ACTIVE"}
     try:
         from alma_agents import registry
         flags |= {a.flag for a in registry.all_agents().values()}
