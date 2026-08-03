@@ -600,13 +600,42 @@ async def _crear_cita_y_confirmar(abono: dict, monto_recibido: int, metodo_detal
         resultado_ml = None
 
     if not resultado_ml:
-        # Slot ya no disponible — no hay reintento automático acá (a
-        # diferencia de procesar_imagen_abono, que SÍ re-busca porque está
-        # respondiendo en vivo al paciente). Deja el abono pendiente:
-        # cuando expire su ventana cae al flujo de la foto/humano.
-        log_event(phone, "abono_email_slot_no_disponible", {"abono_id": abono["id"]})
-        _marcar_estado_abono(abono["id"], "pendiente", nota="slot no disponible al confirmar por correo")
-        return False
+        # ¿El "tope" es una cita del MISMO paciente? Recepción puede haberla
+        # agendado a mano en paralelo (caso real Yendari 2026-08-03: el
+        # rescate creó un DUPLICADO a otra hora por no mirar esto). Si el
+        # paciente ya tiene cita vigente ese día con ese profesional, el
+        # abono se confirma contra ESA cita — jamás se crea una segunda.
+        _cita_existente = None
+        try:
+            from medilink import listar_citas_paciente
+            _citas_p = await asyncio.wait_for(listar_citas_paciente(
+                int(abono["paciente_id"]), rut=abono.get("rut")), timeout=30)
+            for _c in _citas_p or []:
+                if (str(_c.get("fecha")) == str(slot.get("fecha"))
+                        and _c.get("id_profesional") == slot.get("id_profesional")
+                        and not _c.get("estado_anulacion")):
+                    _cita_existente = _c
+                    break
+        except Exception as _e_ce:  # noqa: BLE001
+            log.warning("check cita existente fallo abono_id=%s: %s",
+                        abono["id"], _e_ce)
+        if _cita_existente:
+            log_event(phone, "abono_confirmado_contra_cita_existente", {
+                "abono_id": abono["id"], "id_cita": _cita_existente.get("id"),
+                "hora": _cita_existente.get("hora_inicio")})
+            # La hora real es la de la cita existente — que el mensaje de
+            # confirmación al paciente diga ESA, no la del slot original.
+            if _cita_existente.get("hora_inicio"):
+                slot["hora_inicio"] = str(_cita_existente["hora_inicio"])[:5]
+            resultado_ml = {"id": _cita_existente.get("id")}
+        else:
+            # Slot ya no disponible — no hay reintento automático acá (a
+            # diferencia de procesar_imagen_abono, que SÍ re-busca porque está
+            # respondiendo en vivo al paciente). Deja el abono pendiente:
+            # cuando expire su ventana cae al flujo de la foto/humano.
+            log_event(phone, "abono_email_slot_no_disponible", {"abono_id": abono["id"]})
+            _marcar_estado_abono(abono["id"], "pendiente", nota="slot no disponible al confirmar por correo")
+            return False
 
     id_cita = str(resultado_ml.get("id", "")) if isinstance(resultado_ml, dict) else ""
     now_cl = _dt.now(_CL)
