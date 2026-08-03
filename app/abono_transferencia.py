@@ -481,22 +481,56 @@ def get_abono_pendiente_activo_por_phone(phone: str) -> dict | None:
 
 # ── Motor de emparejamiento ─────────────────────────────────────────────────
 
+def _parse_ts_flexible(s: str) -> datetime | None:
+    """Timestamp ISO con o sin 'T', con o sin offset → datetime AWARE (los
+    naive se asumen hora de Chile, que es como escribe crear_abono_pendiente).
+    """
+    if not s:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(s).replace(" ", "T"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_CL)
+    return dt
+
+
 def _candidatos_pendientes(monto: int, email_dt_iso: str) -> list[dict]:
     """abonos con estado='pendiente' (NO 'esperando_confirmacion_paciente' —
     mientras hay una pregunta en curso no se abre una segunda para el mismo
     abono), mismo monto, y el correo cayó dentro de su ventana. Orden: más
-    antiguo primero (para desempatar cuando hay 2+ candidatos, ver §5)."""
+    antiguo primero (para desempatar cuando hay 2+ candidatos, ver §5).
+
+    BUG 2026-08-03 (caso Yendari, abono 10): la ventana se evaluaba con
+    comparación de STRINGS en SQL, y `creado_at` ('...T13:44:00-04:00') vs
+    email_ts ('... 14:00:48') mezclan 'T'/espacio y offset/naive — la 'T'
+    (0x54) es mayor que el espacio (0x20), así que `creado_at <= email_ts`
+    daba SIEMPRE falso y el correo del banco jamás encontraba candidatos.
+    Ahora la ventana se evalúa en Python con datetimes normalizados."""
     from session import db
     ensure_abono_pendiente_table()
+    email_dt = _parse_ts_flexible(email_dt_iso)
     with db() as conn:
         rows = conn.execute(
             """SELECT * FROM abono_pendientes
                WHERE estado='pendiente' AND monto=?
-                 AND creado_at <= ? AND expira_at >= ?
                ORDER BY creado_at ASC""",
-            (monto, email_dt_iso, email_dt_iso),
+            (monto,),
         ).fetchall()
-    return [dict(r) for r in rows]
+    if email_dt is None:
+        return [dict(r) for r in rows]
+    out = []
+    for r in rows:
+        d = dict(r)
+        creado = _parse_ts_flexible(d.get("creado_at") or "")
+        expira = _parse_ts_flexible(d.get("expira_at") or "")
+        if creado and creado > email_dt:
+            continue
+        if expira and expira < email_dt:
+            continue
+        out.append(d)
+    return out
 
 
 def _marcar_estado_abono(abono_id: int, estado: str, **campos) -> bool:
