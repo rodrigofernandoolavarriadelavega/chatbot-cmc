@@ -327,7 +327,9 @@ function renderHeatmap(){
         // típico del mes → trabajó, pero el final de la jornada quedó vacío.
         const u = _h2m(ag.u);
         if(cierreTipico !== null && u !== null && u <= cierreTipico - 60 && dow < 5 && !FERIADOS.has(f)){
-          extra += "box-shadow:inset 0 -4px 0 0 #8A2418;";
+          // Barra bicolor (casi negro + separador crema): visible sobre celdas
+          // claras Y oscuras — la barra roja se camuflaba en los días rojo oscuro.
+          extra += "box-shadow:inset 0 -4px 0 0 #122028, inset 0 -6px 0 0 #F5F1E8;";
           ttl += ` · CIERRE TEMPRANO (típico ~${_m2h(cierreTipico)})`;
         }
       }
