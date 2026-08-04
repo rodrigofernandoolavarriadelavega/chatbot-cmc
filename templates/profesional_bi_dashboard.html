@@ -278,6 +278,98 @@ const FERIADOS = new Set([
   "2026-10-31","2026-11-01","2026-12-08","2026-12-25",
 ]);
 
+// ── Panel "día completo": hover/click sobre un día → agenda real de Medilink
+// en bloques de 15 min (pacientes solo con token admin; la página es pública).
+const _DIA_CACHE = {};
+const _TOKEN_URL = new URLSearchParams(location.search).get("token") || "";
+
+function _wireDiaPanel(cont){
+  let tip = document.getElementById("caltip");
+  if(!tip){
+    tip = document.createElement("div");
+    tip.id = "caltip";
+    tip.style.cssText = "display:none;position:fixed;z-index:99;background:#122028;color:#F5F1E8;padding:12px 14px;border-radius:8px;font-size:12px;line-height:1.5;width:360px;max-width:92vw;box-shadow:0 8px 24px rgba(0,0,0,.4)";
+    document.body.appendChild(tip);
+    document.addEventListener("click", ev => {
+      if(!ev.target.closest(".calday") && !ev.target.closest("#caltip")) tip.style.display = "none";
+    });
+  }
+  const toM = h => parseInt(h.slice(0,2),10)*60 + parseInt(h.slice(3,5),10);
+  const toH = m => `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+  const place = (r) => {
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - 380, r.left)) + "px";
+    const h = tip.offsetHeight || 200;
+    tip.style.top = (r.bottom + 8 + h > window.innerHeight ? Math.max(8, r.top - 8 - h) : r.bottom + 8) + "px";
+  };
+  const showDia = async (c) => {
+    const f = (c.dataset.info || "").slice(0, 10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(f)) return;
+    const r = c.getBoundingClientRect();
+    tip.innerHTML = `<b>${f}</b> · cargando agenda…`;
+    tip.style.display = "block"; place(r);
+    if(!_DIA_CACHE[f]){
+      try{
+        const res = await fetch(`/api/profesional/${ID_PROF}/dia?fecha=${f}` +
+                                (_TOKEN_URL ? `&token=${encodeURIComponent(_TOKEN_URL)}` : ""));
+        if(!res.ok) throw new Error(res.status);
+        _DIA_CACHE[f] = await res.json();
+      }catch(err){
+        tip.innerHTML = `<b>${f}</b> · Medilink no respondió — pasa el mouse de nuevo`;
+        place(r); return;
+      }
+    }
+    const d = _DIA_CACHE[f];
+    const val = d.citas.filter(x => !x.anulada && x.ini);
+    const anuladas = d.citas.filter(x => x.anulada);
+    let cuerpo;
+    if(!val.length){
+      cuerpo = `<div style="color:#DC8E86">Sin ninguna cita en la agenda este día` +
+               (anuladas.length ? ` · ${anuladas.length} anulada(s)` : "") + `</div>`;
+    } else {
+      const ini = Math.min(...val.map(x => toM(x.ini)));
+      const fin = Math.max(...val.map(x => x.fin ? toM(x.fin) : toM(x.ini) + 15));
+      let rows = "", vacios = 0;
+      for(let t = ini; t < fin; t += 15){
+        const cita = val.find(x => toM(x.ini) <= t && t < (x.fin ? toM(x.fin) : toM(x.ini) + 15));
+        let txt, col;
+        if(cita){
+          const esCont = toM(cita.ini) < t;
+          const nom = cita.paciente || "Ocupado";
+          const est = cita.estado === "Atendido" ? "" : ` · ${cita.estado || "?"}`;
+          txt = esCont ? "↳" : `${nom}${est}`;
+          col = cita.estado === "Atendido" ? "#9FCB8E" : "#E8B84B";
+        } else { txt = "— vacío"; col = "#DC8E86"; vacios++; }
+        rows += `<div style="display:flex;gap:10px;padding:1px 0;border-bottom:1px solid rgba(245,241,232,.06)">` +
+                `<span style="opacity:.55;font-variant-numeric:tabular-nums;flex:0 0 38px">${toH(t)}</span>` +
+                `<span style="color:${col};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${txt}</span></div>`;
+      }
+      cuerpo = `<div style="opacity:.7;margin-bottom:4px">${toH(ini)}–${toH(fin)} · ${val.length} citas · ${vacios} bloques vacíos (${(vacios/4).toFixed(1)} h)</div>` + rows +
+               (anuladas.length ? `<div style="margin-top:6px;opacity:.65">Anuladas (${anuladas.length}): ${anuladas.map(a => a.ini + (a.paciente ? " " + a.paciente : "")).join(" · ")}</div>` : "");
+    }
+    const info = c.dataset.info;
+    const marca = info.includes("SIN AGENDA") ? `<span style="color:#DC8E86"> · SIN AGENDA</span>` :
+                  info.includes("CIERRE TEMPRANO") ? `<span style="color:#E8B84B"> · cierre temprano</span>` : "";
+    tip.innerHTML = `<b>${f}</b>${marca}` +
+                    (d.autorizado ? "" : ` <span style="opacity:.5">(nombres ocultos — entra con ?token=)</span>`) +
+                    `<div style="margin-top:6px;max-height:320px;overflow:auto">${cuerpo}</div>`;
+    place(r);
+  };
+  let hoverTimer = null;
+  cont.addEventListener("mouseover", e => {
+    const c = e.target.closest(".calday");
+    clearTimeout(hoverTimer);
+    if(!c || !c.dataset.info) return;
+    hoverTimer = setTimeout(() => showDia(c), 350);
+  });
+  cont.addEventListener("mouseleave", () => clearTimeout(hoverTimer));
+  cont.onclick = (e) => {
+    const c = e.target.closest(".calday");
+    if(!c || !c.dataset.info){ tip.style.display = "none"; return; }
+    clearTimeout(hoverTimer);
+    showDia(c);
+  };
+}
+
 function renderHeatmap(){
   const cont = document.getElementById("heatmap");
   const dias = Object.keys(DATA.por_dia).sort();
@@ -340,24 +432,7 @@ function renderHeatmap(){
   html += "</div>";
   html += '<p style="font-size:11px;opacity:.6;margin-top:12px">Rayado rojo = día hábil (no feriado) <b>sin ninguna cita en la agenda Medilink</b>; si igual muestra un número, son fichas creadas a distancia (recetas/registros), no presencia. Barra oscura abajo = <b>cierre temprano</b>: la última cita terminó ≥1 h antes de su cierre típico del mes. <b>Click en cualquier día</b> para ver el detalle.</p>';
   cont.innerHTML = html;
-  // Panel de detalle al click (el title nativo es lento y no existe en tablet)
-  cont.onclick = (e) => {
-    const c = e.target.closest(".calday");
-    let tip = document.getElementById("caltip");
-    if(!tip){
-      tip = document.createElement("div");
-      tip.id = "caltip";
-      tip.style.cssText = "display:none;position:fixed;z-index:99;background:#122028;color:#F5F1E8;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.5;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.35)";
-      document.body.appendChild(tip);
-      document.addEventListener("click", ev => { if(!ev.target.closest(".calday")) tip.style.display = "none"; });
-    }
-    if(!c || !c.dataset.info){ tip.style.display = "none"; return; }
-    tip.textContent = c.dataset.info;
-    tip.style.display = "block";
-    const r = c.getBoundingClientRect();
-    tip.style.left = Math.max(8, Math.min(window.innerWidth - 350, r.left)) + "px";
-    tip.style.top = (r.bottom + 8 + 200 > window.innerHeight ? r.top - 8 - tip.offsetHeight : r.bottom + 8) + "px";
-  };
+  _wireDiaPanel(cont);
 }
 
 function renderDow(){

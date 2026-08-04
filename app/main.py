@@ -6883,6 +6883,36 @@ async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
     return base
 
 
+@app.get("/api/profesional/{id_prof}/dia")
+async def api_profesional_dia(id_prof: int, fecha: str,
+                              token: str | None = Query(None),
+                              cmc_session: str | None = Cookie(None)):
+    """Detalle del día para el calendario del dashboard: citas reales de Medilink
+    con horarios. Los NOMBRES de pacientes solo van con auth admin (token query
+    o cookie) — la página /profesional/{id} es pública y esto es dato sensible."""
+    import re as _re
+    if not _re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+        raise HTTPException(400, "fecha inválida (YYYY-MM-DD)")
+    from admin_routes import _verify_cookie, _is_admin_token
+    autorizado = bool(token and _is_admin_token(token)) or bool(
+        cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia"))
+    from medilink import citas_dia_lista
+    citas = await citas_dia_lista(id_prof, fecha)
+    if citas is None:
+        raise HTTPException(503, "Medilink no respondió — intenta de nuevo")
+    out = []
+    for c in citas:
+        out.append({
+            "ini": (c.get("hora_inicio") or "")[:5],
+            "fin": (c.get("hora_fin") or "")[:5],
+            "paciente": (c.get("nombre_paciente") or "").strip() if autorizado else None,
+            "estado": c.get("estado_cita"),
+            "anulada": bool(c.get("estado_anulacion")),
+        })
+    out.sort(key=lambda x: x["ini"])
+    return {"fecha": fecha, "autorizado": autorizado, "citas": out}
+
+
 @app.post("/api/profesional/{id_prof}/sync")
 async def api_profesional_sync(id_prof: int, desde: str = "2024-01-01",
                                 force: int = 0):

@@ -953,6 +953,27 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     return ocupadas
 
 
+async def citas_dia_lista(id_prof: int, fecha: str) -> list | None:
+    """Lista cruda de citas de un profesional/día según /citas (incluye anuladas;
+    el caller decide). Guard cliente-side fecha==pedida (el filtro de la API
+    filtra mal). None si Medilink no respondió."""
+    params = {
+        "id_sucursal":    {"eq": MEDILINK_SUCURSAL},
+        "id_profesional": {"eq": id_prof},
+        "fecha":          {"eq": fecha},
+    }
+    client = _get_shared_client()
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                       params={"q": _q(params)}, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.warning("citas_dia_lista prof=%d fecha=%s: %s", id_prof, fecha, e)
+        return None
+    if r.status_code != 200:
+        return None
+    return [c for c in _safe_json(r).get("data", []) if c.get("fecha") == fecha]
+
+
 async def citas_dia_conteo(id_prof: int, fecha: str) -> tuple | None:
     """(n_citas_no_anuladas, n_atendidas, hora_primera, hora_ultima) según /citas
     para un profesional/día. hora_primera = inicio de la primera cita válida,
