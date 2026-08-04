@@ -265,6 +265,19 @@ function colorByDelta(n, cap){
 }
 function isDarkBg(n,cap){ if(n===0) return false; const d=n-cap; return d>=6||d<=-6; }
 
+// Feriados legales Chile (para no marcar "sin agenda" un día que nadie trabaja)
+const FERIADOS = new Set([
+  "2024-01-01","2024-03-29","2024-03-30","2024-05-01","2024-05-21","2024-06-20",
+  "2024-06-29","2024-07-16","2024-08-15","2024-09-18","2024-09-19","2024-10-31",
+  "2024-11-01","2024-12-08","2024-12-25",
+  "2025-01-01","2025-04-18","2025-04-19","2025-05-01","2025-05-21","2025-06-20",
+  "2025-06-29","2025-07-16","2025-08-15","2025-09-18","2025-09-19","2025-10-12",
+  "2025-10-31","2025-11-01","2025-11-16","2025-12-08","2025-12-14","2025-12-25",
+  "2026-01-01","2026-04-03","2026-04-04","2026-05-01","2026-05-21","2026-06-21",
+  "2026-06-29","2026-07-16","2026-08-15","2026-09-18","2026-09-19","2026-10-12",
+  "2026-10-31","2026-11-01","2026-12-08","2026-12-25",
+]);
+
 function renderHeatmap(){
   const cont = document.getElementById("heatmap");
   const dias = Object.keys(DATA.por_dia).sort();
@@ -294,19 +307,22 @@ function renderHeatmap(){
       // Cruce con la agenda REAL (agenda_dias_cache): las fichas de bi_atenciones
       // no acreditan presencia — pueden ser recetas/registros a distancia.
       const ag = (DATA.agenda_dias||{})[f];
-      let ring = "", ttl = `${f}: ${n} atend`;
-      if(ag && ag.c === 0 && dow < 5){
-        ring = "box-shadow:inset 0 0 0 2px #8A2418;";
-        ttl = `${f}: SIN AGENDA (0 citas)` + (n>0 ? ` — ${n} ficha(s) creadas a distancia` : "");
+      let extra = "", ttl = `${f}: ${n} atend`;
+      if(ag && ag.c === 0 && dow < 5 && !FERIADOS.has(f)){
+        // Rayado: visible sobre cualquier color de fondo (el anillo se camuflaba
+        // en los días rojo oscuro). Día hábil con CERO citas en agenda.
+        extra = "background:repeating-linear-gradient(45deg,#F5F1E8 0 4px,#D89890 4px 8px);" +
+                "box-shadow:inset 0 0 0 2px #8A2418;color:#8A2418;";
+        ttl = `${f}: SIN AGENDA (0 citas)` + (n>0 ? ` — ${n} ficha(s) creadas a distancia` : " — ausencia");
       } else if(ag){
         ttl += ` · agenda: ${ag.c} citas (${ag.a} atendidas)`;
       }
-      html += `<div class="calday" style="background:${bg};${tc}${ring}" title="${ttl}"><div class="n">${n||"·"}</div>${dh}</div>`;
+      html += `<div class="calday" style="background:${bg};${tc}${extra}" title="${ttl}"><div class="n">${n||"·"}</div>${dh}</div>`;
     });
     html += "</div></div>";
   });
   html += "</div>";
-  html += '<p style="font-size:11px;opacity:.6;margin-top:12px">Borde rojo = día hábil <b>sin ninguna cita en la agenda Medilink</b>; si igual muestra un número, son fichas creadas a distancia (recetas/registros), no presencia. Días sin borde ni dato de agenda: aún sin sincronizar (el cruce se cachea desde ago-2026 hacia adelante).</p>';
+  html += '<p style="font-size:11px;opacity:.6;margin-top:12px">Rayado rojo = día hábil (no feriado) <b>sin ninguna cita en la agenda Medilink</b>; si igual muestra un número, son fichas creadas a distancia (recetas/registros), no presencia. Días sin rayado ni dato de agenda: aún sin sincronizar.</p>';
   cont.innerHTML = html;
 }
 
