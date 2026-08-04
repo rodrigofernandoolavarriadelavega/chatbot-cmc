@@ -25,6 +25,7 @@ from session import (get_sesiones_abandonadas, save_session, log_event, log_mess
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
                      get_waitlist_pending, mark_waitlist_notified, cancel_waitlist,
                      get_cita_bot_by_id_for_rebook, mark_cita_cancel_detected,
+                     mark_cita_cancel_notified,
                      get_profile,
                      get_candidatos_horas_vacias, log_horas_vacias_envio,
                      get_horas_vacias_envios_hoy,
@@ -423,17 +424,18 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
     Flujo 1-click: pre-carga los slots en session.data con estado WAIT_SLOT. El
     paciente responde un número y entra directo al flujo existente de confirmación.
 
-    force=True salta el guard de idempotencia sobre cancel_detected_at: lo usa
-    _job_detectar_cancelaciones, que marca la cita como detectada ANTES de
-    llamar acá (esa marca significa "detectada", no "ya notificada"). Sin
-    force, la pre-marca hacía retornar 'ya_notificado' sin enviar nada.
+    Guard de idempotencia sobre cancel_notified_at ("al paciente YA se le
+    avisó") — NO sobre cancel_detected_at, que solo significa "la cita ya no
+    está activa" y también la setean las anulaciones del propio sistema
+    (reagendar/cancelar/panel vía medilink.cancelar_cita). force=True salta
+    el guard para re-notificar a mano si hiciera falta.
 
     Retorna: {"ok": bool, "reason": str, "phone": str, "slots_enviados": int}.
     """
     cita = get_cita_bot_by_id_for_rebook(id_cita)
     if not cita:
         return {"ok": False, "reason": "cita_no_encontrada"}
-    if cita.get("cancel_detected_at") and not force:
+    if cita.get("cancel_notified_at") and not force:
         return {"ok": False, "reason": "ya_notificado"}
     phone = cita["phone"]
     esp = (cita.get("especialidad") or "").strip()
@@ -457,6 +459,7 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
         await send_whatsapp(phone, _cancel_no_slots_msg)
         log_message(phone, "out", _cancel_no_slots_msg, "IDLE")
         mark_cita_cancel_detected(id_cita)
+        mark_cita_cancel_notified(id_cita)
         log_event(phone, "cancel_doctor_notified", {"id_cita": id_cita, "slots": 0})
         return {"ok": True, "reason": "sin_disponibilidad", "phone": phone, "slots_enviados": 0}
 
@@ -488,13 +491,19 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
     from flows import _format_slots
     body = _format_slots(alt_slots)
     if isinstance(body, dict):
-        await send_whatsapp_interactive(phone, body)
+        # _format_slots devuelve el sobre {"type": "interactive", "interactive":
+        # {...}} pensado para el dispatcher del webhook; send_whatsapp_interactive
+        # espera SOLO el payload interno. Pasarle el sobre completo anidaba
+        # interactive.interactive → Meta 400 schema (visto 2026-08-04, los 3
+        # slots nunca llegaban al paciente aunque el job reportaba 'notificado').
+        await send_whatsapp_interactive(phone, body.get("interactive") or body)
         log_message(phone, "out", "[interactive: slots alternativos cancelación doctor]", "WAIT_SLOT")
     else:
         await send_whatsapp(phone, body)
         log_message(phone, "out", body, "WAIT_SLOT")
 
     mark_cita_cancel_detected(id_cita)
+    mark_cita_cancel_notified(id_cita)
     log_event(phone, "cancel_doctor_notified", {
         "id_cita": id_cita, "slots": len(alt_slots), "motivo": motivo
     })
@@ -989,14 +998,14 @@ async def _job_detectar_cancelaciones():
              len(canceladas_proximas), canceladas_lejanas, errores)
 
     # Disparar reagendamiento automático para las próximas.
-    # force=True: el loop de detección de arriba ya marcó cancel_detected_at
-    # (esa marca significa "detectada", no "ya notificada"); sin force el guard
-    # de enviar_reagendar_por_cancelacion devolvía 'ya_notificado' y el
-    # paciente nunca recibía los 3 slots alternativos (bug F005).
+    # Sin force: el guard de enviar_reagendar_por_cancelacion es sobre
+    # cancel_notified_at (no sobre cancel_detected_at que el loop de arriba ya
+    # marcó), así que la pre-marca de detección ya no bloquea el envío (ex bug
+    # F005) y el guard sí protege contra doble notificación.
     for cp in canceladas_proximas:
         try:
             res = await enviar_reagendar_por_cancelacion(
-                str(cp["id_cita"]), motivo="medilink_cancel_detected", force=True
+                str(cp["id_cita"]), motivo="medilink_cancel_detected"
             )
             log.info("Reagendar auto id=%s phone=%s: %s",
                      cp["id_cita"], cp["phone"], res)

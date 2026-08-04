@@ -10325,6 +10325,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log_event(phone, "reagendar_cancel_old_fail",
                               {"id_cita_old": cita_old.get("id"),
                                "id_cita_new": resultado.get("id")})
+                else:
+                    # Fase 4 (Alma operativa): el cupo viejo quedó libre —
+                    # ofrecerlo a la lista de espera. Antes esto ocurría de
+                    # rebote vía _job_detectar_cancelaciones (que ya no ve
+                    # anulaciones propias del sistema). Gateado internamente
+                    # por ALMA_OPERATIVA_ENABLED; nunca frena la confirmación.
+                    try:
+                        from alma_brain import operativa as _operativa_reag
+                        from medilink import PROFESIONALES as _PROFS_FREED
+                        _prof_old = (cita_old.get("profesional") or "").strip().lower()
+                        _id_prof_old = cita_old.get("id_profesional") or next(
+                            (pid for pid, p in _PROFS_FREED.items()
+                             if p.get("nombre", "").strip().lower() == _prof_old),
+                            None)
+                        await _operativa_reag.fill_freed_slot({
+                            "especialidad": cita_old.get("especialidad", ""),
+                            "id_prof": _id_prof_old,
+                            "fecha": cita_old.get("fecha", ""),
+                            "hora": cita_old.get("hora_inicio", ""),
+                            "phone_cancelador": phone,
+                        })
+                    except Exception as _ffs_e:
+                        log.warning("operativa: fill_freed_slot reagendar falló: %s", _ffs_e)
             reset_session(phone)
             # Guardar marca de booking reciente para detectar correcciones
             # de titular post-confirmación (bug 56981328760 2026-04-25 13:29).

@@ -740,6 +740,15 @@ def _run_ddl_inline(conn) -> None:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN cancel_detected_at TEXT")
     except Exception:
         pass  # columna ya existe
+    # Migración: cancel_detected_at = "la cita ya no está activa";
+    # cancel_notified_at = "al paciente ya se le avisó la cancelación".
+    # Separados para que una anulación hecha por el propio sistema (reagendar,
+    # cancelar, panel) no dispare el aviso "cancelada por el profesional" ni
+    # bloquee una notificación legítima posterior (botón cancel-doctor).
+    try:
+        conn.execute("ALTER TABLE citas_bot ADD COLUMN cancel_notified_at TEXT")
+    except Exception:
+        pass  # columna ya existe
     # Migración: agregar fecha_nacimiento a contact_profiles
     try:
         conn.execute("ALTER TABLE contact_profiles ADD COLUMN fecha_nacimiento TEXT")
@@ -2435,7 +2444,7 @@ def get_cita_bot_by_id_for_rebook(id_cita: str) -> dict | None:
     with db() as conn:
         row = conn.execute(
             "SELECT phone, id_cita, especialidad, profesional, fecha, hora, modalidad, "
-            "cancel_detected_at FROM citas_bot WHERE id_cita=? LIMIT 1",
+            "cancel_detected_at, cancel_notified_at FROM citas_bot WHERE id_cita=? LIMIT 1",
             (id_cita,)
         ).fetchone()
         return dict(row) if row else None
@@ -2482,10 +2491,24 @@ def phone_tiene_solo_citas_canceladas(phone: str) -> bool:
 
 
 def mark_cita_cancel_detected(id_cita: str):
-    """Marca una cita como 'cancelación detectada y notificada' para evitar duplicados."""
+    """Marca una cita como 'ya no activa' (anulada — por quien sea).
+
+    El job de detección y los recordatorios la saltan. NO implica que el
+    paciente fue notificado: eso lo marca mark_cita_cancel_notified."""
     with db() as conn:
         conn.execute(
             "UPDATE citas_bot SET cancel_detected_at = datetime('now') WHERE id_cita=?",
+            (id_cita,)
+        )
+        conn.commit()
+
+
+def mark_cita_cancel_notified(id_cita: str):
+    """Marca que al paciente YA se le notificó la cancelación de esta cita
+    (guard de idempotencia de enviar_reagendar_por_cancelacion)."""
+    with db() as conn:
+        conn.execute(
+            "UPDATE citas_bot SET cancel_notified_at = datetime('now') WHERE id_cita=?",
             (id_cita,)
         )
         conn.commit()

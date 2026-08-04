@@ -2064,6 +2064,19 @@ async def estado_cita_actual(id_cita: int, id_prof: int | None = None,
     return _estado_cita_from_raw(cita)
 
 
+def _mark_cancelada_por_sistema(id_cita) -> None:
+    """Toda anulación que sale de cancelar_cita() la originó el sistema (bot,
+    panel admin o agendador web). Marcarla en citas_bot evita que
+    _job_detectar_cancelaciones la confunda con una cancelación del profesional
+    y mande el aviso "cancelada por el profesional" (falso positivo cita 62414,
+    2026-08-04: la paciente reagendó y 11 min después recibió el susto)."""
+    try:
+        from session import mark_cita_cancel_detected
+        mark_cita_cancel_detected(str(id_cita))
+    except Exception as e:
+        log.warning("No se pudo marcar cita %s como anulada por sistema: %s", id_cita, e)
+
+
 async def cancelar_cita(id_cita: int) -> bool:
     """Cancela una cita por su ID, con reintentos ante errores transitorios."""
     url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
@@ -2082,11 +2095,13 @@ async def cancelar_cita(id_cita: int) -> bool:
                 # Slot liberado: invalidar cache de próxima fecha para que
                 # el próximo paciente vea el slot recién disponible.
                 _proxima_cache.clear()
+                _mark_cancelada_por_sistema(id_cita)
                 return True
             if r.status_code == 400 and "igual al original" in r.text:
                 # La cita ya estaba en estado anulado — tratar como éxito
                 log.info("Cita %s ya estaba cancelada (400 igual al original)", id_cita)
                 _report_up()
+                _mark_cancelada_por_sistema(id_cita)
                 return True
             if r.status_code >= 500:
                 log.warning("Medilink PUT %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
