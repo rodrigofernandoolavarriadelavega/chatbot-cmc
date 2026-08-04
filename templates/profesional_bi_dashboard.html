@@ -333,13 +333,31 @@ function renderHeatmap(){
           ttl += ` · CIERRE TEMPRANO (típico ~${_m2h(cierreTipico)})`;
         }
       }
-      html += `<div class="calday" style="background:${bg};${tc}${extra}" title="${ttl}"><div class="n">${n||"·"}</div>${dh}</div>`;
+      html += `<div class="calday" data-info="${ttl.replace(/"/g,"&quot;")}" style="cursor:pointer;background:${bg};${tc}${extra}" title="${ttl}"><div class="n">${n||"·"}</div>${dh}</div>`;
     });
     html += "</div></div>";
   });
   html += "</div>";
-  html += '<p style="font-size:11px;opacity:.6;margin-top:12px">Rayado rojo = día hábil (no feriado) <b>sin ninguna cita en la agenda Medilink</b>; si igual muestra un número, son fichas creadas a distancia (recetas/registros), no presencia. Barra roja abajo = <b>cierre temprano</b>: la última cita del día terminó ≥1 h antes de su cierre típico del mes (pasa el mouse para ver las horas). Días sin marcas ni dato de agenda: aún sin sincronizar.</p>';
+  html += '<p style="font-size:11px;opacity:.6;margin-top:12px">Rayado rojo = día hábil (no feriado) <b>sin ninguna cita en la agenda Medilink</b>; si igual muestra un número, son fichas creadas a distancia (recetas/registros), no presencia. Barra oscura abajo = <b>cierre temprano</b>: la última cita terminó ≥1 h antes de su cierre típico del mes. <b>Click en cualquier día</b> para ver el detalle.</p>';
   cont.innerHTML = html;
+  // Panel de detalle al click (el title nativo es lento y no existe en tablet)
+  cont.onclick = (e) => {
+    const c = e.target.closest(".calday");
+    let tip = document.getElementById("caltip");
+    if(!tip){
+      tip = document.createElement("div");
+      tip.id = "caltip";
+      tip.style.cssText = "display:none;position:fixed;z-index:99;background:#122028;color:#F5F1E8;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.5;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.35)";
+      document.body.appendChild(tip);
+      document.addEventListener("click", ev => { if(!ev.target.closest(".calday")) tip.style.display = "none"; });
+    }
+    if(!c || !c.dataset.info){ tip.style.display = "none"; return; }
+    tip.textContent = c.dataset.info;
+    tip.style.display = "block";
+    const r = c.getBoundingClientRect();
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - 350, r.left)) + "px";
+    tip.style.top = (r.bottom + 8 + 200 > window.innerHeight ? r.top - 8 - tip.offsetHeight : r.bottom + 8) + "px";
+  };
 }
 
 function renderDow(){

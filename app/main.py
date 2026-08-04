@@ -6816,7 +6816,10 @@ def centro_dashboard_page():
     """Consolidado de TODO el centro — mismo dashboard genérico con id 0."""
     if not _PROF_BI_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard profesional no disponible")
-    return _PROF_BI_DASHBOARD_HTML
+    # no-store: sin esto el navegador cachea heurísticamente el HTML y el
+    # dueño no ve los cambios tras un deploy (pasó el 2026-08-04).
+    return HTMLResponse(_PROF_BI_DASHBOARD_HTML,
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/profesional/{id_prof}", response_class=HTMLResponse)
@@ -6826,7 +6829,8 @@ def profesional_dashboard_page(id_prof: int):
     Sirve `profesional_bi_dashboard.html`, NO el de token."""
     if not _PROF_BI_DASHBOARD_HTML:
         raise HTTPException(404, "Dashboard profesional no disponible")
-    return _PROF_BI_DASHBOARD_HTML
+    return HTMLResponse(_PROF_BI_DASHBOARD_HTML,
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/profesional/{id_prof}/data")
