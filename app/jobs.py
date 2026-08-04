@@ -4673,3 +4673,39 @@ async def _job_verificar_intervalos():
             "(_Duración no es compatible con el intervalo de atención_).\n"
             "Se arregla cambiando el intervalo en Medilink o en PROFESIONALES."
         )
+
+
+async def _job_agenda_dias_sync():
+    """Cachea el nº de citas reales por profesional/día en agenda_dias_cache.
+
+    Por qué existe: bi_atenciones NO acredita presencia — se pueden crear
+    fichas/recetas a distancia sin ninguna cita agendada (caso Abarca
+    13-jul-2026: 8 fichas, 0 citas). El calendario de /profesional/{id}
+    cruza fichas vs agenda con esta tabla para no pintar "presente" a
+    quien no abrió agenda ese día.
+
+    Sincroniza los últimos 3 días (hoy incluido) para absorber cambios
+    retroactivos de agenda. ~28 profesionales × 3 días ≈ 84 requests, de
+    madrugada y por el carril batch (guardrail 429).
+    """
+    from datetime import datetime as _dt, timedelta as _td
+    from zoneinfo import ZoneInfo as _ZI
+    from medilink import PROFESIONALES, citas_dia_conteo, use_batch_lane
+    from session import upsert_agenda_dias
+    use_batch_lane()   # guardrail 429: este cron no compite con los pacientes
+
+    hoy = _dt.now(_ZI("America/Santiago")).date()
+    recs = []
+    for pid in PROFESIONALES:
+        for delta in range(3):
+            f = (hoy - _td(days=delta)).isoformat()
+            try:
+                res = await citas_dia_conteo(int(pid), f)
+            except Exception as e:  # noqa: BLE001 — un día no rompe la pasada
+                log.debug("agenda_dias_sync prof %s %s: %s", pid, f, e)
+                res = None
+            if res is not None:      # None = Medilink no respondió → NO cachear
+                recs.append((int(pid), f, res[0], res[1]))
+    n = upsert_agenda_dias(recs)
+    log.info("agenda_dias_sync: %d filas cacheadas (de %d posibles)",
+             n, len(PROFESIONALES) * 3)

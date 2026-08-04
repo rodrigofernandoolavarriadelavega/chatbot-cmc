@@ -43,7 +43,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from medilink import MedilinkRateLimited
 from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
-                  _job_verificar_intervalos,
+                  _job_verificar_intervalos, _job_agenda_dias_sync,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
                   _job_postconsulta, _job_postconsulta_morning,
                   _job_enrolar_atendidos_dia,
@@ -216,6 +216,17 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
         misfire_grace_time=3600,  # F046: si el proceso arrancó tarde, corre igual (hasta 1h después)
         coalesce=True,            # F046: si se acumularon disparos perdidos, corre solo 1 vez
+    )
+    # Agenda por día 04:40 CLT — cachea citas reales por profesional/día
+    # (agenda_dias_cache) para que el calendario de /profesional/{id} distinga
+    # "día con agenda" de "día solo con fichas a distancia" (bi_atenciones miente).
+    scheduler.add_job(
+        _job_agenda_dias_sync,
+        CronTrigger(hour=4, minute=40, timezone=_CLT),
+        id="agenda_dias_sync",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # ROAS diario 05:30 CLT — recalcula ROAS 30d, persiste snapshot y alerta
     # (WhatsApp ventana-abierta + email) si alguna campaña cae bajo ROAS 1.
@@ -6857,6 +6868,13 @@ async def api_profesional_data(id_prof: int, desde: str = "2024-01-01",
     # Cobertura caja/facturado
     fac = base["kpis"]["total_facturado"]
     base["kpis"]["cobertura_caja_pct"] = round(100 * caja["total_caja"] / fac, 1) if fac else 0
+    # Agenda real por día (citas Medilink cacheadas) — para que el calendario
+    # distinga "día con agenda" de "día solo con fichas a distancia".
+    if id_prof != 0:
+        from session import get_agenda_dias
+        base["agenda_dias"] = get_agenda_dias(id_prof, desde=desde)
+    else:
+        base["agenda_dias"] = {}
     base["fuente"] = "bi_atenciones (volumen) + bi_pagos_caja (CAJA REAL)"
     return base
 

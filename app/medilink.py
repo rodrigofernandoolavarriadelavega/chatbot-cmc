@@ -953,6 +953,34 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     return ocupadas
 
 
+async def citas_dia_conteo(id_prof: int, fecha: str) -> tuple[int, int] | None:
+    """(n_citas_no_anuladas, n_atendidas) según /citas para un profesional/día.
+    Guard cliente-side fecha==pedida (el filtro `fecha` de la API filtra mal).
+    None si Medilink no respondió — el caller NO debe cachear ese día."""
+    params = {
+        "id_sucursal":    {"eq": MEDILINK_SUCURSAL},
+        "id_profesional": {"eq": id_prof},
+        "fecha":          {"eq": fecha},
+    }
+    client = _get_shared_client()
+    try:
+        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                       params={"q": _q(params)}, headers=HEADERS)
+    except httpx.RequestError as e:
+        log.warning("citas_dia_conteo prof=%d fecha=%s: %s", id_prof, fecha, e)
+        return None
+    if r.status_code != 200:
+        return None
+    n = a = 0
+    for c in _safe_json(r).get("data", []):
+        if c.get("fecha") != fecha or c.get("estado_anulacion"):
+            continue
+        n += 1
+        if c.get("estado_cita") == "Atendido":
+            a += 1
+    return (n, a)
+
+
 def _slot_libre_vs_ocupadas(hi: str, hf: str, ocupadas: set) -> bool:
     """True si el rango [hi, hf) no se solapa con ninguna hora en ocupadas.
     `ocupadas` es un set de strings 'HH:MM' en bloques de 5 min (ya expandido

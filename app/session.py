@@ -384,6 +384,20 @@ def _run_ddl_inline(conn) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_aten_fecha ON bi_atenciones(fecha)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_aten_prof ON bi_atenciones(id_profesional, fecha)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_bi_aten_pac ON bi_atenciones(id_paciente)")
+    # agenda_dias_cache: nº de citas REALES en la agenda Medilink por profesional/día
+    # (fuente /citas). Existe porque bi_atenciones NO acredita presencia — se pueden
+    # crear fichas/recetas a distancia sin ninguna cita agendada (caso Abarca 13-jul:
+    # 8 fichas, 0 citas). El calendario de /profesional/{id} cruza ambas fuentes.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS agenda_dias_cache (
+            id_prof     INTEGER NOT NULL,
+            fecha       TEXT    NOT NULL,
+            n_citas     INTEGER NOT NULL,
+            n_atendidas INTEGER NOT NULL DEFAULT 0,
+            synced_at   TEXT,
+            PRIMARY KEY (id_prof, fecha)
+        )
+    """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS bi_pagos_caja (
             pago_id        INTEGER PRIMARY KEY,
@@ -3904,6 +3918,32 @@ def get_olavarria_fechas_existentes() -> set[str]:
 
 
 # ── BI v2 helpers ─────────────────────────────────────────────────────────────
+
+def upsert_agenda_dias(records: list[tuple]) -> int:
+    """records: [(id_prof, fecha, n_citas, n_atendidas)] — citas reales en agenda
+    Medilink por día (fuente /citas, NO bi_atenciones)."""
+    if not records:
+        return 0
+    with db() as conn:
+        conn.executemany("""
+            INSERT INTO agenda_dias_cache (id_prof, fecha, n_citas, n_atendidas, synced_at)
+            VALUES (?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(id_prof, fecha) DO UPDATE SET
+              n_citas=excluded.n_citas,
+              n_atendidas=excluded.n_atendidas,
+              synced_at=excluded.synced_at
+        """, records)
+    return len(records)
+
+
+def get_agenda_dias(id_prof: int, desde: str = "2024-01-01") -> dict:
+    """{fecha: {"c": n_citas, "a": n_atendidas}} para el dashboard por profesional."""
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT fecha, n_citas, n_atendidas FROM agenda_dias_cache "
+            "WHERE id_prof=? AND fecha>=?", (id_prof, desde)).fetchall()
+    return {r[0]: {"c": r[1], "a": r[2]} for r in rows}
+
 
 def upsert_bi_atenciones(records: list[dict]) -> int:
     """Inserta/actualiza atenciones desde /api/v5/atenciones de Medilink.
