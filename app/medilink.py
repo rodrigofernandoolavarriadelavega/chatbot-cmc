@@ -953,8 +953,10 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
     return ocupadas
 
 
-async def citas_dia_conteo(id_prof: int, fecha: str) -> tuple[int, int] | None:
-    """(n_citas_no_anuladas, n_atendidas) según /citas para un profesional/día.
+async def citas_dia_conteo(id_prof: int, fecha: str) -> tuple | None:
+    """(n_citas_no_anuladas, n_atendidas, hora_primera, hora_ultima) según /citas
+    para un profesional/día. hora_primera = inicio de la primera cita válida,
+    hora_ultima = fin de la última ('HH:MM'; None si no hay citas).
     Guard cliente-side fecha==pedida (el filtro `fecha` de la API filtra mal).
     None si Medilink no respondió — el caller NO debe cachear ese día."""
     params = {
@@ -972,13 +974,20 @@ async def citas_dia_conteo(id_prof: int, fecha: str) -> tuple[int, int] | None:
     if r.status_code != 200:
         return None
     n = a = 0
+    primera = ultima = None
     for c in _safe_json(r).get("data", []):
         if c.get("fecha") != fecha or c.get("estado_anulacion"):
             continue
         n += 1
         if c.get("estado_cita") == "Atendido":
             a += 1
-    return (n, a)
+        hi = (c.get("hora_inicio") or "")[:5]
+        hf = (c.get("hora_fin") or "")[:5]
+        if hi and (primera is None or hi < primera):
+            primera = hi
+        if hf and (ultima is None or hf > ultima):
+            ultima = hf
+    return (n, a, primera, ultima)
 
 
 def _slot_libre_vs_ocupadas(hi: str, hf: str, ocupadas: set) -> bool:

@@ -4705,7 +4705,7 @@ async def _job_agenda_dias_sync():
                 log.debug("agenda_dias_sync prof %s %s: %s", pid, f, e)
                 res = None
             if res is not None:      # None = Medilink no respondió → NO cachear
-                recs.append((int(pid), f, res[0], res[1]))
+                recs.append((int(pid), f, res[0], res[1], res[2], res[3]))
     n = upsert_agenda_dias(recs)
     log.info("agenda_dias_sync: %d filas cacheadas (de %d posibles)",
              n, len(PROFESIONALES) * 3)

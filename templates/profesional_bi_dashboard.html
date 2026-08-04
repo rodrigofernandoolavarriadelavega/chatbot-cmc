@@ -285,7 +285,13 @@ function renderHeatmap(){
   const byMonth = {};
   dias.forEach(f => { const m = f.slice(0,7); (byMonth[m] = byMonth[m] || []).push(f); });
   let html = '<div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">';
+  const _h2m = h => h ? parseInt(h.slice(0,2),10)*60 + parseInt(h.slice(3,5),10) : null;
+  const _m2h = mm => `${String(Math.floor(mm/60)).padStart(2,"0")}:${String(mm%60).padStart(2,"0")}`;
   Object.keys(byMonth).sort().forEach(m => {
+    // Hora de cierre típica del MES (mediana de hora_ultima en días con agenda):
+    // sirve para marcar retiros anticipados sin configurar franjas por profesional.
+    const cierres = byMonth[m].map(f => _h2m(((DATA.agenda_dias||{})[f]||{}).u)).filter(x => x!==null).sort((x,y)=>x-y);
+    const cierreTipico = cierres.length >= 5 ? cierres[Math.floor(cierres.length/2)] : null;
     html += `<div><div class="mono text-xs uppercase opacity-60 mb-2">${MESES[m.slice(5)]} ${m.slice(0,4)}</div>`;
     html += '<div class="grid grid-cols-7 gap-1">';
     ["L","M","M","J","V","S","D"].forEach(d => html += `<div class="mono text-[9px] opacity-50 text-center">${d}</div>`);
@@ -316,13 +322,21 @@ function renderHeatmap(){
         ttl = `${f}: SIN AGENDA (0 citas)` + (n>0 ? ` — ${n} ficha(s) creadas a distancia` : " — ausencia");
       } else if(ag){
         ttl += ` · agenda: ${ag.c} citas (${ag.a} atendidas)`;
+        if(ag.p && ag.u) ttl += ` · ${ag.p}–${ag.u}`;
+        // Cola final: la última cita del día termina ≥1h antes de su cierre
+        // típico del mes → trabajó, pero el final de la jornada quedó vacío.
+        const u = _h2m(ag.u);
+        if(cierreTipico !== null && u !== null && u <= cierreTipico - 60 && dow < 5 && !FERIADOS.has(f)){
+          extra += "box-shadow:inset 0 -4px 0 0 #8A2418;";
+          ttl += ` · CIERRE TEMPRANO (típico ~${_m2h(cierreTipico)})`;
+        }
       }
       html += `<div class="calday" style="background:${bg};${tc}${extra}" title="${ttl}"><div class="n">${n||"·"}</div>${dh}</div>`;
     });
     html += "</div></div>";
   });
   html += "</div>";
-  html += '<p style="font-size:11px;opacity:.6;margin-top:12px">Rayado rojo = día hábil (no feriado) <b>sin ninguna cita en la agenda Medilink</b>; si igual muestra un número, son fichas creadas a distancia (recetas/registros), no presencia. Días sin rayado ni dato de agenda: aún sin sincronizar.</p>';
+  html += '<p style="font-size:11px;opacity:.6;margin-top:12px">Rayado rojo = día hábil (no feriado) <b>sin ninguna cita en la agenda Medilink</b>; si igual muestra un número, son fichas creadas a distancia (recetas/registros), no presencia. Barra roja abajo = <b>cierre temprano</b>: la última cita del día terminó ≥1 h antes de su cierre típico del mes (pasa el mouse para ver las horas). Días sin marcas ni dato de agenda: aún sin sincronizar.</p>';
   cont.innerHTML = html;
 }
 

@@ -390,14 +390,21 @@ def _run_ddl_inline(conn) -> None:
     # 8 fichas, 0 citas). El calendario de /profesional/{id} cruza ambas fuentes.
     conn.execute("""
         CREATE TABLE IF NOT EXISTS agenda_dias_cache (
-            id_prof     INTEGER NOT NULL,
-            fecha       TEXT    NOT NULL,
-            n_citas     INTEGER NOT NULL,
-            n_atendidas INTEGER NOT NULL DEFAULT 0,
-            synced_at   TEXT,
+            id_prof      INTEGER NOT NULL,
+            fecha        TEXT    NOT NULL,
+            n_citas      INTEGER NOT NULL,
+            n_atendidas  INTEGER NOT NULL DEFAULT 0,
+            hora_primera TEXT,
+            hora_ultima  TEXT,
+            synced_at    TEXT,
             PRIMARY KEY (id_prof, fecha)
         )
     """)
+    try:  # migración: columnas de rango horario (colas finales / retiros anticipados)
+        conn.execute("ALTER TABLE agenda_dias_cache ADD COLUMN hora_primera TEXT")
+        conn.execute("ALTER TABLE agenda_dias_cache ADD COLUMN hora_ultima TEXT")
+    except Exception:
+        pass
     conn.execute("""
         CREATE TABLE IF NOT EXISTS bi_pagos_caja (
             pago_id        INTEGER PRIMARY KEY,
@@ -3920,29 +3927,35 @@ def get_olavarria_fechas_existentes() -> set[str]:
 # ── BI v2 helpers ─────────────────────────────────────────────────────────────
 
 def upsert_agenda_dias(records: list[tuple]) -> int:
-    """records: [(id_prof, fecha, n_citas, n_atendidas)] — citas reales en agenda
-    Medilink por día (fuente /citas, NO bi_atenciones)."""
+    """records: [(id_prof, fecha, n_citas, n_atendidas, hora_primera, hora_ultima)]
+    — citas reales en agenda Medilink por día (fuente /citas, NO bi_atenciones).
+    hora_primera/hora_ultima: inicio de la primera y fin de la última cita NO
+    anulada ('HH:MM'), None si el día no tiene citas."""
     if not records:
         return 0
     with db() as conn:
         conn.executemany("""
-            INSERT INTO agenda_dias_cache (id_prof, fecha, n_citas, n_atendidas, synced_at)
-            VALUES (?, ?, ?, ?, datetime('now'))
+            INSERT INTO agenda_dias_cache
+              (id_prof, fecha, n_citas, n_atendidas, hora_primera, hora_ultima, synced_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
             ON CONFLICT(id_prof, fecha) DO UPDATE SET
               n_citas=excluded.n_citas,
               n_atendidas=excluded.n_atendidas,
+              hora_primera=excluded.hora_primera,
+              hora_ultima=excluded.hora_ultima,
               synced_at=excluded.synced_at
         """, records)
     return len(records)
 
 
 def get_agenda_dias(id_prof: int, desde: str = "2024-01-01") -> dict:
-    """{fecha: {"c": n_citas, "a": n_atendidas}} para el dashboard por profesional."""
+    """{fecha: {"c": citas, "a": atendidas, "p": primera, "u": ultima}}."""
     with db() as conn:
         rows = conn.execute(
-            "SELECT fecha, n_citas, n_atendidas FROM agenda_dias_cache "
-            "WHERE id_prof=? AND fecha>=?", (id_prof, desde)).fetchall()
-    return {r[0]: {"c": r[1], "a": r[2]} for r in rows}
+            "SELECT fecha, n_citas, n_atendidas, hora_primera, hora_ultima "
+            "FROM agenda_dias_cache WHERE id_prof=? AND fecha>=?",
+            (id_prof, desde)).fetchall()
+    return {r[0]: {"c": r[1], "a": r[2], "p": r[3], "u": r[4]} for r in rows}
 
 
 def upsert_bi_atenciones(records: list[dict]) -> int:
