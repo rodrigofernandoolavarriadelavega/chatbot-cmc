@@ -51,12 +51,21 @@ def _solo_digitos(s: str) -> str:
 
 def evaluar_destinatario(cuenta: str, rut: str) -> int | None:
     """1 = destino verificado CMC · 0 = destino NO es del CMC (alerta) ·
-    None = el comprobante no traía datos de destinatario legibles."""
-    cta = _solo_digitos(cuenta)
+    None = el comprobante no traía datos de destinatario legibles.
+
+    La cuenta NO se compara con igualdad literal: cada banco renderiza el
+    número a su manera. Medido en los 5 comprobantes reales marcados
+    'NO es del CMC' (04-08) — TODOS eran la Itaú 221708538: '000221708538'
+    (Itaú), '0221708538' (Falabella), '8538' (app que enmascara y deja los
+    últimos 4). Regla: sin ceros a la izquierda, la cuenta CMC debe terminar
+    en lo leído (≥4 dígitos) — cubre padding y enmascarado."""
+    cta = _solo_digitos(cuenta).lstrip("0")
     rd = _solo_digitos(rut)
     if not cta and not rd:
         return None
-    if cta and cta in _CUENTAS_CMC:
+    if cta and len(cta) >= 4 and any(
+        c.lstrip("0").endswith(cta) for c in _CUENTAS_CMC
+    ):
         return 1
     if rd and rd in _RUTS_CMC:
         return 1
