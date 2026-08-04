@@ -10090,8 +10090,22 @@ async def webhook(request: Request):
 
                     if _ag_blob:
                         from flows import procesar_imagen_abono
-                        async with get_phone_lock(phone):
-                            _ag_respuesta = await procesar_imagen_abono(phone, _ag_blob, _ag_mime)
+                        # OJO: get_phone_lock se importa LOCAL más abajo en esta
+                        # misma función (webhook) → Python lo marca variable
+                        # local para TODO el scope y acá aún no existe. Sin este
+                        # import: UnboundLocalError → 500 en CADA comprobante
+                        # (el camino de visión nunca corrió; caso Bryan 04-08).
+                        from resilience import get_phone_lock
+                        try:
+                            async with get_phone_lock(phone):
+                                _ag_respuesta = await procesar_imagen_abono(phone, _ag_blob, _ag_mime)
+                        except Exception as _ag_proc_e:
+                            # El comprobante ya quedó guardado arriba; una falla
+                            # acá jamás debe responder 500 (Meta reintenta y el
+                            # dedupe se traga el retry → paciente sin respuesta).
+                            log.exception("ABONO: procesar_imagen_abono lanzó para %s: %s",
+                                          phone, _ag_proc_e)
+                            _ag_respuesta = ""
                         if not _ag_respuesta:
                             # Falla silenciosa: el handler devolvió vacío y el
                             # paciente quedaba sin respuesta y sin cita, creyendo

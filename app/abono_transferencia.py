@@ -74,10 +74,19 @@ log = logging.getLogger("abono_transferencia")
 _CL = ZoneInfo("America/Santiago")
 
 # ── Remitentes de banco que nos interesan ───────────────────────────────────
+# FUENTE ÚNICA: transferencias_email_parser.BANCOS_REMITENTES (12+ bancos).
+# Este módulo tenía su propia lista de SOLO 3 bancos (Santander/Falabella/
+# BancoChile) — el 2026-08-04 el correo Scotiabank del abono de Bryan (papá
+# pagador, $60.000) fue descartado acá mientras conciliación lo leía perfecto:
+# BancoEstado+Scotiabank+BCI son ~69% de los pagadores históricos y el carril
+# de abonos era ciego a todos ellos. No volver a duplicar parsers bancarios.
 REMITENTE_SANTANDER  = "mensajeria@santander.cl"
 REMITENTE_FALABELLA  = "notificaciones@cl.bancofalabella.com"
 REMITENTE_BANCOCHILE = "serviciodetransferencias@bancochile.cl"
-REMITENTES_BANCOS = (REMITENTE_SANTANDER, REMITENTE_FALABELLA, REMITENTE_BANCOCHILE)
+from transferencias_email_parser import BANCOS_REMITENTES as _BANCOS_REM_SHARED
+REMITENTES_BANCOS = tuple(
+    rem for rems in _BANCOS_REM_SHARED.values() for rem in rems
+)
 
 # Huella de la cuenta del CMC — ver docstring del módulo (§1). Solo dígitos,
 # se compara contra el cuerpo del correo también reducido a solo dígitos, así
@@ -238,28 +247,33 @@ def _parse_bancochile(body: str) -> dict | None:
     }
 
 
-def parse_bank_email(remitente: str, body: str) -> dict | None:
-    """Punto de entrada del parseo. Devuelve None si el remitente no es uno
-    de los 3 bancos, si el parseo no logró leer nombre+monto con certeza, o
-    si el correo NO es de la cuenta del CMC (§1 del docstring del módulo).
-    Nunca lanza — un correo con formato inesperado se descarta y se loguea,
-    jamás tumba el poller."""
+def parse_bank_email(remitente: str, body: str, subject: str = "") -> dict | None:
+    """Punto de entrada del parseo. DELEGA en transferencias_email_parser
+    (fuente única, 12+ bancos) — este módulo tenía parsers propios de solo 3
+    bancos Y una copia divergente de _es_cuenta_cmc que rechazaba correos
+    válidos (caso Bryan 2026-08-04: Scotiabank, shared=True/local=False).
+    Devuelve None si el remitente no es banco conocido, si no se pudo leer
+    nombre+monto, o si el correo NO es de la cuenta del CMC. Nunca lanza."""
     try:
-        rem = (remitente or "").lower()
-        if REMITENTE_SANTANDER in rem:
-            parsed = _parse_santander(body)
-        elif REMITENTE_FALABELLA in rem:
-            parsed = _parse_falabella(body)
-        elif REMITENTE_BANCOCHILE in rem:
-            parsed = _parse_bancochile(body)
-        else:
+        from transferencias_email_parser import (
+            identificar_banco, parse_email, _es_cuenta_cmc as _cta_shared)
+        banco = identificar_banco(remitente or "")
+        if not banco:
             return None
+        parsed = parse_email(banco, subject or "", body)
         if not parsed or not parsed.get("monto"):
             return None
-        if not _es_cuenta_cmc(body):
-            log.info("parse_bank_email: correo de %s no es de la cuenta del CMC — se descarta", parsed.get("banco"))
+        if not _cta_shared(body):
+            log.info("parse_bank_email: correo de %s no es de la cuenta del CMC — se descarta", banco)
             return None
-        return parsed
+        return {
+            "banco": parsed.get("banco") or banco,
+            "nombre_pagador": parsed.get("nombre") or "",
+            "monto": parsed["monto"],
+            "fecha": parsed.get("fecha") or "",
+            "hora": parsed.get("hora") or "",
+            "codigo_operacion": parsed.get("num_operacion") or "",
+        }
     except Exception as e:
         log.warning("parse_bank_email: fallo parseando correo de %r: %s", remitente, e)
         return None
@@ -430,6 +444,18 @@ def crear_abono_pendiente(*, phone: str, paciente_id, paciente_nombre: str, rut:
     now = datetime.now(_CL)
     expira = calcular_expira(now, horas=(wait_min / 60) if wait_min else None)
     with db() as conn:
+        # Dedupe: un paciente = UN abono vivo por profesional/monto. Caso
+        # Bryan 2026-08-04: abrió el gate desde 2 números distintos → 2
+        # pendientes del mismo RUT; el matcher de correos vio 2 "candidatos"
+        # y la pregunta de desambiguación habría ido al teléfono abandonado.
+        # El intento más nuevo reemplaza al anterior.
+        if rut:
+            conn.execute("""
+                UPDATE abono_pendientes
+                SET estado='reemplazado', updated_at=datetime('now')
+                WHERE estado='pendiente' AND rut=? AND monto=?
+                  AND CAST(id_profesional AS TEXT)=CAST(? AS TEXT)
+            """, (rut, int(monto), id_profesional))
         conn.execute("""
             INSERT INTO abono_pendientes
                 (token, phone, paciente_id, paciente_nombre, rut, monto,
@@ -830,7 +856,8 @@ def get_abono_pendiente_by_id(abono_id: int) -> dict | None:
     return dict(row) if row else None
 
 
-async def procesar_correo_bancario(remitente: str, body: str, email_dt: datetime, uid: int) -> dict:
+async def procesar_correo_bancario(remitente: str, body: str, email_dt: datetime, uid: int,
+                                   subject: str = "") -> dict:
     """Un correo bancario ya identificado (remitente correcto). Parsea,
     registra en `transferencias_banco`, e intenta emparejar contra abonos
     pendientes. Nunca lanza — cualquier fallo se loguea y retorna
@@ -838,7 +865,7 @@ async def procesar_correo_bancario(remitente: str, body: str, email_dt: datetime
     from session import db
 
     try:
-        parsed = parse_bank_email(remitente, body)
+        parsed = parse_bank_email(remitente, body, subject)
         if not parsed:
             return {"ok": True, "match": False, "motivo": "no_parseable_o_cuenta_ajena"}
 
@@ -961,7 +988,8 @@ async def poll_abonos_transferencia() -> dict:
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=_ZI("UTC"))
             dt_local = dt.astimezone(_CL)
-            await procesar_correo_bancario(m["from"], m["body"], dt_local, m["uid"])
+            await procesar_correo_bancario(m["from"], m["body"], dt_local, m["uid"],
+                                           subject=m.get("subject", ""))
             procesados += 1
 
         return {"ok": True, "nuevos": procesados, "vistos": len(raw_emails), "cursor": new_max}
