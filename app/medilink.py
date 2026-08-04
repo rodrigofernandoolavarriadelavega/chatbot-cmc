@@ -256,10 +256,10 @@ PROFESIONALES = {
     # Citas viejas de la era de 30 min quedan en :30 y pueden bloquear ventanas de
     # 40 por solape; se normaliza sola al renovarse la agenda. Verificado 2026-07-29:
     # las 19 citas fuera de grilla se crearon ANTES del 15-jul; las posteriores calzan.
-    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 40, "dias": [1, 3]},
+    78: {"nombre": "Dra. Cecilia Unibazo",     "especialidad": "Psiquiatría",           "intervalo": 40, "dias": [1, 3], "telemedicina": True},
     # Neurología TELEMEDICINA — Lun/Mar/Jue/Vie (horario real en Medilink,
     # sucursal 1). Consulta adultos/adolescentes desde 15 años. $65.000 particular.
-    79: {"nombre": "Dra. Franca González",     "especialidad": "Neurología",            "intervalo": 30},
+    79: {"nombre": "Dra. Franca González",     "especialidad": "Neurología",            "intervalo": 30, "telemedicina": True},
     # Tecnología Médica Oftalmológica PRESENCIAL. $15.000 particular a TODOS
     # (sin Fonasa actualmente). Examen optométrico, fondo de ojo preventivo,
     # presión intraocular, receta de lentes.

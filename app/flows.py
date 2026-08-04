@@ -1028,6 +1028,25 @@ def _list_msg(body_text: str, button_label: str, sections: list) -> dict:
     }
 
 
+def _es_teleconsulta(slot: dict) -> bool:
+    """True si el slot es de un profesional que atiende SOLO por videollamada.
+
+    Fuente única: PROFESIONALES[id]["telemedicina"] (medilink.py); fallback por
+    nombre de especialidad para slots sin id_profesional. Usar SIEMPRE este
+    helper (no chequeos sueltos por id) — el paciente debe ver "teleconsulta"
+    ANTES de confirmar/abonar, no enterarse después de pagar (caso Bryan
+    2026-08-04: pagó abono de psiquiatría sin saber que era videollamada)."""
+    from medilink import PROFESIONALES as _PROFS_TC
+    try:
+        _pid_tc = int(slot.get("id_profesional") or 0)
+    except (TypeError, ValueError):
+        _pid_tc = 0
+    if _PROFS_TC.get(_pid_tc, {}).get("telemedicina"):
+        return True
+    _esp_tc = (slot.get("especialidad") or "").lower()
+    return "psiquiatr" in _esp_tc or "neurolog" in _esp_tc
+
+
 def _btn_msg(body_text: str, buttons: list) -> dict:
     """Construye un mensaje con botones de respuesta (máx 3)."""
     return {
@@ -1149,8 +1168,9 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
             f"Perfecto 🙌\n\n"
             f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
             f"📅 *{slot['fecha_display']}*\n"
-            f"🕐 *{slot['hora_inicio'][:5]}*\n\n"
-            "¿Tu atención será Fonasa o Particular?",
+            f"🕐 *{slot['hora_inicio'][:5]}*\n"
+            + ("📡 *Teleconsulta por videollamada*\n" if _es_teleconsulta(slot) else "")
+            + "\n¿Tu atención será Fonasa o Particular?",
             [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
         )
 
@@ -1225,7 +1245,8 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
                 f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
                 f"📅 {slot['fecha_display']}\n"
                 f"🕐 {slot['hora_inicio'][:5]}\n"
-                f"💳 {modalidad_str}\n\n"
+                + ("📡 *Teleconsulta por videollamada*\n" if _es_teleconsulta(slot) else "")
+                + f"💳 {modalidad_str}\n\n"
                 "¿La confirmo?",
                 [
                     {"id": "si", "title": "✅ Sí, reservar"},
@@ -1239,6 +1260,7 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
         f"🏥 *{esp}* — {slot['profesional']}\n"
         f"📅 *{slot['fecha_display']}*\n"
         f"🕐 *{slot['hora_inicio'][:5]}*"
+        + ("\n📡 *Teleconsulta por videollamada*" if _es_teleconsulta(slot) else "")
     )
     if esp not in _FONASA_SPECIALTIES:
         # Solo particular → saltar pregunta modalidad, ir directo al RUT
@@ -9680,7 +9702,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             f"🏥 {slot['especialidad']} — {slot['profesional']}\n"
             f"📅 {slot['fecha_display']}\n"
             f"🕐 {slot['hora_inicio'][:5]}\n"
-            f"💳 {modalidad}\n\n"
+            + ("📡 *Teleconsulta por videollamada*\n" if _es_teleconsulta(slot) else "")
+            + f"💳 {modalidad}\n\n"
             "¿La confirmo?",
             [
                 {"id": "si", "title": "✅ Sí, reservar"},
@@ -10042,14 +10065,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             {"id": "waitlist_no", "title": "No, gracias"},
                         ]
                     )
-            # Psiquiatría (Dra. Cecilia Unibazo, prof 78) es SOLO teleconsulta → forzar
-            # modalidad TELEMEDICINA (marca [ONLINE] en Medilink), sin preguntar presencial.
-            if str(slot.get("id_profesional")) == "78" or "psiquiatr" in (slot.get("especialidad", "") or "").lower():
-                data["telemedicina_modalidad"] = "TELEMEDICINA"
-
-            # Neurología (Dra. Franca González, prof 79) es SOLO telemedicina → forzar
-            # modalidad TELEMEDICINA igual que psiquiatría, sin abono-gate (no lo pidió el dueño).
-            if str(slot.get("id_profesional")) == "79" or "neurolog" in (slot.get("especialidad", "") or "").lower():
+            # Profesionales SOLO teleconsulta (fuente: PROFESIONALES[id]
+            # ["telemedicina"] — hoy psiquiatría 78 y neurología 79) → forzar
+            # modalidad TELEMEDICINA (marca [ONLINE] en Medilink), sin
+            # preguntar presencial. Neurología va sin abono-gate (decisión
+            # del dueño); eso lo resuelve abono_regla, no este bloque.
+            if _es_teleconsulta(slot):
                 data["telemedicina_modalidad"] = "TELEMEDICINA"
 
             # ── Abono-Gate ────────────────────────────────────────────────────
@@ -10119,10 +10140,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             f"*mañana hasta las {_exp_ag}*" if _link_ap.get("expira_otro_dia")
                             else f"*hasta las {_exp_ag}*"
                         ) if _exp_ag else "*por un rato*"
+                        _tc_ag = (
+                            "📡 La consulta es por *videollamada (teleconsulta)* — "
+                            "al confirmar el abono te enviamos el link.\n\n"
+                        ) if _es_teleconsulta(slot) else ""
                         return (
                             f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
                             f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
                             "así que el día de la atención no pagas nada adicional.\n\n"
+                            f"{_tc_ag}"
                             f"Aquí están los datos para transferir, con botón de copiar:\n"
                             f"{_link_ap['url']}\n\n"
                             f"Tu hora queda apartada {_plazo_ag}.\n"
@@ -10148,10 +10174,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 except Exception:
                     _plazo_fb = "*por 90 minutos*"
 
+                _tc_ag_fb = (
+                    "📡 La consulta es por *videollamada (teleconsulta)* — "
+                    "al confirmar el abono te enviamos el link.\n\n"
+                ) if _es_teleconsulta(slot) else ""
                 return (
                     f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
                     f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
                     "así que el día de la atención no pagas nada adicional.\n\n"
+                    f"{_tc_ag_fb}"
                     "*Datos para transferir:*\n"
                     f"{_CTF_AG['banco']}\n"
                     f"{_CTF_AG['tipo']} {_CTF_AG['numero']}\n"
