@@ -293,6 +293,25 @@ async def job_persistencia_contacto() -> dict:
             n_skip_budget += 1
             continue
 
+        # Regla del dueño (2026-08-05): mirar el HIS antes del toque 2 — si el
+        # paciente ya agendó por teléfono con recepción (no pasa por el bot),
+        # "¿sigues necesitando la hora?" lo confunde y puede hacerlo agendar
+        # DE NUEVO (caso Alexander: terminó con cita duplicada el viernes).
+        from jobs import verificar_cita_externa
+        _cita_ext = await verificar_cita_externa(phone)
+        if _cita_ext == "tiene":
+            from session import log_event as _le_ext
+            _le_ext(phone, "persistencia_skip_cita_externa", {"funnel_id": fid})
+            with db() as conn:
+                conn.execute(
+                    "UPDATE consultas_persistencia SET estado='agendada', "
+                    "motivo_cierre='cita_externa_medilink', closed_at=datetime('now'), "
+                    "updated_at=datetime('now') WHERE id=?", (cid,))
+                conn.commit()
+            continue
+        if _cita_ext == "error":
+            continue  # Medilink no respondió — reintenta el próximo ciclo
+
         from session import is_window_open, log_event, log_message, save_session
 
         esp_txt = f" de *{especialidad}*" if especialidad else ""

@@ -1028,10 +1028,14 @@ async def job_nudge_foto_fallback() -> dict:
     for r in rows:
         abono = dict(r)
         _marcar_estado_abono(abono["id"], "pendiente", foto_pedida=1)
+        # Especialidad REAL del abono — estaba fija en "Psiquiatría" y el
+        # 05-08 una paciente de Gastro recibió "tu hora de Psiquiatría" en
+        # pleno paso de pago (hallazgo auditoría conversaciones).
+        _esp_nudge = (abono.get("especialidad") or "").strip() or "tu especialidad"
         texto = (
             "Todavía no nos llegó la confirmación de tu transferencia.\n\n"
             "¿Nos mandas una *foto* del comprobante para confirmar tu hora de "
-            "Psiquiatría? 📎\n\n"
+            f"{_esp_nudge}? 📎\n\n"
             f"Si tienes dudas, llama al 📞 *{CMC_TELEFONO_FIJO}*"
         )
         try:

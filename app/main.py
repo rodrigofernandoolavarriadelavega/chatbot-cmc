@@ -217,6 +217,19 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=3600,  # F046: si el proceso arrancó tarde, corre igual (hasta 1h después)
         coalesce=True,            # F046: si se acumularon disparos perdidos, corre solo 1 vez
     )
+    # Centinela diario 07:30 CLT — barre fallas SILENCIOSAS (500 del webhook,
+    # Meta 400, excepciones, abonos con plata llegada sin conciliar, citas
+    # duplicadas) y manda UN resumen WhatsApp al dueño. Solo lee; apagable
+    # con CENTINELA_ACTIVE=false. Ver docstring de app/centinela.py.
+    from centinela import job_centinela_diario
+    scheduler.add_job(
+        job_centinela_diario,
+        CronTrigger(hour=7, minute=30, timezone=_CLT),
+        id="centinela_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
     # Agenda por día 04:40 CLT — cachea citas reales por profesional/día
     # (agenda_dias_cache) para que el calendario de /profesional/{id} distinga
     # "día con agenda" de "día solo con fichas a distancia" (bi_atenciones miente).

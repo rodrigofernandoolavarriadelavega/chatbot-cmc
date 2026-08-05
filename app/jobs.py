@@ -75,6 +75,35 @@ def _canal_de_phone(phone: str) -> str:
     return "unknown"
 
 
+async def verificar_cita_externa(phone: str) -> str:
+    """¿El RUT conocido de este phone ya tiene cita futura ACTIVA en Medilink?
+
+    Mira el HIS directo (no citas_bot) porque el paciente pudo haber agendado
+    por TELÉFONO con recepción sin pasar por el bot — regla del dueño
+    2026-08-05 tras el caso Alexander: la persistencia re-enganchó a una
+    familia que ya tenía hora tomada por recepción y terminó en duplicado.
+
+    Retorna: 'tiene' (cita futura confirmada → no molestar) · 'libre'
+    (verificado sin citas → contactar) · 'sin_rut' (imposible verificar,
+    paciente sin RUT conocido → contactar, es el público típico del
+    reenganche) · 'error' (Medilink 429/caído → NO contactar este ciclo,
+    reintentar en el próximo)."""
+    try:
+        from session import get_profile
+        rut = ((get_profile(phone) or {}).get("rut") or "").strip()
+    except Exception:
+        rut = ""
+    if not rut:
+        return "sin_rut"
+    try:
+        from medilink import listar_citas_paciente
+        citas = await listar_citas_paciente(0, rut=rut, raise_on_error=True)
+        return "tiene" if citas else "libre"
+    except Exception as e:
+        log.debug("verificar_cita_externa %s: no verificable (%s)", phone, e)
+        return "error"
+
+
 async def _enviar_reenganche():
     """Reenganche agresivo: slot real + urgencia + botón directo.
 
@@ -379,6 +408,18 @@ async def _enviar_reenganche():
                 f"{slot_txt}\n\n"
                 "¿Te la reservo antes de que se llene?"
             )
+
+        # Regla del dueño (2026-08-05): antes de reenganchar, mirar el HIS —
+        # el paciente pudo haber agendado por TELÉFONO con recepción sin
+        # pasar por el bot. Con cita futura activa, "tienes una reserva
+        # pendiente" solo confunde (caso Alexander → cita duplicada).
+        _cita_ext = await verificar_cita_externa(phone)
+        if _cita_ext == "tiene":
+            log_event(phone, "reenganche_skip_cita_externa", {"state": state})
+            save_session(phone, "IDLE", {})  # ya resolvió por otro canal
+            continue
+        if _cita_ext == "error":
+            continue  # Medilink no respondió — reintenta el próximo ciclo
 
         canal = _canal_de_phone(phone)
         try:
