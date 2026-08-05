@@ -88,94 +88,60 @@ def _links(j: dict) -> dict:
 # Recolección desde Medilink
 # ────────────────────────────────────────────────────────────────────────────
 
-async def recolectar(dias_atras: int = _DIAS_REFRESH, dias_adelante: int = _DIAS_ADELANTE,
-                     max_paginas: int = 900) -> dict:
-    """Barre `/citas` (sucursal + rango de fecha, SIN filtro de anulación —
-    necesitamos ver anuladas y reagendas) paginado, y upserta en la tabla local.
+def _fila(c: dict, fecha: str, ahora: str) -> tuple | None:
+    cid = c.get("id")
+    if cid is None:
+        return None
+    return (
+        int(cid),
+        c.get("id_profesional"),
+        c.get("id_paciente"),
+        " ".join((c.get("nombre_paciente") or "").split()),
+        fecha,
+        (c.get("hora_inicio") or "")[:5],
+        c.get("id_estado"),
+        c.get("estado_cita") or "",
+        1 if c.get("estado_anulacion") == 1 else 0,
+        ahora,
+    )
 
-    Gotchas Medilink que este código respeta:
-      - El filtro `fecha` gte/lte se IGNORA con frecuencia (59% de filas fuera
-        de rango en un caso real medido) → re-filtro cliente-side obligatorio.
-      - El orden de resultados es DESCENDENTE por id (lo más nuevo primero),
-        sin importar la fecha → corte temprano cuando varias páginas seguidas
-        ya no traen nada dentro del rango pedido.
-    """
-    from medilink import HEADERS, _get_shared_client, use_batch_lane
-    from session import system_state_set
 
-    use_batch_lane()  # guardrail 429: crons/syncs jamás por el carril del paciente
-
-    hoy = datetime.now(_CLT).date()
-    desde = (hoy - timedelta(days=dias_atras)).isoformat()
-    hasta = (hoy + timedelta(days=dias_adelante)).isoformat()
-
-    params = {
-        "id_sucursal": {"eq": int(MEDILINK_SUCURSAL)},
-        "fecha":       {"gte": desde, "lte": hasta},
-    }
-    client = _get_shared_client()
+async def _citas_de_un_dia(client, fecha: str, ahora: str) -> list[tuple]:
+    """UNA consulta `/citas` con `fecha eq` (el único filtro de fecha que
+    Medilink respeta de forma confiable — es el que usan los recordatorios en
+    producción), paginada dentro del día. SIN filtro de anulación: necesitamos
+    ver anuladas y reagendas. Re-verifica la fecha cliente-side igual
+    (gotcha #5 de docs/medilink_gotchas.md)."""
+    from medilink import HEADERS, _get
+    params = {"id_sucursal": {"eq": int(MEDILINK_SUCURSAL)}, "fecha": {"eq": fecha}}
     url = f"{MEDILINK_BASE_URL}/citas"
     request_params = {"q": _q(params)}
-
     filas: list[tuple] = []
-    ahora = datetime.now(_CLT).isoformat(timespec="seconds")
-    paginas = total_vistas = 0
-    paginas_sin_rango = 0   # corte temprano: N páginas seguidas 100% fuera de rango
-    truncado = False
+    for _pag in range(8):   # 8 páginas ≈ 400 citas/día — holgadísimo para el CMC
+        r = await _get(client, url, params=request_params, headers=HEADERS, timeout=15)
+        if r.status_code != 200:
+            log.warning("ausentismo._citas_de_un_dia %s: HTTP %d", fecha, r.status_code)
+            break
+        j = r.json()
+        for c in j.get("data", []):
+            if c.get("fecha") != fecha:
+                continue
+            f = _fila(c, fecha, ahora)
+            if f:
+                filas.append(f)
+        nxt = _links(j).get("next")
+        if not nxt:
+            break
+        url, request_params = nxt, None
+        await asyncio.sleep(0.15)
+    return filas
 
-    # ── fase 1: Medilink (async, sin DB tomada) ──
-    try:
-        while True:
-            if paginas >= max_paginas:
-                truncado = True
-                log.warning("ausentismo.recolectar: tope de %d páginas alcanzado (rango %s→%s incompleto)",
-                            max_paginas, desde, hasta)
-                break
-            r = await client.get(url, params=request_params, headers=HEADERS, timeout=15)
-            if r.status_code != 200:
-                log.warning("ausentismo.recolectar: HTTP %d en página %d", r.status_code, paginas + 1)
-                break
-            j = r.json()
-            data = j.get("data", [])
-            total_vistas += len(data)
-            en_rango = 0
-            for c in data:
-                f = c.get("fecha") or ""
-                if not f or f < desde or f > hasta:
-                    continue
-                cid = c.get("id")
-                if cid is None:
-                    continue
-                en_rango += 1
-                filas.append((
-                    int(cid),
-                    c.get("id_profesional"),
-                    c.get("id_paciente"),
-                    " ".join((c.get("nombre_paciente") or "").split()),
-                    f,
-                    (c.get("hora_inicio") or "")[:5],
-                    c.get("id_estado"),
-                    c.get("estado_cita") or "",
-                    1 if c.get("estado_anulacion") == 1 else 0,
-                    ahora,
-                ))
-            paginas += 1
-            paginas_sin_rango = paginas_sin_rango + 1 if (data and en_rango == 0) else 0
-            if paginas_sin_rango >= 3:
-                # el orden es id DESC ≈ cronológico inverso: 3 páginas seguidas
-                # sin nada en rango = ya pasamos el horizonte pedido
-                break
-            nxt = _links(j).get("next")
-            if not nxt:
-                break
-            url, request_params = nxt, None
-            await asyncio.sleep(_THROTTLE_PAG)
-    except httpx.RequestError as e:
-        log.error("ausentismo.recolectar: fallo de red tras %d páginas: %s", paginas, e)
 
-    # ── fase 2: escritura (una transacción, sin Medilink en medio) ──
+def _guardar(filas: list[tuple]) -> None:
+    """Upsert en una sola transacción (nunca con Medilink en medio)."""
+    if not filas:
+        return
     from session import db
-    ensure_ausentismo_table()
     with db() as c:
         c.executemany(
             """INSERT INTO ausentismo_citas
@@ -192,14 +158,79 @@ async def recolectar(dias_atras: int = _DIAS_REFRESH, dias_adelante: int = _DIAS
         )
         c.commit()
 
+
+async def recolectar(dias_atras: int = _DIAS_REFRESH, dias_adelante: int = _DIAS_ADELANTE) -> dict:
+    """Camina `/citas` DÍA POR DÍA (de lo más reciente hacia atrás) y upserta
+    en la tabla local, flusheando cada ~30 días para que un corte a mitad de
+    camino no pierda el avance.
+
+    Por qué día a día y no por rango: verificado en producción 2026-08-05 —
+    Medilink CORTA la paginación de una consulta por rango en ~25 páginas
+    (~1.250 filas), así que un rango de 12 meses devuelve solo las últimas
+    ~5 semanas sin ningún error. Además el filtro gte/lte de `fecha` se ignora
+    con frecuencia. `fecha eq` no sufre ninguna de las dos cosas.
+
+    Los 429 los maneja `medilink._get` (backoff 3/6/12s, carril batch); un día
+    que igual falla queda en `fechas_fallidas` y se reintenta una vez al final
+    tras una pausa larga (patrón del análisis 2026-08-05).
+    """
+    from medilink import _get_shared_client, use_batch_lane, MedilinkRateLimited
+    from session import system_state_set
+
+    use_batch_lane()  # guardrail 429: crons/syncs jamás por el carril del paciente
+
+    hoy = datetime.now(_CLT).date()
+    desde = (hoy - timedelta(days=dias_atras)).isoformat()
+    hasta = (hoy + timedelta(days=dias_adelante)).isoformat()
+    # de lo más nuevo a lo más viejo: si el barrido se corta, lo fresco ya quedó
+    fechas = [(hoy + timedelta(days=d)).isoformat()
+              for d in range(dias_adelante, -dias_atras - 1, -1)]
+
+    ensure_ausentismo_table()
+    client = _get_shared_client()
+    ahora = datetime.now(_CLT).isoformat(timespec="seconds")
+    total = 0
+    fallidas: list[str] = []
+    buffer: list[tuple] = []
+
+    async def _procesar(fecha: str) -> None:
+        nonlocal total
+        try:
+            filas = await _citas_de_un_dia(client, fecha, ahora)
+            buffer.extend(filas)
+            total += len(filas)
+        except (MedilinkRateLimited, httpx.RequestError) as e:
+            fallidas.append(fecha)
+            log.warning("ausentismo.recolectar: día %s falló (%s)", fecha, e)
+
+    for fecha in fechas:
+        await _procesar(fecha)
+        if len(buffer) >= 1200:
+            _guardar(buffer)
+            buffer.clear()
+        await asyncio.sleep(_THROTTLE_PAG)
+    _guardar(buffer)
+    buffer.clear()
+
+    # segunda pasada única para los días que se cayeron por saturación
+    if fallidas:
+        log.info("ausentismo.recolectar: reintentando %d día(s) fallido(s) tras pausa", len(fallidas))
+        await asyncio.sleep(45)
+        pendientes, fallidas = fallidas, []
+        for fecha in pendientes:
+            await _procesar(fecha)
+            await asyncio.sleep(_THROTTLE_PAG * 2)
+        _guardar(buffer)
+        buffer.clear()
+
     resultado = {
         "generado_at": ahora, "desde": desde, "hasta": hasta,
-        "paginas": paginas, "citas_vistas": total_vistas,
-        "citas_guardadas": len(filas), "truncado": truncado,
+        "dias_barridos": len(fechas), "citas_guardadas": total,
+        "fechas_fallidas": fallidas,
     }
     system_state_set(_STATE_KEY, json.dumps(resultado, ensure_ascii=False))
-    log.info("ausentismo.recolectar: %d páginas, %d citas en rango %s→%s (truncado=%s)",
-             paginas, len(filas), desde, hasta, truncado)
+    log.info("ausentismo.recolectar: %d días (%s→%s), %d citas, %d día(s) sin recuperar",
+             len(fechas), desde, hasta, total, len(fallidas))
     return resultado
 
 

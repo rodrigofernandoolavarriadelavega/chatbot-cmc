@@ -362,9 +362,12 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 
 ### 2026-08-05 — Módulo Alma "Ausentismo" — ranking pacientes que no asisten
 - **`app/ausentismo.py`** (nuevo): tabla local `ausentismo_citas` + recolector
-  nocturno 04:50 CLT (Medilink `/citas` paginado, carril batch, re-filtro
-  cliente-side de fecha, corte temprano por orden id DESC). Backfill 12 meses
-  automático la primera noche. Metodología validada 2026-08-05: no-show =
+  nocturno 04:50 CLT que camina `/citas` DÍA POR DÍA con `fecha eq` (carril
+  batch, backoff de `_get`). **Gotcha nuevo medido en prod**: una consulta por
+  RANGO de fechas corta la paginación en ~25 páginas (~1.250 filas) sin error
+  — un rango de 12 meses devuelve solo ~5 semanas; `fecha eq` no sufre eso.
+  Backfill 12 meses automático la primera noche; días caídos por 429 se
+  reintentan al final tras pausa. Metodología validada 2026-08-05: no-show =
   id_estado=8 & anulacion=0 · excluye id_estado=14 (reagenda) · dedup por
   (paciente, día, profesional) con precedencia atendida > no_show > anulada.
 - **`app/ausentismo_routes.py`** (nuevo): `/alma/ausentismo` (HTML) +
