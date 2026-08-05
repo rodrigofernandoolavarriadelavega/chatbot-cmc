@@ -450,12 +450,18 @@ def crear_abono_pendiente(*, phone: str, paciente_id, paciente_nombre: str, rut:
         # y la pregunta de desambiguación habría ido al teléfono abandonado.
         # El intento más nuevo reemplaza al anterior.
         if rut:
+            # RUT normalizado a solo dígitos+DV: el mismo paciente llega una
+            # vez como '16216027-3' y otra como '16.216.027-3' (caso Pamela
+            # 2026-08-04, abonos 16/18 — la comparación literal no los vio
+            # iguales y el dedupe no disparó).
+            _rut_norm = re.sub(r"[^0-9Kk]", "", rut).upper()
             conn.execute("""
                 UPDATE abono_pendientes
                 SET estado='reemplazado', updated_at=datetime('now')
-                WHERE estado='pendiente' AND rut=? AND monto=?
+                WHERE estado='pendiente' AND monto=?
                   AND CAST(id_profesional AS TEXT)=CAST(? AS TEXT)
-            """, (rut, int(monto), id_profesional))
+                  AND UPPER(REPLACE(REPLACE(rut,'.',''),'-','')) = ?
+            """, (int(monto), id_profesional, _rut_norm))
         conn.execute("""
             INSERT INTO abono_pendientes
                 (token, phone, paciente_id, paciente_nombre, rut, monto,

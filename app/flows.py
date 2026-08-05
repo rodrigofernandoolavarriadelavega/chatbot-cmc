@@ -16142,6 +16142,32 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     except Exception as _e_ab:
         log.warning("procesar_imagen_abono: INSERT abonos_cmc falló: %s", _e_ab)
 
+    # ── Consumir el abono del gate + registrar en citas_bot ──────────────────
+    # Sin esto (bug hasta 2026-08-05, caso Marjorie abono 21): el abono
+    # quedaba 'pendiente' → si el correo del banco llegaba minutos después,
+    # dentro de la ventana, el matcher lo veía vivo y creaba una SEGUNDA cita
+    # (misma clase de duplicado que Bryan). Y sin citas_bot la cita quedaba
+    # fuera de recordatorios y de la detección de cancelaciones.
+    try:
+        from abono_transferencia import (get_abono_pendiente_activo_por_phone as _gapp_ok,
+                                         _tomar_abono_atomico as _taa_ok)
+        _ap_ok = _gapp_ok(phone)
+        if _ap_ok and _ap_ok.get("estado") == "pendiente":
+            _taa_ok(_ap_ok["id"], "pendiente", "confirmado",
+                    confirmado_at=now_cl.isoformat(),
+                    confirmado_por="foto_vision", id_cita=id_cita)
+    except Exception as _e_tk:
+        log.warning("procesar_imagen_abono: no se pudo consumir abono_pendiente: %s", _e_tk)
+    try:
+        from session import save_cita_bot as _scb_ab
+        _scb_ab(phone, id_cita, (_area_pc or "Psiquiatría").lower(),
+                slot.get("profesional", ""), slot.get("fecha", ""),
+                slot.get("hora_inicio", ""), "particular",
+                paciente_nombre=paciente.get("nombre", ""),
+                id_paciente_medilink=paciente.get("id"))
+    except Exception as _e_scb:
+        log.warning("procesar_imagen_abono: save_cita_bot falló: %s", _e_scb)
+
     # ── Confirmación al paciente ──────────────────────────────────────────────
     nombre_corto = _first_name(paciente.get("nombre", ""))
     saludo = f"*{nombre_corto}*" if nombre_corto else "Tu hora"
