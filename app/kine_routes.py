@@ -33,7 +33,7 @@ Auth: mismo patrón que inventario_routes / pagos_routes.
 import csv
 import io
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request
@@ -243,7 +243,88 @@ def _compute(meses: int = 6, scope_prof: int | None = None):
     return {"kpis": kpis, "pacientes": pacientes, "carga": carga, "source_status": status}
 
 
+def _calendario(meses: int = 3, scope_prof: int | None = None):
+    """Agrupa las sesiones de kinesiología por día (caja real, prof 21/77).
+    Calca `ortodoncia_routes._calendario`, con dos diferencias porque kine tiene
+    2 kinesiólogos (ortodoncia tiene solo 1 profesional):
+      - la key de dedup por día es (paciente_id, profesional_id), no solo paciente_id
+        (si un día ambos kines atienden al mismo paciente, se cuentan por separado);
+      - cada paciente lleva `profesional_id`/`profesional` para que el front los pinte
+        con color distinto. No hay clasificación por monto (instalación/control no
+        existe en kine) — 'nuevo' = arranca episodio (hueco > GAP_NUEVO_EPISODIO)."""
+    hist, status = _bi_rows(max(meses, 9), scope_prof)  # ventana ancha solo para clasificar
+    corte = (_today() - timedelta(days=meses * 31)).isoformat()
+
+    # 1) visitas por paciente, ordenadas, para detectar inicios de episodio
+    porpac: dict[int, list] = {}
+    for r in hist:
+        f = (r.get("fecha") or "")[:10]
+        if not f:
+            continue
+        porpac.setdefault(r["paciente_id"], []).append((f, r))
+    es_inicio: dict[tuple, bool] = {}  # (pid, fecha) -> bool
+    for pid, visitas in porpac.items():
+        visitas.sort(key=lambda x: x[0])
+        prev = None
+        for f, _r in visitas:
+            d = datetime.strptime(f, "%Y-%m-%d").date()
+            inicio = prev is None or (d - prev).days > GAP_NUEVO_EPISODIO
+            es_inicio[(pid, f)] = es_inicio.get((pid, f)) or inicio
+            prev = d
+
+    # 2) agrupar por día (solo días dentro de la ventana pedida), separando por kinesiólogo
+    pordia: dict[str, dict] = {}
+    for r in hist:
+        f = (r.get("fecha") or "")[:10]
+        if not f or f < corte:
+            continue
+        pid = r["paciente_id"]
+        prof_id = r.get("profesional_id")
+        dia = pordia.setdefault(f, {"fecha": f, "pacientes": {}})
+        key = (pid, prof_id)
+        p = dia["pacientes"].setdefault(key, {
+            "paciente_id": pid,
+            "paciente": r.get("paciente") or f"Paciente {pid}",
+            "telefono": r.get("telefono") or "",
+            "profesional_id": prof_id,
+            "profesional": r.get("profesional") or "",
+            "monto": 0.0,
+            "nuevo": es_inicio.get((pid, f), False),
+        })
+        p["monto"] += float(r.get("monto") or 0)
+
+    dias = []
+    for f, dia in pordia.items():
+        pacs = sorted(dia["pacientes"].values(),
+                      key=lambda x: (not x["nuevo"], x["profesional"] or "", -x["monto"]))
+        n_nuevos = sum(1 for p in pacs if p["nuevo"])
+        por_prof: dict[str, int] = {}
+        for p in pacs:
+            nom = p["profesional"] or "—"
+            por_prof[nom] = por_prof.get(nom, 0) + 1
+        dias.append({
+            "fecha": f,
+            "n_pacientes": len(pacs),
+            "n_nuevos": n_nuevos,
+            "n_encurso": len(pacs) - n_nuevos,
+            "total": round(sum(p["monto"] for p in pacs)),
+            "por_profesional": por_prof,
+            "pacientes": pacs,
+        })
+    dias.sort(key=lambda d: d["fecha"], reverse=True)
+    return {"dias": dias, "source_status": status}
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.get("/calendario")
+async def calendario(meses: int = Query(3, ge=1, le=24),
+                     token: str | None = Query(None),
+                     cmc_session: str | None = Cookie(None),
+                     request: Request = None):
+    _tok, scope = _require_admin(request, token, cmc_session)
+    return _calendario(meses, scope)
+
 
 @router.get("/resumen")
 async def resumen(meses: int = Query(6, ge=1, le=24),
