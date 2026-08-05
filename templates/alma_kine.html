@@ -161,6 +161,38 @@
   }
   .cal-nav { width:30px; height:30px; border:1px solid var(--border); background:#fff; color:var(--blue); border-radius:8px; cursor:pointer; font-size:16px; font-weight:700; line-height:1; display:flex; align-items:center; justify-content:center; }
   .cal-nav:hover { background:var(--aqua-s); border-color:var(--aqua); }
+
+  /* ── Pestañas del módulo ── */
+  .tabs { display:flex; gap:6px; margin:0 0 16px; flex-wrap:wrap; }
+  .tab { padding:9px 16px; border-radius:11px; border:1.5px solid var(--border); background:#fff; color:var(--mute);
+    font-weight:700; font-size:13px; cursor:pointer; transition:.15s; white-space:nowrap; }
+  .tab.on { background:var(--navy); border-color:var(--navy); color:#fff; box-shadow:var(--sh-sm); }
+  .view { display:none; } .view.on { display:block; }
+
+  /* ── Pestaña "Pacientes con seguro complementario" ── */
+  .sc-corte { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; color:var(--mute);
+    background:var(--bg); border:1px solid var(--border); padding:4px 10px; border-radius:999px; }
+  .kpi.good .k-val { color:var(--green); } .kpi.good::after { background:var(--green-s); }
+  .kpi.mutek .k-val { color:var(--mute); } .kpi.mutek::after { background:var(--bg); }
+  .estado.activo { color:var(--green); background:var(--green-s); } .estado.activo .dot { background:var(--green); }
+  .estado.dormido { color:var(--mute); background:var(--bg); } .estado.dormido .dot { background:var(--mute); }
+  .tel-link { color:var(--blue); text-decoration:none; font-family:ui-monospace,Menlo,monospace; font-size:12px; }
+  .tel-link:hover { text-decoration:underline; }
+  .sc-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:14px; }
+  .sc-act { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh-sm);
+    padding:16px 17px; border-left:4px solid var(--aqua); transition:.15s; }
+  .sc-act:hover { box-shadow:var(--sh-md); transform:translateY(-2px); }
+  .sc-act.a { border-left-color:var(--green); } .sc-act.a .ai { background:var(--green-s); color:var(--green); }
+  .sc-act.b { border-left-color:var(--orange); } .sc-act.b .ai { background:var(--orange-s); color:var(--orange); }
+  .sc-act.c { border-left-color:var(--red); } .sc-act.c .ai { background:var(--red-s); color:var(--red); }
+  .sc-act .ai { width:32px; height:32px; border-radius:9px; display:grid; place-items:center; margin-bottom:11px; }
+  .sc-act .ai svg { width:17px; height:17px; }
+  .sc-act .tag-n { font-size:10.5px; font-weight:700; color:var(--mute); text-transform:uppercase; letter-spacing:.05em;
+    display:block; margin-bottom:6px; }
+  .sc-act h4 { font-size:13.5px; font-weight:800; color:var(--navy); margin:0 0 6px; }
+  .sc-act p { font-size:12px; color:var(--mute); line-height:1.55; margin:0; }
+  .sc-act p b { color:var(--navy); }
+  @media (max-width:620px) { .sc-actions { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -181,6 +213,12 @@
   </div>
 
   <div class="wrap">
+    <div class="tabs">
+      <div class="tab on" data-v="programa" onclick="tab('programa')">Programa</div>
+      <div class="tab" data-v="seguro" onclick="tab('seguro')">Pacientes con seguro complementario</div>
+    </div>
+
+    <div class="view on" id="v-programa">
     <div class="kpis" id="kpis"></div>
 
     <div class="banner">
@@ -222,6 +260,77 @@
       Datos del historial real de atenciones (Medilink → BI). Un <b>episodio</b> agrupa sesiones seguidas; un hueco de más de 45 días abre un tratamiento nuevo.
       <b>Riesgo</b> = 8 a 21 días sin volver (cadencia kine ~7d) · <b>Abandono</b> = 22 a 45 días. El plan de sesiones es opcional: si lo cargas, ves el % de avance.
     </div>
+    </div><!-- /view programa -->
+
+    <div class="view" id="v-seguro">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <span class="sc-corte">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Corte al 05-08-2026
+        </span>
+      </div>
+
+      <div class="kpis" id="sc-kpis" style="margin-bottom:16px"></div>
+
+      <div class="banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 8v4M12 16h.01" stroke-linecap="round"/></svg>
+        <div class="bt"><b>Qué es esta lista:</b> pacientes de kinesiología con probable seguro complementario a Fonasa, detectados por un patrón de copago residual bajo en caja. Histórico <b>09-sep-2021 → 04-ago-2026</b>, fuentes <span style="font-family:ui-monospace,monospace;background:var(--aqua-s);color:var(--blue);padding:1px 6px;border-radius:5px;font-size:11px">bi_atenciones</span> + módulo de caja. 224 pagos bajos sustentan el cruce, 72,8% ≤ $2.000 (señal más fuerte). El RUT/id del paciente solo está poblado en ~25% de los registros de caja — esta lista es un piso conservador, no el universo completo.</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+          <input id="sc-q" type="text" placeholder="Buscar paciente, RUT o teléfono…" autocomplete="off">
+        </div>
+        <div class="chips" id="sc-chips"></div>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead><tr>
+            <th>Paciente</th>
+            <th class="hide-sm">Teléfono</th>
+            <th class="num">Sesiones</th>
+            <th class="num">Pagos bajos</th>
+            <th class="num">Copago prom.</th>
+            <th>Última atención</th>
+            <th class="ctr">Estado</th>
+          </tr></thead>
+          <tbody id="sc-tbody"></tbody>
+        </table>
+        <div id="sc-empty" class="empty" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+          <div>Sin resultados para el filtro/búsqueda actual.</div>
+        </div>
+      </div>
+
+      <h3 style="margin:20px 0 12px;font-size:12px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.05em">Qué hacer con esta lista</h3>
+      <div class="sc-actions">
+        <div class="sc-act a">
+          <div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg></div>
+          <span class="tag-n">Activos con pocas sesiones</span>
+          <h4>Asegurar que completen el programa</h4>
+          <p>Copago residual ~$2.000, fricción mínima para volver. Priorizar a quienes llevan pocas sesiones dentro de un programa activo: cada control es prácticamente gratis para el paciente y sostiene la adherencia clínica.</p>
+        </div>
+        <div class="sc-act b">
+          <div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></div>
+          <span class="tag-n">Dormidos con historial largo</span>
+          <h4>Evaluar reevaluación clínica documentada</h4>
+          <p>Pacientes con muchas sesiones previas y sin atención hace meses. Si queda déficit funcional pendiente, corresponde una nueva orden médica legítima — no reactivar solo por el patrón de pago, sino por indicación clínica real, con evaluación registrada en la ficha.</p>
+        </div>
+        <div class="sc-act c">
+          <div class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+          <span class="tag-n">Post-alta funcional</span>
+          <h4>Ofrecer plan particular de mantención</h4>
+          <p>El bono Fonasa <b>no cubre mantención</b> — la Res. 49/2009, Grupo 06, financia solo "patologías recuperables, con carácter curativo". Para quienes ya dieron de alta funcional pero quieren continuar, el camino correcto es un plan particular, no extender el bono.</p>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--mute);margin-top:16px;line-height:1.6">
+        <b>Método:</b> histórico completo 09-sep-2021 → 04-ago-2026. Universo: 6.077 atenciones de kine, 638 pacientes únicos (kinesiólogos Etcheverry y Armijo). Se cruzaron pagos del módulo de caja: copagos mayores a $0 y menores a $7.000, en efectivo o transferencia, como señal de seguro complementario cubriendo la diferencia del copago Fonasa. 224 pagos bajos sustentan el cruce: 163 (72,8%) ≤$2.000 · 57 (25,4%) entre $2.001 y $5.000 · 4 (1,8%) entre $5.001 y $6.999.<br>
+        <span style="color:var(--orange);font-weight:700">Cobertura de datos:</span> 40 pagos bajos adicionales (15%) no fueron atribuibles con confianza porque el RUT/id del paciente solo está poblado en ~25% de los registros de caja. Snapshot estático, corte al 05-08-2026 — no se actualiza en vivo.
+      </div>
+    </div><!-- /view seguro -->
   </div>
 
   <!-- Modal Plan -->
@@ -464,6 +573,87 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySel
 document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click', e=>{ if(e.target===bg) bg.classList.remove('show'); }));
 
 loadAll();
+
+// ── Pestañas ──
+function tab(v){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.v===v));
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('on', el.id==='v-'+v));
+}
+
+// ── Pestaña "Pacientes con seguro complementario" — snapshot estático, corte 05-08-2026 ──
+const SC_DATA = [{"rut": "10350005-2", "nombre": "Juan Antonio Jara Friz", "telefono": "+56934123545", "sesiones": 51, "pagos_bajos": 10, "copago_prom": 4158, "ultima": "2026-08-04", "estado": "activo"}, {"rut": "15196738-8", "nombre": "Danilo Muñoz Godoy", "telefono": "+56953096008", "sesiones": 43, "pagos_bajos": 14, "copago_prom": 1588, "ultima": "2026-08-03", "estado": "activo"}, {"rut": "24186063-9", "nombre": "Yemery Muñoz Fernandez", "telefono": "+56953096008", "sesiones": 46, "pagos_bajos": 9, "copago_prom": 1669, "ultima": "2026-08-03", "estado": "activo"}, {"rut": "9235325-7", "nombre": "Hilda Del Rosario Medina Guerrero", "telefono": "936375335", "sesiones": 6, "pagos_bajos": 1, "copago_prom": 3840, "ultima": "2026-08-03", "estado": "activo"}, {"rut": "13103962-K", "nombre": "Jorge Vera Tisnao", "telefono": "930364173", "sesiones": 1, "pagos_bajos": 1, "copago_prom": 2070, "ultima": "2026-08-03", "estado": "activo"}, {"rut": "13384811-8", "nombre": "Sandra Campos Medina", "telefono": "+56962203867", "sesiones": 27, "pagos_bajos": 2, "copago_prom": 1570, "ultima": "2026-07-31", "estado": "activo"}, {"rut": "19909151-4", "nombre": "Diego Medina Fernandez", "telefono": "+56976064813", "sesiones": 13, "pagos_bajos": 5, "copago_prom": 1670, "ultima": "2026-07-29", "estado": "activo"}, {"rut": "24342782-7", "nombre": "Fernanda Josefa Rivera Cisterna", "telefono": "+56 9 7323 3238", "sesiones": 3, "pagos_bajos": 1, "copago_prom": 2070, "ultima": "2026-07-29", "estado": "activo"}, {"rut": "28432058-1", "nombre": "Martina Isidora Valdebenito Bustamante", "telefono": "+56981712917", "sesiones": 2, "pagos_bajos": 1, "copago_prom": 2070, "ultima": "2026-07-28", "estado": "activo"}, {"rut": "9998525-9", "nombre": "Luis Silva Mora", "telefono": "+56981988409", "sesiones": 75, "pagos_bajos": 8, "copago_prom": 3098, "ultima": "2026-07-22", "estado": "activo"}, {"rut": "22885117-5", "nombre": "Isidora Ignacia Araneda Flores", "telefono": "987157012", "sesiones": 1, "pagos_bajos": 1, "copago_prom": 2070, "ultima": "2026-07-20", "estado": "activo"}, {"rut": "20512871-9", "nombre": "Sebastian Valenzuela La Regla", "telefono": "+56976565625", "sesiones": 96, "pagos_bajos": 28, "copago_prom": 1568, "ultima": "2026-07-17", "estado": "activo"}, {"rut": "16567318-2", "nombre": "Victor Salamanca Marín", "telefono": "+56938752132", "sesiones": 25, "pagos_bajos": 19, "copago_prom": 1649, "ultima": "2026-07-17", "estado": "activo"}, {"rut": "14072145-K", "nombre": "Esteban Salas Aravena", "telefono": "995301576", "sesiones": 3, "pagos_bajos": 2, "copago_prom": 1820, "ultima": "2026-07-15", "estado": "activo"}, {"rut": "22271374-9", "nombre": "Matias Tell Tell", "telefono": "+56933436620", "sesiones": 23, "pagos_bajos": 2, "copago_prom": 1820, "ultima": "2026-07-13", "estado": "activo"}, {"rut": "19510516-2", "nombre": "Nicolas Alarcón Vergara", "telefono": "+56944426577", "sesiones": 18, "pagos_bajos": 12, "copago_prom": 1828, "ultima": "2026-07-10", "estado": "activo"}, {"rut": "14905397-2", "nombre": "Alejandra Salazar Cisterna", "telefono": "+56965838912", "sesiones": 11, "pagos_bajos": 10, "copago_prom": 1670, "ultima": "2026-07-09", "estado": "activo"}, {"rut": "22544685-7", "nombre": "Cristopher Gabriel Fernandez Sanhueza", "telefono": "+56951055314", "sesiones": 29, "pagos_bajos": 7, "copago_prom": 1570, "ultima": "2026-07-06", "estado": "activo"}, {"rut": "11449501-8", "nombre": "Rosa Flores Henríquez", "telefono": "+56987157012", "sesiones": 40, "pagos_bajos": 6, "copago_prom": 1554, "ultima": "2026-06-22", "estado": "activo"}, {"rut": "14610838-5", "nombre": "Leyla Castillo Velásquez", "telefono": "+56957941591", "sesiones": 48, "pagos_bajos": 13, "copago_prom": 1578, "ultima": "2026-06-19", "estado": "activo"}, {"rut": "23578627-3", "nombre": "Francisca Fuentealba Salazar", "telefono": "965838912", "sesiones": 1, "pagos_bajos": 1, "copago_prom": 2072, "ultima": "2026-06-18", "estado": "activo"}, {"rut": "21379712-3", "nombre": "Rodrigo Ignacio Betanzo Salamanca", "telefono": "+56982353297", "sesiones": 52, "pagos_bajos": 14, "copago_prom": 1567, "ultima": "2026-06-09", "estado": "activo"}, {"rut": "15197898-3", "nombre": "Cristian Andres Arias Torres", "telefono": "+56936484654", "sesiones": 40, "pagos_bajos": 8, "copago_prom": 2340, "ultima": "2026-06-03", "estado": "dormido"}, {"rut": "24123963-2", "nombre": "Monserrat Alejandra Isidora Pezo Retamal", "telefono": "+56989033433", "sesiones": 1, "pagos_bajos": 1, "copago_prom": 2070, "ultima": "2026-06-01", "estado": "dormido"}, {"rut": "15196592-K", "nombre": "Dionisio Parra Fuentes", "telefono": "+56949790007", "sesiones": 5, "pagos_bajos": 2, "copago_prom": 1566, "ultima": "2026-04-20", "estado": "dormido"}, {"rut": "16304825-6", "nombre": "Karina Neira Aguilar", "telefono": "+56949790007", "sesiones": 5, "pagos_bajos": 1, "copago_prom": 1566, "ultima": "2026-04-20", "estado": "dormido"}, {"rut": "16762104-K", "nombre": "Manuel Mardones Quinteros", "telefono": "+56954362552", "sesiones": 17, "pagos_bajos": 1, "copago_prom": 4980, "ultima": "2026-04-10", "estado": "dormido"}, {"rut": "15197958-0", "nombre": "Angeline Mariela Castillo Jara", "telefono": "+56975811662", "sesiones": 14, "pagos_bajos": 5, "copago_prom": 1545, "ultima": "2026-04-01", "estado": "dormido"}, {"rut": "14071341-4", "nombre": "Esteban Ruiz Rodríguez", "telefono": "+56989768209", "sesiones": 36, "pagos_bajos": 8, "copago_prom": 1598, "ultima": "2026-03-10", "estado": "dormido"}, {"rut": "13137949-8", "nombre": "Luis Oliva Vera", "telefono": "+56956654129", "sesiones": 2, "pagos_bajos": 1, "copago_prom": 1540, "ultima": "2026-02-12", "estado": "dormido"}, {"rut": "15197095-8", "nombre": "Olga Fernandez Rojas", "telefono": "+56953096008", "sesiones": 24, "pagos_bajos": 1, "copago_prom": 1540, "ultima": "2025-11-14", "estado": "dormido"}, {"rut": "16013571-9", "nombre": "Hector Fabian Reyes Palma", "telefono": "+56946718955", "sesiones": 41, "pagos_bajos": 1, "copago_prom": 1540, "ultima": "2025-10-29", "estado": "dormido"}, {"rut": "16515086-4", "nombre": "Felipe Carrasco Carrasco", "telefono": "+56991544539", "sesiones": 32, "pagos_bajos": 6, "copago_prom": 1557, "ultima": "2025-02-04", "estado": "dormido"}, {"rut": "27703156-6", "nombre": "Ignacia Villarroel Carrasco", "telefono": "+56954271464", "sesiones": 1, "pagos_bajos": 1, "copago_prom": 1480, "ultima": "2024-11-20", "estado": "dormido"}, {"rut": "19271015-4", "nombre": "Jorge Andres Lopez Jimenez", "telefono": "+56953875201", "sesiones": 15, "pagos_bajos": 2, "copago_prom": 1717, "ultima": "2024-10-23", "estado": "dormido"}, {"rut": "19815050-9", "nombre": "Nicolas Silva Coloma", "telefono": "+56995234569", "sesiones": 11, "pagos_bajos": 6, "copago_prom": 4165, "ultima": "2024-10-07", "estado": "dormido"}, {"rut": "18855714-7", "nombre": "Carla Cifuentes Medina", "telefono": "+56974422380", "sesiones": 10, "pagos_bajos": 3, "copago_prom": 1637, "ultima": "2024-09-27", "estado": "dormido"}, {"rut": "16916719-2", "nombre": "Sandra Villagrán Placencia", "telefono": "+56934205141", "sesiones": 10, "pagos_bajos": 5, "copago_prom": 3126, "ultima": "2024-09-25", "estado": "dormido"}, {"rut": "18687103-0", "nombre": "Isabel Paulina Aburto Moya", "telefono": "985710328", "sesiones": 10, "pagos_bajos": 2, "copago_prom": 2586, "ultima": "2024-09-02", "estado": "dormido"}, {"rut": "16724010-0", "nombre": "Cristian Verdugo Neira", "telefono": "+56964475953", "sesiones": 7, "pagos_bajos": 2, "copago_prom": 1716, "ultima": "2024-09-02", "estado": "dormido"}, {"rut": "17570068-4", "nombre": "Raúl Pereira Salamanca", "telefono": "+56995058448", "sesiones": 6, "pagos_bajos": 1, "copago_prom": 1478, "ultima": "2024-08-19", "estado": "dormido"}];
+
+const SC_EST_LABEL = { activo: "Activo", dormido: "Dormido" };
+let SC_STATE = { estado: "todos", q: "" };
+
+function scTelHref(raw){
+  let t = (raw||'').replace(/[^0-9]/g,'');
+  if(!t) return null;
+  if(t.length===9 && t.startsWith('9')) t = '56'+t;
+  if(t.length===8) t = '569'+t;
+  return t ? ('tel:+'+t) : null;
+}
+function scClp(n){ return "$"+Math.round(n).toLocaleString("es-CL"); }
+function scFecha(s){
+  const [y,m,d]=s.split("-");
+  const meses=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return d+"-"+meses[parseInt(m,10)-1]+"-"+y;
+}
+function scConteos(){
+  const c={};
+  ["todos","activo","dormido"].forEach(k=> c[k] = k==="todos" ? SC_DATA.length : SC_DATA.filter(p=>p.estado===k).length);
+  return c;
+}
+function renderSCKpis(){
+  const c = scConteos();
+  document.getElementById('sc-kpis').innerHTML = `
+    <div class="kpi"><div class="k-label">Pacientes con señal</div><div class="k-val">${c.todos}</div><div class="k-sub">de 638 pacientes de kine · 6,4% del universo</div></div>
+    <div class="kpi good"><div class="k-label">Activos</div><div class="k-val">${c.activo}</div><div class="k-sub">con atención de kine en los últimos 60 días</div></div>
+    <div class="kpi mutek"><div class="k-label">Dormidos</div><div class="k-val">${c.dormido}</div><div class="k-sub">sin atención hace más de 60 días</div></div>
+    <div class="kpi warn"><div class="k-label">Copago ≤ $2.000</div><div class="k-val">72,8%</div><div class="k-sub">163 de 224 pagos bajos que sustentan el cruce</div></div>
+    <div class="kpi money"><div class="k-label">Pagos bajos analizados</div><div class="k-val">224</div><div class="k-sub">&gt;$0 y &lt;$7.000, efectivo o transferencia</div></div>`;
+}
+function renderSCChips(){
+  const c = scConteos();
+  const lbl = {todos:'Todos', activo:'Activos', dormido:'Dormidos'};
+  document.getElementById('sc-chips').innerHTML = ["todos","activo","dormido"].map(k=>
+    `<div class="chip ${SC_STATE.estado===k?'active':''}" onclick="setSCEstado('${k}')">${lbl[k]}<span class="cnt">${c[k]}</span></div>`
+  ).join('');
+}
+function scFiltered(){
+  // orden fijo por recencia: la atención más reciente primero
+  let rows = SC_DATA.slice().sort((a,b)=> new Date(b.ultima)-new Date(a.ultima));
+  if(SC_STATE.estado!=="todos") rows = rows.filter(p=>p.estado===SC_STATE.estado);
+  if(SC_STATE.q){
+    const q = SC_STATE.q.toLowerCase();
+    rows = rows.filter(p=> p.nombre.toLowerCase().includes(q) || p.rut.toLowerCase().includes(q) || p.telefono.toLowerCase().includes(q));
+  }
+  return rows;
+}
+function renderSCTable(){
+  const rows = scFiltered();
+  const tb = document.getElementById('sc-tbody'), empty = document.getElementById('sc-empty');
+  if(!rows.length){ tb.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tb.innerHTML = rows.map(p=>{
+    const href = scTelHref(p.telefono);
+    return `<tr>
+      <td><div class="pac-name">${esc(p.nombre)}</div><div class="pac-meta">${esc(p.rut)}</div></td>
+      <td class="hide-sm">${href?`<a class="tel-link" href="${href}">${esc(p.telefono)}</a>`:esc(p.telefono)}</td>
+      <td class="num">${p.sesiones}</td>
+      <td class="num">${p.pagos_bajos}</td>
+      <td class="num">${scClp(p.copago_prom)}</td>
+      <td>${scFecha(p.ultima)}</td>
+      <td class="ctr"><span class="estado ${p.estado}"><span class="dot"></span>${SC_EST_LABEL[p.estado]}</span></td>
+    </tr>`;
+  }).join('');
+}
+function setSCEstado(e){ SC_STATE.estado=e; renderSCChips(); renderSCTable(); }
+document.getElementById('sc-q').addEventListener('input', e=>{ SC_STATE.q = e.target.value.trim(); renderSCTable(); });
+
+renderSCKpis();
+renderSCChips();
+renderSCTable();
 </script>
 </body>
 </html>
