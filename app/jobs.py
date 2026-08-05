@@ -75,6 +75,29 @@ def _canal_de_phone(phone: str) -> str:
     return "unknown"
 
 
+def recepcion_intervino_reciente(phone: str, horas: int = 6) -> bool:
+    """¿Recepción escribió en esta conversación en las últimas N horas?
+
+    Si recepción está (o estuvo hace poco) manejando el caso, el bot NO
+    manda reenganche ni persistencia: el paciente probablemente ya resolvió
+    por ese canal — y muchos de esos pacientes son invisibles para
+    verificar_cita_externa porque dieron sus datos a recepción en texto
+    libre y el bot nunca capturó su RUT (caso 56996666844, 2026-08-05:
+    "Ok quedó agendado, gracias" 12:40 → toque de persistencia 13:15)."""
+    try:
+        with _session_conn() as c:
+            row = c.execute(
+                "SELECT 1 FROM conversation_events WHERE phone=? "
+                "AND event IN ('recepcionista_respondio','auto_takeover_recep_reply') "
+                "AND ts >= datetime('now', ?) LIMIT 1",
+                (phone, f"-{int(horas)} hours"),
+            ).fetchone()
+        return bool(row)
+    except Exception as e:
+        log.warning("recepcion_intervino_reciente %s: %s", phone, e)
+        return False
+
+
 async def verificar_cita_externa(phone: str) -> str:
     """¿El RUT conocido de este phone ya tiene cita futura ACTIVA en Medilink?
 
@@ -409,6 +432,12 @@ async def _enviar_reenganche():
                 "¿Te la reservo antes de que se llene?"
             )
 
+        # Regla del dueño (2026-08-05): si recepción está manejando esta
+        # conversación (escribió en las últimas horas), el bot no se mete.
+        if recepcion_intervino_reciente(phone):
+            log_event(phone, "reenganche_skip_recepcion_activa", {"state": state})
+            save_session(phone, "IDLE", {})
+            continue
         # Regla del dueño (2026-08-05): antes de reenganchar, mirar el HIS —
         # el paciente pudo haber agendado por TELÉFONO con recepción sin
         # pasar por el bot. Con cita futura activa, "tienes una reserva

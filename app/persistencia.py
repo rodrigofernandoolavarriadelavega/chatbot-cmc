@@ -293,11 +293,26 @@ async def job_persistencia_contacto() -> dict:
             n_skip_budget += 1
             continue
 
+        # Regla del dueño (2026-08-05): si recepción escribió en esta
+        # conversación en las últimas horas, el caso es de recepción — el
+        # toque "¿sigues necesitando la hora?" tras un "Ok quedó agendado"
+        # de recepción confunde (caso 56996666844). Cierra la consulta:
+        # recepción es dueña del desenlace.
+        from jobs import recepcion_intervino_reciente, verificar_cita_externa
+        if recepcion_intervino_reciente(phone):
+            from session import log_event as _le_rec
+            _le_rec(phone, "persistencia_skip_recepcion_activa", {"funnel_id": fid})
+            with db() as conn:
+                conn.execute(
+                    "UPDATE consultas_persistencia SET estado='no_explicito', "
+                    "motivo_cierre='recepcion_intervino', closed_at=datetime('now'), "
+                    "updated_at=datetime('now') WHERE id=?", (cid,))
+                conn.commit()
+            continue
         # Regla del dueño (2026-08-05): mirar el HIS antes del toque 2 — si el
         # paciente ya agendó por teléfono con recepción (no pasa por el bot),
         # "¿sigues necesitando la hora?" lo confunde y puede hacerlo agendar
         # DE NUEVO (caso Alexander: terminó con cita duplicada el viernes).
-        from jobs import verificar_cita_externa
         _cita_ext = await verificar_cita_externa(phone)
         if _cita_ext == "tiene":
             from session import log_event as _le_ext
