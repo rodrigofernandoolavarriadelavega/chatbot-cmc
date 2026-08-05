@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Ausentismo — Alma CMC</title>
+<style>
+  /* Fuente local (regla cero-CDN del CMC): variable font servida desde /static */
+  @font-face{
+    font-family:'Montserrat';
+    src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations');
+    font-weight:400 800;
+    font-display:swap;
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,
+                  U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,
+                  U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+  }
+  :root {
+    --aqua:#4FBECE; --aqua-s:#e8f8fb; --blue:#1172AB; --navy:#0F3F68; --navy2:#0c3556;
+    --bg:#F7FBFD; --border:#d6e4ec; --text:#0F3F68; --mute:#62788a;
+    --red:#e84545; --red-s:#fdecec; --green:#23c25e; --green-s:#e7f9ee;
+    --orange:#f59e0b; --orange-s:#fef5e6; --violet:#7c6cf0; --violet-s:#efedfd;
+    --sh-sm:0 1px 3px rgba(15,63,104,.08); --sh-md:0 8px 30px rgba(15,63,104,.14);
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body { font-family:'Montserrat',-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+
+  .pg-topbar { display:flex; align-items:center; gap:12px; background:#fff; border-bottom:1px solid var(--border);
+    padding:0 18px; height:56px; box-shadow:var(--sh-sm); position:sticky; top:0; z-index:20; }
+  .pg-topbar h1 { font-size:15px; font-weight:800; margin:0; color:var(--navy); display:flex; align-items:center; gap:9px; }
+  .pg-topbar h1 svg { width:21px; height:21px; color:var(--aqua); flex-shrink:0; }
+  .pg-topbar .spacer { flex:1; }
+  .cobertura { font-size:10.5px; font-weight:600; color:var(--mute); text-align:right; line-height:1.4; }
+  .search-box { position:relative; }
+  .search-box input { font-family:inherit; font-size:12px; font-weight:500; border:1px solid var(--border);
+    border-radius:9px; padding:8px 12px 8px 32px; width:200px; color:var(--navy); background:var(--bg); transition:all .15s; }
+  .search-box input:focus { outline:none; border-color:var(--aqua); background:#fff; width:240px; }
+  .search-box svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--mute); }
+
+  .wrap { padding:18px; max-width:1320px; margin:0 auto; }
+
+  .kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:13px; margin-bottom:18px; }
+  .kpi { background:#fff; border:1px solid var(--border); border-radius:16px; padding:15px 17px; box-shadow:var(--sh-sm);
+    position:relative; overflow:hidden; }
+  .kpi::after { content:''; position:absolute; right:-18px; top:-18px; width:64px; height:64px; border-radius:50%;
+    background:var(--aqua-s); opacity:.6; }
+  .kpi .k-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
+  .kpi .k-val { font-size:25px; font-weight:800; color:var(--navy); margin-top:6px; line-height:1; position:relative; z-index:1; }
+  .kpi .k-sub { font-size:10.5px; font-weight:600; color:var(--mute); margin-top:5px; }
+  .kpi.alert .k-val { color:var(--red); }
+  .kpi.alert::after { background:var(--red-s); }
+  .kpi.warn .k-val { color:var(--orange); }
+  .kpi.warn::after { background:var(--orange-s); }
+  .kpi.ok .k-val { color:var(--green); }
+  .kpi.ok::after { background:var(--green-s); }
+
+  .banner { display:flex; align-items:flex-start; gap:11px; background:linear-gradient(100deg,#fff,var(--aqua-s));
+    border:1px solid var(--border); border-left:4px solid var(--aqua); border-radius:13px; padding:13px 16px;
+    margin-bottom:16px; box-shadow:var(--sh-sm); }
+  .banner svg { width:20px; height:20px; color:var(--aqua); flex-shrink:0; margin-top:1px; }
+  .banner b { color:var(--navy); }
+  .banner .bt { font-size:12px; color:var(--mute); line-height:1.5; }
+
+  .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:13px; flex-wrap:wrap; }
+  .toolbar label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); }
+  .chips { display:flex; flex-wrap:wrap; gap:7px; }
+  .chip { font-family:inherit; font-size:11.5px; font-weight:600; border:1px solid var(--border); background:#fff;
+    color:var(--blue); border-radius:999px; padding:6px 13px; cursor:pointer; transition:all .14s; }
+  .chip:hover { background:var(--aqua-s); border-color:var(--aqua); }
+  .chip.active { background:var(--navy); border-color:var(--navy); color:#fff; }
+  select { font-family:inherit; font-size:12px; font-weight:600; border:1px solid var(--border); border-radius:9px;
+    padding:7px 10px; color:var(--navy); background:#fff; cursor:pointer; max-width:280px; }
+  select:focus { outline:none; border-color:var(--aqua); }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh-sm); overflow:hidden; }
+  .tbl-scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--mute); padding:12px 14px; background:var(--bg); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.num, td.num { text-align:right; }
+  thead th.ctr, td.ctr { text-align:center; }
+  tbody td { padding:11px 14px; border-bottom:1px solid #eef4f8; font-size:12.5px; vertical-align:middle; }
+  tbody tr.main { cursor:pointer; }
+  tbody tr.main:hover { background:#fafdfe; }
+  .rank-n { font-weight:800; color:var(--mute); font-size:12px; }
+  .pac-name { font-weight:700; color:var(--navy); }
+  .pac-meta { font-size:11px; color:var(--mute); font-weight:500; margin-top:2px; }
+  .ns-val { font-weight:800; font-size:16px; }
+  .sev-1 .ns-val { color:var(--navy); }
+  .sev-2 .ns-val { color:var(--orange); }
+  .sev-3 .ns-val { color:var(--red); }
+  .sev-badge { display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:11px;
+    padding:3px 10px; border-radius:999px; white-space:nowrap; }
+  .sev-badge .dot { width:7px; height:7px; border-radius:50%; }
+  .sev-badge.critico { color:var(--red); background:var(--red-s); } .sev-badge.critico .dot { background:var(--red); }
+  .sev-badge.reincidente { color:var(--orange); background:var(--orange-s); } .sev-badge.reincidente .dot { background:var(--orange); }
+  .sev-badge.puntual { color:var(--mute); background:var(--bg); } .sev-badge.puntual .dot { background:var(--mute); }
+  .tasa-wrap { min-width:90px; }
+  .tasa-txt { font-weight:800; color:var(--navy); font-size:12.5px; }
+  .prog { width:78px; height:7px; background:var(--bg); border:1px solid var(--border); border-radius:999px; overflow:hidden; margin-top:4px; }
+  .prog > i { display:block; height:100%; background:var(--aqua); }
+  .prog > i.hot { background:var(--red); }
+  .prog > i.warm { background:var(--orange); }
+  .prof-chips { display:flex; flex-wrap:wrap; gap:5px; max-width:270px; }
+  .prof-chip { font-size:10.5px; font-weight:600; background:var(--aqua-s); color:var(--blue);
+    border-radius:999px; padding:3px 9px; white-space:nowrap; }
+  .prof-chip b { font-weight:800; }
+  .prox-pill { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700;
+    color:var(--green); background:var(--green-s); border-radius:999px; padding:3px 9px; margin-top:3px; }
+  .prox-pill svg { width:11px; height:11px; }
+  .sin-prox { font-size:10.5px; font-weight:600; color:var(--mute); }
+  .caret { width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;
+    border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--blue); transition:transform .18s; }
+  .caret svg { width:13px; height:13px; }
+  tr.open .caret { transform:rotate(180deg); background:var(--aqua-s); border-color:var(--aqua); }
+
+  /* fila expandida: historial */
+  tr.detail td { background:#fafdfe; padding:0 14px 14px; border-bottom:1px solid var(--border); }
+  .hist { padding:12px 4px 2px; }
+  .hist-title { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin-bottom:9px; }
+  .hist-list { display:flex; flex-direction:column; gap:6px; }
+  .hist-row { display:flex; align-items:center; gap:10px; font-size:12px; }
+  .hist-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .hist-dot.atendida { background:var(--green); }
+  .hist-dot.no_show { background:var(--red); }
+  .hist-dot.anulada { background:var(--orange); }
+  .hist-dot.otra { background:var(--mute); }
+  .hist-dot.reagenda { background:var(--border); }
+  .hist-fecha { font-weight:700; color:var(--navy); min-width:150px; }
+  .hist-prof { color:var(--mute); font-weight:600; flex:1; }
+  .hist-estado { font-weight:700; font-size:11px; padding:2px 9px; border-radius:999px; white-space:nowrap; }
+  .hist-estado.atendida { color:var(--green); background:var(--green-s); }
+  .hist-estado.no_show { color:var(--red); background:var(--red-s); }
+  .hist-estado.anulada { color:var(--orange); background:var(--orange-s); }
+  .hist-estado.otra, .hist-estado.reagenda { color:var(--mute); background:var(--bg); }
+  .hist-futura { font-size:10px; font-weight:800; color:var(--blue); background:var(--aqua-s);
+    border-radius:999px; padding:2px 8px; }
+
+  .empty { padding:46px 20px; text-align:center; color:var(--mute); }
+  .empty svg { width:38px; height:38px; color:var(--border); margin-bottom:10px; }
+  .empty .e-t { font-weight:700; color:var(--navy); font-size:14px; margin-bottom:5px; }
+  .empty .e-s { font-size:12px; line-height:1.6; max-width:460px; margin:0 auto; }
+
+  .foot { display:flex; align-items:center; gap:10px; justify-content:space-between; flex-wrap:wrap;
+    margin-top:14px; font-size:11px; color:var(--mute); font-weight:500; }
+
+  .spin { width:17px; height:17px; border:2px solid var(--aqua-s); border-top-color:var(--aqua);
+    border-radius:50%; animation:sp 0.8s linear infinite; display:inline-block; vertical-align:middle; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+
+  /* móvil: la tabla se vuelve tarjetas */
+  .cards { display:none; }
+  @media (max-width:760px) {
+    .wrap { padding:12px; }
+    .kpis { grid-template-columns:repeat(2,1fr); gap:9px; }
+    .kpi .k-val { font-size:21px; }
+    .pg-topbar { padding:0 12px; gap:8px; }
+    .pg-topbar h1 { font-size:13px; }
+    .cobertura { display:none; }
+    .search-box input { width:130px; }
+    .search-box input:focus { width:150px; }
+    .card.desktop { display:none; }
+    .cards { display:flex; flex-direction:column; gap:10px; }
+    .m-card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:13px 15px; box-shadow:var(--sh-sm); }
+    .m-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .m-ns { text-align:center; flex-shrink:0; }
+    .m-ns .n { font-size:22px; font-weight:800; line-height:1; }
+    .m-ns .t { font-size:9px; font-weight:700; text-transform:uppercase; color:var(--mute); }
+    .m-stats { display:flex; gap:14px; margin-top:9px; font-size:11px; color:var(--mute); font-weight:600; flex-wrap:wrap; }
+    .m-stats b { color:var(--navy); }
+    .m-profs { margin-top:8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="pg-topbar">
+  <h1>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="22" y2="13"/><line x1="22" y1="8" x2="17" y2="13"/></svg>
+    Ausentismo — pacientes que no asisten
+  </h1>
+  <div class="spacer"></div>
+  <div class="cobertura" id="cobertura"></div>
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="buscar" type="search" placeholder="Buscar paciente…" autocomplete="off">
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="banner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div class="bt"><b>Solo inasistencias reales.</b> Una cita cuenta como inasistencia únicamente cuando quedó
+    marcada "No asiste" en Medilink y no fue anulada ni reagendada. Si el paciente reagendó dentro del mismo día
+    y fue atendido, no se le cuenta. Los pacientes con <b>próxima cita agendada</b> son los primeros a confirmar
+    por teléfono.</div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="toolbar">
+    <label>Período</label>
+    <div class="chips" id="chips-dias">
+      <button class="chip" data-dias="30">30 días</button>
+      <button class="chip" data-dias="90">90 días</button>
+      <button class="chip active" data-dias="180">6 meses</button>
+      <button class="chip" data-dias="365">12 meses</button>
+    </div>
+    <label>Profesional</label>
+    <select id="sel-prof"><option value="">Todos los profesionales</option></select>
+    <label>Mínimo</label>
+    <div class="chips" id="chips-min">
+      <button class="chip active" data-min="1">≥ 1 falta</button>
+      <button class="chip" data-min="2">≥ 2</button>
+      <button class="chip" data-min="3">≥ 3</button>
+    </div>
+  </div>
+
+  <div class="card desktop">
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:34px">#</th>
+          <th>Paciente</th>
+          <th class="ctr">Inasistencias</th>
+          <th class="ctr">Clasificación</th>
+          <th class="num">Citas solicitadas</th>
+          <th>Tasa de inasistencia</th>
+          <th>Última inasistencia</th>
+          <th>Con qué profesional falta</th>
+          <th style="width:40px"></th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="9" class="empty"><span class="spin"></span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="foot">
+    <span id="foot-info"></span>
+    <span id="foot-n"></span>
+  </div>
+</div>
+
+<script>
+const TOKEN = "__TOKEN__";
+let DIAS = 180, PROF = "", MINIMO = 1;
+let DATA = null;
+const abiertos = new Set();
+
+const $ = s => document.querySelector(s);
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function fmtFecha(f) {
+  if (!f) return "—";
+  const [y, m, d] = f.split("-");
+  const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return `${parseInt(d)} ${meses[parseInt(m)-1]} ${y}`;
+}
+
+function sev(n) {
+  if (n >= 4) return {cls: "sev-3", badge: "critico", label: "Crítico"};
+  if (n >= 2) return {cls: "sev-2", badge: "reincidente", label: "Reincidente"};
+  return {cls: "sev-1", badge: "puntual", label: "Puntual"};
+}
+
+function kpiHtml(k) {
+  return `
+    <div class="kpi alert"><div class="k-label">Inasistencias en el período</div>
+      <div class="k-val">${k.no_shows}</div><div class="k-sub">de ${k.solicitudes} citas solicitadas</div></div>
+    <div class="kpi warn"><div class="k-label">Últimos 30 días</div>
+      <div class="k-val">${k.no_shows_30d}</div><div class="k-sub">inasistencias recientes</div></div>
+    <div class="kpi"><div class="k-label">Tasa de inasistencia</div>
+      <div class="k-val">${k.tasa_global}%</div><div class="k-sub">del total de citas del período</div></div>
+    <div class="kpi alert"><div class="k-label">Pacientes reincidentes</div>
+      <div class="k-val">${k.reincidentes}</div><div class="k-sub">con 2 o más inasistencias</div></div>
+    <div class="kpi ok"><div class="k-label">Para confirmar ahora</div>
+      <div class="k-val">${k.en_ranking_con_proxima}</div><div class="k-sub">del ranking tienen próxima cita agendada</div></div>`;
+}
+
+function profChips(p) {
+  return `<div class="prof-chips">${p.por_prof.map(x =>
+    `<span class="prof-chip">${esc(x.profesional)} <b>${x.no_shows}</b>/${x.solicitudes}</span>`).join("")}</div>`;
+}
+
+function proxHtml(p) {
+  if (!p.proxima_cita) return `<span class="sin-prox">sin próxima cita</span>`;
+  const pc = p.proxima_cita;
+  return `<span class="prox-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+    Próx.: ${fmtFecha(pc.fecha)} ${esc(pc.hora)} · ${esc(pc.profesional)}</span>`;
+}
+
+function filaHtml(p, i) {
+  const s = sev(p.no_shows);
+  const pct = Math.min(p.tasa, 100);
+  const barCls = p.tasa >= 50 ? "hot" : (p.tasa >= 25 ? "warm" : "");
+  return `<tr class="main ${s.cls} ${abiertos.has(p.id_paciente) ? "open" : ""}" data-pac="${p.id_paciente}">
+    <td class="rank-n">${i + 1}</td>
+    <td><div class="pac-name">${esc(p.paciente)}</div>
+        <div class="pac-meta">ID Medilink ${p.id_paciente}</div>${proxHtml(p)}</td>
+    <td class="ctr"><span class="ns-val">${p.no_shows}</span></td>
+    <td class="ctr"><span class="sev-badge ${s.badge}"><span class="dot"></span>${s.label}</span></td>
+    <td class="num">${p.solicitudes}</td>
+    <td><div class="tasa-wrap"><span class="tasa-txt">${p.tasa}%</span>
+        <div class="prog"><i class="${barCls}" style="width:${pct}%"></i></div></div></td>
+    <td>${fmtFecha(p.ultima_inasistencia)}</td>
+    <td>${profChips(p)}</td>
+    <td class="ctr"><span class="caret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></td>
+  </tr>`;
+}
+
+function cardHtml(p, i) {
+  const s = sev(p.no_shows);
+  const col = p.no_shows >= 4 ? "var(--red)" : (p.no_shows >= 2 ? "var(--orange)" : "var(--navy)");
+  return `<div class="m-card" data-pac="${p.id_paciente}">
+    <div class="m-head">
+      <div><div class="pac-name">${i + 1}. ${esc(p.paciente)}</div>
+        <div class="pac-meta">ID ${p.id_paciente} · <span class="sev-badge ${s.badge}" style="padding:2px 8px"><span class="dot"></span>${s.label}</span></div>
+        ${proxHtml(p)}</div>
+      <div class="m-ns"><div class="n" style="color:${col}">${p.no_shows}</div><div class="t">Faltas</div></div>
+    </div>
+    <div class="m-stats"><span><b>${p.solicitudes}</b> solicitadas</span>
+      <span>tasa <b>${p.tasa}%</b></span>
+      <span>última: <b>${fmtFecha(p.ultima_inasistencia)}</b></span></div>
+    <div class="m-profs">${profChips(p)}</div>
+  </div>`;
+}
+
+function render() {
+  if (!DATA) return;
+  const q = ($("#buscar").value || "").toLowerCase().trim();
+  const lista = DATA.ranking.filter(p => !q || p.paciente.toLowerCase().includes(q) || String(p.id_paciente).includes(q));
+
+  $("#kpis").innerHTML = kpiHtml(DATA.kpis);
+
+  const tbody = $("#tbody");
+  if (!lista.length) {
+    const cubierto = DATA.recoleccion && DATA.recoleccion.citas_locales > 0;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <div class="e-t">${cubierto ? "Sin resultados con estos filtros" : "Aún no hay datos recolectados"}</div>
+      <div class="e-s">${cubierto ? "Pruebe con otro período, otro profesional o un mínimo menor."
+        : "El sistema recolecta el historial de citas desde Medilink cada madrugada (04:50). El primer barrido completa hasta 12 meses de historia."}</div>
+    </div></td></tr>`;
+    $("#cards").innerHTML = "";
+  } else {
+    tbody.innerHTML = lista.map((p, i) => filaHtml(p, i)).join("");
+    $("#cards").innerHTML = lista.map((p, i) => cardHtml(p, i)).join("");
+    // re-abrir historiales que estaban expandidos
+    for (const id of abiertos) {
+      const tr = tbody.querySelector(`tr[data-pac="${id}"]`);
+      if (tr) cargarHistorial(tr, id, true);
+    }
+  }
+  $("#foot-n").textContent = `${lista.length} paciente(s) en el ranking`;
+
+  const rec = DATA.recoleccion || {};
+  const ub = rec.ultimo_barrido;
+  $("#foot-info").textContent = ub
+    ? `Datos locales: ${rec.citas_locales} citas · cobertura ${fmtFecha(rec.cobertura_desde)} → ${fmtFecha(rec.cobertura_hasta)} · último barrido ${ub.generado_at.replace("T", " ").slice(0, 16)}`
+    : "Sin barridos registrados todavía.";
+  $("#cobertura").innerHTML = rec.cobertura_desde
+    ? `Historial desde<br><b>${fmtFecha(rec.cobertura_desde)}</b>` : "";
+}
+
+async function cargar() {
+  $("#tbody").innerHTML = `<tr><td colspan="9" class="empty"><span class="spin"></span></td></tr>`;
+  const u = new URLSearchParams({token: TOKEN, dias: DIAS, minimo: MINIMO});
+  if (PROF) u.set("prof", PROF);
+  try {
+    const r = await fetch(`/api/ausentismo/ranking?${u}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    DATA = await r.json();
+    // selector de profesionales (solo se re-puebla, conservando la selección)
+    const sel = $("#sel-prof");
+    const actual = sel.value;
+    sel.innerHTML = `<option value="">Todos los profesionales</option>` +
+      DATA.profesionales.map(p => `<option value="${p.id_profesional}">${esc(p.profesional)} (${p.no_shows})</option>`).join("");
+    sel.value = actual;
+    render();
+  } catch (e) {
+    $("#tbody").innerHTML = `<tr><td colspan="9"><div class="empty"><div class="e-t">No se pudieron cargar los datos</div><div class="e-s">${esc(e.message)} — reintente en unos segundos.</div></div></td></tr>`;
+  }
+}
+
+async function cargarHistorial(tr, idPac, force) {
+  const existente = tr.nextElementSibling;
+  if (existente && existente.classList.contains("detail")) {
+    if (!force) { existente.remove(); tr.classList.remove("open"); abiertos.delete(idPac); return; }
+    existente.remove();
+  }
+  tr.classList.add("open");
+  abiertos.add(idPac);
+  const det = document.createElement("tr");
+  det.className = "detail";
+  det.innerHTML = `<td colspan="9"><div class="hist"><span class="spin"></span></div></td>`;
+  tr.after(det);
+  try {
+    const r = await fetch(`/api/ausentismo/paciente/${idPac}?token=${encodeURIComponent(TOKEN)}`);
+    const h = await r.json();
+    const nombres = {atendida: "Atendida", no_show: "No asistió", anulada: "Anulada", reagenda: "Reagendada", otra: "Sin cierre"};
+    det.querySelector(".hist").innerHTML = `
+      <div class="hist-title">Historial de citas — orden cronológico (12 meses)</div>
+      <div class="hist-list">${h.citas.map(c => `
+        <div class="hist-row">
+          <span class="hist-dot ${c.tipo}"></span>
+          <span class="hist-fecha">${fmtFecha(c.fecha)} · ${esc(c.hora)}</span>
+          <span class="hist-prof">${esc(c.profesional)}</span>
+          ${c.futura ? `<span class="hist-futura">PRÓXIMA</span>` : ""}
+          <span class="hist-estado ${c.tipo}">${nombres[c.tipo] || esc(c.estado)}</span>
+        </div>`).join("")}</div>`;
+  } catch (e) {
+    det.querySelector(".hist").innerHTML = `<div class="e-s">No se pudo cargar el historial.</div>`;
+  }
+}
+
+// ── eventos ──
+$("#tbody").addEventListener("click", e => {
+  const tr = e.target.closest("tr.main");
+  if (tr) cargarHistorial(tr, parseInt(tr.dataset.pac), false);
+});
+$("#chips-dias").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  document.querySelectorAll("#chips-dias .chip").forEach(c => c.classList.remove("active"));
+  b.classList.add("active"); DIAS = parseInt(b.dataset.dias); abiertos.clear(); cargar();
+});
+$("#chips-min").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  document.querySelectorAll("#chips-min .chip").forEach(c => c.classList.remove("active"));
+  b.classList.add("active"); MINIMO = parseInt(b.dataset.min); abiertos.clear(); cargar();
+});
+$("#sel-prof").addEventListener("change", e => { PROF = e.target.value; abiertos.clear(); cargar(); });
+let tBuscar;
+$("#buscar").addEventListener("input", () => { clearTimeout(tBuscar); tBuscar = setTimeout(render, 180); });
+
+cargar();
+</script>
+</body>
+</html>

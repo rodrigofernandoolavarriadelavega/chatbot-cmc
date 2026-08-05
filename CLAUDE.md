@@ -358,7 +358,48 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-08-01
+**Última actualización**: 2026-08-05
+
+### 2026-08-05 — Módulo Alma "Ausentismo" — ranking pacientes que no asisten
+- **`app/ausentismo.py`** (nuevo): tabla local `ausentismo_citas` + recolector
+  nocturno 04:50 CLT (Medilink `/citas` paginado, carril batch, re-filtro
+  cliente-side de fecha, corte temprano por orden id DESC). Backfill 12 meses
+  automático la primera noche. Metodología validada 2026-08-05: no-show =
+  id_estado=8 & anulacion=0 · excluye id_estado=14 (reagenda) · dedup por
+  (paciente, día, profesional) con precedencia atendida > no_show > anulada.
+- **`app/ausentismo_routes.py`** (nuevo): `/alma/ausentismo` (HTML) +
+  `/api/ausentismo/ranking` (filtros dias/prof/minimo) + `/api/ausentismo/
+  paciente/{id}` (historial) + `POST /api/ausentismo/recolectar` (gated dueño,
+  barrido manual en background). Auth patrón agenda_ticker_routes.
+- **`templates/alma_ausentismo.html`** (nuevo): premium Alma (paleta kine,
+  Montserrat local, cero CDN), KPIs, chips período/mínimo, select profesional,
+  ranking con severidad (Crítico ≥4 / Reincidente ≥2), pill "próxima cita"
+  para confirmar por teléfono, historial expandible, tarjetas en móvil.
+- **`app/config.py`**: key `ausentismo` en registry + visible para perfil
+  Recepción (ADMIN_TOKEN). **`app/main.py`**: registro de rutas + cron 04:50.
+- Validado: deep-import, test funcional de la metodología (dedup intradía,
+  exclusión reagenda, próxima cita), node --check del JS, TestClient 200/403.
+
+### 2026-08-05 — Pestaña "Pacientes con seguro complementario" en Alma Kine (DEPLOYADO commit cd1911a)
+- **`templates/alma_kine.html`**: nueva pestaña junto a "Programa" (toggle JS
+  `tab()`/`.view.on`), snapshot estático de pacientes de kine con probable
+  seguro complementario a Fonasa (detectado por patrón de copago residual
+  bajo en caja, histórico 09-sep-2021→04-ago-2026). Datos embebidos en
+  `SC_DATA` (const JS, no vive query — snapshot fijo, "no se actualiza en
+  vivo" explícito en la UI). KPIs, tabla filtrable/buscable por nombre/RUT/
+  teléfono, 3 tarjetas de acción (activos con pocas sesiones → asegurar
+  programa; dormidos con historial largo → reevaluación clínica documentada,
+  no solo por el patrón de pago; post-alta funcional → plan particular,
+  bono Fonasa Res. 49/2009 Grupo 06 no cubre mantención).
+- Sin cambios en `main.py`/`kine_routes.py` (la ruta `/alma/kine` ya servía
+  el HTML vía placeholder replace `__TOKEN__`/`__KINE_FINANCIERO__`/
+  `__PROF_DASHBOARD_URL__`, sin tocar).
+- Validado: imports profundos OK, JS embebido `node --check` OK, `TestClient`
+  200 local, harness_50/normalizer/stress_200 sin regresión (fallas
+  preexistentes en `main` antes del cambio, verificado con `git stash`).
+  Post-deploy: `/health` 200, `/alma/kine?token=...` 200 en prod con la
+  pestaña nueva presente, logs limpios.
+
 
 ### 2026-08-01 — OCR de órdenes de eco (DEPLOYADO commit cf91da1, GATED OFF)
 - **`app/eco_orden_ocr.py`** (nuevo): foto de orden médica en `wait_eco_tipo` →

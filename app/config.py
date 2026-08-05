@@ -79,6 +79,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "recepcion_kanban":{"label":"Cola de Recepción","icon":"listcheck","title":"Cola de Recepción","sub":"A quién le toca responder ahora y por qué","src":"/alma/recepcion-kanban"},
     "roas":        {"label": "ROAS Campañas",    "icon": "trending-up","title": "ROAS por campaña · Meta Ads × Caja real", "sub": "Retorno de cada campaña vs ingreso real (caja)", "src": "/alma/roas"},
     "agenda_ticker":{"label": "Agendamientos en vivo","icon":"activity","title": "Monitor de Agendamientos en vivo", "sub": "Orden real de llegada · canal · citas pasadas sin cerrar", "src": "/alma/agenda-en-vivo"},
+    "ausentismo":  {"label": "Ausentismo",       "icon": "users",     "title": "Ausentismo — pacientes que no asisten", "sub": "Ranking de inasistencias reales · filtro por profesional · a quién confirmar", "src": "/alma/ausentismo"},
     "agenda":      {"label": "Agenda",           "icon": "calendar",  "title": "Agenda",                         "sub": "Ver citas del dia · Agendar nueva hora",           "src": "/alma/agenda"},
     "sala":        {"label": "En sala",          "icon": "users",     "title": "En sala de espera",              "sub": "Pacientes que avisaron que llegaron (check-in QR)", "src": "/alma/sala"},
     "pagos_olacore":{"label": "Pagos OLACORE",   "icon": "banknote",  "title": "Pagos del dia (completo)",       "sub": "Registro · copagos · bonif. Imed · Caja/Cierre",   "src": "/alma/pagos"},
@@ -148,7 +149,7 @@ ALMA_PROFILES: dict[str, dict] = {
     }} if OLACORE_TOKEN else {}),
     **({ADMIN_TOKEN: {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "recepcion_kanban", "agenda", "sala", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a OLACORE_TOKEN
+        "modulos": ["panel", "panel2", "recepcion_kanban", "agenda", "sala", "ausentismo", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a OLACORE_TOKEN
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,

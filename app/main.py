@@ -544,6 +544,20 @@ async def lifespan(app: FastAPI):
         coalesce=True,
         max_instances=1,
     )
+    # Ausentismo: recolección nocturna de citas (Medilink /citas paginado,
+    # carril batch) → tabla local `ausentismo_citas`. 04:50 CLT, off-peak,
+    # después del cap cache y antes del barrido de sin-cerrar (06:20). La
+    # primera noche hace backfill profundo (hasta 12 meses) automáticamente.
+    from ausentismo import job_ausentismo_nocturno
+    scheduler.add_job(
+        job_ausentismo_nocturno,
+        CronTrigger(hour=4, minute=50, timezone=_CLT),
+        id="ausentismo_nocturno",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
+    )
     # BI v2: sync intradía LIGERO (solo pagos del día) 14:00 y 19:00 CLT → el
     # dashboard /cmc/mensual refleja el día en curso sin esperar a las 23:59.
     scheduler.add_job(
@@ -1236,6 +1250,7 @@ import persistencia_routes; persistencia_routes.register_persistencia_routes(app
 import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estudio de Marketing (panel publicidad/contenido)
 import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
 import agenda_ticker_routes; agenda_ticker_routes.register_agenda_ticker_routes(app)  # Monitor de agendamientos en vivo (/alma/agenda-en-vivo)
+import ausentismo_routes; ausentismo_routes.register_ausentismo_routes(app)  # Ausentismo — ranking pacientes que no asisten (/alma/ausentismo)
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
 import conciliacion_transferencias_routes; conciliacion_transferencias_routes.register_conciliacion_transferencias_routes(app)  # Conciliación transferencias × correos banco + sugerencias de pago (/alma/conciliacion-transferencias)
 import mapa_centro_routes; mapa_centro_routes.register_mapa_centro_routes(app)  # Mapa del Centro: inventario de TODO lo que hay en marcha, con sondas en vivo (/alma/mapa)
