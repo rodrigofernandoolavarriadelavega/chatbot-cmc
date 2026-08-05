@@ -252,6 +252,21 @@ async def job_ausentismo_nocturno() -> dict:
 # Clasificación y análisis (solo DB local — nunca Medilink)
 # ────────────────────────────────────────────────────────────────────────────
 
+def _nombre_prof(idp) -> str:
+    """PROFESIONALES → HIST_PROFESIONALES (ej. Barraza id 64, ya no atiende
+    pero aparece en el histórico de 12 meses) → 'Prof. {id}'."""
+    from medilink import PROFESIONALES
+    n = PROFESIONALES.get(idp, {}).get("nombre")
+    if n:
+        return n
+    try:
+        from main import HIST_PROFESIONALES
+        n = HIST_PROFESIONALES.get(idp, {}).get("nombre")
+    except Exception:
+        n = None
+    return n or f"Prof. {idp}"
+
+
 def _clasificar(id_estado, estado_cita: str, anulacion: int) -> str:
     """Estados verificados en producción (docs/medilink_gotchas.md #11 +
     análisis 2026-08-05): 2=Atendido · 8=No asiste · 14=Cambio de fecha ·
@@ -274,7 +289,6 @@ def analizar(dias: int = 180, id_prof: int | None = None, min_no_shows: int = 1,
     opcionalmente acotado a un profesional. Devuelve KPIs + ranking +
     lista de profesionales para el filtro + estado de la recolección."""
     from session import db, system_state_get
-    from medilink import PROFESIONALES
 
     hoy = datetime.now(_CLT).date()
     hoy_iso = hoy.isoformat()
@@ -300,9 +314,6 @@ def analizar(dias: int = 180, id_prof: int | None = None, min_no_shows: int = 1,
                 WHERE fecha >= ? AND anulacion = 0 AND id_estado != 14
                       AND id_paciente IS NOT NULL{where_prof}""",
             args_futuro).fetchall()
-
-    def _prof_nombre(idp) -> str:
-        return PROFESIONALES.get(idp, {}).get("nombre") or f"Prof. {idp}"
 
     # ── unidad de análisis: (paciente, día, profesional) ──
     # Precedencia del desenlace del día: atendida > no_show > anulada > otra.
@@ -332,7 +343,7 @@ def analizar(dias: int = 180, id_prof: int | None = None, min_no_shows: int = 1,
         })
         p["solicitudes"] += 1
         pp = p["por_prof"].setdefault(idp, {"id_profesional": idp,
-                                            "profesional": _prof_nombre(idp),
+                                            "profesional": _nombre_prof(idp),
                                             "no_shows": 0, "solicitudes": 0})
         pp["solicitudes"] += 1
         if u["tipo"] == "no_show":
@@ -351,7 +362,7 @@ def analizar(dias: int = 180, id_prof: int | None = None, min_no_shows: int = 1,
         actual = proximas.get(idpac)
         if actual is None or (fecha, hora) < (actual["fecha"], actual["hora"]):
             proximas[idpac] = {"fecha": fecha, "hora": hora,
-                               "profesional": _prof_nombre(idp)}
+                               "profesional": _nombre_prof(idp)}
 
     ranking = []
     for idpac, p in por_pac.items():
@@ -383,7 +394,7 @@ def analizar(dias: int = 180, id_prof: int | None = None, min_no_shows: int = 1,
                      AND id_profesional IS NOT NULL
                GROUP BY id_profesional ORDER BY COUNT(*) DESC""",
             (desde, hoy_iso)).fetchall()
-    profesionales = [{"id_profesional": idp, "profesional": _prof_nombre(idp),
+    profesionales = [{"id_profesional": idp, "profesional": _nombre_prof(idp),
                       "no_shows": n} for idp, n in profs_rows]
 
     raw_state = system_state_get(_STATE_KEY)
@@ -412,7 +423,6 @@ def analizar(dias: int = 180, id_prof: int | None = None, min_no_shows: int = 1,
 def historial_paciente(id_paciente: int, dias: int = 365) -> dict:
     """Detalle cronológico de citas de un paciente (para la fila expandida)."""
     from session import db
-    from medilink import PROFESIONALES
     hoy = datetime.now(_CLT).date()
     desde = (hoy - timedelta(days=dias)).isoformat()
     ensure_ausentismo_table()
@@ -430,7 +440,7 @@ def historial_paciente(id_paciente: int, dias: int = 365) -> dict:
             nombre = pac
         citas.append({
             "fecha": fecha, "hora": hora,
-            "profesional": PROFESIONALES.get(idp, {}).get("nombre") or f"Prof. {idp}",
+            "profesional": _nombre_prof(idp),
             "estado": estado or "", "tipo": _clasificar(id_estado, estado, anul),
             "futura": fecha >= hoy.isoformat(),
         })
