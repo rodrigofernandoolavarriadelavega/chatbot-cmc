@@ -3847,10 +3847,10 @@ BOXES_CONFIG = [
     {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [23, 60, 64, 61, 65, 70], "uso_autorizado": "consulta médica de especialidad"},
     {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77], "uso_autorizado": "kinesiología"},
     {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21], "uso_autorizado": "kinesiología"},
-    {"id": "boxdental", "piso": 2, "orden": 1, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76], "uso_autorizado": "odontología"},
-    {"id": "box3",      "piso": 2, "orden": 2, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56, 80], "revenue_profs": [67, 68, 56, 80], "uso_autorizado": "procedimientos y toma de muestras"},
-    {"id": "box4",      "piso": 2, "orden": 3, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52], "uso_autorizado": "consulta psicológica y nutricional"},
-    {"id": "box5",      "piso": 2, "orden": 4, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59], "uso_autorizado": "masoterapia"},
+    {"id": "boxdental", "piso": 2, "orden": 4, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76], "uso_autorizado": "odontología"},
+    {"id": "box3",      "piso": 2, "orden": 1, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56, 80], "revenue_profs": [67, 68, 56, 80], "uso_autorizado": "procedimientos y toma de muestras"},
+    {"id": "box4",      "piso": 2, "orden": 2, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52], "uso_autorizado": "consulta psicológica y nutricional"},
+    {"id": "box5",      "piso": 2, "orden": 3, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59], "uso_autorizado": "masoterapia"},
     # Telemedicina: Unibazo (psiquiatría) y Franca González (neurología) atienden
     # por videollamada. Ocupan AGENDA pero no metros cuadrados, así que van en su
     # propio carril con `virtual: True` — no compiten por sala y no deben contar
