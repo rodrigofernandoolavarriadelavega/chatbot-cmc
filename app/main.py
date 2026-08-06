@@ -10649,10 +10649,67 @@ async def webhook(request: Request):
                 else:
                     extracted = extract_text_from_docx(blob)
                 if extracted:
+                    # OJO: clasificar sobre el texto COMPLETO, no sobre el
+                    # truncado. Las señales de un examen —"Toma Muestra", el
+                    # nombre del laboratorio, los valores de referencia— casi
+                    # nunca caben en los primeros 200 caracteres: el encabezado
+                    # se los come. Antes se clasificaba después de truncar y por
+                    # eso un examen de laboratorio pasaba de largo.
+                    _texto_full = extracted
+
+                    # ── ¿es un examen de laboratorio? ──────────────────────
+                    from examenes_lab import parece_examen, nombre_en_examen
+                    _es_examen, _senales = parece_examen(_texto_full)
+                    if _es_examen:
+                        _nom_pac = nombre_en_examen(_texto_full)
+                        log.info("Examen de laboratorio detectado from=%s señales=%s", phone, _senales)
+                        state_before = get_session(phone).get("state", "IDLE")
+                        log_message(phone, "in", f"[{msg_type}:{saved_filename}]",
+                                    state_before, canal="whatsapp")
+                        from session import log_event as _le_ex, save_session as _ss_ex
+                        _le_ex(phone, "examen_recibido", {
+                            "filename": saved_filename[:120], "senales": _senales[:6],
+                            "paciente_en_examen": (_nom_pac or "")[:80],
+                        })
+                        # Se deriva a recepción para que nadie quede esperando
+                        # respuesta del bot sobre un resultado clínico.
+                        _ss_ex(phone, "HUMAN_TAKEOVER", {
+                            "hold_sent": True, "handoff_reason": "examen_recibido",
+                        })
+                        _ex_resp = (
+                            "Recibí tu examen 🧪 y quedó guardado en tu ficha.\n\n"
+                            "Lo va a revisar el profesional que te atiende. Si necesitas "
+                            "una hora para verlo, escribe *menu* y te ayudo a agendarla."
+                        )
+                        await send_whatsapp(phone, _ex_resp)
+                        log_message(phone, "out", _ex_resp, "HUMAN_TAKEOVER", canal="whatsapp")
+                        # Aviso a recepción con lo mínimo para actuar.
+                        # El aviso va dentro de try/except a propósito: si la
+                        # ventana de 24 h del número admin está cerrada, este
+                        # send falla — y eso no puede tumbar el webhook ni
+                        # perder el examen que ya quedó guardado. Misma lección
+                        # que el bug de visión del 2026-08-04.
+                        if ADMIN_ALERT_PHONE:
+                            _av = (f"🧪 *Examen recibido por el bot*\n"
+                                   f"Paciente: {_nom_pac or 'sin nombre en el documento'}\n"
+                                   f"WhatsApp: {phone}\n"
+                                   f"Archivo: {saved_filename or 'sin nombre'}\n"
+                                   f"Está en su ficha. Falta que lo vea el profesional.")
+                            try:
+                                await send_whatsapp(ADMIN_ALERT_PHONE, _av)
+                                log_message(ADMIN_ALERT_PHONE, "out", _av,
+                                            "HUMAN_TAKEOVER", canal="whatsapp")
+                            except Exception as _e_av:
+                                log.warning("Aviso de examen no enviado a admin: %s", _e_av)
+                        return Response(status_code=200)
+
                     # Truncar a 200 chars antes de pasar al pipeline (Bug-3)
                     if len(extracted) > 200:
                         extracted = extracted[:200] + "…"
                     # Detectar documentos clínicos: ficha, consentimiento, formulario, entrevista
+                    # (se mantiene sobre el texto YA truncado, como estaba: sus
+                    # keywords son genéricas —"formulario" aparece en cualquier
+                    # PDF— y ampliarle el alcance dispararía takeovers de más.)
                     _CLINICAL_DOC_KEYS = ("ficha", "entrevista psicol", "formulario", "consentimiento")
                     _extracted_lower = extracted.lower()
                     _es_doc_clinico = any(k in _extracted_lower for k in _CLINICAL_DOC_KEYS)
