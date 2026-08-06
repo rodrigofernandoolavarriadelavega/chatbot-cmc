@@ -3846,9 +3846,14 @@ BOXES_CONFIG = [
     {"id": "box1",      "piso": 1, "orden": 1, "nombre": "Box 1",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [1, 73, 13], "uso_autorizado": "consulta médica general"},
     {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [23, 60, 64, 61, 65, 70], "uso_autorizado": "consulta médica de especialidad"},
     {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77], "uso_autorizado": "kinesiología"},
-    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21], "uso_autorizado": "kinesiología"},
+    # Ana Celedón (80, oftalmología) comparte HOY esta sala con Etcheverry —
+    # confirmado con el dueño 2026-08-06. Estaba puesta en Box 3 y recepción la
+    # corregía a mano cada día, trabajo que se borraba cada noche. La MIGRACIÓN
+    # a Box 3 está prevista pero NO hecha: la config refleja lo REAL, y el
+    # traslado se evalúa antes con /admin/api/boxes-simular.
+    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21, 80], "revenue_profs": [21, 80], "uso_autorizado": "kinesiología y oftalmología"},
     {"id": "boxdental", "piso": 2, "orden": 4, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76], "uso_autorizado": "odontología"},
-    {"id": "box3",      "piso": 2, "orden": 1, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56, 80], "revenue_profs": [67, 68, 56, 80], "uso_autorizado": "procedimientos y toma de muestras"},
+    {"id": "box3",      "piso": 2, "orden": 1, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56], "revenue_profs": [67, 68, 56], "uso_autorizado": "procedimientos y toma de muestras"},
     {"id": "box4",      "piso": 2, "orden": 2, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52], "uso_autorizado": "consulta psicológica y nutricional"},
     {"id": "box5",      "piso": 2, "orden": 3, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59], "uso_autorizado": "masoterapia"},
     # Telemedicina: Unibazo (psiquiatría) y Franca González (neurología) atienden
@@ -5111,6 +5116,103 @@ def api_boxes_patrones(token: str | None = Query(None), dias: int = Query(60)):
     finally:
         if conn is not None:
             pool.putconn(conn)
+
+
+@app.post("/admin/api/boxes-simular")
+async def api_boxes_simular(request: Request, token: str | None = Query(None)):
+    """Simula mover profesionales de sala SIN tocar nada.
+
+    Responde la pregunta que hoy se decide a ojo: "quiero mover a Ana de
+    Kinesiología 2 a Box 3 — ¿cabe? ¿se topa con alguien?". Toma las citas
+    reales de una ventana de días, reasigna según el escenario y cuenta los
+    choques: dos profesionales con horarios superpuestos en la misma sala.
+
+    Body: {"mover": [{"prof_id": 80, "a_box": "box3"}], "dias": 30}
+    No escribe: es solo lectura sobre bi.fact_citas.
+    """
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    body = await request.json()
+    mover = {int(m["prof_id"]): m["a_box"] for m in (body.get("mover") or []) if m.get("prof_id")}
+    dias = max(1, min(int(body.get("dias") or 30), 120))
+    if not mover:
+        raise HTTPException(400, "falta 'mover'")
+
+    try:
+        _cfg = api_boxes_config_get(token=token) or {}
+        BOXES = boxes_config_efectiva(_cfg.get("layout") or [])
+    except Exception:
+        BOXES = [dict(b) for b in BOXES_CONFIG]
+    por_id = {b["id"]: b for b in BOXES}
+    for destino in set(mover.values()):
+        if destino not in por_id:
+            raise HTTPException(400, f"la sala '{destino}' no existe")
+
+    def _sala_de(pid: int, escenario: bool) -> str | None:
+        if escenario and pid in mover:
+            return mover[pid]
+        for b in BOXES:
+            if pid in (b.get("default_profs") or []):
+                return b["id"]
+        return None
+
+    pool = _bi_pool()
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT fecha, profesional_id, hora_inicio, hora_fin
+                  FROM bi.fact_citas
+                 WHERE fecha >= CURRENT_DATE - %s::int AND fecha <= CURRENT_DATE
+                   AND hora_inicio IS NOT NULL
+            """, (dias,))
+            citas = cur.fetchall()
+    except Exception as e:
+        raise HTTPException(500, f"No se pudieron leer las citas: {str(e)[:120]}")
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+    def _choques(escenario: bool):
+        # Agrupa por (fecha, sala) y cuenta pares que se superponen en el tiempo.
+        por_sala: dict = {}
+        for f, pid, hi, hf in citas:
+            sala = _sala_de(pid, escenario)
+            if not sala or (escenario and por_id.get(sala, {}).get("virtual")):
+                continue
+            por_sala.setdefault((f, sala), []).append((pid, hi, hf))
+        total, detalle = 0, []
+        for (f, sala), items in por_sala.items():
+            items.sort(key=lambda x: x[1])
+            for i in range(len(items)):
+                for j in range(i + 1, len(items)):
+                    a, b = items[i], items[j]
+                    if a[0] == b[0]:
+                        continue          # el mismo profesional no choca consigo
+                    fin_a = a[2] or a[1]
+                    if b[1] < fin_a:      # empieza antes de que termine el otro
+                        total += 1
+                        if len(detalle) < 25:
+                            detalle.append({"fecha": f.isoformat(), "sala": sala,
+                                            "prof_a": a[0], "prof_b": b[0],
+                                            "hora": str(a[1])[:5]})
+                    else:
+                        break
+        return total, detalle
+
+    hoy_n, _ = _choques(False)
+    sim_n, sim_det = _choques(True)
+    return {
+        "dias": dias,
+        "mover": [{"prof_id": k, "a_box": v, "sala_actual": _sala_de(k, False)} for k, v in mover.items()],
+        "choques_hoy": hoy_n,
+        "choques_simulado": sim_n,
+        "diferencia": sim_n - hoy_n,
+        "veredicto": ("cabe sin topones" if sim_n <= hoy_n else
+                      f"agrega {sim_n - hoy_n} choque(s) respecto de hoy"),
+        "ejemplos": sim_det,
+    }
 
 
 @app.put("/admin/api/boxes-config")
