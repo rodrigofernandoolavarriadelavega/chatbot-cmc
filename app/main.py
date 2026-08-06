@@ -5157,17 +5157,22 @@ def api_boxes_config_get(token: str | None = Query(None)):
         except Exception as _pe:
             raise HTTPException(503, "BI pool ocupado, reintenta en unos segundos")
         with conn.cursor() as cur:
-            cur.execute("SELECT layout, pisos, manual_overrides, schedules, weekly_template, updated_at FROM bi.boxes_state_global WHERE id=1")
+            _boxes_escenarios_ensure(cur)
+            conn.commit()
+            cur.execute("SELECT layout, pisos, manual_overrides, schedules, weekly_template, "
+                        "escenarios, updated_at FROM bi.boxes_state_global WHERE id=1")
             row = cur.fetchone()
             if not row:
-                return {"layout": [], "pisos": [], "manual_overrides": {}, "schedules": {}, "weekly_template": {}, "updated_at": None}
-            layout, pisos, overrides, schedules, weekly, updated = row
+                return {"layout": [], "pisos": [], "manual_overrides": {}, "schedules": {},
+                        "weekly_template": {}, "escenarios": {}, "updated_at": None}
+            layout, pisos, overrides, schedules, weekly, escenarios, updated = row
             return {
                 "layout": layout or [],
                 "pisos": pisos or [],
                 "manual_overrides": overrides or {},
                 "schedules": schedules or {},
                 "weekly_template": weekly or {},
+                "escenarios": escenarios or {},
                 "updated_at": updated.isoformat() if updated else None,
             }
     except HTTPException:
@@ -5182,6 +5187,18 @@ def api_boxes_config_get(token: str | None = Query(None)):
     finally:
         if conn is not None:
             pool.putconn(conn)
+
+
+def _boxes_escenarios_ensure(cur) -> None:
+    """Columna de escenarios de simulación. Idempotente.
+
+    Los escenarios viven en la MISMA fila que el resto de la config de boxes
+    (`bi.boxes_state_global`) en vez de en una tabla propia: se leen y se
+    escriben siempre junto con la planta, y el PUT ya hace merge por clave, así
+    que guardar un escenario no puede pisar el layout ni el patrón semanal.
+    """
+    cur.execute("ALTER TABLE bi.boxes_state_global "
+                "ADD COLUMN IF NOT EXISTS escenarios jsonb DEFAULT '{}'::jsonb")
 
 
 def _boxes_log_ensure(cur) -> None:
@@ -5319,19 +5336,30 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
     if not mover:
         raise HTTPException(400, "falta 'mover'")
 
-    # Hay traslados que no son "apretados", son imposibles: un no-dentista al
-    # Box Dental, o un kinesiólogo fuera de kine. Simularlos devolvería un
-    # conteo de choques que se leería como "cabe" — peor que no responder.
-    _imposibles = [
-        {"prof_id": pid, "a_box": bx,
-         "motivo": ("la sala dental sólo admite odontología"
-                    if bx in SALAS_EXCLUYENTES
-                    else f"ese profesional sólo puede estar en {salas_permitidas(pid)}")}
-        for pid, bx in mover.items() if not sala_acepta(bx, pid)
-    ]
+    # IMPOSIBLE es sólo lo que la sala rechaza por sí misma: la dental tiene
+    # sillón y nadie más la ocupa. Ahí el conteo de choques mentiría.
+    #
+    # Que un profesional esté hoy restringido a ciertas salas (`CAUTIVOS`) es un
+    # supuesto de configuración, NO una ley física — y la gracia de simular es
+    # preguntar "¿y si lo levantamos?". La primera versión de este guard también
+    # bloqueaba eso y convertía al simulador en un validador de lo que ya
+    # existe: pedir mover a la masoterapeuta fuera de kine devolvía "imposible"
+    # en vez de responder si cabía. Ahora se simula igual y se advierte.
+    _imposibles = [{"prof_id": pid, "a_box": bx,
+                    "motivo": "la sala dental sólo admite odontología"}
+                   for pid, bx in mover.items()
+                   if bx in SALAS_EXCLUYENTES and not sala_acepta(bx, pid)]
     if _imposibles:
         return {"ok": False, "imposibles": _imposibles,
                 "mensaje": "El traslado no es posible; no se simuló."}
+
+    _advertencias = [
+        {"prof_id": pid, "a_box": bx, "restringido_a": salas_permitidas(pid),
+         "motivo": (CAUTIVOS.get(pid) or {}).get("motivo", ""),
+         "nota": "hoy está restringido a esas salas; la simulación asume que se levanta"}
+        for pid, bx in mover.items()
+        if (salas_permitidas(pid) or []) and bx not in (salas_permitidas(pid) or [])
+    ]
 
     try:
         _cfg = api_boxes_config_get(token=token) or {}
@@ -5429,17 +5457,35 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
                                         "salas_intentadas": _salas_candidatas(pid, escenario)})
         return total, detalle
 
-    hoy_n, _ = _choques(False)
+    hoy_n, hoy_det = _choques(False)
     sim_n, sim_det = _choques(True)
+    # Los choques que YA existen hoy no son culpa del traslado. Se restan para
+    # que "agrega N" signifique de verdad N nuevos, y se devuelven aparte: la
+    # primera corrida mostró 3 topones preexistentes en Box 1/Box 2 que se
+    # leían como si los causara el movimiento simulado.
+    _ya = {(d["fecha"], d["prof"], d["hora"]) for d in hoy_det}
+    _nuevos = [d for d in sim_det if (d["fecha"], d["prof"], d["hora"]) not in _ya]
+    _nom = {}
+    try:
+        from medilink import PROFESIONALES as _PF
+        _nom = {k: v.get("nombre", str(k)) for k, v in _PF.items()}
+    except Exception:
+        pass
+    for d in (_nuevos + hoy_det):
+        d["profesional"] = _nom.get(d.get("prof"), str(d.get("prof")))
     return {
+        "ok": True,
         "dias": dias,
-        "mover": [{"prof_id": k, "a_box": v,
+        "mover": [{"prof_id": k, "a_box": v, "profesional": _nom.get(k, str(k)),
                    "salas_actuales": _salas_candidatas(k, False)} for k, v in mover.items()],
+        "advertencias": _advertencias,
         "choques_hoy": hoy_n,
         "choques_simulado": sim_n,
         "diferencia": sim_n - hoy_n,
         "veredicto": ("cabe sin topones" if sim_n <= hoy_n else
                       f"agrega {sim_n - hoy_n} choque(s) respecto de hoy"),
+        "choques_nuevos": _nuevos,
+        "choques_preexistentes": hoy_det[:25],
         "ejemplos": sim_det,
     }
 
@@ -5471,6 +5517,7 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
     overrides = _campo("manual_overrides", {})
     schedules = _campo("schedules", {})
     weekly = _campo("weekly_template", {})
+    escenarios = _campo("escenarios", {})
     import json as _js
     pool = _bi_pool()
     conn = None
@@ -5480,17 +5527,21 @@ async def api_boxes_config_put(request: Request, token: str | None = Query(None)
         except Exception as _pe:
             raise HTTPException(503, "BI pool ocupado, reintenta en unos segundos")
         with conn.cursor() as cur:
+            _boxes_escenarios_ensure(cur)
             cur.execute("""
-                INSERT INTO bi.boxes_state_global (id, layout, pisos, manual_overrides, schedules, weekly_template, updated_at)
-                VALUES (1, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, NOW())
+                INSERT INTO bi.boxes_state_global (id, layout, pisos, manual_overrides, schedules,
+                                                   weekly_template, escenarios, updated_at)
+                VALUES (1, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, NOW())
                 ON CONFLICT (id) DO UPDATE SET
                   layout = EXCLUDED.layout,
                   pisos = EXCLUDED.pisos,
                   manual_overrides = EXCLUDED.manual_overrides,
                   schedules = EXCLUDED.schedules,
                   weekly_template = EXCLUDED.weekly_template,
+                  escenarios = EXCLUDED.escenarios,
                   updated_at = NOW()
-            """, (_js.dumps(layout), _js.dumps(pisos), _js.dumps(overrides), _js.dumps(schedules), _js.dumps(weekly)))
+            """, (_js.dumps(layout), _js.dumps(pisos), _js.dumps(overrides), _js.dumps(schedules),
+                  _js.dumps(weekly), _js.dumps(escenarios)))
             conn.commit()
         return {"ok": True}
     except HTTPException:

@@ -336,6 +336,56 @@
     }
     footer { padding: 0 12px; font-size: 11px; }
   }
+
+  /* ── Modo simulación ───────────────────────────────────────────────
+     Tiñe TODA la pantalla a propósito: el error caro acá es creer que se
+     está mirando lo real. El color es la señal, no el texto. */
+  body.sim-on .top { background:linear-gradient(135deg,#4B3B8F 0%,#2E2456 100%) }
+  .sim-banner { display:none; align-items:center; gap:10px; max-width:80rem; margin:0 auto 14px;
+      background:#EEEBF7; border:1px solid #C9BFEA; border-left:5px solid #5B4B9E;
+      border-radius:12px; padding:11px 15px }
+  body.sim-on .sim-banner { display:flex }
+  .sim-banner b { color:#4B3B8F; font-size:12.5px; font-weight:800 }
+  .sim-banner span { color:#5C5478; font-size:12px }
+  #simPanel { display:none; max-width:80rem; margin:0 auto 22px }
+  .sim-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)) }
+  .sim-card { background:#fff; border:1px solid var(--cmc-border); border-radius:14px; padding:14px 15px;
+      cursor:pointer; transition:.15s; border-top:3px solid #5B4B9E }
+  .sim-card:hover { box-shadow:0 6px 18px rgba(75,59,143,.15); transform:translateY(-1px) }
+  .sim-card.on { border-color:#5B4B9E; box-shadow:0 0 0 2px rgba(91,75,158,.18) }
+  .sim-card h4 { font-size:13.5px; font-weight:800; color:var(--cmc-navy); margin:0 0 5px;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .sim-card .mv { font-size:11.5px; color:var(--cmc-text-mute); line-height:1.5 }
+  .sim-veredicto { display:inline-block; font-size:10.5px; font-weight:800; padding:2px 9px;
+      border-radius:999px; margin-top:9px; letter-spacing:.02em }
+  .sv-ok { background:#E4F1EB; color:#1E7A5A } .sv-mal { background:#FCF0E6; color:#B4520F }
+  .sv-non { background:#F1F3F5; color:#8A98A3 }
+  .sim-nueva { background:transparent; border:2px dashed #C9BFEA; color:#5B4B9E; font-weight:800;
+      border-radius:14px; padding:14px; cursor:pointer; font-size:13px; font-family:inherit }
+  .sim-nueva:hover { background:#F6F4FC }
+  .sim-editor { background:#fff; border:1px solid var(--cmc-border); border-radius:14px;
+      padding:17px 18px; margin-top:14px }
+  .sim-editor input[type=text] { font-size:15px; font-weight:800; color:var(--cmc-navy); border:0;
+      border-bottom:2px solid var(--cmc-border); padding:4px 2px; width:100%; max-width:380px;
+      font-family:inherit; background:transparent }
+  .sim-editor input[type=text]:focus { outline:0; border-bottom-color:#5B4B9E }
+  .sim-mov { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap }
+  .sim-mov select { font-size:12.5px; padding:6px 9px; border:1px solid var(--cmc-border);
+      border-radius:9px; font-family:inherit; background:#fff; color:var(--cmc-navy); max-width:100% }
+  .sim-btn { font-family:inherit; font-size:12px; font-weight:800; border-radius:999px; padding:7px 15px;
+      cursor:pointer; border:1px solid transparent }
+  .sim-btn.pri { background:#5B4B9E; color:#fff } .sim-btn.pri:hover { background:#4B3B8F }
+  .sim-btn.sec { background:#fff; color:var(--cmc-navy); border-color:var(--cmc-border) }
+  .sim-btn.del { background:#FBEBE9; color:#A8332A }
+  .sim-res { margin-top:15px; padding-top:14px; border-top:1px solid var(--cmc-border) }
+  .sim-kpis { display:flex; gap:22px; flex-wrap:wrap; margin-bottom:10px }
+  .sim-kpi b { display:block; font-size:22px; font-weight:800; color:var(--cmc-navy);
+      font-variant-numeric:tabular-nums; line-height:1.1 }
+  .sim-kpi span { font-size:10.5px; text-transform:uppercase; letter-spacing:.07em;
+      color:var(--cmc-text-mute); font-weight:700 }
+  .sim-lista { font-size:12px; color:var(--cmc-text-mute); line-height:1.65; margin-top:8px }
+  .sim-warn { background:#FCF0E6; border-left:4px solid #B4520F; border-radius:9px; padding:9px 12px;
+      font-size:11.5px; color:#7A3A0B; margin-top:10px; line-height:1.55 }
 </style>
 </head>
 <body class="min-h-screen">
@@ -355,6 +405,7 @@
         <span id="saveStatus" class="save-status" style="display:none">●</span>
         <button id="btnInstall" class="install-btn" style="display:none">Instalar app</button>
         <button id="btnDate" class="hdr-pill"><span id="dateLabel">Hoy</span></button>
+        <button id="btnSimMode" class="hdr-pill">🔬 Simulación</button>
         <button id="btnEditMode" class="hdr-pill">Modo edición</button>
         <button id="btnResetOrder" class="hdr-pill" style="background:transparent;border-color:transparent;opacity:.75;font-weight:600">restaurar default</button>
       </div>
@@ -363,6 +414,25 @@
 </div>
 
 <div class="px-6 pt-6">
+
+<div class="sim-banner">
+  <span style="font-size:17px">🔬</span>
+  <div><b>Estás en modo simulación.</b>
+    <span>Nada de lo que hagas acá cambia la realidad ni toca Medilink. Es para probar antes de mover.</span></div>
+</div>
+
+<section id="simPanel">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:11px;flex-wrap:wrap">
+    <div>
+      <h2 style="font-size:16px;font-weight:800;color:var(--cmc-navy);margin:0">Escenarios</h2>
+      <p style="font-size:12px;color:var(--cmc-text-mute);margin:3px 0 0">
+        Cada escenario es una variante guardada. Se comparan entre sí por los topones que agregan.</p>
+    </div>
+  </div>
+  <div class="sim-grid" id="simGrid"></div>
+  <div id="simEditor"></div>
+</section>
+
 
 <!-- Totales -->
 <section class="max-w-7xl mx-auto mb-8 grid grid-cols-4 gap-4">
@@ -574,7 +644,7 @@ let STATE = { boxes_config_default: [], profesionales_all: [], citas_raw: [], ci
 // patrón semanal ("los martes el Box 4 es psicología de 15 a 19") nunca
 // sobrevivía: se escribía solo en memoria y el guardado siguiente lo borraba de
 // la base. Era la pieza que convierte la tabla en gemelo.
-let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {}, weekly_template: {} };
+let CONFIG = { layout: null, pisos: null, manual_overrides: {}, schedules: {}, weekly_template: {}, escenarios: {} };
 let editMode = false;
 let editingBoxId = null;
 let filterMode = 'todos'; // 'todos' | 'activos'
@@ -725,6 +795,7 @@ async function fetchConfig() {
       manual_overrides: d.manual_overrides || {},
       schedules: d.schedules || {},
       weekly_template: d.weekly_template || {},
+      escenarios: d.escenarios || {},
     };
   } catch {}
 }
@@ -748,6 +819,7 @@ function scheduleSave() {
           manual_overrides: CONFIG.manual_overrides || {},
           schedules: CONFIG.schedules || {},
           weekly_template: CONFIG.weekly_template || {},
+          escenarios: CONFIG.escenarios || {},
         }),
       });
       if (!r.ok) throw new Error(r.status);
@@ -1670,6 +1742,191 @@ async function refresh() {
     }
   });
 })();
+
+// ---------- Simulación: escenarios guardados ----------
+// Un escenario es una VARIANTE con nombre: "¿y si dejo las salas de kine sólo
+// para kinesiología?". Se guarda en la misma config que el resto (columna
+// `escenarios`), así sobrevive al refresh y se puede comparar con las otras.
+let simMode = false;
+let simAbierto = null;
+
+function simEsc() { return CONFIG.escenarios || (CONFIG.escenarios = {}); }
+function simSalas() { return (getLayout() || []).filter(b => !b.virtual && b.id !== 'telemed'); }
+function simNombreProf(pid) {
+  const p = (STATE.profesionales_all || []).find(x => String(x.id) === String(pid));
+  return p ? p.nombre : ('#' + pid);
+}
+function simNombreSala(bid) {
+  const b = simSalas().find(x => x.id === bid);
+  return b ? b.nombre : bid;
+}
+
+function simToggle() {
+  simMode = !simMode;
+  document.body.classList.toggle('sim-on', simMode);
+  document.getElementById('simPanel').style.display = simMode ? 'block' : 'none';
+  document.getElementById('btnSimMode').textContent = simMode ? '← Volver a lo real' : '🔬 Simulación';
+  if (simMode) renderSim(); 
+}
+
+function simNuevo() {
+  const id = 'esc_' + Date.now().toString(36);
+  simEsc()[id] = { id, nombre: 'Escenario ' + (Object.keys(simEsc()).length + 1),
+                   movimientos: [], dias: 30, resultado: null };
+  simAbierto = id;
+  scheduleSave(); renderSim();
+}
+function simDuplicar(id) {
+  const o = simEsc()[id]; if (!o) return;
+  const nid = 'esc_' + Date.now().toString(36);
+  simEsc()[nid] = JSON.parse(JSON.stringify({ ...o, id: nid, nombre: o.nombre + ' (copia)' }));
+  simAbierto = nid; scheduleSave(); renderSim();
+}
+function simBorrar(id) {
+  if (!confirm('¿Borrar este escenario? No afecta nada real.')) return;
+  delete simEsc()[id];
+  if (simAbierto === id) simAbierto = null;
+  scheduleSave(); renderSim();
+}
+function simAbrir(id) { simAbierto = (simAbierto === id ? null : id); renderSim(); }
+function simCampo(id, campo, valor) {
+  const e = simEsc()[id]; if (!e) return;
+  e[campo] = valor;
+  // Cambiar el escenario invalida el resultado: mostrar el veredicto viejo
+  // junto a movimientos nuevos es la peor forma de equivocarse acá.
+  if (campo !== 'nombre') e.resultado = null;
+  scheduleSave();
+  if (campo !== 'nombre') renderSim();
+}
+function simAddMov(id) {
+  const e = simEsc()[id]; if (!e) return;
+  const prof = (STATE.profesionales_all || [])[0];
+  const sala = simSalas()[0];
+  e.movimientos.push({ prof_id: prof ? prof.id : null, a_box: sala ? sala.id : null });
+  e.resultado = null; scheduleSave(); renderSim();
+}
+function simSetMov(id, i, campo, v) {
+  const e = simEsc()[id]; if (!e || !e.movimientos[i]) return;
+  e.movimientos[i][campo] = (campo === 'prof_id') ? parseInt(v, 10) : v;
+  e.resultado = null; scheduleSave(); renderSim();
+}
+function simDelMov(id, i) {
+  const e = simEsc()[id]; if (!e) return;
+  e.movimientos.splice(i, 1); e.resultado = null; scheduleSave(); renderSim();
+}
+
+async function simCorrer(id) {
+  const e = simEsc()[id]; if (!e) return;
+  const mover = (e.movimientos || []).filter(m => m.prof_id && m.a_box);
+  if (!mover.length) { alert('Agrega al menos un movimiento.'); return; }
+  e.corriendo = true; renderSim();
+  try {
+    const r = await fetch(`/admin/api/boxes-simular?token=${TOKEN}`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ mover, dias: e.dias || 30 }),
+    });
+    e.resultado = await r.json();
+    e.corrido_at = new Date().toISOString();
+  } catch (err) {
+    e.resultado = { ok:false, error: String(err) };
+  }
+  e.corriendo = false; scheduleSave(); renderSim();
+}
+
+function simBadge(e) {
+  const r = e.resultado;
+  if (!r) return '<span class="sim-veredicto sv-non">sin correr</span>';
+  if (r.ok === false) return '<span class="sim-veredicto sv-mal">no se puede</span>';
+  const d = r.diferencia || 0;
+  return d <= 0 ? '<span class="sim-veredicto sv-ok">cabe sin topones</span>'
+                : `<span class="sim-veredicto sv-mal">+${d} topón${d>1?'es':''}</span>`;
+}
+
+function renderSim() {
+  const escs = Object.values(simEsc());
+  document.getElementById('simGrid').innerHTML =
+    escs.map(e => `
+      <div class="sim-card ${simAbierto===e.id?'on':''}" onclick="simAbrir('${e.id}')">
+        <h4>${esc(e.nombre)}</h4>
+        <div class="mv">${(e.movimientos||[]).length
+          ? (e.movimientos||[]).filter(m=>m.prof_id&&m.a_box).map(m =>
+              `${esc(simNombreProf(m.prof_id))} → ${esc(simNombreSala(m.a_box))}`).join('<br>') || 'sin movimientos'
+          : 'sin movimientos'}</div>
+        ${simBadge(e)}
+      </div>`).join('') +
+    `<button class="sim-nueva" onclick="simNuevo()">+ Nuevo escenario</button>`;
+  renderSimEditor();
+}
+
+function renderSimEditor() {
+  const cont = document.getElementById('simEditor');
+  const e = simAbierto ? simEsc()[simAbierto] : null;
+  if (!e) { cont.innerHTML = ''; return; }
+  const profs = (STATE.profesionales_all || []);
+  const salas = simSalas();
+  const movs = (e.movimientos || []).map((m, i) => `
+    <div class="sim-mov">
+      <select onchange="simSetMov('${e.id}',${i},'prof_id',this.value)">
+        ${profs.map(p => `<option value="${p.id}" ${String(p.id)===String(m.prof_id)?'selected':''}>${esc(p.nombre)}</option>`).join('')}
+      </select>
+      <span style="color:var(--cmc-text-mute);font-size:13px">→</span>
+      <select onchange="simSetMov('${e.id}',${i},'a_box',this.value)">
+        ${salas.map(b => `<option value="${b.id}" ${b.id===m.a_box?'selected':''}>${esc(b.nombre)}</option>`).join('')}
+      </select>
+      <button class="sim-btn del" onclick="simDelMov('${e.id}',${i})">quitar</button>
+    </div>`).join('') || '<p style="font-size:12px;color:var(--cmc-text-mute);margin-bottom:8px">Todavía no hay movimientos.</p>';
+
+  const r = e.resultado;
+  let res = '';
+  if (e.corriendo) {
+    res = '<div class="sim-res"><p style="font-size:12.5px;color:var(--cmc-text-mute)">Simulando sobre las horas reales…</p></div>';
+  } else if (r && r.ok === false && r.imposibles) {
+    res = `<div class="sim-res"><div class="sim-warn"><b>No se puede.</b><br>` +
+          r.imposibles.map(x => `${esc(simNombreProf(x.prof_id))} → ${esc(simNombreSala(x.a_box))}: ${esc(x.motivo)}`).join('<br>') +
+          `</div></div>`;
+  } else if (r && r.ok !== false) {
+    const nuevos = r.choques_nuevos || [];
+    res = `<div class="sim-res">
+      <div class="sim-kpis">
+        <div class="sim-kpi"><b>${r.choques_hoy}</b><span>topones hoy</span></div>
+        <div class="sim-kpi"><b>${r.choques_simulado}</b><span>con el cambio</span></div>
+        <div class="sim-kpi"><b style="color:${(r.diferencia||0)>0?'#B4520F':'#1E7A5A'}">${(r.diferencia||0)>0?'+':''}${r.diferencia||0}</b><span>diferencia</span></div>
+        <div class="sim-kpi"><b>${r.dias}</b><span>días mirados</span></div>
+      </div>
+      <p style="font-size:13px;font-weight:800;color:var(--cmc-navy)">${esc(r.veredicto||'')}</p>
+      ${(r.advertencias||[]).length ? `<div class="sim-warn">${r.advertencias.map(a =>
+          `<b>${esc(simNombreProf(a.prof_id))}</b> hoy sólo puede estar en ${(a.restringido_a||[]).map(x=>esc(simNombreSala(x))).join(' o ')} (${esc(a.motivo||'')}). La simulación asume que se levanta esa regla.`).join('<br>')}</div>` : ''}
+      ${nuevos.length ? `<div class="sim-lista"><b style="color:var(--cmc-navy)">Topones que agrega:</b><br>` +
+          nuevos.slice(0,10).map(c => `${esc(c.fecha)} · ${esc(c.hora)} · ${esc(c.profesional||('#'+c.prof))}`).join('<br>') +
+          (nuevos.length>10 ? `<br>…y ${nuevos.length-10} más` : '') + `</div>`
+        : '<div class="sim-lista">No agrega ningún topón nuevo.</div>'}
+    </div>`;
+  }
+
+  cont.innerHTML = `
+    <div class="sim-editor">
+      <input type="text" value="${esc(e.nombre)}" onchange="simCampo('${e.id}','nombre',this.value)"
+             placeholder="Nombre del escenario">
+      <p style="font-size:11.5px;color:var(--cmc-text-mute);margin:9px 0 13px">
+        Qué profesional se cambia de sala. El sistema toma las horas reales y cuenta si se topan.</p>
+      ${movs}
+      <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px">
+        <button class="sim-btn sec" onclick="simAddMov('${e.id}')">+ Mover a alguien</button>
+        <select onchange="simCampo('${e.id}','dias',parseInt(this.value,10))"
+                style="font-size:12.5px;padding:7px 10px;border:1px solid var(--cmc-border);border-radius:9px;font-family:inherit">
+          ${[30,60,90].map(d => `<option value="${d}" ${d===(e.dias||30)?'selected':''}>${d} días</option>`).join('')}
+        </select>
+        <button class="sim-btn pri" onclick="simCorrer('${e.id}')">Simular</button>
+        <div style="flex:1"></div>
+        <button class="sim-btn sec" onclick="simDuplicar('${e.id}')">Duplicar</button>
+        <button class="sim-btn del" onclick="simBorrar('${e.id}')">Borrar</button>
+      </div>
+      ${res}
+    </div>`;
+}
+
+document.getElementById('btnSimMode').addEventListener('click', simToggle);
+
 </script>
 </body>
 </html>
