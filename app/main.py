@@ -3865,6 +3865,69 @@ BOXES_CONFIG = [
     {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [78, 79], "revenue_profs": [78, 79], "virtual": True, "uso_autorizado": "teleconsulta (sin sala física)"},
 ]
 
+# Profesionales CAUTIVOS: sólo pueden atender en ciertas salas y nunca se
+# reparten al resto del pool. Es distinto de la prioridad: el cautivo no desplaza
+# a nadie, simplemente no puede estar en otro lado.
+#
+# `excepcion` son salas permitidas fuera de su set habitual, para casos puntuales
+# (no entran al reparto automático; sirven para no marcar un choque falso cuando
+# de verdad ocurre).
+#
+# Datos confirmados con el dueño 2026-08-06.
+CAUTIVOS = {
+    77: {"salas": ["kine1", "kine2"], "motivo": "kinesiología"},
+    21: {"salas": ["kine1", "kine2"], "motivo": "kinesiología"},
+    59: {"salas": ["box5"],           "motivo": "masoterapia"},
+    # Dental: todos al Box Dental. Javiera además puede usar un box del piso 1
+    # cuando el paciente no puede subir al segundo — es excepción, no rutina.
+    55: {"salas": ["boxdental"], "excepcion": ["box1", "box2"],
+         "motivo": "dental; usa piso 1 si el paciente no puede subir"},
+    72: {"salas": ["boxdental"], "motivo": "dental"},
+    66: {"salas": ["boxdental"], "motivo": "dental"},
+    75: {"salas": ["boxdental"], "motivo": "dental"},
+    69: {"salas": ["boxdental"], "motivo": "dental"},
+    76: {"salas": ["boxdental"], "motivo": "dental"},
+}
+
+
+def salas_permitidas(prof_id: int, incluir_excepciones: bool = False) -> list | None:
+    """Salas donde este profesional PUEDE estar, o None si no está restringido."""
+    c = CAUTIVOS.get(prof_id)
+    if not c:
+        return None
+    salas = list(c["salas"])
+    if incluir_excepciones:
+        salas += [x for x in (c.get("excepcion") or []) if x not in salas]
+    return salas
+
+
+# Reglas de PRIORIDAD entre profesionales por sala.
+#
+# El modelo de boxes tiene dos modos: "pool" (el primero que llega toma la sala)
+# y "fijo" (siempre el mismo). Ninguno representa lo que pasa de verdad en el
+# centro: hay salas donde una prestación MANDA sobre otra y desplaza a quien
+# esté ahí.
+#
+# Regla real (confirmada con el dueño 2026-08-06): el Box 1 es de Abarca, SALVO
+# que ese día atienda ecografía. Cuando David Pardo atiende, él toma el Box 1 y
+# Abarca se corre al Box 4; si el 4 está ocupado, al 3.
+#
+# Se evalúa POR FRANJA, no por día: si Pardo sólo atiende en la mañana, Abarca
+# vuelve al Box 1 en la tarde. Sale gratis porque la asignación ya se calcula
+# momento a momento.
+#
+# `alternativas` va en orden de preferencia. Si ninguna tiene cupo, el
+# desplazado cae al reparto normal del pool.
+REGLAS_SALA = [
+    {
+        "cuando_atiende": 68,                    # David Pardo — Ecografía
+        "toma": "box1",
+        "desplaza": {73: ["box4", "box3"]},      # Andrés Abarca — Medicina General
+        "motivo": "ecografía tiene prioridad en Box 1",
+    },
+]
+
+
 def boxes_config_efectiva(layout_guardado) -> list[dict]:
     """Fusiona la planta que editó el usuario con la semántica del código.
 
@@ -5645,6 +5708,64 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             if box["modo"] == "pool":
                 pool_boxes.setdefault(box["pool_group"], []).append(box["id"])
 
+        # ── PRIORIDAD entre profesionales (REGLAS_SALA) ─────────────────────
+        # Antes del reparto normal: si el profesional prioritario está atendiendo
+        # AHORA, toma su sala y el desplazado se va a su alternativa. Como esto
+        # corre sobre `activas` —las citas en curso en este momento— la regla
+        # aplica por franja: si el de ecografía sólo atiende en la mañana, el
+        # desplazado vuelve a su sala en la tarde sin que nadie haga nada.
+        desplazamientos = []
+        _cap = lambda bid: len(box_assignments[bid]["profesionales_activos"]) < 2
+
+        def _colocar(c, bid):
+            elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
+            box_assignments[bid]["profesionales_activos"].append({
+                "profesional": c["profesional"], "especialidad": c["especialidad"],
+                "paciente": _initials_pac(c["paciente"]) if c["paciente"] else None,
+                "elapsed_min": max(0, elapsed),
+                "cita_id": c["cita_id"], "paciente_id": c["paciente_id"],
+            })
+            box_assignments[bid]["citas_hoy_ids"].add(c["cita_id"])
+            citas_asignadas.add(c["cita_id"])
+
+        for regla in REGLAS_SALA:
+            pid_manda = regla["cuando_atiende"]
+            destino = regla["toma"]
+            if destino not in box_assignments:
+                continue
+            citas_manda = [c for c in activas
+                           if c["profesional_id"] == pid_manda and c["cita_id"] not in citas_asignadas]
+            if not citas_manda:
+                continue          # no atiende ahora → nadie se mueve
+
+            # 1) el prioritario toma su sala
+            for c in citas_manda:
+                if _cap(destino):
+                    _colocar(c, destino)
+
+            # 2) los desplazados salen de esa sala y van a su alternativa
+            for pid_fuera, alternativas in (regla.get("desplaza") or {}).items():
+                citas_fuera = [c for c in activas
+                               if c["profesional_id"] == pid_fuera and c["cita_id"] not in citas_asignadas]
+                _perm_fuera = salas_permitidas(pid_fuera)
+                for c in citas_fuera:
+                    ubicado = None
+                    for alt in alternativas:
+                        if _perm_fuera is not None and alt not in _perm_fuera:
+                            continue      # no se desplaza a un cautivo fuera de sus salas
+                        if alt in box_assignments and _cap(alt):
+                            _colocar(c, alt); ubicado = alt; break
+                    desplazamientos.append({
+                        "profesional": c["profesional"], "desde": destino,
+                        "hacia": ubicado, "motivo": regla.get("motivo", ""),
+                        # Si ninguna alternativa tenía cupo, cae al reparto normal
+                        # más abajo — pero queda registrado que no se pudo ubicar.
+                        "sin_cupo": ubicado is None,
+                    })
+            if desplazamientos:
+                log.info("boxes: regla '%s' aplicada — %s", regla.get("motivo"),
+                         [f'{d["profesional"]} → {d["hacia"] or "sin cupo"}' for d in desplazamientos])
+
         for c in activas:
             if c["cita_id"] in citas_asignadas:
                 continue
@@ -5656,8 +5777,15 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                     break
             if target_group is None:
                 continue
-            # Buscar primer box del grupo con cupo (max 2 profesionales simultáneos por box)
-            for box_id in pool_boxes.get(target_group, []):
+            # Un cautivo no entra al reparto libre: sólo puede caer en sus salas.
+            _permitidas = salas_permitidas(c["profesional_id"])
+            _candidatos = pool_boxes.get(target_group, [])
+            if _permitidas is not None:
+                _candidatos = [b for b in _candidatos if b in _permitidas] or _permitidas
+            # Buscar primer box con cupo (max 2 profesionales simultáneos por box)
+            for box_id in _candidatos:
+                if box_id not in box_assignments:
+                    continue
                 if len(box_assignments[box_id]["profesionales_activos"]) < 2:
                     elapsed = int((datetime.combine(today, now_t) - datetime.combine(today, c["hora_inicio"])).total_seconds() / 60)
                     box_assignments[box_id]["profesionales_activos"].append({
@@ -6136,6 +6264,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 # decir por qué en vez de dejar la diferencia sin explicar.
                 "citas_sin_sala": len(citas_sin_sala),
                 "choques": len(choques),
+                "desplazamientos": len(desplazamientos),
                 # Capacidad ociosa del CENTRO en 30 días, sumando solo salas
                 # físicas. Es la respuesta a "cuánto puedo crecer sin construir".
                 "cupos_libres_30d": sum(h.get("cupos_libres_30d") or 0 for h in historial),
@@ -6149,6 +6278,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                 }),
             },
             "choques_detalle": choques,
+            "desplazamientos_detalle": desplazamientos,
             "boxes": boxes_out,
             "boxes_config_default": BOXES,
             "profesionales_all": profesionales_all,
