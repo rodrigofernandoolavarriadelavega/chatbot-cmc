@@ -3851,11 +3851,11 @@ BOXES_CONFIG = [
     # corregía a mano cada día, trabajo que se borraba cada noche. La MIGRACIÓN
     # a Box 3 está prevista pero NO hecha: la config refleja lo REAL, y el
     # traslado se evalúa antes con /admin/api/boxes-simular.
-    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21, 80], "revenue_profs": [21, 80], "uso_autorizado": "kinesiología y oftalmología"},
+    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21, 80, 59], "revenue_profs": [21, 80, 59], "uso_autorizado": "kinesiología, masoterapia y oftalmología"},
     {"id": "boxdental", "piso": 2, "orden": 4, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76], "uso_autorizado": "odontología"},
     {"id": "box3",      "piso": 2, "orden": 1, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56], "revenue_profs": [67, 68, 56], "uso_autorizado": "procedimientos y toma de muestras"},
     {"id": "box4",      "piso": 2, "orden": 2, "nombre": "Box 4",         "tipo": "psico/nutri", "modo": "pool", "pool_group": "psiconut", "default_profs": [74, 49, 52], "uso_autorizado": "consulta psicológica y nutricional"},
-    {"id": "box5",      "piso": 2, "orden": 3, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [59], "uso_autorizado": "masoterapia"},
+    {"id": "box5",      "piso": 2, "orden": 3, "nombre": "Box 5",         "tipo": "masoterapia", "modo": "fijo", "pool_group": None,       "default_profs": [], "uso_autorizado": "masoterapia"},
     # Telemedicina: Unibazo (psiquiatría) y Franca González (neurología) atienden
     # por videollamada. Ocupan AGENDA pero no metros cuadrados, así que van en su
     # propio carril con `virtual: True` — no compiten por sala y no deben contar
@@ -3877,7 +3877,7 @@ BOXES_CONFIG = [
 CAUTIVOS = {
     77: {"salas": ["kine1", "kine2"], "motivo": "kinesiología"},
     21: {"salas": ["kine1", "kine2"], "motivo": "kinesiología"},
-    59: {"salas": ["box5"],           "motivo": "masoterapia"},
+    59: {"salas": ["kine1", "kine2"], "motivo": "masoterapia; su sala es Kine 2"},
     # Dental: todos al Box Dental. Javiera además puede usar un box del piso 1
     # cuando el paciente no puede subir al segundo — es excepción, no rutina.
     55: {"salas": ["boxdental"], "excepcion": ["box1", "box2"],
