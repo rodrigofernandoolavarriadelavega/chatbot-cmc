@@ -5272,9 +5272,14 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
         if b.get("modo") == "pool" and not b.get("virtual"):
             por_grupo.setdefault(b.get("pool_group"), []).append(b["id"])
 
+    _virtuales = {pid for b in BOXES if b.get("virtual")
+                  for pid in (b.get("default_profs") or [])}
+
     def _salas_candidatas(pid: int, escenario: bool) -> list:
         if escenario and pid in mover:
             return [mover[pid]]
+        if pid in _virtuales:
+            return []          # telemedicina: no necesita sala
         perm = salas_permitidas(pid)
         if perm:
             return [x for x in perm if x in por_id]
@@ -5327,6 +5332,10 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
                         ocupacion.setdefault(sala, []).append((hi, fin, pid))
                         colocado = True
                         break
+                # Telemedicina no compite por sala: no encontrar box no es un
+                # choque, es que no lo necesita. Antes inflaba el conteo.
+                if not colocado and pid in _virtuales:
+                    continue
                 if not colocado:
                     total += 1
                     if len(detalle) < 25:
