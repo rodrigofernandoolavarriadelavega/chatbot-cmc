@@ -3839,30 +3839,70 @@ def estado_es_no_show(estado: str | None) -> bool:
     return any(f in e for f in ("no asiste", "no asistio", "no asistió"))
 
 BOXES_CONFIG = [
-    # default_profs = pool de OCUPACIÓN física (quién puede estar en la sala; box1/box2 son
-    #   intercambiables, el spreading en vivo reparte hasta 2 médicos por box).
-    # revenue_profs = atribución CONTABLE (de quién es la plata). box1=MG, box2=especialistas.
-    #   Particiona el pool general sin solape ni hueco → cada cita cuenta una sola vez.
-    {"id": "box1",      "piso": 1, "orden": 1, "nombre": "Box 1",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [1, 73, 13], "uso_autorizado": "consulta médica general"},
-    {"id": "box2",      "piso": 1, "orden": 2, "nombre": "Box 2",         "tipo": "general",     "modo": "pool", "pool_group": "general",  "default_profs": [1, 73, 13, 23, 60, 64, 61, 65, 70], "revenue_profs": [23, 60, 64, 61, 65, 70], "uso_autorizado": "consulta médica de especialidad"},
-    {"id": "kine1",     "piso": 1, "orden": 3, "nombre": "Kinesiología 1","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [77], "uso_autorizado": "kinesiología"},
-    # Ana Celedón (80, oftalmología) comparte HOY esta sala con Etcheverry —
-    # confirmado con el dueño 2026-08-06. Estaba puesta en Box 3 y recepción la
-    # corregía a mano cada día, trabajo que se borraba cada noche. La MIGRACIÓN
-    # a Box 3 está prevista pero NO hecha: la config refleja lo REAL, y el
-    # traslado se evalúa antes con /admin/api/boxes-simular.
-    {"id": "kine2",     "piso": 1, "orden": 4, "nombre": "Kinesiología 2","tipo": "kinesiología","modo": "fijo", "pool_group": None,       "default_profs": [21, 80, 59], "revenue_profs": [21, 80, 59], "uso_autorizado": "kinesiología, masoterapia y oftalmología"},
-    {"id": "boxdental", "piso": 2, "orden": 4, "nombre": "Box Dental",    "tipo": "dental",      "modo": "pool", "pool_group": "dental",   "default_profs": [55, 72, 66, 75, 69, 76], "uso_autorizado": "odontología"},
-    {"id": "box3",      "piso": 2, "orden": 1, "nombre": "Box 3",         "tipo": "procedimientos","modo":"pool","pool_group": "proced",   "default_profs": [67, 68, 56], "revenue_profs": [67, 68, 56], "uso_autorizado": "procedimientos y toma de muestras"},
-    {"id": "box4",      "piso": 2, "orden": 2, "nombre": "Box 4",         "tipo": "psicología",  "modo": "pool", "pool_group": "psico", "default_profs": [74, 49], "revenue_profs": [74, 49], "uso_autorizado": "consulta psicológica"},
-    {"id": "box5",      "piso": 2, "orden": 3, "nombre": "Box 5",         "tipo": "nutrición",   "modo": "fijo", "pool_group": None,       "default_profs": [52], "revenue_profs": [52], "uso_autorizado": "nutrición"},
-    # Telemedicina: Unibazo (psiquiatría) y Franca González (neurología) atienden
-    # por videollamada. Ocupan AGENDA pero no metros cuadrados, así que van en su
-    # propio carril con `virtual: True` — no compiten por sala y no deben contar
-    # como capacidad física cuando se calcule cuánto se puede crecer sin construir.
-    # Antes no estaban en ningún box: sus citas se descartaban en silencio y su
-    # plata no entraba en el revenue del día.
-    {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [], "revenue_profs": [], "virtual": True, "uso_autorizado": "teleconsulta (sin sala física)"},
+    # ⚠️ LOS IDS NO COINCIDEN CON LOS NOMBRES — y es a propósito.
+    #
+    # `box3` se llama "Box 4" y `box4` se llama "Box 3". Se ve mal, pero los ids
+    # son la llave con la que `bi.boxes_asignacion_log` guarda meses de historial
+    # de lo que marcó recepción. Renombrarlos reasignaría en silencio todos los
+    # registros pasados a la sala equivocada. El id es interno; el nombre es lo
+    # que ve la gente, y el nombre es el correcto. No los "arregles".
+    #
+    # Planta confirmada con el dueño el 2026-08-06.
+    #
+    # default_profs  = quién ocupa la sala (asignación física).
+    # revenue_profs  = de quién es la plata. Particiona sin solape ni hueco:
+    #                  cada profesional cuenta en UNA sola sala.
+
+    # ── Piso 1 ────────────────────────────────────────────────────────────
+    # Box 1 y Box 2 comparten grupo: si uno se llena, se desborda al otro.
+    # Box 2 es "de" Márquez y Quijano, pero no rechaza a nadie estando libre
+    # (decisión del dueño: la única sala verdaderamente excluyente es la dental).
+    {"id": "box1", "piso": 1, "orden": 1, "nombre": "Box 1", "tipo": "general",
+     "modo": "pool", "pool_group": "general",
+     "default_profs": [1, 73, 23, 60, 61, 68], "revenue_profs": [1, 73, 23, 60, 61, 68],
+     "uso_autorizado": "consulta médica y ecografía"},
+    {"id": "box2", "piso": 1, "orden": 2, "nombre": "Box 2", "tipo": "general",
+     "modo": "pool", "pool_group": "general",
+     "default_profs": [13, 65], "revenue_profs": [13, 65],
+     "uso_autorizado": "consulta médica (Dr. Márquez y Dr. Quijano)"},
+    # Las dos salas de kine son un grupo: los kinesiólogos pueden ocupar las dos
+    # a la vez cuando coinciden, aunque por lo general les basta una.
+    {"id": "kine1", "piso": 1, "orden": 3, "nombre": "Kinesiología 1", "tipo": "kinesiología",
+     "modo": "pool", "pool_group": "kine",
+     "default_profs": [21, 77], "revenue_profs": [21, 77],
+     "uso_autorizado": "kinesiología"},
+    {"id": "kine2", "piso": 1, "orden": 4, "nombre": "Kinesiología 2", "tipo": "kinesiología",
+     "modo": "pool", "pool_group": "kine",
+     "default_profs": [59, 70, 80], "revenue_profs": [59, 70, 80],
+     "uso_autorizado": "masoterapia, fonoaudiología y oftalmología"},
+
+    # ── Piso 2 ────────────────────────────────────────────────────────────
+    {"id": "box4", "piso": 2, "orden": 1, "nombre": "Box 3", "tipo": "psicología",
+     "modo": "pool", "pool_group": "psico",
+     "default_profs": [74, 49], "revenue_profs": [74, 49],
+     "uso_autorizado": "consulta psicológica (multiuso)"},
+    {"id": "box3", "piso": 2, "orden": 2, "nombre": "Box 4", "tipo": "procedimientos",
+     "modo": "pool", "pool_group": "proced",
+     "default_profs": [67, 56], "revenue_profs": [67, 56],
+     "uso_autorizado": "matrona y podología (multiuso)"},
+    {"id": "box5", "piso": 2, "orden": 3, "nombre": "Box 5", "tipo": "nutrición",
+     "modo": "pool", "pool_group": "nutri",
+     "default_profs": [52], "revenue_profs": [52],
+     "uso_autorizado": "nutrición (multiuso)"},
+    # Única sala EXCLUYENTE del centro: tiene sillón y nadie más la ocupa.
+    {"id": "boxdental", "piso": 2, "orden": 4, "nombre": "Box Dental", "tipo": "dental",
+     "modo": "pool", "pool_group": "dental",
+     "default_profs": [55, 72, 66, 75, 69, 76], "revenue_profs": [55, 72, 66, 75, 69, 76],
+     "uso_autorizado": "odontología"},
+
+    # ── Sin sala ──────────────────────────────────────────────────────────
+    # Ocupan AGENDA pero no metros cuadrados. Van en su propio carril para no
+    # ensuciar el cálculo de cuánto se puede crecer sin construir. Se pueblan
+    # desde la ficha del profesional (`profesionales_telemedicina`).
+    {"id": "telemed", "piso": 0, "orden": 1, "nombre": "Telemedicina", "tipo": "telemedicina",
+     "modo": "pool", "pool_group": "telemed",
+     "default_profs": [], "revenue_profs": [], "virtual": True,
+     "uso_autorizado": "teleconsulta (sin sala física)"},
 ]
 
 # Profesionales CAUTIVOS: sólo pueden atender en ciertas salas y nunca se
@@ -3878,7 +3918,6 @@ CAUTIVOS = {
     77: {"salas": ["kine1", "kine2"], "motivo": "kinesiología"},
     21: {"salas": ["kine1", "kine2"], "motivo": "kinesiología"},
     59: {"salas": ["kine1", "kine2"], "motivo": "masoterapia; su sala es Kine 2"},
-    52: {"salas": ["box5"],           "motivo": "nutrición; Box 5 es su sala"},
     # Dental: todos al Box Dental. Javiera además puede usar un box del piso 1
     # cuando el paciente no puede subir al segundo — es excepción, no rutina.
     55: {"salas": ["boxdental"], "excepcion": ["box1", "box2"],
@@ -3919,6 +3958,37 @@ def salas_permitidas(prof_id: int, incluir_excepciones: bool = False) -> list | 
     if incluir_excepciones:
         salas += [x for x in (c.get("excepcion") or []) if x not in salas]
     return salas
+
+
+# Salas EXCLUYENTES: sólo admiten a sus propios profesionales, aunque estén
+# vacías.
+#
+# OJO — esto es un eje DISTINTO de `CAUTIVOS`, y confundirlos fue un error mío
+# que el dueño corrigió el 2026-08-06:
+#
+#   · CAUTIVOS  restringe al PROFESIONAL: el kinesiólogo sólo trabaja en salas
+#     de kine porque ahí está la camilla y el equipo.
+#   · EXCLUYENTES restringe la SALA: quién más puede entrar cuando está libre.
+#
+# No son lo mismo. Un kinesiólogo no puede salir de kine, pero **un médico sí
+# puede usar una sala de kine si está desocupada** — la sala no es exclusiva,
+# el profesional es el limitado. La única sala verdaderamente excluyente del
+# centro es la dental: tiene sillón, y nadie más la ocupa. Todas las demás
+# (Box 1 a 5 y las de kine) son multiuso y se pueden usar indistintamente.
+SALAS_EXCLUYENTES = {"boxdental"}
+
+
+def sala_acepta(box_id: str, prof_id: int) -> bool:
+    """¿Este profesional puede ocupar esta sala? Cruza los DOS ejes de arriba."""
+    perm = salas_permitidas(prof_id, incluir_excepciones=True)
+    if perm is not None and box_id not in perm:
+        return False                      # el profesional no puede salir de lo suyo
+    if box_id in SALAS_EXCLUYENTES:
+        # Sala exclusiva: sólo entra quien la tiene asignada de origen.
+        for b in BOXES_CONFIG:
+            if b["id"] == box_id:
+                return prof_id in (b.get("default_profs") or [])
+    return True
 
 
 # Reglas de PRIORIDAD entre profesionales por sala.
@@ -5248,6 +5318,20 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
     dias = max(1, min(int(body.get("dias") or 30), 120))
     if not mover:
         raise HTTPException(400, "falta 'mover'")
+
+    # Hay traslados que no son "apretados", son imposibles: un no-dentista al
+    # Box Dental, o un kinesiólogo fuera de kine. Simularlos devolvería un
+    # conteo de choques que se leería como "cabe" — peor que no responder.
+    _imposibles = [
+        {"prof_id": pid, "a_box": bx,
+         "motivo": ("la sala dental sólo admite odontología"
+                    if bx in SALAS_EXCLUYENTES
+                    else f"ese profesional sólo puede estar en {salas_permitidas(pid)}")}
+        for pid, bx in mover.items() if not sala_acepta(bx, pid)
+    ]
+    if _imposibles:
+        return {"ok": False, "imposibles": _imposibles,
+                "mensaje": "El traslado no es posible; no se simuló."}
 
     try:
         _cfg = api_boxes_config_get(token=token) or {}
