@@ -1251,6 +1251,7 @@ import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estu
 import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
 import agenda_ticker_routes; agenda_ticker_routes.register_agenda_ticker_routes(app)  # Monitor de agendamientos en vivo (/alma/agenda-en-vivo)
 import ausentismo_routes; ausentismo_routes.register_ausentismo_routes(app)  # Ausentismo — ranking pacientes que no asisten (/alma/ausentismo)
+import numero_equivocado; numero_equivocado.register_numero_equivocado_routes(app)  # Números reciclados: limpieza 4 capas desde panel v2
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
 import conciliacion_transferencias_routes; conciliacion_transferencias_routes.register_conciliacion_transferencias_routes(app)  # Conciliación transferencias × correos banco + sugerencias de pago (/alma/conciliacion-transferencias)
 import mapa_centro_routes; mapa_centro_routes.register_mapa_centro_routes(app)  # Mapa del Centro: inventario de TODO lo que hay en marcha, con sondas en vivo (/alma/mapa)

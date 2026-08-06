@@ -360,6 +360,31 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 ## Sesión en curso
 **Última actualización**: 2026-08-05
 
+### 2026-08-06 — Vocabulario especialidades + números reciclados
+- **Caso "siquiatra" (56991927216)**: "necesito una hora con siquiatra" caía a
+  Medicina General porque la frase genérica `("necesito una hora","medicina
+  general")` de `_FRASES_ESPECIALIDAD` ganaba por primer-match y "siquiatra"
+  (sin p) no estaba en ningún vocabulario. Fix doble en `flows.py`: (a) ~35
+  variantes/typos nuevos de especialidades (siquiatr/sicolog cubren también
+  psiquiatr/psicolog por substring; oftamolog, oculista, otorino, tramatolog,
+  quinesiolog, nuerolog, matron, etc.) + espejo en `_INTENT_CACHE` de
+  `claude_helper.py`; (b) "necesito una hora" salió de la lista y ahora es un
+  check guardado al FINAL de `_detectar_especialidad_en_texto`: si nombra a
+  alguien no reconocido ("hora con urologo") devuelve None → Claude decide.
+  PENDIENTE conocido: la preferencia de fecha ("próxima semana") se ignora en
+  la primera oferta (misma clase que el caso María "para hoy" del backlog).
+- **Números reciclados** (`app/numero_equivocado.py` nuevo, decisión del
+  dueño): detector conservador de "número equivocado" (patrones fuertes +
+  débiles con contexto) en `handle_message` → responde, tag
+  `posible_numero_equivocado`, HUMAN_TAKEOVER motivo `numero_equivocado`.
+  Recepción confirma con botón "☎️ Nº equivocado" del panel v2 →
+  `POST /admin/api/numero-equivocado/{phone}/limpiar` ejecuta la receta 4
+  capas (Medilink PUT celular/telefono="" en TODAS las fichas con ese número,
+  BI telefono=NULL + opt_outs_marketing 2 formatos, consent→declined, tag
+  local + evento). NUNCA auto-opt-out por texto libre. Ver memoria
+  `cmc_numeros_reciclados_receta.md`. Tests: detector 14/14, vocab 18/18,
+  harness 76/103 (=baseline), normalizer 52/52, JS panel OK, endpoint 403 OK.
+
 ### 2026-08-05 — Módulo Alma "Ausentismo" — ranking pacientes que no asisten
 - **`app/ausentismo.py`** (nuevo): tabla local `ausentismo_citas` + recolector
   nocturno 04:50 CLT que camina `/citas` DÍA POR DÍA con `fecha eq` (carril

@@ -2218,6 +2218,7 @@ function renderHeader(){
   acts.push(`<a class="chat-btn" href="${MEDILINK_AGENDA_URL}" target="_blank" rel="noopener" title="Abrir la agenda en Medilink">🗓️ Medilink</a>`);
   acts.push(`<button class="chat-btn icon-only" onclick="copyRut()" title="Copiar RUT del paciente">🆔</button>`);
   acts.push(`<button class="chat-btn icon-only" onclick="copyPhone()" title="Copiar teléfono">${iconCopy}</button>`);
+  acts.push(`<button class="chat-btn danger" onclick="limpiarNumeroEquivocado()" title="Número reciclado: ya no es de la paciente. Borra el número de la ficha Medilink, lo saca de BI y lo bloquea de todo mensaje de marketing.">☎️ Nº equivocado</button>`);
   $("#chActions").innerHTML = acts.join("");
   $("#takeoverBanner").style.display = isTake ? "flex" : "none";
   // Aviso de conversación parada: el bot no respondió y nadie tomó el control.
@@ -2700,6 +2701,29 @@ async function addTag(t){
     loadInbox();
   } catch(e){ toast("Error al añadir etiqueta", "error"); }
 }
+async function limpiarNumeroEquivocado(){
+  if (!activePhone) return;
+  const ok = confirm(
+    "¿Confirmar que este número YA NO pertenece a la persona registrada?\n\n" +
+    "Se hará automáticamente:\n" +
+    "• Borrar el número de la ficha en Medilink\n" +
+    "• Sacarlo de la base de marketing (BI)\n" +
+    "• Bloquearlo de todo mensaje automático futuro\n\n" +
+    "Esta acción es para números reciclados (otra persona lo tiene ahora).");
+  if (!ok) return;
+  try {
+    const r = await api(`/admin/api/numero-equivocado/${encodeURIComponent(activePhone)}/limpiar`, {method:"POST"});
+    if (r && r.ok){
+      const n = (r.pacientes || []).length;
+      toast(n ? `Número limpiado — ${n} ficha(s) corregida(s) y bloqueado de marketing` :
+                "Número bloqueado de marketing (no estaba asociado a ninguna ficha)", "ok");
+      loadTags();
+    } else {
+      toast("Error: " + ((r && r.error) || "no se pudo limpiar"), "error");
+    }
+  } catch(e){ toast("Error al limpiar el número", "error"); }
+}
+
 async function delTag(t){
   try {
     await api(`/admin/api/tags/${encodeURIComponent(activePhone)}/${encodeURIComponent(t)}`, {method:"DELETE"});

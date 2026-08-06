@@ -2682,6 +2682,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         except Exception as e:
             log.warning("operativa: rescate tomar falló phone=%s: %s", phone, e)
 
+    # ── Número equivocado / reciclado (caso Maria 2026-08-06) ─────────────────
+    # Si quien escribe dice que este número ya no es de la persona que
+    # saludamos, el bot NO sigue conversando: avisa que dejaremos de escribir y
+    # pasa a recepción, que confirma con el botón "Nº equivocado" del panel
+    # (ejecuta la limpieza de 4 capas — ver numero_equivocado.py). El opt-out
+    # NUNCA es automático: un falso positivo silenciaría a un paciente real.
+    if state != "HUMAN_TAKEOVER":
+        try:
+            from numero_equivocado import detectar_reporte_numero_equivocado
+            if detectar_reporte_numero_equivocado(tl):
+                log_event(phone, "numero_equivocado_reportado",
+                          {"texto": txt[:200], "state": state})
+                save_tag(phone, "posible_numero_equivocado")
+                save_session(phone, "HUMAN_TAKEOVER",
+                             {"handoff_reason": "numero_equivocado"})
+                return ("Gracias por avisarnos 🙏 Dejaremos de escribir a este "
+                        "número y corregiremos nuestro registro. Disculpe las "
+                        "molestias.")
+        except Exception as _ne_e:
+            log.warning("numero_equivocado detector falló phone=%s: %s", phone, _ne_e)
+
     # ── Comando admin: /status (y sinónimos) desde el celular del admin ───
     # Abre la ventana 24h de WhatsApp y devuelve el reporte EN VIVO. Útil
     # cuando el job periódico no llegó por "Re-engagement message" (131047).
@@ -13940,7 +13961,10 @@ _FRASES_ESPECIALIDAD = [
     ("quiero medico",         "medicina general"),
     ("quiero doctor",         "medicina general"),
     ("necesito doctor",       "medicina general"),
-    ("necesito una hora",     "medicina general"),   # sin especialidad → MG por defecto
+    # "necesito una hora" se movió a un check guardado DENTRO de
+    # _detectar_especialidad_en_texto: como entrada de esta lista se comía
+    # "necesito una hora con siquiatra" → MG (caso real 2026-08-06, el typo
+    # sin p no estaba en el vocabulario y el primer match ganaba).
     ("pedir hora médico",     "medicina general"),
     ("pedir hora medico",     "medicina general"),
     # Bug 4 fix: salud mental, fuzzy ortodoncia, ansiedad/depresion
@@ -13953,6 +13977,44 @@ _FRASES_ESPECIALIDAD = [
     ("ortodancia",            "ortodoncia"),
     ("ortodonsia",            "ortodoncia"),
     ("ortodencias",           "ortodoncia"),
+    # Variantes y typos de nombres de especialidad (caso siquiatra 2026-08-06).
+    # OJO: "siquiatr" es substring de "psiquiatr" y "sicolog" de "psicolog" —
+    # una sola entrada sin la p inicial cubre AMBAS grafías (la sin-p además
+    # es válida en RAE para sicólogo/siquiatra).
+    ("siquiatr",              "psiquiatría"),
+    ("sikiatr",               "psiquiatría"),
+    ("psquiatr",              "psiquiatría"),
+    ("psiquatr",              "psiquiatría"),
+    ("salud siquica",         "psiquiatría"),
+    ("sicolog",               "psicología"),
+    ("psicoterap",            "psicología"),
+    ("sicoterap",             "psicología"),
+    ("pscolog",               "psicología"),
+    ("neurolog",              "neurología"),
+    ("nuerolog",              "neurología"),
+    ("neorolog",              "neurología"),
+    ("oftalmolog",            "tecnología médica oftalmológica"),
+    ("oftamolog",             "tecnología médica oftalmológica"),
+    ("oculista",              "tecnología médica oftalmológica"),
+    ("optometr",              "tecnología médica oftalmológica"),
+    ("otorino",               "otorrinolaringología"),
+    ("otorrin",               "otorrinolaringología"),
+    ("tramatolog",            "traumatología"),
+    ("traumotolog",           "traumatología"),
+    ("cardilog",              "cardiología"),
+    ("guinecolog",            "ginecología"),
+    ("ginecól",               "ginecología"),
+    ("quinesiolog",           "kinesiología"),
+    ("kineciolog",            "kinesiología"),
+    ("kinisiolog",            "kinesiología"),
+    ("fonaudiolog",           "fonoaudiología"),
+    ("fonoudiolog",           "fonoaudiología"),
+    ("nutriolog",             "nutrición"),
+    ("nutrisionista",         "nutrición"),
+    ("matron",                "matrona"),
+    ("odontolg",              "odontología"),
+    ("gastroenterolog",       "gastroenterología"),
+    ("gastroenterolg",        "gastroenterología"),
 ]
 
 
@@ -14010,6 +14072,15 @@ def _detectar_especialidad_en_texto(txt: str) -> str | None:
         for frase, key in _FRASES_ESPECIALIDAD:
             if frase in tl_fuzzy:
                 return key
+    # Genérica "necesito una hora" → MG por defecto, PERO solo si no nombra a
+    # alguien que no reconocimos: "necesito una hora con siquiatra" (typo fuera
+    # de vocabulario) debe devolver None para que Claude resuelva la
+    # especialidad, no caer a Medicina General (caso real 2026-08-06).
+    if "necesito una hora" in tl:
+        _m = _re.search(r"hora\s+(?:con|para)\s+(?:el\s|la\s|un\s|una\s)?([a-záéíóúñ]{3,})", tl)
+        if _m and _m.group(1) not in ("medico", "médico", "doctor", "doctora"):
+            return None
+        return "medicina general"
     return None
 
 
