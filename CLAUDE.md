@@ -360,6 +360,44 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 ## Sesión en curso
 **Última actualización**: 2026-08-05
 
+### 2026-08-06 — Resultados de examen enviados por el paciente (DEPLOYADO commit 115ef84)
+- **Caso Manuel Yaupe (56998901932, 17:15 CL)**: mandó el PDF de sus exámenes
+  de Inmunomédica. El bot **SÍ lo leyó** (`extract_text_from_pdf` devolvió el
+  texto completo) pero no lo reconoció, así que el texto entró al pipeline de
+  agendamiento y le respondió *"¡Gracias por enviarme tus datos! Para agendar
+  necesito saber qué especialidad…"*. **El problema nunca fue leer, fue
+  clasificar**: `_CLINICAL_DOC_KEYS` solo cubría ficha/entrevista/formulario/
+  consentimiento. No volvió a escribir → abandono silencioso.
+- **`app/examenes_lab.py`** (nuevo): `parece_examen()` por PUNTAJE (fuerte=2:
+  laboratorio conocido, "toma de muestra", "valores de referencia" · media=1:
+  analitos, tipo de muestra, "nº orden" · umbral=3), no lista de keywords
+  sueltas — así "me dijeron que tengo el colesterol alto" no dispara.
+  Informes de imagen puntúan aparte (modalidad + lenguaje de informe).
+  `nombre_en_examen()` extrae el nombre impreso (informativo, para el aviso).
+- **VETO CLAVE — resultado ≠ orden**: una *orden* ("se solicita hemograma")
+  es indicación para HACERSE el examen; ese paciente quiere agendar y de eso
+  se encarga `eco_orden_ocr.py`. Mandar una orden por el carril del resultado
+  le cuesta la hora. `_es_orden_sin_resultados()` es veto duro, no puntaje.
+  Segundo veto: comprobante bancario (tiene su carril en `abono_transferencia`).
+- **`app/main.py`** (~10653): la rama corre ANTES del truncado a 200 chars
+  (defensivo: en otros laboratorios las marcas pueden venir más abajo) y antes
+  del clasificador de documentos clínicos, que se dejó **intacto sobre el texto
+  truncado** a propósito — sus keywords son genéricas y ampliarle el alcance
+  dispararía takeovers de más. Respuesta al paciente + `log_event`
+  `examen_recibido` + `HUMAN_TAKEOVER` (motivo `examen_recibido`) + aviso a
+  `ADMIN_ALERT_PHONE` envuelto en try/except (la ventana de 24 h del admin
+  puede estar cerrada; eso no puede tumbar el webhook — lección del 2026-08-04).
+- **Tests** `tests/test_examenes_lab.py` 14/14, incluido el texto real del PDF
+  de Yaupe tal como sale de PyMuPDF (columnas mezcladas, etiqueta y valor
+  separados por salto de línea). Verificado en PROD contra el PDF real:
+  `es_examen=True`, nombre `MANUEL ARTURO YAUPE RIVAS`. harness_50 76/103
+  (=baseline), normalizer 52/52, `/health` 200, logs sin errores.
+- **Corpus continuo**: revisar el evento `examen_recibido` (trae las señales
+  que dispararon) para ampliar `_LABORATORIOS`/`_ANALITOS`, mismo patrón que
+  `eco_tipo_nomatch`.
+- **PENDIENTE HUMANO**: Yaupe quedó sin respuesta útil y su examen sin avisar.
+  Decidir si se le escribe.
+
 ### 2026-08-06 — Vocabulario especialidades + números reciclados
 - **Caso "siquiatra" (56991927216)**: "necesito una hora con siquiatra" caía a
   Medicina General porque la frase genérica `("necesito una hora","medicina
