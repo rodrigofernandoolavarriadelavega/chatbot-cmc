@@ -3862,7 +3862,7 @@ BOXES_CONFIG = [
     # como capacidad física cuando se calcule cuánto se puede crecer sin construir.
     # Antes no estaban en ningún box: sus citas se descartaban en silencio y su
     # plata no entraba en el revenue del día.
-    {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [78, 79], "revenue_profs": [78, 79], "virtual": True, "uso_autorizado": "teleconsulta (sin sala física)"},
+    {"id": "telemed",   "piso": 0, "orden": 1, "nombre": "Telemedicina",  "tipo": "telemedicina","modo": "pool", "pool_group": "telemed",  "default_profs": [], "revenue_profs": [], "virtual": True, "uso_autorizado": "teleconsulta (sin sala física)"},
 ]
 
 # Profesionales CAUTIVOS: sólo pueden atender en ciertas salas y nunca se
@@ -3888,6 +3888,25 @@ CAUTIVOS = {
     69: {"salas": ["boxdental"], "motivo": "dental"},
     76: {"salas": ["boxdental"], "motivo": "dental"},
 }
+
+
+def profesionales_telemedicina() -> list[int]:
+    """Quién atiende por videollamada, según la ficha del profesional.
+
+    FUENTE ÚNICA: `PROFESIONALES[id]["telemedicina"]` en medilink.py — la misma
+    marca que usa el bot para avisarle al paciente que su hora es teleconsulta.
+
+    Antes el carril de Telemedicina del mapa tenía su propia lista escrita a
+    mano, así que había dos verdades: se podía sacar a alguien del carril y el
+    bot seguía diciendo "videollamada", o al revés. Reasignar ahora es cambiar
+    la marca en la ficha y las dos cosas se mueven juntas.
+    """
+    try:
+        from medilink import PROFESIONALES
+        return sorted(pid for pid, d in PROFESIONALES.items() if d.get("telemedicina"))
+    except Exception as e:  # noqa: BLE001
+        log.warning("boxes: no se pudo leer la marca de telemedicina (%s)", e)
+        return []
 
 
 def salas_permitidas(prof_id: int, incluir_excepciones: bool = False) -> list | None:
@@ -3949,9 +3968,20 @@ def boxes_config_efectiva(layout_guardado) -> list[dict]:
     `revenue_profs` se intersecta con los `default_profs` efectivos: nunca se
     atribuye plata a alguien que ya no está en esa sala.
     """
-    base = {b["id"]: dict(b) for b in BOXES_CONFIG}
+    # El carril virtual se puebla desde la ficha del profesional, no desde una
+    # lista escrita a mano: una sola fuente para el mapa y para lo que el bot le
+    # dice al paciente. Va ANTES del atajo de abajo — si no, sin layout guardado
+    # el carril salía vacío y esos profesionales quedaban sin sala.
+    _tele = profesionales_telemedicina()
+    base = {}
+    for b in BOXES_CONFIG:
+        b = dict(b)
+        if b.get("virtual") and _tele:
+            b["default_profs"] = list(_tele)
+            b["revenue_profs"] = list(_tele)
+        base[b["id"]] = b
     if not layout_guardado:
-        return [dict(b) for b in BOXES_CONFIG]
+        return [dict(b) for b in base.values()]
 
     EDITABLES = ("nombre", "piso", "orden", "tipo", "modo", "pool_group", "default_profs")
     salida, vistos = [], set()
