@@ -5035,9 +5035,11 @@ async def api_boxes_asignacion_log(request: Request, token: str | None = Query(N
     box_id = (body.get("box_id") or "").strip()
     if not box_id:
         raise HTTPException(400, "falta box_id")
-    from datetime import date as _d
+    # `datetime` NO está importado a nivel de módulo en main.py — el resto de las
+    # funciones lo importan localmente. Sin esto: NameError en cada registro.
+    from datetime import date as _d, datetime as _dt
     import zoneinfo as _zi
-    hoy = datetime.now(_zi.ZoneInfo("America/Santiago")).date()
+    hoy = _dt.now(_zi.ZoneInfo("America/Santiago")).date()
     try:
         f = _d.fromisoformat(body["fecha"]) if body.get("fecha") else hoy
     except Exception:
