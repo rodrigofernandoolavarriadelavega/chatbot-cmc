@@ -5339,7 +5339,8 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
     sim_n, sim_det = _choques(True)
     return {
         "dias": dias,
-        "mover": [{"prof_id": k, "a_box": v, "sala_actual": _sala_de(k, False)} for k, v in mover.items()],
+        "mover": [{"prof_id": k, "a_box": v,
+                   "salas_actuales": _salas_candidatas(k, False)} for k, v in mover.items()],
         "choques_hoy": hoy_n,
         "choques_simulado": sim_n,
         "diferencia": sim_n - hoy_n,
