@@ -4998,6 +4998,119 @@ def api_boxes_config_get(token: str | None = Query(None)):
             pool.putconn(conn)
 
 
+def _boxes_log_ensure(cur) -> None:
+    """Bitácora de asignaciones REALES de sala. Idempotente.
+
+    El override manual del dashboard vive en `manual_overrides` (jsonb) indexado
+    POR BOX, así que cada asignación pisa la anterior y `getManualOverrides` sólo
+    devuelve las de HOY: el trabajo de recepción se borra cada noche.
+
+    Acá se guarda cada asignación como un HECHO con su fecha. Eso convierte el
+    arreglo diario —"hoy Ana está en Kinesiología 2"— en evidencia acumulada de
+    cómo se usa el centro de verdad, que es lo que después permite fijar el
+    patrón semanal sobre datos y no sobre memoria.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS bi.boxes_asignacion_log (
+            id          SERIAL PRIMARY KEY,
+            fecha       DATE        NOT NULL,
+            dow         SMALLINT    NOT NULL,   -- 0=lunes … 6=domingo
+            box_id      TEXT        NOT NULL,
+            prof_id     INTEGER,
+            prof_nombre TEXT,
+            origen      TEXT        NOT NULL DEFAULT 'manual',
+            set_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_bal_fecha ON bi.boxes_asignacion_log (fecha)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_bal_box_dow ON bi.boxes_asignacion_log (box_id, dow)")
+
+
+@app.post("/admin/api/boxes-asignacion")
+async def api_boxes_asignacion_log(request: Request, token: str | None = Query(None)):
+    """Registra que alguien asignó un profesional a una sala. No borra nada."""
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    body = await request.json()
+    box_id = (body.get("box_id") or "").strip()
+    if not box_id:
+        raise HTTPException(400, "falta box_id")
+    from datetime import date as _d
+    import zoneinfo as _zi
+    hoy = datetime.now(_zi.ZoneInfo("America/Santiago")).date()
+    try:
+        f = _d.fromisoformat(body["fecha"]) if body.get("fecha") else hoy
+    except Exception:
+        f = hoy
+    pool = _bi_pool()
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            _boxes_log_ensure(cur)
+            cur.execute("""INSERT INTO bi.boxes_asignacion_log
+                           (fecha, dow, box_id, prof_id, prof_nombre, origen)
+                           VALUES (%s,%s,%s,%s,%s,%s)""",
+                        (f, f.weekday(), box_id,
+                         body.get("prof_id"), (body.get("prof_nombre") or "")[:120],
+                         (body.get("origen") or "manual")[:20]))
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        if conn is not None:
+            try: conn.rollback()
+            except Exception: pass
+        log.warning("boxes-asignacion: no se pudo registrar (%s)", e)
+        # Nunca romper la interacción de recepción por un fallo de bitácora.
+        return {"ok": False, "error": str(e)[:120]}
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
+@app.get("/admin/api/boxes-patrones")
+def api_boxes_patrones(token: str | None = Query(None), dias: int = Query(60)):
+    """Qué patrón viene marcando recepción, agregado por sala y día de la semana.
+
+    Responde la pregunta que hoy nadie puede responder: "Ana quedó en
+    Kinesiología 2 los miércoles ¿cuántas veces?". Con eso se decide qué fijar.
+    """
+    if token != ADMIN_TOKEN:
+        raise HTTPException(401, "No autorizado")
+    pool = _bi_pool()
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            _boxes_log_ensure(cur)
+            cur.execute("""
+                SELECT box_id, dow, prof_id, MAX(prof_nombre) AS prof,
+                       COUNT(*) AS veces, MAX(fecha) AS ultima,
+                       COUNT(DISTINCT fecha) AS dias_distintos
+                  FROM bi.boxes_asignacion_log
+                 WHERE fecha >= CURRENT_DATE - %s::int
+                   AND prof_id IS NOT NULL
+                 GROUP BY box_id, dow, prof_id
+                 ORDER BY box_id, dow, veces DESC
+            """, (dias,))
+            filas = [{"box_id": r[0], "dow": r[1], "prof_id": r[2], "profesional": r[3],
+                      "veces": r[4], "ultima": r[5].isoformat() if r[5] else None,
+                      "dias_distintos": r[6]} for r in cur.fetchall()]
+        DOW = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+        for f in filas:
+            f["dia"] = DOW[f["dow"]] if 0 <= f["dow"] < 7 else "?"
+            # Se sugiere fijar cuando el mismo profesional aparece en la misma
+            # sala el mismo día de la semana 3 veces o más: deja de ser excepción.
+            f["sugerir_fijar"] = f["dias_distintos"] >= 3
+        return {"dias": dias, "patrones": filas,
+                "sugeridos": sum(1 for f in filas if f["sugerir_fijar"])}
+    except Exception as e:
+        raise HTTPException(500, f"No se pudo leer la bitácora: {str(e)[:120]}")
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
 @app.put("/admin/api/boxes-config")
 async def api_boxes_config_put(request: Request, token: str | None = Query(None)):
     """Guarda la configuración persistente de boxes."""

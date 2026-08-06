@@ -794,6 +794,22 @@ function setManualOverride(boxId, prof) {
   if (prof === null) delete CONFIG.manual_overrides[boxId];
   else CONFIG.manual_overrides[boxId] = { ...prof, date: hoyLocal(), set_at: new Date().toISOString() };
   scheduleSave();
+  // Además de fijarlo para HOY, se registra como hecho en la bitácora. El
+  // override se limpia solo mañana; la bitácora no. Así lo que recepción viene
+  // arreglando día a día queda como evidencia de cómo se usa el centro de
+  // verdad, y después se decide qué fijar como patrón semanal.
+  // No bloquea ni avisa: si la bitácora falla, la asignación de hoy igual queda.
+  if (prof) {
+    fetch(`/admin/api/boxes-asignacion?token=${TOKEN}`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        box_id: boxId, fecha: getActiveDate(),
+        prof_id: prof.profesional_id ?? prof.prof_id ?? prof.id ?? null,
+        prof_nombre: prof.profesional_nombre || prof.nombre || prof.profesional || '',
+        origen: 'manual',
+      }),
+    }).catch(() => {});
+  }
 }
 
 // ---------- Schedules: override per-date > weekly template > BI fallback ----------
