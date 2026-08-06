@@ -4004,6 +4004,23 @@ def boxes_config_efectiva(layout_guardado) -> list[dict]:
         for _pid in _profs_codigo:
             if _pid not in box["default_profs"]:
                 box["default_profs"].append(_pid)
+
+        # …pero si el CÓDIGO sacó a alguien de esta sala —está en otra sala del
+        # código y ya no en ésta— esa remoción sí manda. Sin esto, mover a un
+        # profesional en el código no servía de nada: el layout guardado (que es
+        # de mayo) lo resucitaba en su sala vieja y quedaba en dos partes.
+        # Sólo aplica a quien el código ubica explícitamente en otro lado; a
+        # quien el código no menciona, se respeta lo que hayas puesto tú.
+        _mudados = {pid for pid in list(box["default_profs"])
+                    if pid not in _profs_codigo
+                    and any(pid in (o.get("default_profs") or [])
+                            for oid, o in base.items() if oid != bid)
+                    and any(pid in (o.get("default_profs") or [])
+                            for oid, o in base.items() if oid == bid) is False}
+        if _mudados:
+            box["default_profs"] = [p for p in box["default_profs"] if p not in _mudados]
+            log.info("boxes: %s — el código movió a %s fuera de esta sala",
+                     bid, sorted(_mudados))
         box.setdefault("modo", "pool")
         box.setdefault("pool_group", None)
         rp = box.get("revenue_profs")
@@ -5241,13 +5258,34 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
         if destino not in por_id:
             raise HTTPException(400, f"la sala '{destino}' no existe")
 
-    def _sala_de(pid: int, escenario: bool) -> str | None:
+    # Réplica de la asignación REAL, no una aproximación. La versión anterior
+    # tomaba el primer box cuyo default_profs contuviera al profesional, así que
+    # amontonaba a todos los generales en Box 1 y contaba cada solapamiento como
+    # choque — cuando el centro permite DOS profesionales por sala a propósito.
+    # El número absoluto salía inflado (838 en 30 días) y no significaba nada.
+    #
+    # Ahora se reparte igual que en vivo: cautivos a sus salas, luego el pool con
+    # tope de dos, y sólo se cuenta choque cuando ya no queda cupo.
+    CUPO_POR_SALA = 2
+    por_grupo: dict = {}
+    for b in BOXES:
+        if b.get("modo") == "pool" and not b.get("virtual"):
+            por_grupo.setdefault(b.get("pool_group"), []).append(b["id"])
+
+    def _salas_candidatas(pid: int, escenario: bool) -> list:
         if escenario and pid in mover:
-            return mover[pid]
+            return [mover[pid]]
+        perm = salas_permitidas(pid)
+        if perm:
+            return [x for x in perm if x in por_id]
         for b in BOXES:
             if pid in (b.get("default_profs") or []):
-                return b["id"]
-        return None
+                if b.get("virtual"):
+                    return []          # telemedicina no disputa metros cuadrados
+                if b.get("modo") == "fijo":
+                    return [b["id"]]
+                return por_grupo.get(b.get("pool_group"), [b["id"]])
+        return []
 
     pool = _bi_pool()
     conn = None
@@ -5268,30 +5306,33 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
             pool.putconn(conn)
 
     def _choques(escenario: bool):
-        # Agrupa por (fecha, sala) y cuenta pares que se superponen en el tiempo.
-        por_sala: dict = {}
-        for f, pid, hi, hf in citas:
-            sala = _sala_de(pid, escenario)
-            if not sala or (escenario and por_id.get(sala, {}).get("virtual")):
-                continue
-            por_sala.setdefault((f, sala), []).append((pid, hi, hf))
+        """Reparte las citas como en vivo y cuenta las que se quedan SIN sala."""
         total, detalle = 0, []
-        for (f, sala), items in por_sala.items():
+        # Por día: se recorren las citas en orden de inicio y se ocupa la primera
+        # sala candidata con cupo en esa franja. Un choque es una cita que no
+        # encontró dónde ir — no dos personas compartiendo sala, que es legítimo.
+        por_dia: dict = {}
+        for f, pid, hi, hf in citas:
+            por_dia.setdefault(f, []).append((pid, hi, hf))
+        for f, items in por_dia.items():
             items.sort(key=lambda x: x[1])
-            for i in range(len(items)):
-                for j in range(i + 1, len(items)):
-                    a, b = items[i], items[j]
-                    if a[0] == b[0]:
-                        continue          # el mismo profesional no choca consigo
-                    fin_a = a[2] or a[1]
-                    if b[1] < fin_a:      # empieza antes de que termine el otro
-                        total += 1
-                        if len(detalle) < 25:
-                            detalle.append({"fecha": f.isoformat(), "sala": sala,
-                                            "prof_a": a[0], "prof_b": b[0],
-                                            "hora": str(a[1])[:5]})
-                    else:
+            ocupacion: dict = {}      # sala → [(inicio, fin, prof)]
+            for pid, hi, hf in items:
+                fin = hf or hi
+                colocado = False
+                for sala in _salas_candidatas(pid, escenario):
+                    activos = [x for x in ocupacion.get(sala, []) if x[1] > hi]
+                    # el mismo profesional en su sala no consume un cupo extra
+                    if any(x[2] == pid for x in activos) or len(activos) < CUPO_POR_SALA:
+                        ocupacion.setdefault(sala, []).append((hi, fin, pid))
+                        colocado = True
                         break
+                if not colocado:
+                    total += 1
+                    if len(detalle) < 25:
+                        detalle.append({"fecha": f.isoformat(), "prof": pid,
+                                        "hora": str(hi)[:5],
+                                        "salas_intentadas": _salas_candidatas(pid, escenario)})
         return total, detalle
 
     hoy_n, _ = _choques(False)
