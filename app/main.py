@@ -6526,8 +6526,11 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             log.warning("boxes: sin panel_cap_cache para hoy (%s)", _e_cap)
 
         _nom_prof = {p["id"]: p["nombre"] for p in profesionales_all}
+        # `por_id` NO existe en esta función (vive en el simulador). El mapa se
+        # arma acá desde BOXES, que sí es local.
+        _por_id_box = {b["id"]: b for b in BOXES}
         for _b in boxes_out:
-            _cfg_b = por_id.get(_b["id"]) or {}
+            _cfg_b = _por_id_box.get(_b["id"]) or {}
             # La partición contable (`revenue_profs`) primero: en box1/box2 el
             # `default_profs` es la misma lista larga y contaría los cupos dos
             # veces, una por sala.
