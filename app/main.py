@@ -5147,7 +5147,15 @@ def anima_redirect(token: str | None = Query(None)):
 @app.get("/admin/api/boxes-config")
 def api_boxes_config_get(token: str | None = Query(None)):
     """Devuelve la configuración persistente de boxes (layout, pisos, overrides, schedules)."""
-    if token != ADMIN_TOKEN:
+    # Mismo criterio que /admin/api/boxes-state: cualquier token Alma válido
+    # entra. La diferencia entre recepción y dueño NO es el acceso, es
+    # `boxes_financiero` (ver ALMA_PROFILES) — el dueño ve los montos y
+    # recepción no. Cuando estos endpoints exigían ADMIN_TOKEN exacto, entrar
+    # con el token de dueño daba 401 en boxes-config: el dashboard se lo tragaba
+    # en el catch de fetchConfig() y quedaba sin layout guardado NI escenarios,
+    # sin ningún error visible.
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
         raise HTTPException(401, "No autorizado")
     pool = _bi_pool()
     conn = None
@@ -5232,7 +5240,15 @@ def _boxes_log_ensure(cur) -> None:
 @app.post("/admin/api/boxes-asignacion")
 async def api_boxes_asignacion_log(request: Request, token: str | None = Query(None)):
     """Registra que alguien asignó un profesional a una sala. No borra nada."""
-    if token != ADMIN_TOKEN:
+    # Mismo criterio que /admin/api/boxes-state: cualquier token Alma válido
+    # entra. La diferencia entre recepción y dueño NO es el acceso, es
+    # `boxes_financiero` (ver ALMA_PROFILES) — el dueño ve los montos y
+    # recepción no. Cuando estos endpoints exigían ADMIN_TOKEN exacto, entrar
+    # con el token de dueño daba 401 en boxes-config: el dashboard se lo tragaba
+    # en el catch de fetchConfig() y quedaba sin layout guardado NI escenarios,
+    # sin ningún error visible.
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
         raise HTTPException(401, "No autorizado")
     body = await request.json()
     box_id = (body.get("box_id") or "").strip()
@@ -5280,7 +5296,15 @@ def api_boxes_patrones(token: str | None = Query(None), dias: int = Query(60)):
     Responde la pregunta que hoy nadie puede responder: "Ana quedó en
     Kinesiología 2 los miércoles ¿cuántas veces?". Con eso se decide qué fijar.
     """
-    if token != ADMIN_TOKEN:
+    # Mismo criterio que /admin/api/boxes-state: cualquier token Alma válido
+    # entra. La diferencia entre recepción y dueño NO es el acceso, es
+    # `boxes_financiero` (ver ALMA_PROFILES) — el dueño ve los montos y
+    # recepción no. Cuando estos endpoints exigían ADMIN_TOKEN exacto, entrar
+    # con el token de dueño daba 401 en boxes-config: el dashboard se lo tragaba
+    # en el catch de fetchConfig() y quedaba sin layout guardado NI escenarios,
+    # sin ningún error visible.
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
         raise HTTPException(401, "No autorizado")
     pool = _bi_pool()
     conn = None
@@ -5328,7 +5352,15 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
     Body: {"mover": [{"prof_id": 80, "a_box": "box3"}], "dias": 30}
     No escribe: es solo lectura sobre bi.fact_citas.
     """
-    if token != ADMIN_TOKEN:
+    # Mismo criterio que /admin/api/boxes-state: cualquier token Alma válido
+    # entra. La diferencia entre recepción y dueño NO es el acceso, es
+    # `boxes_financiero` (ver ALMA_PROFILES) — el dueño ve los montos y
+    # recepción no. Cuando estos endpoints exigían ADMIN_TOKEN exacto, entrar
+    # con el token de dueño daba 401 en boxes-config: el dashboard se lo tragaba
+    # en el catch de fetchConfig() y quedaba sin layout guardado NI escenarios,
+    # sin ningún error visible.
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
         raise HTTPException(401, "No autorizado")
     body = await request.json()
     mover = {int(m["prof_id"]): m["a_box"] for m in (body.get("mover") or []) if m.get("prof_id")}
@@ -5493,7 +5525,15 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
 @app.put("/admin/api/boxes-config")
 async def api_boxes_config_put(request: Request, token: str | None = Query(None)):
     """Guarda la configuración persistente de boxes."""
-    if token != ADMIN_TOKEN:
+    # Mismo criterio que /admin/api/boxes-state: cualquier token Alma válido
+    # entra. La diferencia entre recepción y dueño NO es el acceso, es
+    # `boxes_financiero` (ver ALMA_PROFILES) — el dueño ve los montos y
+    # recepción no. Cuando estos endpoints exigían ADMIN_TOKEN exacto, entrar
+    # con el token de dueño daba 401 en boxes-config: el dashboard se lo tragaba
+    # en el catch de fetchConfig() y quedaba sin layout guardado NI escenarios,
+    # sin ningún error visible.
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
         raise HTTPException(401, "No autorizado")
     body = await request.json()
     # MERGE por clave, no reemplazo total. Antes cualquier cliente que mandara un
