@@ -1012,6 +1012,26 @@ function findBoxForCita(cita, layout) {
 function computeBoxState(layout) {
   const boxes = JSON.parse(JSON.stringify(layout));
   const overrides = getManualOverrides();
+  // Cupos y potencial llegan del backend POR PROFESIONAL y se agregan acá,
+  // igual que el revenue. Agregarlos por sala en el servidor los dejaría
+  // pegados a la planta del código: si movés a alguien de box en el dashboard,
+  // sus cupos se quedaban en la sala vieja. Por eso la tarjeta mostraba
+  // "24 citas de 0 cupos" — leía un campo que su copia local nunca tuvo.
+  const capByProf = {};
+  for (const d of (((STATE.totales || {}).cupos_por_prof) || [])) capByProf[d.prof_id] = d;
+  for (const b of boxes) {
+    const acct = b.default_profs || [];
+    let cup = 0, pot = 0; const det = [];
+    for (const pid of acct) {
+      const d = capByProf[pid];
+      if (!d || !d.cupos) continue;
+      cup += d.cupos; pot += d.cupos * (d.ticket || 0);
+      det.push(d);
+    }
+    b.cupos_hoy = cup;
+    b.cupos_por_prof = det;
+    b.potencial_hoy = pot || null;
+  }
   for (const b of boxes) {
     b.profesionales_activos = [];
     b.proximo = null;
