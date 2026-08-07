@@ -544,6 +544,23 @@ async def lifespan(app: FastAPI):
         coalesce=True,
         max_instances=1,
     )
+    # …y un refresco intradía SÓLO de hoy. El barrido de las 04:10 mide la
+    # agenda antes de que abra el centro, así que a media tarde ya no refleja
+    # lo que se agendó durante el día: en Boxes salía "24 citas de 22 cupos",
+    # una capacidad menor que las citas reales. Es una fecha sola (~24 llamadas
+    # secuenciales throttleadas), no el fan-out que tumbó /admin/api/agenda-dia.
+    def _refrescar_cap_hoy():
+        from datetime import date as _d
+        return refrescar_cap_cache(solo_fecha=_d.today().isoformat(), full=True)
+    scheduler.add_job(
+        _refrescar_cap_hoy,
+        CronTrigger(hour="10,13,16,19", minute=25, timezone=_CLT),
+        id="panel_cap_cache_hoy",
+        replace_existing=True,
+        misfire_grace_time=1800,
+        coalesce=True,
+        max_instances=1,
+    )
     # Ausentismo: recolección nocturna de citas (Medilink /citas paginado,
     # carril batch) → tabla local `ausentismo_citas`. 04:50 CLT, off-peak,
     # después del cap cache y antes del barrido de sin-cerrar (06:20). La
@@ -6522,10 +6539,18 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                         "SELECT id_profesional, cap, n_citas FROM panel_cap_cache WHERE fecha = ?",
                         (today.isoformat(),)).fetchall():
                     cap_hoy[_r[0]] = {"cupos": _r[1] or 0, "citas": _r[2] or 0}
+            with _db_cap() as _c:
+                _u = _c.execute("SELECT MAX(updated_at) FROM panel_cap_cache WHERE fecha = ?",
+                                (today.isoformat(),)).fetchone()
+                cap_actualizado = _u[0] if _u else None
         except Exception as _e_cap:
+            cap_actualizado = None
             log.warning("boxes: sin panel_cap_cache para hoy (%s)", _e_cap)
 
         _nom_prof = {p["id"]: p["nombre"] for p in profesionales_all}
+        _citas_vivas_prof = {}
+        for _c in citas_hoy:
+            _citas_vivas_prof[_c["profesional_id"]] = _citas_vivas_prof.get(_c["profesional_id"], 0) + 1
         # `por_id` NO existe en esta función (vive en el simulador). El mapa se
         # arma acá desde BOXES, que sí es local.
         _por_id_box = {b["id"]: b for b in BOXES}
@@ -6537,15 +6562,21 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             _acct = _cfg_b.get("revenue_profs") or _cfg_b.get("default_profs") or []
             _det, _cup, _pot = [], 0, 0
             for _pid in _acct:
-                _cc = cap_hoy.get(_pid)
-                if not _cc or not _cc["cupos"]:
+                _cc = cap_hoy.get(_pid) or {}
+                # Las CITAS salen siempre de lo vivo; del caché se usa sólo la
+                # CAPACIDAD. Mezclar las dos épocas en la misma tarjeta mostraba
+                # "24 citas de 22 cupos" —imposible— porque el barrido es de la
+                # mañana y no ve lo que se agendó durante el día.
+                _ct = _citas_vivas_prof.get(_pid, 0)
+                _cupos = max(_cc.get("cupos") or 0, _ct)
+                if not _cupos:
                     continue          # no trabaja hoy: no aporta cupos ni potencial
                 _tk = (prof_extra.get(_pid) or {}).get("ticket") or 0
-                _cup += _cc["cupos"]
-                _pot += _cc["cupos"] * _tk
+                _cup += _cupos
+                _pot += _cupos * _tk
                 _det.append({"prof_id": _pid, "profesional": _nom_prof.get(_pid, f"#{_pid}"),
-                             "cupos": _cc["cupos"], "citas": _cc["citas"],
-                             "libres": max(0, _cc["cupos"] - _cc["citas"]),
+                             "cupos": _cupos, "citas": _ct,
+                             "libres": max(0, _cupos - _ct),
                              "ticket": _tk})
             _det.sort(key=lambda x: -x["cupos"])
             _b["cupos_hoy"] = _cup
@@ -6578,6 +6609,7 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
             "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
             "totales": {
                 "cupos_hoy": _tot_cupos,
+                "cupos_actualizado": cap_actualizado,
                 "potencial_hoy": _tot_potencial or None,
                 "cupos_por_prof": _det_global,
                 "boxes_totales": len(BOXES),
