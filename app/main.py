@@ -5539,6 +5539,51 @@ async def api_boxes_simular(request: Request, token: str | None = Query(None)):
     }
 
 
+@app.post("/admin/api/simular-horas")
+async def api_simular_horas(request: Request, token: str | None = Query(None)):
+    """¿Cuánto cambia el ingreso si muevo horas entre profesionales?
+
+    La otra mitad de /admin/api/boxes-simular: ese responde "¿cabe en las
+    salas?", éste responde "¿cuánto me cuesta?". Sólo lectura.
+
+    Body: {"cambios":[{"prof_id":73,"horas_dia":8,"ocupacion":0.65,"comision":0.2}],
+           "origen_id":1, "dias":90, "sensibilidad":true}
+    """
+    from admin_routes import _is_admin_token
+    if not (token and _is_admin_token(token)):
+        raise HTTPException(401, "No autorizado")
+    # Es plata: quien no ve montos en Boxes tampoco puede verlos por acá.
+    if not ALMA_PROFILES.get(token, {}).get("boxes_financiero", True):
+        raise HTTPException(403, "Este módulo muestra montos")
+
+    body = await request.json()
+    cambios = [c for c in (body.get("cambios") or []) if c.get("prof_id")]
+    if not cambios:
+        raise HTTPException(400, "falta 'cambios'")
+    origen_id = body.get("origen_id")
+    dias = max(30, min(int(body.get("dias") or 90), 365))
+
+    from simulador_horas import medir, simular, sensibilidad
+    ids = [int(c["prof_id"]) for c in cambios]
+    if origen_id:
+        ids.append(int(origen_id))
+    try:
+        base = medir(sorted(set(ids)), dias=dias)
+    except Exception as e:
+        raise HTTPException(500, f"No se pudo medir la agenda: {str(e)[:140]}")
+
+    res = simular(base, cambios, int(origen_id) if origen_id else None)
+    res["base"] = base
+    res["dias_medidos"] = dias
+    if body.get("sensibilidad") and len(cambios) == 1:
+        c0 = cambios[0]
+        res["sensibilidad"] = sensibilidad(
+            base, int(c0["prof_id"]),
+            float(c0.get("horas_dia") or base[int(c0["prof_id"])]["horas_dia"]),
+            origen_id=int(origen_id) if origen_id else None)
+    return res
+
+
 @app.put("/admin/api/boxes-config")
 async def api_boxes_config_put(request: Request, token: str | None = Query(None)):
     """Guarda la configuración persistente de boxes."""

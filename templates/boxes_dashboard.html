@@ -409,6 +409,17 @@
       font-variant-numeric:tabular-nums }
   .kpi-sub b { color:var(--cmc-navy); font-weight:800 }
   body.sin-plata .money.rev-only, body.sin-plata .kpi-sub.rev-only { display:none }
+  .sim-lbl { font-size:11px; color:var(--cmc-text-mute); font-weight:700; display:inline-flex;
+      align-items:center; gap:5px }
+  .sim-lbl input { width:64px; font-size:12.5px; padding:5px 7px; border:1px solid var(--cmc-border);
+      border-radius:8px; font-family:inherit; color:var(--cmc-navy); font-variant-numeric:tabular-nums }
+  .sim-lbl select { font-size:12.5px; padding:6px 9px; border:1px solid var(--cmc-border);
+      border-radius:9px; font-family:inherit; background:#fff; color:var(--cmc-navy) }
+  .sim-tab { width:100%; border-collapse:collapse; font-size:11.5px; font-variant-numeric:tabular-nums }
+  .sim-tab th { text-align:left; font-size:9.5px; text-transform:uppercase; letter-spacing:.06em;
+      color:var(--cmc-text-mute); font-weight:800; padding:5px 8px 4px; border-bottom:1px solid var(--cmc-border) }
+  .sim-tab td { padding:5px 8px; border-bottom:1px solid #f0f4f8; color:var(--cmc-navy) }
+  .sim-tab tr:last-child td { border-bottom:0 }
 </style>
 </head>
 <body class="min-h-screen">
@@ -1865,12 +1876,33 @@ function simToggle() {
   if (simMode) renderSim(); 
 }
 
-function simNuevo() {
+function simNuevo(tipo) {
+  tipo = tipo || 'salas';
   const id = 'esc_' + Date.now().toString(36);
-  simEsc()[id] = { id, nombre: 'Escenario ' + (Object.keys(simEsc()).length + 1),
-                   movimientos: [], dias: 30, resultado: null };
+  const n = Object.keys(simEsc()).length + 1;
+  simEsc()[id] = tipo === 'horas'
+    ? { id, tipo:'horas', nombre: 'Horas ' + n, origen_id: null, cambios: [],
+        dias: 90, resultado: null }
+    : { id, tipo:'salas', nombre: 'Salas ' + n, movimientos: [], dias: 30, resultado: null };
   simAbierto = id;
   scheduleSave(); renderSim();
+}
+function simAddCambio(id) {
+  const e = simEsc()[id]; if (!e) return;
+  const p = (STATE.profesionales_all || [])[0];
+  (e.cambios = e.cambios || []).push({ prof_id: p ? p.id : null, horas_dia: 8,
+                                       ocupacion: null, dias_mes: null, comision: 0.20 });
+  e.resultado = null; scheduleSave(); renderSim();
+}
+function simSetCambio(id, i, campo, v) {
+  const e = simEsc()[id]; if (!e || !e.cambios[i]) return;
+  e.cambios[i][campo] = (v === '' || v === null) ? null
+    : (campo === 'prof_id' ? parseInt(v,10) : parseFloat(v));
+  e.resultado = null; scheduleSave(); renderSim();
+}
+function simDelCambio(id, i) {
+  const e = simEsc()[id]; if (!e) return;
+  e.cambios.splice(i,1); e.resultado = null; scheduleSave(); renderSim();
 }
 function simDuplicar(id) {
   const o = simEsc()[id]; if (!o) return;
@@ -1913,13 +1945,23 @@ function simDelMov(id, i) {
 
 async function simCorrer(id) {
   const e = simEsc()[id]; if (!e) return;
-  const mover = (e.movimientos || []).filter(m => m.prof_id && m.a_box);
-  if (!mover.length) { alert('Agrega al menos un movimiento.'); return; }
+  let url, body;
+  if (e.tipo === 'horas') {
+    const cambios = (e.cambios || []).filter(c => c.prof_id && c.horas_dia);
+    if (!cambios.length) { alert('Agrega al menos un cambio de jornada.'); return; }
+    url = `/admin/api/simular-horas?token=${TOKEN}`;
+    body = { cambios, origen_id: e.origen_id || null, dias: e.dias || 90, sensibilidad: true };
+  } else {
+    const mover = (e.movimientos || []).filter(m => m.prof_id && m.a_box);
+    if (!mover.length) { alert('Agrega al menos un movimiento.'); return; }
+    url = `/admin/api/boxes-simular?token=${TOKEN}`;
+    body = { mover, dias: e.dias || 30 };
+  }
   e.corriendo = true; renderSim();
   try {
-    const r = await fetch(`/admin/api/boxes-simular?token=${TOKEN}`, {
+    const r = await fetch(url, {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ mover, dias: e.dias || 30 }),
+      body: JSON.stringify(body),
     });
     e.resultado = await r.json();
     e.corrido_at = new Date().toISOString();
@@ -1932,6 +1974,11 @@ async function simCorrer(id) {
 function simBadge(e) {
   const r = e.resultado;
   if (!r) return '<span class="sim-veredicto sv-non">sin correr</span>';
+  if (e.tipo === 'horas') {
+    const b = r.baja_ingreso_mes || 0;
+    return b > 0 ? `<span class="sim-veredicto sv-mal">−${fmtCLP(b)}/mes</span>`
+                 : '<span class="sim-veredicto sv-ok">sin costo</span>';
+  }
   if (r.ok === false) return '<span class="sim-veredicto sv-mal">no se puede</span>';
   const d = r.diferencia || 0;
   return d <= 0 ? '<span class="sim-veredicto sv-ok">cabe sin topones</span>'
@@ -1939,25 +1986,119 @@ function simBadge(e) {
 }
 
 function renderSim() {
-  const escs = Object.values(simEsc());
+  // Los escenarios de horas mueven sueldos y comisiones: son del dueño. Si el
+  // token no ve plata, ni se listan ni se pueden abrir (el endpoint además
+  // responde 403 — la pantalla no es la única defensa).
+  const escs = Object.values(simEsc()).filter(e => MUESTRA_PLATA || e.tipo !== 'horas');
   document.getElementById('simGrid').innerHTML =
     escs.map(e => `
       <div class="sim-card ${simAbierto===e.id?'on':''}" onclick="simAbrir('${e.id}')">
         <h4>${esc(e.nombre)}</h4>
-        <div class="mv">${(e.movimientos||[]).length
+        <div class="mv">${e.tipo === 'horas'
+          ? ((e.cambios||[]).filter(c=>c.prof_id).map(c =>
+              `${esc(simNombreProf(c.prof_id))} → ${c.horas_dia||'?'} h · ${Math.round((c.comision||0)*100)}%`).join('<br>') || 'sin cambios')
+          : (e.movimientos||[]).length
           ? (e.movimientos||[]).filter(m=>m.prof_id&&m.a_box).map(m =>
               `${esc(simNombreProf(m.prof_id))} → ${esc(simNombreSala(m.a_box))}`).join('<br>') || 'sin movimientos'
           : 'sin movimientos'}</div>
         ${simBadge(e)}
       </div>`).join('') +
-    `<button class="sim-nueva" onclick="simNuevo()">+ Nuevo escenario</button>`;
+    `<button class="sim-nueva" onclick="simNuevo('salas')">+ Escenario de salas</button>` +
+    (MUESTRA_PLATA ? `<button class="sim-nueva" onclick="simNuevo('horas')">+ Escenario de horas y comisión</button>` : '');
   renderSimEditor();
+}
+
+
+// Editor del escenario de HORAS: mueve jornada y comisión, no salas.
+// Responde "¿cuánto me cuesta?", que es la pregunta que el de salas no toca.
+function renderEditorHoras(e) {
+  const profs = (STATE.profesionales_all || []);
+  const opt = (sel) => profs.map(p =>
+    `<option value="${p.id}" ${String(p.id)===String(sel)?'selected':''}>${esc(p.nombre)}</option>`).join('');
+  const filas = (e.cambios || []).map((c, i) => `
+    <div class="sim-mov">
+      <select onchange="simSetCambio('${e.id}',${i},'prof_id',this.value)">${opt(c.prof_id)}</select>
+      <label class="sim-lbl">h/día <input type="number" min="0" max="14" step="0.5"
+        value="${c.horas_dia ?? ''}" onchange="simSetCambio('${e.id}',${i},'horas_dia',this.value)"></label>
+      <label class="sim-lbl">ocup. % <input type="number" min="0" max="100" step="1" placeholder="medida"
+        value="${c.ocupacion!=null ? Math.round(c.ocupacion*100) : ''}"
+        onchange="simSetCambio('${e.id}',${i},'ocupacion', this.value===''?'':(this.value/100))"></label>
+      <label class="sim-lbl">días/mes <input type="number" min="1" max="31" step="0.5" placeholder="medidos"
+        value="${c.dias_mes ?? ''}" onchange="simSetCambio('${e.id}',${i},'dias_mes',this.value)"></label>
+      <label class="sim-lbl">comisión % <input type="number" min="0" max="100" step="1"
+        value="${Math.round((c.comision||0)*100)}"
+        onchange="simSetCambio('${e.id}',${i},'comision', this.value/100)"></label>
+      <button class="sim-btn del" onclick="simDelCambio('${e.id}',${i})">quitar</button>
+    </div>`).join('') || '<p style="font-size:12px;color:var(--cmc-text-mute);margin-bottom:8px">Todavía no hay cambios de jornada.</p>';
+
+  const r = e.resultado;
+  let res = '';
+  if (e.corriendo) {
+    res = '<div class="sim-res"><p style="font-size:12.5px;color:var(--cmc-text-mute)">Midiendo la agenda real y la caja…</p></div>';
+  } else if (r && r.error) {
+    res = `<div class="sim-res"><div class="sim-warn">${esc(r.error)}</div></div>`;
+  } else if (r && r.cambios) {
+    const o = r.origen;
+    res = `<div class="sim-res">
+      <div class="sim-kpis">
+        <div class="sim-kpi"><b>${fmtCLP(r.traspaso_mes)}</b><span>venta traspasada / mes</span></div>
+        <div class="sim-kpi"><b style="color:#B4520F">−${fmtCLP(r.baja_ingreso_mes)}</b><span>baja tu ingreso / mes</span></div>
+        <div class="sim-kpi"><b style="color:#B4520F">−${fmtCLP(r.baja_ingreso_ano)}</b><span>al año</span></div>
+      </div>
+      <div class="sim-lista">
+        ${r.cambios.map(c => `<div><b style="color:var(--cmc-navy)">${esc(c.nombre)}</b>:
+          ${c.horas_hoy} → ${c.horas_nuevas} h/día · ${c.citas_hoy} → ${c.citas_nuevas} citas/día
+          (${c.delta_citas>=0?'+':''}${c.delta_citas}) · ${c.dias_mes} días/mes ·
+          comisión ${Math.round(c.comision*100)}% = ${fmtCLP(c.paga_comision_mes)}/mes</div>`).join('')}
+        ${o ? `<div style="margin-top:7px;padding-top:7px;border-top:1px solid var(--cmc-border)">
+          <b style="color:var(--cmc-navy)">${esc(o.nombre)}</b>: ${o.citas_hoy} → ${o.citas_post} citas/día ·
+          ${o.horas_hoy} → ${o.horas_post} h/día · <b style="color:#1E7A5A">libera ${o.horas_liberadas} h/día</b></div>` : ''}
+      </div>
+      ${(r.avisos||[]).length ? `<div class="sim-warn">${r.avisos.map(a=>esc(a)).join('<br>')}</div>` : ''}
+      ${(r.sensibilidad||[]).length ? `
+        <p style="font-size:11.5px;font-weight:800;color:var(--cmc-navy);margin:13px 0 6px">
+          Si no llena al mismo ritmo</p>
+        <table class="sim-tab"><tr><th>ocupación</th><th>citas/día</th><th>traspaso/mes</th>
+          <th>pierdes 20%</th><th>pierdes 55%</th></tr>
+          ${r.sensibilidad.map(f => `<tr><td>${Math.round(f.ocupacion*100)}%</td>
+            <td>${(f.citas_nuevas||0).toFixed(1)}</td><td>${fmtCLP(f.traspaso_mes)}</td>
+            <td>${fmtCLP(f.com_20)}</td><td>${fmtCLP(f.com_55)}</td></tr>`).join('')}
+        </table>` : ''}
+    </div>`;
+  }
+
+  return `<div class="sim-editor">
+    <input type="text" value="${esc(e.nombre)}" onchange="simCampo('${e.id}','nombre',this.value)"
+           placeholder="Nombre del escenario">
+    <p style="font-size:11.5px;color:var(--cmc-text-mute);margin:9px 0 12px">
+      Cambiá la jornada de alguien y mirá cuánto cuesta. Dejá ocupación y días en blanco
+      para usar los medidos de los últimos ${e.dias||90} días.</p>
+    <div class="sim-mov">
+      <label class="sim-lbl" style="font-weight:700">Los pacientes salen de
+        <select onchange="simCampo('${e.id}','origen_id', this.value?parseInt(this.value,10):null)">
+          <option value="">— nadie (demanda nueva) —</option>${opt(e.origen_id)}
+        </select></label>
+    </div>
+    ${filas}
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px">
+      <button class="sim-btn sec" onclick="simAddCambio('${e.id}')">+ Cambiar una jornada</button>
+      <button class="sim-btn pri" onclick="simCorrer('${e.id}')">Calcular</button>
+      <div style="flex:1"></div>
+      <button class="sim-btn sec" onclick="simDuplicar('${e.id}')">Duplicar</button>
+      <button class="sim-btn del" onclick="simBorrar('${e.id}')">Borrar</button>
+    </div>
+    ${res}
+  </div>`;
 }
 
 function renderSimEditor() {
   const cont = document.getElementById('simEditor');
   const e = simAbierto ? simEsc()[simAbierto] : null;
   if (!e) { cont.innerHTML = ''; return; }
+  if (e.tipo === 'horas') {
+    if (!MUESTRA_PLATA) { cont.innerHTML = ''; return; }
+    cont.innerHTML = renderEditorHoras(e); return;
+  }
   const profs = (STATE.profesionales_all || []);
   const salas = simSalas();
   const movs = (e.movimientos || []).map((m, i) => `
