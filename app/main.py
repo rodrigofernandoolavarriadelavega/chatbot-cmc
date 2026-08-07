@@ -6509,9 +6509,74 @@ async def api_boxes_state(token: str | None = Query(None), fecha: str | None = Q
                               for c in citas_dia_full]
             rev_por_prof = {}
 
+        # ── Cupos y potencial de HOY, por sala y por profesional ─────────
+        # Fuente: `panel_cap_cache`, el barrido nocturno que mide la agenda
+        # REAL contra Medilink. Se prefiere a cualquier proxy de pagos porque
+        # `bi_pagos_caja` sólo ve atenciones PAGADAS: las Fonasa y los bonos no
+        # dejan registro de pago y harían ver la agenda más chica de lo que es.
+        cap_hoy = {}
+        try:
+            from session import db as _db_cap
+            with _db_cap() as _c:
+                for _r in _c.execute(
+                        "SELECT id_profesional, cap, n_citas FROM panel_cap_cache WHERE fecha = ?",
+                        (today.isoformat(),)).fetchall():
+                    cap_hoy[_r[0]] = {"cupos": _r[1] or 0, "citas": _r[2] or 0}
+        except Exception as _e_cap:
+            log.warning("boxes: sin panel_cap_cache para hoy (%s)", _e_cap)
+
+        _nom_prof = {p["id"]: p["nombre"] for p in profesionales_all}
+        for _b in boxes_out:
+            _cfg_b = por_id.get(_b["id"]) or {}
+            # La partición contable (`revenue_profs`) primero: en box1/box2 el
+            # `default_profs` es la misma lista larga y contaría los cupos dos
+            # veces, una por sala.
+            _acct = _cfg_b.get("revenue_profs") or _cfg_b.get("default_profs") or []
+            _det, _cup, _pot = [], 0, 0
+            for _pid in _acct:
+                _cc = cap_hoy.get(_pid)
+                if not _cc or not _cc["cupos"]:
+                    continue          # no trabaja hoy: no aporta cupos ni potencial
+                _tk = (prof_extra.get(_pid) or {}).get("ticket") or 0
+                _cup += _cc["cupos"]
+                _pot += _cc["cupos"] * _tk
+                _det.append({"prof_id": _pid, "profesional": _nom_prof.get(_pid, f"#{_pid}"),
+                             "cupos": _cc["cupos"], "citas": _cc["citas"],
+                             "libres": max(0, _cc["cupos"] - _cc["citas"]),
+                             "ticket": _tk})
+            _det.sort(key=lambda x: -x["cupos"])
+            _b["cupos_hoy"] = _cup
+            _b["cupos_por_prof"] = _det
+            # Sin ticket conocido el potencial es DESCONOCIDO, no cero (misma
+            # regla que `plata_hueco`): un "$0" se lee como "no vale nada".
+            _b["potencial_hoy"] = _pot if _pot else None
+
+        _tot_cupos = sum(_b.get("cupos_hoy") or 0 for _b in boxes_out)
+        _tot_potencial = sum(_b.get("potencial_hoy") or 0 for _b in boxes_out)
+        _det_global = {}
+        for _b in boxes_out:
+            for _d in _b.get("cupos_por_prof") or []:
+                _g = _det_global.setdefault(_d["prof_id"], {**_d, "salas": []})
+                if _b["nombre"] not in _g["salas"]:
+                    _g["salas"].append(_b["nombre"])
+        _det_global = sorted(_det_global.values(), key=lambda x: -x["cupos"])
+
+        # El gateo financiero de más arriba ya corrió, así que estos campos —que
+        # nacen acá— hay que taparlos de nuevo. Los CUPOS sí los ve recepción
+        # (son agenda, no plata); el potencial y el ticket no.
+        if not _boxes_financiero:
+            _tot_potencial = 0
+            for _b in boxes_out:
+                _b.pop("potencial_hoy", None)
+            for _d in [d for _b in boxes_out for d in (_b.get("cupos_por_prof") or [])] + _det_global:
+                _d.pop("ticket", None)
+
         return {
             "now_cl": now_cl.strftime("%Y-%m-%d %H:%M:%S"),
             "totales": {
+                "cupos_hoy": _tot_cupos,
+                "potencial_hoy": _tot_potencial or None,
+                "cupos_por_prof": _det_global,
                 "boxes_totales": len(BOXES),
                 "boxes_ocupados": total_ocupados,
                 "profesionales_activos": total_profs_activos,

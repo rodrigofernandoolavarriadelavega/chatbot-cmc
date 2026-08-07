@@ -386,6 +386,29 @@
   .sim-lista { font-size:12px; color:var(--cmc-text-mute); line-height:1.65; margin-top:8px }
   .sim-warn { background:#FCF0E6; border-left:4px solid #B4520F; border-radius:9px; padding:9px 12px;
       font-size:11.5px; color:#7A3A0B; margin-top:10px; line-height:1.55 }
+
+  .schedule-row .monto { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700;
+      color:#1E7A5A; font-variant-numeric:tabular-nums; white-space:nowrap; margin-left:auto; padding-left:6px }
+  .schedule-row .monto.cero { color:var(--cmc-text-mute); font-weight:500 }
+  /* Popover de desglose por profesional. Se abre con hover Y con foco de
+     teclado: la tarjeta se navega con tab y si no, el dato queda inalcanzable. */
+  .kpop { position:relative; display:inline-block; cursor:help }
+  .kpop-body { display:none; position:absolute; right:0; bottom:calc(100% + 8px); z-index:60;
+      background:#fff; border:1px solid var(--cmc-border); border-radius:11px; padding:10px 12px;
+      box-shadow:0 10px 30px rgba(15,63,104,.17); min-width:196px; max-width:270px; text-align:left;
+      white-space:nowrap }
+  .kpop:hover .kpop-body, .kpop:focus-within .kpop-body { display:block }
+  .kpop-body h5 { font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:800;
+      color:var(--cmc-text-mute); margin:0 0 7px }
+  .kpop-row { display:flex; justify-content:space-between; gap:14px; font-size:11.5px; padding:2.5px 0 }
+  .kpop-row span { color:var(--cmc-navy); font-weight:600; overflow:hidden; text-overflow:ellipsis }
+  .kpop-row b { font-variant-numeric:tabular-nums; color:var(--cmc-navy); font-weight:800 }
+  .kpop-row.libre b { color:#B4520F }
+  .kpop-empty { font-size:11px; color:var(--cmc-text-mute); font-style:italic }
+  .kpi-sub { font-size:10px; color:var(--cmc-text-mute); font-weight:600; margin-top:2px;
+      font-variant-numeric:tabular-nums }
+  .kpi-sub b { color:var(--cmc-navy); font-weight:800 }
+  body.sin-plata .money.rev-only, body.sin-plata .kpi-sub.rev-only { display:none }
 </style>
 </head>
 <body class="min-h-screen">
@@ -731,6 +754,36 @@ function computePatientBar(box) {
   }
   return segments;
 }
+
+// ¿este token ve plata? El backend simplemente NO manda los campos monetarios
+// cuando el perfil es de recepción (`boxes_financiero: false`), así que el
+// frontend se entera por su ausencia — nunca por una copia del permiso acá.
+let MUESTRA_PLATA = true;
+
+// Desglose por profesional que se abre al pasar el dedo sobre el número.
+// `modo` decide qué columna se destaca: las citas que YA tiene o los cupos
+// que ofrece. Es la respuesta a "¿de quién son estas horas?", que hasta ahora
+// obligaba a abrir Medilink.
+function popDesglose(box, modo) {
+  const det = box.cupos_por_prof || [];
+  if (!det.length) return `<span class="kpop-body"><h5>${modo==='citas'?'Citas de hoy':'Cupos de hoy'}</h5>
+      <p class="kpop-empty">Nadie con agenda hoy en esta sala.</p></span>`;
+  const filas = det.map(d => modo === 'citas'
+    ? `<div class="kpop-row"><span>${esc(d.profesional)}</span><b>${d.citas} cita${d.citas===1?'':'s'}</b></div>`
+    : `<div class="kpop-row"><span>${esc(d.profesional)}</span><b>${d.cupos} cupos</b></div>` +
+      (d.libres ? `<div class="kpop-row libre"><span style="opacity:.72;padding-left:8px">libres</span><b>${d.libres}</b></div>` : '')
+  ).join('');
+  const tot = modo === 'citas'
+    ? det.reduce((a,d)=>a+(d.citas||0),0)
+    : det.reduce((a,d)=>a+(d.cupos||0),0);
+  return `<span class="kpop-body">
+    <h5>${modo==='citas'?'Citas de hoy por profesional':'Cupos de hoy por profesional'}</h5>
+    ${filas}
+    <div class="kpop-row" style="border-top:1px solid var(--cmc-border);margin-top:5px;padding-top:5px">
+      <span style="opacity:.7">Total</span><b>${tot}</b></div>
+  </span>`;
+}
+
 function renderLoadBar(box) {
   const segs = computeLoadBar(box);
   const bars = segs.map(s => {
@@ -1084,6 +1137,9 @@ function renderCard(box) {
           <div class="truncate" style="max-width:120px">${esc(s.prof_nombre || '—')}</div>
           ${s.paciente ? `<div class="pac">↳ ${esc(s.paciente)}</div>` : ''}
         </div>
+        ${MUESTRA_PLATA ? `<span class="monto ${(s.monto||0) ? '' : 'cero'}"
+             title="${(s.monto||0) ? 'Pagado en caja (Medilink)' : 'Sin pago registrado en caja'}"
+           >${(s.monto||0) ? fmtCLP(s.monto) : '—'}</span>` : ''}
       </div>`).join('')
     : '<p class="text-[11px] italic" style="color:var(--cmc-text-mute)">Sin horarios para hoy</p>';
   const panelHTML = `
@@ -1118,9 +1174,22 @@ function renderCard(box) {
     </button>
     <div class="mt-4 pt-3 border-t flex justify-between items-center" style="border-color:var(--cmc-border)">
       <div><p class="text-[10px] uppercase" style="color:var(--cmc-text-mute)">Revenue hoy</p>
-        <p class="text-base font-bold money" style="color:var(--cmc-navy)">${fmtCLP(box.revenue_dia)}</p></div>
-      <div class="text-right"><p class="text-[10px] uppercase" style="color:var(--cmc-text-mute)">Citas hoy</p>
-        <p class="text-base font-bold money" style="color:var(--cmc-navy)">${box.citas_dia || 0}</p></div>
+        <p class="text-base font-bold money" style="color:var(--cmc-navy)">${fmtCLP(box.revenue_dia)}</p>
+        ${MUESTRA_PLATA ? (box.potencial_hoy
+          ? `<p class="kpi-sub">potencial <b>${fmtCLP(box.potencial_hoy)}</b></p>`
+          : `<p class="kpi-sub" title="Falta el ticket promedio de estos profesionales">potencial —</p>`) : ''}
+      </div>
+      <div class="text-right">
+        <p class="text-[10px] uppercase" style="color:var(--cmc-text-mute)">Citas hoy</p>
+        <span class="kpop" tabindex="0">
+          <span class="text-base font-bold money" style="color:var(--cmc-navy)">${box.citas_dia || 0}</span>
+          ${popDesglose(box, 'citas')}
+        </span>
+        <span class="kpop" tabindex="0">
+          <p class="kpi-sub">de <b>${box.cupos_hoy || 0}</b> cupos</p>
+          ${popDesglose(box, 'cupos')}
+        </span>
+      </div>
     </div>
   </div>
   ${panelHTML}
@@ -1621,6 +1690,13 @@ async function refresh() {
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
     STATE = d;
+    // El permiso NO se copia acá: el backend simplemente omite los campos de
+    // plata cuando el perfil es de recepción. Se deduce de su ausencia, así no
+    // hay dos verdades que puedan quedar desincronizadas.
+    MUESTRA_PLATA = Array.isArray(d.boxes) && d.boxes.length
+      ? d.boxes.some(b => b.revenue_dia !== undefined)
+      : true;
+    document.body.classList.toggle('sin-plata', !MUESTRA_PLATA);
     render();
 
     if (d.historial && d.historial.length) {
