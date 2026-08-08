@@ -825,6 +825,23 @@ _MESES_ES = {
 }
 
 
+# Separadores del registro en un solo mensaje (WAIT_DATOS_NUEVO): comas, punto
+# y coma, pipe, saltos de línea siempre separan; guion/raya larga/barra SOLO
+# separan si vienen con espacio a los dos lados ("Ruth - Femenino - 28/05/1939",
+# "María / F / 15-03-1990"). Constante a nivel de módulo (no inline en el
+# handler) para que quede testeable sin duplicar el patrón — ver
+# tests/test_registro_paciente.py.
+#
+# BUG DE RAÍZ 2026-08-07 (caso Rosa Aguilar, RUT 13.384.668-9): la barra "/"
+# estaba en la clase de separadores SIEMPRE-activos, junto a la coma. Como
+# "DD/MM/YYYY" es justo el formato de ejemplo que el bot sugiere ("María
+# González López, F, 15/03/1990"), la fecha se partía en 3 tokens sueltos
+# ("19", "08", "1978") que `_parsear_fecha_nacimiento` no reconoce
+# individualmente — el registro seguía adelante SIN fecha de nacimiento, en
+# silencio (no es un campo obligatorio para crear al paciente en Medilink).
+_RE_SPLIT_DATOS_NUEVO = re.compile(r'[,;|\n]+|\s+[-–—/]+\s+')
+
+
 def _parsear_fecha_nacimiento(texto: str):
     """Parsea fecha de nacimiento en múltiples formatos comunes de WhatsApp.
     Retorna datetime.date o None si no puede parsear.
@@ -1087,11 +1104,51 @@ async def _buscar_paciente_safe(rut: str) -> tuple[dict | None, bool]:
     debe derivar a humano para evitar registrar como paciente nuevo a alguien
     que ya está en sistema. Causa raíz del bug donde RUT 16649550-4 (existente)
     se reportó como no encontrado por 429 silenciado.
+
+    Usa `strict=True` (excepción explícita por request) en vez de mirar
+    `is_medilink_down()` (estado agregado del circuit breaker). Un 429
+    sostenido NO apaga el breaker a propósito (ver `_agotado` en medilink.py
+    — "SATURADO ≠ CAÍDO", el HIS sigue vivo), así que `is_medilink_down()`
+    puede seguir en False mientras esta búsqueda puntual se agotó tras 3
+    reintentos. Caso real 2026-08-07 20:46: Rosa Aguilar (RUT existente) cayó
+    en 429 sostenido en `buscar_paciente`, `is_medilink_down()` nunca se
+    activó, el bot la trató como paciente nueva y `crear_paciente` chocó con
+    "Ya existe paciente con el rut" — perdiendo los datos que ya había escrito.
     """
-    paciente = await buscar_paciente(rut)
-    if paciente is None and is_medilink_down():
+    try:
+        paciente = await buscar_paciente(rut, strict=True)
+    except Exception as e:
+        _rut_masked = clean_rut(rut)
+        _rut_masked = ("…" + _rut_masked[-4:]) if len(_rut_masked) > 4 else _rut_masked
+        log.warning("_buscar_paciente_safe: error transitorio rut=%s: %s", _rut_masked, e)
         return None, True
     return paciente, False
+
+
+async def _crear_paciente_con_recuperacion(rut: str, nombre: str, apellidos: str,
+                                            extra: dict, phone: str) -> dict | None:
+    """Crea el paciente en Medilink; si falla por RUT duplicado, recupera la
+    ficha existente en vez de descartar los datos que el paciente ya escribió.
+
+    `crear_paciente` puede fallar con "Ya existe paciente con el rut ..." aun
+    cuando el flujo lo trató como paciente nuevo — típicamente porque la
+    búsqueda previa (`_buscar_paciente_safe`) cayó en un 429/timeout puntual
+    y no lo encontró (ver docstring de esa función). En vez de rendirse con
+    "Hubo un problema, llama a recepción" y perder nombre/sexo/fecha de
+    nacimiento ya capturados, se reintenta la búsqueda: si el paciente
+    aparece, se usa esa ficha y el registro continúa sin fricción.
+    """
+    paciente = await crear_paciente(rut, nombre, apellidos, **extra)
+    if paciente:
+        return paciente
+    try:
+        paciente = await buscar_paciente(rut)
+    except Exception as e:
+        log.warning("_crear_paciente_con_recuperacion: buscar_paciente falló: %s", e)
+        paciente = None
+    if paciente:
+        log_event(phone, "registro_recuperado_duplicado", {"rut": clean_rut(rut)[-4:]})
+    return paciente
 
 
 def _msg_medilink_transient(extra: str = "") -> str:
@@ -11964,9 +12021,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             re.I
         )
 
-        # ── Separar por comas, punto y coma, pipe, barras, saltos de línea
-        # y guiones/raya larga con espacios ("Ruth - Femenino - 28/05/1939"). ──
-        parts_raw = [p.strip() for p in re.split(r'[,;|/\n]+|\s+[-–—]+\s+', raw) if p.strip()]
+        # Separar en campos — ver docstring de _RE_SPLIT_DATOS_NUEVO (arriba,
+        # junto a _parsear_fecha_nacimiento) para el porqué de la barra "/"
+        # solo-con-espacios.
+        parts_raw = [p.strip() for p in _RE_SPLIT_DATOS_NUEVO.split(raw) if p.strip()]
         # Descartar partes que son solo prefijos de respuesta previa (no son nombre)
         parts = [p for p in parts_raw if not _PREFIJOS_PRIMERA_VEZ.match(p)]
 
@@ -12095,7 +12153,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "total_campos": len(extra),
         })
         data["is_paciente_nuevo_post_referral"] = True  # pedir referido tras confirmar
-        paciente = await crear_paciente(rut, nombre, apellidos, **extra)
+        paciente = await _crear_paciente_con_recuperacion(rut, nombre, apellidos, extra, phone)
         if not paciente:
             reset_session(phone)
             return f"Hubo un problema al registrarte 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
@@ -12504,7 +12562,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "rut": rut, "campos_extra": list(extra.keys()),
             "total_campos": len(extra),
         })
-        paciente = await crear_paciente(rut, nombre, apellidos, **extra)
+        paciente = await _crear_paciente_con_recuperacion(rut, nombre, apellidos, extra, phone)
         if not paciente:
             reset_session(phone)
             return (
@@ -12611,7 +12669,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "rut": rut, "campos_extra": list(extra.keys()),
             "total_campos": len(extra),
         })
-        paciente = await crear_paciente(rut, nombre, apellidos, **extra)
+        paciente = await _crear_paciente_con_recuperacion(rut, nombre, apellidos, extra, phone)
         if not paciente:
             reset_session(phone)
             return (
@@ -12764,6 +12822,52 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "Gracias por transferir. Para confirmar tu hora necesito ver el comprobante.\n\n"
                 "Envía una *foto* del comprobante de transferencia por este chat 📎"
+            )
+
+        # ── Caso D0: menciona una especialidad DISTINTA a la del abono pendiente ──
+        # Caso real 2026-08-07 (Sergio Palma): un bug de rebusco (ver
+        # `procesar_imagen_abono`) le cambió el gate de Gastroenterología a
+        # Psiquiatría sin que se diera cuenta. Escribió "no" y luego
+        # "gastroenterología" y el bot solo repetía "esperando comprobante de
+        # Psiquiatría" (Caso D genérico no distinguía intención de especialidad).
+        # No re-gatillamos el gate solo — mover dinero/cancelar la reserva
+        # automáticamente es riesgoso, lo decide recepción con el paciente — pero
+        # sí reconocemos el cambio y derivamos con contexto en vez de repetir
+        # un mensaje que ya demostró no tener sentido para el paciente.
+        _esp_mencionada_ab = _detectar_especialidad_en_texto(txt)
+        if (_esp_mencionada_ab
+                and _esp_mencionada_ab.lower() not in _area_ab.lower()
+                and _area_ab.lower() not in _esp_mencionada_ab.lower()):
+            log_event(phone, "abono_gate_especialidad_distinta", {
+                "gate_especialidad": _area_ab,
+                "mencionada": _esp_mencionada_ab,
+                "texto": txt[:120],
+            })
+            save_session(phone, "HUMAN_TAKEOVER", {
+                "hold_sent": True,
+                "handoff_reason": "abono_gate_cambio_especialidad",
+                "abono_gate_slot": data.get("abono_gate_slot"),
+            })
+            if ADMIN_ALERT_PHONE:
+                from resilience import spawn_task as _spawn_ag_e
+                async def _aviso_recep_cambio_esp():
+                    _msg_e = (
+                        f"📋 *Abono {_area_ab} — paciente menciona otra especialidad*\n"
+                        f"WA: {phone}\n"
+                        f"Tiene un abono pendiente de {_area_ab}, pero escribió: "
+                        f"\"{txt[:150]}\" (parece {_esp_mencionada_ab}).\n"
+                        "Coordinar manualmente: ¿sigue queriendo la hora de "
+                        f"{_area_ab} o cambia a {_esp_mencionada_ab}?"
+                    )
+                    await send_whatsapp(ADMIN_ALERT_PHONE, _msg_e)
+                    from session import log_message as _lm_age
+                    _lm_age(ADMIN_ALERT_PHONE, "out", _msg_e, "WAIT_ABONO_COMPROBANTE")
+                _spawn_ag_e(_aviso_recep_cambio_esp())
+            return (
+                f"Veo que ahora mencionas {_esp_mencionada_ab} — tienes una hora de "
+                f"*{_area_ab}* pendiente de confirmar con abono.\n\n"
+                "Le avisé a recepción para que te ayude a decidirlo.\n"
+                f"Si prefieres, llama al 📞 *{CMC_TELEFONO_FIJO}*"
             )
 
         # ── Caso D: texto libre genérico ──────────────────────────────────────
@@ -16134,11 +16238,19 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
         resultado_ml = None
 
     if not resultado_ml:
-        # La cita falló (slot tomado u otro error) — intentar re-buscar
+        # La cita falló (slot tomado u otro error) — intentar re-buscar EN LA
+        # MISMA ESPECIALIDAD del slot original (_area_pc). Esta función nació
+        # solo para Psiquiatría y quedó con "psiquiatría" fijo cuando el abono
+        # se generalizó a otras especialidades (gastroenterología, etc.) — caso
+        # real 2026-08-07: a un paciente de Gastroenterología (Dr. Quijano) se
+        # le ofreció, tras perder su cupo, una hora de Psiquiatría (Dra.
+        # Unibazo) porque el rebusque estaba clavado en esa especialidad.
+        # Confirmó sin notar el cambio y el comprobante de $35.000 (gastro)
+        # terminó evaluado contra los $60.000 de psiquiatría.
         from medilink import buscar_primer_dia as _bpd_ag
         try:
             _smart_ag, _todos_ag = await asyncio.wait_for(
-                _bpd_ag("psiquiatría"), timeout=30)
+                _bpd_ag(_area_pc), timeout=30)
         except Exception:
             _smart_ag, _todos_ag = [], []
 
@@ -16191,7 +16303,7 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
                     (data.get("rut") or "").strip(),
                     slot.get("id_profesional"),
                     slot.get("profesional", ""),
-                    "Psiquiatría",
+                    _area_pc or "Psiquiatría",
                     fecha_cita_str,
                     precio_total,
                     monto,

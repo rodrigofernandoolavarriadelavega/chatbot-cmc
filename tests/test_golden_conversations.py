@@ -98,7 +98,7 @@ def _slots_gastro(fecha: date) -> list[dict]:
 _FORCE_NO_SLOTS_ON: date | None = None   # si está seteado, esa fecha devuelve []
 _SLOTS_DIA_OVERRIDE: dict | None = None  # {fecha_iso: [slots]} para mocks específicos
 
-async def fake_buscar_paciente(rut: str):
+async def fake_buscar_paciente(rut: str, strict: bool = False):
     rut_clean = rut.replace(".", "").replace("-", "").strip().upper()
     if rut_clean.startswith("11111111"):
         return {"id": 100, "nombre": "Juan Prueba Test", "rut": "11111111-1"}

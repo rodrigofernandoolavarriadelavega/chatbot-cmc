@@ -48,7 +48,7 @@ FAKE_FAIL_CANCELAR_CITA = {"value": False}
 FAKE_SIN_SLOTS = {"value": False}
 FAKE_CITAS_PACIENTE: list[dict] = []
 
-async def fake_buscar_paciente(rut: str):
+async def fake_buscar_paciente(rut: str, strict: bool = False):
     rut_clean = rut.replace(".", "").replace("-", "").strip().upper()
     if rut_clean.startswith("11111111"):
         return {"id": 100, "nombre": "Juan Prueba Test", "rut": "11111111-1"}
