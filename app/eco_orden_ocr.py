@@ -42,7 +42,7 @@ solo clasifica y transcribe.
 
 Responde SOLO un JSON válido, sin texto adicional:
 {
-  "tipo_documento": "orden_medica" | "resultado_examen" | "receta_medicamentos" | "comprobante_pago" | "otro",
+  "tipo_documento": "orden_medica" | "resultado_examen" | "receta_medicamentos" | "comprobante_pago" | "cedula_identidad" | "foto_clinica" | "captura_cita" | "otro",
   "examenes_solicitados": ["transcripción literal de cada examen solicitado"],
   "diagnostico": "",
   "medicamentos": [],
@@ -66,7 +66,16 @@ valores como normales/anormales.
 - "medicamentos": SOLO para receta_medicamentos — cada fármaco con su dosis
   tal como aparece (ej: "Metformina 850 mg cada 12 horas").
 
-Si el documento es orden, resultado o receta y muestra los datos del
+Tipos nuevos:
+- "cedula_identidad": carnet/cédula de identidad (chilena o extranjera).
+  Llena "paciente" con nombre, RUT/RUN y fecha de nacimiento del documento.
+- "foto_clinica": fotografía de una parte del cuerpo, lesión, herida, piel,
+  ojo, hinchazón, o pantalla que muestra una imagen médica. NO describas lo
+  que se ve — solo clasifica.
+- "captura_cita": pantallazo de una cita médica, recordatorio de hora o
+  agenda (de WhatsApp, de una app o de un sistema de agenda).
+
+Si el documento es orden, resultado, receta o cédula y muestra los datos del
 paciente, "paciente" deja de ser null y lleva (cada campo "" si no aparece):
 {
   "nombre": "Katherine Campos",     // nombre del PACIENTE tal como aparece

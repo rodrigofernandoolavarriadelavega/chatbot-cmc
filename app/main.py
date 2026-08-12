@@ -11502,6 +11502,109 @@ async def webhook(request: Request):
                                 except Exception as _e_comp:  # noqa: BLE001
                                     log.warning("comprobante encolar fallo from=%s: %s",
                                                 phone, str(_e_comp)[:200])
+                        # ── Taxonomía ampliada (cédula / foto clínica /
+                        # captura de cita) — gated DOCS_CLINICOS_ACTIVE ─────
+                        from config import DOCS_CLINICOS_ACTIVE as _DC_ACT_TAX
+                        if _DC_ACT_TAX and _ocr_tipo_doc == "cedula_identidad":
+                            # Identidad ya validada módulo 11 en _ocr_identidad.
+                            # Guardarla (TTL 15 min) y ofrecer agendar — el
+                            # botón cae al flujo normal, que prellenará RUT.
+                            save_session(phone, "IDLE", {**_ocr_identidad})
+                            _nom_ced = (_ocr_identidad.get("ocr_paciente")
+                                        or {}).get("nombre", "")
+                            _msg_ced = {
+                                "type": "interactive",
+                                "interactive": {
+                                    "type": "button",
+                                    "body": {"text": (
+                                        "Recibí tu cédula ✅"
+                                        + (f" Gracias, *{_nom_ced.split()[0]}*."
+                                           if _nom_ced else "")
+                                        + "\n\nGuardé tus datos para agendarte "
+                                          "más rápido. ¿Te busco una hora?"
+                                    )},
+                                    "action": {"buttons": [
+                                        {"type": "reply", "reply": {
+                                            "id": "agendar_sugerido",
+                                            "title": "✅ Agendar hora"}},
+                                        {"type": "reply", "reply": {
+                                            "id": "no_agendar",
+                                            "title": "Por ahora no"}},
+                                    ]},
+                                },
+                            }
+                            await send_whatsapp(phone, _msg_ced)
+                            log_message(phone, "out",
+                                        _msg_ced["interactive"]["body"]["text"],
+                                        "IDLE", canal="whatsapp")
+                            log_event(phone, "cedula_recibida_prefill", {})
+                            return Response(status_code=200)
+                        if _DC_ACT_TAX and _ocr_tipo_doc == "foto_clinica":
+                            # REGLA DURA: el bot JAMÁS comenta lo que se ve en
+                            # la foto — solo enruta a evaluación profesional.
+                            # SIN takeover: el bot sigue disponible.
+                            from datetime import datetime as _dt_fc, \
+                                timezone as _tz_fc
+                            save_session(phone, "IDLE", {
+                                "especialidad_sugerida": "medicina general",
+                                "especialidad_sugerida_ts":
+                                    _dt_fc.now(_tz_fc.utc).isoformat(),
+                                **_ocr_identidad,
+                            })
+                            _msg_fc = {
+                                "type": "interactive",
+                                "interactive": {
+                                    "type": "button",
+                                    "body": {"text": (
+                                        "Recibí tu foto 📷 Quedó guardada en tu "
+                                        "ficha.\n\nNo puedo evaluar imágenes — "
+                                        "eso debe hacerlo un profesional en "
+                                        "consulta. ¿Te agendo una hora de "
+                                        "*Medicina General* para que la revisen?"
+                                        "\n\n⚠️ Si es una urgencia, llama al "
+                                        "*SAMU 131*.\n_Si prefieres hablar con "
+                                        "una persona, escribe *recepción*._"
+                                    )},
+                                    "action": {"buttons": [
+                                        {"type": "reply", "reply": {
+                                            "id": "agendar_sugerido",
+                                            "title": "✅ Sí, agendar"}},
+                                        {"type": "reply", "reply": {
+                                            "id": "no_agendar",
+                                            "title": "Por ahora no"}},
+                                    ]},
+                                },
+                            }
+                            await send_whatsapp(phone, _msg_fc)
+                            log_message(phone, "out",
+                                        _msg_fc["interactive"]["body"]["text"],
+                                        "IDLE", canal="whatsapp")
+                            log_event(phone, "foto_clinica_recibida", {})
+                            return Response(status_code=200)
+                        if _DC_ACT_TAX and _ocr_tipo_doc == "captura_cita":
+                            # Pantallazo de una cita → responder con sus
+                            # reservas REALES (flujo ver-reservas existente,
+                            # que prellena el RUT si lo conocemos).
+                            _intro_cc = ("Veo que es una captura de una cita 🗓️ "
+                                         "Te reviso tus reservas 👇")
+                            await send_whatsapp(phone, _intro_cc)
+                            log_message(phone, "out", _intro_cc, "IDLE",
+                                        canal="whatsapp")
+                            from flows import _iniciar_ver as _ini_ver_cc
+                            _resp_cc = await _ini_ver_cc(phone, {})
+                            if isinstance(_resp_cc, dict):
+                                await send_whatsapp_interactive(
+                                    phone, _resp_cc["interactive"])
+                                _log_cc = _interactive_to_text(
+                                    _resp_cc, include_promo=False)
+                            else:
+                                await send_whatsapp(phone, _resp_cc)
+                                _log_cc = _resp_cc or ""
+                            log_message(phone, "out", _log_cc,
+                                        get_session(phone).get("state", "IDLE"),
+                                        canal="whatsapp")
+                            log_event(phone, "captura_cita_recibida", {})
+                            return Response(status_code=200)
                         if _ocr_dec["accion"] == "ofrecer_agenda":
                             from datetime import datetime as _dt_ocr, timezone as _tz_ocr
                             save_session(phone, "IDLE", {
