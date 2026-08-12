@@ -92,11 +92,26 @@ Medilink no documenta estos códigos. Verificados contra prod pidiendo `/citas` 
 | 2 | Atendido | 0 |
 | 3 | **Confirmado por teléfono** | 0 |
 | 5 | En sala de espera | 0 |
+| 6 | Atendiéndose | 0 |
 | 7 | No confirmado (default) | 0 |
+| 8 | **No asiste** | 0 |
 | 10 | Anulado por pcte. via email | 1 |
 | 12 | Notificado via email | 0 |
 | 14 | Cambio de fecha | 1 |
+| 15 | Anulado vía validación | 1 |
 | 18 | Notificado por WhatsApp | 0 |
+
+Estados 6/8/15 verificados en prod el 2026-08-05 (análisis de ausentismo,
+312 profesional-días de 4 profesionales). Dos implicancias:
+
+- **`id_estado=8` "No asiste" es el no-show explícito**, distinto de "Anulado":
+  para medir ausentismo real usar `id_estado==8 & estado_anulacion==0`; las
+  anulaciones (1/10/15) son otra métrica. Metodología completa en
+  `app/ausentismo.py` (dedup intradía, exclusión de id_estado=14).
+- **En citas pasadas Medilink sobrescribe el estado con el desenlace final**
+  (Atendido/Anulado/No asiste): los estados de confirmación (3/7/12/18) solo
+  se observan en citas futuras — no existe serie histórica de "¿se confirmó
+  antes de la cita?".
 
 Notar: "Cambio de fecha" (reagendado) también deja `estado_anulacion=1` en el
 registro viejo — para "¿esta cita sigue vigente?" basta con `estado_anulacion==1`,
