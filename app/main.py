@@ -6719,6 +6719,74 @@ def _initials_pac(nombre: str | None) -> str:
     return ".".join(p[0].upper() for p in parts[:2]) + "."
 
 
+# ── Boxes en vivo — feed PÚBLICO y ANÓNIMO para el gemelo digital ────────────
+# agentecmc.cl/gemelo es HTML estático servido por nginx: no puede llevar el
+# token admin embebido en el bundle. Este endpoint no pide token, pero solo
+# expone {id, nombre visible, estado, especialidad} — nunca paciente, RUT,
+# teléfono, nombre de profesional, plata ni horario detallado.
+_BOXES_EN_VIVO_CACHE: dict = {"ts": 0.0, "data": None}
+_BOXES_EN_VIVO_TTL = 30  # segundos — evita que N visitantes del gemelo golpeen el pool BI (8 conexiones)
+
+
+def _anonimizar_boxes_state(raw: dict) -> list[dict]:
+    """Reduce el payload interno de /admin/api/boxes-state a lo mínimo que
+    necesita el gemelo. "proximo" acá exige <15 min (no los 60 min que usa el
+    dashboard interno): el gemelo solo debe insinuar que alguien está por
+    llegar, no filtrar la agenda con minutos exactos.
+    """
+    out = []
+    for box in raw.get("boxes", []):
+        activos = box.get("profesionales_activos") or []
+        proximo = box.get("proximo") or {}
+        if activos:
+            estado = "ocupado"
+            especialidad = activos[0].get("especialidad") or None
+        elif proximo and isinstance(proximo.get("starts_in_min"), int) and proximo["starts_in_min"] <= 15:
+            estado = "proximo"
+            especialidad = proximo.get("especialidad") or None
+        else:
+            estado = "libre"
+            especialidad = None
+        out.append({
+            "id": box.get("id"),
+            "nombre_visible": box.get("nombre"),
+            "estado": estado,
+            "especialidad_actual": especialidad,
+        })
+    return out
+
+
+@app.get("/api/boxes-en-vivo")
+async def api_boxes_en_vivo():
+    """Estado anónimo de los boxes del CMC para el gemelo digital 3D.
+
+    Sin token: es un endpoint público consumido por HTML estático. Reutiliza
+    toda la lógica de asignación de /admin/api/boxes-state (pools, prioridades,
+    cautivos) llamándolo internamente con el token de servicio, así el pool BI
+    de 8 conexiones no se duplica. La única diferencia es el filtro de salida:
+    ver `_anonimizar_boxes_state`.
+
+    Cache en memoria 30s: cache-aside simple, sin invalidación activa. Un
+    visitante dispara el cálculo real; el resto lee la copia hasta que expire.
+    """
+    now = monotonic()
+    if _BOXES_EN_VIVO_CACHE["data"] is not None and (now - _BOXES_EN_VIVO_CACHE["ts"]) < _BOXES_EN_VIVO_TTL:
+        return _BOXES_EN_VIVO_CACHE["data"]
+
+    try:
+        raw = await api_boxes_state(token=ADMIN_TOKEN, fecha=None)
+        payload = {"boxes": _anonimizar_boxes_state(raw)}
+    except Exception as _e:
+        log.warning("boxes-en-vivo: fallo calculando estado (%s)", _e)
+        if _BOXES_EN_VIVO_CACHE["data"] is not None:
+            return _BOXES_EN_VIVO_CACHE["data"]  # stale-but-served: mejor que un 500 al gemelo
+        raise HTTPException(503, "Estado de boxes no disponible, reintenta en unos segundos")
+
+    _BOXES_EN_VIVO_CACHE["data"] = payload
+    _BOXES_EN_VIVO_CACHE["ts"] = now
+    return payload
+
+
 @app.get("/admin/api/winback-conversations")
 def api_winback_conversations(token: str | None = Query(None), limit: int = 20):
     """Ultimas N conversaciones winback: consent + winback_envios + dim_paciente, enmascaradas."""
