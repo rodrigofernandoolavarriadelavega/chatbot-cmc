@@ -11328,11 +11328,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 or tl in _SET_SALIR or tl_norm in _SET_SALIR):
             reset_session(phone)
             return "Perfecto, no cancelamos nada 😊\n_Escribe *menu* si necesitas algo más._"
-        try:
-            idx = int(txt) - 1
-            if not (0 <= idx < len(citas)):
-                raise ValueError("fuera de rango")
-        except (ValueError, TypeError):
+        cita, _motivo_sel = _resolver_cita_seleccionada(citas, txt, tl, "ccita_")
+        if _motivo_sel == "id_no_vigente":
+            # Tocó una fila de una LISTA VIEJA (la cita ya no está en la
+            # lista vigente — probablemente ya la canceló). No adivinar.
+            log_event(phone, "cancelar_fila_lista_vieja", {"payload": tl[:40]})
+            save_session(phone, "WAIT_CITA_CANCELAR", data)
+            return ("Esa hora ya no está en tu lista (puede que ya la hayas "
+                    "cancelado 😊).\n\nElige desde la lista *más reciente* que "
+                    "te envié, o escribe la fecha (ej: *12/08*).")
+        if cita is None:
             retries = data.get("cancel_retries", 0) + 1
             if retries >= 3:
                 save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": True, "handoff_reason": "cancel_retries"})
@@ -11344,7 +11349,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_CITA_CANCELAR", data)
             return f"Elige un número entre 1 y {len(citas)} 😊\n_(o escribe *menu* para volver al inicio)_"
 
-        cita = citas[idx]
         data["cita_cancelar"] = cita
         save_session(phone, "CONFIRMING_CANCEL", data)
         _esp_c = cita.get('especialidad', '')
@@ -11551,11 +11555,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 or tl in _SET_SALIR or tl_norm in _SET_SALIR):
             reset_session(phone)
             return "Perfecto, dejamos tu cita como está 😊\n_Escribe *menu* si necesitas algo más._"
-        try:
-            idx = int(txt) - 1
-            if not (0 <= idx < len(citas)):
-                raise ValueError("fuera de rango")
-        except (ValueError, TypeError):
+        _cita_sel_r, _motivo_sel_r = _resolver_cita_seleccionada(
+            citas, txt, tl, "rcita_")
+        if _motivo_sel_r == "id_no_vigente":
+            log_event(phone, "reagendar_fila_lista_vieja", {"payload": tl[:40]})
+            save_session(phone, "WAIT_CITA_REAGENDAR", data)
+            return ("Esa hora ya no está en tu lista 😊\n\nElige desde la "
+                    "lista *más reciente* que te envié, o escribe la fecha "
+                    "(ej: *12/08*).")
+        if _cita_sel_r is None:
             retries = data.get("reagendar_retries", 0) + 1
             if retries >= 3:
                 save_session(phone, "HUMAN_TAKEOVER", {"hold_sent": True, "handoff_reason": "reagendar_retries"})
@@ -11566,6 +11574,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             data["reagendar_retries"] = retries
             save_session(phone, "WAIT_CITA_REAGENDAR", data)
             return f"Elige un número entre 1 y {len(citas)} 😊\n_(o escribe *menu* para volver al inicio)_"
+        idx = citas.index(_cita_sel_r)
 
         cita_old = citas[idx]
         esp_lower = (cita_old.get("especialidad") or "").lower()
@@ -15832,7 +15841,8 @@ def _format_citas_reagendar(citas: list, nombre_paciente: str) -> dict:
         hora = c.get("hora_inicio", "")[:5]
         prof = c.get("profesional", "").split()[-1] if c.get("profesional") else ""
         title = f"{fecha_short} {hora} {prof}"[:24]
-        rows.append({"id": str(i), "title": title})
+        # ID Medilink, NO índice (ver _resolver_cita_seleccionada)
+        rows.append({"id": f"rcita_{c.get('id', i)}", "title": title})
     return _list_msg(
         body_text=f"¿Cuál cita quieres reagendar, *{nombre}*?",
         button_label="Elegir cita",
@@ -16027,13 +16037,54 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
     return None
 
 
+def _resolver_cita_seleccionada(citas: list, txt: str, tl: str,
+                                prefijo: str) -> tuple[dict | None, str]:
+    """Resuelve qué cita eligió el paciente en una lista de cancelar/reagendar.
+
+    BUG 2026-08-01 (caso real): las filas llevaban ÍNDICE ("1".."5") y
+    WhatsApp permite tocar filas de listas VIEJAS — tras cancelar una cita la
+    lista se corre y el índice viejo apunta a OTRA cita (eligió "12/08" y el
+    bot confirmó el 14/08). Ahora las filas llevan el ID Medilink de la cita
+    (prefijo_<id>), inmune al corrimiento; además se acepta el número escrito
+    (lista texto) y la fecha dd/mm escrita ("12/08" o "12/08 09:00").
+
+    Retorna (cita|None, motivo) — motivo ∈ ok | id_no_vigente | no_entendido.
+    """
+    if tl.startswith(prefijo):
+        cid = tl[len(prefijo):].strip()
+        for c in citas:
+            if str(c.get("id", "")) == cid:
+                return c, "ok"
+        return None, "id_no_vigente"
+    try:
+        idx = int(txt) - 1
+        if 0 <= idx < len(citas):
+            return citas[idx], "ok"
+    except (ValueError, TypeError):
+        pass
+    m = re.search(r"\b(\d{1,2})[/-](\d{1,2})\b", txt or "")
+    if m:
+        dd, mm = int(m.group(1)), int(m.group(2))
+        matches = [c for c in citas
+                   if (c.get("fecha") or "").endswith(f"-{mm:02d}-{dd:02d}")]
+        hm = re.search(r"\b(\d{1,2}:\d{2})\b", txt or "")
+        if hm and len(matches) > 1:
+            matches = [c for c in matches
+                       if (c.get("hora_inicio") or "").startswith(hm.group(1))]
+        if len(matches) == 1:
+            return matches[0], "ok"
+    return None, "no_entendido"
+
+
 def _format_citas_cancelar(citas: list, nombre_paciente: str):
     nombre = _first_name(nombre_paciente)
     rows = []
     for i, c in enumerate(citas, 1):
         fecha_short = f"{c['fecha'][8:10]}/{c['fecha'][5:7]}" if c.get("fecha") else c.get("fecha_display", "")[:5]
         rows.append({
-            "id": str(i),
+            # ID Medilink, NO índice: inmune a taps sobre listas viejas
+            # (ver _resolver_cita_seleccionada). Fallback i si faltara el id.
+            "id": f"ccita_{c.get('id', i)}",
             "title": f"{fecha_short} {c['hora_inicio'][:5]}"[:24],
             "description": c["profesional"][:72],
         })
