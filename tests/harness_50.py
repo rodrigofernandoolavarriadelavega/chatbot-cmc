@@ -50,7 +50,9 @@ async def fake_buscar_paciente(rut: str, strict: bool = False):
 async def fake_crear_paciente(rut: str, nombre: str, apellidos: str, **kwargs):
     return {"id": 999, "nombre": f"{nombre} {apellidos}".strip(), "rut": rut}
 
-async def fake_crear_cita(id_paciente, id_profesional, fecha, hora_inicio, hora_fin, id_recurso=1):
+async def fake_crear_cita(id_paciente, id_profesional, fecha, hora_inicio, hora_fin, id_recurso=1, **kwargs):
+    # **kwargs: mismo patrón que fake_listar_citas_paciente — crear_cita real
+    # ganó `modalidad` (8f2a77b) y el mock congelado rompía 4 tests en silencio.
     if FAKE_FAIL_CREAR_CITA["value"]:
         return None
     return {"id": 5555}
@@ -68,9 +70,24 @@ async def fake_cancelar_cita(id_cita):
 async def fake_listar_citas_paciente(id_paciente: int = 0, **kwargs):
     return list(FAKE_CITAS_PACIENTE)
 
+_DIAS_ABREV = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+_MESES_ABREV = ["ene", "feb", "mar", "abr", "may", "jun",
+                "jul", "ago", "sep", "oct", "nov", "dic"]
+
+
+def _fecha_futura(dias: int) -> tuple[str, str]:
+    """(iso, display) de hoy+dias. El fixture era una fecha FIJA (2026-04-15)
+    que quedó en el pasado el 2026-04-28, cuando entró la defensa de slots
+    expirados (4dadedd): 21 de las 27 fallas 'baseline' eran solo esto —
+    el harness ofrecía horas del pasado y el bot, correctamente, las
+    rechazaba. Fecha dinámica = el harness no vuelve a mentir nunca."""
+    from datetime import date, timedelta
+    d = date.today() + timedelta(days=dias)
+    return d.strftime("%Y-%m-%d"), f"{_DIAS_ABREV[d.weekday()]} {d.day} {_MESES_ABREV[d.month - 1]}"
+
+
 def _fake_slots(esp_display: str, id_prof: int, prof_nombre: str):
-    base_fecha = "2026-04-15"
-    base_display = "mié 15 abr"
+    base_fecha, base_display = _fecha_futura(7)
     slots = []
     for h in ["09:00", "09:15", "09:30", "10:00", "10:30"]:
         end_min = int(h.split(":")[0]) * 60 + int(h.split(":")[1]) + 15
@@ -89,7 +106,8 @@ def _fake_slots(esp_display: str, id_prof: int, prof_nombre: str):
     return slots
 
 async def fake_buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
-                                  excluir=None, intervalo_override=None, solo_ids=None):
+                                  excluir=None, intervalo_override=None, solo_ids=None,
+                                  fecha_desde=None, fecha_hasta=None, **kwargs):
     if FAKE_SIN_SLOTS["value"]:
         return [], []
     esp = (especialidad or "").lower()
@@ -133,7 +151,7 @@ async def fake_buscar_slots_dia_por_ids(ids, fecha, **kwargs):
     return slots, slots
 
 async def fake_consultar_proxima_fecha(especialidad: str):
-    return "2026-04-15"
+    return _fecha_futura(7)[0]
 
 # ── Fake Claude ──────────────────────────────────────────────────────────────
 def _intent_from_text(m: str) -> dict:
@@ -206,6 +224,17 @@ async def fake_clasificar_respuesta_seguimiento(mensaje: str):
         return "mejor"
     return "igual"
 
+async def fake_classify_with_context(mensaje: str, state: str, session_data: dict):
+    # "continue" = el pre-router se hace a un lado y decide el handler del
+    # estado (el mismo fallback que usa producción cuando Claude falla).
+    # Hallazgo 2026-08-12: este mock NO existía — el harness "offline" llamaba
+    # a la API REAL de Claude en cada mensaje que pasaba el fast-path, y el
+    # sampling del LLM hacía flaky la suite (TERC-01 fallaba ~25% de las
+    # corridas según clasificara "otra persona" como cambiar_profesional).
+    # Así se descubrió, de paso, el bug real de producción (guardas en
+    # _es_respuesta_obvia_al_prompt y en el escape cambiar_profesional).
+    return {"action": "continue"}
+
 # ── Aplicar monkey-patches ───────────────────────────────────────────────────
 import medilink  # noqa: E402
 import claude_helper  # noqa: E402
@@ -225,6 +254,8 @@ for mod in (medilink, flows):
 
 claude_helper.detect_intent = fake_detect_intent
 claude_helper.respuesta_faq = fake_respuesta_faq
+claude_helper.classify_with_context = fake_classify_with_context
+flows.classify_with_context = fake_classify_with_context
 claude_helper.clasificar_respuesta_seguimiento = fake_clasificar_respuesta_seguimiento
 flows.detect_intent = fake_detect_intent
 flows.respuesta_faq = fake_respuesta_faq
@@ -388,23 +419,26 @@ async def main():
     NO_ERROR = {"none": NO_ENTENDI_MARKERS}
 
     def setup_una_cita():
+        _f1, _fd1 = _fecha_futura(12)
         FAKE_CITAS_PACIENTE.extend([{
             "id": 701, "id_profesional": 73,
             "profesional": "Dr. Andrés Abarca",
             "especialidad": "Medicina General",
-            "fecha": "2026-04-20", "fecha_display": "lun 20 abr",
+            "fecha": _f1, "fecha_display": _fd1,
             "hora": "10:00", "hora_inicio": "10:00", "hora_fin": "10:15",
         }])
 
     def setup_multi_citas():
+        _f1, _fd1 = _fecha_futura(12)
+        _f2, _fd2 = _fecha_futura(14)
         FAKE_CITAS_PACIENTE.extend([
             {"id": 701, "id_profesional": 73, "profesional": "Dr. Abarca",
-             "especialidad": "Medicina General", "fecha": "2026-04-20",
-             "fecha_display": "lun 20 abr", "hora": "10:00",
+             "especialidad": "Medicina General", "fecha": _f1,
+             "fecha_display": _fd1, "hora": "10:00",
              "hora_inicio": "10:00", "hora_fin": "10:15"},
             {"id": 702, "id_profesional": 55, "profesional": "Dra. Burgos",
-             "especialidad": "Odontología", "fecha": "2026-04-22",
-             "fecha_display": "mié 22 abr", "hora": "15:00",
+             "especialidad": "Odontología", "fecha": _f2,
+             "fecha_display": _fd2, "hora": "15:00",
              "hora_inicio": "15:00", "hora_fin": "15:30"},
         ])
 
@@ -415,7 +449,8 @@ async def main():
         ("confirmar_sugerido", ["Fonasa", "Particular"]),
         ("1", ["RUT"]),
         ("11111111-1", ["Juan", "confirm"]),
-        ("confirmar", ["reserv", "confirm", "✅", "cita"]),
+        # Post-booking el último mensaje puede ser el cross-sell (deliberado)
+        ("confirmar", {"any": ["reserv", "confirm", "✅", "cita", "me interesa", "agendo"], **NO_ERROR}),
     ])
 
     mk("02 agendar odontologia via lista", "56900000002", [
@@ -425,7 +460,8 @@ async def main():
         # Odonto es particular-only → salta modalidad, va directo a RUT
         ("confirmar_sugerido", ["RUT"]),
         ("11111111-1", ["confirm"]),
-        ("confirmar", ["reserv", "✅", "confirm"]),
+        # Post-booking el último mensaje puede ser el cross-sell (deliberado)
+        ("confirmar", {"any": ["reserv", "✅", "confirm", "me interesa", "evaluación"], **NO_ERROR}),
     ])
 
     mk("03 agendar paciente nuevo registro (1 mensaje)", "56900000003", [
@@ -434,7 +470,9 @@ async def main():
         ("1", ["RUT"]),
         ("99999999-9", ["Nombre", "Sexo", "nacimiento"]),
         ("Pedro Pérez González, M, 15/03/1990", {"any": ["confirm", "cita", "reserv", "Registrad"], **NO_ERROR}),
-        ("confirmar", ["reserv", "✅", "cita"]),
+        # Paciente nuevo: tras reservar, el último mensaje es "¿Cómo nos
+        # conociste?" (referral tracking, deliberado)
+        ("confirmar", {"any": ["reserv", "✅", "cita", "conociste"], **NO_ERROR}),
     ])
 
     mk("04 agendar texto libre doctor", "56900000004", [
@@ -992,16 +1030,18 @@ async def main():
         ("Daniel López, M, 01/01/2000", {"any": ["Daniel", "confirm", "Registrad"], **NO_ERROR}),
     ])
 
-    mk("TERC-02 tercero con perfil conocido → fast-track + cambiar datos", "56900000602", [
+    # Reescrito 2026-08-11: "cambiar_datos" ya no salta a Fonasa/Particular —
+    # desde 616d3b4 (auditoría de conversión 2026-05-29) abre el sub-menú
+    # "¿Qué quieres cambiar?" (cd_horario / cd_persona / cd_datos).
+    mk("TERC-02 tercero con perfil conocido → fast-track + cambiar persona", "56900000602", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         # Fast-track: perfil conocido → salta directo a CONFIRMING_CITA
         ("confirmar_sugerido", {"any": ["reservo", "confirmo", "Juan"], **NO_ERROR}),
-        # Quiere agendar para otra persona → "Cambiar algo" → flujo completo
-        ("cambiar_datos", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
-        # WAIT_MODALIDAD detecta rut_conocido → atajo, pero quiere para otra persona
-        ("1", {"any": ["Agendo con tus datos", "continuar"], **NO_ERROR}),
-        # En WAIT_RUT_AGENDAR escribe "otra persona"
-        ("otra persona", ["RUT", "atender"]),
+        # "Cambiar algo" → sub-menú
+        ("cambiar_datos", {"any": ["cambiar", "Horario", "otra persona"], **NO_ERROR}),
+        # Es para otra persona → pregunta modalidad (o pide RUT si ya la tenía)
+        ("cd_persona", {"any": ["Fonasa", "RUT"], **NO_ERROR}),
+        ("1", {"any": ["RUT", "atender"], **NO_ERROR}),
         ("99999999-9", ["Nombre", "Sexo", "nacimiento"]),
         ("Carlos Pérez, M, 05/06/1985", {"any": ["Carlos", "confirm", "Registrad"], **NO_ERROR}),
     ], setup=lambda: save_profile("56900000602", "11111111-1", "María Gómez")),
@@ -1015,14 +1055,17 @@ async def main():
         ("si", {"any": ["reserv", "✅", "Listo"], **NO_ERROR}),
     ], setup=lambda: save_profile("56900000701", "11111111-1", "Juan Prueba Test")),
 
-    mk("FT-02 fast-track: 'cambiar algo' → flujo completo", "56900000702", [
+    # Reescrito 2026-08-11 contra el sub-menú cd_* (ver TERC-02).
+    mk("FT-02 fast-track: 'cambiar algo' → cd_datos → flujo completo", "56900000702", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),
         # Fast-track ofrece confirmar
         ("confirmar_sugerido", {"any": ["reservo", "confirmo", "Juan"], **NO_ERROR}),
-        # Toca "Cambiar algo" → vuelve a Fonasa/Particular
-        ("cambiar_datos", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+        # "Cambiar algo" → sub-menú
+        ("cambiar_datos", {"any": ["cambiar", "Horario", "otra persona"], **NO_ERROR}),
+        # Corregir mis datos → pregunta Fonasa/Particular con la hora apartada
+        ("cd_datos", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
         # WAIT_MODALIDAD detecta rut_conocido → atajo "¿Agendo con tus datos?"
-        ("1", {"any": ["Agendo con tus datos", "continuar"], **NO_ERROR}),
+        ("1", {"any": ["Agendo con tus datos", "continuar", "RUT"], **NO_ERROR}),
         ("si", {"any": ["reservo", "confirmo"], **NO_ERROR}),
         ("si", {"any": ["reserv", "✅", "Listo"], **NO_ERROR}),
     ], setup=lambda: save_profile("56900000702", "11111111-1", "Juan Prueba Test")),

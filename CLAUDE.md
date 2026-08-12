@@ -358,7 +358,80 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-08-05
+**Última actualización**: 2026-08-12
+
+### 2026-08-12 — Auditoría harness (27 fallas explicadas → 103/103) + bug real "otra persona" + rango cerrado
+- **Las 27 fallas "baseline" del harness, clasificadas una a una** (exigencia
+  del dueño): CERO fallos reales de producción. 21 = fixture con fecha
+  congelada `2026-04-15` (quedó en el pasado el 2026-04-28 cuando entró la
+  defensa de slots expirados 4dadedd — el harness ofrecía horas del pasado y
+  el bot correctamente las rechazaba); 4 = mock `fake_crear_cita` sin kwarg
+  `modalidad`; 2 = tests del flujo viejo de "cambiar_datos" (rediseñado a
+  sub-menú cd_* en 616d3b4). Arreglado TODO en `tests/harness_50.py`: fechas
+  dinámicas (`_fecha_futura`), mocks con `**kwargs`, TERC-02/FT-02 reescritos.
+- **Hallazgo grave del harness**: `classify_with_context` NO estaba mockeado —
+  la suite "offline" llamaba a la API REAL de Claude en cada mensaje que
+  pasaba el fast-path (costo + lentitud + flakiness por sampling). Mockeado a
+  `{"action": "continue"}`. **Suite ahora 103/103 × 5 corridas, determinista.**
+- **BUG REAL DE PRODUCCIÓN cazado gracias al flaky** (TERC-01 fallaba ~25%):
+  en WAIT_RUT_AGENDAR, "otra persona" pasaba por el pre-router LLM y Claude a
+  veces lo clasificaba `escape: cambiar_profesional` → reset + re-oferta → el
+  paciente perdía el flujo de terceros. Fix doble en `flows.py`: (1)
+  `_es_respuesta_obvia_al_prompt` ahora marca obvio `_OTRA_PERSONA_RE` en
+  WAIT_RUT_AGENDAR/WAIT_MODALIDAD (el LLM no lo ve); (2) cinturón en el escape
+  `cambiar_profesional`: si el texto matchea "otra persona", continue.
+  Verificado 6/6 con Claude real.
+- **Rango de fechas CERRADO** (revisión del dueño 2026-08-11): "la próxima
+  semana" = lunes-domingo (antes solo mínimo → podía ofrecer 3 semanas
+  después sin aviso). `buscar_primer_dia` ganó `fecha_desde/fecha_hasta`
+  NATIVOS (ya no se fabrica lista `excluir` con tope escondido); sin cupo en
+  rango cerrado → aviso explícito "No encontré horas para la próxima semana,
+  te muestro la primera después". Fix "+15": "en 15 días"=+15 ≠ "en dos
+  semanas"=+14. Nuevo "esta semana" (hoy→domingo). Captura de preferencia
+  UNIFICADA en `_stash_preferencia_fecha` (antes triplicada en 3 call sites);
+  la preferencia sobrevive al cambio de especialidad (no se hace pop) y una
+  nueva sobreescribe la anterior. Negación "no mañana/mañana no puedo" ya no
+  devuelve mañana. "mañana en la mañana" (día+franja) ya no pierde el día.
+- Tests: extractores 18/18 + combinaciones adversariales, rango nativo con
+  Medilink simulado 4/4, sobreescritura de preferencias 4/4, harness 103/103
+  ×5, normalizer 52/52.
+
+### 2026-08-12 — Modo-caída Medilink 403 plataforma-inactiva + ventana contexto 24h (DEPLOYADO commit bac21ea)
+- **Incidente real esta mañana**: Medilink devolvió 403 "no se encuentra
+  activa" (plataforma suspendida, distinto de un 403 de permisos puntual y
+  distinto del 429 de saturación). El breaker viejo (`probe_up()`) leía
+  `status_code<500` como "vivo" — un 403 pasaba el filtro y el circuito NUNCA
+  se abría, así que el bot seguía intentando agendar contra una plataforma
+  caída sin avisarle a nadie.
+- **`app/medilink_outage.py`** (nuevo): `MedilinkInactiva` (excepción
+  específica, no `MedilinkRateLimited`); modo caída persistido en sqlite —
+  abre con 2 fallos consecutivos, cierra con 2 sondeos OK consecutivos
+  (anti-flapping), tope duro de 24h. Captura el contexto de TODO mensaje
+  entrante mientras está abierto (incluidos los que quedan en
+  `HUMAN_TAKEOVER`), sin tocar `reset_session` — el paciente no pierde su
+  lugar en el flujo.
+- **`app/jobs.py`**: watcher nuevo `_job_medilink_outage_watcher`, cada 3 min,
+  solo actúa si hay contexto pendiente (ahorra requests). Al recuperar, arma
+  un mensaje dirigido con horas reales (`buscar_slots_dia`/`buscar_primer_dia`)
+  — regla barata primero (especialidad ya capturada), Claude Haiku
+  (`detect_intent`) solo si el contexto quedó ambiguo. Skip si el rut ya tiene
+  cita futura, si pasaron >24h, o si quedó en `HUMAN_TAKEOVER` (recepción
+  lo lleva).
+- **`app/main.py`**: catch de `MedilinkInactiva` en los dos webhooks (WhatsApp
+  + IG/FB), mensaje distinto al de saturación ("problema técnico… apenas se
+  recupere te escribo"), captura forzada del mensaje que disparó el fallo.
+  Job registrado en el scheduler `id="medilink_outage_watcher"`.
+- **Tests**: `tests/test_medilink_outage.py` (nuevo, 57 casos) +
+  `tests/test_429_no_es_caida.py` — ambos 100%. **OJO**: `harness_50.py`
+  76/103 y `harness_stress_200.py` 169/200 son baseline preexistente en HEAD
+  (WIP de otra sesión en `flows.py`/`harness_50.py`, sin commitear) — verificado
+  por aislamiento (mismo conteo de fallas con y sin este fix staged). No
+  relacionado a este deploy.
+- **Verificado en PROD**: `/health` 200, `systemctl is-active` → active, 0
+  tracebacks/ERROR post-restart (fuera de `MEDILINK_429`, guardrail conocido
+  — cola de reintentos de la caída de esta mañana, no señal de deploy roto).
+- **PENDIENTE**: observar el próximo ciclo real de caída→recuperación en prod
+  para confirmar que el recontacto dirigido sale con las horas correctas.
 
 ### 2026-08-06 — Resultados de examen enviados por el paciente (DEPLOYADO commit 115ef84)
 - **Caso Manuel Yaupe (56998901932, 17:15 CL)**: mandó el PDF de sus exámenes

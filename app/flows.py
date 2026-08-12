@@ -101,11 +101,25 @@ def _detectar_fecha_pedida_idle(txt: str) -> str | None:
         return hoy.strftime("%Y-%m-%d")
     if "pasado mañana" in t or "pasado manana" in t:
         return (hoy + timedelta(days=2)).strftime("%Y-%m-%d")
-    if ("para mañana" in t or "para manana" in t
-        or t.strip() in ("mañana", "manana")):
-        return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
-    if (("mañana" in t or "manana" in t) and not es_franja):
-        return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
+    # Negación: "no mañana, el otro martes" / "mañana no puedo" — el token
+    # "mañana" está pero NEGADO; sin este guard se devolvía el día siguiente
+    # (justo el que el paciente descartó). Cae al parser de día de semana.
+    _manana_negada = bool(
+        re.search(r"\bno\s+(?:para\s+|puedo\s+)?ma[ñn]ana\b", t)
+        or re.search(r"\bma[ñn]ana\s+no\b", t)
+    )
+    if not _manana_negada:
+        if ("para mañana" in t or "para manana" in t
+            or t.strip() in ("mañana", "manana")):
+            return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
+        # "mañana" como DÍA vs "en/por/de/para la mañana" como FRANJA: en vez
+        # de clasificar el mensaje ENTERO con es_franja_no_dia (que en "mañana
+        # en la mañana" — día + franja juntos — perdía el día), se QUITAN las
+        # menciones de franja y si aún queda un "mañana", ese es día.
+        _t_sin_franja = re.sub(r"\b(?:en|por|de|durante|a|para)\s+la\s+ma[ñn]an(?:a|ita)\b", " ", t)
+        if ("mañana" in _t_sin_franja or "manana" in _t_sin_franja) and not \
+                _franja_mod.es_franja_no_dia(_t_sin_franja):
+            return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
     # Día de semana nombrado ("el viernes", "para el martes"). Reusa el mapa y
     # helper de WAIT_SLOT — antes esto solo funcionaba DESPUÉS de ver slots,
     # no en el primer mensaje (caso siquiatra 2026-08-06: "para la próxima
@@ -133,23 +147,51 @@ def _menciona_prox_semana(t: str) -> bool:
     return any(p in t for p in _FRASES_PROX_SEMANA)
 
 
-def _detectar_fecha_min_idle(txt: str) -> list | None:
-    """Preferencia de RANGO ("la próxima semana", "en 15 días"): no hay un día
-    exacto, solo un mínimo. Retorna [fecha_min_iso, label] o None. Se consume
-    en _iniciar_agendar pasando como `excluir` a buscar_primer_dia los días
-    anteriores al mínimo — así la primera oferta ya cae dentro del rango
-    pedido (caso siquiatra 2026-08-06: pidió próxima semana, se ofreció hoy)."""
+def _detectar_rango_pedido_idle(txt: str) -> list | None:
+    """Preferencia de RANGO de fechas. Retorna [fecha_min, fecha_max|None,
+    label] o None. El rango es CERRADO cuando la frase lo es: "la próxima
+    semana" = lunes a domingo de esa semana, no "desde el lunes en adelante"
+    (si no hay cupo dentro, _iniciar_agendar avisa explícitamente antes de
+    ofrecer algo posterior). "en 15 días" / "en dos semanas" son mínimos
+    abiertos (el paciente fija cuándo PUEDE empezar, no cuándo termina)."""
     if not txt:
         return None
     t = txt.lower()
     hoy = datetime.now(_CHILE_TZ).date()
     if _menciona_prox_semana(t):
         prox_lunes = hoy + timedelta(days=(7 - hoy.weekday()))
-        return [prox_lunes.strftime("%Y-%m-%d"), "la próxima semana"]
-    if any(p in t for p in ("en dos semanas", "en 2 semanas", "en 15 dias",
-                            "en 15 días", "en quince dias", "en quince días")):
-        return [(hoy + timedelta(days=14)).strftime("%Y-%m-%d"), "en dos semanas"]
+        prox_domingo = prox_lunes + timedelta(days=6)
+        return [prox_lunes.strftime("%Y-%m-%d"),
+                prox_domingo.strftime("%Y-%m-%d"), "la próxima semana"]
+    if "esta semana" in t:
+        este_domingo = hoy + timedelta(days=(6 - hoy.weekday()))
+        return [hoy.strftime("%Y-%m-%d"),
+                este_domingo.strftime("%Y-%m-%d"), "esta semana"]
+    # OJO: "en 15 días" chileno = +15, "en dos semanas" = +14 — NO son la
+    # misma frase (bug 2026-08-11 detectado en revisión del dueño).
+    if any(p in t for p in ("en 15 dias", "en 15 días", "en quince dias", "en quince días")):
+        return [(hoy + timedelta(days=15)).strftime("%Y-%m-%d"), None, "en 15 días"]
+    if any(p in t for p in ("en dos semanas", "en 2 semanas")):
+        return [(hoy + timedelta(days=14)).strftime("%Y-%m-%d"), None, "en dos semanas"]
     return None
+
+
+def _stash_preferencia_fecha(txt: str, data: dict) -> None:
+    """Punto ÚNICO de captura de preferencia de fecha — los tres caminos de
+    entrada al agendar (IDLE top, branch agendar, WAIT_ESPECIALIDAD) llaman
+    acá en vez de duplicar la lógica (deuda señalada en revisión 2026-08-11:
+    con la extracción copiada en 3 lugares, un cuarto camino conversacional
+    nuevo se olvida de alguno). Una preferencia nueva SOBREESCRIBE la
+    anterior: "mejor el viernes" después de "la próxima semana" gana."""
+    _fp = _detectar_fecha_pedida_idle(txt)
+    if _fp:
+        data["fecha_pedida_idle"] = _fp
+        data.pop("rango_fecha_pedida", None)
+        return
+    _rg = _detectar_rango_pedido_idle(txt)
+    if _rg:
+        data["rango_fecha_pedida"] = _rg
+        data.pop("fecha_pedida_idle", None)
 
 
 def _abono_gate_psiq_activo() -> bool:
@@ -1986,6 +2028,14 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
         return True
     if _re_pre.fullmatch(r"\d{1,2}\s?(am|pm|hrs?)", tl):
         return True
+    # WAIT_RUT_AGENDAR / WAIT_MODALIDAD: "otra persona" y parientes tienen
+    # handler determinista propio (flujo de terceros). El pre-router NO debe
+    # verlos: Claude a veces clasifica "otra persona" como escape
+    # cambiar_profesional ("quiere OTRO PROFESIONAL") y el paciente pierde el
+    # flujo de terceros — bug no-determinista cazado 2026-08-12 (TERC-01 flaky,
+    # ~25% de las corridas; mismo riesgo con pacientes reales).
+    if state in ("WAIT_RUT_AGENDAR", "WAIT_MODALIDAD") and _OTRA_PERSONA_RE.search(tl):
+        return True
     # WAIT_MODALIDAD: respuestas obvias
     if state == "WAIT_MODALIDAD":
         if tl in {"fonasa", "fona", "f", "particular", "privado", "privada", "p", "1", "2", "isapre"}:
@@ -2572,6 +2622,12 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             return await _iniciar_agendar(phone, data_carry, esp_final)
 
         if tag == "cambiar_profesional":
+            # Cinturón (2026-08-12): si el texto en realidad dice "otra
+            # PERSONA" (tercero), la clasificación del LLM es un falso
+            # positivo — el reset de abajo le botaba el flujo al paciente.
+            # Cae al handler determinista del estado (flujo de terceros).
+            if _OTRA_PERSONA_RE.search(tl):
+                return None
             if state == "WAIT_SLOT":
                 # Re-dispatch al handler "otro_prof" del WAIT_SLOT
                 return None  # Dejar que el handler con tl="otro_prof" no aplica aquí
@@ -4152,13 +4208,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # branch agendar la propagaba; "Medico para hoy tiene?" pasaba por
         # triage GES y perdía la fecha → bot mostraba sábado sin avisar
         # (caso María 56968621918 + Norma Muñoz, CLAUDE.md pendiente #1).
-        _fp_idle_top = _detectar_fecha_pedida_idle(txt)
-        if _fp_idle_top:
-            data["fecha_pedida_idle"] = _fp_idle_top
-        else:
-            _fm_idle_top = _detectar_fecha_min_idle(txt)
-            if _fm_idle_top:
-                data["fecha_min_pedida"] = _fm_idle_top
+        _stash_preferencia_fecha(txt, data)
         _fr_idle_top = _detectar_franja_horaria(txt)
         if _fr_idle_top:
             data["franja_horaria"] = _fr_idle_top
@@ -5719,13 +5769,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # _iniciar_agendar debe avisarle explícitamente en vez de mostrar
             # mañana sin contexto. Caso real 2026-04-28 (Norma Muñoz) +
             # CLAUDE.md pendiente #1 (caso María 56968621918).
-            _fp = _detectar_fecha_pedida_idle(txt)
-            if _fp:
-                data["fecha_pedida_idle"] = _fp
-            else:
-                _fm = _detectar_fecha_min_idle(txt)
-                if _fm:
-                    data["fecha_min_pedida"] = _fm
+            _stash_preferencia_fecha(txt, data)
             data["_txt_raw"] = txt
 
             # Patrón 4 FIX (2026-05-19): paciente activo en tratamiento de
@@ -7145,13 +7189,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # a WAIT_ESPECIALIDAD → escribe "medicina general para hoy". El branch
         # IDLE no detecta la fecha porque ya pasamos a otro estado, y el bot
         # mostraba el siguiente día sin avisar.
-        _fp_we = _detectar_fecha_pedida_idle(txt)
-        if _fp_we:
-            data["fecha_pedida_idle"] = _fp_we
-        else:
-            _fm_we = _detectar_fecha_min_idle(txt)
-            if _fm_we:
-                data["fecha_min_pedida"] = _fm_we
+        _stash_preferencia_fecha(txt, data)
         _fr_we = _detectar_franja_horaria(txt)
         if _fr_we:
             data["franja_horaria"] = _fr_we
@@ -15120,25 +15158,43 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     if data.get("fecha_pedida_idle") and not data.get("fecha_preferida"):
         data["fecha_preferida"] = data.pop("fecha_pedida_idle")
 
-    # Preferencia de RANGO ("la próxima semana", "en 15 días"): se convierte en
-    # lista `excluir` (los días ANTES del mínimo) para buscar_primer_dia — la
-    # primera oferta cae directo dentro del rango pedido en vez de ofrecer hoy
-    # (caso siquiatra 2026-08-06). Solo aplica si no hay fecha exacta pedida.
-    _excluir_hasta_min: list | None = None
-    _fm_pedida = data.pop("fecha_min_pedida", None)
-    if _fm_pedida and not data.get("fecha_preferida"):
+    # Preferencia de RANGO ("la próxima semana" = lunes-domingo cerrado,
+    # "en 15 días" = mínimo abierto): se pasa NATIVA a buscar_primer_dia como
+    # fecha_desde/fecha_hasta (revisión 2026-08-11 — antes se fabricaba una
+    # lista `excluir` que solo simulaba el mínimo, con tope escondido de 21
+    # días, y "próxima semana" podía desbordar a 3 semanas después sin aviso).
+    # NO se hace pop: la preferencia sobrevive a un cambio de especialidad a
+    # mitad de conversación ("psiquiatra la próxima semana… mejor ginecólogo"
+    # conserva la semana). Se limpia con reset_session o cuando el paciente da
+    # una preferencia nueva (_stash_preferencia_fecha sobreescribe).
+    _rango_desde = _rango_hasta = _rango_label = None
+    _rp = data.get("rango_fecha_pedida") or data.get("fecha_min_pedida")  # 2ª clave: compat sesiones del deploy df720d7
+    if _rp and not data.get("fecha_preferida"):
         try:
-            _fm_iso = _fm_pedida[0]
-            _d_hoy = datetime.now(_CHILE_TZ).date()
-            _d_min = datetime.strptime(_fm_iso, "%Y-%m-%d").date()
-            _n_dias = (_d_min - _d_hoy).days
-            if 0 < _n_dias <= 21:
-                _excluir_hasta_min = [
-                    (_d_hoy + timedelta(days=i)).strftime("%Y-%m-%d")
-                    for i in range(_n_dias)
-                ]
-        except Exception as _fm_e:
-            log.warning("fecha_min_pedida inválida %s: %s", _fm_pedida, _fm_e)
+            _rango_desde = _rp[0]
+            _rango_hasta = _rp[1] if len(_rp) > 2 else None
+            _rango_label = _rp[-1]
+            datetime.strptime(_rango_desde, "%Y-%m-%d")
+            if _rango_hasta:
+                datetime.strptime(_rango_hasta, "%Y-%m-%d")
+        except Exception as _rp_e:
+            log.warning("rango_fecha_pedida inválido %s: %s", _rp, _rp_e)
+            _rango_desde = _rango_hasta = _rango_label = None
+
+    async def _buscar_con_rango(_esp_bcr: str, solo_ids=None):
+        """buscar_primer_dia honrando el rango pedido. Si el rango CERRADO
+        quedó sin cupo, reintenta abierto desde el mínimo y deja marcado el
+        aviso para que el mensaje diga explícitamente que la oferta salió del
+        rango — nunca un corrimiento silencioso."""
+        _s, _t = await buscar_primer_dia(_esp_bcr, solo_ids=solo_ids,
+                                         fecha_desde=_rango_desde,
+                                         fecha_hasta=_rango_hasta)
+        if not _t and _rango_desde and _rango_hasta:
+            _s, _t = await buscar_primer_dia(_esp_bcr, solo_ids=solo_ids,
+                                             fecha_desde=_rango_desde)
+            if _t:
+                data["_aviso_sin_rango_pedido"] = _rango_label
+        return _s, _t
 
     # Pediatría solicitada → Medicine General con aclaración explícita.
     # El flag _pediatra_a_mg lo setea IDLE cuando detecta alias pediátrico.
@@ -15174,14 +15230,12 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                     smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
                     mejor = todos[0] if todos else None
         else:
-            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=_MED_AO_IDS,
-                                                   excluir=_excluir_hasta_min)
+            smart, todos = await _buscar_con_rango(especialidad_lower, solo_ids=_MED_AO_IDS)
             if todos:
                 mejor = todos[0]  # más próximo entre ambos doctores
             else:
                 # Abarca + Olavarría sin disponibilidad → Márquez como overflow
-                smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID],
-                                                       excluir=_excluir_hasta_min)
+                smart, todos = await _buscar_con_rango(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
                 mejor = todos[0] if todos else None
     elif especialidad_lower in _ESP_MED_FAMILIAR:
         # Solo Dr. Alonso Márquez (ID 13) atiende Medicina Familiar en el CMC.
@@ -15200,8 +15254,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 smart, todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS)
                 mejor = todos[0] if todos else None
         else:
-            smart, todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS,
-                                                   excluir=_excluir_hasta_min)
+            smart, todos = await _buscar_con_rango("medicina general", solo_ids=_MED_FAMILIAR_IDS)
             mejor = todos[0] if todos else None
         # Normalizar label del slot a "Medicina Familiar" para display correcto
         for s in (todos or []):
@@ -15252,8 +15305,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             # Solo con excepción real (timeout, HTTP 5xx) el código llegaba al
             # except del webhook y mostraba "Tuve un problema técnico".
             try:
-                smart, todos = await buscar_primer_dia(especialidad_lower,
-                                                       excluir=_excluir_hasta_min)
+                smart, todos = await _buscar_con_rango(especialidad_lower)
             except MedilinkRateLimited:
                 # 2026-07-27: este `except` tragaba TODO y convertía "no pude
                 # consultar" en "no hay horas" → lista de espera con la agenda
@@ -15469,6 +15521,13 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         # BUG-08: cuando hay aviso de redireccion, omitir saludo "Hola de nuevo"
         # para no mezclar "No tengo horarios para hoy" + "Hola de nuevo, Jaime! Te encontre hora"
         header = f"\u26a0\ufe0f No tengo horarios para *{_lbl_av}* \U0001f615\nTe muestro la *proxima disponible*:\n\n"
+    # Aviso de RANGO: pidi\u00f3 "la pr\u00f3xima semana" (u otro rango cerrado) y no
+    # hubo cupo dentro \u2014 la oferta que sigue est\u00e1 FUERA del rango pedido y hay
+    # que decirlo, no correr la fecha en silencio (revisi\u00f3n 2026-08-11).
+    _rango_avisar = data.pop("_aviso_sin_rango_pedido", None)
+    if _rango_avisar and not _fecha_avisar:
+        header = (f"\u26a0\ufe0f No encontr\u00e9 horas para *{_rango_avisar}* \U0001f615\n"
+                  f"Te muestro la *primera disponible despu\u00e9s*:\n\n")
     # Aviso de franja: el paciente pidi\u00f3 una franja horaria y ese d\u00eda no tiene
     # cupo en ella. Sin esto el bot mostraba horas de tarde a quien pidi\u00f3 la
     # ma\u00f1ana, sin decir palabra (caso Sara Bustamante 2026-05-14: pidi\u00f3 el
