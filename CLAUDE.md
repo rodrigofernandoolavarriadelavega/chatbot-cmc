@@ -398,6 +398,24 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - **PENDIENTE HUMANO**: Yaupe quedó sin respuesta útil y su examen sin avisar.
   Decidir si se le escribe.
 
+### 2026-08-11 — Preferencia de fecha en la PRIMERA oferta (cierra backlog #1)
+- Antes: "para la próxima semana necesito hora con X" ofrecía HOY (la cañería
+  fecha_preferida solo entendía hoy/mañana/pasado mañana). `flows.py`:
+  - `_detectar_fecha_pedida_idle` ahora también parsea día de semana nombrado
+    ("el viernes" → próximo viernes) reusando `_DIAS_SEMANA`+`_proxima_fecha_dia`
+    de WAIT_SLOT, y el combo "el viernes de la próxima semana" (empuja dentro
+    de esa semana).
+  - Nueva `_detectar_fecha_min_idle` para RANGOS ("próxima semana"/"otra
+    semana"/"semana que viene" → próximo lunes; "en 15 días"/"en dos semanas"
+    → hoy+14). Se stashea como `data["fecha_min_pedida"]` en los 3 call sites
+    (IDLE top, branch agendar, WAIT_ESPECIALIDAD).
+  - `_iniciar_agendar` convierte el mínimo en `excluir=[hoy..min-1]` (máx 21
+    días) para `buscar_primer_dia` en las 3 rutas default (MG dual, MF,
+    genérica) → la primera oferta cae directo dentro del rango pedido. La
+    fecha exacta pedida sigue teniendo prioridad sobre el rango.
+- Tests: extractores 11/11 (relativos a hoy), harness 76/103 (=baseline),
+  normalizer 52/52, deep-import OK.
+
 ### 2026-08-06 — Vocabulario especialidades + números reciclados
 - **Caso "siquiatra" (56991927216)**: "necesito una hora con siquiatra" caía a
   Medicina General porque la frase genérica `("necesito una hora","medicina

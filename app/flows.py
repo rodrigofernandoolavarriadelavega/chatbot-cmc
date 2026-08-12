@@ -106,6 +106,49 @@ def _detectar_fecha_pedida_idle(txt: str) -> str | None:
         return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
     if (("mañana" in t or "manana" in t) and not es_franja):
         return (hoy + timedelta(days=1)).strftime("%Y-%m-%d")
+    # Día de semana nombrado ("el viernes", "para el martes"). Reusa el mapa y
+    # helper de WAIT_SLOT — antes esto solo funcionaba DESPUÉS de ver slots,
+    # no en el primer mensaje (caso siquiatra 2026-08-06: "para la próxima
+    # semana" se ignoraba y se ofrecía hoy).
+    _wd = next((wd for nombre, wd in _DIAS_SEMANA.items() if nombre in t), None)
+    if _wd is not None:
+        fecha = _proxima_fecha_dia(_wd)
+        if fecha and _menciona_prox_semana(t):
+            # "el viernes de la próxima semana": empujar dentro de esa semana
+            prox_lunes = hoy + timedelta(days=(7 - hoy.weekday()))
+            while fecha < prox_lunes.strftime("%Y-%m-%d"):
+                fecha = (datetime.strptime(fecha, "%Y-%m-%d").date()
+                         + timedelta(days=7)).strftime("%Y-%m-%d")
+        return fecha
+    return None
+
+
+_FRASES_PROX_SEMANA = (
+    "proxima semana", "próxima semana", "otra semana", "semana que viene",
+    "siguiente semana", "semana siguiente", "semana entrante",
+)
+
+
+def _menciona_prox_semana(t: str) -> bool:
+    return any(p in t for p in _FRASES_PROX_SEMANA)
+
+
+def _detectar_fecha_min_idle(txt: str) -> list | None:
+    """Preferencia de RANGO ("la próxima semana", "en 15 días"): no hay un día
+    exacto, solo un mínimo. Retorna [fecha_min_iso, label] o None. Se consume
+    en _iniciar_agendar pasando como `excluir` a buscar_primer_dia los días
+    anteriores al mínimo — así la primera oferta ya cae dentro del rango
+    pedido (caso siquiatra 2026-08-06: pidió próxima semana, se ofreció hoy)."""
+    if not txt:
+        return None
+    t = txt.lower()
+    hoy = datetime.now(_CHILE_TZ).date()
+    if _menciona_prox_semana(t):
+        prox_lunes = hoy + timedelta(days=(7 - hoy.weekday()))
+        return [prox_lunes.strftime("%Y-%m-%d"), "la próxima semana"]
+    if any(p in t for p in ("en dos semanas", "en 2 semanas", "en 15 dias",
+                            "en 15 días", "en quince dias", "en quince días")):
+        return [(hoy + timedelta(days=14)).strftime("%Y-%m-%d"), "en dos semanas"]
     return None
 
 
@@ -4112,6 +4155,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _fp_idle_top = _detectar_fecha_pedida_idle(txt)
         if _fp_idle_top:
             data["fecha_pedida_idle"] = _fp_idle_top
+        else:
+            _fm_idle_top = _detectar_fecha_min_idle(txt)
+            if _fm_idle_top:
+                data["fecha_min_pedida"] = _fm_idle_top
         _fr_idle_top = _detectar_franja_horaria(txt)
         if _fr_idle_top:
             data["franja_horaria"] = _fr_idle_top
@@ -5675,6 +5722,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             _fp = _detectar_fecha_pedida_idle(txt)
             if _fp:
                 data["fecha_pedida_idle"] = _fp
+            else:
+                _fm = _detectar_fecha_min_idle(txt)
+                if _fm:
+                    data["fecha_min_pedida"] = _fm
             data["_txt_raw"] = txt
 
             # Patrón 4 FIX (2026-05-19): paciente activo en tratamiento de
@@ -7097,6 +7148,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _fp_we = _detectar_fecha_pedida_idle(txt)
         if _fp_we:
             data["fecha_pedida_idle"] = _fp_we
+        else:
+            _fm_we = _detectar_fecha_min_idle(txt)
+            if _fm_we:
+                data["fecha_min_pedida"] = _fm_we
         _fr_we = _detectar_franja_horaria(txt)
         if _fr_we:
             data["franja_horaria"] = _fr_we
@@ -15056,6 +15111,26 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     if data.get("fecha_pedida_idle") and not data.get("fecha_preferida"):
         data["fecha_preferida"] = data.pop("fecha_pedida_idle")
 
+    # Preferencia de RANGO ("la próxima semana", "en 15 días"): se convierte en
+    # lista `excluir` (los días ANTES del mínimo) para buscar_primer_dia — la
+    # primera oferta cae directo dentro del rango pedido en vez de ofrecer hoy
+    # (caso siquiatra 2026-08-06). Solo aplica si no hay fecha exacta pedida.
+    _excluir_hasta_min: list | None = None
+    _fm_pedida = data.pop("fecha_min_pedida", None)
+    if _fm_pedida and not data.get("fecha_preferida"):
+        try:
+            _fm_iso = _fm_pedida[0]
+            _d_hoy = datetime.now(_CHILE_TZ).date()
+            _d_min = datetime.strptime(_fm_iso, "%Y-%m-%d").date()
+            _n_dias = (_d_min - _d_hoy).days
+            if 0 < _n_dias <= 21:
+                _excluir_hasta_min = [
+                    (_d_hoy + timedelta(days=i)).strftime("%Y-%m-%d")
+                    for i in range(_n_dias)
+                ]
+        except Exception as _fm_e:
+            log.warning("fecha_min_pedida inválida %s: %s", _fm_pedida, _fm_e)
+
     # Pediatría solicitada → Medicine General con aclaración explícita.
     # El flag _pediatra_a_mg lo setea IDLE cuando detecta alias pediátrico.
     if data.pop("_pediatra_a_mg", False) and not saludo_prefix:
@@ -15090,12 +15165,14 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                     smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
                     mejor = todos[0] if todos else None
         else:
-            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=_MED_AO_IDS)
+            smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=_MED_AO_IDS,
+                                                   excluir=_excluir_hasta_min)
             if todos:
                 mejor = todos[0]  # más próximo entre ambos doctores
             else:
                 # Abarca + Olavarría sin disponibilidad → Márquez como overflow
-                smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID])
+                smart, todos = await buscar_primer_dia(especialidad_lower, solo_ids=[_MED_OVERFLOW_ID],
+                                                       excluir=_excluir_hasta_min)
                 mejor = todos[0] if todos else None
     elif especialidad_lower in _ESP_MED_FAMILIAR:
         # Solo Dr. Alonso Márquez (ID 13) atiende Medicina Familiar en el CMC.
@@ -15114,7 +15191,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 smart, todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS)
                 mejor = todos[0] if todos else None
         else:
-            smart, todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS)
+            smart, todos = await buscar_primer_dia("medicina general", solo_ids=_MED_FAMILIAR_IDS,
+                                                   excluir=_excluir_hasta_min)
             mejor = todos[0] if todos else None
         # Normalizar label del slot a "Medicina Familiar" para display correcto
         for s in (todos or []):
@@ -15165,7 +15243,8 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             # Solo con excepción real (timeout, HTTP 5xx) el código llegaba al
             # except del webhook y mostraba "Tuve un problema técnico".
             try:
-                smart, todos = await buscar_primer_dia(especialidad_lower)
+                smart, todos = await buscar_primer_dia(especialidad_lower,
+                                                       excluir=_excluir_hasta_min)
             except MedilinkRateLimited:
                 # 2026-07-27: este `except` tragaba TODO y convertía "no pude
                 # consultar" en "no hay horas" → lista de espera con la agenda
