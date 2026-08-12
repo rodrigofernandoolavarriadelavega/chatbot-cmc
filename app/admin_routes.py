@@ -590,43 +590,62 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     # conversando con ella — el bot NO debe seguir procesando intents de
     # los mensajes del paciente en paralelo. Forzamos HUMAN_TAKEOVER si
     # no estaba ya. Salir requiere explícitamente "devolver al bot".
-    _sess = get_session(phone)
-    state = _sess.get("state", "HUMAN_TAKEOVER")
-    from session import save_session as _save_sess_for_takeover
-    _data = _sess.get("data", {}) or {}
-    # Excepción sistémica: si el paciente está en un estado TRANSACCIONAL
-    # (agendando, completando registro, confirmando cita), un mensaje de la
-    # recepcionista en paralelo NO debe interrumpir el flow. Auditoría
-    # 2026-04-28: 55 takeovers desde WAIT_SLOT/7d, solo 1 terminó en cita.
-    _ESTADOS_TRANSACCIONALES = {
-        "WAIT_SLOT", "CONFIRMING_CITA", "WAIT_QUICK_BOOK",
-        "WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR", "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER",
-        "WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO",
-        "WAIT_COMUNA", "WAIT_EMAIL", "WAIT_REFERRAL", "WAIT_REFERRAL_POST",
-        "WAIT_REFERRAL_CODE",
-        "WAIT_BOOKING_FOR", "WAIT_PHONE_OWNER_NAME",
-        "WAIT_MODALIDAD", "WAIT_CITA_CANCELAR", "WAIT_CITA_REAGENDAR",
-        "CONFIRMING_CANCEL", "CONFIRMING_REAGENDAR",
-    }
-    if state in _ESTADOS_TRANSACCIONALES:
-        log_event(phone, "recep_msg_durante_flow", {"state": state})
-        # NO cambiamos el estado — el paciente sigue en el flow transaccional.
-        # La recepcionista puede contestarle algo en paralelo sin interrumpir.
-    elif state != "HUMAN_TAKEOVER":
-        _data["handoff_reason"] = "recepcionista_respondio"
-        log_event(phone, "auto_takeover_recep_reply", {"from_state": state})
-        state = "HUMAN_TAKEOVER"
-    # Reset contador msgs_sin_respuesta: la recepcionista YA respondió, así que
-    # los próximos mensajes del paciente no deben gatillar "Recibido 🙏" /
-    # "Seguimos atentos" automáticos. Sin esto el bot mandaba auto-replies
-    # mientras la recepcionista ya estaba en la conversación.
-    _data["msgs_sin_respuesta"] = 0
-    # Marca que la recepcionista YA habló al menos una vez en esta sesión.
-    # Sin esto el contador se reseteaba a 0 y el siguiente msg del paciente
-    # volvía a disparar "Recibido 🙏" después de cada respuesta humana.
-    # Ver caso real 56975932459 (2026-04-23): 10 acks repetidos.
-    _data["human_replied"] = True
-    _save_sess_for_takeover(phone, "HUMAN_TAKEOVER", _data)
+    #
+    # RACE FIX 2026-08-12 (caso 56973898136, 21:35): esta lectura-decisión-
+    # escritura de la sesión ahora usa el MISMO lock por teléfono que el
+    # webhook (`resilience.get_phone_lock`). Sin el lock, este endpoint podía
+    # correr en paralelo con el procesamiento del propio mensaje del paciente
+    # (que sí está serializado con ese lock) y pisar en cualquier orden el
+    # `save_session` del flujo transaccional — la causa de fondo detrás del
+    # bug hardcodeado de abajo.
+    from resilience import get_phone_lock
+    async with get_phone_lock(phone):
+        _sess = get_session(phone)
+        state = _sess.get("state", "HUMAN_TAKEOVER")
+        from session import save_session as _save_sess_for_takeover
+        _data = _sess.get("data", {}) or {}
+        # Excepción sistémica: si el paciente está en un estado TRANSACCIONAL
+        # (agendando, completando registro, confirmando cita), un mensaje de la
+        # recepcionista en paralelo NO debe interrumpir el flow. Auditoría
+        # 2026-04-28: 55 takeovers desde WAIT_SLOT/7d, solo 1 terminó en cita.
+        _ESTADOS_TRANSACCIONALES = {
+            "WAIT_SLOT", "CONFIRMING_CITA", "WAIT_QUICK_BOOK",
+            "WAIT_RUT_AGENDAR", "WAIT_RUT_CANCELAR", "WAIT_RUT_REAGENDAR", "WAIT_RUT_VER",
+            "WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO",
+            "WAIT_COMUNA", "WAIT_EMAIL", "WAIT_REFERRAL", "WAIT_REFERRAL_POST",
+            "WAIT_REFERRAL_CODE",
+            "WAIT_BOOKING_FOR", "WAIT_PHONE_OWNER_NAME",
+            "WAIT_MODALIDAD", "WAIT_CITA_CANCELAR", "WAIT_CITA_REAGENDAR",
+            "CONFIRMING_CANCEL", "CONFIRMING_REAGENDAR",
+        }
+        if state in _ESTADOS_TRANSACCIONALES:
+            log_event(phone, "recep_msg_durante_flow", {"state": state})
+            # NO cambiamos el estado — el paciente sigue en el flow transaccional.
+            # La recepcionista puede contestarle algo en paralelo sin interrumpir.
+        elif state != "HUMAN_TAKEOVER":
+            _data["handoff_reason"] = "recepcionista_respondio"
+            log_event(phone, "auto_takeover_recep_reply", {"from_state": state})
+            state = "HUMAN_TAKEOVER"
+        # Reset contador msgs_sin_respuesta: la recepcionista YA respondió, así que
+        # los próximos mensajes del paciente no deben gatillar "Recibido 🙏" /
+        # "Seguimos atentos" automáticos. Sin esto el bot mandaba auto-replies
+        # mientras la recepcionista ya estaba en la conversación.
+        _data["msgs_sin_respuesta"] = 0
+        # Marca que la recepcionista YA habló al menos una vez en esta sesión.
+        # Sin esto el contador se reseteaba a 0 y el siguiente msg del paciente
+        # volvía a disparar "Recibido 🙏" después de cada respuesta humana.
+        # Ver caso real 56975932459 (2026-04-23): 10 acks repetidos.
+        _data["human_replied"] = True
+        # BUG FIX 2026-08-12: este save estaba HARDCODEADO a "HUMAN_TAKEOVER" sin
+        # importar lo que la excepción de arriba decidió — contradecía el propio
+        # comentario ("NO cambiamos el estado") y la auditoría 2026-04-28 (55
+        # takeovers desde WAIT_SLOT, solo 1 terminó en cita). Guardar con el
+        # `state` calculado (preserva WAIT_MODALIDAD/WAIT_SLOT/etc. cuando
+        # corresponde). Causa directa del takeover silencioso de 56973898136
+        # (21:35): recepción respondió con el paciente en WAIT_MODALIDAD, el log
+        # confirmó "NO cambiamos el estado" pero este save lo pisaba de todas
+        # formas.
+        _save_sess_for_takeover(phone, state, _data)
     log_message(phone, "out", f"[Recepcionista] {message}", state, canal=canal, wamid=wamid)
     log_event(phone, "recepcionista_respondio", {"mensaje": message[:200]})
     try:

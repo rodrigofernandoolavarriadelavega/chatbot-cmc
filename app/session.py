@@ -2027,6 +2027,26 @@ def has_recent_event(phone: str, event: str, days: int = 90) -> bool:
         return cur.fetchone() is not None
 
 
+def get_last_recepcionista_ts(phone: str) -> str | None:
+    """Timestamp (UTC, string 'YYYY-MM-DD HH:MM:SS') de la última vez que una
+    recepcionista respondió de VERDAD a este paciente vía `/admin/api/reply`
+    (evento `recepcionista_respondio`). None si nunca respondió.
+
+    Deliberadamente NO cuenta el mensaje automático de "te está atendiendo
+    una recepcionista" que dispara `/admin/api/takeover` (ese es del bot, no
+    de una persona) — solo el evento que se loguea cuando alguien escribe de
+    verdad desde el panel. Usado por la red de seguridad de HUMAN_TAKEOVER
+    (caso Maximiliano 2026-08-12): detectar recepción inactiva sin depender
+    de `sessions.updated_at`, que se pisa con cada mensaje del propio paciente."""
+    with db() as conn:
+        row = conn.execute(
+            "SELECT MAX(ts) FROM conversation_events "
+            "WHERE phone = ? AND event = 'recepcionista_respondio'",
+            (phone,),
+        ).fetchone()
+        return row[0] if row and row[0] else None
+
+
 def purge_old_data(msgs_days: int = 90, events_days: int = 180) -> dict:
     """Borra mensajes y eventos antiguos para evitar crecimiento ilimitado del SQLite.
     Retorna conteos de filas eliminadas."""

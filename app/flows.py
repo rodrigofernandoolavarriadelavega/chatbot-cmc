@@ -39,7 +39,8 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      mark_horas_vacias_respondio, mark_horas_vacias_agendo,
                      registrar_slot_rechazado, get_slots_rechazados,
                      get_recent_pni_event, log_pni_cita_generada,
-                     add_family_link, list_family_links)
+                     add_family_link, list_family_links,
+                     get_last_recepcionista_ts)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
 from pni import get_vaccine_reminder, get_pni_meta
@@ -13050,6 +13051,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # lo contrario). Los supuestos "rescates automáticos" tenían más falsos
     # positivos que beneficios. Ahora el comportamiento es determinístico.
     if state == "HUMAN_TAKEOVER":
+        # BUG FIX 2026-08-12: `_recep_reciente` solo se calculaba dentro de la
+        # rama "intent operativo seguro" (ver_reservas/agendar/...). Con
+        # texto libre no operativo (el caso común: "hola", "aló?", cualquier
+        # mensaje que detect_intent no clasifique como seguro) la variable
+        # nunca se asignaba y el guard de FIX C (`and not _recep_reciente`)
+        # más abajo tiraba UnboundLocalError — el generic except de main.py
+        # lo capturaba y hacía reset_session, perdiendo el takeover. Default
+        # explícito para que SIEMPRE esté definida.
+        _recep_reciente = False
         # ── HUMAN_TAKEOVER SELECTIVO ──────────────────────────────────────
         # Principio: la consulta original (médica, fármaco, complaint) queda
         # pendiente para la recepcionista. Pero intents puramente operativos
@@ -13282,6 +13292,96 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             data["slot_elegido"] = _ht_slot
             return await _slot_confirmed(phone, data, _ht_slot)
         # ── fin FIX C ─────────────────────────────────────────────────────────
+
+        # ── Red de seguridad: recepción inactiva (caso Maximiliano 56949195960,
+        # 2026-08-12) ───────────────────────────────────────────────────────
+        # Pidió "Recepción" (takeover legítimo), mandó 4 mensajes con nombre +
+        # RUT + "lo más pronto posible" y recepción nunca respondió: quedaron
+        # silenciados sin que nadie se enterara. Usa el evento
+        # `recepcionista_respondio` (NO `sessions.updated_at`, que se pisa con
+        # cada mensaje del propio paciente vía el save_session de más abajo) —
+        # esa es la señal real de que una persona escribió, no el bot.
+        _now_ht = datetime.now(timezone.utc)
+        _entrada_iso = data.get("takeover_entered_ts")
+        try:
+            _entrada_dt = (datetime.fromisoformat(_entrada_iso) if _entrada_iso else _now_ht)
+            if _entrada_dt.tzinfo is None:
+                _entrada_dt = _entrada_dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            _entrada_dt = _now_ht
+        data["takeover_entered_ts"] = _entrada_iso or _entrada_dt.isoformat()
+
+        # Referencia = la más reciente entre "entró a takeover" y "recepción
+        # respondió de verdad DENTRO de este takeover" — así una respuesta
+        # nueva de recepción reinicia el reloj de inactividad para la
+        # siguiente eventual pausa, sin necesitar un flag separado.
+        _referencia_dt = _entrada_dt
+        try:
+            _ult_recep_raw = get_last_recepcionista_ts(phone)
+            if _ult_recep_raw:
+                _ult_recep_dt = datetime.fromisoformat(_ult_recep_raw.replace(" ", "T"))
+                _ult_recep_dt = _ult_recep_dt.replace(tzinfo=timezone.utc)
+                if _ult_recep_dt >= _entrada_dt and _ult_recep_dt > _referencia_dt:
+                    _referencia_dt = _ult_recep_dt
+        except Exception as _e_recep_ts:
+            log.warning("get_last_recepcionista_ts falló phone=%s: %s", phone, _e_recep_ts)
+
+        _mins_inactividad = (_now_ht - _referencia_dt).total_seconds() / 60
+
+        # 30 min sin recepción + hay una hora apartada (flujo transaccional
+        # pendiente) → retomar. Antes verificamos que recepción no haya
+        # agendado por otra vía (casi se duplicó una cita por esto).
+        if _mins_inactividad >= 30 and data.get("slot_elegido"):
+            _slot_retomar = data.get("slot_elegido")
+            _rut_retomar = data.get("rut_conocido") or data.get("rut")
+            _ya_agendado = False
+            if _rut_retomar:
+                try:
+                    _citas_chk = await listar_citas_paciente(0, rut=_rut_retomar)
+                    _esp_retomar = (_slot_retomar.get("especialidad") or "").strip().lower()
+                    for _c in (_citas_chk or []):
+                        _esp_c = (_c.get("especialidad") or _c.get("nombre_especialidad") or "").strip().lower()
+                        if _esp_retomar and _esp_c == _esp_retomar:
+                            _ya_agendado = True
+                            break
+                except Exception as _e_chk:
+                    log.warning("retomar takeover: listar_citas_paciente falló phone=%s: %s", phone, _e_chk)
+                    _ya_agendado = True  # ante la duda, no retomar (evitar duplicar)
+            if not _ya_agendado:
+                log_event(phone, "takeover_retomado_30min", {
+                    "slot": _slot_retomar.get("hora_inicio"),
+                    "fecha": _slot_retomar.get("fecha"),
+                })
+                data["slots"] = [_slot_retomar]
+                data["todos_slots"] = [_slot_retomar]
+                data.pop("takeover_entered_ts", None)
+                data.pop("ack_recep_ocupada_ref", None)
+                save_session(phone, "WAIT_SLOT", data)
+                return _btn_msg(
+                    f"Seguimos donde quedamos 🙌\n\n"
+                    f"🏥 *{_slot_retomar.get('especialidad', '')}* — {_slot_retomar.get('profesional', '')}\n"
+                    f"📅 *{_slot_retomar.get('fecha_display', '')}*\n"
+                    f"🕐 *{(_slot_retomar.get('hora_inicio') or '')[:5]}*\n\n"
+                    "¿Confirmo esta hora?",
+                    [{"id": "confirmar_sugerido", "title": "✅ Sí, esa hora"},
+                     {"id": "otro_dia", "title": "Otro día"}]
+                )
+            log_event(phone, "takeover_retomar_bloqueado_cita_existente",
+                      {"rut_suffix": _rut_retomar[-4:] if _rut_retomar else ""})
+
+        # 15 min sin recepción → UN ack suave (no repetido por cada mensaje —
+        # marcado con ack_recep_ocupada_ref, distinto de msgs_sin_respuesta/
+        # human_replied) + evento para el centinela diario / panel.
+        if _mins_inactividad >= 15 and data.get("ack_recep_ocupada_ref") != _referencia_dt.isoformat():
+            data["ack_recep_ocupada_ref"] = _referencia_dt.isoformat()
+            log_event(phone, "takeover_sin_atencion",
+                      {"mins_sin_recepcion": round(_mins_inactividad, 1)})
+            save_session(phone, "HUMAN_TAKEOVER", data)
+            return (
+                "Estamos con recepción ocupada 🙏 tu mensaje quedó registrado, "
+                "te respondemos apenas nos desocupemos."
+            )
+        # ── fin red de seguridad ────────────────────────────────────────────
 
         save_session(phone, "HUMAN_TAKEOVER", data)
 
