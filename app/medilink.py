@@ -8,6 +8,7 @@ import json
 import re
 import logging
 import time
+import unicodedata
 import urllib.parse
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta
@@ -144,6 +145,87 @@ class MedilinkRateLimited(httpx.RequestError):
     """
 
 
+class MedilinkInactiva(httpx.RequestError):
+    """Medilink contestó 403 "La plataforma no se encuentra activa": suspensión
+    de la PLATAFORMA Healthatom completa (no un permiso puntual de un endpoint).
+
+    Hermana de MedilinkRateLimited — mismo motivo de subclasear
+    httpx.RequestError (los callers que ya atrapan httpx.RequestError la tratan
+    como una caída, que es exactamente lo que es). Se diferencia de un 403 de
+    permisos porque exige el MATCH del mensaje (`_es_plataforma_inactiva`), no
+    solo el código: un 403 de permisos de un endpoint puntual NO debe
+    confundirse con esto.
+
+    Incidente real 2026-08-12 12:00-13:22 UTC: TODO endpoint devolvió este 403
+    durante 82 minutos y caía al `except Exception` genérico de los webhooks
+    (reset_session + "Tuve un problema técnico"), 8 pacientes rebotados a
+    ciegas y ninguno quedó en cola de aviso. Ver `medilink_outage.py` para el
+    modo caída con recontacto automático al recuperarse.
+    """
+
+
+def _sin_tildes(s: str) -> str:
+    """Quita tildes/diacríticos preservando el resto (para matching tolerante)."""
+    return "".join(c for c in unicodedata.normalize("NFD", s or "")
+                  if unicodedata.category(c) != "Mn")
+
+
+def _es_plataforma_inactiva(body: str) -> bool:
+    """True si el body de un 403 es la suspensión de PLATAFORMA Healthatom
+    ('La plataforma no se encuentra activa...'), case-insensitive y tolerante
+    a acentos. NO matchea un 403 de permisos de un endpoint puntual — esos NO
+    traen esta frase."""
+    if not body:
+        return False
+    return "no se encuentra activa" in _sin_tildes(body).lower()
+
+
+def _raise_si_plataforma_inactiva(r: "httpx.Response", url: str) -> None:
+    """Detecta el 403 de plataforma suspendida y levanta MedilinkInactiva.
+
+    Se llama desde el wrapper central (_get_loop/_post) ANTES de tratar
+    cualquier `status_code < 500` como "respondió, está vivo" — de lo
+    contrario un 403 de plataforma suspendida se devolvía como una respuesta
+    normal y cada caller decidía a ciegas (la causa raíz del incidente
+    2026-08-12).
+    """
+    if r.status_code != 403 or not _es_plataforma_inactiva(r.text or ""):
+        return
+    log.error("MEDILINK_INACTIVA %s body=%r", url, (r.text or "")[:200])
+    try:
+        import medilink_outage as _mo
+        _mo.note_fallo_inactiva()
+    except Exception as e:  # pragma: no cover — nunca debe tapar la excepción real
+        log.error("medilink_outage.note_fallo_inactiva falló: %s", e)
+    _report_down("plataforma Medilink inactiva (403)")
+    raise MedilinkInactiva(f"Medilink: plataforma no activa ({url})")
+
+
+async def plataforma_activa(timeout: float = 8.0) -> bool:
+    """Sondeo barato para el watcher de recuperación (medilink_outage.py):
+    ¿la plataforma Medilink volvió a estar activa?
+
+    Usa el mismo endpoint liviano que `probe_up()` (/sucursales), por el
+    carril batch (use_batch_lane) para no competir con el carril paciente.
+    True = respondió con cualquier código que NO sea el 403 de suspensión
+    (un 429 cuenta como viva, igual que en probe_up — un servidor que
+    contesta "vas muy rápido" está de pie). False = sigue devolviendo el 403
+    "no se encuentra activa", o no hay red.
+    """
+    use_batch_lane()
+    client = _get_shared_client()
+    try:
+        async with _lane_slot():
+            r = await client.get(f"{MEDILINK_BASE_URL}/sucursales",
+                                 headers=HEADERS, timeout=timeout)
+    except Exception as e:
+        log.warning("plataforma_activa: sondeo falló (%s)", e)
+        return False
+    if r.status_code == 403 and _es_plataforma_inactiva(r.text or ""):
+        return False
+    return True
+
+
 async def probe_up(timeout: float = 3.0) -> bool:
     """Sonda barata y directa: ¿Medilink responde AHORA?
 
@@ -155,11 +237,21 @@ async def probe_up(timeout: float = 3.0) -> bool:
     trataba como caída y por eso el paciente Nelson terminó en lista de espera
     de Psicología en plena tormenta de rate limit, con agenda disponible. Un
     servidor que se toma el trabajo de contestar "vas muy rápido" está de pie.
+
+    El 403 de "plataforma no activa" (2026-08-12) es la excepción: aunque
+    `status_code < 500`, NO está vivo — es la suspensión total de la
+    plataforma Healthatom. Sin este guard, `_iniciar_agendar` (único caller,
+    fail-open del circuit breaker) leía la sonda como "vivo" en plena caída
+    real, logueaba `breaker_falso_positivo` y encima esta función llamaba a
+    `_report_up()`, que resetea la racha de fallos consecutivos que abre el
+    modo caída (medilink_outage.py) — la habría dejado sin poder abrirse
+    nunca en tráfico real.
     """
     try:
         async with httpx.AsyncClient(timeout=timeout) as cli:
             r = await cli.get(f"{MEDILINK_BASE_URL}/sucursales", headers=HEADERS)
-        ok = r.status_code < 500          # 429 incluido: respondió = está vivo
+        ok = r.status_code < 500 and not (
+            r.status_code == 403 and _es_plataforma_inactiva(r.text or ""))
     except Exception:
         ok = False
     if ok:
@@ -411,6 +503,16 @@ _last_reported_status: Optional[str] = None  # None | "up" | "down"
 
 def _report_up() -> None:
     global _last_reported_status
+    # Cualquier respuesta que llega hasta acá NO fue el 403 "plataforma
+    # inactiva" (ver _raise_si_plataforma_inactiva, que corta antes) — rompe
+    # la racha de fallos consecutivos que abre el modo caída, así fallos
+    # aislados y separados en el tiempo no se acumulan como si fueran
+    # consecutivos (evita falsa alarma con un 403 suelto).
+    try:
+        import medilink_outage as _mo
+        _mo.note_exito()
+    except Exception as e:  # pragma: no cover — nunca debe romper un call
+        log.error("medilink_outage.note_exito falló: %s", e)
     if _last_reported_status == "up":
         return
     try:
@@ -477,6 +579,7 @@ async def _get_loop(client, url, kwargs):
         async with _lane_slot():
             try:
                 r = await client.get(url, **kwargs)
+                _raise_si_plataforma_inactiva(r, url)
                 if r.status_code == 429:
                     record_429(url)
                     wait = 3.0 * (2 ** attempt)  # 3s, 6s, 12s
@@ -509,6 +612,7 @@ async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response
         async with _lane_slot():
             try:
                 r = await client.post(url, **kwargs)
+                _raise_si_plataforma_inactiva(r, url)
                 if r.status_code == 429:
                     record_429(url)
                     wait = 3.0 * (2 ** attempt)  # 3s, 6s
@@ -1224,13 +1328,21 @@ def _intervalo_para(especialidad: str | None, override: dict | None) -> dict | N
 async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                             excluir: list = None,
                             intervalo_override: dict = None,
-                            solo_ids: list = None) -> tuple[list, list]:
+                            solo_ids: list = None,
+                            fecha_desde: str | None = None,
+                            fecha_hasta: str | None = None) -> tuple[list, list]:
     """
     Retorna (smart_5, todos_libres) del día disponible más próximo.
     Usa /especialidades/{id}/proxima para descubrir la primera fecha disponible,
     luego obtiene todos los slots reales de ese día cruzando con /citas.
     intervalo_override: {id_prof: minutos} para sobreescribir el intervalo de un profesional.
     solo_ids: si se pasa, restringe la búsqueda a esos IDs (ignora ESPECIALIDADES_MAP).
+    fecha_desde/fecha_hasta (ISO, ambos opcionales): acotan la búsqueda a ese
+    rango CERRADO — "la próxima semana" es lunes a domingo, no "desde el lunes
+    en adelante". Con rango y sin cupo dentro, retorna ([], []) y el caller
+    decide si reintenta abierto avisando al paciente. Nativo a propósito: los
+    callers fabricaban listas `excluir` para simular el desde (frágil, con
+    tope implícito de días).
     """
     ids = _filtrar_licencia(solo_ids) if solo_ids else _ids_para_especialidad(especialidad)
     if not ids:
@@ -1239,6 +1351,13 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
     # Con solo_ids no usar prioridad (ya viene filtrado)
     usar_prioridad = (not solo_ids) and (especialidad.lower() in _ESPECIALIDADES_PRIORIDAD)
     excluir_set = set(excluir or [])
+    try:
+        _d_desde = datetime.strptime(fecha_desde, "%Y-%m-%d").date() if fecha_desde else None
+        _d_hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d").date() if fecha_hasta else None
+    except ValueError:
+        log.warning("buscar_primer_dia: rango inválido desde=%r hasta=%r — ignorado",
+                    fecha_desde, fecha_hasta)
+        _d_desde = _d_hasta = None
     id_esp = _id_especialidad(especialidad)
 
     client = _get_shared_client()
@@ -1256,7 +1375,9 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
     # piden la misma especialidad en rápida sucesión.
     primera_fecha = None
     if id_esp:
-        _px_cached = _proxima_cache.get(id_esp)
+        # Con rango pedido NO usar el cache de /proxima (guarda la primera
+        # fecha SIN filtrar; usarla o escribirla filtrada lo envenenaría).
+        _px_cached = None if (_d_desde or _d_hasta) else _proxima_cache.get(id_esp)
         if _px_cached and (time.monotonic() - _px_cached["_ts"]) < _PROXIMA_CACHE_TTL:
             primera_fecha = _px_cached.get("fecha")
             r = None
@@ -1278,17 +1399,29 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
                     fecha_dt = datetime.strptime(raw, "%d/%m/%Y").strftime("%Y-%m-%d")
                 except ValueError:
                     continue
-                if fecha_dt not in excluir_set:
-                    primera_fecha = fecha_dt
-                    break
-            if primera_fecha:
+                if fecha_dt in excluir_set:
+                    continue
+                if _d_desde and fecha_dt < _d_desde.strftime("%Y-%m-%d"):
+                    continue
+                if _d_hasta and fecha_dt > _d_hasta.strftime("%Y-%m-%d"):
+                    continue
+                primera_fecha = fecha_dt
+                break
+            if primera_fecha and not (_d_desde or _d_hasta):
                 _proxima_cache[id_esp] = {"fecha": primera_fecha, "_ts": time.monotonic()}
 
-    # Siempre escanear desde hoy, usando primera_fecha como límite superior o fallback
+    # Siempre escanear desde hoy (o desde fecha_desde), usando primera_fecha
+    # como límite superior o fallback, y sin pasar jamás de fecha_hasta.
     hoy = datetime.now(_CHILE_TZ).date()
     limite = datetime.strptime(primera_fecha, "%Y-%m-%d").date() if primera_fecha else (hoy + timedelta(days=dias_adelante))
+    delta_ini = max(0, (_d_desde - hoy).days) if _d_desde else 0
+    delta_max = dias_adelante
+    if _d_hasta:
+        delta_max = min(delta_max, (_d_hasta - hoy).days)
+        if delta_max < delta_ini:
+            return [], []   # rango pedido íntegramente en el pasado o vacío
 
-    for delta in range(0, (limite - hoy).days + 1):
+    for delta in range(delta_ini, min((limite - hoy).days, delta_max) + 1):
         fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
         if fecha in excluir_set:
             continue
@@ -1298,12 +1431,14 @@ async def buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
 
     # Si no hubo slots antes de primera_fecha, intentar exactamente esa fecha
     if primera_fecha and primera_fecha not in excluir_set:
-        smart, todos = await _slots_para_fecha(client, ids, horarios, primera_fecha, prioridad=usar_prioridad)
-        if todos:
-            return smart, todos
+        _pf_delta = (datetime.strptime(primera_fecha, "%Y-%m-%d").date() - hoy).days
+        if delta_ini <= _pf_delta <= delta_max:
+            smart, todos = await _slots_para_fecha(client, ids, horarios, primera_fecha, prioridad=usar_prioridad)
+            if todos:
+                return smart, todos
 
     # Continuar día por día más allá
-    for delta in range((limite - hoy).days + 1, dias_adelante + 1):
+    for delta in range(max(delta_ini, (limite - hoy).days + 1), delta_max + 1):
         fecha = (hoy + timedelta(days=delta)).strftime("%Y-%m-%d")
         if fecha in excluir_set:
             continue

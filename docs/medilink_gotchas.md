@@ -129,6 +129,32 @@ por profesional/fecha, cacheado 5 min), `estado_cita_actual()` (resuelve 1 cita,
 prefiere el batch si se le pasa profesional+fecha). Usados por `reminders.py`
 para decidir, justo antes de enviar, si una cita sigue vigente/confirmada.
 
+## 12. 403 "La plataforma no se encuentra activa" — suspensión total, NO error de permisos
+
+Distinto de un 403 normal de permisos de un endpoint puntual. Es Healthatom
+suspendiendo la PLATAFORMA completa: TODO endpoint devuelve el mismo 403 con
+`{"error":{"code":403,"message":"La plataforma no se encuentra activa..."}}`.
+Incidente real 2026-08-12 12:00-13:22 UTC (82 min).
+
+`status_code < 500` NO alcanza para decidir "está vivo" — este 403 pasa esa
+prueba y no lo está. `medilink._raise_si_plataforma_inactiva()` (llamada desde
+el wrapper central `_get`/`_post`) detecta el mensaje (case-insensitive,
+tolerante a tildes vía `_es_plataforma_inactiva()`) y levanta
+`MedilinkInactiva` — **antes** de que cualquier caller trate el 403 como
+respuesta normal. `probe_up()` y `plataforma_activa()` también filtran este
+caso explícitamente; si escribes un sondeo nuevo contra `/sucursales` (o
+cualquier endpoint liviano), no asumas que `status_code < 500` es sinónimo de
+"vivo" — replica el filtro.
+
+Modo caída + recontacto automático con horas reales al recuperarse:
+`app/medilink_outage.py` (estado persistido, ventana 24h, captura de contexto
+de TODO mensaje entrante) + watcher en `jobs.py::_job_medilink_outage_watcher`
+(cada 3 min, exige 2 sondeos OK consecutivos antes de disparar). Webhooks en
+`main.py` capturan `MedilinkInactiva` ANTES del `except Exception` genérico —
+sin eso, cae a `reset_session()` + "problema técnico" y el paciente se pierde
+sin quedar en ninguna cola (lo que pasó en el incidente real: 8 pacientes
+rebotados a ciegas, recepción los recontactó a mano).
+
 ---
 
 **Si tocas este archivo, actualiza también** `CLAUDE.md` si cambia la cita o referencia.

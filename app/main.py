@@ -41,7 +41,8 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      upsert_message_status, upsert_bsuid,
                      get_profile, save_profile)
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
-from medilink import MedilinkRateLimited
+from medilink import MedilinkRateLimited, MedilinkInactiva
+import medilink_outage
 from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_verificar_intervalos, _job_agenda_dias_sync,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
@@ -56,6 +57,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
                   _job_medilink_watchdog, _job_claude_watchdog, _job_cierre_caja_diario,
+                  _job_medilink_outage_watcher,
                   _job_agenda_dia, _job_admin_status_report,
                   _job_cleanup_stuck_sessions,
                   _job_waitlist_check,
@@ -847,6 +849,14 @@ async def lifespan(app: FastAPI):
         _job_claude_watchdog,
         "interval", minutes=2,
         id="claude_watchdog",
+        replace_existing=True,
+    )
+    # Watchdog modo caída Medilink (403 "plataforma no activa"): cada 3 min,
+    # solo actúa si hay contexto pendiente de avisar. Ver medilink_outage.py.
+    scheduler.add_job(
+        _job_medilink_outage_watcher,
+        "interval", minutes=3,
+        id="medilink_outage_watcher",
         replace_existing=True,
     )
     # Cierre de caja diario: 09:05 CLT empuja al dueño el cierre del día anterior
@@ -10401,6 +10411,13 @@ async def webhook(request: Request):
             session = get_session(phone)
             state_before = session.get("state", "IDLE")
             log_message(phone, "in", texto, state_before, canal=canal)
+            # Modo caída Medilink: captura contexto de TODO mensaje entrante
+            # mientras esté abierto (incluidos los que quedan en HUMAN_TAKEOVER
+            # más abajo) — ver medilink_outage.py.
+            try:
+                medilink_outage.capturar_mensaje(phone, texto, session)
+            except Exception:
+                pass
             # Guard HUMAN_TAKEOVER para IG/FB: silenciar respuesta automática
             # y no ejecutar autocapture con texto del operador.
             if state_before == "HUMAN_TAKEOVER":
@@ -10414,6 +10431,23 @@ async def webhook(request: Request):
                 pass
             try:
                 respuesta = await handle_message(phone, texto, session)
+            except MedilinkInactiva as e:
+                # Plataforma Medilink suspendida (403), no saturada (2026-08-12).
+                # NO resetear la sesión: cuando vuelva, el watcher (jobs.py) le
+                # escribe con las horas reales de lo que estaba pidiendo.
+                log.error("Medilink INACTIVA atendiendo %s from=%s: %s", canal, phone, e)
+                log_event(phone, "respuesta_medilink_inactiva", {})
+                try:
+                    medilink_outage.capturar_mensaje(phone, texto, session, force=True)
+                except Exception:
+                    pass
+                respuesta = (
+                    "El sistema de horas está con un problema técnico en este "
+                    "momento 😕\n\n"
+                    "No perdí tu mensaje: apenas se recupere te escribo con las "
+                    "horas disponibles.\n\n"
+                    f"Si prefieres, llámanos: 📞 {CMC_TELEFONO}"
+                )
             except MedilinkRateLimited as e:
                 # Medilink SATURADO, no caído (2026-07-27). NO resetear la sesión:
                 # el paciente sigue donde estaba y con un "hola" retoma. Y sobre
@@ -11775,6 +11809,14 @@ async def webhook(request: Request):
             log_text = f"🎤 {texto}" if is_audio else (_interactive_title or texto)
             log_message(phone, "in", log_text, state_before, canal="whatsapp")
 
+            # Modo caída Medilink: captura contexto de TODO mensaje entrante
+            # mientras esté abierto (incluidos los que quedan en HUMAN_TAKEOVER
+            # más abajo) — ver medilink_outage.py.
+            try:
+                medilink_outage.capturar_mensaje(phone, texto, session)
+            except Exception:
+                pass
+
             # ── Captura fbclid desde primer mensaje (una sola vez por sesión) ──
             # Meta puede precargar mensajes de ad con "Hola [fbclid:XXX]".
             # Guardamos en session data para mandarlo con eventos CAPI.
@@ -11908,6 +11950,24 @@ async def webhook(request: Request):
 
             try:
                 respuesta = await handle_message(phone, texto, session)
+            except MedilinkInactiva as e:
+                # Plataforma Medilink suspendida (403), no saturada (2026-08-12).
+                # Mismo criterio que el otro webhook (ver arriba). NO resetear
+                # la sesión: cuando vuelva, el watcher (jobs.py) le escribe con
+                # las horas reales de lo que estaba pidiendo.
+                log.error("Medilink INACTIVA procesando msg from=%s: %s", phone, e)
+                log_event(phone, "respuesta_medilink_inactiva", {})
+                try:
+                    medilink_outage.capturar_mensaje(phone, texto, session, force=True)
+                except Exception:
+                    pass
+                respuesta = (
+                    "El sistema de horas está con un problema técnico en este "
+                    "momento 😕\n\n"
+                    "No perdí tu mensaje: apenas se recupere te escribo con las "
+                    "horas disponibles.\n\n"
+                    f"Si prefieres, llámanos: 📞 {CMC_TELEFONO}"
+                )
             except MedilinkRateLimited as e:
                 # Saturado ≠ caído: mismo criterio que el otro webhook (ver arriba).
                 # Sin reset de sesión y sin lista de espera.

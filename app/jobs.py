@@ -20,7 +20,9 @@ from fidelizacion import (enviar_seguimiento_postconsulta,
                           enviar_crosssell_post_dental_ortodoncia)
 from medilink import (buscar_primer_dia, buscar_paciente, sync_citas_dia,
                       SEGUIMIENTO_ESPECIALIDADES, PROFESIONALES, get_slots_libres,
-                      listar_citas_paciente)
+                      listar_citas_paciente, buscar_slots_dia, buscar_slots_dia_por_ids,
+                      plataforma_activa)
+import medilink_outage
 from session import (get_sesiones_abandonadas, save_session, log_event, log_message,
                      get_pending_intent_queue, mark_intent_notified, intent_queue_depth,
                      get_waitlist_pending, mark_waitlist_notified, cancel_waitlist,
@@ -1796,14 +1798,12 @@ async def _job_medilink_watchdog_inner():
     if not is_medilink_down():
         return
 
-    # Ping rápido a /sucursales (endpoint liviano y estable)
-    ok = False
-    try:
-        async with httpx.AsyncClient(timeout=8) as client:
-            r = await client.get(f"{MEDILINK_BASE_URL}/sucursales", headers=HEADERS_MEDILINK)
-        ok = r.status_code < 500
-    except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError):
-        ok = False
+    # Ping rápido a /sucursales (endpoint liviano y estable). Reusa
+    # plataforma_activa() (medilink.py) en vez de un check crudo de
+    # status_code<500: un 403 "plataforma no activa" (2026-08-12) es <500
+    # pero NO está viva — un check crudo aquí reportaría "recuperado" a
+    # recepción mientras la plataforma sigue suspendida.
+    ok = await plataforma_activa(timeout=8.0)
 
     if not ok:
         # Sigue caído → alerta a recepción con throttle
@@ -1906,6 +1906,186 @@ async def _job_medilink_watchdog_inner():
                 )
         except Exception:
             pass
+
+
+# ── Watcher de recuperación: modo caída de plataforma Medilink (403) ────────
+# Distinto del watchdog de arriba (429/5xx/red genéricos): esto es específico
+# de la suspensión de plataforma Healthatom (incidente 2026-08-12). Ver
+# medilink_outage.py para el diseño completo (modo caída 24h + captura de
+# contexto + recontacto dirigido con horas reales).
+
+def _fmt_horas_outage(todos: list, maximo: int = 12) -> str:
+    """'09:00, 09:30, ... y más en la tarde hasta las HH:MM' si hay más de las
+    que se muestran."""
+    horas = sorted({s["hora_inicio"] for s in todos})
+    if not horas:
+        return ""
+    mostrar = horas[:maximo]
+    txt = ", ".join(mostrar)
+    if len(horas) > maximo:
+        txt += f" y más en la tarde hasta las {horas[-1]}"
+    return txt
+
+
+def _nombre_profesional_outage(todos: list, id_prof_pedido) -> str:
+    if id_prof_pedido and id_prof_pedido in PROFESIONALES:
+        return PROFESIONALES[id_prof_pedido]["nombre"]
+    nombres = {s.get("profesional") for s in todos if s.get("profesional")}
+    if len(nombres) == 1:
+        return nombres.pop()
+    return "nuestros profesionales"
+
+
+async def _recontacto_outage_mensaje(row: dict) -> tuple[str, str]:
+    """Arma el mensaje dirigido para un contexto pendiente. Retorna
+    (mensaje, resultado) — resultado se guarda en medilink_outage_context.resultado
+    para auditoría (no decide si se envía; eso ya se resolvió antes de llamar:
+    rut con cita existente y HUMAN_TAKEOVER se filtran en el caller)."""
+    especialidad = (row.get("especialidad") or "").strip()
+    id_prof = row.get("id_profesional")
+    textos = row.get("textos") or []
+    texto_original = textos[-1] if textos else ""
+
+    if not especialidad:
+        # Ambiguo (no había especialidad/profesional en el contexto capturado):
+        # una sola consulta al clasificador barato (Claude Haiku), solo acá.
+        try:
+            from claude_helper import detect_intent
+            texto_junto = " / ".join(textos[-3:]) if textos else texto_original
+            if texto_junto.strip():
+                r_intent = await detect_intent(texto_junto)
+                if r_intent.get("intent") == "agendar" and r_intent.get("especialidad"):
+                    especialidad = r_intent["especialidad"]
+        except Exception as e:
+            log.warning("outage recontacto: detect_intent falló phone=%s: %s",
+                       row.get("phone"), e)
+
+    if not especialidad:
+        # Sigue ambiguo, o no pedía agendar: retomamos SU texto original.
+        msg = (
+            "¡Ya volvió el sistema! 🙌\n\n"
+            f"Sobre esto que me preguntabas: \"{texto_original[:180]}\"\n\n"
+            "Cuéntame en qué te ayudo o escribe *menu* para ver las opciones 😊"
+        )
+        return msg, "enviado_generico"
+
+    from datetime import datetime as _dt_outage
+    from zoneinfo import ZoneInfo as _ZI_outage
+    hoy = _dt_outage.now(_ZI_outage("America/Santiago")).date().strftime("%Y-%m-%d")
+
+    try:
+        if id_prof:
+            _, todos = await buscar_slots_dia_por_ids([int(id_prof)], hoy)
+        else:
+            _, todos = await buscar_slots_dia(especialidad, hoy)
+    except Exception as e:
+        log.warning("outage recontacto: buscar_slots_dia falló esp=%s: %s", especialidad, e)
+        todos = []
+
+    dia_label = "hoy"
+    if not todos:
+        try:
+            _, todos = await buscar_primer_dia(
+                especialidad, solo_ids=[int(id_prof)] if id_prof else None)
+        except Exception as e:
+            log.warning("outage recontacto: buscar_primer_dia falló esp=%s: %s", especialidad, e)
+            todos = []
+        dia_label = todos[0]["fecha_display"] if todos else None
+
+    if not todos:
+        msg = (
+            "¡Ya volvió el sistema! 🙌\n\n"
+            f"Para agendar tu hora de *{especialidad}*, escríbeme *agendar* "
+            f"o llama al 📞 {CMC_TELEFONO}."
+        )
+        return msg, "enviado_sin_horas"
+
+    nombre_prof = _nombre_profesional_outage(todos, id_prof)
+    horas_txt = _fmt_horas_outage(todos)
+    if dia_label == "hoy":
+        msg = (
+            f"¡Ya volvió el sistema! 🙌 Sí tenemos hora de *{especialidad} para hoy* "
+            f"con {nombre_prof}: {horas_txt}\n\n"
+            "Escribe *agendar* y elige tu hora 😊"
+        )
+    else:
+        msg = (
+            f"¡Ya volvió el sistema! 🙌 Para *{especialidad}* no hay cupos hoy, "
+            f"pero sí tenemos para *{dia_label}* con {nombre_prof}: {horas_txt}\n\n"
+            "Escribe *agendar* y elige tu hora 😊"
+        )
+    return msg, "enviado"
+
+
+async def _procesar_recontacto_outage():
+    """Recorre el contexto capturado durante la caída y avisa a cada paciente
+    con lo que le corresponde. Guardrails: skip si ya tiene cita futura (rut),
+    skip si quedó en HUMAN_TAKEOVER (recepción lo lleva), pausa 1s entre envíos
+    (429)."""
+    import asyncio as _aio_outage
+    pendientes = medilink_outage.list_pendientes()
+    if not pendientes:
+        return
+    log.warning("MEDILINK_OUTAGE recuperado — procesando %d contexto(s) pendiente(s)",
+               len(pendientes))
+    for row in pendientes:
+        phone = row.get("phone")
+        try:
+            if (row.get("state_al_fallar") or "") == "HUMAN_TAKEOVER":
+                medilink_outage.marcar_resultado(phone, "human_takeover_recepcion")
+                log_event(phone, "outage_recontacto_human_takeover", {})
+                continue
+            rut = (row.get("rut") or "").strip()
+            if rut:
+                try:
+                    citas = await listar_citas_paciente(0, rut=rut)
+                except Exception as e:
+                    log.warning("outage recontacto: listar_citas_paciente falló rut=%s: %s",
+                               rut[-4:] if len(rut) >= 4 else rut, e)
+                    citas = []
+                if citas:
+                    medilink_outage.marcar_resultado(phone, "ya_tenia_cita")
+                    log_event(phone, "outage_recontacto_ya_tenia_cita", {})
+                    continue
+            msg, resultado = await _recontacto_outage_mensaje(row)
+            ok = await send_whatsapp(phone, msg)
+            if ok is None:
+                log.error("outage recontacto: envío falló phone=%s — queda pendiente", phone)
+                continue
+            log_message(phone, "out", msg, "IDLE")
+            medilink_outage.marcar_resultado(phone, resultado)
+            log_event(phone, "outage_recontacto_enviado", {"resultado": resultado})
+        except Exception as e:
+            log.error("outage recontacto: fallo con phone=%s: %s", phone, e)
+        await _aio_outage.sleep(1)
+
+
+async def _job_medilink_outage_watcher_inner():
+    medilink_outage.expirar_pendientes()
+    if not medilink_outage.is_open():
+        return
+    if not medilink_outage.hay_pendientes():
+        return
+    ok = await plataforma_activa()
+    if not ok:
+        medilink_outage.note_sondeo_fail()
+        return
+    cerrado_ahora = medilink_outage.note_sondeo_ok()
+    if not cerrado_ahora:
+        log.info("MEDILINK_OUTAGE sondeo OK (1/%d) — esperando confirmación",
+                 medilink_outage.OKS_TO_CLOSE)
+        return
+    await _procesar_recontacto_outage()
+
+
+async def _job_medilink_outage_watcher():
+    """Cada ~3 min: si el modo caída de plataforma Medilink está abierto y hay
+    pacientes esperando aviso, sondea /sucursales. Exige 2 sondeos OK
+    consecutivos antes de disparar el recontacto (evita flapping)."""
+    try:
+        await _job_medilink_outage_watcher_inner()
+    except Exception as e:
+        log.error("_job_medilink_outage_watcher falló inesperadamente: %s", e)
 
 
 _WAITLIST_ESP_KEYWORDS = (
