@@ -333,14 +333,12 @@ PROFESIONALES = {
     68: {"nombre": "David Pardo",              "especialidad": "Ecografía",             "intervalo": 15},
     # Psiquiatría TELECONSULTA. Atención de 40 min (dueño, 2026-07-15; ratificado
     # 2026-07-29). NO volver a 30 ni a bloques de 60.
-    # Horario REAL leído de Medilink 2026-07-29 — son DOS días, no uno:
+    # Horario REAL leído de Medilink 2026-08-14 (decisión dueño 2026-08-14) —
+    # ambos días con la MISMA grilla:
     #   martes 16:00-20:00 → 6 cupos: 16:00 16:40 17:20 18:00 18:40 19:20
-    #   jueves 15:00-20:00 → 7 cupos: 15:00 15:40 16:20 17:00 17:40 18:20 19:00
-    # ⚠️ PENDIENTE EN MEDILINK (decisión dueño 2026-07-29): mover el inicio del
-    # jueves de 15:00 a **15:20**. Con 15:00 la grilla termina 19:40 y deja 20 min
-    # muertos; con 15:20 da 15:20 16:00 16:40 17:20 18:00 18:40 19:20 — mismos 7
-    # cupos, último paciente 19:20, cierre exacto a las 20:00 y misma grilla que el
-    # martes. El bot NO puede escribir horarios (sólo POST a /pacientes y /citas):
+    #   jueves 16:00-20:00 → 6 cupos: 16:00 16:40 17:20 18:00 18:40 19:20
+    # (Reemplaza el jueves 15:00-20:00 y la propuesta 15:20 de 2026-07-29.)
+    # El bot NO puede escribir horarios (sólo POST a /pacientes y /citas):
     # se cambia a mano en Medilink y el bot lo toma solo en ≤1h (_HORARIO_CACHE_TTL).
     # OJO: `dias` acá NO filtra nada — el filtro real sale de _get_horario(), que
     # lee `dias`/`horario_dia` de Medilink. Se deja al día sólo para que la tabla
