@@ -360,6 +360,57 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 ## Sesión en curso
 **Última actualización**: 2026-08-12
 
+### 2026-08-12 — Takeover silencioso: 3 casos reales del día (SIN DEPLOY, sin commit)
+- **Caso A (bug confirmado)**: `/admin/api/reply` (`admin_routes.py`) calculaba
+  correctamente `state` (respetaba la excepción de estados transaccionales —
+  "NO cambiamos el estado") pero el save final estaba HARDCODEADO a
+  `_save_sess_for_takeover(phone, "HUMAN_TAKEOVER", _data)`, ignorando esa
+  variable. Fix: usa `state`. Revisado `send-document`/`send-template`/
+  `send-confirmation`: no tienen el bug (no llaman `save_session`, solo
+  taggean el `state` del `log_message`).
+- **Caso B (diagnóstico, vía exacta confirmada con logs+DB de prod)**: phone
+  56973898136, 21:35:43-44 UTC. El paciente tocó "confirmar_sugerido"
+  (bot→WAIT_MODALIDAD, dentro del lock por teléfono). EN PARALELO la
+  recepcionista respondió por `/admin/api/reply` — que **no usaba el phone
+  lock** — y leyó `state=WAIT_MODALIDAD` (evento `recep_msg_durante_flow`
+  confirmado en `conversation_events`), pero el bug del Caso A pisó igual a
+  HUMAN_TAKEOVER. Consecuencia directa de A + gap de locking en B. Fix: (1)
+  Caso A resuelto arriba; (2) `admin_reply` ahora envuelve la lectura-decisión-
+  escritura de sesión en `async with get_phone_lock(phone):` (mismo lock que
+  ya usa el webhook, `resilience.get_phone_lock`) para cerrar la carrera de
+  raíz, no solo el síntoma.
+- **Caso C (red de seguridad nueva)**: caso Maximiliano 56949195960 — pidió
+  recepción, mandó 4 mensajes con RUT/urgencia y nadie respondió, silenciado
+  sin dejar rastro. `session.py`: nuevo `get_last_recepcionista_ts(phone)`
+  (MAX ts de evento `recepcionista_respondio` — NO `sessions.updated_at`,
+  que se pisa con cada mensaje del propio paciente). `flows.py` (bloque
+  `HUMAN_TAKEOVER`, antes del ack existente): con recepción inactiva ≥15 min
+  desde que entró al takeover (o desde su última respuesta real) manda UN
+  ack ("recepción ocupada...", no repetido — flag `ack_recep_ocupada_ref`) +
+  `log_event('takeover_sin_atencion', ...)` para el centinela/panel. A los
+  ≥30 min, si hay `slot_elegido` (hora apartada) pendiente, retoma el flujo
+  a WAIT_SLOT — pero antes verifica con `listar_citas_paciente(rut)` que
+  recepción no haya agendado por otra vía (si ya hay cita de esa
+  especialidad, NO retoma — casi se duplicó una cita por esto).
+- **Bug lateral encontrado y arreglado de paso**: `_recep_reciente` (guard de
+  FIX-C, slot preservado durante takeover) solo se asignaba dentro de la
+  rama de intents "seguros" (ver_reservas/agendar/...). Con texto libre no
+  operativo (ej. "hola", "aló?") nunca se definía → `UnboundLocalError` en
+  el guard de FIX-C más abajo, capturado por el `except Exception` genérico
+  de `main.py` → `reset_session` silencioso, perdiendo el takeover. Ahora
+  tiene default `False` al entrar al bloque `HUMAN_TAKEOVER`. Lo destapó el
+  test nuevo de Caso C (mensaje libre + `slot_elegido` presente).
+- **Tests**: `tests/test_takeover_race_2026_08_12.py` (nuevo, 6/6) cubre los
+  5 casos pedidos (reply no cambia estado transaccional / reply en IDLE sí
+  hace takeover / ack único con recepción inactiva / retoma a 30 min solo
+  sin cita ya creada / no retoma con recepción activa reciente). Suites
+  existentes sin regresión: harness_50 103/103 (=baseline determinista),
+  harness_stress_200 143/200 (=baseline, verificado con `git stash`),
+  normalizer 52/52, `test_takeover_selectivo.py` 8/8. Deep-import OK.
+- **NO deployado, NO commiteado.** Archivos: `app/admin_routes.py`,
+  `app/flows.py`, `app/session.py`, `tests/test_takeover_race_2026_08_12.py`.
+  `app/flows.py` no tenía WIP ajeno (verificado con `git status` al empezar).
+
 ### 2026-08-12 — Auditoría harness (27 fallas explicadas → 103/103) + bug real "otra persona" + rango cerrado
 - **Las 27 fallas "baseline" del harness, clasificadas una a una** (exigencia
   del dueño): CERO fallos reales de producción. 21 = fixture con fecha
