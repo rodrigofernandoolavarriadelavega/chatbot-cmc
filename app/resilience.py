@@ -186,21 +186,65 @@ def claude_down_since() -> str | None:
 # racha. Cierra el agujero del apagón silencioso de saldo (caso 2026-06-29:
 # ~10h sin cerebro sin aviso). Ver _job_claude_watchdog en jobs.py.
 _KEY_CLAUDE_ALERTED = "claude_down_alerted_for"
+_KEY_CLAUDE_ALERTED_AT = "claude_down_alerted_at"   # ISO del ÚLTIMO aviso enviado
+
+# Cada cuánto INSISTIR mientras el apagón siga vivo. Una sola alerta por racha
+# asume que alguien la leyó, y nada distingue "avisado" de "resuelto":
+#   · 21-jul-2026: avisó a los 16 s, nadie recargó → 6 días caído, 137 pacientes
+#     perdidos (193 recibieron "problema técnico para entender tu mensaje").
+#   · 18-ago-2026: avisó a los 2 min y se calló igual; se detectó por casualidad
+#     al revisar el dashboard.
+# Un fallo que EXIGE acción humana y no se resuelve tiene que seguir molestando.
+_REALERTA_HORAS = 6.0
+
+
+def horas_caido() -> float:
+    """Horas que lleva la racha actual de Claude caído (0.0 si está arriba)."""
+    down_at = claude_down_since()
+    if not down_at:
+        return 0.0
+    try:
+        dt = datetime.fromisoformat(down_at)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - dt).total_seconds() / 3600
+    except Exception:
+        return 0.0
 
 
 def should_alert_claude_down(min_minutes: float = 3.0) -> bool:
-    """True si Claude está caído y aún NO alertamos al dueño por esta racha.
+    """True si hay que avisarle al dueño que la IA está caída.
 
-    Saldo agotado / API key inválida → alerta inmediata (requieren acción humana).
-    Fallas transitorias (timeout, overload, rate limit) → espera `min_minutes` de
-    caída sostenida, para no alertar por un blip que se recupera solo."""
+    Avisa la primera vez de cada racha y después **re-avisa cada
+    `_REALERTA_HORAS`** mientras siga caída — no una sola vez, que era el
+    agujero por el que se colaron los 6 días de julio.
+
+    Saldo agotado / API key inválida → primer aviso inmediato (requieren acción
+    humana). Fallas transitorias (timeout, overload, rate limit) → espera
+    `min_minutes` de caída sostenida, para no alertar por un blip que se
+    recupera solo.
+    """
     if not is_claude_down():
         return False
     down_at = claude_down_since()
     if not down_at:
         return False
-    if system_state_get(_KEY_CLAUDE_ALERTED) == down_at:
-        return False  # ya alertamos por esta racha
+
+    ya_avisada = system_state_get(_KEY_CLAUDE_ALERTED) == down_at
+    if ya_avisada:
+        # Re-alerta: insistir mientras el apagón siga sin resolverse.
+        ultimo = system_state_get(_KEY_CLAUDE_ALERTED_AT)
+        if not ultimo:
+            return True   # racha marcada por una versión previa, sin timestamp
+        try:
+            dt_u = datetime.fromisoformat(ultimo)
+            if dt_u.tzinfo is None:
+                dt_u = dt_u.replace(tzinfo=timezone.utc)
+            horas = (datetime.now(timezone.utc) - dt_u).total_seconds() / 3600
+            return horas >= _REALERTA_HORAS
+        except Exception:
+            return True
+
     reason = (claude_down_reason() or "").lower()
     if ("saldo" in reason) or ("key" in reason) or ("billing" in reason):
         return True  # urgente: acción humana necesaria
@@ -214,9 +258,17 @@ def should_alert_claude_down(min_minutes: float = 3.0) -> bool:
         return True
 
 
+def es_realerta() -> bool:
+    """True si el aviso que viene es una INSISTENCIA, no el primero de la racha.
+    El mensaje lo usa para cambiar el tono y decir cuánto lleva caído."""
+    return system_state_get(_KEY_CLAUDE_ALERTED) == (claude_down_since() or "\x00")
+
+
 def mark_claude_down_alerted():
-    """Registra que ya alertamos por la racha actual (idempotente)."""
+    """Registra la racha alertada Y cuándo fue el último aviso (para la
+    re-alerta). Sin el timestamp no hay forma de saber cuándo insistir."""
     system_state_set(_KEY_CLAUDE_ALERTED, claude_down_since() or "")
+    system_state_set(_KEY_CLAUDE_ALERTED_AT, datetime.now(timezone.utc).isoformat())
 
 
 def _classify_claude_error(err: str) -> str:

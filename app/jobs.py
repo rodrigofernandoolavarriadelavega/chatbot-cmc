@@ -1707,17 +1707,31 @@ async def _job_claude_watchdog():
     Cierra el apagón silencioso de saldo (caso 2026-06-29: ~10h sin cerebro)."""
     try:
         from resilience import (should_alert_claude_down, mark_claude_down_alerted,
-                                 claude_down_reason, claude_down_since)
+                                 claude_down_reason, claude_down_since,
+                                 es_realerta, horas_caido)
+        # OJO: es_realerta() se lee ANTES de mark_...(), que sobrescribe la marca.
+        insistiendo = es_realerta()
         if not should_alert_claude_down():
             return
         reason = claude_down_reason() or "desconocido"
         since = claude_down_since() or "?"
         depth = intent_queue_depth()
-        msg = ("🔴 *IA del bot CMC caída*\n"
-               f"Causa: {reason}\n"
-               f"Desde: {since} UTC · Conversaciones en cola: {depth}\n\n"
-               "El bot está respondiendo con menú genérico (no detecta intención).\n"
-               "Si es saldo: recargar en console.anthropic.com/settings/billing")
+        horas = horas_caido()
+        if insistiendo:
+            # Re-alerta: el dueño ya fue avisado y el apagón sigue. Lo que
+            # importa acá es el tiempo acumulado, no la causa (ya la sabe).
+            msg = (f"🔴 *SIGUE CAÍDA* — {horas:.0f} h sin IA\n"
+                   f"Causa: {reason}\n"
+                   f"Conversaciones sin entender: {depth}\n\n"
+                   "Cada paciente que escribe recibe _\"problema técnico para "
+                   "entender tu mensaje\"_.\n"
+                   "Si es saldo: console.anthropic.com/settings/billing")
+        else:
+            msg = ("🔴 *IA del bot CMC caída*\n"
+                   f"Causa: {reason}\n"
+                   f"Desde: {since} UTC · Conversaciones en cola: {depth}\n\n"
+                   "El bot está respondiendo con menú genérico (no detecta intención).\n"
+                   "Si es saldo: recargar en console.anthropic.com/settings/billing")
         delivered = False
         # Canal OOB (Telegram) — el más confiable cuando está configurado (no
         # depende de WhatsApp ni Anthropic). Hoy es no-op si faltan los env vars.
