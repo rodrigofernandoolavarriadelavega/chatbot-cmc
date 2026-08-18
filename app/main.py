@@ -208,6 +208,13 @@ def _rate_limited(*keys: str) -> bool:
 # ── Lifespan & scheduler ─────────────────────────────────────────────────────
 
 @asynccontextmanager
+def _dt_now_iso() -> str:
+    """Timestamp en el mismo formato que graba `log_message` en `messages.ts`,
+    para poder comparar con SQL sin conversiones."""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
 async def lifespan(app: FastAPI):
     _CLT = "America/Santiago"
     # Recordatorios 24h: todos los días a las 9:00 AM CLT
@@ -10672,6 +10679,9 @@ async def webhook(request: Request):
             session = get_session(phone)
             state_before = session.get("state", "IDLE")
             log_message(phone, "in", texto, state_before, canal=canal)
+            # Marca temporal del entrante: la usa el reintento por saturación
+            # para saber si el paciente escribió de nuevo mientras esperaba.
+            _ts_entrante = _dt_now_iso()
             # Modo caída Medilink: captura contexto de TODO mensaje entrante
             # mientras esté abierto (incluidos los que quedan en HUMAN_TAKEOVER
             # más abajo) — ver medilink_outage.py.
@@ -10716,10 +10726,28 @@ async def webhook(request: Request):
                 # solo no alcanzamos a leerla. Ver medilink._agotado().
                 log.warning("Medilink saturado atendiendo %s from=%s: %s", canal, phone, e)
                 log_event(phone, "respuesta_medilink_saturado", {})
+                # El bot reintenta SOLO en ~45 s. Antes el texto le pedía al
+                # paciente que reescribiera y no volvía: caso 56926854672
+                # (18-ago) — tocó "Sí, agendar", leyó esto, nunca respondió, y
+                # recepción estuvo 10 min tomándole los datos a mano.
+                try:
+                    import reintento_saturado
+                    from resilience import spawn_task
+                    spawn_task(
+                        reintento_saturado.programar(
+                            phone=phone, texto=texto, canal=canal,
+                            sender_id=sender_id, send_fn=send_fn,
+                            desde_ts=_ts_entrante,
+                        ),
+                        name=f"reintento_saturado:{phone}",
+                    )
+                except Exception as _e_re:  # noqa: BLE001
+                    log.warning("no se pudo programar reintento por saturación: %s", _e_re)
                 respuesta = (
-                    "Estoy con la agenda muy pedida en este momento y no alcancé "
+                    "Dame un momento — la agenda está muy pedida y no alcancé "
                     "a leerla 😅\n\n"
-                    "Escríbeme *de nuevo en un minuto* y te muestro las horas.\n"
+                    "*Te escribo con las horas apenas las tenga*, no necesitas "
+                    "hacer nada.\n"
                     f"Si prefieres, llámanos: 📞 {CMC_TELEFONO}"
                 )
             except Exception as e:
@@ -12069,6 +12097,9 @@ async def webhook(request: Request):
             state_before = session.get("state", "IDLE")
             log_text = f"🎤 {texto}" if is_audio else (_interactive_title or texto)
             log_message(phone, "in", log_text, state_before, canal="whatsapp")
+            # Marca temporal del entrante: la usa el reintento por saturación
+            # para saber si el paciente escribió de nuevo mientras esperaba.
+            _ts_entrante = _dt_now_iso()
 
             # Modo caída Medilink: captura contexto de TODO mensaje entrante
             # mientras esté abierto (incluidos los que quedan en HUMAN_TAKEOVER
@@ -12234,10 +12265,28 @@ async def webhook(request: Request):
                 # Sin reset de sesión y sin lista de espera.
                 log.warning("Medilink saturado procesando msg from=%s: %s", phone, e)
                 log_event(phone, "respuesta_medilink_saturado", {})
+                # El bot reintenta SOLO en ~45 s. Antes el texto le pedía al
+                # paciente que reescribiera y no volvía: caso 56926854672
+                # (18-ago) — tocó "Sí, agendar", leyó esto, nunca respondió, y
+                # recepción estuvo 10 min tomándole los datos a mano.
+                try:
+                    import reintento_saturado
+                    from resilience import spawn_task
+                    spawn_task(
+                        reintento_saturado.programar(
+                            phone=phone, texto=texto, canal=canal,
+                            sender_id=sender_id, send_fn=send_fn,
+                            desde_ts=_ts_entrante,
+                        ),
+                        name=f"reintento_saturado:{phone}",
+                    )
+                except Exception as _e_re:  # noqa: BLE001
+                    log.warning("no se pudo programar reintento por saturación: %s", _e_re)
                 respuesta = (
-                    "Estoy con la agenda muy pedida en este momento y no alcancé "
+                    "Dame un momento — la agenda está muy pedida y no alcancé "
                     "a leerla 😅\n\n"
-                    "Escríbeme *de nuevo en un minuto* y te muestro las horas.\n"
+                    "*Te escribo con las horas apenas las tenga*, no necesitas "
+                    "hacer nada.\n"
                     f"Si prefieres, llámanos: 📞 {CMC_TELEFONO}"
                 )
             except Exception as e:
