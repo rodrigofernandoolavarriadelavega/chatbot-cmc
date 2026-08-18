@@ -319,6 +319,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=8, minute=30, timezone=_CLT),
         id="autopilot_dryrun",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cerebro de Alma — snapshot del world-state global (Fase 1). Read-only y
     # Medilink-free: lee BI + sessions.db + snapshots ya persistidos. Corre
@@ -338,6 +344,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=6, minute=0, timezone=_CLT),
         id="alma_brain_snapshot",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Flota de agentes autónomos (Alma Agents). INERTE por defecto: register_agent_jobs
     # no agrega NI UN job si ALMA_AGENTS_ENABLED=false (default). Encender el maestro
@@ -365,6 +377,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=5, minute=30, timezone=_CLT),
         id="alma_agents_ledger",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Capstone: latido diario que une cerebro + flota (intención simulada) +
     # ledger en un digest unificado. No re-ejecuta agentes ni contacta a nadie;
@@ -381,6 +399,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=6, minute=30, timezone=_CLT),
         id="alma_agents_capstone",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cola de publicación orgánica (segmento IG·FB·WhatsApp): publica las piezas
     # aprobadas que ya vencieron su hora. La escritura real a Meta está bloqueada
@@ -441,6 +465,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", hour=9, minute=35, timezone=_CLT),
         id="learned_skills_semanal",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Guardrail intervalos: 06:20 CLT, antes de que abra el centro y fuera de
     # los clusters de la mañana (429). Compara la duración de cita del bot
@@ -516,6 +546,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=23, minute=55, timezone=_CLT),
         id="abarca_sync_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Sync atenciones Dr. Olavarría: cierre del día a las 23:57 CLT
     scheduler.add_job(
@@ -523,6 +559,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=23, minute=57, timezone=_CLT),
         id="olavarria_sync_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # BI v2: sync diario de TODOS los profesionales 23:59 CLT
     scheduler.add_job(
@@ -613,6 +655,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="sun", hour=3, minute=30, timezone=_CLT),
         id="repasada_historica_semanal",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # CAC snapshot: 00:20 CLT (post bi_sync → usa pagos frescos). Alimenta la
     # pestaña Atribución de Autopilot (data/cac_snapshot.json).
@@ -621,6 +669,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=0, minute=20, timezone=_CLT),
         id="cac_snapshot_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Reporte semanal de demanda no capturada (Items 31/32/35): lunes 09:00 CLT.
     # Lee conversation_events (sin_disponibilidad + demanda_no_disponible) + waitlist.
@@ -630,6 +684,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", hour=9, minute=6, timezone=_CLT),  # 9:06 (era 9:00)
         id="demanda_semanal",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Reactivación: todos los lunes a las 10:30 AM CLT
     scheduler.add_job(
@@ -646,6 +706,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon,wed,fri", hour=11, minute=0, timezone=_CLT),
         id="adherencia_kine",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Control por especialidad: diario a las 11:30 AM CLT
     scheduler.add_job(
@@ -653,6 +719,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=11, minute=30, timezone=_CLT),
         id="control_especialidad",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cross-sell kine: miércoles a las 10:30 AM CLT
     scheduler.add_job(
@@ -660,6 +732,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="wed", hour=10, minute=30, timezone=_CLT),
         id="crosssell_kine",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cross-sell ORL↔Fono: jueves 11:00 CLT
     scheduler.add_job(
@@ -667,6 +745,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="thu", hour=11, minute=24, timezone=_CLT),  # 11:24 (era 11:00)
         id="crosssell_orl_fono",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cross-sell odontología → estética: 1º y 15 del mes 10:30 CLT
     scheduler.add_job(
@@ -674,6 +758,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day="1,15", hour=10, minute=30, timezone=_CLT),
         id="crosssell_odonto_estetica",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cross-sell MG→chequeo preventivo: primer martes del mes 09:30 CLT
     scheduler.add_job(
@@ -681,6 +771,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="tue", day="1-7", hour=9, minute=30, timezone=_CLT),
         id="crosssell_mg_chequeo",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cross-sell post-dental -> ortodoncia: L-V 11:00 CLT (Patron 5, 2026-05-19)
     # Pacientes con cita dental atendida hace 48-72h sin cita futura con Castillo.
@@ -690,6 +786,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon-fri", hour=11, minute=6, timezone=_CLT),  # 11:06 (era 11:00; cluster de 5 jobs)
         id="crosssell_post_dental_ortodoncia",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cumpleaños: diario a las 10:00 CLT
     scheduler.add_job(
@@ -706,6 +808,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", day="1-7", hour=10, minute=42, timezone=_CLT),  # 10:42 (era 10:00; libre entre dental 10:35 y blast 11:xx)
         id="winback_mensual",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Sync caché de citas: diario a las 23:50 CLT
     scheduler.add_job(
@@ -713,6 +821,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=23, minute=50, timezone=_CLT),
         id="sync_citas_cache",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Monitor de Agendamientos en vivo: poll cada 45s, UNA sola consulta base
     # (id_sucursal + cursor por id, sin filtro de profesional — ver
@@ -865,6 +979,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=9, minute=5, timezone=_CLT),
         id="cierre_caja_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Agenda del día: 07:45 CLT empuja cupos/ocupados/libres por profesional
     scheduler.add_job(
@@ -872,6 +992,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=7, minute=45, timezone=_CLT),
         id="agenda_dia",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Lista de espera: diario a las 07:00 CLT
     scheduler.add_job(
@@ -890,6 +1016,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="3-58/5", hour="7-21", day_of_week="mon-sat", timezone=_CLT),
         id="doctor_resumen_precita",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Doctor alerts: reporte progreso 09:05, 12:05, 16:05, 20:05 CLT
     # (+5 min para no chocar con recordatorios y no-show que parten a :00/:02)
@@ -906,6 +1038,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=0, minute=0, timezone=_CLT),
         id="doctor_reset_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # TTL HUMAN_TAKEOVER: reanudar bot si recepción no devolvió el control en 24h.
     # Cron cada hora a los :15. Evita 107+ sesiones bloqueadas (auditoría 2026-04-28).
@@ -945,6 +1083,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour="7-22", minute="15", timezone=_CLT),
         id="cleanup_stuck_sessions",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Regenerar heatmap_cache.json cada 6h (00:05, 06:05, 12:05, 18:05 CLT)
     scheduler.add_job(
@@ -952,6 +1096,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour="*/6", minute=5, timezone=_CLT),
         id="regenerate_heatmap_cache",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Dashboards semanales a profesionales: lunes 09:00 CLT
     scheduler.add_job(
@@ -959,6 +1109,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", hour=9, minute=18, timezone=_CLT),  # 9:18 (era 9:00)
         id="dashboards_semanales_profesionales",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Resumen diario a profesionales: lun-sáb 07:00 CLT (permiso resumen_diario_07)
     scheduler.add_job(
@@ -966,6 +1122,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon-sat", hour=7, minute=12, timezone=_CLT),  # 7:12 (era 7:00; chocaba con waitlist_check, ambos Medilink-heavy)
         id="resumen_diario_profesionales",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Resumen semanal a profesionales: domingo 19:00 CLT (permiso resumen_semanal_dom)
     scheduler.add_job(
@@ -973,6 +1135,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="sun", hour=19, minute=0, timezone=_CLT),
         id="resumen_semanal_profesionales",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # No-show check: cada 30 min entre 09:00 y 21:00 CLT (permiso notif_no_show)
     # +2 min para escalonar respecto a recordatorios que parten a :00
@@ -981,6 +1149,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour="9-21", minute="2,32", timezone=_CLT),
         id="no_show_check_profesionales",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Horas vacías D+1: diariamente a las 14:00 CLT
     # Detecta slots libres del día siguiente y notifica proactivamente a pacientes elegibles.
@@ -989,6 +1163,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=14, minute=0, timezone=_CLT),
         id="horas_vacias_dia_siguiente",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Telemedicina recordatorios: cada 15 min entre 7 y 22 CLT
     # Desfasado a :07/:22/:37/:52 — antes corría en :00/:15/:30/:45, la misma
@@ -999,6 +1179,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="7,22,37,52", hour="7-22", timezone=_CLT),
         id="telemedicina_recordatorios",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Cross-sell por dx tags: diario 11:00 CLT.
     # INACTIVO por defecto (CROSS_SELL_ACTIVE=false).
@@ -1008,6 +1194,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=11, minute=18, timezone=_CLT),  # 11:18 (era 11:00)
         id="crosssell_dx_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Custom Audiences Meta: diario 04:00 CLT
     scheduler.add_job(
@@ -1015,6 +1207,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=4, minute=0, timezone=_CLT),
         id="custom_audiences_sync_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Winback BI: L-V 10:05 CLT — usa bi.v_winback_cohortes_contactables
     # INACTIVO por defecto (WINBACK_ACTIVE=false en .env).
@@ -1043,6 +1241,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour="*/4", minute=15, timezone=_CLT),
         id="watchdog_blast",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Watchdog entrega real de templates: cada 30 min a los :20/:50
     # Detecta apagones de facturación Meta (error 131042). Canal email primario
@@ -1079,6 +1283,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon-fri", hour=19, minute=0, timezone=_CLT),
         id="winback_daily_report",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Reporte conversión Promo Dental Junio: diario 09:00 CLT (solo si ventana 24h abierta; no-op tras junio)
     scheduler.add_job(
@@ -1086,6 +1296,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=9, minute=24, timezone=_CLT),  # 9:24 (era 9:00)
         id="dental_promo_report",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Reporte semanal de salud del bot: lunes 09:00 CLT
     scheduler.add_job(
@@ -1093,6 +1309,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", hour=9, minute=36, timezone=_CLT),  # 9:36 (era 9:00)
         id="health_report_semanal",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # Reporte de caja al dueño: cada mañana 08:45 CLT (cuadre de ayer + efectivo en caja)
     scheduler.add_job(
@@ -1100,6 +1322,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=8, minute=45, timezone=_CLT),
         id="caja_report_diario",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # M4: digest semanal a recepción de pacientes >14 días en waitlist (lunes 09:30 CLT)
     from jobs import _job_waitlist_digest_semanal, _job_followup_info
@@ -1109,6 +1337,12 @@ async def lifespan(app: FastAPI):
         CronTrigger(day_of_week="mon", hour=9, minute=30, timezone=_CLT),
         id="waitlist_digest_semanal",
         replace_existing=True,
+        # misfire_grace_time: APScheduler descarta el disparo si el proceso
+        # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
+        # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
+        # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
     )
     # M5: follow-up proactivo a intent=info sin cita (cada 5 min, gated FOLLOWUP_INFO_ENABLED)
     scheduler.add_job(
