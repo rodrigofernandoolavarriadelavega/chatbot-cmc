@@ -246,6 +246,17 @@ ABONO_GASTRO_CLP = int(os.getenv("ABONO_GASTRO_CLP", "35000"))
 # caso real quedó fuera por 5: transfirió y mandó el comprobante a los 95 min.
 # Se recorta al horario del centro (ver calcular_expira en abono_transferencia).
 ABONO_VENTANA_HORAS = int(os.getenv("ABONO_VENTANA_HORAS", "4"))
+# Minutos que se le dan al paciente para transferir el abono del Abono-Gate.
+# 24 h (1440) desde el 2026-08-18. Antes eran 90 min y se perdía gente que sí
+# quería pagar: de los 13 que pagaron, la mediana fue 13 min pero DOS pagaron
+# a las 49 y 71 horas; de los 36 que no pagaron, 24 se perdieron del todo.
+# La población del CMC es rural — mucha no tiene la app del banco a mano y
+# transfiere al llegar a casa.
+# NO se toca el mecanismo: el pago sigue siendo POR ADELANTADO, que es lo que
+# subió la asistencia de psiquiatría de 30-36% a 60% (medido 18-ago). Solo se
+# corrige el plazo. `calcular_expira` además corre el vencimiento a las 09:00
+# si cayera con el centro cerrado.
+ABONO_WAIT_MIN = int(os.getenv("ABONO_WAIT_MIN", "1440"))
 
 # ── REGISTRO DE ABONOS ──────────────────────────────────────────────────────
 # UNA sola fuente. Sumar una prestación al abono = agregar una entrada acá y

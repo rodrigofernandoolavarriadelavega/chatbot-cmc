@@ -484,6 +484,11 @@ def crear_abono_pendiente(*, phone: str, paciente_id, paciente_nombre: str, rut:
         # decir "mañana a las 09:00", no un "09:00" a secas que se leería como
         # una hora que ya pasó.
         "expira_otro_dia": expira.date() != now.date(),
+        # Días exactos de diferencia. Con la ventana de 24 h el vencimiento cae
+        # normalmente al día siguiente, pero si además se corre a las 09:00 por
+        # horario cerrado puede quedar a 2 días: ahí "mañana" sería falso.
+        "expira_en_dias": (expira.date() - now.date()).days,
+        "expira_fecha": expira.strftime("%d/%m"),
     }
 
 

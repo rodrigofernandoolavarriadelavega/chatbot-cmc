@@ -10265,6 +10265,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
             if _regla_ag and _abono_gate_psiq_activo():
                 from config import CMC_TRANSFERENCIA as _CTF_AG
+                from config import ABONO_WAIT_MIN as _ABONO_WAIT_MIN
                 _ABO_AG = int(_regla_ag["monto"])
                 _AREA_AG = _regla_ag["etiqueta"]
                 # Guardar TODO lo necesario para crear la cita después
@@ -10301,7 +10302,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             especialidad=slot.get("especialidad") or _AREA_AG,
                             id_profesional=slot.get("id_profesional"),
                             slot=slot,
-                            wait_min=90,
+                            # 24 h, no 90 min. El gate SÍ funciona —la asistencia
+                            # de psiquiatría pasó de 30-36% a 60% desde que se
+                            # encendió— así que el pago por adelantado se
+                            # mantiene; lo que se corrige es el plazo.
+                            # Medido el 18-ago sobre los 13 que pagaron: mediana
+                            # 13 min, pero DOS pagaron a las 49 y 71 horas. Y de
+                            # los 36 que no pagaron, 24 se perdieron del todo.
+                            # La población es rural: mucha no tiene la app del
+                            # banco a mano y transfiere al llegar a casa.
+                            # calcular_expira además corre el vencimiento a las
+                            # 09:00 si cayera con el centro cerrado.
+                            wait_min=_ABONO_WAIT_MIN,
                         )
                         # Hora REAL de vencimiento, no un "90 minutos" fijo: la
                         # ventana efectiva depende de wait_min y además se corre
@@ -10309,8 +10321,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         # viejo prometía 90 min cuando el abono vencía a los 60.
                         _exp_ag = _link_ap.get("expira_hhmm", "")
                         _plazo_ag = (
-                            f"*mañana hasta las {_exp_ag}*" if _link_ap.get("expira_otro_dia")
-                            else f"*hasta las {_exp_ag}*"
+                            f"*hasta las {_exp_ag}*" if _link_ap.get("expira_en_dias") == 0
+                            else f"*hasta mañana a las {_exp_ag}*"
+                            if _link_ap.get("expira_en_dias") == 1
+                            else f"*hasta el {_link_ap.get('expira_fecha','')} "
+                                 f"a las {_exp_ag}*"
                         ) if _exp_ag else "*por un rato*"
                         _tc_ag = (
                             "📡 La consulta es por *videollamada (teleconsulta)* — "
@@ -10337,14 +10352,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # prometan exactamente el mismo plazo.
                 try:
                     from abono_transferencia import calcular_expira as _calc_exp_fb
-                    _exp_fb_dt = _calc_exp_fb(datetime.now(_CHILE_TZ), horas=90 / 60)
+                    _ahora_fb = datetime.now(_CHILE_TZ)
+                    _exp_fb_dt = _calc_exp_fb(_ahora_fb, horas=_ABONO_WAIT_MIN / 60)
+                    _dias_fb = (_exp_fb_dt.date() - _ahora_fb.date()).days
+                    # Con 24 h el vencimiento cae al día siguiente: decir solo
+                    # "hasta las 15:40" se leería como una hora que ya pasó.
+                    _hhmm_fb = _exp_fb_dt.strftime('%H:%M')
                     _plazo_fb = (
-                        f"*mañana hasta las {_exp_fb_dt.strftime('%H:%M')}*"
-                        if _exp_fb_dt.date() != datetime.now(_CHILE_TZ).date()
-                        else f"*hasta las {_exp_fb_dt.strftime('%H:%M')}*"
+                        f"*hasta las {_hhmm_fb}*" if _dias_fb == 0
+                        else f"*hasta mañana a las {_hhmm_fb}*" if _dias_fb == 1
+                        else f"*hasta el {_exp_fb_dt.strftime('%d/%m')} a las {_hhmm_fb}*"
                     )
                 except Exception:
-                    _plazo_fb = "*por 90 minutos*"
+                    _plazo_fb = "*por 24 horas*"
 
                 _tc_ag_fb = (
                     "📡 La consulta es por *videollamada (teleconsulta)* — "
