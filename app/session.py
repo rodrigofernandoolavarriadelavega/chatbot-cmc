@@ -3926,15 +3926,58 @@ def update_olavarria_monto(id_cita: int, monto: int) -> None:
         )
 
 
+# Tope de reintentos por atención. Sin esto el relleno de montos se
+# auto-alimentaba: si los reintentos daban 429, nunca se escribía el monto, la
+# atención seguía NULL y se volvía a pedir en la pasada siguiente — para
+# siempre. Medido el 18-ago-2026: 29.132 llamadas a /atenciones/{id} para solo
+# 951 IDs distintos (30 por ID; uno llegó a 221). Era la principal fuente de
+# los ~1.000 429 diarios contra Medilink.
+_MAX_INTENTOS_MONTO = 3
+
+
 def get_olavarria_atenciones_sin_monto() -> list[dict]:
-    """Atenciones (estado=atendido) con id_atencion conocido pero sin monto_facturado todavía."""
+    """Atenciones (estado=atendido) con id_atencion conocido y sin monto todavía.
+
+    Excluye las que ya se intentaron `_MAX_INTENTOS_MONTO` veces sin éxito: si
+    Medilink no devolvió el monto en 3 pasadas distintas, no lo va a devolver
+    por insistir, y cada reintento le quita cupo de rate limit a los pacientes
+    que están agendando en vivo.
+    """
     with db() as conn:
+        _ensure_intentos_monto(conn)
         rows = conn.execute(
             "SELECT id_cita, id_atencion FROM olavarria_atenciones_cache "
-            "WHERE LOWER(estado_cita)='atendido' AND id_atencion IS NOT NULL AND monto_facturado IS NULL "
-            "ORDER BY fecha"
+            "WHERE LOWER(estado_cita)='atendido' AND id_atencion IS NOT NULL "
+            "  AND monto_facturado IS NULL "
+            "  AND COALESCE(intentos_monto, 0) < ? "
+            "ORDER BY fecha",
+            (_MAX_INTENTOS_MONTO,),
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+def _ensure_intentos_monto(conn) -> None:
+    """Agrega la columna intentos_monto si la base viene de antes del fix."""
+    try:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(olavarria_atenciones_cache)")}
+        if "intentos_monto" not in cols:
+            conn.execute("ALTER TABLE olavarria_atenciones_cache "
+                         "ADD COLUMN intentos_monto INTEGER DEFAULT 0")
+            conn.commit()
+    except Exception:  # noqa: BLE001 — nunca romper la lectura por esto
+        pass
+
+
+def marcar_intento_monto(id_cita: int) -> None:
+    """Suma 1 al contador de intentos fallidos de esta atención."""
+    with db() as conn:
+        _ensure_intentos_monto(conn)
+        conn.execute(
+            "UPDATE olavarria_atenciones_cache "
+            "SET intentos_monto = COALESCE(intentos_monto, 0) + 1 WHERE id_cita=?",
+            (id_cita,),
+        )
+        conn.commit()
 
 
 def delete_olavarria_atenciones_fecha(fecha: str) -> int:

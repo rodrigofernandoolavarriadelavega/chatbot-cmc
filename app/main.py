@@ -7844,42 +7844,69 @@ async def api_olavarria_data(refresh: int = 0, desde: str = "2024-01-01", tarifa
 
 async def sync_olavarria_montos(limite: int = 0, delay: float = 0.5) -> dict:
     """Rellena monto_facturado consultando /atenciones/{id} por cada cita atendida
-    sin monto. NO sobreescribe los ya cargados. `limite=0` procesa todos."""
-    import asyncio as _aio_m
-    from session import get_olavarria_atenciones_sin_monto, update_olavarria_monto
-    from config import MEDILINK_BASE_URL as _MB
+    sin monto. NO sobreescribe los ya cargados. `limite=0` procesa todos.
 
+    Este relleno era la principal fuente de 429 contra Medilink (~1.000/día).
+    Se auto-alimentaba: si los reintentos daban 429 no se escribía nada, la
+    atención seguía NULL y volvía a pedirse en la pasada siguiente. Medido el
+    18-ago-2026: **29.132 llamadas a /atenciones/{id} para solo 951 IDs
+    distintos** — 30 por ID, uno llegó a 221. Tres cambios lo cortan:
+
+      1. `use_batch_lane()` — deja de competir con los pacientes en vivo por
+         el rate limit (guardrail: todo cron que pegue a Medilink lo llama).
+      2. Cliente compartido en vez de httpx.AsyncClient propio, que se saltaba
+         el throttling de medilink.py.
+      3. Los fallos suman `intentos_monto`; a los 3 la atención sale de la cola
+         (ver `_MAX_INTENTOS_MONTO` en session.py). Lo que Medilink no entregó
+         en 3 pasadas no lo va a entregar por insistir.
+    """
+    import asyncio as _aio_m
+    from session import (get_olavarria_atenciones_sin_monto, update_olavarria_monto,
+                         marcar_intento_monto)
+    from config import MEDILINK_BASE_URL as _MB
+    from medilink import use_batch_lane, _get_shared_client
+
+    use_batch_lane()   # guardrail 429: este relleno NO es prioritario
     pendientes = get_olavarria_atenciones_sin_monto()
     if limite > 0:
         pendientes = pendientes[:limite]
 
-    ok = 0; fail = 0; sin_id = 0
-    async with httpx.AsyncClient(timeout=20) as cli:
-        for row in pendientes:
-            id_aten = row.get("id_atencion")
-            id_cita = row.get("id_cita")
-            if not id_aten:
-                sin_id += 1; continue
-            for attempt in range(5):
-                try:
-                    r = await cli.get(f"{_MB}/atenciones/{id_aten}", headers=HEADERS_MEDILINK)
-                except Exception:
-                    await _aio_m.sleep(1 + attempt)
-                    continue
-                if r.status_code == 200:
-                    total = (r.json().get("data") or {}).get("total", 0) or 0
-                    update_olavarria_monto(id_cita, int(total))
-                    ok += 1
-                    break
-                if r.status_code == 429:
-                    await _aio_m.sleep(1.5 + attempt * 1.5)
-                    continue
-                fail += 1
+    ok = 0; fail = 0; sin_id = 0; agotados = 0
+    cli = _get_shared_client()
+    for row in pendientes:
+        id_aten = row.get("id_atencion")
+        id_cita = row.get("id_cita")
+        if not id_aten:
+            sin_id += 1; continue
+        resuelto = False
+        # 3 intentos (no 5): con el contador persistido, insistir dentro de la
+        # misma pasada aporta poco y multiplica la presión sobre el HIS.
+        for attempt in range(3):
+            try:
+                r = await cli.get(f"{_MB}/atenciones/{id_aten}", headers=HEADERS_MEDILINK)
+            except Exception:
+                await _aio_m.sleep(1 + attempt)
+                continue
+            if r.status_code == 200:
+                total = (r.json().get("data") or {}).get("total", 0) or 0
+                update_olavarria_monto(id_cita, int(total))
+                ok += 1; resuelto = True
                 break
-            await _aio_m.sleep(delay)
+            if r.status_code == 429:
+                await _aio_m.sleep(1.5 + attempt * 1.5)
+                continue
+            fail += 1
+            break
+        if not resuelto:
+            # Persistir el fallo: a los 3 sale de la cola y deja de martillar.
+            marcar_intento_monto(id_cita)
+            agotados += 1
+        await _aio_m.sleep(delay)
 
-    log.info("olavarria montos sync: ok=%d fail=%d sin_id=%d", ok, fail, sin_id)
-    return {"ok": ok, "fail": fail, "sin_id": sin_id, "pendientes": len(pendientes)}
+    log.info("olavarria montos sync: ok=%d fail=%d sin_id=%d sin_resolver=%d (de %d pendientes)",
+             ok, fail, sin_id, agotados, len(pendientes))
+    return {"ok": ok, "fail": fail, "sin_id": sin_id,
+            "sin_resolver": agotados, "pendientes": len(pendientes)}
 
 
 @app.post("/api/olavarria/sync-montos")
