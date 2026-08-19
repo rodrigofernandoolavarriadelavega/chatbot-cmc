@@ -945,6 +945,36 @@ async def main():
         ("cita_confirm:99999", ["no encontré", "recepción"]),
     ])
 
+    # ── Auditoría mensual 2026-08-19 ─────────────────────────────────────────
+    def setup_cita_bot_cancelar_no_gracias():
+        from session import save_cita_bot, save_profile
+        phone_p = "56900000205"
+        save_profile(phone_p, "11.111.111-1", "Juan Pérez")
+        save_cita_bot(phone_p, "9005", "Medicina General", "Dr. Andrés Abarca",
+                      "2026-04-11", "10:00:00", "particular")
+
+    mk("55 cancelación + 'No, gracias' → cierre corto, no menú de bienvenida",
+       "56900000205", [
+        ("cita_cancelar:9005", {"any": ["cancelar", "mantener", "Sí, cancelar"], **NO_ERROR}),
+        ("si", {"any": ["cancelada", "✅"], **NO_ERROR}),
+        ("post_cancel_no", {
+            "any": ["hasta pronto"],
+            "none": NO_ENTENDI_MARKERS + [
+                "motivos rápidos", "asistente automático", "samu 131",
+            ],
+        }),
+    ], setup=setup_cita_bot_cancelar_no_gracias)
+
+    mk("56 'confirmo' en IDLE sin ninguna cita → pide aclaración, no afirma a ciegas",
+       "56900000206", [
+        ("confirmo", {
+            "any": ["qué quieres confirmar", "rut"],
+            "none": NO_ENTENDI_MARKERS + [
+                "perfecto, te esperamos", "motivos rápidos",
+            ],
+        }),
+    ])
+
     # ── Registro paciente nuevo: variantes fecha nacimiento ──────────────
     mk("REG-01 fecha dd/mm/yyyy", "56900000501", [
         ("quiero agendar kine", {"any": ["Kine", "09:"], **NO_ERROR}),

@@ -3133,6 +3133,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             and len(txt) <= 80)
     )
     if state == "IDLE" and _es_confirmacion_recod:
+        _fila_rc = None
+        _lookup_rc_error = False
         try:
             from session import db as _conn_rc
             import time as _time_rc
@@ -3188,7 +3190,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return "Perfecto, te esperamos. Hasta pronto."
         except Exception as _e_rc:
             log.warning("confirm_recordatorio_texto_libre falló: %s", _e_rc)
-        # Si no hay cita con recordatorio pendiente, dejar caer al flujo normal
+            _lookup_rc_error = True
+        # Auditoría 2026-08-19 (#10, ×12): "confirmo"/"si"/"sii" en IDLE
+        # SIN cita real (ni citas_bot ni recepción) caía al flujo normal, que
+        # terminaba afirmando "Perfecto, te esperamos" o el menú genérico sin
+        # haber verificado nada. El gate 8429dc9 solo cubre el caso CON cita —
+        # este es el hueco simétrico: si la búsqueda SÍ pudo completarse (sin
+        # error) y no encontró ninguna cita, pedir aclaración en vez de
+        # afirmar a ciegas. Si la búsqueda falló (_lookup_rc_error), no se
+        # pudo verificar nada → se deja caer al flujo normal, como antes.
+        if not _lookup_rc_error and not _fila_rc:
+            log_event(phone, "confirmacion_recod_sin_cita", {"txt": txt[:80]})
+            return ("¿Qué quieres confirmar? Si es una hora médica, dime tu "
+                    "*RUT* y la reviso.")
+        # Si no hay cita con recordatorio pendiente (o falló la búsqueda),
+        # dejar caer al flujo normal.
 
     # ── Texto libre NEGATIVO tras recordatorio ("No", "no puedo") ─────────────
     # Espejo del bloque anterior (caso real María 2026-06-11: recordatorio 2h →
@@ -3958,6 +3974,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return await _iniciar_agendar(phone, data, _hv_esp)
         except Exception as _hv_err:
             log.warning("Hook horas_vacias: %s", _hv_err)
+
+    # ── Cierre corto post-cancelación ("No, gracias" al ofrecimiento de
+    # reagendar) ──────────────────────────────────────────────────────────────
+    # Antes usaba el id genérico "menu_volver" y caía al reset de comandos
+    # globales de abajo, que muestra el menú de bienvenida COMPLETO (con
+    # disclosure Ley 21.719 + dirección) si el paciente entró directo a
+    # CONFIRMING_CANCEL vía botón de recordatorio (sin pasar por IDLE antes,
+    # así que "disclosure_enviado" nunca se había logueado) — quedaba como
+    # si fuera un desconocido de primer contacto. Auditoría 2026-08-19 (#5, ×14).
+    if tl == "post_cancel_no":
+        reset_session(phone)
+        return "¡Hasta pronto! Escríbenos si necesitas algo más 😊"
 
     # ── Comandos globales ─────────────────────────────────────────────────────
     _COMANDOS_GLOBALES = ("menu", "menú", "inicio", "reiniciar", "volver", "hola", "menu_volver")
@@ -11621,7 +11649,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"{_cancel_suffix}",
                     [
                         {"id": "1", "title": "Sí, agendar"},
-                        {"id": "menu_volver", "title": "No, gracias"},
+                        {"id": "post_cancel_no", "title": "No, gracias"},
                     ]
                 )
             return f"Hubo un problema al cancelar 😕\nLlama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
