@@ -70,6 +70,14 @@ Contexto crítico del negocio (úsalo para juzgar):
   personal +56987834148 NUNCA debe aparecer en mensajes al paciente.
 - NO se debe prometer sucursales, viajes, ni decir "certificados/habilitados
   /acreditados/Superintendencia" (publicidad engañosa).
+- Psiquiatría (Dra. Unibazo): TELEconsulta, martes y jueves 16:00-20:00, cada
+  40 min; exige ABONO de $60.000 antes de crear la hora — que el bot lo pida
+  NO es un error. Gastroenterología (Dr. Quijano) existe y exige abono $35.000.
+- Neurología (Dra. González) es telemedicina y atiende SOLO ≥15 años.
+- Resultado de examen ≠ orden de examen: son flujos distintos, no confundirlos.
+- El bot puede ofrecer fechas de OTRO día si no hay cupo hoy — eso no es bug;
+  sí lo es ofrecer fechas a meses de distancia sin que el paciente pidiera esa
+  fecha (hubo un bug así con "adulto mayor"→mayo; ya corregido el 19-ago).
 
 Qué buscar (no exhaustivo):
 - Intent mal clasificado (el bot entendió otra cosa).
@@ -189,53 +197,31 @@ def _parse_json(text: str) -> dict:
     return {"findings": [], "summary": "parse_error", "_raw": text[:500]}
 
 
-def _ensure_table() -> None:
+def _filtrar_nuevos(findings: list[dict]) -> list[dict]:
+    """Solo los hallazgos cuyo dedup_key NO existe ya en audit_findings.
+    Evita re-estagear en pending_safe_fixes.jsonl lo mismo cada hora — el
+    archivo llegó a 1,6 MB de repetidos porque el staging ignoraba el dedup
+    que store_findings SÍ aplica en la tabla."""
+    from app.audit_store import _dedup_key
+    if not findings:
+        return []
     con = _conn()
     try:
-        con.execute("""
-            CREATE TABLE IF NOT EXISTS audit_findings (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                run_ts        TEXT DEFAULT (datetime('now')),
-                phone         TEXT,
-                severity      TEXT,
-                category      TEXT,
-                issue         TEXT,
-                evidence      TEXT,
-                fix_type      TEXT,
-                suggested_fix TEXT,
-                target_hint   TEXT,
-                status        TEXT DEFAULT 'open'
-            )
-        """)
-        con.execute(
-            "CREATE INDEX IF NOT EXISTS idx_audit_run ON audit_findings(run_ts)"
-        )
-        con.commit()
-    finally:
-        con.close()
-
-
-def _store_findings(findings: list[dict]) -> None:
-    con = _conn()
-    try:
+        nuevos = []
         for f in findings:
-            con.execute(
-                """INSERT INTO audit_findings
-                   (phone, severity, category, issue, evidence, fix_type,
-                    suggested_fix, target_hint)
-                   VALUES (?,?,?,?,?,?,?,?)""",
-                (
-                    f.get("phone"), f.get("severity"), f.get("category"),
-                    f.get("issue"), f.get("evidence"), f.get("fix_type"),
-                    f.get("suggested_fix"), f.get("target_hint"),
-                ),
-            )
-        con.commit()
+            dk = _dedup_key("conversacion", f)
+            row = con.execute(
+                "SELECT 1 FROM audit_findings WHERE dedup_key = ? LIMIT 1", (dk,)
+            ).fetchone()
+            if not row:
+                nuevos.append(f)
+        return nuevos
     finally:
         con.close()
 
 
-def _write_report(findings: list[dict], summary: str, n_conv: int) -> Path:
+def _write_report(findings: list[dict], summary: str, n_conv: int,
+                  ventana: str, staged: list[dict]) -> Path:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc)
     stamp = now.strftime("%Y-%m-%d_%H%M")
@@ -243,7 +229,7 @@ def _write_report(findings: list[dict], summary: str, n_conv: int) -> Path:
     safe = [f for f in findings if f.get("fix_type") == "data_safe"]
     logic = [f for f in findings if f.get("fix_type") != "data_safe"]
     lines = [
-        f"# Auditoría conversaciones — {stamp} UTC",
+        f"# Auditoría conversaciones — {stamp} UTC · ventana {ventana}",
         f"\nConversaciones revisadas: {n_conv} · Hallazgos: {len(findings)} "
         f"(seguros: {len(safe)}, revisión: {len(logic)})",
         f"\n**Resumen:** {summary}\n",
@@ -264,19 +250,160 @@ def _write_report(findings: list[dict], summary: str, n_conv: int) -> Path:
             )
     report.write_text("\n".join(lines), encoding="utf-8")
 
-    # Estagear fixes seguros para aplicación manual de un toque
-    if safe:
+    # Estagear SOLO fixes seguros nuevos (dedup) — antes se apendeaba todo cada
+    # hora y pending_safe_fixes.jsonl creció 1,6 MB de repetidos.
+    staged_safe = [f for f in staged if f.get("fix_type") == "data_safe"]
+    if staged_safe:
         staging = LOG_DIR / "pending_safe_fixes.jsonl"
         with staging.open("a", encoding="utf-8") as fh:
-            for f in safe:
+            for f in staged_safe:
                 fh.write(json.dumps({"run": stamp, **f}, ensure_ascii=False) + "\n")
     return report
 
 
+# ── Consolidación: de N hallazgos crudos a problemas raíz accionables ─────────
+
+CONSOLIDATOR_SYSTEM = """\
+Eres el triager senior del chatbot del Centro Médico Carampangue. Recibes
+hallazgos CRUDOS de auditorías horarias (muchos son el mismo problema raíz
+reformulado). Tu trabajo: consolidarlos en una lista CORTA de problemas
+distintos, ordenada por (frecuencia × severidad), accionable.
+
+Reglas:
+- Un problema raíz = una entrada, aunque tenga 80 hallazgos crudos.
+- No inventes problemas que no estén en los datos.
+- "posible_falso_positivo": marca true si los hallazgos sugieren que el auditor
+  horario está confundido (p.ej. reporta como bug el abono de psiquiatría, que
+  es política real del centro).
+
+Devuelve SOLO JSON:
+{
+  "problemas": [
+    {
+      "titulo": "<corto y concreto>",
+      "prioridad": 1|2|3,
+      "n_hallazgos": <int>,
+      "categorias": ["..."],
+      "fix_type": "data_safe|logic_review",
+      "descripcion": "<qué pasa, 2-3 frases, con el patrón común>",
+      "fix_concreto": "<qué cambiar exactamente>",
+      "target": "<archivo/dict probable o null>",
+      "telefonos_ejemplo": ["..."],
+      "posible_falso_positivo": false
+    }
+  ],
+  "resumen": "<3-4 frases del estado de la semana>"
+}
+"""
+
+
+def _fetch_findings(since_days: int) -> list[dict]:
+    con = _conn()
+    try:
+        rows = con.execute(
+            """SELECT phone, severity, category, issue, evidence, fix_type,
+                      suggested_fix, target_hint, run_ts
+               FROM audit_findings
+               WHERE check_name = 'conversacion' AND status = 'open'
+                 AND run_ts >= datetime('now', ?)
+               ORDER BY run_ts""",
+            (f"-{since_days} days",),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        con.close()
+
+
+def _compactar_findings(findings: list[dict]) -> str:
+    """Pre-agrupa localmente para que 1.500 hallazgos entren en una llamada:
+    agrupa por (category, fix_type, primeras 8 palabras normalizadas del issue)
+    y emite count + teléfonos + hasta 2 ejemplos por grupo."""
+    grupos: dict[tuple, list[dict]] = defaultdict(list)
+    for f in findings:
+        issue_norm = re.sub(r"[^a-záéíóúñü ]", "", (f.get("issue") or "").lower())
+        clave_texto = " ".join(issue_norm.split()[:8])
+        grupos[(f.get("category"), f.get("fix_type"), clave_texto)].append(f)
+
+    bloques = []
+    # Grupos grandes primero — son los problemas sistémicos.
+    for (cat, ft, _k), fs in sorted(grupos.items(), key=lambda kv: -len(kv[1])):
+        tels = sorted({f.get("phone") or "?" for f in fs})
+        ej = fs[0]
+        b = [f"[{cat}|{ft}] ×{len(fs)} · tels({len(tels)}): {', '.join(tels[:6])}"]
+        b.append(f"  issue: {ej.get('issue','')}")
+        if ej.get("evidence"):
+            b.append(f"  evidencia: {ej['evidence'][:180]}")
+        if ej.get("suggested_fix"):
+            b.append(f"  fix sugerido: {ej['suggested_fix'][:180]}")
+        if ej.get("target_hint"):
+            b.append(f"  target: {ej['target_hint']}")
+        if len(fs) > 1:
+            e2 = fs[len(fs) // 2]
+            b.append(f"  otro ej: {e2.get('issue','')[:160]}")
+        bloques.append("\n".join(b))
+    return "\n\n".join(bloques)
+
+
+def consolidar(since_days: int, model: str) -> dict:
+    findings = _fetch_findings(since_days)
+    if not findings:
+        print(f"[consolidar] sin hallazgos abiertos en {since_days} días")
+        return {}
+    compacto = _compactar_findings(findings)
+    # Cota dura de tamaño del prompt (~200k chars ≈ margen amplio)
+    if len(compacto) > 180_000:
+        compacto = compacto[:180_000] + "\n[TRUNCADO]"
+
+    from anthropic import Anthropic
+    client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    resp = client.messages.create(
+        model=model,
+        max_tokens=8000,
+        system=CONSOLIDATOR_SYSTEM,
+        messages=[{"role": "user", "content":
+                   f"Hallazgos crudos de los últimos {since_days} días "
+                   f"({len(findings)} en total), pre-agrupados:\n\n{compacto}"}],
+    )
+    text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+    result = _parse_json(text)
+    problemas = result.get("problemas", []) or []
+
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    out_md = LOG_DIR / f"consolidado_{stamp}_{since_days}d.md"
+    lines = [
+        f"# Consolidado semanal — {stamp} · últimos {since_days} días",
+        f"\nHallazgos crudos: {len(findings)} → problemas raíz: {len(problemas)}",
+        f"\n**Resumen:** {result.get('resumen','')}\n",
+    ]
+    for i, p in enumerate(problemas, 1):
+        fp = " ⚠️ posible falso positivo del auditor" if p.get("posible_falso_positivo") else ""
+        lines.append(
+            f"\n## {i}. [P{p.get('prioridad','?')}] {p.get('titulo','')}"
+            f" — ×{p.get('n_hallazgos','?')}{fp}\n"
+            f"- **Qué pasa:** {p.get('descripcion','')}\n"
+            f"- **Fix:** {p.get('fix_concreto','')}\n"
+            f"- **Dónde:** `{p.get('target') or '?'}` · tipo `{p.get('fix_type','?')}`\n"
+            f"- **Ejemplos:** {', '.join(p.get('telefonos_ejemplo', [])[:5])}"
+        )
+    out_md.write_text("\n".join(lines), encoding="utf-8")
+    out_json = LOG_DIR / f"consolidado_{stamp}_{since_days}d.json"
+    out_json.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"[consolidar] {len(findings)} hallazgos → {len(problemas)} problemas · {out_md}")
+    return result
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Enjambre de auditoría horaria CMC")
+    ap = argparse.ArgumentParser(description="Enjambre de auditoría de conversaciones CMC")
     ap.add_argument("--since-min", type=int, default=65,
                     help="ventana en minutos (default 65)")
+    ap.add_argument("--since-days", type=int, default=None,
+                    help="ventana en días (pisa --since-min; para barridos largos)")
+    ap.add_argument("--max-conv", type=int, default=MAX_CONVERSATIONS,
+                    help=f"tope de conversaciones por corrida (default {MAX_CONVERSATIONS})")
+    ap.add_argument("--consolidar", action="store_true",
+                    help="NO audita: consolida los hallazgos crudos de la tabla "
+                         "en problemas raíz (usa --since-days, default 7)")
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--dry-run", action="store_true",
                     help="no escribe a la DB ni estagea; solo imprime")
@@ -286,27 +413,50 @@ def main() -> int:
         print("ERROR: falta ANTHROPIC_API_KEY (¿cargaste el .env?)", file=sys.stderr)
         return 2
 
-    convos = _fetch_conversations(args.since_min)
-    if not convos:
-        print(f"[audit] sin conversaciones con actividad en {args.since_min} min")
+    if args.consolidar:
+        consolidar(args.since_days or 7, args.model)
         return 0
 
-    # Limitar volumen por corrida (coste/latencia acotados)
-    items = list(convos.items())[:MAX_CONVERSATIONS]
+    since_min = (args.since_days * 24 * 60) if args.since_days else args.since_min
+    ventana = f"{args.since_days}d" if args.since_days else f"{since_min}min"
+    convos = _fetch_conversations(since_min)
+    if not convos:
+        print(f"[audit] sin conversaciones con actividad en {ventana}")
+        return 0
+
+    # Limitar volumen por corrida (coste/latencia acotados) — AVISANDO el corte.
+    items = list(convos.items())[:args.max_conv]
+    if len(convos) > len(items):
+        print(f"[audit] ADVERTENCIA: {len(convos)} conversaciones en la ventana, "
+              f"solo se auditan {len(items)} (sube --max-conv para cubrir todo)")
 
     # Procesar en lotes para que el JSON de hallazgos no trunque por max_tokens.
     findings: list[dict] = []
     summaries: list[str] = []
+    errores = 0
     for i in range(0, len(items), CHUNK_SIZE):
         chunk = items[i:i + CHUNK_SIZE]
         transcripts = "\n\n".join(_render_transcript(ph, msgs) for ph, msgs in chunk)
-        result = _call_auditor(transcripts, args.model)
-        findings.extend(result.get("findings", []) or [])
+        try:
+            result = _call_auditor(transcripts, args.model)
+        except Exception as e:  # un lote caído no bota la corrida completa
+            errores += 1
+            print(f"[audit] lote {i // CHUNK_SIZE + 1} falló: {e}", file=sys.stderr)
+            continue
+        # Anti-alucinación: descartar hallazgos cuyo phone no está en el lote.
+        phones_lote = {ph for ph, _ in chunk}
+        for f in result.get("findings", []) or []:
+            if f.get("phone") in phones_lote:
+                findings.append(f)
+            else:
+                print(f"[audit] descartado hallazgo con phone fuera del lote: "
+                      f"{f.get('phone')!r} — {f.get('issue','')[:80]}")
         if result.get("summary"):
             summaries.append(result["summary"])
     summary = " · ".join(summaries)
 
-    print(f"[audit] {len(items)} conversaciones · {len(findings)} hallazgos · {summary}")
+    print(f"[audit] {len(items)} conversaciones · {len(findings)} hallazgos "
+          f"· lotes fallidos: {errores} · {summary}")
     for f in findings:
         print(f"  [{f.get('severity','?')}] {f.get('fix_type','?')} "
               f"{f.get('category','?')} ({f.get('phone','?')}): {f.get('issue','')}")
@@ -316,10 +466,12 @@ def main() -> int:
         return 0
 
     if findings:
+        # Staging: calcular los realmente-nuevos ANTES de insertarlos.
+        nuevos = _filtrar_nuevos(findings)
         from app.audit_store import store_findings
         new = store_findings("conversacion", findings)
-        report = _write_report(findings, summary, len(items))
-        print(f"[audit] reporte: {report} · {new} nuevos en tabla")
+        report = _write_report(findings, summary, len(items), ventana, staged=nuevos)
+        print(f"[audit] reporte: {report} · {new} nuevos en tabla · {len(nuevos)} estageados")
 
     return 0
 
