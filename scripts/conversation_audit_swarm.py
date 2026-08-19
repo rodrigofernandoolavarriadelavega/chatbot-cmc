@@ -271,6 +271,8 @@ distintos, ordenada por (frecuencia × severidad), accionable.
 
 Reglas:
 - Un problema raíz = una entrada, aunque tenga 80 hallazgos crudos.
+- MÁXIMO 15 problemas (los más importantes); descripcion ≤ 3 frases y
+  fix_concreto ≤ 2 frases — la salida completa debe caber en el límite de tokens.
 - No inventes problemas que no estén en los datos.
 - "posible_falso_positivo": marca true si los hallazgos sugieren que el auditor
   horario está confundido (p.ej. reporta como bug el abono de psiquiatría, que
@@ -358,7 +360,7 @@ def consolidar(since_days: int, model: str) -> dict:
     client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     resp = client.messages.create(
         model=model,
-        max_tokens=8000,
+        max_tokens=20000,  # 8000 truncaba el JSON con ~1.400 hallazgos (19-ago)
         system=CONSOLIDATOR_SYSTEM,
         messages=[{"role": "user", "content":
                    f"Hallazgos crudos de los últimos {since_days} días "
