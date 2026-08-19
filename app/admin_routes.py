@@ -618,7 +618,35 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
             "WAIT_MODALIDAD", "WAIT_CITA_CANCELAR", "WAIT_CITA_REAGENDAR",
             "CONFIRMING_CANCEL", "CONFIRMING_REAGENDAR",
         }
-        if state in _ESTADOS_TRANSACCIONALES:
+        # Excepción a la excepción: si el mensaje de la recepcionista es una
+        # SEÑAL DE RESOLUCIÓN ("ya está anulada", "ya quedó agendada", "listo,
+        # ya te la cambié"...), significa que ella terminó de resolver A MANO
+        # la MISMA gestión que el flow transaccional representa. Dejar el bot
+        # corriendo en ese estado ya no es "responder algo en paralelo sin
+        # interrumpir" — es un choque directo: el bot sigue pidiendo RUT/slot
+        # para algo que la recepcionista ya cerró.
+        # Caso real 56993991362 (2026-08-13 13:25): recepcionista anuló la
+        # cita a mano en WAIT_SLOT ("ok, ya está anulada"); el bot, sin
+        # takeover, siguió en WAIT_SLOT y el siguiente "Gracias" del paciente
+        # llegó a detect_intent con el flow roto → filtración de una
+        # respuesta que expuso el formato interno del clasificador al
+        # paciente. Mismo patrón en 56988217082 (16:01:40): recepcionista
+        # tomó el nombre para anular a mano, el bot igual validó RUT.
+        import re as _re_resolucion
+        _RESOLUCION_RE = _re_resolucion.compile(
+            r"ya\s+(?:est[aá]|qued[oó]|te\s+la|te\s+lo|la|lo)\s*"
+            r"(?:anul|cancel|agend|reserv|confirm|cambi|resolv|list)"
+            r"|\blisto,?\s+ya\b"
+            r"|\bresuelto\b"
+            r"|\bya\s+la\s+anul|ya\s+lo\s+anul"
+            r"|\byo\s+(?:ya\s+)?(?:la\s+|lo\s+)?(?:anul[eé]|agend[eé]|cancel[eé])\b",
+            _re_resolucion.IGNORECASE,
+        )
+        if state in _ESTADOS_TRANSACCIONALES and _RESOLUCION_RE.search(message):
+            _data["handoff_reason"] = "recepcionista_resolvio_a_mano"
+            log_event(phone, "auto_takeover_recep_resolucion", {"from_state": state, "mensaje": message[:200]})
+            state = "HUMAN_TAKEOVER"
+        elif state in _ESTADOS_TRANSACCIONALES:
             log_event(phone, "recep_msg_durante_flow", {"state": state})
             # NO cambiamos el estado — el paciente sigue en el flow transaccional.
             # La recepcionista puede contestarle algo en paralelo sin interrumpir.

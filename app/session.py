@@ -2920,13 +2920,25 @@ def save_fidelizacion_respuesta(phone: str, tipo: str, respuesta: str):
 
 
 def get_ultimo_seguimiento(phone: str) -> dict | None:
-    """Retorna el último seguimiento post-consulta sin respuesta para este paciente."""
+    """Retorna el último seguimiento post-consulta sin respuesta para este paciente,
+    SOLO si se envió en las últimas 48h.
+
+    Sin el límite de tiempo, un seguimiento que quedó sin respuesta explícita
+    (`respuesta IS NULL`) se consideraba "pendiente" para siempre — cualquier
+    "Mejor"/"Igual"/"Bueno" que el paciente escribiera semanas después, en un
+    contexto totalmente distinto, se interpretaba como la respuesta a esa
+    pregunta de salud vieja y disparaba upsell de masoterapia/reagendamiento
+    fuera de lugar. Caso real 56930364173, 56993991362 (auditoría 2026-08-19,
+    problema #12). 48h cubre con holgura la ventana real en que un paciente
+    responde a un seguimiento post-consulta.
+    """
     with db() as conn:
         row = conn.execute("""
             SELECT f.phone, f.cita_id, f.enviado_en, cb.especialidad, cb.profesional
             FROM fidelizacion_msgs f
             LEFT JOIN citas_bot cb ON cb.id_cita = f.cita_id AND cb.phone = f.phone
             WHERE f.phone = ? AND f.tipo = 'postconsulta' AND f.respuesta IS NULL
+              AND f.enviado_en >= datetime('now', '-48 hours')
             ORDER BY f.enviado_en DESC LIMIT 1
         """, (phone,)).fetchone()
         return dict(row) if row else None

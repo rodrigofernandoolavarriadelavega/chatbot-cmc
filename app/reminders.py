@@ -95,11 +95,19 @@ def _fmt_fecha_display(fecha: str) -> str:
         return fecha
 
 
+# Ver mismo set en fidelizacion.py — nombres centinela que no deben mostrarse
+# tal cual al paciente (placeholders de flujos incompletos). Auditoría 2026-08-19 (#5).
+_NOMBRE_CENTINELA = {"paciente", "otra", "otro", "none", "null", "desconocido", "-"}
+
+
 def _nombre_corto(nombre: str | None) -> str:
     """'Sergio Carrasco Cordero' → 'Sergio'"""
     if not nombre:
         return ""
-    return nombre.strip().split()[0].capitalize()
+    primera = nombre.strip().split()[0]
+    if primera.lower() in _NOMBRE_CENTINELA:
+        return ""
+    return primera.capitalize()
 
 
 def _interactive_recordatorio(cita: dict) -> dict:
@@ -239,6 +247,19 @@ async def enviar_recordatorios(send_text_fn, send_interactive_fn=None,
     log.info("Recordatorios: enviando %d recordatorio(s) para %s", len(citas), manana)
     for cita in citas:
         try:
+            # No enviar recordatorios automáticos mientras una recepcionista
+            # está atendiendo esta conversación (HUMAN_TAKEOVER) — el paciente
+            # puede confundirse recibiendo mensajes cruzados del bot y de una
+            # persona real al mismo tiempo. Auditoría 2026-08-19 (#4).
+            try:
+                from session import get_session as _get_sess_rec
+                if (_get_sess_rec(cita["phone"]) or {}).get("state") == "HUMAN_TAKEOVER":
+                    log.info("Recordatorio 24h: phone=%s en HUMAN_TAKEOVER, no se envía",
+                             cita["phone"])
+                    log_event(cita["phone"], "recordatorio_skip_takeover", {"id_cita": cita.get("id_cita")})
+                    continue
+            except Exception:
+                pass
             if USE_TEMPLATES and send_template_fn:
                 # Template: recordatorio_cita
                 # body_params: [nombre, especialidad, profesional, fecha_display, hora, modalidad]
@@ -387,6 +408,35 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
              len(citas), hora_min, hora_max)
     for cita in citas:
         try:
+            # Re-validación de hora justo antes de enviar: `citas` se calculó
+            # contra la ventana [1h45, 2h15] al INICIO del job, pero la validación
+            # Medilink de arriba (una llamada por cita, con throttle 0.7s + reintentos
+            # si Medilink está lento/caído) puede demorar minutos u horas en un
+            # backlog grande. Sin este guard, un recordatorio "en 2 horas" puede
+            # salir cuando la cita YA PASÓ. Caso real 56985831922/56994853413
+            # (auditoría 2026-08-19): recordatorio a las 17:45 para cita de las 16:xx.
+            try:
+                _cita_dt_chk = datetime.strptime(
+                    f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M:%S"
+                ).replace(tzinfo=_TZ_CL)
+            except ValueError:
+                _cita_dt_chk = datetime.strptime(
+                    f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M"
+                ).replace(tzinfo=_TZ_CL)
+            if _cita_dt_chk <= datetime.now(_TZ_CL):
+                log.warning("Recordatorio 2h: cita %s ya pasó (%s), no se envía",
+                            cita.get("id_cita"), _cita_dt_chk)
+                log_event(cita["phone"], "recordatorio_2h_skip_hora_pasada",
+                          {"id_cita": cita.get("id_cita"), "fecha_hora": str(_cita_dt_chk)})
+                continue
+            try:
+                from session import get_session as _get_sess_rec2
+                if (_get_sess_rec2(cita["phone"]) or {}).get("state") == "HUMAN_TAKEOVER":
+                    log.info("Recordatorio 2h: phone=%s en HUMAN_TAKEOVER, no se envía", cita["phone"])
+                    log_event(cita["phone"], "recordatorio_skip_takeover", {"id_cita": cita.get("id_cita")})
+                    continue
+            except Exception:
+                pass
             hora = _fmt_hora(cita["hora"])
             nombre_pac = _nombre_corto(cita.get("paciente_nombre")) or "paciente"
             nombre_own = _nombre_corto(cita.get("phone_owner"))

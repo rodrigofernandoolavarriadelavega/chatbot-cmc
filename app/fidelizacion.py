@@ -49,10 +49,21 @@ def _dias_para_control(especialidad: str) -> int:
     return _DIAS_CONTROL.get(especialidad.lower(), _DIAS_CONTROL_DEFAULT)
 
 
+# Valores centinela que a veces terminan guardados como "nombre" en citas_bot/
+# contact_profiles (placeholders de flujos que no se completaron: "Otra
+# persona" del paso booking_for_other, literales "paciente"/"None"/"null" de
+# fallbacks anteriores) y que, si se les aplica _nombre_corto sin filtrar, se
+# leakean tal cual al paciente: "Hola *Otra* 😊". Auditoría 2026-08-19 (#5).
+_NOMBRE_CENTINELA = {"paciente", "otra", "otro", "none", "null", "desconocido", "-"}
+
+
 def _nombre_corto(nombre: str | None) -> str:
     if not nombre:
         return ""
-    return nombre.strip().split()[0].capitalize()
+    primera = nombre.strip().split()[0]
+    if primera.lower() in _NOMBRE_CENTINELA:
+        return ""
+    return primera.capitalize()
 
 
 def _resolver_atendido(nombre: str | None) -> str:

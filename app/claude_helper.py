@@ -1515,6 +1515,20 @@ _NOMBRES_PROF_CONOCIDOS: frozenset[str] = frozenset({
     "juan", "juana", "sarai", "andrea", "david", "franca", "ana",
 })
 
+# Fuga de meta-prompt: si el texto que se le mostraría al paciente habla del
+# propio contrato/formato interno del clasificador (JSON, "intent",
+# "especialidad", "respuesta_directa", "system prompt"...) es una señal de que
+# el modelo perdió el rol y está describiéndose a sí mismo en vez de
+# responder al paciente. Ver detect_intent para el caso real que lo motivó.
+_RX_LEAK_METAPROMPT = re.compile(
+    r"formato\s+json|json\s+v[aá]lido|las\s+claves[:]?\s*(?:intent|especialidad)"
+    r"|\bintent\b.{0,20}\bespecialidad\b.{0,20}\brespuesta_directa\b"
+    r"|proces(?:ar|o)\s+mensajes\s+de\s+pacientes"
+    r"|system\s+prompt|prompt\s+del\s+sistema|instrucciones\s+(?:del\s+sistema|internas)"
+    r"|\bestoy\s+listo\s+para\s+procesar\b",
+    re.IGNORECASE,
+)
+
 _RX_PRECIO_FAQ = re.compile(r"\$\d{1,3}(?:\.\d{3})+(?:\.\d+)?")
 _RX_DR_NOMBRE_FAQ = re.compile(
     r"\b(?:Dr\.|Dra\.|doctor|doctora|kinesiólogo|kinesiologa|"
@@ -2189,6 +2203,23 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
             log.warning("post-proceso detect_intent falló: %s", _e_pp)
         rd = _result.get("respuesta_directa")
         if isinstance(rd, str) and rd:
+            # ── GUARDA DE FUGA: respuesta_directa nunca debe hablar DE SÍ MISMA.
+            # Caso real 56993991362 (2026-08-13): un turno confuso (recepcionista
+            # resolviendo a mano en paralelo al flow) hizo que el modelo devolviera,
+            # dentro de respuesta_directa, un texto meta ("Estoy listo para procesar
+            # mensajes de pacientes. Responderé exclusivamente en formato JSON con
+            # las claves: intent, especialidad y respuesta_directa...") — el paciente
+            # vio literalmente la descripción del contrato JSON interno. Si el texto
+            # que se le mostraría al paciente menciona esas palabras clave de
+            # arquitectura, se descarta y cae al menú seguro en vez de enviarse.
+            if _RX_LEAK_METAPROMPT.search(rd):
+                log.error("detect_intent: respuesta_directa con fuga de prompt descartada: %r", rd[:200])
+                try:
+                    from session import log_event as _le_leak
+                    _le_leak("", "leak_metaprompt_bloqueado", {"texto": rd[:240], "mensaje": mensaje[:120]})
+                except Exception:
+                    pass
+                return {"intent": "menu", "especialidad": None, "respuesta_directa": None}
             rd = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", rd)  # BUG-C: normalize ** → * para WhatsApp
             _result["respuesta_directa"] = _scrub_telefonos(rd)
         return _result
@@ -2629,6 +2660,15 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
             data = json.loads(text)
         respuesta_claude = data.get("respuesta_directa")
         if respuesta_claude:
+            # Misma guarda de fuga de meta-prompt que detect_intent (ver ahí el caso real).
+            if _RX_LEAK_METAPROMPT.search(respuesta_claude):
+                log.error("respuesta_faq: respuesta con fuga de prompt descartada: %r", respuesta_claude[:200])
+                try:
+                    from session import log_event as _le_leak_f
+                    _le_leak_f("", "leak_metaprompt_bloqueado", {"texto": respuesta_claude[:240], "mensaje": mensaje[:120]})
+                except Exception:
+                    pass
+                return _local_faq_fallback(mensaje) or "Para más información, comunícate con recepción 😊"
             # BUG-04: colapsar ** → * para WhatsApp (Haiku a veces usa Markdown estándar)
             respuesta_claude = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", respuesta_claude)
             # BUG-A FIX: validar precios, profesionales y especialidades

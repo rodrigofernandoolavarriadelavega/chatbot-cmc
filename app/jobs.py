@@ -39,7 +39,7 @@ from resilience import (is_medilink_down, mark_medilink_up, medilink_down_since,
                         should_notify_recovery, mark_recovery_notified)
 from doctor_alerts import (enviar_resumen_precita, enviar_reporte_progreso,
                            reset_resumenes_diarios)
-from config import CMC_TELEFONO
+from config import CMC_TELEFONO, CMC_TELEFONO_FIJO
 
 log = logging.getLogger("bot")
 
@@ -426,6 +426,27 @@ async def _enviar_reenganche():
                 f"Hola {saludo} 👋 Te quedaste eligiendo la duración de tu "
                 "*masoterapia* (20 o 40 min). ¿Seguimos para reservar tu hora?"
             )
+        elif state in ("WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR"):
+            # Copy honesto: NO hay ninguna reserva pendiente acá, el paciente
+            # estaba a mitad de ANULAR una hora existente. Caso real 56988217082
+            # (auditoría 2026-08-19): "Tienes una reserva pendiente. ¿Te la
+            # reservo?" le llegó a alguien que dijo "no podré ir".
+            msg = (
+                f"Hola {saludo} 👋 Te quedaste a mitad de cancelar tu hora"
+                f"{' de *' + especialidad + '*' if especialidad else ''}. "
+                "¿Seguimos con la anulación o prefieres dejarla como está?"
+            )
+        elif state in ("WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR"):
+            msg = (
+                f"Hola {saludo} 👋 Te quedaste a mitad de reagendar tu hora"
+                f"{' de *' + especialidad + '*' if especialidad else ''}. "
+                "¿Seguimos buscando un nuevo horario?"
+            )
+        elif state == "WAIT_RUT_VER":
+            msg = (
+                f"Hola {saludo} 👋 Te quedaste viendo tus horas reservadas. "
+                "¿Te ayudo con algo más?"
+            )
         else:
             msg = (
                 f"Hola {saludo} 👋 Tienes una reserva pendiente"
@@ -526,7 +547,7 @@ async def enviar_reagendar_por_cancelacion(id_cita: str, motivo: str = "doctor_c
             f"⚠️ Tu hora del {cita.get('fecha','')} {cita.get('hora','')} con "
             f"{cita.get('profesional','')} fue cancelada por el profesional.\n\n"
             f"Por ahora no tenemos horas disponibles en *{esp}*. "
-            f"Llámanos para coordinar: 📞 *{CMC_TELEFONO}*"
+            f"Llámanos para coordinar: 📞 *{CMC_TELEFONO_FIJO}*"
         )
         await send_whatsapp(phone, _cancel_no_slots_msg)
         log_message(phone, "out", _cancel_no_slots_msg, "IDLE")
@@ -2010,7 +2031,7 @@ async def _recontacto_outage_mensaje(row: dict) -> tuple[str, str]:
         msg = (
             "¡Ya volvió el sistema! 🙌\n\n"
             f"Para agendar tu hora de *{especialidad}*, escríbeme *agendar* "
-            f"o llama al 📞 {CMC_TELEFONO}."
+            f"o llama al 📞 {CMC_TELEFONO_FIJO}."
         )
         return msg, "enviado_sin_horas"
 

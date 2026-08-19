@@ -1245,7 +1245,7 @@ def _msg_medilink_transient(extra: str = "") -> str:
     )
     if extra:
         base += "\n\n" + extra
-    base += f"\n\nMientras esperas también puedes llamar:\n📞 *{CMC_TELEFONO}*"
+    base += f"\n\nMientras esperas también puedes llamar:\n📞 *{CMC_TELEFONO_FIJO}*"
     return base
 
 
@@ -1304,8 +1304,32 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
 
     data["slot_elegido"] = slot
 
+    # Especialidades Solo Particular (ecografía, odontología, podología,
+    # psiquiatría, etc.): NUNCA preguntar Fonasa/Particular ni mostrar el
+    # campo de previsión leído del perfil/última-vez del paciente. La rama
+    # de "pacientes nuevos" más abajo ya lo hacía; las ramas de fast-track
+    # (paciente recurrente, agendando para otra persona) reutilizaban la
+    # ÚLTIMA modalidad del paciente o preguntaban siempre, mostrando
+    # "💳 Fonasa" en servicios que dicen explícitamente "Solo Particular".
+    # Caso real 56933321462 (ecografía), 56939197575 (odontología),
+    # 56954945451 (psiquiatría) — auditoría 2026-08-19.
+    _esp_slot_conf = slot.get("especialidad", "")
+    _esp_solo_particular_conf = _esp_slot_conf not in _FONASA_SPECIALTIES
+
     # No fast-track si ya sabemos que es para otra persona
     if data.get("booking_for_other"):
+        if _esp_solo_particular_conf:
+            data["modalidad"] = "particular"
+            save_session(phone, "WAIT_RUT_AGENDAR", data)
+            return (
+                f"Perfecto 🙌\n\n"
+                f"🏥 *{slot['especialidad']}* — {slot['profesional']}\n"
+                f"📅 *{slot['fecha_display']}*\n"
+                f"🕐 *{slot['hora_inicio'][:5]}*\n"
+                + ("📡 *Teleconsulta por videollamada*\n" if _es_teleconsulta(slot) else "")
+                + "\nPara reservar necesito el *RUT* del paciente 😊\n"
+                "(ej: *12.345.678-9*)"
+            )
         save_session(phone, "WAIT_MODALIDAD", data)
         return _btn_msg(
             f"Perfecto 🙌\n\n"
@@ -1339,6 +1363,10 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
                 if t.startswith("modalidad-"):
                     last_modalidad = t.replace("modalidad-", "")
                     break
+            # Solo Particular: no reutilizar la última modalidad del paciente
+            # (podría venir de una consulta Fonasa anterior con otra especialidad).
+            if _esp_solo_particular_conf:
+                last_modalidad = "particular"
             data.update({
                 "rut_conocido": _owner_rut_ft,
                 "nombre_conocido": perfil.get("nombre") or "",
@@ -1373,6 +1401,10 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
                 if t.startswith("modalidad-"):
                     last_modalidad = t.replace("modalidad-", "")
                     break
+            # Solo Particular: idem — no reutilizar una modalidad Fonasa de
+            # otra especialidad para un servicio que no acepta Fonasa.
+            if _esp_solo_particular_conf:
+                last_modalidad = "particular"
             data.update({
                 "paciente": paciente,
                 "rut": perfil["rut"],
@@ -1883,7 +1915,7 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
         log_event(phone, "confirmacion_precita_notfound", {"id_cita": id_cita, "accion": accion})
         return (
             "No encontré esa cita en nuestros registros 😕\n"
-            f"Llama a recepción para ayudarte: 📞 *{CMC_TELEFONO}*"
+            f"Llama a recepción para ayudarte: 📞 *{CMC_TELEFONO_FIJO}*"
         )
 
     fecha = cita_bot.get("fecha", "")
@@ -1913,7 +1945,7 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
         if not esp_lower:
             return (
                 "No pude identificar la especialidad de esa cita 😕\n"
-                f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
+                f"Llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
             )
         # Construir la cita "vieja" mínima para reagendar sin pedir RUT
         cita_old = {
@@ -2319,7 +2351,7 @@ def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
             "Los controles posteriores: $30.000 por visita.\n\n"
             "💳 Pago: efectivo, transferencia, débito o crédito.\n"
             "Para coordinar el inicio del tratamiento escríbenos o llama "
-            f"al *{CMC_TELEFONO}*."
+            f"al *{CMC_TELEFONO_FIJO}*."
         )
     if data:
         slot = data.get("slot_elegido") or {}
@@ -3131,8 +3163,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Eco con los datos de la cita: si el matcher amplio disparara
                 # mal, el paciente lo ve al tiro y puede corregir.
                 try:
-                    _cuando_rc = ("hoy" if _fila_rc["fecha"] == _hoy_rc
-                                  else f"el {_fila_rc['fecha']}")
+                    if _fila_rc["fecha"] == _hoy_rc:
+                        _cuando_rc = "hoy"
+                    else:
+                        # Fecha legible en español ("el jueves 20 de agosto") en
+                        # vez del ISO crudo de citas_bot ("2026-08-20"). Caso real
+                        # 56996546416, 56997907908 (auditoría 2026-08-19, #14).
+                        try:
+                            _DIAS_RC = ["lunes", "martes", "miércoles", "jueves",
+                                        "viernes", "sábado", "domingo"]
+                            _MESES_RC = ["enero", "febrero", "marzo", "abril", "mayo",
+                                         "junio", "julio", "agosto", "septiembre",
+                                         "octubre", "noviembre", "diciembre"]
+                            _fdt_rc = datetime.strptime(_fila_rc["fecha"], "%Y-%m-%d").date()
+                            _cuando_rc = (f"el {_DIAS_RC[_fdt_rc.weekday()]} "
+                                          f"{_fdt_rc.day} de {_MESES_RC[_fdt_rc.month - 1]}")
+                        except ValueError:
+                            _cuando_rc = f"el {_fila_rc['fecha']}"
                     return (f"¡Perfecto! Queda confirmada tu hora de "
                             f"*{_fila_rc['especialidad']}* {_cuando_rc} a las "
                             f"*{_fila_rc['hora']}* con {_fila_rc['profesional']}. "
@@ -3277,7 +3324,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         save_session(phone, state, data)
         return (
             "Sin problema. Cuando quieras retomar, escribe *menu* y te ayudo.\n\n"
-            f"_Tambien nos puedes llamar al {CMC_TELEFONO}._"
+            f"_Tambien nos puedes llamar al {CMC_TELEFONO_FIJO}._"
         )
 
     # ── Respuesta al consent_marketing_v1 (Tarea B win-back) ─────────────────
@@ -5125,7 +5172,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "⚠️ Lo que describes puede requerir atención médica urgente.\n\n"
                         "Por favor, llama al *SAMU 131* o acude al servicio de "
                         "urgencias más cercano ahora mismo.\n\n"
-                        f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n"
+                        f"También puedes contactarnos:\n📞 *{CMC_TELEFONO_FIJO}*\n"
                         f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
                         + DISCLAIMER
                     )
@@ -5140,7 +5187,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "Carampangue.\n\n"
                         "Te recomiendo acudir a tu consultorio de referencia o al "
                         "hospital base para una evaluación.\n\n"
-                        f"Si necesitas orientación, llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
+                        f"Si necesitas orientación, llama a recepción:\n📞 *{CMC_TELEFONO_FIJO}*\n\n"
                         + DISCLAIMER
                     )
                 # Especialidad agendable → iniciar flujo de agendar con urgencia empática.
@@ -5198,7 +5245,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "¿A quién buscas?",
                 [
                     {"id": "prof_armijo",    "title": "Luis Armijo (Kine)"},
-                    {"id": "prof_etcheverry","title": "Leonardo Etcheverry (Kine)"},
+                    {"id": "prof_etcheverry","title": "L. Etcheverry (Kine)"},
                     {"id": "menu_volver",    "title": "Ver otras opciones"},
                 ]
             )
@@ -5504,7 +5551,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "en un laboratorio cercano.\n\n"
                 "Si necesitas una consulta para solicitar exámenes, escribe *agendar* "
                 "o llama a recepción:\n\n"
-                f"📞 *{CMC_TELEFONO}*\n"
+                f"📞 *{CMC_TELEFONO_FIJO}*\n"
                 f"☎️ *{CMC_TELEFONO_FIJO}*"
             )
 
@@ -5804,7 +5851,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                 {"id": "orto_agendar",  "title": "Agendar hora/control"},
                                 {"id": "orto_ver_cita", "title": "Mi próxima cita"},
                                 {"id": "orto_boleta",   "title": "Reimpresión de boleta"},
-                                {"id": "orto_urgencia", "title": "Bracket suelto / urgencia"},
+                                {"id": "orto_urgencia", "title": "Bracket suelto/urgencia"},
                             ],
                         }],
                     )
@@ -5977,7 +6024,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "⚠️ Lo que describes puede requerir atención urgente.\n\n"
                     "Por favor, llama al *SAMU 131* o acude al servicio de "
                     "urgencias más cercano ahora mismo.\n\n"
-                    f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n"
+                    f"También puedes contactarnos:\n📞 *{CMC_TELEFONO_FIJO}*\n"
                     f"☎️ *{CMC_TELEFONO_FIJO}*"
                 )
             return _derivar_humano(phone=phone, contexto=txt)
@@ -6052,7 +6099,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return await _iniciar_agendar(phone, data, _ap_fb)
             return (
                 "Para consultar disponibilidad, dime qué especialidad necesitas 😊\n\n"
-                f"O llama a recepción: 📞 *{CMC_TELEFONO}*"
+                f"O llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
             )
 
         if intent in ("precio", "info"):
@@ -6368,7 +6415,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         return _btn_msg(
             "¿La cita es para un adulto o para un menor?",
             [
-                {"id": "menor_es_adulto", "title": "Continuar (es adulto)"},
+                {"id": "menor_es_adulto", "title": "Es para un adulto"},
                 {"id": "menor_es_menor",  "title": "Es para un menor"},
             ]
         )
@@ -6388,13 +6435,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "Sin problema. Si en otro momento quieres buscar hora con el Dr. Márquez, "
                 "escribe *menu* y elige Medicina Familiar.\n\n"
-                f"También puedes llamar a recepción: {CMC_TELEFONO}"
+                f"También puedes llamar a recepción: {CMC_TELEFONO_FIJO}"
             )
         save_session(phone, "WAIT_MEDFAM_FALLBACK", data)
         return _btn_msg(
             "¿Quieres que te muestre horas con *Medicina General*?",
             [
-                {"id": "medfam_fallback_si", "title": "Sí, mostrar Medicina General"},
+                {"id": "medfam_fallback_si", "title": "Sí, mostrar horas MG"},
                 {"id": "medfam_fallback_no", "title": "No, gracias"},
             ]
         )
@@ -6449,7 +6496,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _btn_msg(
                 f"No encontré disponibilidad para masoterapia en los próximos días 😕\n\n"
                 "¿Quieres que te avise apenas se libere un cupo?\n\n"
-                f"También puedes llamarnos: 📞 *{CMC_TELEFONO}*",
+                f"También puedes llamarnos: 📞 *{CMC_TELEFONO_FIJO}*",
                 [
                     {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
                     {"id": "waitlist_no", "title": "No, gracias"},
@@ -7072,7 +7119,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     return (
                         "No logré identificar el tipo de ecografía que necesitas 😕\n\n"
                         "Una recepcionista va a ayudarte directamente.\n\n"
-                        f"También puedes llamarnos: 📞 *{CMC_TELEFONO}*"
+                        f"También puedes llamarnos: 📞 *{CMC_TELEFONO_FIJO}*"
                     )
                 data["wait_eco_tipo"] = True  # mantener el flag para el próximo intento
                 data["eco_tipo_reintentos"] = _eco_reintentos
@@ -7295,10 +7342,31 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if txt.startswith("motivo_"):
             reset_session(phone)
             return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
-        # C3: filtrar slots pasados que puedan quedar en cache entre días
+        # C3: filtrar slots pasados que puedan quedar en cache entre días.
+        # Antes solo comparaba FECHA (>= hoy) — un slot de HOY cuya hora ya
+        # pasó (la conversación quedó abierta, o el paciente volvió a "ver
+        # todos"/"otro día" y luego regresó a la lista original) seguía
+        # ofreciéndose como disponible. Caso real 56985831922 (auditoría
+        # 2026-08-19): Psicología 20:00 ofrecida a las 22:58. Mismo margen de
+        # 30 min que usa la revalidación al confirmar (línea ~1287).
         _hoy_str_ws = _hoy_cl.strftime("%Y-%m-%d")
+        _ahora_ws = datetime.now(_CHILE_TZ)
         def _filtrar_slots_pasados(lst: list) -> list:
-            return [s for s in lst if (s.get("fecha") or "") >= _hoy_str_ws]
+            out = []
+            for s in lst:
+                _f_s = s.get("fecha") or ""
+                if _f_s < _hoy_str_ws:
+                    continue
+                if _f_s == _hoy_str_ws:
+                    _h_s = (s.get("hora_inicio") or "")[:5]
+                    try:
+                        _dt_s = datetime.strptime(f"{_f_s} {_h_s}", "%Y-%m-%d %H:%M").replace(tzinfo=_CHILE_TZ)
+                        if _dt_s < _ahora_ws + timedelta(minutes=30):
+                            continue
+                    except ValueError:
+                        pass
+                out.append(s)
+            return out
         slots_mostrados = _filtrar_slots_pasados(data.get("slots", []))
         todos_slots     = _filtrar_slots_pasados(data.get("todos_slots", slots_mostrados))
         # P1-A: en reagendar, excluir la cita vieja de los slots ofrecidos para
@@ -7645,7 +7713,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
                 # Botones: ver otras fechas / agendar con el prof actual / menú
                 _btn_agendar_id = f"agendar_prof_{prof_sugerido_id}" if prof_sugerido_id else "menu"
-                _btn_agendar_title = f"Agendar con {_prof_actual_nombre.split()[-1]}"[:20]
+                # WhatsApp trunca (visualmente, sin aviso) los títulos de botón a 20
+                # caracteres. "Agendar con " (12) + apellido largo se cortaba a mitad
+                # de palabra: "Agendar con Olavarrí". Prefijo más corto "Agendar c/ "
+                # (11) deja margen para apellidos de hasta 9 letras sin cortar; si
+                # aun así se pasa, se trunca el APELLIDO (no la frase completa) para
+                # no perder el prefijo. Caso real 56923605649 (auditoría 2026-08-19, #15).
+                _apellido_btn = _prof_actual_nombre.split()[-1]
+                _prefix_btn = "Agendar c/ "
+                _max_apellido = 20 - len(_prefix_btn)
+                if len(_apellido_btn) > _max_apellido:
+                    _apellido_btn = _apellido_btn[:_max_apellido]
+                _btn_agendar_title = f"{_prefix_btn}{_apellido_btn}"
                 data["profs_vistos"] = list(profs_vistos)
                 save_session(phone, "WAIT_SLOT", data)
                 return _btn_msg(
@@ -7668,7 +7747,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return (
                     "No encontré disponibilidad con otros profesionales en los próximos días.\n\n"
                     "Escribe *otro día* para seguir buscando con el mismo doctor, "
-                    f"o llama a recepción: {CMC_TELEFONO}"
+                    f"o llama a recepción: {CMC_TELEFONO_FIJO}"
                 )
             nueva_fecha = todos_nuevo[0]["fecha"]
             if nueva_fecha not in fechas_vistas:
@@ -7941,7 +8020,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return (
                     "No pude consultar otras fechas en este momento 😕\n"
                     "Intenta de nuevo en unos segundos o llama a recepción: "
-                    f"📞 *{CMC_TELEFONO}*"
+                    f"📞 *{CMC_TELEFONO_FIJO}*"
                 )
             if not todos_nuevo:
                 data["waitlist_especialidad"] = especialidad
@@ -8854,9 +8933,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "Todavía no logro entenderte 😕\n\n"
                     "Elige una opción o escribe el *número* del horario:",
                     [
-                        {"id": "ver_todos",       "title": "📋 Ver todos los horarios"},
+                        {"id": "ver_todos",       "title": "📋 Ver todos"},
                         {"id": "otro_dia",        "title": "📅 Buscar otro día"},
-                        {"id": "accion_recepcion","title": "💬 Hablar con recepción"},
+                        {"id": "accion_recepcion","title": "💬 Recepción"},
                     ]
                 )
             # ── Detector de preferencia temporal antes del fallback ──
@@ -9054,7 +9133,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 try:
                     resp_faq = await respuesta_faq(txt)
                 except Exception:
-                    resp_faq = f"Para más información llama a recepción: 📞 *{CMC_TELEFONO}*"
+                    resp_faq = f"Para más información llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
                 save_session(phone, "WAIT_MODALIDAD", data)
                 return _btn_msg(
                     f"{resp_faq}\n\n¿La atención será *Fonasa* o *Particular*?",
@@ -9807,7 +9886,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"pediátricos complejos te recomendamos ir a tu CESFAM o a un pediatra externo.\n\n"
                     f"¿Quieres continuar con la cita en el CMC?",
                     [{"id": "ped_continuar", "title": "Sí, continuar"},
-                     {"id": "ped_no", "title": "No, mejor ir al CESFAM"}],
+                     {"id": "ped_no", "title": "Mejor ir al CESFAM"}],
                 )
         except Exception as _e_ped:
             log.warning("aviso pediatria error (ignorado): %s", _e_ped)
@@ -9938,8 +10017,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "¿Qué quieres cambiar?",
                 [
                     {"id": "cd_horario",  "title": "📅 Horario u otro día"},
-                    {"id": "cd_persona",  "title": "👤 Es para otra persona"},
-                    {"id": "cd_datos",    "title": "✏️ Mis datos (RUT/nombre)"},
+                    {"id": "cd_persona",  "title": "👤 Otra persona"},
+                    {"id": "cd_datos",    "title": "✏️ Mis datos"},
                 ]
             )
         # Sub-opciones del cambiar_datos
@@ -10189,7 +10268,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "la reserva.\n\n"
                         "Tu selección sigue guardada. Escribe *si* en unos segundos "
                         "para reintentar, o llama a recepción:\n"
-                        f"📞 *{CMC_TELEFONO}*"
+                        f"📞 *{CMC_TELEFONO_FIJO}*"
                     )
             if not _lock_ok:
                 log.warning("Slot lock ocupado por otro paciente: %s %s prof %s",
@@ -10524,7 +10603,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "la reserva.\n\n"
                         "Tu selección sigue guardada. Escribe *si* en unos segundos "
                         "para reintentar, o llama a recepción:\n"
-                        f"📞 *{CMC_TELEFONO}*"
+                        f"📞 *{CMC_TELEFONO_FIJO}*"
                     )
                 # Otros errores (4xx, errores de datos, etc.): dejar subir para que
                 # el except genérico de main.py los maneje normalmente. Cerrar el
@@ -10604,6 +10683,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Purchase (CAPI) usen la prestación real y su arancel ($15.000).
                 if data.get("especialidad") in _BIA_KEYS:
                     esp = "Bioimpedanciometría"
+                # Dr. Alonso Márquez (id 13) está en el pool de "Medicina
+                # General" para el ruteo (bypass en medilink.py), pero su
+                # especialidad real es Medicina Familiar y su tarifa particular
+                # es $30.000, no $25.000. `_precio_line` ya lo corrige al
+                # ofrecer el slot; sin este mismo ajuste acá, `citas_bot.especialidad`
+                # queda guardado como "Medicina General" y ese valor se ECOA
+                # tal cual en la confirmación de recordatorio ("Queda confirmada
+                # tu hora de *Medicina General* ... con Dr. Alonso Márquez") sin
+                # pasar nunca por `_precio_line`. Caso real 56923605649,
+                # 56934071742 (auditoría 2026-08-19).
+                if slot.get("id_profesional") == 13 and esp.lower() in ("medicina general", "medicina familiar"):
+                    esp = "Medicina Familiar"
+                    # Mutar también el slot: los mensajes de confirmación de más
+                    # abajo (reagendado / reservado / telemedicina) leen
+                    # slot['especialidad'] directo, no la variable `esp`.
+                    slot["especialidad"] = esp
                 save_tag(phone, f"cita-{esp.lower()}")
                 save_tag(phone, f"modalidad-{data.get('modalidad','particular')}")
                 id_cita = str(resultado.get("id", "")) if isinstance(resultado, dict) else ""
@@ -10862,9 +10957,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # examen a quien acaba de agendarlo).
                 if esp == "Bioimpedanciometría":
                     cross_ref = f"\n\n{_BIA_PREPARACION}"
-                # Recordatorio PNI para pacientes pediátricos
-                fecha_nac = (data.get("reg_fecha_nacimiento")
-                             or paciente.get("fecha_nacimiento", ""))
+                # Recordatorio PNI para pacientes pediátricos.
+                # `paciente` es el registro Medilink recién resuelto para la
+                # persona REAL a la que se le agendó ESTA cita (fuente de verdad).
+                # `data["reg_fecha_nacimiento"]` es la fecha capturada en el
+                # PASO DE REGISTRO de ESTA sesión — pero `data` puede traer
+                # arrastre de un registro anterior en la misma sesión (ej. el
+                # paciente empezó a registrar a un hijo, abandonó, y terminó
+                # agendando para sí mismo). Priorizar el registro Medilink real
+                # y usar `reg_fecha_nacimiento` solo si Medilink no la trae (recién
+                # creado, antes de que buscar_paciente() haya vuelto a leer el
+                # registro completo). Caso real 56993539046 (auditoría 2026-08-19):
+                # "Benjamin (10 meses)" enviado al titular ADULTO que agendó para
+                # sí mismo — la fecha de nacimiento venía de `reg_fecha_nacimiento`
+                # de un registro de otro familiar (Escarleth) que quedó en `data`.
+                fecha_nac = (paciente.get("fecha_nacimiento", "")
+                             or data.get("reg_fecha_nacimiento"))
                 pni_msg = ""
                 _pni_telemetria = None  # metadata para log_event("pni_enviado")
                 if fecha_nac:
@@ -11216,7 +11324,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     )
                 return (
                     "Hubo un problema al reservar la hora 😕\n"
-                    f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
+                    f"Llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
                 )
 
         if tl in NEGACIONES or tl_norm in NEGACIONES:
@@ -11326,7 +11434,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return (
                 "No tenemos ese RUT registrado 😊\n\n"
-                f"¿Necesitas ayuda? Llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
+                f"¿Necesitas ayuda? Llama a recepción:\n📞 *{CMC_TELEFONO_FIJO}*\n\n"
                 "_Escribe *menu* para volver._"
             )
 
@@ -11516,7 +11624,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         {"id": "menu_volver", "title": "No, gracias"},
                     ]
                 )
-            return f"Hubo un problema al cancelar 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
+            return f"Hubo un problema al cancelar 😕\nLlama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
 
         if tl in NEGACIONES or tl_norm in NEGACIONES:
             reset_session(phone)
@@ -11584,7 +11692,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return (
                 "No tenemos ese RUT registrado 😊\n\n"
-                f"¿Necesitas ayuda? Llama a recepción:\n📞 *{CMC_TELEFONO}*\n\n"
+                f"¿Necesitas ayuda? Llama a recepción:\n📞 *{CMC_TELEFONO_FIJO}*\n\n"
                 "_Escribe *menu* para volver._"
             )
 
@@ -11647,7 +11755,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return (
                 "No pude identificar la especialidad de esa cita 😕\n"
-                f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
+                f"Llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
             )
         data["cita_old"] = cita_old
         data["reagendar_mode"] = True
@@ -11942,7 +12050,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "No encontré ese RUT 🔎\n\n¿Intentamos de nuevo?",
             [
                 {"id": "menu", "title": "🏠 Volver al inicio"},
-                {"id": "accion_recepcion", "title": "💬 Hablar con recepción"},
+                {"id": "accion_recepcion", "title": "💬 Recepción"},
             ]
         )
 
@@ -11959,7 +12067,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "No pude consultar tus citas en este momento porque el sistema "
                 "de agenda está lento 😕\n\n"
                 "Intenta de nuevo en unos minutos, o llama a recepción:\n"
-                f"📞 *{CMC_TELEFONO}*"
+                f"📞 *{CMC_TELEFONO_FIJO}*"
             )
         reset_session(phone)
         nombre_corto = _first_name(paciente.get('nombre'))
@@ -12285,7 +12393,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         paciente = await _crear_paciente_con_recuperacion(rut, nombre, apellidos, extra, phone)
         if not paciente:
             reset_session(phone)
-            return f"Hubo un problema al registrarte 😕\nLlama a recepción: 📞 *{CMC_TELEFONO}*"
+            return f"Hubo un problema al registrarte 😕\nLlama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
 
         # A2: guardar perfil solo si es el dueño del celular, no un tercero.
         # Si booking_for_other=True, el RUT/nombre del paciente recién creado
@@ -12573,7 +12681,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "por videollamada.\n\n"
                 "¿Te agendo una hora presencial para este primer control?",
                 [
-                    {"id": "agendar_presencial_tele", "title": "Sí, agendar presencial"},
+                    {"id": "agendar_presencial_tele", "title": "Prefiero presencial"},
                     {"id": "no_agendar",              "title": "No por ahora"},
                 ]
             )
@@ -12696,7 +12804,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return (
                 "Hubo un problema al registrarte 😕\n"
-                f"Llama a recepción: 📞 *{CMC_TELEFONO}*"
+                f"Llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
             )
         # Guardar perfil con fecha_nacimiento para campaña de cumpleaños.
         # A2: guard — no pisar perfil del dueño si es registro de tercero.
@@ -12803,7 +12911,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return (
                 "Hubo un problema al registrarte \U0001f615\n"
-                f"Llama a recepción: \U0001f4de *{CMC_TELEFONO}*"
+                f"Llama a recepción: \U0001f4de *{CMC_TELEFONO_FIJO}*"
             )
         # A2: guard — no pisar perfil del dueño si es registro de tercero.
         if not data.get("booking_for_other"):
@@ -13249,7 +13357,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 "Gracias por contarnos 🙏 Ya registré tu mensaje para que una "
                 "recepcionista te responda en este chat.\n\n"
-                f"*Si es urgente o empeora, llama ahora:*\n📞 *{CMC_TELEFONO}*\n"
+                f"*Si es urgente o empeora, llama ahora:*\n📞 *{CMC_TELEFONO_FIJO}*\n"
                 "🚑 *SAMU*: 131"
             )
 
@@ -13420,14 +13528,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Primer ack — el paciente sabe que una recepcionista vendra.
             return (
                 "Recibido 🙏 Una recepcionista te responderá en este chat en breve.\n\n"
-                f"_Si es urgente puedes llamar: 📞 *{CMC_TELEFONO}*_"
+                f"_Si es urgente puedes llamar: 📞 *{CMC_TELEFONO_FIJO}*_"
             )
         # Desde msg 2+ el bot queda SILENCIOSO. No spamear al paciente con
         # "Seguimos atentos" ni "Recibido 🙏" repetidos — la recepcionista ya
         # está respondiendo desde el panel y el ruido confunde. Cada 15
         # mensajes sin respuesta humana mandamos un recordatorio suave.
         if msgs_sin_respuesta > 0 and msgs_sin_respuesta % 15 == 0:
-            return f"Seguimos aquí 🙌 Si es urgente, llama al 📞 *{CMC_TELEFONO}*"
+            return f"Seguimos aquí 🙌 Si es urgente, llama al 📞 *{CMC_TELEFONO_FIJO}*"
         return ""
 
     # Fallback
@@ -14657,7 +14765,7 @@ def _modo_degradado(phone: str, intent: str, state_snap: str = "",
         "Nuestro sistema de citas está con un problema técnico en este momento 😕\n\n"
         "Guardé tu mensaje y te avisaré apenas vuelva a estar operativo. "
         "Mientras tanto puedes llamarnos:\n"
-        f"📞 *{CMC_TELEFONO}*\n"
+        f"📞 *{CMC_TELEFONO_FIJO}*\n"
         f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
         "_Gracias por tu paciencia._"
     )
@@ -14966,7 +15074,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 "¿Continúas con Medicina General o prefieres esperar al traumatólogo?",
                 [
                     {"id": "trauma_mg",       "title": "✅ Continuar con MG"},
-                    {"id": "trauma_waitlist", "title": "⏳ Esperar al traumatólogo"},
+                    {"id": "trauma_waitlist", "title": "⏳ Prefiero esperar"},
                 ]
             )
         if not saludo_prefix:
@@ -15397,7 +15505,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 "El Dr. Márquez (*Medicina Familiar*) no tiene horas disponibles esta semana.\n\n"
                 "¿Te muestro horas con *Medicina General* (Dr. Abarca, Dr. Olavarría o Dr. Márquez)?",
                 [
-                    {"id": "medfam_fallback_si", "title": "Sí, mostrar Medicina General"},
+                    {"id": "medfam_fallback_si", "title": "Sí, mostrar horas MG"},
                     {"id": "medfam_fallback_no", "title": "No, gracias"},
                 ]
             )

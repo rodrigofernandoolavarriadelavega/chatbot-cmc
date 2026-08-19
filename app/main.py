@@ -11444,33 +11444,30 @@ async def webhook(request: Request):
                         await send_whatsapp(phone, _doc_resp)
                         log_message(phone, "out", _doc_resp, "HUMAN_TAKEOVER", canal="whatsapp")
                         return Response(status_code=200)
-                    texto = "[DOCUMENTO ENVIADO POR PACIENTE]: " + extracted
-                    log.info("Texto extraído from=%s (%d chars): %s", phone, len(extracted), extracted[:120])
+                    # Documento sin clasificar (ni examen, ni ficha/consentimiento/
+                    # formulario conocido): puede ser CUALQUIER COSA — liquidación de
+                    # sueldo, cédula, contrato, boleta de otro rubro. Antes se citaba
+                    # un preview del texto extraído de vuelta al paciente ("Esto es lo
+                    # que dice: ...") Y se inyectaba el documento completo al pipeline
+                    # de agendamiento (detect_intent la procesaba como si fuera un
+                    # mensaje del paciente). Caso real: liquidación de sueldo con razón
+                    # social, RUT de la empresa y RUT del trabajador transcrita en el
+                    # chat (auditoría 2026-08-19, #11). Nunca transcribir ni interpretar
+                    # el contenido — mismo patrón que el documento clínico de arriba.
+                    log.info("Documento sin clasificar from=%s (%d chars extraídos, no se transcribe)",
+                             phone, len(extracted))
                     state_before = get_session(phone).get("state", "IDLE")
                     log_text = f"[{msg_type}:{saved_filename}]"
                     log_message(phone, "in", log_text, state_before, canal="whatsapp")
-                    # Feedback al paciente (como con audio)
-                    preview = extracted[:200]
-                    confirm_msg = f"Recibí tu documento. Esto es lo que dice:\n_{preview}_"
+                    from session import log_event as _le_doc2, save_session as _ss_doc2
+                    _le_doc2(phone, "documento_sin_clasificar_recibido", {"filename": saved_filename[:120]})
+                    _ss_doc2(phone, "HUMAN_TAKEOVER", {
+                        "hold_sent": True,
+                        "handoff_reason": "documento_sin_clasificar",
+                    })
+                    confirm_msg = "Recibí tu documento, una recepcionista lo revisará."
                     await send_whatsapp(phone, confirm_msg)
-                    log_message(phone, "out", confirm_msg, state_before, canal="whatsapp")
-                    # Procesar el texto extraído por el pipeline normal.
-                    # Lock por phone: serializa procesamiento si llegan mensajes
-                    # simultáneos del mismo paciente (evita doble respuesta en WAIT_SLOT).
-                    from resilience import get_phone_lock
-                    async with get_phone_lock(phone):
-                        session = get_session(phone)
-                        respuesta = await handle_message(phone, texto, session)
-                        if respuesta:
-                            if isinstance(respuesta, dict):
-                                await send_whatsapp_interactive(phone, respuesta["interactive"])
-                                # Log con texto completo (body + opciones) para que la
-                                # recepcionista en /admin vea las mismas opciones que el paciente.
-                                log_text = _interactive_to_text(respuesta, include_promo=False)
-                                log_message(phone, "out", log_text, get_session(phone).get("state", "IDLE"), canal="whatsapp")
-                            else:
-                                await send_whatsapp(phone, respuesta)
-                                log_message(phone, "out", respuesta, get_session(phone).get("state", "IDLE"), canal="whatsapp")
+                    log_message(phone, "out", confirm_msg, "HUMAN_TAKEOVER", canal="whatsapp")
                     return Response(status_code=200)
 
             # Imágenes y otros → guardar + derivar a recepción (sin extracción)
