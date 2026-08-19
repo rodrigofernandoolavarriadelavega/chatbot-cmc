@@ -98,3 +98,50 @@ def test_fmt_fecha_omite_anio_en_el_actual():
     salida = medilink._fmt_fecha(f"{hoy.year}-12-04")
     assert str(hoy.year) not in salida
     assert "4 de diciembre" in salida
+
+
+# ── Mes por substring (2026-08-19) ───────────────────────────────────────────
+# El parser de solo-mes (flows.py, bloque 1b) hacía match por substring sin
+# borde derecho e incluía abreviaturas de 3 letras. Casos reales:
+#   "Es un adulto MAYOr"   → mayo 2027  (psiquiatría, 56959282309)
+#   "Alonso MARquez"       → marzo 2027 (MG, 56961770276)
+#   paciente llamado Julio → cita real creada el 01/07/2027 (56989050528)
+# Regla nueva: solo nombres COMPLETOS de mes y como palabra entera (\b...\b).
+
+import re as _re
+
+_MESES_FULL_TEST = ("enero", "febrero", "marzo", "abril", "mayo", "junio",
+                    "julio", "agosto", "septiembre", "octubre",
+                    "noviembre", "diciembre")
+
+
+def _detecta_mes(texto: str):
+    """Réplica de la regla del bloque 1b post-fix."""
+    for m in _MESES_FULL_TEST:
+        if _re.search(rf"\b{m}\b", texto):
+            return m
+    return None
+
+
+@pytest.mark.parametrize("texto", [
+    "es un adulto mayor",          # caso real → mayo 2027
+    "alonso marquez",              # caso real → marzo 2027
+    "hora con el dr marquez",
+    "mi novia dice que si",        # "nov" y "dic" eran abreviaturas válidas
+    "quiero para dic",             # abreviatura sola ya no dispara solo-mes
+    "se me agoto el bono",         # "ago"
+    "la sra mayorga",
+])
+def test_mes_no_detectado_en_substring(texto):
+    assert _detecta_mes(texto) is None, texto
+
+
+@pytest.mark.parametrize("texto,mes", [
+    ("para mayo", "mayo"),
+    ("mayo", "mayo"),
+    ("en septiembre porfa", "septiembre"),
+    ("quiero hora para diciembre", "diciembre"),
+    ("el mes de marzo", "marzo"),
+])
+def test_mes_detectado_como_palabra(texto, mes):
+    assert _detecta_mes(texto) == mes

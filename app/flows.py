@@ -7775,13 +7775,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             except (KeyError, ValueError, Exception):
                 pass
         # 1b) Solo mes mencionado: "para mayo", "en mayo", "mayo", "para junio"
+        # SOLO nombres completos y como palabra entera (\b...\b). El substring
+        # sin borde derecho + abreviaturas ("may", "mar", "jul") mandó pacientes
+        # a 2027: "adulto MAYOr"→mayo 2027, "alonso MARquez"→marzo 2027, y una
+        # cita real quedó el 01/07/2027 porque el paciente se llamaba Julio
+        # (casos 2026-08-19 y 2026-08-16). Las abreviaturas siguen vivas en el
+        # bloque 1a, donde exigen "DD de MES" y van con \b.
         if not _fecha_objetivo:
-          for _mes_nombre, _mes_num in _MESES_ES.items():
-            if len(_mes_nombre) < 3:
-                continue
-            if (f" {_mes_nombre}" in f" {tl_norm_slot}"
-                    or tl_norm_slot.startswith(_mes_nombre)
-                    or tl_norm_slot.endswith(_mes_nombre)):
+          _MESES_FULL = ("enero", "febrero", "marzo", "abril", "mayo", "junio",
+                         "julio", "agosto", "septiembre", "octubre",
+                         "noviembre", "diciembre")
+          for _mes_nombre in _MESES_FULL:
+            _mes_num = _MESES_ES[_mes_nombre]
+            if re.search(rf"\b{_mes_nombre}\b", tl_norm_slot):
                 _hoy_dt = datetime.now(_CHILE_TZ).date()
                 _anio = _hoy_dt.year
                 # A3: comparar desde el primer día del mes mencionado.
