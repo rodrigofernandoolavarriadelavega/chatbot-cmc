@@ -845,6 +845,72 @@ def _upsert_pagos(records: list[dict]) -> tuple[int, int]:
     return n_ok, n_sin_prof
 
 
+def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
+    """Cruza la atribución de profesional del espejo (bi_pagos_caja, matcher
+    heurístico) contra el registro HUMANO de recepción (pagos_cmc). Dos
+    señales, ambas solo-lectura (flag, jamás auto-corrige):
+
+    1. `recepcion_mismo_dia`: recepción registró al paciente ese día con UN
+       profesional inequívoco y el espejo dice otro. (Julio 2026: 96% de
+       cobertura, 0 contradicciones.)
+    2. `historial_unanime`: sin registro ese día, pero TODOS los registros del
+       paciente en pagos_cmc (≥2, ventana 60 días hacia atrás) apuntan a un
+       único profesional distinto al del espejo — habría cazado el caso María
+       Melian (pago 36616, $150.000 colgado a Fredes siendo de Javiera).
+
+    Los pagos con override manual (bi_pago_overrides) se saltan: ya son
+    verdad nivel 0. El barrido dominical publica los flags por Telegram para
+    que el dueño decida el override."""
+    import unicodedata
+
+    def _norm(s: str) -> str:
+        s = unicodedata.normalize("NFD", (s or "").lower())
+        return " ".join("".join(ch for ch in s
+                                if unicodedata.category(ch) != "Mn").split())
+
+    with _bi_conn() as c:
+        bi = c.execute(
+            "SELECT pago_id, fecha, monto, id_profesional, nombre_paciente "
+            "FROM bi_pagos_caja WHERE fecha>=? AND fecha<=?",
+            (desde, hasta)).fetchall()
+        cmc = c.execute(
+            "SELECT fecha, paciente_nombre, id_profesional FROM pagos_cmc "
+            "WHERE id_profesional IS NOT NULL "
+            "AND fecha>=date(?, '-60 days') AND fecha<=?",
+            (desde, hasta)).fetchall()
+        overrides = {r[0] for r in c.execute(
+            "SELECT pago_id FROM bi_pago_overrides").fetchall()}
+
+    mismo_dia: dict = {}
+    historial: dict = {}
+    for r in cmc:
+        nom = _norm(r["paciente_nombre"])
+        mismo_dia.setdefault((r["fecha"], nom), set()).add(r["id_profesional"])
+        historial.setdefault(nom, []).append(r["id_profesional"])
+
+    flags = []
+    for r in bi:
+        if r["pago_id"] in overrides:
+            continue
+        nom = _norm(r["nombre_paciente"])
+        base = {"pago_id": r["pago_id"], "fecha": r["fecha"],
+                "monto": r["monto"], "espejo": r["id_profesional"],
+                "paciente": r["nombre_paciente"]}
+        sd = mismo_dia.get((r["fecha"], nom))
+        if sd:
+            if len(sd) == 1 and r["id_profesional"] not in sd:
+                flags.append({**base, "tipo": "recepcion_mismo_dia",
+                              "sugerido": next(iter(sd))})
+            continue
+        hist = historial.get(nom) or []
+        if (len(hist) >= 2 and len(set(hist)) == 1
+                and r["id_profesional"] is not None
+                and r["id_profesional"] != hist[0]):
+            flags.append({**base, "tipo": "historial_unanime",
+                          "sugerido": hist[0]})
+    return {"n": len(flags), "flags": flags}
+
+
 def _purge_anulados_dia(fecha: str, live_ids: set) -> int:
     """Reconcilia: borra de bi_pagos_caja los pagos de `fecha` que YA NO existen
     en Medilink (anulados/eliminados tras una sync previa). El upsert nunca borra,

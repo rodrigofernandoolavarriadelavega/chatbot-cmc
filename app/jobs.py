@@ -1152,7 +1152,7 @@ async def _job_conciliacion_caja_semanal():
     fantasma para siempre (caso julio 2026: 6 pagos anulados = $201.760
     inflando el espejo, descubierto recién al cierre del mes). Pedido del
     dueño 2026-08-20. Avisa por Telegram solo si purgó algo."""
-    from bi_sync import sync_pagos_rango
+    from bi_sync import sync_pagos_rango, auditar_atribucion_pagos
     hoy = date.today()
     primero_mes_ant = (hoy.replace(day=1) - timedelta(days=1)).replace(day=1)
     try:
@@ -1160,15 +1160,35 @@ async def _job_conciliacion_caja_semanal():
                                    hasta=hoy.isoformat(), force=True)
         log.info("conciliacion_caja_semanal: %s", r)
         purg = r.get("purgados") or 0
-        if purg:
+        # Auditoría de atribución: espejo vs registro humano de recepción
+        # (pagos_cmc). Solo flags — el override lo decide el dueño.
+        aud = {"n": 0, "flags": []}
+        try:
+            aud = auditar_atribucion_pagos(primero_mes_ant.isoformat(),
+                                           hoy.isoformat())
+            log.info("conciliacion_caja_semanal auditoria: %s flags", aud["n"])
+        except Exception:
+            log.warning("conciliacion_caja_semanal: auditoria fallo",
+                        exc_info=True)
+        if purg or aud["n"]:
             try:
                 from alertas_oob import enviar_telegram
-                detalle = ", ".join(r.get("purgados_detalle") or [])
-                await enviar_telegram(
-                    f"Barrido dominical de caja: purgados {purg} pago(s) "
-                    f"anulados en Medilink que inflaban el espejo BI "
-                    f"({detalle}). Los dashboards ya cuadran con Medilink.",
-                    header="🧹 Conciliación caja")
+                partes = []
+                if purg:
+                    detalle = ", ".join(r.get("purgados_detalle") or [])
+                    partes.append(f"Purgados {purg} pago(s) anulados en "
+                                  f"Medilink que inflaban el espejo ({detalle}).")
+                if aud["n"]:
+                    lineas = "\n".join(
+                        f"• pago {f['pago_id']} {f['fecha']} ${f['monto']:,}: "
+                        f"espejo prof {f['espejo']} vs recepción prof "
+                        f"{f['sugerido']} ({f['tipo']}) — {f['paciente']}"
+                        for f in aud["flags"][:10])
+                    partes.append(f"Atribución dudosa en {aud['n']} pago(s) "
+                                  f"(espejo vs registro de recepción):\n{lineas}")
+                partes.append("Los totales del espejo ya cuadran con Medilink.")
+                await enviar_telegram("\n\n".join(partes),
+                                      header="🧹 Conciliación caja semanal")
             except Exception:
                 log.warning("conciliacion_caja_semanal: aviso telegram fallo",
                             exc_info=True)
