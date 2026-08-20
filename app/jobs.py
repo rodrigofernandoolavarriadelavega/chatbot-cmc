@@ -1145,6 +1145,37 @@ async def _job_olavarria_sync():
         await sync_olavarria_atenciones(solo_hoy=True)
 
 
+async def _job_conciliacion_caja_semanal():
+    """Domingo 04:10 CLT: re-barre la caja COMPLETA (mes en curso + mes
+    anterior) contra Medilink vivo, día por día. El sync nocturno solo mira
+    7 días hacia atrás — una anulación o edición de monto más antigua quedaba
+    fantasma para siempre (caso julio 2026: 6 pagos anulados = $201.760
+    inflando el espejo, descubierto recién al cierre del mes). Pedido del
+    dueño 2026-08-20. Avisa por Telegram solo si purgó algo."""
+    from bi_sync import sync_pagos_rango
+    hoy = date.today()
+    primero_mes_ant = (hoy.replace(day=1) - timedelta(days=1)).replace(day=1)
+    try:
+        r = await sync_pagos_rango(desde=primero_mes_ant.isoformat(),
+                                   hasta=hoy.isoformat(), force=True)
+        log.info("conciliacion_caja_semanal: %s", r)
+        purg = r.get("purgados") or 0
+        if purg:
+            try:
+                from alertas_oob import enviar_telegram
+                detalle = ", ".join(r.get("purgados_detalle") or [])
+                await enviar_telegram(
+                    f"Barrido dominical de caja: purgados {purg} pago(s) "
+                    f"anulados en Medilink que inflaban el espejo BI "
+                    f"({detalle}). Los dashboards ya cuadran con Medilink.",
+                    header="🧹 Conciliación caja")
+            except Exception:
+                log.warning("conciliacion_caja_semanal: aviso telegram fallo",
+                            exc_info=True)
+    except Exception as e:
+        log.warning("conciliacion_caja_semanal fallo: %s", e)
+
+
 async def _job_bi_sync_diario():
     """BI v2: sincroniza atenciones + pagos del día anterior y hoy. Después
     re-cruza pagos huérfanos por si alguna atención llegó tarde."""

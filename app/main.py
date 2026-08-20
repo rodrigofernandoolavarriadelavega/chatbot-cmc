@@ -582,6 +582,17 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=3600,
         coalesce=True,
     )
+    # Conciliación caja semanal: domingo 04:10 CLT re-barre mes en curso +
+    # anterior contra Medilink vivo (purga anulados tardíos — caso julio 2026)
+    from jobs import _job_conciliacion_caja_semanal
+    scheduler.add_job(
+        _job_conciliacion_caja_semanal,
+        CronTrigger(day_of_week="sun", hour=4, minute=10, timezone=_CLT),
+        id="conciliacion_caja_semanal",
+        replace_existing=True,
+        misfire_grace_time=7200,
+        coalesce=True,
+    )
     # Panel del Día: cache de CAPACIDAD REAL por profesional (Medilink /citas,
     # secuencial+throttle) 04:10 CLT — horario libre, off-peak. Alimenta el
     # potencial/ocupación reales del N1 sin fan-out en vivo.

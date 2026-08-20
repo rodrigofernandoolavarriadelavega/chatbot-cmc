@@ -915,6 +915,8 @@ async def sync_pagos_rango(desde: str = "2024-01-01", hasta: str | None = None,
         total_pagos = 0
         total_sin_prof = 0
         total_dias = 0
+        total_purgados = 0
+        purgados_detalle: list[str] = []
         d = d_desde
         async with httpx.AsyncClient(timeout=30) as cli:
             while d <= d_hasta:
@@ -932,16 +934,30 @@ async def sync_pagos_rango(desde: str = "2024-01-01", hasta: str | None = None,
                         total_pagos += n_ok
                         total_sin_prof += n_sin
                         total_dias += 1
+                    # Reconciliar anulados: _purge_anulados_dia existía desde el
+                    # caso 2026-06 ($97.960 inflados) pero NUNCA se llamaba —
+                    # los pagos anulados en Medilink después del sync quedaban
+                    # fantasmas para siempre (caso julio 2026: 6 pagos,
+                    # $201.760). Guard interno: solo purga con live_ids no
+                    # vacío, jamás borra masivo sobre un fetch fallido.
+                    live_ids = {int(p["id"]) for p in pagos_dia if p.get("id")}
+                    n_purg = _purge_anulados_dia(fiso, live_ids)
+                    if n_purg:
+                        total_purgados += n_purg
+                        purgados_detalle.append(f"{fiso}:{n_purg}")
                     await asyncio.sleep(1.0)  # entre días
                 d += timedelta(days=1)
 
         fin = datetime.utcnow().isoformat()
         log_bi_sync("pagos", 0, f"{desde}..{hasta or date.today()}",
                     inicio, fin, total_pagos, total_sin_prof, True)
-        log.info("pagos sync done: dias=%d pagos=%d sin_prof=%d",
-                 total_dias, total_pagos, total_sin_prof)
+        log.info("pagos sync done: dias=%d pagos=%d sin_prof=%d purgados=%d %s",
+                 total_dias, total_pagos, total_sin_prof, total_purgados,
+                 ",".join(purgados_detalle))
         return {"ok": True, "dias": total_dias, "pagos": total_pagos,
-                "sin_profesional": total_sin_prof}
+                "sin_profesional": total_sin_prof,
+                "purgados": total_purgados,
+                "purgados_detalle": purgados_detalle}
 
 
 def stats_profesional_caja(id_profesional: int, desde: str = "2024-01-01") -> dict:
