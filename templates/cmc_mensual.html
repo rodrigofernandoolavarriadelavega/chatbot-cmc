@@ -299,9 +299,9 @@ footer{text-align:center;padding:22px;font-size:.7rem;color:var(--mute)}
     <div id="alert-neg" class="alert-neg">⚠️ Hay profesionales con margen CMC negativo.</div>
     <div class="tw">
       <table>
-        <thead><tr><th>Profesional</th><th>Área</th><th>Subárea</th><th class="r">Total Mes</th><th class="r">Honorarios</th><th class="r">CMC</th><th class="r">% CMC</th><th style="width:90px">Margen</th></tr></thead>
+        <thead><tr><th>Profesional</th><th>Área</th><th>Subárea</th><th class="r">Total Mes</th><th class="r">Honorarios</th><th class="r">Transferencia</th><th class="r">CMC</th><th class="r">% CMC</th><th style="width:90px">Margen</th></tr></thead>
         <tbody id="viewTableBody"></tbody>
-        <tfoot><tr><td colspan="3">TOTAL</td><td class="r" id="foot-total">—</td><td class="r" id="foot-prof">—</td><td class="r" id="foot-cmc">—</td><td class="r" id="foot-pct">—</td><td></td></tr></tfoot>
+        <tfoot><tr><td colspan="3">TOTAL</td><td class="r" id="foot-total">—</td><td class="r" id="foot-prof">—</td><td class="r" id="foot-transf">—</td><td class="r" id="foot-cmc">—</td><td class="r" id="foot-pct">—</td><td></td></tr></tfoot>
       </table>
     </div>
   </div>
@@ -527,6 +527,9 @@ const ORIGINAL = [
   {name:"Dra. Franca González",          total:100000,  prof:85000,   cmc:15000,    area:"med",    subarea:"neuro",   tipo_pago:"pct", hono_fijo:0},
   {name:"TM Ana Celedón",                total:100000,  prof:70000,   cmc:30000,    area:"tecmed", subarea:"",        tipo_pago:"pct", hono_fijo:0},
 ];
+// Transferencia = honorarios × 0,8475 (líquido tras retención de boleta
+// 15,25% — pedido del dueño 2026-08-20; calza con su planilla de junio).
+const RETENCION_FACTOR = 0.8475;
 let data = JSON.parse(JSON.stringify(ORIGINAL));
 
 /* ══════════ SIMULACIÓN ══════════ */
@@ -884,6 +887,7 @@ function renderDashboard(){
   document.getElementById('kpi-total-profs').textContent=`de ${data.length} en nómina`;
   document.getElementById('foot-total').innerHTML=fmtCLP(sT);
   document.getElementById('foot-prof').innerHTML=fmtCLP(sP);
+  document.getElementById('foot-transf').innerHTML=fmtCLP(Math.round(sP*RETENCION_FACTOR));
   document.getElementById('foot-cmc').innerHTML=fmtCLP(sC);
   document.getElementById('foot-pct').textContent=pctFmt(sC,sT);
   document.getElementById('alert-neg').style.display=data.some(d=>d.cmc<0)?'block':'none';
@@ -902,6 +906,7 @@ function renderDashboard(){
       <td><span class="badge" style="background:${bg};color:${a.color}">${a.label}</span></td>
       <td>${sub?`<span class="badge" style="background:${h2r(sub.color,.18)};color:${sub.color}">${sub.label}</span>`:'<span style="color:#cbd5e1;font-size:.72rem">—</span>'}</td>
       <td class="r">${fmtCLP(d.total)}</td><td class="r">${fmtCLP(d.prof)}</td>
+      <td class="r" style="color:#0e7490">${fmtCLP(Math.round(d.prof*RETENCION_FACTOR))}</td>
       <td class="r">${fmtCLP(d.cmc)}</td><td class="r ${d.cmc<0?'neg':''}">${cmcP}</td>
       <td><div class="bar-mini"><div class="bar-mini-fill" style="width:${bw}%;background:${bc}"></div></div></td>`;
     tbody.appendChild(tr);
