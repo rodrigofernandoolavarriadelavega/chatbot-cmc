@@ -956,8 +956,8 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
 
     with _bi_conn() as c:
         bi = c.execute(
-            "SELECT pago_id, fecha, monto, id_profesional, nombre_paciente "
-            "FROM bi_pagos_caja WHERE fecha>=? AND fecha<=?",
+            "SELECT pago_id, fecha, monto, id_profesional, nombre_paciente, "
+            "id_paciente FROM bi_pagos_caja WHERE fecha>=? AND fecha<=?",
             (desde, hasta)).fetchall()
         cmc = c.execute(
             "SELECT fecha, paciente_nombre, id_profesional FROM pagos_cmc "
@@ -1067,6 +1067,36 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
                           "espejo": sorted(p for p in profs_esp if p),
                           "paciente": nom, "tipo": "dia_multi_prof_desbalance",
                           "sugerido": sorted(profs_recep)})
+    # SEÑAL 4 — par kinesiólogos 21/77 (hallazgo 2026-08-20): Leo (21, jefe)
+    # abre las atenciones de AMBOS kines, así que la cascada por atenciones
+    # siempre apunta a Leo aunque haya atendido Luis (77). La CITA sí dice
+    # quién atendió (verificado 5/5 contra recepción). Si el espejo asignó un
+    # pago a un kine pero la cita "Atendido" de ese día es SOLO del otro →
+    # flag. Cruce por id_paciente (no por nombre).
+    _KINES = (21, 77)
+    try:
+        with _bi_conn() as c3:
+            citas_kine = c3.execute(
+                "SELECT fecha, id_paciente, id_profesional FROM ausentismo_citas "
+                "WHERE id_profesional IN (21, 77) AND estado_cita='Atendido' "
+                "AND fecha>=date(?, '-3 days') AND fecha<=?",
+                (desde, hasta)).fetchall()
+        cit_idx: dict = {}
+        for r in citas_kine:
+            cit_idx.setdefault((r["fecha"], r["id_paciente"]), set()).add(
+                r["id_profesional"])
+        for r in bi:
+            if r["id_profesional"] not in _KINES or r["pago_id"] in overrides:
+                continue
+            quien = cit_idx.get((r["fecha"], r["id_paciente"]))
+            if quien and len(quien) == 1 and r["id_profesional"] not in quien:
+                flags.append({"pago_id": r["pago_id"], "fecha": r["fecha"],
+                              "monto": r["monto"], "espejo": r["id_profesional"],
+                              "paciente": r["nombre_paciente"],
+                              "tipo": "cita_kine_contradice",
+                              "sugerido": next(iter(quien))})
+    except Exception:
+        pass  # tabla ausentismo_citas ausente (tests) — señal opcional
     return {"n": len(flags), "flags": flags}
 
 
