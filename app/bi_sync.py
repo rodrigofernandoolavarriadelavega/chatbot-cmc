@@ -1026,6 +1026,10 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
         profs_esp = espejo_dia.get((fecha, nom))
         if not profs_esp or len(profs_esp) >= len(profs_recep):
             continue
+        if (fecha, nom) not in pagos_grupo:
+            # Todos los pagos del grupo ya tienen override (caso decidido por
+            # el dueño, ej. pago partido de Samira) — nada que revisar.
+            continue
         # Intentar resolver cada pago del grupo por ARANCEL: monto → área →
         # ¿un único profesional del día de esa área? Tres desenlaces:
         # confirma al espejo (silencio), lo contradice (flag concreto), o el
