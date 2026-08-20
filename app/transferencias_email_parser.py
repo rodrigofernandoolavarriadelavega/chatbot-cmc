@@ -50,6 +50,7 @@ import unicodedata
 # ── Identificación de banco por remitente ───────────────────────────────────
 # Cada banco puede tener más de un remitente conocido (variantes históricas).
 BANCOS_REMITENTES: dict[str, tuple[str, ...]] = {
+    "itau":        ("transferencias@itau.cl",),
     "bancoestado": ("noreply@correo.bancoestado.cl", "noreply@bancoestado.cl",
                      "sendmail@bancoestado.cl", "notificaciones@correo.bancoestado.cl"),
     "falabella":   ("notificaciones@cl.bancofalabella.com",),
@@ -68,6 +69,7 @@ BANCOS_REMITENTES: dict[str, tuple[str, ...]] = {
 
 # Nombre legible para el dashboard.
 BANCOS_LABEL: dict[str, str] = {
+    "itau": "Itaú",
     "bancoestado": "BancoEstado", "falabella": "Banco Falabella",
     "bancochile": "Banco de Chile", "scotiabank": "Scotiabank",
     "santander": "Santander", "bci": "BCI", "ripley": "Banco Ripley",
@@ -472,7 +474,39 @@ def _parse_losheroes(text: str, subject: str) -> dict:
     }
 
 
+def _parse_itau(text: str, subject: str) -> dict:
+    """Itaú — 'Itaú informa.' desde transferencias@itau.cl. Es el banco del
+    CMC: el aviso llega cuando el PAGADOR transfiere desde Itaú (mismo banco).
+    Plantilla HTML tabular con MUCHO whitespace entre rótulo y valor
+    (verificado contra correo real del 14-08-2026, transacción 590197386):
+        Datos de la Cuenta de Origen ... Nombre \\n FREDDY MICHAEL ORELLANA ...
+        Fecha - Hora \\n 14/08/2026-19:19:13 hrs
+        Numero de Transaccion \\n 590197386
+        Monto: \\n $41.680
+    El destinatario viene con cuenta y RUT completos → _es_cuenta_cmc aplica
+    directo (0221708538 contiene 221708538)."""
+    m_nombre = re.search(
+        r'Datos de la Cuenta de Origen.*?Nombre\s*\n\s*(.+?)\s*\n',
+        text, re.S)
+    m_fh = re.search(
+        r'Fecha\s*-\s*Hora\s*\n?\s*(\d{1,2}/\d{1,2}/\d{4})\s*-\s*(\d{1,2}:\d{2})',
+        text, re.S)
+    m_num = re.search(r'Numero de Transacci[oó]n\s*\n?\s*(\d+)', text, re.S)
+    m_msg = re.search(r'Comentario\s*\n\s*(\S.*?)\s*\n', text, re.S)
+    monto = _monto(text, r'Monto\s*:?\s*\n?\s*\$\s*([\d\.]{1,15})')
+    return {
+        "banco": "itau",
+        "nombre": re.sub(r"\s+", " ", m_nombre.group(1)).strip() if m_nombre else None,
+        "monto": monto,
+        "fecha": _fecha_ddmmyyyy(m_fh.group(1)) if m_fh else None,
+        "hora": m_fh.group(2) if m_fh else None,
+        "num_operacion": m_num.group(1) if m_num else None,
+        "mensaje": _limpiar_mensaje(m_msg.group(1) if m_msg else None),
+    }
+
+
 PARSERS = {
+    "itau": _parse_itau,
     "santander": _parse_santander,
     "falabella": _parse_falabella,
     "bancochile": _parse_bancochile,
