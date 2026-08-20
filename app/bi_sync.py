@@ -974,6 +974,23 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
         mismo_dia.setdefault((r["fecha"], nom), set()).add(r["id_profesional"])
         historial.setdefault(nom, []).append(r["id_profesional"])
 
+    # Índice de citas ATENDIDAS por (fecha, id_paciente) — el árbitro supremo
+    # (verificado 2026-08-20: 5/5 en el par kine y 16/16 desactivando falsas
+    # alarmas de historial en mayo). Si la cita del día confirma al espejo,
+    # el flag de historial se SUPRIME: el historial engaña con pacientes de
+    # series kine porque recepción registra bajo el jefe (Leo).
+    citas_atendidas: dict = {}
+    try:
+        with _bi_conn() as c4:
+            for r in c4.execute(
+                    "SELECT fecha, id_paciente, id_profesional FROM ausentismo_citas "
+                    "WHERE estado_cita='Atendido' AND fecha>=? AND fecha<=?",
+                    (desde, hasta)):
+                citas_atendidas.setdefault((r["fecha"], r["id_paciente"]),
+                                           set()).add(r["id_profesional"])
+    except Exception:
+        pass  # tabla ausente (tests) — el suprimidor es opcional
+
     flags = []
     espejo_dia: dict = {}   # (fecha, nom) -> set de profs que asignó el espejo
     # Los pagos con override SÍ cuentan para el balance del día (son verdad
@@ -1000,6 +1017,11 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
         if (len(hist) >= 2 and len(set(hist)) == 1
                 and r["id_profesional"] is not None
                 and r["id_profesional"] != hist[0]):
+            # Suprimir si la cita ATENDIDA del día confirma al espejo
+            # (cita > historial — 16 falsas alarmas de mayo eran esto).
+            atendidos = citas_atendidas.get((r["fecha"], r["id_paciente"]))
+            if atendidos and r["id_profesional"] in atendidos:
+                continue
             flags.append({**base, "tipo": "historial_unanime",
                           "sugerido": hist[0]})
     # SEÑAL 3 — día multi-profesional desbalanceado (clase Jorge 2026-08-20):
