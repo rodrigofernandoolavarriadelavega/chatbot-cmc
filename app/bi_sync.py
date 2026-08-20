@@ -481,6 +481,76 @@ async def _fetch_pagos_dia(cli: httpx.AsyncClient, fecha: str) -> AsyncIterator[
         await asyncio.sleep(0.8)
 
 
+_AREA_POR_PROF = {
+    1: "med", 73: "med", 13: "med", 23: "med", 60: "med", 61: "med",
+    65: "med", 64: "med", 79: "med",
+    68: "eco", 80: "eco",
+    55: "dent", 72: "dent", 66: "dent", 75: "dent", 69: "dent", 76: "dent",
+    59: "maso", 77: "kine", 21: "kine", 52: "nutri", 74: "psico", 49: "psico",
+    70: "fono", 67: "matrona", 56: "podo", 78: "psiq",
+}
+
+_MONTO_AREA_CACHE: dict = {"ts": 0.0, "tabla": {}}
+
+
+def _tabla_monto_area(c) -> dict[int, str]:
+    """Montos-arancel que identifican especialidad (idea del dueño 2026-08-20):
+    los copagos Fonasa son valores fijos por prestación — $20.980 es psicología
+    el 100% de las veces, $15.130 medicina 99%, $9.540 nutrición 96%, etc.
+    Se construye DINÁMICO desde la distribución real de bi_pagos_caja (120
+    días, pureza ≥95%, n≥15) para que sobreviva a cambios de arancel. Los
+    montos redondos particulares ($30.000, $40.000...) no alcanzan pureza y
+    quedan fuera solos. Cache 24 h por proceso."""
+    import time
+    if time.time() - _MONTO_AREA_CACHE["ts"] < 86400 and _MONTO_AREA_CACHE["tabla"]:
+        return _MONTO_AREA_CACHE["tabla"]
+    tabla: dict[int, str] = {}
+    try:
+        from collections import defaultdict
+        rows = c.execute(
+            "SELECT monto, id_profesional, COUNT(*) FROM bi_pagos_caja "
+            "WHERE fecha >= date('now','-120 days') "
+            "AND id_profesional IS NOT NULL GROUP BY monto, id_profesional"
+        ).fetchall()
+        por_monto: dict = defaultdict(lambda: defaultdict(int))
+        for m, pid, n in rows:
+            a = _AREA_POR_PROF.get(pid)
+            if a and m:
+                por_monto[int(m)][a] += n
+        for m, areas in por_monto.items():
+            tot = sum(areas.values())
+            top_a, top_n = max(areas.items(), key=lambda kv: kv[1])
+            if tot >= 15 and top_n / tot >= 0.95:
+                tabla[m] = top_a
+    except Exception:
+        return _MONTO_AREA_CACHE["tabla"] or {}
+    _MONTO_AREA_CACHE.update(ts=time.time(), tabla=tabla)
+    return tabla
+
+
+def _norm_nombre(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFD", (s or "").lower())
+    return " ".join("".join(ch for ch in s
+                            if unicodedata.category(ch) != "Mn").split())
+
+
+def _nombres_calzan(a: str, b: str) -> bool:
+    """True si los nombres NORMALIZADOS son iguales o los tokens de uno son
+    subconjunto del otro (≥2 tokens). Recepción suele omitir el segundo
+    nombre: 'Claudio Lobos Salazar' vs Medilink 'Claudio Ignacio  Lobos
+    Salazar' (doble espacio incluido) — la igualdad exacta que se usaba antes
+    fallaba ahí y el pago caía a la cascada heurística (caso 37477, $20.980
+    de Jorge colgado a Abarca)."""
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    ta, tb = set(a.split()), set(b.split())
+    chico, grande = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    return len(chico) >= 2 and chico <= grande
+
+
 def _resolver_profesional_pagos_cmc(c, fecha_iso: str, nombre_pago: str, monto: int
                                      ) -> int | None:
     """NIVEL 0.5 — pagos_cmc (verdad humana: profesional asignado por recepción).
@@ -505,19 +575,24 @@ def _resolver_profesional_pagos_cmc(c, fecha_iso: str, nombre_pago: str, monto: 
     if not nombre_pago or not fecha_iso:
         return None
     try:
-        cmc_rows = c.execute(
+        # Match de nombre en Python (no en SQL): normaliza tildes/espacios y
+        # acepta subconjunto de tokens — la igualdad exacta perdía los casos
+        # donde recepción escribe el nombre más corto que Medilink.
+        dia_rows = c.execute(
             """
             SELECT id_profesional,
                    COALESCE(copago, 0)      AS copago,
-                   COALESCE(bonificacion, 0) AS bonificacion
+                   COALESCE(bonificacion, 0) AS bonificacion,
+                   paciente_nombre
             FROM   pagos_cmc
             WHERE  fecha = ?
-              AND  LOWER(REPLACE(paciente_nombre, '  ', ' '))
-                   = LOWER(REPLACE(?, '  ', ' '))
               AND  id_profesional IS NOT NULL
             """,
-            (fecha_iso, nombre_pago),
+            (fecha_iso,),
         ).fetchall()
+        objetivo = _norm_nombre(nombre_pago)
+        cmc_rows = [r for r in dia_rows
+                    if _nombres_calzan(_norm_nombre(r[3]), objetivo)]
 
         if not cmc_rows:
             return None
@@ -527,10 +602,21 @@ def _resolver_profesional_pagos_cmc(c, fecha_iso: str, nombre_pago: str, monto: 
             # Un único profesional ese día para ese paciente → match claro.
             return profs_cmc.pop()
 
-        # Varios profesionales ese día para ese paciente → desempatamos
-        # por monto: elegir el registro cuyo copago+bonificacion se acerque
-        # más a monto_pago. Si dos registros empatan en distancia → ambiguo,
-        # no retornamos (dejamos caer a la cascada heurística).
+        # Varios profesionales ese día → DESEMPATE 1 por ARANCEL (idea del
+        # dueño 2026-08-20): si el monto del pago es un arancel que identifica
+        # especialidad (tabla dinámica ≥95% pureza) y UNO solo de los
+        # profesionales del día es de esa área → ese es.
+        area_monto = _tabla_monto_area(c).get(int(monto or 0))
+        if area_monto:
+            candidatos = [p for p in profs_cmc
+                          if _AREA_POR_PROF.get(p) == area_monto]
+            if len(candidatos) == 1:
+                return candidatos[0]
+
+        # DESEMPATE 2 (histórico) por distancia de monto: elegir el registro
+        # cuyo copago+bonificacion se acerque más a monto_pago. Si dos
+        # registros empatan en distancia → ambiguo, no retornamos (dejamos
+        # caer a la cascada heurística).
         ranked = sorted(cmc_rows, key=lambda r: abs((r[1] + r[2]) - monto))
         best_dist = abs((ranked[0][1] + ranked[0][2]) - monto)
         second_dist = abs((ranked[1][1] + ranked[1][2]) - monto) \
@@ -920,11 +1006,36 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
     # entero a un prof; convención: la parte MAYOR). Los copagos de recepción
     # NO calzan con los montos de caja → no se puede desempatar por monto,
     # solo flaggear para revisar contra el reporte por-profesional de la UI.
+    with _bi_conn() as c2:
+        tabla_arancel = _tabla_monto_area(c2)
+    pagos_grupo: dict = {}
+    for r in bi:
+        if r["pago_id"] in overrides:
+            continue
+        pagos_grupo.setdefault((r["fecha"], _norm_nombre(r["nombre_paciente"])),
+                               []).append(r)
     for (fecha, nom), profs_recep in mismo_dia.items():
         if len(profs_recep) < 2:
             continue
         profs_esp = espejo_dia.get((fecha, nom))
-        if profs_esp and len(profs_esp) < len(profs_recep):
+        if not profs_esp or len(profs_esp) >= len(profs_recep):
+            continue
+        # Intentar resolver cada pago del grupo por ARANCEL: monto → área →
+        # ¿un único profesional del día de esa área? → sugerencia concreta.
+        resuelto_alguno = False
+        for r in pagos_grupo.get((fecha, nom), []):
+            area = tabla_arancel.get(int(r["monto"] or 0))
+            if not area:
+                continue
+            cand = [p for p in profs_recep if _AREA_POR_PROF.get(p) == area]
+            if len(cand) == 1 and r["id_profesional"] != cand[0]:
+                resuelto_alguno = True
+                flags.append({"pago_id": r["pago_id"], "fecha": fecha,
+                              "monto": r["monto"], "espejo": r["id_profesional"],
+                              "paciente": r["nombre_paciente"],
+                              "tipo": "dia_multi_prof_arancel",
+                              "sugerido": cand[0]})
+        if not resuelto_alguno:
             flags.append({"pago_id": None, "fecha": fecha, "monto": None,
                           "espejo": sorted(p for p in profs_esp if p),
                           "paciente": nom, "tipo": "dia_multi_prof_desbalance",
