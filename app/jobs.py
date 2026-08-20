@@ -1179,11 +1179,17 @@ async def _job_conciliacion_caja_semanal():
                     partes.append(f"Purgados {purg} pago(s) anulados en "
                                   f"Medilink que inflaban el espejo ({detalle}).")
                 if aud["n"]:
-                    lineas = "\n".join(
-                        f"• pago {f['pago_id']} {f['fecha']} ${f['monto']:,}: "
-                        f"espejo prof {f['espejo']} vs recepción prof "
-                        f"{f['sugerido']} ({f['tipo']}) — {f['paciente']}"
-                        for f in aud["flags"][:10])
+                    def _fmt_flag(f):
+                        if f.get("pago_id"):
+                            return (f"• pago {f['pago_id']} {f['fecha']} "
+                                    f"${f['monto']:,}: espejo prof {f['espejo']} "
+                                    f"vs recepción prof {f['sugerido']} "
+                                    f"({f['tipo']}) — {f['paciente']}")
+                        return (f"• {f['fecha']} {f['paciente']}: recepción vio "
+                                f"profs {f['sugerido']} pero el espejo colgó "
+                                f"todo a {f['espejo']} (día multi-profesional "
+                                f"— revisar contra Medilink)")
+                    lineas = "\n".join(_fmt_flag(f) for f in aud["flags"][:10])
                     partes.append(f"Atribución dudosa en {aud['n']} pago(s) "
                                   f"(espejo vs registro de recepción):\n{lineas}")
                 partes.append("Los totales del espejo ya cuadran con Medilink.")

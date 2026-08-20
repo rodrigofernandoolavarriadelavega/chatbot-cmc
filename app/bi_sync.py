@@ -889,10 +889,12 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
         historial.setdefault(nom, []).append(r["id_profesional"])
 
     flags = []
+    espejo_dia: dict = {}   # (fecha, nom) -> set de profs que asignó el espejo
     for r in bi:
         if r["pago_id"] in overrides:
             continue
         nom = _norm(r["nombre_paciente"])
+        espejo_dia.setdefault((r["fecha"], nom), set()).add(r["id_profesional"])
         base = {"pago_id": r["pago_id"], "fecha": r["fecha"],
                 "monto": r["monto"], "espejo": r["id_profesional"],
                 "paciente": r["nombre_paciente"]}
@@ -908,6 +910,25 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
                 and r["id_profesional"] != hist[0]):
             flags.append({**base, "tipo": "historial_unanime",
                           "sugerido": hist[0]})
+    # SEÑAL 3 — día multi-profesional desbalanceado (clase Jorge 2026-08-20):
+    # recepción vio ≥2 profesionales distintos ese día para el paciente, pero
+    # el espejo colgó TODOS sus pagos del día a menos profesionales de los que
+    # recepción registró. Firma de: (a) doble atención con matcher volcado a
+    # uno solo (caso Claudio Lobos 37476+37477 ambos a 73 siendo 73+74), y
+    # (b) pago PARTIDO entre dos tratamientos (caso Samira 37030, $30.520 =
+    # $20.980 psico + $9.540 nutri — irrepresentable: el espejo asigna el pago
+    # entero a un prof; convención: la parte MAYOR). Los copagos de recepción
+    # NO calzan con los montos de caja → no se puede desempatar por monto,
+    # solo flaggear para revisar contra el reporte por-profesional de la UI.
+    for (fecha, nom), profs_recep in mismo_dia.items():
+        if len(profs_recep) < 2:
+            continue
+        profs_esp = espejo_dia.get((fecha, nom))
+        if profs_esp and len(profs_esp) < len(profs_recep):
+            flags.append({"pago_id": None, "fecha": fecha, "monto": None,
+                          "espejo": sorted(p for p in profs_esp if p),
+                          "paciente": nom, "tipo": "dia_multi_prof_desbalance",
+                          "sugerido": sorted(profs_recep)})
     return {"n": len(flags), "flags": flags}
 
 
