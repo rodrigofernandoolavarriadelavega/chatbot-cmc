@@ -6984,18 +6984,102 @@ def _initials_pac(nombre: str | None) -> str:
 # ── Boxes en vivo — feed PÚBLICO y ANÓNIMO para el gemelo digital ────────────
 # agentecmc.cl/gemelo es HTML estático servido por nginx: no puede llevar el
 # token admin embebido en el bundle. Este endpoint no pide token, pero solo
-# expone {id, nombre visible, estado, especialidad} — nunca paciente, RUT,
-# teléfono, nombre de profesional, plata ni horario detallado.
+# expone {id, nombre visible, piso, estado, especialidad} — nunca paciente,
+# RUT, teléfono ni nombre de profesional. Con `?detalle=1` además expone la
+# agenda del día por box en bloques HH:MM + estado + especialidad (sin plata,
+# sin cita_id, sin paciente_id): ver `_anonimizar_boxes_state`.
 _BOXES_EN_VIVO_CACHE: dict = {"ts": 0.0, "data": None}
+_BOXES_EN_VIVO_CACHE_DETALLE: dict = {"ts": 0.0, "data": None}
 _BOXES_EN_VIVO_TTL = 30  # segundos — evita que N visitantes del gemelo golpeen el pool BI (8 conexiones)
 
+# Fragmentos (estado_cita en minúscula, mismo vocabulario que estado_ocupa_sala
+# / estado_es_no_show más arriba) que mapean al bucket público de un bloque.
+_BLOQUE_ANULADA_FRAGS = ("anulad", "cambio de fecha")
+_BLOQUE_NO_SHOW_FRAGS = ("no asiste", "no asistio", "no asistió")
+_BLOQUE_ATENDIDA_FRAGS = ("atendid",)  # atendido / atendida
 
-def _anonimizar_boxes_state(raw: dict) -> list[dict]:
+
+def _bucket_estado_bloque(estado_raw: str | None, h_ini: str | None, h_fin: str | None,
+                          now_hhmm: str | None) -> str:
+    """Clasifica una cita del día en el vocabulario público del bloque:
+    'atendida'|'en_curso'|'agendada'|'no_show'|'anulada'. Usa los mismos
+    fragmentos que `estado_ocupa_sala`/`estado_es_no_show` (misma fuente de
+    verdad, sin duplicar la lista de estados de Medilink en otro lado).
+    """
+    e = (estado_raw or "").lower()
+    if any(f in e for f in _BLOQUE_ANULADA_FRAGS):
+        return "anulada"
+    if any(f in e for f in _BLOQUE_NO_SHOW_FRAGS):
+        return "no_show"
+    if any(f in e for f in _BLOQUE_ATENDIDA_FRAGS):
+        return "atendida"
+    if h_ini and h_fin and now_hhmm and h_ini <= now_hhmm < h_fin:
+        return "en_curso"
+    return "agendada"
+
+
+def _box_de_profesional(prof_id, boxes_cfg: list[dict]) -> str | None:
+    """A qué box pertenece este profesional para efectos de la agenda pública.
+    Misma partición que usa Revenue internamente (`revenue_profs` primero, sin
+    solape ni doble conteo): un profesional cae en UNA sola sala."""
+    for box in boxes_cfg:
+        acct = box.get("revenue_profs") or box.get("default_profs") or []
+        if prof_id in acct:
+            return box.get("id")
+    return None
+
+
+def _proximo_bloque_libre(bloques: list[dict], now_hhmm: str | None) -> str | None:
+    """Cuándo se desocupa el box: si algo lo ocupa ahora mismo, la hora_fin más
+    lejana de lo que lo cubre; si no hay nada cubriendo el momento actual, el
+    box ya está libre ahora."""
+    if not now_hhmm:
+        return None
+    cubren = [b for b in bloques
+              if b["estado"] in ("agendada", "en_curso", "atendida")
+              and b.get("hora_inicio") and b.get("hora_fin")
+              and b["hora_inicio"] <= now_hhmm < b["hora_fin"]]
+    if cubren:
+        return max(b["hora_fin"] for b in cubren)
+    return now_hhmm
+
+
+def _anonimizar_boxes_state(raw: dict, detalle: bool = False) -> list[dict]:
     """Reduce el payload interno de /admin/api/boxes-state a lo mínimo que
     necesita el gemelo. "proximo" acá exige <15 min (no los 60 min que usa el
     dashboard interno): el gemelo solo debe insinuar que alguien está por
     llegar, no filtrar la agenda con minutos exactos.
+
+    Con `detalle=True` agrega, por box, la agenda del día en bloques
+    anonimizados (`agenda_dia`) y métricas (`metricas_dia`). La partición
+    profesional→box reusa `revenue_profs`/`default_profs` de
+    `boxes_config_default` (misma fuente que usa /admin/api/boxes-state para
+    Revenue, sin recalcular pools/prioridades/cautivos de nuevo).
     """
+    citas_por_box: dict = {}
+    now_hhmm = None
+    if detalle:
+        from datetime import datetime as _dt_bv
+        boxes_cfg = raw.get("boxes_config_default") or []
+        citas_por_box = {b.get("id"): [] for b in boxes_cfg}
+        try:
+            now_hhmm = _dt_bv.strptime(raw.get("now_cl", ""), "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
+        except Exception:
+            now_hhmm = None
+        for c in raw.get("citas_dia_full") or []:
+            bid = _box_de_profesional(c.get("profesional_id"), boxes_cfg)
+            if bid is None:
+                continue
+            h_ini, h_fin = c.get("hora_inicio"), c.get("hora_fin")
+            citas_por_box.setdefault(bid, []).append({
+                "hora_inicio": h_ini,
+                "hora_fin": h_fin,
+                "estado": _bucket_estado_bloque(c.get("estado"), h_ini, h_fin, now_hhmm),
+                "especialidad": c.get("especialidad") or None,
+            })
+        for bid in citas_por_box:
+            citas_por_box[bid].sort(key=lambda b: b["hora_inicio"] or "")
+
     out = []
     for box in raw.get("boxes", []):
         activos = box.get("profesionales_activos") or []
@@ -7009,17 +7093,32 @@ def _anonimizar_boxes_state(raw: dict) -> list[dict]:
         else:
             estado = "libre"
             especialidad = None
-        out.append({
+        entry = {
             "id": box.get("id"),
             "nombre_visible": box.get("nombre"),
+            "piso": box.get("piso"),
             "estado": estado,
             "especialidad_actual": especialidad,
-        })
+        }
+        if detalle:
+            bloques = citas_por_box.get(box.get("id"), [])
+            citas_total = len(bloques)
+            atendidas = sum(1 for b in bloques if b["estado"] == "atendida")
+            cupos_hoy = box.get("cupos_hoy") or 0
+            ocupacion_pct = min(100, round(citas_total / cupos_hoy * 100)) if cupos_hoy else None
+            entry["agenda_dia"] = bloques
+            entry["metricas_dia"] = {
+                "citas_total": citas_total,
+                "atendidas": atendidas,
+                "ocupacion_pct": ocupacion_pct,
+                "proximo_bloque_libre": _proximo_bloque_libre(bloques, now_hhmm),
+            }
+        out.append(entry)
     return out
 
 
 @app.get("/api/boxes-en-vivo")
-async def api_boxes_en_vivo():
+async def api_boxes_en_vivo(detalle: int = Query(0)):
     """Estado anónimo de los boxes del CMC para el gemelo digital 3D.
 
     Sin token: es un endpoint público consumido por HTML estático. Reutiliza
@@ -7028,24 +7127,30 @@ async def api_boxes_en_vivo():
     de 8 conexiones no se duplica. La única diferencia es el filtro de salida:
     ver `_anonimizar_boxes_state`.
 
+    `?detalle=1` agrega la agenda del día por box (bloques HH:MM + estado +
+    especialidad, sin paciente/profesional) y métricas del día. Cachea aparte
+    del modo simple (payload distinto) para no invalidar el uno al otro.
+
     Cache en memoria 30s: cache-aside simple, sin invalidación activa. Un
     visitante dispara el cálculo real; el resto lee la copia hasta que expire.
     """
+    quiere_detalle = bool(detalle)
+    cache = _BOXES_EN_VIVO_CACHE_DETALLE if quiere_detalle else _BOXES_EN_VIVO_CACHE
     now = monotonic()
-    if _BOXES_EN_VIVO_CACHE["data"] is not None and (now - _BOXES_EN_VIVO_CACHE["ts"]) < _BOXES_EN_VIVO_TTL:
-        return _BOXES_EN_VIVO_CACHE["data"]
+    if cache["data"] is not None and (now - cache["ts"]) < _BOXES_EN_VIVO_TTL:
+        return cache["data"]
 
     try:
         raw = await api_boxes_state(token=ADMIN_TOKEN, fecha=None)
-        payload = {"boxes": _anonimizar_boxes_state(raw)}
+        payload = {"boxes": _anonimizar_boxes_state(raw, detalle=quiere_detalle)}
     except Exception as _e:
         log.warning("boxes-en-vivo: fallo calculando estado (%s)", _e)
-        if _BOXES_EN_VIVO_CACHE["data"] is not None:
-            return _BOXES_EN_VIVO_CACHE["data"]  # stale-but-served: mejor que un 500 al gemelo
+        if cache["data"] is not None:
+            return cache["data"]  # stale-but-served: mejor que un 500 al gemelo
         raise HTTPException(503, "Estado de boxes no disponible, reintenta en unos segundos")
 
-    _BOXES_EN_VIVO_CACHE["data"] = payload
-    _BOXES_EN_VIVO_CACHE["ts"] = now
+    cache["data"] = payload
+    cache["ts"] = now
     return payload
 
 
