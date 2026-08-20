@@ -20,7 +20,7 @@ _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 AREA_MAP = {
     1: "med", 73: "med", 13: "med", 23: "med", 60: "med", 61: "med",
     65: "med", 64: "med",
-    68: "tecmed",
+    68: "tecmed", 80: "tecmed", 79: "med",
     55: "dent", 72: "dent", 66: "dent", 75: "dent", 69: "dent", 76: "dent",
     59: "maso", 77: "kine", 21: "kine",
     52: "nutri", 74: "psico", 49: "psico", 70: "fono",

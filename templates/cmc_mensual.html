@@ -469,6 +469,7 @@ const ORIGINAL_AREAS = [
       {key:'orl',      label:'Otorrinolaringología',  color:'#a5b4fc'},
       {key:'gastro',   label:'Gastroenterología',     color:'#6ee7b7'},
       {key:'cardio',   label:'Cardiología',           color:'#fca5a5'},
+      {key:'neuro',    label:'Neurología',            color:'#c084fc'},
     ]},
   { key:'kine',   label:'Kinesiología',    color:'#22c55e', subareas:[] },
   { key:'dent',   label:'Dental',          color:'#f59e0b',
@@ -507,21 +508,24 @@ const ORIGINAL = [
   {name:"David Pardo",                   total:1730000, prof:1211000, cmc:519000,   area:"tecmed", subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Dr. Millán",                    total:1770000, prof:1216875, cmc:553125,   area:"med",    subarea:"cardio",  tipo_pago:"pct", hono_fijo:0},
   {name:"Dra. Juana",                    total:255000,  prof:178430,  cmc:76500,    area:"fono",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
-  {name:"Kine Leo",                      total:2985880, prof:1558228, cmc:1492940,  area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
-  {name:"Kine Luis",                     total:239740,  prof:98480,   cmc:119870,   area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Kine Leo",                      total:2985880, prof:1492940, cmc:1492940,  area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  {name:"Kine Luis",                     total:239740,  prof:119870,  cmc:119870,   area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Kine Paola",                    total:0,       prof:0,       cmc:0,        area:"kine",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Nutri Gise",                    total:285490,  prof:199843,  cmc:85647,    area:"nutri",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Matrona Saraí",                 total:200000,  prof:133136,  cmc:70000,    area:"matro",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Podóloga Andrea",               total:398000,  prof:278600,  cmc:119400,   area:"podo",   subarea:"",        tipo_pago:"pct", hono_fijo:0},
-  {name:"Dentista Carlos",               total:555000,  prof:249750,  cmc:305250,   area:"dent",   subarea:"odont",   tipo_pago:"pct", hono_fijo:0},
-  {name:"Dentista Javi",                 total:2305000, prof:1170410, cmc:1152500,  area:"dent",   subarea:"odont",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Dentista Carlos",               total:555000,  prof:277500,  cmc:277500,   area:"dent",   subarea:"odont",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Dentista Javi",                 total:2305000, prof:1152500, cmc:1152500,  area:"dent",   subarea:"odont",   tipo_pago:"pct", hono_fijo:0},
   {name:"Dentista Daniela",              total:1800000, prof:1080000, cmc:720000,   area:"dent",   subarea:"ortod",   tipo_pago:"pct", hono_fijo:0},
   {name:"Impl. Aurora",                  total:0,       prof:0,       cmc:0,        area:"dent",   subarea:"impl",    tipo_pago:"pct", hono_fijo:0},
-  {name:"Endodoncista Eduardo",          total:660000,  prof:451000,  cmc:231000,   area:"dent",   subarea:"endod",   tipo_pago:"pct", hono_fijo:0},
-  {name:"Estética Valentina Fuentealba", total:319980,  prof:127992,  cmc:111993,   area:"dent",   subarea:"est_d",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Endodoncista Eduardo",          total:660000,  prof:495000,  cmc:165000,   area:"dent",   subarea:"endod",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Estética Valentina Fuentealba", total:319980,  prof:271983,  cmc:47997,    area:"dent",   subarea:"est_d",   tipo_pago:"pct", hono_fijo:0},
   {name:"Psicólogo Juan Pablo",          total:62570,   prof:43799,   cmc:18771,    area:"psico",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Psicólogo Jorge",               total:415900,  prof:291130,  cmc:124770,   area:"psico",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Dra. Cecilia Unibazo",          total:360000,  prof:324000,  cmc:36000,    area:"med",    subarea:"",        tipo_pago:"pct", hono_fijo:0},
+  // Semillas: el % de honorarios sale de prof/total (85% Franca, 70% Celedón — definido por el dueño 2026-08-20)
+  {name:"Dra. Franca González",          total:100000,  prof:85000,   cmc:15000,    area:"med",    subarea:"neuro",   tipo_pago:"pct", hono_fijo:0},
+  {name:"TM Ana Celedón",                total:100000,  prof:70000,   cmc:30000,    area:"tecmed", subarea:"",        tipo_pago:"pct", hono_fijo:0},
 ];
 let data = JSON.parse(JSON.stringify(ORIGINAL));
 
@@ -2123,6 +2127,7 @@ const _NOMBRE_TO_ID = {
   "Nutri Gise": 52, "Psicólogo Jorge": 74, "Psicólogo Juan Pablo": 49,
   "Dra. Juana": 70, "Matrona Saraí": 67, "Podóloga Andrea": 56,
   "Dra. Cecilia Unibazo": 78,
+  "Dra. Franca González": 79, "TM Ana Celedón": 80,
 };
 // Abarca: cambió de % variable a sueldo fijo en agosto 2024.
 // Antes 2024-08: total va a "Dr. Abarca" (% variable)
