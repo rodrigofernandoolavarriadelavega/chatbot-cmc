@@ -1021,20 +1021,47 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
         if not profs_esp or len(profs_esp) >= len(profs_recep):
             continue
         # Intentar resolver cada pago del grupo por ARANCEL: monto → área →
-        # ¿un único profesional del día de esa área? → sugerencia concreta.
+        # ¿un único profesional del día de esa área? Tres desenlaces:
+        # confirma al espejo (silencio), lo contradice (flag concreto), o el
+        # monto es la SUMA de dos aranceles de las áreas del día (pago
+        # PARTIDO — caso Uberlinda $26.520 = $15.130 med + $11.390 kine):
+        # convención parte MAYOR; flag solo si el espejo no la sigue.
         resuelto_alguno = False
         for r in pagos_grupo.get((fecha, nom), []):
-            area = tabla_arancel.get(int(r["monto"] or 0))
-            if not area:
+            monto_r = int(r["monto"] or 0)
+            area = tabla_arancel.get(monto_r)
+            if area:
+                cand = [p for p in profs_recep if _AREA_POR_PROF.get(p) == area]
+                if len(cand) == 1:
+                    resuelto_alguno = True
+                    if r["id_profesional"] != cand[0]:
+                        flags.append({"pago_id": r["pago_id"], "fecha": fecha,
+                                      "monto": r["monto"],
+                                      "espejo": r["id_profesional"],
+                                      "paciente": r["nombre_paciente"],
+                                      "tipo": "dia_multi_prof_arancel",
+                                      "sugerido": cand[0]})
                 continue
-            cand = [p for p in profs_recep if _AREA_POR_PROF.get(p) == area]
-            if len(cand) == 1 and r["id_profesional"] != cand[0]:
-                resuelto_alguno = True
-                flags.append({"pago_id": r["pago_id"], "fecha": fecha,
-                              "monto": r["monto"], "espejo": r["id_profesional"],
-                              "paciente": r["nombre_paciente"],
-                              "tipo": "dia_multi_prof_arancel",
-                              "sugerido": cand[0]})
+            # ¿pago partido? monto = arancel_a + arancel_b con áreas del día
+            aranceles_dia = {}
+            for p in profs_recep:
+                a = _AREA_POR_PROF.get(p)
+                for m, ar in tabla_arancel.items():
+                    if ar == a:
+                        aranceles_dia[m] = p
+            for m1, p1 in aranceles_dia.items():
+                m2 = monto_r - m1
+                if m2 in aranceles_dia and aranceles_dia[m2] != p1:
+                    mayor = p1 if m1 >= m2 else aranceles_dia[m2]
+                    resuelto_alguno = True
+                    if r["id_profesional"] != mayor:
+                        flags.append({"pago_id": r["pago_id"], "fecha": fecha,
+                                      "monto": r["monto"],
+                                      "espejo": r["id_profesional"],
+                                      "paciente": r["nombre_paciente"],
+                                      "tipo": "pago_partido_mayor_parte",
+                                      "sugerido": mayor})
+                    break
         if not resuelto_alguno:
             flags.append({"pago_id": None, "fecha": fecha, "monto": None,
                           "espejo": sorted(p for p in profs_esp if p),
