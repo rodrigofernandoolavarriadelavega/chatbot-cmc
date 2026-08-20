@@ -976,11 +976,17 @@ def auditar_atribucion_pagos(desde: str, hasta: str) -> dict:
 
     flags = []
     espejo_dia: dict = {}   # (fecha, nom) -> set de profs que asignó el espejo
+    # Los pagos con override SÍ cuentan para el balance del día (son verdad
+    # nivel 0 — sin esto un grupo ya corregido seguía flaggeando, caso Milton
+    # post-fix), pero NO generan flags propios (skip en el loop siguiente).
+    for r in bi:
+        espejo_dia.setdefault(
+            (r["fecha"], _norm(r["nombre_paciente"])), set()
+        ).add(r["id_profesional"])
     for r in bi:
         if r["pago_id"] in overrides:
             continue
         nom = _norm(r["nombre_paciente"])
-        espejo_dia.setdefault((r["fecha"], nom), set()).add(r["id_profesional"])
         base = {"pago_id": r["pago_id"], "fecha": r["fecha"],
                 "monto": r["monto"], "espejo": r["id_profesional"],
                 "paciente": r["nombre_paciente"]}
