@@ -561,10 +561,16 @@ def _candidatos_pendientes(monto: int, email_dt_iso: str) -> list[dict]:
     for r in rows:
         d = dict(r)
         creado = _parse_ts_flexible(d.get("creado_at") or "")
-        expira = _parse_ts_flexible(d.get("expira_at") or "")
         if creado and creado > email_dt:
             continue
-        if expira and expira < email_dt:
+        # Ventana AMPLIADA a 72 h (2026-08-20, caso Katherine Oyarzún): la
+        # gente paga horas o DÍAS después del gate — con la ventana original
+        # de 90 min (expira_at) su correo real de $60.000 llegó al día 6 y
+        # quedó sin_match con el abono aún pendiente. Como esta query ya
+        # filtra estado='pendiente', un abono resuelto jamás re-matchea; la
+        # ambigüedad entre candidatos la resuelven el filtro de nombre y la
+        # pregunta al paciente (§5).
+        if creado and (email_dt - creado) > timedelta(hours=72):
             continue
         out.append(d)
     return out

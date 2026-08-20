@@ -39,3 +39,22 @@ class TestVentanaMatching(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestVentana72h(unittest.TestCase):
+    """Caso Katherine Oyarzún (2026-08-20): pagó al día 6 del gate — fuera de
+    la ventana original de 90 min. Ahora la ventana es 72 h sobre abonos aún
+    pendientes; más allá de 72 h sigue fuera (no re-matchear pagos antiguos)."""
+
+    def test_pago_al_dia_2_entra(self):
+        from datetime import timedelta
+        creado = _parse_ts_flexible("2026-08-04T13:00:00-04:00")
+        email = _parse_ts_flexible("2026-08-06 10:00:00")
+        self.assertLessEqual(creado, email)
+        self.assertLessEqual(email - creado, timedelta(hours=72))
+
+    def test_pago_al_dia_6_sigue_fuera(self):
+        from datetime import timedelta
+        creado = _parse_ts_flexible("2026-08-04T13:00:00-04:00")
+        email = _parse_ts_flexible("2026-08-10 10:00:00")
+        self.assertGreater(email - creado, timedelta(hours=72))
