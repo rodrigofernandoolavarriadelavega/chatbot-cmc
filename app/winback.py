@@ -576,6 +576,47 @@ def _is_staff_phone(tel_digits: str) -> bool:
     return False
 
 
+def _anotar_phone_compartido(tel_suffix: str, candidato: dict) -> dict:
+    """Marca `phone_compartido=True` si este teléfono NO es de una sola persona.
+
+    Hallazgo auditoría 2026-08-05 (Ley 21.719): el número 996510668 lo
+    comparten 7 fichas; el winback saludó a "Matias" con su médico tratante
+    cuando quien contestaba era Baldremina — datos clínicos de un tercero a
+    quien sea que tenga el aparato. Dos señales, cualquiera basta:
+      1. ≥2 pacientes distintos en BI con el mismo sufijo de 9 dígitos.
+      2. El nombre que el bot YA conoce de ese WhatsApp (contact_profiles)
+         no calza con el candidato elegido.
+    Con el flag puesto, los senders usan copy neutro (sin nombre, sin
+    especialidad, sin profesional) o se abstienen."""
+    compartido = False
+    try:
+        with bi_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(DISTINCT paciente_id) FROM bi.dim_paciente "
+                    "WHERE RIGHT(regexp_replace(telefono, '[^0-9]', '', 'g'), 9) = %s",
+                    (tel_suffix,),
+                )
+                n = (cur.fetchone() or [0])[0] or 0
+                compartido = n > 1
+    except Exception as e:
+        log.debug("phone_compartido: conteo BI falló (%s)", e)
+    if not compartido:
+        try:
+            from session import get_profile
+            _prof = get_profile("56" + tel_suffix) or get_profile(tel_suffix) or {}
+            _nom_conocido = (_prof.get("nombre") or "").strip()
+            if _nom_conocido:
+                from abono_transferencia import nombres_similares
+                _cand_full = f"{candidato.get('nombre') or ''} {candidato.get('apellido') or ''}".strip()
+                if _cand_full and not nombres_similares(_cand_full, _nom_conocido)[0]:
+                    compartido = True
+        except Exception as e:
+            log.debug("phone_compartido: contraste perfil falló (%s)", e)
+    candidato["phone_compartido"] = compartido
+    return candidato
+
+
 def get_candidato_por_phone(phone: str) -> dict | None:
     """Busca datos de un paciente por teléfono usando cascada de 4 fuentes.
 
@@ -630,7 +671,7 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                         "genero", "ultima_atencion", "ultima_especialidad",
                         "ultimo_profesional", "dias_inactivo", "cohorte", "edad",
                     ]
-                    return dict(zip(cols, row))
+                    return _anotar_phone_compartido(tel_suffix, dict(zip(cols, row)))
     except Exception as e:
         log.warning("winback: get_candidato_por_phone fuente1 error phone=...%s: %s", tel_suffix[-4:], e)
 
@@ -654,7 +695,7 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                         "winback: get_candidato_por_phone fuente2 (dim_paciente) phone=...%s nombre=%s",
                         tel_suffix[-4:], (row[1] or "").strip()[:20],
                     )
-                    return {
+                    return _anotar_phone_compartido(tel_suffix, {
                         "paciente_id": row[0],
                         "nombre": row[1],
                         "apellido": row[2],
@@ -666,7 +707,7 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                         "dias_inactivo": None,
                         "cohorte": "unknown",
                         "edad": None,
-                    }
+                    })
     except Exception as e:
         log.warning("winback: get_candidato_por_phone fuente2 error phone=...%s: %s", tel_suffix[-4:], e)
 
@@ -694,7 +735,7 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                     "winback: get_candidato_por_phone fuente3 (contact_profiles) phone=...%s nombre=%s",
                     tel_suffix[-4:], nombre_cp[:20],
                 )
-                return {
+                return _anotar_phone_compartido(tel_suffix, {
                     "paciente_id": 0,
                     "nombre": nombre_cp,
                     "apellido": "",
@@ -706,7 +747,7 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                     "dias_inactivo": None,
                     "cohorte": "unknown",
                     "edad": None,
-                }
+                })
     except Exception as e:
         log.warning("winback: get_candidato_por_phone fuente3 error phone=...%s: %s", tel_suffix[-4:], e)
 
@@ -731,7 +772,7 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                         "Usando fallback 'Paciente'. Revisar datos de fuente.",
                         tel_suffix[-4:],
                     )
-                    return {
+                    return _anotar_phone_compartido(tel_suffix, {
                         "paciente_id": 0,
                         "nombre": "Paciente",
                         "apellido": "",
@@ -743,7 +784,7 @@ def get_candidato_por_phone(phone: str) -> dict | None:
                         "dias_inactivo": None,
                         "cohorte": "unknown",
                         "edad": None,
-                    }
+                    })
     except Exception as e:
         log.warning("winback: get_candidato_por_phone fuente4 error phone=...%s: %s", tel_suffix[-4:], e)
 
@@ -963,6 +1004,20 @@ async def send_winback(candidato: dict) -> bool:
 
     if not telefono or len(telefono) < 8:
         log.warning("winback: telefono inválido para paciente_id=%s", paciente_id)
+        return False
+
+    # Teléfono compartido por varias fichas → NO mandar template: todos los
+    # templates aprobados llevan el NOMBRE del paciente y quien tiene el
+    # aparato puede ser otra persona (Ley 21.719, hallazgo auditoría 05-08).
+    # El camino de sesión tiene copy neutro; el de template se abstiene.
+    if candidato.get("phone_compartido"):
+        log.info("winback: skip template — phone compartido paciente_id=%s phone=...%s",
+                 paciente_id, telefono[-4:])
+        try:
+            from session import log_event as _le_wb
+            _le_wb(telefono, "winback_skip_phone_compartido", {"paciente_id": paciente_id})
+        except Exception:
+            pass
         return False
 
     # Gate de consentimiento explícito de marketing.
@@ -1225,7 +1280,20 @@ async def _send_winback_session(candidato: dict) -> bool:
     from config import CMC_TELEFONO_FIJO as _FIJO
     _fijo = _FIJO or "(44) 296 5226"
 
-    if cohorte == "365d":
+    if candidato.get("phone_compartido"):
+        # Teléfono compartido por varias fichas (o el nombre conocido del
+        # WhatsApp no calza con el candidato): SIN nombre, SIN especialidad,
+        # SIN profesional — quien contesta puede no ser el paciente (hallazgo
+        # auditoría 05-08, Ley 21.719: "Hola Matias... sin pasar a General
+        # con Abarca" a un número donde contestaba Baldremina).
+        body_text = (
+            f"Hola 👋, le saluda el Centro Médico Carampangue.\n\n"
+            f"Si usted o alguien de su familia tiene un control pendiente, "
+            f"podemos ayudarle a agendar con facilidad.\n\n"
+            f"Escríbanos por este WhatsApp o llámenos al {_fijo}.\n\n"
+            f"Responde BAJA si no deseas recibir más mensajes."
+        )
+    elif cohorte == "365d":
         # One-shot genérico: sin mencionar especialidad ni profesional
         body_text = (
             f"Hola {nombre}, te saluda el Centro Médico Carampangue.\n\n"

@@ -4420,7 +4420,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 r"\b(la hora|esa hora|esta hora|la cita) (es )?para "
                 r"(mi |un |una )?(hij[oa]|esposo|esposa|mam[aá]|pap[aá]|"
                 r"hermano|hermana|nieto|nieta|pareja|pololo|polola|"
-                r"abuelo|abuela|familiar|amig[oa])\b",
+                r"abuelo|abuela|familiar|amig[oa])\b"
+                # "La hora al nombre de Alexander" (caso Isabella 04-08): la
+                # corrección viene con NOMBRE PROPIO, no con parentesco.
+                r"|\b(la hora|esa hora|esta hora|la cita)?\s*a(?:l)?\s+nombre\s+de\s+\w+",
                 re.IGNORECASE,
             )
             if _es_post_confirm and _CORRECCION_TITULAR_RE.search(txt):
@@ -10027,6 +10030,48 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "¿Tu atención será Fonasa o Particular?",
                 [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
             )
+        # ── Titular distinto EN la confirmación (caso Isabella→Alexander,
+        # auditoría 04-08): la mamá escribió "Alexander vallejos Fernández" y
+        # "La hora al nombre de Alexander" DURANTE la confirmación y el bot
+        # respondió "Responde Sí o Cambiar" — reservó a nombre de la hija
+        # equivocada y de ahí nació todo el enredo de fichas/duplicados.
+        # Detectamos: (a) "a/al nombre de X", (b) un nombre propio "suelto"
+        # (2-4 palabras alfabéticas sin verbos/palabras de flujo) DISTINTO al
+        # paciente en pantalla → reusar la rama cd_persona (flujo "para otra
+        # persona" que preserva el slot).
+        if not data.get("booking_for_other"):
+            _RE_AL_NOMBRE = _re_corr.compile(
+                r"\ba(?:l)?\s+nombre\s+de\s+([A-Za-zÁÉÍÓÚáéíóúñÑ ]{3,60})",
+                _re_corr.IGNORECASE)
+            _m_alnombre = _RE_AL_NOMBRE.search(txt)
+            _cand_titular = (_m_alnombre.group(1).strip() if _m_alnombre else "")
+            if not _cand_titular:
+                _STOP_TITULAR = {
+                    "si", "sí", "no", "ok", "ya", "hola", "gracias", "quiero",
+                    "necesito", "cambiar", "cambio", "confirmar", "confirmo",
+                    "cancelar", "reservar", "agendar", "hora", "cita", "la",
+                    "el", "una", "un", "mi", "me", "para", "por", "favor",
+                    "esa", "esta", "buenas", "buenos", "dias", "días",
+                    "tardes", "noches", "menu", "menú", "doctor", "doctora",
+                }
+                _pal_tit = txt.strip().split()
+                if (2 <= len(_pal_tit) <= 4
+                        and all(w.isalpha() for w in _pal_tit)
+                        and not any(w.lower() in _STOP_TITULAR for w in _pal_tit)):
+                    _cand_titular = " ".join(_pal_tit)
+            if _cand_titular:
+                _mismo_titular = False
+                try:
+                    from abono_transferencia import nombres_similares as _ns_tit
+                    _nom_actual = (data.get("paciente") or {}).get("nombre", "")
+                    _mismo_titular = bool(_nom_actual) and _ns_tit(_cand_titular, _nom_actual)[0]
+                except Exception:
+                    pass
+                if not _mismo_titular:
+                    log_event(phone, "titular_distinto_en_confirmacion",
+                              {"txt": txt[:120], "candidato": _cand_titular[:60]})
+                    tl = "cd_persona"  # cae en la rama existente más abajo
+
         # Paciente quiere cambiar algo → mostrar sub-menú de opciones
         # (FIX 3: 21% abandona porque antes se saltaba directo a WAIT_MODALIDAD
         # sin preguntar QUÉ quería cambiar)
@@ -13179,6 +13224,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             reset_session(phone)
             return "_Escribe *menu* si necesitas algo más._"
         else:
+            # Intención ACCIONABLE en medio del cross-sell (hallazgo auditoría
+            # 05-08, caso Patricia 56986484201): "Quiero cambiar la hora" justo
+            # tras confirmar caía como "ambigua" → reprompt → reset, y la
+            # paciente tuvo que rehacer todo el flujo (9 min, 15 mensajes).
+            # Reset + re-despacho a IDLE: el pipeline normal de intents rutea
+            # cambiar/cancelar/agendar sin enumerar nada acá.
+            _CS_INTENT_RX = re.compile(
+                r"\b(cambiar|reagendar|correr|mover|modificar|anular|cancelar|"
+                r"otra hora|otro d[ií]a|otro horario|agendar|necesito (?:una )?hora|"
+                r"quiero (?:una )?hora)\b", re.IGNORECASE)
+            if _CS_INTENT_RX.search(txt):
+                log_event(phone, "cross_sell_intent_redispatch", {"txt": txt[:120]})
+                log_cross_sell(phone, esp_origen, esp_destino, "interrumpido")
+                reset_session(phone)
+                return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
             # Respuesta ambigua (ej: "¿cuánto cuesta?", "gracias", RUT, texto libre)
             # → reprompt una vez; al segundo intento fallido, escapar para evitar loop.
             _cs_intentos = data.get("cs_intentos", 0) + 1
