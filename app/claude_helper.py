@@ -760,7 +760,7 @@ Además, cuando el intent sea "info" por un término del glosario, SIEMPRE compl
 
 EJEMPLO:
 Input: "quiero tapadura"
-Output: {{"intent": "info", "especialidad": "odontología", "respuesta_directa": "Una *tapadura* (empaste) es la reparación de una muela con caries 🦷. La Dra. Javiera Burgos limpia la zona picada y la rellena con resina del mismo color del diente. Dura ~30 min, usamos anestesia local, no duele. Desde $35.000."}}
+Output: {{"intent": "info", "especialidad": "odontología", "respuesta_directa": "Una *tapadura* (empaste) es la reparación de una muela con caries 🦷. El dentista limpia la zona picada y la rellena con resina del mismo color del diente. Dura ~30 min, usamos anestesia local, no duele. Desde $35.000."}}
 
 Input: "necesito un botox"
 Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_directa": "El *botox* relaja los músculos de la cara para suavizar arrugas de frente, entrecejo y patas de gallo ✨. La Dra. Valentina Fuentealba lo aplica con micro-inyecciones, ~20 min, efecto dura 4–6 meses."}}
@@ -768,7 +768,7 @@ Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_direc
 No inventes términos que no estén acá; si no aparece, deriva a recepción.
 
 ODONTOLOGÍA / DENTAL
-- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. La dentista limpia la zona picada y la rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos). Desde $35.000.
+- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. La dentista limpia la zona picada y la rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $35.000.
 - Limpieza dental / sarro / profilaxis / me sangran las encías → destartraje + profilaxis, $30.000 en **Odontología General**. Duración ~40 min, sin dolor.
 - Sacar muela / sacar diente / muela del juicio / muela picada que no se puede arreglar → exodoncia simple $40.000, compleja $60.000 en **Odontología General**. Se usa anestesia local, ~30–45 min.
 - Matar el nervio / tratamiento de conducto / dolor fuerte de muela / caries profunda que llega al nervio → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente). Se limpia y sella el interior del diente para evitar extraerlo.
@@ -1131,7 +1131,7 @@ OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular):
 - Consulta ORL: $35.000 — evaluación de oído, nariz y garganta: sinusitis, amigdalitis, otitis, ronquidos, pólipos nasales, desviación de tabique, vértigo.
 - Control ORL: $8.000 — control post-consulta o seguimiento de tratamiento ORL.
 
-ODONTOLOGÍA GENERAL (Dra. Javiera Burgos — solo particular):
+ODONTOLOGÍA GENERAL (Dra. Javiera Burgos y Dr. Carlos Jiménez — solo particular):
 - Evaluación dental: $15.000 — revisión completa de dientes, encías y mordida. Incluye diagnóstico y plan de tratamiento.
 - Restauración de resina (tapadura): desde $35.000 — reparación de caries o dientes rotos con resina del color del diente. Con anestesia local, sin dolor.
 - Exodoncia simple: $40.000 — extracción de diente con anestesia local. Para dientes que ya no se pueden reparar.
@@ -1140,7 +1140,7 @@ ODONTOLOGÍA GENERAL (Dra. Javiera Burgos — solo particular):
 - Destartraje + profilaxis: $30.000 — limpieza dental profesional: retiro de sarro y placa bacteriana con ultrasonido + pulido. Se recomienda cada 6 meses.
 
 ORTODONCIA (Dra. Daniela Castillo — solo particular):
-⚠️ IMPORTANTE: NO se agenda directamente con ortodoncia. El paciente SIEMPRE debe primero agendar una evaluación con ODONTOLOGÍA GENERAL (Dra. Javiera Burgos). La dentista evalúa el caso, solicita radiografías, toma fotografías y luego ella gestiona la derivación a la ortodoncista. El presupuesto dental es $15.000, pero si el paciente decide empezar tratamiento previo ese día, el presupuesto sale gratis. La especialidad para agendar es "odontología" (NO "ortodoncia").
+⚠️ IMPORTANTE: NO se agenda directamente con ortodoncia. El paciente SIEMPRE debe primero agendar una evaluación con la Dra. Javiera Burgos (ella gestiona la derivación a ortodoncia). ESTO APLICA SOLO A ORTODONCIA: para odontología general (tapaduras, limpiezas, extracciones) atienden indistintamente la Dra. Burgos y el Dr. Jiménez, según disponibilidad. La dentista evalúa el caso, solicita radiografías, toma fotografías y luego ella gestiona la derivación a la ortodoncista. El presupuesto dental es $15.000, pero si el paciente decide empezar tratamiento previo ese día, el presupuesto sale gratis. La especialidad para agendar es "odontología" (NO "ortodoncia").
 Precios referenciales de ortodoncia (solo después de la evaluación dental):
 - Instalación brackets boca completa: $120.000 — brackets metálicos arriba y abajo. Incluye arco inicial.
 - Instalación brackets 1 arcada: $60.000 — brackets solo arriba o solo abajo.

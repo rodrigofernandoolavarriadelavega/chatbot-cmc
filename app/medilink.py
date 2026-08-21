@@ -313,9 +313,9 @@ PROFESIONALES = {
     61: {"nombre": "Dr. Tirso Rejón",          "especialidad": "Ginecología",           "intervalo": 20},
     65: {"nombre": "Dr. Nicolás Quijano",      "especialidad": "Gastroenterología",     "intervalo": 20},
     55: {"nombre": "Dra. Javiera Burgos",      "especialidad": "Odontología General",   "intervalo": 60},
-    # 72: Dr. Carlos Jiménez — Odontología General — YA NO se agenda por el bot
-    # (decisión dueño 2026-07-08, solo Burgos). Entrada viva para histórico
-    # (ortodoncia_cache/reportes); no se referencia en ESPECIALIDADES_MAP.
+    # 72: Dr. Carlos Jiménez — Odontología General. Fuera del ruteo entre el
+    # 2026-07-08 y el 2026-08-21; reactivado porque atiende viernes y SÁBADO,
+    # y sin él el bot no podía agendar ninguna hora dental de sábado.
     72: {"nombre": "Dr. Carlos Jiménez",       "especialidad": "Odontología General",   "intervalo": 30},
     66: {"nombre": "Dra. Daniela Castillo",    "especialidad": "Ortodoncia",            "intervalo": 30},
     75: {"nombre": "Dr. Fernando Fredes",      "especialidad": "Endodoncia",            "intervalo": 30},
@@ -373,20 +373,28 @@ ESPECIALIDADES_MAP = {
     "armijo": [77], "luis armijo": [77],
     "paola acosta": [59], "paola": [59],
     "burgos": [55], "javiera burgos": [55], "dra burgos": [55],
-    # Dr. Carlos Jiménez (72) YA NO agenda odontología general (decisión
-    # dueño 2026-07-08). Si el paciente lo pide explícitamente, redirige a
-    # Burgos (55) sin error — no borrar la entrada 72 de PROFESIONALES,
-    # se sigue usando en histórico (ortodoncia_cache, reportes).
-    "jimenez": [55], "jiménez": [55], "carlos jimenez": [55], "dr jimenez": [55],
+    # Dr. Carlos Jiménez (72) VUELVE al ruteo (decisión dueño 2026-08-21).
+    # Quien lo pide POR SU NOMBRE va con él. Entre el 8-jul y el 21-ago estas
+    # claves apuntaban a Burgos (55) y el paciente era redirigido EN SILENCIO:
+    # pedía a un profesional y le agendaban con otro sin decírselo.
+    "jimenez": [72], "jiménez": [72], "carlos jimenez": [72],
+    "carlos jiménez": [72], "dr jimenez": [72], "dr jiménez": [72],
     "montalba": [74], "jorge montalba": [74],
     "rodriguez": [49], "rodríguez": [49], "juan pablo": [49], "juan pablo rodriguez": [49],
     # ── Especialidades genéricas (cuando el paciente no nombra a nadie) ──
-    # Odontología general SOLO Dra. Javiera Burgos (55) — decisión dueño
-    # 2026-07-08. Antes incluía a Jiménez (72) en el pool.
-    "odontología": [55], "odontologia": [55],
-    "dentista": [55], "dental": [55],
-    "odontólogo": [55], "odontologo": [55],
-    "odontología general": [55], "odontologia general": [55],
+    # Odontología general: LOS DOS, y se ofrece según disponibilidad real
+    # (decisión dueño 2026-08-21, revierte el "solo Burgos" del 2026-07-08).
+    #
+    # Por qué importa el orden de los ids: sus agendas son casi disjuntas
+    # (leído de Medilink el 21-08-2026):
+    #     Burgos  (55) → lunes a viernes
+    #     Jiménez (72) → viernes y sábado
+    # Con "solo Burgos", el bot no podía agendar NI UNA hora dental de sábado,
+    # porque el único que atiende ese día estaba fuera del ruteo.
+    "odontología": [55, 72], "odontologia": [55, 72],
+    "dentista": [55, 72], "dental": [55, 72],
+    "odontólogo": [55, 72], "odontologo": [55, 72],
+    "odontología general": [55, 72], "odontologia general": [55, 72],
     "endodoncia": [75], "endodoncista": [75],
     "estética facial": [76], "estetica facial": [76], "estética": [76],
     "fonoaudiología": [70], "fonoaudiólogo": [70], "fonoaudiologa": [70],
