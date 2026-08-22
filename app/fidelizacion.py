@@ -9,7 +9,7 @@ Flujos de fidelización:
   7. Win-back (pacientes >90 días sin cita)
 """
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 _TZ_CHILE = ZoneInfo("America/Santiago")
@@ -1660,3 +1660,149 @@ async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None
             log.info("crosssell_post_dental_ortodoncia enviado → %s", phone)
         except Exception as e:
             log.error("Error cross-sell post-dental phone=%s: %s", phone, e)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Secuenciación post-consulta (portaviones #10, hallazgo ×18 en el mes)
+#
+# Problema real (casos 56978613486, 56959205136, 56999671505): al responder
+# "Mejor" al seguimiento, el paciente recibía en ráfaga de ≤3s: (1) los tips
+# de autocuidado (flush de `pending_tips`, ya diferido — ver
+# `enviar_seguimiento_postconsulta` más arriba), (2) el upsell cross-sell y
+# (3) la solicitud de reseña Google (`flows._send_review_request_if_due`,
+# disparada por `spawn_task` casi al mismo tiempo). Los 3 mensajes salían
+# en el mismo tick de `handle_message` sin esperar respuesta entre pasos.
+#
+# Estas funciones son PURAS (sin I/O) y arman/leen un payload que vive en
+# `session.data["upsell_postconsulta"]` / `session.data["review_postconsulta"]`
+# — mismo patrón que `pending_tips`. `jobs.py` las consume con dos crons
+# nuevos (`_job_secuencia_postconsulta_upsell` / `_job_secuencia_postconsulta_review`)
+# que despachan cuando corresponde, en vez de enviar todo en el momento de
+# la respuesta. Wiring pendiente en `flows.py` — ver docstring de los jobs.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Separación entre el ack inmediato ("Mejor" → tips ya en curso) y el upsell.
+UPSELL_DELAY_MINUTOS = 20
+# Si el paciente no responde el upsell, igual se le pide la reseña tras esto.
+REVIEW_TIMEOUT_HORAS = 3
+# Si SÍ respondió el upsell (si/no), la reseña sale poco después, no al tiro.
+REVIEW_DELAY_TRAS_RESPUESTA_MIN = 5
+
+
+def construir_secuencia_upsell(especialidad_origen: str, upsell_esp: str | None,
+                                upsell_msg: str | None, rating: int | None,
+                                ahora: datetime | None = None) -> dict:
+    """Payload para `data["upsell_postconsulta"]`. Puro — `ahora` inyectable
+    para tests. `upsell_esp`/`upsell_msg` pueden ser None (especialidad sin
+    cross-sell mapeado en `UPSELL_POSTCONSULTA`; igual se agenda para no
+    perder la secuenciación del control genérico)."""
+    ahora = ahora or datetime.now(timezone.utc)
+    return {
+        "especialidad_origen": especialidad_origen or "",
+        "upsell_esp": upsell_esp,
+        "upsell_msg": upsell_msg,
+        "rating": rating,
+        "status": "pendiente",  # pendiente → enviado → respondido
+        "creado_en": ahora.isoformat(),
+        "disparar_en": (ahora + timedelta(minutes=UPSELL_DELAY_MINUTOS)).isoformat(),
+    }
+
+
+def _parse_ts(valor: str | None) -> datetime | None:
+    if not valor:
+        return None
+    try:
+        dt = datetime.fromisoformat(valor)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        return None
+
+
+def debe_disparar_upsell(secuencia: dict | None, ahora: datetime | None = None) -> bool:
+    """¿Ya toca mandar el upsell diferido? Falso si no hay secuencia, si ya
+    se envió/respondió, o si aún no llega `disparar_en`."""
+    if not secuencia or secuencia.get("status") != "pendiente":
+        return False
+    ahora = ahora or datetime.now(timezone.utc)
+    disparar_en = _parse_ts(secuencia.get("disparar_en"))
+    if disparar_en is None:
+        return False
+    return ahora >= disparar_en
+
+
+def marcar_upsell_enviado(secuencia: dict, ahora: datetime | None = None) -> dict:
+    ahora = ahora or datetime.now(timezone.utc)
+    nueva = dict(secuencia)
+    nueva["status"] = "enviado"
+    nueva["enviado_en"] = ahora.isoformat()
+    return nueva
+
+
+def marcar_upsell_respondido(secuencia: dict, ahora: datetime | None = None) -> dict:
+    """Pensada para llamarse desde flows.py cuando el paciente toca
+    'upsell_si'/'no_control' (wiring pendiente, ver reporte de la sesión).
+    Acorta el timeout de la reseña — no hace falta esperar 3h si ya contestó."""
+    ahora = ahora or datetime.now(timezone.utc)
+    nueva = dict(secuencia)
+    nueva["status"] = "respondido"
+    nueva["respondido_en"] = ahora.isoformat()
+    return nueva
+
+
+def construir_secuencia_review(especialidad: str, rating: int | None,
+                                ahora: datetime | None = None) -> dict:
+    """Payload para `data["review_postconsulta"]`. Puro."""
+    ahora = ahora or datetime.now(timezone.utc)
+    return {
+        "especialidad": especialidad or "",
+        "rating": rating,
+        "status": "pendiente",  # pendiente → enviado
+        "creado_en": ahora.isoformat(),
+    }
+
+
+def calcular_disparo_review(secuencia_upsell: dict | None,
+                             ahora: datetime | None = None) -> datetime | None:
+    """Cuándo corresponde disparar la reseña, en función del upsell:
+    - Sin upsell aplicable (especialidad sin cross-sell): timeout corto
+      tras el ack (no tiene sentido esperar una respuesta que no existe).
+    - Upsell "respondido": timeout corto tras la respuesta.
+    - Upsell "enviado" sin respuesta: timeout largo (REVIEW_TIMEOUT_HORAS).
+    - Upsell todavía "pendiente" (el job de upsell no ha corrido): None,
+      la reseña espera — nunca se adelanta al upsell.
+    """
+    ahora = ahora or datetime.now(timezone.utc)
+    if not secuencia_upsell:
+        return ahora + timedelta(minutes=REVIEW_DELAY_TRAS_RESPUESTA_MIN)
+    status = secuencia_upsell.get("status")
+    if status == "respondido":
+        base = _parse_ts(secuencia_upsell.get("respondido_en")) or ahora
+        return base + timedelta(minutes=REVIEW_DELAY_TRAS_RESPUESTA_MIN)
+    if status == "enviado":
+        base = _parse_ts(secuencia_upsell.get("enviado_en")) or ahora
+        return base + timedelta(hours=REVIEW_TIMEOUT_HORAS)
+    return None  # "pendiente" — todavía no se resuelve el upsell
+
+
+def debe_disparar_review(secuencia_review: dict | None, secuencia_upsell: dict | None,
+                          ahora: datetime | None = None) -> bool:
+    """¿Ya toca mandar la reseña diferida? Nunca antes de que el upsell esté
+    resuelto (respondido o vencido su timeout) — ese es el orden pedido:
+    tips → upsell → reseña, nunca en la misma ráfaga."""
+    if not secuencia_review or secuencia_review.get("status") != "pendiente":
+        return False
+    ahora = ahora or datetime.now(timezone.utc)
+    disparo = calcular_disparo_review(secuencia_upsell, ahora)
+    if disparo is None:
+        return False
+    return ahora >= disparo
+
+
+def marcar_review_enviado(secuencia: dict, ahora: datetime | None = None) -> dict:
+    ahora = ahora or datetime.now(timezone.utc)
+    nueva = dict(secuencia)
+    nueva["status"] = "enviado"
+    nueva["enviado_en"] = ahora.isoformat()
+    return nueva

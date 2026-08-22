@@ -4815,32 +4815,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         pass
                 log_event(phone, "seguimiento_mejor",
                           {"especialidad": esp, "rating": rating})
-                # Pide reseña Google solo a promotores (rating ≥ 4)
-                try:
-                    from resilience import spawn_task
-                    spawn_task(_send_review_request_if_due(phone, esp, rating=rating))
-                except Exception:
-                    pass
-                # Cross-sell inteligente según especialidad
+                # Secuenciación post-consulta (portaviones #10, hallazgo ×18):
+                # antes acá salían upsell + reseña Google en la misma ráfaga
+                # que los tips (≤3s, spawn_task casi simultáneo — casos
+                # 56978613486/56959205136/56999671505). Ahora se AGENDA: el
+                # upsell sale ~UPSELL_DELAY_MINUTOS después
+                # (_job_secuencia_postconsulta_upsell) y la reseña recién
+                # cuando ese upsell quede resuelto o venza su timeout
+                # (_job_secuencia_postconsulta_review). Ver fidelizacion.py.
+                from fidelizacion import construir_secuencia_upsell, construir_secuencia_review
                 upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
+                upsell_msg, upsell_esp = upsell if upsell else (None, None)
                 data["upsell_postconsulta_ts"] = datetime.now(timezone.utc).isoformat()
-                if upsell:
-                    upsell_msg, upsell_esp = upsell
-                    data["upsell_especialidad"] = upsell_esp
-                    save_session(phone, "IDLE", data)
-                    log_event(phone, "upsell_postconsulta_ofrecido",
-                              {"especialidad_origen": esp, "especialidad_destino": upsell_esp})
-                    return _btn_msg(
-                        f"Qué bueno saberlo 😊 Nos alegra que te sientas bien.\n\n{upsell_msg}",
-                        [{"id": "upsell_si", "title": "Sí, me interesa"},
-                         {"id": "no_control", "title": "No por ahora"}]
-                    )
-                save_session(phone, "IDLE", data)  # persistir upsell_postconsulta_ts (anti-loop)
-                return _btn_msg(
+                data["upsell_postconsulta"] = construir_secuencia_upsell(esp, upsell_esp, upsell_msg, rating)
+                data["review_postconsulta"] = construir_secuencia_review(esp, rating)
+                save_session(phone, "IDLE", data)
+                log_event(phone, "secuencia_postconsulta_programada",
+                          {"especialidad_origen": esp, "especialidad_destino": upsell_esp})
+                return (
                     "Qué bueno saberlo 😊 Nos alegra que te sientas bien.\n\n"
-                    "¿Quieres agendar tu control de seguimiento?",
-                    [{"id": "1", "title": "Sí, agendar control"},
-                     {"id": "no_control", "title": "Por ahora no"}]
+                    "_Escribe *menu* si necesitas algo más._"
                 )
 
             # Detractor (peor, rating 1-2) o neutro (igual, rating 3)
@@ -4892,6 +4886,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl == "upsell_si":
             upsell_esp = data.pop("upsell_especialidad", None)
             log_event(phone, "upsell_postconsulta_acepto", {"especialidad": upsell_esp})
+            # Secuenciación post-consulta: marcar el upsell "respondido" para
+            # que la reseña Google (diferida) salga poco después, no espere
+            # el timeout completo de horas sin respuesta.
+            if data.get("upsell_postconsulta"):
+                from fidelizacion import marcar_upsell_respondido
+                data["upsell_postconsulta"] = marcar_upsell_respondido(data["upsell_postconsulta"])
             perfil = get_profile(phone)
             if perfil:
                 data["rut_conocido"] = perfil["rut"]
@@ -4899,6 +4899,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_agendar(phone, data, upsell_esp)
         if tl == "no_control":
             data.pop("upsell_especialidad", None)
+            if data.get("upsell_postconsulta"):
+                from fidelizacion import marcar_upsell_respondido
+                data["upsell_postconsulta"] = marcar_upsell_respondido(data["upsell_postconsulta"])
+            save_session(phone, "IDLE", data)
             return (
                 "Entendido 😊 Cuando lo necesites, estamos acá.\n"
                 "_Escribe *menu* para volver al inicio._"
@@ -5089,29 +5093,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     rating_libre = 5 if "5" in (txt or "") else 4
                     log_event(phone, "seguimiento_mejor",
                               {"especialidad": esp, "fuente": "texto_libre", "rating": rating_libre})
-                    try:
-                        from resilience import spawn_task
-                        spawn_task(_send_review_request_if_due(phone, esp, rating=rating_libre))
-                    except Exception:
-                        pass
+                    # Secuenciación post-consulta (mismo fix que el path de
+                    # botón arriba): upsell y reseña quedan agendados, no en
+                    # la misma ráfaga que este ack.
+                    from fidelizacion import construir_secuencia_upsell, construir_secuencia_review
                     upsell = UPSELL_POSTCONSULTA.get(esp.lower()) if esp else None
-                    if upsell:
-                        upsell_msg, upsell_esp = upsell
-                        data["upsell_especialidad"] = upsell_esp
-                        save_session(phone, "IDLE", data)
-                        log_event(phone, "upsell_postconsulta_ofrecido",
-                                  {"especialidad_origen": esp, "especialidad_destino": upsell_esp,
-                                   "fuente": "texto_libre"})
-                        return _btn_msg(
-                            f"Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n{upsell_msg}",
-                            [{"id": "upsell_si", "title": "Sí, me interesa"},
-                             {"id": "no_control", "title": "No por ahora"}]
-                        )
-                    return _btn_msg(
+                    upsell_msg, upsell_esp = upsell if upsell else (None, None)
+                    data["upsell_postconsulta_ts"] = datetime.now(timezone.utc).isoformat()
+                    data["upsell_postconsulta"] = construir_secuencia_upsell(esp, upsell_esp, upsell_msg, rating_libre)
+                    data["review_postconsulta"] = construir_secuencia_review(esp, rating_libre)
+                    save_session(phone, "IDLE", data)
+                    log_event(phone, "secuencia_postconsulta_programada",
+                              {"especialidad_origen": esp, "especialidad_destino": upsell_esp,
+                               "fuente": "texto_libre"})
+                    return (
                         "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
-                        "¿Quieres agendar tu control de seguimiento?",
-                        [{"id": "1", "title": "Sí, agendar control"},
-                         {"id": "no_control", "title": "Por ahora no"}]
+                        "_Escribe *menu* si necesitas algo más._"
                     )
                 else:  # igual o peor
                     log_event(phone, "seguimiento_negativo",

@@ -4747,6 +4747,154 @@ async def _job_followup_info():
             log.warning("followup_info: error enviando a %s: %s", _phone_fi, _e_send_fi)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Secuenciación post-consulta: despacha upsell y reseña Google DIFERIDOS
+# (portaviones #10, hallazgo ×18 en el mes — casos 56978613486, 56959205136,
+# 56999671505). Antes salían en la misma ráfaga de ≤3s que los tips, al
+# responder "Mejor" al seguimiento. Ahora `flows.py` (bloque `_SEG_ID_MAP` +
+# el path de texto libre + handlers `upsell_si`/`no_control`) solo guarda la
+# secuencia en `data["upsell_postconsulta"]` / `data["review_postconsulta"]`
+# (armada con `fidelizacion.construir_secuencia_upsell` /
+# `construir_secuencia_review`) y devuelve el ack; estos dos jobs la
+# despachan cuando corresponde. Registrados en `main.py` cada 10 min
+# (`secuencia_postconsulta_upsell` / `secuencia_postconsulta_review`).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_secuencia_postconsulta_enabled() -> bool:
+    import os as _os_sp
+    return _os_sp.getenv("SECUENCIA_POSTCONSULTA_ENABLED", "true").lower() in ("true", "1", "yes")
+
+
+async def _job_secuencia_postconsulta_upsell():
+    """Cada N min (ver scheduler): manda el upsell diferido de la secuencia
+    post-consulta cuando corresponde (`fidelizacion.debe_disparar_upsell`).
+    Guard de takeover/flujo activo: solo procesa `state='IDLE'` (mismo patrón
+    que `_job_followup_info`) — una sesión en HUMAN_TAKEOVER o a mitad de otro
+    flujo (WAIT_*) queda excluida por el propio WHERE, no hace falta chequeo
+    aparte."""
+    if not _get_secuencia_postconsulta_enabled():
+        return
+
+    import json as _json_su
+    import fidelizacion as _fid_su
+    from session import db as _conn_su, is_window_open as _win_su
+
+    try:
+        with _conn_su() as _c_su:
+            rows_su = _c_su.execute(
+                "SELECT phone, state, data FROM sessions WHERE state = 'IDLE'"
+            ).fetchall()
+    except Exception as _e_su:
+        log.error("secuencia_postconsulta_upsell: error leyendo DB: %s", _e_su)
+        return
+
+    for row_su in (rows_su or []):
+        _phone_su = row_su["phone"] if isinstance(row_su, dict) else row_su[0]
+        _data_raw_su = row_su["data"] if isinstance(row_su, dict) else row_su[2]
+        try:
+            _data_su = _json_su.loads(_data_raw_su) if isinstance(_data_raw_su, str) else (_data_raw_su or {})
+        except Exception:
+            continue
+
+        _secuencia_su = _data_su.get("upsell_postconsulta") if isinstance(_data_su, dict) else None
+        if not _fid_su.debe_disparar_upsell(_secuencia_su):
+            continue
+
+        try:
+            if not _win_su(_phone_su):
+                continue
+        except Exception:
+            continue
+
+        _upsell_msg_su = (_secuencia_su or {}).get("upsell_msg")
+        _upsell_esp_su = (_secuencia_su or {}).get("upsell_esp")
+        if not _upsell_msg_su:
+            # Sin cross-sell mapeado (control genérico) — no hay texto que
+            # mandar por separado; se marca enviado igual para no bloquear
+            # la reseña, que ya usa su propio timeout corto sin upsell.
+            _data_su["upsell_postconsulta"] = _fid_su.marcar_upsell_enviado(_secuencia_su)
+            try:
+                save_session(_phone_su, "IDLE", _data_su)
+            except Exception:
+                pass
+            continue
+
+        try:
+            from flows import _btn_msg as _btn_su
+            _interactive_su = _btn_su(
+                _upsell_msg_su,
+                [{"id": "upsell_si", "title": "Sí, me interesa"},
+                 {"id": "no_control", "title": "No por ahora"}],
+            )
+            await send_whatsapp_interactive(_phone_su, _interactive_su["interactive"])
+            log_message(_phone_su, "out", _upsell_msg_su, "IDLE")
+            if _upsell_esp_su:
+                _data_su["upsell_especialidad"] = _upsell_esp_su
+            _data_su["upsell_postconsulta"] = _fid_su.marcar_upsell_enviado(_secuencia_su)
+            save_session(_phone_su, "IDLE", _data_su)
+            log_event(_phone_su, "upsell_postconsulta_diferido_enviado",
+                      {"especialidad_destino": _upsell_esp_su})
+            log.info("secuencia_postconsulta_upsell: enviado a %s (esp_destino=%s)",
+                      _phone_su, _upsell_esp_su)
+        except Exception as _e_send_su:
+            log.warning("secuencia_postconsulta_upsell: error enviando a %s: %s",
+                        _phone_su, _e_send_su)
+
+
+async def _job_secuencia_postconsulta_review():
+    """Cada N min (ver scheduler): manda la reseña Google diferida, SOLO
+    después de que el upsell de la secuencia esté resuelto — respondido o
+    vencido su timeout (`fidelizacion.debe_disparar_review`). Nunca se
+    dispara en la misma ráfaga que el upsell. Reusa
+    `flows._send_review_request_if_due` (cooldown anti-spam 365 días +
+    log_event ya implementados ahí) en vez de duplicar esa lógica."""
+    if not _get_secuencia_postconsulta_enabled():
+        return
+
+    import json as _json_sr
+    import fidelizacion as _fid_sr
+    from session import db as _conn_sr, is_window_open as _win_sr
+
+    try:
+        with _conn_sr() as _c_sr:
+            rows_sr = _c_sr.execute(
+                "SELECT phone, state, data FROM sessions WHERE state = 'IDLE'"
+            ).fetchall()
+    except Exception as _e_sr:
+        log.error("secuencia_postconsulta_review: error leyendo DB: %s", _e_sr)
+        return
+
+    for row_sr in (rows_sr or []):
+        _phone_sr = row_sr["phone"] if isinstance(row_sr, dict) else row_sr[0]
+        _data_raw_sr = row_sr["data"] if isinstance(row_sr, dict) else row_sr[2]
+        try:
+            _data_sr = _json_sr.loads(_data_raw_sr) if isinstance(_data_raw_sr, str) else (_data_raw_sr or {})
+        except Exception:
+            continue
+
+        _sec_review_sr = _data_sr.get("review_postconsulta") if isinstance(_data_sr, dict) else None
+        _sec_upsell_sr = _data_sr.get("upsell_postconsulta") if isinstance(_data_sr, dict) else None
+        if not _fid_sr.debe_disparar_review(_sec_review_sr, _sec_upsell_sr):
+            continue
+
+        try:
+            if not _win_sr(_phone_sr):
+                continue
+        except Exception:
+            continue
+
+        try:
+            from flows import _send_review_request_if_due as _srr_sr
+            await _srr_sr(_phone_sr, (_sec_review_sr or {}).get("especialidad", ""),
+                         rating=(_sec_review_sr or {}).get("rating"))
+            _data_sr["review_postconsulta"] = _fid_sr.marcar_review_enviado(_sec_review_sr)
+            save_session(_phone_sr, "IDLE", _data_sr)
+            log.info("secuencia_postconsulta_review: procesado %s", _phone_sr)
+        except Exception as _e_send_sr:
+            log.warning("secuencia_postconsulta_review: error enviando a %s: %s",
+                        _phone_sr, _e_send_sr)
+
+
 # ── Reporte semanal de demanda no capturada (Items 31/32/35) ─────────────────
 
 # Precios de consulta por especialidad (para estimar $ perdidos).

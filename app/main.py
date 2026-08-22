@@ -1369,6 +1369,24 @@ async def lifespan(app: FastAPI):
         id="followup_info",
         replace_existing=True,
     )
+    # Secuenciación post-consulta (portaviones #10, 2026-08-22): despacha el
+    # upsell diferido y, recién después, la reseña Google — reemplaza la
+    # ráfaga upsell+reseña que salía junto con los tips al responder "Mejor".
+    # Gated por SECUENCIA_POSTCONSULTA_ENABLED (default true). Cada 10 min,
+    # mismo patrón que followup_info.
+    from jobs import _job_secuencia_postconsulta_upsell, _job_secuencia_postconsulta_review
+    scheduler.add_job(
+        _job_secuencia_postconsulta_upsell,
+        CronTrigger(minute="*/10", timezone=_CLT),
+        id="secuencia_postconsulta_upsell",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _job_secuencia_postconsulta_review,
+        CronTrigger(minute="*/10", timezone=_CLT),
+        id="secuencia_postconsulta_review",
+        replace_existing=True,
+    )
     # Carril de persistencia (2026-07-13): segundo toque a consultas de
     # agendamiento abiertas que el reenganche existente no rescató. GATED OFF
     # por defecto (PERSISTENCIA_ACTIVE) — la función retorna de inmediato si
