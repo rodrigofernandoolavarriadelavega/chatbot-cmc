@@ -358,7 +358,38 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-08-20
+**Última actualización**: 2026-08-22
+
+### 2026-08-22 — Secuenciación post-consulta: fin de la ráfaga tips+upsell+reseña (DEPLOYADO commit 8844ea1)
+- **Problema real (portaviones #10, hallazgo ×18/mes, casos 56978613486,
+  56959205136, 56999671505)**: al responder "Mejor" al seguimiento, el
+  paciente recibía en ráfaga de ≤3s: tips de autocuidado + upsell cross-sell
+  + solicitud de reseña Google (`spawn_task` casi simultáneo).
+- **Fix**: `app/fidelizacion.py` — funciones puras nuevas
+  (`construir_secuencia_upsell`/`construir_secuencia_review`,
+  `debe_disparar_upsell`/`debe_disparar_review`, `marcar_upsell_enviado`/
+  `marcar_upsell_respondido`/`marcar_review_enviado`) que arman/leen payload
+  en `data["upsell_postconsulta"]`/`data["review_postconsulta"]` (mismo
+  patrón que `pending_tips`). `app/flows.py`: la rama "Mejor" (botón y texto
+  libre) ya no dispara nada en el momento — solo guarda la secuencia y
+  devuelve el ack; `upsell_si`/`no_control` marcan la secuencia "respondido".
+  `app/jobs.py`: 2 crons nuevos (`_job_secuencia_postconsulta_upsell` /
+  `_job_secuencia_postconsulta_review`, cada 10 min, guard `state='IDLE'`,
+  gated `SECUENCIA_POSTCONSULTA_ENABLED` default true) despachan el upsell
+  20 min después y la reseña recién cuando el upsell queda resuelto
+  (respondido o vencido su timeout de 3h) — nunca en la misma ráfaga.
+  `app/main.py`: 2 `scheduler.add_job` cron `*/10`.
+- **Tests**: `tests/test_secuencia_postconsulta.py` nuevo (32/32: 24 puros +
+  8 integración contra `handle_message`). Sin regresión: harness_50 105/105
+  (gate duro), harness_stress_200 169/200 (=baseline), normalizer 52/52,
+  test_auditoria_2026_08_19 13/13. Deep-import 13 módulos OK.
+- **Deploy**: push + pull VPS + restart. `/health` 200, `systemctl is-active`
+  active, logs limpios 60s (solo `MEDILINK_429` de cola preexistente, sin
+  ERROR/Traceback nuevos). Verificado `GET /admin/api/scheduler-info` →
+  ambos jobs (`secuencia_postconsulta_upsell`/`secuencia_postconsulta_review`)
+  registrados con `next_run` correcto.
+
+### 2026-08-20 — Conciliación caja marzo→agosto + matcher de atribución v2 (TODO DEPLOYADO)
 
 ### 2026-08-20 — Conciliación caja marzo→agosto + matcher de atribución v2 (TODO DEPLOYADO)
 - **Espejo `bi_pagos_caja` = Medilink AL PESO en mar/abr/may/jun/jul/ago**
