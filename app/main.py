@@ -39,7 +39,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
                      intent_queue_depth, waitlist_depth, purge_old_data,
                      upsert_message_status, upsert_bsuid,
-                     get_profile, save_profile)
+                     get_profile, save_profile, _scrub_pii)
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from medilink import MedilinkRateLimited, MedilinkInactiva
 import medilink_outage
@@ -10882,7 +10882,7 @@ async def webhook(request: Request):
             if resp_text:
                 await send_fn(sender_id, resp_text)
                 log_message(phone, "out", resp_text, state_after, canal=canal)
-                log.info("BOT %s to=%s state=%s reply=%r", canal.upper(), phone, state_after, resp_text[:80])
+                log.info("BOT %s to=%s state=%s reply=%r", canal.upper(), phone, state_after, _scrub_pii(resp_text[:80]))
 
     # ── Helper: ¿el perfil aún necesita un nombre real? ─────────────────────
     def _profile_needs_name(phone: str) -> bool:
@@ -11007,7 +11007,7 @@ async def webhook(request: Request):
                         log.warning("Rate limit excedido IG phone=%s", phone)
                         continue
                     log.info("INSTAGRAM from=%s name=%r text=%r sender=%s",
-                             phone, sender_name, texto[:80], ev.get("sender", {}))
+                             phone, sender_name, _scrub_pii(texto[:80]), ev.get("sender", {}))
                     # Guardar/recuperar nombre: reintenta aunque ya exista un
                     # perfil con nombre vacío (antes solo capturaba en el 1er msg).
                     if _profile_needs_name(phone):
@@ -11055,7 +11055,7 @@ async def webhook(request: Request):
                         log.warning("Rate limit excedido FB phone=%s", phone)
                         continue
                     log.info("MESSENGER from=%s sender=%s text=%r",
-                             phone, ev.get("sender", {}), texto[:80])
+                             phone, ev.get("sender", {}), _scrub_pii(texto[:80]))
                     # Guardar nombre si viene en el webhook
                     sender_obj = ev.get("sender", {})
                     sender_name = sender_obj.get("name", "") or sender_obj.get("first_name", "")
@@ -11268,7 +11268,7 @@ async def webhook(request: Request):
                 return Response(status_code=200)
             texto = transcripcion
             is_audio = True
-            log.info("AUDIO transcrito from=%s text=%r", phone, texto[:120])
+            log.info("AUDIO transcrito from=%s text=%r", phone, _scrub_pii(texto[:120]))
         elif msg_type == "reaction":
             # Reacciones (emoji a un mensaje) — ignorar silenciosamente
             return Response(status_code=200)
@@ -12201,8 +12201,7 @@ async def webhook(request: Request):
             log.info("MSG tipo desconocido from=%s type=%s — ignorado", phone, msg_type)
             return Response(status_code=200)
 
-        from session import _scrub_pii as _sp
-        log.info("MSG from=%s id=%s type=%s text=%r", phone, msg_id, msg_type, _sp(texto[:100]))
+        log.info("MSG from=%s id=%s type=%s text=%r", phone, msg_id, msg_type, _scrub_pii(texto[:100]))
 
         from resilience import get_phone_lock
         async with get_phone_lock(phone):
@@ -12285,7 +12284,7 @@ async def webhook(request: Request):
                 if (not _tk_data.get("human_replied")
                         and _es_intent_rescate_takeover(texto)):
                     log.info("HUMAN_TAKEOVER rescate por intención clara from=%s txt=%r",
-                             phone, (texto or "")[:40])
+                             phone, _scrub_pii((texto or "")[:40]))
                     try:
                         log_event(phone, "takeover_rescate_intent", {"texto": (texto or "")[:60]})
                     except Exception:
@@ -12424,7 +12423,7 @@ async def webhook(request: Request):
 
             if resp_text:
                 log_message(phone, "out", resp_text, state_after, canal="whatsapp")
-            log.info("BOT to=%s state=%s reply=%r", phone, state_after, resp_text[:80])
+            log.info("BOT to=%s state=%s reply=%r", phone, state_after, _scrub_pii(resp_text[:80]))
 
             if not respuesta:
                 pass  # silencio intencional (HUMAN_TAKEOVER)
@@ -12470,7 +12469,7 @@ async def webhook(request: Request):
                 if not _xtxt:
                     log.info("MSG extra en batch ignorado from=%s type=%s", _xphone, _xtype)
                     continue
-                log.info("MSG extra en batch from=%s type=%s text=%r", _xphone, _xtype, _xtxt[:80])
+                log.info("MSG extra en batch from=%s type=%s text=%r", _xphone, _xtype, _scrub_pii(_xtxt[:80]))
                 # Lock por phone: el mensaje principal ya liberó su lock al retornar,
                 # pero si hay otro handler en vuelo del mismo paciente queremos serializar.
                 from resilience import get_phone_lock

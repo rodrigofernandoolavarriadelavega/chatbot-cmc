@@ -66,12 +66,23 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             # Vaginal genérico
             "eco vaginal",
             "ecografia vaginal",
+            # Chilenismo coloquial para la zona vaginal (corpus eco_tipo_nomatch
+            # 2026-08-08: "Ecografia bajinal")
+            "bajinal",
+            "eco bajinal",
+            "ecografia bajinal",
             # Pélvica — también la palabra sola: "Ecotomagrias pélvica femenina"
             # no contiene "eco pelvica" y quedaba sin match (corpus 2026-08-01).
+            # OJO: "pelviana masculina" NO debe caer acá — ver guard
+            # `_es_pelvica_masculina` en route_ecografia (un hombre no tiene
+            # útero/ovarios; corpus 2026-08-13 "ecografia pelviana masculina").
             "pelvica",
             "pelvis",
+            "pelviana",
             "eco pelvica",
             "ecografia pelvica",
+            "eco pelviana",
+            "ecografia pelviana",
             # Ginecológica — raíz sola: en prod los pacientes contestan
             # "Ginecóloga"/"Ginecológia" a la pregunta de tipo (corpus 2026-08-01).
             # Seguro: el gate de contexto eco impide que "hora con ginecología"
@@ -234,6 +245,15 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "prostata",
             "eco prostata",
             "ecografia prostata",
+            # Pélvica masculina (vejiga/próstata por vía abdominal, NO
+            # ginecológica) — ver guard `_es_pelvica_masculina` en route_ecografia.
+            "pelvica masculina",
+            "pelvis masculina",
+            "pelviana masculina",
+            "eco pelvica masculina",
+            "eco pelviana masculina",
+            "ecografia pelvica masculina",
+            "ecografia pelviana masculina",
             # Musculoesquelética y articulaciones específicas
             "musculoesqueletica",
             "musculo esqueletica",
@@ -298,6 +318,14 @@ ECOGRAFIA_ROUTING: dict[str, dict] = {
             "eco lumbar",
             "ecografia lumbar",
             "ecotomografia lumbar",
+            # Dorsal / columna dorsal (corpus eco_tipo_nomatch 2026-08-11: "Buenas
+            # tardes, realizan Ecotomografia Dorsal?" quedaba sin match)
+            "dorsal",
+            "de dorsal",
+            "eco dorsal",
+            "ecografia dorsal",
+            "ecotomografia dorsal",
+            "columna dorsal",
             "paravertebral",
             # Omóplato / escápula / hombro posterior
             "omoplato",
@@ -371,6 +399,7 @@ _SOLO_ECO_KEYWORDS = frozenset({
     "eco grafia",      # con espacio
     "eco grafias",
     "eco tomografia",  # con espacio
+    "ecomotografia",   # typo transposición mo/to (corpus 2026-08-13)
 })
 
 # ── GATE de contexto ecográfico ──────────────────────────────────────────────
@@ -395,6 +424,7 @@ _ECO_CONTEXT_RE = _re_eco.compile(
     r"ecocardio\w*|"                # ecocardiograma, ecocardiografia
     r"ecotom\w*|"                   # ecotomografia, ecotomografo, ecotomo, ecotomagria(s) (typo)
     r"ecotograf\w*|"                # ecotografia (typo sin -mo-)
+    r"ecomotograf\w*|"              # ecomotografia (typo transposición mo/to)
     r"ecodoppler|"
     r"ecomamaria|"                  # variante pegada
     r"ultrasonido\w*|"
@@ -486,12 +516,27 @@ def route_ecografia(texto: str, assume_context: bool = False) -> dict | None:
     if not assume_context and not _tiene_contexto_eco(txt_norm):
         return None
 
+    # Guard: "pélvica/pelviana masculina" NO es ginecológica — un hombre no
+    # tiene útero ni ovarios. Sin esto, el keyword genérico "pelvica"/"pelvis"
+    # de ginecologia_rejon capturaba a pacientes varones. Casos reales
+    # 2026-08-13: "Ecomotografia pelviana masculina", "Necesito sacarme una
+    # ecografia pelviana masculina" (ambas quedaron sin match y escalaron).
+    _es_pelvica_masculina = (
+        ("pelvic" in txt_norm or "pelvis" in txt_norm or "pelvian" in txt_norm)
+        and "masculin" in txt_norm
+    )
+
     # Prioridad fija: obstétrica no-disponible primero (para no caer en ginecología),
     # luego ginecología, luego cardiología, luego general.
     for key in ("obstetrica_no_disponible", "ginecologia_rejon",
                 "cardiologia_millan_waitlist", "ecografia_general_pardo"):
         routing = ECOGRAFIA_ROUTING[key]
         for kw in routing["keywords"]:
+            if key == "ginecologia_rejon" and _es_pelvica_masculina and kw in (
+                "pelvica", "pelvis", "pelviana", "eco pelvica",
+                "ecografia pelvica", "eco pelviana", "ecografia pelviana",
+            ):
+                continue
             if _norm(kw) in txt_norm:
                 return routing
 

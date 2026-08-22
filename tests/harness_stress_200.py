@@ -11,6 +11,18 @@ Ejecución:
     PYTHONPATH=app:. python3 tests/harness_stress_200.py
 
 No toca producción, no llama a Medilink real ni a Claude real ni a WhatsApp.
+
+BASELINE (2026-08-22, mock sano): 169/200 passed, 31 failed, CERO excepciones.
+`fake_buscar_primer_dia` no aceptaba `fecha_desde`/`fecha_hasta` (el real los
+ganó con el fix de rango cerrado, 2026-08-11) ni `**kwargs` — cualquier
+escenario que los pasara (ej. "la próxima semana") crasheaba con TypeError y
+arrastraba el total reportado (antes: 143/200, con 57 fallas mezclando mocks
+rotos y mismatches reales). Con el mock arreglado, las 31 fallas restantes son
+asserts de escenario, NO crashes: en su mayoría, fecha fija `mié 15 abr`
+en `_fake_slots` (mismo bug de fecha congelada que ya se arregló en
+harness_50.py el 2026-08-12) y escenarios de traumatología que predatan el
+redirect intencional a Medicina General (BUG-4). No se tocaron — no era el
+alcance de este fix. Si baja de 169/200, es una regresión real.
 """
 from __future__ import annotations
 
@@ -85,7 +97,13 @@ def _fake_slots(esp_display: str, id_prof: int, prof_nombre: str):
     return slots
 
 async def fake_buscar_primer_dia(especialidad: str, dias_adelante: int = 60,
-                                  excluir=None, intervalo_override=None, solo_ids=None):
+                                  excluir=None, intervalo_override=None, solo_ids=None,
+                                  fecha_desde=None, fecha_hasta=None, **kwargs):
+    # FIX H (auditoría 2026-08-22): buscar_primer_dia real ganó fecha_desde/
+    # fecha_hasta (rango cerrado, 2026-08-11) y este mock quedó congelado sin
+    # ellos ni **kwargs — cualquier caller que los pasara (p.ej. "la próxima
+    # semana") crasheaba con TypeError y tumbaba ese escenario completo de la
+    # suite. Mismo patrón que ya tenía harness_50.py.
     if FAKE_SIN_SLOTS["value"]:
         return [], []
     esp = (especialidad or "").lower()

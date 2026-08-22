@@ -250,6 +250,36 @@ AFIRMACIONES = {
 }
 NEGACIONES   = {"no", "nop", "nope", "cancelar", "cancel", "no gracias"}
 
+# Puntuación pegada a la afirmación/negación — vulnerabilidad real en IG/FB:
+# ahí no hay botón nativo (Messenger/Instagram entregan el click como `message`
+# de texto plano, no como `postback`), así que el paciente re-escribe a mano el
+# título del botón, coma incluida ("Sí, reservar", "Sí, cancelar"). El check de
+# prefijo `tl_norm.startswith("si ")` fallaba porque el 3er carácter era "," y
+# no " ". Caso real fb_27793059056989936 (2026-08-13 15:53-15:54): tocó/escribió
+# "Si, reservar" dos veces en CONFIRMING_CITA, ambas rechazadas con "Responde
+# *Sí* para confirmar" — la recepcionista terminó tomando el pago y los datos a
+# mano por HUMAN_TAKEOVER.
+_PUNTUACION_RE = re.compile(r"[,.;:!¡¿?]+")
+
+
+def _afirma(tl: str, tl_norm: str) -> bool:
+    """True si el texto es una afirmación, tolerando puntuación pegada
+    ("Sí, reservar", "Sí!, dale") y vocales repetidas ("siii")."""
+    _sin_vocales_rep = re.sub(r"([aeiou])\1{2,}", r"\1", tl_norm)
+    limpio = re.sub(r"\s+", " ", _PUNTUACION_RE.sub(" ", _sin_vocales_rep)).strip()
+    if tl in AFIRMACIONES or tl_norm in AFIRMACIONES or limpio in AFIRMACIONES:
+        return True
+    return any(limpio == a or limpio.startswith(a + " ") for a in AFIRMACIONES)
+
+
+def _niega(tl: str, tl_norm: str) -> bool:
+    """Mismo tratamiento que `_afirma` pero para negaciones ("No, gracias")."""
+    _sin_vocales_rep = re.sub(r"([aeiou])\1{2,}", r"\1", tl_norm)
+    limpio = re.sub(r"\s+", " ", _PUNTUACION_RE.sub(" ", _sin_vocales_rep)).strip()
+    if tl in NEGACIONES or tl_norm in NEGACIONES or limpio in NEGACIONES:
+        return True
+    return any(limpio == n or limpio.startswith(n + " ") for n in NEGACIONES)
+
 
 async def _buscar_slots_dia_con_retry(especialidad: str, fecha: str, **kwargs):
     """FIX 3 (2026-06-10): retry con backoff para buscar_slots_dia.
@@ -3089,6 +3119,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "ver todos": "ver_todos",
         "ver más": "ver_otros",
         "ver mas": "ver_otros",
+        # WAIT_ECO_FALLBACK_PARDO (FIX C 2026-08-22): "Es otra eco" no es un
+        # "no" léxico — _niega() no lo captura, así que en IG/FB (donde el
+        # paciente re-escribe el título del botón) necesita mapeo explícito.
+        "es otra eco": "eco_pb_otra",
     }
     _tl_map_key = tl_norm.lstrip("🔄💬📅📋👤⚡🏥❌✅🔎📊📷 ").strip()
     if _tl_map_key in _TITLE_TO_ID:
@@ -3385,6 +3419,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
         "WAIT_CROSS_SELL",
         "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
+        "WAIT_ECO_FALLBACK_PARDO",
     }
     _consent_in_active_flow = state in _FLOW_STATES
 
@@ -3892,6 +3927,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
                 "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
                 "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
+                "WAIT_ECO_FALLBACK_PARDO",
                 "WAIT_ABONO_COMPROBANTE",  # abono-gate psiquiatría
                 "WAIT_ABONO_PAGADOR_CONFIRM",  # confirmación auto por correo bancario (¿es esa persona?)
             )
@@ -7147,13 +7183,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "txt": txt[:120], "reintento": True, "intento": _eco_reintentos
                 })
                 if _eco_reintentos >= 2:
-                    # Escalar a recepción — el paciente no logra escribir el tipo
-                    log_event(phone, "ecografia_escalada_recepcion", {"txt": txt[:120]})
-                    save_session(phone, "HUMAN_TAKEOVER", {})
-                    return (
-                        "No logré identificar el tipo de ecografía que necesitas 😕\n\n"
-                        "Una recepcionista va a ayudarte directamente.\n\n"
-                        f"También puedes llamarnos: 📞 *{CMC_TELEFONO_FIJO}*"
+                    # FIX C (auditoría 2026-08-22): en vez de escalar a ciegas a
+                    # recepción, ofrecer directo la eco general de partes blandas
+                    # con David Pardo — es lo que resuelve la enorme mayoría de
+                    # estos casos (abdominal/renal/tiroides/partes blandas/
+                    # articulación), y deja "es otra eco" como salida a recepción
+                    # para el resto. Antes esto era HUMAN_TAKEOVER ciego para
+                    # el 100% de los que no acertaban el vocabulario dos veces.
+                    log_event(phone, "eco_tipo_fallback_pardo_ofrecido", {"txt": txt[:120]})
+                    data.pop("eco_tipo_reintentos", None)
+                    data.pop("wait_eco_tipo", None)
+                    save_session(phone, "WAIT_ECO_FALLBACK_PARDO", data)
+                    return _btn_msg(
+                        "No logré identificar el tipo exacto de tu ecografía 😕\n\n"
+                        "La mayoría de las ecografías que no son ginecológicas ni "
+                        "del corazón las realiza *David Pardo* (abdominal, renal, "
+                        "tiroides, partes blandas, articulaciones), $40.000 "
+                        "particular.\n\n"
+                        "¿Es ese tipo de ecografía?",
+                        [
+                            {"id": "eco_pb_si", "title": "Sí, agendar"},
+                            {"id": "eco_pb_otra", "title": "Es otra eco"},
+                        ]
                     )
                 data["wait_eco_tipo"] = True  # mantener el flag para el próximo intento
                 data["eco_tipo_reintentos"] = _eco_reintentos
@@ -10160,7 +10211,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}]
             )
         # ── Paciente declinó la confirmación de cita duplicada ──
-        if data.get("dup_pending") and (tl in NEGACIONES or tl_norm in NEGACIONES):
+        if data.get("dup_pending") and _niega(tl, tl_norm):
             data.pop("dup_pending", None)
             reset_session(phone)
             log_event(phone, "cita_duplicada_rechazada", {})
@@ -10169,22 +10220,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Escribe *menu* si necesitas algo más._"
             )
         # Bug 1 fix: detectar afirmación como prefijo ("si reservar", "si confirma",
-        # "si por favor", "siii" ya normalizado a "si" por triage_ges/flows).
-        # También colapsar vocales repetidas en el propio tl_norm del flujo.
-        import re as _re_b1
-        _tl_norm_c = _re_b1.sub(r"([aeiou])\1{2,}", r"\1", tl_norm)
-        _es_afirmacion_confirming = (
-            tl in AFIRMACIONES
-            or tl_norm in AFIRMACIONES
-            or _tl_norm_c in AFIRMACIONES
-            or any(_tl_norm_c == a or _tl_norm_c.startswith(a + " ")
-                   for a in AFIRMACIONES)
-        )
+        # "si por favor", "siii" ya normalizado a "si" por triage_ges/flows) y con
+        # puntuación pegada ("Si, reservar" — ver _afirma, caso fb_27793059056989936).
+        _es_afirmacion_confirming = _afirma(tl, tl_norm)
         if _es_afirmacion_confirming:
             slot    = data.get("slot_elegido")
             paciente = data.get("paciente")
+            if slot and not paciente:
+                # Reconstrucción barata antes de rendirnos: el slot sigue ahí,
+                # solo `paciente` se perdió (limpieza parcial de sesión, race).
+                # El perfil guardado (save_profile) casi siempre sobrevive.
+                _perfil_recon = get_profile(phone)
+                _rut_recon = data.get("rut") or (_perfil_recon or {}).get("rut", "")
+                if _rut_recon:
+                    try:
+                        paciente = await buscar_paciente(_rut_recon)
+                    except Exception as _e_recon:
+                        log.warning("reconstruccion paciente CONFIRMING_CITA falló: %s", _e_recon)
+                        paciente = None
+                    if paciente:
+                        data["paciente"] = paciente
+                        data["rut"] = _rut_recon
+                        log_event(phone, "confirming_cita_paciente_reconstruido", {})
             if not slot or not paciente:
                 # Sesión sin datos clave (limpieza parcial, race, admin_resume manual).
+                log_event(phone, "confirming_cita_hilo_perdido", {
+                    "slot_falta": not slot, "paciente_falta": not paciente,
+                })
                 reset_session(phone)
                 return (
                     "Perdimos el hilo de tu reserva 😅 "
@@ -11403,7 +11465,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"Llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
                 )
 
-        if tl in NEGACIONES or tl_norm in NEGACIONES:
+        if _niega(tl, tl_norm):
             reset_session(phone)
             return (
                 "No hay problema 😊\n\n"
@@ -11616,7 +11678,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
     # ── CONFIRMING_CANCEL ─────────────────────────────────────────────────────
     if state == "CONFIRMING_CANCEL":
-        if tl in AFIRMACIONES or tl_norm in AFIRMACIONES:
+        # _afirma tolera puntuación pegada ("Sí, cancelar" — el botón de este
+        # estado la incluye). Misma clase de bug que CONFIRMING_CITA.
+        if _afirma(tl, tl_norm):
             cita = data.get("cita_cancelar")
             if not cita or not cita.get("id"):
                 log.warning("CONFIRMING_CANCEL sin cita_cancelar en sesión phone=%s", phone)
@@ -11702,7 +11766,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 )
             return f"Hubo un problema al cancelar 😕\nLlama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
 
-        if tl in NEGACIONES or tl_norm in NEGACIONES:
+        if _niega(tl, tl_norm):
             reset_session(phone)
             return "Perfecto, tu cita se mantiene 😊\n_Escribe *menu* si necesitas algo más._"
 
@@ -11847,6 +11911,33 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         log_event(phone, "reagendar_elegida_cita",
                   {"id_cita": cita_old["id"], "especialidad": esp_lower})
         return await _iniciar_agendar(phone, data, esp_lower)
+
+    # ── WAIT_ECO_FALLBACK_PARDO ────────────────────────────────────────────────
+    # FIX C (2026-08-22): tras 2 intentos sin resolver el tipo de ecografía en
+    # wait_eco_tipo, se ofrece directo la eco general de David Pardo en vez de
+    # re-preguntar infinito o escalar a ciegas. Ver flows.py WAIT_ESPECIALIDAD.
+    if state == "WAIT_ECO_FALLBACK_PARDO":
+        if tl == "eco_pb_si" or _afirma(tl, tl_norm):
+            log_event(phone, "eco_tipo_fallback_pardo_aceptado", {})
+            data["_txt_raw"] = "partes blandas"
+            return await _iniciar_agendar(phone, data, "ecografía")
+        if tl == "eco_pb_otra" or _niega(tl, tl_norm):
+            log_event(phone, "eco_tipo_fallback_pardo_rechazado", {})
+            save_session(phone, "HUMAN_TAKEOVER", {})
+            return (
+                "Sin problema 😊 Una recepcionista te ayuda a identificar el tipo "
+                "exacto de ecografía que necesitas.\n\n"
+                f"También puedes llamarnos: 📞 *{CMC_TELEFONO_FIJO}*"
+            )
+        return _btn_msg(
+            "Responde *Sí, agendar* si es una ecografía general (abdominal, "
+            "renal, tiroides, partes blandas, articulaciones...) o *Es otra eco* "
+            "para que te ayude recepción.",
+            [
+                {"id": "eco_pb_si", "title": "Sí, agendar"},
+                {"id": "eco_pb_otra", "title": "Es otra eco"},
+            ]
+        )
 
     # ── WAIT_WAITLIST_CONFIRM_ECOCA ──────────────────────────────────────────
     # Estado especial para ecocardiograma: usa la waitlist estándar pero con
