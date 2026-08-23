@@ -1153,6 +1153,10 @@ async def _job_conciliacion_caja_semanal():
     inflando el espejo, descubierto recién al cierre del mes). Pedido del
     dueño 2026-08-20. Avisa por Telegram solo si purgó algo."""
     from bi_sync import sync_pagos_rango, auditar_atribucion_pagos
+    # Import local (idioma de jobs.py): el 1er domingo (24-08) el job reventó
+    # con NameError: 'date' no está a nivel de módulo y el deep-import
+    # pre-deploy no ve NameErrors dentro del cuerpo de una función.
+    from datetime import date, timedelta
     hoy = date.today()
     primero_mes_ant = (hoy.replace(day=1) - timedelta(days=1)).replace(day=1)
     try:
