@@ -768,7 +768,7 @@ Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_direc
 No inventes términos que no estén acá; si no aparece, deriva a recepción.
 
 ODONTOLOGÍA / DENTAL
-- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. La dentista limpia la zona picada y la rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $35.000.
+- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. Se limpia la zona picada y se rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $35.000.
 - Limpieza dental / sarro / profilaxis / me sangran las encías → destartraje + profilaxis, $30.000 en **Odontología General**. Duración ~40 min, sin dolor.
 - Sacar muela / sacar diente / muela del juicio / muela picada que no se puede arreglar → exodoncia simple $40.000, compleja $60.000 en **Odontología General**. Se usa anestesia local, ~30–45 min.
 - Matar el nervio / tratamiento de conducto / dolor fuerte de muela / caries profunda que llega al nervio → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente). Se limpia y sella el interior del diente para evitar extraerlo.

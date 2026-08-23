@@ -646,10 +646,10 @@ CROSS_REFERENCE: dict[str, str] = {
     ),
     "Odontología General": (
         "\n\n✨ *¿Sabías que hacemos Blanqueamiento Dental?*\n"
-        # Blanqueamiento y carillas: se nombra a Burgos porque son los servicios
-        # estéticos que ella ofrece. NO es el ruteo de odontología general —
-        # ése volvió a ser Burgos + Jiménez el 2026-08-21.
-        "Dra. Javiera Burgos realiza:\n"
+        # Los DOS hacen blanqueamiento y carillas (confirmado por el dueño
+        # 2026-08-23). Nombrar sólo a una escondía la mitad de la oferta —
+        # y en particular la del sábado, que es el único día del Dr. Jiménez.
+        "Dra. Javiera Burgos y Dr. Carlos Jiménez realizan:\n"
         "• Blanqueamiento dental ($75.000)\n"  # F033: precio real $75.000 (no $120.000)
         "• Carillas de resina (desde $50.000)\n\n"
         "Aprovecha tu visita y mejora tu sonrisa. "
