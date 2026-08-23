@@ -613,19 +613,16 @@ def _resolver_profesional_pagos_cmc(c, fecha_iso: str, nombre_pago: str, monto: 
             if len(candidatos) == 1:
                 return candidatos[0]
 
-        # DESEMPATE 2 (histórico) por distancia de monto: elegir el registro
-        # cuyo copago+bonificacion se acerque más a monto_pago. Si dos
-        # registros empatan en distancia → ambiguo, no retornamos (dejamos
-        # caer a la cascada heurística).
-        ranked = sorted(cmc_rows, key=lambda r: abs((r[1] + r[2]) - monto))
-        best_dist = abs((ranked[0][1] + ranked[0][2]) - monto)
-        second_dist = abs((ranked[1][1] + ranked[1][2]) - monto) \
-            if len(ranked) > 1 else best_dist + 1
-        # Solo retornar si el ganador es claramente mejor que el segundo
-        # (diferencia de al menos 2.000 pesos o 5% del monto).
-        gap_minimo = max(2000, monto * 0.05) if monto > 0 else 2000
-        if second_dist - best_dist >= gap_minimo:
-            return ranked[0][0]
+        # DESEMPATE 2 por monto EXACTO: si el copago+bonificacion registrado
+        # por recepción calza AL PESO con el monto del pago para UN solo
+        # profesional del día, es él. Antes era "distancia más cercana con
+        # gap" — y la distancia ENGAÑA porque el copago de mesón casi nunca
+        # coincide con el monto de caja (caso Sebastián Peña 22-08: pago
+        # $15.130 de Olavarría empujado a Millán porque su copago $20.000
+        # quedaba "más cerca" que el $2.360 de Olavarría). Exacto o nada.
+        exactos = {r[0] for r in cmc_rows if (r[1] + r[2]) == monto}
+        if len(exactos) == 1:
+            return exactos.pop()
         # Ambiguo → caer a heurística
         return None
     except Exception:
