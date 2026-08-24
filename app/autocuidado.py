@@ -133,6 +133,12 @@ _NOMBRES_MASCULINOS = frozenset({
     "pedro", "rafael", "raul", "renato", "ricardo", "roberto", "rodrigo",
     "ruben", "samuel", "sebastian", "sergio", "simon", "tomas", "victor",
     "vicente", "waldo", "walter", "willson", "wilson", "yerlan",
+    # Consolidado 2026-08-24 (#12): casos reales de PAP/VPH mal dirigidos —
+    # "Salim" recibió recordatorio de PAP, "Elian" de VPH con lenguaje
+    # exclusivamente femenino. Nombres no chilenos-tradicionales que faltaban
+    # en el diccionario, dejando la corrección por nombre inactiva y el
+    # sexo de Medilink (posiblemente mal cargado) sin contrapeso.
+    "salim", "elian", "khalil", "omar", "karim", "amir",
 })
 
 

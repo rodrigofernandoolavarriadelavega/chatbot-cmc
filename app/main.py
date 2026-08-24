@@ -10831,7 +10831,7 @@ async def webhook(request: Request):
             # autocapture_profile: solo fuera de HUMAN_TAKEOVER
             try:
                 from session import try_autocapture_rut_name
-                try_autocapture_rut_name(phone, texto)
+                await try_autocapture_rut_name(phone, texto)
             except Exception:
                 pass
             try:
@@ -12358,7 +12358,7 @@ async def webhook(request: Request):
             # capturar texto dictado por el operador como si fuera datos del paciente.
             try:
                 from session import try_autocapture_rut_name
-                try_autocapture_rut_name(phone, log_text)
+                await try_autocapture_rut_name(phone, log_text)
             except Exception:
                 pass
 

@@ -55,8 +55,12 @@ _PNI_CALENDARIO = [
     (36, 48, "Varicela (2ª dosis)", "segunda dosis contra varicela", False),
     # 1° Básico (~6-7 años) — vacunación escolar
     (60, 96, "dTpa (1ª dosis escolar, 1° básico)", "refuerzo contra difteria, tétanos y tos convulsiva acelular", True),
-    # 4° Básico (~9-11 años) — VPH dosis única para niños y niñas
-    (108, 144, "VPH (dosis única)", "protege contra el virus papiloma humano — previene cáncer cervicouterino y otros", True),
+    # 4° Básico (~9-11 años) — VPH dosis única para niños y niñas.
+    # FIX 2026-08-24 (consolidado, #12): la descripción mencionaba SOLO
+    # "cáncer cervicouterino" (cáncer exclusivamente femenino) — confuso/
+    # alarmante cuando se envía a un niño (caso real: Elian). El texto base
+    # es neutro; `get_vaccine_reminder` lo ajusta según sexo si está disponible.
+    (108, 144, "VPH (dosis única)", "protege contra el virus papiloma humano — previene cánceres asociados al VPH (cervicouterino, orofaríngeo, anal y otros)", True),
     # 8° Básico (~13-15 años)
     (156, 180, "dTpa (2ª dosis escolar, 8° básico)", "refuerzo adolescente contra difteria, tétanos y tos convulsiva", True),
 ]

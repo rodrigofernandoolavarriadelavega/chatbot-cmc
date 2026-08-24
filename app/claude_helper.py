@@ -101,9 +101,13 @@ _INTENT_CACHE: dict[str, dict] = {
     "fisio":          {"intent": "agendar", "especialidad": "kinesiología"},
     "fisioterapia":   {"intent": "agendar", "especialidad": "kinesiología"},
     "fisioterapeuta": {"intent": "agendar", "especialidad": "kinesiología"},
-    # P1: ortodoncia con typo
-    "ortodonsista":   {"intent": "info",    "especialidad": "ortodoncia"},
-    "ortodoncista":   {"intent": "info",    "especialidad": "ortodoncia"},
+    # FIX 2026-08-24 (consolidado, #15): "ortodoncista"/"ortodonsista" (typo)
+    # SACADOS del caché — mismo motivo que "ortodoncia" (comentario más abajo):
+    # un cache hit devuelve respuesta_directa=None y salta el texto que
+    # explica el flujo real (evaluación previa con Dra. Burgos → derivación a
+    # la ortodoncista). Estaban en el caché por error, dejando a Claude sin
+    # oportunidad de explicar y arriesgando un mapeo silencioso a odontología
+    # general sin aclaración.
     # P1: obstetra/obstetricia → matrona (CMC no tiene obstetricia propia)
     "obstetra":       {"intent": "info",    "especialidad": "matrona"},
     "obstetricia":    {"intent": "info",    "especialidad": "matrona"},

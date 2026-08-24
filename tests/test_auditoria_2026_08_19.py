@@ -8,7 +8,8 @@ Cubre, con tests unitarios sin red (mocks/DB temporal donde hace falta):
   - #2 modalidad: especialidades Solo Particular nunca deben mostrar Fonasa.
   - #5 nombre centinela: '_nombre_corto' filtra 'Otra'/'paciente'/'None'/etc.
   - #12 seguimiento viejo: 'get_ultimo_seguimiento' ignora respuestas
-    pendientes de hace más de 48h.
+    pendientes de hace más de 2h (ventana original 48h, endurecida a 2h el
+    2026-08-24 — consolidado #14, ventana de 48h seguía siendo laxa).
   - #15 botones: cubierto por test_botones_longitud.py (test separado).
 
 Ejecución:
@@ -188,7 +189,7 @@ class TestSeguimientoViejo(unittest.TestCase):
             conn.commit()
 
     def test_seguimiento_reciente_se_retorna(self):
-        self._insert_seguimiento("56900000001", hace_horas=2)
+        self._insert_seguimiento("56900000001", hace_horas=1)
         seg = self.session.get_ultimo_seguimiento("56900000001")
         self.assertIsNotNone(seg)
 
@@ -200,10 +201,14 @@ class TestSeguimientoViejo(unittest.TestCase):
         seg = self.session.get_ultimo_seguimiento("56900000002")
         self.assertIsNone(seg)
 
-    def test_limite_justo_48h(self):
-        self._insert_seguimiento("56900000003", hace_horas=47)
+    def test_limite_justo_2h(self):
+        # FIX 2026-08-24 (consolidado, #14): ventana endurecida de 48h → 2h —
+        # casos reales posteriores al fix del 19-ago (56983010449 y otros)
+        # seguían interpretando "Mejor"/"Igual" sueltos horas después como
+        # respuesta a un seguimiento viejo.
+        self._insert_seguimiento("56900000003", hace_horas=1)
         self.assertIsNotNone(self.session.get_ultimo_seguimiento("56900000003"))
-        self._insert_seguimiento("56900000004", hace_horas=49)
+        self._insert_seguimiento("56900000004", hace_horas=3)
         self.assertIsNone(self.session.get_ultimo_seguimiento("56900000004"))
 
 

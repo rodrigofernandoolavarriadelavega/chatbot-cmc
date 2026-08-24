@@ -2218,8 +2218,13 @@ def _mark_cancelada_por_sistema(id_cita) -> None:
         log.warning("No se pudo marcar cita %s como anulada por sistema: %s", id_cita, e)
 
 
-async def cancelar_cita(id_cita: int) -> bool:
-    """Cancela una cita por su ID, con reintentos ante errores transitorios."""
+async def cancelar_cita_con_motivo(id_cita: int) -> tuple[bool, str]:
+    """Cancela una cita por su ID, con reintentos ante errores transitorios.
+    Retorna (ok, motivo_legible) — motivo_legible solo tiene contenido útil
+    cuando ok=False (consolidado 2026-08-24, #13: antes `cancelar_cita`
+    devolvía solo bool y el paciente recibía un "Hubo un problema" genérico
+    sin ninguna pista, incluso cuando la causa era clara — ej. rate limit,
+    timeout, o un error específico de Medilink)."""
     url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
     client = _get_shared_client()
     for attempt in range(3):
@@ -2237,24 +2242,31 @@ async def cancelar_cita(id_cita: int) -> bool:
                 # el próximo paciente vea el slot recién disponible.
                 _proxima_cache.clear()
                 _mark_cancelada_por_sistema(id_cita)
-                return True
+                return True, ""
             if r.status_code == 400 and "igual al original" in r.text:
                 # La cita ya estaba en estado anulado — tratar como éxito
                 log.info("Cita %s ya estaba cancelada (400 igual al original)", id_cita)
                 _report_up()
                 _mark_cancelada_por_sistema(id_cita)
-                return True
+                return True, ""
             if r.status_code >= 500:
                 log.warning("Medilink PUT %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
             else:
                 log.error("Error cancelar cita %s: %s %s", id_cita, r.status_code, r.text[:200])
-                return False
+                return False, "el sistema de agenda rechazó la solicitud"
         except (httpx.TimeoutException, httpx.NetworkError) as e:
             log.warning("Medilink PUT %s error red: %s (intento %d/3)", url, e, attempt + 1)
         if attempt < 2:
             await asyncio.sleep(1.5 ** attempt)
     log.error("No se pudo cancelar cita %s tras 3 intentos", id_cita)
-    return False
+    return False, "el sistema de agenda no respondió a tiempo"
+
+
+async def cancelar_cita(id_cita: int) -> bool:
+    """Cancela una cita por su ID. Wrapper compatible de
+    `cancelar_cita_con_motivo` para callers que solo necesitan el bool."""
+    ok, _motivo = await cancelar_cita_con_motivo(id_cita)
+    return ok
 
 
 # Especialidades con pacientes recurrentes — para el panel de seguimiento
@@ -2531,12 +2543,17 @@ def _calcular_dv_rut(cuerpo: str) -> str:
 
 def hint_rut_error(rut_raw: str) -> str:
     """Devuelve un mensaje de error descriptivo para un RUT inválido.
-    Si el cuerpo numérico parece válido (7-9 dígitos) pero el DV no cuadra,
-    sugiere el DV correcto. Útil para mensajes de error al usuario.
+
+    FIX 2026-08-24 (consolidado, #3): ANTES, si el cuerpo numérico parecía
+    válido pero el dígito verificador no cuadraba, el mensaje revelaba el DV
+    correcto calculado ("el dígito correcto es *X*"). Eso deja al bot
+    validar/completar el RUT de un tercero (cualquiera puede tipear un
+    cuerpo de RUT ajeno y el bot le confirma si es real y cuál es su DV) —
+    fuga de validación de terceros. Ahora el mensaje nunca revela el DV
+    calculado, solo indica que no coincide.
     """
     try:
         limpio = rut_raw.replace(".", "").replace("-", "").strip().upper()
-        # Separar cuerpo y DV: si tiene guion original, último token
         if "-" in rut_raw:
             partes = rut_raw.replace(".", "").strip().upper().split("-")
             cuerpo = partes[0]
@@ -2548,9 +2565,8 @@ def hint_rut_error(rut_raw: str) -> str:
             dv_correcto = _calcular_dv_rut(cuerpo)
             if dv_correcto and dv_ingresado and dv_ingresado != dv_correcto:
                 return (
-                    f"El dígito verificador de ese RUT no coincide.\n"
-                    f"Si tu RUT es *{cuerpo}*, el dígito correcto es *{dv_correcto}*.\n"
-                    f"Escríbelo como: *{cuerpo}-{dv_correcto}*"
+                    "El RUT ingresado no es válido, por favor verifícalo.\n"
+                    "Escríbelo con dígito verificador, por ejemplo: *12.345.678-9*"
                 )
     except Exception:
         pass

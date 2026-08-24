@@ -1662,7 +1662,7 @@ _PALABRAS_BASURA = {
 }
 
 
-def try_autocapture_rut_name(phone: str, text: str) -> dict | None:
+async def try_autocapture_rut_name(phone: str, text: str) -> dict | None:
     """Extrae RUT chileno + nombre aproximado de un mensaje libre y los asocia
     al teléfono si no tiene perfil completo. Pasivo y silencioso: nunca rompe
     el flujo. Retorna el perfil guardado (o None si no capturó nada).
@@ -1671,6 +1671,21 @@ def try_autocapture_rut_name(phone: str, text: str) -> dict | None:
       - "9.443.926-4 maría Parra pedrero"
       - "mi rut es 12345678-9 Juan Pérez"
       - "RUT: 12.345.678-9"
+
+    GUARDRAIL 2026-08-24 (caso real Jhon/Giovanny Muñoz Castillo, ×2 en el
+    consolidado de auditoría): un paciente escribió desde su propio celular
+    un bloque con el RUT+nombre+dirección+previsión de OTRA persona (estaba
+    agendando/registrando a un tercero, ej. un hermano). Esta función lo
+    capturó igual porque el teléfono no tenía perfil todavía, y quedó
+    guardado como si ESE tercero fuera el dueño del celular. Meses después,
+    "cancelar" reusó ese RUT sin volver a preguntar y expuso — y canceló —
+    la cita real del tercero a quien tocaba ese celular.
+    Antes de persistir, se verifica contra el celular que Medilink tiene
+    registrado para ese RUT: si Medilink conoce un teléfono para ese
+    paciente y NO coincide con quien está escribiendo, no se guarda (es
+    RUT de un tercero, no el dueño del celular). Si Medilink no tiene
+    teléfono en ficha, no responde, o el RUT es un paciente nuevo sin
+    ficha aún, se mantiene el comportamiento anterior (best-effort).
     """
     if not phone or not text:
         return None
@@ -1727,6 +1742,25 @@ def try_autocapture_rut_name(phone: str, text: str) -> dict | None:
     if not nombre_final:
         # RUT sin nombre: guardar igual el RUT para poder cruzarlo en Medilink
         nombre_final = ""
+
+    # Verificación contra el celular de ficha en Medilink (ver guardrail arriba).
+    try:
+        from medilink import buscar_paciente  # type: ignore
+        paciente_mv = await buscar_paciente(rut_final)
+        if paciente_mv:
+            tel_ficha = paciente_mv.get("celular") or paciente_mv.get("telefono") or ""
+            tel_ficha_norm = _normalize_phone_e164(tel_ficha)
+            phone_norm = _normalize_phone_e164(phone)
+            if tel_ficha_norm and phone_norm and tel_ficha_norm != phone_norm:
+                log_event(phone, "autocapture_rut_mismatch_phone", {
+                    "rut": rut_final, "tel_ficha": tel_ficha_norm[:6] + "***",
+                })
+                return None
+    except Exception:
+        # Medilink caído/lento/timeout: no bloquear el autocapture por esto,
+        # mismo criterio best-effort que el resto de la función.
+        pass
+
     save_profile(phone, rut_final, nombre_final)
     try:
         log_event(phone, "autocapture_profile", {
@@ -2921,7 +2955,7 @@ def save_fidelizacion_respuesta(phone: str, tipo: str, respuesta: str):
 
 def get_ultimo_seguimiento(phone: str) -> dict | None:
     """Retorna el último seguimiento post-consulta sin respuesta para este paciente,
-    SOLO si se envió en las últimas 48h.
+    SOLO si se envió en las últimas 2h.
 
     Sin el límite de tiempo, un seguimiento que quedó sin respuesta explícita
     (`respuesta IS NULL`) se consideraba "pendiente" para siempre — cualquier
@@ -2929,8 +2963,18 @@ def get_ultimo_seguimiento(phone: str) -> dict | None:
     contexto totalmente distinto, se interpretaba como la respuesta a esa
     pregunta de salud vieja y disparaba upsell de masoterapia/reagendamiento
     fuera de lugar. Caso real 56930364173, 56993991362 (auditoría 2026-08-19,
-    problema #12). 48h cubre con holgura la ventana real en que un paciente
-    responde a un seguimiento post-consulta.
+    problema #12) — fix original con ventana de 48h.
+
+    FIX 2026-08-24 (consolidado, #14): la ventana de 48h seguía siendo
+    demasiado laxa — casos reales POSTERIORES al fix del 19-ago (56983010449,
+    56942835163, 56976128987, 56982564936, 56941199411) mostraron "Mejor"/
+    "Igual" sueltos, dichos como saludo o comparativo sin relación con la
+    consulta, disparando upsell horas o incluso un día después. Se acorta a
+    2h — cubre con holgura el tiempo real en que un paciente responde a un
+    seguimiento (la propia auditoría de fidelizacion.py mide "respondido"
+    dentro de 24h para métricas, pero la INTERPRETACIÓN de una respuesta
+    ambigua como "Mejor" exige una ventana mucho más ajustada que la métrica
+    de conversión).
     """
     with db() as conn:
         row = conn.execute("""
@@ -2938,7 +2982,7 @@ def get_ultimo_seguimiento(phone: str) -> dict | None:
             FROM fidelizacion_msgs f
             LEFT JOIN citas_bot cb ON cb.id_cita = f.cita_id AND cb.phone = f.phone
             WHERE f.phone = ? AND f.tipo = 'postconsulta' AND f.respuesta IS NULL
-              AND f.enviado_en >= datetime('now', '-48 hours')
+              AND f.enviado_en >= datetime('now', '-2 hours')
             ORDER BY f.enviado_en DESC LIMIT 1
         """, (phone,)).fetchone()
         return dict(row) if row else None
