@@ -760,8 +760,9 @@ class TestOtraPersonaREAmpliado(unittest.TestCase):
                       "_OTRA_PERSONA_SLOT_RE en WAIT_SLOT debe incluir guagua")
 
 
-class TestConfigEdadAvisoPediatria(unittest.TestCase):
-    """BUG-3: EDAD_AVISO_PEDIATRIA debe existir en config.py con las especialidades correctas."""
+class TestConfigSinAvisoPediatria(unittest.TestCase):
+    """2026-08-24: el aviso 'no tenemos pediatría → CESFAM' fue ELIMINADO.
+    El CMC atiende niños en MG/familiar/kine/fono/nutrición sin avisos."""
 
     def setUp(self):
         import sys
@@ -771,25 +772,14 @@ class TestConfigEdadAvisoPediatria(unittest.TestCase):
         importlib.reload(_cfg)
         self.cfg = _cfg
 
-    def test_existe_dict(self):
-        self.assertTrue(hasattr(self.cfg, "EDAD_AVISO_PEDIATRIA"),
-                        "EDAD_AVISO_PEDIATRIA debe existir en config.py")
+    def test_no_existe_dict(self):
+        self.assertFalse(hasattr(self.cfg, "EDAD_AVISO_PEDIATRIA"),
+                         "EDAD_AVISO_PEDIATRIA NO debe volver a config.py")
 
-    def test_medicina_general_14(self):
-        d = self.cfg.EDAD_AVISO_PEDIATRIA
-        self.assertEqual(d.get("medicina general"), 14)
-
-    def test_medicina_familiar_14(self):
-        d = self.cfg.EDAD_AVISO_PEDIATRIA
-        self.assertEqual(d.get("medicina familiar"), 14)
-
-    def test_kinesiologia_14(self):
-        d = self.cfg.EDAD_AVISO_PEDIATRIA
-        self.assertEqual(d.get("kinesiologia"), 14)
-
-    def test_psicologia_adulto_18(self):
-        d = self.cfg.EDAD_AVISO_PEDIATRIA
-        self.assertEqual(d.get("psicologia adulto"), 18)
+    def test_mg_no_tiene_edad_minima(self):
+        for esp in ("medicina general", "medicina familiar", "kinesiologia",
+                    "fonoaudiologia", "nutricion"):
+            self.assertIsNone(self.cfg.EDAD_MIN_ESPECIALIDAD.get(esp), esp)
 
 
 class TestFlowsPediatriaGuards(unittest.TestCase):
@@ -808,14 +798,11 @@ class TestFlowsPediatriaGuards(unittest.TestCase):
         self.assertIn("_EDAD_CTX_RE", self.contenido,
                       "Falta guard de contexto de edad en _parse_slot_selection")
 
-    def test_bug3_aviso_pediatria_en_wait_rut(self):
-        """Aviso pediátrico debe verificarse en WAIT_RUT_AGENDAR."""
-        self.assertIn("pediatria_aviso_visto", self.contenido,
-                      "Falta flag pediatria_aviso_visto en WAIT_RUT_AGENDAR")
-        self.assertIn("ped_continuar", self.contenido,
-                      "Falta handler botón ped_continuar")
-        self.assertIn("ped_no", self.contenido,
-                      "Falta handler botón ped_no")
+    def test_sin_aviso_pediatria_en_wait_rut(self):
+        """El aviso pediátrico → CESFAM NO debe existir (eliminado 2026-08-24)."""
+        self.assertNotIn("pediatria_aviso_visto", self.contenido)
+        self.assertNotIn("ped_continuar", self.contenido)
+        self.assertNotIn("Mejor ir al CESFAM", self.contenido)
 
     def test_bug5_menor_kw_rut_guard(self):
         """Guard de keyword menor en WAIT_RUT_AGENDAR debe existir."""

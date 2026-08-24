@@ -9953,23 +9953,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 contexto=f"paciente no tiene RUT exacto; nombre indicado: {txt[:120]}"
             )
 
-        # BUG-3 FIX: Respuesta a aviso pediátrico (botones ped_continuar / ped_no)
-        if tl == "ped_continuar":
-            # Paciente acepta continuar pese al aviso de edad — limpiar flag y pedir RUT
-            data.pop("pediatria_aviso_visto", None)
-            save_session(phone, "WAIT_RUT_AGENDAR", data)
-            return (
-                "Sin problema 😊 Ingresa el *RUT* del paciente:\n"
-                "(ej: *12.345.678-9*)"
-            )
-        if tl == "ped_no":
-            reset_session(phone)
-            return (
-                "Entendido 😊 Te recomendamos acudir al *CESFAM Carampangue* "
-                "o a un pediatra en el Hospital de Arauco para atención especializada.\n\n"
-                "Si en algún momento necesitas una consulta para adultos, estaremos aquí."
-            )
-
         # Botón "Ingresar otro RUT" (rut_nuevo) — paciente rechazó el RUT conocido
         if tl == "rut_nuevo":
             data.pop("rut_conocido", None)
@@ -10116,48 +10099,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "_Ejemplo: *María González López, F, 15/03/1990*_"
             )
 
-        # BUG-3 FIX: Aviso suave pediátrico (no bloqueo) para especialidades
-        # que el CMC atiende pero sin pediatría especializada. Solo se muestra
-        # una vez (flag pediatria_aviso_visto en sesión).
-        try:
-            from config import EDAD_AVISO_PEDIATRIA as _EDAD_AVISO_PED
-            _esp_ped = (data.get("especialidad") or "").lower().strip()
-            _fn_ped = paciente.get("fecha_nacimiento") or ""
-            _edad_ped: int | None = None
-            if _fn_ped:
-                # FIX 2026-08-24 (consolidado, #15): `buscar_paciente()` de
-                # Medilink puede devolver fecha_nacimiento en ISO
-                # (YYYY-MM-DD) — NO solo DD/MM/YYYY como asumía este parse
-                # (caso real confirmado en prod, 2026-08-24). Con
-                # `strptime(..., "%d/%m/%Y")` el ISO revienta ValueError, el
-                # `except: pass` lo traga en silencio y el aviso/bloqueo por
-                # edad queda DESACTIVADO sin que nadie se entere. Reusa el
-                # parser multi-formato ya usado en el registro de pacientes.
-                _dparsed_ped = _parsear_fecha_nacimiento(_fn_ped)
-                if _dparsed_ped:
-                    _today_ped = datetime.now(_CHILE_TZ).date()
-                    _edad_ped = (_today_ped - _dparsed_ped).days // 365
-            _umbral_ped = _EDAD_AVISO_PED.get(_esp_ped)
-            if (
-                _umbral_ped is not None
-                and _edad_ped is not None
-                and _edad_ped < _umbral_ped
-                and not data.get("pediatria_aviso_visto")
-            ):
-                data["pediatria_aviso_visto"] = True
-                save_session(phone, "WAIT_RUT_AGENDAR", data)
-                log_event(phone, "aviso_pediatria", {"esp": _esp_ped, "edad": _edad_ped})
-                return _btn_msg(
-                    f"*Aviso importante:* el paciente tiene {_edad_ped} años. "
-                    f"En el CMC no tenemos pediatría especializada — nuestros profesionales "
-                    f"pueden atender niños sanos para consultas básicas, pero para temas "
-                    f"pediátricos complejos te recomendamos ir a tu CESFAM o a un pediatra externo.\n\n"
-                    f"¿Quieres continuar con la cita en el CMC?",
-                    [{"id": "ped_continuar", "title": "Sí, continuar"},
-                     {"id": "ped_no", "title": "Mejor ir al CESFAM"}],
-                )
-        except Exception as _e_ped:
-            log.warning("aviso pediatria error (ignorado): %s", _e_ped)
+        # 2026-08-24: ELIMINADO el 'aviso suave pediátrico' (ex BUG-3) que
+        # mandaba a menores de 14 al CESFAM. El CMC SÍ atiende niños en MG,
+        # familiar, kine, fono y nutrición; el aviso ahuyentaba pacientes
+        # (reporte del dueño con capturas reales). Los bloqueos DUROS por
+        # edad (EDAD_MIN/EDAD_MAX) siguen abajo en FIX-13.
 
         # FIX-13: Validación pre-flight edad/género antes de confirmar cita.
         # Evita agendar menores en especialidades adultas (o vice-versa).

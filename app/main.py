@@ -11182,7 +11182,7 @@ async def webhook(request: Request):
             "accion_agendar", "accion_mis_citas", "accion_otro", "accion_waitlist",
             "quick_other", "quick_book", "quick_yes", "quick_no",
             "quick_cancel", "waitlist_si", "waitlist_no", "reac_si", "reac_luego",
-            "ped_continuar", "ped_no", "no_pediatra", "no_agendar",
+            "no_pediatra", "no_agendar",
             "menor_confirma_menor", "menor_confirma_adulto",
             "menor_es_adulto", "menor_es_menor",
             "wb_agendar", "wb_info",

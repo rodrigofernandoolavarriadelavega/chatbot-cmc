@@ -217,6 +217,13 @@ ALMA_PROFILES: dict[str, dict] = {
 TELEMEDICINA_ENABLED   = os.getenv("TELEMEDICINA_ENABLED", "false").lower() == "true"
 REFERRAL_BONOS_ENABLED = os.getenv("REFERRAL_BONOS_ENABLED", "false").lower() == "true"
 ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "")
+# Rol ADMINISTRACIÓN (2026-08-24): personal administrativo SIN rol clínico.
+# Ve agenda, caja, conciliación y errores operativos; NO ve las conversaciones
+# de los pacientes. Esa separación no es burocracia: una conversación de
+# WhatsApp trae síntomas, diagnósticos y RUT — es dato de salud bajo la Ley
+# 21.719, y quien no tiene rol clínico no tiene por qué leerlo para hacer su
+# trabajo. La agenda sí, porque sin ella no se puede administrar el centro.
+ADMINISTRACION_TOKEN = os.getenv("ADMINISTRACION_TOKEN", "")
 
 # Promo dental: flyer que se envía AUTOMÁTICAMENTE a quien recién acepta el
 # consent dental (consent_dental_v1 → "Sí, acepto"). Gateado: apagar al terminar
@@ -549,17 +556,9 @@ EDAD_MAX_ESPECIALIDAD: dict[str, int] = {
     "psicologia infantil": 17,
 }
 
-# BUG-3 FIX: Aviso informativo (no bloqueo) cuando el paciente es menor de
-# la edad umbral en especialidades que el CMC atiende pero sin pediatría especializada.
-# El bot muestra un aviso y pregunta si quiere continuar de todos modos.
-EDAD_AVISO_PEDIATRIA: dict[str, int] = {
-    "medicina general":  14,
-    "medicina familiar": 14,
-    "kinesiologia":      14,
-    "fonoaudiologia":    14,
-    "nutricion":         14,
-    "psicologia adulto": 18,  # psicologia adulto ya tiene EDAD_MIN hard; este es el aviso suave
-}
+# 2026-08-24: EDAD_AVISO_PEDIATRIA ELIMINADO. El CMC atiende niños en MG,
+# familiar, kine, fono y nutrición sin aviso. Solo aplican los bloqueos duros
+# EDAD_MIN_ESPECIALIDAD / EDAD_MAX_ESPECIALIDAD.
 
 # "M" = masculino, "F" = femenino (según campo sexo de Medilink)
 GENERO_REQUERIDO: dict[str, str] = {
