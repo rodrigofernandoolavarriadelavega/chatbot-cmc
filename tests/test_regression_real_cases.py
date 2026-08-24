@@ -1229,7 +1229,24 @@ class TestBug2CancelarInfoPrefilter(unittest.TestCase):
 
 
 class TestBug4DetectarFranjaHoraria(unittest.TestCase):
-    """BUG-4: _detectar_franja_horaria debe parsear franjas correctamente."""
+    """BUG-4: _detectar_franja_horaria debe parsear franjas correctamente.
+
+    RANGOS ACTUALIZADOS (2026-08-23). Antes había TRES tablas de rangos
+    contradictorias en el código; se unificaron en `app/franja.py`, que es hoy
+    la única fuente de verdad. Estos tests asertaban la tabla vieja:
+
+        mañana   (8, 12)  →  (8, 13)
+        tarde   (12, 18)  →  (13, 19)
+        noche   (18, 22)  →  (19, 23)
+
+    Los nuevos siguen el uso chileno real: "en la mañana" se estira hasta el
+    almuerzo (13), no hasta las 12; "en la noche" empieza a las 19. Con los
+    rangos viejos, un paciente que pedía "en la mañana" no veía el cupo de las
+    12:30 y uno que pedía "en la tarde" veía cupos de mediodía.
+
+    Si estos números vuelven a cambiar, se cambian en `app/franja.py` y acá —
+    en ninguna otra parte.
+    """
 
     def setUp(self):
         import sys, os
@@ -1248,19 +1265,34 @@ class TestBug4DetectarFranjaHoraria(unittest.TestCase):
         self.assertEqual(result, (8, 10))
 
     def test_en_la_manana(self):
-        self.assertEqual(self._fn("en la mañana"), (8, 12))
+        self.assertEqual(self._fn("en la mañana"), (8, 13))
 
     def test_en_la_tarde(self):
-        self.assertEqual(self._fn("en la tarde"), (12, 18))
+        self.assertEqual(self._fn("en la tarde"), (13, 19))
 
     def test_en_la_noche(self):
-        self.assertEqual(self._fn("en la noche"), (18, 22))
+        self.assertEqual(self._fn("en la noche"), (19, 23))
 
     def test_por_la_manana(self):
-        self.assertEqual(self._fn("por la mañana"), (8, 12))
+        self.assertEqual(self._fn("por la mañana"), (8, 13))
 
     def test_sin_franja(self):
         self.assertIsNone(self._fn("quiero hora con kine"))
+
+    def test_una_sola_fuente_de_verdad(self):
+        """Los rangos salen de app/franja.py, no de una copia en flows.py."""
+        from franja import FRANJAS
+        self.assertEqual(FRANJAS["mañana"], (8, 13))
+        self.assertEqual(FRANJAS["tarde"], (13, 19))
+        self.assertEqual(FRANJAS["noche"], (19, 23))
+
+    def test_mas_tarde_le_confirmo_no_es_una_franja(self):
+        """'Más tarde le confirmo' es un APLAZAMIENTO de cortesía, no una
+        preferencia horaria. Se detectó el 19-08-2026 con un paciente real
+        (56959883429) al que se le ofrecieron cupos de 15-23 h porque dijo que
+        confirmaría más tarde."""
+        self.assertIsNone(self._fn("Más tarde le confirmo"))
+        self.assertIsNone(self._fn("después le aviso"))
 
 
 class TestBug5PrecioIntent(unittest.TestCase):
