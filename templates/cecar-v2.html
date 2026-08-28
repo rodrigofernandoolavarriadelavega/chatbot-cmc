@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CECAR · Recupera y vuelve más fuerte | Carampangue</title>
+<meta name="description" content="Kinesiología y reacondicionamiento físico en Carampangue. Sesión con bono Fonasa $7.830. Sala equipada, kinesiólogo al lado, hora reservada por WhatsApp.">
+<!-- NOINDEX A PROPOSITO: la pagina todavia trae marcadores ambar
+     (direccion, horarios, precio de consulta). Al completarlos,
+     cambiar a content="index, follow", volver a poner el enlace en
+     el pie de sitio.html y sumar "cecar" al sitemap de main.py. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://centromedicocarampangue.cl/cecar/v2">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_CL">
+<meta property="og:title" content="CECAR · Recupera y vuelve más fuerte">
+<meta property="og:description" content="Kinesiología y reacondicionamiento en Carampangue. Sesión con bono Fonasa $7.830.">
+<meta property="og:image" content="https://centromedicocarampangue.cl/static/sitio/cecar-logo.png">
+<link rel="icon" type="image/png" href="/static/sitio/cecar-isotipo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- ============================================================
+     CECAR v2 — versión "gimnasio". Convive con /cecar (v1, clínica).
+     Decisiones tomadas leyendo las páginas que convierten en el rubro:
+       · Smart Fit CL  → 3 tarjetas de precio comparables, precio VISIBLE
+       · Sportlife CL  → el gancho va en una barra ARRIBA del hero, no dentro
+       · Barry's       → negro + UN acento, formato reducido a 2 módulos
+       · Gymshark      → negro como marco, jerarquía por ESCALA no por peso
+       · Tendencia 26  → tipografía cinética en vez de foto de hero
+                         (nos calza: no hay fotos de la sala todavía)
+     El acento es el turquesa de la marca CECAR, que sobre negro rinde.
+     Contenido, precios y plano: los mismos datos reales de la v1.
+     ⚠️ Los <span class="todo"> siguen siendo datos por completar.
+     ============================================================ -->
+<script>document.documentElement.className+=" js";</script>
+<style>
+:root{
+  --bg:#080C10; --bg2:#0D141A; --card:#121B23; --card2:#16212B;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.18);
+  --txt:#F2F6F8; --txt2:#93A4B1; --txt3:#8296A4;
+  --acc:#4FBECE; --acc2:#7FE9F7; --deep:#1172AB; --warn:#F2B04E; --danger:#FF6B57;
+  --fd:'Montserrat',ui-sans-serif,system-ui,sans-serif;
+  --fb:'Inter',ui-sans-serif,system-ui,sans-serif;
+  --container:1200px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;background:var(--bg)}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:var(--fb);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+img,svg{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+h1,h2,h3,h4{margin:0}
+p{margin:0}
+ul{margin:0;padding:0;list-style:none}
+::selection{background:var(--acc);color:#04222A}
+
+.skip{position:absolute;top:-50px;left:8px;background:var(--acc);color:#04222A;padding:12px 20px;border-radius:8px;font-weight:800;z-index:999}
+.skip:focus{top:8px}
+:focus-visible{outline:2.5px solid var(--acc);outline-offset:3px;border-radius:6px}
+
+.wrap{width:100%;max-width:var(--container);margin:0 auto;padding:0 24px}
+section{padding:104px 0;position:relative}
+
+/* ---------- tipografía ---------- */
+.kicker{font-family:var(--fd);font-weight:800;font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--acc)}
+.mega{font-family:var(--fd);font-weight:900;text-transform:uppercase;letter-spacing:-.03em;line-height:.92;color:var(--txt)}
+h2.mega{font-size:clamp(34px,6vw,68px)}
+/* Linea contorneada. El trazo NO puede ser mas fino: a 1,5px se desvanece en
+   pantallas de baja densidad y la palabra desaparece. Se ve "cargada" de cerca
+   porque los contornos internos de cada letra tambien se dibujan — es correcto,
+   no un choque de glifos. */
+.mega .out{color:transparent;-webkit-text-stroke:2px var(--acc);paint-order:stroke fill}
+.mega .on{color:var(--acc)}
+.sub{font-size:17px;color:var(--txt2);max-width:60ch;line-height:1.65}
+.sec-head{margin-bottom:52px;max-width:800px}
+.sec-head .kicker{display:block;margin-bottom:14px}
+.sec-head .sub{margin-top:18px}
+
+/* ---------- marcador de dato pendiente ---------- */
+.todo{display:inline-block;padding:1px 8px;border:1.5px dashed var(--warn);border-radius:6px;background:rgba(242,176,78,.1);color:var(--warn);font-family:var(--fb);font-weight:600;font-size:.9em;text-transform:none;letter-spacing:0}
+
+/* ---------- botones ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:16px 26px;border-radius:6px;font-family:var(--fd);font-weight:800;font-size:13.5px;letter-spacing:.06em;text-transform:uppercase;line-height:1;min-height:50px;transition:transform .16s ease,background .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease}
+.btn:active{transform:translateY(1px)}
+.btn-acc{background:var(--acc);color:#04222A;box-shadow:0 0 0 0 rgba(79,190,206,.5)}
+.btn-acc:hover{background:var(--acc2);box-shadow:0 10px 34px -10px rgba(79,190,206,.75)}
+.btn-wa{background:#25D366;color:#04220F}
+.btn-wa:hover{background:#3ce87c;box-shadow:0 10px 34px -10px rgba(37,211,102,.7)}
+.btn-line{border:1.6px solid var(--line2);color:var(--txt)}
+.btn-line:hover{border-color:var(--acc);color:var(--acc)}
+.btn-sm{padding:12px 18px;min-height:44px;font-size:12px}
+
+/* ---------- barra de gancho (arriba de todo, patrón Sportlife) ---------- */
+.gancho{display:block;background:var(--acc);color:#04222A;font-family:var(--fd);font-weight:800;font-size:13px;letter-spacing:.02em}
+.gancho .in{display:flex;align-items:center;gap:12px;padding:11px 24px;flex-wrap:wrap}
+.gancho .pt{width:8px;height:8px;border-radius:50%;background:#04222A;flex:none}
+.gancho .go{margin-left:auto;display:inline-flex;align-items:center;gap:7px;background:#04222A;color:var(--acc);padding:6px 14px;border-radius:999px;font-size:12px}
+
+/* ---------- nav ---------- */
+.nav-wrap{position:sticky;top:0;z-index:100;background:rgba(8,12,16,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:26px;height:74px}
+.brand{display:flex;align-items:center;gap:11px;flex:none}
+.brand img{width:40px;height:40px;background:#fff;border-radius:10px;padding:3px}
+.brand b{font-family:var(--fd);font-weight:900;font-size:20px;letter-spacing:.01em;line-height:1;display:block}
+.brand .sub2{font-size:8.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);display:block;margin-top:3px}
+.nav-links{display:flex;gap:26px;margin-left:auto;font-family:var(--fd);font-weight:700;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt2)}
+.nav-links a:hover{color:var(--acc)}
+.nav-cta{display:flex;align-items:center;gap:10px}
+.burger{display:none;width:46px;height:46px;border-radius:8px;border:1.6px solid var(--line2);align-items:center;justify-content:center}
+.panel{display:none;border-top:1px solid var(--line);padding:6px 0 18px}
+.panel.open{display:block}
+.panel a{display:block;padding:14px 2px;font-family:var(--fd);font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--line)}
+.panel a:last-child{border-bottom:0}
+
+/* ---------- hero ---------- */
+.hero{padding:96px 0 84px;overflow:hidden;position:relative}
+.hero::before{content:"";position:absolute;inset:-30% -10% auto -10%;height:120%;
+  background:radial-gradient(60% 55% at 22% 28%,rgba(79,190,206,.22),transparent 62%),
+             radial-gradient(48% 48% at 82% 18%,rgba(17,114,171,.24),transparent 65%);
+  pointer-events:none}
+.hero .wrap{position:relative;z-index:1}
+.hero h1{font-size:clamp(46px,10.5vw,132px)}
+.hero .sub{margin:30px 0 34px;font-size:18.5px;max-width:54ch}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap}
+.hero-meta{margin-top:26px;font-size:13.5px;color:var(--txt3);display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.hero-meta .dot{width:4px;height:4px;border-radius:50%;background:var(--txt3)}
+
+/* ---------- contadores ---------- */
+.stats{border-block:1px solid var(--line);background:var(--bg2)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:38px 22px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat b{display:block;font-family:var(--fd);font-weight:900;font-size:clamp(32px,4.2vw,52px);line-height:1;color:var(--acc);letter-spacing:-.02em}
+.stat span{display:block;margin-top:10px;font-size:12.5px;color:var(--txt2);line-height:1.4}
+
+/* ---------- ticker ---------- */
+.ticker{border-bottom:1px solid var(--line);background:var(--acc);color:#04222A;overflow:hidden;padding:13px 0}
+.ticker-in{display:flex;gap:0;width:max-content;animation:desliza 28s linear infinite}
+.ticker span{font-family:var(--fd);font-weight:900;font-size:15px;letter-spacing:.1em;text-transform:uppercase;padding:0 26px;white-space:nowrap}
+@keyframes desliza{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ---------- módulos ---------- */
+.mods{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.mod{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:40px 36px;position:relative;overflow:hidden;transition:border-color .25s ease,transform .25s ease}
+.mod:hover{border-color:var(--acc);transform:translateY(-3px)}
+.mod .num{font-family:var(--fd);font-weight:900;font-size:76px;line-height:1;color:transparent;-webkit-text-stroke:1.5px rgba(79,190,206,.4);position:absolute;top:18px;right:26px}
+.mod h3{font-family:var(--fd);font-weight:900;font-size:clamp(28px,3.4vw,40px);text-transform:uppercase;letter-spacing:-.02em;margin-bottom:12px}
+.mod .lead{color:var(--txt2);font-size:15.5px;line-height:1.65;margin-bottom:26px;max-width:44ch}
+.mod ul{display:grid;gap:11px;margin-bottom:30px}
+.mod li{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:var(--txt)}
+.mod li i{flex:none;width:6px;height:6px;border-radius:50%;background:var(--acc);margin-top:8px}
+
+/* ---------- precios ---------- */
+.precios{background:var(--bg2)}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:34px 30px;display:flex;flex-direction:column;position:relative}
+.pcard.destacada{border-color:var(--acc);background:linear-gradient(180deg,rgba(79,190,206,.09),var(--card) 55%)}
+.pcard .tag{position:absolute;top:-11px;left:30px;background:var(--acc);color:#04222A;font-family:var(--fd);font-weight:900;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding:5px 12px;border-radius:999px}
+.pcard h3{font-family:var(--fd);font-weight:800;font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:var(--txt2);margin-bottom:18px}
+.pcard .val{font-family:var(--fd);font-weight:900;font-size:clamp(38px,5vw,54px);line-height:1;letter-spacing:-.03em}
+.pcard.destacada .val{color:var(--acc)}
+.pcard .por{font-size:13.5px;color:var(--txt3);margin-top:10px}
+.pcard .alt{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--txt2)}
+.pcard ul{display:grid;gap:10px;margin:22px 0 28px}
+.pcard li{display:flex;gap:10px;font-size:14px;color:var(--txt2);align-items:flex-start}
+.pcard li svg{flex:none;color:var(--acc);margin-top:3px}
+.pcard .btn{margin-top:auto}
+.pnota{margin-top:26px;font-size:13.5px;color:var(--txt3);max-width:70ch}
+
+/* ---------- sala ---------- */
+.sala{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center}
+.plano{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+.pcap{margin-top:14px;text-align:center;font-size:12.5px;color:var(--txt3)}
+.key{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;font-size:12.5px;color:var(--txt2);justify-content:center}
+.key span{display:inline-flex;align-items:center;gap:7px}
+.key i{width:11px;height:11px;border-radius:3px}
+.ley{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:26px}
+.ley li{display:flex;gap:9px;align-items:baseline;font-size:13.5px;color:var(--txt2)}
+.ley .n{flex:none;width:20px;height:20px;border-radius:5px;display:grid;place-items:center;font-family:var(--fd);font-weight:900;font-size:10.5px;background:rgba(255,255,255,.06)}
+.ley .n.f{color:#4FBECE} .ley .n.c{color:#4FB3CE} .ley .n.e{color:#FF8A5B}
+
+/* ---------- triage ---------- */
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start}
+.tcol{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:32px 28px}
+.tcol h3{font-family:var(--fd);font-weight:900;font-size:20px;text-transform:uppercase;letter-spacing:-.01em;margin-bottom:7px}
+.tcol .ts{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);margin-bottom:22px}
+.tcol ul{display:grid;gap:13px}
+.tcol li{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:var(--txt2);line-height:1.55}
+.tcol li svg{flex:none;margin-top:3px;color:var(--acc)}
+.tcol.roja{border-color:rgba(255,107,87,.42);background:linear-gradient(180deg,rgba(255,107,87,.10),var(--card) 60%)}
+.tcol.roja h3{color:var(--danger)}
+.tcol.roja .ts{color:var(--danger)}
+.tcol.roja li svg{color:var(--danger)}
+.tnota{margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 24px;font-size:14.5px;color:var(--txt2);line-height:1.65}
+
+/* ---------- horarios ---------- */
+.hor{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:34px;max-width:620px}
+.hor li{display:flex;justify-content:space-between;gap:20px;padding:15px 0;border-bottom:1px solid var(--line);font-size:15.5px}
+.hor li:last-child{border-bottom:0}
+.hor li b{font-family:var(--fd);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:13px}
+.hor li span{color:var(--txt2)}
+
+/* ---------- faq ---------- */
+.faq{display:grid;gap:12px;max-width:900px}
+.fq{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.fq summary{cursor:pointer;padding:22px 26px;font-family:var(--fd);font-weight:800;font-size:15.5px;display:flex;justify-content:space-between;gap:18px;align-items:center;list-style:none}
+.fq summary::-webkit-details-marker{display:none}
+.fq summary::after{content:"+";font-size:24px;color:var(--acc);font-weight:700;flex:none;line-height:1}
+.fq[open] summary::after{content:"−"}
+.fq[open] summary{color:var(--acc)}
+.fq .a{padding:0 26px 24px;color:var(--txt2);font-size:15px;line-height:1.7;max-width:70ch}
+
+/* ---------- cierre ---------- */
+.cierre{text-align:center;background:linear-gradient(160deg,rgba(79,190,206,.16),transparent 60%),var(--bg2);border-top:1px solid var(--line)}
+.cierre h2{font-size:clamp(36px,7vw,86px)}
+.cierre .sub{margin:22px auto 36px;text-align:center}
+.cierre .ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+
+/* ---------- footer ---------- */
+footer{background:#04080B;border-top:1px solid var(--line);padding:64px 0 28px;font-size:14.5px;color:var(--txt2)}
+.fgrid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:38px}
+footer h4{font-family:var(--fd);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--txt);margin-bottom:18px}
+footer ul{display:grid;gap:12px}
+footer a:hover{color:var(--acc)}
+.fval{color:var(--txt);font-weight:600;display:block}
+.flbl{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--txt3);display:block}
+.furg{margin-top:42px;padding:16px 22px;border-radius:10px;background:rgba(255,107,87,.09);border:1px solid rgba(255,107,87,.24);display:flex;gap:11px;align-items:center;font-size:14px}
+.furg a{color:var(--danger);font-weight:700;text-decoration:underline}
+.ffoot{margin-top:26px;padding-top:22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--txt3)}
+
+/* ---------- CTA fija móvil ---------- */
+.fija{display:none}
+.fija{transform:translateY(115%);transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+.fija.on{transform:none}
+
+/* ---------- motion ---------- */
+.rev{opacity:1}
+.js .rev{opacity:0;transform:translateY(22px)}
+.js .rev.in{opacity:1;transform:none;transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .js .rev,.js .rev.in{opacity:1;transform:none;transition:none}
+  .ticker-in{animation:none}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .tri{grid-template-columns:1fr}
+  .sala{grid-template-columns:1fr;gap:36px}
+}
+@media (max-width:940px){
+  .nav-links{display:none}
+  .burger{display:flex}
+  .mods,.pgrid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .stat:nth-child(2){border-right:0}
+  .stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .fgrid{grid-template-columns:1fr 1fr}
+  .fija{display:block;position:fixed;left:0;right:0;bottom:0;z-index:95;padding:11px 16px calc(11px + env(safe-area-inset-bottom));background:rgba(8,12,16,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+  .fija .btn{width:100%}
+  body{padding-bottom:82px}
+}
+@media (max-width:620px){
+  .mega .out{color:#5E7A86;-webkit-text-stroke:0}
+  .wrap{padding:0 17px}
+  section{padding:70px 0}
+  .hero{padding:64px 0 56px}
+  .hero-ctas .btn{width:100%}
+  .gancho .in{padding:10px 17px;font-size:12px}
+  .gancho .go{margin-left:0}
+  .mod{padding:30px 24px}
+  .mod .num{font-size:56px;top:14px;right:20px}
+  .pcard,.tcol,.hor,.plano{padding:26px 22px}
+  .ley{grid-template-columns:1fr}
+  .fgrid{grid-template-columns:1fr;gap:30px}
+}
+@media (max-width:400px){
+  /* A 320px el nav no cierra: marca 126 + CTA 161 + separaciones > 320.
+     Se recorta lo prescindible (la bajada, el boton Llamar que igual esta en
+     el pie) y se aprieta el resto, pero el wordmark CECAR NO se toca:
+     una marca sin nombre en la barra superior no sirve de nada. */
+  .brand .sub2{display:none}
+  .brand b{font-size:18px}
+  .nav-cta .btn-line{display:none}
+  .nav{gap:12px}
+  .nav-cta{gap:8px}
+  .btn-sm{padding:10px 13px;font-size:11px}
+}
+</style>
+
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org","@type":"MedicalBusiness",
+  "@id":"https://centromedicocarampangue.cl/cecar#cecar",
+  "name":"CECAR · Centro de Entrenamiento Carampangue","alternateName":"CECAR",
+  "url":"https://centromedicocarampangue.cl/cecar",
+  "image":"https://centromedicocarampangue.cl/static/sitio/cecar-logo.png",
+  "description":"Kinesiología y reacondicionamiento físico en sala equipada, más consulta médica con bono Fonasa, en Carampangue, Provincia de Arauco.",
+  "telephone":"+56442965226",
+  "areaServed":[{"@type":"City","name":"Carampangue"},{"@type":"City","name":"Arauco"},{"@type":"City","name":"Curanilahue"}],
+  "medicalSpecialty":["PhysicalTherapy","PrimaryCare"],
+  "parentOrganization":{"@type":"MedicalClinic","name":"Centro Médico Carampangue","url":"https://centromedicocarampangue.cl/"},
+  "makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Sesión de kinesiología"},
+    "priceSpecification":[
+      {"@type":"PriceSpecification","price":"7830","priceCurrency":"CLP","description":"Con bono Fonasa"},
+      {"@type":"PriceSpecification","price":"20000","priceCurrency":"CLP","description":"Particular"}]}]
+}
+</script>
+</head>
+<body>
+
+<a href="#main" class="skip">Saltar al contenido principal</a>
+
+<!-- GANCHO — arriba del hero, como Sportlife pone su "entrena gratis 3 días" -->
+<a class="gancho" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20mi%20evaluaci%C3%B3n%20kin%C3%A9sica%20en%20CECAR%20(web%3A%20v2-gancho)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener">
+  <div class="wrap in">
+    <span class="pt"></span>
+    <span>Empieza por la evaluación kinésica · sesión con bono Fonasa $7.830</span>
+    <span class="go">Agendar por WhatsApp →</span>
+  </div>
+</a>
+
+<header class="nav-wrap">
+  <div class="wrap">
+    <nav class="nav" aria-label="Principal">
+      <a href="/cecar/v2" class="brand" aria-label="CECAR inicio">
+        <img src="/static/sitio/cecar-isotipo.png" alt="" width="40" height="40">
+        <span><b>CECAR</b><span class="sub2">Carampangue</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="#entrena">Qué hacemos</a>
+        <a href="#precios">Precios</a>
+        <a href="#sala">La sala</a>
+        <a href="#triage">¿Kine o médico?</a>
+        <a href="#faq">Preguntas</a>
+      </div>
+      <div class="nav-cta">
+        <a href="tel:+56442965226" class="btn btn-line btn-sm">Llamar</a>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20en%20CECAR%20(web%3A%20v2-nav)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-acc btn-sm">Agendar</a>
+        <button class="burger" id="bg" aria-label="Abrir menú" aria-expanded="false" aria-controls="pn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </nav>
+    <div class="panel" id="pn">
+      <a href="#entrena">Qué hacemos</a>
+      <a href="#precios">Precios</a>
+      <a href="#sala">La sala</a>
+      <a href="#triage">¿Kine o médico?</a>
+      <a href="#horarios">Horarios</a>
+      <a href="#faq">Preguntas</a>
+      <a href="/cecar">Ver versión clásica</a>
+      <a href="/">Centro Médico Carampangue</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- HERO — tipografía cinética en vez de foto (tendencia 2026, y no hay fotos aún) -->
+<section class="hero">
+  <div class="wrap">
+    <span class="kicker">Carampangue · Provincia de Arauco</span>
+    <h1 class="mega" style="margin-top:20px">
+      Recupera.<br>
+      <span class="out">Entrena.</span><br>
+      <span class="on">Vuelve.</span>
+    </h1>
+    <p class="sub">Kinesiología y reacondicionamiento físico con el kinesiólogo al lado,
+      en una sala equipada de verdad. Y la consulta médica en el mismo lugar,
+      con bono Fonasa. Sin viajar a Concepción por cada sesión.</p>
+    <div class="hero-ctas">
+      <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20kinesiolog%C3%ADa%20en%20CECAR%20(web%3A%20v2-hero)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-wa">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
+        Agendar mi hora
+      </a>
+      <a href="#precios" class="btn btn-line">Ver precios</a>
+    </div>
+    <p class="hero-meta">
+      <span>Respondemos 24/7</span><span class="dot"></span>
+      <span>Hora reservada, sin espera</span><span class="dot"></span>
+      <span>Bono Fonasa en el lugar</span>
+    </p>
+  </div>
+</section>
+
+<!-- CONTADORES -->
+<div class="stats">
+  <div class="wrap" style="padding:0">
+    <div class="stats-grid">
+      <div class="stat"><b data-n="46.6" data-dec="1" data-suf=" m²">46,6 m²</b><span>de sala, medidos con huincha</span></div>
+      <div class="stat"><b data-n="10">10</b><span>estaciones de trabajo</span></div>
+      <div class="stat"><b data-n="28.6" data-dec="1" data-suf=" m²">28,6 m²</b><span>de piso libre al centro</span></div>
+      <div class="stat"><b data-n="7830" data-pre="$" data-mil="1">$7.830</b><span>la sesión con bono Fonasa</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-in" id="tk"></div>
+</div>
+
+<!-- DOS MÓDULOS — formato reducido, como Barry's con RUN y LIFT -->
+<section id="entrena">
+  <div class="wrap">
+    <div class="sec-head rev">
+      <span class="kicker">Qué hacemos</span>
+      <h2 class="mega">Dos caminos,<br><span class="on">un mismo lugar</span></h2>
+      <p class="sub">CECAR no intenta ser un centro médico completo — para eso está el Centro
+        Médico Carampangue. Acá se recupera la función y se vuelve a entrenar.</p>
+    </div>
+    <div class="mods">
+      <article class="mod rev">
+        <div class="num">01</div>
+        <h3>Recupera</h3>
+        <p class="lead">Kinesiología. Partimos midiendo qué te pasa —rango, fuerza, dolor—
+          y de ahí sale tu plan con un número de sesiones real, no "vamos viendo".</p>
+        <ul>
+          <li><i></i>Dolor lumbar y cervical</li>
+          <li><i></i>Hombro, rodilla y tobillo</li>
+          <li><i></i>Rehabilitación después de una operación</li>
+          <li><i></i>Sobrecarga por trabajo repetitivo</li>
+        </ul>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20kinesiolog%C3%ADa%20(web%3A%20v2-recupera)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-acc">Agendar kinesiología</a>
+      </article>
+      <article class="mod rev">
+        <div class="num">02</div>
+        <h3>Entrena</h3>
+        <p class="lead">Reacondicionamiento físico supervisado. Cuando el dolor ya cedió,
+          lo que evita la recaída es volver a tener fuerza — con alguien mirando la técnica.</p>
+        <ul>
+          <li><i></i>Vuelta a la actividad después del alta</li>
+          <li><i></i>Fuerza para una espalda que recae</li>
+          <li><i></i>Evaluación de composición corporal con InBody</li>
+          <li><i></i>Progresión guiada, no una rutina fotocopiada</li>
+        </ul>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20reacondicionamiento%20f%C3%ADsico%20en%20CECAR%20(web%3A%20v2-entrena)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-line">Quiero entrenar</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- PRECIOS — visibles y comparables. Esconderlos mata la conversión. -->
+<section class="precios" id="precios">
+  <div class="wrap">
+    <div class="sec-head rev">
+      <span class="kicker">Precios</span>
+      <h2 class="mega">Sin letra chica</h2>
+      <p class="sub">Lo que vale está acá abajo. No hay que llenar un formulario
+        ni escribir para saber cuánto cuesta.</p>
+    </div>
+    <div class="pgrid">
+      <article class="pcard destacada rev">
+        <span class="tag">Lo más pedido</span>
+        <h3>Kinesiología con bono</h3>
+        <div class="val">$7.830</div>
+        <div class="por">por sesión, con bono Fonasa</div>
+        <div class="alt">Particular: <strong style="color:var(--txt)">$20.000</strong> la sesión</div>
+        <ul>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>El bono se vende en el lugar</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Requiere orden médica para la cobertura</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Hora reservada, con el kinesiólogo al lado</li>
+        </ul>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20kinesiolog%C3%ADa%20con%20bono%20Fonasa%20(web%3A%20v2-precio-kine)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-acc">Agendar</a>
+      </article>
+
+      <article class="pcard rev">
+        <h3>Primera sesión</h3>
+        <div class="val">Evaluación</div>
+        <div class="por">kinésica completa</div>
+        <div class="alt">Se cobra como sesión: <strong style="color:var(--txt)">$7.830</strong> con bono</div>
+        <ul>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Se mide rango, fuerza y dolor</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Sales con un número de sesiones estimado</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Y con el ejercicio para hacer en la casa</li>
+        </ul>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20mi%20evaluaci%C3%B3n%20kin%C3%A9sica%20(web%3A%20v2-precio-eval)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-line">Reservar evaluación</a>
+      </article>
+
+      <article class="pcard rev">
+        <h3>Consulta médica</h3>
+        <div class="val"><span class="todo">$ copago</span></div>
+        <div class="por">consulta con bono Fonasa</div>
+        <div class="alt"><span class="todo">Confirmar valor particular y grupo Fonasa</span></div>
+        <ul>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Evaluación médica de la lesión</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>La orden de kinesiología, si corresponde</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Controles y recetas</li>
+        </ul>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20m%C3%A9dica%20en%20CECAR%20(web%3A%20v2-precio-consulta)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-line">Agendar consulta</a>
+      </article>
+    </div>
+    <p class="pnota">Los valores de kinesiología son los mismos que publica el Centro Médico
+      Carampangue. El bono Fonasa se compra en el lugar: no tienes que ir a otra parte.</p>
+  </div>
+</section>
+
+<!-- LA SALA -->
+<section id="sala">
+  <div class="wrap">
+    <div class="sala">
+      <div class="plano rev">
+        <svg viewBox="0 0 560 440" role="img" aria-labelledby="pT pD">
+  <title id="pT">Plano a escala de la sala CECAR</title>
+  <desc id="pD">Sala de 7,90 por 5,90 metros, diez estaciones contra los muros largos y el centro libre.</desc>
+  <rect x="44.5" y="44.5" width="474" height="354" fill="#0D141A"/>
+  <rect x="90" y="130" width="383" height="182" fill="#4FBECE" fill-opacity=".07" stroke="#4FBECE" stroke-opacity=".22" stroke-dasharray="5 5"/>
+  <text x="281.5" y="214" text-anchor="middle" font-size="13" font-weight="800" fill="#4FBECE" letter-spacing="2">PISO LIBRE</text>
+  <text x="281.5" y="233" text-anchor="middle" font-size="12" fill="#7E93A1">28,6 m² de trabajo</text>
+  <rect x="40" y="40" width="483" height="363" fill="none" stroke="#33434F" stroke-width="9"/>
+  <rect x="34" y="191.5" width="12" height="60" fill="#080C10"/>
+  <path d="M 104.5 191.5 A 60 60 0 0 1 44.5 251.5" fill="none" stroke="#3D4E5A" stroke-width="1.4"/>
+  <line x1="44.5" y1="191.5" x2="104.5" y2="191.5" stroke="#55697A" stroke-width="2"/>
+  <text x="112" y="228" font-size="11" fill="#55697A">puerta 1,00</text>
+  <rect x="77.5" y="47.2" width="84" height="69" rx="3" fill="#4FBECE" fill-opacity=".9"/><rect x="165.7" y="46.9" width="84" height="36" rx="3" fill="#4FBECE" fill-opacity=".9"/><rect x="254.5" y="46.9" width="42" height="42" rx="3" fill="#4FBECE" fill-opacity=".9"/><rect x="301.3" y="46.9" width="108" height="36" rx="3" fill="#4FBECE" fill-opacity=".9"/><rect x="413.5" y="46.6" width="72" height="27" rx="3" fill="#4FBECE" fill-opacity=".9"/><rect x="508.0" y="86.5" width="9" height="138" rx="3" fill="#4FBECE" fill-opacity=".9"/><rect x="466.0" y="290.5" width="51" height="54" rx="3" fill="#FF8A5B" fill-opacity=".9"/><rect x="431.5" y="387.7" width="54" height="8.4" rx="3" fill="#FF8A5B" fill-opacity=".9"/><rect x="280.3" y="360.1" width="72" height="36" rx="3" fill="#2E8FA8" fill-opacity=".9"/><rect x="77.2" y="342.1" width="123" height="54" rx="3" fill="#2E8FA8" fill-opacity=".9"/><circle cx="119.5" cy="81.7" r="9.5" fill="#080C10" stroke="#4FBECE" stroke-width="1.6"/><text x="119.5" y="85.3" text-anchor="middle" font-size="11" font-weight="800" fill="#4FBECE">1</text><circle cx="207.7" cy="64.9" r="9.5" fill="#080C10" stroke="#4FBECE" stroke-width="1.6"/><text x="207.7" y="68.5" text-anchor="middle" font-size="11" font-weight="800" fill="#4FBECE">2</text><circle cx="275.5" cy="67.9" r="9.5" fill="#080C10" stroke="#4FBECE" stroke-width="1.6"/><text x="275.5" y="71.5" text-anchor="middle" font-size="11" font-weight="800" fill="#4FBECE">3</text><circle cx="355.3" cy="64.9" r="9.5" fill="#080C10" stroke="#4FBECE" stroke-width="1.6"/><text x="355.3" y="68.5" text-anchor="middle" font-size="11" font-weight="800" fill="#4FBECE">4</text><circle cx="449.5" cy="60.1" r="9.5" fill="#080C10" stroke="#4FBECE" stroke-width="1.6"/><text x="449.5" y="63.7" text-anchor="middle" font-size="11" font-weight="800" fill="#4FBECE">5</text><circle cx="493.0" cy="155.5" r="9.5" fill="#080C10" stroke="#4FBECE" stroke-width="1.6"/><text x="493.0" y="159.1" text-anchor="middle" font-size="11" font-weight="800" fill="#4FBECE">6</text><circle cx="491.5" cy="317.5" r="9.5" fill="#080C10" stroke="#FF8A5B" stroke-width="1.6"/><text x="491.5" y="321.1" text-anchor="middle" font-size="11" font-weight="800" fill="#FF8A5B">7</text><circle cx="458.5" cy="374.0" r="9.5" fill="#080C10" stroke="#FF8A5B" stroke-width="1.6"/><text x="458.5" y="377.6" text-anchor="middle" font-size="11" font-weight="800" fill="#FF8A5B">8</text><circle cx="316.3" cy="378.1" r="9.5" fill="#080C10" stroke="#2E8FA8" stroke-width="1.6"/><text x="316.3" y="381.70000000000005" text-anchor="middle" font-size="11" font-weight="800" fill="#2E8FA8">9</text><circle cx="138.7" cy="369.1" r="9.5" fill="#080C10" stroke="#2E8FA8" stroke-width="1.6"/><text x="138.7" y="372.70000000000005" text-anchor="middle" font-size="11" font-weight="800" fill="#2E8FA8">10</text>
+  <line x1="40" y1="26" x2="523" y2="26" stroke="#55697A" stroke-width="1"/>
+  <line x1="40" y1="21" x2="40" y2="31" stroke="#55697A" stroke-width="1"/>
+  <line x1="523" y1="21" x2="523" y2="31" stroke="#55697A" stroke-width="1"/>
+  <text x="281.5" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#93A4B1">7,90 m</text>
+  <line x1="26" y1="40" x2="26" y2="403" stroke="#55697A" stroke-width="1"/>
+  <line x1="21" y1="40" x2="31" y2="40" stroke="#55697A" stroke-width="1"/>
+  <line x1="21" y1="403" x2="31" y2="403" stroke="#55697A" stroke-width="1"/>
+  <text x="14" y="221.5" text-anchor="middle" font-size="12" font-weight="700" fill="#93A4B1" transform="rotate(-90 14 221.5)">5,90 m</text>
+</svg>
+        <div class="key">
+          <span><i style="background:#4FBECE"></i>Fuerza</span>
+          <span><i style="background:#2E8FA8"></i>Cardio</span>
+          <span><i style="background:#FF8A5B"></i>Evaluación y movilidad</span>
+        </div>
+        <p class="pcap">Plano a escala. Interior medido en terreno: 7,90 × 5,90 m = 46,6 m².</p>
+      </div>
+      <div class="rev">
+        <span class="kicker">La sala</span>
+        <h2 class="mega" style="margin:14px 0 18px">Diez estaciones<br><span class="on">y el centro libre</span></h2>
+        <p class="sub">El equipo va contra los dos muros largos y el centro queda entero
+          despejado. En 46 m² ese piso libre no es lo que sobra: es la estación que más
+          se usa —movilidad, trabajo funcional y ejercicio guiado.</p>
+        <ul class="ley"><li><span class="n f">1</span>Rack de sentadillas</li><li><span class="n f">2</span>Banco ajustable</li><li><span class="n f">3</span>Rack de discos</li><li><span class="n f">4</span>Rack de mancuernas</li><li><span class="n f">5</span>Kettlebells</li><li><span class="n f">6</span>Barra olímpica en soporte</li><li><span class="n e">7</span>Plataforma InBody</li><li><span class="n e">8</span>Espalderas</li><li><span class="n c">9</span>Bicicleta estática</li><li><span class="n c">10</span>Trotadora</li></ul>
+        <p style="margin-top:22px;font-size:13.5px;color:var(--txt3)">
+          <span class="todo">Verificar la lista contra el equipamiento instalado hoy</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRIAGE -->
+<section id="triage" style="background:var(--bg2)">
+  <div class="wrap">
+    <div class="sec-head rev">
+      <span class="kicker">Antes de agendar</span>
+      <h2 class="mega">¿Kinesiólogo<br><span class="out">o médico?</span></h2>
+      <p class="sub">Si ya tienes diagnóstico e indicación, parte por kinesiología. Si todavía
+        no sabes qué tienes, parte por el médico. Y hay un tercer grupo de señales que
+        no es para acá: es para urgencia.</p>
+    </div>
+    <div class="tri">
+      <div class="tcol rev">
+        <h3>Parte por kine</h3>
+        <p class="ts">Ya se sabe qué hay que trabajar</p>
+        <ul><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Traes una orden médica de kinesiología</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Te operaron —rodilla, hombro, cadera o columna— y te indicaron rehabilitación</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Dolor de sobrecarga por trabajo repetitivo, sin golpe ni caída de por medio</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Ya tuviste este mismo cuadro, fue evaluado, y volvió igual</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Terminaste un tratamiento y quieres reacondicionamiento supervisado</li></ul>
+      </div>
+      <div class="tcol rev">
+        <h3>Parte por el médico</h3>
+        <p class="ts">Hay que saber qué es antes</p>
+        <ul><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Dolor nuevo, sin causa clara, o que lleva más de 4 a 6 semanas sin ceder</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Golpe o caída reciente que nadie ha evaluado todavía</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Una articulación hinchada, caliente o enrojecida</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Dolor que aparece siempre con el esfuerzo y se pasa con el reposo</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Necesitas la orden para que la kinesiología quede cubierta por Fonasa</li></ul>
+      </div>
+      <div class="tcol roja rev">
+        <h3>Anda a urgencia</h3>
+        <p class="ts">Esto no se trata con ejercicio</p>
+        <ul><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Pérdida de fuerza en un brazo o una pierna, o se te caen las cosas</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Adormecimiento entre las piernas, o problemas para orinar o retener</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Dolor de espalda que te despierta de noche y no cede en ninguna posición</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Fiebre junto con el dolor de espalda</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Baja de peso sin explicación, o antecedente de cáncer</li><li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Dolor en el pecho, falta de aire, o dolor que baja al brazo o la mandíbula</li></ul>
+        <p style="margin-top:20px;font-size:14.5px;font-weight:700;color:var(--danger)">
+          Llama al <a href="tel:131" style="text-decoration:underline">SAMU 131</a> o ve al
+          servicio de urgencia más cercano.
+        </p>
+      </div>
+    </div>
+    <p class="tnota"><strong style="color:var(--txt)">Esto orienta, no diagnostica.</strong>
+      Ninguna lista reemplaza que alguien te examine. Si tu caso no calza claro en ninguna
+      columna, escríbenos y lo vemos: es preferible que preguntes a que pierdas semanas
+      haciendo el ejercicio equivocado —o esperando con algo que no era muscular.</p>
+  </div>
+</section>
+
+<!-- HORARIOS -->
+<section id="horarios">
+  <div class="wrap">
+    <div class="sec-head rev">
+      <span class="kicker">Horarios</span>
+      <h2 class="mega">Cuándo venir</h2>
+      <p class="sub">La sala trabaja con hora reservada: llegas y entrenas, no esperas turno.</p>
+    </div>
+    <div class="hor rev">
+      <ul>
+        <li><b>Lun a Vie</b><span class="todo">HH:MM – HH:MM</span></li>
+        <li><b>Sábado</b><span class="todo">HH:MM – HH:MM</span></li>
+        <li><b>Domingo</b><span>Cerrado</span></li>
+      </ul>
+      <p style="margin-top:22px;font-size:14px;color:var(--txt2)">
+        Consulta médica: <span class="todo">días y bloque del médico</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="background:var(--bg2)">
+  <div class="wrap">
+    <div class="sec-head rev">
+      <span class="kicker">Preguntas frecuentes</span>
+      <h2 class="mega">Lo que más<br><span class="on">nos preguntan</span></h2>
+    </div>
+    <div class="faq"><details class="fq"><summary>¿Necesito orden médica para la kinesiología?</summary><div class="a">Para que quede cubierta por Fonasa sí. Si no la tienes, puedes tomar la consulta médica acá mismo: el médico te evalúa y deja la indicación en la misma visita.</div></details><details class="fq"><summary>¿Cuánto cuesta y qué cubre el bono?</summary><div class="a">La sesión con bono Fonasa queda en <strong>$7.830</strong>; particular, en $20.000. Son los mismos valores que publica el Centro Médico Carampangue, y el bono se vende en el lugar.</div></details><details class="fq"><summary>¿Cuántas sesiones voy a necesitar?</summary><div class="a">Sale de la evaluación de la primera sesión, no de un promedio. Ahí se estima cuántas y con qué frecuencia, y se ajusta según cómo respondas.</div></details><details class="fq"><summary>¿Puedo ir sin hora?</summary><div class="a">No conviene. La sala trabaja con cupos por bloque para que tengas al kinesiólogo disponible y tu espacio de trabajo. Se agenda por WhatsApp en un mensaje.</div></details><details class="fq"><summary>¿Esto es un gimnasio con mensualidad?</summary><div class="a">No. CECAR trabaja por sesión de kinesiología y reacondicionamiento supervisado, no con plan mensual de libre acceso.</div></details><details class="fq"><summary>¿CECAR es lo mismo que el Centro Médico Carampangue?</summary><div class="a">Son de la misma familia pero no son lo mismo. En el <a href="/" style="color:var(--acc);text-decoration:underline">Centro Médico Carampangue</a> están las 22 especialidades médicas y dentales. En CECAR está la sala y la consulta médica que la acompaña.</div></details><details class="fq"><summary>¿Y si mi problema es una urgencia?</summary><div class="a">CECAR no es un servicio de urgencia. Con dolor en el pecho, falta de aire, pérdida de fuerza o de conciencia, llama al <a href="tel:131" style="color:var(--danger);text-decoration:underline">SAMU 131</a>.</div></details></div>
+  </div>
+</section>
+
+<!-- CIERRE -->
+<section class="cierre">
+  <div class="wrap">
+    <h2 class="mega">Tu primera hora<br><span class="on">empieza acá</span></h2>
+    <p class="sub">Escríbenos por WhatsApp y te damos el primer cupo disponible.
+      Respondemos las 24 horas.</p>
+    <div class="ctas">
+      <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20en%20CECAR%20(web%3A%20v2-cierre)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-wa">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
+        Agendar por WhatsApp
+      </a>
+      <a href="tel:+56442965226" class="btn btn-line">Llamar (44) 296 5226</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <a href="/cecar/v2" class="brand" style="margin-bottom:18px">
+          <img src="/static/sitio/cecar-isotipo.png" alt="" width="40" height="40">
+          <span><b>CECAR</b><span class="sub2">Carampangue</span></span>
+        </a>
+        <p style="line-height:1.7;max-width:40ch">Kinesiología, reacondicionamiento físico y
+          consulta médica en Carampangue, Provincia de Arauco. Parte de la familia del
+          Centro Médico Carampangue.</p>
+      </div>
+      <div>
+        <h4>Contacto</h4>
+        <ul>
+          <li><a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20informaci%C3%B3n%20de%20CECAR%20(web%3A%20v2-pie)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener"><span class="flbl">WhatsApp</span><span class="fval">+56 9 6661 0737</span></a></li>
+          <li><a href="tel:+56442965226"><span class="flbl">Teléfono</span><span class="fval">(44) 296 5226</span></a></li>
+          <li><span class="flbl">Dirección</span><span class="fval"><span class="todo">Calle y número, Carampangue</span></span></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Horarios</h4>
+        <ul>
+          <li><span class="flbl">Lun a Vie</span><span class="fval"><span class="todo">HH–HH</span></span></li>
+          <li><span class="flbl">Sábado</span><span class="fval"><span class="todo">HH–HH</span></span></li>
+          <li><span class="flbl">Domingo</span><span class="fval" style="color:var(--txt3)">Cerrado</span></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Sitio</h4>
+        <ul>
+          <li><a href="#entrena">Qué hacemos</a></li>
+          <li><a href="#precios">Precios</a></li>
+          <li><a href="#sala">La sala</a></li>
+          <li><a href="#triage">¿Kine o médico?</a></li>
+          <li><a href="/cecar">Versión clásica</a></li>
+          <li><a href="/">Centro Médico Carampangue</a></li>
+          <li><a href="/privacidad">Privacidad</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="furg">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none"></span>
+      <span>CECAR no atiende urgencias. Si es una emergencia, llama al <a href="tel:131">SAMU 131</a>.</span>
+    </div>
+    <div class="ffoot">
+      <div>© 2026 CECAR · Centro de Entrenamiento Carampangue.</div>
+      <div>Provincia de Arauco · Región del Biobío</div>
+    </div>
+  </div>
+</footer>
+
+<div class="fija">
+  <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20en%20CECAR%20(web%3A%20v2-fija)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-wa">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
+    Agendar por WhatsApp
+  </a>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- menú móvil ---- */
+  var bg = document.getElementById("bg"), pn = document.getElementById("pn");
+  if (bg && pn) {
+    bg.addEventListener("click", function(){
+      var ab = pn.classList.toggle("open");
+      bg.setAttribute("aria-expanded", ab ? "true" : "false");
+      bg.setAttribute("aria-label", ab ? "Cerrar menú" : "Abrir menú");
+    });
+    pn.addEventListener("click", function(e){
+      if (e.target.tagName === "A") { pn.classList.remove("open"); bg.setAttribute("aria-expanded","false"); }
+    });
+    document.addEventListener("keydown", function(e){
+      if (e.key === "Escape" && pn.classList.contains("open")) { bg.click(); bg.focus(); }
+    });
+  }
+
+  /* ---- la barra fija entra cuando el CTA del hero sale de pantalla ---- */
+  var fija = document.querySelector(".fija"), ancla = document.querySelector(".hero-ctas");
+  if (fija && ancla && "IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) {
+      fija.classList.toggle("on", !es[0].isIntersecting);
+    }, { threshold: 0 }).observe(ancla);
+  } else if (fija) {
+    fija.classList.add("on");   /* sin observer, mejor visible que nunca */
+  }
+
+  /* ---- ticker: se duplica en JS para que el loop empalme sin costura ----
+     Con el texto escrito dos veces a mano, cualquier edición futura rompe
+     el empalme del -50%. Escrito una vez y clonado, no puede desincronizarse. */
+  var tk = document.getElementById("tk");
+  if (tk) {
+    var frases = ["Kinesiología","Reacondicionamiento","Bono Fonasa","Hora reservada",
+                  "InBody","Carampangue","Post-operatorio","Dolor lumbar"];
+    var linea = frases.map(function(f){ return "<span>"+f+" ✦</span>"; }).join("");
+    tk.innerHTML = linea + linea;
+  }
+
+  /* ---- aparición por scroll ---- */
+  var revs = [].slice.call(document.querySelectorAll(".rev"));
+  if (reduce || !("IntersectionObserver" in window)) {
+    revs.forEach(function(el){ el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -12% 0px", threshold: .08 });
+    revs.forEach(function(el){ io.observe(el); });
+  }
+
+  /* ---- contadores ---- */
+  function pinta(el, v){
+    var dec = +(el.dataset.dec || 0);
+    var t = dec ? v.toFixed(dec).replace(".", ",") : Math.round(v).toString();
+    if (el.dataset.mil) t = Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    el.textContent = (el.dataset.pre || "") + t + (el.dataset.suf || "");
+  }
+  var nums = [].slice.call(document.querySelectorAll("[data-n]"));
+  if (reduce || !("IntersectionObserver" in window)) {
+    nums.forEach(function(el){ pinta(el, +el.dataset.n); });
+  } else {
+    var io2 = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var el = e.target, fin = +el.dataset.n, t0 = null;
+        io2.unobserve(el);
+        pinta(el, 0);   /* recien aca se pone en cero: el HTML trae el valor real */
+        requestAnimationFrame(function paso(t){
+          if (t0 === null) t0 = t;
+          var p = Math.min((t - t0) / 1100, 1);
+          pinta(el, fin * (1 - Math.pow(1 - p, 3)));   /* easeOutCubic */
+          if (p < 1) requestAnimationFrame(paso);
+        });
+      });
+    }, { threshold: .5 });
+    nums.forEach(function(el){ io2.observe(el); });
+  }
+})();
+</script>
+
+</body>
+</html>

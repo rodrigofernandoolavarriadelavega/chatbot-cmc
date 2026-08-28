@@ -1688,6 +1688,8 @@ _HORIZONTE_DASHBOARD_HTML = (_TEMPLATE_DIR / "horizonte_dashboard.html").read_te
 _CAMINO_50M_HTML = (_TEMPLATE_DIR / "camino_50m.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "camino_50m.html").exists() else ""
 _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
 _PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
+_CECAR_HTML = (_TEMPLATE_DIR / "cecar.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "cecar.html").exists() else ""
+_CECAR_V2_HTML = (_TEMPLATE_DIR / "cecar-v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "cecar-v2.html").exists() else ""
 _TRAUMATOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "traumatologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "traumatologo-curanilahue.html").exists() else ""
 _OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "otorrino-curanilahue.html").exists() else ""
 _GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ginecologo-curanilahue.html").exists() else ""
@@ -1764,6 +1766,28 @@ def sala_espera():
 def administradora_funciones():
     """Mapa del cargo Administradora del CMC × malla UTP Adm. de Empresas (formación)."""
     return _ADMIN_FUNCIONES_HTML
+
+
+@app.get("/cecar/v2", response_class=HTMLResponse)
+def cecar_landing_v2():
+    """CECAR v2 — version "gimnasio" (oscura, energetica). Convive con /cecar.
+
+    Mismos datos que la v1: precios reales, plano real, triage clinico. Cambia
+    el lenguaje visual, no los hechos.
+    """
+    return _CECAR_V2_HTML
+
+
+@app.get("/cecar", response_class=HTMLResponse)
+def cecar_landing():
+    """CECAR — Centro de Entrenamiento Carampangue (kinesiologia + consulta medica).
+
+    Hermana publica de sitio.html. OJO: en agentecmc.cl nginx tiene un
+    `location = /cecar` estatico (la ficha de superficie para el constructor)
+    que gana por match exacto, asi que esta ruta solo se ve en
+    centromedicocarampangue.cl/cecar.
+    """
+    return _CECAR_HTML
 
 
 @app.get("/traumatologo-curanilahue", response_class=HTMLResponse)
