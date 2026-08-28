@@ -1770,14 +1770,24 @@ def administradora_funciones():
 
 
 @app.get("/patio", response_class=HTMLResponse)
-def patio_carampangue():
+def patio_carampangue(request: Request):
     """Patio Carampangue - pagina publica del uso transitorio del terreno
     Republica x Conquista (patio gastronomico/familiar de fin de semana).
+
+    SOLO en agentecmc.cl (el dominio-taller de todo lo que construimos).
+    En centromedicocarampangue.cl devuelve 404 A PROPOSITO: el Patio es una
+    marca APARTE del centro medico y no debe colgar del dominio clinico ni
+    ensuciarle el SEO. Los dos dominios apuntan a esta misma app, asi que
+    toda ruta nace visible en ambos si nadie la filtra por Host - es el mismo
+    problema que /cecar, resuelto alla con un location de nginx.
 
     OJO: sale con <meta robots="noindex"> a proposito hasta que exista
     permiso municipal y fecha de apertura confirmada. Los datos por
     confirmar estan marcados en ambar dentro del template.
     """
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
     return _PATIO_HTML
 
 
