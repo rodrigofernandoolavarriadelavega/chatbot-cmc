@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CECAR · Kinesiología y consulta médica en Carampangue</title>
-<meta name="description" content="Centro de Entrenamiento Carampangue. Kinesiología y reacondicionamiento físico en sala equipada, más consulta médica con bono Fonasa. Carampangue, Arauco. Agenda por WhatsApp.">
+<meta name="description" content="Kinesiología en Carampangue con bono Fonasa: $7.830 la sesión y hasta 10 sesiones por programa, no una suelta. Consulta médica en el mismo lugar. Centro de Entrenamiento Carampangue, Arauco.">
 <!-- NOINDEX A PROPOSITO: la pagina todavia trae marcadores ambar
      (direccion, horarios, precio de consulta). Al completarlos,
      cambiar a content="index, follow", volver a poner el enlace en
@@ -308,6 +308,24 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
 }
 .svc-price .amount { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--brand-navy); }
 .svc-price .unit { font-size: 13px; color: var(--ink-500); }
+
+/* Explicador del bono. Numeros tomados de la Res. Ex. 49/2009 MINSAL (Normas
+   Tecnico Administrativas MLE), Grupo 06. NO es un segundo servicio: la etapa
+   de recuperar fuerza va DENTRO del tratamiento cubierto — lo que queda fuera
+   es la mantencion despues del alta ("patologias recuperables, con caracter
+   curativo", dice la norma). */
+.bono { margin-top: 28px; background: #fff; border: 1px solid var(--ink-200); border-radius: var(--radius-lg); padding: 34px 34px 30px; }
+.bono-head { max-width: 62ch; margin-bottom: 26px; }
+.bono-head h3 { font-family: var(--font-display); font-size: clamp(20px,2.4vw,26px); font-weight: 800; color: var(--ink-900); margin: 12px 0 10px; letter-spacing: -.02em; }
+.bono-head h3 em { font-style: italic; color: var(--brand-teal-ink); }
+.bono-head p { font-size: 15px; color: var(--ink-600); line-height: 1.6; }
+.bono-lista { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.bono-lista li { border-top: 3px solid var(--brand-teal); padding-top: 14px; }
+.bono-lista b { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--ink-900); margin-bottom: 7px; line-height: 1.25; }
+.bono-lista span { font-size: 13.5px; color: var(--ink-600); line-height: 1.55; }
+.bono-limite { margin-top: 28px; padding: 18px 22px; border-radius: var(--radius); background: var(--ink-50); border: 1px solid var(--ink-200); font-size: 14px; color: var(--ink-600); line-height: 1.65; }
+.bono-limite b { color: var(--ink-800); }
+.bono-fuente { display: block; margin-top: 10px; font-size: 12px; color: var(--ink-400); }
 .svc-card .btn { margin-top: 20px; align-self: flex-start; }
 
 /* Triage */
@@ -453,6 +471,7 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
   .hero-visual { max-width: 460px; }
   .strip-grid { grid-template-columns: repeat(2, 1fr); }
   .steps, .svc { grid-template-columns: 1fr; }
+  .bono-lista { grid-template-columns: 1fr 1fr; }
   .triage-grid { grid-template-columns: 1fr; }
   .leyenda { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -482,6 +501,8 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
   .equip { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr; gap: 32px; }
   .plano-wrap { padding: 13px; }
+  .bono { padding: 26px 22px 24px; }
+  .bono-lista { grid-template-columns: 1fr; gap: 18px; }
   /* Nav en pantalla chica: los dos CTA pasan a icono cuadrado. Con el texto
      oculto pero el padding de pill (22px por lado) seguian desbordando a 320px. */
   .nav { gap: 12px; }
@@ -541,7 +562,7 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
     }
   ],
   "availableService": [
-    { "@type": "MedicalTherapy", "name": "Kinesiología y reacondicionamiento físico" },
+    { "@type": "MedicalTherapy", "name": "Kinesiología y rehabilitación musculoesquelética" },
     { "@type": "MedicalProcedure", "name": "Consulta médica general con bono Fonasa" }
   ]
 }
@@ -672,9 +693,9 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
           sin salir de <span class="accent-deep">Carampangue</span>.
         </h1>
         <p class="lead" style="font-weight:500;color:var(--ink-700)">
-          Kinesiología y reacondicionamiento físico con kinesiólogo al lado, en una sala
-          equipada de verdad, y consulta médica con bono Fonasa en el mismo lugar.
-          Sin viajar a Concepción para cada sesión.
+          Un tratamiento kinésico completo con bono Fonasa —las sesiones que haga falta
+          hasta que te recuperes— y la consulta médica en el mismo lugar. Sin viajar a
+          Concepción para cada sesión.
         </p>
         <div class="hero-ctas">
           <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20kinesiolog%C3%ADa%20en%20CECAR%20(web%3A%20cecar-hero)&utm_source=cecar&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-wa btn-lg">
@@ -780,16 +801,18 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
         <span class="pill">Rehabilitación</span>
         <h3>Kinesiología</h3>
         <p>Recuperación de lesiones, dolor de columna, post-operatorio y
-           reacondicionamiento físico, en una sala con el equipamiento para hacerlo en serio.</p>
+           en una sala con el equipamiento para hacerlo en serio. No es una sesión suelta:
+           son las sesiones que necesite tu recuperación.</p>
         <ul class="svc-list">
           <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Dolor lumbar y cervical</li>
           <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Lesiones de hombro, rodilla y tobillo</li>
           <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Rehabilitación después de una operación</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Reacondicionamiento físico supervisado</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Volver a tener fuerza, como parte del mismo tratamiento</li>
         </ul>
         <div class="svc-price">
           <span class="amount">$7.830</span>
-          <span class="unit">por sesión con <strong>bono Fonasa</strong> · $20.000 particular</span>
+          <span class="unit">por sesión con <strong>bono Fonasa</strong> · $20.000 particular<br>
+            <span style="color:var(--ink-400)">Cada sesión del tratamiento, no solo la primera</span></span>
         </div>
         <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20kinesiolog%C3%ADa%20en%20CECAR%20(web%3A%20cecar-kine)&utm_source=cecar&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-teal">Agendar kinesiología</a>
       </article>
@@ -812,6 +835,45 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
         </div>
         <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20m%C3%A9dica%20en%20CECAR%20(web%3A%20cecar-consulta)&utm_source=cecar&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-primary">Agendar consulta</a>
       </article>
+    </div>
+
+    <div class="bono">
+      <div class="bono-head">
+        <span class="pill ink">Cómo funciona tu bono</span>
+        <h3>El bono cubre un <em>tratamiento</em>, no una sesión suelta</h3>
+        <p>Mucha gente cree que el bono alcanza para una vez y después hay que volver
+           donde el médico. No es así, y conviene que lo sepas antes de partir.</p>
+      </div>
+      <ul class="bono-lista">
+        <li>
+          <b>Hasta 10 sesiones por programa</b>
+          <span>Una al día. El programa lo arma el kinesiólogo con lo que tu
+            recuperación necesite, incluida la etapa de volver a tener fuerza.</span>
+        </li>
+        <li>
+          <b>2 evaluaciones sin volver al médico</b>
+          <span>Durante el tratamiento se te puede reevaluar dos veces sin necesitar
+            una nueva indicación médica. Así el plan se ajusta a cómo vas respondiendo.</span>
+        </li>
+        <li>
+          <b>La orden no detalla cada terapia</b>
+          <span>Basta con que el médico consigne tu diagnóstico y que necesitas
+            kinesiología. Qué se hace en cada sesión lo define el kinesiólogo contigo.</span>
+        </li>
+        <li>
+          <b>Más de un programa en el año</b>
+          <span>Si la recuperación lo requiere, puedes tener otro programa dentro del
+            mismo año. <span class="todo">Confirmar el tope anual del código que factura CECAR</span></span>
+        </li>
+      </ul>
+      <p class="bono-limite">
+        <b>Dónde sí termina el bono:</b> Fonasa financia estas prestaciones para tratar
+        una lesión y recuperarte de ella. Si ya te dieron el alta y lo que quieres es
+        seguir entrenando para mantenerte, eso ya no es tratamiento y va como plan
+        particular — te decimos el valor antes de que empieces, nunca después.
+        <span class="bono-fuente">Res. Ex. 49/2009 MINSAL, Normas Técnico Administrativas
+        de la Modalidad Libre Elección · Grupo 06, Kinesiología y Fisioterapia.</span>
+      </p>
     </div>
   </div>
 </section>
@@ -840,7 +902,7 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
           <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Te operaron —rodilla, hombro, cadera o columna— y te indicaron rehabilitación</li>
           <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Dolor de sobrecarga por trabajo repetitivo, sin golpe ni caída de por medio</li>
           <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Ya tuviste este mismo cuadro, fue evaluado, y volvió igual</li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Terminaste un tratamiento y quieres reacondicionamiento físico supervisado</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Ya te dieron el alta y quieres seguir entrenando supervisado</li>
         </ul>
       </div>
 
@@ -987,6 +1049,15 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
         <div class="ans">Sí. La consulta médica se atiende con bono Fonasa, que se vende
           en el mismo lugar. La sesión de kinesiología con bono queda en <strong>$7.830</strong>;
           particular, en $20.000.</div>
+      </details>
+      <details class="faq-item">
+        <summary>¿El bono cubre todas las sesiones o solo la primera?</summary>
+        <div class="ans">Un programa puede llegar hasta 10 sesiones, no una sola. Además
+          se te puede reevaluar hasta dos veces durante el tratamiento sin que tengas que
+          volver donde el médico por una orden nueva. Y la etapa de recuperar fuerza va
+          dentro del mismo tratamiento: estar fuerte de nuevo es parte de sanar la lesión,
+          no un servicio aparte. Lo que sí es particular es seguir entrenando
+          <em>después</em> del alta, cuando ya no hay tratamiento en curso.</div>
       </details>
       <details class="faq-item">
         <summary>¿Cuántas sesiones voy a necesitar?</summary>
