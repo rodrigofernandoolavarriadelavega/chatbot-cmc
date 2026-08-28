@@ -31,6 +31,11 @@ _LOG_PATHS = ("/var/log/cmc-bot.log", "/var/log/cmc-bot.log.1")
 # duplicado (caso Alexander 2026-08-05: 3 citas activas en 2 fichas).
 _PROFS_SERIE_OK = {21, 49, 52, 55, 56, 59, 66, 70, 72, 74, 75, 76, 77}
 
+# Tope de páginas por día al barrer la agenda (50 citas/página). 20 = 1.000
+# citas/día, muy por encima de cualquier día real del CMC; existe solo para
+# que un `next` en bucle no cuelgue el centinela.
+_MAX_PAGINAS_DIA = 20
+
 
 def _activo() -> bool:
     return os.getenv("CENTINELA_ACTIVE", "true").strip().lower() in ("1", "true", "yes")
@@ -120,8 +125,8 @@ def _revisar_abonos() -> tuple[list, list]:
 
 
 async def _revisar_duplicados_medilink(dias: int = 5) -> list:
-    """Citas ACTIVAS del mismo paciente con el mismo profesional de consulta
-    en los próximos `dias` — sospecha de duplicado bot↔recepción."""
+    """Citas ACTIVAS del mismo paciente, mismo profesional y MISMO DÍA dentro de
+    los próximos `dias` — sospecha de duplicado bot↔recepción."""
     import json
     import urllib.parse
     from medilink import _get_shared_client, MEDILINK_BASE_URL, HEADERS
@@ -133,20 +138,43 @@ async def _revisar_duplicados_medilink(dias: int = 5) -> list:
         fecha = (hoy + timedelta(days=i)).strftime("%Y-%m-%d")
         q = json.dumps({"id_sucursal": {"eq": 1}, "fecha": {"eq": fecha},
                         "estado_anulacion": {"eq": 0}})
+        url = f"{MEDILINK_BASE_URL}/citas?q={urllib.parse.quote(q)}"
         try:
-            r = await client.get(f"{MEDILINK_BASE_URL}/citas?q={urllib.parse.quote(q)}",
-                                 headers=HEADERS)
-            if r.status_code != 200:
-                # Un centinela que salta días EN SILENCIO replica la clase de
-                # falla que vino a cazar — los días no revisados se reportan.
-                dias_sin_revisar.append(fecha)
-                continue
-            for cita in (r.json().get("data") or []):
-                prof = cita.get("id_profesional")
-                if prof in _PROFS_SERIE_OK:
-                    continue
-                key = (cita.get("id_paciente"), prof)
-                grupos.setdefault(key, []).append(cita)
+            # Medilink corta en 50 por página y NO avisa que hay más: solo deja
+            # un `links.next`. Leer únicamente la primera página dejaba ciego al
+            # centinela en los días cargados — caso Isidora 2026-08-28: 75 citas
+            # ese día, 2 de sus 3 horas duplicadas caían en la página 2 y el
+            # reporte salió en CERO con el duplicado a la vista en la agenda.
+            paginas = 0
+            while url and paginas < _MAX_PAGINAS_DIA:
+                r = await client.get(url, headers=HEADERS)
+                if r.status_code != 200:
+                    # Un centinela que salta días EN SILENCIO replica la clase de
+                    # falla que vino a cazar — los días no revisados se reportan.
+                    dias_sin_revisar.append(fecha)
+                    break
+                cuerpo = r.json()
+                for cita in (cuerpo.get("data") or []):
+                    prof = cita.get("id_profesional")
+                    if prof in _PROFS_SERIE_OK:
+                        continue
+                    # Criterio (Rodrigo, 2026-08-28): duplicado = mismo paciente
+                    # + mismo profesional + MISMO DÍA, igual que el bloqueo del bot
+                    # en flows.py. Cruzar los 5 días marcaba como duplicado un
+                    # control legítimo con el mismo médico otro día, y una alerta
+                    # con falsos positivos deja de leerse.
+                    key = (cita.get("id_paciente"), prof, cita.get("fecha"))
+                    grupos.setdefault(key, []).append(cita)
+                url = (cuerpo.get("links") or {}).get("next")
+                paginas += 1
+                if url:
+                    await asyncio.sleep(0.3)
+            else:
+                # Salimos por tope de páginas con `next` todavía pendiente: el día
+                # quedó a medio leer. Se reporta como no revisado en vez de darlo
+                # por limpio — misma regla que el fallo HTTP de arriba.
+                if url:
+                    dias_sin_revisar.append(fecha)
         except Exception as e:
             log.debug("centinela duplicados fecha %s: %s", fecha, e)
             dias_sin_revisar.append(fecha)
@@ -155,12 +183,16 @@ async def _revisar_duplicados_medilink(dias: int = 5) -> list:
     if dias_sin_revisar:
         dups.append({"paciente": "", "profesional": "",
                      "sin_revisar": dias_sin_revisar})
-    for (_pac, _prof), citas in grupos.items():
+    for (_pac, _prof, _fecha), citas in grupos.items():
         if len(citas) > 1:
             c0 = citas[0]
             dups.append({
                 "paciente": (c0.get("nombre_paciente") or "").strip(),
                 "profesional": (c0.get("nombre_profesional") or "").strip(),
+                "fecha": _fecha,
+                # Llave estable para no repetir la misma alerta cada hora.
+                "key": f"{_pac}-{_prof}-{_fecha}",
+                "horas": sorted(str(c.get("hora_inicio"))[:5] for c in citas),
                 "citas": [f"{c.get('fecha')} {str(c.get('hora_inicio'))[:5]}"
                           for c in citas],
             })
@@ -232,3 +264,117 @@ async def job_centinela_diario():
         log.info("Centinela diario: %d hallazgo(s) enviados al dueño", len(secciones))
     except Exception as e:
         log.error("Centinela: no se pudo enviar el resumen: %s", e)
+
+
+# ── Duplicados EN CALIENTE ────────────────────────────────────────────────────
+# El centinela diario avisa a las 07:30 del día siguiente. Caso Isidora
+# (2026-08-28): las dos horas duplicadas se crearon a las 13:19 y 13:57 del día
+# anterior — el aviso habría llegado 17 h tarde, con el bloque ya cerrado y las
+# tres horas ocupadas. Este job corre DENTRO del horario de atención y le habla
+# a RECEPCIÓN: es quien crea el duplicado a mano durante un takeover (el bot ya
+# se bloquea solo en flows.py) y la única que puede deshacerlo a tiempo.
+_INTRADIA_DEDUP_HORAS = 12
+
+
+def _intradia_activo() -> bool:
+    return os.getenv("CENTINELA_INTRADIA_ACTIVE", "true").strip().lower() in ("1", "true", "yes")
+
+
+def _destinos_recepcion() -> tuple[list[str], bool]:
+    """Números de recepción desde `RECEPCION_ALERT_PHONES` (CSV, formato 569…).
+
+    Si no está configurado cae al dueño, pero el mensaje LO DICE: un fallback
+    silencioso se vuelve permanente por olvido y el aviso nunca llega a quien
+    tiene que actuar.
+    """
+    raw = os.getenv("RECEPCION_ALERT_PHONES", "").strip()
+    destinos = [p.strip() for p in raw.replace(";", ",").split(",") if p.strip()]
+    if destinos:
+        return destinos, False
+    from config import ADMIN_ALERT_PHONE
+    return ([ADMIN_ALERT_PHONE] if ADMIN_ALERT_PHONE else []), True
+
+
+def _ya_alertado(key: str, horas: int = _INTRADIA_DEDUP_HORAS) -> bool:
+    """¿Ya avisamos este duplicado? Evita repetir la misma alerta cada hora
+    mientras recepción todavía no la resuelve."""
+    from session import db
+    try:
+        with db() as conn:
+            cur = conn.execute(
+                "SELECT 1 FROM conversation_events "
+                "WHERE phone = 'centinela' AND event = 'dup_intradia_alertado' "
+                "  AND meta LIKE ? AND ts > datetime('now', ?) LIMIT 1",
+                (f'%"{key}"%', f"-{int(horas)} hours"),
+            )
+            return cur.fetchone() is not None
+    except Exception as e:
+        # Sin historial preferimos repetir el aviso antes que callarlo: una
+        # alerta repetida molesta, una perdida cuesta una hora de agenda.
+        log.warning("centinela intradía: dedup no disponible (%s) — se envía igual", e)
+        return False
+
+
+async def job_centinela_duplicados_intradia():
+    """Cron horario en horario de atención: horas duplicadas del MISMO día (hoy
+    y mañana) mientras todavía se pueden anular. Avisa a recepción."""
+    from session import log_event
+    if not _activo() or not _intradia_activo():
+        return
+    from medilink import use_batch_lane
+    use_batch_lane()
+
+    try:
+        dups = await _revisar_duplicados_medilink(dias=2)
+    except Exception as e:
+        log.error("centinela intradía: no pude revisar duplicados: %s", e)
+        return
+
+    # Los días que no se pudieron leer (429, tope de páginas) quedan en el log;
+    # el resumen de las 07:30 los reporta. Alertarlos cada hora sería ruido.
+    for d in dups:
+        if d.get("sin_revisar"):
+            log.warning("centinela intradía: días sin revisar %s", d["sin_revisar"])
+
+    nuevos = [d for d in dups if d.get("key") and not _ya_alertado(d["key"])]
+    if not nuevos:
+        return
+
+    lineas = []
+    for d in nuevos:
+        f = d.get("fecha") or ""
+        f_disp = f"{f[8:10]}-{f[5:7]}" if len(f) == 10 else f
+        lineas.append(f"• *{d['paciente']}* tiene {len(d['horas'])} horas el {f_disp} "
+                      f"con {d['profesional']}: {' · '.join(d['horas'])}")
+    msg = ("⚠️ *Horas duplicadas en la agenda*\n\n" + "\n".join(lineas)
+           + "\n\nFavor confirmar con el paciente cuál hora queda y anular la otra.")
+
+    destinos, es_fallback = _destinos_recepcion()
+    if es_fallback:
+        msg += ("\n\n_Este aviso debería llegarle a recepción: falta configurar "
+                "RECEPCION_ALERT_PHONES en el servidor._")
+
+    enviados = 0
+    from messaging import send_whatsapp
+    for tel in destinos:
+        try:
+            if await send_whatsapp(tel, msg[:3900]):
+                enviados += 1
+        except Exception as e:
+            log.warning("centinela intradía: WhatsApp a %s falló: %s", tel, e)
+    if not enviados:
+        # Fuera de la ventana de 24h de Meta el texto libre se rechaza (400). El
+        # aviso no se pierde: sale por Telegram, que no tiene esa restricción.
+        try:
+            from alertas_oob import enviar_telegram
+            await enviar_telegram(msg, header="🛰️ Centinela — horas duplicadas")
+        except Exception as e:
+            log.error("centinela intradía: tampoco pude avisar por Telegram: %s", e)
+
+    for d in nuevos:
+        log_event("centinela", "dup_intradia_alertado", {
+            "key": d["key"], "paciente": d["paciente"],
+            "horas": d["horas"], "destinos_ok": enviados,
+        })
+    log.info("Centinela intradía: %d duplicado(s) nuevo(s), %d destino(s) OK",
+             len(nuevos), enviados)

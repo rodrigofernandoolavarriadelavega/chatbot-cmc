@@ -239,6 +239,19 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=3600,
         coalesce=True,
     )
+    # Centinela intradía — cada hora 09:00-20:00 CLT. Caza horas duplicadas del
+    # MISMO día creadas fuera del bot (recepción a mano durante un takeover) y
+    # avisa a recepción mientras todavía se pueden anular. El resumen de las
+    # 07:30 llegaba al día siguiente: caso Isidora 2026-08-28, 17 h tarde.
+    from centinela import job_centinela_duplicados_intradia
+    scheduler.add_job(
+        job_centinela_duplicados_intradia,
+        CronTrigger(hour="9-20", minute=5, timezone=_CLT),
+        id="centinela_duplicados_intradia",
+        replace_existing=True,
+        misfire_grace_time=900,
+        coalesce=True,
+    )
     # Agenda por día 04:40 CLT — cachea citas reales por profesional/día
     # (agenda_dias_cache) para que el calendario de /profesional/{id} distinga
     # "día con agenda" de "día solo con fichas a distancia" (bi_atenciones miente).
