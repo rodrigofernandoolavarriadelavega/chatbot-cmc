@@ -18,7 +18,9 @@
 <meta property="og:title" content="CECAR · Kinesiología y consulta médica en Carampangue">
 <meta property="og:description" content="Rehabilitación kinesiológica con sala equipada y consulta médica con bono Fonasa, en Carampangue.">
 <meta property="og:url" content="https://centromedicocarampangue.cl/cecar">
-<meta property="og:image" content="https://centromedicocarampangue.cl/static/sitio/cecar-logo.png">
+<meta property="og:image" content="https://centromedicocarampangue.cl/static/sitio/cecar-sala.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="900">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="icon" type="image/png" href="/static/sitio/cecar-isotipo.png">
@@ -261,10 +263,14 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
   border-radius: var(--radius-xl); padding: 44px 38px;
   box-shadow: 0 30px 70px -20px rgba(15,63,104,.45); color: #fff;
 }
-.hero-panel img { width: 118px; height: 118px; margin: 0 auto 22px; background: #fff; border-radius: 26px; padding: 12px; }
-.hero-panel .hp-name { font-family: var(--font-display); font-weight: 800; font-size: 26px; text-align: center; letter-spacing: -.02em; }
-.hero-panel .hp-sub { text-align: center; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; opacity: .82; margin-top: 6px; font-weight: 700; font-family: var(--font-display); }
-.hp-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 30px; }
+.hero-foto { margin: 0 0 16px; }
+.hero-foto img {
+  width: 100%; border-radius: var(--radius-xl); border: 6px solid #fff;
+  box-shadow: 0 30px 70px -20px rgba(15,63,104,.45); aspect-ratio: 16/9; object-fit: cover;
+}
+.hero-foto figcaption { margin-top: 10px; font-size: 12px; color: var(--ink-500); text-align: center; }
+.hero-panel { padding: 26px 24px; }
+.hp-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .hp-stat { background: rgba(255,255,255,.11); border-radius: var(--radius); padding: 15px 16px; }
 .hp-stat b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1.1; }
 .hp-stat span { font-size: 11.5px; opacity: .85; line-height: 1.35; display: block; margin-top: 4px; }
@@ -710,10 +716,16 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
       </div>
 
       <div class="hero-visual">
+        <figure class="hero-foto">
+          <picture>
+            <source srcset="/static/sitio/cecar-sala-900.webp 900w, /static/sitio/cecar-sala.webp 1600w"
+                    sizes="(max-width: 1000px) 92vw, 46vw" type="image/webp">
+            <img src="/static/sitio/cecar-sala.jpg" alt="Sala de entrenamiento de CECAR, con zona de cardio, rack de fuerza y área de kinesiología"
+                 width="1600" height="900" fetchpriority="high" decoding="async">
+          </picture>
+          <figcaption><span class="todo">Decidir: rotular como imagen referencial del proyecto, o reemplazar por foto real de la sala</span></figcaption>
+        </figure>
         <div class="hero-panel">
-          <img src="/static/sitio/cecar-isotipo.png" alt="Isotipo CECAR" width="118" height="118">
-          <div class="hp-name">CECAR</div>
-          <div class="hp-sub">Centro de Entrenamiento Carampangue</div>
           <div class="hp-stats">
             <div class="hp-stat"><b>10</b><span>estaciones de trabajo en la sala</span></div>
             <div class="hp-stat"><b>46,6 m²</b><span>de sala medidos en terreno</span></div>

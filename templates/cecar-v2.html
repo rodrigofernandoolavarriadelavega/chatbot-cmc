@@ -15,7 +15,9 @@
 <meta property="og:locale" content="es_CL">
 <meta property="og:title" content="CECAR · Recupera y vuelve más fuerte">
 <meta property="og:description" content="Gimnasio $10.000 al mes en Carampangue. Kinesiología con bono Fonasa $7.830 y consulta médica en el mismo lugar.">
-<meta property="og:image" content="https://centromedicocarampangue.cl/static/sitio/cecar-logo.png">
+<meta property="og:image" content="https://centromedicocarampangue.cl/static/sitio/cecar-sala.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="900">
 <link rel="icon" type="image/png" href="/static/sitio/cecar-isotipo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,11 +69,7 @@ section{padding:104px 0;position:relative}
 .kicker{font-family:var(--fd);font-weight:800;font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--acc)}
 .mega{font-family:var(--fd);font-weight:900;text-transform:uppercase;letter-spacing:-.03em;line-height:.92;color:var(--txt)}
 h2.mega{font-size:clamp(34px,6vw,68px)}
-/* Linea contorneada. El trazo NO puede ser mas fino: a 1,5px se desvanece en
-   pantallas de baja densidad y la palabra desaparece. Se ve "cargada" de cerca
-   porque los contornos internos de cada letra tambien se dibujan — es correcto,
-   no un choque de glifos. */
-.mega .out{color:transparent;-webkit-text-stroke:2px var(--acc);paint-order:stroke fill}
+.mega .out{color:#A8BCC7}
 .mega .on{color:var(--acc)}
 .sub{font-size:17px;color:var(--txt2);max-width:60ch;line-height:1.65}
 .sec-head{margin-bottom:52px;max-width:800px}
@@ -115,11 +113,19 @@ h2.mega{font-size:clamp(34px,6vw,68px)}
 .panel a:last-child{border-bottom:0}
 
 /* ---------- hero ---------- */
-.hero{padding:96px 0 84px;overflow:hidden;position:relative}
-.hero::before{content:"";position:absolute;inset:-30% -10% auto -10%;height:120%;
-  background:radial-gradient(60% 55% at 22% 28%,rgba(79,190,206,.22),transparent 62%),
-             radial-gradient(48% 48% at 82% 18%,rgba(17,114,171,.24),transparent 65%);
+.hero{padding:96px 0 84px;overflow:hidden;position:relative;isolation:isolate}
+.hero-foto{position:absolute;inset:0;z-index:-2;overflow:hidden}
+.hero-foto img{width:100%;height:100%;object-fit:cover;object-position:center 62%}
+/* Velo: sin el, el titulo blanco cae sobre los ventanales sobreexpuestos de la
+   foto y el contraste se hunde justo en la primera pantalla. Mas denso a la
+   izquierda, que es donde vive el texto. */
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(100deg,rgba(8,12,16,.94) 0%,rgba(8,12,16,.88) 38%,rgba(8,12,16,.62) 66%,rgba(8,12,16,.5) 100%),
+             linear-gradient(to bottom,rgba(8,12,16,.35) 0%,transparent 22%,transparent 66%,var(--bg) 100%)}
+.hero::before{content:"";position:absolute;inset:-30% -10% auto -10%;height:120%;z-index:-1;
+  background:radial-gradient(60% 55% at 22% 28%,rgba(79,190,206,.16),transparent 62%);
   pointer-events:none}
+.foto-nota{margin-top:18px;font-size:12px;color:var(--txt3)}
 .hero .wrap{position:relative;z-index:1}
 .hero h1{font-size:clamp(46px,10.5vw,132px)}
 .hero .sub{margin:30px 0 34px;font-size:18.5px;max-width:54ch}
@@ -279,7 +285,6 @@ footer a:hover{color:var(--acc)}
   body{padding-bottom:82px}
 }
 @media (max-width:620px){
-  .mega .out{color:#5E7A86;-webkit-text-stroke:0}
   .wrap{padding:0 17px}
   section{padding:70px 0}
   .hero{padding:64px 0 56px}
@@ -380,6 +385,13 @@ footer a:hover{color:var(--acc)}
 
 <!-- HERO — tipografía cinética en vez de foto (tendencia 2026, y no hay fotos aún) -->
 <section class="hero">
+  <div class="hero-foto" aria-hidden="true">
+    <picture>
+      <source srcset="/static/sitio/cecar-sala-900.webp 900w, /static/sitio/cecar-sala.webp 1600w"
+              sizes="100vw" type="image/webp">
+      <img src="/static/sitio/cecar-sala.jpg" alt="" width="1600" height="900" fetchpriority="high" decoding="async">
+    </picture>
+  </div>
   <div class="wrap">
     <span class="kicker">Carampangue · Provincia de Arauco</span>
     <h1 class="mega" style="margin-top:20px">
@@ -402,6 +414,7 @@ footer a:hover{color:var(--acc)}
       <span>Hora reservada, sin espera</span><span class="dot"></span>
       <span>Bono Fonasa en el lugar</span>
     </p>
+    <p class="foto-nota"><span class="todo">Decidir: rotular la imagen como referencial del proyecto, o reemplazarla por una foto real de la sala</span></p>
   </div>
 </section>
 
