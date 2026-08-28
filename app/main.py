@@ -1689,6 +1689,7 @@ _CAMINO_50M_HTML = (_TEMPLATE_DIR / "camino_50m.html").read_text(encoding="utf-8
 _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "privacidad.html").exists() else ""
 _PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
 _CECAR_HTML = (_TEMPLATE_DIR / "cecar.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "cecar.html").exists() else ""
+_PATIO_HTML = (_TEMPLATE_DIR / "patio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "patio.html").exists() else ""
 _CECAR_V2_HTML = (_TEMPLATE_DIR / "cecar-v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "cecar-v2.html").exists() else ""
 _TRAUMATOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "traumatologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "traumatologo-curanilahue.html").exists() else ""
 _OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "otorrino-curanilahue.html").exists() else ""
@@ -1766,6 +1767,18 @@ def sala_espera():
 def administradora_funciones():
     """Mapa del cargo Administradora del CMC × malla UTP Adm. de Empresas (formación)."""
     return _ADMIN_FUNCIONES_HTML
+
+
+@app.get("/patio", response_class=HTMLResponse)
+def patio_carampangue():
+    """Patio Carampangue - pagina publica del uso transitorio del terreno
+    Republica x Conquista (patio gastronomico/familiar de fin de semana).
+
+    OJO: sale con <meta robots="noindex"> a proposito hasta que exista
+    permiso municipal y fecha de apertura confirmada. Los datos por
+    confirmar estan marcados en ambar dentro del template.
+    """
+    return _PATIO_HTML
 
 
 @app.get("/cecar/v2", response_class=HTMLResponse)

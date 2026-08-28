@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patio Carampangue · El patio del pueblo, fin de semana a fin de semana</title>
+<meta name="description" content="Patio Carampangue: comida, feria de emprendedores, juegos para niños y música en vivo, cada fin de semana en República con Conquista, Carampangue. Entrada liberada.">
+
+<!-- ⚠️ NOINDEX A PROPOSITO. La cancha todavia no tiene permiso municipal ni
+     fecha de apertura confirmada: una pagina de un lugar que aun no abre NO
+     debe entrar a Google. Al confirmar apertura: cambiar a "index, follow",
+     descomentar el JSON-LD de Event del final y borrar este comentario. -->
+<meta name="robots" content="noindex, nofollow">
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_CL">
+<meta property="og:site_name" content="Patio Carampangue">
+<meta property="og:title" content="Patio Carampangue · El patio del pueblo">
+<meta property="og:description" content="Comida, feria, juegos y musica cada fin de semana en Carampangue. Entrada liberada.">
+
+<!-- ============================================================
+     PATIO CARAMPANGUE — pagina publica del uso transitorio del
+     terreno Republica x Conquista (~1.000 m2 / 983 m2 medidos).
+
+     DECISIONES DE DISENO, para quien la herede:
+     · SIN FUENTES EXTERNAS NI CDN. Todo vive en este archivo. El patio se
+       promociona por WhatsApp en un pueblo con red mala: una fuente de
+       Google que tarda es una pagina en blanco. Stack de sistema, pesos
+       altos y tracking negativo hacen el trabajo de una display.
+     · NO hereda el navy del CMC. El CMC es una marca clinica; esta es una
+       marca de fin de semana. Comparten familia solo en el modulo "Patio
+       Saludable", que si usa el azul del CMC a proposito.
+     · Los numeros del plano (983,0 m2 / 293,6 / 664,2 / 25,2) NO son
+       decorativos: salen del motor de Alma Espacios, proyecto
+       patio-carampangue.json. Si cambia el plano, cambian aca.
+
+     ⚠️ TODO LO ENVUELTO EN <span class="todo"> ES DATO POR CONFIRMAR.
+     Se pinta con borde ambar punteado a proposito: esta pagina NO sale a
+     produccion mientras se vea un solo recuadro ambar. Al reemplazar,
+     borrar la etiqueta <span class="todo"> completa.
+     ============================================================ -->
+<style>
+:root{
+  /* ---- Marca Patio ---------------------------------------------------- */
+  --ember:      #E2542C;   /* fogon — color lider */
+  --ember-ink:  #A8320F;
+  --ember-soft: #FDE9E1;
+  --sun:        #F2A413;   /* toldo / ampolleta */
+  --sun-soft:   #FDF0D6;
+  --bosque:     #14513C;   /* Arauco forestal — color ancla oscuro */
+  --bosque-ink: #0B3427;
+  --bosque-soft:#E3EFE9;
+  --uva:        #7C3B8E;   /* musica */
+  --uva-soft:   #F2E7F5;
+  --cmc:        #1172AB;   /* azul institucional CMC — solo Patio Saludable */
+  --cmc-soft:   #E8F2F9;
+
+  --tinta:   #1A130F;
+  --tinta-2: #3A2C24;
+  --tinta-3: #6B584C;
+  --tinta-4: #9C8A7D;
+  --linea:   #E4D9C9;
+  --arena:   #FBF5EA;      /* papel */
+  --arena-2: #F4E9D7;
+  --blanco:  #FFFFFF;
+
+  --r-sm: 10px; --r: 16px; --r-lg: 26px; --r-xl: 38px; --r-pill: 999px;
+  --sombra-sm: 0 2px 8px rgba(26,19,15,.06);
+  --sombra:    0 14px 34px -16px rgba(26,19,15,.28), 0 2px 8px rgba(26,19,15,.06);
+  --sombra-lg: 0 40px 70px -28px rgba(26,19,15,.38), 0 10px 20px rgba(26,19,15,.08);
+
+  --display: ui-sans-serif, "SF Pro Display", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --texto:   ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --voz:     ui-serif, Georgia, "Times New Roman", serif;
+
+  --ancho: 1180px;
+  --nav-h: 62px;
+}
+
+*{box-sizing:border-box}
+/* Un display de autor le gana a [hidden] del navegador: sin esto las
+   pestanas "ocultas" siguen visibles. Vale para todo el archivo. */
+[hidden]{display:none !important}
+html{scroll-behavior:smooth; -webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--arena); color:var(--tinta);
+  font-family:var(--texto); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+img{max-width:100%; display:block}
+a{color:inherit}
+button{font:inherit; color:inherit; cursor:pointer}
+:focus-visible{outline:3px solid var(--ember); outline-offset:3px; border-radius:6px}
+
+.env{width:100%; max-width:var(--ancho); margin:0 auto; padding:0 20px}
+section,header,footer{scroll-margin-top:calc(var(--nav-h) + 14px)}
+
+/* ---- Tipografia ------------------------------------------------------- */
+.h-xl,.h-l,.h-m{font-family:var(--display); font-weight:800; letter-spacing:-.035em; line-height:1.02; margin:0}
+.h-xl{font-size:clamp(2.6rem, 9.5vw, 5.6rem)}
+.h-l {font-size:clamp(2rem, 5.6vw, 3.3rem); letter-spacing:-.03em}
+.h-m {font-size:clamp(1.35rem, 3vw, 1.8rem); letter-spacing:-.02em; line-height:1.15}
+.sobre{
+  font-family:var(--display); font-weight:800; font-size:.72rem;
+  letter-spacing:.19em; text-transform:uppercase; color:var(--ember-ink);
+  display:flex; align-items:center; gap:10px; margin:0 0 14px;
+}
+.sobre::before{content:""; width:26px; height:3px; background:var(--ember); border-radius:2px; flex:none}
+.bajada{font-size:clamp(1rem,2.2vw,1.18rem); color:var(--tinta-2); max-width:62ch; margin:14px 0 0}
+.voz{font-family:var(--voz); font-style:italic}
+
+/* ---- Barra ------------------------------------------------------------ */
+.nav{
+  position:sticky; top:0; z-index:60; height:var(--nav-h);
+  background:rgba(251,245,234,.94); backdrop-filter:saturate(1.6) blur(14px);
+  -webkit-backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid transparent; transition:border-color .25s, box-shadow .25s;
+}
+.nav.pegada{border-bottom-color:var(--linea); box-shadow:0 6px 20px -14px rgba(26,19,15,.4)}
+.nav .env{height:100%; display:flex; align-items:center; gap:18px}
+.marca{display:flex; align-items:center; gap:10px; text-decoration:none; font-family:var(--display); font-weight:800; letter-spacing:-.03em; font-size:1.05rem; white-space:nowrap}
+.sello{
+  width:34px; height:34px; border-radius:11px; flex:none; position:relative;
+  background:linear-gradient(150deg, var(--sun), var(--ember) 55%, var(--ember-ink));
+  box-shadow:0 4px 12px -4px rgba(226,84,44,.7);
+}
+.sello::after{
+  content:""; position:absolute; inset:0; border-radius:11px;
+  background:
+    radial-gradient(circle at 50% 74%, rgba(255,255,255,.95) 0 3.2px, transparent 3.6px),
+    linear-gradient(to top, rgba(255,255,255,.9) 0 2px, transparent 2px) no-repeat 50% 62%/13px 2px;
+}
+.nav-links{display:none; gap:4px; margin-left:auto}
+.nav-links a{
+  text-decoration:none; font-size:.9rem; font-weight:600; color:var(--tinta-2);
+  padding:8px 12px; border-radius:var(--r-pill); transition:background .18s,color .18s;
+}
+.nav-links a:hover{background:var(--arena-2); color:var(--tinta)}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  font-family:var(--display); font-weight:700; font-size:.95rem; letter-spacing:-.01em;
+  padding:13px 22px; border-radius:var(--r-pill); border:2px solid transparent;
+  text-decoration:none; transition:transform .16s, box-shadow .2s, background .2s;
+}
+.btn:active{transform:translateY(1px)}
+.btn-ember{background:var(--ember); color:#fff; box-shadow:0 10px 24px -10px rgba(226,84,44,.85)}
+.btn-ember:hover{background:var(--ember-ink); box-shadow:0 14px 30px -10px rgba(226,84,44,.9)}
+.btn-linea{border-color:var(--tinta); color:var(--tinta); background:transparent}
+.btn-linea:hover{background:var(--tinta); color:var(--arena)}
+.btn-claro{background:rgba(255,255,255,.14); color:#fff; border-color:rgba(255,255,255,.4)}
+.btn-claro:hover{background:rgba(255,255,255,.24)}
+.btn-sm{padding:9px 15px; font-size:.85rem}
+.nav .btn{margin-left:auto; padding:9px 16px; font-size:.88rem}
+@media (min-width:900px){ .nav-links{display:flex} .nav .btn{margin-left:8px} }
+
+/* ---- Portada ---------------------------------------------------------- */
+.portada{
+  position:relative; overflow:hidden; color:#fff;
+  background:var(--bosque-ink);
+  padding:clamp(52px,9vw,104px) 0 clamp(60px,8vw,96px);
+}
+.portada::before{
+  content:""; position:absolute; inset:-30% -20% auto -20%; height:150%;
+  background:
+    radial-gradient(52% 46% at 18% 22%, rgba(242,164,19,.55), transparent 62%),
+    radial-gradient(48% 44% at 82% 12%, rgba(226,84,44,.62), transparent 66%),
+    radial-gradient(60% 56% at 60% 96%, rgba(20,81,60,.9), transparent 70%);
+  animation:derivar 22s ease-in-out infinite alternate;
+}
+.portada::after{
+  content:""; position:absolute; inset:0; opacity:.16; pointer-events:none;
+  background-image:
+    repeating-linear-gradient(115deg, rgba(255,255,255,.14) 0 1px, transparent 1px 5px);
+}
+@keyframes derivar{
+  from{transform:translate3d(-2%,0,0) scale(1)}
+  to  {transform:translate3d(3%,-3%,0) scale(1.09)}
+}
+.portada .env{position:relative; z-index:2}
+.chip-vivo{
+  display:inline-flex; align-items:center; gap:9px; padding:7px 15px 7px 11px;
+  border-radius:var(--r-pill); background:rgba(255,255,255,.13);
+  border:1px solid rgba(255,255,255,.28); font-size:.8rem; font-weight:700;
+  letter-spacing:.06em; text-transform:uppercase; backdrop-filter:blur(6px);
+}
+.punto{width:9px; height:9px; border-radius:50%; background:var(--sun); box-shadow:0 0 0 0 rgba(242,164,19,.7); animation:latir 2.4s infinite}
+@keyframes latir{70%{box-shadow:0 0 0 11px rgba(242,164,19,0)} 100%{box-shadow:0 0 0 0 rgba(242,164,19,0)}}
+.portada h1{margin:20px 0 0; color:#fff}
+.portada h1 em{font-family:var(--voz); font-style:italic; font-weight:400; color:var(--sun)}
+.portada .bajada{color:rgba(255,255,255,.86)}
+.acciones{display:flex; flex-wrap:wrap; gap:12px; margin-top:30px}
+
+/* Cuenta regresiva */
+.reloj{
+  margin-top:38px; display:inline-flex; flex-wrap:wrap; align-items:flex-end; gap:8px;
+  padding:18px 22px; border-radius:var(--r-lg);
+  background:rgba(0,0,0,.24); border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(10px);
+}
+.reloj .rot{width:100%; font-size:.72rem; letter-spacing:.18em; text-transform:uppercase; font-weight:800; color:rgba(255,255,255,.62); margin-bottom:8px}
+.casilla{text-align:center; min-width:56px}
+.casilla b{display:block; font-family:var(--display); font-weight:800; font-size:clamp(1.7rem,5vw,2.4rem); line-height:1; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
+.casilla span{font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.6)}
+.reloj .dosp{font-size:1.6rem; font-weight:700; color:rgba(255,255,255,.35); padding-bottom:14px}
+
+/* ---- Cinta ------------------------------------------------------------ */
+.cinta{background:var(--ember); color:#fff; overflow:hidden; padding:13px 0; border-top:3px solid var(--ember-ink); border-bottom:3px solid var(--ember-ink)}
+.cinta .pista{display:flex; width:max-content; animation:correr 34s linear infinite}
+.cinta span{font-family:var(--display); font-weight:800; font-size:.95rem; letter-spacing:.13em; text-transform:uppercase; padding:0 26px; display:flex; align-items:center; gap:26px; white-space:nowrap}
+.cinta span::after{content:""; width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.65)}
+@keyframes correr{from{transform:translateX(0)} to{transform:translateX(-50%)}}
+.cinta:hover .pista{animation-play-state:paused}
+
+/* ---- Cifras ----------------------------------------------------------- */
+.cifras{background:var(--blanco); border-bottom:1px solid var(--linea)}
+.cifras .env{display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--linea); padding:0}
+.cifra{background:var(--blanco); padding:26px 18px; text-align:center}
+.cifra b{display:block; font-family:var(--display); font-weight:800; font-size:clamp(1.7rem,5vw,2.5rem); letter-spacing:-.04em; color:var(--bosque); font-variant-numeric:tabular-nums}
+.cifra span{display:block; font-size:.76rem; letter-spacing:.1em; text-transform:uppercase; color:var(--tinta-3); font-weight:700; margin-top:6px}
+@media (min-width:760px){ .cifras .env{grid-template-columns:repeat(4,1fr)} }
+
+/* ---- Secciones -------------------------------------------------------- */
+section{padding:clamp(56px,8vw,96px) 0}
+.sec-clara{background:var(--blanco)}
+.sec-oscura{background:var(--bosque-ink); color:#fff}
+.sec-oscura .sobre{color:var(--sun)} .sec-oscura .sobre::before{background:var(--sun)}
+.sec-oscura .bajada{color:rgba(255,255,255,.82)}
+.cab{max-width:70ch; margin-bottom:clamp(30px,4vw,48px)}
+
+/* ---- Zonas ------------------------------------------------------------ */
+.zonas{display:grid; gap:18px; grid-template-columns:1fr}
+@media (min-width:700px){.zonas{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1000px){.zonas{grid-template-columns:repeat(3,1fr)}}
+.zona{
+  position:relative; overflow:hidden; border-radius:var(--r-lg); padding:28px 24px 26px;
+  background:var(--blanco); border:1px solid var(--linea); box-shadow:var(--sombra-sm);
+  transition:transform .22s cubic-bezier(.2,.8,.3,1), box-shadow .22s, border-color .22s;
+}
+.zona:hover{transform:translateY(-6px); box-shadow:var(--sombra); border-color:transparent}
+.zona::before{content:""; position:absolute; inset:0 0 auto; height:5px; background:var(--c)}
+.zona .glifo{width:52px; height:52px; border-radius:16px; background:var(--cs); display:grid; place-items:center; margin-bottom:16px}
+.zona .glifo svg{width:26px; height:26px; stroke:var(--c); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+.zona h3{font-family:var(--display); font-weight:800; font-size:1.28rem; letter-spacing:-.025em; margin:0 0 8px}
+.zona p{margin:0; color:var(--tinta-3); font-size:.97rem}
+.zona .pie{margin-top:16px; padding-top:14px; border-top:1px dashed var(--linea); font-size:.85rem; font-weight:700; color:var(--c); display:flex; align-items:center; gap:8px}
+.z-sabores{--c:var(--ember); --cs:var(--ember-soft)}
+.z-kids   {--c:#C77C00;      --cs:var(--sun-soft)}
+.z-mercado{--c:var(--bosque);--cs:var(--bosque-soft)}
+.z-vivo   {--c:var(--uva);   --cs:var(--uva-soft)}
+.z-salud  {--c:var(--cmc);   --cs:var(--cmc-soft)}
+
+/* ---- Recuadro TODO ---------------------------------------------------- */
+.todo{
+  display:inline-block; border:1.5px dashed var(--sun); background:var(--sun-soft);
+  color:#8A5B00; border-radius:7px; padding:1px 8px; font-weight:700; font-size:.93em;
+}
+
+/* ---- Calendario ------------------------------------------------------- */
+.cal-filtros{display:flex; flex-wrap:wrap; gap:9px; margin-bottom:22px}
+.fchip{
+  display:inline-flex; align-items:center; gap:8px; padding:8px 15px; border-radius:var(--r-pill);
+  border:1.5px solid var(--linea); background:var(--blanco); font-size:.87rem; font-weight:700;
+  color:var(--tinta-3); transition:all .18s;
+}
+.fchip .bolita{width:9px; height:9px; border-radius:50%; background:var(--c, var(--tinta-4))}
+.fchip:hover{border-color:var(--tinta-4); color:var(--tinta)}
+.fchip[aria-pressed="true"]{background:var(--tinta); border-color:var(--tinta); color:#fff}
+.fchip[aria-pressed="true"] .bolita{box-shadow:0 0 0 3px rgba(255,255,255,.22)}
+
+.cal-marco{display:grid; gap:22px; grid-template-columns:1fr; align-items:start}
+/* min-width:0 = un item de grid puede achicarse por debajo de su min-content.
+   Sin esto la pista se ensancha al contenido y el telefono scrollea de lado. */
+.cal-marco>*,.plano-marco>*,.dos-col>*,.zonas>*,.tarjetas>*{min-width:0}
+@media (min-width:1000px){ .cal-marco{grid-template-columns:1.25fr .95fr; gap:26px} }
+
+.cal{background:var(--blanco); border:1px solid var(--linea); border-radius:var(--r-lg); padding:18px 18px 22px; box-shadow:var(--sombra-sm)}
+.cal-barra{display:flex; align-items:center; gap:10px; margin-bottom:16px}
+.cal-mes{font-family:var(--display); font-weight:800; font-size:1.22rem; letter-spacing:-.025em; flex:1; min-width:0}
+.cal-mes::first-letter,.panel-cab h3::first-letter{text-transform:uppercase}
+.flecha{
+  width:40px; height:40px; border-radius:50%; border:1.5px solid var(--linea); background:var(--blanco);
+  display:grid; place-items:center; flex:none; transition:all .18s;
+}
+.flecha:hover{background:var(--tinta); border-color:var(--tinta); color:#fff}
+.flecha svg{width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
+
+.cal-dias,.cal-grilla{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.cal-dias{margin-bottom:7px}
+.cal-dias span{text-align:center; font-size:.68rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--tinta-4); padding:4px 0}
+/* OJO: aspect-ratio + min-height le da a la celda un ancho minimo implicito
+   (44px) que en un telefono de 390 desbordaba la grilla. min-width:0 deja
+   que la celda se angoste; el alto lo sigue mandando min-height. */
+.celda{
+  position:relative; aspect-ratio:1/1; min-height:44px; min-width:0; border-radius:12px; border:1.5px solid transparent;
+  background:transparent; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+  font-family:var(--display); font-weight:700; font-size:.95rem; color:var(--tinta-2);
+  transition:background .16s, border-color .16s, transform .16s;
+}
+.celda.vacia{visibility:hidden}
+.celda.fuera{color:var(--tinta-4); opacity:.45}
+.celda.finde{background:var(--arena)}
+.celda.hay{cursor:pointer; background:var(--arena-2); border-color:var(--arena-2)}
+.celda.hay:hover{transform:translateY(-2px); border-color:var(--tinta-4)}
+.celda.hoy{box-shadow:inset 0 0 0 2px var(--ember); color:var(--ember-ink)}
+.celda[aria-pressed="true"]{background:var(--tinta); border-color:var(--tinta); color:#fff}
+.celda[aria-pressed="true"] .puntos i{box-shadow:0 0 0 1.5px rgba(255,255,255,.35)}
+.puntos{display:flex; gap:3px; height:7px; align-items:center}
+.puntos i{width:6px; height:6px; border-radius:50%; background:var(--c); display:block}
+@media (max-width:430px){
+  .cal{padding:12px 12px 18px}
+  .cal-grilla,.cal-dias{gap:4px}
+  .cal-dias span{font-size:.62rem; letter-spacing:.04em}
+}
+.cal-leyenda{margin-top:16px; padding-top:14px; border-top:1px dashed var(--linea); font-size:.8rem; color:var(--tinta-3); display:flex; flex-wrap:wrap; gap:14px}
+.cal-leyenda b{display:inline-flex; align-items:center; gap:6px; font-weight:700; color:var(--tinta-2)}
+.cal-leyenda .mini{width:12px; height:12px; border-radius:4px; display:inline-block}
+
+/* Panel del dia / agenda */
+.panel{background:var(--blanco); border:1px solid var(--linea); border-radius:var(--r-lg); padding:22px; box-shadow:var(--sombra-sm)}
+.panel-cab{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px}
+.panel-cab h3{font-family:var(--display); font-weight:800; font-size:1.2rem; letter-spacing:-.025em; margin:0}
+.panel-cab .cant{font-size:.8rem; font-weight:700; color:var(--tinta-4)}
+.panel .nada{color:var(--tinta-3); font-size:.95rem; margin:14px 0 0}
+
+.evento{
+  border:1px solid var(--linea); border-left:4px solid var(--c); border-radius:var(--r);
+  padding:16px 16px 14px; margin-top:14px; background:var(--blanco); transition:box-shadow .2s, transform .2s;
+}
+.evento:hover{box-shadow:var(--sombra-sm); transform:translateX(2px)}
+.evento .arriba{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:7px}
+.etiq{font-size:.68rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--c); background:var(--cs); padding:4px 9px; border-radius:var(--r-pill)}
+.hora{font-size:.82rem; font-weight:700; color:var(--tinta-3); font-variant-numeric:tabular-nums}
+.evento h4{font-family:var(--display); font-weight:800; font-size:1.05rem; letter-spacing:-.02em; margin:0 0 5px}
+.evento p{margin:0; font-size:.92rem; color:var(--tinta-3)}
+.evento .valor{margin-top:9px; font-size:.85rem; font-weight:700; color:var(--bosque)}
+.evento .herr{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+.mini-btn{
+  display:inline-flex; align-items:center; gap:6px; font-size:.78rem; font-weight:700;
+  padding:7px 12px; border-radius:var(--r-pill); border:1.5px solid var(--linea);
+  background:var(--blanco); color:var(--tinta-2); transition:all .16s; text-decoration:none;
+}
+.mini-btn:hover{border-color:var(--tinta); background:var(--tinta); color:#fff}
+.mini-btn svg{width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+.ev-porconf{border-style:dashed; border-color:var(--sun); background:var(--sun-soft)}
+.ev-porconf h4::after{content:" · por confirmar"; font-size:.72rem; font-weight:700; letter-spacing:.04em; color:#8A5B00; text-transform:uppercase}
+
+.agenda-prox{margin-top:22px}
+.agenda-prox h4{font-family:var(--display); font-weight:800; font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:var(--tinta-4); margin:0 0 10px}
+.fila{display:flex; gap:13px; align-items:center; padding:11px 0; border-bottom:1px dashed var(--linea); width:100%; background:none; border-left:0; border-right:0; border-top:0; text-align:left}
+.fila:hover{background:var(--arena)}
+.fila .fecha{flex:none; width:48px; text-align:center; border-radius:11px; background:var(--arena-2); padding:6px 0}
+.fila .fecha b{display:block; font-family:var(--display); font-weight:800; font-size:1.15rem; line-height:1}
+.fila .fecha span{display:block; font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; color:var(--tinta-3); font-weight:700}
+.fila .qué{min-width:0}
+.fila .qué b{display:block; font-size:.93rem; font-weight:700; letter-spacing:-.01em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.fila .qué span{font-size:.8rem; color:var(--tinta-3)}
+.fila .bolita{margin-left:auto; width:9px; height:9px; border-radius:50%; background:var(--c); flex:none}
+
+/* ---- Plano ------------------------------------------------------------ */
+.plano-marco{display:grid; gap:22px; grid-template-columns:1fr; align-items:start}
+@media (min-width:960px){ .plano-marco{grid-template-columns:1.5fr 1fr; gap:30px} }
+.lienzo{background:var(--blanco); border:1px solid var(--linea); border-radius:var(--r-lg); padding:16px; box-shadow:var(--sombra-sm)}
+.lienzo svg{width:100%; height:auto; display:block; touch-action:manipulation}
+.gz{cursor:pointer}
+.gz .cuerpo{transition:fill .2s, stroke .2s}
+.gz:hover .cuerpo, .gz.sel .cuerpo{fill:var(--hov); stroke:var(--str)}
+.gz text{pointer-events:none; font-family:var(--display); font-weight:800; letter-spacing:.04em}
+.ficha-zona{background:var(--blanco); border:1px solid var(--linea); border-radius:var(--r-lg); padding:24px; box-shadow:var(--sombra-sm)}
+.ficha-zona .etiq{display:inline-block; margin-bottom:10px}
+.ficha-zona h3{font-family:var(--display); font-weight:800; font-size:1.35rem; letter-spacing:-.03em; margin:0 0 10px}
+.ficha-zona p{margin:0 0 14px; color:var(--tinta-3); font-size:.96rem}
+.datos{list-style:none; margin:0; padding:0; border-top:1px dashed var(--linea)}
+.datos li{display:flex; justify-content:space-between; gap:14px; padding:10px 0; border-bottom:1px dashed var(--linea); font-size:.9rem}
+.datos li span{color:var(--tinta-3)}
+.datos li b{font-weight:700; text-align:right; font-variant-numeric:tabular-nums}
+
+/* ---- Sumate (pestanas) ------------------------------------------------ */
+.pest{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:22px}
+.pest button{
+  padding:11px 20px; border-radius:var(--r-pill); border:1.5px solid rgba(255,255,255,.28);
+  background:transparent; color:rgba(255,255,255,.8); font-family:var(--display); font-weight:700; font-size:.92rem; transition:all .18s;
+}
+.pest button:hover{border-color:#fff; color:#fff}
+.pest button[aria-selected="true"]{background:var(--sun); border-color:var(--sun); color:var(--tinta)}
+.panel-oscuro{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); border-radius:var(--r-lg); padding:clamp(22px,4vw,34px)}
+.panel-oscuro h3{font-family:var(--display); font-weight:800; font-size:1.5rem; letter-spacing:-.03em; margin:0 0 6px}
+.precio-gr{font-family:var(--display); font-weight:800; font-size:clamp(2rem,6vw,2.8rem); letter-spacing:-.04em; color:var(--sun); line-height:1; margin:16px 0 4px}
+.precio-gr small{display:block; font-size:.8rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.6); margin-top:8px}
+.lista-check{list-style:none; margin:20px 0 0; padding:0; display:grid; gap:11px}
+.lista-check li{display:flex; gap:11px; align-items:flex-start; font-size:.95rem; color:rgba(255,255,255,.86)}
+.lista-check svg{width:19px; height:19px; flex:none; margin-top:2px; stroke:var(--sun); fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
+.dos-col{display:grid; gap:26px; grid-template-columns:1fr}
+@media (min-width:820px){ .dos-col{grid-template-columns:1fr 1fr; gap:34px} }
+
+/* ---- Practica + FAQ --------------------------------------------------- */
+.tarjetas{display:grid; gap:16px; grid-template-columns:1fr}
+@media (min-width:700px){.tarjetas{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1040px){.tarjetas{grid-template-columns:repeat(4,1fr)}}
+.tarj{background:var(--arena); border:1px solid var(--linea); border-radius:var(--r); padding:22px}
+.tarj h4{font-family:var(--display); font-weight:800; font-size:1rem; letter-spacing:-.02em; margin:0 0 8px; display:flex; align-items:center; gap:9px}
+.tarj h4 svg{width:19px; height:19px; stroke:var(--ember); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+.tarj p{margin:0; font-size:.92rem; color:var(--tinta-3)}
+details.faq{border-bottom:1px solid var(--linea); padding:6px 0}
+details.faq summary{
+  list-style:none; cursor:pointer; padding:17px 40px 17px 0; position:relative;
+  font-family:var(--display); font-weight:700; font-size:1.03rem; letter-spacing:-.02em;
+}
+details.faq summary::-webkit-details-marker{display:none}
+details.faq summary::after{
+  content:""; position:absolute; right:8px; top:50%; width:11px; height:11px; margin-top:-7px;
+  border-right:2.4px solid var(--tinta-4); border-bottom:2.4px solid var(--tinta-4);
+  transform:rotate(45deg); transition:transform .22s;
+}
+details.faq[open] summary::after{transform:rotate(-135deg); margin-top:-2px}
+details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width:72ch}
+
+/* ---- Pie -------------------------------------------------------------- */
+.pie{background:var(--tinta); color:rgba(255,255,255,.72); padding:clamp(46px,7vw,72px) 0 30px; font-size:.92rem}
+.pie a{color:#fff; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.3)}
+.pie-gr{display:grid; gap:28px; grid-template-columns:1fr}
+@media (min-width:800px){.pie-gr{grid-template-columns:1.4fr 1fr 1fr}}
+.pie h5{font-family:var(--display); font-weight:800; font-size:.76rem; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.45); margin:0 0 12px}
+.pie ul{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(255,255,255,.14); font-size:.82rem; color:rgba(255,255,255,.5); display:grid; gap:8px}
+
+/* ---- Aparecer + accesibilidad ---------------------------------------- */
+.rev{opacity:0; transform:translateY(22px); transition:opacity .7s cubic-bezier(.2,.8,.3,1), transform .7s cubic-bezier(.2,.8,.3,1)}
+.rev.dentro{opacity:1; transform:none}
+.saltar{position:absolute; left:-9999px; top:0}
+.saltar:focus{left:12px; top:12px; z-index:99; background:var(--tinta); color:#fff; padding:10px 16px; border-radius:8px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important}
+  .rev{opacity:1; transform:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<a class="saltar" href="#cartelera">Saltar a la cartelera</a>
+
+<nav class="nav" id="nav">
+  <div class="env">
+    <a class="marca" href="#top"><span class="sello" aria-hidden="true"></span> Patio Carampangue</a>
+    <div class="nav-links">
+      <a href="#cartelera">Cartelera</a>
+      <a href="#zonas">Qué hay</a>
+      <a href="#plano">El patio</a>
+      <a href="#sumate">Vender aquí</a>
+      <a href="#visita">Cómo llegar</a>
+    </div>
+    <a class="btn btn-ember" href="#cartelera">Ver el finde</a>
+  </div>
+</nav>
+
+<header class="portada" id="top">
+  <div class="env">
+    <span class="chip-vivo"><span class="punto" aria-hidden="true"></span> Sábados y domingos · Carampangue</span>
+    <h1 class="h-xl">El patio<br>del pueblo,<br><em>fin de semana<br>a fin de semana.</em></h1>
+    <p class="bajada">Un terreno de 983 m² en República con Conquista que los sábados y domingos se transforma:
+      comida de verdad, feria de vecinos que emprenden, juegos para los niños con la reja cerrada, y música cuando cae la tarde.
+      Entrada liberada. Se arma el viernes, se desarma el domingo.</p>
+    <div class="acciones">
+      <a class="btn btn-ember" href="#cartelera">Ver la cartelera</a>
+      <a class="btn btn-claro" href="#sumate">Quiero vender aquí</a>
+    </div>
+
+    <div class="reloj" id="reloj" role="timer" aria-live="off">
+      <span class="rot" id="relojRot">Falta para el próximo patio</span>
+      <span class="casilla"><b id="rd">–</b><span>días</span></span><span class="dosp">:</span>
+      <span class="casilla"><b id="rh">–</b><span>horas</span></span><span class="dosp">:</span>
+      <span class="casilla"><b id="rm">–</b><span>min</span></span><span class="dosp">:</span>
+      <span class="casilla"><b id="rs">–</b><span>seg</span></span>
+    </div>
+  </div>
+</header>
+
+<div class="cinta" aria-hidden="true">
+  <div class="pista" id="pista">
+    <span>Patio Sabores</span><span>Patio Kids</span><span>Patio Mercado</span><span>Patio Vivo</span><span>Patio Saludable</span><span>Entrada liberada</span>
+    <span>Patio Sabores</span><span>Patio Kids</span><span>Patio Mercado</span><span>Patio Vivo</span><span>Patio Saludable</span><span>Entrada liberada</span>
+  </div>
+</div>
+
+<div class="cifras">
+  <div class="env">
+    <div class="cifra"><b data-contar="983">983</b><span>m² de patio</span></div>
+    <div class="cifra"><b data-contar="120" data-pre="80–">80–120</b><span>personas a la vez</span></div>
+    <div class="cifra"><b data-contar="12" data-pre="+">+12</b><span>puestos de vecinos</span></div>
+    <div class="cifra"><b data-contar="0" data-txt="$0">$0</b><span>vale la entrada</span></div>
+  </div>
+</div>
+
+<!-- ================= ZONAS / SUBMARCAS ================= -->
+<section id="zonas" class="sec-clara">
+  <div class="env">
+    <div class="cab rev">
+      <p class="sobre">Cinco patios en uno</p>
+      <h2 class="h-l">No es una feria. Es un patio con barrios.</h2>
+      <p class="bajada">Cada zona tiene su propio horario, su propia gente y su propio color. Los mismos 983 m² se reordenan
+        según lo que toque ese fin de semana — por eso el plano es liviano y todo se desarma.</p>
+    </div>
+
+    <div class="zonas">
+      <article class="zona z-sabores rev">
+        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M4 9h16M6 9V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M5 9l1 9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-9"/></svg></div>
+        <h3>Patio Sabores</h3>
+        <p>Tres carros de comida por fin de semana, rotando. Nada de cadenas: cocina de la zona, con resolución sanitaria a la vista.</p>
+        <div class="pie">3 cupos por fin de semana</div>
+      </article>
+
+      <article class="zona z-kids rev">
+        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 3v4M5 21V11l7-4 7 4v10M9 21v-5h6v5"/></svg></div>
+        <h3>Patio Kids</h3>
+        <p>293,6 m² cercados con <b>un solo acceso</b> y barrera continua hacia la calle: ningún niño sale directo a los autos. Castillo inflable, cama elástica y plaza blanda.</p>
+        <div class="pie">Ficha <span class="todo">$4.000</span> por niño</div>
+      </article>
+
+      <article class="zona z-mercado rev">
+        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 9h18l-1.5-4.5A2 2 0 0 0 17.6 3H6.4a2 2 0 0 0-1.9 1.5L3 9zM5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/></svg></div>
+        <h3>Patio Mercado</h3>
+        <p>Feria rotativa de 6 a 10 emprendedores de Carampangue y alrededores. Distinta cada fin de semana, para que el que vino el sábado pasado encuentre algo nuevo.</p>
+        <div class="pie">Puesto desde $12.000</div>
+      </article>
+
+      <article class="zona z-vivo rev">
+        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM19 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg></div>
+        <h3>Patio Vivo</h3>
+        <p>Escenario chico para lo que hay de verdad en la zona: cueca, cumbia, folclor escolar, bandas jóvenes. Se toca temprano y se apaga a la hora que dice el permiso.</p>
+        <div class="pie">Convocatoria abierta a músicos</div>
+      </article>
+
+      <article class="zona z-salud rev">
+        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 12h4l2 5 4-12 2 7h6"/></svg></div>
+        <h3>Patio Saludable</h3>
+        <p>Una vez al mes el Centro Médico Carampangue baja al patio: control de presión, peso y talla, consejería y orientación de horas. Sin costo, sin fila médica.</p>
+        <div class="pie">Con el Centro Médico Carampangue</div>
+      </article>
+
+      <article class="zona rev" style="--c:var(--tinta);--cs:var(--arena-2)">
+        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.2-7-10a7 7 0 1 1 14 0c0 4.8-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg></div>
+        <h3>Y el patio mismo</h3>
+        <p>Sombra, mesas, baños, luz cálida y música de fondo. Se puede llegar solo a sentarse: no hay que consumir para estar.</p>
+        <div class="pie">Entrada siempre liberada</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CARTELERA ================= -->
+<section id="cartelera" style="background:var(--arena)">
+  <div class="env">
+    <div class="cab rev">
+      <p class="sobre">Cartelera</p>
+      <h2 class="h-l">¿Qué hay este fin de semana?</h2>
+      <p class="bajada">La programación base se repite todos los fines de semana; encima de eso van los eventos especiales.
+        Toca un día con puntos de color para ver el detalle, filtra por lo que te interesa y llévate la fecha a tu teléfono.</p>
+    </div>
+
+    <div class="cal-filtros rev" role="group" aria-label="Filtrar la cartelera por tipo de actividad" id="filtros"></div>
+
+    <div class="cal-marco">
+      <div class="cal rev">
+        <div class="cal-barra">
+          <button class="flecha" id="mesAntes" aria-label="Mes anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <h3 class="cal-mes" id="calMes" aria-live="polite">—</h3>
+          <button class="mini-btn" id="btnHoy" type="button">Hoy</button>
+          <button class="flecha" id="mesDespues" aria-label="Mes siguiente"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+        <div class="cal-dias" aria-hidden="true">
+          <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+        </div>
+        <div class="cal-grilla" id="grilla" role="grid" aria-label="Calendario de actividades"></div>
+        <div class="cal-leyenda" id="leyenda"></div>
+      </div>
+
+      <div class="panel rev">
+        <div class="panel-cab">
+          <h3 id="panelTitulo">Elige un día</h3>
+          <span class="cant" id="panelCant"></span>
+        </div>
+        <div id="panelLista"><p class="nada">Los días con actividad están marcados con puntos de color en el calendario.</p></div>
+
+        <div class="agenda-prox">
+          <h4>Lo que viene</h4>
+          <div id="proximos"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PLANO ================= -->
+<section id="plano" class="sec-clara">
+  <div class="env">
+    <div class="cab rev">
+      <p class="sobre">El terreno</p>
+      <h2 class="h-l">983 m² medidos, no estimados.</h2>
+      <p class="bajada">El plano está levantado en Alma Espacios y validado por el motor: superficies, cierre perimetral y anchos de paso
+        salen del modelo, no de un dibujo a mano. Toca una zona para ver sus números.</p>
+    </div>
+
+    <div class="plano-marco">
+      <div class="lienzo rev">
+        <svg viewBox="0 0 880 600" role="img" aria-label="Plano esquemático del Patio Carampangue: 40 por 25 metros, con Patio Kids cercado, patio abierto, carros de comida, feria, escenario y zona técnica.">
+          <defs>
+            <pattern id="pasto" width="14" height="14" patternUnits="userSpaceOnUse">
+              <rect width="14" height="14" fill="#FBF5EA"/><circle cx="7" cy="7" r="1" fill="#E4D9C9"/>
+            </pattern>
+          </defs>
+
+          <!-- terreno -->
+          <rect x="20" y="20" width="800" height="500" rx="10" fill="url(#pasto)" stroke="#3A2C24" stroke-width="3"/>
+
+          <!-- patio abierto (fondo clickeable) -->
+          <g class="gz" data-zona="abierto" style="--hov:#F4E9D7;--str:#3A2C24" tabindex="0" role="button" aria-label="Patio abierto">
+            <rect class="cuerpo" x="24" y="24" width="792" height="492" rx="8" fill="transparent" stroke="transparent" stroke-width="2"/>
+            <text x="60" y="500" font-size="17" fill="#6B584C">PATIO ABIERTO · 664,2 m²</text>
+          </g>
+
+          <!-- patio kids -->
+          <g class="gz" data-zona="kids" style="--hov:#FDF0D6;--str:#C77C00" tabindex="0" role="button" aria-label="Patio Kids">
+            <rect class="cuerpo" x="40" y="40" width="515" height="228" rx="8" fill="#FDF6E7" stroke="#E3C46B" stroke-width="2.5" stroke-dasharray="9 5"/>
+            <text x="58" y="70" font-size="17" fill="#8A5B00">PATIO KIDS · 293,6 m²</text>
+            <rect x="90" y="105" width="80" height="86" rx="10" fill="#F2A413" opacity=".75"/>
+            <text x="97" y="212" font-size="12" fill="#8A5B00">castillo 4×4</text>
+            <circle cx="270" cy="150" r="34" fill="#E2542C" opacity=".7"/>
+            <text x="238" y="212" font-size="12" fill="#8A5B00">cama elástica</text>
+            <rect x="360" y="112" width="150" height="76" rx="14" fill="#14513C" opacity=".28"/>
+            <text x="382" y="212" font-size="12" fill="#8A5B00">plaza blanda</text>
+            <!-- unico acceso 1,2 m -->
+            <rect x="288" y="262" width="24" height="12" fill="#FBF5EA" stroke="#C77C00" stroke-width="2"/>
+            <text x="322" y="285" font-size="12" fill="#C77C00">único acceso · 1,2 m</text>
+          </g>
+
+          <!-- carros de comida -->
+          <g class="gz" data-zona="sabores" style="--hov:#FDE9E1;--str:#E2542C" tabindex="0" role="button" aria-label="Patio Sabores, carros de comida">
+            <rect class="cuerpo" x="600" y="40" width="216" height="230" rx="8" fill="#FDF3EF" stroke="#F0BCA8" stroke-width="2"/>
+            <text x="616" y="66" font-size="15" fill="#A8320F">PATIO SABORES</text>
+            <rect x="620" y="80" width="176" height="52" rx="7" fill="#E2542C" opacity=".78"/>
+            <rect x="620" y="142" width="176" height="52" rx="7" fill="#E2542C" opacity=".62"/>
+            <rect x="620" y="204" width="176" height="52" rx="7" fill="#E2542C" opacity=".46"/>
+            <text x="700" y="112" font-size="12" fill="#fff">carro 1</text>
+            <text x="700" y="174" font-size="12" fill="#fff">carro 2</text>
+            <text x="700" y="236" font-size="12" fill="#7A2409">carro 3</text>
+          </g>
+
+          <!-- feria -->
+          <g class="gz" data-zona="mercado" style="--hov:#E3EFE9;--str:#14513C" tabindex="0" role="button" aria-label="Patio Mercado, feria de emprendedores">
+            <rect class="cuerpo" x="300" y="300" width="516" height="96" rx="8" fill="#EFF6F2" stroke="#B6D3C6" stroke-width="2"/>
+            <text x="316" y="326" font-size="15" fill="#0B3427">PATIO MERCADO · feria rotativa</text>
+            <g fill="#14513C" opacity=".7">
+              <rect x="318" y="338" width="46" height="42" rx="5"/><rect x="374" y="338" width="46" height="42" rx="5"/>
+              <rect x="430" y="338" width="46" height="42" rx="5"/><rect x="486" y="338" width="46" height="42" rx="5"/>
+              <rect x="542" y="338" width="46" height="42" rx="5"/><rect x="598" y="338" width="46" height="42" rx="5"/>
+              <rect x="654" y="338" width="46" height="42" rx="5"/><rect x="710" y="338" width="46" height="42" rx="5"/>
+              <rect x="766" y="338" width="46" height="42" rx="5"/>
+            </g>
+          </g>
+
+          <!-- escenario -->
+          <g class="gz" data-zona="vivo" style="--hov:#F2E7F5;--str:#7C3B8E" tabindex="0" role="button" aria-label="Patio Vivo, escenario">
+            <rect class="cuerpo" x="40" y="300" width="230" height="120" rx="8" fill="#F7F0F9" stroke="#D5B7DE" stroke-width="2"/>
+            <text x="56" y="326" font-size="15" fill="#5C2669">PATIO VIVO</text>
+            <rect x="60" y="338" width="190" height="60" rx="6" fill="#7C3B8E" opacity=".72"/>
+            <text x="118" y="374" font-size="13" fill="#fff">escenario</text>
+          </g>
+
+          <!-- mesas -->
+          <g opacity=".85">
+            <circle cx="600" cy="290" r="0" fill="none"/>
+            <g fill="#3A2C24" opacity=".22">
+              <circle cx="330" cy="440" r="17"/><circle cx="392" cy="440" r="17"/><circle cx="454" cy="440" r="17"/>
+              <circle cx="516" cy="440" r="17"/><circle cx="578" cy="440" r="17"/><circle cx="640" cy="440" r="17"/>
+            </g>
+            <text x="330" y="478" font-size="12" fill="#6B584C">mesas y sombra</text>
+          </g>
+
+          <!-- zona tecnica -->
+          <g class="gz" data-zona="tecnica" style="--hov:#EDE7E1;--str:#3A2C24" tabindex="0" role="button" aria-label="Zona técnica, baños y servicio">
+            <rect class="cuerpo" x="676" y="418" width="140" height="94" rx="8" fill="#F1ECE5" stroke="#C9BBAB" stroke-width="2"/>
+            <text x="690" y="444" font-size="13" fill="#3A2C24">ZONA TÉCNICA</text>
+            <text x="690" y="462" font-size="12" fill="#6B584C">25,2 m²</text>
+            <rect x="690" y="472" width="40" height="30" rx="4" fill="#6B584C" opacity=".55"/>
+            <rect x="738" y="472" width="40" height="30" rx="4" fill="#6B584C" opacity=".55"/>
+            <text x="692" y="494" font-size="10" fill="#fff">baños</text>
+          </g>
+
+          <!-- accesos -->
+          <rect x="380" y="512" width="80" height="16" fill="#E2542C" rx="4"/>
+          <text x="330" y="552" font-size="15" fill="#A8320F" font-weight="700">▲ REPÚBLICA · acceso del público (portón 4 m)</text>
+          <rect x="812" y="200" width="16" height="70" fill="#3A2C24" rx="4"/>
+          <text transform="translate(856,300) rotate(-90)" text-anchor="middle" font-size="13" fill="#3A2C24">CONQUISTA · acceso de servicio</text>
+          <text x="40" y="580" font-size="12" fill="#9C8A7D">Esquema referencial 40 × 25 m. Orientación y accesos según plano medido en Alma Espacios · no sustituye planos de arquitectura ni aprobación municipal.</text>
+        </svg>
+      </div>
+
+      <aside class="ficha-zona rev" id="fichaZona" aria-live="polite"></aside>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SUMATE ================= -->
+<section id="sumate" class="sec-oscura">
+  <div class="env">
+    <div class="cab rev">
+      <p class="sobre">Vender aquí</p>
+      <h2 class="h-l">El patio no cocina: arrienda el espacio.</h2>
+      <p class="bajada">No tenemos carros propios ni vendemos artesanía. Administramos el lugar, la luz, los baños, la seguridad
+        y la difusión — y le arrendamos el metro cuadrado a quien sí sabe cocinar, tejer o tocar.</p>
+    </div>
+
+    <div class="pest rev" role="tablist" aria-label="Formas de participar">
+      <button role="tab" id="tab-truck" aria-controls="p-truck" aria-selected="true">Carro de comida</button>
+      <button role="tab" id="tab-feria" aria-controls="p-feria" aria-selected="false">Puesto de feria</button>
+      <button role="tab" id="tab-musica" aria-controls="p-musica" aria-selected="false">Tocar en el escenario</button>
+      <button role="tab" id="tab-auspicio" aria-controls="p-auspicio" aria-selected="false">Auspiciar</button>
+    </div>
+
+    <div class="panel-oscuro rev">
+      <div class="dos-col" role="tabpanel" id="p-truck" aria-labelledby="tab-truck">
+        <div>
+          <h3>Carro de comida</h3>
+          <p style="color:rgba(255,255,255,.8);margin:8px 0 0">Tres cupos por fin de semana, con corriente, punto de agua y basura resuelta.
+            Rotamos la parrilla: no ponemos dos carros del mismo rubro el mismo día.</p>
+          <div class="precio-gr">$50.000<small>por fin de semana completo</small></div>
+          <a class="btn btn-ember" style="margin-top:22px" href="#contacto">Postular mi carro</a>
+        </div>
+        <div>
+          <h4 style="font-family:var(--display);font-weight:800;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:0">Lo que te van a pedir</h4>
+          <ul class="lista-check">
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Resolución sanitaria de la SEREMI vigente</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Permiso municipal e iniciación de actividades</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Permiso de circulación al día del carro</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> 100 litros de agua potable a bordo</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Lavamanos con jabón y toalla desechable como único secado</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Superficies sólidas y lavables</li>
+          </ul>
+          <p style="font-size:.85rem;color:rgba(255,255,255,.55);margin-top:16px">Los papeles son tuyos y los revisamos antes de darte el cupo:
+            un carro sin resolución nos cierra el patio entero.</p>
+        </div>
+      </div>
+
+      <div class="dos-col" role="tabpanel" id="p-feria" aria-labelledby="tab-feria" hidden>
+        <div>
+          <h3>Puesto de feria</h3>
+          <p style="color:rgba(255,255,255,.8);margin:8px 0 0">De 6 a 10 puestos por fin de semana, rotando. Preferencia para vecinos de
+            Carampangue y comunas de Arauco. Traes tu mesa o arriendas la nuestra.</p>
+          <div class="precio-gr">$12.000<small>por puesto, por fin de semana</small></div>
+          <a class="btn btn-ember" style="margin-top:22px" href="#contacto">Reservar un puesto</a>
+        </div>
+        <div>
+          <h4 style="font-family:var(--display);font-weight:800;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:0">Cómo funciona</h4>
+          <ul class="lista-check">
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Rotación: si postulan más de 10, entra el que no vino el finde pasado</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Un rubro no ocupa más de dos puestos el mismo día</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Alimentos envasados o elaborados: mismos papeles que un carro</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Armado desde las <span class="todo">10:00</span>, retiro hasta <span class="todo">21:00</span></li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Se paga por adelantado; si llueve fuerte, el cupo se corre al finde siguiente</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="dos-col" role="tabpanel" id="p-musica" aria-labelledby="tab-musica" hidden>
+        <div>
+          <h3>Tocar en el escenario</h3>
+          <p style="color:rgba(255,255,255,.8);margin:8px 0 0">Escenario chico, sonido básico incluido. Buscamos lo de acá: conjuntos de cueca,
+            grupos folclóricos escolares, cumbia, bandas jóvenes, solistas.</p>
+          <div class="precio-gr">Sin costo<small>para el músico · el patio pone el equipo</small></div>
+          <a class="btn btn-ember" style="margin-top:22px" href="#contacto">Mandar mi música</a>
+        </div>
+        <div>
+          <h4 style="font-family:var(--display);font-weight:800;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:0">Reglas del escenario</h4>
+          <ul class="lista-check">
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Bloques de 40 minutos, entre <span class="todo">17:00 y 20:30</span></li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Volumen y horario de corte según el permiso municipal — no se negocia</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Contenido apto para niños: es un patio familiar</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Puedes vender tu propio disco o merch en el borde del escenario</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="dos-col" role="tabpanel" id="p-auspicio" aria-labelledby="tab-auspicio" hidden>
+        <div>
+          <h3>Auspiciar el patio</h3>
+          <p style="color:rgba(255,255,255,.8);margin:8px 0 0">Una marca por fin de semana, visible en el arco de entrada, en el escenario y
+            en la difusión. Frente a 80–120 personas simultáneas, familias de Carampangue y alrededores.</p>
+          <div class="precio-gr">$50.000<small>por fin de semana · una sola marca</small></div>
+          <a class="btn btn-ember" style="margin-top:22px" href="#contacto">Conversar un auspicio</a>
+        </div>
+        <div>
+          <h4 style="font-family:var(--display);font-weight:800;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:0">Qué incluye</h4>
+          <ul class="lista-check">
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Pendón en el portón de acceso y en el escenario</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Menciones desde el escenario entre bloques</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Presencia en la difusión del fin de semana</li>
+            <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Opción de activación con un stand en el patio abierto</li>
+          </ul>
+          <p style="font-size:.85rem;color:rgba(255,255,255,.55);margin-top:16px">No se auspicia con alcohol, tabaco ni juegos de azar. Es un patio con niños adentro.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VISITA ================= -->
+<section id="visita" style="background:var(--arena)">
+  <div class="env">
+    <div class="cab rev">
+      <p class="sobre">Antes de venir</p>
+      <h2 class="h-l">Lo práctico, sin letra chica.</h2>
+    </div>
+
+    <div class="tarjetas">
+      <div class="tarj rev">
+        <h4><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.2-7-10a7 7 0 1 1 14 0c0 4.8-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg> Dónde</h4>
+        <p>Esquina de <b>República con Conquista</b>, Carampangue, comuna de Arauco. Se entra caminando por República;
+          por Conquista solo entran los carros y el servicio.</p>
+      </div>
+      <div class="tarj rev">
+        <h4><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Cuándo</h4>
+        <p>Sábados y domingos, de <span class="todo">12:00</span> a <span class="todo">21:00</span>.
+          El horario definitivo queda fijado por el permiso municipal.</p>
+      </div>
+      <div class="tarj rev">
+        <h4><svg viewBox="0 0 24 24"><path d="M4 17V7a2 2 0 0 1 2-2h9l5 5v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 21h8"/></svg> Estacionamiento</h4>
+        <p><b>El patio no tiene estacionamiento adentro.</b> Es a propósito: preferimos metros para las mesas y los niños.
+          Se estaciona en la calle, y por eso el cierre hacia Conquista es continuo.</p>
+      </div>
+      <div class="tarj rev">
+        <h4><svg viewBox="0 0 24 24"><path d="M3 12h4l2 5 4-12 2 7h6"/></svg> Seguridad</h4>
+        <p>Un solo acceso al área de juegos, barrera continua hacia la calle, y portón de 4 m que deja entrar una ambulancia.
+          A cada proveedor de inflables le exigimos su <b>póliza de responsabilidad civil por escrito</b>.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:clamp(40px,6vw,64px);max-width:80ch" class="rev">
+      <h3 class="h-m" style="margin-bottom:10px">Preguntas que nos hacen</h3>
+      <details class="faq"><summary>¿Cuánto cuesta entrar?</summary><p>Nada. La entrada al patio es siempre liberada: se puede llegar solo a sentarse, escuchar música y mirar. Se paga únicamente lo que se consume y la ficha de los juegos.</p></details>
+      <details class="faq"><summary>¿Los juegos están incluidos?</summary><p>No. El área de juegos funciona con ficha por niño (<span class="todo">$4.000</span>, tiempo <span class="todo">por definir</span>). El resto del patio —mesas, música, feria, sombra— es libre.</p></details>
+      <details class="faq"><summary>¿Se puede entrar con comida de afuera?</summary><p>Sí, con criterio: es un patio, no un restorán. Lo que pedimos es que la basura vaya a los tachos y que no se instalen ventas propias adentro, porque los puestos pagaron su cupo.</p></details>
+      <details class="faq"><summary>¿Qué pasa si llueve?</summary><p>Estamos en Arauco: hay toldos y sombra, pero con lluvia fuerte o viento se suspende y se avisa por las redes del patio. Los puestos pagados se corren al fin de semana siguiente.</p></details>
+      <details class="faq"><summary>¿Es seguro para niños chicos?</summary><p>El área de juegos está cercada, tiene un solo acceso de 1,2 m y una barrera continua hacia la calle: ningún niño puede salir directo hacia los autos. Los inflables tienen zona de seguridad despejada alrededor y el proveedor entrega su póliza. Aun así, los niños entran acompañados por un adulto responsable.</p></details>
+      <details class="faq"><summary>¿Van a estar siempre en ese terreno?</summary><p>No, y lo decimos de frente: este es un <b>uso transitorio</b>. El terreno está destinado a un proyecto de salud mayor, y todo lo del patio es desmontable —cero obra permanente— justamente para poder irse sin dejar huella cuando llegue ese momento.</p></details>
+      <details class="faq"><summary>¿Cómo postulo con mi emprendimiento?</summary><p>En la sección <a href="#sumate" style="color:var(--ember-ink)">Vender aquí</a> están los cupos, los precios y los papeles que se piden. Escríbenos y te decimos qué fin de semana hay espacio.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTACTO / PIE ================= -->
+<footer class="pie" id="contacto">
+  <div class="env">
+    <div class="pie-gr">
+      <div>
+        <a class="marca" href="#top" style="color:#fff;font-size:1.15rem"><span class="sello" aria-hidden="true"></span> Patio Carampangue</a>
+        <p style="margin:14px 0 0;max-width:44ch">Uso transitorio de fin de semana del terreno de República con Conquista, Carampangue, comuna de Arauco.
+          Todo lo que ves se arma el viernes y se desarma el domingo.</p>
+        <div class="acciones" style="margin-top:20px">
+          <a class="btn btn-claro btn-sm" href="#sumate">Quiero un cupo</a>
+          <a class="btn btn-claro btn-sm" href="#cartelera">Ver la cartelera</a>
+        </div>
+      </div>
+      <div>
+        <h5>Contacto</h5>
+        <ul>
+          <li>WhatsApp <span class="todo">+56 9 ____ ____</span></li>
+          <li>Instagram <span class="todo">@patiocarampangue</span></li>
+          <li>Correo <span class="todo">hola@____</span></li>
+          <li>República con Conquista, Carampangue</li>
+        </ul>
+      </div>
+      <div>
+        <h5>El patio</h5>
+        <ul>
+          <li><a href="#zonas">Las cinco zonas</a></li>
+          <li><a href="#cartelera">Cartelera del mes</a></li>
+          <li><a href="#plano">Plano del terreno</a></li>
+          <li><a href="https://agentecmc.cl/modelador?p=YDiBpqpVYYS" target="_blank" rel="noopener">Ver el patio en 3D</a></li>
+          <li><a href="https://centromedicocarampangue.cl" target="_blank" rel="noopener">Centro Médico Carampangue</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="legal">
+      <p>La programación publicada es <b>referencial</b> y está sujeta a los permisos municipales y sanitarios correspondientes.
+        Las fechas marcadas «por confirmar» todavía no tienen autorización y pueden cambiar.</p>
+      <p>Actividad transitoria y desmontable. El área de juegos funciona bajo supervisión de un adulto responsable; los equipos son operados por
+        proveedores con póliza de responsabilidad civil vigente.</p>
+      <p>© <span id="anio">2026</span> Patio Carampangue · Carampangue, comuna de Arauco, Región del Biobío.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   1. DATOS
+   ---------------------------------------------------------------------
+   La cartelera NO es una lista escrita a mano: es una REGLA + excepciones.
+   Un patio que abre todos los fines de semana tendria ~104 filas al ano y
+   nadie las mantendria. Aca la programacion base se GENERA por dia de
+   semana y las fechas puntuales se agregan como excepciones.
+   ===================================================================== */
+
+var MARCAS = {
+  sabores: {n:"Patio Sabores",   c:"#E2542C", cs:"#FDE9E1"},
+  kids:    {n:"Patio Kids",      c:"#C77C00", cs:"#FDF0D6"},
+  mercado: {n:"Patio Mercado",   c:"#14513C", cs:"#E3EFE9"},
+  vivo:    {n:"Patio Vivo",      c:"#7C3B8E", cs:"#F2E7F5"},
+  salud:   {n:"Patio Saludable", c:"#1172AB", cs:"#E8F2F9"}
+};
+
+/* ⚠️ FECHA DE APERTURA POR CONFIRMAR — depende del permiso municipal.
+   Todo el calendario cuelga de aqui: antes de esta fecha no se genera nada. */
+var APERTURA = new Date(2026, 8, 5);          // sabado 5 de septiembre de 2026
+var CIERRE_TEMPORADA = new Date(2027, 2, 31); // hasta donde se genera la base
+
+/* Programacion base por dia de la semana (6 = sabado, 0 = domingo).
+   Si el patio pasa a abrir tambien los viernes, se agrega la clave 5. */
+var BASE = {
+  6: [
+    {m:"sabores", h:"12:00", f:"21:00", t:"Abre el patio", d:"Tres carros de comida, mesas, sombra y música de fondo. Entrada liberada.", v:"Entrada liberada"},
+    {m:"mercado", h:"12:00", f:"20:00", t:"Feria de emprendedores", d:"Entre 6 y 10 puestos de vecinos, distintos cada fin de semana.", v:"Puesto $12.000"},
+    {m:"kids",    h:"13:00", f:"20:00", t:"Juegos abiertos", d:"Castillo inflable, cama elástica y plaza blanda, en el área cercada con un solo acceso.", v:"Ficha por niño"},
+    {m:"vivo",    h:"18:00", f:"20:30", t:"Música en vivo", d:"Bloques de 40 minutos en el escenario. Artista de la semana por confirmar.", v:"Sin costo", pc:true}
+  ],
+  0: [
+    {m:"sabores", h:"12:00", f:"20:00", t:"Abre el patio", d:"Domingo más tranquilo: comida, mesas largas y sombra.", v:"Entrada liberada"},
+    {m:"mercado", h:"12:00", f:"19:00", t:"Feria de emprendedores", d:"Segunda vuelta de la feria del sábado.", v:"Puesto $12.000"},
+    {m:"kids",    h:"13:00", f:"19:00", t:"Juegos abiertos", d:"Mismo horario del sábado, cerrando una hora antes.", v:"Ficha por niño"}
+  ]
+};
+
+/* Patio Saludable: el PRIMER sabado de cada mes. Es la unica actividad
+   que trae al CMC al terreno, y por eso vive como regla propia. */
+var SALUDABLE = {m:"salud", h:"11:00", f:"14:00", t:"Patio Saludable",
+  d:"El Centro Médico Carampangue en el patio: control de presión, peso y talla, consejería y orientación de horas. Sin costo.",
+  v:"Gratis", pc:true};
+
+/* Excepciones con fecha propia. TODAS marcadas pc:true (por confirmar)
+   mientras no exista permiso: se pintan en ambar y lo dicen en el titulo. */
+var ESPECIALES = [
+  {fecha:"2026-09-05", m:"vivo",    h:"12:00", f:"21:00", t:"Primer fin de semana del Patio", d:"Apertura: los tres carros, la feria completa, juegos y música desde la tarde.", v:"Entrada liberada", pc:true},
+  {fecha:"2026-09-19", m:"vivo",    h:"12:00", f:"21:00", t:"Fin de semana dieciochero", d:"Cueca, empanadas y juegos típicos en el patio abierto.", v:"Entrada liberada", pc:true},
+  {fecha:"2026-10-03", m:"mercado", h:"12:00", f:"20:00", t:"Feria larga de primavera", d:"El doble de puestos, ocupando también el patio abierto.", v:"Entrada liberada", pc:true},
+  {fecha:"2026-10-31", m:"kids",    h:"16:00", f:"21:00", t:"Tarde de disfraces", d:"Concurso de disfraces para niños y dulces en los puestos de la feria.", v:"Ficha por niño", pc:true},
+  {fecha:"2026-12-20", m:"vivo",    h:"16:00", f:"22:00", t:"Patio de Navidad", d:"Feria navideña de emprendedores, coro y llegada del viejito pascuero.", v:"Entrada liberada", pc:true}
+];
+
+/* =====================================================================
+   2. MOTOR DE CALENDARIO
+   ===================================================================== */
+
+function iso(d){
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function mismoDia(a,b){ return iso(a) === iso(b); }
+function primerSabado(d){
+  // ¿es el primer sabado del mes? (dia <= 7 y sabado)
+  return d.getDay() === 6 && d.getDate() <= 7;
+}
+
+function eventosDeDia(fecha){
+  var out = [], i;
+  if (fecha < APERTURA || fecha > CIERRE_TEMPORADA) return out;
+  var base = BASE[fecha.getDay()] || [];
+  if (primerSabado(fecha)) out.push(Object.assign({}, SALUDABLE));
+  for (i=0;i<base.length;i++) out.push(Object.assign({}, base[i]));
+  var clave = iso(fecha);
+  for (i=0;i<ESPECIALES.length;i++){
+    if (ESPECIALES[i].fecha === clave) out.push(Object.assign({}, ESPECIALES[i], {esp:true}));
+  }
+  out.sort(function(a,b){ return a.h.localeCompare(b.h); });
+  return out;
+}
+
+function filtrar(evs){
+  if (!filtros.size) return evs;
+  return evs.filter(function(e){ return filtros.has(e.m); });
+}
+
+/* =====================================================================
+   3. ESTADO + PINTADO
+   ===================================================================== */
+
+var hoy = new Date(); hoy.setHours(0,0,0,0);
+var cursor = new Date(Math.max(hoy.getTime(), APERTURA.getTime()));
+cursor.setDate(1);
+var elegido = null;
+var filtros = new Set();
+
+var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+var DIAS   = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+var DIAS_C = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+var $ = function(s){ return document.querySelector(s); };
+
+/* --- chips de filtro --- */
+(function chips(){
+  var cont = $("#filtros"), html = "";
+  Object.keys(MARCAS).forEach(function(k){
+    html += '<button class="fchip" type="button" data-marca="'+k+'" aria-pressed="false" style="--c:'+MARCAS[k].c+'">'+
+            '<span class="bolita"></span>'+MARCAS[k].n+'</button>';
+  });
+  cont.innerHTML = html;
+  cont.addEventListener("click", function(e){
+    var b = e.target.closest(".fchip"); if(!b) return;
+    var k = b.dataset.marca;
+    if (filtros.has(k)) { filtros.delete(k); b.setAttribute("aria-pressed","false"); }
+    else { filtros.add(k); b.setAttribute("aria-pressed","true"); }
+    pintarMes(); pintarPanel(); pintarProximos();
+  });
+
+  var ley = $("#leyenda"); var lh = "";
+  Object.keys(MARCAS).forEach(function(k){
+    lh += '<b><span class="mini" style="background:'+MARCAS[k].c+'"></span>'+MARCAS[k].n+'</b>';
+  });
+  lh += '<b><span class="mini" style="background:var(--sun-soft);border:1.5px dashed var(--sun)"></span>Por confirmar</b>';
+  ley.innerHTML = lh;
+})();
+
+function pintarMes(){
+  $("#calMes").textContent = MESES[cursor.getMonth()] + " " + cursor.getFullYear();
+  var primero = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+  var offset = (primero.getDay() + 6) % 7;            // lunes = 0
+  var dias = new Date(cursor.getFullYear(), cursor.getMonth()+1, 0).getDate();
+  var html = "", i;
+
+  for (i=0;i<offset;i++) html += '<div class="celda vacia" aria-hidden="true"></div>';
+
+  for (i=1;i<=dias;i++){
+    var f = new Date(cursor.getFullYear(), cursor.getMonth(), i);
+    var evs = filtrar(eventosDeDia(f));
+    var cls = "celda";
+    if (f.getDay()===0 || f.getDay()===6) cls += " finde";
+    if (mismoDia(f, hoy)) cls += " hoy";
+    if (evs.length) cls += " hay";
+    if (f < hoy) cls += " fuera";
+
+    var vistas = [], puntos = "";
+    evs.forEach(function(e){ if (vistas.indexOf(e.m)<0 && vistas.length<4) vistas.push(e.m); });
+    vistas.forEach(function(m){ puntos += '<i style="--c:'+MARCAS[m].c+'"></i>'; });
+
+    if (evs.length){
+      html += '<button class="'+cls+'" data-f="'+iso(f)+'" aria-pressed="'+(elegido && mismoDia(f,elegido))+'" '+
+              'aria-label="'+i+" de "+MESES[cursor.getMonth()]+", "+evs.length+' actividades">'+
+              i + '<span class="puntos">'+puntos+'</span></button>';
+    } else {
+      html += '<div class="'+cls+'">'+i+'<span class="puntos"></span></div>';
+    }
+  }
+  $("#grilla").innerHTML = html;
+}
+
+function tarjetaEvento(ev, fecha){
+  var M = MARCAS[ev.m];
+  var pc = ev.pc ? " ev-porconf" : "";
+  var texto = encodeURIComponent("Patio Carampangue · " + ev.t + " · " + DIAS[fecha.getDay()] + " " + fecha.getDate() + " de " + MESES[fecha.getMonth()] + ", " + ev.h + " hrs");
+  return '<article class="evento'+pc+'" style="--c:'+M.c+';--cs:'+M.cs+'">'+
+    '<div class="arriba"><span class="etiq">'+M.n+'</span><span class="hora">'+ev.h+' – '+ev.f+'</span></div>'+
+    '<h4>'+ev.t+'</h4><p>'+ev.d+'</p>'+
+    (ev.v ? '<div class="valor">'+ev.v+'</div>' : '')+
+    '<div class="herr">'+
+      '<button class="mini-btn" type="button" data-ics="'+iso(fecha)+'|'+ev.h+'|'+ev.f+'|'+ev.t.replace(/"/g,"")+'">'+
+      '<svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg>Agendar</button>'+
+      '<a class="mini-btn" href="https://api.whatsapp.com/send?text='+texto+'" target="_blank" rel="noopener">'+
+      '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 3.2 6.4L4 20l1.6-3.2A7.9 7.9 0 0 1 4 12z"/></svg>Compartir</a>'+
+    '</div></article>';
+}
+
+function pintarPanel(){
+  var cont = $("#panelLista");
+  if (!elegido){
+    $("#panelTitulo").textContent = "Elige un día";
+    $("#panelCant").textContent = "";
+    cont.innerHTML = '<p class="nada">Los días con actividad están marcados con puntos de color en el calendario.</p>';
+    return;
+  }
+  var evs = filtrar(eventosDeDia(elegido));
+  $("#panelTitulo").textContent = DIAS[elegido.getDay()] + " " + elegido.getDate() + " de " + MESES[elegido.getMonth()];
+  $("#panelCant").textContent = evs.length ? (evs.length + (evs.length===1?" actividad":" actividades")) : "";
+  if (!evs.length){
+    cont.innerHTML = '<p class="nada">Ese día el patio está cerrado (o el filtro deja fuera lo que había). El patio abre sábados y domingos.</p>';
+    return;
+  }
+  cont.innerHTML = evs.map(function(e){ return tarjetaEvento(e, elegido); }).join("");
+}
+
+function proximosDias(n){
+  var out = [], f = new Date(hoy.getTime()), tope = 0;
+  while (out.length < n && tope < 400){
+    var evs = filtrar(eventosDeDia(f));
+    if (evs.length) out.push({f:new Date(f.getTime()), evs:evs});
+    f.setDate(f.getDate()+1); tope++;
+  }
+  return out;
+}
+
+function pintarProximos(){
+  var lista = proximosDias(5), html = "";
+  if (!lista.length){ $("#proximos").innerHTML = '<p class="nada">No hay fechas cargadas todavía.</p>'; return; }
+  lista.forEach(function(d){
+    var m = MARCAS[d.evs[0].m];
+    var titulo = d.evs.find(function(e){ return e.esp; });
+    titulo = titulo ? titulo.t : (d.evs.length + " actividades");
+    html += '<button class="fila" type="button" data-f="'+iso(d.f)+'" style="--c:'+m.c+'">'+
+      '<span class="fecha"><b>'+d.f.getDate()+'</b><span>'+MESES[d.f.getMonth()].slice(0,3)+'</span></span>'+
+      '<span class="qué"><b>'+titulo+'</b><span>'+DIAS_C[d.f.getDay()]+' · desde '+d.evs[0].h+'</span></span>'+
+      '<span class="bolita"></span></button>';
+  });
+  $("#proximos").innerHTML = html;
+}
+
+function elegirFecha(str){
+  var p = str.split("-");
+  elegido = new Date(+p[0], +p[1]-1, +p[2]);
+  if (elegido.getMonth() !== cursor.getMonth() || elegido.getFullYear() !== cursor.getFullYear()){
+    cursor = new Date(elegido.getFullYear(), elegido.getMonth(), 1);
+  }
+  pintarMes(); pintarPanel();
+}
+
+/* --- eventos de interfaz --- */
+$("#grilla").addEventListener("click", function(e){
+  var b = e.target.closest("button.celda"); if(!b) return;
+  elegirFecha(b.dataset.f);
+});
+$("#proximos").addEventListener("click", function(e){
+  var b = e.target.closest("button.fila"); if(!b) return;
+  elegirFecha(b.dataset.f);
+  document.getElementById("cartelera").scrollIntoView({behavior:"smooth", block:"start"});
+});
+$("#mesAntes").addEventListener("click", function(){ cursor.setMonth(cursor.getMonth()-1); pintarMes(); });
+$("#mesDespues").addEventListener("click", function(){ cursor.setMonth(cursor.getMonth()+1); pintarMes(); });
+$("#btnHoy").addEventListener("click", function(){
+  var prox = proximosDias(1)[0];
+  if (prox) elegirFecha(iso(prox.f));
+  else { cursor = new Date(hoy.getFullYear(), hoy.getMonth(), 1); pintarMes(); }
+});
+
+/* --- .ics: se arma en el navegador, sin servicios externos --- */
+document.addEventListener("click", function(e){
+  var b = e.target.closest("[data-ics]"); if(!b) return;
+  var p = b.dataset.ics.split("|");
+  var d = p[0].replace(/-/g,"");
+  var ini = d + "T" + p[1].replace(":","") + "00";
+  var fin = d + "T" + p[2].replace(":","") + "00";
+  var ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Patio Carampangue//ES",
+    "BEGIN:VEVENT","UID:"+ini+"-patio@carampangue","DTSTAMP:"+ini,
+    "DTSTART:"+ini,"DTEND:"+fin,"SUMMARY:"+p[3]+" · Patio Carampangue",
+    "LOCATION:República con Conquista, Carampangue, Arauco",
+    "DESCRIPTION:Programación referencial, sujeta a confirmación.",
+    "END:VEVENT","END:VCALENDAR"].join("\r\n");
+  var url = URL.createObjectURL(new Blob([ics], {type:"text/calendar;charset=utf-8"}));
+  var a = document.createElement("a");
+  a.href = url; a.download = "patio-carampangue-" + p[0] + ".ics";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+});
+
+pintarMes();
+(function(){ var prox = proximosDias(1)[0]; if (prox) elegirFecha(iso(prox.f)); })();
+pintarProximos();
+
+/* =====================================================================
+   4. CUENTA REGRESIVA
+   ---------------------------------------------------------------------
+   No cuenta hacia una fecha escrita a mano: pregunta al mismo motor del
+   calendario cual es el proximo dia con programacion. Si manana el patio
+   pasa a abrir los viernes, el reloj se entera solo.
+   ===================================================================== */
+function proximaApertura(){
+  var ahora = new Date(), f = new Date(ahora.getTime()); f.setHours(0,0,0,0);
+  for (var i=0;i<400;i++){
+    var evs = eventosDeDia(f);
+    if (evs.length){
+      var h = evs[0].h.split(":"), cierre = evs[evs.length-1].f.split(":");
+      var abre  = new Date(f.getFullYear(), f.getMonth(), f.getDate(), +h[0], +h[1]);
+      var cierra= new Date(f.getFullYear(), f.getMonth(), f.getDate(), +cierre[0], +cierre[1]);
+      if (ahora < abre)  return {t:abre,  abierto:false, dia:f};
+      if (ahora < cierra) return {t:cierra, abierto:true,  dia:f};
+    }
+    f.setDate(f.getDate()+1);
+  }
+  return null;
+}
+function tictac(){
+  var p = proximaApertura();
+  if (!p){ document.getElementById("reloj").style.display = "none"; return; }
+  var falta = p.t - new Date();
+  if (falta < 0) falta = 0;
+  var d = Math.floor(falta/86400000),
+      h = Math.floor(falta/3600000)%24,
+      m = Math.floor(falta/60000)%60,
+      s = Math.floor(falta/1000)%60;
+  document.getElementById("rd").textContent = d;
+  document.getElementById("rh").textContent = String(h).padStart(2,"0");
+  document.getElementById("rm").textContent = String(m).padStart(2,"0");
+  document.getElementById("rs").textContent = String(s).padStart(2,"0");
+  document.getElementById("relojRot").textContent = p.abierto
+    ? "El patio está abierto ahora · cierra en"
+    : "Falta para el patio del " + DIAS[p.dia.getDay()] + " " + p.dia.getDate() + " de " + MESES[p.dia.getMonth()] + " (fecha por confirmar)";
+}
+tictac(); setInterval(tictac, 1000);
+
+/* =====================================================================
+   5. PLANO INTERACTIVO
+   ===================================================================== */
+var ZONAS = {
+  abierto: {m:"mercado", t:"Patio abierto", p:"El corazón del terreno: mesas, sombra, circulación y espacio para que la gente se quede. El 39% del patio queda libre de obstáculos a propósito — un patio lleno de cosas no deja pasar un coche ni una silla de ruedas.",
+    d:[["Superficie","664,2 m²"],["Libre de circulación","39% del terreno"],["Capacidad estimada","80–120 personas"],["Mesas","8–12 según el fin de semana"]]},
+  kids: {m:"kids", t:"Patio Kids", p:"Área cercada con un solo acceso de 1,2 m y barrera continua hacia la calle. Con 11,4 m de ancho útil no caben dos juegos grandes lado a lado: es castillo + cama elástica + plaza blanda, y así queda la zona de seguridad despejada.",
+    d:[["Superficie","293,6 m²"],["Accesos","1 · de 1,2 m"],["Juegos","2 + plaza blanda"],["Zona de seguridad","1,8 m a los lados"],["Consumo eléctrico","1 turbina · 1.100 W"]]},
+  sabores: {m:"sabores", t:"Patio Sabores", p:"Tres carros por fin de semana, alineados hacia Conquista para que entren y salgan por el acceso de servicio. El público nunca cruza por donde maniobra un carro.",
+    d:[["Cupos","3 por fin de semana"],["Valor del cupo","$50.000"],["Acceso","por Conquista (servicio)"],["Requisito","resolución sanitaria vigente"]]},
+  mercado: {m:"mercado", t:"Patio Mercado", p:"Feria rotativa de emprendedores en el borde del patio abierto, para que se recorra caminando desde la entrada de República sin cruzar el área de juegos.",
+    d:[["Puestos","6 a 10"],["Valor del puesto","$12.000"],["Rotación","por fin de semana"],["Preferencia","vecinos de la comuna"]]},
+  vivo: {m:"vivo", t:"Patio Vivo", p:"Escenario chico contra el deslinde poniente, mirando hacia las mesas. Bloques de 40 minutos y corte de volumen a la hora que fije el permiso municipal.",
+    d:[["Bloques","40 minutos"],["Horario","17:00 a 20:30"],["Costo para el músico","sin costo"],["Sonido","lo pone el patio"]]},
+  tecnica: {m:"mercado", t:"Zona técnica", p:"Baños químicos, generador, agua y basura, junto al acceso de servicio de Conquista. Fuera del recorrido del público a propósito: es lo que hace que el resto del patio se vea limpio.",
+    d:[["Superficie","25,2 m²"],["Baños","2 químicos + lavamanos"],["Acceso","camión de servicio por Conquista"],["Retiro de basura","cierre de cada jornada"]]}
+};
+function pintarFicha(k){
+  var z = ZONAS[k], M = MARCAS[z.m];
+  var html = '<span class="etiq" style="--c:'+M.c+';--cs:'+M.cs+'">'+z.t+'</span><h3>'+z.t+'</h3><p>'+z.p+'</p><ul class="datos">';
+  z.d.forEach(function(par){ html += '<li><span>'+par[0]+'</span><b>'+par[1]+'</b></li>'; });
+  html += '</ul><a class="mini-btn" style="margin-top:16px" href="https://agentecmc.cl/modelador?p=YDiBpqpVYYS" target="_blank" rel="noopener">Ver el patio en 3D</a>';
+  document.getElementById("fichaZona").innerHTML = html;
+  Array.prototype.forEach.call(document.querySelectorAll(".gz"), function(g){ g.classList.toggle("sel", g.dataset.zona===k); });
+}
+Array.prototype.forEach.call(document.querySelectorAll(".gz"), function(g){
+  g.addEventListener("click", function(){ pintarFicha(g.dataset.zona); });
+  g.addEventListener("keydown", function(e){
+    if (e.key==="Enter" || e.key===" "){ e.preventDefault(); pintarFicha(g.dataset.zona); }
+  });
+});
+pintarFicha("kids");
+
+/* =====================================================================
+   6. PESTANAS DE "VENDER AQUI"
+   ===================================================================== */
+var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+tabs.forEach(function(t){
+  t.addEventListener("click", function(){
+    tabs.forEach(function(o){
+      var abierto = (o === t);
+      o.setAttribute("aria-selected", abierto ? "true" : "false");
+      document.getElementById(o.getAttribute("aria-controls")).hidden = !abierto;
+    });
+  });
+});
+
+/* =====================================================================
+   7. DETALLES DE PRESENTACION
+   ===================================================================== */
+var io = ("IntersectionObserver" in window) ? new IntersectionObserver(function(entradas){
+  entradas.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add("dentro"); io.unobserve(e.target); } });
+}, {rootMargin:"0px 0px -6% 0px", threshold:0}) : null;
+Array.prototype.forEach.call(document.querySelectorAll(".rev"), function(el){
+  if (io) io.observe(el); else el.classList.add("dentro");
+});
+
+var nav = document.getElementById("nav");
+addEventListener("scroll", function(){ nav.classList.toggle("pegada", scrollY > 8); }, {passive:true});
+
+/* Contadores: animan una sola vez, al entrar en pantalla. */
+Array.prototype.forEach.call(document.querySelectorAll("[data-contar]"), function(el){
+  var meta = parseFloat(el.dataset.contar), pre = el.dataset.pre || "", txt = el.dataset.txt;
+  if (txt){ el.textContent = txt; return; }
+  var visto = false;
+  var obs = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if (!e.isIntersecting || visto) return;
+      visto = true;
+      var t0 = performance.now(), dur = 1100;
+      (function paso(t){
+        var k = Math.min(1, (t - t0)/dur), suave = 1 - Math.pow(1-k, 3);
+        el.textContent = pre + Math.round(meta * suave).toLocaleString("es-CL");
+        if (k < 1) requestAnimationFrame(paso);
+      })(t0);
+    });
+  }, {threshold:.4});
+  obs.observe(el);
+});
+
+document.getElementById("anio").textContent = new Date().getFullYear();
+})();
+</script>
+
+<!-- ⚠️ AL CONFIRMAR APERTURA: descomentar y completar. Publicar schema de
+     Event con fechas no autorizadas seria declarar en Google un evento que
+     todavia no existe.
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Place","name":"Patio Carampangue",
+ "address":{"@type":"PostalAddress","streetAddress":"República con Conquista","addressLocality":"Carampangue","addressRegion":"Biobío","addressCountry":"CL"},
+ "openingHours":"Sa,Su 12:00-21:00"}
+</script>
+-->
+</body>
+</html>
