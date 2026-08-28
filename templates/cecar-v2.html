@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CECAR · Recupera y vuelve más fuerte | Carampangue</title>
-<meta name="description" content="Gimnasio en Carampangue por $10.000 al mes. Kinesiología con bono Fonasa $7.830 y consulta médica en el mismo lugar. Sala equipada, hora reservada por WhatsApp.">
+<meta name="description" content="Gimnasio en Carampangue: primer mes $10.000 por lanzamiento. Planes desde $10.000 al mes con el semestre. Kinesiología con bono Fonasa $7.830 y consulta médica en el mismo lugar.">
 <!-- NOINDEX A PROPOSITO: la pagina todavia trae marcadores ambar
      (direccion, horarios, precio de consulta). Al completarlos,
      cambiar a content="index, follow", volver a poner el enlace en
@@ -14,7 +14,7 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_CL">
 <meta property="og:title" content="CECAR · Recupera y vuelve más fuerte">
-<meta property="og:description" content="Gimnasio $10.000 al mes en Carampangue. Kinesiología con bono Fonasa $7.830 y consulta médica en el mismo lugar.">
+<meta property="og:description" content="Primer mes $10.000 por lanzamiento. Planes desde $10.000 al mes. Kinesiología con bono Fonasa $7.830 y consulta médica en Carampangue.">
 <meta property="og:image" content="https://centromedicocarampangue.cl/static/sitio/cecar-sala.jpg">
 <meta property="og:image:width" content="1600">
 <meta property="og:image:height" content="900">
@@ -178,6 +178,23 @@ h2.mega{font-size:clamp(34px,6vw,68px)}
    La etapa de recuperar fuerza va DENTRO del tratamiento cubierto; lo que queda
    fuera es la mantencion post-alta (la norma financia "patologias recuperables,
    con caracter curativo"). Antes la pagina daba a entender lo contrario. */
+.planes{margin-top:34px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:34px}
+.planes-head{max-width:66ch;margin-bottom:28px}
+.planes-head h3{font-family:var(--fd);font-weight:900;font-size:clamp(21px,2.7vw,30px);text-transform:uppercase;letter-spacing:-.02em;margin-bottom:12px;line-height:1.05}
+.planes-head p{font-size:14.5px;color:var(--txt2);line-height:1.65}
+.planes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.plan{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:26px 24px;position:relative}
+.plan.destacado{border-color:var(--acc);background:linear-gradient(180deg,rgba(79,190,206,.1),var(--bg2) 60%)}
+.p-tag{position:absolute;top:-11px;left:22px;background:var(--acc);color:#04222A;font-family:var(--fd);font-weight:900;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.plan h4{font-family:var(--fd);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt2);margin-bottom:14px}
+.p-val{font-family:var(--fd);font-weight:900;font-size:clamp(30px,3.6vw,40px);line-height:1;letter-spacing:-.03em}
+.plan.destacado .p-val{color:var(--acc)}
+.p-mes{font-size:13.5px;color:var(--txt3);margin-top:9px}
+.p-mes strong{color:var(--txt2)}
+.plan p{font-size:13.5px;color:var(--txt2);line-height:1.6;margin-top:16px}
+.plan p strong{color:var(--txt)}
+.planes-cta{margin-top:26px}
+.planes-nota{margin-top:18px;font-size:13px;color:var(--txt3);max-width:70ch}
 .bono{margin-top:34px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:34px}
 .bono h3{font-family:var(--fd);font-weight:900;font-size:clamp(21px,2.7vw,30px);text-transform:uppercase;letter-spacing:-.02em;margin-bottom:26px;line-height:1.05}
 .bono ul{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-bottom:26px}
@@ -276,6 +293,8 @@ footer a:hover{color:var(--acc)}
   .burger{display:flex}
   .mods,.pgrid{grid-template-columns:1fr}
   .bono ul{grid-template-columns:1fr}
+  .planes-grid{grid-template-columns:1fr}
+  .planes-cta{width:100%}
   .stats-grid{grid-template-columns:1fr 1fr}
   .stat:nth-child(2){border-right:0}
   .stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
@@ -293,7 +312,8 @@ footer a:hover{color:var(--acc)}
   .gancho .go{margin-left:0}
   .mod{padding:30px 24px}
   .mod .num{font-size:56px;top:14px;right:20px}
-  .pcard,.tcol,.hor,.plano,.bono{padding:26px 22px}
+  .pcard,.tcol,.hor,.plano,.bono,.planes{padding:26px 22px}
+  .plan{padding:24px 20px}
   .ley{grid-template-columns:1fr}
   .fgrid{grid-template-columns:1fr;gap:30px}
 }
@@ -318,14 +338,18 @@ footer a:hover{color:var(--acc)}
   "name":"CECAR · Centro de Entrenamiento Carampangue","alternateName":"CECAR",
   "url":"https://centromedicocarampangue.cl/cecar",
   "image":"https://centromedicocarampangue.cl/static/sitio/cecar-logo.png",
-  "description":"Gimnasio con mensualidad de $10.000, kinesiología con bono Fonasa y consulta médica, en Carampangue, Provincia de Arauco.",
+  "description":"Gimnasio con planes mensual, semestral y anual, kinesiología con bono Fonasa y consulta médica, en Carampangue, Provincia de Arauco.",
   "telephone":"+56442965226",
   "areaServed":[{"@type":"City","name":"Carampangue"},{"@type":"City","name":"Arauco"},{"@type":"City","name":"Curanilahue"}],
   "medicalSpecialty":["PhysicalTherapy","PrimaryCare"],
   "parentOrganization":{"@type":"MedicalClinic","name":"Centro Médico Carampangue","url":"https://centromedicocarampangue.cl/"},
   "makesOffer":[
-    {"@type":"Offer","itemOffered":{"@type":"Service","name":"Mensualidad de gimnasio"},
-     "price":"10000","priceCurrency":"CLP"},
+    {"@type":"Offer","itemOffered":{"@type":"Service","name":"Gimnasio · plan mensual"},
+     "price":"15000","priceCurrency":"CLP"},
+    {"@type":"Offer","itemOffered":{"@type":"Service","name":"Gimnasio · plan semestral (6 meses)"},
+     "price":"60000","priceCurrency":"CLP","description":"Equivale a $10.000 al mes"},
+    {"@type":"Offer","itemOffered":{"@type":"Service","name":"Gimnasio · plan anual (12 meses)"},
+     "price":"110000","priceCurrency":"CLP","description":"Equivale a $9.167 al mes"},
     {"@type":"Offer","itemOffered":{"@type":"MedicalTherapy","name":"Sesión de kinesiología"},
     "priceSpecification":[
       {"@type":"PriceSpecification","price":"7830","priceCurrency":"CLP","description":"Con bono Fonasa, requiere orden médica"},
@@ -341,7 +365,7 @@ footer a:hover{color:var(--acc)}
 <a class="gancho" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20mi%20evaluaci%C3%B3n%20kin%C3%A9sica%20en%20CECAR%20(web%3A%20v2-gancho)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener">
   <div class="wrap in">
     <span class="pt"></span>
-    <span>Gimnasio $10.000 al mes · kinesiología con bono Fonasa $7.830 la sesión</span>
+    <span>Promoción de lanzamiento · tu primer mes en el gimnasio a $10.000</span>
     <span class="go">Agendar por WhatsApp →</span>
   </div>
 </a>
@@ -399,9 +423,9 @@ footer a:hover{color:var(--acc)}
       <span class="out">Entrena.</span><br>
       <span class="on">Vuelve.</span>
     </h1>
-    <p class="sub">Gimnasio por $10.000 al mes, kinesiología con bono Fonasa y consulta
-      médica, en la misma sala. Entrenas con el kinesiólogo trabajando al lado.
-      Sin viajar a Concepción por cada sesión.</p>
+    <p class="sub">Gimnasio, kinesiología con bono Fonasa y consulta médica, en la misma
+      sala. Entrenas con el kinesiólogo trabajando al lado. Tu primer mes sale $10.000
+      por lanzamiento, y con el semestre te sigue costando lo mismo.</p>
     <div class="hero-ctas">
       <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20kinesiolog%C3%ADa%20en%20CECAR%20(web%3A%20v2-hero)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-wa">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
@@ -425,7 +449,7 @@ footer a:hover{color:var(--acc)}
       <div class="stat"><b data-n="46.6" data-dec="1" data-suf=" m²">46,6 m²</b><span>de sala, medidos con huincha</span></div>
       <div class="stat"><b data-n="10">10</b><span>estaciones de trabajo</span></div>
       <div class="stat"><b data-n="28.6" data-dec="1" data-suf=" m²">28,6 m²</b><span>de piso libre al centro</span></div>
-      <div class="stat"><b data-n="10000" data-pre="$" data-mil="1">$10.000</b><span>la mensualidad del gimnasio</span></div>
+      <div class="stat"><b data-n="10000" data-pre="$" data-mil="1">$10.000</b><span>tu primer mes, por lanzamiento</span></div>
     </div>
   </div>
 </div>
@@ -461,10 +485,10 @@ footer a:hover{color:var(--acc)}
       <article class="mod rev">
         <div class="num">02</div>
         <h3>Entrena</h3>
-        <p class="lead">La sala completa por $10.000 al mes, con hora reservada y el
+        <p class="lead">La sala completa con hora reservada y el
           kinesiólogo trabajando al lado. Si vienes saliendo de un tratamiento, es
           justo donde sigue el trabajo para no recaer.</p>
-        <p class="aviso"><b>$10.000 al mes, plan particular.</b> La mensualidad es el uso
+        <p class="aviso"><b>Primer mes $10.000 por lanzamiento.</b> Los planes son el uso
           de la sala; las sesiones de kinesiología van aparte, con bono Fonasa.</p>
         <ul>
           <li><i></i>Fuerza: rack, discos, mancuernas, kettlebells</li>
@@ -472,7 +496,7 @@ footer a:hover{color:var(--acc)}
           <li><i></i>Evaluación de composición corporal con InBody</li>
           <li><i></i>Con hora reservada: llegas y hay espacio</li>
         </ul>
-        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20reacondicionamiento%20f%C3%ADsico%20en%20CECAR%20(web%3A%20v2-entrena)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-line">Inscribirme por $10.000</a>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20reacondicionamiento%20f%C3%ADsico%20en%20CECAR%20(web%3A%20v2-entrena)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-line">Ver los planes</a>
       </article>
     </div>
   </div>
@@ -505,8 +529,8 @@ footer a:hover{color:var(--acc)}
       <article class="pcard rev">
         <h3>Gimnasio</h3>
         <div class="val">$10.000</div>
-        <div class="por">al mes, plan particular</div>
-        <div class="alt">Uso de la sala completa. <strong style="color:var(--txt)">No incluye</strong> sesiones de kinesiología</div>
+        <div class="por">tu primer mes, por lanzamiento</div>
+        <div class="alt">Después, desde <strong style="color:var(--txt)">$10.000 al mes</strong> con el plan semestral. <a href="#planes" style="color:var(--acc);text-decoration:underline">Ver los planes</a></div>
         <ul>
           <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Fuerza, cardio y piso libre</li>
           <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Con hora reservada: siempre hay espacio</li>
@@ -528,6 +552,39 @@ footer a:hover{color:var(--acc)}
         <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20consulta%20m%C3%A9dica%20en%20CECAR%20(web%3A%20v2-precio-consulta)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-line">Agendar consulta</a>
       </article>
     </div>
+    <div class="planes rev" id="planes">
+      <div class="planes-head">
+        <h3>Planes del <span class="on">gimnasio</span></h3>
+        <p>Tu primer mes entra con la promoción de lanzamiento a $10.000. Después eliges:
+          si te quedas con el semestre, el mes te sigue costando lo mismo.</p>
+      </div>
+      <div class="planes-grid">
+        <article class="plan">
+          <h4>Mensual</h4>
+          <div class="p-val">$15.000</div>
+          <div class="p-mes">al mes</div>
+          <p>Sin compromiso. Pagas mes a mes y te sales cuando quieras.</p>
+        </article>
+        <article class="plan destacado">
+          <span class="p-tag">El que deja el mes en $10.000</span>
+          <h4>Semestral</h4>
+          <div class="p-val">$60.000</div>
+          <div class="p-mes">6 meses · sale a <strong>$10.000 al mes</strong></div>
+          <p>Ahorras <strong>$30.000</strong> frente a pagar mes a mes. Es el plan que
+             mantiene el precio de lanzamiento.</p>
+        </article>
+        <article class="plan">
+          <h4>Anual</h4>
+          <div class="p-val">$110.000</div>
+          <div class="p-mes">12 meses · sale a <strong>$9.167 al mes</strong></div>
+          <p>Ahorras <strong>$70.000</strong> en el año. El valor más bajo por mes.</p>
+        </article>
+      </div>
+      <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20inscribirme%20en%20el%20gimnasio%20de%20CECAR%20(web%3A%20v2-planes)&utm_source=cecar-v2&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-acc planes-cta">Inscribirme</a>
+      <p class="planes-nota">Los planes son del gimnasio: uso de la sala. Las sesiones de
+        kinesiología van aparte, con bono Fonasa o particular.</p>
+    </div>
+
     <div class="bono rev">
       <h3>El bono cubre un <span class="on">tratamiento</span>, no una sesión suelta</h3>
       <ul>
@@ -538,7 +595,7 @@ footer a:hover{color:var(--acc)}
       <p>La etapa de recuperar fuerza va <strong style="color:var(--txt)">dentro</strong> del
         tratamiento, no como extra. Donde sí termina el bono es después del alta: si ya te
         recuperaste y quieres seguir entrenando para mantenerte, eso ya no es tratamiento:
-        sigues en la sala con la mensualidad de $10.000.
+        sigues en la sala con un plan del gimnasio, desde $10.000 al mes.
         <span class="fuente">Res. Ex. 49/2009 MINSAL, Normas Técnico Administrativas de la
         Modalidad Libre Elección · Grupo 06, Kinesiología y Fisioterapia.
         <span class="todo">Confirmar tope anual de programas del código que factura CECAR</span></span>
@@ -663,7 +720,7 @@ footer a:hover{color:var(--acc)}
       <span class="kicker">Preguntas frecuentes</span>
       <h2 class="mega">Lo que más<br><span class="on">nos preguntan</span></h2>
     </div>
-    <div class="faq"><details class="fq"><summary>¿Necesito orden médica para la kinesiología?</summary><div class="a">Para que quede cubierta por Fonasa sí. Si no la tienes, puedes tomar la consulta médica acá mismo: el médico te evalúa y deja la indicación en la misma visita.</div></details><details class="fq"><summary>¿Cuánto cuesta y qué cubre el bono?</summary><div class="a">La sesión con bono Fonasa queda en <strong>$7.830</strong>; particular, en $20.000. Son los mismos valores que publica el Centro Médico Carampangue, y el bono se vende en el lugar.</div></details><details class="fq"><summary>¿El bono cubre todas las sesiones o solo la primera?</summary><div class="a">Un programa puede llegar hasta 10 sesiones, no una sola. Además se te puede reevaluar hasta dos veces durante el tratamiento sin que vuelvas donde el médico por una orden nueva. Y la etapa de recuperar fuerza va dentro del mismo tratamiento: estar fuerte de nuevo es parte de sanar la lesión, no un servicio aparte. Lo que sí es particular es seguir entrenando <em>después</em> del alta.</div></details><details class="fq"><summary>¿Cuántas sesiones voy a necesitar?</summary><div class="a">Sale de la evaluación de la primera sesión, no de un promedio. Ahí se estima cuántas y con qué frecuencia, y se ajusta según cómo respondas.</div></details><details class="fq"><summary>¿Puedo ir sin hora?</summary><div class="a">No conviene. La sala trabaja con cupos por bloque para que tengas al kinesiólogo disponible y tu espacio de trabajo. Se agenda por WhatsApp en un mensaje.</div></details><details class="fq"><summary>¿Qué incluye la mensualidad de $10.000?</summary><div class="a">El uso de la sala con todo su equipamiento: fuerza, cardio y el piso libre para movilidad. Se entra con hora reservada, así que siempre hay espacio para trabajar. <strong style="color:var(--txt)">No incluye las sesiones de kinesiología</strong>, que van aparte con bono Fonasa o particular — son dos cosas distintas y se cobran distinto.</div></details><details class="fq"><summary>¿CECAR es lo mismo que el Centro Médico Carampangue?</summary><div class="a">Son de la misma familia pero no son lo mismo. En el <a href="/" style="color:var(--acc);text-decoration:underline">Centro Médico Carampangue</a> están las 22 especialidades médicas y dentales. En CECAR está la sala y la consulta médica que la acompaña.</div></details><details class="fq"><summary>¿Y si mi problema es una urgencia?</summary><div class="a">CECAR no es un servicio de urgencia. Con dolor en el pecho, falta de aire, pérdida de fuerza o de conciencia, llama al <a href="tel:131" style="color:var(--danger);text-decoration:underline">SAMU 131</a>.</div></details></div>
+    <div class="faq"><details class="fq"><summary>¿Necesito orden médica para la kinesiología?</summary><div class="a">Para que quede cubierta por Fonasa sí. Si no la tienes, puedes tomar la consulta médica acá mismo: el médico te evalúa y deja la indicación en la misma visita.</div></details><details class="fq"><summary>¿Cuánto cuesta y qué cubre el bono?</summary><div class="a">La sesión con bono Fonasa queda en <strong>$7.830</strong>; particular, en $20.000. Son los mismos valores que publica el Centro Médico Carampangue, y el bono se vende en el lugar.</div></details><details class="fq"><summary>¿El bono cubre todas las sesiones o solo la primera?</summary><div class="a">Un programa puede llegar hasta 10 sesiones, no una sola. Además se te puede reevaluar hasta dos veces durante el tratamiento sin que vuelvas donde el médico por una orden nueva. Y la etapa de recuperar fuerza va dentro del mismo tratamiento: estar fuerte de nuevo es parte de sanar la lesión, no un servicio aparte. Lo que sí es particular es seguir entrenando <em>después</em> del alta.</div></details><details class="fq"><summary>¿Cuántas sesiones voy a necesitar?</summary><div class="a">Sale de la evaluación de la primera sesión, no de un promedio. Ahí se estima cuántas y con qué frecuencia, y se ajusta según cómo respondas.</div></details><details class="fq"><summary>¿Puedo ir sin hora?</summary><div class="a">No conviene. La sala trabaja con cupos por bloque para que tengas al kinesiólogo disponible y tu espacio de trabajo. Se agenda por WhatsApp en un mensaje.</div></details><details class="fq"><summary>¿Cuánto cuesta el gimnasio y qué incluye?</summary><div class="a">Tu primer mes entra con la promoción de lanzamiento a <strong style="color:var(--txt)">$10.000</strong>. Después: mensual $15.000, semestral $60.000 (sale a $10.000 al mes) o anual $110.000 (sale a $9.167 al mes). Incluye el uso de la sala completa —fuerza, cardio y piso libre— con hora reservada. <strong style="color:var(--txt)">No incluye las sesiones de kinesiología</strong>, que van aparte con bono Fonasa o particular.</div></details><details class="fq"><summary>¿CECAR es lo mismo que el Centro Médico Carampangue?</summary><div class="a">Son de la misma familia pero no son lo mismo. En el <a href="/" style="color:var(--acc);text-decoration:underline">Centro Médico Carampangue</a> están las 22 especialidades médicas y dentales. En CECAR está la sala y la consulta médica que la acompaña.</div></details><details class="fq"><summary>¿Y si mi problema es una urgencia?</summary><div class="a">CECAR no es un servicio de urgencia. Con dolor en el pecho, falta de aire, pérdida de fuerza o de conciencia, llama al <a href="tel:131" style="color:var(--danger);text-decoration:underline">SAMU 131</a>.</div></details></div>
   </div>
 </section>
 
@@ -780,8 +837,8 @@ footer a:hover{color:var(--acc)}
      el empalme del -50%. Escrito una vez y clonado, no puede desincronizarse. */
   var tk = document.getElementById("tk");
   if (tk) {
-    var frases = ["Gimnasio $10.000","Kinesiología","Bono Fonasa","Hasta 10 sesiones",
-                  "Hora reservada","Post-operatorio","InBody","Carampangue"];
+    var frases = ["Primer mes $10.000","Kinesiología","Bono Fonasa","Hasta 10 sesiones",
+                  "Hora reservada","Semestre $60.000","InBody","Carampangue"];
     var linea = frases.map(function(f){ return "<span>"+f+" ✦</span>"; }).join("");
     tk.innerHTML = linea + linea;
   }
