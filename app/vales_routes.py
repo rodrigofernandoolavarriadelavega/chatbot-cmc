@@ -245,65 +245,233 @@ dd.grande{font-size:1.18rem;font-weight:700;color:var(--navy)}
 _LOGO = "/static/sitio/cropped-logo-carampangue.png"
 
 
+# ── La credencial (dirección A, elegida por el dueño 2026-08-29) ────────────
+# Fuentes AUTOSERVIDAS: la abre el mostrador en un telefono con señal rural, y
+# la CSP prohibe data: en font-src, asi que van como archivo propio.
+_CSS_VALE = """
+@font-face{font-family:'Montserrat';src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations');
+           font-weight:400 800;font-display:swap}
+@font-face{font-family:'Plex Mono';src:url('/static/fonts/plexmono-500-latin.woff2') format('woff2');
+           font-weight:500;font-display:swap}
+@font-face{font-family:'Plex Mono';src:url('/static/fonts/plexmono-600-latin.woff2') format('woff2');
+           font-weight:600;font-display:swap}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f9;color:#12303f;-webkit-font-smoothing:antialiased;
+     font-family:Montserrat,'Helvetica Neue',Arial,sans-serif;line-height:1.5}
+.mono{font-family:'Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.eyebrow{font-size:8.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#7d97a8}
+.marco{max-width:640px;margin:0 auto;padding:28px 20px}
+.cred{background:#fff;border-radius:14px;overflow:hidden;
+      box-shadow:0 4px 12px rgba(15,63,104,.06),0 16px 36px rgba(15,63,104,.10)}
+.cab{position:relative;background:#0F3F68;padding:26px 30px 22px;overflow:hidden}
+.cab .guilloche{position:absolute;inset:0;opacity:.10;
+  background:repeating-linear-gradient(58deg,transparent 0 6px,#4FBECE 6px 7px),
+             repeating-linear-gradient(-58deg,transparent 0 11px,#fff 11px 12px)}
+.cab .fila{position:relative;display:flex;align-items:flex-start;gap:16px}
+.placa{width:56px;height:56px;background:#fff;border-radius:12px;flex:none;
+       display:flex;align-items:center;justify-content:center}
+.cab h1{margin:5px 0 0;font-size:23px;font-weight:700;color:#fff;letter-spacing:-.015em}
+.cab .sub{font-size:11.5px;color:#a7c6da;margin-top:3px;font-weight:500}
+.cab .eyebrow{color:#8fb3ca}
+.folio{text-align:right;flex:none;padding-top:2px}
+.folio b{display:block;font-size:21px;font-weight:600;color:#fff;letter-spacing:.08em;margin-top:5px}
+.rule{height:3px;background:linear-gradient(90deg,#4FBECE 0%,#1172AB 55%,#0F3F68 100%)}
+.cuerpo{padding:26px 30px 0;display:flex;flex-direction:column;gap:22px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:99px;
+      font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.c-vigente{background:#e4f4ec;color:#1b7a55}
+.c-usado{background:#eceff1;color:#5a7182}
+.c-vencido{background:#fff4d6;color:#b58105}
+.c-anulado{background:#ffebee;color:#e53935}
+.dato .v{font-size:26px;font-weight:700;color:#0F3F68;letter-spacing:-.02em;margin-top:6px;text-wrap:balance}
+.dato .rut{font-size:14px;color:#5a7182;margin-top:4px;letter-spacing:.04em}
+.hair{height:1px;background:#e3ebf1}
+.prest{font-size:19px;font-weight:600;color:#12303f;margin-top:6px;line-height:1.3;text-wrap:balance}
+.obs{font-size:12.5px;color:#5a7182;margin-top:8px;line-height:1.55}
+.par{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.par .v{font-size:13.5px;font-weight:500;margin-top:5px;line-height:1.4}
+.valor{position:relative;margin:26px 30px 0;padding:22px 24px;background:#e5f5f8;
+       border:1px solid #bfe4ec;border-radius:12px;overflow:hidden}
+.valor::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#1172AB}
+.valor .in{max-width:330px}
+.valor .eyebrow{color:#1172AB}
+.valor .n{font-size:40px;font-weight:600;color:#0F3F68;letter-spacing:-.02em;line-height:1.05;margin-top:8px}
+.valor .b{font-size:11.5px;color:#3d6076;margin-top:9px;line-height:1.5}
+.valor .b strong{color:#0F3F68}
+.timbre{position:absolute;right:14px;top:50%;transform:translateY(-50%) rotate(-11deg);opacity:.9;pointer-events:none}
+.aviso{margin:16px 30px 0;padding:15px 18px;border:1px solid #e3ebf1;border-radius:10px;background:#f7fafc;
+       display:flex;gap:13px;align-items:flex-start}
+.aviso div{font-size:12.5px;line-height:1.6;color:#3d6076}
+.aviso strong{color:#0F3F68}
+.pie{margin-top:22px;border-top:1px solid #e3ebf1;padding:16px 30px 18px;background:#fbfcfd}
+.pie .f{display:flex;gap:18px;align-items:flex-end}
+.pie .txt{font-size:10.5px;color:#5a7182;line-height:1.6}
+.pie .txt strong{color:#12303f}
+.pie .url{font-size:10px;color:#8aa2b2;margin-top:6px}
+.micro{margin-top:12px;font-size:5.5px;letter-spacing:.34em;color:#c3d3de;white-space:nowrap;overflow:hidden}
+@media(max-width:560px){
+  .cab,.cuerpo,.pie{padding-left:20px;padding-right:20px}
+  .valor,.aviso{margin-left:20px;margin-right:20px}
+  .cab .fila{flex-wrap:wrap}
+  .folio{text-align:left;width:100%;padding-top:10px}
+  .timbre{position:static;transform:rotate(-6deg);margin:18px auto 0;display:block;width:104px}
+  .valor .in{max-width:none}
+  .valor .n{font-size:34px}
+}
+@media print{body{background:#fff}.cred{box-shadow:none;border:1px solid #e3ebf1}.marco{padding:0}}
+"""
+
+# Cada estado tiene su timbre: el color y la palabra cambian, la forma no.
+_TIMBRE = {
+    "vigente": ("#1172AB", "#0F3F68", "VÁLIDO"),
+    "usado":   ("#7d97a8", "#5a7182", "UTILIZADO"),
+    "vencido": ("#b58105", "#8a6410", "VENCIDO"),
+    "anulado": ("#e53935", "#b32b26", "ANULADO"),
+}
+
+
+def _svg_timbre(estado: str, fecha: str) -> str:
+    aro, tinta, palabra = _TIMBRE.get(estado, _TIMBRE["vigente"])
+    return f"""<svg class="timbre" width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
+  <defs><path id="orb{estado}" d="M64,64 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0"/></defs>
+  <circle cx="64" cy="64" r="59" fill="none" stroke="{aro}" stroke-width="2.5"/>
+  <circle cx="64" cy="64" r="53.5" fill="none" stroke="{aro}" stroke-width="1"/>
+  <circle cx="64" cy="64" r="37" fill="none" stroke="{aro}" stroke-width="1"/>
+  <text font-family="Montserrat,sans-serif" font-size="8.4" font-weight="700" letter-spacing="2.1" fill="{aro}">
+    <textPath href="#orb{estado}" startOffset="50%" text-anchor="middle">CENTRO MÉDICO CARAMPANGUE · CONVENIO ·</textPath>
+  </text>
+  <path d="M58 40h12v13h13v12H70v13H58V65H45V53h13z" fill="{aro}" opacity=".16"/>
+  <text x="64" y="63" text-anchor="middle" font-family="Montserrat,sans-serif" font-size="12" font-weight="800" letter-spacing="1.2" fill="{tinta}">{palabra}</text>
+  <text x="64" y="79" text-anchor="middle" font-family="'Plex Mono',monospace" font-size="10" font-weight="600" letter-spacing=".8" fill="{aro}">{fecha}</text>
+</svg>"""
+
+
+_CRUZ = ('<svg width="34" height="34" viewBox="0 0 40 40" aria-label="Centro Médico Carampangue">'
+         '<path d="M16 5h8v11h11v8H24v11h-8V24H5v-8h11z" fill="#1172AB"/>'
+         '<path d="M16 5h8v11h11v8H24v11h-8V24H5v-8h11z" fill="none" stroke="#4FBECE" stroke-width="2.4"/></svg>')
+
+
+def _dmy(iso: str) -> str:
+    try:
+        a, m, d = iso[:10].split("-")
+        return f"{d}·{m}·{a}"
+    except Exception:
+        return iso[:10]
+
+
 @router.get("/vale/{folio}", response_class=HTMLResponse)
 def ver_vale(folio: str):
     """Pagina PUBLICA de validacion: la abre el mostrador de Imagendent.
 
     Sin token a proposito — Imagendent no tiene cuenta en nuestro sistema. El
-    folio (6 hex aleatorios) es el secreto. No expone nada clinico: nombre, RUT,
-    prestacion autorizada y el valor a descontar. **NUNCA el precio de venta.**
+    folio (6 hex aleatorios) es el secreto. No expone nada clinico mas alla de
+    la prestacion autorizada, y **NUNCA el precio de venta**: el margen del CMC
+    no es asunto del proveedor.
     """
     v = _vale(folio)
     if not v:
-        return HTMLResponse(
-            f"<style>{_CSS}</style><div class='hoja'><div class='cab'>"
-            f"<img src='{_LOGO}' alt='Centro Médico Carampangue'>"
-            "<div><h1>Vale no encontrado</h1><p>Verifique el folio</p></div></div>"
-            "<div class='cuerpo'><p>Este folio no corresponde a ningún vale emitido "
-            "por Centro Médico Carampangue.</p></div></div>", status_code=404)
+        return HTMLResponse(f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Vale no encontrado</title><style>{_CSS_VALE}</style></head><body><div class="marco"><div class="cred">
+<div class="cab"><div class="guilloche"></div><div class="fila"><div class="placa">{_CRUZ}</div>
+<div><div class="eyebrow">Centro Médico Carampangue</div><h1>Vale no encontrado</h1>
+<div class="sub">Verifique el folio</div></div></div></div><div class="rule"></div>
+<div class="cuerpo" style="padding-bottom:26px"><p style="font-size:13px;color:#5a7182">
+Este folio no corresponde a ningún vale emitido por Centro Médico Carampangue.</p></div>
+</div></div></body></html>""", status_code=404)
+
     est = _estado_real(v)
     bolsa = ("Cuenta de Saldo Socio Estratégico" if v["bolsa"] == "saldo"
              else "Cuponera Plan Socio Estratégico Oro")
-    obs = (f"<dt>Observaciones clínicas</dt><dd>{v['observaciones']}</dd>"
-           if v["observaciones"] else "")
-    ind = (f"<dt>Indicación original</dt><dd>{v['indicado_por']}</dd>"
-           if v["indicado_por"] else "")
+    obs = f'<div class="obs">{v["observaciones"]}</div>' if v["observaciones"] else ""
+    ind = (f'<div><div class="eyebrow">Indicación original</div>'
+           f'<div class="v">{v["indicado_por"]}</div></div>') if v["indicado_por"] else ""
+    tick = ('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>')
+
     return HTMLResponse(f"""<!doctype html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Vale {v['folio']} · Centro Médico Carampangue</title><style>{_CSS}</style></head><body>
-<div class="hoja">
-  <div class="cab">
-    <img src="{_LOGO}" alt="Centro Médico Carampangue">
-    <div><h1>Vale de convenio</h1><p>Radiología Dental · Centro Médico Carampangue</p></div>
-    <div class="folio"><span>Folio</span><b>{v['folio']}</b></div>
-  </div>
-  <div class="cuerpo">
-    <span class="estado e-{est}">{est}</span>
-    <dl>
-      <dt>Paciente</dt><dd class="grande">{v['paciente']}</dd>
-      <dt>RUT</dt><dd>{v['rut']}</dd>
-      <dt>Prestación autorizada</dt><dd class="grande">{v['prestacion_nombre']}</dd>
-      {obs}
-      <dt>Profesional que deriva</dt><dd>{v['profesional'] or 'Centro Médico Carampangue'}</dd>
-      {ind}
-      <dt>Emitido</dt><dd>{v['creado_at'][:10]}</dd>
-      <dt>Válido hasta</dt><dd>{v['vence_el']}</dd>
-    </dl>
-    <div class="destacado">
-      <div class="t">Valor a descontar del convenio</div>
-      <div class="v">{_fmt(v['costo'])}</div>
-      <div class="n">Con cargo a: <b>{bolsa}</b>. El paciente ya pagó la prestación
-      en Centro Médico Carampangue — <b>no debe pagar en mostrador</b>.</div>
+<title>Vale {v['folio']} · Centro Médico Carampangue</title>
+<style>{_CSS_VALE}</style></head><body>
+<div class="marco"><div class="cred">
+
+  <div class="cab"><div class="guilloche"></div>
+    <div class="fila">
+      <div class="placa">{_CRUZ}</div>
+      <div style="flex-grow:1;padding-top:2px">
+        <div class="eyebrow">Centro Médico Carampangue</div>
+        <h1>Vale de convenio</h1>
+        <div class="sub">Radiología Dental · Plan Socio Estratégico</div>
+      </div>
+      <div class="folio"><div class="eyebrow">Folio</div><b class="mono">{v['folio']}</b></div>
     </div>
   </div>
-  <div class="pie">
-    Emitido por <b>Centro Médico Carampangue</b> · Convenio de Colaboración Clínica
-    Aliada – Plan Socio Estratégico.<br>
-    Ante cualquier duda sobre este vale, contactar al centro médico antes de
-    atender al paciente.
+  <div class="rule"></div>
+
+  <div class="cuerpo">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span class="chip c-{est}">{tick if est == 'vigente' else ''}{est}</span>
+      <div style="margin-left:auto;text-align:right">
+        <div class="eyebrow">Válido hasta</div>
+        <div class="mono" style="font-size:13px;font-weight:600;color:#0F3F68;margin-top:2px">{_dmy(v['vence_el'])}</div>
+      </div>
+    </div>
+
+    <div class="dato">
+      <div class="eyebrow">Paciente</div>
+      <div class="v">{v['paciente']}</div>
+      <div class="rut mono">{v['rut']}</div>
+    </div>
+
+    <div class="hair"></div>
+
+    <div>
+      <div class="eyebrow">Prestación autorizada</div>
+      <div class="prest">{v['prestacion_nombre']}</div>
+      {obs}
+    </div>
+
+    <div class="par">
+      <div><div class="eyebrow">Profesional que deriva</div>
+        <div class="v">{v['profesional'] or 'Centro Médico Carampangue'}</div></div>
+      {ind}
+    </div>
   </div>
-</div></body></html>""")
+
+  <div class="valor">
+    <div class="in">
+      <div class="eyebrow">Valor a descontar del convenio</div>
+      <div class="n mono">{_fmt(v['costo'])}</div>
+      <div class="b">Con cargo a <strong>{bolsa}</strong></div>
+    </div>
+    {_svg_timbre(est, _dmy(v['creado_at']))}
+  </div>
+
+  <div class="aviso">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1172AB" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px">
+      <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div>El paciente <strong>ya pagó esta prestación</strong> en Centro Médico Carampangue.
+    <strong>No debe pagar en mostrador</strong>: el valor se descuenta del convenio.</div>
+  </div>
+
+  <div class="pie">
+    <div class="f">
+      <div style="flex-grow:1">
+        <div class="txt">Emitido por <strong>Centro Médico Carampangue</strong> ·
+          Convenio de Colaboración Clínica Aliada – Plan Socio Estratégico</div>
+        <div class="url mono">Verificar en agentecmc.cl/vale/{v['folio']}</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div class="eyebrow" style="font-size:7.5px">Emitido</div>
+        <div class="mono" style="font-size:11px;color:#5a7182;margin-top:3px">{_dmy(v['creado_at'])}</div>
+      </div>
+    </div>
+    <div class="micro mono" aria-hidden="true">{'CMC·' * 40}</div>
+  </div>
+
+</div></div></body></html>""")
 
 
 @router.get("/vales", response_class=HTMLResponse)
