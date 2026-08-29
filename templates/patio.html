@@ -1584,35 +1584,45 @@ document.getElementById("anio").textContent = new Date().getFullYear();
 (function pizarra(){
   var caja = document.getElementById("finde"); if (!caja) return;
   var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var base = hoy < APERTURA ? new Date(APERTURA) : hoy;
-  var dias = [], f = new Date(base);
-  // el viernes de ESTA semana si aún no pasa; si ya pasó el domingo, el de la próxima
-  while (dias.length < 3 && dias.length + 0 < 3) {
-    var d = f.getDay();
-    if (d === 5 || d === 6 || d === 0) dias.push(new Date(f));
-    f.setDate(f.getDate() + 1);
-    if (f - base > 1000*60*60*24*10) break;
-  }
+
+  /* El fin de semana COMPLETO (viernes, sábado y domingo de la misma semana),
+     no "los próximos tres días abiertos": si el viernes ya pasó o el patio aún
+     no abre ese día, se muestra en gris. Un tablero que salta al viernes de la
+     otra semana confunde a quien está decidiendo el panorama de HOY. */
+  var d = hoy.getDay();                    // 0 dom … 5 vie, 6 sáb
+  var viernes = new Date(hoy);
+  if (d === 6) viernes.setDate(hoy.getDate() - 1);        // sábado → el viernes de ayer
+  else if (d === 0) viernes.setDate(hoy.getDate() - 2);   // domingo → el viernes antenoche
+  else viernes.setDate(hoy.getDate() + ((5 - d + 7) % 7));// resto → el viernes que viene
+  var dias = [0,1,2].map(function(i){ var x = new Date(viernes); x.setDate(viernes.getDate()+i); return x; });
+
   function pintar(){
     caja.innerHTML = dias.map(function(dia){
-      var evs = eventosDeDia(dia);
-      var estrella = evs.filter(function(e){ return e.esp; })[0] ||
-                     evs.filter(function(e){ return e.m === "vivo" || e.m === "kids"; })[0] || evs[0];
-      var nom = DIAS[dia.getDay()];
-      if (!evs.length) return '<div class="dia cerrado"><div class="cuando"><b>'+nom+'</b>'+
-        '<span>'+dia.getDate()+' '+MESES[dia.getMonth()].slice(0,3)+'</span></div>'+
-        '<p class="detalle">El patio no abre este día.</p></div>';
+      var evs = eventosDeDia(dia), nom = DIAS[dia.getDay()];
+      var cab = '<div class="cuando"><b>'+nom+'</b><span>'+dia.getDate()+' '+
+                MESES[dia.getMonth()].slice(0,3)+'</span></div>';
+      if (!evs.length){
+        var motivo = dia < APERTURA ? "Todavía no abrimos este día." : "El patio no abre este día.";
+        return '<div class="dia cerrado">'+cab+'<p class="detalle">'+motivo+'</p></div>';
+      }
+      /* El "plato del día" es el panorama especial; si no hay, lo que más
+         convoca (música o juegos) y no el genérico "Abre el patio". */
+      var estrella = evs.filter(function(e){ return e.esp; })[0]
+                  || evs.filter(function(e){ return e.m === "vivo"; })[0]
+                  || evs.filter(function(e){ return e.m === "kids"; })[0]
+                  || evs[0];
       var horas = evs.slice(0,3).map(function(e){
         return '<span class="hora-chip">'+e.h+' '+e.t.replace(/^Abre el patio$/,"Abre")+'</span>'; }).join("");
-      return '<div class="dia"><div class="cuando"><b>'+nom+'</b>'+
-        '<span>'+dia.getDate()+' '+MESES[dia.getMonth()].slice(0,3)+'</span></div>'+
-        '<p class="plato">'+estrella.t+'</p>'+
+      return '<div class="dia">'+cab+'<p class="plato">'+estrella.t+'</p>'+
         (estrella.d ? '<p class="detalle">'+estrella.d+'</p>' : '')+
         '<div class="horas">'+horas+'</div></div>';
     }).join("");
   }
   pintar();
-  traerMes(dias[0].getFullYear(), dias[0].getMonth()+1).then(pintar);
+  // un fin de semana puede cruzar de mes: se piden los meses que haga falta
+  var meses = {};
+  dias.forEach(function(x){ meses[x.getFullYear()+"-"+(x.getMonth()+1)] = [x.getFullYear(), x.getMonth()+1]; });
+  Promise.all(Object.keys(meses).map(function(k){ return traerMes(meses[k][0], meses[k][1]); })).then(pintar);
 })();
 
 /* ── Las cartas de los carros: se piden a la app, no se copian acá.
