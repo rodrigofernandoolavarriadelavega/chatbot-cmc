@@ -456,7 +456,7 @@ details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width
 
 <header class="portada" id="top">
   <div class="env">
-    <span class="chip-vivo"><span class="punto" aria-hidden="true"></span> Sábados y domingos · Carampangue</span>
+    <span class="chip-vivo"><span class="punto" aria-hidden="true"></span> Inauguración sábado 29 de agosto · Carampangue</span>
     <h1 class="h-xl">El patio<br>del pueblo,<br><em>fin de semana<br>a fin de semana.</em></h1>
     <p class="bajada">Un terreno de 983 m² en República con Conquista que los sábados y domingos se transforma:
       comida de verdad, feria de vecinos que emprenden, juegos para los niños con la reja cerrada, y música cuando cae la tarde.
@@ -916,7 +916,7 @@ var MARCAS = {
 
 /* ⚠️ FECHA DE APERTURA POR CONFIRMAR — depende del permiso municipal.
    Todo el calendario cuelga de aqui: antes de esta fecha no se genera nada. */
-var APERTURA = new Date(2026, 8, 5);          // sabado 5 de septiembre de 2026
+var APERTURA = new Date(2026, 7, 29);         // sabado 29 de agosto de 2026 (inauguracion)
 var CIERRE_TEMPORADA = new Date(2027, 2, 31); // hasta donde se genera la base
 
 /* Programacion base por dia de la semana (6 = sabado, 0 = domingo).
@@ -944,7 +944,9 @@ var SALUDABLE = {m:"salud", h:"11:00", f:"14:00", t:"Patio Saludable",
 /* Excepciones con fecha propia. TODAS marcadas pc:true (por confirmar)
    mientras no exista permiso: se pintan en ambar y lo dicen en el titulo. */
 var ESPECIALES = [
-  {fecha:"2026-09-05", m:"vivo",    h:"12:00", f:"21:00", t:"Primer fin de semana del Patio", d:"Apertura: los tres carros, la feria completa, juegos y música desde la tarde.", v:"Entrada liberada", pc:true},
+  {fecha:"2026-08-29", m:"vivo",    h:"12:00", f:"22:00", t:"Inauguración del Patio", d:"Los tres carros, la feria completa, juegos y música toda la tarde.", v:"Entrada liberada", pc:true},
+  {fecha:"2026-08-29", m:"vivo",    h:"20:00", f:"22:00", t:"Paulo Londra en vivo", d:"El cordobés que llevó el trap en español al mundo abre el patio: «Adán y Eva», «Tal vez», «Nena Maldición».", v:"Entrada liberada", pc:true},
+  {fecha:"2026-09-05", m:"sabores", h:"12:00", f:"21:00", t:"Primer fin de semana normal", d:"El patio ya en régimen: tres carros, feria, juegos y música desde la tarde.", v:"Entrada liberada", pc:true},
   {fecha:"2026-09-19", m:"vivo",    h:"12:00", f:"21:00", t:"Fin de semana dieciochero", d:"Cueca, empanadas y juegos típicos en el patio abierto.", v:"Entrada liberada", pc:true},
   {fecha:"2026-10-03", m:"mercado", h:"12:00", f:"20:00", t:"Feria larga de primavera", d:"El doble de puestos, ocupando también el patio abierto.", v:"Entrada liberada", pc:true},
   {fecha:"2026-10-31", m:"kids",    h:"16:00", f:"21:00", t:"Tarde de disfraces", d:"Concurso de disfraces para niños y dulces en los puestos de la feria.", v:"Ficha por niño", pc:true},
