@@ -97,11 +97,13 @@ for _n, _sec in [
 # ═══════════════════════ COMUNA DE CURANILAHUE ══════════════════════════════
 _add(["Curanilahue", "Curanilhue", "Curanilague"], "Curanilahue", "Curanilahue urbano", "ciudad", "alta")
 _add(["Plegarias", "Plegaria"], "Curanilahue", "Plegarias", "localidad", "alta")
-# Colico: los datos propios lo dan 91% Curanilahue (n=53). Correccion sobre mi
-# suposicion inicial de que era "San Jose de Colico" de Arauco.
-_add(["Colico", "Colico Norte", "Colico Sur", "San Jose de Colico", "San Jose Colico"],
-     "Curanilahue", "Colico", "localidad", "media")
-_add(["Eleuterio Ramirez"], "Curanilahue", "Curanilahue urbano", "villa", "alta")
+# Colico / San Jose de Colico: CONFIRMADO POR EL DUENO (2026-08-29) que es de
+# CURANILAHUE. Los datos propios ya lo daban 91% Curanilahue (n=53); mi
+# suposicion inicial de que era de Arauco estaba equivocada. Aparecia con ficha
+# repartida entre Arauco, Curanilahue y Los Alamos segun quien la tecleo.
+_add(["Colico", "Colico Norte", "Colico Sur", "San Jose de Colico", "San Jose Colico",
+      "Cheneco"],
+     "Curanilahue", "Colico", "localidad", "alta")
 _add(["Las Hortalizas", "Hortalizas"], "Curanilahue", "Curanilahue urbano", "villa", "media")
 _add(["Los Amarillos"], "Curanilahue", "Curanilahue urbano", "villa", "media")
 _add(["Carcoop"], "Curanilahue", "Curanilahue urbano", "villa", "media")
@@ -170,6 +172,9 @@ AMBIGUOS: dict[str, tuple[str, ...]] = {
     "LOS BOLDOS": ("Arauco", "Curanilahue"),
     "EL BOLDO": ("Arauco", "Curanilahue"),
     "LOS ALAMOS": ("Los Alamos", "Arauco"),
+    # calle comun en medio Chile: la ficha 13839 decia Lebu y por este nombre
+    # el resolvedor la queria mover a Curanilahue. Solo confirma, no reasigna.
+    "ELEUTERIO RAMIREZ": ("Curanilahue", "Lebu", "Arauco"),
     "CERRO VERDE": ("Los Alamos", "Arauco"),
     "VILLARRICA": ("Curanilahue", "Arauco"),
     "SANTA MARIA": ("Curanilahue", "Arauco"),
@@ -195,6 +200,9 @@ _PATRONES = [(k, re.compile(r"(?<![A-Z])" + re.escape(k).replace(r"\ ", r"\s+") 
 # "Sector"/"Camino" NO entran: esos si suelen anteceder a una localidad real.
 _VIA = re.compile(r"\b(CALLE|CALLEJON|PASAJE|PSJE|PJE|AVENIDA|AVDA|AV|POBLACION|"
                   r"POBL|VILLA|DIAGONAL|SUBIDA|SUBID)\s+(?:LOS\s+|LAS\s+|EL\s+|LA\s+)?$")
+# "camino antiguo a Curanilahue" es una VIA bautizada por su destino y esta en
+# Arauco, no en Curanilahue. Dos fichas casi se mudan de comuna por esto.
+_VIA_DESTINO = re.compile(r"\b(ANTIGU[OA]|CAMINO|RUTA|KM|KILOMETRO)\s+(?:A\s+|AL\s+)?$")
 
 
 def _candidatos(d: str):
@@ -203,8 +211,9 @@ def _candidatos(d: str):
     out = []
     for clave, pat in _PATRONES:
         for m in pat.finditer(d):
-            if _VIA.search(d[:m.start()]):
-                continue                      # "calle Los Alamos" -> no cuenta
+            prev = d[:m.start()]
+            if _VIA.search(prev) or _VIA_DESTINO.search(prev):
+                continue                      # "calle Los Alamos" / "camino antiguo a X"
             out.append((m.start(), clave))
     return out
 
