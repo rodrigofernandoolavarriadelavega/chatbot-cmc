@@ -574,6 +574,10 @@ details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width
         </div>
         <div class="cal-grilla" id="grilla" role="grid" aria-label="Calendario de actividades"></div>
         <div class="cal-leyenda" id="leyenda"></div>
+        <p id="avisoRespaldo" hidden style="margin-top:12px;font-size:.82rem;color:#8A5B00;
+           background:var(--sun-soft);border:1.5px dashed var(--sun);border-radius:10px;padding:10px 12px">
+          No pudimos conectar con la cartelera del patio: esto es la programación base guardada
+          en esta página. Puede que falten los panoramas del fin de semana.</p>
       </div>
 
       <div class="panel rev">
@@ -961,7 +965,39 @@ var ESPECIALES = [
 
 /* =====================================================================
    2. MOTOR DE CALENDARIO
+   ---------------------------------------------------------------------
+   La programacion REAL vive en la app (/patio/app), no aca: un mismo patio
+   con dos calendarios distintos termina contradiciendose (ya pasó: la app
+   abría los viernes y esta página seguía diciendo sábado y domingo).
+   Esta página PIDE el mes a la app -- mismo dominio, sin CORS -- y las
+   reglas locales de abajo quedan de RESPALDO para cuando la app no
+   responda: en Carampangue la red se cae, y un calendario en blanco es
+   peor que uno desactualizado. Se avisa cuando se está mostrando el
+   respaldo, para no mentir con cara de dato fresco.
    ===================================================================== */
+var API_MES = "/patio/app/api/mes";
+var cacheAPI = {};      // "2026-09" -> { "2026-09-04": [actividades] }
+var mesEnRespaldo = {}; // "2026-09" -> true si hubo que caer al respaldo
+
+function claveMes(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+
+function traerMes(anio, mes){
+  var clave = anio + "-" + String(mes).padStart(2,"0");
+  if (cacheAPI[clave] || mesEnRespaldo[clave]) return Promise.resolve();
+  return fetch(API_MES + "?a=" + anio + "&m=" + mes, {headers:{"Accept":"application/json"}})
+    .then(function(r){ if(!r.ok) throw new Error("api"); return r.json(); })
+    .then(function(j){
+      var porDia = {};
+      j.dias.forEach(function(d){
+        if (!d.acts.length) return;
+        porDia[d.f] = d.acts.map(function(a){
+          return {m:a.zona, h:a.h, f:a.f, t:a.t, d:a.d || "", v:a.v || "", pc:!!a.pc, esp:!!a.esp};
+        });
+      });
+      cacheAPI[clave] = porDia;
+    })
+    .catch(function(){ mesEnRespaldo[clave] = true; });
+}
 
 function iso(d){
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
@@ -973,6 +1009,8 @@ function primerSabado(d){
 }
 
 function eventosDeDia(fecha){
+  var clave = claveMes(fecha);
+  if (cacheAPI[clave]) return (cacheAPI[clave][iso(fecha)] || []).slice();
   var out = [], i;
   if (fecha < APERTURA || fecha > CIERRE_TEMPORADA) return out;
   var base = BASE[fecha.getDay()] || [];
@@ -1032,6 +1070,14 @@ var $ = function(s){ return document.querySelector(s); };
 })();
 
 function pintarMes(){
+  var claveActual = claveMes(cursor);
+  if (!cacheAPI[claveActual] && !mesEnRespaldo[claveActual]){
+    traerMes(cursor.getFullYear(), cursor.getMonth()+1).then(function(){
+      if (claveMes(cursor) === claveActual){ pintarMes(); pintarPanel(); pintarProximos(); }
+    });
+  }
+  var aviso = $("#avisoRespaldo");
+  if (aviso) aviso.hidden = !mesEnRespaldo[claveActual];
   $("#calMes").textContent = MESES[cursor.getMonth()] + " " + cursor.getFullYear();
   var primero = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   var offset = (primero.getDay() + 6) % 7;            // lunes = 0
