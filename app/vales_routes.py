@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import hmac
 import json as _json
+from pathlib import Path as _Path
 import secrets
 from datetime import date, datetime, timedelta
 
@@ -65,6 +66,8 @@ PRESTACIONES: dict[str, dict] = {
                           "costo": 30000, "venta": 45000, "bolsa": "oro"},
 }
 VIGENCIA_DIAS = 60
+CARGA_INICIAL = 200_000     # anexo, PRIMERO: carga inicial de la Cuenta de Saldo
+AVISO_RECARGA = 50_000      # anexo, PRIMERO: Imagendent avisa al llegar a este saldo
 
 # ── Qué hay que pedirle a recepción SEGÚN la prestación ─────────────────────
 # La solicitud no es un texto libre igual para todo: un cone beam necesita pieza
@@ -258,6 +261,74 @@ async def api_crear(request: Request, token: str | None = Query(None)):
               {"folio": folio, "prestacion": clave, "costo": p["costo"], "bolsa": p["bolsa"]})
     return JSONResponse({"ok": True, "folio": folio,
                          "url": f"/vale/{folio}", "vence_el": fila["vence_el"]})
+
+
+@router.get("/api/vales/lista")
+def api_lista(token: str | None = Query(None), limite: int = Query(200)):
+    """Vales + saldo, para que el modulo de Convenios se dibuje solo."""
+    if not _ok(token):
+        raise HTTPException(401, "No autorizado")
+    with db() as c:
+        cols = ("folio", "creado_at", "paciente", "rut", "telefono", "prestacion_nombre",
+                "costo", "venta", "bolsa", "estado", "vence_el", "observaciones",
+                "profesional", "indicado_por")
+        rows = c.execute(f"SELECT {','.join(cols)} FROM vales_convenio "
+                         f"ORDER BY creado_at DESC LIMIT ?", (limite,)).fetchall()
+        gast = c.execute("""SELECT bolsa, SUM(costo) FROM vales_convenio
+                            WHERE estado IN ('vigente','usado') GROUP BY bolsa""").fetchall()
+    consumido = {b: t for b, t in gast}
+    vales = []
+    for r in rows:
+        v = dict(zip(cols, tuple(r)))
+        v["estado_real"] = _estado_real(v)
+        v["margen"] = (v["venta"] - v["costo"]) if v["venta"] else None
+        vales.append(v)
+    return JSONResponse({
+        "vales": vales,
+        "saldo": {"carga": CARGA_INICIAL, "consumido": consumido.get("saldo", 0),
+                  "restante": CARGA_INICIAL - consumido.get("saldo", 0),
+                  "aviso_en": AVISO_RECARGA, "oro": consumido.get("oro", 0)},
+    })
+
+
+@router.post("/api/vales/{folio}/enviar")
+async def api_enviar(folio: str, token: str | None = Query(None)):
+    """Manda el vale por el WhatsApp DEL BOT, no por un wa.me que abre el celular.
+
+    OJO ventana de 24 h: si el paciente no le ha escrito al bot en las ultimas
+    24 horas, Meta rechaza el texto libre y `send_whatsapp` devuelve None (no
+    levanta). Eso NO es un error del sistema — es la politica de WhatsApp. Se
+    devuelve `enviado:false` para que el mostrador use el enlace a mano en vez
+    de creer que salio.
+    """
+    if not _ok(token):
+        raise HTTPException(401, "No autorizado")
+    v = _vale(folio)
+    if not v:
+        raise HTTPException(404, "Vale no encontrado")
+    tel = (v.get("telefono") or "").strip()
+    if not tel:
+        raise HTTPException(400, "Este vale no tiene teléfono registrado")
+    url = f"https://agentecmc.cl/vale/{folio}"
+    texto = (
+        f"Hola {(v['paciente'] or '').split(' ')[0]}, le enviamos su vale para el examen "
+        f"*{v['prestacion_nombre']}*.\n\n"
+        f"Muéstrelo al llegar: {url}\n\n"
+        f"Ya está pagado en el Centro Médico Carampangue, no debe pagar en el lugar del examen. "
+        f"Válido hasta el {v['vence_el']}.\n\n"
+        f"Cualquier duda, llámenos al {CMC_TELEFONO_FIJO}."
+    )
+    try:
+        from messaging import send_whatsapp
+        wamid = await send_whatsapp(tel, texto)
+    except Exception as e:                                            # noqa: BLE001
+        raise HTTPException(502, f"No se pudo enviar: {e}") from e
+    log_event(tel, "vale_convenio_enviado", {"folio": folio, "ok": bool(wamid)})
+    if not wamid:
+        return JSONResponse({"enviado": False, "url": url, "motivo":
+                             "El paciente no le ha escrito al bot en 24 horas, así que "
+                             "WhatsApp no deja mandarle un mensaje nuevo. Cópiele el enlace."})
+    return JSONResponse({"enviado": True, "url": url})
 
 
 @router.post("/api/vales/{folio}/{accion}")
@@ -563,6 +634,46 @@ Este folio no corresponde a ningún vale emitido por Centro Médico Carampangue.
 </div></div></body></html>""")
 
 
+# ── Modulo CONVENIOS de recepcion ──────────────────────────────────────────
+_TPL = _Path(__file__).resolve().parent.parent / "templates"
+
+
+def _tpl(nombre: str) -> str:
+    f = _TPL / nombre
+    return f.read_text(encoding="utf-8") if f.exists() else ""
+
+
+@router.get("/recepcion/convenios", response_class=HTMLResponse)
+def convenios_index(token: str | None = Query(None)):
+    """Portada del modulo: un convenio por tarjeta, con su saldo en vivo."""
+    if not _ok(token):
+        raise HTTPException(401, "No autorizado")
+    html = _tpl("recepcion_convenios.html")
+    if not html:
+        raise HTTPException(404, "Módulo no disponible")
+    return HTMLResponse(html.replace("__TOKEN__", token or ""),
+                        headers={"Cache-Control": "no-store"})
+
+
+@router.get("/recepcion/convenios/imagendent", response_class=HTMLResponse)
+def convenio_imagendent(token: str | None = Query(None)):
+    """Mesa de trabajo del convenio Imagendent: emitir, enviar y llevar el saldo.
+
+    El tarifario y los campos de solicitud se inyectan como JSON para que el
+    formulario se dibuje solo — si cambia PRESTACIONES o SOLICITUD, la pagina
+    cambia sola y no hay dos verdades.
+    """
+    if not _ok(token):
+        raise HTTPException(401, "No autorizado")
+    html = _tpl("recepcion_convenio_imagendent.html")
+    if not html:
+        raise HTTPException(404, "Módulo no disponible")
+    html = (html.replace("__TOKEN__", token or "")
+                .replace("__PRESTACIONES__", _json.dumps(PRESTACIONES, ensure_ascii=False))
+                .replace("__SOLICITUD__", _json.dumps(SOLICITUD, ensure_ascii=False)))
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+
 @router.get("/vales", response_class=HTMLResponse)
 def panel_vales(token: str | None = Query(None)):
     if not _ok(token):
@@ -574,7 +685,7 @@ def panel_vales(token: str | None = Query(None)):
         gast = c.execute("""SELECT bolsa, SUM(costo) FROM vales_convenio
                             WHERE estado IN ('vigente','usado') GROUP BY bolsa""").fetchall()
     consumido = {b: t for b, t in gast}
-    saldo_rest = 200000 - consumido.get("saldo", 0)
+    saldo_rest = CARGA_INICIAL - consumido.get("saldo", 0)
     filas = []
     for r in rows:
         v = dict(zip(("folio", "creado_at", "paciente", "rut", "prestacion_nombre", "costo",

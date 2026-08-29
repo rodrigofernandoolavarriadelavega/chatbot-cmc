@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Imagendent RX · Convenios · CMC</title>
+<style>
+@font-face{font-family:'Montserrat';src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations');
+           font-weight:400 800;font-display:swap}
+@font-face{font-family:'Plex Mono';src:url('/static/fonts/plexmono-500-latin.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Plex Mono';src:url('/static/fonts/plexmono-600-latin.woff2') format('woff2');font-weight:600;font-display:swap}
+:root{--navy:#0F3F68;--azul:#1172AB;--aqua:#4FBECE;--aqua-soft:#e5f5f8;--navy-soft:#d7e0ea;
+      --tinta:#12303f;--gris:#5a7182;--gris-2:#8aa2b2;--linea:#e3ebf1;--linea-2:#eef3f7;
+      --bg:#f3f6f9;--panel:#fff;--panel-2:#f7fafc;--ok:#1b7a55;--ok-soft:#e4f4ec;
+      --warn:#b58105;--warn-soft:#fff4d6;--mal:#c0392b;--mal-soft:#ffebee;--wa:#128c7e;
+      --sh-sm:0 1px 2px rgba(15,63,104,.05),0 1px 3px rgba(15,63,104,.04);
+      --sh-lg:0 4px 12px rgba(15,63,104,.06),0 16px 36px rgba(15,63,104,.09)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);line-height:1.55;
+     font-family:Montserrat,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:'Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+a{color:var(--azul);text-decoration:none} a:hover{color:var(--navy)}
+:focus-visible{outline:2px solid var(--azul);outline-offset:2px;border-radius:4px}
+
+.top{background:var(--navy);color:#fff}
+.top .in{max-width:1180px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;gap:14px}
+.top .marca{width:40px;height:40px;background:#fff;border-radius:10px;flex:none;overflow:hidden;
+            display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--navy);font-size:14px}
+.top .marca img{width:100%;height:100%;object-fit:contain;padding:4px}
+.top .t{font-size:9px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:#8fb3ca}
+.top h1{margin:2px 0 0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.top .volver{margin-left:auto;font-size:12px;color:#a7c6da}.top .volver:hover{color:#fff}
+
+.wrap{max-width:1180px;margin:0 auto;padding:26px 24px 60px}
+.kpis{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:22px}
+.kpi{background:var(--panel);border:1px solid var(--linea);border-radius:12px;padding:16px 18px;box-shadow:var(--sh-sm)}
+.kpi .l{font-size:8.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gris-2)}
+.kpi .v{font-size:26px;font-weight:600;color:var(--navy);letter-spacing:-.02em;margin-top:6px;line-height:1.1}
+.kpi .n{font-size:11px;color:var(--gris);margin-top:5px}
+.kpi.alerta{border-left:3px solid var(--warn)}
+
+.cols{display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:1000px){.cols{grid-template-columns:minmax(0,420px) minmax(0,1fr);align-items:start}}
+.card{background:var(--panel);border:1px solid var(--linea);border-radius:14px;box-shadow:var(--sh-sm)}
+.card > h2{margin:0;padding:18px 22px;font-size:14px;font-weight:600;border-bottom:1px solid var(--linea-2)}
+.card .body{padding:20px 22px}
+
+label{display:block;font-size:8.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+      color:var(--gris-2);margin-bottom:5px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--linea);border-radius:8px;
+             font:inherit;font-size:13.5px;background:#fff;color:var(--tinta)}
+input::placeholder{color:#b6c6d2}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a7182' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+       background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.campos{display:flex;flex-direction:column;gap:14px}
+.par{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+.hint{font-size:11px;color:var(--gris);margin-top:5px}
+.hint.ok{color:var(--ok)} .hint.warn{color:var(--warn)}
+.sec-sol{margin-top:18px;padding-top:18px;border-top:1px dashed var(--linea)}
+.sec-sol .tit{font-size:8.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+              color:var(--azul);margin-bottom:12px}
+.req{color:var(--mal)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--azul);color:#fff;
+     border:0;border-radius:8px;padding:12px 18px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--navy);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.wa{background:var(--wa)} .btn.wa:hover{background:#0e6f63}
+.btn.sec{background:transparent;color:var(--gris);border:1px solid var(--linea)}
+.btn.sec:hover{border-color:var(--azul);color:var(--azul);background:transparent}
+.btn.mini{padding:6px 11px;font-size:11.5px;border-radius:6px}
+
+.listo{border:1px solid var(--linea);border-left:3px solid var(--ok);border-radius:10px;
+       padding:16px 18px;background:var(--panel-2);margin-top:16px}
+.listo .h{font-weight:600;color:var(--ok);font-size:13.5px}
+.listo .u{font-size:11.5px;margin:8px 0 13px;word-break:break-all;color:var(--gris)}
+.listo .acc{display:flex;gap:8px;flex-wrap:wrap}
+.msg{font-size:12.5px;margin-top:12px;min-height:1em}
+.msg.err{color:var(--mal)}
+
+.tabla{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:620px}
+th,td{padding:11px 14px;border-bottom:1px solid var(--linea-2);text-align:left;vertical-align:top}
+th{font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gris-2);
+   border-bottom:1px solid var(--linea)}
+td.n{font-family:'Plex Mono',monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+tbody tr:hover{background:var(--panel-2)}
+.pill{display:inline-block;font-size:8.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+      padding:3px 9px;border-radius:99px;white-space:nowrap}
+.p-vigente{background:var(--ok-soft);color:var(--ok)}
+.p-usado{background:var(--linea-2);color:var(--gris)}
+.p-vencido{background:var(--warn-soft);color:var(--warn)}
+.p-anulado{background:var(--mal-soft);color:var(--mal)}
+.vacio{padding:34px 22px;text-align:center;color:var(--gris);font-size:13px}
+.aviso{background:var(--warn-soft);border:1px solid #f0dcb4;border-left:3px solid var(--warn);
+       border-radius:10px;padding:14px 17px;font-size:12.5px;color:#6b4e0a;line-height:1.6;margin-bottom:20px}
+.aviso b{color:#4a3606}
+@media(max-width:560px){.wrap{padding:20px 14px 48px}.top .in{padding:14px 16px}.par{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="in">
+  <div class="marca" id="marcaTop">IR</div>
+  <div>
+    <div class="t">Convenios · Centro Médico Carampangue</div>
+    <h1>Imagendent RX</h1>
+  </div>
+  <a class="volver" href="/recepcion/convenios?token=__TOKEN__">← Convenios</a>
+</div></div>
+
+<div class="wrap">
+
+  <div class="aviso">
+    <b>Recuerde:</b> el paciente paga el examen acá, en el Centro Médico. En Imagendent
+    no debe pagar nada — el valor se descuenta del convenio.
+  </div>
+
+  <div class="kpis">
+    <div class="kpi" id="kSaldo"><div class="l">Saldo disponible</div><div class="v mono" id="vSaldo">—</div><div class="n" id="nSaldo">cargando…</div></div>
+    <div class="kpi"><div class="l">Consumido</div><div class="v mono" id="vCons">—</div><div class="n">de la Cuenta de Saldo</div></div>
+    <div class="kpi"><div class="l">Cuponera Oro</div><div class="v mono" id="vOro">—</div><div class="n">panorámicas, teles y bitewings</div></div>
+    <div class="kpi"><div class="l">Vales emitidos</div><div class="v mono" id="vN">—</div><div class="n">últimos 200</div></div>
+  </div>
+
+  <div class="cols">
+
+    <section class="card">
+      <h2>Emitir vale</h2>
+      <div class="body">
+        <div class="campos">
+          <div>
+            <label for="rut">RUT del paciente</label>
+            <input id="rut" placeholder="12.345.678-9" autocomplete="off" autofocus>
+            <div class="hint" id="rutmsg">Escríbalo y presione Enter: el resto se completa solo.</div>
+          </div>
+          <div><label for="paciente">Paciente</label><input id="paciente" placeholder="Se completa solo"></div>
+          <div><label for="telefono">Teléfono</label><input id="telefono" placeholder="Se completa solo" inputmode="numeric"></div>
+          <div>
+            <label for="prestacion">Prestación</label>
+            <select id="prestacion"></select>
+            <div class="hint" id="precioHint"></div>
+          </div>
+          <div class="par">
+            <div><label for="profesional">Deriva</label><input id="profesional" placeholder="Dr. …"></div>
+            <div><label for="venta">Precio cobrado</label><input id="venta" inputmode="numeric" placeholder="auto"></div>
+          </div>
+          <div><label for="indicado_por">Indicación original (si viene de otro médico)</label>
+            <input id="indicado_por" placeholder="ej: orden de otorrinolaringología"></div>
+        </div>
+
+        <div class="sec-sol">
+          <div class="tit">Solicitud del examen</div>
+          <div class="campos" id="solcampos"></div>
+          <div style="margin-top:14px"><label for="observaciones">Algo más que deban saber</label>
+            <input id="observaciones" placeholder="Opcional"></div>
+        </div>
+
+        <div style="margin-top:20px"><button class="btn" id="bCrear" style="width:100%">Emitir vale</button></div>
+        <div class="msg" id="msg"></div>
+        <div id="listo"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Vales emitidos</h2>
+      <div class="tabla"><table>
+        <thead><tr><th>Folio</th><th>Paciente</th><th>Prestación</th>
+          <th class="n">Descuenta</th><th class="n">Margen</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="tbody"><tr><td colspan="7" class="vacio">Cargando…</td></tr></tbody>
+      </table></div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+const T = "__TOKEN__";
+const PREST = __PRESTACIONES__;
+const SOL   = __SOLICITUD__;
+const clp = n => '$' + Math.round(n || 0).toLocaleString('es-CL');
+const $ = id => document.getElementById(id);
+
+(function(){ // logo real apenas exista el archivo; mientras, el monograma
+  const i = new Image();
+  i.onload = () => { $('marcaTop').innerHTML = '<img src="/static/sitio/imagendent-logo.png" alt="Imagendent RX">'; };
+  i.src = '/static/sitio/imagendent-logo.png';
+})();
+
+// ── selector de prestación ────────────────────────────────────────────────
+$('prestacion').innerHTML = Object.entries(PREST).map(([k, p]) =>
+  `<option value="${k}">${p.nombre} — ${clp(p.costo)}</option>`).join('');
+
+function pintarSolicitud(){
+  const k = $('prestacion').value, p = PREST[k], campos = SOL[k] || [];
+  $('precioHint').innerHTML = p.venta
+    ? `Se descuenta ${clp(p.costo)} · se le cobra ${clp(p.venta)} · margen ${clp(p.venta - p.costo)}`
+    : `<span class="warn">Se descuenta ${clp(p.costo)} · <b>falta definir el precio de venta</b>: escríbalo abajo.</span>`;
+  $('venta').value = p.venta || '';
+  $('solcampos').innerHTML = campos.map(c => {
+    const req = c.req ? ' <span class="req">*</span>' : '';
+    const inp = c.opts
+      ? `<select data-sol="${c.id}"><option value="">— elegir —</option>` +
+        c.opts.map(o => `<option>${o}</option>`).join('') + '</select>'
+      : `<input data-sol="${c.id}" placeholder="${c.ph || ''}">`;
+    return `<div><label>${c.label}${req}</label>${inp}</div>`;
+  }).join('') || '<div class="hint">Esta prestación no necesita detalle.</div>';
+}
+$('prestacion').addEventListener('change', pintarSolicitud);
+pintarSolicitud();
+
+// ── autocompletar por RUT ─────────────────────────────────────────────────
+async function buscarRut(){
+  const rut = $('rut').value.trim(), m = $('rutmsg');
+  if (rut.replace(/\D/g, '').length < 7) return;
+  m.className = 'hint'; m.textContent = 'Buscando la ficha…';
+  try {
+    const r = await fetch('/api/vales/paciente?rut=' + encodeURIComponent(rut) + '&token=' + encodeURIComponent(T));
+    const d = await r.json();
+    if (d.nombre)   $('paciente').value = d.nombre;
+    if (d.telefono) $('telefono').value = d.telefono;
+    m.className = 'hint ' + (d.encontrado ? 'ok' : 'warn');
+    m.textContent = d.encontrado
+      ? 'Ficha encontrada' + (d.telefono ? ' · teléfono cargado' : ' · sin teléfono registrado')
+      : 'No está en Medilink. Escriba el nombre a mano.';
+  } catch(e) { m.className = 'hint warn'; m.textContent = 'No se pudo consultar la ficha.'; }
+}
+$('rut').addEventListener('blur', buscarRut);
+$('rut').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); buscarRut(); } });
+
+// ── emitir ────────────────────────────────────────────────────────────────
+$('bCrear').addEventListener('click', async () => {
+  const b = {};
+  ['paciente','rut','telefono','prestacion','profesional','indicado_por','venta','observaciones']
+    .forEach(k => b[k] = ($(k).value || '').trim());
+  b.solicitud = {};
+  document.querySelectorAll('[data-sol]').forEach(el => b.solicitud[el.dataset.sol] = (el.value || '').trim());
+  const m = $('msg'); m.className = 'msg'; m.textContent = 'Emitiendo…';
+  $('bCrear').disabled = true;
+  const r = await fetch('/api/vales?token=' + encodeURIComponent(T),
+    {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b)});
+  const d = await r.json().catch(() => ({}));
+  $('bCrear').disabled = false;
+  if (!r.ok){ m.className = 'msg err'; m.textContent = d.detail || 'No se pudo emitir'; return; }
+  m.textContent = '';
+  const url = location.origin + '/vale/' + d.folio;
+  $('listo').innerHTML =
+    `<div class="listo"><div class="h">Vale ${d.folio} emitido</div>
+     <div class="u mono">${url}</div>
+     <div class="acc">
+       <button class="btn wa" onclick="enviar('${d.folio}')">Enviar por WhatsApp</button>
+       <a class="btn sec" target="_blank" href="/vale/${d.folio}">Ver el vale</a>
+       <button class="btn sec" onclick="limpiar()">Emitir otro</button>
+     </div><div class="msg" id="envmsg"></div></div>`;
+  cargar();
+});
+
+function limpiar(){
+  ['rut','paciente','telefono','indicado_por','observaciones'].forEach(k => $(k).value = '');
+  document.querySelectorAll('[data-sol]').forEach(el => el.value = '');
+  $('listo').innerHTML = ''; $('rutmsg').className = 'hint';
+  $('rutmsg').textContent = 'Escríbalo y presione Enter: el resto se completa solo.';
+  $('rut').focus();
+}
+
+async function enviar(folio){
+  const m = $('envmsg') || $('msg');
+  m.className = 'msg'; m.textContent = 'Enviando por el WhatsApp del centro…';
+  const r = await fetch('/api/vales/' + folio + '/enviar?token=' + encodeURIComponent(T), {method:'POST'});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok){ m.className = 'msg err'; m.textContent = d.detail || 'No se pudo enviar'; return; }
+  if (d.enviado){ m.className = 'msg'; m.style.color = 'var(--ok)'; m.textContent = 'Enviado. Le llegó al paciente.'; }
+  else { m.className = 'msg err'; m.textContent = d.motivo; }
+}
+
+// ── lista ─────────────────────────────────────────────────────────────────
+async function cargar(){
+  const r = await fetch('/api/vales/lista?token=' + encodeURIComponent(T));
+  const d = await r.json();
+  const s = d.saldo;
+  $('vSaldo').textContent = clp(s.restante);
+  $('vCons').textContent  = clp(s.consumido);
+  $('vOro').textContent   = clp(s.oro);
+  $('vN').textContent     = d.vales.length;
+  const bajo = s.restante <= s.aviso_en;
+  $('kSaldo').className = 'kpi' + (bajo ? ' alerta' : '');
+  $('nSaldo').innerHTML = bajo
+    ? '<b style="color:var(--warn)">Hay que recargar el convenio</b>'
+    : 'de ' + clp(s.carga) + ' cargados';
+  $('tbody').innerHTML = d.vales.length ? d.vales.map(v => `
+    <tr>
+      <td><a class="mono" target="_blank" href="/vale/${v.folio}">${v.folio}</a></td>
+      <td>${v.paciente}<div style="font-size:11px;color:var(--gris)" class="mono">${v.rut}</div></td>
+      <td>${v.prestacion_nombre}${v.observaciones ? `<div style="font-size:11px;color:var(--gris)">${v.observaciones}</div>` : ''}</td>
+      <td class="n">${clp(v.costo)}</td>
+      <td class="n">${v.margen != null ? clp(v.margen) : '—'}</td>
+      <td><span class="pill p-${v.estado_real}">${v.estado_real}</span></td>
+      <td style="white-space:nowrap">
+        ${v.telefono ? `<button class="btn wa mini" onclick="enviar('${v.folio}')">WhatsApp</button> ` : ''}
+        <button class="btn sec mini" onclick="acc('${v.folio}','usar')">Usado</button>
+        <button class="btn sec mini" onclick="acc('${v.folio}','anular')">Anular</button>
+      </td>
+    </tr>`).join('')
+    : '<tr><td colspan="7" class="vacio">Todavía no se ha emitido ningún vale.</td></tr>';
+}
+async function acc(folio, a){
+  await fetch('/api/vales/' + folio + '/' + a + '?token=' + encodeURIComponent(T), {method:'POST'});
+  cargar();
+}
+cargar();
+</script>
+</body>
+</html>

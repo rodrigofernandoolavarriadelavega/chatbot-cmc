@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Convenios · Centro Médico Carampangue</title>
+<style>
+/* Manual de marca CMC tal como está en admin_v2: navy #0F3F68 · azul #1172AB ·
+   aqua #4FBECE · borde #e3ebf1 · sombras con tinte navy. Fuentes autoservidas. */
+@font-face{font-family:'Montserrat';src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations');
+           font-weight:400 800;font-display:swap}
+@font-face{font-family:'Plex Mono';src:url('/static/fonts/plexmono-500-latin.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Plex Mono';src:url('/static/fonts/plexmono-600-latin.woff2') format('woff2');font-weight:600;font-display:swap}
+:root{--navy:#0F3F68;--azul:#1172AB;--aqua:#4FBECE;--aqua-soft:#e5f5f8;--navy-soft:#d7e0ea;
+      --tinta:#12303f;--gris:#5a7182;--gris-2:#8aa2b2;--linea:#e3ebf1;--linea-2:#eef3f7;
+      --bg:#f3f6f9;--panel:#fff;--panel-2:#f7fafc;--ok:#1b7a55;--ok-soft:#e4f4ec;
+      --warn:#b58105;--warn-soft:#fff4d6;--mal:#c0392b;--mal-soft:#ffebee;
+      --sh-sm:0 1px 2px rgba(15,63,104,.05),0 1px 3px rgba(15,63,104,.04);
+      --sh-md:0 2px 6px rgba(15,63,104,.05),0 6px 18px rgba(15,63,104,.06);
+      --sh-lg:0 4px 12px rgba(15,63,104,.06),0 16px 36px rgba(15,63,104,.09)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);line-height:1.55;
+     font-family:Montserrat,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:'Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+a{color:var(--azul);text-decoration:none} a:hover{color:var(--navy)}
+:focus-visible{outline:2px solid var(--azul);outline-offset:2px;border-radius:4px}
+
+.top{background:var(--navy);color:#fff}
+.top .in{max-width:1120px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;gap:14px}
+.top .cruz{width:34px;height:34px;background:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
+.top .t{font-size:9px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:#8fb3ca}
+.top h1{margin:2px 0 0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.top .volver{margin-left:auto;font-size:12px;color:#a7c6da}
+.top .volver:hover{color:#fff}
+
+.wrap{max-width:1120px;margin:0 auto;padding:34px 24px 60px}
+.lede{max-width:62ch;color:var(--gris);font-size:14px;margin:0 0 28px}
+
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.conv{background:var(--panel);border:1px solid var(--linea);border-radius:14px;overflow:hidden;
+      box-shadow:var(--sh-sm);transition:box-shadow .16s,transform .16s;display:flex;flex-direction:column}
+.conv:hover{box-shadow:var(--sh-lg);transform:translateY(-2px)}
+.conv .cab{padding:22px 22px 18px;display:flex;gap:15px;align-items:center;border-bottom:1px solid var(--linea-2)}
+.marca{width:56px;height:56px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;
+       background:var(--navy);color:#fff;font-weight:800;font-size:19px;letter-spacing:-.02em;overflow:hidden}
+.marca img{width:100%;height:100%;object-fit:contain;background:#fff;padding:5px}
+.conv h2{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em}
+.conv .rubro{font-size:11.5px;color:var(--gris);margin-top:2px}
+.conv .cuerpo{padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;flex-grow:1}
+.conv p{margin:0;font-size:12.5px;color:var(--gris);line-height:1.6}
+.saldo{background:var(--aqua-soft);border:1px solid #bfe4ec;border-radius:10px;padding:13px 15px}
+.saldo .l{font-size:8.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--azul)}
+.saldo .v{font-size:24px;font-weight:600;color:var(--navy);margin-top:5px;letter-spacing:-.02em}
+.saldo .b{margin-top:9px;height:5px;background:#cfe6ed;border-radius:99px;overflow:hidden}
+.saldo .b i{display:block;height:100%;background:var(--azul);border-radius:99px}
+.saldo .n{font-size:10.5px;color:#3d6076;margin-top:7px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--azul);color:#fff;
+     border:0;border-radius:8px;padding:11px 18px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--navy);color:#fff}
+.btn.sec{background:transparent;color:var(--gris);border:1px solid var(--linea)}
+.btn.sec:hover{border-color:var(--azul);color:var(--azul);background:transparent}
+.conv .pie{margin-top:auto}
+.proximo{opacity:.55}
+.proximo .marca{background:var(--navy-soft);color:var(--gris)}
+.tag{display:inline-block;font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+     padding:3px 8px;border-radius:99px;background:var(--linea-2);color:var(--gris)}
+.aviso{margin-top:26px;background:var(--warn-soft);border:1px solid #f0dcb4;border-left:3px solid var(--warn);
+       border-radius:10px;padding:15px 18px;font-size:12.5px;color:#6b4e0a;line-height:1.6;max-width:70ch}
+.aviso b{color:#4a3606}
+@media(max-width:560px){.wrap{padding:26px 16px 48px}.top .in{padding:14px 16px}}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="in">
+  <div class="cruz">
+    <svg width="21" height="21" viewBox="0 0 40 40" aria-hidden="true">
+      <path d="M16 5h8v11h11v8H24v11h-8V24H5v-8h11z" fill="#1172AB"/></svg>
+  </div>
+  <div>
+    <div class="t">Centro Médico Carampangue</div>
+    <h1>Convenios</h1>
+  </div>
+  <a class="volver" href="/admin/v2?token=__TOKEN__">← Volver a recepción</a>
+</div></div>
+
+<div class="wrap">
+  <p class="lede">Acuerdos con prestadores externos donde el paciente compra en el Centro Médico
+  y se atiende afuera. Desde acá se emite el vale que el paciente muestra al llegar.</p>
+
+  <div class="grid">
+
+    <article class="conv">
+      <div class="cab">
+        <div class="marca" id="marcaImg">IR</div>
+        <div>
+          <h2>Imagendent RX</h2>
+          <div class="rubro">Radiología dental y maxilofacial · Caupolicán 0124, Arauco</div>
+        </div>
+      </div>
+      <div class="cuerpo">
+        <p>Radiografías, cone beam, escáner intraoral y laboratorio digital.
+        El paciente paga acá y allá no paga nada.</p>
+        <div class="saldo">
+          <div class="l">Saldo del convenio</div>
+          <div class="v mono" id="sRest">—</div>
+          <div class="b"><i id="sBar" style="width:0"></i></div>
+          <div class="n" id="sNota">cargando…</div>
+        </div>
+        <div class="pie">
+          <a class="btn" href="/recepcion/convenios/imagendent?token=__TOKEN__" style="width:100%">
+            Emitir un vale
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </a>
+        </div>
+      </div>
+    </article>
+
+    <article class="conv proximo">
+      <div class="cab">
+        <div class="marca">+</div>
+        <div>
+          <h2>Otro convenio</h2>
+          <div class="rubro"><span class="tag">Cuando exista</span></div>
+        </div>
+      </div>
+      <div class="cuerpo">
+        <p>Laboratorio, imagenología o cualquier prestador donde el paciente compre
+        en el Centro Médico. El módulo está armado para sumar más de uno.</p>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="aviso" id="avisoEscrito">
+    <b>Antes de mandar un paciente:</b> el vale digital solo sirve si Imagendent lo acepta
+    y sabe quién lo valida en el mostrador. Si eso todavía no está confirmado por escrito,
+    el paciente puede llegar y que le cobren precio público.
+  </div>
+</div>
+
+<script>
+const T = "__TOKEN__";
+// El logo de Imagendent se muestra apenas exista el archivo; mientras tanto va el
+// monograma, que es honesto: mejor un marcador que una imitación del logo real.
+(function(){
+  const img = new Image();
+  img.onload = () => { document.getElementById('marcaImg').innerHTML =
+    '<img src="/static/sitio/imagendent-logo.png" alt="Imagendent RX">'; };
+  img.src = '/static/sitio/imagendent-logo.png';
+})();
+
+const clp = n => '$' + Math.round(n || 0).toLocaleString('es-CL');
+fetch('/api/vales/lista?token=' + encodeURIComponent(T))
+  .then(r => r.json())
+  .then(d => {
+    const s = d.saldo;
+    document.getElementById('sRest').textContent = clp(s.restante);
+    const pct = Math.max(0, Math.min(100, 100 * s.restante / s.carga));
+    document.getElementById('sBar').style.width = pct + '%';
+    const bajo = s.restante <= s.aviso_en;
+    document.getElementById('sNota').innerHTML = bajo
+      ? '<b style="color:#b58105">Hay que recargar:</b> quedan menos de ' + clp(s.aviso_en) + '.'
+      : 'De ' + clp(s.carga) + ' cargados · ' + d.vales.length + ' vales emitidos';
+  })
+  .catch(() => { document.getElementById('sNota').textContent = 'No se pudo leer el saldo.'; });
+</script>
+</body>
+</html>
