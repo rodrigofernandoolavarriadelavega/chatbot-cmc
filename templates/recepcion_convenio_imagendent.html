@@ -80,11 +80,13 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .msg.err{color:var(--mal)}
 
 .tabla{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:720px;table-layout:fixed}
-col.c-folio{width:96px} col.c-pac{width:22%} col.c-prest{width:auto}
-col.c-desc{width:92px} col.c-marg{width:88px} col.c-est{width:88px} col.c-acc{width:170px}
-td.folio{white-space:nowrap}
-.obs1{font-size:11px;color:var(--gris);margin-top:3px;
+/* layout AUTOMATICO: con table-layout:fixed los anchos sumaban mas que el
+   contenedor (la tabla vive en una columna de grid) y los encabezados se
+   encimaban. Auto + min-width + scroll horizontal es lo que aguanta. */
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px}
+td.folio,td.n,td.acc,th.n{white-space:nowrap}
+td.prest{min-width:200px}
+.obs1{font-size:11px;color:var(--gris);margin-top:3px;max-width:320px;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 th,td{padding:11px 14px;border-bottom:1px solid var(--linea-2);text-align:left;vertical-align:top}
 th{font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gris-2);
@@ -171,8 +173,6 @@ tbody tr:hover{background:var(--panel-2)}
     <section class="card">
       <h2>Vales emitidos</h2>
       <div class="tabla"><table>
-        <colgroup><col class="c-folio"><col class="c-pac"><col class="c-prest">
-          <col class="c-desc"><col class="c-marg"><col class="c-est"><col class="c-acc"></colgroup>
         <thead><tr><th>Folio</th><th>Paciente</th><th>Prestación</th>
           <th class="n">Descuenta</th><th class="n">Margen</th><th>Estado</th><th></th></tr></thead>
         <tbody id="tbody"><tr><td colspan="7" class="vacio">Cargando…</td></tr></tbody>
@@ -299,12 +299,12 @@ async function cargar(){
     <tr>
       <td class="folio"><a class="mono" target="_blank" href="/vale/${v.folio}">${v.folio}</a></td>
       <td>${v.paciente}<div style="font-size:11px;color:var(--gris)" class="mono">${v.rut}</div></td>
-      <td>${v.prestacion_nombre}${v.observaciones
+      <td class="prest">${v.prestacion_nombre}${v.observaciones
           ? `<div class="obs1" title="${(v.observaciones||'').replace(/"/g,'&quot;')}">${v.observaciones}</div>` : ''}</td>
       <td class="n">${clp(v.costo)}</td>
       <td class="n">${v.margen != null ? clp(v.margen) : '—'}</td>
       <td><span class="pill p-${v.estado_real}">${v.estado_real}</span></td>
-      <td style="white-space:nowrap">
+      <td class="acc">
         ${v.telefono ? `<button class="btn wa mini" onclick="enviar('${v.folio}')">WhatsApp</button> ` : ''}
         <button class="btn sec mini" onclick="acc('${v.folio}','usar')">Usado</button>
         <button class="btn sec mini" onclick="acc('${v.folio}','anular')">Anular</button>
