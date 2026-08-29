@@ -88,23 +88,35 @@ async def escribir(filas, limite: int):
     from config import MEDILINK_BASE_URL
     from medilink import HEADERS
 
+    # Medilink tira 429 "Too Many Attempts" con rafagas cortas: la primera
+    # corrida escribio 102 de 225 y el resto reboto. Pausa base amplia +
+    # backoff exponencial. Reescribir un valor ya puesto es inocuo (idempotente).
     ok = err = 0
-    async with httpx.AsyncClient(timeout=15) as c:
+    pendientes = []
+    async with httpx.AsyncClient(timeout=20) as c:
         for i, f in enumerate(filas[:limite], 1):
-            try:
-                r = await c.put(f"{MEDILINK_BASE_URL}/pacientes/{f['id']}",
-                                json={"comuna": f["comuna"]}, headers=HEADERS)
-                if r.status_code in (200, 201):
-                    ok += 1
-                else:
-                    err += 1
-                    print("   ! %s -> %s %s" % (f["id"], r.status_code, r.text[:80]))
-            except Exception as e:                                   # noqa: BLE001
-                err += 1
-                print("   ! %s -> %s" % (f["id"], e))
-            if i % 20 == 0:
-                print("   … %d/%d" % (i, min(len(filas), limite)))
-            await asyncio.sleep(0.35)
+            escrito = False
+            for intento in range(4):
+                try:
+                    r = await c.put(f"{MEDILINK_BASE_URL}/pacientes/{f['id']}",
+                                    json={"comuna": f["comuna"]}, headers=HEADERS)
+                    if r.status_code in (200, 201):
+                        ok += 1; escrito = True; break
+                    if r.status_code == 429:
+                        await asyncio.sleep(3 * (2 ** intento))     # 3·6·12·24 s
+                        continue
+                    print("   ! %s -> %s %s" % (f["id"], r.status_code, r.text[:70]))
+                    break
+                except Exception as e:                               # noqa: BLE001
+                    print("   ! %s -> %s" % (f["id"], e))
+                    await asyncio.sleep(3)
+            if not escrito:
+                err += 1; pendientes.append(f["id"])
+            if i % 25 == 0:
+                print("   … %d/%d (ok=%d)" % (i, min(len(filas), limite), ok))
+            await asyncio.sleep(1.1)
+    if pendientes:
+        print("   pendientes tras reintentos: %s" % pendientes[:20])
     return ok, err
 
 
