@@ -456,10 +456,10 @@ details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width
 
 <header class="portada" id="top">
   <div class="env">
-    <span class="chip-vivo"><span class="punto" aria-hidden="true"></span> Inauguración sábado 29 de agosto · Carampangue</span>
+    <span class="chip-vivo"><span class="punto" aria-hidden="true"></span> Viernes, sábado y domingo · Carampangue</span>
     <h1 class="h-xl">El patio<br>del pueblo,<br><em>fin de semana<br>a fin de semana.</em></h1>
     <p class="bajada">Un terreno de 983 m² en República con Conquista que los sábados y domingos se transforma:
-      comida de verdad, feria de vecinos que emprenden, juegos para los niños con la reja cerrada, y música cuando cae la tarde.
+      comida de verdad, feria de vecinos que emprenden, juegos para los niños con la reja cerrada, y un panorama distinto cada viernes, sábado y domingo.
       Entrada liberada. Se arma el viernes, se desarma el domingo.</p>
     <div class="acciones">
       <a class="btn btn-ember" href="/patio/app/">Abrir la app del patio</a>
@@ -821,7 +821,7 @@ details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width
       </div>
       <div class="tarj rev">
         <h4><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Cuándo</h4>
-        <p>Sábados y domingos, de <span class="todo">12:00</span> a <span class="todo">21:00</span>.
+        <p>Viernes de <span class="todo">17:00</span> a <span class="todo">22:00</span>; sábados y domingos desde <span class="todo">12:00</span>.
           El horario definitivo queda fijado por el permiso municipal.</p>
       </div>
       <div class="tarj rev">
@@ -922,6 +922,11 @@ var CIERRE_TEMPORADA = new Date(2027, 2, 31); // hasta donde se genera la base
 /* Programacion base por dia de la semana (6 = sabado, 0 = domingo).
    Si el patio pasa a abrir tambien los viernes, se agrega la clave 5. */
 var BASE = {
+  5: [
+    {m:"sabores", h:"17:00", f:"22:00", t:"Abre el patio", d:"Viernes de tarde-noche: carros de comida, mesas y luz cálida.", v:"Entrada liberada"},
+    {m:"mercado", h:"17:00", f:"21:30", t:"Feria de emprendedores", d:"Los mismos puestos, con horario de after office rural.", v:"Puesto $12.000"},
+    {m:"kids",    h:"17:00", f:"21:00", t:"Juegos abiertos", d:"Castillo inflable, cama elástica y plaza blanda.", v:"Ficha por niño"}
+  ],
   6: [
     {m:"sabores", h:"12:00", f:"21:00", t:"Abre el patio", d:"Tres carros de comida, mesas, sombra y música de fondo. Entrada liberada.", v:"Entrada liberada"},
     {m:"mercado", h:"12:00", f:"20:00", t:"Feria de emprendedores", d:"Entre 6 y 10 puestos de vecinos, distintos cada fin de semana.", v:"Puesto $12.000"},
@@ -945,6 +950,7 @@ var SALUDABLE = {m:"salud", h:"11:00", f:"14:00", t:"Patio Saludable",
    mientras no exista permiso: se pintan en ambar y lo dicen en el titulo. */
 var ESPECIALES = [
   {fecha:"2026-08-29", m:"vivo",    h:"12:00", f:"22:00", t:"Inauguración del Patio", d:"Los tres carros, la feria completa, juegos y música toda la tarde.", v:"Entrada liberada", pc:true},
+  {fecha:"2026-08-30", m:"vivo",    h:"17:00", f:"19:30", t:"Cine al aire libre", d:"Película familiar en pantalla grande al caer la tarde del domingo. Traiga su manta.", v:"Entrada liberada", pc:true},
   {fecha:"2026-08-29", m:"vivo",    h:"20:00", f:"22:00", t:"Paulo Londra en vivo", d:"El cordobés que llevó el trap en español al mundo abre el patio: «Adán y Eva», «Tal vez», «Nena Maldición».", v:"Entrada liberada", pc:true},
   {fecha:"2026-09-05", m:"sabores", h:"12:00", f:"21:00", t:"Primer fin de semana normal", d:"El patio ya en régimen: tres carros, feria, juegos y música desde la tarde.", v:"Entrada liberada", pc:true},
   {fecha:"2026-09-19", m:"vivo",    h:"12:00", f:"21:00", t:"Fin de semana dieciochero", d:"Cueca, empanadas y juegos típicos en el patio abierto.", v:"Entrada liberada", pc:true},
