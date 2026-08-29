@@ -757,6 +757,7 @@ def _run_ddl_inline(conn) -> None:
     # Migración: campos del perfil editable (actualizar datos desde portal)
     for col, typ in [
         ("email", "TEXT"), ("comuna", "TEXT"), ("direccion", "TEXT"),
+        ("sector", "TEXT"),          # localidad dentro de la comuna (Laraquete, Carampangue…)
         ("sexo", "TEXT"), ("prevision", "TEXT"),
         ("contacto_emerg_nombre", "TEXT"), ("contacto_emerg_telefono", "TEXT"),
     ]:
@@ -1601,6 +1602,28 @@ def save_profile(phone: str, rut: str, nombre: str, fecha_nacimiento: str = None
                 ON CONFLICT(phone) DO UPDATE SET
                     rut=excluded.rut, nombre=excluded.nombre, updated_at=excluded.updated_at
             """, (phone, rut, nombre))
+        conn.commit()
+
+
+def save_ubicacion(phone: str, comuna: str | None, sector: str | None = None) -> None:
+    """Persiste comuna y sector normalizados del paciente.
+
+    `contact_profiles.comuna` existia desde hace meses pero **nadie la escribia**
+    (save_profile solo guarda rut/nombre/fecha), por eso estaba vacia en las
+    2.131 filas. Sin esto, el unico lugar con la ubicacion era Medilink, donde
+    el campo cae por defecto en "ARAUCO". Ver `app/localidades_arauco.py`.
+    """
+    if not comuna and not sector:
+        return
+    with db() as conn:
+        conn.execute("""
+            INSERT INTO contact_profiles (phone, comuna, sector, updated_at)
+            VALUES (?, ?, ?, datetime('now'))
+            ON CONFLICT(phone) DO UPDATE SET
+                comuna=COALESCE(excluded.comuna, contact_profiles.comuna),
+                sector=COALESCE(excluded.sector, contact_profiles.sector),
+                updated_at=excluded.updated_at
+        """, (phone, comuna, sector))
         conn.commit()
 
 

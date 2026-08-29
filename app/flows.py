@@ -12839,14 +12839,47 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 ]
             )
         save_session(phone, "WAIT_COMUNA", data)
-        return "🏘️ *¿De qué comuna eres?*\n(ej: *Arauco*, *Curanilahue*, *Cañete*. O escribe *saltar*)"
+        return ("🏘️ *¿De qué comuna o localidad eres?*\n"
+                "(ej: *Arauco*, *Carampangue*, *Laraquete*, *Curanilahue*, "
+                "*Los Álamos*. O escribe *saltar*)")
 
     # ── WAIT_COMUNA ────────────────────────────────────────────────────────
     if state == "WAIT_COMUNA":
         if tl in ("saltar", "no", "skip", "paso", "no tengo"):
             log_event(phone, "registro_skip", {"step": "comuna"})
         else:
-            data["reg_comuna"] = txt.strip().title()
+            # El paciente suele responder con su LOCALIDAD ("Laraquete",
+            # "Carampangue"), no con la comuna. Guardar eso crudo es como se
+            # ensucio la data historica. Se normaliza contra el diccionario de
+            # la provincia: a Medilink va la COMUNA canonica y el sector queda
+            # aparte, en contact_profiles. Ver app/localidades_arauco.py.
+            # OJO: flows.py importa a sus hermanos DESNUDOS ("from session
+            # import ..."), no con prefijo "app.". Un import con prefijo aca
+            # revienta en prod y, envuelto en try/except, la normalizacion
+            # dejaria de hacer nada EN SILENCIO.
+            crudo = txt.strip()
+            try:
+                from localidades_arauco import resolver as _resolver_loc
+                _u = _resolver_loc(crudo, crudo)
+            except Exception as _e_loc:
+                log.warning("comuna: diccionario de localidades no disponible: %s", _e_loc)
+                _u = {"comuna": None, "sector": None, "confianza": None}
+            if _u.get("comuna") and _u["comuna"] != "Fuera de la provincia":
+                data["reg_comuna"] = _u["comuna"]
+                if _u.get("sector"):
+                    data["reg_sector"] = _u["sector"]
+                if _u["comuna"].lower() != crudo.lower():
+                    log_event(phone, "comuna_normalizada", {
+                        "crudo": crudo[:60], "comuna": _u["comuna"],
+                        "sector": _u.get("sector"), "confianza": _u.get("confianza"),
+                    })
+            else:
+                data["reg_comuna"] = crudo.title()
+            try:
+                from session import save_ubicacion
+                save_ubicacion(phone, data.get("reg_comuna"), data.get("reg_sector"))
+            except Exception as _e_ub:
+                log.warning("comuna: no se pudo persistir la ubicacion: %s", _e_ub)
         save_session(phone, "WAIT_EMAIL", data)
         return "📧 *¿Cuál es tu correo electrónico?*\n(ej: *maria@gmail.com*. O escribe *saltar*)"
 
