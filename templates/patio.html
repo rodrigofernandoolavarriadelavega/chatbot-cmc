@@ -265,12 +265,89 @@ section{padding:clamp(56px,8vw,96px) 0}
 .zona .glifo svg{width:26px; height:26px; stroke:var(--c); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 .zona h3{font-family:var(--display); font-weight:800; font-size:1.28rem; letter-spacing:-.025em; margin:0 0 8px}
 .zona p{margin:0; color:var(--tinta-3); font-size:.97rem}
-.zona .pie{margin-top:16px; padding-top:14px; border-top:1px dashed var(--linea); font-size:.85rem; font-weight:700; color:var(--c); display:flex; align-items:center; gap:8px}
+.zona .zpie{margin-top:16px; padding-top:14px; border-top:1px dashed var(--linea); font-size:.85rem; font-weight:700; color:var(--c); display:flex; align-items:center; gap:8px}
 .z-sabores{--c:var(--ember); --cs:var(--ember-soft)}
 .z-kids   {--c:#C77C00;      --cs:var(--sun-soft)}
 .z-mercado{--c:var(--bosque);--cs:var(--bosque-soft)}
 .z-vivo   {--c:var(--uva);   --cs:var(--uva-soft)}
 .z-salud  {--c:var(--cmc);   --cs:var(--cmc-soft)}
+
+
+/* ═══ Patrones del manual ═══════════════════════════════════════════════ */
+.guirnalda{position:relative;height:30px;margin-bottom:-8px;overflow:hidden;z-index:3}
+.guirnalda::before{content:"";position:absolute;left:-4%;right:-4%;top:0;height:18px;
+  border-bottom:3px solid rgba(255,255,255,.5);border-radius:0 0 50% 50%/0 0 100% 100%}
+.guirnalda i{position:absolute;top:13px;width:11px;height:15px;border-radius:0 0 50% 50%/0 0 62% 62%;
+  background:var(--c);box-shadow:0 0 12px 2px color-mix(in srgb, var(--c) 60%, transparent);
+  animation:ampolleta 3.4s ease-in-out infinite alternate}
+@keyframes ampolleta{from{opacity:.55}to{opacity:1}}
+.banderines{display:flex;height:18px;overflow:hidden}
+.banderines i{flex:1;background:var(--c);clip-path:polygon(0 0,100% 0,50% 100%)}
+.toldo{height:14px;background:repeating-linear-gradient(90deg,var(--ember) 0 22px,#fff 22px 44px);
+  border-radius:0 0 4px 4px}
+
+/* ═══ Cartel del evento ═════════════════════════════════════════════════ */
+.cartel{position:relative;overflow:hidden;border-radius:var(--r-xl);margin:0 0 26px;
+  background:linear-gradient(150deg,#1B1D22 0%,#03271E 55%,#3A1A12 100%);color:#fff;
+  box-shadow:var(--sombra-lg)}
+.cartel-luz{position:absolute;left:50%;top:-130px;width:min(460px,124%);height:320px;
+  transform:translateX(-50%);pointer-events:none;
+  background:radial-gradient(circle,rgba(253,181,21,.42),transparent 66%);
+  animation:respira 6s ease-in-out infinite alternate}
+@keyframes respira{from{opacity:.7;transform:translateX(-50%) scale(1)}to{opacity:1;transform:translateX(-50%) scale(1.14)}}
+.cartel-in{position:relative;z-index:1;padding:clamp(24px,4vw,38px)}
+.cartel-tag{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.16em;
+  text-transform:uppercase;padding:7px 14px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.26);color:var(--sun)}
+.cartel-fecha{font-family:var(--display);font-size:1rem;font-weight:700;color:var(--sun);margin:18px 0 0}
+.cartel-nombre{font-family:var(--display);font-weight:700;line-height:.98;letter-spacing:0;
+  font-size:clamp(2.6rem,10vw,5rem);margin:6px 0 0;overflow-wrap:anywhere;
+  background:linear-gradient(180deg,#fff 34%,var(--sun));-webkit-background-clip:text;background-clip:text;
+  color:transparent;text-shadow:0 16px 44px rgba(253,181,21,.22)}
+.cartel-bajada{font-size:1.06rem;font-weight:600;color:rgba(255,255,255,.9);margin-top:14px;max-width:46ch}
+.cartel-detalle{font-size:.94rem;color:rgba(255,255,255,.66);margin-top:10px;max-width:62ch}
+.cartel-pie{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:22px;padding-top:18px;
+  border-top:1px solid rgba(255,255,255,.14)}
+.cartel-valor{font-family:var(--display);font-weight:700;font-size:.9rem;background:var(--sun);
+  color:var(--tinta);padding:9px 17px;border-radius:var(--r-pill)}
+.cartel-lugar{font-size:.8rem;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+
+/* ═══ Los carros ════════════════════════════════════════════════════════ */
+.carros{display:grid;gap:18px;grid-template-columns:1fr}
+@media (min-width:820px){.carros{grid-template-columns:repeat(3,1fr)}}
+.carro{background:var(--blanco);border:1px solid var(--linea);border-radius:var(--r-lg);
+  overflow:hidden;box-shadow:var(--sombra-sm);transition:transform .24s var(--ease),box-shadow .24s}
+.carro:hover{transform:translateY(-5px);box-shadow:var(--sombra)}
+.carro-cab{background:var(--cs);padding:22px 20px 18px;text-align:center;position:relative}
+.carro-cab::after{content:"";position:absolute;left:0;right:0;bottom:0;height:12px;
+  background:repeating-linear-gradient(90deg,var(--c) 0 18px,#fff 18px 36px);opacity:.85}
+.carro-cab img{width:96px;height:96px;border-radius:50%;object-fit:contain;margin:0 auto 12px;display:block;
+  box-shadow:0 8px 20px -8px rgba(0,0,0,.28)}
+.carro-cab h3{font-family:var(--display);font-weight:700;font-size:1.12rem;margin:0}
+.carro-cab p{margin:5px 0 0;font-size:.85rem;color:var(--tinta-3)}
+.carro-carta{list-style:none;margin:0;padding:16px 20px 20px}
+.carro-carta li{display:flex;gap:12px;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--linea)}
+.carro-carta li:last-child{border-bottom:0}
+.carro-carta b{font-weight:700;font-size:.93rem;flex:1;min-width:0}
+.carro-carta span{font-family:var(--display);font-weight:700;color:var(--c);white-space:nowrap}
+.carro-cod{display:block;text-align:center;font-family:var(--display);font-weight:700;letter-spacing:.16em;
+  background:var(--c);color:#fff;padding:9px;font-size:.85rem}
+.carros-cargando{color:var(--tinta-4);font-size:.92rem;text-align:center;padding:24px}
+
+/* ═══ Más peso visual ═══════════════════════════════════════════════════ */
+.portada{padding-top:clamp(30px,5vw,60px)}
+.zona{border-width:1.5px}
+.zona .glifo{box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent)}
+.cifra b{font-family:var(--font-display,var(--display))}
+.sec-oscura{position:relative;overflow:hidden}
+.sec-oscura::before{content:"";position:absolute;right:-140px;top:-160px;width:420px;height:420px;
+  background:radial-gradient(circle,rgba(253,181,21,.16),transparent 64%);pointer-events:none}
+/* CTA fija en el teléfono: la acción principal no puede quedar a 8.000 px de scroll */
+.cta-fija{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;
+  display:flex;gap:8px;opacity:0;transform:translateY(90px);transition:.35s var(--ease);pointer-events:none}
+.cta-fija.ver{opacity:1;transform:none;pointer-events:auto}
+.cta-fija .btn{flex:1;box-shadow:var(--sombra-lg)}
+@media (min-width:900px){.cta-fija{display:none}}
 
 /* ---- Recuadro TODO ---------------------------------------------------- */
 .todo{
@@ -438,13 +515,13 @@ details.faq[open] summary::after{transform:rotate(-135deg); margin-top:-2px}
 details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width:72ch}
 
 /* ---- Pie -------------------------------------------------------------- */
-.pie{background:var(--tinta); color:rgba(255,255,255,.72); padding:clamp(46px,7vw,72px) 0 30px; font-size:.92rem}
-.pie a{color:#fff; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.3)}
-.pie-gr{display:grid; gap:28px; grid-template-columns:1fr}
-@media (min-width:800px){.pie-gr{grid-template-columns:1.4fr 1fr 1fr}}
-.pie h5{font-family:var(--display); font-weight:800; font-size:.76rem; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.45); margin:0 0 12px}
-.pie ul{list-style:none; margin:0; padding:0; display:grid; gap:8px}
-.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(255,255,255,.14); font-size:.82rem; color:rgba(255,255,255,.5); display:grid; gap:8px}
+footer.pie{background:var(--tinta); color:rgba(255,255,255,.72); padding:clamp(46px,7vw,72px) 0 30px; font-size:.92rem}
+footer.pie a{color:#fff; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.3)}
+footer.pie .pie-gr{display:grid; gap:28px; grid-template-columns:1fr}
+@media (min-width:800px){footer.pie .pie-gr{grid-template-columns:1.4fr 1fr 1fr}}
+footer.pie h5{font-family:var(--display); font-weight:800; font-size:.76rem; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.45); margin:0 0 12px}
+footer.pie ul{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+footer.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(255,255,255,.14); font-size:.82rem; color:rgba(255,255,255,.5); display:grid; gap:8px}
 
 /* ---- Aparecer + accesibilidad ---------------------------------------- */
 .rev{opacity:0; transform:translateY(22px); transition:opacity .7s cubic-bezier(.2,.8,.3,1), transform .7s cubic-bezier(.2,.8,.3,1)}
@@ -532,43 +609,74 @@ details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width
         <div class="glifo"><svg viewBox="0 0 24 24"><path d="M4 9h16M6 9V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M5 9l1 9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-9"/></svg></div>
         <h3>Patio Sabores</h3>
         <p>Tres carros de comida por fin de semana, rotando. Nada de cadenas: cocina de la zona, con resolución sanitaria a la vista.</p>
-        <div class="pie">3 cupos por fin de semana</div>
+        <div class="zpie">3 cupos por fin de semana</div>
       </article>
 
       <article class="zona z-kids rev">
         <div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 3v4M5 21V11l7-4 7 4v10M9 21v-5h6v5"/></svg></div>
         <h3>Patio Kids</h3>
         <p>293,6 m² cercados con <b>un solo acceso</b> y barrera continua hacia la calle: ningún niño sale directo a los autos. Castillo inflable, cama elástica y plaza blanda.</p>
-        <div class="pie">Ficha <span class="todo">$4.000</span> por niño</div>
+        <div class="zpie">Ficha <span class="todo">$4.000</span> por niño</div>
       </article>
 
       <article class="zona z-mercado rev">
         <div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 9h18l-1.5-4.5A2 2 0 0 0 17.6 3H6.4a2 2 0 0 0-1.9 1.5L3 9zM5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/></svg></div>
         <h3>Patio Mercado</h3>
         <p>Feria rotativa de 6 a 10 emprendedores de Carampangue y alrededores. Distinta cada fin de semana, para que el que vino el sábado pasado encuentre algo nuevo.</p>
-        <div class="pie">Puesto desde $12.000</div>
+        <div class="zpie">Puesto desde $12.000</div>
       </article>
 
       <article class="zona z-vivo rev">
         <div class="glifo"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM19 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg></div>
         <h3>Patio Vivo</h3>
         <p>Escenario chico para lo que hay de verdad en la zona: cueca, cumbia, folclor escolar, bandas jóvenes. Se toca temprano y se apaga a la hora que dice el permiso.</p>
-        <div class="pie">Convocatoria abierta a músicos</div>
+        <div class="zpie">Convocatoria abierta a músicos</div>
       </article>
 
       <article class="zona z-salud rev">
         <div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 12h4l2 5 4-12 2 7h6"/></svg></div>
         <h3>Patio Saludable</h3>
         <p>Una vez al mes el Centro Médico Carampangue baja al patio: control de presión, peso y talla, consejería y orientación de horas. Sin costo, sin fila médica.</p>
-        <div class="pie">Con el Centro Médico Carampangue</div>
+        <div class="zpie">Con el Centro Médico Carampangue</div>
       </article>
 
       <article class="zona rev" style="--c:var(--tinta);--cs:var(--arena-2)">
         <div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.2-7-10a7 7 0 1 1 14 0c0 4.8-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg></div>
         <h3>Y el patio mismo</h3>
         <p>Sombra, mesas, baños, luz cálida y música de fondo. Se puede llegar solo a sentarse: no hay que consumir para estar.</p>
-        <div class="pie">Entrada siempre liberada</div>
+        <div class="zpie">Entrada siempre liberada</div>
       </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EVENTO Y CARROS ================= -->
+<section class="sec-clara" id="apertura">
+  <div class="env">
+    <article class="cartel rev">
+      <div class="cartel-luz" aria-hidden="true"></div>
+      <div class="cartel-in">
+        <span class="cartel-tag">Por confirmar · Inauguración del patio</span>
+        <p class="cartel-fecha">Sábado 29 de agosto · 20:00 hrs</p>
+        <h2 class="cartel-nombre">Paulo Londra</h2>
+        <p class="cartel-bajada">El cordobés que llevó el trap en español al mundo abre el Patio Carampangue.</p>
+        <p class="cartel-detalle">«Adán y Eva», «Tal vez» y «Nena Maldición» son himnos de una generación entera.
+          Viene de su EP «Versus» y del single «Ramen Para Dos» con María Becerra.</p>
+        <div class="cartel-pie">
+          <span class="cartel-valor">Entrada liberada</span>
+          <span class="cartel-lugar">Escenario · Patio Vivo</span>
+        </div>
+      </div>
+    </article>
+
+    <div class="cab rev" style="margin-top:clamp(40px,6vw,64px)">
+      <p class="sobre">Qué se come</p>
+      <h2 class="h-l">Tres carros, tres cartas.</h2>
+      <p class="bajada">Los precios son los del fin de semana. En cada cartel hay un código de cuatro letras:
+        escríbelo en la app y se te estampa el sello del pasaporte.</p>
+    </div>
+    <div class="carros rev" id="carros">
+      <p class="carros-cargando">Cargando las cartas…</p>
     </div>
   </div>
 </section>
@@ -920,6 +1028,10 @@ details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width
     </div>
   </div>
 </footer>
+
+<div class="cta-fija" id="ctaFija">
+  <a class="btn btn-ember" href="/patio/app/">Abrir la app del patio</a>
+</div>
 
 <script>
 (function(){
@@ -1366,6 +1478,38 @@ Array.prototype.forEach.call(document.querySelectorAll("[data-contar]"), functio
 });
 
 document.getElementById("anio").textContent = new Date().getFullYear();
+
+/* ── Las cartas de los carros: se piden a la app, no se copian acá.
+      Si la app no responde, la sección se ESCONDE: mostrar "cargando" para
+      siempre es peor que no mostrar nada. ── */
+(function carros(){
+  var caja = document.getElementById("carros");
+  if (!caja) return;
+  fetch("/patio/app/api/carros", {headers:{"Accept":"application/json"}})
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(cs){
+      caja.innerHTML = cs.map(function(c){
+        var filas = c.carta.map(function(i){
+          return '<li><b>'+i.item+'</b><span>$'+i.precio.toLocaleString("es-CL")+'</span></li>';
+        }).join("");
+        return '<article class="carro" style="--c:'+c.color+';--cs:'+c.color+'14">'+
+          '<div class="carro-cab"><img src="/patio/app/static/carros/'+c.img+'" alt="Logo de '+c.nombre+'" loading="lazy">'+
+          '<h3>'+c.nombre+'</h3><p>'+c.lema+'</p></div>'+
+          '<ul class="carro-carta">'+filas+'</ul>'+
+          '<span class="carro-cod">'+c.codigo+'</span></article>';
+      }).join("");
+    })
+    .catch(function(){ var s = document.getElementById("apertura"); if (s) caja.closest(".carros").innerHTML =
+      '<p class="carros-cargando">Las cartas se ven en la app del patio.</p>'; });
+})();
+
+/* La acción principal, siempre a mano en el teléfono. */
+(function ctaFija(){
+  var cta = document.getElementById("ctaFija"), portada = document.querySelector(".portada");
+  if (!cta || !portada || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver(function(e){ cta.classList.toggle("ver", !e[0].isIntersecting); },
+    {threshold:0}).observe(portada);
+})();
 })();
 </script>
 
