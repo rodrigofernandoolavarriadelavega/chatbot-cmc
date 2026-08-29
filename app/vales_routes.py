@@ -31,14 +31,14 @@ DISENO
 from __future__ import annotations
 
 import hmac
-import json
+import json as _json
 import secrets
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from config import ADMIN_TOKEN, OLACORE_TOKEN
+from config import ADMIN_TOKEN, OLACORE_TOKEN, CMC_TELEFONO_FIJO
 from session import db, log_event
 
 router = APIRouter()
@@ -65,6 +65,49 @@ PRESTACIONES: dict[str, dict] = {
                           "costo": 30000, "venta": 45000, "bolsa": "oro"},
 }
 VIGENCIA_DIAS = 60
+
+# ── Qué hay que pedirle a recepción SEGÚN la prestación ─────────────────────
+# La solicitud no es un texto libre igual para todo: un cone beam necesita pieza
+# y finalidad, un escaneo necesita ademas para que trabajo de laboratorio es
+# (el anexo lo EXIGE en su punto CUARTO), y una panoramica no necesita nada.
+# Sin esto Imagendent no sabe que registrar y el vale no cumple el convenio.
+_FIN_CBCT = ["Implante", "Tercer molar incluido", "Endodoncia / conducto",
+             "Patología o quiste", "Seno maxilar / ORL", "ATM", "Ortodoncia", "Otro"]
+_FIN_ESCANEO = ["Corona", "Incrustación", "Carilla", "Puente", "Prótesis removible",
+                "Placa de bruxismo", "Ortodoncia / alineadores", "Modelo de estudio"]
+
+SOLICITUD: dict[str, list[dict]] = {
+    "periapical":       [{"id": "piezas", "label": "Pieza o piezas", "req": True,
+                          "ph": "ej: 2.6"}],
+    "periapical_ant":   [{"id": "piezas", "label": "Piezas del sector anterior", "req": False,
+                          "ph": "ej: 1.1 a 2.2"}],
+    "periapical_total": [{"id": "motivo", "label": "Motivo", "req": False,
+                          "ph": "ej: evaluación periodontal completa"}],
+    "cbct_unitario":    [{"id": "piezas", "label": "Pieza o sector", "req": True,
+                          "ph": "ej: 4.6 / maxilar derecho"},
+                         {"id": "finalidad", "label": "Finalidad", "req": True,
+                          "opts": _FIN_CBCT}],
+    "cbct_bimaxilar":   [{"id": "finalidad", "label": "Finalidad", "req": True,
+                          "opts": _FIN_CBCT},
+                         {"id": "piezas", "label": "Zonas de interés", "req": False,
+                          "ph": "ej: ambos maxilares, foco en 3.8 y 4.8"}],
+    "escaneo_1":        [{"id": "piezas", "label": "Pieza o piezas", "req": True,
+                          "ph": "ej: 2.6"},
+                         {"id": "finalidad", "label": "Para qué trabajo", "req": True,
+                          "opts": _FIN_ESCANEO},
+                         {"id": "maxilar", "label": "Maxilar a escanear", "req": True,
+                          "opts": ["Superior", "Inferior"]}],
+    "escaneo_2":        [{"id": "piezas", "label": "Pieza de trabajo", "req": True,
+                          "ph": "ej: 3.6"},
+                         {"id": "finalidad", "label": "Para qué trabajo", "req": True,
+                          "opts": _FIN_ESCANEO},
+                         {"id": "nota", "label": "Por qué se necesita el antagonista", "req": False,
+                          "ph": "ej: requiere relación oclusal"}],
+    "panoramica":       [{"id": "motivo", "label": "Motivo", "req": False, "ph": "ej: control general"}],
+    "teleradiografia":  [{"id": "motivo", "label": "Motivo", "req": False, "ph": "ej: estudio cefalométrico"}],
+    "bitewing":         [{"id": "piezas", "label": "Sector", "req": False, "ph": "ej: bilateral posterior"}],
+    "set_ortodoncia":   [{"id": "motivo", "label": "Motivo", "req": False, "ph": "ej: inicio de tratamiento"}],
+}
 
 
 def _crear_tabla() -> None:
@@ -123,7 +166,37 @@ def _estado_real(v: dict) -> str:
 def api_prestaciones(token: str | None = Query(None)):
     if not _ok(token):
         raise HTTPException(401, "No autorizado")
-    return JSONResponse({"prestaciones": PRESTACIONES, "vigencia_dias": VIGENCIA_DIAS})
+    return JSONResponse({"prestaciones": PRESTACIONES, "solicitud": SOLICITUD,
+                         "vigencia_dias": VIGENCIA_DIAS})
+
+
+@router.get("/api/vales/paciente")
+async def api_paciente(rut: str = Query(...), token: str | None = Query(None)):
+    """Autocompleta el vale desde el RUT: recepcion no deberia tipear el nombre.
+
+    El nombre sale de Medilink (fuente de verdad de la ficha) y el telefono de
+    nuestra propia base — Medilink no lo devuelve en la busqueda por RUT. Si
+    Medilink no responde, igual devolvemos el telefono para no bloquear: el
+    formulario permite escribir el nombre a mano.
+    """
+    if not _ok(token):
+        raise HTTPException(401, "No autorizado")
+    nombre = None
+    try:
+        import medilink
+        p = await medilink.buscar_paciente(rut)
+        if p:
+            nombre = p.get("nombre")
+    except Exception:                                                # noqa: BLE001
+        pass                       # Medilink caido no puede tumbar el mostrador
+    tel = None
+    try:
+        from session import get_phone_by_rut
+        tel = get_phone_by_rut(rut)
+    except Exception:                                                # noqa: BLE001
+        pass
+    return JSONResponse({"nombre": nombre, "telefono": tel,
+                         "encontrado": bool(nombre)})
 
 
 @router.post("/api/vales")
@@ -139,11 +212,25 @@ async def api_crear(request: Request, token: str | None = Query(None)):
     rut = (b.get("rut") or "").strip()
     if not paciente or not rut:
         raise HTTPException(400, "Falta nombre o RUT del paciente")
-    # El anexo (CUARTO) EXIGE detallar piezas y finalidad para el escaneo: sin eso
-    # Imagendent no sabe que registrar y el vale no cumple el convenio.
-    obs = (b.get("observaciones") or "").strip()
-    if p.get("pide_detalle") and len(obs) < 5:
-        raise HTTPException(400, "El escaneo intraoral exige indicar piezas y finalidad (punto CUARTO del anexo)")
+    # La solicitud se arma desde los campos propios de ESTA prestacion. El anexo
+    # (CUARTO) exige piezas y finalidad para el escaneo; los demas examenes
+    # tienen su propio minimo. Se valida aca, no en el navegador.
+    campos = SOLICITUD.get(clave, [])
+    sol = b.get("solicitud") or {}
+    partes, faltan = [], []
+    for c in campos:
+        val = str(sol.get(c["id"]) or "").strip()
+        if not val:
+            if c["req"]:
+                faltan.append(c["label"])
+            continue
+        partes.append(f'{c["label"]}: {val}')
+    if faltan:
+        raise HTTPException(400, "Falta " + " y ".join(faltan) + " para esta prestación")
+    libre = (b.get("observaciones") or "").strip()
+    if libre:
+        partes.append(libre)
+    obs = " · ".join(partes)
 
     folio = "CMC-" + secrets.token_hex(3).upper()
     hoy = date.today()
@@ -461,6 +548,8 @@ Este folio no corresponde a ningún vale emitido por Centro Médico Carampangue.
       <div style="flex-grow:1">
         <div class="txt">Emitido por <strong>Centro Médico Carampangue</strong> ·
           Convenio de Colaboración Clínica Aliada – Plan Socio Estratégico</div>
+        <div class="txt" style="margin-top:5px">¿Dudas antes de atender?
+          Llame al <strong class="mono">{CMC_TELEFONO_FIJO}</strong></div>
         <div class="url mono">Verificar en agentecmc.cl/vale/{v['folio']}</div>
       </div>
       <div style="text-align:right;flex:none">
@@ -508,7 +597,7 @@ def panel_vales(token: str | None = Query(None)):
         f"<option value='{k}'>{p['nombre']} — {_fmt(p['costo'])}"
         + ("" if p["venta"] else "  ⚠ sin precio de venta") + "</option>"
         for k, p in PRESTACIONES.items())
-    return HTMLResponse(f"""<!doctype html><html lang="es"><head>
+    return HTMLResponse((f"""<!doctype html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow"><title>Vales de convenio · CMC</title>
 <style>{_CSS}
@@ -548,16 +637,25 @@ Sin eso, el paciente llega con un link que nadie sabe leer y le cobran precio p�
   <div class="kpi"><b>{len(rows)}</b><span>Vales emitidos</span></div>
 </div>
 <div class="card"><h2 style="margin:0 0 14px;font-size:1rem">Emitir vale</h2>
+  <p style="font-size:.84rem;color:var(--gris);margin:-6px 0 14px">
+    Escriba el RUT y presione Enter: el nombre y el teléfono se completan solos desde la ficha.</p>
   <div class="g">
-    <div><label>Paciente</label><input id="paciente" placeholder="Nombre y apellidos"></div>
-    <div><label>RUT</label><input id="rut" placeholder="12.345.678-9"></div>
-    <div><label>Teléfono (para enviar por WhatsApp)</label><input id="telefono" placeholder="56912345678"></div>
+    <div><label>RUT del paciente</label>
+      <input id="rut" placeholder="12.345.678-9" autofocus>
+      <span id="rutmsg" style="font-size:.74rem;color:var(--gris)"></span></div>
+    <div><label>Paciente</label><input id="paciente" placeholder="Se completa solo"></div>
+    <div><label>Teléfono (para enviar por WhatsApp)</label><input id="telefono" placeholder="Se completa solo"></div>
     <div><label>Prestación</label><select id="prestacion">{opciones}</select></div>
     <div><label>Profesional que deriva</label><input id="profesional" placeholder="Dr. Rodrigo Olavarría"></div>
     <div><label>Indicación original (si viene de otro médico)</label><input id="indicado_por" placeholder="Orden de Dr. X, otorrinolaringología"></div>
     <div><label>Precio de venta al paciente (si la prestación no lo trae)</label><input id="venta" inputmode="numeric" placeholder="49900"></div>
-    <div style="grid-column:1/-1"><label>Observaciones — piezas y finalidad (obligatorio en escaneo intraoral)</label>
-      <textarea id="observaciones" rows="2" placeholder="Pieza 2.6, evaluación previa a implante"></textarea></div>
+  </div>
+  <div id="solicitud" style="margin-top:16px;padding-top:16px;border-top:1px dashed var(--linea)">
+    <div style="font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.14em;
+                text-transform:uppercase;color:var(--gris);margin-bottom:10px">Solicitud del examen</div>
+    <div class="g" id="solcampos"></div>
+    <div style="margin-top:12px"><label>Observaciones adicionales (opcional)</label>
+      <input id="observaciones" placeholder="Cualquier cosa que Imagendent deba saber"></div>
   </div>
   <div style="margin-top:14px"><button class="btn" onclick="crear()">Emitir vale</button></div>
   <div id="msg"></div>
@@ -568,22 +666,78 @@ Sin eso, el paciente llega con un link que nadie sabe leer y le cobran precio p�
 </div>
 <script>
 const T = new URLSearchParams(location.search).get('token');
+const SOL = __SOLICITUD_JSON__;
+function pintarSolicitud(){{
+  const k = document.getElementById('prestacion').value;
+  const campos = SOL[k] || [];
+  document.getElementById('solcampos').innerHTML = campos.map(c => {{
+    const req = c.req ? ' <span style="color:#a33a30">*</span>' : '';
+    const inp = c.opts
+      ? '<select data-sol="' + c.id + '"><option value="">— elegir —</option>' +
+        c.opts.map(o => '<option>' + o + '</option>').join('') + '</select>'
+      : '<input data-sol="' + c.id + '" placeholder="' + (c.ph || '') + '">';
+    return '<div><label>' + c.label + req + '</label>' + inp + '</div>';
+  }}).join('') || '<div style="font-size:.82rem;color:var(--gris)">Esta prestación no necesita detalle.</div>';
+}}
+document.getElementById('prestacion').addEventListener('change', pintarSolicitud);
+pintarSolicitud();
+
 async function crear(){{
   const b = {{}};
   ['paciente','rut','telefono','prestacion','profesional','indicado_por','venta','observaciones']
     .forEach(k => b[k] = (document.getElementById(k).value || '').trim());
+  b.solicitud = {{}};
+  document.querySelectorAll('[data-sol]').forEach(el => {{
+    b.solicitud[el.dataset.sol] = (el.value || '').trim();
+  }});
   const m = document.getElementById('msg');
   m.textContent = 'Emitiendo…';
   const r = await fetch('/api/vales?token=' + encodeURIComponent(T),
     {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify(b)}});
   const d = await r.json().catch(() => ({{}}));
   if (!r.ok) {{ m.style.color = '#a33a30'; m.textContent = d.detail || 'No se pudo emitir'; return; }}
-  m.style.color = '#2e7d5b';
-  m.innerHTML = 'Vale <b>' + d.folio + '</b> emitido. <a target="_blank" href="/vale/' + d.folio + '">Verlo</a>';
-  setTimeout(() => location.reload(), 1200);
+  const url = location.origin + '/vale/' + d.folio;
+  const tel = (b.telefono || '').replace(/\\D/g, '');
+  const wa = tel
+    ? '<a class="btn" style="background:#128c7e" target="_blank" href="https://wa.me/' + tel +
+      '?text=' + encodeURIComponent('Su vale para el examen: ' + url) + '">Enviar por WhatsApp</a>'
+    : '<span style="color:var(--gris);font-size:.82rem">Sin teléfono: copie el enlace y mándelo a mano.</span>';
+  m.style.color = 'inherit';
+  m.innerHTML =
+    '<div style="border:1px solid var(--linea);border-left:3px solid var(--ok);border-radius:8px;' +
+    'padding:14px 16px;margin-top:4px;background:#fff">' +
+    '<div style="font-weight:600;color:var(--ok)">Vale ' + d.folio + ' emitido</div>' +
+    '<div style="font-family:ui-monospace,monospace;font-size:.8rem;margin:8px 0 12px">' + url + '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' + wa +
+    '<a class="btn sec" target="_blank" href="/vale/' + d.folio + '">Ver el vale</a>' +
+    '<button class="btn sec" onclick="location.reload()">Emitir otro</button></div></div>';
+  ['rut','paciente','telefono','observaciones'].forEach(k => document.getElementById(k).value = '');
+  document.querySelectorAll('[data-sol]').forEach(el => el.value = '');
 }}
+async function buscarRut(){{
+  const rut = document.getElementById('rut').value.trim();
+  const msg = document.getElementById('rutmsg');
+  if (rut.replace(/\\D/g, '').length < 7) {{ msg.textContent = ''; return; }}
+  msg.textContent = 'Buscando…';
+  try {{
+    const r = await fetch('/api/vales/paciente?rut=' + encodeURIComponent(rut) +
+                          '&token=' + encodeURIComponent(T));
+    const d = await r.json();
+    if (d.nombre) document.getElementById('paciente').value = d.nombre;
+    if (d.telefono) document.getElementById('telefono').value = d.telefono;
+    msg.style.color = d.encontrado ? '#2e7d5b' : '#9a6b12';
+    msg.textContent = d.encontrado
+      ? ('Ficha encontrada' + (d.telefono ? ' · teléfono cargado' : ' · sin teléfono en el bot'))
+      : 'No está en Medilink: escriba el nombre a mano.';
+  }} catch (e) {{ msg.style.color = '#9a6b12'; msg.textContent = 'No se pudo consultar la ficha.'; }}
+}}
+document.getElementById('rut').addEventListener('blur', buscarRut);
+document.getElementById('rut').addEventListener('keydown', e => {{
+  if (e.key === 'Enter') {{ e.preventDefault(); buscarRut(); }}
+}});
+
 async function acc(folio, a){{
   await fetch('/api/vales/' + folio + '/' + a + '?token=' + encodeURIComponent(T), {{method:'POST'}});
   location.reload();
 }}
-</script></body></html>""")
+</script></body></html>""").replace("__SOLICITUD_JSON__", _json.dumps(SOLICITUD, ensure_ascii=False)))
