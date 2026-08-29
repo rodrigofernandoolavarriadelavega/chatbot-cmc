@@ -359,11 +359,16 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
     precioBase: 28735,          /* $/box-hora que reproduce los $33M */
     ocupMBase: 34, ocupTBase: 51, boxesBase: 9, horasBase: 69.3,
     margenBase: 33.4, opexBase: 4.3,
-    techoMin: 45, techoMax: 55
+    techoMin: 45, techoMax: 55,
+    /* CECAR como SEGUNDO recinto: 3 box piso 1 + gimnasio, 3 box piso 2 +
+       sala de taller. Fijos = arriendo 2 pisos $1,7M + recepcion $0,7M + aseo $0,6M. */
+    cecarBoxBase: 6, cecarOcupBase: 30, cecarFijos: 3.0
   };
 
   /* ── catálogo de proyectos ────────────────────────────────────────── */
   var CAT = [
+    {id:"cecarBox", n:"CECAR — box de consulta", f:"CECAR", t:"A", salud:1, capex:20.0,
+     motor:1, c:0, b:0, a:0, mg:0, y:2027},
     {id:"cecarR", n:"CECAR Rehab — 4 estaciones",  f:"CECAR", t:"A", salud:1, capex:4.5,  c:0.3, b:0.7,  a:1.4,  mg:62, y:2026},
     {id:"cecarT", n:"CECAR Training y 60+",        f:"CECAR", t:"A", salud:0, capex:8.0,  c:0.9, b:1.6,  a:3.2,  mg:56, y:2026},
     {id:"cecarD", n:"CECAR Deporte — clubes",      f:"CECAR", t:"A", salud:1, capex:0.8,  c:0.2, b:0.4,  a:0.9,  mg:50, y:2026},
@@ -388,6 +393,7 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
   var DEF = {
     boxes:K.boxesBase, horas:K.horasBase, ocupM:K.ocupMBase, ocupT:K.ocupTBase,
     precio:K.precioBase, margen:K.margenBase, opex:K.opexBase, multiplo:5,
+    cecarBox:K.cecarBoxBase, cecarOcup:K.cecarOcupBase,
     u:{}, extra:[]
   };
   CAT.forEach(function(p){ DEF.u[p.id] = {on:0, esc:"b", y:p.y}; });
@@ -398,7 +404,7 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
     base:     {nm:"Base 2030", d:{ocupM:45, ocupT:58, opex:5.5, on:"todo", esc:"b"}},
     cons:     {nm:"Conservador 2030", d:{ocupM:38, ocupT:54, opex:5.0, on:"todo", esc:"c"}},
     agr:      {nm:"Agresivo 2030", d:{ocupM:56, ocupT:68, opex:6.2, margen:36, on:"todo", esc:"a"}},
-    salud:    {nm:"Solo salud", d:{ocupM:45, ocupT:58, opex:5.2, on:["cecarR","cecarD","img","lab","musc","mujer","check","carin","dom"], esc:"b"}}
+    salud:    {nm:"Solo salud", d:{ocupM:45, ocupT:58, opex:5.2, on:["cecarBox","cecarR","cecarD","img","lab","musc","mujer","check","carin","dom"], esc:"b"}}
   };
 
   var S = JSON.parse(JSON.stringify(DEF)), preset = "hoy";
@@ -438,7 +444,22 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
     return cap * oc * S.precio / 1e6;                  /* en millones */
   }
   function unidades(){ return CAT.concat(S.extra); }
-  function valorEsc(u){ var e = (S.u[u.id]||{}).esc || "b"; return e === "c" ? u.c : e === "a" ? u.a : u.b; }
+  /* El escenario de un motor mueve su OCUPACION, no una venta tecleada:
+     conservador 0,7x · base 1x · agresivo 1,4x. */
+  var ESC_OC = {c:0.7, b:1, a:1.4};
+  function ventaCecar(esc){
+    return S.cecarBox * S.horas * K.semanas * (S.cecarOcup/100) * (ESC_OC[esc]||1) * S.precio / 1e6;
+  }
+  function valorEsc(u){
+    var e = (S.u[u.id]||{}).esc || "b";
+    if (u.motor) return ventaCecar(e);
+    return e === "c" ? u.c : e === "a" ? u.a : u.b;
+  }
+  function ebUnidad(u, v){
+    if (u.t === "B") return 0;
+    if (u.motor) return v * S.margen/100 - K.cecarFijos;   /* carga sus propios fijos */
+    return v * u.mg/100;
+  }
 
   /* Un año: el motor interpola desde lo medido (2026) hasta la palanca (2030);
      cada proyecto entra a la mitad su primer año y completo desde el siguiente. */
@@ -461,7 +482,7 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
       venta += v;
       if (u.salud) saludM += v;
       if (u.saas) ventaSaas += v;
-      var e = v * u.mg / 100;
+      var e = ebUnidad(u, v);
       eb += e;
       porFrente[u.f] = (porFrente[u.f] || 0) + e;
     });
@@ -496,6 +517,10 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
      hint:"33,4% medido en agosto, y bajando: en junio era 35,4%. Se mueve renegociando honorarios o cambiando la mezcla."},
     {k:"opex",   nm:"Opex fijo mensual",      min:3, max:12, step:.1, suf:"", base:K.opexBase, mm:1,
      hint:"Arriendo, administración, recepción, aseo. Crece con las unidades nuevas."},
+    {k:"cecarBox", nm:"Box de consulta en CECAR", min:0, max:12, step:1, suf:"", base:K.cecarBoxBase,
+     hint:"Tres en el primer piso con el gimnasio y tres en el segundo con la sala de taller. Seis box son dos tercios de la capacidad instalada de todo el centro médico."},
+    {k:"cecarOcup", nm:"Ocupación de los box de CECAR", min:5, max:60, step:1, suf:"%", base:K.cecarOcupBase,
+     hint:"Con 20% ya pasa los $2M. El CMC corre al 41%, pero ahí los dos juntos rozan el techo de la provincia: 30% es el objetivo sano."},
     {k:"multiplo", nm:"Múltiplo de valorización", min:3, max:8, step:.5, suf:"×", base:5,
      hint:"Veces EBITDA anual. Entre 4 y 6 para prestadores pequeños en Chile."}
   ];
@@ -528,7 +553,7 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
   function pintarProyectos(){
     document.getElementById("projs").innerHTML = unidades().map(function(u){
       var st = S.u[u.id] || {on:0, esc:"b", y:u.y};
-      var v = valorEsc(u), e = u.t === "B" ? 0 : v * u.mg / 100;
+      var v = valorEsc(u), e = ebUnidad(u, v);
       return '<div class="pj ' + (st.on ? "" : "off") + '" data-id="' + u.id + '">' +
         '<div class="r1"><label class="sw"><input type="checkbox" data-a="on" ' + (st.on ? "checked" : "") + '>' +
         '<span class="nm">' + u.n + '</span></label>' +
@@ -665,8 +690,21 @@ footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--in
   }
 
   /* ── render ───────────────────────────────────────────────────────── */
+  /* Las unidades con motor cambian de valor cuando se mueve una palanca, no solo
+     cuando se toca su tarjeta. Se refresca SOLO el texto del resultado: repintar
+     la tarjeta entera mataria el foco de los <select> mientras se arrastra. */
+  function refrescarSalidas(){
+    unidades().forEach(function(u){
+      var el = document.querySelector('.pj[data-id="' + u.id + '"] .out');
+      if (!el) return;
+      var v = valorEsc(u), e = ebUnidad(u, v);
+      el.innerHTML = M(v) + " venta<br>" + (u.t === "B" ? "al centro" : "<b>" + M(e) + "</b> EBITDA");
+    });
+  }
+
   function render(){
     var S2 = serie(), fin = S2[S2.length-1];
+    refrescarSalidas();
     var dV = fin.venta - K.ventaAgo, dE = fin.eb - K.ebAgo;
     var ebAnual = fin.eb*12, saasAnual = fin.saas*12;
     var valor = (ebAnual - saasAnual*0.45)*S.multiplo + saasAnual*4;
