@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Grupo Carampangue — OLACORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@300..700&display=swap">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<nav class="gcnav"><div class="in"><a href="/grupo?token=__TOKEN__" aria-current="page">Grupo Carampangue</a><span class="sep">/</span><a href="/grupo/2030?token=__TOKEN__">Modelo 2030</a><span class="sep">/</span><a href="/olacore?token=__TOKEN__">Documentos del holding</a></div></nav>
+<style>
+/* ─── Meridiano Sur · tokens ─────────────────────────────────────────────
+   Claro = papel cartográfico (neblina). Oscuro = fiordo.
+   Las marcas de datos van validadas aparte para cada superficie.        */
+:root{
+  --paper:#E8E0D0; --paper-2:#DFD6C3; --paper-3:#D2C7B0; --sunk:#DAD1BE;
+  --ink:#0E2530; --ink-2:#33505E; --ink-3:#65798A;
+  --rule:#C6BBA2; --rule-soft:#D6CCB7;
+  --cobre:#8F5F1B; --lacre:#8E3527; --ok:#3A6B4A;
+  --mA:#B76E12;  /* serie A · margen bruto  (validada s/ #E8E0D0) */
+  --mB:#00719A;  /* serie B · honorarios    (validada s/ #E8E0D0) */
+  --mA-soft:rgba(183,110,18,.16); --mB-soft:rgba(0,113,154,.14);
+  --band:#0E2530; --band-ink:#E8E0D0; --band-ink-2:#9FB0B9; --band-rule:#2B4855;
+  --shadow:0 1px 0 rgba(14,37,48,.06);
+  --max:1080px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+    --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+    --rule:#264652; --rule-soft:#1C3843;
+    --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287;
+    --mA:#C4842C; --mB:#2794BB;
+    --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+    --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+    --shadow:0 1px 0 rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+  --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+  --rule:#264652; --rule-soft:#1C3843;
+  --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287;
+  --mA:#C4842C; --mB:#2794BB;
+  --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+  --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+  --shadow:0 1px 0 rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Space Grotesk","Helvetica Neue",Arial,sans-serif;
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{
+  font-family:Fraunces,"Iowan Old Style",Georgia,serif;
+  font-variation-settings:'SOFT' 50; text-wrap:balance;
+  margin:0; line-height:1.12; font-weight:600;
+}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--cobre); outline-offset:3px; border-radius:2px}
+
+.wrap{max-width:var(--max); margin-inline:auto; padding-inline:clamp(20px,5vw,48px)}
+.kicker{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px; font-weight:500;
+  letter-spacing:.3em; text-transform:uppercase; color:var(--ink-3);
+}
+.num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+
+/* meridiano — la firma del sistema */
+.meridian{width:1px; height:56px; background:var(--cobre); position:relative; margin:0 auto}
+.meridian::before,.meridian::after{
+  content:""; position:absolute; left:-4px; width:9px; height:9px;
+  background:var(--cobre); border-radius:50%;
+}
+.meridian::before{top:22%} .meridian::after{bottom:22%}
+
+/* ─── portada ───────────────────────────────────────────────────────── */
+.hero{background:var(--band); color:var(--band-ink); padding-block:clamp(48px,9vw,92px) clamp(40px,7vw,72px)}
+.hero .kicker{color:var(--band-ink-2)}
+.hero-grid{display:grid; gap:clamp(28px,5vw,56px); grid-template-columns:1fr}
+@media(min-width:860px){.hero-grid{grid-template-columns:1.25fr .85fr; align-items:end}}
+.hero h1{font-size:clamp(2.9rem,8.2vw,5.1rem); letter-spacing:-.022em; margin-top:14px}
+.hero h1 em{
+  display:block; font-style:italic; font-weight:300;
+  font-size:clamp(1.05rem,2.5vw,1.5rem); letter-spacing:.04em;
+  color:var(--band-ink-2); margin-top:16px; font-variation-settings:'SOFT' 80;
+}
+.hero-lede{color:var(--band-ink-2); max-width:46ch; margin-top:22px; font-size:1.02rem}
+.hero-stat{border-top:1px solid var(--band-rule); padding-top:18px}
+.hero-stat + .hero-stat{margin-top:20px}
+.hero-stat .v{
+  font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:clamp(1.9rem,4.6vw,2.5rem); font-weight:500; letter-spacing:-.02em;
+  display:block; line-height:1.05;
+}
+.hero-stat .l{color:var(--band-ink-2); font-size:.83rem; margin-top:7px; display:block}
+
+/* ─── secciones ─────────────────────────────────────────────────────── */
+section{padding-block:clamp(46px,7vw,78px); border-top:1px solid var(--rule)}
+section:first-of-type{border-top:0}
+.shead{margin-bottom:clamp(26px,4vw,40px); max-width:64ch}
+.shead h2{font-size:clamp(1.6rem,3.6vw,2.25rem); letter-spacing:-.014em; margin-top:12px}
+.shead p{color:var(--ink-2); margin-top:14px; max-width:62ch}
+
+/* ─── organigrama ───────────────────────────────────────────────────── */
+.org{overflow-x:auto; padding-bottom:8px}
+.org-inner{min-width:640px}
+.holdbar{
+  border:1px solid var(--rule); background:var(--paper-2); border-radius:3px;
+  padding:16px 20px; display:flex; flex-wrap:wrap; gap:8px 18px; align-items:baseline;
+}
+.holdbar strong{font-family:Fraunces,Georgia,serif; font-size:1.15rem; font-weight:600}
+.holdbar span{color:var(--ink-3); font-size:.85rem}
+.stem{height:26px; width:1px; background:var(--rule); margin-inline:auto}
+.branches{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; position:relative}
+.branches::before{
+  content:""; position:absolute; top:-13px; left:16.6%; right:16.6%;
+  height:1px; background:var(--rule);
+}
+.branch{border:1px solid var(--rule); border-top:2px solid var(--cobre); border-radius:3px;
+  background:var(--paper-2); padding:18px; position:relative}
+.branch::before{content:""; position:absolute; top:-13px; left:50%; width:1px; height:13px; background:var(--rule)}
+.branch h3{font-size:1.06rem; letter-spacing:-.01em}
+.branch .role{color:var(--ink-3); font-size:.76rem; margin-top:5px; display:block}
+.branch ul{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:7px}
+.branch li{font-size:.88rem; padding-left:14px; position:relative; color:var(--ink-2)}
+.branch li::before{content:""; position:absolute; left:0; top:.62em; width:6px; height:1px; background:var(--cobre)}
+.prop{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--lacre);
+  border:1px solid currentColor; border-radius:2px; padding:1px 5px; margin-left:6px; vertical-align:1px;
+}
+
+/* ─── unidades ──────────────────────────────────────────────────────── */
+.units{display:grid; gap:16px; grid-template-columns:1fr}
+@media(min-width:700px){.units{grid-template-columns:1fr 1fr}}
+.unit{
+  border:1px solid var(--rule); border-radius:3px; background:var(--paper-2);
+  padding:20px 20px 18px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--shadow);
+}
+.unit-top{display:flex; justify-content:space-between; align-items:flex-start; gap:12px}
+.unit h3{font-size:1.18rem; letter-spacing:-.012em}
+.unit .sub{color:var(--ink-3); font-size:.78rem; margin-top:4px}
+.chip{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.16em;
+  text-transform:uppercase; padding:3px 8px; border-radius:2px; white-space:nowrap;
+  border:1px solid currentColor;
+}
+.chip.op{color:var(--ok)} .chip.build{color:var(--cobre)} .chip.eval{color:var(--ink-3)}
+.unit p{font-size:.9rem; color:var(--ink-2)}
+.facts{list-style:none; margin:0; padding:12px 0 0; border-top:1px solid var(--rule-soft);
+  display:flex; flex-direction:column; gap:6px}
+.facts li{display:flex; justify-content:space-between; gap:14px; font-size:.85rem; align-items:baseline}
+.facts span:first-child{color:var(--ink-3)}
+.facts span:last-child{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; text-align:right}
+
+/* ─── tiles ─────────────────────────────────────────────────────────── */
+.tiles{display:grid; gap:14px; grid-template-columns:repeat(2,1fr)}
+@media(min-width:820px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{border:1px solid var(--rule); border-left:3px solid var(--cobre); border-radius:3px;
+  background:var(--paper-2); padding:16px 16px 14px}
+.tile .v{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:clamp(1.35rem,3.4vw,1.72rem); font-weight:500; letter-spacing:-.02em; display:block; line-height:1.1}
+.tile .l{color:var(--ink-3); font-size:.78rem; margin-top:8px; display:block; line-height:1.4}
+.tile .d{font-size:.76rem; margin-top:7px; display:block; font-family:"IBM Plex Mono",monospace}
+.up{color:var(--ok)} .down{color:var(--lacre)}
+
+/* ─── figuras / gráficos ────────────────────────────────────────────── */
+.fig{margin-top:clamp(24px,4vw,36px); border:1px solid var(--rule); border-radius:3px;
+  background:var(--paper-2); padding:clamp(16px,3vw,24px)}
+.fig h3{font-size:1.02rem}
+.fig .cap{color:var(--ink-3); font-size:.82rem; margin-top:6px; max-width:66ch}
+.plot{margin-top:18px; position:relative}
+.plot svg{display:block; width:100%; height:auto; overflow:visible}
+.gridline{stroke:var(--rule-soft); stroke-width:1}
+.axis-t{fill:var(--ink-3); font-family:"IBM Plex Mono",monospace; font-size:10px}
+.axis-t.b{fill:var(--ink-2); font-weight:600}
+.legend{display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:16px; align-items:center}
+.legend .it{display:flex; align-items:center; gap:8px; font-size:.83rem; color:var(--ink-2)}
+.swatch{width:11px; height:11px; border-radius:2px; flex:none}
+.tip{
+  position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-120%);
+  background:var(--band); color:var(--band-ink); border:1px solid var(--band-rule);
+  border-radius:3px; padding:8px 11px; font-size:.78rem; white-space:nowrap; z-index:5;
+  transition:opacity .12s ease; box-shadow:0 4px 14px rgba(0,0,0,.22);
+}
+.tip.on{opacity:1}
+.tip b{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600}
+.tip .r{display:flex; justify-content:space-between; gap:14px; margin-top:3px; color:var(--band-ink-2)}
+.tip .r i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px;font-style:normal}
+details.tbl{margin-top:16px; border-top:1px solid var(--rule-soft); padding-top:12px}
+details.tbl summary{cursor:pointer; font-size:.82rem; color:var(--ink-3); font-family:"IBM Plex Mono",monospace;
+  letter-spacing:.08em; text-transform:uppercase}
+details.tbl summary::marker{color:var(--cobre)}
+
+/* ─── tablas ────────────────────────────────────────────────────────── */
+.tblwrap{overflow-x:auto; margin-top:14px}
+table{border-collapse:collapse; width:100%; min-width:520px; font-size:.88rem}
+th,td{text-align:right; padding:9px 12px; border-bottom:1px solid var(--rule-soft)}
+th:first-child,td:first-child{text-align:left}
+thead th{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:500;
+  border-bottom:1px solid var(--rule); white-space:nowrap;
+}
+tbody td{font-variant-numeric:tabular-nums; font-family:"IBM Plex Mono",monospace}
+tbody td:first-child{font-family:"Space Grotesk",sans-serif}
+tr.total td{border-top:1px solid var(--rule); border-bottom:0; font-weight:600; color:var(--ink)}
+tr.hi{background:var(--sunk)}
+
+/* ─── decisiones ────────────────────────────────────────────────────── */
+.dec{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+.dec li{display:grid; grid-template-columns:auto 1fr; gap:16px; padding:18px 0;
+  border-bottom:1px solid var(--rule-soft); align-items:start}
+.dec li:last-child{border-bottom:0}
+.dec .n{font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--cobre); padding-top:3px}
+.dec h4{font-size:1.02rem; font-family:Fraunces,Georgia,serif; font-weight:600}
+.dec p{font-size:.89rem; color:var(--ink-2); margin-top:6px}
+.dec .gat{
+  font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--ink-3);
+  margin-top:9px; padding-left:12px; border-left:2px solid var(--cobre);
+}
+
+/* ─── notas ─────────────────────────────────────────────────────────── */
+.notes{background:var(--sunk); border-radius:3px; padding:clamp(18px,3vw,26px); border:1px solid var(--rule)}
+.notes ol{margin:14px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:9px}
+.notes li{font-size:.85rem; color:var(--ink-2)}
+.notes strong{color:var(--ink)}
+footer{border-top:1px solid var(--rule); padding-block:34px 46px; color:var(--ink-3); font-size:.8rem}
+.foot{display:flex; flex-wrap:wrap; gap:14px 28px; justify-content:space-between; align-items:baseline}
+.conf{color:var(--lacre); font-family:"IBM Plex Mono",monospace; font-size:.72rem;
+  letter-spacing:.14em; text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+
+/* barra de navegacion entre los dos documentos del grupo */
+.gcnav{background:var(--band); border-bottom:1px solid var(--band-rule);
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px;
+  letter-spacing:.18em; text-transform:uppercase}
+.gcnav .in{max-width:var(--max); margin-inline:auto; padding:11px clamp(20px,5vw,48px);
+  display:flex; flex-wrap:wrap; gap:6px 22px; align-items:center}
+.gcnav a{color:var(--band-ink-2); text-decoration:none; padding:2px 0;
+  border-bottom:1px solid transparent}
+.gcnav a:hover{color:var(--band-ink); border-bottom-color:var(--cobre)}
+.gcnav a[aria-current="page"]{color:var(--band-ink); border-bottom-color:var(--cobre)}
+.gcnav .sep{color:var(--band-rule)}
+</style>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="kicker">37°10′S · 73°17′O — Carampangue, Provincia de Arauco</span>
+      <h1>Grupo Carampangue<em>Salud · Bienestar · Comunidad</em></h1>
+      <p class="hero-lede">Tres unidades que atienden a la misma comunidad desde el mismo pueblo: el centro médico, el centro de kinesiología y entrenamiento, y el patio de fin de semana. Una sola operación, un solo terreno de origen.</p>
+    </div>
+    <div>
+      <div class="hero-stat">
+        <span class="v">$31,7M</span>
+        <span class="l">Venta de agosto 2026 al día 28 · cierra cerca de $33M</span>
+      </div>
+      <div class="hero-stat">
+        <span class="v">$1.377.450</span>
+        <span class="l">Venta por día operativo — 38% sobre junio</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+<!-- ─── ESTRUCTURA ─────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">01 — Estructura</span>
+    <h2>Quién es dueño de qué</h2>
+    <p>OLACORE SpA es el vehículo legal y tributario: no tiene cara pública. Las caras comerciales son los dos grupos y la vertical de software. Cada uno agrupa negocios que comparten cliente y territorio, no que comparten dueño solamente.</p>
+  </div>
+
+  <div class="org">
+    <div class="org-inner">
+      <div class="holdbar">
+        <strong>OLACORE SpA</strong>
+        <span>Holding legal y tributario — no customer-facing</span>
+      </div>
+      <div class="stem"></div>
+      <div class="branches">
+        <div class="branch">
+          <h3>Grupo Carampangue</h3>
+          <span class="role">Salud, bienestar y comunidad · Arauco</span>
+          <ul>
+            <li>Centro Médico Carampangue</li>
+            <li>CECAR</li>
+            <li>Patio Carampangue</li>
+          </ul>
+        </div>
+        <div class="branch">
+          <h3>Grupo Olavega<span class="prop">propuesto</span></h3>
+          <span class="role">Agroalimentario · Arauco y Los Lagos</span>
+          <ul>
+            <li>Olavega Campo — 170 ha, Piedra Azul</li>
+            <li>Olavega Hidroponía — Arauco</li>
+            <li>Olavega Alimentos — pulpa y congelado</li>
+          </ul>
+        </div>
+        <div class="branch">
+          <h3>OLACORE Tech</h3>
+          <span class="role">Software de orden · escala internacional</span>
+          <ul>
+            <li>Adkun — la empresa</li>
+            <li>Alma — la plataforma</li>
+            <li>Instancias desplegadas</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── UNIDADES ───────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">02 — Unidades</span>
+    <h2>Las tres del pueblo</h2>
+    <p>Hoy toda la venta del grupo la produce el centro médico. CECAR y el Patio son líneas nuevas con capital comprometido bajo y una pregunta de validación cada una.</p>
+  </div>
+
+  <div class="units">
+    <article class="unit">
+      <div class="unit-top">
+        <div>
+          <h3>Centro Médico Carampangue</h3>
+          <div class="sub">Consulta, dental, kinesiología, imagenología</div>
+        </div>
+        <span class="chip op">En operación</span>
+      </div>
+      <p>El motor. 400 m² en dos pisos, 18 profesionales activos, con la agenda al 41% de su capacidad instalada — la restricción es gente y agenda, no metros.</p>
+      <ul class="facts">
+        <li><span>Venta agosto 2026</span><span>$31.681.360</span></li>
+        <li><span>Margen bruto</span><span>$10.592.838</span></li>
+        <li><span>Ocupación de box</span><span>41%</span></li>
+        <li><span>Origen de pacientes</span><span>67% comuna Arauco</span></li>
+      </ul>
+    </article>
+
+    <article class="unit">
+      <div class="unit-top">
+        <div>
+          <h3>CECAR</h3>
+          <div class="sub">Kinesiología y reacondicionamiento</div>
+        </div>
+        <span class="chip build">En construcción</span>
+      </div>
+      <p>Dos líneas sobre la misma sala: tratamiento con bono Fonasa y mantención post-alta con mensualidad. La sala actual tiene 46,61 m²; el proyecto pide 140.</p>
+      <ul class="facts">
+        <li><span>Kinesiología con bono</span><span>$7.830</span></li>
+        <li><span>Kinesiología particular</span><span>$20.000</span></li>
+        <li><span>Gimnasio, mensual</span><span>$15.000</span></li>
+        <li><span>Gimnasio, semestral</span><span>$60.000</span></li>
+      </ul>
+    </article>
+
+    <article class="unit">
+      <div class="unit-top">
+        <div>
+          <h3>Patio Carampangue</h3>
+          <div class="sub">Gastronomía, feria y juegos de fin de semana</div>
+        </div>
+        <span class="chip build">Piloto</span>
+      </div>
+      <p>Uso transitorio y desmontable del terreno de República × Conquista. No se compran food trucks: se arriendan espacios y se administra el lugar.</p>
+      <ul class="facts">
+        <li><span>Bruto por fin de semana</span><span>$536.000</span></li>
+        <li><span>Costos, versión austera</span><span>$420.000</span></li>
+        <li><span>Equilibrio, juegos arrendados</span><span>103 niños</span></li>
+        <li><span>Equilibrio, juegos propios</span><span>33 niños</span></li>
+      </ul>
+    </article>
+
+    <article class="unit">
+      <div class="unit-top">
+        <div>
+          <h3>Terreno República × Conquista</h3>
+          <div class="sub">~1.000 m² · media cuadra del centro médico</div>
+        </div>
+        <span class="chip eval">En evaluación</span>
+      </div>
+      <p>El activo de fondo. Destino previsto: centro diagnóstico con farmacia y laboratorio. El Patio existe, entre otras cosas, para medir convocatoria antes de comprometer el capital de la obra.</p>
+      <ul class="facts">
+        <li><span>Constructible, 3 pisos</span><span>~3.000 m²</span></li>
+        <li><span>Fase 1 recomendada</span><span>800–1.000 m²</span></li>
+        <li><span>Capex Fase 1, usado</span><span>~$254M</span></li>
+        <li><span>Techo de demanda provincial</span><span>$45–55M/mes</span></li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<!-- ─── NÚMEROS ────────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">03 — Los números</span>
+    <h2>Ocho meses de caja</h2>
+    <p>Fuente única: el espejo de la caja de Medilink, conciliado al peso contra el sistema entre marzo y agosto. Agosto está cortado el día 28.</p>
+  </div>
+
+  <div class="tiles">
+    <div class="tile">
+      <span class="v">$31,7M</span>
+      <span class="l">Venta agosto (al 28)</span>
+      <span class="d up">+22% vs junio</span>
+    </div>
+    <div class="tile">
+      <span class="v">$1,38M</span>
+      <span class="l">Venta por día operativo</span>
+      <span class="d up">+38% vs junio</span>
+    </div>
+    <div class="tile">
+      <span class="v">33,4%</span>
+      <span class="l">Margen bruto sobre venta</span>
+      <span class="d down">−2,0 pts vs junio</span>
+    </div>
+    <div class="tile">
+      <span class="v">$396M</span>
+      <span class="l">Ritmo anualizado de venta</span>
+      <span class="d">a paso de agosto</span>
+    </div>
+  </div>
+
+  <figure class="fig">
+    <h3>Venta mensual del centro médico, 2026</h3>
+    <p class="cap">Febrero es el piso del año. La pendiente de junio en adelante no es estacional: la venta por día operativo sube en los tres meses.</p>
+    <div class="plot" id="p1"></div>
+    <details class="tbl"><summary>Ver como tabla</summary>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Mes</th><th>Pagos</th><th>Venta</th><th>Días</th><th>Venta / día</th></tr></thead>
+        <tbody id="t1"></tbody>
+      </table></div>
+    </details>
+  </figure>
+
+  <figure class="fig">
+    <h3>En qué se parte cada peso vendido</h3>
+    <p class="cap">Honorarios profesionales contra lo que queda en la casa, calculado con el porcentaje real de cada contrato. La venta creció 22% entre junio y agosto; el margen bruto solo 15%. La diferencia es mezcla: el crecimiento vino de líneas con honorario alto.</p>
+    <div class="plot" id="p2"></div>
+    <div class="legend" id="l2"></div>
+    <details class="tbl"><summary>Ver como tabla</summary>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Mes</th><th>Venta</th><th>Honorarios</th><th>Margen bruto</th><th>Margen %</th></tr></thead>
+        <tbody id="t2"></tbody>
+      </table></div>
+    </details>
+  </figure>
+
+  <div class="fig">
+    <h3>Lo que ese punto y medio cuesta</h3>
+    <p class="cap">Si agosto hubiera conservado el margen de junio, con exactamente la misma venta.</p>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Escenario sobre la venta de agosto</th><th>Margen bruto</th><th>Diferencia</th></tr></thead>
+      <tbody>
+        <tr><td>Margen real de agosto — 33,4%</td><td>$10.592.838</td><td>—</td></tr>
+        <tr class="hi"><td>Con el margen de junio — 35,4%</td><td>$11.215.201</td><td class="up">+$622.363 / mes</td></tr>
+        <tr class="total"><td>Efecto sobre doce meses</td><td></td><td class="up">+$7.468.356</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ─── ESCENARIOS ─────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">04 — Escenarios</span>
+    <h2>Hasta dónde llega</h2>
+    <p>Tres columnas: lo que el grupo produce hoy, lo que produce si CECAR y el Patio entran en régimen y el centro médico sigue llenando mañanas, y el techo que dos análisis independientes marcan en el mismo lugar — cerca de $50M mensuales de venta clínica.</p>
+  </div>
+
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>Venta mensual</th><th>Agosto 2026</th><th>Realista, 12 meses</th><th>Techo</th></tr></thead>
+      <tbody>
+        <tr><td>Centro Médico Carampangue</td><td>$33,0M</td><td>$40,0M</td><td>$48–50M</td></tr>
+        <tr><td>CECAR — gimnasio</td><td>—</td><td>$1,5M</td><td>$2,5M</td></tr>
+        <tr><td>Patio Carampangue</td><td>—</td><td>$2,1M</td><td>$2,1M</td></tr>
+        <tr class="total"><td>Venta del grupo</td><td>$33,0M</td><td>$43,6M</td><td>~$54M</td></tr>
+        <tr class="total"><td>Al año</td><td>$396M</td><td>$523M</td><td>$650M</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tblwrap" style="margin-top:26px">
+    <table>
+      <thead><tr><th>Ganancia del dueño</th><th>Agosto 2026</th><th>Realista, 12 meses</th><th>Techo</th></tr></thead>
+      <tbody>
+        <tr><td>EBITDA del centro médico</td><td>$6,7M</td><td>$8,4M</td><td>$11,0M</td></tr>
+        <tr><td>Honorario clínico propio</td><td>$5,8M</td><td>$5,8M</td><td>$5,8M</td></tr>
+        <tr><td>CECAR — gimnasio</td><td>—</td><td>$1,0M</td><td>$1,8M</td></tr>
+        <tr><td>Patio Carampangue</td><td>—</td><td>$0,5M</td><td>$0,6M</td></tr>
+        <tr class="total"><td>Total mensual</td><td>$12,5M</td><td>$15,7M</td><td>$19,2M</td></tr>
+        <tr class="total"><td>Al año</td><td>$150M</td><td>$188M</td><td>$230M</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── DECISIONES ─────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">05 — Decisiones</span>
+    <h2>Lo que mueve el número el próximo año</h2>
+    <p>Ordenadas por lo que cuestan de averiguar, no por lo que prometen. Las dos primeras son gratis.</p>
+  </div>
+
+  <ol class="dec">
+    <li>
+      <span class="n">01</span>
+      <div>
+        <h4>Preguntarle a Fonasa por escrito si paga bono en kinesiología grupal</h4>
+        <p>Es el interruptor de toda la unidad de rehabilitación. Si la respuesta es no, el circuito por estaciones no existe y no se compra ninguna camilla. Cuesta un oficio.</p>
+        <p class="gat">Decide $4,5M de capex y $0,9M mensuales de margen</p>
+      </div>
+    </li>
+    <li>
+      <span class="n">02</span>
+      <div>
+        <h4>Reactivar a los dos especialistas que hoy venden cero</h4>
+        <p>Traumatología y otorrinolaringología salieron y no fueron reemplazadas. Todo lo que produzcan es incremental puro: no hay capital, ni sala nueva, ni contratación que negociar desde cero.</p>
+        <p class="gat">Entre $598.000 y $1.050.000 mensuales de margen · capex cero</p>
+      </div>
+    </li>
+    <li>
+      <span class="n">03</span>
+      <div>
+        <h4>Revisar la mezcla de honorarios antes de sumar la próxima línea</h4>
+        <p>El margen bajó dos puntos en dos meses porque el crecimiento llegó por líneas con porcentaje alto. El criterio no es la especialidad sino cuánto del trabajo que genera esa consulta se queda en el edificio.</p>
+        <p class="gat">$622.000 mensuales sobre la venta que ya existe</p>
+      </div>
+    </li>
+    <li>
+      <span class="n">04</span>
+      <div>
+        <h4>Correr el piloto del Patio con los juegos arrendados</h4>
+        <p>Una sola métrica decide si hay negocio de juegos: si pasan de cien niños pagando ficha en un fin de semana, se compran; si no, el Patio se queda en gastronomía y feria y vale por lo que convoca, no por lo que deja.</p>
+        <p class="gat">Equilibrio en 103 niños arrendando · 33 con juegos propios</p>
+      </div>
+    </li>
+    <li>
+      <span class="n">05</span>
+      <div>
+        <h4>Registrar la marca fuerte</h4>
+        <p>Carampangue es un topónimo y por eso es marca débil: se puede usar, no se puede defender. Olavega es un nombre acuñado y ahí sí hay algo que proteger, en clases 29 y 32, junto con el dominio.</p>
+        <p class="gat">Verificar la cercanía fonética con una marca de aceite ya establecida</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<!-- ─── NOTAS ──────────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">06 — Procedencia</span>
+    <h2>De dónde sale cada número</h2>
+  </div>
+  <div class="notes">
+    <ol>
+      <li><strong>Venta.</strong> Espejo local de la caja de Medilink, conciliado al peso contra el sistema entre marzo y agosto de 2026. Un barrido semanal purga los pagos anulados fuera de plazo.</li>
+      <li><strong>Agosto está incompleto.</strong> Corte al día 28. Quedaban sábado 29 y lunes 31 sin registrar cuando se hizo esta página.</li>
+      <li><strong>Honorarios.</strong> Calculados con el porcentaje de contrato de cada profesional. Un contrato mixto se calcula con su fórmula propia. Dos profesionales nuevos aún no tienen porcentaje cargado y se estimaron al 70%: entre los dos suman menos del 0,4% de la venta.</li>
+      <li><strong>El EBITDA es estimación, no medición.</strong> Descuenta un opex fijo de $4,3M mensuales del que solo hay un mes completo cargado. El panel de EBITDA del sistema lo muestra inflado desde junio porque los egresos no se están cargando: esa cifra no sirve hasta corregir el proceso.</li>
+      <li><strong>Techo de venta.</strong> Dos estimaciones independientes convergen cerca de $50M mensuales: una de arriba hacia abajo por demanda provincial, otra de abajo hacia arriba sumando a cada profesional en su mejor mes histórico.</li>
+      <li><strong>Grupo Olavega es una propuesta de nombre</strong>, no una decisión tomada. El resto de la estructura sí está definida.</li>
+      <li><strong>Sin datos de pacientes.</strong> Esta página trabaja solo con agregados de caja. No contiene información clínica ni identificable de ninguna persona atendida.</li>
+    </ol>
+  </div>
+</section>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <div class="meridian" style="margin:0 0 14px"></div>
+      <strong style="font-family:Fraunces,Georgia,serif">Grupo Carampangue</strong><br>
+      OLACORE · Meridiano Sur — Carampangue, Provincia de Arauco
+    </div>
+    <div style="text-align:right">
+      <span class="conf">Documento interno</span><br>
+      Cifras al 28 de agosto de 2026
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var CLP = function(n){ return "$" + n.toLocaleString("es-CL"); };
+  var css  = function(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
+
+  /* ── datos ─────────────────────────────────────────────────────── */
+  var MESES = [
+    {m:"ene", venta:19398610, pagos:797,  dias:null},
+    {m:"feb", venta:17671170, pagos:726,  dias:null},
+    {m:"mar", venta:25070260, pagos:1044, dias:27},
+    {m:"abr", venta:22143590, pagos:1005, dias:24},
+    {m:"may", venta:24042160, pagos:1143, dias:24},
+    {m:"jun", venta:25974530, pagos:1262, dias:26},
+    {m:"jul", venta:28519980, pagos:1277, dias:26},
+    {m:"ago", venta:31681360, pagos:1416, dias:23, parcial:true}
+  ];
+  var COMP = [
+    {m:"junio",  venta:25974530, hon:16778403, mar:9196126},
+    {m:"julio",  venta:28519980, hon:18912399, mar:9607580},
+    {m:"agosto", venta:31681360, hon:21088521, mar:10592838}
+  ];
+
+  /* ── tabla 1 ───────────────────────────────────────────────────── */
+  var t1 = document.getElementById("t1");
+  MESES.forEach(function(d){
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + d.m + (d.parcial ? " (al 28)" : "") + "</td>" +
+      "<td>" + d.pagos + "</td><td>" + CLP(d.venta) + "</td>" +
+      "<td>" + (d.dias || "—") + "</td>" +
+      "<td>" + (d.dias ? CLP(Math.round(d.venta / d.dias)) : "—") + "</td>";
+    t1.appendChild(tr);
+  });
+
+  /* ── tabla 2 ───────────────────────────────────────────────────── */
+  var t2 = document.getElementById("t2");
+  COMP.forEach(function(d){
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + d.m + "</td><td>" + CLP(d.venta) + "</td><td>" + CLP(d.hon) +
+      "</td><td>" + CLP(d.mar) + "</td><td>" + (100 * d.mar / d.venta).toFixed(1).replace(".", ",") + "%</td>";
+    t2.appendChild(tr);
+  });
+
+  /* ── tooltip compartido ────────────────────────────────────────── */
+  function mkTip(host){
+    var el = document.createElement("div");
+    el.className = "tip"; host.appendChild(el); return el;
+  }
+
+  /* ── gráfico 1 · línea + área ──────────────────────────────────── */
+  function lineChart(){
+    var host = document.getElementById("p1"), tip = mkTip(host);
+    var W = 800, H = 300, L = 62, R = 22, T = 22, B = 34;
+    var iw = W - L - R, ih = H - T - B;
+    var max = 36000000, ticks = [0, 9000000, 18000000, 27000000, 36000000];
+    var x = function(i){ return L + (iw * i) / (MESES.length - 1); };
+    var y = function(v){ return T + ih - (ih * v) / max; };
+
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Venta mensual del centro médico, enero a agosto de 2026">'];
+    ticks.forEach(function(v){
+      s.push('<line class="gridline" x1="' + L + '" y1="' + y(v) + '" x2="' + (W - R) + '" y2="' + y(v) + '"/>');
+      s.push('<text class="axis-t" x="' + (L - 10) + '" y="' + (y(v) + 3.5) + '" text-anchor="end">' + (v / 1000000) + 'M</text>');
+    });
+    var d = "", a = "";
+    MESES.forEach(function(p, i){
+      d += (i ? " L" : "M") + x(i) + " " + y(p.venta);
+    });
+    a = d + " L" + x(MESES.length - 1) + " " + y(0) + " L" + x(0) + " " + y(0) + " Z";
+    s.push('<path d="' + a + '" fill="var(--mA-soft)"/>');
+    s.push('<path d="' + d + '" fill="none" stroke="var(--mA)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>');
+    MESES.forEach(function(p, i){
+      var last = i === MESES.length - 1;
+      s.push('<circle cx="' + x(i) + '" cy="' + y(p.venta) + '" r="' + (last ? 6 : 4) +
+             '" fill="' + (last ? "var(--mA)" : "var(--paper-2)") + '" stroke="var(--mA)" stroke-width="2"/>');
+      s.push('<text class="axis-t' + (last ? " b" : "") + '" x="' + x(i) + '" y="' + (H - 12) + '" text-anchor="middle">' + p.m + '</text>');
+    });
+    var lastP = MESES[MESES.length - 1];
+    s.push('<text class="axis-t b" x="' + (x(MESES.length - 1) - 6) + '" y="' + (y(lastP.venta) - 14) + '" text-anchor="end">$31,7M</text>');
+    MESES.forEach(function(p, i){
+      s.push('<rect x="' + (x(i) - iw / (MESES.length - 1) / 2) + '" y="' + T + '" width="' + (iw / (MESES.length - 1)) +
+             '" height="' + ih + '" fill="transparent" data-i="' + i + '" class="hit"/>');
+    });
+    s.push("</svg>");
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+
+    var svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var p = MESES[+h.dataset.i], r = svg.getBoundingClientRect();
+      tip.innerHTML = "<b>" + CLP(p.venta) + "</b><div class='r'><span>" + p.m + " 2026" +
+        (p.parcial ? " · al 28" : "") + "</span></div><div class='r'><span>" + p.pagos + " pagos" +
+        (p.dias ? " · " + CLP(Math.round(p.venta / p.dias)) + "/día" : "") + "</span></div>";
+      tip.style.left = (r.width * (x(+h.dataset.i) / W)) + "px";
+      tip.style.top  = (r.height * (y(p.venta) / H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  }
+
+  /* ── gráfico 2 · barras apiladas ───────────────────────────────── */
+  function stackChart(){
+    var host = document.getElementById("p2"), tip = mkTip(host);
+    var W = 800, H = 300, L = 62, R = 22, T = 26, B = 34;
+    var iw = W - L - R, ih = H - T - B;
+    var max = 34000000, ticks = [0, 8500000, 17000000, 25500000, 34000000];
+    var bw = 96, gap = 2;
+    var y = function(v){ return T + ih - (ih * v) / max; };
+    var cx = function(i){ return L + iw * (i + 0.5) / COMP.length; };
+
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Composición de la venta entre honorarios y margen bruto, junio a agosto de 2026">'];
+    ticks.forEach(function(v){
+      s.push('<line class="gridline" x1="' + L + '" y1="' + y(v) + '" x2="' + (W - R) + '" y2="' + y(v) + '"/>');
+      s.push('<text class="axis-t" x="' + (L - 10) + '" y="' + (y(v) + 3.5) + '" text-anchor="end">' + (v / 1000000) + 'M</text>');
+    });
+    COMP.forEach(function(p, i){
+      var X = cx(i) - bw / 2;
+      /* el eje va invertido: y(mayor) < y(menor). La altura se mide hacia abajo. */
+      var hTop = y(p.hon), hH = y(0) - y(p.hon);
+      var mTop = y(p.venta), mH = y(p.hon) - y(p.venta) - gap;
+      s.push('<rect x="' + X + '" y="' + hTop + '" width="' + bw + '" height="' + hH + '" fill="var(--mB)"/>');
+      s.push('<rect x="' + X + '" y="' + mTop + '" width="' + bw + '" height="' + Math.max(mH, 2) + '" fill="var(--mA)" rx="4"/>');
+      s.push('<text class="axis-t b" x="' + cx(i) + '" y="' + (mTop - 9) + '" text-anchor="middle">' +
+             (100 * p.mar / p.venta).toFixed(1).replace(".", ",") + '%</text>');
+      s.push('<text class="axis-t" x="' + cx(i) + '" y="' + (H - 12) + '" text-anchor="middle">' + p.m + '</text>');
+      s.push('<rect x="' + X + '" y="' + T + '" width="' + bw + '" height="' + ih + '" fill="transparent" data-i="' + i + '" class="hit"/>');
+    });
+    s.push("</svg>");
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+
+    document.getElementById("l2").innerHTML =
+      '<span class="it"><i class="swatch" style="background:var(--mA)"></i>Margen bruto — queda en la casa</span>' +
+      '<span class="it"><i class="swatch" style="background:var(--mB)"></i>Honorarios profesionales</span>';
+
+    var svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var p = COMP[+h.dataset.i], r = svg.getBoundingClientRect();
+      tip.innerHTML = "<b>" + p.m + " · " + CLP(p.venta) + "</b>" +
+        "<div class='r'><span><i style='background:var(--mA)'></i>Margen bruto</span><b>" + CLP(p.mar) + "</b></div>" +
+        "<div class='r'><span><i style='background:var(--mB)'></i>Honorarios</span><b>" + CLP(p.hon) + "</b></div>";
+      tip.style.left = (r.width * (cx(+h.dataset.i) / W)) + "px";
+      tip.style.top  = (r.height * (y(p.venta) / H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  }
+
+  lineChart();
+  stackChart();
+})();
+</script>
+
+</body>
+</html>

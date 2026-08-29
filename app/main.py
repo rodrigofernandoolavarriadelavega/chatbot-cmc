@@ -4093,6 +4093,8 @@ _OLACORE_REUNION_HTML = (_TEMPLATE_DIR / "olacore_reunion.html").read_text(encod
 _OLACORE_PORTAL_HTML = (_TEMPLATE_DIR / "olacore_portal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "olacore_portal.html").exists() else ""
 # Token dedicado para compartir SOLO los documentos del holding (no da acceso al resto de Alma).
 OLACORE_HOLDING_TOKEN = "olacore_holding_2026"
+_GRUPO_CARAMPANGUE_HTML = (_TEMPLATE_DIR / "grupo_carampangue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue.html").exists() else ""
+_GRUPO_CARAMPANGUE_2030_HTML = (_TEMPLATE_DIR / "grupo_carampangue_2030.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_2030.html").exists() else ""
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
 _ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
 _ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
@@ -5514,6 +5516,44 @@ def olacore_portal_page(token: str | None = Query(None)):
         raise HTTPException(404, "Portal no disponible")
     return HTMLResponse(_OLACORE_PORTAL_HTML.replace("__TOKEN__", token or ""),
                         headers={"Cache-Control": "no-store"})
+
+
+def _grupo_carampangue_doc(html: str, token: str | None, request: Request) -> HTMLResponse:
+    """Guardas comunes de los documentos del Grupo Carampangue.
+
+    1) SOLO agentecmc.cl. Los dos dominios apuntan a esta MISMA app, asi que
+       toda ruta nace visible en ambos si nadie la filtra por Host (mismo
+       problema que /patio y /carin). Estos documentos traen la caja real del
+       centro: no pueden colgar del dominio clinico.
+    2) Gateados con el token del holding (_olacore_holding_ok): son cifras
+       internas, incluida la venta mensual y el margen por unidad.
+    3) El template trae __TOKEN__ en los enlaces de su barra superior para que
+       el visitante navegue entre los dos documentos sin re-tipear el token
+       (mismo patron que /olacore).
+    """
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not _olacore_holding_ok(token):
+        raise HTTPException(401, "No autorizado")
+    if not html:
+        raise HTTPException(404, "Documento no disponible")
+    return HTMLResponse(html.replace("__TOKEN__", token or ""),
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.get("/grupo", response_class=HTMLResponse)
+@app.get("/grupo/", response_class=HTMLResponse)
+def grupo_carampangue_page(request: Request, token: str | None = Query(None)):
+    """Grupo Carampangue - estructura, unidades y ocho meses de caja real."""
+    return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_HTML, token, request)
+
+
+@app.get("/grupo/2030", response_class=HTMLResponse)
+def grupo_carampangue_2030_page(request: Request, token: str | None = Query(None)):
+    """Grupo Carampangue 2030 - modelo financiero de las 21 unidades:
+    capital, venta en tres escenarios, EBITDA por frente y secuencia."""
+    return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_2030_HTML, token, request)
 
 
 @app.get("/anima", include_in_schema=False)

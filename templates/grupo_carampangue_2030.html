@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Grupo Carampangue 2030 — OLACORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@300..700&display=swap">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<nav class="gcnav"><div class="in"><a href="/grupo?token=__TOKEN__">Grupo Carampangue</a><span class="sep">/</span><a href="/grupo/2030?token=__TOKEN__" aria-current="page">Modelo 2030</a><span class="sep">/</span><a href="/olacore?token=__TOKEN__">Documentos del holding</a></div></nav>
+<style>
+:root{
+  --paper:#E8E0D0; --paper-2:#DFD6C3; --paper-3:#D2C7B0; --sunk:#DAD1BE;
+  --ink:#0E2530; --ink-2:#33505E; --ink-3:#65798A;
+  --rule:#C6BBA2; --rule-soft:#D6CCB7;
+  --cobre:#8F5F1B; --lacre:#8E3527; --ok:#3A6B4A;
+  --mA:#B76E12; --mB:#00719A;
+  --mA-soft:rgba(183,110,18,.16); --mB-soft:rgba(0,113,154,.14);
+  --band:#0E2530; --band-ink:#E8E0D0; --band-ink-2:#9FB0B9; --band-rule:#2B4855;
+  --max:1140px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+    --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+    --rule:#264652; --rule-soft:#1C3843;
+    --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287;
+    --mA:#C4842C; --mB:#2794BB;
+    --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+    --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+  --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+  --rule:#264652; --rule-soft:#1C3843;
+  --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287;
+  --mA:#C4842C; --mB:#2794BB;
+  --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+  --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+}
+
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink);
+  font-family:"Space Grotesk","Helvetica Neue",Arial,sans-serif; font-size:16px; line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:Fraunces,"Iowan Old Style",Georgia,serif; font-variation-settings:'SOFT' 50;
+  text-wrap:balance; margin:0; line-height:1.12; font-weight:600}
+p{margin:0}
+:focus-visible{outline:2px solid var(--cobre); outline-offset:3px; border-radius:2px}
+.wrap{max-width:var(--max); margin-inline:auto; padding-inline:clamp(20px,5vw,48px)}
+.kicker{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px; font-weight:500;
+  letter-spacing:.3em; text-transform:uppercase; color:var(--ink-3)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+
+.hero{background:var(--band); color:var(--band-ink); padding-block:clamp(46px,8vw,84px) clamp(38px,6vw,64px)}
+.hero .kicker{color:var(--band-ink-2)}
+.hero h1{font-size:clamp(2.5rem,7vw,4.4rem); letter-spacing:-.022em; margin-top:14px}
+.hero h1 em{display:block; font-style:italic; font-weight:300; font-size:clamp(1rem,2.3vw,1.35rem);
+  letter-spacing:.03em; color:var(--band-ink-2); margin-top:14px; font-variation-settings:'SOFT' 80}
+.hero-lede{color:var(--band-ink-2); max-width:60ch; margin-top:22px}
+.hero-row{display:grid; gap:18px; grid-template-columns:repeat(2,1fr); margin-top:clamp(30px,5vw,46px)}
+@media(min-width:760px){.hero-row{grid-template-columns:repeat(4,1fr)}}
+.hs{border-top:1px solid var(--band-rule); padding-top:14px}
+.hs .v{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:clamp(1.5rem,3.4vw,1.95rem); font-weight:500; letter-spacing:-.02em; display:block; line-height:1.1}
+.hs .l{color:var(--band-ink-2); font-size:.78rem; margin-top:7px; display:block; line-height:1.45}
+
+section{padding-block:clamp(44px,6.5vw,74px); border-top:1px solid var(--rule)}
+.shead{margin-bottom:clamp(24px,4vw,38px); max-width:66ch}
+.shead h2{font-size:clamp(1.55rem,3.4vw,2.2rem); letter-spacing:-.014em; margin-top:12px}
+.shead p{color:var(--ink-2); margin-top:14px; max-width:64ch}
+.shead p + p{margin-top:10px}
+
+/* aviso */
+.callout{border:1px solid var(--rule); border-left:3px solid var(--lacre); background:var(--sunk);
+  border-radius:3px; padding:20px 22px; margin-top:24px}
+.callout h4{font-size:1.05rem; margin-bottom:8px}
+.callout p{font-size:.92rem; color:var(--ink-2)}
+.callout p + p{margin-top:9px}
+.callout.ok{border-left-color:var(--ok)}
+.callout.cob{border-left-color:var(--cobre)}
+
+/* tipos */
+.tipos{display:grid; gap:14px; grid-template-columns:1fr; margin-top:24px}
+@media(min-width:720px){.tipos{grid-template-columns:repeat(4,1fr)}}
+.tipo{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2); padding:16px}
+.tipo .t{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--cobre)}
+.tipo h4{font-size:.98rem; margin-top:7px}
+.tipo p{font-size:.83rem; color:var(--ink-2); margin-top:7px}
+.tipo .q{font-family:"IBM Plex Mono",monospace; font-size:.8rem; margin-top:10px;
+  padding-top:9px; border-top:1px solid var(--rule-soft); color:var(--ink-3)}
+
+/* figuras */
+.fig{margin-top:clamp(22px,3.5vw,34px); border:1px solid var(--rule); border-radius:3px;
+  background:var(--paper-2); padding:clamp(16px,3vw,24px)}
+.fig h3{font-size:1.02rem}
+.fig .cap{color:var(--ink-3); font-size:.83rem; margin-top:6px; max-width:70ch}
+.plot{margin-top:18px; position:relative}
+.plot svg{display:block; width:100%; height:auto; overflow:visible}
+.gridline{stroke:var(--rule-soft); stroke-width:1}
+.axis-t{fill:var(--ink-3); font-family:"IBM Plex Mono",monospace; font-size:10px}
+.axis-t.b{fill:var(--ink-2); font-weight:600}
+.axis-l{fill:var(--ink-3); font-family:"Space Grotesk",sans-serif; font-size:10.5px}
+.legend{display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:16px; align-items:center}
+.legend .it{display:flex; align-items:center; gap:8px; font-size:.83rem; color:var(--ink-2)}
+.swatch{width:11px; height:11px; border-radius:2px; flex:none}
+.tip{position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-118%);
+  background:var(--band); color:var(--band-ink); border:1px solid var(--band-rule); border-radius:3px;
+  padding:9px 12px; font-size:.78rem; white-space:nowrap; z-index:5; transition:opacity .12s ease;
+  box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.tip.on{opacity:1}
+.tip b{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600}
+.tip .r{display:flex; justify-content:space-between; gap:16px; margin-top:3px; color:var(--band-ink-2)}
+
+/* tablas */
+.tblwrap{overflow-x:auto; margin-top:18px}
+table{border-collapse:collapse; width:100%; min-width:760px; font-size:.86rem}
+th,td{text-align:right; padding:8px 10px; border-bottom:1px solid var(--rule-soft)}
+th:first-child,td:first-child{text-align:left}
+th:nth-child(2),td:nth-child(2){text-align:left}
+thead th{font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:500; border-bottom:1px solid var(--rule);
+  white-space:nowrap; position:sticky; top:0; background:var(--paper-2)}
+thead th.s{cursor:pointer; user-select:none}
+thead th.s:hover{color:var(--cobre)}
+thead th.s::after{content:"  ⇅"; opacity:.4}
+thead th.s.asc::after{content:"  ↑"; opacity:1; color:var(--cobre)}
+thead th.s.desc::after{content:"  ↓"; opacity:1; color:var(--cobre)}
+tbody td{font-variant-numeric:tabular-nums; font-family:"IBM Plex Mono",monospace}
+tbody td:first-child,tbody td:nth-child(2){font-family:"Space Grotesk",sans-serif}
+tbody tr:hover{background:var(--sunk)}
+tr.total td{border-top:1px solid var(--rule); border-bottom:0; font-weight:600}
+.top5{box-shadow:inset 3px 0 0 var(--mA)}
+.pill{font-family:"IBM Plex Mono",monospace; font-size:8.5px; letter-spacing:.12em; text-transform:uppercase;
+  border:1px solid currentColor; border-radius:2px; padding:1px 5px; white-space:nowrap}
+.pA{color:var(--ok)} .pB{color:var(--lacre)} .pC{color:var(--cobre)} .pD{color:var(--ink-3)}
+.dots{letter-spacing:1px; color:var(--cobre)}
+
+/* secuencia */
+.years{display:flex; flex-direction:column; gap:0; margin-top:8px}
+.yr{display:grid; grid-template-columns:auto 1fr; gap:20px; padding:22px 0;
+  border-bottom:1px solid var(--rule-soft); align-items:start}
+.yr:last-child{border-bottom:0}
+.yr .y{font-family:"IBM Plex Mono",monospace; font-size:1.05rem; color:var(--cobre); font-weight:600;
+  padding-top:2px; white-space:nowrap}
+.yr h4{font-size:1.05rem}
+.yr p{font-size:.9rem; color:var(--ink-2); margin-top:7px}
+.yr .met{font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--ink-3); margin-top:10px;
+  padding-left:12px; border-left:2px solid var(--cobre)}
+
+.notes{background:var(--sunk); border:1px solid var(--rule); border-radius:3px; padding:clamp(18px,3vw,26px)}
+.notes ol{margin:14px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:9px}
+.notes li{font-size:.85rem; color:var(--ink-2)}
+.notes strong{color:var(--ink)}
+footer{border-top:1px solid var(--rule); padding-block:32px 44px; color:var(--ink-3); font-size:.8rem}
+.foot{display:flex; flex-wrap:wrap; gap:14px 28px; justify-content:space-between; align-items:baseline}
+.conf{color:var(--lacre); font-family:"IBM Plex Mono",monospace; font-size:.72rem;
+  letter-spacing:.14em; text-transform:uppercase}
+.meridian{width:1px; height:50px; background:var(--cobre); position:relative}
+.meridian::before,.meridian::after{content:""; position:absolute; left:-4px; width:9px; height:9px;
+  background:var(--cobre); border-radius:50%}
+.meridian::before{top:22%} .meridian::after{bottom:22%}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* barra de navegacion entre los dos documentos del grupo */
+.gcnav{background:var(--band); border-bottom:1px solid var(--band-rule);
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px;
+  letter-spacing:.18em; text-transform:uppercase}
+.gcnav .in{max-width:var(--max); margin-inline:auto; padding:11px clamp(20px,5vw,48px);
+  display:flex; flex-wrap:wrap; gap:6px 22px; align-items:center}
+.gcnav a{color:var(--band-ink-2); text-decoration:none; padding:2px 0;
+  border-bottom:1px solid transparent}
+.gcnav a:hover{color:var(--band-ink); border-bottom-color:var(--cobre)}
+.gcnav a[aria-current="page"]{color:var(--band-ink); border-bottom-color:var(--cobre)}
+.gcnav .sep{color:var(--band-rule)}
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="kicker">Modelo financiero · 21 unidades · pesos de 2026</span>
+    <h1>Grupo Carampangue 2030<em>Qué se puede construir sobre 37.163 habitantes</em></h1>
+    <p class="hero-lede">El plano completo, con la aritmética hecha: cuánto cuesta cada unidad, cuánto vende, cuánto deja de verdad, y cuáles cinco frentes explican casi el setenta por ciento del resultado. Los otros nueve se reparten lo que queda.</p>
+    <div class="hero-row">
+      <div class="hs"><span class="v">$97,6M</span><span class="l">Venta mensual del grupo en 2030, escenario base</span></div>
+      <div class="hs"><span class="v">$23,3M</span><span class="l">EBITDA mensual · 24% sobre venta</span></div>
+      <div class="hs"><span class="v">$213M</span><span class="l">Capital total a invertir, sin el edificio</span></div>
+      <div class="hs"><span class="v">5 de 14</span><span class="l">Frentes que explican el 69% del EBITDA</span></div>
+    </div>
+  </div>
+</header>
+
+<main><div class="wrap">
+
+<!-- ── 01 · EL ERROR QUE HAY QUE EVITAR ─────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">01 — El método</span>
+    <h2>Antes de sumar, separar</h2>
+    <p>Un plan con veintiún unidades tiene una trampa aritmética: varias de ellas no traen plata nueva, sino que le ponen nombre a plata que ya entra. Si se suma el «potencial» de la Unidad Musculoesquelética sobre la venta del centro médico, se está contando dos veces la misma consulta y la misma sesión de kinesiología.</p>
+    <p>Por eso cada unidad de este modelo está clasificada por el <strong>tipo de peso</strong> que produce. Solo los tipos A y C se suman; el tipo B se modela como aumento de conversión sobre lo que ya existe, y el tipo D no vende nada.</p>
+  </div>
+
+  <div class="tipos">
+    <div class="tipo">
+      <span class="t">Tipo A</span>
+      <h4>Venta nueva</h4>
+      <p>Plata que hoy no existe en ninguna parte. Un socio del gimnasio, un contrato con una forestal, una licencia de software.</p>
+      <p class="q">Se suma completa</p>
+    </div>
+    <div class="tipo">
+      <span class="t">Tipo B</span>
+      <h4>Reempaque</h4>
+      <p>Servicios que ya se prestan, con marca y relato nuevos. Sirven para vender más y mejor, no para facturar aparte.</p>
+      <p class="q">Se suma solo el aumento</p>
+    </div>
+    <div class="tipo">
+      <span class="t">Tipo C</span>
+      <h4>Captura de fuga</h4>
+      <p>Plata que el paciente ya gasta, pero afuera. La imagen, el examen, los lentes, el remedio que hoy se compran en otra parte.</p>
+      <p class="q">Se suma, con techo propio</p>
+    </div>
+    <div class="tipo">
+      <span class="t">Tipo D</span>
+      <h4>Multiplicador</h4>
+      <p>No factura. Hace que las otras facturen más o cuesten menos. La cuenta única, el software interno, el dato.</p>
+      <p class="q">No se suma nunca</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h4>Cuatro de las unidades del plan son tipo B</h4>
+    <p>Unidad Musculoesquelética, Centro de la Mujer, Check Carampangue y CECAR Deporte son buenas ideas y están en el modelo — pero como aumento de conversión sobre el centro médico, no como líneas propias. Entre las cuatro aportan <strong>$4,7M mensuales</strong>, no los $15M que resultarían de sumar sus «potenciales» por separado.</p>
+    <p>Esa distinción sola es la diferencia entre un plan de $113M mensuales y uno de $97,6M. El segundo es el que se puede defender.</p>
+  </div>
+</section>
+
+<!-- ── 02 · EL PUENTE ────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">02 — El puente</span>
+    <h2>De $33M a $97,6M</h2>
+    <p>Cada bloque es lo que agrega un frente completo, no una unidad suelta. El escenario es el base: ni conservador ni agresivo.</p>
+  </div>
+
+  <figure class="fig">
+    <h3>Puente de venta mensual, 2026 a 2030</h3>
+    <p class="cap">Los dos bloques de la derecha —retail y fuera del territorio— son los únicos que no dependen de la demanda de salud de la comuna. Ese detalle decide el plan entero, y se explica en la sección siguiente.</p>
+    <div class="plot" id="pw"></div>
+    <div class="legend" id="lw"></div>
+  </figure>
+</section>
+
+<!-- ── 03 · EL TECHO ─────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">03 — El techo</span>
+    <h2>Dónde se acaba el pueblo</h2>
+    <p>La comuna de Arauco tiene 37.163 habitantes y la provincia completa 166.231, según el Censo 2024. Dos análisis independientes —uno de arriba hacia abajo por demanda provincial, otro sumando a cada profesional en su mejor mes histórico— pusieron el techo de la venta clínica cerca de <strong>$50M mensuales</strong>.</p>
+    <p>El plan, contando solo sus líneas clínicas, llega a <strong>$59,9M</strong>. Está entre un 9% y un 33% por sobre ese techo.</p>
+  </div>
+
+  <figure class="fig">
+    <h3>Las tres canastas del plan, contra el techo medido</h3>
+    <p class="cap">El techo de $45–55M se estimó para consulta, procedimiento y rehabilitación. No incluye farmacia, óptica, estética ni contratos con empresas: esas líneas amplían el mercado en vez de disputarlo.</p>
+    <div class="plot" id="pc"></div>
+  </figure>
+
+  <div class="callout cob">
+    <h4>La conclusión que reordena el plan</h4>
+    <p>El núcleo clínico ya está en su techo en el escenario base. Eso no significa que el plan esté mal: significa que <strong>el crecimiento de verdad no viene de más salud en Carampangue</strong>, sino de tres sitios distintos — vender a empresas en vez de a personas, vender cosas en vez de horas, y vender fuera del territorio.</p>
+    <p>Dicho de otra manera: Salud Empresas, farmacia y óptica, y ALMA con Lota. Son exactamente las tres que en el plan original aparecían más abajo en la lista.</p>
+  </div>
+
+  <div class="callout">
+    <h4>Y una advertencia sobre el CESFAM</h4>
+    <p>El nuevo CESFAM de Carampangue tiene un presupuesto de <strong>$6.469 millones</strong> y entrega proyectada a octubre de 2026. No compite con la mayoría de estas líneas, pero sí con dos: medicina general indiferenciada y toma de muestras básica. Ambas están en el modelo con margen deliberadamente bajo.</p>
+  </div>
+</section>
+
+<!-- ── 04 · LAS 21 UNIDADES ──────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">04 — Las unidades</span>
+    <h2>Una por una</h2>
+    <p>Ordenadas por lo que aportan al EBITDA. Se puede reordenar haciendo clic en cualquier columna. La franja de cobre marca las cinco que explican el 70%.</p>
+  </div>
+
+  <div class="tblwrap">
+    <table id="tbl">
+      <thead><tr>
+        <th class="s" data-k="nombre">Unidad</th>
+        <th class="s" data-k="tipo">Tipo</th>
+        <th class="s" data-k="capex">Capex</th>
+        <th class="s" data-k="cons">Venta cons.</th>
+        <th class="s" data-k="base">Venta base</th>
+        <th class="s" data-k="agr">Venta agr.</th>
+        <th class="s" data-k="mg">Margen</th>
+        <th class="s" data-k="eb">EBITDA</th>
+        <th class="s" data-k="reg">Regul.</th>
+        <th class="s" data-k="sin">Sinergia</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+      <tfoot id="tf"></tfoot>
+    </table>
+  </div>
+  <div class="legend" style="margin-top:14px">
+    <span class="it"><span class="pill pA">A</span> venta nueva</span>
+    <span class="it"><span class="pill pB">B</span> reempaque — el número es aumento sobre lo existente</span>
+    <span class="it"><span class="pill pC">C</span> captura de fuga</span>
+    <span class="it"><span class="pill pD">D</span> multiplicador, no factura</span>
+    <span class="it"><span class="dots">•••</span> más difícil / más sinérgico</span>
+  </div>
+</section>
+
+<!-- ── 05 · VENTA vs MARGEN ──────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">05 — La trampa</span>
+    <h2>Vender mucho no es ganar mucho</h2>
+    <p>Cada burbuja es una unidad. A la derecha las que más venden, arriba las que más dejan por peso vendido, y el tamaño es el capital que hay que poner. La esquina que interesa es <strong>arriba y a la derecha con burbuja chica</strong>.</p>
+  </div>
+
+  <figure class="fig">
+    <h3>Venta mensual contra margen EBITDA, tamaño según capital requerido</h3>
+    <p class="cap">La farmacia es el caso de manual: sería la línea que más vende del grupo entero y una de las que menos deja, con $25M de capital comprometido y un químico farmacéutico obligatorio en la planilla.</p>
+    <p class="cap" style="margin-top:9px"><strong style="color:var(--ink-2)">Y hay dos burbujas que caen casi encima:</strong> imagenología y Salud Empresas venden casi lo mismo y dejan casi el mismo margen. La única diferencia entre las dos es el tamaño — una pide <strong style="color:var(--ink-2)">$60M</strong> de capital y la otra <strong style="color:var(--ink-2)">$1M</strong>. Cuando dos proyectos rinden igual, el que gana es el que no hay que financiar.</p>
+    <div class="plot" id="ps"></div>
+    <div class="legend" id="ls"></div>
+  </figure>
+
+  <div class="callout">
+    <h4>Farmacia: 12% de la venta, 3% del EBITDA</h4>
+    <p>Con margen de retail farmacéutico del 30% y el químico farmacéutico que exige el DS 466, el punto de equilibrio está entre $350.000 y $440.000 de venta diaria. A $12M mensuales la farmacia apenas pasa ese punto: aporta <strong>$0,7M de EBITDA por $25M de capital</strong>. Salud Empresas aporta $1,9M por $1M de capital.</p>
+    <p>No es un argumento para descartarla — cierra el circuito de la receta y es defensiva. Es un argumento para no ponerla antes que las otras, y para no celebrar la cifra de venta que produce.</p>
+  </div>
+</section>
+
+<!-- ── 06 · LOS CINCO ────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">06 — El ochenta veinte</span>
+    <h2>Los cinco que importan</h2>
+    <p>De los $23,3M de EBITDA mensual del escenario base, cinco frentes aportan $16,2M. Los otros nueve se reparten $7,1M, y entre todos piden más de la mitad del capital.</p>
+  </div>
+
+  <figure class="fig">
+    <h3>Aporte al EBITDA mensual por frente</h3>
+    <p class="cap">Los cinco de cobre son el plan. El resto es lo que se hace después, o lo que se le entrega a otro para que lo haga. CECAR aparece como un frente aunque en la tabla ocupe tres filas.</p>
+    <div class="plot" id="pp"></div>
+    <div class="legend" id="lp"></div>
+  </figure>
+
+  <div class="callout ok">
+    <h4>Dos de las cinco no necesitan capital</h4>
+    <p>Exprimir el centro médico —llenar las mañanas, que corren al 34%, y reactivar a los dos especialistas que hoy venden cero— aporta $9,25M de EBITDA sin poner un peso. Salud Empresas necesita $1M, que es un vendedor y un protocolo. Entre los dos, <strong>$11,2M de los $23,3M con $1M de capital</strong>.</p>
+    <p>Los otros tres —imagenología, CECAR y el piloto fuera del territorio— piden $98M entre los tres. Ese es el orden correcto y no es discutible.</p>
+  </div>
+</section>
+
+<!-- ── 07 · SECUENCIA ────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">07 — Secuencia</span>
+    <h2>En qué orden, y con qué se pasa de año</h2>
+    <p>Cada año tiene una métrica de salida. Si no se cumple, no se pasa al siguiente: se arregla el año en curso.</p>
+  </div>
+
+  <div class="years">
+    <div class="yr">
+      <span class="y">2026</span>
+      <div>
+        <h4>Lo que no cuesta plata</h4>
+        <p>Terminar CECAR, la respuesta escrita de Fonasa sobre kinesiología grupal, reactivar a los dos especialistas dormidos, y el primer contrato de Salud Empresas. Nada de esto pide capital y todo se puede hacer con el equipo actual.</p>
+        <p class="met">Salir del año con la venta sobre $38M y el margen bruto de vuelta sobre 35%</p>
+      </div>
+    </div>
+    <div class="yr">
+      <span class="y">2027</span>
+      <div>
+        <h4>El circuito diagnóstico</h4>
+        <p>Toma de muestras e imagenología: las dos piezas que cierran el recorrido consulta → examen → resultado → control, y que hoy mandan al paciente a otra parte. Encima de eso, la Unidad Musculoesquelética y el Centro de la Mujer como protocolos de conversión, no como obras.</p>
+        <p class="met">Que la fuga de exámenes baje bajo el 30% y Salud Empresas pase de tres contratos</p>
+      </div>
+    </div>
+    <div class="yr">
+      <span class="y">2028</span>
+      <div>
+        <h4>Salir del territorio</h4>
+        <p>El piloto de Lota o Coronel con dos o tres box, y las primeras ventas de ALMA a centros externos. Recién acá se prueba si el modelo es replicable o si es un buen negocio local irrepetible. En paralelo, CARIN y óptica.</p>
+        <p class="met">Un centro externo pagando ALMA doce meses seguidos, y el piloto en punto de equilibrio</p>
+      </div>
+    </div>
+    <div class="yr">
+      <span class="y">2029</span>
+      <div>
+        <h4>Retail y comunidad</h4>
+        <p>Farmacia, CARES, y la Cuenta Carampangue con el club encima. Van al final a propósito: son las de más capital, menos sinergia clínica o más riesgo legal, y ninguna es condición de las anteriores.</p>
+        <p class="met">Que el EBITDA del grupo pase $18M mensuales sin contar retail</p>
+      </div>
+    </div>
+    <div class="yr">
+      <span class="y">2030</span>
+      <div>
+        <h4>El edificio, si hace falta</h4>
+        <p>Recién cuando las unidades estén apretadas de verdad se decide la Fase 1 de 800 a 1.000 m². Construir antes es comprar metros para llenarlos después, que es el error que este plan completo existe para evitar.</p>
+        <p class="met">Ocupación sobre 70% en los 400 m² actuales durante seis meses seguidos</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 08 · VALOR ────────────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">08 — Valor</span>
+    <h2>Cuánto vale todo esto</h2>
+    <p>A múltiplos de mercado para prestadores de salud pequeños en Chile, entre cuatro y seis veces EBITDA, y software recurrente entre tres y cinco veces la facturación anual.</p>
+  </div>
+
+  <div class="tblwrap">
+    <table style="min-width:560px">
+      <thead><tr><th>Componente</th><th>Base del múltiplo</th><th>Múltiplo</th><th>Valor</th></tr></thead>
+      <tbody>
+        <tr><td>Salud, retail y comunidad — EBITDA anual</td><td>$264M</td><td>5×</td><td>$1.319M</td></tr>
+        <tr><td>ALMA — facturación anual, no EBITDA</td><td>$36M</td><td>4×</td><td>$144M</td></tr>
+        <tr class="total"><td>Valor del grupo operativo</td><td></td><td></td><td>$1.463M</td></tr>
+        <tr><td>Terreno República × Conquista</td><td>—</td><td>aparte</td><td>no valorizado</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <h4>El número que hay que mirar de frente</h4>
+    <p>Veintiún unidades, $213M de capital y cuatro años de trabajo llevan a un grupo de aproximadamente <strong>$1.460 millones de pesos</strong> de valor operativo. Es mucho, y a la vez es lo que da un pueblo de 37.163 habitantes: no hay plan que lo cambie, porque el límite es demográfico.</p>
+      <p>Lo que sí cambia el orden de magnitud es ALMA vendido fuera, porque es lo único del plan cuyo mercado no es Carampangue. Hoy está valorizado acá con prudencia deliberada — 25 centros a $120.000 — y es la única línea donde equivocarse por abajo cuesta caro.</p>
+  </div>
+</section>
+
+<!-- ── 09 · LO QUE NO CUADRA ─────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">09 — Objeciones</span>
+    <h2>Lo que no cuadra del plan</h2>
+  </div>
+  <div class="callout">
+    <h4>La restricción no es la plata, es la atención</h4>
+    <p>El capital pedido, $213M en cuatro años, es perfectamente financiable con el EBITDA del propio grupo. Veintiún unidades operadas por una persona no lo son. Cada unidad nueva necesita alguien que la despierte en la mañana, y hoy ese alguien es siempre el mismo.</p>
+    <p>El modelo asume, sin decirlo, que en 2027 hay un gerente de operaciones y en 2028 un jefe comercial. Si esas dos contrataciones no ocurren, el plan no se retrasa: se detiene en el frente número tres.</p>
+  </div>
+  <div class="callout">
+    <h4>Tres cosas del plan original que yo cambiaría</h4>
+    <p><strong>El club como producto asegurador.</strong> Cobrar mensual y prometer beneficios en salud es exactamente la frontera del negocio asegurador. Necesita diseño legal antes de la primera inscripción, no después.</p>
+    <p><strong>ALMA a $150.000 mensuales.</strong> El único benchmark propio del grupo pone el techo de la pequeña y mediana empresa cerca de tres UF, alrededor de $120.000. El modelo usa esa cifra; a $150.000 el número de centros hay que bajarlo.</p>
+    <p><strong>Super Don Pancho en el organigrama.</strong> Es del tío. Mientras no haya participación acordada, es un cliente de ALMA y un aliado del Patio, no una unidad del grupo, y no está en estos números.</p>
+  </div>
+  <div class="callout ok">
+    <h4>Y una del plan original que es mejor de lo que parecía</h4>
+    <p>Salud Empresas estaba en el medio de la lista y es el mejor negocio del plan: $1,9M de EBITDA mensual por $1M de capital, en una provincia forestal llena de contratistas con obligación legal de exámenes ocupacionales. Es la única línea que vende a alguien que <em>tiene</em> que comprar.</p>
+  </div>
+</section>
+
+<!-- ── 10 · PROCEDENCIA ──────────────────────────────────────────────── -->
+<section>
+  <div class="shead">
+    <span class="kicker">10 — Procedencia</span>
+    <h2>Qué está medido y qué está supuesto</h2>
+  </div>
+  <div class="notes">
+    <ol>
+      <li><strong>Medido en producción.</strong> La venta del centro médico, el margen bruto del 33,4%, los honorarios por contrato, la ocupación del 41% y la venta por día operativo. Todo sale del espejo de la caja, conciliado al peso entre marzo y agosto de 2026.</li>
+      <li><strong>Medido en fuentes públicas.</strong> Población de la comuna (37.163) y de la provincia (166.231), Censo 2024. Presupuesto del CESFAM de Carampangue ($6.469 millones) y su entrega proyectada, del ARI 2026 del Servicio de Salud Arauco.</li>
+      <li><strong>Derivado de análisis propios anteriores.</strong> El techo clínico de $45–55M, el punto de equilibrio de la farmacia, los números de la unidad de kinesiología por estaciones, el capital de imagenología y las cifras del Patio.</li>
+      <li><strong>Supuesto, y frágil.</strong> Las ventas de Salud Empresas, CARIN, CARES, el club y el piloto fuera del territorio. Ninguna tiene un dato propio detrás todavía: son estimaciones de tamaño, no proyecciones. Son las primeras que hay que reemplazar por medición.</li>
+      <li><strong>El supuesto más frágil de todos</strong> es que Fonasa pague bono por paciente en kinesiología grupal supervisada. De él dependen CECAR Rehab completo y parte de la Unidad Musculoesquelética. Se resuelve con un oficio.</li>
+      <li><strong>Margen EBITDA por unidad.</strong> Estimado por línea, no medido. El del centro médico descuenta un opex fijo del que solo hay un mes completo cargado. Ninguna cifra de este modelo sirve para un banco sin antes cargar los egresos reales.</li>
+      <li><strong>Pesos de 2026 sin inflación ni reajuste.</strong> Un ejercicio a cuatro años en pesos nominales subestima los costos más que los ingresos.</li>
+    </ol>
+  </div>
+</section>
+
+</div></main>
+
+<footer><div class="wrap foot">
+  <div>
+    <div class="meridian" style="margin:0 0 14px"></div>
+    <strong style="font-family:Fraunces,Georgia,serif">Grupo Carampangue 2030</strong><br>
+    OLACORE · Meridiano Sur — Carampangue, Provincia de Arauco
+  </div>
+  <div style="text-align:right">
+    <span class="conf">Documento interno · modelo de trabajo</span><br>
+    Cifras base al 28 de agosto de 2026
+  </div>
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var M = function(n){ return "$" + n.toFixed(1).replace(".", ",") + "M"; };
+  var pc = function(n){ return (n*100).toFixed(0) + "%"; };
+
+  /* ── las 21 unidades ────────────────────────────────────────────────
+     capex y venta en millones de CLP/mes · mg = margen EBITDA sobre su venta
+     reg = dificultad regulatoria 1-3 · sin = sinergia con CMC 1-3          */
+  var U = [
+    {n:"CMC — llenar mañanas y reactivar especialistas", f:"CMC exprimido", g:"Salud", t:"A", capex:0,   cons:4.0, base:7.0,  agr:11.0, mg:.33, reg:1, sin:3},
+    {n:"CECAR Rehab — 4 estaciones",            f:"CECAR", g:"Salud", t:"A", capex:4.5,  cons:0.3, base:0.7,  agr:1.4,  mg:.62, reg:2, sin:3},
+    {n:"CECAR Training y 60+",                  f:"CECAR", g:"Salud", t:"A", capex:8.0,  cons:0.9, base:1.6,  agr:3.2,  mg:.56, reg:1, sin:2},
+    {n:"CECAR Deporte — clubes",                f:"CECAR", g:"Salud", t:"A", capex:0.8,  cons:0.2, base:0.4,  agr:0.9,  mg:.50, reg:1, sin:3},
+    {n:"Unidad Musculoesquelética",             f:"CMC exprimido", g:"Salud", t:"B", capex:1.0,  cons:0.6, base:1.2,  agr:2.2,  mg:.50, reg:1, sin:3},
+    {n:"Centro de la Mujer",                    f:"CMC exprimido", g:"Salud", t:"B", capex:2.0,  cons:0.8, base:1.5,  agr:2.8,  mg:.30, reg:1, sin:3},
+    {n:"Check Carampangue",                     f:"CMC exprimido", g:"Salud", t:"B", capex:0.5,  cons:1.0, base:2.0,  agr:3.5,  mg:.35, reg:1, sin:3},
+    {n:"Imagenología — RX, pano, CBCT, eco",    f:"Imagenología", g:"Salud", t:"C", capex:60.0, cons:3.0, base:5.0,  agr:8.0,  mg:.40, reg:3, sin:3},
+    {n:"Laboratorio y toma de muestras",        f:"Laboratorio", g:"Salud", t:"C", capex:4.0,  cons:1.8, base:3.0,  agr:4.5,  mg:.10, reg:3, sin:3},
+    {n:"Salud Empresas",                        f:"Salud Empresas", g:"Salud", t:"A", capex:1.0,  cons:2.4, base:4.8,  agr:11.0, mg:.40, reg:2, sin:2},
+    {n:"CARIN — neurodesarrollo",               f:"CARIN", g:"Salud", t:"A", capex:6.0,  cons:1.5, base:2.5,  agr:4.5,  mg:.30, reg:2, sin:2},
+    {n:"Carampangue a Domicilio",               f:"Domicilio", g:"Salud", t:"A", capex:3.0,  cons:1.0, base:2.0,  agr:3.6,  mg:.30, reg:3, sin:2},
+    {n:"Óptica Carampangue",                    f:"Óptica", g:"Retail",t:"C", capex:12.0, cons:2.5, base:4.0,  agr:6.5,  mg:.22, reg:2, sin:2},
+    {n:"Farmacia",                              f:"Farmacia", g:"Retail",t:"C", capex:25.0, cons:9.0, base:12.0, agr:16.0, mg:.06, reg:3, sin:2},
+    {n:"CARES — estética",                      f:"CARES", g:"Retail",t:"A", capex:8.0,  cons:1.8, base:3.0,  agr:5.0,  mg:.35, reg:2, sin:1},
+    {n:"Patio Carampangue",                     f:"Patio", g:"Comunidad",t:"A", capex:2.7, cons:1.2, base:2.1, agr:3.0, mg:.28, reg:2, sin:1},
+    {n:"Club Carampangue",                      f:"Club", g:"Comunidad",t:"A", capex:5.0, cons:1.4, base:2.8, agr:5.6, mg:.32, reg:3, sin:2},
+    {n:"Cuenta Carampangue",                    f:"—", g:"Tecnología",t:"D", capex:5.0, cons:0, base:0,   agr:0,    mg:0,   reg:2, sin:3},
+    {n:"ALMA — venta a terceros",               f:"ALMA", g:"Tecnología",t:"A", capex:40.0, cons:1.2, base:3.0, agr:9.0, mg:.45, reg:1, sin:1},
+    {n:"Piloto Lota o Coronel",                 f:"Lota / Coronel", g:"Salud", t:"A", capex:25.0, cons:3.0, base:6.0,  agr:10.0, mg:.25, reg:3, sin:1},
+    {n:"Edificio Fase 1 — 800 a 1.000 m²",      f:"—", g:"Salud", t:"D", capex:254.0, cons:0, base:0,     agr:0,    mg:0,   reg:3, sin:3}
+  ];
+  var BASE_2026 = 33.0;
+
+  U.forEach(function(u){ u.eb = u.base * u.mg; });
+  /* Los tipo B no facturan aparte: su venta es aumento de conversión sobre el
+     núcleo, así que su EBITDA vive dentro del núcleo y no se suma por separado. */
+  var upliftB = U.filter(function(u){ return u.t === "B"; }).reduce(function(a,u){ return a + u.base; }, 0);
+  U[0].eb = (BASE_2026 + U[0].base + upliftB) * 0.33 - 5.5;
+  U.filter(function(u){ return u.t === "B"; }).forEach(function(u){ u.eb = 0; u.enNucleo = true; });
+
+  /* agregación por FRENTE — CECAR son tres filas pero un solo frente */
+  var FR = {};
+  U.forEach(function(u){
+    if (u.f === "—") return;
+    var a = FR[u.f] || (FR[u.f] = {n:u.f, eb:0, capex:0, base:0});
+    a.eb += u.eb; a.capex += u.capex; a.base += u.base;
+  });
+  var FRENTES = Object.keys(FR).map(function(k){ return FR[k]; })
+                      .sort(function(a,b){ return b.eb - a.eb; });
+  var TOP5 = {};
+  FRENTES.slice(0,5).forEach(function(f){ TOP5[f.n] = 1; });
+  U.forEach(function(u){ u.five = TOP5[u.f] ? 1 : 0; });
+
+  var TOT = {
+    base: BASE_2026 + U.reduce(function(a,u){ return a + u.base; }, 0),
+    capex: U.reduce(function(a,u){ return a + u.capex; }, 0) - 254,
+    eb: U.reduce(function(a,u){ return a + u.eb; }, 0)
+  };
+
+  /* ── tabla ────────────────────────────────────────────────────────── */
+  var tb = document.getElementById("tb"), tf = document.getElementById("tf");
+  var dots = function(n){ return "•".repeat(n) + "<span style='opacity:.25'>" + "•".repeat(3-n) + "</span>"; };
+  function paint(rows){
+    tb.innerHTML = rows.map(function(u){
+      return '<tr class="' + (u.five ? "top5" : "") + '">' +
+        '<td>' + u.n + '</td>' +
+        '<td><span class="pill p' + u.t + '">' + u.t + '</span></td>' +
+        '<td>' + (u.capex ? M(u.capex) : "—") + '</td>' +
+        '<td>' + (u.base ? M(u.cons) : "—") + '</td>' +
+        '<td>' + (u.base ? M(u.base) : "—") + '</td>' +
+        '<td>' + (u.base ? M(u.agr) : "—") + '</td>' +
+        '<td>' + (u.base ? pc(u.mg) : "—") + '</td>' +
+        '<td>' + (u.enNucleo ? "<span style='color:var(--ink-3)'>en núcleo</span>" : (u.eb ? M(u.eb) : "—")) + '</td>' +
+        '<td class="dots">' + dots(u.reg) + '</td>' +
+        '<td class="dots">' + dots(u.sin) + '</td></tr>';
+    }).join("");
+  }
+  paint(U.slice().sort(function(a,b){ return b.eb - a.eb; }));
+  tf.innerHTML = '<tr class="total"><td>Grupo 2030 — base $33,0M incluida</td><td></td><td>' + M(TOT.capex) +
+    '</td><td></td><td>' + M(TOT.base) + '</td><td></td><td>' + pc(TOT.eb / TOT.base) + '</td><td>' +
+    M(TOT.eb) + '</td><td></td><td></td></tr>';
+
+  var dir = {};
+  Array.prototype.forEach.call(document.querySelectorAll("th.s"), function(th){
+    th.addEventListener("click", function(){
+      var k = th.dataset.k, asc = !dir[k]; dir = {}; dir[k] = asc;
+      Array.prototype.forEach.call(document.querySelectorAll("th.s"), function(o){ o.classList.remove("asc","desc"); });
+      th.classList.add(asc ? "asc" : "desc");
+      paint(U.slice().sort(function(a,b){
+        var x = a[k], y = b[k];
+        if (typeof x === "string") return asc ? x.localeCompare(y) : y.localeCompare(x);
+        return asc ? x - y : y - x;
+      }));
+    });
+  });
+
+  function mkTip(h){ var e = document.createElement("div"); e.className = "tip"; h.appendChild(e); return e; }
+
+  /* ── puente de venta ──────────────────────────────────────────────── */
+  (function(){
+    var host = document.getElementById("pw"), tip = mkTip(host);
+    var pasos = [
+      {l:"Base 2026",        v:BASE_2026, tipo:"base"},
+      {l:"CMC exprimido",    v:7.0},
+      {l:"CECAR",            v:2.7},
+      {l:"Reempaque",        v:4.7},
+      {l:"Diagnóstico",      v:8.0},
+      {l:"Salud Empresas",   v:4.8},
+      {l:"CARIN",            v:2.5},
+      {l:"Domicilio",        v:2.0},
+      {l:"Retail",           v:19.0},
+      {l:"Comunidad",        v:4.9},
+      {l:"Fuera del territorio", v:9.0},
+      {l:"Total 2030",       v:0, tipo:"total"}
+    ];
+    var W = 880, H = 330, L = 46, R = 14, T = 24, B = 62, iw = W-L-R, ih = H-T-B;
+    var max = 104, y = function(v){ return T + ih - ih*v/max; };
+    var bw = iw/pasos.length*0.62, step = iw/pasos.length;
+    var acc = 0, s = ['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Puente de venta mensual de 2026 a 2030">'];
+    [0,26,52,78,104].forEach(function(v){
+      s.push('<line class="gridline" x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'"/>');
+      s.push('<text class="axis-t" x="'+(L-8)+'" y="'+(y(v)+3.5)+'" text-anchor="end">'+v+'M</text>');
+    });
+    pasos.forEach(function(p,i){
+      var cx = L + step*(i+0.5), x0 = cx - bw/2, y0, hh, col;
+      if (p.tipo === "base"){ y0 = y(p.v); hh = y(0)-y(p.v); acc = p.v; col = "var(--mB)"; }
+      else if (p.tipo === "total"){ p.v = acc; y0 = y(acc); hh = y(0)-y(acc); col = "var(--mB)"; }
+      else { y0 = y(acc+p.v); hh = y(acc)-y(acc+p.v); if (i) s.push('<line x1="'+(cx-step*0.5-bw/2+bw)+'" y1="'+y(acc)+'" x2="'+x0+'" y2="'+y(acc)+'" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2 2"/>'); acc += p.v; col = "var(--mA)"; }
+      s.push('<rect x="'+x0+'" y="'+y0+'" width="'+bw+'" height="'+Math.max(hh,2)+'" fill="'+col+'" rx="3"/>');
+      s.push('<text class="axis-t b" x="'+cx+'" y="'+(y0-7)+'" text-anchor="middle">'+(p.tipo?"":"+")+p.v.toFixed(1).replace(".",",")+'</text>');
+      s.push('<text class="axis-l" x="'+cx+'" y="'+(H-B+18)+'" text-anchor="end" transform="rotate(-38 '+cx+' '+(H-B+18)+')">'+p.l+'</text>');
+      s.push('<rect x="'+x0+'" y="'+T+'" width="'+bw+'" height="'+ih+'" fill="transparent" class="hit" data-i="'+i+'"/>');
+    });
+    s.push("</svg>");
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+    document.getElementById("lw").innerHTML =
+      '<span class="it"><i class="swatch" style="background:var(--mB)"></i>Punto de partida y llegada</span>' +
+      '<span class="it"><i class="swatch" style="background:var(--mA)"></i>Lo que agrega cada frente</span>';
+    var svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var i = +h.dataset.i, p = pasos[i], r = svg.getBoundingClientRect();
+      tip.innerHTML = "<b>" + M(p.v) + "</b><div class='r'><span>" + p.l + "</span></div>";
+      tip.style.left = (r.width * ((L + step*(i+0.5))/W)) + "px";
+      tip.style.top  = (r.height * (T/H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  })();
+
+  /* ── canastas vs techo ────────────────────────────────────────────── */
+  (function(){
+    var host = document.getElementById("pc"), tip = mkTip(host);
+    var C = [
+      {l:"Clínico local", v:59.9, d:"Consulta, kine, imagen, laboratorio, CARIN, domicilio y reempaques"},
+      {l:"Retail, empresas y comunidad", v:28.7, d:"Óptica, farmacia, estética, Salud Empresas, gimnasio, Patio y club"},
+      {l:"Fuera del territorio", v:9.0, d:"ALMA vendido a terceros y el piloto en Lota o Coronel"}
+    ];
+    var W = 880, H = 210, L = 210, R = 70, T = 16, B = 34, iw = W-L-R, ih = H-T-B;
+    var max = 66, x = function(v){ return L + iw*v/max; };
+    var bh = ih/C.length*0.52;
+    var s = ['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Las tres canastas de venta del plan contra el techo de demanda clínica medido">'];
+    // banda del techo
+    s.push('<rect x="'+x(45)+'" y="'+T+'" width="'+(x(55)-x(45))+'" height="'+ih+'" fill="var(--mB-soft)"/>');
+    s.push('<line x1="'+x(45)+'" y1="'+T+'" x2="'+x(45)+'" y2="'+(T+ih)+'" stroke="var(--mB)" stroke-width="1.5" stroke-dasharray="4 3"/>');
+    s.push('<line x1="'+x(55)+'" y1="'+T+'" x2="'+x(55)+'" y2="'+(T+ih)+'" stroke="var(--mB)" stroke-width="1.5" stroke-dasharray="4 3"/>');
+    s.push('<text class="axis-t b" x="'+((x(45)+x(55))/2)+'" y="'+(T+ih+22)+'" text-anchor="middle" fill="var(--mB)">techo medido $45–55M</text>');
+    C.forEach(function(c,i){
+      var cy = T + ih*(i+0.5)/C.length;
+      s.push('<rect x="'+L+'" y="'+(cy-bh/2)+'" width="'+(x(c.v)-L)+'" height="'+bh+'" fill="var(--mA)" rx="3"/>');
+      s.push('<text class="axis-l" x="'+(L-12)+'" y="'+(cy+4)+'" text-anchor="end" fill="var(--ink-2)">'+c.l+'</text>');
+      s.push('<text class="axis-t b" x="'+(x(c.v)+8)+'" y="'+(cy+4)+'">'+M(c.v)+'</text>');
+      s.push('<rect x="'+L+'" y="'+(cy-bh/2)+'" width="'+(x(c.v)-L)+'" height="'+bh+'" fill="transparent" class="hit" data-i="'+i+'"/>');
+    });
+    s.push("</svg>");
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+    var svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var c = C[+h.dataset.i], r = svg.getBoundingClientRect(), i = +h.dataset.i;
+      tip.innerHTML = "<b>" + M(c.v) + "</b><div class='r'><span>" + c.d + "</span></div>";
+      tip.style.left = (r.width * ((L + (x(c.v)-L)/2)/W)) + "px";
+      tip.style.top  = (r.height * ((T + ih*(i+0.5)/C.length)/H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  })();
+
+  /* ── dispersión venta × margen, tamaño = capex ────────────────────── */
+  (function(){
+    var host = document.getElementById("ps"), tip = mkTip(host);
+    var D = U.filter(function(u){ return u.base > 0 && u.t !== "B"; });
+    var W = 880, H = 400, L = 54, R = 26, T = 22, B = 46, iw = W-L-R, ih = H-T-B;
+    var xm = 14, ym = .70;
+    var x = function(v){ return L + iw*v/xm; }, y = function(v){ return T + ih - ih*v/ym; };
+    var rr = function(c){ return 6 + Math.sqrt(c) * 2.6; };
+    var s = ['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Dispersión de venta mensual contra margen EBITDA por unidad, tamaño según capital">'];
+    [0,.175,.35,.525,.70].forEach(function(v){
+      s.push('<line class="gridline" x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'"/>');
+      s.push('<text class="axis-t" x="'+(L-8)+'" y="'+(y(v)+3.5)+'" text-anchor="end">'+pc(v)+'</text>');
+    });
+    [0,3.5,7,10.5,14].forEach(function(v){
+      s.push('<text class="axis-t" x="'+x(v)+'" y="'+(H-B+20)+'" text-anchor="middle">'+M(v)+'</text>');
+    });
+    s.push('<text class="axis-l" x="'+(L+iw/2)+'" y="'+(H-6)+'" text-anchor="middle">Venta mensual, escenario base</text>');
+    D.sort(function(a,b){ return b.capex - a.capex; }).forEach(function(u,i){
+      s.push('<circle cx="'+x(u.base)+'" cy="'+y(u.mg)+'" r="'+rr(u.capex)+'" fill="'+(u.five?"var(--mA)":"var(--mB)")+
+             '" fill-opacity=".78" stroke="var(--paper-2)" stroke-width="2" class="hit" data-i="'+i+'"/>');
+    });
+    /* etiquetas directas solo en los extremos que importan.
+       dir: 1 derecha · -1 izquierda · 0 arriba (evita el choque en el centro) */
+    [["Farmacia",12.0,.06,25,1],["CMC exprimido",7.0,.33,0,1],["CECAR Rehab",0.7,.62,4.5,1],
+     ["ALMA",3.0,.45,40,0],["Imagenología",5.0,.40,60,0],["Salud Empresas",4.8,.40,60,2]].forEach(function(e){
+      var cx = x(e[1]), cy = y(e[2]), r = rr(e[3]), d = e[4];
+      if (d === 0) s.push('<text class="axis-t b" x="'+cx+'" y="'+(cy-r-8)+'" text-anchor="middle">'+e[0]+'</text>');
+      else if (d === 2) s.push('<text class="axis-t b" x="'+cx+'" y="'+(cy+r+16)+'" text-anchor="middle">'+e[0]+'</text>');
+      else s.push('<text class="axis-t b" x="'+(cx+d*(r+8))+'" y="'+(cy+3.5)+'" text-anchor="'+(d>0?"start":"end")+'">'+e[0]+'</text>');
+    });
+    s.push("</svg>");
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+    document.getElementById("ls").innerHTML =
+      '<span class="it"><i class="swatch" style="background:var(--mA)"></i>Las cinco que explican el 70%</span>' +
+      '<span class="it"><i class="swatch" style="background:var(--mB)"></i>Las demás</span>' +
+      '<span class="it" style="color:var(--ink-3)">El diámetro es el capital requerido</span>';
+    var svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var u = D[+h.dataset.i], r = svg.getBoundingClientRect();
+      tip.innerHTML = "<b>" + u.n + "</b>" +
+        "<div class='r'><span>Venta base</span><b>" + M(u.base) + "</b></div>" +
+        "<div class='r'><span>Margen EBITDA</span><b>" + pc(u.mg) + "</b></div>" +
+        "<div class='r'><span>Capital</span><b>" + M(u.capex) + "</b></div>";
+      tip.style.left = (r.width * (x(u.base)/W)) + "px";
+      tip.style.top  = (r.height * (y(u.mg)/H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  })();
+
+  /* ── pareto de EBITDA ─────────────────────────────────────────────── */
+  (function(){
+    var host = document.getElementById("pp"), tip = mkTip(host);
+    var P = FRENTES.filter(function(f){ return f.eb > 0; })
+                   .map(function(f){ return {n:f.n, eb:f.eb, capex:f.capex, five:TOP5[f.n]}; });
+    var W = 880, H = 30 + P.length*26, L = 250, R = 76, T = 12;
+    var ih = H - T - 14, max = 10, x = function(v){ return L + (W-L-R)*v/max; };
+    var bh = 15;
+    var s = ['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Aporte al EBITDA mensual por unidad, ordenado de mayor a menor">'];
+    [0,2.5,5,7.5,10].forEach(function(v){
+      s.push('<line class="gridline" x1="'+x(v)+'" y1="'+T+'" x2="'+x(v)+'" y2="'+(T+ih)+'"/>');
+    });
+    P.forEach(function(u,i){
+      var cy = T + 13 + i*26;
+      s.push('<rect x="'+L+'" y="'+(cy-bh/2)+'" width="'+Math.max(x(u.eb)-L,2)+'" height="'+bh+'" fill="'+(u.five?"var(--mA)":"var(--mB)")+'" rx="3"/>');
+      s.push('<text class="axis-l" x="'+(L-12)+'" y="'+(cy+4)+'" text-anchor="end" fill="'+(u.five?"var(--ink)":"var(--ink-2)")+'">'+
+             (u.n.length>34 ? u.n.slice(0,33)+"…" : u.n)+'</text>');
+      s.push('<text class="axis-t'+(u.five?" b":"")+'" x="'+(x(u.eb)+8)+'" y="'+(cy+4)+'">'+M(u.eb)+'</text>');
+      s.push('<rect x="'+L+'" y="'+(cy-13)+'" width="'+(W-L-R)+'" height="26" fill="transparent" class="hit" data-i="'+i+'"/>');
+    });
+    s.push("</svg>");
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+    var f5 = P.filter(function(u){ return u.five; }).reduce(function(a,u){ return a+u.eb; }, 0);
+    document.getElementById("lp").innerHTML =
+      '<span class="it"><i class="swatch" style="background:var(--mA)"></i>Los cinco frentes — ' + M(f5) + ' · ' + pc(f5/TOT.eb) + ' del total</span>' +
+      '<span class="it"><i class="swatch" style="background:var(--mB)"></i>Los otros ' + (P.length-5) + ' — ' + M(TOT.eb-f5) + '</span>';
+    var svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var u = P[+h.dataset.i], r = svg.getBoundingClientRect();
+      tip.innerHTML = "<b>" + u.n + "</b>" +
+        "<div class='r'><span>EBITDA</span><b>" + M(u.eb) + "</b></div>" +
+        "<div class='r'><span>Capital</span><b>" + M(u.capex) + "</b></div>";
+      tip.style.left = (r.width * (x(u.eb/2)/W)) + "px";
+      tip.style.top  = (r.height * ((T+13+(+h.dataset.i)*26)/H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  })();
+})();
+</script>
+
+</body>
+</html>
