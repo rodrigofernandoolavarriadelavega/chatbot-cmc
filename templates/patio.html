@@ -350,6 +350,91 @@ section{padding:clamp(56px,8vw,96px) 0}
 .cta-fija .btn{flex:1;box-shadow:var(--sombra-lg)}
 @media (min-width:900px){.cta-fija{display:none}}
 
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LA PIZARRA — pieza firma de la página.
+   Todo carro de comida tiene su pizarra con el menú escrito con tiza; es el
+   artefacto más reconocible de este mundo y responde la única pregunta que
+   trae a alguien acá: ¿qué hay este fin de semana? Por eso rompe la pila de
+   tarjetas blancas: es de otro material.
+   El marco es madera (gradiente), la superficie es pizarra con polvo de tiza
+   (radiales muy suaves) y los textos van en tiza, no en blanco puro.
+   ══════════════════════════════════════════════════════════════════════ */
+:root{ --pizarra:#12241F; --pizarra-2:#1B322B; --tiza:#F6F1E4; --madera:#8A5A32; }
+.pizarra{
+  position:relative; border-radius:20px; padding:clamp(16px,2.6vw,22px);
+  background:linear-gradient(155deg,#A06B3D,#8A5A32 42%,#6E4526);
+  box-shadow:var(--sombra-lg);
+}
+.pizarra-in{
+  position:relative; border-radius:12px; padding:clamp(22px,4vw,38px) clamp(18px,3.4vw,34px);
+  background:
+    radial-gradient(70% 50% at 22% 18%, rgba(255,255,255,.05), transparent 60%),
+    radial-gradient(60% 46% at 82% 78%, rgba(255,255,255,.04), transparent 60%),
+    linear-gradient(180deg,var(--pizarra-2),var(--pizarra));
+  box-shadow:inset 0 2px 14px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
+  overflow:hidden;
+}
+/* Polvo de tiza en el borde inferior: el detalle que hace que se lea como
+   pizarra usada y no como una caja oscura. */
+.pizarra-in::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:70px; pointer-events:none;
+  background:radial-gradient(120% 100% at 50% 130%, rgba(246,241,228,.13), transparent 62%);
+}
+.pizarra .rotulo{
+  font-family:var(--display); font-weight:700; font-size:.72rem; letter-spacing:.22em;
+  text-transform:uppercase; color:rgba(246,241,228,.5); margin:0 0 6px;
+}
+.pizarra h2{
+  font-family:var(--display); font-weight:700; color:var(--tiza); margin:0;
+  font-size:clamp(1.9rem,6.4vw,3rem); line-height:1.02; letter-spacing:0;
+}
+.pizarra h2 em{font-style:normal; color:var(--sun); display:inline-block; transform:rotate(-1.4deg)}
+.pizarra .sub{margin:12px 0 0; color:rgba(246,241,228,.62); font-size:.98rem; max-width:52ch}
+
+.finde{display:grid; gap:14px; grid-template-columns:1fr; margin-top:clamp(22px,3.4vw,30px)}
+@media (min-width:780px){.finde{grid-template-columns:repeat(3,1fr); gap:18px}}
+.dia{
+  position:relative; padding:20px 18px 18px; border-radius:14px; min-width:0;
+  background:rgba(246,241,228,.045); border:1px solid rgba(246,241,228,.12);
+  transition:background .22s var(--ease), transform .22s var(--ease);
+}
+.dia:hover{background:rgba(246,241,228,.085); transform:translateY(-3px)}
+.dia .cuando{display:flex; align-items:baseline; gap:9px; margin-bottom:12px}
+.dia .cuando b{font-family:var(--display); font-weight:700; font-size:1.28rem; color:var(--tiza);
+  text-transform:capitalize; line-height:1}
+.dia .cuando span{font-family:var(--display); font-weight:700; font-size:.78rem; letter-spacing:.14em;
+  text-transform:uppercase; color:rgba(246,241,228,.42)}
+.dia .plato{font-family:var(--display); font-weight:700; font-size:1.06rem; color:var(--sun); line-height:1.2}
+.dia .detalle{margin:7px 0 0; font-size:.88rem; color:rgba(246,241,228,.6)}
+.dia .horas{margin-top:14px; padding-top:12px; border-top:1px dashed rgba(246,241,228,.22);
+  display:flex; flex-wrap:wrap; gap:7px}
+.dia .hora-chip{font-family:var(--display); font-weight:700; font-size:.72rem; letter-spacing:.04em;
+  padding:5px 10px; border-radius:var(--r-pill); background:rgba(246,241,228,.1); color:rgba(246,241,228,.8);
+  border:1px solid rgba(246,241,228,.14)}
+.dia.cerrado{opacity:.45}
+.pizarra-pie{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+  margin-top:clamp(20px,3vw,26px)}
+.pizarra-pie .fino{color:rgba(246,241,228,.42); font-size:.8rem; margin:0}
+.btn-tiza{background:var(--tiza); color:var(--pizarra); border-color:var(--tiza)}
+.btn-tiza:hover{background:#fff; color:var(--pizarra)}
+
+/* ═══ Borde de toldo: separa secciones como el alero de un carro ════════ */
+.borde-toldo{height:20px; background:var(--arena);
+  -webkit-mask-image:radial-gradient(22px 20px at 22px 0, transparent 21px, #000 22px);
+  mask-image:radial-gradient(22px 20px at 22px 0, transparent 21px, #000 22px);
+  -webkit-mask-size:44px 20px; mask-size:44px 20px; -webkit-mask-repeat:repeat-x; mask-repeat:repeat-x}
+.borde-toldo.sobre-blanco{background:var(--blanco)}
+
+/* ═══ Tarjetas de zona con banda de color: dejan de ser todas iguales ═══ */
+.zona{padding-top:0; overflow:hidden}
+.zona::before{display:none}
+.zona .banda{margin:0 -24px 20px; padding:18px 24px 16px; background:var(--cs);
+  border-bottom:2px solid var(--c); display:flex; align-items:center; gap:13px}
+.zona .banda .glifo{margin:0; width:46px; height:46px; background:var(--blanco);
+  box-shadow:0 4px 10px -4px color-mix(in srgb, var(--c) 45%, transparent)}
+.zona .banda h3{margin:0; font-size:1.16rem}
+
 /* ---- Recuadro TODO ---------------------------------------------------- */
 .todo{
   display:inline-block; border:1.5px dashed var(--sun); background:var(--sun-soft);
@@ -581,12 +666,26 @@ footer.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(2
 </header>
 
 <div class="banderines" aria-hidden="true"><i style="--c:#FDB515"></i><i style="--c:#F15A24"></i><i style="--c:#19A7A3"></i><i style="--c:#EF6B57"></i><i style="--c:#FDB515"></i><i style="--c:#F15A24"></i><i style="--c:#19A7A3"></i><i style="--c:#EF6B57"></i><i style="--c:#FDB515"></i><i style="--c:#F15A24"></i><i style="--c:#19A7A3"></i><i style="--c:#EF6B57"></i><i style="--c:#FDB515"></i><i style="--c:#F15A24"></i><i style="--c:#19A7A3"></i><i style="--c:#EF6B57"></i><i style="--c:#FDB515"></i><i style="--c:#F15A24"></i><i style="--c:#19A7A3"></i><i style="--c:#EF6B57"></i><i style="--c:#FDB515"></i><i style="--c:#F15A24"></i><i style="--c:#19A7A3"></i><i style="--c:#EF6B57"></i></div>
-<div class="cinta" aria-hidden="true">
-  <div class="pista" id="pista">
-    <span>Patio Sabores</span><span>Patio Kids</span><span>Patio Mercado</span><span>Patio Vivo</span><span>Patio Saludable</span><span>Entrada liberada</span>
-    <span>Patio Sabores</span><span>Patio Kids</span><span>Patio Mercado</span><span>Patio Vivo</span><span>Patio Saludable</span><span>Entrada liberada</span>
+
+
+<section style="background:var(--arena); padding:clamp(30px,5vw,48px) 0 clamp(34px,5vw,52px)">
+  <div class="env">
+    <div class="pizarra rev">
+      <div class="pizarra-in">
+        <p class="rotulo">Este fin de semana</p>
+        <h2>¿Qué hay <em>en el patio?</em></h2>
+        <p class="sub">La programación cambia todas las semanas. Esto es lo que toca ahora.</p>
+        <div class="finde" id="finde">
+          <div class="dia"><div class="cuando"><b>Cargando…</b></div></div>
+        </div>
+        <div class="pizarra-pie">
+          <p class="fino">Programación referencial · sujeta a permisos municipales</p>
+          <a class="btn btn-tiza btn-sm" href="#cartelera">Ver el mes completo</a>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 
 <div class="cifras">
   <div class="env">
@@ -598,6 +697,7 @@ footer.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(2
 </div>
 
 <!-- ================= ZONAS / SUBMARCAS ================= -->
+<div class="borde-toldo" aria-hidden="true"></div>
 <section id="zonas" class="sec-clara">
   <div class="env">
     <div class="cab rev">
@@ -609,43 +709,37 @@ footer.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(2
 
     <div class="zonas">
       <article class="zona z-sabores rev">
-        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M4 9h16M6 9V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M5 9l1 9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-9"/></svg></div>
-        <h3>Patio Sabores</h3>
+        <div class="banda"><div class="glifo"><svg viewBox="0 0 24 24"><path d="M4 9h16M6 9V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M5 9l1 9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-9"/></svg></div><h3>Patio Sabores</h3></div>
         <p>Tres carros de comida por fin de semana, rotando. Nada de cadenas: cocina de la zona, con resolución sanitaria a la vista.</p>
         <div class="zpie">3 cupos por fin de semana</div>
       </article>
 
       <article class="zona z-kids rev">
-        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 3v4M5 21V11l7-4 7 4v10M9 21v-5h6v5"/></svg></div>
-        <h3>Patio Kids</h3>
+        <div class="banda"><div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 3v4M5 21V11l7-4 7 4v10M9 21v-5h6v5"/></svg></div><h3>Patio Kids</h3></div>
         <p>293,6 m² cercados con <b>un solo acceso</b> y barrera continua hacia la calle: ningún niño sale directo a los autos. Castillo inflable, cama elástica y plaza blanda.</p>
         <div class="zpie">Ficha <span class="todo">$4.000</span> por niño</div>
       </article>
 
       <article class="zona z-mercado rev">
-        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 9h18l-1.5-4.5A2 2 0 0 0 17.6 3H6.4a2 2 0 0 0-1.9 1.5L3 9zM5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/></svg></div>
-        <h3>Patio Mercado</h3>
+        <div class="banda"><div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 9h18l-1.5-4.5A2 2 0 0 0 17.6 3H6.4a2 2 0 0 0-1.9 1.5L3 9zM5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/></svg></div><h3>Patio Mercado</h3></div>
         <p>Feria rotativa de 6 a 10 emprendedores de Carampangue y alrededores. Distinta cada fin de semana, para que el que vino el sábado pasado encuentre algo nuevo.</p>
         <div class="zpie">Puesto desde $12.000</div>
       </article>
 
       <article class="zona z-vivo rev">
-        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM19 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg></div>
-        <h3>Patio Vivo</h3>
+        <div class="banda"><div class="glifo"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM19 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg></div><h3>Patio Vivo</h3></div>
         <p>Escenario chico para lo que hay de verdad en la zona: cueca, cumbia, folclor escolar, bandas jóvenes. Se toca temprano y se apaga a la hora que dice el permiso.</p>
         <div class="zpie">Convocatoria abierta a músicos</div>
       </article>
 
       <article class="zona z-salud rev">
-        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 12h4l2 5 4-12 2 7h6"/></svg></div>
-        <h3>Patio Saludable</h3>
+        <div class="banda"><div class="glifo"><svg viewBox="0 0 24 24"><path d="M3 12h4l2 5 4-12 2 7h6"/></svg></div><h3>Patio Saludable</h3></div>
         <p>Una vez al mes el Centro Médico Carampangue baja al patio: control de presión, peso y talla, consejería y orientación de horas. Sin costo, sin fila médica.</p>
         <div class="zpie">Con el Centro Médico Carampangue</div>
       </article>
 
       <article class="zona rev" style="--c:var(--tinta);--cs:var(--arena-2)">
-        <div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.2-7-10a7 7 0 1 1 14 0c0 4.8-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg></div>
-        <h3>Y el patio mismo</h3>
+        <div class="banda"><div class="glifo"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.2-7-10a7 7 0 1 1 14 0c0 4.8-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg></div><h3>Y el patio mismo</h3></div>
         <p>Sombra, mesas, baños, luz cálida y música de fondo. Se puede llegar solo a sentarse: no hay que consumir para estar.</p>
         <div class="zpie">Entrada siempre liberada</div>
       </article>
@@ -685,6 +779,7 @@ footer.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(2
 </section>
 
 <!-- ================= CARTELERA ================= -->
+<div class="borde-toldo sobre-blanco" aria-hidden="true"></div>
 <section id="cartelera" style="background:var(--arena)">
   <div class="env">
     <div class="cab rev">
@@ -945,6 +1040,7 @@ footer.pie .legal{margin-top:34px; padding-top:22px; border-top:1px solid rgba(2
 </section>
 
 <!-- ================= VISITA ================= -->
+<div class="borde-toldo sobre-blanco" aria-hidden="true"></div>
 <section id="visita" style="background:var(--arena)">
   <div class="env">
     <div class="cab rev">
@@ -1481,6 +1577,43 @@ Array.prototype.forEach.call(document.querySelectorAll("[data-contar]"), functio
 });
 
 document.getElementById("anio").textContent = new Date().getFullYear();
+
+/* ── La pizarra del fin de semana: viernes, sábado y domingo que vienen.
+      Usa el MISMO motor del calendario (API de la app + respaldo local), así
+      que nunca puede contradecir a la cartelera de más abajo. ── */
+(function pizarra(){
+  var caja = document.getElementById("finde"); if (!caja) return;
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var base = hoy < APERTURA ? new Date(APERTURA) : hoy;
+  var dias = [], f = new Date(base);
+  // el viernes de ESTA semana si aún no pasa; si ya pasó el domingo, el de la próxima
+  while (dias.length < 3 && dias.length + 0 < 3) {
+    var d = f.getDay();
+    if (d === 5 || d === 6 || d === 0) dias.push(new Date(f));
+    f.setDate(f.getDate() + 1);
+    if (f - base > 1000*60*60*24*10) break;
+  }
+  function pintar(){
+    caja.innerHTML = dias.map(function(dia){
+      var evs = eventosDeDia(dia);
+      var estrella = evs.filter(function(e){ return e.esp; })[0] ||
+                     evs.filter(function(e){ return e.m === "vivo" || e.m === "kids"; })[0] || evs[0];
+      var nom = DIAS[dia.getDay()];
+      if (!evs.length) return '<div class="dia cerrado"><div class="cuando"><b>'+nom+'</b>'+
+        '<span>'+dia.getDate()+' '+MESES[dia.getMonth()].slice(0,3)+'</span></div>'+
+        '<p class="detalle">El patio no abre este día.</p></div>';
+      var horas = evs.slice(0,3).map(function(e){
+        return '<span class="hora-chip">'+e.h+' '+e.t.replace(/^Abre el patio$/,"Abre")+'</span>'; }).join("");
+      return '<div class="dia"><div class="cuando"><b>'+nom+'</b>'+
+        '<span>'+dia.getDate()+' '+MESES[dia.getMonth()].slice(0,3)+'</span></div>'+
+        '<p class="plato">'+estrella.t+'</p>'+
+        (estrella.d ? '<p class="detalle">'+estrella.d+'</p>' : '')+
+        '<div class="horas">'+horas+'</div></div>';
+    }).join("");
+  }
+  pintar();
+  traerMes(dias[0].getFullYear(), dias[0].getMonth()+1).then(pintar);
+})();
 
 /* ── Las cartas de los carros: se piden a la app, no se copian acá.
       Si la app no responde, la sección se ESCONDE: mostrar "cargando" para
