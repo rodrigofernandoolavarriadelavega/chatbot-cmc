@@ -11,7 +11,7 @@
 <style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
-<nav class="gcnav"><div class="in"><a href="/grupo?token=__TOKEN__" aria-current="page">Grupo Carampangue</a><span class="sep">/</span><a href="/grupo/2030?token=__TOKEN__">Modelo 2030</a><span class="sep">/</span><a href="/olacore?token=__TOKEN__">Documentos del holding</a></div></nav>
+<nav class="gcnav"><div class="in"><a href="/grupo?token=__TOKEN__" aria-current="page">Grupo Carampangue</a><span class="sep">/</span><a href="/grupo/2030?token=__TOKEN__">Modelo 2030</a><span class="sep">/</span><a href="/grupo/simulador?token=__TOKEN__">Simulador</a><span class="sep">/</span><a href="/olacore?token=__TOKEN__">Documentos del holding</a></div></nav>
 <style>
 /* ─── Meridiano Sur · tokens ─────────────────────────────────────────────
    Claro = papel cartográfico (neblina). Oscuro = fiordo.
@@ -239,14 +239,12 @@ footer{border-top:1px solid var(--rule); padding-block:34px 46px; color:var(--in
   letter-spacing:.14em; text-transform:uppercase}
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
 
-/* barra de navegacion entre los dos documentos del grupo */
 .gcnav{background:var(--band); border-bottom:1px solid var(--band-rule);
   font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px;
   letter-spacing:.18em; text-transform:uppercase}
-.gcnav .in{max-width:var(--max); margin-inline:auto; padding:11px clamp(20px,5vw,48px);
+.gcnav .in{max-width:var(--max); margin-inline:auto; padding:11px clamp(16px,4vw,40px);
   display:flex; flex-wrap:wrap; gap:6px 22px; align-items:center}
-.gcnav a{color:var(--band-ink-2); text-decoration:none; padding:2px 0;
-  border-bottom:1px solid transparent}
+.gcnav a{color:var(--band-ink-2); text-decoration:none; padding:2px 0; border-bottom:1px solid transparent}
 .gcnav a:hover{color:var(--band-ink); border-bottom-color:var(--cobre)}
 .gcnav a[aria-current="page"]{color:var(--band-ink); border-bottom-color:var(--cobre)}
 .gcnav .sep{color:var(--band-rule)}

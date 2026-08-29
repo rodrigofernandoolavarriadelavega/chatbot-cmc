@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Simulador Grupo Carampangue — OLACORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@300..700&display=swap">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<nav class="gcnav"><div class="in"><a href="/grupo?token=__TOKEN__">Grupo Carampangue</a><span class="sep">/</span><a href="/grupo/2030?token=__TOKEN__">Modelo 2030</a><span class="sep">/</span><a href="/grupo/simulador?token=__TOKEN__" aria-current="page">Simulador</a><span class="sep">/</span><a href="/olacore?token=__TOKEN__">Documentos del holding</a></div></nav>
+<style>
+:root{
+  --paper:#E8E0D0; --paper-2:#DFD6C3; --paper-3:#D2C7B0; --sunk:#DAD1BE;
+  --ink:#0E2530; --ink-2:#33505E; --ink-3:#65798A;
+  --rule:#C6BBA2; --rule-soft:#D6CCB7;
+  --cobre:#8F5F1B; --lacre:#8E3527; --ok:#3A6B4A; --alerta:#8A6A12; --sobre-cobre:#F6F1E6;
+  --mA:#B76E12; --mB:#00719A;
+  --mA-soft:rgba(183,110,18,.16); --mB-soft:rgba(0,113,154,.14);
+  --band:#0E2530; --band-ink:#E8E0D0; --band-ink-2:#9FB0B9; --band-rule:#2B4855;
+  --max:1180px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+    --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+    --rule:#264652; --rule-soft:#1C3843;
+    --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287; --alerta:#D9B75E; --sobre-cobre:#0E2530;
+    --mA:#C4842C; --mB:#2794BB;
+    --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+    --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+  --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+  --rule:#264652; --rule-soft:#1C3843;
+  --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287; --alerta:#D9B75E; --sobre-cobre:#0E2530;
+  --mA:#C4842C; --mB:#2794BB;
+  --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+  --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+}
+
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink);
+  font-family:"Space Grotesk","Helvetica Neue",Arial,sans-serif; font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:Fraunces,"Iowan Old Style",Georgia,serif; font-variation-settings:'SOFT' 50;
+  text-wrap:balance; margin:0; line-height:1.14; font-weight:600}
+p{margin:0}
+button,input,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--cobre); outline-offset:2px; border-radius:3px}
+.wrap{max-width:var(--max); margin-inline:auto; padding-inline:clamp(16px,4vw,40px)}
+.kicker{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px; font-weight:500;
+  letter-spacing:.28em; text-transform:uppercase; color:var(--ink-3)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+
+/* ── encabezado ─────────────────────────────────────────────────────── */
+.top{background:var(--band); color:var(--band-ink); padding-block:clamp(28px,5vw,46px) clamp(22px,4vw,34px)}
+.top .kicker{color:var(--band-ink-2)}
+.top h1{font-size:clamp(1.9rem,5vw,3rem); letter-spacing:-.02em; margin-top:10px}
+.top p{color:var(--band-ink-2); max-width:62ch; margin-top:14px; font-size:.95rem}
+
+/* ── barra de resultado, pegada arriba ──────────────────────────────── */
+.res{position:sticky; top:0; z-index:40; background:var(--band); color:var(--band-ink);
+  border-bottom:1px solid var(--band-rule); box-shadow:0 2px 14px rgba(0,0,0,.16)}
+.res .in{max-width:var(--max); margin-inline:auto; padding:12px clamp(16px,4vw,40px);
+  display:grid; gap:10px 22px; grid-template-columns:repeat(2,1fr)}
+@media(min-width:820px){.res .in{grid-template-columns:repeat(5,1fr)}}
+.rc .v{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:clamp(1.15rem,2.7vw,1.5rem); font-weight:500; letter-spacing:-.02em; display:block; line-height:1.15}
+.rc .l{color:var(--band-ink-2); font-size:.7rem; display:block; margin-top:3px; line-height:1.35}
+.rc .d{font-size:.7rem; font-family:"IBM Plex Mono",monospace; margin-top:2px; display:block}
+.up{color:#7FC08F} .down{color:#E08A7C} .warn{color:#E3BE6A}
+
+/* ── secciones ──────────────────────────────────────────────────────── */
+section{padding-block:clamp(30px,4.5vw,52px); border-top:1px solid var(--rule)}
+.shead{margin-bottom:22px; max-width:66ch}
+.shead h2{font-size:clamp(1.35rem,3vw,1.9rem); letter-spacing:-.012em; margin-top:10px}
+.shead p{color:var(--ink-2); margin-top:11px; font-size:.92rem}
+
+/* ── presets ────────────────────────────────────────────────────────── */
+.presets{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px}
+.presets button{background:var(--paper-2); border:1px solid var(--rule); border-radius:3px;
+  padding:8px 13px; font-size:.82rem; cursor:pointer; transition:border-color .12s,color .12s}
+.presets button:hover{border-color:var(--cobre); color:var(--cobre)}
+/* el texto del preset activo va sobre cobre: usa el token de "tinta sobre acento",
+   definido en los tres estados de tema como cualquier otro color */
+.presets button.on{background:var(--cobre); border-color:var(--cobre); color:var(--sobre-cobre)}
+
+/* ── palancas ───────────────────────────────────────────────────────── */
+.levers{display:grid; gap:14px; grid-template-columns:1fr}
+@media(min-width:760px){.levers{grid-template-columns:1fr 1fr}}
+.lv{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2); padding:14px 16px}
+.lv .hd{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.lv .nm{font-size:.9rem; font-weight:500}
+.lv .val{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:1.02rem; color:var(--cobre); font-weight:600; white-space:nowrap}
+.lv .hint{font-size:.76rem; color:var(--ink-3); margin-top:5px}
+.lv input[type=range]{width:100%; margin-top:11px; accent-color:var(--cobre); cursor:pointer}
+.lv .base{font-family:"IBM Plex Mono",monospace; font-size:.7rem; color:var(--ink-3); margin-top:4px}
+
+/* ── proyectos ──────────────────────────────────────────────────────── */
+.projs{display:grid; gap:10px; grid-template-columns:1fr}
+@media(min-width:700px){.projs{grid-template-columns:1fr 1fr}}
+@media(min-width:1040px){.projs{grid-template-columns:1fr 1fr 1fr}}
+.pj{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2);
+  padding:12px 13px; display:flex; flex-direction:column; gap:9px; transition:opacity .15s}
+.pj.off{opacity:.44}
+.pj .r1{display:flex; align-items:flex-start; gap:9px}
+.pj label.sw{display:flex; align-items:center; gap:8px; cursor:pointer; flex:1; min-width:0}
+.pj input[type=checkbox]{width:17px; height:17px; accent-color:var(--cobre); cursor:pointer; flex:none}
+.pj .nm{font-size:.87rem; font-weight:500; line-height:1.3}
+.pj .tag{font-family:"IBM Plex Mono",monospace; font-size:8px; letter-spacing:.12em;
+  text-transform:uppercase; border:1px solid currentColor; border-radius:2px; padding:1px 4px; flex:none}
+.tA{color:var(--ok)} .tB{color:var(--lacre)} .tC{color:var(--cobre)} .tD{color:var(--ink-3)}
+.pj .r2{display:flex; gap:7px; align-items:center; flex-wrap:wrap}
+.pj select{background:var(--paper); border:1px solid var(--rule); border-radius:3px;
+  padding:4px 6px; font-size:.76rem; cursor:pointer}
+.pj .out{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:.76rem; color:var(--ink-3); margin-left:auto; text-align:right; white-space:nowrap}
+.pj .out b{color:var(--cobre); font-weight:600}
+.pj .del{background:none; border:0; color:var(--ink-3); cursor:pointer; font-size:1rem; padding:0 3px; line-height:1}
+.pj .del:hover{color:var(--lacre)}
+
+/* ── agregar vertical ───────────────────────────────────────────────── */
+.form{border:1px solid var(--rule); border-left:3px solid var(--cobre); border-radius:3px;
+  background:var(--sunk); padding:18px}
+.fgrid{display:grid; gap:12px; grid-template-columns:repeat(2,1fr); margin-top:14px}
+@media(min-width:760px){.fgrid{grid-template-columns:repeat(4,1fr)}}
+.fld{display:flex; flex-direction:column; gap:5px}
+.fld span{font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3)}
+.fld input,.fld select{background:var(--paper); border:1px solid var(--rule); border-radius:3px;
+  padding:7px 9px; font-size:.85rem; width:100%}
+.fld input[type=number]{font-family:"IBM Plex Mono",monospace}
+.fbtns{display:flex; gap:9px; margin-top:15px; flex-wrap:wrap}
+.btn{background:var(--cobre); color:var(--sobre-cobre); border:0; border-radius:3px;
+  padding:9px 16px; font-size:.85rem; font-weight:500; cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn.sec{background:transparent; color:var(--ink-2); border:1px solid var(--rule)}
+.btn.sec:hover{border-color:var(--cobre); color:var(--cobre); filter:none}
+.msg{font-size:.8rem; color:var(--ok); margin-top:9px; min-height:1.2em}
+.msg.err{color:var(--lacre)}
+
+/* ── figuras ────────────────────────────────────────────────────────── */
+.fig{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2);
+  padding:clamp(14px,2.5vw,22px); margin-top:16px}
+.fig h3{font-size:1rem}
+.fig .cap{color:var(--ink-3); font-size:.81rem; margin-top:5px; max-width:70ch}
+.plot{margin-top:16px; position:relative}
+.plot svg{display:block; width:100%; height:auto; overflow:visible}
+.gridline{stroke:var(--rule-soft); stroke-width:1}
+.axis-t{fill:var(--ink-3); font-family:"IBM Plex Mono",monospace; font-size:10px}
+.axis-t.b{fill:var(--ink-2); font-weight:600}
+.axis-l{fill:var(--ink-3); font-family:"Space Grotesk",sans-serif; font-size:10.5px}
+.legend{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:14px; align-items:center}
+.legend .it{display:flex; align-items:center; gap:7px; font-size:.82rem; color:var(--ink-2)}
+.swatch{width:11px; height:11px; border-radius:2px; flex:none}
+.tip{position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-118%);
+  background:var(--band); color:var(--band-ink); border:1px solid var(--band-rule); border-radius:3px;
+  padding:9px 12px; font-size:.78rem; white-space:nowrap; z-index:5; transition:opacity .12s ease;
+  box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.tip.on{opacity:1}
+.tip b{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600}
+.tip .r{display:flex; justify-content:space-between; gap:16px; margin-top:3px; color:var(--band-ink-2)}
+.tip .r i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px;font-style:normal}
+
+/* ── medidor del techo ──────────────────────────────────────────────── */
+.gauge{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2); padding:18px; margin-top:16px}
+.gauge .lbl{display:flex; justify-content:space-between; align-items:baseline; gap:14px}
+.gauge .lbl h3{font-size:1rem}
+.gauge .st{font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase}
+.bar{height:26px; background:var(--sunk); border-radius:3px; margin-top:14px; position:relative; overflow:hidden}
+.bar .fill{height:100%; background:var(--mA); transition:width .18s ease}
+.bar .techo{position:absolute; top:0; bottom:0; background:var(--mB-soft);
+  border-left:2px dashed var(--mB); border-right:2px dashed var(--mB)}
+.gauge .foot{font-size:.82rem; color:var(--ink-2); margin-top:11px}
+
+/* ── tablas ─────────────────────────────────────────────────────────── */
+.tblwrap{overflow-x:auto; margin-top:16px}
+table{border-collapse:collapse; width:100%; min-width:600px; font-size:.85rem}
+th,td{text-align:right; padding:7px 10px; border-bottom:1px solid var(--rule-soft)}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:500; border-bottom:1px solid var(--rule)}
+tbody td{font-variant-numeric:tabular-nums; font-family:"IBM Plex Mono",monospace}
+tbody td:first-child{font-family:"Space Grotesk",sans-serif}
+tr.total td{border-top:1px solid var(--rule); border-bottom:0; font-weight:600}
+
+.notes{background:var(--sunk); border:1px solid var(--rule); border-radius:3px; padding:20px}
+.notes ol{margin:12px 0 0; padding-left:19px; display:flex; flex-direction:column; gap:8px}
+.notes li{font-size:.84rem; color:var(--ink-2)}
+.notes strong{color:var(--ink)}
+footer{border-top:1px solid var(--rule); padding-block:28px 40px; color:var(--ink-3); font-size:.79rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.gcnav{background:var(--band); border-bottom:1px solid var(--band-rule);
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px;
+  letter-spacing:.18em; text-transform:uppercase}
+.gcnav .in{max-width:var(--max); margin-inline:auto; padding:11px clamp(16px,4vw,40px);
+  display:flex; flex-wrap:wrap; gap:6px 22px; align-items:center}
+.gcnav a{color:var(--band-ink-2); text-decoration:none; padding:2px 0; border-bottom:1px solid transparent}
+.gcnav a:hover{color:var(--band-ink); border-bottom-color:var(--cobre)}
+.gcnav a[aria-current="page"]{color:var(--band-ink); border-bottom-color:var(--cobre)}
+.gcnav .sep{color:var(--band-rule)}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <span class="kicker">Simulador · pesos de 2026 · estado 2030</span>
+    <h1>Simulador Grupo Carampangue</h1>
+    <p>Mueve las palancas y mira qué pasa. El motor del centro médico no es un supuesto: es box-horas por ocupación por precio, calibrado contra la caja real de agosto. Todo lo que cambies queda guardado en este navegador, y el botón de compartir arma un enlace con tu escenario adentro.</p>
+  </div>
+</header>
+
+<div class="res"><div class="in">
+  <div class="rc"><span class="v" id="rVenta">—</span><span class="l">Venta mensual 2030</span><span class="d" id="rVentaD"></span></div>
+  <div class="rc"><span class="v" id="rEb">—</span><span class="l">EBITDA mensual</span><span class="d" id="rEbD"></span></div>
+  <div class="rc"><span class="v" id="rMg">—</span><span class="l">Margen sobre venta</span><span class="d" id="rMgD"></span></div>
+  <div class="rc"><span class="v" id="rCap">—</span><span class="l">Capital requerido</span><span class="d" id="rCapD"></span></div>
+  <div class="rc"><span class="v" id="rVal">—</span><span class="l">Valor del grupo</span><span class="d" id="rValD"></span></div>
+</div></div>
+
+<main><div class="wrap">
+
+<section>
+  <div class="shead">
+    <span class="kicker">Escenarios listos</span>
+    <h2>Parte de uno de estos</h2>
+    <p>Cada botón mueve todas las palancas de golpe. Después ajusta lo que quieras.</p>
+  </div>
+  <div class="presets" id="presets"></div>
+  <div class="fbtns">
+    <button class="btn sec" id="bShare">Copiar enlace de este escenario</button>
+    <button class="btn sec" id="bReset">Volver a hoy</button>
+    <span class="msg" id="mShare"></span>
+  </div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="kicker">01 — El motor</span>
+    <h2>Profesionales y horas del centro médico</h2>
+    <p>La venta del centro no sale de una proyección: sale de <strong>box-horas disponibles × ocupación × precio por box-hora</strong>. Hoy son 9 box, 69 horas semanales cada uno y una ocupación de 34% en la mañana y 51% en la tarde. El precio por box-hora está calibrado para que esas cifras den los $33M de agosto.</p>
+  </div>
+  <div class="levers" id="levers"></div>
+  <div class="gauge" id="gauge">
+    <div class="lbl"><h3>Venta clínica contra el techo de demanda</h3><span class="st" id="gSt">—</span></div>
+    <div class="bar"><div class="fill" id="gFill" style="width:0"></div><div class="techo" id="gTecho"></div></div>
+    <p class="foot" id="gFoot"></p>
+  </div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="kicker">02 — Los proyectos</span>
+    <h2>Enciende, apaga y elige el año</h2>
+    <p>Cada proyecto entra con su escenario y su año de arranque. El primer año entra a la mitad; desde el siguiente, completo. Los marcados <span class="tag tB" style="display:inline-block">B</span> son reempaque: su venta se suma al centro médico y toma su margen, porque no facturan aparte.</p>
+  </div>
+  <div class="projs" id="projs"></div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="kicker">03 — Vertical nueva</span>
+    <h2>Agrega lo que no está</h2>
+    <p>Una veterinaria, una escuela de conductores, un laboratorio dental, lo que sea. Ponle nombre y números y entra al modelo como cualquier otra unidad.</p>
+  </div>
+  <div class="form">
+    <div class="fgrid">
+      <div class="fld" style="grid-column:span 2"><span>Nombre</span><input type="text" id="fN" placeholder="Veterinaria Carampangue" maxlength="46"></div>
+      <div class="fld"><span>Tipo de peso</span><select id="fT">
+        <option value="A">A — venta nueva</option>
+        <option value="C">C — captura de fuga</option>
+        <option value="B">B — reempaque</option>
+      </select></div>
+      <div class="fld"><span>Año de arranque</span><select id="fY">
+        <option>2026</option><option>2027</option><option selected>2028</option><option>2029</option><option>2030</option>
+      </select></div>
+      <div class="fld"><span>Capital ($M)</span><input type="number" id="fCx" value="5" min="0" max="500" step="0.5"></div>
+      <div class="fld"><span>Venta conservadora ($M/mes)</span><input type="number" id="fC" value="1" min="0" max="80" step="0.1"></div>
+      <div class="fld"><span>Venta base ($M/mes)</span><input type="number" id="fB" value="2" min="0" max="80" step="0.1"></div>
+      <div class="fld"><span>Venta agresiva ($M/mes)</span><input type="number" id="fA" value="3.5" min="0" max="80" step="0.1"></div>
+      <div class="fld"><span>Margen EBITDA (%)</span><input type="number" id="fM" value="30" min="0" max="90" step="1"></div>
+      <div class="fld"><span>¿Compite por el techo clínico?</span><select id="fS">
+        <option value="0">No es salud</option>
+        <option value="1">Sí, es salud</option>
+      </select></div>
+    </div>
+    <div class="fbtns"><button class="btn" id="bAdd">Agregar al modelo</button></div>
+    <p class="msg" id="mAdd"></p>
+  </div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="kicker">04 — Resultado</span>
+    <h2>Cómo se ve tu escenario</h2>
+  </div>
+
+  <figure class="fig">
+    <h3>Venta y EBITDA mensuales, 2026 a 2030</h3>
+    <p class="cap">Las dos series están en la misma unidad y en el mismo eje. El motor del centro médico se mueve de forma pareja desde lo medido hoy hasta donde dejaste las palancas; los proyectos entran el año que elegiste.</p>
+    <div class="plot" id="pC"></div>
+    <div class="legend" id="lC"></div>
+  </figure>
+
+  <figure class="fig">
+    <h3>Aporte al EBITDA por frente</h3>
+    <p class="cap">Solo lo que está encendido. La franja de cobre son los cinco de más arriba.</p>
+    <div class="plot" id="pR"></div>
+    <div class="legend" id="lR"></div>
+  </figure>
+
+  <div class="fig">
+    <h3>Resumen por año</h3>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Año</th><th>Venta / mes</th><th>EBITDA / mes</th><th>Margen</th><th>Capital acumulado</th><th>Unidades activas</th></tr></thead>
+      <tbody id="tY"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="kicker">05 — Cómo calcula</span><h2>Las reglas del motor</h2></div>
+  <div class="notes">
+    <ol>
+      <li><strong>Centro médico.</strong> Venta = box-horas semanales × 4,33 semanas × ocupación ponderada × precio por box-hora. La ocupación ponderada pesa mañana y tarde por igual, porque la grilla reparte las horas casi mitad y mitad. El precio por box-hora nace calibrado en <strong>$28.735</strong>, que es exactamente lo que hace que 9 box, 69 horas y 34/51% de ocupación den los $33M medidos en agosto.</li>
+      <li><strong>EBITDA del centro</strong> = (venta del centro + reempaques) × margen bruto − opex fijo. El margen bruto arranca en 33,4%, que es el medido en agosto con los porcentajes de contrato reales. Subirlo significa renegociar honorarios o cambiar la mezcla hacia especialidades que dejan más.</li>
+      <li><strong>Los proyectos</strong> aportan su venta por su propio margen EBITDA. El año de arranque entra a la mitad y desde el año siguiente completo, que es lo que suele demorar una línea nueva en llenarse.</li>
+      <li><strong>El techo clínico</strong> de $45–55M mensuales sale de dos estimaciones independientes que convergen. Solo se compara contra las líneas de salud: retail, empresas, comunidad y lo que se venda fuera del territorio no compiten por esa demanda.</li>
+      <li><strong>El valor</strong> aplica el múltiplo que elijas sobre el EBITDA anual, salvo ALMA, que se valoriza sobre facturación anual por ser software recurrente.</li>
+      <li><strong>Lo que el simulador no sabe.</strong> No modela inflación, ni el tiempo de las personas, ni si existe quién opere cada unidad. Esa es la restricción real y no aparece en ninguna palanca.</li>
+    </ol>
+  </div>
+</section>
+
+</div></main>
+
+<footer><div class="wrap">
+  <strong style="font-family:Fraunces,Georgia,serif">Simulador Grupo Carampangue</strong> — modelo de trabajo, cifras base al 28 de agosto de 2026. Los escenarios se guardan solo en este navegador.
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var M  = function(n){ return "$" + (Math.round(n*10)/10).toFixed(1).replace(".", ",") + "M"; };
+  var M0 = function(n){ return "$" + Math.round(n).toLocaleString("es-CL") + "M"; };
+  var P  = function(n){ return (Math.round(n*10)/10).toFixed(1).replace(".", ",") + "%"; };
+  var YEARS = [2026,2027,2028,2029,2030];
+
+  /* ── constantes medidas ───────────────────────────────────────────── */
+  var K = {
+    ventaAgo: 33.0, ebAgo: 6.7, semanas: 4.333,
+    precioBase: 28735,          /* $/box-hora que reproduce los $33M */
+    ocupMBase: 34, ocupTBase: 51, boxesBase: 9, horasBase: 69.3,
+    margenBase: 33.4, opexBase: 4.3,
+    techoMin: 45, techoMax: 55
+  };
+
+  /* ── catálogo de proyectos ────────────────────────────────────────── */
+  var CAT = [
+    {id:"cecarR", n:"CECAR Rehab — 4 estaciones",  f:"CECAR", t:"A", salud:1, capex:4.5,  c:0.3, b:0.7,  a:1.4,  mg:62, y:2026},
+    {id:"cecarT", n:"CECAR Training y 60+",        f:"CECAR", t:"A", salud:0, capex:8.0,  c:0.9, b:1.6,  a:3.2,  mg:56, y:2026},
+    {id:"cecarD", n:"CECAR Deporte — clubes",      f:"CECAR", t:"A", salud:1, capex:0.8,  c:0.2, b:0.4,  a:0.9,  mg:50, y:2026},
+    {id:"emp",    n:"Salud Empresas",              f:"Salud Empresas", t:"A", salud:0, capex:1.0, c:2.4, b:4.8, a:11.0, mg:40, y:2026},
+    {id:"patio",  n:"Patio Carampangue",           f:"Patio", t:"A", salud:0, capex:2.7,  c:1.2, b:2.1,  a:3.0,  mg:28, y:2026},
+    {id:"img",    n:"Imagenología",                f:"Imagenología", t:"C", salud:1, capex:60.0, c:3.0, b:5.0, a:8.0, mg:40, y:2027},
+    {id:"lab",    n:"Laboratorio y toma de muestras", f:"Laboratorio", t:"C", salud:1, capex:4.0, c:1.8, b:3.0, a:4.5, mg:10, y:2027},
+    {id:"musc",   n:"Unidad Musculoesquelética",   f:"CMC", t:"B", salud:1, capex:1.0,  c:0.6, b:1.2,  a:2.2,  mg:0,  y:2027},
+    {id:"mujer",  n:"Centro de la Mujer",          f:"CMC", t:"B", salud:1, capex:2.0,  c:0.8, b:1.5,  a:2.8,  mg:0,  y:2027},
+    {id:"check",  n:"Check Carampangue",           f:"CMC", t:"B", salud:1, capex:0.5,  c:1.0, b:2.0,  a:3.5,  mg:0,  y:2027},
+    {id:"carin",  n:"CARIN — neurodesarrollo",     f:"CARIN", t:"A", salud:1, capex:6.0, c:1.5, b:2.5,  a:4.5,  mg:30, y:2028},
+    {id:"optica", n:"Óptica Carampangue",          f:"Óptica", t:"C", salud:0, capex:12.0, c:2.5, b:4.0, a:6.5, mg:22, y:2028},
+    {id:"alma",   n:"ALMA — venta a terceros",     f:"ALMA", t:"A", salud:0, capex:40.0, c:1.2, b:3.0, a:9.0, mg:45, y:2028, saas:1},
+    {id:"lota",   n:"Piloto Lota o Coronel",       f:"Lota / Coronel", t:"A", salud:0, capex:25.0, c:3.0, b:6.0, a:10.0, mg:25, y:2028},
+    {id:"dom",    n:"Carampangue a Domicilio",     f:"Domicilio", t:"A", salud:1, capex:3.0, c:1.0, b:2.0, a:3.6, mg:30, y:2028},
+    {id:"farm",   n:"Farmacia",                    f:"Farmacia", t:"C", salud:0, capex:25.0, c:9.0, b:12.0, a:16.0, mg:6, y:2029},
+    {id:"cares",  n:"CARES — estética",            f:"CARES", t:"A", salud:0, capex:8.0, c:1.8, b:3.0, a:5.0, mg:35, y:2029},
+    {id:"club",   n:"Club Carampangue",            f:"Club", t:"A", salud:0, capex:5.0, c:1.4, b:2.8, a:5.6, mg:32, y:2029}
+  ];
+
+  /* ── estado ───────────────────────────────────────────────────────── */
+  var DEF = {
+    boxes:K.boxesBase, horas:K.horasBase, ocupM:K.ocupMBase, ocupT:K.ocupTBase,
+    precio:K.precioBase, margen:K.margenBase, opex:K.opexBase, multiplo:5,
+    u:{}, extra:[]
+  };
+  CAT.forEach(function(p){ DEF.u[p.id] = {on:0, esc:"b", y:p.y}; });
+
+  var PRESETS = {
+    hoy:      {nm:"Hoy", d:{}},
+    gratis:   {nm:"Solo lo que no cuesta plata", d:{ocupM:40, ocupT:55, on:["cecarR","cecarD","emp"], esc:"c"}},
+    base:     {nm:"Base 2030", d:{ocupM:45, ocupT:58, opex:5.5, on:"todo", esc:"b"}},
+    cons:     {nm:"Conservador 2030", d:{ocupM:38, ocupT:54, opex:5.0, on:"todo", esc:"c"}},
+    agr:      {nm:"Agresivo 2030", d:{ocupM:56, ocupT:68, opex:6.2, margen:36, on:"todo", esc:"a"}},
+    salud:    {nm:"Solo salud", d:{ocupM:45, ocupT:58, opex:5.2, on:["cecarR","cecarD","img","lab","musc","mujer","check","carin","dom"], esc:"b"}}
+  };
+
+  var S = JSON.parse(JSON.stringify(DEF)), preset = "hoy";
+
+  function aplicarPreset(k){
+    var p = PRESETS[k]; if (!p) return;
+    S = JSON.parse(JSON.stringify(DEF));
+    var d = p.d;
+    ["ocupM","ocupT","opex","margen","boxes","horas","precio","multiplo"].forEach(function(f){
+      if (d[f] !== undefined) S[f] = d[f];
+    });
+    CAT.forEach(function(c){
+      var on = d.on === "todo" ? 1 : (d.on && d.on.indexOf(c.id) >= 0 ? 1 : 0);
+      S.u[c.id] = {on:on, esc:d.esc || "b", y:c.y};
+    });
+    preset = k;
+  }
+
+  /* ── persistencia ─────────────────────────────────────────────────── */
+  var LS = "gc2030_sim_v1";
+  function guardar(){ try{ localStorage.setItem(LS, JSON.stringify({s:S,p:preset})); }catch(e){} }
+  function cargar(){
+    try{
+      var h = location.hash.replace(/^#e=/, "");
+      if (h) { var d = JSON.parse(decodeURIComponent(escape(atob(h)))); if (d && d.u) { S = d; preset = ""; return; } }
+    }catch(e){}
+    try{
+      var r = localStorage.getItem(LS);
+      if (r) { var o = JSON.parse(r); if (o && o.s && o.s.u) { S = o.s; preset = o.p || ""; } }
+    }catch(e){}
+  }
+
+  /* ── el cálculo ───────────────────────────────────────────────────── */
+  function ventaMotor(ocupM, ocupT){
+    var cap = S.boxes * S.horas * K.semanas;          /* box-horas al mes */
+    var oc  = (ocupM + ocupT) / 200;                   /* ponderada, mitad y mitad */
+    return cap * oc * S.precio / 1e6;                  /* en millones */
+  }
+  function unidades(){ return CAT.concat(S.extra); }
+  function valorEsc(u){ var e = (S.u[u.id]||{}).esc || "b"; return e === "c" ? u.c : e === "a" ? u.a : u.b; }
+
+  /* Un año: el motor interpola desde lo medido (2026) hasta la palanca (2030);
+     cada proyecto entra a la mitad su primer año y completo desde el siguiente. */
+  function anio(Y){
+    var k = (Y - 2026) / 4;
+    var oM = K.ocupMBase + (S.ocupM - K.ocupMBase) * k;
+    var oT = K.ocupTBase + (S.ocupT - K.ocupTBase) * k;
+    var opex = K.opexBase + (S.opex - K.opexBase) * k;
+    var vMotor = ventaMotor(oM, oT), upliftB = 0, venta = 0, eb = 0, capex = 0, activas = 0;
+    var porFrente = {}, saludM = 0, ventaSaas = 0;
+
+    unidades().forEach(function(u){
+      var st = S.u[u.id]; if (!st || !st.on) return;
+      var y0 = st.y || u.y; if (Y < y0) return;
+      activas++;
+      if (Y === y0) capex += u.capex;
+      var f = (Y === y0) ? 0.5 : 1;                    /* rampa del primer año */
+      var v = valorEsc(u) * f;
+      if (u.t === "B") { upliftB += v; if (u.salud) saludM += v; return; }
+      venta += v;
+      if (u.salud) saludM += v;
+      if (u.saas) ventaSaas += v;
+      var e = v * u.mg / 100;
+      eb += e;
+      porFrente[u.f] = (porFrente[u.f] || 0) + e;
+    });
+
+    var ebMotor = (vMotor + upliftB) * S.margen / 100 - opex;
+    porFrente["Centro médico"] = ebMotor;
+    venta += vMotor + upliftB;
+    saludM += vMotor;
+    eb += ebMotor;
+    return {Y:Y, venta:venta, eb:eb, capex:capex, activas:activas,
+            salud:saludM, frentes:porFrente, saas:ventaSaas};
+  }
+
+  function serie(){
+    var acc = 0;
+    return YEARS.map(function(Y){ var r = anio(Y); acc += r.capex; r.capexAcum = acc; return r; });
+  }
+
+  /* ── pintado ──────────────────────────────────────────────────────── */
+  var LEV = [
+    {k:"ocupM",  nm:"Ocupación de mañana",    min:20, max:85, step:1, suf:"%", base:K.ocupMBase,
+     hint:"Las mañanas corren al 34% y las tardes al 51%. Esta es la palanca más barata que existe: la sala ya está pagada."},
+    {k:"ocupT",  nm:"Ocupación de tarde",     min:20, max:90, step:1, suf:"%", base:K.ocupTBase,
+     hint:"Ya va en 51%. Subirla exige demanda nueva, no solo agenda."},
+    {k:"boxes",  nm:"Box en uso",             min:6,  max:20, step:1, suf:"", base:K.boxesBase,
+     hint:"Cada box suma capacidad. Más allá de 12 hay que construir."},
+    {k:"horas",  nm:"Horas semanales por box", min:40, max:100, step:1, suf:" h", base:K.horasBase,
+     hint:"Hoy 69 horas: seis días. Abrir sábado completo o estirar hasta las 21 sube este número."},
+    {k:"precio", nm:"Precio por box-hora",    min:18000, max:55000, step:250, suf:"", base:K.precioBase, money:1,
+     hint:"Sube con el ticket promedio y con la mezcla hacia prestaciones de más valor."},
+    {k:"margen", nm:"Margen bruto del centro", min:25, max:45, step:.1, suf:"%", base:K.margenBase,
+     hint:"33,4% medido en agosto, y bajando: en junio era 35,4%. Se mueve renegociando honorarios o cambiando la mezcla."},
+    {k:"opex",   nm:"Opex fijo mensual",      min:3, max:12, step:.1, suf:"", base:K.opexBase, mm:1,
+     hint:"Arriendo, administración, recepción, aseo. Crece con las unidades nuevas."},
+    {k:"multiplo", nm:"Múltiplo de valorización", min:3, max:8, step:.5, suf:"×", base:5,
+     hint:"Veces EBITDA anual. Entre 4 y 6 para prestadores pequeños en Chile."}
+  ];
+
+  function fmtLev(l){
+    var v = S[l.k];
+    if (l.money) return "$" + Math.round(v).toLocaleString("es-CL");
+    if (l.mm) return M(v);
+    return (l.step < 1 ? v.toFixed(1).replace(".", ",") : v) + l.suf;
+  }
+
+  function pintarLevers(){
+    document.getElementById("levers").innerHTML = LEV.map(function(l){
+      return '<div class="lv"><div class="hd"><span class="nm">' + l.nm + '</span>' +
+        '<span class="val" id="lv_' + l.k + '">' + fmtLev(l) + '</span></div>' +
+        '<p class="hint">' + l.hint + '</p>' +
+        '<input type="range" id="in_' + l.k + '" min="' + l.min + '" max="' + l.max +
+        '" step="' + l.step + '" value="' + S[l.k] + '" aria-label="' + l.nm + '">' +
+        '<div class="base">hoy: ' + (l.money ? "$" + l.base.toLocaleString("es-CL") : l.mm ? M(l.base) : l.base + l.suf) + '</div></div>';
+    }).join("");
+    LEV.forEach(function(l){
+      document.getElementById("in_" + l.k).addEventListener("input", function(e){
+        S[l.k] = parseFloat(e.target.value);
+        document.getElementById("lv_" + l.k).textContent = fmtLev(l);
+        preset = ""; marcarPresets(); render();
+      });
+    });
+  }
+
+  function pintarProyectos(){
+    document.getElementById("projs").innerHTML = unidades().map(function(u){
+      var st = S.u[u.id] || {on:0, esc:"b", y:u.y};
+      var v = valorEsc(u), e = u.t === "B" ? 0 : v * u.mg / 100;
+      return '<div class="pj ' + (st.on ? "" : "off") + '" data-id="' + u.id + '">' +
+        '<div class="r1"><label class="sw"><input type="checkbox" data-a="on" ' + (st.on ? "checked" : "") + '>' +
+        '<span class="nm">' + u.n + '</span></label>' +
+        '<span class="tag t' + u.t + '">' + u.t + '</span>' +
+        (u.custom ? '<button class="del" data-a="del" title="Quitar" aria-label="Quitar ' + u.n + '">×</button>' : "") +
+        '</div><div class="r2">' +
+        '<select data-a="esc" aria-label="Escenario"><option value="c"' + (st.esc==="c"?" selected":"") + '>Conservador</option>' +
+        '<option value="b"' + (st.esc==="b"?" selected":"") + '>Base</option>' +
+        '<option value="a"' + (st.esc==="a"?" selected":"") + '>Agresivo</option></select>' +
+        '<select data-a="y" aria-label="Año">' + YEARS.map(function(Y){
+          return '<option value="' + Y + '"' + ((st.y||u.y)===Y?" selected":"") + '>' + Y + '</option>'; }).join("") + '</select>' +
+        '<span class="out">' + M(v) + ' venta<br>' + (u.t === "B" ? "al centro" : "<b>" + M(e) + "</b> EBITDA") + '</span>' +
+        '</div></div>';
+    }).join("");
+
+    Array.prototype.forEach.call(document.querySelectorAll(".pj"), function(el){
+      var id = el.dataset.id;
+      el.addEventListener("change", function(ev){
+        var a = ev.target.dataset.a; if (!a) return;
+        if (!S.u[id]) S.u[id] = {on:0, esc:"b", y:2028};
+        if (a === "on") S.u[id].on = ev.target.checked ? 1 : 0;
+        if (a === "esc") S.u[id].esc = ev.target.value;
+        if (a === "y")   S.u[id].y = parseInt(ev.target.value, 10);
+        preset = ""; marcarPresets(); pintarProyectos(); render();
+      });
+      var del = el.querySelector('[data-a="del"]');
+      if (del) del.addEventListener("click", function(){
+        S.extra = S.extra.filter(function(x){ return x.id !== id; });
+        delete S.u[id]; pintarProyectos(); render();
+      });
+    });
+  }
+
+  function marcarPresets(){
+    Array.prototype.forEach.call(document.querySelectorAll("#presets button"), function(b){
+      b.classList.toggle("on", b.dataset.k === preset);
+    });
+  }
+
+  /* ── gráficos ─────────────────────────────────────────────────────── */
+  function mkTip(h){
+    var t = h.querySelector(".tip");
+    if (!t) { t = document.createElement("div"); t.className = "tip"; h.appendChild(t); }
+    return t;
+  }
+
+  function curva(S2){
+    var host = document.getElementById("pC"), tip = mkTip(host);
+    var maxV = Math.max(40, Math.ceil(Math.max.apply(null, S2.map(function(r){ return r.venta; })) / 20) * 20);
+    var W = 880, H = 300, L = 52, R = 20, T = 22, B = 38, iw = W-L-R, ih = H-T-B;
+    var x = function(i){ return L + iw*i/(S2.length-1); }, y = function(v){ return T + ih - ih*v/maxV; };
+    var s = ['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Venta y EBITDA mensuales proyectados de 2026 a 2030">'];
+    for (var g=0; g<=4; g++){
+      var v = maxV*g/4;
+      s.push('<line class="gridline" x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'"/>');
+      s.push('<text class="axis-t" x="'+(L-8)+'" y="'+(y(v)+3.5)+'" text-anchor="end">'+Math.round(v)+'M</text>');
+    }
+    [["venta","var(--mA)","var(--mA-soft)"],["eb","var(--mB)","var(--mB-soft)"]].forEach(function(sr){
+      var d = "", k = sr[0];
+      S2.forEach(function(r,i){ d += (i?" L":"M") + x(i) + " " + y(r[k]); });
+      s.push('<path d="'+d+' L'+x(S2.length-1)+' '+y(0)+' L'+x(0)+' '+y(0)+' Z" fill="'+sr[2]+'"/>');
+      s.push('<path d="'+d+'" fill="none" stroke="'+sr[1]+'" stroke-width="2" stroke-linejoin="round"/>');
+      S2.forEach(function(r,i){
+        var last = i === S2.length-1;
+        s.push('<circle cx="'+x(i)+'" cy="'+y(r[k])+'" r="'+(last?5.5:3.5)+'" fill="'+(last?sr[1]:"var(--paper-2)")+'" stroke="'+sr[1]+'" stroke-width="2"/>');
+      });
+      var lastR = S2[S2.length-1];
+      s.push('<text class="axis-t b" x="'+(x(S2.length-1)-8)+'" y="'+(y(lastR[k])-12)+'" text-anchor="end">'+M(lastR[k])+'</text>');
+    });
+    S2.forEach(function(r,i){
+      s.push('<text class="axis-t'+(i===S2.length-1?" b":"")+'" x="'+x(i)+'" y="'+(H-14)+'" text-anchor="middle">'+r.Y+'</text>');
+      s.push('<rect x="'+(x(i)-iw/(S2.length-1)/2)+'" y="'+T+'" width="'+(iw/(S2.length-1))+'" height="'+ih+'" fill="transparent" class="hit" data-i="'+i+'"/>');
+    });
+    s.push("</svg>");
+    host.querySelectorAll("svg").forEach(function(n){ n.remove(); });
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+    document.getElementById("lC").innerHTML =
+      '<span class="it"><i class="swatch" style="background:var(--mA)"></i>Venta mensual</span>' +
+      '<span class="it"><i class="swatch" style="background:var(--mB)"></i>EBITDA mensual</span>';
+    var svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var r = S2[+h.dataset.i], bb = svg.getBoundingClientRect();
+      tip.innerHTML = "<b>" + r.Y + "</b>" +
+        "<div class='r'><span><i style='background:var(--mA)'></i>Venta</span><b>" + M(r.venta) + "</b></div>" +
+        "<div class='r'><span><i style='background:var(--mB)'></i>EBITDA</span><b>" + M(r.eb) + "</b></div>" +
+        "<div class='r'><span>Unidades activas</span><b>" + r.activas + "</b></div>";
+      tip.style.left = (bb.width * (x(+h.dataset.i)/W)) + "px";
+      tip.style.top  = (bb.height * (y(r.venta)/H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  }
+
+  function ranking(fin){
+    var host = document.getElementById("pR"), tip = mkTip(host);
+    var arr = Object.keys(fin.frentes).map(function(k){ return {n:k, eb:fin.frentes[k]}; })
+                    .filter(function(f){ return Math.abs(f.eb) > 0.001; })
+                    .sort(function(a,b){ return b.eb - a.eb; });
+    var total = arr.reduce(function(a,f){ return a + f.eb; }, 0);
+    var maxE = Math.max.apply(null, arr.map(function(f){ return f.eb; }).concat([1]));
+    var W = 880, H = 26 + arr.length*25, L = 210, R = 70, T = 10, iw = W-L-R;
+    var x = function(v){ return L + iw*Math.max(v,0)/maxE; };
+    var s = ['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Aporte al EBITDA por frente en el escenario elegido">'];
+    arr.forEach(function(f,i){
+      var cy = T + 12 + i*25, top5 = i < 5;
+      s.push('<rect x="'+L+'" y="'+(cy-7)+'" width="'+Math.max(x(f.eb)-L,2)+'" height="14" fill="'+(top5?"var(--mA)":"var(--mB)")+'" rx="3"/>');
+      s.push('<text class="axis-l" x="'+(L-11)+'" y="'+(cy+4)+'" text-anchor="end" fill="'+(top5?"var(--ink)":"var(--ink-2)")+'">'+
+             (f.n.length>30 ? f.n.slice(0,29)+"…" : f.n)+'</text>');
+      s.push('<text class="axis-t'+(top5?" b":"")+'" x="'+(x(f.eb)+7)+'" y="'+(cy+4)+'">'+M(f.eb)+'</text>');
+      s.push('<rect x="'+L+'" y="'+(cy-12)+'" width="'+iw+'" height="25" fill="transparent" class="hit" data-i="'+i+'"/>');
+    });
+    s.push("</svg>");
+    host.querySelectorAll("svg").forEach(function(n){ n.remove(); });
+    host.insertAdjacentHTML("afterbegin", s.join(""));
+    var t5 = arr.slice(0,5).reduce(function(a,f){ return a + f.eb; }, 0);
+    document.getElementById("lR").innerHTML = arr.length
+      ? '<span class="it"><i class="swatch" style="background:var(--mA)"></i>Los cinco de arriba — ' + M(t5) +
+        ' · ' + P(total ? 100*t5/total : 0) + ' del total</span>' +
+        '<span class="it"><i class="swatch" style="background:var(--mB)"></i>Los otros ' + Math.max(arr.length-5,0) + ' — ' + M(total-t5) + '</span>'
+      : '<span class="it">Nada encendido todavía.</span>';
+    var svg = host.querySelector("svg");
+    if (!svg) return;
+    svg.addEventListener("mousemove", function(e){
+      var h = e.target.closest(".hit"); if (!h) return;
+      var f = arr[+h.dataset.i], bb = svg.getBoundingClientRect();
+      tip.innerHTML = "<b>" + f.n + "</b><div class='r'><span>EBITDA mensual</span><b>" + M(f.eb) + "</b></div>" +
+        "<div class='r'><span>Del total</span><b>" + P(total ? 100*f.eb/total : 0) + "</b></div>";
+      tip.style.left = (bb.width * (x(f.eb/2)/W)) + "px";
+      tip.style.top  = (bb.height * ((T+12+(+h.dataset.i)*25)/H)) + "px";
+      tip.classList.add("on");
+    });
+    svg.addEventListener("mouseleave", function(){ tip.classList.remove("on"); });
+  }
+
+  /* ── render ───────────────────────────────────────────────────────── */
+  function render(){
+    var S2 = serie(), fin = S2[S2.length-1];
+    var dV = fin.venta - K.ventaAgo, dE = fin.eb - K.ebAgo;
+    var ebAnual = fin.eb*12, saasAnual = fin.saas*12;
+    var valor = (ebAnual - saasAnual*0.45)*S.multiplo + saasAnual*4;
+
+    document.getElementById("rVenta").textContent = M(fin.venta);
+    document.getElementById("rVentaD").innerHTML  = '<span class="'+(dV>=0?"up":"down")+'">'+(dV>=0?"+":"")+M(dV)+' vs hoy</span>';
+    document.getElementById("rEb").textContent    = M(fin.eb);
+    document.getElementById("rEbD").innerHTML     = '<span class="'+(dE>=0?"up":"down")+'">'+(dE>=0?"+":"")+M(dE)+' vs hoy</span>';
+    document.getElementById("rMg").textContent    = P(fin.venta ? 100*fin.eb/fin.venta : 0);
+    document.getElementById("rMgD").innerHTML     = '<span class="'+(fin.eb/fin.venta>=0.203?"up":"down")+'">hoy 20,3%</span>';
+    document.getElementById("rCap").textContent   = M0(fin.capexAcum);
+    document.getElementById("rCapD").textContent  = "acumulado 2026–2030";
+    document.getElementById("rVal").textContent   = M0(valor);
+    document.getElementById("rValD").textContent  = S.multiplo + "× EBITDA anual";
+
+    /* medidor del techo clínico */
+    var esc = Math.max(K.techoMax*1.55, fin.salud*1.12);
+    document.getElementById("gFill").style.width  = (100*Math.min(fin.salud,esc)/esc) + "%";
+    var tch = document.getElementById("gTecho");
+    tch.style.left = (100*K.techoMin/esc) + "%";
+    tch.style.width = (100*(K.techoMax-K.techoMin)/esc) + "%";
+    var st = document.getElementById("gSt"), ft = document.getElementById("gFoot");
+    if (fin.salud <= K.techoMin){
+      st.textContent = "con holgura"; st.style.color = "var(--ok)";
+      ft.innerHTML = "Venta clínica <strong>" + M(fin.salud) + "</strong> contra un techo estimado de $45–55M. Cabe.";
+    } else if (fin.salud <= K.techoMax){
+      st.textContent = "en el borde"; st.style.color = "var(--alerta)";
+      ft.innerHTML = "Venta clínica <strong>" + M(fin.salud) + "</strong>: estás dentro de la banda del techo. De aquí en adelante cada peso cuesta más que el anterior.";
+    } else {
+      st.textContent = "sobre el techo"; st.style.color = "var(--lacre)";
+      ft.innerHTML = "Venta clínica <strong>" + M(fin.salud) + "</strong>, entre " +
+        P(100*(fin.salud/K.techoMax-1)) + " y " + P(100*(fin.salud/K.techoMin-1)) +
+        " sobre el techo medido. Para sostenerlo hay que traer pacientes de fuera de la provincia o no va a ocurrir.";
+    }
+
+    curva(S2); ranking(fin);
+
+    document.getElementById("tY").innerHTML = S2.map(function(r){
+      return "<tr><td>" + r.Y + "</td><td>" + M(r.venta) + "</td><td>" + M(r.eb) + "</td><td>" +
+        P(r.venta ? 100*r.eb/r.venta : 0) + "</td><td>" + M0(r.capexAcum) + "</td><td>" + r.activas + "</td></tr>";
+    }).join("");
+    guardar();
+  }
+
+  /* ── arranque ─────────────────────────────────────────────────────── */
+  document.getElementById("presets").innerHTML = Object.keys(PRESETS).map(function(k){
+    return '<button data-k="' + k + '">' + PRESETS[k].nm + '</button>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("#presets button"), function(b){
+    b.addEventListener("click", function(){
+      aplicarPreset(b.dataset.k); marcarPresets(); pintarLevers(); pintarProyectos(); render();
+    });
+  });
+
+  document.getElementById("bAdd").addEventListener("click", function(){
+    var n = document.getElementById("fN").value.trim(), m = document.getElementById("mAdd");
+    if (!n) { m.textContent = "Ponle un nombre a la vertical."; m.className = "msg err"; return; }
+    /* Los tres escenarios tienen que venir ordenados o el modelo miente:
+       si el usuario los teclea al reves se ordenan solos y se le avisa. */
+    var vs = [+document.getElementById("fC").value || 0,
+              +document.getElementById("fB").value || 0,
+              +document.getElementById("fA").value || 0];
+    var desordenado = !(vs[0] <= vs[1] && vs[1] <= vs[2]);
+    vs.sort(function(x,y){ return x - y; });
+    var id = "x" + Date.now().toString(36);
+    var u = {id:id, n:n, f:n, custom:1,
+      t: document.getElementById("fT").value,
+      salud: +document.getElementById("fS").value,
+      capex: +document.getElementById("fCx").value || 0,
+      c: vs[0], b: vs[1], a: vs[2],
+      mg: +document.getElementById("fM").value || 0,
+      y: +document.getElementById("fY").value};
+    S.extra.push(u); S.u[id] = {on:1, esc:"b", y:u.y};
+    document.getElementById("fN").value = "";
+    m.textContent = "«" + n + "» quedó encendida desde " + u.y + "." +
+      (desordenado ? " Ordené las tres ventas de menor a mayor: " + M(vs[0]) + " / " + M(vs[1]) + " / " + M(vs[2]) + "." : "");
+    m.className = "msg";
+    preset = ""; marcarPresets(); pintarProyectos(); render();
+  });
+
+  document.getElementById("bReset").addEventListener("click", function(){
+    aplicarPreset("hoy"); location.hash = "";
+    marcarPresets(); pintarLevers(); pintarProyectos(); render();
+  });
+
+  document.getElementById("bShare").addEventListener("click", function(){
+    var m = document.getElementById("mShare");
+    try{
+      var h = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+      var url = location.origin + location.pathname + location.search + "#e=" + h;
+      location.hash = "e=" + h;
+      if (navigator.clipboard) navigator.clipboard.writeText(url);
+      m.textContent = "Enlace copiado. Quien lo abra ve este mismo escenario."; m.className = "msg";
+    }catch(e){ m.textContent = "No se pudo copiar; el enlace igual quedó en la barra del navegador."; m.className = "msg err"; }
+  });
+
+  cargar();
+  CAT.forEach(function(c){ if (!S.u[c.id]) S.u[c.id] = {on:0, esc:"b", y:c.y}; });
+  if (!S.extra) S.extra = [];
+  pintarLevers(); pintarProyectos(); marcarPresets(); render();
+})();
+</script>
+
+</body>
+</html>

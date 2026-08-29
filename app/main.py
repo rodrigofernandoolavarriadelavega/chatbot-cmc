@@ -4095,6 +4095,7 @@ _OLACORE_PORTAL_HTML = (_TEMPLATE_DIR / "olacore_portal.html").read_text(encodin
 OLACORE_HOLDING_TOKEN = "olacore_holding_2026"
 _GRUPO_CARAMPANGUE_HTML = (_TEMPLATE_DIR / "grupo_carampangue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue.html").exists() else ""
 _GRUPO_CARAMPANGUE_2030_HTML = (_TEMPLATE_DIR / "grupo_carampangue_2030.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_2030.html").exists() else ""
+_GRUPO_CARAMPANGUE_SIM_HTML = (_TEMPLATE_DIR / "grupo_carampangue_simulador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_simulador.html").exists() else ""
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
 _ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
 _ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
@@ -5554,6 +5555,18 @@ def grupo_carampangue_2030_page(request: Request, token: str | None = Query(None
     """Grupo Carampangue 2030 - modelo financiero de las 21 unidades:
     capital, venta en tres escenarios, EBITDA por frente y secuencia."""
     return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_2030_HTML, token, request)
+
+
+@app.get("/grupo/simulador", response_class=HTMLResponse)
+def grupo_carampangue_simulador_page(request: Request, token: str | None = Query(None)):
+    """Simulador 2030: palancas de ocupacion, box, horas, honorarios y proyectos.
+
+    El motor del centro medico es box-horas x ocupacion x precio/box-hora,
+    calibrado para que 9 box, 69 h/sem y 34/51% de ocupacion reproduzcan los
+    $33M de agosto. El escenario del visitante vive en su localStorage y se
+    comparte por el hash de la URL (no toca el servidor).
+    """
+    return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_SIM_HTML, token, request)
 
 
 @app.get("/anima", include_in_schema=False)
