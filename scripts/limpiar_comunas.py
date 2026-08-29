@@ -126,6 +126,10 @@ def main():
     ap.add_argument("--aplicar-conflictos", action="store_true",
                     help="ademas pisa las fichas donde la direccion contradice al campo")
     ap.add_argument("--limite", type=int, default=500)
+    ap.add_argument("--solo", default="",
+                    help="ids separados por coma: aplica SOLO esos conflictos. "
+                         "Sirve para pisar a mano los casos revisados uno por uno, "
+                         "en vez de confiar en el nivel de confianza en bloque.")
     a = ap.parse_args()
 
     relleno, conflictos, stats = clasificar()
@@ -154,7 +158,19 @@ def main():
     ok, err = asyncio.run(escribir(relleno, a.limite))
     print("    relleno: %d ok · %d error" % (ok, err))
 
-    if a.aplicar_conflictos:
+    if a.solo:
+        ids = {x.strip() for x in a.solo.split(",") if x.strip()}
+        sel = [f for f in conflictos if str(f["id"]) in ids]
+        faltan = ids - {str(f["id"]) for f in sel}
+        if faltan:
+            print("\n   ! ids no encontrados entre los conflictos: %s" % sorted(faltan))
+        print("\n>>> pisando SOLO los %d conflictos indicados…" % len(sel))
+        for f in sel:
+            print("    %-7s %-24s %-13s -> %-13s | %s"
+                  % (f["id"], f["nombre"], f["campo"], f["comuna"], f["dir"]))
+        ok2, err2 = asyncio.run(escribir(sel, a.limite))
+        print("    conflictos: %d ok · %d error" % (ok2, err2))
+    elif a.aplicar_conflictos:
         altos = [f for f in conflictos if f["conf"] == "alta"]
         print("\n>>> pisando CONFLICTOS de confianza alta (%d de %d)…"
               % (len(altos), len(conflictos)))
