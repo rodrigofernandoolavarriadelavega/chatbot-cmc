@@ -116,7 +116,8 @@ section{padding-block:clamp(30px,4.5vw,52px); border-top:1px solid var(--rule)}
 .ds .nm{font-size:.88rem; font-weight:500; line-height:1.3}
 .ds .tag{font-family:"IBM Plex Mono",monospace; font-size:8px; letter-spacing:.12em;
   text-transform:uppercase; border:1px solid currentColor; border-radius:2px; padding:1px 4px; flex:none}
-.tpm{color:var(--mB)} .tcar{color:var(--ok)} .text{color:var(--alerta)}
+.tpm,.tcar,.text{color:var(--ink-3)}
+.pTuyo{color:var(--ok)} .pFam{color:var(--alerta)} .pTer{color:var(--lacre)}
 .ds .del{background:none; border:0; color:var(--ink-3); cursor:pointer; font-size:1rem; padding:0 3px; line-height:1}
 .ds .del:hover{color:var(--lacre)}
 .ds .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:7px 10px}
@@ -241,6 +242,11 @@ footer{border-top:1px solid var(--rule); padding-block:26px; color:var(--ink-3);
     <button class="btn pri" id="bShare">Copiar enlace del escenario</button>
     <span class="msg" id="mShare"></span>
   </div>
+  <div class="note">
+    <h4>El instrumento importa más que el monto</h4>
+    <p><b>No transfieras plata: vendé mercadería con factura.</b> Comprás el volumen y se lo vendés al destino a costo más un fee. Resuelve tres cosas de una vez: si no te pagan te queda mercadería en vez de una incobrable; ante el SII es una compraventa normal y no un préstamo entre partes con interés imputable; y no deja un aporte acumulado y sin nombre dentro de un patrimonio ajeno.</p>
+    <p>Eso último es lo que más pesa cuando el destino es de la familia. Plata puesta año tras año sin documentar no se sabe después si fue préstamo, regalo o anticipo de herencia — y esa pregunta no aparece mientras todo va bien, aparece en la sucesión. Una venta que se cierra sola cada mes no acumula ninguna ambigüedad.</p>
+  </div>
   <div class="note warn" id="noteDesp" hidden>
     <h4>Estás usando más que el piso</h4>
     <p id="noteDespTxt"></p>
@@ -285,17 +291,21 @@ footer{border-top:1px solid var(--rule); padding-block:26px; color:var(--ink-3);
   var LS = "gc_float_v1";
   var BASE = { venta:31.68, pct:66.6, P:10, atraso:0, modo:"timing" };
   var SEED = [
-    { id:"meulen", n:"Meulen — abarrotes y bodega", g:"pm",  on:1, monto:2.0, dia:11, rot:15, fee:5 },
-    { id:"pancho", n:"Super Don Pancho — del tío", g:"ext", on:1, monto:2.0, dia:11, rot:12, fee:5 },
-    { id:"optica", n:"Óptica Carampangue — inventario propio", g:"car", on:0, monto:3.0, dia:11, rot:45, fee:22 }
+    { id:"meulen", n:"Meulen — abarrotes y bodega", g:"pm", p:"familia", on:1, monto:2.0, dia:11, rot:15, fee:5 },
+    { id:"pancho", n:"Super Don Pancho", g:"car", p:"tercero", on:1, monto:2.0, dia:11, rot:12, fee:5 },
+    { id:"optica", n:"Óptica Carampangue — inventario propio", g:"car", p:"tuyo", on:0, monto:3.0, dia:11, rot:45, fee:22 }
   ];
   var S = null;
   // Grupo Olavega es la casa madre; el eje es geográfico. Dentro del grupo el
   // traspaso es asignación de capital; fuera del grupo es crédito a un tercero.
-  var GRP = {
-    car: { t:"Carampangue",  dentro:1 },
-    pm:  { t:"Puerto Montt", dentro:1 },
-    ext: { t:"Externo",      dentro:0 }
+  var GRP = { car:{t:"Carampangue"}, pm:{t:"Puerto Montt"}, ext:{t:"Fuera"} };
+  // Propiedad LEGAL, que es un eje distinto del lugar en el organigrama:
+  // "Grupo Olavega" es identidad comercial, no titulo. La plata que sale del
+  // CMC hacia un patrimonio ajeno es credito a un tercero aunque sea familia.
+  var PROP = {
+    tuyo:    { t:"Tuyo",     c:"pTuyo" },
+    familia: { t:"Familia",  c:"pFam"  },
+    tercero: { t:"Tercero",  c:"pTer"  }
   };
 
   function clon(o){ return JSON.parse(JSON.stringify(o)); }
@@ -384,6 +394,40 @@ footer{border-top:1px solid var(--rule); padding-block:26px; color:var(--ink-3);
       if (r) S = JSON.parse(r);
     }catch(e){ S = base(); }
     if (!S || !S.d || !S.d.length) S = base();
+    normalizar();
+  }
+
+  /* Un escenario guardado antes (localStorage o enlace compartido) puede venir
+     con el esquema viejo: sin propiedad legal, o con el campo `fam` que se usó
+     en la primera versión. Sin esto, PROP[x.p] es undefined y la página muere
+     entera al pintar. Todo lo que se lea de afuera se normaliza al entrar.   */
+  function normalizar(){
+    ["venta","pct","P","atraso"].forEach(function(k){
+      if (typeof S[k] !== "number" || isNaN(S[k])) S[k] = BASE[k];
+    });
+    if (S.modo !== "timing" && S.modo !== "perm") S.modo = BASE.modo;
+    S.d = (S.d || []).filter(Boolean).map(function(x, i){
+      if (!GRP[x.g]) x.g = "ext";
+      // `fam:1` era el marcador de la primera versión, antes de separar
+      // propiedad legal de lugar en el organigrama.
+      if (!PROP[x.p]){
+        // Primero la semilla por id: un escenario viejo de "Meulen" no debe
+        // degradar a tercero solo porque el campo no existia todavia.
+        var sem = SEED.filter(function(y){ return y.id === x.id; })[0];
+        x.p = sem ? sem.p : (x.fam ? "familia" : "tercero");
+        if (sem && !GRP[x.g]) x.g = sem.g;
+      }
+      delete x.fam;
+      if (!x.id) x.id = "x" + i + Date.now().toString(36);
+      if (!x.n) x.n = "Destino " + (i + 1);
+      ["monto","dia","rot","fee"].forEach(function(k){
+        var v = parseFloat(x[k]);
+        x[k] = (isNaN(v) || v < 0) ? 0 : v;
+      });
+      x.on = x.on ? 1 : 0;
+      return x;
+    });
+    if (!S.d.length) S.d = clon(SEED);
   }
 
   /* ── pintado ────────────────────────────────────────────────────────── */
@@ -410,6 +454,7 @@ footer{border-top:1px solid var(--rule); padding-block:26px; color:var(--ink-3);
         '<div class="r1"><label class="sw"><input type="checkbox" data-i="' + i + '" data-k="on"' +
           (x.on ? " checked" : "") + '><span class="nm">' + x.n + '</span></label>' +
           '<span class="tag t' + x.g + '">' + GRP[x.g].t + '</span>' +
+          '<span class="tag ' + PROP[x.p].c + '" title="Propiedad legal, distinta del lugar en el organigrama">' + PROP[x.p].t + '</span>' +
           '<button class="del" data-del="' + i + '" title="Quitar destino" aria-label="Quitar ' + x.n + '">×</button></div>' +
         '<div class="grid">' +
           fld(i, "monto", "Monto $M", x.monto, "0.1") +
@@ -522,9 +567,16 @@ footer{border-top:1px solid var(--rule); padding-block:26px; color:var(--ink-3);
     if (!filas.length){
       txt = "Encendé al menos un destino para ver la prueba.";
     } else if (!caen.length){
+      var ajeno = filas.filter(function(f){ return f.x.p !== "tuyo"; })
+                       .reduce(function(a,f){ return a + f.x.monto; }, 0);
       txt = "Ninguna caída individual te deja sin pagar. La mayor exposición es " + mayor.x.n +
             " con " + M(mayor.x.monto) + " (" + pc(mayor.x.monto/tot) + " del total) y aun perdiéndola completa " +
-            "la caja toca piso en " + M(mayor.minSin) + ". Esta configuración está diversificada de verdad.";
+            "la caja toca piso en " + M(mayor.minSin) + ". " +
+            (ajeno > 0
+              ? "Ojo igual: " + M(ajeno) + " (" + pc(ajeno/tot) + ") está en patrimonio que NO es tuyo, así que " +
+                "es crédito a un tercero por mucho que el organigrama los ponga en la misma casa. Eso se resuelve " +
+                "con el instrumento, no con el monto: vendé mercadería con factura en vez de transferir plata."
+              : "Todo el despliegue está en patrimonio propio.");
     } else {
       txt = caen.length + " destino" + (caen.length > 1 ? "s dejan" : " deja") +
             " la caja bajo cero si no devuelve: " + caen.map(function(f){ return f.x.n; }).join(", ") +
@@ -578,7 +630,7 @@ footer{border-top:1px solid var(--rule); padding-block:26px; color:var(--ink-3);
   });
   document.getElementById("bAdd").addEventListener("click", function(){
     S.d.push({ id:"x" + Date.now().toString(36), n:"Destino nuevo", fam:0, on:1,
-               g:"ext", monto:1.0, dia:11, rot:20, fee:5 });
+               g:"ext", p:"tercero", monto:1.0, dia:11, rot:20, fee:5 });
     guardar(); pintarDestinos(); render();
     var ult = document.querySelectorAll("#dests .ds input[type=number]");
     if (ult.length) ult[ult.length - 4].focus();
