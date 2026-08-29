@@ -36,15 +36,23 @@ import sqlite3
 import sys
 from collections import Counter
 
-sys.path.insert(0, "/opt/chatbot-cmc")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# OJO: los modulos de app/ se importan DESNUDOS entre si ("from config import
+# ...", "from session import ..."), asi que app/ tambien tiene que estar en el
+# path o `import medilink` revienta. Correr con venv/bin/python3 en el VPS.
+_RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+for _p in (_RAIZ, os.path.join(_RAIZ, "app"), "/opt/chatbot-cmc", "/opt/chatbot-cmc/app"):
+    if os.path.isdir(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
 
 HEATMAP = "/opt/chatbot-cmc/data/heatmap_cache.db"
 
 
 def clasificar():
     """Devuelve (relleno, conflictos, stats) sin tocar nada."""
-    from app.localidades_arauco import resolver
+    try:
+        from localidades_arauco import resolver
+    except ImportError:
+        from app.localidades_arauco import resolver
 
     con = sqlite3.connect(HEATMAP)
     relleno, conflictos = [], []
@@ -77,8 +85,8 @@ async def escribir(filas, limite: int):
     """PUT /pacientes/{id} con {"comuna": ...}. Serial y con pausa: la API
     tiene rate limit y este script no compite con el bot en produccion."""
     import httpx
-    from app.config import MEDILINK_BASE_URL
-    from app.medilink import HEADERS
+    from config import MEDILINK_BASE_URL
+    from medilink import HEADERS
 
     ok = err = 0
     async with httpx.AsyncClient(timeout=15) as c:
