@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CECAR · Kinesiología y consulta médica en Carampangue</title>
-<meta name="description" content="Gimnasio en Carampangue: primer mes $10.000 por lanzamiento, y desde $10.000 al mes con el semestre. Kinesiología con bono Fonasa $7.830 y consulta médica en el mismo lugar.">
+<meta name="description" content="Entrena gratis 3 días en CECAR, Carampangue. Después, primer mes $10.000 hasta el 31 de octubre. Kinesiología con bono Fonasa $7.830 y consulta médica en el mismo lugar.">
 <!-- NOINDEX A PROPOSITO: la pagina todavia trae marcadores ambar
      (direccion, horarios, precio de consulta). Al completarlos,
      cambiar a content="index, follow", volver a poner el enlace en
@@ -333,6 +333,12 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
 .p-mes strong { color: var(--ink-700); }
 .plan p { font-size: 13.5px; color: var(--ink-600); line-height: 1.6; margin-top: 16px; }
 .plan p strong { color: var(--ink-800); }
+.prueba { display: flex; gap: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  margin-bottom: 26px; padding: 22px 24px; border-radius: var(--radius);
+  background: var(--brand-teal-soft); border: 1px solid rgba(31,126,140,.24); }
+.prueba b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--brand-teal-ink); margin-bottom: 7px; }
+.prueba span { font-size: 13.5px; color: var(--ink-600); line-height: 1.6; display: block; max-width: 62ch; }
+.prueba .btn { flex: none; }
 .planes-cta { margin-top: 26px; }
 .planes-nota { margin-top: 18px; font-size: 13px; color: var(--ink-500); max-width: 70ch; }
 
@@ -501,6 +507,8 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
   .svc { grid-template-columns: 1fr; }
   .bono-lista { grid-template-columns: 1fr 1fr; }
   .planes-grid { grid-template-columns: 1fr; }
+  .prueba { flex-direction: column; align-items: flex-start; }
+  .prueba .btn { width: 100%; }
   .triage-grid { grid-template-columns: 1fr; }
   .leyenda { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -654,9 +662,9 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
 <a class="hours-bar" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20informaci%C3%B3n%20de%20CECAR%20(web%3A%20cecar)&utm_source=cecar&utm_medium=organic" target="_blank" rel="noopener" aria-label="Escribir a CECAR por WhatsApp">
   <div class="container hours-bar-inner">
     <span class="hb-led" id="hbLed" aria-hidden="true"></span>
-    <span class="hb-label" id="hbLabel">Kinesiología y consulta médica</span>
+    <span class="hb-label" id="hbLabel">Entrena gratis 3 días</span>
     <span class="hb-sep">·</span>
-    <span class="hb-text">Carampangue · Provincia de Arauco</span>
+    <span class="hb-text">Sin costo y sin compromiso · después, primer mes a $10.000</span>
     <span class="hb-tag">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg>
       Agenda 24/7
@@ -718,7 +726,7 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
     <div class="hero-grid">
       <div>
         <div class="hero-pre">
-          <span class="hero-status"><span class="led" aria-hidden="true"></span>Con hora reservada</span>
+          <span class="hero-status"><span class="led" aria-hidden="true"></span>3 días gratis para probar</span>
           <span class="hero-loc">Carampangue · Provincia de Arauco</span>
         </div>
         <h1 class="display">
@@ -850,7 +858,7 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
         </ul>
         <div class="svc-price">
           <span class="amount">$10.000</span>
-          <span class="unit">tu primer mes, por lanzamiento<br><span style="color:var(--ink-400)">Después, desde $10.000 al mes con el semestre</span></span>
+          <span class="unit">tu primer mes · hasta el 31 de octubre<br><span style="color:var(--ink-400)">Después, desde $10.000 al mes con el semestre</span></span>
         </div>
         <a href="#planes" class="btn btn-teal">Ver los planes</a>
       </article>
@@ -900,8 +908,18 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
       <div class="planes-head">
         <span class="pill">Promoción de lanzamiento</span>
         <h3>Tu primer mes a <em>$10.000</em></h3>
-        <p>Después eliges plan. Si te quedas con el semestre, el mes te sigue costando
-           lo mismo que la promoción.</p>
+        <p>Promoción válida <strong>hasta el 31 de octubre de 2026</strong>. Después
+           eliges plan: si te quedas con el semestre, el mes te sigue costando lo mismo
+           que la promoción.</p>
+      </div>
+      <div class="prueba">
+        <div>
+          <b>Primero, pruébalo: 3 días gratis</b>
+          <span>Vienes, entrenas y ves si te acomoda la sala. Sin costo, sin compromiso
+            y sin dejar datos de pago. Se reservan por WhatsApp.
+            <span class="todo">Definir condiciones: días corridos o sueltos, y si es una vez por persona</span></span>
+        </div>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20mis%203%20d%C3%ADas%20gratis%20en%20el%20gimnasio%20de%20CECAR%20(web%3A%20cecar-prueba)&utm_source=cecar&utm_medium=organic" target="_blank" rel="noopener" class="btn btn-teal">Quiero mis 3 días</a>
       </div>
       <div class="planes-grid">
         <article class="plan">
@@ -1159,9 +1177,15 @@ h2 em, .display em { font-style: italic; color: var(--brand-teal-ink); font-weig
           va revisando según cómo respondas.</div>
       </details>
       <details class="faq-item">
+        <summary>¿Cómo son los 3 días gratis?</summary>
+        <div class="ans">Vienes tres días a entrenar sin pagar nada, para ver si te acomoda
+          la sala y los horarios. No se piden datos de pago ni queda ningún compromiso: si
+          no te convence, no pasa nada. Se reservan por WhatsApp, igual que cualquier hora.</div>
+      </details>
+      <details class="faq-item">
         <summary>¿Cuánto cuesta el gimnasio y qué incluye?</summary>
         <div class="ans">Tu primer mes entra con la promoción de lanzamiento a
-          <strong>$10.000</strong>. Después: mensual $15.000, semestral $60.000 (sale a
+          <strong>$10.000</strong>, válida hasta el 31 de octubre de 2026. Después: mensual $15.000, semestral $60.000 (sale a
           $10.000 al mes) o anual $110.000 (sale a $9.167 al mes). Incluye el uso de la
           sala completa —fuerza, cardio y piso libre— con hora reservada.
           <strong>No incluye las sesiones de kinesiología</strong>, que van aparte con
