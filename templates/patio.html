@@ -118,7 +118,7 @@ section,header,footer{scroll-margin-top:calc(var(--nav-h) + 14px)}
 }
 .sobre::before{content:""; width:26px; height:3px; background:var(--ember); border-radius:2px; flex:none}
 .bajada{font-size:clamp(1rem,2.2vw,1.18rem); color:var(--tinta-2); max-width:62ch; margin:14px 0 0}
-.voz{font-family:var(--voz); font-style:italic}
+.voz{font-family:var(--display); font-weight:700; color:var(--ember-ink)}
 
 /* ---- Barra ------------------------------------------------------------ */
 .nav{
@@ -209,7 +209,8 @@ section,header,footer{scroll-margin-top:calc(var(--nav-h) + 14px)}
 .punto{width:9px; height:9px; border-radius:50%; background:var(--sun); box-shadow:0 0 0 0 rgba(242,164,19,.7); animation:latir 2.4s infinite}
 @keyframes latir{70%{box-shadow:0 0 0 11px rgba(242,164,19,0)} 100%{box-shadow:0 0 0 0 rgba(242,164,19,0)}}
 .portada h1{margin:20px 0 0; color:#fff}
-.portada h1 em{font-family:var(--voz); font-style:italic; font-weight:400; color:var(--sun)}
+.portada h1 em{font-family:var(--display); font-style:normal; font-weight:700; color:var(--sun);
+  display:inline-block; transform:rotate(-1.2deg)}
 .portada .bajada{color:rgba(255,255,255,.86)}
 .acciones{display:flex; flex-wrap:wrap; gap:12px; margin-top:30px}
 
