@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Simulador del Float — Grupo Carampangue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@300..700&display=swap">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<nav class="gcnav"><div class="in"><a href="/grupo?token=__TOKEN__">Grupo Carampangue</a><span class="sep">/</span><a href="/grupo/2030?token=__TOKEN__">Modelo 2030</a><span class="sep">/</span><a href="/grupo/simulador?token=__TOKEN__">Simulador</a><span class="sep">/</span><a href="/grupo/float?token=__TOKEN__" aria-current="page">Float</a><span class="sep">/</span><a href="/olacore?token=__TOKEN__">Documentos del holding</a></div></nav>
+<style>
+:root{
+  --paper:#E8E0D0; --paper-2:#DFD6C3; --paper-3:#D2C7B0; --sunk:#DAD1BE;
+  --ink:#0E2530; --ink-2:#33505E; --ink-3:#65798A;
+  --rule:#C6BBA2; --rule-soft:#D6CCB7;
+  --cobre:#8F5F1B; --lacre:#8E3527; --ok:#3A6B4A; --alerta:#8A6A12; --sobre-cobre:#F6F1E6;
+  --mA:#B76E12; --mB:#00719A;
+  --mA-soft:rgba(183,110,18,.16); --mB-soft:rgba(0,113,154,.14);
+  --peligro-soft:rgba(142,53,39,.14);
+  --band:#0E2530; --band-ink:#E8E0D0; --band-ink-2:#9FB0B9; --band-rule:#2B4855;
+  --max:1180px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+    --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+    --rule:#264652; --rule-soft:#1C3843;
+    --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287; --alerta:#D9B75E; --sobre-cobre:#0E2530;
+    --mA:#C4842C; --mB:#2794BB;
+    --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+    --peligro-soft:rgba(222,131,117,.16);
+    --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E2530; --paper-2:#14303D; --paper-3:#1C3F4E; --sunk:#0A1E27;
+  --ink:#E8E0D0; --ink-2:#BFB49C; --ink-3:#8DA1AC;
+  --rule:#264652; --rule-soft:#1C3843;
+  --cobre:#D8A45C; --lacre:#DE8375; --ok:#74B287; --alerta:#D9B75E; --sobre-cobre:#0E2530;
+  --mA:#C4842C; --mB:#2794BB;
+  --mA-soft:rgba(196,132,44,.20); --mB-soft:rgba(39,148,187,.18);
+  --peligro-soft:rgba(222,131,117,.16);
+  --band:#081920; --band-ink:#E8E0D0; --band-ink-2:#8DA1AC; --band-rule:#20404C;
+}
+
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink);
+  font-family:"Space Grotesk","Helvetica Neue",Arial,sans-serif; font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:Fraunces,"Iowan Old Style",Georgia,serif; font-variation-settings:'SOFT' 50;
+  text-wrap:balance; margin:0; line-height:1.14; font-weight:600}
+p{margin:0}
+button,input,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--cobre); outline-offset:2px; border-radius:3px}
+.wrap{max-width:var(--max); margin-inline:auto; padding-inline:clamp(16px,4vw,40px)}
+.kicker{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10px; font-weight:500;
+  letter-spacing:.28em; text-transform:uppercase; color:var(--ink-3)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+
+.gcnav{background:var(--band); border-bottom:1px solid var(--band-rule); font-size:.78rem}
+.gcnav .in{max-width:var(--max); margin-inline:auto; padding:9px clamp(16px,4vw,40px);
+  display:flex; flex-wrap:wrap; gap:7px; align-items:center}
+.gcnav a{color:var(--band-ink-2); text-decoration:none}
+.gcnav a:hover{color:var(--band-ink)}
+.gcnav a[aria-current]{color:var(--band-ink); font-weight:500}
+.gcnav .sep{color:var(--band-rule)}
+
+.top{background:var(--band); color:var(--band-ink); padding-block:clamp(28px,5vw,46px) clamp(22px,4vw,34px)}
+.top .kicker{color:var(--band-ink-2)}
+.top h1{font-size:clamp(1.9rem,5vw,3rem); letter-spacing:-.02em; margin-top:10px}
+.top p{color:var(--band-ink-2); max-width:64ch; margin-top:14px; font-size:.95rem}
+
+.res{position:sticky; top:0; z-index:40; background:var(--band); color:var(--band-ink);
+  border-bottom:1px solid var(--band-rule); box-shadow:0 2px 14px rgba(0,0,0,.16)}
+.res .in{max-width:var(--max); margin-inline:auto; padding:12px clamp(16px,4vw,40px);
+  display:grid; gap:10px 22px; grid-template-columns:repeat(2,1fr)}
+@media(min-width:820px){.res .in{grid-template-columns:repeat(5,1fr)}}
+.rc .v{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:clamp(1.1rem,2.6vw,1.45rem); font-weight:500; letter-spacing:-.02em; display:block; line-height:1.15}
+.rc .l{color:var(--band-ink-2); font-size:.7rem; display:block; margin-top:3px; line-height:1.35}
+.up{color:#7FC08F} .down{color:#E08A7C} .warn{color:#E3BE6A}
+
+section{padding-block:clamp(30px,4.5vw,52px); border-top:1px solid var(--rule)}
+.shead{margin-bottom:22px; max-width:68ch}
+.shead h2{font-size:clamp(1.35rem,3vw,1.9rem); letter-spacing:-.012em; margin-top:10px}
+.shead p{color:var(--ink-2); margin-top:11px; font-size:.92rem}
+
+.levers{display:grid; gap:14px; grid-template-columns:1fr}
+@media(min-width:760px){.levers{grid-template-columns:1fr 1fr}}
+.lv{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2); padding:14px 16px}
+.lv .hd{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.lv .nm{font-size:.9rem; font-weight:500}
+.lv .val{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:1.02rem; color:var(--cobre); font-weight:600; white-space:nowrap}
+.lv .hint{font-size:.76rem; color:var(--ink-3); margin-top:5px}
+.lv input[type=range]{width:100%; margin-top:11px; accent-color:var(--cobre); cursor:pointer}
+
+.modes{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px}
+.modes button{background:var(--paper-2); border:1px solid var(--rule); border-radius:3px;
+  padding:8px 13px; font-size:.82rem; cursor:pointer; transition:border-color .12s,color .12s}
+.modes button:hover{border-color:var(--cobre); color:var(--cobre)}
+.modes button.on{background:var(--cobre); border-color:var(--cobre); color:var(--sobre-cobre)}
+
+.dests{display:grid; gap:10px; grid-template-columns:1fr}
+@media(min-width:900px){.dests{grid-template-columns:1fr 1fr}}
+.ds{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2); padding:12px 13px;
+  display:flex; flex-direction:column; gap:9px; transition:opacity .15s}
+.ds.off{opacity:.45}
+.ds .r1{display:flex; align-items:center; gap:9px}
+.ds label.sw{display:flex; align-items:center; gap:8px; cursor:pointer; flex:1; min-width:0}
+.ds input[type=checkbox]{width:17px; height:17px; accent-color:var(--cobre); cursor:pointer; flex:none}
+.ds .nm{font-size:.88rem; font-weight:500; line-height:1.3}
+.ds .tag{font-family:"IBM Plex Mono",monospace; font-size:8px; letter-spacing:.12em;
+  text-transform:uppercase; border:1px solid currentColor; border-radius:2px; padding:1px 4px; flex:none}
+.tpm{color:var(--mB)} .tcar{color:var(--ok)} .text{color:var(--alerta)}
+.ds .del{background:none; border:0; color:var(--ink-3); cursor:pointer; font-size:1rem; padding:0 3px; line-height:1}
+.ds .del:hover{color:var(--lacre)}
+.ds .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:7px 10px}
+@media(min-width:520px){.ds .grid{grid-template-columns:repeat(4,1fr)}}
+.fld{display:flex; flex-direction:column; gap:2px}
+.fld span{font-size:.66rem; color:var(--ink-3); font-family:"IBM Plex Mono",monospace;
+  letter-spacing:.06em; text-transform:uppercase}
+.fld input{background:var(--paper); border:1px solid var(--rule); border-radius:3px;
+  padding:5px 7px; font-size:.82rem; font-family:"IBM Plex Mono",monospace;
+  font-variant-numeric:tabular-nums; width:100%}
+.ds .out{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:.75rem; color:var(--ink-3); display:flex; justify-content:space-between;
+  gap:10px; border-top:1px dashed var(--rule-soft); padding-top:7px}
+.ds .out b{color:var(--cobre); font-weight:600}
+.ds .out .bad{color:var(--lacre); font-weight:600}
+.ds .out .good{color:var(--ok); font-weight:600}
+
+.addrow{margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.btn{background:var(--paper-2); border:1px solid var(--rule); border-radius:3px;
+  padding:8px 14px; font-size:.82rem; cursor:pointer}
+.btn:hover{border-color:var(--cobre); color:var(--cobre)}
+.btn.pri{background:var(--cobre); border-color:var(--cobre); color:var(--sobre-cobre)}
+.msg{font-size:.8rem; color:var(--ink-3)}
+.msg.err{color:var(--lacre)}
+
+.plot{border:1px solid var(--rule); border-radius:3px; background:var(--paper-2); padding:16px}
+.plot svg{display:block; width:100%; height:auto; overflow:visible}
+.leg{display:flex; flex-wrap:wrap; gap:16px; margin-top:12px; font-size:.78rem; color:var(--ink-2)}
+.leg i{display:inline-block; width:22px; height:3px; border-radius:2px; margin-right:6px;
+  vertical-align:middle}
+.leg i.dash{height:0; border-radius:0; background:none; border-top:3px dashed currentColor}
+
+.note{border:1px solid var(--rule); border-left:3px solid var(--cobre); border-radius:3px;
+  background:var(--paper-2); padding:15px 17px; margin-top:20px}
+.note.warn{border-left-color:var(--lacre)}
+.note h4{font-size:1rem; margin-bottom:7px}
+.note p{font-size:.88rem; color:var(--ink-2)}
+.note p + p{margin-top:8px}
+
+table{width:100%; border-collapse:collapse; font-size:.85rem}
+.tw{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; background:var(--paper-2)}
+th,td{padding:9px 12px; text-align:right; border-bottom:1px solid var(--rule-soft); white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:500}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.pill{font-family:"IBM Plex Mono",monospace; font-size:.68rem; border-radius:2px;
+  padding:2px 6px; border:1px solid currentColor}
+.pill.ok{color:var(--ok)} .pill.no{color:var(--lacre)}
+
+footer{border-top:1px solid var(--rule); padding-block:26px; color:var(--ink-3); font-size:.8rem}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <span class="kicker">Grupo Carampangue · Tesorería</span>
+    <h1>El float de honorarios</h1>
+    <p>La caja del CMC recauda todos los días y le paga a los profesionales el día 10 del mes siguiente. Entremedio queda un saldo ocioso. Esta página mide cuánto es, cuánto de eso se puede desplegar sin arriesgar el pago, y qué pasa si un destino no devuelve.</p>
+    <p style="margin-top:9px">Los destinos se marcan por su lugar en <b>Grupo Olavega</b>: Carampangue y Puerto Montt son casa; lo demás es crédito a un tercero.</p>
+  </div>
+</header>
+
+<div class="res"><div class="in">
+  <div class="rc"><span class="v" id="rFloat">—</span><span class="l">Float promedio</span></div>
+  <div class="rc"><span class="v" id="rPiso">—</span><span class="l">Piso de caja del mes</span></div>
+  <div class="rc"><span class="v" id="rDesp">—</span><span class="l">Desplegado</span></div>
+  <div class="rc"><span class="v" id="rRet">—</span><span class="l">Retorno / mes</span></div>
+  <div class="rc"><span class="v" id="rHold">—</span><span class="l">Aguanta de atraso</span></div>
+</div></div>
+
+<section><div class="wrap">
+  <div class="shead">
+    <span class="kicker">1 · La fuente</span>
+    <h2>De dónde sale el float</h2>
+    <p>Base medida: agosto 2026, venta $31,68M y honorarios brutos $21,09M (66,6%). La caja entra casi uniforme, ~$1,3M por día. El único pago registrado en el sistema es el 11-jul para el mes de junio, así que el día de pago base es el 10.</p>
+  </div>
+  <div class="levers">
+    <div class="lv">
+      <div class="hd"><span class="nm">Venta mensual del CMC</span><span class="val" id="vVenta">—</span></div>
+      <div class="hint">Agosto real fue $31,68M al día 28. Ritmo anual ~$396M.</div>
+      <input type="range" id="sVenta" min="20" max="60" step="0.5">
+    </div>
+    <div class="lv">
+      <div class="hd"><span class="nm">Honorarios sobre la venta</span><span class="val" id="vPct">—</span></div>
+      <div class="hint">66,6% en agosto. Sube con el mix de % altos (psiquiatría al 90%).</div>
+      <input type="range" id="sPct" min="50" max="80" step="0.5">
+    </div>
+    <div class="lv">
+      <div class="hd"><span class="nm">Día de pago de honorarios</span><span class="val" id="vP">—</span></div>
+      <div class="hint">Cada día que corrés la fecha suma float. Correrla también corre el riesgo con los profesionales.</div>
+      <input type="range" id="sP" min="1" max="25" step="1">
+    </div>
+    <div class="lv">
+      <div class="hd"><span class="nm">Atraso a soportar</span><span class="val" id="vAtraso">—</span></div>
+      <div class="hint">Suma días de rotación a TODOS los destinos a la vez. Es la prueba de estrés.</div>
+      <input type="range" id="sAtraso" min="0" max="30" step="1">
+    </div>
+  </div>
+  <div class="note">
+    <h4>Las tres cifras que no hay que confundir</h4>
+    <p><b>Promedio</b> = honorarios × (0,5 + P/30). Es lo que ves en la cuenta en un día cualquiera. <b>No es desplegable.</b></p>
+    <p><b>Piso</b> = honorarios × P/30. Es lo único que se puede tener invertido de forma permanente sin quedar corto ningún mes.</p>
+    <p><b>Techo</b> = la víspera del pago. Es plata que ya tiene dueño y sale al día siguiente.</p>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="shead">
+    <span class="kicker">2 · El despliegue</span>
+    <h2>Dónde se pone y con qué forma</h2>
+    <p>Cada destino tiene un monto, el día en que sale la plata, los días que tarda en volver y la mejora de precio que captura. El modo cambia todo: con timing la plata vuelve antes del día de pago y podés usar más que el piso; permanente significa que está siempre afuera y entonces solo podés usar el piso.</p>
+  </div>
+  <div class="modes">
+    <button data-modo="timing">Con timing — una vuelta al mes</button>
+    <button data-modo="perm">Rotativo permanente</button>
+  </div>
+  <div class="dests" id="dests"></div>
+  <div class="addrow">
+    <button class="btn" id="bAdd">+ Agregar destino</button>
+    <button class="btn" id="bReset">Volver a la base</button>
+    <button class="btn pri" id="bShare">Copiar enlace del escenario</button>
+    <span class="msg" id="mShare"></span>
+  </div>
+  <div class="note warn" id="noteDesp" hidden>
+    <h4>Estás usando más que el piso</h4>
+    <p id="noteDespTxt"></p>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="shead">
+    <span class="kicker">3 · La caja día a día</span>
+    <h2>El mes completo, con el día de pago marcado</h2>
+    <p>La línea azul es el float sin tocar. La línea cobre es lo que realmente te queda después de desplegar. Si la cobre cruza el cero, ese día no podés pagar.</p>
+  </div>
+  <div class="plot" id="plotCaja"></div>
+  <div class="leg">
+    <span style="color:var(--mB)"><i class="dash"></i><span style="color:var(--ink-2)">Float sin desplegar</span></span>
+    <span><i style="background:var(--mA)"></i>Caja después del despliegue</span>
+    <span style="color:var(--lacre)"><i class="dash"></i><span style="color:var(--ink-2)">Día de pago de honorarios</span></span>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="shead">
+    <span class="kicker">4 · Concentración</span>
+    <h2>Si cae uno, ¿podés pagar igual?</h2>
+    <p>Diversificar baja el riesgo de crédito pero destruye la mejora de precio, que venía del volumen. La salida es <b>diversificar la deuda y concentrar la compra</b>: una sola orden grande negociada como comprador de $10M, mercadería repartida entre destinos. Acá cada fila prueba qué pasa si ese destino no devuelve nada este mes.</p>
+    <p style="margin-top:10px">Ojo con qué está diversificando de verdad: repartir entre <b>Carampangue y Puerto Montt</b> son dos bolsillos del mismo Grupo Olavega, así que baja el riesgo <i>operativo</i> (que una tienda se equivoque comprando) pero no el riesgo del grupo — es el mismo balance. Solo un destino <b>externo</b> diversifica crédito de verdad. Y lo que no cambia nunca es que los honorarios se le deben a profesionales que están fuera del grupo, pase lo que pase.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Destino</th><th>Monto</th><th>% del total</th><th>Retorno/mes</th><th>Si no devuelve</th><th>¿Pagás el día P?</th></tr></thead>
+    <tbody id="tbCaida"></tbody>
+  </table></div>
+  <div class="note" id="noteConc"><h4>Lectura</h4><p id="noteConcTxt"></p></div>
+</div></section>
+
+<footer><div class="wrap">
+  Cifras internas del Grupo Carampangue. Base: <span class="mono">bi_pagos_caja</span> agosto 2026, honorarios con <span class="mono">equipo_cmc.pct_honorario</span> real, día de pago desde <span class="mono">remuneracion_estado</span>. El escenario vive en tu navegador y se comparte por el enlace, no toca el servidor.
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var LS = "gc_float_v1";
+  var BASE = { venta:31.68, pct:66.6, P:10, atraso:0, modo:"timing" };
+  var SEED = [
+    { id:"meulen", n:"Meulen — abarrotes y bodega", g:"pm",  on:1, monto:2.0, dia:11, rot:15, fee:5 },
+    { id:"pancho", n:"Super Don Pancho — del tío", g:"ext", on:1, monto:2.0, dia:11, rot:12, fee:5 },
+    { id:"optica", n:"Óptica Carampangue — inventario propio", g:"car", on:0, monto:3.0, dia:11, rot:45, fee:22 }
+  ];
+  var S = null;
+  // Grupo Olavega es la casa madre; el eje es geográfico. Dentro del grupo el
+  // traspaso es asignación de capital; fuera del grupo es crédito a un tercero.
+  var GRP = {
+    car: { t:"Carampangue",  dentro:1 },
+    pm:  { t:"Puerto Montt", dentro:1 },
+    ext: { t:"Externo",      dentro:0 }
+  };
+
+  function clon(o){ return JSON.parse(JSON.stringify(o)); }
+  function base(){ var b = clon(BASE); b.d = clon(SEED); return b; }
+
+  function M(x){
+    var s = (Math.abs(x) < 10 ? x.toFixed(2) : x.toFixed(1)).replace(".", ",");
+    return "$" + s + "M";
+  }
+  function pc(x){ return (x*100).toFixed(0) + "%"; }
+
+  /* ── motor ────────────────────────────────────────────────────────────
+     Régimen estacionario sobre un mes de 30 días. H = honorarios del mes.
+     La caja acumula H/30 por día; el día P se paga el H del mes anterior.
+       B(d) = (d < P ? H : 0) + H*d/30
+     Comprobación: en d=P queda H*P/30 (recién pagado) y en d=30 queda H,
+     que es exactamente lo que se debe al abrir el mes siguiente.          */
+  function honorarios(){ return S.venta * S.pct/100; }
+
+  function curvaBase(){
+    var H = honorarios(), out = [];
+    for (var d = 1; d <= 30; d++) out.push((d < S.P ? H : 0) + H*d/30);
+    return out;
+  }
+
+  function activos(){ return S.d.filter(function(x){ return x.on; }); }
+
+  // ¿la plata del destino x está afuera el día d? Envuelve al mes siguiente.
+  function afuera(x, d){
+    if (S.modo === "perm") return true;
+    var R = Math.max(1, Math.round(x.rot) + S.atraso);
+    if (R >= 30) return true;
+    for (var k = 0; k < R; k++){
+      if (((Math.round(x.dia) - 1 + k) % 30) + 1 === d) return true;
+    }
+    return false;
+  }
+
+  // curva de caja; omitir = id de un destino que NO devuelve (queda afuera todo el mes)
+  function curvaCaja(omitir){
+    var b = curvaBase(), out = [];
+    for (var d = 1; d <= 30; d++){
+      var fuera = 0;
+      activos().forEach(function(x){
+        if (omitir && x.id === omitir) { fuera += x.monto; return; }
+        if (afuera(x, d)) fuera += x.monto;
+      });
+      out.push(b[d-1] - fuera);
+    }
+    return out;
+  }
+
+  function minimo(arr){ return arr.reduce(function(a,b){ return b < a ? b : a; }, Infinity); }
+  function promedio(arr){ return arr.reduce(function(a,b){ return a+b; }, 0) / arr.length; }
+
+  function retorno(x){
+    var vueltas = S.modo === "perm" ? 30 / Math.max(1, Math.round(x.rot) + S.atraso) : 1;
+    return x.monto * x.fee/100 * vueltas;
+  }
+  function retornoTotal(){
+    return activos().reduce(function(a,x){ return a + retorno(x); }, 0);
+  }
+  function desplegado(){
+    return activos().reduce(function(a,x){ return a + x.monto; }, 0);
+  }
+
+  // máximo atraso uniforme extra que aguanta antes de que la caja cruce cero
+  function aguante(){
+    var guardado = S.atraso;
+    for (var extra = 0; extra <= 40; extra++){
+      S.atraso = guardado + extra;
+      if (minimo(curvaCaja(null)) < 0){ S.atraso = guardado; return extra - 1; }
+    }
+    S.atraso = guardado;
+    return 40;
+  }
+
+  /* ── estado ─────────────────────────────────────────────────────────── */
+  function guardar(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
+  function cargar(){
+    S = base();
+    try{
+      var h = location.hash.replace(/^#f=/, "");
+      if (h && h !== location.hash){ S = JSON.parse(decodeURIComponent(escape(atob(h)))); return; }
+      var r = localStorage.getItem(LS);
+      if (r) S = JSON.parse(r);
+    }catch(e){ S = base(); }
+    if (!S || !S.d || !S.d.length) S = base();
+  }
+
+  /* ── pintado ────────────────────────────────────────────────────────── */
+  function pintarLevers(){
+    document.getElementById("sVenta").value = S.venta;
+    document.getElementById("sPct").value   = S.pct;
+    document.getElementById("sP").value     = S.P;
+    document.getElementById("sAtraso").value = S.atraso;
+    document.getElementById("vVenta").textContent  = M(S.venta);
+    document.getElementById("vPct").textContent    = S.pct.toFixed(1).replace(".", ",") + "%";
+    document.getElementById("vP").textContent      = "día " + S.P;
+    document.getElementById("vAtraso").textContent = S.atraso === 0 ? "sin atraso" : "+" + S.atraso + " días";
+    document.querySelectorAll(".modes button").forEach(function(b){
+      b.classList.toggle("on", b.dataset.modo === S.modo);
+    });
+  }
+
+  function pintarDestinos(){
+    var host = document.getElementById("dests");
+    host.innerHTML = S.d.map(function(x, i){
+      var vuelve = ((Math.round(x.dia) - 1 + Math.round(x.rot) + S.atraso) % 30) + 1;
+      var tarde  = S.modo === "timing" && (Math.round(x.rot) + S.atraso) >= 30;
+      return '<div class="ds' + (x.on ? "" : " off") + '">' +
+        '<div class="r1"><label class="sw"><input type="checkbox" data-i="' + i + '" data-k="on"' +
+          (x.on ? " checked" : "") + '><span class="nm">' + x.n + '</span></label>' +
+          '<span class="tag t' + x.g + '">' + GRP[x.g].t + '</span>' +
+          '<button class="del" data-del="' + i + '" title="Quitar destino" aria-label="Quitar ' + x.n + '">×</button></div>' +
+        '<div class="grid">' +
+          fld(i, "monto", "Monto $M", x.monto, "0.1") +
+          fld(i, "dia",   "Sale día",  x.dia,   "1") +
+          fld(i, "rot",   "Rota días", x.rot,   "1") +
+          fld(i, "fee",   "Mejora pts", x.fee,  "0.5") +
+        '</div>' +
+        '<div class="out"><span>' + (S.modo === "perm"
+            ? "siempre afuera · " + (30/Math.max(1, Math.round(x.rot)+S.atraso)).toFixed(1) + " vueltas/mes"
+            : "vuelve el día " + vuelve) +
+          (tarde ? ' <span class="bad">— no alcanza a volver</span>' : '') + '</span>' +
+          '<span>retorno <b>' + M(retorno(x)) + '</b></span></div>' +
+      '</div>';
+    }).join("");
+
+    host.querySelectorAll('input[type=checkbox]').forEach(function(el){
+      el.addEventListener("change", function(){
+        S.d[+el.dataset.i].on = el.checked ? 1 : 0; guardar(); pintarDestinos(); render();
+      });
+    });
+    host.querySelectorAll('input[data-k]:not([type=checkbox])').forEach(function(el){
+      el.addEventListener("input", function(){
+        var v = parseFloat(el.value);
+        if (isNaN(v) || v < 0) return;
+        S.d[+el.dataset.i][el.dataset.k] = v; guardar(); render();
+      });
+    });
+    host.querySelectorAll(".del").forEach(function(el){
+      el.addEventListener("click", function(){
+        S.d.splice(+el.dataset.del, 1); guardar(); pintarDestinos(); render();
+      });
+    });
+  }
+  function fld(i, k, label, v, step){
+    return '<label class="fld"><span>' + label + '</span>' +
+      '<input type="number" step="' + step + '" min="0" data-i="' + i + '" data-k="' + k +
+      '" value="' + v + '"></label>';
+  }
+
+  function plotCaja(){
+    var b = curvaBase(), c = curvaCaja(null);
+    var W = 900, H = 300, mL = 62, mR = 14, mT = 16, mB = 34;
+    var lo = Math.min(0, minimo(c)), hi = Math.max.apply(null, b) * 1.06;
+    var X = function(d){ return mL + (d-1)/29 * (W-mL-mR); };
+    var Y = function(v){ return mT + (hi-v)/(hi-lo) * (H-mT-mB); };
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Saldo de caja de honorarios día a día durante un mes, antes y después del despliegue">'];
+
+    // grilla horizontal
+    var pasos = 4;
+    for (var g = 0; g <= pasos; g++){
+      var v = lo + (hi-lo)*g/pasos;
+      s.push('<line x1="' + mL + '" y1="' + Y(v).toFixed(1) + '" x2="' + (W-mR) +
+             '" y2="' + Y(v).toFixed(1) + '" stroke="var(--rule-soft)" stroke-width="1"/>');
+      s.push('<text x="' + (mL-9) + '" y="' + (Y(v)+4).toFixed(1) +
+             '" text-anchor="end" font-size="11" font-family="IBM Plex Mono, monospace" fill="var(--ink-3)">' +
+             M(v) + '</text>');
+    }
+    // zona bajo cero
+    if (lo < 0){
+      s.push('<rect x="' + mL + '" y="' + Y(0).toFixed(1) + '" width="' + (W-mL-mR) +
+             '" height="' + (Y(lo)-Y(0)).toFixed(1) + '" fill="var(--peligro-soft)"/>');
+      s.push('<line x1="' + mL + '" y1="' + Y(0).toFixed(1) + '" x2="' + (W-mR) +
+             '" y2="' + Y(0).toFixed(1) + '" stroke="var(--lacre)" stroke-width="1.5"/>');
+    }
+    // día de pago
+    s.push('<line x1="' + X(S.P).toFixed(1) + '" y1="' + mT + '" x2="' + X(S.P).toFixed(1) +
+           '" y2="' + (H-mB) + '" stroke="var(--lacre)" stroke-width="1.5" stroke-dasharray="5 4"/>');
+    s.push('<text x="' + (X(S.P)+6).toFixed(1) + '" y="' + (mT+13) +
+           '" font-size="11" font-family="IBM Plex Mono, monospace" fill="var(--lacre)">día ' + S.P + ' · pago</text>');
+
+    function linea(arr, color, ancho, guion){
+      var p = arr.map(function(v, i){ return (i ? "L" : "M") + X(i+1).toFixed(1) + " " + Y(v).toFixed(1); }).join(" ");
+      s.push('<path d="' + p + '" fill="none" stroke="' + color + '" stroke-width="' + ancho +
+             '"' + (guion ? ' stroke-dasharray="' + guion + '"' : '') +
+             ' stroke-linejoin="round" stroke-linecap="round"/>');
+    }
+    linea(c, "var(--mA)", 2.6);
+    linea(b, "var(--mB)", 2, "6 4");
+
+    // eje x
+    [1,5,10,15,20,25,30].forEach(function(d){
+      s.push('<text x="' + X(d).toFixed(1) + '" y="' + (H-mB+19) +
+             '" text-anchor="middle" font-size="11" font-family="IBM Plex Mono, monospace" fill="var(--ink-3)">' +
+             d + '</text>');
+    });
+    s.push('<text x="' + ((mL+W-mR)/2) + '" y="' + (H-4) +
+           '" text-anchor="middle" font-size="11" fill="var(--ink-3)">día del mes</text>');
+    s.push("</svg>");
+    document.getElementById("plotCaja").innerHTML = s.join("");
+  }
+
+  function tablaCaida(){
+    var tot = desplegado(), H = honorarios();
+    var filas = activos().map(function(x){
+      var minSin = minimo(curvaCaja(x.id));
+      return { x:x, minSin:minSin, ok:minSin >= 0 };
+    });
+    document.getElementById("tbCaida").innerHTML = filas.length ? filas.map(function(f){
+      return '<tr><td>' + f.x.n + '</td>' +
+        '<td class="num">' + M(f.x.monto) + '</td>' +
+        '<td class="num">' + (tot ? pc(f.x.monto/tot) : "—") + '</td>' +
+        '<td class="num">' + M(retorno(f.x)) + '</td>' +
+        '<td class="num">' + M(f.minSin) + '</td>' +
+        '<td><span class="pill ' + (f.ok ? "ok" : "no") + '">' + (f.ok ? "sí" : "NO") + '</span></td></tr>';
+    }).join("") : '<tr><td colspan="6">Ningún destino encendido.</td></tr>';
+
+    var caen = filas.filter(function(f){ return !f.ok; });
+    var mayor = filas.slice().sort(function(a,b){ return b.x.monto - a.x.monto; })[0];
+    var txt;
+    if (!filas.length){
+      txt = "Encendé al menos un destino para ver la prueba.";
+    } else if (!caen.length){
+      txt = "Ninguna caída individual te deja sin pagar. La mayor exposición es " + mayor.x.n +
+            " con " + M(mayor.x.monto) + " (" + pc(mayor.x.monto/tot) + " del total) y aun perdiéndola completa " +
+            "la caja toca piso en " + M(mayor.minSin) + ". Esta configuración está diversificada de verdad.";
+    } else {
+      txt = caen.length + " destino" + (caen.length > 1 ? "s dejan" : " deja") +
+            " la caja bajo cero si no devuelve: " + caen.map(function(f){ return f.x.n; }).join(", ") +
+            ". Eso significa que ese mes no le pagás a los profesionales. Bajá el monto o corré el día de salida.";
+    }
+    document.getElementById("noteConcTxt").textContent = txt;
+  }
+
+  function render(){
+    var b = curvaBase(), c = curvaCaja(null);
+    var H = honorarios();
+    var prom = promedio(b), piso = minimo(b), pisoReal = minimo(c);
+    var desp = desplegado(), ret = retornoTotal(), ag = aguante();
+
+    document.getElementById("rFloat").textContent = M(prom);
+    document.getElementById("rDesp").textContent  = M(desp);
+    document.getElementById("rRet").textContent   = M(ret);
+
+    var elP = document.getElementById("rPiso");
+    elP.textContent = M(pisoReal);
+    elP.className = "v " + (pisoReal < 0 ? "down" : pisoReal < H*0.1 ? "warn" : "up");
+
+    var elH = document.getElementById("rHold");
+    elH.textContent = ag < 0 ? "ya no paga" : ag >= 40 ? "40+ días" : ag + " días";
+    elH.className = "v " + (ag < 0 ? "down" : ag < 5 ? "warn" : "up");
+
+    var nd = document.getElementById("noteDesp");
+    if (desp > piso + 1e-9){
+      nd.hidden = false;
+      document.getElementById("noteDespTxt").textContent =
+        "Desplegaste " + M(desp) + " y el piso permanente es " + M(piso) + ". La diferencia (" +
+        M(desp - piso) + ") solo funciona si la plata vuelve antes del día " + S.P +
+        ", todos los meses, sin fallar. Hoy el escenario aguanta " +
+        (ag < 0 ? "cero" : ag) + " días de atraso antes de no poder pagar.";
+    } else { nd.hidden = true; }
+
+    plotCaja(); tablaCaida(); guardar();
+  }
+
+  /* ── eventos ────────────────────────────────────────────────────────── */
+  [["sVenta","venta"],["sPct","pct"],["sP","P"],["sAtraso","atraso"]].forEach(function(par){
+    document.getElementById(par[0]).addEventListener("input", function(e){
+      S[par[1]] = parseFloat(e.target.value);
+      pintarLevers(); pintarDestinos(); render();
+    });
+  });
+  document.querySelectorAll(".modes button").forEach(function(b){
+    b.addEventListener("click", function(){
+      S.modo = b.dataset.modo; pintarLevers(); pintarDestinos(); render();
+    });
+  });
+  document.getElementById("bAdd").addEventListener("click", function(){
+    S.d.push({ id:"x" + Date.now().toString(36), n:"Destino nuevo", fam:0, on:1,
+               g:"ext", monto:1.0, dia:11, rot:20, fee:5 });
+    guardar(); pintarDestinos(); render();
+    var ult = document.querySelectorAll("#dests .ds input[type=number]");
+    if (ult.length) ult[ult.length - 4].focus();
+  });
+  document.getElementById("bReset").addEventListener("click", function(){
+    S = base(); location.hash = ""; pintarLevers(); pintarDestinos(); render();
+  });
+  document.getElementById("bShare").addEventListener("click", function(){
+    var m = document.getElementById("mShare");
+    try{
+      var h = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+      var url = location.origin + location.pathname + location.search + "#f=" + h;
+      location.hash = "f=" + h;
+      if (navigator.clipboard) navigator.clipboard.writeText(url);
+      m.textContent = "Enlace copiado. Quien lo abra ve este mismo escenario."; m.className = "msg";
+    }catch(e){ m.textContent = "No se pudo copiar; el enlace igual quedó en la barra."; m.className = "msg err"; }
+  });
+
+  cargar(); pintarLevers(); pintarDestinos(); render();
+})();
+</script>
+
+</body>
+</html>

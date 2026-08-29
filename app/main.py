@@ -4096,6 +4096,7 @@ OLACORE_HOLDING_TOKEN = "olacore_holding_2026"
 _GRUPO_CARAMPANGUE_HTML = (_TEMPLATE_DIR / "grupo_carampangue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue.html").exists() else ""
 _GRUPO_CARAMPANGUE_2030_HTML = (_TEMPLATE_DIR / "grupo_carampangue_2030.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_2030.html").exists() else ""
 _GRUPO_CARAMPANGUE_SIM_HTML = (_TEMPLATE_DIR / "grupo_carampangue_simulador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_simulador.html").exists() else ""
+_GRUPO_CARAMPANGUE_FLOAT_HTML = (_TEMPLATE_DIR / "grupo_carampangue_float.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_float.html").exists() else ""
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
 _ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
 _ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
@@ -5567,6 +5568,21 @@ def grupo_carampangue_simulador_page(request: Request, token: str | None = Query
     comparte por el hash de la URL (no toca el servidor).
     """
     return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_SIM_HTML, token, request)
+
+
+@app.get("/grupo/float", response_class=HTMLResponse)
+def grupo_carampangue_float_page(request: Request, token: str | None = Query(None)):
+    """Simulador del float de honorarios: cuanto saldo ocioso deja el ciclo de
+    caja del CMC y cuanto de eso se puede desplegar sin arriesgar el pago.
+
+    Regimen estacionario sobre un mes de 30 dias: la caja acumula honorarios/30
+    por dia y el dia P se paga el mes anterior, asi que B(d) = (d<P ? H : 0) +
+    H*d/30. De ahi salen las tres cifras que no hay que confundir: promedio
+    (lo que se ve en la cuenta), piso (lo unico desplegable de forma
+    permanente) y techo (plata que ya tiene dueno). El escenario vive en el
+    localStorage del visitante y se comparte por el hash de la URL.
+    """
+    return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_FLOAT_HTML, token, request)
 
 
 @app.get("/anima", include_in_schema=False)
