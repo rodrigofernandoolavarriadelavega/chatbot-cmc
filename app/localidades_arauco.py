@@ -77,7 +77,6 @@ _add(["Los Maitenes", "Maitenes"], "Arauco", "Los Maitenes", "localidad", "alta"
 _add(["Maquehua"], "Arauco", "Maquehua", "localidad", "alta")
 _add(["Punta Carampangue"], "Arauco", "Carampangue", "localidad", "alta")
 _add(["Cruce Norte"], "Arauco", "Carampangue", "localidad", "media")
-_add(["Los Castanos"], "Arauco", "Conumo", "localidad", "media")
 # poblaciones y villas urbanas (NO desambiguan solas: tipo="villa")
 for _n, _sec in [
     ("Villa Don Carlos", "Arauco urbano"), ("Volcan Antuco", "Arauco urbano"),
@@ -166,6 +165,11 @@ AMBIGUOS: dict[str, tuple[str, ...]] = {
     # que lo escriben estan marcadas Arauco y varias dicen "CHILLANCITO S/N
     # CARAMPANGUE". O hay dos, o el campo esta mal en masa. PREGUNTAR AL DUENO.
     "CHILLANCITO": ("Curanilahue", "Arauco"),
+    # nombres de arbol/planta: son calle en media provincia, no localidad
+    "LOS CASTANOS": ("Arauco", "Curanilahue"),
+    "LOS BOLDOS": ("Arauco", "Curanilahue"),
+    "EL BOLDO": ("Arauco", "Curanilahue"),
+    "LOS ALAMOS": ("Los Alamos", "Arauco"),
     "CERRO VERDE": ("Los Alamos", "Arauco"),
     "VILLARRICA": ("Curanilahue", "Arauco"),
     "SANTA MARIA": ("Curanilahue", "Arauco"),
@@ -186,6 +190,25 @@ _PATRONES = [(k, re.compile(r"(?<![A-Z])" + re.escape(k).replace(r"\ ", r"\s+") 
              for k in _ORDEN]
 
 
+# Palabras que convierten al nombre siguiente en CALLEJERO, no geografico.
+# "Calle Los Alamos 53, Laraquete" NO es Los Alamos: es una calle en Laraquete.
+# "Sector"/"Camino" NO entran: esos si suelen anteceder a una localidad real.
+_VIA = re.compile(r"\b(CALLE|CALLEJON|PASAJE|PSJE|PJE|AVENIDA|AVDA|AV|POBLACION|"
+                  r"POBL|VILLA|DIAGONAL|SUBIDA|SUBID)\s+(?:LOS\s+|LAS\s+|EL\s+|LA\s+)?$")
+
+
+def _candidatos(d: str):
+    """Todas las localidades nombradas en la direccion, con su posicion.
+    Descarta las que vienen detras de una palabra de via (son calles)."""
+    out = []
+    for clave, pat in _PATRONES:
+        for m in pat.finditer(d):
+            if _VIA.search(d[:m.start()]):
+                continue                      # "calle Los Alamos" -> no cuenta
+            out.append((m.start(), clave))
+    return out
+
+
 def resolver(direccion: str | None, comuna_campo: str | None = None,
              ciudad_campo: str | None = None) -> dict:
     """Devuelve {comuna, sector, fuente, confianza, conflicto}.
@@ -202,9 +225,12 @@ def resolver(direccion: str | None, comuna_campo: str | None = None,
 
     d = normalizar(direccion)
     if d:
-        for clave, pat in _PATRONES:
-            if not pat.search(d):
-                continue
+        # En una direccion chilena la LOCALIDAD va al final ("... 8 Laraquete").
+        # Tomar el primer nombre que calce hacia Los Alamos cuando el domicilio
+        # termina en Laraquete fue un falso positivo real del barrido batch.
+        cands = _candidatos(d)
+        cands.sort(key=lambda t: -t[0])          # el ultimo nombrado manda
+        for _pos, clave in cands:
             if clave in AMBIGUOS:
                 # solo confirma; si el campo no es candidato, no inventamos
                 cands = AMBIGUOS[clave]
