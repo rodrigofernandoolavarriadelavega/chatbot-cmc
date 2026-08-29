@@ -14,6 +14,9 @@
 
 <link rel="canonical" href="https://agentecmc.cl/patio">
 <meta property="og:url" content="https://agentecmc.cl/patio">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/static/fuentes/NunitoSans-400-latin.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/static/fuentes/Fredoka-700-latin.woff2">
+<link rel="stylesheet" href="/static/fuentes/marca.css">
 <link rel="icon" type="image/png" href="/static/sitio/patio-icono.png">
 <link rel="apple-touch-icon" href="/static/sitio/patio-icono.png">
 <meta property="og:image" content="https://agentecmc.cl/static/sitio/patio-logo.webp">
@@ -47,26 +50,29 @@
 <style>
 :root{
   /* ---- Marca Patio ---------------------------------------------------- */
-  --ember:      #E2542C;   /* fogon — color lider */
-  --ember-ink:  #A8320F;
-  --ember-soft: #FDE9E1;
-  --sun:        #F2A413;   /* toldo / ampolleta */
-  --sun-soft:   #FDF0D6;
-  --bosque:     #14513C;   /* Arauco forestal — color ancla oscuro */
-  --bosque-ink: #0B3427;
-  --bosque-soft:#E3EFE9;
-  --uva:        #7C3B8E;   /* musica */
-  --uva-soft:   #F2E7F5;
+  --ember:      #F15A24;   /* Naranja del manual — energía y llamados a la acción */
+  --ember-ink:  #C4441A;
+  --ember-soft: #FDEBE4;
+  --sun:        #FDB515;   /* Amarillo sol — alegría e iluminación */
+  --sun-soft:   #FFF4DA;
+  --bosque:     #064C3B;   /* Verde bosque — color institucional del manual */
+  --bosque-ink: #03271E;
+  --bosque-soft:#E6F0EC;
+  --uva:        #D9452F;   /* Coral del manual — Patio Vivo */
+  --uva-soft:   #FDECE9;
+  --turquesa:   #19A7A3;   /* juegos y elementos juveniles */
+  --turquesa-soft:#E4F5F4;
+  --coral:      #EF6B57;   /* acentos secundarios */
   --cmc:        #1172AB;   /* azul institucional CMC — solo Patio Saludable */
   --cmc-soft:   #E8F2F9;
 
-  --tinta:   #1A130F;
-  --tinta-2: #3A2C24;
-  --tinta-3: #6B584C;
-  --tinta-4: #9C8A7D;
-  --linea:   #E4D9C9;
-  --arena:   #FBF5EA;      /* papel */
-  --arena-2: #F4E9D7;
+  --tinta:   #152E26;
+  --tinta-2: #2E4A41;
+  --tinta-3: #5E7268;
+  --tinta-4: #94A49C;
+  --linea:   #E6DCC4;
+  --arena:   #FFF3D6;      /* Crema del manual — fondos cálidos */
+  --arena-2: #F8E8C8;
   --blanco:  #FFFFFF;
 
   --r-sm: 10px; --r: 16px; --r-lg: 26px; --r-xl: 38px; --r-pill: 999px;
@@ -74,8 +80,8 @@
   --sombra:    0 14px 34px -16px rgba(26,19,15,.28), 0 2px 8px rgba(26,19,15,.06);
   --sombra-lg: 0 40px 70px -28px rgba(26,19,15,.38), 0 10px 20px rgba(26,19,15,.08);
 
-  --display: ui-sans-serif, "SF Pro Display", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --texto:   ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --display:'Fredoka', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  --texto:'Nunito Sans', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --voz:     ui-serif, Georgia, "Times New Roman", serif;
 
   --ancho: 1180px;
@@ -101,9 +107,9 @@ button{font:inherit; color:inherit; cursor:pointer}
 section,header,footer{scroll-margin-top:calc(var(--nav-h) + 14px)}
 
 /* ---- Tipografia ------------------------------------------------------- */
-.h-xl,.h-l,.h-m{font-family:var(--display); font-weight:800; letter-spacing:-.035em; line-height:1.02; margin:0}
+.h-xl,.h-l,.h-m{font-family:var(--display); font-weight:700; letter-spacing:-.005em; line-height:1.02; margin:0}
 .h-xl{font-size:clamp(2.6rem, 9.5vw, 5.6rem)}
-.h-l {font-size:clamp(2rem, 5.6vw, 3.3rem); letter-spacing:-.03em}
+.h-l {font-size:clamp(2rem, 5.6vw, 3.3rem); letter-spacing:0}
 .h-m {font-size:clamp(1.35rem, 3vw, 1.8rem); letter-spacing:-.02em; line-height:1.15}
 .sobre{
   font-family:var(--display); font-weight:800; font-size:.72rem;
@@ -123,7 +129,7 @@ section,header,footer{scroll-margin-top:calc(var(--nav-h) + 14px)}
 }
 .nav.pegada{border-bottom-color:var(--linea); box-shadow:0 6px 20px -14px rgba(26,19,15,.4)}
 .nav .env{height:100%; display:flex; align-items:center; gap:18px}
-.marca{display:flex; align-items:center; gap:10px; text-decoration:none; font-family:var(--display); font-weight:800; letter-spacing:-.03em; font-size:1.05rem; white-space:nowrap}
+.marca{display:flex; align-items:center; gap:10px; text-decoration:none; font-family:var(--display); font-weight:700; letter-spacing:0; font-size:1.05rem; white-space:nowrap}
 .sello{
   width:34px; height:34px; border-radius:11px; flex:none; position:relative;
   background:linear-gradient(150deg, var(--sun), var(--ember) 55%, var(--ember-ink));
@@ -159,6 +165,8 @@ section,header,footer{scroll-margin-top:calc(var(--nav-h) + 14px)}
 @media (min-width:900px){ .nav-links{display:flex} .nav .btn{margin-left:8px} }
 
 .sello-img{width:44px;height:auto;flex:none;display:block;object-fit:contain}
+.horizontal{height:34px;width:auto;display:block}
+@media (min-width:520px){.horizontal{height:40px}}
 /* El logo abre la página: es lo primero que se ve y lo que hay que recordar. */
 .logo-portada{
   width:clamp(180px, 46vw, 300px); height:auto; margin:0 0 22px;
@@ -455,7 +463,7 @@ details.faq p{margin:0 0 18px; color:var(--tinta-3); font-size:.96rem; max-width
 
 <nav class="nav" id="nav">
   <div class="env">
-    <a class="marca" href="#top"><img class="sello-img" src="/static/sitio/patio-sello.webp" alt="" width="44" height="27"> Patio Carampangue</a>
+    <a class="marca" href="#top"><img class="horizontal" src="/static/sitio/patio-horizontal.webp" alt="Patio Carampangue" width="488" height="157"></a>
     <div class="nav-links">
       <a href="#cartelera">Cartelera</a>
       <a href="#zonas">Qué hay</a>

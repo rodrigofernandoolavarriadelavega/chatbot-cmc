@@ -1,0 +1,8 @@
+/* Tipografías de la marca Patio Carampangue — AUTOSERVIDAS y RECORTADAS.
+   Fredoka 700: títulos, precios y señalética. Nunito Sans 400/700/800: texto.
+   Sin CDN y sólo con los glifos que la app escribe: en Carampangue el peso
+   de una fuente se nota más que cualquier animación. */
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:700;font-display:swap;src:url('Fredoka-700-latin.woff2') format('woff2');}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:400;font-display:swap;src:url('NunitoSans-400-latin.woff2') format('woff2');}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:700;font-display:swap;src:url('NunitoSans-700-latin.woff2') format('woff2');}
+@font-face{font-family:'Nunito Sans';font-style:normal;font-weight:800;font-display:swap;src:url('NunitoSans-800-latin.woff2') format('woff2');}
