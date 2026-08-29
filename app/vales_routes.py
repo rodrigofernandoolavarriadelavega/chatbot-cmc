@@ -340,9 +340,9 @@ def _svg_timbre(estado: str, fecha: str) -> str:
   <text font-family="Montserrat,sans-serif" font-size="8.4" font-weight="700" letter-spacing="2.1" fill="{aro}">
     <textPath href="#orb{estado}" startOffset="50%" text-anchor="middle">CENTRO MÉDICO CARAMPANGUE · CONVENIO ·</textPath>
   </text>
-  <path d="M58 40h12v13h13v12H70v13H58V65H45V53h13z" fill="{aro}" opacity=".16"/>
-  <text x="64" y="63" text-anchor="middle" font-family="Montserrat,sans-serif" font-size="12" font-weight="800" letter-spacing="1.2" fill="{tinta}">{palabra}</text>
-  <text x="64" y="79" text-anchor="middle" font-family="'Plex Mono',monospace" font-size="10" font-weight="600" letter-spacing=".8" fill="{aro}">{fecha}</text>
+  <path d="M61.2 41h5.6v5.4h5.4v5.6h-5.4v5.4h-5.6v-5.4H55.8v-5.6h5.4z" fill="{aro}" opacity=".55"/>
+  <text x="64" y="69" text-anchor="middle" font-family="Montserrat,sans-serif" font-size="12" font-weight="800" letter-spacing="1.2" fill="{tinta}">{palabra}</text>
+  <text x="64" y="84" text-anchor="middle" font-family="'Plex Mono',monospace" font-size="9.5" font-weight="600" letter-spacing=".8" fill="{aro}">{fecha}</text>
 </svg>"""
 
 
