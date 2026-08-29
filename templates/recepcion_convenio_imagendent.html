@@ -298,7 +298,7 @@ async function cargar(){
   $('tbody').innerHTML = d.vales.length ? d.vales.map(v => `
     <tr>
       <td class="folio"><a class="mono" target="_blank" href="/vale/${v.folio}">${v.folio}</a></td>
-      <td>${v.paciente}<div style="font-size:11px;color:var(--gris)" class="mono">${v.rut}</div></td>
+      <td>${v.paciente}<div style="font-size:11px;color:var(--gris);white-space:nowrap" class="mono">${v.rut}</div></td>
       <td class="prest">${v.prestacion_nombre}${v.observaciones
           ? `<div class="obs1" title="${(v.observaciones||'').replace(/"/g,'&quot;')}">${v.observaciones}</div>` : ''}</td>
       <td class="n">${clp(v.costo)}</td>
