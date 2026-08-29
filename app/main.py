@@ -1690,6 +1690,7 @@ _PRIVACIDAD_HTML = (_TEMPLATE_DIR / "privacidad.html").read_text(encoding="utf-8
 _PROFESIONALES_CMC_HTML = (_TEMPLATE_DIR / "profesionales_cmc.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "profesionales_cmc.html").exists() else ""
 _CECAR_HTML = (_TEMPLATE_DIR / "cecar.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "cecar.html").exists() else ""
 _PATIO_HTML = (_TEMPLATE_DIR / "patio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "patio.html").exists() else ""
+_CARIN_HTML = (_TEMPLATE_DIR / "carin.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "carin.html").exists() else ""
 _CECAR_V2_HTML = (_TEMPLATE_DIR / "cecar-v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "cecar-v2.html").exists() else ""
 _TRAUMATOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "traumatologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "traumatologo-curanilahue.html").exists() else ""
 _OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "otorrino-curanilahue.html").exists() else ""
@@ -1789,6 +1790,28 @@ def patio_carampangue(request: Request):
     if host.endswith("centromedicocarampangue.cl"):
         raise HTTPException(status_code=404, detail="Not found")
     return _PATIO_HTML
+
+
+@app.get("/carin", response_class=HTMLResponse)
+def carin_carampangue_infantil(request: Request):
+    """CARIN - Carampangue Infantil: pagina publica del centro de desarrollo
+    infantil (evaluacion, terapia y talleres para ninas y ninos).
+
+    SOLO en agentecmc.cl, igual que /patio: CARIN es una marca APARTE del
+    centro medico y no debe colgar del dominio clinico ni ensuciarle el SEO.
+    Los dos dominios apuntan a esta misma app, asi que toda ruta nace visible
+    en ambos si nadie la filtra por Host.
+
+    OJO: sale con <meta robots="noindex"> A PROPOSITO. Adentro hay ~8 datos
+    marcados en ambar que todavia NO estan confirmados (WhatsApp propio,
+    direccion, horario, que areas parten de verdad, prevision Fonasa) y las
+    fotos son renders del proyecto, no del recinto terminado. Se quita el
+    noindex cuando esos datos existan y haya fotos reales.
+    """
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    return _CARIN_HTML
 
 
 @app.get("/cecar/v2", response_class=HTMLResponse)
