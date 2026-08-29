@@ -1543,6 +1543,8 @@ app.include_router(alma_control_routes.router)
 
 import vuelos_routes
 app.include_router(vuelos_routes.router)
+import vales_routes
+app.include_router(vales_routes.router)   # vales digitales de convenio (radiologia dental)
 
 import agenda_routes
 app.include_router(agenda_routes.router)
