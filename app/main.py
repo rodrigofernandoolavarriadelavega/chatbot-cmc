@@ -8824,9 +8824,21 @@ def api_state_put(body: dict):
 
 
 @app.get("/api/cmc/mensual")
-def api_cmc_mensual(mes: str | None = None):
+def api_cmc_mensual(request: Request, mes: str | None = None,
+                    token: str | None = Query(None),
+                    cmc_session: str | None = Cookie(None)):
     """Agrega bi_pagos_caja por profesional y por área para un mes (YYYY-MM).
-    Si mes es None, usa el mes actual."""
+    Si mes es None, usa el mes actual.
+
+    🔴 Este endpoint NO tenía auth (hallado 2026-09-02): devolvía la produccion
+    del mes por profesional — nombre, especialidad, total facturado, pacientes —
+    a cualquiera, y ademas colgaba del dominio clinico publico. Ahora exige el
+    modulo "mensual" del perfil y 404 fuera de agentecmc.cl."""
+    import alma_scope
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    alma_scope.resolve(request, token, cmc_session, "mensual")
     from session import db as _c_m
     from medilink import PROFESIONALES
     from datetime import date as _d_m
@@ -8941,8 +8953,18 @@ def api_cmc_mensual(mes: str | None = None):
 
 
 @app.get("/cmc/mensual", response_class=HTMLResponse)
-def cmc_mensual_page():
-    """Dashboard mensual v2 — leído de bi_pagos_caja (CSV oficial Medilink)."""
+def cmc_mensual_page(request: Request, token: str | None = Query(None),
+                     cmc_session: str | None = Cookie(None)):
+    """Dashboard mensual v2 — leído de bi_pagos_caja (CSV oficial Medilink).
+
+    Misma correccion que su API: no tenía auth y servía honorarios por
+    profesional a cualquiera, en los dos dominios."""
+    import alma_scope
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not alma_scope.page_token(token, cmc_session, "mensual"):
+        raise HTTPException(401, "No autorizado")
     p = _TEMPLATE_DIR / "cmc_mensual.html"
     if not p.exists():
         raise HTTPException(404, "Dashboard mensual no disponible")
