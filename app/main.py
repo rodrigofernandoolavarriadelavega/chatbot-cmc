@@ -1545,6 +1545,10 @@ import vuelos_routes
 app.include_router(vuelos_routes.router)
 import vales_routes
 app.include_router(vales_routes.router)   # vales digitales de convenio (radiologia dental)
+import cargos_routes
+app.include_router(cargos_routes.router)        # cargos a descontar al profesional (Javiera 01-09)
+import orto_embudo_routes
+app.include_router(orto_embudo_routes.router)   # embudo de ortodoncia previo a la instalacion
 
 import agenda_routes
 app.include_router(agenda_routes.router)
@@ -4112,6 +4116,8 @@ _ALMA_EXAMENES_HTML = (_TEMPLATE_DIR / "alma_examenes.html").read_text(encoding=
 _ALMA_TAREAS_HTML = (_TEMPLATE_DIR / "alma_tareas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_tareas.html").exists() else ""
 _ALMA_CHECKLIST_HTML = (_TEMPLATE_DIR / "alma_checklist.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_checklist.html").exists() else ""
 _ALMA_LIQUIDACIONES_HTML = (_TEMPLATE_DIR / "alma_liquidaciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_liquidaciones.html").exists() else ""
+_ALMA_CARGOS_HTML = (_TEMPLATE_DIR / "alma_cargos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_cargos.html").exists() else ""
+_ALMA_ORTO_EMBUDO_HTML = (_TEMPLATE_DIR / "alma_orto_embudo.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_orto_embudo.html").exists() else ""
 _ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inicio.html").exists() else ""
 _ALMA_PROVEEDORES_HTML = (_TEMPLATE_DIR / "alma_proveedores.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_proveedores.html").exists() else ""
 _ALMA_MEJORAS_HTML = (_TEMPLATE_DIR / "alma_mejoras.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_mejoras.html").exists() else ""
@@ -4145,6 +4151,8 @@ for _ap, _ah, _al in [
     ("/alma/tareas", _ALMA_TAREAS_HTML, "Tareas"),
     ("/alma/checklist", _ALMA_CHECKLIST_HTML, "Checklist"),
     ("/alma/liquidaciones", _ALMA_LIQUIDACIONES_HTML, "Liquidaciones"),
+    ("/alma/cargos", _ALMA_CARGOS_HTML, "Cargos"),
+    ("/alma/orto-embudo", _ALMA_ORTO_EMBUDO_HTML, "EmbudoOrtodoncia"),
     ("/alma/inicio", _ALMA_INICIO_HTML, "Inicio"),
     ("/alma/proveedores", _ALMA_PROVEEDORES_HTML, "Proveedores"),
     ("/alma/mejoras", _ALMA_MEJORAS_HTML, "Mejoras"),

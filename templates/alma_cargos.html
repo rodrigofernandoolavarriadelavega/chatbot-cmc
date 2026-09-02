@@ -1,0 +1,266 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<title>Cargos al profesional — Alma CMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/alma_kit.css">
+<style>
+.tabs{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{font:inherit;font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;
+  border:1px solid var(--border,#e5e9f0);background:#fff;color:var(--navy,#16324f);cursor:pointer}
+.tabs button.on{background:var(--navy,#16324f);border-color:var(--navy,#16324f);color:#fff}
+.pill{font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap}
+.pill.pend{background:#fdf3e3;color:#a06c12}
+.pill.pag{background:#eaf6ee;color:#2c6b41}
+.aviso{border:1px solid #f0dcc6;background:#fffaf3;border-radius:12px;padding:12px 14px;margin-bottom:14px;
+  font-size:12px;color:#7a5a2e;line-height:1.6}
+.aviso b{color:#5d4320}
+.rapido{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;margin-bottom:12px}
+.rapido button{font:inherit;font-size:12px;font-weight:600;padding:10px 8px;border-radius:10px;
+  border:1px solid var(--border,#e5e9f0);background:#fff;color:var(--navy,#16324f);cursor:pointer;text-align:left;line-height:1.3}
+.rapido button:hover{border-color:#8aa6c0}
+.rapido button small{display:block;color:#7d90a4;font-weight:500;margin-top:2px}
+</style>
+</head><body>
+<div class="pg-topbar">
+  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg> Cargos al profesional</h1>
+  <div class="spacer"></div>
+  <input id="mes" type="month" style="font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:9px;padding:7px 10px;color:var(--navy)">
+  <button class="btn-ghost" onclick="exportCSV()">CSV</button>
+  <button class="btn-primary" onclick="nuevo()">+ Anotar</button>
+</div>
+<div class="wrap">
+  <div class="tabs">
+    <button id="t-reg" class="on" onclick="tab('reg')">Lo anotado</button>
+    <button id="t-liq" onclick="tab('liq')">A descontar este mes</button>
+    <button id="t-cat" onclick="tab('cat')">Qué se cobra</button>
+  </div>
+
+  <section id="v-reg">
+    <div class="kpis" id="kpis"></div>
+    <div class="rapido" id="rapido"></div>
+    <div class="card"><div class="card-head">Cargos del mes
+      <span class="spacer"></span>
+      <select id="f-estado" onchange="load()" style="font:inherit;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:5px 8px">
+        <option value="">Todos</option><option value="pendiente">Pendientes</option><option value="pagado">Pagados</option></select>
+      <button class="btn-ghost" onclick="importar()" title="Trae las radiografías del convenio Imagendent">↓ Importar vales</button></div>
+      <table><thead><tr><th>Fecha</th><th>Profesional</th><th>Qué</th><th class="hide-sm">Paciente</th><th class="num">Total</th><th>Estado</th><th class="num"></th></tr></thead>
+      <tbody id="tbody"></tbody></table>
+      <div id="empty" class="empty" style="display:none">Nada anotado este mes. Pulsa «+ Anotar» apenas ocupes una radiografía, un trabajo de laboratorio o una cubeta.</div></div>
+    <div class="note">Cada cosa que se le cobra al profesional se anota acá cuando pasa, no a fin de mes. Lo <b>pendiente</b> es lo que hay que descontarle en la liquidación; al descontarlo, márcalo como pagado y deja de sumar.</div>
+  </section>
+
+  <section id="v-liq" style="display:none">
+    <div class="aviso">Esto es lo que hay que <b>descontar en la liquidación de honorarios</b> de este mes. Suma solo los cargos <b>pendientes</b>. Cuando descuentes a alguien, marca sus cargos como pagados para que no se vuelvan a contar el mes siguiente.</div>
+    <div class="card"><div class="card-head">A descontar por profesional <span id="liq-tot" class="badge mute"></span></div>
+      <table><thead><tr><th>Profesional</th><th class="num">Cargos</th><th class="num">A descontar</th><th class="num"></th></tr></thead>
+      <tbody id="liq-body"></tbody></table>
+      <div id="liq-empty" class="empty" style="display:none">Sin cargos pendientes este mes.</div></div>
+  </section>
+
+  <section id="v-cat" style="display:none">
+    <div class="aviso" id="cat-aviso"></div>
+    <div class="card"><div class="card-head">Catálogo de cobros <span class="spacer"></span>
+      <button class="btn-primary" onclick="nuevoCat()">+ Ítem</button></div>
+      <table><thead><tr><th>Ítem</th><th>Categoría</th><th class="num">Precio</th><th class="hide-sm">Unidad</th><th class="num"></th></tr></thead>
+      <tbody id="cat-body"></tbody></table></div>
+    <div class="note">Los ítems en <b>$0</b> están sin precio: nadie sabe a cuánto se cobran salvo tú, así que quedaron en cero a propósito en vez de inventar un valor que después descuenta de más o de menos. Los insumos vienen del módulo Inventario Dental con el precio de MayorDent — ese es el <i>costo</i>, hay que confirmar a cuánto se cobra.</div>
+  </section>
+</div>
+
+<div class="modal-bg" id="m-c"><div class="modal">
+  <div class="modal-head"><h2 id="c-title">Anotar cargo</h2><div class="x" onclick="AlmaKit.closeModal('m-c')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="c-id">
+    <div class="field"><label>Profesional</label><select id="c-prof"></select></div>
+    <div class="field"><label>Qué se le cobra</label><select id="c-item" onchange="pickItem()"></select></div>
+    <div class="field"><label>Descripción</label><input id="c-desc" placeholder="Ej: cubetas de impresión"></div>
+    <div class="field-row">
+      <div class="field"><label>Cantidad</label><input id="c-cant" type="number" step="0.5" value="1" oninput="calc()"></div>
+      <div class="field"><label>Precio unitario</label><input id="c-precio" type="number" value="0" oninput="calc()"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Fecha</label><input id="c-fecha" type="date"></div>
+      <div class="field"><label>Paciente (opcional)</label><input id="c-pac" placeholder="para saber de quién era"></div>
+    </div>
+    <div class="kpi money" style="border-radius:12px;margin-top:6px"><div class="k-label">Total a descontar</div><div class="k-val" id="c-total" style="font-size:20px">$0</div></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn-ghost" id="c-del" onclick="borrar()" style="margin-right:auto;color:#b3403a">Eliminar</button>
+    <button class="btn-ghost" onclick="AlmaKit.closeModal('m-c')">Cancelar</button>
+    <button class="btn-primary" onclick="guardar()">Guardar</button></div>
+</div></div>
+
+<div class="modal-bg" id="m-k"><div class="modal">
+  <div class="modal-head"><h2>Ítem del catálogo</h2><div class="x" onclick="AlmaKit.closeModal('m-k')">✕</div></div>
+  <div class="modal-body"><input type="hidden" id="k-id">
+    <div class="field"><label>Nombre</label><input id="k-nombre" placeholder="Ej: Radiografía panorámica"></div>
+    <div class="field-row">
+      <div class="field"><label>Categoría</label><select id="k-cat"></select></div>
+      <div class="field"><label>Precio que se cobra</label><input id="k-precio" type="number" value="0"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Unidad</label><input id="k-unidad" value="unidad"></div>
+      <div class="field"><label>Activo</label><select id="k-activo"><option value="1">Sí</option><option value="0">No</option></select></div>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-k')">Cancelar</button>
+    <button class="btn-primary" onclick="guardarCat()">Guardar</button></div>
+</div></div>
+
+<script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/cargos";</script>
+<script src="/static/alma_kit.js"></script>
+<script>
+const {api,clp,esc,toast,openModal,closeModal}=AlmaKit;
+let MES=new Date().toISOString().slice(0,7), D=null, CAT=null, TAB='reg';
+document.getElementById('mes').value=MES;
+document.getElementById('mes').addEventListener('change',e=>{MES=e.target.value;loadAll();});
+
+function tab(t){ TAB=t; ['reg','liq','cat'].forEach(x=>{
+    document.getElementById('t-'+x).classList.toggle('on',x===t);
+    document.getElementById('v-'+x).style.display = x===t?'':'none'; });
+  if(t==='liq') loadLiq(); if(t==='cat') loadCat(); }
+
+async function loadAll(){ await load(); if(TAB==='liq') loadLiq(); if(TAB==='cat') loadCat(); }
+
+async function load(){
+  const est=document.getElementById('f-estado').value;
+  D=await api("?mes="+MES+(est?"&estado="+est:""));
+  document.getElementById('kpis').innerHTML=[
+    ['Por descontar',clp(D.pendiente),'money'],['Ya descontado',clp(D.pagado),''],
+    ['Total del mes',clp(D.total),''],['Anotaciones',D.items.length,'']
+  ].map(([l,v,c])=>`<div class="kpi ${c}"><div class="k-label">${l}</div><div class="k-val">${v}</div></div>`).join('');
+  const tb=document.getElementById('tbody');
+  tb.innerHTML=D.items.map(i=>`<tr>
+    <td class="t-meta">${esc(i.fecha.slice(5))}</td>
+    <td class="t-strong">${esc(i.profesional)}</td>
+    <td>${esc(i.descripcion)}${i.cantidad!=1?` <span class="t-meta">×${i.cantidad}</span>`:''}${i.origen==='vale'?' <span class="badge mute">vale</span>':''}</td>
+    <td class="hide-sm t-meta">${esc(i.paciente||'')}</td>
+    <td class="num t-strong">${clp(i.total)}</td>
+    <td><span class="pill ${i.pagado?'pag':'pend'}">${i.pagado?'Descontado':'Pendiente'}</span></td>
+    <td class="num"><button class="icon-btn" onclick="toggle(${i.id},${i.pagado?0:1})" title="${i.pagado?'Marcar pendiente':'Marcar descontado'}">${i.pagado?'↺':'✓'}</button>
+      <button class="icon-btn" onclick="editar(${i.id})">✎</button></td></tr>`).join('');
+  document.getElementById('empty').style.display=D.items.length?'none':'';
+  const prof=document.getElementById('c-prof');
+  prof.innerHTML=D.profesionales.map(p=>`<option>${esc(p)}</option>`).join('');
+}
+
+async function loadLiq(){
+  const r=await api("/resumen-liquidacion?mes="+MES);
+  document.getElementById('liq-tot').textContent=clp(r.total);
+  document.getElementById('liq-body').innerHTML=r.items.map(i=>`<tr>
+    <td class="t-strong">${esc(i.profesional)}</td><td class="num t-meta">${i.n}</td>
+    <td class="num t-strong">${clp(i.descontar)}</td>
+    <td class="num"><button class="icon-btn" onclick="copiar(${i.descontar})" title="Copiar el monto">⧉</button></td></tr>`).join('');
+  document.getElementById('liq-empty').style.display=r.items.length?'none':'';
+}
+function copiar(v){ navigator.clipboard?.writeText(String(v)); toast("Copiado: "+clp(v)); }
+
+async function loadCat(){
+  CAT=await api("/catalogo");
+  document.getElementById('cat-aviso').innerHTML = CAT.sin_precio
+    ? `Hay <b>${CAT.sin_precio} ítems sin precio</b>. Mientras estén en $0 no descuentan nada — ponles el valor que de verdad se le cobra al profesional.`
+    : `Todos los ítems activos tienen precio.`;
+  document.getElementById('cat-body').innerHTML=CAT.items.map(i=>`<tr style="${i.activo?'':'opacity:.45'}">
+    <td class="t-strong">${esc(i.nombre)}</td><td class="t-meta">${esc(i.categoria)}</td>
+    <td class="num ${i.precio?'t-strong':''}" style="${i.precio?'':'color:#c0392b;font-weight:700'}">${i.precio?clp(i.precio):'sin precio'}</td>
+    <td class="hide-sm t-meta">${esc(i.unidad||'')}</td>
+    <td class="num"><button class="icon-btn" onclick="editarCat(${i.id})">✎</button></td></tr>`).join('');
+  const sel=document.getElementById('c-item');
+  sel.innerHTML='<option value="">— escribir a mano —</option>'+
+    CAT.items.filter(i=>i.activo).map(i=>`<option value="${i.id}">${esc(i.nombre)}${i.precio?' · '+clp(i.precio):' · sin precio'}</option>`).join('');
+  const kc=document.getElementById('k-cat');
+  kc.innerHTML=CAT.categorias.map(c=>`<option>${esc(c)}</option>`).join('');
+  // atajos: los 6 items mas caros con precio, para anotar de un toque
+  document.getElementById('rapido').innerHTML=CAT.items.filter(i=>i.activo&&i.precio)
+    .sort((a,b)=>b.precio-a.precio).slice(0,6)
+    .map(i=>`<button onclick='rapido(${i.id})'>${esc(i.nombre.slice(0,28))}<small>${clp(i.precio)}</small></button>`).join('');
+}
+
+function calc(){ const t=(+document.getElementById('c-cant').value||0)*(+document.getElementById('c-precio').value||0);
+  document.getElementById('c-total').textContent=clp(Math.round(t)); }
+function pickItem(){
+  const id=+document.getElementById('c-item').value; if(!id) return;
+  const it=CAT.items.find(x=>x.id===id); if(!it) return;
+  document.getElementById('c-desc').value=it.nombre;
+  document.getElementById('c-precio').value=it.precio; calc();
+}
+function rapido(id){ nuevo(); document.getElementById('c-item').value=id; pickItem(); }
+
+function nuevo(){
+  if(!CAT) loadCat();
+  document.getElementById('c-title').textContent="Anotar cargo";
+  ['c-id','c-desc','c-pac'].forEach(x=>document.getElementById(x).value="");
+  document.getElementById('c-cant').value=1; document.getElementById('c-precio').value=0;
+  document.getElementById('c-item').value=""; document.getElementById('c-total').textContent="$0";
+  document.getElementById('c-fecha').value=new Date().toISOString().slice(0,10);
+  document.getElementById('c-del').style.display='none';
+  openModal('m-c');
+}
+function editar(id){
+  const i=D.items.find(x=>x.id===id); if(!i) return;
+  document.getElementById('c-title').textContent="Editar cargo";
+  document.getElementById('c-id').value=i.id;
+  document.getElementById('c-prof').value=i.profesional;
+  document.getElementById('c-desc').value=i.descripcion;
+  document.getElementById('c-cant').value=i.cantidad;
+  document.getElementById('c-precio').value=i.precio_unit;
+  document.getElementById('c-fecha').value=i.fecha;
+  document.getElementById('c-pac').value=i.paciente||"";
+  document.getElementById('c-del').style.display=''; calc(); openModal('m-c');
+}
+async function guardar(){
+  const id=document.getElementById('c-id').value;
+  const body={ profesional:document.getElementById('c-prof').value,
+    descripcion:document.getElementById('c-desc').value.trim(),
+    cantidad:+document.getElementById('c-cant').value||1,
+    precio_unit:+document.getElementById('c-precio').value||0,
+    fecha:document.getElementById('c-fecha').value,
+    paciente:document.getElementById('c-pac').value.trim(),
+    catalogo_id:+document.getElementById('c-item').value||null };
+  if(!body.descripcion){ toast("Falta qué se cobra",'err'); return; }
+  try{ await api(id?("/"+id):"",{method:id?"PATCH":"POST",body:JSON.stringify(body)});
+    closeModal('m-c'); toast("Anotado"); loadAll(); }catch(e){ toast(e.message,'err'); }
+}
+async function toggle(id,pagado){
+  try{ await api("/"+id,{method:"PATCH",body:JSON.stringify({pagado:!!pagado})}); loadAll(); }
+  catch(e){ toast(e.message,'err'); }
+}
+async function borrar(){
+  const id=document.getElementById('c-id').value; if(!id) return;
+  if(!confirm("¿Eliminar este cargo?")) return;
+  try{ await api("/"+id,{method:"DELETE"}); closeModal('m-c'); toast("Eliminado"); loadAll(); }
+  catch(e){ toast(e.message,'err'); }
+}
+async function importar(){
+  try{ const r=await api("/importar-vales?mes="+MES,{method:"POST"});
+    toast(r.creados?`${r.creados} radiografías importadas`:"No había vales nuevos"); loadAll(); }
+  catch(e){ toast(e.message,'err'); }
+}
+function nuevoCat(){
+  if(!CAT){ loadCat(); return; }
+  document.getElementById('k-id').value=""; document.getElementById('k-nombre').value="";
+  document.getElementById('k-precio').value=0; document.getElementById('k-unidad').value="unidad";
+  document.getElementById('k-activo').value="1"; openModal('m-k');
+}
+function editarCat(id){
+  const i=CAT.items.find(x=>x.id===id); if(!i) return;
+  document.getElementById('k-id').value=i.id; document.getElementById('k-nombre').value=i.nombre;
+  document.getElementById('k-cat').value=i.categoria; document.getElementById('k-precio').value=i.precio;
+  document.getElementById('k-unidad').value=i.unidad||"unidad";
+  document.getElementById('k-activo').value=i.activo?"1":"0"; openModal('m-k');
+}
+async function guardarCat(){
+  const body={ id:+document.getElementById('k-id').value||null,
+    nombre:document.getElementById('k-nombre').value.trim(),
+    categoria:document.getElementById('k-cat').value,
+    precio:+document.getElementById('k-precio').value||0,
+    unidad:document.getElementById('k-unidad').value.trim(),
+    activo:document.getElementById('k-activo').value==="1" };
+  if(!body.nombre){ toast("Falta el nombre",'err'); return; }
+  try{ await api("/catalogo",{method:"POST",body:JSON.stringify(body)});
+    closeModal('m-k'); toast("Guardado"); loadCat(); }catch(e){ toast(e.message,'err'); }
+}
+function exportCSV(){ location.href="/alma/api/cargos/export?mes="+MES+"&token="+encodeURIComponent(window.ALMA_TOKEN); }
+loadCat().then(load);
+</script>
+</body></html>
