@@ -110,6 +110,14 @@
 .cd li .tag{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:1px 6px}
 .cd li .tag.nuevo{background:var(--aqua-s);color:var(--blue)}
 .cd li .tag.curso{background:var(--bg);color:var(--mute)}
+/* La pestaña consulta el BI y puede tardar un par de segundos: sin esto se ve
+   vacía y parece rota. */
+.cargando{padding:34px 16px;text-align:center;color:var(--mute);font-size:12.5px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:10px}
+.cargando i{width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--aqua);
+  border-radius:50%;animation:sp .8s linear infinite;display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.cargando i{animation:none}}
 .col-h .nm{font-size:12px;font-weight:700;color:var(--navy);line-height:1.25;letter-spacing:-.01em}
 .col-h .ct{margin-left:auto;font-size:11px;font-weight:800;background:var(--bg);color:var(--mute);
   border-radius:20px;padding:2px 9px;font-variant-numeric:tabular-nums}
@@ -236,6 +244,7 @@
       <table><thead><tr><th>Paciente</th><th class="num hide-sm">Meses</th><th class="num hide-sm">Controles</th>
         <th class="num">Sin control</th><th>Estado</th><th class="num hide-sm">Saldo</th><th class="num"></th></tr></thead>
       <tbody id="tra-body"></tbody></table>
+      <div id="tra-body_wrap"></div>
       <div id="tra-empty" class="empty" style="display:none">Sin pacientes en tratamiento.</div>
     </div>
     <div class="note" style="margin-top:14px">Se calcula en vivo desde la caja real de la ortodoncista: meses en tratamiento, cuántos controles lleva y cuántos días pasaron desde el último. <b>Control vencido</b> = más de 45 días sin venir.</div>
@@ -380,8 +389,13 @@ function vista(v){ VISTA=v; ['emb','tra','cal'].forEach(x=>{
     document.getElementById('v-'+x).style.display = x===v?'':'none'; });
   if(v==='tra'&&!TRAT) cargarTrat(); if(v==='cal') cargarCal(); }
 
+function cargando(id, txt){
+  document.getElementById(id).innerHTML=`<div class="cargando"><i></i>${txt}</div>`;
+}
 async function cargarTrat(){
   const f=document.getElementById('tra-filtro').value;
+  document.getElementById('tra-empty').style.display='none';
+  cargando('tra-body_wrap','Leyendo los tratamientos…');
   try{
     // los KPIs viven en /resumen, no en /pacientes
     const [d,r]=await Promise.all([apiOrto("/pacientes?estado="+f+"&meses=12"),
@@ -407,12 +421,15 @@ async function cargarTrat(){
         <td class="num hide-sm">${p.saldo?clp(p.saldo):'—'}</td>
         <td class="num">${tel?`<a class="icon-btn" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}</td></tr>`;
     }).join('');
+    document.getElementById('tra-body_wrap').innerHTML='';
     document.getElementById('tra-empty').style.display=pac.length?'none':'';
-  }catch(e){ toast(e.message,'err'); }
+  }catch(e){ document.getElementById('tra-body_wrap').innerHTML=''; toast(e.message,'err'); }
 }
 
 async function cargarCal(){
   const m=document.getElementById('cal-meses').value;
+  document.getElementById('cal-empty').style.display='none';
+  cargando('cal-body','Leyendo el calendario…');
   try{
     const d=await apiOrto("/calendario?meses="+m);
     const dias=d.dias||d.calendario||[];
