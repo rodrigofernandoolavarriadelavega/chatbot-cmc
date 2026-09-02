@@ -112,6 +112,11 @@
 .cd li .tag.curso{background:var(--bg);color:var(--mute)}
 /* La pestaña consulta el BI y puede tardar un par de segundos: sin esto se ve
    vacía y parece rota. */
+/* El kit no le da color al SVG dentro de .icon-btn: con fill=none y sin stroke
+   el ícono queda invisible (se veía un círculo vacío en la tabla). */
+.icon-btn svg{width:15px;height:15px;stroke:var(--navy);fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.icon-btn:hover svg{stroke:var(--green)}
 .cargando{padding:34px 16px;text-align:center;color:var(--mute);font-size:12.5px;font-weight:600;
   display:flex;align-items:center;justify-content:center;gap:10px}
 .cargando i{width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--aqua);
