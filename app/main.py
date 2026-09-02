@@ -4123,19 +4123,36 @@ _ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf
 _ALMA_PROVEEDORES_HTML = (_TEMPLATE_DIR / "alma_proveedores.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_proveedores.html").exists() else ""
 _ALMA_MEJORAS_HTML = (_TEMPLATE_DIR / "alma_mejoras.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_mejoras.html").exists() else ""
 
-def _make_alma_page(_html, _label):
-    """Factory de páginas Alma simples (template con __TOKEN__, misma auth que el shell)."""
+def _modulo_de_ruta(_ruta: str) -> str | None:
+    """Key del ALMA_MODULE_REGISTRY que sirve esta ruta, para saber si el
+    perfil que entra la tiene permitida."""
+    from config import ALMA_MODULE_REGISTRY
+    for k, m in ALMA_MODULE_REGISTRY.items():
+        if m.get("src") == _ruta:
+            return k
+    return None
+
+
+def _make_alma_page(_html, _label, _modulo=None):
+    """Factory de páginas Alma simples (template con __TOKEN__).
+
+    La auth pasa por `alma_scope.page_token`, que respeta la allowlist
+    `modulos` del perfil. Antes esta funcion promovia la cookie de ortodoncia a
+    ADMIN_TOKEN, con lo que un perfil dental abria EBITDA y liquidaciones de
+    todo el centro; ahora cada pagina exige que su modulo este en el perfil.
+    """
     def _page(token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
-        from admin_routes import _verify_cookie, _is_admin_token
+        import alma_scope
         if not _html:
             raise HTTPException(404, f"{_label} no disponible")
-        if token and _is_admin_token(token):
-            return HTMLResponse(_html.replace("__TOKEN__", token))
-        if cmc_session:
-            role = _verify_cookie(cmc_session)
-            if role in ("admin", "ortodoncia"):
-                return HTMLResponse(_html.replace("__TOKEN__", ADMIN_TOKEN))
-        return RedirectResponse(url="/admin/login", status_code=302)
+        tk = alma_scope.page_token(token, cmc_session, _modulo)
+        if not tk:
+            # Sesion valida pero sin permiso para ESTE modulo -> 403, no login:
+            # mandarla a /admin/login la haria dar vueltas ya estando dentro.
+            if token or cmc_session:
+                raise HTTPException(403, "Este módulo no está disponible para tu perfil")
+            return RedirectResponse(url="/admin/login", status_code=302)
+        return HTMLResponse(_html.replace("__TOKEN__", tk))
     return _page
 
 for _ap, _ah, _al in [
@@ -4156,7 +4173,8 @@ for _ap, _ah, _al in [
     ("/alma/proveedores", _ALMA_PROVEEDORES_HTML, "Proveedores"),
     ("/alma/mejoras", _ALMA_MEJORAS_HTML, "Mejoras"),
 ]:
-    app.add_api_route(_ap, _make_alma_page(_ah, _al), methods=["GET"], response_class=HTMLResponse, include_in_schema=False)
+    app.add_api_route(_ap, _make_alma_page(_ah, _al, _modulo_de_ruta(_ap)), methods=["GET"],
+                      response_class=HTMLResponse, include_in_schema=False)
 
 # ── Pool de conexiones BI para endpoints de boxes ────────────────────────────
 # Máximo 8 conexiones compartidas entre boxes-state, boxes-config y boxes-config-put.
