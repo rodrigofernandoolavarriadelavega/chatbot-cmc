@@ -191,8 +191,11 @@
 
 /* ── Ficha lateral ─────────────────────────────────────────────────────── */
 .drawer{position:fixed;inset:0;background:rgba(15,63,104,.42);opacity:0;pointer-events:none;
-  transition:opacity .2s;z-index:60;display:flex;justify-content:flex-end}
-.drawer.on{opacity:1;pointer-events:auto}
+  /* `visibility` ademas de `opacity`: cerrada, la ficha salia del borde derecho
+     y su boton de cerrar seguia contando como objetivo tactil invisible.
+     Asi queda fuera del layout, del orden de tabulacion y del arbol de a11y. */
+  visibility:hidden;transition:opacity .2s,visibility .2s;z-index:60;display:flex;justify-content:flex-end}
+.drawer.on{opacity:1;pointer-events:auto;visibility:visible}
 .drawer .pane{width:min(420px,100%);background:#fff;height:100%;overflow-y:auto;
   transform:translateX(22px);transition:transform .22s;display:flex;flex-direction:column}
 .drawer.on .pane{transform:none}
@@ -229,6 +232,18 @@
 .exbox input{width:17px;height:17px;accent-color:var(--aqua);cursor:pointer;flex:none;margin-top:1px}
 .hint{font-size:11px;color:var(--mute);margin-top:6px;line-height:1.5}
 
+/* Mínimo táctil de 44 px, solo donde se toca con el dedo. En escritorio con
+   mouse 34 px es cómodo y subirlo a 44 infla la interfaz sin ganar nada. */
+@media(pointer:coarse){
+  .hb{min-height:44px}
+  .pt .acts button,.pt .acts a{min-height:44px}
+  .pt .acts .ico{width:44px}
+  .icon-btn{min-width:44px;min-height:44px}
+  .vtabs button{min-height:44px}
+  .cal-cell.has{min-height:56px}
+  .dh .x{width:44px;height:44px}
+  .stuck .row{padding:11px 0}
+}
 @media(max-width:760px){
   .board{flex-direction:column;overflow-x:visible}
   .col{flex:none;max-height:none}.col-b{max-height:none}

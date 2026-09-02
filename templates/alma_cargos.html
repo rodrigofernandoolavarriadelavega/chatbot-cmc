@@ -25,7 +25,16 @@
 .hb.pri{background:var(--aqua);border-color:var(--aqua);color:#08303c;box-shadow:0 3px 14px rgba(79,190,206,.4)}
 .hb.pri:hover{background:#63cbd9}
 .hb input[type=month]{background:transparent;border:0;color:#fff;font:inherit;font-size:12.5px;font-weight:700;
-  cursor:pointer;color-scheme:dark}
+  cursor:pointer;color-scheme:dark;min-height:24px;align-self:stretch}
+/* Mínimo táctil de 44 px solo en pantallas táctiles (ver nota en el embudo). */
+@media(pointer:coarse){
+  .hb{min-height:44px}
+  .hb input[type=month]{min-height:44px}
+  .tabs button{min-height:44px}
+  .icon-btn{min-width:44px;min-height:44px}
+  .rapido button{min-height:56px}
+  .liqrow button{min-height:44px}
+}
 
 .wrap2{max-width:1400px;margin:0 auto;padding:18px 20px 40px}
 
