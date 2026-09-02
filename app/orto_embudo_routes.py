@@ -49,6 +49,12 @@ router = APIRouter(prefix="/alma/api/orto-embudo", tags=["orto-embudo"])
 # dependen de un tercero (la Dra. Castillo) — ahi es donde se cae la gente.
 # `alerta` = dias despues de los cuales la tarjeta se pone en rojo.
 ETAPAS = [
+    # Etapa 0, medida sobre 114 conversaciones reales (2026-09-01): 114 preguntan
+    # por ortodoncia y solo 38 agendan. De los 92 que se caen, el 98% deja de
+    # responder despues de que el bot le explica el protocolo — y hoy no existen
+    # en ninguna parte porque el tablero empezaba cuando el paciente ya llegaba
+    # al box. Esta columna la llena el barrido `sincronizar`, no una persona.
+    {"id": "consulto",            "label": "Consultó, no agendó", "alerta": 3,  "espera": False, "auto": True},
     {"id": "proceso_inicial",     "label": "Proceso inicial",       "alerta": 7,  "espera": False},
     {"id": "tratamiento_previo",  "label": "Tratamiento previo",    "alerta": 30, "espera": False},
     {"id": "venta_cupones",       "label": "Venta de cupones",      "alerta": 10, "espera": False},
@@ -82,6 +88,9 @@ def _crear_tabla() -> None:
                 etapa_desde  TEXT NOT NULL,
                 notas        TEXT,
                 examenes     TEXT,
+                origen       TEXT,
+                phone        TEXT,
+                consulta_txt TEXT,
                 valor_cupones INTEGER DEFAULT 0,
                 historial    TEXT,
                 creado_por   TEXT,
@@ -101,10 +110,12 @@ _crear_tabla()
 
 # La tabla pudo nacer sin `examenes` (se desplego antes que esta funcion).
 with db() as _c:
-    if "examenes" not in [r[1] for r in _c.execute("PRAGMA table_info(orto_embudo)")]:
-        _c.execute("ALTER TABLE orto_embudo ADD COLUMN examenes TEXT")
-        _c.commit()
-        log.info("orto_embudo: columna examenes agregada")
+    _cols = [r[1] for r in _c.execute("PRAGMA table_info(orto_embudo)")]
+    for _col in ("examenes", "origen", "phone", "consulta_txt"):
+        if _col not in _cols:
+            _c.execute(f"ALTER TABLE orto_embudo ADD COLUMN {_col} TEXT")
+            log.info("orto_embudo: columna %s agregada", _col)
+    _c.commit()
 
 
 # ── Aviso por correo ────────────────────────────────────────────────────────
@@ -212,6 +223,59 @@ Aviso automatico de coordinacion. No contiene informacion clinica.</p></div>"""
     threading.Thread(target=_enviar, args=(asunto, cuerpo, para), daemon=True).start()
 
 
+# Palabras con las que un paciente nombra la ortodoncia. Salieron de leer las
+# 114 conversaciones reales, no de imaginarlas.
+_KW_ORTO = ["ortodonc", "braket", "bracket", "frenillo", "ortodoncista", "invisalign"]
+
+
+def _sincronizar_consultas(dias: int = 60) -> dict:
+    """Mete al embudo a quien pregunto por ortodoncia por WhatsApp y no agendo.
+
+    Tres filtros, y el segundo es el que importa:
+      1. Preguntó en los ultimos `dias`.
+      2. NO tiene cita de Ortodoncia. Esto ademas saca la post-venta: quien ya
+         esta en tratamiento y escribe porque "se le solto un bracket" tiene
+         cita previa, asi que no ensucia la columna de captacion (eran 10 de
+         las 114 consultas).
+      3. No esta ya en el embudo (por telefono).
+    No dispara correos: escribe directo, sin pasar por `crear`.
+    """
+    like = " OR ".join(f"lower(m.text) LIKE '%{k}%'" for k in _KW_ORTO)
+    creados, revisados = 0, 0
+    with db() as c:
+        ya = {(r[0] or "").strip() for r in c.execute(
+            "SELECT phone FROM orto_embudo WHERE phone IS NOT NULL")}
+        con_cita = {r[0] for r in c.execute(
+            "SELECT DISTINCT phone FROM citas_bot WHERE especialidad='Ortodoncia'")}
+        filas = list(c.execute(
+            f"SELECT m.phone, MIN(m.ts), MIN(m.text) FROM messages m "
+            f"WHERE m.direction='in' AND ({like}) "
+            f"AND m.ts >= datetime('now', ?) GROUP BY m.phone", (f"-{int(dias)} days",)))
+        for phone, ts, txt in filas:
+            revisados += 1
+            if not phone or phone in con_cita or phone in ya:
+                continue
+            nombre = None
+            r = list(c.execute("SELECT paciente_nombre FROM citas_bot WHERE phone=? "
+                               "AND paciente_nombre IS NOT NULL ORDER BY id DESC LIMIT 1", (phone,)))
+            if r:
+                nombre = r[0][0]
+            if not nombre:
+                r = list(c.execute("SELECT nombre FROM contact_profiles WHERE phone=?", (phone,)))
+                nombre = (r[0][0] if r and r[0][0] else None)
+            nombre = (nombre or "").strip() or f"Sin nombre · {phone[-4:]}"
+            c.execute("INSERT INTO orto_embudo(paciente,telefono,etapa,etapa_desde,origen,phone,"
+                      "consulta_txt,historial,creado_por,created_at,updated_at) "
+                      "VALUES (?,?,'consulto',?,'bot',?,?,?,'sync',?,?)",
+                      (nombre, phone, (ts or _ahora())[:19], phone,
+                       (txt or "").strip()[:300],
+                       f"{(ts or _ahora())[:19]} consulto por WhatsApp", _ahora(), _ahora()))
+            creados += 1
+        c.commit()
+    log.info("orto_embudo sync: %d creados de %d consultas revisadas", creados, revisados)
+    return {"creados": creados, "revisados": revisados, "dias": dias}
+
+
 def _auth(request: Request, token: str | None, cmc_session: str | None) -> str:
     from admin_routes import _verify_cookie, _is_admin_token
     from config import ADMIN_TOKEN, ORTODONCIA_TOKEN
@@ -249,11 +313,13 @@ def _fila(r) -> dict:
         "atrasado": bool(meta["alerta"]) and d > meta["alerta"],
         "limite": meta["alerta"],
         "notas": r[6], "valor_cupones": r[7] or 0,
+        "origen": (r[8] if len(r) > 8 else None) or "manual",
+        "consulta": (r[9] if len(r) > 9 else None),
     }
 
 
-_SEL = ("SELECT id,paciente,telefono,rut,etapa,etapa_desde,notas,valor_cupones "
-        "FROM orto_embudo")
+_SEL = ("SELECT id,paciente,telefono,rut,etapa,etapa_desde,notas,valor_cupones,"
+        "origen,consulta_txt FROM orto_embudo")
 
 
 @router.get("/tablero")
@@ -410,6 +476,13 @@ def detalle(pid: int, request: Request, token: str | None = Query(None),
     base["orden"] = _ORDEN.index(base["etapa"]) + 1 if base["etapa"] in _ORDEN else 0
     base["total_etapas"] = len(ETAPAS)
     return base
+
+
+@router.post("/sincronizar")
+def sincronizar(request: Request, dias: int = Query(60, ge=1, le=365),
+                token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
+    _auth(request, token, cmc_session)
+    return {"ok": True, **_sincronizar_consultas(dias)}
 
 
 @router.get("/examenes")
