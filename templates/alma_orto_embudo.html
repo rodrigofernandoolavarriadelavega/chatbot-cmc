@@ -99,17 +99,41 @@
 .est.pronto{background:var(--orange-s);color:#a06c12}
 .est.al_dia,.est.activo{background:var(--green-s);color:#1d7a41}
 .est.finalizado{background:var(--bg);color:var(--mute)}
-.cal{display:grid;gap:10px;grid-template-columns:1fr}
-@media(min-width:760px){.cal{grid-template-columns:repeat(2,1fr)}}
-@media(min-width:1100px){.cal{grid-template-columns:repeat(3,1fr)}}
-.cd{border:1px solid var(--border);border-radius:14px;background:#fff;padding:13px 15px;box-shadow:var(--sh-sm)}
-.cd .fh{display:flex;align-items:baseline;gap:9px}
-.cd .f{font-size:12.5px;font-weight:800;color:var(--navy)}
-.cd .tot{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--blue);
-  font-variant-numeric:tabular-nums}
-.cd li .pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cd li .icon-btn{flex:none}
-.cd li .tag.inst{background:var(--aqua-s);color:var(--blue)}
+/* Calendario: grilla mensual, portada del módulo Ortodoncia original.
+   `--violet` no existe en alma_kit; se usa --orange para "nuevo". */
+.cal-month{margin-bottom:26px}.cal-month:last-child{margin-bottom:0}
+.cal-mhead{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.cal-mhead h3{font-size:14px;font-weight:800;color:var(--navy);margin:0;text-transform:capitalize}
+.cal-mhead .msum{font-size:11px;font-weight:600;color:var(--mute)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);
+  text-align:center;padding:2px 0 5px}
+.cal-cell{min-height:62px;border:1px solid var(--border);border-radius:10px;padding:6px 7px;background:#fff;
+  display:flex;flex-direction:column;gap:3px;position:relative}
+.cal-cell.empty-day{background:var(--bg);border-style:dashed;opacity:.55}
+.cal-cell.pad{background:transparent;border:none}
+.cal-cell.has{cursor:pointer;border-color:var(--aqua);transition:all .12s}
+.cal-cell.has:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
+.cal-dnum{font-size:11px;font-weight:700;color:var(--mute)}
+.cal-cell.has .cal-dnum{color:var(--navy)}
+.cal-count{font-size:18px;font-weight:800;color:var(--blue);line-height:1}
+.cal-count small{font-size:10px;font-weight:600;color:var(--mute)}
+.cal-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:auto}
+.cal-dot{width:6px;height:6px;border-radius:50%;background:var(--aqua)}
+.cal-dot.nuevo{background:var(--orange)}
+.cal-newbadge{font-size:9px;font-weight:800;color:var(--orange);background:var(--orange-s);
+  border-radius:6px;padding:1px 5px;align-self:flex-start}
+.day-list{display:flex;flex-direction:column;gap:7px;max-height:55vh;overflow-y:auto}
+.day-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:10px}
+.day-row .dr-name{font-weight:700;color:var(--navy);font-size:12.5px}
+.day-row .dr-meta{font-size:10.5px;color:var(--mute)}
+.day-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:20px}
+.day-tag.instalacion{background:var(--blue);color:#fff}
+.day-tag.control{background:var(--aqua-s);color:var(--blue)}
+.day-tag.otro{background:var(--bg);color:var(--mute)}
+.day-tag.nuevo{background:var(--orange);color:#fff}
+.day-row .dr-monto{margin-left:auto;font-weight:700;color:var(--navy);font-size:12px}
+@media(max-width:760px){.cal-cell{min-height:50px}.cal-count{font-size:15px}}
 .cd .n{font-size:11px;color:var(--mute);font-weight:600;margin-top:2px}
 .cd ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
 .cd li{font-size:12px;color:var(--navy);display:flex;gap:8px;align-items:center}
@@ -266,7 +290,7 @@
       <span class="sp"></span>
       <select id="cal-meses" onchange="cargarCal()" style="font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--navy);background:var(--bg)">
         <option value="3">Últimos 3 meses</option><option value="6">6 meses</option><option value="12">12 meses</option></select></div></div>
-    <div class="cal" id="cal-body"></div>
+    <div class="pan"><div class="pan-b" id="cal-body"></div></div>
     <div id="cal-empty" class="empty" style="display:none">Sin atenciones en el período.</div>
   </section>
 </div>
@@ -289,6 +313,11 @@
     <button class="btn-ghost" style="flex:1" onclick="editarDesdeDw()">Editar</button>
     <button class="btn-primary" style="flex:1" id="dw-wa">WhatsApp</button>
   </div>
+</div></div>
+
+<div class="modal-bg" id="m-day"><div class="modal">
+  <div class="modal-head"><h2 id="day-title">Día</h2><div class="x" onclick="AlmaKit.closeModal('m-day')">✕</div></div>
+  <div class="modal-body"><div class="day-list" id="day-list"></div></div>
 </div></div>
 
 <!-- Modal paciente -->
@@ -437,6 +466,10 @@ async function cargarTrat(){
   }catch(e){ document.getElementById('tra-body_wrap').innerHTML=''; toast(e.message,'err'); }
 }
 
+const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const DOW=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+let CALD={};
+
 async function cargarCal(){
   const m=document.getElementById('cal-meses').value;
   document.getElementById('cal-empty').style.display='none';
@@ -444,244 +477,59 @@ async function cargarCal(){
   try{
     const d=await apiOrto("/calendario?meses="+m);
     const dias=d.dias||[];
-    document.getElementById('cal-body').innerHTML=dias.map(x=>`<div class="cd">
-      <div class="fh"><span class="f">${esc(x.fecha||'')}</span>
-        ${x.total?`<span class="tot">${clp(x.total)}</span>`:''}</div>
-      <div class="n">${x.n_pacientes||0} paciente${(x.n_pacientes||0)==1?'':'s'}${
-        x.n_instalaciones?` · <b>${x.n_instalaciones} instalación${x.n_instalaciones==1?'':'es'}</b>`:''}${
-        x.n_nuevos?` · ${x.n_nuevos} nuevo${x.n_nuevos==1?'':'s'}`:''}</div>
-      <ul>${(x.pacientes||[]).map(p=>{
-        const tel=(p.telefono||'').replace(/[^0-9]/g,'');
-        const es=p.tipo==='instalacion'?'inst':(p.nuevo?'nuevo':'curso');
-        const lbl=p.tipo==='instalacion'?'instalación':(p.nuevo?'nuevo':'control');
-        return `<li><span class="tag ${es}">${lbl}</span><span class="pn">${esc(p.paciente||'')}</span>${
-          tel?`<a class="icon-btn" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}</li>`;
-      }).join('')}</ul>
-    </div>`).join('');
-    document.getElementById('cal-empty').style.display=dias.length?'none':'';
-  }catch(e){ toast(e.message,'err'); }
-}
-async function pintarSug(){
-  let it=[];
-  try{ it=(await api("/sugerencias")).items; }catch(e){ return; }
-  const s=document.getElementById('sug');
-  if(!it.length){ s.innerHTML=''; return; }
-  s.innerHTML=`<div class="sug">
-    <h3>${svg(I.cal)} ${it.length} paciente${it.length==1?'':'s'} del embudo ya tiene${it.length==1?'':'n'} hora con la ortodoncista</h3>
-    <p class="lead">Salió de los correos de citas. Revisa que sea la persona correcta antes de mover.</p>
-    ${it.map(x=>`<div class="row">
-      <div><div class="nm">${esc(x.paciente)}</div>
-        <div class="et">está en «${esc(x.etapa_actual)}»${x.nombre_cita!==x.paciente?` · en la cita figura como ${esc(x.nombre_cita)}`:''}</div></div>
-      <span class="fh">${esc(x.fecha)} ${esc(x.hora)}</span>
-      <button onclick="aplicarSug(${x.id})">Mover a Agendado</button></div>`).join('')}</div>`;
-}
-async function aplicarSug(id){
-  try{ const r=await api("/sugerencias/"+id+"/aplicar",{method:"POST"});
-    toast(r.paciente+" movido a Agendado"); load(); }catch(e){ toast(e.message,'err'); }
-}
-function pintarKpis(){
-  document.getElementById('kpis').innerHTML=[
-    ['En proceso',DATA.total_activos,'a',I.users],
-    ['Detenidos',DATA.atrasados,DATA.atrasados?'r':'g',I.alert],
-    ['Esperando a Dani',DATA.esperando_dani,'o',I.send],
-    ['Cupones vendidos',clp(DATA.valor_cupones),'g',I.coins]
-  ].map(([l,v,c,ic])=>`<div class="k2"><div class="ic ${c}">${svg(ic)}</div>
-    <div><div class="v">${v}</div><div class="l">${l}</div></div></div>`).join('');
-}
-function pintarStuck(){
-  const s=document.getElementById('stuck');
-  if(!DATA.peor.length){ s.innerHTML=''; return; }
-  s.innerHTML=`<div class="stuck"><h3>${svg(I.alert)} Llevan mucho tiempo detenidos</h3>
-    ${DATA.peor.map(p=>`<div class="row" onclick="abrirDw(${p.id})"><b>${esc(p.paciente)}</b>
-      <span>${esc(p.etapa_label)}</span><span class="d">${p.dias_en_etapa} días</span></div>`).join('')}</div>`;
-}
-function pintarBoard(){
-  document.getElementById('board').innerHTML=DATA.columnas.map((c,i)=>`
-    <div class="col ${c.espera?'espera':''}">
-      <div class="col-h"><span class="st">${i+1}</span><span class="nm">${esc(c.label)}</span>
-        <span class="ct">${c.n}</span></div>
-      <div class="col-b" data-etapa="${c.id}">${c.pacientes.length?c.pacientes.map(tarjeta).join(''):'<div class="vacio">Sin pacientes</div>'}</div>
-    </div>`).join('');
-  document.querySelectorAll('.col-b').forEach(el=>{
-    Sortable.create(el,{group:'embudo',animation:170,ghostClass:'sortable-ghost',dragClass:'sortable-drag',
-      filter:'.vacio,.acts',preventOnFilter:false,delayOnTouchOnly:true,delay:130,
-      onEnd:async ev=>{
-        const id=+ev.item.dataset.id, etapa=ev.to.dataset.etapa;
-        if(etapa===ev.from.dataset.etapa) return;
-        try{ await api("/"+id,{method:"PATCH",body:JSON.stringify({etapa})});
-          toast("Movido a "+(ORDEN.includes(etapa)?nombreEtapa(etapa):etapa)); load();
-        }catch(e){ toast(e.message,'err'); load(); }
-      }});
-  });
-}
-function nombreEtapa(id){ const t=ETAPAS.concat(FINALES).find(x=>x.id===id); return t?t.label:id; }
-function tarjeta(p){
-  const i=ORDEN.indexOf(p.etapa), prev=i>0?ORDEN[i-1]:null, next=i<ORDEN.length-1?ORDEN[i+1]:null;
-  const pct=Math.round(((i+1)/ETAPAS.length)*100);
-  const tel=(p.telefono||'').replace(/[^0-9]/g,'');
-  return `<div class="pt ${p.atrasado?'warn':''} ${p.origen==='bot'?'bot':''}" data-id="${p.id}">
-    <div class="n" onclick="abrirDw(${p.id})">${esc(p.paciente)}</div>
-    <div class="m"><span class="dias">${svg(I.clock)}${p.dias_en_etapa} d</span>
-      ${p.origen==='bot'?'<span class="src">WhatsApp</span>':''}
-      ${p.valor_cupones?`<span>${clp(p.valor_cupones)}</span>`:''}</div>
-    ${p.consulta?`<div class="q">"${esc(p.consulta)}"</div>`:''}
-    <div class="bar"><i style="width:${pct}%"></i></div>
-    <div class="acts">
-      ${prev?`<button class="ico" onclick="mover(${p.id},'${prev}')" title="Volver">${svg(I.left,2.3)}</button>`:''}
-      ${tel?`<a class="ico" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}
-      ${next?`<button onclick="mover(${p.id},'${next}')">Avanzar ${svg(I.right,2.3)}</button>`:''}
-    </div></div>`;
-}
-async function mover(id,etapa){
-  try{ await api("/"+id,{method:"PATCH",body:JSON.stringify({etapa})});
-    toast("Movido a "+nombreEtapa(etapa)); load(); }catch(e){ toast(e.message,'err'); }
+    CALD={}; dias.forEach(x=>{ CALD[x.fecha]=x; });
+    if(!dias.length){ document.getElementById('cal-body').innerHTML='';
+      document.getElementById('cal-empty').style.display=''; return; }
+    const meses=[...new Set(dias.map(x=>x.fecha.slice(0,7)))].sort().reverse();
+    document.getElementById('cal-body').innerHTML=meses.map(pintarMes).join('');
+  }catch(e){ document.getElementById('cal-body').innerHTML=''; toast(e.message,'err'); }
 }
 
-/* ── Ficha lateral ── */
-async function abrirDw(id){
-  DWID=id;
-  try{
-    const p=await api("/paciente/"+id);
-    document.getElementById('dw-n').textContent=p.paciente;
-    document.getElementById('dw-s').textContent=p.etapa_label+" · "+p.dias_en_etapa+" días en esta etapa";
-    const total=p.total_etapas, hasta=Math.min(p.orden,total);
-    document.getElementById('dw-prog').innerHTML=Array.from({length:total},(_,i)=>
-      `<i class="${i<hasta?'on':''}"></i>`).join('');
-    document.getElementById('dw-progtxt').textContent=`Etapa ${hasta} de ${total}`;
-    document.getElementById('dw-qwrap').style.display=p.consulta?'':'none';
-    document.getElementById('dw-q').textContent=p.consulta?'"'+p.consulta+'"':"";
-    let ex=[]; try{ ex=JSON.parse(p.examenes||"[]"); }catch(e){}
-    document.getElementById('dw-exwrap').style.display=ex.length?'':'none';
-    document.getElementById('dw-ex').innerHTML=ex.map(x=>`<li>${svg(I.chk,2.4)}${esc(x)}</li>`).join('');
-    document.getElementById('dw-notwrap').style.display=p.notas?'':'none';
-    document.getElementById('dw-not').textContent=p.notas||"";
-    document.getElementById('dw-tl').innerHTML=(p.pasos.length?p.pasos:[{ts:p.creado,a:'creado'}])
-      .slice().reverse().map(s=>`<li>${s.de?`${esc(s.de)} → <b>${esc(s.a)}</b>`:esc(s.a)}
-        <span class="t">${esc(s.ts||'')}</span></li>`).join('');
+function pintarMes(ym){
+  const [Y,M]=ym.split('-').map(Number);
+  const first=new Date(Y,M-1,1), diasEn=new Date(Y,M,0).getDate();
+  const lead=(first.getDay()+6)%7;               // lunes = 0
+  let pacMes=0,nuevMes=0,totMes=0,diasMes=0,celdas='';
+  for(let i=0;i<lead;i++) celdas+='<div class="cal-cell pad"></div>';
+  for(let d=1;d<=diasEn;d++){
+    const ds=`${Y}-${String(M).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const info=CALD[ds];
+    if(info){
+      pacMes+=info.n_pacientes; nuevMes+=info.n_nuevos; totMes+=info.total; diasMes++;
+      const dots=(info.pacientes||[]).slice(0,8).map(p=>`<span class="cal-dot ${p.nuevo?'nuevo':''}"></span>`).join('');
+      const badge=info.n_nuevos?`<span class="cal-newbadge">+${info.n_nuevos} nuevo${info.n_nuevos>1?'s':''}</span>`:'';
+      celdas+=`<div class="cal-cell has" onclick="abrirDia('${ds}')">
+        <div class="cal-dnum">${d}</div>
+        <div class="cal-count">${info.n_pacientes}<small> pac.</small></div>
+        ${badge}<div class="cal-dots">${dots}</div></div>`;
+    } else {
+      celdas+=`<div class="cal-cell empty-day"><div class="cal-dnum">${d}</div></div>`;
+    }
+  }
+  const dows=DOW.map(x=>`<div class="cal-dow">${x}</div>`).join('');
+  return `<div class="cal-month">
+    <div class="cal-mhead"><h3>${MESES[M-1]} ${Y}</h3>
+      <span class="msum">${diasMes} días de atención · ${pacMes} pacientes (${nuevMes} nuevos · ${pacMes-nuevMes} en curso) · ${clp(totMes)}</span></div>
+    <div class="cal-grid">${dows}${celdas}</div></div>`;
+}
+
+function abrirDia(ds){
+  const info=CALD[ds]; if(!info) return;
+  const dt=new Date(ds+'T12:00:00');
+  document.getElementById('day-title').textContent=
+    `${DOW[(dt.getDay()+6)%7]} ${dt.getDate()} ${MESES[dt.getMonth()]} · ${info.n_pacientes} pac. (${info.n_nuevos} nuevos · ${info.n_encurso} en curso)`;
+  document.getElementById('day-list').innerHTML=(info.pacientes||[]).map(p=>{
+    const lbl={instalacion:'Instalación',control:'Control',otro:'Otro'}[p.tipo]||p.tipo;
+    const flag=p.nuevo?'<span class="day-tag nuevo">Nuevo</span>':'';
     const tel=(p.telefono||'').replace(/[^0-9]/g,'');
-    const wa=document.getElementById('dw-wa');
-    wa.style.display=tel?'':'none';
-    wa.onclick=()=>window.open("https://wa.me/"+tel,"_blank","noopener");
-    document.getElementById('dw').classList.add('on');
-  }catch(e){ toast(e.message,'err'); }
-}
-function cerrarDw(){ document.getElementById('dw').classList.remove('on'); }
-function editarDesdeDw(){ cerrarDw(); editar(DWID); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrarDw(); });
-
-/* ── Modal paciente ── */
-function pintarExamenes(marcados){
-  const box=document.getElementById('p-ex');
-  document.getElementById('p-exwrap').style.display=EXCAT.length?'':'none';
-  box.innerHTML=EXCAT.map((x,i)=>{
-    const on=marcados?marcados.includes(x.n):!!x.d;
-    return `<label><input type="checkbox" value="${esc(x.n)}" ${on?'checked':''}><span>${esc(x.n)}</span></label>`;
+    return `<div class="day-row">${flag}<span class="day-tag ${esc(p.tipo||'otro')}">${esc(lbl)}</span>
+      <div><div class="dr-name">${esc(p.paciente||'')}</div>${p.telefono?`<div class="dr-meta">${esc(p.telefono)}</div>`:''}</div>
+      <div class="dr-monto">${clp(p.monto||0)}</div>
+      ${tel?`<a class="icon-btn" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}</div>`;
   }).join('');
-}
-function nuevo(){
-  document.getElementById('p-title').textContent="Nuevo paciente";
-  ['p-id','p-nombre','p-tel','p-rut','p-notas'].forEach(x=>document.getElementById(x).value="");
-  document.getElementById('p-cup').value=0;
-  document.getElementById('p-etapa').value="proceso_inicial";
-  document.getElementById('p-del').style.display='none';
-  pintarExamenes(null);
-  openModal('m-p'); setTimeout(()=>document.getElementById('p-nombre').focus(),70);
-}
-async function editar(id){
-  try{
-    const p=await api("/paciente/"+id);
-    document.getElementById('p-title').textContent=p.paciente;
-    document.getElementById('p-id').value=p.id;
-    document.getElementById('p-nombre').value=p.paciente;
-    document.getElementById('p-tel').value=p.telefono||"";
-    document.getElementById('p-rut').value=p.rut||"";
-    document.getElementById('p-cup').value=p.valor_cupones||0;
-    document.getElementById('p-notas').value=p.notas||"";
-    document.getElementById('p-etapa').value=p.etapa;
-    document.getElementById('p-del').style.display='';
-    document.getElementById('p-exwrap').style.display='none';
-    openModal('m-p');
-  }catch(e){ toast(e.message,'err'); }
-}
-async function guardar(){
-  const id=document.getElementById('p-id').value;
-  const body={ paciente:document.getElementById('p-nombre').value.trim(),
-    telefono:document.getElementById('p-tel').value.trim(),
-    rut:document.getElementById('p-rut').value.trim(),
-    etapa:document.getElementById('p-etapa').value,
-    valor_cupones:+document.getElementById('p-cup').value||0,
-    notas:document.getElementById('p-notas').value.trim() };
-  if(!body.paciente){ toast("Falta el nombre",'err'); return; }
-  if(!id) body.examenes=[...document.querySelectorAll('#p-ex input:checked')].map(x=>x.value);
-  try{
-    await api(id?("/"+id):"",{method:id?"PATCH":"POST",body:JSON.stringify(body)});
-    closeModal('m-p'); toast(id?"Guardado":"Paciente agregado"); load();
-  }catch(e){ toast(e.message,'err'); }
-}
-async function borrar(){
-  const id=document.getElementById('p-id').value; if(!id) return;
-  if(!confirm("¿Eliminar a este paciente del embudo?")) return;
-  try{ await api("/"+id,{method:"DELETE"}); closeModal('m-p'); toast("Eliminado"); load(); }
-  catch(e){ toast(e.message,'err'); }
+  openModal('m-day');
 }
 
-/* ── Catálogo de exámenes ── */
-function abrirExamenes(){ pintarExCat(); openModal('m-ex'); }
-function pintarExCat(){
-  document.getElementById('ex-list').innerHTML=EXCAT.map((x,i)=>`
-    <div style="display:flex;gap:9px;align-items:center;background:var(--bg);border:1px solid var(--border);
-                border-radius:9px;padding:8px 11px">
-      <input type="checkbox" ${x.d?'checked':''} data-i="${i}" style="width:17px;height:17px;accent-color:var(--aqua)">
-      <span style="flex:1;font-size:12.5px;font-weight:500;line-height:1.4">${esc(x.n)}</span>
-      <button class="icon-btn" onclick="delEx(${i})" title="Quitar">✕</button></div>`).join('');
-  document.querySelectorAll('#ex-list input').forEach(el=>
-    el.addEventListener('change',()=>{ EXCAT[+el.dataset.i].d=el.checked?1:0; }));
-}
-function addEx(){
-  const v=document.getElementById('ex-new').value.trim(); if(!v) return;
-  EXCAT.push({n:v,d:1}); document.getElementById('ex-new').value=""; pintarExCat();
-}
-function delEx(i){ EXCAT.splice(i,1); pintarExCat(); }
-async function guardarEx(){
-  try{ const r=await api("/examenes",{method:"POST",body:JSON.stringify({items:EXCAT})});
-    EXCAT=r.items; closeModal('m-ex'); toast("Lista guardada"); }
-  catch(e){ toast(e.message,'err'); }
-}
-
-/* ── Avisos ── */
-async function abrirMails(){
-  try{ const c=await api("/config");
-    document.getElementById('mm-mails').value=c.mails||"";
-    document.getElementById('mm-alta').checked=c.avisar_alta;
-    document.getElementById('mm-dani').checked=c.avisar_dani;
-    document.getElementById('mm-estado').textContent = c.hay_credencial
-      ? (c.destinatarios.length? `Avisando a ${c.destinatarios.length} correo(s).` : "Falta cargar los correos: por ahora no se avisa a nadie.")
-      : "El centro no tiene configurado su correo de salida; avísale a Rodrigo.";
-    openModal('m-mail');
-  }catch(e){ toast(e.message,'err'); }
-}
-async function guardarMailsSilencioso(){
-  await api("/config",{method:"POST",body:JSON.stringify({
-    mails:document.getElementById('mm-mails').value.trim(),
-    avisar_alta:document.getElementById('mm-alta').checked,
-    avisar_dani:document.getElementById('mm-dani').checked })});
-}
-async function guardarMails(){
-  try{ await guardarMailsSilencioso(); toast("Guardado"); closeModal('m-mail'); }
-  catch(e){ toast(e.message,'err'); }
-}
-async function probarMail(){
-  try{ await guardarMailsSilencioso(); const r=await api("/config/probar",{method:"POST"});
-    toast("Prueba enviada a "+r.enviados_a.length+" correo(s)"); }catch(e){ toast(e.message,'err'); }
-}
-async function sincronizar(){
-  document.getElementById('pillTxt').textContent="Buscando\u2026";
-  try{ const r=await api("/sincronizar?dias=60",{method:"POST"});
-    toast(r.creados?`${r.creados} consultas traídas del WhatsApp`:"Sin consultas nuevas");
-    await load();
-  }catch(e){ toast(e.message,'err'); }
-  document.getElementById('pillTxt').textContent="En vivo";
-}
 function exportCSV(){ location.href="/alma/api/orto-embudo/export?token="+encodeURIComponent(window.ALMA_TOKEN); }
 init();
 </script>
