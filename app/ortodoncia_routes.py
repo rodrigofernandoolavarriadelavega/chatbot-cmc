@@ -74,6 +74,12 @@ def _require_admin(request: Request, token: str | None, cmc_session: str | None)
             return ADMIN_TOKEN
     if token and _is_admin_token(token):
         return token
+    # El token de ortodoncia entra a SU propio modulo. Se amplia aca y no en el
+    # factory generico de paginas Alma, que abriria los 43 modulos del registry
+    # (EBITDA incluido) a un token que circula por WhatsApp.
+    from config import ORTODONCIA_TOKEN
+    if token and ORTODONCIA_TOKEN and token == ORTODONCIA_TOKEN:
+        return token
     raise HTTPException(status_code=401, detail="Token inválido")
 
 

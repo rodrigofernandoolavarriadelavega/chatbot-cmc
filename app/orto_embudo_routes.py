@@ -356,59 +356,6 @@ def _sugerencias_agendados() -> list:
     return out
 
 
-def _cargar_en_tratamiento(meses: int = 12) -> dict:
-    """Trae a la columna "En tratamiento" la cartera viva de ortodoncia.
-
-    Fuente: `ortodoncia_cache` (atenciones reales con la ortodoncista) enriquecida
-    con la proxima cita de `email_ticker`. En las notas queda cuantas atenciones
-    lleva, desde cuando y cuando vuelve — que es lo que Javiera necesita ver de
-    un paciente que ya paso por el embudo.
-
-    ⚠️ `ortodoncia_cache` no sincroniza desde marzo-2026, asi que "ultima
-    atencion" puede estar vieja. La proxima cita SI es actual (viene del correo).
-    """
-    creados = 0
-    with db() as c:
-        ya = {(r[0] or "").strip().lower() for r in c.execute("SELECT paciente FROM orto_embudo")}
-        try:
-            pac = list(c.execute(
-                "SELECT paciente_nombre, COUNT(*), MIN(fecha), MAX(fecha) FROM ortodoncia_cache "
-                "WHERE paciente_nombre IS NOT NULL AND paciente_nombre!='' "
-                "AND fecha >= date('now', ?) GROUP BY paciente_nombre",
-                (f"-{int(meses)} months",)))
-        except Exception as e:
-            return {"creados": 0, "error": str(e)[:120]}
-        try:
-            prox = list(c.execute(
-                "SELECT paciente_nombre, MIN(fecha_cita), MIN(hora_cita) FROM email_ticker "
-                "WHERE tipo='agendada' AND lower(profesional_nombre) LIKE '%castillo%' "
-                "AND fecha_cita >= date('now') GROUP BY paciente_nombre"))
-        except Exception:
-            prox = []
-
-        for nombre, n, desde, hasta in pac:
-            limpio = " ".join((nombre or "").split())
-            if not limpio or limpio.lower() in ya:
-                continue
-            sig = next((p for p in prox if _calza_nombre(p[0], limpio)), None)
-            nota = f"{n} atenciones desde {desde} · última {hasta}"
-            if sig:
-                nota += f" · próxima {sig[1]} {sig[2]}"
-            else:
-                nota += " · SIN próxima hora agendada"
-            c.execute("INSERT INTO orto_embudo(paciente,etapa,etapa_desde,notas,origen,"
-                      "historial,creado_por,created_at,updated_at) "
-                      "VALUES (?,'en_tratamiento',?,?,'tratamiento',?,'sync',?,?)",
-                      (limpio, (hasta or _ahora())[:19] + " 00:00:00" if len(hasta or "") == 10 else _ahora(),
-                       nota, f"{_ahora()} cargado desde el historial de ortodoncia",
-                       _ahora(), _ahora()))
-            ya.add(limpio.lower())
-            creados += 1
-        c.commit()
-    log.info("orto_embudo: %d pacientes en tratamiento cargados", creados)
-    return {"creados": creados, "revisados": len(pac)}
-
-
 def _auth(request: Request, token: str | None, cmc_session: str | None) -> str:
     from admin_routes import _verify_cookie, _is_admin_token
     from config import ADMIN_TOKEN, ORTODONCIA_TOKEN
@@ -465,10 +412,11 @@ def tablero(request: Request, incluir_finales: int = Query(0),
     _FUERA = ("en_tratamiento", "instalado", "descartado")
     activos = [f for f in filas if f["etapa"] not in _FUERA]
     cols = []
-    # "En tratamiento" se muestra siempre — es la cartera viva; las otras dos
-    # terminales solo si se piden.
-    _finales = [f for f in FINALES if f["id"] == "en_tratamiento" or incluir_finales]
-    for e in ETAPAS + _finales:
+    # Las terminales no van en el tablero. "En tratamiento" en particular vive
+    # en su propia pestaña, leyendo EN VIVO el modulo de Ortodoncia que ya
+    # existe (dias sin control, estado y saldo calculados desde el BI) — mucho
+    # mejor dato que copiarlo aca desde un cache que no sincroniza desde marzo.
+    for e in ETAPAS + (FINALES if incluir_finales else []):
         ps = [f for f in filas if f["etapa"] == e["id"]]
         ps.sort(key=lambda x: -x["dias_en_etapa"])
         cols.append({"id": e["id"], "label": e["label"], "espera": e["espera"],
@@ -653,9 +601,7 @@ def sincronizar(request: Request, dias: int = Query(60, ge=1, le=365),
                 token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
     _auth(request, token, cmc_session)
     entrada = _sincronizar_consultas(dias)
-    trat = _cargar_en_tratamiento()
-    return {"ok": True, **entrada, "en_tratamiento": trat.get("creados", 0),
-            "sugerencias": len(_sugerencias_agendados())}
+    return {"ok": True, **entrada, "sugerencias": len(_sugerencias_agendados())}
 
 
 @router.get("/examenes")
