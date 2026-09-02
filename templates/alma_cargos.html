@@ -26,15 +26,6 @@
 .hb.pri:hover{background:#63cbd9}
 .hb input[type=month]{background:transparent;border:0;color:#fff;font:inherit;font-size:12.5px;font-weight:700;
   cursor:pointer;color-scheme:dark;min-height:24px;align-self:stretch}
-/* Mínimo táctil de 44 px solo en pantallas táctiles (ver nota en el embudo). */
-@media(pointer:coarse){
-  .hb{min-height:44px}
-  .hb input[type=month]{min-height:44px}
-  .tabs button{min-height:46px}
-  .icon-btn{min-width:44px;min-height:44px}
-  .rapido button{min-height:56px}
-  .liqrow button{min-height:44px}
-}
 
 .wrap2{max-width:1400px;margin:0 auto;padding:18px 20px 40px}
 
@@ -109,6 +100,18 @@
   .chartbox{height:200px}
   .modal{max-width:100%!important;border-radius:0!important;height:100%;max-height:100%}
   .liqrow{flex-wrap:wrap}.liqrow .amt{margin-left:auto}
+}
+
+/* Mínimo táctil, AL FINAL del stylesheet a propósito: las media queries no
+   suman especificidad, así que puesto arriba lo pisaba la regla posterior de
+   `.tabs button{min-height:40px}` y la medición seguía dando 40. */
+@media(pointer:coarse){
+  .hb{min-height:44px}
+  .hb input[type=month]{min-height:44px}
+  .tabs button{min-height:46px}
+  .icon-btn{min-width:44px;min-height:44px}
+  .rapido button{min-height:56px}
+  .liqrow button{min-height:44px}
 }
 </style>
 </head><body>
