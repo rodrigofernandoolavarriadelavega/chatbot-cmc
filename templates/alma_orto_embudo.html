@@ -383,10 +383,12 @@ function vista(v){ VISTA=v; ['emb','tra','cal'].forEach(x=>{
 async function cargarTrat(){
   const f=document.getElementById('tra-filtro').value;
   try{
-    const d=await apiOrto("/pacientes?estado="+f+"&meses=12");
+    // los KPIs viven en /resumen, no en /pacientes
+    const [d,r]=await Promise.all([apiOrto("/pacientes?estado="+f+"&meses=12"),
+                                   apiOrto("/resumen?meses=12")]);
     TRAT=d; const pac=d.pacientes||[];
     document.getElementById('v-c-tra').textContent=(d.conteos&&d.conteos.todos)||pac.length;
-    const k=d.kpis||{};
+    const k=r.kpis||{};
     document.getElementById('tra-kpis').innerHTML=[
       ['En tratamiento',k.activos??pac.length,'a',I.users],
       ['Control vencido',k.vencidos??0,(k.vencidos?'r':'g'),I.alert],
