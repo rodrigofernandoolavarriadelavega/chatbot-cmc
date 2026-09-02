@@ -103,12 +103,18 @@
 @media(min-width:760px){.cal{grid-template-columns:repeat(2,1fr)}}
 @media(min-width:1100px){.cal{grid-template-columns:repeat(3,1fr)}}
 .cd{border:1px solid var(--border);border-radius:14px;background:#fff;padding:13px 15px;box-shadow:var(--sh-sm)}
+.cd .fh{display:flex;align-items:baseline;gap:9px}
 .cd .f{font-size:12.5px;font-weight:800;color:var(--navy)}
+.cd .tot{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--blue);
+  font-variant-numeric:tabular-nums}
+.cd li .pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd li .icon-btn{flex:none}
+.cd li .tag.inst{background:var(--aqua-s);color:var(--blue)}
 .cd .n{font-size:11px;color:var(--mute);font-weight:600;margin-top:2px}
 .cd ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
 .cd li{font-size:12px;color:var(--navy);display:flex;gap:8px;align-items:center}
 .cd li .tag{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:1px 6px}
-.cd li .tag.nuevo{background:var(--aqua-s);color:var(--blue)}
+.cd li .tag.nuevo{background:var(--orange-s);color:var(--orange)}
 .cd li .tag.curso{background:var(--bg);color:var(--mute)}
 /* La pestaña consulta el BI y puede tardar un par de segundos: sin esto se ve
    vacía y parece rota. */
@@ -437,11 +443,20 @@ async function cargarCal(){
   cargando('cal-body','Leyendo el calendario…');
   try{
     const d=await apiOrto("/calendario?meses="+m);
-    const dias=d.dias||d.calendario||[];
+    const dias=d.dias||[];
     document.getElementById('cal-body').innerHTML=dias.map(x=>`<div class="cd">
-      <div class="f">${esc(x.fecha||'')}</div>
-      <div class="n">${(x.pacientes||[]).length} paciente(s)${x.nuevos?` · ${x.nuevos} nuevo(s)`:''}</div>
-      <ul>${(x.pacientes||[]).map(p=>`<li><span class="tag ${p.nuevo?'nuevo':'curso'}">${p.nuevo?'nuevo':'control'}</span>${esc(p.paciente||p.nombre||'')}</li>`).join('')}</ul>
+      <div class="fh"><span class="f">${esc(x.fecha||'')}</span>
+        ${x.total?`<span class="tot">${clp(x.total)}</span>`:''}</div>
+      <div class="n">${x.n_pacientes||0} paciente${(x.n_pacientes||0)==1?'':'s'}${
+        x.n_instalaciones?` · <b>${x.n_instalaciones} instalación${x.n_instalaciones==1?'':'es'}</b>`:''}${
+        x.n_nuevos?` · ${x.n_nuevos} nuevo${x.n_nuevos==1?'':'s'}`:''}</div>
+      <ul>${(x.pacientes||[]).map(p=>{
+        const tel=(p.telefono||'').replace(/[^0-9]/g,'');
+        const es=p.tipo==='instalacion'?'inst':(p.nuevo?'nuevo':'curso');
+        const lbl=p.tipo==='instalacion'?'instalación':(p.nuevo?'nuevo':'control');
+        return `<li><span class="tag ${es}">${lbl}</span><span class="pn">${esc(p.paciente||'')}</span>${
+          tel?`<a class="icon-btn" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}</li>`;
+      }).join('')}</ul>
     </div>`).join('');
     document.getElementById('cal-empty').style.display=dias.length?'none':'';
   }catch(e){ toast(e.message,'err'); }
