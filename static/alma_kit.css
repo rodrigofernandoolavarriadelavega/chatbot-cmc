@@ -206,3 +206,17 @@ tbody tr:hover{background:#fafdfe;}
   /* Wrap sin margen lateral doble */
   .wrap{padding:10px 10px 70px;}
 }
+
+/* ── Mínimo táctil ────────────────────────────────────────────────────────
+   Regla de producto de Alma: los profesionales lo usan más en el celular que
+   en el PC, y ahí todo objetivo se toca con el dedo (≥44 px). Va AL FINAL del
+   archivo a propósito: las media queries no suman especificidad, así que
+   puesto antes lo pisarían las reglas de más abajo. Solo aplica con puntero
+   grueso — con mouse, 34 px se pulsa sin problema y subirlo infla la interfaz. */
+@media (pointer: coarse) {
+  .btn-primary, .btn-ghost { min-height: 44px; }
+  .icon-btn { min-width: 44px; min-height: 44px; }
+  .chip { min-height: 40px; }
+  .search-box input { min-height: 44px; }
+  .modal-foot button { min-height: 46px; }
+}
