@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}</style>
+<title>Embudo y Cargos</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --paper:#F4F7FA; --surface:#FFFFFF; --sunk:#EDF2F6;
+  --ink:#0F3F68; --ink-2:#3D5D77; --ink-3:#6B8399;
+  --rule:#DAE4EC; --rule-soft:#E9EFF4;
+  --azul:#1172AB; --aqua:#4FBECE;
+  --ambar:#9A6512; --ambar-bg:#FDF6EA;
+  --rojo:#A8352C; --rojo-bg:#FCF1F0;
+  --verde:#2C6B41;
+  --shadow:0 1px 2px rgba(15,63,104,.05), 0 8px 24px -12px rgba(15,63,104,.16);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0A1F33; --surface:#0F2B43; --sunk:#0C2438;
+    --ink:#E4EDF4; --ink-2:#A9C0D2; --ink-3:#7C97AC;
+    --rule:#1E4160; --rule-soft:#173347;
+    --azul:#5AAEDC; --aqua:#4FBECE;
+    --ambar:#E0B463; --ambar-bg:#2A2113;
+    --rojo:#E38C82; --rojo-bg:#2E1815;
+    --verde:#7BC094;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0A1F33; --surface:#0F2B43; --sunk:#0C2438;
+  --ink:#E4EDF4; --ink-2:#A9C0D2; --ink-3:#7C97AC;
+  --rule:#1E4160; --rule-soft:#173347;
+  --azul:#5AAEDC; --aqua:#4FBECE;
+  --ambar:#E0B463; --ambar-bg:#2A2113;
+  --rojo:#E38C82; --rojo-bg:#2E1815;
+  --verde:#7BC094;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink);
+  font-family:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
+  font-size:17px; line-height:1.62; -webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Montserrat,"Helvetica Neue",Arial,sans-serif;
+  text-wrap:balance; margin:0; line-height:1.2; letter-spacing:-.01em}
+p{margin:0}
+strong{font-weight:600}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.86em}
+a{color:var(--azul)}
+:focus-visible{outline:2px solid var(--azul); outline-offset:3px; border-radius:3px}
+
+.wrap{max-width:660px; margin-inline:auto; padding:0 22px 72px}
+.stack{display:flex; flex-direction:column}
+
+/* encabezado */
+header{background:var(--ink); color:#EAF2F8; padding:44px 0 38px; margin-bottom:40px}
+:root[data-theme="dark"] header,
+:root:not([data-theme="light"]) header{border-bottom:1px solid var(--rule)}
+header .wrap{padding-bottom:0}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--aqua)}
+header h1{font-size:clamp(1.85rem,6vw,2.5rem); font-weight:800; margin-top:12px; color:#fff}
+header p{color:#B7CEDF; margin-top:14px; font-size:1.02rem}
+
+section{margin-top:48px}
+h2{font-size:clamp(1.3rem,4vw,1.6rem); font-weight:700}
+h2 .num{font-family:"IBM Plex Mono",monospace; font-size:.72em; color:var(--azul);
+  font-weight:500; margin-right:10px}
+h3{font-size:1.04rem; font-weight:700; margin-top:30px}
+section > p, .card p{margin-top:14px}
+
+.card{background:var(--surface); border:1px solid var(--rule); border-radius:12px;
+  padding:22px 24px; margin-top:20px; box-shadow:var(--shadow)}
+.card h3{margin-top:0}
+
+/* el embudo: la secuencia ES el contenido, por eso va como riel */
+.track{list-style:none; margin:22px 0 0; padding:0; position:relative}
+.track::before{content:""; position:absolute; left:13px; top:14px; bottom:14px;
+  width:2px; background:var(--rule)}
+.track li{position:relative; padding:0 0 20px 44px}
+.track li:last-child{padding-bottom:0}
+.dot{position:absolute; left:6px; top:5px; width:16px; height:16px; border-radius:50%;
+  background:var(--surface); border:2px solid var(--rule)}
+.track li.espera .dot{border-color:var(--ambar); background:var(--ambar)}
+.track .nm{font-weight:600; font-size:1.02rem}
+.track .meta{font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--ink-3);
+  margin-top:2px}
+.track li.espera .meta{color:var(--ambar)}
+
+.callout{border-left:3px solid var(--azul); background:var(--sunk);
+  border-radius:0 10px 10px 0; padding:16px 20px; margin-top:22px}
+.callout.warn{border-left-color:var(--ambar); background:var(--ambar-bg)}
+.callout.todo{border-left-color:var(--rojo); background:var(--rojo-bg)}
+.callout p + p{margin-top:10px}
+.callout .lbl{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-3); display:block; margin-bottom:7px}
+.callout.warn .lbl{color:var(--ambar)}
+.callout.todo .lbl{color:var(--rojo)}
+
+ol.steps{margin:18px 0 0; padding-left:0; list-style:none; counter-reset:s;
+  display:flex; flex-direction:column; gap:14px}
+ol.steps li{counter-increment:s; padding-left:40px; position:relative}
+ol.steps li::before{content:counter(s); position:absolute; left:0; top:1px;
+  width:26px; height:26px; border-radius:50%; background:var(--azul); color:#fff;
+  font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:500;
+  display:flex; align-items:center; justify-content:center}
+
+ul.plain{margin:14px 0 0; padding-left:20px}
+ul.plain li{margin-top:9px}
+
+.tabs{display:flex; flex-direction:column; gap:0; margin-top:20px;
+  border:1px solid var(--rule); border-radius:12px; overflow:hidden; background:var(--surface)}
+.tabs > div{padding:17px 20px; border-bottom:1px solid var(--rule-soft)}
+.tabs > div:last-child{border-bottom:0}
+.tabs .tname{font-weight:700; font-size:1rem; display:flex; align-items:baseline; gap:9px}
+.tabs .tname .pin{font-family:"IBM Plex Mono",monospace; font-size:10px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:500}
+.tabs p{margin-top:6px; color:var(--ink-2); font-size:.96rem}
+
+.kbd{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:.8em;
+  background:var(--sunk); border:1px solid var(--rule); border-radius:5px;
+  padding:1px 7px; color:var(--ink-2); white-space:nowrap}
+
+.link-row{display:flex; flex-direction:column; gap:10px; margin-top:16px}
+.link-row a{display:block; background:var(--sunk); border:1px solid var(--rule);
+  border-radius:9px; padding:13px 16px; text-decoration:none; color:var(--ink)}
+.link-row a:hover{border-color:var(--azul)}
+.link-row .t{font-weight:600; font-size:.98rem}
+.link-row .u{font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--azul);
+  margin-top:3px; word-break:break-all}
+
+footer{margin-top:56px; padding-top:24px; border-top:1px solid var(--rule);
+  color:var(--ink-3); font-size:.88rem}
+</style>
+
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <span class="eyebrow">Centro Médico Carampangue</span>
+    <h1>Embudo de Ortodoncia<br>y Cargos al profesional</h1>
+    <p>Dos herramientas nuevas, hechas sobre lo que pediste el lunes. Las dos ya están funcionando.</p>
+  </div>
+</header>
+
+<div class="wrap stack">
+
+  <section>
+    <h2><span class="num">01</span>El embudo de ortodoncia</h2>
+    <p>Un tablero con las ocho etapas que nombraste, en tu orden. Cada paciente es una tarjeta y va avanzando de columna. Lo que hoy llevas en la cabeza queda escrito, y cualquiera del equipo puede verlo sin preguntarte.</p>
+
+    <ol class="track">
+      <li><span class="dot"></span><div class="nm">Proceso inicial</div><div class="meta">se marca en rojo a los 7 días</div></li>
+      <li><span class="dot"></span><div class="nm">Tratamiento previo</div><div class="meta">30 días</div></li>
+      <li><span class="dot"></span><div class="nm">Venta de cupones</div><div class="meta">10 días · aquí anotas cuánto se vendió</div></li>
+      <li><span class="dot"></span><div class="nm">Radiografía recibida</div><div class="meta">5 días</div></li>
+      <li class="espera"><span class="dot"></span><div class="nm">Enviada a Dani</div><div class="meta">4 días · esperando a otra persona</div></li>
+      <li><span class="dot"></span><div class="nm">Respuesta de Dani</div><div class="meta">3 días</div></li>
+      <li class="espera"><span class="dot"></span><div class="nm">Respuesta a paciente</div><div class="meta">5 días · esperando a otra persona</div></li>
+      <li><span class="dot"></span><div class="nm">Agendado para instalación</div><div class="meta">30 días</div></li>
+    </ol>
+
+    <div class="callout">
+      <span class="lbl">Lo que hace el contador</span>
+      <p>Cada tarjeta muestra <strong>cuántos días lleva esperando esa etapa</strong>, no cuántos lleva en total. Se reinicia cada vez que la mueves, así que responde la pregunta que importa: ¿esto está detenido?</p>
+      <p>Los dos puntos ámbar son las etapas que dependen de otra persona. Ahí es donde se cae la gente, porque nadie está esperando activamente. Cuando alguien pasa del límite, la tarjeta se pone roja y aparece arriba en «Llevan mucho tiempo detenidos».</p>
+    </div>
+
+    <h3>Cómo se usa</h3>
+    <ol class="steps">
+      <li><strong>+ Paciente</strong> para meter a alguien nuevo. Solo el nombre es obligatorio; el teléfono conviene, porque habilita el botón de WhatsApp en la tarjeta.</li>
+      <li><strong>Avanzar →</strong> lo pasa a la etapa siguiente. La flecha <span class="kbd">←</span> lo devuelve si te equivocaste.</li>
+      <li>Tocando el <strong>nombre</strong> abres la ficha para corregir datos, dejar una nota o eliminarlo.</li>
+      <li>Cuando se instala, lo mueves a <strong>Instalado</strong> y sale del tablero. De ahí en adelante el seguimiento del tratamiento sigue en el módulo <strong>Ortodoncia</strong>, que ya existía.</li>
+    </ol>
+
+    <h3>Los avisos por correo</h3>
+    <p>Como se coordinan por correo, el aviso entra por ahí. Con el botón <strong>✉ Avisos</strong> pones las direcciones separadas por coma y eliges cuándo se manda:</p>
+    <ul class="plain">
+      <li>Cuando entra un paciente nuevo al embudo.</li>
+      <li>Cuando le envías la radiografía a la ortodoncista.</li>
+    </ul>
+    <div class="callout">
+      <span class="lbl">Qué dice el correo</span>
+      <p>Solo el nombre y la etapa. Nada clínico, sin RUT ni teléfono: es un aviso de coordinación, no una ficha. Hay un botón <strong>Enviar prueba</strong> para confirmar que llega antes de confiar en él.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span>Cargos al profesional</h2>
+    <p>Esto nace de lo que contaste: que el mes pasado se te pasó descontar unas cubetas. Hoy tu registro es el único que existe, y cuando algo se olvida no hay dónde encontrarlo después.</p>
+    <p>Ahora cada radiografía, trabajo de laboratorio o insumo se anota <strong>cuando pasa</strong>, con su valor y a qué profesional se le cobra. A fin de mes el total sale solo.</p>
+
+    <div class="tabs">
+      <div>
+        <div class="tname">Lo anotado <span class="pin">día a día</span></div>
+        <p>La lista del mes. <strong>+ Anotar</strong> abre la ficha: profesional, qué se le cobra, cantidad y — si quieres — de qué paciente era. Arriba hay botones de acceso rápido para lo que más se repite.</p>
+      </div>
+      <div>
+        <div class="tname">A descontar este mes <span class="pin">para la liquidación</span></div>
+        <p>El total por profesional, sumando solo lo pendiente. Es la cifra que se descuenta en la liquidación de honorarios. Cuando ya la descontaste, marcas esos cargos con <span class="kbd">✓</span> y dejan de sumar el mes siguiente.</p>
+      </div>
+      <div>
+        <div class="tname">Qué se cobra <span class="pin">el catálogo</span></div>
+        <p>La lista de precios. Ya trae los 41 insumos del módulo de Inventario Dental. Puedes agregar los que falten.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="lbl">Se importa solo</span>
+      <p>Las radiografías del convenio con Imagendent ya quedan registradas con paciente, profesional y valor. El botón <strong>↓ Importar vales</strong> las trae al listado para que no las escribas dos veces. Si lo aprietas dos veces no se duplican.</p>
+    </div>
+
+    <div class="callout todo">
+      <span class="lbl">Lo primero que hay que hacer</span>
+      <p>Hay <strong>tres ítems en $0</strong>: radiografía, trabajo de laboratorio y cubeta. Los dejé sin precio a propósito, porque solo tú sabes a cuánto se cobran — un valor inventado ahí se convierte en un descuento equivocado en la liquidación de alguien.</p>
+      <p>Mientras estén en cero no descuentan nada. Ponles el valor real en la pestaña <strong>Qué se cobra</strong> y quedan listos.</p>
+      <p>Ojo con los 41 insumos: el precio que traen es el <strong>costo</strong> de MayorDent, no lo que se cobra. Hay que revisarlos.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span>Cómo entrar</h2>
+    <p>Primero inicias sesión con tu clave de ortodoncia, y después abres cualquiera de los dos. Una vez adentro, quedan disponibles desde el menú de Alma.</p>
+    <div class="link-row">
+      <a href="https://agentecmc.cl/admin/login">
+        <div class="t">1 · Iniciar sesión</div>
+        <div class="u">agentecmc.cl/admin/login</div>
+      </a>
+      <a href="https://agentecmc.cl/alma/orto-embudo">
+        <div class="t">2 · Embudo de Ortodoncia</div>
+        <div class="u">agentecmc.cl/alma/orto-embudo</div>
+      </a>
+      <a href="https://agentecmc.cl/alma/cargos">
+        <div class="t">3 · Cargos al profesional</div>
+        <div class="u">agentecmc.cl/alma/cargos</div>
+      </a>
+    </div>
+    <p style="margin-top:18px">Funciona igual en el celular que en el computador — en el teléfono las columnas del embudo se apilan una debajo de la otra. Los dos módulos tienen botón <strong>CSV</strong> por si necesitas la información en una planilla.</p>
+  </section>
+
+  <footer>
+    Ambos módulos están funcionando desde el 1 de septiembre de 2026. Si algo no calza con cómo lo haces de verdad, se cambia: la idea era partir de tu forma de trabajar, no al revés.
+  </footer>
+
+</div>
+
+</body>
+</html>

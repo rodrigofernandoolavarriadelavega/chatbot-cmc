@@ -4118,6 +4118,7 @@ _ALMA_CHECKLIST_HTML = (_TEMPLATE_DIR / "alma_checklist.html").read_text(encodin
 _ALMA_LIQUIDACIONES_HTML = (_TEMPLATE_DIR / "alma_liquidaciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_liquidaciones.html").exists() else ""
 _ALMA_CARGOS_HTML = (_TEMPLATE_DIR / "alma_cargos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_cargos.html").exists() else ""
 _ALMA_ORTO_EMBUDO_HTML = (_TEMPLATE_DIR / "alma_orto_embudo.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_orto_embudo.html").exists() else ""
+_GUIA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "guia_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "guia_ortodoncia.html").exists() else ""
 _ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inicio.html").exists() else ""
 _ALMA_PROVEEDORES_HTML = (_TEMPLATE_DIR / "alma_proveedores.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_proveedores.html").exists() else ""
 _ALMA_MEJORAS_HTML = (_TEMPLATE_DIR / "alma_mejoras.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_mejoras.html").exists() else ""
@@ -5578,6 +5579,35 @@ def grupo_carampangue_simulador_page(request: Request, token: str | None = Query
     comparte por el hash de la URL (no toca el servidor).
     """
     return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_SIM_HTML, token, request)
+
+
+@app.get("/guia/ortodoncia", response_class=HTMLResponse)
+def guia_ortodoncia_page(request: Request, token: str | None = Query(None),
+                         cmc_session: str | None = Cookie(None)):
+    """Guia de uso del Embudo de Ortodoncia y de Cargos al profesional.
+
+    Es material interno de equipo, no clinico: no lleva datos de pacientes ni
+    claves. Acepta el token de ortodoncia ADEMAS del de admin para que Javiera
+    pueda abrir el link directo — si exigiera la cookie tendria que iniciar
+    sesion para leer justamente las instrucciones de como iniciar sesion.
+    404 en el dominio clinico, igual que el resto de lo interno.
+    """
+    from admin_routes import _verify_cookie, _is_admin_token
+    from config import ORTODONCIA_TOKEN
+
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not _GUIA_ORTODONCIA_HTML:
+        raise HTTPException(404, "Guia no disponible")
+    ok = False
+    if token and (_is_admin_token(token) or (ORTODONCIA_TOKEN and token == ORTODONCIA_TOKEN)):
+        ok = True
+    elif cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia", "administracion"):
+        ok = True
+    if not ok:
+        raise HTTPException(401, "No autorizado")
+    return HTMLResponse(_GUIA_ORTODONCIA_HTML, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/grupo/float", response_class=HTMLResponse)
