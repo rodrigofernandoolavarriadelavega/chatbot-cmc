@@ -183,9 +183,14 @@ def register_ebitda_routes(app):
     """Registra el módulo EBITDA. Llamar desde main.py."""
 
     def _auth(token, cmc_session):
+        """Solo dueño/recepción. Antes bastaba CUALQUIER cookie válida — con eso
+        el perfil dental abría el EBITDA del centro entero (hallado 2026-09-02)."""
         from admin_routes import _verify_cookie, _is_admin_token
-        if not ((token and _is_admin_token(token)) or _verify_cookie(cmc_session)):
-            raise HTTPException(403, "No autorizado")
+        if token and _is_admin_token(token):
+            return
+        if _verify_cookie(cmc_session) in ("admin", "administracion"):
+            return
+        raise HTTPException(403, "No autorizado")
 
     @app.get("/api/cmc/ebitda", tags=["bi"])
     def api_ebitda(mes: str | None = Query(None), token: str | None = Query(None),

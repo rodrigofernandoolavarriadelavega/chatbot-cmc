@@ -170,8 +170,11 @@ ALMA_PROFILES: dict[str, dict] = {
     # liquidaciones de todo el centro; esta lista lo cierra.
     **({ORTODONCIA_TOKEN: {
         "variante": "Dental",
-        "modulos": ["orto_embudo", "cargos", "guia_orto", "agenda",
-                    "inventario", "esterilizacion", "ausentismo"],
+        # Solo lo verificado abriendo de verdad. Inventario/esterilización/
+        # ausentismo tienen su propia auth y hoy la rechazan: se agregan cuando
+        # se les enseñe el perfil, no antes — una lista que promete accesos que
+        # dan 403 es peor que una corta.
+        "modulos": ["orto_embudo", "cargos", "guia_orto", "agenda"],
         "boxes_financiero": False,
         "panel_profesional": False,
     }} if ORTODONCIA_TOKEN else {}),

@@ -23,7 +23,9 @@ def require_admin(request: Request,
             return tk
     if cmc_session:
         role = _verify_cookie(cmc_session)
-        if role in ("admin", "ortodoncia"):
+        # La cookie dental NO se promueve a ADMIN: estos módulos son del dueño
+        # y de recepción. Lo suyo entra por su perfil en ALMA_PROFILES.
+        if role in ("admin", "administracion"):
             return ADMIN_TOKEN
     if token and _is_admin_token(token):
         return token
