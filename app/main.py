@@ -1549,6 +1549,8 @@ import cargos_routes
 app.include_router(cargos_routes.router)        # cargos a descontar al profesional (Javiera 01-09)
 import orto_embudo_routes
 app.include_router(orto_embudo_routes.router)   # embudo de ortodoncia previo a la instalacion
+import orto_fotos_routes
+app.include_router(orto_fotos_routes.router)     # registro fotografico de avance + nota dictada
 
 import agenda_routes
 app.include_router(agenda_routes.router)
