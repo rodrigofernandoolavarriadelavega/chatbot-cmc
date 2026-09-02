@@ -20,7 +20,7 @@ import hmac
 
 from fastapi import HTTPException
 
-from config import ALMA_PROFILES, ADMIN_TOKEN, OLACORE_TOKEN
+from config import ALMA_PROFILES, ADMIN_TOKEN, OLACORE_TOKEN, ORTODONCIA_TOKEN
 
 _ADMIN_TOKENS: tuple[str, ...] = (ADMIN_TOKEN, OLACORE_TOKEN)
 
@@ -85,7 +85,13 @@ def resolve(request, token: str | None, cmc_session: str | None,
         raise HTTPException(401, "Token inválido")
     if cmc_session:
         from admin_routes import _verify_cookie
-        if _verify_cookie(cmc_session) in ("admin", "ortodoncia"):
+        rol = _verify_cookie(cmc_session)
+        if rol == "ortodoncia":
+            # La cookie dental NO se promueve a admin: se resuelve como su
+            # propio perfil, con la allowlist de ALMA_PROFILES. Antes devolvia
+            # (ADMIN_TOKEN, None) y con eso veia EBITDA y liquidaciones enteras.
+            return resolve(request, ORTODONCIA_TOKEN, None, module_key)
+        if rol == "admin":
             return ADMIN_TOKEN, None
     raise HTTPException(401, "Token inválido")
 
@@ -109,6 +115,9 @@ def page_token(token: str | None, cmc_session: str | None,
         return None
     if cmc_session:
         from admin_routes import _verify_cookie
-        if _verify_cookie(cmc_session) in ("admin", "ortodoncia"):
+        rol = _verify_cookie(cmc_session)
+        if rol == "ortodoncia":
+            return page_token(ORTODONCIA_TOKEN, None, module_key)
+        if rol == "admin":
             return ADMIN_TOKEN
     return None

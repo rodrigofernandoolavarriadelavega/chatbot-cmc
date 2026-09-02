@@ -103,8 +103,10 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     # ── Módulos Profesionales (analítica clínica BI-driven por especialidad) ──
     "programas":   {"label": "Programas Clínicos","icon":"heartpulse", "title": "Programas Clínicos",             "sub": "Adherencia y recall por especialidad · lista de hoy","src": "/alma/programas", "grupo": "Módulos Profesionales"},
     "kine":        {"label": "Programa Kine",    "icon": "activity",  "title": "Programa Kinesiología",          "sub": "Adherencia · riesgo de abandono · plan de sesiones","src": "/alma/kine", "grupo": "Módulos Profesionales"},
-    "ortodoncia":  {"label": "Ortodoncia",       "icon": "smile",     "title": "Seguimiento Ortodoncia",         "sub": "Controles vencidos · avance · plan de pago",       "src": "/alma/ortodoncia", "grupo": "Módulos Profesionales"},
-    "orto_embudo": {"label": "Embudo Ortodoncia","icon": "shuffle",   "title": "Embudo de Ortodoncia",           "sub": "Desde el interés hasta la instalación · quién espera qué", "src": "/alma/orto-embudo", "grupo": "Módulos Profesionales"},
+    # Panel unico de ortodoncia: embudo + pacientes en tratamiento + calendario.
+    # Reemplaza la entrada "ortodoncia" del menu (su contenido vive adentro, en
+    # pestañas, leyendo el mismo /alma/api/ortodoncia).
+    "orto_embudo": {"label": "Ortodoncia",       "icon": "smile",     "title": "Ortodoncia",                     "sub": "Embudo · pacientes en tratamiento · calendario", "src": "/alma/orto-embudo", "grupo": "Módulos Profesionales"},
     "guia_orto":   {"label": "Cómo se usa",      "icon": "file",      "title": "Guía — Embudo y Cargos",         "sub": "Instrucciones de los dos módulos nuevos", "src": "/guia/ortodoncia", "grupo": "Módulos Profesionales"},
     "cargos":      {"label": "Cargos al profesional","icon":"coins",  "title": "Cargos al profesional",          "sub": "Radiografías · laboratorio · insumos a descontar en la liquidación", "src": "/alma/cargos"},
     "pacientes":   {"label": "Pacientes",        "icon": "users",     "title": "Pacientes — Ficha 360",          "sub": "Buscar · historial · pagos · citas · etiquetas",   "src": "/alma/pacientes"},
@@ -140,6 +142,8 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
 # `boxes_financiero=True` habilita datos monetarios en /admin/api/boxes-state.
 # Para agregar un perfil nuevo: añadir una entrada aquí.
 # "variante" es la 3ª línea del lockup (debajo de "CARAMPANGUE" fija). "" = no muestra 3ª línea.
+ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "")   # perfil Dental (Javiera) — se usa en ALMA_PROFILES, definir ANTES
+
 ALMA_PROFILES: dict[str, dict] = {
     # Las claves son los tokens reales leídos de env (OLACORE_TOKEN / ADMIN_TOKEN).
     # Si el token está vacío (env no definida) no se registra la entrada — el dict
@@ -157,6 +161,20 @@ ALMA_PROFILES: dict[str, dict] = {
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
     }} if ADMIN_TOKEN else {}),
+    # ── Perfil DENTAL (Javiera) ──────────────────────────────────────────────
+    # Ve TODO lo dental/ortodoncia y nada del centro completo. No lleva
+    # `profesional_id` a proposito: necesita ver a los pacientes de la
+    # ortodoncista y del otro dentista, no solo los suyos — el scoping por
+    # profesional la dejaria ciega justo en lo que administra.
+    # Antes este token entraba como ADMIN por la cookie y veia EBITDA y
+    # liquidaciones de todo el centro; esta lista lo cierra.
+    **({ORTODONCIA_TOKEN: {
+        "variante": "Dental",
+        "modulos": ["orto_embudo", "cargos", "guia_orto", "agenda",
+                    "inventario", "esterilizacion", "ausentismo"],
+        "boxes_financiero": False,
+        "panel_profesional": False,
+    }} if ORTODONCIA_TOKEN else {}),
     # ── Perfiles por profesional (datos acotados a lo suyo) ──────────────────
     # `profesional_id` = id en Medilink (== bi.dim_profesional.profesional_id).
     # Su sola presencia activa el scoping: cada módulo filtra a ese profesional.
@@ -219,7 +237,6 @@ ALMA_PROFILES: dict[str, dict] = {
 # (precios, % descuento, cuenta bancaria, templates Meta).
 TELEMEDICINA_ENABLED   = os.getenv("TELEMEDICINA_ENABLED", "false").lower() == "true"
 REFERRAL_BONOS_ENABLED = os.getenv("REFERRAL_BONOS_ENABLED", "false").lower() == "true"
-ORTODONCIA_TOKEN   = os.getenv("ORTODONCIA_TOKEN", "")
 # Rol ADMINISTRACIÓN (2026-08-24): personal administrativo SIN rol clínico.
 # Ve agenda, caja, conciliación y errores operativos; NO ve las conversaciones
 # de los pacientes. Esa separación no es burocracia: una conversación de
