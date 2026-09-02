@@ -65,6 +65,12 @@ ETAPAS = [
     {"id": "agendado",            "label": "Agendado instalación",  "alerta": 30, "espera": False},
 ]
 FINALES = [
+    # Columna aparte a proposito. Un paciente en control mensual NO puede entrar
+    # a las etapas del embudo: el contador lo marcaria "detenido" a los pocos
+    # dias y las alertas dejarian de significar algo. Pero tiene que VERSE, o
+    # Javiera termina mirando dos tableros. Por eso: visible, fuera de los KPIs
+    # de proceso, y sin limite de dias (alerta 0 = nunca se pone en rojo).
+    {"id": "en_tratamiento", "label": "En tratamiento", "alerta": 0, "espera": False},
     {"id": "instalado",  "label": "Instalado",  "alerta": 0, "espera": False},
     {"id": "descartado", "label": "No sigue",   "alerta": 0, "espera": False},
 ]
@@ -350,6 +356,59 @@ def _sugerencias_agendados() -> list:
     return out
 
 
+def _cargar_en_tratamiento(meses: int = 12) -> dict:
+    """Trae a la columna "En tratamiento" la cartera viva de ortodoncia.
+
+    Fuente: `ortodoncia_cache` (atenciones reales con la ortodoncista) enriquecida
+    con la proxima cita de `email_ticker`. En las notas queda cuantas atenciones
+    lleva, desde cuando y cuando vuelve — que es lo que Javiera necesita ver de
+    un paciente que ya paso por el embudo.
+
+    ⚠️ `ortodoncia_cache` no sincroniza desde marzo-2026, asi que "ultima
+    atencion" puede estar vieja. La proxima cita SI es actual (viene del correo).
+    """
+    creados = 0
+    with db() as c:
+        ya = {(r[0] or "").strip().lower() for r in c.execute("SELECT paciente FROM orto_embudo")}
+        try:
+            pac = list(c.execute(
+                "SELECT paciente_nombre, COUNT(*), MIN(fecha), MAX(fecha) FROM ortodoncia_cache "
+                "WHERE paciente_nombre IS NOT NULL AND paciente_nombre!='' "
+                "AND fecha >= date('now', ?) GROUP BY paciente_nombre",
+                (f"-{int(meses)} months",)))
+        except Exception as e:
+            return {"creados": 0, "error": str(e)[:120]}
+        try:
+            prox = list(c.execute(
+                "SELECT paciente_nombre, MIN(fecha_cita), MIN(hora_cita) FROM email_ticker "
+                "WHERE tipo='agendada' AND lower(profesional_nombre) LIKE '%castillo%' "
+                "AND fecha_cita >= date('now') GROUP BY paciente_nombre"))
+        except Exception:
+            prox = []
+
+        for nombre, n, desde, hasta in pac:
+            limpio = " ".join((nombre or "").split())
+            if not limpio or limpio.lower() in ya:
+                continue
+            sig = next((p for p in prox if _calza_nombre(p[0], limpio)), None)
+            nota = f"{n} atenciones desde {desde} · última {hasta}"
+            if sig:
+                nota += f" · próxima {sig[1]} {sig[2]}"
+            else:
+                nota += " · SIN próxima hora agendada"
+            c.execute("INSERT INTO orto_embudo(paciente,etapa,etapa_desde,notas,origen,"
+                      "historial,creado_por,created_at,updated_at) "
+                      "VALUES (?,'en_tratamiento',?,?,'tratamiento',?,'sync',?,?)",
+                      (limpio, (hasta or _ahora())[:19] + " 00:00:00" if len(hasta or "") == 10 else _ahora(),
+                       nota, f"{_ahora()} cargado desde el historial de ortodoncia",
+                       _ahora(), _ahora()))
+            ya.add(limpio.lower())
+            creados += 1
+        c.commit()
+    log.info("orto_embudo: %d pacientes en tratamiento cargados", creados)
+    return {"creados": creados, "revisados": len(pac)}
+
+
 def _auth(request: Request, token: str | None, cmc_session: str | None) -> str:
     from admin_routes import _verify_cookie, _is_admin_token
     from config import ADMIN_TOKEN, ORTODONCIA_TOKEN
@@ -403,9 +462,13 @@ def tablero(request: Request, incluir_finales: int = Query(0),
     _auth(request, token, cmc_session)
     with db() as c:
         filas = [_fila(r) for r in c.execute(_SEL + " ORDER BY etapa_desde")]
-    activos = [f for f in filas if f["etapa"] not in ("instalado", "descartado")]
+    _FUERA = ("en_tratamiento", "instalado", "descartado")
+    activos = [f for f in filas if f["etapa"] not in _FUERA]
     cols = []
-    for e in ETAPAS + (FINALES if incluir_finales else []):
+    # "En tratamiento" se muestra siempre — es la cartera viva; las otras dos
+    # terminales solo si se piden.
+    _finales = [f for f in FINALES if f["id"] == "en_tratamiento" or incluir_finales]
+    for e in ETAPAS + _finales:
         ps = [f for f in filas if f["etapa"] == e["id"]]
         ps.sort(key=lambda x: -x["dias_en_etapa"])
         cols.append({"id": e["id"], "label": e["label"], "espera": e["espera"],
@@ -418,6 +481,7 @@ def tablero(request: Request, incluir_finales: int = Query(0),
         "esperando_dani": len([f for f in activos if f["etapa"] == "enviada_dani"]),
         "esperando_paciente": len([f for f in activos if f["etapa"] == "respuesta_paciente"]),
         "valor_cupones": sum(f["valor_cupones"] for f in activos),
+        "en_tratamiento": len([f for f in filas if f["etapa"] == "en_tratamiento"]),
         "peor": sorted(atrasados, key=lambda x: -x["dias_en_etapa"])[:5],
     }
 
@@ -589,7 +653,9 @@ def sincronizar(request: Request, dias: int = Query(60, ge=1, le=365),
                 token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
     _auth(request, token, cmc_session)
     entrada = _sincronizar_consultas(dias)
-    return {"ok": True, **entrada, "sugerencias": len(_sugerencias_agendados())}
+    trat = _cargar_en_tratamiento()
+    return {"ok": True, **entrada, "en_tratamiento": trat.get("creados", 0),
+            "sugerencias": len(_sugerencias_agendados())}
 
 
 @router.get("/examenes")
