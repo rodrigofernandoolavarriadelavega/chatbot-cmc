@@ -82,10 +82,34 @@
 .col-h .st{width:22px;height:22px;border-radius:7px;background:var(--aqua-s);color:var(--blue);
   font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
 .col.espera .col-h .st{background:var(--orange-s);color:var(--orange)}
-.col.cartera{background:linear-gradient(180deg,#f4fbf6,#fff);border-color:#c9e6d4}
-.col.cartera .col-h .st{background:var(--green-s);color:var(--green)}
-.col.cartera .pt{border-left-color:var(--green)}
-.col.cartera .pt .q{font-style:normal}
+.vtabs{display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap}
+.vtabs button{font:inherit;font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:10px;min-height:40px;
+  border:1px solid var(--border);background:#fff;color:var(--navy);cursor:pointer;transition:all .15s;
+  display:inline-flex;align-items:center;gap:7px}
+.vtabs button:hover{border-color:var(--aqua)}
+.vtabs button.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--sh-sm)}
+.vtabs button .cnt{font-size:11px;font-weight:800;background:var(--bg);color:var(--mute);border-radius:20px;padding:1px 8px}
+.vtabs button.on .cnt{background:rgba(255,255,255,.18);color:#fff}
+.pan{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh-sm);overflow:hidden}
+.pan-h{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pan-h h3{margin:0;font-size:13px;font-weight:800;color:var(--navy)}
+.pan-h .sp{flex:1}
+.est{font-size:10.5px;font-weight:800;border-radius:20px;padding:3px 10px;white-space:nowrap}
+.est.vencido{background:var(--red-s);color:#a3312b}
+.est.pronto{background:var(--orange-s);color:#a06c12}
+.est.al_dia,.est.activo{background:var(--green-s);color:#1d7a41}
+.est.finalizado{background:var(--bg);color:var(--mute)}
+.cal{display:grid;gap:10px;grid-template-columns:1fr}
+@media(min-width:760px){.cal{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1100px){.cal{grid-template-columns:repeat(3,1fr)}}
+.cd{border:1px solid var(--border);border-radius:14px;background:#fff;padding:13px 15px;box-shadow:var(--sh-sm)}
+.cd .f{font-size:12.5px;font-weight:800;color:var(--navy)}
+.cd .n{font-size:11px;color:var(--mute);font-weight:600;margin-top:2px}
+.cd ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.cd li{font-size:12px;color:var(--navy);display:flex;gap:8px;align-items:center}
+.cd li .tag{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:1px 6px}
+.cd li .tag.nuevo{background:var(--aqua-s);color:var(--blue)}
+.cd li .tag.curso{background:var(--bg);color:var(--mute)}
 .col-h .nm{font-size:12px;font-weight:700;color:var(--navy);line-height:1.25;letter-spacing:-.01em}
 .col-h .ct{margin-left:auto;font-size:11px;font-weight:800;background:var(--bg);color:var(--mute);
   border-radius:20px;padding:2px 9px;font-variant-numeric:tabular-nums}
@@ -190,9 +214,41 @@
 
 <div class="wrap2">
   <div class="kpis2" id="kpis"></div>
-  <div id="sug"></div>
-  <div id="stuck"></div>
-  <div class="board" id="board"></div>
+  <div class="vtabs">
+    <button id="v-b-emb" class="on" onclick="vista('emb')">Embudo <span class="cnt" id="v-c-emb">0</span></button>
+    <button id="v-b-tra" onclick="vista('tra')">En tratamiento <span class="cnt" id="v-c-tra">&middot;</span></button>
+    <button id="v-b-cal" onclick="vista('cal')">Calendario</button>
+  </div>
+
+  <section id="v-emb">
+    <div id="sug"></div>
+    <div id="stuck"></div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <section id="v-tra" style="display:none">
+    <div class="kpis2" id="tra-kpis"></div>
+    <div class="pan">
+      <div class="pan-h"><h3>Pacientes en tratamiento</h3><span class="sp"></span>
+        <select id="tra-filtro" onchange="cargarTrat()" style="font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--navy);background:var(--bg)">
+          <option value="todos">Todos</option><option value="vencido">Control vencido</option>
+          <option value="pronto">Control pronto</option></select></div>
+      <table><thead><tr><th>Paciente</th><th class="num hide-sm">Meses</th><th class="num hide-sm">Controles</th>
+        <th class="num">Sin control</th><th>Estado</th><th class="num hide-sm">Saldo</th><th class="num"></th></tr></thead>
+      <tbody id="tra-body"></tbody></table>
+      <div id="tra-empty" class="empty" style="display:none">Sin pacientes en tratamiento.</div>
+    </div>
+    <div class="note" style="margin-top:14px">Se calcula en vivo desde la caja real de la ortodoncista: meses en tratamiento, cuántos controles lleva y cuántos días pasaron desde el último. <b>Control vencido</b> = más de 45 días sin venir.</div>
+  </section>
+
+  <section id="v-cal" style="display:none">
+    <div class="pan" style="margin-bottom:14px"><div class="pan-h"><h3>Días de atención de la ortodoncista</h3>
+      <span class="sp"></span>
+      <select id="cal-meses" onchange="cargarCal()" style="font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--navy);background:var(--bg)">
+        <option value="3">Últimos 3 meses</option><option value="6">6 meses</option><option value="12">12 meses</option></select></div></div>
+    <div class="cal" id="cal-body"></div>
+    <div id="cal-empty" class="empty" style="display:none">Sin atenciones en el período.</div>
+  </section>
 </div>
 
 <!-- Ficha lateral -->
@@ -305,6 +361,66 @@ async function init(){
 async function load(){
   DATA=await api("/tablero?incluir_finales=0");
   pintarKpis(); pintarStuck(); pintarBoard(); pintarSug();
+  document.getElementById('v-c-emb').textContent=DATA.total_activos;
+}
+
+/* ── Un solo panel ──────────────────────────────────────────────────────
+   "En tratamiento" y "Calendario" NO duplican datos: llaman al modulo de
+   Ortodoncia que ya existe (/alma/api/ortodoncia), que los calcula en vivo
+   desde la caja real. Copiarlos aca habria dejado dos verdades distintas. */
+const API_ORTO="/alma/api/ortodoncia";
+async function apiOrto(path){
+  const r=await fetch(API_ORTO+path+(path.includes("?")?"&":"?")+"token="+encodeURIComponent(window.ALMA_TOKEN));
+  if(!r.ok) throw new Error("No se pudo leer el módulo de Ortodoncia (HTTP "+r.status+")");
+  return r.json();
+}
+let VISTA='emb', TRAT=null;
+function vista(v){ VISTA=v; ['emb','tra','cal'].forEach(x=>{
+    document.getElementById('v-b-'+x).classList.toggle('on',x===v);
+    document.getElementById('v-'+x).style.display = x===v?'':'none'; });
+  if(v==='tra'&&!TRAT) cargarTrat(); if(v==='cal') cargarCal(); }
+
+async function cargarTrat(){
+  const f=document.getElementById('tra-filtro').value;
+  try{
+    const d=await apiOrto("/pacientes?estado="+f+"&meses=12");
+    TRAT=d; const pac=d.pacientes||[];
+    document.getElementById('v-c-tra').textContent=(d.conteos&&d.conteos.todos)||pac.length;
+    const k=d.kpis||{};
+    document.getElementById('tra-kpis').innerHTML=[
+      ['En tratamiento',k.activos??pac.length,'a',I.users],
+      ['Control vencido',k.vencidos??0,(k.vencidos?'r':'g'),I.alert],
+      ['Control pronto',k.pronto??0,'o',I.clock],
+      ['Cartera por cobrar',clp(k.valor_cartera||0),'g',I.coins]
+    ].map(([l,v,c,ic])=>`<div class="k2"><div class="ic ${c}">${svg(ic)}</div>
+      <div><div class="v">${v}</div><div class="l">${l}</div></div></div>`).join('');
+    document.getElementById('tra-body').innerHTML=pac.map(p=>{
+      const tel=(p.telefono||'').replace(/[^0-9]/g,'');
+      return `<tr>
+        <td class="t-strong">${esc(p.paciente)}${p.lugar?`<div class="t-meta">${esc(p.lugar)}</div>`:''}</td>
+        <td class="num hide-sm t-meta">${p.meses_tratamiento??'—'}</td>
+        <td class="num hide-sm t-meta">${p.n_controles??0}</td>
+        <td class="num t-strong">${p.dias_sin_control} d</td>
+        <td><span class="est ${esc(p.estado)}">${esc(p.estado_label||p.estado)}</span></td>
+        <td class="num hide-sm">${p.saldo?clp(p.saldo):'—'}</td>
+        <td class="num">${tel?`<a class="icon-btn" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}</td></tr>`;
+    }).join('');
+    document.getElementById('tra-empty').style.display=pac.length?'none':'';
+  }catch(e){ toast(e.message,'err'); }
+}
+
+async function cargarCal(){
+  const m=document.getElementById('cal-meses').value;
+  try{
+    const d=await apiOrto("/calendario?meses="+m);
+    const dias=d.dias||d.calendario||[];
+    document.getElementById('cal-body').innerHTML=dias.map(x=>`<div class="cd">
+      <div class="f">${esc(x.fecha||'')}</div>
+      <div class="n">${(x.pacientes||[]).length} paciente(s)${x.nuevos?` · ${x.nuevos} nuevo(s)`:''}</div>
+      <ul>${(x.pacientes||[]).map(p=>`<li><span class="tag ${p.nuevo?'nuevo':'curso'}">${p.nuevo?'nuevo':'control'}</span>${esc(p.paciente||p.nombre||'')}</li>`).join('')}</ul>
+    </div>`).join('');
+    document.getElementById('cal-empty').style.display=dias.length?'none':'';
+  }catch(e){ toast(e.message,'err'); }
 }
 async function pintarSug(){
   let it=[];
@@ -327,9 +443,9 @@ async function aplicarSug(id){
 function pintarKpis(){
   document.getElementById('kpis').innerHTML=[
     ['En proceso',DATA.total_activos,'a',I.users],
-    ['En tratamiento',DATA.en_tratamiento||0,'g',I.chk2],
     ['Detenidos',DATA.atrasados,DATA.atrasados?'r':'g',I.alert],
     ['Esperando a Dani',DATA.esperando_dani,'o',I.send],
+    ['Cupones vendidos',clp(DATA.valor_cupones),'g',I.coins]
   ].map(([l,v,c,ic])=>`<div class="k2"><div class="ic ${c}">${svg(ic)}</div>
     <div><div class="v">${v}</div><div class="l">${l}</div></div></div>`).join('');
 }
@@ -342,8 +458,8 @@ function pintarStuck(){
 }
 function pintarBoard(){
   document.getElementById('board').innerHTML=DATA.columnas.map((c,i)=>`
-    <div class="col ${c.espera?'espera':''} ${c.id==='en_tratamiento'?'cartera':''}">
-      <div class="col-h"><span class="st">${c.id==='en_tratamiento'?'&#10003;':i+1}</span><span class="nm">${esc(c.label)}</span>
+    <div class="col ${c.espera?'espera':''}">
+      <div class="col-h"><span class="st">${i+1}</span><span class="nm">${esc(c.label)}</span>
         <span class="ct">${c.n}</span></div>
       <div class="col-b" data-etapa="${c.id}">${c.pacientes.length?c.pacientes.map(tarjeta).join(''):'<div class="vacio">Sin pacientes</div>'}</div>
     </div>`).join('');
@@ -369,7 +485,7 @@ function tarjeta(p){
     <div class="m"><span class="dias">${svg(I.clock)}${p.dias_en_etapa} d</span>
       ${p.origen==='bot'?'<span class="src">WhatsApp</span>':''}
       ${p.valor_cupones?`<span>${clp(p.valor_cupones)}</span>`:''}</div>
-    ${p.consulta?`<div class="q">"${esc(p.consulta)}"</div>`:(p.etapa==='en_tratamiento'&&p.notas?`<div class="q">${esc(p.notas)}</div>`:'')}
+    ${p.consulta?`<div class="q">"${esc(p.consulta)}"</div>`:''}
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="acts">
       ${prev?`<button class="ico" onclick="mover(${p.id},'${prev}')" title="Volver">${svg(I.left,2.3)}</button>`:''}
