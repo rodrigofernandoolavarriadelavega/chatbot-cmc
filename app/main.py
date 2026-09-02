@@ -4152,8 +4152,6 @@ for _ap, _ah, _al in [
     ("/alma/tareas", _ALMA_TAREAS_HTML, "Tareas"),
     ("/alma/checklist", _ALMA_CHECKLIST_HTML, "Checklist"),
     ("/alma/liquidaciones", _ALMA_LIQUIDACIONES_HTML, "Liquidaciones"),
-    ("/alma/cargos", _ALMA_CARGOS_HTML, "Cargos"),
-    ("/alma/orto-embudo", _ALMA_ORTO_EMBUDO_HTML, "EmbudoOrtodoncia"),
     ("/alma/inicio", _ALMA_INICIO_HTML, "Inicio"),
     ("/alma/proveedores", _ALMA_PROVEEDORES_HTML, "Proveedores"),
     ("/alma/mejoras", _ALMA_MEJORAS_HTML, "Mejoras"),
@@ -5579,6 +5577,46 @@ def grupo_carampangue_simulador_page(request: Request, token: str | None = Query
     comparte por el hash de la URL (no toca el servidor).
     """
     return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_SIM_HTML, token, request)
+
+
+def _pagina_ortodoncia(_html: str, _label: str):
+    """Paginas de los modulos de Javiera, abribles con el token de ortodoncia.
+
+    El factory generico `_make_alma_page` solo admite ADMIN_TOKEN por query, y
+    ampliarlo ahi abriria los 43 modulos del registry — incluidos EBITDA y
+    Liquidaciones — a un token que hoy circula por WhatsApp. Por eso el permiso
+    se amplia SOLO en estas dos paginas, que son las suyas.
+    """
+    def _page(request: Request, token: str | None = Query(None),
+              cmc_session: str | None = Cookie(None)):
+        from admin_routes import _verify_cookie, _is_admin_token
+        from config import ORTODONCIA_TOKEN
+
+        host = (request.headers.get("host") or "").split(":")[0].lower()
+        if host.endswith("centromedicocarampangue.cl"):
+            raise HTTPException(status_code=404, detail="Not found")
+        if not _html:
+            raise HTTPException(404, f"{_label} no disponible")
+        tk = None
+        if token and _is_admin_token(token):
+            tk = token
+        elif token and ORTODONCIA_TOKEN and token == ORTODONCIA_TOKEN:
+            tk = token
+        elif cmc_session and _verify_cookie(cmc_session) in ("admin", "ortodoncia", "administracion"):
+            tk = ORTODONCIA_TOKEN or ADMIN_TOKEN
+        if not tk:
+            raise HTTPException(401, "No autorizado")
+        return HTMLResponse(_html.replace("__TOKEN__", tk),
+                            headers={"Cache-Control": "no-store"})
+    return _page
+
+
+for _ap, _ah, _al in [
+    ("/alma/orto-embudo", _ALMA_ORTO_EMBUDO_HTML, "EmbudoOrtodoncia"),
+    ("/alma/cargos", _ALMA_CARGOS_HTML, "Cargos"),
+]:
+    app.add_api_route(_ap, _pagina_ortodoncia(_ah, _al), methods=["GET"],
+                      response_class=HTMLResponse, include_in_schema=False)
 
 
 @app.get("/guia/ortodoncia", response_class=HTMLResponse)
