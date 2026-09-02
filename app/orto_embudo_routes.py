@@ -276,6 +276,80 @@ def _sincronizar_consultas(dias: int = 60) -> dict:
     return {"creados": creados, "revisados": revisados, "dias": dias}
 
 
+def _tokens_nombre(s: str) -> set:
+    """Tokens significativos de un nombre, ya normalizados (sin tildes)."""
+    from email_ticker import _normalizar_nombre
+    return {t for t in _normalizar_nombre(s).split() if len(t) >= 3}
+
+
+def _calza_nombre(a: str, b: str) -> bool:
+    """Compara el nombre del correo con el del embudo.
+
+    NO se reusa `email_ticker._nombres_coinciden` a proposito: ese acepta
+    contencion ("juan" in "juan ignacio garrido"), y su propio comentario
+    aclara que es seguro PORQUE alli el match ya viene acotado por
+    profesional + fecha + hora. Aca no hay ese acotamiento — se compara
+    contra todo el embudo — asi que la contencion haria calzar a cualquier
+    Juan con cualquier otro. Se exige coincidencia fuerte.
+    """
+    from email_ticker import _normalizar_nombre
+    na, nb = _normalizar_nombre(a), _normalizar_nombre(b)
+    if not na or not nb:
+        return False
+    if na == nb:
+        return True
+    ta, tb = _tokens_nombre(a), _tokens_nombre(b)
+    if len(ta) < 2 or len(tb) < 2:
+        return False       # con un solo token no hay evidencia suficiente
+    comunes = ta & tb
+    if len(comunes) < 2:
+        return False       # al menos nombre + un apellido
+    corto, largo = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    return corto <= largo  # el nombre corto tiene que estar entero en el largo
+
+
+# Etapas desde las que tiene sentido saltar a "agendado".
+_ANTES_DE_AGENDADO = [e["id"] for e in ETAPAS if e["id"] != "agendado"]
+
+
+def _sugerencias_agendados() -> list:
+    """Quien del embudo YA tiene hora con la ortodoncista, sin mover nada.
+
+    Dentalink manda un correo por cada cita y `email_ticker` lo deja parseado
+    con paciente, fecha, hora y profesional. Aca solo se cruza por nombre y se
+    PROPONE: mover queda a un clic de Javiera.
+
+    Se sugiere en vez de mover solo porque el cruce es por texto contra todo el
+    embudo, sin acotar por fecha ni profesional. Un cruce equivocado moveria al
+    paciente que no era y nadie se enteraria; asi, si esta mal, ella lo ve.
+    Un nombre que calza con MAS DE UNO no se sugiere: mejor callar que adivinar.
+    """
+    with db() as c:
+        try:
+            citas = list(c.execute(
+                "SELECT paciente_nombre, fecha_cita, hora_cita, id_cita FROM email_ticker "
+                "WHERE tipo='agendada' AND lower(profesional_nombre) LIKE '%castillo%' "
+                "AND fecha_cita >= date('now','-7 days') ORDER BY fecha_cita"))
+        except Exception as e:
+            log.warning("orto_embudo: email_ticker no disponible: %s", e)
+            return []
+        pend = list(c.execute(
+            "SELECT id, paciente, etapa FROM orto_embudo WHERE etapa IN (%s)"
+            % ",".join("?" * len(_ANTES_DE_AGENDADO)), _ANTES_DE_AGENDADO))
+
+    out, usados = [], set()
+    for nombre, fecha, hora, id_cita in citas:
+        cands = [p for p in pend if p[0] not in usados and _calza_nombre(nombre, p[1])]
+        if len(cands) != 1:
+            continue
+        pid, pnom, etapa = cands[0]
+        usados.add(pid)
+        out.append({"id": pid, "paciente": pnom, "nombre_cita": nombre,
+                    "etapa_actual": _TODAS.get(etapa, {}).get("label", etapa),
+                    "fecha": fecha, "hora": hora, "id_cita": id_cita})
+    return out
+
+
 def _auth(request: Request, token: str | None, cmc_session: str | None) -> str:
     from admin_routes import _verify_cookie, _is_admin_token
     from config import ADMIN_TOKEN, ORTODONCIA_TOKEN
@@ -478,11 +552,44 @@ def detalle(pid: int, request: Request, token: str | None = Query(None),
     return base
 
 
+@router.get("/sugerencias")
+def sugerencias(request: Request, token: str | None = Query(None),
+                cmc_session: str | None = Cookie(None)):
+    """Pacientes del embudo que ya tienen hora con la ortodoncista."""
+    _auth(request, token, cmc_session)
+    return {"items": _sugerencias_agendados()}
+
+
+@router.post("/sugerencias/{pid}/aplicar")
+def aplicar_sugerencia(pid: int, request: Request, token: str | None = Query(None),
+                       cmc_session: str | None = Cookie(None)):
+    """Mueve a 'Agendado instalacion' dejando escrito de donde salio el dato."""
+    _auth(request, token, cmc_session)
+    sug = [s for s in _sugerencias_agendados() if s["id"] == pid]
+    if not sug:
+        raise HTTPException(404, "Esa sugerencia ya no aplica")
+    g = sug[0]
+    with db() as c:
+        r = list(c.execute("SELECT etapa, historial FROM orto_embudo WHERE id=?", (pid,)))
+        if not r:
+            raise HTTPException(404, "No existe")
+        hist = (r[0][1] or "") + (
+            f"\n{_ahora()} {r[0][0]} \u2192 agendado "
+            f"(desde el correo: hora con la ortodoncista el {g['fecha']} {g['hora']})")
+        c.execute("UPDATE orto_embudo SET etapa='agendado',etapa_desde=?,historial=?,updated_at=? "
+                  "WHERE id=?", (_ahora(), hist[-4000:], _ahora(), pid))
+        c.commit()
+    log_event(None, "orto_embudo_sugerencia_aplicada",
+              {"paciente": g["paciente"], "fecha": g["fecha"]})
+    return {"ok": True, **g}
+
+
 @router.post("/sincronizar")
 def sincronizar(request: Request, dias: int = Query(60, ge=1, le=365),
                 token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
     _auth(request, token, cmc_session)
-    return {"ok": True, **_sincronizar_consultas(dias)}
+    entrada = _sincronizar_consultas(dias)
+    return {"ok": True, **entrada, "sugerencias": len(_sugerencias_agendados())}
 
 
 @router.get("/examenes")

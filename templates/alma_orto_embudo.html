@@ -50,6 +50,20 @@
 .k2 .l{font-size:10.5px;color:var(--mute);font-weight:600;margin-top:2px;line-height:1.3}
 
 /* ── Aviso de detenidos ────────────────────────────────────────────────── */
+.sug{border:1px solid #bfe3ea;background:linear-gradient(135deg,#f2fbfd,#e8f8fb);border-radius:16px;
+  padding:15px 17px;margin-bottom:16px;box-shadow:var(--sh-sm)}
+.sug h3{margin:0 0 4px;font-size:13px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:8px}
+.sug h3 svg{width:16px;height:16px;stroke:var(--blue)}
+.sug .lead{font-size:11.5px;color:#4a7286;margin:0 0 11px;line-height:1.5}
+.sug .row{display:flex;align-items:center;gap:11px;padding:9px 0;border-top:1px solid #d3ecf2;flex-wrap:wrap}
+.sug .row:first-of-type{border-top:0}
+.sug .row .nm{font-weight:700;font-size:12.5px;color:var(--navy)}
+.sug .row .et{font-size:11px;color:var(--mute)}
+.sug .row .fh{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--blue);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.sug .row button{font:inherit;font-size:11.5px;font-weight:700;padding:7px 13px;border-radius:8px;min-height:36px;
+  border:1px solid var(--aqua);background:var(--aqua);color:#08303c;cursor:pointer}
+.sug .row button:hover{background:#63cbd9}
 .stuck{border:1px solid #f3d3cf;background:linear-gradient(135deg,#fff6f5,#fdecec);border-radius:16px;
   padding:15px 17px;margin-bottom:16px;box-shadow:var(--sh-sm)}
 .stuck h3{margin:0 0 9px;font-size:13px;font-weight:800;color:#a3312b;display:flex;align-items:center;gap:8px}
@@ -172,6 +186,7 @@
 
 <div class="wrap2">
   <div class="kpis2" id="kpis"></div>
+  <div id="sug"></div>
   <div id="stuck"></div>
   <div class="board" id="board"></div>
 </div>
@@ -269,7 +284,8 @@ const I={
   clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   wa:'<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
   chk:'<path d="M20 6 9 17l-5-5"/>',
-  left:'<path d="m15 18-6-6 6-6"/>', right:'<path d="m9 18 6-6-6-6"/>'
+  left:'<path d="m15 18-6-6 6-6"/>', right:'<path d="m9 18 6-6-6-6"/>',
+  cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>'
 };
 const svg=(p,w)=>`<svg viewBox="0 0 24 24" fill="none" stroke-width="${w||2}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 let ETAPAS=[],FINALES=[],ORDEN=[],DATA=null,EXCAT=[],DWID=null;
@@ -283,7 +299,25 @@ async function init(){
 }
 async function load(){
   DATA=await api("/tablero?incluir_finales=0");
-  pintarKpis(); pintarStuck(); pintarBoard();
+  pintarKpis(); pintarStuck(); pintarBoard(); pintarSug();
+}
+async function pintarSug(){
+  let it=[];
+  try{ it=(await api("/sugerencias")).items; }catch(e){ return; }
+  const s=document.getElementById('sug');
+  if(!it.length){ s.innerHTML=''; return; }
+  s.innerHTML=`<div class="sug">
+    <h3>${svg(I.cal)} ${it.length} paciente${it.length==1?'':'s'} del embudo ya tiene${it.length==1?'':'n'} hora con la ortodoncista</h3>
+    <p class="lead">Salió de los correos de citas. Revisa que sea la persona correcta antes de mover.</p>
+    ${it.map(x=>`<div class="row">
+      <div><div class="nm">${esc(x.paciente)}</div>
+        <div class="et">está en «${esc(x.etapa_actual)}»${x.nombre_cita!==x.paciente?` · en la cita figura como ${esc(x.nombre_cita)}`:''}</div></div>
+      <span class="fh">${esc(x.fecha)} ${esc(x.hora)}</span>
+      <button onclick="aplicarSug(${x.id})">Mover a Agendado</button></div>`).join('')}</div>`;
+}
+async function aplicarSug(id){
+  try{ const r=await api("/sugerencias/"+id+"/aplicar",{method:"POST"});
+    toast(r.paciente+" movido a Agendado"); load(); }catch(e){ toast(e.message,'err'); }
 }
 function pintarKpis(){
   document.getElementById('kpis').innerHTML=[
