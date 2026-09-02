@@ -373,6 +373,32 @@ def resumen_liquidacion(request: Request, mes: str | None = Query(None),
     return {"mes": mes, "items": items, "total": sum(i["descontar"] for i in items)}
 
 
+@router.post("/marcar-descontado")
+async def marcar_descontado(request: Request, token: str | None = Query(None),
+                            cmc_session: str | None = Cookie(None)):
+    """Marca de una vez todos los cargos pendientes de un profesional en el mes.
+
+    Es la accion real del cierre: se descuenta la suma completa en la
+    liquidacion, no cargo por cargo. Marcarlos uno a uno era la via segura de
+    que quedara alguno sin marcar y se volviera a cobrar el mes siguiente.
+    """
+    _auth(request, token, cmc_session)
+    b = await request.json()
+    prof = (b.get("profesional") or "").strip()
+    mes = (b.get("mes") or _mes_actual())[:7]
+    if not prof:
+        raise HTTPException(400, "Falta el profesional")
+    pagado = 0 if b.get("deshacer") else 1
+    with db() as c:
+        cur = c.execute("UPDATE cargo_registro SET pagado=?,pagado_at=?,updated_at=? "
+                        "WHERE mes=? AND profesional=? AND pagado=?",
+                        (pagado, _ahora() if pagado else None, _ahora(), mes, prof, 1 - pagado))
+        n = cur.rowcount
+        c.commit()
+    log_event(None, "cargos_marcados", {"prof": prof, "mes": mes, "n": n, "pagado": pagado})
+    return {"ok": True, "actualizados": n}
+
+
 @router.get("/export")
 def export(request: Request, mes: str | None = Query(None),
            token: str | None = Query(None), cmc_session: str | None = Cookie(None)):

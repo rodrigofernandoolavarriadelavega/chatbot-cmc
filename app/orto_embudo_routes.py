@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import csv
 import html as _html
+import json
 import io
 import logging
 import os
@@ -80,6 +81,7 @@ def _crear_tabla() -> None:
                 etapa        TEXT NOT NULL DEFAULT 'proceso_inicial',
                 etapa_desde  TEXT NOT NULL,
                 notas        TEXT,
+                examenes     TEXT,
                 valor_cupones INTEGER DEFAULT 0,
                 historial    TEXT,
                 creado_por   TEXT,
@@ -97,6 +99,13 @@ def _crear_tabla() -> None:
 
 _crear_tabla()
 
+# La tabla pudo nacer sin `examenes` (se desplego antes que esta funcion).
+with db() as _c:
+    if "examenes" not in [r[1] for r in _c.execute("PRAGMA table_info(orto_embudo)")]:
+        _c.execute("ALTER TABLE orto_embudo ADD COLUMN examenes TEXT")
+        _c.commit()
+        log.info("orto_embudo: columna examenes agregada")
+
 
 # ── Aviso por correo ────────────────────────────────────────────────────────
 # El equipo ya se coordina por correo, asi que el aviso entra por el canal que
@@ -105,7 +114,29 @@ _crear_tabla()
 #
 # PRIVACIDAD: el correo lleva SOLO nombre y etapa. Nada clinico, ningun RUT,
 # ningun telefono. Es un aviso de coordinacion, no una ficha (Ley 21.719).
-_DEFAULTS = {"mails": "", "avisar_alta": "1", "avisar_dani": "1"}
+# La solicitud de examenes NO se inventa: se siembra del catalogo real del
+# convenio (`vales_routes.PRESTACIONES`), donde el "Set radiologico ortodoncia"
+# ya viene definido y con precio como bitewing + panoramica + teleradiografia.
+# Javiera edita la lista desde la pagina; esto es solo el punto de partida.
+_EXAMENES_SEED = [
+    {"n": "Set radiológico ortodoncia (bitewing + panorámica + teleradiografía)", "d": 1},
+    {"n": "Fotografías clínicas (intraorales y extraorales)", "d": 1},
+    {"n": "Modelos de estudio", "d": 1},
+    {"n": "Radiografía Panorámica", "d": 0},
+    {"n": "Teleradiografía de perfil", "d": 0},
+    {"n": "Escaneo intraoral digital — ambos maxilares", "d": 0},
+    {"n": "CONE BEAM Bimaxilar", "d": 0},
+]
+_DEFAULTS = {"mails": "", "avisar_alta": "1", "avisar_dani": "1",
+             "examenes": json.dumps(_EXAMENES_SEED, ensure_ascii=False)}
+
+
+def _examenes_catalogo() -> list:
+    try:
+        v = json.loads(_cfg().get("examenes") or "[]")
+        return v if isinstance(v, list) and v else list(_EXAMENES_SEED)
+    except Exception:
+        return list(_EXAMENES_SEED)
 
 
 def _cfg() -> dict:
@@ -153,10 +184,20 @@ def _enviar(asunto: str, cuerpo_html: str, para: list[str]) -> None:
         log.warning("orto_embudo: no se pudo enviar el aviso: %s", e)
 
 
-def _avisar(asunto: str, titulo: str, lineas: list, pie: str) -> None:
+def _avisar(asunto: str, titulo: str, lineas: list, pie: str,
+            examenes: list | None = None) -> None:
     para = _destinatarios()
     if not para:
         return
+    bloque = ""
+    if examenes:
+        items = "".join(f'<li style="margin:4px 0">{_html.escape(x)}</li>' for x in examenes)
+        bloque = (f'<div style="margin:18px 0 0;padding:14px 16px;background:#F1F8FA;'
+                  f'border-left:3px solid #4FBECE;border-radius:0 8px 8px 0">'
+                  f'<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;'
+                  f'color:#1172AB;font-weight:700">Solicitud de examenes</div>'
+                  f'<ul style="margin:9px 0 0;padding-left:18px;color:#0F3F68;font-size:14px">'
+                  f'{items}</ul></div>')
     filas = "".join(
         f'<tr><td style="padding:5px 14px 5px 0;color:#6b8095;font-size:13px">{_html.escape(k)}</td>'
         f'<td style="padding:5px 0;color:#16324f;font-size:14px;font-weight:600">{_html.escape(v)}</td></tr>'
@@ -164,7 +205,7 @@ def _avisar(asunto: str, titulo: str, lineas: list, pie: str) -> None:
     cuerpo = f"""<div style="font-family:Helvetica,Arial,sans-serif;max-width:520px">
 <h2 style="color:#16324f;font-size:17px;margin:0 0 4px">{_html.escape(titulo)}</h2>
 <p style="color:#6b8095;font-size:13px;margin:0 0 14px">Embudo de Ortodoncia &middot; Centro Medico Carampangue</p>
-<table style="border-collapse:collapse">{filas}</table>
+<table style="border-collapse:collapse">{filas}</table>{bloque}
 <p style="color:#6b8095;font-size:12px;margin:16px 0 0;line-height:1.6">{_html.escape(pie)}</p>
 <p style="color:#9aabbd;font-size:11px;margin:14px 0 0;line-height:1.5">
 Aviso automatico de coordinacion. No contiene informacion clinica.</p></div>"""
@@ -251,23 +292,26 @@ async def crear(request: Request, token: str | None = Query(None),
         raise HTTPException(400, "Falta el nombre del paciente")
     etapa = b.get("etapa") if b.get("etapa") in _TODAS else "proceso_inicial"
     with db() as c:
+        exs = [x.strip() for x in (b.get("examenes") or []) if str(x).strip()]
         c.execute("INSERT INTO orto_embudo(paciente,telefono,rut,etapa,etapa_desde,notas,"
-                  "valor_cupones,historial,creado_por,created_at,updated_at) "
-                  "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                  "valor_cupones,examenes,historial,creado_por,created_at,updated_at) "
+                  "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                   (nombre, (b.get("telefono") or "").strip() or None,
                    (b.get("rut") or "").strip() or None, etapa, _ahora(),
                    b.get("notas"), int(b.get("valor_cupones") or 0),
+                   json.dumps(exs, ensure_ascii=False) if exs else None,
                    f"{_ahora()} creado en {etapa}", b.get("creado_por") or "recepcion",
                    _ahora(), _ahora()))
         pid = list(c.execute("SELECT last_insert_rowid()"))[0][0]
         c.commit()
     log_event(None, "orto_embudo_alta", {"paciente": nombre, "etapa": etapa})
     if _cfg().get("avisar_alta") == "1":
+        lineas = [("Paciente", nombre), ("Etapa", _TODAS[etapa]["label"]),
+                  ("Fecha", _ahora()[:16])]
         _avisar(f"Ortodoncia · paciente nuevo: {nombre}",
-                "Entro un paciente nuevo al embudo",
-                [("Paciente", nombre), ("Etapa", _TODAS[etapa]["label"]),
-                 ("Fecha", _ahora()[:16])],
-                "Queda registrado en el embudo de ortodoncia de Alma.")
+                "Entro un paciente nuevo al embudo", lineas,
+                "Queda registrado en el embudo de ortodoncia de Alma.",
+                examenes=exs)
     return {"ok": True, "id": pid}
 
 
@@ -326,6 +370,67 @@ def etapas(request: Request, token: str | None = Query(None),
            cmc_session: str | None = Cookie(None)):
     _auth(request, token, cmc_session)
     return {"etapas": ETAPAS, "finales": FINALES, "orden": _ORDEN}
+
+
+@router.get("/paciente/{pid}")
+def detalle(pid: int, request: Request, token: str | None = Query(None),
+            cmc_session: str | None = Cookie(None)):
+    """Ficha completa con su linea de tiempo.
+
+    `historial` se guarda como texto append-only ("<ts> <de> -> <a>") porque el
+    volumen es chico y asi sobrevive a cualquier cambio de esquema. Se parsea
+    aca para la vista en vez de guardar filas: si manana cambian las etapas, el
+    historial viejo se sigue leyendo igual.
+    """
+    _auth(request, token, cmc_session)
+    with db() as c:
+        r = list(c.execute(
+            "SELECT id,paciente,telefono,rut,etapa,etapa_desde,notas,valor_cupones,"
+            "historial,created_at FROM orto_embudo WHERE id=?", (pid,)))
+    if not r:
+        raise HTTPException(404, "No existe")
+    row = r[0]
+    pasos = []
+    for linea in (row[8] or "").strip().split("\n"):
+        linea = linea.strip()
+        if not linea:
+            continue
+        ts, _, resto = linea.partition(" ")
+        if len(ts) == 10 and " " in linea:
+            ts, resto = linea[:19], linea[20:]
+        if "→" in resto:
+            de, _, a = resto.partition("→")
+            pasos.append({"ts": ts, "de": _TODAS.get(de.strip(), {}).get("label", de.strip()),
+                          "a": _TODAS.get(a.strip(), {}).get("label", a.strip())})
+        else:
+            pasos.append({"ts": ts, "de": None, "a": resto.strip()})
+    base = _fila(row[:8])
+    base["creado"] = (row[9] or "")[:16]
+    base["pasos"] = pasos
+    base["orden"] = _ORDEN.index(base["etapa"]) + 1 if base["etapa"] in _ORDEN else 0
+    base["total_etapas"] = len(ETAPAS)
+    return base
+
+
+@router.get("/examenes")
+def examenes_get(request: Request, token: str | None = Query(None),
+                 cmc_session: str | None = Cookie(None)):
+    _auth(request, token, cmc_session)
+    return {"items": _examenes_catalogo()}
+
+
+@router.post("/examenes")
+async def examenes_set(request: Request, token: str | None = Query(None),
+                       cmc_session: str | None = Cookie(None)):
+    """Guarda cual es 'lo que se pide siempre'. Solo Javiera lo sabe."""
+    _auth(request, token, cmc_session)
+    b = await request.json()
+    items = [{"n": str(x.get("n", "")).strip(), "d": 1 if x.get("d") else 0}
+             for x in (b.get("items") or []) if str(x.get("n", "")).strip()]
+    if not items:
+        raise HTTPException(400, "La lista no puede quedar vacia")
+    _cfg_set({"examenes": json.dumps(items, ensure_ascii=False)})
+    return {"ok": True, "items": items}
 
 
 @router.get("/config")

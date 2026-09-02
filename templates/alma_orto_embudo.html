@@ -5,72 +5,191 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/alma_kit.css">
 <style>
-/* Tablero: en escritorio scrollea horizontal; en celular se apila, porque
-   Javiera lo va a usar desde el telefono entre paciente y paciente. */
-.board{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x proximity}
-.col{flex:0 0 260px;scroll-snap-align:start;background:var(--card,#fff);border:1px solid var(--border,#e5e9f0);
-     border-radius:12px;display:flex;flex-direction:column;max-height:70vh}
-.col-h{padding:10px 12px;border-bottom:1px solid var(--border,#e5e9f0);display:flex;align-items:center;gap:7px}
-.col-h .nm{font-size:12px;font-weight:700;color:var(--navy,#16324f);line-height:1.25}
-.col-h .ct{margin-left:auto;font-size:11px;font-weight:700;background:#eef2f7;color:#516b85;border-radius:20px;padding:2px 8px}
-.col-h .dot{width:7px;height:7px;border-radius:50%;flex:none;background:#c3ccd8}
-.col.espera .col-h .dot{background:#e0a01e}
-.col-b{padding:9px;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
-.pt{border:1px solid var(--border,#e5e9f0);border-left:3px solid #c3ccd8;border-radius:9px;padding:9px 10px;background:#fff}
-.pt.warn{border-left-color:#d9534f;background:#fff8f7}
-.pt .n{font-size:13px;font-weight:700;color:var(--navy,#16324f);line-height:1.3}
-.pt .m{font-size:11px;color:#6b8095;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.pt .m b{color:#d9534f}
-.pt .acts{display:flex;gap:6px;margin-top:8px}
-.pt .acts button{flex:1;font:inherit;font-size:11px;font-weight:600;padding:5px 6px;border-radius:7px;
-     border:1px solid var(--border,#e5e9f0);background:#f7f9fc;color:var(--navy,#16324f);cursor:pointer}
-.pt .acts button:hover{border-color:#8aa6c0}
-.pt .acts a{flex:none;display:flex;align-items:center;justify-content:center;width:30px;border-radius:7px;
-     border:1px solid var(--border,#e5e9f0);background:#f0faf3;text-decoration:none}
-.col-b .vacio{font-size:11px;color:#9aabbd;text-align:center;padding:14px 6px}
-.kpi .k-label{white-space:normal;line-height:1.3}
-.alerta{border:1px solid #f0c9c6;background:#fff8f7;border-radius:12px;padding:12px 14px;margin-bottom:14px}
-.alerta h3{font-size:13px;font-weight:800;color:#a3312b;margin:0 0 7px}
-.alerta ul{margin:0;padding-left:17px;font-size:12px;color:#6b4340;line-height:1.7}
-@media(max-width:720px){.board{flex-direction:column;overflow-x:visible;max-height:none}
-  .col{flex:none;max-height:none}.col-b{max-height:none}}
+/* ── Hero firma Alma ───────────────────────────────────────────────────── */
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+  color:#fff;padding:22px 20px 20px}
+.hero::after{content:"";position:absolute;right:-90px;top:-120px;width:340px;height:340px;
+  background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%);pointer-events:none}
+.hero .in{position:relative;max-width:1400px;margin:0 auto;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.hero .bdg{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;flex:none}
+.hero .bdg svg{width:21px;height:21px;stroke:#fff}
+.hero h1{font-size:19px;font-weight:800;margin:0;letter-spacing:-.01em}
+.hero p{margin:5px 0 0;font-size:12.5px;color:#c3ddea;max-width:60ch;line-height:1.55}
+.hero .sp{flex:1;min-width:12px}
+.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;
+  background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);font-size:11px;font-weight:600}
+.mode-pill .dot{width:8px;height:8px;border-radius:50%;background:#7CFFB2;
+  box-shadow:0 0 0 4px rgba(124,255,178,.28);animation:pu 2.2s ease-in-out infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.45}}
+.hero-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hb{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:9px 14px;font-family:inherit;
+  font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.24);
+  background:rgba(255,255,255,.1);color:#fff;transition:background .15s,transform .12s;min-height:40px}
+.hb:hover{background:rgba(255,255,255,.2)}.hb:active{transform:translateY(1px)}
+.hb svg{width:15px;height:15px;stroke:currentColor}
+.hb.pri{background:var(--aqua);border-color:var(--aqua);color:#08303c;box-shadow:0 3px 14px rgba(79,190,206,.4)}
+.hb.pri:hover{background:#63cbd9}
+
+.wrap2{max-width:1400px;margin:0 auto;padding:18px 20px 40px}
+
+/* ── KPIs ──────────────────────────────────────────────────────────────── */
+.kpis2{display:grid;gap:11px;grid-template-columns:repeat(2,1fr);margin-bottom:16px}
+@media(min-width:900px){.kpis2{grid-template-columns:repeat(4,1fr)}}
+.k2{background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px 15px;
+  box-shadow:var(--sh-sm);display:flex;gap:12px;align-items:center;transition:transform .15s,box-shadow .15s}
+.k2:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.k2 .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none}
+.k2 .ic svg{width:18px;height:18px}
+.k2 .ic.a{background:linear-gradient(135deg,#e3f5f8,#cfeef3)}.k2 .ic.a svg{stroke:var(--blue)}
+.k2 .ic.r{background:var(--red-s)}.k2 .ic.r svg{stroke:var(--red)}
+.k2 .ic.o{background:var(--orange-s)}.k2 .ic.o svg{stroke:var(--orange)}
+.k2 .ic.g{background:var(--green-s)}.k2 .ic.g svg{stroke:var(--green)}
+.k2 .v{font-size:22px;font-weight:800;line-height:1.05;color:var(--navy);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.k2 .l{font-size:10.5px;color:var(--mute);font-weight:600;margin-top:2px;line-height:1.3}
+
+/* ── Aviso de detenidos ────────────────────────────────────────────────── */
+.stuck{border:1px solid #f3d3cf;background:linear-gradient(135deg,#fff6f5,#fdecec);border-radius:16px;
+  padding:15px 17px;margin-bottom:16px;box-shadow:var(--sh-sm)}
+.stuck h3{margin:0 0 9px;font-size:13px;font-weight:800;color:#a3312b;display:flex;align-items:center;gap:8px}
+.stuck h3 svg{width:16px;height:16px;stroke:#a3312b}
+.stuck .row{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:12.5px;color:#7a4440;
+  border-top:1px dashed #f0cfcb;cursor:pointer}
+.stuck .row:first-of-type{border-top:0}
+.stuck .row b{color:#8c2f27;font-weight:700}
+.stuck .row .d{margin-left:auto;font-weight:800;color:#a3312b;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ── Tablero ───────────────────────────────────────────────────────────── */
+.board{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x proximity}
+.col{flex:0 0 268px;scroll-snap-align:start;background:#fff;border:1px solid var(--border);
+  border-radius:16px;display:flex;flex-direction:column;max-height:66vh;box-shadow:var(--sh-sm)}
+.col-h{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.col-h .st{width:22px;height:22px;border-radius:7px;background:var(--aqua-s);color:var(--blue);
+  font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.col.espera .col-h .st{background:var(--orange-s);color:var(--orange)}
+.col-h .nm{font-size:12px;font-weight:700;color:var(--navy);line-height:1.25;letter-spacing:-.01em}
+.col-h .ct{margin-left:auto;font-size:11px;font-weight:800;background:var(--bg);color:var(--mute);
+  border-radius:20px;padding:2px 9px;font-variant-numeric:tabular-nums}
+.col-b{padding:10px;display:flex;flex-direction:column;gap:9px;overflow-y:auto;min-height:64px;flex:1}
+.col-b.drag-over{background:var(--aqua-s);border-radius:0 0 15px 15px}
+
+.pt{border:1px solid var(--border);border-left:3px solid var(--aqua);border-radius:12px;padding:11px 12px;
+  background:#fff;cursor:grab;transition:box-shadow .15s,transform .12s,border-color .15s}
+.pt:hover{box-shadow:var(--sh-md);transform:translateY(-1px);border-color:var(--aqua)}
+.pt:active{cursor:grabbing}
+.pt.warn{border-left-color:var(--red);background:linear-gradient(135deg,#fffafa,#fff)}
+.pt .n{font-size:13px;font-weight:700;color:var(--navy);line-height:1.3;letter-spacing:-.01em}
+.pt .m{font-size:11px;color:var(--mute);margin-top:4px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;
+  font-variant-numeric:tabular-nums}
+.pt .m .dias{display:inline-flex;align-items:center;gap:4px}
+.pt .m .dias svg{width:12px;height:12px;stroke:currentColor}
+.pt.warn .m .dias{color:var(--red);font-weight:800}
+.pt .bar{height:3px;border-radius:99px;background:var(--bg);margin-top:9px;overflow:hidden}
+.pt .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--aqua),var(--blue))}
+.pt .acts{display:flex;gap:6px;margin-top:9px}
+.pt .acts button,.pt .acts a{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
+  font:inherit;font-size:11px;font-weight:700;padding:7px 6px;border-radius:8px;min-height:34px;
+  border:1px solid var(--border);background:var(--bg);color:var(--navy);cursor:pointer;text-decoration:none;
+  transition:border-color .15s,background .15s}
+.pt .acts button:hover,.pt .acts a:hover{border-color:var(--aqua);background:var(--aqua-s)}
+.pt .acts .ico{flex:none;width:34px}
+.pt .acts svg{width:14px;height:14px;stroke:currentColor}
+.sortable-ghost{opacity:.32}
+.sortable-drag{box-shadow:var(--sh-md);transform:rotate(1.5deg)}
+.col-b .vacio{font-size:11px;color:#9fb2c1;text-align:center;padding:16px 6px;font-weight:600}
+
+/* ── Ficha lateral ─────────────────────────────────────────────────────── */
+.drawer{position:fixed;inset:0;background:rgba(15,63,104,.42);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:60;display:flex;justify-content:flex-end}
+.drawer.on{opacity:1;pointer-events:auto}
+.drawer .pane{width:min(420px,100%);background:#fff;height:100%;overflow-y:auto;
+  transform:translateX(22px);transition:transform .22s;display:flex;flex-direction:column}
+.drawer.on .pane{transform:none}
+.dh{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;
+  position:sticky;top:0;background:#fff;z-index:2}
+.dh h2{margin:0;font-size:16px;font-weight:800;color:var(--navy);letter-spacing:-.01em}
+.dh .sub{font-size:11.5px;color:var(--mute);margin-top:3px;font-weight:600}
+.dh .x{margin-left:auto;width:32px;height:32px;border-radius:9px;border:1px solid var(--border);
+  background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.dh .x svg{width:15px;height:15px;stroke:var(--mute)}
+.db{padding:18px 20px;display:flex;flex-direction:column;gap:18px}
+.prog{display:flex;gap:4px}
+.prog i{flex:1;height:5px;border-radius:99px;background:var(--bg)}
+.prog i.on{background:linear-gradient(90deg,var(--aqua),var(--blue))}
+.dsec h4{margin:0 0 9px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:800}
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tl li{position:relative;padding:0 0 13px 22px;font-size:12px;color:var(--navy)}
+.tl li:last-child{padding-bottom:0}
+.tl li::before{content:"";position:absolute;left:0;top:4px;width:12px;height:12px;border-radius:50%;
+  background:#fff;border:2px solid var(--aqua)}
+.tl li .t{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--mute);display:block;margin-top:2px}
+.exl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.exl li{font-size:12px;color:var(--navy);display:flex;gap:8px;align-items:flex-start;line-height:1.45}
+.exl li svg{width:14px;height:14px;stroke:var(--green);flex:none;margin-top:2px}
+.dfoot{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:8px}
+
+/* ── Lista de exámenes en el modal ─────────────────────────────────────── */
+.exbox{border:1px solid var(--border);border-radius:12px;background:var(--bg);padding:11px 13px;
+  display:flex;flex-direction:column;gap:2px;max-height:210px;overflow-y:auto}
+.exbox label{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;font-weight:500;
+  color:var(--navy);cursor:pointer;padding:7px 4px;line-height:1.4;border-radius:7px}
+.exbox label:hover{background:#fff}
+.exbox input{width:17px;height:17px;accent-color:var(--aqua);cursor:pointer;flex:none;margin-top:1px}
+.hint{font-size:11px;color:var(--mute);margin-top:6px;line-height:1.5}
+
+@media(max-width:760px){
+  .board{flex-direction:column;overflow-x:visible}
+  .col{flex:none;max-height:none}.col-b{max-height:none}
+  .drawer .pane{width:100%}
+  .modal{max-width:100%!important;border-radius:0!important;height:100%;max-height:100%}
+}
 </style>
 </head><body>
-<div class="pg-topbar">
-  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" stroke-linecap="round"/></svg> Embudo de Ortodoncia</h1>
-  <div class="spacer"></div>
-  <button class="btn-ghost" onclick="abrirMails()">✉ Avisos</button>
-  <button class="btn-ghost" onclick="exportCSV()">CSV</button>
-  <button class="btn-primary" onclick="nuevo()">+ Paciente</button>
-</div>
-<div class="wrap">
-  <div class="kpis" id="kpis"></div>
-  <div id="alerta"></div>
-  <div class="board" id="board"></div>
-  <div class="note">Desde que llega el interés hasta que se instala. El contador de cada tarjeta es <b>cuántos días lleva esperando esa etapa</b>, y se reinicia al moverla. Las etapas con punto ámbar dependen de un tercero — «Enviada a Dani» y «Respuesta a paciente» son donde se cae la gente. Cuando se instala, el seguimiento del tratamiento sigue en el módulo <b>Ortodoncia</b>.</div>
-</div>
 
-<div class="modal-bg" id="m-mail"><div class="modal">
-  <div class="modal-head"><h2>Avisos por correo</h2><div class="x" onclick="AlmaKit.closeModal('m-mail')">✕</div></div>
-  <div class="modal-body">
-    <div class="field"><label>¿A quién se le avisa?</label>
-      <input id="mm-mails" placeholder="dani@… , javiera@… , centro@…">
-      <div style="font-size:11px;color:#7d90a4;margin-top:5px">Separados por coma. Van todos en el mismo correo.</div></div>
-    <div class="field"><label>Cuándo se manda</label>
-      <label style="display:flex;gap:8px;align-items:center;font-weight:500;font-size:13px;margin-top:5px">
-        <input type="checkbox" id="mm-alta"> Cuando entra un paciente nuevo</label>
-      <label style="display:flex;gap:8px;align-items:center;font-weight:500;font-size:13px;margin-top:7px">
-        <input type="checkbox" id="mm-dani"> Cuando se le envía la radiografía a la ortodoncista</label></div>
-    <div class="note" style="margin-top:12px">El correo lleva <b>solo el nombre y la etapa</b> — nada clínico, sin RUT ni teléfono. Es un aviso de coordinación.</div>
-    <div id="mm-estado" style="font-size:12px;color:#7d90a4;margin-top:10px"></div>
+<div class="hero"><div class="in">
+  <div class="bdg"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10M11 18h2"/></svg></div>
+  <div>
+    <h1>Embudo de Ortodoncia</h1>
+    <p>Desde que llega el interés hasta que se instala. Arrastra las tarjetas entre columnas; el contador dice cuántos días lleva esperando esa etapa.</p>
   </div>
-  <div class="modal-foot">
-    <button class="btn-ghost" onclick="probarMail()" style="margin-right:auto">Enviar prueba</button>
-    <button class="btn-ghost" onclick="AlmaKit.closeModal('m-mail')">Cancelar</button>
-    <button class="btn-primary" onclick="guardarMails()">Guardar</button></div>
+  <div class="sp"></div>
+  <div class="hero-acts">
+    <span class="mode-pill"><span class="dot"></span><span id="pillTxt">En vivo</span></span>
+    <button class="hb" onclick="abrirExamenes()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/></svg> Exámenes</button>
+    <button class="hb" onclick="abrirMails()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> Avisos</button>
+    <button class="hb" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> CSV</button>
+    <button class="hb pri" onclick="nuevo()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Paciente</button>
+  </div>
 </div></div>
 
-<div class="modal-bg" id="m-p"><div class="modal">
+<div class="wrap2">
+  <div class="kpis2" id="kpis"></div>
+  <div id="stuck"></div>
+  <div class="board" id="board"></div>
+</div>
+
+<!-- Ficha lateral -->
+<div class="drawer" id="dw" onclick="if(event.target===this)cerrarDw()"><div class="pane">
+  <div class="dh">
+    <div><h2 id="dw-n">—</h2><div class="sub" id="dw-s">—</div></div>
+    <div class="x" onclick="cerrarDw()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="db">
+    <div><div class="prog" id="dw-prog"></div><div class="hint" id="dw-progtxt"></div></div>
+    <div class="dsec" id="dw-exwrap"><h4>Solicitud de exámenes</h4><ul class="exl" id="dw-ex"></ul></div>
+    <div class="dsec" id="dw-notwrap"><h4>Notas</h4><p style="font-size:12.5px;color:var(--navy);margin:0;line-height:1.55" id="dw-not"></p></div>
+    <div class="dsec"><h4>Línea de tiempo</h4><ul class="tl" id="dw-tl"></ul></div>
+  </div>
+  <div class="dfoot">
+    <button class="btn-ghost" style="flex:1" onclick="editarDesdeDw()">Editar</button>
+    <button class="btn-primary" style="flex:1" id="dw-wa">WhatsApp</button>
+  </div>
+</div></div>
+
+<!-- Modal paciente -->
+<div class="modal-bg" id="m-p"><div class="modal" style="max-width:520px">
   <div class="modal-head"><h2 id="p-title">Paciente</h2><div class="x" onclick="AlmaKit.closeModal('m-p')">✕</div></div>
   <div class="modal-body"><input type="hidden" id="p-id">
     <div class="field"><label>Nombre del paciente</label><input id="p-nombre" placeholder="Nombre y apellido"></div>
@@ -80,7 +199,11 @@
     </div>
     <div class="field-row">
       <div class="field"><label>Etapa</label><select id="p-etapa"></select></div>
-      <div class="field"><label>Cupones vendidos (CLP)</label><input id="p-cup" type="number" value="0"></div>
+      <div class="field"><label>Cupones vendidos</label><input id="p-cup" type="number" value="0"></div>
+    </div>
+    <div class="field" id="p-exwrap"><label>Solicitud de exámenes</label>
+      <div class="exbox" id="p-ex"></div>
+      <div class="hint">Va en el correo que se manda al equipo. Se edita la lista desde <b>Exámenes</b>, arriba.</div>
     </div>
     <div class="field"><label>Notas</label><input id="p-notas" placeholder="Ej: espera presupuesto, falta pieza 36…"></div>
   </div>
@@ -90,76 +213,189 @@
     <button class="btn-primary" onclick="guardar()">Guardar</button></div>
 </div></div>
 
+<!-- Modal avisos -->
+<div class="modal-bg" id="m-mail"><div class="modal">
+  <div class="modal-head"><h2>Avisos por correo</h2><div class="x" onclick="AlmaKit.closeModal('m-mail')">✕</div></div>
+  <div class="modal-body">
+    <div class="field"><label>¿A quién se le avisa?</label>
+      <input id="mm-mails" placeholder="dani@… , javiera@… , centro@…">
+      <div class="hint">Separados por coma. Van todos en el mismo correo.</div></div>
+    <div class="field"><label>Cuándo se manda</label>
+      <label style="display:flex;gap:9px;align-items:center;font-weight:600;font-size:12.5px;margin-top:6px;cursor:pointer">
+        <input type="checkbox" id="mm-alta" style="width:17px;height:17px;accent-color:var(--aqua)"> Cuando entra un paciente nuevo</label>
+      <label style="display:flex;gap:9px;align-items:center;font-weight:600;font-size:12.5px;margin-top:9px;cursor:pointer">
+        <input type="checkbox" id="mm-dani" style="width:17px;height:17px;accent-color:var(--aqua)"> Cuando se le envía la radiografía a la ortodoncista</label></div>
+    <div class="note" style="margin-top:12px">El correo lleva el nombre, la etapa y la solicitud de exámenes. Nada clínico, sin RUT ni teléfono.</div>
+    <div class="hint" id="mm-estado"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn-ghost" onclick="probarMail()" style="margin-right:auto">Enviar prueba</button>
+    <button class="btn-ghost" onclick="AlmaKit.closeModal('m-mail')">Cancelar</button>
+    <button class="btn-primary" onclick="guardarMails()">Guardar</button></div>
+</div></div>
+
+<!-- Modal catálogo de exámenes -->
+<div class="modal-bg" id="m-ex"><div class="modal">
+  <div class="modal-head"><h2>Lo que se pide siempre</h2><div class="x" onclick="AlmaKit.closeModal('m-ex')">✕</div></div>
+  <div class="modal-body">
+    <div class="hint" style="margin:0 0 12px">Los marcados vienen pre-seleccionados al ingresar un paciente. Salieron del catálogo del convenio; ajústalos a como los pides de verdad.</div>
+    <div id="ex-list" style="display:flex;flex-direction:column;gap:7px"></div>
+    <div style="display:flex;gap:7px;margin-top:11px">
+      <input id="ex-new" placeholder="Agregar otro examen…" style="flex:1">
+      <button class="btn-ghost" onclick="addEx()">Agregar</button></div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="AlmaKit.closeModal('m-ex')">Cancelar</button>
+    <button class="btn-primary" onclick="guardarEx()">Guardar</button></div>
+</div></div>
+
 <script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/orto-embudo";</script>
 <script src="/static/alma_kit.js"></script>
+<script src="/static/sortable-1.15.2.min.js"></script>
 <script>
 const {api,clp,esc,toast,openModal,closeModal}=AlmaKit;
-let ETAPAS=[], FINALES=[], ORDEN=[], DATA=null;
+const I={
+  users:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
+  alert:'<path d="M10.29 3.86 1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4 20-7z"/>',
+  coins:'<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1110.34 18M7 6h1v4M16.71 13.88l.7.71-2.82 2.82"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  wa:'<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
+  chk:'<path d="M20 6 9 17l-5-5"/>',
+  left:'<path d="m15 18-6-6 6-6"/>', right:'<path d="m9 18 6-6-6-6"/>'
+};
+const svg=(p,w)=>`<svg viewBox="0 0 24 24" fill="none" stroke-width="${w||2}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+let ETAPAS=[],FINALES=[],ORDEN=[],DATA=null,EXCAT=[],DWID=null;
 
 async function init(){
   const e=await api("/etapas"); ETAPAS=e.etapas; FINALES=e.finales; ORDEN=e.orden;
-  const sel=document.getElementById('p-etapa');
-  sel.innerHTML=ETAPAS.concat(FINALES).map(x=>`<option value="${x.id}">${esc(x.label)}</option>`).join('');
+  document.getElementById('p-etapa').innerHTML=ETAPAS.concat(FINALES)
+    .map(x=>`<option value="${x.id}">${esc(x.label)}</option>`).join('');
+  try{ EXCAT=(await api("/examenes")).items; }catch(e){ EXCAT=[]; }
   await load();
 }
 async function load(){
   DATA=await api("/tablero?incluir_finales=0");
-  document.getElementById('kpis').innerHTML=[
-    ['En proceso',DATA.total_activos,''],
-    ['Atrasados',DATA.atrasados,DATA.atrasados?'money':''],
-    ['Esperando a Dani',DATA.esperando_dani,''],
-    ['Cupones vendidos',clp(DATA.valor_cupones),'']
-  ].map(([l,v,c])=>`<div class="kpi ${c}"><div class="k-label">${l}</div><div class="k-val">${v}</div></div>`).join('');
-
-  document.getElementById('alerta').innerHTML = DATA.peor.length
-    ? `<div class="alerta"><h3>Llevan mucho tiempo detenidos</h3><ul>${DATA.peor.map(p=>
-        `<li><b>${esc(p.paciente)}</b> — ${esc(p.etapa_label)}, ${p.dias_en_etapa} días (límite ${p.limite})</li>`).join('')}</ul></div>` : '';
-
-  document.getElementById('board').innerHTML=DATA.columnas.map(c=>`
-    <div class="col ${c.espera?'espera':''}">
-      <div class="col-h"><span class="dot"></span><span class="nm">${esc(c.label)}</span><span class="ct">${c.n}</span></div>
-      <div class="col-b">${c.pacientes.length?c.pacientes.map(p=>tarjeta(p)).join(''):'<div class="vacio">—</div>'}</div>
-    </div>`).join('');
+  pintarKpis(); pintarStuck(); pintarBoard();
 }
+function pintarKpis(){
+  document.getElementById('kpis').innerHTML=[
+    ['En proceso',DATA.total_activos,'a',I.users],
+    ['Detenidos',DATA.atrasados,DATA.atrasados?'r':'g',I.alert],
+    ['Esperando a Dani',DATA.esperando_dani,'o',I.send],
+    ['Cupones vendidos',clp(DATA.valor_cupones),'g',I.coins]
+  ].map(([l,v,c,ic])=>`<div class="k2"><div class="ic ${c}">${svg(ic)}</div>
+    <div><div class="v">${v}</div><div class="l">${l}</div></div></div>`).join('');
+}
+function pintarStuck(){
+  const s=document.getElementById('stuck');
+  if(!DATA.peor.length){ s.innerHTML=''; return; }
+  s.innerHTML=`<div class="stuck"><h3>${svg(I.alert)} Llevan mucho tiempo detenidos</h3>
+    ${DATA.peor.map(p=>`<div class="row" onclick="abrirDw(${p.id})"><b>${esc(p.paciente)}</b>
+      <span>${esc(p.etapa_label)}</span><span class="d">${p.dias_en_etapa} días</span></div>`).join('')}</div>`;
+}
+function pintarBoard(){
+  document.getElementById('board').innerHTML=DATA.columnas.map((c,i)=>`
+    <div class="col ${c.espera?'espera':''}">
+      <div class="col-h"><span class="st">${i+1}</span><span class="nm">${esc(c.label)}</span>
+        <span class="ct">${c.n}</span></div>
+      <div class="col-b" data-etapa="${c.id}">${c.pacientes.length?c.pacientes.map(tarjeta).join(''):'<div class="vacio">Sin pacientes</div>'}</div>
+    </div>`).join('');
+  document.querySelectorAll('.col-b').forEach(el=>{
+    Sortable.create(el,{group:'embudo',animation:170,ghostClass:'sortable-ghost',dragClass:'sortable-drag',
+      filter:'.vacio,.acts',preventOnFilter:false,delayOnTouchOnly:true,delay:130,
+      onEnd:async ev=>{
+        const id=+ev.item.dataset.id, etapa=ev.to.dataset.etapa;
+        if(etapa===ev.from.dataset.etapa) return;
+        try{ await api("/"+id,{method:"PATCH",body:JSON.stringify({etapa})});
+          toast("Movido a "+(ORDEN.includes(etapa)?nombreEtapa(etapa):etapa)); load();
+        }catch(e){ toast(e.message,'err'); load(); }
+      }});
+  });
+}
+function nombreEtapa(id){ const t=ETAPAS.concat(FINALES).find(x=>x.id===id); return t?t.label:id; }
 function tarjeta(p){
   const i=ORDEN.indexOf(p.etapa), prev=i>0?ORDEN[i-1]:null, next=i<ORDEN.length-1?ORDEN[i+1]:null;
-  const wa=p.telefono?`<a href="https://wa.me/${esc((p.telefono||'').replace(/[^0-9]/g,''))}" target="_blank" rel="noopener" title="WhatsApp">💬</a>`:'';
-  return `<div class="pt ${p.atrasado?'warn':''}">
-    <div class="n" onclick="editar(${p.id})" style="cursor:pointer">${esc(p.paciente)}</div>
-    <div class="m"><span>${p.atrasado?'<b>'+p.dias_en_etapa+' días</b>':p.dias_en_etapa+' días'}</span>
+  const pct=Math.round(((i+1)/ETAPAS.length)*100);
+  const tel=(p.telefono||'').replace(/[^0-9]/g,'');
+  return `<div class="pt ${p.atrasado?'warn':''}" data-id="${p.id}">
+    <div class="n" onclick="abrirDw(${p.id})">${esc(p.paciente)}</div>
+    <div class="m"><span class="dias">${svg(I.clock)}${p.dias_en_etapa} d</span>
       ${p.valor_cupones?`<span>${clp(p.valor_cupones)}</span>`:''}</div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="acts">
-      ${prev?`<button onclick="mover(${p.id},'${prev}')" title="Volver">←</button>`:''}
-      ${wa}
-      ${next?`<button onclick="mover(${p.id},'${next}')" title="Avanzar">Avanzar →</button>`:''}
+      ${prev?`<button class="ico" onclick="mover(${p.id},'${prev}')" title="Volver">${svg(I.left,2.3)}</button>`:''}
+      ${tel?`<a class="ico" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}
+      ${next?`<button onclick="mover(${p.id},'${next}')">Avanzar ${svg(I.right,2.3)}</button>`:''}
     </div></div>`;
 }
 async function mover(id,etapa){
-  try{ await api("/"+id,{method:"PATCH",body:JSON.stringify({etapa})}); toast("Movido"); load(); }
-  catch(e){ toast(e.message,'err'); }
+  try{ await api("/"+id,{method:"PATCH",body:JSON.stringify({etapa})});
+    toast("Movido a "+nombreEtapa(etapa)); load(); }catch(e){ toast(e.message,'err'); }
+}
+
+/* ── Ficha lateral ── */
+async function abrirDw(id){
+  DWID=id;
+  try{
+    const p=await api("/paciente/"+id);
+    document.getElementById('dw-n').textContent=p.paciente;
+    document.getElementById('dw-s').textContent=p.etapa_label+" · "+p.dias_en_etapa+" días en esta etapa";
+    const total=p.total_etapas, hasta=Math.min(p.orden,total);
+    document.getElementById('dw-prog').innerHTML=Array.from({length:total},(_,i)=>
+      `<i class="${i<hasta?'on':''}"></i>`).join('');
+    document.getElementById('dw-progtxt').textContent=`Etapa ${hasta} de ${total}`;
+    let ex=[]; try{ ex=JSON.parse(p.examenes||"[]"); }catch(e){}
+    document.getElementById('dw-exwrap').style.display=ex.length?'':'none';
+    document.getElementById('dw-ex').innerHTML=ex.map(x=>`<li>${svg(I.chk,2.4)}${esc(x)}</li>`).join('');
+    document.getElementById('dw-notwrap').style.display=p.notas?'':'none';
+    document.getElementById('dw-not').textContent=p.notas||"";
+    document.getElementById('dw-tl').innerHTML=(p.pasos.length?p.pasos:[{ts:p.creado,a:'creado'}])
+      .slice().reverse().map(s=>`<li>${s.de?`${esc(s.de)} → <b>${esc(s.a)}</b>`:esc(s.a)}
+        <span class="t">${esc(s.ts||'')}</span></li>`).join('');
+    const tel=(p.telefono||'').replace(/[^0-9]/g,'');
+    const wa=document.getElementById('dw-wa');
+    wa.style.display=tel?'':'none';
+    wa.onclick=()=>window.open("https://wa.me/"+tel,"_blank","noopener");
+    document.getElementById('dw').classList.add('on');
+  }catch(e){ toast(e.message,'err'); }
+}
+function cerrarDw(){ document.getElementById('dw').classList.remove('on'); }
+function editarDesdeDw(){ cerrarDw(); editar(DWID); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrarDw(); });
+
+/* ── Modal paciente ── */
+function pintarExamenes(marcados){
+  const box=document.getElementById('p-ex');
+  document.getElementById('p-exwrap').style.display=EXCAT.length?'':'none';
+  box.innerHTML=EXCAT.map((x,i)=>{
+    const on=marcados?marcados.includes(x.n):!!x.d;
+    return `<label><input type="checkbox" value="${esc(x.n)}" ${on?'checked':''}><span>${esc(x.n)}</span></label>`;
+  }).join('');
 }
 function nuevo(){
   document.getElementById('p-title').textContent="Nuevo paciente";
-  document.getElementById('p-id').value=""; document.getElementById('p-nombre').value="";
-  document.getElementById('p-tel').value=""; document.getElementById('p-rut').value="";
-  document.getElementById('p-cup').value=0; document.getElementById('p-notas').value="";
+  ['p-id','p-nombre','p-tel','p-rut','p-notas'].forEach(x=>document.getElementById(x).value="");
+  document.getElementById('p-cup').value=0;
   document.getElementById('p-etapa').value="proceso_inicial";
   document.getElementById('p-del').style.display='none';
-  openModal('m-p'); setTimeout(()=>document.getElementById('p-nombre').focus(),60);
+  pintarExamenes(null);
+  openModal('m-p'); setTimeout(()=>document.getElementById('p-nombre').focus(),70);
 }
-function editar(id){
-  let p=null; DATA.columnas.forEach(c=>c.pacientes.forEach(x=>{ if(x.id===id) p=x; }));
-  if(!p) return;
-  document.getElementById('p-title').textContent=p.paciente;
-  document.getElementById('p-id').value=p.id;
-  document.getElementById('p-nombre').value=p.paciente;
-  document.getElementById('p-tel').value=p.telefono||"";
-  document.getElementById('p-rut').value=p.rut||"";
-  document.getElementById('p-cup').value=p.valor_cupones||0;
-  document.getElementById('p-notas').value=p.notas||"";
-  document.getElementById('p-etapa').value=p.etapa;
-  document.getElementById('p-del').style.display='';
-  openModal('m-p');
+async function editar(id){
+  try{
+    const p=await api("/paciente/"+id);
+    document.getElementById('p-title').textContent=p.paciente;
+    document.getElementById('p-id').value=p.id;
+    document.getElementById('p-nombre').value=p.paciente;
+    document.getElementById('p-tel').value=p.telefono||"";
+    document.getElementById('p-rut').value=p.rut||"";
+    document.getElementById('p-cup').value=p.valor_cupones||0;
+    document.getElementById('p-notas').value=p.notas||"";
+    document.getElementById('p-etapa').value=p.etapa;
+    document.getElementById('p-del').style.display='';
+    document.getElementById('p-exwrap').style.display='none';
+    openModal('m-p');
+  }catch(e){ toast(e.message,'err'); }
 }
 async function guardar(){
   const id=document.getElementById('p-id').value;
@@ -170,9 +406,10 @@ async function guardar(){
     valor_cupones:+document.getElementById('p-cup').value||0,
     notas:document.getElementById('p-notas').value.trim() };
   if(!body.paciente){ toast("Falta el nombre",'err'); return; }
+  if(!id) body.examenes=[...document.querySelectorAll('#p-ex input:checked')].map(x=>x.value);
   try{
     await api(id?("/"+id):"",{method:id?"PATCH":"POST",body:JSON.stringify(body)});
-    closeModal('m-p'); toast("Guardado"); load();
+    closeModal('m-p'); toast(id?"Guardado":"Paciente agregado"); load();
   }catch(e){ toast(e.message,'err'); }
 }
 async function borrar(){
@@ -181,6 +418,31 @@ async function borrar(){
   try{ await api("/"+id,{method:"DELETE"}); closeModal('m-p'); toast("Eliminado"); load(); }
   catch(e){ toast(e.message,'err'); }
 }
+
+/* ── Catálogo de exámenes ── */
+function abrirExamenes(){ pintarExCat(); openModal('m-ex'); }
+function pintarExCat(){
+  document.getElementById('ex-list').innerHTML=EXCAT.map((x,i)=>`
+    <div style="display:flex;gap:9px;align-items:center;background:var(--bg);border:1px solid var(--border);
+                border-radius:9px;padding:8px 11px">
+      <input type="checkbox" ${x.d?'checked':''} data-i="${i}" style="width:17px;height:17px;accent-color:var(--aqua)">
+      <span style="flex:1;font-size:12.5px;font-weight:500;line-height:1.4">${esc(x.n)}</span>
+      <button class="icon-btn" onclick="delEx(${i})" title="Quitar">✕</button></div>`).join('');
+  document.querySelectorAll('#ex-list input').forEach(el=>
+    el.addEventListener('change',()=>{ EXCAT[+el.dataset.i].d=el.checked?1:0; }));
+}
+function addEx(){
+  const v=document.getElementById('ex-new').value.trim(); if(!v) return;
+  EXCAT.push({n:v,d:1}); document.getElementById('ex-new').value=""; pintarExCat();
+}
+function delEx(i){ EXCAT.splice(i,1); pintarExCat(); }
+async function guardarEx(){
+  try{ const r=await api("/examenes",{method:"POST",body:JSON.stringify({items:EXCAT})});
+    EXCAT=r.items; closeModal('m-ex'); toast("Lista guardada"); }
+  catch(e){ toast(e.message,'err'); }
+}
+
+/* ── Avisos ── */
 async function abrirMails(){
   try{ const c=await api("/config");
     document.getElementById('mm-mails').value=c.mails||"";
@@ -188,7 +450,7 @@ async function abrirMails(){
     document.getElementById('mm-dani').checked=c.avisar_dani;
     document.getElementById('mm-estado').textContent = c.hay_credencial
       ? (c.destinatarios.length? `Avisando a ${c.destinatarios.length} correo(s).` : "Falta cargar los correos: por ahora no se avisa a nadie.")
-      : "⚠ El centro no tiene configurado su correo de salida; avísale a Rodrigo.";
+      : "El centro no tiene configurado su correo de salida; avísale a Rodrigo.";
     openModal('m-mail');
   }catch(e){ toast(e.message,'err'); }
 }
@@ -204,8 +466,7 @@ async function guardarMails(){
 }
 async function probarMail(){
   try{ await guardarMailsSilencioso(); const r=await api("/config/probar",{method:"POST"});
-    toast("Prueba enviada a "+r.enviados_a.length+" correo(s)");
-  }catch(e){ toast(e.message,'err'); }
+    toast("Prueba enviada a "+r.enviados_a.length+" correo(s)"); }catch(e){ toast(e.message,'err'); }
 }
 function exportCSV(){ location.href="/alma/api/orto-embudo/export?token="+encodeURIComponent(window.ALMA_TOKEN); }
 init();

@@ -5,66 +5,172 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/alma_kit.css">
 <style>
-.tabs{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
-.tabs button{font:inherit;font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;
-  border:1px solid var(--border,#e5e9f0);background:#fff;color:var(--navy,#16324f);cursor:pointer}
-.tabs button.on{background:var(--navy,#16324f);border-color:var(--navy,#16324f);color:#fff}
-.pill{font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap}
-.pill.pend{background:#fdf3e3;color:#a06c12}
-.pill.pag{background:#eaf6ee;color:#2c6b41}
-.aviso{border:1px solid #f0dcc6;background:#fffaf3;border-radius:12px;padding:12px 14px;margin-bottom:14px;
-  font-size:12px;color:#7a5a2e;line-height:1.6}
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
+  color:#fff;padding:22px 20px 20px}
+.hero::after{content:"";position:absolute;right:-90px;top:-120px;width:340px;height:340px;
+  background:radial-gradient(circle,rgba(79,190,206,.38),transparent 70%);pointer-events:none}
+.hero .in{position:relative;max-width:1400px;margin:0 auto;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.hero .bdg{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;flex:none}
+.hero .bdg svg{width:21px;height:21px;stroke:#fff}
+.hero h1{font-size:19px;font-weight:800;margin:0;letter-spacing:-.01em}
+.hero p{margin:5px 0 0;font-size:12.5px;color:#c3ddea;max-width:62ch;line-height:1.55}
+.hero .sp{flex:1;min-width:12px}
+.hero-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hb{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:9px 14px;font-family:inherit;
+  font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.24);
+  background:rgba(255,255,255,.1);color:#fff;transition:background .15s,transform .12s;min-height:40px}
+.hb:hover{background:rgba(255,255,255,.2)}.hb:active{transform:translateY(1px)}
+.hb svg{width:15px;height:15px;stroke:currentColor}
+.hb.pri{background:var(--aqua);border-color:var(--aqua);color:#08303c;box-shadow:0 3px 14px rgba(79,190,206,.4)}
+.hb.pri:hover{background:#63cbd9}
+.hb input[type=month]{background:transparent;border:0;color:#fff;font:inherit;font-size:12.5px;font-weight:700;
+  cursor:pointer;color-scheme:dark}
+
+.wrap2{max-width:1400px;margin:0 auto;padding:18px 20px 40px}
+
+.tabs{display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap}
+.tabs button{font:inherit;font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:10px;min-height:40px;
+  border:1px solid var(--border);background:#fff;color:var(--navy);cursor:pointer;transition:all .15s;
+  display:inline-flex;align-items:center;gap:7px}
+.tabs button:hover{border-color:var(--aqua)}
+.tabs button.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--sh-sm)}
+.tabs button .cnt{font-size:11px;font-weight:800;background:var(--bg);color:var(--mute);border-radius:20px;padding:1px 8px}
+.tabs button.on .cnt{background:rgba(255,255,255,.18);color:#fff}
+
+.kpis2{display:grid;gap:11px;grid-template-columns:repeat(2,1fr);margin-bottom:16px}
+@media(min-width:900px){.kpis2{grid-template-columns:repeat(4,1fr)}}
+.k2{background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px 15px;
+  box-shadow:var(--sh-sm);display:flex;gap:12px;align-items:center;transition:transform .15s,box-shadow .15s}
+.k2:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.k2 .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none}
+.k2 .ic svg{width:18px;height:18px}
+.k2 .ic.a{background:linear-gradient(135deg,#e3f5f8,#cfeef3)}.k2 .ic.a svg{stroke:var(--blue)}
+.k2 .ic.o{background:var(--orange-s)}.k2 .ic.o svg{stroke:var(--orange)}
+.k2 .ic.g{background:var(--green-s)}.k2 .ic.g svg{stroke:var(--green)}
+.k2 .v{font-size:21px;font-weight:800;line-height:1.05;color:var(--navy);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.k2 .l{font-size:10.5px;color:var(--mute);font-weight:600;margin-top:2px;line-height:1.3}
+
+.grid2{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:1000px){.grid2{grid-template-columns:1.35fr 1fr}}
+.pan{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh-sm);overflow:hidden}
+.pan-h{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.pan-h .ph{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#e3f5f8,#cfeef3);
+  display:flex;align-items:center;justify-content:center;flex:none}
+.pan-h .ph svg{width:15px;height:15px;stroke:var(--blue)}
+.pan-h h3{margin:0;font-size:13px;font-weight:800;color:var(--navy)}
+.pan-h .sp{flex:1}
+.pan-b{padding:14px 16px}
+.chartbox{position:relative;height:230px}
+
+.rapido{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.rapido button{font:inherit;font-size:12px;font-weight:700;padding:11px 12px;border-radius:12px;min-height:52px;
+  border:1px solid var(--border);background:#fff;color:var(--navy);cursor:pointer;text-align:left;line-height:1.3;
+  box-shadow:var(--sh-sm);transition:all .15s}
+.rapido button:hover{border-color:var(--aqua);transform:translateY(-2px);box-shadow:var(--sh-md)}
+.rapido button small{display:block;color:var(--blue);font-weight:800;margin-top:3px;font-size:12px;
+  font-variant-numeric:tabular-nums}
+
+.pill{font-size:10.5px;font-weight:800;border-radius:20px;padding:3px 10px;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:5px}
+.pill.pend{background:var(--orange-s);color:#a06c12}
+.pill.pag{background:var(--green-s);color:#1d7a41}
+.pill i{width:6px;height:6px;border-radius:50%;background:currentColor;display:block}
+
+.aviso{border:1px solid #f0dcc6;background:linear-gradient(135deg,#fffaf3,#fef5e6);border-radius:16px;
+  padding:14px 16px;margin-bottom:16px;font-size:12.5px;color:#7a5a2e;line-height:1.6;box-shadow:var(--sh-sm)}
 .aviso b{color:#5d4320}
-.rapido{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;margin-bottom:12px}
-.rapido button{font:inherit;font-size:12px;font-weight:600;padding:10px 8px;border-radius:10px;
-  border:1px solid var(--border,#e5e9f0);background:#fff;color:var(--navy,#16324f);cursor:pointer;text-align:left;line-height:1.3}
-.rapido button:hover{border-color:#8aa6c0}
-.rapido button small{display:block;color:#7d90a4;font-weight:500;margin-top:2px}
+.aviso.rojo{border-color:#f3d3cf;background:linear-gradient(135deg,#fff6f5,#fdecec);color:#7a4440}
+.aviso.rojo b{color:#8c2f27}
+
+.liqrow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border)}
+.liqrow:last-child{border-bottom:0}
+.liqrow .nm{font-weight:700;font-size:13px;color:var(--navy);flex:1;min-width:0}
+.liqrow .n{font-size:11px;color:var(--mute);font-weight:600}
+.liqrow .amt{font-size:16px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+.liqrow .btns{display:flex;gap:6px}
+.liqrow button{font:inherit;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;min-height:34px;
+  border:1px solid var(--border);background:var(--bg);color:var(--navy);cursor:pointer}
+.liqrow button:hover{border-color:var(--aqua);background:var(--aqua-s)}
+.liqrow button.done{background:var(--green-s);border-color:#bfe6cd;color:#1d7a41}
+
+.hint{font-size:11px;color:var(--mute);margin-top:6px;line-height:1.5}
+@media(max-width:760px){
+  .chartbox{height:200px}
+  .modal{max-width:100%!important;border-radius:0!important;height:100%;max-height:100%}
+  .liqrow{flex-wrap:wrap}.liqrow .amt{margin-left:auto}
+}
 </style>
 </head><body>
-<div class="pg-topbar">
-  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg> Cargos al profesional</h1>
-  <div class="spacer"></div>
-  <input id="mes" type="month" style="font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:9px;padding:7px 10px;color:var(--navy)">
-  <button class="btn-ghost" onclick="exportCSV()">CSV</button>
-  <button class="btn-primary" onclick="nuevo()">+ Anotar</button>
-</div>
-<div class="wrap">
+<div class="hero"><div class="in">
+  <div class="bdg"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div>
+    <h1>Cargos al profesional</h1>
+    <p>Radiografías, laboratorio e insumos que se le descuentan a cada profesional. Se anota cuando pasa, no a fin de mes.</p>
+  </div>
+  <div class="sp"></div>
+  <div class="hero-acts">
+    <label class="hb"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><input type="month" id="mes"></label>
+    <button class="hb" onclick="importar()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Importar vales</button>
+    <button class="hb" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg> CSV</button>
+    <button class="hb pri" onclick="nuevo()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Anotar</button>
+  </div>
+</div></div>
+
+<div class="wrap2">
   <div class="tabs">
-    <button id="t-reg" class="on" onclick="tab('reg')">Lo anotado</button>
-    <button id="t-liq" onclick="tab('liq')">A descontar este mes</button>
-    <button id="t-cat" onclick="tab('cat')">Qué se cobra</button>
+    <button id="t-reg" class="on" onclick="tab('reg')">Lo anotado <span class="cnt" id="c-reg">0</span></button>
+    <button id="t-liq" onclick="tab('liq')">A descontar <span class="cnt" id="c-liq">0</span></button>
+    <button id="t-cat" onclick="tab('cat')">Qué se cobra <span class="cnt" id="c-cat">0</span></button>
   </div>
 
   <section id="v-reg">
-    <div class="kpis" id="kpis"></div>
+    <div class="kpis2" id="kpis"></div>
     <div class="rapido" id="rapido"></div>
-    <div class="card"><div class="card-head">Cargos del mes
-      <span class="spacer"></span>
-      <select id="f-estado" onchange="load()" style="font:inherit;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:5px 8px">
-        <option value="">Todos</option><option value="pendiente">Pendientes</option><option value="pagado">Pagados</option></select>
-      <button class="btn-ghost" onclick="importar()" title="Trae las radiografías del convenio Imagendent">↓ Importar vales</button></div>
-      <table><thead><tr><th>Fecha</th><th>Profesional</th><th>Qué</th><th class="hide-sm">Paciente</th><th class="num">Total</th><th>Estado</th><th class="num"></th></tr></thead>
-      <tbody id="tbody"></tbody></table>
-      <div id="empty" class="empty" style="display:none">Nada anotado este mes. Pulsa «+ Anotar» apenas ocupes una radiografía, un trabajo de laboratorio o una cubeta.</div></div>
-    <div class="note">Cada cosa que se le cobra al profesional se anota acá cuando pasa, no a fin de mes. Lo <b>pendiente</b> es lo que hay que descontarle en la liquidación; al descontarlo, márcalo como pagado y deja de sumar.</div>
+    <div class="grid2">
+      <div class="pan">
+        <div class="pan-h"><span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+          <h3>Cargos del mes</h3><span class="sp"></span>
+          <select id="f-estado" onchange="load()" style="font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--navy);background:var(--bg)">
+            <option value="">Todos</option><option value="pendiente">Pendientes</option><option value="pagado">Descontados</option></select></div>
+        <table><thead><tr><th>Fecha</th><th>Profesional</th><th>Qué</th><th class="hide-sm">Paciente</th><th class="num">Total</th><th>Estado</th><th class="num"></th></tr></thead>
+        <tbody id="tbody"></tbody></table>
+        <div id="empty" class="empty" style="display:none">Nada anotado este mes. Pulsa «Anotar» apenas ocupes una radiografía, un trabajo de laboratorio o una cubeta.</div>
+      </div>
+      <div class="pan">
+        <div class="pan-h"><span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/></svg></span><h3>Por categoría</h3></div>
+        <div class="pan-b"><div class="chartbox"><canvas id="chCat"></canvas></div></div>
+      </div>
+    </div>
   </section>
 
   <section id="v-liq" style="display:none">
-    <div class="aviso">Esto es lo que hay que <b>descontar en la liquidación de honorarios</b> de este mes. Suma solo los cargos <b>pendientes</b>. Cuando descuentes a alguien, marca sus cargos como pagados para que no se vuelvan a contar el mes siguiente.</div>
-    <div class="card"><div class="card-head">A descontar por profesional <span id="liq-tot" class="badge mute"></span></div>
-      <table><thead><tr><th>Profesional</th><th class="num">Cargos</th><th class="num">A descontar</th><th class="num"></th></tr></thead>
-      <tbody id="liq-body"></tbody></table>
-      <div id="liq-empty" class="empty" style="display:none">Sin cargos pendientes este mes.</div></div>
+    <div class="aviso">Esto es lo que hay que <b>descontar en la liquidación de honorarios</b> de este mes. Suma solo los cargos <b>pendientes</b>. Al descontarle a alguien, usa «Marcar descontado» y sus cargos dejan de contarse el mes siguiente.</div>
+    <div class="grid2">
+      <div class="pan">
+        <div class="pan-h"><span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8"/></svg></span>
+          <h3>A descontar por profesional</h3><span class="sp"></span><span id="liq-tot" class="badge mute"></span></div>
+        <div id="liq-body"></div>
+        <div id="liq-empty" class="empty" style="display:none">Sin cargos pendientes este mes.</div>
+      </div>
+      <div class="pan">
+        <div class="pan-h"><span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg></span><h3>Reparto</h3></div>
+        <div class="pan-b"><div class="chartbox"><canvas id="chProf"></canvas></div></div>
+      </div>
+    </div>
   </section>
 
   <section id="v-cat" style="display:none">
-    <div class="aviso" id="cat-aviso"></div>
-    <div class="card"><div class="card-head">Catálogo de cobros <span class="spacer"></span>
-      <button class="btn-primary" onclick="nuevoCat()">+ Ítem</button></div>
-      <table><thead><tr><th>Ítem</th><th>Categoría</th><th class="num">Precio</th><th class="hide-sm">Unidad</th><th class="num"></th></tr></thead>
-      <tbody id="cat-body"></tbody></table></div>
-    <div class="note">Los ítems en <b>$0</b> están sin precio: nadie sabe a cuánto se cobran salvo tú, así que quedaron en cero a propósito en vez de inventar un valor que después descuenta de más o de menos. Los insumos vienen del módulo Inventario Dental con el precio de MayorDent — ese es el <i>costo</i>, hay que confirmar a cuánto se cobra.</div>
+    <div class="aviso rojo" id="cat-aviso"></div>
+    <div class="pan">
+      <div class="pan-h"><span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 7h-9M14 17H5M17 3l3 4-3 4M7 13l-3 4 3 4"/></svg></span>
+        <h3>Catálogo de cobros</h3><span class="sp"></span>
+        <button class="btn-primary" onclick="nuevoCat()">+ Ítem</button></div>
+      <table><thead><tr><th>Ítem</th><th class="hide-sm">Categoría</th><th class="num">Precio</th><th class="hide-sm">Unidad</th><th class="num"></th></tr></thead>
+      <tbody id="cat-body"></tbody></table>
+    </div>
+    <div class="note" style="margin-top:14px">Los ítems en <b>$0</b> están sin precio: quedaron en cero a propósito en vez de inventar un valor que después descuenta de más o de menos. Los insumos vienen de Inventario Dental con el precio de MayorDent — ese es el <i>costo</i>, hay que confirmar a cuánto se cobra.</div>
   </section>
 </div>
 
@@ -109,9 +215,17 @@
 
 <script>window.ALMA_TOKEN="__TOKEN__"; window.ALMA_API="/alma/api/cargos";</script>
 <script src="/static/alma_kit.js"></script>
+<script src="/static/chart-4.4.1.umd.min.js"></script>
 <script>
 const {api,clp,esc,toast,openModal,closeModal}=AlmaKit;
-let MES=new Date().toISOString().slice(0,7), D=null, CAT=null, TAB='reg';
+const I={
+  wallet:'<path d="M19 7V5a2 2 0 00-2-2H5a2 2 0 000 4h15a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V5M16 12h.01"/>',
+  check:'<path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4 12 14.01l-3-3"/>',
+  layers:'<path d="m12 2 9 5-9 5-9-5 9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/>',
+  hash:'<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>'
+};
+const svg=(p,w)=>`<svg viewBox="0 0 24 24" fill="none" stroke-width="${w||2}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+let MES=new Date().toISOString().slice(0,7), D=null, CAT=null, LIQ=null, TAB='reg', CH={};
 document.getElementById('mes').value=MES;
 document.getElementById('mes').addEventListener('change',e=>{MES=e.target.value;loadAll();});
 
@@ -120,60 +234,89 @@ function tab(t){ TAB=t; ['reg','liq','cat'].forEach(x=>{
     document.getElementById('v-'+x).style.display = x===t?'':'none'; });
   if(t==='liq') loadLiq(); if(t==='cat') loadCat(); }
 
-async function loadAll(){ await load(); if(TAB==='liq') loadLiq(); if(TAB==='cat') loadCat(); }
+async function loadAll(){ await load(); if(TAB==='liq') loadLiq(); if(TAB==='cat') loadCat(); else loadLiq(true); }
+
+function grafico(id,labels,datos,horizontal){
+  const c=document.getElementById(id); if(!c) return;
+  if(CH[id]) CH[id].destroy();
+  if(!labels.length){ CH[id]=null; c.getContext('2d').clearRect(0,0,c.width,c.height); return; }
+  CH[id]=new Chart(c,{type:'bar',data:{labels,datasets:[{data:datos,
+      backgroundColor:'#4FBECE',hoverBackgroundColor:'#1172AB',borderRadius:7,barThickness:horizontal?16:26}]},
+    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>clp(c.parsed[horizontal?'x':'y'])}}},
+      scales:{x:{grid:{display:!horizontal,color:'#eef4f8'},ticks:{font:{family:'Montserrat',size:10},color:'#62788a',
+                 callback:horizontal?(v=>clp(v)):undefined}},
+              y:{grid:{display:horizontal?false:true,color:'#eef4f8'},ticks:{font:{family:'Montserrat',size:10},color:'#62788a',
+                 callback:horizontal?undefined:(v=>clp(v))}}}}});
+}
 
 async function load(){
   const est=document.getElementById('f-estado').value;
   D=await api("?mes="+MES+(est?"&estado="+est:""));
+  document.getElementById('c-reg').textContent=D.items.length;
   document.getElementById('kpis').innerHTML=[
-    ['Por descontar',clp(D.pendiente),'money'],['Ya descontado',clp(D.pagado),''],
-    ['Total del mes',clp(D.total),''],['Anotaciones',D.items.length,'']
-  ].map(([l,v,c])=>`<div class="kpi ${c}"><div class="k-label">${l}</div><div class="k-val">${v}</div></div>`).join('');
-  const tb=document.getElementById('tbody');
-  tb.innerHTML=D.items.map(i=>`<tr>
+    ['Por descontar',clp(D.pendiente),'o',I.wallet],
+    ['Ya descontado',clp(D.pagado),'g',I.check],
+    ['Total del mes',clp(D.total),'a',I.layers],
+    ['Anotaciones',D.items.length,'a',I.hash]
+  ].map(([l,v,c,ic])=>`<div class="k2"><div class="ic ${c}">${svg(ic)}</div>
+    <div><div class="v">${v}</div><div class="l">${l}</div></div></div>`).join('');
+  document.getElementById('tbody').innerHTML=D.items.map(i=>`<tr>
     <td class="t-meta">${esc(i.fecha.slice(5))}</td>
     <td class="t-strong">${esc(i.profesional)}</td>
-    <td>${esc(i.descripcion)}${i.cantidad!=1?` <span class="t-meta">×${i.cantidad}</span>`:''}${i.origen==='vale'?' <span class="badge mute">vale</span>':''}</td>
+    <td>${esc(i.descripcion)}${i.cantidad!=1?` <span class="t-meta">x${i.cantidad}</span>`:''}${i.origen==='vale'?' <span class="badge mute">vale</span>':''}</td>
     <td class="hide-sm t-meta">${esc(i.paciente||'')}</td>
     <td class="num t-strong">${clp(i.total)}</td>
-    <td><span class="pill ${i.pagado?'pag':'pend'}">${i.pagado?'Descontado':'Pendiente'}</span></td>
-    <td class="num"><button class="icon-btn" onclick="toggle(${i.id},${i.pagado?0:1})" title="${i.pagado?'Marcar pendiente':'Marcar descontado'}">${i.pagado?'↺':'✓'}</button>
-      <button class="icon-btn" onclick="editar(${i.id})">✎</button></td></tr>`).join('');
+    <td><span class="pill ${i.pagado?'pag':'pend'}"><i></i>${i.pagado?'Descontado':'Pendiente'}</span></td>
+    <td class="num"><button class="icon-btn" onclick="toggle(${i.id},${i.pagado?0:1})" title="${i.pagado?'Marcar pendiente':'Marcar descontado'}">${i.pagado?'\u21ba':'\u2713'}</button>
+      <button class="icon-btn" onclick="editar(${i.id})" title="Editar">\u270e</button></td></tr>`).join('');
   document.getElementById('empty').style.display=D.items.length?'none':'';
-  const prof=document.getElementById('c-prof');
-  prof.innerHTML=D.profesionales.map(p=>`<option>${esc(p)}</option>`).join('');
+  document.getElementById('c-prof').innerHTML=D.profesionales.map(p=>`<option>${esc(p)}</option>`).join('');
+  const porCat={}; D.items.forEach(i=>porCat[i.categoria]=(porCat[i.categoria]||0)+i.total);
+  const ks=Object.keys(porCat).sort((a,b)=>porCat[b]-porCat[a]);
+  grafico('chCat',ks,ks.map(k=>porCat[k]),false);
 }
 
-async function loadLiq(){
-  const r=await api("/resumen-liquidacion?mes="+MES);
-  document.getElementById('liq-tot').textContent=clp(r.total);
-  document.getElementById('liq-body').innerHTML=r.items.map(i=>`<tr>
-    <td class="t-strong">${esc(i.profesional)}</td><td class="num t-meta">${i.n}</td>
-    <td class="num t-strong">${clp(i.descontar)}</td>
-    <td class="num"><button class="icon-btn" onclick="copiar(${i.descontar})" title="Copiar el monto">⧉</button></td></tr>`).join('');
-  document.getElementById('liq-empty').style.display=r.items.length?'none':'';
+async function loadLiq(silencioso){
+  LIQ=await api("/resumen-liquidacion?mes="+MES);
+  document.getElementById('c-liq').textContent=LIQ.items.length;
+  document.getElementById('liq-tot').textContent=clp(LIQ.total);
+  document.getElementById('liq-body').innerHTML=LIQ.items.map(i=>`<div class="liqrow">
+    <div class="nm">${esc(i.profesional)}<div class="n">${i.n} cargo${i.n==1?'':'s'} pendiente${i.n==1?'':'s'}</div></div>
+    <div class="amt">${clp(i.descontar)}</div>
+    <div class="btns"><button onclick="copiar(${i.descontar})" title="Copiar el monto">Copiar</button>
+      <button class="done" onclick="marcarProf('${esc(i.profesional).replace(/'/g,"\\'")}')">Marcar descontado</button></div></div>`).join('');
+  document.getElementById('liq-empty').style.display=LIQ.items.length?'none':'';
+  if(!silencioso||TAB==='liq')
+    grafico('chProf',LIQ.items.map(i=>i.profesional.split(' ').slice(0,2).join(' ')),
+            LIQ.items.map(i=>i.descontar),true);
 }
 function copiar(v){ navigator.clipboard?.writeText(String(v)); toast("Copiado: "+clp(v)); }
+async function marcarProf(prof){
+  if(!confirm("¿Marcar como descontados todos los cargos pendientes de "+prof+" este mes?")) return;
+  try{ const r=await api("/marcar-descontado",{method:"POST",body:JSON.stringify({profesional:prof,mes:MES})});
+    toast(r.actualizados+" cargo(s) marcados"); loadAll(); }catch(e){ toast(e.message,'err'); }
+}
 
 async function loadCat(){
   CAT=await api("/catalogo");
+  document.getElementById('c-cat').textContent=CAT.items.length;
   document.getElementById('cat-aviso').innerHTML = CAT.sin_precio
     ? `Hay <b>${CAT.sin_precio} ítems sin precio</b>. Mientras estén en $0 no descuentan nada — ponles el valor que de verdad se le cobra al profesional.`
     : `Todos los ítems activos tienen precio.`;
+  document.getElementById('cat-aviso').style.display=CAT.sin_precio?'':'none';
   document.getElementById('cat-body').innerHTML=CAT.items.map(i=>`<tr style="${i.activo?'':'opacity:.45'}">
-    <td class="t-strong">${esc(i.nombre)}</td><td class="t-meta">${esc(i.categoria)}</td>
-    <td class="num ${i.precio?'t-strong':''}" style="${i.precio?'':'color:#c0392b;font-weight:700'}">${i.precio?clp(i.precio):'sin precio'}</td>
+    <td class="t-strong">${esc(i.nombre)}</td><td class="hide-sm t-meta">${esc(i.categoria)}</td>
+    <td class="num" style="${i.precio?'font-weight:700':'color:#c0392b;font-weight:800'}">${i.precio?clp(i.precio):'sin precio'}</td>
     <td class="hide-sm t-meta">${esc(i.unidad||'')}</td>
-    <td class="num"><button class="icon-btn" onclick="editarCat(${i.id})">✎</button></td></tr>`).join('');
+    <td class="num"><button class="icon-btn" onclick="editarCat(${i.id})" title="Editar">\u270e</button></td></tr>`).join('');
   const sel=document.getElementById('c-item');
   sel.innerHTML='<option value="">— escribir a mano —</option>'+
     CAT.items.filter(i=>i.activo).map(i=>`<option value="${i.id}">${esc(i.nombre)}${i.precio?' · '+clp(i.precio):' · sin precio'}</option>`).join('');
-  const kc=document.getElementById('k-cat');
-  kc.innerHTML=CAT.categorias.map(c=>`<option>${esc(c)}</option>`).join('');
-  // atajos: los 6 items mas caros con precio, para anotar de un toque
+  document.getElementById('k-cat').innerHTML=CAT.categorias.map(c=>`<option>${esc(c)}</option>`).join('');
   document.getElementById('rapido').innerHTML=CAT.items.filter(i=>i.activo&&i.precio)
     .sort((a,b)=>b.precio-a.precio).slice(0,6)
-    .map(i=>`<button onclick='rapido(${i.id})'>${esc(i.nombre.slice(0,28))}<small>${clp(i.precio)}</small></button>`).join('');
+    .map(i=>`<button onclick="rapido(${i.id})">${esc(i.nombre.slice(0,30))}<small>${clp(i.precio)}</small></button>`).join('');
 }
 
 function calc(){ const t=(+document.getElementById('c-cant').value||0)*(+document.getElementById('c-precio').value||0);
@@ -185,7 +328,6 @@ function pickItem(){
   document.getElementById('c-precio').value=it.precio; calc();
 }
 function rapido(id){ nuevo(); document.getElementById('c-item').value=id; pickItem(); }
-
 function nuevo(){
   if(!CAT) loadCat();
   document.getElementById('c-title').textContent="Anotar cargo";
@@ -194,7 +336,7 @@ function nuevo(){
   document.getElementById('c-item').value=""; document.getElementById('c-total').textContent="$0";
   document.getElementById('c-fecha').value=new Date().toISOString().slice(0,10);
   document.getElementById('c-del').style.display='none';
-  openModal('m-c');
+  openModal('m-c'); setTimeout(()=>document.getElementById('c-desc').focus(),70);
 }
 function editar(id){
   const i=D.items.find(x=>x.id===id); if(!i) return;
@@ -261,6 +403,6 @@ async function guardarCat(){
     closeModal('m-k'); toast("Guardado"); loadCat(); }catch(e){ toast(e.message,'err'); }
 }
 function exportCSV(){ location.href="/alma/api/cargos/export?mes="+MES+"&token="+encodeURIComponent(window.ALMA_TOKEN); }
-loadCat().then(load);
+loadCat().then(()=>{ load(); loadLiq(true); });
 </script>
 </body></html>
