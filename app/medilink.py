@@ -1027,6 +1027,42 @@ def _ids_para_especialidad(especialidad: str) -> list:
     return _filtrar_licencia(ids)
 
 
+async def _citas_paginado(client: httpx.AsyncClient, params: dict,
+                          tope_paginas: int = 20) -> list:
+    """GET /citas siguiendo `links.next` hasta agotar el día.
+
+    La API pagina de a 50 y NO avisa: un solo GET devuelve exactamente 50 filas
+    y se pierde el resto en silencio. Medido 2026-08-28: 7 días-profesional ya
+    truncaban en la lectura analítica, y el día más cargado de agendamiento
+    llegó a 46 citas vivas — a cuatro de romper la lectura de cupos ocupados,
+    que es la que evita el doble agendamiento.
+
+    Propaga el error de red (el caller decide): asumir "no hay más" ante un
+    fallo es justamente lo que produce el sobre-agendamiento.
+    """
+    fuera: list = []
+    url = f"{MEDILINK_BASE_URL}/citas"
+    kwargs: dict = {"params": {"q": _q(params)}}
+    vistos: set[str] = set()
+    for _ in range(tope_paginas):
+        r = await _get(client, url, headers=HEADERS, **kwargs)
+        if r.status_code != 200:
+            raise httpx.RequestError(f"GET /citas → {r.status_code}")
+        j = _safe_json(r)
+        lote = j.get("data", [])
+        fuera.extend(lote)
+        nxt = (j.get("links") or {}).get("next")
+        # el cursor repetido significa que la API se quedó pegada: cortar
+        if not nxt or not lote or nxt in vistos:
+            break
+        vistos.add(nxt)
+        url, kwargs = nxt, {}
+    else:
+        log.warning("citas: se alcanzó el tope de %d páginas (%d filas) — "
+                    "puede faltar data", tope_paginas, len(fuera))
+    return fuera
+
+
 async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: str) -> set:
     """Retorna set de hora_inicio ocupadas según /citas (fuente de verdad real).
     Expande citas largas: una cita 11:00-12:00 bloquea 11:00, 11:15, 11:30, 11:45.
@@ -1038,15 +1074,12 @@ async def _get_horas_ocupadas(client: httpx.AsyncClient, id_prof: int, fecha: st
         "estado_anulacion": {"eq": 0},
     }
     try:
-        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                       params={"q": _q(params)}, headers=HEADERS)
+        citas = await _citas_paginado(client, params)
     except httpx.RequestError as e:
         log.error("No se pudo obtener horas ocupadas prof %d fecha %s: %s", id_prof, fecha, e)
         raise  # Propagar error — no asumir que todo está libre
-    if r.status_code != 200:
-        raise httpx.RequestError(f"GET horas_ocupadas prof={id_prof} fecha={fecha} → {r.status_code}")
     ocupadas = set()
-    for c in _safe_json(r).get("data", []):
+    for c in citas:
         hi = c.get("hora_inicio", "")[:5]
         hf = c.get("hora_fin", "")[:5]
         if not hi:
@@ -1074,14 +1107,11 @@ async def citas_dia_lista(id_prof: int, fecha: str) -> list | None:
     }
     client = _get_shared_client()
     try:
-        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                       params={"q": _q(params)}, headers=HEADERS)
+        citas = await _citas_paginado(client, params)
     except httpx.RequestError as e:
         log.warning("citas_dia_lista prof=%d fecha=%s: %s", id_prof, fecha, e)
         return None
-    if r.status_code != 200:
-        return None
-    return [c for c in _safe_json(r).get("data", []) if c.get("fecha") == fecha]
+    return [c for c in citas if c.get("fecha") == fecha]
 
 
 async def citas_dia_conteo(id_prof: int, fecha: str) -> tuple | None:
@@ -1097,16 +1127,13 @@ async def citas_dia_conteo(id_prof: int, fecha: str) -> tuple | None:
     }
     client = _get_shared_client()
     try:
-        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                       params={"q": _q(params)}, headers=HEADERS)
+        citas = await _citas_paginado(client, params)
     except httpx.RequestError as e:
         log.warning("citas_dia_conteo prof=%d fecha=%s: %s", id_prof, fecha, e)
         return None
-    if r.status_code != 200:
-        return None
     n = a = 0
     primera = ultima = None
-    for c in _safe_json(r).get("data", []):
+    for c in citas:
         if c.get("fecha") != fecha or c.get("estado_anulacion"):
             continue
         n += 1
@@ -1966,14 +1993,12 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
     }
     client = _get_shared_client()
     try:
-        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                       params={"q": _q(params)}, headers=HEADERS)
+        citas_raw = await _citas_paginado(client, params)
     except httpx.RequestError as e:
+        # Devolver [] y no propagar: flows.py:1764 llama sin try/except, y una
+        # agenda vacía degrada a "sin pacientes" en vez de tumbar el comando.
         log.error("obtener_agenda_dia prof=%d fecha=%s: %s", id_prof, fecha, e)
         return []
-    if r.status_code != 200:
-        return []
-    citas_raw = _safe_json(r).get("data", [])
 
     # Obtener datos de pacientes en paralelo (máx 5 concurrentes)
     import asyncio as _aio
@@ -2039,10 +2064,12 @@ async def obtener_agenda_dia(id_prof: int, fecha: str | None = None) -> list[dic
 
 
 async def citas_dia_lite(id_prof: int, fecha: str) -> list[dict]:
-    """Citas del día de un profesional con hora/estado/nombre — UNA sola llamada a /citas,
-    SIN fan-out de /pacientes (el nombre del paciente ya viene en la cita). Pensada para
-    uso on-demand (popup de agenda): segura contra el rate-limit que sí dispara el
-    fan-out de obtener_agenda_dia. Sirve para fechas pasadas (las citas son históricas)."""
+    """Citas del día de un profesional con hora/estado/nombre, SIN fan-out de
+    /pacientes (el nombre del paciente ya viene en la cita). Pensada para uso
+    on-demand (popup de agenda): segura contra el rate-limit que sí dispara el
+    fan-out de obtener_agenda_dia. Sirve para fechas pasadas (son históricas).
+
+    Pagina: un día de más de 50 citas mostraba la agenda cortada en silencio."""
     params = {
         "id_sucursal":      {"eq": MEDILINK_SUCURSAL},
         "id_profesional":   {"eq": id_prof},
@@ -2051,15 +2078,12 @@ async def citas_dia_lite(id_prof: int, fecha: str) -> list[dict]:
     }
     client = _get_shared_client()
     try:
-        r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
-                       params={"q": _q(params)}, headers=HEADERS)
+        citas = await _citas_paginado(client, params)
     except httpx.RequestError as e:
         log.error("citas_dia_lite prof=%d fecha=%s: %s", id_prof, fecha, e)
         return []
-    if r.status_code != 200:
-        return []
     out = []
-    for c in _safe_json(r).get("data", []):
+    for c in citas:
         out.append({
             "hora":         (c.get("hora_inicio") or "")[:5],
             "hora_fin":     (c.get("hora_fin") or "")[:5],
