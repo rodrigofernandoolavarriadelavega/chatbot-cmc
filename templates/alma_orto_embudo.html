@@ -170,6 +170,59 @@
   border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;
   display:flex;align-items:center;justify-content:center}
 .fp-full .cerrar svg{width:18px;height:18px;stroke:#fff}
+.fp-full .nav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.fp-full .nav.izq{left:12px}.fp-full .nav.der{right:12px}
+.fp-full .nav svg{width:20px;height:20px;stroke:#fff}
+.fp-full .cont{position:relative;display:flex;align-items:center;justify-content:center;width:100%}
+
+/* pestañas de la ficha */
+.fp-tabs{display:flex;gap:6px;margin-bottom:14px}
+.fp-tabs button{flex:1;font:inherit;font-size:12.5px;font-weight:700;padding:9px 10px;border-radius:10px;
+  min-height:42px;border:1px solid var(--border);background:#fff;color:var(--navy);cursor:pointer}
+.fp-tabs button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+/* cola de la sesión: en un control real saca 5-7 vistas, no una */
+.fp-cola{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-bottom:12px}
+.fp-q{border:1px solid var(--border);border-radius:11px;overflow:hidden;background:#fff;position:relative}
+.fp-q img{display:block;width:100%;height:82px;object-fit:cover;background:var(--bg)}
+.fp-q select{width:100%;border:0;border-top:1px solid var(--border);font:inherit;font-size:10px;
+  font-weight:700;padding:5px 4px;color:var(--navy);background:#fff;cursor:pointer}
+.fp-q .quitar{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;border:0;
+  background:rgba(15,63,104,.72);color:#fff;cursor:pointer;font-size:13px;line-height:1;display:flex;
+  align-items:center;justify-content:center}
+.fp-cola-vacia{grid-column:1/-1;padding:16px;text-align:center;color:var(--mute);font-size:11.5px;font-weight:600}
+
+/* comparador antes / ahora */
+.cmp-sel{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.cmp-sel select{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);
+  border-radius:9px;padding:8px 10px;color:var(--navy);background:var(--bg);min-height:42px}
+.cmp{position:relative;border-radius:14px;overflow:hidden;background:#000;user-select:none;touch-action:none;
+  aspect-ratio:4/3}
+.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.cmp .antes{clip-path:inset(0 calc(100% - var(--x,50%)) 0 0)}
+.cmp .barra{position:absolute;top:0;bottom:0;left:var(--x,50%);width:2px;background:#fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:ew-resize}
+.cmp .barra::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.cmp .barra::before{content:"‹ ›";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:2;font-size:15px;font-weight:800;color:var(--navy);letter-spacing:1px}
+.cmp .et{position:absolute;bottom:10px;font-size:10.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:#fff;background:rgba(8,25,38,.72);border-radius:20px;padding:4px 11px}
+.cmp .et.i{left:10px}.cmp .et.d{right:10px}
+.cmp-meta{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:11.5px;
+  color:var(--mute);font-weight:600;flex-variant-numeric:tabular-nums}
+.cmp-meta b{color:var(--navy)}
+
+@media print{
+  .hero,.vtabs,.modal-foot,.fp-tabs,.fp-cap,.field,.hint,.pg-topbar{display:none!important}
+  .modal-bg{position:static!important;background:none!important;display:block!important;opacity:1!important}
+  .modal{max-width:100%!important;box-shadow:none!important;border:0!important}
+  .fp-it img{height:auto}
+  .fp-grid{grid-template-columns:repeat(3,1fr)}
+  body{background:#fff}
+}
 @media(max-width:760px){.cal-cell{min-height:50px}.cal-count{font-size:15px}}
 .cd .n{font-size:11px;color:var(--mute);font-weight:600;margin-top:2px}
 .cd ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
@@ -375,6 +428,12 @@
 <div class="modal-bg" id="m-foto"><div class="modal" style="max-width:560px">
   <div class="modal-head"><h2 id="fp-title">Ficha fotográfica</h2><div class="x" onclick="AlmaKit.closeModal('m-foto')">✕</div></div>
   <div class="modal-body">
+    <div class="fp-tabs">
+      <button id="fpt-nuevo" class="on" onclick="fpTab('nuevo')">Nuevo control</button>
+      <button id="fpt-avance" onclick="fpTab('avance')">Avance</button>
+    </div>
+
+    <section id="fpv-nuevo">
     <div class="fp-cap">
       <label for="fp-file">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -386,14 +445,22 @@
         <span id="fp-mic-t">Dictar nota</span>
       </button>
     </div>
-    <div id="fp-prev"></div>
-    <div class="field"><label>Vista</label><select id="fp-vista"></select></div>
+    <div class="fp-cola" id="fp-cola"></div>
     <div class="field"><label>Nota del control</label>
       <textarea id="fp-nota" rows="3" placeholder="Dicta o escribe: qué observaste, qué se ajustó, qué viene…"
         style="font:inherit;font-size:13px;border:1px solid var(--border);border-radius:9px;padding:9px 11px;width:100%;resize:vertical;color:var(--navy)"></textarea>
       <div class="hint" id="fp-hint">Al dictar, revisa el texto antes de guardar: los nombres y la numeración dentaria son lo que más se equivoca.</div></div>
     <div class="field"><label>Fecha del control</label><input type="date" id="fp-fecha"></div>
     <div id="fp-hist"></div>
+    </section>
+
+    <section id="fpv-avance" style="display:none">
+      <div class="cmp-sel">
+        <select id="cmp-vista" onchange="fpComparar()"></select>
+        <button class="btn-ghost" onclick="fpImprimir()" style="margin-left:auto">Imprimir ficha</button>
+      </div>
+      <div id="cmp-mount"></div>
+    </section>
   </div>
   <div class="modal-foot">
     <button class="btn-ghost" onclick="AlmaKit.closeModal('m-foto')">Cerrar</button>
@@ -402,7 +469,12 @@
 
 <div class="fp-full" id="fp-full" onclick="if(event.target===this)fpCerrarFull()">
   <button class="cerrar" onclick="fpCerrarFull()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-  <img id="fp-full-img" alt=""><div class="meta" id="fp-full-meta"></div>
+  <div class="cont">
+    <button class="nav izq" onclick="fpNav(-1)" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <img id="fp-full-img" alt="">
+    <button class="nav der" onclick="fpNav(1)" aria-label="Siguiente"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
+  <div class="meta" id="fp-full-meta"></div>
 </div>
 
 <!-- Modal paciente -->
@@ -845,7 +917,7 @@ async function sincronizar(){
    NAVEGADOR (canvas) antes de subir: en Carampangue la señal es irregular y
    mandar 4 MB desde el box no funciona. */
 const API_FOTOS="/alma/api/orto-fotos";
-let FP={pid:null,nombre:"",img:null,rec:null,chunks:[]};
+let FP={pid:null,nombre:"",cola:[],rec:null,chunks:[],vistas:[],fotos:[],verIdx:-1};
 
 async function apiFotos(path, opts){
   const sep = path.includes("?") ? "&" : "?";
@@ -857,23 +929,48 @@ async function apiFotos(path, opts){
 }
 
 async function abrirFotos(pid, nombre){
-  FP={pid:pid,nombre:nombre,img:null,rec:null,chunks:[]};
+  FP={pid:pid,nombre:nombre,cola:[],rec:null,chunks:[],vistas:[],fotos:[],verIdx:-1};
   document.getElementById('fp-title').textContent=nombre;
-  document.getElementById('fp-prev').innerHTML='';
   document.getElementById('fp-nota').value='';
   document.getElementById('fp-fecha').value=new Date().toISOString().slice(0,10);
   document.getElementById('fp-file').value='';
-  try{ const v=await apiFotos("/vistas");
-    document.getElementById('fp-vista').innerHTML=v.vistas.map(x=>`<option>${esc(x)}</option>`).join('');
-  }catch(e){}
+  fpTab('nuevo'); fpPintarCola();
+  try{ FP.vistas=(await apiFotos("/vistas")).vistas; }catch(e){ FP.vistas=["Otra"]; }
   openModal('m-foto');
   fpHistorial();
 }
+
+function fpTab(t){
+  ['nuevo','avance'].forEach(x=>{
+    document.getElementById('fpt-'+x).classList.toggle('on',x===t);
+    document.getElementById('fpv-'+x).style.display = x===t?'':'none';
+  });
+  document.getElementById('fp-save').style.display = t==='nuevo'?'':'none';
+  if(t==='avance') fpPrepararComparador();
+}
+
+/* La cola: en un control real se sacan 5-7 vistas seguidas. Guardar de a una
+   obligaba a repetir el ciclo completo por cada foto. */
+function fpPintarCola(){
+  const c=document.getElementById('fp-cola');
+  if(!FP.cola.length){
+    c.innerHTML='<div class="fp-cola-vacia">Las fotos que saques aparecen acá antes de guardarse.</div>';
+    return;
+  }
+  c.innerHTML=FP.cola.map((q,i)=>`<div class="fp-q">
+    <button class="quitar" onclick="fpQuitar(${i})" aria-label="Quitar">&times;</button>
+    <img src="${q.img}" alt="">
+    <select onchange="FP.cola[${i}].vista=this.value">
+      ${FP.vistas.map(v=>`<option ${v===q.vista?'selected':''}>${esc(v)}</option>`).join('')}
+    </select></div>`).join('');
+}
+function fpQuitar(i){ FP.cola.splice(i,1); fpPintarCola(); }
 
 async function fpHistorial(){
   const h=document.getElementById('fp-hist');
   try{
     const d=await apiFotos("?paciente_id="+(FP.pid||0));
+    FP.fotos=d.fotos||[];
     if(!d.sesiones.length){
       h.innerHTML='<div class="fp-vacio">Sin fotos todavía.<br>La primera marca el punto de partida del tratamiento.</div>';
       return;
@@ -882,7 +979,7 @@ async function fpHistorial(){
       d.sesiones.map(s=>`<div class="fp-ses">
         <h4>${esc(s.fecha)} <span>${s.fotos.length} foto${s.fotos.length==1?'':'s'}</span></h4>
         <div class="fp-grid">${s.fotos.map(f=>`
-          <div class="fp-it" onclick="fpFull(${f.id},'${esc((f.vista||'').replace(/'/g,''))}','${esc(s.fecha)}')">
+          <div class="fp-it" onclick="fpFull(${f.id})">
             <img src="${API_FOTOS}/img/${f.id}?token=${encodeURIComponent(window.ALMA_TOKEN)}" alt="" loading="lazy">
             <div class="v">${esc(f.vista||'')}</div></div>`).join('')}</div>
         ${s.fotos.filter(f=>f.nota).map(f=>`<div class="fp-nota">${esc(f.nota)}</div>`).join('')}
@@ -890,10 +987,23 @@ async function fpHistorial(){
   }catch(e){ h.innerHTML='<div class="fp-vacio">No se pudo leer el historial.</div>'; }
 }
 
-function fpFull(id,vista,fecha){
-  document.getElementById('fp-full-img').src=`${API_FOTOS}/img/${id}?token=${encodeURIComponent(window.ALMA_TOKEN)}`;
-  document.getElementById('fp-full-meta').textContent=`${vista} · ${fecha} · ${FP.nombre}`;
+function fpFull(id){
+  FP.verIdx=FP.fotos.findIndex(f=>f.id===id);
+  if(FP.verIdx<0) return;
+  fpPintarVisor();
   document.getElementById('fp-full').classList.add('on');
+}
+function fpPintarVisor(){
+  const f=FP.fotos[FP.verIdx]; if(!f) return;
+  document.getElementById('fp-full-img').src=`${API_FOTOS}/img/${f.id}?token=${encodeURIComponent(window.ALMA_TOKEN)}`;
+  document.getElementById('fp-full-meta').textContent=
+    `${f.vista||''} · ${f.fecha} · ${FP.nombre}`+(f.nota?` — ${f.nota}`:'')+
+    `   (${FP.verIdx+1} de ${FP.fotos.length})`;
+}
+function fpNav(d){
+  if(!FP.fotos.length) return;
+  FP.verIdx=(FP.verIdx+d+FP.fotos.length)%FP.fotos.length;
+  fpPintarVisor();
 }
 function fpCerrarFull(){ document.getElementById('fp-full').classList.remove('on');
   document.getElementById('fp-full-img').src=''; }
@@ -910,10 +1020,16 @@ function fpFoto(ev){
       const cv=document.createElement('canvas');
       cv.width=Math.round(im.width*esc_); cv.height=Math.round(im.height*esc_);
       cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
-      FP.img=cv.toDataURL('image/jpeg',0.82);
-      document.getElementById('fp-prev').innerHTML=`<div class="fp-prev"><img src="${FP.img}" alt=""></div>`;
-      const kb=Math.round(FP.img.length*0.75/1024);
-      document.getElementById('fp-hint').textContent=`Foto lista (${kb} KB). Dicta o escribe la nota y guarda.`;
+      const img=cv.toDataURL('image/jpeg',0.82);
+      // la vista se propone en el orden estándar del registro; ella la corrige
+      const usadas=FP.cola.map(x=>x.vista);
+      const sugerida=FP.vistas.find(v=>!usadas.includes(v)) || FP.vistas[0];
+      FP.cola.push({img:img, vista:sugerida});
+      fpPintarCola();
+      const kb=Math.round(img.length*0.75/1024);
+      document.getElementById('fp-hint').textContent=
+        `${FP.cola.length} foto${FP.cola.length==1?'':'s'} en esta sesión (${kb} KB la última). Saca las que necesites y guarda al final.`;
+      ev.target.value='';
     };
     im.src=fr.result;
   };
@@ -951,23 +1067,86 @@ async function fpVoz(){
 
 async function fpGuardar(){
   const nota=document.getElementById('fp-nota').value.trim();
-  if(!FP.img && !nota){ toast("Saca una foto o escribe la nota",'err'); return; }
-  const btn=document.getElementById('fp-save'); btn.disabled=true; btn.textContent='Guardando…';
+  const fecha=document.getElementById('fp-fecha').value;
+  if(!FP.cola.length && !nota){ toast("Saca una foto o escribe la nota",'err'); return; }
+  const btn=document.getElementById('fp-save'); btn.disabled=true;
   try{
-    if(FP.img){
+    // La nota va SOLO en la primera: es del control, no de cada foto —
+    // repetirla en las siete dejaría la ficha ilegible.
+    for(let i=0;i<FP.cola.length;i++){
+      btn.textContent=`Guardando ${i+1} de ${FP.cola.length}…`;
       await apiFotos("",{method:"POST",body:JSON.stringify({
-        paciente_id:FP.pid, paciente:FP.nombre, imagen:FP.img,
-        vista:document.getElementById('fp-vista').value,
-        nota:nota, fecha:document.getElementById('fp-fecha').value })});
+        paciente_id:FP.pid, paciente:FP.nombre, imagen:FP.cola[i].img,
+        vista:FP.cola[i].vista, nota:(i===0?nota:null), fecha:fecha })});
     }
-    toast("Guardado en la ficha");
-    FP.img=null; document.getElementById('fp-prev').innerHTML='';
+    toast(FP.cola.length>1 ? `${FP.cola.length} fotos guardadas` : "Guardado en la ficha");
+    FP.cola=[]; fpPintarCola();
     document.getElementById('fp-nota').value=''; document.getElementById('fp-file').value='';
+    document.getElementById('fp-hint').textContent='Al dictar, revisa el texto antes de guardar: los nombres y la numeración dentaria son lo que más se equivoca.';
     fpHistorial();
   }catch(e){ toast(e.message,'err'); }
   btn.disabled=false; btn.textContent='Guardar en la ficha';
 }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') fpCerrarFull(); });
+
+/* ── Comparador: la razón de sacar las fotos ──────────────────────────────
+   Compara la MISMA vista en su primera y su última toma. Comparar frontal con
+   perfil no dice nada, así que el selector solo lista vistas con ≥2 tomas. */
+function fpPrepararComparador(){
+  const sel=document.getElementById('cmp-vista');
+  const porVista={};
+  FP.fotos.forEach(f=>{ const v=f.vista||'Otra'; (porVista[v]=porVista[v]||[]).push(f); });
+  const comparables=Object.keys(porVista).filter(v=>porVista[v].length>=2);
+  if(!comparables.length){
+    sel.innerHTML=''; sel.style.display='none';
+    document.getElementById('cmp-mount').innerHTML=
+      '<div class="fp-vacio">Todavía no hay dos tomas de la misma vista.<br>Con la segunda ya se puede comparar el avance.</div>';
+    return;
+  }
+  sel.style.display='';
+  sel.innerHTML=comparables.map(v=>`<option>${esc(v)}</option>`).join('');
+  fpComparar();
+}
+
+function fpComparar(){
+  const v=document.getElementById('cmp-vista').value;
+  const set=FP.fotos.filter(f=>(f.vista||'Otra')===v)
+                    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  if(set.length<2) return;
+  const a=set[0], b=set[set.length-1];
+  const url=id=>`${API_FOTOS}/img/${id}?token=${encodeURIComponent(window.ALMA_TOKEN)}`;
+  const meses=Math.max(0, Math.round((new Date(b.fecha)-new Date(a.fecha))/2629800000));
+  document.getElementById('cmp-mount').innerHTML=`
+    <div class="cmp" id="cmp" style="--x:50%">
+      <img class="ahora" src="${url(b.id)}" alt="Ahora">
+      <img class="antes" src="${url(a.id)}" alt="Antes">
+      <span class="et i">${esc(a.fecha)}</span><span class="et d">${esc(b.fecha)}</span>
+      <div class="barra" id="cmp-barra"></div>
+    </div>
+    <div class="cmp-meta"><span>Primera: <b>${esc(a.fecha)}</b></span>
+      <span><b>${meses}</b> ${meses===1?'mes':'meses'} de avance</span>
+      <span>Última: <b>${esc(b.fecha)}</b></span></div>`;
+  const cmp=document.getElementById('cmp');
+  const mover=e=>{
+    const r=cmp.getBoundingClientRect();
+    const x=((e.touches?e.touches[0].clientX:e.clientX)-r.left)/r.width*100;
+    cmp.style.setProperty('--x', Math.max(0,Math.min(100,x))+'%');
+  };
+  let activo=false;
+  const on=e=>{ activo=true; mover(e); e.preventDefault(); };
+  cmp.addEventListener('mousedown',on); cmp.addEventListener('touchstart',on,{passive:false});
+  window.addEventListener('mousemove',e=>{ if(activo) mover(e); });
+  window.addEventListener('touchmove',e=>{ if(activo) mover(e); },{passive:true});
+  window.addEventListener('mouseup',()=>{activo=false;});
+  window.addEventListener('touchend',()=>{activo=false;});
+}
+
+function fpImprimir(){ window.print(); }
+document.addEventListener('keydown',e=>{
+  const abierto=document.getElementById('fp-full').classList.contains('on');
+  if(e.key==='Escape') fpCerrarFull();
+  if(abierto && e.key==='ArrowLeft')  fpNav(-1);
+  if(abierto && e.key==='ArrowRight') fpNav(1);
+});
 
 function exportCSV(){ location.href="/alma/api/orto-embudo/export?token="+encodeURIComponent(window.ALMA_TOKEN); }
 init();
