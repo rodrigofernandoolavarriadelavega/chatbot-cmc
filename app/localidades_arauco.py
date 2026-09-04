@@ -31,7 +31,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
-__all__ = ["resolver", "normalizar", "LOCALIDADES", "COMUNAS", "POBLACION"]
+__all__ = ["resolver", "normalizar", "LOCALIDADES", "COMUNAS",
+           "POBLACION", "COMUNA_DISPLAY"]
 
 # ── poblacion Censo 2024 (INE) ──────────────────────────────────────────────
 POBLACION = {
@@ -39,6 +40,19 @@ POBLACION = {
     "Lebu": 26043, "Los Alamos": 21084, "Contulmo": 5838, "Tirua": 9664,
 }
 COMUNAS = tuple(POBLACION)
+
+# Como se ESCRIBE cada comuna cuando el dato va a la ficha de Medilink.
+# Las claves internas van sin tilde/ene a proposito (el resolvedor compara
+# normalizado), pero Medilink ya tiene "Cañete" escrito con ene en las fichas
+# que teclea recepcion: escribir "Canete" crearia una SEGUNDA ortografia de la
+# misma comuna y el heatmap la contaria como dos. Medido el 2026-09-03 sobre
+# las 50 fichas mas recientes: 'Arauco' 20, 'Cañete' 3, 'Curanilahue' 3,
+# 'arauco' 2, 'Los Alamos' 1, 'CURANILAHUE' 1.
+COMUNA_DISPLAY = {
+    "Arauco": "Arauco", "Canete": "Cañete", "Curanilahue": "Curanilahue",
+    "Lebu": "Lebu", "Los Alamos": "Los Álamos", "Contulmo": "Contulmo",
+    "Tirua": "Tirúa",
+}
 
 # ── el diccionario: NOMBRE -> (comuna, sector, tipo, confianza) ─────────────
 # `sector` es como queremos verlo en los reportes; `tipo` distingue localidad

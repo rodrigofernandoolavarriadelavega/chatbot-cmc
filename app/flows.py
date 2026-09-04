@@ -10086,17 +10086,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "👤 Nombre completo\n"
                     "⚤ Sexo (M o F)\n"
                     "📅 Fecha de nacimiento\n"
-                    "📱 Celular _(opcional, para recordarte la cita)_\n\n"
-                    "_Ejemplo: María González López, F, 15/03/1990_\n"
-                    "_Si quieres agregar celular al final: …, 912345678_"
+                    "📱 Celular _(opcional, para recordarte la cita)_\n"
+                    "📍 Dónde vives _(opcional)_\n\n"
+                    "_Ejemplo: María González López, F, 15/03/1990, Carampangue_\n"
+                    "_Si quieres agregar celular: …, 912345678_"
                 )
             return (
                 "¡Bienvenido/a! Es tu primera vez con nosotros 🙌\n\n"
                 "Escríbeme en *un solo mensaje*:\n\n"
                 "👤 Nombre completo\n"
                 "⚤ Sexo (M o F)\n"
-                "📅 Fecha de nacimiento\n\n"
-                "_Ejemplo: *María González López, F, 15/03/1990*_"
+                "📅 Fecha de nacimiento\n"
+                "📍 Dónde vives _(opcional)_\n\n"
+                "_Ejemplo: *María González López, F, 15/03/1990, Carampangue*_"
             )
 
         # 2026-08-24: ELIMINADO el 'aviso suave pediátrico' (ex BUG-3) que
@@ -12585,8 +12587,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Perfecto, escríbeme tus datos en *un solo mensaje*:\n\n"
                 "👤 Nombre completo\n"
                 "⚤ Sexo (M o F)\n"
-                "📅 Fecha de nacimiento\n\n"
-                "_Ejemplo: *María González López, F, 15/03/1990*_"
+                "📅 Fecha de nacimiento\n"
+                "📍 Dónde vives _(opcional)_\n\n"
+                "_Ejemplo: *María González López, F, 15/03/1990, Carampangue*_"
             )
 
         # ── Filtrar prefijos que son respuesta a la pregunta "¿es primera vez?" ──
@@ -12609,6 +12612,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         sexo = None
         fecha_nac = None
         celular_raw = None
+        comuna_res = None
+        sector_res = None
+        localidad_raw = None
+        # ── Localidad OPCIONAL (2026-09-03) ──────────────────────────────────
+        # Hasta hoy el bot creaba la ficha SIN comuna y SIN direccion: el 40%
+        # de las fichas nuevas nacia ciega (medido sobre las 50 ultimas de
+        # Medilink: 20/20 de las que no tienen comuna tampoco tienen direccion).
+        # La pregunta si existia -WAIT_COMUNA, con este mismo diccionario- pero
+        # esa cadena quedo INALCANZABLE al cambiar al registro rapido: nadie
+        # hace save_session a WAIT_NOMBRE_NUEVO en todo el repo.
+        #
+        # Aca el nombre de localidad viaja dentro del mismo mensaje, asi que
+        # NO hay fallback a texto crudo: solo se acepta la parte si el
+        # diccionario de la provincia la reconoce. En WAIT_COMUNA el mensaje
+        # ENTERO era la respuesta a "de que comuna eres" y el crudo servia;
+        # aca un dato suelto que no calza (un segundo telefono, un correo)
+        # terminaria escrito como comuna de la ficha.
+        #
+        # OJO con el import: flows.py importa a sus hermanos DESNUDOS. Con
+        # prefijo "app." revienta en prod y, tragado por el except, la captura
+        # dejaria de existir EN SILENCIO -por eso el log es error, no warning.
+        try:
+            from localidades_arauco import (resolver as _resolver_loc,
+                                            COMUNA_DISPLAY as _COMUNA_DISPLAY)
+        except Exception as _e_loc:
+            log.error("registro: diccionario de localidades no disponible, "
+                      "la comuna no se capturara: %s", _e_loc)
+            _resolver_loc = None
+            _COMUNA_DISPLAY = {}
         _SEX_M = re.compile(r'^(m|masculino|hombre|masc)$', re.I)
         _SEX_F = re.compile(r'^(f|femenino|mujer|fem)$', re.I)
         _PHONE_RE = re.compile(r'^(\+?56)?[0-9\s\-]{8,12}$')
@@ -12634,6 +12666,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 f = _parsear_fecha_nacimiento(p)
                 if f:
                     fecha_nac = f; continue
+            # ¿Es una localidad conocida de la provincia?
+            # Solo se prueba DESPUES de tener nombre: el nombre siempre va
+            # primero en el mensaje, y asi la localidad no puede robarselo
+            # (hay apellidos que son toponimos: "Lebu", "Contulmo").
+            if nombre_raw and not comuna_res and _resolver_loc:
+                _u_loc = _resolver_loc(p, None)
+                if _u_loc.get("comuna"):
+                    comuna_res = _u_loc["comuna"]
+                    sector_res = _u_loc.get("sector")
+                    localidad_raw = p
+                    continue
             # Lo demás es nombre (primera parte no-matcheada)
             if not nombre_raw:
                 nombre_raw = p
@@ -12724,6 +12767,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if cel.startswith("56") and len(cel) >= 10:
                 extra["celular"] = cel[2:]
                 extra["telefono"] = cel[2:]
+        if comuna_res:
+            # "Fuera de la provincia" no es una comuna: es la etiqueta que usa
+            # el diccionario para no contar a esa gente como local. A la ficha
+            # va el nombre real de la ciudad, que el resolvedor deja en sector.
+            extra["comuna"] = (sector_res if comuna_res == "Fuera de la provincia"
+                               else _COMUNA_DISPLAY.get(comuna_res, comuna_res))
+            data["reg_comuna"] = extra["comuna"]
+            if sector_res:
+                data["reg_sector"] = sector_res
+            log_event(phone, "registro_localidad", {
+                "crudo": (localidad_raw or "")[:60], "comuna": extra["comuna"],
+                "sector": sector_res,
+            })
 
         log_event(phone, "registro_completo", {
             "rut": rut, "campos_extra": list(extra.keys()),
@@ -12734,6 +12790,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if not paciente:
             reset_session(phone)
             return f"Hubo un problema al registrarte 😕\nLlama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
+
+        # El SECTOR (Laraquete vs Carampangue vs Arauco urbano) no cabe en la
+        # ficha de Medilink, que solo tiene comuna — y es justo el corte que el
+        # negocio necesita. Vive aparte, en contact_profiles. Nunca rompe el
+        # registro: si falla, el paciente ya quedo creado igual.
+        if comuna_res and not data.get("booking_for_other"):
+            try:
+                from session import save_ubicacion
+                save_ubicacion(phone, data.get("reg_comuna"), data.get("reg_sector"))
+            except Exception as _e_ub:
+                log.warning("registro: no se pudo persistir la ubicacion: %s", _e_ub)
 
         # A2: guardar perfil solo si es el dueño del celular, no un tercero.
         # Si booking_for_other=True, el RUT/nombre del paciente recién creado
