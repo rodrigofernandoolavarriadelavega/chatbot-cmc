@@ -358,7 +358,30 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-08-22
+**Última actualización**: 2026-08-24
+
+### 2026-08-24 — Fuga de identidad por autocaptura de RUT + 10 fixes post-auditoría (DEPLOYADO commit 06f642e)
+- **Bug de seguridad real** (portaviones, consolidado 2d): `try_autocapture_rut_name`
+  guardaba como identidad del celular cualquier RUT pegado en el chat. Caso
+  56939444138: en mayo pegó los datos de su hermano para agendarle; en agosto
+  "cancelar" reusó ese RUT y anuló la cita del hermano. Fix: la función es
+  ASYNC y verifica en Medilink que el celular de la ficha coincida antes de
+  persistir (3 call sites con `await`: admin_routes.py:681, main.py:10834/12361).
+  Test `tests/test_autocapture_rut_tercero_2026_08_24.py`.
+- Otros 10 (cada uno con test `*_2026_08_24.py`): `hint_rut_error` sin DV
+  revelado · confirmaciones/cierres con typos ("Sii", "hay estaré", "oki") ·
+  cancelar cita ya pasada (`cancelar_cita_con_motivo`) · parser hora "3"/"para
+  el 26" + fecha libre en WAIT_QUICK_BOOK (+ fix índice oculto Fallback-1) ·
+  PAP solo femenino / nombres masculinos ampliados · neurología ≥15 (pre-flight
+  fallaba en silencio: fecha ISO de Medilink vs DD/MM + `except: pass`) ·
+  "ortodoncista" fuera del caché rápido · reactivación conserva especialidad
+  (`reac_si`/`ctrl_si` pasaban None) · "Dr X a las HH:MM" valida hora ·
+  copy "Abono previo requerido" + nota devolución · ventana Mejor/Igual 48h→2h.
+- Tests: harness_50 105/105 · stress_200 169/200 (=baseline) · test_rut 63/63.
+  `/health` 200, logs limpios (sin "never awaited").
+- Deploys previos de la misma campaña de auditoría: `c05c7e9`, `0ef6d7d`,
+  `ade2366`, `8844ea1`. Curva de hallazgos/día del auditor: 285→230→214→135.
+
 
 ### 2026-08-22 — Secuenciación post-consulta: fin de la ráfaga tips+upsell+reseña (DEPLOYADO commit 8844ea1)
 - **Problema real (portaviones #10, hallazgo ×18/mes, casos 56978613486,

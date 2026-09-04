@@ -10,7 +10,8 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, Request, Query, HTTPException, Header, Depends, Cookie, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, JSONResponse
 
-from config import ADMIN_TOKEN, OLACORE_TOKEN, ORTODONCIA_TOKEN, COOKIE_SECRET, STAFF_PHONES
+from config import (ADMIN_TOKEN, OLACORE_TOKEN, ORTODONCIA_TOKEN,
+                    ADMINISTRACION_TOKEN, COOKIE_SECRET, STAFF_PHONES)
 
 # Conjunto de tokens que tienen acceso de admin completo.
 # Agregar aquí cualquier token nuevo que deba tener los mismos permisos que ADMIN_TOKEN.
@@ -73,14 +74,24 @@ def _sign_cookie(role: str) -> str:
 
 
 def _verify_cookie(value: str) -> str | None:
-    """Verify a signed cookie. Returns role ('admin'|'ortodoncia') or None."""
+    """Verify a signed cookie. Returns role ('admin'|'ortodoncia') o None.
+
+    Ver el comentario de abajo: "administracion" se valida aparte a propósito."""
     if not value:
         return None
     parts = value.split(":")
     if len(parts) != 3:
         return None
     role, expires_str, sig = parts
-    if role not in ("admin", "ortodoncia"):
+    if role not in ("admin", "ortodoncia", "administracion"):
+        return None
+    # PUERTA ESTRECHA: los módulos legacy hacen `if _verify_cookie(c)` sin
+    # mirar QUÉ rol es. Devolver "administracion" acá le abriría todos de
+    # golpe — remuneraciones, abandono de tratamiento, ortodoncia. Así que
+    # este verificador general NO lo reconoce; `require_administracion` lo
+    # valida por su cuenta con `_rol_de_cookie()`. Abrirle un módulo nuevo
+    # tiene que ser una decisión explícita, no un efecto secundario.
+    if role == "administracion":
         return None
     try:
         expires = int(expires_str)
@@ -145,6 +156,62 @@ def require_admin(request: Request,
     # 3. Query param (backwards compat)
     if token and _is_admin_token(token):
         return token
+    raise HTTPException(status_code=401, detail="Token inválido")
+
+
+def _rol_de_cookie(cmc_session: str | None) -> str | None:
+    """Rol real de la cookie, incluyendo 'administracion'.
+
+    Existe porque `_verify_cookie()` lo oculta a propósito (ver ahí). Sólo la
+    usa `require_administracion`, que es el único punto donde ese rol vale."""
+    if not cmc_session:
+        return None
+    try:
+        role, expires_str, sig = cmc_session.split(":", 2)
+    except ValueError:
+        return None
+    if role not in ("admin", "ortodoncia", "administracion"):
+        return None
+    try:
+        if int(expires_str) < int(time.time()):
+            return None
+    except (TypeError, ValueError):
+        return None
+    esperado = hmac.new(COOKIE_SECRET.encode(), f"{role}:{expires_str}".encode(),
+                        hashlib.sha256).hexdigest()
+    return role if hmac.compare_digest(sig, esperado) else None
+
+
+def require_administracion(request: Request,
+                           token: str | None = Query(None),
+                           authorization: str | None = Header(None),
+                           cmc_session: str | None = Cookie(None)) -> str:
+    """Valida token de ADMINISTRACIÓN (o admin, que lo incluye todo).
+
+    QUÉ ABRE: agenda, caja, conciliación bancaria, métricas, lista de espera y
+    los reportes de errores operativos (duplicación de agenda, etc.).
+
+    QUÉ NO ABRE, Y ES A PROPÓSITO: `/admin/api/conversations`. Una conversación
+    de WhatsApp con un paciente trae síntomas, diagnósticos y RUT — es dato de
+    salud bajo la Ley 21.719. Para administrar el centro no hace falta leerla;
+    para agendar, cobrar y conciliar, sí hace falta la agenda. La línea va ahí.
+    """
+    if authorization and authorization.lower().startswith("bearer "):
+        tk = authorization.split(None, 1)[1].strip()
+        if _is_admin_token(tk):
+            return tk
+        if ADMINISTRACION_TOKEN and hmac.compare_digest(tk, ADMINISTRACION_TOKEN):
+            return ADMINISTRACION_TOKEN
+    rol = _rol_de_cookie(cmc_session)
+    if rol == "admin":
+        return ADMIN_TOKEN
+    if rol == "administracion":
+        return ADMINISTRACION_TOKEN
+    if token:
+        if _is_admin_token(token):
+            return token
+        if ADMINISTRACION_TOKEN and hmac.compare_digest(token, ADMINISTRACION_TOKEN):
+            return ADMINISTRACION_TOKEN
     raise HTTPException(status_code=401, detail="Token inválido")
 
 
@@ -339,6 +406,15 @@ def admin_login(request: Request, password: str = Form(...)):
         log.info("Ortodoncia login OK (cookie set) ip=%s", ip)
         return response
 
+    # Administración: entra sólo si el token está configurado. Un token vacío
+    # NUNCA autentica — sin este guard, no definir la variable de entorno
+    # dejaría el rol abierto a cualquiera que mande la contraseña vacía.
+    if ADMINISTRACION_TOKEN and hmac.compare_digest(password, ADMINISTRACION_TOKEN):
+        response = RedirectResponse(url="/admin", status_code=302)
+        _set_session_cookie(response, "administracion", is_https)
+        log.info("Administracion login OK (cookie set) ip=%s", ip)
+        return response
+
     log.warning("Admin login FAIL ip=%s", ip)
     raise HTTPException(status_code=401, detail="Contrasena incorrecta")
 
@@ -485,14 +561,14 @@ def get_permiso(phone: str, feature: str, default: bool = False) -> bool:
 
 
 @router.get("/admin/api/metrics")
-def admin_metrics(_: str = Depends(require_admin)):
+def admin_metrics(_: str = Depends(require_administracion)):
     return get_metricas(dias=30)
 
 
 # ── Waitlist ─────────────────────────────────────────────────────────────────
 
 @router.get("/admin/api/waitlist")
-def admin_waitlist(_: str = Depends(require_admin)):
+def admin_waitlist(_: str = Depends(require_administracion)):
     """Lista de espera completa (activas + notificadas + canceladas).
     Agrega campo badge para identificar servicios especiales en el panel."""
     rows = get_waitlist_all()
@@ -515,7 +591,7 @@ def admin_waitlist_cancel(wl_id: int, _: str = Depends(require_admin)):
 # ── Confirmaciones ───────────────────────────────────────────────────────────
 
 @router.get("/admin/api/confirmaciones")
-def admin_confirmaciones(fecha: str = None, _: str = Depends(require_admin)):
+def admin_confirmaciones(fecha: str = None, _: str = Depends(require_administracion)):
     """Estado de confirmación de las citas del bot para una fecha (default: mañana)."""
     if not fecha:
         fecha = (date.today() + timedelta(days=1)).isoformat()
@@ -803,7 +879,7 @@ async def admin_buscar_paciente(rut: str, _: str = Depends(require_admin)):
 
 
 @router.get("/admin/api/slots")
-async def admin_slots(especialidad: str, _: str = Depends(require_admin)):
+async def admin_slots(especialidad: str, _: str = Depends(require_administracion)):
     """Retorna la próxima fecha disponible y sus slots para una especialidad."""
     fecha = await buscar_primer_dia(especialidad)
     if not fecha:
@@ -877,7 +953,7 @@ async def admin_agendar(request: Request, _: str = Depends(require_admin)):
 
 
 @router.get("/admin/api/especialidades")
-def admin_especialidades(_: str = Depends(require_admin)):
+def admin_especialidades(_: str = Depends(require_administracion)):
     """Retorna la lista de especialidades únicas disponibles."""
     esp = sorted({v["especialidad"] for v in PROFESIONALES.values()})
     return {"especialidades": esp}
