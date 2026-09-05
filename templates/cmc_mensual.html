@@ -1763,6 +1763,11 @@ document.getElementById('mesLabel').addEventListener('change',()=>{
 // Si el dashboard se abre desde http://localhost:8000 → rutas relativas.
 // Si se abre como archivo local (file://) → apunta al puerto 8000.
 const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+// El token viaja en la URL de la página (/cmc/mensual?token=…) y hay que reenviarlo
+// en cada llamada: /api/cmc/mensual y /api/state exigen auth, y esta página se sirve
+// como archivo crudo, así que el server no puede inyectarlo en el HTML.
+const _CMC_TOKEN = new URLSearchParams(location.search).get('token') || '';
+const _tk = u => _CMC_TOKEN ? u + (u.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(_CMC_TOKEN) : u;
 
 let _saveTimer = null;
 function saveState(){
@@ -1780,7 +1785,7 @@ function saveState(){
       box_data:         boxData,
     };
     try {
-      const r = await fetch(API_BASE+'/api/state',{
+      const r = await fetch(_tk(API_BASE+'/api/state'),{
         method:'PUT',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(payload)
@@ -2079,7 +2084,7 @@ async function init(){
   const ind = document.getElementById('save-indicator');
   if(ind){ ind.textContent='Cargando…'; ind.style.opacity='1'; ind.style.background='#e0f2fe'; ind.style.color='#0369a1'; }
   try {
-    const r = await fetch(API_BASE+'/api/state');
+    const r = await fetch(_tk(API_BASE+'/api/state'));
     if(r.ok){
       const s = await r.json();
       if(s.profesionales?.length){
@@ -2164,10 +2169,46 @@ const _SIN_TOTAL = new Set([
 let _CMC_MESES = [];
 let _CMC_MES_ACTUAL = null;
 
+// Sin datos frescos la pantalla seguía mostrando el último state guardado
+// rotulado "TOTAL DEL MES" — números viejos que se leen como los de hoy.
+function _cmcMarcarDesactualizado(motivo){
+  let b = document.getElementById('cmc-stale');
+  if(!b){
+    b = document.createElement('div');
+    b.id = 'cmc-stale';
+    b.style.cssText = 'background:#fdf4e3;border:1px solid #f2debd;border-left:4px solid #c98a14;'
+      + 'color:#7a5209;padding:10px 14px;border-radius:0 8px 8px 0;margin:0 0 14px;'
+      + 'font-weight:600;font-size:14px';
+    const grid = document.querySelector('.kpi-grid');
+    if(grid && grid.parentNode) grid.parentNode.insertBefore(b, grid);
+    else document.body.insertBefore(b, document.body.firstChild);
+  }
+  b.textContent = '⚠️ Datos NO actualizados — esto es el último guardado, no la caja de hoy. ' + motivo;
+  document.querySelectorAll('.kpi-value').forEach(el => el.style.opacity = '.45');
+  const lab = document.getElementById('chart-mes-label');
+  if(lab) lab.textContent = 'sin actualizar';
+}
+
 async function _cmcLoadMes(mes){
-  const url = mes ? `/api/cmc/mensual?mes=${mes}` : '/api/cmc/mensual';
+  const qs = new URLSearchParams();
+  if(mes) qs.set('mes', mes);
+  if(_CMC_TOKEN) qs.set('token', _CMC_TOKEN);
+  const url = '/api/cmc/mensual' + (qs.toString() ? '?' + qs : '');
   const r = await fetch(url);
+  if(!r.ok){
+    _cmcMarcarDesactualizado(r.status === 401 || r.status === 403
+      ? 'La sesión no tiene permiso para el módulo Mensual — abrí el panel desde Alma con tu token.'
+      : `El servidor respondió ${r.status}.`);
+    return;
+  }
   const d = await r.json();
+  if(!Array.isArray(d.profesionales)){
+    _cmcMarcarDesactualizado('La respuesta del servidor vino sin la lista de profesionales.');
+    return;
+  }
+  const stale = document.getElementById('cmc-stale');
+  if(stale) stale.remove();
+  document.querySelectorAll('.kpi-value').forEach(el => el.style.opacity = '');
   _CMC_MES_ACTUAL = d.mes;
   // Mapa id_profesional → total cobrado (huérfano con id=null va aparte)
   const totByProf = {};

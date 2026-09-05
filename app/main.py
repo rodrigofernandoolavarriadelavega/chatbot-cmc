@@ -3571,8 +3571,18 @@ def suplementos_page():
 
 @app.get("/bi/mensual", response_class=HTMLResponse)
 @app.get("/bi/dashboard-mensual", response_class=HTMLResponse)
-def bi_dashboard_mensual_page():
-    """Dashboard mensual Health BI (CMC): facturación por profesional/área, simulador honorarios."""
+def bi_dashboard_mensual_page(request: Request, token: str | None = Query(None),
+                              cmc_session: str | None = Cookie(None)):
+    """Dashboard mensual Health BI (CMC): facturación por profesional/área, simulador honorarios.
+
+    Gemelo viejo de /cmc/mensual. Estaba público en los dos dominios y consumía
+    /api/state; se cierra junto con él (2026-09-05)."""
+    import alma_scope
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not alma_scope.page_token(token, cmc_session, "mensual"):
+        raise HTTPException(401, "No autorizado")
     html = _read_template("bi_dashboard_mensual.html")
     if not html:
         raise HTTPException(404, "Dashboard mensual no disponible")
@@ -8775,8 +8785,18 @@ def _ensure_state_table(c):
 
 
 @app.get("/api/state")
-def api_state_get():
-    """Carga el state del dashboard mensual (singleton row id=1)."""
+def api_state_get(request: Request, token: str | None = Query(None),
+                  cmc_session: str | None = Cookie(None)):
+    """Carga el state del dashboard mensual (singleton row id=1).
+
+    🔴 Cerrado 2026-09-05: servía honorarios por profesional (nombre, total,
+    honorario, margen CMC) sin auth y en los DOS dominios — la misma fuga que se
+    cerró el 2026-09-02 en /cmc/mensual, a este endpoint se le pasó."""
+    import alma_scope
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    alma_scope.resolve(request, token, cmc_session, "mensual")
     import json as _json_st
     from session import db as _c_st
     with _c_st() as c:
@@ -8802,8 +8822,18 @@ def api_state_get():
 
 
 @app.put("/api/state")
-def api_state_put(body: dict):
-    """Persiste el state. Solo guarda campos conocidos (whitelist)."""
+def api_state_put(body: dict, request: Request, token: str | None = Query(None),
+                  cmc_session: str | None = Cookie(None)):
+    """Persiste el state. Solo guarda campos conocidos (whitelist).
+
+    🔴 Cerrado 2026-09-05: servía honorarios por profesional (nombre, total,
+    honorario, margen CMC) sin auth y en los DOS dominios — la misma fuga que se
+    cerró el 2026-09-02 en /cmc/mensual, a este endpoint se le pasó."""
+    import alma_scope
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    alma_scope.resolve(request, token, cmc_session, "mensual")
     import json as _json_st
     from session import db as _c_st
     payload = {

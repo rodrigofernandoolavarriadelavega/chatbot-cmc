@@ -1692,6 +1692,10 @@ document.getElementById('mesLabel').addEventListener('change',()=>{
 // Si el dashboard se abre desde http://localhost:8000 → rutas relativas.
 // Si se abre como archivo local (file://) → apunta al puerto 8000.
 const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+// /api/state exige auth (honorarios por profesional). Esta página se sirve como
+// archivo crudo, así que el token tiene que venir en su propia URL y reenviarse.
+const _BI_TOKEN = new URLSearchParams(location.search).get('token') || '';
+const _tk = u => _BI_TOKEN ? u + (u.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(_BI_TOKEN) : u;
 
 let _saveTimer = null;
 function saveState(){
@@ -1709,7 +1713,7 @@ function saveState(){
       box_data:         boxData,
     };
     try {
-      const r = await fetch(API_BASE+'/api/state',{
+      const r = await fetch(_tk(API_BASE+'/api/state'),{
         method:'PUT',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(payload)
@@ -2008,7 +2012,7 @@ async function init(){
   const ind = document.getElementById('save-indicator');
   if(ind){ ind.textContent='Cargando…'; ind.style.opacity='1'; ind.style.background='#e0f2fe'; ind.style.color='#0369a1'; }
   try {
-    const r = await fetch(API_BASE+'/api/state');
+    const r = await fetch(_tk(API_BASE+'/api/state'));
     if(r.ok){
       const s = await r.json();
       if(s.profesionales?.length){
