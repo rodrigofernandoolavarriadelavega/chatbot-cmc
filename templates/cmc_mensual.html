@@ -891,7 +891,15 @@ function renderDashboard(){
   document.getElementById('foot-cmc').innerHTML=fmtCLP(sC);
   document.getElementById('foot-pct').textContent=pctFmt(sC,sT);
   document.getElementById('alert-neg').style.display=data.some(d=>d.cmc<0)?'block':'none';
-  document.getElementById('chart-mes-label').textContent=document.getElementById('mesLabel').value;
+  // El selector se puebla DESPUES de este render: si todavia dice 'cargando…' no
+  // pisamos la etiqueta que _cmcLoadMes ya dejo correcta. Usamos el TEXTO de la
+  // opcion (ya viene 'Septiembre 2026'), no el value crudo ('2026-09').
+  {
+    const _sel = document.getElementById('mesLabel');
+    const _opt = _sel && _sel.options[_sel.selectedIndex];
+    if (_opt && /^\d{4}-\d{2}$/.test(_sel.value))
+      document.getElementById('chart-mes-label').textContent = _opt.text;
+  }
 
   // Tabla
   const tbody=document.getElementById('viewTableBody'); tbody.innerHTML='';
