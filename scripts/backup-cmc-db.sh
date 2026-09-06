@@ -2,7 +2,9 @@
 # Backup online de sessions.db encriptada con SQLCipher.
 # Usa sqlcipher_export() (el .backup tradicional no soporta DBs encriptadas).
 # El backup resultante queda encriptado con la MISMA key.
-# Retención: últimos 8 backups (~2 meses con cron semanal).
+# Retención: escalonada (7 diarios + 4 semanales + 3 mensuales), en
+# scripts/purgar-respaldos.py. El cron corre TODOS LOS DÍAS, no semanal:
+# la purga vieja conservaba 30 copias diarias y llegó a ocupar 8,3 GB.
 set -euo pipefail
 
 SRC=/opt/chatbot-cmc/data/sessions.db
@@ -49,8 +51,6 @@ fi
 gzip -f "${DST}"
 chmod 600 "${DST}.gz"
 
-# Purga: conservar solo los 8 más recientes
-ls -1t "${DST_DIR}"/sessions_*.db.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
 
 SIZE=$(du -h "${DST}.gz" | cut -f1)
 echo "[$(date -Iseconds)] OK: ${DST}.gz (${SIZE}, ${ROWS} sessions)"
@@ -66,7 +66,6 @@ if [ -d "${UPLOADS_SRC}" ]; then
     USIZE=$(du -h "${UPDST}" 2>/dev/null | cut -f1)
     UFILES=$(find "${UPLOADS_SRC}" -type f 2>/dev/null | wc -l)
     echo "[$(date -Iseconds)] OK uploads: ${UPDST} (${USIZE}, ${UFILES} archivos)"
-    ls -1t "${DST_DIR}"/uploads_*.tar.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
 else
     echo "[$(date -Iseconds)] WARN: no existe ${UPLOADS_SRC}, skip uploads backup" >&2
 fi
@@ -84,10 +83,26 @@ if [ -f "${HM_SRC}" ]; then
         chmod 600 "${HMDST}.gz"
         HMSIZE=$(du -h "${HMDST}.gz" 2>/dev/null | cut -f1)
         echo "[$(date -Iseconds)] OK heatmap: ${HMDST}.gz (${HMSIZE})"
-        ls -1t "${DST_DIR}"/heatmap_cache_*.db.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
     else
         echo "[$(date -Iseconds)] ERROR: falló .backup de ${HM_SRC}" >&2
     fi
 else
     echo "[$(date -Iseconds)] WARN: no existe ${HM_SRC}, skip heatmap backup" >&2
 fi
+
+# ── Purga escalonada ─────────────────────────────────────────────────────────
+# Al final y una sola vez para las tres familias. Antes cada bloque purgaba lo
+# suyo con `tail -n +31`, que (a) conservaba 30 copias diarias —un mes de
+# alcance por 8,3 GB— y (b) sólo miraba archivos .gz, así que los respaldos que
+# quedaban a medias cuando el proceso se cortaba no los borraba nadie nunca.
+python3 /opt/chatbot-cmc/scripts/purgar-respaldos.py \
+    || echo "[$(date -Iseconds)] WARN: la purga de respaldos falló" >&2
+
+# ── Copia FUERA del servidor ─────────────────────────────────────────────────
+# Va al final, después de la purga local: primero se decide qué se conserva acá
+# y recién entonces se sincroniza afuera. Un respaldo en el mismo disco que la
+# base protege contra un DELETE mal escrito, no contra perder el droplet.
+# El Space guarda MÁS historia que el disco local (30+12+12 contra 7+4+3):
+# acá el espacio es el problema, allá sobran 250 GB ya pagados.
+python3 /opt/chatbot-cmc/scripts/subir-respaldos.py \
+    || echo "[$(date -Iseconds)] ERROR: la subida a Spaces falló — el respaldo de hoy sólo existe en este disco" >&2
