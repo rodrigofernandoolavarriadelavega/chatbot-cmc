@@ -1208,8 +1208,12 @@ def reanudar_takeovers_expirados(horas_max: int = 24,
             _reset(conn, phone)
             try:
                 payload = '{"horas_max": %d, "solo_media": %s}' % (horas_max, "true" if solo_media else "false")
+                # OJO: la columna es `meta`, NO `payload` (ver DDL arriba). Con
+                # `payload` el INSERT tiraba "no such column" y el except de
+                # abajo se lo tragaba → 0 filas de takeover_ttl_reanudado aunque
+                # el job hubiera corrido. Verificado en prod 2026-09-06.
                 conn.execute(
-                    "INSERT INTO conversation_events (phone, event, payload, ts) "
+                    "INSERT INTO conversation_events (phone, event, meta, ts) "
                     "VALUES (?, 'takeover_ttl_reanudado', ?, datetime('now'))",
                     (phone, payload),
                 )

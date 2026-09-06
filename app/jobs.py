@@ -1525,6 +1525,12 @@ async def _job_takeover_media_ttl():
         log.exception("takeover_media_ttl falló: %s", e)
 
 
+# Horas mínimas entre dos alertas de takeover pendiente. Sin cooldown el job
+# reenviaba la lista completa cada 30 min (54 envíos verificados en el log del
+# 5-sep-2026, toda la noche con las mismas 70 sesiones).
+_ALERTA_TAKEOVER_COOLDOWN_H = 6
+
+
 async def _job_takeover_pendiente_alert():
     """Alerta al admin cuando hay sesiones HUMAN_TAKEOVER sin respuesta humana
     en tiempo excesivo: >2h en horario hábil (09-20 CLT lun-vie) o >12h fuera.
@@ -1598,6 +1604,32 @@ async def _job_takeover_pendiente_alert():
         log.info("takeover_pendiente_alert: ventana 24h cerrada para ADMIN_ALERT_PHONE — skip envío (%d sesiones varadas)", len(alertas))
         return
 
+    # Cooldown: el job corre cada 30 min y hasta 2026-09-06 reenviaba la misma
+    # lista cada vez. Se apoya en el propio evento que registra más abajo, así
+    # que sobrevive a los reinicios por deploy (16 en 7 días en ago-2026).
+    try:
+        conn = _s_conn()
+        ultima = conn.execute(
+            "SELECT MAX(ts) FROM conversation_events "
+            "WHERE event='takeover_pendiente_alerta'"
+        ).fetchone()[0]
+        conn.close()
+    except Exception:
+        ultima = None
+    if ultima:
+        try:
+            u = _dt.fromisoformat(ultima)
+            if u.tzinfo is None:
+                u = u.replace(tzinfo=_tz.utc)
+            horas_desde = (now_utc - u).total_seconds() / 3600
+            if horas_desde < _ALERTA_TAKEOVER_COOLDOWN_H:
+                log.info("takeover_pendiente_alert: cooldown activo (%.1fh < %dh) — "
+                         "%d sesiones varadas, no se reenvía",
+                         horas_desde, _ALERTA_TAKEOVER_COOLDOWN_H, len(alertas))
+                return
+        except Exception:
+            pass
+
     # Enviar alerta consolidada al admin (máx 5 casos en el mensaje)
     lineas = [f"• {a['phone'][-4:]}... · {a['horas']}h · {a['razon']}" for a in alertas[:5]]
     if len(alertas) > 5:
@@ -1612,10 +1644,16 @@ async def _job_takeover_pendiente_alert():
         await send_whatsapp(ADMIN_ALERT_PHONE, cuerpo)
         log.info("takeover_pendiente_alert: alerta enviada para %d sesiones", len(alertas))
         from session import log_event as _le
-        for a in alertas:
-            _le(a["phone"], "takeover_pendiente_alerta", {
-                "horas": a["horas"], "razon": a["razon"],
-            })
+        # UN evento resumen, no uno por sesión: antes escribía 70 filas por
+        # corrida × 48 corridas/día ≈ 3.360 filas diarias en conversation_events
+        # describiendo un estado que no cambiaba. Además es la marca de tiempo
+        # que lee el cooldown de arriba.
+        _le(ADMIN_ALERT_PHONE, "takeover_pendiente_alerta", {
+            "n": len(alertas),
+            "umbral_horas": umbral_horas,
+            "max_horas": max(a["horas"] for a in alertas),
+            "muestra": [a["phone"][-4:] for a in alertas[:5]],
+        })
     except Exception as e:
         log.error("takeover_pendiente_alert: no se pudo enviar alerta: %s", e)
 

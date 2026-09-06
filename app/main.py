@@ -1083,6 +1083,13 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute=15, timezone=_CLT),
         id="takeover_ttl",
         replace_existing=True,
+        # Sin esto APScheduler descarta el disparo si llega >1s tarde (default).
+        # Verificado 2026-09-06: llegaba 3-6s tarde SIEMPRE (27/27 corridas del
+        # log) → el TTL nunca corrió y quedaron 386 sesiones bloqueadas, 274 con
+        # más de 7 días. Mismo modo de falla que el cierre de caja (ver
+        # doctor_reset_diario). El job es idempotente: coalesce evita la pila.
+        misfire_grace_time=300,
+        coalesce=True,
     )
     # TTL más corto (6h) para HUMAN_TAKEOVER iniciados por imagen/PDF: solo
     # requieren ack/archivado. Cron cada hora a los :45.
@@ -1091,6 +1098,10 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute=45, timezone=_CLT),
         id="takeover_media_ttl",
         replace_existing=True,
+        # Ver takeover_ttl: 27/27 corridas descartadas por llegar ~3s tarde.
+        # Por eso los 57 handoffs media:comprobante_pago nunca se liberaron.
+        misfire_grace_time=300,
+        coalesce=True,
     )
     # Alerta takeover pendiente: cada 30 min, avisa si hay sesiones sin respuesta humana
     # >2h (horario hábil) o >12h (fuera de horario).
@@ -1393,12 +1404,19 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="*/10", timezone=_CLT),
         id="secuencia_postconsulta_upsell",
         replace_existing=True,
+        # 53/53 corridas descartadas por misfire (log 2026-09-06): la secuencia
+        # postconsulta nunca corrió. Grace < intervalo (10 min) + coalesce.
+        misfire_grace_time=300,
+        coalesce=True,
     )
     scheduler.add_job(
         _job_secuencia_postconsulta_review,
         CronTrigger(minute="*/10", timezone=_CLT),
         id="secuencia_postconsulta_review",
         replace_existing=True,
+        # Ver secuencia_postconsulta_upsell: mismo misfire, 53/53 descartadas.
+        misfire_grace_time=300,
+        coalesce=True,
     )
     # Carril de persistencia (2026-07-13): segundo toque a consultas de
     # agendamiento abiertas que el reenganche existente no rescató. GATED OFF
