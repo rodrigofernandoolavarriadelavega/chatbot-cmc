@@ -358,7 +358,47 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-08-24
+**Última actualización**: 2026-09-06
+
+### 2026-09-06 — 4 crons que NUNCA corrieron por `misfire_grace_time` (DEPLOYADO a5b1b48)
+- **Síntoma**: alerta "70 pacientes sin respuesta en HUMAN_TAKEOVER" cada 30 min
+  toda la noche. **Realidad**: 386 sesiones bloqueadas, 382 con +24h (274 con
+  +7 días, la más antigua 26 h=633).
+- **Causa raíz**: `_job_takeover_ttl` (:15) y `_job_takeover_media_ttl` (:45)
+  llegaban **3-6 s tarde SIEMPRE** (27/27 corridas del log) y APScheduler las
+  descartaba con el `misfire_grace_time` **default de 1 s**. El SQL del job
+  estaba perfecto (verificado: seleccionaba las 382 filas) — el job nunca
+  entraba a su cuerpo. Modo de falla ya conocido (`doctor_reset_diario`, cierre
+  de caja) pero el parche solo se había aplicado a 74 de 89 jobs.
+- **Igual de muertos**: `_job_secuencia_postconsulta_upsell` y `_review`
+  (`*/10`), **53/53 descartadas** — es el pendiente #10 del portaviones
+  ("secuenciación postconsulta"): nunca fue lógica rota, el cron no corría.
+- **Fix**: `misfire_grace_time=300` + `coalesce=True` en los 4.
+- **Bug lateral**: `session.py::reanudar_takeovers_expirados` insertaba el
+  evento `takeover_ttl_reanudado` en la columna **`payload`, que no existe**
+  (es `meta`) → moría dentro de un `try/except: pass`. La tabla tenía 0 filas.
+- **Alerta**: `jobs.py` — cooldown de 6 h (leído del propio evento, sobrevive
+  reinicios) + **UN** evento resumen en vez de uno por sesión (antes 70×48 ≈
+  3.360 filas/día en `conversation_events`).
+- **Verificado en prod**: `03:15:06 takeover_ttl: reanudados 382 phones` ·
+  HUMAN_TAKEOVER **386 → 4** · `takeover_ttl_reanudado` 0 → 382 eventos ·
+  **0 misfires** tras el restart · `/health` 200. Tests: 14/14 takeover;
+  suite completa 277 fallos = baseline exacto con y sin el cambio (verificado
+  con `git stash`; son `ModuleNotFoundError: psycopg2` del venv local).
+- **Desvío**: G1 abortó el deploy 2 veces — había trabajo SIN COMMITEAR directo
+  en el VPS (retención escalonada de respaldos: `backup-cmc-db.sh` + los nuevos
+  `purgar-respaldos.py` / `subir-respaldos.py`). Se rescató a git verificando
+  **sha256 idéntico byte a byte** antes de commitear, así el pull dejó los
+  archivos como ya estaban corriendo. Copias en `/root/rescate-scripts/`.
+  Credenciales en `/etc/cmc-spaces.env`, fuera del repo.
+- **PENDIENTE**: quedan **11 jobs sin `misfire_grace_time`** (`reenganche`,
+  `followup_info`, `persistencia_contacto`, `organic_publish_queue`,
+  `detectar_cancelaciones`, `monitor_anomalias`, `claude_watchdog`,
+  `medilink_outage_watcher`, `takeover_pendiente_alert`, `admin_status_report`,
+  `watchdog_entrega`). Auditarlos: los de alta frecuencia a :15/:45 son los que
+  se pierden sistemáticamente.
+
+### 2026-08-24 — Fuga de identidad por autocaptura de RUT + 10 fixes post-auditoría (DEPLOYADO commit 06f642e)
 
 ### 2026-08-24 — Fuga de identidad por autocaptura de RUT + 10 fixes post-auditoría (DEPLOYADO commit 06f642e)
 - **Bug de seguridad real** (portaviones, consolidado 2d): `try_autocapture_rut_name`
