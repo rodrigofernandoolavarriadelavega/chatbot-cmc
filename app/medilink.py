@@ -2600,13 +2600,46 @@ def hint_rut_error(rut_raw: str) -> str:
     )
 
 
+# Caracteres que llegan en lugar del DV real. 'J' está pegada a 'K' en el
+# teclado; 'L'/'I' se confunden con '1' y 'O' con '0' al leer una cédula.
+_DV_TIPEOS = {"J": ("K",), "L": ("1", "K"), "I": ("1",), "O": ("0",)}
+
+
+def _reparar_dv_tipeado(cuerpo: str, dv: str | None) -> str | None:
+    """Corrige un DV escrito con un carácter que no existe como dígito
+    verificador, pero SÓLO si la corrección cuadra con módulo 11.
+
+    El DV chileno es 0-9 o K. Por WhatsApp llegan otros caracteres:
+    '12.067.174-J' (J al lado de K) o '22.643.819-l' (ele por uno), ambos
+    reales en prod. Antes esos caracteres no matcheaban la clase del DV, el
+    RUT caía a la rama "sin DV explícito" y el bot DERIVABA un DV del cuerpo,
+    pisando en silencio lo que el paciente había escrito.
+
+    Nunca adivina: si ninguna corrección valida, devuelve el carácter tal cual
+    para que `valid_rut` lo rechace y el bot vuelva a pedir el RUT.
+    """
+    if not dv or dv in "0123456789K":
+        return dv
+    correcto = _calcular_dv_rut(cuerpo) if 7 <= len(cuerpo) <= 8 else ""
+    for candidato in _DV_TIPEOS.get(dv, ()):
+        if candidato and candidato == correcto:
+            return candidato
+    return dv
+
+
 def clean_rut(rut: str) -> str:
     """Normaliza RUT con múltiples formatos aceptados:
     - '12.345.678-9' / '12345678-9'      → '12345678-9' (ya válido)
     - '123456789'                         → '12345678-9' (último char es DV)
     - '12 345 678 9' / '12.345.678 9'     → '12345678-9' (espacios/puntos)
-    - '12345678' (8 dígitos sin DV)       → '12345678-K' (calcula DV)
-    - '1234567' (7 dígitos sin DV)        → '1234567-K' (calcula DV)
+    - '9 224 066 5' (8 díg., sin DV)      → '9224066-5'  (el último ES el DV:
+                                            se prefiere la lectura que valida
+                                            módulo 11 antes que derivar un DV)
+    - '20997207' (8 díg., sin DV)         → '20997207-7' (cuerpo de 8: ninguna
+                                            otra lectura valida, el DV se
+                                            deriva — módulo 11 es determinista)
+    - '1234567' (7 dígitos sin DV)        → '1234567-K' (deriva DV)
+    - '12.067.174-J' / '22.643.819-l'     → repara el DV sólo si valida (K / 1)
     - 'rut 12.345.678-9' / '12345678 /9'  → '12345678-9'
 
     Reduce fricción en WAIT_RUT_* donde pacientes rurales escriben sin guión
@@ -2644,12 +2677,12 @@ def clean_rut(rut: str) -> str:
     # Permite puntos/espacios/nbsp internos en el cuerpo y guión(es) antes del DV.
     # Así toleramos texto circundante, envolturas ("", [], {}, «»), emojis, etc.
     m = re.search(
-        r"(\d[\d.\s\u00a0]{5,}\d)(?:\s*-+\s*([0-9K]))?(?![0-9K])",
+        r"(\d[\d.\s\u00a0]{5,}\d)(?:\s*-+\s*([0-9KJLIO]))?(?![0-9K])",
         rut,
     )
     if m:
         cuerpo_digitos = re.sub(r"\D", "", m.group(1))
-        dv = m.group(2)
+        dv = _reparar_dv_tipeado(cuerpo_digitos, m.group(2))
         if dv:
             if 7 <= len(cuerpo_digitos) <= 8:
                 return f"{cuerpo_digitos}-{dv}"
@@ -2658,6 +2691,21 @@ def clean_rut(rut: str) -> str:
         else:
             if len(cuerpo_digitos) == 9:
                 return f"{cuerpo_digitos[:8]}-{cuerpo_digitos[8]}"
+            # 8 d\u00edgitos sin DV expl\u00edcito: DOS lecturas posibles y hay que
+            # elegir la que cuadre con m\u00f3dulo 11, NO calcular un DV a ciegas.
+            #   A) cuerpo de 8 + DV derivado   \u2192 '80875541' = 80875541-6
+            #   B) cuerpo de 7 + \u00faltimo = DV   \u2192 '80875541' = 8087554-1
+            # Antes se tomaba SIEMPRE A, as\u00ed que a quien escrib\u00eda su RUT con
+            # espacios ('9 224 066 5' = 9.224.066-5) el bot le fabricaba
+            # 92240665-0 \u2014 el RUT de otra persona. Con RUT inexistente el flujo
+            # se va a registro y crea una ficha basura en Medilink. Medido en
+            # prod 2026-09-07: 5 de 6 casos de 8 d\u00edgitos eran B, no A.
+            # B s\u00f3lo se acepta si valida m\u00f3dulo 11 (1/11 de falso positivo);
+            # si no valida, A es la \u00fanica lectura posible y su DV es derivado,
+            # no inventado (m\u00f3dulo 11 es determinista dado el cuerpo).
+            if len(cuerpo_digitos) == 8:
+                if _calcular_dv_rut(cuerpo_digitos[:7]) == cuerpo_digitos[7]:
+                    return f"{cuerpo_digitos[:7]}-{cuerpo_digitos[7]}"
             if 7 <= len(cuerpo_digitos) <= 8:
                 dv_calc = _calcular_dv_rut(cuerpo_digitos)
                 if dv_calc:
