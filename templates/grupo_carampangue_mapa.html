@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Mapa del Grupo Olavega</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --bg:#F4F7FA; --panel:#FFFFFF; --panel2:#EDF2F7; --borde:#E6EDF3; --borde2:#D6E1EA;
+  --ink:#13202E; --texto:#2A3B4D; --muted:#64798C; --tenue:#93A6B6;
+  --navy:#0F3F68; --navy-deep:#0A2E4D; --azul:#1172AB; --aqua:#4FBECE;
+  --car:#0E7C66; --pm:#1172AB; --tech:#6C5CE0; --fuera:#7E93A8; --estruct:#0F3F68; --tiempo:#C96A2E;
+  --sh-sm:0 1px 2px rgba(15,63,104,.06), 0 1px 3px rgba(15,63,104,.05);
+  --sh-md:0 4px 12px rgba(15,63,104,.07), 0 1px 3px rgba(15,63,104,.05);
+  --sh-lg:0 12px 32px rgba(15,63,104,.10), 0 2px 8px rgba(15,63,104,.06);
+  --r:16px; --r-sm:10px;
+  --sobre-navy:#FFFFFF;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0A141D; --panel:#101E2A; --panel2:#162836; --borde:#1E3244; --borde2:#2A4055;
+  --ink:#EAF1F6; --texto:#C6D5E0; --muted:#8CA3B6; --tenue:#6A8093;
+  --navy:#14496F; --navy-deep:#0B2740; --azul:#3B9BD4; --aqua:#5FCFDE;
+  --car:#3FB79A; --pm:#4FA8DC; --tech:#9A8CEC; --fuera:#7E93A8; --estruct:#5B9AC8; --tiempo:#E0915A;
+  --sh-sm:0 1px 2px rgba(0,0,0,.30); --sh-md:0 4px 14px rgba(0,0,0,.34);
+  --sh-lg:0 14px 36px rgba(0,0,0,.42);
+  --sobre-navy:#FFFFFF;
+}}
+:root[data-theme="dark"]{
+  --bg:#0A141D; --panel:#101E2A; --panel2:#162836; --borde:#1E3244; --borde2:#2A4055;
+  --ink:#EAF1F6; --texto:#C6D5E0; --muted:#8CA3B6; --tenue:#6A8093;
+  --navy:#14496F; --navy-deep:#0B2740; --azul:#3B9BD4; --aqua:#5FCFDE;
+  --car:#3FB79A; --pm:#4FA8DC; --tech:#9A8CEC; --fuera:#7E93A8; --estruct:#5B9AC8; --tiempo:#E0915A;
+  --sh-sm:0 1px 2px rgba(0,0,0,.30); --sh-md:0 4px 14px rgba(0,0,0,.34);
+  --sh-lg:0 14px 36px rgba(0,0,0,.42);
+  --sobre-navy:#FFFFFF;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--texto);
+  font-family:Montserrat,-apple-system,"Segoe UI",sans-serif; font-size:15px; line-height:1.6;
+  font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased}
+.env{max-width:1280px; margin:0 auto; padding:26px 22px 90px}
+:focus-visible{outline:2px solid var(--aqua); outline-offset:3px; border-radius:6px}
+svg.ico{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round; flex:none}
+
+/* ══ header firma ══ */
+.firma{position:relative; overflow:hidden; border-radius:var(--r);
+  background:linear-gradient(118deg, var(--navy-deep) 0%, var(--navy) 46%, var(--azul) 118%);
+  box-shadow:var(--sh-lg); padding:34px 34px 30px; color:var(--sobre-navy)}
+.firma::after{content:""; position:absolute; top:-190px; right:-120px; width:520px; height:520px;
+  border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, rgba(79,190,206,.34) 0%, rgba(79,190,206,.10) 42%, transparent 68%)}
+.firma::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background:radial-gradient(circle at 12% 118%, rgba(79,190,206,.16) 0%, transparent 46%)}
+.firma > *{position:relative; z-index:1}
+.fila-firma{display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap}
+.badge-ico{width:46px; height:46px; border-radius:13px; flex:none; display:grid; place-items:center;
+  background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.20);
+  backdrop-filter:blur(6px); color:var(--aqua)}
+.badge-ico svg{width:23px; height:23px; stroke-width:1.7}
+.firma h1{font-size:clamp(27px,4.1vw,41px); font-weight:800; letter-spacing:-.028em;
+  line-height:1.04; margin:0; color:#fff; text-wrap:balance}
+.firma .kicker{font-size:10.5px; font-weight:700; letter-spacing:.17em; text-transform:uppercase;
+  color:var(--aqua); margin-bottom:8px}
+.firma p{max-width:66ch; margin:14px 0 0; font-size:15px; font-weight:400;
+  color:rgba(255,255,255,.80); line-height:1.62}
+.firma p b{color:#fff; font-weight:600}
+.pill-modo{margin-left:auto; display:inline-flex; align-items:center; gap:8px; flex:none;
+  padding:7px 15px 7px 12px; border-radius:99px; background:rgba(255,255,255,.11);
+  border:1px solid rgba(255,255,255,.19); font-size:11.5px; font-weight:600;
+  color:rgba(255,255,255,.92); letter-spacing:.01em}
+.dot{width:7px; height:7px; border-radius:50%; background:var(--aqua); flex:none;
+  box-shadow:0 0 0 0 rgba(79,190,206,.65); animation:latido 2.4s infinite}
+@keyframes latido{
+  0%{box-shadow:0 0 0 0 rgba(79,190,206,.55)}
+  70%{box-shadow:0 0 0 9px rgba(79,190,206,0)}
+  100%{box-shadow:0 0 0 0 rgba(79,190,206,0)}
+}
+
+/* ══ kpis ══ */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:13px; margin-top:16px}
+.kpi{background:var(--panel); border:1px solid var(--borde); border-radius:var(--r);
+  padding:16px 17px; box-shadow:var(--sh-sm); display:flex; gap:13px; align-items:flex-start;
+  transition:transform .18s cubic-bezier(.2,.7,.3,1), box-shadow .18s}
+.kpi:hover{transform:translateY(-2px); box-shadow:var(--sh-md)}
+.kpi .tile{width:34px; height:34px; border-radius:10px; flex:none; display:grid; place-items:center;
+  background:var(--panel2); color:var(--azul)}
+.kpi .tile svg{width:17px; height:17px}
+.kpi .n{font-size:24px; font-weight:700; color:var(--ink); line-height:1.05; letter-spacing:-.02em}
+.kpi .n small{font-size:12.5px; font-weight:500; color:var(--tenue); letter-spacing:0}
+.kpi .l{font-size:11.5px; font-weight:500; color:var(--muted); margin-top:5px; line-height:1.35}
+
+/* ══ lentes ══ */
+.lentes{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:11px; margin-top:22px}
+.lentes button{text-align:left; cursor:pointer; font-family:inherit;
+  background:var(--panel); border:1px solid var(--borde); border-radius:var(--r);
+  padding:13px 15px; box-shadow:var(--sh-sm); color:var(--muted);
+  transition:transform .18s cubic-bezier(.2,.7,.3,1), box-shadow .18s, border-color .18s, background .18s}
+.lentes button:hover{transform:translateY(-2px); box-shadow:var(--sh-md); border-color:var(--borde2)}
+.lentes button strong{display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700;
+  color:var(--ink); letter-spacing:-.012em}
+.lentes button strong svg{width:15px; height:15px; color:var(--tenue)}
+.lentes button small{display:block; font-size:11.5px; font-weight:500; color:var(--tenue); margin-top:5px}
+.lentes button[aria-pressed="true"]{
+  background:linear-gradient(122deg,var(--navy-deep),var(--navy)); border-color:var(--navy);
+  box-shadow:var(--sh-md)}
+.lentes button[aria-pressed="true"] strong,
+.lentes button[aria-pressed="true"] strong svg{color:#fff}
+.lentes button[aria-pressed="true"] small{color:rgba(255,255,255,.68)}
+
+/* ══ tablero ══ */
+.tablero{display:grid; grid-template-columns:1fr 304px; gap:15px; margin-top:15px; align-items:start}
+@media(max-width:960px){.tablero{grid-template-columns:1fr}}
+.caja{background:var(--panel); border:1px solid var(--borde); border-radius:var(--r);
+  box-shadow:var(--sh-md); overflow:hidden}
+.caja-top{display:flex; align-items:center; gap:11px; padding:13px 17px; border-bottom:1px solid var(--borde)}
+.caja-top .t{font-size:12.5px; font-weight:700; color:var(--ink); letter-spacing:-.01em}
+.caja-top .s{font-size:11.5px; font-weight:500; color:var(--tenue)}
+.caja-top .der{margin-left:auto; display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+  font-size:10.5px; font-weight:600; color:var(--tenue); letter-spacing:.02em}
+.caja-top .der span{display:flex; align-items:center; gap:6px}
+.sw{width:11px; height:11px; border-radius:50%; display:block; border:1.6px solid var(--muted)}
+.lienzo-env{position:relative}
+#lienzo{display:block; width:100%; height:672px; cursor:grab}
+#lienzo.arrastrando{cursor:grabbing}
+@media(max-width:700px){#lienzo{height:498px}}
+#tip{position:absolute; pointer-events:none; z-index:4; opacity:0; transition:opacity .13s;
+  background:linear-gradient(120deg,var(--navy-deep),var(--navy)); color:#fff;
+  font-size:11.5px; font-weight:600; padding:7px 11px; border-radius:9px;
+  white-space:nowrap; transform:translate(-50%,-172%); box-shadow:var(--sh-md);
+  border:1px solid rgba(255,255,255,.14)}
+.caja-pie{display:flex; gap:7px; flex-wrap:wrap; padding:12px 17px; border-top:1px solid var(--borde)}
+.caja-pie button{font-family:inherit; font-size:10.5px; font-weight:600; cursor:pointer;
+  padding:5px 11px 5px 8px; border:1px solid var(--borde2); background:transparent;
+  color:var(--muted); border-radius:99px; transition:.15s; display:flex; align-items:center; gap:6px}
+.caja-pie button i{width:7px; height:7px; border-radius:50%; display:block; flex:none}
+.caja-pie button:hover{border-color:var(--azul); color:var(--ink)}
+.caja-pie button[aria-pressed="false"]{opacity:.42}
+
+/* ══ riel ══ */
+.riel{position:sticky; top:14px; display:flex; flex-direction:column; gap:13px}
+.tarjeta{background:var(--panel); border:1px solid var(--borde); border-radius:var(--r);
+  padding:17px; box-shadow:var(--sh-sm)}
+.tarjeta h4{display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--tenue); margin:0 0 13px; font-weight:700}
+.tarjeta h4 svg{width:14px; height:14px}
+#det .nom{font-size:19px; font-weight:700; color:var(--ink); line-height:1.16; letter-spacing:-.018em}
+#det .sub{display:inline-flex; align-items:center; gap:7px; margin-top:8px; font-size:10.5px;
+  font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+#det .sub i{width:9px; height:9px; border-radius:50%; display:block}
+.pills{display:flex; gap:6px; flex-wrap:wrap; margin-top:12px}
+.pill{font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:99px;
+  background:var(--panel2); color:var(--muted)}
+.cifra-caja{margin-top:14px; padding:13px 14px; border-radius:var(--r-sm);
+  background:linear-gradient(120deg,var(--navy-deep),var(--navy)); color:#fff}
+.cifra-caja .n{font-size:27px; font-weight:800; letter-spacing:-.03em; line-height:1}
+.cifra-caja .n small{font-size:12px; font-weight:500; color:rgba(255,255,255,.66); letter-spacing:0}
+.cifra-caja .barra{height:4px; border-radius:99px; background:rgba(255,255,255,.20); margin-top:10px; overflow:hidden}
+.cifra-caja .barra i{display:block; height:100%; background:var(--aqua); border-radius:99px}
+.cifra-caja .pie{font-size:10px; font-weight:600; color:rgba(255,255,255,.62); margin-top:7px; letter-spacing:.03em}
+#det .nota{font-size:13.5px; font-weight:400; color:var(--muted); margin:13px 0 0; line-height:1.55}
+.lista{margin:14px 0 0; padding:14px 0 0; list-style:none; border-top:1px solid var(--borde);
+  display:flex; flex-direction:column; gap:9px}
+.lista li{display:flex; gap:9px; align-items:flex-start; font-size:12.5px; line-height:1.38}
+.lista li i.mk{width:6px; height:6px; border-radius:50%; flex:none; margin-top:6px}
+.lista li .tx{color:var(--texto); font-weight:500}
+.lista li .tp{display:block; font-size:9.5px; font-weight:700; letter-spacing:.07em;
+  text-transform:uppercase; color:var(--tenue); margin-bottom:1px}
+.lista li.fut .tx{color:var(--muted); font-weight:400}
+.vacio{color:var(--tenue); font-size:13px}
+.leyenda{display:flex; flex-direction:column; gap:9px}
+.leyenda span.fila{display:flex; align-items:center; gap:10px; font-size:12.5px; font-weight:500; color:var(--texto)}
+.leyenda i{width:10px; height:10px; border-radius:50%; flex:none; display:block}
+.leyenda b{margin-left:auto; font-size:11px; font-weight:600; color:var(--tenue)}
+
+/* ══ secciones ══ */
+section{padding-top:56px}
+.sec-k{font-size:10.5px; font-weight:700; letter-spacing:.17em; text-transform:uppercase; color:var(--azul)}
+h2{font-size:24px; font-weight:700; letter-spacing:-.025em; color:var(--ink); margin:8px 0 24px}
+.hall{display:grid; grid-template-columns:repeat(auto-fit,minmax(272px,1fr)); gap:14px}
+.hallazgo{background:var(--panel); border:1px solid var(--borde); border-radius:var(--r);
+  padding:19px; box-shadow:var(--sh-sm);
+  transition:transform .18s cubic-bezier(.2,.7,.3,1), box-shadow .18s}
+.hallazgo:hover{transform:translateY(-2px); box-shadow:var(--sh-md)}
+.hallazgo .tile{width:32px; height:32px; border-radius:10px; display:grid; place-items:center;
+  background:var(--panel2); color:var(--azul); margin-bottom:13px}
+.hallazgo.ojo .tile{background:rgba(201,106,46,.12); color:var(--tiempo)}
+.hallazgo h3{font-size:15px; font-weight:700; color:var(--ink); margin:0 0 8px; letter-spacing:-.014em; line-height:1.28}
+.hallazgo p{margin:0; font-size:13.5px; font-weight:400; color:var(--muted); line-height:1.55}
+.hallazgo p + p{margin-top:9px}
+.hallazgo b{color:var(--texto); font-weight:600}
+code{font-family:ui-monospace,Menlo,monospace; font-size:12px; background:var(--panel2);
+  padding:1px 5px; border-radius:5px; color:var(--texto)}
+footer{margin-top:54px; padding:19px 21px; background:var(--panel); border:1px solid var(--borde);
+  border-radius:var(--r); font-size:11.5px; font-weight:400; color:var(--tenue); line-height:1.8}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+
+/* barra de navegación del Grupo (patrón de las páginas hermanas) */
+.gcnav{background:linear-gradient(118deg,var(--navy-deep),var(--navy)); font-size:.78rem;
+  border-bottom:1px solid rgba(255,255,255,.10)}
+.gcnav .in{max-width:1280px; margin-inline:auto; padding:10px 22px;
+  display:flex; flex-wrap:wrap; gap:7px; align-items:center}
+.gcnav a{color:rgba(255,255,255,.62); text-decoration:none; font-weight:500;
+  transition:color .15s}
+.gcnav a:hover{color:#fff}
+.gcnav a[aria-current]{color:var(--aqua); font-weight:600}
+.gcnav .sep{color:rgba(255,255,255,.24)}
+</style>
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<nav class="gcnav"><div class="in"><a href="/grupo?token=__TOKEN__">Grupo Carampangue</a><span class="sep">/</span><a href="/grupo/2030?token=__TOKEN__">Modelo 2030</a><span class="sep">/</span><a href="/grupo/simulador?token=__TOKEN__">Simulador</a><span class="sep">/</span><a href="/grupo/float?token=__TOKEN__">Float</a><span class="sep">/</span><a href="/grupo/mapa?token=__TOKEN__" aria-current="page">Mapa</a><span class="sep">/</span><a href="/olacore?token=__TOKEN__">Documentos del holding</a></div></nav>
+<div class="env">
+<div class="firma">
+  <div class="fila-firma">
+    <div class="badge-ico"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8"/></svg></div>
+    <div style="min-width:min(100%,320px)">
+      <div class="kicker">Arquitectura de marca · corte 7 sep 2026</div>
+      <h1>Mapa del Grupo Olavega</h1>
+    </div>
+    <div class="pill-modo"><span class="dot"></span><span id="pill-txt">38 unidades · 67 relaciones</span></div>
+  </div>
+  <p>Las marcas y unidades que existen, se están construyendo o están sobre la mesa — y las relaciones entre ellas: <b>quién es dueño de quién, quién le genera demanda a quién, dónde compiten y por dónde podría pasar la plata.</b> Cambia la lente para reagrupar el mismo mapa según lo que necesites decidir.</p>
+</div>
+
+<div class="kpis" id="kpis"></div>
+<div class="lentes" id="lentes"></div>
+
+<div class="tablero">
+  <div class="caja">
+    <div class="caja-top">
+      <span class="t" id="top-t">Por estructura</span>
+      <span class="s" id="top-s">quién es dueño de quién</span>
+      <span class="der">
+        <span><i class="sw" style="background:var(--muted);border-color:var(--muted)"></i>opera</span>
+        <span><i class="sw" style="background:linear-gradient(90deg,var(--muted) 50%,transparent 50%)"></i>en obra</span>
+        <span><i class="sw"></i>futura</span>
+      </span>
+    </div>
+    <div class="lienzo-env">
+      <canvas id="lienzo"></canvas>
+      <div id="tip"></div>
+    </div>
+    <div class="caja-pie" id="filtros"></div>
+  </div>
+  <aside class="riel">
+    <div class="tarjeta" id="det"></div>
+    <div class="tarjeta">
+      <h4><svg class="ico" viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg><span id="ley-tit">Agrupación</span></h4>
+      <div class="leyenda" id="leyenda"></div>
+    </div>
+  </aside>
+</div>
+
+<section>
+  <div class="sec-k">Lo que el mapa deja ver</div>
+  <h2>Cuatro cosas que no se ven desde adentro</h2>
+  <div class="hall">
+    <div class="hallazgo ojo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+      <h3>El nodo más cargado no es una empresa</h3>
+      <p>Eres tú. Tus horas clínicas alimentan al CMC — produjiste <b>$8,16M en agosto</b>, tu récord — y al mismo tiempo eres el único que opera el stack completo: <code>bus factor = 1</code>.</p>
+      <p>Toda la estructura de arriba cuelga de un nodo que no escala y que además financia al resto.</p>
+    </div>
+    <div class="hallazgo ojo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
+      <h3>CMC y CECAR no suman: compiten</h3>
+      <p>El techo de demanda de la provincia está en <b>$45–55M/mes clínicos</b>. CMC a $33M más CECAR al nivel de ocupación del CMC da $54M: el borde superior de la banda.</p>
+      <p>Los 6 box de CECAR solo son crecimiento real si traen pacientes de <b>fuera de la comuna</b>. Si no, se canibalizan.</p>
+    </div>
+    <div class="hallazgo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div>
+      <h3>La mitad grande no está modelada</h3>
+      <p>Meulen vende <b>$45–60M/mes</b>: más que todo Grupo Carampangue junto. El modelo <code>/grupo/2030</code> cubre solo la mitad de Arauco.</p>
+      <p>Falta el consolidado de Grupo Olavega, y la mitad que falta hoy factura más que la que está dibujada.</p>
+    </div>
+    <div class="hallazgo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <h3>Las apuestas gratis cuelgan del mismo tronco</h3>
+      <p>Salud Empresas, domicilio, los box de CECAR, CARIN y los profesionales a porcentaje <b>no cuestan nada si fallan</b> — y todas dependen de que el CMC les mande el paciente.</p>
+      <p>Es diversificación aparente: un solo motor las alimenta.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-k">Las cuatro lentes</div>
+  <h2>Cómo se podrían agrupar</h2>
+  <div class="hall">
+    <div class="hallazgo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></div>
+      <h3>Por estructura</h3>
+      <p>La que ya decidiste el 29 de agosto: <b>eje geográfico</b>. Grupo Olavega arriba, Carampangue y Puerto Montt como caras comerciales, OLACORE SpA como envoltorio legal invisible y OLACORE Tech cruzando ambas. Sirve para constituir sociedades y hablar con el contador.</p>
+    </div>
+    <div class="hallazgo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v2m0 8v2"/></svg></div>
+      <h3>Por naturaleza del ingreso</h3>
+      <p>La que le habla a tu meta: separa lo que se paga con <b>tu tiempo</b>, lo que es <b>margen de dueño</b>, lo que es <b>renta de un activo</b> y lo que es <b>recurrente de software</b>. En esta lente se ve de un vistazo cuánto de tu vida sigue colgando de la columna equivocada.</p>
+    </div>
+    <div class="hallazgo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
+      <h3>Por riesgo</h3>
+      <p>Tu propio marco del modelo 2030: lo que <b>cuesta cero si falla</b> —profesionales a porcentaje, box, Salud Empresas, CARIN, domicilio— va todo en paralelo y ahora. Lo que <b>cuesta aunque falle</b> —imagenología $60M, farmacia $25M, Alma $40M— es lo único que merece compuertas.</p>
+    </div>
+    <div class="hallazgo">
+      <div class="tile"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><circle cx="12" cy="12" r="4"/><path d="M4.9 4.9 7.8 7.8"/><path d="M16.2 16.2l2.9 2.9"/></svg></div>
+      <h3>Por madurez</h3>
+      <p>Qué opera, qué está en obra, qué está en evaluación y qué es todavía una idea. Es la lente para repartir atención: hoy <b>hay más nodos en construcción que operando</b>, y esa proporción decide si el próximo año se cobra o se sigue construyendo.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Nodos y relaciones reconstruidos desde las memorias de proyecto: arquitectura de marca del 29-ago-2026, modelo Grupo Carampangue 2030, float de honorarios, meta de reemplazo de ingreso médico y las fichas de cada unidad.<br>
+  Las cifras de venta son mensuales en pesos chilenos; las marcadas como potenciales vienen de escenarios modelados, no de caja registrada.<br>
+  Ríomonte, Capital Travel, Reloncaví, EMEM y Don Pancho aparecen porque se conectan al grupo, no porque sean del grupo.
+</footer>
+</div>
+
+<script>
+/* ═══════════ datos ═══════════ */
+const G='car', P='pm', T='tech', F='fuera', S='estruct';
+const N = [
+ {id:'olavega', n:'Grupo Olavega', g:S, m:'marcha', i:'estruct', r:'estruct', nota:'La casa madre comercial. El eje es geográfico, no de negocio — decidido por ti el 29-ago-2026.'},
+ {id:'olacore', n:'OLACORE SpA', g:S, m:'evaluacion', i:'estruct', r:'caro', nota:'El holding legal y tributario. No es customer-facing: nadie lo ve. Pro Pyme 14D abajo, diferimiento arriba. Nada se constituye sin contador y abogado.'},
+ {id:'gcar', n:'Grupo Carampangue', g:S, m:'marcha', i:'estruct', r:'estruct', nota:'Todo lo que hay en Arauco. El topónimo ya lo llevan encima tres marcas, así que no hay que explicarlo. Marca débil en INAPI: no se puede apropiar.'},
+ {id:'gpm', n:'Puerto Montt', g:S, m:'marcha', i:'estruct', r:'estruct', nota:'Meulen y lo asociado: bodega y el suelo de Piedra Azul. A 700 km del otro cluster.'},
+
+ {id:'cmc', n:'Centro Médico Carampangue', g:G, m:'marcha', i:'dueno', r:'opera', v:33, nota:'El motor. 9 box, 69 horas semanales, 41% de ocupación. Todo lo demás del grupo se alimenta de su flujo de pacientes.'},
+ {id:'rodrigo', n:'Tus horas clínicas', g:G, m:'marcha', i:'tiempo', r:'opera', v:8.2, pulso:1, nota:'Produjiste $8,16M en agosto, tu récord histórico. El hueco a reemplazar son $5,79M/mes. Ya estás en tu techo personal: no puedes crecer atendiendo más.'},
+ {id:'farmacia', n:'Farmacia CMC', g:G, m:'marcha', i:'dueno', r:'opera', v:4, nota:'12% de la venta pero solo 3% del EBITDA. Se autofinancia y sostiene al químico farmacéutico obligatorio. Su gracia es capturar la receta que tu propio médico acaba de escribir.'},
+ {id:'cecar', n:'CECAR', g:G, m:'construccion', i:'dueno', r:'cero', v:15.5, pot:1, nota:'Gimnasio + 6 box de consulta: dos tercios de la capacidad instalada del CMC. Pasa los $2M de EBITDA con 20% de ocupación. Frente #2 del grupo. Local Monsalve 168, con destino OFICINAS y suelo rural por resolver.'},
+ {id:'patio', n:'Patio Carampangue', g:G, m:'construccion', i:'dueno', r:'cero', v:0.6, nota:'Uso transitorio del terreno mientras se define el edificio. El finde arranca $112k abajo: lo decide ser dueño de los juegos, no arrendarlos. Su valor real es marketing y prueba de convocatoria.'},
+ {id:'nuni', n:'NUNI', g:G, m:'construccion', i:'recurrente', r:'caro', nota:'La app de comercio multi-tenant. Cero comisión donde las plataformas no llegan — foso geográfico, no tecnológico. Sin clientes externos todavía.'},
+ {id:'carin', n:'CARIN', g:G, m:'evaluacion', i:'dueno', r:'cero', nota:'Carampangue Infantil, centro de desarrollo. Landing en vivo con noindex y 8 datos por confirmar. Marca aparte del CMC.'},
+ {id:'optica', n:'Óptica Carampangue', g:G, m:'evaluacion', i:'dueno', r:'cero', nota:'50/50 con vesting por volumen. Los activos quedan fuera del acuerdo y las boletas siempre del RUT tuyo. Vive de la oftalmología del CMC.'},
+ {id:'rehab', n:'Unidad de rehabilitación', g:G, m:'construccion', i:'dueno', r:'cero', nota:'Fisiatría y kinesiología por estaciones en Monsalve. 4 estaciones es el punto dulce, payback 5 meses. Falta confirmar el bono grupal Fonasa por escrito.'},
+ {id:'terreno', n:'Terreno República × Conquista', g:G, m:'marcha', i:'renta', r:'opera', nota:'~1.000 m² propios a media cuadra del CMC, 3 pisos al 100% de ocupación = ~3.000 m² construibles. El activo más valioso y de menor riesgo del portafolio.'},
+ {id:'edificio', n:'Edificio propio', g:G, m:'futura', i:'renta', r:'caro', nota:'Por fases. Fase 1 de 800–1.000 m², no los 3.000 de una: el límite no es el suelo, es la demanda de la provincia. El siguiente piso solo cuando el anterior esté lleno.'},
+ {id:'diag', n:'Centro diagnóstico', g:G, m:'futura', i:'dueno', r:'caro', v:17.8, pot:1, nota:'Piso 1 del edificio. Break-even con equipos usados ~$740k/día sin TAC. Cambia el modelo de centro de consultas a centro de referencia provincial.'},
+ {id:'lab', n:'Laboratorio clínico', g:G, m:'futura', i:'dueno', r:'cero', nota:'El mejor de la Fase A por volumen contra capex, y no estaba en tu lista original. Como toma de muestras que deriva a un laboratorio de referencia: $2–6M en vez de $15–70M.'},
+ {id:'tac', n:'TAC usado', g:G, m:'futura', i:'dueno', r:'caro', nota:'16 cortes, ~$130M instalado, break-even 5–6 exámenes al día. No hay TAC en la provincia de Arauco: el más cercano está en Coronel. Fase 2, nunca Fase 1.'},
+ {id:'empresas', n:'Salud Empresas', g:G, m:'futura', i:'dueno', r:'cero', nota:'Exámenes preocupacionales y convenios con las forestales. Cuesta cero si falla: usa los box y los médicos que ya están.'},
+ {id:'domicilio', n:'Atención a domicilio', g:G, m:'futura', i:'dueno', r:'cero', nota:'Otra de las que cuesta cero si falla. Profesionales a porcentaje de producción, sin metros cuadrados nuevos.'},
+ {id:'hidro', n:'Olavega Hidroponía', g:G, m:'construccion', i:'dueno', r:'caro', nota:'En vivo en olavega.agentecmc.cl. La escuela: aprender antes de escalar al campo. Falta la fotovoltaica.'},
+ {id:'berries', n:'Olavega Campo · berries', g:G, m:'futura', i:'renta', r:'caro', v:7.5, pot:1, nota:'En régimen, año 5–8, deja $80–100M al año: solo eso iguala tu sueldo médico. Pero toma años y compite con el CMC por tu atención, no por tu plata.'},
+ {id:'camaron', n:'Rincón del Camarón', g:G, m:'evaluacion', i:'dueno', r:'cero', nota:'Restaurante con socio chef. Fuera del núcleo, pero comparte el público del Patio y el mismo pueblo.'},
+ {id:'imagendent', n:'Imagendent', g:F, m:'evaluacion', i:'estruct', r:'caro', nota:'Radiología dental de Arauco. Plan Oro $300k solo si la cuponera no vence y queda POR ESCRITO. Sustituye $17–22M de panorámico propio.'},
+
+ {id:'meulen', n:'Supermercado Meulen', g:P, m:'marcha', i:'dueno', r:'opera', v:52, nota:'Vende $45–60M/mes con bodega: del mismo porte que el CMC en margen bruto. Es del papá — la mitad pasa a ser tuya al jubilar, con tu hermana.'},
+ {id:'bodega', n:'Bodega Meulen', g:P, m:'marcha', i:'renta', r:'opera', nota:'La infraestructura que hace que Meulen compre distinto al resto del retail de barrio. Es el activo, no el local.'},
+ {id:'estacion', n:'Estación Olavarría', g:P, m:'futura', i:'renta', r:'caro', nota:'Strip comercial vecinal con ferretería ancla en el terreno familiar de Ruta 7 km 17, Piedra Azul. El primer activo inmobiliario del grupo: renta pura, sin operar nada.'},
+ {id:'riomonte', n:'Clínica Ríomonte', g:P, m:'evaluacion', i:'recurrente', r:'cero', nota:'Dental en Puerto Montt, con socio dentista. El piloto equity-light: engancharla al stack sin comprarla. A 700 km del CMC = cero canibalización.'},
+
+ {id:'olatech', n:'OLACORE Tech', g:T, m:'construccion', i:'recurrente', r:'caro', nota:'La capa transversal. Dos vertientes: la interna que potencia las marcas propias y la externa que vende a terceros. Patrón internal-first, como Basecamp.'},
+ {id:'adkun', n:'Adkun', g:T, m:'construccion', i:'recurrente', r:'caro', nota:'La empresa de software. Es la que factura afuera; Alma es lo que vende.'},
+ {id:'alma', n:'Alma', g:T, m:'construccion', i:'recurrente', r:'caro', nota:'El producto gestor. $7M/mes de MRR son 15–25 clientes a $300–500k. Bloqueo real: es single-tenant y lo operas tú solo.'},
+ {id:'gemelo', n:'Gemelo Sanitario', g:T, m:'construccion', i:'recurrente', r:'cero', nota:'$349–499k por recinto, $990k–1,49M por centro. El foso son los objetos con reglas sanitarias adentro. Siempre pre-evaluación: nunca garantizar a la SEREMI.'},
+ {id:'escriba', n:'Alma Escriba · Pluma', g:T, m:'construccion', i:'recurrente', r:'cero', nota:'El copiloto de escucha dentro de Medilink. El audio nunca sale del Mac. Es lo más vendible del stack clínico y lo menos mostrado.'},
+
+ {id:'donpancho', n:'Super Don Pancho', g:F, m:'marcha', i:'estruct', r:'opera', nota:'Del tío, hermano de tu mamá. NO tienes participación: recibe float y usa el ERP, pero el margen no es tuyo.'},
+ {id:'emem', n:'EMEM · El Mundo en Madera', g:F, m:'evaluacion', i:'recurrente', r:'cero', nota:'Ferretería de madera de Martín, amigo tuyo, que hizo la sala dental del CMC en 2021. Su dolor es la fidelización. La demo lleva lista desde el 26 de agosto sin mostrarse.'},
+ {id:'capital', n:'Capital Travel', g:F, m:'evaluacion', i:'recurrente', r:'cero', nota:'Agencia de alta montaña en el Cajón del Maipo. Instancia de Alma con base real migrada. Cliente potencial fuera de todo rubro tuyo.'},
+ {id:'reloncavi', n:'Buses Reloncaví', g:F, m:'evaluacion', i:'recurrente', r:'cero', nota:'Sistema operativo interno para transporte. Otra instancia sin cliente pagando confirmado.'},
+ {id:'kintu', n:'Kintu', g:F, m:'evaluacion', i:'recurrente', r:'cero', nota:'Plataforma de marketing multi-marca. Cambio de rubro respecto del resto: no es salud ni retail.'}
+];
+const E = [
+ ['olacore','olavega','propiedad'],
+ ['olavega','gcar','propiedad'], ['olavega','gpm','propiedad'], ['olavega','olatech','propiedad'],
+ ['gcar','cmc','propiedad'], ['gcar','cecar','propiedad'], ['gcar','patio','propiedad'],
+ ['gcar','carin','propiedad'], ['gcar','optica','propiedad'], ['gcar','farmacia','propiedad'],
+ ['gcar','hidro','propiedad'], ['gcar','terreno','propiedad'], ['gcar','camaron','propiedad'],
+ ['gcar','nuni','propiedad'], ['gcar','rehab','propiedad'],
+ ['gpm','meulen','propiedad'], ['gpm','bodega','propiedad'], ['gpm','estacion','propiedad'],
+ ['gpm','riomonte','propiedad'],
+ ['olatech','adkun','propiedad'], ['adkun','alma','propiedad'],
+ ['alma','gemelo','propiedad'], ['alma','escriba','propiedad'],
+ ['rodrigo','cmc','tiempo'], ['rodrigo','alma','tiempo'], ['rodrigo','nuni','tiempo'],
+ ['cmc','farmacia','demanda'], ['cmc','optica','demanda'], ['cmc','rehab','demanda'],
+ ['cmc','carin','demanda'], ['cmc','lab','demanda',1], ['cmc','diag','demanda',1],
+ ['cmc','empresas','demanda',1], ['cmc','domicilio','demanda',1],
+ ['cecar','rehab','demanda'], ['diag','tac','demanda',1], ['cmc','imagendent','demanda'],
+ ['cmc','cecar','competencia'],
+ ['terreno','patio','suelo'], ['terreno','edificio','suelo',1],
+ ['edificio','diag','suelo',1], ['edificio','farmacia','suelo',1], ['edificio','lab','suelo',1],
+ ['meulen','bodega','suelo'], ['estacion','meulen','suelo',1],
+ ['cmc','meulen','caja'], ['cmc','donpancho','caja'],
+ ['alma','cmc','tecnologia'], ['alma','meulen','tecnologia'], ['alma','optica','tecnologia'],
+ ['alma','farmacia','tecnologia'], ['alma','hidro','tecnologia'], ['alma','donpancho','tecnologia'],
+ ['alma','riomonte','tecnologia',1], ['alma','reloncavi','tecnologia',1],
+ ['alma','capital','tecnologia',1], ['alma','emem','tecnologia',1], ['alma','kintu','tecnologia',1],
+ ['gemelo','cmc','tecnologia'], ['gemelo','riomonte','tecnologia',1],
+ ['escriba','cmc','tecnologia'], ['escriba','riomonte','tecnologia',1],
+ ['nuni','patio','tecnologia'], ['nuni','emem','tecnologia',1], ['nuni','meulen','tecnologia',1],
+ ['nuni','camaron','tecnologia',1],
+ ['hidro','berries','futuro',1], ['berries','meulen','futuro',1],
+ ['farmacia','meulen','futuro',1], ['bodega','estacion','futuro',1]
+];
+const LENTES = [
+  {id:'g', t:'Por estructura', s:'quién es dueño de quién', campo:'g',
+   ico:'<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>',
+   orden:['estruct','car','pm','tech','fuera'],
+   nom:{estruct:'Estructura del holding', car:'Grupo Carampangue', pm:'Puerto Montt', tech:'OLACORE Tech', fuera:'Conectados, no propios'}},
+  {id:'i', t:'Por tipo de ingreso', s:'de dónde sale la plata', campo:'i',
+   ico:'<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>',
+   orden:['tiempo','dueno','renta','recurrente','estruct'],
+   nom:{tiempo:'Tu tiempo · no escala', dueno:'Margen de dueño', renta:'Renta de un activo', recurrente:'Recurrente de software', estruct:'Estructura'}},
+  {id:'r', t:'Por riesgo', s:'qué pasa si falla', campo:'r',
+   ico:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+   orden:['opera','cero','caro','estruct'],
+   nom:{opera:'Ya operando', cero:'Cuesta cero si falla', caro:'Cuesta aunque falle', estruct:'Estructura'}},
+  {id:'m', t:'Por madurez', s:'en qué punto está', campo:'m',
+   ico:'<circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M4.9 4.9 7.8 7.8M16.2 16.2l2.9 2.9"/>',
+   orden:['marcha','construccion','evaluacion','futura'],
+   nom:{marcha:'Opera hoy', construccion:'En construcción', evaluacion:'En evaluación', futura:'Todavía una idea'}}
+];
+const COLG = {car:'--car', pm:'--pm', tech:'--tech', fuera:'--fuera', estruct:'--estruct'};
+const TIPOS = {
+  propiedad:{t:'propiedad', c:'--tenue'}, demanda:{t:'demanda', c:'--car'},
+  tecnologia:{t:'tecnología', c:'--tech'}, caja:{t:'caja', c:'--pm'},
+  suelo:{t:'suelo', c:'--fuera'}, competencia:{t:'competencia', c:'--tiempo'},
+  tiempo:{t:'tu tiempo', c:'--tiempo'}, futuro:{t:'sinergia', c:'--aqua'}
+};
+const MAD = {marcha:'opera hoy', construccion:'en construcción', evaluacion:'en evaluación', futura:'futura'};
+const ING = {tiempo:'tu tiempo', dueno:'margen de dueño', renta:'renta de activo', recurrente:'recurrente', estruct:'estructura'};
+const RIE = {opera:'ya opera', cero:'cuesta cero si falla', caro:'cuesta aunque falle', estruct:'estructura'};
+
+/* ═══════════ preparación ═══════════ */
+const idx={}; N.forEach((n,i)=>{ idx[n.id]=i; });
+const AR = E.filter(e=>idx[e[0]]!==undefined && idx[e[1]]!==undefined)
+            .map(e=>({a:idx[e[0]], b:idx[e[1]], t:e[2], f:!!e[3]}));
+const vec = N.map(()=>[]);
+AR.forEach((e,i)=>{ vec[e.a].push(i); vec[e.b].push(i); });
+N.forEach(n=>{ n.r = n.v ? 8+Math.sqrt(n.v)*2.15 : (n.g===S?10.5:7.5); n.al=0; });
+const VMAX = Math.max(...N.map(n=>n.v||0));
+
+const cv=document.getElementById('lienzo'), cx=cv.getContext('2d');
+let Wc=1000, Hc=672, lente=LENTES[0], layouts={}, tiposOn=new Set(Object.keys(TIPOS));
+let sel=-1, hov=-1, arr=-1, entrada=0, latir=0;
+
+function calcular(L){
+  const grupos = L.orden.filter(k=>N.some(n=>n[L.campo]===k));
+  const cw = Wc/grupos.length, centro={};
+  grupos.forEach((k,i)=>{ centro[k]={x:cw*(i+.5), y:Hc*.53}; });
+  const pos = N.map((n,i)=>{
+    const c=centro[n[L.campo]]||{x:Wc/2,y:Hc/2}, a=i*2.399963;
+    return {x:c.x+Math.cos(a)*38, y:c.y+Math.sin(a)*38, vx:0, vy:0};
+  });
+  for(let it=0; it<340; it++){
+    const k=1-it/380;
+    for(let i=0;i<N.length;i++) for(let j=i+1;j<N.length;j++){
+      const A=pos[i], B=pos[j];
+      let dx=A.x-B.x, dy=A.y-B.y, d2=dx*dx+dy*dy;
+      if(d2<1){ dx=Math.random()-.5; dy=Math.random()-.5; d2=1; }
+      const min=N[i].r+N[j].r+32;
+      if(d2 > min*min*5) continue;
+      const d=Math.sqrt(d2), f=2500/d2;
+      A.vx+=f*dx/d; A.vy+=f*dy/d; B.vx-=f*dx/d; B.vy-=f*dy/d;
+    }
+    AR.forEach(e=>{
+      const A=pos[e.a], B=pos[e.b];
+      const mismo = N[e.a][L.campo]===N[e.b][L.campo];
+      const dx=B.x-A.x, dy=B.y-A.y, d=Math.hypot(dx,dy)||1;
+      const f=(d-(mismo?76:152))*(mismo?.05:.012);
+      A.vx+=f*dx/d; A.vy+=f*dy/d; B.vx-=f*dx/d; B.vy-=f*dy/d;
+    });
+    N.forEach((n,i)=>{
+      const c=centro[n[L.campo]]||{x:Wc/2,y:Hc/2};
+      pos[i].vx += (c.x-pos[i].x)*.030; pos[i].vy += (c.y-pos[i].y)*.016;
+      pos[i].x += pos[i].vx*k*.5; pos[i].y += pos[i].vy*k*.5;
+      pos[i].vx*=.80; pos[i].vy*=.80;
+      const m=n.r+18;
+      pos[i].x=Math.max(m,Math.min(Wc-m,pos[i].x));
+      pos[i].y=Math.max(m+30,Math.min(Hc-m-20,pos[i].y));
+    });
+  }
+  return {pos, grupos, centro, cw};
+}
+function preparar(){
+  LENTES.forEach(L=>{ layouts[L.id]=calcular(L); });
+  N.forEach((n,i)=>{ n.x=layouts[lente.id].pos[i].x; n.y=layouts[lente.id].pos[i].y; });
+}
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function hex2rgba(h,a){
+  h=h.trim(); if(h[0]!=='#') return h;
+  if(h.length===4) h='#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3];
+  const n=parseInt(h.slice(1),16);
+  return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+}
+function medir(){
+  const rect=cv.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=rect.width*dpr; cv.height=rect.height*dpr;
+  cx.setTransform(dpr,0,0,dpr,0,0);
+  if(!layouts[lente.id] || Math.abs(rect.width-Wc)>1 || Math.abs(rect.height-Hc)>1){
+    Wc=rect.width; Hc=rect.height; preparar();
+  }
+  dibujar();
+}
+
+/* ═══════════ dibujo ═══════════ */
+function dibujar(){
+  cx.clearRect(0,0,Wc,Hc);
+  const C={}; Object.keys(COLG).forEach(k=>C[k]=css(COLG[k]));
+  const TC={}; Object.keys(TIPOS).forEach(k=>TC[k]=css(TIPOS[k].c));
+  const ink=css('--ink'), muted=css('--muted'), tenue=css('--tenue'),
+        panel=css('--panel'), panel2=css('--panel2'), aqua=css('--aqua');
+  const lay=layouts[lente.id];
+
+  /* ground: bandas suaves por grupo */
+  lay.grupos.forEach((k,i)=>{
+    const x0=lay.cw*i;
+    if(i%2===1){ cx.fillStyle=hex2rgba(panel2,.55); cx.fillRect(x0,0,lay.cw,Hc); }
+  });
+  const vg=cx.createRadialGradient(Wc/2,Hc*.5,Hc*.16,Wc/2,Hc*.5,Hc*1.05);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,hex2rgba(css('--navy'),.055));
+  cx.fillStyle=vg; cx.fillRect(0,0,Wc,Hc);
+
+  /* rótulos de columna */
+  cx.textAlign='center';
+  lay.grupos.forEach((k,i)=>{
+    const x=lay.cw*i+lay.cw/2, etq=(lente.nom[k]||k).toUpperCase();
+    cx.font='700 9.5px Montserrat, sans-serif';
+    const w=cx.measureText(etq).width+22;
+    cx.fillStyle=hex2rgba(panel,.88);
+    cx.beginPath();
+    if(cx.roundRect) cx.roundRect(x-w/2, 11, w, 21, 10.5); else cx.rect(x-w/2, 11, w, 21);
+    cx.fill();
+    cx.strokeStyle=hex2rgba(tenue,.28); cx.lineWidth=1; cx.stroke();
+    cx.fillStyle=tenue;
+    cx.fillText(etq, x, 25.5);
+  });
+
+  const foco = hov>=0?hov:sel;
+  const cerca=new Set();
+  if(foco>=0){ cerca.add(foco); vec[foco].forEach(ei=>{ cerca.add(AR[ei].a); cerca.add(AR[ei].b); }); }
+
+  /* aristas con degradé origen→destino */
+  AR.forEach(e=>{
+    if(!tiposOn.has(e.t)) return;
+    const A=N[e.a], B=N[e.b];
+    const on = foco>=0 && (e.a===foco||e.b===foco);
+    const alfa = foco<0 ? (e.f?.34:.50) : (on?1:.055);
+    const col=TC[e.t];
+    const gr=cx.createLinearGradient(A.x,A.y,B.x,B.y);
+    gr.addColorStop(0, hex2rgba(col, alfa*(on?.55:.35)));
+    gr.addColorStop(.5, hex2rgba(col, alfa));
+    gr.addColorStop(1, hex2rgba(col, alfa*(on?.95:.60)));
+    cx.strokeStyle=gr;
+    cx.lineWidth = on?2.4:(e.t==='propiedad'?1.1:1.5);
+    cx.setLineDash(e.f?[4,4]:[]);
+    cx.lineCap='round';
+    const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy);
+    const mx=(A.x+B.x)/2 - dy/len*len*.075, my=(A.y+B.y)/2 + dx/len*len*.075;
+    cx.beginPath(); cx.moveTo(A.x,A.y); cx.quadraticCurveTo(mx,my,B.x,B.y); cx.stroke();
+    cx.setLineDash([]);
+  });
+
+  /* nodos */
+  N.forEach((n,i)=>{
+    const on = foco<0 || cerca.has(i);
+    const a = (on?1:.13) * (entrada);
+    if(a<=0.01) return;
+    const col=C[n.g];
+    let R = n.r * (i===foco?1.22:1) * (0.86+0.14*entrada);
+    if(n.pulso){ R *= 1 + Math.sin(latir)*0.045; }
+    cx.globalAlpha=a;
+
+    if(i===foco || n.pulso){
+      const halo = n.pulso && i!==foco ? .16+Math.sin(latir)*.06 : .22;
+      const g2=cx.createRadialGradient(n.x,n.y,R*.6,n.x,n.y,R*2.9);
+      g2.addColorStop(0,hex2rgba(col,halo)); g2.addColorStop(1,hex2rgba(col,0));
+      cx.fillStyle=g2; cx.beginPath(); cx.arc(n.x,n.y,R*2.9,0,6.2832); cx.fill();
+    }
+    cx.save();
+    cx.shadowColor = hex2rgba(css('--navy'), .26);
+    cx.shadowBlur = i===foco?14:7; cx.shadowOffsetY = i===foco?3:2;
+    cx.lineWidth=2; cx.strokeStyle=col;
+    if(n.m==='marcha'){
+      const g3=cx.createLinearGradient(n.x-R,n.y-R,n.x+R,n.y+R);
+      g3.addColorStop(0,col); g3.addColorStop(1,hex2rgba(col,.80));
+      cx.fillStyle=g3;
+      cx.beginPath(); cx.arc(n.x,n.y,R,0,6.2832); cx.fill();
+    } else if(n.m==='construccion'){
+      cx.fillStyle=panel; cx.beginPath(); cx.arc(n.x,n.y,R,0,6.2832); cx.fill();
+      cx.restore(); cx.save();
+      cx.fillStyle=hex2rgba(col,.88);
+      cx.beginPath(); cx.moveTo(n.x,n.y); cx.arc(n.x,n.y,R,-Math.PI/2,Math.PI/2); cx.fill();
+      cx.lineWidth=2; cx.strokeStyle=col;
+      cx.beginPath(); cx.arc(n.x,n.y,R,0,6.2832); cx.stroke();
+    } else {
+      cx.fillStyle=panel; cx.beginPath(); cx.arc(n.x,n.y,R,0,6.2832); cx.fill();
+      cx.restore(); cx.save();
+      cx.lineWidth=2; cx.strokeStyle=hex2rgba(col,.85);
+      cx.setLineDash(n.m==='futura'?[3,3]:[]);
+      cx.beginPath(); cx.arc(n.x,n.y,R,0,6.2832); cx.stroke();
+      cx.setLineDash([]);
+    }
+    cx.restore();
+    if(i===sel){
+      cx.globalAlpha=a*.85; cx.strokeStyle=hex2rgba(ink,.55); cx.lineWidth=1.3;
+      cx.beginPath(); cx.arc(n.x,n.y,R+5.5,0,6.2832); cx.stroke();
+    }
+  });
+
+  /* etiquetas */
+  cx.textAlign='center';
+  N.forEach((n,i)=>{
+    const on = foco<0 || cerca.has(i);
+    if(foco>=0 && !on) return;
+    cx.globalAlpha = entrada * (i===foco?1:.94);
+    cx.font = (i===foco?'700 ':'600 ') + (n.g===S?'11':'10.5') + 'px Montserrat, sans-serif';
+    const t = n.n.length>25 ? n.n.slice(0,24)+'…' : n.n;
+    const y = n.y + n.r + 14;
+    cx.lineWidth=4; cx.lineJoin='round'; cx.strokeStyle=hex2rgba(panel,.92);
+    cx.strokeText(t,n.x,y);
+    cx.fillStyle = i===foco?ink:muted;
+    cx.fillText(t,n.x,y);
+  });
+  cx.globalAlpha=1;
+}
+
+/* animación continua sólo si hace falta */
+let raf=null;
+let ultimo=0;
+function bucle(t){
+  raf=requestAnimationFrame(bucle);
+  if(t && t-ultimo < 41) return;
+  ultimo=t||0;
+  latir += 0.13;
+  if(entrada<1) entrada=Math.min(1, entrada+0.10);
+  dibujar();
+}
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ═══════════ lentes ═══════════ */
+function irA(L){
+  lente=L;
+  document.getElementById('top-t').textContent=L.t;
+  document.getElementById('top-s').textContent=L.s;
+  const dest=layouts[L.id].pos;
+  N.forEach((n,i)=>{ n.ox=n.x; n.oy=n.y; n.dx=dest[i].x; n.dy=dest[i].y; });
+  pintarLeyenda();
+  if(reduce){ N.forEach(n=>{n.x=n.dx; n.y=n.dy;}); dibujar(); return; }
+  const t0=performance.now();
+  (function paso(t){
+    const p=Math.min(1,(t-t0)/680);
+    const e = p<.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2;
+    N.forEach(n=>{ n.x=n.ox+(n.dx-n.ox)*e; n.y=n.oy+(n.dy-n.oy)*e; });
+    if(!raf) dibujar();
+    if(p<1) requestAnimationFrame(paso);
+  })(t0);
+}
+document.getElementById('lentes').innerHTML = LENTES.map((L,i)=>
+  `<button data-l="${L.id}" aria-pressed="${i===0}">
+     <strong><svg class="ico" viewBox="0 0 24 24">${L.ico}</svg>${L.t}</strong>
+     <small>${L.s}</small></button>`).join('');
+document.getElementById('lentes').addEventListener('click', ev=>{
+  const b=ev.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#lentes button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+  irA(LENTES.find(L=>L.id===b.dataset.l));
+});
+document.getElementById('filtros').innerHTML = Object.entries(TIPOS).map(([k,v])=>
+  `<button data-t="${k}" aria-pressed="true"><i style="background:var(${v.c})"></i>${v.t}</button>`).join('');
+document.getElementById('filtros').addEventListener('click', ev=>{
+  const b=ev.target.closest('button'); if(!b) return;
+  const k=b.dataset.t;
+  if(tiposOn.has(k)){ tiposOn.delete(k); b.setAttribute('aria-pressed','false'); }
+  else { tiposOn.add(k); b.setAttribute('aria-pressed','true'); }
+  dibujar();
+});
+function pintarLeyenda(){
+  document.getElementById('ley-tit').textContent=lente.t;
+  const lay=layouts[lente.id];
+  document.getElementById('leyenda').innerHTML = lay.grupos.map(k=>{
+    const ns=N.filter(n=>n[lente.campo]===k);
+    const v=ns.reduce((a,b)=>a+(b.v&&!b.pot&&b.id!=='rodrigo'?b.v:0),0);
+    const col = lente.campo==='g' ? `var(${COLG[k]})` : 'var(--azul)';
+    return `<span class="fila"><i style="background:${col}"></i>${lente.nom[k]||k}
+      <b>${ns.length}${v?' · $'+v.toFixed(0)+'M':''}</b></span>`;
+  }).join('');
+}
+function ficha(i){
+  const box=document.getElementById('det');
+  const cab = '<h4><svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>Ficha</h4>';
+  if(i<0){ box.innerHTML=cab+'<p class="vacio">Toca cualquier nodo del mapa. Puedes arrastrarlos para desenredar.</p>'; return; }
+  const n=N[i];
+  const rel=vec[i].map(ei=>{
+    const e=AR[ei], otro = e.a===i?N[e.b]:N[e.a], dir = e.a===i?'→':'←';
+    return `<li class="${e.f?'fut':''}"><i class="mk" style="background:var(${TIPOS[e.t].c})"></i>
+      <span><span class="tp">${TIPOS[e.t].t}${e.f?' · potencial':''}</span>
+      <span class="tx">${dir} ${otro.n}</span></span></li>`;
+  }).join('');
+  box.innerHTML = cab +
+    `<div class="nom">${n.n}</div>
+     <div class="sub"><i style="background:var(${COLG[n.g]})"></i>${(lente.nom[n[lente.campo]]||'')}</div>
+     <div class="pills"><span class="pill">${MAD[n.m]}</span><span class="pill">${ING[n.i]}</span><span class="pill">${RIE[n.r]}</span></div>
+     ${n.v?`<div class="cifra-caja">
+        <div class="n">$${n.v}M<small> /mes</small></div>
+        <div class="barra"><i style="width:${Math.max(4,100*n.v/VMAX)}%"></i></div>
+        <div class="pie">${n.pot?'ESCENARIO MODELADO':'CAJA REGISTRADA'} · ${(100*n.v/VMAX).toFixed(0)}% DEL MAYOR</div>
+      </div>`:''}
+     <p class="nota">${n.nota}</p>
+     ${rel?`<ul class="lista">${rel}</ul>`:''}`;
+}
+
+/* ═══════════ interacción ═══════════ */
+function enPos(ev){
+  const r=cv.getBoundingClientRect(), p=ev.touches?ev.touches[0]:ev;
+  return {x:p.clientX-r.left, y:p.clientY-r.top};
+}
+function cercano(m){
+  let best=-1, bd=1e9;
+  N.forEach((n,i)=>{
+    const d=(n.x-m.x)**2+(n.y-m.y)**2, lim=(n.r+14)**2;
+    if(d<lim && d<bd){ bd=d; best=i; }
+  });
+  return best;
+}
+const tip=document.getElementById('tip');
+cv.addEventListener('mousemove', ev=>{
+  const m=enPos(ev);
+  if(arr>=0){ N[arr].x=m.x; N[arr].y=m.y; layouts[lente.id].pos[arr]={x:m.x,y:m.y}; if(!raf)dibujar(); return; }
+  const h=cercano(m);
+  if(h!==hov){
+    hov=h; if(!raf)dibujar();
+    if(h>=0){
+      const n=N[h];
+      tip.textContent = n.n + (n.v?' · $'+n.v+'M/mes':'') + ' · ' + MAD[n.m];
+      tip.style.left=n.x+'px'; tip.style.top=n.y+'px'; tip.style.opacity=1;
+    } else tip.style.opacity=0;
+  }
+});
+cv.addEventListener('mousedown', ev=>{
+  const h=cercano(enPos(ev));
+  if(h>=0){ arr=h; sel=h; cv.classList.add('arrastrando'); ficha(h); if(!raf)dibujar(); }
+});
+window.addEventListener('mouseup', ()=>{ if(arr>=0){ arr=-1; cv.classList.remove('arrastrando'); } });
+cv.addEventListener('mouseleave', ()=>{ hov=-1; tip.style.opacity=0; if(!raf)dibujar(); });
+cv.addEventListener('touchstart', ev=>{
+  const h=cercano(enPos(ev));
+  if(h>=0){ ev.preventDefault(); arr=h; sel=h; ficha(h); if(!raf)dibujar(); }
+},{passive:false});
+cv.addEventListener('touchmove', ev=>{
+  if(arr<0) return; ev.preventDefault();
+  const m=enPos(ev); N[arr].x=m.x; N[arr].y=m.y;
+  layouts[lente.id].pos[arr]={x:m.x,y:m.y}; if(!raf)dibujar();
+},{passive:false});
+cv.addEventListener('touchend', ()=>{ arr=-1; });
+
+/* ═══════════ kpis ═══════════ */
+(function(){
+  const ventaReal = N.filter(n=>n.v && !n.pot && n.id!=='rodrigo').reduce((a,b)=>a+b.v,0);
+  const enObra = N.filter(n=>n.m==='construccion').length;
+  const futuras = N.filter(n=>n.m==='futura'||n.m==='evaluacion').length;
+  const potenciales = AR.filter(e=>e.f).length;
+  const I = {
+    red:'<rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8"/>',
+    plata:'<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v2m0 8v2"/>',
+    obra:'<path d="M2 20h20"/><path d="M4 20V8l8-5 8 5v12"/><path d="M9 20v-6h6v6"/>',
+    link:'<path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><path d="M8 12h8"/>'
+  };
+  document.getElementById('kpis').innerHTML = [
+    [I.red, N.length, '', 'unidades y marcas en el mapa'],
+    [I.plata, '$'+ventaReal.toFixed(0)+'M', '/mes', 'venta registrada hoy, sin escenarios'],
+    [I.obra, enObra+' <small>/ '+futuras+'</small>', '', 'en construcción y por decidir'],
+    [I.link, AR.length, ' · '+potenciales, 'relaciones, de ellas potenciales']
+  ].map(([ic,n,s,l])=>`<div class="kpi"><div class="tile"><svg class="ico" viewBox="0 0 24 24">${ic}</svg></div>
+      <div><div class="n">${n}<small>${s}</small></div><div class="l">${l}</div></div></div>`).join('');
+  document.getElementById('pill-txt').textContent = N.length+' unidades · '+AR.length+' relaciones';
+})();
+
+/* ═══════════ arranque ═══════════ */
+medir();
+pintarLeyenda();
+sel=idx['cmc']; ficha(sel);
+if(reduce){ entrada=1; dibujar(); }
+else { entrada=.55; bucle();
+  setTimeout(()=>{ if(raf && !N.some(n=>n.pulso)){ cancelAnimationFrame(raf); raf=null; } }, 1400);
+}
+window.addEventListener('resize', medir);
+if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ if(!raf)dibujar(); });
+</script>
+
+</body>
+</html>

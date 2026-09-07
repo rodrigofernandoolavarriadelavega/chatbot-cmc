@@ -4133,6 +4133,7 @@ _GRUPO_CARAMPANGUE_HTML = (_TEMPLATE_DIR / "grupo_carampangue.html").read_text(e
 _GRUPO_CARAMPANGUE_2030_HTML = (_TEMPLATE_DIR / "grupo_carampangue_2030.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_2030.html").exists() else ""
 _GRUPO_CARAMPANGUE_SIM_HTML = (_TEMPLATE_DIR / "grupo_carampangue_simulador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_simulador.html").exists() else ""
 _GRUPO_CARAMPANGUE_FLOAT_HTML = (_TEMPLATE_DIR / "grupo_carampangue_float.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_float.html").exists() else ""
+_GRUPO_CARAMPANGUE_MAPA_HTML = (_TEMPLATE_DIR / "grupo_carampangue_mapa.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "grupo_carampangue_mapa.html").exists() else ""
 _ALMA_PACIENTES_HTML = (_TEMPLATE_DIR / "alma_pacientes.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pacientes.html").exists() else ""
 _ALMA_INTERCONSULTAS_HTML = (_TEMPLATE_DIR / "alma_interconsultas.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_interconsultas.html").exists() else ""
 _ALMA_ESTERILIZACION_HTML = (_TEMPLATE_DIR / "alma_esterilizacion.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_esterilizacion.html").exists() else ""
@@ -5709,6 +5710,26 @@ def grupo_carampangue_float_page(request: Request, token: str | None = Query(Non
     localStorage del visitante y se comparte por el hash de la URL.
     """
     return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_FLOAT_HTML, token, request)
+
+
+@app.get("/grupo/mapa", response_class=HTMLResponse)
+def grupo_carampangue_mapa_page(request: Request, token: str | None = Query(None)):
+    """Mapa de marcas del Grupo Olavega: las unidades que existen, las que se
+    estan construyendo y las que estan sobre la mesa, con las relaciones entre
+    ellas.
+
+    Cuatro tipos de arista que no se ven en el organigrama: quien le genera
+    demanda a quien (el CMC alimenta a farmacia, optica, rehabilitacion y a
+    todo lo que viene), donde comparten suelo, por donde pasa el float de
+    honorarios y donde COMPITEN - CMC y CECAR se pelean el mismo techo
+    provincial de $45-55M, no se suman.
+
+    El mismo grafo se reagrupa con cuatro lentes: estructura (el eje geografico
+    decidido el 29-ago), naturaleza del ingreso (tu tiempo vs margen de dueno vs
+    renta vs recurrente), riesgo (cuesta cero si falla vs cuesta aunque falle) y
+    madurez. Todo es estatico en el navegador: no toca el servidor.
+    """
+    return _grupo_carampangue_doc(_GRUPO_CARAMPANGUE_MAPA_HTML, token, request)
 
 
 @app.get("/anima", include_in_schema=False)
