@@ -358,7 +358,44 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-09-06
+**Última actualización**: 2026-09-07
+
+### 2026-09-07 — El bot FABRICABA el dígito verificador (DEPLOYADO 7a45a65)
+- **Auditoría de 30 días** (1.185 mensajes en `WAIT_RUT_*`): el parser de RUT
+  estaba bien en formato (152/155 entradas tipo-RUT aceptadas, tolera puntos,
+  espacios, `_`, `/`, `|`, unicode, RUT+nombre en el mismo mensaje). El bug era
+  otro y **silencioso**.
+- **Causa**: `clean_rut` tomaba cualquier secuencia de 8 dígitos sin DV
+  explícito como CUERPO y le DERIVABA un DV. Pero quien escribe su RUT con
+  espacios (`9 224 066 5` = 9.224.066-5) o pegado (`80875541` = 8.087.554-1)
+  **ya incluyó el DV ahí**. El bot devolvía `92240665-0` / `80875541-6` — RUT
+  de nadie. Como el resultado es self-consistent, `valid_rut` daba **True**:
+  no había mensaje de rechazo, el flujo seguía, no encontraba al paciente y se
+  iba a registro. **6 casos en 30 días, los 6 con `registro_completo` +
+  `cita_creada`.**
+- **Golpea a los adultos mayores**: los 6 RUT empiezan en 5/8/9 → cuerpo de 7
+  dígitos. Son justo los que escriben el RUT sin guión.
+- **Fix**: ante 8 dígitos sin DV se prefiere la lectura que valida módulo 11
+  (cuerpo 7 + último = DV); si ninguna valida, el cuerpo son los 8 y el DV se
+  deriva (módulo 11 es determinista dado el cuerpo — derivar ≠ inventar).
+  Nuevo `_reparar_dv_tipeado`: `J`→`K`, `l`→`1`, `I`/`O`, corregido **sólo si
+  valida**; si no, se rechaza y el bot vuelve a pedirlo.
+- **Verificación**: los 1.185 mensajes reales pasados por código viejo vs nuevo
+  → **1.179 idénticos, 6 cambiados (todos de RUT fabricado al real), 0
+  regresiones**. `test_rut_dv_fabricado_2026_09_07` 290/290 (incluye propiedad
+  sobre RUTs sintéticos) · test_rut 63/63 · test_rut_variantes 1000/1000 ·
+  dv_no_leak 14/14 · autocapture 6/6 · harness_50 105/105 · normalizer 52/52.
+  (`test_agenda_por_rut` 1 fallo = PREEXISTENTE, verificado con `git stash`.)
+- 🔴 **PENDIENTE HUMANO — 4 fichas de Medilink con RUT fabricado**:
+  Manuela Gayoso `id=15813` (`92240665-0` → **9224066-5**) · Ana Carrillo
+  `id=15822` (`80875541-6` → **8087554-1**) · José Melgarejo `id=15996`
+  (`51342992-4` → **5134299-2**) · Rosa Orellana `id=16002` (`89481791-7` →
+  **8948179-1**). Riesgo: bonificación Fonasa se valida por RUT, y si el
+  paciente vuelve dando el RUT bueno se crea ficha duplicada. Jeannette Terán
+  (6853) y Mario Suárez (15902) quedaron con el RUT correcto.
+  También hay 4 RUT fabricados persistidos en `contact_profiles` local.
+
+### 2026-09-06 — 4 crons que NUNCA corrieron por `misfire_grace_time` (DEPLOYADO a5b1b48)
 
 ### 2026-09-06 — 4 crons que NUNCA corrieron por `misfire_grace_time` (DEPLOYADO a5b1b48)
 - **Síntoma**: alerta "70 pacientes sin respuesta en HUMAN_TAKEOVER" cada 30 min
