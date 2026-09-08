@@ -198,6 +198,37 @@ class ContadorDeCupones(_BaseImagendent):
             self.assertEqual(M._tarifa(reg["slug"]), PRESTACIONES[reg["slug"]])
 
 
+class BarridoIncompleto(_BaseImagendent):
+    """Un conteo que se equivoca callado es peor que no tenerlo.
+
+    La primera corrida real (2026-09-08) perdio 10 atenciones por 429 y el panel
+    dijo "4 cupones restantes" cuando quedaban 3. Con ese numero se le discute el
+    saldo al proveedor, asi que el error tiene que ser VISIBLE.
+    """
+
+    def test_lee_el_resultado_del_barrido_en_json(self):
+        import json
+        with db() as c:
+            c.execute("INSERT OR REPLACE INTO system_state(key,value) VALUES(?,?)",
+                      ("imagendent_ultimo_sync",
+                       json.dumps({"atenciones": 387, "nuevos": 12, "errores": 10})))
+        us = M.estado()["ultimo_sync"]
+        self.assertEqual(us["errores"], 10)
+        self.assertEqual(us["atenciones"], 387)
+
+    def test_tolera_el_formato_viejo_str_dict(self):
+        """La primera version guardaba str(dict); no puede reventar el panel."""
+        with db() as c:
+            c.execute("INSERT OR REPLACE INTO system_state(key,value) VALUES(?,?)",
+                      ("imagendent_ultimo_sync", "{'atenciones': 387, 'errores': 10}"))
+        self.assertIn("crudo", M.estado()["ultimo_sync"])
+
+    def test_sin_barrido_previo_no_revienta(self):
+        with db() as c:
+            c.execute("DELETE FROM system_state WHERE key='imagendent_ultimo_sync'")
+        self.assertIsNone(M.estado()["ultimo_sync"])
+
+
 class ReglaDeReposicion(_BaseImagendent):
     """La regla la escribe el dueno. Estos tests describen el contrato."""
 

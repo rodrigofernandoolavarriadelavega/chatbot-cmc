@@ -162,67 +162,85 @@ async def sync_consumo(dias: int = DIAS_VENTANA) -> dict:
             (*PROFESIONALES_DENTALES, desde)))
 
     headers = {"Authorization": f"Token {MEDILINK_TOKEN}"}
-    nuevos = actualizados = errores = 0
+    nuevos = actualizados = 0
+    fallidas: list[tuple] = []
     ahora = datetime.now(_CHILE_TZ).isoformat(timespec="seconds")
 
     async with httpx.AsyncClient(timeout=45) as cli:
-        for aid, fecha, id_pac, paciente, id_prof in ats:
-            data = None
-            for intento in range(5):
-                try:
-                    r = await cli.get(f"{MEDILINK_BASE_URL}/atenciones/{aid}/detalles",
-                                      headers=headers)
-                except Exception as e:            # red caida: no aborta el barrido
-                    log.warning("imagendent sync: atencion %s error de red: %s", aid, e)
+        # DOS pasadas: la segunda reintenta lo que el rate-limit dejo afuera.
+        # Sin esto el barrido sub-cuenta EN SILENCIO — la primera corrida real
+        # (2026-09-08) perdio 10 atenciones por 429 y el panel dijo "4 cupones
+        # restantes" cuando quedaban 3. Un contador que se equivoca callado es
+        # peor que no tenerlo: con ese numero se le discute al proveedor.
+        pendientes = list(ats)
+        for pasada in (1, 2):
+            if pasada == 2:
+                if not fallidas:
                     break
-                if r.status_code == 429:
-                    await asyncio.sleep(2.5 * (intento + 1))
-                    continue
-                if r.status_code != 200:
+                log.info("[imagendent] reintento de %d atenciones que fallaron", len(fallidas))
+                pendientes, fallidas = fallidas, []
+                await asyncio.sleep(20)
+            for aid, fecha, id_pac, paciente, id_prof in pendientes:
+                data = None
+                for intento in range(5):
+                    try:
+                        r = await cli.get(f"{MEDILINK_BASE_URL}/atenciones/{aid}/detalles",
+                                          headers=headers)
+                    except Exception as e:            # red caida: no aborta el barrido
+                        log.warning("imagendent sync: atencion %s error de red: %s", aid, e)
+                        break
+                    if r.status_code == 429:
+                        await asyncio.sleep(2.5 * (intento + 1))
+                        continue
+                    if r.status_code != 200:
+                        break
+                    data = (r.json() or {}).get("data")
                     break
-                data = (r.json() or {}).get("data")
-                break
-            if data is None:
-                errores += 1
-                continue
+    
 
-            for det in data:
-                reg = MEDILINK_CONVENIO.get(det.get("id_prestacion"))
-                if not reg:
-                    continue
-                tar = _tarifa(reg["slug"])
-                fila = (
-                    det.get("id"), aid, fecha, id_pac, paciente or "", id_prof,
-                    det.get("profesional_realizador") or "",
-                    det.get("id_prestacion"), (det.get("nombre_prestacion") or "").strip(),
-                    reg["slug"], tar.get("bolsa", ""), reg["unidades"],
-                    int(tar.get("costo") or 0), int(tar.get("venta") or 0),
-                    int(det.get("total") or 0), int(det.get("pagado") or 0),
-                    1 if det.get("realizado") else 0, ahora,
-                )
-                with db() as c:
-                    existe = c.execute("SELECT 1 FROM convenio_consumo WHERE detalle_id=?",
-                                       (det.get("id"),)).fetchone()
-                    c.execute("""
-                        INSERT INTO convenio_consumo
-                          (detalle_id, atencion_id, fecha, id_paciente, paciente,
-                           id_profesional, profesional, id_prestacion, prestacion,
-                           slug, bolsa, unidades, costo, venta, cobrado, pagado,
-                           realizado, synced_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                        ON CONFLICT(detalle_id) DO UPDATE SET
-                          cobrado=excluded.cobrado, pagado=excluded.pagado,
-                          realizado=excluded.realizado, profesional=excluded.profesional,
-                          synced_at=excluded.synced_at
-                    """, fila)
-                if existe:
-                    actualizados += 1
-                else:
-                    nuevos += 1
-            await asyncio.sleep(0.35)
+                for det in data:
+                    reg = MEDILINK_CONVENIO.get(det.get("id_prestacion"))
+                    if not reg:
+                        continue
+                    tar = _tarifa(reg["slug"])
+                    fila = (
+                        det.get("id"), aid, fecha, id_pac, paciente or "", id_prof,
+                        det.get("profesional_realizador") or "",
+                        det.get("id_prestacion"), (det.get("nombre_prestacion") or "").strip(),
+                        reg["slug"], tar.get("bolsa", ""), reg["unidades"],
+                        int(tar.get("costo") or 0), int(tar.get("venta") or 0),
+                        int(det.get("total") or 0), int(det.get("pagado") or 0),
+                        1 if det.get("realizado") else 0, ahora,
+                    )
+                    with db() as c:
+                        existe = c.execute("SELECT 1 FROM convenio_consumo WHERE detalle_id=?",
+                                           (det.get("id"),)).fetchone()
+                        c.execute("""
+                            INSERT INTO convenio_consumo
+                              (detalle_id, atencion_id, fecha, id_paciente, paciente,
+                               id_profesional, profesional, id_prestacion, prestacion,
+                               slug, bolsa, unidades, costo, venta, cobrado, pagado,
+                               realizado, synced_at)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                            ON CONFLICT(detalle_id) DO UPDATE SET
+                              cobrado=excluded.cobrado, pagado=excluded.pagado,
+                              realizado=excluded.realizado, profesional=excluded.profesional,
+                              synced_at=excluded.synced_at
+                        """, fila)
+                    if existe:
+                        actualizados += 1
+                    else:
+                        nuevos += 1
+                await asyncio.sleep(0.35)
 
     res = {"atenciones": len(ats), "nuevos": nuevos, "actualizados": actualizados,
-           "errores": errores, "desde": desde, "corrio": ahora}
+           "errores": len(fallidas), "desde": desde, "corrio": ahora}
+    # Se persiste ACA y no en el cron para que el barrido manual del panel deje
+    # la misma huella. En JSON, no str(dict): el panel necesita leer `errores`.
+    import json as _json
+    with db() as c:
+        c.execute("INSERT OR REPLACE INTO system_state(key, value) VALUES(?,?)",
+                  ("imagendent_ultimo_sync", _json.dumps(res)))
     log.info("[imagendent] sync — %s", res)
     return res
 
@@ -230,15 +248,23 @@ async def sync_consumo(dias: int = DIAS_VENTANA) -> dict:
 async def job_sync_imagendent() -> None:
     """Cron nocturno. Corre DESPUES del bi_sync (03:59), que llena bi_atenciones."""
     try:
-        res = await sync_consumo()
-        with db() as c:
-            c.execute("INSERT OR REPLACE INTO system_state(key, value) VALUES(?,?)",
-                      ("imagendent_ultimo_sync", str(res)))
+        await sync_consumo()   # persiste su propio resultado
     except Exception as e:
         log.error("[imagendent] job nocturno fallo: %s", e, exc_info=True)
 
 
 # ── Estado de las dos bolsas ────────────────────────────────────────────────
+
+def _ultimo_sync(raw: str | None) -> dict | None:
+    """El barrido guardado, o None. Tolera el formato viejo (str(dict))."""
+    if not raw:
+        return None
+    import json
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return {"crudo": raw}
+
 
 def estado() -> dict:
     """Cuanto queda de cada bolsa, calculado sobre lo REALIZADO."""
@@ -316,7 +342,7 @@ def estado() -> dict:
         "vales_reales": len(vales_reales), "vales_prueba": len(vales_prueba),
         "vales_prueba_detalle": [{"folio": v[0], "paciente": v[2], "costo": v[5]}
                                  for v in vales_prueba],
-        "ultimo_sync": ult[0] if ult else None,
+        "ultimo_sync": _ultimo_sync(ult[0] if ult else None),
     }
 
 
@@ -469,6 +495,17 @@ def panel(request: Request, token: str | None = Query(None),
     spark = "".join(f'<i style="height:{100*v/max(tope,1):.0f}%" title="{v} cupones"></i>'
                     for v in sem) or '<span style="color:#5a7182;font-size:.82rem">sin datos</span>'
 
+    us = e["ultimo_sync"] or {}
+    incompleto = ""
+    if us.get("errores"):
+        incompleto = (
+            f'<div class="aviso rojo"><b>El último barrido no pudo leer '
+            f'{us["errores"]} atenciones</b> (Medilink devolvió 429). '
+            f'El conteo de abajo puede quedar CORTO — no lo uses para discutirle '
+            f'el saldo a Imagendent hasta volver a barrer sin errores.</div>')
+    ult_txt = (f'{us.get("corrio", "?")} · {us.get("atenciones", "?")} atenciones · '
+               f'{us.get("nuevos", 0)} nuevas') if us else "nunca"
+
     return HTMLResponse(f"""<!doctype html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
@@ -476,7 +513,7 @@ def panel(request: Request, token: str | None = Query(None),
 <div class="wrap">
   <h1>Convenio Imagendent — Radiología Dental</h1>
   <div class="sub">Se mide lo <b>realizado en Medilink</b>, no los vales emitidos.
-  Último barrido: {e["ultimo_sync"] or "nunca"}</div>
+  Último barrido: {ult_txt}</div>\n\n  {incompleto}
 
   {aviso}{prueba}
 
