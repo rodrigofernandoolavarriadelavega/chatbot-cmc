@@ -109,6 +109,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "orto_embudo": {"label": "Ortodoncia",       "icon": "smile",     "title": "Ortodoncia",                     "sub": "Embudo · pacientes en tratamiento · calendario", "src": "/alma/orto-embudo", "grupo": "Módulos Profesionales"},
     "guia_orto":   {"label": "Cómo se usa",      "icon": "file",      "title": "Guía — Embudo y Cargos",         "sub": "Instrucciones de los dos módulos nuevos", "src": "/guia/ortodoncia", "grupo": "Módulos Profesionales"},
     "cargos":      {"label": "Cargos al profesional","icon":"coins",  "title": "Cargos al profesional",          "sub": "Radiografías · laboratorio · insumos a descontar en la liquidación", "src": "/alma/cargos"},
+    "imagendent":  {"label": "Convenio Imagendent","icon":"package",  "title": "Convenio Imagendent — Radiología Dental", "sub": "Cupones restantes · saldo · margen · ritmo de consumo", "src": "/alma/imagendent"},
     "pacientes":   {"label": "Pacientes",        "icon": "users",     "title": "Pacientes — Ficha 360",          "sub": "Buscar · historial · pagos · citas · etiquetas",   "src": "/alma/pacientes"},
     "interconsultas":{"label": "Interconsultas", "icon": "shuffle",   "title": "Interconsultas",                 "sub": "Derivaciones entre especialidades",                "src": "/alma/interconsultas"},
     "esterilizacion":{"label": "Esterilización", "icon": "shield",    "title": "Esterilización",                 "sub": "Trazabilidad de ciclos · indicadores · SEREMI",    "src": "/alma/esterilizacion"},
@@ -271,6 +272,7 @@ CMC_TRANSFERENCIA = {
 # dato dueño 2026-06-12) — no hay saldo el día de la atención.
 ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "60000"))
 ABONO_GASTRO_CLP = int(os.getenv("ABONO_GASTRO_CLP", "35000"))
+ABONO_NEUROLOGIA_CLP = int(os.getenv("ABONO_NEUROLOGIA_CLP", "65000"))
 
 # Horas que se le dan al paciente para transferir. Eran 90 MINUTOS y el primer
 # caso real quedó fuera por 5: transfirió y mandó el comprobante a los 95 min.
@@ -322,6 +324,17 @@ ABONO_REGLAS: dict[str, dict] = {
         "monto":         ABONO_GASTRO_CLP,        # consulta completa (dueño 29-jul)
         "precio":        ABONO_GASTRO_CLP,        # → saldo del día = 0
         "profesionales": [65],                    # Dr. Quijano
+        "gate_bot":      True,
+    },
+    # Neurología es teleconsulta forzada igual que Psiquiatría (PROFESIONALES[79]
+    # .telemedicina). Sin gate, jul-ago 2026 cerró con 11 citas, 8 anuladas (73%)
+    # y SOLO 2 pagos en caja ($130.000) — mismo mecanismo, mismo criterio del
+    # dueño que en Psiquiatría: la consulta completa por adelantado.
+    "neurología": {
+        "etiqueta":      "Neurología",
+        "monto":         ABONO_NEUROLOGIA_CLP,    # consulta completa (dueño 07-sep)
+        "precio":        ABONO_NEUROLOGIA_CLP,    # → saldo del día = 0
+        "profesionales": [79],                    # Dra. Franca González
         "gate_bot":      True,
     },
     # Estas dos son abono PARCIAL y las registra recepción en el mesón: el bot

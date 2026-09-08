@@ -266,6 +266,20 @@ async def lifespan(app: FastAPI):
     # ROAS diario 05:30 CLT — recalcula ROAS 30d, persiste snapshot y alerta
     # (WhatsApp ventana-abierta + email) si alguna campaña cae bajo ROAS 1.
     # Corre post bi_sync de madrugada (bi_pagos_caja ya actualizada).
+    # Convenio Imagendent 05:10 CLT — relee las prestaciones de radiologia
+    # cargadas en las atenciones dentales y descuenta la cuponera/saldo. Va
+    # DESPUES del bi_sync de las 03:59 (que llena bi_atenciones, de donde saca
+    # que atenciones mirar) y ANTES del ROAS. Idempotente por detalle_id, asi
+    # que rebarrer no duplica: solo refresca lo que se marco realizado tarde.
+    from imagendent_routes import job_sync_imagendent
+    scheduler.add_job(
+        job_sync_imagendent,
+        CronTrigger(hour=5, minute=10, timezone=_CLT),
+        id="imagendent_sync_nocturno",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
     from roas_routes import roas_daily_job
     scheduler.add_job(
         roas_daily_job,
@@ -1565,6 +1579,8 @@ import vales_routes
 app.include_router(vales_routes.router)   # vales digitales de convenio (radiologia dental)
 import cargos_routes
 app.include_router(cargos_routes.router)        # cargos a descontar al profesional (Javiera 01-09)
+import imagendent_routes
+app.include_router(imagendent_routes.router)    # convenio Imagendent: cupones + saldo medidos en Medilink
 import orto_embudo_routes
 app.include_router(orto_embudo_routes.router)   # embudo de ortodoncia previo a la instalacion
 import orto_fotos_routes

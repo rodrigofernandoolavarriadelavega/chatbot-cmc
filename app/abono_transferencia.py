@@ -1,7 +1,9 @@
 """abono_transferencia.py — Confirmación automática de abonos por transferencia
-bancaria (hoy: Psiquiatría, Dra. Cecilia Unibazo, prof 78, abono ÚNICO de
-$60.000 — la consulta completa por adelantado. Es la ÚNICA prestación con
-abono previo del bot; ver `ABONO_PSIQUIATRIA_CLP` en config.py).
+bancaria. QUÉ prestaciones y por cuánto sale de `config.ABONO_REGLAS` (fuente
+única) — hoy Psiquiatría prof 78 $60.000, Gastroenterología prof 65 $35.000 y
+Neurología prof 79 $65.000, las tres la consulta completa por adelantado (saldo
+del día = 0). Este módulo NO conoce especialidades: recibe monto y profesional
+desde el gate, así que sumar una prestación no se toca acá.
 
 TODO GATEADO por `ABONO_AUTO_ACTIVE` (config.py, default false). Con el flag
 apagado este módulo no abre conexiones IMAP, no registra el cron, y no cambia
