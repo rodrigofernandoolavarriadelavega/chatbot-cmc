@@ -169,6 +169,52 @@ for _n, _c in [("Lota", "Lota"), ("Coronel", "Coronel"), ("Concepcion", "Concepc
 
 # ── AMBIGUOS: aparecen en mas de una comuna. NUNCA reasignan por si solos. ──
 # El resolvedor los usa solo para confirmar lo que ya dice el campo.
+# ═══════════ CENSO 2024: localidades que faltaban (agregadas 2026-09-08) ═════
+# Fuente: Feature Service publico de microdatos del INE, capas Manzanas (urbano)
+# + Manzanas-entidades (rural). Ver chatbot-cmc/scripts/censo2024_entidades.py.
+#
+# CADA NOMBRE PASO UNA PRUEBA EMPIRICA antes de entrar: se busco en las 16.079
+# direcciones reales de pacientes, y se descarto todo nombre que ya apareciera
+# en direcciones de OTRA comuna — porque eso significa que ahi es una CALLE, no
+# un lugar. Lo que la prueba caza (y ningun criterio a ojo habria cazado):
+#
+#   Pehuen    (Lebu, 1.220 hab)  aparece 35 veces en direcciones de ARAUCO y
+#                                CERO en Lebu -> es la Villa Pehuen de Arauco.
+#                                Agregarla habria mudado 35 pacientes de comuna.
+#   Lleu Lleu (Canete, 558)      6 apariciones en Arauco, cero propias.
+#   Tucapel   (Canete, 341)      calle conocida de Arauco (estaba en los
+#                                keywords del BI viejo). Ni se propuso.
+#
+# Tambien quedan FUERA los homonimos que ya viven en AMBIGUOS (Los Rios, Pangue):
+# el INE los ubica en Los Alamos, pero el diccionario los tiene ambiguos a
+# proposito y resolverlos con una sola fuente seria pisar esa decision.
+_add(["San Jose de Colico", "Colico Norte", "Colico Sur"],
+     "Curanilahue", "Colico", "localidad", "alta")   # el INE parte lo que aca es un solo sector
+_add(["Pichiarauco"], "Curanilahue", "Pichiarauco", "localidad", "alta")
+_add(["Antiguala"], "Los Alamos", "Antiguala", "pueblo", "alta")
+_add(["Nine"], "Arauco", "Nine", "localidad", "alta")
+_add(["Curaquilla"], "Arauco", "Curaquilla", "localidad", "alta")
+_add(["Las Puentes"], "Arauco", "Las Puentes", "localidad", "alta")
+_add(["Las Penas"], "Arauco", "Las Penas", "localidad", "alta")
+_add(["Raqui"], "Arauco", "Raqui", "localidad", "alta")
+_add(["Guape"], "Canete", "Guape", "localidad", "alta")
+_add(["Huentelolen"], "Canete", "Huentelolen", "localidad", "alta")
+_add(["Tres Sauces"], "Canete", "Tres Sauces", "localidad", "alta")
+_add(["Lautaro Antiquina"], "Canete", "Lautaro Antiquina", "localidad", "alta")
+_add(["Huechicura"], "Canete", "Huechicura", "localidad", "alta")
+_add(["Llenquehue"], "Canete", "Llenquehue", "localidad", "alta")
+_add(["Lloncao"], "Canete", "Lloncao", "localidad", "alta")
+_add(["El Reposo"], "Canete", "El Reposo", "localidad", "alta")
+_add(["Caillin"], "Canete", "Caillin", "localidad", "alta")
+_add(["Pangueco"], "Canete", "Pangueco", "localidad", "alta")
+_add(["Tranaquepe"], "Tirua", "Tranaquepe", "localidad", "alta")
+_add(["San Ramon"], "Tirua", "San Ramon", "localidad", "alta")
+_add(["Quilquilco"], "Tirua", "Quilquilco", "localidad", "alta")
+_add(["Ranquilhue Grande"], "Tirua", "Ranquilhue Grande", "localidad", "alta")
+_add(["Isla Mocha"], "Lebu", "Isla Mocha", "localidad", "alta")
+_add(["Santa Rosa"], "Lebu", "Santa Rosa", "localidad", "media")   # nombre generico: cero apariciones hoy, pero puede ser calle manana
+
+
 AMBIGUOS: dict[str, tuple[str, ...]] = {
     "TRAUCO": ("Arauco", "Los Alamos"),
     "TRONGOL": ("Curanilahue", "Los Alamos"),
@@ -212,8 +258,21 @@ _PATRONES = [(k, re.compile(r"(?<![A-Z])" + re.escape(k).replace(r"\ ", r"\s+") 
 # Palabras que convierten al nombre siguiente en CALLEJERO, no geografico.
 # "Calle Los Alamos 53, Laraquete" NO es Los Alamos: es una calle en Laraquete.
 # "Sector"/"Camino" NO entran: esos si suelen anteceder a una localidad real.
-_VIA = re.compile(r"\b(CALLE|CALLEJON|PASAJE|PSJE|PJE|AVENIDA|AVDA|AV|POBLACION|"
-                  r"POBL|VILLA|DIAGONAL|SUBIDA|SUBID)\s+(?:LOS\s+|LAS\s+|EL\s+|LA\s+)?$")
+_VIA = re.compile(r"\b(CALLE|CALLEJON|PASAJE|PSJE|PJE|AVENIDA|AVDA|AV|"
+                  r"DIAGONAL|SUBIDA|SUBID)\s+(?:LOS\s+|LAS\s+|EL\s+|LA\s+)?$")
+
+# VILLA y POBLACION van APARTE de _VIA, y no es un detalle de estilo.
+# Una villa ES un nombre de lugar, no una via — pero "Villa Los Alamos" (que
+# existe en Curanilahue) no debe mudar al paciente a la comuna Los Alamos.
+# Por eso el prefijo solo bloquea cuando lo que matcheo NO es de tipo villa:
+#   "Villa Los Sauces 8"        -> Carampangue   (LOS SAUCES es villa: pasa)
+#   "Poblacion Union Carampanguina" -> Carampangue   (es villa: pasa)
+#   "Villa Los Alamos 12"       -> no muda de comuna (LOS ALAMOS es pueblo)
+# Antes, con VILLA/POBLACION dentro de _VIA, que una villa resolviera dependia
+# de si su clave del diccionario incluia por casualidad la palabra "Villa":
+# "Villa El Bosque" resolvia (clave VILLA EL BOSQUE) y "Villa Los Sauces" no
+# (clave LOS SAUCES). Inconsistente en ambos sentidos.
+_VILLA_PREFIJO = re.compile(r"\b(POBLACION|POBL|VILLA)\s+(?:LOS\s+|LAS\s+|EL\s+|LA\s+)?$")
 # "camino antiguo a Curanilahue" es una VIA bautizada por su destino y esta en
 # Arauco, no en Curanilahue. Dos fichas casi se mudan de comuna por esto.
 _VIA_DESTINO = re.compile(r"\b(ANTIGU[OA]|CAMINO|RUTA|KM|KILOMETRO)\s+(?:A\s+|AL\s+)?$")
@@ -224,10 +283,13 @@ def _candidatos(d: str):
     Descarta las que vienen detras de una palabra de via (son calles)."""
     out = []
     for clave, pat in _PATRONES:
+        es_villa = clave in _D and _D[clave][2] == "villa"
         for m in pat.finditer(d):
             prev = d[:m.start()]
             if _VIA.search(prev) or _VIA_DESTINO.search(prev):
                 continue                      # "calle Los Alamos" / "camino antiguo a X"
+            if not es_villa and _VILLA_PREFIJO.search(prev):
+                continue                      # "Villa Los Alamos" no muda de comuna
             out.append((m.start(), clave))
     return out
 
@@ -252,7 +314,13 @@ def resolver(direccion: str | None, comuna_campo: str | None = None,
         # Tomar el primer nombre que calce hacia Los Alamos cuando el domicilio
         # termina en Laraquete fue un falso positivo real del barrido batch.
         cands = _candidatos(d)
-        cands.sort(key=lambda t: -t[0])          # el ultimo nombrado manda
+        # Orden de evidencia: primero LOCALIDAD sobre villa, despues el ultimo
+        # nombrado. Los nombres de villa se repiten entre pueblos ("Villa
+        # Esperanza", "Los Sauces", "Villa El Bosque" existe en Laraquete Y en
+        # Llico); los de localidad no. Caso real que lo obligo: "llico poblacion
+        # villa el bosque" mudaba al paciente a Laraquete porque la villa venia
+        # despues en el texto. Una villa solo gana si no se nombro localidad.
+        cands.sort(key=lambda t: (t[1] in _D and _D[t[1]][2] == "villa", -t[0]))
         for _pos, clave in cands:
             if clave in AMBIGUOS:
                 # solo confirma; si el campo no es candidato, no inventamos
