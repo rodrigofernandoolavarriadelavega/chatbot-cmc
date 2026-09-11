@@ -246,6 +246,7 @@ def aplicar_repasada(d_desde: str, d_hasta: str, dry_run: bool = False) -> dict:
 
     corregidos, revisados, con_match = 0, 0, 0
     detalle = []
+    ambiguos: list[dict] = []
     with _conn() as c:
         cmc: dict = {}
         for fe, nom, idp in c.execute(
@@ -262,7 +263,9 @@ def aplicar_repasada(d_desde: str, d_hasta: str, dry_run: bool = False) -> dict:
             """SELECT p.pago_id, p.fecha, p.atencion_id, p.id_paciente, p.id_profesional, p.monto,
                       (SELECT a.paciente_nombre FROM bi_atenciones a
                          WHERE a.id_paciente=p.id_paciente
-                         ORDER BY a.atencion_id LIMIT 1) AS nombre_aten
+                         ORDER BY a.atencion_id LIMIT 1) AS nombre_aten,
+                      (SELECT a2.id_profesional FROM bi_atenciones a2
+                         WHERE a2.atencion_id = p.atencion_id) AS prof_atencion
                FROM bi_pagos_caja p
                WHERE p.fecha >= ? AND p.fecha <= ?
                  AND NOT EXISTS (SELECT 1 FROM bi_pago_overrides o WHERE o.pago_id=p.pago_id)""",
@@ -278,6 +281,25 @@ def aplicar_repasada(d_desde: str, d_hasta: str, dry_run: bool = False) -> dict:
             correcto = next(iter(profs))
             if correcto == r["id_profesional"]:
                 continue
+            # El pago YA está enganchado a una atención de otro profesional: el cruce
+            # por (fecha, nombre) dice una cosa y la atención del propio pago dice
+            # otra. Eso no es "el heurístico se equivocó" — es un día con DOS
+            # profesionales donde el cruce sólo vio uno (pasa cuando recepción tipea
+            # mal el nombre en pagos_cmc: apellidos duplicados y la segunda fila deja
+            # de agrupar). Escribir el override aquí deja un registro contradictorio
+            # —profesional X sobre una atención de Y— y le quita la plata a quien sí
+            # atendió. Se reporta como ambiguo; no se adivina (misma regla que la
+            # conciliación de transferencias).
+            if r["prof_atencion"] is not None and r["prof_atencion"] != correcto:
+                ambiguos.append({
+                    "pago_id": r["pago_id"], "fecha": r["fecha"],
+                    "paciente": nombre or "—", "monto": int(r["monto"] or 0),
+                    "atencion_id": r["atencion_id"],
+                    "prof_atencion_id": r["prof_atencion"], "prof_atencion": _nom(r["prof_atencion"]),
+                    "prof_recepcion_id": correcto, "prof_recepcion": _nom(correcto),
+                })
+                continue
+
             # discrepancia: el heurístico se equivocó
             detalle.append({
                 "pago_id": r["pago_id"], "fecha": r["fecha"],
@@ -299,10 +321,13 @@ def aplicar_repasada(d_desde: str, d_hasta: str, dry_run: bool = False) -> dict:
             c.commit()
     tasa = round(100 * corregidos / con_match, 1) if con_match else 0.0
     if not dry_run:
-        log.info("repasada %s..%s: revisados=%d con_match=%d corregidos=%d (%.1f%%)",
-                 d_desde, d_hasta, revisados, con_match, corregidos, tasa)
+        log.info("repasada %s..%s: revisados=%d con_match=%d corregidos=%d (%.1f%%) ambiguos=%d ($%d)",
+                 d_desde, d_hasta, revisados, con_match, corregidos, tasa,
+                 len(ambiguos), sum(a["monto"] for a in ambiguos))
     return {"revisados": revisados, "con_match_manual": con_match, "corregidos": corregidos,
-            "tasa_error_pct": tasa, "detalle": detalle, "desde": d_desde, "hasta": d_hasta}
+            "tasa_error_pct": tasa, "detalle": detalle, "desde": d_desde, "hasta": d_hasta,
+            "ambiguos": ambiguos, "n_ambiguos": len(ambiguos),
+            "monto_ambiguo": sum(a["monto"] for a in ambiguos)}
 
 
 @router.post("/aplicar-repasada")
@@ -321,6 +346,7 @@ async def aplicar_repasada_endpoint(desde: str | None = Query(None),
     d_hasta = hasta or hoy.isoformat()
     r = aplicar_repasada(d_desde, d_hasta)
     r.pop("detalle", None)
+    r.pop("ambiguos", None)   # se resumen en n_ambiguos/monto_ambiguo
     return r
 
 
