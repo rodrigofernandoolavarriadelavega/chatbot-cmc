@@ -295,7 +295,10 @@ footer{text-align:center;padding:22px;font-size:.7rem;color:var(--mute)}
 
   <!-- Detail table -->
   <div class="card">
-    <h2>Detalle por Profesional</h2>
+    <h2>Detalle por Profesional
+      <button class="btn btn-white btn-sm" style="margin-left:auto" onclick="exportDetalleProfesional()"
+              title="Descargar esta tabla en Excel (.xlsx)">⬇️ Excel</button>
+    </h2>
     <div id="alert-neg" class="alert-neg">⚠️ Hay profesionales con margen CMC negativo.</div>
     <div class="tw">
       <table>
@@ -1385,6 +1388,59 @@ function resetData(){
   saveState();
 }
 function applyAndSwitch(){switchTab('dashboard');}
+
+/* ══════════ EXCEL — Detalle por Profesional ══════════ */
+// Exporta la tabla de "Detalle por Profesional" tal como se ve: mismas filas,
+// mismo orden, mes seleccionado. Es distinto de exportExcel(), que vuelca el
+// estado del editor (5 hojas) para poder re-importarlo con importExcel().
+// Aquí el destino es una planilla para trabajar, así que los montos van como
+// NÚMERO y no como el texto "$1.234" — si no, Excel no los suma. El signo $
+// y el % los pone el formato de celda, no el valor.
+function exportDetalleProfesional(){
+  // Si el selector todavía dice 'cargando…' su texto no sirve como etiqueta:
+  // caemos al mes en curso y lo formateamos nosotros (_fmtMes), nunca al texto crudo.
+  const sel    = document.getElementById('mesLabel');
+  const opt    = sel && sel.options[sel.selectedIndex];
+  const listo  = /^\d{4}-\d{2}$/.test((sel && sel.value) || '');
+  const mesKey = listo ? sel.value : new Date().toISOString().slice(0,7);
+  const mesTxt = (listo && ((opt && opt.text) || '').trim()) || _fmtMes(mesKey);
+
+  const hdr  = ["Profesional","Área","Subárea","Total Mes","Honorarios","Transferencia","CMC","% CMC"];
+  const rows = data.map(d=>{
+    const a = areaByKey(d.area), sb = subareaByKey(d.area, d.subarea);
+    return [d.name, a.label, sb ? sb.label : "",
+            d.total, d.prof, Math.round(d.prof*RETENCION_FACTOR), d.cmc,
+            d.total ? d.cmc/d.total : null];
+  });
+  const sT = data.reduce((s,d)=>s+d.total,0);
+  const sP = data.reduce((s,d)=>s+d.prof,0);
+  const sC = data.reduce((s,d)=>s+d.cmc,0);
+  rows.push(["TOTAL","","", sT, sP, Math.round(sP*RETENCION_FACTOR), sC, sT ? sC/sT : null]);
+
+  const aoa = [
+    [`Detalle por Profesional — ${mesTxt}`],
+    [`Centro Médico Carampangue · exportado ${new Date().toLocaleString('es-CL')} · `
+     + `transferencia = honorarios × ${RETENCION_FACTOR} (líquido tras retención de boleta)`],
+    [],
+    hdr,
+    ...rows,
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:30},{wch:16},{wch:20},{wch:14},{wch:14},{wch:15},{wch:14},{wch:9}];
+
+  // Formato de celda por columna. El encabezado ocupa la fila 4 (título, nota,
+  // blanco), así que la data arranca en la fila 5 de Excel.
+  const money = '"$"#,##0;[Red]-"$"#,##0';
+  rows.forEach((_,i)=>{
+    const r = 5 + i;
+    ['D','E','F','G'].forEach(col=>{ const c = ws[col+r]; if(c && c.t === 'n') c.z = money; });
+    const pc = ws['H'+r]; if(pc && pc.t === 'n') pc.z = '0.0%';
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Detalle por Profesional');
+  XLSX.writeFile(wb, `CMC_Detalle_Profesional_${mesKey}.xlsx`);
+}
 
 /* ══════════ EXCEL EXPORT / IMPORT ══════════ */
 function exportExcel(){
