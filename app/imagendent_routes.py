@@ -196,7 +196,18 @@ async def sync_consumo(dias: int = DIAS_VENTANA) -> dict:
                         break
                     data = (r.json() or {}).get("data")
                     break
-    
+
+                # La atencion no se pudo leer: red caida, status != 200, o los 5
+                # intentos de 429 agotados. NUNCA seguir con `data` en None — antes
+                # reventaba en `for det in data` y se caia el barrido ENTERO, asi que
+                # no se guardaba nada de lo que venia despues (el cron nocturno lleva
+                # fallando desde que existe). Se anota para la segunda pasada y para
+                # que `errores` diga la verdad: `fallidas` se declaraba y se leia,
+                # pero nadie la llenaba, o sea el reintento era codigo muerto y
+                # `errores` reportaba 0 por construccion.
+                if data is None:
+                    fallidas.append((aid, fecha, id_pac, paciente, id_prof))
+                    continue
 
                 for det in data:
                     reg = MEDILINK_CONVENIO.get(det.get("id_prestacion"))
