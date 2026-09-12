@@ -210,7 +210,7 @@ El campo `intervalo` es la duración de cita por WhatsApp (en minutos). El bot *
 | 77 | Luis Armijo | Kinesiología | 40 |
 | 21 | Leonardo Etcheverry | Kinesiología | 40 |
 | 52 | Gisela Pinto | Nutrición | 60 |
-| 74 | Jorge Montalba | Psicología Adulto / Psicología Infantil | 45 |
+| 74 | Jorge Montalba | Psicología Adulto / Psicología Infantil | 45 | **lun-vie 18:00-20:30 ONLINE · sáb 09:00-14:00 PRESENCIAL** (`telemedicina_dias`) |
 | 49 | Juan Pablo Rodríguez | Psicología Adulto | 45 |
 | 70 | Juana Arratia | Fonoaudiología | 30 |
 | 67 | Sarai Gómez | Matrona | 30 |
@@ -219,6 +219,7 @@ El campo `intervalo` es la duración de cita por WhatsApp (en minutos). El bot *
 | 78 | Dra. Cecilia Unibazo | Psiquiatría | **40** (TELECONSULTA, $60.000 particular, abono) — **martes 16-20** (6 cupos) y **jueves 15-20** (7 cupos), verificado en Medilink 2026-07-29. ⚠️ Pendiente en Medilink: mover el jueves a **15:20**-20:00 para que el último paciente sea 19:20 y cierre a las 20:00 (hoy termina 19:40 con 20 min muertos) |
 | 79 | Dra. Franca González | Neurología | 30 (TELEMEDICINA, $65.000 particular, solo desde 15 años) |
 | 80 | TM Ana Celedón | Tecnología Médica Oftalmológica | 20 (PRESENCIAL, $15.000 particular a todos, sin Fonasa) |
+| 81 | Dr. Raúl Paz | Nutriología y Diabetología | 30 (TELECONSULTA **miércoles 17:30-20:00 = 5 cupos/sem**, $60.000 particular, sin Fonasa, desde 15 años, **gate de abono total**, honorario 90%) |
 
 ## Cancelación de citas en Medilink
 Usar `PUT /citas/{id}` con body `{"id_estado": 1}` — esto pone la cita en estado "Anulado" con `estado_anulacion=1`.
@@ -513,7 +514,9 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
   (Javiera, Jorge, Daniela, Olavarría junio completo) y citas.
 - **Hallazgo humano**: atenciones de Kine Luis se abren bajo Leo (jefe) — BI
   protegido (recepción-first), pero reportes por-prof DE Medilink distorsionan.
-- **DB Mensual**: nómina completa (Franca 79 neuro 85% · TM Celedón 80 70%)
+- **DB Mensual**: nómina completa (Franca 79 neuro 85% · TM Celedón 80 70% ·
+  **Paz 81 nutriología 90%** — el % más alto, es contrato, no ratio histórico;
+  viaja en `pct_contrato` porque todavía no tiene mes real)
   + % reales (Valentina 85, Javi/Carlos→45/Leo/Luis 50, Fredes 75) + columna
   **Transferencia** (honorarios × 0,8475) + state guardado parchado
   (cmc_dashboard_state, +2 filas). Fuente única de liquidaciones: pagos_cmc.

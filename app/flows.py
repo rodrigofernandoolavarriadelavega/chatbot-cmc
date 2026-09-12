@@ -543,6 +543,10 @@ PRECIOS_SLOT = {
     "Matrona":                ("ambas",     16000,  None, 20000),  # Fonasa $16.000 / Particular $20.000
     "Psiquiatría":            ("particular", 60000),
     "Neurología":             ("particular", 65000),
+    # Dr. Raúl Paz (81) — TELECONSULTA, 30 min. SOLO PARTICULAR: el bono MLE
+    # $4.770 de "nutrición" es de la NUTRICIONISTA (Gisela, 52), no del
+    # nutriólogo. Nunca ofrecer bono Fonasa para esta consulta.
+    "Nutriología y Diabetología": ("particular", 60000),
     "Tecnología Médica Oftalmológica": ("particular", 15000),  # TM Ana Celedón, $15.000 a TODOS (sin Fonasa)
     "Fonoaudiología":         ("particular", 25000),
     "Podología":              ("particular", 20000, "desde"),
@@ -633,6 +637,20 @@ CROSS_REFERENCE: dict[str, str] = {
         "(lo que hay que evitar) — algo que la pesa sola no puede decirte.\n\n"
         "💰 *$15.000* · dura 15 minutos · lo realiza la misma *Gisela Pinto*\n\n"
         "Si quieres agregarlo, escribe *bioimpedanciometría* y te doy hora 😊"
+    ),
+    # Quien agenda con el nutriólogo es casi siempre diabético u obeso: el plan
+    # alimentario (Gisela) y la bioimpedanciometría son lo que hace medible su
+    # indicación médica. No se ofrece podología ni fondo de ojo acá para no
+    # saturar el mensaje — van en el riel de fidelización.
+    "Nutriología y Diabetología": (
+        "\n\n🥗 *Para que el tratamiento rinda*\n"
+        "El Dr. Paz indica el tratamiento médico; el *plan alimentario* lo armas "
+        "con *Gisela Pinto*, nuestra nutricionista (*$20.000* particular o "
+        "*$4.770* con bono Fonasa).\n\n"
+        "📊 También hacemos *Bioimpedanciometría* (*$15.000*, 15 min): mide "
+        "cuánta grasa y cuánto músculo tienes, para saber si lo que bajas es "
+        "grasa y no músculo.\n\n"
+        "Si te interesa, escribe *menu* y lo agendamos 😊"
     ),
     "Fonoaudiología": (
         "\n\n💡 *¿Sabías que tenemos Otorrinolaringólogo?*\n"
@@ -1180,23 +1198,57 @@ def _list_msg(body_text: str, button_label: str, sections: list) -> dict:
     }
 
 
-def _es_teleconsulta(slot: dict) -> bool:
-    """True si el slot es de un profesional que atiende SOLO por videollamada.
+def _weekday_slot(slot: dict):
+    """Weekday de Python (lunes=0 … domingo=6) del slot, o None si no se puede.
 
-    Fuente única: PROFESIONALES[id]["telemedicina"] (medilink.py); fallback por
-    nombre de especialidad para slots sin id_profesional. Usar SIEMPRE este
-    helper (no chequeos sueltos por id) — el paciente debe ver "teleconsulta"
-    ANTES de confirmar/abonar, no enterarse después de pagar (caso Bryan
-    2026-08-04: pagó abono de psiquiatría sin saber que era videollamada)."""
+    El slot trae `fecha` en ISO ('2026-03-25') desde medilink._slots_libres.
+    """
+    _f = (slot.get("fecha") or "").strip()[:10]
+    try:
+        return date.fromisoformat(_f).weekday()
+    except (ValueError, TypeError):
+        return None
+
+
+def _es_teleconsulta(slot: dict) -> bool:
+    """True si ESE SLOT se atiende por videollamada.
+
+    Fuente única: PROFESIONALES[id] en medilink.py, que admite dos formas:
+      · "telemedicina": True         → SIEMPRE online (psiquiatría 78, neuro 79, Paz 81)
+      · "telemedicina_dias": [0..6]  → online SOLO esos weekdays; el resto presencial
+
+    Montalba (74) es el primer caso MIXTO — lun-vie online, sábado presencial —
+    y por eso la modalidad se resuelve por SLOT, no por profesional. Un booleano
+    plano le diría "videollamada" al paciente del sábado.
+
+    Usar SIEMPRE este helper (no chequeos sueltos por id) — el paciente debe ver
+    "teleconsulta" ANTES de confirmar/abonar, no enterarse después de pagar (caso
+    Bryan 2026-08-04: pagó abono de psiquiatría sin saber que era videollamada)."""
     from medilink import PROFESIONALES as _PROFS_TC
     try:
         _pid_tc = int(slot.get("id_profesional") or 0)
     except (TypeError, ValueError):
         _pid_tc = 0
-    if _PROFS_TC.get(_pid_tc, {}).get("telemedicina"):
+    _cfg_tc = _PROFS_TC.get(_pid_tc, {})
+    _dias_tc = _cfg_tc.get("telemedicina_dias")
+    if _dias_tc is not None:
+        _wd_tc = _weekday_slot(slot)
+        if _wd_tc is None:
+            # Sin fecha usable no podemos afirmar la modalidad. Elegimos NO
+            # prometer videollamada: decir "presencial" de más deja al paciente
+            # EN la clínica, donde recepción lo resuelve; decir "online" de más
+            # lo deja en su casa esperando un link que no llega y PIERDE la hora.
+            # El error recuperable es el primero.
+            log.warning("_es_teleconsulta: slot sin fecha para prof %d — asumo presencial", _pid_tc)
+            return False
+        return _wd_tc in _dias_tc
+    if _cfg_tc.get("telemedicina"):
         return True
     _esp_tc = (slot.get("especialidad") or "").lower()
-    return "psiquiatr" in _esp_tc or "neurolog" in _esp_tc
+    # "nutriolog"/"diabetolog" NO colisionan con "nutrición" (la nutricionista
+    # es presencial): ninguno es substring del otro.
+    return ("psiquiatr" in _esp_tc or "neurolog" in _esp_tc
+            or "nutriolog" in _esp_tc or "diabetolog" in _esp_tc)
 
 
 def _btn_msg(body_text: str, buttons: list) -> dict:
@@ -7441,6 +7493,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                        "optometra", "optometria", "optometría",
                                        "optometrista", "celedon", "celedón")):
             return await _iniciar_agendar(phone, data, "tecnología médica oftalmológica")
+        # Nutriología y Diabetología: Dr. Raúl Paz (prof 81), TELECONSULTA.
+        # Mismo bypass explícito que psiquiatría/neurología/oftalmología.
+        # ⚠️ "nutri"/"nutricion" NO entran acá: quien dice eso quiere a la
+        # nutricionista Gisela Pinto (52, $20.000 con bono $4.770), no una
+        # teleconsulta médica de $60.000.
+        if any(k in tl_norm for k in ("nutriolog", "nutriólog", "diabetolog",
+                                       "diabetólog", "diabetes", "diabetis",
+                                       "prediabetes", "lerdon", "lerdón")):
+            return await _iniciar_agendar(phone, data, "nutriología y diabetología")
         from medilink import _ids_para_especialidad
         # Traducir ID de lista interactiva al nombre real de especialidad
         especialidad_candidata = _ESP_ID_MAP.get(tl, tl)
@@ -14207,6 +14268,20 @@ _APELLIDOS_PROFESIONAL = [
     ("pardos",       "ecografía"),
     ("david pardo",  "ecografía"),
 
+    # === Dr. Raúl Paz Lerdón (81) — Nutriología y Diabetología, teleconsulta ===
+    # ⚠️ NO agregar "paz" ni "raul" solos: "paz" pega dentro de "capaz"/"incapaz"
+    # y en "descanse en paz"; "raul" es nombre común de pacientes. Todos los
+    # aliases de acá tienen ≥5 chars tras colapsar espacios → match por substring.
+    ("lerdon",       "nutriología y diabetología"),
+    ("lerdón",       "nutriología y diabetología"),
+    ("paz lerdon",   "nutriología y diabetología"),
+    ("dr paz",       "nutriología y diabetología"),
+    ("dra paz",      "nutriología y diabetología"),
+    ("doctor paz",   "nutriología y diabetología"),
+    ("raul paz",     "nutriología y diabetología"),
+    ("raúl paz",     "nutriología y diabetología"),
+    ("dr raul",      "nutriología y diabetología"),
+
     # Matrona (no estaba) — Sarai Gómez (67). "gómez" y "sarai" son únicos en el centro.
     ("sarai",        "matrona"),
     ("saraí",        "matrona"),
@@ -14904,7 +14979,77 @@ _FRASES_ESPECIALIDAD = [
     ("kinisiolog",            "kinesiología"),
     ("fonaudiolog",           "fonoaudiología"),
     ("fonoudiolog",           "fonoaudiología"),
-    ("nutriolog",             "nutrición"),
+    # ❌ ERA: ("nutriolog", "nutrición") — mandaba a quien pedía NUTRIÓLOGO a la
+    # nutricionista Gisela ($20.000). Desde que existe el Dr. Paz (81) eso es un
+    # ruteo equivocado: el nutriólogo es MÉDICO y son prestaciones distintas.
+    ("nutriolog",             "nutriología y diabetología"),
+    ("nutriólog",             "nutriología y diabetología"),
+    ("diabetolog",            "nutriología y diabetología"),
+    ("diabetólog",            "nutriología y diabetología"),
+    ("prediabetes",           "nutriología y diabetología"),
+    ("pre diabetes",          "nutriología y diabetología"),
+    ("resistencia a la insulina", "nutriología y diabetología"),
+    ("sindrome metabolico",   "nutriología y diabetología"),
+    ("síndrome metabólico",   "nutriología y diabetología"),
+    ("higado graso",          "nutriología y diabetología"),
+    ("hígado graso",          "nutriología y diabetología"),
+    ("doctor del azucar",     "nutriología y diabetología"),
+    ("doctor del azúcar",     "nutriología y diabetología"),
+    ("medico de la diabetes", "nutriología y diabetología"),
+    ("médico de la diabetes", "nutriología y diabetología"),
+    ("especialista en diabetes", "nutriología y diabetología"),
+    ("azucar alta",           "nutriología y diabetología"),
+    ("azúcar alta",           "nutriología y diabetología"),
+    ("glicemia alta",         "nutriología y diabetología"),
+    ("hemoglobina glicosilada", "nutriología y diabetología"),
+    # El paciente pide el fármaco por marca. Es consulta MÉDICA — ojo: rutea al
+    # especialista correcto, NO promete receta (ver SYSTEM_PROMPT).
+    ("ozempic",               "nutriología y diabetología"),
+    ("saxenda",               "nutriología y diabetología"),
+    ("mounjaro",              "nutriología y diabetología"),
+    ("wegovy",                "nutriología y diabetología"),
+    ("semaglutida",           "nutriología y diabetología"),
+    ("liraglutida",           "nutriología y diabetología"),
+    # ── Alcance ampliado (dueño 2026-09-10): embarazo, DM1, bombas/sensores y
+    #    seguimiento bariátrico. Acá sí pueden vivir frases largas: este
+    #    detector hace `frase in texto_del_paciente`, nunca al revés, así que
+    #    no convierte "embarazo" ni "bypass" en trampas.
+    # ⚠️ El control PRENATAL sigue siendo Matrona/Ginecología: solo capturamos
+    #    la frase que nombra la diabetes, jamás "embarazo" solo.
+    ("diabetes gestacional",  "nutriología y diabetología"),
+    ("diabetes del embarazo", "nutriología y diabetología"),
+    ("diabetes en el embarazo", "nutriología y diabetología"),
+    ("azucar alta en el embarazo", "nutriología y diabetología"),
+    ("azúcar alta en el embarazo", "nutriología y diabetología"),
+    ("diabetes tipo 1",       "nutriología y diabetología"),
+    ("diabetes tipo uno",     "nutriología y diabetología"),
+    ("insulino dependiente",  "nutriología y diabetología"),
+    ("insulinodependiente",   "nutriología y diabetología"),
+    ("bomba de insulina",     "nutriología y diabetología"),
+    ("microinfusora",         "nutriología y diabetología"),
+    ("sensor de glucosa",     "nutriología y diabetología"),
+    ("sensor de azucar",      "nutriología y diabetología"),
+    ("sensor de azúcar",      "nutriología y diabetología"),
+    ("monitoreo continuo de glucosa", "nutriología y diabetología"),
+    ("freestyle",             "nutriología y diabetología"),
+    ("free style",            "nutriología y diabetología"),
+    ("dexcom",                "nutriología y diabetología"),
+    ("parche de glucosa",     "nutriología y diabetología"),
+    ("parche del azucar",     "nutriología y diabetología"),
+    ("parche del azúcar",     "nutriología y diabetología"),
+    # Bariátrica: el CMC NO opera, solo hace el seguimiento. "bypass" SIN
+    # "gastrico" no entra: el bypass coronario es cardiología.
+    ("cirugia bariatrica",    "nutriología y diabetología"),
+    ("cirugía bariátrica",    "nutriología y diabetología"),
+    ("bariatric",             "nutriología y diabetología"),
+    ("bariátric",             "nutriología y diabetología"),
+    ("manga gastrica",        "nutriología y diabetología"),
+    ("manga gástrica",        "nutriología y diabetología"),
+    ("bypass gastrico",       "nutriología y diabetología"),
+    ("bypass gástrico",       "nutriología y diabetología"),
+    ("balon gastrico",        "nutriología y diabetología"),
+    ("balón gástrico",        "nutriología y diabetología"),
+    ("gastrectomia",          "nutriología y diabetología"),
     ("nutrisionista",         "nutrición"),
     ("matron",                "matrona"),
     ("odontolg",              "odontología"),

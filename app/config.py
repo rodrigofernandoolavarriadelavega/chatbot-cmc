@@ -273,6 +273,7 @@ CMC_TRANSFERENCIA = {
 ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "60000"))
 ABONO_GASTRO_CLP = int(os.getenv("ABONO_GASTRO_CLP", "35000"))
 ABONO_NEUROLOGIA_CLP = int(os.getenv("ABONO_NEUROLOGIA_CLP", "65000"))
+ABONO_NUTRIOLOGIA_CLP = int(os.getenv("ABONO_NUTRIOLOGIA_CLP", "60000"))
 
 # Horas que se le dan al paciente para transferir. Eran 90 MINUTOS y el primer
 # caso real quedó fuera por 5: transfirió y mandó el comprobante a los 95 min.
@@ -337,6 +338,18 @@ ABONO_REGLAS: dict[str, dict] = {
         "profesionales": [79],                    # Dra. Franca González
         "gate_bot":      True,
     },
+    # Nutriología y Diabetología: teleconsulta forzada igual que Psiquiatría y
+    # Neurología (PROFESIONALES[81].telemedicina). Mismo criterio del dueño
+    # (2026-09-10): consulta completa por adelantado. Sin gate, una teleconsulta
+    # cara con paciente nuevo es la receta exacta del 73% de anulación que tuvo
+    # Neurología en jul-ago 2026.
+    "nutriología y diabetología": {
+        "etiqueta":      "Nutriología y Diabetología",
+        "monto":         ABONO_NUTRIOLOGIA_CLP,   # consulta completa
+        "precio":        ABONO_NUTRIOLOGIA_CLP,   # → saldo del día = 0
+        "profesionales": [81],                    # Dr. Raúl Paz
+        "gate_bot":      True,
+    },
     # Estas dos son abono PARCIAL y las registra recepción en el mesón: el bot
     # no las bloquea al agendar. Viven acá igual para que el monto sugerido, la
     # contabilidad y el ciclo pendiente→aplicado sean los mismos.
@@ -393,6 +406,20 @@ def abono_regla(especialidad: str | None = None,
             if not _ok(cfg):
                 continue
             k = _sin_tilde(clave)
+            # "nutri" es prefijo de DOS prestaciones con precios muy distintos:
+            # Nutrición (Gisela 52, $20.000, abono parcial SIN gate) y
+            # Nutriología y Diabetología (Dr. Paz 81, $60.000, CON gate). El
+            # match por prefijo corto — el mismo que hace funcionar "gastro" y
+            # "psiqui" — le pedía $60.000 por adelantado a quien solo escribió
+            # "nutri". Para esta familia se exige que el texto nombre al MÉDICO.
+            # Probado: "nutri"/"nutrición" → None; "nutriología…" → gate $60.000.
+            if k.startswith("nutriolo"):
+                # Match explícito en vez de prefijo: la clave es compuesta
+                # ("nutriologia y diabetologia") y un "diabetologia" pelado no
+                # comparte prefijo con ella, así que el test genérico lo perdía.
+                if "nutriolo" in e or "diabetolo" in e:
+                    return {**cfg, "clave": clave}
+                continue
             if e == k or e.startswith(k[:8]) or k.startswith(e[:8]):
                 return {**cfg, "clave": clave}
     return None
@@ -586,6 +613,15 @@ EDAD_MIN_ESPECIALIDAD: dict[str, int] = {
     # para el mismo detalle en PRECIOS_SLOT. Se agregan ambas formas por seguridad.
     "neurología":         15,
     "neurologia":         15,
+    # Dr. Paz viene de medicina interna → adultos y adolescentes. Obesidad y
+    # diabetes INFANTIL no están ofrecidas (pendiente de confirmar con él):
+    # los menores quedan en Medicina General + Nutrición (Gisela).
+    "nutriología y diabetología": 15,
+    "nutriologia y diabetologia": 15,
+    "nutriología":        15,
+    "nutriologia":        15,
+    "diabetología":       15,
+    "diabetologia":       15,
 }
 
 EDAD_MAX_ESPECIALIDAD: dict[str, int] = {
@@ -641,6 +677,14 @@ ARANCELES_CLP: dict[str, int] = {
     "psiquiatria":                  60000,
     "neurología":                   65000,
     "neurologia":                   65000,
+    # Nutriología y Diabetología (Dr. Paz, 81) — $60.000, SOLO particular.
+    # No confundir con "nutrición" $20.000 (Gisela, con bono MLE $4.770).
+    "nutriología y diabetología":   60000,
+    "nutriologia y diabetologia":   60000,
+    "nutriología":                  60000,
+    "nutriologia":                  60000,
+    "diabetología":                 60000,
+    "diabetologia":                 60000,
     "tecnología médica oftalmológica": 15000,
     "tecnologia medica oftalmologica": 15000,
     "oftalmología":                 15000,

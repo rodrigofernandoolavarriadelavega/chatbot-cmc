@@ -54,6 +54,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_bi_sync_diario, _job_bi_sync_intradia, _job_pagos_prellenar_intradia,
                   _job_cac_snapshot, _job_repasada_historica,
                   _job_adherencia_kine, _job_control_especialidad,
+                  _job_avisar_templates_saltados,
                   _job_crosssell_kine, _job_crosssell_orl_fono,
                   _job_crosssell_odonto_estetica, _job_crosssell_mg_chequeo,
                   _job_medilink_watchdog, _job_claude_watchdog, _job_cierre_caja_diario,
@@ -755,6 +756,16 @@ async def lifespan(app: FastAPI):
         # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
         # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
         # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
+    # Resumen de recordatorios que no salieron por teléfono no enviable:
+    # diario 20:00 CLT, después de que corrieron todos los rieles del día.
+    scheduler.add_job(
+        _job_avisar_templates_saltados,
+        CronTrigger(hour=20, minute=0, timezone=_CLT),
+        id="avisar_templates_saltados",
+        replace_existing=True,
         misfire_grace_time=3600,
         coalesce=True,
     )
@@ -8932,7 +8943,7 @@ def api_cmc_mensual(request: Request, mes: str | None = None,
 
     AREA_MAP = {
         1: "med", 73: "med", 13: "med", 23: "med", 60: "med", 61: "med",
-        65: "med", 64: "med", 79: "med",
+        65: "med", 64: "med", 79: "med", 81: "med",
         68: "tecmed", 80: "tecmed",
         55: "dent", 72: "dent", 66: "dent", 75: "dent", 69: "dent", 76: "dent",
         59: "maso", 77: "kine", 21: "kine",

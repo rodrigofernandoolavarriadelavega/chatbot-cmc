@@ -34,6 +34,7 @@ log = logging.getLogger("bot.fidelizacion")
 _DIAS_CONTROL = {
     "kinesiología":      3,
     "nutrición":         30,
+    "nutriología y diabetología": 90,   # ritmo de la hemoglobina glicosilada
     "psicología adulto": 30,
     "medicina general":  90,
     "medicina familiar": 90,
@@ -611,6 +612,7 @@ async def enviar_adherencia_kine(send_fn, send_template_fn=None):
 # Especialidades con control periódico: (nombre_en_citas_bot, dias_para_control)
 _CONTROL_REGLAS = [
     ("Nutrición",        30),
+    ("Nutriología y Diabetología", 90),
     ("Psicología Adulto", 30),
     ("Cardiología",      90),
     ("Ginecología",      180),

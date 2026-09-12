@@ -412,6 +412,7 @@ const ORIGINAL_AREAS = [
       {key:'orl',      label:'Otorrinolaringología',  color:'#a5b4fc'},
       {key:'gastro',   label:'Gastroenterología',     color:'#6ee7b7'},
       {key:'cardio',   label:'Cardiología',           color:'#fca5a5'},
+      {key:'nutriol',  label:'Nutriología y Diabetología', color:'#34d399'},
     ]},
   { key:'kine',   label:'Kinesiología',    color:'#22c55e', subareas:[] },
   { key:'dent',   label:'Dental',          color:'#f59e0b',
@@ -461,6 +462,7 @@ const ORIGINAL = [
   {name:"Impl. Aurora",                  total:0,       prof:0,       cmc:0,        area:"dent",   subarea:"impl",    tipo_pago:"pct", hono_fijo:0},
   {name:"Endodoncista Eduardo",          total:660000,  prof:451000,  cmc:231000,   area:"dent",   subarea:"endod",   tipo_pago:"pct", hono_fijo:0},
   {name:"Estética Valentina Fuentealba", total:319980,  prof:127992,  cmc:111993,   area:"dent",   subarea:"est_d",   tipo_pago:"pct", hono_fijo:0},
+  {name:"Dr. Raúl Paz nutriología",      total:0,       prof:0,       cmc:0,        area:"med",    subarea:"nutriol", tipo_pago:"pct", hono_fijo:0, pct_contrato:0.90},
   {name:"Psicólogo Juan Pablo",          total:62570,   prof:43799,   cmc:18771,    area:"psico",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
   {name:"Psicólogo Jorge",               total:415900,  prof:291130,  cmc:124770,   area:"psico",  subarea:"",        tipo_pago:"pct", hono_fijo:0},
 ];
@@ -475,7 +477,14 @@ const tipoPagoSim = (i)=> simParams[i].tipo_pago_sim ?? (data[i].tipo_pago||'pct
 // Honorarios fijos efectivos para simulación
 const honoFijoSim = (i)=> simParams[i].hono_fijo_sim != null ? simParams[i].hono_fijo_sim : (data[i].hono_fijo||0);
 // % efectivo para tipo pct
-const profPctFor  = (i)=> simParams[i].profPct != null ? simParams[i].profPct/100 : (data[i].total>0?data[i].prof/data[i].total:0.70);
+// Orden de precedencia del %: (1) lo que el usuario tipeó en el simulador,
+// (2) el ratio REAL del mes (prof/total), (3) el % de CONTRATO si el
+// profesional todavía no tiene mes — si no, un recién llegado se simulaba al
+// 70% por defecto y el Dr. Paz (90%) mostraba un margen CMC que no existe,
+// (4) 70% genérico.
+const profPctFor  = (i)=> simParams[i].profPct != null ? simParams[i].profPct/100
+                        : (data[i].total>0 ? data[i].prof/data[i].total
+                        : (data[i].pct_contrato ?? 0.70));
 const realProfPct = ()=> data.map((_,i)=>profPctFor(i));
 
 function calcSim(){

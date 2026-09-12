@@ -2239,6 +2239,10 @@ _WAITLIST_ESP_KEYWORDS = (
     ("otorrin", "otorrinolaringologia"),
     ("psicolog", "psicologia"),
     ("nutricion", "nutricion"),
+    # ⚠️ "nutriolog"/"diabetolog" ANTES de nada que empiece con "nutri":
+    # el mapeo es por prefijo y son prestaciones distintas.
+    ("nutriolog", "nutriologia y diabetologia"),
+    ("diabetolog", "nutriologia y diabetologia"),
     ("matron", "matrona"),
     ("podolog", "podologia"),
     ("masoterap", "masoterapia"),
@@ -2704,6 +2708,7 @@ _ESPECIALIDADES_HORAS_VACIAS = [
     ("Odontología General",  [72, 55]),
     ("Psicología Adulto",    [74, 49]),
     ("Nutrición",            [52]),
+    ("Nutriología y Diabetología", [81]),
     ("Podología",            [56]),
     ("Ecografía",            [68]),
     ("Matrona",              [67]),
@@ -5250,3 +5255,48 @@ async def _job_agenda_dias_sync():
     n = upsert_agenda_dias(recs)
     log.info("agenda_dias_sync: %d filas cacheadas (de %d posibles)",
              n, len(PROFESIONALES) * 3)
+
+
+# ── Templates saltados por teléfono no enviable ──────────────────────────────
+async def _job_avisar_templates_saltados():
+    """Resumen DIARIO de los templates que no se pudieron enviar porque el
+    teléfono no es un destino válido de WhatsApp.
+
+    Por qué existe: ese skip vivía solo como WARNING en /var/log/cmc-bot.log.
+    Una paciente con número peruano (+51) estuvo semanas sin recibir NINGÚN
+    recordatorio — conversaba normal con el bot, así que nada se veía roto — y
+    se descubrió recién cuando el dueño lo notó a mano (2026-09-08).
+
+    Va agrupado y una vez al día a propósito: avisar por cada intento sería
+    ruido (los rieles 24h/2h/48h reintentan sobre la misma cita).
+    """
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _Z
+    from session import db as _db
+    from alertas_oob import enviar_telegram as _tg
+
+    hoy = _dt.now(_Z("America/Santiago")).date().isoformat()
+    try:
+        with _db() as c:
+            filas = c.execute(
+                "SELECT phone, COUNT(*) FROM conversation_events "
+                "WHERE event='template_skip_phone_invalido' AND date(ts)=? "
+                "GROUP BY phone ORDER BY 2 DESC", (hoy,)
+            ).fetchall()
+    except Exception as e:
+        log.error("_job_avisar_templates_saltados: no pude leer eventos: %s", e)
+        return
+
+    if not filas:
+        log.info("templates_saltados: ninguno hoy")
+        return
+
+    lineas = ["⚠️ *Recordatorios que NO salieron* — %s" % hoy, "",
+              "Estos números no son destinos válidos de WhatsApp, así que el "
+              "template se saltó. Si es un paciente real, hay que contactarlo a mano:", ""]
+    for phone, n in filas:
+        lineas.append("• `%s` — %d intento(s)" % (phone, n))
+    lineas += ["", "_IDs de Messenger/Instagram (fb_/ig_) y fijos son esperables._"]
+
+    await _tg("\n".join(lineas))
+    log.info("templates_saltados: avisados %d número(s)", len(filas))

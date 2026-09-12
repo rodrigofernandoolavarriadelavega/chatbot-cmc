@@ -850,6 +850,10 @@ body.embed .flow{padding-top:18px}
                     <span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
                     <div><div class="rl">Fecha y hora</div><div class="rv" id="cf-when">—</div></div>
                   </div>
+                  <div class="rrow" id="cf-mod-row" hidden>
+                    <span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 11 6-4v10l-6-4z"/></svg></span>
+                    <div><div class="rl">Modalidad</div><div class="rv" id="cf-mod">—</div></div>
+                  </div>
                   <div class="rrow">
                     <span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
                     <div><div class="rl">Paciente</div><div class="rv" id="cf-pac">—</div></div>
@@ -883,10 +887,11 @@ body.embed .flow{padding-top:18px}
               <div class="success">
                 <div class="suc-ring"><span class="c1"></span><span class="c2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></div>
                 <h2>Su hora quedó reservada</h2>
-                <p>Le esperamos en el Centro Médico Carampangue.</p>
+                <p id="dn-lead">Le esperamos en el Centro Médico Carampangue.</p>
                 <div class="suc-card">
                   <div class="rrow"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><div class="rl">Su atención</div><div class="rv" id="dn-spec">—</div></div></div>
                   <div class="rrow"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><div class="rl">Fecha y hora</div><div class="rv" id="dn-when">—</div></div></div>
+                  <div class="rrow" id="dn-mod-row" hidden><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 11 6-4v10l-6-4z"/></svg></span><div><div class="rl">Modalidad</div><div class="rv" id="dn-mod">—</div></div></div>
                 </div>
                 <div class="wa-note">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
@@ -1090,6 +1095,15 @@ let SPEC_INDEX = {};         // especialidad-name -> spec object
 // S.spec = especialidad object {especialidad, precio, dental, metodos_pago, profesionales:[{id,nombre,precio}], grupo}
 // S.prof = {id, nombre} or {auto:true}
 // S.slot = chosen slot object {hora_inicio,hora_fin,fecha,fecha_display,profesional,especialidad,id_profesional,id_recurso}
+// MODALIDAD = 'online' | 'presencial' | '' — la entrega /slots por profesional Y fecha.
+// Depende del DÍA (Montalba 74 es online lun-vie y presencial el sábado), así que
+// se refresca en cada consulta de slots, no una sola vez al elegir profesional.
+let MODALIDAD = '';
+function modalidadTexto(m){
+  if(m==='online') return 'Videollamada — no tiene que venir al centro';
+  if(m==='presencial') return 'Presencial en el Centro Médico Carampangue';
+  return '';
+}
 let S = {step:0, spec:null, prof:null, day:null, slot:null, patient:null, consent:false, reagId:null};
 
 /* ================================================================
@@ -1344,7 +1358,7 @@ async function resolveAutoProf(){
   const results = await Promise.all(profs.map(async p=>{
     try{
       const r = await apiGet(`/slots?id_prof=${encodeURIComponent(p.id)}`);
-      return {id:p.id, nombre:p.nombre, fecha:r.fecha, count:(r.slots||[]).length, slots:r.slots||[]};
+      return {id:p.id, nombre:p.nombre, fecha:r.fecha, count:(r.slots||[]).length, slots:r.slots||[], modalidad:r.modalidad||''};
     }catch(e){ return {id:p.id, nombre:p.nombre, fecha:null, count:0, slots:[]}; }
   }));
   const valid = results.filter(x=>x.fecha);
@@ -1369,11 +1383,13 @@ async function initDays(){
       profId = best.id;
       firstISO = best.fecha;
       firstSlots = best.slots;
+      MODALIDAD = best.modalidad||'';
     } else {
       profId = S.prof.id;
       const r = await apiGet(`/slots?id_prof=${encodeURIComponent(profId)}`);
       firstISO = r.fecha;
       firstSlots = r.slots||[];
+      MODALIDAD = r.modalidad||'';
       if(!firstISO){ showNoAvail(); return; }
     }
     S._profId = profId;
@@ -1429,6 +1445,7 @@ async function loadSlotsForDay(iso){
   try{
     const r = await apiGet(`/slots?id_prof=${encodeURIComponent(S._profId)}&fecha=${encodeURIComponent(iso)}`);
     const slots = r.slots||[];
+    if(r.modalidad) MODALIDAD = r.modalidad;   // puede cambiar según el día (Montalba)
     SLOTS_CACHE[iso]=slots;
     const d=DAYS.find(x=>x.iso===iso); if(d) d.count=slots.length;
     renderDays();
@@ -1650,6 +1667,9 @@ function fillConfirm(){
   document.getElementById('cf-spec').textContent=S.spec.especialidad;
   document.getElementById('cf-prof').textContent=profLabel();
   document.getElementById('cf-when').textContent = S.slot ? whenLong(S.slot.fecha, S.slot.hora_inicio) : '—';
+  const _cfm = modalidadTexto(MODALIDAD);
+  document.getElementById('cf-mod').textContent = _cfm;
+  document.getElementById('cf-mod-row').hidden = !_cfm;
   const pacName = S.patient.found ? (S.patient.name||S.patient.short||'Paciente') : (S.patient.name||'Paciente nuevo');
   document.getElementById('cf-pac').textContent = pacName + ' · ' + formatRut(S.patient.rut);
   document.getElementById('cf-price').textContent = S.prest ? S.prest.p : (S.spec.precio || '—');
@@ -1704,6 +1724,15 @@ async function confirmReserva(){
     const r = await apiPost('/reservar', body);
     document.getElementById('dn-spec').textContent = (r.especialidad||S.spec.especialidad) + ' · ' + (r.profesional||profLabel());
     document.getElementById('dn-when').textContent = whenLong(r.fecha||S.slot.fecha, r.hora_inicio||S.slot.hora_inicio);
+    const _mod = r.modalidad || MODALIDAD;
+    const _dnm = modalidadTexto(_mod);
+    document.getElementById('dn-mod').textContent = _dnm;
+    document.getElementById('dn-mod-row').hidden = !_dnm;
+    // "Le esperamos en el centro" es FALSO si la hora es por videollamada.
+    const _dnLead = document.getElementById('dn-lead');
+    if(_dnLead) _dnLead.textContent = (_mod==='online')
+      ? 'Le enviaremos el enlace de la videollamada antes de su hora.'
+      : 'Le esperamos en el Centro Médico Carampangue.';
     S.lastReserva = r;
     S.reagId=null;
     showStep(5);

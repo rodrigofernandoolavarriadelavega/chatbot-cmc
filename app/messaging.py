@@ -279,6 +279,16 @@ def _normalize_phone_outbound(phone: str) -> str | None:
         return digits
     if len(digits) == 9 and digits.startswith("9"):
         return "56" + digits
+    # Móviles PERUANOS: +51 9XXXXXXXX (11 dígitos con el código país).
+    # Caso real 2026-09-08: una paciente con número peruano conversaba bien con
+    # el bot (los mensajes de texto no pasan por acá) pero NINGÚN recordatorio
+    # proactivo le llegaba nunca — todos morían silenciosos en este return None.
+    # Se abre SOLO Perú, que es el caso confirmado; el resto sigue cerrado a
+    # propósito. Este guard es lo que frena los IDs de Messenger/Instagram
+    # (fb_…, ig_… → 15-17 dígitos al limpiar) y los fijos chilenos (562…, 564…),
+    # que no existen en WhatsApp. Para abrir otro país, agregar su rama acá.
+    if len(digits) == 11 and digits.startswith("519"):
+        return digits
     return None
 
 
@@ -717,6 +727,16 @@ async def send_whatsapp_template(to: str, template_name: str,
             "send_whatsapp_template: telefono formato invalido, skip — to=%r template=%s",
             to, template_name,
         )
+        # Dejar rastro consultable, no solo una línea de log. Antes este skip era
+        # 100% silencioso: una paciente con número peruano pasó semanas sin recibir
+        # NINGÚN recordatorio y solo se detectó cuando el dueño lo notó a mano.
+        # El resumen diario (_job_avisar_templates_saltados) lo eleva a Telegram.
+        try:
+            from session import log_event as _le
+            _le(to, "template_skip_phone_invalido",
+                {"template": template_name, "phone": to})
+        except Exception:  # nunca romper el envío por no poder loguear
+            pass
         return None
     _wamid = await _post_meta({
         "messaging_product": "whatsapp",

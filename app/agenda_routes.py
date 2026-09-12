@@ -40,6 +40,7 @@ _CAPI_VALUE_BY_PROF: dict[int, float] = {
     77: 20_000.0,   # Luis Armijo — Kinesiología particular
     21: 20_000.0,   # Leonardo Etcheverry — Kinesiología particular
     52: 20_000.0,   # Gisela Pinto — Nutrición particular
+    81: 60_000.0,   # Dr. Raúl Paz — Nutriología y Diabetología (teleconsulta)
     74: 20_000.0,   # Jorge Montalba — Psicología particular
     49: 20_000.0,   # Juan Pablo Rodríguez — Psicología particular
     70: 30_000.0,   # Juana Arratia — Fonoaudiología (evaluación)
