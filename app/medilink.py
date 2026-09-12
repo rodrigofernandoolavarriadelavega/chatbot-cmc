@@ -325,7 +325,13 @@ PROFESIONALES = {
     77: {"nombre": "Luis Armijo",              "especialidad": "Kinesiología",          "intervalo": 40},
     21: {"nombre": "Leonardo Etcheverry",      "especialidad": "Kinesiología",          "intervalo": 40},
     52: {"nombre": "Gisela Pinto",             "especialidad": "Nutrición",             "intervalo": 60},
-    74: {"nombre": "Jorge Montalba",           "especialidad": "Psicología Adulto",     "intervalo": 45},
+    # Psicología Montalba — MODALIDAD MIXTA (dueño, 2026-09-11):
+    #   lun-vie 18:00-20:30 ONLINE · sábado 09:00-14:00 PRESENCIAL
+    # Primer profesional cuya modalidad depende del DÍA, por eso `telemedicina_dias`
+    # (weekday de Python: lunes=0 … sábado=5) en vez del booleano `telemedicina`.
+    # Los HORARIOS reales los lee _get_horario() desde Medilink — se cargan allá,
+    # NO acá. Si el sábado no aparece, es que falta cargarlo en Medilink.
+    74: {"nombre": "Jorge Montalba",           "especialidad": "Psicología Adulto",     "intervalo": 45, "telemedicina_dias": [0, 1, 2, 3, 4]},
     49: {"nombre": "Juan Pablo Rodríguez",     "especialidad": "Psicología Adulto",     "intervalo": 45},
     70: {"nombre": "Juana Arratia",            "especialidad": "Fonoaudiología",        "intervalo": 30},
     67: {"nombre": "Sarai Gómez",              "especialidad": "Matrona",               "intervalo": 30},
@@ -354,6 +360,25 @@ PROFESIONALES = {
     # (sin Fonasa actualmente). Examen optométrico, fondo de ojo preventivo,
     # presión intraocular, receta de lentes.
     80: {"nombre": "TM Ana Celedón",           "especialidad": "Tecnología Médica Oftalmológica", "intervalo": 20},
+    # Nutriología y Diabetología TELECONSULTA — Dr. Raúl Paz Lerdón (Concepción).
+    # Formación INFORMADA por el CMC (no verificada contra certificados):
+    # nutriólogo y diabetólogo, Pontificia Universidad Católica de Chile. El bot
+    # NO recita malla curricular ("3 años de interna + 2 de subespecialidad" es
+    # la ruta típica en Chile, no un dato del profesional) ni atribuye el
+    # pregrado a la UC si solo la subespecialidad lo es.
+    # NO es la nutricionista: él es MÉDICO, diagnostica, pide exámenes
+    # y RECETA (metformina, insulina, GLP-1). Gisela Pinto (52) hace el plan
+    # alimentario. Son complementarios, NO sustitutos — ver ESPECIALIDADES_MAP.
+    # $60.000 particular (sin bono Fonasa: el bono MLE de nutrición es de la
+    # nutricionista, no del nutriólogo). Bloque de 30 min. Desde 15 años.
+    # Horario real lo lee _get_horario() de Medilink; no hardcodear `dias`.
+    # Horario REAL leído de /profesionales/81/horarios el 2026-09-10 (sucursal 1):
+    #   Medilink dia 3 → weekday 2 = MIÉRCOLES 17:30-20:00 → 5 cupos de 30 min
+    #   (17:30 18:00 18:30 19:00 19:30). Los otros 6 días están guardados con
+    #   hora_inicio == hora_fin (17:30-17:30), que _get_horario lee como CERRADO.
+    # `dias` acá NO filtra nada (el filtro real lo da _get_horario leyendo
+    # Medilink); se deja al día sólo para que la tabla no mienta.
+    81: {"nombre": "Dr. Raúl Paz",             "especialidad": "Nutriología y Diabetología", "intervalo": 30, "dias": [2], "telemedicina": True},
 }
 
 # Mapa de palabras clave → IDs de profesionales
@@ -437,6 +462,57 @@ ESPECIALIDADES_MAP = {
     "bioimpedanciometría": [52], "bioimpedanciometria": [52],
     "bioimpedancia": [52], "bio impedancia": [52],
     "composición corporal": [52], "composicion corporal": [52],
+    # ── Nutriología y Diabetología — Dr. Raúl Paz (81), TELECONSULTA ──────────
+    # ⚠️ ORDEN IMPORTANTE: este bloque va DESPUÉS de "nutrición"/"nutricionista"
+    # porque _ids_para_especialidad, cuando no hay match exacto, recorre el dict
+    # buscando substring bidireccional. Con este bloque arriba, un "nutri" pelado
+    # caería en "nutriología" → Dr. Paz ($60.000) en vez de Gisela ($20.000).
+    # Quien dice "nutri" quiere a la nutricionista; quien quiere al médico dice
+    # "nutriólogo", "diabetólogo", "diabetes" o "azúcar".
+    "nutriología y diabetología": [81], "nutriologia y diabetologia": [81],
+    "nutriología": [81], "nutriologia": [81],
+    "nutriólogo": [81], "nutriologo": [81], "nutrióloga": [81], "nutriologa": [81],
+    "diabetología": [81], "diabetologia": [81],
+    "diabetólogo": [81], "diabetologo": [81], "diabetóloga": [81], "diabetologa": [81],
+    "diabetes": [81], "diabetis": [81], "diabete": [81], "diabetico": [81],
+    "diabético": [81], "diabetica": [81], "diabética": [81],
+    "prediabetes": [81], "pre diabetes": [81],
+    "azúcar alta": [81], "azucar alta": [81], "azúcar en la sangre": [81],
+    "azucar en la sangre": [81], "glicemia alta": [81], "glicemia": [81],
+    "hemoglobina glicosilada": [81], "resistencia a la insulina": [81],
+    # "ajuste de insulina" deja como efecto lateral que un "insulina" pelado
+    # resuelva a [81] — y está BIEN desde que atiende DM1, bombas y sensores:
+    # la insulina es su territorio. La renovación simple de receta la manda a
+    # Medicina General el SYSTEM_PROMPT, que corre antes de este fallback.
+    "ajuste de insulina": [81], "metformina": [81],
+    # ── Alcance ampliado (confirmado por el dueño 2026-09-10) ───────────────
+    # REGLA DE ESTE DICCIONARIO: acá van SOLO etiquetas canónicas de una palabra
+    # o inequívocas. El fallback de _ids_para_especialidad compara en AMBOS
+    # sentidos, así que una clave larga vuelve trampa a cada palabra que la
+    # compone: "diabetes del embarazo" hacía que "embarazo" resolviera al
+    # diabetólogo en vez de a Matrona, "bomba de insulina" resucitaba "insulina"
+    # (que saqué a propósito) y "sensor de glucosa" capturaba "sensor".
+    # Las frases coloquiales viven en _FRASES_ESPECIALIDAD (flows.py), que
+    # matchea `frase in texto_del_paciente` — la única dirección segura.
+    #
+    # Diabetes gestacional: el MANEJO METABÓLICO es de Paz; el CONTROL PRENATAL
+    # sigue siendo Matrona (67) / Ginecología (61).
+    "diabetes gestacional": [81],
+    # Diabetes tipo 1 — desde 15 años (EDAD_MIN_ESPECIALIDAD bloquea niños).
+    # "diabetes tipo 1" no necesita clave propia: el fallback la resuelve por
+    # "diabetes", y una clave con la palabra "tipo" sería otra trampa.
+    "dm1": [81], "insulino dependiente": [81], "insulinodependiente": [81],
+    "diabetes juvenil": [81],
+    # Bombas de insulina y monitoreo continuo. El CMC NO vende ni instala los
+    # dispositivos: el médico indica, interpreta y ajusta.
+    "microinfusora": [81], "freestyle": [81], "free style": [81], "dexcom": [81],
+    # Seguimiento post-cirugía bariátrica. El CMC NO OPERA.
+    # Solo la palabra sola: "cirugía bariátrica" haría que "cirugía" cayera acá.
+    "bariátrica": [81], "bariatrica": [81], "bariátrico": [81], "bariatrico": [81],
+    # Al profesional por su nombre. OJO: "paz" pelado NO va acá — colisiona por
+    # substring con "capaz"/"incapaz"/"descanse en paz".
+    "dr paz": [81], "doctor paz": [81], "raúl paz": [81], "raul paz": [81],
+    "paz lerdón": [81], "paz lerdon": [81], "lerdón": [81], "lerdon": [81],
     "podología": [56], "podólogo": [56],
     "ortodoncia": [66], "ortodoncista": [66],
     "ecografía": [68], "ecografista": [68], "tecnólogo": [68],
@@ -477,6 +553,20 @@ ESPECIALIDADES_ID = {
     "bioimpedanciometría": 4, "bioimpedanciometria": 4,
     "bioimpedancia": 4, "bio impedancia": 4,
     "composición corporal": 4, "composicion corporal": 4,
+    # Nutriología y Diabetología = id 25 en Medilink (Dr. Paz, 81). NO es el 4:
+    # ese es Nutrición (la nutricionista). Dos especialidades distintas, dos
+    # agendas distintas, dos precios distintos.
+    "nutriología y diabetología": 25, "nutriologia y diabetologia": 25,
+    "nutriología": 25, "nutriologia": 25,
+    "nutriólogo": 25, "nutriologo": 25, "nutrióloga": 25, "nutriologa": 25,
+    "diabetología": 25, "diabetologia": 25,
+    "diabetólogo": 25, "diabetologo": 25, "diabetóloga": 25, "diabetologa": 25,
+    "diabetes": 25, "diabetis": 25, "diabete": 25,
+    "prediabetes": 25, "pre diabetes": 25,
+    "obesidad": 25, "síndrome metabólico": 25, "sindrome metabolico": 25,
+    "resistencia a la insulina": 25, "hígado graso": 25, "higado graso": 25,
+    "dr paz": 25, "doctor paz": 25, "raúl paz": 25, "raul paz": 25,
+    "paz lerdón": 25, "paz lerdon": 25, "lerdón": 25, "lerdon": 25,
     "podología": 12, "podólogo": 12,
     "ortodoncia": 19, "ortodoncista": 19,
     "ecografía": 13, "ecografista": 13, "tecnólogo": 13,

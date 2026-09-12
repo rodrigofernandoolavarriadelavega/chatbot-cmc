@@ -67,8 +67,8 @@
   <header class="mb-10">
     <p class="section-head">CMC · Economía del dueño · Reemplazo de ingreso clínico</p>
     <h1 class="text-5xl md:text-6xl font-semibold leading-none mb-3" style="color:var(--fiordo)">Reemplazo de ingreso<em class="italic" style="color:var(--cobre)">.</em></h1>
-    <p class="serif italic text-xl opacity-75 max-w-3xl">¿Cuánto del ingreso clínico personal de Rodrigo (~$5,03M/mes) puede reemplazar el CMC creciendo, sin que él atienda?</p>
-    <p class="mono text-xs opacity-60 mt-4">Cifras congeladas y verificadas contra sessions.db (jul-2026) — no se recalculan en vivo. Dos escenarios: conservador y optimista.</p>
+    <p class="serif italic text-xl opacity-75 max-w-3xl">¿Cuánto del ingreso clínico personal de Rodrigo (~$5,51M/mes) puede reemplazar el CMC creciendo, sin que él atienda?</p>
+    <p class="mono text-xs opacity-60 mt-4">Actualizado el 12-sep-2026 contra bi_pagos_caja: el hueco, la venta del centro y toda la sección 05 (techo por profesional) son datos de <strong>agosto 2026</strong>. Los montos de los escenarios conservador y optimista (secciones 01-04) siguen siendo el cálculo de julio y están pendientes de recálculo. No se recalcula en vivo.</p>
   </header>
 
   <!-- KPIs centrales -->
@@ -76,8 +76,8 @@
     <div class="grid md:grid-cols-4 gap-3">
       <div class="kpi-card" style="border-top:3px solid var(--lacre)">
         <div class="kpi-label">Hueco a tapar / mes</div>
-        <div class="kpi-num neg">$5.033.524</div>
-        <div class="kpi-sub">Honorario de Rodrigo — 71% de $7.089.470 que produce. Ya está en su techo personal; no crece atendiendo más.</div>
+        <div class="kpi-num neg">$5.508.918</div>
+        <div class="kpi-sub">Honorario de Rodrigo — 71% de los $7.759.040 que produce en promedio jun-ago 2026. En agosto solo fue $6.479.658. Ya está en su techo personal; no crece atendiendo más.</div>
       </div>
       <div class="kpi-card" style="border-top:3px solid var(--agua)">
         <div class="kpi-label">Escenario conservador</div>
@@ -91,8 +91,8 @@
       </div>
       <div class="kpi-card" style="border-top:3px solid var(--cobre)">
         <div class="kpi-label">Venta total CMC hoy</div>
-        <div class="kpi-num">$26.039.530</div>
-        <div class="kpi-sub">Punto de partida, mes de referencia</div>
+        <div class="kpi-num">$34.798.830</div>
+        <div class="kpi-sub">Agosto 2026, último mes cerrado. Si todos repitieran su récord: $46.846.510</div>
       </div>
     </div>
   </section>
@@ -100,15 +100,15 @@
   <!-- 01 Medidor del hueco -->
   <section class="mb-10 panel">
     <p class="section-head">01 — El hueco y su cobertura</p>
-    <h2 class="section-title">¿Cuánto tapa cada escenario del hueco de $5.033.524?</h2>
+    <h2 class="section-title">¿Cuánto tapa cada escenario del hueco de $5.508.918?</h2>
     <div class="space-y-8 mt-6">
       <div>
         <div class="flex justify-between items-baseline mb-2">
           <span class="mono text-xs uppercase tracking-wider opacity-70">Conservador</span>
-          <span class="mono text-sm font-semibold" style="color:var(--agua)">$4.583.890 · 91%</span>
+          <span class="mono text-sm font-semibold" style="color:var(--agua)">$4.583.890 · 83%</span>
         </div>
         <div class="gauge-track">
-          <div class="gauge-fill" style="width:45.5%; background:var(--agua);">91%</div>
+          <div class="gauge-fill" style="width:41.6%; background:var(--agua);">83%</div>
           <div class="gauge-marker" style="left:50%;"></div>
           <div class="gauge-marker-label" style="left:50%;">100% = hueco</div>
         </div>
@@ -116,10 +116,10 @@
       <div>
         <div class="flex justify-between items-baseline mb-2">
           <span class="mono text-xs uppercase tracking-wider opacity-70">Optimista</span>
-          <span class="mono text-sm font-semibold" style="color:var(--musgo)">$9.364.520 · 186%</span>
+          <span class="mono text-sm font-semibold" style="color:var(--musgo)">$9.364.520 · 170%</span>
         </div>
         <div class="gauge-track">
-          <div class="gauge-fill" style="width:93%; background:var(--musgo);">186%</div>
+          <div class="gauge-fill" style="width:85%; background:var(--musgo);">170%</div>
           <div class="gauge-marker" style="left:50%;"></div>
           <div class="gauge-marker-label" style="left:50%;">100% = hueco</div>
         </div>
@@ -129,14 +129,14 @@
     <table class="tidy mt-8">
       <thead><tr><th>Métrica</th><th>Hoy</th><th>Conservador</th><th>Optimista</th></tr></thead>
       <tbody>
-        <tr><td>Venta total CMC/mes</td><td>$26.039.530</td><td>$32.978.536</td><td>$48.643.270</td></tr>
+        <tr><td>Venta total CMC/mes</td><td>$34.798.830</td><td>$32.978.536</td><td>$48.643.270</td></tr>
         <tr><td>Margen dueño bruto (sin Rodrigo)</td><td>—</td><td>$9.173.890</td><td>$14.494.520</td></tr>
         <tr><td>Opex estimado</td><td>~$4,29M (mayo real)</td><td>$4.590.000</td><td>$5.130.000</td></tr>
         <tr class="total-row"><td>EBITDA / margen dueño neto</td><td>~$4-5M</td><td class="pos">$4.583.890</td><td class="pos">$9.364.520</td></tr>
-        <tr class="total-row"><td>% del hueco $5,03M que tapa</td><td>—</td><td>91%</td><td>186%</td></tr>
+        <tr class="total-row"><td>% del hueco $5,51M que tapa</td><td>—</td><td>83%</td><td>170%</td></tr>
       </tbody>
     </table>
-    <p class="text-xs opacity-60 mt-3">"Sin Rodrigo" = margen que le queda al dueño del CMC como negocio, sin sumar el honorario clínico personal de Rodrigo (ver sección 06, tratado aparte).</p>
+    <p class="text-xs opacity-60 mt-3">La columna <strong>Hoy</strong> es agosto 2026; las columnas Conservador y Optimista siguen siendo el cálculo de julio y están pendientes de recálculo. "Sin Rodrigo" = margen que le queda al dueño del CMC como negocio, sin sumar el honorario clínico personal de Rodrigo (ver sección 06, tratado aparte).</p>
   </section>
 
   <!-- 02 + 03 Charts -->
@@ -189,52 +189,63 @@
     <p class="text-xs opacity-60 mt-3">Trauma y Otorrino son <strong>100% incrementales</strong>: hoy venden $0, cualquier venta es ganancia neta de capacidad ociosa reactivada. Eco Fonasa requiere triplicar el volumen actual de David Pardo — ver caveat 1.</p>
   </section>
 
-  <!-- 05 Staff existente + Abarca -->
-  <section class="mb-10 grid md:grid-cols-3 gap-6">
-    <div class="panel md:col-span-2">
-      <p class="section-head">05 — Staff existente (20 profesionales, sin Rodrigo/Barraza/Borrego/Pardo)</p>
-      <h2 class="section-title">Parejo, con roles concentradores.</h2>
-      <table class="tidy">
-        <thead><tr><th>Profesional</th><th>Especialidad</th><th>% margen dueño</th><th>Nota</th></tr></thead>
-        <tbody>
-          <tr><td>Márquez</td><td>Medicina General</td><td class="mono">75%</td><td>—</td></tr>
-          <tr><td>Unibazo</td><td>Psiquiatría</td><td class="mono">90%</td><td>Mayor margen del staff</td></tr>
-          <tr><td>Rejón</td><td>Ginecología</td><td class="mono">70%</td><td>—</td></tr>
-          <tr><td>Arratia</td><td>Fonoaudiología</td><td class="mono">70%</td><td>—</td></tr>
-          <tr><td>Millán</td><td>Cardiología</td><td class="mono">69%</td><td class="neg">Hoy vende $0</td></tr>
-          <tr><td>Castillo</td><td>Ortodoncia</td><td class="mono">60%</td><td>—</td></tr>
-          <tr><td>Burgos</td><td>Odontología general</td><td class="mono">51%</td><td>—</td></tr>
-          <tr><td>Etcheverry</td><td>Kinesiología</td><td class="mono">52%</td><td>—</td></tr>
-          <tr><td>Jiménez</td><td>Odontología general</td><td class="mono">45%</td><td>—</td></tr>
-          <tr><td>Armijo</td><td>Kinesiología</td><td class="mono">41%</td><td>Menor margen del staff</td></tr>
-          <tr><td class="opacity-60">Otros 10 profesionales</td><td class="opacity-60">Mix especialidades</td><td class="opacity-60 mono">—</td><td class="opacity-60">Detalle en informe completo</td></tr>
-        </tbody>
-      </table>
-      <table class="tidy mt-4">
-        <thead><tr><th>Bloque</th><th>Venta actual</th><th>Margen actual</th><th>Venta mejor mes</th><th>Margen mejor mes</th></tr></thead>
-        <tbody>
-          <tr class="total-row">
-            <td>Total 20 profesionales</td>
-            <td>$13.743.460</td><td class="pos">$5.377.887</td>
-            <td>$24.767.710</td><td class="pos">$9.150.843</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="panel">
-      <p class="section-head">Dr. Abarca</p>
-      <h2 class="section-title text-2xl">Contrato especial.</h2>
-      <p class="text-xs opacity-70 mb-4">max($1.707.063 fijo, 62% de venta) — 8 horas. No es fijo puro: sobre cierto volumen el % gana.</p>
-      <table class="tidy">
-        <tbody>
-          <tr><td>Venta actual</td><td class="text-right mono">$2.861.470</td></tr>
-          <tr><td>Margen actual</td><td class="text-right mono pos">$1.087.359</td></tr>
-          <tr><td colspan="2" class="pt-3 pb-1 opacity-60 text-xs">Optimista (récord nov-25)</td></tr>
-          <tr><td>Venta optimista</td><td class="text-right mono">$5.620.090</td></tr>
-          <tr><td>Margen optimista</td><td class="text-right mono pos">$2.135.634</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <!-- 05 Todos a su peak -->
+  <section class="mb-10 panel">
+    <p class="section-head">05 — Todos los profesionales en su mejor mes histórico</p>
+    <h2 class="section-title">El techo, sumando el récord de cada uno.</h2>
+    <p class="text-xs opacity-70 mb-4">Caja real por profesional (<span class="mono">bi_pagos_caja</span>, ene-2024 a sep-2026).
+      «Hoy» es <strong>agosto 2026</strong>, el último mes cerrado. El margen es lo que queda para el centro después del honorario:
+      venta × (1 − % del profesional). Ordenado por cuánto le falta a cada uno para volver a su propio récord.</p>
+    <table class="tidy">
+      <thead><tr><th>Profesional</th><th>% prof.</th><th>Venta ago-26</th><th>Margen</th><th>Su mejor mes</th><th>Cuándo</th><th>Margen peak</th><th>Le falta</th></tr></thead>
+      <tbody>
+<tr><td>Andrés Abarca</td><td class="mono">esp.</td><td class="text-right mono">$3.094.700</td><td class="text-right mono pos">$1.175.986</td><td class="text-right mono">$5.620.090</td><td class="text-right mono">nov-25</td><td class="text-right mono pos">$2.135.634</td><td class="text-right">$2.525.390</td></tr>
+<tr><td>Manuel Borrego</td><td class="mono">75%</td><td class="text-right mono">$0</td><td class="text-right mono pos">$0</td><td class="text-right mono">$2.391.000</td><td class="text-right mono">nov-25</td><td class="text-right mono pos">$597.750</td><td class="text-right"><span class="neg">hoy vende $0</span></td></tr>
+<tr><td>Tirso Rejón</td><td class="mono">70%</td><td class="text-right mono">$540.000</td><td class="text-right mono pos">$162.000</td><td class="text-right mono">$1.903.950</td><td class="text-right mono">oct-25</td><td class="text-right mono pos">$571.185</td><td class="text-right">$1.363.950</td></tr>
+<tr><td>Miguel Millán</td><td class="mono">69%</td><td class="text-right mono">$780.000</td><td class="text-right mono pos">$241.800</td><td class="text-right mono">$1.770.000</td><td class="text-right mono">mar-26</td><td class="text-right mono pos">$548.700</td><td class="text-right">$990.000</td></tr>
+<tr><td>Carlos Jiménez</td><td class="mono">45%</td><td class="text-right mono">$295.000</td><td class="text-right mono pos">$162.250</td><td class="text-right mono">$1.225.000</td><td class="text-right mono">may-26</td><td class="text-right mono pos">$673.750</td><td class="text-right">$930.000</td></tr>
+<tr><td>Leonardo Etcheverry</td><td class="mono">52%</td><td class="text-right mono">$2.382.040</td><td class="text-right mono pos">$1.143.379</td><td class="text-right mono">$3.079.220</td><td class="text-right mono">mar-26</td><td class="text-right mono pos">$1.478.026</td><td class="text-right">$697.180</td></tr>
+<tr><td>Juana Arratia</td><td class="mono">70%</td><td class="text-right mono">$55.000</td><td class="text-right mono pos">$16.500</td><td class="text-right mono">$725.000</td><td class="text-right mono">ene-26</td><td class="text-right mono pos">$217.500</td><td class="text-right">$670.000</td></tr>
+<tr><td>Aurora Valdés</td><td class="mono">80%</td><td class="text-right mono">$0</td><td class="text-right mono pos">$0</td><td class="text-right mono">$480.000</td><td class="text-right mono">may-25</td><td class="text-right mono pos">$96.000</td><td class="text-right"><span class="neg">hoy vende $0</span></td></tr>
+<tr><td>Valentina Fuentealba</td><td class="mono">40%</td><td class="text-right mono">$0</td><td class="text-right mono pos">$0</td><td class="text-right mono">$450.000</td><td class="text-right mono">ene-26</td><td class="text-right mono pos">$270.000</td><td class="text-right"><span class="neg">hoy vende $0</span></td></tr>
+<tr><td>Alonso Márquez</td><td class="mono">75%</td><td class="text-right mono">$2.793.330</td><td class="text-right mono pos">$698.332</td><td class="text-right mono">$3.210.750</td><td class="text-right mono">mar-25</td><td class="text-right mono pos">$802.688</td><td class="text-right">$417.420</td></tr>
+<tr><td>Andrea Guevara</td><td class="mono">70%</td><td class="text-right mono">$309.000</td><td class="text-right mono pos">$92.700</td><td class="text-right mono">$642.000</td><td class="text-right mono">ene-26</td><td class="text-right mono pos">$192.600</td><td class="text-right">$333.000</td></tr>
+<tr><td>Javiera Burgos</td><td class="mono">51%</td><td class="text-right mono">$3.571.000</td><td class="text-right mono pos">$1.749.790</td><td class="text-right mono">$3.835.000</td><td class="text-right mono">jul-26</td><td class="text-right mono pos">$1.879.150</td><td class="text-right">$264.000</td></tr>
+<tr><td>Juan Pablo Rodríguez</td><td class="mono">70%</td><td class="text-right mono">$45.980</td><td class="text-right mono pos">$13.794</td><td class="text-right mono">$301.710</td><td class="text-right mono">may-25</td><td class="text-right mono pos">$90.513</td><td class="text-right">$255.730</td></tr>
+<tr><td>Nicolás Quijano</td><td class="mono">71%</td><td class="text-right mono">$280.000</td><td class="text-right mono pos">$81.200</td><td class="text-right mono">$507.500</td><td class="text-right mono">sep-25</td><td class="text-right mono pos">$147.175</td><td class="text-right">$227.500</td></tr>
+<tr><td>Sarai Gómez</td><td class="mono">67%</td><td class="text-right mono">$180.000</td><td class="text-right mono pos">$59.400</td><td class="text-right mono">$334.000</td><td class="text-right mono">oct-25</td><td class="text-right mono pos">$110.220</td><td class="text-right">$154.000</td></tr>
+<tr><td>Fernando Fredes</td><td class="mono">68%</td><td class="text-right mono">$600.000</td><td class="text-right mono pos">$192.000</td><td class="text-right mono">$660.000</td><td class="text-right mono">mar-26</td><td class="text-right mono pos">$211.200</td><td class="text-right">$60.000</td></tr>
+<tr><td>Gisela Pinto</td><td class="mono">70%</td><td class="text-right mono">$343.560</td><td class="text-right mono pos">$103.068</td><td class="text-right mono">$385.060</td><td class="text-right mono">nov-25</td><td class="text-right mono pos">$115.518</td><td class="text-right">$41.500</td></tr>
+<tr class="opacity-60"><td>Rodrigo Olavarría</td><td class="mono">71%</td><td class="text-right mono">$9.126.280</td><td class="text-right mono pos">$2.646.621</td><td class="text-right mono">$9.126.280</td><td class="text-right mono">ago-26</td><td class="text-right mono pos">$2.646.621</td><td class="text-right"><span class="mono">en su peak</span></td></tr>
+<tr class="opacity-60"><td>David Pardo</td><td class="mono">70%</td><td class="text-right mono">$3.360.000</td><td class="text-right mono pos">$1.008.000</td><td class="text-right mono">$3.360.000</td><td class="text-right mono">ago-26</td><td class="text-right mono pos">$1.008.000</td><td class="text-right"><span class="mono">en su peak</span></td></tr>
+<tr class="opacity-60"><td>Cecilia Unibazo</td><td class="mono">90%</td><td class="text-right mono">$3.060.980</td><td class="text-right mono pos">$306.098</td><td class="text-right mono">$3.060.980</td><td class="text-right mono">ago-26</td><td class="text-right mono pos">$306.098</td><td class="text-right"><span class="mono">en su peak</span></td></tr>
+<tr class="opacity-60"><td>Daniela Castillo</td><td class="mono">60%</td><td class="text-right mono">$2.060.000</td><td class="text-right mono pos">$824.000</td><td class="text-right mono">$2.060.000</td><td class="text-right mono">ago-26</td><td class="text-right mono pos">$824.000</td><td class="text-right"><span class="mono">en su peak</span></td></tr>
+<tr class="opacity-60"><td>Luis Armijo</td><td class="mono">41%</td><td class="text-right mono">$954.440</td><td class="text-right mono pos">$563.120</td><td class="text-right mono">$954.440</td><td class="text-right mono">ago-26</td><td class="text-right mono pos">$563.120</td><td class="text-right"><span class="mono">en su peak</span></td></tr>
+<tr class="opacity-60"><td>Jorge Montalba</td><td class="mono">70%</td><td class="text-right mono">$764.530</td><td class="text-right mono pos">$229.359</td><td class="text-right mono">$764.530</td><td class="text-right mono">ago-26</td><td class="text-right mono pos">$229.359</td><td class="text-right"><span class="mono">en su peak</span></td></tr>
+        <tr class="total-row">
+          <td>TOTAL</td><td class="mono">—</td>
+          <td class="text-right mono">$34.595.840</td><td class="text-right mono pos">$11.469.398</td>
+          <td class="text-right mono">$46.846.510</td><td class="mono">—</td>
+          <td class="text-right mono pos">$15.714.806</td>
+          <td class="text-right mono">$12.250.670</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text-xs opacity-70 mt-3"><strong>Si todos repitieran su mejor mes a la vez, el CMC vendería $46.846.510 al mes</strong>
+      — un 35% sobre agosto — y el margen del centro pasaría de $11.469.398 a $15.714.806,
+      es decir <strong>$4.245.409 más por mes</strong>. Eso converge con la otra estimación del techo, la de demanda provincial, que daba cerca de $50M.</p>
+    <p class="text-xs opacity-70 mt-3"><strong>6 de los 23 ya están en su peak:</strong>
+      Rodrigo Olavarría, David Pardo, Cecilia Unibazo, Daniela Castillo, Luis Armijo, Jorge Montalba. Para ellos agosto fue el mejor mes de su historia,
+      así que no hay recuperación pendiente — su crecimiento exige capacidad nueva, no reactivación.</p>
+    <p class="text-xs opacity-70 mt-3"><strong>La brecha está concentrada.</strong> Cinco nombres explican
+      67%% de los $12.250.670 que faltan:
+      Andrés Abarca ($2.525.390), Manuel Borrego ($2.391.000), Tirso Rejón ($1.363.950), Miguel Millán ($990.000), Carlos Jiménez ($930.000).
+      Tres de ellos hoy venden $0 o casi: no hay que conseguir pacientes nuevos, hay que volver a abrirles agenda.</p>
+    <p class="text-xs opacity-70 mt-3" style="border-left:3px solid var(--lacre); padding-left:12px">
+      <strong>Corrección respecto de la versión anterior de esta página.</strong> La columna decía «% margen dueño» y marcaba a
+      Unibazo (90%) como «mayor margen del staff». Está al revés: <span class="mono">pct_honorario</span> es <strong>lo que se lleva el profesional</strong>,
+      no lo que queda el centro. Psiquiatría al 90% es el <em>menor</em> margen de la clínica, no el mayor, y Armijo al 41% es el mayor.
+      Verificado contra la caja de agosto: con esta lectura el margen del centro da 33,2%, que calza con el 33,4% medido; con la lectura anterior daba 61%, imposible.</p>
   </section>
 
   <!-- 06 Rodrigo aparte -->
@@ -244,15 +255,15 @@
     <div class="grid md:grid-cols-3 gap-6 mt-4">
       <div>
         <div class="kpi-label">Venta que produce</div>
-        <div class="kpi-num">$7.089.470</div>
+        <div class="kpi-num">$7.759.040</div>
       </div>
       <div>
         <div class="kpi-label">Honorario (71%)</div>
-        <div class="kpi-num neg">$5.033.524</div>
+        <div class="kpi-num neg">$5.508.918</div>
       </div>
       <div>
         <div class="kpi-label">Margen que deja al CMC (29%)</div>
-        <div class="kpi-num pos">$2.055.946</div>
+        <div class="kpi-num pos">$2.250.122</div>
       </div>
     </div>
     <p class="text-sm opacity-80 mt-4 max-w-3xl">Rodrigo produce a su techo personal — no crece atendiendo más horas. Por eso se trata <strong>separado</strong> del resto del staff: no cuenta como "ingreso sin que él atienda", es exactamente el hueco que este análisis busca reemplazar con las otras líneas.</p>
@@ -348,7 +359,7 @@ new Chart(document.getElementById('chartVenta'), {
     labels: ['Hoy', 'Conservador', 'Optimista'],
     datasets: [{
       label: 'Venta total CMC/mes',
-      data: [26039530, 32978536, 48643270],
+      data: [34798830, 32978536, 48643270],
       backgroundColor: ['#B86D3F', '#5B8B96', '#4A5F3A'],
       borderRadius: 4,
       maxBarThickness: 90
@@ -375,7 +386,7 @@ new Chart(document.getElementById('chartMargen'), {
     datasets: [
       {
         label: 'Staff existente (20 prof.)',
-        data: [5377887, 9150843],
+        data: [5377887, 9150843],  // conservador/optimista = cálculo de julio, pendiente
         backgroundColor: '#1F3340',
         borderRadius: 4
       },

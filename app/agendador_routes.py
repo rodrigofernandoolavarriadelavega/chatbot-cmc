@@ -111,7 +111,8 @@ def _valid_fecha_futura(fecha: str) -> bool:
 # Orden y agrupamiento curado. Precio se deriva de PRECIOS_SLOT (fuente del bot).
 _GRUPOS = [
     ("Médicas",              ["Medicina General", "Medicina Familiar", "Cardiología",
-                              "Gastroenterología", "Otorrinolaringología"]),
+                              "Gastroenterología", "Otorrinolaringología",
+                              "Nutriología y Diabetología"]),
     ("Salud de la mujer",    ["Ginecología", "Matrona"]),
     ("Terapias y bienestar", ["Kinesiología", "Nutrición", "Psicología Adulto",
                               "Psicología Infantil", "Fonoaudiología", "Podología",
@@ -172,6 +173,9 @@ _PRESTACIONES: dict[str, list[dict]] = {
         {"n": "Lipopapada (3 sesiones)", "p": "$139.990"},
         {"n": "Exosomas (regeneración)", "p": "$349.900"},
         {"n": "Bioestimulador de colágeno", "p": "$450.000"},
+    ],
+    "Nutriología y Diabetología": [
+        {"n": "Consulta nutriólogo y diabetólogo (teleconsulta, 30 min)", "p": "$60.000"},
     ],
     "Nutrición": [
         {"n": "Consulta nutricional", "p": "Fonasa $4.770 · Particular $20.000"},
@@ -315,6 +319,22 @@ async def catalogo(request: Request, preview: str | None = Query(None)):
     return {"grupos": _build_catalogo()}
 
 
+def _modalidad(id_prof: int, fecha: str) -> str:
+    """'online' | 'presencial' para ESE profesional en ESA fecha.
+
+    Reusa flows._es_teleconsulta (fuente única de la regla) — no duplicar acá.
+    Hasta 2026-09-11 el agendador web no decía la modalidad en NINGÚN caso, ni
+    siquiera en psiquiatría (78) y neurología (79), que son 100% videollamada:
+    el paciente reservaba sin saberlo. Montalba (74), con modalidad que cambia
+    según el día, volvía el silencio insostenible.
+    """
+    from flows import _es_teleconsulta
+    from medilink import PROFESIONALES
+    esp = PROFESIONALES.get(id_prof, {}).get("especialidad", "")
+    return "online" if _es_teleconsulta(
+        {"id_profesional": id_prof, "fecha": fecha, "especialidad": esp}) else "presencial"
+
+
 @router.get("/slots")
 async def slots(request: Request, id_prof: int = Query(...),
                 fecha: str | None = Query(None), preview: str | None = Query(None)):
@@ -327,7 +347,8 @@ async def slots(request: Request, id_prof: int = Query(...),
         raise HTTPException(400, "Profesional no reconocido")
     if fecha is None:
         data = await _primer_dia_prof(id_prof)
-        return {"id_prof": id_prof, "fecha": data["fecha"], "slots": data["slots"]}
+        return {"id_prof": id_prof, "fecha": data["fecha"], "slots": data["slots"],
+                "modalidad": _modalidad(id_prof, data["fecha"])}
     if not _valid_fecha_futura(fecha):
         raise HTTPException(400, "Fecha inválida o pasada")
     try:
@@ -335,7 +356,8 @@ async def slots(request: Request, id_prof: int = Query(...),
     except Exception as e:
         log.error("slots prof=%s fecha=%s: %s", id_prof, fecha, e)
         raise HTTPException(503, "No pudimos consultar las horas. Intente nuevamente.")
-    return {"id_prof": id_prof, "fecha": fecha, "slots": todos}
+    return {"id_prof": id_prof, "fecha": fecha, "slots": todos,
+            "modalidad": _modalidad(id_prof, fecha)}
 
 
 @router.post("/identificar")
@@ -528,7 +550,8 @@ async def reservar(request: Request, preview: str | None = Query(None)):
     asyncio.create_task(_capi_schedule(phone, rut, id_profesional, prof, fecha, hora_inicio, id_cita))
     # Confirmación inmediata por WhatsApp (gated; requiere template aprobado)
     if config.AGENDADOR_WA_CONFIRM:
-        asyncio.create_task(_wa_confirm(phone, prof, esp, fecha, hora_inicio))
+        asyncio.create_task(_wa_confirm(phone, prof, esp, fecha, hora_inicio,
+                                        _modalidad(id_profesional, fecha)))
 
     log_event(phone, "agendador_web_reserva", {
         "id_cita": str(id_cita), "id_profesional": id_profesional,
@@ -544,6 +567,7 @@ async def reservar(request: Request, preview: str | None = Query(None)):
         "fecha": fecha,
         "hora_inicio": hora_inicio,
         "hora_fin": hora_fin,
+        "modalidad": _modalidad(id_profesional, fecha),
         "nombre": paciente_nombre,
         "metodos_pago": (["Efectivo", "Transferencia", "Débito", "Crédito"]
                          if _es_dental(esp) else ["Efectivo", "Transferencia"]),
@@ -655,17 +679,26 @@ async def _capi_schedule(phone, rut, id_profesional, prof, fecha, hora_inicio, i
         log.warning("_capi_schedule agendador: %s", e)
 
 
-async def _wa_confirm(phone, prof, esp, fecha, hora_inicio):
+async def _wa_confirm(phone, prof, esp, fecha, hora_inicio, modalidad="presencial"):
     """Confirmación inmediata por WhatsApp. Requiere template aprobado; gated.
     FIX F064: usar body_params= (no params=) — kwarg correcto de send_whatsapp_template.
     Template recordatorio_cita tiene 6 placeholders:
       {{1}}=nombre {{2}}=especialidad {{3}}=profesional {{4}}=fecha {{5}}=hora {{6}}=prevision
+
+    El template está aprobado con esos 6 y no se le puede agregar una línea sin
+    aprobar uno nuevo en Meta. Por eso, cuando la hora es ONLINE, la marca va
+    dentro del placeholder de especialidad ("Psicología Adulto (videollamada)"):
+    es texto libre y el paciente necesita verlo sí o sí. Solo se marca el online
+    — "presencial" es lo que ya se asume y ensuciaría el mensaje de todos.
     """
     try:
         from messaging import send_whatsapp_template
+        _esp_wa = esp or prof.get("especialidad", "")
+        if modalidad == "online":
+            _esp_wa = f"{_esp_wa} (videollamada)"
         await send_whatsapp_template(phone, "recordatorio_cita", body_params=[
             prof.get("nombre", ""),
-            esp or prof.get("especialidad", ""),
+            _esp_wa,
             prof.get("nombre", ""),
             fecha,
             hora_inicio,

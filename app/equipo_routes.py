@@ -32,6 +32,11 @@ def _rol_de(esp: str) -> str:
         return "Kinesiología"
     if "psico" in e:
         return "Salud mental"
+    # ⚠️ "nutriolog"/"diabetolog" se evalúa ANTES que "nutri": el nutriólogo
+    # Dr. Paz es MÉDICO y su especialidad contiene "nutri", así que sin este
+    # corte quedaba rotulado como "Profesional" junto a la nutricionista.
+    if "nutriolog" in e or "diabetolog" in e:
+        return "Médico"
     if any(k in e for k in ["nutri", "fono", "podolog", "matrona"]):
         return "Profesional"
     return "Médico"
@@ -70,6 +75,11 @@ HONORARIO_PCT_DEFAULT: dict[int, int] = {
     1: 71, 13: 75, 21: 52, 23: 75, 49: 70, 52: 70, 55: 51, 56: 70,
     60: 69, 61: 70, 64: 71, 65: 71, 66: 60, 67: 67, 68: 70, 70: 70,
     72: 45, 74: 70, 75: 68, 76: 40, 77: 41,
+    # Dr. Raúl Paz (Nutriología y Diabetología): 90% — acuerdo del dueño
+    # 2026-09-10. Sobre $60.000 son $54.000 para él y $6.000 para el CMC
+    # por atención, antes de costos. Es el % más alto del centro: NO viene
+    # de un ratio histórico (no tiene mes todavía), es contrato.
+    81: 90,
 }
 
 

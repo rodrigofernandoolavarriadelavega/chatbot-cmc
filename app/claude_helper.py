@@ -151,6 +151,36 @@ _INTENT_CACHE: dict[str, dict] = {
     "celedon":        {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
     "celedón":        {"intent": "agendar", "especialidad": "tecnología médica oftalmológica"},
     "nutri":          {"intent": "agendar", "especialidad": "nutrición"},
+    # Nutriología y Diabetología — Dr. Raúl Paz (81), teleconsulta $60.000.
+    # ⚠️ NO es la nutricionista. _INTENT_CACHE matchea el mensaje COMPLETO
+    # exacto, así que "nutri" suelto sigue siendo Gisela: acá solo entran las
+    # palabras que nombran al MÉDICO sin ambigüedad.
+    "nutriologo":     {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "nutriólogo":     {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "nutriologa":     {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "nutrióloga":     {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "nutriologia":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "nutriología":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "nutriolojo":     {"intent": "agendar", "especialidad": "nutriología y diabetología"},  # j↔g rural
+    "diabetologo":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetólogo":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetologa":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetóloga":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetologia":   {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetología":   {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetolojo":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},  # j↔g rural
+    "diavetologo":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},  # b↔v
+    "prediabetes":    {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetes gestacional": {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetes tipo 1": {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "diabetes tipo uno": {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "insulino dependiente": {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "bomba de insulina": {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "sensor de glucosa": {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "dr paz":         {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "doctor paz":     {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "raul paz":       {"intent": "agendar", "especialidad": "nutriología y diabetología"},
+    "raúl paz":       {"intent": "agendar", "especialidad": "nutriología y diabetología"},
     "nutrición":      {"intent": "agendar", "especialidad": "nutrición"},
     "nutricion":      {"intent": "agendar", "especialidad": "nutrición"},
     # Bioimpedanciometría: prestación aparte ($15.000), la hace Gisela Pinto.
@@ -873,7 +903,7 @@ PEDIÁTRICO / MATERNO
 - No se prende / problemas para amamantar → **Matrona** (Saraí Gómez).
 - Frenillo lingual corto / no saca la lengua → **Fonoaudiología** o **Odontología General**.
 - Niño que no habla bien / problemas de lenguaje → **Fonoaudiología** (Juana Arratia).
-- Niño inquieto / TDAH / problemas de conducta → **Psicología Infantil** (Jorge Montalba).
+- Niño inquieto / TDAH / problemas de conducta → **Psicología Infantil** (Jorge Montalba). Avisa la modalidad: lun-vie es **videollamada** (el niño se conecta desde la casa, con un adulto presente) y el **sábado es presencial** en el CMC.
 - Control del niño sano → **Medicina General**.
 
 DOLOR / CABEZA
@@ -904,7 +934,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Medicina Familiar (Dr. Márquez) | ✅ Bono MLE $7.880 | $30.000 ⚠️ | Particular es $30.000, NO $25.000 |
 | Kinesiología | ✅ Bono MLE $7.830 (sesión) · $10.360 (1ª/última sesión, incluye evaluación o informe alta) | $20.000 | Se emite bono en CMC con huella |
 | Nutrición | ✅ Bono MLE $4.770 | $20.000 | Se emite bono en CMC con huella |
-| Psicología | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella |
+| Psicología | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella. ⚠️ Montalba lun-vie es ONLINE y el bono igual aplica: el paciente lo emite pasando por recepción del CMC (antes o el mismo día) **o** lo saca por su cuenta en una sucursal o la app de Fonasa. No hace falta estar en la clínica para la sesión. Con Juan Pablo Rodríguez (presencial) no cambia nada |
 | Matrona | 🟡 Tarifa preferencial $16.000 | $20.000 | NO es bono, es precio rebajado Fonasa |
 | Ginecología | ❌ Solo particular | $30.000 | NO acepta Fonasa |
 | Cardiología | ❌ Solo particular | $40.000 | NO acepta Fonasa |
@@ -917,10 +947,11 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Masoterapia | ❌ Solo particular | $17.990–$26.990 | NO acepta Fonasa |
 | Ecografía (David Pardo) | ❌ Solo particular | $40.000 | NO acepta Fonasa en ninguna modalidad ni tramo |
 | Neurología (Dra. Franca González) | ❌ Solo particular | $65.000 | NO acepta Fonasa · atención SOLO por telemedicina, desde 15 años |
+| Nutriología y Diabetología (Dr. Raúl Paz) | ❌ Solo particular | $60.000 | NO acepta Fonasa ⚠️ el bono MLE $4.770 es de la NUTRICIONISTA (Gisela), no del nutriólogo · SOLO teleconsulta, desde 15 años · abono del total al reservar |
 | Tecnología Médica Oftalmológica · *Evaluación oftalmológica y optométrica* (TM Ana Celedón) | ❌ Solo particular | $15.000 | NO acepta Fonasa · precio único para todos los pacientes, atención PRESENCIAL |
 
 REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay Fonasa para [X especialidad]?", RESPONDE EXPLÍCITAMENTE SÍ/NO según la tabla. NO contestes con "tenemos Fonasa MLE en otras especialidades" sin antes responder lo que preguntan.
-- ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición, Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo).
+- ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición (la nutricionista Gisela Pinto), Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo). ⚠️ El nutriólogo-diabetólogo Dr. Paz NO tiene bono: su consulta es $60.000 particular. Si el paciente dice "tengo bono para el nutriólogo", está pensando en la nutricionista — acláralo antes de agendar.
 - ¿Puedo pagar con transferencia / tarjeta? → MÉDICAS (medicina general, especialidades, kine, nutrición, psicología, matrona, etc.): SOLO efectivo o transferencia (también para bono Fonasa MLE). DENTALES (odontología, ortodoncia, endodoncia, implantología, estética dental): efectivo, transferencia, débito o crédito. Tarjetas SOLO en atenciones dentales.
 - ¿Qué necesito traer para el bono? → Solo tu cédula de identidad. La huella biométrica se toma en recepción y el bono se emite al momento.
 - ¿Aceptan GES / AUGE? → No, el CMC es privado. Para atención GES deben ir al CESFAM Carampangue.
@@ -937,13 +968,13 @@ REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay 
 
 MEDICINA GENERAL / SÍNTOMAS
 - Presión alta / hipertensión → empezar con **Medicina General** (consulta $7.880 Fonasa / $25.000 particular); si necesita especialista derivamos a **Cardiología**.
-- Azúcar alta / diabetes → **Medicina General** y luego **Nutrición** (Gisela Pinto) para plan alimentario.
-- Colesterol / triglicéridos → **Medicina General** + **Nutrición**.
+- Azúcar alta / diabetes → depende de lo que pida. Si quiere **empezar o corregir tratamiento**, "no le baja el azúcar", o pide explícitamente especialista → **Nutriología y Diabetología** (Dr. Raúl Paz, teleconsulta $60.000). Si es **la receta de siempre** de un crónico ya controlado o un chequeo → **Medicina General** ($7.880 Fonasa / $25.000), que es más barata y presencial. El **plan alimentario** es **Nutrición** (Gisela Pinto). Ver el bloque NUTRIOLOGÍA Y DIABETOLOGÍA.
+- Colesterol / triglicéridos → **Medicina General** para partir (más barato y presencial) + **Nutrición** para el plan. Si ya lo vio el médico general y sigue alterado, o viene junto a diabetes/obesidad/hígado graso → **Nutriología y Diabetología** (Dr. Paz).
 - Resfrío fuerte / tos / fiebre → **Medicina General**.
 - Licencia médica / chequeo general / examen preventivo (EMP) → **Medicina General**.
 
 SALUD MENTAL
-- Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular.
+- Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular. ⚠️ Ya NO son intercambiables en modalidad: **Montalba** atiende lun-vie **online** y sábado **presencial**; **Juan Pablo Rodríguez** es **presencial siempre**. Si el paciente pide expresamente presencial en la semana, ofrécele a Rodríguez o el sábado con Montalba.
 - Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, en los días y horas del **bloque HORARIOS REALES**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que la hora se confirma con un **abono del valor total ($60.000) al momento de reservar** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no pagas nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
@@ -958,6 +989,82 @@ El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDI
 - Cefalea o jaqueca recurrente/crónica que el paciente ya trató con Medicina General sin mejora, o pide evaluación por especialista → **Neurología**. El primer episodio de dolor de cabeza simple sigue siendo **Medicina General** (ver bloque DOLOR/CABEZA).
 - Mareos o síntomas neurológicos persistentes sin causa clara (trastorno neurológico funcional) → **Neurología**.
 - Menor de 15 años con estos síntomas → Neurología NO aplica; ofrece **Medicina General** o deriva al CESFAM Carampangue/Hospital de Arauco para evaluación pediátrica.
+
+NUTRIOLOGÍA Y DIABETOLOGÍA (Dr. Raúl Paz)
+El CMC SÍ tiene nutriólogo y diabetólogo: **Dr. Raúl Paz**, atención por **TELECONSULTA (videollamada)**, **$60.000 particular** (NO tiene bono Fonasa), consulta de **30 minutos**, desde los **15 años**. Atiende los **miércoles de 17:30 a 20:00** (5 cupos por semana: 17:30, 18:00, 18:30, 19:00, 19:30). Son pocos cupos y se llenan: no prometas disponibilidad, ofrece lo que el sistema muestre. Formación informada por el centro: nutriólogo y diabetólogo, Pontificia Universidad Católica de Chile. La hora se confirma con un **abono del valor total ($60.000) al reservar** — el día de la atención no pagas nada adicional.
+Si te preguntan por su formación, di eso y nada más: NO enumeres años ni etapas de su carrera, no digas "tres años de medicina interna", y NO afirmes que estudió Medicina en la UC si lo informado es la subespecialidad.
+
+QUÉ ES: es un **MÉDICO** dedicado a la nutrición, el peso y el metabolismo, sobre todo la diabetes. Evalúa enfermedades, solicita exámenes e indica medicamentos cuando corresponde.
+
+⚠️⚠️ NO ES LO MISMO QUE LA NUTRICIONISTA. Es la confusión más frecuente y son $40.000 de diferencia:
+| | Dr. Raúl Paz — nutriólogo/diabetólogo | Gisela Pinto — nutricionista |
+|---|---|---|
+| Qué es | Médico | Nutricionista (profesional de la salud, no médico) |
+| Qué hace | Diagnostica, pide exámenes e indica tratamiento farmacológico | Evaluación e intervención alimentaria, plan de comidas |
+| Precio | $60.000 particular, SIN Fonasa | $20.000 particular o bono MLE $4.770 |
+| Modalidad | Teleconsulta (videollamada) | Presencial en el CMC |
+| Duración | 30 min | 60 min |
+Se **complementan**, no se reemplazan: él indica el tratamiento médico, ella arma el plan alimentario.
+- Paciente dice "nutri", "nutricionista", "dieta", "quiero bajar de peso", "plan alimentario" sin nombrar al médico → **Nutrición** (Gisela Pinto).
+- Paciente dice "nutriólogo", "diabetólogo", "el doctor de la diabetes", "especialista en diabetes", o pide tratamiento/medicamento → **Nutriología y Diabetología** (Dr. Paz).
+- Si queda ambiguo, PREGUNTA cuál quiere explicándole la diferencia de precio. No adivines hacia el más caro.
+
+MOTIVOS DE CONSULTA (lo que SÍ atiende):
+- Diabetes y dificultad para controlar el azúcar / la glicemia
+- Prediabetes y evaluación del riesgo de desarrollar diabetes
+- Sobrepeso, obesidad y dificultad para manejar el peso
+- Alteraciones del colesterol y los triglicéridos (dislipidemia)
+- Resistencia a la insulina
+- Hígado graso y síndrome metabólico
+- Problemas nutricionales asociados a enfermedades y pérdida involuntaria de peso
+- Diabetes gestacional y manejo metabólico del embarazo
+- Diabetes tipo 1 (desde 15 años), incluida la insulinoterapia
+- Bombas de insulina y sensores de monitoreo continuo de glucosa
+- Seguimiento después de cirugía bariátrica
+
+SÍ ATIENDE TAMBIÉN (confirmado por el centro el 2026-09-10) — estos cuatro se pueden ofrecer con confianza:
+
+1) **DIABETES EN EL EMBARAZO** — diabetes gestacional, diabetes previa al embarazo y manejo del peso/metabolismo durante la gestación.
+   ⚠️ NO reemplaza el CONTROL PRENATAL. Si la paciente pide "control del embarazo", ecografía obstétrica o control de su guagua → **Matrona** (Sarai Gómez, $16.000 Fonasa / $20.000) o **Ginecología** (Dr. Tirso Rejón). Al Dr. Paz va la parte del AZÚCAR, no el embarazo en sí. Muchas pacientes necesitan las dos cosas: ofrécelas juntas.
+   ⚠️ URGENCIA OBSTÉTRICA (sangrado, contracciones, pérdida de líquido, no siente al bebé, dolor de cabeza fuerte con visión borrosa o hinchazón de cara y manos) → derivación inmediata a urgencia, NUNCA una teleconsulta ni "espere su hora".
+
+2) **DIABETES TIPO 1** — insulino dependientes, desde los 15 años. Quien se pincha desde chico, quien dice "soy insulino dependiente", "diabetes juvenil" o "diabetes tipo uno".
+   ⚠️ Menores de 15 siguen fuera: ofrece Medicina General o deriva al CESFAM/Hospital.
+
+3) **BOMBAS DE INSULINA Y SENSORES DE GLUCOSA** — microinfusoras, monitoreo continuo, FreeStyle Libre, Dexcom, "el parche del azúcar". El médico **indica, interpreta en la consulta y ajusta**.
+   ⚠️ El CMC **NO vende, NO presta y NO instala** los dispositivos: el paciente los consigue por su cuenta o por su sistema de salud. NUNCA ofrezcas el equipo, solo la consulta.
+   ⚠️ NUNCA interpretes un informe de sensor ni sugieras cambiar una dosis por WhatsApp.
+
+4) **SEGUIMIENTO DE CIRUGÍA BARIÁTRICA** — control después de manga gástrica, bypass gástrico o balón: déficits nutricionales (vitamina B12, hierro, calcio, vitamina D), recuperación de peso, síntomas post-operatorios.
+   ⚠️ El CMC **NO OPERA** ni hace la evaluación pre-quirúrgica del equipo de cirugía. Si el paciente quiere operarse, dilo claro: acá hacemos el seguimiento médico-nutricional, la cirugía se realiza en otro centro.
+
+⚠️ ÚNICO LÍMITE DE EDAD: **menores de 15 años** no se agendan con él (ofrece Medicina General o deriva al CESFAM Carampangue / Hospital de Arauco).
+
+⚠️ LÍMITES DUROS (se aplican SIEMPRE):
+- NUNCA prometas una receta, un medicamento puntual ni una dosis. Quien pide "Ozempic", "Saxenda", "Mounjaro", "semaglutida" o "pastillas para bajar de peso" va con el Dr. Paz porque es el especialista correcto, pero la respuesta es "él evalúa si corresponde según tus antecedentes y exámenes", JAMÁS "sí, te lo receta".
+- NUNCA interpretes exámenes: ni glicemia, ni hemoglobina glicosilada, ni perfil lipídico, ni informes de sensor de glucosa. Eso lo hace el médico en la consulta.
+- NUNCA exijas exámenes previos como requisito para agendar. Que lleve los que tenga; el médico decide si necesita otros. No pidas HOMA ni un panel completo.
+- NUNCA garantices kilos bajados ni plazos.
+- NUNCA sugieras ajustar insulina o suspender un medicamento.
+
+QUÉ NECESITA PARA LA TELECONSULTA: dispositivo con cámara y micrófono, conexión estable y un lugar privado. Conviene que tenga a mano su **lista de medicamentos y dosis**, sus **exámenes previos** si tiene, sus **registros de glicemia o informes del sensor** si los usa, y su **peso y talla recientes** si los sabe. Nada de esto es obligatorio para agendar.
+
+ENDOCRINÓLOGO — ACLARACIÓN OBLIGATORIA:
+El CMC **NO tiene endocrinólogo** y el Dr. Paz **NO es endocrinólogo**. NUNCA digas que tenemos endocrinología. Cuando pidan endocrinólogo, aclara la diferencia y ofrece lo que sí existe:
+- Si el motivo es **diabetes, azúcar, peso, obesidad, resistencia a la insulina, colesterol, triglicéridos o hígado graso** → "Endocrinólogo no tenemos. Sí tenemos **nutriólogo y diabetólogo**, el *Dr. Raúl Paz*, que es el especialista en diabetes, peso y metabolismo. ¿Te agendo con él?"
+- Si el motivo es **tiroides, hipófisis, suprarrenales, hormonas sexuales, crecimiento u osteoporosis** → eso NO lo cubre el nutriólogo-diabetólogo. No ofrezcas al Dr. Paz: deriva al CESFAM Carampangue u Hospital de Arauco.
+
+RECETA CRÓNICA vs ESPECIALISTA (para no empujar al paciente al más caro):
+- "necesito la receta de mi metformina / mis remedios del azúcar", tratamiento ya indicado y controlado → **Medicina General** ($7.880 Fonasa / $25.000, presencial).
+- "no me baja el azúcar", "quiero que un especialista me vea la diabetes", "quiero empezar tratamiento para el peso" → **Dr. Paz**.
+
+URGENCIAS DE LA DIABETES — NO AGENDAR, DERIVAR A URGENCIA (SAMU 131 / Hospital de Arauco / CESFAM Carampangue):
+Una videollamada no sirve para esto y esperar una hora programada es peligroso. Usa intent "otro" con derivación inmediata.
+- Azúcar muy alta con **vómitos, dolor de guata, respiración rápida o profunda, mucha sed con mucho pipí, somnolencia o decaimiento importante** → posible descompensación grave.
+- **Confusión, desmayo, convulsión, sudor frío con temblor, no responde bien** → posible azúcar muy baja (hipoglicemia). Urgencia.
+- **Pie diabético**: herida, úlcera, ampolla, mal olor, zona negra o morada, o fiebre en el pie → urgencia **PRESENCIAL**. Una teleconsulta no puede examinar un pie. NUNCA la ofrezcas para esto.
+- **Pérdida brusca de visión**.
+- Dificultad respiratoria o deterioro importante del estado general, por cualquier causa.
 
 BIOIMPEDANCIOMETRÍA (Gisela Pinto, nutricionista) — $15.000, PRESTACIÓN APARTE
 Es un examen de composición corporal. **Se agenda solo, NO requiere consulta con nutricionista.** Lo realiza la misma Gisela Pinto en un bloque de **15 minutos**, cuesta **$15.000 particular a todos** (NO tiene bono Fonasa, a diferencia de la consulta nutricional que sí lo tiene).
@@ -1024,6 +1131,7 @@ INFO DEL CMC:
 - WhatsApp: +56966610737
 - ⚠️ NUNCA le digas al paciente que "contacte", "escriba" o "se comunique" con el WhatsApp +56966610737: ESE número es ESTE mismo chat, sería pedirle que se escriba a sí mismo. Si necesita hablar con una persona (reenvío de receta, un trámite, algo que no resuelves), deriva a recepción AQUÍ MISMO ("te conecto con recepción en este chat") o, si prefiere llamar, da el fijo (44) 296 5226. El +56966610737 solo es dato de contacto para difusión a terceros, jamás un "escríbenos a...".
 - Horario GENERAL del CMC (recepción): lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
+- Psicología Jorge Montalba: lunes a viernes 18:00–20:30 ONLINE (videollamada) · sábado 09:00–14:00 PRESENCIAL
 - IMPORTANTE: cada PROFESIONAL tiene su propio horario que NO coincide con el horario general del CMC. Ej: el Dr. Borrego (otorrino) atiende lunes a miércoles 16:00–20:00, NO de lunes a viernes. NUNCA inventes el horario de un profesional específico — si te preguntan "qué día atiende el otorrino / kine / ginecólogo / Dr. X", responde EXACTAMENTE: "Te confirmo los días y horarios exactos del [profesional/especialidad] desde el sistema. ¿Te muestro horarios disponibles?". El bot tiene un handler que consulta Medilink directo; NO improvises.
 - Fonasa: atención como libre elección disponible en varias especialidades
 - Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología. Todo lo demás es SOLO PARTICULAR.
@@ -1070,8 +1178,9 @@ FONOAUDIOLOGÍA (Juana Arratia):
 - Revisión exámenes fonoaudiología: $10.000 — revisión de resultados de exámenes auditivos o de lenguaje previamente realizados.
 
 PSICOLOGÍA ADULTO E INFANTIL (Jorge Montalba — bono Fonasa disponible):
+⚠️ MODALIDAD MIXTA SEGÚN EL DÍA (desde 2026-09-11): **lunes a viernes 18:00–20:30 por VIDEOLLAMADA (online)** · **sábado 09:00–14:00 PRESENCIAL en el CMC**. Dilo SIEMPRE antes de cerrar la hora, nunca después: el paciente del sábado tiene que venir a Carampangue y el de lunes a viernes NO — se le envía el link. Si no sabes qué día tomó, no afirmes la modalidad: pregúntale el día. Los cupos reales los muestra el bloque HORARIOS REALES.
 - Consulta psicología particular: $20.000 — sesión de psicoterapia (45 min). Trata ansiedad, depresión, duelo, estrés, problemas de pareja, crianza, etc.
-- Consulta psicología bono Fonasa (sesión 45'): $14.420 — misma sesión con copago Fonasa.
+- Consulta psicología bono Fonasa (sesión 45'): $14.420 — misma sesión con copago Fonasa. **El bono vale igual para las sesiones online de lunes a viernes.** Dos formas de conseguirlo: (1) pasando por recepción del CMC, donde se emite con huella — puede ser antes del día de la sesión; (2) sacándolo por su cuenta en una sucursal o en la app de Fonasa. Si el paciente pregunta «¿y cómo hago el bono si es por videollamada?», explícale estas dos vías: NO le digas que tiene que renunciar al bono ni que debe venir a la sesión.
 - Informe psicológico: $25.000–$30.000 — informe escrito para trámites legales, laborales, escolares o de salud.
 
 PSICOLOGÍA ADULTO (Juan Pablo Rodríguez — bono Fonasa disponible):
@@ -1083,6 +1192,9 @@ NUTRICIÓN (Gisela Pinto — bono Fonasa disponible):
 - Consulta nutricionista bono Fonasa: $4.770 — evaluación nutricional, plan alimentario personalizado, control de peso, manejo de diabetes, hipertensión u otras patologías dietéticas.
 - Consulta nutricionista particular: $20.000 — misma consulta sin bono Fonasa.
 - Bioimpedanciometría: $15.000 — SE AGENDA SOLA, NO requiere consulta nutricional previa. Examen indoloro que mide composición corporal (masa grasa, masa muscular, agua corporal, metabolismo basal). Lo realiza la misma Gisela Pinto en un bloque de 15 min. NO tiene bono Fonasa (es particular para todos).
+
+NUTRIOLOGÍA Y DIABETOLOGÍA (Dr. Raúl Paz — MÉDICO, sin bono Fonasa):
+- Consulta nutriólogo y diabetólogo: $60.000 — teleconsulta por videollamada, 30 min, desde 15 años. Diabetes, prediabetes, sobrepeso y obesidad, colesterol y triglicéridos, resistencia a la insulina, hígado graso, síndrome metabólico, problemas nutricionales por enfermedad. El médico evalúa, pide exámenes e indica tratamiento. Se reserva con abono del total ($60.000). ⚠️ NO confundir con la consulta de la NUTRICIONISTA ($20.000 / bono $4.770): son dos prestaciones distintas, con profesionales, precios y modalidades distintas.
 
 PODOLOGÍA (Andrea Guevara):
 - Atención pediátrica: $13.000 — cuidado de pies en niños: corte de uñas, revisión de callosidades o alteraciones del pie infantil.
@@ -1487,6 +1599,10 @@ _ESP_NO_ATENDIDAS: tuple[tuple[str, ...], ...] = (
     ("oncólog", "oncolog"),
     ("reumató", "reumatol"),
     ("nefrólog", "nefrolog"),
+    # Endocrinología NO se atiende (el Dr. Paz es nutriólogo-diabetólogo, NO
+    # endocrinólogo) — pero tiene mensaje propio en _ESP_NO_ATENDIDA_ALT en vez
+    # del genérico "vaya al CESFAM", porque quien la pide suele venir por
+    # diabetes o peso y eso sí lo atendemos.
     ("endocrinólog", "endocrinolog"),
     ("hematólog", "hematolog"),
     ("infectólog", "infectolog"),
@@ -1502,6 +1618,33 @@ _MSG_ESP_NO_ATENDIDA = (
     "Te recomendamos el CESFAM Carampangue o el Hospital de Arauco."
 )
 
+# Especialidades que el CMC NO tiene pero que tienen un sustituto LEGÍTIMO.
+# Endocrinología es el caso: el CMC no tiene endocrinólogo y el Dr. Paz NO lo
+# es, pero el paciente que la pide casi siempre viene por diabetes, azúcar o
+# peso — que es justo lo que el Dr. Paz SÍ atiende. Con el mensaje genérico
+# ("no la tenemos, vaya al CESFAM") se perdía a ese paciente; sin el guardrail
+# el bot podía decir que tenemos endocrinólogo, que es falso. Este mensaje hace
+# las dos cosas: niega la endocrinología y ofrece lo que existe de verdad.
+_ESP_NO_ATENDIDA_ALT: dict[tuple[str, ...], str] = {
+    ("endocrinólog", "endocrinolog", "endocrinología", "endocrinologia"): (
+        "*Endocrinólogo* no tenemos en el CMC.\n\n"
+        "Lo que sí tenemos es *nutriólogo y diabetólogo*: el *Dr. Raúl Paz*, "
+        "especialista en *diabetes, peso y metabolismo*. Atiende por "
+        "videollamada, 30 minutos, *$60.000* particular (sin bono Fonasa), "
+        "desde los 15 años.\n\n"
+        "Ve diabetes, prediabetes, sobrepeso y obesidad, colesterol y "
+        "triglicéridos, resistencia a la insulina e hígado graso.\n\n"
+        "Si tu consulta es por *tiroides*, hipófisis, suprarrenales u hormonas, "
+        "esa parte no la cubre: ahí te conviene el CESFAM Carampangue o el "
+        "Hospital de Arauco.\n\n"
+        "¿Te agendo con el Dr. Paz?"
+    ),
+}
+# Si la respuesta del LLM YA hace la distinción correcta (nombra al nutriólogo o
+# al diabetólogo), se deja pasar tal cual: el guardrail existe para evitar que
+# el bot INVENTE la especialidad, no para borrar una aclaración que es correcta.
+_ALT_YA_ACLARADO: tuple[str, ...] = ("nutriólog", "nutriolog", "diabetólog", "diabetolog")
+
 # Nombres + apellidos de profesionales CONOCIDOS (minúscula, sin tildes).
 # Incluye primer nombre porque Haiku a veces escribe "Dr. Alonso" en vez de
 # "Dr. Márquez" y el validador, si solo tuviera apellidos, mutaba a "Dr. del CMC".
@@ -1511,12 +1654,12 @@ _NOMBRES_PROF_CONOCIDOS: frozenset[str] = frozenset({
     "rejon", "quijano", "burgos", "jimenez", "castillo", "fredes",
     "valdes", "fuentealba", "acosta", "armijo", "etcheverry", "pinto",
     "montalba", "rodriguez", "arratia", "gomez", "guevara", "pardo",
-    "gonzalez", "celedon", "navarrete",
+    "gonzalez", "celedon", "navarrete", "paz", "lerdon",
     # Primeros nombres (uso conversacional frecuente)
     "rodrigo", "andres", "alonso", "manuel", "miguel", "claudio", "tirso",
     "nicolas", "javiera", "carlos", "daniela", "fernando", "aurora",
     "valentina", "paola", "luis", "leonardo", "gisela", "jorge",
-    "juan", "juana", "sarai", "andrea", "david", "franca", "ana",
+    "juan", "juana", "sarai", "andrea", "david", "franca", "ana", "raul",
 })
 
 # Fuga de meta-prompt: si el texto que se le mostraría al paciente habla del
@@ -1583,13 +1726,23 @@ def _validar_respuesta_faq(texto: str, phone: str = "") -> str:
     tl = texto.lower()
     for variantes in _ESP_NO_ATENDIDAS:
         if any(v in tl for v in variantes):
+            _alt = None
+            for _claves, _msg in _ESP_NO_ATENDIDA_ALT.items():
+                if any(v in _claves for v in variantes):
+                    _alt = _msg
+                    break
+            if _alt is not None and any(w in tl for w in _ALT_YA_ACLARADO):
+                # La respuesta ya distingue endocrinólogo de nutriólogo-
+                # diabetólogo → es correcta, no la pises. Sigue revisando las
+                # demás especialidades no atendidas.
+                continue
             if _log_ev:
                 try:
                     _log_ev(phone, "faq_esp_no_atendida", {"variante": variantes[0], "texto": texto[:120]})
                 except Exception:
                     pass
             log.warning("faq_esp_no_atendida: %s en respuesta FAQ", variantes[0])
-            return _MSG_ESP_NO_ATENDIDA
+            return _alt if _alt is not None else _MSG_ESP_NO_ATENDIDA
 
     # 3. Profesionales desconocidos
     for m in _RX_DR_NOMBRE_FAQ.finditer(texto):
@@ -2393,6 +2546,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "🏥 *Centro Médico Carampangue*\n\n"
      "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología, otorrino\n"
      "🧠 *Salud mental y neuro:* psiquiatría y neurología (por videollamada), psicología\n"
+     "🩸 *Diabetes y peso:* nutriólogo y diabetólogo (por videollamada) — *Dr. Raúl Paz*\n"
      "👁️ *Vista:* examen de la vista y receta de lentes — *Tecnología Médica Oftalmológica* (TM Ana Celedón)\n"
      "🦷 *Dental:* odontología, ortodoncia, endodoncia, implantología\n"
      "✨ *Estética:* estética facial, toxina, hilos, bioestimuladores\n"
@@ -2401,6 +2555,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("que servicios",),
      "🏥 Atendemos: Medicina General, Odontología, Cardiología, Ginecología, "
      "Gastroenterología, Otorrino, Neurología, Psiquiatría, "
+     "Nutriología y Diabetología (videollamada), "
      "Tecnología Médica Oftalmológica (examen de la vista y lentes), "
      "Kinesiología, Masoterapia, Nutrición, Bioimpedanciometría, Psicología, Fonoaudiología, "
      "Podología, Matrona, Ecografía, Estética Facial, Ortodoncia, Endodoncia, Implantología.\n\n"
@@ -2458,6 +2613,17 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Sí, tenemos podología con *Andrea Guevara*. ¿Quieres agendar?"),
     (("psicolog",),
      "Sí, tenemos psicología adulto e infantil. ¿Quieres agendar?"),
+    (("nutriolog", "nutriólog", "diabetolog", "diabetólog", "diabetes", "prediabetes"),
+     "Sí, tenemos *nutriólogo y diabetólogo*: el *Dr. Raúl Paz*.\n\n"
+     "Atiende por *videollamada* (teleconsulta), la consulta dura *30 minutos* "
+     "y vale *$60.000* particular — no tiene bono Fonasa. Desde los 15 años.\n\n"
+     "Ve diabetes (tipo 1 y tipo 2), prediabetes, diabetes del embarazo, "
+     "sobrepeso y obesidad, colesterol y triglicéridos, resistencia a la "
+     "insulina e hígado graso. También bombas de insulina y sensores de "
+     "glucosa, y el seguimiento después de una cirugía bariátrica.\n\n"
+     "_Ojo: no es lo mismo que la nutricionista. Si lo que buscas es el plan de "
+     "comidas, eso es *Nutrición* con Gisela Pinto ($20.000 o $4.770 con bono)._\n\n"
+     "¿Quieres agendar?"),
     (("nutric",),
      "Sí, tenemos nutrición con *Gisela Pinto*. ¿Quieres agendar?"),
     (("matrona",),

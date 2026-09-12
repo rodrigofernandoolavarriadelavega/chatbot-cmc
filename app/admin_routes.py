@@ -2847,6 +2847,8 @@ _CROSS_SELL_PRECIO: dict[str, int] = {
     "masoterapia":            20000,
     "kinesiolog\u00eda":           20000,
     "nutrici\u00f3n":              20000,
+    "nutriolog\u00eda y diabetolog\u00eda": 60000,   # Dr. Paz (81) — teleconsulta, sin Fonasa
+    "nutriolog\u00eda":            60000,
     "psicolog\u00eda adulto":      20000,
     "psicolog\u00eda infantil":    20000,
     "fonoaudiolog\u00eda":         35000,
