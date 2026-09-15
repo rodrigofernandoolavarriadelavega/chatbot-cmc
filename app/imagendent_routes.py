@@ -665,30 +665,37 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:13px;
 .c .alerta{color:var(--red);font-weight:700}
 
 /* ── Mapa calendario: el saldo corriente, dia a dia ────── */
-.mes{margin-bottom:20px}
+.mes{margin-bottom:20px;max-width:640px}
 .mes h3{font-size:12px;font-weight:800;margin:0 0 9px;text-transform:capitalize;
   letter-spacing:-.1px}
 .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px}
 .dow span{font-size:9.5px;font-weight:800;color:var(--mute);text-align:center;
   letter-spacing:.06em;text-transform:uppercase}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
-.d{aspect-ratio:1;border:1px solid var(--border);border-radius:9px;padding:4px 5px;
-  background:var(--card);display:flex;flex-direction:column;min-height:56px;
+.d{border:1px solid var(--border);border-radius:8px;padding:3px 5px 4px;
+  background:var(--card);display:flex;flex-direction:column;height:58px;
   position:relative;overflow:hidden}
 .d.off{background:transparent;border-color:transparent}
 .d.nada{background:#fbfdfe}
 .d .dn{font-size:9.5px;font-weight:700;color:var(--mute);line-height:1}
 .d.act{border-color:var(--aqua);background:linear-gradient(160deg,#f3fbfd,#fff)}
 .d.act .dn{color:var(--blue)}
-.d .mas{font-size:16px;font-weight:800;line-height:1.05;margin-top:auto;
+.d .mas{font-size:15px;font-weight:800;line-height:1;margin-top:auto;
   font-variant-numeric:tabular-nums;letter-spacing:-.5px}
-.d .cup{font-size:9px;font-weight:800;line-height:1.2;color:var(--mute);
-  font-variant-numeric:tabular-nums;white-space:nowrap}
+.d .cup{font-size:9px;font-weight:800;line-height:1.1;color:var(--mute);
+  font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 .d .cup b{color:var(--blue)}
+/* El ordinal va arriba a la izquierda, al lado del numero del dia: en la
+   linea de abajo competia por el ancho con el acumulado y se partia en dos. */
+.d .dn{display:flex;gap:4px;align-items:baseline}
+.d .dn b{font-size:9px;font-weight:800}
 .d.c2{border-color:#b9a05e;background:linear-gradient(160deg,#fffcf2,#fff)}
 .d.c2 .cup b,.d.c2 .dn{color:#8a6205}
 .d.c3{border-color:#8f9fd6;background:linear-gradient(160deg,#f6f7fd,#fff)}
 .d.c3 .cup b,.d.c3 .dn{color:#4a5aa8}
+.d .ord{position:absolute;top:3px;left:19px;font-size:9px;font-weight:800;
+  color:var(--blue);line-height:1}
+.d.c2 .ord{color:#8a6205} .d.c3 .ord{color:#4a5aa8}
 .d .cb{position:absolute;top:3px;right:3px;font-size:8px;font-weight:800;
   background:#efe3fb;color:#6b3fa0;border-radius:5px;padding:1px 4px;line-height:1.4}
 .d .hito{position:absolute;inset:0;border-radius:8px;pointer-events:none;
@@ -962,8 +969,8 @@ def panel(request: Request, token: str | None = Query(None),
                     if d and d["cupones"]:
                         cls = f'act c{d["cuponera"]}'
                         cuerpo = (f'<div class="mas">+{d["cupones"]}</div>'
-                                  f'<div class="cup"><b>{_ORD.get(d["cuponera"], "?")}</b> '
-                                  f'· {d["acum"]}/{RX_POR_TRAMO}</div>')
+                                  f'<div class="cup">{d["acum"]}/{RX_POR_TRAMO}</div>')
+                        extra += f'<b class="ord">{_ORD.get(d["cuponera"], "?")}</b>'
                         if d["cruce"]:
                             extra += '<div class="hito"></div>'
                     if d and d["cbct"]:
