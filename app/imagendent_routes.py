@@ -876,7 +876,7 @@ def panel(request: Request, token: str | None = Query(None),
         h_cls, h_est = "verde", "Convenio vigente"
         h_cifra = f'{oro["rx_restantes"]}<small> cupones</small>'
         dias = (oro["rx_restantes"] / prom2 * 7) if prom2 else 0
-        h_txt = (f'Al ritmo de las ultimas 2 semanas ({prom2:.1f} por semana) alcanzan '
+        h_txt = (f'Al ritmo de las últimas 2 semanas ({prom2:.1f} por semana) alcanzan '
                  f'para <b>{dias:.0f} días</b> más.' if prom2
                  else 'Sin consumo reciente para proyectar cuánto duran.')
 
@@ -915,8 +915,10 @@ def panel(request: Request, token: str | None = Query(None),
         hall.append(
             f'<div class="h amber"><div class="tag">Sobre la mesa</div>'
             f'<div class="v">{_m(oro["cbct_restantes"] * 35_000)}</div>'
-            f'<p><b>{oro["cbct_restantes"]} CBCT de cortesía</b> sin usar. Estan pagados dentro del '
-            f'Plan Oro y no se arrastran solos al próximo tramo — hay que usarlos o perderlos.</p></div>')
+            f'<p><b>{oro["cbct_restantes"]} CBCT de cortesía</b> sin usar, ya pagados dentro '
+            f'del Plan Oro. Si vencen o se arrastran al próximo tramo <b>depende del '
+            f'anexo y no está cerrado por escrito</b> — conviene confirmarlo con Luis.'
+            f'</p></div>')
     hall.append(
         f'<div class="h aqua"><div class="tag">Margen del convenio</div>'
         f'<div class="v">{_m(plata["margen"])}</div>'
@@ -1130,7 +1132,7 @@ def panel(request: Request, token: str | None = Query(None),
   <div class="top">
     <div><h1>Convenio Imagendent</h1>
       <div class="meta">Radiología dental · se mide lo <b>realizado en Medilink</b>, no los
-      vales emitidos · ultimo barrido: {ult_txt}</div></div>
+      vales emitidos · último barrido: {ult_txt}</div></div>
     <div class="sp"></div>
     <button class="btn" id="bs" onclick="sync()">Barrer ahora</button>
     <span id="msg"></span>
@@ -1175,10 +1177,10 @@ def panel(request: Request, token: str | None = Query(None),
 
   <div class="card">
     <h2>Ritmo de consumo</h2>
-    <p class="h2s">Cupones por semana ISO. Las ultimas {len(sem)} semanas.</p>
+    <p class="h2s">Cupones por semana ISO. Las últimas {len(sem)} semanas.</p>
     <div class="ritmo">{cols}</div>
     <p class="nota">El consumo <b>no es plano, acelera</b>. La primera cuponera fue
-    3 → 3 → 8 → 13 y se acabó de golpe en la ultima semana. Por eso un promedio simple
+    3 → 3 → 8 → 13 y se acabó de golpe en la última semana. Por eso un promedio simple
     llega tarde: hay que mirar la pendiente, no el promedio.</p>
   </div>
 
