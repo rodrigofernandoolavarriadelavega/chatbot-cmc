@@ -89,6 +89,13 @@ MEDILINK_CONVENIO: dict[int, dict] = {
     5748: {"slug": "set_ortodoncia",  "unidades": 3},
     5749: {"slug": "cbct_unitario",   "unidades": 0},  # no gasta cupon de RX
 }
+# Que prestaciones sueltas equivalen a un pack. Sirve para medir cuanto cuesta
+# la OFERTA: el pack va a $40.000 y las tres sueltas suman $45.000, o sea cada
+# pack entrega $5.000 de descuento a proposito para ganar el caso de ortodoncia.
+# No es un error de precio — el dueno lo confirmo el 2026-09-15 — pero conviene
+# ver el acumulado para decidir si la oferta sigue conviniendo.
+PACK_COMPONENTES = {"set_ortodoncia": ("bitewing", "panoramica", "teleradiografia")}
+
 PROFESIONALES_DENTALES = (55, 66, 72)   # Burgos · Castillo · Jimenez
 DIAS_VENTANA = 45   # cuanto atras rebarre el cron cada noche
 
@@ -252,6 +259,13 @@ async def sync_consumo(dias: int = DIAS_VENTANA) -> dict:
                             ON CONFLICT(detalle_id) DO UPDATE SET
                               cobrado=excluded.cobrado, pagado=excluded.pagado,
                               realizado=excluded.realizado, profesional=excluded.profesional,
+                              -- costo y venta TAMBIEN se refrescan: el tarifario es la
+                              -- fuente unica y esta copia se independizaba para siempre.
+                              -- Sin esto, corregir un precio en el tarifario no llegaba
+                              -- nunca a las filas ya barridas y el panel comparaba contra
+                              -- un precio que ya no existia (paso con el pack de
+                              -- ortodoncia: $45.000 guardados vs $40.000 de oferta).
+                              costo=excluded.costo, venta=excluded.venta,
                               synced_at=excluded.synced_at
                         """, fila)
                     if existe:
@@ -400,12 +414,24 @@ def estado() -> dict:
     facturado = sum(f[9] or f[8] for f in filas)
     costo_real = sum(f[7] for f in filas if f[5] == "oro") + saldo_usado
 
-    # FUGA DE PRECIO: lo que el tarifario dice menos lo que la caja cobro de
-    # verdad. No es un error de este modulo, es un precio mal cargado en
-    # Medilink (los packs de ortodoncia salen a $40.000 y el tarifario dice
-    # $45.000). Se calcula aparte porque es plata recuperable con UN cambio de
-    # catalogo, no negociando con Imagendent: el costo no se mueve.
-    fuga = sum(max((f[8] or 0) - f[9], 0) for f in filas if f[9])
+    # DESCALCE TARIFARIO vs CAJA: en condiciones normales es 0. Si aparece algo,
+    # es que la caja cobro distinto de lo que dice el tarifario — un precio mal
+    # cargado en Medilink, por ejemplo. Se deja calculado para que ese caso no
+    # pase inadvertido.
+    descalce = sum(max((f[8] or 0) - f[9], 0) for f in filas if f[9])
+
+    # DESCUENTO DEL PACK: lo que la oferta entrega respecto de vender las tres
+    # radiografias por separado. Decision comercial, no error: el costo no
+    # cambia ($30.000), asi que el descuento sale entero del margen.
+    descuento_pack, packs_n, pack_venta, pack_suelto = 0, 0, 0, 0
+    for f in filas:
+        comps = PACK_COMPONENTES.get(f[4])
+        if not comps:
+            continue
+        suelto = sum(_tarifa(c).get("venta") or 0 for c in comps)
+        descuento_pack += max(suelto - (f[8] or 0), 0)
+        packs_n += 1
+        pack_venta, pack_suelto = (f[8] or 0), suelto
 
     # Ritmo: unidades por semana ISO, para ver si acelera o se apaga.
     ritmo: dict[str, int] = {}
@@ -471,8 +497,10 @@ def estado() -> dict:
         "saldo": {"carga": CARGA_SALDO, "usado": saldo_usado,
                   "restante": CARGA_SALDO - saldo_usado, "aviso_en": AVISO_SALDO},
         "plata": {"facturado": facturado, "costo": costo_real,
-                  "margen": facturado - costo_real, "fuga": fuga,
-                  "margen_sin_fuga": facturado + fuga - costo_real},
+                  "margen": facturado - costo_real, "descalce": descalce,
+                  "descuento_pack": descuento_pack, "packs": packs_n,
+                  "pack_venta": pack_venta, "pack_suelto": pack_suelto,
+                  "margen_sin_descuento": facturado + descuento_pack - costo_real},
         "cuponeras": _cuponeras, "dias": _dias_rx,
         "ritmo_semanal": semanas, "ritmo_labels": etiquetas,
         "ritmo_parcial": parcial, "ritmo_dia_semana": _hoy.weekday() + 1,
@@ -812,14 +840,27 @@ def panel(request: Request, token: str | None = Query(None),
 
     # ── Hallazgos: solo plata que se mueve con UNA accion concreta.
     hall = []
-    if plata.get("fuga"):
-        packs = sum(1 for f in e["consumo"] if f["cobrado"] and f["cobrado"] < (f["venta"] or 0))
+    if plata.get("descalce"):
+        n_d = sum(1 for f in e["consumo"] if f["cobrado"] and f["cobrado"] < (f["venta"] or 0))
         hall.append(
-            f'<div class="h rojo"><div class="tag">Fuga de precio</div>'
-            f'<div class="v">{_m(plata["fuga"])}</div>'
-            f'<p>{packs} atenciones se cobraron <b>bajo el tarifario</b>. El precio está mal '
-            f'cargado en Medilink, no es un problema del convenio: el costo no se mueve, '
-            f'así que esto es margen que se regaló en caja.</p></div>')
+            f'<div class="h rojo"><div class="tag">Descalce con el tarifario</div>'
+            f'<div class="v">{_m(plata["descalce"])}</div>'
+            f'<p>{n_d} atenciones se cobraron <b>distinto de lo que dice el tarifario</b>. '
+            f'Suele ser un precio mal cargado en Medilink — conviene revisar el catálogo.'
+            f'</p></div>')
+    if plata.get("descuento_pack"):
+        _n = plata.get("packs", 0)
+        _uno = plata["descuento_pack"] // max(_n, 1)
+        _mg_pack = 100 * (plata["pack_venta"] - 30_000) / max(plata["pack_venta"], 1)
+        _mg_suel = 100 * (plata["pack_suelto"] - 30_000) / max(plata["pack_suelto"], 1)
+        hall.append(
+            f'<div class="h amber"><div class="tag">Lo que cuesta la oferta</div>'
+            f'<div class="v">{_m(plata["descuento_pack"])}</div>'
+            f'<p><b>{_n} packs</b> a {_m(plata["pack_venta"])} en vez de '
+            f'{_m(plata["pack_suelto"])} sueltas: {_m(_uno)} de descuento por caso. '
+            f'Es a propósito y el costo no cambia, así que el pack deja '
+            f'<b>{_mg_pack:.0f}%</b> de margen contra <b>{_mg_suel:.0f}%</b> vendiendo '
+            f'las tres por separado.</p></div>')
     if oro["cbct_restantes"]:
         hall.append(
             f'<div class="h amber"><div class="tag">Sobre la mesa</div>'
@@ -831,9 +872,9 @@ def panel(request: Request, token: str | None = Query(None),
         f'<div class="v">{_m(plata["margen"])}</div>'
         f'<p>{_m(plata["facturado"])} facturado menos {_m(plata["costo"])} de costo = '
         f'<b>{100 * plata["margen"] / max(plata["facturado"], 1):.0f}%</b>'
-        + (f'. Cobrando a tarifario serían {_m(plata["margen_sin_fuga"])} '
-           f'({100 * plata["margen_sin_fuga"] / max(plata["facturado"] + plata["fuga"], 1):.0f}%).'
-           if plata.get("fuga") else '.')
+        + (f'. Sin el descuento del pack serían {_m(plata["margen_sin_descuento"])} '
+           f'({100 * plata["margen_sin_descuento"] / max(plata["facturado"] + plata["descuento_pack"], 1):.0f}%).'
+           if plata.get("descuento_pack") else '.')
         + '</p></div>')
 
     # ── Vales de prueba: ensucian el saldo del OTRO modulo, no el de este.
@@ -1093,8 +1134,8 @@ def panel(request: Request, token: str | None = Query(None),
 
   <div class="card">
     <h2>Consumo registrado</h2>
-    <p class="h2s">Cada línea es una atención cerrada en Medilink. La columna Δ marca la
-    diferencia entre el tarifario y lo que realmente cobro la caja.</p>
+    <p class="h2s">Cada línea es una atención cerrada en Medilink. La columna Δ marca si
+    la caja cobró algo <b>distinto del tarifario</b>: con todo bien cargado va vacía.</p>
     <div class="scroll"><table>
       <thead><tr><th>Fecha</th><th>Paciente</th><th>Prestación</th><th>Bolsa</th>
         <th style="text-align:right">Cup.</th><th style="text-align:right">Costo</th>

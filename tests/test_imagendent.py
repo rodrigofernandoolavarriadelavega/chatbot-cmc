@@ -184,8 +184,8 @@ class ContadorDeCupones(_BaseImagendent):
         _sembrar()
         self.assertEqual(M.estado()["ritmo_semanal"], [3, 3, 8, 13])
 
-    def test_margen_con_el_precio_correcto_del_pack(self):
-        """7 packs cobrados a $40.000 en vez de $45.000 = $35.000 en la mesa."""
+    def test_margen_con_el_precio_del_pack(self):
+        """El pack va a $40.000 POR OFERTA (dueno, 2026-09-15), no por error."""
         _sembrar()
         p = M.estado()["plata"]
         # costo: 27 RX x $10.000
@@ -354,3 +354,43 @@ class TestLibroMayorPorDia(unittest.TestCase):
         self.assertEqual(e["oro"]["rx_usados"], 27)            # intacto
         self.assertEqual(e["dias"]["2026-09-04"]["cbct"], 1)   # contado aparte
         self.assertEqual(e["dias"]["2026-09-04"]["cupones"], 0)
+
+
+class TestDescuentoDelPack(unittest.TestCase):
+    """El pack a $40.000 es una oferta, no un precio mal cargado.
+
+    Las tres sueltas suman $45.000 y el costo es el mismo ($30.000): el
+    descuento sale entero del margen, y el panel tiene que decirlo como
+    decision comercial en vez de gritar "fuga".
+    """
+
+    def test_el_pack_vale_menos_que_las_tres_sueltas(self):
+        import vales_routes
+        comps = M.PACK_COMPONENTES["set_ortodoncia"]
+        suelto = sum(vales_routes.PRESTACIONES[c]["venta"] for c in comps)
+        pack = vales_routes.PRESTACIONES["set_ortodoncia"]
+        self.assertEqual(suelto, 45_000)
+        self.assertEqual(pack["venta"], 40_000)
+        self.assertEqual(suelto - pack["venta"], 5_000)   # el descuento
+        self.assertEqual(pack["costo"], 30_000)           # el costo NO cambia
+
+    def test_cuantifica_el_descuento_entregado(self):
+        _sembrar()
+        p = M.estado()["plata"]
+        self.assertEqual(p["packs"], 7)
+        self.assertEqual(p["descuento_pack"], 7 * 5_000)
+        self.assertEqual(p["margen_sin_descuento"], p["margen"] + 35_000)
+
+    def test_sin_descalce_cuando_la_caja_cobra_el_tarifario(self):
+        """Cobrar $40.000 ya NO es un descalce: es lo que dice el tarifario."""
+        _sembrar()
+        self.assertEqual(M.estado()["plata"]["descalce"], 0)
+
+    def test_el_descalce_si_delata_un_precio_mal_cargado(self):
+        """Si la caja cobra bajo el tarifario, eso si tiene que aparecer."""
+        _sembrar()
+        with db() as c:
+            c.execute("UPDATE convenio_consumo SET cobrado=35000 WHERE atencion_id="
+                      "(SELECT atencion_id FROM convenio_consumo "
+                      " WHERE slug='set_ortodoncia' LIMIT 1)")
+        self.assertEqual(M.estado()["plata"]["descalce"], 5_000)

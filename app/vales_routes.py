@@ -62,8 +62,13 @@ PRESTACIONES: dict[str, dict] = {
     "panoramica":        {"nombre": "Radiografía Panorámica",                    "costo": 10000, "venta": 15000, "bolsa": "oro"},
     "teleradiografia":   {"nombre": "Teleradiografía de perfil",                 "costo": 10000, "venta": 15000, "bolsa": "oro"},
     "bitewing":          {"nombre": "Bitewing",                                  "costo": 10000, "venta": 15000, "bolsa": "oro"},
+    # OFERTA (confirmado por el dueno 2026-09-15): el pack va a $40.000, no a la
+    # suma de las tres sueltas ($45.000). Son $5.000 de descuento por caso que se
+    # entregan a proposito para ganar el tratamiento de ortodoncia completo. El
+    # costo no se mueve ($30.000), asi que el descuento sale entero del margen:
+    # 25% en pack contra 33% vendiendo las tres por separado.
     "set_ortodoncia":    {"nombre": "Set radiológico ortodoncia (bitewing + panorámica + teleradiografía)",
-                          "costo": 30000, "venta": 45000, "bolsa": "oro"},
+                          "costo": 30000, "venta": 40000, "bolsa": "oro"},
 }
 VIGENCIA_DIAS = 60
 CARGA_INICIAL = 200_000     # anexo, PRIMERO: carga inicial de la Cuenta de Saldo
