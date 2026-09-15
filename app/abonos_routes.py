@@ -135,6 +135,12 @@ def ensure_abonos_table() -> None:
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_abonos_fecha  ON abonos_cmc(fecha)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_abonos_estado ON abonos_cmc(estado)")
+        # `updated_at` cambia con CUALQUIER edición, así que no sirve para saber
+        # cuándo se aplicó el abono. Columna propia, escrita una sola vez.
+        try:
+            conn.execute("ALTER TABLE abonos_cmc ADD COLUMN aplicado_at TEXT DEFAULT ''")
+        except Exception:
+            pass   # ya existe
         conn.execute("CREATE INDEX IF NOT EXISTS idx_abonos_rut    ON abonos_cmc(rut)")
         conn.commit()
 
@@ -299,7 +305,7 @@ def _fetch_abonos(estado: str | None, fecha_desde: str | None,
                        profesional, area, procedimiento, fecha_cita,
                        precio_total, monto_abono, saldo, metodo_pago, folio,
                        codigo_transferencia, estado, id_cita, pago_id, nota,
-                       creado_por, created_at, updated_at
+                       creado_por, created_at, updated_at, aplicado_at
                 FROM abonos_cmc {clause}
                 ORDER BY datetime(created_at) DESC, id DESC""",
             params
@@ -385,6 +391,13 @@ async def put_abono(abono_id: int, request: Request,
         if "monto_abono" in body and body["monto_abono"] is not None:
             cur["monto_abono"] = int(body["monto_abono"] or 0)
         cur["saldo"] = max(int(cur["precio_total"] or 0) - int(cur["monto_abono"] or 0), 0)
+
+        # Si la edición manual lo deja en 'aplicado' y todavía no tiene fecha de
+        # aplicación, se sella acá. Se escribe UNA vez: si ya la tiene, no se pisa
+        # (editar la nota de un abono aplicado no debe mover su fecha).
+        if cur.get("estado") == "aplicado" and not (cur.get("aplicado_at") or ""):
+            conn.execute("UPDATE abonos_cmc SET aplicado_at=datetime('now','localtime') "
+                         "WHERE id=? AND COALESCE(aplicado_at,'')=''", (abono_id,))
 
         conn.execute(
             """UPDATE abonos_cmc SET
@@ -566,7 +579,8 @@ async def aplicar_abono(abono_id: int, request: Request,
             pago_id = cur.lastrowid
 
         conn.execute(
-            "UPDATE abonos_cmc SET estado='aplicado', pago_id=?, updated_at=datetime('now') WHERE id=?",
+            "UPDATE abonos_cmc SET estado='aplicado', pago_id=?, "
+            "aplicado_at=datetime('now','localtime'), updated_at=datetime('now') WHERE id=?",
             (pago_id, abono_id)
         )
         conn.commit()

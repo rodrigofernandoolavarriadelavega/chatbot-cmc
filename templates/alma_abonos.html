@@ -312,7 +312,7 @@
     <thead>
       <tr>
         <th>#</th>
-        <th class="th-sort" data-sort="hora">Hora</th>
+        <th class="th-sort" data-sort="fecha">Fecha</th><th class="th-sort" data-sort="hora">Hora</th>
         <th class="th-sort" data-sort="paciente_nombre">Paciente</th>
         <th class="th-sort" data-sort="rut">RUT</th>
         <th class="th-sort th-filtro" data-sort="profesional" data-col="profesional">Profesional</th>
@@ -321,7 +321,7 @@
         <th class="th-sort" data-sort="monto_abono">Abono</th>
         <th class="th-sort" data-sort="saldo">Saldo</th>
         <th class="th-sort th-filtro" data-sort="metodo_pago" data-col="metodo_pago">Metodo</th>
-        <th class="th-sort th-filtro" data-sort="estado" data-col="estado">Estado</th>
+        <th class="th-sort th-filtro" data-sort="estado" data-col="estado">Estado</th><th class="th-sort" data-sort="aplicado_at">Aplicado</th>
         <th>Cita futura</th>
         <th></th>
       </tr>
@@ -431,6 +431,16 @@ let DATA = {};
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const fmt$ = n => n == null ? '--' : '$' + Number(n).toLocaleString('es-CL');
 const fmtHora = s => s ? s.slice(0,5) : '--';
+const fmtFecha = f => {
+  if (!f) return '--';
+  const p = String(f).slice(0,10).split('-');
+  return p.length === 3 ? (p[2] + '-' + p[1] + '-' + p[0].slice(2)) : esc(f);
+};
+// Los abonos anteriores a esta columna no tienen fecha sellada. Se muestra
+// "sin registro" en vez de caer a updated_at, que cambia con cualquier edicion
+// y daria una fecha falsa que parece verdadera.
+const fmtAplicado = a => a.estado !== 'aplicado' ? '--'
+                       : (a.aplicado_at ? fmtFecha(a.aplicado_at) : 'sin registro');
 function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const ESTADO_LBL = { pendiente:'Pendiente', aplicado:'Aplicado', reembolsado:'Reembolsado', trasladado:'Trasladado', perdido:'Perdido' };
 
@@ -630,6 +640,7 @@ function renderTabla(abonos) {
       : '';
     return '<tr data-id="' + a.id + '">' +
       '<td style="color:var(--mute)">' + (i+1) + '</td>' +
+      '<td style="font-size:11px;white-space:nowrap">' + fmtFecha(a.fecha) + '</td>' +
       '<td>' + fmtHora(a.hora) + '</td>' +
       '<td title="' + esc(a.paciente_nombre) + '"><div class="pac">' + esc(a.paciente_nombre) + '</div><div class="rut-sub">' + esc(a.rut||'--') + '</div></td>' +
       '<td style="color:var(--mute);font-size:10px">' + esc(a.rut||'--') + '</td>' +
@@ -640,6 +651,7 @@ function renderTabla(abonos) {
       '<td style="text-align:right" class="saldo-val">' + fmt$(a.saldo) + '</td>' +
       '<td>' + esc(a.metodo_pago||'--') + '</td>' +
       '<td><span class="badge b-' + esc(a.estado) + '">' + (ESTADO_LBL[a.estado]||esc(a.estado)) + '</span></td>' +
+      '<td style="font-size:10px;color:var(--mute);white-space:nowrap">' + fmtAplicado(a) + '</td>' +
       '<td style="font-size:10px;color:var(--mute)">' + esc(a.fecha_cita||'--') + '</td>' +
       '<td><div class="td-actions">' +
         (aplicado ? '' : '<button class="btn-icon go" title="Marcar atendido y cobrar saldo" data-act="aplicar" data-id="' + a.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg></button>') +
