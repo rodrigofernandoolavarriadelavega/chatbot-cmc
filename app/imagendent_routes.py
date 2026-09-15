@@ -41,6 +41,7 @@ Auth: admin / administracion, igual que el resto de los modulos de plata.
 from __future__ import annotations
 
 import logging
+import asyncio
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 
@@ -558,15 +559,51 @@ def api_resumen(request: Request, token: str | None = Query(None),
     return JSONResponse(estado())
 
 
+# Un barrido de 45 dias son ~300 atenciones con pausa de 0.35s entre cada una:
+# pasa los 100 segundos. Nginx corta a los 30 y el boton devolvia 504 SIEMPRE —
+# nunca funciono. Por eso ahora se lanza en segundo plano y se responde al tiro;
+# el panel consulta el resultado con /sync/estado.
+_sync_corriendo = {"activo": False, "res": None, "error": None}
+
+
+async def _sync_en_fondo(dias: int) -> None:
+    _sync_corriendo.update(activo=True, res=None, error=None)
+    try:
+        res = await sync_consumo(dias)
+        log_event("imagendent", "sync_manual", res)
+        _sync_corriendo["res"] = res
+    except Exception as exc:                      # noqa: BLE001
+        log.exception("Barrido manual de Imagendent fallo")
+        _sync_corriendo["error"] = str(exc)
+    finally:
+        _sync_corriendo["activo"] = False
+
+
 @router.post("/alma/api/imagendent/sync")
 async def api_sync(request: Request, token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None),
                    dias: int = Query(DIAS_VENTANA, ge=1, le=365)):
-    """Barrido a demanda. El nocturno hace lo mismo sin que nadie apriete nada."""
+    """Lanza el barrido y responde al tiro. El nocturno hace lo mismo a las 05:10."""
     _auth(request, token, cmc_session)
-    res = await sync_consumo(dias)
-    log_event("imagendent", "sync_manual", res)
-    return JSONResponse(res)
+    if _sync_corriendo["activo"]:
+        return JSONResponse({"estado": "corriendo",
+                             "detalle": "Ya hay un barrido en curso."})
+    asyncio.create_task(_sync_en_fondo(dias))
+    return JSONResponse({"estado": "lanzado"})
+
+
+@router.get("/alma/api/imagendent/sync/estado")
+def api_sync_estado(request: Request, token: str | None = Query(None),
+                    cmc_session: str | None = Cookie(None)):
+    """En que va el barrido lanzado desde el panel."""
+    _auth(request, token, cmc_session)
+    if _sync_corriendo["activo"]:
+        return JSONResponse({"estado": "corriendo"})
+    if _sync_corriendo["error"]:
+        return JSONResponse({"estado": "error", "detalle": _sync_corriendo["error"]})
+    if _sync_corriendo["res"]:
+        return JSONResponse({"estado": "listo", **_sync_corriendo["res"]})
+    return JSONResponse({"estado": "inactivo"})
 
 
 # ── Panel ───────────────────────────────────────────────────────────────────
@@ -1156,16 +1193,34 @@ def panel(request: Request, token: str | None = Query(None),
 
 </div>
 <script>
+// El barrido demora mas de 100s y nginx corta a los 30: se lanza y despues se
+// consulta el estado, en vez de esperar una respuesta que nunca llega.
 async function sync(){{
   const m=document.getElementById('msg'), b=document.getElementById('bs');
-  m.textContent='Barriendo Medilink…'; if(b) b.disabled=true;
+  m.textContent='Barriendo Medilink… (demora ~2 minutos)'; if(b) b.disabled=true;
   try{{
     const r=await fetch('/alma/api/imagendent/sync{tk}',{{method:'POST'}});
     const d=await r.json();
     if(!r.ok){{ m.textContent='Error: '+(d.detail||r.status); if(b) b.disabled=false; return; }}
-    m.textContent=`${{d.atenciones}} atenciones · ${{d.nuevos}} nuevas · ${{d.actualizados}} actualizadas`;
-    setTimeout(()=>location.reload(),900);
+    if(d.estado==='corriendo'){{ m.textContent='Ya hay un barrido en curso…'; }}
+    esperar();
   }}catch(e){{ m.textContent='Error de red: '+e; if(b) b.disabled=false; }}
+}}
+async function esperar(){{
+  const m=document.getElementById('msg'), b=document.getElementById('bs');
+  for(let i=0;i<90;i++){{
+    await new Promise(r=>setTimeout(r,3000));
+    try{{
+      const d=await (await fetch('/alma/api/imagendent/sync/estado{tk}')).json();
+      if(d.estado==='listo'){{
+        m.textContent=`${{d.atenciones}} atenciones · ${{d.nuevos}} nuevas · ${{d.actualizados}} actualizadas`;
+        setTimeout(()=>location.reload(),900); return;
+      }}
+      if(d.estado==='error'){{ m.textContent='Error: '+d.detalle; if(b) b.disabled=false; return; }}
+    }}catch(e){{ /* la consulta puede fallar suelta, se reintenta */ }}
+  }}
+  m.textContent='El barrido sigue corriendo — recarga en un rato.';
+  if(b) b.disabled=false;
 }}
 </script>
 </body></html>""")
