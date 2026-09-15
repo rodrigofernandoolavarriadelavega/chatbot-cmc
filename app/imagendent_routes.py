@@ -293,12 +293,17 @@ def _ultimo_sync(raw: str | None) -> dict | None:
         return {"crudo": raw}
 
 
-def repartir_en_cuponeras(consumo_oro: list) -> list:
+def repartir_en_cuponeras(consumo_oro: list) -> tuple[list, dict]:
     """Imputa cada cupon a una cuponera concreta, la mas antigua primero (FIFO).
 
-    `consumo_oro` son tuplas (fecha ISO, unidades) de la bolsa oro. Devuelve una
-    fila por cuponera con cuando se entrego, cuantos cupones lleva, cuando se
-    agoto y cuantos dias duro.
+    `consumo_oro` son tuplas (fecha ISO, unidades) de la bolsa oro. Devuelve
+    `(cuponeras, dias)`:
+
+      · `cuponeras` — una fila por cuponera: cuando se entrego, cuantos cupones
+        lleva, cuando se agoto y cuantos dias duro.
+      · `dias` — el libro mayor: por fecha, cuantos cupones salieron ESE dia,
+        en que cuponera iban y a que acumulado llegaron. Es lo que permite leer
+        "1° +2 = 5" en el calendario sin recalcular nada.
 
     Dos casos que el modelo tiene que decir en voz alta en vez de promediar:
 
@@ -308,7 +313,7 @@ def repartir_en_cuponeras(consumo_oro: list) -> list:
         calculo: es credito, y conviene verlo.
       · `sobregiro` — cupones que no caben en ninguna cuponera comprada.
     """
-    cuponeras, sobregiro = [], 0
+    cuponeras, sobregiro, dias = [], 0, {}
     for entrega in ENTREGAS_ORO:
         for _ in range(entrega["cuponeras"]):
             cuponeras.append({
@@ -319,6 +324,11 @@ def repartir_en_cuponeras(consumo_oro: list) -> list:
 
     i = 0
     for fecha, unidades in sorted(consumo_oro):
+        # El acumulado hay que anotarlo EN EL MOMENTO de imputar: despues de
+        # repartir ya no se puede reconstruir a que altura iba la cuponera ese
+        # dia. Por eso el libro mayor se arma aca y no en una segunda pasada.
+        d = dias.setdefault(fecha, {"cupones": 0, "cuponera": None, "acum": 0,
+                                    "cruce": False, "cbct": 0})
         for _ in range(int(unidades or 0)):
             while i < len(cuponeras) and cuponeras[i]["usados"] >= RX_POR_TRAMO:
                 i += 1
@@ -332,6 +342,12 @@ def repartir_en_cuponeras(consumo_oro: list) -> list:
                 c["antes_de_entrega"] += 1
             if c["usados"] == RX_POR_TRAMO:
                 c["agotada"] = fecha
+            d["cupones"] += 1
+            # Un dia puede cruzar de una cuponera a la siguiente: se muestra la
+            # ultima tocada y se marca el cruce en vez de esconderlo.
+            if d["cuponera"] not in (None, c["n"]):
+                d["cruce"] = True
+            d["cuponera"], d["acum"] = c["n"], c["usados"]
 
     for c in cuponeras:
         if c["agotada"]:
@@ -345,7 +361,7 @@ def repartir_en_cuponeras(consumo_oro: list) -> list:
         c["restantes"] = RX_POR_TRAMO - c["usados"]
     if cuponeras:
         cuponeras[-1]["sobregiro"] = sobregiro
-    return cuponeras
+    return cuponeras, dias
 
 
 def estado() -> dict:
@@ -431,6 +447,16 @@ def estado() -> dict:
     vales_reales = [v for v in vales if not _es_prueba(v[2]) and v[6] in ("vigente", "usado")]
     vales_prueba = [v for v in vales if _es_prueba(v[2])]
 
+    # El CBCT se cuenta APARTE: no gasta cupon de radiografia (unidades=0 en el
+    # catalogo), asi que sumarlo al mismo numero mentiria sobre la cuponera.
+    _cuponeras, _dias_rx = repartir_en_cuponeras(
+        [(f[0], f[6]) for f in filas if f[5] == "oro"])
+    for f in filas:
+        if f[4] == "cbct_unitario":
+            _d = _dias_rx.setdefault(f[0], {"cupones": 0, "cuponera": None,
+                                            "acum": 0, "cruce": False, "cbct": 0})
+            _d["cbct"] += 1
+
     return {
         "oro": {
             "rx_total": CUPONERA_ORO_RX, "rx_usados": rx_usados,
@@ -447,8 +473,7 @@ def estado() -> dict:
         "plata": {"facturado": facturado, "costo": costo_real,
                   "margen": facturado - costo_real, "fuga": fuga,
                   "margen_sin_fuga": facturado + fuga - costo_real},
-        "cuponeras": repartir_en_cuponeras(
-            [(f[0], f[6]) for f in filas if f[5] == "oro"]),
+        "cuponeras": _cuponeras, "dias": _dias_rx,
         "ritmo_semanal": semanas, "ritmo_labels": etiquetas,
         "ritmo_parcial": parcial, "ritmo_dia_semana": _hoy.weekday() + 1,
         "tramos": {"n": TRAMOS_ORO, "invertido": TRAMOS_ORO * PRECIO_TRAMO},
@@ -639,6 +664,49 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:13px;
 .c .pie b{color:var(--text)}
 .c .alerta{color:var(--red);font-weight:700}
 
+/* ── Mapa calendario: el saldo corriente, dia a dia ────── */
+.mes{margin-bottom:20px}
+.mes h3{font-size:12px;font-weight:800;margin:0 0 9px;text-transform:capitalize;
+  letter-spacing:-.1px}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px}
+.dow span{font-size:9.5px;font-weight:800;color:var(--mute);text-align:center;
+  letter-spacing:.06em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.d{aspect-ratio:1;border:1px solid var(--border);border-radius:9px;padding:4px 5px;
+  background:var(--card);display:flex;flex-direction:column;min-height:56px;
+  position:relative;overflow:hidden}
+.d.off{background:transparent;border-color:transparent}
+.d.nada{background:#fbfdfe}
+.d .dn{font-size:9.5px;font-weight:700;color:var(--mute);line-height:1}
+.d.act{border-color:var(--aqua);background:linear-gradient(160deg,#f3fbfd,#fff)}
+.d.act .dn{color:var(--blue)}
+.d .mas{font-size:16px;font-weight:800;line-height:1.05;margin-top:auto;
+  font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.d .cup{font-size:9px;font-weight:800;line-height:1.2;color:var(--mute);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.d .cup b{color:var(--blue)}
+.d.c2{border-color:#b9a05e;background:linear-gradient(160deg,#fffcf2,#fff)}
+.d.c2 .cup b,.d.c2 .dn{color:#8a6205}
+.d.c3{border-color:#8f9fd6;background:linear-gradient(160deg,#f6f7fd,#fff)}
+.d.c3 .cup b,.d.c3 .dn{color:#4a5aa8}
+.d .cb{position:absolute;top:3px;right:3px;font-size:8px;font-weight:800;
+  background:#efe3fb;color:#6b3fa0;border-radius:5px;padding:1px 4px;line-height:1.4}
+.d .hito{position:absolute;inset:0;border-radius:8px;pointer-events:none;
+  box-shadow:inset 0 0 0 2px var(--amber)}
+.d.entrega{border-color:var(--green)}
+.d.entrega .dn{color:var(--green)}
+.d .ent{position:absolute;bottom:2px;right:4px;font-size:8.5px;font-weight:800;
+  color:var(--green)}
+.ley{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--mute);
+  margin-top:4px}
+.ley i{display:inline-block;width:10px;height:10px;border-radius:3px;
+  margin-right:4px;vertical-align:-1px;border:1px solid var(--border)}
+.ley .l1 i{background:linear-gradient(160deg,#f3fbfd,#fff);border-color:var(--aqua)}
+.ley .l2 i{background:linear-gradient(160deg,#fffcf2,#fff);border-color:#b9a05e}
+.ley .l3 i{background:linear-gradient(160deg,#f6f7fd,#fff);border-color:#8f9fd6}
+.ley .lc i{background:#efe3fb;border-color:#c9a9ec}
+.ley .le i{border-color:var(--green)}
+
 /* ── Tabla ────────────────────────────────────────────── */
 .scroll{overflow-x:auto;margin:0 -20px;padding:0 20px}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:660px}
@@ -807,6 +875,8 @@ def panel(request: Request, token: str | None = Query(None),
     # ── Cuponeras: una linea de vida por cuponera, no una bolsa unica.
     _MES = ("ene", "feb", "mar", "abr", "may", "jun",
             "jul", "ago", "sep", "oct", "nov", "dic")
+    _MESL = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+             "agosto", "septiembre", "octubre", "noviembre", "diciembre")
 
     def _fec(iso):
         if not iso:
@@ -861,6 +931,57 @@ def panel(request: Request, token: str | None = Query(None),
     else:
         proy = ('Todavía no se agota ninguna cuponera completa, así que no hay un '
                 'ritmo comprobado con el cual proyectar cuándo pedir la próxima.')
+
+    # ── Mapa calendario: cada dia muestra en que cuponera vamos, cuantos
+    #    cupones salieron ESE dia y a que acumulado llego esa cuponera.
+    #    El CBCT va en su propio distintivo: no gasta cupon.
+    dias_log = e.get("dias", {})
+    entregas = {x["fecha"]: x["cuponeras"] for x in ENTREGAS_ORO}
+    _ORD = {1: "1°", 2: "2°", 3: "3°"}
+    meses_html = []
+    if dias_log or entregas:
+        _todas = sorted(set(dias_log) | set(entregas))
+        _ini = date.fromisoformat(_todas[0]).replace(day=1)
+        _hoy_cl = datetime.now(_CHILE_TZ).date()
+        _ult = max(date.fromisoformat(_todas[-1]), _hoy_cl)
+        _cur = _ini
+        while _cur <= _ult:
+            # Lunes de la semana en que cae el dia 1, hasta cubrir el mes.
+            _primer = _cur
+            _sig = (_cur.replace(day=28) + timedelta(days=4)).replace(day=1)
+            _cursor = _primer - timedelta(days=_primer.weekday())
+            celdas = []
+            while _cursor < _sig:
+                if _cursor.month != _cur.month:
+                    celdas.append('<div class="d off"></div>')
+                else:
+                    iso = _cursor.isoformat()
+                    d = dias_log.get(iso)
+                    ent = entregas.get(iso)
+                    cls, cuerpo, extra = "nada", "", ""
+                    if d and d["cupones"]:
+                        cls = f'act c{d["cuponera"]}'
+                        cuerpo = (f'<div class="mas">+{d["cupones"]}</div>'
+                                  f'<div class="cup"><b>{_ORD.get(d["cuponera"], "?")}</b> '
+                                  f'· {d["acum"]}/{RX_POR_TRAMO}</div>')
+                        if d["cruce"]:
+                            extra += '<div class="hito"></div>'
+                    if d and d["cbct"]:
+                        extra += f'<div class="cb">CB {d["cbct"]}</div>'
+                    if ent:
+                        cls += " entrega"
+                        extra += f'<div class="ent">+{ent} 📦</div>'
+                    celdas.append(
+                        f'<div class="d {cls}"><div class="dn">{_cursor.day}</div>'
+                        f'{cuerpo}{extra}</div>')
+                _cursor += timedelta(days=1)
+            meses_html.append(
+                f'<div class="mes"><h3>{_MESL[_cur.month - 1]} {_cur.year}</h3>'
+                f'<div class="dow"><span>L</span><span>M</span><span>M</span>'
+                f'<span>J</span><span>V</span><span>S</span><span>D</span></div>'
+                f'<div class="grid">{"".join(celdas)}</div></div>')
+            _cur = _sig
+    cal = "".join(meses_html) or '<div class="vacio">Sin movimientos todavía.</div>'
 
     # ── Ritmo
     tope = max(sem) if sem else 1
@@ -936,6 +1057,22 @@ def panel(request: Request, token: str | None = Query(None),
     saldo. Así se ve cuánto duró cada una de verdad, no un promedio sobre el total.</p>
     <div class="cup">{"".join(cups)}</div>
     <p class="nota">{proy}</p>
+  </div>
+
+  <div class="card">
+    <h2>Mapa por día</h2>
+    <p class="h2s">Cada día muestra en qué cuponera vamos, cuántos cupones salieron
+    ese día y el acumulado de esa cuponera. El CBCT se cuenta aparte porque no gasta
+    cupón de radiografía.</p>
+    {cal}
+    <div class="ley">
+      <span class="l1"><i></i>Cuponera 1</span>
+      <span class="l2"><i></i>Cuponera 2</span>
+      <span class="l3"><i></i>Cuponera 3</span>
+      <span class="lc"><i></i>CB = CBCT (aparte)</span>
+      <span class="le"><i></i>📦 día de entrega</span>
+      <span>Borde naranjo = ese día se cambió de cuponera</span>
+    </div>
   </div>
 
   <div class="card">

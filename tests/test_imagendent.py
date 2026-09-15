@@ -265,14 +265,14 @@ class TestRepartoEnCuponeras(unittest.TestCase):
     """El consumo se imputa a una cuponera concreta, la mas antigua primero."""
 
     def test_llena_la_primera_antes_de_tocar_la_segunda(self):
-        cups = M.repartir_en_cuponeras([("2026-08-20", M.RX_POR_TRAMO + 1)])
+        cups, _ = M.repartir_en_cuponeras([("2026-08-20", M.RX_POR_TRAMO + 1)])
         self.assertEqual(cups[0]["usados"], M.RX_POR_TRAMO)
         self.assertEqual(cups[0]["estado"], "agotada")
         self.assertEqual(cups[1]["usados"], 1)
         self.assertEqual(cups[2]["estado"], "sin abrir")
 
     def test_registra_cuando_se_agoto_y_cuantos_dias_duro(self):
-        cups = M.repartir_en_cuponeras(
+        cups, _ = M.repartir_en_cuponeras(
             [("2026-08-20", 10), ("2026-09-01", M.RX_POR_TRAMO - 10)])
         c1 = cups[0]
         self.assertEqual(c1["agotada"], "2026-09-01")
@@ -281,12 +281,12 @@ class TestRepartoEnCuponeras(unittest.TestCase):
 
     def test_delata_los_cupones_usados_antes_de_que_llegara_la_cuponera(self):
         """Se agoto la primera y se siguio trabajando a cuenta de la que venia."""
-        cups = M.repartir_en_cuponeras([("2026-09-14", M.RX_POR_TRAMO + 1)])
+        cups, _ = M.repartir_en_cuponeras([("2026-09-14", M.RX_POR_TRAMO + 1)])
         self.assertEqual(cups[1]["antes_de_entrega"], 1)   # entrega es el 15-sep
 
     def test_el_sobregiro_no_se_pierde_en_silencio(self):
         total = M.CUPONERA_ORO_RX
-        cups = M.repartir_en_cuponeras([("2026-09-16", total + 4)])
+        cups, _ = M.repartir_en_cuponeras([("2026-09-16", total + 4)])
         self.assertEqual(cups[-1]["sobregiro"], 4)
         self.assertTrue(all(c["usados"] == M.RX_POR_TRAMO for c in cups))
 
@@ -294,12 +294,12 @@ class TestRepartoEnCuponeras(unittest.TestCase):
         """Las filas vienen DESC de la query: el reparto ordena por su cuenta."""
         desc = [("2026-09-01", 20), ("2026-08-20", 15)]
         asc = [("2026-08-20", 15), ("2026-09-01", 20)]
-        self.assertEqual([c["usados"] for c in M.repartir_en_cuponeras(desc)],
-                         [c["usados"] for c in M.repartir_en_cuponeras(asc)])
-        self.assertEqual(M.repartir_en_cuponeras(desc)[0]["agotada"], "2026-09-01")
+        self.assertEqual([c["usados"] for c in M.repartir_en_cuponeras(desc)[0]],
+                         [c["usados"] for c in M.repartir_en_cuponeras(asc)[0]])
+        self.assertEqual(M.repartir_en_cuponeras(desc)[0][0]["agotada"], "2026-09-01")
 
     def test_las_cuponeras_suman_el_total_comprado(self):
-        cups = M.repartir_en_cuponeras([])
+        cups, _ = M.repartir_en_cuponeras([])
         self.assertEqual(len(cups), M.TRAMOS_ORO)
         self.assertEqual(sum(c["rx"] for c in cups), M.CUPONERA_ORO_RX)
 
@@ -315,3 +315,42 @@ class TestRitmoSemanal(unittest.TestCase):
         self.assertEqual(e["ritmo_semanal"][-3:], [1, 0, 1])
         # Y las etiquetas quedan contiguas, sin saltos.
         self.assertEqual(e["ritmo_labels"][-3:], ["S34", "S35", "S36"])
+
+
+class TestLibroMayorPorDia(unittest.TestCase):
+    """El calendario lee '1° +2 = 5' sin recalcular: el reparto ya lo anoto."""
+
+    def test_anota_cuantos_salieron_ese_dia_y_el_acumulado(self):
+        _, dias = M.repartir_en_cuponeras([("2026-08-20", 3), ("2026-08-21", 2)])
+        self.assertEqual(dias["2026-08-20"]["cupones"], 3)
+        self.assertEqual(dias["2026-08-20"]["acum"], 3)
+        self.assertEqual(dias["2026-08-21"]["cupones"], 2)
+        self.assertEqual(dias["2026-08-21"]["acum"], 5)   # el ejemplo del dueno
+        self.assertEqual(dias["2026-08-21"]["cuponera"], 1)
+
+    def test_el_acumulado_se_reinicia_en_la_cuponera_siguiente(self):
+        _, dias = M.repartir_en_cuponeras(
+            [("2026-08-20", M.RX_POR_TRAMO), ("2026-09-20", 2)])
+        self.assertEqual(dias["2026-08-20"]["acum"], M.RX_POR_TRAMO)
+        self.assertEqual(dias["2026-09-20"]["cuponera"], 2)
+        self.assertEqual(dias["2026-09-20"]["acum"], 2)   # vuelve a empezar
+
+    def test_marca_el_dia_que_cruza_de_una_cuponera_a_la_otra(self):
+        _, dias = M.repartir_en_cuponeras([("2026-08-20", M.RX_POR_TRAMO + 2)])
+        d = dias["2026-08-20"]
+        self.assertTrue(d["cruce"])
+        self.assertEqual(d["cuponera"], 2)    # se muestra la ultima tocada
+        self.assertEqual(d["acum"], 2)
+
+    def test_un_dia_sin_consumo_no_aparece_en_el_libro(self):
+        _, dias = M.repartir_en_cuponeras([("2026-08-20", 1)])
+        self.assertNotIn("2026-08-21", dias)
+
+    def test_el_cbct_no_gasta_cupones_y_se_cuenta_aparte(self):
+        """unidades=0 en el catalogo: el CBCT no puede mover el contador de RX."""
+        self.assertEqual(M.MEDILINK_CONVENIO[5749]["unidades"], 0)
+        _sembrar(CONSUMO_REAL + [("2026-09-04", 56999, "Rosa Marin", 5749)])
+        e = M.estado()
+        self.assertEqual(e["oro"]["rx_usados"], 27)            # intacto
+        self.assertEqual(e["dias"]["2026-09-04"]["cbct"], 1)   # contado aparte
+        self.assertEqual(e["dias"]["2026-09-04"]["cupones"], 0)
