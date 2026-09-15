@@ -559,10 +559,23 @@ def api_resumen(request: Request, token: str | None = Query(None),
     return JSONResponse(estado())
 
 
-# Un barrido de 45 dias son ~300 atenciones con pausa de 0.35s entre cada una:
-# pasa los 100 segundos. Nginx corta a los 30 y el boton devolvia 504 SIEMPRE —
-# nunca funciono. Por eso ahora se lanza en segundo plano y se responde al tiro;
-# el panel consulta el resultado con /sync/estado.
+# Ventana del barrido MANUAL. El nocturno usa DIAS_VENTANA (45) porque tiene la
+# madrugada entera; el manual no puede.
+#
+# Comprobado en vivo el 2026-09-15: un barrido de 45 dias son ~300 atenciones y
+# revienta la CUOTA DE CUENTA de Medilink. El carril batch (use_batch_lane, que
+# sync_consumo ya llamaba) no alcanza: reparte los cupos LOCALES, pero el 429 lo
+# devuelve Medilink por cuenta, sin importar de que carril venga. Resultado: el
+# bot en vivo empezo a comerse 429 en /pacientes y en el ticker de agenda, en
+# plena hora de atencion.
+#
+# 7 dias son ~50 atenciones (~20s) y cubren de sobra el caso real del boton:
+# "acabo de cargar una prestacion y la quiero ver ya".
+DIAS_MANUAL = 7
+
+# Ademas: ~300 atenciones x 0.35s pasan los 100 segundos y nginx corta a los 30,
+# asi que el boton devolvia 504 SIEMPRE. Por eso el barrido se lanza en segundo
+# plano y el panel consulta el resultado con /sync/estado.
 _sync_corriendo = {"activo": False, "res": None, "error": None}
 
 
@@ -582,7 +595,7 @@ async def _sync_en_fondo(dias: int) -> None:
 @router.post("/alma/api/imagendent/sync")
 async def api_sync(request: Request, token: str | None = Query(None),
                    cmc_session: str | None = Cookie(None),
-                   dias: int = Query(DIAS_VENTANA, ge=1, le=365)):
+                   dias: int = Query(DIAS_MANUAL, ge=1, le=365)):
     """Lanza el barrido y responde al tiro. El nocturno hace lo mismo a las 05:10."""
     _auth(request, token, cmc_session)
     if _sync_corriendo["activo"]:
@@ -1186,8 +1199,10 @@ def panel(request: Request, token: str | None = Query(None),
 
   <div class="card">
     <h2>Barrido</h2>
-    <p class="h2s">Corre solo todas las noches a las 05:10, después del sync de Medilink.
-    Acá lo puedes forzar si acabas de cargar una prestación y la quieres ver al tiro.</p>
+    <p class="h2s">Corre solo todas las noches a las 05:10 y barre los últimos
+    {DIAS_VENTANA} días. Acá lo puedes forzar si acabas de cargar una prestación y la
+    quieres ver al tiro: revisa los últimos <b>{DIAS_MANUAL} días</b>, que es lo que
+    Medilink aguanta sin ponerse lento para el bot en horario de atención.</p>
     <button class="btn" onclick="sync()">Barrer ahora</button>
   </div>
 
@@ -1197,7 +1212,7 @@ def panel(request: Request, token: str | None = Query(None),
 // consulta el estado, en vez de esperar una respuesta que nunca llega.
 async function sync(){{
   const m=document.getElementById('msg'), b=document.getElementById('bs');
-  m.textContent='Barriendo Medilink… (demora ~2 minutos)'; if(b) b.disabled=true;
+  m.textContent='Barriendo Medilink…'; if(b) b.disabled=true;
   try{{
     const r=await fetch('/alma/api/imagendent/sync{tk}',{{method:'POST'}});
     const d=await r.json();
