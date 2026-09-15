@@ -5243,10 +5243,15 @@ def alma_abonos_page(token: str | None = Query(None),
     from alma_scope import page_token as _pt, is_readonly as _ro
     if not _ALMA_ABONOS_HTML:
         raise HTTPException(404, "Abonos no disponible")
-    def _ren_abonos(tok: str, readonly: bool) -> str:
-        return (_ALMA_ABONOS_HTML
-                .replace("__TOKEN__", tok)
-                .replace("__ABONOS_READONLY__", "true" if readonly else "false"))
+    def _ren_abonos(tok: str, readonly: bool) -> HTMLResponse:
+        # `no-store` como en /olacore: sin esto el navegador se queda con el HTML
+        # viejo despues de un deploy y el usuario ve columnas que ya no existen
+        # (o no ve las nuevas) sin ninguna senal de que esta mirando algo viejo.
+        return HTMLResponse(
+            _ALMA_ABONOS_HTML
+            .replace("__TOKEN__", tok)
+            .replace("__ABONOS_READONLY__", "true" if readonly else "false"),
+            headers={"Cache-Control": "no-store"})
     if token and _is_admin_token(token):
         return _ren_abonos(token, False)
     # Perfil de profesional por token explícito → prioridad sobre la cookie admin del navegador
