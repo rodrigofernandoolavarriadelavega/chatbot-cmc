@@ -5093,7 +5093,7 @@ def alma_shell(token: str | None = Query(None),
     if not _ALMA_HTML:
         raise HTTPException(404, "Alma no disponible")
 
-    def _render(active_token: str) -> str:
+    def _render(active_token: str) -> HTMLResponse:
         import json as _json_alma
         profile = ALMA_PROFILES.get(active_token, {})
         variante = profile.get("variante", "") or ""
@@ -5117,11 +5117,16 @@ def alma_shell(token: str | None = Query(None),
             modules_list = [m for m in modules_list if m["id"] != "sala"]
         profile_modules_json = _json_alma.dumps(modules_list, ensure_ascii=False)
         panel_profesional = "true" if profile.get("panel_profesional", True) else "false"
-        return (_ALMA_HTML
-                .replace("__TOKEN__", active_token)
-                .replace("__ALMA_VARIANTE_LINE__", variante_line)
-                .replace("__PROFILE_MODULES__", profile_modules_json)
-                .replace("__PANEL_PROFESIONAL__", panel_profesional))
+        # `no-store`: sin esto el navegador guarda el shell y, tras cambiar el
+        # registry o el perfil, sigue mostrando la lista de módulos vieja sin
+        # ninguna señal. Además el HTML lleva el token embebido.
+        return HTMLResponse(
+            _ALMA_HTML
+            .replace("__TOKEN__", active_token)
+            .replace("__ALMA_VARIANTE_LINE__", variante_line)
+            .replace("__PROFILE_MODULES__", profile_modules_json)
+            .replace("__PANEL_PROFESIONAL__", panel_profesional),
+            headers={"Cache-Control": "no-store"})
 
     from alma_scope import page_token as _alma_page_token
     eff = _alma_page_token(token, cmc_session, None)  # shell: solo exige login válido

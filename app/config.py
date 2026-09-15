@@ -110,6 +110,7 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "guia_orto":   {"label": "Cómo se usa",      "icon": "file",      "title": "Guía — Embudo y Cargos",         "sub": "Instrucciones de los dos módulos nuevos", "src": "/guia/ortodoncia", "grupo": "Módulos Profesionales"},
     "cargos":      {"label": "Cargos al profesional","icon":"coins",  "title": "Cargos al profesional",          "sub": "Radiografías · laboratorio · insumos a descontar en la liquidación", "src": "/alma/cargos"},
     "imagendent":  {"label": "Convenio Imagendent","icon":"package",  "title": "Convenio Imagendent — Radiología Dental", "sub": "Cupones restantes · saldo · margen · ritmo de consumo", "src": "/alma/imagendent"},
+    "vales_rx":    {"label": "Emitir vale RX",   "icon": "package",   "title": "Imagendent RX — emitir y enviar vales", "sub": "Mesa de trabajo: crear el vale, mandarlo y seguir el saldo", "src": "/recepcion/convenios/imagendent"},
     "pacientes":   {"label": "Pacientes",        "icon": "users",     "title": "Pacientes — Ficha 360",          "sub": "Buscar · historial · pagos · citas · etiquetas",   "src": "/alma/pacientes"},
     "interconsultas":{"label": "Interconsultas", "icon": "shuffle",   "title": "Interconsultas",                 "sub": "Derivaciones entre especialidades",                "src": "/alma/interconsultas"},
     "esterilizacion":{"label": "Esterilización", "icon": "shield",    "title": "Esterilización",                 "sub": "Trazabilidad de ciclos · indicadores · SEREMI",    "src": "/alma/esterilizacion"},
@@ -157,7 +158,7 @@ ALMA_PROFILES: dict[str, dict] = {
     }} if OLACORE_TOKEN else {}),
     **({ADMIN_TOKEN: {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "recepcion_kanban", "agenda", "sala", "ausentismo", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot"],  # recepción — "inicio" (vistazo del dueño) reservado a OLACORE_TOKEN
+        "modulos": ["panel", "panel2", "recepcion_kanban", "agenda", "sala", "ausentismo", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot", "imagendent", "vales_rx"],  # recepción — "inicio" (vistazo del dueño) reservado a OLACORE_TOKEN
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
