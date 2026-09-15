@@ -41,7 +41,7 @@ Auth: admin / administracion, igual que el resto de los modulos de plata.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request
@@ -54,9 +54,25 @@ _CHILE_TZ = ZoneInfo("America/Santiago")
 router = APIRouter(tags=["imagendent"])
 
 # ── El plan contratado (anexo Imagendent 2026-08-12 / 2026-08-29) ────────────
-# Plan Oro $300.000 = 30 RX a $10.000 + 2 CBCT de cortesia.
-CUPONERA_ORO_RX   = 30
-CUPONERA_ORO_CBCT = 2
+# Plan Oro $300.000 = 30 RX a $10.000 + 2 CBCT de cortesia. Es un bundle FIJO:
+# cada tramo trae lo mismo. Por eso el total se deriva de cuantos tramos hay
+# comprados y no se escribe a mano — escribir "90" suelto esconde que son tres
+# compras distintas y obliga a recalcular el CBCT a ojo.
+RX_POR_TRAMO   = 30
+CBCT_POR_TRAMO = 2
+PRECIO_TRAMO   = 300_000
+# Cada ENTREGA es un hecho con fecha. El consumo se imputa FIFO (se gasta
+# primero la cuponera mas antigua), y asi se puede medir cuanto DURO cada una:
+# ese es el dato que decide cuando pedir la siguiente, y es mucho mas honesto
+# que un promedio sobre una bolsa unica de 90 cupones.
+# OJO: la fecha del tramo 1 es la del anexo, no hay guia de despacho.
+ENTREGAS_ORO = [
+    {"fecha": "2026-08-12", "cuponeras": 1},   # piloto
+    {"fecha": "2026-09-15", "cuponeras": 2},   # las dos que llegaron juntas
+]
+TRAMOS_ORO        = sum(e["cuponeras"] for e in ENTREGAS_ORO)   # 3
+CUPONERA_ORO_RX   = RX_POR_TRAMO * TRAMOS_ORO                   # 90
+CUPONERA_ORO_CBCT = CBCT_POR_TRAMO * TRAMOS_ORO                 # 6
 CARGA_SALDO       = 200_000    # carga inicial Cuenta de Saldo Socio Estrategico
 AVISO_SALDO       = 50_000     # Imagendent avisa para recargar en este piso
 
@@ -277,6 +293,61 @@ def _ultimo_sync(raw: str | None) -> dict | None:
         return {"crudo": raw}
 
 
+def repartir_en_cuponeras(consumo_oro: list) -> list:
+    """Imputa cada cupon a una cuponera concreta, la mas antigua primero (FIFO).
+
+    `consumo_oro` son tuplas (fecha ISO, unidades) de la bolsa oro. Devuelve una
+    fila por cuponera con cuando se entrego, cuantos cupones lleva, cuando se
+    agoto y cuantos dias duro.
+
+    Dos casos que el modelo tiene que decir en voz alta en vez de promediar:
+
+      · `antes_de_entrega` — cupones consumidos ANTES de que esa cuponera
+        llegara. Pasa cuando la anterior se agoto y se siguio haciendo
+        radiografias a cuenta de la que venia en camino. No es un error de
+        calculo: es credito, y conviene verlo.
+      · `sobregiro` — cupones que no caben en ninguna cuponera comprada.
+    """
+    cuponeras, sobregiro = [], 0
+    for entrega in ENTREGAS_ORO:
+        for _ in range(entrega["cuponeras"]):
+            cuponeras.append({
+                "n": len(cuponeras) + 1, "entregada": entrega["fecha"],
+                "rx": RX_POR_TRAMO, "usados": 0, "agotada": None,
+                "antes_de_entrega": 0, "primer_uso": None,
+            })
+
+    i = 0
+    for fecha, unidades in sorted(consumo_oro):
+        for _ in range(int(unidades or 0)):
+            while i < len(cuponeras) and cuponeras[i]["usados"] >= RX_POR_TRAMO:
+                i += 1
+            if i >= len(cuponeras):
+                sobregiro += 1
+                continue
+            c = cuponeras[i]
+            c["usados"] += 1
+            c["primer_uso"] = c["primer_uso"] or fecha
+            if fecha < c["entregada"]:
+                c["antes_de_entrega"] += 1
+            if c["usados"] == RX_POR_TRAMO:
+                c["agotada"] = fecha
+
+    for c in cuponeras:
+        if c["agotada"]:
+            c["dias"] = (date.fromisoformat(c["agotada"])
+                         - date.fromisoformat(c["entregada"])).days
+            c["estado"] = "agotada"
+        elif c["usados"]:
+            c["estado"] = "en uso"
+        else:
+            c["estado"] = "sin abrir"
+        c["restantes"] = RX_POR_TRAMO - c["usados"]
+    if cuponeras:
+        cuponeras[-1]["sobregiro"] = sobregiro
+    return cuponeras
+
+
 def estado() -> dict:
     """Cuanto queda de cada bolsa, calculado sobre lo REALIZADO."""
     # `vales_convenio` se ASEGURA explicitamente, no se hereda del import.
@@ -330,9 +401,27 @@ def estado() -> dict:
             ritmo[f"{iso[0]}-S{iso[1]:02d}"] = ritmo.get(f"{iso[0]}-S{iso[1]:02d}", 0) + f[6]
         except ValueError:
             pass
-    _claves = sorted(ritmo)[-4:]
-    semanas = [ritmo[k] for k in _claves]
+    # Una semana SIN consumo vale 0, no "no existe". Si se salta, dos semanas no
+    # contiguas quedan pegadas en el grafico y una caida a cero se lee como
+    # continuidad: S36=14 junto a S38=3 parecia "bajo a 3" cuando fue 14 -> 0 -> 3.
+    # Se rellena entre la primera y la ultima semana CON DATOS (no hasta hoy: eso
+    # dejaria el grafico en cero al mirar un periodo historico).
+    if ritmo:
+        _o = [datetime.strptime(k + "-1", "%G-S%V-%u").date() for k in sorted(ritmo)]
+        _lunes, _d = [], _o[0]
+        while _d <= _o[-1]:
+            _lunes.append(_d)
+            _d += timedelta(weeks=1)
+        _claves = [f"{d.isocalendar()[0]}-S{d.isocalendar()[1]:02d}" for d in _lunes][-4:]
+    else:
+        _claves = []
+    semanas = [ritmo.get(k, 0) for k in _claves]
     etiquetas = [k.split("-")[1] for k in _claves]   # "2026-S37" -> "S37"
+    # Si la ultima barra es la semana en curso no es comparable con las cerradas
+    # y no puede entrar en ninguna proyeccion: cerrado se compara con cerrado.
+    _hoy = datetime.now(_CHILE_TZ).date()
+    _sem_hoy = f"{_hoy.isocalendar()[0]}-S{_hoy.isocalendar()[1]:02d}"
+    parcial = bool(_claves) and _claves[-1] == _sem_hoy and _hoy.weekday() < 6
 
     # Vales de prueba: no son consumo, ensucian el saldo. Se marcan, no se borran.
     def _es_prueba(nombre: str) -> bool:
@@ -358,7 +447,11 @@ def estado() -> dict:
         "plata": {"facturado": facturado, "costo": costo_real,
                   "margen": facturado - costo_real, "fuga": fuga,
                   "margen_sin_fuga": facturado + fuga - costo_real},
+        "cuponeras": repartir_en_cuponeras(
+            [(f[0], f[6]) for f in filas if f[5] == "oro"]),
         "ritmo_semanal": semanas, "ritmo_labels": etiquetas,
+        "ritmo_parcial": parcial, "ritmo_dia_semana": _hoy.weekday() + 1,
+        "tramos": {"n": TRAMOS_ORO, "invertido": TRAMOS_ORO * PRECIO_TRAMO},
         "alerta": alerta_reposicion(max(CUPONERA_ORO_RX - rx_usados, 0), semanas),
         "consumo": [dict(zip(
             ("fecha", "paciente", "profesional", "prestacion", "slug", "bolsa",
@@ -520,6 +613,31 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:13px;
   background:linear-gradient(180deg,var(--aqua),var(--blue));transition:height .5s ease}
 .ritmo .col.max .b{background:linear-gradient(180deg,#f0a92b,var(--amber))}
 .ritmo .s{font-size:10.5px;color:var(--mute);font-weight:700;letter-spacing:.04em}
+
+/* ── Cuponeras: de la entrega hasta que se gasta ───────── */
+.cup{display:flex;flex-direction:column;gap:11px}
+.c{border:1px solid var(--border);border-radius:12px;padding:13px 15px;
+  background:linear-gradient(90deg,#fbfdfe,#fff)}
+.c.agotada{border-color:#e4d4a8;background:linear-gradient(90deg,#fffcf3,#fff)}
+.c.uso{border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.14)}
+.c .l1{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:9px}
+.c .tit{font-weight:800;font-size:13px}
+.c .fechas{font-size:11.5px;color:var(--mute)}
+.c .dur{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--mute);
+  font-variant-numeric:tabular-nums}
+.c .est{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  padding:2.5px 8px;border-radius:20px}
+.c.agotada .est{background:#fdf3d8;color:#8a6205}
+.c.uso .est{background:var(--aqua-s);color:var(--blue)}
+.c.nueva .est{background:#eef4f8;color:var(--mute)}
+.c .celdas{display:flex;gap:2.5px;flex-wrap:wrap}
+.c .u{width:100%;max-width:17px;height:15px;flex:1 1 9px;border-radius:2.5px;
+  background:#e4eef4}
+.c .u.on{background:linear-gradient(180deg,var(--aqua),var(--blue))}
+.c.agotada .u.on{background:linear-gradient(180deg,#e9c463,var(--amber))}
+.c .pie{font-size:11.5px;color:var(--mute);margin-top:8px;line-height:1.5}
+.c .pie b{color:var(--text)}
+.c .alerta{color:var(--red);font-weight:700}
 
 /* ── Tabla ────────────────────────────────────────────── */
 .scroll{overflow-x:auto;margin:0 -20px;padding:0 20px}
@@ -686,6 +804,64 @@ def panel(request: Request, token: str | None = Query(None),
       <div class="de">{pct_mar:.0f}% sobre {_m(plata["facturado"])} facturado</div>
       <div class="g"><i style="width:{min(pct_mar, 100):.0f}%"></i></div></div>"""
 
+    # ── Cuponeras: una linea de vida por cuponera, no una bolsa unica.
+    _MES = ("ene", "feb", "mar", "abr", "may", "jun",
+            "jul", "ago", "sep", "oct", "nov", "dic")
+
+    def _fec(iso):
+        if not iso:
+            return "—"
+        d = date.fromisoformat(iso)
+        return f"{d.day} {_MES[d.month - 1]}"
+
+    cups, dur_ref = [], []
+    for c in e.get("cuponeras", []):
+        cls = {"agotada": "agotada", "en uso": "uso"}.get(c["estado"], "nueva")
+        if c.get("dias"):
+            dur_ref.append((c["dias"], c["rx"]))
+        celdas = "".join(f'<i class="u{" on" if k < c["usados"] else ""}"></i>'
+                         for k in range(c["rx"]))
+        if c["estado"] == "agotada":
+            ritmo_c = c["rx"] / max(c["dias"] or 1, 1)
+            pie = (f'Duró <b>{c["dias"]} días</b> — {ritmo_c:.1f} cupones por día. '
+                   f'Se agotó el {_fec(c["agotada"])}.')
+        elif c["estado"] == "en uso":
+            pie = (f'Lleva <b>{c["usados"]} de {c["rx"]}</b>. '
+                   f'Primer uso: {_fec(c["primer_uso"])}.')
+        else:
+            pie = "Sin abrir. Entra en uso cuando se agote la anterior."
+        if c.get("antes_de_entrega"):
+            n_ant = c["antes_de_entrega"]
+            pie += (f' <span class="alerta">{n_ant} cupón'
+                    f'{"es" if n_ant > 1 else ""} se usó antes de que llegara</span> '
+                    f'— se siguió trabajando a cuenta de esta cuponera.')
+        if c.get("sobregiro"):
+            pie += (f' <span class="alerta">{c["sobregiro"]} sin cuponera que los '
+                    f'cubra.</span>')
+        cups.append(
+            f'<div class="c {cls}"><div class="l1">'
+            f'<span class="tit">Cuponera {c["n"]}</span>'
+            f'<span class="est">{c["estado"]}</span>'
+            f'<span class="fechas">entregada {_fec(c["entregada"])}</span>'
+            f'<span class="dur">{c["usados"]}/{c["rx"]}</span></div>'
+            f'<div class="celdas">{celdas}</div>'
+            f'<div class="pie">{pie}</div></div>')
+
+    # Proyeccion con las cuponeras YA agotadas: es el unico ritmo comprobado.
+    if dur_ref:
+        _rpd = sum(rx for _, rx in dur_ref) / sum(d for d, _ in dur_ref)
+        _quedan = oro["rx_restantes"]
+        _dias_quedan = _quedan / _rpd if _rpd else 0
+        # El VPS corre en UTC y Chile va en -4: date.today() adelanta la fecha
+        # despues de las 20:00 locales. Misma trampa que comparar dias abiertos.
+        _fin = datetime.now(_CHILE_TZ).date() + timedelta(days=round(_dias_quedan))
+        proy = (f'Las cuponeras ya agotadas se gastaron a <b>{_rpd:.1f} cupones por '
+                f'día</b>. A ese ritmo los <b>{_quedan}</b> que quedan alcanzan hasta '
+                f'cerca del <b>{_fec(_fin.isoformat())}</b> ({_dias_quedan:.0f} días).')
+    else:
+        proy = ('Todavía no se agota ninguna cuponera completa, así que no hay un '
+                'ritmo comprobado con el cual proyectar cuándo pedir la próxima.')
+
     # ── Ritmo
     tope = max(sem) if sem else 1
     if sem:
@@ -753,6 +929,14 @@ def panel(request: Request, token: str | None = Query(None),
   <div class="hall">{"".join(hall)}</div>
 
   <div class="kpis">{kpis}</div>
+
+  <div class="card">
+    <h2>Cuponeras — de la entrega hasta que se gasta</h2>
+    <p class="h2s">Cada cupón se imputa a la cuponera más antigua que todavía tenga
+    saldo. Así se ve cuánto duró cada una de verdad, no un promedio sobre el total.</p>
+    <div class="cup">{"".join(cups)}</div>
+    <p class="nota">{proy}</p>
+  </div>
 
   <div class="card">
     <h2>Ritmo de consumo</h2>

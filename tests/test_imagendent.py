@@ -2,9 +2,14 @@
 """Tests del modulo de convenio Imagendent.
 
 El caso de oro es el consumo REAL barrido de Medilink el 2026-09-07: 13 lineas
-de prestacion que suman 27 cupones, dejando 3 de los 30 del Plan Oro. Ese "3"
-es el numero que el dueno sabia de memoria y que ningun sistema podia confirmar
-— si este test se cae, el modulo volvio a mentir.
+de prestacion que suman 27 cupones. Con UNA cuponera de 30 eso dejaba 3, que era
+el numero que el dueno sabia de memoria y que ningun sistema podia confirmar —
+si el 27 se cae, el modulo volvio a mentir.
+
+Los totales se leen de las CONSTANTES, nunca escritos a mano: el 2026-09-15
+llegaron dos cuponeras mas y los tests que tenian "30" clavado habrian fallado
+por un cambio de catalogo, no por un bug. Lo que se testea es el reparto, no
+cuantas cuponeras hay compradas.
 """
 import os
 import sys
@@ -126,7 +131,9 @@ class ContadorDeCupones(_BaseImagendent):
         oro = M.estado()["oro"]
         # 7 packs x3 + 3 panoramicas + 2 teles + 1 bitewing = 27
         self.assertEqual(oro["rx_usados"], 27)
-        self.assertEqual(oro["rx_restantes"], 3)
+        self.assertEqual(oro["rx_restantes"], M.CUPONERA_ORO_RX - 27)
+        # Con UNA sola cuponera eso daba los 3 que el dueno sabia de memoria.
+        self.assertEqual(M.RX_POR_TRAMO - 27, 3)
 
     def test_las_13_filas_no_se_confunden_con_13_cupones(self):
         """Regresion del bug conceptual: 13 lineas != 13 cupones."""
@@ -137,7 +144,7 @@ class ContadorDeCupones(_BaseImagendent):
         _sembrar()
         oro = M.estado()["oro"]
         self.assertEqual(oro["cbct_usados"], 0)
-        self.assertEqual(oro["cbct_restantes"], 2)
+        self.assertEqual(oro["cbct_restantes"], M.CUPONERA_ORO_CBCT)
 
     def test_la_cuenta_de_saldo_no_se_toca_con_puras_RX(self):
         """Las dos bolsas son independientes: gastar cupones no baja el saldo."""
@@ -151,19 +158,24 @@ class ContadorDeCupones(_BaseImagendent):
         _sembrar(filas)
         e = M.estado()
         self.assertEqual(e["oro"]["cbct_usados"], 1)
-        self.assertEqual(e["oro"]["cbct_restantes"], 1)
+        self.assertEqual(e["oro"]["cbct_restantes"], M.CUPONERA_ORO_CBCT - 1)
         self.assertEqual(e["saldo"]["restante"], M.CARGA_SALDO)  # aun gratis
 
-    def test_el_tercer_cbct_si_descuenta_el_saldo(self):
-        extra = [("2026-09-04", 56990 + n, f"Paciente {n}", 5749) for n in range(3)]
+    def test_el_cbct_siguiente_a_la_cortesia_si_descuenta_el_saldo(self):
+        """El CBCT N+1 (con N de cortesia) es el primero que toca la plata."""
+        n_extra = M.CUPONERA_ORO_CBCT + 1
+        extra = [("2026-09-04", 56990 + n, f"Paciente {n}", 5749)
+                 for n in range(n_extra)]
         _sembrar(CONSUMO_REAL + extra)
         e = M.estado()
-        self.assertEqual(e["oro"]["cbct_usados"], 2)          # cortesia agotada
-        self.assertEqual(e["saldo"]["usado"], 35_000)         # el 3ro va al saldo
+        self.assertEqual(e["oro"]["cbct_usados"], M.CUPONERA_ORO_CBCT)  # cortesia agotada
+        self.assertEqual(e["saldo"]["usado"], 35_000)                   # solo el excedente
         self.assertEqual(e["saldo"]["restante"], M.CARGA_SALDO - 35_000)
 
     def test_nunca_da_restantes_negativos(self):
-        muchos = [("2026-09-05", 57000 + n, f"P{n}", 5748) for n in range(20)]
+        # Suficientes packs (3 cupones c/u) para pasarse del total comprado.
+        n_packs = M.CUPONERA_ORO_RX // 3 + 5
+        muchos = [("2026-09-05", 57000 + n, f"P{n}", 5748) for n in range(n_packs)]
         _sembrar(muchos)
         self.assertEqual(M.estado()["oro"]["rx_restantes"], 0)
 
@@ -247,3 +259,59 @@ class ReglaDeReposicion(_BaseImagendent):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestRepartoEnCuponeras(unittest.TestCase):
+    """El consumo se imputa a una cuponera concreta, la mas antigua primero."""
+
+    def test_llena_la_primera_antes_de_tocar_la_segunda(self):
+        cups = M.repartir_en_cuponeras([("2026-08-20", M.RX_POR_TRAMO + 1)])
+        self.assertEqual(cups[0]["usados"], M.RX_POR_TRAMO)
+        self.assertEqual(cups[0]["estado"], "agotada")
+        self.assertEqual(cups[1]["usados"], 1)
+        self.assertEqual(cups[2]["estado"], "sin abrir")
+
+    def test_registra_cuando_se_agoto_y_cuantos_dias_duro(self):
+        cups = M.repartir_en_cuponeras(
+            [("2026-08-20", 10), ("2026-09-01", M.RX_POR_TRAMO - 10)])
+        c1 = cups[0]
+        self.assertEqual(c1["agotada"], "2026-09-01")
+        # Entregada el 12-ago segun ENTREGAS_ORO -> 20 dias hasta el 1-sep.
+        self.assertEqual(c1["dias"], 20)
+
+    def test_delata_los_cupones_usados_antes_de_que_llegara_la_cuponera(self):
+        """Se agoto la primera y se siguio trabajando a cuenta de la que venia."""
+        cups = M.repartir_en_cuponeras([("2026-09-14", M.RX_POR_TRAMO + 1)])
+        self.assertEqual(cups[1]["antes_de_entrega"], 1)   # entrega es el 15-sep
+
+    def test_el_sobregiro_no_se_pierde_en_silencio(self):
+        total = M.CUPONERA_ORO_RX
+        cups = M.repartir_en_cuponeras([("2026-09-16", total + 4)])
+        self.assertEqual(cups[-1]["sobregiro"], 4)
+        self.assertTrue(all(c["usados"] == M.RX_POR_TRAMO for c in cups))
+
+    def test_el_orden_de_llegada_no_altera_el_reparto(self):
+        """Las filas vienen DESC de la query: el reparto ordena por su cuenta."""
+        desc = [("2026-09-01", 20), ("2026-08-20", 15)]
+        asc = [("2026-08-20", 15), ("2026-09-01", 20)]
+        self.assertEqual([c["usados"] for c in M.repartir_en_cuponeras(desc)],
+                         [c["usados"] for c in M.repartir_en_cuponeras(asc)])
+        self.assertEqual(M.repartir_en_cuponeras(desc)[0]["agotada"], "2026-09-01")
+
+    def test_las_cuponeras_suman_el_total_comprado(self):
+        cups = M.repartir_en_cuponeras([])
+        self.assertEqual(len(cups), M.TRAMOS_ORO)
+        self.assertEqual(sum(c["rx"] for c in cups), M.CUPONERA_ORO_RX)
+
+
+class TestRitmoSemanal(unittest.TestCase):
+    """Una semana sin consumo vale 0, no desaparece del grafico."""
+
+    def test_la_semana_sin_consumo_aparece_en_cero(self):
+        # S34 (17-ago) y S36 (31-ago), con la S35 vacia en medio.
+        _sembrar([("2026-08-17", 60001, "A", 5745), ("2026-08-31", 60002, "B", 5745)])
+        e = M.estado()
+        self.assertIn(0, e["ritmo_semanal"])
+        self.assertEqual(e["ritmo_semanal"][-3:], [1, 0, 1])
+        # Y las etiquetas quedan contiguas, sin saltos.
+        self.assertEqual(e["ritmo_labels"][-3:], ["S34", "S35", "S36"])
