@@ -1005,9 +1005,12 @@ def panel(request: Request, token: str | None = Query(None),
             pie = "Sin abrir. Entra en uso cuando se agote la anterior."
         if c.get("antes_de_entrega"):
             n_ant = c["antes_de_entrega"]
-            pie += (f' <span class="alerta">{n_ant} cupón'
-                    f'{"es" if n_ant > 1 else ""} se usó antes de que llegara</span> '
-                    f'— se siguió trabajando a cuenta de esta cuponera.')
+            # "cupón" pierde la tilde en plural (cupones) y el verbo concuerda.
+            _plural = n_ant > 1
+            pie += (f' <span class="alerta">{n_ant} '
+                    f'{"cupones se usaron" if _plural else "cupón se usó"} antes de que '
+                    f'{"llegaran" if _plural else "llegara"}</span> — se siguió trabajando '
+                    f'a cuenta de esta cuponera.')
         if c.get("sobregiro"):
             pie += (f' <span class="alerta">{c["sobregiro"]} sin cuponera que los '
                     f'cubra.</span>')
