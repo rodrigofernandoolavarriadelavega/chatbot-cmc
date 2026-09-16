@@ -132,8 +132,9 @@ class ContadorDeCupones(_BaseImagendent):
         # 7 packs x3 + 3 panoramicas + 2 teles + 1 bitewing = 27
         self.assertEqual(oro["rx_usados"], 27)
         self.assertEqual(oro["rx_restantes"], M.CUPONERA_ORO_RX - 27)
-        # Con UNA sola cuponera eso daba los 3 que el dueno sabia de memoria.
-        self.assertEqual(M.RX_POR_TRAMO - 27, 3)
+        # El "quedan 3" que el dueno sabia de memoria era contra el pozo del
+        # Plan Oro, que son DOS cuponeras de 15 (= 30), no contra una sola.
+        self.assertEqual(M.CUPONERAS_X_ORO * M.RX_POR_TRAMO - 27, 3)
 
     def test_las_13_filas_no_se_confunden_con_13_cupones(self):
         """Regresion del bug conceptual: 13 lineas != 13 cupones."""
@@ -280,9 +281,15 @@ class TestRepartoEnCuponeras(unittest.TestCase):
         self.assertEqual(c1["dias"], 20)
 
     def test_delata_los_cupones_usados_antes_de_que_llegara_la_cuponera(self):
-        """Se agoto la primera y se siguio trabajando a cuenta de la que venia."""
-        cups, _ = M.repartir_en_cuponeras([("2026-09-14", M.RX_POR_TRAMO + 1)])
-        self.assertEqual(cups[1]["antes_de_entrega"], 1)   # entrega es el 15-sep
+        """Se agoto todo lo entregado y se siguio trabajando a cuenta de lo que venia.
+
+        Se consume el dia ANTES de la segunda entrega: el cupon que sobra cae en
+        una cuponera que todavia no habia llegado.
+        """
+        n_1a = M.ENTREGAS_ORO[0]["cuponeras"]          # cuantas trajo la 1a entrega
+        cups, _ = M.repartir_en_cuponeras([("2026-09-14", n_1a * M.RX_POR_TRAMO + 1)])
+        self.assertEqual(cups[n_1a]["antes_de_entrega"], 1)
+        self.assertEqual(cups[n_1a]["entregada"], M.ENTREGAS_ORO[1]["fecha"])
 
     def test_el_sobregiro_no_se_pierde_en_silencio(self):
         total = M.CUPONERA_ORO_RX
@@ -292,8 +299,11 @@ class TestRepartoEnCuponeras(unittest.TestCase):
 
     def test_el_orden_de_llegada_no_altera_el_reparto(self):
         """Las filas vienen DESC de la query: el reparto ordena por su cuenta."""
-        desc = [("2026-09-01", 20), ("2026-08-20", 15)]
-        asc = [("2026-08-20", 15), ("2026-09-01", 20)]
+        # La 1a cuponera tiene que cruzar las DOS fechas para que el orden importe:
+        # se abre el 20-ago y recien se agota el 1-sep.
+        parcial, resto = M.RX_POR_TRAMO - 5, M.RX_POR_TRAMO + 5
+        desc = [("2026-09-01", resto), ("2026-08-20", parcial)]
+        asc = [("2026-08-20", parcial), ("2026-09-01", resto)]
         self.assertEqual([c["usados"] for c in M.repartir_en_cuponeras(desc)[0]],
                          [c["usados"] for c in M.repartir_en_cuponeras(asc)[0]])
         self.assertEqual(M.repartir_en_cuponeras(desc)[0][0]["agotada"], "2026-09-01")

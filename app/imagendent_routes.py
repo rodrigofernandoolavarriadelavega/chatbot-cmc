@@ -55,25 +55,28 @@ _CHILE_TZ = ZoneInfo("America/Santiago")
 router = APIRouter(tags=["imagendent"])
 
 # ── El plan contratado (anexo Imagendent 2026-08-12 / 2026-08-29) ────────────
-# Plan Oro $300.000 = 30 RX a $10.000 + 2 CBCT de cortesia. Es un bundle FIJO:
-# cada tramo trae lo mismo. Por eso el total se deriva de cuantos tramos hay
-# comprados y no se escribe a mano — escribir "90" suelto esconde que son tres
-# compras distintas y obliga a recalcular el CBCT a ojo.
-RX_POR_TRAMO   = 30
-CBCT_POR_TRAMO = 2
-PRECIO_TRAMO   = 300_000
+# La unidad fisica es la CUPONERA: 15 RX + 1 CBCT de cortesia (dueno, 2026-09-15).
+# El "Plan Oro $300.000" son DOS cuponeras: 30 RX x $10.000 = $300.000, con los
+# 2 CBCT de cortesia incluidos. Esa equivalencia explica el "quedan 3" que el
+# dueno sabia de memoria en septiembre: era contra el pozo de 30, o sea contra
+# las dos cuponeras del Plan Oro, no contra una sola.
+# El total se DERIVA de las entregas y nunca se escribe a mano.
+RX_POR_TRAMO    = 15          # cupones de radiografia por cuponera
+CBCT_POR_TRAMO  = 1           # CBCT de cortesia por cuponera
+PRECIO_TRAMO    = 150_000     # $10.000 x 15 RX
+CUPONERAS_X_ORO = 2           # un "Plan Oro" = 2 cuponeras
 # Cada ENTREGA es un hecho con fecha. El consumo se imputa FIFO (se gasta
 # primero la cuponera mas antigua), y asi se puede medir cuanto DURO cada una:
 # ese es el dato que decide cuando pedir la siguiente, y es mucho mas honesto
 # que un promedio sobre una bolsa unica de 90 cupones.
 # OJO: la fecha del tramo 1 es la del anexo, no hay guia de despacho.
 ENTREGAS_ORO = [
-    {"fecha": "2026-08-12", "cuponeras": 1},   # piloto
+    {"fecha": "2026-08-12", "cuponeras": 2},   # Plan Oro inicial = 2 cuponeras
     {"fecha": "2026-09-15", "cuponeras": 2},   # las dos que llegaron juntas
 ]
-TRAMOS_ORO        = sum(e["cuponeras"] for e in ENTREGAS_ORO)   # 3
-CUPONERA_ORO_RX   = RX_POR_TRAMO * TRAMOS_ORO                   # 90
-CUPONERA_ORO_CBCT = CBCT_POR_TRAMO * TRAMOS_ORO                 # 6
+TRAMOS_ORO        = sum(e["cuponeras"] for e in ENTREGAS_ORO)   # 4 cuponeras
+CUPONERA_ORO_RX   = RX_POR_TRAMO * TRAMOS_ORO                   # 60 RX
+CUPONERA_ORO_CBCT = CBCT_POR_TRAMO * TRAMOS_ORO                 # 4 CBCT
 CARGA_SALDO       = 200_000    # carga inicial Cuenta de Saldo Socio Estrategico
 AVISO_SALDO       = 50_000     # Imagendent avisa para recargar en este piso
 
@@ -867,7 +870,7 @@ def panel(request: Request, token: str | None = Query(None),
     elif oro["rx_restantes"] == 0:
         h_cls, h_est = "rojo", "Cuponera agotada"
         h_cifra = f'0<small> cupones</small>'
-        h_txt = 'No quedan cupones del Plan Oro. Cada radiografía nueva se paga a tarifa llena.'
+        h_txt = 'No quedan cupones en ninguna cuponera. Cada radiografía nueva se paga a tarifa llena.'
     elif al:
         h_cls = "rojo" if al.get("nivel") == "rojo" else "amber"
         h_est, h_cifra = "Hay que recargar", f'{oro["rx_restantes"]}<small> cupones</small>'
@@ -916,7 +919,7 @@ def panel(request: Request, token: str | None = Query(None),
             f'<div class="h amber"><div class="tag">Sobre la mesa</div>'
             f'<div class="v">{_m(oro["cbct_restantes"] * 35_000)}</div>'
             f'<p><b>{oro["cbct_restantes"]} CBCT de cortesía</b> sin usar, ya pagados dentro '
-            f'del Plan Oro. Si vencen o se arrastran al próximo tramo <b>depende del '
+            f'de las cuponeras. Si vencen o se arrastran al próximo tramo <b>depende del '
             f'anexo y no está cerrado por escrito</b> — conviene confirmarlo con Luis.'
             f'</p></div>')
     hall.append(
@@ -957,11 +960,11 @@ def panel(request: Request, token: str | None = Query(None),
     kpis = f"""
     <div class="k"><div class="lbl">Cupones de radiografía</div>
       <div class="v {cls_rx}">{oro["rx_restantes"]}</div>
-      <div class="de">restantes de {oro["rx_total"]} · {oro["rx_usados"]} usados</div>
+      <div class="de">de {oro["rx_total"]} · {TRAMOS_ORO} cuponeras de {RX_POR_TRAMO}</div>
       <div class="g"><i class="{cls_rx}" style="width:{pct_rx:.0f}%"></i></div></div>
     <div class="k"><div class="lbl">CBCT de cortesía</div>
       <div class="v">{oro["cbct_restantes"]}</div>
-      <div class="de">de {oro["cbct_total"]} incluidos en el Plan Oro</div>
+      <div class="de">de {oro["cbct_total"]} · 1 por cuponera</div>
       <div class="g"><i style="width:{100 * oro["cbct_restantes"] / max(oro["cbct_total"], 1):.0f}%"></i></div></div>
     <div class="k"><div class="lbl">Cuenta Socio Estratégico</div>
       <div class="v {cls_sal}">{_m(sal["restante"])}</div>
@@ -1037,7 +1040,8 @@ def panel(request: Request, token: str | None = Query(None),
     #    El CBCT va en su propio distintivo: no gasta cupon.
     dias_log = e.get("dias", {})
     entregas = {x["fecha"]: x["cuponeras"] for x in ENTREGAS_ORO}
-    _ORD = {1: "1°", 2: "2°", 3: "3°"}
+    def _ord(n):
+        return f"{n}°" if n else "?"
     meses_html = []
     if dias_log or entregas:
         _todas = sorted(set(dias_log) | set(entregas))
@@ -1060,10 +1064,10 @@ def panel(request: Request, token: str | None = Query(None),
                     ent = entregas.get(iso)
                     cls, cuerpo, extra = "nada", "", ""
                     if d and d["cupones"]:
-                        cls = f'act c{d["cuponera"]}'
+                        cls = f'act c{(d["cuponera"] - 1) % 3 + 1}'
                         cuerpo = (f'<div class="mas">+{d["cupones"]}</div>'
                                   f'<div class="cup">{d["acum"]}/{RX_POR_TRAMO}</div>')
-                        extra += f'<b class="ord">{_ORD.get(d["cuponera"], "?")}</b>'
+                        extra += f'<b class="ord">{_ord(d["cuponera"])}</b>'
                         if d["cruce"]:
                             extra += '<div class="hito"></div>'
                     if d and d["cbct"]:
@@ -1166,7 +1170,7 @@ def panel(request: Request, token: str | None = Query(None),
     cupón de radiografía.</p>
     {cal}
     <div class="ley">
-      <span class="l1"><i></i>Cuponera 1</span>
+      <span class="l1"><i></i>Cuponeras 1 y 4</span>
       <span class="l2"><i></i>Cuponera 2</span>
       <span class="l3"><i></i>Cuponera 3</span>
       <span class="lc"><i></i>CB = CBCT (aparte)</span>
