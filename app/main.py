@@ -1867,6 +1867,37 @@ def carin_carampangue_infantil(request: Request):
     return _CARIN_HTML
 
 
+@app.get("/carta-ce7edd0a", response_class=HTMLResponse)
+def carta_nicole_24(request: Request):
+    """Carta interactiva de cumpleanos (regalo personal, NO es del centro medico).
+
+    Es un encargo personal: Miguel Ubillus para su enamorada, que cumple 24.
+    Vive aca solo porque agentecmc.cl es el dominio-taller y necesitaba una URL
+    https para que la musica de YouTube pueda arrancar sola (en un archivo
+    suelto, file://, el origen es "null" y YouTube rechaza el postMessage).
+
+    Tres candados, porque tiene el nombre de una persona real y una carta privada:
+      1. Slug no adivinable (no hay nada que enlace a esta URL).
+      2. 404 en centromedicocarampangue.cl, igual que /patio y /carin: una carta
+         de amor no cuelga del dominio clinico.
+      3. noindex/nofollow por cabecera, para que no la levante ningun buscador.
+
+    Se borra esta ruta cuando pase el cumpleanos. Fuente editable del documento:
+    ~/carta-nicole-24 (index.html + construir.sh).
+    """
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    ruta = _TEMPLATE_DIR / "carta-nicole.html"
+    if not ruta.exists():
+        raise HTTPException(status_code=404, detail="Not found")
+    return HTMLResponse(
+        ruta.read_text(encoding="utf-8"),
+        headers={"X-Robots-Tag": "noindex, nofollow, noarchive",
+                 "Cache-Control": "no-store, max-age=0"},
+    )
+
+
 @app.get("/cecar/v2", response_class=HTMLResponse)
 def cecar_landing_v2():
     """CECAR v2 — version "gimnasio" (oscura, energetica). Convive con /cecar.
