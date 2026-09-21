@@ -319,20 +319,23 @@ def panel(request: Request, token: str | None = Query(None),
 
     # ── escenarios ──
     mejor = max(esc["reemplazo"], key=lambda x: x["margen"])
+    # Las tres tarjetas muestran MARGEN como cifra grande, no venta: puestas
+    # lado a lado, dos con venta y una con margen se leen como comparables y
+    # no lo son. La venta va en el detalle.
     escen = f"""
     <div class="e hoy"><div class="t">Hoy, atendiendo tú</div>
-      <div class="v">{M(esc['venta'])}</div>
-      <div class="d">margen <b>{M(esc['margen'])}</b> · {esc['pct']:.1f}%<br>
-      anualizado sobre {esc['meses']} meses de 2026</div></div>
+      <div class="v">{M(esc['margen'])}</div>
+      <div class="d">de margen al año · <b>{esc['pct']:.1f}%</b><br>
+      sobre {M(esc['venta'])} de venta · anualizado sobre {esc['meses']} meses</div></div>
     <div class="e sin"><div class="t">Dejas de atender · sin reemplazo</div>
-      <div class="v">{M(esc['venta_sin'])}</div>
-      <div class="d">margen <b>{M(esc['margen_sin'])}</b> ·
-      <b>{esc['pct_sin']:.1f}%</b><br>la venta cae
-      {100*(esc['venta_sin']/esc['venta']-1):.0f}% y el margen
+      <div class="v">{M(esc['margen_sin'])}</div>
+      <div class="d">de margen al año · <b>{esc['pct_sin']:.1f}%</b><br>
+      sobre {M(esc['venta_sin'])} de venta: cae
+      {100*(esc['venta_sin']/esc['venta']-1):.0f}%, pero el margen solo
       {100*(esc['margen_sin']/esc['margen']-1):.0f}% — el <b>porcentaje sube</b></div></div>
-    <div class="e mejor"><div class="t">Reemplazo al {mejor['pct']}%</div>
+    <div class="e mejor"><div class="t">Alguien toma tu volumen al {mejor['pct']}%</div>
       <div class="v">{M(mejor['margen'])}</div>
-      <div class="d">tomando tu mismo volumen<br>
+      <div class="d">de margen al año · sobre {M(esc['venta'])} de venta<br>
       <b>{M(mejor['delta'])} más</b> que teniéndote a ti en el box</div></div>"""
 
     reemp = "".join(
@@ -437,10 +440,10 @@ def panel(request: Request, token: str | None = Query(None),
     <div class="gauge"><i style="width:{te['avance']:.0f}%"></i>
       <span>{te['avance']:.0f}% del techo · {M(te['hoy'])} de {M(te['venta'])} al mes</span></div>
     <div class="esc" style="margin-top:14px">
-      <div class="e hoy"><div class="t">Techo con todos</div>
+      <div class="e hoy"><div class="t">Techo con todos · venta</div>
         <div class="v">{M(te['venta']*12)}</div>
         <div class="d">al año · margen <b>{M(te['margen']*12)}</b> · {te['pct']:.1f}%</div></div>
-      <div class="e mejor"><div class="t">Techo sin ti en el box</div>
+      <div class="e mejor"><div class="t">Techo sin ti en el box · venta</div>
         <div class="v">{M(te['venta_sin']*12)}</div>
         <div class="d">al año · margen <b>{M(te['margen_sin']*12)}</b> ·
         <b>{te['pct_sin']:.1f}%</b><br>
