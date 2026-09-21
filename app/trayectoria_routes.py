@@ -28,7 +28,8 @@ La venta atribuida a profesionales que no estan en `equipo_cmc` se costea al
 PCT_DEFAULT. En 2021-2022 eso es mas de la mitad de la venta, asi que el margen
 de esos anos es referencia y no dato. De 2024 en adelante baja a 2-10%.
 """
-from datetime import date, datetime
+import calendar
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request
@@ -78,6 +79,11 @@ def datos() -> dict:
         filas = list(c.execute(
             "SELECT substr(fecha,1,7), id_profesional, SUM(monto) FROM bi_pagos_caja "
             "WHERE fecha >= ? GROUP BY 1,2", (DESDE,)))
+        # Misma venta recortada al día de hoy, para la vista de "mismo corte".
+        _hoy = datetime.now(_CL).date().strftime("%m-%d")
+        filas_corte = list(c.execute(
+            "SELECT substr(fecha,1,7), id_profesional, SUM(monto) FROM bi_pagos_caja "
+            "WHERE fecha >= ? AND substr(fecha,6,5) <= ? GROUP BY 1,2", (DESDE, _hoy)))
         pac = dict(c.execute(
             "SELECT substr(fecha,1,4), COUNT(DISTINCT id_paciente) FROM bi_pagos_caja "
             "WHERE fecha >= ? GROUP BY 1", (DESDE,)))
@@ -174,11 +180,107 @@ def datos() -> dict:
                         "v25": d["v25"], "v26": d["v26"], "delta": d["g26"] - d["g25"]})
     ranking.sort(key=lambda x: -x["delta"])
 
+    corte_proy = ytd_y_proyeccion(filas_corte, filas, pct)
+
     return {"serie": serie, "escenario": escen, "ranking": ranking,
+            "corte": corte_proy,
             "techo": {"filas": techo, "venta": tv, "margen": tg, "pct": 100*tg/tv,
                       "venta_sin": sv, "margen_sin": sg, "pct_sin": 100*sg/sv,
                       "hoy": hoy_v, "avance": 100*hoy_v/tv, "mes": ult},
             "meses": meses, "generado": datetime.now(_CL).strftime("%d-%m-%Y %H:%M")}
+
+
+def ytd_y_proyeccion(filas_corte, filas_todo, pct) -> dict:
+    """Dos vistas que la serie anual no da:
+
+    1. MISMO CORTE — cada año medido del 1-ene al día de hoy. Comparar años
+       completos contra uno en curso infla al pasado; este corte no.
+    2. PROYECCION — cierre del año usando la ESTACIONALIDAD real (cuánto entró
+       históricamente después de esta fecha, como múltiplo del acumulado), no
+       una regla de tres sobre el promedio diario.
+
+    Dos trampas que este cálculo evita a propósito:
+
+      · El sueldo FIJO se prorratea en el mes del corte. Al 21-sep corresponden
+        21/30 del sueldo, no el mes entero; sin eso el margen del año en curso
+        sale castigado contra los años cerrados.
+      · 2021 queda FUERA del promedio de estacionalidad. La caja arranca en
+        julio de 2021, así que su "acumulado al corte" son 3 meses y su ratio
+        (1,29x) no mide estacionalidad sino datos faltantes.
+    """
+    hoy = datetime.now(_CL).date()
+    corte = hoy.strftime("%m-%d")
+    dim = calendar.monthrange(hoy.year, hoy.month)[1]
+    mes_corte = hoy.strftime("%m")
+
+    # ── 1. mismo corte ──
+    ytd: dict = {}
+    for m, i, v in filas_corte:
+        a = m[:4]
+        d = ytd.setdefault(a, {"v": 0.0, "h": 0.0, "fij": {}})
+        d["v"] += v
+        fj = honorario_fijo(i, m)
+        if fj is not None:
+            d["fij"][(m, i)] = fj * (hoy.day / dim if m[5:7] == mes_corte else 1.0)
+        else:
+            d["h"] += v * pct.get(i, PCT_DEFAULT) / 100
+    corte_filas = []
+    ant = None
+    for a in sorted(ytd):
+        d = ytd[a]
+        g = d["v"] - d["h"] - sum(d["fij"].values())
+        corte_filas.append({"anio": a, "venta": d["v"], "margen": g,
+                            "pct": 100 * g / d["v"],
+                            "crec": None if ant is None else 100 * (d["v"] / ant - 1),
+                            # 2021 arranca en julio: su corte no es comparable.
+                            "parcial": a == "2021"})
+        ant = d["v"]
+
+    # ── 2. estacionalidad y cierre ──
+    porm: dict = {}
+    for m, i, v in filas_todo:
+        porm[m] = porm.get(m, 0.0) + v
+    ratios = []
+    for a in sorted(ytd):
+        if a == "2021" or a == str(hoy.year):
+            continue
+        resto = sum(v for m, v in porm.items() if m[:4] == a and m[5:7] > mes_corte)
+        if resto and ytd[a]["v"]:
+            ratios.append({"anio": a, "ratio": resto / ytd[a]["v"],
+                           "base": ytd[a]["v"], "resto": resto})
+    prud = sum(r["ratio"] for r in ratios) / len(ratios) if ratios else 0
+    # Los dos últimos años cerrados mandan: hubo un quiebre de régimen (el Q4
+    # de un negocio que se encoge pesa mucho menos que el de uno que crece).
+    rec = (sum(r["ratio"] for r in ratios[-2:]) / len(ratios[-2:])) if ratios else 0
+
+    base = ytd[str(hoy.year)]["v"]
+    # resto del mes en curso: días hábiles por el promedio de las últimas semanas
+    with db() as c:
+        dd = dict(c.execute("SELECT fecha, SUM(monto) FROM bi_pagos_caja "
+                            "WHERE fecha >= date('now','localtime','-40 day') "
+                            "AND fecha < date('now','localtime') GROUP BY 1"))
+    sem = [v for f, v in dd.items() if date.fromisoformat(f).weekday() < 5]
+    sab = [v for f, v in dd.items() if date.fromisoformat(f).weekday() == 5]
+    ps = sum(sem) / len(sem) if sem else 0
+    pb = sum(sab) / len(sab) if sab else 0
+    falta_mes = sum(pb if date(hoy.year, hoy.month, d).weekday() == 5
+                    else (ps if date(hoy.year, hoy.month, d).weekday() < 5 else 0)
+                    for d in range(hoy.day + 1, dim + 1))
+
+    cierres = [{"nombre": "Prudente", "det": f"estacionalidad promedio de {len(ratios)} años",
+                "ratio": prud, "total": base + falta_mes + base * prud},
+               {"nombre": "Tendencia", "det": "estacionalidad de los 2 últimos años",
+                "ratio": rec, "total": base + falta_mes + base * rec}]
+    anterior = sum(v for m, v in porm.items() if m[:4] == str(hoy.year - 1))
+    for cc in cierres:
+        cc["margen"] = cc["total"] * corte_filas[-1]["pct"] / 100
+        cc["vs"] = 100 * (cc["total"] / anterior - 1) if anterior else 0
+
+    return {"corte": corte_filas, "corte_fecha": hoy.strftime("%d-%m"),
+            "ratios": ratios, "base": base, "falta_mes": falta_mes,
+            "dias_falta": sum(1 for d in range(hoy.day + 1, dim + 1)
+                              if date(hoy.year, hoy.month, d).weekday() < 6),
+            "dia_habil": ps, "cierres": cierres, "anterior": anterior}
 
 
 @router.get("/alma/api/trayectoria")
@@ -262,6 +364,25 @@ margin:10px 0 6px}
 font-size:11.5px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.28)}
 .mini{height:6px;border-radius:3px;background:#e8f0f5;overflow:hidden;min-width:56px}
 .mini i{display:block;height:100%;background:var(--aqua)}
+/* Proyección */
+.proy{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.p{border:1px solid var(--border);border-radius:13px;padding:15px 16px;background:var(--card);
+border-left:4px solid var(--aqua)}
+.p.alto{border-left-color:var(--green);background:linear-gradient(120deg,var(--green-s),#fff)}
+.p .t{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.p .v{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;margin:5px 0 3px;
+letter-spacing:-.7px}
+.p .d{font-size:11.5px;color:var(--mute);line-height:1.5}.p .d b{color:var(--text)}
+.barras{display:flex;gap:10px;align-items:flex-end;height:120px;margin:10px 0 2px}
+.barras .c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+height:100%;gap:5px}
+.barras .b{width:100%;max-width:70px;border-radius:5px 5px 0 0;min-height:4px;
+background:linear-gradient(180deg,var(--aqua),var(--blue))}
+.barras .c.baja .b{background:linear-gradient(180deg,#f08a8a,var(--red))}
+.barras .c.proy .b{background:repeating-linear-gradient(45deg,#bfe6ee,#bfe6ee 5px,#e8f8fb 5px,#e8f8fb 10px);
+border:1px dashed var(--blue)}
+.barras .v{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
+.barras .a{font-size:10px;color:var(--mute);font-weight:700}
 .aviso{border-radius:11px;padding:13px 16px;font-size:12.5px;line-height:1.55;
 margin-bottom:14px;border:1px solid}
 .aviso.amber{background:var(--amber-s);border-color:#f0dcae;color:#7c4a03}
@@ -365,6 +486,41 @@ def panel(request: Request, token: str | None = Query(None),
         f'{M(r["delta"])}</span></td></tr>'
         for r in d["ranking"][:8] + d["ranking"][-3:])
 
+    # ── mismo corte + proyección ──
+    cp = d["corte"]
+    cfilas = "".join(
+        f'<tr class="{"crisis" if (r["crec"] or 0) < 0 else ("hoy" if r["anio"] == cp["corte"][-1]["anio"] else "")}">'
+        f'<td class="nom">{r["anio"]}'
+        + ('<div class="sub">arranca en julio, no comparable</div>' if r["parcial"] else '')
+        + f'</td><td class="n">{M(r["venta"])}</td>'
+        f'<td class="n">' + ("—" if r["crec"] is None else
+          f'<span class="{"up" if r["crec"] > 0 else "dn"}">{r["crec"]:+.0f}%</span>') + '</td>'
+        f'<td class="n">{M(r["margen"])}</td>'
+        f'<td class="n"><b>{r["pct"]:.1f}%</b></td></tr>' for r in cp["corte"])
+
+    tope_c = max(r["venta"] for r in cp["corte"])
+    cbarras = "".join(
+        f'<div class="c{" baja" if (r["crec"] or 0) < 0 else ""}">'
+        f'<div class="v">{M(r["venta"])}</div>'
+        f'<div class="b" style="height:{100*r["venta"]/tope_c:.0f}%"></div>'
+        f'<div class="a">{r["anio"]}</div></div>' for r in cp["corte"])
+
+    _u = cp["corte"][-1]
+    cnota = (f'A esta fecha vas <b>{_u["crec"]:+.0f}%</b> contra el año pasado, con el margen '
+             f'en <b>{_u["pct"]:.1f}%</b>. La barra roja es el año que cayó.')
+
+    ratios = "".join(
+        f'<tr><td class="nom">{r["anio"]}</td><td class="n">{M(r["base"])}</td>'
+        f'<td class="n">{M(r["resto"])}</td>'
+        f'<td class="n"><b>{r["ratio"]:.2f}x</b></td></tr>' for r in cp["ratios"])
+
+    proyec = "".join(
+        f'<div class="p{" alto" if cc is cp["cierres"][-1] else ""}">'
+        f'<div class="t">{cc["nombre"]}</div><div class="v">{M(cc["total"])}</div>'
+        f'<div class="d">{cc["det"]} ({cc["ratio"]:.2f}x)<br>'
+        f'margen <b>{M(cc["margen"])}</b> · <b>{cc["vs"]:+.0f}%</b> contra el año anterior'
+        f'</div></div>' for cc in cp["cierres"])
+
     malo = [r for r in s if r["desc"] > 20]
     aviso = ""
     if malo:
@@ -431,6 +587,39 @@ def panel(request: Request, token: str | None = Query(None),
         <th style="text-align:right">Margen del centro</th>
         <th style="text-align:right">vs. tenerte a ti</th></tr></thead>
       <tbody>{reemp}</tbody></table></div>
+  </div>
+
+  <div class="card">
+    <h2>Mismo corte: 1 de enero al {cp['corte_fecha']} de cada año</h2>
+    <p class="h2s">Comparar un año en curso contra años completos infla al pasado.
+    Acá todos se cortan el mismo día, así que el crecimiento es el real a esta fecha.</p>
+    <div class="scroll"><table style="min-width:520px">
+      <thead><tr><th>Año al {cp['corte_fecha']}</th><th style="text-align:right">Venta</th>
+        <th style="text-align:right">Crec.</th><th style="text-align:right">Margen</th>
+        <th style="text-align:right">% marg</th></tr></thead>
+      <tbody>{cfilas}</tbody></table></div>
+    <div class="barras">{cbarras}</div>
+    <p class="nota">{cnota}</p>
+  </div>
+
+  <div class="card">
+    <h2>Proyección de cierre</h2>
+    <p class="h2s">No es una regla de tres sobre el promedio diario: usa la
+    <b>estacionalidad real</b> — cuánto entró históricamente después de esta fecha, como
+    múltiplo de lo acumulado.</p>
+    <div class="scroll" style="margin-bottom:14px"><table style="min-width:460px">
+      <thead><tr><th>Año</th><th style="text-align:right">Al {cp['corte_fecha']}</th>
+        <th style="text-align:right">Entró después</th>
+        <th style="text-align:right">Múltiplo</th></tr></thead>
+      <tbody>{ratios}</tbody></table></div>
+    <div class="proy">{proyec}</div>
+    <p class="nota">Parte de <b>{M(cp['base'])}</b> ya en caja más <b>{M(cp['falta_mes'])}</b>
+    de lo que queda del mes ({cp['dias_falta']} días hábiles a {M(cp['dia_habil'])}).
+    El múltiplo tiene un <b>quiebre de régimen</b>: 0,27x y 0,24x cuando el centro se
+    encogía, contra 0,49x y 0,46x creciendo. Por eso el escenario de tendencia usa solo
+    los dos últimos años — el Q4 de un negocio que crece no se parece al de uno que cae.
+    <b>2021 queda fuera</b>: la caja arranca en julio, su múltiplo mide datos faltantes,
+    no estacionalidad.</p>
   </div>
 
   <div class="card">
