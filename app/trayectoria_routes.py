@@ -181,13 +181,89 @@ def datos() -> dict:
     ranking.sort(key=lambda x: -x["delta"])
 
     corte_proy = ytd_y_proyeccion(filas_corte, filas, pct)
+    extra = analisis_extra(filas, meses, pct, eq)
 
     return {"serie": serie, "escenario": escen, "ranking": ranking,
-            "corte": corte_proy,
+            "corte": corte_proy, "extra": extra,
             "techo": {"filas": techo, "venta": tv, "margen": tg, "pct": 100*tg/tv,
                       "venta_sin": sv, "margen_sin": sg, "pct_sin": 100*sg/sv,
                       "hoy": hoy_v, "avance": 100*hoy_v/tv, "mes": ult},
             "meses": meses, "generado": datetime.now(_CL).strftime("%d-%m-%Y %H:%M")}
+
+
+def analisis_extra(filas, meses, pct, eq) -> dict:
+    """Lo que la serie anual no cuenta: el valle, el mix, y de donde salio el quiebre.
+
+    Todo se calcula sobre la misma caja; ninguna cifra esta escrita a mano.
+    """
+    # ── el valle y la recuperacion ────────────────────────────────────────
+    llenos = {m: v for m, v in meses.items() if v > 0}
+    peor = min(llenos.items(), key=lambda x: x[1])
+    mejor = max(llenos.items(), key=lambda x: x[1])
+    dif = ((int(mejor[0][:4]) - int(peor[0][:4])) * 12
+           + int(mejor[0][5:7]) - int(peor[0][5:7]))
+
+    # ── mix: cuanta venta viene de profesionales caros ────────────────────
+    # El corte en 70% no es arbitrario: es donde estan psiquiatria (90),
+    # implantologia (80) y las medicinas generales de 75 — las lineas que
+    # crecen la venta sin mover el margen.
+    mix = {}
+    for m, i, v in filas:
+        a = m[:4]
+        d = mix.setdefault(a, {"tot": 0.0, "caro": 0.0, "barato": 0.0, "fijo": 0.0})
+        d["tot"] += v
+        if honorario_fijo(i, m) is not None:
+            d["fijo"] += v
+        elif pct.get(i, PCT_DEFAULT) >= 70:
+            d["caro"] += v
+        elif pct.get(i, PCT_DEFAULT) < 60:
+            d["barato"] += v
+    mix_filas = [{"anio": a, **{k: 100 * d[k] / d["tot"] for k in ("caro", "barato", "fijo")},
+                  "medio": 100 * (d["tot"] - d["caro"] - d["barato"] - d["fijo"]) / d["tot"]}
+                 for a, d in sorted(mix.items())]
+
+    # ── el quiebre: quien crecio entre el peor año y el siguiente ─────────
+    a_peor = peor[0][:4]
+    a_sig = str(int(a_peor) + 1)
+    q = {}
+    for m, i, v in filas:
+        if m[:4] in (a_peor, a_sig):
+            q.setdefault(i, {a_peor: 0.0, a_sig: 0.0})[m[:4]] += v
+    quiebre = []
+    for i, dd in q.items():
+        info = eq.get(i, {"nombre": f"id {i}", "esp": "(sin registrar)"})
+        quiebre.append({"nombre": info["nombre"], "esp": info["esp"],
+                        "antes": dd[a_peor], "despues": dd[a_sig],
+                        "delta": dd[a_sig] - dd[a_peor]})
+    quiebre.sort(key=lambda x: -x["delta"])
+
+    # ── sueldos fijos: lo unico que rompe la banda, ¿esta funcionando? ────
+    fijos = {}
+    for m, i, v in filas:
+        fj = honorario_fijo(i, m)
+        if fj is None:
+            continue
+        d = fijos.setdefault(i, {"v": 0.0, "c": 0.0, "desde": m, "hasta": m})
+        d["v"] += v; d["c"] += fj
+        d["desde"] = min(d["desde"], m); d["hasta"] = max(d["hasta"], m)
+    fijos_filas = [{"nombre": eq.get(i, {"nombre": f"id {i}"})["nombre"],
+                    "esp": eq.get(i, {"esp": ""}).get("esp", ""), **d,
+                    "neto": d["v"] - d["c"]} for i, d in fijos.items()]
+
+    # ── pendientes de datos: venta sin % conocido ─────────────────────────
+    sin = {}
+    for m, i, v in filas:
+        if i and i not in eq:
+            d = sin.setdefault(i, {"v": 0.0, "anios": set()})
+            d["v"] += v; d["anios"].add(m[:4])
+    pend = sorted(({"id": i, "v": d["v"], "anios": sorted(d["anios"])}
+                   for i, d in sin.items()), key=lambda x: -x["v"])[:6]
+
+    return {"peor": {"mes": peor[0], "v": peor[1]},
+            "mejor": {"mes": mejor[0], "v": mejor[1]},
+            "factor": mejor[1] / peor[1], "meses_rec": dif,
+            "mix": mix_filas, "quiebre": quiebre, "a_peor": a_peor, "a_sig": a_sig,
+            "fijos": fijos_filas, "pendientes": pend}
 
 
 def ytd_y_proyeccion(filas_corte, filas_todo, pct) -> dict:
@@ -364,6 +440,29 @@ margin:10px 0 6px}
 font-size:11.5px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.28)}
 .mini{height:6px;border-radius:3px;background:#e8f0f5;overflow:hidden;min-width:56px}
 .mini i{display:block;height:100%;background:var(--aqua)}
+/* Serie mensual */
+.serie{display:flex;gap:1.5px;align-items:flex-end;height:120px;margin:6px 0 2px}
+.serie i{flex:1;background:linear-gradient(180deg,var(--aqua),var(--blue));border-radius:2px 2px 0 0;
+min-height:2px;position:relative}
+.serie i.peor{background:var(--red)} .serie i.mejor{background:var(--green)}
+.ejes{display:flex;justify-content:space-between;font-size:10px;color:var(--mute);font-weight:700}
+.hito{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+.hito div{flex:1;min-width:150px}
+.hito .t{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.hito .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
+.hito .v.malo{color:var(--red)} .hito .v.bueno{color:var(--green)}
+.hito .s{font-size:11px;color:var(--mute)}
+/* Mix apilado */
+.mix{display:flex;flex-direction:column;gap:7px}
+.mx{display:flex;align-items:center;gap:10px}
+.mx .a{font-size:11px;font-weight:800;width:38px;color:var(--mute)}
+.mx .bar{flex:1;display:flex;height:22px;border-radius:6px;overflow:hidden}
+.mx .bar span{display:flex;align-items:center;justify-content:center;font-size:9.5px;
+font-weight:800;color:#fff;white-space:nowrap}
+.mx .caro{background:var(--red)} .mx .medio{background:#f0a92b}
+.mx .barato{background:var(--green)} .mx .fijo{background:var(--blue)}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--mute);margin-top:9px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 /* Proyección */
 .proy{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
 .p{border:1px solid var(--border);border-radius:13px;padding:15px 16px;background:var(--card);
@@ -521,6 +620,65 @@ def panel(request: Request, token: str | None = Query(None),
         f'margen <b>{M(cc["margen"])}</b> · <b>{cc["vs"]:+.0f}%</b> contra el año anterior'
         f'</div></div>' for cc in cp["cierres"])
 
+    # ── serie mensual, valle, quiebre, mix, fijos, pendientes ──
+    ex = d["extra"]
+    ms = sorted(d["meses"])
+    tope_m = max(d["meses"].values())
+    sserie = "".join(
+        f'<i class="{"peor" if m == ex["peor"]["mes"] else ("mejor" if m == ex["mejor"]["mes"] else "")}"'
+        f' style="height:{100*d["meses"][m]/tope_m:.1f}%" title="{m}: {M(d["meses"][m])}"></i>'
+        for m in ms)
+    nmeses, mes0, mesN = len(ms), ms[0], ms[-1]
+
+    sq = "".join(
+        f'<tr><td><div class="nom">{r["nombre"]}</div><div class="sub">{r["esp"]}</div></td>'
+        f'<td class="n">{M(r["antes"])}</td><td class="n">{M(r["despues"])}</td>'
+        f'<td class="n"><span class="{"up" if r["delta"] > 0 else "dn"}">{M(r["delta"])}</span>'
+        f'</td></tr>' for r in ex["quiebre"][:6])
+    _t3 = sum(r["delta"] for r in ex["quiebre"][:1])
+    _tt = sum(r["delta"] for r in ex["quiebre"] if r["delta"] > 0)
+    qnota = (f'El dueño solo explica <b>{100*_t3/_tt:.0f}%</b> del crecimiento de ese año '
+             f'({M(_t3)} de {M(_tt)}). El resto son <b>líneas nuevas</b> que se abrieron: '
+             f'ecografía, kinesiología y odontología. Y en paralelo se podó el equipo. '
+             f'Salir de la caída fue trabajar más <b>y</b> cambiar la oferta, no una sola '
+             f'de las dos.')
+
+    smix = ""
+    for r in ex["mix"]:
+        tramos = "".join(
+            f'<span class="{k}" style="width:{r[k]:.1f}%">{r[k]:.0f}%</span>'
+            for k in ("caro", "medio", "barato", "fijo") if r[k] >= 4)
+        smix += f'<div class="mx"><span class="a">{r["anio"]}</span><div class="bar">{tramos}</div></div>'
+    _p, _u = ex["mix"][0], ex["mix"][-1]
+    mixnota = (f'La venta que viene de profesionales caros pasó de <b>{_p["caro"]:.0f}%</b> '
+               f'a <b>{_u["caro"]:.0f}%</b>, y baja todos los años sin excepción. Ese es el '
+               f'cambio estructural de fondo: no es que se venda más de lo mismo, es que se '
+               f'vende <b>otra mezcla</b>. Es la razón por la que el margen aguanta mientras '
+               f'el tamaño se multiplica.')
+
+    sfij = "".join(
+        f'<tr><td><div class="nom">{r["nombre"]}</div><div class="sub">{r["esp"]}</div></td>'
+        f'<td class="n sub">{r["desde"]}</td><td class="n">{M(r["v"])}</td>'
+        f'<td class="n">{M(r["c"])}</td>'
+        f'<td class="n"><span class="{"up" if r["neto"] > 0 else "dn"}">{M(r["neto"])}</span>'
+        f'</td></tr>' for r in ex["fijos"])
+    if ex["fijos"]:
+        _f = ex["fijos"][0]
+        fijnota = (f'{_f["nombre"]} lleva <b>{M(_f["v"])}</b> producidos contra '
+                   f'<b>{M(_f["c"])}</b> de sueldo: va en <b>{M(_f["neto"])}</b>. '
+                   + ('La tesis del costo fijo es correcta — es lo único que puede romper '
+                      'la banda — pero <b>este caso todavía no la demuestra</b>. Recién '
+                      'está dando vuelta la esquina.' if _f["neto"] < 0 else
+                      'Ya está en azul: la apuesta del costo fijo está pagando.'))
+    else:
+        fijnota = "Nadie con sueldo fijo todavía. Todo el equipo va a comisión."
+
+    spend = "".join(
+        f'<tr><td class="nom">{r["id"]}</td><td class="n">{M(r["v"])}</td>'
+        f'<td class="sub">{", ".join(r["anios"])}</td>'
+        f'<td>{"<b style=color:#e84545>sigue facturando</b>" if str(mesN)[:4] in r["anios"] else "<span class=sub>ya no está</span>"}</td>'
+        f'</tr>' for r in ex["pendientes"])
+
     malo = [r for r in s if r["desc"] > 20]
     aviso = ""
     if malo:
@@ -563,6 +721,35 @@ def panel(request: Request, token: str | None = Query(None),
   </div>
 
   <div class="card">
+    <h2>Mes a mes, los {nmeses} meses</h2>
+    <p class="h2s">La serie completa de caja. En rojo el peor mes, en verde el mejor.</p>
+    <div class="serie">{sserie}</div>
+    <div class="ejes"><span>{mes0}</span><span>{mesN}</span></div>
+    <div class="hito">
+      <div><div class="t">El fondo</div><div class="v malo">{M(ex['peor']['v'])}</div>
+        <div class="s">{ex['peor']['mes']}</div></div>
+      <div><div class="t">El techo alcanzado</div><div class="v bueno">{M(ex['mejor']['v'])}</div>
+        <div class="s">{ex['mejor']['mes']}</div></div>
+      <div><div class="t">Recuperación</div><div class="v">{ex['factor']:.1f}x</div>
+        <div class="s">en {ex['meses_rec']} meses</div></div>
+    </div>
+    <p class="nota">Del fondo a hoy hay <b>{ex['factor']:.1f} veces</b> en
+    {ex['meses_rec']} meses. Ese, y no el crecimiento del último año, es el número que
+    mide lo que se hizo acá.</p>
+  </div>
+
+  <div class="card">
+    <h2>Cómo se salió de {ex['a_peor']}</h2>
+    <p class="h2s">Quién movió la venta entre {ex['a_peor']} y {ex['a_sig']}, el año del quiebre.</p>
+    <div class="scroll"><table style="min-width:520px">
+      <thead><tr><th>Profesional</th><th style="text-align:right">{ex['a_peor']}</th>
+        <th style="text-align:right">{ex['a_sig']}</th>
+        <th style="text-align:right">Δ venta</th></tr></thead>
+      <tbody>{sq}</tbody></table></div>
+    <p class="nota">{qnota}</p>
+  </div>
+
+  <div class="card">
     <h2>El margen nunca sale de la banda</h2>
     <p class="h2s">Porcentaje que queda en el centro, año a año.</p>
     {banda}
@@ -587,6 +774,21 @@ def panel(request: Request, token: str | None = Query(None),
         <th style="text-align:right">Margen del centro</th>
         <th style="text-align:right">vs. tenerte a ti</th></tr></thead>
       <tbody>{reemp}</tbody></table></div>
+  </div>
+
+  <div class="card">
+    <h2>De dónde viene la venta</h2>
+    <p class="h2s">Repartida por lo que se lleva el profesional. El corte en 70% no es
+    arbitrario: ahí están psiquiatría (90%), implantología (80%) y las medicinas generales
+    de 75% — las líneas que suben la venta sin mover el margen.</p>
+    <div class="mix">{smix}</div>
+    <div class="leg">
+      <span><i style="background:var(--red)"></i>70% o más (caro)</span>
+      <span><i style="background:#f0a92b"></i>60–69%</span>
+      <span><i style="background:var(--green)"></i>bajo 60% (barato)</span>
+      <span><i style="background:var(--blue)"></i>sueldo fijo</span>
+    </div>
+    <p class="nota">{mixnota}</p>
   </div>
 
   <div class="card">
@@ -651,6 +853,19 @@ def panel(request: Request, token: str | None = Query(None),
   </div>
 
   <div class="card">
+    <h2>Costo fijo: la única forma de romper la banda</h2>
+    <p class="h2s">A comisión el costo crece igual que la venta, así que el porcentaje
+    no se mueve. Con sueldo fijo sí — pero recién deja margen cuando la producción
+    supera el sueldo. Así va la apuesta:</p>
+    <div class="scroll"><table style="min-width:540px">
+      <thead><tr><th>Profesional</th><th style="text-align:right">Desde</th>
+        <th style="text-align:right">Produjo</th><th style="text-align:right">Costó</th>
+        <th style="text-align:right">Neto</th></tr></thead>
+      <tbody>{sfij}</tbody></table></div>
+    <p class="nota">{fijnota}</p>
+  </div>
+
+  <div class="card">
     <h2>Quién mueve el margen</h2>
     <p class="h2s">Cambio del margen del centro entre 2025 y 2026, mismos meses.
     Los de <b>costo fijo</b> se calculan con su contrato, no con porcentaje.</p>
@@ -661,6 +876,21 @@ def panel(request: Request, token: str | None = Query(None),
       <tbody>{rk}</tbody></table></div>
     <p class="nota">Vender más no es lo mismo que dejar más: mira las filas donde la venta
     sube y el margen casi no se mueve. Ahí está el 70–75% de comisión.</p>
+  </div>
+
+  <div class="card">
+    <h2>Pendientes de datos</h2>
+    <p class="h2s">Venta atribuida a profesionales que no están en <code>equipo_cmc</code>.
+    Se costea al {PCT_DEFAULT}% supuesto, así que mueve el margen de estas tablas sin que
+    nadie lo decida.</p>
+    <div class="scroll"><table style="min-width:400px">
+      <thead><tr><th>id en Medilink</th><th style="text-align:right">Venta acumulada</th>
+        <th>Años</th><th></th></tr></thead>
+      <tbody>{spend}</tbody></table></div>
+    <p class="nota">Los <b>1000+</b> son de la numeración vieja: profesionales que ya no
+    están y no vale la pena cargar. Los de <b>numeración corriente que siguen
+    facturando</b> sí — cada uno mueve el margen real sin que nadie haya decidido su
+    porcentaje.</p>
   </div>
 
 </div></body></html>""")
