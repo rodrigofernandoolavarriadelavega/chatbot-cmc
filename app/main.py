@@ -1592,6 +1592,8 @@ import cargos_routes
 app.include_router(cargos_routes.router)        # cargos a descontar al profesional (Javiera 01-09)
 import imagendent_routes
 app.include_router(imagendent_routes.router)    # convenio Imagendent: cupones + saldo medidos en Medilink
+import trayectoria_routes
+app.include_router(trayectoria_routes.router)  # SOLO DUENO: 5 anos de caja, banda del margen, techo
 import orto_embudo_routes
 app.include_router(orto_embudo_routes.router)   # embudo de ortodoncia previo a la instalacion
 import orto_fotos_routes
