@@ -63,6 +63,7 @@ router = APIRouter(tags=["imagendent"])
 # El total se DERIVA de las entregas y nunca se escribe a mano.
 RX_POR_TRAMO    = 15          # cupones de radiografia por cuponera
 CBCT_POR_TRAMO  = 1           # CBCT de cortesia por cuponera
+CUPONES_POR_TRAMO = RX_POR_TRAMO + CBCT_POR_TRAMO   # 16 cupones en total por cuponera
 PRECIO_TRAMO    = 150_000     # $10.000 x 15 RX
 CUPONERAS_X_ORO = 2           # un "Plan Oro" = 2 cuponeras
 # Cada ENTREGA es un hecho con fecha. El consumo se imputa FIFO (se gasta
@@ -960,11 +961,11 @@ def panel(request: Request, token: str | None = Query(None),
     kpis = f"""
     <div class="k"><div class="lbl">Cupones de radiografía</div>
       <div class="v {cls_rx}">{oro["rx_restantes"]}</div>
-      <div class="de">de {oro["rx_total"]} · {TRAMOS_ORO} cuponeras de {RX_POR_TRAMO}</div>
+      <div class="de">de {oro["rx_total"]} · {TRAMOS_ORO} cuponeras de {CUPONES_POR_TRAMO} ({RX_POR_TRAMO} RX + {CBCT_POR_TRAMO} CBCT)</div>
       <div class="g"><i class="{cls_rx}" style="width:{pct_rx:.0f}%"></i></div></div>
     <div class="k"><div class="lbl">CBCT de cortesía</div>
       <div class="v">{oro["cbct_restantes"]}</div>
-      <div class="de">de {oro["cbct_total"]} · 1 por cuponera</div>
+      <div class="de">de {oro["cbct_total"]} · {CBCT_POR_TRAMO} por cuponera de {CUPONES_POR_TRAMO}</div>
       <div class="g"><i style="width:{100 * oro["cbct_restantes"] / max(oro["cbct_total"], 1):.0f}%"></i></div></div>
     <div class="k"><div class="lbl">Cuenta Socio Estratégico</div>
       <div class="v {cls_sal}">{_m(sal["restante"])}</div>
