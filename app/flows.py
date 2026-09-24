@@ -272,6 +272,22 @@ def _afirma(tl: str, tl_norm: str) -> bool:
     return any(limpio == a or limpio.startswith(a + " ") for a in AFIRMACIONES)
 
 
+# Palabras que convierten un "sí" en "sí, pero otra cosa": en WAIT_SLOT no
+# pueden confirmar la hora sugerida ("sí pero mejor el martes", "sí a las 5").
+_CONTRASTE_SLOT_RE = re.compile(
+    r"\d|\b(pero|mejor|otr[oa]s?|cambi\w*|no|tarde|mañana|manana|lunes|martes|"
+    r"mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|hoy|semana|antes|despu[eé]s)\b")
+
+
+def _afirma_slot(tl: str, tl_norm: str) -> bool:
+    """`_afirma` para WAIT_SLOT: acepta "sí por favor" / "sí dale", pero no un
+    "sí" que trae otra fecha u hora — ese texto lo tiene que interpretar el
+    resto del handler, no reservar la hora sugerida."""
+    if not _afirma(tl, tl_norm):
+        return False
+    return not _CONTRASTE_SLOT_RE.search(tl_norm or tl or "")
+
+
 def _niega(tl: str, tl_norm: str) -> bool:
     """Mismo tratamiento que `_afirma` pero para negaciones ("No, gracias")."""
     _sin_vocales_rep = re.sub(r"([aeiou])\1{2,}", r"\1", tl_norm)
@@ -3295,9 +3311,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # si NO hay cita con recordatorio pendiente, no deben disparar "¿Qué
     # quieres confirmar?" (esa pregunta es solo para quien dijo explícitamente
     # "confirmo"/"asistiré") — ver el branch "sin cita" más abajo.
+    # Portaviones 2026-09-24 #8 (caso 56972978206): "Si" pelado (sin
+    # puntuación ni "confirmo"/"asistiré") a un recordatorio de cita caía al
+    # menú genérico. Mismo tratamiento que "sii"/"oki": SOLO confirma si hay
+    # una cita real con recordatorio pendiente (ver bloque de arriba); sin
+    # eso, cae al flujo normal sin forzar "¿Qué quieres confirmar?" — un "Si"
+    # pelado fuera de contexto es demasiado ambiguo para eso.
     _TOKENS_CONFIRM_RECOD_SOFT = {
         "hay estare", "hay estaré", "ahi voy", "ahí voy",
         "sii", "si!", "oki", "okey", "agradecida",
+        "si", "sí", "sip",
     }
     _es_confirmacion_recod_soft = tl_norm in _TOKENS_CONFIRM_RECOD_SOFT
     _es_confirmacion_recod = (
@@ -5609,9 +5632,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _btn_msg(
                 "Recibí tu *RUT* 👌 ¿Qué necesitas hacer?",
                 [
+                    # Portaviones 2026-09-24 #7 (caso 56991471428): estos ids
+                    # deben coincidir con los atajos numéricos globales de IDLE
+                    # ("1"=agendar, "2"=reagendar, "3"=cancelar, "4"=ver — ver
+                    # bloque "Atajos numéricos del menú" más abajo). Antes
+                    # "Ver mis citas" mandaba id="3", que el dispatcher global
+                    # interpreta como CANCELAR — el botón "Ver mis citas"
+                    # entraba directo a _iniciar_cancelar (WAIT_CITA_CANCELAR)
+                    # en vez de _iniciar_ver.
                     {"id": "1", "title": "Agendar hora"},
-                    {"id": "3", "title": "Ver mis citas"},
-                    {"id": "2", "title": "Cancelar cita"},
+                    {"id": "4", "title": "Ver mis citas"},
+                    {"id": "3", "title": "Cancelar cita"},
                 ]
             )
 
@@ -7761,7 +7792,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 ))
             )
         )
-        if (tl == "confirmar_sugerido" or tl in AFIRMACIONES or tl_norm in AFIRMACIONES or _afirm_libre) and slots_mostrados:
+        # Portaviones 2026-09-24 #8 (caso 56910111979, "Si por favor"): el
+        # check exacto `tl in AFIRMACIONES` no tolera afirmaciones con texto
+        # pegado ("si por favor", "sí dale"). `_afirma()` es el helper
+        # compartido que ya tolera eso (prefijo "si " + puntuación pegada +
+        # vocales repetidas) — se usa en CONFIRMING_CITA/CONFIRMING_CANCEL,
+        # faltaba acá.
+        if (tl == "confirmar_sugerido" or _afirma_slot(tl, tl_norm) or _afirm_libre) and slots_mostrados:
             # Si el paciente pidió explicitamente otro profesional antes y los
             # slots mostrados NO son de él, preferir uno que sí lo sea.
             _pedido = data.get("prof_pedido_explicito")
@@ -11885,7 +11922,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_CITA_CANCELAR ────────────────────────────────────────────────────
     if state == "WAIT_CITA_CANCELAR":
         citas = data.get("citas", [])
-        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        # "ninguna"/"ninguno" sumados en el portaviones 2026-09-24 #7 (caso
+        # 56991471428): el paciente respondía "Ninguna" para declinar la
+        # selección y quedaba atrapado en "Elige un número entre 1 y N"
+        # porque el set de salida solo reconocía menu/salir/atras.
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás",
+                      "ninguna", "ninguno", "ningun", "ningún"}
         if (tl in NEGACIONES or tl_norm in NEGACIONES
                 or tl in _SET_SALIR or tl_norm in _SET_SALIR):
             reset_session(phone)
@@ -12157,7 +12199,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_CITA_REAGENDAR ───────────────────────────────────────────────────
     if state == "WAIT_CITA_REAGENDAR":
         citas = data.get("citas", [])
-        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        # "ninguna"/"ninguno" sumados en el portaviones 2026-09-24 #7 (caso
+        # 56991471428): el paciente respondía "Ninguna" para declinar la
+        # selección y quedaba atrapado en "Elige un número entre 1 y N"
+        # porque el set de salida solo reconocía menu/salir/atras.
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás",
+                      "ninguna", "ninguno", "ningun", "ningún"}
         if (tl in NEGACIONES or tl_norm in NEGACIONES
                 or tl in _SET_SALIR or tl_norm in _SET_SALIR):
             reset_session(phone)
@@ -12559,7 +12606,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # que elija un número, o que mande un RUT de familiar no vinculado.
     if state == "WAIT_CITA_CANCELAR_FAMILIAR":
         citas_planas = data.get("citas_familiares", [])
-        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        # "ninguna"/"ninguno" sumados en el portaviones 2026-09-24 #7 (caso
+        # 56991471428): el paciente respondía "Ninguna" para declinar la
+        # selección y quedaba atrapado en "Elige un número entre 1 y N"
+        # porque el set de salida solo reconocía menu/salir/atras.
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás",
+                      "ninguna", "ninguno", "ningun", "ningún"}
         if tl in _SET_SALIR or tl_norm in _SET_SALIR:
             reset_session(phone)
             return "Perfecto, no cancelamos nada 😊\n_Escribe *menu* si necesitas algo más._"
@@ -12627,7 +12679,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ── WAIT_CITA_REAGENDAR_FAMILIAR ──────────────────────────────────────────
     if state == "WAIT_CITA_REAGENDAR_FAMILIAR":
         citas_planas = data.get("citas_familiares", [])
-        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás"}
+        # "ninguna"/"ninguno" sumados en el portaviones 2026-09-24 #7 (caso
+        # 56991471428): el paciente respondía "Ninguna" para declinar la
+        # selección y quedaba atrapado en "Elige un número entre 1 y N"
+        # porque el set de salida solo reconocía menu/salir/atras.
+        _SET_SALIR = {"menu", "menú", "salir", "atras", "atrás",
+                      "ninguna", "ninguno", "ningun", "ningún"}
         if tl in _SET_SALIR or tl_norm in _SET_SALIR:
             reset_session(phone)
             return "Perfecto, dejamos las citas como están 😊\n_Escribe *menu* si necesitas algo más._"
@@ -16317,6 +16374,25 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         data["waitlist_especialidad"] = especialidad_lower
         data["waitlist_id_prof_pref"] = id_prof_pref
 
+        # Portaviones 2026-09-24 #6: especialidades con abono OBLIGATORIO
+        # (Gastroenterología $35.000, Psiquiatría $60.000, Neurología,
+        # Nutriología y Diabetología) no avisaban el abono al inscribir en
+        # lista de espera — el paciente se enteraba recién al intentar
+        # reservar, cuando ya se liberó el cupo. Monto real desde
+        # config.ABONO_REGLAS (misma fuente que el gate de agendamiento), no
+        # inventado acá.
+        from config import abono_regla as _abono_regla_wl
+        _regla_wl = _abono_regla_wl(especialidad=especialidad_lower)
+        _abono_nota_wl = ""
+        if _regla_wl:
+            _monto_wl_txt = f"{_regla_wl['monto']:,.0f}".replace(",", ".")
+            _abono_nota_wl = (
+                f"\n\n💳 Ojo: *{_regla_wl['etiqueta']}* pide un abono de "
+                f"*${_monto_wl_txt}* por adelantado para confirmar la hora "
+                "(es el valor total de la consulta, el día de la atención no "
+                "pagas nada adicional)."
+            )
+
         # Auditoría 2026-05-03: 145 sin_disponibilidad/30d → 0 inserts en waitlist.
         # Pacientes abandonaban en WAIT_WAITLIST_CONFIRM sin responder. Fix: si ya
         # conocemos al paciente (perfil completo) inscribir AUTOMÁTICO con opt-out
@@ -16341,14 +16417,16 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                     return (
                         f"{_header_auto}\n\n"
                         f"Te inscribí {saludo}en la lista de espera. Apenas tengamos fecha "
-                        "te aviso por este mismo chat 📱\n\n"
+                        "te aviso por este mismo chat 📱"
+                        f"{_abono_nota_wl}\n\n"
                         "Si prefieres no recibir aviso, responde *BAJA*.\n"
                         "_Escribe *menu* si necesitas algo más._"
                     )
                 return (
                     f"No hay horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
                     f"Te inscribí {saludo}en la lista de espera. Apenas se libere un cupo "
-                    "te aviso por este mismo chat 📱\n\n"
+                    "te aviso por este mismo chat 📱"
+                    f"{_abono_nota_wl}\n\n"
                     "Si prefieres no recibir aviso, responde *BAJA*.\n"
                     "_Escribe *menu* si necesitas algo más._"
                 )
@@ -16366,6 +16444,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 f"No encontré horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
                 "¿Quieres que te avise apenas se libere un cupo?\n"
                 "Te inscribo en nuestra lista de espera y te escribo por WhatsApp."
+                f"{_abono_nota_wl}"
             )
         )
         return _btn_msg(

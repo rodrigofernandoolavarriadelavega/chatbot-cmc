@@ -359,12 +359,21 @@ async def _enviar_reenganche():
             continue
 
         # (d) Estados de OFERTA OPCIONAL post-acción (cross-sell tras reservar,
-        #     pregunta de referidos): no hay nada "pendiente" — la reserva ya
-        #     quedó hecha. Mandar "tienes una reserva pendiente" acá confunde
-        #     (caso real María 2026-06-11: reservó a las 10:02 y a las 10:16 el
-        #     bot le dijo que tenía una reserva pendiente). Ignorar la oferta ES
-        #     una respuesta válida → reset suave a IDLE, sin mensaje.
-        if state in ("WAIT_CROSS_SELL", "WAIT_REFERRAL_POST"):
+        #     pregunta de referidos, parentesco, agendar para otra persona):
+        #     no hay nada "pendiente" — la reserva ya quedó hecha. Mandar
+        #     "tienes una reserva pendiente" acá confunde (caso real María
+        #     2026-06-11: reservó a las 10:02 y a las 10:16 el bot le dijo que
+        #     tenía una reserva pendiente). Ignorar la oferta ES una respuesta
+        #     válida → reset suave a IDLE, sin mensaje.
+        #     WAIT_PARENTESCO/WAIT_AGENDAR_OTRO sumados en el portaviones
+        #     2026-09-24 #5 (casos 56931103936, 56975778835, 56961930267):
+        #     mismo patrón exacto — la cita ya estaba confirmada
+        #     ("¡Listo! Tu hora quedó reservada") y el bot igual mandó
+        #     "tienes una reserva pendiente. ¿te la reservo antes de que se
+        #     llene?" 14-20 min después, y al tocar "Sí, continuar" reseteaba
+        #     a IDLE perdiendo la pregunta opcional pendiente.
+        if state in ("WAIT_CROSS_SELL", "WAIT_REFERRAL_POST",
+                     "WAIT_PARENTESCO", "WAIT_AGENDAR_OTRO"):
             log_event(phone, "reenganche_skip",
                       {"motivo": "oferta_opcional_post_accion", "state": state})
             log.info("Reenganche skip (oferta opcional) → reset IDLE phone=%s state=%s", phone, state)
@@ -446,6 +455,16 @@ async def _enviar_reenganche():
             msg = (
                 f"Hola {saludo} 👋 Te quedaste viendo tus horas reservadas. "
                 "¿Te ayudo con algo más?"
+            )
+        elif state == "WAIT_ESPECIALIDAD":
+            # Copy honesto: acá el paciente todavía no eligió ESPECIALIDAD,
+            # no hay ningún horario apartado. "Tienes una reserva pendiente"
+            # es falso en este estado (portaviones 2026-09-24 #5, casos
+            # fb_38574770855503490 y fb_9250731408388759 — ninguno había
+            # elegido especialidad todavía).
+            msg = (
+                f"Hola {saludo} 👋 Te quedaste eligiendo la especialidad que necesitas. "
+                "¿Seguimos buscando tu hora?"
             )
         else:
             msg = (
@@ -4738,6 +4757,45 @@ async def _job_followup_info():
                     _ss_fi(_phone_fi, "IDLE", _data_fi)
                 except Exception:
                     pass
+                continue
+        except Exception:
+            pass
+
+        # Guard: la conversación siguió DESPUÉS del turno info que marcó
+        # followup_info_ts (portaviones 2026-09-24 #4 — casos 56926015431 y
+        # fb_28345312241786286: el paciente respondió "no gracias" o recibió
+        # una oferta más específica con botón "Sí, agendar" en un turno
+        # posterior, pero ese turno no limpia el flag porque no siempre pasa
+        # por el mismo código que lo setea). Si hubo CUALQUIER mensaje (in u
+        # out) después de followup_info_ts, el contexto ya avanzó — el
+        # follow-up genérico llega tarde, redundante o encima de una
+        # respuesta/oferta ya dada. Se limpia el flag sin enviar nada.
+        try:
+            # messages.ts se guarda como "YYYY-MM-DD HH:MM:SS" (datetime('now')
+            # de SQLite, UTC, sin 'T' ni offset) — _info_ts es un datetime
+            # timezone-aware (UTC). Comparar como texto ISO directo compara
+            # mal (' ' < 'T' en ASCII, casi cualquier ts del mismo día
+            # calzaría "menor"): se formatea al mismo patrón que la columna.
+            # Solo direction='in': la respuesta 'out' del propio turno que
+            # setea followup_info_ts se loguea DESPUÉS (main.py llama
+            # handle_message → guarda sesión → recién ahí log_message), así
+            # que mirar 'out' se auto-dispararía siempre. Un 'in' posterior
+            # SÍ significa que el paciente siguió la conversación.
+            _info_ts_sql = _info_ts.strftime("%Y-%m-%d %H:%M:%S")
+            with _conn_fi() as _c_cont:
+                _msg_post = _c_cont.execute(
+                    "SELECT 1 FROM messages WHERE phone=? AND direction='in' AND ts > ? LIMIT 1",
+                    (_phone_fi, _info_ts_sql),
+                ).fetchone()
+            if _msg_post:
+                _data_fi["followup_info_sent"] = True
+                try:
+                    from session import save_session as _ss_fi3
+                    _ss_fi3(_phone_fi, "IDLE", _data_fi)
+                except Exception:
+                    pass
+                _le_fi(_phone_fi, "followup_info_skip_conversacion_activa",
+                       {"esp": _data_fi.get("followup_info_esp", "")})
                 continue
         except Exception:
             pass
