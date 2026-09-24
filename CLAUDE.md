@@ -384,10 +384,12 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - **PENDIENTE HUMANO**: horario Unibazo en Medilink = mar/jue 14-18 (código dice 16-20)
   → confirmar cuál es real; agenda de Pardo sin días abiertos después del 28-sep;
   cardiología 4 pacientes sin horas en 24h (Millán).
+- `3aabfdf` **Consent marketing** (`app/consent_marketing.py`): se registra según A QUÉ
+  contesta el paciente (también en takeover y re-opt-in). Backfill: 20 respuestas
+  perdidas corregidas en BI (`response_method='reply_backfill_20260924'`).
 - **PENDIENTE (verificados REAL por portaviones v2, sin arreglar)**: hora/día/médico
   distinto al elegido (parser de selección); botón "✅ Sí, continuar" del reenganche
-  usa id "menu" (resetea); opt-in marketing no se registra + "No por ahora" = baja
-  (Ley 21.719); citas duplicadas al reagendar; WAIT_* sin lenguaje natural;
+  usa id "menu" (resetea); citas duplicadas al reagendar; WAIT_* sin lenguaje natural;
   `admin_routes.api_send_document` sin idempotencia.
 
 ### 2026-09-07 — El bot FABRICABA el dígito verificador (DEPLOYADO 7a45a65)
