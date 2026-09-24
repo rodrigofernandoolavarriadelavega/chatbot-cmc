@@ -455,6 +455,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="*/5", timezone=_CLT),
         id="organic_publish_queue",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Recordatorios 2h: cada 15 min entre 7:30 y 21:30 CLT
     scheduler.add_job(
@@ -492,6 +493,7 @@ async def lifespan(app: FastAPI):
         "interval", minutes=5,
         id="reenganche",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Skills aprendidas (nivel 6): lunes 09:35 CLT (hueco entre 9:12 y 10:00 para
     # no engrosar clusters → 429). No-op si LEARNED_SKILLS_ACTIVE=false (default).
@@ -565,6 +567,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute=24, timezone=_CLT),  # cada hora :24 (era :15; chocaba con recordatorios_2h+telemedicina → 995×429 en :15)
         id="detectar_cancelaciones",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Monitor de anomalías: cada 15 min escanea bugs sospechosos y manda
     # resumen al WhatsApp del dueño (ADMIN_ALERT_PHONE). El dueño se entera
@@ -574,6 +577,7 @@ async def lifespan(app: FastAPI):
         "interval", minutes=15,
         id="monitor_anomalias",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Sync atenciones Dr. Abarca: cierre del día a las 23:55 CLT
     scheduler.add_job(
@@ -1013,6 +1017,7 @@ async def lifespan(app: FastAPI):
         "interval", minutes=1,
         id="medilink_watchdog",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Watchdog IA (Claude): cada 2 min alerta al dueño si la IA cae (saldo/API)
     scheduler.add_job(
@@ -1020,6 +1025,7 @@ async def lifespan(app: FastAPI):
         "interval", minutes=2,
         id="claude_watchdog",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Watchdog modo caída Medilink (403 "plataforma no activa"): cada 3 min,
     # solo actúa si hay contexto pendiente de avisar. Ver medilink_outage.py.
@@ -1028,6 +1034,7 @@ async def lifespan(app: FastAPI):
         "interval", minutes=3,
         id="medilink_outage_watcher",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Cierre de caja diario: 09:05 CLT empuja al dueño el cierre del día anterior
     scheduler.add_job(
@@ -1087,6 +1094,7 @@ async def lifespan(app: FastAPI):
             CronTrigger(hour=h, minute=5, timezone=_CLT),
             id=f"doctor_reporte_{h}",
             replace_existing=True,
+            misfire_grace_time=300, coalesce=True,
         )
     # Doctor alerts: reset diario a medianoche CLT
     scheduler.add_job(
@@ -1135,6 +1143,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="10,40", timezone=_CLT),
         id="takeover_pendiente_alert",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Reporte periódico de estado al admin cada 30 min
     # (+8 min para separar del no-show_check (:02/:32) y reporte progreso (:05)
@@ -1143,6 +1152,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="8,38", timezone=_CLT),
         id="admin_status_report",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Limpieza de sesiones stuck en WAIT_* cada hora
     scheduler.add_job(
@@ -1323,6 +1333,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="20,50", timezone=_CLT),
         id="watchdog_entrega",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Dental win-back: L-V 10:35 CLT — campanas dentales focalizadas.
     # Cohortes por profesional: ortodoncia → endo/implanto → odonto general → estética.
@@ -1417,6 +1428,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="*/5", timezone=_CLT),
         id="followup_info",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # Secuenciación post-consulta (portaviones #10, 2026-08-22): despacha el
     # upsell diferido y, recién después, la reseña Google — reemplaza la
@@ -1452,6 +1464,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="*/15", timezone=_CLT),
         id="persistencia_contacto",
         replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
     )
     # B6: Synthetic check del agendamiento — ejercita buscar_primer_dia("Medicina General")
     # READ-ONLY (sin crear citas). Gateado por SYNTHETIC_CHECK_ENABLED (default true).
