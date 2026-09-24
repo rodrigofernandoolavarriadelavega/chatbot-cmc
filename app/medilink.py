@@ -381,6 +381,36 @@ PROFESIONALES = {
     81: {"nombre": "Dr. Raúl Paz",             "especialidad": "Nutriología y Diabetología", "intervalo": 30, "dias": [2], "telemedicina": True},
 }
 
+
+def _especialidad_display(id_prof: int) -> str:
+    """Especialidad a mostrar EN UN SLOT para `id_prof` — normalmente igual
+    a `PROFESIONALES[id_prof]["especialidad"]`, con UNA excepción a propósito:
+
+    Dr. Alonso Márquez (13) figura como "Medicina General" en PROFESIONALES
+    porque comparte el pool de búsqueda con Abarca/Olavarría (ver
+    ESPECIALIDADES_MAP "medicina general": [73, 1, 13], y el bypass de
+    "marquez" que evita activar el stage Abarca/Olavarría). Eso es ruteo,
+    no lo que el paciente debe leer: su especialidad real es Medicina
+    Familiar y `_precio_line` en flows.py ya le aplica la tarifa distinta
+    ($30.000 vs $25.000) por ese motivo.
+
+    Portaviones 2026-09-24 #3 (casos reales 56975778835, 56977564441,
+    56961770276, 56933455723, 56936253177): sin este único choke point, cada
+    slot de Márquez nacía con "especialidad": "Medicina General" (ambos sitios
+    de construcción, más abajo en este archivo) y el bot lo mostraba así en
+    WAIT_SLOT/CONFIRMING_CITA — pero el guardado final de la cita (flows.py,
+    tras crear_cita) SÍ lo corregía a "Medicina Familiar" para que
+    recordatorios/postconsulta salieran bien. Resultado: misma conversación,
+    dos nombres para la misma hora. Fijar la etiqueta ACÁ, en el único lugar
+    donde nace el dict del slot, evita tener que repetir el parche en cada
+    uno de los ~30 call sites de flows.py que arman/expanden slots — y NO
+    toca PROFESIONALES[13]["especialidad"] (routing/menú siguen intactos).
+    """
+    if id_prof == 13:
+        return "Medicina Familiar"
+    return PROFESIONALES[id_prof]["especialidad"]
+
+
 # Mapa de palabras clave → IDs de profesionales
 ESPECIALIDADES_MAP = {
     "kinesiología": [77, 21], "kinesiólogo": [77, 21], "kinesiologa": [77, 21], "kine": [77, 21],
@@ -946,7 +976,7 @@ async def _slots_desde_agendas(client: httpx.AsyncClient, id_prof: int, fecha: s
             continue
         libres.append({
             "profesional":    PROFESIONALES[id_prof]["nombre"],
-            "especialidad":   PROFESIONALES[id_prof]["especialidad"],
+            "especialidad":   _especialidad_display(id_prof),
             "fecha":          fecha,
             "fecha_display":  _fmt_fecha(fecha),
             "hora_inicio":    hi,
@@ -1389,7 +1419,7 @@ async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict
                 libres_prof += 1
                 todos_libres.append({
                     "profesional":    PROFESIONALES[id_prof]["nombre"],
-                    "especialidad":   PROFESIONALES[id_prof]["especialidad"],
+                    "especialidad":   _especialidad_display(id_prof),
                     "fecha":          fecha,
                     "fecha_display":  _fmt_fecha(fecha),
                     "hora_inicio":    hi,

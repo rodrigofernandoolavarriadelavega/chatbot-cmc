@@ -699,7 +699,7 @@ Input: "Tengo hora con Dr Abarca pero me surgió un imprevisto, no voy a poder i
 Output: {{"intent": "cancelar", "especialidad": null, "respuesta_directa": null}}
 
 Input: "La consulta con la psiquiatra que atiende el jueves, ¿se cancela particular o atiende por Fonasa?"
-Output: {{"intent": "precio", "especialidad": "psiquiatría", "respuesta_directa": "La psiquiatra (Dra. Cecilia Unibazo) atiende por teleconsulta en los días y horas del bloque HORARIOS REALES. La consulta es *particular, $60.000* — no trabaja con Fonasa. Por la alta demanda y los cupos limitados, la hora se confirma con el *abono del valor total ($60.000) al momento de reservar*; así el cupo queda para quien realmente lo usará y más personas de la zona pueden acceder. El día de la atención no pagas nada adicional. ¿Te ayudo a agendar?"}}
+Output: {{"intent": "precio", "especialidad": "psiquiatría", "respuesta_directa": "La psiquiatra (Dra. Cecilia Unibazo) atiende por teleconsulta en los días y horas del bloque HORARIOS REALES. El valor total de la teleconsulta es *$60.000 particular* — no trabaja con Fonasa. Por la alta demanda y los cupos limitados, para reservar la hora se paga el *100% ($60.000) por adelantado*; así el cupo queda para quien realmente lo usará y más personas de la zona pueden acceder. El día de la atención no se cobra nada adicional. ¿Te ayudo a agendar?"}}
 
 Input: "Quiero cambiar mi hora del viernes al lunes"
 Output: {{"intent": "reagendar", "especialidad": null, "respuesta_directa": null}}
@@ -761,8 +761,8 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
-- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, $60.000 particular, NO Fonasa; horario SOLO del bloque HORARIOS REALES). Por la alta demanda y cupos limitados, la hora se confirma con el abono del valor total ($60.000) al reservar (no paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
-- Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños.
+- Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, $60.000 particular, NO Fonasa; horario SOLO del bloque HORARIOS REALES). Por la alta demanda y cupos limitados, para reservar la hora se paga el 100% del valor ($60.000) por adelantado (no se paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
+- Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños. Igual que Psiquiatría, para reservar la hora se paga el 100% del valor ($65.000) por adelantado (no se paga nada extra el día de la atención).
 - Oftalmólogo / oftalmóloga / oftalmología / optometrista / optometría / TM Ana Celedón / Celedón (tecnólogo médico) → "tecnología médica oftalmológica" (TM Ana Celedón, PRESENCIAL, $15.000 particular a TODOS los pacientes — no tiene Fonasa actualmente, consulta de 20 min; prestación: *Evaluación oftalmológica y optométrica*).
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
 - Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
@@ -947,7 +947,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Masoterapia | ❌ Solo particular | $17.990–$26.990 | NO acepta Fonasa |
 | Ecografía (David Pardo) | ❌ Solo particular | $40.000 | NO acepta Fonasa en ninguna modalidad ni tramo |
 | Neurología (Dra. Franca González) | ❌ Solo particular | $65.000 | NO acepta Fonasa · atención SOLO por telemedicina, desde 15 años |
-| Nutriología y Diabetología (Dr. Raúl Paz) | ❌ Solo particular | $60.000 | NO acepta Fonasa ⚠️ el bono MLE $4.770 es de la NUTRICIONISTA (Gisela), no del nutriólogo · SOLO teleconsulta, desde 15 años · abono del total al reservar |
+| Nutriología y Diabetología (Dr. Raúl Paz) | ❌ Solo particular | $60.000 | NO acepta Fonasa ⚠️ el bono MLE $4.770 es de la NUTRICIONISTA (Gisela), no del nutriólogo · SOLO teleconsulta, desde 15 años · el 100% se paga por adelantado al reservar |
 | Tecnología Médica Oftalmológica · *Evaluación oftalmológica y optométrica* (TM Ana Celedón) | ❌ Solo particular | $15.000 | NO acepta Fonasa · precio único para todos los pacientes, atención PRESENCIAL |
 
 REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay Fonasa para [X especialidad]?", RESPONDE EXPLÍCITAMENTE SÍ/NO según la tabla. NO contestes con "tenemos Fonasa MLE en otras especialidades" sin antes responder lo que preguntan.
@@ -975,13 +975,13 @@ MEDICINA GENERAL / SÍNTOMAS
 
 SALUD MENTAL
 - Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular. ⚠️ Ya NO son intercambiables en modalidad: **Montalba** atiende lun-vie **online** y sábado **presencial**; **Juan Pablo Rodríguez** es **presencial siempre**. Si el paciente pide expresamente presencial en la semana, ofrécele a Rodríguez o el sábado con Montalba.
-- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, en los días y horas del **bloque HORARIOS REALES**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que la hora se confirma con un **abono del valor total ($60.000) al momento de reservar** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no pagas nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
+- Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, en los días y horas del **bloque HORARIOS REALES**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que para reservar la hora se paga el **100% del valor ($60.000) por adelantado** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no se cobra nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
 
 NEUROLOGÍA (Dra. Franca González)
-El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDICINA (videollamada)**, **$65.000 particular** (no atiende por Fonasa), consulta de **30 minutos**. Atiende SOLO desde los **15 años en adelante** (adolescentes y adultos) — no ve niños. Áreas de interés: epilepsia, trastornos neurológicos funcionales, trastornos de memoria, déficit atencional, ansiedad y estrés (de causa neurológica), cefaleas y neurología general.
+El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDICINA (videollamada)**, **$65.000 particular** (no atiende por Fonasa), consulta de **30 minutos**. Atiende SOLO desde los **15 años en adelante** (adolescentes y adultos) — no ve niños. Áreas de interés: epilepsia, trastornos neurológicos funcionales, trastornos de memoria, déficit atencional, ansiedad y estrés (de causa neurológica), cefaleas y neurología general. Para reservar la hora se paga el **100% del valor ($65.000) por adelantado** — el día de la atención no se cobra nada adicional.
 - Piden explícitamente "neurólogo"/"neuróloga"/"neurología" → **Neurología** directo.
 - Epilepsia / convulsiones / episodio de pérdida de conciencia con movimientos anormales (ya evaluado o diagnosticado, no en curso) → **Neurología**. Si el episodio está ocurriendo ahora o es reciente, prioriza la derivación a urgencia (ver DOLOR/CABEZA y FAST más abajo).
 - Pérdida de memoria / olvidos frecuentes en adulto / le cuesta concentrarse y quiere evaluación específica → **Neurología**.
@@ -991,7 +991,7 @@ El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDI
 - Menor de 15 años con estos síntomas → Neurología NO aplica; ofrece **Medicina General** o deriva al CESFAM Carampangue/Hospital de Arauco para evaluación pediátrica.
 
 NUTRIOLOGÍA Y DIABETOLOGÍA (Dr. Raúl Paz)
-El CMC SÍ tiene nutriólogo y diabetólogo: **Dr. Raúl Paz**, atención por **TELECONSULTA (videollamada)**, **$60.000 particular** (NO tiene bono Fonasa), consulta de **30 minutos**, desde los **15 años**. Atiende los **miércoles de 17:30 a 20:00** (5 cupos por semana: 17:30, 18:00, 18:30, 19:00, 19:30). Son pocos cupos y se llenan: no prometas disponibilidad, ofrece lo que el sistema muestre. Formación informada por el centro: nutriólogo y diabetólogo, Pontificia Universidad Católica de Chile. La hora se confirma con un **abono del valor total ($60.000) al reservar** — el día de la atención no pagas nada adicional.
+El CMC SÍ tiene nutriólogo y diabetólogo: **Dr. Raúl Paz**, atención por **TELECONSULTA (videollamada)**, **$60.000 particular** (NO tiene bono Fonasa), consulta de **30 minutos**, desde los **15 años**. Atiende los **miércoles de 17:30 a 20:00** (5 cupos por semana: 17:30, 18:00, 18:30, 19:00, 19:30). Son pocos cupos y se llenan: no prometas disponibilidad, ofrece lo que el sistema muestre. Formación informada por el centro: nutriólogo y diabetólogo, Pontificia Universidad Católica de Chile. Para reservar la hora se paga el **100% del valor ($60.000) por adelantado** — el día de la atención no se cobra nada adicional.
 Si te preguntan por su formación, di eso y nada más: NO enumeres años ni etapas de su carrera, no digas "tres años de medicina interna", y NO afirmes que estudió Medicina en la UC si lo informado es la subespecialidad.
 
 QUÉ ES: es un **MÉDICO** dedicado a la nutrición, el peso y el metabolismo, sobre todo la diabetes. Evalúa enfermedades, solicita exámenes e indica medicamentos cuando corresponde.
@@ -1194,7 +1194,7 @@ NUTRICIÓN (Gisela Pinto — bono Fonasa disponible):
 - Bioimpedanciometría: $15.000 — SE AGENDA SOLA, NO requiere consulta nutricional previa. Examen indoloro que mide composición corporal (masa grasa, masa muscular, agua corporal, metabolismo basal). Lo realiza la misma Gisela Pinto en un bloque de 15 min. NO tiene bono Fonasa (es particular para todos).
 
 NUTRIOLOGÍA Y DIABETOLOGÍA (Dr. Raúl Paz — MÉDICO, sin bono Fonasa):
-- Consulta nutriólogo y diabetólogo: $60.000 — teleconsulta por videollamada, 30 min, desde 15 años. Diabetes, prediabetes, sobrepeso y obesidad, colesterol y triglicéridos, resistencia a la insulina, hígado graso, síndrome metabólico, problemas nutricionales por enfermedad. El médico evalúa, pide exámenes e indica tratamiento. Se reserva con abono del total ($60.000). ⚠️ NO confundir con la consulta de la NUTRICIONISTA ($20.000 / bono $4.770): son dos prestaciones distintas, con profesionales, precios y modalidades distintas.
+- Consulta nutriólogo y diabetólogo: $60.000 — teleconsulta por videollamada, 30 min, desde 15 años. Diabetes, prediabetes, sobrepeso y obesidad, colesterol y triglicéridos, resistencia a la insulina, hígado graso, síndrome metabólico, problemas nutricionales por enfermedad. El médico evalúa, pide exámenes e indica tratamiento. Se reserva pagando el 100% del valor por adelantado ($60.000). ⚠️ NO confundir con la consulta de la NUTRICIONISTA ($20.000 / bono $4.770): son dos prestaciones distintas, con profesionales, precios y modalidades distintas.
 
 PODOLOGÍA (Andrea Guevara):
 - Atención pediátrica: $13.000 — cuidado de pies en niños: corte de uñas, revisión de callosidades o alteraciones del pie infantil.
@@ -2265,7 +2265,11 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
                 f"Su mensaje debe interpretarse en ese contexto. "
                 f"Por ejemplo, si pregunta \"¿necesito orden?\", probablemente "
                 f"pregunta si necesita orden para ese servicio/examen, no que quiere "
-                f"emitir una orden.\n\n"
+                f"emitir una orden. "
+                f"El headline es texto publicitario, NO lo cites ni repitas sus "
+                f"frases textuales (ej. eslóganes tipo \"sin viajar\") en tu "
+                f"respuesta — explica la ubicación/cercanía del CMC con tus "
+                f"propias palabras, de forma factual.\n\n"
             )
         resp = await _claude_create(
             model="claude-haiku-4-5-20251001",
@@ -2781,7 +2785,11 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
             _referral_ctx15f = (
                 f"[CONTEXTO IMPORTANTE] El paciente llegó al chat desde un anuncio "
                 f"de Meta sobre \"{meta_referral['headline']}\". "
-                f"Responde teniendo en cuenta ese contexto.\n\n"
+                f"Responde teniendo en cuenta ese contexto. "
+                f"El headline es texto publicitario, NO lo cites ni repitas sus "
+                f"frases textuales (ej. eslóganes tipo \"sin viajar\") en tu "
+                f"respuesta — explica la ubicación/cercanía del CMC con tus "
+                f"propias palabras, de forma factual.\n\n"
             )
         # Fix G: prepend duro de instrucción JSON en el user message para evitar
         # que Haiku responda en prosa cuando hay contexto adicional (recepcion/referral).

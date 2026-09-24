@@ -86,6 +86,19 @@ def _parse_fecha(fecha_str: str) -> Optional[date]:
     return None
 
 
+def es_menor_de(fecha_nacimiento: str, anios: int) -> bool:
+    """True si el paciente tiene menos de `anios` años cumplidos.
+
+    False si la fecha no se pudo parsear (nunca bloquea por falta de dato).
+    Usado para no ofrecer pitches de cross-sell redactados para adultos
+    (ej. "dolor crónico de espalda") a pacientes que son niños.
+    """
+    fecha_nac = _parse_fecha(fecha_nacimiento) if fecha_nacimiento else None
+    if not fecha_nac:
+        return False
+    return _edad_meses(fecha_nac, date.today()) < anios * 12
+
+
 def get_vaccine_reminder(fecha_nacimiento: str, nombre: str = "") -> Optional[str]:
     """
     Genera un mensaje de recordatorio de vacunas PNI si el paciente

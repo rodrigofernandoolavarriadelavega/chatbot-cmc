@@ -43,7 +43,7 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      get_last_recepcionista_ts)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
-from pni import get_vaccine_reminder, get_pni_meta
+from pni import get_vaccine_reminder, get_pni_meta, es_menor_de
 from hitos_desarrollo import get_milestones_reminder, get_hitos_meta
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
 from messaging import send_whatsapp
@@ -844,14 +844,22 @@ _CROSS_SELL_RULES: dict[str, list[tuple[str, str]]] = {
 
 
 def _cross_sell_interactive(phone: str, esp_origen: str,
-                            slot_data: dict) -> dict | None:
+                            slot_data: dict,
+                            excluir_destinos: set[str] | None = None) -> dict | None:
     """Genera mensaje interactivo de cross-sell si aplica cooldown y regla.
-    Retorna dict con el payload de botones, o None si no corresponde."""
+    Retorna dict con el payload de botones, o None si no corresponde.
+
+    excluir_destinos: especialidades destino a saltar aunque la regla exista
+    (ej. Kinesiología para un paciente menor de edad — portaviones 2026-09-24
+    #11: el pitch "dolor crónico de espalda, cuello u hombros" se le ofrecía
+    a niños de 11/13 años recién agendados en Medicina General/Familiar)."""
     from session import puede_cross_sell, log_cross_sell
     reglas = _CROSS_SELL_RULES.get(esp_origen.strip())
     if not reglas:
         return None
     for esp_destino, mensaje in reglas:
+        if excluir_destinos and esp_destino in excluir_destinos:
+            continue
         if puede_cross_sell(phone, esp_origen, esp_destino):
             log_cross_sell(phone, esp_origen, esp_destino, "ofrecido")
             return {
@@ -2376,11 +2384,14 @@ async def _responder_pregunta_horario(phone: str, state: str, data: dict, txt: s
         )
     try:
         import httpx as _httpx
-        from medilink import _get_horario, PROFESIONALES as _PROFS_HQ
+        from medilink import _get_horario, PROFESIONALES as _PROFS_HQ, _especialidad_display as _esp_disp_hq
         async with _httpx.AsyncClient(timeout=10) as _c:
             horario = await _get_horario(_c, int(prof_id))
         prof_nombre = _PROFS_HQ.get(int(prof_id), {}).get("nombre", "El profesional")
-        especialidad = _PROFS_HQ.get(int(prof_id), {}).get("especialidad", "")
+        # _especialidad_display (no PROFESIONALES directo): Márquez (13) se
+        # muestra como "Medicina Familiar" — mismo motivo que en los slots
+        # (portaviones 2026-09-24 #3), esta es otra vía que el paciente lee.
+        especialidad = _esp_disp_hq(int(prof_id)) if int(prof_id) in _PROFS_HQ else ""
         esp_sufijo = f" de *{especialidad}*" if especialidad else ""
         horario_str = _format_horario_prof(horario)
         # Marcar prof pedido explícitamente para que confirmar_sugerido no
@@ -2420,6 +2431,20 @@ _ECG_KEYWORDS = frozenset({
     "ecg", "electrocardiograma", "electro cardiograma", "electrocardiografia",
     "electrocardiografía", "electro", "trazado cardiaco", "trazado cardíaco",
 })
+
+def _es_linea_abono_previo(linea: str) -> bool:
+    """True si `linea` (salida de `_precio_line`) es la línea de abono-gate
+    ("💳 Abono previo requerido: $X — se paga antes de confirmar la hora").
+
+    Portaviones 2026-09-24 #2: `_preguntar_precio_respuesta`/`_preguntar_pago_
+    respuesta` concatenaban esta línea con el bloque genérico "se cancela al
+    momento de la atención... No se cobra al agendar la hora" — literalmente
+    contradictorio para Psiquiatría/Neurología/Nutriología-Paz/Gastroenterología
+    (casos reales 56940013565, 56946473502). El monto en sí ya era correcto
+    (Paz $60.000, Neurología $65.000 — ver ABONO_REGLAS en config.py); el bug
+    era solo de redacción."""
+    return (linea or "").startswith("💳 Abono previo requerido")
+
 
 def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
     """Responde a preguntas de PRECIO (valor monetario).
@@ -2484,6 +2509,17 @@ def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
                     metodos = "• Efectivo, transferencia, débito o crédito\n"
                 else:
                     metodos = "• Efectivo o transferencia\n"
+                if _es_linea_abono_previo(linea):
+                    # Especialidad con abono-gate (Psiquiatría, Neurología,
+                    # Nutriología y Diabetología, Gastroenterología): el bloque
+                    # genérico "se cancela al momento de la atención" contradice
+                    # la línea de arriba. Ver docstring de _es_linea_abono_previo.
+                    return (
+                        f"{linea}\n\n"
+                        "💳 *Pago:* se paga el 100% por adelantado para reservar la hora.\n"
+                        f"{metodos}"
+                        "El día de la atención no se cobra nada adicional."
+                    )
                 return (
                     f"{linea}\n\n"
                     "💳 *Pago:* se cancela al momento de la atención.\n"
@@ -2512,6 +2548,7 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
     """
     precio_block = ""
     esp_low = ""
+    _linea_pago = ""
     if data:
         slot = data.get("slot_elegido") or {}
         esp = (slot.get("especialidad") or data.get("especialidad") or "").strip()
@@ -2528,6 +2565,7 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
             linea = _precio_line(esp, slot if slot else None, modalidad_override=_modalidad_pedida, id_profesional=_pid_pago)
             if linea:
                 precio_block = f"{linea}\n\n"
+                _linea_pago = linea
     # Filtrar la línea de pago según el tipo de especialidad
     if esp_low and any(d in esp_low for d in _ESP_DENTALES):
         metodos = "• Efectivo, transferencia, débito o crédito\n"
@@ -2537,6 +2575,15 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
         metodos = (
             "• *Atenciones médicas:* efectivo o transferencia\n"
             "• *Atenciones dentales:* efectivo, transferencia, débito o crédito\n"
+        )
+    if _es_linea_abono_previo(_linea_pago):
+        # Ver docstring de _es_linea_abono_previo: no contradecir el abono-gate
+        # con el bloque genérico "se cancela al momento de la atención".
+        return (
+            f"{precio_block}"
+            "💳 *Pago:* se paga el 100% por adelantado para reservar la hora.\n"
+            f"{metodos}"
+            "El día de la atención no se cobra nada adicional."
         )
     return (
         f"{precio_block}"
@@ -11579,7 +11626,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _cs_last_ts = data.get("cross_sell_sent_ts", 0)
                 _cs_throttle_ok = ((_time_cs.time() - _cs_last_ts) >= 600)
                 if not reagendar and not es_tercero and _cs_throttle_ok:
-                    _cs = _cross_sell_interactive(phone, esp, slot)
+                    # Portaviones 2026-09-24 #11: no ofrecer el pitch de
+                    # Kinesiología ("dolor crónico de espalda, cuello u
+                    # hombros") a pacientes menores de 12 años — casos reales
+                    # Alonso (11), Javier (13), Cristobal (11) recién
+                    # agendados en Medicina General/Familiar. `fecha_nac` es
+                    # el mismo dato ya resuelto arriba para el PNI/hitos.
+                    _cs_excluir = (
+                        {"Kinesiología"}
+                        if fecha_nac and es_menor_de(fecha_nac, 12)
+                        else None
+                    )
+                    _cs = _cross_sell_interactive(phone, esp, slot, _cs_excluir)
                     if _cs:
                         _cs_dest = _cs["_cross_sell_esp_destino"]
                         data["cross_sell_sent_ts"] = _time_cs.time()
@@ -14703,6 +14761,16 @@ _APELLIDOS_NORM = [(re.sub(r"[^a-zñ]+", "", a.lower()), key) for a, key in _APE
 _APELLIDOS_BLACKLIST = {"au", "vale", "pao", "fer", "armi"}
 _APELLIDOS_NORM = [(a, k) for (a, k) in _APELLIDOS_NORM if a not in _APELLIDOS_BLACKLIST]
 
+# Aliases de >=5 chars que SÍ deben exigir word-boundary (en vez del substring
+# "colapsado sin espacios" que usa el resto de la lista larga). Sin esto se
+# arman falsos positivos al pegar el final de una palabra con el inicio de la
+# siguiente. Caso real 2026-09-22 (56947531125, portaviones #13): "médico QUE
+# atienda" colapsa a "...medi-CO QUE-atienda..." → contiene "coque" (alias de
+# Jorge Montalba, Psicología) y el bot ofreció Psicología para "hora con
+# médico que atienda por Fonasa". "coque" es un apodo completo — no debe
+# matchear como fragmento cruzando dos palabras.
+_APELLIDOS_REQUIERE_BORDE = {"coque"}
+
 
 def _normalizar_para_apellido_ws(txt: str) -> str:
     """Como _normalizar_para_apellido pero PRESERVA espacios para permitir
@@ -14757,6 +14825,10 @@ def _detectar_apellido_profesional(txt: str) -> str | None:
       "márq_uez", etc.).
     - Aliases <5 chars: word-boundary regex en versión con espacios (evita
       "vale" matchando en "vale el bono", "pao" en "por", etc.).
+    - Aliases en _APELLIDOS_REQUIERE_BORDE (>=5 chars pero apodos completos):
+      también exigen word-boundary, aunque midan >=5 — el substring colapsado
+      puede armarse pegando el final de una palabra con el inicio de otra
+      ("médico QUE" → "coque").
     """
     if not txt:
         return None
@@ -14779,11 +14851,11 @@ def _detectar_apellido_profesional(txt: str) -> str | None:
     for apellido_norm, key in _APELLIDOS_NORM:
         if not apellido_norm:
             continue
-        if len(apellido_norm) >= 5:
+        if len(apellido_norm) >= 5 and apellido_norm not in _APELLIDOS_REQUIERE_BORDE:
             if apellido_norm in norm_collapsed:
                 return key
         else:
-            # Alias corto — exigir word-boundary
+            # Alias corto (o apodo completo que exige borde) — word-boundary
             if re.search(r"\b" + re.escape(apellido_norm) + r"\b", norm_ws):
                 return key
     # ── Fuzzy fallback (typos no en diccionario): "cabalga" → "carballo",
@@ -15208,6 +15280,24 @@ def _build_especialidades_texto() -> str:
 _ESPECIALIDADES_TEXTO = _build_especialidades_texto()
 
 
+def _precio_corto_grupo(slot0: dict) -> str:
+    """Precio de un profesional en una línea corta, para anotar junto a su
+    nombre en un listado con varios profesionales (ej. Abarca/Olavarría
+    $25.000 vs Márquez $30.000 en Medicina General).
+
+    Portaviones 2026-09-24 #3: `_format_slots_expansion` agrupaba por
+    profesional y mostraba su nombre, pero NUNCA el precio — así que la
+    tarifa diferenciada de Márquez desaparecía justo en la vista donde el
+    paciente lo compara con Abarca/Olavarría. Reusa `_precio_line` (misma
+    fuente que el resto del bot, nada inventado); si no hay precio registrado
+    retorna "" y no se muestra nada (no se inventa)."""
+    esp = slot0.get("especialidad", "")
+    linea = _precio_line(esp, slot0)
+    if not linea:
+        return ""
+    return linea.replace("💰 ", "").replace("💳 ", "")
+
+
 def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | dict:
     """Formatea slots agrupados por profesional. groups = [{"slots": [...]}].
     show_ver_mas=True agrega botón 'Ver más profesionales' (id=ver_todos)."""
@@ -15230,6 +15320,7 @@ def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | d
 
     if total_rows <= 10:
         sections = []
+        precio_lineas = []
         offset = 0
         for g in groups:
             prof = g["slots"][0]["profesional"]
@@ -15237,9 +15328,13 @@ def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | d
                     for i, s in enumerate(g["slots"])]
             offset += len(g["slots"])
             sections.append({"title": prof[:24], "rows": rows})
+            _precio_g = _precio_corto_grupo(g["slots"][0])
+            if _precio_g:
+                precio_lineas.append(f"*{prof}*: {_precio_g}")
         sections.append({"title": "Más opciones", "rows": nav_rows})
+        _precio_bloque = ("\n\n" + "\n".join(precio_lineas)) if precio_lineas else ""
         return _list_msg(
-            body_text=f"Horarios disponibles — *{fecha_display}* 👇",
+            body_text=f"Horarios disponibles — *{fecha_display}* 👇{_precio_bloque}",
             button_label="Ver horarios",
             sections=sections,
         )
@@ -15249,7 +15344,8 @@ def _format_slots_expansion(groups: list, show_ver_mas: bool = False) -> str | d
     idx = 1
     for g in groups:
         prof = g["slots"][0]["profesional"]
-        lineas.append(f"\n*{prof}*")
+        _precio_g = _precio_corto_grupo(g["slots"][0])
+        lineas.append(f"\n*{prof}* — {_precio_g}" if _precio_g else f"\n*{prof}*")
         for s in g["slots"]:
             lineas.append(f"*{idx}.* {s['hora_inicio'][:5]}")
             idx += 1
@@ -16476,11 +16572,18 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             except Exception:
                 pass
 
+    # BUG-D (portaviones 2026-09-24 #1): esta era la ÚNICA tarjeta de oferta
+    # que no marcaba teleconsulta — el paciente solo se enteraba al llegar a
+    # CONFIRMING_CITA (o después de pagar el abono). _es_teleconsulta ya es
+    # el helper único usado en el resto de mensajes (ver su docstring: "el
+    # paciente debe ver 'teleconsulta' ANTES de confirmar/abonar").
+    _tele_linea = "📡 *Teleconsulta por videollamada*\n" if _es_teleconsulta(mejor) else ""
     return _btn_msg(
         f"{_aviso_no_hoy}{header}Te encontré hora ✨\n\n"
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
         f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n"
+        f"{_tele_linea}"
         f"{precio_bloque}"
         f"{escasez}\n"
         "¿Te la reservo?",
