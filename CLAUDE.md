@@ -359,7 +359,36 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-09-07
+**Última actualización**: 2026-09-24
+
+### 2026-09-24 — Errores sistémicos + portaviones v2 (6 deploys, todo en prod)
+- `b792832` **Eco: sobrecupos con agenda formal LLENA**. La inyección de sobrecupos
+  solo corría si había hora formal → con 0 slots, lista de espera directa (7
+  pacientes con 12 sobrecupos libres el lunes 28). Ojo: Pardo tiene horario
+  semanal VACÍO en Medilink; sin días abiertos tampoco hay sobrecupos.
+- `11f9d38` **Webhook procesa TODO el lote de Meta**. Leía solo entry[0]/changes[0]/
+  messages[0]: 1.308/3.132 mensajes quedaban en 'sent' con respuesta posterior del
+  paciente (watchdog en APAGÓN falso ~47%) y un entrante en 2ª posición se perdía.
+  `_partir_lote_wa` + `_request_interno` (scope `cmc_webhook_split`, salta firma
+  solo para unidades internas de un lote ya validado).
+- `126a86c` misfire_grace_time en los 13 jobs que faltaban.
+- `86ff151` + `2455188` portaviones (7d, 1.455 hallazgos): abono sin texto
+  contradictorio, Márquez = "Medicina Familiar" desde `medilink._especialidad_display`
+  + precio en listados multi-prof, "Teleconsulta" en la oferta, sin kine a <12,
+  alias "coque" con borde ("médico que"), no repetir headline CTWA, "Ver mis citas"
+  mandaba id "3" (= CANCELAR global), "Si" a recordatorio, `_afirma_slot` (un "sí"
+  con otra fecha/hora NO confirma la sugerida), reenganche honesto, abono en waitlist.
+- `badeade` **Portaviones v2** (ver memory cmc_portaviones_auditoria_conversaciones):
+  transcript con eventos+log, `scripts/audit_conocimiento.md`, salidas estructuradas,
+  `--verificar`, 4 checks sistémicos en audit_runner. Cron semanal lunes 10:00 UTC.
+- **PENDIENTE HUMANO**: horario Unibazo en Medilink = mar/jue 14-18 (código dice 16-20)
+  → confirmar cuál es real; agenda de Pardo sin días abiertos después del 28-sep;
+  cardiología 4 pacientes sin horas en 24h (Millán).
+- **PENDIENTE (verificados REAL por portaviones v2, sin arreglar)**: hora/día/médico
+  distinto al elegido (parser de selección); botón "✅ Sí, continuar" del reenganche
+  usa id "menu" (resetea); opt-in marketing no se registra + "No por ahora" = baja
+  (Ley 21.719); citas duplicadas al reagendar; WAIT_* sin lenguaje natural;
+  `admin_routes.api_send_document` sin idempotencia.
 
 ### 2026-09-07 — El bot FABRICABA el dígito verificador (DEPLOYADO 7a45a65)
 - **Auditoría de 30 días** (1.185 mensajes en `WAIT_RUT_*`): el parser de RUT
