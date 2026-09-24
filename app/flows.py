@@ -16178,6 +16178,29 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     except Exception:
         pass
 
+    # SOBRECUPO con agenda formal LLENA (2026-09-24): el bloque "sobrecupo en la
+    # primera oferta" de más abajo solo corre si hubo una hora formal; con 0 slots
+    # formales el flujo caía directo a lista de espera y los sobrecupos nunca se
+    # ofrecían — justo el caso para el que existen (eco Pardo lleno, 7 pacientes a
+    # waitlist con 12 sobrecupos libres el lunes 28). Si la especialidad sobrecupea,
+    # probarlos ANTES de declarar "no hay horas".
+    if not todos or not mejor:
+        try:
+            import sobrecupo as _sc_vacio
+            _sobres_vacio = await _sc_vacio.generar_slots(especialidad_lower)
+            if _sobres_vacio:
+                from medilink import _fmt_fecha as _ff_vacio
+                for _s in _sobres_vacio:
+                    _s.setdefault("fecha_display", _ff_vacio(_s["fecha"]))
+                todos = _sobres_vacio
+                smart = _sobres_vacio[:5]
+                mejor = _sobres_vacio[0]
+                log_event(phone, "sobrecupo_agenda_llena",
+                          {"esp": especialidad_lower, "fecha": mejor.get("fecha"),
+                           "n": len(_sobres_vacio)})
+        except Exception as _e_scv:  # noqa: BLE001 — nunca romper el agendamiento
+            log.warning("sobrecupo con agenda llena falló: %s", _e_scv)
+
     if not todos or not mejor:
         # Segunda baranda (2026-07-27): búsqueda vacía + breaker caído NO es
         # "no hay horas", es "no pudimos consultar". Inscribir en lista de
