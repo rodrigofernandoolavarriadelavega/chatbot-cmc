@@ -11099,6 +11099,53 @@ def _es_intent_rescate_takeover(texto: str) -> bool:
     return t in _RESCATE
 
 
+def _partir_lote_wa(data: dict) -> list[dict]:
+    """Parte un POST de WhatsApp en unidades de 1 entry / 1 change / ≤1 message.
+
+    Los `statuses` de un change viajan con su primera unidad (el handler ya los
+    recorre todos). Cada mensaje lleva el `contacts` que le corresponde por
+    wa_id (o todos, si Meta no manda wa_id). Un payload ya unitario devuelve
+    una sola unidad → el caller lo procesa tal cual, sin redespacho."""
+    unidades: list[dict] = []
+    for entry in data.get("entry") or []:
+        for change in entry.get("changes") or []:
+            value = change.get("value") or {}
+            base = {k: v for k, v in value.items() if k not in ("messages", "statuses", "contacts")}
+            msgs = value.get("messages") or []
+            contacts = value.get("contacts") or []
+            statuses = value.get("statuses") or []
+
+            def _unidad(v: dict) -> dict:
+                return {**data, "entry": [{**entry, "changes": [{**change, "value": v}]}]}
+
+            if not msgs:
+                unidades.append(_unidad(value))
+                continue
+            for i, m in enumerate(msgs):
+                v = dict(base)
+                v["messages"] = [m]
+                propios = [c for c in contacts if c.get("wa_id") == m.get("from")]
+                if propios or contacts:
+                    v["contacts"] = propios or contacts
+                if i == 0 and statuses:
+                    v["statuses"] = statuses
+                unidades.append(_unidad(v))
+    return unidades or [data]
+
+
+def _request_interno(payload: dict) -> Request:
+    """Request en memoria para re-procesar una unidad de un lote ya validado."""
+    import json as _json_ri
+    body = _json_ri.dumps(payload).encode()
+
+    async def _receive():
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    scope = {"type": "http", "method": "POST", "path": "/webhook", "headers": [],
+             "query_string": b"", "cmc_webhook_split": True}
+    return Request(scope, _receive)
+
+
 @app.post("/webhook")
 async def webhook(request: Request):
     """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger).
@@ -11125,7 +11172,8 @@ async def webhook(request: Request):
             return (_jd.loads(body_bytes.decode() or "{}") or {}).get("object")
         except Exception:
             return "?"
-    if not sig_header.startswith("sha256="):
+    _es_unidad_de_lote = bool(request.scope.get("cmc_webhook_split"))
+    if not _es_unidad_de_lote and not sig_header.startswith("sha256="):
         log.warning("webhook firma faltante/malformada obj=%s", _wh_diag())
         return Response(status_code=403)
     import hmac as _hmac_w, hashlib as _hl_w
@@ -11139,7 +11187,9 @@ async def webhook(request: Request):
     # los webhooks del objeto `instagram` (IG con Instagram Login) firman con el
     # Instagram App Secret. Aceptamos si CUALQUIERA valida — ambos son secretos de
     # Meta, así que sigue siendo imposible forjar un webhook sin uno de ellos.
-    if not (_sig_match(_MAS) or _sig_match(_IGS)):
+    # `cmc_webhook_split` solo lo pone _redespachar_wa (abajo) en un scope
+    # construido en memoria: un request externo no puede fijar claves de scope.
+    if not _es_unidad_de_lote and not (_sig_match(_MAS) or _sig_match(_IGS)):
         log.warning("webhook firma inválida obj=%s", _wh_diag())
         return Response(status_code=403)
     try:
@@ -11150,6 +11200,26 @@ async def webhook(request: Request):
     if not isinstance(data, dict):
         return Response(status_code=200)
     obj = data.get("object", "")
+
+    # ── Webhook WA en lote (2026-09-24) ──────────────────────────────────────
+    # Meta agrupa varias actualizaciones en un solo POST (varios entry, varios
+    # changes o varios messages). El handler de abajo lee SOLO entry[0] /
+    # changes[0] / messages[0] y descartaba el resto en silencio: 1.326 de 1.570
+    # mensajes en 24 h quedaron en "sent" aunque el paciente respondió después
+    # (el watchdog de entrega gritaba APAGÓN al 47%), y con el mismo mecanismo
+    # se puede perder un mensaje ENTRANTE de un paciente. Se parte el lote en
+    # unidades de 1 entry / 1 change / ≤1 message y se procesa cada una en orden
+    # por el mismo camino de siempre.
+    if obj == "whatsapp_business_account" and not _es_unidad_de_lote:
+        _unidades = _partir_lote_wa(data)
+        if len(_unidades) > 1:
+            log.info("webhook WA en lote: %d unidades", len(_unidades))
+            for _u in _unidades:
+                try:
+                    await webhook(_request_interno(_u))
+                except Exception as _e_u:  # noqa: BLE001 — una unidad no tumba las demás
+                    log.error("webhook WA lote: unidad falló: %s", _e_u)
+            return Response(status_code=200)
 
     # ── Helper: convertir mensaje interactivo WA a texto plano ──────────────
     _SOCIAL_PROMO = (
