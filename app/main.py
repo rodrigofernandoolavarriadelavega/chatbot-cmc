@@ -12774,6 +12774,22 @@ async def webhook(request: Request):
                     session = get_session(phone)
                     state_before = "IDLE"
                 else:
+                    # El consentimiento de marketing (Ley 21.719) se registra
+                    # aunque recepción tenga la conversación: es un acto del
+                    # paciente sobre una plantilla del bot. Antes este guard lo
+                    # silenciaba y el "Sí, actívenlos" se perdía sin registro.
+                    try:
+                        import consent_marketing as _cm_tk
+                        _cm_tk_st = _cm_tk.detectar(phone, texto)
+                        if _cm_tk_st:
+                            _cm_tk.registrar(phone, _cm_tk_st, texto, via="takeover")
+                            _cm_tk_resp = ("Listo, quedó registrado ✅" if _cm_tk_st == "accepted"
+                                           else "Listo, no recibirás mensajes de marketing.")
+                            await send_whatsapp(phone, _cm_tk_resp)
+                            log_message(phone, "out", _cm_tk_resp, "HUMAN_TAKEOVER", canal="whatsapp")
+                            return Response(status_code=200)
+                    except Exception as _e_cm_tk:  # noqa: BLE001 — nunca romper el guard
+                        log.warning("consent en takeover falló phone=%s: %s", phone, _e_cm_tk)
                     log.info("HUMAN_TAKEOVER activo from=%s type=%s — silenciado", phone, msg_type)
                     return Response(status_code=200)
             # ── fin guard HUMAN_TAKEOVER ────────────────────────────────────

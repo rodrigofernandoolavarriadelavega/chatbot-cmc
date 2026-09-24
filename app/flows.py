@@ -2944,6 +2944,79 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     return None
 
 
+async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: str,
+                                      via: str = "flujo") -> str | None:
+    """Registra la respuesta a consent_marketing_v2 y arma la respuesta al
+    paciente (con winback inmediato si corresponde). Quién ES respuesta al
+    consentimiento lo decide consent_marketing.detectar (a qué mensaje contesta,
+    no el estado de la sesión)."""
+    _es_consent_no = not _es_consent_si
+    try:
+        from winback import (
+            WINBACK_ACTIVE,
+            get_candidato_por_phone,
+            ya_enviado_winback_hoy,
+            send_winback_smart,
+            _especialidad_sin_profesional,
+        )
+        _consent_status = "accepted" if _es_consent_si else "declined"
+        import consent_marketing as _cm
+        _cm.registrar(phone, _consent_status, txt, via=via)
+        if _es_consent_no:
+            return "Listo, no recibirás más mensajes de marketing."
+
+        # ── Consent SI: enviar winback inmediato si WINBACK_ACTIVE ────────
+        if not WINBACK_ACTIVE:
+            # Flag desactivado: confirmar consent sin enviar winback
+            log_event(phone, "winback_event_skip_inactive", {})
+            return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
+
+        # Rate limit: no enviar más de 1 winback por phone por día
+        if ya_enviado_winback_hoy(phone):
+            log_event(phone, "winback_event_skip_rate_limit", {})
+            return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
+
+        # Buscar datos del paciente en BI (incluye filtros consent + opt-out)
+        _candidato = get_candidato_por_phone(phone)
+        if not _candidato:
+            # Paciente no en BI o no contactable — confirmación genérica
+            log_event(phone, "winback_event_skip_no_candidato", {})
+            return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
+
+        # Guard disponibilidad: si la especialidad del paciente no tiene
+        # profesional disponible (licencia/vacaciones), NO lo invitamos a una
+        # hora que no existe — confirmamos el consent sin winback (no silencio).
+        if _especialidad_sin_profesional(_candidato.get("ultima_especialidad")):
+            log_event(phone, "winback_event_skip_sin_disponibilidad",
+                      {"especialidad": _candidato.get("ultima_especialidad")})
+            return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
+
+        # Enviar winback event-driven (asíncrono, no bloquea la respuesta)
+        import asyncio as _asyncio
+
+        async def _send_now():
+            try:
+                ok = await send_winback_smart(_candidato, prefer_session=True)
+                log_event(phone, "winback_event_driven", {
+                    "ok": ok,
+                    "cohorte": _candidato.get("cohorte"),
+                    "especialidad": _candidato.get("ultima_especialidad"),
+                })
+            except Exception as _we:
+                log.warning("winback event-driven error phone=...%s: %s", phone[-4:], _we)
+
+        _loop = _asyncio.get_event_loop()
+        _loop.create_task(_send_now())
+
+        # El winback ES la respuesta — no mandar acuse intermedio
+        return None
+
+    except Exception as _ce:
+        log.warning("consent handler error phone=%s: %s", phone, _ce)
+        # No escalar a humano
+        return "Listo, queda registrado.\n_Escribe *menu* si necesitas algo más._"
+
+
 async def handle_message(phone: str, texto: str, session: dict) -> str:
     state = session["state"]
     data  = session["data"]
@@ -3136,6 +3209,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # botón `cat_medico`/`cita_confirm:*`, selección de slot, captura de
     # nombre) y para pasarle a `detect_intent` el texto original.
     tl_norm = normalizar_texto_paciente(txt)
+
+    # ── Consentimiento de marketing (Ley 21.719) ─────────────────────────────
+    # Primero que todo: si el paciente está contestando la plantilla
+    # consent_marketing_v2, su respuesta se registra aunque la sesión esté en
+    # medio de otro flujo. consent_marketing.detectar mira A QUÉ contesta (el
+    # último mensaje que le enviamos), no el estado — ver su docstring.
+    import consent_marketing as _cm_mod
+    _cm_status = _cm_mod.detectar(phone, txt)
+    if _cm_status:
+        return await _responder_consent_marketing(phone, _cm_status == "accepted", txt)
 
     # Fecha de hoy en Chile — disponible en todos los handlers del flujo.
     # IMPORTANTE: NO mover dentro de bloques condicionales — varios handlers
@@ -3653,93 +3736,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _tiene_postconsulta_pending = bool(_row_pc)
         except Exception:
             pass
-
-    if (_es_consent_si or _es_consent_no) and not _consent_in_active_flow \
-            and _tiene_marketing_pending and not _tiene_dental_pending \
-            and not _tiene_postconsulta_pending:
-        try:
-            from winback import (
-                registrar_consent_respuesta,
-                WINBACK_ACTIVE,
-                get_candidato_por_phone,
-                ya_enviado_winback_hoy,
-                send_winback_smart,
-                _especialidad_sin_profesional,
-            )
-            _consent_status = "accepted" if _es_consent_si else "declined"
-            registrar_consent_respuesta(phone, _consent_status, method="reply")
-            log_event(phone, "marketing_consent_respuesta", {
-                "status": _consent_status,
-                "raw": txt[:120],
-            })
-            if _es_consent_no:
-                # Insertar en opt_outs_marketing para exclusión permanente
-                try:
-                    from winback import bi_conn as _bi_conn
-                    with _bi_conn() as _pg:
-                        with _pg.cursor() as _cur:
-                            _cur.execute(
-                                "INSERT INTO bi.opt_outs_marketing "
-                                "(phone, source, reason) "
-                                "VALUES (%s, %s, %s) "
-                                "ON CONFLICT (phone) DO NOTHING",
-                                (_phone_match, "consent_marketing_v1", "declined_marketing"),
-                            )
-                            _pg.commit()
-                except Exception as _oe:
-                    log.warning("opt_out insert error phone=%s: %s", phone, _oe)
-                return "Listo, no recibirás más mensajes de marketing."
-
-            # ── Consent SI: enviar winback inmediato si WINBACK_ACTIVE ────────
-            if not WINBACK_ACTIVE:
-                # Flag desactivado: confirmar consent sin enviar winback
-                log_event(phone, "winback_event_skip_inactive", {})
-                return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
-
-            # Rate limit: no enviar más de 1 winback por phone por día
-            if ya_enviado_winback_hoy(phone):
-                log_event(phone, "winback_event_skip_rate_limit", {})
-                return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
-
-            # Buscar datos del paciente en BI (incluye filtros consent + opt-out)
-            _candidato = get_candidato_por_phone(phone)
-            if not _candidato:
-                # Paciente no en BI o no contactable — confirmación genérica
-                log_event(phone, "winback_event_skip_no_candidato", {})
-                return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
-
-            # Guard disponibilidad: si la especialidad del paciente no tiene
-            # profesional disponible (licencia/vacaciones), NO lo invitamos a una
-            # hora que no existe — confirmamos el consent sin winback (no silencio).
-            if _especialidad_sin_profesional(_candidato.get("ultima_especialidad")):
-                log_event(phone, "winback_event_skip_sin_disponibilidad",
-                          {"especialidad": _candidato.get("ultima_especialidad")})
-                return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
-
-            # Enviar winback event-driven (asíncrono, no bloquea la respuesta)
-            import asyncio as _asyncio
-
-            async def _send_now():
-                try:
-                    ok = await send_winback_smart(_candidato, prefer_session=True)
-                    log_event(phone, "winback_event_driven", {
-                        "ok": ok,
-                        "cohorte": _candidato.get("cohorte"),
-                        "especialidad": _candidato.get("ultima_especialidad"),
-                    })
-                except Exception as _we:
-                    log.warning("winback event-driven error phone=...%s: %s", phone[-4:], _we)
-
-            _loop = _asyncio.get_event_loop()
-            _loop.create_task(_send_now())
-
-            # El winback ES la respuesta — no mandar acuse intermedio
-            return None
-
-        except Exception as _ce:
-            log.warning("consent handler error phone=%s: %s", phone, _ce)
-            # No escalar a humano
-            return "Listo, queda registrado.\n_Escribe *menu* si necesitas algo más._"
 
     # ── Respuesta al consent_dental_v1 (Win-back Dental) ─────────────────────
     # Quick Replies del template UTILITY consent_dental_v1:
