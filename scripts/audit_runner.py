@@ -22,9 +22,11 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
-from datetime import datetime
+from collections import Counter
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -208,12 +210,136 @@ def check_finanzas() -> list[dict]:
     return []
 
 
+# ══ Chequeos SISTÉMICOS (2026-09-24) ══════════════════════════════════════════
+# Nacieron de dos bugs que el auditor de conversaciones no podía ver desde el
+# chat: la eco mandando pacientes a lista de espera con sobrecupos libres, y el
+# webhook que descartaba los estados de entrega de Meta en lote.
+_BOT_LOG = Path(os.getenv("CMC_BOT_LOG", "/var/log/cmc-bot.log"))
+_AUDIT_DIR = Path(os.getenv("CMC_AUDIT_LOG_DIR", "/var/log/cmc-audit"))
+_HOY_UTC = datetime.now(ZoneInfo("UTC")).strftime("%Y-%m-%d")
+
+
+def _log_desde(minutos: int) -> list[str]:
+    corte = (datetime.now(ZoneInfo("UTC")) - timedelta(minutes=minutos)).strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with open(_BOT_LOG, encoding="utf-8", errors="replace") as fh:
+            return [ln.rstrip("\n") for ln in fh if ln[:19] >= corte and ln[:2] == "20"]
+    except FileNotFoundError:
+        return []
+
+
+def check_entrega() -> list[dict]:
+    """Mensajes que figuran 'sent' aunque el paciente escribió DESPUÉS: el
+    mensaje llegó, lo que se perdió es el estado → webhook descartando datos."""
+    con = _conn()
+    try:
+        tot = con.execute("SELECT COUNT(*) FROM message_statuses "
+                          "WHERE ts >= datetime('now','-24 hours')").fetchone()[0]
+        perdidos = con.execute("""
+            SELECT COUNT(*) FROM message_statuses s
+            WHERE s.status = 'sent' AND s.ts >= datetime('now','-24 hours')
+              AND EXISTS (SELECT 1 FROM messages m WHERE m.phone = s.phone
+                          AND m.direction = 'in' AND m.ts > s.ts)""").fetchone()[0]
+    finally:
+        con.close()
+    if tot >= 50 and perdidos / tot > 0.15:
+        return [{"severity": "high", "category": "tecnico", "fix_type": "logic_review",
+                 "issue": f"{perdidos} de {tot} mensajes (24h) quedaron en 'sent' aunque el paciente "
+                          f"respondió después: se están perdiendo webhooks de estado de Meta.",
+                 "evidence": f"perdidos={perdidos} total={tot} ({perdidos * 100 // tot}%)",
+                 "target_hint": "app/main.py webhook (lotes de Meta) · session.upsert_message_status",
+                 "dedup_key": f"entrega|estados_perdidos|{_HOY_UTC}"}]
+    return []
+
+
+def check_disponibilidad() -> list[dict]:
+    """Especialidades mandando pacientes a 'no hay horas' en serie: agenda sin
+    días abiertos en Medilink, o búsqueda rota. Operativamente urgente."""
+    con = _conn()
+    try:
+        rows = con.execute("""
+            SELECT lower(json_extract(meta, '$.especialidad')) esp, COUNT(*) n,
+                   COUNT(DISTINCT phone) pacientes, MAX(ts) ult
+            FROM conversation_events
+            WHERE event = 'sin_disponibilidad' AND ts >= datetime('now','-24 hours')
+            GROUP BY esp HAVING pacientes >= 3 ORDER BY pacientes DESC""").fetchall()
+    finally:
+        con.close()
+    return [{"severity": "high" if r["pacientes"] >= 5 else "medium", "category": "disponibilidad",
+             "fix_type": "logic_review",
+             "issue": f"{r['pacientes']} pacientes recibieron 'no hay horas' de {r['esp'] or '?'} en 24h. "
+                      f"Revisar si la agenda tiene días abiertos en Medilink y si hay sobrecupos que "
+                      f"el bot no está ofreciendo.",
+             "evidence": f"eventos={r['n']} pacientes={r['pacientes']} último={r['ult']}",
+             "target_hint": "Medilink (agenda) · app/flows.py _iniciar_agendar · app/sobrecupo.py",
+             "dedup_key": f"disponibilidad|{r['esp']}|{_HOY_UTC}"} for r in rows]
+
+
+def check_log() -> list[dict]:
+    """Errores del bot en la última hora agrupados por firma + búsquedas
+    degradadas por 429 + crons que APScheduler descartó (misfire)."""
+    lineas = _log_desde(65)
+    firmas: Counter = Counter()
+    degradadas = n429 = 0
+    misfires: Counter = Counter()
+    for ln in lineas:
+        if "MEDILINK_429" in ln:
+            n429 += 1
+        if re.search(r"No se pudo (obtener|buscar)", ln):
+            degradadas += 1
+        m = re.search(r'Run time of job "([^"(]+)', ln)
+        if m and "was missed" in ln:
+            misfires[m.group(1).strip()] += 1
+        if (" ERROR " in ln or " CRITICAL " in ln) and "429" not in ln and "saturado" not in ln.lower():
+            cuerpo = re.sub(r"\d+", "#", ln[20:])[:150]
+            firmas[cuerpo] += 1
+    out = []
+    for firma, n in firmas.most_common(5):
+        if n >= 3:
+            out.append({"severity": "medium", "category": "tecnico", "fix_type": "logic_review",
+                        "issue": f"Error repetido ×{n} en la última hora: {firma}",
+                        "evidence": firma, "target_hint": "",
+                        "dedup_key": f"log|{firma[:100]}|{_HOY_UTC}"})
+    if degradadas >= 10:
+        out.append({"severity": "high", "category": "tecnico", "fix_type": "logic_review",
+                    "issue": f"{degradadas} consultas a Medilink fallaron en la última hora "
+                             f"({n429} respuestas 429): búsquedas de horas de pacientes quedan a medias.",
+                    "evidence": f"degradadas={degradadas} 429={n429}",
+                    "target_hint": "app/medilink.py _get · crons batch de pagos/atenciones",
+                    "dedup_key": f"log|medilink_degradado|{_HOY_UTC}"})
+    for job, n in misfires.items():
+        out.append({"severity": "high", "category": "tecnico", "fix_type": "logic_review",
+                    "issue": f"Cron '{job}' descartado por APScheduler ×{n} (misfire): no está corriendo.",
+                    "evidence": job, "target_hint": "app/main.py add_job misfire_grace_time",
+                    "dedup_key": f"log|misfire|{job}|{_HOY_UTC}"})
+    return out
+
+
+def check_portaviones() -> list[dict]:
+    """La propia auditoría horaria dejó de correr (cron caído, script roto)."""
+    cron_log = _AUDIT_DIR / "cron.log"
+    try:
+        edad_min = (datetime.now().timestamp() - cron_log.stat().st_mtime) / 60
+    except FileNotFoundError:
+        return []
+    if edad_min > 130:
+        return [{"severity": "high", "category": "tecnico", "fix_type": "logic_review",
+                 "issue": f"La auditoría horaria de conversaciones no escribe hace {int(edad_min)} min.",
+                 "evidence": str(cron_log), "target_hint": "crontab · scripts/conversation_audit_swarm.py",
+                 "dedup_key": f"portaviones|detenido|{_HOY_UTC}"}]
+    return []
+
+
 CHECKS = {
     "precio": check_precio,
     "consent": check_consent,
     "agenda": check_agenda,
     "leak": check_leak,
     "finanzas": check_finanzas,
+    "entrega": check_entrega,
+    "disponibilidad": check_disponibilidad,
+    "log": check_log,
+    "portaviones": check_portaviones,
 }
 
 
