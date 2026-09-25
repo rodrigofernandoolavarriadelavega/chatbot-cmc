@@ -15627,12 +15627,19 @@ async def _paciente_ortodoncia_activo(phone: str) -> int:
         def _query_orto_sync():
             with _bi_orto_conn() as _pg:
                 with _pg.cursor() as _cur:
+                    # fact_atenciones no tiene rut: se une con dim_paciente.
+                    # Las columnas son profesional_id y fecha (la versión
+                    # anterior usaba rut/id_profesional/fecha_atencion y fallaba
+                    # SIEMPRE → retornaba 0 y nadie contaba como "ya en
+                    # tratamiento"; 2026-09-25). RUT BI viene sin puntos y el
+                    # del perfil con puntos: se comparan normalizados.
                     _cur.execute(
-                        "SELECT COUNT(*) FROM bi.fact_atenciones "
-                        "WHERE rut = %s "
-                        "  AND id_profesional = 66 "
-                        "  AND fecha_atencion >= NOW() - INTERVAL '6 months'",
-                        (perfil["rut"],),
+                        "SELECT COUNT(*) FROM bi.fact_atenciones a "
+                        "JOIN bi.dim_paciente p ON p.paciente_id = a.paciente_id "
+                        "WHERE upper(replace(replace(p.rut, '.', ''), '-', '')) = %s "
+                        "  AND a.profesional_id = 66 "
+                        "  AND a.fecha >= NOW() - INTERVAL '6 months'",
+                        (re.sub(r"[.\-\s]", "", perfil["rut"]).upper(),),
                     )
                     return (_cur.fetchone() or [0])[0]
 
