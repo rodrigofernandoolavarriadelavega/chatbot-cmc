@@ -337,7 +337,7 @@ class TestPrimerContactoFlyerPlomo(CapitalDemoBase):
         self.assertEqual(primer_envio["type"], "cta_url")
         self.assertEqual(primer_envio["header"]["type"], "image")
         self.assertEqual(primer_envio["header"]["image"]["link"], capital_demo._FLYER_IMG_URL)
-        self.assertIn("ALGÚN DÍA VAS A CONTAR ESTA HISTORIA", primer_envio["body"]["text"])
+        self.assertIn("Hay historias que se escriben a 5.424 metros", primer_envio["body"]["text"])
         self.assertEqual(primer_envio["footer"]["text"], "Responde BAJA para no recibir más salidas")
         self.assertEqual(primer_envio["action"]["name"], "cta_url")
         self.assertEqual(primer_envio["action"]["parameters"]["display_text"], "Reservar mi cupo")

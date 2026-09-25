@@ -194,20 +194,10 @@ _NOMBRES_FALLBACK = {
 }
 
 _COPY_FLYER_RESTO = (
-    " 🏔️ ALGÚN DÍA VAS A CONTAR ESTA HISTORIA.\n\n"
-    "El frío en la cara. El sonido de tus pasos sobre la montaña. La cordillera "
-    "extendiéndose hasta donde alcanza la mirada… y tú, ahí, viviendo eso que "
-    "tantas veces imaginaste.\n\n"
-    "Cerro El Plomo. 5.424 metros de un desafío que empieza mucho antes de la "
-    "cumbre: cuando decides ir por él.\n\n"
-    "Prepárate para días intensos, paisajes inmensos y compañeros con quienes "
-    "compartir cada paso. Hay experiencias que se quedan contigo mucho después "
-    "de volver a casa. 🔥\n\n"
-    "⚡ CIERRE DE PREVENTA | ÚLTIMOS CUPOS\n\n"
-    "📅 19–20–21 de diciembre: 3 cupos\n"
-    "📅 26–27–28 de diciembre: 3 cupos\n"
-    "📅 02–03–04 de enero: 4 cupos\n\n"
-    "Capital Travel | Tu próxima gran historia empieza con un paso."
+    " 🏔️ Hay historias que se escriben a 5.424 metros. Vive la tuya.\n\n"
+    "Cerro El Plomo con Capital Travel.\n"
+    "🔥 Últimos cupos de preventa.\n\n"
+    "📲 Escríbenos “PLOMO” y da el primer paso."
 )
 
 
