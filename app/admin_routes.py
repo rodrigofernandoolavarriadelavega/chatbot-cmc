@@ -1009,7 +1009,7 @@ def admin_search_messages(q: str, _: str = Depends(require_admin)):
     # Los chats del desvío demo Capital Travel no son pacientes: tampoco aparecen al buscar
     # (la lista y la cola ya los ocultan). Fail-open: si el filtro falla, no oculta nada.
     try:
-        from capital_demo import activo as _capital_activo
+        from capital_demo import oculto_en_cmc as _capital_activo
         results = [r for r in results if not _capital_activo(str(r.get("phone", "")))]
     except Exception as exc:  # noqa: BLE001
         log.warning("admin_search: no se pudo filtrar desvío Capital: %s", exc)

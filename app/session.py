@@ -2823,7 +2823,7 @@ def get_conversations(limit: int = 2000) -> list[dict]:
         # funcionando — solo se oculta del LISTADO. Fail-open: si el check
         # falla, no oculta nada (mejor mostrar de más que esconder pacientes).
         try:
-            from capital_demo import activo as _capital_demo_activo
+            from capital_demo import oculto_en_cmc as _capital_demo_activo
             result = [d for d in result if not _capital_demo_activo(d.get("phone", ""))]
         except Exception as exc:  # noqa: BLE001
             log.warning("get_conversations: no se pudo filtrar desvío Capital Demo: %s", exc)

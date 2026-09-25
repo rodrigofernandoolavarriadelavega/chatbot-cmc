@@ -109,6 +109,17 @@ def activo(phone: str) -> bool:
     return hoy <= hasta
 
 
+def oculto_en_cmc(phone: str) -> bool:
+    """¿Se oculta este chat del panel/cola/búsqueda del CMC?
+    Sí si está en el desvío, salvo los números de CAPITAL_DEMO_VISIBLE_CMC (internos que
+    el dueño quiere ver también en el CMC, p.ej. él mismo). Clientes externos: ocultos, para
+    que ninguna recepcionista les responda como centro médico."""
+    if not activo(phone):
+        return False
+    visibles = {p.strip().lstrip("+") for p in os.getenv("CAPITAL_DEMO_VISIBLE_CMC", "").split(",") if p.strip()}
+    return (phone or "").lstrip("+") not in visibles
+
+
 # ── Extracción de texto del mensaje entrante ─────────────────────────────
 def texto_de_mensaje(msg: dict, msg_type: str):
     """Devuelve el texto del mensaje si es texto o botón; None para audio,

@@ -157,3 +157,14 @@ def test_busqueda_del_panel_no_devuelve_chats_del_desvio(monkeypatch):
         {"phone": "56911112222", "text": "Quiero Estética"}])
     r = admin_routes.admin_search_messages("Estética", _="x")
     assert [x["phone"] for x in r["results"]] == ["56911112222"]
+
+
+def test_numeros_visibles_en_cmc_no_se_ocultan(monkeypatch):
+    import capital_demo
+    monkeypatch.setenv("CAPITAL_DEMO_PHONES", "56983129274,56987834148,51955058247")
+    monkeypatch.setenv("CAPITAL_DEMO_HASTA", "2099-01-01")
+    monkeypatch.setenv("CAPITAL_DEMO_VISIBLE_CMC", "56987834148,51955058247")
+    assert capital_demo.oculto_en_cmc("56983129274") is True      # cliente externo: oculto
+    assert capital_demo.oculto_en_cmc("56987834148") is False     # dueño: visible en ambos
+    assert capital_demo.oculto_en_cmc("+51955058247") is False
+    assert capital_demo.oculto_en_cmc("56911112222") is False     # paciente normal
