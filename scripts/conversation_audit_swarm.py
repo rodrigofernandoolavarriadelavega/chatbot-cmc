@@ -72,9 +72,12 @@ APRENDIDO_MD = LOG_DIR / "aprendido.md"
 
 # Modelos: el horario corre ~24×/día y COMPARTE la cuenta API con el bot.
 # 25-sep-2026: con claude-opus-5 cada hora la recarga de US$20 duró 3,6 días y
-# el bot quedó sin saldo. Haiku ≈ US$0,4/día. No subir sin preguntar al dueño.
-DEFAULT_MODEL = os.getenv("CMC_AUDIT_MODEL", "claude-haiku-4-5")
-DEFAULT_EFFORT = os.getenv("CMC_AUDIT_EFFORT", "medium")
+# el bot quedó sin saldo. Comparación 25-sep sobre las mismas 41 conversaciones:
+# Haiku 12 hallazgos (~5 bugs reales, varias falsas alarmas) vs Sonnet 5 en
+# esfuerzo bajo 16 (~13 reales). Elegido por el dueño: Sonnet 5 low
+# (~US$0,6-0,8/día). No subir modelo ni esfuerzo sin preguntarle.
+DEFAULT_MODEL = os.getenv("CMC_AUDIT_MODEL", "claude-sonnet-5")
+DEFAULT_EFFORT = os.getenv("CMC_AUDIT_EFFORT", "low")
 DEEP_MODEL = os.getenv("CMC_AUDIT_DEEP_MODEL", "claude-opus-5")
 DEEP_EFFORT = os.getenv("CMC_AUDIT_DEEP_EFFORT", "high")
 MAX_CONVERSATIONS = int(os.getenv("CMC_AUDIT_MAX_CONV", "150"))
