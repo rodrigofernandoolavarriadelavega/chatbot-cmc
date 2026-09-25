@@ -49,6 +49,16 @@ _FLUJO_ACTIVO_STATES = {
     # en su ficha, con HUMAN_TAKEOVER. Verificado en producción con 3 pacientes
     # el mismo día que se encendió el gate.
     "WAIT_ABONO_COMPROBANTE", "WAIT_ABONO_PAGADOR_CONFIRM",
+    # 2026-09-25: mismo patrón que FIX-6 y WAIT_ABONO_*. WAIT_PARENTESCO se
+    # ofrece justo DESPUÉS de confirmar una cita para terceros ("¿qué es
+    # Rodrigo tuyo/a?", opcional) — pero con timeout de 30 min, una respuesta
+    # tardía (caso real 56931806676: contestó a los 33 min) llegaba con
+    # state=IDLE. El id interno del botón ("par_padre") entraba como texto
+    # libre al fallback de Claude, que lo citó tal cual al paciente
+    # ("veo que escribiste «par_padre»") — filtración de un identificador
+    # interno. Con 240 min el botón llega dentro de la ventana y lo procesa
+    # el handler de WAIT_PARENTESCO normalmente.
+    "WAIT_PARENTESCO",
 }
 
 # ── SQLCipher opcional ───────────────────────────────────────────────────────

@@ -495,8 +495,41 @@ async def send_whatsapp_location(to: str, latitude: float, longitude: float,
     })
 
 
+_WA_INTERACTIVE_BODY_LIMIT = 1024  # tope duro de Meta para interactive.body.text
+
+
+def _safe_interactive_body(text: str) -> str:
+    """Recorta el body de un mensaje interactivo (botones/lista) al límite real
+    de Meta (1024 chars — distinto del texto plano, que acepta 4096 y ya se
+    parte en chunks en send_whatsapp/FIX-8).
+
+    Caso real 2026-09-25 (56956326820): una respuesta FAQ larga + oferta de
+    hora armada con `_btn_msg` llegó a ~1300 chars de body → Meta devolvió
+    400 (#131009) "Parameter value is not valid" y el mensaje NUNCA se
+    entregó (a diferencia del texto plano, acá no hay reintento posible: el
+    payload es irreversible). Corta en borde de palabra y cierra negritas
+    (`*`) sueltas para no dejar un asterisco colgando.
+    """
+    if not text or len(text) <= _WA_INTERACTIVE_BODY_LIMIT:
+        return text
+    limit = _WA_INTERACTIVE_BODY_LIMIT - 1  # deja espacio para "…"
+    cut = text[:limit]
+    sp = cut.rfind(" ")
+    if sp > limit - 40:  # no recortar de más si el último espacio quedó lejos
+        cut = cut[:sp]
+    if cut.count("*") % 2 == 1:
+        cut = cut.rsplit("*", 1)[0]
+    return cut.rstrip() + "…"
+
+
 async def send_whatsapp_interactive(to: str, interactive: dict):
     """Envía mensaje interactivo (botones o lista) vía Meta Cloud API."""
+    body_text = (interactive.get("body") or {}).get("text")
+    if isinstance(body_text, str) and len(body_text) > _WA_INTERACTIVE_BODY_LIMIT:
+        log.warning("send_whatsapp_interactive: body %d chars > límite %d, recortando",
+                    len(body_text), _WA_INTERACTIVE_BODY_LIMIT)
+        interactive = dict(interactive)
+        interactive["body"] = {**interactive["body"], "text": _safe_interactive_body(body_text)}
     await _post_meta({
         "messaging_product": "whatsapp",
         "to": to,

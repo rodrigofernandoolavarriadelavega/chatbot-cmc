@@ -25,6 +25,19 @@ _CHILE_TZ = ZoneInfo("America/Santiago")
 
 router = APIRouter(prefix="/alma/api/pagos", tags=["pagos"])
 
+# Pacing real del carril batch de prellenar_pagos (2026-09-25). Medilink
+# rate-limita ~20 req/min DURO por cuenta (docs/medilink_gotchas.md #6),
+# compartido entre el carril paciente y el batch — el lane_batch() de
+# 2026-07-27 evita que los 429 del batch apaguen el circuit breaker del
+# paciente, pero NO limita cuántas requests reales le quita del presupuesto.
+# Los throttles previos (0.15s/0.18s ≈ 400 req/min) overshooteaban el límite
+# real más de 20x, generando la propia tormenta de 429 que luego bloqueaba
+# escrituras de pacientes en vivo (caso real 56961281031, 2026-09-25 13:46:
+# registro de paciente nueva chocó con esta corrida horaria y crear_paciente
+# se agotó en 429 SATURADO). Pacing más lento que el presupuesto completo
+# para dejar margen real al carril paciente mientras el batch corre.
+_BATCH_PACE_S = 4.0
+
 # ── Arancel Fonasa MLE Nivel 3 (CMC) ─────────────────────────────────────────
 # Solo estas áreas aceptan bono Imed (Fonasa MLE).
 # El resto es particular.
@@ -1708,7 +1721,7 @@ async def prellenar_pagos(
     - 1 sola query GET /citas?fecha=... para todas las citas del día.
     - Para citas NUEVAS (no existen en pagos_cmc): INSERT draft.
     - Para citas YA EXISTENTES con procedimiento vacío y fila NO bloqueada:
-      busca /atenciones/{id}/detalles y rellena el hueco. Throttled 0.15s.
+      busca /atenciones/{id}/detalles y rellena el hueco. Throttled (_BATCH_PACE_S).
     - NUNCA sobrescribe filas bloqueadas (bloqueado=1) ni campos ya editados
       (copago, metodo_pago, folio, procedimiento no vacíos).
     - Solo escribe procedimiento en filas cuya prestación sigue vacía.
@@ -1839,7 +1852,7 @@ async def prellenar_pagos(
         Usa _get (retry 429 + semáforo): sin esto el rate limit del sync grande
         dejaba la prestación vacía silenciosamente."""
         try:
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(_BATCH_PACE_S)
             rd = await _get(
                 client,
                 f"{MEDILINK_BASE_URL}/atenciones/{id_aten}/detalles",
@@ -1869,7 +1882,7 @@ async def prellenar_pagos(
             return _aten_meta_cache[id_aten]
         res = ("", 0)
         try:
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(_BATCH_PACE_S)
             ra = await _get(
                 client,
                 f"{MEDILINK_BASE_URL}/atenciones/{id_aten}",
@@ -1898,7 +1911,7 @@ async def prellenar_pagos(
             return _ficha_cache[id_paciente]
         rut_tel = ("", "")
         try:
-            await asyncio.sleep(0.18)
+            await asyncio.sleep(_BATCH_PACE_S)
             # _get: retry 429 + semáforo. Antes era client.get directo y un rate
             # limit dejaba el RUT vacío (y cacheado) → filas sin RUT en el sync grande.
             rp = await _get(

@@ -2763,7 +2763,23 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
         elif tag == "preguntar_info":
             # Intentar FAQ específico primero (telemedicina, radiografía, etc).
             from claude_helper import _local_faq_fallback as _faq_fb
-            resp = _faq_fb(txt) or _preguntar_info_respuesta()
+            resp = _faq_fb(txt)
+            if not resp:
+                # BUG fix 2026-09-25 (caso 56991531985): "¿atienden con fonasa?"
+                # caía al bloque genérico de dirección/teléfono/horario sin
+                # contestar la pregunta. Si menciona previsión/cobertura, usar
+                # la tabla completa de respuesta_faq (SYSTEM_PROMPT) en vez de
+                # la ficha de ubicación — nunca dejar la pregunta sin responder.
+                _tl_info = txt.lower()
+                if any(k in _tl_info for k in
+                       ("fonasa", "isapre", "convenio", "prevision",
+                        "previsión", "dipreca", "capredena")):
+                    from claude_helper import respuesta_faq as _resp_faq_full
+                    try:
+                        resp = await _resp_faq_full(txt)
+                    except Exception:
+                        resp = None
+            resp = resp or _preguntar_info_respuesta()
         else:
             return None
         recordatorio = _recordatorio_prompt(state, data)
@@ -3435,6 +3451,34 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Fallback: cita agendada en RECEPCIÓN (vive en
                 # citas_recepcion_reminders, no en citas_bot) — bug 2026-06-23.
                 _fila_rc = get_cita_recepcion_confirmable(phone, _hoy_rc)
+            _cita_ya_confirmada_rc = None
+            if not _fila_rc:
+                # BUG fix 2026-09-25 (caso 56982248297): la cita ya se había
+                # confirmado con un recordatorio ANTERIOR (48h/24h) y llegó
+                # un recordatorio nuevo (24h/2h) para la MISMA cita. La query
+                # de arriba exige confirmation_status vacío, así que no la
+                # encuentra y el paciente caía en "¿Qué quieres confirmar? ...
+                # dime tu RUT" como si no tuviera hora. Reconocer que ya está
+                # confirmada en vez de pedirle el RUT de nuevo.
+                with _conn_rc() as _c_rc_ya:
+                    _cita_ya_confirmada_rc = _c_rc_ya.execute(
+                        "SELECT id_cita, especialidad, profesional, fecha, hora "
+                        "FROM citas_bot "
+                        "WHERE phone=? AND fecha >= ? AND confirmation_status='confirmed' "
+                        "AND (cancel_detected_at IS NULL) "
+                        "ORDER BY fecha ASC, hora ASC LIMIT 1",
+                        (phone, _hoy_rc),
+                    ).fetchone()
+                if _cita_ya_confirmada_rc:
+                    log_event(phone, "cita_ya_confirmada_reconfirmacion", {
+                        "id_cita": str(_cita_ya_confirmada_rc["id_cita"]),
+                        "txt": txt[:80],
+                    })
+                    return (
+                        f"Tu hora de *{_cita_ya_confirmada_rc['especialidad']}* con "
+                        f"{_cita_ya_confirmada_rc['profesional']} ya estaba confirmada "
+                        "✅ No necesitas hacer nada más. Te esperamos 👋"
+                    )
             if _fila_rc:
                 _id_cita_rc = str(_fila_rc["id_cita"])
                 mark_cita_confirmation(_id_cita_rc, phone, "confirmed")
@@ -10082,6 +10126,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
 
     if state == "WAIT_RUT_AGENDAR":
+        # BUG fix 2026-09-25: rechazo explícito de la hora ofrecida ("no quiero la
+        # hora") caía en el parser de RUT y quedaba en loop pidiendo RUT (o, si
+        # Claude estaba caído, en "problema técnico para entender"). Mismo patrón
+        # que BUG-03 en WAIT_MODALIDAD: salir del flujo amablemente. Como en este
+        # punto todavía no se creó ninguna cita (se crea recién tras CONFIRMING_CITA),
+        # no hay nada que cancelar por el camino oficial.
+        _tl_rut_no = txt.lower().strip()
+        _NO_QUIERO_KW_RUT = ("no quiero", "no quero", "ya no quiero",
+                              "no gracias", "no necesito", "dejalo", "déjalo",
+                              "olvidalo", "olvídalo", "no importa")
+        # Un texto que habla del RUT o trae dígitos NO es rechazo de la hora
+        # ("ya no me acuerdo de mi rut", "no quiero dar el rut por aquí",
+        # "olvidé el carnet 12.345…"): ese paciente sigue queriendo reservar.
+        _habla_de_rut = bool(re.search(r"\d|\brut\b|carnet|c[eé]dula", _tl_rut_no))
+        if tl != "rut_nuevo" and not _habla_de_rut and (
+            any(k in _tl_rut_no for k in _NO_QUIERO_KW_RUT) or tl in NEGACIONES
+        ):
+            log_event(phone, "rut_agendar_rechazo_hora", {"texto": txt[:120]})
+            reset_session(phone)
+            return (
+                "Entendido, no hay problema 😊\n\n"
+                "_Escribe *menu* si necesitas algo más._"
+            )
         # BUG-H: si ya hubo 2+ rechazos de RUT y el paciente envía texto sin formato de
         # RUT (parece un nombre), derivar a recepción con el nombre como contexto.
         _RUT_LIKE = re.compile(r'\b\d{5,8}[-–][\dkK]\b|\b\d{7,9}\b')
@@ -12208,6 +12275,31 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 or tl in _SET_SALIR or tl_norm in _SET_SALIR):
             reset_session(phone)
             return "Perfecto, dejamos tu cita como está 😊\n_Escribe *menu* si necesitas algo más._"
+        # BUG fix 2026-09-25 (caso 56949341431): "No podre ir" en lenguaje
+        # natural solo generaba "Elige un número entre 1 y 3" en loop. La
+        # persona quiere CANCELAR, no reagendar — pivotea a la selección de
+        # cancelación reusando la misma lista de citas ya cargada (mismo
+        # formato que usa WAIT_CITA_CANCELAR), sin volver a pedir RUT.
+        _CANCEL_INTENT_KW_REAG = (
+            "no podre ir", "no podre asistir", "no podre llegar",
+            "no puedo ir", "no puedo asistir", "no puedo llegar",
+            "no voy a poder", "no voy a poder ir", "no voy a ir",
+            "no alcanzo a llegar", "no alcanzo a ir",
+            "mejor cancelar", "quiero cancelar", "prefiero cancelar",
+            "quiero cancelarla", "mejor cancelarla",
+        )
+        # "No puedo ir el martes, quiero otro día" es REAGENDAR (el flujo actual),
+        # no cancelar: solo se pivotea si no pide otra fecha/hora.
+        _pide_otra_fecha = bool(re.search(
+            r"otr[oa]s? (d[ií]a|hora|fecha)|cambi|reagend|mover|lunes|martes|mi[eé]rcoles|"
+            r"jueves|viernes|s[aá]bado|mañana|manana|semana", tl_norm))
+        if any(k in tl_norm for k in _CANCEL_INTENT_KW_REAG) and not _pide_otra_fecha:
+            log_event(phone, "reagendar_pivot_a_cancelar", {"texto": txt[:120]})
+            data["reagendar_mode"] = False
+            data.pop("reagendar_retries", None)
+            paciente_r = data.get("paciente") or {}
+            save_session(phone, "WAIT_CITA_CANCELAR", data)
+            return _format_citas_cancelar(citas, paciente_r.get("nombre", ""))
         _cita_sel_r, _motivo_sel_r = _resolver_cita_seleccionada(
             citas, txt, tl, "rcita_")
         if _motivo_sel_r == "id_no_vigente":
@@ -13662,6 +13754,31 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "en el centro.\n\n"
                 "Si preferes llamar directamente: 📞 (44) 296 5226\n\n"
                 "_Tu hora queda pendiente de confirmar hasta que se reciba el abono._"
+            )
+
+        # ── Caso Fonasa: aclarar cobertura antes de repetir "esperando comprobante" ──
+        # BUG fix 2026-09-25 (caso 56973790616): "Con fonasa" en pleno abono-gate
+        # de Psiquiatría solo repetía "estoy esperando el comprobante" sin
+        # aclarar que esta especialidad es únicamente particular. El paciente
+        # ya pagó ese abono por adelantado, así que no cabe otra cobertura acá.
+        _kw_fonasa_ab = ("fonasa", "isapre", "dipreca", "capredena")
+        if any(k in tl_norm for k in _kw_fonasa_ab) and _area_ab not in _FONASA_SPECIALTIES:
+            log_event(phone, "abono_gate_pregunta_fonasa", {
+                "area": _area_ab, "texto": txt[:120],
+            })
+            save_session(phone, "WAIT_ABONO_COMPROBANTE", data)
+            from config import ABONO_PSIQUIATRIA_CLP as _ABO_PSQ_FN, abono_regla as _reg_fn
+            _sl_fn = data.get("abono_gate_slot") or {}
+            _r_fn = _reg_fn(especialidad=_sl_fn.get("especialidad"),
+                            id_profesional=_sl_fn.get("id_profesional"))
+            _monto_fn = f"${int(_r_fn['monto']) if _r_fn else _ABO_PSQ_FN:,}".replace(",", ".")
+            return (
+                f"*{_area_ab}* es solo *particular* — no se puede pagar con Fonasa "
+                "ni Isapre.\n\n"
+                f"El abono de *{_monto_fn} CLP* corresponde al valor total de la "
+                "consulta; el día de la atención no pagas nada adicional.\n\n"
+                "Envía una *foto* del comprobante de transferencia para confirmar "
+                "tu hora 📎"
             )
 
         # ── Caso B: texto "ya transferí" / "ya envié" pero sin imagen ────────
