@@ -967,7 +967,39 @@ def _split_long_msg(body: str, limit: int = 900) -> list[str]:
     return chunks
 
 
-async def send_instagram(igsid: str, body: str):
+_IG_PAGE_TOKEN_CACHE: dict[str, str] = {}
+
+
+async def _ig_page_token() -> str | None:
+    """Page Access Token de la página del CMC derivado del system-user token
+    (META_ACCESS_TOKEN, permanente) vía /me/accounts. No vence (expires_at=0)
+    y trae instagram_manage_messages.
+
+    2026-09-25: META_PAGE_ACCESS_TOKEN venció el 14-jun-2026 y desde entonces
+    TODO envío por Instagram fallaba con 401 (192 personas escribieron, 167
+    respuestas de recepción nunca llegaron; el panel las mostraba como enviadas).
+    """
+    if _IG_PAGE_TOKEN_CACHE.get("token"):
+        return _IG_PAGE_TOKEN_CACHE["token"]
+    if not META_ACCESS_TOKEN:
+        return None
+    try:
+        client = _get_meta_client()
+        r = await client.get("https://graph.facebook.com/v22.0/me/accounts",
+                             params={"fields": "id,access_token"},
+                             headers={"Authorization": f"Bearer {META_ACCESS_TOKEN}"})
+        if r.status_code == 200:
+            for p in r.json().get("data", []):
+                if p.get("id") == META_PAGE_ID and p.get("access_token"):
+                    _IG_PAGE_TOKEN_CACHE["token"] = p["access_token"]
+                    return p["access_token"]
+        log.error("ig page token: /me/accounts → %s %s", r.status_code, r.text[:150])
+    except (httpx.TimeoutException, httpx.NetworkError) as e:
+        log.error("ig page token error: %s", e)
+    return None
+
+
+async def send_instagram(igsid: str, body: str) -> bool:
     """Envía mensaje de texto a un usuario de Instagram vía Graph API.
     IG rechaza mensajes > 1000 chars: divide en chunks automáticamente.
     Dedupe: skip si el mismo body se envió a este igsid en los últimos 2 min."""
@@ -975,25 +1007,48 @@ async def send_instagram(igsid: str, body: str):
     body = _normalize_markdown_for_chat(body)
     if _is_dupe_outbound(f"ig_{igsid}", body):
         log.info("dedupe outbound skipped ig=%s len=%d", igsid, len(body))
-        return
-    if not INSTAGRAM_USER_ID:
-        log.error("INSTAGRAM_USER_ID no configurado en .env")
-        return
-    url = f"https://graph.instagram.com/v22.0/{INSTAGRAM_USER_ID}/messages"
+        return True
+    # Camino principal: /{page-id}/messages con el token de página derivado del
+    # system-user (no vence). Respaldo: el camino antiguo por graph.instagram.
+    page_tok = await _ig_page_token()
+    rutas = []
+    if page_tok:
+        rutas.append((f"https://graph.facebook.com/v22.0/{META_PAGE_ID}/messages", page_tok))
+    if INSTAGRAM_USER_ID:
+        rutas.append((f"https://graph.instagram.com/v22.0/{INSTAGRAM_USER_ID}/messages",
+                      META_PAGE_ACCESS_TOKEN))
+    if not rutas:
+        log.error("Instagram sin ruta de envío (sin token de página ni INSTAGRAM_USER_ID)")
+        return False
+    todo_ok = True
     for chunk in _split_long_msg(body, limit=900):
-        for attempt in range(2):
-            try:
-                client = _get_meta_client()
-                r = await client.post(
-                    url,
-                    headers={"Authorization": f"Bearer {META_PAGE_ACCESS_TOKEN}"},
-                    json={"recipient": {"id": igsid}, "message": {"text": chunk}},
-                )
-                if r.status_code == 200:
-                    break
-                log.error("Instagram API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
-            except (httpx.TimeoutException, httpx.NetworkError) as e:
-                log.error("Instagram API intento %d error: %s", attempt + 1, e)
+        enviado = False
+        for url, tok in rutas:
+            for attempt in range(2):
+                try:
+                    client = _get_meta_client()
+                    r = await client.post(
+                        url,
+                        headers={"Authorization": f"Bearer {tok}"},
+                        json={"recipient": {"id": igsid}, "message": {"text": chunk}},
+                    )
+                    if r.status_code == 200:
+                        enviado = True
+                        break
+                    log.error("Instagram API intento %d → %s: %s", attempt + 1, r.status_code, r.text[:200])
+                    if r.status_code in (400, 401, 403):
+                        if url.startswith("https://graph.facebook.com") and r.status_code == 401:
+                            _IG_PAGE_TOKEN_CACHE.pop("token", None)
+                        break          # error de autorización/parámetro: probar la otra ruta
+                except (httpx.TimeoutException, httpx.NetworkError) as e:
+                    log.error("Instagram API intento %d error: %s", attempt + 1, e)
+            if enviado:
+                break
+        if not enviado:
+            todo_ok = False
+            log.error("INSTAGRAM_NO_ENTREGADO ig=%s len=%d", igsid, len(chunk))
+            break
+    return todo_ok
 
 
 # ─── Render de templates para logging legible ─────────────────────────────────

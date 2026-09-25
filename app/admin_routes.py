@@ -652,7 +652,13 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     wamid = None
     if phone.startswith("ig_"):
         igsid = phone[3:]
-        await send_instagram(igsid, message)
+        # Si Instagram no entrega, la recepcionista TIENE que saberlo: antes el
+        # panel mostraba el mensaje como enviado aunque Meta lo rechazaba
+        # (token vencido 14-jun → 167 respuestas perdidas sin aviso).
+        if await send_instagram(igsid, message) is False:
+            raise HTTPException(status_code=502, detail=(
+                "Instagram no entregó el mensaje. Intenta de nuevo o contacta al "
+                "paciente por otro medio."))
         canal = "instagram"
     elif phone.startswith("fb_"):
         psid = phone[3:]
