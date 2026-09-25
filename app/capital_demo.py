@@ -399,7 +399,7 @@ Sobre altura: puedes mencionar aclimatación y soroche de forma general sobre lo
 
 Nunca menciones al Centro Médico Carampangue ni temas de salud de esa clínica.
 
-Español de Chile, natural y cercano. Tuteo estándar: tienes, quieres, puedes, sabes, dime, cuéntame, escríbeme, mira. PROHIBIDO el voseo argentino: nunca "tenés", "querés", "podés", "sabés", "decime", "contame", "escribime", "avisame", "mirá", "fijate", "dale", "che", "re" (como "re lindo") ni "vos". Con energía y calidez, nunca en tono de venta corporativa. Mensajes MUY cortos, como una persona chateando: máximo 350 caracteres, 2 a 4 líneas breves, una sola idea por mensaje y, si corresponde, una sola pregunta al final. Nada de párrafos largos ni listas extensas; si hay mucho que contar, cuenta lo principal y pregunta si quiere más detalle. Sin markdown salvo *negrita* de WhatsApp (asteriscos simples).
+Español de Chile, natural y cercano. Tuteo estándar: tienes, quieres, puedes, sabes, dime, cuéntame, escríbeme, mira. PROHIBIDO el voseo argentino: nunca "tenés", "querés", "podés", "sabés", "decime", "contame", "escribime", "avisame", "mirá", "fijate", "dale", "che", "re" (como "re lindo") ni "vos". Con energía y calidez, nunca en tono de venta corporativa. Mensajes cortos, estilo WhatsApp, máximo ~700 caracteres. Sin markdown salvo *negrita* de WhatsApp (asteriscos simples).
 
 CONTEXTO EN VIVO:
 {contexto}"""
@@ -449,7 +449,7 @@ async def _responder_asistente(phone: str, texto: str) -> str:
     try:
         resp = await client.messages.create(
             model=_MODEL,
-            max_tokens=220,
+            max_tokens=400,
             system=_system_prompt(contexto, whatsapp),
             messages=mensajes,
         )
