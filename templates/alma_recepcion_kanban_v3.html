@@ -608,8 +608,12 @@ async function pintarConv(card){
     cuerpo.innerHTML = (msgs||[]).slice(-50).map(m => {
       const dir = (m.direction || m.dir) === 'in' ? 'in' : 'out';
       // Imagen dedicada (media_url): arriba del texto, como WhatsApp.
-      const img = m.media_url
-        ? `<a class="mimg" href="${String(m.media_url).replace(/"/g,'&quot;')}" target="_blank"><img src="${String(m.media_url).replace(/"/g,'&quot;')}" loading="lazy" alt="imagen"></a>`
+      // Fotos de pacientes (/admin/api/…) exigen token; este panel ya lo pasa en la URL (ver api()).
+      const _mu = m.media_url && String(m.media_url).startsWith('/admin/api/')
+        ? m.media_url + (m.media_url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN)
+        : m.media_url;
+      const img = _mu
+        ? `<a class="mimg" href="${String(_mu).replace(/"/g,'&quot;')}" target="_blank"><img src="${String(_mu).replace(/"/g,'&quot;')}" loading="lazy" alt="imagen"></a>`
         : '';
       return `<div class="msg ${dir}">${img}${(m.text||'').replace(/</g,'&lt;')}
         <span class="t">${(m.ts||'').slice(11,16)}</span></div>`;

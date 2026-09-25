@@ -1561,6 +1561,27 @@ function toggleContext(){
 const TOKEN = "__TOKEN__";
 const CHK_ENABLED = __CHECKLIST_PILL__;
 const HEADERS = TOKEN ? {"Authorization": "Bearer " + TOKEN} : {};
+
+// Imágenes protegidas del panel: fetch con la cabecera Authorization → blob URL.
+// Un <img src> no puede mandar cabeceras y el token nunca va en la URL.
+const _mediaCache = new Map();
+async function _blobProtegido(url){
+  if (_mediaCache.has(url)) return _mediaCache.get(url);
+  const p = fetch(url, {headers: HEADERS}).then(r => r.ok ? r.blob() : Promise.reject(r.status))
+    .then(b => URL.createObjectURL(b));
+  _mediaCache.set(url, p);
+  p.catch(() => _mediaCache.delete(url));
+  return p;
+}
+function hidratarMediaProtegida(root){
+  (root || document).querySelectorAll('img[data-auth-src]:not([data-hidratada])').forEach(img => {
+    img.setAttribute('data-hidratada', '1');
+    _blobProtegido(img.getAttribute('data-auth-src'))
+      .then(u => { img.src = u; const a = img.closest('a[data-auth-href]'); if (a){ a.href = u; a.target = '_blank'; } })
+      .catch(() => { img.alt = 'Imagen no disponible'; });
+  });
+}
+new MutationObserver(() => hidratarMediaProtegida()).observe(document.documentElement, {childList: true, subtree: true});
 const QS     = TOKEN ? "?token=" + encodeURIComponent(TOKEN) : "";
 
 const POLL_INBOX_MS = 8000;
@@ -2288,9 +2309,12 @@ function renderMessages(){
     // Imagen dedicada (pedido del dueño 2026-09-25): flyers de campaña,
     // fotos entrantes de pacientes, envíos ad-hoc desde el panel. Arriba del
     // texto, como WhatsApp. Clic abre en grande (nueva pestaña).
-    const mediaHtml = m.media_url
-      ? `<a href="${esc(m.media_url)}" target="_blank" class="msg-media"><img src="${esc(m.media_url)}" loading="lazy" alt="imagen"></a>`
-      : '';
+    // Las fotos de pacientes (/admin/api/…) exigen el token, que aquí viaja solo
+    // en la cabecera: se descargan con fetch y se muestran como blob (ver hidratarMediaProtegida).
+    const _prot = m.media_url && String(m.media_url).startsWith('/admin/api/');
+    const mediaHtml = !m.media_url ? '' : _prot
+      ? `<a href="#" class="msg-media" data-auth-href="${esc(m.media_url)}"><img data-auth-src="${esc(m.media_url)}" alt="imagen"></a>`
+      : `<a href="${esc(m.media_url)}" target="_blank" class="msg-media"><img src="${esc(m.media_url)}" loading="lazy" alt="imagen"></a>`;
     if (isSystem){
       html += `<div class="msg system">${mediaHtml}${esc(text.replace(/^\[|\]$/g,""))}</div>`;
       lastKind = "system";
