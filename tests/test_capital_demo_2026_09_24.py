@@ -490,3 +490,11 @@ class TestLinkYPromptSinPacientesCMC(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_sin_voseo_corrige_formas_argentinas():
+    import capital_demo as c
+    assert c.sin_voseo("Dormís en carpa y tenés que llevar ropa.") == "Duermes en carpa y tienes que llevar ropa."
+    assert c.sin_voseo("Contame cuándo querés ir. Mirá el cerro.") == "Cuéntame cuándo quieres ir. Mira el cerro."
+    # no toca tuteo ni palabras que solo contienen la forma
+    assert c.sin_voseo("Tienes que ver el mirador") == "Tienes que ver el mirador"

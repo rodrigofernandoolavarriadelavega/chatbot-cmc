@@ -29,6 +29,7 @@ RUT/handle_message.
 import json
 import logging
 import os
+import re
 import time
 from datetime import date, datetime
 from pathlib import Path
@@ -292,7 +293,9 @@ def _render_contexto(tours: list, salidas_por_tour: dict, condiciones: list) -> 
             f"- [id {t.get('id')}] {t.get('nombre')} ({t.get('categoria', '')}) — "
             f"dificultad: {t.get('dificultad', 's/i')}, altitud: {t.get('altitud_m', 's/i')} m, "
             f"duración: {dur} {dur_u}, destino: {t.get('destino', '')}, "
+            f"desnivel: {t.get('desnivel_m', 's/i')} m, "
             f"precio: ${precio:,.0f} CLP por persona. Salidas: {fechas}"
+            f". Descripción: {t.get('descripcion') or 's/i'}"
             .replace(",", ".")
         )
     tours_txt = "\n".join(bloques) or "No hay tours cargados en este momento."
@@ -350,7 +353,7 @@ def _system_prompt(contexto: str, whatsapp: str) -> str:
 
 Tu voz es la del flyer que ya le llegó a esta persona: motivadora, aventurera, cercana — la de alguien que ya subió esas montañas y quiere que el otro también viva "esa historia que algún día va a contar". Invita al desafío, no lo vendas frío. Un par de emojis de montaña/fuego/mochila cuando calce de forma natural (🏔️🔥🎒), NUNCA en cada línea ni forzados. No prometas la cumbre ni exageres — la seguridad, los guías y la preparación física se cuentan como PARTE de la aventura ("vas bien acompañado", "te preparamos para que lo disfrutes"), nunca como letra chica o advertencia aparte.
 
-Responde sobre tours, precios, dificultad, altura, duración, qué llevar, preparación física, condiciones de la cordillera y cómo reservar, usando SOLO los datos del contexto de abajo. Jamás inventes fechas, precios, cupos ni guías que no estén ahí. Si un tour no tiene salida programada, dilo con franqueza y ofrece coordinar la fecha directamente con la agencia.
+Responde sobre tours, precios, dificultad, altura, duración, qué llevar, preparación física, condiciones de la cordillera y cómo reservar, usando SOLO los datos del contexto de abajo. Jamás inventes fechas, precios, cupos ni guías que no estén ahí. Tampoco inventes logística: dónde se duerme (refugio, carpa, campamento), horarios, itinerario día a día, comidas, equipo incluido o vistas específicas; usa solo lo que dice la descripción del tour y, si te preguntan algo que no está, dilo con franqueza y ofrece que la agencia lo confirme por WhatsApp. Si un tour no tiene salida programada, dilo con franqueza y ofrece coordinar la fecha directamente con la agencia.
 
 Para reservar, entrega este link con el id del tour correspondiente: https://capital.agentecmc.cl/agendar?tour=<id>{src_txt}
 
@@ -372,6 +375,31 @@ _APOLOGIA = (
 )
 
 
+# Red de seguridad: el modelo a veces se desliza al voseo ("dormís", "tenés") aunque el
+# prompt lo prohíba. Se corrigen las formas más comunes a tuteo antes de enviar.
+_VOSEO_A_TUTEO = {
+    "tenés": "tienes", "querés": "quieres", "podés": "puedes", "sabés": "sabes",
+"hacés": "haces", "venís": "vienes", "vivís": "vives",
+    "dormís": "duermes", "subís": "subes", "salís": "sales", "sentís": "sientes",
+    "preferís": "prefieres", "necesitás": "necesitas", "llevás": "llevas",
+    "pensás": "piensas", "empezás": "empiezas", "caminás": "caminas", "llegás": "llegas",
+"decime": "dime", "contame": "cuéntame", "escribime": "escríbeme",
+    "avisame": "avísame", "mirá": "mira", "fijate": "fíjate", "andá": "anda",
+    "llevá": "lleva", "vení": "ven", "poné": "pon", "reservá": "reserva",
+    "preparate": "prepárate", "animate": "anímate", "sumate": "súmate",
+}
+_VOSEO_RE = re.compile(r"\b(" + "|".join(sorted(_VOSEO_A_TUTEO, key=len, reverse=True)) + r")\b",
+                       re.IGNORECASE)
+
+
+def sin_voseo(texto: str) -> str:
+    def _sub(m):
+        w = m.group(0)
+        r = _VOSEO_A_TUTEO[w.lower()]
+        return r[:1].upper() + r[1:] if w[:1].isupper() else r
+    return _VOSEO_RE.sub(_sub, texto)
+
+
 async def _responder_asistente(phone: str, texto: str) -> str:
     try:
         contexto, whatsapp = await _fetch_contexto()
@@ -389,7 +417,7 @@ async def _responder_asistente(phone: str, texto: str) -> str:
             system=_system_prompt(contexto, whatsapp),
             messages=mensajes,
         )
-        respuesta = (resp.content[0].text or "").strip()
+        respuesta = sin_voseo((resp.content[0].text or "").strip())
         if not respuesta:
             raise ValueError("respuesta vacía de Claude")
     except Exception as e:  # noqa: BLE001
