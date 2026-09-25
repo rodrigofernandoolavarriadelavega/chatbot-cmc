@@ -70,8 +70,10 @@ BOT_LOG = Path(os.getenv("CMC_BOT_LOG", "/var/log/cmc-bot.log"))
 CONOCIMIENTO_MD = ROOT / "scripts" / "audit_conocimiento.md"
 APRENDIDO_MD = LOG_DIR / "aprendido.md"
 
-# Modelos: el horario corre ~24×/día; el consolidador/verificador 1×/semana.
-DEFAULT_MODEL = os.getenv("CMC_AUDIT_MODEL", "claude-opus-5")
+# Modelos: el horario corre ~24×/día y COMPARTE la cuenta API con el bot.
+# 25-sep-2026: con claude-opus-5 cada hora la recarga de US$20 duró 3,6 días y
+# el bot quedó sin saldo. Haiku ≈ US$0,4/día. No subir sin preguntar al dueño.
+DEFAULT_MODEL = os.getenv("CMC_AUDIT_MODEL", "claude-haiku-4-5")
 DEFAULT_EFFORT = os.getenv("CMC_AUDIT_EFFORT", "medium")
 DEEP_MODEL = os.getenv("CMC_AUDIT_DEEP_MODEL", "claude-opus-5")
 DEEP_EFFORT = os.getenv("CMC_AUDIT_DEEP_EFFORT", "high")
@@ -154,6 +156,14 @@ class LLMError(RuntimeError):
     pass
 
 
+def _output_config(model: str, effort: str, schema: dict) -> dict:
+    """Haiku 4.5 rechaza `effort` con un 400; solo los modelos que lo soportan lo llevan."""
+    cfg = {"format": {"type": "json_schema", "schema": schema}}
+    if "haiku" not in model:
+        cfg["effort"] = effort
+    return cfg
+
+
 def _llm_json(system: str, user: str, schema: dict, *, model: str, effort: str,
               max_tokens: int = 16000) -> dict:
     """Una llamada con JSON Schema garantizado. El SDK instalado (0.28) no
@@ -166,10 +176,7 @@ def _llm_json(system: str, user: str, schema: dict, *, model: str, effort: str,
         max_tokens=max_tokens,
         system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": user}],
-        extra_body={"output_config": {
-            "effort": effort,
-            "format": {"type": "json_schema", "schema": schema},
-        }},
+        extra_body={"output_config": _output_config(model, effort, schema)},
     )
     if resp.stop_reason == "refusal":
         raise LLMError("refusal")
