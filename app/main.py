@@ -43,6 +43,7 @@ from session import (get_session, is_duplicate, reset_session, save_session,
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from medilink import MedilinkRateLimited, MedilinkInactiva
 import medilink_outage
+import capital_demo
 from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_verificar_intervalos, _job_agenda_dias_sync,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
@@ -11622,6 +11623,28 @@ async def webhook(request: Request):
         if msg_id and is_duplicate(msg_id):
             log.info("MSG duplicado ignorado id=%s from=%s", msg_id, phone)
             return Response(status_code=200)
+
+        # ── Desvío DEMO Capital Travel (temporal, whitelist) ─────────────────
+        # Lo más temprano posible: firma verificada, mensaje parseado, deduplicado.
+        # Antes de sesión/estado/Medilink/consent/autocaptura RUT/handle_message
+        # — un paciente del CMC nunca pasa por acá (activo() exige whitelist +
+        # fecha límite; sin esas dos env el módulo no hace nada). Ver capital_demo.py.
+        # `contacts` ya se leyó arriba (captura BSUID) — se reusa el profile.name
+        # de Meta para el saludo del flyer de primer contacto.
+        _wa_profile_name = ""
+        if contacts:
+            _wa_profile_name = (contacts[0].get("profile", {}) or {}).get("name", "") or ""
+        # Fail-open hacia el CMC: cualquier excepción no controlada de la demo
+        # (Claude caído, API de Capital caída, error de I/O del archivo de
+        # "ya enviado", etc.) jamás debe tumbar el webhook ni perder el mensaje
+        # de un paciente real — se loguea y el mensaje sigue el flujo normal.
+        try:
+            if await capital_demo.manejar_webhook_wa(phone, msg, msg_type,
+                                                      wa_profile_name=_wa_profile_name):
+                return Response(status_code=200)
+        except Exception as _cd_e:  # noqa: BLE001
+            log.error("capital_demo: excepción no controlada, sigue flujo CMC from=%s: %s",
+                       phone, _cd_e, exc_info=True)
 
         # Rate limit por phone Y por RUT (si lo conocemos): evita bypass rotando números
         _profile = get_profile(phone) or {}
