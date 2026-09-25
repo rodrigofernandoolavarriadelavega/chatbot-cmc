@@ -71,6 +71,10 @@ class CapitalDemoBase(unittest.IsolatedAsyncioTestCase):
         # Historial en memoria no debe filtrarse entre tests.
         capital_demo._historial.clear()
         capital_demo._historial_ts.clear()
+        # La reconstrucción del historial desde el log de mensajes (tras reinicio)
+        # leería mensajes que otros tests dejaron en la base: estos tests no la cubren.
+        self._p_hist_log = patch.object(capital_demo, "_historial_desde_log", return_value=[])
+        self._p_hist_log.start()
         capital_demo._cache_ctx.update(ts=0.0, texto=None, whatsapp=capital_demo._WHATSAPP_FALLBACK)
         # Archivo de "ya recibió el flyer" aislado por test (tmp), y estado
         # en memoria reseteado — cada test empieza como si nadie hubiese
@@ -81,6 +85,7 @@ class CapitalDemoBase(unittest.IsolatedAsyncioTestCase):
         capital_demo._enviados_mem = None
 
     def tearDown(self):
+        self._p_hist_log.stop()
         os.environ.clear()
         os.environ.update(self._env_bak)
         capital_demo._ENVIADOS_PATH = self._enviados_path_bak
