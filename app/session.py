@@ -2768,6 +2768,19 @@ def get_conversations(limit: int = 2000) -> list[dict]:
                 d["msgs_sin_respuesta"] = 0
                 d["flow_data"] = {}
             result.append(d)
+        # Los teléfonos del desvío DEMO Capital Travel (ver capital_demo.py) NO
+        # son pacientes del CMC — nunca deben listarse en el panel de recepción
+        # ni en el kanban (build_board/api_cola consumen esta misma función),
+        # o una recepcionista podría responderle al dueño de Capital Travel
+        # creyendo que es un paciente. El acceso directo por teléfono
+        # (GET /admin/api/conversations/{phone}, usa get_messages) sigue
+        # funcionando — solo se oculta del LISTADO. Fail-open: si el check
+        # falla, no oculta nada (mejor mostrar de más que esconder pacientes).
+        try:
+            from capital_demo import activo as _capital_demo_activo
+            result = [d for d in result if not _capital_demo_activo(d.get("phone", ""))]
+        except Exception as exc:  # noqa: BLE001
+            log.warning("get_conversations: no se pudo filtrar desvío Capital Demo: %s", exc)
         return result
 
 
@@ -3662,10 +3675,14 @@ def get_case_study_report(dias: int = 30) -> dict:
         referral = {r["tag"].replace("referido:", ""): r["cnt"] for r in ref_rows}
 
         # ── Canales ───────────────────────────────────────────────────────
+        # canal='capital_demo' excluido: son mensajes del desvío DEMO Capital
+        # Travel (capital_demo.py), no pacientes del CMC — no deben aparecer
+        # en las métricas de canales de recepción.
         canal_rows = conn.execute("""
             SELECT canal, COUNT(DISTINCT phone) as usuarios, COUNT(*) as mensajes
             FROM messages
             WHERE ts >= datetime('now', ?) AND direction='in'
+              AND COALESCE(canal, 'whatsapp') != 'capital_demo'
             GROUP BY canal
         """, (since,)).fetchall()
         canales = {r["canal"]: {"usuarios": r["usuarios"], "mensajes": r["mensajes"]}
