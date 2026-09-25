@@ -44,6 +44,7 @@ from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from medilink import MedilinkRateLimited, MedilinkInactiva
 import medilink_outage
 import capital_demo
+import capital_demo_routes
 from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_verificar_intervalos, _job_agenda_dias_sync,
                   _job_recordatorios, _job_recordatorios_2h, _job_recordatorios_48h,
@@ -1588,6 +1589,7 @@ app.add_middleware(
 
 # Registrar rutas admin + portal
 app.include_router(admin_routes.router)
+app.include_router(capital_demo_routes.router)  # bandeja de recepción Alma Capital (ver capital_demo.py)
 from autopilot.routes import router as autopilot_router  # noqa: E402
 app.include_router(autopilot_router)
 app.include_router(portal_routes.router)

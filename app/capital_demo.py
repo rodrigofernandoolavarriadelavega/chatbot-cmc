@@ -25,6 +25,17 @@ hace que el mensaje siga el flujo normal del bot del CMC.
 Enganche: app/main.py, webhook POST /webhook, justo después de deduplicar por
 message id y antes de rate-limit/sesión/estado/Medilink/consent/autocaptura
 RUT/handle_message.
+
+Bandeja de recepción de Alma Capital (extensión 2026-09-25):
+  - Espejo fire-and-forget: cada mensaje del desvío (entrante, saliente del
+    bot, saliente de un operador de Alma Capital) se envía a
+    `POST {CAPITAL_API_BASE}/api/wa/evento` con header `X-Alma-Secret` (env
+    CAPITAL_WA_SECRET). Sin esa env, no se espeja nada (mismo criterio
+    fail-closed que el resto del módulo).
+  - Modo humano: `data/capital_demo_humano.json` (mismo patrón atómico que
+    `capital_demo_enviados.json`). Con el teléfono en modo humano, el bot
+    registra y espeja lo entrante pero NO responde — Alma Capital toma el
+    control desde `POST /internal/capital-demo/enviar` (app/capital_demo_routes.py).
 """
 import json
 import logging
@@ -239,6 +250,49 @@ def _marcar_enviado(phone: str):
         log.error("capital_demo: no se pudo persistir %s: %s", _ENVIADOS_PATH, e)
 
 
+# ── Modo humano: Alma Capital toma el control, el bot deja de responder ────
+# Mismo patrón atómico (memoria + disco) que _cargar_enviados/_marcar_enviado.
+_HUMANO_PATH = Path(__file__).resolve().parent.parent / "data" / "capital_demo_humano.json"
+_humano_mem = None  # set[str] | None — lazy
+
+
+def _cargar_humano():
+    global _humano_mem
+    if _humano_mem is not None:
+        return _humano_mem
+    try:
+        if _HUMANO_PATH.exists():
+            data = json.loads(_HUMANO_PATH.read_text(encoding="utf-8"))
+            _humano_mem = set(data) if isinstance(data, list) else set()
+        else:
+            _humano_mem = set()
+    except Exception as e:  # noqa: BLE001
+        log.warning("capital_demo: no se pudo leer %s: %s", _HUMANO_PATH, e)
+        _humano_mem = set()
+    return _humano_mem
+
+
+def es_modo_humano(phone: str) -> bool:
+    return (phone or "").lstrip("+") in _cargar_humano()
+
+
+def set_modo(phone: str, modo: str) -> None:
+    """modo: 'humano' (el bot deja de responder) o 'bot' (vuelve a responder)."""
+    phone = (phone or "").lstrip("+")
+    humano = _cargar_humano()
+    if modo == "humano":
+        humano.add(phone)
+    else:
+        humano.discard(phone)
+    try:
+        _HUMANO_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _HUMANO_PATH.with_suffix(".tmp")
+        tmp.write_text(json.dumps(sorted(humano), ensure_ascii=False), encoding="utf-8")
+        tmp.replace(_HUMANO_PATH)
+    except Exception as e:  # noqa: BLE001
+        log.error("capital_demo: no se pudo persistir %s: %s", _HUMANO_PATH, e)
+
+
 def _primer_nombre(nombre_perfil: str) -> str:
     n = (nombre_perfil or "").strip()
     return n.split()[0] if n else ""
@@ -298,6 +352,51 @@ def _es_pregunta_concreta(texto: str) -> bool:
 # ── Contexto en vivo desde la API pública de Alma Capital ───────────────
 def _capital_api_base() -> str:
     return os.getenv("CAPITAL_API_BASE", "http://127.0.0.1:8210")
+
+
+def _capital_wa_secret() -> str:
+    return os.getenv("CAPITAL_WA_SECRET", "").strip()
+
+
+async def _espejo_post(payload: dict) -> None:
+    """POST real al endpoint de eventos de Alma Capital. Cualquier error se
+    loguea y se descarta — el espejo nunca puede tumbar ni frenar la demo."""
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as cli:
+            await cli.post(
+                f"{_capital_api_base()}/api/wa/evento",
+                json=payload,
+                headers={"X-Alma-Secret": _capital_wa_secret()},
+            )
+    except Exception as e:  # noqa: BLE001
+        log.warning("capital_demo: espejo a Alma Capital falló: %s", e)
+
+
+def _espejo(phone: str, direccion: str, autor: str, texto: str,
+            tipo: str = "text", wamid: str | None = None,
+            nombre: str | None = None) -> None:
+    """Dispara (fire-and-forget) el espejo de un mensaje hacia la bandeja de
+    Alma Capital. Sin CAPITAL_WA_SECRET no hace nada — fail-closed, igual que
+    activo(). No bloquea al caller: agenda una asyncio.Task y sigue."""
+    secret = _capital_wa_secret()
+    if not secret:
+        return
+    payload = {
+        "telefono": (phone or "").lstrip("+"),
+        "direccion": direccion,
+        "autor": autor,
+        "texto": texto,
+        "tipo": tipo,
+        "wamid": wamid,
+        "ts": datetime.now(_CL).isoformat(),
+    }
+    if nombre:
+        payload["nombre"] = nombre
+    try:
+        from resilience import spawn_task
+        spawn_task(_espejo_post(payload), name="capital-demo-espejo")
+    except Exception as e:  # noqa: BLE001 — nunca debe tumbar la demo
+        log.warning("capital_demo: no se pudo agendar espejo: %s", e)
 
 
 def _render_contexto(tours: list, salidas_por_tour: dict, condiciones: list) -> str:
@@ -456,24 +555,31 @@ async def _responder_asistente(phone: str, texto: str) -> str:
 
 
 # ── Envío + logging (mismo canal de mensajería del bot, log marcado aparte) ──
-async def _log(phone: str, direction: str, texto: str):
+# `autor` viaja SOLO al espejo (Alma Capital necesita distinguir cliente/bot/
+# operador); el log local (session.log_message) no lo necesita — sigue
+# marcado por `state`/`canal` como antes, salvo para el operador que usa un
+# `state` propio para que se distinga en el panel/BD si hace falta.
+async def _log(phone: str, direction: str, texto: str, autor: str = "cliente",
+                tipo: str = "text", wamid: str | None = None,
+                nombre: str | None = None, state: str = "CAPITAL_DEMO"):
     try:
         from session import log_message
-        log_message(phone, direction, texto, "CAPITAL_DEMO", canal="capital_demo")
+        log_message(phone, direction, texto, state, canal="capital_demo", wamid=wamid)
     except Exception as e:  # noqa: BLE001 — nunca debe tumbar la demo
         log.warning("capital_demo: no se pudo loguear mensaje %s: %s", direction, e)
+    _espejo(phone, direction, autor, texto, tipo=tipo, wamid=wamid, nombre=nombre)
 
 
 async def _enviar(phone: str, texto: str):
     from messaging import send_whatsapp
-    await send_whatsapp(phone, texto)
-    await _log(phone, "out", texto)
+    wamid = await send_whatsapp(phone, texto)
+    await _log(phone, "out", texto, autor="bot", wamid=wamid)
 
 
 async def _enviar_interactivo(phone: str, interactive: dict, log_text: str):
     from messaging import send_whatsapp_interactive
     await send_whatsapp_interactive(phone, interactive)
-    await _log(phone, "out", log_text)
+    await _log(phone, "out", log_text, autor="bot", tipo="interactive")
 
 
 # ── Entrypoint del webhook ───────────────────────────────────────────────
@@ -511,9 +617,12 @@ async def manejar_webhook_wa(phone: str, msg: dict, msg_type: str,
         return False
 
     texto = texto_de_mensaje(msg, msg_type)
+    _nombre_perfil = wa_profile_name or None
 
     if texto is None:
-        await _log(phone, "in", f"[{msg_type}]")
+        await _log(phone, "in", f"[{msg_type}]", tipo=msg_type, nombre=_nombre_perfil)
+        if es_modo_humano(phone):
+            return True
         await _enviar(phone, _AVISO_SOLO_TEXTO)
         return True
 
@@ -521,7 +630,13 @@ async def manejar_webhook_wa(phone: str, msg: dict, msg_type: str,
     if texto_norm.upper() == _ESCAPE_WORD:
         return False
 
-    await _log(phone, "in", texto_norm)
+    await _log(phone, "in", texto_norm, tipo=msg_type, nombre=_nombre_perfil)
+
+    # Modo humano: Alma Capital tomó el control de esta conversación. El
+    # mensaje ya quedó registrado y espejado arriba — el bot simplemente no
+    # responde (ni flyer de primer contacto ni asistente).
+    if es_modo_humano(phone):
+        return True
 
     # Primer contacto: flyer con imagen + link de reserva, y botón único
     # "PLOMO", ANTES que cualquier respuesta del asistente. Se marca de

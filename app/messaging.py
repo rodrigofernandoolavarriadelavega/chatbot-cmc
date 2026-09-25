@@ -1,5 +1,6 @@
 """Messaging utilities — WhatsApp, Instagram, Facebook Messenger, Whisper."""
 import asyncio
+import contextvars
 import logging
 import os
 import re
@@ -57,6 +58,22 @@ def _get_openai_client() -> httpx.AsyncClient:
     return _OPENAI_CLIENT
 
 
+# Side-channel (por contexto de asyncio.Task, no global) para que un caller
+# pueda distinguir "ventana 24h cerrada" de otros fallos de envío sin cambiar
+# la firma de send_whatsapp/_post_meta. Cada Task de asyncio copia el context
+# al crearse, así que llamadas concurrentes de distintos requests no se pisan.
+_ventana_cerrada_var: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "meta_ventana_cerrada", default=False
+)
+
+
+def ventana_cerrada_ultimo_envio() -> bool:
+    """True si el último _post_meta() en este contexto detectó la ventana de
+    24h cerrada (códigos 131047 y afines). Leer inmediatamente después de un
+    `await send_whatsapp(...)` que haya devuelto None."""
+    return _ventana_cerrada_var.get()
+
+
 async def _post_meta(payload: dict) -> str | None:
     """POST a Meta Cloud API con retry selectivo.
 
@@ -66,6 +83,7 @@ async def _post_meta(payload: dict) -> str | None:
     - 5xx / 429 / timeout / NetworkError: transitorio → backoff exponencial
       (2s, 4s), 3 intentos totales.
     """
+    _ventana_cerrada_var.set(False)
     WINDOW_CLOSED_CODES = {131047, 131052, 131051, 131045, 131042, 131030}
     backoffs = [2, 4]
     for attempt in range(3):
@@ -104,6 +122,7 @@ async def _post_meta(payload: dict) -> str | None:
             if is_window_closed:
                 log.info("Meta API: ventana 24h cerrada para %s (code=%s) — mensaje omitido",
                          payload.get("to", "?"), err_code)
+                _ventana_cerrada_var.set(True)
                 return None
             if 400 <= r.status_code < 500 and r.status_code != 429:
                 _to_val = payload.get("to", "?")
