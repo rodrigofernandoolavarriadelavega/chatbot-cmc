@@ -657,13 +657,15 @@ async def send_dental_winback(candidato: dict) -> bool:
                      telefono[-4:], _cb_motivo)
             return False
 
+        _header_img = _cfg_wb.DENTAL_PROMO_FLYER_IMG if _es_promo_flyer else None
         await send_whatsapp_template(
             to=telefono,
             template_name=template_name,
             body_params=body_params,
-            header_image_url=(_cfg_wb.DENTAL_PROMO_FLYER_IMG if _es_promo_flyer else None),
+            header_image_url=_header_img,
         )
-        _lm(telefono, "out", _rtb(template_name, body_params), "IDLE")
+        _lm(telefono, "out", _rtb(template_name, body_params), "IDLE",
+            media_url=_header_img, media_tipo=("image" if _header_img else None))
         _registrar_envio_dental(
             paciente_id=paciente_id,
             telefono=telefono,

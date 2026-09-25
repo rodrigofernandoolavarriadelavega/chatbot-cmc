@@ -1226,8 +1226,64 @@ async def api_send_document(
         await send_whatsapp_document_by_id(phone, media_id, filename=fname, caption=caption)
         log_text = f"[documento: {fname}] {caption}" if caption else f"[documento: {fname}]"
 
-    log_message(phone, "out", log_text, "HUMAN_TAKEOVER", canal="whatsapp")
+    # Imagen enviada ad-hoc desde el panel: guarda una copia local (Meta media
+    # id no sirve para renderizar en el navegador — necesita auth por-request)
+    # para que el chat la muestre como miniatura, misma técnica que las fotos
+    # recibidas del paciente pero en su propia tabla (no infla media_stats).
+    media_url = None
+    media_tipo = None
+    if is_image:
+        try:
+            import re as _re_sd
+            from pathlib import Path as _Path_sd
+            from datetime import datetime as _dt_sd
+            from zoneinfo import ZoneInfo as _ZI_sd
+            from session import save_admin_sent_media
+
+            safe_name = _re_sd.sub(r"[^\w.\-]", "_", _re_sd.sub(r".*[/\\]", "", fname or "archivo"))[:120] \
+                or "archivo"
+            ts_sd = _dt_sd.now(_ZI_sd("America/Santiago")).strftime("%Y%m%d_%H%M%S")
+            upload_dir = _Path_sd(__file__).parent.parent / "data" / "uploads" / phone
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            dest = upload_dir / f"sent_{ts_sd}_{safe_name}"
+            dest.write_bytes(content)
+            rel_path = f"data/uploads/{phone}/{dest.name}"
+            sent_id = save_admin_sent_media(phone, dest.name, mime, rel_path, len(content), caption[:200])
+            media_url = f"/admin/api/sent-media/{sent_id}"
+            media_tipo = "image"
+        except Exception as e:  # noqa: BLE001 — nunca debe tumbar el envío
+            log.warning("send-document: no se pudo guardar copia local para miniatura: %s", e)
+
+    log_message(phone, "out", log_text, "HUMAN_TAKEOVER", canal="whatsapp",
+               media_url=media_url, media_tipo=media_tipo)
     return {"ok": True, "media_id": media_id, "type": "image" if is_image else "document"}
+
+
+@router.get("/admin/api/sent-media/{sent_id}")
+def api_serve_sent_media(sent_id: int, _=Depends(require_admin)):
+    """Sirve una imagen/documento enviado ad-hoc desde el panel (send-document).
+    Mismo patrón/guardas que /admin/api/file/{id} pero sobre admin_sent_media."""
+    from session import db as _conn
+    from pathlib import Path
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT file_path, mime_type, filename FROM admin_sent_media WHERE id=?",
+            (sent_id,)
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Archivo no encontrado")
+    _root = Path(__file__).parent.parent
+    fpath = (_root / row["file_path"]).resolve()
+    try:
+        fpath.relative_to((_root / "data").resolve())
+    except ValueError:
+        raise HTTPException(400, "Ruta fuera del directorio permitido")
+    if not fpath.exists():
+        raise HTTPException(404, "Archivo eliminado del disco")
+    content_bytes = fpath.read_bytes()
+    mime = row["mime_type"] or "application/octet-stream"
+    headers = {"Content-Disposition": f'inline; filename="{row["filename"]}"'}
+    return Response(content=content_bytes, media_type=mime, headers=headers)
 
 
 @router.post("/admin/api/send-template")

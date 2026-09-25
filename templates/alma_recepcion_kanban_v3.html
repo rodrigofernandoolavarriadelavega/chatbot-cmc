@@ -252,6 +252,8 @@ body.wp-busy,body.wp-busy *{user-select:none!important}
 .msg.out{background:linear-gradient(145deg,var(--blue),var(--navy));color:#fff;align-self:flex-end;
   border-bottom-right-radius:4px}
 .msg .t{display:block;font-size:.61rem;opacity:.7;margin-top:3px;font-weight:600}
+.msg .mimg{display:block;margin-bottom:5px}
+.msg .mimg img{max-width:260px;max-height:320px;border-radius:10px;cursor:pointer;display:block}
 .wfoot{border-top:1px solid var(--line);padding:10px 12px;display:none;gap:8px;flex:none}
 .wpop.pinned .wfoot{display:flex}
 .wfoot textarea{flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-family:inherit;
@@ -605,7 +607,11 @@ async function pintarConv(card){
     if (wpPhone !== card.phone) return;               // el mouse ya se movió a otra
     cuerpo.innerHTML = (msgs||[]).slice(-50).map(m => {
       const dir = (m.direction || m.dir) === 'in' ? 'in' : 'out';
-      return `<div class="msg ${dir}">${(m.text||'').replace(/</g,'&lt;')}
+      // Imagen dedicada (media_url): arriba del texto, como WhatsApp.
+      const img = m.media_url
+        ? `<a class="mimg" href="${String(m.media_url).replace(/"/g,'&quot;')}" target="_blank"><img src="${String(m.media_url).replace(/"/g,'&quot;')}" loading="lazy" alt="imagen"></a>`
+        : '';
+      return `<div class="msg ${dir}">${img}${(m.text||'').replace(/</g,'&lt;')}
         <span class="t">${(m.ts||'').slice(11,16)}</span></div>`;
     }).join('') || '<div class="cargando">Sin mensajes</div>';
     cuerpo.scrollTop = cuerpo.scrollHeight;

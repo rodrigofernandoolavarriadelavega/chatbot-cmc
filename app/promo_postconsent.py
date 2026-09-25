@@ -382,10 +382,10 @@ async def job_promo_postconsent(dry_run: bool = False) -> dict:
                 await send_whatsapp_template(
                     teln, template, header_image_url=DENTAL_PROMO_FLYER_IMG,
                 )
-                # Copy real + URL para que el panel muestre la miniatura.
-                log_message(teln, "out",
-                            render_template_body(template) + "\n" + DENTAL_PROMO_FLYER_IMG,
-                            "IDLE")
+                # Copy real + media_url dedicado para que el panel muestre la
+                # miniatura arriba del texto.
+                log_message(teln, "out", render_template_body(template), "IDLE",
+                            media_url=DENTAL_PROMO_FLYER_IMG, media_tipo="image")
                 log_event(teln, _EVENT_ENVIADA, {"template": template, "segment": "no_dental"})
                 _registrar_envio(teln, template, "no_dental")
                 record_contact(teln, "promo_postconsent", {"template": template})

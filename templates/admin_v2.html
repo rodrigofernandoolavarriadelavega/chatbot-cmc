@@ -584,6 +584,9 @@ input, textarea, select{font-family:inherit; color:inherit}
 .msg .text{white-space:pre-wrap}
 .msg .text .msg-img{display:block;margin-top:5px}
 .msg .text .msg-img img{max-width:220px;max-height:300px;border-radius:10px;border:1px solid rgba(15,63,104,.12);cursor:pointer}
+/* Imagen dedicada (columna media_url): arriba del texto, estilo WhatsApp */
+.msg .msg-media{display:block;margin-bottom:5px}
+.msg .msg-media img{max-width:260px;max-height:320px;border-radius:10px;border:1px solid rgba(15,63,104,.12);cursor:pointer;display:block}
 .msg .prefix{
   font-size:10px; color:var(--cmc-blue); font-weight:700; margin-bottom:2px; display:block;
   letter-spacing:.5px; text-transform:uppercase;
@@ -2282,8 +2285,14 @@ function renderMessages(){
     const text = m.text || "";
     const isRecep = isOut && text.startsWith("[Recepcionista]");
     const isSystem = isOut && (text.startsWith("[") && text.endsWith("]")) && !isRecep;
+    // Imagen dedicada (pedido del dueño 2026-09-25): flyers de campaña,
+    // fotos entrantes de pacientes, envíos ad-hoc desde el panel. Arriba del
+    // texto, como WhatsApp. Clic abre en grande (nueva pestaña).
+    const mediaHtml = m.media_url
+      ? `<a href="${esc(m.media_url)}" target="_blank" class="msg-media"><img src="${esc(m.media_url)}" loading="lazy" alt="imagen"></a>`
+      : '';
     if (isSystem){
-      html += `<div class="msg system">${esc(text.replace(/^\[|\]$/g,""))}</div>`;
+      html += `<div class="msg system">${mediaHtml}${esc(text.replace(/^\[|\]$/g,""))}</div>`;
       lastKind = "system";
       return;
     }
@@ -2301,6 +2310,7 @@ function renderMessages(){
       : '';
     html += `<div class="msg ${cls}${firstCls}" data-msg-id="${m.id}"${m.wamid ? ` data-wamid="${esc(m.wamid)}"` : ''}>
       ${isRecep && firstCls ? '<span class="prefix">Recepcionista</span>' : ''}
+      ${mediaHtml}
       <span class="text">${formatWa(cleanText)}</span>
       <span class="time">${time}${editedBadge}</span>
       ${editBtn}

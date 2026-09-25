@@ -3796,11 +3796,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                 header_image_url=DENTAL_PROMO_FLYER_IMG,
                             )
                             # Log con el COPY REAL del template (no una etiqueta) +
-                            # la URL para que el panel muestre la miniatura.
+                            # media_url dedicado para que el panel muestre la
+                            # miniatura arriba del texto (antes iba pegada al
+                            # cuerpo — ya no hace falta, columna propia).
                             log_message(
                                 phone, "out",
-                                _rtb_promo(DENTAL_PROMO_FLYER_TEMPLATE) + "\n" + DENTAL_PROMO_FLYER_IMG,
+                                _rtb_promo(DENTAL_PROMO_FLYER_TEMPLATE),
                                 "IDLE",
+                                media_url=DENTAL_PROMO_FLYER_IMG, media_tipo="image",
                             )
                             log_event(phone, "dental_promo_flyer_enviado", {
                                 "template": DENTAL_PROMO_FLYER_TEMPLATE,

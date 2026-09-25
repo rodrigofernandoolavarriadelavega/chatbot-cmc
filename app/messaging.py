@@ -527,8 +527,9 @@ async def send_whatsapp_image(to: str, media_url: str,
                                log_state: str = "IDLE") -> str | None:
     """Envía una imagen vía Meta Cloud API usando URL pública.
 
-    log=True registra el envío en el historial (tabla messages) con la URL
-    pública embebida, para que el panel lo renderice inline como miniatura.
+    log=True registra el envío en el historial (tabla messages) con
+    media_url=media_url, para que el panel la renderice como miniatura
+    arriba del texto (columna dedicada, no un link suelto en el cuerpo).
     Usar log=True en campañas/envíos de imagen que el dueño debe poder ver."""
     img = {"link": media_url}
     if caption:
@@ -542,8 +543,8 @@ async def send_whatsapp_image(to: str, media_url: str,
     if log:
         try:
             from session import log_message as _lm
-            _txt = (f"[imagen] {caption}".strip() if caption else "[imagen]") + f"\n{media_url}"
-            _lm(to, "out", _txt, log_state, wamid=res)
+            _txt = f"[imagen] {caption}".strip() if caption else "[imagen]"
+            _lm(to, "out", _txt, log_state, wamid=res, media_url=media_url, media_tipo="image")
         except Exception:
             pass
     return res

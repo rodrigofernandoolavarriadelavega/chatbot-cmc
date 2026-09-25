@@ -783,6 +783,33 @@ def _run_ddl_inline(conn) -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_wamid ON messages(wamid)")
     except _OPERATIONAL_ERRORS:
         pass
+    # Migración: media_url/media_tipo — pedido del dueño 2026-09-25, ver flyers
+    # de campaña, imágenes entrantes de pacientes e interactivos con header IMAGE
+    # renderizados como miniatura en el panel (no solo texto plano).
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN media_url TEXT")
+    except _OPERATIONAL_ERRORS:
+        pass
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN media_tipo TEXT")
+    except _OPERATIONAL_ERRORS:
+        pass
+    # Tabla nueva: imágenes/documentos enviados AD-HOC desde el panel (send-
+    # document). Deliberadamente separada de patient_files — esa tabla y sus
+    # métricas (get_media_stats, pill 📷) cuentan SOLO lo RECIBIDO del
+    # paciente; mezclar lo enviado por recepción inflaría ese contador.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS admin_sent_media (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone       TEXT,
+            filename    TEXT,
+            mime_type   TEXT,
+            file_path   TEXT,
+            file_size   INTEGER,
+            caption     TEXT,
+            created_at  TEXT DEFAULT (datetime('now'))
+        )
+    """)
     # Migración: confirmación de asistencia pre-cita
     # Valores: NULL/pending (sin responder), confirmed, reagendar, cancelar
     try:
@@ -2145,12 +2172,21 @@ def _scrub_pii(text: str) -> str:
 
 
 def log_message(phone: str, direction: str, text: str, state: str = "IDLE",
-                canal: str = "whatsapp", wamid: str | None = None):
-    """Registra un mensaje entrante ('in') o saliente ('out') en el historial."""
+                canal: str = "whatsapp", wamid: str | None = None,
+                media_url: str | None = None, media_tipo: str | None = None):
+    """Registra un mensaje entrante ('in') o saliente ('out') en el historial.
+
+    media_url/media_tipo: cuando el mensaje trae una imagen (flyer/campaña con
+    header IMAGE, imagen saliente, foto entrante de paciente), la URL para
+    renderizarla en el panel — pública (campañas) o `/admin/api/file/{id}` /
+    `/admin/api/sent-media/{id}` (autenticada) según el caso. Ver
+    docs/medilink_gotchas.md NO aplica acá; el patrón vive en messaging.py y
+    main.py (media handler) y admin_routes.py (send-document)."""
     with db() as conn:
         conn.execute(
-            "INSERT INTO messages (phone, direction, text, state, canal, wamid) VALUES (?, ?, ?, ?, ?, ?)",
-            (phone, direction, str(text)[:2000], state, canal, wamid)
+            "INSERT INTO messages (phone, direction, text, state, canal, wamid, media_url, media_tipo) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (phone, direction, str(text)[:2000], state, canal, wamid, media_url, media_tipo)
         )
         conn.commit()
     # Web Push: notificar a la PWA admin en cada mensaje entrante de paciente.
@@ -2363,7 +2399,7 @@ def get_messages(phone: str, limit: int = 300) -> list[dict]:
     with db() as conn:
         rows = conn.execute(
             "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal, "
-            "wamid, edited_at FROM messages "
+            "wamid, edited_at, media_url, media_tipo FROM messages "
             "WHERE phone=? ORDER BY id DESC LIMIT ?",
             (phone, limit)
         ).fetchall()
@@ -5525,6 +5561,21 @@ def get_patient_files(phone: str, limit: int = 50) -> list[dict]:
             LIMIT ?
         """, (phone, limit)).fetchall()
         return [dict(r) for r in rows]
+
+
+def save_admin_sent_media(phone: str, filename: str, mime_type: str,
+                          file_path: str, file_size: int, caption: str = "") -> int:
+    """Guarda referencia a una imagen/documento enviado AD-HOC desde el panel
+    (POST /admin/api/send-document), para poder servirla de vuelta y que el
+    chat la muestre como miniatura. Ver nota en la migración de esta tabla:
+    NO es patient_files (esa cuenta solo lo recibido del paciente)."""
+    with db() as conn:
+        cur = conn.execute("""
+            INSERT INTO admin_sent_media (phone, filename, mime_type, file_path, file_size, caption)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (phone, filename, mime_type, file_path, file_size, caption))
+        conn.commit()
+        return cur.lastrowid
 
 
 def get_media_stats() -> dict:

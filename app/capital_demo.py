@@ -374,10 +374,13 @@ async def _espejo_post(payload: dict) -> None:
 
 def _espejo(phone: str, direccion: str, autor: str, texto: str,
             tipo: str = "text", wamid: str | None = None,
-            nombre: str | None = None) -> None:
+            nombre: str | None = None, media_url: str | None = None) -> None:
     """Dispara (fire-and-forget) el espejo de un mensaje hacia la bandeja de
     Alma Capital. Sin CAPITAL_WA_SECRET no hace nada — fail-closed, igual que
-    activo(). No bloquea al caller: agenda una asyncio.Task y sigue."""
+    activo(). No bloquea al caller: agenda una asyncio.Task y sigue.
+
+    media_url: link público https de la imagen (flyer, header de interactivo).
+    Solo tiene sentido en saliente — Alma Capital ya acepta y guarda el campo."""
     secret = _capital_wa_secret()
     if not secret:
         return
@@ -392,6 +395,8 @@ def _espejo(phone: str, direccion: str, autor: str, texto: str,
     }
     if nombre:
         payload["nombre"] = nombre
+    if media_url:
+        payload["media_url"] = media_url
     try:
         from resilience import spawn_task
         spawn_task(_espejo_post(payload), name="capital-demo-espejo")
@@ -561,13 +566,16 @@ async def _responder_asistente(phone: str, texto: str) -> str:
 # `state` propio para que se distinga en el panel/BD si hace falta.
 async def _log(phone: str, direction: str, texto: str, autor: str = "cliente",
                 tipo: str = "text", wamid: str | None = None,
-                nombre: str | None = None, state: str = "CAPITAL_DEMO"):
+                nombre: str | None = None, state: str = "CAPITAL_DEMO",
+                media_url: str | None = None):
     try:
         from session import log_message
-        log_message(phone, direction, texto, state, canal="capital_demo", wamid=wamid)
+        log_message(phone, direction, texto, state, canal="capital_demo", wamid=wamid,
+                    media_url=media_url, media_tipo=("image" if media_url else None))
     except Exception as e:  # noqa: BLE001 — nunca debe tumbar la demo
         log.warning("capital_demo: no se pudo loguear mensaje %s: %s", direction, e)
-    _espejo(phone, direction, autor, texto, tipo=tipo, wamid=wamid, nombre=nombre)
+    _espejo(phone, direction, autor, texto, tipo=tipo, wamid=wamid, nombre=nombre,
+           media_url=media_url)
 
 
 async def _enviar(phone: str, texto: str):
@@ -576,10 +584,23 @@ async def _enviar(phone: str, texto: str):
     await _log(phone, "out", texto, autor="bot", wamid=wamid)
 
 
+def _media_url_de_interactivo(interactive: dict) -> str | None:
+    """Extrae el link público de la imagen de header, si el interactivo trae
+    uno (ej. el flyer del primer contacto)."""
+    try:
+        header = interactive.get("header") or {}
+        if header.get("type") == "image":
+            return (header.get("image") or {}).get("link")
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
 async def _enviar_interactivo(phone: str, interactive: dict, log_text: str):
     from messaging import send_whatsapp_interactive
     await send_whatsapp_interactive(phone, interactive)
-    await _log(phone, "out", log_text, autor="bot", tipo="interactive")
+    await _log(phone, "out", log_text, autor="bot", tipo="interactive",
+              media_url=_media_url_de_interactivo(interactive))
 
 
 # ── Entrypoint del webhook ───────────────────────────────────────────────

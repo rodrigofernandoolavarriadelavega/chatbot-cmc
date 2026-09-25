@@ -11939,6 +11939,7 @@ async def webhook(request: Request):
             saved_filename = ""
             blob = None
             mime = ""
+            _media_file_id = None
             if media_id:
                 try:
                     result = await download_whatsapp_media(media_id)
@@ -11967,11 +11968,18 @@ async def webhook(request: Request):
                             file_path = _UPLOAD_DIR / saved_filename
                         file_path.write_bytes(blob)
                         rel_path = f"data/uploads/{phone}/{saved_filename}"
-                        save_patient_file(phone, saved_filename, msg_type, mime,
-                                          rel_path, len(blob), caption[:200])
+                        _media_file_id = save_patient_file(phone, saved_filename, msg_type, mime,
+                                                            rel_path, len(blob), caption[:200])
                         log.info("MEDIA guardado from=%s path=%s size=%d", phone, rel_path, len(blob))
                 except Exception as e:
                     log.error("Error descargando/guardando media from=%s: %s", phone, e)
+
+            # Solo imágenes tienen miniatura en el panel (pedido del dueño
+            # 2026-09-25) — reusa el endpoint YA existente que sirve
+            # patient_files por id, autenticado con require_admin.
+            _media_url_in = f"/admin/api/file/{_media_file_id}" \
+                if (msg_type == "image" and _media_file_id) else None
+            _media_tipo_in = "image" if _media_url_in else None
 
             # PDF/Word → extraer texto y procesar como mensaje (igual que audio)
             if blob and mime in ("application/pdf",
@@ -12113,7 +12121,8 @@ async def webhook(request: Request):
                 and msg_type in ("image", "document")
             # Logging de entrada SIEMPRE: la recepcionista debe ver que llegó
             # una imagen/documento independiente del estado de la sesión.
-            log_message(phone, "in", log_text, state_before, canal="whatsapp")
+            log_message(phone, "in", log_text, state_before, canal="whatsapp",
+                       media_url=_media_url_in, media_tipo=_media_tipo_in)
 
             # ── Guard HUMAN_TAKEOVER para media ────────────────────────────
             # Si ya hay un operador humano atendiendo, NO enviar respuesta
