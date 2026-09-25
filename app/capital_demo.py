@@ -120,7 +120,43 @@ def texto_de_mensaje(msg: dict, msg_type: str):
 
 
 # ── Historial por teléfono ───────────────────────────────────────────────
+def _historial_desde_log(phone: str) -> list:
+    """Tras un reinicio el historial en memoria se pierde: se reconstruye desde el log de
+    mensajes (canal capital_demo, últimas 24 h), alternando user/assistant como exige la API."""
+    try:
+        from session import get_messages
+        from datetime import datetime as _dt
+        filas = [m for m in get_messages(phone, 60) if m.get("canal") == "capital_demo"]
+    except Exception as e:  # noqa: BLE001
+        log.warning("capital_demo: no se pudo reconstruir historial: %s", e)
+        return []
+    limite = time.time() - _HIST_TTL_S
+    turnos = []
+    for m in filas:
+        try:
+            if _dt.fromisoformat(str(m.get("ts"))[:19]).timestamp() < limite:
+                continue
+        except (TypeError, ValueError):
+            pass
+        rol = "user" if m.get("direction") == "in" else "assistant"
+        texto = (m.get("text") or "").strip()
+        if not texto:
+            continue
+        if turnos and turnos[-1]["role"] == rol:
+            turnos[-1]["content"] += "\n" + texto
+        else:
+            turnos.append({"role": rol, "content": texto})
+    while turnos and turnos[0]["role"] != "user":
+        turnos.pop(0)
+    return turnos[-_HIST_MAX_TURNOS:]
+
+
 def _historial_get(phone: str) -> list:
+    if phone not in _historial:
+        reconstruido = _historial_desde_log(phone)
+        if reconstruido:
+            _historial[phone] = reconstruido
+            _historial_ts[phone] = time.time()
     ts = _historial_ts.get(phone, 0.0)
     if time.time() - ts > _HIST_TTL_S:
         _historial.pop(phone, None)
@@ -363,7 +399,7 @@ Sobre altura: puedes mencionar aclimatación y soroche de forma general sobre lo
 
 Nunca menciones al Centro Médico Carampangue ni temas de salud de esa clínica.
 
-Español de Chile, natural y cercano. Tuteo estándar: tienes, quieres, puedes, sabes, dime, cuéntame, escríbeme, mira. PROHIBIDO el voseo argentino: nunca "tenés", "querés", "podés", "sabés", "decime", "contame", "escribime", "avisame", "mirá", "fijate", "dale", "che", "re" (como "re lindo") ni "vos". Con energía y calidez, nunca en tono de venta corporativa. Mensajes cortos, estilo WhatsApp, máximo ~700 caracteres. Sin markdown salvo *negrita* de WhatsApp (asteriscos simples).
+Español de Chile, natural y cercano. Tuteo estándar: tienes, quieres, puedes, sabes, dime, cuéntame, escríbeme, mira. PROHIBIDO el voseo argentino: nunca "tenés", "querés", "podés", "sabés", "decime", "contame", "escribime", "avisame", "mirá", "fijate", "dale", "che", "re" (como "re lindo") ni "vos". Con energía y calidez, nunca en tono de venta corporativa. Mensajes MUY cortos, como una persona chateando: máximo 350 caracteres, 2 a 4 líneas breves, una sola idea por mensaje y, si corresponde, una sola pregunta al final. Nada de párrafos largos ni listas extensas; si hay mucho que contar, cuenta lo principal y pregunta si quiere más detalle. Sin markdown salvo *negrita* de WhatsApp (asteriscos simples).
 
 CONTEXTO EN VIVO:
 {contexto}"""
@@ -413,7 +449,7 @@ async def _responder_asistente(phone: str, texto: str) -> str:
     try:
         resp = await client.messages.create(
             model=_MODEL,
-            max_tokens=400,
+            max_tokens=220,
             system=_system_prompt(contexto, whatsapp),
             messages=mensajes,
         )
