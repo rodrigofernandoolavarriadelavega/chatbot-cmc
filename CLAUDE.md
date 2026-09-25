@@ -361,6 +361,18 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 ## Sesión en curso
 **Última actualización**: 2026-09-24
 
+### 2026-09-25 — Saldo API agotado + 8 bugs (DEPLOYADO)
+- 10:12 CLT saldo Anthropic agotado (recarga US$20 duró 3,6 días en vez de ~3 semanas):
+  el portaviones v2 en claude-opus-5 cada hora + verificación de prueba. Bot solo ≈
+  US$0,70/día (medido con CLAUDE_CALL). Auditor horario ahora `claude-sonnet-5` effort
+  low (`f8c1877`, decisión del dueño tras comparar con Haiku); semanal SIGUE PAUSADO.
+  Haiku 4.5 rechaza `effort` → `_output_config`. NUNCA correr pruebas con API sin preguntar.
+- `1c7856f` `_paciente_ortodoncia_activo` consultaba columnas inexistentes → siempre 0.
+- `5a43ee7` 7 bugs: rechazo en WAIT_RUT_AGENDAR, "no podré ir" en reagendar, Fonasa sin
+  responder (WAIT_* y abono), reconfirmación, **pagos batch a 0,15 s tumbaba registros
+  por 429 → 4 s**, WAIT_PARENTESCO en _FLUJO_ACTIVO_STATES, cuerpo interactivo ≤1024.
+- PENDIENTE: token Instagram vencido desde 14-jun; horario Unibazo en Medilink (14-18 vs 16-20).
+
 ### 2026-09-24 — Errores sistémicos + portaviones v2 (6 deploys, todo en prod)
 - `b792832` **Eco: sobrecupos con agenda formal LLENA**. La inyección de sobrecupos
   solo corría si había hora formal → con 0 slots, lista de espera directa (7
