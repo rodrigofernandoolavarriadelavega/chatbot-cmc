@@ -1006,6 +1006,13 @@ def admin_search_messages(q: str, _: str = Depends(require_admin)):
     if len(q.strip()) < 2:
         raise HTTPException(status_code=400, detail="Mínimo 2 caracteres")
     results = search_messages(q.strip())
+    # Los chats del desvío demo Capital Travel no son pacientes: tampoco aparecen al buscar
+    # (la lista y la cola ya los ocultan). Fail-open: si el filtro falla, no oculta nada.
+    try:
+        from capital_demo import activo as _capital_activo
+        results = [r for r in results if not _capital_activo(str(r.get("phone", "")))]
+    except Exception as exc:  # noqa: BLE001
+        log.warning("admin_search: no se pudo filtrar desvío Capital: %s", exc)
     return {"q": q, "results": results}
 
 

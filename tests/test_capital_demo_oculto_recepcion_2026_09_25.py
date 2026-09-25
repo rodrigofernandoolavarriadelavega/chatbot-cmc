@@ -146,3 +146,14 @@ class TestMetricasPorCanal(CapitalDemoOcultoBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_busqueda_del_panel_no_devuelve_chats_del_desvio(monkeypatch):
+    import admin_routes
+    monkeypatch.setenv("CAPITAL_DEMO_PHONES", "51955058247")
+    monkeypatch.setenv("CAPITAL_DEMO_HASTA", "2099-01-01")
+    monkeypatch.setattr(admin_routes, "search_messages", lambda q: [
+        {"phone": "51955058247", "text": "Quiero Estética"},
+        {"phone": "56911112222", "text": "Quiero Estética"}])
+    r = admin_routes.admin_search_messages("Estética", _="x")
+    assert [x["phone"] for x in r["results"]] == ["56911112222"]
