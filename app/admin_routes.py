@@ -648,7 +648,14 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     message = body.get("message", "").strip()
     if not phone or not message:
         raise HTTPException(status_code=400, detail="phone y message son requeridos")
+    return await responder_como_recepcion(phone, message)
 
+
+async def responder_como_recepcion(phone: str, message: str,
+                                   exigir_entrega: bool = False) -> dict:
+    """Envío humano con takeover + lock por teléfono. Lo usan el panel de
+    recepción y el popup de conversación del embudo de ortodoncia: un solo
+    camino, para que ambos respeten los estados transaccionales del bot."""
     wamid = None
     if phone.startswith("ig_"):
         igsid = phone[3:]
@@ -666,6 +673,12 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
         canal = "messenger"
     else:
         wamid = await send_whatsapp(phone, message)
+        if not wamid and exigir_entrega:
+            # Sin wamid Meta no aceptó el mensaje (ventana de 24 h cerrada,
+            # número inválido, dedupe). No se registra como enviado.
+            raise HTTPException(status_code=502, detail=(
+                "WhatsApp no aceptó el mensaje. Si el paciente no escribe hace "
+                "más de 24 h, solo se le puede enviar una plantilla aprobada."))
         canal = "whatsapp"
 
     # Auto-takeover: cuando la recepcionista escribe, el paciente está

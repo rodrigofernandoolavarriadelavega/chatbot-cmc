@@ -282,6 +282,139 @@ def _sincronizar_consultas(dias: int = 60) -> dict:
     return {"creados": creados, "revisados": revisados, "dias": dias}
 
 
+# ── Avance automático por evidencia real ─────────────────────────────────────
+# Las etapas que dejan rastro en los sistemas no dependen de la memoria de
+# Javiera: una atención con la dentista general, un tratamiento cobrado o una
+# hora con la ortodoncista ya dicen dónde va el paciente. Solo AVANZA (nunca
+# retrocede ni pisa lo que alguien movió a mano más allá) y deja escrito en el
+# historial qué evidencia usó. Las etapas del medio (radiografía, Dani,
+# respuesta) no tienen fuente: siguen siendo manuales.
+_DENT_GENERAL = (55, 72)     # Burgos, Jiménez
+_ORTODONCISTA = 66           # Castillo
+_EVALUACION_MAX = 15000      # la evaluación cuesta $15.000; más que eso es tratamiento
+_INSTALACION_MIN = 80000     # misma frontera que ortodoncia_routes
+
+
+def _pids_por_telefono(tails: set[str]) -> dict[str, set[int]]:
+    """Pacientes Medilink por los últimos 9 dígitos del celular: ficha del BI
+    (dim_paciente) + citas que agendó el bot desde ese número."""
+    out: dict[str, set[int]] = {t: set() for t in tails}
+    try:
+        from main import _bi_pool
+        pool = _bi_pool()
+        conn = pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT paciente_id, telefono FROM bi.dim_paciente WHERE telefono IS NOT NULL")
+                for pid, tel in cur.fetchall():
+                    d = "".join(ch for ch in tel if ch.isdigit())[-9:]
+                    if d in out:
+                        out[d].add(int(pid))
+        finally:
+            pool.putconn(conn)
+    except Exception as e:
+        log.warning("orto_embudo: BI no disponible para identidad (%s)", e)
+    with db() as c:
+        for t in tails:
+            for r in c.execute("SELECT DISTINCT id_paciente_medilink FROM citas_bot WHERE phone LIKE ? "
+                               "AND id_paciente_medilink IS NOT NULL", ("%" + t,)):
+                out[t].add(int(r[0]))
+    return out
+
+
+def _etapa_por_evidencia(c, pids: set[int], desde: str, hoy: str) -> tuple[str, str] | None:
+    """(etapa, motivo) más avanzada que prueban los datos, o None."""
+    if not pids:
+        return None
+    q = ",".join("?" * len(pids))
+    orto = list(c.execute(
+        f"SELECT fecha, monto FROM bi_pagos_caja WHERE id_paciente IN ({q}) AND id_profesional=? "
+        f"AND fecha>=? UNION ALL SELECT fecha, total FROM bi_atenciones WHERE id_paciente IN ({q}) "
+        f"AND id_profesional=? AND fecha>=?", (*pids, _ORTODONCISTA, desde, *pids, _ORTODONCISTA, desde)))
+    inst = sorted(f for f, m in orto if (m or 0) >= _INSTALACION_MIN)
+    if inst:
+        return "instalado", f"instalación con la ortodoncista el {inst[0]}"
+    ctrl = sorted(f for f, m in orto if 0 < (m or 0) < _INSTALACION_MIN)
+    previo = list(c.execute(f"SELECT MIN(fecha) FROM bi_pagos_caja WHERE id_paciente IN ({q}) "
+                            f"AND id_profesional=? AND fecha<?", (*pids, _ORTODONCISTA, desde)))[0][0]
+    if ctrl and previo:
+        # Ya se atendía con la ortodoncista ANTES de escribir: es post-venta
+        # (un bracket suelto, o la mamá preguntando por el hijo en control).
+        return "en_tratamiento", f"en control con la ortodoncista desde el {previo}"
+    if ctrl:
+        # Primera visita con la ortodoncista sin instalación todavía: fue a la
+        # evaluación. No hay etapa exacta para eso; queda como agendado.
+        return "agendado", f"evaluación con la ortodoncista el {ctrl[0]}"
+    fut = list(c.execute(f"SELECT MIN(fecha) FROM citas_cache WHERE id_paciente IN ({q}) AND id_prof=? "
+                         f"AND fecha>=?", (*pids, _ORTODONCISTA, hoy)))[0][0]
+    if fut:
+        return "agendado", f"hora con la ortodoncista el {fut}"
+    # Pack de radiografías de ortodoncia (cupones Imagendent). Es específico de
+    # ortodoncia, así que vale aunque el celular sea compartido.
+    cup = list(c.execute(
+        f"SELECT fecha, realizado, pagado, prestacion FROM convenio_consumo WHERE id_paciente IN ({q}) "
+        f"AND fecha>=? AND (slug='set_ortodoncia' OR lower(prestacion) LIKE '%ortodon%') ORDER BY fecha",
+        (*pids, desde)))
+    if any(r[1] for r in cup):
+        f = next(r[0] for r in cup if r[1])
+        return "rx_recibida", f"radiografías de ortodoncia tomadas el {f}"
+    if any((r[2] or 0) > 0 for r in cup):
+        f = next(r[0] for r in cup if (r[2] or 0) > 0)
+        return "venta_cupones", f"pagó el pack de radiografías el {f}"
+    if len(pids) > 1:
+        # Celular compartido (mamá que agenda para el hijo): la dentista general
+        # no prueba nada de ESTE paciente. La ortodoncista sí, por eso va arriba.
+        return None
+    q2 = ",".join("?" * len(_DENT_GENERAL))
+    gen = list(c.execute(
+        f"SELECT fecha, monto FROM bi_pagos_caja WHERE id_paciente IN ({q}) AND id_profesional IN ({q2}) "
+        f"AND fecha>=? UNION ALL SELECT fecha, total FROM bi_atenciones WHERE id_paciente IN ({q}) "
+        f"AND id_profesional IN ({q2}) AND fecha>=?", (*pids, *_DENT_GENERAL, desde, *pids, *_DENT_GENERAL, desde)))
+    trat = sorted(f for f, m in gen if (m or 0) > _EVALUACION_MAX)
+    if trat:
+        return "tratamiento_previo", f"tratamiento con la dentista general el {trat[0]}"
+    if gen:
+        return "proceso_inicial", f"atención con la dentista general el {min(f for f, _ in gen)}"
+    return None
+
+
+def _avanzar_por_evidencia(aplicar: bool = True) -> dict:
+    hoy = _ahora()[:10]
+    with db() as c:
+        filas = list(c.execute("SELECT id, paciente, phone, telefono, etapa, etapa_desde, historial "
+                               "FROM orto_embudo WHERE etapa IN (%s)" % ",".join("?" * len(_ORDEN)), _ORDEN))
+    tails = {}
+    for f in filas:
+        d = "".join(ch for ch in (f[2] or f[3] or "") if ch.isdigit())
+        if len(d) >= 9:
+            tails[f[0]] = d[-9:]
+    por_tel = _pids_por_telefono(set(tails.values()))
+    movidos, cambios = 0, []
+    with db() as c:
+        for pid, nombre, _, _, etapa, desde, hist in filas:
+            if pid not in tails:
+                continue
+            # la evidencia vale desde que consultó (primera línea del historial)
+            ini = min((hist or desde or "")[:10] or desde[:10], (desde or "")[:10])
+            r = _etapa_por_evidencia(c, por_tel[tails[pid]], ini, hoy)
+            if not r:
+                continue
+            nueva, motivo = r
+            if _ORDEN.index(nueva) <= _ORDEN.index(etapa) or etapa in ("descartado",):
+                continue
+            cambios.append({"id": pid, "paciente": nombre, "de": etapa, "a": nueva, "motivo": motivo})
+            if aplicar:
+                h = (hist or "") + f"\n{_ahora()} {etapa} → {nueva} (automático: {motivo})"
+                c.execute("UPDATE orto_embudo SET etapa=?, etapa_desde=?, historial=?, updated_at=? "
+                          "WHERE id=?", (nueva, _ahora(), h[-4000:], _ahora(), pid))
+                movidos += 1
+        if aplicar:
+            c.commit()
+    if movidos:
+        log_event(None, "orto_embudo_avance_auto", {"movidos": movidos})
+    return {"movidos": movidos, "cambios": cambios}
+
+
 def _tokens_nombre(s: str) -> set:
     """Tokens significativos de un nombre, ya normalizados (sin tildes)."""
     from email_ticker import _normalizar_nombre
@@ -564,6 +697,128 @@ def detalle(pid: int, request: Request, token: str | None = Query(None),
     return base
 
 
+# ── Actividad real del paciente (citas, pagos, cupones) ──────────────────────
+_PROF_DENTAL = {55: "Dra. Javiera Burgos", 72: "Dr. Carlos Jiménez", 66: "Dra. Daniela Castillo",
+                75: "Dr. Fernando Fredes", 69: "Dra. Aurora Valdés"}
+
+
+@router.get("/paciente/{pid}/actividad")
+def actividad(pid: int, request: Request, token: str | None = Query(None),
+              cmc_session: str | None = Cookie(None)):
+    """Lo que dejó rastro en los sistemas: atenciones y pagos del área dental,
+    cupones del pack de radiografías y horas futuras. Solo odontología: con un
+    celular compartido no se muestra la medicina general del resto de la familia."""
+    _auth(request, token, cmc_session)
+    phone, _ = _phone_de(pid)
+    tail = phone[-9:]
+    pids = _pids_por_telefono({tail})[tail]
+    if not pids:
+        return {"eventos": [], "pacientes": 0}
+    q = ",".join("?" * len(pids))
+    qp = ",".join("?" * len(_PROF_DENTAL))
+    ev = []
+    with db() as c:
+        nombres = {r[0]: r[1] for r in c.execute(
+            f"SELECT id_paciente, MAX(nombre_paciente) FROM bi_pagos_caja WHERE id_paciente IN ({q}) "
+            f"GROUP BY id_paciente", tuple(pids)) if r[1]}
+        for r in c.execute(f"SELECT fecha, id_profesional, monto, metodo_pago, id_paciente FROM bi_pagos_caja "
+                           f"WHERE id_paciente IN ({q}) AND id_profesional IN ({qp})",
+                           (*pids, *_PROF_DENTAL)):
+            ev.append({"fecha": r[0], "tipo": "pago", "prof": _PROF_DENTAL[r[1]], "monto": r[2],
+                       "detalle": r[3] or "", "pac": r[4]})
+        pagadas = {(e["fecha"], e["prof"]) for e in ev}
+        for r in c.execute(f"SELECT fecha, id_profesional, total, id_paciente FROM bi_atenciones "
+                           f"WHERE id_paciente IN ({q}) AND id_profesional IN ({qp})",
+                           (*pids, *_PROF_DENTAL)):
+            if (r[0], _PROF_DENTAL[r[1]]) not in pagadas:
+                ev.append({"fecha": r[0], "tipo": "atencion", "prof": _PROF_DENTAL[r[1]],
+                           "monto": r[2] or 0, "detalle": "sin pago ese día", "pac": r[3]})
+        for r in c.execute(f"SELECT fecha, prestacion, unidades, pagado, realizado, id_paciente "
+                           f"FROM convenio_consumo WHERE id_paciente IN ({q})", tuple(pids)):
+            ev.append({"fecha": r[0], "tipo": "cupones", "prof": "Imagendent", "monto": r[3] or 0,
+                       "detalle": f"{r[1]} · {r[2]} {'cupón' if r[2] == 1 else 'cupones'}"
+                                  + (" · tomadas" if r[4] else " · pendientes"), "pac": r[5]})
+        for r in c.execute(f"SELECT fecha, hora_inicio, id_prof, id_paciente FROM citas_cache "
+                           f"WHERE id_paciente IN ({q}) AND id_prof IN ({qp}) AND fecha>=?",
+                           (*pids, *_PROF_DENTAL, _ahora()[:10])):
+            ev.append({"fecha": r[0], "tipo": "hora", "prof": _PROF_DENTAL[r[2]], "monto": 0,
+                       "detalle": f"agendada a las {(r[1] or '')[:5]}", "pac": r[3]})
+    for e in ev:
+        dueno = e.pop("pac")
+        e["paciente"] = nombres.get(dueno, "") if len(pids) > 1 else ""
+    ev.sort(key=lambda e: e["fecha"], reverse=True)
+    return {"eventos": ev[:80], "pacientes": len(pids),
+            # el pack de cupones también entra a caja como pago: no se suma dos veces
+            "total_pagado": sum(e["monto"] for e in ev if e["tipo"] == "pago")}
+
+
+# ── Conversación de WhatsApp desde la tarjeta ────────────────────────────────
+# El token de ortodoncia circula por WhatsApp: estos endpoints NO reciben un
+# teléfono, reciben el id de la tarjeta y el teléfono sale de la fila. Así solo
+# se puede leer o escribir a pacientes que ya están en el embudo, nunca a
+# cualquier conversación del bot.
+
+def _phone_de(pid: int) -> tuple[str, str]:
+    with db() as c:
+        r = list(c.execute("SELECT phone, telefono, paciente FROM orto_embudo WHERE id=?", (pid,)))
+    if not r:
+        raise HTTPException(404, "No existe")
+    phone = "".join(ch for ch in (r[0][0] or r[0][1] or "") if ch.isdigit())
+    if len(phone) == 9 and phone.startswith("9"):
+        phone = "56" + phone
+    if len(phone) < 11:
+        raise HTTPException(400, "La tarjeta no tiene un celular valido")
+    return phone, r[0][2]
+
+
+def _ventana_abierta(phone: str) -> tuple[bool, str | None]:
+    """WhatsApp solo deja escribir texto libre hasta 24 h despues del ultimo
+    mensaje DEL paciente. Meta igual devuelve wamid fuera de ventana y el
+    rechazo llega despues por webhook, asi que hay que mirarlo antes."""
+    with db() as c:
+        r = list(c.execute("SELECT MAX(ts) FROM messages WHERE phone=? AND direction='in'", (phone,)))
+        ult = r[0][0] if r else None
+        if not ult:
+            return False, None
+        ok = list(c.execute("SELECT ? >= datetime('now','-24 hours')", (ult,)))[0][0]
+    return bool(ok), ult
+
+
+@router.get("/conversacion/{pid}")
+def conversacion(pid: int, request: Request, token: str | None = Query(None),
+                 cmc_session: str | None = Cookie(None)):
+    _auth(request, token, cmc_session)
+    from session import get_messages, get_session
+    phone, nombre = _phone_de(pid)
+    abierta, ult_in = _ventana_abierta(phone)
+    msgs = [{"id": m["id"], "dir": m["direction"], "texto": m["text"] or "",
+             "ts": m["ts"], "media": m.get("media_tipo")}
+            for m in get_messages(phone, limit=150)]
+    return {"paciente": nombre, "telefono": phone, "mensajes": msgs,
+            "ventana_abierta": abierta, "ultimo_del_paciente": ult_in,
+            "estado_bot": (get_session(phone) or {}).get("state", "IDLE")}
+
+
+@router.post("/conversacion/{pid}")
+async def conversacion_responder(pid: int, request: Request, token: str | None = Query(None),
+                                 cmc_session: str | None = Cookie(None)):
+    _auth(request, token, cmc_session)
+    texto = ((await request.json()).get("mensaje") or "").strip()
+    if not texto:
+        raise HTTPException(400, "Mensaje vacio")
+    if len(texto) > 4000:
+        raise HTTPException(400, "Mensaje demasiado largo")
+    phone, _ = _phone_de(pid)
+    abierta, _ = _ventana_abierta(phone)
+    if not abierta:
+        raise HTTPException(409, "Pasaron mas de 24 h desde el ultimo mensaje del paciente: "
+                                 "WhatsApp no permite escribirle texto libre.")
+    from admin_routes import responder_como_recepcion
+    r = await responder_como_recepcion(phone, texto, exigir_entrega=True)
+    log_event(phone, "orto_embudo_respuesta", {"tarjeta": pid, "mensaje": texto[:200]})
+    return r
+
+
 @router.get("/sugerencias")
 def sugerencias(request: Request, token: str | None = Query(None),
                 cmc_session: str | None = Cookie(None)):
@@ -601,7 +856,9 @@ def sincronizar(request: Request, dias: int = Query(60, ge=1, le=365),
                 token: str | None = Query(None), cmc_session: str | None = Cookie(None)):
     _auth(request, token, cmc_session)
     entrada = _sincronizar_consultas(dias)
-    return {"ok": True, **entrada, "sugerencias": len(_sugerencias_agendados())}
+    avance = _avanzar_por_evidencia()
+    return {"ok": True, **entrada, "avanzados": avance["movidos"],
+            "sugerencias": len(_sugerencias_agendados())}
 
 
 @router.get("/examenes")

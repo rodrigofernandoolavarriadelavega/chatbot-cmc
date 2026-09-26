@@ -1257,15 +1257,20 @@ async def _job_bi_sync_diario():
     try:
         with _c_b() as c:
             rows = c.execute(
-                "SELECT pago_id, fecha, id_paciente, monto, id_profesional "
-                "FROM bi_pagos_caja WHERE fecha >= ?",
+                "SELECT pago_id, fecha, id_paciente, monto, id_profesional, "
+                "nombre_paciente FROM bi_pagos_caja WHERE fecha >= ?",
                 ((date.today() - timedelta(days=14)).isoformat(),)
             ).fetchall()
             changed = 0
             recovered = 0
             for r in rows:
+                # Sin nombre_paciente el NIVEL 0.5 (recepción) no puede calzar y
+                # la cascada gana por monto: cada noche pisaba la atribución
+                # correcta de los últimos 14 días (pago 39951: profilaxis de
+                # Burgos colgada a Castillo por una atención de ella de $30.000).
                 p = {"id": r["pago_id"], "id_paciente": r["id_paciente"],
-                     "fecha_recepcion": r["fecha"], "monto_pago": r["monto"]}
+                     "fecha_recepcion": r["fecha"], "monto_pago": r["monto"],
+                     "nombre_paciente": r["nombre_paciente"]}
                 id_prof, aid = _resolver_profesional_pago(c, p)
                 if id_prof is None:
                     continue

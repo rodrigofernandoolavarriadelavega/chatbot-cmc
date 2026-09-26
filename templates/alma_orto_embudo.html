@@ -335,10 +335,46 @@
   .dh .x{width:44px;height:44px}
   .stuck .row{padding:11px 0}
 }
+.act{list-style:none;margin:0;padding:0}
+.act li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--navy)}
+.act li:last-child{border-bottom:0}
+.act .f{flex:none;width:58px;font-family:ui-monospace,monospace;font-size:10.5px;color:var(--mute);padding-top:2px}
+.act .b{flex:1;min-width:0}
+.act .b b{font-weight:700}
+.act .b small{display:block;color:var(--mute);font-size:11px;margin-top:1px}
+.act .m{flex:none;font-weight:800;font-size:12.5px}
+.act .tg{display:inline-block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+  border-radius:5px;padding:1px 6px;margin-right:5px;vertical-align:1px}
+.act .tg.pago{background:#e3f5ec;color:#157347}.act .tg.cupones{background:#efe8fb;color:#5b3aa6}
+.act .tg.hora{background:#e3f3f6;color:#0f5f73}.act .tg.atencion{background:var(--bg);color:var(--mute)}
+.act-tot{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--navy);
+  background:var(--bg);border-radius:9px;padding:8px 11px;margin-bottom:8px}
+/* Popup de conversación: se responde desde el número del bot, no desde un celular personal */
+#m-chat .modal{max-width:520px;display:flex;flex-direction:column;overflow:hidden;height:min(720px,90vh)}
+.ch-sub{font-size:11.5px;color:var(--mute);font-weight:600;margin-top:2px}
+.ch-body{flex:1;overflow-y:auto;padding:16px 18px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
+.ch-dia{align-self:center;font-size:10.5px;font-weight:800;color:var(--mute);background:#fff;
+  border:1px solid var(--border);border-radius:99px;padding:2px 10px;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.ch-m{max-width:82%;padding:8px 11px 5px;border-radius:13px;font-size:13px;line-height:1.45;color:var(--navy);
+  white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(15,63,104,.06)}
+.ch-m.in{align-self:flex-start;background:#fff;border:1px solid var(--border);border-top-left-radius:4px}
+.ch-m.out{align-self:flex-end;background:#e3f3f6;border-top-right-radius:4px}
+.ch-m.hum{background:#d6ecf8}
+.ch-m .who{display:block;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.ch-m .t{display:block;text-align:right;font-size:10px;color:var(--mute);margin-top:3px}
+.ch-aviso{font-size:12px;line-height:1.45;padding:10px 18px;border-top:1px solid var(--border);color:var(--navy);background:#fff}
+.ch-aviso.cerrada{background:#fff6e5;color:#8a5a00}
+.ch-foot{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:#fff;align-items:flex-end}
+.ch-foot textarea{flex:1;font:inherit;font-size:13.5px;border:1px solid var(--border);border-radius:11px;padding:10px 12px;
+  color:var(--navy);resize:none;max-height:140px;min-height:44px;background:var(--bg)}
+.ch-foot textarea:focus{outline:2px solid rgba(79,190,206,.45);background:#fff}
+.ch-foot button{min-height:44px;padding:0 16px}
+.ch-foot textarea:disabled,.ch-foot button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:760px){
   .board{flex-direction:column;overflow-x:visible}
   .col{flex:none;max-height:none}.col-b{max-height:none}
   .drawer .pane{width:100%}
+  #m-chat .modal{height:100%!important}
   .modal{max-width:100%!important;border-radius:0!important;height:100%;max-height:100%}
 }
 </style>
@@ -413,11 +449,24 @@
       <p style="font-size:12.5px;color:var(--navy);margin:0;line-height:1.55;font-style:italic" id="dw-q"></p></div>
     <div class="dsec" id="dw-exwrap"><h4>Solicitud de exámenes</h4><ul class="exl" id="dw-ex"></ul></div>
     <div class="dsec" id="dw-notwrap"><h4>Notas</h4><p style="font-size:12.5px;color:var(--navy);margin:0;line-height:1.55" id="dw-not"></p></div>
+    <div class="dsec"><h4>Atenciones, pagos y cupones</h4><div id="dw-act"></div></div>
     <div class="dsec"><h4>Línea de tiempo</h4><ul class="tl" id="dw-tl"></ul></div>
   </div>
   <div class="dfoot">
     <button class="btn-ghost" style="flex:1" onclick="editarDesdeDw()">Editar</button>
     <button class="btn-primary" style="flex:1" id="dw-wa">WhatsApp</button>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="m-chat" onclick="if(event.target===this)cerrarChat()"><div class="modal">
+  <div class="modal-head"><div><h2 id="ch-n">Conversación</h2><div class="ch-sub" id="ch-s"></div></div>
+    <div class="x" onclick="cerrarChat()">✕</div></div>
+  <div class="ch-body" id="ch-body"></div>
+  <div class="ch-aviso" id="ch-aviso"></div>
+  <div class="ch-foot">
+    <textarea id="ch-txt" rows="1" placeholder="Escribe tu respuesta…" oninput="chAuto(this)"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarChat()}"></textarea>
+    <button class="btn-primary" id="ch-send" onclick="enviarChat()">Enviar</button>
   </div>
 </div></div>
 
@@ -757,7 +806,7 @@ function tarjeta(p){
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="acts">
       ${prev?`<button class="ico" onclick="mover(${p.id},'${prev}')" title="Volver">${svg(I.left,2.3)}</button>`:''}
-      ${tel?`<a class="ico" href="https://wa.me/${tel}" target="_blank" rel="noopener" title="WhatsApp">${svg(I.wa)}</a>`:''}
+      ${tel?`<button class="ico" onclick="abrirChat(${p.id})" title="Ver y responder la conversación">${svg(I.wa)}</button>`:''}
       ${next?`<button onclick="mover(${p.id},'${next}')">Avanzar ${svg(I.right,2.3)}</button>`:''}
     </div></div>`;
 }
@@ -790,13 +839,97 @@ async function abrirDw(id){
     const tel=(p.telefono||'').replace(/[^0-9]/g,'');
     const wa=document.getElementById('dw-wa');
     wa.style.display=tel?'':'none';
-    wa.onclick=()=>window.open("https://wa.me/"+tel,"_blank","noopener");
+    wa.textContent='Conversación';
+    wa.onclick=()=>{ cerrarDw(); abrirChat(id); };
     document.getElementById('dw').classList.add('on');
+    cargarActividad(id);
   }catch(e){ toast(e.message,'err'); }
+}
+const ACT_TXT={pago:'Pago',cupones:'Cupones',hora:'Hora',atencion:'Atención'};
+async function cargarActividad(id){
+  const el=document.getElementById('dw-act');
+  el.innerHTML='<div class="hint">Buscando en caja y agenda…</div>';
+  try{
+    const d=await api("/paciente/"+id+"/actividad");
+    if(DWID!==id) return;
+    if(!d.eventos.length){ el.innerHTML='<div class="hint">Sin atenciones dentales registradas para este celular.</div>'; return; }
+    const hoy=new Date().toISOString().slice(0,10);
+    el.innerHTML=`<div class="act-tot"><span>Pagado en el área dental</span><span>${clp(d.total_pagado)}</span></div>`
+      +(d.pacientes>1?`<div class="hint" style="margin-bottom:6px">Celular compartido por ${d.pacientes} pacientes: se indica de quién es cada fila.</div>`:'')
+      +'<ul class="act">'+d.eventos.map(e=>{
+        const [y,m,dd]=e.fecha.slice(0,10).split('-');
+        return `<li><span class="f">${dd}-${m}-${y.slice(2)}${e.fecha>hoy?'<br>próxima':''}</span>
+          <span class="b"><span class="tg ${e.tipo}">${ACT_TXT[e.tipo]}</span><b>${esc(e.prof)}</b>
+            <small>${esc(e.detalle)}${e.paciente?' · '+esc(e.paciente):''}</small></span>
+          <span class="m">${e.monto&&e.tipo!=='hora'?clp(e.monto):''}</span></li>`;}).join('')+'</ul>';
+  }catch(e){ el.innerHTML=`<div class="hint">${esc(e.message)}</div>`; }
+}
+/* ── Conversación ─────────────────────────────────────────────────────────
+   Se lee y se responde desde el número del bot (el mismo que usa recepción),
+   no desde un celular personal. Mientras el popup está abierto se refresca
+   cada 8 s para ver si el paciente contestó. */
+let CHID=null, CHTIMER=null, CHN=0;
+const CH_TZ={timeZone:'America/Santiago'};
+function chFecha(ts){ return new Date(String(ts).replace(' ','T')+'Z'); }
+function chAuto(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,140)+'px'; }
+async function abrirChat(id){
+  CHID=id; CHN=0;
+  document.getElementById('ch-n').textContent='Conversación';
+  document.getElementById('ch-s').textContent='';
+  document.getElementById('ch-body').innerHTML='<div class="cargando"><i></i>Leyendo la conversación…</div>';
+  document.getElementById('ch-aviso').textContent='';
+  openModal('m-chat');
+  await cargarChat(true);
+  clearInterval(CHTIMER); CHTIMER=setInterval(()=>cargarChat(false),8000);
+  document.getElementById('ch-txt').focus();
+}
+function cerrarChat(){ clearInterval(CHTIMER); CHTIMER=null; CHID=null; closeModal('m-chat'); }
+async function cargarChat(forzar){
+  if(CHID===null) return;
+  let d; try{ d=await api("/conversacion/"+CHID); }
+  catch(e){ if(forzar) document.getElementById('ch-body').innerHTML=`<div class="empty">${esc(e.message)}</div>`; return; }
+  if(CHID===null) return;
+  document.getElementById('ch-n').textContent=d.paciente;
+  document.getElementById('ch-s').textContent='+'+d.telefono;
+  const av=document.getElementById('ch-aviso'), txt=document.getElementById('ch-txt'), btn=document.getElementById('ch-send');
+  if(d.ventana_abierta){
+    av.className='ch-aviso';
+    av.textContent='Se envía desde el WhatsApp del centro. Al responder, el bot deja de contestarle y la conversación queda con recepción.';
+  }else{
+    av.className='ch-aviso cerrada';
+    av.textContent='Pasaron más de 24 h desde su último mensaje: WhatsApp no permite escribirle texto libre hasta que vuelva a escribir.';
+  }
+  txt.disabled=btn.disabled=!d.ventana_abierta;
+  if(!forzar && d.mensajes.length===CHN) return;
+  CHN=d.mensajes.length;
+  const body=document.getElementById('ch-body');
+  const alFondo=forzar || body.scrollHeight-body.scrollTop-body.clientHeight<80;
+  let dia='', h='';
+  for(const m of d.mensajes){
+    const f=chFecha(m.ts), dd=f.toLocaleDateString('es-CL',{...CH_TZ,weekday:'short',day:'numeric',month:'short'});
+    if(dd!==dia){ dia=dd; h+=`<div class="ch-dia">${esc(dd)}</div>`; }
+    const hum=m.dir==='out' && /^\[Recepcionista\]/.test(m.texto);
+    const texto=m.texto.replace(/^\[Recepcionista\]\s*/,'') || (m.media?'['+m.media+']':'');
+    const who=m.dir==='in'?'':(hum?'Recepción':'Bot');
+    h+=`<div class="ch-m ${m.dir==='in'?'in':'out'} ${hum?'hum':''}">${who?`<span class="who">${who}</span>`:''}${esc(texto)}
+      <span class="t">${f.toLocaleTimeString('es-CL',{...CH_TZ,hour:'2-digit',minute:'2-digit'})}</span></div>`;
+  }
+  body.innerHTML=h||'<div class="empty">Sin mensajes registrados.</div>';
+  if(alFondo) body.scrollTop=body.scrollHeight;
+}
+async function enviarChat(){
+  const t=document.getElementById('ch-txt'), b=document.getElementById('ch-send'), msg=t.value.trim();
+  if(!msg||CHID===null||b.disabled) return;
+  b.disabled=true;
+  try{
+    await api("/conversacion/"+CHID,{method:"POST",body:JSON.stringify({mensaje:msg})});
+    t.value=''; chAuto(t); toast('Enviado'); await cargarChat(true);
+  }catch(e){ toast(e.message,'err'); }
+  finally{ b.disabled=false; }
 }
 function cerrarDw(){ document.getElementById('dw').classList.remove('on'); }
 function editarDesdeDw(){ cerrarDw(); editar(DWID); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrarDw(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(CHID!==null) cerrarChat(); else cerrarDw(); } });
 
 /* ── Modal paciente ── */
 function pintarExamenes(marcados){
@@ -906,7 +1039,10 @@ async function probarMail(){
 async function sincronizar(){
   document.getElementById('pillTxt').textContent="Buscando\u2026";
   try{ const r=await api("/sincronizar?dias=60",{method:"POST"});
-    toast(r.creados?`${r.creados} consultas traídas del WhatsApp`:"Sin consultas nuevas");
+    const partes=[];
+    if(r.creados) partes.push(`${r.creados} consultas traídas del WhatsApp`);
+    if(r.avanzados) partes.push(`${r.avanzados} avanzaron por sus citas y pagos`);
+    toast(partes.length?partes.join(' · '):"Sin cambios");
     await load();
   }catch(e){ toast(e.message,'err'); }
   document.getElementById('pillTxt').textContent="En vivo";
