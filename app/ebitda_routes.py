@@ -32,6 +32,12 @@ SIN_RETENCION = {65, 68, 73}    # Quijano (gastro), David Pardo (ecografía), Ab
 TRANSBANK_DEBITO = 0.006
 TRANSBANK_CREDITO = 0.013
 
+# Publicidad Meta Ads: se lee del gasto real de la cuenta publicitaria (no se
+# carga a mano). La cuenta la comparten otros negocios de la familia: esas
+# campañas no son gasto del CMC y se excluyen por nombre.
+_META_NO_CMC = ("meulen", "terremoto", "brasas", "don pancho")
+_META_CACHE: dict = {}
+
 
 def _norm_nom(s: str) -> str:
     import re
@@ -66,11 +72,66 @@ def _comision_transbank(c, mes: str):
             cred += r["monto"] or 0
     com = round(deb * TRANSBANK_DEBITO + cred * TRANSBANK_CREDITO)
     return com, deb, cred
+def _gasto_meta(mes: str):
+    """Gasto de Meta Ads del mes (CLP) → (monto, n_campañas, excluidas) o None si
+    Meta no respondió. Caché: 1 h el mes en curso, 7 días los meses cerrados."""
+    import time
+    import json as _json
+    import httpx
+    import config
+    ahora = time.time()
+    abierto = mes >= date.today().strftime("%Y-%m")
+    hit = _META_CACHE.get(mes)
+    if hit and ahora - hit[0] < (3600 if abierto else 7 * 86400):
+        return hit[1]
+    token = getattr(config, "META_ACCESS_TOKEN", "")
+    acct = getattr(config, "META_AD_ACCOUNT_ID", "") or "act_220608142267129"
+    if not acct.startswith("act_"):
+        acct = f"act_{acct}"
+    if not token:
+        return None
+    inicio, fin = _mes_bounds(mes)
+    hasta = min(date.fromisoformat(fin).toordinal() - 1, date.today().toordinal())
+    hasta = date.fromordinal(hasta).isoformat()
+    try:
+        # Token en header, nunca en la URL (httpx loggea la URL completa).
+        r = httpx.get(f"https://graph.facebook.com/v21.0/{acct}/insights",
+                      params={"fields": "campaign_name,spend", "level": "campaign",
+                              "time_range": _json.dumps({"since": inicio, "until": hasta}),
+                              "limit": 500},
+                      headers={"Authorization": f"Bearer {token}"}, timeout=20)
+        data = r.json()
+    except Exception:
+        return None
+    if not isinstance(data, dict) or data.get("error"):
+        return None
+    total, n, excl = 0.0, 0, []
+    for c in data.get("data", []):
+        gasto = float(c.get("spend") or 0)
+        if gasto <= 0:
+            continue
+        nombre = (c.get("campaign_name") or "").lower()
+        if any(k in nombre for k in _META_NO_CMC):
+            excl.append((c.get("campaign_name") or "")[:40])
+            continue
+        total += gasto
+        n += 1
+    res = (round(total), n, excl)
+    _META_CACHE[mes] = (ahora, res)
+    return res
+
 # Honorario FIJO mensual (no % del ingreso). Único contrato fijo: Dr. Abarca (id 73).
 # Su CMC = ingreso − fijo puede ser negativo (riesgo del centro). El fijo cambió:
 # hasta abril 2026 era $3.414.126; desde mayo 2026 es la mitad ($1.707.063).
 def honorario_fijo(pid: int, mes: str):
     if pid == 73:  # Dr. Abarca contrato
+        # Desde el 7-sep-2026: fijo $3.414.126 por 40 h en la tarde (decisión
+        # del dueño 31-ago). Septiembre es mixto: fijo prorrateado 24/30 más el
+        # 62% de su venta del 1 al 6 bajo el esquema anterior ($442.730).
+        if mes >= "2026-10":
+            return 3414126
+        if mes == "2026-09":
+            return round(3414126 * 24 / 30 + 442730 * 0.62)
         return 1707063 if mes >= "2026-05" else 3414126
     return None
 
@@ -154,6 +215,18 @@ def _ebitda_mes(c, mes: str) -> dict:
 
     gastos, gastos_detalle = _gastos_mes(c, mes)
     # Comisión Transbank automática (calculada del cruce caja × medio de pago)
+    # Publicidad Meta automática, salvo que ya se haya cargado a mano.
+    if not any("public" in (g.get("categoria") or "").lower() or
+               "meta" in (g.get("categoria") or "").lower() for g in gastos_detalle):
+        _meta = _gasto_meta(mes)
+        if _meta and _meta[0] > 0:
+            gastos += _meta[0]
+            gastos_detalle.append({
+                "id": None, "categoria": "Publicidad Meta Ads",
+                "descripcion": f"Auto · gasto real de {_meta[1]} campañas en Meta"
+                               + (f" (excluye {len(_meta[2])} de otros negocios)" if _meta[2] else ""),
+                "monto": _meta[0], "recurrente": 0, "auto": True,
+            })
     com_tbk, tbk_deb, tbk_cred = _comision_transbank(c, mes)
     if com_tbk > 0:
         gastos += com_tbk

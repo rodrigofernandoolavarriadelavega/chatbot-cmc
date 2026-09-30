@@ -2797,12 +2797,16 @@ def clean_rut(rut: str) -> str:
     # Permite puntos/espacios/nbsp internos en el cuerpo y guión(es) antes del DV.
     # Así toleramos texto circundante, envolturas ("", [], {}, «»), emojis, etc.
     m = re.search(
-        r"(\d[\d.\s\u00a0]{5,}\d)(?:\s*-+\s*([0-9KJLIO]))?(?![0-9K])",
+        # El DV va tras guión, o es una K suelta tras el cuerpo ("13.839.834K",
+        # "14.590.420 K") que no es el comienzo de otra palabra ("…834 ok" NO
+        # trae DV). Sin esto "14.590.420 K" se leía como 1.459.042-0: el RUT
+        # válido de OTRA persona.
+        r"(\d[\d.,\s\u00a0]{5,}\d)(?:\s*-+\s*([0-9KJLIO])|\s*(K)(?![A-Z0-9]))?(?![0-9K])",
         rut,
     )
     if m:
         cuerpo_digitos = re.sub(r"\D", "", m.group(1))
-        dv = _reparar_dv_tipeado(cuerpo_digitos, m.group(2))
+        dv = _reparar_dv_tipeado(cuerpo_digitos, m.group(2) or m.group(3))
         if dv:
             if 7 <= len(cuerpo_digitos) <= 8:
                 return f"{cuerpo_digitos}-{dv}"
@@ -2841,6 +2845,11 @@ def clean_rut(rut: str) -> str:
         cuerpo, dv = rut.rsplit("-", 1)
         return f"{cuerpo}-{dv}" if cuerpo and dv else rut
     if rut.isdigit() and 7 <= len(rut) <= 8:
+        # Misma regla que arriba: con 8 dígitos el último puede ser el DV. Este
+        # fallback derivaba el DV a ciegas y fabricaba el RUT de otra persona
+        # cuando el texto no calzaba con la extracción (p. ej. miles con coma).
+        if len(rut) == 8 and _calcular_dv_rut(rut[:7]) == rut[7]:
+            return f"{rut[:7]}-{rut[7]}"
         dv = _calcular_dv_rut(rut)
         if dv:
             return f"{rut}-{dv}"

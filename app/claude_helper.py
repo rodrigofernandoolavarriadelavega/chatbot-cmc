@@ -1606,13 +1606,15 @@ _ESP_NO_ATENDIDAS: tuple[tuple[str, ...], ...] = (
     ("endocrinólog", "endocrinolog"),
     ("hematólog", "hematolog"),
     ("infectólog", "infectolog"),
-    ("urolog",),
+    ("urólog", "urolog"),
     ("cirujano", "cirugía general"),
     ("ortopedista",),
     ("alergólog", "alergolog"),
     ("radiolog",),
     ("anestesiólog", "anestesiolog"),
 )
+_RX_CIRUJANO_DENTISTA = re.compile(r"cirujan[oa]s?[\s-]+dentistas?")
+
 _MSG_ESP_NO_ATENDIDA = (
     "Esa especialidad no la tenemos en el CMC. "
     "Te recomendamos el CESFAM Carampangue o el Hospital de Arauco."
@@ -1723,9 +1725,15 @@ def _validar_respuesta_faq(texto: str, phone: str = "") -> str:
     texto = _RX_PRECIO_FAQ.sub(_check_precio, texto)
 
     # 2. Especialidades no atendidas
-    tl = texto.lower()
+    # Se busca al INICIO de palabra, no en cualquier parte: "urolog" está dentro
+    # de "ne-urolog-ía" y "pediatr" dentro de "odontopediatría". Con el `in`
+    # plano, cada respuesta que mencionaba Neurología (que SÍ tenemos) se
+    # reemplazaba entera por "vaya al CESFAM" — caso real 2026-09-29, paciente
+    # nuevo preguntando si llevaba bono Fonasa, perdido en la confirmación.
+    # "cirujano dentista" es el título de todo dentista en Chile, no cirugía.
+    tl = _RX_CIRUJANO_DENTISTA.sub(" ", texto.lower())
     for variantes in _ESP_NO_ATENDIDAS:
-        if any(v in tl for v in variantes):
+        if any(re.search(r"(?<!\w)" + re.escape(v), tl) for v in variantes):
             _alt = None
             for _claves, _msg in _ESP_NO_ATENDIDA_ALT.items():
                 if any(v in _claves for v in variantes):

@@ -2154,7 +2154,7 @@ _FAST_PATH_BUTTONS = {
     # interpretaba "Fonasa" como preguntar_info y devolvía la dirección,
     # ignorando 5 mensajes consecutivos. Fast-path corta el classifier.
     "fonasa", "fona", "particular", "privado", "privada",
-    "no_gracias_reeng",
+    "no_gracias_reeng", "waitlist_antes_si",
 }
 
 _FAST_PATH_PREFIXES = (
@@ -3031,6 +3031,84 @@ async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: st
         log.warning("consent handler error phone=%s: %s", phone, _ce)
         # No escalar a humano
         return "Listo, queda registrado.\n_Escribe *menu* si necesitas algo más._"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Entradas que NO son un RUT en los estados que piden RUT (WAIT_RUT_*)
+# ─────────────────────────────────────────────────────────────────────────────
+# Antes, todo lo que llegaba a un WAIT_RUT_* pasaba por clean_rut → "no reconozco
+# ese RUT" y sumaba un intento fallido (al 2º-3º se deriva a recepción). Pero
+# muchas de esas entradas no eran RUT mal escritos:
+#   · el id de un botón de un mensaje anterior (caso real 29-sep: "Cambiar algo →
+#     Horario u otro día" llegaba como `cd_horario` y se leía como RUT);
+#   · un pedido de otra fecha ("Hora para hoy", "¿nada antes?");
+#   · una pregunta ("¿debo llevar bono?").
+# Regla única: si la entrada no puede ser un RUT (menos de 6 dígitos), se atiende
+# por lo que es y NO cuenta como RUT fallido. Los RUT mal escritos siguen su
+# camino de siempre.
+_CD_BOTONES = {"cd_horario", "cd_persona", "cd_datos", "cambiar_datos"}
+_RX_PIDE_OTRA_FECHA = re.compile(
+    r"\b(hoy|mañana|manana|pasado mañana|antes|m[aá]s temprano|m[aá]s tarde|"
+    r"otro d[ií]a|otra hora|otro horario|otra fecha|lunes|martes|mi[eé]rcoles|"
+    r"jueves|viernes|s[aá]bado|domingo|esta semana|pr[oó]xima semana)\b")
+_RX_ES_PREGUNTA = re.compile(
+    r"\?|^\s*(qu[eé]|cu[aá]nto|cu[aá]ndo|d[oó]nde|c[oó]mo|cu[aá]l|debo|tengo que|"
+    r"puedo|hay|atiende|se puede|necesito llevar)\b")
+
+
+def _puede_ser_rut(txt: str) -> bool:
+    return sum(ch.isdigit() for ch in (txt or "")) >= 6
+
+
+async def _atender_entrada_no_rut(phone: str, txt: str, tl: str, state: str,
+                                  data: dict):
+    """Devuelve la respuesta si `txt` claramente no es un RUT; None si hay que
+    tratarlo como RUT (válido o mal escrito)."""
+    if _puede_ser_rut(txt):
+        return None
+    # 1. Botón de "Cambiar algo" de la confirmación anterior → hacer lo que dice.
+    if tl in _CD_BOTONES and data.get("slot_elegido"):
+        log_event(phone, "rut_boton_anterior", {"boton": tl, "state": state})
+        save_session(phone, "CONFIRMING_CITA", data)
+        return await handle_message(phone, tl, {"state": "CONFIRMING_CITA", "data": data})
+    # 2. Pide otra fecha/hora mientras le pedíamos el RUT → buscar horario.
+    _esp = (data.get("slot_elegido") or {}).get("especialidad") or data.get("especialidad")
+    # Sólo si es un PEDIDO de fecha ("hora para hoy", "¿nada antes?", "otro día"),
+    # no una frase que menciona un día de pasada ("es para mi hijo, lo llevo
+    # mañana"): corto, o que hable de la hora o de cambiarla.
+    _pide_fecha = _RX_PIDE_OTRA_FECHA.search(tl) and (
+        len(tl.split()) <= 5 or "hora" in tl or "cambi" in tl)
+    if state == "WAIT_RUT_AGENDAR" and _esp and _pide_fecha:
+        log_event(phone, "rut_pide_otra_fecha", {"texto": txt[:120], "esp": _esp})
+        _stash_preferencia_fecha(txt, data)
+        for _k in ("slot_elegido", "slots", "todos_slots"):
+            data.pop(_k, None)
+        return await _iniciar_agendar(phone, data, _esp)
+    # 3. Pregunta → responderla sin perder el paso.
+    if _RX_ES_PREGUNTA.search(tl):
+        log_event(phone, "rut_pregunta_intermedia", {"texto": txt[:120], "state": state})
+        try:
+            _resp = await respuesta_faq(txt)
+        except Exception:
+            _resp = "Esa consulta te la responde recepción 😊"
+        save_session(phone, state, data)
+        return f"{_resp}\n\n_Cuando quieras seguir, envíame el *RUT* (ej: *12.345.678-9*)._"
+    # 4. Cualquier otra cosa (botón viejo, texto suelto): volver a pedir el RUT
+    #    sin contarlo como RUT fallido. Tope propio para no quedar en loop.
+    _n = data.get("intentos_no_rut", 0) + 1
+    data["intentos_no_rut"] = _n
+    log_event(phone, "rut_entrada_no_rut", {"texto": txt[:120], "state": state, "n": _n})
+    if _n >= 3:
+        return _derivar_humano(phone=phone, contexto=f"no envía RUT en {state}: {txt[:120]}")
+    save_session(phone, state, data)
+    _botones = [{"id": "menu", "title": "🏠 Volver al inicio"}]
+    if state == "WAIT_RUT_AGENDAR" and data.get("slot_elegido"):
+        _botones.insert(0, {"id": "cd_horario", "title": "📅 Cambiar horario"})
+    return _btn_msg(
+        "Para seguir necesito el *RUT* de la persona que se atiende, con dígito "
+        "verificador (ej: *12.345.678-9*).",
+        _botones,
+    )
 
 
 async def handle_message(phone: str, texto: str, session: dict) -> str:
@@ -4943,6 +5021,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if txt == "3": return await _iniciar_cancelar(phone, data)
         if txt == "4": return await _iniciar_ver(phone, data)
         if txt == "5": return await _iniciar_waitlist(phone, data, None)
+        # "lista de espera" escrito (IG/FB reescriben el título del botón) se
+        # mapea a `accion_waitlist`, que no tenía handler y caía a "no entendí".
+        if tl == "accion_waitlist": return await _iniciar_waitlist(phone, data, None)
         if txt == "6": return _derivar_humano(phone=phone, contexto="menú opción 6")
 
         # ── Motivos rápidos del menú ──────────────────────────────────────────
@@ -7696,6 +7777,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if txt.startswith("motivo_"):
             reset_session(phone)
             return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
+        # "Avísame si hay antes" (ofrecido cuando pide una hora más pronto que la
+        # primera disponible): inscribe en lista de espera sin perder la oferta.
+        if tl in ("waitlist_antes_si", "accion_waitlist"):
+            data["waitlist_especialidad"] = data.get("especialidad", "")
+            data["waitlist_id_prof_pref"] = (data.get("slot_sugerido") or {}).get("id_profesional")
+            log_event(phone, "waitlist_desde_pide_antes", {"esp": data["waitlist_especialidad"]})
+            perfil = get_profile(phone)
+            if perfil and perfil.get("rut"):
+                data["rut"] = perfil["rut"]
+                data["paciente_nombre"] = perfil.get("nombre", "")
+                return _inscribir_waitlist_y_responder(phone, data)
+            save_session(phone, "WAIT_WAITLIST_RUT", data)
+            return ("Perfecto 👍 Para inscribirte necesito tu RUT:\n"
+                    "(ej: *12.345.678-9*)" + _PRIVACY_NOTE)
         # C3: filtrar slots pasados que puedan quedar en cache entre días.
         # Antes solo comparaba FECHA (>= hoy) — un slot de HOY cuya hora ya
         # pasó (la conversación quedó abierta, o el paciente volvió a "ver
@@ -9402,6 +9497,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "⚠️ Si es una *urgencia médica*, llama al *SAMU 131* o ve directamente al *Hospital de Arauco*.\n\n"
                     "Si quieres agendar una hora regular, escribe el *número* del horario o *otro día*."
                 )
+            # "¿nada antes?" / "algo más pronto": no hay antes que la primera
+            # hora mostrada. Antes respondía "No te entendí bien" y el paciente
+            # se iba (3 casos en ginecología el 29-sep). Se lo decimos y le
+            # damos las dos salidas: tomarla o que le avisemos.
+            if re.search(r"\b(antes|m[aá]s pronto|m[aá]s temprano|lo antes posible)\b", tl) and slots_mostrados:
+                _s0 = slots_mostrados[0]
+                _h0 = str(_s0.get("hora_inicio", ""))[:5]
+                _f0 = _s0.get("fecha_display") or _s0.get("fecha", "")
+                log_event(phone, "wait_slot_pide_antes", {"txt": txt[:80], "primera": f"{_f0} {_h0}"})
+                save_session(phone, "WAIT_SLOT", data)
+                return _btn_msg(
+                    f"La primera hora disponible es *{_f0} a las {_h0}*"
+                    + (f" con {_s0.get('profesional')}" if _s0.get("profesional") else "")
+                    + ". Antes no tengo 😕\n\n"
+                    "¿La tomas, o prefieres que te avise si se libera algo antes?",
+                    [{"id": "confirmar_sugerido", "title": f"✅ Tomar {_h0}"[:20]},
+                     {"id": "waitlist_antes_si", "title": "📝 Avisarme antes"}],
+                )
             if _TEMP_HOY.search(tl):
                 from datetime import datetime as _dt_h
                 _hoy = _dt_h.now(_CHILE_TZ)
@@ -10219,6 +10332,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         else:
             rut = clean_rut(txt)
         if not valid_rut(rut):
+            _no_rut = await _atender_entrada_no_rut(phone, txt, tl, state, data)
+            if _no_rut is not None:
+                return _no_rut
             # Escape: el usuario pide cambiar de profesional ("me equivoqué necesito con abarca")
             apellido_esc = _detectar_apellido_profesional(txt)
             if apellido_esc and any(
@@ -11899,6 +12015,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await _iniciar_agendar(phone, {}, apellido_esc)
         rut = clean_rut(txt)
         if not valid_rut(rut):
+            _no_rut = await _atender_entrada_no_rut(phone, txt, tl, state, data)
+            if _no_rut is not None:
+                return _no_rut
             # BUG-C: 74% abandono. Contador con escalación tras 2 intentos fallidos.
             _rut_cancel_intentos = data.get("rut_cancelar_intentos", 0) + 1
             data["rut_cancelar_intentos"] = _rut_cancel_intentos
@@ -12207,6 +12326,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
         rut = clean_rut(txt)
         if not valid_rut(rut):
+            _no_rut = await _atender_entrada_no_rut(phone, txt, tl, state, data)
+            if _no_rut is not None:
+                return _no_rut
             # BUG-C: 80% abandono. Contador con escalación tras 2 intentos fallidos.
             _rut_reag_intentos = data.get("rut_reagendar_intentos", 0) + 1
             data["rut_reagendar_intentos"] = _rut_reag_intentos
@@ -12424,6 +12546,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "WAIT_WAITLIST_RUT_ECOCA":
         rut = clean_rut(txt)
         if not valid_rut(rut):
+            _no_rut = await _atender_entrada_no_rut(phone, txt, tl, state, data)
+            if _no_rut is not None:
+                return _no_rut
             return hint_rut_error(txt)
         _ensure_consent(phone)
         data["rut"] = rut
@@ -12533,6 +12658,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if state == "WAIT_WAITLIST_RUT":
         rut = clean_rut(txt)
         if not valid_rut(rut):
+            _no_rut = await _atender_entrada_no_rut(phone, txt, tl, state, data)
+            if _no_rut is not None:
+                return _no_rut
             return hint_rut_error(txt)
         _ensure_consent(phone)
         data["rut"] = rut
@@ -12619,6 +12747,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return await handle_message(phone, txt, {"state": "IDLE", "data": {}})
         rut = clean_rut(txt)
         if not valid_rut(rut):
+            _no_rut = await _atender_entrada_no_rut(phone, txt, tl, state, data)
+            if _no_rut is not None:
+                return _no_rut
             # BUG-C: 96% abandono en WAIT_RUT_VER. Tras 2 intentos fallidos,
             # ofrecer derivación a recepción en vez de seguir pidiendo RUT.
             _rut_ver_intentos = data.get("rut_ver_intentos", 0) + 1
