@@ -215,14 +215,19 @@ _AGENDAR_VIA = {
 
 _ESP_EXTRA: dict[str, list[int]] = {
     "Medicina Familiar":   [13],   # Dr. Alonso Márquez
-    "Psicología Infantil": [74],   # Jorge Montalba
+    "Psicología Infantil": [74, 82],   # Jorge Montalba + Ps. Jacquelinne Salas
 }
 
 def _fmt_clp(n: int) -> str:
     return "$" + f"{int(n):,}".replace(",", ".")
 
 def _precio_label(esp: str, id_prof: int | None = None) -> str:
-    from flows import PRECIOS_SLOT
+    from flows import PRECIOS_SLOT, PRECIO_PROF_SIN_BONO
+    # Profesional que atiende Fonasa SIN bono (Salas, 82): pago directo, jamás
+    # "bono". La etiqueta lo dice explícito para que la web no prometa copago MLE.
+    if id_prof in PRECIO_PROF_SIN_BONO:
+        _f, _p = PRECIO_PROF_SIN_BONO[id_prof]
+        return f"Fonasa (sin bono) {_fmt_clp(_f)} · Particular {_fmt_clp(_p)}"
     entry = _PRECIO_PROF_OVERRIDE.get(id_prof) if id_prof else None
     entry = entry or PRECIOS_SLOT.get(esp)
     if not entry:

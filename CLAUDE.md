@@ -212,6 +212,7 @@ El campo `intervalo` es la duración de cita por WhatsApp (en minutos). El bot *
 | 52 | Gisela Pinto | Nutrición | 60 |
 | 74 | Jorge Montalba | Psicología Adulto / Psicología Infantil | 45 | **lun-vie 18:00-20:30 ONLINE · sáb 09:00-14:00 PRESENCIAL** (`telemedicina_dias`) |
 | 49 | Juan Pablo Rodríguez | Psicología Adulto | 45 |
+| 82 | Ps. Jacquelinne Salas | Psicología Adulto / Psicología Infantil | 45 | **PRESENCIAL** lun-vie 15:30-20:00 · sáb 09:00-14:00 (online solo a pedido, lo coordina recepción). **SIN bono Fonasa**: Fonasa $20.000 directo / particular $25.000 (`flows.PRECIO_PROF_SIN_BONO`) |
 | 70 | Juana Arratia | Fonoaudiología | 30 |
 | 67 | Sarai Gómez | Matrona | 30 |
 | 56 | Andrea Guevara | Podología | 60 |

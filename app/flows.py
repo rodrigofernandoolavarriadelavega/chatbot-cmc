@@ -580,6 +580,42 @@ PRECIOS_SLOT = {
     # Masoterapia se resuelve dinámicamente según la duración real del slot.
 }
 
+# ── Precio por profesional SIN bono Fonasa (pago directo) ────────────────────
+# Ps. Jacquelinne Salas (82), decisión del dueño 2026-10-01: $20.000 para
+# beneficiarios Fonasa y $25.000 particular. NO es un bono MLE ni un copago:
+# todavía no figura en el registro de prestadores de la Superintendencia, así
+# que NO emite bono. El paciente Fonasa paga $20.000 directo en el CMC.
+# Por eso no sirve la tupla ("ambas", fonasa, None, particular) de PRECIOS_SLOT
+# (esa significa "bono MLE"): la psicología "Adulto"/"Infantil" de Montalba y
+# Rodríguez sigue con bono $14.420. Formato: id_profesional -> (fonasa, particular).
+# Quitar la entrada el día que emita bono (y pasar a copago MLE en PRECIOS_SLOT).
+PRECIO_PROF_SIN_BONO: dict[int, tuple[int, int]] = {
+    82: (20000, 25000),
+}
+
+
+def _fmt_clp_flows(n: int) -> str:
+    return "$" + f"{int(n):,}".replace(",", ".")
+
+
+def _precio_line_sin_bono(pid, modalidad_override: str | None = None) -> str:
+    """Línea de precio para un profesional de PRECIO_PROF_SIN_BONO, o "" si no
+    aplica. Jamás menciona "bono": deja explícito que el paciente Fonasa paga
+    directo."""
+    try:
+        pair = PRECIO_PROF_SIN_BONO.get(int(pid))
+    except (TypeError, ValueError):
+        return ""
+    if not pair:
+        return ""
+    f_str, p_str = _fmt_clp_flows(pair[0]), _fmt_clp_flows(pair[1])
+    if modalidad_override == "fonasa":
+        return f"💰 Fonasa (sin bono): {f_str} — se paga directo en el CMC"
+    if modalidad_override == "particular":
+        return f"💰 Particular: {p_str}"
+    return f"💰 Fonasa (sin bono): {f_str} · Particular: {p_str}"
+
+
 # ── Bioimpedanciometría (Gisela Pinto, 52) ───────────────────────────────────
 # Prestación aparte de la consulta nutricional: $15.000, bloque de 15 min, sin
 # bono Fonasa. Se agenda sola (no requiere consulta) y también se ofrece como
@@ -1102,6 +1138,9 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
     _pid = (slot.get("id_profesional") if slot else None) or id_profesional
     if _pid == 13 and esp.lower() in ("medicina general", "medicina familiar"):
         esp = "Medicina Familiar"
+    # Psicóloga sin bono Fonasa (Salas, 82): precio propio, nunca el bono $14.420.
+    if _pid in PRECIO_PROF_SIN_BONO and esp.lower().startswith("psicolog"):
+        return _precio_line_sin_bono(_pid, modalidad_override)
     # Masoterapia: el precio depende de la duración real del slot (20 o 40 min)
     if esp.lower() == "masoterapia":
         if not slot:
@@ -5497,7 +5536,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "quijano", "burgos", "jimenez", "jiménez", "castillo",
             "fredes", "valdes", "valdés", "fuentealba", "armijo",
             "etcheverry", "pinto", "montalba", "rodriguez", "rodríguez",
-            "arratia", "saraí", "sarai", "guevara", "pardo",
+            "jacquelinne", "arratia", "saraí", "sarai", "guevara", "pardo",
             # "horita" usado como diminutivo de "hora" (cita), muy común en CMC
             "horita",
             # "para hoy"/"para mañana"/"para el [día]" = scheduling intent, NO síntoma.
@@ -8660,6 +8699,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "\u00bfTe sirve el horario? Elige un n\u00famero para reservar."
                 ).format(
                     esp=str(_esp_cob or especialidad),
+                    precio=("\n" + _precio_cob) if _precio_cob else "",
+                )
+            elif _slot_cob and int(_slot_cob.get("id_profesional") or 0) in PRECIO_PROF_SIN_BONO:
+                # Ps. Salas (82): atiende a pacientes Fonasa pero SIN bono —
+                # jamás decir "bono MLE" (ver PRECIO_PROF_SIN_BONO).
+                _resp_cob = (
+                    "Con *{prof}* los pacientes Fonasa pagan un valor preferente "
+                    "*directo en el CMC, sin bono* (todav\u00eda no emite bono Fonasa). "
+                    "Tambi\u00e9n atiende *Particular*.{precio}\n\n"
+                    "\u00bfTe sirve el horario? Elige un n\u00famero para reservar."
+                ).format(
+                    prof=str(_slot_cob.get("profesional") or "la psic\u00f3loga"),
                     precio=("\n" + _precio_cob) if _precio_cob else "",
                 )
             else:
@@ -14881,6 +14932,18 @@ _APELLIDOS_PROFESIONAL = [
     ("dr montalba",      "montalba"),
     ("dr jorge",         "montalba"),
 
+    # === Ps. Jacquelinne Salas (82) — Psicología infantojuvenil y adultos ===
+    # Solo formas con nombre+apellido o título+apellido: "salas" suelto choca
+    # con "salas de espera" y "jacqueline" es nombre común de pacientes.
+    ("jacquelinne salas",   "jacquelinne salas"),
+    ("jacqueline salas",    "jacquelinne salas"),
+    ("jaqueline salas",     "jacquelinne salas"),
+    ("jacquelin salas",     "jacquelinne salas"),
+    ("jacquelinne",         "jacquelinne salas"),   # doble n: grafía única, no es nombre de paciente típico
+    ("psicologa salas",     "jacquelinne salas"),
+    ("psicóloga salas",     "jacquelinne salas"),
+    ("dra salas",           "jacquelinne salas"),
+
     # === Dr. Juan Pablo Rodríguez (49) — Psicología ===
     ("juan pablo rodriguez", "rodriguez"),
     ("juanpa",       "rodriguez"),
@@ -15113,7 +15176,7 @@ _ESPECIALIDADES_NO_DISPONIBLES_NORM = {
 # detector local de especialidad. Caso real 2026-04-28 (56993584481).
 _APELLIDOS_INDIVIDUALES_KEYS = frozenset({
     "abarca", "armijo", "burgos", "etcheverry", "jimenez", "marquez",
-    "montalba", "olavarría", "olavarria", "rodriguez",
+    "montalba", "olavarría", "olavarria", "rodriguez", "jacquelinne salas",
 })
 
 
@@ -15999,6 +16062,19 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         data["booking_for_other"] = True
         log_event(phone, "tercero_detectado_iniciar", {"txt": _txt_raw[:120]})
     _esp_lower_menor = (especialidad or "").lower().strip()
+    # Psicología genérica/adulto + menor detectado en el texto → pool INFANTIL
+    # (Montalba + Salas). Antes caía en el aviso "atiende principalmente
+    # adultos" aunque el CMC SÍ tiene psicología para niños y adolescentes.
+    if (
+        _txt_raw
+        and _esp_lower_menor in ("psicología", "psicologia", "psicología adulto",
+                                 "psicologia adulto", "psicólogo", "psicóloga")
+        and not data.get("_menor_confirmado_adulto")
+        and _detectar_menor_en_texto(_txt_raw)
+    ):
+        especialidad = "psicología infantil"
+        _esp_lower_menor = "psicología infantil"
+        log_event(phone, "psicologia_menor_a_infantil", {"txt": _txt_raw[:120]})
     _saltar_aviso_menor = (
         not _txt_raw
         or data.get("_menor_confirmado_adulto")

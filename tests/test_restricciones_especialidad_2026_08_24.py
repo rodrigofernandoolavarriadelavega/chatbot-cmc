@@ -83,11 +83,13 @@ def main():
 
     # ── 3. psicología infantil → Montalba (74) exclusivamente ──────────────
     ids_infantil = set(_ids_para_especialidad("psicología infantil"))
-    check("psicología infantil → solo Montalba (74), nunca Rodríguez (49)",
-          ids_infantil == {74}, ids_infantil)
+    # 2026-10-01: se suma la Ps. Jacquelinne Salas (82, infantojuvenil + adultos).
+    # La regla que importa sigue en pie: Rodríguez (49, solo adultos) NUNCA.
+    check("psicología infantil → Montalba (74) y Salas (82), nunca Rodríguez (49)",
+          ids_infantil == {74, 82}, ids_infantil)
     ids_adulto = set(_ids_para_especialidad("psicología adulto"))
-    check("psicología adulto → Montalba (74) y Rodríguez (49)",
-          ids_adulto == {74, 49}, ids_adulto)
+    check("psicología adulto → Montalba (74), Rodríguez (49) y Salas (82)",
+          ids_adulto == {74, 49, 82}, ids_adulto)
 
 
 if __name__ == "__main__":

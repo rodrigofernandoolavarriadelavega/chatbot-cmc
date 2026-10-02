@@ -333,6 +333,19 @@ PROFESIONALES = {
     # NO acá. Si el sábado no aparece, es que falta cargarlo en Medilink.
     74: {"nombre": "Jorge Montalba",           "especialidad": "Psicología Adulto",     "intervalo": 45, "telemedicina_dias": [0, 1, 2, 3, 4]},
     49: {"nombre": "Juan Pablo Rodríguez",     "especialidad": "Psicología Adulto",     "intervalo": 45},
+    # Ps. Jacquelinne Salas (82) — psicóloga, atiende NIÑOS/ADOLESCENTES y ADULTOS
+    # (formación infantojuvenil + TEA). Por eso está en AMBOS pools de
+    # ESPECIALIDADES_MAP ("psicología adulto" e "infantil"); acá la etiqueta es
+    # "Psicología Adulto" igual que Montalba, y flows._normalizar_slot_especialidad
+    # la muestra como "Psicología Infantil" cuando el paciente pidió infantil.
+    # Horario en Medilink: lun-vie 15:30-20:00 · sáb 09:00-14:00 (45 min).
+    # PRESENCIAL (dueño, 2026-10-01). Online por videollamada = EXCEPCIÓN a pedido
+    # del paciente, la coordina recepción: NO se modela con telemedicina_dias
+    # (eso marcaría todo un día como videollamada). Si algún día se abren días
+    # online fijos, agregar "telemedicina_dias": [...] como Montalba.
+    # PRECIO: $20.000 Fonasa (pago directo, SIN bono: aún no está en el registro
+    # de la Superintendencia) / $25.000 particular → ver flows.PRECIO_PROF_SIN_BONO.
+    82: {"nombre": "Ps. Jacquelinne Salas",    "especialidad": "Psicología Adulto",     "intervalo": 45},
     70: {"nombre": "Juana Arratia",            "especialidad": "Fonoaudiología",        "intervalo": 30},
     67: {"nombre": "Sarai Gómez",              "especialidad": "Matrona",               "intervalo": 30},
     56: {"nombre": "Andrea Guevara",           "especialidad": "Podología",             "intervalo": 60},
@@ -435,6 +448,8 @@ ESPECIALIDADES_MAP = {
     "jimenez": [72], "jiménez": [72], "carlos jimenez": [72],
     "carlos jiménez": [72], "dr jimenez": [72], "dr jiménez": [72],
     "montalba": [74], "jorge montalba": [74],
+    "jacquelinne salas": [82], "jacqueline salas": [82], "jaqueline salas": [82],
+    "psicóloga salas": [82], "psicologa salas": [82], "dra salas": [82],
     "rodriguez": [49], "rodríguez": [49], "juan pablo": [49], "juan pablo rodriguez": [49],
     # ── Especialidades genéricas (cuando el paciente no nombra a nadie) ──
     # Odontología general: LOS DOS, y se ofrece según disponibilidad real
@@ -465,9 +480,11 @@ ESPECIALIDADES_MAP = {
     "traumatología": [73, 1], "traumatólogo": [73, 1],
     "cardiología": [60], "cardiólogo": [60],
     "gastroenterología": [65], "gastroenterólogo": [65],
-    "psicología adulto": [74, 49], "psicólogo adulto": [74, 49],
-    "psicología infantil": [74], "psicólogo infantil": [74],
-    "psicología": [74, 49], "psicólogo": [74, 49], "psicóloga": [74, 49],
+    # Salas (82) atiende niños/adolescentes Y adultos → va en los dos pools.
+    "psicología adulto": [74, 49, 82], "psicólogo adulto": [74, 49, 82],
+    "psicología infantil": [74, 82], "psicólogo infantil": [74, 82],
+    "psicóloga infantil": [74, 82],
+    "psicología": [74, 49, 82], "psicólogo": [74, 49, 82], "psicóloga": [74, 49, 82],
     "psiquiatría": [78], "psiquiatria": [78], "psiquiatra": [78], "psiquiátrica": [78],
     "neurología": [79], "neurologia": [79], "neurólogo": [79], "neurologo": [79],
     "neuróloga": [79], "neurologa": [79],

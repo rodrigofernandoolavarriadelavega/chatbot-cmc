@@ -407,7 +407,7 @@ def _planes(prog: str) -> dict[int, dict]:
 # estética son módulos aparte; aquí solo las especialidades de programas de tratamiento.
 _ESP_TO_PROF = {
     4:  [52],          # Nutrición — Gisela Pinto
-    5:  [74, 49],      # Psicología — Jorge Montalba, Juan Pablo Rodríguez
+    5:  [74, 49, 82],  # Psicología — Jorge Montalba, Juan Pablo Rodríguez, Jacquelinne Salas
     8:  [70],          # Fonoaudiología — Juana Arratia
     9:  [55, 72],      # Odontología general — Javiera Burgos, Carlos Jiménez
     12: [56],          # Podología — Andrea Guevara

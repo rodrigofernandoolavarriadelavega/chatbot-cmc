@@ -23,7 +23,7 @@ AREA_MAP = {
     68: "tecmed", 80: "tecmed", 79: "med", 81: "med",
     55: "dent", 72: "dent", 66: "dent", 75: "dent", 69: "dent", 76: "dent",
     59: "maso", 77: "kine", 21: "kine",
-    52: "nutri", 74: "psico", 49: "psico", 70: "fono",
+    52: "nutri", 74: "psico", 49: "psico", 82: "psico", 70: "fono",
     67: "matrona", 56: "podo",
 }
 AREA_LABELS = {

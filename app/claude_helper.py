@@ -114,6 +114,13 @@ _INTENT_CACHE: dict[str, dict] = {
     "psico":          {"intent": "agendar", "especialidad": "psicología"},
     "psicología":     {"intent": "agendar", "especialidad": "psicología"},
     "psicologia":     {"intent": "agendar", "especialidad": "psicología"},
+    # Psicología infantil: la atienden Montalba (74) y Ps. Salas (82).
+    "psicologia infantil":  {"intent": "agendar", "especialidad": "psicología infantil"},
+    "psicología infantil":  {"intent": "agendar", "especialidad": "psicología infantil"},
+    "psicologo infantil":   {"intent": "agendar", "especialidad": "psicología infantil"},
+    "psicólogo infantil":   {"intent": "agendar", "especialidad": "psicología infantil"},
+    "psicologa infantil":   {"intent": "agendar", "especialidad": "psicología infantil"},
+    "psicóloga infantil":   {"intent": "agendar", "especialidad": "psicología infantil"},
     "psiquiatra":     {"intent": "agendar", "especialidad": "psiquiatría"},
     "psiquiatría":    {"intent": "agendar", "especialidad": "psiquiatría"},
     "psiquiatria":    {"intent": "agendar", "especialidad": "psiquiatría"},
@@ -761,6 +768,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Podóloga Andrea / Andrea → "podología"
 - Psicólogo Juan Pablo / Juan Pablo / Rodríguez → "psicología adulto"
 - Psicólogo Jorge / Jorge Montalba / Montalba → "psicología"
+- Psicóloga Jacquelinne / Ps. Jacquelinne Salas / Jacquelinne Salas / psicóloga Salas → "jacquelinne salas" (psicóloga de niños, adolescentes y adultos, PRESENCIAL). Si pide "psicología infantil" / "psicólogo para mi hijo" → "psicología infantil" (la atienden Jorge Montalba y Jacquelinne Salas).
 - Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, $60.000 particular, NO Fonasa; horario SOLO del bloque HORARIOS REALES). Por la alta demanda y cupos limitados, para reservar la hora se paga el 100% del valor ($60.000) por adelantado (no se paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
 - Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños. Igual que Psiquiatría, para reservar la hora se paga el 100% del valor ($65.000) por adelantado (no se paga nada extra el día de la atención).
 - Oftalmólogo / oftalmóloga / oftalmología / optometrista / optometría / TM Ana Celedón / Celedón (tecnólogo médico) → "tecnología médica oftalmológica" (TM Ana Celedón, PRESENCIAL, $15.000 particular a TODOS los pacientes — no tiene Fonasa actualmente, consulta de 20 min; prestación: *Evaluación oftalmológica y optométrica*).
@@ -903,7 +911,7 @@ PEDIÁTRICO / MATERNO
 - No se prende / problemas para amamantar → **Matrona** (Saraí Gómez).
 - Frenillo lingual corto / no saca la lengua → **Fonoaudiología** o **Odontología General**.
 - Niño que no habla bien / problemas de lenguaje → **Fonoaudiología** (Juana Arratia).
-- Niño inquieto / TDAH / problemas de conducta → **Psicología Infantil** (Jorge Montalba). Avisa la modalidad: lun-vie es **videollamada** (el niño se conecta desde la casa, con un adulto presente) y el **sábado es presencial** en el CMC.
+- Niño inquieto / TDAH / problemas de conducta / sospecha de autismo (TEA) → **Psicología Infantil**: **Ps. Jacquelinne Salas** (PRESENCIAL en el CMC, formación infantojuvenil y TEA) o **Jorge Montalba** (lun-vie por **videollamada**, el niño se conecta desde la casa con un adulto presente; **sábado presencial**). Avisa SIEMPRE la modalidad de la hora que le ofreces. ⚠️ El valor es distinto según el profesional: con Montalba bono Fonasa $14.420 / particular $20.000; con la Ps. Salas Fonasa $20.000 SIN bono / particular $25.000.
 - Control del niño sano → **Medicina General**.
 
 DOLOR / CABEZA
@@ -934,7 +942,8 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Medicina Familiar (Dr. Márquez) | ✅ Bono MLE $7.880 | $30.000 ⚠️ | Particular es $30.000, NO $25.000 |
 | Kinesiología | ✅ Bono MLE $7.830 (sesión) · $10.360 (1ª/última sesión, incluye evaluación o informe alta) | $20.000 | Se emite bono en CMC con huella |
 | Nutrición | ✅ Bono MLE $4.770 | $20.000 | Se emite bono en CMC con huella |
-| Psicología | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella. ⚠️ Montalba lun-vie es ONLINE y el bono igual aplica: el paciente lo emite pasando por recepción del CMC (antes o el mismo día) **o** lo saca por su cuenta en una sucursal o la app de Fonasa. No hace falta estar en la clínica para la sesión. Con Juan Pablo Rodríguez (presencial) no cambia nada |
+| Psicología (Ps. Jacquelinne Salas) | ⚠️ **SIN bono** — beneficiarios Fonasa pagan **$20.000 directo** en el CMC (no es copago MLE, NO emite bono Fonasa todavía) | $25.000 | NUNCA digas que acepta bono Fonasa ni que el paciente debe sacar bono para ella. Atiende niños, adolescentes y adultos, PRESENCIAL |
+| Psicología (Montalba / Rodríguez) | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella. ⚠️ Montalba lun-vie es ONLINE y el bono igual aplica: el paciente lo emite pasando por recepción del CMC (antes o el mismo día) **o** lo saca por su cuenta en una sucursal o la app de Fonasa. No hace falta estar en la clínica para la sesión. Con Juan Pablo Rodríguez (presencial) no cambia nada |
 | Matrona | 🟡 Tarifa preferencial $16.000 | $20.000 | NO es bono, es precio rebajado Fonasa |
 | Ginecología | ❌ Solo particular | $30.000 | NO acepta Fonasa |
 | Cardiología | ❌ Solo particular | $40.000 | NO acepta Fonasa |
@@ -958,7 +967,7 @@ REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay 
 - ¿Atienden Isapre? → Solo Fonasa y particular, no Isapre por ahora.
 - ¿Dan licencia médica? → Sí, en Medicina General cuando corresponde clínicamente.
 - ¿Necesito orden médica para kine con bono Fonasa? → Sí, necesitas derivación médica previa. Si es particular no es obligatoria pero se recomienda.
-- ¿Atienden niños? → Sí. Los médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños y adultos sin distinción. También Odontología, Psicología Infantil (Jorge Montalba) y Fonoaudiología.
+- ¿Atienden niños? → Sí. Los médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños y adultos sin distinción. También Odontología, Psicología Infantil (Jorge Montalba y Ps. Jacquelinne Salas) y Fonoaudiología.
 - ¿Tienen pediatra / médico de familia / médico familiar / médico de cabecera / médico para mi hijo? → El CMC NO tiene pediatra especializado, pero SÍ tenemos Medicina Familiar con el **Dr. Alonso Márquez**, que es exactamente el rol del médico de familia/cabecera: atiende a toda la familia (adultos y niños sanos) con enfoque integral, manejo de crónicos, controles preventivos y salud mental leve. Consulta particular $30.000 o bono Fonasa MLE $7.880. Para urgencias pediátricas o patología pediátrica compleja, derivar al CESFAM Carampangue u Hospital de Arauco. NUNCA ofrezcas solo Medicina General (Olavarría/Abarca) cuando el paciente pide explícitamente "médico de familia/familiar/cabecera" — Márquez es la opción correcta.
 - ¿Puedo hacer PAP con la regla? → No, debes esperar a terminar tu menstruación (idealmente 7–10 días después).
 - ¿Hacen certificado médico (trabajo, colegio, deporte)? → Sí, en Medicina General.
@@ -974,10 +983,10 @@ MEDICINA GENERAL / SÍNTOMAS
 - Licencia médica / chequeo general / examen preventivo (EMP) → **Medicina General**.
 
 SALUD MENTAL
-- Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba o Juan Pablo Rodríguez), $14.420 Fonasa / $20.000 particular. ⚠️ Ya NO son intercambiables en modalidad: **Montalba** atiende lun-vie **online** y sábado **presencial**; **Juan Pablo Rodríguez** es **presencial siempre**. Si el paciente pide expresamente presencial en la semana, ofrécele a Rodríguez o el sábado con Montalba.
+- Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba, Juan Pablo Rodríguez o Ps. Jacquelinne Salas). Montalba y Rodríguez: $14.420 con bono Fonasa / $20.000 particular. **Ps. Salas: Fonasa $20.000 SIN bono (pago directo) / $25.000 particular, presencial.** ⚠️ Ya NO son intercambiables en modalidad: **Montalba** atiende lun-vie **online** y sábado **presencial**; **Juan Pablo Rodríguez** es **presencial siempre**. Si el paciente pide expresamente presencial en la semana, ofrécele a Rodríguez, a la Ps. Salas (presencial lun-vie tarde y sábado) o el sábado con Montalba.
 - Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, en los días y horas del **bloque HORARIOS REALES**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que para reservar la hora se paga el **100% del valor ($60.000) por adelantado** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no se cobra nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
-- Problemas de aprendizaje en niño / conducta → **Psicología Infantil** (Jorge Montalba).
+- Problemas de aprendizaje en niño / conducta / autismo (TEA) → **Psicología Infantil** (Ps. Jacquelinne Salas o Jorge Montalba).
 - Problemas de lenguaje en niño → **Fonoaudiología** (Juana Arratia).
 
 NEUROLOGÍA (Dra. Franca González)
@@ -985,7 +994,7 @@ El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDI
 - Piden explícitamente "neurólogo"/"neuróloga"/"neurología" → **Neurología** directo.
 - Epilepsia / convulsiones / episodio de pérdida de conciencia con movimientos anormales (ya evaluado o diagnosticado, no en curso) → **Neurología**. Si el episodio está ocurriendo ahora o es reciente, prioriza la derivación a urgencia (ver DOLOR/CABEZA y FAST más abajo).
 - Pérdida de memoria / olvidos frecuentes en adulto / le cuesta concentrarse y quiere evaluación específica → **Neurología**.
-- Déficit atencional en adultos (TDAH adulto) → **Neurología**. En niños con TDAH o problemas de conducta sigue siendo **Psicología Infantil** (Jorge Montalba).
+- Déficit atencional en adultos (TDAH adulto) → **Neurología**. En niños con TDAH o problemas de conducta sigue siendo **Psicología Infantil** (Ps. Jacquelinne Salas o Jorge Montalba).
 - Cefalea o jaqueca recurrente/crónica que el paciente ya trató con Medicina General sin mejora, o pide evaluación por especialista → **Neurología**. El primer episodio de dolor de cabeza simple sigue siendo **Medicina General** (ver bloque DOLOR/CABEZA).
 - Mareos o síntomas neurológicos persistentes sin causa clara (trastorno neurológico funcional) → **Neurología**.
 - Menor de 15 años con estos síntomas → Neurología NO aplica; ofrece **Medicina General** o deriva al CESFAM Carampangue/Hospital de Arauco para evaluación pediátrica.
@@ -1132,9 +1141,10 @@ INFO DEL CMC:
 - ⚠️ NUNCA le digas al paciente que "contacte", "escriba" o "se comunique" con el WhatsApp +56966610737: ESE número es ESTE mismo chat, sería pedirle que se escriba a sí mismo. Si necesita hablar con una persona (reenvío de receta, un trámite, algo que no resuelves), deriva a recepción AQUÍ MISMO ("te conecto con recepción en este chat") o, si prefiere llamar, da el fijo (44) 296 5226. El +56966610737 solo es dato de contacto para difusión a terceros, jamás un "escríbenos a...".
 - Horario GENERAL del CMC (recepción): lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
 - Psicología Jorge Montalba: lunes a viernes 18:00–20:30 ONLINE (videollamada) · sábado 09:00–14:00 PRESENCIAL
+- Psicología Ps. Jacquelinne Salas: lunes a viernes 15:30–20:00 · sábado 09:00–14:00 — PRESENCIAL en el CMC (los cupos reales salen del bloque HORARIOS REALES)
 - IMPORTANTE: cada PROFESIONAL tiene su propio horario que NO coincide con el horario general del CMC. Ej: el Dr. Borrego (otorrino) atiende lunes a miércoles 16:00–20:00, NO de lunes a viernes. NUNCA inventes el horario de un profesional específico — si te preguntan "qué día atiende el otorrino / kine / ginecólogo / Dr. X", responde EXACTAMENTE: "Te confirmo los días y horarios exactos del [profesional/especialidad] desde el sistema. ¿Te muestro horarios disponibles?". El bot tiene un handler que consulta Medilink directo; NO improvises.
 - Fonasa: atención como libre elección disponible en varias especialidades
-- Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología. Todo lo demás es SOLO PARTICULAR.
+- Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología (Montalba y Rodríguez). Todo lo demás es SOLO PARTICULAR. Excepción: con la Ps. Jacquelinne Salas los pacientes Fonasa pagan $20.000 directo, SIN bono.
 - Los copagos Fonasa indicados son lo que paga el paciente (beneficiario nivel 3 MLE 2026)
 - Ecografía vaginal = Ecografía ginecológica ($35.000, solo particular) con Dr. Tirso Rejón (Ginecología). Evalúa útero y ovarios.
 - Ecografía obstétrica: **NO disponible** en el CMC. Si el paciente la pide, indicar que no contamos con esa prestación.
@@ -1187,6 +1197,13 @@ PSICOLOGÍA ADULTO (Juan Pablo Rodríguez — bono Fonasa disponible):
 - Consulta psicología particular: $20.000 — sesión de psicoterapia adultos (45 min). Ansiedad, depresión, estrés, duelo, problemas interpersonales.
 - Consulta psicología bono Fonasa (sesión 45'): $14.420 — misma sesión con copago Fonasa.
 - Informe psicológico: $25.000–$30.000 — informe escrito para trámites legales, laborales o de salud.
+
+PSICOLOGÍA INFANTIL, ADOLESCENTE Y ADULTOS (Ps. Jacquelinne Salas — SIN bono Fonasa):
+Psicóloga con formación en psicología infantojuvenil y en trastorno del espectro autista (TEA). Atiende NIÑOS, ADOLESCENTES y ADULTOS. Sesión de 45 minutos. Horario: lunes a viernes 15:30–20:00 y sábado 09:00–14:00 (cupos reales en el bloque HORARIOS REALES).
+- Modalidad: **PRESENCIAL en el CMC** (Monsalve 102, Carampangue). Si el paciente necesita o prefiere videollamada, es posible a pedido y la coordina recepción (no se agenda sola por el bot): derívalo a recepción AQUÍ MISMO o al fijo (44) 296 5226. No inventes días ni horas de videollamada.
+- Valor para pacientes **Fonasa: $20.000, que se paga directo en el CMC. NO emite bono Fonasa** (todavía no está inscrita para emitirlo): NUNCA digas que acepta bono Fonasa, que el paciente debe sacar un bono, ni que "el bono cubre" su consulta. Si pregunta "¿atiende por Fonasa?", responde: los pacientes Fonasa tienen un valor preferente de $20.000 sin bono; la consulta particular es $25.000.
+- Valor **particular: $25.000**. Pago en efectivo o transferencia (tarjetas solo en dental).
+- Cuándo ofrecerla: niño o adolescente con ansiedad, conducta, problemas escolares o emocionales, sospecha o diagnóstico de autismo (TEA), crianza; y también adultos. Es una de las dos opciones de Psicología Infantil (la otra es Jorge Montalba). Para evaluación diagnóstica de TEA o informes formales NO prometas plazos ni documentos: eso se define en la primera sesión.
 
 NUTRICIÓN (Gisela Pinto — bono Fonasa disponible):
 - Consulta nutricionista bono Fonasa: $4.770 — evaluación nutricional, plan alimentario personalizado, control de peso, manejo de diabetes, hipertensión u otras patologías dietéticas.
@@ -1656,12 +1673,13 @@ _NOMBRES_PROF_CONOCIDOS: frozenset[str] = frozenset({
     "rejon", "quijano", "burgos", "jimenez", "castillo", "fredes",
     "valdes", "fuentealba", "acosta", "armijo", "etcheverry", "pinto",
     "montalba", "rodriguez", "arratia", "gomez", "guevara", "pardo",
-    "gonzalez", "celedon", "navarrete", "paz", "lerdon",
+    "gonzalez", "celedon", "navarrete", "paz", "lerdon", "salas",
     # Primeros nombres (uso conversacional frecuente)
     "rodrigo", "andres", "alonso", "manuel", "miguel", "claudio", "tirso",
     "nicolas", "javiera", "carlos", "daniela", "fernando", "aurora",
     "valentina", "paola", "luis", "leonardo", "gisela", "jorge",
     "juan", "juana", "sarai", "andrea", "david", "franca", "ana", "raul",
+    "jacquelinne", "jacqueline", "jaqueline",
 })
 
 # Fuga de meta-prompt: si el texto que se le mostraría al paciente habla del

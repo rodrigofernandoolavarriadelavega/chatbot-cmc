@@ -486,7 +486,7 @@ _AREA_POR_PROF = {
     65: "med", 64: "med", 79: "med",
     68: "eco", 80: "eco",
     55: "dent", 72: "dent", 66: "dent", 75: "dent", 69: "dent", 76: "dent",
-    59: "maso", 77: "kine", 21: "kine", 52: "nutri", 74: "psico", 49: "psico",
+    59: "maso", 77: "kine", 21: "kine", 52: "nutri", 74: "psico", 49: "psico", 82: "psico",
     70: "fono", 67: "matrona", 56: "podo", 78: "psiq",
 }
 

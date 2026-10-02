@@ -80,6 +80,8 @@ HONORARIO_PCT_DEFAULT: dict[int, int] = {
     # por atención, antes de costos. Es el % más alto del centro: NO viene
     # de un ratio histórico (no tiene mes todavía), es contrato.
     81: 90,
+    # Ps. Jacquelinne Salas: 70% — acuerdo del dueño 2026-10-01.
+    82: 70,
 }
 
 
