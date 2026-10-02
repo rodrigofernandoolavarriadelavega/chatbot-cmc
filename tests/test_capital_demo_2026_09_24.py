@@ -503,3 +503,12 @@ def test_sin_voseo_corrige_formas_argentinas():
     assert c.sin_voseo("Contame cuándo querés ir. Mirá el cerro.") == "Cuéntame cuándo quieres ir. Mira el cerro."
     # no toca tuteo ni palabras que solo contienen la forma
     assert c.sin_voseo("Tienes que ver el mirador") == "Tienes que ver el mirador"
+
+
+def test_sin_voseo_chileno_y_sin_pico():
+    import capital_demo as c
+    assert c.sin_voseo("¿Querís subir un pico?") == "¿Quieres subir un cerro?"
+    assert c.sin_voseo("Son 4 mil y pico metros") == "Son 4 mil y algo metros"
+    assert c.sin_voseo("Los picos de la cordillera") == "Los cerros de la cordillera"
+    assert c.sin_voseo("¿Cachái? Tenís que llevar casco") == "¿Entiendes? Tienes que llevar casco"
+    assert c.sin_voseo("Picotear algo en el refugio") == "Picotear algo en el refugio"  # no toca palabras que solo contienen "pico"

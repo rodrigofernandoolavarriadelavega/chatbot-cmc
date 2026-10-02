@@ -504,7 +504,7 @@ Sobre altura: puedes mencionar aclimatación y soroche de forma general sobre lo
 
 Nunca menciones al Centro Médico Carampangue ni temas de salud de esa clínica.
 
-Español de Chile, natural y cercano. Tuteo estándar: tienes, quieres, puedes, sabes, dime, cuéntame, escríbeme, mira. PROHIBIDO el voseo argentino: nunca "tenés", "querés", "podés", "sabés", "decime", "contame", "escribime", "avisame", "mirá", "fijate", "dale", "che", "re" (como "re lindo") ni "vos". Con energía y calidez, nunca en tono de venta corporativa. Mensajes cortos, estilo WhatsApp, máximo ~700 caracteres. Sin markdown salvo *negrita* de WhatsApp (asteriscos simples).
+Español de Chile, natural y cercano. Tuteo estándar: tienes, quieres, puedes, sabes, dime, cuéntame, escríbeme, mira. PROHIBIDO el voseo argentino: nunca "tenés", "querés", "podés", "sabés", "decime", "contame", "escribime", "avisame", "mirá", "fijate", "dale", "che", "re" (como "re lindo") ni "vos". Tampoco voseo chileno ("querís", "tenís", "podís", "sabís", "cachái"). NUNCA uses la palabra "pico" (en Chile tiene connotación sexual): di cerro, cumbre o cima. Evita también otras palabras con doble sentido en Chile ("concha", "raja", "polla", "pichula", "weón"). Con energía y calidez, nunca en tono de venta corporativa. Mensajes cortos, estilo WhatsApp, máximo ~700 caracteres. Sin markdown salvo *negrita* de WhatsApp (asteriscos simples).
 
 CONTEXTO EN VIVO:
 {contexto}"""
@@ -528,6 +528,10 @@ _VOSEO_A_TUTEO = {
     "avisame": "avísame", "mirá": "mira", "fijate": "fíjate", "andá": "anda",
     "llevá": "lleva", "vení": "ven", "poné": "pon", "reservá": "reserva",
     "preparate": "prepárate", "animate": "anímate", "sumate": "súmate",
+    # voseo chileno (también fuera de lugar por escrito)
+    "querís": "quieres", "tenís": "tienes", "podís": "puedes", "sabís": "sabes",
+    "estái": "estás", "estai": "estás", "cachái": "entiendes", "cachai": "entiendes",
+    "creís": "crees", "decís": "dices", "hacís": "haces", "ponís": "pones", "vai": "vas",
 }
 _VOSEO_RE = re.compile(r"\b(" + "|".join(sorted(_VOSEO_A_TUTEO, key=len, reverse=True)) + r")\b",
                        re.IGNORECASE)
@@ -538,7 +542,11 @@ def sin_voseo(texto: str) -> str:
         w = m.group(0)
         r = _VOSEO_A_TUTEO[w.lower()]
         return r[:1].upper() + r[1:] if w[:1].isupper() else r
-    return _VOSEO_RE.sub(_sub, texto)
+    texto = _VOSEO_RE.sub(_sub, texto)
+    # "pico" tiene connotación sexual en Chile: nunca debe salir (cerro/cumbre).
+    texto = re.sub(r"\by pico\b", "y algo", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\b([Pp])ico(s?)\b", lambda m: ("C" if m.group(1) == "P" else "c") + "erro" + m.group(2), texto)
+    return texto
 
 
 async def _responder_asistente(phone: str, texto: str) -> str:
