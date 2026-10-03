@@ -1707,11 +1707,41 @@ async def cruzar_origen(
     return await _cruzar_origen_pass(fecha_iso)
 
 
+# Una sola corrida de prellenar por fecha a la vez (2026-10-02). Cada corrida
+# toma ~15 min por el pacing del carril batch, y carga las filas existentes UNA
+# vez al inicio: dos corridas superpuestas (botón apretado de nuevo porque
+# "no termina", otra pestaña, el cron) no se ven entre sí e insertan la misma
+# cita N veces. Caso real: 4 corridas 10:58-11:03 → 217 filas para 67 citas.
+# Proceso único de uvicorn → basta un lock en memoria.
+_PRELLENAR_EN_CURSO: set[str] = set()
+
+
 @router.post("/prellenar")
 async def prellenar_pagos(
     fecha: str | None = Query(None, description="YYYY-MM-DD; por defecto hoy"),
     token: str | None = Query(None),
     cmc_session: str | None = Cookie(None),
+    request: Request = None,
+):
+    _require_admin_dep(request, token=token, cmc_session=cmc_session)
+    clave = fecha or datetime.now(_CHILE_TZ).strftime("%Y-%m-%d")
+    if clave in _PRELLENAR_EN_CURSO:
+        log.info("prellenar_pagos: fecha=%s ya en curso — se omite corrida duplicada", clave)
+        return {"creadas": 0, "actualizadas": 0, "saltadas": 0, "no_asiste": 0,
+                "eliminadas": 0, "errores": 0, "rut_cruce": 0, "en_curso": True,
+                "mensaje": "Ya se está actualizando desde Medilink; espera unos minutos"}
+    _PRELLENAR_EN_CURSO.add(clave)
+    try:
+        return await _prellenar_pagos_impl(fecha=fecha, token=token,
+                                           cmc_session=cmc_session, request=request)
+    finally:
+        _PRELLENAR_EN_CURSO.discard(clave)
+
+
+async def _prellenar_pagos_impl(
+    fecha: str | None = None,
+    token: str | None = None,
+    cmc_session: str | None = None,
     request: Request = None,
 ):
     """
@@ -2190,15 +2220,20 @@ async def prellenar_pagos(
 
         try:
             with _conn() as conn:
-                conn.execute(
+                # INSERT condicional: re-verifica en el momento de escribir que la
+                # cita no tenga ya fila (el mapa existing_by_id_cita se cargó al
+                # inicio de una corrida de ~15 min y puede estar viejo).
+                cur = conn.execute(
                     """INSERT INTO pagos_cmc
                        (fecha, hora, paciente_nombre, rut, id_profesional, profesional,
                         area, prevision, copago, bonificacion, metodo_pago, folio,
                         codigo_transferencia, tipo_bono, procedimiento, origen, id_cita,
                         creado_por, bloqueado, canal, fuente, match_confianza, monto_medilink,
                         id_paciente, created_at, updated_at)
-                       VALUES (?,?,?,?,?,?,?,?,?,0,'','','','',?,?,?,
-                               'prellenar', 0, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))""",
+                       SELECT ?,?,?,?,?,?,?,?,?,0,'','','','',?,?,?,
+                              'prellenar', 0, ?, ?, ?, ?, ?, datetime('now'), datetime('now')
+                       WHERE ? = '' OR NOT EXISTS (
+                           SELECT 1 FROM pagos_cmc WHERE fecha = ? AND id_cita = ?)""",
                     (
                         fecha_iso,
                         hora_inicio,
@@ -2217,9 +2252,11 @@ async def prellenar_pagos(
                         att["confianza"],
                         int(_total or 0),   # monto real Medilink (arancel) — Fase B cuadre
                         int(id_paciente) if id_paciente else None,  # llave de reconciliación
+                        id_cita_str, fecha_iso, id_cita_str,
                     )
                 )
                 conn.commit()
+                insertada = cur.rowcount > 0
             # Registrar en mapas para idempotencia dentro del mismo batch.
             # Incluir todos los campos que la rama "if existing:" lee como key
             # obligatoria (existing["fuente"]) o vía .get() para evitar KeyError.
@@ -2241,7 +2278,10 @@ async def prellenar_pagos(
                 existing_by_id_cita[id_cita_str] = meta_new
             if rut_cita:
                 existing_by_rut[rut_cita] = meta_new
-            creadas += 1
+            if insertada:
+                creadas += 1
+            else:
+                saltadas += 1
         except Exception as e_ins:
             log.warning("prellenar_pagos: error INSERT cita %s: %s", id_cita_str, e_ins)
             errores += 1
