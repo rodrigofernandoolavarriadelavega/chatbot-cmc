@@ -2193,7 +2193,7 @@ _FAST_PATH_BUTTONS = {
     # interpretaba "Fonasa" como preguntar_info y devolvía la dirección,
     # ignorando 5 mensajes consecutivos. Fast-path corta el classifier.
     "fonasa", "fona", "particular", "privado", "privada",
-    "no_gracias_reeng", "waitlist_antes_si",
+    "no_gracias_reeng", "waitlist_antes_si", "seg_control",
 }
 
 _FAST_PATH_PREFIXES = (
@@ -5215,10 +5215,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         ), name=f"prof_notif_peor_{_id_prof_pp}")
                 except Exception as _pn_pp_err:
                     log.warning("prof_notif_paciente_peor falló: %s", _pn_pp_err)
+            # Ofrece una consulta NUEVA, no "reagendar": el id "2" llevaba al
+            # flujo de mover citas y le ofrecía la que acababa de tener (ya
+            # atendida), que el bot anulaba (caso 2026-09-28).
+            data["seg_control_esp"] = (esp or "").lower()
+            save_session(phone, state, data)
             return _btn_msg(
                 "Lamentamos escuchar eso 😟\n\n"
-                f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
-                [{"id": "2", "title": "Sí, reagendar"},
+                f"¿Quieres agendar otra consulta{' con ' + prof if prof else ''}?",
+                [{"id": "seg_control", "title": "Sí, agendar"},
                  {"id": "no_control", "title": "No por ahora"}]
             )
         if tl == "upsell_si":
@@ -5415,6 +5420,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return "Sin problema 😊 Cuando te haga sentido, avísame.\n_Escribe *menu* para ver opciones._"
 
         # ── Recordatorio de control ───────────────────────────────────────────
+        if tl == "seg_control":
+            _esp_seg = data.pop("seg_control_esp", "") or None
+            log_event(phone, "seguimiento_agendar_control", {"esp": _esp_seg or ""})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, _esp_seg)
         if tl == "ctrl_si":
             # FIX 2026-08-24 (consolidado, #2): mismo bug que reac_si — el
             # botón "📅 Reservar" del recordatorio de control (Nutrición/
@@ -5489,10 +5502,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             spawn_task(send_whatsapp(ADMIN_ALERT_PHONE, alerta))
                         except Exception:
                             log.warning("No se pudo enviar alerta peor a %s", ADMIN_ALERT_PHONE)
+                    data["seg_control_esp"] = (esp or "").lower()
+                    save_session(phone, state, data)
                     return _btn_msg(
                         "Lamentamos escuchar eso 😟\n\n"
-                        f"¿Quieres reagendar una consulta{' con ' + prof if prof else ''}?",
-                        [{"id": "2", "title": "Sí, reagendar"},
+                        f"¿Quieres agendar otra consulta{' con ' + prof if prof else ''}?",
+                        [{"id": "seg_control", "title": "Sí, agendar"},
                          {"id": "no_control", "title": "No por ahora"}]
                     )
 

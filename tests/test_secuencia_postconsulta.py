@@ -494,7 +494,7 @@ class TestFlowsSeguimientoIgualPeorSinCambios(unittest.IsolatedAsyncioTestCase):
         _seed_seguimiento(phone, especialidad="medicina general")
         resp = await flows_mod.handle_message(phone, "seg_2", {"state": "IDLE", "data": {}})
         texto = str(resp).lower()
-        self.assertIn("reagendar", texto)
+        self.assertIn("seg_control", texto)
         data = session.get_session(phone)["data"]
         self.assertNotIn("upsell_postconsulta", data)
         self.assertNotIn("review_postconsulta", data)
@@ -504,7 +504,7 @@ class TestFlowsSeguimientoIgualPeorSinCambios(unittest.IsolatedAsyncioTestCase):
         _seed_seguimiento(phone, especialidad="medicina general")
         resp = await flows_mod.handle_message(phone, "seg_3", {"state": "IDLE", "data": {}})
         texto = str(resp).lower()
-        self.assertIn("reagendar", texto)
+        self.assertIn("seg_control", texto)
         data = session.get_session(phone)["data"]
         self.assertNotIn("upsell_postconsulta", data)
 
@@ -518,7 +518,7 @@ class TestFlowsSeguimientoIgualPeorSinCambios(unittest.IsolatedAsyncioTestCase):
         with patch("flows.clasificar_respuesta_seguimiento", new=_fake_clasificar):
             resp = await flows_mod.handle_message(phone, "me siento pésimo", {"state": "IDLE", "data": {}})
         texto = str(resp).lower()
-        self.assertIn("reagendar", texto)
+        self.assertIn("seg_control", texto)
         data = session.get_session(phone)["data"]
         self.assertNotIn("upsell_postconsulta", data)
 

@@ -2049,6 +2049,12 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None,
     # (Antes: data = [c for c in data if not c.get("id_paciente") or c.get("id_paciente") == id_paciente])
     citas = []
     for c in data:
+        # Una cita de HOY que ya está atendida / en sala / atendiéndose no es
+        # "futura": no se puede reagendar ni cancelar. Antes aparecía en la
+        # lista y el reagendar la anulaba después de atendida (16 casos
+        # jun-sep 2026; ver CITA_YA_ATENDIDA).
+        if _cita_ya_avanzo(c):
+            continue
         id_prof = c.get("id_profesional")
         prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
         citas.append({
@@ -2379,6 +2385,25 @@ def _mark_cancelada_por_sistema(id_cita) -> None:
         log.warning("No se pudo marcar cita %s como anulada por sistema: %s", id_cita, e)
 
 
+# Estados Medilink en que la cita ya ocurrió o está ocurriendo: 2 Atendido,
+# 5 En sala de espera, 6 Atendiéndose. El bot JAMÁS anula una cita así.
+# Caso real 2026-09-28 (Martín, Abarca 14:15): el seguimiento de la noche le
+# ofreció "reagendar", eligió la cita de ese mismo día ya atendida y el bot la
+# anuló a las 22:09. Pasó al menos 2 veces seguras y hasta 16 en 4 meses.
+CITA_YA_ATENDIDA = {2, 5, 6}
+_TXT_YA_ATENDIDA = ("atendid", "en sala", "atendiéndose", "atendiendose")
+
+
+def _cita_ya_avanzo(c: dict) -> bool:
+    try:
+        if int(c.get("id_estado") or 0) in CITA_YA_ATENDIDA:
+            return True
+    except (TypeError, ValueError):
+        pass
+    txt = (c.get("estado_cita") or "").strip().lower()
+    return any(txt.startswith(t) for t in _TXT_YA_ATENDIDA)
+
+
 async def cancelar_cita_con_motivo(id_cita: int) -> tuple[bool, str]:
     """Cancela una cita por su ID, con reintentos ante errores transitorios.
     Retorna (ok, motivo_legible) — motivo_legible solo tiene contenido útil
@@ -2388,6 +2413,20 @@ async def cancelar_cita_con_motivo(id_cita: int) -> tuple[bool, str]:
     timeout, o un error específico de Medilink)."""
     url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
     client = _get_shared_client()
+    # Red de seguridad: mirar el estado ANTES de anular. Si ya fue atendida,
+    # no se toca (venga de reagendar, cancelar, recepción o un job). Si
+    # Medilink no responde, se sigue como antes: bloquear toda cancelación
+    # por un 429 sería peor.
+    try:
+        rg = await _get(client, url, headers=HEADERS)
+        if rg.status_code == 200:
+            _c = (_safe_json(rg) or {}).get("data") or {}
+            if _cita_ya_avanzo(_c):
+                log.warning("cancelar_cita %s BLOQUEADA: ya avanzó (estado %s)",
+                            id_cita, _c.get("estado_cita") or _c.get("id_estado"))
+                return False, "esa hora ya fue atendida, así que no la puedo anular"
+    except Exception as e:  # noqa: BLE001
+        log.warning("cancelar_cita %s: no pude leer el estado previo (%s)", id_cita, e)
     for attempt in range(3):
         try:
             r = await client.put(url, json={"id_estado": 1}, headers=HEADERS)
