@@ -1154,11 +1154,60 @@ def _filtrar_licencia(ids: list) -> list:
         return ids
 
 
+def _sin_tildes(t: str) -> str:
+    import unicodedata as _ud
+    return "".join(ch for ch in _ud.normalize("NFD", (t or "").lower())
+                   if _ud.category(ch) != "Mn").strip()
+
+
+# Formas de NOMBRAR una especialidad (por la persona o el oficio) que no
+# coinciden con ninguna llave de ESPECIALIDADES_MAP. Sin esto, "médico general"
+# (con tilde) no encontraba profesionales, se registraba como especialidad
+# inexistente y el bot respondía "En el CMC no contamos con médico general"
+# (caso 2026-09-28). Medido: 16 variantes comunes fallaban igual.
+_ALIAS_ESPECIALIDAD = {
+    "medico general": "medicina general", "medica general": "medicina general",
+    "doctor general": "medicina general", "doctora general": "medicina general",
+    "medico": "medicina general", "medica": "medicina general",
+    "doctor": "medicina general", "doctora": "medicina general",
+    "general": "medicina general", "medicina": "medicina general",
+    "medico familiar": "medicina familiar", "medica familiar": "medicina familiar",
+    "oculista": "oftalmología", "optica": "oftalmología",
+    "ecografia": "ecografía", "ecotomografia": "ecografía", "eco": "ecografía",
+}
+
+
+def especialidad_canonica(especialidad: str | None) -> str | None:
+    """Lleva cualquier forma de nombrar una especialidad a su llave de
+    ESPECIALIDADES_MAP ("ginecólogo"→"ginecología", "médico general"→
+    "medicina general"). Devuelve el texto original si no la reconoce."""
+    if not especialidad:
+        return especialidad
+    e = especialidad.lower().strip()
+    if e in ESPECIALIDADES_MAP:
+        return e
+    n = _sin_tildes(e)
+    if n in _ALIAS_ESPECIALIDAD:
+        return _ALIAS_ESPECIALIDAD[n]
+    llaves = {_sin_tildes(k): k for k in ESPECIALIDADES_MAP}
+    if n in llaves:
+        return llaves[n]
+    # El oficio a la disciplina: ginecologo/a → ginecologia, podologo → podologia
+    import re as _re_esp
+    n2 = _re_esp.sub(r"log[oa]s?\b", "logia", n)
+    if n2 in llaves:
+        return llaves[n2]
+    return especialidad
+
+
 def _ids_para_especialidad(especialidad: str) -> list:
+    especialidad = especialidad_canonica(especialidad) or ""
     ids = ESPECIALIDADES_MAP.get(especialidad.lower(), [])
     if not ids:
+        n = _sin_tildes(especialidad)
         for key, prof_ids in ESPECIALIDADES_MAP.items():
-            if especialidad.lower() in key or key in especialidad.lower():
+            k = _sin_tildes(key)
+            if n and (n in k or k in n):
                 ids = prof_ids
                 break
     return _filtrar_licencia(ids)

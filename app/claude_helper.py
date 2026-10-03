@@ -1742,6 +1742,11 @@ def _validar_respuesta_faq(texto: str, phone: str = "") -> str:
 
     texto = _RX_PRECIO_FAQ.sub(_check_precio, texto)
 
+    # 1b. "Escribe *1* o …": el "1" depende del paso (en el de un anuncio elige
+    # la PRIMERA hora ofrecida, de otra especialidad; caso 29-sep). La
+    # respuesta informativa solo debe proponer el texto ("agendar X").
+    texto = re.sub(r"(?i)escribe \*?1\*? o \*", "Escribe *", texto)
+
     # 2. Especialidades no atendidas
     # Se busca al INICIO de palabra, no en cualquier parte: "urolog" está dentro
     # de "ne-urolog-ía" y "pediatr" dentro de "odontopediatría". Con el `in`
@@ -2492,32 +2497,32 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("ecograf", "mamari"),
      "Sí, realizamos *ecografía mamaria* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
      "💰 Particular: $40.000\n\n"
-     "Escribe *1* o *agendar ecografía* para reservar hora."),
+     "Escribe *agendar ecografía* para reservar hora."),
     (("ecotomograf", "mamari"),
      "Sí, realizamos *ecotomografía mamaria* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
      "💰 Particular: $40.000\n\n"
-     "Escribe *1* o *agendar ecografía* para reservar hora."),
+     "Escribe *agendar ecografía* para reservar hora."),
     (("ecograf", "testicul"),
      "Sí, realizamos *ecografía testicular / inguino-escrotal* con el Dr. David Pardo 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"
-     "Escribe *1* o *agendar* para reservar hora."),
+     "Escribe *agendar* para reservar hora."),
     (("ecotomograf", "texticul"),
      "Sí, realizamos *ecografía testicular* con el Dr. David Pardo 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"
-     "Escribe *1* o *agendar* para reservar hora."),
+     "Escribe *agendar* para reservar hora."),
     (("ecograf", "doppler"),
      "Sí, realizamos *ecografía Doppler* (miembros inferiores, carótidas, etc.) "
      "con el Dr. David Pardo 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"
-     "Escribe *1* o *agendar* para reservar hora."),
+     "Escribe *agendar* para reservar hora."),
     (("ecograf", "abdomin"),
      "Sí, realizamos *ecografía abdominal* con el Dr. David Pardo 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"
-     "Escribe *1* o *agendar* para reservar hora."),
+     "Escribe *agendar* para reservar hora."),
     (("ecograf", "ginecolog"),
      "Sí, realizamos *ecografía ginecológica* con el Dr. Tirso Rejón (ginecólogo) 👩‍⚕️\n\n"
      "💰 Particular: desde $35.000\n\n"
-     "Escribe *1* o *agendar ginecología* para reservar hora."),
+     "Escribe *agendar ginecología* para reservar hora."),
     (("ecograf", "obstetric"),
      "Lo sentimos, por ahora *no contamos con ecografía obstétrica* 🙏\n\n"
      "Te recomendamos acudir a un centro de imagenología especializado.\n\n"
@@ -2525,23 +2530,23 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     (("gastroenterolog",),
      "Sí, tenemos *gastroenterólogo*: Dr. Nicolás Quijano 🩺\n\n"
      "💰 Consulta particular: $35.000\n\n"
-     "Escribe *1* o *agendar gastroenterología* para reservar hora."),
+     "Escribe *agendar gastroenterología* para reservar hora."),
     (("cardiolog",),
      "Sí, tenemos *cardiólogo*: Dr. Miguel Millán 🫀\n\n"
      "💰 Consulta particular: $40.000\n\n"
-     "Escribe *1* o *agendar cardiología* para reservar hora."),
+     "Escribe *agendar cardiología* para reservar hora."),
     (("otorrino",),
      "Sí, tenemos *otorrinolaringólogo*: Dr. Manuel Borrego 👂\n\n"
      "💰 Consulta particular: $35.000\n\n"
-     "Escribe *1* o *agendar otorrinolaringología* para reservar hora."),
+     "Escribe *agendar otorrinolaringología* para reservar hora."),
     (("ginecolog",),
      "Sí, tenemos *ginecólogo*: Dr. Tirso Rejón 👩‍⚕️\n\n"
      "💰 Consulta particular: $30.000\n\n"
-     "Escribe *1* o *agendar ginecología* para reservar hora."),
+     "Escribe *agendar ginecología* para reservar hora."),
     (("traumatolog",),
      "*Traumatología:* atendemos lesiones musculoesqueléticas con nuestros médicos "
      "generales. Si requieres especialista traumatólogo directo, te derivan desde el CMC 🦴\n\n"
-     "Escribe *1* o *agendar* para reservar hora."),
+     "Escribe *agendar* para reservar hora."),
     (("radiograf",),
      "No realizamos *radiografías* en el CMC 🙏\n\n"
      "Contamos con *ecografía* (Dr. David Pardo). Para radiografías te "
@@ -2581,7 +2586,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "🦷 *Dental:* odontología, ortodoncia, endodoncia, implantología\n"
      "✨ *Estética:* estética facial, toxina, hilos, bioestimuladores\n"
      "🏃 *Kinesiología · Masoterapia · Nutrición · Bioimpedanciometría · Fonoaudiología · Podología · Matrona · Ecografía*\n\n"
-     "Escribe *1* o *agendar* para reservar hora 📅"),
+     "Escribe *agendar* para reservar hora 📅"),
     (("que servicios",),
      "🏥 Atendemos: Medicina General, Odontología, Cardiología, Ginecología, "
      "Gastroenterología, Otorrino, Neurología, Psiquiatría, "

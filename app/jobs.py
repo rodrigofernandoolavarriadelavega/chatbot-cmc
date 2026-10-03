@@ -496,8 +496,10 @@ async def _enviar_reenganche():
         try:
             if canal == "wa":
                 from flows import _btn_msg as _btn_msg_j
+                # "reeng_si" (no "menu"): "menu" reseteaba la sesión y el
+                # paciente perdía la hora que justamente se le ofrecía guardar.
                 _bt_msg = _btn_msg_j(msg, [
-                    {"id": "menu", "title": "✅ Sí, continuar"},
+                    {"id": "reeng_si", "title": "✅ Sí, continuar"},
                     {"id": "no_gracias_reeng", "title": "No por ahora"},
                 ])
                 await send_whatsapp_interactive(phone, _bt_msg["interactive"])

@@ -1041,6 +1041,22 @@ async def job_nudge_foto_fallback() -> dict:
     for r in rows:
         abono = dict(r)
         _marcar_estado_abono(abono["id"], "pendiente", foto_pedida=1)
+        # No pedir la foto si recepción ya está en la conversación o si el
+        # paciente YA mandó un comprobante legible: caso 3-oct, pagó, recepción
+        # le confirmó la hora y 12 min después el bot le dijo "todavía no nos
+        # llegó tu transferencia".
+        try:
+            from jobs import recepcion_intervino_reciente as _rir
+            with db() as _cn:
+                _ya_pago = _cn.execute(
+                    "SELECT 1 FROM conversation_events WHERE phone=? AND event='abono_comprobante_leido' "
+                    "AND ts >= datetime('now','-24 hours') LIMIT 1", (abono["phone"],)).fetchone()
+            if _ya_pago or _rir(abono["phone"]):
+                log_event(abono["phone"], "abono_nudge_omitido",
+                          {"abono_id": abono["id"], "motivo": "comprobante_recibido" if _ya_pago else "recepcion_activa"})
+                continue
+        except Exception as _e_om:
+            log.warning("job_nudge_foto_fallback: chequeo previo falló (sigue): %s", _e_om)
         # Especialidad REAL del abono — estaba fija en "Psiquiatría" y el
         # 05-08 una paciente de Gastro recibió "tu hora de Psiquiatría" en
         # pleno paso de pago (hallazgo auditoría conversaciones).

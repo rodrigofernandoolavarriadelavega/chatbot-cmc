@@ -195,6 +195,10 @@ def _stash_preferencia_fecha(txt: str, data: dict) -> None:
         data.pop("fecha_pedida_idle", None)
 
 
+class _AbonoCitaExistente(Exception):
+    """Marca interna: el pago corresponde a una cita que ya existía."""
+
+
 def _abono_gate_psiq_activo() -> bool:
     """Flag efectivo para el Abono-Gate de Psiquiatría.
 
@@ -279,10 +283,17 @@ _CONTRASTE_SLOT_RE = re.compile(
     r"mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|hoy|semana|antes|despu[eé]s)\b")
 
 
+_POR_FAVOR_SOLO = {"por favor", "porfavor", "porfa", "por fa", "x favor", "xfavor", "xfa"}
+
+
 def _afirma_slot(tl: str, tl_norm: str) -> bool:
     """`_afirma` para WAIT_SLOT: acepta "sí por favor" / "sí dale", pero no un
     "sí" que trae otra fecha u hora — ese texto lo tiene que interpretar el
     resto del handler, no reservar la hora sugerida."""
+    # "Por favor" solo, respondiendo a "¿te reservo esta hora?", es un sí
+    # (caso 25-sep: quedó sin agendar por "slot_no_elegido").
+    if re.sub(r"[^a-z ]", "", (tl_norm or tl or "")).strip() in _POR_FAVOR_SOLO:
+        return True
     if not _afirma(tl, tl_norm):
         return False
     return not _CONTRASTE_SLOT_RE.search(tl_norm or tl or "")
@@ -564,7 +575,7 @@ PRECIOS_SLOT = {
     # nutriólogo. Nunca ofrecer bono Fonasa para esta consulta.
     "Nutriología y Diabetología": ("particular", 60000),
     "Tecnología Médica Oftalmológica": ("particular", 15000),  # TM Ana Celedón, $15.000 a TODOS (sin Fonasa)
-    "Fonoaudiología":         ("particular", 25000),
+    "Fonoaudiología":         ("particular", 30000),   # Evaluación infantil/adulto = prestación 5700 en Medilink (dueño 2026-10-03)
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
     "Ginecología":            ("particular", 30000, "eco ginecológica: $35.000"),  # dueño 2026-06-12: ATENCIÓN $30.000, ECO $35.000 (F034 había conflado la eco)
@@ -2193,12 +2204,13 @@ _FAST_PATH_BUTTONS = {
     # interpretaba "Fonasa" como preguntar_info y devolvía la dirección,
     # ignorando 5 mensajes consecutivos. Fast-path corta el classifier.
     "fonasa", "fona", "particular", "privado", "privada",
-    "no_gracias_reeng", "waitlist_antes_si", "seg_control",
+    "no_gracias_reeng", "waitlist_antes_si", "seg_control", "reeng_si", "pagar_hora",
 }
 
 _FAST_PATH_PREFIXES = (
     "cita_confirm:", "cita_cancelar:", "cita_reagendar:",
     "motivo_", "cat_", "menu_", "accion_", "slot_", "cita_",
+    "opc_idx:", "hora_amb_si:",
 )
 
 def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> bool:
@@ -2233,6 +2245,15 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
     # ~25% de las corridas; mismo riesgo con pacientes reales).
     if state in ("WAIT_RUT_AGENDAR", "WAIT_MODALIDAD") and _OTRA_PERSONA_RE.search(tl):
         return True
+    # Viene de un anuncio con horas de UNA especialidad y pregunta por OTRA
+    # ("¿tienen otorrino?", "el diabetólogo?"): el handler de este estado ya
+    # sabe cambiar de especialidad. Si el pre-router contesta como pregunta
+    # informativa, el paciente queda en las horas del anuncio y su "1" reserva
+    # la de ese anuncio (caso 29-sep: pidió otorrino, quedó en medicina general).
+    if state == "WAIT_META_SLOT_CHOICE":
+        _esp_txt = _detectar_especialidad_en_texto(txt)
+        if _esp_txt and _esp_txt.lower() != (data.get("especialidad") or data.get("meta_especialidad") or "").lower():
+            return True
     # WAIT_MODALIDAD: respuestas obvias
     if state == "WAIT_MODALIDAD":
         if tl in {"fonasa", "fona", "f", "particular", "privado", "privada", "p", "1", "2", "isapre"}:
@@ -3518,7 +3539,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # ausencia de "no" para no robarle el caso al bloque negativo de abajo.
     _RE_CONFIRM_RECOD = re.compile(
         r"\b(confirmand\w*|confirmo|confirmar|confirmad[oa]|"
-        r"asistir[ae]\w*|va a (ir|asistir|llegar)|si va\b|"
+        r"asistir[ae]\w*|asist(o|imos)\b|va a (ir|asistir|llegar)|si va\b|"
         r"(ahi|alli|alla) estar[ae]\b)"
     )
     # FIX 2026-08-24 (consolidado #1, ×12): chilenismos/typos que confirman
@@ -3794,6 +3815,27 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "Sin problema. Cuando quieras retomar, escribe *menu* y te ayudo.\n\n"
             f"_Tambien nos puedes llamar al {CMC_TELEFONO_FIJO}._"
         )
+
+    # "✅ Sí, continuar" del reenganche ("Tienes una reserva pendiente… ¿te la
+    # reservo?"). Antes el botón era "menu": reseteaba y el paciente perdía la
+    # hora que se le ofrecía guardar. Ahora retoma el paso donde quedó.
+    if tl == "reeng_si":
+        log_event(phone, "reenganche_aceptado", {"state": state})
+        data.pop("reenganche_sent", None)
+        if state == "WAIT_SLOT" and (data.get("slot_sugerido") or data.get("slots")):
+            return await handle_message(phone, "confirmar_sugerido", {"state": state, "data": data})
+        if state == "CONFIRMING_CITA" and data.get("slot_elegido"):
+            return await handle_message(phone, "si", {"state": state, "data": data})
+        if state == "WAIT_MODALIDAD":
+            return _btn_msg("¡Sigamos! 😊 ¿Tu atención será *Fonasa* o *Particular*?",
+                            [{"id": "1", "title": "Fonasa"}, {"id": "2", "title": "Particular"}])
+        if state == "WAIT_RUT_AGENDAR":
+            return "¡Sigamos! 😊 Escríbeme el *RUT* de quien se atiende (ej: *12.345.678-9*)."
+        _esp_reeng = (data.get("slot_elegido") or {}).get("especialidad") or data.get("especialidad")
+        if _esp_reeng:
+            return await _iniciar_agendar(phone, data, _esp_reeng)
+        reset_session(phone)
+        return await handle_message(phone, "menu", {"state": "IDLE", "data": {}})
 
     # ── Respuesta al consent_marketing_v1 (Tarea B win-back) ─────────────────
     # Quick Replies del template UTILITY consent_marketing_v1:
@@ -5892,6 +5934,35 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             r"\bagend[eé] (una )?hora\b",
             re.IGNORECASE,
         )
+        # "Cancelar" en Chile también es PAGAR ("tengo que cancelar mi hora del
+        # 6" = pagarla). Caso 3-oct: paciente de psiquiatría quería pagar el
+        # abono y el bot abrió "¿cuál cita quieres reagendar?". Si habla de
+        # plata o tiene un abono pendiente, se aclara antes de tocar la cita.
+        if re.search(r"\bcancel", tl) and not re.search(r"\b(anul|no (voy|puedo) (a )?(ir|asistir))", tl):
+            _habla_plata = bool(re.search(
+                r"\b(pag|abon|plata|transfer|deposit|monto|mil\b|\$|\d{2}\.?000)", tl))
+            _abono_pend = None
+            try:
+                from abono_transferencia import get_abono_pendiente_activo_por_phone as _gap
+                _abono_pend = _gap(phone)
+            except Exception:
+                pass
+            if _habla_plata:
+                log_event(phone, "cancelar_es_pagar", {"texto": txt[:120], "abono_pendiente": bool(_abono_pend)})
+                return _derivar_humano(phone=phone,
+                                       contexto=f"QUIERE PAGAR su hora (no anularla): {txt[:150]}")
+            if _abono_pend:
+                log_event(phone, "cancelar_ambiguo_pagar_o_anular", {"texto": txt[:120]})
+                save_session(phone, state, data)
+                return _btn_msg(
+                    "¿Quieres *pagar* tu hora o *anularla*? 😊",
+                    [{"id": "pagar_hora", "title": "💳 Pagar mi hora"},
+                     {"id": "3", "title": "❌ Anular mi hora"}],
+                )
+        if tl == "pagar_hora":
+            log_event(phone, "cancelar_es_pagar", {"texto": "boton"})
+            return _derivar_humano(phone=phone, contexto="QUIERE PAGAR su hora (botón 'Pagar mi hora')")
+
         if _CITA_EXISTENTE_RE.search(txt) and not any(p in tl for p in ("agendar", "quiero agendar", "quiero una hora nueva")):
             log_event(phone, "intent_cita_existente_detectado", {"texto": txt[:120]})
             return await _iniciar_reagendar(phone, data)
@@ -6370,11 +6441,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             from config import TELEMEDICINA_ENABLED
             if not TELEMEDICINA_ENABLED:
                 log_event(phone, "telemedicina_pedida_pausada", {"texto": txt[:120]})
-                return _txt(
-                    "Por ahora atendemos solo de forma *presencial* en el centro 🏥\n\n"
-                    f"📍 {_CMC_DIRECCION}\n"
-                    "🕐 Lun-Vie 08:00-21:00 · Sáb 09:00-14:00\n\n"
-                    "Si quieres agendar una hora presencial, escribe *agendar*."
+                # Antes llamaba a `_txt`, que no existe: NameError → "Tuve un
+                # problema técnico" a TODO el que pedía hora online. Y decía
+                # "solo presencial", falso: estas especialidades son por video.
+                return (
+                    "Sí 😊 Estas especialidades atienden por *videollamada*:\n\n"
+                    "• *Psiquiatría* — Dra. Cecilia Unibazo\n"
+                    "• *Neurología* — Dra. Franca González\n"
+                    "• *Nutriología y Diabetología* — Dr. Raúl Paz\n"
+                    "• *Psicología* — Jorge Montalba (lunes a viernes)\n\n"
+                    "Las demás son presenciales en el centro:\n"
+                    f"📍 {_CMC_DIRECCION}\n\n"
+                    "Escríbeme la especialidad que necesitas (ej: *agendar psiquiatría*)."
                 )
             save_session(phone, "WAIT_TELEMEDICINA_ESPECIALIDAD", data)
             return _btn_msg(
@@ -6547,6 +6625,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             _ap_fb = _detectar_apellido_profesional(txt)
             if _ap_fb:
                 return await _iniciar_agendar(phone, data, _ap_fb)
+            # Esperar la especialidad en su estado: si queda en IDLE, la
+            # respuesta corta ("General", "kine") cae al saludo genérico
+            # (caso 1-oct: "tendrá horas médicas" → "General" → menú).
+            data.pop("from_waitlist", None)
+            save_session(phone, "WAIT_ESPECIALIDAD", data)
             return (
                 "Para consultar disponibilidad, dime qué especialidad necesitas 😊\n\n"
                 f"O llama a recepción: 📞 *{CMC_TELEFONO_FIJO}*"
@@ -7931,6 +8014,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 log.warning("sobrecupo offering falló: %s", _e_sc)
 
         fecha_actual    = todos_slots[0]["fecha"] if todos_slots else None
+        # Respuesta a "¿la opción N o las N:00?" (más abajo). Va ANTES del lector
+        # de horas: "opc_idx:13" contiene un 13 y se leía como "las 13:00".
+        if tl.startswith("opc_idx:"):
+            try:
+                _i_opc = int(tl.split(":", 1)[1])
+            except ValueError:
+                _i_opc = -1
+            if 0 <= _i_opc < len(slots_mostrados):
+                return await _slot_confirmed(phone, data, slots_mostrados[_i_opc])
+            return _format_slots(slots_mostrados, mostrar_todos=True)
         # tl_norm_slot: normalizado usado por todo el handler. Definido al inicio
         # porque bloques tempranos (mes/fecha/semana) lo referencian antes del
         # punto donde históricamente se asignaba (~línea 3140). Causaba NameError
@@ -9099,6 +9192,38 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return _format_slots(slots_mostrados, mostrar_todos=True)
 
         idx = _parse_slot_selection(txt, slots_mostrados)
+
+        # Número 8-21 suelto: puede ser una OPCIÓN de la lista o una HORA. Antes
+        # se tomaba siempre como opción → "14" reservaba la opción 14 (20:30)
+        # aunque hubiera hora a las 14:xx (29 casos en 45 días; 10 pacientes
+        # corrigieron). Si las dos lecturas son posibles y apuntan a horas
+        # distintas, se pregunta en vez de adivinar.
+        _num_slot = tl.strip()
+        if _num_slot.isdigit() and 8 <= int(_num_slot) <= 21 and todos_slots:
+            _n_s = int(_num_slot)
+            _slots_hora_n = [x for x in todos_slots
+                             if (x.get("hora_inicio") or "")[:2] == f"{_n_s:02d}"]
+            if _slots_hora_n:
+                if idx is None:
+                    # No hay opción con ese número a la vista: es una hora.
+                    log_event(phone, "slot_numero_como_hora", {"txt": txt[:10]})
+                    if len(_slots_hora_n) == 1:
+                        return await _slot_confirmed(phone, data, _slots_hora_n[0])
+                    data["slots"] = _slots_hora_n[:10]
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _format_slots(_slots_hora_n[:10], mostrar_todos=True)
+                _s_opc = slots_mostrados[idx]
+                if _s_opc not in _slots_hora_n:
+                    _h_opc = (_s_opc.get("hora_inicio") or "")[:5]
+                    _h_hora = (_slots_hora_n[0].get("hora_inicio") or "")[:5]
+                    log_event(phone, "slot_numero_ambiguo",
+                              {"txt": txt[:10], "opcion": _h_opc, "hora": _h_hora})
+                    save_session(phone, "WAIT_SLOT", data)
+                    return _btn_msg(
+                        f"¿Quieres la *opción {_n_s}* ({_h_opc}) o la hora de las *{_h_hora}*? 🕒",
+                        [{"id": f"opc_idx:{idx}", "title": f"Opción {_n_s} · {_h_opc}"[:20]},
+                         {"id": f"hora_amb_si:{_h_hora}", "title": f"Las {_h_hora}"[:20]}],
+                    )
 
         # FIX 2026-08-24 (consolidado, #10): un número suelto 1-7 ("3") sin ":"
         # es candidato ambiguo de hora — el CMC no atiende de madrugada, así
@@ -15322,6 +15447,9 @@ _FRASES_ESPECIALIDAD = [
     ("implant",               "implantología"),
     ("masoterapia",           "masoterapia"),
     ("masaje",                "masoterapia"),
+    ("linfatic",              "masoterapia"),  # drenaje linfático ("gotitas linfáticas", 1-oct)
+    ("linfátic",              "masoterapia"),
+    ("drenaje",               "masoterapia"),
     ("otorrino",              "otorrinolaringología"),
     ("orl",                   "otorrinolaringología"),
     ("cardiolog",             "cardiología"),
@@ -15521,6 +15649,13 @@ def _detectar_especialidad_en_texto(txt: str) -> str | None:
     if not txt:
         return None
     tl = txt.lower().strip()
+    # Respuesta corta a "¿qué especialidad necesitas?": "General", "médico
+    # general", "un médico" (caso 1-oct: "General" caía al saludo genérico).
+    _tl_corto = re.sub(r"[^a-záéíóúñ ]", "", tl).strip()
+    if _tl_corto in ("general", "medicina", "medico", "médico", "un medico",
+                     "un médico", "doctor", "un doctor", "medico general",
+                     "médico general", "general medico", "general médico"):
+        return "medicina general"
     # BUG-04: "eco" solo (o "eco" como palabra) → ecografía.
     # "eco" es 3 chars: match substring daría falsos positivos ("económico", "ecología").
     # Usar word-boundary para palabras ≤4 caracteres que son ambiguas.
@@ -15977,6 +16112,12 @@ async def _paciente_ortodoncia_activo(phone: str) -> int:
 
 async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                             saludo_prefix: str | None = None) -> str:
+    # Nombre oficial de la especialidad desde la entrada: "médico general",
+    # "ginecólogo", "podóloga" no calzaban con el mapa y terminaban en
+    # "no contamos con…" (caso 2026-09-28).
+    if especialidad:
+        from medilink import especialidad_canonica as _esp_canon
+        especialidad = _esp_canon(especialidad)
     if is_medilink_down():
         # Fail-open VERIFICADO (2026-07-27). El flag puede estar viejo: los 429
         # del cron de pagos lo dejaban en "down" mientras /citas y /agendas
@@ -17794,7 +17935,28 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
 
     # ── Validación OK: crear cita en Medilink ────────────────────────────────
     id_cita = ""
+    # Si el paciente YA tiene esa misma hora (pagó una cita agendada antes), el
+    # pago va contra esa cita. Antes se intentaba crearla de nuevo, Medilink
+    # respondía "tope con otra cita" (su propia cita) y el bot le decía "esa
+    # hora fue tomada" y le ofrecía otra fecha (caso Juan P., 3-oct: pagó el
+    # 6-oct y le ofrecieron el 29-oct).
+    resultado_ml = None
     try:
+        _ya = await asyncio.wait_for(listar_citas_paciente(
+            paciente.get("id"), rut=(paciente.get("rut") or data.get("rut") or None)), timeout=20)
+        for _c_ya in _ya or []:
+            if (str(_c_ya.get("id_profesional")) == str(slot.get("id_profesional"))
+                    and _c_ya.get("fecha") == slot.get("fecha")
+                    and (_c_ya.get("hora_inicio") or "")[:5] == (slot.get("hora_inicio") or "")[:5]):
+                resultado_ml = {"id": _c_ya.get("id")}
+                id_cita = str(_c_ya.get("id") or "")
+                log_event(phone, "abono_cita_ya_existia", {"id_cita": id_cita, "fecha": slot.get("fecha")})
+                break
+    except Exception as _e_ya:
+        log.warning("procesar_imagen_abono: no pude revisar citas existentes: %s", _e_ya)
+    try:
+        if resultado_ml is not None:
+            raise _AbonoCitaExistente()
         resultado_ml = await asyncio.wait_for(crear_cita(
             id_paciente=paciente["id"],
             id_profesional=slot["id_profesional"],
@@ -17806,6 +17968,8 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
         ), timeout=45)
         if isinstance(resultado_ml, dict):
             id_cita = str(resultado_ml.get("id", ""))
+    except _AbonoCitaExistente:
+        pass
     except Exception as _err_ml:
         log.error("procesar_imagen_abono: crear_cita falló: %s", _err_ml)
         resultado_ml = None
