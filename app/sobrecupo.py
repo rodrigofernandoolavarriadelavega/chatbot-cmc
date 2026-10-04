@@ -33,6 +33,22 @@ def _especialidades() -> set:
     return {s.strip().lower() for s in raw.split(",") if s.strip()}
 
 
+def especialidad_aplica(especialidad: str) -> bool:
+    """¿Esta especialidad sobrecupea? Se decide por el PROFESIONAL al que rutea, no
+    por el texto: el flujo guarda la especialidad con el tipo de examen pegado
+    ("ecografía abdominal y pélvica", "ecografía de pared abdominal") y la
+    comparación exacta contra la allowlist la dejaba fuera → sin capas 2/3 y el
+    paciente terminaba en lista de espera (caso 2-oct, martes 6 con cupos)."""
+    import medilink as M
+    ids = set(M._ids_para_especialidad(especialidad or ""))
+    if not ids:
+        return False
+    permitidos: set = set()
+    for e in _especialidades():
+        permitidos |= set(M._ids_para_especialidad(e))
+    return ids <= permitidos
+
+
 def _max_dia() -> int:
     # Con el 2º tecnólogo, se sobrecupea EN CADA atención de David → tope alto
     # (≈ una jornada completa). Ajustable por env.
@@ -124,11 +140,11 @@ async def generar_slots(especialidad: str, dias_horizonte: int = 10) -> list[dic
     """Slots de SOBRECUPO ofrecibles para la especialidad (vacío si el flag está OFF
     o la especialidad no está en la allowlist). Genera horas 'por medio' en el próximo
     día laboral del profesional, hasta el tope diario, restando los ya creados."""
-    if not _enabled() or (especialidad or "").lower() not in _especialidades():
+    if not _enabled():
         return []
     import medilink as M
     ids = M._ids_para_especialidad(especialidad)
-    if not ids:
+    if not ids or not especialidad_aplica(especialidad):
         return []
     id_prof = ids[0]                       # eco → David Pardo (68)
     client = M._get_shared_client()
