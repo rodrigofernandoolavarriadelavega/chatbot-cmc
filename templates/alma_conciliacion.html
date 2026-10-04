@@ -367,7 +367,7 @@
             Transferencias (Itau)
             <span class="upload-badge" id="badge-itau">CSV</span>
           </div>
-          <div class="upload-sub">Extracto Itau — abonos por transferencia</div>
+          <div class="upload-sub">Opcional: sin cartola se usan los correos de aviso de banco</div>
         </label>
 
         <label class="upload-item" id="zone-banco_estado">
@@ -447,6 +447,9 @@
 
     <!-- Resultados (oculto hasta que lleguen datos) -->
     <div id="resultsContent" style="display:none">
+
+      <!-- Advertencias (qué NO se auditó y por qué) -->
+      <div id="advertencias" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.35);font-size:12.5px;line-height:1.5"></div>
 
       <!-- KPIs principales -->
       <div class="kpi-strip" id="kpiStrip"></div>
@@ -694,7 +697,7 @@ function renderCuadre(cuadre) {
     tbody.innerHTML = '<tr class="no-data-row"><td colspan="8">Sin datos para cuadre diario.</td></tr>';
     return;
   }
-  const estCls = { 'CUADRA': 'est-cuadra', 'CUADRA CON OBSERVACIONES': 'est-obs', 'NO CUADRA': 'est-nocuadra' };
+  const estCls = { 'CUADRA': 'est-cuadra', 'CUADRA CON OBSERVACIONES': 'est-obs', 'NO CUADRA': 'est-nocuadra', 'SIN FUENTE': '' };
   tbody.innerHTML = cuadre.map(c => `<tr>
     <td>${c.fecha}</td>
     <td>$${fmt(c.recepcion)}</td>
@@ -712,11 +715,13 @@ function renderKPIs(kpis) {
 
   const riskCls = { ALTO: 'risk-alto', MEDIO: 'risk-medio', BAJO: 'risk-ok' };
 
+  const cj = kpis.caja || {};
+  const pct = kpis.pct_conciliado;
   const cards = [
-    { label: 'Total registrado', value: '$' + fmt(kpis.total_registrado), sub: 'Recepcion + copagos', cls: '' },
-    { label: 'Total respaldado', value: '$' + fmt(kpis.total_respaldado), sub: 'Suma extractos externos', cls: '' },
-    { label: 'Diferencia neta', value: '$' + fmt(Math.abs(kpis.diferencia_neta)), sub: kpis.diferencia_neta > 0 ? 'Sin respaldo bancario' : kpis.diferencia_neta < 0 ? 'Exceso externo' : 'Todo cuadra', cls: Math.abs(kpis.diferencia_neta) > 1 ? 'risk-alto' : 'risk-ok' },
-    { label: 'Conciliado', value: kpis.pct_conciliado + '%', sub: 'Con respaldo externo', cls: kpis.pct_conciliado >= 95 ? 'risk-ok' : kpis.pct_conciliado >= 70 ? 'risk-medio' : 'risk-alto' },
+    { label: 'Recepcion vs caja Medilink', value: '$' + fmt(Math.abs(cj.diferencia || 0)), sub: '$' + fmt(cj.recepcion_esperado) + ' vs $' + fmt(cj.caja_medilink) + ' · ' + (cj.emparejados || 0) + '/' + (cj.pacientes_dia_recepcion || 0) + ' pacientes-dia cruzados', cls: Math.abs(cj.diferencia || 0) > (cj.caja_medilink || 0) * 0.02 ? 'risk-medio' : 'risk-ok' },
+    { label: 'Registrado (medios auditados)', value: '$' + fmt(kpis.total_registrado), sub: 'Solo medios con archivo completo', cls: '' },
+    { label: 'Respaldado', value: '$' + fmt(kpis.total_respaldado), sub: 'Extractos subidos', cls: '' },
+    { label: 'Conciliado', value: pct == null ? '—' : pct + '%', sub: pct == null ? 'Sube un extracto para medir' : 'Con respaldo externo', cls: pct == null ? '' : pct >= 95 ? 'risk-ok' : pct >= 70 ? 'risk-medio' : 'risk-alto' },
     { label: 'Hallazgos', value: kpis.n_hallazgos, sub: kpis.n_alta + ' alta prioridad', cls: kpis.n_alta > 0 ? 'risk-alto' : kpis.n_hallazgos > 0 ? 'risk-medio' : 'risk-ok' },
     { label: 'Nivel de riesgo', value: kpis.nivel_riesgo, sub: kpis.dias_no_cuadran + ' dias no cuadran', cls: riskCls[kpis.nivel_riesgo] || '' },
   ];
@@ -732,7 +737,7 @@ function renderKPIs(kpis) {
 function renderFuentes(kpis) {
   const grid = document.getElementById('fuentesGrid');
   const labels = {
-    TRANSFERENCIA: 'Transferencias (Itau)',
+    TRANSFERENCIA: 'Transferencias',
     EFECTIVO: 'Efectivo (BancoEstado)',
     TRANSBANK_DEBITO: 'Transbank Debito',
     TRANSBANK_CREDITO: 'Transbank Credito',
@@ -740,15 +745,15 @@ function renderFuentes(kpis) {
   };
   grid.innerHTML = kpis.fuentes.map(f => {
     const registrado = f.medio === 'IMED' ? kpis.imed_esperado : f.registrado;
-    const noData = registrado === 0 && f.respaldado === 0;
+    const noData = !f.con_fuente || (registrado === 0 && f.respaldado === 0);
     const cls = noData ? 'no-data' : f.ok ? 'ok' : 'diff';
     const badgeCls = noData ? 'nd' : f.ok ? 'ok' : 'diff';
-    const badgeTxt = noData ? 'Sin datos' : f.ok ? 'Cuadra' : 'Diferencia';
+    const badgeTxt = !f.con_fuente ? 'Sin archivo' : noData ? 'Sin datos' : f.parcial ? 'Parcial' : f.ok ? 'Cuadra' : 'Diferencia';
     const difCls = f.diferencia > 0.5 ? 'pos' : f.diferencia < -0.5 ? 'neg' : 'zero';
     const imedLbl = f.medio === 'IMED' ? 'Bonif. esperadas' : 'Registrado';
     return `<div class="fuente-card ${cls}">
       <div class="fuente-header">
-        <span class="fuente-name">${labels[f.medio] || f.medio}</span>
+        <span class="fuente-name">${labels[f.medio] || f.medio}${f.fuente ? ' <small style="font-weight:500;color:var(--mute)">· ' + esc(f.fuente) + '</small>' : ''}</span>
         <span class="fuente-badge ${badgeCls}">${badgeTxt}</span>
       </div>
       <div class="fuente-row"><span>${imedLbl}</span><span>$${fmt(registrado)}</span></div>
@@ -812,6 +817,10 @@ async function conciliar() {
     const data = await resp.json();
 
     _allHallazgos = data.hallazgos || [];
+    const adv = (data.kpis && data.kpis.advertencias) || [];
+    const advEl = document.getElementById('advertencias');
+    advEl.innerHTML = adv.map(a => '• ' + esc(a)).join('<br>');
+    advEl.style.display = adv.length ? '' : 'none';
     renderKPIs(data.kpis);
     renderFuentes(data.kpis);
     buildFilters(_allHallazgos);

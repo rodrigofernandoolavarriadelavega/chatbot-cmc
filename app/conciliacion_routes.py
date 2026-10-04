@@ -100,145 +100,288 @@ def _parse_csv_bytes(data: bytes, fuente: str) -> list[dict]:
     return rows
 
 
-def _pagos_cmc_a_pagos(d_desde: date, d_hasta: date) -> list[Pago]:
-    """
-    Lee tabla pagos_cmc de sessions.db y convierte a objetos Pago de auditor.py.
-    Solo incluye registros en el rango dado.
-    Mapeo de campos:
-      fecha           → Pago.fecha
-      paciente_nombre → Pago.paciente
-      copago          → Pago.monto  (lo que paga el paciente)
-      metodo_pago     → Pago.medio  (efectivo/transferencia/debito/credito)
-      profesional     → Pago.profesional
-      id_profesional  → Pago.id (reutilizado como referencia)
-      bonificacion    → Pago.observacion (guardado para capa Imed)
-    """
+def _leer_pagos_cmc(d_desde: date, d_hasta: date) -> list[dict]:
+    """Filas de pagos_cmc del rango, con la bonificación Fonasa esperada ya
+    calculada desde el arancel N3 (`bonif_arancel`). La columna
+    `bonificacion` NO se usa: recepción dejó de ingresarla (sep-2026: 0 filas
+    con valor), así que sumarla daba siempre $0."""
     from session import db as _conn
     try:
         with _conn() as conn:
             rows = conn.execute(
-                """SELECT id, fecha, paciente_nombre, copago, bonificacion,
-                          metodo_pago, profesional, id_profesional, prevision,
-                          rut, id_cita
+                """SELECT id, fecha, paciente_nombre, copago, metodo_pago,
+                          profesional, prevision, area, rut
                    FROM pagos_cmc
                    WHERE fecha BETWEEN ? AND ?
                    ORDER BY fecha, hora""",
                 (d_desde.isoformat(), d_hasta.isoformat())
             ).fetchall()
     except Exception as e:
-        log.error("_pagos_cmc_a_pagos: error leyendo pagos_cmc: %s", e)
+        log.error("_leer_pagos_cmc: error leyendo pagos_cmc: %s", e)
         return []
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["copago"] = int(d["copago"] or 0)
+        es_fonasa = (d["prevision"] or "").strip().lower() == "fonasa"
+        d["bonif_arancel"] = int(_bonif_desde_arancel(d["area"] or "")) if es_fonasa else 0
+        out.append(d)
+    return out
 
+
+def _pagos_cmc_a_pagos(filas: list[dict]) -> list[Pago]:
+    """Convierte filas de pagos_cmc en objetos Pago para los cruces POR MEDIO
+    (transferencia, efectivo, Transbank). Pago.monto = copago: es lo único que
+    pasa por el medio de pago — la bonificación la paga Imed, no el paciente.
+
+    Antes, con copago=0 se usaba la bonificación como monto y el medio por
+    defecto era 'efectivo': plata de Imed aparecía como efectivo esperado en
+    BancoEstado. Una fila sin medio queda como SIN_MEDIO, nunca se adivina."""
     pagos = []
-    for row in rows:
-        fecha_obj = parsear_fecha(row["fecha"]) if row["fecha"] else None
-        monto = float(row["copago"] or 0)
-        if monto <= 0:
-            # Si copago=0 pero hay bonificacion, igual incluir para cruce Medilink
-            monto = float(row["bonificacion"] or 0)
-        if monto <= 0:
+    for row in filas:
+        if row["copago"] <= 0:
             continue
-
-        medio_raw = row["metodo_pago"] or "efectivo"
-        medio = normalizar_medio(medio_raw)
-
+        medio = normalizar_medio(row["metodo_pago"]) if row["metodo_pago"] else "SIN_MEDIO"
         pagos.append(Pago(
             fuente="RECEPCION",
-            fecha=fecha_obj,
+            fecha=parsear_fecha(row["fecha"]) if row["fecha"] else None,
             paciente=str(row["paciente_nombre"] or "").strip(),
-            monto=monto,
+            monto=float(row["copago"]),
             medio=medio,
             profesional=str(row["profesional"] or "").strip(),
-            observacion=str(row["bonificacion"] or "0"),  # bonif guardada aquí
             id=row["id"],
         ))
     return pagos
 
 
-def _medilink_pagos_a_pagos(d_desde: date, d_hasta: date) -> list[Pago]:
-    """
-    Llama la API Medilink /pagos (módulo Cajas) y convierte a objetos Pago.
-    Wrapper síncrono: usa httpx síncrono para no complicar el endpoint.
-    Fechas en formato DD/MM/YYYY para la API.
-    """
-    import httpx
-    import os
+# ── Lado Medilink: caja local (bi_pagos_caja) ─────────────────────────────────
+#
+# Antes este lado llamaba a la API /pagos de Medilink con `Bearer` (Medilink usa
+# `Token`) → HTTP 401 en producción: el lado Medilink venía SIEMPRE vacío y cada
+# pago de recepción salía como "FALTANTE ALTA" (~1.500 falsos por mes). Aunque
+# autenticara, pedía una sola página (Medilink pagina de a 50 sin ordenar por
+# fecha). `bi_pagos_caja` es la misma caja, sincronizada cada 30 min por
+# bi_sync con paginación correcta — no toca el HIS al conciliar.
 
-    base_url = os.getenv("MEDILINK_BASE_URL", "https://api.medilink2.healthatom.com/api/v5")
-    token = os.getenv("MEDILINK_TOKEN", "")
-    sucursal = os.getenv("MEDILINK_SUCURSAL", "1")
-
-    if not token:
-        log.warning("_medilink_pagos_a_pagos: MEDILINK_TOKEN no configurado")
-        return []
-
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-    desde_str = d_desde.strftime("%d/%m/%Y")
-    hasta_str = d_hasta.strftime("%d/%m/%Y")
-
-    pagos = []
+def _leer_caja_medilink(d_desde: date, d_hasta: date) -> list[dict]:
+    """Pagos de caja Medilink agregados por (fecha, paciente). El nombre sale de
+    la atención del propio pago, luego de cualquier atención del paciente,
+    luego de citas_cache. `metodo_pago` de esta tabla NO se usa: es 'Efectivo'
+    por defecto en el 99,7% de las filas (ver docs/LIBRO_DE_LA_VERDAD.md)."""
+    from session import db as _conn
     try:
-        with httpx.Client(timeout=30.0) as client:
-            resp = client.get(
-                f"{base_url}/pagos",
-                params={
-                    "id_sucursal": sucursal,
-                    "fecha_desde": desde_str,
-                    "fecha_hasta": hasta_str,
-                },
-                headers=headers,
-            )
-        if resp.status_code != 200:
-            log.warning("_medilink_pagos_a_pagos: HTTP %d", resp.status_code)
-            return []
-        data = resp.json()
-        items = data if isinstance(data, list) else data.get("data", data.get("pagos", []))
-        for i, item in enumerate(items):
-            # Campos típicos del endpoint /pagos de Medilink
-            fecha_raw = (
-                item.get("fecha") or item.get("fecha_pago") or
-                item.get("fecha_atencion") or ""
-            )
-            fecha_obj = parsear_fecha(str(fecha_raw)) if fecha_raw else None
-            if fecha_obj and not (d_desde <= fecha_obj <= d_hasta):
-                continue
-
-            monto_raw = (
-                item.get("monto") or item.get("total") or
-                item.get("copago") or item.get("valor") or 0
-            )
-            monto = float(monto_raw or 0)
-            if monto <= 0:
-                continue
-
-            paciente = str(
-                item.get("paciente") or item.get("nombre_paciente") or
-                item.get("nombre") or ""
-            ).strip()
-
-            medio_raw = str(
-                item.get("forma_pago") or item.get("medio") or
-                item.get("tipo_pago") or ""
-            )
-            medio = normalizar_medio(medio_raw) if medio_raw else "DESCONOCIDO"
-
-            profesional = str(
-                item.get("profesional") or item.get("medico") or ""
-            ).strip()
-
-            pagos.append(Pago(
-                fuente="MEDILINK",
-                fecha=fecha_obj,
-                paciente=paciente,
-                monto=monto,
-                medio=medio,
-                profesional=profesional,
-                id=i,
-            ))
+        with _conn() as conn:
+            rows = conn.execute(
+                """SELECT g.fecha, g.id_paciente, g.monto, g.n,
+                          COALESCE(
+                            (SELECT a.paciente_nombre FROM bi_atenciones a
+                              WHERE a.atencion_id = g.atencion_id),
+                            (SELECT a.paciente_nombre FROM bi_atenciones a
+                              WHERE a.id_paciente = g.id_paciente
+                                AND COALESCE(a.paciente_nombre,'') <> ''
+                              ORDER BY a.atencion_id DESC LIMIT 1),
+                            (SELECT c.paciente_nombre FROM citas_cache c
+                              WHERE c.id_paciente = g.id_paciente LIMIT 1),
+                            '') AS paciente
+                   FROM (SELECT fecha, id_paciente, SUM(monto) AS monto, COUNT(*) AS n,
+                                MAX(atencion_id) AS atencion_id
+                           FROM bi_pagos_caja
+                          WHERE fecha BETWEEN ? AND ?
+                          GROUP BY fecha, id_paciente) g""",
+                (d_desde.isoformat(), d_hasta.isoformat())
+            ).fetchall()
     except Exception as e:
-        log.error("_medilink_pagos_a_pagos: error llamando API: %s", e)
+        log.error("_leer_caja_medilink: %s", e)
+        return []
+    return [{"fecha": r["fecha"], "id_paciente": r["id_paciente"],
+             "paciente": r["paciente"] or "", "monto": int(r["monto"] or 0),
+             "n": r["n"]} for r in rows if (r["monto"] or 0) > 0]
 
-    return pagos
+
+def _clp(n) -> str:
+    return "$" + f"{int(round(n)):,}".replace(",", ".")
+
+
+# Repeticiones de la MISMA diferencia (esperado, caja) para tratarla como patrón.
+_MIN_PATRON = 5
+
+
+def _tokens_nombre(s: str) -> set[str]:
+    return {t for t in normalizar_texto(s or "").replace(".", " ").split() if len(t) >= 3}
+
+
+def _sim_paciente(a: str, b: str) -> float:
+    """Coincidencia de nombres tolerante a que una fuente tenga nombre corto
+    ("Juan Pérez") y la otra el completo ("JUAN ANDRÉS PÉREZ SOTO"): fracción
+    de tokens del nombre MÁS CORTO presentes en el otro. Exige ≥2 tokens en
+    común (salvo nombres de un token) para que un apellido común solo no
+    empareje a dos personas distintas."""
+    ta, tb = _tokens_nombre(a), _tokens_nombre(b)
+    if not ta or not tb:
+        return 0.0
+    inter = ta & tb
+    if len(inter) < min(2, len(ta), len(tb)):
+        return 0.0
+    return len(inter) / min(len(ta), len(tb))
+
+
+def _prioridad_cruce_caja(tipo: str, monto: int, prevision: str) -> str:
+    """Prioridad de un hallazgo del cruce recepción ↔ caja Medilink.
+
+    tipo: 'FALTANTE'         → recepción registró cobro, la caja Medilink no tiene nada
+                               ese paciente-día (la plata no quedó en el HIS: honorarios
+                               y BI se calculan desde la caja, así que nadie la ve).
+          'SOBRANTE'         → la caja tiene el pago y el módulo Pagos de recepción no
+                               (el panel de recepción no lo muestra; la plata sí está).
+          'DIFERENCIA_MONTO' → ambos lo tienen pero los montos no calzan; `monto` es
+                               |esperado - caja|.
+    prevision: 'fonasa' | 'particular' | ... (de recepción; '' en SOBRANTE).
+    Devuelve 'ALTA' | 'MEDIA' | 'BAJA'.
+    """
+    # TODO(Rodrigo): tu regla de negocio — ver mensaje en el chat.
+    return "ALTA" if tipo == "FALTANTE" else "MEDIA"
+
+
+def _cruzar_caja(recep: list[dict], caja: list[dict], hasta_sync: date | None) -> tuple[list[Hallazgo], dict]:
+    """Cruce puro recepción (pagos_cmc) ↔ caja Medilink por PACIENTE-DÍA.
+
+    Esperado en caja = Σ(copago + bonificación Fonasa por arancel): Medilink
+    guarda el arancel completo de una atención Fonasa, recepción solo el copago.
+    Comparar copago contra caja hacía "diferir" a toda la Fonasa.
+
+    Filas de recepción sin cobro (copago 0, sin medio = prellenadas que nunca
+    se cobraron) no entran. Días posteriores al último sync de caja tampoco:
+    saldrían como faltantes solo porque la caja aún no los trajo."""
+    from collections import defaultdict
+    grupos_r: dict = defaultdict(lambda: {"esperado": 0, "copago": 0, "nombre": "", "prevision": "", "ids": []})
+    for r in recep:
+        if r["copago"] <= 0 and not r["metodo_pago"]:
+            continue
+        esperado = r["copago"] + r["bonif_arancel"]
+        if esperado <= 0:
+            continue
+        f = r["fecha"]
+        if hasta_sync and date.fromisoformat(f) > hasta_sync:
+            continue
+        k = (f, r["rut"] or normalizar_texto(r["paciente_nombre"] or ""))
+        g = grupos_r[k]
+        g["fecha"], g["nombre"] = f, g["nombre"] or (r["paciente_nombre"] or "").strip()
+        g["prevision"] = g["prevision"] or (r["prevision"] or "")
+        g["esperado"] += esperado
+        g["copago"] += r["copago"]
+        g["ids"].append(r["id"])
+    caja_f = [c for c in caja if not (hasta_sync and date.fromisoformat(c["fecha"]) > hasta_sync)]
+
+    # Emparejar por mejor similitud: mismo día primero, luego ±1 día.
+    pares = []
+    for i, g in enumerate(grupos_r.values()):
+        fr = date.fromisoformat(g["fecha"])
+        for j, c in enumerate(caja_f):
+            dd = abs((fr - date.fromisoformat(c["fecha"])).days)
+            if dd > 1:
+                continue
+            s = _sim_paciente(g["nombre"], c["paciente"])
+            if s >= 0.66:
+                pares.append((dd, -s, abs(g["esperado"] - c["monto"]), i, j))
+    pares.sort()
+    gl = list(grupos_r.values())
+    usados_r, usados_c, hallazgos = set(), set(), []
+    n_ok = 0
+    difs: list[tuple[dict, dict, int]] = []
+    for dd, _s, dif, i, j in pares:
+        if i in usados_r or j in usados_c:
+            continue
+        usados_r.add(i); usados_c.add(j)
+        if dif <= TOLERANCIA_MONTO:
+            n_ok += 1
+        else:
+            difs.append((gl[i], caja_f[j], dif))
+
+    # Una diferencia que se repite idéntica (mismo esperado, mismo monto en caja)
+    # no es un error de recepción: es una tarifa distinta entre el módulo Pagos y
+    # Medilink (ej. sep-2026: 600+ consultas Fonasa MG con recepción $15.760 vs
+    # caja $15.130). Se reporta UNA vez como patrón con su total, para que no
+    # tape los casos sueltos, que sí son anomalías.
+    from collections import Counter
+    frec = Counter((g["esperado"], c["monto"]) for g, c, _ in difs)
+    patrones: dict = {}
+    for g, c, dif in difs:
+        clave = (g["esperado"], c["monto"])
+        if frec[clave] >= _MIN_PATRON:
+            p = patrones.setdefault(clave, {"n": 0, "prev": Counter(), "f0": g["fecha"], "f1": g["fecha"]})
+            p["n"] += 1
+            p["prev"][g["prevision"] or "?"] += 1
+            p["f0"], p["f1"] = min(p["f0"], g["fecha"]), max(p["f1"], g["fecha"])
+            continue
+        hallazgos.append(Hallazgo(
+            fecha=date.fromisoformat(g["fecha"]), paciente=g["nombre"],
+            monto_interno=g["esperado"], monto_externo=c["monto"],
+            fuente_interna="RECEPCION", fuente_externa="MEDILINK", medio="CAJA",
+            tipo="DIFERENCIA_MONTO",
+            comentario=(f"Recepción ${g['esperado']:,.0f}"
+                        + (f" (copago ${g['copago']:,.0f} + bonif. Fonasa)" if g["esperado"] != g["copago"] else "")
+                        + f" vs caja Medilink ${c['monto']:,.0f}").replace(",", "."),
+            prioridad=_prioridad_cruce_caja("DIFERENCIA_MONTO", int(dif), g["prevision"]),
+        ))
+    for (esp, caj), p in sorted(patrones.items(), key=lambda kv: -kv[1]["n"] * abs(kv[0][0] - kv[0][1])):
+        prev = p["prev"].most_common(1)[0][0]
+        hallazgos.append(Hallazgo(
+            fecha=None, paciente=f"PATRÓN · {p['n']} atenciones",
+            monto_interno=float(esp * p["n"]), monto_externo=float(caj * p["n"]),
+            fuente_interna="RECEPCION", fuente_externa="MEDILINK", medio="CAJA",
+            tipo="DIFERENCIA_MONTO",
+            comentario=(f"{p['n']} atenciones ({prev}, {p['f0'][8:10]}/{p['f0'][5:7]}–{p['f1'][8:10]}/{p['f1'][5:7]}) "
+                        f"con recepción {_clp(esp)} y caja {_clp(caj)}: {_clp(abs(esp - caj))} c/u, "
+                        f"{_clp(abs(esp - caj) * p['n'])} en total. Diferencia sistemática: tarifa distinta "
+                        f"entre módulo Pagos y Medilink, o área/previsión mal asignada en recepción."),
+            prioridad=_prioridad_cruce_caja("DIFERENCIA_MONTO", abs(esp - caj) * p["n"], prev),
+        ))
+    for i, g in enumerate(gl):
+        if i in usados_r:
+            continue
+        hallazgos.append(Hallazgo(
+            fecha=date.fromisoformat(g["fecha"]), paciente=g["nombre"],
+            monto_interno=g["esperado"], monto_externo=None,
+            fuente_interna="RECEPCION", fuente_externa="MEDILINK", medio="CAJA",
+            tipo="FALTANTE",
+            comentario="Recepción registró el cobro pero la caja Medilink no tiene pago de este paciente ese día",
+            prioridad=_prioridad_cruce_caja("FALTANTE", g["esperado"], g["prevision"]),
+        ))
+    for j, c in enumerate(caja_f):
+        if j in usados_c:
+            continue
+        hallazgos.append(Hallazgo(
+            fecha=date.fromisoformat(c["fecha"]), paciente=c["paciente"] or f"id_paciente {c['id_paciente']}",
+            monto_interno=None, monto_externo=c["monto"],
+            fuente_interna="RECEPCION", fuente_externa="MEDILINK", medio="CAJA",
+            tipo="SOBRANTE",
+            comentario="Pago en caja Medilink sin registro en el módulo Pagos de recepción",
+            prioridad=_prioridad_cruce_caja("SOBRANTE", c["monto"], ""),
+        ))
+    resumen = {"grupos_recepcion": len(gl), "grupos_caja": len(caja_f),
+               "emparejados": len(usados_r), "cuadran": n_ok,
+               "en_patron": sum(p["n"] for p in patrones.values())}
+    return hallazgos, resumen
+
+
+def _hasta_sync_caja() -> tuple[date | None, list[str]]:
+    """Último día que la caja local tiene completo (fecha CLT del último sync
+    de pagos) + advertencia si el sync está viejo."""
+    try:
+        import verdad
+        st = verdad.sync_status()
+        p = st["sync"].get("pagos") or {}
+        if not p.get("ultimo_sync_utc"):
+            return None, ["No hay registro de sincronización de la caja Medilink; el cruce con caja puede estar incompleto."]
+        ts = datetime.fromisoformat(p["ultimo_sync_utc"][:19]).replace(tzinfo=ZoneInfo("UTC"))
+        hasta = ts.astimezone(_CHILE_TZ).date()
+        adv = []
+        if (p.get("edad_horas") or 0) > 2:
+            adv.append(f"La caja Medilink se sincronizó hace {p['edad_horas']:.0f} h; lo cobrado después aún no aparece.")
+        return hasta, adv
+    except Exception as e:
+        log.warning("_hasta_sync_caja: %s", e)
+        return None, []
 
 
 # ── Capa Imed (nueva — no existe en auditor.py) ───────────────────────────────
@@ -370,8 +513,14 @@ def _cruzar_imed(
 class AuditorWeb(Auditor):
     """
     Versión del Auditor adaptada para la web:
-    - cargar_datos() lee desde pagos_cmc (SQLite) + API Medilink en vez de CSV.
+    - Recepción desde pagos_cmc; lado Medilink desde la caja local bi_pagos_caja
+      (cruce por paciente-día, ver `_cruzar_caja`).
+    - Transferencias: cartola Itaú subida, o si no hay, los correos de aviso de
+      banco ya guardados en `transferencias_banco` (motor de
+      conciliacion_transferencias, con ambigüedad declarada).
     - Agrega cruzar_imed() con los movimientos Imed del upload.
+    - Solo se comparan los medios que tienen fuente externa: un medio sin
+      archivo no "falta", simplemente no se auditó.
     """
 
     def __init__(
@@ -391,64 +540,198 @@ class AuditorWeb(Auditor):
         self.movs_tb_debito     = movs_tb_debito or []
         self.movs_tb_credito    = movs_tb_credito or []
         self.movs_imed          = movs_imed or []
+        self.filas_recepcion: list[dict] = []
+        self.caja_medilink: list[dict] = []
+        self.advertencias: list[str] = []
+        self.resumen_caja: dict = {}
+        # medio → etiqueta de la fuente externa usada (solo medios auditados)
+        self.fuentes_cargadas: dict[str, str] = {}
+        if self.movs_transferencia:
+            self.fuentes_cargadas["TRANSFERENCIA"] = "Cartola Itaú"
+        if self.movs_efectivo:
+            self.fuentes_cargadas["EFECTIVO"] = "BancoEstado"
+        if self.movs_tb_debito:
+            self.fuentes_cargadas["TRANSBANK_DEBITO"] = "Transbank"
+        if self.movs_tb_credito:
+            self.fuentes_cargadas["TRANSBANK_CREDITO"] = "Transbank"
+        if self.movs_imed:
+            self.fuentes_cargadas["IMED"] = "Imed"
+
+    @property
+    def _d_desde(self) -> date:
+        return self.desde or date.today().replace(day=1)
+
+    @property
+    def _d_hasta(self) -> date:
+        return self.hasta or date.today()
 
     def cargar_datos_web(self):
-        """Carga recepción (SQLite) y Medilink (API). Movimientos ya cargados en __init__."""
-        d_desde = self.desde or date.today().replace(day=1)
-        d_hasta = self.hasta or date.today()
+        """Carga recepción y caja Medilink (ambas locales). Externos ya en __init__."""
+        self.filas_recepcion = _leer_pagos_cmc(self._d_desde, self._d_hasta)
+        self.pagos_recepcion = _pagos_cmc_a_pagos(self.filas_recepcion)
+        self.caja_medilink = _leer_caja_medilink(self._d_desde - timedelta(days=1),
+                                                 self._d_hasta + timedelta(days=1))
+        # pagos_medilink solo alimenta la columna "Medilink" del cuadre diario.
+        self.pagos_medilink = [
+            Pago(fuente="MEDILINK", fecha=date.fromisoformat(c["fecha"]), paciente=c["paciente"],
+                 monto=float(c["monto"]), medio="CAJA")
+            for c in self.caja_medilink if self._d_desde.isoformat() <= c["fecha"] <= self._d_hasta.isoformat()
+        ]
+        sin_medio = [p for p in self.pagos_recepcion if p.medio == "SIN_MEDIO"]
+        if sin_medio:
+            self.advertencias.append(
+                f"{len(sin_medio)} cobro(s) de recepción sin medio de pago "
+                f"(${sum(p.monto for p in sin_medio):,.0f}) — no entran a ningún cruce por medio.".replace(",", "."))
+        log.info("AuditorWeb.cargar_datos_web: recepcion=%d caja=%d transf=%d efvo=%d tbd=%d tbc=%d imed=%d",
+                 len(self.pagos_recepcion), len(self.caja_medilink), len(self.movs_transferencia),
+                 len(self.movs_efectivo), len(self.movs_tb_debito), len(self.movs_tb_credito),
+                 len(self.movs_imed))
 
-        self.pagos_recepcion = _pagos_cmc_a_pagos(d_desde, d_hasta)
-        self.pagos_medilink  = _medilink_pagos_a_pagos(d_desde, d_hasta)
+    def cruzar_recepcion_medilink(self):
+        """Reemplaza el cruce base (por pago y con medio): ver `_cruzar_caja`."""
+        hasta_sync, adv = _hasta_sync_caja()
+        self.advertencias.extend(adv)
+        if hasta_sync and hasta_sync < self._d_hasta:
+            self.advertencias.append(
+                f"Caja Medilink sincronizada hasta el {hasta_sync.strftime('%d/%m')}: "
+                f"los días posteriores no se cruzan contra la caja.")
+        recep = [r for r in self.filas_recepcion]
+        caja = self.caja_medilink
+        hallazgos, self.resumen_caja = _cruzar_caja(recep, caja, hasta_sync)
+        d0, d1 = self._d_desde, self._d_hasta
+        self.hallazgos.extend(h for h in hallazgos if h.fecha is None or d0 <= h.fecha <= d1)
 
-        log.info(
-            "AuditorWeb.cargar_datos_web: recepcion=%d medilink=%d "
-            "transf=%d efvo=%d tbd=%d tbc=%d imed=%d",
-            len(self.pagos_recepcion), len(self.pagos_medilink),
-            len(self.movs_transferencia), len(self.movs_efectivo),
-            len(self.movs_tb_debito), len(self.movs_tb_credito),
-            len(self.movs_imed),
-        )
+    def cruzar_transferencias_correos(self):
+        """Sin cartola Itaú: usa los correos de aviso de banco ya parseados.
+
+        Cobertura PARCIAL (no todos los bancos avisan por correo): un registro
+        sin correo no prueba nada → BAJA. Un correo sin registro sí es plata
+        que entró y nadie anotó → ALTA. Los empates de monto/fecha se reportan
+        como revisión manual, nunca se asignan a ciegas."""
+        try:
+            import conciliacion_transferencias as ct
+            r = ct.conciliar(self._d_desde.isoformat(), self._d_hasta.isoformat())
+        except Exception as e:
+            log.warning("cruzar_transferencias_correos: %s", e)
+            self.advertencias.append("No se pudieron leer los correos de banco para cruzar transferencias.")
+            return
+        t = r["totales"]
+        self.fuentes_cargadas["TRANSFERENCIA"] = "Correos de banco (parcial)"
+        self.transf_correos_total = (t["conciliado_monto"] + t["correo_sin_registro_monto"]
+                                     + t["ambiguo_monto_correos"])
+        self.transf_correos_totales = t
+        for e in r["correo_sin_registro"]:
+            self._agregar(Hallazgo(
+                fecha=date.fromisoformat(e["fecha"]), paciente=e.get("nombre_transfiere") or "—",
+                monto_interno=None, monto_externo=float(e["monto"]),
+                fuente_interna="RECEPCION", fuente_externa="CORREO_BANCO", medio="TRANSFERENCIA",
+                tipo="SIN_RESPALDO_INTERNO",
+                comentario=(f"Llegó aviso de transferencia ${e['monto']:,.0f} de {e.get('nombre_transfiere') or '—'} "
+                            f"y no hay pago registrado que calce").replace(",", "."),
+                prioridad="ALTA",
+            ))
+        for p in r["registrado_sin_correo"]:
+            self._agregar(Hallazgo(
+                fecha=date.fromisoformat(p["fecha"]), paciente=p.get("paciente_nombre") or "—",
+                monto_interno=float(p.get("copago") or 0), monto_externo=None,
+                fuente_interna="RECEPCION", fuente_externa="CORREO_BANCO", medio="TRANSFERENCIA",
+                tipo="SIN_RESPALDO_BANCARIO",
+                comentario="Sin aviso por correo (normal en bancos que no avisan) — confirmar con cartola si importa",
+                prioridad="BAJA",
+            ))
+        for g in r["ambiguos"]:
+            fechas = sorted({p["fecha"] for p in g["pagos"]} | {c["fecha"] for c in g["correos"]})
+            self._agregar(Hallazgo(
+                fecha=date.fromisoformat(fechas[0]),
+                paciente=", ".join(p["paciente"] for p in g["pagos"])[:120],
+                monto_interno=float(g["monto"] * len(g["pagos"])),
+                monto_externo=float(g["monto"] * len(g["correos"])),
+                fuente_interna="RECEPCION", fuente_externa="CORREO_BANCO", medio="TRANSFERENCIA",
+                tipo="REQUIERE_REVISION_MANUAL", comentario=g["nota"],
+                prioridad="BAJA",
+            ))
+        if t["registrado_sin_correo_n"]:
+            self.advertencias.append(
+                f"Transferencias cruzadas contra correos de banco: {t['registrado_sin_correo_n']} registro(s) "
+                f"sin correo quedan en prioridad BAJA porque no todos los bancos avisan. "
+                f"Sube la cartola Itaú para auditarlas todas.")
 
     def auditar_web(self):
         """Ejecuta todos los cruces incluyendo la capa Imed."""
         self.cargar_datos_web()
         self.cruzar_recepcion_medilink()
-        self.cruzar_transferencias()
-        self.cruzar_efectivo()
-        self.cruzar_transbank("TRANSBANK_DEBITO",  self.movs_tb_debito)
-        self.cruzar_transbank("TRANSBANK_CREDITO", self.movs_tb_credito)
-        # Capa Imed (nueva)
-        d_desde = self.desde or date.today().replace(day=1)
-        d_hasta = self.hasta or date.today()
-        imed_hallazgos = _cruzar_imed(
-            self.pagos_recepcion, self.movs_imed, d_desde, d_hasta
-        )
-        self.hallazgos.extend(imed_hallazgos)
+        if self.movs_transferencia:
+            self.cruzar_transferencias()
+        else:
+            self.cruzar_transferencias_correos()
+        if self.movs_efectivo:
+            self.cruzar_efectivo()
+        if self.movs_tb_debito:
+            self.cruzar_transbank("TRANSBANK_DEBITO", self.movs_tb_debito)
+        if self.movs_tb_credito:
+            self.cruzar_transbank("TRANSBANK_CREDITO", self.movs_tb_credito)
+        if self.movs_imed:
+            # Sin reporte Imed no hay nada contra qué comparar: antes salía un
+            # "FALTANTE ALTA" por la bonificación entera del período.
+            self.hallazgos.extend(_cruzar_imed(self.pagos_recepcion, self.movs_imed,
+                                               self._d_desde, self._d_hasta))
+        sin = [m for m in ("EFECTIVO", "TRANSBANK_DEBITO", "TRANSBANK_CREDITO", "IMED")
+               if m not in self.fuentes_cargadas]
+        if sin:
+            self.advertencias.append("Sin archivo (no auditados): " + ", ".join(
+                {"EFECTIVO": "efectivo/BancoEstado", "TRANSBANK_DEBITO": "Transbank débito",
+                 "TRANSBANK_CREDITO": "Transbank crédito", "IMED": "Imed"}[m] for m in sin) + ".")
 
     def _totales_externos(self) -> dict:
-        """Extiende el método base para incluir IMED."""
         base = super()._totales_externos()
+        if not self.movs_transferencia and hasattr(self, "transf_correos_total"):
+            base["TRANSFERENCIA"] = float(self.transf_correos_total)
         base["IMED"] = sum(m.monto for m in self.movs_imed if m.tipo == "CREDITO")
         return base
 
     def _totales_internos_imed(self) -> float:
-        """Suma de bonificaciones Fonasa del período (esperado Imed)."""
-        d_desde = self.desde or date.today().replace(day=1)
-        d_hasta = self.hasta or date.today()
-        from session import db as _conn
-        try:
-            with _conn() as conn:
-                row = conn.execute(
-                    """SELECT COALESCE(SUM(bonificacion), 0) as total
-                       FROM pagos_cmc
-                       WHERE fecha BETWEEN ? AND ?
-                         AND prevision = 'fonasa'
-                         AND bonificacion > 0""",
-                    (d_desde.isoformat(), d_hasta.isoformat())
-                ).fetchone()
-            return float(row["total"] or 0)
-        except Exception:
-            return 0.0
+        """Bonificación Fonasa esperada del período, por arancel N3 (la misma
+        cuenta que usa el hallazgo IMED; antes sumaba la columna
+        `bonificacion`, que recepción ya no llena → $0 siempre)."""
+        return float(sum(r["bonif_arancel"] for r in self.filas_recepcion
+                         if r["copago"] > 0 or r["metodo_pago"]))
+
+    def _cuadre_diario(self) -> list[dict]:
+        """Cuadre por día SOLO con los medios que tienen fuente externa. Antes
+        restaba toda la recepción contra los archivos subidos: sin Transbank
+        subido, cada día con débito salía NO CUADRA."""
+        medios = [m for m in ("TRANSFERENCIA", "EFECTIVO", "TRANSBANK_DEBITO", "TRANSBANK_CREDITO")
+                  if m in self.fuentes_cargadas]
+        if "TRANSFERENCIA" in medios and not self.movs_transferencia:
+            # Con correos (cobertura parcial) no hay cuadre diario honesto de
+            # transferencias: se excluyen del cuadre y quedan en hallazgos.
+            medios.remove("TRANSFERENCIA")
+        fechas = sorted({p.fecha for p in self.pagos_recepcion if p.fecha}
+                        | {p.fecha for p in self.pagos_medilink if p.fecha})
+        filas = []
+        for fec in fechas:
+            rec = sum(p.monto for p in self.pagos_recepcion if p.fecha == fec and p.medio in medios)
+            med = sum(p.monto for p in self.pagos_medilink if p.fecha == fec)
+            transf = sum(m.monto for m in self.movs_transferencia if m.fecha == fec and m.tipo == "CREDITO")
+            efvo = sum(m.monto for m in self.movs_efectivo if m.fecha == fec and m.tipo == "CREDITO")
+            tb = (sum(m.monto for m in self.movs_tb_debito if m.fecha == fec)
+                  + sum(m.monto for m in self.movs_tb_credito if m.fecha == fec))
+            if not medios:
+                estado, dif = "SIN FUENTE", 0.0
+            else:
+                dif = rec - (transf + efvo + tb)
+                if abs(dif) < TOLERANCIA_MONTO:
+                    estado = "CUADRA"
+                elif rec and abs(dif) < rec * 0.05:
+                    estado = "CUADRA CON OBSERVACIONES"
+                else:
+                    estado = "NO CUADRA"
+            filas.append({
+                "fecha": fec.strftime("%d/%m/%Y"), "recepcion": rec, "medilink": med,
+                "itau": transf, "banco_estado": efvo, "transbank": tb,
+                "diferencia": dif, "estado": estado,
+            })
+        return filas
 
 
 # ── Helpers de serialización ──────────────────────────────────────────────────
@@ -480,22 +763,26 @@ def _kpis(auditor: AuditorWeb) -> dict:
     medios = ["TRANSFERENCIA", "EFECTIVO", "TRANSBANK_DEBITO", "TRANSBANK_CREDITO", "IMED"]
     fuentes = []
     for m in medios:
-        if m == "IMED":
-            registrado = imed_esperado
-        else:
-            registrado = totales_int.get(m, 0.0)
-        respaldado = totales_ext.get(m, 0.0)
-        diferencia = registrado - respaldado
+        registrado = imed_esperado if m == "IMED" else totales_int.get(m, 0.0)
+        con_fuente = m in auditor.fuentes_cargadas
+        respaldado = totales_ext.get(m, 0.0) if con_fuente else 0.0
+        diferencia = registrado - respaldado if con_fuente else 0.0
         fuentes.append({
             "medio":      m,
             "registrado": registrado,
             "respaldado": respaldado,
             "diferencia": diferencia,
-            "ok":         abs(diferencia) <= TOLERANCIA_MONTO or registrado == 0,
+            "con_fuente": con_fuente,
+            "fuente":     auditor.fuentes_cargadas.get(m, ""),
+            "parcial":    auditor.fuentes_cargadas.get(m, "").endswith("(parcial)"),
+            "ok":         con_fuente and (abs(diferencia) <= TOLERANCIA_MONTO or registrado == 0),
         })
 
-    total_registrado = sum(totales_int.values())
-    total_respaldado = sum(v for k, v in totales_ext.items() if k != "IMED")
+    # Totales solo sobre medios auditados con fuente COMPLETA (los correos de
+    # banco son parciales: su "diferencia" no es plata faltante).
+    completos = [f for f in fuentes if f["con_fuente"] and not f["parcial"] and f["medio"] != "IMED"]
+    total_registrado = sum(f["registrado"] for f in completos)
+    total_respaldado = sum(f["respaldado"] for f in completos)
     n_alta = sum(1 for h in auditor.hallazgos if h.prioridad == "ALTA")
     n_media = sum(1 for h in auditor.hallazgos if h.prioridad == "MEDIA")
     n_baja  = sum(1 for h in auditor.hallazgos if h.prioridad == "BAJA")
@@ -511,10 +798,14 @@ def _kpis(auditor: AuditorWeb) -> dict:
     elif n_alta > 0 or n_obs > 0:
         nivel_riesgo = "MEDIO"
 
-    pct_conciliado = 0.0
+    pct_conciliado = None
     if total_registrado > 0:
-        # porcentaje que tiene respaldo externo
         pct_conciliado = min(100.0, round(total_respaldado / total_registrado * 100, 1))
+
+    rc = auditor.resumen_caja or {}
+    total_recep = sum(r["copago"] + r["bonif_arancel"] for r in auditor.filas_recepcion
+                      if r["copago"] > 0 or r["metodo_pago"])
+    total_caja = sum(p.monto for p in auditor.pagos_medilink)
 
     return {
         "periodo_desde":   auditor.desde.isoformat() if auditor.desde else None,
@@ -533,9 +824,19 @@ def _kpis(auditor: AuditorWeb) -> dict:
         "dias_no_cuadran":   n_no,
         "n_recepcion":       len(auditor.pagos_recepcion),
         "n_medilink":        len(auditor.pagos_medilink),
+        "caja": {
+            "recepcion_esperado": total_recep,
+            "caja_medilink":      total_caja,
+            "diferencia":         total_recep - total_caja,
+            "pacientes_dia_recepcion": rc.get("grupos_recepcion", 0),
+            "pacientes_dia_caja":      rc.get("grupos_caja", 0),
+            "emparejados":        rc.get("emparejados", 0),
+            "cuadran":            rc.get("cuadran", 0),
+        },
         "fuentes":           fuentes,
         "imed_esperado":     imed_esperado,
         "imed_recibido":     totales_ext.get("IMED", 0.0),
+        "advertencias":      auditor.advertencias,
     }
 
 
@@ -660,7 +961,12 @@ async def preview_periodo(
         "n_hallazgos":   len(auditor.hallazgos),
         "hallazgos":     [_hallazgo_to_dict(h) for h in auditor.hallazgos],
         "total_recepcion": sum(p.monto for p in auditor.pagos_recepcion),
+        # Comparable con la caja: copago + bonificación Fonasa por arancel.
+        "total_recepcion_esperado_caja": sum(
+            r["copago"] + r["bonif_arancel"] for r in auditor.filas_recepcion
+            if r["copago"] > 0 or r["metodo_pago"]),
         "total_medilink":  sum(p.monto for p in auditor.pagos_medilink),
+        "advertencias":    auditor.advertencias,
     }
 
 
