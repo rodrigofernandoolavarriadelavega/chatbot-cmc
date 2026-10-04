@@ -6479,7 +6479,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             from config import REFERRAL_BONOS_ENABLED
             if not REFERRAL_BONOS_ENABLED:
                 log_event(phone, "referido_pedido_pausado", {"texto": txt[:120]})
-                return _txt(
+                # Antes `_txt(...)`, que no existe → NameError → "problema técnico".
+                return (
                     "Gracias por querer recomendarnos. Estamos terminando de "
                     "definir los detalles del programa de referidos y lo "
                     "habilitaremos pronto.\n\n"
