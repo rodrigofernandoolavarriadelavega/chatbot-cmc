@@ -2332,7 +2332,7 @@ def _estado_cita_from_raw(c: dict) -> dict:
     estado_txt = (c.get("estado_cita") or "").strip().lower()
     return {
         "anulada":     c.get("estado_anulacion") == 1,
-        "confirmada":  c.get("id_estado") == 3 or estado_txt.startswith("confirmad"),
+        "confirmada":  c.get("id_estado") in (3, 11, 20, 22, 24, 25) or estado_txt.startswith("confirmad"),
         "estado_cita": c.get("estado_cita") or "",
         "id_estado":   c.get("id_estado"),
         "id_paciente": c.get("id_paciente"),
@@ -2509,6 +2509,76 @@ async def cancelar_cita_con_motivo(id_cita: int) -> tuple[bool, str]:
             await asyncio.sleep(1.5 ** attempt)
     log.error("No se pudo cancelar cita %s tras 3 intentos", id_cita)
     return False, "el sistema de agenda no respondió a tiempo"
+
+
+# Estados Medilink que deja el bot cuando el paciente confirma por WhatsApp.
+# Creados por el CMC en Medilink el 2026-10-02 (GET /citas/estados):
+# 24 "Confirmado por bot 48hrs" (confirmó con anticipación: recordatorio 48h/24h)
+# 25 "Confirmado por bot 2hrs"  (confirmó el mismo día, recordatorio 2h).
+ID_ESTADO_CONFIRMADO_BOT_48H = 24
+ID_ESTADO_CONFIRMADO_BOT_2H = 25
+# Hasta cuántas horas antes de la cita una confirmación cuenta como "2hrs".
+HORAS_CONFIRMACION_2H = 6
+# Estados que NO se pisan al confirmar: ya confirmada (3 teléfono, 11 email,
+# 20 WhatsApp, 22 Confirmado, 24/25 bot), la cita ya avanzó (2 Atendido, 5 En
+# sala de espera, 6 Atendiéndose, 8 No asiste) o recepción la tiene en revisión
+# (26 "Cancelado bot, confirmar": decide recepción, no el bot). Las anuladas se
+# filtran por estado_anulacion. Lista verificada con GET /citas/estados 2026-10-05.
+_ESTADOS_NO_PISAR_AL_CONFIRMAR = {2, 3, 5, 6, 8, 11, 20, 22, 24, 25, 26}
+
+
+def estado_confirmacion_bot(fecha: str, hora: str, ahora: datetime | None = None) -> int:
+    """Elige el estado Medilink según cuánto falta para la cita al confirmar.
+    `fecha` YYYY-MM-DD, `hora` HH:MM. Si no se puede calcular → 48hrs."""
+    try:
+        cita_dt = datetime.strptime(f"{fecha} {(hora or '')[:5]}", "%Y-%m-%d %H:%M").replace(
+            tzinfo=ZoneInfo("America/Santiago"))
+    except ValueError:
+        return ID_ESTADO_CONFIRMADO_BOT_48H
+    ahora = ahora or datetime.now(ZoneInfo("America/Santiago"))
+    if cita_dt - ahora <= timedelta(hours=HORAS_CONFIRMACION_2H):
+        return ID_ESTADO_CONFIRMADO_BOT_2H
+    return ID_ESTADO_CONFIRMADO_BOT_48H
+
+
+async def confirmar_cita_whatsapp(id_cita: int, id_estado: int) -> tuple[bool, str]:
+    """Marca la cita como confirmada por el bot en Medilink (`id_estado` 24 ó
+    25, ver `estado_confirmacion_bot`) cuando el paciente confirma asistencia.
+    Retorna (cambiada, motivo). No pisa citas anuladas, ya confirmadas ni
+    que ya avanzaron (en sala, atendida) — en esos casos retorna (False, motivo)
+    sin tocar nada. Nunca lanza: el paciente ya recibió su "confirmada ✅"."""
+    cita = await get_cita(int(id_cita))
+    if cita is None:
+        return False, "no se pudo leer la cita"
+    if cita.get("estado_anulacion") == 1:
+        return False, f"cita anulada ({cita.get('estado_cita')})"
+    if cita.get("id_estado") in _ESTADOS_NO_PISAR_AL_CONFIRMAR:
+        return False, f"estado actual se respeta ({cita.get('estado_cita')})"
+
+    url = f"{MEDILINK_BASE_URL}/citas/{id_cita}"
+    client = _get_shared_client()
+    for attempt in range(3):
+        try:
+            r = await client.put(url, json={"id_estado": id_estado},
+                                 headers=HEADERS)
+            if r.status_code == 429:
+                record_429(url)
+                await asyncio.sleep(3.0 * (2 ** attempt))
+                continue
+            if r.status_code in (200, 201):
+                _report_up()
+                return True, ""
+            if r.status_code == 400 and "igual al original" in r.text:
+                return False, "ya tenía ese estado"
+            if r.status_code < 500:
+                log.error("Confirmar cita %s en Medilink: %s %s", id_cita, r.status_code, r.text[:200])
+                return False, f"Medilink rechazó ({r.status_code})"
+            log.warning("Medilink PUT %s → %s (intento %d/3)", url, r.status_code, attempt + 1)
+        except (httpx.TimeoutException, httpx.NetworkError) as e:
+            log.warning("Medilink PUT %s error red: %s (intento %d/3)", url, e, attempt + 1)
+        if attempt < 2:
+            await asyncio.sleep(1.5 ** attempt)
+    return False, "Medilink no respondió a tiempo"
 
 
 async def cancelar_cita(id_cita: int) -> bool:

@@ -18,6 +18,7 @@ from claude_helper import (detect_intent, respuesta_faq, clasificar_respuesta_se
 from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_ids,
                       buscar_paciente, buscar_paciente_por_nombre, crear_paciente, crear_cita,
                       listar_citas_paciente, cancelar_cita, cancelar_cita_con_motivo, obtener_agenda_dia,
+                      confirmar_cita_whatsapp, estado_confirmacion_bot,
                       valid_rut, clean_rut, hint_rut_error, especialidades_disponibles,
                       consultar_proxima_fecha, verificar_slot_disponible,
                       MedilinkRateLimited)
@@ -2067,6 +2068,25 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
     return await consulta_clinica_doctor(txt)
 
 
+def _confirmar_en_medilink_bg(id_cita, phone: str, fecha: str, hora: str) -> None:
+    """Lleva la confirmación del paciente a Medilink ("Confirmado por bot
+    48hrs" o "2hrs" según cuánto falta para la cita) en segundo plano: la respuesta al paciente no espera a Medilink (429 puede
+    tardar ~20 s) y un fallo ahí no le cambia nada al paciente."""
+    id_estado = estado_confirmacion_bot(fecha, hora)
+
+    async def _run():
+        try:
+            ok, motivo = await confirmar_cita_whatsapp(int(id_cita), id_estado)
+        except Exception as e:
+            ok, motivo = False, f"excepción: {e}"
+        log_event(phone, "cita_confirmada_medilink" if ok else "cita_confirmada_medilink_omitida",
+                  {"id_cita": str(id_cita), "id_estado": id_estado, "motivo": motivo})
+    try:
+        asyncio.get_running_loop().create_task(_run())
+    except RuntimeError:
+        log.warning("Sin event loop para confirmar cita %s en Medilink", id_cita)
+
+
 async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
     """Procesa la respuesta del paciente a los botones del recordatorio de 09:00.
     IDs: cita_confirm:<id_cita> / cita_reagendar:<id_cita> / cita_cancelar:<id_cita>"""
@@ -2102,6 +2122,7 @@ async def _handle_confirmacion_precita(phone: str, tl: str, data: dict) -> str:
     if accion == "cita_confirm":
         mark_cita_confirmation(id_cita, phone, "confirmed")
         log_event(phone, "cita_confirmada", {"id_cita": id_cita, "especialidad": esp})
+        _confirmar_en_medilink_bg(id_cita, phone, fecha, hora)
         reset_session(phone)
         return (
             f"¡Perfecto! Tu asistencia quedó confirmada ✅\n\n"
@@ -3620,6 +3641,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             if _fila_rc:
                 _id_cita_rc = str(_fila_rc["id_cita"])
                 mark_cita_confirmation(_id_cita_rc, phone, "confirmed")
+                _confirmar_en_medilink_bg(_id_cita_rc, phone,
+                                          _fila_rc["fecha"], _fila_rc["hora"])
                 log_event(phone, "cita_confirmada_texto_libre", {
                     "id_cita": _id_cita_rc,
                     "especialidad": _fila_rc["especialidad"],
