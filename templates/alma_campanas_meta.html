@@ -229,6 +229,7 @@ td.nmc{min-width:230px}
 .tbl-mode .tbl-wrap.full .nm{max-width:300px}
 .card-h .segs{display:flex;gap:8px;flex-wrap:wrap}
 .seg .sh2{display:none}
+.seg.hidden-web{display:none}
 .nm{font-weight:700;color:var(--navy);max-width:340px}
 .nm small{display:block;font-weight:500;color:var(--mute);font-size:11.5px;margin-top:1px}
 .cacv{font-weight:800;color:var(--navy)}
@@ -441,6 +442,17 @@ td.ret .rc{font-weight:800}
   .hero{padding-top:12px;padding-bottom:12px}
   .hero p{display:none}
 }
+/* ── Canal: anuncios Meta / página web ─────────────────────────────────── */
+.seg.canal button[aria-pressed="true"]{background:var(--navy);color:#fff;box-shadow:none}
+.only-meta{}
+body.c-web .only-meta{display:none!important}
+.chip.web{background:#EEF2FF;color:#3B4A8C}
+.kc-txt{margin:6px 0 0 19px;font-size:11.5px;color:var(--ink-2);font-style:italic;line-height:1.35;overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sin-gasto{font-size:11.5px;color:var(--mute);font-weight:600;white-space:nowrap}
+.webnote{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;font-size:12.5px;color:var(--ink-2)}
+.webnote svg{width:18px;height:18px;stroke:var(--blue);flex:none;margin-top:1px}
+
 /* ── Tarjeta trabajable: indicador de gestión ─────────────────────────── */
 .kc{cursor:pointer;position:relative}
 .kc:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
@@ -505,6 +517,7 @@ td.ret .rc{font-weight:800}
 .mx-tabs button{flex:1;min-height:44px;border:0;background:none;font-weight:700;font-size:13px;color:var(--mute);cursor:pointer;
   border-bottom:2px solid transparent;transition:color .15s,border-color .2s var(--ease)}
 .mx-tabs button[aria-selected="true"]{color:var(--navy);border-bottom-color:var(--aqua)}
+.mx-tabs .b[hidden]{display:none}
 .mx-tabs .b{display:inline-block;min-width:8px;height:8px;border-radius:50%;background:var(--orange);margin-left:6px;vertical-align:1px}
 .mx-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr)}
 .mx-left{overflow-y:auto;padding:18px 20px 24px;display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain}
@@ -672,9 +685,14 @@ td.ret .rc{font-weight:800}
       <button class="tab" role="tab" id="tab-panel" aria-controls="v-panel" aria-selected="true" data-v="panel">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><span class="lg">Panel de campañas</span><span class="sh">Campañas</span></button>
       <button class="tab" role="tab" id="tab-kanban" aria-controls="v-kanban" aria-selected="false" data-v="kanban">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lg">Pacientes de anuncios</span><span class="sh">Pacientes</span> <span class="cnt" id="kCount">—</span></button>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lg" id="kTabLbl">Pacientes de anuncios</span><span class="sh">Pacientes</span> <span class="cnt" id="kCount">—</span></button>
     </div>
     <div class="filters" role="group" aria-label="Filtros">
+      <div class="seg canal" id="segCanal" role="group" aria-label="Canal de llegada">
+        <button type="button" data-c="meta" aria-pressed="true">Anuncios Meta</button>
+        <button type="button" data-c="web" aria-pressed="false">Página web</button>
+        <button type="button" data-c="todos" aria-pressed="false">Todos</button>
+      </div>
       <div class="seg" id="segRango" role="group" aria-label="Rango de fechas">
         <button type="button" data-r="7" aria-pressed="false">7 días</button>
         <button type="button" data-r="30" aria-pressed="true">30 días</button>
@@ -689,7 +707,7 @@ td.ret .rc{font-weight:800}
       </span>
       <label class="fld"><span class="sr">Campaña</span><select id="fCampana"><option value="">Todas las campañas</option></select>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></label>
-      <label class="fld"><span class="sr">Plataforma</span><select id="fPlat">
+      <label class="fld only-meta"><span class="sr">Plataforma</span><select id="fPlat">
         <option value="">Facebook e Instagram</option><option value="facebook">Solo Facebook</option>
         <option value="instagram">Solo Instagram</option><option value="sin_dato">Plataforma sin dato</option></select>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></label>
@@ -782,11 +800,13 @@ const I = {
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
   list: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
   pulse: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
   ext: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
 };
 
 /* ── Estado ─────────────────────────────────────────────────────────────── */
-const S = { v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
+const S = { canal: "meta", v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
             tabla: "anuncios", estado: (() => { try { return localStorage.getItem("cm_estado") || "todos"; } catch (_) { return "todos"; } })(), cols: (() => { try { return localStorage.getItem("cm_cols") || "resumen"; } catch (_) { return "resumen"; } })(), kcol: "escribio", panel: null, kanban: null, ver: {} };
 
 function hoyCL() {
@@ -803,7 +823,8 @@ function qs(extra) {
   const [d, h] = rangoFechas();
   const p = new URLSearchParams({ desde: d, hasta: h });
   if (S.campana) p.set("campana", S.campana);
-  if (S.plat) p.set("plataforma", S.plat);
+  if (S.plat && S.canal !== "web") p.set("plataforma", S.plat);
+  if (S.canal !== "meta") p.set("canal", S.canal);
   if (extra) { if (S.anuncio) p.set("anuncio", S.anuncio); if (S.esp) p.set("especialidad", S.esp); if (S.q) p.set("q", S.q); if (S.gest) p.set("gestion", S.gest); }
   return p.toString();
 }
@@ -865,8 +886,8 @@ function opciones(o) {
     sel.innerHTML = `<option value="">${first}</option>` + items.map(x => `<option value="${esc(x.id)}">${esc(x.nombre)}</option>`).join("");
     sel.value = items.some(x => x.id === cur) ? cur : "";
   };
-  fill($("#fCampana"), o.campanas, "Todas las campañas", S.campana);
-  fill($("#fAnuncio"), o.anuncios.filter(a => !S.campana || a.campaign_id === S.campana), "Todos los anuncios", S.anuncio);
+  fill($("#fCampana"), o.campanas, S.canal === "web" ? "Todas las páginas" : S.canal === "todos" ? "Campañas y páginas" : "Todas las campañas", S.campana);
+  fill($("#fAnuncio"), o.anuncios.filter(a => !S.campana || a.campaign_id === S.campana), S.canal === "web" ? "Todos los botones" : S.canal === "todos" ? "Anuncios y botones" : "Todos los anuncios", S.anuncio);
   fill($("#fEsp"), o.especialidades.map(e => ({ id: e, nombre: e })), "Todas las especialidades", S.esp);
 }
 
@@ -893,7 +914,13 @@ function skelKanban() {
 /* ── Panel ──────────────────────────────────────────────────────────────── */
 function renderPanel() {
   const p = S.panel, k = p.kpis, m = p.medicion;
-  if (!p.hay_insights && !k.personas && !k.citas) {
+  const web = S.canal === "web", todos = S.canal === "todos";
+  if (web && !k.personas) {
+    $("#v-panel").innerHTML = notaMedicion(p) + estado("", I.globe, "Nadie llegó desde la página web en este rango",
+      "Cuando alguien toque un botón de WhatsApp en centromedicocarampangue.cl, aparecerá aquí con la página y el botón que usó.", S.rango !== "90" ? '<button class="btn" type="button" onclick="setRango(\'90\')">Ver últimos 90 días</button>' : "");
+    return;
+  }
+  if (!web && !p.hay_insights && !k.personas && !k.citas) {
     $("#v-panel").innerHTML = notaMedicion(p) + estado("", I.wallet, "Aún no hay fotos de Meta Ads",
       "La foto diaria de Meta (gasto, conversaciones y desgloses) se guarda cada día. Cuando exista la primera, este panel mostrará el costo por conversación, por cita y por atención de cada anuncio.", "");
     return;
@@ -901,28 +928,30 @@ function renderPanel() {
   const sinGasto = S.plat === "sin_dato";
   const res = k.resultado;
   const money = [
-    { cls: "venta", l: "Venta", v: fmt$(k.venta), s: k.pagaron ? fmtN(k.pagaron) + (k.pagaron === 1 ? " paciente pagó" : " pacientes pagaron") + (k.pagaron_tel ? " (" + fmtN(k.pagaron_tel) + " fuera del bot)" : "") : "Nadie del anuncio ha pagado aún" },
+    { cls: "venta", l: "Venta", v: fmt$(k.venta), s: k.pagaron ? fmtN(k.pagaron) + (k.pagaron === 1 ? " paciente pagó" : " pacientes pagaron") + (k.pagaron_tel ? " (" + fmtN(k.pagaron_tel) + " fuera del bot)" : "") : (web ? "Nadie de la web ha pagado aún" : "Nadie del anuncio ha pagado aún") },
     { l: "Para el centro", v: fmt$(k.centro), s: k.centro_pct == null ? "Venta menos honorarios" : k.centro_pct + "% de la venta, tras honorarios", op: "→" },
-    { l: "Gasto en Meta", v: sinGasto ? "—" : fmt$(k.gasto), s: sinGasto ? "Meta no informa gasto sin plataforma" : fmtN(k.impresiones) + " impresiones", op: "−" },
+    web ? { l: "Gasto publicitario", v: "—", s: "La web no tiene gasto publicitario registrado", op: "−" }
+      : { l: "Gasto en Meta", v: sinGasto ? "—" : fmt$(k.gasto), s: sinGasto ? "Meta no informa gasto sin plataforma" : (todos ? "Solo anuncios; la web no tiene gasto registrado" : fmtN(k.impresiones) + " impresiones"), op: "−" },
     { cls: "res " + (sinGasto ? "" : res >= 0 ? "pos" : "neg"), l: "Resultado", v: sinGasto ? "—" : fmt$(res),
-      s: "Para el centro menos el gasto", op: "=", chip: !sinGasto && k.retorno != null ? "retorno venta " + String(k.retorno).replace(".", ",") + "× · centro " + String(k.retorno_centro).replace(".", ",") + "×" : "" },
+      s: web ? "Igual a lo que queda para el centro: sin gasto registrado" : "Para el centro menos el gasto", op: "=", chip: !sinGasto && k.retorno != null ? "retorno venta " + String(k.retorno).replace(".", ",") + "× · centro " + String(k.retorno_centro).replace(".", ",") + "×" : "" },
   ];
   const band = `<div class="mband" role="group" aria-label="Plata del rango">${money.map((m, i) => `<div class="mb ${m.cls || ""}" style="--i:${i}">
       ${m.op ? `<span class="op" aria-hidden="true">${m.op}</span>` : ""}<div class="lbl">${m.l}</div>
       <div class="v">${m.v}${m.chip ? `<span class="chipr" title="Venta ÷ gasto">${m.chip}</span>` : ""}</div><div class="s">${esc(m.s)}</div></div>`).join("")}</div>`;
   const chica = k.citas && k.citas < p.umbrales.muestra_chica;
   const steps = [
-    { l: "Conversaciones", v: sinGasto ? "—" : fmtN(k.conversaciones), s: "Informadas por Meta", c: sinGasto ? null : k.cac_conv, cl: "c/u" },
-    { l: "Personas captadas", v: fmtN(k.personas), s: "Teléfonos únicos del anuncio", r: sinGasto ? null : pct(k.personas, k.conversaciones) },
-    { l: "Citas", v: fmtN(k.citas), s: chica ? "Muestra chica: menos de " + p.umbrales.muestra_chica + " citas" : "Agendadas por el bot", r: pct(k.citas, k.personas), c: sinGasto ? null : k.cac_cita, cl: "por cita", key: true },
-    { l: "Atendidos", v: fmtN(k.atendidos), s: "Aviso de atención (proxy)", r: pct(k.atendidos, k.citas), c: sinGasto ? null : k.cac_atendido, cl: "por atendido", hi: true },
+    { l: "Conversaciones", v: sinGasto || web ? "—" : fmtN(k.conversaciones), s: web ? "Solo existe para anuncios de Meta" : todos ? "Informadas por Meta (solo anuncios)" : "Informadas por Meta", c: sinGasto || web ? null : k.cac_conv, cl: web ? "" : "c/u" },
+    { l: "Personas captadas", v: fmtN(k.personas), s: web ? "Teléfonos únicos que escribieron desde la web" : todos ? "Teléfonos únicos, anuncio o web, sin repetir" : "Teléfonos únicos del anuncio", r: sinGasto || web || todos ? null : pct(k.personas, k.conversaciones) },
+    { l: "Citas", v: fmtN(k.citas), s: chica ? "Muestra chica: menos de " + p.umbrales.muestra_chica + " citas" : "Agendadas por el bot", r: pct(k.citas, k.personas), c: sinGasto ? null : k.cac_cita, cl: web ? "" : "por cita", key: true },
+    { l: "Atendidos", v: fmtN(k.atendidos), s: "Aviso de atención (proxy)", r: pct(k.atendidos, k.citas), c: sinGasto ? null : k.cac_atendido, cl: web ? "" : "por atendido", hi: true },
   ];
   const funnel = `<div class="funnel" role="group" aria-label="Embudo y costo por etapa">${steps.map((st, i) => `<div class="fs${st.hi ? " hi" : ""}${st.key ? " key" : ""}" style="--i:${i + 4}">
       ${st.r ? `<span class="rate" title="Conversión desde la etapa anterior">${st.r}</span>` : ""}
       <div class="lbl">${st.l}</div><div class="v num">${st.v}</div><div class="s">${esc(st.s)}</div>
       ${st.cl ? `<div class="c" title="Gasto ÷ ${st.l.toLowerCase()}"><b>${fmt$(st.c)}</b>${st.cl}</div>` : ""}</div>`).join("")}</div>`;
 
-  $("#v-panel").innerHTML = notaMedicion(p) + band + funnel + alertas(p) + tabla(p) + conocieron(p) + desgloses(p) + tendencia(p);
+  const soloMeta = web ? `<div class="card block"><div class="webnote">${I.info}<div><b>Desgloses, tendencia mensual y alertas de gasto</b> son datos de Meta Ads y aplican solo a los anuncios. Véalos en "Anuncios Meta" o "Todos".</div></div></div>` : "";
+  $("#v-panel").innerHTML = notaMedicion(p) + band + funnel + (web ? "" : alertas(p)) + tabla(p) + conocieron(p) + (web ? soloMeta : desgloses(p) + tendencia(p));
   bindTabla();
 }
 function notaMedicion(p) {
@@ -937,6 +966,7 @@ function notaMedicion(p) {
     <li><b>Plataforma por persona</b> (Facebook o Instagram) desde el ${fdate(m.plataforma_desde)}; antes queda "sin dato".</li>
     <li><b>Venta</b>: cobrado en caja (Medilink) a cada paciente que trajo el anuncio, hasta hoy. Incluye a quienes escribieron desde el anuncio y después agendaron por recepción o llegaron directo: se reconocen porque su teléfono está en la ficha de un paciente que pagó dentro de 90 días del clic. Un teléfono compartido (familia) suma a todos sus pacientes. Cada paciente cuenta una vez, en el anuncio de su primera cita. Si ya era paciente del centro, sus pagos posteriores también cuentan.</li>
     <li><b>Para el centro</b>: cada pago menos el honorario del profesional que atendió (su % cargado en Equipo; 70% si falta; Dr. Abarca con sueldo fijo se calcula al 62%). <b>Resultado</b> = para el centro menos el gasto del anuncio.</li>
+    <li><b>Página web</b>: personas que escribieron con un botón de WhatsApp de centromedicocarampangue.cl. La página, el artículo y el botón salen del evento que registra el bot en cada llegada (desde el 05/10/2026); antes de esa fecha, del texto pre-escrito del botón y del tag de la primera visita, y el artículo exacto del blog no viene (solo "blog"). Citas = las del bot hasta 90 días después de llegar. La web no tiene gasto publicitario registrado: Resultado = para el centro. En "Todos", cada persona cuenta una sola vez, en el canal de su primer contacto del rango; en cada canal por separado aparece en ambos.</li>
     <li><b>Cómo nos conocieron</b> <span class="tag-est">declarado</span> es lo que el paciente responde al bot después de agendar, no una medición. La opción antigua "Redes o Google" no separa redes sociales de Google.</li>
     <li><b>Frecuencia</b> <span class="tag-est">estimado</span> impresiones ÷ alcance diario sumado. Es un piso: la frecuencia real del rango es mayor.</li>
   </ul></details>${warn}</div></div>`;
@@ -954,6 +984,8 @@ const dash = '<span class="dash">—</span>';
 function tienePop(r) { return (r.por_profesional && r.por_profesional.length) || r.conocieron; }
 function tabla(p) {
   const anun = S.tabla === "anuncios", full = S.cols === "todo";
+  const web = S.canal === "web", todosC = S.canal === "todos";
+  const uni = web ? (anun ? "Botón" : "Página") : todosC ? (anun ? "Origen" : "Campaña o página") : (anun ? "Anuncio" : "Campaña");
   const todas = anun ? p.anuncios : p.campanas;
   const rows = S.estado === "activos" ? todas.filter(r => r.activo) : S.estado === "pausados" ? todas.filter(r => !r.activo) : todas;
   const malos = new Set(p.alertas.filter(a => a.tipo === "sin_citas").map(a => a.ad_id));
@@ -964,10 +996,13 @@ function tabla(p) {
     const badges = [];
     if (anun && malos.has(r.ad_id)) badges.push('<span class="badge bad">Sin citas</span>');
     if (anun && sat.has(r.ad_id)) badges.push('<span class="badge warn">Saturado</span>');
-    if (r.citas > 0 && r.muestra_chica) badges.push('<span class="badge mut">Muestra chica</span>');
-    if (S.estado === "todos" && r.activo) badges.unshift('<span class="badge on">Activo</span>');
+    if (r.citas > 0 && r.muestra_chica && r.canal !== "web") badges.push('<span class="badge mut">Muestra chica</span>');
+    const esWeb = r.canal === "web";
+    if (S.estado === "todos" && r.activo && !esWeb) badges.unshift('<span class="badge on">Activo</span>');
+    if (esWeb && S.canal === "todos") badges.unshift('<span class="badge info">Web</span>');
     const nombre = anun ? r.anuncio : r.campana;
-    const sub = anun ? r.campana : (r.n_anuncios + (r.n_anuncios === 1 ? " anuncio" : " anuncios"));
+    const sub = anun ? (esWeb ? [r.campana, r.detalle].filter(Boolean).join(" · ") : r.campana)
+      : (r.n_anuncios + (esWeb ? (r.n_anuncios === 1 ? " botón" : " botones") : (r.n_anuncios === 1 ? " anuncio" : " anuncios")));
     const pop = tienePop(r);
     const venta = `<td class="r mny venta-cell${pop ? " has-pop" : ""}" data-l="Venta" data-pop="${anun ? "a" : "c"}:${esc(anun ? r.ad_id : r.campaign_id)}" tabindex="${pop ? 0 : -1}"${pop ? ' role="button" aria-label="Ver de dónde viene la venta"' : ""}><b>${fmt$(r.venta)}</b>${r.pagaron ? '<small class="pctc">' + r.pagaron + (r.pagaron === 1 ? " paciente" : " pacientes") + (r.pagaron_tel ? " · " + r.pagaron_tel + " fuera del bot" : "") + "</small>" : ""}${!full && r.fuera_pct ? `<small class="pctc">${r.fuera_pct}% en otra especialidad</small>` : ""}</td>`;
     const centro = `<td class="r mny" data-l="Para el centro">${r.venta ? fmt$(r.centro) + '<small class="pctc">' + r.centro_pct + "%</small>" : dash}</td>`;
@@ -975,8 +1010,8 @@ function tabla(p) {
     const x = v => String(v).replace(".", ",") + "×";
     const retorno = `<td class="r ret" data-l="Retorno">${r.retorno == null ? dash
       : `<span class="rv" title="Venta total ÷ gasto">${x(r.retorno)}<small>venta</small></span><span class="rc ${r.retorno_centro >= 1 ? "resp" : "resn"}" title="Para el centro ÷ gasto. Sobre 1× el anuncio se paga solo">${x(r.retorno_centro)}<small>centro</small></span>`}</td>`;
-    const first = `<td class="nmc" data-l="${anun ? "Anuncio" : "Campaña"}"><div class="nm">${esc(nombre)}<small>${esc(sub)}</small></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
-    const gasto = `<td class="r" data-l="Gasto">${sinG ? dash : fmt$(r.gasto)}</td>`;
+    const first = `<td class="nmc" data-l="${uni}"><div class="nm">${esc(nombre)}<small>${esc(sub)}</small></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
+    const gasto = `<td class="r" data-l="Gasto">${sinG ? dash : esWeb ? '<span class="sin-gasto" title="La web no tiene gasto publicitario registrado">Sin gasto</span>' : fmt$(r.gasto)}</td>`;
     if (!full) return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">${first}${gasto}
       <td class="r" data-l="Citas">${fmtN(r.citas)}<small class="pctc">de ${fmtN(r.personas)} ${r.personas === 1 ? "persona" : "personas"} · ${fmtN(r.atendidos)} atend.</small></td>
       <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? dash : fmt$(r.cac_cita)}</span>${r.cac_atendido == null ? "" : `<small class="pctc">${fmt$(r.cac_atendido)} por atendido</small>`}</td>
@@ -998,16 +1033,16 @@ function tabla(p) {
     : `<tr><td colspan="${ncol}"><div class="empty" style="padding:28px 10px"><h3 style="font-size:15px">Sin ${anun ? "anuncios" : "campañas"}${S.estado === "activos" ? " activos" : S.estado === "pausados" ? " pausados" : ""} en este rango</h3><p style="margin:0">Pruebe con un rango más amplio o quite los filtros.</p></div></td></tr>`;
   const thMoney = `<th class="r mny">Venta</th><th class="r mny" title="Venta menos honorarios de los profesionales">Para el centro</th><th class="r mny" title="Para el centro menos gasto en el anuncio">Resultado</th>`;
   const head = full
-    ? `<th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
+    ? `<th>${uni}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
       <th class="r">Atendidos</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
-    : `<th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thMoney}<th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th>`;
-  return `<div class="card block tbl-mode"><div class="card-h"><div class="ic">${I.table}</div><h2>Rendimiento por ${anun ? "anuncio" : "campaña"}</h2><span class="cp">${rows.length}</span>
-    <div class="sp"></div><div class="segs"><div class="seg" id="segEstado" role="group" aria-label="Estado en Meta" title="${p.estado_fuente === "meta" ? "Estado de entrega según Meta" : "Meta no respondió: activo = tuvo gasto en los últimos 2 días"}">
-      <button type="button" data-e="todos" aria-pressed="${S.estado === "todos"}">Todos</button><button type="button" data-e="activos" aria-pressed="${S.estado === "activos"}">Activos <span class="scnt">${todas.filter(r => r.activo).length}</span></button><button type="button" data-e="pausados" aria-pressed="${S.estado === "pausados"}">Pausados</button></div>
+    : `<th>${uni}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thMoney}<th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th>`;
+  return `<div class="card block tbl-mode"><div class="card-h"><div class="ic">${I.table}</div><h2>Rendimiento por ${web ? (anun ? "botón" : "página") : todosC ? (anun ? "origen" : "campaña o página") : (anun ? "anuncio" : "campaña")}</h2><span class="cp">${rows.length}</span>
+    <div class="sp"></div><div class="segs"><div class="seg${web ? " hidden-web" : ""}" id="segEstado" role="group" aria-label="Estado en Meta" title="${p.estado_fuente === "meta" ? "Estado de entrega según Meta" : "Meta no respondió: activo = tuvo gasto en los últimos 2 días"}">
+      <button type="button" data-e="todos" aria-pressed="${S.estado === "todos"}">Todos</button><button type="button" data-e="activos" aria-pressed="${S.estado === "activos"}">Activos <span class="scnt">${todas.filter(r => r.activo && r.canal !== "web").length}</span></button><button type="button" data-e="pausados" aria-pressed="${S.estado === "pausados"}">Pausados</button></div>
       <div class="seg" id="segCols" role="group" aria-label="Columnas">
       <button type="button" data-k="resumen" aria-pressed="${!full}">Resumen</button><button type="button" data-k="todo" aria-pressed="${full}"><span class="lg2">Todas las columnas</span><span class="sh2">Todo</span></button></div>
       <div class="seg" id="segTabla" role="group" aria-label="Agrupar por">
-      <button type="button" data-t="campanas" aria-pressed="${!anun}">Campañas</button><button type="button" data-t="anuncios" aria-pressed="${anun}">Anuncios</button></div></div></div>
+      <button type="button" data-t="campanas" aria-pressed="${!anun}">${web ? "Páginas" : "Campañas"}</button><button type="button" data-t="anuncios" aria-pressed="${anun}">${web ? "Botones" : "Anuncios"}</button></div></div></div>
     <div class="tbl-wrap${full ? " full" : ""}"><table><thead><tr>${head}</tr></thead>
     <tbody>${body}</tbody></table></div>
     <div class="tbl-foot"><details><summary style="cursor:pointer;font-weight:700;color:var(--navy)">Cómo leer esta tabla</summary><p style="margin:6px 0 0">Ordenado por costo por cita, de menor a mayor. Al final, lo que gastó sin traer citas. "Muestra chica" = menos de ${p.umbrales.muestra_chica} citas: el costo puede cambiar mucho con una sola cita más. Venta = lo cobrado en caja a cada paciente que trajo el anuncio, hasta hoy: los que agendaron por el bot (desde ese día) y los que escribieron desde el anuncio y después se atendieron por otra vía, reconocidos por su teléfono en la ficha de Medilink con un pago dentro de 90 días del clic ("fuera del bot") (incluye controles y otras especialidades; si ya era paciente del centro, también cuenta). Toque la venta para ver por profesional, por especialidad y cómo dicen que nos conocieron. Para el centro = venta menos el honorario de cada profesional (su % en Equipo; 70% si no tiene cargado). Resultado = para el centro menos el gasto del anuncio. Fuera de esp. = % de la venta que fue en una especialidad distinta a la del anuncio (la especialidad sale del nombre del anuncio; si no dice, de lo más agendado). Retorno: venta ÷ gasto, y para el centro ÷ gasto (sobre 1× el anuncio se paga solo). Frec. = cuántas veces vio el anuncio cada persona alcanzada, en promedio (estimado mínimo); sobre 6 está saturado.</p></details></div></div>`;
@@ -1034,7 +1069,7 @@ function popHtml(r) {
   const rows = (r.por_profesional || []).map(x => `<tr class="${x.fuera ? "fuera" : ""}"><td>${esc(x.nombre)}<small>${x.pacientes} ${x.pacientes === 1 ? "paciente" : "pacientes"}${x.grupo ? " · " + esc(x.grupo) : ""}${x.fuera ? " · otra especialidad" : ""}</small></td>
     <td class="r">${fmt$(x.venta)}</td><td class="r">${fmt$(x.centro)}<small>${x.centro_pct == null ? "" : x.centro_pct + "%"}</small></td></tr>`).join("");
   const cab = r.fuera_pct != null && r.grupo && !["Varias", "mixto"].includes(r.grupo)
-    ? `<div class="pop-s">Anuncio de <b>${esc(r.grupo)}</b> · ${r.fuera_pct}% de la venta en otras especialidades</div>` : "";
+    ? `<div class="pop-s">${r.canal === "web" ? "Botón que pide" : "Anuncio de"} <b>${esc(r.grupo)}</b> · ${r.fuera_pct}% de la venta en otras especialidades</div>` : "";
   const esp = (r.por_especialidad || []).map(x => `<tr class="${x.del_anuncio ? "" : "fuera"}"><td>${esc(x.grupo)}<small>${x.pacientes} ${x.pacientes === 1 ? "paciente" : "pacientes"}${x.del_anuncio ? " · especialidad del anuncio" : ""}</small></td>
     <td class="r">${fmt$(x.venta)}<small>${r.venta ? Math.round(100 * x.venta / r.venta) + "%" : ""}</small></td><td class="r">${fmt$(x.centro)}</td></tr>`).join("");
   const espT = esp ? `<div class="pop-h">Por especialidad</div><table class="pop-t"><thead><tr><th>Especialidad</th><th class="r">Venta</th><th class="r">Para el centro</th></tr></thead><tbody>${esp}</tbody></table>` : "";
@@ -1127,7 +1162,7 @@ function desgloses(p) {
     <div class="dn">${note ? `<div class="dleg">${note}</div>` : ""}${inner}</div></div>`;
   const nf = S.plat ? "Sin filtro de plataforma: Meta no cruza este corte con la plataforma." : "";
   return `<div class="card-h" style="padding:0 2px 10px"><div class="ic">${I.pie}</div><h2>Desgloses de Meta</h2><div class="sp"></div>
-      <span class="badge info">Solo hasta conversación</span></div>
+      ${S.canal === "todos" ? '<span class="badge mut">Solo anuncios de Meta</span>' : ""}<span class="badge info">Solo hasta conversación</span></div>
     <p class="dleg" style="margin:-4px 2px 12px">Meta informa gasto y conversaciones por estos cortes, pero no citas ni atenciones. La barra destacada es el corte con menor costo por conversación (con al menos 3 conversaciones).</p>
     <div class="grid-d">
       ${card("Facebook vs Instagram", "gasto · costo por conv.", barras(d.plataforma), S.plat ? "Muestra ambas plataformas para comparar." : "")}
@@ -1160,7 +1195,7 @@ function tendencia(p) {
   const line = pts.length > 1 ? `<polyline points="${pts.map(p => p[0] + "," + p[1]).join(" ")}" fill="none" stroke="#4FBECE" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>` : "";
   const dots = pts.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#fff" stroke="#0E7C8C" stroke-width="2"/>${i === pts.length - 1 ? `<text x="${p[0] + 6}" y="${p[1] - 10}" text-anchor="end" font-size="12" font-weight="800" fill="#0E7C8C">${fmt$(p[2])}</text>` : ""}`).join("");
   const ult = t[t.length - 1];
-  return `<div class="card block"><div class="card-h"><div class="ic">${I.trend}</div><h2>Tendencia mensual</h2><span class="sub">últimos 12 meses hasta el fin del rango</span></div>
+  return `<div class="card block"><div class="card-h"><div class="ic">${I.trend}</div><h2>Tendencia mensual</h2><span class="sub">${S.canal === "todos" ? "solo anuncios de Meta · " : ""}últimos 12 meses hasta el fin del rango</span></div>
     <div class="trend"><div class="leg"><span><i style="background:#C3D2DE"></i>Gasto del mes</span><span><i style="background:#4FBECE;height:3px;vertical-align:3px"></i>Costo por conversación</span>${bw < 44 ? "" : "<span>f = frecuencia mínima estimada</span>"}${parcial ? "<span>* mes en curso, parcial</span>" : ""}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gasto mensual y costo por conversación. Último mes: ${fmt$(ult.gasto)} de gasto.">
       <line x1="${pl}" x2="${W - pr}" y1="${H - pb}" y2="${H - pb}" stroke="#DCE6EE"/>${bars}${line}${dots}${lbl}</svg></div></div>`;
@@ -1174,7 +1209,7 @@ function renderKanban() {
   $("#kCount").textContent = fmtN(k.total);
   if (!k.total) {
     const filtros = S.campana || S.plat || S.anuncio || S.esp || S.q || S.gest;
-    $("#v-kanban").innerHTML = estado("", I.users, filtros ? "Nadie coincide con estos filtros" : "Nadie llegó por un anuncio en este rango",
+    $("#v-kanban").innerHTML = estado("", I.users, filtros ? "Nadie coincide con estos filtros" : (S.canal === "web" ? "Nadie llegó desde la página web en este rango" : "Nadie llegó por un anuncio en este rango"),
       filtros ? "Quite algún filtro o amplíe el rango de fechas." : "Cuando alguien escriba por WhatsApp desde un anuncio de Facebook o Instagram, aparecerá aquí con el momento en que está con la agenda.",
       filtros ? '<button class="btn" type="button" onclick="limpiar()">Limpiar filtros</button>' : (S.rango !== "90" ? '<button class="btn" type="button" onclick="setRango(\'90\')">Ver últimos 90 días</button>' : ""));
     return;
@@ -1183,7 +1218,7 @@ function renderKanban() {
   const pick = `<div class="colpick" role="group" aria-label="Etapa">${k.columnas.map(c => `<button type="button" data-c="${c.id}" aria-pressed="${c.id === S.kcol}">
       <span class="dot" style="width:8px;height:8px;border-radius:50%;background:${COLC[c.id]}"></span>${esc(c.label)}<span class="n">${c.n}</span></button>`).join("")}</div>`;
   const conCita = k.columnas.filter(c => c.id === "agendado" || c.id === "atendido").reduce((a, c) => a + c.n, 0);
-  const intro = `<div class="kintro"><span><b>${fmtN(k.total)}</b> ${k.total === 1 ? "persona llegó" : "personas llegaron"} por un anuncio entre el ${fdate(k.rango.desde)} y el ${fdate(k.rango.hasta)}; <b>${fmtN(conCita)}</b> ${conCita === 1 ? "tiene" : "tienen"} cita o ya ${conCita === 1 ? "se atendió" : "se atendieron"}.</span>
+  const intro = `<div class="kintro"><span><b>${fmtN(k.total)}</b> ${k.total === 1 ? "persona llegó" : "personas llegaron"} ${S.canal === "web" ? "desde la página web" : S.canal === "todos" ? "por un anuncio o por la página web" : "por un anuncio"} entre el ${fdate(k.rango.desde)} y el ${fdate(k.rango.hasta)}; <b>${fmtN(conCita)}</b> ${conCita === 1 ? "tiene" : "tienen"} cita o ya ${conCita === 1 ? "se atendió" : "se atendieron"}.</span>
     ${k.por_llamar || S.gest === "por_llamar" ? `<button type="button" class="tocall" id="btnToCall" aria-pressed="${S.gest === "por_llamar"}">${I.phone}${fmtN(k.por_llamar)} por llamar hoy o vencidos</button>` : ""}
     <span class="badge mut" title="Las columnas se calculan solas con la agenda, los mensajes y los avisos de atención. La gestión (llamadas, notas) es una capa encima: toque una tarjeta.">Se actualiza solo</span></div>`;
   const board = `<div class="board">${k.columnas.map(c => colHtml(c)).join("")}</div>`;
@@ -1202,7 +1237,7 @@ function colHtml(c) {
   const more = c.tarjetas.length > lim ? `<button type="button" class="more" onclick="verMas('${c.id}')">Ver ${Math.min(PASO, c.tarjetas.length - lim)} más de ${c.tarjetas.length - lim}</button>` : "";
   return `<div class="col${c.id === S.kcol ? " cur" : ""}" data-c="${c.id}" style="--c:${COLC[c.id]}">
     <div class="col-h"><span class="dot"></span><h3>${esc(c.label)}</h3><span class="n">${c.n}</span></div>
-    <div class="col-help">${esc(c.ayuda)}</div>
+    <div class="col-help">${esc(S.canal === "meta" ? c.ayuda : c.ayuda.replace("Llegó por el anuncio", S.canal === "web" ? "Llegó desde la página web" : "Llegó por un anuncio o por la web").replace("dentro de 90 días del clic", "dentro de 90 días de su llegada"))}</div>
     <div class="cards">${cards || '<div class="col-empty">Nadie en esta etapa</div>'}${more}</div></div>`;
 }
 function verMas(id) {
@@ -1223,7 +1258,9 @@ function gestHtml(g) {
   return `<div class="kc-gest ${cls}">${ic}<span>${esc(txt)}</span>${g.con_nota ? `<span class="nt" title="Tiene nota">${I.note}</span>` : ""}</div>`;
 }
 function cardHtml(t, i, col) {
-  const plat = t.plataforma === "instagram" ? `<span class="chip">${I.ig}Instagram</span>`
+  const w = t.canal === "web" ? (t.web || {}) : null;
+  const plat = w ? `<span class="chip web">${I.globe}Web · ${esc(w.pagina || "")}</span>${w.comuna ? `<span class="chip">${I.pin}${esc(w.comuna)}</span>` : ""}`
+    : t.plataforma === "instagram" ? `<span class="chip">${I.ig}Instagram</span>`
     : t.plataforma === "facebook" ? `<span class="chip">${I.fb}Facebook</span>` : `<span class="chip nd">Plataforma sin dato</span>`;
   const late = (col === "escribio" && t.dias_etapa >= 3) || (col === "vio_horas" && t.dias_etapa >= 2);
   const dias = t.dias_etapa === 0 ? "hoy" : t.dias_etapa + " d";
@@ -1233,8 +1270,9 @@ function cardHtml(t, i, col) {
     <div class="kc-top"><span class="kc-name${t.nombre ? "" : " anon"}">${esc(t.nombre || "Sin nombre registrado")}</span>
       <span class="kc-days${late ? " late" : ""}" title="Días en esta etapa">${dias}</span></div>
     <div class="kc-tel">${esc(t.telefono)}</div>
-    <div class="kc-ad">${I.meg}<span title="${esc(t.anuncio)}">${esc(t.anuncio)}</span></div>
-    <div class="kc-camp" title="${esc(t.campana)}">${esc(t.campana)}</div>
+    <div class="kc-ad">${w ? I.globe : I.meg}<span title="${esc(t.anuncio)}">${esc(t.anuncio)}</span></div>
+    ${w ? `<div class="kc-camp" title="${esc([w.articulo ? "Artículo " + w.articulo : "", w.posicion].filter(Boolean).join(" · ") || t.campana)}">${esc([w.articulo ? "Artículo «" + w.articulo + "»" : "", w.posicion].filter(Boolean).join(" · ") || t.campana)}</div>${w.texto ? `<div class="kc-txt" title="Texto del botón">“${esc(w.texto)}”</div>` : ""}`
+      : `<div class="kc-camp" title="${esc(t.campana)}">${esc(t.campana)}</div>`}
     <div class="kc-chips">${plat}${t.especialidad ? `<span class="chip">${esc(t.especialidad)}</span>` : ""}${t.fuera_del_bot ? `<span class="chip" title="Escribió desde el anuncio y después pagó en caja; se agendó por otra vía">Pagó en caja · fuera del bot</span>` : ""}</div>
     ${t.proxima_cita ? `<div class="kc-cita">${I.cal}Cita ${esc(t.proxima_cita.fecha)}${t.proxima_cita.hora ? " · " + esc(t.proxima_cita.hora) : ""}</div>` : ""}
     ${gestHtml(g)}
@@ -1245,7 +1283,7 @@ function cardHtml(t, i, col) {
 /* ── Ficha de la persona ────────────────────────────────────────────────── */
 const MX = { clave: null, t: null, col: null, d: null, sel: "sin_gestion", timer: null, n: 0, from: null, tab: "seg" };
 const CH_TZ = { timeZone: "America/Santiago" };
-const TL_IC = { clic: I.meg, cita: I.cal, anulada: I.xc, horarios: I.clock, atencion: I.check, pago: I.wallet };
+const TL_IC = { web: I.globe, clic: I.meg, cita: I.cal, anulada: I.xc, horarios: I.clock, atencion: I.check, pago: I.wallet };
 function buscarTarjeta(clave) {
   for (const c of (S.kanban ? S.kanban.columnas : [])) {
     const t = c.tarjetas.find(x => x.clave === clave); if (t) return [t, c];
@@ -1302,11 +1340,16 @@ function setTab(t) {
 function pintarMeta() {
   const t = MX.t, c = MX.col, d = MX.d;
   const plat = (d ? d.plataforma : t.plataforma);
+  const w = d ? (d.canal === "web" ? d.web : null) : (t.canal === "web" ? t.web : null);
   const dias = t.dias_etapa === 0 ? "desde hoy" : t.dias_etapa + (t.dias_etapa === 1 ? " día" : " días");
   $("#mxMeta").innerHTML = `<span class="chip etapa" style="--c:${COLC[c.id]}"><i></i><span>${esc(c.label)} · ${dias}</span></span>
-    <span class="chip" title="${esc(d ? d.anuncio : t.anuncio)}">${I.meg}<span>${esc(d ? d.anuncio : t.anuncio)}</span></span>
+    <span class="chip" title="${esc(d ? d.anuncio : t.anuncio)}">${w ? I.globe : I.meg}<span>${esc(d ? d.anuncio : t.anuncio)}</span></span>
     <span class="chip" title="${esc(d ? d.campana : t.campana)}"><span>${esc(d ? d.campana : t.campana)}</span></span>
-    ${plat === "instagram" ? `<span class="chip">${I.ig}Instagram</span>` : plat === "facebook" ? `<span class="chip">${I.fb}Facebook</span>` : `<span class="chip nd">Plataforma sin dato</span>`}`;
+    ${w ? [w.articulo ? `<span class="chip" title="Artículo del blog"><span>Artículo «${esc(w.articulo)}»</span></span>` : "",
+           w.posicion ? `<span class="chip"><span>${esc(w.posicion)}</span></span>` : "",
+           w.comuna ? `<span class="chip">${I.pin}<span>${esc(w.comuna)}</span></span>` : "",
+           `<span class="chip web">${I.globe}Página web</span>`].join("")
+      : plat === "instagram" ? `<span class="chip">${I.ig}Instagram</span>` : plat === "facebook" ? `<span class="chip">${I.fb}Facebook</span>` : `<span class="chip nd">Plataforma sin dato</span>`}`;
 }
 async function cargarFicha() {
   const clave = MX.clave;
@@ -1396,15 +1439,15 @@ function actualizarTarjeta(clave, sg) {
 function pintarAct() {
   const d = MX.d, p = d.pagos;
   const sum = `<div class="act-sum">
-      <div><span class="lbl">Pagado en caja</span><div class="v">${p.total ? fmt$(p.total) : "—"}</div><small>${p.total ? "Desde el primer clic" : "Sin pagos desde el primer clic"}${p.pacientes > 1 ? " · " + p.pacientes + " pacientes con este teléfono" : ""}</small></div>
-      <div><span class="lbl">Anuncios</span><div class="v">${fmtN(d.clics)} ${d.clics === 1 ? "clic" : "clics"}</div><small>Primero el ${esc(d.primer_clic)}</small></div>
-    </div>${p.antes_del_clic ? `<p class="dleg" style="margin:-4px 0 10px">Ya era paciente: ${p.antes_del_clic} ${p.antes_del_clic === 1 ? "pago" : "pagos"} antes del primer clic (${fmt$(p.antes_total)}), no incluidos aquí.</p>` : ""}`;
+      <div><span class="lbl">Pagado en caja</span><div class="v">${p.total ? fmt$(p.total) : "—"}</div><small>${p.total ? "Desde el primer contacto" : "Sin pagos desde el primer contacto"}${p.pacientes > 1 ? " · " + p.pacientes + " pacientes con este teléfono" : ""}</small></div>
+      <div><span class="lbl">Llegadas</span><div class="v">${[d.clics ? fmtN(d.clics) + (d.clics === 1 ? " clic" : " clics") : "", d.visitas_web ? fmtN(d.visitas_web) + " web" : ""].filter(Boolean).join(" · ") || "—"}</div><small>Primer contacto el ${esc(d.primer_clic)}</small></div>
+    </div>${p.antes_del_clic ? `<p class="dleg" style="margin:-4px 0 10px">Ya era paciente: ${p.antes_del_clic} ${p.antes_del_clic === 1 ? "pago" : "pagos"} antes del primer contacto (${fmt$(p.antes_total)}), no incluidos aquí.</p>` : ""}`;
   const items = d.linea.map((x, i) => `<li class="t-${x.tipo}" style="--i:${i}"><span class="ti">${TL_IC[x.tipo] || I.info}</span>
       <span class="tb"><b>${esc(x.titulo)}</b>${x.tipo === "cita" && x.anulada ? '<span class="badge bad">Anulada</span>' : ""}${x.tipo === "cita" && !x.del_anuncio ? '<span class="badge mut">Sin anuncio</span>' : ""}
-        ${x.detalle ? `<p>${esc(x.detalle)}</p>` : ""}<small>${esc(x.fecha)}${x.hora ? " · " + esc(x.hora) : ""}${x.paciente ? " · " + esc(x.paciente) : ""}${x.plataforma && x.plataforma !== "sin_dato" ? " · " + (x.plataforma === "instagram" ? "Instagram" : "Facebook") : ""}</small></span>
+        ${x.detalle ? `<p>${esc(x.detalle)}</p>` : ""}<small>${esc(x.fecha)}${x.hora ? " · " + esc(x.hora) : ""}${x.paciente ? " · " + esc(x.paciente) : ""}${x.plataforma === "instagram" ? " · Instagram" : x.plataforma === "facebook" ? " · Facebook" : ""}</small></span>
       <span class="tm">${x.monto ? fmt$(x.monto) : ""}</span></li>`).join("");
   $("#mxAct").innerHTML = `<h3>${I.pulse}Línea de tiempo<small>Más reciente primero</small></h3><div class="mx-in">${sum}<ul class="tl">${items}</ul>
-    <p class="dleg" style="margin:10px 0 0">Clics en anuncios, citas del bot, horarios ofrecidos, avisos de atención y pagos en caja (cruce por teléfono, igual que la venta del panel). Sin datos clínicos.</p></div>`;
+    <p class="dleg" style="margin:10px 0 0">Clics en anuncios, llegadas desde la web, citas del bot, horarios ofrecidos, avisos de atención y pagos en caja (cruce por teléfono, igual que la venta del panel). Sin datos clínicos.</p></div>`;
 }
 function chFecha(ts) { return new Date(String(ts).replace(" ", "T") + "Z"); }
 function chAuto(t) { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 140) + "px"; }
@@ -1483,7 +1526,7 @@ document.addEventListener("keydown", e => {
 function setVista(v, push) {
   S.v = v;
   const vp = document.getElementById("vpop"); if (vp) vp.classList.remove("on");
-  document.body.className = "v-" + v;
+  document.body.className = "v-" + v + (S.canal === "web" ? " c-web" : "");
   document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.v === v));
   document.querySelectorAll(".view").forEach(x => x.classList.toggle("on", x.id === "v-" + v));
   if (push) history.replaceState(null, "", location.pathname + location.search + "#" + v);
@@ -1518,6 +1561,14 @@ document.querySelectorAll("#segRango button").forEach(b => b.onclick = () => set
 $("#fDesde").onchange = e => { S.desde = e.target.value; if (S.desde && S.hasta) cargar(); };
 $("#fHasta").onchange = e => { S.hasta = e.target.value; if (S.desde && S.hasta) cargar(); };
 $("#fCampana").onchange = e => { S.campana = e.target.value; S.anuncio = ""; marcarClear(); S.ver = {}; cargar(); };
+document.querySelectorAll("#segCanal button").forEach(b => b.onclick = () => {
+  S.canal = b.dataset.c;
+  document.querySelectorAll("#segCanal button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  document.body.classList.toggle("c-web", S.canal === "web");
+  $("#kTabLbl").textContent = S.canal === "web" ? "Pacientes de la web" : S.canal === "todos" ? "Pacientes de anuncios y web" : "Pacientes de anuncios";
+  S.campana = S.anuncio = ""; $("#fCampana").value = $("#fAnuncio").value = "";
+  marcarClear(); S.ver = {}; cargar();
+});
 $("#fPlat").onchange = e => { S.plat = e.target.value; marcarClear(); S.ver = {}; cargar(); };
 $("#fAnuncio").onchange = e => { S.anuncio = e.target.value; marcarClear(); S.ver = {}; cargar(); };
 $("#fEsp").onchange = e => { S.esp = e.target.value; marcarClear(); S.ver = {}; cargar(); };

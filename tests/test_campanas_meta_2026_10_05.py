@@ -195,7 +195,7 @@ check("kanban: especialidad desde evento si no hay cita",
       col["vio_horas"]["tarjetas"][0]["especialidad"] == "Ecografía")
 permitidas = {"clave", "phone", "telefono", "nombre", "anuncio", "ad_id", "campana", "campaign_id",
               "plataforma", "especialidad", "llegada", "llegada_iso", "proxima_cita", "dias_etapa",
-              "fuera_del_bot", "gestion"}
+              "fuera_del_bot", "gestion", "canal", "web"}
 check("privacidad: la tarjeta no trae campos extra",
       all(set(t) <= permitidas for cc in kb["columnas"] for t in cc["tarjetas"]))
 
@@ -439,6 +439,134 @@ check("conocieron por anuncio: sin respuestas = None", ad3["conocieron"] is None
 check("conocieron por campaña suma sus anuncios",
       next(x for x in pc["campanas"] if x["campaign_id"] == "C1")["conocieron"]["respondieron"] == 2)
 check("conocieron: rango vacío sin error", cm.panel_data(fecha(-400), fecha(-380))["conocieron"]["total"] == 0)
+
+# ── Canal "Página web" y "Todos" sin duplicar (2026-10-05) ─────────────────
+w = cm.parse_web("Hola, quiero agendar una Ecografía. (web: blog)")
+check("parse web: página y botón", w["pagina"] == "Blog" and w["boton"] == "Agendar · Ecografía"
+      and w["especialidad"] == "Ecografía")
+w = cm.parse_web("Hola, soy de Curanilahue y quiero agendar con el otorrino. (web)")
+check("parse web: sin página + comuna → página por comuna", w["pagina"] == "Página por comuna"
+      and w["comuna"] == "Curanilahue" and w["boton"] == "Agendar · Otorrino y fono")
+check("parse web: variantes genéricas juntas",
+      cm.parse_web("Hola, quiero agendar una hora. (web: home)")["boton_id"]
+      == cm.parse_web("Hola, quiero agendar (web: home)")["boton_id"])
+check("parse web: '(web)' al inicio y typos", cm.parse_web("(web) quierolo agendar con el traumatologo soy debuena tarde Curanilahue")["boton"] == "Agendar · Traumatología")
+check("parse web: flotante de comuna = página por comuna", cm.parse_web("Hola (web: comuna_float)")["pagina"] == "Página por comuna")
+check("parse web: sin página ni comuna", cm.parse_web("Hola quiero agendar (web)")["pagina"] == "Sin página identificada")
+w = cm.parse_web("Hola, quiero agendar una Ecografía. (web: blog · eco-abdominal · flotante)")
+check("parse web: marcador extendido página · artículo · botón",
+      w["pagina"] == "Blog" and w["articulo"] == "eco-abdominal" and w["posicion"] == "flotante"
+      and w["boton"] == "Agendar · Ecografía")
+w = cm.parse_web("(web: blog_float) Hola, quiero agendar con el otorrino")
+check("parse web: marcador antiguo blog_float = blog + flotante, al inicio", w["pagina"] == "Blog" and w["posicion"] == "flotante")
+
+meta_antes = cm.panel_data(D30, H)
+kb_meta_antes = cm.kanban_data(D30, H, ahora=AHORA)
+ad2_meta = next(a for a in meta_antes["anuncios"] if a["ad_id"] == "AD2")["personas"]
+with session.db() as c:
+    def wtag(ph, tag, dias):
+        c.execute("INSERT INTO contact_tags (phone, tag, ts) VALUES (?,?,?)", (ph, tag, utc(dias)))
+
+    def win(ph, texto, dias):
+        c.execute("INSERT INTO messages (phone, direction, text, ts) VALUES (?,?,?,?)", (ph, "in", texto, utc(dias)))
+    # W1: botón de ecografía del blog → agenda por el bot y paga
+    wtag("56922220001", "referral_source:web", 4); wtag("56922220001", "referral_source:web_blog", 4)
+    win("56922220001", "Hola, quiero agendar una Ecografía. (web: blog)", 4)
+    c.execute("INSERT INTO citas_bot (phone, id_cita, especialidad, profesional, fecha, hora, created_at, "
+              "paciente_nombre, id_paciente_medilink) VALUES (?,?,?,?,?,?,?,?,?)",
+              ("56922220001", "W1", "Ecografía", "Prof", fecha(3), "11:00", utc(3.9), "Wanda Web", 888001))
+    c.execute("INSERT INTO bi_pagos_caja (pago_id, fecha, id_paciente, id_profesional, monto) VALUES (?,?,?,?,?)",
+              (990101, fecha(-1), 888001, 68, 40000))
+    # W2: página de Curanilahue (solo tag genérico)
+    wtag("56922220002", "referral_source:web", 2)
+    win("56922220002", "Hola, soy de Curanilahue y quiero agendar con el otorrino. (web)", 2)
+    # P5 (anuncio hace 1 d) llegó ANTES por la web → en "todos" cuenta para la web
+    wtag("56911110005", "referral_source:web_home", 6); win("56911110005", "Hola, quiero agendar (web: home)", 6)
+    # P1 (anuncio hace 3 d) llegó DESPUÉS por la web → en "todos" cuenta para el anuncio
+    wtag("56911110001", "referral_source:web_home", 0.5)
+    # fuera del rango
+    wtag("56922220003", "referral_source:web_home", 60)
+    c.commit()
+
+# W5: dos llegadas con el evento nuevo web_origen (+ el tag de la primera)
+with session.db() as c:
+    c.execute("INSERT INTO contact_tags (phone, tag, ts) VALUES (?,?,?)", ("56922220005", "referral_source:web", utc(5)))
+    c.execute("INSERT INTO contact_tags (phone, tag, ts) VALUES (?,?,?)", ("56922220005", "referral_source:web_blog", utc(5)))
+    for dias, meta in ((5.0001, {"pagina": "blog", "articulo": "eco-abdominal", "boton": "flotante",
+                                 "texto": "Hola, quiero agendar una Ecografía. (web: blog · eco-abdominal · flotante)"}),
+                       (1, {"pagina": "home", "articulo": "", "boton": "hero",
+                            "texto": "Hola, quiero agendar (web: home · · hero)"})):
+        c.execute("INSERT INTO conversation_events (phone, event, meta, ts) VALUES (?,?,?,?)",
+                  ("56922220005", "web_origen", json.dumps(meta), utc(dias)))
+    c.commit()
+with session.db() as c:
+    _w5 = [r for r in cm._llegadas_web(c, cm._epoch_ini(HOY - timedelta(days=29)), cm._epoch_fin(HOY))
+           if r["phone"] == "56922220005"]
+check("web_origen: dos llegadas, el tag de la primera no se repite", len(_w5) == 2)
+pw = cm.panel_data(D30, H, canal="web")
+w5 = [a for a in pw["anuncios"] if a["ad_id"].startswith("web:blog:eco-abdominal:flotante:")]
+check("web_origen: fila con artículo y posición", len(w5) == 1 and w5[0]["personas"] == 1
+      and w5[0]["articulo"] == "eco-abdominal" and w5[0]["posicion"] == "Botón flotante")
+check("web_origen: en el panel cuenta en su PRIMERA llegada (no en la de inicio)",
+      not any(a["ad_id"].startswith("web:home:-:hero:") for a in pw["anuncios"]))
+kw = pw["kpis"]
+check("web: personas del canal", kw["personas"] == 5)
+check("web: sin gasto, resultado = para el centro, sin retorno",
+      kw["gasto"] == 0 and kw["resultado"] == kw["centro"] and kw["retorno"] is None and kw["cac_cita"] is None)
+ecob = next((a for a in pw["anuncios"] if a["ad_id"] == "web:blog:-:-:agendar-ecografia"), None)
+check("web: el botón es la fila, la página es la campaña",
+      ecob is not None and ecob["campana"] == "Web · Blog" and ecob["anuncio"] == "Agendar · Ecografía"
+      and ecob["campaign_id"] == "web:blog")
+check("web: cita y venta del botón", ecob["citas"] == 1 and ecob["venta"] == 40000 and ecob["pagaron"] == 1)
+check("web: especialidad pedida = la del botón", ecob["grupo"] == "Ecografía")
+check("web: página por comuna presente",
+      any(x["campaign_id"] == "web:comuna" for x in pw["campanas"]))
+check("web: desgloses, tendencia y alertas vacíos",
+      not any(pw["desgloses"].values()) and pw["tendencia"] == [] and pw["alertas"] == [])
+check("web: fila marcada canal web y activa", ecob["canal"] == "web" and ecob["activo"] is True)
+check("web: filtro por página", cm.panel_data(D30, H, canal="web", campana="web:blog")["kpis"]["personas"] == 2)
+
+pm = cm.panel_data(D30, H, canal="meta")
+check("meta: no cambia por la web", pm["kpis"]["personas"] == meta_antes["kpis"]["personas"]
+      and pm["kpis"]["venta"] == meta_antes["kpis"]["venta"])
+pt = cm.panel_data(D30, H, canal="todos")
+check("todos: sin duplicar personas", pt["kpis"]["personas"] == meta_antes["kpis"]["personas"] + 3)
+check("todos: quien llegó primero por la web sale del anuncio",
+      next(a for a in pt["anuncios"] if a["ad_id"] == "AD2")["personas"] == ad2_meta - 1)
+check("todos: gasto solo de Meta", pt["kpis"]["gasto"] == meta_antes["kpis"]["gasto"])
+check("todos: venta = meta + web", pt["kpis"]["venta"] == meta_antes["kpis"]["venta"] + 40000)
+
+kbw = cm.kanban_data(D30, H, ahora=AHORA, canal="web")
+cw = {t["clave"]: t for cc in kbw["columnas"] for t in cc["tarjetas"]}
+check("kanban web: personas", kbw["total"] == 5)
+check("kanban web: tarjeta con la última llegada", cw["922220005"]["web"]["posicion"] == "Portada (hero)"
+      and cw["922220005"]["web"]["pagina"] == "Inicio")
+check("kanban web: tarjeta con página y botón", cw["922220001"]["web"]["pagina"] == "Blog"
+      and cw["922220001"]["web"]["boton"] == "Agendar · Ecografía" and cw["922220001"]["canal"] == "web")
+check("kanban web: comuna", cw["922220002"]["web"]["comuna"] == "Curanilahue")
+check("kanban web: agendado por el bot", any(t["clave"] == "922220001" for cc in kbw["columnas"]
+                                              if cc["id"] == "agendado" for t in cc["tarjetas"]))
+kbt = cm.kanban_data(D30, H, ahora=AHORA, canal="todos")
+check("kanban todos: una tarjeta por persona", kbt["total"] == kb_meta_antes["total"] + 3)
+ct = {t["clave"]: t for cc in kbt["columnas"] for t in cc["tarjetas"]}
+check("kanban todos: P5 en web, P1 en anuncio", ct["911110005"]["canal"] == "web" and ct["911110001"]["canal"] == "meta")
+check("kanban meta: P5 sigue en su anuncio",
+      any(t["clave"] == "911110005" and t["canal"] == "meta"
+          for cc in cm.kanban_data(D30, H, ahora=AHORA)["columnas"] for t in cc["tarjetas"]))
+
+fw = cm.persona_data("922220001", ahora=AHORA)
+check("ficha: persona web se abre (candado ampliado)", fw["canal"] == "web" and fw["web"]["boton"] == "Agendar · Ecografía")
+check("ficha: llegada web en la línea de tiempo",
+      any(x["tipo"] == "web" and "Agendar · Ecografía" in x["detalle"] for x in fw["linea"]))
+check("ficha: canal meta no abre a una persona solo web", _err(cm.persona_data, "922220001", canal="meta") == 404)
+check("ficha: sigue cerrada para quien no llegó por anuncio ni web", _err(cm.persona_data, "933333333") == 404)
+r = cli.get(f"{base}/922220001?canal=web", headers=hd)
+check("GET ficha web dueño 200", r.status_code == 200)
+check("GET ficha web sin token 401", cli.get(f"{base}/922220001?canal=web").status_code == 401)
+r = cli.get(f"/alma/api/campanas-meta/panel?desde={D30}&hasta={H}&canal=web", headers=hd)
+check("GET panel canal=web", r.status_code == 200 and r.json()["canal"] == "web")
+r = cli.get(f"/alma/api/campanas-meta/kanban?desde={D30}&hasta={H}&canal=todos", headers=hd)
+check("GET kanban canal=todos", r.status_code == 200 and r.json()["canal"] == "todos")
 
 print(f"\n{len(FALLAS)} fallas")
 sys.exit(1 if FALLAS else 0)

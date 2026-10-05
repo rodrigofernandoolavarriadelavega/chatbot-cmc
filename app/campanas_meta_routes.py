@@ -190,6 +190,8 @@ def _mascara(phone: str | None) -> str:
 
 def _plat(p: str | None) -> str:
     p = (p or "").strip().lower()
+    if p == "web":
+        return "web"
     return p if p in _PLATS else "sin_dato"
 
 
@@ -278,6 +280,322 @@ def _pasa_filtros(info: dict, plataforma: str, campana: str | None, plat_filtro:
     if plat_filtro and _plat(plataforma) != plat_filtro:
         return False
     return True
+
+
+# ── Canal: anuncios Meta, página web o ambos ────────────────────────────────
+# La web (centromedicocarampangue.cl) no tiene gasto ni anuncios: los botones
+# de WhatsApp mandan "(web: <página>)" y el bot guarda `referral_source:web` y
+# `referral_source:web_<página>` en contact_tags (con la fecha de la PRIMERA
+# vez, INSERT OR IGNORE). Cada página se trata como un "anuncio" sintético
+# `web:<página>` dentro de la campaña "Página web". En "todos", cada persona
+# cuenta solo en el canal de su PRIMER contacto del rango: no se duplica.
+
+CANALES = ("meta", "web", "todos")
+_WEB_PAG_LBL = {"home": "Inicio", "blog": "Blog", "comuna": "Página por comuna",
+                "landing_ortodoncia": "Landing de ortodoncia", "v2": "Portada v2",
+                "sin_pagina": "Sin página identificada", "agendador": "Agendador web"}
+# Marcadores antiguos que traían la posición pegada a la página.
+_WEB_PAG_ALIAS = {"comuna_float": ("comuna", "flotante"), "blog_float": ("blog", "flotante"),
+                  "v2-hero": ("v2", "hero")}
+_WEB_POS_LBL = {"hero": "Portada (hero)", "flotante": "Botón flotante", "float": "Botón flotante",
+                "header": "Encabezado", "footer": "Pie de página", "cta": "Llamado final"}
+
+
+def _pag_pos(pag: str, pos: str = "") -> tuple[str, str]:
+    pag = (pag or "").strip().lower()
+    if pag in _WEB_PAG_ALIAS:
+        p2, p_pos = _WEB_PAG_ALIAS[pag]
+        return p2, pos or p_pos
+    return pag, pos
+
+
+def _es_posicion(x: str) -> bool:
+    x = (x or "").lower()
+    return x in _WEB_POS_LBL or x.startswith("cuerpo")
+
+
+def _pos_lbl(pos: str) -> str:
+    if not pos:
+        return ""
+    if pos.startswith("cuerpo"):
+        n = pos.split("-", 1)[1] if "-" in pos else ""
+        return "En el texto" + (f" ({n})" if n else "")
+    return _WEB_POS_LBL.get(pos, pos.replace("-", " ").replace("_", " ").capitalize())
+VENTANA_CITA_WEB_DIAS = 90
+VENTANA_MSG_WEB_SEG = 120   # el primer mensaje cae a ±2 min de la fecha del tag
+
+# Comunas que aparecen en los textos de los botones (página de cada comuna).
+_COMUNAS = [("Curanilahue", "curanilahue"), ("Los Álamos", "los alamos"), ("Arauco", "arauco"),
+            ("Lebu", "lebu"), ("Cañete", "canete"), ("Carampangue", "carampangue"),
+            ("Tirúa", "tirua"), ("Contulmo", "contulmo"), ("Laraquete", "laraquete"),
+            ("Ramadillas", "ramadillas"), ("Concepción", "concepcion"), ("Coronel", "coronel"),
+            ("Lota", "lota"), ("Santa Juana", "santa juana")]
+_RE_WEB = None
+
+
+def _canal(c: str | None) -> str:
+    return c if c in CANALES else "meta"
+
+
+def _es_web_camp(campana: str | None) -> bool:
+    return bool(campana) and campana.startswith("web:")
+
+
+def _web_lbl(pag: str) -> str:
+    return _WEB_PAG_LBL.get(pag) or (pag.replace("_", " ").replace("-", " ").strip().capitalize() or "Sin página")
+
+
+def parse_web(texto: str | None) -> dict:
+    """Lee el texto que pre-escribe cada botón del sitio:
+    "Hola, quiero agendar una Ecografía. (web: blog)" → página blog, botón
+    "Agendar · Ecografía", especialidad Ecografía. Con el marcador extendido
+    "(web: blog · eco-abdominal · flotante)" trae además el artículo y la
+    posición del botón; en el marcador simple el artículo NO viene."""
+    import re
+    global _RE_WEB
+    if _RE_WEB is None:
+        _RE_WEB = re.compile(r"\(\s*web\s*(?:[:：]\s*([^()]{0,120}?))?\s*\)", re.I)
+    t = (texto or "").strip()
+    m = _RE_WEB.search(t)
+    partes = [re.sub(r"[^\w-]", "", x.strip().lower()) for x in re.split(r"[·|/]", (m.group(1) or "") if m else "")]
+    partes = [x for x in partes if x] + ["", "", ""]
+    pag, articulo, pos = partes[0], partes[1][:80], partes[2][:40]
+    if articulo and not pos and _es_posicion(articulo):   # "(web: home · hero)"
+        articulo, pos = "", articulo
+    pag, pos = _pag_pos(pag, pos)
+    resto = _RE_WEB.sub(" ", t) if m else t
+    resto = " ".join(re.sub(r"\d+", " ", resto).split()).strip(" .,;:-")
+    n = " " + re.sub(r"[^a-z ]+", " ", _sin_tildes(resto)) + " "
+    n = " ".join(n.split())
+    comuna = next((lbl for lbl, k in _COMUNAS if re.search(r"(^| )" + k + r"( |$)", n)), "")
+    explicita = bool(pag)
+    if not pag:
+        pag = "comuna" if comuna else "sin_pagina"
+    esp = _grupo(resto)
+    if "vi el blog" in n or "lei el blog" in n or "lei en el blog" in n:
+        intent = "blog"
+    elif "agend" in n or " hora" in " " + n or "reserv" in n:
+        intent = "agendar"
+    else:
+        intent = ""
+    if intent == "agendar":
+        boton = f"Agendar · {esp}" if esp else "Agendar (genérico)"
+    elif intent == "blog":
+        boton = f"Leyó el blog · {esp}" if esp else "Leyó el blog"
+    elif esp:
+        boton = f"Consulta · {esp}"
+    else:
+        sin_saludo = re.sub(r"^(hola|buen[oa]s?( dias| tardes| noches)?|buenas)\s*[,.!]*\s*", "", resto, flags=re.I)
+        sin_saludo = sin_saludo.strip(" .,;:!-")
+        boton = (sin_saludo[:1].upper() + sin_saludo[1:])[:70] if sin_saludo else "Solo saludo (sin pedido)"
+    slug = re.sub(r"[^a-z0-9]+", "-", _sin_tildes(boton)).strip("-") or "sin-texto"
+    return {"pagina_id": pag, "pagina": _web_lbl(pag), "pagina_explicita": explicita, "articulo": articulo,
+            "posicion": pos, "boton": boton, "boton_id": slug,
+            "texto": resto, "especialidad": esp or "", "comuna": comuna}
+
+
+_WEB_INFO: dict[str, dict] = {}   # ad_id web → etiquetas (se llena al leer las llegadas)
+
+
+def _info_web(ad_id: str) -> dict:
+    if ad_id in _WEB_INFO:
+        return dict(_WEB_INFO[ad_id])
+    partes = (ad_id.split(":") + ["", "", "", ""])[1:5]
+    pag = partes[0] or "sin_pagina"
+    boton = partes[3].replace("-", " ").capitalize() if partes[3] else "Sin texto"
+    return {"ad_id": ad_id, "anuncio": boton, "campaign_id": f"web:{pag}",
+            "campana": "Web · " + _web_lbl(pag), "pagina": _web_lbl(pag), "boton": boton, "esp_boton": "",
+            "articulo": partes[1] if partes[1] != "-" else "", "posicion": _pos_lbl(partes[2] if partes[2] != "-" else ""),
+            "detalle": ""}
+
+
+def _info(mapa: dict, ad_id: str, headline: str = "") -> dict:
+    if (ad_id or "").startswith("web:"):
+        return _info_web(ad_id)
+    return _info_ad(mapa, ad_id, headline)
+
+
+def _llegadas_web(c, e0: int | None = None, e1: int | None = None,
+                  claves: set[str] | None = None) -> list[dict]:
+    """Llegadas desde la web, con la misma forma que una fila de meta_referrals.
+
+    Fuente principal: el evento `web_origen` (desde oct-2026), uno por CADA
+    llegada, con página, artículo, posición del botón y el texto. Respaldo para
+    lo histórico: el tag `referral_source:web*` (solo la PRIMERA vez) más el
+    mensaje entrante "(web…)" más cercano a esa fecha (±2 min). Un tag que cae
+    a menos de 5 min de un `web_origen` es la misma llegada y no se repite.
+    Incluye el agendador web (`cita_origen` canal 'web') si alguna vez tiene filas."""
+    def _ok(k):
+        return claves is None or k in claves
+
+    like = ("%" + next(iter(claves))) if claves is not None and len(claves) == 1 else None
+    eventos: list[tuple[str, str, int, dict]] = []   # (clave, phone, ts, meta)
+    try:
+        q = "SELECT phone, ts, meta FROM conversation_events WHERE event='web_origen'"
+        for r in c.execute(q + (" AND phone LIKE ?" if like else ""), (like,) if like else ()):
+            k = _clave(r["phone"])
+            if not _ok(k):
+                continue
+            try:
+                meta = json.loads(r["meta"] or "{}")
+            except (ValueError, TypeError):
+                meta = {}
+            eventos.append((k, r["phone"], _utc_txt_epoch(r["ts"]) or 0, meta))
+    except Exception:
+        pass
+    ev_eps: dict[str, list[int]] = defaultdict(list)
+    for k, _, ep, _m in eventos:
+        ev_eps[k].append(ep)
+
+    por: dict[str, dict] = {}
+    try:
+        filas = c.execute("SELECT phone, tag, ts FROM contact_tags WHERE tag LIKE 'referral_source:web%'").fetchall()
+    except Exception:
+        filas = []
+    for r in filas:
+        tag = (r["tag"] or "").strip().lower()
+        if tag == "referral_source:web":
+            pag = None
+        elif tag.startswith("referral_source:web_"):
+            pag = tag.split("referral_source:web_", 1)[1].strip() or None
+        else:
+            continue
+        k = _clave(r["phone"])
+        if not _ok(k):
+            continue
+        ep = _utc_txt_epoch(r["ts"]) or 0
+        d = por.setdefault(k, {"phone": r["phone"], "gen": None, "pags": {}})
+        if pag is None:
+            d["gen"] = ep if d["gen"] is None else min(d["gen"], ep)
+        else:
+            d["pags"][pag] = min(d["pags"].get(pag, ep), ep)
+    agendador: dict[str, tuple[str, int]] = {}
+    try:
+        for r in c.execute("SELECT b.phone, o.created_at FROM cita_origen o JOIN citas_bot b ON b.id_cita = o.id_cita "
+                           "WHERE lower(o.canal) = 'web'"):
+            k = _clave(r["phone"])
+            if not _ok(k):
+                continue
+            ep = _utc_txt_epoch(r["created_at"]) or 0
+            if k not in agendador or ep < agendador[k][1]:
+                agendador[k] = (r["phone"], ep)
+    except Exception:
+        pass
+    msgs: dict[str, list[tuple[int, str]]] = defaultdict(list)
+    if por:
+        q = "SELECT phone, text, ts FROM messages WHERE direction='in' AND text LIKE '%(web%'"
+        try:
+            for r in c.execute(q + (" AND phone LIKE ?" if like else ""), (like,) if like else ()):
+                k = _clave(r["phone"])
+                if k in por:
+                    msgs[k].append((_utc_txt_epoch(r["ts"]) or 0, r["text"] or ""))
+        except Exception:
+            pass
+    out = []
+
+    def _fila(phone, ep, texto, pag_tag="", articulo="", pos="", fuente="tag"):
+        w = parse_web(texto) if texto else {"pagina_id": "sin_pagina", "pagina_explicita": False, "articulo": "",
+                                            "posicion": "", "boton": "Sin texto registrado",
+                                            "boton_id": "sin-texto", "texto": "", "especialidad": "", "comuna": ""}
+        pag, pos2 = _pag_pos(pag_tag, pos or w["posicion"])
+        if not pag or (w["pagina_explicita"] and fuente == "tag"):
+            pag = w["pagina_id"] if (w["pagina_explicita"] or not pag) else pag
+        art = articulo or w["articulo"]
+        ad_id = f"web:{pag}:{art or '-'}:{pos2 or '-'}:{w['boton_id']}"
+        pag_lbl, pos_lbl = _web_lbl(pag), _pos_lbl(pos2)
+        det = " · ".join(x for x in (f"Artículo «{art}»" if art else "", pos_lbl) if x)
+        _WEB_INFO[ad_id] = {"ad_id": ad_id, "anuncio": w["boton"], "campaign_id": f"web:{pag}",
+                            "campana": "Web · " + pag_lbl, "pagina": pag_lbl, "boton": w["boton"],
+                            "esp_boton": w["especialidad"], "articulo": art, "posicion": pos_lbl, "detalle": det}
+        out.append({"phone": phone, "source_id": ad_id, "headline": "", "body": "", "plataforma": "web",
+                    "ts": ep, "origen": "web", "web": {"pagina": pag_lbl, "articulo": art, "posicion": pos_lbl,
+                                                      "boton": w["boton"], "texto": w["texto"],
+                                                      "comuna": w["comuna"], "especialidad": w["especialidad"],
+                                                      "fuente": fuente}})
+
+    def _rango_ok(ep):
+        return e0 is None or (e0 <= ep < e1)
+
+    for k, phone, ep, meta in eventos:
+        if _rango_ok(ep):
+            art, pos = (meta.get("articulo") or ""), (meta.get("boton") or "")
+            if art and not pos and _es_posicion(art):   # el bot guardó la posición como artículo
+                art, pos = "", art
+            _fila(phone, ep, meta.get("texto") or "", meta.get("pagina") or "", art, pos, fuente="evento")
+    for k, d in por.items():
+        pags = d["pags"] or ({"": d["gen"]} if d["gen"] is not None else {})
+        for pag, ep in pags.items():
+            if not _rango_ok(ep) or any(abs(ep - x) <= 300 for x in ev_eps.get(k, ())):
+                continue
+            cerca = [m for m in msgs.get(k, []) if abs(m[0] - ep) <= VENTANA_MSG_WEB_SEG]
+            texto = min(cerca, key=lambda m: abs(m[0] - ep))[1] if cerca else ""
+            _fila(d["phone"], ep, texto, pag)
+    for k, (phone, ep) in agendador.items():
+        if _rango_ok(ep):
+            _fila(phone, ep, "", "agendador", fuente="agendador")
+    return out
+
+
+def _llegadas(c, canal: str, e0: int, e1: int, primera_web: bool = False) -> list[dict]:
+    """Contactos del rango según el canal, ordenados por fecha. En 'todos'
+    cada persona queda solo con las llegadas del canal de su primer contacto."""
+    filas: list[dict] = []
+    if canal in ("meta", "todos"):
+        filas += [{**dict(r), "origen": "meta"} for r in c.execute(
+            "SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals WHERE ts >= ? AND ts < ?",
+            (e0, e1))]
+    if canal in ("web", "todos"):
+        filas += _llegadas_web(c, e0, e1)
+    filas.sort(key=lambda r: r["ts"])
+    if primera_web:   # una persona con varias llegadas web cuenta en la primera del rango
+        vistos: set[str] = set()
+        f2 = []
+        for r in filas:
+            if r["origen"] == "web":
+                k = _clave(r["phone"])
+                if k in vistos:
+                    continue
+                vistos.add(k)
+            f2.append(r)
+        filas = f2
+    if canal == "todos":
+        primero: dict[str, str] = {}
+        for r in filas:
+            primero.setdefault(_clave(r["phone"]), r["origen"])
+        filas = [r for r in filas if primero[_clave(r["phone"])] == r["origen"]]
+    return filas
+
+
+def _citas_web(c, llegada: dict[str, tuple[int, str]], hasta_epoch: int) -> list[dict]:
+    """Citas del bot de personas que llegaron por la web: creadas desde la
+    llegada y hasta 90 días después (y antes del fin del rango), una por
+    (persona, especialidad)."""
+    if not llegada:
+        return []
+    t_min = min(v[0] for v in llegada.values()) - 3600
+    filas = c.execute(
+        "SELECT phone, id_cita, especialidad, fecha, hora, created_at, cancel_detected_at, "
+        "confirmation_status, id_paciente_medilink FROM citas_bot WHERE created_at >= ? AND created_at < ? "
+        "ORDER BY created_at", (_utc_txt(t_min), _utc_txt(hasta_epoch))).fetchall()
+    vistas, out = set(), []
+    for r in filas:
+        d = dict(r)
+        k = _clave(d["phone"])
+        if k not in llegada:
+            continue
+        ts, ad_id = llegada[k]
+        ce = _utc_txt_epoch(d["created_at"]) or 0
+        if ce < ts - 3600 or ce > ts + VENTANA_CITA_WEB_DIAS * 86400:
+            continue
+        kk = (k, (d["especialidad"] or "").strip().lower())
+        if kk in vistas:
+            continue
+        vistas.add(kk)
+        d.update(_info_web(ad_id))
+        d["clave"] = k
+        d["created_epoch"] = ce
+        out.append(d)
+    return out
 
 
 def _purchases(c, desde_epoch: int) -> dict[str, list[int]]:
@@ -399,6 +717,9 @@ _GRUPOS = [
     ("Kinesiología", ("kinesio", "kine ", "kine·", "kine-", "masoterap", "rehabilit")),
     ("Nutrición", ("nutri", "diabet")),
     ("Cardiología", ("cardio",)),
+    ("Traumatología", ("traumato", "tramatolog")),
+    ("Gastroenterología", ("gastro",)),
+    ("Neurología", ("neurolog",)),
     ("Ginecología", ("ginecolog", "matrona")),
     ("Otorrino y fono", ("otorrino", "fonoaudio")),
     ("Medicina general", ("medicina general", "medicina familiar", "mg ", "mg·", "medico", "bono fonasa",
@@ -711,8 +1032,8 @@ def _cerrar(a: dict) -> dict:
         "gasto": g, "impresiones": a["impresiones"], "clics": a["clics"],
         "conversaciones": a["conv"], "personas": len(a["personas"]),
         "citas": citas, "atendidos": aten,
-        "cac_conv": _div(g, a["conv"]), "cac_cita": _div(g, citas),
-        "cac_atendido": _div(g, aten),
+        "cac_conv": _div(g, a["conv"]) if g else None, "cac_cita": _div(g, citas) if g else None,
+        "cac_atendido": _div(g, aten) if g else None,
         "venta": round(a["venta"]),
         "retorno": round(a["venta"] / g, 2) if g else None,
         # lo que le queda al centro (tras honorarios) por cada $1 de gasto en Meta;
@@ -748,6 +1069,14 @@ def _orden_cac(x: dict):
     if x["gasto"] > 0:
         return (1, -x["gasto"])
     return (2, -x["personas"])
+
+
+def _orden_canal(x: dict):
+    # Anuncios por costo por cita; la web (sin gasto) al final, por lo que
+    # dejó para el centro y luego por personas.
+    if x.get("canal") == "web":
+        return (3, -x["centro"], -x["personas"])
+    return _orden_cac(x)
 
 
 _DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -798,15 +1127,20 @@ def _lbl_hora(f):
 
 
 def panel_data(desde: str | None = None, hasta: str | None = None,
-               campana: str | None = None, plataforma: str | None = None) -> dict:
+               campana: str | None = None, plataforma: str | None = None,
+               canal: str | None = None) -> dict:
     d, h = _rango(desde, hasta)
+    canal = _canal(canal)
     plat = plataforma if plataforma in (*_PLATS, "sin_dato") else None
+    if canal == "web":
+        plat = None   # la web no tiene plataforma
     e0, e1 = _epoch_ini(d), _epoch_fin(h)
     with db() as c:
         mapa = _mapa_anuncios(c)
         ins = _insights_filas(c, d, h, campana, plat if plat in _PLATS else None)
         # 'sin_dato' no existe en Meta: el gasto no se puede filtrar así.
-        if plat == "sin_dato":
+        # La web no tiene gasto publicitario registrado.
+        if plat == "sin_dato" or canal == "web" or _es_web_camp(campana):
             ins = []
         por_ad: dict[str, dict] = defaultdict(_acum)
         tot = _acum()
@@ -818,21 +1152,27 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                 a["clics"] += f["clicks"] or 0
                 a["conv"] += f["conversaciones"] or 0
 
-        # Personas captadas: teléfonos únicos que llegaron por anuncio.
-        clics: dict[str, tuple[int, str]] = {}   # clave → (primer clic, ad_id)
-        for r in c.execute(
-                "SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
-                "WHERE ts >= ? AND ts < ?", (e0, e1)):
-            info = _info_ad(mapa, r["source_id"] or "", r["headline"] or "")
+        # Personas captadas: teléfonos únicos que llegaron por el canal.
+        clics: dict[str, tuple[int, str]] = {}   # clave → (primer contacto, ad_id)
+        origen_k: dict[str, str] = {}
+        for r in _llegadas(c, canal, e0, e1, primera_web=True):
+            info = _info(mapa, r["source_id"] or "", r["headline"] or "")
             if not _pasa_filtros(info, r["plataforma"], campana, plat):
                 continue
             k = _clave(r["phone"])
             por_ad[info["ad_id"]]["personas"].add(k)
             tot["personas"].add(k)
+            origen_k.setdefault(k, r["origen"])
             if k not in clics or r["ts"] < clics[k][0]:
                 clics[k] = (r["ts"], info["ad_id"])
 
-        citas = _citas_atribuidas(c, e0, e1, mapa, campana, plat)
+        citas = []
+        if canal in ("meta", "todos") and not _es_web_camp(campana):
+            citas = _citas_atribuidas(c, e0, e1, mapa, campana, plat)
+            if canal == "todos":   # quien llegó primero por la web cuenta solo allá
+                citas = [ci for ci in citas if origen_k.get(ci["clave"]) != "web"]
+        if canal in ("web", "todos"):
+            citas += _citas_web(c, {k: v for k, v in clics.items() if v[1].startswith("web:")}, e1)
         compras = _purchases(c, e0)
         for ci in citas:
             ci["atendido"] = any(t >= ci["created_epoch"] for t in compras.get(ci["clave"], []))
@@ -856,6 +1196,13 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             if g:
                 esp_citas[ci["ad_id"]].append(g)
         for ad_id, a in por_ad.items():
+            if ad_id.startswith("web:"):
+                g = _info_web(ad_id)["esp_boton"] or None
+                if not g and esp_citas.get(ad_id):
+                    g = max(set(esp_citas[ad_id]), key=esp_citas[ad_id].count)
+                a["grupo"] = g
+                a["fuera"] = sum(v["venta"] for pid, v in a["profs"].items() if g and _grupo_prof(pid) != g)
+                continue
             info = _info_ad(mapa, ad_id)
             ref = c.execute("SELECT headline, body FROM meta_referrals WHERE source_id=? "
                             "ORDER BY ts DESC LIMIT 1", (ad_id,)).fetchone() if ad_id else None
@@ -886,14 +1233,14 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         anuncios, por_camp = [], defaultdict(_acum)
         camp_nombre: dict[str, str] = {}
         for ad_id, a in por_ad.items():
-            info = _info_ad(mapa, ad_id)
-            if ad_id and ad_id not in mapa:
+            info = _info(mapa, ad_id)
+            if ad_id and ad_id not in mapa and not ad_id.startswith("web:"):
                 # nombre desde el headline del referral, si lo hay
                 hl = c.execute("SELECT headline FROM meta_referrals WHERE source_id=? AND headline != '' "
                                "ORDER BY ts DESC LIMIT 1", (ad_id,)).fetchone()
                 if hl:
                     info["anuncio"] = hl[0]
-            fila = {**info, **_cerrar(a)}
+            fila = {**info, **_cerrar(a), "canal": "web" if ad_id.startswith("web:") else "meta"}
             anuncios.append(fila)
             cid = info["campaign_id"]
             camp_nombre[cid] = info["campana"]
@@ -910,20 +1257,23 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         for pc in por_camp.values():
             gs = pc.pop("grupos", set()) - {None}
             pc["grupo"] = next(iter(gs)) if len(gs) == 1 else ("Varias" if gs else None)
-        campanas = [{"campaign_id": cid, "campana": camp_nombre[cid],
+        campanas = [{"campaign_id": cid, "campana": camp_nombre[cid], "canal": "web" if _es_web_camp(cid) else "meta",
                      "n_anuncios": sum(1 for x in anuncios if x["campaign_id"] == cid),
                      **_cerrar(a)} for cid, a in por_camp.items()]
         estados = _estados_meta()
         recientes = _con_gasto_reciente(c) if not estados else set()
         for x in anuncios:
+            if x["canal"] == "web":   # la web no se pausa: siempre "activa"
+                x["estado"], x["activo"] = "WEB", True
+                continue
             st = estados.get(x["ad_id"]) if estados else None
             x["estado"] = st or ("ACTIVE" if x["ad_id"] in recientes else "")
             x["activo"] = (st == "ACTIVE") if estados else (x["ad_id"] in recientes)
         for cp in campanas:
             cp["activo"] = any(x["activo"] for x in anuncios if x["campaign_id"] == cp["campaign_id"])
         estado_fuente = "meta" if estados else "gasto_reciente"
-        anuncios.sort(key=_orden_cac)
-        campanas.sort(key=_orden_cac)
+        anuncios.sort(key=_orden_canal)
+        campanas.sort(key=_orden_canal)
 
         # Desgloses (solo hasta conversación)
         des = {
@@ -946,7 +1296,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         # Tendencia mensual: 12 meses hasta el fin del rango.
         _m = h.year * 12 + h.month - 1 - 11          # 11 meses antes del mes de `hasta`
         t0 = date(_m // 12, _m % 12 + 1, 1)
-        tend_f = [] if plat == "sin_dato" else _insights_filas(c, t0, h, campana, plat if plat in _PLATS else None)
+        tend_f = [] if (plat == "sin_dato" or canal == "web") else _insights_filas(c, t0, h, campana, plat if plat in _PLATS else None)
         meses: dict[str, dict] = {}
         for f in tend_f:
             m = meses.setdefault(f["fecha"][:7], {"gasto": 0.0, "conv": 0, "imp": 0, "alc": 0})
@@ -972,14 +1322,18 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                                 "texto": "Saturado: la misma gente lo ve una y otra vez."})
         alertas.sort(key=lambda a: (a["tipo"] != "sin_citas", -(a.get("gasto") or 0)))
 
+        if canal == "web":   # desgloses, tendencia y alertas son solo de Meta
+            des = {kk: [] for kk in des}
+            alertas = []
         _uf = c.execute("SELECT MAX(fecha) FROM meta_insights_diario").fetchone()[0]
         hay_insights = _uf is not None
-        opciones = _opciones(c, mapa)
+        opciones = _opciones(c, mapa, canal)
 
     k = _cerrar(tot)
     return {
         "rango": {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": (h - d).days + 1},
-        "filtros": {"campana": campana or "", "plataforma": plat or ""},
+        "filtros": {"campana": campana or "", "plataforma": plat or "", "canal": canal},
+        "canal": canal,
         "kpis": k,
         "campanas": campanas,
         "anuncios": anuncios,
@@ -999,17 +1353,25 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
     }
 
 
-def _opciones(c, mapa: dict) -> dict:
+def _opciones(c, mapa: dict, canal: str = "meta") -> dict:
     camps: dict[str, str] = {}
-    for m in mapa.values():
-        if m["campaign_id"]:
-            camps[m["campaign_id"]] = m["campaign_name"] or m["campaign_id"]
-    ads = [{"id": a, "nombre": m["ad_name"] or a, "campaign_id": m["campaign_id"]}
-           for a, m in mapa.items() if a]
+    ads = []
+    if canal in ("meta", "todos"):
+        for m in mapa.values():
+            if m["campaign_id"]:
+                camps[m["campaign_id"]] = m["campaign_name"] or m["campaign_id"]
+        ads = [{"id": a, "nombre": m["ad_name"] or a, "campaign_id": m["campaign_id"]}
+               for a, m in mapa.items() if a]
+    if canal in ("web", "todos"):
+        for x in sorted({r["source_id"] for r in _llegadas_web(c)}):
+            i = _info_web(x)
+            camps[i["campaign_id"]] = i["campana"]
+            ads.append({"id": x, "nombre": i["campana"] + " · " + i["anuncio"], "campaign_id": i["campaign_id"]})
     ads.sort(key=lambda x: x["nombre"].lower())
     esp = sorted({(r[0] or "").strip() for r in c.execute(
         "SELECT DISTINCT especialidad FROM citas_bot WHERE ad_source_id IS NOT NULL "
-        "AND ad_source_id != ''") if (r[0] or "").strip()}, key=str.lower)
+        "AND ad_source_id != ''" if canal == "meta" else
+        "SELECT DISTINCT especialidad FROM citas_bot") if (r[0] or "").strip()}, key=str.lower)
     return {"campanas": sorted(({"id": k, "nombre": v} for k, v in camps.items()),
                                key=lambda x: x["nombre"].lower()),
             "anuncios": ads, "especialidades": esp}
@@ -1035,7 +1397,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
                 campana: str | None = None, anuncio: str | None = None,
                 plataforma: str | None = None, especialidad: str | None = None,
                 q: str | None = None, ahora: datetime | None = None,
-                gestion: str | None = None) -> dict:
+                gestion: str | None = None, canal: str | None = None) -> dict:
     """Una tarjeta por persona (clave = últimos 9 dígitos) cuyo ÚLTIMO clic en
     un anuncio cae en el rango. La etapa sale de los datos, por prioridad:
 
@@ -1051,7 +1413,8 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
     hoy, ahora_hm = ahora.date().isoformat(), ahora.strftime("%H:%M")
     ahora_ep = int(ahora.timestamp())
     d, h = _rango(desde, hasta)
-    plat = plataforma if plataforma in (*_PLATS, "sin_dato") else None
+    canal = _canal(canal)
+    plat = plataforma if plataforma in (*_PLATS, "sin_dato") and canal != "web" else None
     e0, e1 = _epoch_ini(d), _epoch_fin(h)
     esp_f = (especialidad or "").strip().lower()
     qn = (q or "").strip().lower()
@@ -1059,21 +1422,20 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
 
     with db() as c:
         mapa = _mapa_anuncios(c)
-        # Último referral por persona en el rango
+        # Último contacto por persona en el rango (en "todos", dentro del canal
+        # de su primer contacto: una sola tarjeta por persona).
         ult: dict[str, dict] = {}
-        for r in c.execute(
-                "SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
-                "WHERE ts >= ? AND ts < ? ORDER BY ts", (e0, e1)):
-            ult[_clave(r["phone"])] = dict(r)
+        for r in _llegadas(c, canal, e0, e1):
+            ult[_clave(r["phone"])] = r
         personas = {}
         for k, r in ult.items():
-            info = _info_ad(mapa, r["source_id"] or "", r["headline"] or "")
+            info = _info(mapa, r["source_id"] or "", r["headline"] or "")
             if not _pasa_filtros(info, r["plataforma"], campana, plat, anuncio):
                 continue
             personas[k] = {**info, "phone": r["phone"], "ts": r["ts"],
-                           "plataforma": _plat(r["plataforma"])}
+                           "plataforma": _plat(r["plataforma"]), "canal": r["origen"], "web": r.get("web")}
         if not personas:
-            return _kanban_vacio(d, h, _opciones(c, mapa))
+            return _kanban_vacio(d, h, _opciones(c, mapa, canal))
 
         # Citas, eventos y mensajes desde el primer clic — agrupados por persona.
         t_min = min(p["ts"] for p in personas.values()) - 3600
@@ -1145,7 +1507,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
                     if f and f[:10] <= (dia + timedelta(days=VENTANA_TELEFONO_DIAS)).isoformat():
                         ep = _epoch_ini(date.fromisoformat(f[:10]))
                         pago_tel[k] = min(pago_tel.get(k, ep), ep)
-        opciones = _opciones(c, mapa)
+        opciones = _opciones(c, mapa, canal)
         segs = _seguimientos(c, set(personas))
 
     cols: dict[str, list[dict]] = {e: [] for e in _ETAPA_IDS}
@@ -1207,6 +1569,8 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
             "fuera_del_bot": etapa == "atendido" and not mis and k in pago_tel,
             "campana": p["campana"], "campaign_id": p["campaign_id"],
             "plataforma": p["plataforma"],
+            "canal": p["canal"],
+            "web": p["web"],
             "especialidad": esp.strip().capitalize() if esp and esp.islower() else esp,
             "llegada": llegada.strftime("%d/%m/%Y"),
             "llegada_iso": llegada.strftime("%Y-%m-%d %H:%M"),
@@ -1225,6 +1589,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
         columnas.append({**e, "n": len(ts), "tarjetas": ts})
     return {
         "rango": {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": (h - d).days + 1},
+        "canal": canal,
         "columnas": columnas,
         "total": sum(c_["n"] for c_ in columnas),
         "por_llamar": sum(1 for c_ in columnas for t in c_["tarjetas"]
@@ -1237,6 +1602,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
 
 def _kanban_vacio(d: date, h: date, opciones: dict) -> dict:
     return {"rango": {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": (h - d).days + 1},
+            "canal": "",
             "columnas": [{**e, "n": 0, "tarjetas": []} for e in ETAPAS], "total": 0, "por_llamar": 0,
             "opciones": {**opciones, "gestion": GESTION},
             "medicion": {"atribucion_desde": ATRIBUCION_DESDE, "plataforma_desde": PLATAFORMA_DESDE,
@@ -1338,17 +1704,24 @@ def _clave_valida(clave: str) -> str:
     raise HTTPException(404, "No existe esa persona")
 
 
-def _phones_de(c, clave: str) -> list[dict]:
-    """Referrals de la persona (más reciente primero). Solo se puede abrir a
-    quien llegó por un anuncio: si no hay referral, 404 — así el endpoint no
-    sirve para leer cualquier conversación del bot."""
-    if clave.startswith(("fb_", "ig_")):
-        filas = c.execute("SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
+def _phones_de(c, clave: str, canal: str | None = None) -> list[dict]:
+    """Contactos de la persona (más reciente primero): clics en anuncios y
+    llegadas desde la página web. Solo se puede abrir a quien llegó por uno de
+    esos dos canales: si no hay ninguno, 404 — así el endpoint no sirve para
+    leer cualquier conversación del bot."""
+    canal = _canal(canal) if canal else "todos"
+    filas: list[dict] = []
+    if canal in ("meta", "todos"):
+        if clave.startswith(("fb_", "ig_")):
+            q = c.execute("SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
                           "WHERE phone=? ORDER BY ts DESC", (clave,)).fetchall()
-    else:
-        filas = c.execute("SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
+        else:
+            q = c.execute("SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
                           "WHERE phone LIKE ? ORDER BY ts DESC", ("%" + clave,)).fetchall()
-    filas = [dict(r) for r in filas if _clave(r["phone"]) == clave]
+        filas += [{**dict(r), "origen": "meta"} for r in q if _clave(r["phone"]) == clave]
+    if canal in ("web", "todos"):
+        filas += _llegadas_web(c, claves={clave})
+    filas.sort(key=lambda r: -r["ts"])
     if not filas:
         raise HTTPException(404, "No existe esa persona")
     return filas
@@ -1426,7 +1799,7 @@ def guardar_seguimiento(clave: str, estado: str, nota: str | None, proximo: str 
         return _seguimiento_completo(c, clave, ahora.date().isoformat())
 
 
-def persona_data(clave: str, ahora: datetime | None = None) -> dict:
+def persona_data(clave: str, ahora: datetime | None = None, canal: str | None = None) -> dict:
     """Ficha de una persona que llegó por un anuncio: cabecera, seguimiento y
     línea de tiempo (clics, citas del bot, horarios ofrecidos, avisos de
     atención y pagos en caja). Sin datos clínicos: no hay diagnósticos ni
@@ -1435,18 +1808,28 @@ def persona_data(clave: str, ahora: datetime | None = None) -> dict:
     ahora = ahora or datetime.now(_CL)
     hoy = ahora.date().isoformat()
     with db() as c:
-        refs = _phones_de(c, clave)
+        refs = _phones_de(c, clave, canal)
         phone = refs[0]["phone"]
         phones = sorted({r["phone"] for r in refs})
         mapa = _mapa_anuncios(c)
         primer = min(r["ts"] for r in refs)
         ev: list[dict] = []
         for r in refs:
-            info = _info_ad(mapa, r["source_id"] or "", r["headline"] or "")
-            ev.append({"ts": r["ts"], "tipo": "clic", "titulo": "Clic en un anuncio",
-                       "detalle": f'{info["anuncio"]} · {info["campana"]}',
-                       "plataforma": _plat(r["plataforma"])})
-        ult = _info_ad(mapa, refs[0]["source_id"] or "", refs[0]["headline"] or "")
+            info = _info(mapa, r["source_id"] or "", r["headline"] or "")
+            if r["origen"] == "web":
+                w = r.get("web") or {}
+                ev.append({"ts": r["ts"], "tipo": "web", "titulo": "Escribió desde la página web",
+                           "detalle": " · ".join(x for x in (w.get("pagina"),
+                                                             f'artículo «{w["articulo"]}»' if w.get("articulo") else "",
+                                                             w.get("posicion"), w.get("boton"),
+                                                             f'"{w["texto"]}"' if w.get("texto") else "",
+                                                             w.get("comuna")) if x),
+                           "plataforma": "web"})
+            else:
+                ev.append({"ts": r["ts"], "tipo": "clic", "titulo": "Clic en un anuncio",
+                           "detalle": f'{info["anuncio"]} · {info["campana"]}',
+                           "plataforma": _plat(r["plataforma"])})
+        ult = _info(mapa, refs[0]["source_id"] or "", refs[0]["headline"] or "")
 
         # Citas del bot (todas las del teléfono, también las anteriores al clic:
         # muestran si ya era paciente).
@@ -1552,8 +1935,11 @@ def persona_data(clave: str, ahora: datetime | None = None) -> dict:
         "nombre": nombre,
         "anuncio": ult["anuncio"], "campana": ult["campana"], "ad_id": ult["ad_id"],
         "plataforma": _plat(refs[0]["plataforma"]),
+        "canal": refs[0]["origen"],
+        "web": refs[0].get("web"),
         "primer_clic": datetime.fromtimestamp(primer, _CL).strftime("%d/%m/%Y"),
-        "clics": len(refs),
+        "clics": sum(1 for r in refs if r["origen"] == "meta"),
+        "visitas_web": sum(1 for r in refs if r["origen"] == "web"),
         "linea": ev[:150],
         "pagos": {"total": pagos_total, "pacientes": len(pids_l),
                   "antes_del_clic": antes_n, "antes_total": antes_total},
@@ -1597,9 +1983,9 @@ def conversacion_data(clave: str) -> dict:
 @router.get("/panel")
 def panel(request: Request, desde: str | None = Query(None), hasta: str | None = Query(None),
           campana: str | None = Query(None), plataforma: str | None = Query(None),
-          token: str | None = Query(None)):
+          canal: str | None = Query(None), token: str | None = Query(None)):
     _auth(request, token)
-    return panel_data(desde, hasta, campana or None, plataforma or None)
+    return panel_data(desde, hasta, campana or None, plataforma or None, canal or None)
 
 
 @router.get("/kanban")
@@ -1607,16 +1993,17 @@ def kanban(request: Request, desde: str | None = Query(None), hasta: str | None 
            campana: str | None = Query(None), anuncio: str | None = Query(None),
            plataforma: str | None = Query(None), especialidad: str | None = Query(None),
            q: str | None = Query(None), gestion: str | None = Query(None),
-           token: str | None = Query(None)):
+           canal: str | None = Query(None), token: str | None = Query(None)):
     _auth(request, token)
     return kanban_data(desde, hasta, campana or None, anuncio or None, plataforma or None,
-                       especialidad or None, q or None, gestion=gestion or None)
+                       especialidad or None, q or None, gestion=gestion or None, canal=canal or None)
 
 
 @router.get("/persona/{clave}")
-def persona(clave: str, request: Request, token: str | None = Query(None)):
+def persona(clave: str, request: Request, canal: str | None = Query(None),
+            token: str | None = Query(None)):
     _auth(request, token)
-    return persona_data(clave)
+    return persona_data(clave, canal=canal or None)
 
 
 @router.post("/persona/{clave}/seguimiento")
