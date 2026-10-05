@@ -18,7 +18,7 @@ with db() as conn:
     _run_ddl_inline(conn)
     conn.commit()
     filas = conn.execute(
-        "SELECT rowid, phone, created_at FROM citas_bot WHERE ad_source_id IS NULL"
+        "SELECT rowid AS rid, phone, created_at FROM citas_bot WHERE ad_source_id IS NULL"
     ).fetchall()
 
 asignadas = 0
@@ -38,7 +38,7 @@ for f in filas:
                 """UPDATE citas_bot SET ad_source_id=?, ad_headline=?,
                           ad_plataforma=?, ad_referral_ts=? WHERE rowid=?""",
                 (ref["source_id"], ref["headline"], ref["plataforma"], ref["ts"],
-                 f["rowid"]),
+                 f["rid"]),
             )
             conn.commit()
 
