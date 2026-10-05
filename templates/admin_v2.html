@@ -1741,6 +1741,19 @@ function openMedilink(){ window.open(MEDILINK_AGENDA_URL, "_blank", "noopener");
 /* =========================================================================
  *  INBOX
  * ========================================================================= */
+// Enlace directo a una conversación: /admin/v2#c=<teléfono> (lo usan Campañas
+// Meta y la Cola de Recepción). Empareja por los últimos 9 dígitos y limpia el
+// hash para que un recargar no reabra el chat.
+function abrirDesdeHash(){
+  const m = (location.hash || "").match(/[#&]c=([^&]+)/);
+  if (!m) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  const dig = decodeURIComponent(m[1]).replace(/\D/g, "");
+  if (dig.length < 8) return;
+  const conv = conversations.find(c => String(c.phone || "").replace(/\D/g, "").slice(-9) === dig.slice(-9));
+  openChat(conv ? conv.phone : dig).catch(e => console.error("abrirDesdeHash", e));
+}
+
 async function loadInbox(){
   try {
     const [convs, unread, tagSum] = await Promise.all([
@@ -3225,7 +3238,7 @@ function setup(){
   if (btnPgGlobal) btnPgGlobal.addEventListener("click", () => openPagoModal({ global: true }));
 
   setupAttach();
-  loadInbox();
+  loadInbox().then(abrirDesdeHash);
   loadEcografiasPhones();
   loadWaitlistPhones();
   inboxTimer = setInterval(loadInbox, POLL_INBOX_MS);
