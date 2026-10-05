@@ -163,6 +163,17 @@ def parse_hora(texto: str) -> Optional[Tuple[int, int]]:
     t2 = re.sub(r"\btreinta\s+y\s+cinco\b", "35", t2)
     t2 = re.sub(r"\bcincuenta\s+y\s+cinco\b", "55", t2)
 
+    # "una"/"uno" son casi siempre ARTÍCULO ("no agendar una nueva", "quiero una
+    # hora", "dame una"), no la 1 PM. Caso real 2-oct: "necesito el resultado,
+    # no agendar una nueva" → 13:00 → reservó el slot de las 12:45. Solo cuentan
+    # como hora con contexto horario explícito o como respuesta sola.
+    if t2.strip() not in ("una", "uno"):
+        t2 = re.sub(
+            r"(?<!\bla )(?<!\blas )\b(una|uno)\b"
+            r"(?!\s+(?:y\s+(?:media|cuarto|\d|cinco|diez|quince|veinte|treinta|cuarenta|cincuenta)|en\s+punto|de\s+la\s+(?:tarde|noche|manana)"
+            r"|p\.?m\.?|a\.?m\.?|hrs?\b))",
+            "_art_", t2)
+
     # Reemplazar palabras-número con dígitos (más largas primero)
     palabras_orden = sorted(_NUM_PALABRA_HORA.keys(), key=len, reverse=True)
     for p in palabras_orden:

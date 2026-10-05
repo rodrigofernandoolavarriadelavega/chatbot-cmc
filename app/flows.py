@@ -4249,6 +4249,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     contexto=f"urgencia {etiqueta}: {txt[:160]}"
                 )
 
+    # ── Pide INFORME/RESULTADO de un examen ya hecho → recepción (cualquier estado) ──
+    # Recepción es quien lo envía por este chat (panel → enviar documento). Antes
+    # caía al agendamiento de eco y hasta reservaba hora (ver _pide_informe).
+    if state != "HUMAN_TAKEOVER" and _pide_informe(txt):
+        log_event(phone, "pide_informe", {"state": state, "texto": txt[:200]})
+        _derivar_humano(phone=phone, contexto=f"PIDE INFORME/RESULTADO: {txt[:160]}",
+                        takeover_reason="pide_informe")
+        return (
+            "Le aviso a recepción para que te ayude con tu *informe/resultado* "
+            "por este mismo chat 🙌\n\n"
+            "Para ubicarlo más rápido, escríbenos el *nombre y RUT del paciente* "
+            "y *qué examen* fue (y su fecha)."
+        )
+
     # ── Consent inline (Ley 19.628) ──────────────────────────────────────────
     # El consentimiento se registra cuando el paciente proporciona su RUT
     # (consentimiento tácito al compartir datos personales). NO bloqueamos al
@@ -15321,6 +15335,71 @@ _APELLIDOS_INDIVIDUALES_KEYS = frozenset({
 })
 
 
+_AUTOID_RE = re.compile(
+    r"\b(?:soy|me\s+llamo|mi\s+nombre\s+es|mi\s+nombre|habla|le\s+habla|"
+    r"le\s+escribe|les\s+escribe|te\s+escribe|de\s+parte\s+de)\s+"
+    r"((?:[^\W\d_]+\s*){1,4})",
+    re.IGNORECASE,
+)
+_AUTOID_STOP = {
+    "paciente", "de", "del", "la", "el", "los", "las", "un", "una", "mama", "mamá",
+    "papa", "papá", "hijo", "hija", "apoderado", "apoderada", "tutor", "tutora",
+    "esposa", "esposo", "abuela", "abuelo", "tia", "tía", "nieta", "nieto",
+    "y", "necesito", "quiero", "quisiera", "con", "para", "por", "que", "la",
+    "dra", "dr", "doctora", "doctor", "psicologa", "psicóloga", "fonasa", "particular",
+    "nuevo", "nueva", "yo", "ella", "el", "él",
+}
+
+
+def _quitar_autoidentificacion(txt: str) -> str:
+    """Saca el NOMBRE PROPIO del paciente que se presenta ("Soy Jacquelinne
+    Vergara, necesito…") antes de buscar profesionales por nombre. Caso real
+    2-oct: la paciente se llamaba igual que la Ps. Jacquelinne Salas y el bot la
+    mandó a agendar psicología. Corta en la primera palabra que no es nombre
+    ("soy paciente de la dra salas" queda intacto)."""
+    def _rep(m):
+        nombres = []
+        for w in m.group(1).split():
+            if w.lower().strip(".,;:") in _AUTOID_STOP:
+                break
+            nombres.append(w)
+        if not nombres:
+            return m.group(0)
+        resto = m.group(1).split()[len(nombres):]
+        return m.group(0)[: m.start(1) - m.start(0)] + " ".join(resto) + " "
+    return _AUTOID_RE.sub(_rep, txt or "")
+
+
+_INFORME_RE = re.compile(r"\b(informe|informes|resultado|resultados)\b")
+_AGENDAR_NEGADO_RE = re.compile(
+    r"\bno\s+(?:quiero\s+|necesito\s+|es\s+para\s+|para\s+)?"
+    r"(?:agendar|reservar|sacar|pedir|una\s+hora|hora|otra\s+hora|una\s+nueva|nueva)\w*(?:\s+\w+){0,2}"
+)
+_QUIERE_AGENDAR_RE = re.compile(
+    r"\b(agendar|agendo|agende|reservar|reservame|resérvame|sacar\s+(?:una\s+)?hora|"
+    r"pedir\s+(?:una\s+|otra\s+)?hora|(?:quiero|necesito|kiero|quisiera|busco)\s+(?:una\s+|otra\s+)?hora|"
+    r"hora\s+(?:para|con)|tiene[ns]?\s+hora|control\s+(?:para|con)|"
+    r"(?:mostrar|ver|llevar|revisar|traer|evaluar)\w*\s+(?:los\s+|mis\s+|el\s+|la\s+|sus\s+)?"
+    r"(?:resultado|informe|examen))"
+)
+
+
+def _pide_informe(txt: str) -> bool:
+    """¿El paciente pide el INFORME/RESULTADO de un examen ya hecho (no agendar)?
+
+    Caso real 2-oct (…8335): "Necesito que me envíen informe de ecotomografía
+    realizada el lunes 28" → el bot entendió agendar eco; luego "necesito el
+    resultado, no agendar una nueva" → reservó una hora. El pre-check viejo de
+    "retiro de informe" solo corría en IDLE, con frases exactas, y se anulaba si
+    el texto decía "eco". Acá: menciona informe/resultado y NO pide hora (una
+    negación "no agendar…" no cuenta como pedir hora)."""
+    t = _normalizar_para_apellido_ws(txt) if txt else ""
+    if not t or not _INFORME_RE.search(t):
+        return False
+    sin_negacion = _AGENDAR_NEGADO_RE.sub(" ", t)
+    return not _QUIERE_AGENDAR_RE.search(sin_negacion)
+
+
 def _detectar_apellido_profesional(txt: str) -> str | None:
     """Si el texto menciona un apellido de profesional, devuelve la key de
     ESPECIALIDADES_MAP correspondiente. Normaliza el input para tolerar
@@ -15340,6 +15419,7 @@ def _detectar_apellido_profesional(txt: str) -> str | None:
     """
     if not txt:
         return None
+    txt = _quitar_autoidentificacion(txt)
     norm_collapsed = _normalizar_para_apellido(txt)
     norm_ws = _normalizar_para_apellido_ws(txt)
     if not norm_collapsed:
