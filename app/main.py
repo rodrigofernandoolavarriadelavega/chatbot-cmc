@@ -1623,6 +1623,8 @@ import trayectoria_routes
 app.include_router(trayectoria_routes.router)  # SOLO DUENO: 5 anos de caja, banda del margen, techo
 import orto_embudo_routes
 app.include_router(orto_embudo_routes.router)   # embudo de ortodoncia previo a la instalacion
+import campanas_meta_routes
+app.include_router(campanas_meta_routes.router)  # SOLO DUENO: gasto Meta -> conversacion -> cita -> atencion
 import orto_fotos_routes
 app.include_router(orto_fotos_routes.router)     # registro fotografico de avance + nota dictada
 
@@ -4205,6 +4207,7 @@ _ALMA_CHECKLIST_HTML = (_TEMPLATE_DIR / "alma_checklist.html").read_text(encodin
 _ALMA_LIQUIDACIONES_HTML = (_TEMPLATE_DIR / "alma_liquidaciones.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_liquidaciones.html").exists() else ""
 _ALMA_CARGOS_HTML = (_TEMPLATE_DIR / "alma_cargos.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_cargos.html").exists() else ""
 _ALMA_ORTO_EMBUDO_HTML = (_TEMPLATE_DIR / "alma_orto_embudo.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_orto_embudo.html").exists() else ""
+_ALMA_CAMPANAS_META_HTML = (_TEMPLATE_DIR / "alma_campanas_meta.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_campanas_meta.html").exists() else ""
 _GUIA_ORTODONCIA_HTML = (_TEMPLATE_DIR / "guia_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "guia_ortodoncia.html").exists() else ""
 _ALMA_INICIO_HTML = (_TEMPLATE_DIR / "alma_inicio.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_inicio.html").exists() else ""
 _ALMA_PROVEEDORES_HTML = (_TEMPLATE_DIR / "alma_proveedores.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_proveedores.html").exists() else ""
@@ -5732,6 +5735,27 @@ for _ap, _ah, _al in [
 ]:
     app.add_api_route(_ap, _pagina_ortodoncia(_ah, _al), methods=["GET"],
                       response_class=HTMLResponse, include_in_schema=False)
+
+
+@app.get("/alma/campanas-meta", response_class=HTMLResponse, include_in_schema=False)
+def alma_campanas_meta_page(request: Request, token: str | None = Query(None)):
+    """Campañas Meta: panel de CAC por anuncio + kanban de pacientes de anuncios.
+
+    SOLO DUENO (OLACORE_TOKEN), igual que Trayectoria: muestra gasto
+    publicitario. No pasa por `_make_alma_page` porque ese factory acepta el
+    ADMIN_TOKEN de recepcion como admin; tampoco se acepta la cookie `admin`,
+    que comparten recepcion y dueno. 404 en el dominio clinico.
+    """
+    import campanas_meta_routes as _cm
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.endswith("centromedicocarampangue.cl"):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not _ALMA_CAMPANAS_META_HTML:
+        raise HTTPException(404, "Campañas Meta no disponible")
+    if not _cm.token_dueno(token):
+        raise HTTPException(403, "Solo el token del dueño abre Campañas Meta")
+    return HTMLResponse(_ALMA_CAMPANAS_META_HTML.replace("__TOKEN__", token),
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/guia/ortodoncia", response_class=HTMLResponse)

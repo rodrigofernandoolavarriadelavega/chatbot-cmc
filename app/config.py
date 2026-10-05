@@ -77,6 +77,10 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "panel":       {"label": "Panel Recepción",  "icon": "inbox",     "title": "Panel de Recepción v2",          "sub": "Conversaciones · WhatsApp · Agenda",              "src": "/admin/v2"},
     "panel2":      {"label": "Panel Recepción 2","icon": "inbox",     "title": "Panel de Recepción v3 (beta)",   "sub": "Nuevo · cola de atención priorizada · en pruebas","src": "/admin/v3"},
     "recepcion_kanban":{"label":"Cola de Recepción","icon":"listcheck","title":"Cola de Recepción","sub":"A quién le toca responder ahora y por qué","src":"/alma/recepcion-kanban"},
+    # SOLO DUENO: muestra gasto publicitario. No va en la allowlist de
+    # Recepcion (ADMIN_TOKEN); OLACORE_TOKEN (`modulos: None`) lo ve. Ademas su
+    # pagina y su API exigen OLACORE_TOKEN: un ADMIN_TOKEN no lo abre.
+    "campanas_meta":{"label": "Campañas Meta",  "icon": "target",    "title": "Campañas Meta — de la conversación a la atención", "sub": "CAC por anuncio · pacientes que llegaron por anuncios", "src": "/alma/campanas-meta"},
     "roas":        {"label": "ROAS Campañas",    "icon": "trending-up","title": "ROAS por campaña · Meta Ads × Caja real", "sub": "Retorno de cada campaña vs ingreso real (caja)", "src": "/alma/roas"},
     "agenda_ticker":{"label": "Agendamientos en vivo","icon":"activity","title": "Monitor de Agendamientos en vivo", "sub": "Orden real de llegada · canal · citas pasadas sin cerrar", "src": "/alma/agenda-en-vivo"},
     "ausentismo":  {"label": "Ausentismo",       "icon": "users",     "title": "Ausentismo — pacientes que no asisten", "sub": "Ranking de inasistencias reales · filtro por profesional · a quién confirmar", "src": "/alma/ausentismo"},
