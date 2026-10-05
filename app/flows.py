@@ -3206,19 +3206,29 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # Es lo único que WhatsApp transmite: los UTMs del query string del wa.me se
     # pierden (WhatsApp solo pasa el campo text=). Detectamos, taggeamos y
     # LIMPIAMOS el marcador para no contaminar la detección de intención.
+    # Formato extendido (2026-10-05): "(web: blog · eco-abdominal · flotante)"
+    # = página · artículo · botón. Acepta también el simple "(web: home)" y que
+    # el marcador venga al INICIO del texto (pasa en algunos teléfonos).
     _web_match = re.search(
-        r"\(\s*web(?:\s*[:：]\s*([\w-]+))?\s*\)\s*$", txt, re.IGNORECASE
-    )
+        r"\(\s*web(?:\s*[:：]\s*([^()]{0,120}?))?\s*\)\s*$", txt, re.IGNORECASE
+    ) or re.match(r"^\s*\(\s*web(?:\s*[:：]\s*([^()]{0,120}?))?\s*\)\s*", txt, re.IGNORECASE)
     if _web_match:
-        _slug = (_web_match.group(1) or "").strip().lower()
+        _partes = [p.strip().lower() for p in re.split(r"[·|/]", _web_match.group(1) or "") if p.strip()]
+        _slug = re.sub(r"[^\w-]", "", _partes[0]) if _partes else ""
+        _art = re.sub(r"[^\w-]", "", _partes[1])[:80] if len(_partes) > 1 else ""
+        _btn = re.sub(r"[^\w-]", "", _partes[2])[:40] if len(_partes) > 2 else ""
         if "referral_source:web" not in get_tags(phone):
             save_tag(phone, "referral_source:web")
             log_event(phone, "referral_source_auto", {"source": "web"})
             if _slug:
                 save_tag(phone, f"referral_source:web_{_slug}")
                 log_event(phone, "referral_source_auto", {"source": f"web_{_slug}"})
+        # Cada llegada desde la web (no solo la primera): página, artículo y
+        # botón, para medir qué artículo y qué botón traen pacientes.
+        log_event(phone, "web_origen", {"pagina": _slug, "articulo": _art, "boton": _btn,
+                                        "texto": txt[:160]})
         # Limpiar el marcador del texto para el resto del pipeline conversacional
-        txt = txt[: _web_match.start()].rstrip(" .,-–—")
+        txt = (txt[: _web_match.start()] + txt[_web_match.end():]).strip(" .,-–—")
         texto = txt
         tl = txt.lower().strip("*_~").strip()
 
