@@ -31,7 +31,9 @@ from collections import defaultdict
 from datetime import date, datetime
 
 CARPETA = "/opt/backups/chatbot-cmc"
-DIARIOS, SEMANAS, MESES = 7, 4, 3
+# 2 locales bastan: la historia larga (30+12+12) vive en el Space cmc-respaldos.
+# Con 7+4+3 el disco de 25 GB se llenó el 5-oct-2026 y botó bot y panel.
+DIARIOS, SEMANAS, MESES = 2, 0, 0
 # familia → cómo reconocer sus archivos. Se toma el .db y el .db.gz juntos: un
 # respaldo a medio comprimir es el respaldo de ese día igual.
 PATRON = re.compile(r"^(?P<familia>[a-z_]+)_(?P<fecha>\d{8})_(?P<hora>\d{6})\.(?P<ext>.+)$")
