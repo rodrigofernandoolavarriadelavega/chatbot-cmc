@@ -217,6 +217,49 @@ def _mapa_anuncios(c) -> dict[str, dict]:
     return out
 
 
+# Estado de entrega (activo/pausado) por anuncio, en vivo desde Meta. Se cachea
+# 15 min: el panel no puede esperar a Meta en cada carga. Si Meta falla, se
+# usa como respaldo "tuvo gasto ayer u hoy" en la foto diaria.
+_ESTADOS_CACHE: dict = {"ts": 0.0, "data": {}}
+_ESTADOS_TTL = 900
+
+
+def _estados_meta() -> dict[str, str]:
+    import time as _t
+    if _t.time() - _ESTADOS_CACHE["ts"] < _ESTADOS_TTL and _ESTADOS_CACHE["data"]:
+        return _ESTADOS_CACHE["data"]
+    out: dict[str, str] = {}
+    try:
+        import httpx
+        import config
+        token = getattr(config, "META_ACCESS_TOKEN", "")
+        acct = getattr(config, "META_AD_ACCOUNT_ID", "") or "act_220608142267129"
+        acct = acct if acct.startswith("act_") else f"act_{acct}"
+        if token:
+            url = f"https://graph.facebook.com/v22.0/{acct}/ads"
+            params = {"fields": "id,effective_status", "limit": 500}
+            with httpx.Client(timeout=8) as cl:
+                while url:
+                    r = cl.get(url, params=params, headers={"Authorization": f"Bearer {token}"})
+                    if r.status_code != 200:
+                        break
+                    b = r.json()
+                    for a in b.get("data", []):
+                        out[str(a.get("id"))] = a.get("effective_status") or ""
+                    url, params = (b.get("paging") or {}).get("next"), None
+    except Exception as e:
+        log.warning("campanas_meta: estados de Meta no disponibles: %s", e)
+    if out:
+        _ESTADOS_CACHE.update(ts=_t.time(), data=out)
+    return out
+
+
+def _con_gasto_reciente(c) -> set[str]:
+    hace2 = (_hoy() - timedelta(days=2)).isoformat()
+    return {r[0] for r in c.execute("SELECT DISTINCT ad_id FROM meta_insights_diario "
+                                    "WHERE desglose='total' AND fecha >= ? AND spend > 0", (hace2,))}
+
+
 def _info_ad(mapa: dict, ad_id: str, headline: str = "") -> dict:
     m = mapa.get(ad_id or "")
     if m:
@@ -672,6 +715,9 @@ def _cerrar(a: dict) -> dict:
         "cac_atendido": _div(g, aten),
         "venta": round(a["venta"]),
         "retorno": round(a["venta"] / g, 2) if g else None,
+        # lo que le queda al centro (tras honorarios) por cada $1 de gasto en Meta;
+        # bajo 1× el anuncio no se paga solo
+        "retorno_centro": round(a["centro"] / g, 2) if g else None,
         "centro": round(a["centro"]),
         "centro_pct": round(100 * a["centro"] / a["venta"]) if a["venta"] else None,
         "resultado": round(a["centro"]) - g,
@@ -867,6 +913,15 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         campanas = [{"campaign_id": cid, "campana": camp_nombre[cid],
                      "n_anuncios": sum(1 for x in anuncios if x["campaign_id"] == cid),
                      **_cerrar(a)} for cid, a in por_camp.items()]
+        estados = _estados_meta()
+        recientes = _con_gasto_reciente(c) if not estados else set()
+        for x in anuncios:
+            st = estados.get(x["ad_id"]) if estados else None
+            x["estado"] = st or ("ACTIVE" if x["ad_id"] in recientes else "")
+            x["activo"] = (st == "ACTIVE") if estados else (x["ad_id"] in recientes)
+        for cp in campanas:
+            cp["activo"] = any(x["activo"] for x in anuncios if x["campaign_id"] == cp["campaign_id"])
+        estado_fuente = "meta" if estados else "gasto_reciente"
         anuncios.sort(key=_orden_cac)
         campanas.sort(key=_orden_cac)
 
@@ -931,6 +986,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         "desgloses": des,
         "tendencia": tendencia,
         "alertas": alertas,
+        "estado_fuente": estado_fuente,
         "conocieron": conocieron,
         "hay_insights": hay_insights,
         "ultima_foto": _uf,

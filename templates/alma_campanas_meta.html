@@ -236,6 +236,11 @@ td.nmc{min-width:230px}
   white-space:nowrap;letter-spacing:.01em;margin:2px 4px 0 0}
 .badge.mut{background:var(--line-2);color:var(--mute)}
 .badge.warn{background:var(--orange-s);color:var(--orange-d)}
+td.ret span{display:block;white-space:nowrap;font-variant-numeric:tabular-nums}
+td.ret span small{display:inline;margin-left:4px;font-size:10.5px;color:var(--mute);font-weight:600}
+td.ret .rc{font-weight:800}
+.badge.on{background:#E3F6EE;color:#13795b}
+.seg .scnt{font-size:10.5px;font-weight:800;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--line-2);color:var(--mute)}
 .badge.bad{background:var(--red-s);color:var(--red-d)}
 .badge.ok{background:var(--green-s);color:var(--green-d)}
 .badge.info{background:var(--aqua-s);color:var(--aqua-d)}
@@ -782,7 +787,7 @@ const I = {
 
 /* ── Estado ─────────────────────────────────────────────────────────────── */
 const S = { v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
-            tabla: "anuncios", cols: (() => { try { return localStorage.getItem("cm_cols") || "resumen"; } catch (_) { return "resumen"; } })(), kcol: "escribio", panel: null, kanban: null, ver: {} };
+            tabla: "anuncios", estado: (() => { try { return localStorage.getItem("cm_estado") || "todos"; } catch (_) { return "todos"; } })(), cols: (() => { try { return localStorage.getItem("cm_cols") || "resumen"; } catch (_) { return "resumen"; } })(), kcol: "escribio", panel: null, kanban: null, ver: {} };
 
 function hoyCL() {
   const p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -900,7 +905,7 @@ function renderPanel() {
     { l: "Para el centro", v: fmt$(k.centro), s: k.centro_pct == null ? "Venta menos honorarios" : k.centro_pct + "% de la venta, tras honorarios", op: "→" },
     { l: "Gasto en Meta", v: sinGasto ? "—" : fmt$(k.gasto), s: sinGasto ? "Meta no informa gasto sin plataforma" : fmtN(k.impresiones) + " impresiones", op: "−" },
     { cls: "res " + (sinGasto ? "" : res >= 0 ? "pos" : "neg"), l: "Resultado", v: sinGasto ? "—" : fmt$(res),
-      s: "Para el centro menos el gasto", op: "=", chip: !sinGasto && k.retorno != null ? "retorno " + String(k.retorno).replace(".", ",") + "×" : "" },
+      s: "Para el centro menos el gasto", op: "=", chip: !sinGasto && k.retorno != null ? "retorno venta " + String(k.retorno).replace(".", ",") + "× · centro " + String(k.retorno_centro).replace(".", ",") + "×" : "" },
   ];
   const band = `<div class="mband" role="group" aria-label="Plata del rango">${money.map((m, i) => `<div class="mb ${m.cls || ""}" style="--i:${i}">
       ${m.op ? `<span class="op" aria-hidden="true">${m.op}</span>` : ""}<div class="lbl">${m.l}</div>
@@ -949,7 +954,8 @@ const dash = '<span class="dash">—</span>';
 function tienePop(r) { return (r.por_profesional && r.por_profesional.length) || r.conocieron; }
 function tabla(p) {
   const anun = S.tabla === "anuncios", full = S.cols === "todo";
-  const rows = anun ? p.anuncios : p.campanas;
+  const todas = anun ? p.anuncios : p.campanas;
+  const rows = S.estado === "activos" ? todas.filter(r => r.activo) : S.estado === "pausados" ? todas.filter(r => !r.activo) : todas;
   const malos = new Set(p.alertas.filter(a => a.tipo === "sin_citas").map(a => a.ad_id));
   const sat = new Set(p.alertas.filter(a => a.tipo === "saturado").map(a => a.ad_id));
   const sinG = S.plat === "sin_dato";
@@ -959,13 +965,16 @@ function tabla(p) {
     if (anun && malos.has(r.ad_id)) badges.push('<span class="badge bad">Sin citas</span>');
     if (anun && sat.has(r.ad_id)) badges.push('<span class="badge warn">Saturado</span>');
     if (r.citas > 0 && r.muestra_chica) badges.push('<span class="badge mut">Muestra chica</span>');
+    if (S.estado === "todos" && r.activo) badges.unshift('<span class="badge on">Activo</span>');
     const nombre = anun ? r.anuncio : r.campana;
     const sub = anun ? r.campana : (r.n_anuncios + (r.n_anuncios === 1 ? " anuncio" : " anuncios"));
     const pop = tienePop(r);
     const venta = `<td class="r mny venta-cell${pop ? " has-pop" : ""}" data-l="Venta" data-pop="${anun ? "a" : "c"}:${esc(anun ? r.ad_id : r.campaign_id)}" tabindex="${pop ? 0 : -1}"${pop ? ' role="button" aria-label="Ver de dónde viene la venta"' : ""}><b>${fmt$(r.venta)}</b>${r.pagaron ? '<small class="pctc">' + r.pagaron + (r.pagaron === 1 ? " paciente" : " pacientes") + (r.pagaron_tel ? " · " + r.pagaron_tel + " fuera del bot" : "") + "</small>" : ""}${!full && r.fuera_pct ? `<small class="pctc">${r.fuera_pct}% en otra especialidad</small>` : ""}</td>`;
     const centro = `<td class="r mny" data-l="Para el centro">${r.venta ? fmt$(r.centro) + '<small class="pctc">' + r.centro_pct + "%</small>" : dash}</td>`;
     const resultado = `<td class="r mny res" data-l="Resultado">${sinG ? dash : `<b class="${r.resultado >= 0 ? "resp" : "resn"}">${fmt$(r.resultado)}</b>`}</td>`;
-    const retorno = `<td class="r" data-l="Retorno">${r.retorno == null ? dash : String(r.retorno).replace(".", ",") + "×"}</td>`;
+    const x = v => String(v).replace(".", ",") + "×";
+    const retorno = `<td class="r ret" data-l="Retorno">${r.retorno == null ? dash
+      : `<span class="rv" title="Venta total ÷ gasto">${x(r.retorno)}<small>venta</small></span><span class="rc ${r.retorno_centro >= 1 ? "resp" : "resn"}" title="Para el centro ÷ gasto. Sobre 1× el anuncio se paga solo">${x(r.retorno_centro)}<small>centro</small></span>`}</td>`;
     const first = `<td class="nmc" data-l="${anun ? "Anuncio" : "Campaña"}"><div class="nm">${esc(nombre)}<small>${esc(sub)}</small></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
     const gasto = `<td class="r" data-l="Gasto">${sinG ? dash : fmt$(r.gasto)}</td>`;
     if (!full) return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">${first}${gasto}
@@ -986,20 +995,22 @@ function tabla(p) {
       ${retorno}
       <td class="r" data-l="Frecuencia">${r.frecuencia == null ? dash : String(r.frecuencia).replace(".", ",")}</td>
     </tr>`; }).join("")
-    : `<tr><td colspan="${ncol}"><div class="empty" style="padding:28px 10px"><h3 style="font-size:15px">Sin ${anun ? "anuncios" : "campañas"} en este rango</h3><p style="margin:0">Pruebe con un rango más amplio o quite los filtros.</p></div></td></tr>`;
+    : `<tr><td colspan="${ncol}"><div class="empty" style="padding:28px 10px"><h3 style="font-size:15px">Sin ${anun ? "anuncios" : "campañas"}${S.estado === "activos" ? " activos" : S.estado === "pausados" ? " pausados" : ""} en este rango</h3><p style="margin:0">Pruebe con un rango más amplio o quite los filtros.</p></div></td></tr>`;
   const thMoney = `<th class="r mny">Venta</th><th class="r mny" title="Venta menos honorarios de los profesionales">Para el centro</th><th class="r mny" title="Para el centro menos gasto en el anuncio">Resultado</th>`;
   const head = full
     ? `<th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
-      <th class="r">Atendidos</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Venta ÷ gasto">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
-    : `<th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thMoney}<th class="r" title="Venta ÷ gasto">Retorno</th>`;
+      <th class="r">Atendidos</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
+    : `<th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thMoney}<th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th>`;
   return `<div class="card block tbl-mode"><div class="card-h"><div class="ic">${I.table}</div><h2>Rendimiento por ${anun ? "anuncio" : "campaña"}</h2><span class="cp">${rows.length}</span>
-    <div class="sp"></div><div class="segs"><div class="seg" id="segCols" role="group" aria-label="Columnas">
+    <div class="sp"></div><div class="segs"><div class="seg" id="segEstado" role="group" aria-label="Estado en Meta" title="${p.estado_fuente === "meta" ? "Estado de entrega según Meta" : "Meta no respondió: activo = tuvo gasto en los últimos 2 días"}">
+      <button type="button" data-e="todos" aria-pressed="${S.estado === "todos"}">Todos</button><button type="button" data-e="activos" aria-pressed="${S.estado === "activos"}">Activos <span class="scnt">${todas.filter(r => r.activo).length}</span></button><button type="button" data-e="pausados" aria-pressed="${S.estado === "pausados"}">Pausados</button></div>
+      <div class="seg" id="segCols" role="group" aria-label="Columnas">
       <button type="button" data-k="resumen" aria-pressed="${!full}">Resumen</button><button type="button" data-k="todo" aria-pressed="${full}"><span class="lg2">Todas las columnas</span><span class="sh2">Todo</span></button></div>
       <div class="seg" id="segTabla" role="group" aria-label="Agrupar por">
       <button type="button" data-t="campanas" aria-pressed="${!anun}">Campañas</button><button type="button" data-t="anuncios" aria-pressed="${anun}">Anuncios</button></div></div></div>
     <div class="tbl-wrap${full ? " full" : ""}"><table><thead><tr>${head}</tr></thead>
     <tbody>${body}</tbody></table></div>
-    <div class="tbl-foot"><details><summary style="cursor:pointer;font-weight:700;color:var(--navy)">Cómo leer esta tabla</summary><p style="margin:6px 0 0">Ordenado por costo por cita, de menor a mayor. Al final, lo que gastó sin traer citas. "Muestra chica" = menos de ${p.umbrales.muestra_chica} citas: el costo puede cambiar mucho con una sola cita más. Venta = lo cobrado en caja a cada paciente que trajo el anuncio, hasta hoy: los que agendaron por el bot (desde ese día) y los que escribieron desde el anuncio y después se atendieron por otra vía, reconocidos por su teléfono en la ficha de Medilink con un pago dentro de 90 días del clic ("fuera del bot") (incluye controles y otras especialidades; si ya era paciente del centro, también cuenta). Toque la venta para ver por profesional, por especialidad y cómo dicen que nos conocieron. Para el centro = venta menos el honorario de cada profesional (su % en Equipo; 70% si no tiene cargado). Resultado = para el centro menos el gasto del anuncio. Fuera de esp. = % de la venta que fue en una especialidad distinta a la del anuncio (la especialidad sale del nombre del anuncio; si no dice, de lo más agendado). Retorno = venta ÷ gasto. Frec. = cuántas veces vio el anuncio cada persona alcanzada, en promedio (estimado mínimo); sobre 6 está saturado.</p></details></div></div>`;
+    <div class="tbl-foot"><details><summary style="cursor:pointer;font-weight:700;color:var(--navy)">Cómo leer esta tabla</summary><p style="margin:6px 0 0">Ordenado por costo por cita, de menor a mayor. Al final, lo que gastó sin traer citas. "Muestra chica" = menos de ${p.umbrales.muestra_chica} citas: el costo puede cambiar mucho con una sola cita más. Venta = lo cobrado en caja a cada paciente que trajo el anuncio, hasta hoy: los que agendaron por el bot (desde ese día) y los que escribieron desde el anuncio y después se atendieron por otra vía, reconocidos por su teléfono en la ficha de Medilink con un pago dentro de 90 días del clic ("fuera del bot") (incluye controles y otras especialidades; si ya era paciente del centro, también cuenta). Toque la venta para ver por profesional, por especialidad y cómo dicen que nos conocieron. Para el centro = venta menos el honorario de cada profesional (su % en Equipo; 70% si no tiene cargado). Resultado = para el centro menos el gasto del anuncio. Fuera de esp. = % de la venta que fue en una especialidad distinta a la del anuncio (la especialidad sale del nombre del anuncio; si no dice, de lo más agendado). Retorno: venta ÷ gasto, y para el centro ÷ gasto (sobre 1× el anuncio se paga solo). Frec. = cuántas veces vio el anuncio cada persona alcanzada, en promedio (estimado mínimo); sobre 6 está saturado.</p></details></div></div>`;
 }
 function conocieron(p) {
   const c = p.conocieron; if (!c) return "";
@@ -1074,6 +1085,9 @@ function bindTabla() {
   bindPop();
   const redo = () => { const card = document.querySelector(".tbl-mode"); const tmp = document.createElement("div");
     tmp.innerHTML = tabla(S.panel); card.replaceWith(tmp.firstElementChild); bindTabla(); };
+  document.querySelectorAll("#segEstado button").forEach(b => b.onclick = () => {
+    S.estado = b.dataset.e; try { localStorage.setItem("cm_estado", S.estado); } catch (_) {} redo();
+  });
   document.querySelectorAll("#segCols button").forEach(b => b.onclick = () => {
     S.cols = b.dataset.k; try { localStorage.setItem("cm_cols", S.cols); } catch (_) {} redo();
   });
