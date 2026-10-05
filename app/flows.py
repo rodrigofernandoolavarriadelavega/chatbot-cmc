@@ -4249,20 +4249,6 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     contexto=f"urgencia {etiqueta}: {txt[:160]}"
                 )
 
-    # ── Pide INFORME/RESULTADO de un examen ya hecho → recepción (cualquier estado) ──
-    # Recepción es quien lo envía por este chat (panel → enviar documento). Antes
-    # caía al agendamiento de eco y hasta reservaba hora (ver _pide_informe).
-    if state != "HUMAN_TAKEOVER" and _pide_informe(txt):
-        log_event(phone, "pide_informe", {"state": state, "texto": txt[:200]})
-        _derivar_humano(phone=phone, contexto=f"PIDE INFORME/RESULTADO: {txt[:160]}",
-                        takeover_reason="pide_informe")
-        return (
-            "Le aviso a recepción para que te ayude con tu *informe/resultado* "
-            "por este mismo chat 🙌\n\n"
-            "Para ubicarlo más rápido, escríbenos el *nombre y RUT del paciente* "
-            "y *qué examen* fue (y su fecha)."
-        )
-
     # ── Consent inline (Ley 19.628) ──────────────────────────────────────────
     # El consentimiento se registra cuando el paciente proporciona su RUT
     # (consentimiento tácito al compartir datos personales). NO bloqueamos al
@@ -4372,6 +4358,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "de las próximas 48 horas (plazo legal: 30 días).\n\n"
                 "Mientras tanto hemos pausado el envío de mensajes."
             )
+
+
+    # ── Pide INFORME/RESULTADO de un examen ya hecho → recepción (cualquier estado) ──
+    # Recepción es quien lo envía por este chat (panel → enviar documento). Antes
+    # caía al agendamiento de eco y hasta reservaba hora (ver _pide_informe).
+    # Va DESPUÉS de baja/derecho al olvido y excluye al doctor: "borren mis datos
+    # y resultados" es Ley 19.628, no un pedido de informe.
+    if state != "HUMAN_TAKEOVER" and phone != _doctor_phone and _pide_informe(txt):
+        log_event(phone, "pide_informe", {"state": state, "texto": txt[:200]})
+        _derivar_humano(phone=phone, contexto=f"PIDE INFORME/RESULTADO: {txt[:160]}",
+                        takeover_reason="pide_informe")
+        return (
+            "Le aviso a recepción para que te ayude con tu *informe/resultado* "
+            "por este mismo chat 🙌\n\n"
+            "Para ubicarlo más rápido, escríbenos el *nombre y RUT del paciente* "
+            "y *qué examen* fue (y su fecha)."
+        )
 
     # ── Hook: respuesta a push de horas vacías ──────────────────────────────
     # Si el paciente recibió horas_vacias_enviado en las últimas 4h y responde

@@ -81,5 +81,19 @@ class T(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(flows._pide_informe(t), t)
 
 
+    async def test_borrar_datos_y_resultados_es_derecho_al_olvido(self):
+        p = "56900020009"
+        r = await self._say(p, "quiero borrar mis datos y mis resultados")
+        self.assertNotEqual(session.get_session(p)["state"], "HUMAN_TAKEOVER")
+        self.assertNotIn("informe/resultado", str(r))
+
+    async def test_doctor_no_cae_en_pide_informe(self):
+        doc = getattr(flows, "ADMIN_ALERT_PHONE", None)
+        if not doc:
+            self.skipTest("sin _doctor_phone en entorno de test")
+        r = await flows.handle_message(doc, "el resultado del examen de hoy", {"state": "IDLE", "data": {}})
+        self.assertNotIn("informe/resultado", str(r))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
