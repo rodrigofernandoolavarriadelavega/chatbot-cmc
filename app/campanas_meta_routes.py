@@ -35,6 +35,11 @@ QUE ES MEDIDO Y QUE ES PROXY (la UI lo dice tal cual)
   después (controles, otras especialidades): es la venta que trajo el anuncio,
   no solo la primera consulta. Si el paciente ya era del centro, sus pagos
   posteriores igual se cuentan — la UI lo advierte.
+- Venta por TELÉFONO: si la persona escribió desde el anuncio y no agendó por
+  el bot, pero su número está en la ficha de un paciente (pacientes_heatmap,
+  citas de recepción) que pagó en caja dentro de 90 días desde el clic, esa
+  venta también es del anuncio (desde el día del clic). Así entra lo que
+  agenda recepción o llega directo. `pagaron_tel` cuenta esos pacientes.
 - Para el centro: cada pago × (1 − pct_honorario/100) del profesional que lo
   atendió (`equipo_cmc.pct_honorario` = lo que se lleva el PROFESIONAL, NO el
   margen — ver guardrail). Sin pct cargado → 70% de referencia. Abarca (73)
@@ -56,6 +61,7 @@ import json
 import logging
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -87,7 +93,7 @@ ETAPAS = [
     {"id": "agendado",  "label": "Agendado",
      "ayuda": "Tiene una cita futura vigente."},
     {"id": "atendido",  "label": "Atendido",
-     "ayuda": "Aviso de atención (CAPI Purchase) o cita ya pasada y no anulada."},
+     "ayuda": "Aviso de atención (CAPI Purchase), cita ya pasada y no anulada, o pagó en caja dentro de 90 días del clic aunque no agendara por el bot."},
     {"id": "anulo",     "label": "Anuló / no asistió",
      "ayuda": "Su cita fue anulada y no tiene otra vigente. Las inasistencias aún no llegan desde Medilink."},
     {"id": "perdido",   "label": "Sin respuesta > 7 días",
@@ -294,18 +300,74 @@ def _pct_honorarios(c) -> dict[int, int]:
     return m
 
 
-def _venta_por_anuncio(c, citas: list[dict]) -> dict[str, tuple[int, float]]:
-    """(venta, para el centro) cobrado en caja a cada paciente desde el día de
-    su primera cita atribuida (citas viene ordenado por created_at). Un
-    paciente → un anuncio."""
-    inicio: dict[int, tuple[str, str]] = {}
+VENTANA_TELEFONO_DIAS = 90   # el primer pago debe caer ≤90 días después del clic
+
+
+def _pacientes_por_telefono(c, claves: set[str]) -> dict[str, set[int]]:
+    """clave de teléfono → ids de paciente Medilink que tienen ese número.
+
+    Fuentes: ficha de Medilink (`pacientes_heatmap.celular`, heatmap_cache.db,
+    se refresca cada madrugada), teléfonos de las citas que agenda recepción
+    (`citas_recepcion_reminders`), `pacientes_sin_optin` y `citas_bot`. Un
+    teléfono puede tener varios pacientes (la mamá que agenda a sus hijos):
+    se toman todos — el anuncio trajo a la familia."""
+    out: dict[str, set[int]] = defaultdict(set)
+
+    def _add(tel, pid):
+        k = _clave(str(tel or ""))
+        if pid and k in claves:
+            out[k].add(int(pid))
+
+    for q in ("SELECT phone, id_paciente FROM citas_recepcion_reminders",
+              "SELECT celular, id_paciente_medilink FROM pacientes_sin_optin",
+              "SELECT phone, id_paciente_medilink FROM citas_bot"):
+        try:
+            for r in c.execute(q):
+                _add(r[0], r[1])
+        except Exception:
+            pass
+    try:
+        import sqlite3
+        import session as _s
+        ruta = Path(_s.DB_PATH).parent / "heatmap_cache.db"
+        if ruta.exists():
+            h = sqlite3.connect(f"file:{ruta}?mode=ro", uri=True)
+            try:
+                for tel, pid in h.execute("SELECT celular, id FROM pacientes_heatmap WHERE celular IS NOT NULL"):
+                    _add(tel, pid)
+            finally:
+                h.close()
+    except Exception as e:
+        log.warning("campanas_meta: directorio de pacientes no disponible: %s", e)
+    return out
+
+
+def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) -> dict[str, dict]:
+    """Venta y margen por anuncio. Un paciente → un anuncio.
+
+    Dos caminos para saber que una persona del anuncio se atendió:
+      1. bot: agendó por el bot y la cita quedó atribuida → desde ese día.
+      2. teléfono: escribió desde el anuncio y su número está en la ficha de
+         un paciente que pagó en caja dentro de 90 días desde el clic (lo
+         agendó recepción, llamó por teléfono, llegó directo) → desde el clic.
+    Se cuenta todo lo pagado desde ese día hasta hoy.
+    `clics`: clave de teléfono → (epoch del primer clic en el rango, ad_id)."""
+    inicio: dict[int, tuple[str, str, str]] = {}   # pid → (ad_id, desde, camino)
     for ci in citas:
         pid = ci.get("id_paciente_medilink")
         if pid and pid not in inicio:
             dia = datetime.fromtimestamp(ci["created_epoch"], _CL).date().isoformat()
-            inicio[pid] = (ci["ad_id"], dia)
-    out: dict[str, list] = defaultdict(lambda: [0, 0.0])
+            inicio[int(pid)] = (ci["ad_id"], dia, "bot")
+    por_tel = _pacientes_por_telefono(c, set(clics))
+    for k in sorted(clics, key=lambda x: clics[x][0]):
+        ts, ad_id = clics[k]
+        dia = datetime.fromtimestamp(ts, _CL).date().isoformat()
+        for pid in por_tel.get(k, ()):
+            if pid not in inicio:
+                inicio[pid] = (ad_id, dia, "telefono")
+
     pct = _pct_honorarios(c)
+    pagos: dict[int, list] = defaultdict(list)
     ids = list(inicio)
     for i in range(0, len(ids), 500):
         lote = ids[i:i + 500]
@@ -317,13 +379,27 @@ def _venta_por_anuncio(c, citas: list[dict]) -> dict[str, tuple[int, float]]:
             log.warning("campanas_meta: venta no disponible: %s", e)
             return {}
         for r in filas:
-            ad_id, dia = inicio[r["id_paciente"]]
+            ad_id, dia, _ = inicio[r["id_paciente"]]
             if (r["fecha"] or "")[:10] >= dia:
-                monto = int(r["monto"] or 0)
-                p_prof = pct.get(r["id_profesional"]) or PCT_HONORARIO_DEFAULT
-                out[ad_id][0] += monto
-                out[ad_id][1] += monto * (100 - p_prof) / 100
-    return {k: (v[0], v[1]) for k, v in out.items()}
+                pagos[r["id_paciente"]].append(r)
+
+    out: dict[str, dict] = defaultdict(lambda: {"venta": 0, "centro": 0.0, "pagaron": 0, "pagaron_tel": 0})
+    for pid, filas in pagos.items():
+        ad_id, dia, camino = inicio[pid]
+        if camino == "telefono":
+            primero = min((f["fecha"] or "")[:10] for f in filas)
+            limite = (date.fromisoformat(dia) + timedelta(days=VENTANA_TELEFONO_DIAS)).isoformat()
+            if primero > limite:
+                continue
+        o = out[ad_id]
+        o["pagaron"] += 1
+        o["pagaron_tel"] += 1 if camino == "telefono" else 0
+        for f in filas:
+            monto = int(f["monto"] or 0)
+            p_prof = pct.get(f["id_profesional"]) or PCT_HONORARIO_DEFAULT
+            o["venta"] += monto
+            o["centro"] += monto * (100 - p_prof) / 100
+    return dict(out)
 
 
 # ── Panel ───────────────────────────────────────────────────────────────────
@@ -354,7 +430,8 @@ def _insights_filas(c, d: date, h: date, campana: str | None, plat: str | None,
 
 def _acum() -> dict:
     return {"gasto": 0.0, "impresiones": 0, "alcance": 0, "clics": 0, "conv": 0,
-            "personas": set(), "citas": 0, "atendidos": 0, "venta": 0, "centro": 0}
+            "personas": set(), "citas": 0, "atendidos": 0, "venta": 0, "centro": 0,
+            "pagaron": 0, "pagaron_tel": 0}
 
 
 def _cerrar(a: dict) -> dict:
@@ -371,6 +448,7 @@ def _cerrar(a: dict) -> dict:
         "centro": round(a["centro"]),
         "centro_pct": round(100 * a["centro"] / a["venta"]) if a["venta"] else None,
         "resultado": round(a["centro"]) - g,
+        "pagaron": a["pagaron"], "pagaron_tel": a["pagaron_tel"],
         "frecuencia": round(a["impresiones"] / a["alcance"], 2) if a["alcance"] else None,
         "muestra_chica": citas < MUESTRA_CHICA,
     }
@@ -455,8 +533,9 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                 a["conv"] += f["conversaciones"] or 0
 
         # Personas captadas: teléfonos únicos que llegaron por anuncio.
+        clics: dict[str, tuple[int, str]] = {}   # clave → (primer clic, ad_id)
         for r in c.execute(
-                "SELECT phone, source_id, headline, plataforma FROM meta_referrals "
+                "SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
                 "WHERE ts >= ? AND ts < ?", (e0, e1)):
             info = _info_ad(mapa, r["source_id"] or "", r["headline"] or "")
             if not _pasa_filtros(info, r["plataforma"], campana, plat):
@@ -464,6 +543,8 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             k = _clave(r["phone"])
             por_ad[info["ad_id"]]["personas"].add(k)
             tot["personas"].add(k)
+            if k not in clics or r["ts"] < clics[k][0]:
+                clics[k] = (r["ts"], info["ad_id"])
 
         citas = _citas_atribuidas(c, e0, e1, mapa, campana, plat)
         compras = _purchases(c, e0)
@@ -473,10 +554,10 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                 a["citas"] += 1
                 a["atendidos"] += 1 if ci["atendido"] else 0
 
-        for ad_id, (monto, centro) in _venta_por_anuncio(c, citas).items():
+        for ad_id, v in _venta_por_anuncio(c, citas, clics).items():
             for a in (por_ad[ad_id], tot):
-                a["venta"] += monto
-                a["centro"] += centro
+                for kk in ("venta", "centro", "pagaron", "pagaron_tel"):
+                    a[kk] += v[kk]
 
         # Tabla por anuncio y por campaña
         anuncios, por_camp = [], defaultdict(_acum)
@@ -494,7 +575,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             cid = info["campaign_id"]
             camp_nombre[cid] = info["campana"]
             pc = por_camp[cid]
-            for k in ("gasto", "impresiones", "alcance", "clics", "conv", "citas", "atendidos", "venta", "centro"):
+            for k in ("gasto", "impresiones", "alcance", "clics", "conv", "citas", "atendidos", "venta", "centro", "pagaron", "pagaron_tel"):
                 pc[k] += a[k]
             pc["personas"] |= a["personas"]
         campanas = [{"campaign_id": cid, "campana": camp_nombre[cid],
@@ -693,6 +774,33 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
             k = _clave(r[0])
             if k in personas:
                 nombres[k] = r[1].strip()
+        # Pagó en caja sin pasar por el bot (lo agendó recepción, llamó, llegó
+        # directo): su teléfono está en la ficha de un paciente con un pago
+        # ≤90 días después del clic. Misma regla que la venta del panel.
+        pago_tel: dict[str, int] = {}
+        por_tel = _pacientes_por_telefono(c, set(personas))
+        pid_k: dict[int, list[str]] = defaultdict(list)
+        for k, pids in por_tel.items():
+            for pid in pids:
+                pid_k[pid].append(k)
+        ids = list(pid_k)
+        for i in range(0, len(ids), 500):
+            lote = ids[i:i + 500]
+            try:
+                filas = c.execute("SELECT id_paciente, MIN(fecha) AS f FROM bi_pagos_caja WHERE id_paciente IN (%s) "
+                                  "AND fecha >= ? GROUP BY id_paciente" % ",".join("?" * len(lote)),
+                                  (*lote, datetime.fromtimestamp(t_min, _CL).date().isoformat())).fetchall()
+            except Exception:
+                filas = []
+            for r in filas:
+                for k in pid_k[r["id_paciente"]]:
+                    dia = datetime.fromtimestamp(personas[k]["ts"], _CL).date()
+                    # primer pago desde el clic: hay que mirar desde ese día, no desde t_min
+                    f = c.execute("SELECT MIN(fecha) FROM bi_pagos_caja WHERE id_paciente=? AND fecha >= ?",
+                                  (r["id_paciente"], dia.isoformat())).fetchone()[0]
+                    if f and f[:10] <= (dia + timedelta(days=VENTANA_TELEFONO_DIAS)).isoformat():
+                        ep = _epoch_ini(date.fromisoformat(f[:10]))
+                        pago_tel[k] = min(pago_tel.get(k, ep), ep)
         opciones = _opciones(c, mapa)
 
     cols: dict[str, list[dict]] = {e: [] for e in _ETAPA_IDS}
@@ -710,13 +818,15 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
 
         if futuras:
             etapa, desde_ep = "agendado", futuras[0]["created_epoch"]
-        elif comp or pasadas:
+        elif comp or pasadas or k in pago_tel:
             etapa = "atendido"
             if pasadas:
                 f = pasadas[-1]["fecha"][:10]
                 desde_ep = _epoch_ini(datetime.strptime(f, "%Y-%m-%d").date())
-            else:
+            elif comp:
                 desde_ep = min(comp)
+            else:
+                desde_ep = pago_tel[k]
         elif mis:
             etapa = "anulo"
             canc = [_utc_txt_epoch(ci.get("cancel_detected_at")) for ci in mis]
@@ -746,6 +856,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
             "telefono": _mascara(p["phone"]),
             "nombre": nombre,
             "anuncio": p["anuncio"], "ad_id": p["ad_id"],
+            "fuera_del_bot": etapa == "atendido" and not mis and k in pago_tel,
             "campana": p["campana"], "campaign_id": p["campaign_id"],
             "plataforma": p["plataforma"],
             "especialidad": esp.strip().capitalize() if esp and esp.islower() else esp,

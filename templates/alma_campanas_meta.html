@@ -556,7 +556,7 @@ function renderPanel() {
     { l: "Costo por conversación", v: k.cac_conv, s: "Gasto ÷ conversaciones de Meta" },
     { l: "Costo por cita", v: k.cac_cita, s: k.citas < p.umbrales.muestra_chica && k.citas ? "Muestra chica: menos de " + p.umbrales.muestra_chica + " citas" : "Gasto ÷ citas atribuidas", key: true },
     { l: "Costo por atendido", v: k.cac_atendido, s: "Gasto ÷ atendidos (proxy)" },
-    { l: "Venta", v: k.venta, s: k.retorno == null ? "Cobrado en caja a los pacientes del anuncio" : "Retorno " + String(k.retorno).replace(".", ",") + " veces lo gastado", key: true },
+    { l: "Venta", v: k.venta, s: fmtN(k.pagaron) + " pacientes pagaron (" + fmtN(k.pagaron_tel) + " fuera del bot)" + (k.retorno == null ? "" : " · retorno " + String(k.retorno).replace(".", ",") + "×"), key: true },
     { l: "Para el centro", v: k.centro, s: (k.centro_pct == null ? "" : k.centro_pct + "% de la venta · ") + "Resultado tras el gasto: " + fmt$(k.resultado), res: k.resultado },
   ];
   const cacHtml = `<div class="cacs">${cacs.map((c, i) => `<div class="cac${c.key ? " key" : ""}" style="--i:${i}">
@@ -575,7 +575,7 @@ function notaMedicion(p) {
     <li><b>Medido por el bot:</b> personas captadas (teléfonos que llegaron por un anuncio) y citas atribuidas al último clic en un anuncio, desde el ${fdate(m.atribucion_desde)}. Un reagendamiento no se cuenta dos veces.</li>
     <li><b>Proxy:</b> "atendido" = aviso de atención enviado a Meta (CAPI Purchase), que se emite cuando la hora ya pasó y no fue anulada. Una inasistencia no anulada hoy cuenta como atendida.</li>
     <li><b>Plataforma por persona</b> (Facebook o Instagram) desde el ${fdate(m.plataforma_desde)}; antes queda "sin dato".</li>
-    <li><b>Venta</b>: cobrado en caja (Medilink) a cada paciente desde el día en que agendó por el anuncio, hasta hoy. Cada paciente cuenta una vez, en el anuncio de su primera cita. Si ya era paciente del centro, sus pagos posteriores también cuentan.</li>
+    <li><b>Venta</b>: cobrado en caja (Medilink) a cada paciente que trajo el anuncio, hasta hoy. Incluye a quienes escribieron desde el anuncio y después agendaron por recepción o llegaron directo: se reconocen porque su teléfono está en la ficha de un paciente que pagó dentro de 90 días del clic. Un teléfono compartido (familia) suma a todos sus pacientes. Cada paciente cuenta una vez, en el anuncio de su primera cita. Si ya era paciente del centro, sus pagos posteriores también cuentan.</li>
     <li><b>Para el centro</b>: cada pago menos el honorario del profesional que atendió (su % cargado en Equipo; 70% si falta; Dr. Abarca con sueldo fijo se calcula al 62%). <b>Resultado</b> = para el centro menos el gasto del anuncio.</li>
     <li><b>Frecuencia</b> <span class="tag-est">estimado</span> impresiones ÷ alcance diario sumado. Es un piso: la frecuencia real del rango es mayor.</li>
   </ul></details>${warn}</div></div>`;
@@ -612,7 +612,7 @@ function tabla(p) {
       <td class="r" data-l="Costo / conv.">${r.cac_conv == null ? '<span class="dash">—</span>' : fmt$(r.cac_conv)}</td>
       <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? '<span class="dash">—</span>' : fmt$(r.cac_cita)}</span></td>
       <td class="r" data-l="Costo / atendido">${r.cac_atendido == null ? '<span class="dash">—</span>' : fmt$(r.cac_atendido)}</td>
-      <td class="r" data-l="Venta"><b>${fmt$(r.venta)}</b></td>
+      <td class="r" data-l="Venta"><b>${fmt$(r.venta)}</b>${r.pagaron ? '<small class="pctc">' + r.pagaron + (r.pagaron === 1 ? " paciente" : " pacientes") + (r.pagaron_tel ? " · " + r.pagaron_tel + " fuera del bot" : "") + "</small>" : ""}</td>
       <td class="r" data-l="Para el centro">${r.venta ? fmt$(r.centro) + '<small class="pctc">' + r.centro_pct + "%</small>" : '<span class="dash">—</span>'}</td>
       <td class="r" data-l="Resultado"><span class="${r.resultado >= 0 ? "resp" : "resn"}">${sinG ? '<span class="dash">—</span>' : fmt$(r.resultado)}</span></td>
       <td class="r" data-l="Retorno">${r.retorno == null ? '<span class="dash">—</span>' : String(r.retorno).replace(".", ",") + "×"}</td>
@@ -625,7 +625,7 @@ function tabla(p) {
     <div class="tbl-wrap"><table><thead><tr><th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
       <th class="r">Atendidos</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th><th class="r">Venta</th><th class="r" title="Venta menos honorarios de los profesionales">Para el centro</th><th class="r" title="Para el centro menos gasto en el anuncio">Resultado</th><th class="r" title="Venta ÷ gasto">Retorno</th><th class="r">Frec.</th></tr></thead>
     <tbody>${body}</tbody></table></div>
-    <div class="tbl-foot">Ordenado por costo por cita, de menor a mayor. Al final, lo que gastó sin traer citas. "Muestra chica" = menos de ${p.umbrales.muestra_chica} citas: el costo puede cambiar mucho con una sola cita más. Venta = lo cobrado en caja a cada paciente desde el día en que agendó por el anuncio, hasta hoy (incluye controles y otras especialidades; si ya era paciente del centro, también cuenta). Para el centro = venta menos el honorario de cada profesional (su % en Equipo; 70% si no tiene cargado). Resultado = para el centro menos el gasto del anuncio. Retorno = venta ÷ gasto.</div></div>`;
+    <div class="tbl-foot">Ordenado por costo por cita, de menor a mayor. Al final, lo que gastó sin traer citas. "Muestra chica" = menos de ${p.umbrales.muestra_chica} citas: el costo puede cambiar mucho con una sola cita más. Venta = lo cobrado en caja a cada paciente que trajo el anuncio, hasta hoy: los que agendaron por el bot (desde ese día) y los que escribieron desde el anuncio y después se atendieron por otra vía, reconocidos por su teléfono en la ficha de Medilink con un pago dentro de 90 días del clic ("fuera del bot") (incluye controles y otras especialidades; si ya era paciente del centro, también cuenta). Para el centro = venta menos el honorario de cada profesional (su % en Equipo; 70% si no tiene cargado). Resultado = para el centro menos el gasto del anuncio. Retorno = venta ÷ gasto.</div></div>`;
 }
 function bindTabla() {
   document.querySelectorAll("#segTabla button").forEach(b => b.onclick = () => {
@@ -757,7 +757,7 @@ function cardHtml(t, i, col) {
     <div class="kc-tel">${esc(t.telefono)}</div>
     <div class="kc-ad">${I.meg}<span title="${esc(t.anuncio)}">${esc(t.anuncio)}</span></div>
     <div class="kc-camp" title="${esc(t.campana)}">${esc(t.campana)}</div>
-    <div class="kc-chips">${plat}${t.especialidad ? `<span class="chip">${esc(t.especialidad)}</span>` : ""}</div>
+    <div class="kc-chips">${plat}${t.especialidad ? `<span class="chip">${esc(t.especialidad)}</span>` : ""}${t.fuera_del_bot ? `<span class="chip" title="Escribió desde el anuncio y después pagó en caja; se agendó por otra vía">Pagó en caja · fuera del bot</span>` : ""}</div>
     ${t.proxima_cita ? `<div class="kc-cita">${I.cal}Cita ${esc(t.proxima_cita.fecha)}${t.proxima_cita.hora ? " · " + esc(t.proxima_cita.hora) : ""}</div>` : ""}
     <div class="kc-foot"><span>Llegó ${esc(t.llegada)}</span>
       <a class="kc-link" href="${esc(link)}" target="_blank" rel="noopener" aria-label="Abrir la conversación de ${esc(t.nombre || t.telefono)} en el panel de recepción">${I.ext}Conversación</a></div>

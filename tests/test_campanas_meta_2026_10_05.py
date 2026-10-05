@@ -194,7 +194,8 @@ check("kanban: días en etapa", col["perdido"]["tarjetas"][0]["dias_etapa"] == 1
 check("kanban: especialidad desde evento si no hay cita",
       col["vio_horas"]["tarjetas"][0]["especialidad"] == "Ecografía")
 permitidas = {"clave", "phone", "telefono", "nombre", "anuncio", "ad_id", "campana", "campaign_id",
-              "plataforma", "especialidad", "llegada", "llegada_iso", "proxima_cita", "dias_etapa"}
+              "plataforma", "especialidad", "llegada", "llegada_iso", "proxima_cita", "dias_etapa",
+              "fuera_del_bot"}
 check("privacidad: la tarjeta no trae campos extra",
       all(set(t) <= permitidas for cc in kb["columnas"] for t in cc["tarjetas"]))
 
@@ -224,6 +225,34 @@ check("auth: dueño 200", r.status_code == 200 and r.json()["kpis"]["citas"] == 
 r = cli.get(f"/alma/api/campanas-meta/kanban?desde={D30}&hasta={H}",
             headers={"Authorization": "Bearer dueno_test"})
 check("auth: dueño por Bearer 200", r.status_code == 200 and r.json()["total"] == 7)
+
+# ── Venta por teléfono: escribió desde el anuncio, no agendó por el bot, pero
+# pagó en caja (recepción) → la venta es del anuncio; >90 días después, no.
+import sqlite3 as _sq
+_h = _sq.connect(str(Path(session.DB_PATH).parent / "heatmap_cache.db"))
+_h.execute("CREATE TABLE IF NOT EXISTS pacientes_heatmap (id INTEGER, celular TEXT)")
+_h.executemany("INSERT INTO pacientes_heatmap VALUES (?,?)",
+               [(777001, "+56 9 7700 0001"), (777002, "56977000002")])
+_h.commit(); _h.close()
+with session.db() as c:
+    c.execute("INSERT INTO meta_referrals (phone, source_id, headline, ts, plataforma) VALUES (?,?,?,?,?)",
+              ("56977000001", "AD1", "h", ep(10), "facebook"))
+    c.execute("INSERT INTO meta_referrals (phone, source_id, headline, ts, plataforma) VALUES (?,?,?,?,?)",
+              ("56977000002", "AD1", "h", ep(20), "facebook"))
+    c.execute("INSERT INTO bi_pagos_caja (pago_id, fecha, id_paciente, id_profesional, monto) VALUES (?,?,?,?,?)",
+              (990001, fecha(-5), 777001, 1, 30000))
+    c.execute("INSERT INTO bi_pagos_caja (pago_id, fecha, id_paciente, id_profesional, monto) VALUES (?,?,?,?,?)",
+              (990002, fecha(-25), 777002, 1, 99999))   # pagó ANTES del clic → no cuenta
+    c.commit()
+_p = cm.panel_data(D30, H)
+_ad1 = next(a for a in _p["anuncios"] if a["ad_id"] == "AD1")
+check("venta por teléfono: entra el que pagó tras el clic", _ad1["pagaron_tel"] == 1)
+check("venta por teléfono: no entra el pago anterior al clic", _p["kpis"]["venta"] >= 30000
+      and all(a["venta"] < 99999 or a["ad_id"] != "AD1" for a in _p["anuncios"]))
+_k = cm.kanban_data(D30, H)
+_t = [t for col in _k["columnas"] for t in col["tarjetas"] if t["phone"] == "56977000001"]
+check("kanban: pagó fuera del bot → Atendido", bool(_t) and _t[0]["fuera_del_bot"]
+      and any(t["phone"] == "56977000001" for col in _k["columnas"] if col["id"] == "atendido" for t in col["tarjetas"]))
 
 print(f"\n{len(FALLAS)} fallas")
 sys.exit(1 if FALLAS else 0)
