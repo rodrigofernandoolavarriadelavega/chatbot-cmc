@@ -93,9 +93,9 @@ ETAPAS = [
     {"id": "agendado",  "label": "Agendado",
      "ayuda": "Tiene una cita futura vigente."},
     {"id": "atendido",  "label": "Atendido",
-     "ayuda": "Aviso de atención (CAPI Purchase), cita ya pasada y no anulada, o pagó en caja dentro de 90 días del clic aunque no agendara por el bot."},
+     "ayuda": "Medilink marca la cita como atendida, o pagó en caja ese día o dentro de 90 días del clic aunque no agendara por el bot. Sin dato de Medilink: cita pasada y no anulada (respaldo)."},
     {"id": "anulo",     "label": "Anuló / no asistió",
-     "ayuda": "Su cita fue anulada y no tiene otra vigente. Las inasistencias aún no llegan desde Medilink."},
+     "ayuda": "Medilink la marca como inasistencia (no asistió) o la cita fue anulada, y no tiene otra vigente."},
     {"id": "perdido",   "label": "Sin respuesta > 7 días",
      "ayuda": "Sin cita y sin escribir hace más de 7 días."},
 ]
@@ -577,7 +577,8 @@ def _citas_web(c, llegada: dict[str, tuple[int, str]], hasta_epoch: int) -> list
         "SELECT phone, id_cita, especialidad, fecha, hora, created_at, cancel_detected_at, "
         "confirmation_status, id_paciente_medilink FROM citas_bot WHERE created_at >= ? AND created_at < ? "
         "ORDER BY created_at", (_utc_txt(t_min), _utc_txt(hasta_epoch))).fetchall()
-    vistas, out = set(), []
+    vistas: dict = {}
+    out = []
     for r in filas:
         d = dict(r)
         k = _clave(d["phone"])
@@ -589,13 +590,147 @@ def _citas_web(c, llegada: dict[str, tuple[int, str]], hasta_epoch: int) -> list
             continue
         kk = (k, (d["especialidad"] or "").strip().lower())
         if kk in vistas:
+            vistas[kk]["hermanas"].append(dict(r))
             continue
-        vistas.add(kk)
+        vistas[kk] = d
+        d["hermanas"] = [dict(r)]
         d.update(_info_web(ad_id))
         d["clave"] = k
         d["created_epoch"] = ce
         out.append(d)
     return out
+
+
+# ── Desenlace real de cada cita (Medilink) ──────────────────────────────────
+# Fuente: `ausentismo_citas` (espejo nocturno de Medilink /citas, ver
+# app/ausentismo.py), cruzado por id de cita con `citas_bot.id_cita`.
+# Misma metodología que el módulo Ausentismo:
+#   Atendida = id_estado 2 · No asistió = id_estado 8 sin anulación ·
+#   Anulada = anulación 1 · 14 = reagenda (se sigue a la cita nueva del mismo
+#   paciente y profesional) · un "no asiste" con otra cita ATENDIDA ese día con
+#   el mismo profesional no es inasistencia (reagenda intradía).
+# Respaldos, en orden: pago en caja o atención en BI ese día → atendida;
+# anulada detectada por el bot → anulada; hora futura → pendiente; aviso CAPI
+# Purchase (proxy antiguo) → atendida "por proxy"; si no, sin dato.
+
+_RANGO_DES = {"atendida": 4, "no_show": 3, "pendiente": 2, "anulada": 1, "sin_dato": 0}
+
+
+def _tabla_existe(c, nombre: str) -> bool:
+    return bool(c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (nombre,)).fetchone())
+
+
+def _clasif_medilink(id_estado, estado: str, anulacion) -> str:
+    est = (estado or "").strip().lower()
+    if id_estado == 14:
+        return "reagenda"
+    if id_estado == 2 or est.startswith("atend"):
+        return "atendida"
+    if (anulacion or 0) == 1:
+        return "anulada"
+    if id_estado == 8 or est.startswith("no asist"):
+        return "no_show"
+    return "otra"
+
+
+class Desenlaces:
+    """Calcula el desenlace de citas del bot con una sola carga de datos."""
+
+    def __init__(self, c, citas: list[dict], hoy: str, compras: dict[str, list[int]] | None = None):
+        self.hoy, self.compras = hoy, compras or {}
+        self.med: dict[int, dict] = {}
+        self.por_pac: dict[int, list[dict]] = defaultdict(list)
+        self.pagos: set[tuple[int, str]] = set()
+        ids, pids = set(), set()
+        for ci in citas:
+            for h in ci.get("hermanas") or [ci]:
+                try:
+                    ids.add(int(str(h.get("id_cita") or "").strip()))
+                except ValueError:
+                    pass
+                if h.get("id_paciente_medilink"):
+                    pids.add(int(h["id_paciente_medilink"]))
+        if ids and _tabla_existe(c, "ausentismo_citas"):
+            il = list(ids)
+            for i in range(0, len(il), 500):
+                lote = il[i:i + 500]
+                for r in c.execute("SELECT id_cita, id_profesional, id_paciente, fecha, hora, id_estado, estado_cita, "
+                                   "anulacion FROM ausentismo_citas WHERE id_cita IN (%s)" % ",".join("?" * len(lote)), lote):
+                    self.med[int(r["id_cita"])] = dict(r)
+                    if r["id_paciente"]:
+                        pids.add(int(r["id_paciente"]))
+            pl = list(pids)
+            for i in range(0, len(pl), 500):
+                lote = pl[i:i + 500]
+                for r in c.execute("SELECT id_cita, id_profesional, id_paciente, fecha, hora, id_estado, estado_cita, "
+                                   "anulacion FROM ausentismo_citas WHERE id_paciente IN (%s)" % ",".join("?" * len(lote)), lote):
+                    self.por_pac[int(r["id_paciente"])].append(dict(r))
+        pl = list(pids)
+        for i in range(0, len(pl), 500):
+            lote = pl[i:i + 500]
+            for q in ("SELECT id_paciente, fecha FROM bi_pagos_caja WHERE id_paciente IN (%s)",
+                      "SELECT id_paciente, fecha FROM bi_atenciones WHERE id_paciente IN (%s)"):
+                try:
+                    for r in c.execute(q % ",".join("?" * len(lote)), lote):
+                        self.pagos.add((int(r[0]), (r[1] or "")[:10]))
+                except Exception:
+                    pass
+
+    def _medilink(self, idc: int) -> str | None:
+        m = self.med.get(idc)
+        if not m:
+            return None
+        t = _clasif_medilink(m["id_estado"], m["estado_cita"], m["anulacion"])
+        pac, prof, f = m["id_paciente"], m["id_profesional"], (m["fecha"] or "")[:10]
+        if t == "no_show" and pac:
+            if any(_clasif_medilink(x["id_estado"], x["estado_cita"], x["anulacion"]) == "atendida"
+                   and x["id_profesional"] == prof and (x["fecha"] or "")[:10] == f for x in self.por_pac.get(pac, [])):
+                return "atendida"
+        if t == "reagenda" and pac:
+            lim = (date.fromisoformat(f) + timedelta(days=45)).isoformat() if f else "9999"
+            nuevas = sorted((x for x in self.por_pac.get(pac, []) if x["id_profesional"] == prof
+                             and int(x["id_cita"]) != idc and f <= (x["fecha"] or "")[:10] <= lim),
+                            key=lambda x: (x["fecha"] or "", x["hora"] or ""))
+            for x in nuevas:
+                t2 = _clasif_medilink(x["id_estado"], x["estado_cita"], x["anulacion"])
+                if t2 in ("atendida", "no_show", "anulada"):
+                    return t2
+            return None
+        if t in ("atendida", "no_show", "anulada"):
+            return t
+        return None
+
+    def una(self, h: dict, clave: str = "") -> tuple[str, str]:
+        """(desenlace, fuente) de una fila de citas_bot."""
+        try:
+            idc = int(str(h.get("id_cita") or "").strip())
+        except ValueError:
+            idc = None
+        if idc is not None:
+            t = self._medilink(idc)
+            if t:
+                return t, "medilink"
+        f = (h.get("fecha") or "")[:10]
+        pac = h.get("id_paciente_medilink") or (self.med.get(idc) or {}).get("id_paciente")
+        if pac and f and (int(pac), f) in self.pagos and f <= self.hoy:
+            return "atendida", "caja"
+        if _cancelada(h):
+            return "anulada", "bot"
+        if f >= self.hoy:
+            return "pendiente", "agenda"
+        ce = _utc_txt_epoch(h.get("created_at")) or 0
+        if any(t >= ce for t in self.compras.get(clave or _clave(h.get("phone")), [])):
+            return "atendida", "proxy"
+        return "sin_dato", ""
+
+    def grupo(self, ci: dict) -> tuple[str, str]:
+        """Mejor desenlace entre la cita y sus reagendamientos."""
+        mejor = ("sin_dato", "")
+        for h in ci.get("hermanas") or [ci]:
+            d = self.una(h, ci.get("clave", ""))
+            if _RANGO_DES[d[0]] > _RANGO_DES[mejor[0]]:
+                mejor = d
+        return mejor
 
 
 def _purchases(c, desde_epoch: int) -> dict[str, list[int]]:
@@ -628,16 +763,19 @@ def _citas_atribuidas(c, desde_epoch: int, hasta_epoch: int, mapa: dict,
         "confirmation_status, ad_source_id, ad_headline, ad_plataforma, id_paciente_medilink FROM citas_bot "
         "WHERE ad_source_id IS NOT NULL AND ad_source_id != '' AND created_at >= ? AND created_at < ? "
         "ORDER BY created_at", (_utc_txt(desde_epoch), _utc_txt(hasta_epoch))).fetchall()
-    vistas, out = set(), []
+    vistas: dict = {}
+    out = []
     for r in filas:
         d = dict(r)
         k = (_clave(d["phone"]), (d["especialidad"] or "").strip().lower())
         if k in vistas:
+            vistas[k]["hermanas"].append(dict(r))   # reagendamiento: misma cita lógica
             continue
         info = _info_ad(mapa, d["ad_source_id"], d["ad_headline"] or "")
         if not _pasa_filtros(info, d["ad_plataforma"], campana, plat):
             continue
-        vistas.add(k)
+        vistas[k] = d
+        d["hermanas"] = [dict(r)]
         d.update(info)
         d["clave"] = k[0]
         d["created_epoch"] = _utc_txt_epoch(d["created_at"]) or 0
@@ -704,6 +842,84 @@ def _pacientes_por_telefono(c, claves: set[str]) -> dict[str, set[int]]:
 
 
 ID_IMAGENDENT = -1   # línea propia en el desglose por profesional
+
+# ── Ortodoncia: instalaciones atribuidas ────────────────────────────────────
+# Una persona del anuncio/web "instaló" si, DESPUÉS de su primer contacto:
+#   - la caja tiene un cobro de la ortodoncista (Dra. Castillo, id 66) de
+#     instalación (≥ $80.000, misma frontera que ortodoncia_routes), o
+#     `ortodoncia_cache` la marca instalación, o
+#   - el embudo de ortodoncia la tiene en 'instalado' (o 'en_tratamiento')
+#     desde una fecha posterior al contacto.
+# Quien ya pagaba a la ortodoncista ANTES del contacto es paciente en curso:
+# no cuenta como instalación traída por el anuncio.
+ORTODONCISTA = 66
+INSTALACION_MIN = 80000
+VENTANA_INSTALACION_DIAS = 365
+
+
+def _instalaciones(c, clics: dict[str, tuple[int, str]]) -> dict[str, dict]:
+    """clave → {"fecha", "venta_orto", "fuente"} de quienes instalaron."""
+    if not clics:
+        return {}
+    por_tel = _pacientes_por_telefono(c, set(clics))
+    pid_k: dict[int, set[str]] = defaultdict(set)
+    for k, pids in por_tel.items():
+        for pid in pids:
+            pid_k[pid].add(k)
+    orto: dict[str, list[tuple[str, int]]] = defaultdict(list)   # clave → [(fecha, monto)]
+    marc: dict[str, list[str]] = defaultdict(list)               # clave → fechas de instalación (cache)
+    ids = list(pid_k)
+    for i in range(0, len(ids), 500):
+        lote = ids[i:i + 500]
+        ph = ",".join("?" * len(lote))
+        for q in (f"SELECT id_paciente, fecha, monto FROM bi_pagos_caja WHERE id_profesional=? AND id_paciente IN ({ph})",):
+            try:
+                for r in c.execute(q, (ORTODONCISTA, *lote)):
+                    for k in pid_k[r[0]]:
+                        orto[k].append(((r[1] or "")[:10], int(r[2] or 0)))
+            except Exception:
+                pass
+        try:
+            for r in c.execute(f"SELECT id_paciente, fecha, total FROM bi_atenciones WHERE id_profesional=? "
+                               f"AND id_paciente IN ({ph})", (ORTODONCISTA, *lote)):
+                if int(r[2] or 0) >= INSTALACION_MIN:
+                    for k in pid_k[r[0]]:
+                        marc[k].append((r[1] or "")[:10])
+        except Exception:
+            pass
+        try:
+            for r in c.execute(f"SELECT id_paciente, fecha FROM ortodoncia_cache WHERE tipo='instalacion' "
+                               f"AND id_paciente IN ({ph})", lote):
+                for k in pid_k[r[0]]:
+                    marc[k].append((r[1] or "")[:10])
+        except Exception:
+            pass
+    embudo: dict[str, tuple[str, str]] = {}
+    try:
+        for r in c.execute("SELECT phone, telefono, etapa, etapa_desde FROM orto_embudo "
+                           "WHERE etapa IN ('instalado','en_tratamiento')"):
+            for tel in (r[0], r[1]):
+                k = _clave(str(tel or ""))
+                if k in clics:
+                    embudo[k] = (r[2], (r[3] or "")[:10])
+    except Exception:
+        pass
+    out: dict[str, dict] = {}
+    for k, (ts, _ad) in clics.items():
+        dia = datetime.fromtimestamp(ts, _CL).date()
+        d0, lim = dia.isoformat(), (dia + timedelta(days=VENTANA_INSTALACION_DIAS)).isoformat()
+        previos = [f for f, m in orto.get(k, []) if f < d0 and m > 0]
+        if previos:
+            continue   # ya era paciente de ortodoncia
+        inst = sorted([f for f, m in orto.get(k, []) if d0 <= f <= lim and m >= INSTALACION_MIN]
+                      + [f for f in marc.get(k, []) if d0 <= f <= lim])
+        fuente = "caja" if inst else ""
+        if not inst and k in embudo and embudo[k][1] >= d0:
+            inst, fuente = [embudo[k][1]], "embudo"
+        if inst:
+            out[k] = {"fecha": inst[0], "fuente": fuente,
+                      "venta_orto": sum(m for f, m in orto.get(k, []) if f >= d0)}
+    return out
 
 # ── Especialidad del anuncio vs. lo que se vendió ───────────────────────────
 # Grupos (no especialidades sueltas): psiquiatría y psicología son "Salud
@@ -993,7 +1209,8 @@ def _insights_filas(c, d: date, h: date, campana: str | None, plat: str | None,
 
 def _acum() -> dict:
     return {"gasto": 0.0, "impresiones": 0, "alcance": 0, "clics": 0, "conv": 0,
-            "personas": set(), "citas": 0, "atendidos": 0, "venta": 0, "centro": 0,
+            "personas": set(), "citas": 0, "atendidos": 0, "no_asistio": 0, "anuladas": 0,
+            "por_proxy": 0, "con_medilink": 0, "instalaron": set(), "orto_venta": 0, "venta": 0, "centro": 0,
             "pagaron": 0, "pagaron_tel": 0, "profs": {}}
 
 
@@ -1032,6 +1249,10 @@ def _cerrar(a: dict) -> dict:
         "gasto": g, "impresiones": a["impresiones"], "clics": a["clics"],
         "conversaciones": a["conv"], "personas": len(a["personas"]),
         "citas": citas, "atendidos": aten,
+        "no_asistio": a["no_asistio"], "anuladas": a["anuladas"],
+        "no_asistio_pct": round(100 * a["no_asistio"] / (aten + a["no_asistio"])) if (aten + a["no_asistio"]) else None,
+        "atendidos_proxy": a["por_proxy"], "con_medilink": a["con_medilink"],
+        "instalaron": len(a["instalaron"]), "orto_venta": round(a["orto_venta"]),
         "cac_conv": _div(g, a["conv"]) if g else None, "cac_cita": _div(g, citas) if g else None,
         "cac_atendido": _div(g, aten) if g else None,
         "venta": round(a["venta"]),
@@ -1174,11 +1395,22 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         if canal in ("web", "todos"):
             citas += _citas_web(c, {k: v for k, v in clics.items() if v[1].startswith("web:")}, e1)
         compras = _purchases(c, e0)
+        des_c = Desenlaces(c, citas, _hoy().isoformat(), compras)
         for ci in citas:
-            ci["atendido"] = any(t >= ci["created_epoch"] for t in compras.get(ci["clave"], []))
+            ci["desenlace"], ci["fuente"] = des_c.grupo(ci)
+            ci["atendido"] = ci["desenlace"] == "atendida"
             for a in (por_ad[ci["ad_id"]], tot):
                 a["citas"] += 1
                 a["atendidos"] += 1 if ci["atendido"] else 0
+                a["no_asistio"] += 1 if ci["desenlace"] == "no_show" else 0
+                a["anuladas"] += 1 if ci["desenlace"] == "anulada" else 0
+                a["por_proxy"] += 1 if ci["fuente"] == "proxy" else 0
+                a["con_medilink"] += 1 if ci["fuente"] == "medilink" else 0
+
+        for k, v in _instalaciones(c, clics).items():
+            for a in (por_ad[clics[k][1]], tot):
+                a["instalaron"].add(k)
+                a["orto_venta"] += v["venta_orto"]
 
         _NOMBRES_PROF.clear()
         _NOMBRES_PROF.update(_nombres_profesionales(c))
@@ -1245,8 +1477,10 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             cid = info["campaign_id"]
             camp_nombre[cid] = info["campana"]
             pc = por_camp[cid]
-            for k in ("gasto", "impresiones", "alcance", "clics", "conv", "citas", "atendidos", "venta", "centro", "pagaron", "pagaron_tel"):
+            for k in ("gasto", "impresiones", "alcance", "clics", "conv", "citas", "atendidos", "venta", "centro", "pagaron", "pagaron_tel",
+                      "no_asistio", "anuladas", "por_proxy", "con_medilink", "orto_venta"):
                 pc[k] += a[k]
+            pc["instalaron"] |= a["instalaron"]
             pc["personas"] |= a["personas"]
             _sumar_profs(pc["profs"], a["profs"])
             pcc = pc.setdefault("conoc", defaultdict(int))
@@ -1397,7 +1631,8 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
                 campana: str | None = None, anuncio: str | None = None,
                 plataforma: str | None = None, especialidad: str | None = None,
                 q: str | None = None, ahora: datetime | None = None,
-                gestion: str | None = None, canal: str | None = None) -> dict:
+                gestion: str | None = None, canal: str | None = None,
+                resultado: str | None = None) -> dict:
     """Una tarjeta por persona (clave = últimos 9 dígitos) cuyo ÚLTIMO clic en
     un anuncio cae en el rango. La etapa sale de los datos, por prioridad:
 
@@ -1441,8 +1676,8 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
         t_min = min(p["ts"] for p in personas.values()) - 3600
         citas: dict[str, list[dict]] = defaultdict(list)
         for r in c.execute(
-                "SELECT phone, especialidad, profesional, fecha, hora, created_at, cancel_detected_at, "
-                "confirmation_status, paciente_nombre FROM citas_bot WHERE created_at >= ?",
+                "SELECT phone, id_cita, especialidad, profesional, fecha, hora, created_at, cancel_detected_at, "
+                "confirmation_status, paciente_nombre, id_paciente_medilink FROM citas_bot WHERE created_at >= ?",
                 (_utc_txt(t_min),)):
             k = _clave(r["phone"])
             if k in personas:
@@ -1509,23 +1744,30 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
                         pago_tel[k] = min(pago_tel.get(k, ep), ep)
         opciones = _opciones(c, mapa, canal)
         segs = _seguimientos(c, set(personas))
+        des = Desenlaces(c, [ci for v in citas.values() for ci in v], hoy, compras)
 
     cols: dict[str, list[dict]] = {e: [] for e in _ETAPA_IDS}
     for k, p in personas.items():
         R = p["ts"]
         mis = [ci for ci in citas.get(k, []) if ci["created_epoch"] >= R - 3600]
-        vigentes = [ci for ci in mis if not _cancelada(ci)]
-        futuras = sorted([ci for ci in vigentes if _cita_futura(ci, hoy, ahora_hm)],
-                         key=lambda x: (x["fecha"], x["hora"] or ""))
-        pasadas = sorted([ci for ci in vigentes if not _cita_futura(ci, hoy, ahora_hm)],
-                         key=lambda x: (x["fecha"], x["hora"] or ""))
+        for ci in mis:
+            ci["_des"], ci["_fuente"] = des.una(ci, k)
+        orden_f = lambda x: (x["fecha"] or "", x["hora"] or "")
+        futuras = sorted([ci for ci in mis if ci["_des"] in ("pendiente", "sin_dato") and not _cancelada(ci)
+                          and _cita_futura(ci, hoy, ahora_hm)], key=orden_f)
+        # Pasadas que cuentan como atendidas: Medilink/caja/proxy, o sin ningún
+        # dato (respaldo: hora pasada y no anulada, como antes).
+        pasadas = sorted([ci for ci in mis if not _cita_futura(ci, hoy, ahora_hm)
+                          and (ci["_des"] == "atendida" or (ci["_des"] in ("sin_dato", "pendiente")
+                                                            and not _cancelada(ci)))], key=orden_f)
+        no_show = sorted([ci for ci in mis if ci["_des"] == "no_show"], key=orden_f)
         comp = [t for t in compras.get(k, []) if t >= R]
         sl = [t for t in slots.get(k, []) if t >= R - 60]
         actividad = max(ult_msg.get(k, 0), R)
 
         if futuras:
             etapa, desde_ep = "agendado", futuras[0]["created_epoch"]
-        elif comp or pasadas or k in pago_tel:
+        elif pasadas or k in pago_tel or (comp and not mis):
             etapa = "atendido"
             if pasadas:
                 f = pasadas[-1]["fecha"][:10]
@@ -1534,6 +1776,9 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
                 desde_ep = min(comp)
             else:
                 desde_ep = pago_tel[k]
+        elif no_show:
+            etapa = "anulo"
+            desde_ep = _epoch_ini(date.fromisoformat(no_show[-1]["fecha"][:10]))
         elif mis:
             etapa = "anulo"
             canc = [_utc_txt_epoch(ci.get("cancel_detected_at")) for ci in mis]
@@ -1559,6 +1804,8 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
         gest = _gestion_tarjeta(segs.get(k), hoy)
         if gestion and not _pasa_gestion(gest, gestion):
             continue
+        if resultado == "no_asistio" and not (etapa == "anulo" and no_show):
+            continue
         llegada = datetime.fromtimestamp(R, _CL)
         cols[etapa].append({
             "clave": k,
@@ -1567,6 +1814,10 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
             "nombre": nombre,
             "anuncio": p["anuncio"], "ad_id": p["ad_id"],
             "fuera_del_bot": etapa == "atendido" and not mis and k in pago_tel,
+            "desenlace": ("no_asistio" if no_show else "anulo") if etapa == "anulo" else None,
+            "atencion_fuente": (next((ci["_fuente"] for ci in reversed(pasadas) if ci["_des"] == "atendida"), "sin_dato")
+                                if pasadas else ("caja" if k in pago_tel else ("proxy" if comp else None)))
+                               if etapa == "atendido" else None,
             "campana": p["campana"], "campaign_id": p["campaign_id"],
             "plataforma": p["plataforma"],
             "canal": p["canal"],
@@ -1594,6 +1845,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
         "total": sum(c_["n"] for c_ in columnas),
         "por_llamar": sum(1 for c_ in columnas for t in c_["tarjetas"]
                           if (t["gestion"] or {}).get("alerta")),
+        "no_asistieron": sum(1 for c_ in columnas for t in c_["tarjetas"] if t.get("desenlace") == "no_asistio"),
         "opciones": {**opciones, "gestion": GESTION},
         "medicion": {"atribucion_desde": ATRIBUCION_DESDE, "plataforma_desde": PLATAFORMA_DESDE,
                      "dias_perdido": DIAS_PERDIDO},
@@ -1603,7 +1855,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
 def _kanban_vacio(d: date, h: date, opciones: dict) -> dict:
     return {"rango": {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": (h - d).days + 1},
             "canal": "",
-            "columnas": [{**e, "n": 0, "tarjetas": []} for e in ETAPAS], "total": 0, "por_llamar": 0,
+            "columnas": [{**e, "n": 0, "tarjetas": []} for e in ETAPAS], "total": 0, "por_llamar": 0, "no_asistieron": 0,
             "opciones": {**opciones, "gestion": GESTION},
             "medicion": {"atribucion_desde": ATRIBUCION_DESDE, "plataforma_desde": PLATAFORMA_DESDE,
                          "dias_perdido": DIAS_PERDIDO}}
@@ -1836,24 +2088,39 @@ def persona_data(clave: str, ahora: datetime | None = None, canal: str | None = 
         q_ph = ",".join("?" * len(phones))
         citas = []
         for r in c.execute("SELECT phone, especialidad, profesional, fecha, hora, created_at, "
-                           "cancel_detected_at, confirmation_status, paciente_nombre, ad_source_id "
-                           "FROM citas_bot WHERE phone LIKE ? OR phone IN (%s)" % q_ph,
+                           "cancel_detected_at, confirmation_status, paciente_nombre, ad_source_id, id_cita, "
+                           "id_paciente_medilink FROM citas_bot WHERE phone LIKE ? OR phone IN (%s)" % q_ph,
                            ("%" + clave if clave.isdigit() else clave, *phones)):
             if _clave(r["phone"]) != clave:
                 continue
-            d = dict(r)
-            citas.append(d)
+            citas.append(dict(r))
+        des_p = Desenlaces(c, citas, hoy, _purchases(c, primer - 86400 * 400))
+        _DES_LBL = {"atendida": "Atendida", "no_show": "No asistió", "anulada": "Anulada",
+                    "pendiente": "Por venir", "sin_dato": "Sin dato"}
+        _FUE_LBL = {"medilink": "según Medilink", "caja": "pagó en caja ese día", "bot": "detectada por el bot",
+                    "proxy": "estimado por aviso a Meta", "agenda": ""}
+        for d in citas:
             cre = _utc_txt_epoch(d["created_at"]) or 0
             hora = (d["hora"] or "")[:5]
+            dz, fz = des_p.una(d, clave)
             ev.append({"ts": cre, "tipo": "cita", "titulo": "Agendó por el bot",
                        "detalle": " · ".join(x for x in (
                            d["especialidad"] or "", (_fmt_fecha(d["fecha"]) + (" a las " + hora if hora else "")),
                            d["profesional"] or "") if x),
-                       "anulada": _cancelada(d), "del_anuncio": bool(d["ad_source_id"])})
-            if _cancelada(d):
+                       "anulada": dz == "anulada", "del_anuncio": bool(d["ad_source_id"]),
+                       "desenlace": dz, "desenlace_lbl": " · ".join(x for x in (_DES_LBL[dz], _FUE_LBL.get(fz, "")) if x)})
+            if dz == "anulada":
                 ca = _utc_txt_epoch(d.get("cancel_detected_at"))
                 ev.append({"ts": ca or cre + 1, "tipo": "anulada", "titulo": "Cita anulada",
                            "detalle": " · ".join(x for x in (d["especialidad"] or "", _fmt_fecha(d["fecha"])) if x)})
+            elif dz == "no_show":
+                try:
+                    e_ns = _epoch_ini(date.fromisoformat((d["fecha"] or "")[:10])) + 20 * 3600
+                except ValueError:
+                    e_ns = cre + 1
+                ev.append({"ts": e_ns, "tipo": "no_show", "titulo": "No asistió a la cita",
+                           "detalle": " · ".join(x for x in (d["especialidad"] or "", _fmt_fecha(d["fecha"]),
+                                                             "según Medilink") if x), "solo_fecha": True})
 
         # Horarios ofrecidos y avisos de atención (eventos del bot).
         vistos_slot: list[int] = []
@@ -1870,8 +2137,9 @@ def persona_data(clave: str, ahora: datetime | None = None, canal: str | None = 
                 meta = {}
             if r["event"] == "capi_send_ok":
                 if meta.get("event_type") == "Purchase":
-                    ev.append({"ts": e, "tipo": "atencion", "titulo": "Aviso de atención a Meta",
-                               "detalle": "La hora pasó y no fue anulada (proxy de atención)"})
+                    ev.append({"ts": e, "tipo": "atencion", "titulo": "Aviso de atención enviado a Meta",
+                               "detalle": "Se envía cuando la hora pasa sin anulación; no confirma asistencia "
+                                          "(manda el estado de Medilink)"})
                 continue
             if any(abs(e - v) < 600 for v in vistos_slot):   # ráfaga de ofertas = una sola
                 continue
@@ -1993,10 +2261,12 @@ def kanban(request: Request, desde: str | None = Query(None), hasta: str | None 
            campana: str | None = Query(None), anuncio: str | None = Query(None),
            plataforma: str | None = Query(None), especialidad: str | None = Query(None),
            q: str | None = Query(None), gestion: str | None = Query(None),
-           canal: str | None = Query(None), token: str | None = Query(None)):
+           canal: str | None = Query(None), resultado: str | None = Query(None),
+           token: str | None = Query(None)):
     _auth(request, token)
     return kanban_data(desde, hasta, campana or None, anuncio or None, plataforma or None,
-                       especialidad or None, q or None, gestion=gestion or None, canal=canal or None)
+                       especialidad or None, q or None, gestion=gestion or None, canal=canal or None,
+                       resultado=resultado or None)
 
 
 @router.get("/persona/{clave}")

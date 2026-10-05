@@ -78,6 +78,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_crosssell_dx,
                   _job_winback_bi,
                   _job_custom_audiences_sync,
+                  _job_audiencias_captacion,
                   _job_marketing_consent_blast,
                   _job_consent_agendados,
                   _job_takeover_pendiente_alert,
@@ -627,6 +628,25 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=7200,
         coalesce=True,
     )
+    # Avisos de Campañas Meta al dueño (Telegram): resumen semanal lunes 08:30 y
+    # alertas diarias 09:05 CLT. Flag META_ALERTAS_ACTIVE (config.py).
+    from meta_alertas import job_meta_resumen_semanal, job_meta_alertas_diario
+    scheduler.add_job(
+        job_meta_resumen_semanal,
+        CronTrigger(day_of_week="mon", hour=8, minute=30, timezone=_CLT),
+        id="meta_resumen_semanal",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        job_meta_alertas_diario,
+        CronTrigger(hour=9, minute=5, timezone=_CLT),
+        id="meta_alertas_diario",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
     # Foto diaria Meta Ads con desgloses (plataforma, ubicación, edad/sexo,
     # región, hora) → meta_insights_diario, cruzable con citas_bot.ad_source_id.
     from meta_insights_snapshot import job_meta_insights_diario
@@ -677,6 +697,18 @@ async def lifespan(app: FastAPI):
         job_ausentismo_nocturno,
         CronTrigger(hour=4, minute=50, timezone=_CLT),
         id="ausentismo_nocturno",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
+    )
+    # CAPI Purchase con valor real: 07:07 CLT, DESPUÉS del sync de caja (23:59) y del
+    # recolector de ausentismo (04:50). Ver app/capi_purchase.py.
+    from capi_purchase import job_capi_purchase_diario
+    scheduler.add_job(
+        job_capi_purchase_diario,
+        CronTrigger(hour=7, minute=7, timezone=_CLT),
+        id="capi_purchase_diario",
         replace_existing=True,
         misfire_grace_time=3600,
         coalesce=True,
@@ -1301,6 +1333,17 @@ async def lifespan(app: FastAPI):
         # estaba ocupado/reiniciando en ese segundo exacto — sin log ni error.
         # El bot reinicia en cada deploy (16 veces en 7 días de ago-2026) y por
         # eso el cierre de caja NUNCA corrió desde que se creó el 30-jun.
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
+    # Audiencias de captación Meta (exclusión + semilla): diario 04:30 CLT.
+    # INERTE por defecto (META_AUDIENCIAS_CAPTACION_ACTIVE=false): el job corre
+    # pero sale sin tocar BI ni Meta. Ver docs/AUDIENCIAS_CAPTACION_2026-10.md.
+    scheduler.add_job(
+        _job_audiencias_captacion,
+        CronTrigger(hour=4, minute=30, timezone=_CLT),
+        id="audiencias_captacion_diario",
+        replace_existing=True,
         misfire_grace_time=3600,
         coalesce=True,
     )
@@ -11517,6 +11560,18 @@ async def webhook(request: Request):
         except Exception as e:
             log.debug("No se pudo obtener perfil %s %s: %s", platform, sender_id, e)
 
+    def _capturar_referral_social(_phone, _ev, _canal):
+        try:
+            from session import capturar_referral_social as _crs
+            if _crs(_phone, _ev, _canal):
+                log.info("META_REFERRAL %s capturado phone=%s payload=%s",
+                         "IG" if _canal == "instagram" else "FB", _phone,
+                         __import__("json").dumps(_ev.get("referral") or (_ev.get("postback") or {}).get("referral")
+                                    or (_ev.get("message") or {}).get("referral") or {},
+                                    ensure_ascii=False)[:400])
+        except Exception as _ref_err:
+            log.warning("meta_referral social error: %s", _ref_err)
+
     # ── Instagram DMs ────────────────────────────────────────────────────────
     if obj == "instagram":
         try:
@@ -11525,6 +11580,10 @@ async def webhook(request: Request):
                     sender_id = ev.get("sender", {}).get("id", "")
                     sender_name = ev.get("sender", {}).get("username", "") or ev.get("sender", {}).get("name", "")
                     msg = ev.get("message", {})
+                    if sender_id and not msg.get("is_echo"):
+                        # Referral de anuncio (OPEN_THREAD / postback / message):
+                        # puede llegar sin texto, por eso se captura antes del filtro.
+                        _capturar_referral_social(f"ig_{sender_id}", ev, "instagram")
                     if not sender_id or not msg or msg.get("is_echo"):
                         continue
                     texto = msg.get("text", "")
@@ -11546,19 +11605,6 @@ async def webhook(request: Request):
                             save_profile(phone, (get_profile(phone) or {}).get("rut", "") or "", sender_name)
                         else:
                             await _fetch_social_name(sender_id, phone, "instagram")
-                    # Capturar referral Meta (anuncio Click-to-Instagram DM)
-                    _ig_referral = ev.get("referral") or {}
-                    if not _ig_referral:
-                        # IG también puede traerlo en postback.referral
-                        _ig_referral = ev.get("postback", {}).get("referral") or {}
-                    if _ig_referral:
-                        try:
-                            from session import save_meta_referral as _smr
-                            _smr(phone, _ig_referral, canal="instagram")
-                            log.info("META_REFERRAL IG capturado phone=%s headline=%r",
-                                     phone, _ig_referral.get("headline", "")[:60])
-                        except Exception as _ref_err:
-                            log.debug("meta_referral IG error: %s", _ref_err)
                     # Procesar con el chatbot completo
                     from messaging import send_instagram
                     await _process_social(phone, sender_id, texto, "instagram", send_instagram)
@@ -11573,6 +11619,8 @@ async def webhook(request: Request):
                 for ev in entry.get("messaging", []):
                     sender_id = ev.get("sender", {}).get("id", "")
                     msg = ev.get("message", {})
+                    if sender_id and not msg.get("is_echo"):
+                        _capturar_referral_social(f"fb_{sender_id}", ev, "messenger")
                     if not sender_id or not msg or msg.get("is_echo"):
                         continue
                     texto = msg.get("text", "")
@@ -11595,16 +11643,6 @@ async def webhook(request: Request):
                             save_profile(phone, (get_profile(phone) or {}).get("rut", "") or "", sender_name)
                         else:
                             await _fetch_social_name(sender_id, phone, "facebook")
-                    # Capturar referral Meta (anuncio Click-to-Messenger)
-                    _fb_referral = ev.get("referral") or {}
-                    if _fb_referral:
-                        try:
-                            from session import save_meta_referral as _smr
-                            _smr(phone, _fb_referral, canal="messenger")
-                            log.info("META_REFERRAL FB capturado phone=%s headline=%r",
-                                     phone, _fb_referral.get("headline", "")[:60])
-                        except Exception as _ref_err:
-                            log.debug("meta_referral FB error: %s", _ref_err)
                     from messaging import send_messenger
                     await _process_social(phone, sender_id, texto, "messenger", send_messenger)
         except Exception as e:

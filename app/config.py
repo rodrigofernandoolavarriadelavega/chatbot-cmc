@@ -467,6 +467,13 @@ CONCILIACION_TRANSFERENCIAS_ACTIVE = os.getenv(
     "CONCILIACION_TRANSFERENCIAS_ACTIVE", "false"
 ).lower() in ("true", "1", "yes", "on")
 
+# Avisos de Campañas Meta al dueño (app/meta_alertas.py): resumen semanal lunes
+# 08:30 CLT + alertas diarias 09:05 CLT por Telegram. Default ENCENDIDO; para
+# apagarlo sin deploy: META_ALERTAS_ACTIVE=false en el .env y restart.
+META_ALERTAS_ACTIVE = os.getenv(
+    "META_ALERTAS_ACTIVE", "true"
+).lower() in ("true", "1", "yes", "on")
+
 # Lectura automática de órdenes médicas de eco (foto → tipo → oferta de agenda).
 # Práctica 2026-08-01: 15/15 órdenes reales leídas bien. El paciente SIEMPRE
 # confirma antes de agendar; si la lectura falla, cae a recepción (flujo actual).
@@ -726,6 +733,20 @@ def get_arancel_cpl(especialidad: str | None) -> int:
 # Meta Marketing API — cuenta publicitaria del CMC.
 # Override en .env: META_AD_ACCOUNT_ID=act_XXXXXXXXXXXXX
 META_AD_ACCOUNT_ID = os.getenv("META_AD_ACCOUNT_ID", "act_220608142267129")
+
+# Audiencias de CAPTACIÓN en Meta (exclusión de pacientes actuales + semilla de
+# audiencia similar). GATEADO OFF: enviar hashes de pacientes a Meta es dato de
+# salud de terceros y el consentimiento actual probablemente no lo cubre — ver
+# docs/AUDIENCIAS_CAPTACION_2026-10.md. Encender solo con visto bueno legal.
+META_AUDIENCIAS_CAPTACION_ACTIVE = os.getenv(
+    "META_AUDIENCIAS_CAPTACION_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+# La lista de exclusión exige consentimiento de marketing aceptado (default).
+# En false queda solo con los filtros de baja que ya aplica custom_audiences_sync;
+# la semilla SIEMPRE exige consentimiento.
+META_AUDIENCIA_EXCLUSION_EXIGE_CONSENT = os.getenv(
+    "META_AUDIENCIA_EXCLUSION_EXIGE_CONSENT", "true"
+).lower() in ("true", "1", "yes", "on")
 
 # Meta Conversion API (CAPI) — server-side events.
 # META_PIXEL_ID: vacío = CAPI deshabilitado (modo OFF seguro).

@@ -1430,16 +1430,21 @@ def ultimo_referral_antes_de(phone: str, hasta_ts: int,
     """Último clic en anuncio Meta del teléfono en los `ttl_dias` previos a
     `hasta_ts` (epoch). Empareja por últimos 9 dígitos, igual que
     get_meta_referral_fresh. Lo usan save_cita_bot y el backfill histórico."""
-    suf = "".join(ch for ch in (phone or "") if ch.isdigit())[-9:]
-    if not suf:
+    if _es_id_social(phone):   # fb_/ig_: id completo, no sufijo de 9 dígitos
+        cond, clave = "phone = ?", phone
+    else:
+        clave = "".join(ch for ch in (phone or "") if ch.isdigit())[-9:]
+        cond = ("substr(phone,1,3) NOT IN ('fb_','ig_') AND "
+                "substr(replace(replace(replace(phone,'+',''),' ',''),'-',''), -9) = ?")
+    if not clave:
         return None
     with db() as conn:
         row = conn.execute(
-            """SELECT source_id, headline, plataforma, ts FROM meta_referrals
-               WHERE substr(replace(replace(replace(phone,'+',''),' ',''),'-',''), -9) = ?
+            f"""SELECT source_id, headline, plataforma, ts FROM meta_referrals
+               WHERE {cond}
                  AND ts <= ? AND ts >= ?
                ORDER BY ts DESC LIMIT 1""",
-            (suf, hasta_ts, hasta_ts - ttl_dias * 86400),
+            (clave, hasta_ts, hasta_ts - ttl_dias * 86400),
         ).fetchone()
     if not row:
         return None
@@ -6110,6 +6115,63 @@ def _plataforma_desde_url(source_url: str) -> str:
     return ""
 
 
+def _es_id_social(phone: str) -> bool:
+    return (phone or "").startswith(("fb_", "ig_"))
+
+
+def normalizar_referral_social(ev: dict, canal: str) -> dict | None:
+    """Referral de anuncio Click-to-Messenger / Click-to-Instagram Direct
+    -> forma que espera save_meta_referral (la de WhatsApp).
+
+    Meta lo entrega en messaging[].referral, messaging[].postback.referral o
+    messaging[].message.referral, con source='ADS', type='OPEN_THREAD', ad_id y
+    ads_context_data{ad_title, photo_url, video_url, post_id}. Referrals que no
+    son de anuncio (m.me/?ref=, código QR; source SHORTLINK/CUSTOMER_CHAT_PLUGIN)
+    devuelven None. Devuelve None si no hay referral.
+    """
+    ev = ev or {}
+    ref = (ev.get("referral")
+           or (ev.get("postback") or {}).get("referral")
+           or (ev.get("message") or {}).get("referral")
+           or {})
+    if not isinstance(ref, dict) or not ref:
+        return None
+    ad_id = str(ref.get("ad_id") or "").strip()
+    if not ad_id and str(ref.get("source") or "").upper() != "ADS":
+        return None
+    ctx = ref.get("ads_context_data") or {}
+    foto, video = ctx.get("photo_url") or "", ctx.get("video_url") or ""
+    return {
+        "source_id": ad_id,
+        "source_type": "ad",
+        "headline": ctx.get("ad_title") or "",
+        "body": ref.get("ref") or "",
+        "media_type": "video" if video else ("image" if foto else ""),
+        "ctwa_clid": "",
+        "source_url": "",
+        "plataforma": "instagram" if canal == "instagram" else "facebook",
+        "_meta_social": ref,
+    }
+
+
+def capturar_referral_social(phone: str, ev: dict, canal: str) -> bool:
+    """Normaliza y guarda el referral de un evento Messenger/IG. True si guardó.
+    Evita duplicar el mismo anuncio para la misma persona en 10 minutos (Meta
+    manda OPEN_THREAD y luego el mensaje con el mismo referral)."""
+    norm = normalizar_referral_social(ev, canal)
+    if not norm or not norm["source_id"]:
+        return False
+    with db() as conn:
+        dup = conn.execute(
+            "SELECT 1 FROM meta_referrals WHERE phone=? AND source_id=? AND ts>=? LIMIT 1",
+            (phone, norm["source_id"], int(time.time()) - 600),
+        ).fetchone()
+    if dup:
+        return False
+    save_meta_referral(phone, norm, canal=canal)
+    return True
+
+
 def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") -> None:
     """Guarda el referral del anuncio Meta en la sesión (data) y en la tabla
     meta_referrals para analytics permanente.  También emite un log_event.
@@ -6125,9 +6187,11 @@ def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") 
     media_type = (referral_obj.get("media_type") or "").strip()[:64]
     ctwa_clid = (referral_obj.get("ctwa_clid") or "").strip()[:512]
     source_url = (referral_obj.get("source_url") or "").strip()[:512]
-    plataforma = _plataforma_desde_url(source_url)
+    plataforma = referral_obj.get("plataforma") or _plataforma_desde_url(source_url)
     try:
-        raw_json = _json_mr.dumps(referral_obj, ensure_ascii=False)[:8000]
+        # Messenger/IG: el raw guarda el payload original de Meta completo
+        raw_json = _json_mr.dumps(referral_obj.get("_meta_social", referral_obj),
+                                  ensure_ascii=False)[:8000]
     except Exception:
         raw_json = ""
 
@@ -6189,18 +6253,23 @@ def get_meta_referral_fresh(phone: str, ttl_horas: int = 168) -> dict | None:
     # formato de teléfono entre el evento y meta_referrals — un 'phone=?' exacto
     # perdía la atribución si el formato no calzaba al dígito). Devuelve también
     # el ts del clic para que el fbc del CAPI lleve la hora real del clic.
-    suf = "".join(ch for ch in (phone or "") if ch.isdigit())[-9:]
-    if not suf:
+    if _es_id_social(phone):
+        cond, clave = "phone = ?", phone
+    else:
+        clave = "".join(ch for ch in (phone or "") if ch.isdigit())[-9:]
+        cond = ("substr(phone,1,3) NOT IN ('fb_','ig_') AND "
+                "substr(replace(replace(replace(phone,'+',''),' ',''),'-',''), -9) = ?")
+    if not clave:
         return None
     cutoff = int(time.time()) - ttl_horas * 3600
     with db() as conn:
         row = conn.execute(
-            """SELECT source_type, source_id, headline, body, ctwa_clid, ts
+            f"""SELECT source_type, source_id, headline, body, ctwa_clid, ts
                FROM meta_referrals
-               WHERE substr(replace(replace(replace(phone,'+',''),' ',''),'-',''), -9) = ?
+               WHERE {cond}
                  AND ts >= ?
                ORDER BY ts DESC LIMIT 1""",
-            (suf, cutoff),
+            (clave, cutoff),
         ).fetchone()
     if row:
         return {

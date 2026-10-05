@@ -242,14 +242,18 @@ async def _replace_users(audience_id: str, hashed_phones: list[str]) -> bool:
     return True
 
 
-async def _crear_lookalike(seed_audience_id: str) -> str | None:
+async def _crear_lookalike(
+    seed_audience_id: str,
+    nombre: str = "CMC Lookalike 1% Chile",
+    descripcion: str = "Lookalike 1% Chile basado en pacientes atendidos últimos 90 días (CMC).",
+) -> str | None:
     """Crea Lookalike 1% Chile desde la audiencia seed."""
     try:
         result = await _meta_post(
             f"{_META_API_BASE}/{_META_AD_ACCOUNT_ID}/customaudiences",
             data={
-                "name": "CMC Lookalike 1% Chile",
-                "description": "Lookalike 1% Chile basado en pacientes atendidos últimos 90 días (CMC).",
+                "name": nombre,
+                "description": descripcion,
                 "subtype": "LOOKALIKE",
                 "origin_audience_id": seed_audience_id,
                 "lookalike_spec": str({

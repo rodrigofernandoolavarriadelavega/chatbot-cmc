@@ -262,52 +262,6 @@ async def enviar_seguimiento_postconsulta_dia_anterior(send_fn, send_template_fn
             log.error("Error seguimiento tardío phone=%s: %s", (grupo_m[0].get("phone") if grupo_m else "?"), e)
 
 
-def _dispatch_capi_purchase(cita: dict) -> None:
-    """Emite (fire-and-forget) un evento CAPI Purchase por una atención ocurrida.
-
-    Extraído del flujo post-consulta para llamarlo TANTO en citas únicas COMO por
-    cada atención de un grupo multi-cita (teléfono familiar compartido), que antes
-    hacía `continue` sin emitir → esas familias quedaban sin conversión atribuida.
-    Recupera el ctwa_clid con ttl_horas=2160 (90d) — mismo TTL que _ctwa_clid_for()
-    en flows.py — para cubrir ciclos largos clic-CTWA→agenda→atención. No lanza:
-    loguea y sigue. Debe llamarse desde contexto async (usa asyncio.create_task).
-    """
-    try:
-        import asyncio as _asyncio_fidel
-        import meta_capi as _mc_purch
-        from session import get_profile as _gp_fidel, get_meta_referral_fresh as _gmrf
-        from config import get_arancel_cpl as _get_arancel
-        _prof_fidel = _gp_fidel(cita["phone"]) or {}
-        _nom_fidel = (cita.get("nombre") or _prof_fidel.get("nombre") or "").split()
-        # Recuperar atribución Meta Ads: ttl_horas=2160 (90d) porque el ciclo
-        # clic-CTWA→agenda→atención puede superar los 7d (seguimiento crónico,
-        # reagendamientos). 168h (7d) original era insuficiente: pacientes de
-        # campañas CTWA que agendaron hace 2-4 semanas salían con attr=none.
-        # Usar el mismo TTL que _ctwa_clid_for() en flows.py.
-        _ref_fidel = None
-        try:
-            _ref_fidel = _gmrf(cita["phone"], ttl_horas=2160)
-        except Exception as _ref_err:
-            log.debug("CAPI: no se pudo leer meta_referral para %s: %s", cita["phone"], _ref_err)
-        _ctwa = (_ref_fidel or {}).get("ctwa_clid") or None
-        _asyncio_fidel.create_task(_mc_purch.send_event(
-            "Purchase",
-            phone=cita["phone"],
-            value=float(_get_arancel(cita.get("especialidad"))),
-            currency="CLP",
-            rut=_prof_fidel.get("rut") or None,
-            first_name=_nom_fidel[0] if _nom_fidel else None,
-            last_name=_nom_fidel[-1] if len(_nom_fidel) > 1 else None,
-            ctwa_clid=_ctwa,
-            custom_data={
-                "content_name": cita.get("especialidad") or "",
-                "content_category": "medical_appointment",
-            },
-        ))
-    except Exception as _capi_purch_err:
-        log.debug("CAPI Purchase create_task falló: %s", _capi_purch_err)
-
-
 async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                                           send_text_fn=None, buscar_paciente_fn=None):
     """
@@ -401,17 +355,6 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                 await send_fn(_cita_ref["phone"], msg)
                 log_message(_cita_ref["phone"], "out", body_txt, "IDLE")
                 log.info("Seguimiento combinado enviado → %s (%d citas)", _cita_ref["phone"], len(grupo))
-                # BUGFIX atribución: emitir un CAPI Purchase por cada atención DISTINTA
-                # del grupo. Antes este branch hacía `continue` sin emitir, así que las
-                # familias con teléfono compartido y 2+ citas el mismo día generaban CERO
-                # conversiones en Meta (under-count silencioso, ~1.7 grupos/día).
-                _seen_cap_idc: set = set()
-                for _cg in grupo:
-                    _idc_g = _cg.get("id_cita")
-                    if _idc_g in _seen_cap_idc:
-                        continue
-                    _seen_cap_idc.add(_idc_g)
-                    _dispatch_capi_purchase(_cg)
                 continue
             # Cita única — flujo normal
             cita = grupo[0]
@@ -483,11 +426,8 @@ async def enviar_seguimiento_postconsulta(send_fn, send_template_fn=None,
                     log.warning("No se pudo guardar pending_tips: %s", _e_tips)
 
             log.info("Seguimiento enviado → %s (%s)", cita["phone"], cita.get("especialidad"))
-            # ── Meta CAPI: evento Purchase — cita ocurrida (proxy más confiable) ─
-            # El post-consulta se manda solo cuando la cita ya pasó (filtro hora_actual).
-            # Es el momento más cercano a "compra confirmada" sin integración de caja.
-            _dispatch_capi_purchase(cita)
-            # ── fin CAPI Purchase ────────────────────────────────────────────
+            # El Purchase CAPI ya no sale aquí: lo envía capi_purchase.job_capi_purchase_diario
+            # (07:07 CLT) con el valor real de caja y solo si la atención ocurrió.
         except Exception as e:
             _phone_err = (grupo[0].get("phone") if grupo else "?")
             log.error("Error seguimiento phone=%s: %s", _phone_err, e)

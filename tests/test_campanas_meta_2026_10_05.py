@@ -195,7 +195,7 @@ check("kanban: especialidad desde evento si no hay cita",
       col["vio_horas"]["tarjetas"][0]["especialidad"] == "Ecografía")
 permitidas = {"clave", "phone", "telefono", "nombre", "anuncio", "ad_id", "campana", "campaign_id",
               "plataforma", "especialidad", "llegada", "llegada_iso", "proxima_cita", "dias_etapa",
-              "fuera_del_bot", "gestion", "canal", "web"}
+              "fuera_del_bot", "gestion", "canal", "web", "desenlace", "atencion_fuente"}
 check("privacidad: la tarjeta no trae campos extra",
       all(set(t) <= permitidas for cc in kb["columnas"] for t in cc["tarjetas"]))
 
@@ -331,7 +331,7 @@ fq = cm.persona_data("977000002", ahora=AHORA)
 check("ficha: pago anterior al clic no entra a la línea, se informa aparte",
       not any(x["tipo"] == "pago" for x in fq["linea"]) and fq["pagos"]["antes_del_clic"] == 1)
 check("ficha: sin datos clínicos (solo campos permitidos)",
-      all(set(x) <= {"ts", "tipo", "titulo", "detalle", "plataforma", "anulada", "del_anuncio", "monto",
+      all(set(x) <= {"ts", "tipo", "titulo", "detalle", "plataforma", "anulada", "del_anuncio", "monto", "desenlace", "desenlace_lbl",
                      "paciente", "solo_fecha", "fecha", "hora", "iso"} for f in (f1, f2, f3, f4, fp) for x in f["linea"]))
 check("ficha: 404 a quien no llegó por anuncio", _err(cm.persona_data, "955555555") == 404)
 
@@ -567,6 +567,88 @@ r = cli.get(f"/alma/api/campanas-meta/panel?desde={D30}&hasta={H}&canal=web", he
 check("GET panel canal=web", r.status_code == 200 and r.json()["canal"] == "web")
 r = cli.get(f"/alma/api/campanas-meta/kanban?desde={D30}&hasta={H}&canal=todos", headers=hd)
 check("GET kanban canal=todos", r.status_code == 200 and r.json()["canal"] == "todos")
+
+# ── Desenlace real desde Medilink (ausentismo_citas) ────────────────────────
+import ausentismo  # noqa: E402
+import orto_embudo_routes  # noqa: E402,F401  (crea orto_embudo)
+ausentismo.ensure_ausentismo_table()
+pa = cm.panel_data(D30, H)
+a1a = next(x for x in pa["anuncios"] if x["ad_id"] == "AD1")
+with session.db() as c:
+    def mref(ph, ad, dias):
+        c.execute("INSERT INTO meta_referrals (phone, source_id, headline, ts, plataforma) VALUES (?,?,?,?,?)",
+                  (ph, ad, "h", ep(dias), "facebook"))
+
+    def mcita(ph, idc, f, pid, ad="AD1", esp="Medicina General"):
+        c.execute("INSERT INTO citas_bot (phone, id_cita, especialidad, profesional, fecha, hora, created_at, "
+                  "ad_source_id, ad_plataforma, id_paciente_medilink) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                  (ph, idc, esp, "Dr", fecha(f), "10:00", utc(5.9), ad, "facebook", pid))
+
+    def aus(idc, pid, f, est, anul=0, prof=1):
+        c.execute("INSERT INTO ausentismo_citas (id_cita, id_profesional, id_paciente, fecha, hora, id_estado, "
+                  "estado_cita, anulacion) VALUES (?,?,?,?,?,?,?,?)", (idc, prof, pid, fecha(f), "10:00", est, "", anul))
+    for i in range(1, 7):
+        mref(f"5693333000{i}", "AD1", 6)
+    mcita("56933330001", "7001", -3, 7770001); aus(7001, 7770001, -3, 8)                 # no asistió
+    c.execute("INSERT INTO conversation_events (phone, event, meta, ts) VALUES (?,?,?,?)",
+              ("56933330001", "capi_send_ok", json.dumps({"event_type": "Purchase"}), utc(2.5)))  # el proxy decía atendido
+    mcita("56933330002", "7002", -3, 7770002); aus(7002, 7770002, -3, 2)                 # atendida
+    mcita("56933330003", "7003", -3, 7770003); aus(7003, 7770003, -3, 14); aus(7013, 7770003, -1, 2)  # reagenda → atendida
+    mcita("56933330004", "7004", -2, 7770004)                                             # sin Medilink, pagó ese día
+    c.execute("INSERT INTO bi_pagos_caja (pago_id, fecha, id_paciente, id_profesional, monto) VALUES (?,?,?,?,?)",
+              (990201, fecha(-2), 7770004, 1, 20000))
+    mcita("56933330005", "7005", -3, 7770005); aus(7005, 7770005, -3, 8); aus(7015, 7770005, -3, 2)  # reagenda intradía
+    mcita("56933330006", "7006", -3, 7770006); aus(7006, 7770006, -3, 1, anul=1)         # anulada en Medilink
+    c.commit()
+pb = cm.panel_data(D30, H)
+a1b = next(x for x in pb["anuncios"] if x["ad_id"] == "AD1")
+check("medilink: 6 citas nuevas en el anuncio", a1b["citas"] - a1a["citas"] == 6)
+check("medilink: atendidas reales (2, reagenda, caja, reagenda intradía)", a1b["atendidos"] - a1a["atendidos"] == 4)
+check("medilink: no asistió aunque el proxy CAPI dijera atendido", a1b["no_asistio"] - a1a["no_asistio"] == 1)
+check("medilink: anulada en Medilink sin aviso del bot", a1b["anuladas"] - a1a["anuladas"] == 1)
+check("medilink: % no asistió", a1b["no_asistio_pct"] == round(100 * a1b["no_asistio"] / (a1b["atendidos"] + a1b["no_asistio"])))
+check("medilink: costo por atendido con atendidos reales", a1b["cac_atendido"] == round(a1b["gasto"] / a1b["atendidos"]))
+check("medilink: cuántas vienen de Medilink", a1b["con_medilink"] - a1a["con_medilink"] == 5)
+kd = cm.kanban_data(D30, H, ahora=AHORA)
+cd = {t["clave"]: (cc["id"], t) for cc in kd["columnas"] for t in cc["tarjetas"]}
+check("kanban: no asistió va a la columna Anuló/no asistió",
+      cd["933330001"][0] == "anulo" and cd["933330001"][1]["desenlace"] == "no_asistio")
+check("kanban: anulada en Medilink se distingue", cd["933330006"][0] == "anulo" and cd["933330006"][1]["desenlace"] == "anulo")
+check("kanban: atendida con fuente Medilink", cd["933330002"][0] == "atendido" and cd["933330002"][1]["atencion_fuente"] == "medilink")
+check("kanban: atendida por caja", cd["933330004"][0] == "atendido" and cd["933330004"][1]["atencion_fuente"] == "caja")
+check("kanban: cuenta no asistieron", kd["no_asistieron"] == 1)
+kr = cm.kanban_data(D30, H, ahora=AHORA, resultado="no_asistio")
+check("kanban: filtro para recuperar inasistentes", kr["total"] == 1)
+fm = cm.persona_data("933330001", ahora=AHORA)
+check("ficha: cita con desenlace no asistió y evento", any(x["tipo"] == "cita" and x["desenlace"] == "no_show" for x in fm["linea"])
+      and any(x["tipo"] == "no_show" for x in fm["linea"]))
+r = cli.get(f"/alma/api/campanas-meta/kanban?desde={D30}&hasta={H}&resultado=no_asistio", headers=hd)
+check("GET kanban resultado=no_asistio", r.status_code == 200 and r.json()["total"] == 1)
+
+# ── Ortodoncia: instalaciones por anuncio ───────────────────────────────────
+a2a = next(x for x in cm.panel_data(D30, H)["anuncios"] if x["ad_id"] == "AD2")
+with session.db() as c:
+    for ph, dias in (("56944440001", 10), ("56944440002", 10), ("56944440003", 8), ("56944440004", 10)):
+        c.execute("INSERT INTO meta_referrals (phone, source_id, headline, ts, plataforma) VALUES (?,?,?,?,?)",
+                  (ph, "AD2", "h", ep(dias), "instagram"))
+    for ph, pid in (("56944440001", 8880001), ("56944440002", 8880002), ("56944440004", 8880004)):
+        c.execute("INSERT INTO citas_bot (phone, id_cita, especialidad, fecha, hora, created_at, id_paciente_medilink) "
+                  "VALUES (?,?,?,?,?,?,?)", (ph, "O" + ph[-1], "Ortodoncia", fecha(-6), "10:00", utc(9), pid))
+    for pago, f, pid, monto in ((990301, -5, 8880001, 120000), (990302, -2, 8880001, 30000),   # instaló tras el clic
+                                (990303, -60, 8880002, 30000), (990304, -3, 8880002, 120000),  # ya era paciente
+                                (990305, -20, 8880004, 120000)):                                # instaló antes del clic
+        c.execute("INSERT INTO bi_pagos_caja (pago_id, fecha, id_paciente, id_profesional, monto) VALUES (?,?,?,?,?)",
+                  (pago, fecha(f), pid, 66, monto))
+    c.execute("INSERT INTO orto_embudo (paciente, telefono, phone, etapa, etapa_desde) VALUES (?,?,?,?,?)",
+              ("Olga Orto", "+56 9 4444 0003", "56944440003", "instalado", fecha(0) + " 10:00:00"))
+    c.commit()
+po = cm.panel_data(D30, H)
+a2b = next(x for x in po["anuncios"] if x["ad_id"] == "AD2")
+check("orto: instalaron por caja y por embudo, no el paciente antiguo ni el anterior al clic",
+      a2b["instalaron"] - a2a["instalaron"] == 2)
+check("orto: venta de ortodoncia asociada", a2b["orto_venta"] - a2a["orto_venta"] == 150000)
+check("orto: total y campaña", po["kpis"]["instalaron"] >= 2
+      and next(x for x in po["campanas"] if x["campaign_id"] == "C2")["instalaron"] >= 2)
 
 print(f"\n{len(FALLAS)} fallas")
 sys.exit(1 if FALLAS else 0)

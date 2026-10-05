@@ -3645,6 +3645,16 @@ async def _job_custom_audiences_sync() -> None:
         log.error("_job_custom_audiences_sync fallo: %s", e)
 
 
+async def _job_audiencias_captacion() -> None:
+    """Job diario 04:30 CLT: audiencias de captación Meta (exclusión + semilla).
+    Inerte salvo META_AUDIENCIAS_CAPTACION_ACTIVE=true (default false)."""
+    try:
+        from audiencias_captacion import job_audiencias_captacion
+        await job_audiencias_captacion()
+    except Exception as e:
+        log.error("_job_audiencias_captacion fallo: %s", e)
+
+
 async def _job_winback_bi() -> None:
     """Job diario L-V 10:05 CLT: campanas winback desde BI Postgres.
 
