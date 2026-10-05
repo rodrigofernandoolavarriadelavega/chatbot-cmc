@@ -2415,7 +2415,7 @@ async def blog_post(slug: str):
             base_path = _BLOG_DIR / f"{base_slug}.html"
             if base_path.exists():
                 html = base_path.read_text(encoding="utf-8")
-                return _localize_blog(html, base_slug, comuna_slug)
+                return _ensure_wa_script(_localize_blog(html, base_slug, comuna_slug))
 
     # Sin localización: blog base — inyectar bloque de enlaces a variantes por comuna
     blog_path = _BLOG_DIR / f"{slug}.html"
@@ -2423,7 +2423,7 @@ async def blog_post(slug: str):
         return HTMLResponse("<h1>404 — Artículo no encontrado</h1>", status_code=404)
     html = blog_path.read_text(encoding="utf-8")
     html = _inject_comunas_block_in_base(html, slug)
-    return html
+    return _ensure_wa_script(html)
 
 
 # ============================================================
@@ -2593,6 +2593,18 @@ def _build_comunas_footer_block(base_slug: str) -> str:
   </div>
 </section>
 """
+
+
+_WA_TRACK_TAG = '<script defer src="/static/cmc-wa.js?v=1"></script>\n'
+
+
+def _ensure_wa_script(html: str) -> str:
+    """Red de seguridad: si un articulo nuevo del blog no trae el script que
+    agrega el marcador (web: pagina . articulo . boton) a los links wa.me, se lo
+    pone antes de </head>. Idempotente (no duplica si la plantilla ya lo tiene)."""
+    if "cmc-wa.js" in html or "</head>" not in html:
+        return html
+    return html.replace("</head>", _WA_TRACK_TAG + "</head>", 1)
 
 
 def _inject_comunas_block_in_base(html: str, base_slug: str) -> str:
