@@ -627,6 +627,17 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=7200,
         coalesce=True,
     )
+    # Foto diaria Meta Ads con desgloses (plataforma, ubicación, edad/sexo,
+    # región, hora) → meta_insights_diario, cruzable con citas_bot.ad_source_id.
+    from meta_insights_snapshot import job_meta_insights_diario
+    scheduler.add_job(
+        job_meta_insights_diario,
+        CronTrigger(hour=6, minute=20, timezone=_CLT),
+        id="meta_insights_diario",
+        replace_existing=True,
+        misfire_grace_time=7200,
+        coalesce=True,
+    )
     # Panel del Día: cache de CAPACIDAD REAL por profesional (Medilink /citas,
     # secuencial+throttle) 04:10 CLT — horario libre, off-peak. Alimenta el
     # potencial/ocupación reales del N1 sin fan-out en vivo.

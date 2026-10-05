@@ -848,6 +848,14 @@ def _run_ddl_inline(conn) -> None:
         conn.execute("ALTER TABLE citas_bot ADD COLUMN id_paciente_medilink INTEGER")
     except _OPERATIONAL_ERRORS:
         pass
+    # Migración: atribución del anuncio Meta que trajo la cita (último clic ≤90d
+    # antes de crearla). ad_source_id = ad_id de Meta (meta_referrals.source_id).
+    for _col_ad in ("ad_source_id TEXT", "ad_headline TEXT", "ad_plataforma TEXT",
+                    "ad_referral_ts INTEGER"):
+        try:
+            conn.execute(f"ALTER TABLE citas_bot ADD COLUMN {_col_ad}")
+        except _OPERATIONAL_ERRORS:
+            pass
     # ── Compliance Ley 19.628 (Chile, reforma 2024) ───────────────────────────
     # Registro de consentimiento explícito del paciente para almacenar
     # conversación + datos. Sin un registro 'accepted' aquí NO se almacena
@@ -935,6 +943,15 @@ def _run_ddl_inline(conn) -> None:
             ts          INTEGER NOT NULL
         )
     """)
+    # Migración: source_url del referral → de qué plataforma vino el clic
+    # (fb.me/facebook.com = Facebook, instagram.com = Instagram).
+    # raw_json: el referral COMPLETO tal como llega de Meta — cualquier campo
+    # que Meta agregue (o que hoy no usamos) queda disponible para análisis.
+    for _col in ("source_url", "plataforma", "raw_json"):
+        try:
+            conn.execute(f"ALTER TABLE meta_referrals ADD COLUMN {_col} TEXT")
+        except Exception:
+            pass  # columna ya existe
     conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_ref_phone ON meta_referrals(phone)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_ref_ts ON meta_referrals(ts)")
     # ── BUG-C: Slots rechazados por paciente ─────────────────────────────────
@@ -1390,6 +1407,44 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
              id_paciente_medilink)
         )
         conn.commit()
+    # Atribución al anuncio: aparte y protegida — jamás puede tumbar el registro
+    # de la cita.
+    try:
+        ref = ultimo_referral_antes_de(phone, int(time.time()))
+        if ref:
+            with db() as conn:
+                conn.execute(
+                    """UPDATE citas_bot SET ad_source_id=?, ad_headline=?,
+                              ad_plataforma=?, ad_referral_ts=?
+                       WHERE id_cita=? AND phone=?""",
+                    (ref["source_id"], ref["headline"], ref["plataforma"],
+                     ref["ts"], id_cita, phone),
+                )
+                conn.commit()
+    except Exception as _e_attr:
+        log.debug("save_cita_bot: atribución anuncio falló: %s", _e_attr)
+
+
+def ultimo_referral_antes_de(phone: str, hasta_ts: int,
+                             ttl_dias: int = 90) -> dict | None:
+    """Último clic en anuncio Meta del teléfono en los `ttl_dias` previos a
+    `hasta_ts` (epoch). Empareja por últimos 9 dígitos, igual que
+    get_meta_referral_fresh. Lo usan save_cita_bot y el backfill histórico."""
+    suf = "".join(ch for ch in (phone or "") if ch.isdigit())[-9:]
+    if not suf:
+        return None
+    with db() as conn:
+        row = conn.execute(
+            """SELECT source_id, headline, plataforma, ts FROM meta_referrals
+               WHERE substr(replace(replace(replace(phone,'+',''),' ',''),'-',''), -9) = ?
+                 AND ts <= ? AND ts >= ?
+               ORDER BY ts DESC LIMIT 1""",
+            (suf, hasta_ts, hasta_ts - ttl_dias * 86400),
+        ).fetchone()
+    if not row:
+        return None
+    return {"source_id": row["source_id"] or "", "headline": row["headline"] or "",
+            "plataforma": row["plataforma"] or "", "ts": row["ts"]}
 
 
 # ── Telemedicina MVP ──────────────────────────────────────────────────────────
@@ -6044,6 +6099,17 @@ def get_horas_vacias_envios_hoy(especialidad: str) -> int:
 # Meta Referral — Click-to-WhatsApp / IG / FB Ads
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _plataforma_desde_url(source_url: str) -> str:
+    """'instagram' / 'facebook' según el source_url del referral; '' si no se sabe.
+    Sin URL o con dominio desconocido NO se adivina (queda vacío, no 'facebook')."""
+    u = (source_url or "").lower()
+    if "instagram.com" in u or "instagr.am" in u:
+        return "instagram"
+    if "fb.me" in u or "facebook.com" in u or "fb.com" in u or "fb.watch" in u:
+        return "facebook"
+    return ""
+
+
 def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") -> None:
     """Guarda el referral del anuncio Meta en la sesión (data) y en la tabla
     meta_referrals para analytics permanente.  También emite un log_event.
@@ -6058,15 +6124,22 @@ def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") 
     body_text = (referral_obj.get("body") or "").strip()[:512]
     media_type = (referral_obj.get("media_type") or "").strip()[:64]
     ctwa_clid = (referral_obj.get("ctwa_clid") or "").strip()[:512]
+    source_url = (referral_obj.get("source_url") or "").strip()[:512]
+    plataforma = _plataforma_desde_url(source_url)
+    try:
+        raw_json = _json_mr.dumps(referral_obj, ensure_ascii=False)[:8000]
+    except Exception:
+        raw_json = ""
 
     with db() as conn:
         conn.execute(
             """INSERT INTO meta_referrals
                (phone, source_type, source_id, headline, body, media_type,
-                ctwa_clid, canal, ts)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ctwa_clid, canal, ts, source_url, plataforma, raw_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (phone, source_type, source_id, headline, body_text,
-             media_type, ctwa_clid, canal, ts),
+             media_type, ctwa_clid, canal, ts, source_url, plataforma,
+             raw_json),
         )
         conn.commit()
 
@@ -6087,6 +6160,7 @@ def save_meta_referral(phone: str, referral_obj: dict, canal: str = "whatsapp") 
         "headline": headline[:80],
         "source_id": source_id[:40],
         "canal": canal,
+        "plataforma": plataforma or "desconocida",
     })
 
 

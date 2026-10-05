@@ -39,6 +39,15 @@ def _cfg():
         return pixel, token, tecode
 
 
+def _waba_id() -> str:
+    try:
+        from config import META_WABA_ID
+        return META_WABA_ID
+    except ImportError:
+        import os
+        return os.getenv("META_WABA_ID", "")
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _sha256(s: str | None) -> str | None:
@@ -201,28 +210,18 @@ async def send_event(
             _clid_central = (_ref_central.get("ctwa_clid") or "").strip()
             if _clid_central:
                 ctwa_clid = _clid_central
-                # ts REAL del clic → el fbc lleva la hora del clic, no 'now'.
-                # Crítico para eventos backdateados (batch Purchase 22:00): si el
-                # fbc quedara con ts > event_time, Meta DESCARTA la atribución en
-                # silencio. Con el ts del referral el fbc siempre precede al evento.
-                _ref_ts_central = _ref_central.get("ts")
-                if _ref_ts_central and ctwa_clid_ts is None:
-                    try:
-                        ctwa_clid_ts = int(_ref_ts_central) * 1000
-                    except (ValueError, TypeError):
-                        pass
                 log.debug("CAPI %s: ctwa_clid recuperado de meta_referrals (fallback central)", event_name)
         except Exception as _e_central:
             log.debug("CAPI: fallback central ctwa_clid lookup falló: %s", _e_central)
-    if not fbc and ctwa_clid:
-        # ctwa_clid es el ID nativo de Click-to-WhatsApp ads.
-        # Meta lo acepta como fbc con el mismo formato que fbclid.
-        # Solo se usa si no viene fbclid (no pisar atribución más precisa).
-        # ctwa_clid_ts debe estar en ms (epoch*1000); si no viene, cae a now.
-        # En backfill es el ts real del clic → evita que el fbc quede con
-        # timestamp posterior al event_time (Meta descarta esa atribución).
-        _fbc_ts_ms = ctwa_clid_ts if ctwa_clid_ts is not None else int(time.time() * 1000)
-        fbc = f"fb.1.{_fbc_ts_ms}.{ctwa_clid}"
+    if ctwa_clid and action_source == "business_messaging":
+        # ctwa_clid es el ID nativo de Click-to-WhatsApp ads. CAPI for Business
+        # Messaging lo espera en su PROPIO campo + el WABA, no disfrazado de fbc
+        # (fb.1.<ts>.<clid> es formato de cookie web: Meta recibía el evento
+        # pero no lo cruzaba con el clic del anuncio WhatsApp).
+        user_data["ctwa_clid"] = ctwa_clid
+        _waba = _waba_id()
+        if _waba:
+            user_data["whatsapp_business_account_id"] = _waba
     if fbc:
         user_data["fbc"] = fbc
     if fbp:
@@ -280,7 +279,8 @@ async def send_event(
                 # Observabilidad de atribución: registrar SI el evento llevó click-id.
                 # Sin esto, "0 eventos con fbc" en logs es ambiguo (¿no se adjuntó o no
                 # se logueó?). Hace auditable el cierre del loop CAC de un solo grep.
-                _attr = "fbc" if user_data.get("fbc") else "none"
+                _attr = ("ctwa" if user_data.get("ctwa_clid")
+                         else "fbc" if user_data.get("fbc") else "none")
                 log.info(
                     "CAPI %s event_id=%s received=%s attr=%s quality=%s test_code=%s",
                     event_name, eid[:8], ms, _attr,
