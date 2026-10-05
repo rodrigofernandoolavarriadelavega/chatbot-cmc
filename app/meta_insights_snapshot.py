@@ -165,5 +165,10 @@ async def job_meta_insights_diario() -> None:
 
 if __name__ == "__main__":
     import sys
+    from pathlib import Path
+    from dotenv import load_dotenv
+    # A mano (fuera del servicio) hay que cargar el .env: sin SQLCIPHER_KEY
+    # sessions.db da "file is not a database".
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     logging.basicConfig(level=logging.INFO)
     print(snapshot_rango(sys.argv[1], sys.argv[2]), "filas")
