@@ -11714,7 +11714,7 @@ async def webhook(request: Request):
             "seg_mejor", "seg_igual", "seg_peor",
             "tele_mg", "tele_psico", "tele_nutri", "tele_otro",
             "cita_confirm", "cita_reagendar", "cita_cancelar",
-            "ref_amigo", "ref_rrss", "ref_recurrente", "ref_google",
+            "ref_amigo", "ref_rrss", "ref_recurrente", "ref_google", "ref_fbig", "ref_calle",
             "maso_20", "maso_40",
             "medfam_fallback_si", "medfam_fallback_no",
             "waitlist_confirmar", "waitlist_cancelar",

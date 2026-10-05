@@ -24,8 +24,10 @@ def _auth(token, cmc_session):
 
 
 _TPL = Path(__file__).parent.parent / "templates" / "captacion_dashboard.html"
-_FUENTE_LABEL = {"amigo": "Amigo / familiar", "rrss": "Redes sociales",
-                 "recurrente": "Ya era paciente", "google": "Google / web"}
+_FUENTE_LABEL = {"amigo": "Amigo / familiar", "rrss": "Redes / Google (antiguo)",
+                 "facebook_instagram": "Facebook / Instagram",
+                 "recurrente": "Ya era paciente", "google": "Google / web", "calle": "Letrero / pasó por fuera", "radio": "Radio",
+                 "anuncio_meta": "Anuncio Meta (detectado, no se pregunta)"}
 
 
 def _data(c) -> dict:

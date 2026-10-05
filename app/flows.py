@@ -11993,7 +11993,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # En este caso debemos enviar confirmacion_msg directamente porque
                 # el return es un interactivo (botón referral). Logueamos manualmente
                 # para que recepción vea el mensaje de confirmación en el panel.
+                # Si llegó tocando un anuncio de Meta ya sabemos de dónde vino
+                # (anuncio + plataforma en meta_referrals): no se le pregunta.
+                # Menos fricción, y la respuesta declarada no pisa al dato medido.
+                _ref_ad_post = ""
                 if data.get("is_paciente_nuevo_post_referral"):
+                    try:
+                        from session import get_meta_referral_fresh as _gmr_post
+                        _ref_ad_post = ((_gmr_post(phone, ttl_horas=2160) or {}).get("source_id") or "")
+                    except Exception:
+                        _ref_ad_post = ""
+                    if _ref_ad_post:
+                        save_tag(phone, "referido:anuncio_meta")
+                        log_event(phone, "referral_post_omitido_anuncio", {"source_id": _ref_ad_post[:40]})
+                if data.get("is_paciente_nuevo_post_referral") and not _ref_ad_post:
                     save_session(phone, "WAIT_REFERRAL_POST", {})
                     await send_whatsapp(phone, confirmacion_msg)
                     from session import log_message as _log_msg_conf
@@ -12011,11 +12024,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             if _pni_tel_ref:
                                 log_event(phone, "pni_enviado", _pni_tel_ref)
                         _spawn(_send_pni_referral())
+                    # 3 botones de un toque. "Ya venía antes" sobraba (solo se
+                    # pregunta a pacientes nuevos) y "Redes / Google" en un solo
+                    # botón no dejaba separar Facebook/Instagram de Google. Lo
+                    # escrito a mano (letrero, ya venía…) se sigue reconociendo.
                     return _btn_msg(
-                        "Una última cosa rápida 🙏\n\n*¿Cómo nos conociste?*",
+                        "Una última cosa rápida 🙏\n\n*¿Cómo nos conociste?*\n\n"
+                        "_Si fue de otra forma (letrero, radio, etc.), escríbela._",
                         [{"id": "ref_amigo", "title": "👥 Amigo / familiar"},
-                         {"id": "ref_rrss", "title": "📱 Redes / Google"},
-                         {"id": "ref_recurrente", "title": "🔄 Ya venía antes"}]
+                         {"id": "ref_fbig", "title": "📱 Facebook/Instagram"},
+                         {"id": "ref_google", "title": "🔎 Google"}]
                     )
                 # Sufijo estándar para cierres de confirmación
                 _conf_suffix = "\n\n_Escribe *menu* si necesitas algo más._"
@@ -13639,22 +13657,30 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         _POST_MAP = {
             "ref_amigo": "amigo",
-            "ref_rrss": "rrss",
+            "ref_rrss": "rrss",          # botón antiguo "Redes / Google" (mensajes viejos)
+            "ref_fbig": "facebook_instagram",
             "ref_recurrente": "recurrente",
             "ref_google": "google",
+            "ref_calle": "calle",
         }
         # Mapeo por button id o por texto libre
         ref_source = _POST_MAP.get(tl)
         if not ref_source:
             tl_low = tl.lower()
-            if any(w in tl_low for w in ("amig", "famili", "conoci", "vecin", "recomen")):
+            if any(w in tl_low for w in ("amig", "famili", "vecin", "recomen")):
                 ref_source = "amigo"
-            elif any(w in tl_low for w in ("instagram", "facebook", "tiktok", "red social", "rrss", "google", "internet", "busq")):
-                ref_source = "rrss" if "google" not in tl_low else "google"
+            elif any(w in tl_low for w in ("google", "internet", "busq")):
+                ref_source = "google"
+            elif any(w in tl_low for w in ("instagram", "facebook", "face", "insta", "red social", "redes", "anuncio", "publicidad")):
+                ref_source = "facebook_instagram"
+            elif any(w in tl_low for w in ("tiktok", "rrss")):
+                ref_source = "rrss"
             elif any(w in tl_low for w in ("antes", "siempre", "años", "venia", "venía", "recurr")):
                 ref_source = "recurrente"
-            elif any(w in tl_low for w in ("volante", "calle", "letrero", "fachada", "pasaba")):
+            elif any(w in tl_low for w in ("volante", "calle", "letrero", "fachada", "pasaba", "pase por", "pasé por", "cartel")):
                 ref_source = "calle"
+            elif "radio" in tl_low:
+                ref_source = "radio"
         if ref_source:
             save_tag(phone, f"referido:{ref_source}")
             log_event(phone, "registro_referral_post", {"source": ref_source, "raw": txt[:60]})
@@ -13841,7 +13867,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             elif any(w in tl for w in ("google", "internet", "busq", "web")):
                 save_tag(phone, "referido:google")
                 log_event(phone, "registro_referral", {"source": "google", "raw": txt[:60]})
-            elif any(w in tl for w in ("instagram", "facebook", "tiktok", "red")):
+            elif any(w in tl for w in ("instagram", "facebook", "face", "insta")):
+                save_tag(phone, "referido:facebook_instagram")
+                log_event(phone, "registro_referral", {"source": "facebook_instagram", "raw": txt[:60]})
+            elif any(w in tl for w in ("tiktok", "red")):
                 save_tag(phone, "referido:rrss")
                 log_event(phone, "registro_referral", {"source": "rrss", "raw": txt[:60]})
             elif any(w in tl for w in ("antes", "siempre", "años", "venia", "venía")):
