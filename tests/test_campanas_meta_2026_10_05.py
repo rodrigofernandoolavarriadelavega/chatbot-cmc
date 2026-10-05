@@ -195,7 +195,7 @@ check("kanban: especialidad desde evento si no hay cita",
       col["vio_horas"]["tarjetas"][0]["especialidad"] == "Ecografía")
 permitidas = {"clave", "phone", "telefono", "nombre", "anuncio", "ad_id", "campana", "campaign_id",
               "plataforma", "especialidad", "llegada", "llegada_iso", "proxima_cita", "dias_etapa",
-              "fuera_del_bot"}
+              "fuera_del_bot", "gestion"}
 check("privacidad: la tarjeta no trae campos extra",
       all(set(t) <= permitidas for cc in kb["columnas"] for t in cc["tarjetas"]))
 
@@ -253,6 +253,192 @@ _k = cm.kanban_data(D30, H)
 _t = [t for col in _k["columnas"] for t in col["tarjetas"] if t["phone"] == "56977000001"]
 check("kanban: pagó fuera del bot → Atendido", bool(_t) and _t[0]["fuera_del_bot"]
       and any(t["phone"] == "56977000001" for col in _k["columnas"] if col["id"] == "atendido" for t in col["tarjetas"]))
+
+# ── Ficha trabajable (2026-10-05): seguimiento, línea de tiempo, conversación ─
+import asyncio  # noqa: E402
+from fastapi import HTTPException  # noqa: E402
+
+
+def _err(fn, *a, **kw):
+    try:
+        fn(*a, **kw)
+    except HTTPException as e:
+        return e.status_code
+    return None
+
+
+# Seguimiento: guardar, leer, historial append-only
+s1 = cm.guardar_seguimiento("911110005", "contactado", "Pidió que lo llamen en la tarde", None, ahora=AHORA)
+check("seguimiento: guarda estado y nota", s1["estado"] == "contactado" and s1["nota"].startswith("Pidió"))
+check("seguimiento: historial con 1 línea", len(s1["historial"]) == 1 and s1["historial"][0]["label"] == "Contactado")
+s2 = cm.guardar_seguimiento("911110005", "contactado", "Pidió que lo llamen en la tarde", None, ahora=AHORA)
+check("seguimiento: sin cambios no agrega línea", len(s2["historial"]) == 1)
+check("seguimiento: volver a llamar sin fecha → 400",
+      _err(cm.guardar_seguimiento, "911110005", "volver_llamar", "", None) == 400)
+check("seguimiento: estado desconocido → 400", _err(cm.guardar_seguimiento, "911110005", "inventado", "", None) == 400)
+check("seguimiento: fecha inválida → 400",
+      _err(cm.guardar_seguimiento, "911110005", "volver_llamar", "", "31-02-2026") == 400)
+check("seguimiento: persona que no llegó por anuncio → 404",
+      _err(cm.guardar_seguimiento, "900000000", "contactado", "", None) == 404)
+check("seguimiento: clave con formato inválido → 404",
+      _err(cm.guardar_seguimiento, "1 OR 1=1", "contactado", "", None) == 404)
+s3 = cm.guardar_seguimiento("911110005", "volver_llamar", "No contestó", fecha(-1), ahora=AHORA)
+check("seguimiento: historial crece y queda el más reciente arriba",
+      len(s3["historial"]) == 2 and s3["historial"][0]["estado"] == "volver_llamar"
+      and s3["historial"][1]["estado"] == "contactado")
+check("seguimiento: fecha vencida → alerta vencido", s3["alerta"] == "vencido")
+cm.guardar_seguimiento("911110004", "volver_llamar", "", fecha(0), ahora=AHORA)
+cm.guardar_seguimiento("911110003", "no_interesa", "", fecha(-3), ahora=AHORA)
+kg = cm.kanban_data(D30, H, ahora=AHORA)
+tg = {t["clave"]: t["gestion"] for cc in kg["columnas"] for t in cc["tarjetas"]}
+check("tarjeta: indicador vencido", tg["911110005"]["alerta"] == "vencido"
+      and tg["911110005"]["estado"] == "volver_llamar")
+check("tarjeta: indicador hoy", tg["911110004"]["alerta"] == "hoy")
+check("tarjeta: gestión cerrada no alerta aunque la fecha pasó", tg["911110003"]["alerta"] is None)
+check("tarjeta: sin gestión = None", tg["911110001"] is None)
+check("kanban: cuenta por llamar", kg["por_llamar"] == 2)
+check("kanban: columnas no cambian por la gestión",
+      {cc["id"]: cc["n"] for cc in kg["columnas"]} == {cc["id"]: cc["n"] for cc in kb["columnas"]}
+      or kg["total"] >= kb["total"])
+check("filtro gestión: por llamar", cm.kanban_data(D30, H, ahora=AHORA, gestion="por_llamar")["total"] == 2)
+check("filtro gestión: no le interesa", cm.kanban_data(D30, H, ahora=AHORA, gestion="no_interesa")["total"] == 1)
+check("filtro gestión: sin gestionar excluye gestionados",
+      cm.kanban_data(D30, H, ahora=AHORA, gestion="sin_gestion")["total"] == kg["total"] - 3)
+check("kanban: opciones de gestión", [g["id"] for g in kg["opciones"]["gestion"]][0] == "sin_gestion")
+
+# Línea de tiempo
+f1 = cm.persona_data("911110001", ahora=AHORA)
+tipos1 = [x["tipo"] for x in f1["linea"]]
+check("ficha: teléfono completo dentro de la ficha", f1["telefono"] == "+56 9 1111 0001" and f1["tel_href"] == "+56911110001")
+check("ficha: nombre", f1["nombre"] == "Ana Prueba")
+check("ficha: clic y citas del bot", "clic" in tipos1 and tipos1.count("cita") == 2)
+check("ficha: anuncio y campaña", f1["anuncio"] == "Anuncio AD1" and f1["campana"] == "Campaña Uno")
+check("ficha: más reciente primero", [x["ts"] for x in f1["linea"]] == sorted((x["ts"] for x in f1["linea"]), reverse=True))
+f2 = cm.persona_data("911110002", ahora=AHORA)
+check("ficha: aviso de atención (Purchase) y no el Lead",
+      [x["tipo"] for x in f2["linea"]].count("atencion") == 1)
+f3 = cm.persona_data("911110003", ahora=AHORA)
+check("ficha: cita anulada marcada", any(x["tipo"] == "anulada" for x in f3["linea"])
+      and any(x["tipo"] == "cita" and x["anulada"] for x in f3["linea"]))
+check("ficha: trae el seguimiento", f3["seguimiento"]["estado"] == "no_interesa")
+f4 = cm.persona_data("911110004", ahora=AHORA)
+check("ficha: horarios ofrecidos", any(x["tipo"] == "horarios" and x["detalle"] == "Ecografía" for x in f4["linea"]))
+fp = cm.persona_data("977000001", ahora=AHORA)
+pg = [x for x in fp["linea"] if x["tipo"] == "pago"]
+check("ficha: pago en caja por cruce de teléfono", len(pg) == 1 and pg[0]["monto"] == 30000 and fp["pagos"]["total"] == 30000)
+check("ficha: pago con profesional con nombre", pg[0]["detalle"] and not pg[0]["detalle"].startswith("Profesional "))
+fq = cm.persona_data("977000002", ahora=AHORA)
+check("ficha: pago anterior al clic no entra a la línea, se informa aparte",
+      not any(x["tipo"] == "pago" for x in fq["linea"]) and fq["pagos"]["antes_del_clic"] == 1)
+check("ficha: sin datos clínicos (solo campos permitidos)",
+      all(set(x) <= {"ts", "tipo", "titulo", "detalle", "plataforma", "anulada", "del_anuncio", "monto",
+                     "paciente", "solo_fecha", "fecha", "hora", "iso"} for f in (f1, f2, f3, f4, fp) for x in f["linea"]))
+check("ficha: 404 a quien no llegó por anuncio", _err(cm.persona_data, "955555555") == 404)
+
+# Conversación: ventana de 24 h (contra el reloj real, como Meta)
+_now = datetime.now(timezone.utc)
+with session.db() as c:
+    c.execute("INSERT INTO messages (phone, direction, text, ts) VALUES (?,?,?,?)",
+              ("56911110004", "in", "¿tienen hora el viernes?", (_now - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")))
+    c.execute("INSERT INTO messages (phone, direction, text, ts) VALUES (?,?,?,?)",
+              ("56911110006", "in", "gracias", (_now - timedelta(hours=30)).strftime("%Y-%m-%d %H:%M:%S")))
+    c.commit()
+ca = cm.conversacion_data("911110004")
+check("conversación: ventana abierta (escribió hace 1 h)", ca["ventana_abierta"] is True
+      and any("viernes" in m["texto"] for m in ca["mensajes"]))
+check("conversación: ventana cerrada (escribió hace 30 h)", cm.conversacion_data("911110006")["ventana_abierta"] is False)
+
+ENVIOS = []
+
+
+async def _fake_responder(phone, texto):
+    ENVIOS.append((phone, texto))
+    return {"ok": True, "wamid": "wamid.FAKE"}
+
+
+cm._responder = _fake_responder   # nunca se envía nada real
+base = "/alma/api/campanas-meta/persona"
+for metodo, ruta, body in (("get", f"{base}/911110004", None), ("get", f"{base}/911110004/conversacion", None),
+                           ("post", f"{base}/911110004/seguimiento", {"estado": "contactado"}),
+                           ("post", f"{base}/911110004/conversacion", {"mensaje": "Hola"})):
+    fn = getattr(cli, metodo)
+    kw = {"json": body} if body else {}
+    check(f"auth {metodo.upper()} {ruta[len(base):] or '/'}: sin token 401", fn(ruta, **kw).status_code == 401)
+    check(f"auth {metodo.upper()} {ruta[len(base):] or '/'}: recepción 403",
+          fn(ruta + "?token=recepcion_test", **kw).status_code == 403)
+check("sin envíos por intentos no autorizados", ENVIOS == [])
+hd = {"Authorization": "Bearer dueno_test"}
+r = cli.get(f"{base}/911110004", headers=hd)
+check("GET ficha dueño 200", r.status_code == 200 and r.json()["clave"] == "911110004")
+r = cli.post(f"{base}/911110006/conversacion", headers=hd, json={"mensaje": "Hola, ¿pudo agendar?"})
+check("POST con ventana cerrada → 409 y no envía", r.status_code == 409 and ENVIOS == [])
+r = cli.post(f"{base}/911110004/conversacion", headers=hd, json={"mensaje": "   "})
+check("POST mensaje vacío → 400", r.status_code == 400 and ENVIOS == [])
+cm.guardar_seguimiento("911110002", "sin_gestion", "", None, ahora=AHORA)
+with session.db() as c:
+    c.execute("INSERT INTO messages (phone, direction, text, ts) VALUES (?,?,?,?)",
+              ("56911110002", "in", "hola", (_now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")))
+    c.commit()
+r = cli.post(f"{base}/911110002/conversacion", headers=hd, json={"mensaje": "Hola, le escribimos del centro"})
+check("POST con ventana abierta → envía por el camino de recepción",
+      r.status_code == 200 and ENVIOS == [("56911110002", "Hola, le escribimos del centro")])
+sg = cm.persona_data("911110002", ahora=AHORA)["seguimiento"]
+check("responder deja 'Contactado' si estaba sin gestionar",
+      sg["estado"] == "contactado" and sg["historial"][0]["origen"] == "respuesta por WhatsApp")
+n_env = len(ENVIOS)
+r = cli.post(f"{base}/911110004/conversacion", headers=hd, json={"mensaje": "Le confirmo el viernes"})
+sg4 = cm.persona_data("911110004", ahora=AHORA)["seguimiento"]
+check("responder no pisa una gestión ya hecha", r.status_code == 200 and len(ENVIOS) == n_env + 1
+      and sg4["estado"] == "volver_llamar")
+async def _fake_caido(phone, texto):
+    raise RuntimeError("red caída")
+
+
+cm._responder = _fake_caido
+r = cli.post(f"{base}/911110004/conversacion", headers=hd, json={"mensaje": "Hola"})
+check("envío con error de red → 502 con mensaje claro", r.status_code == 502 and "No se pudo enviar" in r.json()["detail"])
+cm._responder = _fake_responder
+r = cli.post(f"{base}/911110004/seguimiento", headers=hd, json={"estado": "agendo_otra_via", "nota": "Agendó por teléfono"})
+check("POST seguimiento dueño 200", r.status_code == 200 and r.json()["estado"] == "agendo_otra_via"
+      and r.json()["historial"][0]["nota"] == "Agendó por teléfono")
+r = cli.get(f"/alma/api/campanas-meta/kanban?desde={D30}&hasta={H}&gestion=agendo_otra_via", headers=hd)
+check("GET kanban con filtro de gestión", r.status_code == 200 and r.json()["total"] == 1)
+
+# ── Cómo nos conocieron (pregunta post-cita) ────────────────────────────────
+with session.db() as c:
+    for ph, tag, dias in (("56911110001", "referido:amigo", 2.5),        # tocó AD1 hace 3 d → con anuncio
+                          ("56911110002", "referido:recurrente", 9),     # tocó AD1 hace 10 d → con anuncio
+                          ("56911110002", "referido:amigo", 40),         # respuesta vieja: manda la más reciente
+                          ("56911110003", "referido:rrss", 3.5),         # AD2 hace 4 d
+                          ("56900000001", "referido:amigo", 1),          # nunca tocó un anuncio
+                          ("56900000002", "referido:google", 2),
+                          ("56900000003", "referido:facebook_instagram", 2),
+                          ("56900000004", "referido:amigo", 60)):        # fuera del rango
+        c.execute("INSERT INTO contact_tags (phone, tag, ts) VALUES (?,?,?)", (ph, tag, utc(dias)))
+    # Respondió ANTES de tocar el anuncio → no cuenta como "con anuncio"
+    c.execute("INSERT INTO contact_tags (phone, tag, ts) VALUES (?,?,?)", ("56911110005", "referido:recurrente", utc(3)))
+    c.commit()
+pc = cm.panel_data(D30, H)
+cn = pc["conocieron"]
+op = {o["id"]: o for o in cn["opciones"]}
+check("conocieron: total de respuestas en el rango", cn["total"] == 7)
+check("conocieron: amigo 2, uno con anuncio", op["amigo"]["n"] == 2 and op["amigo"]["con_anuncio"] == 1
+      and op["amigo"]["sin_anuncio"] == 1)
+check("conocieron: manda la respuesta más reciente del teléfono", op["recurrente"]["n"] == 2)
+check("conocieron: respondió antes del clic → sin anuncio", op["recurrente"]["con_anuncio"] == 1)
+check("conocieron: nuevas opciones facebook_instagram y google",
+      op["google"]["n"] == 1 and op["facebook_instagram"]["n"] == 1)
+check("conocieron: rrss antiguo separado", op["rrss"]["n"] == 1 and "antiguo" in op["rrss"]["label"])
+check("conocieron: porcentajes", op["amigo"]["pct"] == round(100 * 2 / 7))
+ad1 = next(a for a in pc["anuncios"] if a["ad_id"] == "AD1")
+check("conocieron por anuncio: AD1 amigo 50% / ya era paciente 50%",
+      ad1["conocieron"]["respondieron"] == 2 and ad1["conocieron"]["amigo_pct"] == 50
+      and ad1["conocieron"]["recurrente_pct"] == 50)
+ad3 = next(a for a in pc["anuncios"] if a["ad_id"] == "AD3")
+check("conocieron por anuncio: sin respuestas = None", ad3["conocieron"] is None)
+check("conocieron por campaña suma sus anuncios",
+      next(x for x in pc["campanas"] if x["campaign_id"] == "C1")["conocieron"]["respondieron"] == 2)
+check("conocieron: rango vacío sin error", cm.panel_data(fecha(-400), fecha(-380))["conocieron"]["total"] == 0)
 
 print(f"\n{len(FALLAS)} fallas")
 sys.exit(1 if FALLAS else 0)

@@ -115,7 +115,23 @@ button,input,select{font:inherit;color:inherit}
 .warnline{margin-top:6px;color:var(--orange-d);font-weight:600}
 
 /* Embudo KPI */
-.funnel{display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);
+/* Banda de plata: Venta → Para el centro − Gasto = Resultado (lo primero que mira el dueño) */
+.mband{display:grid;grid-template-columns:1fr 1fr 1fr 1.25fr;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-sm);overflow:hidden;margin-bottom:12px}
+.mb{position:relative;padding:16px 20px 15px;opacity:0;animation:rise .32s var(--back) forwards;animation-delay:calc(var(--i,0)*50ms)}
+.mb+.mb{border-left:1px solid var(--line-2)}
+.mb .v{font-size:25px;font-weight:800;color:var(--navy);letter-spacing:-.02em;line-height:1.1;margin-top:6px;font-variant-numeric:tabular-nums}
+.mb .s{font-size:12px;color:var(--mute);margin-top:4px;font-weight:500}
+.mb .op{position:absolute;left:-12px;top:50%;transform:translateY(-50%);z-index:2;width:24px;height:24px;border-radius:50%;background:#fff;
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--mute);box-shadow:var(--sh-xs)}
+.mb.venta .v{color:var(--blue)}
+.mb.res{background:linear-gradient(135deg,#F3F8FC,#fff)}
+.mb.res .v{font-size:32px}
+.mb.res.pos{background:linear-gradient(135deg,var(--green-s),#fff)}.mb.res.pos .v{color:var(--green-d)}
+.mb.res.neg{background:linear-gradient(135deg,var(--red-s),#fff)}.mb.res.neg .v{color:var(--red-d)}
+.mb .chipr{display:inline-block;margin-left:6px;font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;background:#fff;
+  border:1px solid var(--line);color:var(--ink-2);vertical-align:3px;letter-spacing:0}
+.funnel{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);
   box-shadow:var(--sh-sm);overflow:hidden;margin-bottom:12px}
 .fs{position:relative;padding:16px 18px 15px;opacity:0;animation:rise .32s var(--back) forwards;animation-delay:calc(var(--i,0)*50ms)}
 .fs+.fs{border-left:1px solid var(--line-2)}
@@ -124,6 +140,12 @@ button,input,select{font:inherit;color:inherit}
 .fs .rate{position:absolute;left:-13px;top:50%;transform:translateY(-50%);z-index:2;background:#fff;border:1px solid var(--line);
   border-radius:999px;font-size:10.5px;font-weight:800;color:var(--blue);padding:2px 6px;font-variant-numeric:tabular-nums;box-shadow:var(--sh-xs)}
 .fs.hi .v{color:var(--green-d)}
+.fs+.fs{padding-left:26px}
+.fs .c{display:inline-flex;align-items:baseline;gap:5px;margin-top:8px;font-size:12px;color:var(--ink-2);font-weight:600;
+  background:var(--line-2);border-radius:8px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.fs .c b{font-size:13px;color:var(--navy);font-weight:800}
+.fs.key .c{background:var(--aqua-s)}.fs.key .c b{color:var(--blue)}
+.funnel{margin-bottom:24px}
 @keyframes rise{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .pctc{display:block;font-size:11px;color:var(--mute);font-weight:600}.resp{color:#13795b;font-weight:700}.resn{color:#c0362c;font-weight:700}.cac.pos .v{color:#13795b}.cac.neg .v{color:#c0362c}
 .cacs{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
@@ -153,6 +175,42 @@ button,input,select{font:inherit;color:inherit}
 
 /* Tabla */
 .tbl-wrap{overflow-x:auto}
+.venta-cell.has-pop{cursor:help}
+.venta-cell.has-pop b{text-decoration:underline dotted var(--mute);text-underline-offset:3px}
+#vpop{position:fixed;z-index:60;min-width:300px;max-width:min(420px,calc(100vw - 16px));background:#fff;border:1px solid var(--line);
+  border-radius:14px;box-shadow:0 12px 32px rgba(15,40,70,.18);padding:12px 14px;opacity:0;pointer-events:none;transform:translateY(-4px);
+  transition:opacity .12s,transform .12s}
+#vpop.on{opacity:1;transform:none}
+#vpop .pop-h{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+#vpop .pop-t{width:100%;border-collapse:collapse;font-size:13px}
+#vpop .pop-t th{position:static;font-size:10.5px;padding:4px 6px;background:none;border-top:0}
+#vpop .pop-t td{padding:5px 6px;border-bottom:1px solid var(--line-2);vertical-align:top}
+#vpop .pop-t td small{display:block;font-size:11px;color:var(--mute)}
+#vpop .pop-t tfoot td{font-weight:800;border-bottom:0}
+td small.otras{display:block;font-size:10.5px;color:#B07215;font-weight:600;max-width:150px;margin-left:auto;white-space:normal}
+#vpop{max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain}
+#vpop.sheet{left:8px!important;right:8px;top:auto!important;bottom:calc(8px + env(safe-area-inset-bottom));max-width:none;min-width:0;
+  max-height:72dvh;border-radius:18px;padding:14px 16px 16px;box-shadow:0 -8px 40px rgba(15,40,70,.28);transform:translateY(16px)}
+#vpop.sheet.on{transform:none}
+#vpop .pop-x{display:none}
+#vpop.sheet .pop-x{display:flex;position:sticky;top:-14px;margin:-14px -16px 6px;padding:8px 8px 0;justify-content:flex-end;background:#fff;z-index:1}
+#vpop .pop-x button{width:44px;height:36px;border:0;border-radius:10px;background:var(--line-2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+#vpop .pop-x svg{width:16px;height:16px;stroke:var(--ink-2)}
+#vpop .pop-s{font-size:12px;color:var(--ink-2);margin:-2px 0 6px}
+#vpop tr.fuera td:first-child{border-left:3px solid #E8A33D;padding-left:8px}
+#vpop .pop-n{font-size:11px;color:var(--mute);margin-top:6px}
+/* Encabezado fijo al bajar. Un contenedor con overflow anula el sticky contra
+   la página: en pantallas anchas (la tabla cabe) se suelta el overflow y el
+   encabezado se pega bajo la barra de filtros; en medianas la tabla se
+   desplaza dentro de su propio recuadro con el encabezado fijo arriba. */
+@media(min-width:761px){
+  .tbl-wrap{max-height:calc(100dvh - var(--bar-h,64px) - 40px);overflow:auto}
+  thead th{position:sticky;top:0;z-index:2}
+}
+@media(min-width:1280px){
+  .tbl-wrap:not(.full){max-height:none;overflow:visible}
+  .tbl-wrap:not(.full) thead th{top:var(--bar-h,64px)}
+}
 table{width:100%;border-collapse:collapse}
 thead th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);
   padding:10px 12px;background:#F7FAFC;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line);white-space:nowrap}
@@ -162,6 +220,15 @@ tbody tr{transition:background .12s}
 tbody tr:hover{background:#FAFCFE}
 tbody tr:last-child td{border-bottom:0}
 tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+th.mny,td.mny{background:#F6FAFD}
+@media(min-width:761px){tbody td.r{white-space:nowrap}tbody td.r small.otras{white-space:normal}}
+tbody tr:hover td.mny{background:#F0F6FB}
+th.mny{color:var(--navy)}
+td.res b{font-size:14px;font-weight:800}
+td.nmc{min-width:230px}
+.tbl-mode .tbl-wrap.full .nm{max-width:300px}
+.card-h .segs{display:flex;gap:8px;flex-wrap:wrap}
+.seg .sh2{display:none}
 .nm{font-weight:700;color:var(--navy);max-width:340px}
 .nm small{display:block;font-weight:500;color:var(--mute);font-size:11.5px;margin-top:1px}
 .cacv{font-weight:800;color:var(--navy)}
@@ -176,7 +243,7 @@ tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
 .tbl-foot{padding:10px 18px 14px;font-size:12px;color:var(--mute)}
 
 /* Desgloses */
-.grid-d{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:14px;margin-bottom:24px}
+.grid-d{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:14px;margin-bottom:24px;align-items:start}
 .dn{padding:2px 18px 16px}
 .brow{display:grid;grid-template-columns:minmax(96px,1.2fr) minmax(40px,1fr) auto;gap:10px;align-items:center;padding:6px 0;font-size:12.5px}
 .brow .k{color:var(--ink-2);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
@@ -198,6 +265,23 @@ tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
 .dleg{font-size:11.5px;color:var(--mute);margin:2px 0 6px}
 .dleg b{color:var(--aqua-d)}
 @media(min-width:1100px){.grid-d .span2{grid-column:span 2}}
+
+/* Cómo nos conocieron */
+.cn{padding:2px 18px 16px}
+.crow{display:grid;grid-template-columns:minmax(150px,220px) minmax(60px,1fr) 110px;gap:12px;align-items:center;padding:7px 0;font-size:13px;
+  opacity:0;animation:rise .28s var(--ease) forwards;animation-delay:calc(var(--i,0)*40ms)}
+.crow+.crow{border-top:1px solid var(--line-2)}
+.crow .k{font-weight:700;color:var(--ink)}
+.crow .k small{display:block;font-weight:500;color:var(--mute);font-size:11.5px}
+.crow .bar{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--line-2)}
+.crow .bar i{display:block;height:100%;transform-origin:left;animation:grow .45s var(--ease) both;animation-delay:calc(var(--i,0)*40ms)}
+.crow .bar .a{background:var(--aqua)}.crow .bar .b{background:#B7C8D6}
+.crow .val{text-align:right;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap}
+.crow .val small{display:block;font-size:11px;color:var(--mute);font-weight:600}
+.crow.nil .k,.crow.nil .val{color:var(--mute)}
+#vpop .pop-c{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+#vpop .pop-c span{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--line-2);color:var(--ink-2)}
+#vpop .pop-c span.k{background:var(--aqua-s);color:var(--navy)}
 
 /* Tendencia */
 .trend{padding:4px 18px 16px}
@@ -281,11 +365,11 @@ tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media(max-width:1024px){
-  .funnel{grid-template-columns:repeat(3,1fr)}
-  .cacs{grid-template-columns:repeat(3,1fr)}
-  .fs:nth-child(4){border-left:0}
-  .fs:nth-child(n+4){border-top:1px solid var(--line-2)}
-  .fs:nth-child(4) .rate{display:none}
+  .mband{grid-template-columns:1fr 1fr}
+  .mb:nth-child(3){border-left:0}
+  .mb:nth-child(n+3){border-top:1px solid var(--line-2)}
+  .mb:nth-child(3) .op{display:none}
+  .mb.res .v{font-size:25px}
 }
 @media(max-width:760px){
   .hero{padding:16px 16px 14px}
@@ -307,11 +391,19 @@ tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
   .fs:nth-child(1),.fs:nth-child(2){border-top:0}
   .fs:nth-child(even){border-left:1px solid var(--line-2)}
   .fs .rate{display:none}
-  .fs:nth-child(5){grid-column:1/-1}
-  .cacs{grid-template-columns:1fr;gap:8px}
-  .cac{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:12px 14px}
-  .cac .v{font-size:21px;margin:0;margin-left:auto}
-  .cac .s{width:100%;margin-top:0}
+  .mb{padding:13px 14px}
+  .mb .v{font-size:19px}
+  .mb.res .v{font-size:21px}
+  .mb .op{display:none}
+  .crow{grid-template-columns:1fr auto;gap:4px 12px}
+  .crow .bar{grid-column:1/-1;grid-row:2}
+  .cn{padding:2px 14px 14px}
+  td.mny{background:transparent}
+  .card td.res{margin-top:4px;padding-top:8px;border-top:1px solid var(--line-2)}
+  .card td{flex-wrap:wrap;align-items:baseline}
+  .card td::before{margin-right:auto}
+  .card td>small.pctc,.card td>small.otras{flex-basis:100%;text-align:right;margin:0;max-width:none}
+  .seg .lg2{display:none}.seg .sh2{display:inline}
   .card-h{padding:12px 14px}
   .grid-d{grid-template-columns:1fr}
   .dn{padding:2px 14px 14px}
@@ -344,9 +436,213 @@ tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
   .hero{padding-top:12px;padding-bottom:12px}
   .hero p{display:none}
 }
+/* ── Tarjeta trabajable: indicador de gestión ─────────────────────────── */
+.kc{cursor:pointer;position:relative}
+.kc:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.kc.noanim{opacity:1;animation:none}
+.kc.g-vencido{box-shadow:inset 3px 0 0 var(--red),var(--sh-xs)}
+.kc.g-hoy{box-shadow:inset 3px 0 0 var(--orange),var(--sh-xs)}
+.kc.g-vencido:hover{box-shadow:inset 3px 0 0 var(--red),var(--sh-md)}
+.kc.g-hoy:hover{box-shadow:inset 3px 0 0 var(--orange),var(--sh-md)}
+.kc-gest{display:flex;align-items:center;gap:6px;margin-top:8px;padding:5px 8px;border-radius:9px;font-size:11.5px;font-weight:700;
+  background:var(--line-2);color:var(--ink-2)}
+.kc-gest svg{width:13px;height:13px;stroke:currentColor;flex:none}
+.kc-gest .nt{margin-left:auto;display:inline-flex;color:var(--mute)}
+.kc-gest.hoy{background:var(--orange-s);color:var(--orange-d)}
+.kc-gest.vencido{background:var(--red-s);color:var(--red-d)}
+.kc-open{margin-left:auto;display:inline-flex;align-items:center;gap:4px;color:var(--blue);font-weight:700;white-space:nowrap}
+.kc-open svg{width:14px;height:14px;stroke:currentColor;transition:transform .15s var(--ease)}
+.kc:hover .kc-open svg{transform:translateX(2px)}
+.kintro .tocall{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid #F5C9A3;
+  background:var(--orange-s);color:var(--orange-d);font-weight:800;font-size:12px;cursor:pointer}
+.kintro .tocall svg{width:13px;height:13px;stroke:currentColor}
+.kintro .tocall[aria-pressed="true"]{background:var(--orange-d);border-color:var(--orange-d);color:#fff}
+
+/* ── Ficha de la persona (modal) ──────────────────────────────────────── */
+.mx-bg{position:fixed;inset:0;z-index:70;background:rgba(15,40,70,.42);display:flex;align-items:center;justify-content:center;
+  padding:24px;opacity:0;transition:opacity .2s var(--ease)}
+.mx-bg.on{opacity:1}
+.mx-bg[hidden]{display:none}
+.mx{position:relative;width:min(1180px,100%);height:min(860px,calc(100dvh - 48px));background:#F7FAFC;border-radius:20px;
+  box-shadow:var(--sh-lg);display:flex;flex-direction:column;overflow:hidden;transform:translateY(14px) scale(.985);opacity:0;
+  transition:transform .26s var(--back),opacity .2s var(--ease)}
+.mx-bg.on .mx{transform:none;opacity:1}
+.mx-head{background:#fff;border-bottom:1px solid var(--line);padding:16px 20px 0;flex:none}
+.mx-id{display:flex;align-items:center;gap:12px}
+.mx-av{width:44px;height:44px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;font-weight:800;font-size:15px;letter-spacing:.02em}
+.mx-t{min-width:0;flex:1}
+.mx-t h2{margin:0;font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.02em;line-height:1.2;overflow-wrap:anywhere}
+.mx-t h2.anon{color:var(--mute)}
+.mx-t h2:focus{outline:none}
+.mx-tel{font-size:13px;color:var(--ink-2);font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.mx-x{width:44px;height:44px;border-radius:12px;border:0;background:var(--line-2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex:none;transition:background .15s}
+.mx-x:hover{background:var(--line)}
+.mx-x svg{width:18px;height:18px;stroke:var(--ink-2)}
+.mx-meta{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0}
+.mx-meta .chip{font-size:11.5px;padding:3px 10px;max-width:100%}
+.mx-meta .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mx-meta .chip.etapa{background:#fff;border:1px solid var(--line);color:var(--navy)}
+.mx-meta .chip.etapa i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.mx-acts{display:flex;gap:8px;margin:12px 0 14px;flex-wrap:wrap}
+.mbtn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:0 16px;border-radius:11px;
+  border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:13px;text-decoration:none;cursor:pointer;
+  transition:background .15s,border-color .15s,box-shadow .15s}
+.mbtn:hover{background:var(--aqua-s);border-color:#BFE6EC}
+.mbtn svg{width:16px;height:16px;stroke:currentColor}
+.mbtn.pri{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--sh-sm)}
+.mbtn.pri:hover{background:#0B3254;box-shadow:var(--sh-md)}
+.mbtn .sh{display:none}
+@media(max-width:760px){.mbtn .sh{display:inline}}
+.mbtn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.mx-tabs{display:none;gap:2px;margin:0 -4px}
+.mx-tabs button{flex:1;min-height:44px;border:0;background:none;font-weight:700;font-size:13px;color:var(--mute);cursor:pointer;
+  border-bottom:2px solid transparent;transition:color .15s,border-color .2s var(--ease)}
+.mx-tabs button[aria-selected="true"]{color:var(--navy);border-bottom-color:var(--aqua)}
+.mx-tabs .b{display:inline-block;min-width:8px;height:8px;border-radius:50%;background:var(--orange);margin-left:6px;vertical-align:1px}
+.mx-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr)}
+.mx-left{overflow-y:auto;padding:18px 20px 24px;display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain}
+.mx-sec{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh-xs)}
+.mx-sec>h3{display:flex;align-items:center;gap:8px;margin:0;padding:14px 16px 0;font-size:14px;font-weight:800;color:var(--navy)}
+.mx-sec>h3 svg{width:16px;height:16px;stroke:var(--blue)}
+.mx-sec>h3 small{margin-left:auto;font-size:11px;font-weight:600;color:var(--mute)}
+.mx-in{padding:12px 16px 16px}
+.g-alert{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:11px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+.g-alert svg{width:16px;height:16px;stroke:currentColor;flex:none}
+.g-alert.hoy{background:var(--orange-s);color:var(--orange-d)}
+.g-alert.vencido{background:var(--red-s);color:var(--red-d)}
+.g-est{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+.g-est button{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:11px;border:1px solid var(--line);
+  background:#fff;color:var(--ink-2);font-weight:700;font-size:13px;text-align:left;cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.g-est button:hover{border-color:#BFE6EC;background:#FAFDFE}
+.g-est button i{width:16px;height:16px;border-radius:50%;border:2px solid #B7C8D6;flex:none;transition:border-color .15s,box-shadow .15s}
+.g-est button[aria-checked="true"]{border-color:var(--aqua);background:var(--aqua-s);color:var(--navy);box-shadow:0 0 0 1px var(--aqua)}
+.g-est button[aria-checked="true"] i{border-color:var(--blue);box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 8px var(--blue)}
+.g-f{margin-top:14px}
+.g-f label{display:block;margin-bottom:6px}
+.g-f input[type=date],.g-f textarea{width:100%;min-height:44px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font:inherit;
+  font-size:16px;color:var(--navy);background:#fff;transition:border-color .15s,box-shadow .15s}
+@media(min-width:761px){.g-f input[type=date],.g-f textarea{font-size:14px}}
+.g-f textarea{resize:vertical;min-height:88px;line-height:1.45}
+.g-f input:focus,.g-f textarea:focus{outline:none;border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.22)}
+.g-f .req{color:var(--orange-d);font-weight:700;text-transform:none;letter-spacing:0;font-size:11.5px;margin-left:6px}
+.g-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.g-row input{flex:1 1 170px;width:auto!important}
+.g-q{min-height:40px;padding:0 11px;border-radius:10px;border:1px dashed #BCCBD7;background:none;color:var(--blue);font-weight:700;font-size:12px;cursor:pointer}
+.g-q:hover{background:var(--aqua-s);border-style:solid;border-color:#BFE6EC}
+.g-save{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;padding:12px 16px;background:linear-gradient(to top,#fff 75%,rgba(255,255,255,0));
+  border-radius:0 0 16px 16px}
+.g-save .hint{font-size:12px;color:var(--mute)}
+.g-save .mbtn.pri{margin-left:auto;min-width:140px}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line-2);font-size:12.5px}
+.hist li:first-child{border-top:0}
+.hist .hd{color:var(--mute);font-variant-numeric:tabular-nums;font-size:11.5px;white-space:nowrap;padding-top:1px}
+.hist .hbd{color:var(--ink);min-width:0}
+.hist .hbd b{color:var(--navy)}
+.hist .hbd small{display:block;color:var(--mute);font-size:11.5px}
+.hist .hbd p{margin:3px 0 0;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.act-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.act-sum div{background:var(--bg);border-radius:11px;padding:9px 12px}
+.act-sum .v{font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.act-sum small{display:block;font-size:11.5px;color:var(--mute);margin-top:1px}
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl li{position:relative;display:grid;grid-template-columns:28px 1fr auto;gap:10px;padding:8px 0;opacity:0;
+  animation:rise .26s var(--ease) forwards;animation-delay:calc(min(var(--i,0),10)*40ms)}
+.tl li::before{content:"";position:absolute;left:13.5px;top:36px;bottom:-8px;width:1px;background:var(--line)}
+.tl li:last-child::before{display:none}
+.tl .ti{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--line-2);position:relative;z-index:1}
+.tl .ti svg{width:14px;height:14px;stroke:var(--ink-2)}
+.tl .t-clic .ti{background:var(--aqua-s)}.tl .t-clic .ti svg{stroke:var(--aqua-d)}
+.tl .t-cita .ti{background:#E6F0F8}.tl .t-cita .ti svg{stroke:var(--blue)}
+.tl .t-anulada .ti{background:var(--red-s)}.tl .t-anulada .ti svg{stroke:var(--red)}
+.tl .t-pago .ti,.tl .t-atencion .ti{background:var(--green-s)}.tl .t-pago .ti svg,.tl .t-atencion .ti svg{stroke:var(--green-d)}
+.tl .tb{min-width:0}
+.tl .tb b{font-size:13px;color:var(--ink);font-weight:700}
+.tl .tb p{margin:1px 0 0;font-size:12.5px;color:var(--ink-2);overflow-wrap:anywhere}
+.tl .tb small{display:block;font-size:11.5px;color:var(--mute);font-variant-numeric:tabular-nums;margin-top:2px}
+.tl .tm{font-weight:800;font-size:13px;color:var(--green-d);font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:2px}
+.tl .tb .badge{margin:0 0 0 6px;vertical-align:1px}
+/* Conversación */
+.mx-right{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line);background:#fff}
+.chh{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line-2);flex:none}
+.chh h3{margin:0;font-size:14px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:8px}
+.chh h3 svg{width:16px;height:16px;stroke:var(--blue)}
+.chh .st{margin-left:auto;font-size:11px;font-weight:700;color:var(--mute);background:var(--line-2);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.ch-body{flex:1;min-height:0;overflow-y:auto;padding:14px 16px;background:var(--bg);display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+.ch-dia{align-self:center;font-size:10.5px;font-weight:800;color:var(--mute);background:#fff;border:1px solid var(--line);border-radius:999px;
+  padding:2px 10px;margin:8px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.ch-m{max-width:84%;padding:8px 11px 5px;border-radius:13px;font-size:13px;line-height:1.45;color:var(--ink);white-space:pre-wrap;
+  overflow-wrap:anywhere;box-shadow:var(--sh-xs)}
+.ch-m.in{align-self:flex-start;background:#fff;border:1px solid var(--line);border-top-left-radius:4px}
+.ch-m.out{align-self:flex-end;background:#E3F3F6;border-top-right-radius:4px}
+.ch-m.hum{background:#D6ECF8}
+.ch-m .who{display:block;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.ch-m .t{display:block;text-align:right;font-size:10px;color:var(--mute);margin-top:3px}
+.ch-aviso{font-size:12px;line-height:1.45;padding:10px 16px;border-top:1px solid var(--line-2);color:var(--ink-2);background:#fff;flex:none}
+.ch-aviso.cerrada{background:var(--orange-s);color:var(--orange-d);font-weight:600}
+.ch-foot{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line-2);background:#fff;align-items:flex-end;flex:none}
+.ch-foot textarea{flex:1;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--ink);
+  resize:none;max-height:140px;min-height:44px;background:var(--bg)}
+@media(min-width:761px){.ch-foot textarea{font-size:13.5px}}
+.ch-foot textarea:focus{outline:none;border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,190,206,.22);background:#fff}
+.ch-foot textarea:disabled,.ch-foot button:disabled{opacity:.5;cursor:not-allowed}
+.ch-foot .mbtn{flex:none}
+.mx-sk{padding:16px}
+@media(max-width:1023px){
+  .mx-tabs{display:flex}
+  .mx-body{display:block;position:relative}
+  .mx-left,.mx-right{position:absolute;inset:0}
+  .mx-right{border-left:0}
+  .mx[data-tab="chat"] .mx-left{display:none}
+  .mx:not([data-tab="chat"]) .mx-right{display:none}
+  .mx[data-tab="seg"] #mxAct,.mx[data-tab="act"] #mxSeg{display:none}
+  .mx-acts{margin-bottom:10px}
+  .chh{padding:8px 16px}.chh h3{display:none}
+}
+@media(max-width:360px){.g-est{grid-template-columns:1fr}}
+@media(max-width:760px) and (max-height:700px){
+  .mx-av{display:none}
+  .mx-t h2{font-size:16px}
+  .mx-meta{margin-top:8px}
+  .mx-acts{margin:8px 0}
+}
+@media(max-width:760px){
+  .mx-bg{padding:0;align-items:stretch}
+  .mx{width:100%;height:100dvh;border-radius:0;transform:translateY(28px)}
+  .mx-head{padding:max(12px,env(safe-area-inset-top)) 14px 0}
+  .mx-t h2{font-size:17px}
+  .mx-meta{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-14px;padding-right:14px}
+  .mx-meta::-webkit-scrollbar{display:none}
+  .mx-meta .chip{flex:none;max-width:72vw}
+  .mx-acts{display:grid;grid-template-columns:1fr 1fr}
+  .mx-left{padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+  .mx-sec{border-radius:14px}
+  .g-est{grid-template-columns:1fr 1fr}
+  .mbtn .lg{display:none}
+  .g-row input{flex-basis:100%}
+  .g-q{flex:1}
+  .g-save{padding:12px 14px calc(12px + env(safe-area-inset-bottom))}
+  .g-save .hint{display:none}
+  .g-save .mbtn.pri{flex:1}
+}
+@media(max-height:500px) and (orientation:landscape){
+  .mx-bg{padding:0}.mx{height:100dvh;width:100%;border-radius:0}
+  .mx-meta,.mx-av{display:none}
+  .mx-head{display:flex;flex-wrap:wrap;align-items:center;gap:0 10px;padding:6px max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
+  .mx-id{display:contents}
+  .mx-t{order:1;flex:1;min-width:0}
+  .mx-x{order:3}
+  .mx-acts{margin:0;order:2;display:flex}
+  .mx-tabs{flex-basis:100%;order:4}
+  .mx-t h2{font-size:16px}.mx-tel{font-size:12px}
+  .g-save{position:static}
+}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important}
-  .fs,.cac,.al,.kc{opacity:1}
+  .fs,.cac,.al,.kc,.tl li,.mb,.crow{opacity:1}
 }
 </style>
 </head>
@@ -396,6 +692,8 @@ tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></label>
       <label class="fld only-k"><span class="sr">Especialidad</span><select id="fEsp"><option value="">Todas las especialidades</option></select>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></label>
+      <label class="fld only-k"><span class="sr">Gestión</span><select id="fGest"><option value="">Toda la gestión</option></select>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></label>
       <label class="fld search only-k"><span class="sr">Buscar por nombre o teléfono</span>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="search" id="fQ" placeholder="Nombre o teléfono" autocomplete="off"></label>
@@ -409,6 +707,44 @@ tbody tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 var(--red)}
   <section class="view" id="v-kanban" role="tabpanel" aria-labelledby="tab-kanban"></section>
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="mx-bg" id="mx" hidden>
+  <div class="mx" role="dialog" aria-modal="true" aria-labelledby="mxNombre" data-tab="seg">
+    <header class="mx-head">
+      <div class="mx-id">
+        <div class="mx-av" id="mxAv" aria-hidden="true"></div>
+        <div class="mx-t"><h2 id="mxNombre" tabindex="-1">Persona</h2><div class="mx-tel" id="mxTel"></div></div>
+        <button type="button" class="mx-x" id="mxX" aria-label="Cerrar ficha"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="mx-meta" id="mxMeta"></div>
+      <div class="mx-acts">
+        <a class="mbtn pri" id="mxCall" href="#"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Llamar</a>
+        <a class="mbtn" id="mxPanel" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg><span class="lg">Panel de recepción</span><span class="sh">Recepción</span></a>
+      </div>
+      <div class="mx-tabs" role="tablist" aria-label="Secciones de la ficha">
+        <button type="button" role="tab" data-t="seg" aria-selected="true">Gestión<span class="b" id="mxTabAlert" hidden></span></button>
+        <button type="button" role="tab" data-t="act" aria-selected="false">Actividad</button>
+        <button type="button" role="tab" data-t="chat" aria-selected="false">Conversación</button>
+      </div>
+    </header>
+    <div class="mx-body">
+      <div class="mx-left">
+        <section class="mx-sec" id="mxSeg" aria-label="Seguimiento"></section>
+        <section class="mx-sec" id="mxAct" aria-label="Línea de tiempo"></section>
+      </div>
+      <section class="mx-right" id="mxChat" aria-label="Conversación">
+        <div class="chh"><h3><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Conversación con el bot</h3><span class="st" id="chSt"></span></div>
+        <div class="ch-body" id="chBody"></div>
+        <div class="ch-aviso" id="chAviso"></div>
+        <div class="ch-foot">
+          <label class="sr" for="chTxt">Respuesta</label>
+          <textarea id="chTxt" rows="1" placeholder="Escriba su respuesta…"></textarea>
+          <button type="button" class="mbtn pri" id="chSend">Enviar</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
 
 <script>
 const TOKEN = "__TOKEN__";
@@ -433,12 +769,20 @@ const I = {
   users: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
   fb: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
   ig: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+  note: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  xc: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  list: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  pulse: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
   ext: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
 };
 
 /* ── Estado ─────────────────────────────────────────────────────────────── */
-const S = { v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "",
-            tabla: "anuncios", kcol: "escribio", panel: null, kanban: null, ver: {} };
+const S = { v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
+            tabla: "anuncios", cols: (() => { try { return localStorage.getItem("cm_cols") || "resumen"; } catch (_) { return "resumen"; } })(), kcol: "escribio", panel: null, kanban: null, ver: {} };
 
 function hoyCL() {
   const p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -455,7 +799,7 @@ function qs(extra) {
   const p = new URLSearchParams({ desde: d, hasta: h });
   if (S.campana) p.set("campana", S.campana);
   if (S.plat) p.set("plataforma", S.plat);
-  if (extra) { if (S.anuncio) p.set("anuncio", S.anuncio); if (S.esp) p.set("especialidad", S.esp); if (S.q) p.set("q", S.q); }
+  if (extra) { if (S.anuncio) p.set("anuncio", S.anuncio); if (S.esp) p.set("especialidad", S.esp); if (S.q) p.set("q", S.q); if (S.gest) p.set("gestion", S.gest); }
   return p.toString();
 }
 async function api(path) {
@@ -483,6 +827,7 @@ async function cargar(silencioso) {
     if (my !== seq) return;
     S.panel = p; S.kanban = k;
     opciones(p.opciones);
+    opcionesGestion(k.opciones.gestion || []);
     pill(p);
     renderPanel(); renderKanban();
     if (silencioso) toast("Datos actualizados");
@@ -520,12 +865,19 @@ function opciones(o) {
   fill($("#fEsp"), o.especialidades.map(e => ({ id: e, nombre: e })), "Todas las especialidades", S.esp);
 }
 
+function opcionesGestion(g) {
+  const sel = $("#fGest"); if (sel.options.length > 1) return;
+  sel.innerHTML = `<option value="">Toda la gestión</option><option value="por_llamar">Por llamar: hoy o vencido</option>`
+    + g.map(x => `<option value="${esc(x.id)}">${esc(x.label)}</option>`).join("");
+  sel.value = S.gest;
+}
+
 /* ── Skeletons ──────────────────────────────────────────────────────────── */
 function skelPanel() {
   $("#v-panel").innerHTML = `
     <div class="sk" style="height:46px;margin-bottom:16px"></div>
-    <div class="funnel" style="border:0">${[0,1,2,3,4].map(() => `<div class="fs" style="opacity:1;animation:none"><div class="sk" style="height:11px;width:60%"></div><div class="sk" style="height:26px;width:75%;margin-top:10px"></div><div class="sk" style="height:10px;width:50%;margin-top:8px"></div></div>`).join("")}</div>
-    <div class="cacs">${[0,1,2,3,4].map(() => `<div class="sk" style="height:96px;border-radius:18px"></div>`).join("")}</div>
+    <div class="mband">${[0,1,2,3].map(() => `<div class="mb" style="opacity:1;animation:none"><div class="sk" style="height:11px;width:50%"></div><div class="sk" style="height:28px;width:75%;margin-top:10px"></div><div class="sk" style="height:10px;width:60%;margin-top:8px"></div></div>`).join("")}</div>
+    <div class="funnel">${[0,1,2,3].map(() => `<div class="fs" style="opacity:1;animation:none"><div class="sk" style="height:11px;width:60%"></div><div class="sk" style="height:24px;width:45%;margin-top:10px"></div><div class="sk" style="height:18px;width:55%;margin-top:10px"></div></div>`).join("")}</div>
     <div class="sk" style="height:320px;border-radius:18px"></div>`;
 }
 function skelKanban() {
@@ -542,27 +894,30 @@ function renderPanel() {
     return;
   }
   const sinGasto = S.plat === "sin_dato";
+  const res = k.resultado;
+  const money = [
+    { cls: "venta", l: "Venta", v: fmt$(k.venta), s: k.pagaron ? fmtN(k.pagaron) + (k.pagaron === 1 ? " paciente pagó" : " pacientes pagaron") + (k.pagaron_tel ? " (" + fmtN(k.pagaron_tel) + " fuera del bot)" : "") : "Nadie del anuncio ha pagado aún" },
+    { l: "Para el centro", v: fmt$(k.centro), s: k.centro_pct == null ? "Venta menos honorarios" : k.centro_pct + "% de la venta, tras honorarios", op: "→" },
+    { l: "Gasto en Meta", v: sinGasto ? "—" : fmt$(k.gasto), s: sinGasto ? "Meta no informa gasto sin plataforma" : fmtN(k.impresiones) + " impresiones", op: "−" },
+    { cls: "res " + (sinGasto ? "" : res >= 0 ? "pos" : "neg"), l: "Resultado", v: sinGasto ? "—" : fmt$(res),
+      s: "Para el centro menos el gasto", op: "=", chip: !sinGasto && k.retorno != null ? "retorno " + String(k.retorno).replace(".", ",") + "×" : "" },
+  ];
+  const band = `<div class="mband" role="group" aria-label="Plata del rango">${money.map((m, i) => `<div class="mb ${m.cls || ""}" style="--i:${i}">
+      ${m.op ? `<span class="op" aria-hidden="true">${m.op}</span>` : ""}<div class="lbl">${m.l}</div>
+      <div class="v">${m.v}${m.chip ? `<span class="chipr" title="Venta ÷ gasto">${m.chip}</span>` : ""}</div><div class="s">${esc(m.s)}</div></div>`).join("")}</div>`;
+  const chica = k.citas && k.citas < p.umbrales.muestra_chica;
   const steps = [
-    { l: "Gasto", v: sinGasto ? "—" : fmt$(k.gasto), s: sinGasto ? "Meta no informa gasto sin plataforma" : fmtN(k.impresiones) + " impresiones" },
-    { l: "Conversaciones", v: sinGasto ? "—" : fmtN(k.conversaciones), s: "Informadas por Meta" },
+    { l: "Conversaciones", v: sinGasto ? "—" : fmtN(k.conversaciones), s: "Informadas por Meta", c: sinGasto ? null : k.cac_conv, cl: "c/u" },
     { l: "Personas captadas", v: fmtN(k.personas), s: "Teléfonos únicos del anuncio", r: sinGasto ? null : pct(k.personas, k.conversaciones) },
-    { l: "Citas", v: fmtN(k.citas), s: "Agendadas por el bot", r: pct(k.citas, k.personas) },
-    { l: "Atendidos", v: fmtN(k.atendidos), s: "Aviso de atención (proxy)", r: pct(k.atendidos, k.citas), hi: true },
+    { l: "Citas", v: fmtN(k.citas), s: chica ? "Muestra chica: menos de " + p.umbrales.muestra_chica + " citas" : "Agendadas por el bot", r: pct(k.citas, k.personas), c: sinGasto ? null : k.cac_cita, cl: "por cita", key: true },
+    { l: "Atendidos", v: fmtN(k.atendidos), s: "Aviso de atención (proxy)", r: pct(k.atendidos, k.citas), c: sinGasto ? null : k.cac_atendido, cl: "por atendido", hi: true },
   ];
-  const funnel = `<div class="funnel">${steps.map((s, i) => `<div class="fs${s.hi ? " hi" : ""}" style="--i:${i}">
-      ${s.r ? `<span class="rate" title="Conversión desde la etapa anterior">${s.r}</span>` : ""}
-      <div class="lbl">${s.l}</div><div class="v num">${s.v}</div><div class="s">${esc(s.s)}</div></div>`).join("")}</div>`;
-  const cacs = [
-    { l: "Costo por conversación", v: k.cac_conv, s: "Gasto ÷ conversaciones de Meta" },
-    { l: "Costo por cita", v: k.cac_cita, s: k.citas < p.umbrales.muestra_chica && k.citas ? "Muestra chica: menos de " + p.umbrales.muestra_chica + " citas" : "Gasto ÷ citas atribuidas", key: true },
-    { l: "Costo por atendido", v: k.cac_atendido, s: "Gasto ÷ atendidos (proxy)" },
-    { l: "Venta", v: k.venta, s: fmtN(k.pagaron) + " pacientes pagaron (" + fmtN(k.pagaron_tel) + " fuera del bot)" + (k.retorno == null ? "" : " · retorno " + String(k.retorno).replace(".", ",") + "×"), key: true },
-    { l: "Para el centro", v: k.centro, s: (k.centro_pct == null ? "" : k.centro_pct + "% de la venta · ") + "Resultado tras el gasto: " + fmt$(k.resultado), res: k.resultado },
-  ];
-  const cacHtml = `<div class="cacs">${cacs.map((c, i) => `<div class="cac${c.key ? " key" : ""}" style="--i:${i}">
-      <div class="lbl">${c.l}</div><div class="v num">${sinGasto ? "—" : fmt$(c.v)}</div><div class="s${c.res != null ? (c.res >= 0 ? " resp" : " resn") : ""}">${esc(c.s)}</div></div>`).join("")}</div>`;
+  const funnel = `<div class="funnel" role="group" aria-label="Embudo y costo por etapa">${steps.map((st, i) => `<div class="fs${st.hi ? " hi" : ""}${st.key ? " key" : ""}" style="--i:${i + 4}">
+      ${st.r ? `<span class="rate" title="Conversión desde la etapa anterior">${st.r}</span>` : ""}
+      <div class="lbl">${st.l}</div><div class="v num">${st.v}</div><div class="s">${esc(st.s)}</div>
+      ${st.cl ? `<div class="c" title="Gasto ÷ ${st.l.toLowerCase()}"><b>${fmt$(st.c)}</b>${st.cl}</div>` : ""}</div>`).join("")}</div>`;
 
-  $("#v-panel").innerHTML = notaMedicion(p) + funnel + cacHtml + alertas(p) + tabla(p) + desgloses(p) + tendencia(p);
+  $("#v-panel").innerHTML = notaMedicion(p) + band + funnel + alertas(p) + tabla(p) + conocieron(p) + desgloses(p) + tendencia(p);
   bindTabla();
 }
 function notaMedicion(p) {
@@ -577,6 +932,7 @@ function notaMedicion(p) {
     <li><b>Plataforma por persona</b> (Facebook o Instagram) desde el ${fdate(m.plataforma_desde)}; antes queda "sin dato".</li>
     <li><b>Venta</b>: cobrado en caja (Medilink) a cada paciente que trajo el anuncio, hasta hoy. Incluye a quienes escribieron desde el anuncio y después agendaron por recepción o llegaron directo: se reconocen porque su teléfono está en la ficha de un paciente que pagó dentro de 90 días del clic. Un teléfono compartido (familia) suma a todos sus pacientes. Cada paciente cuenta una vez, en el anuncio de su primera cita. Si ya era paciente del centro, sus pagos posteriores también cuentan.</li>
     <li><b>Para el centro</b>: cada pago menos el honorario del profesional que atendió (su % cargado en Equipo; 70% si falta; Dr. Abarca con sueldo fijo se calcula al 62%). <b>Resultado</b> = para el centro menos el gasto del anuncio.</li>
+    <li><b>Cómo nos conocieron</b> <span class="tag-est">declarado</span> es lo que el paciente responde al bot después de agendar, no una medición. La opción antigua "Redes o Google" no separa redes sociales de Google.</li>
     <li><b>Frecuencia</b> <span class="tag-est">estimado</span> impresiones ÷ alcance diario sumado. Es un piso: la frecuencia real del rango es mayor.</li>
   </ul></details>${warn}</div></div>`;
 }
@@ -589,12 +945,15 @@ function alertas(p) {
       ? `<div class="al bad" style="--i:${i}"><div class="ico">${I.wallet}</div><div style="min-width:0"><div class="t">${esc(a.anuncio)}</div><div class="d">${esc(a.campana)} · ${esc(a.texto)}</div></div><div class="x num">${fmt$(a.gasto)}<small>0 citas</small></div></div>`
       : `<div class="al warn" style="--i:${i}"><div class="ico">${I.repeat}</div><div style="min-width:0"><div class="t">${esc(a.anuncio)}</div><div class="d">${esc(a.campana)} · ${esc(a.texto)}</div></div><div class="x num">${String(a.frecuencia).replace(".", ",")}<small>frecuencia mín.</small></div></div>`).join("")}</div></div>`;
 }
+const dash = '<span class="dash">—</span>';
+function tienePop(r) { return (r.por_profesional && r.por_profesional.length) || r.conocieron; }
 function tabla(p) {
-  const anun = S.tabla === "anuncios";
+  const anun = S.tabla === "anuncios", full = S.cols === "todo";
   const rows = anun ? p.anuncios : p.campanas;
   const malos = new Set(p.alertas.filter(a => a.tipo === "sin_citas").map(a => a.ad_id));
   const sat = new Set(p.alertas.filter(a => a.tipo === "saturado").map(a => a.ad_id));
   const sinG = S.plat === "sin_dato";
+  const ncol = full ? 15 : 8;
   const body = rows.length ? rows.map(r => {
     const badges = [];
     if (anun && malos.has(r.ad_id)) badges.push('<span class="badge bad">Sin citas</span>');
@@ -602,32 +961,122 @@ function tabla(p) {
     if (r.citas > 0 && r.muestra_chica) badges.push('<span class="badge mut">Muestra chica</span>');
     const nombre = anun ? r.anuncio : r.campana;
     const sub = anun ? r.campana : (r.n_anuncios + (r.n_anuncios === 1 ? " anuncio" : " anuncios"));
-    return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">
-      <td data-l="${anun ? "Anuncio" : "Campaña"}"><div class="nm">${esc(nombre)}<small>${esc(sub)}</small></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>
-      <td class="r" data-l="Gasto">${sinG ? '<span class="dash">—</span>' : fmt$(r.gasto)}</td>
-      <td class="r" data-l="Conversaciones">${sinG ? '<span class="dash">—</span>' : fmtN(r.conversaciones)}</td>
+    const pop = tienePop(r);
+    const venta = `<td class="r mny venta-cell${pop ? " has-pop" : ""}" data-l="Venta" data-pop="${anun ? "a" : "c"}:${esc(anun ? r.ad_id : r.campaign_id)}" tabindex="${pop ? 0 : -1}"${pop ? ' role="button" aria-label="Ver de dónde viene la venta"' : ""}><b>${fmt$(r.venta)}</b>${r.pagaron ? '<small class="pctc">' + r.pagaron + (r.pagaron === 1 ? " paciente" : " pacientes") + (r.pagaron_tel ? " · " + r.pagaron_tel + " fuera del bot" : "") + "</small>" : ""}${!full && r.fuera_pct ? `<small class="pctc">${r.fuera_pct}% en otra especialidad</small>` : ""}</td>`;
+    const centro = `<td class="r mny" data-l="Para el centro">${r.venta ? fmt$(r.centro) + '<small class="pctc">' + r.centro_pct + "%</small>" : dash}</td>`;
+    const resultado = `<td class="r mny res" data-l="Resultado">${sinG ? dash : `<b class="${r.resultado >= 0 ? "resp" : "resn"}">${fmt$(r.resultado)}</b>`}</td>`;
+    const retorno = `<td class="r" data-l="Retorno">${r.retorno == null ? dash : String(r.retorno).replace(".", ",") + "×"}</td>`;
+    const first = `<td class="nmc" data-l="${anun ? "Anuncio" : "Campaña"}"><div class="nm">${esc(nombre)}<small>${esc(sub)}</small></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
+    const gasto = `<td class="r" data-l="Gasto">${sinG ? dash : fmt$(r.gasto)}</td>`;
+    if (!full) return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">${first}${gasto}
+      <td class="r" data-l="Citas">${fmtN(r.citas)}<small class="pctc">de ${fmtN(r.personas)} ${r.personas === 1 ? "persona" : "personas"} · ${fmtN(r.atendidos)} atend.</small></td>
+      <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? dash : fmt$(r.cac_cita)}</span>${r.cac_atendido == null ? "" : `<small class="pctc">${fmt$(r.cac_atendido)} por atendido</small>`}</td>
+      ${venta}${centro}${resultado}${retorno}</tr>`;
+    return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">${first}${gasto}
+      <td class="r" data-l="Conversaciones">${sinG ? dash : fmtN(r.conversaciones)}</td>
       <td class="r" data-l="Personas">${fmtN(r.personas)}</td>
       <td class="r" data-l="Citas">${fmtN(r.citas)}</td>
       <td class="r" data-l="Atendidos">${fmtN(r.atendidos)}</td>
-      <td class="r" data-l="Costo / conv.">${r.cac_conv == null ? '<span class="dash">—</span>' : fmt$(r.cac_conv)}</td>
-      <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? '<span class="dash">—</span>' : fmt$(r.cac_cita)}</span></td>
-      <td class="r" data-l="Costo / atendido">${r.cac_atendido == null ? '<span class="dash">—</span>' : fmt$(r.cac_atendido)}</td>
-      <td class="r" data-l="Venta"><b>${fmt$(r.venta)}</b>${r.pagaron ? '<small class="pctc">' + r.pagaron + (r.pagaron === 1 ? " paciente" : " pacientes") + (r.pagaron_tel ? " · " + r.pagaron_tel + " fuera del bot" : "") + "</small>" : ""}</td>
-      <td class="r" data-l="Para el centro">${r.venta ? fmt$(r.centro) + '<small class="pctc">' + r.centro_pct + "%</small>" : '<span class="dash">—</span>'}</td>
-      <td class="r" data-l="Resultado"><span class="${r.resultado >= 0 ? "resp" : "resn"}">${sinG ? '<span class="dash">—</span>' : fmt$(r.resultado)}</span></td>
-      <td class="r" data-l="Retorno">${r.retorno == null ? '<span class="dash">—</span>' : String(r.retorno).replace(".", ",") + "×"}</td>
-      <td class="r" data-l="Frecuencia">${r.frecuencia == null ? '<span class="dash">—</span>' : String(r.frecuencia).replace(".", ",")}</td>
+      <td class="r" data-l="Costo / conv.">${r.cac_conv == null ? dash : fmt$(r.cac_conv)}</td>
+      <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? dash : fmt$(r.cac_cita)}</span></td>
+      <td class="r" data-l="Costo / atendido">${r.cac_atendido == null ? dash : fmt$(r.cac_atendido)}</td>
+      ${venta}${centro}${resultado}
+      <td class="r" data-l="Fuera de la esp." title="${r.grupo && r.fuera_pct != null ? "Especialidad del anuncio: " + esc(r.grupo) + ". " + fmt$(r.fuera_venta) + " de la venta fue en otras especialidades." : "Sin especialidad identificable"}">${r.fuera_pct == null ? dash : r.fuera_pct + "%" + '<small class="pctc">' + esc(r.grupo) + "</small>"
+        + ((r.por_especialidad || []).filter(x => !x.del_anuncio).length ? '<small class="otras">+ ' + esc(r.por_especialidad.filter(x => !x.del_anuncio).slice(0, 3).map(x => x.grupo).join(", ")) + (r.por_especialidad.filter(x => !x.del_anuncio).length > 3 ? "…" : "") + "</small>" : "")}</td>
+      ${retorno}
+      <td class="r" data-l="Frecuencia">${r.frecuencia == null ? dash : String(r.frecuencia).replace(".", ",")}</td>
     </tr>`; }).join("")
-    : `<tr><td colspan="14"><div class="empty" style="padding:28px 10px"><h3 style="font-size:15px">Sin ${anun ? "anuncios" : "campañas"} en este rango</h3><p style="margin:0">Pruebe con un rango más amplio o quite los filtros.</p></div></td></tr>`;
-  return `<div class="card block"><div class="card-h"><div class="ic">${I.table}</div><h2>Rendimiento por ${anun ? "anuncio" : "campaña"}</h2><span class="cp">${rows.length}</span>
-    <div class="sp"></div><div class="seg" id="segTabla" role="group" aria-label="Agrupar por">
-      <button type="button" data-t="campanas" aria-pressed="${!anun}">Campañas</button><button type="button" data-t="anuncios" aria-pressed="${anun}">Anuncios</button></div></div>
-    <div class="tbl-wrap"><table><thead><tr><th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
-      <th class="r">Atendidos</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th><th class="r">Venta</th><th class="r" title="Venta menos honorarios de los profesionales">Para el centro</th><th class="r" title="Para el centro menos gasto en el anuncio">Resultado</th><th class="r" title="Venta ÷ gasto">Retorno</th><th class="r">Frec.</th></tr></thead>
+    : `<tr><td colspan="${ncol}"><div class="empty" style="padding:28px 10px"><h3 style="font-size:15px">Sin ${anun ? "anuncios" : "campañas"} en este rango</h3><p style="margin:0">Pruebe con un rango más amplio o quite los filtros.</p></div></td></tr>`;
+  const thMoney = `<th class="r mny">Venta</th><th class="r mny" title="Venta menos honorarios de los profesionales">Para el centro</th><th class="r mny" title="Para el centro menos gasto en el anuncio">Resultado</th>`;
+  const head = full
+    ? `<th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
+      <th class="r">Atendidos</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Venta ÷ gasto">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
+    : `<th>${anun ? "Anuncio" : "Campaña"}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thMoney}<th class="r" title="Venta ÷ gasto">Retorno</th>`;
+  return `<div class="card block tbl-mode"><div class="card-h"><div class="ic">${I.table}</div><h2>Rendimiento por ${anun ? "anuncio" : "campaña"}</h2><span class="cp">${rows.length}</span>
+    <div class="sp"></div><div class="segs"><div class="seg" id="segCols" role="group" aria-label="Columnas">
+      <button type="button" data-k="resumen" aria-pressed="${!full}">Resumen</button><button type="button" data-k="todo" aria-pressed="${full}"><span class="lg2">Todas las columnas</span><span class="sh2">Todo</span></button></div>
+      <div class="seg" id="segTabla" role="group" aria-label="Agrupar por">
+      <button type="button" data-t="campanas" aria-pressed="${!anun}">Campañas</button><button type="button" data-t="anuncios" aria-pressed="${anun}">Anuncios</button></div></div></div>
+    <div class="tbl-wrap${full ? " full" : ""}"><table><thead><tr>${head}</tr></thead>
     <tbody>${body}</tbody></table></div>
-    <div class="tbl-foot">Ordenado por costo por cita, de menor a mayor. Al final, lo que gastó sin traer citas. "Muestra chica" = menos de ${p.umbrales.muestra_chica} citas: el costo puede cambiar mucho con una sola cita más. Venta = lo cobrado en caja a cada paciente que trajo el anuncio, hasta hoy: los que agendaron por el bot (desde ese día) y los que escribieron desde el anuncio y después se atendieron por otra vía, reconocidos por su teléfono en la ficha de Medilink con un pago dentro de 90 días del clic ("fuera del bot") (incluye controles y otras especialidades; si ya era paciente del centro, también cuenta). Para el centro = venta menos el honorario de cada profesional (su % en Equipo; 70% si no tiene cargado). Resultado = para el centro menos el gasto del anuncio. Retorno = venta ÷ gasto.</div></div>`;
+    <div class="tbl-foot"><details><summary style="cursor:pointer;font-weight:700;color:var(--navy)">Cómo leer esta tabla</summary><p style="margin:6px 0 0">Ordenado por costo por cita, de menor a mayor. Al final, lo que gastó sin traer citas. "Muestra chica" = menos de ${p.umbrales.muestra_chica} citas: el costo puede cambiar mucho con una sola cita más. Venta = lo cobrado en caja a cada paciente que trajo el anuncio, hasta hoy: los que agendaron por el bot (desde ese día) y los que escribieron desde el anuncio y después se atendieron por otra vía, reconocidos por su teléfono en la ficha de Medilink con un pago dentro de 90 días del clic ("fuera del bot") (incluye controles y otras especialidades; si ya era paciente del centro, también cuenta). Toque la venta para ver por profesional, por especialidad y cómo dicen que nos conocieron. Para el centro = venta menos el honorario de cada profesional (su % en Equipo; 70% si no tiene cargado). Resultado = para el centro menos el gasto del anuncio. Fuera de esp. = % de la venta que fue en una especialidad distinta a la del anuncio (la especialidad sale del nombre del anuncio; si no dice, de lo más agendado). Retorno = venta ÷ gasto. Frec. = cuántas veces vio el anuncio cada persona alcanzada, en promedio (estimado mínimo); sobre 6 está saturado.</p></details></div></div>`;
 }
+function conocieron(p) {
+  const c = p.conocieron; if (!c) return "";
+  const filt = S.campana || S.plat;
+  const head = `<div class="card-h"><div class="ic">${I.users}</div><h2>Cómo nos conocieron</h2><span class="cp">${fmtN(c.total)}</span><div class="sp"></div>
+    <span class="badge mut" title="Respuesta del paciente a la pregunta del bot después de agendar">Declarado por el paciente</span></div>`;
+  if (!c.total) return `<div class="card block">${head}<div class="cn"><p class="dleg" style="margin:0">Nadie respondió la pregunta "¿Cómo nos conoció?" en este rango.</p></div></div>`;
+  const max = Math.max(...c.opciones.map(o => o.n)) || 1;
+  const rows = c.opciones.map((o, i) => `<div class="crow${o.n ? "" : " nil"}" style="--i:${i}">
+      <span class="k">${esc(o.label)}${o.n ? `<small>${fmtN(o.con_anuncio)} tocaron un anuncio antes · ${fmtN(o.sin_anuncio)} no</small>` : "<small>Sin respuestas aún</small>"}</span>
+      <span class="bar" role="img" aria-label="${o.con_anuncio} con anuncio, ${o.sin_anuncio} sin anuncio"><i class="a" style="width:${o.con_anuncio / max * 100}%;--i:${i}"></i><i class="b" style="width:${o.sin_anuncio / max * 100}%;--i:${i}"></i></span>
+      <span class="val">${fmtN(o.n)}<small>${o.pct == null ? "—" : o.pct + "%"}</small></span></div>`).join("");
+  return `<div class="card block">${head}<div class="cn">
+    <div class="leg" style="margin:0 0 4px"><span><i style="background:var(--aqua)"></i>Tocó un anuncio antes de responder</span><span><i style="background:#B7C8D6"></i>Sin anuncio</span></div>
+    ${rows}
+    <p class="dleg" style="margin:10px 0 0">${fmtN(c.total)} respuestas entre el ${fdate(p.rango.desde)} y el ${fdate(p.rango.hasta)}, por fecha de la respuesta; ${fmtN(c.con_anuncio)} de ellas de personas que tocaron un anuncio antes. Es lo que el paciente declara, no una medición: "Redes o Google (antiguo)" no separa redes sociales de Google.${filt ? " Este reparto no depende de los filtros de campaña ni plataforma." : ""}</p></div></div>`;
+}
+// Popover "¿a qué profesional se le atribuyó la venta?" — un solo elemento
+// flotante (position:fixed) para que ninguna caja con overflow lo recorte.
+function popHtml(r) {
+  const rows = (r.por_profesional || []).map(x => `<tr class="${x.fuera ? "fuera" : ""}"><td>${esc(x.nombre)}<small>${x.pacientes} ${x.pacientes === 1 ? "paciente" : "pacientes"}${x.grupo ? " · " + esc(x.grupo) : ""}${x.fuera ? " · otra especialidad" : ""}</small></td>
+    <td class="r">${fmt$(x.venta)}</td><td class="r">${fmt$(x.centro)}<small>${x.centro_pct == null ? "" : x.centro_pct + "%"}</small></td></tr>`).join("");
+  const cab = r.fuera_pct != null && r.grupo && !["Varias", "mixto"].includes(r.grupo)
+    ? `<div class="pop-s">Anuncio de <b>${esc(r.grupo)}</b> · ${r.fuera_pct}% de la venta en otras especialidades</div>` : "";
+  const esp = (r.por_especialidad || []).map(x => `<tr class="${x.del_anuncio ? "" : "fuera"}"><td>${esc(x.grupo)}<small>${x.pacientes} ${x.pacientes === 1 ? "paciente" : "pacientes"}${x.del_anuncio ? " · especialidad del anuncio" : ""}</small></td>
+    <td class="r">${fmt$(x.venta)}<small>${r.venta ? Math.round(100 * x.venta / r.venta) + "%" : ""}</small></td><td class="r">${fmt$(x.centro)}</td></tr>`).join("");
+  const espT = esp ? `<div class="pop-h">Por especialidad</div><table class="pop-t"><thead><tr><th>Especialidad</th><th class="r">Venta</th><th class="r">Para el centro</th></tr></thead><tbody>${esp}</tbody></table>` : "";
+  const cn = r.conocieron;
+  const cnT = cn ? `<div class="pop-h" style="margin-top:${rows ? 12 : 0}px">Cómo dicen que nos conocieron</div>
+    <div class="pop-s">${cn.respondieron} ${cn.respondieron === 1 ? "persona de este anuncio respondió" : "personas de este anuncio respondieron"}:</div>
+    <div class="pop-c"><span class="k">${cn.amigo_pct}% amigo o familiar</span><span class="k">${cn.recurrente_pct}% ya era paciente</span>${cn.detalle.filter(x => x.id !== "amigo" && x.id !== "recurrente").map(x => `<span>${x.pct}% ${esc(x.label)}</span>`).join("")}</div>
+    <div class="pop-n" style="margin-top:0">Declarado por el paciente al agendar. Ayuda a ver cuánto de lo atribuido al anuncio es boca a boca o paciente antiguo.</div>` : "";
+  const profT = rows ? `${cab ? `<div class="pop-h">Qué se atendió con este anuncio</div>` + cab : ""}${espT}<div class="pop-h" style="margin-top:10px">Por profesional</div><table class="pop-t"><thead><tr><th>Profesional</th><th class="r">Venta</th><th class="r">Para el centro</th></tr></thead>
+    <tbody>${rows}</tbody><tfoot><tr><td>Total</td><td class="r">${fmt$(r.venta)}</td><td class="r">${fmt$(r.centro)}<small>${r.centro_pct == null ? "" : r.centro_pct + "%"}</small></td></tr></tfoot></table>
+    <div class="pop-n">Según quién cobró en la caja de Medilink. Las radiografías de Imagendent van en su propia línea: al centro le queda la venta menos el costo del convenio.</div>` : "";
+  return profT + cnT;
+}
+function bindPop() {
+  let pop = document.getElementById("vpop");
+  if (!pop) { pop = document.createElement("div"); pop.id = "vpop"; pop.setAttribute("role", "tooltip"); document.body.appendChild(pop); }
+  const buscar = key => { const [t, id] = key.split(":"); const arr = t === "a" ? S.panel.anuncios : S.panel.campanas;
+    return arr.find(x => String(t === "a" ? x.ad_id : x.campaign_id) === id); };
+  const mostrar = el => { const r = buscar(el.dataset.pop); if (!r || !tienePop(r)) return;
+    const sheet = matchMedia("(max-width:760px)").matches;
+    pop.classList.toggle("sheet", sheet);
+    pop.innerHTML = (sheet ? '<div class="pop-x"><button type="button" aria-label="Cerrar detalle de la venta"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' : "") + popHtml(r);
+    pop.classList.add("on");
+    const px = pop.querySelector(".pop-x button"); if (px) px.onclick = ocultar;
+    if (sheet) { pop.style.left = pop.style.top = ""; return; }
+    const b = el.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    let x = Math.min(Math.max(8, b.right - w), innerWidth - w - 8);
+    let y = b.bottom + 6; if (y + h > innerHeight - 8) y = Math.max(8, b.top - h - 6);
+    pop.style.left = x + "px"; pop.style.top = y + "px"; };
+  const ocultar = () => pop.classList.remove("on");
+  document.querySelectorAll(".venta-cell.has-pop").forEach(el => {
+    if (matchMedia("(hover: hover)").matches) { el.onmouseenter = () => mostrar(el); el.onmouseleave = ocultar; }
+    el.onfocus = () => mostrar(el); el.onblur = ocultar;
+    el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } else if (e.key === "Escape") ocultar(); };
+    el.onclick = e => { e.stopPropagation(); (pop.classList.contains("on") && pop.dataset.k === el.dataset.pop) ? ocultar() : mostrar(el); pop.dataset.k = el.dataset.pop; };
+  });
+  if (!bindPop.listo) { bindPop.listo = true;
+    document.addEventListener("click", e => { if (!pop.contains(e.target)) ocultar(); });
+    addEventListener("scroll", e => { if (!(e.target instanceof Node) || !pop.contains(e.target)) ocultar(); }, { passive: true, capture: true }); }
+}
+function medirBarra() {
+  const b = document.querySelector(".bar");
+  if (b) document.documentElement.style.setProperty("--bar-h", b.getBoundingClientRect().height + "px");
+}
+window.addEventListener("resize", medirBarra);
 function bindTabla() {
+  medirBarra();
+  bindPop();
+  const redo = () => { const card = document.querySelector(".tbl-mode"); const tmp = document.createElement("div");
+    tmp.innerHTML = tabla(S.panel); card.replaceWith(tmp.firstElementChild); bindTabla(); };
+  document.querySelectorAll("#segCols button").forEach(b => b.onclick = () => {
+    S.cols = b.dataset.k; try { localStorage.setItem("cm_cols", S.cols); } catch (_) {} redo();
+  });
   document.querySelectorAll("#segTabla button").forEach(b => b.onclick = () => {
     S.tabla = b.dataset.t;
     const card = b.closest(".card"); const tmp = document.createElement("div");
@@ -669,8 +1118,8 @@ function desgloses(p) {
     <div class="grid-d">
       ${card("Facebook vs Instagram", "gasto · costo por conv.", barras(d.plataforma), S.plat ? "Muestra ambas plataformas para comparar." : "")}
       ${card("Ubicación", "dónde se vio el anuncio", barras(d.ubicacion))}
-      ${card("Edad y sexo", "gasto · costo por conv.", barras(d.edad_sexo), nf)}
       ${card("Día de la semana", "gasto · costo por conv.", barras(d.dia_semana))}
+      ${card("Edad y sexo", "gasto · costo por conv.", barras(d.edad_sexo), nf)}
       ${card("Hora del día", "conversaciones", horas(d.hora), nf).replace('class="card"', 'class="card span2"')}
     </div>`;
 }
@@ -710,7 +1159,7 @@ function renderKanban() {
   const k = S.kanban;
   $("#kCount").textContent = fmtN(k.total);
   if (!k.total) {
-    const filtros = S.campana || S.plat || S.anuncio || S.esp || S.q;
+    const filtros = S.campana || S.plat || S.anuncio || S.esp || S.q || S.gest;
     $("#v-kanban").innerHTML = estado("", I.users, filtros ? "Nadie coincide con estos filtros" : "Nadie llegó por un anuncio en este rango",
       filtros ? "Quite algún filtro o amplíe el rango de fechas." : "Cuando alguien escriba por WhatsApp desde un anuncio de Facebook o Instagram, aparecerá aquí con el momento en que está con la agenda.",
       filtros ? '<button class="btn" type="button" onclick="limpiar()">Limpiar filtros</button>' : (S.rango !== "90" ? '<button class="btn" type="button" onclick="setRango(\'90\')">Ver últimos 90 días</button>' : ""));
@@ -721,9 +1170,12 @@ function renderKanban() {
       <span class="dot" style="width:8px;height:8px;border-radius:50%;background:${COLC[c.id]}"></span>${esc(c.label)}<span class="n">${c.n}</span></button>`).join("")}</div>`;
   const conCita = k.columnas.filter(c => c.id === "agendado" || c.id === "atendido").reduce((a, c) => a + c.n, 0);
   const intro = `<div class="kintro"><span><b>${fmtN(k.total)}</b> ${k.total === 1 ? "persona llegó" : "personas llegaron"} por un anuncio entre el ${fdate(k.rango.desde)} y el ${fdate(k.rango.hasta)}; <b>${fmtN(conCita)}</b> ${conCita === 1 ? "tiene" : "tienen"} cita o ya ${conCita === 1 ? "se atendió" : "se atendieron"}.</span>
-    <span class="badge mut" title="Las columnas se calculan solas con la agenda, los mensajes y los avisos de atención">Se actualiza solo</span></div>`;
+    ${k.por_llamar || S.gest === "por_llamar" ? `<button type="button" class="tocall" id="btnToCall" aria-pressed="${S.gest === "por_llamar"}">${I.phone}${fmtN(k.por_llamar)} por llamar hoy o vencidos</button>` : ""}
+    <span class="badge mut" title="Las columnas se calculan solas con la agenda, los mensajes y los avisos de atención. La gestión (llamadas, notas) es una capa encima: toque una tarjeta.">Se actualiza solo</span></div>`;
   const board = `<div class="board">${k.columnas.map(c => colHtml(c)).join("")}</div>`;
   $("#v-kanban").innerHTML = intro + pick + board;
+  const tc = $("#btnToCall");
+  if (tc) tc.onclick = () => { S.gest = S.gest === "por_llamar" ? "" : "por_llamar"; $("#fGest").value = S.gest; marcarClear(); S.ver = {}; cargar(); };
   document.querySelectorAll(".colpick button").forEach(b => b.onclick = () => {
     S.kcol = b.dataset.c;
     document.querySelectorAll(".colpick button").forEach(x => x.setAttribute("aria-pressed", x === b));
@@ -745,13 +1197,25 @@ function verMas(id) {
   const el = document.querySelector(`.board .col[data-c="${id}"]`);
   const tmp = document.createElement("div"); tmp.innerHTML = colHtml(c); el.replaceWith(tmp.firstElementChild);
 }
+function gestHtml(g) {
+  if (!g) return "";
+  const cls = g.alerta || "";
+  let txt = g.label, ic = I.check;
+  if (g.alerta === "vencido") { txt = "Llamada vencida · " + g.proximo_fmt; ic = I.phone; }
+  else if (g.alerta === "hoy") { txt = "Volver a llamar hoy"; ic = I.phone; }
+  else if (g.estado === "volver_llamar") { txt = "Volver a llamar " + g.proximo_fmt; ic = I.clock; }
+  else if (g.estado === "no_interesa") ic = I.xc;
+  else if (g.estado === "sin_gestion") { txt = g.proximo ? "Próximo contacto " + g.proximo_fmt : "Con nota"; ic = I.clock; }
+  return `<div class="kc-gest ${cls}">${ic}<span>${esc(txt)}</span>${g.con_nota ? `<span class="nt" title="Tiene nota">${I.note}</span>` : ""}</div>`;
+}
 function cardHtml(t, i, col) {
   const plat = t.plataforma === "instagram" ? `<span class="chip">${I.ig}Instagram</span>`
     : t.plataforma === "facebook" ? `<span class="chip">${I.fb}Facebook</span>` : `<span class="chip nd">Plataforma sin dato</span>`;
   const late = (col === "escribio" && t.dias_etapa >= 3) || (col === "vio_horas" && t.dias_etapa >= 2);
   const dias = t.dias_etapa === 0 ? "hoy" : t.dias_etapa + " d";
-  const link = `/admin/v2?token=${encodeURIComponent(TOKEN)}#c=${encodeURIComponent(t.phone)}`;
-  return `<article class="kc" style="--i:${i}">
+  const g = t.gestion, gc = g && g.alerta ? " g-" + g.alerta : "";
+  return `<article class="kc${gc}" style="--i:${i}" data-k="${esc(t.clave)}" data-col="${col}" role="button" tabindex="0" aria-haspopup="dialog"
+      aria-label="Abrir ficha de ${esc(t.nombre || t.telefono)}${g ? ", gestión: " + esc(g.alerta === "vencido" ? "llamada vencida" : g.alerta === "hoy" ? "volver a llamar hoy" : g.label) : ""}">
     <div class="kc-top"><span class="kc-name${t.nombre ? "" : " anon"}">${esc(t.nombre || "Sin nombre registrado")}</span>
       <span class="kc-days${late ? " late" : ""}" title="Días en esta etapa">${dias}</span></div>
     <div class="kc-tel">${esc(t.telefono)}</div>
@@ -759,14 +1223,252 @@ function cardHtml(t, i, col) {
     <div class="kc-camp" title="${esc(t.campana)}">${esc(t.campana)}</div>
     <div class="kc-chips">${plat}${t.especialidad ? `<span class="chip">${esc(t.especialidad)}</span>` : ""}${t.fuera_del_bot ? `<span class="chip" title="Escribió desde el anuncio y después pagó en caja; se agendó por otra vía">Pagó en caja · fuera del bot</span>` : ""}</div>
     ${t.proxima_cita ? `<div class="kc-cita">${I.cal}Cita ${esc(t.proxima_cita.fecha)}${t.proxima_cita.hora ? " · " + esc(t.proxima_cita.hora) : ""}</div>` : ""}
-    <div class="kc-foot"><span>Llegó ${esc(t.llegada)}</span>
-      <a class="kc-link" href="${esc(link)}" target="_blank" rel="noopener" aria-label="Abrir la conversación de ${esc(t.nombre || t.telefono)} en el panel de recepción">${I.ext}Conversación</a></div>
+    ${gestHtml(g)}
+    <div class="kc-foot"><span>Llegó ${esc(t.llegada)}</span><span class="kc-open" aria-hidden="true">Ficha${I.chev}</span></div>
   </article>`;
 }
+
+/* ── Ficha de la persona ────────────────────────────────────────────────── */
+const MX = { clave: null, t: null, col: null, d: null, sel: "sin_gestion", timer: null, n: 0, from: null, tab: "seg" };
+const CH_TZ = { timeZone: "America/Santiago" };
+const TL_IC = { clic: I.meg, cita: I.cal, anulada: I.xc, horarios: I.clock, atencion: I.check, pago: I.wallet };
+function buscarTarjeta(clave) {
+  for (const c of (S.kanban ? S.kanban.columnas : [])) {
+    const t = c.tarjetas.find(x => x.clave === clave); if (t) return [t, c];
+  }
+  return [null, null];
+}
+function iniciales(n) {
+  const p = String(n || "").trim().split(/\s+/).filter(Boolean);
+  return p.length ? (p[0][0] + (p.length > 1 ? p[p.length > 2 ? 2 : 1][0] : "")).toUpperCase() : "—";
+}
+async function apiSend(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { Authorization: "Bearer " + TOKEN, "Content-Type": "application/json" },
+                                credentials: "same-origin", body: JSON.stringify(body) });
+  let j = null; try { j = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error((j && j.detail && typeof j.detail === "string") ? j.detail : "No se pudo completar (HTTP " + r.status + ")");
+  return j;
+}
+function abrirFicha(clave, origen) {
+  const [t, c] = buscarTarjeta(clave); if (!t) return;
+  Object.assign(MX, { clave, t, col: c, d: null, n: 0, from: origen || document.activeElement });
+  const bg = $("#mx");
+  $("#mxNombre").textContent = t.nombre || "Sin nombre registrado";
+  $("#mxNombre").classList.toggle("anon", !t.nombre);
+  $("#mxAv").textContent = iniciales(t.nombre);
+  $("#mxTel").textContent = t.telefono;
+  pintarMeta();
+  $("#mxCall").setAttribute("aria-disabled", "true"); $("#mxCall").href = "#";
+  $("#mxPanel").href = `/admin/v2?token=${encodeURIComponent(TOKEN)}#c=${encodeURIComponent(t.phone)}`;
+  $("#mxSeg").innerHTML = `<div class="mx-sk"><div class="sk" style="height:14px;width:40%"></div><div class="sk" style="height:44px;margin-top:14px"></div><div class="sk" style="height:44px;margin-top:8px"></div><div class="sk" style="height:88px;margin-top:14px"></div></div>`;
+  $("#mxAct").innerHTML = `<div class="mx-sk">${[0,1,2,3].map(() => '<div class="sk" style="height:40px;margin-bottom:10px"></div>').join("")}</div>`;
+  $("#chBody").innerHTML = `<div class="sk" style="height:38px;width:60%"></div><div class="sk" style="height:38px;width:55%;align-self:flex-end"></div><div class="sk" style="height:38px;width:65%"></div>`;
+  $("#chAviso").textContent = ""; $("#chSt").textContent = "";
+  setTab("seg");
+  bg.hidden = false; document.body.style.overflow = "hidden";
+  requestAnimationFrame(() => requestAnimationFrame(() => bg.classList.add("on")));
+  setTimeout(() => $("#mxNombre").focus({ preventScroll: true }), 30);
+  cargarFicha(); cargarChat(true);
+  clearInterval(MX.timer); MX.timer = setInterval(() => cargarChat(false), 8000);
+}
+function cerrarFicha() {
+  if (!MX.clave) return;
+  clearInterval(MX.timer); MX.timer = null; MX.clave = null;
+  const bg = $("#mx"); bg.classList.remove("on"); document.body.style.overflow = "";
+  setTimeout(() => { if (!MX.clave) bg.hidden = true; }, 200);
+  const k = MX.from && MX.from.dataset && MX.from.dataset.k ? document.querySelector(`.kc[data-k="${CSS.escape(MX.from.dataset.k)}"]`) : MX.from;
+  if (k && k.focus) k.focus({ preventScroll: true });
+}
+function setTab(t) {
+  MX.tab = t;
+  document.querySelector(".mx").dataset.tab = t;
+  document.querySelectorAll(".mx-tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.t === t));
+  if (t === "chat") { const b = $("#chBody"); b.scrollTop = b.scrollHeight; }
+}
+function pintarMeta() {
+  const t = MX.t, c = MX.col, d = MX.d;
+  const plat = (d ? d.plataforma : t.plataforma);
+  const dias = t.dias_etapa === 0 ? "desde hoy" : t.dias_etapa + (t.dias_etapa === 1 ? " día" : " días");
+  $("#mxMeta").innerHTML = `<span class="chip etapa" style="--c:${COLC[c.id]}"><i></i><span>${esc(c.label)} · ${dias}</span></span>
+    <span class="chip" title="${esc(d ? d.anuncio : t.anuncio)}">${I.meg}<span>${esc(d ? d.anuncio : t.anuncio)}</span></span>
+    <span class="chip" title="${esc(d ? d.campana : t.campana)}"><span>${esc(d ? d.campana : t.campana)}</span></span>
+    ${plat === "instagram" ? `<span class="chip">${I.ig}Instagram</span>` : plat === "facebook" ? `<span class="chip">${I.fb}Facebook</span>` : `<span class="chip nd">Plataforma sin dato</span>`}`;
+}
+async function cargarFicha() {
+  const clave = MX.clave;
+  try {
+    const d = await api("/alma/api/campanas-meta/persona/" + encodeURIComponent(clave));
+    if (MX.clave !== clave) return;
+    MX.d = d;
+    if (d.nombre) { $("#mxNombre").textContent = d.nombre; $("#mxNombre").classList.remove("anon"); $("#mxAv").textContent = iniciales(d.nombre); }
+    $("#mxTel").textContent = d.telefono;
+    const call = $("#mxCall");
+    if (d.tel_href) { call.href = "tel:" + d.tel_href; call.removeAttribute("aria-disabled"); call.setAttribute("aria-label", "Llamar al " + d.telefono); }
+    pintarMeta(); pintarSeg(); pintarAct();
+  } catch (e) {
+    if (MX.clave !== clave) return;
+    const msg = e.perm ? "Sin permiso para abrir esta ficha." : "No se pudo cargar la ficha. Revise la conexión e intente de nuevo.";
+    $("#mxSeg").innerHTML = `<div class="empty err" style="padding:28px 16px"><div class="ei">${I.alert}</div><h3 style="font-size:15px">No se pudo cargar</h3><p>${esc(msg)}</p><button class="btn" type="button" onclick="cargarFicha()">Reintentar</button></div>`;
+    $("#mxAct").innerHTML = "";
+  }
+}
+function fechaMas(dias) {
+  const d = new Date(hoyCL() + "T12:00:00"); d.setDate(d.getDate() + dias); return d.toISOString().slice(0, 10);
+}
+function pintarSeg() {
+  const sg = MX.d.seguimiento, opts = MX.d.gestion_opciones;
+  MX.sel = sg.estado;
+  const alerta = sg.alerta === "vencido" ? `<div class="g-alert vencido">${I.phone}Llamada vencida: había que llamar el ${fdate(sg.proximo)}.</div>`
+    : sg.alerta === "hoy" ? `<div class="g-alert hoy">${I.phone}Hoy toca volver a llamar.</div>` : "";
+  $("#mxTabAlert").hidden = !sg.alerta;
+  const hist = sg.historial.length ? `<ul class="hist">${sg.historial.map(h => `<li><span class="hd">${fdate(h.ts)}<br>${esc(h.ts.slice(11, 16))}</span>
+      <span class="hbd"><b>${esc(h.label)}</b>${h.proximo ? ` · próximo contacto ${esc(h.proximo_fmt)}` : ""}${h.origen && h.origen !== "dueño" ? `<small>${esc(h.origen[0].toUpperCase() + h.origen.slice(1))}</small>` : ""}${h.nota ? `<p>${esc(h.nota)}</p>` : ""}</span></li>`).join("")}</ul>`
+    : `<p class="dleg" style="margin:0">Aún no hay gestión registrada. Cada vez que guarde, queda una línea aquí con la fecha; el historial no se borra.</p>`;
+  $("#mxSeg").innerHTML = `<h3>${I.phone}Seguimiento${sg.actualizado ? `<small>Actualizado ${fdate(sg.actualizado)} ${esc(sg.actualizado.slice(11, 16))}</small>` : ""}</h3>
+    <div class="mx-in">${alerta}
+      <div class="lbl" id="gEstL" style="margin-bottom:8px">Estado de gestión</div>
+      <div class="g-est" role="radiogroup" aria-labelledby="gEstL">${opts.map(o => `<button type="button" role="radio" data-e="${esc(o.id)}" aria-checked="${o.id === sg.estado}" tabindex="${o.id === sg.estado ? 0 : -1}"><i></i>${esc(o.label)}</button>`).join("")}</div>
+      <div class="g-f"><label class="lbl" for="gProx">Próximo contacto<span class="req" id="gReq" ${sg.estado === "volver_llamar" ? "" : "hidden"}>obligatorio para volver a llamar</span></label>
+        <div class="g-row"><input type="date" id="gProx" value="${esc(sg.proximo || "")}">
+          <button type="button" class="g-q" data-d="1">Mañana</button><button type="button" class="g-q" data-d="3">En 3 días</button><button type="button" class="g-q" data-d="7">En 1 semana</button></div></div>
+      <div class="g-f"><label class="lbl" for="gNota">Nota</label>
+        <textarea id="gNota" maxlength="2000" placeholder="Qué conversaron, a qué hora prefiere que lo llamen, qué le interesa…">${esc(sg.nota)}</textarea></div>
+    </div>
+    <div class="g-save"><span class="hint">Las columnas del tablero se calculan solas; esto es su gestión.</span>
+      <button type="button" class="mbtn pri" id="gSave">Guardar gestión</button></div>
+    <div class="mx-in" style="padding-top:4px"><div class="lbl" style="margin-bottom:6px">Historial de gestión</div>${hist}</div>`;
+  const radios = [...document.querySelectorAll(".g-est button")];
+  const elegir = b => {
+    MX.sel = b.dataset.e;
+    radios.forEach(x => { x.setAttribute("aria-checked", x === b); x.tabIndex = x === b ? 0 : -1; });
+    $("#gReq").hidden = MX.sel !== "volver_llamar";
+    if (MX.sel === "volver_llamar" && !$("#gProx").value) $("#gProx").value = fechaMas(1);
+  };
+  radios.forEach((b, i) => {
+    b.onclick = () => elegir(b);
+    b.onkeydown = e => {
+      const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!dir) return;
+      e.preventDefault(); const n = radios[(i + dir + radios.length) % radios.length]; elegir(n); n.focus();
+    };
+  });
+  document.querySelectorAll(".g-q").forEach(b => b.onclick = () => { $("#gProx").value = fechaMas(+b.dataset.d); });
+  $("#gSave").onclick = guardarGestion;
+}
+async function guardarGestion() {
+  const b = $("#gSave"); if (b.disabled) return;
+  const body = { estado: MX.sel, nota: $("#gNota").value, proximo: $("#gProx").value || null };
+  if (body.estado === "volver_llamar" && !body.proximo) { toast("Indique la fecha en que hay que volver a llamar", "error"); $("#gProx").focus(); return; }
+  b.disabled = true; b.textContent = "Guardando…";
+  const clave = MX.clave;
+  try {
+    const sg = await apiSend("/alma/api/campanas-meta/persona/" + encodeURIComponent(clave) + "/seguimiento", body);
+    if (MX.clave !== clave) return;
+    MX.d.seguimiento = sg; pintarSeg(); actualizarTarjeta(clave, sg);
+    toast("Gestión guardada");
+  } catch (e) { toast(e.message, "error"); b.disabled = false; b.textContent = "Guardar gestión"; }
+}
+function actualizarTarjeta(clave, sg) {
+  const [t, c] = buscarTarjeta(clave); if (!t) return;
+  const lbl = (MX.d && MX.d.gestion_opciones.find(o => o.id === sg.estado) || {}).label || sg.estado;
+  const vacio = sg.estado === "sin_gestion" && !sg.proximo && !(sg.nota || "").trim();
+  t.gestion = vacio ? null : { estado: sg.estado, label: lbl, proximo: sg.proximo, proximo_fmt: sg.proximo ? fdate(sg.proximo) : "",
+                               alerta: sg.alerta, con_nota: !!(sg.nota || "").trim() };
+  S.kanban.por_llamar = S.kanban.columnas.reduce((a, cc) => a + cc.tarjetas.filter(x => x.gestion && x.gestion.alerta).length, 0);
+  const el = document.querySelector(`.kc[data-k="${CSS.escape(clave)}"]`);
+  if (el) { const tmp = document.createElement("div"); tmp.innerHTML = cardHtml(t, 0, c.id); const n = tmp.firstElementChild; n.classList.add("noanim"); el.replaceWith(n); MX.from = n; }
+  const tc = $("#btnToCall");
+  if (tc) { tc.lastChild.textContent = fmtN(S.kanban.por_llamar) + " por llamar hoy o vencidos"; tc.hidden = !S.kanban.por_llamar && S.gest !== "por_llamar"; }
+}
+function pintarAct() {
+  const d = MX.d, p = d.pagos;
+  const sum = `<div class="act-sum">
+      <div><span class="lbl">Pagado en caja</span><div class="v">${p.total ? fmt$(p.total) : "—"}</div><small>${p.total ? "Desde el primer clic" : "Sin pagos desde el primer clic"}${p.pacientes > 1 ? " · " + p.pacientes + " pacientes con este teléfono" : ""}</small></div>
+      <div><span class="lbl">Anuncios</span><div class="v">${fmtN(d.clics)} ${d.clics === 1 ? "clic" : "clics"}</div><small>Primero el ${esc(d.primer_clic)}</small></div>
+    </div>${p.antes_del_clic ? `<p class="dleg" style="margin:-4px 0 10px">Ya era paciente: ${p.antes_del_clic} ${p.antes_del_clic === 1 ? "pago" : "pagos"} antes del primer clic (${fmt$(p.antes_total)}), no incluidos aquí.</p>` : ""}`;
+  const items = d.linea.map((x, i) => `<li class="t-${x.tipo}" style="--i:${i}"><span class="ti">${TL_IC[x.tipo] || I.info}</span>
+      <span class="tb"><b>${esc(x.titulo)}</b>${x.tipo === "cita" && x.anulada ? '<span class="badge bad">Anulada</span>' : ""}${x.tipo === "cita" && !x.del_anuncio ? '<span class="badge mut">Sin anuncio</span>' : ""}
+        ${x.detalle ? `<p>${esc(x.detalle)}</p>` : ""}<small>${esc(x.fecha)}${x.hora ? " · " + esc(x.hora) : ""}${x.paciente ? " · " + esc(x.paciente) : ""}${x.plataforma && x.plataforma !== "sin_dato" ? " · " + (x.plataforma === "instagram" ? "Instagram" : "Facebook") : ""}</small></span>
+      <span class="tm">${x.monto ? fmt$(x.monto) : ""}</span></li>`).join("");
+  $("#mxAct").innerHTML = `<h3>${I.pulse}Línea de tiempo<small>Más reciente primero</small></h3><div class="mx-in">${sum}<ul class="tl">${items}</ul>
+    <p class="dleg" style="margin:10px 0 0">Clics en anuncios, citas del bot, horarios ofrecidos, avisos de atención y pagos en caja (cruce por teléfono, igual que la venta del panel). Sin datos clínicos.</p></div>`;
+}
+function chFecha(ts) { return new Date(String(ts).replace(" ", "T") + "Z"); }
+function chAuto(t) { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 140) + "px"; }
+const EST_BOT = { HUMAN_TAKEOVER: "Con recepción", IDLE: "Bot en espera" };
+async function cargarChat(forzar) {
+  const clave = MX.clave; if (!clave) return;
+  let d;
+  try { d = await api("/alma/api/campanas-meta/persona/" + encodeURIComponent(clave) + "/conversacion"); }
+  catch (e) { if (forzar && MX.clave === clave) $("#chBody").innerHTML = `<div class="empty" style="padding:24px 10px"><p style="margin:0">No se pudo leer la conversación.</p></div>`; return; }
+  if (MX.clave !== clave) return;
+  $("#chSt").textContent = EST_BOT[d.estado_bot] || (String(d.estado_bot || "").startsWith("WAIT") ? "Bot en un flujo" : "Bot");
+  const av = $("#chAviso"), txt = $("#chTxt"), btn = $("#chSend");
+  if (d.ventana_abierta) {
+    av.className = "ch-aviso";
+    av.textContent = "Se envía desde el WhatsApp del centro. Al responder, el bot deja de contestarle y la conversación queda con recepción.";
+  } else {
+    av.className = "ch-aviso cerrada";
+    av.textContent = d.ultimo_del_paciente
+      ? "Pasaron más de 24 h desde su último mensaje: WhatsApp no permite escribirle texto libre hasta que vuelva a escribir. Llámelo por teléfono."
+      : "Esta persona no ha escrito por WhatsApp: no se le puede enviar texto libre. Llámela por teléfono.";
+  }
+  txt.disabled = btn.disabled = !d.ventana_abierta;
+  if (!forzar && d.mensajes.length === MX.n) return;
+  MX.n = d.mensajes.length;
+  const body = $("#chBody");
+  const alFondo = forzar || body.scrollHeight - body.scrollTop - body.clientHeight < 80;
+  let dia = "", h = "";
+  for (const m of d.mensajes) {
+    const f = chFecha(m.ts), dd = f.toLocaleDateString("es-CL", { ...CH_TZ, weekday: "short", day: "numeric", month: "short" });
+    if (dd !== dia) { dia = dd; h += `<div class="ch-dia">${esc(dd)}</div>`; }
+    const hum = m.dir === "out" && /^\[Recepcionista\]/.test(m.texto);
+    const texto = m.texto.replace(/^\[Recepcionista\]\s*/, "") || (m.media ? "[" + m.media + "]" : "");
+    const who = m.dir === "in" ? "" : (hum ? "Recepción" : "Bot");
+    h += `<div class="ch-m ${m.dir === "in" ? "in" : "out"}${hum ? " hum" : ""}">${who ? `<span class="who">${who}</span>` : ""}${esc(texto)}<span class="t">${f.toLocaleTimeString("es-CL", { ...CH_TZ, hour: "2-digit", minute: "2-digit" })}</span></div>`;
+  }
+  body.innerHTML = h || `<div class="empty" style="padding:24px 10px"><p style="margin:0">Sin mensajes registrados con esta persona.</p></div>`;
+  if (alFondo) body.scrollTop = body.scrollHeight;
+}
+async function enviarChat() {
+  const t = $("#chTxt"), b = $("#chSend"), msg = t.value.trim();
+  if (!msg || !MX.clave || b.disabled) return;
+  b.disabled = true; const clave = MX.clave;
+  try {
+    await apiSend("/alma/api/campanas-meta/persona/" + encodeURIComponent(clave) + "/conversacion", { mensaje: msg });
+    t.value = ""; chAuto(t); toast("Mensaje enviado");
+    await cargarChat(true);
+    if (MX.clave === clave && MX.d && MX.d.seguimiento.estado === "sin_gestion") {
+      const d = await api("/alma/api/campanas-meta/persona/" + encodeURIComponent(clave));
+      if (MX.clave === clave) { MX.d = d; pintarSeg(); actualizarTarjeta(clave, d.seguimiento); }
+    }
+  } catch (e) { toast(e.message, "error"); }
+  finally { if (MX.clave === clave) b.disabled = $("#chTxt").disabled; }
+}
+$("#mxX").onclick = cerrarFicha;
+$("#mx").addEventListener("click", e => { if (e.target === e.currentTarget) cerrarFicha(); });
+document.querySelectorAll(".mx-tabs button").forEach(b => b.onclick = () => setTab(b.dataset.t));
+$("#chSend").onclick = enviarChat;
+$("#chTxt").oninput = e => chAuto(e.target);
+$("#chTxt").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !matchMedia("(pointer:coarse)").matches) { e.preventDefault(); enviarChat(); } };
+$("#v-kanban").addEventListener("click", e => { const k = e.target.closest(".kc"); if (k) abrirFicha(k.dataset.k, k); });
+$("#v-kanban").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("kc")) { e.preventDefault(); abrirFicha(e.target.dataset.k, e.target); }
+});
+document.addEventListener("keydown", e => {
+  if (!MX.clave) return;
+  if (e.key === "Escape") { e.preventDefault(); cerrarFicha(); return; }
+  if (e.key !== "Tab") return;
+  const f = [...document.querySelectorAll(".mx a[href],.mx button:not([disabled]),.mx textarea:not([disabled]),.mx input,.mx [tabindex='0']")]
+    .filter(x => x.offsetParent !== null && x.getAttribute("aria-disabled") !== "true");
+  if (!f.length) return;
+  if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+  else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+});
 
 /* ── Interacción ────────────────────────────────────────────────────────── */
 function setVista(v, push) {
   S.v = v;
+  const vp = document.getElementById("vpop"); if (vp) vp.classList.remove("on");
   document.body.className = "v-" + v;
   document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.v === v));
   document.querySelectorAll(".view").forEach(x => x.classList.toggle("on", x.id === "v-" + v));
@@ -785,12 +1487,12 @@ function setRango(r) {
   S.ver = {}; cargar();
 }
 function marcarClear() {
-  const on = S.campana || S.plat || (S.v === "kanban" && (S.anuncio || S.esp || S.q));
+  const on = S.campana || S.plat || (S.v === "kanban" && (S.anuncio || S.esp || S.q || S.gest));
   $("#btnClear").classList.toggle("on", !!on);
 }
 function limpiar() {
-  S.campana = S.plat = S.anuncio = S.esp = S.q = "";
-  $("#fCampana").value = $("#fPlat").value = $("#fAnuncio").value = $("#fEsp").value = $("#fQ").value = "";
+  S.campana = S.plat = S.anuncio = S.esp = S.q = S.gest = "";
+  $("#fCampana").value = $("#fPlat").value = $("#fAnuncio").value = $("#fEsp").value = $("#fQ").value = $("#fGest").value = "";
   marcarClear(); S.ver = {}; cargar();
 }
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => setVista(t.dataset.v, true));
@@ -805,6 +1507,7 @@ $("#fCampana").onchange = e => { S.campana = e.target.value; S.anuncio = ""; mar
 $("#fPlat").onchange = e => { S.plat = e.target.value; marcarClear(); S.ver = {}; cargar(); };
 $("#fAnuncio").onchange = e => { S.anuncio = e.target.value; marcarClear(); S.ver = {}; cargar(); };
 $("#fEsp").onchange = e => { S.esp = e.target.value; marcarClear(); S.ver = {}; cargar(); };
+$("#fGest").onchange = e => { S.gest = e.target.value; marcarClear(); S.ver = {}; cargar(); };
 let qT; $("#fQ").oninput = e => { clearTimeout(qT); qT = setTimeout(() => { S.q = e.target.value.trim(); marcarClear(); S.ver = {}; cargar(); }, 320); };
 $("#btnClear").onclick = limpiar;
 $("#btnRefresh").onclick = () => cargar(true);

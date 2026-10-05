@@ -342,6 +342,73 @@ def _pacientes_por_telefono(c, claves: set[str]) -> dict[str, set[int]]:
     return out
 
 
+ID_IMAGENDENT = -1   # línea propia en el desglose por profesional
+
+# ── Especialidad del anuncio vs. lo que se vendió ───────────────────────────
+# Grupos (no especialidades sueltas): psiquiatría y psicología son "Salud
+# mental", ortodoncia/endodoncia/Imagendent son "Dental". El orden importa:
+# lo específico antes que lo genérico ("salud mental" antes que "salud").
+_GRUPOS = [
+    ("Salud mental", ("salud mental", "psicolog", "psiquiatr", "ansiedad", "depresi")),
+    ("Dental", ("dental", "odontolog", "ortodon", "orto ", "orto-", "orto battle", "endodon", "implant",
+                "bracket", "diente", "sonrisa", "imagendent", "radiografia", "estetica facial")),
+    ("Ecografía", ("ecograf", "ecotomograf", "eco ", "eco·", "doppler")),
+    ("Kinesiología", ("kinesio", "kine ", "kine·", "kine-", "masoterap", "rehabilit")),
+    ("Nutrición", ("nutri", "diabet")),
+    ("Cardiología", ("cardio",)),
+    ("Ginecología", ("ginecolog", "matrona")),
+    ("Otorrino y fono", ("otorrino", "fonoaudio")),
+    ("Medicina general", ("medicina general", "medicina familiar", "mg ", "mg·", "medico", "bono fonasa",
+                          "problemas de salud", "malos habitos", "consulta medica", "hora hoy")),
+]
+
+
+def _sin_tildes(t: str) -> str:
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFD", (t or "").lower())
+                   if unicodedata.category(ch) != "Mn")
+
+
+def _grupo(texto: str | None) -> str | None:
+    """Grupo cuya palabra clave aparece PRIMERO en el texto. Los textos de los
+    anuncios suelen enumerar varias especialidades ("contamos con medicina
+    general, otorrino…"): manda la que el anuncio nombra antes."""
+    t = " " + _sin_tildes(texto or "").replace("\n", " ") + " "
+    mejor, pos = None, len(t) + 1
+    for g, claves in _GRUPOS:
+        for k in claves:
+            i = t.find(k)
+            if 0 <= i < pos:
+                mejor, pos = g, i
+    return mejor
+
+
+def _grupo_prof(pid: int) -> str | None:
+    if pid == ID_IMAGENDENT:
+        return "Dental"
+    try:
+        from medilink import PROFESIONALES
+        esp = PROFESIONALES.get(pid, {}).get("especialidad", "")
+    except Exception:
+        esp = ""
+    return _grupo(esp) or (esp or None)
+
+
+def _nombres_profesionales(c) -> dict[int, str]:
+    m: dict[int, str] = {ID_IMAGENDENT: "Imagendent (radiografías)"}
+    try:
+        from medilink import PROFESIONALES
+        m.update({k: v.get("nombre", "") for k, v in PROFESIONALES.items()})
+    except Exception:
+        pass
+    try:
+        m.update({r[0]: r[1] for r in c.execute(
+            "SELECT id_medilink, nombre FROM equipo_cmc WHERE id_medilink IS NOT NULL AND nombre != ''")})
+    except Exception:
+        pass
+    return m
+
+
 def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) -> dict[str, dict]:
     """Venta y margen por anuncio. Un paciente → un anuncio.
 
@@ -383,7 +450,9 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
             if (r["fecha"] or "")[:10] >= dia:
                 pagos[r["id_paciente"]].append(r)
 
-    out: dict[str, dict] = defaultdict(lambda: {"venta": 0, "centro": 0.0, "pagaron": 0, "pagaron_tel": 0})
+    out: dict[str, dict] = defaultdict(lambda: {"venta": 0, "centro": 0.0, "pagaron": 0, "pagaron_tel": 0,
+                                                "profs": {}})
+    contados: set[int] = set()
     for pid, filas in pagos.items():
         ad_id, dia, camino = inicio[pid]
         if camino == "telefono":
@@ -391,15 +460,145 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
             limite = (date.fromisoformat(dia) + timedelta(days=VENTANA_TELEFONO_DIAS)).isoformat()
             if primero > limite:
                 continue
+        contados.add(pid)
         o = out[ad_id]
         o["pagaron"] += 1
         o["pagaron_tel"] += 1 if camino == "telefono" else 0
         for f in filas:
             monto = int(f["monto"] or 0)
             p_prof = pct.get(f["id_profesional"]) or PCT_HONORARIO_DEFAULT
+            centro = monto * (100 - p_prof) / 100
             o["venta"] += monto
-            o["centro"] += monto * (100 - p_prof) / 100
+            o["centro"] += centro
+            pp = o["profs"].setdefault(f["id_profesional"], {"venta": 0, "centro": 0.0, "pacientes": set()})
+            pp["venta"] += monto
+            pp["centro"] += centro
+            pp["pacientes"].add(pid)
+
+    # Imagendent: las radiografías se cobran en la atención del profesional
+    # (Javiera, Daniela…), pero el examen lo hace Imagendent y al centro le
+    # queda venta − costo del convenio, sin honorario. Se mueven de la línea
+    # del profesional a su propia línea (la venta total no cambia).
+    try:
+        filas = []
+        ids_ok = list(contados)
+        for i in range(0, len(ids_ok), 500):
+            lote = ids_ok[i:i + 500]
+            filas += c.execute(
+                "SELECT id_paciente, id_profesional, fecha, venta, cobrado, costo FROM convenio_consumo "
+                "WHERE convenio='imagendent' AND id_paciente IN (%s)" % ",".join("?" * len(lote)), lote).fetchall()
+    except Exception:
+        filas = []
+    for r in filas:
+        pid = r["id_paciente"]
+        ad_id, dia, _ = inicio[pid]
+        o = out.get(ad_id)
+        if not o or pid not in contados or (r["fecha"] or "")[:10] < dia:
+            continue
+        monto = int(r["cobrado"] or r["venta"] or 0)
+        if not monto:
+            continue
+        prof = o["profs"].get(r["id_profesional"])
+        if prof and prof["venta"] >= monto:
+            p_prof = pct.get(r["id_profesional"]) or PCT_HONORARIO_DEFAULT
+            prof["venta"] -= monto
+            prof["centro"] -= monto * (100 - p_prof) / 100
+            o["centro"] -= monto * (100 - p_prof) / 100
+            if prof["venta"] <= 0:
+                o["profs"].pop(r["id_profesional"])
+        else:
+            continue   # no se encontró el cobro en caja: no se inventa
+        im = o["profs"].setdefault(ID_IMAGENDENT, {"venta": 0, "centro": 0.0, "pacientes": set()})
+        im["venta"] += monto
+        im["centro"] += monto - int(r["costo"] or 0)
+        im["pacientes"].add(pid)
+        o["centro"] += monto - int(r["costo"] or 0)
     return dict(out)
+
+
+# ── Cómo nos conocieron (pregunta post-cita del bot) ────────────────────────
+# Lo que el paciente DECLARA al agendar por primera vez (`contact_tags`
+# referido:*). El antiguo "rrss" mezclaba redes sociales y Google en una sola
+# opción; desde oct-2026 el bot separa facebook_instagram y google.
+CONOCIERON = [
+    ("amigo", "Amigo o familiar"),
+    ("recurrente", "Ya era paciente"),
+    ("facebook_instagram", "Facebook o Instagram"),
+    ("google", "Google"),
+    ("rrss", "Redes o Google (antiguo)"),
+    ("codigo", "Código de referido"),
+    ("otro", "Otra respuesta"),
+]
+_CONOC_LBL = dict(CONOCIERON)
+
+
+def _conoc_id(tag: str) -> str:
+    k = (tag or "").split(":", 1)[-1].strip().lower()
+    return k if k in _CONOC_LBL else "otro"
+
+
+def _tags_referido(c, desde_txt: str | None = None, hasta_txt: str | None = None) -> dict[str, tuple[str, int]]:
+    """clave → (opción, epoch) de su respuesta MÁS RECIENTE (un teléfono puede
+    tener más de un tag referido:*)."""
+    q = "SELECT phone, tag, ts FROM contact_tags WHERE tag LIKE 'referido:%'"
+    args: list = []
+    if desde_txt:
+        q += " AND ts >= ?"
+        args.append(desde_txt)
+    if hasta_txt:
+        q += " AND ts < ?"
+        args.append(hasta_txt)
+    out: dict[str, tuple[str, int]] = {}
+    try:
+        filas = c.execute(q, args).fetchall()
+    except Exception as e:  # pragma: no cover
+        log.warning("campanas_meta: contact_tags no disponible: %s", e)
+        return out
+    for r in filas:
+        k = _clave(r["phone"])
+        ep = _utc_txt_epoch(r["ts"]) or 0
+        if k not in out or ep >= out[k][1]:
+            out[k] = (_conoc_id(r["tag"]), ep)
+    return out
+
+
+def conocieron_data(c, e0: int, e1: int) -> dict:
+    """Reparto de respuestas en el rango (por fecha de la respuesta), y de
+    cada opción cuántos habían tocado un anuncio ANTES de responder."""
+    tags = _tags_referido(c, _utc_txt(e0), _utc_txt(e1))
+    primer_clic: dict[str, int] = {}
+    if tags:
+        for r in c.execute("SELECT phone, MIN(ts) FROM meta_referrals GROUP BY phone"):
+            k = _clave(r[0])
+            if k in tags and (k not in primer_clic or r[1] < primer_clic[k]):
+                primer_clic[k] = r[1]
+    acc = {cid: {"id": cid, "label": lbl, "n": 0, "con_anuncio": 0} for cid, lbl in CONOCIERON}
+    for k, (cid, ep) in tags.items():
+        a = acc[cid]
+        a["n"] += 1
+        if k in primer_clic and primer_clic[k] <= ep:
+            a["con_anuncio"] += 1
+    total = len(tags)
+    opciones = []
+    for cid, _ in CONOCIERON:
+        a = acc[cid]
+        if not a["n"] and cid not in ("amigo", "recurrente", "facebook_instagram", "google"):
+            continue
+        a["sin_anuncio"] = a["n"] - a["con_anuncio"]
+        a["pct"] = round(100 * a["n"] / total) if total else None
+        opciones.append(a)
+    return {"total": total, "con_anuncio": sum(a["con_anuncio"] for a in acc.values()), "opciones": opciones}
+
+
+def _conoc_resumen(cnt: dict[str, int]) -> dict | None:
+    n = sum(cnt.values())
+    if not n:
+        return None
+    return {"respondieron": n,
+            "amigo_pct": round(100 * cnt.get("amigo", 0) / n),
+            "recurrente_pct": round(100 * cnt.get("recurrente", 0) / n),
+            "detalle": [{"id": cid, "label": lbl, "n": cnt[cid], "pct": round(100 * cnt[cid] / n)}
+                        for cid, lbl in CONOCIERON if cnt.get(cid)]}
 
 
 # ── Panel ───────────────────────────────────────────────────────────────────
@@ -431,7 +630,35 @@ def _insights_filas(c, d: date, h: date, campana: str | None, plat: str | None,
 def _acum() -> dict:
     return {"gasto": 0.0, "impresiones": 0, "alcance": 0, "clics": 0, "conv": 0,
             "personas": set(), "citas": 0, "atendidos": 0, "venta": 0, "centro": 0,
-            "pagaron": 0, "pagaron_tel": 0}
+            "pagaron": 0, "pagaron_tel": 0, "profs": {}}
+
+
+_NOMBRES_PROF: dict[int, str] = {}
+
+
+def _sumar_profs(dst: dict, src: dict) -> None:
+    for pid, v in src.items():
+        d = dst.setdefault(pid, {"venta": 0, "centro": 0.0, "pacientes": set()})
+        d["venta"] += v["venta"]
+        d["centro"] += v["centro"]
+        d["pacientes"] |= v["pacientes"]
+
+
+def _por_grupo(a: dict) -> list[dict]:
+    """Venta agrupada por especialidad (grupo) — qué se terminó atendiendo."""
+    acc: dict[str, dict] = {}
+    for pid, v in a["profs"].items():
+        g = _grupo_prof(pid) or "Otra"
+        d = acc.setdefault(g, {"grupo": g, "venta": 0, "centro": 0.0, "pacientes": set()})
+        d["venta"] += v["venta"]
+        d["centro"] += v["centro"]
+        d["pacientes"] |= v["pacientes"]
+    out = []
+    for d in acc.values():
+        out.append({"grupo": d["grupo"], "venta": round(d["venta"]), "centro": round(d["centro"]),
+                    "pacientes": len(d["pacientes"]),
+                    "del_anuncio": d["grupo"] == a.get("grupo")})
+    return sorted(out, key=lambda x: (not x["del_anuncio"], -x["venta"]))
 
 
 def _cerrar(a: dict) -> dict:
@@ -449,8 +676,21 @@ def _cerrar(a: dict) -> dict:
         "centro_pct": round(100 * a["centro"] / a["venta"]) if a["venta"] else None,
         "resultado": round(a["centro"]) - g,
         "pagaron": a["pagaron"], "pagaron_tel": a["pagaron_tel"],
+        "grupo": a.get("grupo"),
+        "fuera_venta": round(a.get("fuera", 0)),
+        "fuera_pct": round(100 * a.get("fuera", 0) / a["venta"]) if a["venta"] and a.get("grupo") else None,
+        "por_especialidad": _por_grupo(a),
+        "por_profesional": sorted(
+            ({"id": pid, "nombre": _NOMBRES_PROF.get(pid) or f"Profesional {pid}",
+              "grupo": _grupo_prof(pid),
+              "fuera": a.get("grupo") not in (None, "Varias", "mixto") and _grupo_prof(pid) != a.get("grupo"),
+              "venta": round(v["venta"]), "centro": round(v["centro"]),
+              "centro_pct": round(100 * v["centro"] / v["venta"]) if v["venta"] else None,
+              "pacientes": len(v["pacientes"])}
+             for pid, v in a["profs"].items()), key=lambda x: -x["venta"]),
         "frecuencia": round(a["impresiones"] / a["alcance"], 2) if a["alcance"] else None,
         "muestra_chica": citas < MUESTRA_CHICA,
+        "conocieron": _conoc_resumen(a.get("conoc") or {}),
     }
 
 
@@ -554,10 +794,47 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                 a["citas"] += 1
                 a["atendidos"] += 1 if ci["atendido"] else 0
 
+        _NOMBRES_PROF.clear()
+        _NOMBRES_PROF.update(_nombres_profesionales(c))
         for ad_id, v in _venta_por_anuncio(c, citas, clics).items():
             for a in (por_ad[ad_id], tot):
                 for kk in ("venta", "centro", "pagaron", "pagaron_tel"):
                     a[kk] += v[kk]
+                _sumar_profs(a["profs"], v["profs"])
+
+        # Especialidad del anuncio (nombre/título; si no dice, la más agendada)
+        # y cuánto de su venta cayó en OTRA especialidad.
+        esp_citas: dict[str, list[str]] = defaultdict(list)
+        for ci in citas:
+            g = _grupo(ci.get("especialidad"))
+            if g:
+                esp_citas[ci["ad_id"]].append(g)
+        for ad_id, a in por_ad.items():
+            info = _info_ad(mapa, ad_id)
+            ref = c.execute("SELECT headline, body FROM meta_referrals WHERE source_id=? "
+                            "ORDER BY ts DESC LIMIT 1", (ad_id,)).fetchone() if ad_id else None
+            # El texto del anuncio (body) dice de qué es; el título suele ser
+            # solo "Centro Médico Carampangue" y caería en Medicina general.
+            nombre = info["anuncio"] if ad_id in mapa else (ref["headline"] if ref else "")
+            g = (_grupo(nombre) or _grupo((ref["body"] or "")[:400] if ref else "")
+                 or _grupo(info["campana"]))
+            if not g and esp_citas.get(ad_id):
+                g = max(set(esp_citas[ad_id]), key=esp_citas[ad_id].count)
+            a["grupo"] = g
+            a["fuera"] = sum(v["venta"] for pid, v in a["profs"].items() if g and _grupo_prof(pid) != g)
+        tot["fuera"] = sum(a.get("fuera", 0) for a in por_ad.values())
+        tot["grupo"] = "mixto"
+
+        # Cómo dicen que nos conocieron las personas de cada anuncio (su
+        # respuesta más reciente a la pregunta post-cita, cuando la hay).
+        tags_all = _tags_referido(c)
+        for a in list(por_ad.values()) + [tot]:
+            cnt: dict[str, int] = defaultdict(int)
+            for k in a["personas"]:
+                if k in tags_all:
+                    cnt[tags_all[k][0]] += 1
+            a["conoc"] = cnt
+        conocieron = conocieron_data(c, e0, e1)
 
         # Tabla por anuncio y por campaña
         anuncios, por_camp = [], defaultdict(_acum)
@@ -578,6 +855,15 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             for k in ("gasto", "impresiones", "alcance", "clics", "conv", "citas", "atendidos", "venta", "centro", "pagaron", "pagaron_tel"):
                 pc[k] += a[k]
             pc["personas"] |= a["personas"]
+            _sumar_profs(pc["profs"], a["profs"])
+            pcc = pc.setdefault("conoc", defaultdict(int))
+            for kk, vv in a.get("conoc", {}).items():
+                pcc[kk] += vv
+            pc["fuera"] = pc.get("fuera", 0) + a.get("fuera", 0)
+            pc.setdefault("grupos", set()).add(a.get("grupo"))
+        for pc in por_camp.values():
+            gs = pc.pop("grupos", set()) - {None}
+            pc["grupo"] = next(iter(gs)) if len(gs) == 1 else ("Varias" if gs else None)
         campanas = [{"campaign_id": cid, "campana": camp_nombre[cid],
                      "n_anuncios": sum(1 for x in anuncios if x["campaign_id"] == cid),
                      **_cerrar(a)} for cid, a in por_camp.items()]
@@ -645,6 +931,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         "desgloses": des,
         "tendencia": tendencia,
         "alertas": alertas,
+        "conocieron": conocieron,
         "hay_insights": hay_insights,
         "ultima_foto": _uf,
         "opciones": opciones,
@@ -691,7 +978,8 @@ def _cita_futura(ci: dict, hoy: str, ahora_hm: str) -> bool:
 def kanban_data(desde: str | None = None, hasta: str | None = None,
                 campana: str | None = None, anuncio: str | None = None,
                 plataforma: str | None = None, especialidad: str | None = None,
-                q: str | None = None, ahora: datetime | None = None) -> dict:
+                q: str | None = None, ahora: datetime | None = None,
+                gestion: str | None = None) -> dict:
     """Una tarjeta por persona (clave = últimos 9 dígitos) cuyo ÚLTIMO clic en
     un anuncio cae en el rango. La etapa sale de los datos, por prioridad:
 
@@ -802,6 +1090,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
                         ep = _epoch_ini(date.fromisoformat(f[:10]))
                         pago_tel[k] = min(pago_tel.get(k, ep), ep)
         opciones = _opciones(c, mapa)
+        segs = _seguimientos(c, set(personas))
 
     cols: dict[str, list[dict]] = {e: [] for e in _ETAPA_IDS}
     for k, p in personas.items():
@@ -849,6 +1138,9 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
             hay = (qn in nombre.lower()) or (len(qd) >= 3 and qd in "".join(ch for ch in p["phone"] if ch.isdigit()))
             if not hay:
                 continue
+        gest = _gestion_tarjeta(segs.get(k), hoy)
+        if gestion and not _pasa_gestion(gest, gestion):
+            continue
         llegada = datetime.fromtimestamp(R, _CL)
         cols[etapa].append({
             "clave": k,
@@ -865,6 +1157,7 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
             "proxima_cita": ({"fecha": _fmt_fecha(futuras[0]["fecha"]), "hora": (futuras[0]["hora"] or "")[:5]}
                              if futuras else None),
             "dias_etapa": max(0, (ahora_ep - desde_ep) // 86400),
+            "gestion": gest,
             "_orden": actividad,
         })
 
@@ -878,7 +1171,9 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
         "rango": {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": (h - d).days + 1},
         "columnas": columnas,
         "total": sum(c_["n"] for c_ in columnas),
-        "opciones": opciones,
+        "por_llamar": sum(1 for c_ in columnas for t in c_["tarjetas"]
+                          if (t["gestion"] or {}).get("alerta")),
+        "opciones": {**opciones, "gestion": GESTION},
         "medicion": {"atribucion_desde": ATRIBUCION_DESDE, "plataforma_desde": PLATAFORMA_DESDE,
                      "dias_perdido": DIAS_PERDIDO},
     }
@@ -886,10 +1181,359 @@ def kanban_data(desde: str | None = None, hasta: str | None = None,
 
 def _kanban_vacio(d: date, h: date, opciones: dict) -> dict:
     return {"rango": {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": (h - d).days + 1},
-            "columnas": [{**e, "n": 0, "tarjetas": []} for e in ETAPAS], "total": 0,
-            "opciones": opciones,
+            "columnas": [{**e, "n": 0, "tarjetas": []} for e in ETAPAS], "total": 0, "por_llamar": 0,
+            "opciones": {**opciones, "gestion": GESTION},
             "medicion": {"atribucion_desde": ATRIBUCION_DESDE, "plataforma_desde": PLATAFORMA_DESDE,
                          "dias_perdido": DIAS_PERDIDO}}
+
+
+# ── Seguimiento (capa de gestión encima del kanban) ─────────────────────────
+# Las columnas del kanban se calculan solas con la agenda; nadie las mueve a
+# mano. Lo que sí hace una persona es GESTIONAR: llamar, anotar, dejar una
+# fecha para volver a llamar. Eso vive aquí, por persona (clave = últimos 9
+# dígitos del teléfono), con un historial que solo crece.
+
+GESTION = [
+    {"id": "sin_gestion",     "label": "Sin gestionar"},
+    {"id": "contactado",      "label": "Contactado"},
+    {"id": "volver_llamar",   "label": "Volver a llamar"},
+    {"id": "agendo_otra_via", "label": "Agendó por otra vía"},
+    {"id": "no_interesa",     "label": "No le interesa"},
+]
+_GESTION_LBL = {g["id"]: g["label"] for g in GESTION}
+_GESTION_CERRADA = {"agendo_otra_via", "no_interesa"}   # una fecha pendiente ya no alerta
+FILTRO_POR_LLAMAR = "por_llamar"                         # volver a llamar hoy o vencido
+
+
+def _crear_tablas_seguimiento() -> None:
+    with db() as c:
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS campanas_seguimiento (
+                clave      TEXT PRIMARY KEY,
+                estado     TEXT NOT NULL DEFAULT 'sin_gestion',
+                nota       TEXT,
+                proximo    TEXT,
+                updated_at TEXT
+            )""")
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS campanas_seguimiento_hist (
+                id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                clave   TEXT NOT NULL,
+                ts      TEXT NOT NULL,
+                estado  TEXT,
+                nota    TEXT,
+                proximo TEXT,
+                origen  TEXT
+            )""")
+        c.execute("CREATE INDEX IF NOT EXISTS ix_campanas_seg_hist ON campanas_seguimiento_hist(clave, id)")
+        c.commit()
+
+
+try:
+    _crear_tablas_seguimiento()
+except Exception as _e:  # pragma: no cover — sin DB al importar no se cae el bot
+    log.warning("campanas_meta: no se pudo crear campanas_seguimiento: %s", _e)
+
+
+def _seguimientos(c, claves: set[str]) -> dict[str, dict]:
+    if not claves:
+        return {}
+    out, ks = {}, list(claves)
+    for i in range(0, len(ks), 500):
+        lote = ks[i:i + 500]
+        for r in c.execute("SELECT clave, estado, nota, proximo, updated_at FROM campanas_seguimiento "
+                           "WHERE clave IN (%s)" % ",".join("?" * len(lote)), lote):
+            out[r["clave"]] = dict(r)
+    return out
+
+
+def _gestion_tarjeta(seg: dict | None, hoy: str) -> dict | None:
+    """Indicador de gestión para la tarjeta. `alerta`: 'hoy' o 'vencido' si
+    hay una fecha de próximo contacto que ya llegó y la gestión sigue abierta."""
+    if not seg:
+        return None
+    estado = seg.get("estado") or "sin_gestion"
+    prox = (seg.get("proximo") or "")[:10] or None
+    alerta = None
+    if prox and estado not in _GESTION_CERRADA:
+        alerta = "hoy" if prox == hoy else ("vencido" if prox < hoy else None)
+    if estado == "sin_gestion" and not prox and not (seg.get("nota") or "").strip():
+        return None
+    return {"estado": estado, "label": _GESTION_LBL.get(estado, estado), "proximo": prox,
+            "proximo_fmt": _fmt_fecha(prox) if prox else "", "alerta": alerta,
+            "con_nota": bool((seg.get("nota") or "").strip())}
+
+
+def _pasa_gestion(gest: dict | None, filtro: str) -> bool:
+    if filtro == FILTRO_POR_LLAMAR:
+        return bool(gest and gest.get("alerta"))
+    if filtro == "sin_gestion":
+        return not gest or gest["estado"] == "sin_gestion"
+    return bool(gest) and gest["estado"] == filtro
+
+
+def _clave_valida(clave: str) -> str:
+    clave = (clave or "").strip()
+    if clave.startswith(("fb_", "ig_")):
+        if len(clave) > 4 and clave[3:].replace("-", "").replace("_", "").isalnum():
+            return clave
+    elif len(clave) == 9 and clave.isdigit():
+        return clave
+    raise HTTPException(404, "No existe esa persona")
+
+
+def _phones_de(c, clave: str) -> list[dict]:
+    """Referrals de la persona (más reciente primero). Solo se puede abrir a
+    quien llegó por un anuncio: si no hay referral, 404 — así el endpoint no
+    sirve para leer cualquier conversación del bot."""
+    if clave.startswith(("fb_", "ig_")):
+        filas = c.execute("SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
+                          "WHERE phone=? ORDER BY ts DESC", (clave,)).fetchall()
+    else:
+        filas = c.execute("SELECT phone, source_id, headline, plataforma, ts FROM meta_referrals "
+                          "WHERE phone LIKE ? ORDER BY ts DESC", ("%" + clave,)).fetchall()
+    filas = [dict(r) for r in filas if _clave(r["phone"]) == clave]
+    if not filas:
+        raise HTTPException(404, "No existe esa persona")
+    return filas
+
+
+def _telefono_completo(phone: str) -> str:
+    p = (phone or "").strip()
+    if p.startswith("fb_"):
+        return "Messenger"
+    if p.startswith("ig_"):
+        return "Instagram Direct"
+    dig = "".join(ch for ch in p if ch.isdigit())
+    if len(dig) == 11 and dig.startswith("569"):
+        return f"+56 9 {dig[3:7]} {dig[7:]}"
+    return ("+" + dig) if dig else "—"
+
+
+def _tel_href(phone: str) -> str | None:
+    dig = "".join(ch for ch in (phone or "") if ch.isdigit())
+    if (phone or "").startswith(("fb_", "ig_")) or len(dig) < 9:
+        return None
+    return "+" + dig if len(dig) >= 11 else "+56" + dig
+
+
+def _historial(c, clave: str) -> list[dict]:
+    return [{"ts": r["ts"], "estado": r["estado"], "label": _GESTION_LBL.get(r["estado"], r["estado"]),
+             "nota": r["nota"] or "", "proximo": r["proximo"] or None,
+             "proximo_fmt": _fmt_fecha(r["proximo"]) if r["proximo"] else "", "origen": r["origen"] or ""}
+            for r in c.execute("SELECT ts, estado, nota, proximo, origen FROM campanas_seguimiento_hist "
+                               "WHERE clave=? ORDER BY id DESC", (clave,))]
+
+
+def _seguimiento_completo(c, clave: str, hoy: str) -> dict:
+    seg = _seguimientos(c, {clave}).get(clave) or {}
+    estado = seg.get("estado") or "sin_gestion"
+    gest = _gestion_tarjeta(seg, hoy) or {}
+    return {"estado": estado, "label": _GESTION_LBL.get(estado, estado), "nota": seg.get("nota") or "",
+            "proximo": (seg.get("proximo") or "")[:10] or None, "alerta": gest.get("alerta"),
+            "actualizado": seg.get("updated_at"), "historial": _historial(c, clave)}
+
+
+def guardar_seguimiento(clave: str, estado: str, nota: str | None, proximo: str | None,
+                        origen: str = "dueño", ahora: datetime | None = None) -> dict:
+    """Guarda el estado de gestión y agrega una línea al historial (append-only).
+    Si nada cambió, no agrega línea."""
+    clave = _clave_valida(clave)
+    if estado not in _GESTION_LBL:
+        raise HTTPException(400, "Estado de gestión desconocido")
+    nota = (nota or "").strip()
+    if len(nota) > 2000:
+        raise HTTPException(400, "La nota no puede pasar de 2.000 caracteres")
+    prox = (proximo or "").strip()[:10] or None
+    if prox:
+        try:
+            datetime.strptime(prox, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(400, "Fecha de próximo contacto inválida")
+    if estado == "volver_llamar" and not prox:
+        raise HTTPException(400, "Indique la fecha en que hay que volver a llamar")
+    ahora = ahora or datetime.now(_CL)
+    ts = ahora.strftime("%Y-%m-%d %H:%M:%S")
+    with db() as c:
+        _phones_de(c, clave)
+        prev = _seguimientos(c, {clave}).get(clave)
+        cambio = (not prev or prev["estado"] != estado or (prev["nota"] or "") != nota
+                  or ((prev["proximo"] or "")[:10] or None) != prox)
+        if cambio:
+            c.execute("INSERT INTO campanas_seguimiento (clave, estado, nota, proximo, updated_at) "
+                      "VALUES (?,?,?,?,?) ON CONFLICT(clave) DO UPDATE SET estado=excluded.estado, "
+                      "nota=excluded.nota, proximo=excluded.proximo, updated_at=excluded.updated_at",
+                      (clave, estado, nota, prox, ts))
+            c.execute("INSERT INTO campanas_seguimiento_hist (clave, ts, estado, nota, proximo, origen) "
+                      "VALUES (?,?,?,?,?,?)", (clave, ts, estado, nota, prox, origen))
+            c.commit()
+        return _seguimiento_completo(c, clave, ahora.date().isoformat())
+
+
+def persona_data(clave: str, ahora: datetime | None = None) -> dict:
+    """Ficha de una persona que llegó por un anuncio: cabecera, seguimiento y
+    línea de tiempo (clics, citas del bot, horarios ofrecidos, avisos de
+    atención y pagos en caja). Sin datos clínicos: no hay diagnósticos ni
+    motivos de consulta, solo qué pasó con la agenda y la caja."""
+    clave = _clave_valida(clave)
+    ahora = ahora or datetime.now(_CL)
+    hoy = ahora.date().isoformat()
+    with db() as c:
+        refs = _phones_de(c, clave)
+        phone = refs[0]["phone"]
+        phones = sorted({r["phone"] for r in refs})
+        mapa = _mapa_anuncios(c)
+        primer = min(r["ts"] for r in refs)
+        ev: list[dict] = []
+        for r in refs:
+            info = _info_ad(mapa, r["source_id"] or "", r["headline"] or "")
+            ev.append({"ts": r["ts"], "tipo": "clic", "titulo": "Clic en un anuncio",
+                       "detalle": f'{info["anuncio"]} · {info["campana"]}',
+                       "plataforma": _plat(r["plataforma"])})
+        ult = _info_ad(mapa, refs[0]["source_id"] or "", refs[0]["headline"] or "")
+
+        # Citas del bot (todas las del teléfono, también las anteriores al clic:
+        # muestran si ya era paciente).
+        q_ph = ",".join("?" * len(phones))
+        citas = []
+        for r in c.execute("SELECT phone, especialidad, profesional, fecha, hora, created_at, "
+                           "cancel_detected_at, confirmation_status, paciente_nombre, ad_source_id "
+                           "FROM citas_bot WHERE phone LIKE ? OR phone IN (%s)" % q_ph,
+                           ("%" + clave if clave.isdigit() else clave, *phones)):
+            if _clave(r["phone"]) != clave:
+                continue
+            d = dict(r)
+            citas.append(d)
+            cre = _utc_txt_epoch(d["created_at"]) or 0
+            hora = (d["hora"] or "")[:5]
+            ev.append({"ts": cre, "tipo": "cita", "titulo": "Agendó por el bot",
+                       "detalle": " · ".join(x for x in (
+                           d["especialidad"] or "", (_fmt_fecha(d["fecha"]) + (" a las " + hora if hora else "")),
+                           d["profesional"] or "") if x),
+                       "anulada": _cancelada(d), "del_anuncio": bool(d["ad_source_id"])})
+            if _cancelada(d):
+                ca = _utc_txt_epoch(d.get("cancel_detected_at"))
+                ev.append({"ts": ca or cre + 1, "tipo": "anulada", "titulo": "Cita anulada",
+                           "detalle": " · ".join(x for x in (d["especialidad"] or "", _fmt_fecha(d["fecha"])) if x)})
+
+        # Horarios ofrecidos y avisos de atención (eventos del bot).
+        vistos_slot: list[int] = []
+        for r in c.execute("SELECT phone, event, ts, meta FROM conversation_events WHERE ts >= ? "
+                           "AND event IN (?,?,?) AND (phone LIKE ? OR phone IN (%s)) ORDER BY ts" % q_ph,
+                           (_utc_txt(primer - 86400 * 30), *_EV_SLOTS, "capi_send_ok",
+                            "%" + clave if clave.isdigit() else clave, *phones)):
+            if _clave(r["phone"]) != clave:
+                continue
+            e = _utc_txt_epoch(r["ts"]) or 0
+            try:
+                meta = json.loads(r["meta"] or "{}")
+            except (ValueError, TypeError):
+                meta = {}
+            if r["event"] == "capi_send_ok":
+                if meta.get("event_type") == "Purchase":
+                    ev.append({"ts": e, "tipo": "atencion", "titulo": "Aviso de atención a Meta",
+                               "detalle": "La hora pasó y no fue anulada (proxy de atención)"})
+                continue
+            if any(abs(e - v) < 600 for v in vistos_slot):   # ráfaga de ofertas = una sola
+                continue
+            vistos_slot.append(e)
+            esp = (meta.get("esp") or "").strip()
+            ev.append({"ts": e, "tipo": "horarios", "titulo": "El bot le ofreció horarios",
+                       "detalle": esp.capitalize() if esp.islower() else esp})
+
+        # Pagos en caja: mismo cruce por teléfono que la venta del panel.
+        pids = set(_pacientes_por_telefono(c, {clave}).get(clave, set()))
+        nombres_prof = _nombres_profesionales(c)
+        dia_clic = datetime.fromtimestamp(primer, _CL).date().isoformat()
+        pagos_total, antes_n, antes_total = 0, 0, 0
+        pids_l = sorted(pids)
+        orden_pid = {pid: i + 1 for i, pid in enumerate(pids_l)}
+        if pids_l:
+            try:
+                filas = c.execute("SELECT fecha, id_profesional, id_paciente, monto FROM bi_pagos_caja "
+                                  "WHERE id_paciente IN (%s) ORDER BY fecha" % ",".join("?" * len(pids_l)),
+                                  pids_l).fetchall()
+            except Exception as e:  # entorno sin BI: sin pagos, no rompe la ficha
+                log.warning("campanas_meta: pagos no disponibles: %s", e)
+                filas = []
+            for r in filas:
+                f = (r["fecha"] or "")[:10]
+                monto = int(r["monto"] or 0)
+                if f < dia_clic:
+                    antes_n += 1
+                    antes_total += monto
+                    continue
+                pagos_total += monto
+                try:
+                    e = _epoch_ini(date.fromisoformat(f)) + 12 * 3600
+                except ValueError:
+                    continue
+                ev.append({"ts": e, "tipo": "pago", "titulo": "Pago en caja", "solo_fecha": True,
+                           "detalle": nombres_prof.get(r["id_profesional"]) or f"Profesional {r['id_profesional']}",
+                           "monto": monto,
+                           "paciente": (f"Paciente {orden_pid[r['id_paciente']]} de {len(pids_l)}"
+                                        if len(pids_l) > 1 else "")})
+
+        nombre = ""
+        for r in c.execute("SELECT phone, nombre FROM contact_profiles WHERE nombre IS NOT NULL AND nombre != '' "
+                           "AND (phone LIKE ? OR phone IN (%s))" % q_ph,
+                           ("%" + clave if clave.isdigit() else clave, *phones)):
+            if _clave(r["phone"]) == clave:
+                nombre = r["nombre"].strip()
+        if not nombre:
+            nombre = next((ci["paciente_nombre"].strip() for ci in reversed(citas)
+                           if (ci.get("paciente_nombre") or "").strip()), "")
+        seguimiento = _seguimiento_completo(c, clave, hoy)
+
+    for x in ev:
+        dt = datetime.fromtimestamp(x["ts"], _CL)
+        x["fecha"] = dt.strftime("%d/%m/%Y")
+        x["hora"] = "" if x.get("solo_fecha") else dt.strftime("%H:%M")
+        x["iso"] = dt.strftime("%Y-%m-%d %H:%M")
+    ev.sort(key=lambda x: -x["ts"])   # más reciente primero
+    return {
+        "clave": clave, "phone": phone, "telefono": _telefono_completo(phone), "tel_href": _tel_href(phone),
+        "nombre": nombre,
+        "anuncio": ult["anuncio"], "campana": ult["campana"], "ad_id": ult["ad_id"],
+        "plataforma": _plat(refs[0]["plataforma"]),
+        "primer_clic": datetime.fromtimestamp(primer, _CL).strftime("%d/%m/%Y"),
+        "clics": len(refs),
+        "linea": ev[:150],
+        "pagos": {"total": pagos_total, "pacientes": len(pids_l),
+                  "antes_del_clic": antes_n, "antes_total": antes_total},
+        "seguimiento": seguimiento,
+        "gestion_opciones": GESTION,
+    }
+
+
+# ── Conversación del bot desde la ficha ─────────────────────────────────────
+# Mismo mecanismo que el embudo de ortodoncia: la ventana de 24 h se mira
+# ANTES de enviar (Meta igual devuelve wamid fuera de ventana) y el envío pasa
+# por `responder_como_recepcion` (takeover + lock por teléfono), un solo
+# camino para todos los paneles.
+
+def _ventana(phone: str) -> tuple[bool, str | None]:
+    from orto_embudo_routes import _ventana_abierta
+    return _ventana_abierta(phone)
+
+
+async def _responder(phone: str, texto: str) -> dict:
+    from admin_routes import responder_como_recepcion
+    return await responder_como_recepcion(phone, texto, exigir_entrega=True)
+
+
+def conversacion_data(clave: str) -> dict:
+    from session import get_messages, get_session
+    clave = _clave_valida(clave)
+    with db() as c:
+        phone = _phones_de(c, clave)[0]["phone"]
+    abierta, ult_in = _ventana(phone)
+    msgs = [{"id": m["id"], "dir": m["direction"], "texto": m["text"] or "",
+             "ts": m["ts"], "media": m.get("media_tipo")}
+            for m in get_messages(phone, limit=150)]
+    return {"telefono": _telefono_completo(phone), "mensajes": msgs,
+            "ventana_abierta": abierta, "ultimo_del_paciente": ult_in,
+            "estado_bot": (get_session(phone) or {}).get("state", "IDLE")}
 
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
@@ -906,7 +1550,70 @@ def panel(request: Request, desde: str | None = Query(None), hasta: str | None =
 def kanban(request: Request, desde: str | None = Query(None), hasta: str | None = Query(None),
            campana: str | None = Query(None), anuncio: str | None = Query(None),
            plataforma: str | None = Query(None), especialidad: str | None = Query(None),
-           q: str | None = Query(None), token: str | None = Query(None)):
+           q: str | None = Query(None), gestion: str | None = Query(None),
+           token: str | None = Query(None)):
     _auth(request, token)
     return kanban_data(desde, hasta, campana or None, anuncio or None, plataforma or None,
-                       especialidad or None, q or None)
+                       especialidad or None, q or None, gestion=gestion or None)
+
+
+@router.get("/persona/{clave}")
+def persona(clave: str, request: Request, token: str | None = Query(None)):
+    _auth(request, token)
+    return persona_data(clave)
+
+
+@router.post("/persona/{clave}/seguimiento")
+async def persona_seguimiento(clave: str, request: Request, token: str | None = Query(None)):
+    _auth(request, token)
+    try:
+        b = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Cuerpo inválido")
+    if not isinstance(b, dict):
+        raise HTTPException(400, "Cuerpo inválido")
+    return guardar_seguimiento(clave, str(b.get("estado") or ""), b.get("nota"), b.get("proximo"))
+
+
+@router.get("/persona/{clave}/conversacion")
+def persona_conversacion(clave: str, request: Request, token: str | None = Query(None)):
+    _auth(request, token)
+    return conversacion_data(clave)
+
+
+@router.post("/persona/{clave}/conversacion")
+async def persona_responder(clave: str, request: Request, token: str | None = Query(None)):
+    """Responde por el WhatsApp del bot. Con la ventana de 24 h cerrada no se
+    envía texto libre (409). Al responder, la conversación queda con recepción
+    (takeover) y, si la persona estaba sin gestionar, queda como Contactado."""
+    _auth(request, token)
+    try:
+        texto = ((await request.json()).get("mensaje") or "").strip()
+    except (ValueError, AttributeError):
+        raise HTTPException(400, "Cuerpo inválido")
+    if not texto:
+        raise HTTPException(400, "Mensaje vacío")
+    if len(texto) > 4000:
+        raise HTTPException(400, "Mensaje demasiado largo")
+    clave = _clave_valida(clave)
+    with db() as c:
+        phone = _phones_de(c, clave)[0]["phone"]
+        prev = _seguimientos(c, {clave}).get(clave)
+    abierta, _ = _ventana(phone)
+    if not abierta:
+        raise HTTPException(409, "Pasaron más de 24 h desde el último mensaje de esta persona: "
+                                 "WhatsApp no permite escribirle texto libre hasta que vuelva a escribir.")
+    try:
+        r = await _responder(phone, texto)
+    except HTTPException:
+        raise
+    except Exception as e:   # red/Meta caída: el dueño debe saber que NO salió
+        log.warning("campanas_meta: envío falló para %s: %s", clave, e)
+        raise HTTPException(502, "No se pudo enviar el mensaje por WhatsApp. Intente de nuevo en unos minutos "
+                                 "o llame por teléfono.")
+    from session import log_event
+    log_event(phone, "campanas_meta_respuesta", {"clave": clave, "mensaje": texto[:200]})
+    if not prev or (prev.get("estado") or "sin_gestion") == "sin_gestion":
+        guardar_seguimiento(clave, "contactado", (prev or {}).get("nota"), (prev or {}).get("proximo"),
+                            origen="respuesta por WhatsApp")
+    return r if isinstance(r, dict) else {"ok": True}
