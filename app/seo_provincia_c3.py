@@ -82,7 +82,7 @@ PAGINAS_3["odontologia-general-lebu"] = pag(
     lead="Para un paciente de Lebu, el viaje a Carampangue es de unos 77 km. Por eso conviene diseñar el tratamiento dental con el menor número posible de visitas.",
     secciones=[
         ("Evaluar y comenzar el mismo día",
-         "<p>La evaluación dental cuesta $15.000. Cuando el tratamiento previo se inicia ese mismo día (por ejemplo, una limpieza o una tapadura), el presupuesto no tiene costo, y se paga solo la atención realizada. Para quien viene de lejos, esa es la forma de aprovechar el viaje: salir de la primera visita con el plan definido y parte del trabajo hecho.</p>"
+         "<p>La evaluación dental cuesta $15.000 y se descuenta si ese mismo día comienzas o dejas pagado el tratamiento (por ejemplo, una limpieza o una tapadura): en ese caso pagas solo la atención. Para quien viene de lejos, esa es la forma de aprovechar el viaje: salir de la primera visita con el plan definido y parte del trabajo hecho.</p>"
          + tabla_oferta(["odo_eval", "odo_limpieza", "odo_resina", "odo_exo"])),
         ("Pedir la hora pensando en el viaje",
          "<p>La Dra. Burgos atiende de lunes a sábado y el Dr. Jiménez los viernes y sábados. Pida su hora por WhatsApp, indique que viaja desde Lebu y consulte por una hora que permita resolver más de un tratamiento en la misma visita. Las horas de la Dra. Burgos son de 60 minutos y las del Dr. Jiménez, de 30.</p>"
@@ -146,7 +146,7 @@ PAGINAS_3["ortodoncia-curanilahue"] = pag(
     lead="Fuera de la comuna de Arauco, Curanilahue es la localidad de la que más pacientes vienen a controles de ortodoncia al centro. La razón es práctica: 30 km por la Ruta 160 permiten mantener los controles mensuales sin faltar.",
     secciones=[
         ("Cómo se inicia el tratamiento",
-         "<p>La ortodoncia parte con una evaluación con la dentista general (Dra. Javiera Burgos o Dr. Carlos Jiménez), que revisa la boca, solicita radiografías y descarta caries o problemas de encías antes de instalar los brackets. Después gestiona la derivación con la ortodoncista, la Dra. Daniela Castillo. El presupuesto cuesta $15.000 y no tiene costo si se inicia ese día el tratamiento previo.</p>"
+         "<p>La ortodoncia parte con una evaluación con la dentista general (Dra. Javiera Burgos o Dr. Carlos Jiménez), que revisa la boca, solicita radiografías y descarta caries o problemas de encías antes de instalar los brackets. Después gestiona la derivación con la ortodoncista, la Dra. Daniela Castillo. La evaluación cuesta $15.000 y se descuenta si ese mismo día comienzas o dejas pagado el tratamiento previo (casi siempre limpieza y flúor).</p>"
          + tabla_oferta(["odo_eval", "orto_brackets", "orto_control"])),
         ("Constancia: el factor que más pesa",
          "<p>Un tratamiento de ortodoncia dura entre 18 y 36 meses, con visitas cada tres o cuatro semanas. Lo que más determina el resultado es no perder controles. Para una familia de Curanilahue, la forma de sostenerlos es pedir el siguiente control antes de salir de la consulta, acordar una hora que no choque con el trabajo o el colegio y avisar por WhatsApp con tiempo si hay que reagendar.</p>"

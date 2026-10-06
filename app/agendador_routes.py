@@ -191,7 +191,7 @@ _PRESTACIONES: dict[str, list[dict]] = {
         {"n": "Carillas de resina", "p": "desde $50.000"},
     ],
     "Ortodoncia": [
-        {"n": "Evaluación dental previa (gratis si inicia tratamiento ese día)", "p": "$15.000"},
+        {"n": "Evaluación dental previa (se descuenta si inicia o paga el tratamiento ese día)", "p": "$15.000"},
         {"n": "Instalación brackets boca completa", "p": "$120.000"},
         {"n": "Instalación brackets 1 arcada", "p": "$60.000"},
         {"n": "Control mensual ortodoncia", "p": "$30.000"},
@@ -206,8 +206,9 @@ _AGENDAR_VIA = {
     "Ortodoncia": {
         "via": "Odontología General",
         "nota": ("El tratamiento de ortodoncia parte con una evaluación dental "
-                 "con nuestro equipo de Odontología General ($15.000 — gratis si "
-                 "inicia un tratamiento ese mismo día). La dentista evalúa su caso, "
+                 "con nuestro equipo de Odontología General ($15.000, que se "
+                 "descuenta si ese mismo día inicia o deja pagado el tratamiento "
+                 "previo). La dentista evalúa su caso, "
                  "solicita radiografías y gestiona su derivación con la ortodoncista "
                  "Dra. Daniela Castillo."),
     },

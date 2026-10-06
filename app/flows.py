@@ -16800,8 +16800,10 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     # ── Ortodoncia/dental: rutea según si el paciente YA está en tratamiento ──
     # 4 macrogrupos de negocio, 2 destinos (dueño 2026-07-08):
     #   Grupo 1 (nunca evaluado, quiere brackets)              → odontología
-    #     general (Dra. Burgos, $15.000 evaluación/presupuesto, gratis si
-    #     empieza tratamiento previo ese día).
+    #     general (Dra. Burgos, $15.000 evaluación: se descuenta del
+    #     tratamiento previo —limpieza, flúor, etc.— SOLO si ese mismo día lo
+    #     comienza o lo deja pagado; nunca de la instalación. Así la dentista
+    #     no hace evaluaciones gratis. Dueño 2026-10-06).
     #   Grupos 2/3/4 (instalación parcial/completa, en control) → YA están
     #     con la Dra. Castillo (66) → horas directo con ELLA, con aviso de
     #     que pueden ajustarse.
@@ -16854,15 +16856,16 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             return await _iniciar_agendar(
                 phone, data, "odontología",
                 saludo_prefix=(
-                    "¿Quieres empezar tu tratamiento de ortodoncia? 🦷✨\n\n"
-                    "Primero debes agendar una cita con nuestra dentista general.\n"
-                    "Ella evaluará tu caso, verá si necesitas algún tratamiento previo, "
-                    "te dará la orden para radiografías y tomará fotografías.\n"
-                    "Después, ¡ella misma gestionará tu derivación con la ortodoncista! 😁\n\n"
-                    "El valor del presupuesto es de $15.000, pero si decides comenzar tu "
-                    "tratamiento previo en ese momento, el presupuesto te sale gratis y "
-                    "solo pagas la acción que se realice ese día.\n\n"
-                    "Quedamos atentos si quieres agendar tu hora. 😊\n\n"
+                    "🦷 *Ortodoncia en Carampangue, sin viajar a Concepción*\n\n"
+                    "• Brackets boca completa: *$120.000*\n"
+                    "• Controles mensuales: *$30.000*\n\n"
+                    "Se parte con una *evaluación con nuestra dentista* ($15.000): revisa "
+                    "tu caso, te da la orden de radiografías, toma fotos y te deriva con "
+                    "la ortodoncista.\n\n"
+                    "💡 Los $15.000 *se descuentan si ese mismo día comienzas o dejas pagado* "
+                    "el tratamiento previo a los brackets (casi siempre limpieza y flúor).\n\n"
+                    "🔥 *Precio especial* — Estudio radiográfico de ortodoncia (panorámica + telerradiografía + bitewing): *solo $40.000* 📸\n\n"
+                    "Estas son las próximas horas para tu evaluación 👇\n\n"
                 ),
             )
         # _es_pedido_dental_generico sin señal de tratamiento activo → sigue

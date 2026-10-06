@@ -814,7 +814,7 @@ ODONTOLOGÍA / DENTAL
 - Limpieza dental / sarro / profilaxis / me sangran las encías → destartraje + profilaxis, $30.000 en **Odontología General**. Duración ~40 min, sin dolor.
 - Sacar muela / sacar diente / muela del juicio / muela picada que no se puede arreglar → exodoncia simple $40.000, compleja $60.000 en **Odontología General**. Se usa anestesia local, ~30–45 min.
 - Matar el nervio / tratamiento de conducto / dolor fuerte de muela / caries profunda que llega al nervio → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente). Se limpia y sella el interior del diente para evitar extraerlo.
-- Frenillos / fierros / brackets / dientes chuecos / quiero arreglarme los dientes / dientes torcidos / ortodoncia / quiero ortodoncia / cuánto cuesta la ortodoncia → responde SIEMPRE con este texto exacto (no inventes otro): "¿Quieres empezar tu tratamiento de ortodoncia? 🦷✨\n\nPrimero debes agendar una cita con nuestra *dentista general*.\nElla evaluará tu caso, verá si necesitas algún tratamiento previo, te dará la orden para radiografías y tomará fotografías.\nDespués, ¡ella misma gestionará tu derivación con la ortodoncista! 😁\n\nEl valor del presupuesto es de $15.000, pero si decides comenzar tu tratamiento previo en ese momento, el presupuesto te sale gratis y solo pagas la acción que se realice ese día.\n\n💰 *Valores referenciales de ortodoncia* (después de la evaluación dental):\n• Instalación brackets boca completa: *$120.000*\n• Controles mensuales: *$30.000* (ajuste de arcos y elásticos, ~18-24 meses de tratamiento)\n\nQuedamos atentos si quieres agendar tu hora 😊". La especialidad para agendar es "odontología" (dentista general, NO ortodoncia directamente).
+- Frenillos / fierros / brackets / dientes chuecos / quiero arreglarme los dientes / dientes torcidos / ortodoncia / quiero ortodoncia / cuánto cuesta la ortodoncia → responde SIEMPRE con este texto exacto (no inventes otro, no agregues pregunta final: el sistema agrega la próxima hora con botón): "🦷 *Ortodoncia en Carampangue, sin viajar a Concepción*\n\n• Brackets boca completa: *$120.000*\n• Controles mensuales: *$30.000* (~18-24 meses)\n\nSe parte con una *evaluación con nuestra dentista* ($15.000): revisa tu caso, te da la orden de radiografías, toma fotos y te deriva con la ortodoncista.\n\n💡 Los $15.000 *se descuentan si ese mismo día comienzas o dejas pagado* el tratamiento previo a los brackets (casi siempre limpieza y flúor).\n\n🔥 *Precio especial* — Estudio radiográfico de ortodoncia (panorámica + telerradiografía + bitewing): *solo $40.000* 📸". La especialidad para agendar es "odontología" (dentista general, NO ortodoncia directamente).
 - Perdí un diente / diente nuevo / poner diente fijo / implante dental / quiero un implante → **Implantología** con Dra. Aurora Valdés (desde $650.000). Se instala un tornillo de titanio en el hueso y una corona encima. 2–3 sesiones separadas por meses.
 - Blanqueamiento / aclarar dientes / dientes amarillos → **Odontología General**, $75.000. Se aplica gel especial ~60 min, aclara varios tonos, indoloro.
 
@@ -1274,7 +1274,8 @@ ODONTOLOGÍA GENERAL (Dra. Javiera Burgos y Dr. Carlos Jiménez — solo particu
 - Destartraje + profilaxis: $30.000 — limpieza dental profesional: retiro de sarro y placa bacteriana con ultrasonido + pulido. Se recomienda cada 6 meses.
 
 ORTODONCIA (Dra. Daniela Castillo — solo particular):
-⚠️ IMPORTANTE: NO se agenda directamente con ortodoncia. El paciente SIEMPRE debe primero agendar una evaluación con la Dra. Javiera Burgos (ella gestiona la derivación a ortodoncia). ESTO APLICA SOLO A ORTODONCIA: para odontología general (tapaduras, limpiezas, extracciones) atienden indistintamente la Dra. Burgos y el Dr. Jiménez, según disponibilidad. La dentista evalúa el caso, solicita radiografías, toma fotografías y luego ella gestiona la derivación a la ortodoncista. El presupuesto dental es $15.000, pero si el paciente decide empezar tratamiento previo ese día, el presupuesto sale gratis. La especialidad para agendar es "odontología" (NO "ortodoncia").
+⚠️ IMPORTANTE: NO se agenda directamente con ortodoncia. El paciente SIEMPRE debe primero agendar una evaluación con la Dra. Javiera Burgos (ella gestiona la derivación a ortodoncia). ESTO APLICA SOLO A ORTODONCIA: para odontología general (tapaduras, limpiezas, extracciones) atienden indistintamente la Dra. Burgos y el Dr. Jiménez, según disponibilidad. La dentista evalúa el caso, solicita radiografías, toma fotografías y luego ella gestiona la derivación a la ortodoncista. La evaluación cuesta $15.000 y SE DESCUENTA del tratamiento previo (limpieza, flúor u otro; casi siempre limpieza y flúor) SOLO si ese mismo día el paciente lo comienza o lo deja pagado. Si no, se cobra (la dentista no hace evaluaciones gratis). NUNCA se descuenta de la instalación de brackets. La especialidad para agendar es "odontología" (NO "ortodoncia").
+Estudio radiográfico de ortodoncia (SIEMPRE requerido antes de instalar): panorámica + telerradiografía + bitewing = $40.000 en el CMC, presentarlo como PRECIO ESPECIAL (sueltas $15.000 c/u). No mencionar convenio. No decir "imbatible", "el más barato" ni comparar con otros centros. NO afirmar precios de otros centros: no están verificados.
 Precios referenciales de ortodoncia (solo después de la evaluación dental):
 - Instalación brackets boca completa: $120.000 — brackets metálicos arriba y abajo. Incluye arco inicial.
 - Instalación brackets 1 arcada: $60.000 — brackets solo arriba o solo abajo.
@@ -2701,12 +2702,16 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Con anestesia local, sin dolor.\n\n"
      "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
     (("cuanto", "bracket"),
-     "*Ortodoncia* con la Dra. Daniela Castillo (valores referenciales):\n"
-     "- Evaluación inicial: *$15.000* (con odontólogo general primero)\n"
-     "- Instalación brackets boca completa: desde *$120.000*\n"
-     "- Controles mensuales: *$30.000*\n\n"
-     "El primer paso es una evaluación con nuestro odontólogo general. "
-     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
+     "🦷 *Ortodoncia en Carampangue, sin viajar a Concepción*\n\n"
+     "• Brackets boca completa: *$120.000*\n"
+     "• Controles mensuales: *$30.000*\n\n"
+     "Se parte con una *evaluación con nuestra dentista* ($15.000), que te "
+     "deriva con la ortodoncista. Los $15.000 *se descuentan si ese mismo "
+     "día comienzas o dejas pagado el tratamiento previo* (casi siempre "
+     "limpieza y flúor).\n\n"
+     "🔥 *Precio especial* — Estudio radiográfico de ortodoncia (panorámica + "
+     "telerradiografía + bitewing): *solo $40.000* 📸\n\n"
+     "¿Te busco hora? Escribe *agendar ortodoncia*."),
     (("cuanto", "implante"),
      "El *implante dental* (corona + tornillo) parte desde *$650.000* con la "
      "Dra. Aurora Valdés (implantóloga). El proceso total toma 3-6 meses.\n\n"
@@ -2714,15 +2719,19 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "*(44) 296 5226*."),
     (("precio", "consulta", "dental"),
      "La *consulta odontológica* (evaluación) cuesta *$15.000*. "
-     "Incluye diagnóstico y plan de tratamiento.\n\n"
+     "Incluye diagnóstico y plan de tratamiento. Se descuenta si ese mismo día comienzas o dejas pagado el tratamiento.\n\n"
      "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
     (("cuanto", "ortodoncia"),
-     "*Ortodoncia* con la Dra. Daniela Castillo (valores referenciales):\n"
-     "- Evaluación inicial: *$15.000* (con odontólogo general primero)\n"
-     "- Instalación brackets boca completa: desde *$120.000*\n"
-     "- Controles mensuales: *$30.000*\n\n"
-     "El primer paso es una evaluación con nuestro odontólogo general. "
-     "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
+     "🦷 *Ortodoncia en Carampangue, sin viajar a Concepción*\n\n"
+     "• Brackets boca completa: *$120.000*\n"
+     "• Controles mensuales: *$30.000*\n\n"
+     "Se parte con una *evaluación con nuestra dentista* ($15.000), que te "
+     "deriva con la ortodoncista. Los $15.000 *se descuentan si ese mismo "
+     "día comienzas o dejas pagado el tratamiento previo* (casi siempre "
+     "limpieza y flúor).\n\n"
+     "🔥 *Precio especial* — Estudio radiográfico de ortodoncia (panorámica + "
+     "telerradiografía + bitewing): *solo $40.000* 📸\n\n"
+     "¿Te busco hora? Escribe *agendar ortodoncia*."),
 ]
 
 
