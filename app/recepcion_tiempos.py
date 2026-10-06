@@ -49,6 +49,19 @@ TRAMOS = [
 ]
 TRAMO_LBL = {t[0]: t[1] for t in TRAMOS}
 
+# Tramos finos (Campañas Meta → "Velocidad de respuesta"): lo que pidió el
+# dueño. Se mide igual que TRAMOS (minutos hábiles hasta la 1ª respuesta
+# humana); solo cambian los cortes: la conversación de un anuncio se enfría en
+# minutos, no en horas.
+TRAMOS_FINOS = [
+    ("lt5", "Menos de 5 min", 0, 5),
+    ("5_30", "5 a 30 min", 5, 30),
+    ("30_120", "30 min a 2 horas", 30, 120),
+    ("gt2h", "Más de 2 horas", 120, None),
+    ("sin_respuesta", "Sin respuesta", None, None),
+]
+TRAMO_FINO_LBL = {t[0]: t[1] for t in TRAMOS_FINOS}
+
 
 def en_horario(epoch: int, horario: dict | None = None) -> bool:
     horario = horario or HORARIO
@@ -131,6 +144,31 @@ def tramo(minutos: float | None, respondida: bool = True) -> str:
         if minutos >= lo and (hi is None or minutos < hi):
             return tid
     return "gt4h"
+
+
+def tramo_fino(minutos: float | None, respondida: bool = True) -> str:
+    """Igual que `tramo` pero con los cortes de TRAMOS_FINOS (<5, 5-30, 30-120, >2 h)."""
+    if not respondida or minutos is None:
+        return "sin_respuesta"
+    for tid, _, lo, hi in TRAMOS_FINOS:
+        if lo is None:
+            continue
+        if minutos >= lo and (hi is None or minutos < hi):
+            return tid
+    return "gt2h"
+
+
+def curva_fina(personas: list[dict]) -> list[dict]:
+    """Como `curva`, con TRAMOS_FINOS. personas: dicts con 'minutos',
+    'respondida' y 'agendo'."""
+    out = []
+    por = [(tramo_fino(p.get("minutos"), bool(p.get("respondida"))), p) for p in personas]
+    for tid, lbl, _, _ in TRAMOS_FINOS:
+        g = [p for t, p in por if t == tid]
+        ag = sum(1 for p in g if p.get("agendo"))
+        out.append({"tramo": tid, "label": lbl, "personas": len(g), "agendaron": ag,
+                    "pct": round(100 * ag / len(g)) if g else None})
+    return out
 
 
 def mediana(valores: list[float]) -> float | None:

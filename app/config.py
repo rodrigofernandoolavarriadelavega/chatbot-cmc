@@ -488,6 +488,29 @@ try:
 except ValueError:
     RECEPCION_ALERTA_MIN = 15
 
+# Agenda × anuncios (app/campanas_meta_integraciones.py). Cupos libres reales de
+# los próximos 14 días por profesional, leídos de Medilink con el MISMO cálculo
+# de slots que usa el bot (respeta intervalo del bot, breaks, bloqueos y citas),
+# secuencial y con pausa, en carril batch, y guardados en `agenda_cupos_cache`.
+# El panel solo lee ese cache: jamás llama a Medilink. Default ENCENDIDO para el
+# cache; apagar: AGENDA_CUPOS_ACTIVE=false (el panel muestra "sin datos").
+AGENDA_CUPOS_ACTIVE = os.getenv(
+    "AGENDA_CUPOS_ACTIVE", "true"
+).lower() in ("true", "1", "yes", "on")
+# Alertas Telegram "gastando en una especialidad sin cupos" y "cupos vacíos sin
+# anuncio" (meta_alertas.py). Default APAGADO: primero se mira el panel unos días
+# para ver que los umbrales no cansan; encender con AGENDA_ALERTAS_ACTIVE=true.
+AGENDA_ALERTAS_ACTIVE = os.getenv(
+    "AGENDA_ALERTAS_ACTIVE", "false"
+).lower() in ("true", "1", "yes", "on")
+
+# Creativos de los anuncios (miniatura, título y texto) desde la Marketing API
+# → `meta_creativos` + imágenes guardadas en disco (data/creativos). Usa el mismo
+# META_ACCESS_TOKEN de la foto diaria (permiso ads_read). Sin token no hace nada.
+META_CREATIVOS_ACTIVE = os.getenv(
+    "META_CREATIVOS_ACTIVE", "true"
+).lower() in ("true", "1", "yes", "on")
+
 # Foto diaria de Google Search Console (app/gsc_snapshot.py, 06:40 CLT, últimos
 # 5 días) → gsc_diario / gsc_paginas_diario, para el canal "Página web" de
 # Campañas Meta. Service account de solo lectura; la llave NO va en el repo.

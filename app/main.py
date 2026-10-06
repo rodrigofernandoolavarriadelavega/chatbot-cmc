@@ -686,6 +686,31 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=7200,
         coalesce=True,
     )
+    # Campañas Meta × agenda: cupos libres reales 14 días por profesional (misma
+    # lectura de slots que el bot, secuencial, carril batch) → agenda_cupos_cache.
+    # 05:30 y 21:30, fuera de la jornada para no competir con el bot por Medilink.
+    # Flag AGENDA_CUPOS_ACTIVE.
+    from campanas_meta_integraciones import job_agenda_cupos, job_meta_creativos
+    scheduler.add_job(
+        job_agenda_cupos,
+        CronTrigger(hour="5,21", minute=30, timezone=_CLT),
+        id="agenda_cupos",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
+    )
+    # Creativos de los anuncios (texto + miniatura guardada) tras la foto diaria
+    # de insights. Flag META_CREATIVOS_ACTIVE.
+    scheduler.add_job(
+        job_meta_creativos,
+        CronTrigger(hour=6, minute=50, timezone=_CLT),
+        id="meta_creativos",
+        replace_existing=True,
+        misfire_grace_time=7200,
+        coalesce=True,
+        max_instances=1,
+    )
     # Panel del Día: cache de CAPACIDAD REAL por profesional (Medilink /citas,
     # secuencial+throttle) 04:10 CLT — horario libre, off-peak. Alimenta el
     # potencial/ocupación reales del N1 sin fan-out en vivo.

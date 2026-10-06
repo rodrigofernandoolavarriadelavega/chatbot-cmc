@@ -160,14 +160,20 @@ SUG_MUESTRA_CHICA = 5      # citas en 4 semanas
 SUG_SUBIR_PCT, SUG_BAJAR_PCT, SUG_BAJAR_FUERTE_PCT = 20, 15, 30
 
 
-def recomendar(c28: dict, c14: dict | None = None) -> dict | None:
+def _txt_periodo(dias: int) -> str:
+    return "4 semanas" if dias == 28 else f"{dias} días"
+
+
+def recomendar(c28: dict, c14: dict | None = None, dias: int = 28) -> dict | None:
     """Regla pura para UNA campaña. c28/c14: filas de campaña de panel_data
-    (4 y 2 semanas). Devuelve {accion, monto_semana, razon, muestra_chica} o
-    None si no gastó."""
+    (el rango completo y su segunda mitad; por defecto 4 y 2 semanas).
+    `dias` = largo del rango de c28: el gasto semanal es gasto ÷ (dias/7).
+    Devuelve {accion, monto_semana, razon, muestra_chica} o None si no gastó."""
     gasto = c28.get("gasto") or 0
     if gasto <= 0:
         return None
-    sem = gasto / 4
+    per = _txt_periodo(dias)
+    sem = gasto / (max(dias, 1) / 7)
     citas = c28.get("citas") or 0
     ret_c = c28.get("retorno_centro")
     frec = c28.get("frecuencia") or 0
@@ -179,7 +185,7 @@ def recomendar(c28: dict, c14: dict | None = None) -> dict | None:
         return {"accion": acc, "monto_semana": monto if acc != "mantener" else 0, "razon": razon,
                 "muestra_chica": chica and acc != "pausar", "gasto_semana": round(sem), "retorno_centro": ret_c, "citas": citas}
     if citas == 0 and gasto >= SUG_SIN_CITAS_GASTO:
-        return r("pausar", 100, f"Gastó {_clp(gasto)} en 4 semanas sin traer ninguna cita.")
+        return r("pausar", 100, f"Gastó {_clp(gasto)} en {per} sin traer ninguna cita.")
     if ret_c is None:
         return r("mantener", 0, "Aún no hay venta para medirla.")
     txt_ret = f"de cada $1.000 gastados vuelven {_clp(ret_c * 1000)} al centro"
@@ -192,7 +198,7 @@ def recomendar(c28: dict, c14: dict | None = None) -> dict | None:
         return r("subir", SUG_SUBIR_PCT, f"Se paga solo: {txt_ret}.")
     if ret_c >= SUG_MANTENER_RET:
         if ret14 is not None and ret14 < SUG_BAJAR_FUERTE_RET and not chica:
-            return r("bajar", SUG_BAJAR_PCT, f"Las últimas 2 semanas cayó: {txt_ret} en 4 semanas, menos en las 2 últimas.")
+            return r("bajar", SUG_BAJAR_PCT, f"En la segunda mitad del periodo cayó: {txt_ret} en {per}, menos en la segunda mitad.")
         return r("mantener", 0, f"Cerca del equilibrio: {txt_ret}.")
     if chica:
         return r("mantener", 0, f"Todavía no se paga ({txt_ret}), pero con menos de {SUG_MUESTRA_CHICA} citas es pronto para cortar.")
@@ -201,22 +207,40 @@ def recomendar(c28: dict, c14: dict | None = None) -> dict | None:
     return r("bajar", SUG_BAJAR_PCT, f"Aún no se paga: {txt_ret}.")
 
 
-def sugerencias_presupuesto(hoy: date | None = None) -> dict:
+def sugerencias_presupuesto(hoy: date | None = None, desde: date | None = None,
+                            hasta: date | None = None, plataforma: str | None = None) -> dict:
+    """Sin `desde`/`hasta`: las últimas 4 semanas cerradas (resumen semanal).
+    Con ellos (panel): EXACTAMENTE el rango del filtro, el mismo con que se
+    arma la tabla, para que sugerencia y tabla no discrepen (ortodoncia 2,59×
+    contra 2,46× por rangos distintos, 6-oct). La tendencia usa la segunda
+    mitad del rango (solo si dura 14 días o más)."""
     hoy = hoy or datetime.now(_CL).date()
-    h = hoy - timedelta(days=1)
-    p28 = _kpis(h - timedelta(days=27), h, "meta")
-    p14 = _kpis(h - timedelta(days=13), h, "meta")
-    c14 = {c["campaign_id"]: c for c in p14["campanas"]}
+    if desde and hasta:
+        d, h = desde, hasta
+    else:
+        h = hoy - timedelta(days=1)
+        d = h - timedelta(days=27)
+    dias = (h - d).days + 1
+    pl = plataforma if plataforma in ("facebook", "instagram") else None
+    from campanas_meta_routes import panel_data
+    pr = panel_data(d.isoformat(), h.isoformat(), plataforma=pl, canal="meta")
+    c14 = {}
+    if dias >= 14:
+        mitad = dias // 2
+        p2 = panel_data((h - timedelta(days=mitad - 1)).isoformat(), h.isoformat(), plataforma=pl, canal="meta")
+        c14 = {c["campaign_id"]: c for c in p2["campanas"]}
     out = []
-    for c in p28["campanas"]:
+    for c in pr["campanas"]:
         if not c.get("activo"):
             continue
-        rec = recomendar(c, c14.get(c["campaign_id"]))
+        rec = recomendar(c, c14.get(c["campaign_id"]), dias)
         if rec:
-            out.append({"campaign_id": c["campaign_id"], "campana": c["campana"] or "Sin campaña", **rec})
+            out.append({"campaign_id": c["campaign_id"], "campana": c["campana"] or "Sin campaña",
+                        "desde": d.isoformat(), "hasta": h.isoformat(), "retorno_centro_rango": c.get("retorno_centro"),
+                        **rec})
     orden = {"pausar": 0, "bajar": 1, "subir": 2, "mantener": 3}
     out.sort(key=lambda x: (orden[x["accion"]], -x["gasto_semana"]))
-    return {"desde": (h - timedelta(days=27)).isoformat(), "hasta": h.isoformat(), "campanas": out}
+    return {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": dias, "rango_corto": dias < 21, "campanas": out}
 
 
 _ACC_TXT = {"subir": "Subir", "mantener": "Mantener", "bajar": "Bajar", "pausar": "Pausar"}
@@ -307,6 +331,15 @@ def evaluar_alertas(hoy: date | None = None) -> list[tuple[str, str]]:
                         f"{_clp(z['semana_previa'])}. Revisa si hay anuncios detenidos, pago rechazado "
                         f"o cuenta restringida.{extra}"))
         n_hoy, n_venc = _por_llamar(c, hoy)
+    # (e)(f) Agenda × anuncios, detrás de flag: gastar en una especialidad sin
+    # cupos / cupos vacíos sin anuncio. Lee solo el cache de cupos (nunca Medilink).
+    import config as _cfg
+    if getattr(_cfg, "AGENDA_ALERTAS_ACTIVE", False):
+        try:
+            import campanas_meta_integraciones as _ci
+            out += _ci.alertas_agenda(hoy)
+        except Exception as e:   # una alerta nueva no puede tumbar las demás
+            log.warning("meta_alertas: agenda × anuncios no disponible: %s", e)
     if n_hoy or n_venc:
         partes = []
         if n_venc:

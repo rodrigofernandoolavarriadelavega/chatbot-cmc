@@ -362,6 +362,14 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 ## Sesión en curso
 **Última actualización**: 2026-10-06
 
+### 2026-10-06 — Campañas Meta: integraciones (SIN COMMIT, SIN DEPLOY)
+- `app/campanas_meta_integraciones.py` (nuevo, cuelga de `cm.router`): agenda × anuncios
+  (`agenda_cupos_cache`, cron 05:30/21:30, flag `AGENDA_CUPOS_ACTIVE`; alertas Telegram detrás
+  de `AGENDA_ALERTAS_ACTIVE`=false), creativos + fatiga (`meta_creativos`, imágenes en
+  `data/creativos`, cron 06:50, `META_CREATIVOS_ACTIVE`), territorio, velocidad, valor 90 d,
+  aviso a Meta (`capi_purchase_corridas`). Venta en 3 partes + retorno estricto, atendidos por
+  fuente, sugerencias con el MISMO rango de la tabla. Test: `test_campanas_integraciones_2026_10_06.py`.
+
 ### 2026-10-05/06 — Atribución Meta Ads completa + Campañas Meta + orden del repo (TODO EN PROD)
 - **Atribución**: CAPI con `ctwa_clid` nativo + WABA; copia al dataset ligado a la WABA
   (`META_CAPI_EXTRA_DATASET_IDS`); `meta_referrals` guarda plataforma FB/IG + `raw_json`;
