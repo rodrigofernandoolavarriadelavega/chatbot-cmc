@@ -1910,6 +1910,7 @@ _OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_
 _GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ginecologo-curanilahue.html").exists() else ""
 _DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "dentista-curanilahue.html").exists() else ""
 _LANDING_ORTODONCIA_HTML = (_TEMPLATE_DIR / "landing_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ortodoncia.html").exists() else ""
+_LANDING_ESTETICA_HTML = (_TEMPLATE_DIR / "landing_estetica.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_estetica.html").exists() else ""
 _ADKUN_COMPANY_HTML = (_TEMPLATE_DIR / "adkun_company_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_company_board.html").exists() else ""
 _ADKUN_LANDING_HTML = (_TEMPLATE_DIR / "adkun_landing.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_landing.html").exists() else ""
 _ALMA_PRODUCT_HTML = (_TEMPLATE_DIR / "alma_product_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_product_board.html").exists() else ""
@@ -2087,6 +2088,12 @@ def dentista_curanilahue():
 def landing_ortodoncia():
     """Landing SEO — Ortodoncia en Arauco y Carampangue."""
     return _LANDING_ORTODONCIA_HTML
+
+
+@app.get("/estetica", response_class=HTMLResponse)
+def landing_estetica():
+    """Landing — Estética facial en Carampangue (Dra. Valentina Fuentealba)."""
+    return _LANDING_ESTETICA_HTML
 
 
 @app.get("/sitio", response_class=HTMLResponse)
