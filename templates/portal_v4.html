@@ -1428,7 +1428,7 @@ a{color:inherit; text-decoration:none}
 
       <footer class="site-foot">
         <div class="sf-name">Centro Médico Carampangue</div>
-        <div class="sf-line">📍 República 102, Carampangue · <a href="https://www.google.com/maps/search/?api=1&query=Centro%20M%C3%A9dico%20Carampangue%2C%20Rep%C3%BAblica%20102%2C%20Carampangue%2C%20Arauco" target="_blank" rel="noopener">Cómo llegar</a></div>
+        <div class="sf-line">📍 Monsalve 102, esquina República, Carampangue · <a href="https://www.google.com/maps/search/?api=1&query=Centro%20M%C3%A9dico%20Carampangue%2C%20Rep%C3%BAblica%20102%2C%20Carampangue%2C%20Arauco" target="_blank" rel="noopener">Cómo llegar</a></div>
         <div class="sf-line">💬 <a href="https://wa.me/56966610737" target="_blank" rel="noopener">WhatsApp del centro</a> · 🚑 Emergencias: <a href="tel:131">SAMU 131</a></div>
         <button class="sf-install" id="sf-install" onclick="instalarApp()">📲 Instalar la app del centro</button>
       </footer>
@@ -1731,7 +1731,7 @@ function renderAll() {
 }
 
 /* ═══ Utilidades próximo control / info útil ═══ */
-const CMC_DIR = 'República 102, Carampangue, Arauco';
+const CMC_DIR = 'Monsalve 102, esquina República, Carampangue, Arauco';
 const CMC_MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Centro Médico Carampangue, ' + CMC_DIR);
 const CMC_WA = 'https://wa.me/56966610737';
 let _nextCita = null;
@@ -2206,7 +2206,7 @@ function compartirArbol() {
     return `• ${f}${m.edad != null ? ' (' + m.edad + ')' : ''}: ` +
       (m.proxima ? `${m.proxima.especialidad} · ${_fmtFamFecha(m.proxima)}` : 'sin horas agendadas');
   });
-  const txt = `🌳 *Horas médicas de la familia* — Centro Médico Carampangue\n${lines.join('\n')}\n\n📍 República 102, Carampangue`;
+  const txt = `🌳 *Horas médicas de la familia* — Centro Médico Carampangue\n${lines.join('\n')}\n\n📍 Monsalve 102, esquina República, Carampangue`;
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 function buildGenSVG(mem) {

@@ -462,7 +462,7 @@ function gcalHref() {
   return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
     + '&text=' + encodeURIComponent(`${S.esp.especialidad} — Centro Médico Carampangue`)
     + `&dates=${ds}T${p(h)}${p(mi)}00/${ds}T${p(Math.floor(fin/60))}${p(fin%60)}00&ctz=America/Santiago`
-    + '&location=' + encodeURIComponent('República 102, Carampangue, Arauco');
+    + '&location=' + encodeURIComponent('Monsalve 102, esquina República, Carampangue, Arauco');
 }
 
 async function confirmar() {

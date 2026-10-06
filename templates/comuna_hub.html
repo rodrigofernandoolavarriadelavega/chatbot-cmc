@@ -98,60 +98,280 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 }
 </script>
 
+<link rel="preload" href="/static/fonts/montserrat-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-:root {
-  --navy:#0F3F68; --navy-deep:#0a2c4d;
-  --teal:#1F7E8C; --aqua:#4FBECE; --aqua-soft:#B6E3D4;
-  --cream:#F4F1ED; --cream-soft:#FAF8F5; --paper:#FFFFFF;
-  --ink-900:#0a1a28; --ink-700:#3c5166; --ink-500:#5e7183; --ink-300:#bac4ce;
-  --shadow-sm:0 2px 8px rgba(15,63,104,0.06);
-  --shadow:0 8px 24px rgba(15,63,104,0.10);
-  --radius:16px; --radius-pill:999px;
-  --font-display:'Fraunces','Times New Roman',serif;
-  --font-body:'Inter',-apple-system,sans-serif;
+@font-face {
+  font-family: 'Montserrat'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations'), url('/static/fonts/montserrat-var-latin.woff2') format('woff2');
 }
-*{box-sizing:border-box}body{margin:0;font-family:var(--font-body);font-size:16px;color:var(--ink-700);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
-.container{max-width:1180px;margin:0 auto;padding:0 24px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;font-family:var(--font-body);font-size:14.5px;font-weight:700;border-radius:var(--radius-pill);border:1px solid transparent;cursor:pointer;transition:transform .2s,background .2s;text-decoration:none;white-space:nowrap}
-.btn-wa{background:#25D366;color:white;box-shadow:0 6px 16px -4px rgba(37,211,102,0.45)}
-.btn-wa:hover{background:#1ebe5a;transform:translateY(-1px)}
-.btn-lg{padding:15px 28px;font-size:15.5px}
-.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.94);backdrop-filter:blur(18px);border-bottom:1px solid #e5e7eb;height:64px;display:flex;align-items:center}
-.nav-brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--navy)}
-.nav-brand img{width:38px;height:38px}
-.hero{background:linear-gradient(135deg,var(--navy-deep) 0%,var(--navy) 50%,var(--teal) 100%);color:white;padding:60px 0 80px;text-align:center;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:0;right:0;width:300px;height:200px;background:var(--aqua);opacity:0.15;clip-path:polygon(100% 0,0 0,100% 100%)}
-.eyebrow{display:inline-block;padding:6px 16px;background:rgba(255,255,255,0.15);border-radius:var(--radius-pill);font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:18px;backdrop-filter:blur(10px)}
-.hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(32px,5.5vw,52px);line-height:1.1;margin:0 0 20px;letter-spacing:-0.02em}
-.hero h1 em{color:var(--aqua);font-style:italic;font-weight:700}
-.hero .lead{font-size:clamp(17px,2vw,21px);max-width:720px;margin:0 auto 32px;opacity:0.95;line-height:1.5}
-.hero-meta{display:inline-flex;flex-wrap:wrap;gap:18px 28px;justify-content:center;margin-bottom:32px;font-size:14px;font-weight:600}
-.hero-meta-item{display:flex;align-items:center;gap:6px;opacity:0.9}
-.hero-meta-item svg{flex:none}
-.section{padding:64px 0}
-.section-title{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,3.5vw,40px);color:var(--ink-900);margin:0 0 12px;letter-spacing:-0.015em;text-align:center}
-.section-sub{font-size:17px;color:var(--ink-500);max-width:680px;margin:0 auto 40px;text-align:center;line-height:1.5}
-.spec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
-.spec-card{display:flex;flex-direction:column;background:white;border:1px solid #e5e7eb;border-radius:var(--radius);padding:22px 22px 18px;transition:transform .2s,box-shadow .2s,border-color .2s}
-.spec-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--aqua)}
-.spec-card .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 10px;border-radius:var(--radius-pill);background:var(--aqua-soft);color:var(--teal);align-self:flex-start;margin-bottom:12px}
-.spec-card h3{font-family:var(--font-display);font-weight:700;font-size:19px;color:var(--ink-900);margin:0 0 8px}
-.spec-card p{font-size:14px;color:var(--ink-500);margin:0 0 14px;flex:1}
-.spec-card .price{font-size:13.5px;font-weight:600;color:var(--navy);margin-bottom:6px}
-.spec-card .read{font-size:13px;font-weight:600;color:var(--teal);display:inline-flex;align-items:center;gap:6px}
-.cta-band{background:linear-gradient(135deg,var(--aqua) 0%,var(--teal) 100%);color:white;padding:56px 24px;text-align:center;border-radius:var(--radius);margin:64px 0}
-.cta-band h2{font-family:var(--font-display);font-size:clamp(26px,3.5vw,38px);font-weight:800;margin:0 0 14px}
-.cta-band p{font-size:17px;opacity:0.95;max-width:580px;margin:0 auto 24px}
-.faq{background:var(--cream-soft);padding:64px 0}
-.faq-list{max-width:780px;margin:0 auto}
-.faq-item{background:white;border:1px solid #e5e7eb;border-radius:var(--radius);padding:24px 28px;margin-bottom:14px}
-.faq-q{font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--ink-900);margin:0 0 10px}
-.faq-a{font-size:15.5px;color:var(--ink-700);margin:0;line-height:1.6}
-footer{background:var(--ink-900);color:#94a3b8;padding:40px 24px;text-align:center;font-size:14px}
-footer a{color:var(--aqua)}
-.wa-float{position:fixed;bottom:24px;right:24px;width:60px;height:60px;background:#25D366;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px -4px rgba(37,211,102,0.5);z-index:100;transition:transform .2s}
-.wa-float:hover{transform:scale(1.08)}
+
+:root {
+  --brand-deep: #1172AB; --brand-deep-ink: #0B4F7A; --brand-deep-soft: #E8F2F9;
+  --brand-navy: #0F3F68; --brand-teal: #4FBECE; --brand-teal-soft: #E6F6F8; --brand-teal-ink: #1F7E8C;
+  --ink-900: #0A1A28; --ink-800: #11283C; --ink-700: #223548; --ink-600: #3C5166; --ink-500: #5E7183;
+  --ink-400: #8A97A6; --ink-300: #BAC4CE; --ink-200: #DFE5EC; --ink-100: #EEF2F6; --ink-50: #F7F9FB;
+  --paper: #FFFFFF; --accent-success: #15803D; --wa: #25D366; --wa-ink: #1EBE5A; --star: #F5B301;
+  --shadow-xs: 0 1px 2px rgba(11,79,122,0.04);
+  --shadow-sm: 0 2px 6px rgba(11,79,122,0.06);
+  --shadow:    0 10px 30px -12px rgba(11,79,122,0.18), 0 2px 6px rgba(11,79,122,0.06);
+  --shadow-lg: 0 30px 60px -20px rgba(11,79,122,0.25), 0 8px 16px rgba(11,79,122,0.08);
+  --radius-sm: 10px; --radius: 16px; --radius-lg: 24px; --radius-pill: 999px;
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --font-display: 'Montserrat', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  color: var(--ink-700); background: var(--paper);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; height: auto; }
+h1, h2, h3, h4, p { margin: 0; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+:focus-visible { outline: 3px solid var(--brand-teal); outline-offset: 2px; border-radius: 6px; }
+.skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; background: var(--brand-navy); color: #fff; padding: 10px 16px; border-radius: 10px; font: 700 14px var(--font-display); }
+.skip-link:focus { top: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 22px; min-height: 44px; border-radius: var(--radius-pill); border: 1.5px solid transparent;
+  font-family: var(--font-display); font-weight: 700; font-size: 14.5px; letter-spacing: 0.01em; line-height: 1;
+  white-space: nowrap; cursor: pointer;
+  transition: transform .15s var(--ease), box-shadow .2s var(--ease), background .2s, color .2s, border-color .2s;
+}
+.btn svg { flex-shrink: 0; }
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--brand-deep); color: #fff; box-shadow: 0 8px 18px -8px rgba(17,114,171,0.55); }
+.btn-primary:hover { background: var(--brand-deep-ink); box-shadow: 0 12px 24px -8px rgba(17,114,171,0.6); }
+.btn-wa { background: var(--wa); color: #fff; box-shadow: 0 6px 16px -4px rgba(37,211,102,0.45); }
+.btn-wa:hover { background: var(--wa-ink); transform: translateY(-1px); box-shadow: 0 10px 22px -4px rgba(37,211,102,0.55); }
+.btn-ghost { color: var(--ink-800); background: #fff; border-color: var(--ink-200); }
+.btn-ghost:hover { border-color: var(--brand-deep); color: var(--brand-deep); background: var(--brand-deep-soft); }
+.btn-white { background: #fff; color: var(--brand-navy); }
+.btn-white:hover { background: var(--brand-deep-soft); transform: translateY(-1px); }
+.btn-lg { padding: 18px 28px; font-size: 15.5px; }
+
+.emergency-strip { background: #B91C1C; color: #fff; padding: 7px 16px; font-size: 12.5px; text-align: center; font-weight: 500; }
+.emergency-strip strong { font-weight: 700; }
+.emergency-strip a { color: #fff; text-decoration: underline; text-underline-offset: 2px; font-weight: 700; }
+
+.nav-wrap {
+  position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.94);
+  backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px);
+  border-bottom: 1px solid var(--ink-100);
+}
+.nav { display: flex; align-items: center; gap: 20px; height: 72px; }
+.nav-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.nav-brand img { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.1; font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--ink-900); letter-spacing: -0.02em; min-width: 0; }
+.nav-brand-sub { font-family: var(--font-display); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: var(--brand-deep); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-cta { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 11.5px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-deep); margin-bottom: 16px;
+}
+.eyebrow::before { content: ''; width: 18px; height: 2px; border-radius: 2px; background: var(--brand-teal); flex-shrink: 0; }
+.breadcrumb { margin-bottom: 22px; }
+.breadcrumb ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-500); }
+.breadcrumb li { display: inline-flex; align-items: center; gap: 6px; }
+.breadcrumb li + li::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid var(--ink-300); border-top: 1.5px solid var(--ink-300); transform: rotate(45deg); margin-right: 4px; }
+.breadcrumb a { color: var(--ink-500); padding: 4px 0; transition: color .15s; }
+.breadcrumb a:hover { color: var(--brand-deep); }
+.breadcrumb .current { color: var(--ink-800); font-weight: 600; }
+
+.sec { padding: 88px 0; }
+.sec-alt { background: var(--ink-50); }
+.sec-head { max-width: 720px; margin: 0 0 40px; }
+.sec-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+.sec-head h2 {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3.2vw, 38px);
+  line-height: 1.12; letter-spacing: -0.025em; color: var(--ink-900); margin-bottom: 12px; text-wrap: balance;
+}
+.sec-head h2 em { font-style: italic; color: var(--brand-teal-ink); }
+.sec-head p { font-size: 17px; line-height: 1.6; color: var(--ink-600); text-wrap: pretty; }
+
+.hero-photo {
+  position: relative; margin: 0; border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow-lg); border: 6px solid #fff; aspect-ratio: 4 / 3.3; background: var(--ink-100);
+}
+.hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+.hero-photo figcaption {
+  position: absolute; left: 14px; right: 14px; bottom: 14px; padding: 14px 18px; border-radius: 14px;
+  background: rgba(10,26,40,0.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: #fff; font-family: var(--font-display);
+}
+.hero-photo figcaption small { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 4px; }
+.hero-photo figcaption span { display: block; font-size: 15px; font-weight: 700; line-height: 1.35; }
+
+.faq-list { max-width: 800px; margin: 0 auto; display: grid; gap: 10px; }
+.faq-list details { background: #fff; border: 1px solid var(--ink-200); border-radius: 14px; transition: border-color .2s, box-shadow .2s; }
+.faq-list details[open] { border-color: rgba(79,190,206,0.7); box-shadow: var(--shadow-sm); }
+.faq-list summary {
+  cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 18px 20px; min-height: 56px; border-radius: 14px;
+  font-family: var(--font-display); font-weight: 700; font-size: 16px; line-height: 1.4; color: var(--ink-900);
+}
+.faq-list summary::-webkit-details-marker { display: none; }
+.faq-list summary:hover { color: var(--brand-deep); }
+.faq-list summary svg { flex-shrink: 0; width: 32px; height: 32px; padding: 7px; border-radius: 50%; background: var(--brand-deep-soft); color: var(--brand-deep); transition: transform .2s var(--ease), background .2s; }
+.faq-list details[open] summary svg { transform: rotate(180deg); background: var(--brand-deep); color: #fff; }
+.faq-list .answer { padding: 0 20px 20px; font-size: 15.5px; line-height: 1.7; color: var(--ink-600); animation: faqIn .22s var(--ease); }
+.faq-list .answer strong { color: var(--ink-900); }
+@keyframes faqIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+.cta-band { position: relative; overflow: hidden; text-align: center; color: #fff; padding: 80px 0; background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-deep) 100%); }
+.cta-band::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(800px 400px at 95% -10%, rgba(79,190,206,0.32), transparent 55%), radial-gradient(600px 600px at 5% 120%, rgba(79,190,206,0.16), transparent 55%); }
+.cta-band > .container { position: relative; }
+.cta-band h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 3.8vw, 44px); line-height: 1.1; letter-spacing: -0.025em; margin: 0 auto 14px; max-width: 22ch; text-wrap: balance; }
+.cta-band h2 em { font-style: italic; color: var(--brand-teal); }
+.cta-band p { font-size: 17px; max-width: 580px; margin: 0 auto 32px; color: rgba(255,255,255,0.9); }
+.cta-band .ctas { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.footer { background: #0A1A28; color: rgba(255,255,255,0.72); padding: 48px 0 32px; position: relative; font-size: 14px; }
+.footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--brand-teal) 0%, var(--brand-deep) 50%, var(--brand-teal) 100%); }
+.footer-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; align-items: flex-start; }
+.footer-brand { display: flex; gap: 12px; align-items: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 16px; }
+.footer-brand img { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
+.footer-brand small { display: block; font-size: 13px; font-weight: 500; font-family: var(--font-body); color: rgba(255,255,255,0.7); margin-top: 2px; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 0 20px; list-style: none; margin: 0; padding: 0; }
+.footer-links a { display: inline-block; padding: 10px 0; color: rgba(255,255,255,0.78); transition: color .15s; }
+.footer-links a:hover { color: #fff; }
+.footer-foot { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12.5px; color: rgba(255,255,255,0.62); }
+.footer-foot a { color: rgba(255,255,255,0.8); text-decoration: underline; text-underline-offset: 2px; }
+
+.wa-float { position: fixed; right: 22px; bottom: 22px; z-index: 70; width: 58px; height: 58px; border-radius: 50%; background: var(--wa); color: #fff; display: grid; place-items: center; box-shadow: 0 12px 28px rgba(37,211,102,0.42); transition: transform .2s var(--ease); }
+.wa-float:hover { transform: scale(1.06); }
+.mob-bar {
+  display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--ink-100); box-shadow: 0 -8px 24px rgba(11,79,122,0.10);
+}
+.mob-bar a { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 12px; border-radius: 12px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; white-space: nowrap; transition: transform .15s var(--ease); }
+.mob-bar a:active { transform: scale(.97); }
+.mob-bar svg { flex-shrink: 0; }
+.mob-bar .mb-tel { flex: 0 0 auto; padding: 12px 18px; background: #fff; color: var(--brand-navy); border: 1.5px solid var(--ink-200); }
+.mob-bar .mb-wa { background: var(--wa); color: #fff; box-shadow: 0 6px 16px -6px rgba(37,211,102,0.6); }
+@media (max-width: 720px) {
+  .container { padding: 0 18px; }
+  .nav { height: 64px; gap: 10px; }
+  .nav-brand img { width: 36px; height: 36px; }
+  .brand-text { font-size: 15.5px; }
+  .nav-brand-sub { font-size: 9.5px; }
+  .nav-wa-btn { padding: 0; width: 44px; font-size: 0; gap: 0; }
+  .emergency-strip { font-size: 12px; padding: 6px 12px; }
+  .sec { padding: 56px 0; }
+  .sec-head { margin-bottom: 28px; }
+  .sec-head p { font-size: 16px; }
+  .hero-photo { aspect-ratio: 16 / 10; border-width: 4px; border-radius: 20px; }
+  .hero-photo figcaption { left: 10px; right: 10px; bottom: 10px; padding: 10px 14px; }
+  .hero-photo figcaption span { font-size: 14px; }
+  .faq-list summary { font-size: 15.5px; }
+  .cta-band { padding: 56px 0; }
+  .cta-band .ctas { display: flex; flex-direction: column; }
+  .cta-band .btn { width: 100%; }
+  .footer-row { flex-direction: column; }
+  .mob-bar { display: flex; }
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .wa-float { display: none; }
+}
+@media (max-width: 400px) { .mob-bar .mb-long { display: none; } }
+@media (max-width: 360px) { .brand-text { font-size: 14.5px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+.hero { position: relative; overflow: hidden; padding: 40px 0 72px; background: radial-gradient(900px 420px at 100% 0%, rgba(79,190,206,0.12), transparent 60%), linear-gradient(180deg, #fff 0%, var(--ink-50) 100%); border-bottom: 1px solid var(--ink-100); }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 56px; align-items: center; }
+.hero h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 4.4vw, 52px); line-height: 1.06; letter-spacing: -0.03em; color: var(--ink-900); margin: 0 0 20px; text-wrap: balance; }
+.hero h1 em { font-style: italic; color: var(--brand-teal-ink); }
+.hero .lead { font-size: 18px; line-height: 1.6; color: var(--ink-600); max-width: 60ch; margin-bottom: 28px; text-wrap: pretty; }
+.hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
+.hero-meta { list-style: none; margin: 0; padding: 18px 0 0; border-top: 1px solid var(--ink-200); display: flex; flex-wrap: wrap; gap: 12px 26px; font-size: 14px; color: var(--ink-700); }
+.hero-meta li { display: flex; align-items: center; gap: 8px; }
+.hero-meta svg { color: var(--brand-teal-ink); flex-shrink: 0; }
+.hero-meta strong { color: var(--ink-900); font-weight: 600; }
+
+/* Secciones (incluye la que arma seo_provincia.seccion_hub) */
+.section { padding: 88px 0; }
+.section + .section { padding-top: 0; }
+.section-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.12; letter-spacing: -0.025em; color: var(--ink-900); margin: 0 0 12px; max-width: 760px; text-wrap: balance; }
+.section-sub { font-size: 17px; line-height: 1.6; color: var(--ink-600); max-width: 680px; margin: 0 0 36px; text-wrap: pretty; }
+.section-title + .spec-grid { margin-top: 32px; }
+.spec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.spec-card { position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 24px 22px 18px; background: #fff; border: 1px solid var(--ink-100); border-radius: var(--radius); transition: transform .25s var(--ease), box-shadow .25s, border-color .2s; }
+.spec-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--brand-teal); transition: height .25s; }
+.spec-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(15,63,104,0.12); border-color: var(--brand-teal); }
+.spec-card:hover::before { height: 6px; background: linear-gradient(90deg, var(--brand-teal) 0%, var(--brand-deep) 100%); }
+.spec-card .pill { align-self: flex-start; margin-bottom: 14px; padding: 4px 10px; border-radius: var(--radius-pill); background: var(--brand-teal-soft); color: var(--brand-teal-ink); font-family: var(--font-display); font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.spec-card h3 { font-family: var(--font-display); font-weight: 800; font-size: 17px; line-height: 1.3; letter-spacing: -0.01em; color: var(--ink-900); margin: 0 0 6px; }
+.spec-card p { font-size: 14px; line-height: 1.55; color: var(--ink-600); margin: 0 0 14px; flex: 1; }
+.spec-card .price { padding-top: 12px; border-top: 1px dashed var(--ink-200); font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--ink-900); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+.spec-card .read { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: var(--brand-deep); }
+.spec-card .read::after { content: ''; width: 14px; height: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231172AB' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3Cpolyline points='12 5 19 12 12 19'/%3E%3C/svg%3E") center / contain no-repeat; transition: transform .2s var(--ease); }
+.spec-card .read svg { display: none; }
+.spec-card:hover .read::after { transform: translateX(3px); }
+
+/* Bloque local (HTML con estilos inline generado en app/main.py) */
+.local-info { padding: 88px 0 !important; background: var(--ink-50) !important; border: 0 !important; }
+.local-info h2 { font-family: var(--font-display) !important; font-weight: 800; font-size: clamp(26px, 3.2vw, 38px) !important; line-height: 1.12 !important; letter-spacing: -0.025em; color: var(--ink-900) !important; margin: 0 0 32px !important; text-wrap: balance; }
+.local-info .container > div { gap: 16px !important; }
+.local-info article { padding: 26px 24px; background: #fff; border: 1px solid var(--ink-100); border-radius: var(--radius); box-shadow: var(--shadow-xs); }
+.local-info article h3 { font-family: var(--font-display); font-weight: 800; font-size: 17px !important; color: var(--ink-900) !important; margin: 0 0 10px !important; display: flex; align-items: center; gap: 10px; }
+.local-info article h3::before { content: ''; width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0; background: var(--brand-deep-soft) center / 16px no-repeat; }
+.local-info article:nth-child(1) h3::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231172AB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='19' r='3'/%3E%3Cpath d='M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15'/%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3C/svg%3E"); }
+.local-info article:nth-child(2) h3::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231172AB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3C/svg%3E"); }
+.local-info article:nth-child(3) h3::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231172AB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E"); }
+.local-info article p { font-size: 15px; line-height: 1.7 !important; color: var(--ink-700) !important; }
+
+/* Sede: fotos */
+.place-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 40px; align-items: center; }
+.place-copy h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.12; letter-spacing: -0.025em; color: var(--ink-900); margin-bottom: 14px; }
+.place-copy p { font-size: 16.5px; line-height: 1.65; color: var(--ink-600); margin-bottom: 18px; }
+.place-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.place-list li { display: flex; gap: 12px; align-items: center; font-size: 15px; color: var(--ink-800); }
+.place-list .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: var(--brand-deep-soft); color: var(--brand-deep); }
+.photos { display: grid; grid-template-columns: 1.4fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; }
+.photos figure { position: relative; margin: 0; border-radius: var(--radius); overflow: hidden; background: var(--ink-100); }
+.photos figure:first-child { grid-row: 1 / 3; }
+.photos img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1400 / 1173; }
+.photos figure:first-child img { aspect-ratio: auto; }
+.photos figcaption { position: absolute; left: 10px; bottom: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(10,26,40,0.7); color: #fff; font-family: var(--font-display); font-size: 12px; font-weight: 600; }
+
+.faq-sec { padding: 88px 0; background: linear-gradient(180deg, var(--ink-50) 0%, var(--brand-teal-soft) 100%); }
+.faq-sec .section-title { text-align: center; margin: 0 auto 32px; }
+
+.footer-areas { margin-top: 18px; font-size: 13.5px; color: rgba(255,255,255,0.7); }
+.footer-areas a { display: inline-block; padding: 6px 2px; color: rgba(255,255,255,0.85); text-decoration: underline; text-decoration-color: rgba(255,255,255,0.3); text-underline-offset: 3px; }
+.footer-areas a:hover { color: #fff; }
+
+@media (max-width: 1023px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+  .hero-photo { aspect-ratio: 16 / 9; max-width: 720px; }
+  .place-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .hero { padding: 24px 0 40px; }
+  .hero .lead { font-size: 17px; }
+  .hero .ctas .btn { width: 100%; white-space: normal; text-align: center; line-height: 1.25; }
+  .hero-meta { flex-direction: column; gap: 10px; }
+  .section, .local-info, .faq-sec { padding: 56px 0 !important; }
+  .section + .section { padding-top: 0 !important; }
+  .section-sub { font-size: 16px; margin-bottom: 24px; }
+  .spec-grid { grid-template-columns: 1fr; gap: 10px; }
+  .spec-card { padding: 18px 18px 14px; }
+  .spec-card .pill { margin-bottom: 10px; }
+  .spec-card p { margin-bottom: 10px; }
+  .local-info .container > div { grid-template-columns: 1fr !important; }
+  .local-info h2 { margin-bottom: 24px !important; }
+  .photos { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+  .photos figure:first-child { grid-row: auto; grid-column: 1 / -1; }
+  .photos figure:first-child img { aspect-ratio: 16 / 10; }
+}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -159,100 +379,154 @@ footer a{color:var(--aqua)}
 
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W428KN3R" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
-<header class="nav">
-  <div class="container" style="display:flex;align-items:center;gap:18px;width:100%">
-    <a class="nav-brand" href="https://centromedicocarampangue.cl/">
-      <img src="https://agentecmc.cl/static/isotipo.png" alt="CMC Logo">
-      <span>Centro Médico Carampangue</span>
+<a href="#contenido" class="skip-link">Saltar al contenido</a>
+
+<div class="emergency-strip" role="note"><strong>Emergencias:</strong> llame al SAMU <a href="tel:131">131</a> · No somos servicio de urgencias</div>
+
+<header class="nav-wrap">
+  <div class="container nav">
+    <a class="nav-brand" href="https://centromedicocarampangue.cl/" aria-label="Centro Médico Carampangue, ir al inicio">
+      <img src="/static/sitio/cropped-logo-carampangue.png" alt="" width="44" height="44">
+      <span class="brand-text">Carampangue<span class="nav-brand-sub">Centro Médico</span></span>
     </a>
-    <a class="btn btn-wa" style="margin-left:auto" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna)&utm_source=comuna&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-      Agendar
-    </a>
+    <div class="nav-cta">
+      <a class="btn btn-wa nav-wa-btn" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna)&utm_source=comuna&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener" aria-label="Agendar por WhatsApp"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar</a>
+    </div>
   </div>
 </header>
 
+<main id="contenido">
+
 <section class="hero">
-  <div class="container">
-    <span class="eyebrow">Servicios médicos · {{COMUNA_NOMBRE}}</span>
-    <h1>Médico y Dentista en <em>{{COMUNA_NOMBRE}}</em><br>Centro Médico Carampangue</h1>
-    <p class="lead">{{LEAD_TEXT}}</p>
-    <div class="hero-meta">
-      <span class="hero-meta-item">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        {{KM_TXT}}{{MIN_TXT}}
-      </span>
-      <span class="hero-meta-item">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        Lun-Sáb hasta 21:00
-      </span>
-      <span class="hero-meta-item">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Agenda WhatsApp 24/7
-      </span>
+  <div class="container hero-grid">
+    <div>
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <ol>
+          <li><a href="https://centromedicocarampangue.cl/">Inicio</a></li>
+          <li><a href="/comuna/">Servicios por comuna</a></li>
+          <li><span class="current" aria-current="page">{{COMUNA_NOMBRE}}</span></li>
+        </ol>
+      </nav>
+      <div class="eyebrow">{{EYEBROW}}</div>
+      <h1>{{H1_HTML}}</h1>
+      <p class="lead">{{LEAD_TEXT}}</p>
+      <div class="ctas">
+        <a class="btn btn-primary btn-lg" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna)&utm_source=comuna&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar por WhatsApp desde {{COMUNA_NOMBRE}}</a>
+        <a class="btn btn-ghost btn-lg" href="tel:+56442965226"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> (44) 296 5226</a>
+      </div>
+      <ul class="hero-meta">
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg> <strong>{{KM_TXT}}{{MIN_TXT}}</strong></li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg> Lun-Vie 08:00–21:00 · Sáb 09:00–14:00</li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg> Agenda WhatsApp 24/7</li>
+      </ul>
     </div>
-    <a class="btn btn-wa btn-lg" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna)&utm_source=comuna&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-      Agendar por WhatsApp desde {{COMUNA_NOMBRE}}
-    </a>
+    <figure class="hero-photo">
+      <picture>
+        <source srcset="/static/sitio/fachada-centro-medico-carampangue.webp" type="image/webp">
+        <img src="/static/sitio/fachada-centro-medico-carampangue.jpg" alt="Fachada del Centro Médico Carampangue, en Monsalve 102, esquina República" width="1448" height="1086" decoding="async">
+      </picture>
+      <figcaption><small>Sede única</small><span>Monsalve 102, esquina República, Carampangue</span></figcaption>
+    </figure>
   </div>
 </section>
 
 <section class="section">
   <div class="container">
     <h2 class="section-title">22 especialidades para pacientes de {{COMUNA_NOMBRE}}</h2>
-    <p class="section-sub">Consulta disponibilidad real al instante por WhatsApp. Bono Fonasa MLE en sucursal con huella biométrica.</p>
+    <p class="section-sub">Consulte disponibilidad real al instante por WhatsApp. Bono Fonasa MLE en el centro, con huella biométrica.</p>
     <div class="spec-grid">
       {{SPECIALTY_CARDS}}
     </div>
   </div>
 </section>
 
+{{PEDIDAS_SECTION}}
 {{LOCAL_INFO_SECTION}}
 
-<section class="container">
-  <div class="cta-band">
-    <h2>{{COMUNA_NOMBRE}} a {{KM_TXT}} del CMC</h2>
-    <p>Atendemos pacientes de toda la Provincia de Arauco. Ruta {{RUTA}}. Confirma tu hora por WhatsApp en menos de 1 minuto.</p>
-    <a class="btn btn-wa btn-lg" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna_cta)&utm_source=comuna_cta&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener">
-      Agendar ahora
-    </a>
-  </div>
-</section>
-
-<section class="faq">
-  <div class="container">
-    <h2 class="section-title">Preguntas frecuentes desde {{COMUNA_NOMBRE}}</h2>
-    <div class="faq-list">
-      <div class="faq-item">
-        <p class="faq-q">¿El Centro Médico Carampangue atiende a pacientes de {{COMUNA_NOMBRE}}?</p>
-        <p class="faq-a">Sí. Atendemos pacientes de toda la Provincia de Arauco. Desde {{COMUNA_NOMBRE}} estás a {{KM_TXT}}{{MIN_TXT}} por {{RUTA}}.</p>
-      </div>
-      <div class="faq-item">
-        <p class="faq-q">¿Cómo agendo desde {{COMUNA_NOMBRE}}?</p>
-        <p class="faq-a">Por WhatsApp al +56 9 6661 0737 a cualquier hora — el asistente automático revisa disponibilidad real y te confirma al instante. También puedes llamar al (44) 296 5226 en horario de recepción.</p>
-      </div>
-      <div class="faq-item">
-        <p class="faq-q">¿Aceptan Bono Fonasa?</p>
-        <p class="faq-a">Sí, en Medicina General, Medicina Familiar, Kinesiología, Nutrición, Psicología Adulto y Psicología Infantil. El bono se emite en el centro con huella biométrica. Matrona tiene tarifa preferencial Fonasa ($16.000).</p>
-      </div>
-      <div class="faq-item">
-        <p class="faq-q">¿Qué horarios de atención tienen?</p>
-        <p class="faq-a">Lunes a viernes 08:00 a 21:00, sábados 09:00 a 14:00. Algunos profesionales tienen días específicos — consulta disponibilidad real por WhatsApp.</p>
-      </div>
+<section class="section" style="padding-top:88px">
+  <div class="container place-grid">
+    <div class="place-copy">
+      <h2>Una sola sede, en Carampangue</h2>
+      <p>Toda la atención se realiza en Monsalve 102, esquina República. Al agendar por WhatsApp, indique desde dónde viene y se confirma fecha y hora antes de su viaje.</p>
+      <ul class="place-list">
+        <li><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span>Monsalve 102, esquina República, Carampangue</li>
+        <li><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>Lunes a viernes 08:00 a 21:00 · Sábado 09:00 a 14:00</li>
+        <li><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>Bono Fonasa MLE en el centro, con huella biométrica</li>
+      </ul>
+    </div>
+    <div class="photos">
+      <figure>
+        <picture><source srcset="/static/sitio/recepcion.webp" type="image/webp"><img src="/static/sitio/recepcion-1.jpg" alt="Recepción del Centro Médico Carampangue" width="1400" height="1173" loading="lazy" decoding="async"></picture>
+        <figcaption>Recepción</figcaption>
+      </figure>
+      <figure>
+        <picture><source srcset="/static/sitio/sala-espera.webp" type="image/webp"><img src="/static/sitio/sala-espera-1.jpg" alt="Sala de espera del centro" width="1400" height="1173" loading="lazy" decoding="async"></picture>
+        <figcaption>Sala de espera</figcaption>
+      </figure>
+      <figure>
+        <picture><source srcset="/static/sitio/box-medico.webp" type="image/webp"><img src="/static/sitio/box-medico-1.jpg" alt="Box de atención médica" width="1400" height="1173" loading="lazy" decoding="async"></picture>
+        <figcaption>Box de atención</figcaption>
+      </figure>
     </div>
   </div>
 </section>
 
-<footer>
-  <p><strong>Centro Médico Carampangue</strong> · República 102, Carampangue · Provincia de Arauco · Región del Biobío</p>
-  <p>WhatsApp <a href="https://wa.me/56966610737?utm_source=comuna_footer&utm_campaign={{COMUNA_SLUG}}">+56 9 6661 0737</a> · Fijo (44) 296 5226</p>
-  <p>Servimos también a: <a href="/comuna/arauco">Arauco</a> · <a href="/comuna/lebu">Lebu</a> · <a href="/comuna/canete">Cañete</a> · <a href="/comuna/curanilahue">Curanilahue</a> · <a href="/comuna/los-alamos">Los Álamos</a> · <a href="/comuna/tirua">Tirúa</a> · <a href="/comuna/contulmo">Contulmo</a></p>
+<section class="faq-sec">
+  <div class="container">
+    <h2 class="section-title">Preguntas frecuentes desde {{COMUNA_NOMBRE}}</h2>
+    <div class="faq-list faq">
+      <details><summary>¿El Centro Médico Carampangue atiende a pacientes de {{COMUNA_NOMBRE}}? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="answer">Sí. Atendemos pacientes de toda la Provincia de Arauco. Desde {{COMUNA_NOMBRE}} está a {{KM_TXT}}{{MIN_TXT}} por {{RUTA}}.</div>
+      </details>
+      <details><summary>¿Cómo agendo desde {{COMUNA_NOMBRE}}? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="answer">Por WhatsApp al +56 9 6661 0737 a cualquier hora: el asistente automático revisa disponibilidad real y le confirma al instante. También puede llamar al (44) 296 5226 en horario de recepción.</div>
+      </details>
+      <details><summary>¿Aceptan Bono Fonasa? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="answer">Sí, en Medicina General, Medicina Familiar, Kinesiología, Nutrición, Psicología Adulto y Psicología Infantil. El bono se emite en el centro con huella biométrica. Matrona tiene tarifa preferencial Fonasa ($16.000).</div>
+      </details>
+      <details><summary>¿Qué horarios de atención tienen? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="answer">Lunes a viernes 08:00 a 21:00, sábados 09:00 a 14:00. Algunos profesionales tienen días específicos: consulte disponibilidad real por WhatsApp.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="container">
+    <h2>Su hora desde <em>{{COMUNA_NOMBRE}}</em>, confirmada por WhatsApp</h2>
+    <p>Atendemos pacientes de toda la Provincia de Arauco. Confirme su hora por WhatsApp en menos de 1 minuto.</p>
+    <div class="ctas">
+      <a class="btn btn-wa btn-lg" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna_cta)&utm_source=comuna_cta&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar ahora</a>
+      <a class="btn btn-white btn-lg" href="tel:+56442965226">Llamar al (44) 296 5226</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-row">
+      <div class="footer-brand">
+        <img src="/static/sitio/cropped-logo-carampangue.png" alt="" width="40" height="40" loading="lazy">
+        <span>Centro Médico Carampangue<small>Monsalve 102, esquina República, Carampangue · Provincia de Arauco · Región del Biobío</small></span>
+      </div>
+      <ul class="footer-links">
+        <li>WhatsApp <a href="https://wa.me/56966610737?utm_source=comuna_footer&utm_campaign={{COMUNA_SLUG}}">+56 9 6661 0737</a></li>
+        <li><a href="tel:+56442965226">Fijo (44) 296 5226</a></li>
+      </ul>
+    </div>
+    <p class="footer-areas">Servimos también a: <a href="/comuna/arauco">Arauco</a> · <a href="/comuna/lebu">Lebu</a> · <a href="/comuna/canete">Cañete</a> · <a href="/comuna/curanilahue">Curanilahue</a> · <a href="/comuna/los-alamos">Los Álamos</a> · <a href="/comuna/tirua">Tirúa</a> · <a href="/comuna/contulmo">Contulmo</a></p>
+    <div class="footer-foot">© 2026 Centro Médico Carampangue · Emergencias: SAMU 131</div>
+  </div>
 </footer>
 
-<a class="wa-float" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna_float)&utm_source=comuna_float&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener" aria-label="WhatsApp">
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-</a>
+<a class="wa-float" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna_float)&utm_source=comuna_float&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener" aria-label="Agendar por WhatsApp"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg></a>
+
+<div class="mob-bar" role="navigation" aria-label="Acciones rápidas">
+  <a class="mb-tel" href="tel:+56442965226" aria-label="Llamar al (44) 296 5226"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Llamar</a>
+  <a class="mb-wa" href="https://wa.me/56966610737?text=Hola%20{{WA_TEXT}}%20(web%3A%20comuna)&utm_source=comuna&utm_medium=organic&utm_campaign={{COMUNA_SLUG}}" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar<span class="mb-long">&nbsp;por WhatsApp</span></a>
+</div>
 
 <script>
 (function(){

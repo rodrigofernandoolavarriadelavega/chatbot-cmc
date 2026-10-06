@@ -1902,6 +1902,10 @@ _PATIO_HTML = (_TEMPLATE_DIR / "patio.html").read_text(encoding="utf-8") if (_TE
 _CARIN_HTML = (_TEMPLATE_DIR / "carin.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "carin.html").exists() else ""
 _CECAR_V2_HTML = (_TEMPLATE_DIR / "cecar-v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "cecar-v2.html").exists() else ""
 _TRAUMATOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "traumatologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "traumatologo-curanilahue.html").exists() else ""
+# Otorrino: el Dr. Borrego atiende solo por videollamada y casi nadie la agenda;
+# sin fecha de regreso presencial. En "true", las
+# páginas de otorrino vuelven a mostrarse (las redirecciones son 302 a propósito).
+OTORRINO_ACTIVO = os.getenv("OTORRINO_ACTIVO", "false").lower() in ("1", "true", "si", "sí")
 _OTORRINO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "otorrino-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "otorrino-curanilahue.html").exists() else ""
 _GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "ginecologo-curanilahue.html").exists() else ""
 _DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "dentista-curanilahue.html").exists() else ""
@@ -2045,16 +2049,26 @@ def cecar_landing():
     return _CECAR_HTML
 
 
-@app.get("/traumatologo-curanilahue", response_class=HTMLResponse)
+@app.get("/traumatologo-curanilahue", include_in_schema=False)
 def traumatologo_curanilahue():
-    """Landing SEO — Traumatólogo en Curanilahue."""
-    return _TRAUMATOLOGO_CURANILAHUE_HTML
+    """El CMC ya no tiene traumatólogo: quien busca uno llega a kinesiología de Curanilahue."""
+    return RedirectResponse(url="/blog/kinesiologia-curanilahue", status_code=301)
 
 
 @app.get("/otorrino-curanilahue", response_class=HTMLResponse)
 def otorrino_curanilahue():
-    """Landing SEO — Otorrinolaringólogo en Curanilahue."""
+    """Landing SEO — Otorrinolaringólogo en Curanilahue (302 a fonoaudiología mientras no hay otorrino)."""
+    if not OTORRINO_ACTIVO:
+        return RedirectResponse(url="/blog/fonoaudiologia-curanilahue", status_code=302)
     return _OTORRINO_CURANILAHUE_HTML
+
+
+def _destino_sin_otorrino(slug: str) -> str:
+    """/blog/otorrinolaringologia-<localidad> → /blog/fonoaudiologia-<localidad> (o la general)."""
+    loc = slug[len("otorrinolaringologia"):].lstrip("-")
+    if loc and (_TEMPLATE_DIR / "blog" / "fonoaudiologia.html").exists():
+        return f"/blog/fonoaudiologia-{loc}"
+    return "/blog/fonoaudiologia"
 
 
 @app.get("/ginecologo-curanilahue", response_class=HTMLResponse)
@@ -2196,7 +2210,7 @@ _COMUNA_SPECIALTIES = [
     ("fonoaudiologia", "Fonoaudiología", "Particular $25.000", "Juana Arratia", "Rehabilitación"),
     ("matrona", "Matrona", "Tarifa Fonasa $16.000", "Sarai Gómez", "Salud Mujer"),
     ("podologia", "Podología", "$20.000–$35.000", "Andrea Guevara", "Bienestar"),
-    ("ecografia", "Ecografía", "$35.000", "Dr. David Pardo", "Diagnóstico"),
+    ("ecografia", "Ecografía", "$40.000", "David Pardo", "Diagnóstico"),
     ("neurologia", "Neurología", "Particular $65.000", "Dra. Franca González", "Especialidades"),
     ("psiquiatria", "Psiquiatría", "Particular $60.000", "Dra. Cecilia Unibazo", "Salud Mental"),
     ("oftalmologia", "Oftalmología", "$15.000 (todos)", "TM Ana Celedón", "Diagnóstico"),
@@ -2207,6 +2221,15 @@ _COMUNA_SPECIALTIES = [
     ("implantologia", "Implantología", "Implante + corona desde $650.000", "Dra. Aurora Valdés", "Dental"),
     ("estetica-facial", "Estética Facial", "Evaluación $15.000", "Dra. Valentina Fuentealba", "Estética"),
 ]
+
+
+def _seccion_hub_prov(slug: str) -> str:
+    try:
+        from seo_provincia import seccion_hub
+        return seccion_hub(slug)
+    except Exception:
+        log.exception("seo_provincia: seccion_hub falló para %s", slug)
+        return ""
 
 
 @app.get("/comuna/{slug}", response_class=HTMLResponse)
@@ -2222,24 +2245,34 @@ async def comuna_hub(slug: str):
     ruta = c.get("ruta", "")
 
     # Title con descriptor de distancia
+    # Títulos según lo que la gente busca (Search Console 2026-05/10: "centro médico cañete",
+    # "dentista cañete", "clínica dental los álamos"...). Para localidades donde NO hay sede,
+    # el título habla de "pacientes de X", nunca de "en X": no se sugiere sucursal.
     if km == 0:
-        title = f"Médico y Dentista en {nombre} · Centro Médico Carampangue"
+        title = "Centro Médico en Carampangue · Médico y Dentista, Monsalve 102, esquina República"
         km_txt = "en el centro de la localidad"
         min_txt = ""
-        lead = (f"Centro Médico Carampangue está físicamente en {nombre}, en República 102. "
-                f"23 profesionales y 22 especialidades médicas y dentales. Bono Fonasa MLE en sucursal con huella biométrica.")
+        h1_html = "Centro Médico en <em>Carampangue</em><br>Médico y dentista, Monsalve 102, esquina República"
+        eyebrow = "Sede única · Carampangue, Provincia de Arauco"
+        lead = ("El Centro Médico Carampangue está en Monsalve 102, esquina República, en Carampangue, comuna de Arauco. "
+                "Es nuestra única sede. 23 profesionales y 22 especialidades médicas y dentales. "
+                "Bono Fonasa MLE en el centro, con huella biométrica.")
+        description = ("Centro Médico Carampangue: médico, dentista y especialistas en Monsalve 102, esquina República, Carampangue "
+                       "(comuna de Arauco). Bono Fonasa, horario de lunes a sábado. Agenda por WhatsApp.")
     else:
-        title = f"Médico y Dentista en {nombre} · CMC a {km} km ({minutos} min)"
+        _dur_txt = (f"{minutos} min" if minutos < 60 else
+                    (f"{minutos // 60} h" if minutos % 60 == 0 else f"{minutos // 60} h {minutos % 60:02d} min"))
+        title = f"Centro médico y dentista para pacientes de {nombre} · a {km} km | CMC"
         km_txt = f"a {km} km"
         min_txt = f" · {minutos} min" if minutos else ""
-        lead = (f"Atendemos pacientes desde {nombre} ({c['tipo'] if 'tipo' in c else 'Provincia de Arauco'}). "
-                f"Centro Médico Carampangue está a {km} km vía {ruta}. "
-                f"23 profesionales · 22 especialidades · Bono Fonasa MLE · Agenda WhatsApp 24/7.")
-
-    description = (f"Médico y dentista para pacientes de {nombre} (Provincia de Arauco). "
-                   f"23 profesionales, 22 especialidades · Bono Fonasa MLE · "
-                   f"a {km} km del centro" if km > 0 else
-                   f"Médico y dentista en {nombre}: 23 profesionales, 22 especialidades. Bono Fonasa MLE.")
+        h1_html = f"Centro médico y dentista para pacientes de <em>{nombre}</em>"
+        eyebrow = f"Pacientes de {nombre} · sede en Carampangue"
+        lead = (f"El Centro Médico Carampangue tiene una sola sede, en Monsalve 102, esquina República, Carampangue. "
+                f"Desde {nombre} está a {km} km (unos {_dur_txt} en auto) por {ruta}. "
+                f"23 profesionales, 22 especialidades y bono Fonasa MLE en el centro.")
+        description = (f"Médico, dentista y especialistas para pacientes de {nombre}: a {km} km "
+                       f"(unos {_dur_txt}) del Centro Médico Carampangue, por {ruta}. "
+                       f"Bono Fonasa en medicina general. Agenda por WhatsApp.")
 
     wa_text = f"quiero%20agendar%20una%20hora%20desde%20{nombre.replace(' ', '%20')}"
 
@@ -2319,7 +2352,10 @@ async def comuna_hub(slug: str):
             .replace("{{WA_TEXT}}", wa_text)
             .replace("{{SPECIALTY_CARDS}}", cards_html)
             .replace("{{ITEMLIST_JSON}}", itemlist_json)
-            .replace("{{LOCAL_INFO_SECTION}}", local_info))
+            .replace("{{LOCAL_INFO_SECTION}}", local_info)
+            .replace("{{H1_HTML}}", h1_html)
+            .replace("{{EYEBROW}}", eyebrow)
+            .replace("{{PEDIDAS_SECTION}}", _seccion_hub_prov(slug)))
     return html
 
 
@@ -2340,7 +2376,7 @@ async def comuna_index():
             distancia = "Sede principal"
             badge = "★ Sede"
             tipo_grupo = "sede"
-        elif km <= 10:
+        elif km <= 15:
             distancia = f"a {km} km · {minutos} min"
             badge = "Cercana"
             tipo_grupo = "cercana"
@@ -2490,12 +2526,12 @@ footer{{text-align:center;padding:24px;font-size:13px;color:#5e7183;border-top:1
 </section>
 <section class="section">
   <h2>Sede principal</h2>
-  <p class="sub">El Centro Médico Carampangue está físicamente en República 102, Carampangue (comuna de Arauco), Región del Biobío.</p>
+  <p class="sub">El Centro Médico Carampangue está físicamente en Monsalve 102, esquina República, Carampangue (comuna de Arauco), Región del Biobío.</p>
   <div class="c-grid">
       {sede_html}
   </div>
   <h2>Localidades cercanas</h2>
-  <p class="sub">A menos de 10 km del centro — viaje de ida y vuelta cómodo en una mañana.</p>
+  <p class="sub">A 15 km o menos del centro: viaje de ida y vuelta en una mañana.</p>
   <div class="c-grid">
       {cercanas_html}
   </div>
@@ -2519,7 +2555,7 @@ footer{{text-align:center;padding:24px;font-size:13px;color:#5e7183;border-top:1
     <details><summary>¿Aceptan Bono Fonasa para pacientes de otras comunas?</summary><p class="ans">Sí. El Bono Fonasa MLE se emite en la sucursal con huella biométrica para Medicina General, Medicina Familiar, Kinesiología, Nutrición y Psicología (adulto e infantil), independiente de la comuna del paciente. Matrona tiene tarifa preferencial Fonasa ($16.000).</p></details>
   </div>
 </section>
-<footer>Centro Médico Carampangue · República 102, Carampangue · Provincia de Arauco · (44) 296 5226 · WhatsApp +56 9 6661 0737</footer>
+<footer>Centro Médico Carampangue · Monsalve 102, esquina República, Carampangue · Provincia de Arauco · (44) 296 5226 · WhatsApp +56 9 6661 0737</footer>
 </body>
 </html>"""
 
@@ -2531,6 +2567,21 @@ async def blog_post(slug: str):
     import re as _re
     if not _re.fullmatch(r"[a-z0-9-]{1,80}", slug):
         return HTMLResponse("<h1>404</h1>", status_code=404)
+
+    # Otorrino sin atención presencial (sin fecha de regreso): redirección TEMPORAL (302)
+    # a fonoaudiología de la misma localidad, para no perder la posición en Google.
+    if not OTORRINO_ACTIVO and slug.startswith("otorrinolaringologia"):
+        return RedirectResponse(url=_destino_sin_otorrino(slug), status_code=302)
+
+    # Páginas localidad × especialidad con contenido propio (docs/SEO_PROVINCIA_2026-10.md):
+    # misma URL que la variante generada por plantilla, pero con cuerpo escrito para esa localidad.
+    try:
+        from seo_provincia import render_pagina as _render_seo_prov
+        _html_prov = _render_seo_prov(slug)
+        if _html_prov:
+            return _html_prov
+    except Exception:
+        log.exception("seo_provincia: fallo al renderizar %s; se usa la plantilla genérica", slug)
 
     # Detectar localización por sufijo conocido
     for comuna_slug in COMUNAS_ARAUCO:
@@ -2555,73 +2606,77 @@ async def blog_post(slug: str):
 # COMUNAS DE LA PROVINCIA DE ARAUCO (SEO local)
 # ============================================================
 COMUNAS_ARAUCO = {
-    # Localidades fuertes (mayor concentración de pacientes)
+    # km y min: ruteo vial hasta Carampangue (OSRM sobre OpenStreetMap, 2026-10-06),
+    # redondeados. Los valores anteriores subestimaban Los Alamos, Lebu y Tirua en 20-30 km
+    # y daban 15 km/20 min para Arauco (son 8 km/11 min). Ver docs/SEO_PROVINCIA_2026-10.md.
     "carampangue": {"nombre": "Carampangue", "km": 0,   "min": 0,   "ruta": "—",              "tipo": "local"},
-    "laraquete":   {"nombre": "Laraquete",   "km": 8,   "min": 10,  "ruta": "Ruta 160 norte", "tipo": "cercana"},
-    "ramadilla":   {"nombre": "Ramadilla",   "km": 6,   "min": 10,  "ruta": "ruta rural",     "tipo": "cercana"},
+    "laraquete":   {"nombre": "Laraquete",   "km": 12,  "min": 12,  "ruta": "Ruta 160",       "tipo": "cercana"},
+    "ramadilla":   {"nombre": "Ramadilla",   "km": 7,   "min": 7,   "ruta": "Ruta 160",       "tipo": "cercana"},
     # Comunas Provincia de Arauco
-    "arauco":      {"nombre": "Arauco",      "km": 15,  "min": 20,  "ruta": "Ruta P-22"},
-    "lebu":        {"nombre": "Lebu",        "km": 50,  "min": 60,  "ruta": "Ruta P-40"},
-    "canete":      {"nombre": "Cañete",      "km": 70,  "min": 80,  "ruta": "Ruta P-72"},
-    "tirua":       {"nombre": "Tirúa",       "km": 110, "min": 120, "ruta": "Ruta P-72 sur"},
-    "curanilahue": {"nombre": "Curanilahue", "km": 25,  "min": 30,  "ruta": "Ruta 160"},
-    "los-alamos":  {"nombre": "Los Álamos",  "km": 35,  "min": 40,  "ruta": "Ruta 160"},
-    "contulmo":    {"nombre": "Contulmo",    "km": 90,  "min": 100, "ruta": "Ruta P-72 + P-60"},
+    "arauco":      {"nombre": "Arauco",      "km": 8,   "min": 11,  "ruta": "Ruta P-20"},
+    "lebu":        {"nombre": "Lebu",        "km": 77,  "min": 80,  "ruta": "Ruta 160"},
+    "canete":      {"nombre": "Cañete",      "km": 72,  "min": 80,  "ruta": "Ruta P-60 y Ruta 160"},
+    "tirua":       {"nombre": "Tirúa",       "km": 138, "min": 150, "ruta": "rutas P-72, P-60 y 160"},
+    "curanilahue": {"nombre": "Curanilahue", "km": 30,  "min": 30,  "ruta": "Ruta 160"},
+    "los-alamos":  {"nombre": "Los Álamos",  "km": 53,  "min": 55,  "ruta": "Ruta 160"},
+    "contulmo":    {"nombre": "Contulmo",    "km": 106, "min": 120, "ruta": "Ruta P-60 y Ruta 160"},
 }
 
 # Contenido único por comuna — se inyecta en cada blog comuna-especialidad
 # para que Google los trate como páginas distintas (no template duplicado).
 # Datos verificables (rutas, hospitales públicos, distancias) — sin inventar números.
 COMUNA_LOCAL_DATA = {
+    # Texto verificable: rutas y tiempos del ruteo vial (2026-10-06). Sin nombres de líneas
+    # de bus ni frecuencias (no se tiene certeza). Español formal (usted).
     "carampangue": {
-        "locomocion": "El centro está en República 102, en pleno casco urbano de Carampangue, a 5 minutos a pie desde la plaza y frente a Banco Estado. Hay estacionamiento libre en la calle. Si vienes en colectivo o taxi, cualquier conductor de la zona conoce la ubicación.",
-        "contexto": "Carampangue es la localidad más poblada de la comuna de Arauco fuera del centro urbano de Arauco mismo. Cuenta con CESFAM Carampangue para atención primaria, escuelas y comercio, pero las especialidades médicas y dentales requieren derivación al hospital de Arauco o Concepción.",
-        "razon": "El CMC nació en Carampangue justamente para acercar {esp} sin que tengas que viajar a Arauco o Concepción. Tu hora puede ser el mismo día o al día siguiente, sin las listas de espera del sistema público.",
+        "locomocion": "El centro está en Monsalve 102, esquina República, en el casco urbano de Carampangue. Hay estacionamiento libre en la calle. Carampangue está sobre la Ruta 160, a 8 km de la ciudad de Arauco.",
+        "contexto": "Carampangue es una localidad de la comuna de Arauco, en la Provincia de Arauco, Región del Biobío. Es la única sede del Centro Médico Carampangue: no existen otras sucursales.",
+        "razon": "En Carampangue se resuelve {esp} sin viajar a Arauco ni a Concepción. Las horas se piden por WhatsApp, a cualquier hora del día.",
     },
     "laraquete": {
-        "locomocion": "Desde Laraquete son 8 km por la Ruta 160 hacia el sur, 10 minutos en auto. Los buses interurbanos del tramo Concepción–Arauco–Lebu paran en Carampangue durante todo el día. También hay taxis colectivos locales que cubren Laraquete–Carampangue.",
-        "contexto": "Laraquete es la entrada norte a la Provincia de Arauco, balneario y comunidad pesquera. Cuenta con CESFAM y posta rural, pero las especialidades se derivan a Carampangue, Arauco o Concepción.",
-        "razon": "Para vecinos de Laraquete, el CMC es la opción más cercana de {esp} sin tener que cruzar el puente del Bío Bío hasta Concepción (1 hora). Vuelta el mismo día, sin perder la jornada completa.",
+        "locomocion": "Desde Laraquete son 12 km por la Ruta 160 hacia el sur, unos 12 minutos en auto.",
+        "contexto": "Laraquete es una localidad costera de la comuna de Arauco, en el extremo norte de la Provincia de Arauco.",
+        "razon": "Para quienes viven en Laraquete, el centro permite resolver {esp} con pocos minutos de viaje y volver el mismo día, sin cruzar a Concepción.",
     },
     "ramadilla": {
-        "locomocion": "Ramadilla está a 6 km de Carampangue por camino rural, 10 minutos en auto. La ruta es directa; sin auto, lo más práctico es taxi compartido o coordinar con un familiar. La señal de celular y datos cubre bien el tramo.",
-        "contexto": "Ramadilla es localidad rural de la comuna de Arauco con población dispersa. La posta rural cubre atención básica pero todo lo especializado se deriva.",
-        "razon": "Por cercanía geográfica, los vecinos de Ramadilla suelen preferir el CMC para {esp} antes que viajar al hospital de Arauco — menos tiempo de viaje y horario más amplio (hasta las 21:00 entre semana).",
+        "locomocion": "Ramadilla está a unos 7 km de Carampangue por la Ruta 160, cerca de 7 minutos en auto.",
+        "contexto": "Ramadilla es una localidad rural de la comuna de Arauco.",
+        "razon": "Por la cercanía, es posible atenderse en el centro y regresar en pocos minutos. El horario general es de lunes a viernes de 8:00 a 21:00 y sábados de 9:00 a 14:00; cada profesional tiene además sus propios días.",
     },
     "arauco": {
-        "locomocion": "Desde Arauco son 15 km por la Ruta P-22, 20 minutos en auto. Hay buses Estuario Reloncaví y otras líneas que cubren Arauco–Carampangue durante el día. También sirve cualquier bus interurbano que vaya hacia Concepción y para en Carampangue.",
-        "contexto": "Arauco es la cabecera comunal y centro político-administrativo. Cuenta con Hospital Dr. Rafael Avaria, CESFAM Arauco y CECOSF. El CMC es la principal alternativa privada de la comuna para especialidades médicas y dentales.",
-        "razon": "Pacientes de Arauco acuden al CMC para {esp} cuando necesitan acortar listas de espera del sistema público o cuando buscan tratamientos dentales (ortodoncia, implantología, estética) que la red pública no cubre con prontitud.",
+        "locomocion": "Desde la ciudad de Arauco son 8 km por el camino que une Arauco con Carampangue (Ruta P-20), unos 11 minutos en auto.",
+        "contexto": "Arauco es la cabecera de la comuna. Carampangue, donde está el Centro Médico Carampangue, pertenece a la misma comuna.",
+        "razon": "Quien vive en Arauco puede atenderse en {esp} sin salir de la comuna y combinar, en un mismo viaje, varias atenciones del centro.",
     },
     "curanilahue": {
-        "locomocion": "Desde Curanilahue son 25 km por la Ruta 160, 30 minutos en auto. Buses Lit Sur, Estuario Reloncaví y otras líneas cubren el tramo Curanilahue–Carampangue varias veces al día. Es viaje de ida y vuelta cómodo en una mañana.",
-        "contexto": "Curanilahue tiene Hospital Comunitario Dr. Rafael Avaria y CESFAM. Históricamente comuna minera del carbón, hoy en transición. Los pacientes locales conocen bien la red Carampangue–Arauco.",
-        "razon": "Curanilahue es, después de Arauco, la comuna fuera de la sede del CMC con más pacientes recurrentes — particularmente en odontología, ortodoncia y kinesiología. Muchas familias vienen mensualmente para controles ortodónticos y aprovechan el viaje para otras especialidades como {esp}.",
+        "locomocion": "Desde Curanilahue son 30 km por la Ruta 160, cerca de 30 minutos en auto. El viaje de ida y vuelta cabe en una mañana o en una tarde.",
+        "contexto": "Fuera de la comuna de Arauco, Curanilahue es la localidad de la que más pacientes vienen al centro.",
+        "razon": "Muchas familias de Curanilahue vienen de forma recurrente, en especial para controles de ortodoncia, medicina general y otorrinolaringología. Quien viaja por una atención puede consultar si hay horas de {esp} el mismo día.",
     },
     "los-alamos": {
-        "locomocion": "Desde Los Álamos son 35 km por la Ruta 160, 40 minutos en auto. Los buses interurbanos que conectan Concepción con Lebu pasan por Los Álamos y Carampangue, lo que facilita la conexión sin transbordos.",
-        "contexto": "Los Álamos cuenta con Hospital Comunitario Los Álamos y CESFAM. Es comuna intermedia entre Curanilahue y Lebu, con economía diversificada (forestal, comercio, servicios).",
-        "razon": "Para pacientes de Los Álamos, el CMC es opción cuando necesitan {esp} y prefieren no viajar a Concepción (1h 30 min) ni esperar la red pública. La distancia hace que el viaje sea razonable de ida y vuelta el mismo día.",
+        "locomocion": "Desde Los Álamos son unos 53 km por la Ruta 160, que pasa por Curanilahue: cerca de 55 minutos en auto.",
+        "contexto": "Los Álamos es una comuna de la Provincia de Arauco, entre Curanilahue y Lebu.",
+        "razon": "Desde Los Álamos, las atenciones más pedidas son los controles de ortodoncia, la medicina general, la otorrinolaringología y la ecografía. Se recomienda confirmar la fecha por WhatsApp antes de viajar y agrupar atenciones en una sola visita ({esp}).",
     },
     "lebu": {
-        "locomocion": "Desde Lebu son 50 km combinando Ruta P-40 y Ruta 160, alrededor de 1 hora en auto. Hay servicios diarios de buses Lebu–Concepción que paran en Carampangue, lo que evita transbordos. El viaje completo (ida + atención + vuelta) cabe holgadamente en una jornada.",
-        "contexto": "Lebu es la capital de la Provincia de Arauco, con Hospital Provincial Santa Isabel de Lebu. Pero la red pública trabaja con tiempos de espera largos para varias especialidades, especialmente las dentales.",
-        "razon": "Pacientes de Lebu vienen al CMC para {esp} principalmente para acortar tiempos de espera o para tratamientos dentales privados (ortodoncia, implantología). Es habitual programar la cita temprano para volver en la tarde.",
+        "locomocion": "Desde Lebu son unos 77 km por la Ruta 160, que pasa por Los Álamos y Curanilahue: cerca de 1 hora 20 minutos en auto.",
+        "contexto": "Lebu es la capital de la Provincia de Arauco.",
+        "razon": "Desde Lebu, la atención más pedida es otorrinolaringología, seguida de ecografía y cardiología. Dado el trayecto, conviene confirmar fecha y hora por WhatsApp y agrupar atenciones en una misma visita ({esp}).",
     },
     "canete": {
-        "locomocion": "Desde Cañete son 70 km vía Ruta P-72 y luego Ruta 160 hacia el norte, alrededor de 1h 20 min en auto. Hay servicios de buses Cañete–Concepción que paran en Carampangue, sin necesidad de transbordo en Arauco.",
-        "contexto": "Cañete es la comuna mapuche-lafquenche más grande de la Provincia de Arauco. Cuenta con Hospital Intercultural Kallvu Llanka, que combina medicina occidental con medicina mapuche.",
-        "razon": "Pacientes de Cañete vienen al CMC para {esp} cuando necesitan especialidades privadas o quieren agilizar tiempos. Muchos combinan el viaje con compras o trámites en Carampangue/Arauco para optimizar el día.",
+        "locomocion": "Desde Cañete son unos 72 km, por la Ruta P-60 y luego la Ruta 160: cerca de 1 hora 20 minutos en auto.",
+        "contexto": "Cañete es una comuna de la Provincia de Arauco; cuenta con el Hospital Intercultural Kallvu Llanka.",
+        "razon": "Desde Cañete, las atenciones más pedidas son otorrinolaringología, psiquiatría por teleconsulta, medicina general y gastroenterología. Por la distancia, se recomienda confirmar la fecha antes de viajar ({esp}). La psiquiatría y la neurología se atienden por videollamada, sin viaje.",
     },
     "contulmo": {
-        "locomocion": "Desde Contulmo son 90 km vía Ruta P-72 y P-60, alrededor de 1h 40 min en auto. Es trayecto largo pero la única alternativa razonable sin pasar por Concepción (que sería un rodeo de más de 3 horas).",
-        "contexto": "Contulmo es comuna cordillerana pequeña, junto al Lago Lanalhue, con paisajes selváticos y patrimonio arquitectónico colono. Cuenta con CESFAM Contulmo y postas rurales, pero las especialidades se derivan fuera de la comuna.",
-        "razon": "Pacientes de Contulmo eligen el CMC para {esp} cuando necesitan especialidades que en su comuna no existen y prefieren no hacer el viaje a Concepción. Recomendamos agendar varias atenciones en un mismo día para optimizar el viaje.",
+        "locomocion": "Desde Contulmo son unos 106 km, por la Ruta P-60 y luego la Ruta 160: cerca de 2 horas en auto.",
+        "contexto": "Contulmo es una comuna de la Provincia de Arauco, junto al lago Lanalhue.",
+        "razon": "Por la distancia, se recomienda coordinar con anticipación por WhatsApp y, cuando sea posible, agrupar varias atenciones en una sola visita ({esp}). La psiquiatría y la neurología se atienden por videollamada.",
     },
     "tirua": {
-        "locomocion": "Desde Tirúa son 110 km vía Ruta P-72 sur, alrededor de 2 horas en auto. Es la comuna más distante de la Provincia de Arauco, por lo que recomendamos agendar el viaje con tiempo y combinar varias atenciones en una sola venida.",
-        "contexto": "Tirúa es comuna mapuche-lafquenche del extremo sur de la Provincia, costera. Cuenta con CESFAM Tirúa y postas rurales. La conectividad con la red pública especializada implica viajar a Cañete o a Concepción.",
-        "razon": "Pacientes de Tirúa que viajan al CMC suelen agendar varias atenciones en un mismo día (médica + dental + ecografía cuando aplica). Para {esp} en particular, conviene coordinar con anticipación por WhatsApp para que la cita calce con disponibilidad.",
+        "locomocion": "Desde Tirúa son unos 138 km, por las rutas P-72, P-60 y 160: cerca de 2 horas 30 minutos en auto.",
+        "contexto": "Tirúa es la comuna más austral de la Provincia de Arauco.",
+        "razon": "Por la distancia, se recomienda coordinar con anticipación por WhatsApp y agrupar varias atenciones en una sola visita ({esp}). La psiquiatría y la neurología se atienden por videollamada.",
     },
 }
 
@@ -2854,6 +2909,7 @@ async def sitemap_xml():
         "psicologia-infantil-cuando-consultar", "rinoplastia-funcional-tabique",
         "vacunas-pni-calendario-2026", "bono-fonasa-mle-arauco",
         "limpieza-dental-precio-arauco", "ecografia-precio-arauco",
+        "pediatra-arauco",
     ]
     base_url = "https://centromedicocarampangue.cl"
     today = datetime.now().strftime("%Y-%m-%d")
@@ -3007,7 +3063,7 @@ async def sitemap_images_xml():
     base = "https://centromedicocarampangue.cl"
     img_base = "https://agentecmc.cl/static/images/centro"
     photos = [
-        ("fachada-centro-medico-carampangue.jpg", "Fachada del Centro Médico y Dental Carampangue con su letrero, en República 102 esquina Monsalve, Arauco"),
+        ("fachada-centro-medico-carampangue.jpg", "Fachada del Centro Médico y Dental Carampangue con su letrero, en Monsalve 102, esquina República, Arauco"),
         ("recepcion.jpg", "Recepción del Centro Médico Carampangue con mostrador de madera y zona de espera"),
         ("sala-espera.jpg", "Sala de espera con sillones y vista a la calle desde ventanal grande"),
         ("box-medico.jpg", "Box de atención médica con camilla, escritorio y lavamanos"),
@@ -3941,28 +3997,28 @@ _COMUNAS_DATA = {
     "curanilahue": {
         "name": "Curanilahue",
         "title": "Médicos en Curanilahue · Centro Médico Carampangue",
-        "description": "Atención médica completa para pacientes de Curanilahue. 22 especialidades médicas y dentales a 25 minutos del centro. Bono Fonasa, agendamiento por WhatsApp.",
-        "hero_lead": "Si vives en Curanilahue, el CMC está a 25 minutos. 22 especialidades médicas y dentales: medicina general, kinesiología, ginecología, pediatría, odontología, psicología, ecografías y más. Bono Fonasa MLE en consultas elegibles.",
-        "km": "25", "time": "25 minutos", "bus": "Buses regulares Curanilahue–Arauco pasan por Carampangue",
-        "transport": "Toma cualquier bus que vaya a Arauco o que pase por la Ruta 160 — todos hacen parada en Carampangue. Tiempo estimado en transporte público: 35-45 minutos.",
+        "description": "Atención médica completa para pacientes de Curanilahue. 22 especialidades médicas y dentales a 30 minutos del centro. Bono Fonasa, agendamiento por WhatsApp.",
+        "hero_lead": "Si vive en Curanilahue, el CMC está a 30 minutos. 22 especialidades médicas y dentales: medicina general, kinesiología, ginecología, odontología, psicología, ecografías y más. Bono Fonasa MLE en consultas elegibles.",
+        "km": "30", "time": "30 minutos", "bus": "Ruta 160 directa hasta Carampangue",
+        "transport": "El viaje se hace por la Ruta 160, sin desvíos, en unos 30 minutos en auto. El centro está en Monsalve 102, esquina República, con estacionamiento libre en la calle.",
         "kine_note": "Ya atendemos pacientes recurrentes desde Curanilahue.",
     },
     "los-alamos": {
         "name": "Los Álamos",
         "title": "Médicos cerca de Los Álamos · Centro Médico Carampangue",
-        "description": "Atención médica integral para pacientes de Los Álamos. CMC a 35 km, 22 especialidades, agendamiento por WhatsApp.",
+        "description": "Atención médica integral para pacientes de Los Álamos. CMC a 53 km, 22 especialidades, agendamiento por WhatsApp.",
         "hero_lead": "Si estás en Los Álamos, el Centro Médico Carampangue es la opción más cercana fuera de tu comuna. 22 especialidades médicas y dentales con tarifa Fonasa donde aplica.",
-        "km": "35", "time": "40 minutos", "bus": "Buses Los Álamos–Concepción pasan cerca de Carampangue",
-        "transport": "Buses Los Álamos a Concepción/Talcahuano vía Arauco pasan cerca del centro. También accesible en auto vía Ruta 160.",
+        "km": "53", "time": "55 minutos", "bus": "Ruta 160 directa hasta Carampangue",
+        "transport": "El viaje se hace por la Ruta 160, que pasa por Curanilahue, en unos 55 minutos en auto. El centro está en Monsalve 102, esquina República.",
         "kine_note": "Bono Fonasa MLE en kinesiología: 10 sesiones por $83.360.",
     },
     "canete": {
         "name": "Cañete",
         "title": "Médicos cerca de Cañete · Centro Médico Carampangue",
-        "description": "Atención médica integral para pacientes de Cañete. 22 especialidades a 45 km, agendamiento por WhatsApp, Fonasa y particular.",
+        "description": "Atención médica integral para pacientes de Cañete. 22 especialidades a 72 km, agendamiento por WhatsApp, Fonasa y particular.",
         "hero_lead": "Atendemos pacientes desde Cañete y comunas cercanas (Tirúa, Contulmo). 22 especialidades médicas y dentales. Bono Fonasa MLE disponible. Si necesitas algo que no encontraste en tu comuna, te esperamos.",
-        "km": "45", "time": "55 minutos", "bus": "Buses Cañete–Concepción pasan por la zona",
-        "transport": "Buses interregionales (Cañete a Concepción) hacen parada en Arauco, desde ahí 10 minutos a Carampangue. En auto, vía Ruta 160.",
+        "km": "72", "time": "1 hora 20 minutos", "bus": "Ruta P-60 y Ruta 160 hasta Carampangue",
+        "transport": "El viaje se hace por la Ruta P-60 y luego por la Ruta 160, en cerca de 1 hora 20 minutos en auto. El centro está en Monsalve 102, esquina República, en Carampangue.",
         "kine_note": "Tratamientos extensos disponibles: kinesiología, psicología, ortodoncia.",
     },
     "lebu": {
@@ -3970,8 +4026,8 @@ _COMUNAS_DATA = {
         "title": "Médicos cerca de Lebu · Centro Médico Carampangue",
         "description": "Atención médica integral para pacientes de Lebu. CMC en provincia de Arauco, 22 especialidades, agendamiento por WhatsApp.",
         "hero_lead": "Si estás en Lebu, capital de la provincia de Arauco, el CMC en Carampangue ofrece 22 especialidades médicas y dentales que pueden no estar disponibles en tu comuna. Bono Fonasa MLE en consultas elegibles.",
-        "km": "55", "time": "1 hora 10 minutos", "bus": "Buses Lebu–Concepción vía Cañete y Arauco",
-        "transport": "Buses Lebu a Concepción pasan por Cañete y Arauco. Desde Arauco son 10 minutos a Carampangue.",
+        "km": "77", "time": "1 hora 20 minutos", "bus": "Ruta 160 hasta Carampangue",
+        "transport": "El viaje se hace por la Ruta 160, que pasa por Los Álamos y Curanilahue, en cerca de 1 hora 20 minutos en auto. El centro está en Monsalve 102, esquina República.",
         "kine_note": "22 especialidades disponibles en una sola visita.",
     },
 }
@@ -5965,6 +6021,19 @@ def anima_redirect(token: str | None = Query(None)):
     """Redirect 301 de /anima → /alma (ruta canónica de la plataforma)."""
     target = f"/alma?token={token}" if token else "/alma"
     return RedirectResponse(url=target, status_code=301)
+
+
+# URLs viejas de WordPress que Google sigue mostrando (Search Console oct-2026:
+# ~465 y ~410 apariciones) y hoy dan 404 → su artículo actual.
+_WP_LEGACY = {"/kinesiologia-2": "/blog/kinesiologia", "/medicina-general-2": "/blog/medicina-general"}
+
+
+@app.get("/kinesiologia-2", include_in_schema=False)
+@app.get("/kinesiologia-2/", include_in_schema=False)
+@app.get("/medicina-general-2", include_in_schema=False)
+@app.get("/medicina-general-2/", include_in_schema=False)
+def wp_legacy_redirect(request: Request):
+    return RedirectResponse(url=_WP_LEGACY[request.url.path.rstrip("/")], status_code=301)
 
 
 @app.get("/admin/api/boxes-config")
