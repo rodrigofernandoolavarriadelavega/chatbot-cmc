@@ -72,6 +72,42 @@ def ensure_table() -> None:
                    sent_at     TEXT DEFAULT (datetime('now'))
                )"""
         )
+        _ensure_corridas(c)
+
+
+def _ensure_corridas(c) -> None:
+    """Una fila por corrida de `enviar_purchases` (la lee Campañas Meta, sección
+    "Aviso a Meta"). Solo informa; no participa de la lógica de envío."""
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS capi_purchase_corridas (
+               id            INTEGER PRIMARY KEY AUTOINCREMENT,
+               fecha_corrida TEXT NOT NULL,      -- ISO con hora, America/Santiago
+               enviados      INTEGER,
+               diferidos     INTEGER,
+               no_atendidos  INTEGER,
+               duplicados    INTEGER,
+               errores       INTEGER,
+               value_total   REAL,
+               estimados     INTEGER
+           )"""
+    )
+
+
+def registrar_corrida(res: dict, ahora: datetime | None = None) -> None:
+    """Guarda el resultado de una corrida. Nunca lanza: un fallo de bitácora no
+    puede afectar el envío."""
+    try:
+        ahora = ahora or datetime.now(_CLT)
+        with db() as c:
+            _ensure_corridas(c)
+            c.execute(
+                "INSERT INTO capi_purchase_corridas (fecha_corrida, enviados, diferidos, no_atendidos, "
+                "duplicados, errores, value_total, estimados) VALUES (?,?,?,?,?,?,?,?)",
+                (ahora.isoformat(timespec="seconds"), res.get("enviados", 0), res.get("diferidos", 0),
+                 res.get("no_atendidos", 0), res.get("duplicados", 0), res.get("errores", 0),
+                 float(res.get("value_total", 0.0)), res.get("estimados", 0)))
+    except Exception as e:
+        log.warning("capi_purchase: no se pudo registrar la corrida: %s", e)
 
 
 def _caja_cerrada(c, fecha: str) -> bool:
@@ -269,6 +305,7 @@ async def enviar_purchases(hoy: date | None = None) -> dict:
                 log.warning("CAPI Purchase cita %s sin confirmar (%s); reintenta mañana", it["id_cita"], r)
                 res["errores"] += 1
     log.info("capi_purchase_diario: %s", res)
+    registrar_corrida(res)
     return res
 
 

@@ -226,11 +226,32 @@ def _mapa_anuncios(c) -> dict[str, dict]:
 _ESTADOS_CACHE: dict = {"ts": 0.0, "data": {}}
 _ESTADOS_TTL = 900
 
+# Lectores que NO pueden salir a la red (Alma Radar, app/radar_routes.py): con
+# esta marca `_estados_meta` usa solo lo que ya está en caché y, si no hay, cae
+# al respaldo "tuvo gasto ayer u hoy" de la foto diaria. Sin la marca, todo
+# sigue igual que antes.
+import contextvars as _cv
+from contextlib import contextmanager as _cm_ctx
+
+_SOLO_LOCAL = _cv.ContextVar("campanas_meta_solo_local", default=False)
+
+
+@_cm_ctx
+def solo_datos_locales():
+    """`with solo_datos_locales(): panel_data(...)` — sin llamadas a Meta."""
+    tok = _SOLO_LOCAL.set(True)
+    try:
+        yield
+    finally:
+        _SOLO_LOCAL.reset(tok)
+
 
 def _estados_meta() -> dict[str, str]:
     import time as _t
     if _t.time() - _ESTADOS_CACHE["ts"] < _ESTADOS_TTL and _ESTADOS_CACHE["data"]:
         return _ESTADOS_CACHE["data"]
+    if _SOLO_LOCAL.get():
+        return {}
     out: dict[str, str] = {}
     try:
         import httpx
@@ -991,7 +1012,47 @@ def _nombres_profesionales(c) -> dict[int, str]:
     return m
 
 
-def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) -> dict[str, dict]:
+VENTANA_ESPECIALIDAD_DIAS = 30   # "venta de la especialidad del anuncio, primeros 30 días desde la cita"
+
+
+def _split_sumar(dst: dict, camino: str, grupo: str | None, dentro30: bool, venta: float, centro: float) -> None:
+    """Acumula venta/centro por (camino, especialidad del pago, dentro de 30 días).
+    camino 'telefono' = hallada solo por teléfono compartido en la ficha."""
+    k = (camino, grupo or "", bool(dentro30))
+    v = dst.setdefault(k, [0, 0.0])
+    v[0] += venta
+    v[1] += centro
+
+
+def _sumar_split(dst: dict, src: dict) -> None:
+    for k, (v, c) in src.items():
+        d = dst.setdefault(k, [0, 0.0])
+        d[0] += v
+        d[1] += c
+
+
+def _buckets_venta(a: dict) -> None:
+    """Reparte la venta del anuncio en tres, SIN solaparse (suman la venta total):
+      (a) venta de la especialidad del anuncio, primeros 30 días desde la cita
+          (solo pacientes que agendaron por el bot);
+      (c) venta hallada solo por teléfono compartido (pagaron_tel);
+      (b) todo lo demás: controles posteriores y otras especialidades.
+    Es ATRIBUCIÓN (a quién tocó el anuncio antes de pagar), no causalidad: no
+    sabemos cuánto habría pagado igual sin el anuncio."""
+    g = a.get("grupo")
+    ve = ce = vt = ct = 0
+    for (camino, grp, dentro), (v, c) in (a.get("split") or {}).items():
+        if camino == "telefono":
+            vt += v
+            ct += c
+        elif g and dentro and grp == g:
+            ve += v
+            ce += c
+    a["v_esp30"], a["c_esp30"], a["v_tel"], a["c_tel"] = ve, ce, vt, ct
+
+
+def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]],
+                       detalle: dict | None = None) -> dict[str, dict]:
     """Venta y margen por anuncio. Un paciente → un anuncio.
 
     Dos caminos para saber que una persona del anuncio se atendió:
@@ -1000,13 +1061,24 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
          un paciente que pagó en caja dentro de 90 días desde el clic (lo
          agendó recepción, llamó por teléfono, llegó directo) → desde el clic.
     Se cuenta todo lo pagado desde ese día hasta hoy.
-    `clics`: clave de teléfono → (epoch del primer clic en el rango, ad_id)."""
+    `clics`: clave de teléfono → (epoch del primer clic en el rango, ad_id).
+    `detalle` (opcional): si se pasa un dict, se llena pid → {ad_id, venta,
+    centro} con lo mismo que se suma por anuncio (para cruzar por comuna sin
+    duplicar la regla de atribución)."""
     inicio: dict[int, tuple[str, str, str]] = {}   # pid → (ad_id, desde, camino)
+    fin30: dict[int, str] = {}                      # pid → último día de "los primeros 30 días desde la cita"
     for ci in citas:
         pid = ci.get("id_paciente_medilink")
         if pid and pid not in inicio:
             dia = datetime.fromtimestamp(ci["created_epoch"], _CL).date().isoformat()
             inicio[int(pid)] = (ci["ad_id"], dia, "bot")
+            # 30 días desde el día de la CITA (si agendó con semanas de anticipo,
+            # la primera consulta cae después de agendar); piso: 30 días desde que agendó.
+            base = max(dia, (ci.get("fecha") or "")[:10] or dia)
+            try:
+                fin30[int(pid)] = (date.fromisoformat(base) + timedelta(days=VENTANA_ESPECIALIDAD_DIAS)).isoformat()
+            except ValueError:
+                fin30[int(pid)] = (date.fromisoformat(dia) + timedelta(days=VENTANA_ESPECIALIDAD_DIAS)).isoformat()
     por_tel = _pacientes_por_telefono(c, set(clics))
     for k in sorted(clics, key=lambda x: clics[x][0]):
         ts, ad_id = clics[k]
@@ -1014,6 +1086,7 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
         for pid in por_tel.get(k, ()):
             if pid not in inicio:
                 inicio[pid] = (ad_id, dia, "telefono")
+                fin30[pid] = (date.fromisoformat(dia) + timedelta(days=VENTANA_ESPECIALIDAD_DIAS)).isoformat()
 
     pct = _pct_honorarios(c)
     pagos: dict[int, list] = defaultdict(list)
@@ -1033,7 +1106,13 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
                 pagos[r["id_paciente"]].append(r)
 
     out: dict[str, dict] = defaultdict(lambda: {"venta": 0, "centro": 0.0, "pagaron": 0, "pagaron_tel": 0,
-                                                "profs": {}})
+                                                "profs": {}, "split": {}})
+    g_memo: dict[int, str | None] = {}
+
+    def _g(prof):
+        if prof not in g_memo:
+            g_memo[prof] = _grupo_prof(prof)
+        return g_memo[prof]
     contados: set[int] = set()
     for pid, filas in pagos.items():
         ad_id, dia, camino = inicio[pid]
@@ -1046,12 +1125,20 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
         o = out[ad_id]
         o["pagaron"] += 1
         o["pagaron_tel"] += 1 if camino == "telefono" else 0
+        det = None
+        if detalle is not None:
+            det = detalle[pid] = {"ad_id": ad_id, "venta": 0, "centro": 0.0}
         for f in filas:
             monto = int(f["monto"] or 0)
             p_prof = pct.get(f["id_profesional"]) or PCT_HONORARIO_DEFAULT
             centro = monto * (100 - p_prof) / 100
             o["venta"] += monto
             o["centro"] += centro
+            if det is not None:
+                det["venta"] += monto
+                det["centro"] += centro
+            _split_sumar(o["split"], camino, _g(f["id_profesional"]),
+                         (f["fecha"] or "")[:10] <= fin30.get(pid, ""), monto, centro)
             pp = o["profs"].setdefault(f["id_profesional"], {"venta": 0, "centro": 0.0, "pacientes": set()})
             pp["venta"] += monto
             pp["centro"] += centro
@@ -1083,9 +1170,16 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
         prof = o["profs"].get(r["id_profesional"])
         if prof and prof["venta"] >= monto:
             p_prof = pct.get(r["id_profesional"]) or PCT_HONORARIO_DEFAULT
+            dentro_im = (r["fecha"] or "")[:10] <= fin30.get(pid, "")
+            camino_im = inicio[pid][2]
+            _split_sumar(o["split"], camino_im, _g(r["id_profesional"]), dentro_im, -monto,
+                         -monto * (100 - p_prof) / 100)
+            _split_sumar(o["split"], camino_im, _g(ID_IMAGENDENT), dentro_im, monto, monto - int(r["costo"] or 0))
             prof["venta"] -= monto
             prof["centro"] -= monto * (100 - p_prof) / 100
             o["centro"] -= monto * (100 - p_prof) / 100
+            if detalle is not None and pid in detalle:
+                detalle[pid]["centro"] -= monto * (100 - p_prof) / 100
             if prof["venta"] <= 0:
                 o["profs"].pop(r["id_profesional"])
         else:
@@ -1095,6 +1189,8 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]]) 
         im["centro"] += monto - int(r["costo"] or 0)
         im["pacientes"].add(pid)
         o["centro"] += monto - int(r["costo"] or 0)
+        if detalle is not None and pid in detalle:
+            detalle[pid]["centro"] += monto - int(r["costo"] or 0)
     return dict(out)
 
 
@@ -1272,7 +1368,9 @@ def _acum() -> dict:
     return {"gasto": 0.0, "impresiones": 0, "alcance": 0, "clics": 0, "conv": 0,
             "personas": set(), "citas": 0, "atendidos": 0, "no_asistio": 0, "anuladas": 0,
             "por_proxy": 0, "con_medilink": 0, "instalaron": set(), "orto_venta": 0, "venta": 0, "centro": 0,
-            "pagaron": 0, "pagaron_tel": 0, "profs": {}}
+            "pagaron": 0, "pagaron_tel": 0, "profs": {},
+            "split": {}, "v_esp30": 0, "c_esp30": 0.0, "v_tel": 0, "c_tel": 0.0,
+            "at_medilink": 0, "at_caja": 0, "at_proxy": 0}
 
 
 _NOMBRES_PROF: dict[int, str] = {}
@@ -1313,10 +1411,20 @@ def _cerrar(a: dict) -> dict:
         "no_asistio": a["no_asistio"], "anuladas": a["anuladas"],
         "no_asistio_pct": round(100 * a["no_asistio"] / (aten + a["no_asistio"])) if (aten + a["no_asistio"]) else None,
         "atendidos_proxy": a["por_proxy"], "con_medilink": a["con_medilink"],
+        # de dónde salió cada "atendido" (solo los que cuentan como atendidos)
+        "atendidos_fuente": {"medilink": a["at_medilink"], "caja": a["at_caja"], "respaldo": a["at_proxy"]},
         "instalaron": len(a["instalaron"]), "orto_venta": round(a["orto_venta"]),
         "cac_conv": _div(g, a["conv"]) if g else None, "cac_cita": _div(g, citas) if g else None,
         "cac_atendido": _div(g, aten) if g else None,
         "venta": round(a["venta"]),
+        # Venta en tres partes que suman la venta total (ver _buckets_venta)
+        "venta_esp30": round(a["v_esp30"]), "centro_esp30": round(a["c_esp30"]),
+        "venta_tel": round(a["v_tel"]), "centro_tel": round(a["c_tel"]),
+        "venta_otra": round(a["venta"] - a["v_esp30"] - a["v_tel"]),
+        "centro_otra": round(a["centro"] - a["c_esp30"] - a["c_tel"]),
+        # Retorno ESTRICTO: solo lo de la especialidad del anuncio en los primeros
+        # 30 días, para el centro ÷ gasto. Al lado del retorno completo.
+        "retorno_estricto": round(a["c_esp30"] / g, 2) if g else None,
         "retorno": round(a["venta"] / g, 2) if g else None,
         # lo que le queda al centro (tras honorarios) por cada $1 de gasto en Meta;
         # bajo 1× el anuncio no se paga solo
@@ -1467,6 +1575,8 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                 a["anuladas"] += 1 if ci["desenlace"] == "anulada" else 0
                 a["por_proxy"] += 1 if ci["fuente"] == "proxy" else 0
                 a["con_medilink"] += 1 if ci["fuente"] == "medilink" else 0
+                if ci["atendido"] and ci["fuente"] in ("medilink", "caja", "proxy"):
+                    a["at_" + ci["fuente"]] += 1
 
         for k, v in _instalaciones(c, clics).items():
             for a in (por_ad[clics[k][1]], tot):
@@ -1480,6 +1590,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                 for kk in ("venta", "centro", "pagaron", "pagaron_tel"):
                     a[kk] += v[kk]
                 _sumar_profs(a["profs"], v["profs"])
+                _sumar_split(a["split"], v["split"])
 
         # Especialidad del anuncio (nombre/título; si no dice, la más agendada)
         # y cuánto de su venta cayó en OTRA especialidad.
@@ -1510,6 +1621,13 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             a["fuera"] = sum(v["venta"] for pid, v in a["profs"].items() if g and _grupo_prof(pid) != g)
         tot["fuera"] = sum(a.get("fuera", 0) for a in por_ad.values())
         tot["grupo"] = "mixto"
+        # Venta en tres partes (especialidad del anuncio a 30 días / otras y
+        # posteriores / solo por teléfono). El total y cada campaña suman los
+        # anuncios: la especialidad "de la campaña" no existe, la del anuncio sí.
+        for a in por_ad.values():
+            _buckets_venta(a)
+        for kk in ("v_esp30", "c_esp30", "v_tel", "c_tel"):
+            tot[kk] = sum(a[kk] for a in por_ad.values())
 
         # Cómo dicen que nos conocieron las personas de cada anuncio (su
         # respuesta más reciente a la pregunta post-cita, cuando la hay).
@@ -1548,7 +1666,8 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             camp_nombre[cid] = info["campana"]
             pc = por_camp[cid]
             for k in ("gasto", "impresiones", "alcance", "clics", "conv", "citas", "atendidos", "venta", "centro", "pagaron", "pagaron_tel",
-                      "no_asistio", "anuladas", "por_proxy", "con_medilink", "orto_venta"):
+                      "no_asistio", "anuladas", "por_proxy", "con_medilink", "orto_venta",
+                      "v_esp30", "c_esp30", "v_tel", "c_tel", "at_medilink", "at_caja", "at_proxy"):
                 pc[k] += a[k]
             pc["instalaron"] |= a["instalaron"]
             pc.setdefault("rap", []).extend(a.get("rap", []))
@@ -1637,6 +1756,12 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         _uf = c.execute("SELECT MAX(fecha) FROM meta_insights_diario").fetchone()[0]
         hay_insights = _uf is not None
         opciones = _opciones(c, mapa, canal)
+        # Desde cuándo Medilink (espejo de ausentismo) tiene estado por cita: antes de
+        # esa fecha no hay otra forma que el respaldo antiguo (aviso a Meta).
+        aus_desde = None
+        if _tabla_existe(c, "ausentismo_citas"):
+            aus_desde = c.execute("SELECT MIN(fecha) FROM ausentismo_citas WHERE fecha IS NOT NULL "
+                                  "AND fecha != ''").fetchone()[0]
 
     k = _cerrar(tot)
     return {
@@ -1658,6 +1783,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         "umbrales": {"gasto_sin_citas": UMBRAL_GASTO_SIN_CITAS, "frecuencia": UMBRAL_FRECUENCIA,
                      "muestra_chica": MUESTRA_CHICA},
         "medicion": {"atribucion_desde": ATRIBUCION_DESDE, "plataforma_desde": PLATAFORMA_DESDE,
+                     "medilink_desde": (aus_desde or "")[:10] or None,
                      "rango_antes_de_atribucion": d.isoformat() < ATRIBUCION_DESDE,
                      "rango_antes_de_plataforma": d.isoformat() < PLATAFORMA_DESDE},
     }
@@ -2683,9 +2809,15 @@ def kanban(request: Request, desde: str | None = Query(None), hasta: str | None 
 
 
 @router.get("/sugerencias-presupuesto")
-def sugerencias_presupuesto_ep(request: Request, token: str | None = Query(None)):
+def sugerencias_presupuesto_ep(request: Request, desde: str | None = Query(None), hasta: str | None = Query(None),
+                               plataforma: str | None = Query(None), token: str | None = Query(None)):
+    """Sin fechas: últimas 4 semanas (igual que el resumen del lunes). Con
+    fechas: el MISMO rango que la tabla del panel."""
     _auth(request, token)
     import meta_alertas
+    if desde or hasta:
+        d, h = _rango(desde, hasta)
+        return meta_alertas.sugerencias_presupuesto(desde=d, hasta=h, plataforma=plataforma)
     return meta_alertas.sugerencias_presupuesto()
 
 
@@ -2774,3 +2906,9 @@ async def persona_responder(clave: str, request: Request, token: str | None = Qu
         guardar_seguimiento(clave, "contactado", (prev or {}).get("nota"), (prev or {}).get("proximo"),
                             origen="respuesta por WhatsApp")
     return r if isinstance(r, dict) else {"ok": True}
+
+
+# ── Integraciones (agenda, creativos, territorio, velocidad, valor 90 días) ──
+# Viven en su propio módulo y cuelgan de ESTE router: al importarlo se
+# registran sus rutas. Va al final porque necesita todo lo de arriba definido.
+import campanas_meta_integraciones  # noqa: E402,F401
