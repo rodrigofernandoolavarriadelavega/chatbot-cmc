@@ -52,6 +52,18 @@ def _extra_dataset_ids() -> list[str]:
 _extra_tasks: set = set()
 
 
+# Lo que sale hacia Meta NUNCA lleva la especialidad ni nada que revele la relación
+# asistencial (oct-2026: se mandaba content_name="Psiquiatría" junto con teléfono,
+# nombre y RUT hasheados = dato de salud; Meta lo prohíbe y la Ley 21.719 lo trata
+# como sensible). Lista BLANCA: solo estas claves salen; el resto se descarta.
+_CUSTOM_DATA_PERMITIDO = {"currency", "value", "venta_total", "value_estimado",
+                          "registration_method", "order_id"}
+
+
+def _sin_datos_de_salud(custom_data: dict) -> dict:
+    return {k: v for k, v in (custom_data or {}).items() if k in _CUSTOM_DATA_PERMITIDO}
+
+
 async def _send_copy(dataset_id: str, payload: dict, event_name: str, eid: str, attr: str) -> None:
     """Copia best-effort del evento a un dataset adicional (2 intentos).
 
@@ -280,7 +292,7 @@ async def send_event(
         if value is not None:
             cd["value"] = value
         if custom_data:
-            cd.update(custom_data)
+            cd.update(_sin_datos_de_salud(custom_data))
         event["custom_data"] = cd
 
     # Construir payload
