@@ -1956,11 +1956,13 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
     # teleconsulta en Medilink y RECHAZAN la creación con 400 si falta el campo
     # `videoconsulta`. Solo lo enviamos en TELEMEDICINA para no alterar el body
     # de las citas presenciales (que ya funcionan sin el campo).
-    # `forzar_videoconsulta`: el profesional atiende PRESENCIAL pero su horario
-    # en Medilink quedó con videoconsulta habilitada (Ps. Salas, 6-oct) → se
-    # manda el campo para que Medilink acepte, SIN el rótulo [ONLINE].
-    if modalidad == "TELEMEDICINA" or forzar_videoconsulta:
+    # `forzar_videoconsulta`: profesionales cuyo horario en Medilink tiene la
+    # videoconsulta habilitada (Ps. Salas) EXIGEN el campo siempre: 1 = online,
+    # 0 = presencial. Verificado 6-oct con cita de prueba 67739 (201 con 0).
+    if modalidad == "TELEMEDICINA":
         body["videoconsulta"] = 1
+    elif forzar_videoconsulta:
+        body["videoconsulta"] = 0
     client = _get_shared_client()
     try:
         r = await _post(client, f"{MEDILINK_BASE_URL}/citas", json=body, headers=HEADERS)

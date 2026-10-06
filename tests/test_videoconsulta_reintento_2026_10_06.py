@@ -120,6 +120,7 @@ def test_salas_sigue_presencial():
     """Salas atiende presencial: se manda el campo, pero la cita no pasa a online."""
     _confirmar("56932133850", _slot(82, "Ps. Jacquelinne Salas", "Psicología Adulto"),
                "psicología adulto")
+    assert LLAMADAS[0]["forzar_videoconsulta"] is True  # el campo va desde el 1er intento
     reintento = LLAMADAS[1]
     assert reintento["modalidad"] == "PRESENCIAL"
     assert reintento["forzar_videoconsulta"] is True
@@ -166,7 +167,7 @@ def test_crear_cita_manda_videoconsulta_si_se_fuerza():
     ml._post = _fake_post
     asyncio.run(ml.crear_cita(1, 82, _FECHA, "17:00", "17:45", forzar_videoconsulta=True))
     asyncio.run(ml.crear_cita(1, 82, _FECHA, "17:00", "17:45"))
-    assert enviados[0].get("videoconsulta") == 1
+    assert enviados[0].get("videoconsulta") == 0  # presencial: 0 (cita de prueba 67739)
     assert "[ONLINE]" not in (enviados[0].get("observaciones") or "")
     assert "videoconsulta" not in enviados[1]
 

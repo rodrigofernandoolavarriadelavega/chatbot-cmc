@@ -606,10 +606,10 @@ PRECIO_PROF_SIN_BONO: dict[int, tuple[int, int]] = {
     82: (20000, 25000),
 }
 
-# Profesionales que atienden PRESENCIAL pero cuyo horario en Medilink tiene la
-# videoconsulta habilitada: Medilink rechaza la cita con 400 "Debe mandar el
-# parámetro videoconsulta". Se reintenta mandando el campo SIN convertir la cita
-# en online. Sacar el id cuando recepción corrija el horario en Medilink.
+# Profesionales cuyo horario en Medilink tiene la videoconsulta habilitada
+# (atienden presencial Y online): Medilink rechaza con 400 "Debe mandar el
+# parámetro videoconsulta" si falta el campo. Se manda siempre: 0 presencial,
+# 1 online (verificado 6-oct). El reintento del except queda de respaldo.
 _PROFS_PRESENCIAL_FLAG_VIDEO: frozenset[int] = frozenset({82})
 
 
@@ -11504,6 +11504,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         id_recurso=slot.get("id_recurso", 1),
                         modalidad=data.get("telemedicina_modalidad", "PRESENCIAL"),
                         observaciones_extra=_obs_prestacion,
+                        # Su horario en Medilink admite video: el campo va
+                        # desde el primer intento (0 presencial / 1 online).
+                        forzar_videoconsulta=slot.get("id_profesional") in _PROFS_PRESENCIAL_FLAG_VIDEO,
                     ), timeout=45)
             except Exception as _crear_err:
                 # P1-B: Medilink exige campo videoconsulta para ciertos slots
