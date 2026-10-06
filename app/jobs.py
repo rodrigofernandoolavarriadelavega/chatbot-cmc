@@ -1,6 +1,8 @@
 """Scheduler job functions — reenganche, watchdog, waitlist, fidelización wrappers."""
 import logging
 
+import reenganche_texto as _rt
+
 import httpx
 
 from config import (MEDILINK_BASE_URL, MEDILINK_TOKEN, ADMIN_ALERT_PHONE, USE_TEMPLATES,
@@ -129,6 +131,41 @@ async def verificar_cita_externa(phone: str) -> str:
         return "error"
 
 
+async def _proxima_hora_real(esp: str, cache: dict | None = None) -> tuple[dict | None, int]:
+    """Próxima hora real (slot, n horas libres ese día) con el MISMO ruteo que el
+    agendamiento (medicina general → Abarca/Olavarría, familiar → Márquez), para
+    ofrecer lo que el paciente verá al tocar el botón. Masoterapia pregunta
+    duración antes: no se ofrece hora. `cache` evita repetir la consulta por
+    especialidad dentro de una misma pasada del job (nunca fan-out a Medilink).
+    (None, 0) si no hay hora o Medilink no responde.
+    """
+    esp = (esp or "").strip().lower()
+    if not esp or is_medilink_down():
+        return None, 0
+    if cache is not None and esp in cache:
+        return cache[esp]
+    res: tuple[dict | None, int] = (None, 0)
+    try:
+        from flows import (_ESP_MED_GENERAL, _ESP_MED_FAMILIAR,
+                           _MED_AO_IDS, _MED_FAMILIAR_IDS)
+        if esp in ("masoterapia", "masaje", "masajes"):
+            todos = []
+        elif esp in _ESP_MED_GENERAL:
+            _, todos = await buscar_primer_dia(esp, dias_adelante=7, solo_ids=_MED_AO_IDS)
+        elif esp in _ESP_MED_FAMILIAR:
+            _, todos = await buscar_primer_dia("medicina general", dias_adelante=7,
+                                               solo_ids=_MED_FAMILIAR_IDS)
+        else:
+            _, todos = await buscar_primer_dia(esp, dias_adelante=7)
+        if todos:
+            res = (todos[0], len(todos))
+    except Exception as e:
+        log.debug("proxima_hora_real %s: %s", esp, e)
+    if cache is not None:
+        cache[esp] = res
+    return res
+
+
 async def _enviar_reenganche():
     """Reenganche agresivo: slot real + urgencia + botón directo.
 
@@ -169,13 +206,22 @@ async def _enviar_reenganche():
     # Excluir ADMIN_ALERT_PHONE: nunca tiene ventana 24h abierta desde el bot → Meta 131047.
     if ADMIN_ALERT_PHONE:
         sesiones = [s for s in sesiones if s.get("phone") != ADMIN_ALERT_PHONE]
+    _cache_proxima: dict = {}
     for s in sesiones:
         phone = s["phone"]
         state = s["state"]
         data  = s["data"]
         especialidad = data.get("especialidad", "")
         nombre = (data.get("nombre_conocido") or data.get("reg_nombre") or "").split()
-        saludo = f"*{nombre[0]}*" if nombre else ""
+        # Para el mensaje de reenganche: sesión → perfil guardado (sin nombre
+        # el saludo salía "Hola  👋" con doble espacio).
+        try:
+            from session import get_profile as _gp_reeng
+            _nombre_msg = _rt.primer_nombre(
+                data.get("nombre_conocido"), data.get("reg_nombre"),
+                (_gp_reeng(phone) or {}).get("nombre"))
+        except Exception:
+            _nombre_msg = _rt.primer_nombre(data.get("nombre_conocido"), data.get("reg_nombre"))
 
         # No reengancharse si todas las citas relevantes del paciente están canceladas.
         # Evita el mensaje "tienes una reserva pendiente" para una cita que ya no existe.
@@ -233,9 +279,8 @@ async def _enviar_reenganche():
                     except Exception:
                         pass
                 _nombre_reinv = (data.get("nombre_conocido") or data.get("reg_nombre") or "").split()
-                _saludo_reinv = f"*{_nombre_reinv[0]}*" if _nombre_reinv else ""
                 _msg_reinv = (
-                    f"Hola {_saludo_reinv} — vimos que tu hora"
+                    f"{_rt.saludo(_rt.primer_nombre(*_nombre_reinv))} Vimos que tu hora"
                     f"{' de *' + especialidad + '*' if especialidad else ''} fue cancelada."
                     f"{_slot_txt_reinv}\n\n"
                     "Si quieres reagendar, escribe *menu* y te ayudamos en un momento."
@@ -397,82 +442,11 @@ async def _enviar_reenganche():
             save_session(phone, "IDLE", {})
             continue
 
-        # Intentar obtener próximo slot real para la especialidad
-        slot_txt = ""
-        if especialidad and not is_medilink_down():
-            try:
-                _, todos = await buscar_primer_dia(especialidad, dias_adelante=7)
-                if todos:
-                    s0 = todos[0]
-                    n_slots = len(todos)
-                    escasez = "⚡ _Última hora disponible_ " if n_slots <= 2 else (
-                        f"⚡ _Quedan solo {n_slots} horas_ " if n_slots <= 4 else "")
-                    slot_txt = (
-                        f"\n\n{escasez}📅 *{s0.get('fecha_display', '')}* a las *{s0.get('hora_inicio', '')[:5]}*"
-                        f" con *{s0.get('profesional', '')}*"
-                    )
-            except Exception:
-                pass
-
-        if state == "WAIT_SLOT":
-            msg = (
-                f"Hola {saludo} 👋 Te quedaste a punto de elegir tu hora"
-                f"{' de *' + especialidad + '*' if especialidad else ''}."
-                f"{slot_txt}\n\n"
-                "Las horas se van llenando rápido, ¿la reservo?"
-            )
-        elif state in ("CONFIRMING_CITA", "WAIT_RUT_AGENDAR", "WAIT_DATOS_NUEVO", "WAIT_NOMBRE_NUEVO"):
-            msg = (
-                f"Hola {saludo} 👋 Quedaste a un paso de confirmar tu hora"
-                f"{' de *' + especialidad + '*' if especialidad else ''}."
-                f"{slot_txt}\n\n"
-                "Solo falta un dato para reservarla. ¿Seguimos?"
-            )
-        elif state == "WAIT_DURACION_MASOTERAPIA":
-            # Aún elige duración (20/40 min): NO hay reserva. No mostrar slot ni
-            # decir "reserva pendiente" — confunde al paciente (hallazgo auditoría).
-            msg = (
-                f"Hola {saludo} 👋 Te quedaste eligiendo la duración de tu "
-                "*masoterapia* (20 o 40 min). ¿Seguimos para reservar tu hora?"
-            )
-        elif state in ("WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR"):
-            # Copy honesto: NO hay ninguna reserva pendiente acá, el paciente
-            # estaba a mitad de ANULAR una hora existente. Caso real 56988217082
-            # (auditoría 2026-08-19): "Tienes una reserva pendiente. ¿Te la
-            # reservo?" le llegó a alguien que dijo "no podré ir".
-            msg = (
-                f"Hola {saludo} 👋 Te quedaste a mitad de cancelar tu hora"
-                f"{' de *' + especialidad + '*' if especialidad else ''}. "
-                "¿Seguimos con la anulación o prefieres dejarla como está?"
-            )
-        elif state in ("WAIT_RUT_REAGENDAR", "WAIT_CITA_REAGENDAR"):
-            msg = (
-                f"Hola {saludo} 👋 Te quedaste a mitad de reagendar tu hora"
-                f"{' de *' + especialidad + '*' if especialidad else ''}. "
-                "¿Seguimos buscando un nuevo horario?"
-            )
-        elif state == "WAIT_RUT_VER":
-            msg = (
-                f"Hola {saludo} 👋 Te quedaste viendo tus horas reservadas. "
-                "¿Te ayudo con algo más?"
-            )
-        elif state == "WAIT_ESPECIALIDAD":
-            # Copy honesto: acá el paciente todavía no eligió ESPECIALIDAD,
-            # no hay ningún horario apartado. "Tienes una reserva pendiente"
-            # es falso en este estado (portaviones 2026-09-24 #5, casos
-            # fb_38574770855503490 y fb_9250731408388759 — ninguno había
-            # elegido especialidad todavía).
-            msg = (
-                f"Hola {saludo} 👋 Te quedaste eligiendo la especialidad que necesitas. "
-                "¿Seguimos buscando tu hora?"
-            )
-        else:
-            msg = (
-                f"Hola {saludo} 👋 Tienes una reserva pendiente"
-                f"{' de *' + especialidad + '*' if especialidad else ''}."
-                f"{slot_txt}\n\n"
-                "¿Te la reservo antes de que se llene?"
-            )
+        # Próxima hora real para la especialidad (mismo ruteo que el agendamiento).
+        _slot0, _n_slots = (None, 0)
+        if especialidad and _rt.usa_slot(state):
+            _slot0, _n_slots = await _proxima_hora_real(especialidad, _cache_proxima)
+        msg = _rt.msg_reenganche(state, _nombre_msg, especialidad, _slot0, _n_slots)
 
         # Regla del dueño (2026-08-05): si recepción está manejando esta
         # conversación (escribió en las últimas horas), el bot no se mete.
@@ -527,7 +501,9 @@ async def _enviar_reenganche():
         from resilience import get_phone_lock as _gpl_re
         async with _gpl_re(phone):
             save_session(phone, state, data)
-        log_event(phone, "reenganche_enviado", {"state": state, "canal": canal})
+        log_event(phone, "reenganche_enviado", {
+            "state": state, "canal": canal,
+            "variante": _rt.variante_reenganche(state, _slot0)})
         log.info("Reenganche enviado → %s (estado: %s, canal: %s)", phone, state, canal)
 
 
@@ -1409,43 +1385,73 @@ async def _job_cac_snapshot():
         log.warning("cac_snapshot: fallo %s", e)
 
 
+def _campana_activa(flag: str) -> bool:
+    """Interruptor de campaña a pacientes (agregado 2026-09-28; antes corrían sin
+    flag). Default ON para no cambiar nada: .env + override en vivo desde
+    /alma/control (switchboard), leído en cada ejecución."""
+    import os as _os_c
+    env = _os_c.getenv(flag, "true").lower() in ("true", "1", "yes")
+    try:
+        from alma_switchboard import effective as _sb_eff_c
+        activa = _sb_eff_c(flag, env)
+    except Exception:
+        activa = env
+    if not activa:
+        log.info("%s=false — campaña pausada, no se envía", flag)
+    return activa
+
+
 async def _job_reactivacion():
+    if not _campana_activa("CAMPANA_REACTIVACION_ACTIVE"):
+        return
     try:
         await enviar_reactivacion_pacientes(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_reactivacion falló (BUG-07): %s", e)
 
 async def _job_adherencia_kine():
+    if not _campana_activa("CAMPANA_ADHERENCIA_KINE_ACTIVE"):
+        return
     try:
         await enviar_adherencia_kine(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_adherencia_kine falló (BUG-07): %s", e)
 
 async def _job_control_especialidad():
+    if not _campana_activa("CAMPANA_CONTROL_ESPECIALIDAD_ACTIVE"):
+        return
     try:
         await enviar_recordatorio_control(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_control_especialidad falló (BUG-07): %s", e)
 
 async def _job_crosssell_kine():
+    if not _campana_activa("CAMPANA_CROSSSELL_KINE_ACTIVE"):
+        return
     try:
         await enviar_crosssell_kine(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_kine falló (BUG-07): %s", e)
 
 async def _job_crosssell_orl_fono():
+    if not _campana_activa("CAMPANA_CROSSSELL_ORL_FONO_ACTIVE"):
+        return
     try:
         await enviar_crosssell_orl_fono(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_orl_fono falló (BUG-07): %s", e)
 
 async def _job_crosssell_odonto_estetica():
+    if not _campana_activa("CAMPANA_CROSSSELL_ODONTO_ESTETICA_ACTIVE"):
+        return
     try:
         await enviar_crosssell_odonto_estetica(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_odonto_estetica falló (BUG-07): %s", e)
 
 async def _job_crosssell_mg_chequeo():
+    if not _campana_activa("CAMPANA_CROSSSELL_MG_CHEQUEO_ACTIVE"):
+        return
     try:
         await enviar_crosssell_mg_chequeo(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
@@ -1454,18 +1460,24 @@ async def _job_crosssell_mg_chequeo():
 async def _job_crosssell_post_dental_ortodoncia():
     # Patron 5 (2026-05-19): cross-sell ortodoncia 48h despues de cita dental.
     # Cron L-V 11:00 CLT. Template pendiente: crosssell_ortodoncia_post_dental_v1.
+    if not _campana_activa("CAMPANA_CROSSSELL_POST_DENTAL_ACTIVE"):
+        return
     try:
         await enviar_crosssell_post_dental_ortodoncia(send_whatsapp_proactive, send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_crosssell_post_dental_ortodoncia fallo: %s", e)
 
 async def _job_cumpleanos():
+    if not _campana_activa("CAMPANA_CUMPLEANOS_ACTIVE"):
+        return
     try:
         await enviar_cumpleanos(send_whatsapp_proactive)
     except Exception as e:
         log.error("_job_cumpleanos falló (BUG-07): %s", e)
 
 async def _job_winback():
+    if not _campana_activa("CAMPANA_WINBACK_MENSUAL_ACTIVE"):
+        return
     try:
         await enviar_winback(send_whatsapp_proactive)
     except Exception as e:
@@ -4711,6 +4723,7 @@ async def _job_followup_info():
         log.error("followup_info: error leyendo DB: %s", _e_fi)
         return
 
+    _cache_fi: dict = {}
     for row_fi in (rows_fi or []):
         _phone_fi = row_fi["phone"] if isinstance(row_fi, dict) else row_fi[0]
         _state_fi = row_fi["state"] if isinstance(row_fi, dict) else row_fi[1]
@@ -4817,17 +4830,40 @@ async def _job_followup_info():
         except Exception:
             pass
 
-        # Armar mensaje de follow-up
+        # Armar mensaje de follow-up: lo que consultó + próxima hora real.
         _esp_fi = (_data_fi.get("followup_info_esp") or "").strip()
-        _nombre_fi = (_data_fi.get("nombre_conocido") or _data_fi.get("reg_nombre") or "").split()
-        _saludo_fi = f"*{_nombre_fi[0]}*, " if _nombre_fi else ""
+        if not _esp_fi:
+            # followup_info_esp casi nunca se llenaba (el detector devuelve null en
+            # info); el contexto de especialidad de la conversación sí se guarda.
+            _lec = (_data_fi.get("last_esp_context") or "").strip()
+            _lec_ts = _data_fi.get("last_esp_context_ts") or ""
+            try:
+                _t_lec = _dt_fi.fromisoformat(_lec_ts)
+                if _t_lec.tzinfo is None:
+                    _t_lec = _t_lec.replace(tzinfo=_tz_fi.utc)
+                if _lec and (_dt_fi.now(_tz_fi.utc) - _t_lec).total_seconds() <= 1800:
+                    _esp_fi = _lec
+            except (ValueError, TypeError):
+                pass
         if _esp_fi:
-            _msg_fi = (
-                f"Hola {_saludo_fi}¿te gustaría que te ayude a agendar una hora "
-                f"en *{_esp_fi}*? 😊"
-            )
-        else:
-            _msg_fi = f"Hola {_saludo_fi}¿te gustaría que te ayude a agendar una hora? 😊"
+            try:
+                from medilink import _ids_para_especialidad as _ids_fi
+                if not _ids_fi(_esp_fi):
+                    _esp_fi = ""   # no atendemos esa especialidad: versión corta
+            except Exception:
+                _esp_fi = ""
+        _perfil_nom = ""
+        try:
+            from session import get_profile as _gp_fi
+            _perfil_nom = (_gp_fi(_phone_fi) or {}).get("nombre") or ""
+        except Exception:
+            pass
+        _nombre_fi = _rt.primer_nombre(_data_fi.get("nombre_conocido"),
+                                       _data_fi.get("reg_nombre"), _perfil_nom)
+        _slot_fi, _n_fi = (None, 0)
+        if _esp_fi:
+            _slot_fi, _n_fi = await _proxima_hora_real(_esp_fi, _cache_fi)
+        _msg_fi, _tipo_fi = _rt.msg_followup_info(_nombre_fi, _esp_fi, _slot_fi, _n_fi)
 
         canal_fi = _canal_de_phone(_phone_fi)
         if canal_fi == "unknown":
@@ -4835,21 +4871,20 @@ async def _job_followup_info():
 
         try:
             from flows import _btn_msg as _btn_fi
-            _interactive_fi = _btn_fi(
-                _msg_fi,
-                [
-                    {"id": "1",             "title": "Si, agendar"},
-                    {"id": "no_gracias_fi", "title": "No, gracias"},
-                ],
-            )
+            _interactive_fi = _btn_fi(_msg_fi, _rt.BOTONES_FOLLOWUP[_tipo_fi])
+            if _tipo_fi != "corto":
+                # Los botones agendar_sugerido / ver_otros leen esta especialidad.
+                _data_fi["especialidad_sugerida"] = _esp_fi.lower()
+                _data_fi["especialidad_sugerida_ts"] = _dt_fi.now(_tz_fi.utc).isoformat()
+            _txt_ig_fi = _msg_fi + _rt.PIE_TEXTO_LIBRE[_tipo_fi]
             if canal_fi == "wa":
                 await send_whatsapp_interactive(_phone_fi, _interactive_fi["interactive"])
                 log_message(_phone_fi, "out", _msg_fi, "IDLE")
             elif canal_fi == "ig":
-                await send_instagram(_phone_fi[3:], _msg_fi)
+                await send_instagram(_phone_fi[3:], _txt_ig_fi)
                 log_message(_phone_fi, "out", _msg_fi, "IDLE")
             elif canal_fi == "fb":
-                await send_messenger(_phone_fi[3:], _msg_fi)
+                await send_messenger(_phone_fi[3:], _txt_ig_fi)
                 log_message(_phone_fi, "out", _msg_fi, "IDLE")
             else:
                 continue
@@ -4862,6 +4897,7 @@ async def _job_followup_info():
                 pass
             _le_fi(_phone_fi, "followup_info_enviado", {
                 "esp": _esp_fi,
+                "variante": "followup_" + _tipo_fi,
                 "age_min": round(_age_min, 1),
             })
             log.info("followup_info: enviado a %s (esp=%s, age=%.1f min)", _phone_fi, _esp_fi, _age_min)

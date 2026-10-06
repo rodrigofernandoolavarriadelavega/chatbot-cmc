@@ -1207,6 +1207,65 @@ def _insights_filas(c, d: date, h: date, campana: str | None, plat: str | None,
     return [dict(r) for r in c.execute(q, args)]
 
 
+# ── Rapidez de recepción ────────────────────────────────────────────────────
+# Por persona del rango: minutos HÁBILES desde que necesitó a recepción hasta
+# la primera respuesta humana (app/recepcion_tiempos.py), y si agendó (cita
+# del bot desde su llegada, ≤90 días, o pago en caja ≤90 días). La curva cruza
+# ambas cosas: ¿agenda más quien recibe respuesta rápida?
+
+def _rapidez(c, clics: dict[str, tuple[int, str]], hasta_epoch: int) -> dict[str, dict]:
+    import recepcion_tiempos as rt
+    if not clics:
+        return {}
+    t_min = min(v[0] for v in clics.values()) - 3600
+    msgs: dict[str, list[dict]] = defaultdict(list)
+    for r in c.execute("SELECT phone, direction, text, state, ts FROM messages WHERE ts >= ? AND ts < ?",
+                       (_utc_txt(t_min), _utc_txt(hasta_epoch + VENTANA_TELEFONO_DIAS * 86400))):
+        k = _clave(r["phone"])
+        if k in clics:
+            msgs[k].append({"ts": _utc_txt_epoch(r["ts"]) or 0, "dir": r["direction"], "texto": r["text"] or "",
+                            "state": r["state"] or ""})
+    agendo: set[str] = set()
+    for r in c.execute("SELECT phone, created_at FROM citas_bot WHERE created_at >= ?", (_utc_txt(t_min),)):
+        k = _clave(r["phone"])
+        if k in clics:
+            ce = _utc_txt_epoch(r["created_at"]) or 0
+            ts = clics[k][0]
+            if ts - 3600 <= ce <= ts + VENTANA_TELEFONO_DIAS * 86400:
+                agendo.add(k)
+    por_tel = _pacientes_por_telefono(c, set(clics) - agendo)
+    for k, pids in por_tel.items():
+        if not pids:
+            continue
+        dia = datetime.fromtimestamp(clics[k][0], _CL).date()
+        q = ",".join("?" * len(pids))
+        try:
+            f = c.execute(f"SELECT MIN(fecha) FROM bi_pagos_caja WHERE id_paciente IN ({q}) AND fecha >= ?",
+                          (*pids, dia.isoformat())).fetchone()[0]
+        except Exception:
+            f = None
+        if f and f[:10] <= (dia + timedelta(days=VENTANA_TELEFONO_DIAS)).isoformat():
+            agendo.add(k)
+    out = {}
+    for k, (ts, ad_id) in clics.items():
+        r = rt.respuesta_humana(msgs.get(k, []), desde=ts - 60)
+        out[k] = {**r, "agendo": k in agendo, "ad_id": ad_id}
+    return out
+
+
+def _rapidez_resumen(filas: list[dict]) -> dict:
+    import recepcion_tiempos as rt
+    nec = [f for f in filas if f["necesito"]]
+    resp = [f["minutos"] for f in nec if f["respondida"]]
+    solo_bot = [f for f in filas if not f["necesito"] and not f.get("proactiva")]
+    return {"necesitaron": len(nec), "respondidas": len(resp),
+            "proactivas": sum(1 for f in filas if f.get("proactiva")),
+            "sin_respuesta": sum(1 for f in nec if not f["respondida"]),
+            "mediana_min": rt.mediana(resp),
+            "curva": rt.curva(nec),
+            "solo_bot": len(solo_bot), "solo_bot_agendaron": sum(1 for f in solo_bot if f["agendo"])}
+
+
 def _acum() -> dict:
     return {"gasto": 0.0, "impresiones": 0, "alcance": 0, "clics": 0, "conv": 0,
             "personas": set(), "citas": 0, "atendidos": 0, "no_asistio": 0, "anuladas": 0,
@@ -1461,6 +1520,12 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             a["conoc"] = cnt
         conocieron = conocieron_data(c, e0, e1)
 
+        rap = _rapidez(c, clics, e1)
+        rap_ad: dict[str, list[dict]] = defaultdict(list)
+        for v in rap.values():
+            rap_ad[v["ad_id"]].append(v)
+        rapidez = _rapidez_resumen(list(rap.values()))
+
         # Tabla por anuncio y por campaña
         anuncios, por_camp = [], defaultdict(_acum)
         camp_nombre: dict[str, str] = {}
@@ -1472,7 +1537,10 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                                "ORDER BY ts DESC LIMIT 1", (ad_id,)).fetchone()
                 if hl:
                     info["anuncio"] = hl[0]
-            fila = {**info, **_cerrar(a), "canal": "web" if ad_id.startswith("web:") else "meta"}
+            rr = _rapidez_resumen(rap_ad.get(ad_id, []))
+            a["rap"] = rap_ad.get(ad_id, [])
+            fila = {**info, **_cerrar(a), "resp_mediana_min": rr["mediana_min"], "resp_necesitaron": rr["necesitaron"],
+                    "resp_sin": rr["sin_respuesta"], "resp_curva": rr["curva"], "canal": "web" if ad_id.startswith("web:") else "meta"}
             anuncios.append(fila)
             cid = info["campaign_id"]
             camp_nombre[cid] = info["campana"]
@@ -1481,6 +1549,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                       "no_asistio", "anuladas", "por_proxy", "con_medilink", "orto_venta"):
                 pc[k] += a[k]
             pc["instalaron"] |= a["instalaron"]
+            pc.setdefault("rap", []).extend(a.get("rap", []))
             pc["personas"] |= a["personas"]
             _sumar_profs(pc["profs"], a["profs"])
             pcc = pc.setdefault("conoc", defaultdict(int))
@@ -1491,9 +1560,13 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         for pc in por_camp.values():
             gs = pc.pop("grupos", set()) - {None}
             pc["grupo"] = next(iter(gs)) if len(gs) == 1 else ("Varias" if gs else None)
+        def _rap_fields(lst):
+            rr = _rapidez_resumen(lst)
+            return {"resp_mediana_min": rr["mediana_min"], "resp_necesitaron": rr["necesitaron"],
+                    "resp_sin": rr["sin_respuesta"], "resp_curva": rr["curva"]}
         campanas = [{"campaign_id": cid, "campana": camp_nombre[cid], "canal": "web" if _es_web_camp(cid) else "meta",
                      "n_anuncios": sum(1 for x in anuncios if x["campaign_id"] == cid),
-                     **_cerrar(a)} for cid, a in por_camp.items()]
+                     **_cerrar(a), **_rap_fields(a.get("rap", []))} for cid, a in por_camp.items()]
         estados = _estados_meta()
         recientes = _con_gasto_reciente(c) if not estados else set()
         for x in anuncios:
@@ -1576,6 +1649,7 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
         "alertas": alertas,
         "estado_fuente": estado_fuente,
         "conocieron": conocieron,
+        "rapidez": rapidez,
         "hay_insights": hay_insights,
         "ultima_foto": _uf,
         "opciones": opciones,
@@ -1609,6 +1683,186 @@ def _opciones(c, mapa: dict, canal: str = "meta") -> dict:
     return {"campanas": sorted(({"id": k, "nombre": v} for k, v in camps.items()),
                                key=lambda x: x["nombre"].lower()),
             "anuncios": ads, "especialidades": esp}
+
+
+# ── A quién llamar hoy ──────────────────────────────────────────────────────
+# Lista priorizada para el dueño, encima del kanban (no lo cambia):
+#   1. No asistió hace ≤ 7 días (Medilink) — recuperar la hora.
+#   2. Vio horarios y no agendó hace < 3 días — todavía está caliente.
+#   3. Seguimiento para hoy o vencido.
+# Quien ya quedó cerrado en la gestión (agendó por otra vía / no le interesa)
+# no aparece. Dentro de cada prioridad, lo más reciente primero.
+LLAMAR_NO_SHOW_DIAS = 7
+LLAMAR_VIO_HORAS_DIAS = 3
+
+
+def llamar_hoy_data(desde: str | None = None, hasta: str | None = None, campana: str | None = None,
+                    anuncio: str | None = None, plataforma: str | None = None,
+                    especialidad: str | None = None, canal: str | None = None,
+                    ahora: datetime | None = None) -> dict:
+    kb = kanban_data(desde, hasta, campana, anuncio, plataforma, especialidad, None, ahora=ahora, canal=canal)
+    out = []
+    for col in kb["columnas"]:
+        for t in col["tarjetas"]:
+            g = t.get("gestion") or {}
+            if g.get("estado") in _GESTION_CERRADA:
+                continue
+            motivos = []
+            if t.get("desenlace") == "no_asistio" and t["dias_etapa"] <= LLAMAR_NO_SHOW_DIAS:
+                motivos.append((1, "no_asistio", "No asistió " + ("hoy" if t["dias_etapa"] == 0 else
+                                                                  f"hace {t['dias_etapa']} d") + ": reagendar"))
+            if col["id"] == "vio_horas" and t["dias_etapa"] < LLAMAR_VIO_HORAS_DIAS:
+                motivos.append((2, "vio_horas", "Vio horarios " + ("hoy" if t["dias_etapa"] == 0 else
+                                                                   f"hace {t['dias_etapa']} d") + " y no agendó"))
+            if g.get("alerta") in ("hoy", "vencido"):
+                motivos.append((3, "seguimiento", "Seguimiento vencido" if g["alerta"] == "vencido"
+                                else "Seguimiento para hoy"))
+            if not motivos:
+                continue
+            motivos.sort()
+            out.append({**t, "columna": col["id"], "columna_label": col["label"], "prioridad": motivos[0][0],
+                        "motivo": motivos[0][1], "motivos": [m[2] for m in motivos]})
+    out.sort(key=lambda x: (x["prioridad"], x["llegada_iso"]), reverse=False)
+    # más reciente primero dentro de cada prioridad
+    res = []
+    for p in (1, 2, 3):
+        res += sorted((x for x in out if x["prioridad"] == p), key=lambda x: x["llegada_iso"], reverse=True)
+    return {"rango": kb["rango"], "total": len(res), "personas": res,
+            "por_prioridad": {p: sum(1 for x in res if x["prioridad"] == p) for p in (1, 2, 3)}}
+
+
+# ── Valor en el tiempo (cohortes por mes de llegada) ────────────────────────
+# Cada persona entra a la cohorte del mes de su PRIMER contacto (anuncio o web)
+# desde may-2026 (antes no hay atribución). Venta y "para el centro"
+# acumulados a 30/90/180/365 días desde ese día, con la misma regla de la venta
+# del panel: si agendó por el bot, todo lo que pagó desde el contacto; si no,
+# solo si su primer pago cae ≤90 días después (cruce por teléfono). Gasto de la
+# cohorte = gasto en Meta del mismo mes (de la campaña, si se agrupa por
+# campaña); la web no tiene gasto. "Se pagó" = primer horizonte en que lo que
+# quedó para el centro supera ese gasto.
+
+COHORTES_DESDE = "2026-05-01"
+HORIZONTES = (30, 90, 180, 365)
+
+
+def cohortes_data(por: str = "canal", canal: str | None = "todos", hoy: date | None = None) -> dict:
+    hoy = hoy or _hoy()
+    por = por if por in ("canal", "campana") else "canal"
+    canal = _canal(canal) if canal else "todos"
+    d0 = date.fromisoformat(COHORTES_DESDE)
+    e0, e1 = _epoch_ini(d0), _epoch_fin(hoy)
+    with db() as c:
+        mapa = _mapa_anuncios(c)
+        primero: dict[str, dict] = {}
+        for r in _llegadas(c, canal, e0, e1, primera_web=True):
+            k = _clave(r["phone"])
+            if k not in primero:
+                primero[k] = r
+        if not primero:
+            return {"cohortes": [], "horizontes": list(HORIZONTES), "desde": COHORTES_DESDE, "por": por, "canal": canal}
+        claves = set(primero)
+        # agendó por el bot desde el contacto
+        bot: set[str] = set()
+        for r in c.execute("SELECT phone, created_at FROM citas_bot WHERE created_at >= ?", (_utc_txt(e0 - 3600),)):
+            k = _clave(r["phone"])
+            if k in primero and (_utc_txt_epoch(r["created_at"]) or 0) >= primero[k]["ts"] - 3600:
+                bot.add(k)
+        por_tel = _pacientes_por_telefono(c, claves)
+        pid_k: dict[int, set[str]] = defaultdict(set)
+        for k, pids in por_tel.items():
+            for pid in pids:
+                pid_k[pid].add(k)
+        pagos: dict[str, list[tuple[str, int, int]]] = defaultdict(list)   # clave → (fecha, monto, id_prof)
+        ids = list(pid_k)
+        for i in range(0, len(ids), 500):
+            lote = ids[i:i + 500]
+            try:
+                for r in c.execute("SELECT id_paciente, fecha, monto, id_profesional FROM bi_pagos_caja WHERE "
+                                   "id_paciente IN (%s) AND fecha >= ?" % ",".join("?" * len(lote)),
+                                   (*lote, COHORTES_DESDE)):
+                    for k in pid_k[r[0]]:
+                        pagos[k].append(((r[1] or "")[:10], int(r[2] or 0), r[3]))
+            except Exception as e:
+                log.warning("campanas_meta: cohortes sin caja: %s", e)
+        pct = _pct_honorarios(c)
+        # gasto por mes (total y por campaña)
+        gasto_mes: dict[tuple[str, str], float] = defaultdict(float)
+        _ensure_insights(c)
+        for r in c.execute("SELECT substr(fecha,1,7), campaign_id, SUM(spend) FROM meta_insights_diario "
+                           "WHERE desglose='total' AND fecha >= ? GROUP BY 1, 2", (COHORTES_DESDE,)):
+            gasto_mes[(r[0], r[1] or "")] += r[2] or 0
+            gasto_mes[(r[0], "*meta")] += r[2] or 0
+
+    grupos: dict[tuple[str, str], dict] = {}
+    for k, r in primero.items():
+        dia = datetime.fromtimestamp(r["ts"], _CL).date()
+        mes = dia.strftime("%Y-%m")
+        info = _info(mapa, r["source_id"] or "", r["headline"] or "")
+        if por == "canal":
+            gid, glbl = ("web", "Página web") if r["origen"] == "web" else ("meta", "Anuncios Meta")
+        elif r["origen"] == "web":
+            gid, glbl = "web", "Página web"
+        else:
+            gid, glbl = info["campaign_id"] or "-", info["campana"]
+        g = grupos.setdefault((mes, gid), {"cohorte": mes, "grupo_id": gid, "grupo": glbl, "personas": 0,
+                                           "pacientes": 0, "volvieron": 0,
+                                           "h": {h: {"venta": 0, "centro": 0.0} for h in HORIZONTES}})
+        g["personas"] += 1
+        ps = sorted(p for p in pagos.get(k, []) if p[0] >= dia.isoformat())
+        if not ps:
+            continue
+        if k not in bot and ps[0][0] > (dia + timedelta(days=VENTANA_TELEFONO_DIAS)).isoformat():
+            continue   # pagó, pero no dentro de 90 días del contacto: no es del anuncio
+        g["pacientes"] += 1
+        dias_pago = {p[0] for p in ps if p[0] <= (dia + timedelta(days=365)).isoformat()}
+        if len(dias_pago) >= 2:
+            g["volvieron"] += 1
+        for h in HORIZONTES:
+            lim = (dia + timedelta(days=h)).isoformat()
+            for f, monto, prof in ps:
+                if f <= lim:
+                    g["h"][h]["venta"] += monto
+                    g["h"][h]["centro"] += monto * (100 - (pct.get(prof) or PCT_HONORARIO_DEFAULT)) / 100
+
+    out = []
+    for (mes, gid), g in sorted(grupos.items(), key=lambda x: (x[0][0], x[1]["grupo"])):
+        y, m = int(mes[:4]), int(mes[5:])
+        fin_mes = (date(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1))
+        if gid == "web":
+            gasto = 0.0
+        elif por == "canal":
+            gasto = gasto_mes.get((mes, "*meta"), 0.0)
+        else:
+            gasto = gasto_mes.get((mes, gid), 0.0)
+        hs = []
+        paga_en = None
+        prev = 0
+        for h in HORIZONTES:
+            completo = hoy >= fin_mes + timedelta(days=h)
+            cen = round(g["h"][h]["centro"])
+            # se muestra desde que la cohorte entró a esa ventana (parcial hasta completarla)
+            hs.append({"dias": h, "venta": g["h"][h]["venta"], "centro": cen, "completo": completo,
+                       "alcanzado": hoy >= date(y, m, 1) + timedelta(days=prev)})
+            prev = h
+            if paga_en is None and gasto > 0 and cen >= gasto:
+                paga_en = h
+        ult = next((x for x in reversed(hs) if x["alcanzado"]), hs[0])
+        if gasto <= 0:
+            estado = "sin_gasto"
+        elif paga_en:
+            estado = "pagado"
+        elif hs[-1]["completo"]:
+            estado = "no_se_pago"
+        else:
+            estado = "aun_no"
+        out.append({"cohorte": mes, "grupo_id": gid, "grupo": g["grupo"], "personas": g["personas"],
+                    "pacientes": g["pacientes"], "volvieron": g["volvieron"],
+                    "volvieron_pct": round(100 * g["volvieron"] / g["pacientes"]) if g["pacientes"] else None,
+                    "gasto": round(gasto), "cac": round(gasto / g["pacientes"]) if gasto and g["pacientes"] else None,
+                    "costo_persona": round(gasto / g["personas"]) if gasto and g["personas"] else None,
+                    "horizontes": hs, "paga_en": paga_en, "estado": estado,
+                    "falta": max(0, round(gasto - ult["centro"])) if estado == "aun_no" else 0})
+    return {"cohortes": out, "horizontes": list(HORIZONTES), "desde": COHORTES_DESDE, "por": por, "canal": canal}
 
 
 # ── Kanban ──────────────────────────────────────────────────────────────────
@@ -2267,6 +2521,30 @@ def kanban(request: Request, desde: str | None = Query(None), hasta: str | None 
     return kanban_data(desde, hasta, campana or None, anuncio or None, plataforma or None,
                        especialidad or None, q or None, gestion=gestion or None, canal=canal or None,
                        resultado=resultado or None)
+
+
+@router.get("/sugerencias-presupuesto")
+def sugerencias_presupuesto_ep(request: Request, token: str | None = Query(None)):
+    _auth(request, token)
+    import meta_alertas
+    return meta_alertas.sugerencias_presupuesto()
+
+
+@router.get("/llamar-hoy")
+def llamar_hoy(request: Request, desde: str | None = Query(None), hasta: str | None = Query(None),
+               campana: str | None = Query(None), anuncio: str | None = Query(None),
+               plataforma: str | None = Query(None), especialidad: str | None = Query(None),
+               canal: str | None = Query(None), token: str | None = Query(None)):
+    _auth(request, token)
+    return llamar_hoy_data(desde, hasta, campana or None, anuncio or None, plataforma or None,
+                           especialidad or None, canal=canal or None)
+
+
+@router.get("/cohortes")
+def cohortes(request: Request, por: str | None = Query("canal"), canal: str | None = Query("todos"),
+             token: str | None = Query(None)):
+    _auth(request, token)
+    return cohortes_data(por or "canal", canal or "todos")
 
 
 @router.get("/persona/{clave}")

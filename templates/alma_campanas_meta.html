@@ -587,6 +587,64 @@ body.c-web .only-meta{display:none!important}
 .kintro .rescue svg{width:13px;height:13px;stroke:currentColor}
 .kintro .rescue[aria-pressed="true"]{background:var(--red-d);border-color:var(--red-d);color:#fff}
 .fs .ns{display:block;margin-top:6px;font-size:12px;font-weight:700;color:var(--red-d)}
+/* Sugerencia de presupuesto */
+.sug-list{padding:0 8px 8px}
+.sug{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 10px;border-radius:12px;
+  opacity:0;animation:rise .28s var(--ease) forwards;animation-delay:calc(var(--i,0)*45ms)}
+.sug+.sug{border-top:1px solid var(--line-2)}
+.sug .acc{display:inline-flex;align-items:center;justify-content:center;min-width:84px;padding:4px 10px;border-radius:999px;font-size:12px;
+  font-weight:800;letter-spacing:.01em}
+.sug .acc.subir{background:var(--green-s);color:var(--green-d)}.sug .acc.bajar{background:var(--orange-s);color:var(--orange-d)}
+.sug .acc.pausar{background:var(--red-s);color:var(--red-d)}.sug .acc.mantener{background:var(--line-2);color:var(--ink-2)}
+.sug .t{font-weight:700;color:var(--ink);font-size:13.5px}
+.sug .d{font-size:12.5px;color:var(--ink-2);margin-top:1px}
+.sug .m{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;color:var(--navy);white-space:nowrap}
+.sug .m small{display:block;font-size:11px;color:var(--mute);font-weight:600}
+/* Rapidez de recepción */
+.rap{padding:2px 18px 18px}
+.rap-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
+.rap-k div{background:var(--bg);border-radius:12px;padding:10px 12px}
+.rap-k .v{font-size:21px;font-weight:800;color:var(--navy);letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.rap-k small{display:block;font-size:11.5px;color:var(--mute)}
+.rcurve{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:end;height:170px;padding:0 4px}
+.rcurve .b{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.rcurve .bar{width:min(64px,100%);background:#C3D2DE;border-radius:8px 8px 3px 3px;height:var(--h);min-height:3px;transform-origin:bottom;
+  animation:growy .45s var(--ease) both;animation-delay:calc(var(--i,0)*50ms)}
+.rcurve .b.best .bar{background:var(--aqua)}
+.rcurve .b.nil .bar{background:repeating-linear-gradient(45deg,#E4EBF1 0 6px,#F1F5F8 6px 12px)}
+.rcurve .pc{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:6px;font-variant-numeric:tabular-nums}
+.rcurve-x{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:8px;text-align:center;font-size:11.5px;color:var(--ink-2);font-weight:700}
+.rcurve-x small{display:block;color:var(--mute);font-weight:600}
+.rap-t{width:100%;margin-top:16px}
+/* Valor en el tiempo */
+.val-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.val-h p{margin:0;font-size:13px;color:var(--ink-2);flex:1;min-width:240px}
+.hz b{display:block;font-size:13px}
+.hz small{display:block;font-size:11px;color:var(--mute);font-weight:600}
+.hz.parcial b{color:var(--mute)}
+.pay{min-width:150px}
+.pay .pb{height:8px;border-radius:999px;background:var(--line-2);overflow:hidden;margin-top:5px}
+.pay .pb i{display:block;height:100%;width:var(--w);background:var(--aqua);border-radius:999px;transform-origin:left;animation:grow .45s var(--ease) both}
+.pay.ok .pb i{background:var(--green)}
+.pay small{display:block;font-size:11px;color:var(--mute);margin-top:3px}
+.not-valor{}
+body.v-valor .not-valor{display:none!important}
+/* A quién llamar hoy */
+.kintro .callday{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--navy);
+  background:#fff;color:var(--navy);font-weight:800;font-size:12px;cursor:pointer}
+.kintro .callday svg{width:13px;height:13px;stroke:currentColor}
+.kintro .callday[aria-pressed="true"]{background:var(--navy);color:#fff}
+.ll-g{margin-bottom:20px}
+.ll-g h3{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:14px;font-weight:800;color:var(--navy)}
+.ll-g h3 .n{font-size:11.5px;font-weight:800;background:#fff;border-radius:999px;padding:1px 9px;color:var(--ink-2);box-shadow:var(--sh-xs)}
+.ll-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.kc-why{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.kc-why span{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--aqua-s);color:var(--navy)}
+.kc-why span.p1{background:var(--red-s);color:var(--red-d)}
+@media(max-width:760px){
+  .sug{grid-template-columns:auto 1fr;}.sug .m{grid-column:2;text-align:left}
+  .rcurve{height:140px;gap:6px}.rcurve-x{gap:6px;font-size:10.5px}
+}
 .orto{display:grid;grid-template-columns:auto repeat(3,1fr);gap:0;align-items:stretch;background:#fff;border:1px solid var(--line);
   border-radius:var(--r-lg);box-shadow:var(--sh-sm);margin-bottom:24px;overflow:hidden}
 .orto>div{padding:14px 18px}.orto>div+div{border-left:1px solid var(--line-2)}
@@ -680,7 +738,7 @@ body.c-web .only-meta{display:none!important}
 }
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important}
-  .fs,.cac,.al,.kc,.tl li,.mb,.crow{opacity:1}
+  .fs,.cac,.al,.kc,.tl li,.mb,.crow,.sug{opacity:1}
 }
 </style>
 </head>
@@ -706,6 +764,8 @@ body.c-web .only-meta{display:none!important}
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><span class="lg">Panel de campañas</span><span class="sh">Campañas</span></button>
       <button class="tab" role="tab" id="tab-kanban" aria-controls="v-kanban" aria-selected="false" data-v="kanban">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lg" id="kTabLbl">Pacientes de anuncios</span><span class="sh">Pacientes</span> <span class="cnt" id="kCount">—</span></button>
+      <button class="tab" role="tab" id="tab-valor" aria-controls="v-valor" aria-selected="false" data-v="valor">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg><span class="lg">Valor en el tiempo</span><span class="sh">Valor</span></button>
     </div>
     <div class="filters" role="group" aria-label="Filtros">
       <div class="seg canal" id="segCanal" role="group" aria-label="Canal de llegada">
@@ -713,7 +773,7 @@ body.c-web .only-meta{display:none!important}
         <button type="button" data-c="web" aria-pressed="false">Página web</button>
         <button type="button" data-c="todos" aria-pressed="false">Todos</button>
       </div>
-      <div class="seg" id="segRango" role="group" aria-label="Rango de fechas">
+      <div class="seg not-valor" id="segRango" role="group" aria-label="Rango de fechas">
         <button type="button" data-r="7" aria-pressed="false">7 días</button>
         <button type="button" data-r="30" aria-pressed="true">30 días</button>
         <button type="button" data-r="90" aria-pressed="false">90 días</button>
@@ -725,9 +785,9 @@ body.c-web .only-meta{display:none!important}
         <span>a</span>
         <label class="fld"><span class="sr">Hasta</span><input type="date" id="fHasta"></label>
       </span>
-      <label class="fld"><span class="sr">Campaña</span><select id="fCampana"><option value="">Todas las campañas</option></select>
+      <label class="fld not-valor"><span class="sr">Campaña</span><select id="fCampana"><option value="">Todas las campañas</option></select>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></label>
-      <label class="fld only-meta"><span class="sr">Plataforma</span><select id="fPlat">
+      <label class="fld only-meta not-valor"><span class="sr">Plataforma</span><select id="fPlat">
         <option value="">Facebook e Instagram</option><option value="facebook">Solo Facebook</option>
         <option value="instagram">Solo Instagram</option><option value="sin_dato">Plataforma sin dato</option></select>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></label>
@@ -748,6 +808,7 @@ body.c-web .only-meta{display:none!important}
 <main class="wrap">
   <section class="view on" id="v-panel" role="tabpanel" aria-labelledby="tab-panel"></section>
   <section class="view" id="v-kanban" role="tabpanel" aria-labelledby="tab-kanban"></section>
+  <section class="view" id="v-valor" role="tabpanel" aria-labelledby="tab-valor"></section>
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -826,7 +887,7 @@ const I = {
 };
 
 /* ── Estado ─────────────────────────────────────────────────────────────── */
-const S = { res: "", canal: "meta", v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
+const S = { llamar: false, llamarData: null, sug: null, valor: null, valorPor: "canal", res: "", canal: "meta", v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
             tabla: "anuncios", estado: (() => { try { return localStorage.getItem("cm_estado") || "todos"; } catch (_) { return "todos"; } })(), cols: (() => { try { return localStorage.getItem("cm_cols") || "resumen"; } catch (_) { return "resumen"; } })(), kcol: "escribio", panel: null, kanban: null, ver: {} };
 
 function hoyCL() {
@@ -877,6 +938,7 @@ async function cargar(silencioso) {
     pill(p);
     renderPanel(); renderKanban();
     if (silencioso) toast("Datos actualizados");
+    cargarSugerencias(); if (S.llamar) cargarLlamar(); if (S.v === "valor" || S.valor) cargarValor();
   } catch (e) {
     if (my !== seq) return;
     const html = e.perm
@@ -888,6 +950,12 @@ async function cargar(silencioso) {
   } finally {
     if (my === seq) $("#btnRefresh").classList.remove("spin");
   }
+}
+async function cargarSugerencias() {
+  if (S.canal === "web") return;
+  try { S.sug = await api("/alma/api/campanas-meta/sugerencias-presupuesto"); }
+  catch (e) { S.sug = { error: true, campanas: [] }; }
+  const el = document.getElementById("sugBox"); if (el) el.outerHTML = sugerencias();
 }
 function estado(cls, icon, t, p, act) {
   return `<div class="card"><div class="empty ${cls}"><div class="ei">${icon}</div><h3>${esc(t)}</h3><p>${esc(p)}</p>${act || ""}</div></div>`;
@@ -972,9 +1040,94 @@ function renderPanel() {
       ${st.cl ? `<div class="c" title="Gasto ÷ ${st.l.toLowerCase()}"><b>${fmt$(st.c)}</b>${st.cl}</div>` : ""}</div>`).join("")}</div>`;
 
   const soloMeta = web ? `<div class="card block"><div class="webnote">${I.info}<div><b>Desgloses, tendencia mensual y alertas de gasto</b> son datos de Meta Ads y aplican solo a los anuncios. Véalos en "Anuncios Meta" o "Todos".</div></div></div>` : "";
-  $("#v-panel").innerHTML = notaMedicion(p) + band + funnel + ortoKpi(p) + (web ? "" : alertas(p)) + tabla(p) + conocieron(p) + (web ? soloMeta : desgloses(p) + tendencia(p));
+  $("#v-panel").innerHTML = notaMedicion(p) + band + funnel + ortoKpi(p) + (web ? "" : sugerencias()) + (web ? "" : alertas(p)) + tabla(p) + rapidez(p) + conocieron(p) + (web ? soloMeta : desgloses(p) + tendencia(p));
   bindTabla();
 }
+const ACC_LBL = { subir: "Subir", mantener: "Mantener", bajar: "Bajar", pausar: "Pausar" };
+function sugerencias() {
+  const head = `<div class="card-h"><div class="ic">${I.wallet}</div><h2>Sugerencia de presupuesto</h2>${S.sug && S.sug.campanas ? `<span class="cp">${S.sug.campanas.length}</span>` : ""}<div class="sp"></div>
+    <span class="sub">${S.sug && S.sug.hasta ? "4 semanas al " + fdate(S.sug.hasta) + " · " : ""}nada se cambia solo</span></div>`;
+  if (!S.sug) return `<div class="card block" id="sugBox">${head}<div style="padding:0 18px 16px"><div class="sk" style="height:44px"></div><div class="sk" style="height:44px;margin-top:8px"></div></div></div>`;
+  if (S.sug.error) return `<div class="card block" id="sugBox">${head}<p class="dleg" style="padding:0 18px 14px;margin:0">No se pudo calcular la sugerencia. Reintente con Actualizar.</p></div>`;
+  if (!S.sug.campanas.length) return `<div class="card block" id="sugBox">${head}<p class="dleg" style="padding:0 18px 14px;margin:0">No hay campañas activas con gasto en las últimas 4 semanas.</p></div>`;
+  const rows = S.sug.campanas.map((x, i) => `<div class="sug" style="--i:${i}"><span class="acc ${x.accion}">${ACC_LBL[x.accion]}</span>
+      <div style="min-width:0"><div class="t">${esc(x.campana)}${x.muestra_chica ? ' <span class="badge mut">Muestra chica</span>' : ""}</div><div class="d">${esc(x.razon)}</div></div>
+      <div class="m">${x.monto_semana && x.accion !== "mantener" ? (x.accion === "subir" ? "+" : "−") + fmt$(x.monto_semana) : "—"}<small>${x.monto_semana && x.accion !== "mantener" ? "por semana · " : ""}hoy ${fmt$(x.gasto_semana)}/sem.</small></div></div>`).join("");
+  return `<div class="card block" id="sugBox">${head}<div class="sug-list">${rows}</div>
+    <p class="dleg" style="padding:0 18px 14px;margin:0">Regla: se sube si a la campaña le deja al centro más de $1.300 por cada $1.000 gastados y no está saturada; se baja si deja menos de $800; se pausa si gastó $50.000 o más sin citas. Con menos de 5 citas no se baja: muestra chica. La venta de las semanas más recientes todavía madura (controles, tratamientos).</p></div>`;
+}
+function rapidez(p) {
+  const r = p.rapidez; if (!r) return "";
+  const head = `<div class="card-h"><div class="ic">${I.clock}</div><h2>Rapidez de recepción</h2><span class="cp">${fmtN(r.necesitaron)}</span><div class="sp"></div>
+    <span class="sub">minutos en horario de atención</span></div>`;
+  if (!r.necesitaron) return `<div class="card block">${head}<p class="dleg" style="padding:0 18px 16px;margin:0">En este rango nadie que llegó por ${S.canal === "web" ? "la web" : "un anuncio"} pasó a recepción: el bot las atendió de principio a fin${r.solo_bot ? " (" + fmtN(r.solo_bot) + " personas)" : ""}.</p></div>`;
+  const con = r.curva.filter(x => x.pct != null && x.personas >= 3);
+  const best = con.length > 1 ? con.reduce((a, b) => a.pct >= b.pct ? a : b).tramo : null;
+  const bars = r.curva.map((x, i) => `<div class="b${x.tramo === best ? " best" : ""}${x.pct == null ? " nil" : ""}"><span class="pc">${x.pct == null ? "—" : x.pct + "%"}</span>
+      <span class="bar" style="--h:${x.pct == null ? 3 : Math.max(3, x.pct)}%;--i:${i}" title="${esc(x.label)}: ${x.agendaron} de ${x.personas} agendaron"></span></div>`).join("");
+  const xs = r.curva.map(x => `<span>${esc(x.label)}<small>${fmtN(x.personas)} ${x.personas === 1 ? "persona" : "personas"}</small></span>`).join("");
+  const camps = (p.campanas || []).filter(c => c.resp_necesitaron).sort((a, b) => b.resp_necesitaron - a.resp_necesitaron);
+  const tab = camps.length ? `<div class="tbl-wrap full"><table class="rap-t"><thead><tr><th>${S.canal === "web" ? "Página" : "Campaña"}</th><th class="r">Pasaron a recepción</th><th class="r" title="Mediana de minutos hábiles hasta la primera respuesta humana">Mediana</th><th class="r">Sin respuesta</th><th class="r" title="% que agendó entre quienes recibieron respuesta en menos de 15 min">Agendó si &lt;15 min</th><th class="r" title="% que agendó entre quienes esperaron más de 1 hora o no recibieron respuesta">Agendó si &gt;1 h o nada</th></tr></thead><tbody>${camps.map(c => {
+      const cv = Object.fromEntries(c.resp_curva.map(x => [x.tramo, x]));
+      const lento = ["1_4h", "gt4h", "sin_respuesta"].reduce((a, t) => [a[0] + cv[t].personas, a[1] + cv[t].agendaron], [0, 0]);
+      return `<tr><td data-l="${S.canal === "web" ? "Página" : "Campaña"}"><div class="nm">${esc(c.campana)}</div></td><td class="r" data-l="Pasaron a recepción">${fmtN(c.resp_necesitaron)}</td>
+        <td class="r" data-l="Mediana">${c.resp_mediana_min == null ? dash : fmtMin(c.resp_mediana_min)}</td><td class="r" data-l="Sin respuesta">${c.resp_sin ? `<span class="resn">${fmtN(c.resp_sin)}</span>` : "0"}</td>
+        <td class="r" data-l="Agendó si <15 min">${cv.lt15.pct == null ? dash : cv.lt15.pct + "%"}<small class="pctc">${cv.lt15.personas} pers.</small></td>
+        <td class="r" data-l="Agendó si >1 h o nada">${lento[0] ? Math.round(100 * lento[1] / lento[0]) + "%" : dash}<small class="pctc">${lento[0]} pers.</small></td></tr>`; }).join("")}</tbody></table></div>` : "";
+  return `<div class="card block">${head}<div class="rap">
+    <div class="rap-k"><div><span class="lbl">Mediana de respuesta</span><div class="v">${r.mediana_min == null ? "—" : fmtMin(r.mediana_min)}</div><small>Hasta la primera respuesta humana</small></div>
+      <div><span class="lbl">Pasaron a recepción</span><div class="v">${fmtN(r.necesitaron)}</div><small>${fmtN(r.solo_bot)} las atendió solo el bot${r.proactivas ? " · " + fmtN(r.proactivas) + " las escribió recepción primero" : ""}</small></div>
+      <div><span class="lbl">Sin respuesta humana</span><div class="v${r.sin_respuesta ? " resn" : ""}">${fmtN(r.sin_respuesta)}</div><small>${r.necesitaron ? Math.round(100 * r.sin_respuesta / r.necesitaron) + "% de quienes pasaron" : ""}</small></div></div>
+    <div class="lbl" style="margin-bottom:8px">% que agendó según cuánto tardó recepción</div>
+    <div class="rcurve" role="img" aria-label="Porcentaje que agendó según el tiempo de respuesta de recepción">${bars}</div><div class="rcurve-x">${xs}</div>
+    ${tab}
+    <p class="dleg" style="margin:12px 0 0">Se mide desde que el bot la pasó a recepción hasta el primer mensaje de recepción desde el panel. Cuando recepción escribió primero por su cuenta (sin que el bot la derivara) no hubo espera y no entra en la curva. Solo cuentan minutos en horario de atención: lunes a viernes 08:00–21:00 y sábado 09:00–14:00. "Agendó" = cita del bot o pago en caja hasta 90 días después de llegar.</p></div></div>`;
+}
+function fmtMin(m) { m = Math.round(m); if (m < 1) return "<1 min"; return m < 60 ? m + " min" : (Math.floor(m / 60) + " h" + (m % 60 ? " " + (m % 60) + " min" : "")); }
+
+/* ── Valor en el tiempo ─────────────────────────────────────────────────── */
+async function cargarValor() {
+  const el = $("#v-valor");
+  if (!S.valor) el.innerHTML = `<div class="sk" style="height:46px;margin-bottom:14px"></div><div class="sk" style="height:360px;border-radius:18px"></div>`;
+  try {
+    S.valor = await api("/alma/api/campanas-meta/cohortes?por=" + S.valorPor + "&canal=" + S.canal);
+    renderValor();
+  } catch (e) {
+    el.innerHTML = e.perm ? estado("err", I.alert, "Sin permiso", "Solo el acceso del dueño abre esta vista.", "")
+      : estado("err", I.alert, "No se pudo cargar el valor en el tiempo", "Revise la conexión e intente de nuevo.", '<button class="btn" type="button" onclick="cargarValor()">Reintentar</button>');
+  }
+}
+const MESL = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function renderValor() {
+  const v = S.valor, el = $("#v-valor");
+  const seg = `<div class="seg" id="segValor" role="group" aria-label="Agrupar por"><button type="button" data-p="canal" aria-pressed="${S.valorPor === "canal"}">Por canal</button><button type="button" data-p="campana" aria-pressed="${S.valorPor === "campana"}">Por campaña</button></div>`;
+  const intro = `<div class="val-h"><p>Cada persona entra a la cohorte del mes en que escribió por primera vez (anuncio o web). Se suma lo que pagó en caja a los 30, 90, 180 y 365 días de ese contacto, y lo que de eso quedó para el centro tras honorarios. "Se pagó" = cuándo lo que quedó para el centro superó el gasto en Meta de ese mes.</p>${seg}</div>`;
+  if (!v.cohortes.length) { el.innerHTML = intro + estado("", I.trend, "Aún no hay cohortes", "Las cohortes empiezan en mayo de 2026, cuando el bot empezó a amarrar cada persona a su anuncio.", ""); bindValor(); return; }
+  const rows = v.cohortes.slice().reverse().map(x => {
+    const [y, m] = x.cohorte.split("-");
+    const hz = x.horizontes.map(h => !h.alcanzado ? `<td class="r hz" data-l="${h.dias} días">${dash}</td>`
+      : `<td class="r hz${h.completo ? "" : " parcial"}" data-l="${h.dias} días" title="${h.completo ? "" : "Parcial: aún no pasan " + h.dias + " días para toda la cohorte"}"><b>${fmt$(h.centro)}</b><small>venta ${fmt$(h.venta)}${h.completo ? "" : " · parcial"}</small></td>`).join("");
+    const ult = [...x.horizontes].reverse().find(h => h.alcanzado) || x.horizontes[0];
+    const pctPago = x.gasto ? Math.min(100, Math.round(100 * ult.centro / x.gasto)) : 0;
+    const pay = x.estado === "sin_gasto" ? `<span class="dash">Sin gasto registrado</span>`
+      : x.estado === "pagado" ? `<div class="pay ok"><b class="resp">A los ${x.paga_en} días</b><div class="pb"><i style="--w:100%"></i></div></div>`
+      : x.estado === "no_se_pago" ? `<div class="pay"><b class="resn">No se pagó en 1 año</b><div class="pb"><i style="--w:${pctPago}%"></i></div></div>`
+      : `<div class="pay"><b>Aún no · ${pctPago}%</b><div class="pb"><i style="--w:${pctPago}%"></i></div><small>faltan ${fmt$(x.falta)}</small></div>`;
+    return `<tr><td data-l="Cohorte"><div class="nm">${MESL[+m - 1][0].toUpperCase() + MESL[+m - 1].slice(1)} ${y}<small>${esc(x.grupo)}</small></div></td>
+      <td class="r" data-l="Personas">${fmtN(x.personas)}<small class="pctc">${fmtN(x.pacientes)} pagaron</small></td>
+      <td class="r" data-l="Volvieron">${fmtN(x.volvieron)}<small class="pctc">${x.volvieron_pct == null ? "" : x.volvieron_pct + "% de quienes pagaron"}</small></td>
+      <td class="r" data-l="Gasto del mes">${x.gasto ? fmt$(x.gasto) : dash}<small class="pctc">${x.cac ? fmt$(x.cac) + " por paciente" : ""}</small></td>
+      ${hz}<td data-l="¿Se pagó?">${pay}</td></tr>`;
+  }).join("");
+  el.innerHTML = intro + `<div class="card block"><div class="card-h"><div class="ic">${I.trend}</div><h2>Valor en el tiempo</h2><span class="cp">${v.cohortes.length}</span><div class="sp"></div><span class="sub">desde mayo 2026 · para el centro acumulado</span></div>
+    <div class="tbl-wrap full"><table><thead><tr><th>Cohorte</th><th class="r">Personas</th><th class="r" title="Pacientes con pagos en 2 o más días distintos dentro de 1 año">Volvieron</th><th class="r">Gasto del mes</th>${v.horizontes.map(h => `<th class="r">${h} días</th>`).join("")}<th>¿Se pagó?</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="tbl-foot">Montos de cada celda: lo que quedó para el centro (arriba) y la venta total (abajo), acumulados desde el primer contacto. "Parcial" = todavía no pasan esos días para toda la cohorte: la cifra va a crecer. Venta con la misma regla del panel (agendó por el bot, o pagó en caja dentro de 90 días del contacto). Las radiografías de Imagendent se cuentan como venta del profesional que cobró.</div></div>`;
+  bindValor();
+}
+function bindValor() {
+  document.querySelectorAll("#segValor button").forEach(b => b.onclick = () => { S.valorPor = b.dataset.p; cargarValor(); });
+}
+
 // KPI de ortodoncia: visible cuando la campaña elegida es dental u ortodoncia.
 function ortoKpi(p) {
   if (!S.campana) return "";
@@ -1024,7 +1177,7 @@ function tabla(p) {
   const malos = new Set(p.alertas.filter(a => a.tipo === "sin_citas").map(a => a.ad_id));
   const sat = new Set(p.alertas.filter(a => a.tipo === "saturado").map(a => a.ad_id));
   const sinG = S.plat === "sin_dato";
-  const ncol = full ? 16 : 8;
+  const ncol = full ? 17 : 8;
   const body = rows.length ? rows.map(r => {
     const badges = [];
     if (anun && malos.has(r.ad_id)) badges.push('<span class="badge bad">Sin citas</span>');
@@ -1054,6 +1207,7 @@ function tabla(p) {
       <td class="r" data-l="Personas">${fmtN(r.personas)}</td>
       <td class="r" data-l="Citas">${fmtN(r.citas)}</td>
       <td class="r" data-l="Atendidos">${fmtN(r.atendidos)}</td>
+      <td class="r" data-l="Resp. recepción" title="Mediana de minutos hábiles hasta la primera respuesta humana">${r.resp_mediana_min == null ? dash : fmtMin(r.resp_mediana_min)}${r.resp_sin ? `<small class="pctc resn">${r.resp_sin} sin resp.</small>` : ""}</td>
       <td class="r" data-l="No asistió">${r.no_asistio ? `<span class="resn">${fmtN(r.no_asistio)}</span><small class="pctc">${r.no_asistio_pct}%</small>` : dash}</td>
       <td class="r" data-l="Costo / conv.">${r.cac_conv == null ? dash : fmt$(r.cac_conv)}</td>
       <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? dash : fmt$(r.cac_cita)}</span></td>
@@ -1068,7 +1222,7 @@ function tabla(p) {
   const thMoney = `<th class="r mny">Venta</th><th class="r mny" title="Venta menos honorarios de los profesionales">Para el centro</th><th class="r mny" title="Para el centro menos gasto en el anuncio">Resultado</th>`;
   const head = full
     ? `<th>${uni}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
-      <th class="r" title="Según Medilink; respaldo: pago en caja ese día">Atendidos</th><th class="r" title="Medilink los marca como inasistencia (no asiste, sin anulación). % sobre atendidos + no asistió">No asistió</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
+      <th class="r" title="Según Medilink; respaldo: pago en caja ese día">Atendidos</th><th class="r" title="Mediana de minutos en horario de atención hasta la primera respuesta humana">Resp. recep.</th><th class="r" title="Medilink los marca como inasistencia (no asiste, sin anulación). % sobre atendidos + no asistió">No asistió</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
     : `<th>${uni}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thMoney}<th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th>`;
   return `<div class="card block tbl-mode"><div class="card-h"><div class="ic">${I.table}</div><h2>Rendimiento por ${web ? (anun ? "botón" : "página") : todosC ? (anun ? "origen" : "campaña o página") : (anun ? "anuncio" : "campaña")}</h2><span class="cp">${rows.length}</span>
     <div class="sp"></div><div class="segs"><div class="seg${web ? " hidden-web" : ""}" id="segEstado" role="group" aria-label="Estado en Meta" title="${p.estado_fuente === "meta" ? "Estado de entrega según Meta" : "Meta no respondió: activo = tuvo gasto en los últimos 2 días"}">
@@ -1255,11 +1409,13 @@ function renderKanban() {
       <span class="dot" style="width:8px;height:8px;border-radius:50%;background:${COLC[c.id]}"></span>${esc(c.label)}<span class="n">${c.n}</span></button>`).join("")}</div>`;
   const conCita = k.columnas.filter(c => c.id === "agendado" || c.id === "atendido").reduce((a, c) => a + c.n, 0);
   const intro = `<div class="kintro"><span><b>${fmtN(k.total)}</b> ${k.total === 1 ? "persona llegó" : "personas llegaron"} ${S.canal === "web" ? "desde la página web" : S.canal === "todos" ? "por un anuncio o por la página web" : "por un anuncio"} entre el ${fdate(k.rango.desde)} y el ${fdate(k.rango.hasta)}; <b>${fmtN(conCita)}</b> ${conCita === 1 ? "tiene" : "tienen"} cita o ya ${conCita === 1 ? "se atendió" : "se atendieron"}.</span>
+    <button type="button" class="callday" id="btnLlamar" aria-pressed="${S.llamar}">${I.phone}A quién llamar hoy</button>
     ${k.no_asistieron || S.res ? `<button type="button" class="rescue" id="btnRescue" aria-pressed="${S.res === "no_asistio"}" title="Personas que Medilink marca como inasistencia: llamarlas para reagendar">${I.phone}${fmtN(k.no_asistieron)} no ${k.no_asistieron === 1 ? "asistió" : "asistieron"} · recuperar</button>` : ""}
     ${k.por_llamar || S.gest === "por_llamar" ? `<button type="button" class="tocall" id="btnToCall" aria-pressed="${S.gest === "por_llamar"}">${I.phone}${fmtN(k.por_llamar)} por llamar hoy o vencidos</button>` : ""}
     <span class="badge mut" title="Las columnas se calculan solas con la agenda, los mensajes y los avisos de atención. La gestión (llamadas, notas) es una capa encima: toque una tarjeta.">Se actualiza solo</span></div>`;
   const board = `<div class="board">${k.columnas.map(c => colHtml(c)).join("")}</div>`;
-  $("#v-kanban").innerHTML = intro + pick + board;
+  $("#v-kanban").innerHTML = intro + (S.llamar ? `<div id="llBox">${llamarHtml()}</div>` : pick + board);
+  $("#btnLlamar").onclick = () => { S.llamar = !S.llamar; if (S.llamar) { S.llamarData = null; cargarLlamar(); } renderKanban(); };
   const rb = $("#btnRescue");
   if (rb) rb.onclick = () => { S.res = S.res ? "" : "no_asistio"; if (S.res) S.kcol = "anulo"; marcarClear(); S.ver = {}; cargar(); };
   const tc = $("#btnToCall");
@@ -1269,6 +1425,26 @@ function renderKanban() {
     document.querySelectorAll(".colpick button").forEach(x => x.setAttribute("aria-pressed", x === b));
     document.querySelectorAll(".board .col").forEach(x => x.classList.toggle("cur", x.dataset.c === S.kcol));
   });
+}
+const LL_G = [[1, "No asistieron: recuperar la hora", "Medilink los marca como inasistencia en los últimos 7 días."],
+              [2, "Vieron horarios y no agendaron", "Hace menos de 3 días: todavía recuerdan la conversación."],
+              [3, "Seguimiento para hoy o vencido", "La fecha de volver a llamar ya llegó."]];
+async function cargarLlamar() {
+  try { S.llamarData = await api("/alma/api/campanas-meta/llamar-hoy?" + qs(true).replace(/&?(gestion|resultado|q)=[^&]*/g, "")); }
+  catch (e) { S.llamarData = { error: true, personas: [] }; }
+  const b = document.getElementById("llBox"); if (b && S.llamar) b.innerHTML = llamarHtml();
+}
+function llamarHtml() {
+  const d = S.llamarData;
+  if (!d) return `<div class="ll-grid">${[0,1,2].map(() => '<div class="sk" style="height:150px;border-radius:12px"></div>').join("")}</div>`;
+  if (d.error) return estado("err", I.alert, "No se pudo armar la lista", "Revise la conexión e intente de nuevo.", '<button class="btn" type="button" onclick="cargarLlamar()">Reintentar</button>');
+  if (!d.personas.length) return estado("", I.check, "Nadie pendiente hoy", "No hay inasistencias recientes, personas que vieron horarios hace menos de 3 días ni seguimientos vencidos con estos filtros.", "");
+  return LL_G.map(([p, t, ayuda]) => {
+    const g = d.personas.filter(x => x.prioridad === p);
+    if (!g.length) return "";
+    return `<section class="ll-g"><h3>${esc(t)} <span class="n">${g.length}</span></h3><p class="dleg" style="margin:-6px 0 10px">${esc(ayuda)}</p>
+      <div class="ll-grid">${g.map((x, i) => cardHtml(x, i, x.columna).replace('<div class="kc-top">', `<div class="kc-why">${x.motivos.map((m, j) => `<span class="${j === 0 && x.prioridad === 1 ? "p1" : ""}">${esc(m)}</span>`).join("")}</div><div class="kc-top">`)).join("")}</div></section>`;
+  }).join("");
 }
 function colHtml(c) {
   const lim = S.ver[c.id] || PASO;
@@ -1328,6 +1504,8 @@ function buscarTarjeta(clave) {
   for (const c of (S.kanban ? S.kanban.columnas : [])) {
     const t = c.tarjetas.find(x => x.clave === clave); if (t) return [t, c];
   }
+  const t = S.llamarData && (S.llamarData.personas || []).find(x => x.clave === clave);
+  if (t) return [t, (S.kanban.columnas.find(c => c.id === t.columna) || { id: t.columna, label: t.columna_label })];
   return [null, null];
 }
 function iniciales(n) {
@@ -1570,6 +1748,7 @@ function setVista(v, push) {
   document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.v === v));
   document.querySelectorAll(".view").forEach(x => x.classList.toggle("on", x.id === "v-" + v));
   if (push) history.replaceState(null, "", location.pathname + location.search + "#" + v);
+  if (v === "valor" && !S.valor) cargarValor();
   marcarClear();
 }
 function setRango(r) {
@@ -1595,7 +1774,8 @@ function limpiar() {
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => setVista(t.dataset.v, true));
 document.querySelector(".tabs").addEventListener("keydown", e => {
   if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-  const v = S.v === "panel" ? "kanban" : "panel"; setVista(v, true); $("#tab-" + v).focus();
+  const vs = ["panel", "kanban", "valor"], i = vs.indexOf(S.v);
+  const v = vs[(i + (e.key === "ArrowRight" ? 1 : vs.length - 1)) % vs.length]; setVista(v, true); $("#tab-" + v).focus();
 });
 document.querySelectorAll("#segRango button").forEach(b => b.onclick = () => setRango(b.dataset.r));
 $("#fDesde").onchange = e => { S.desde = e.target.value; if (S.desde && S.hasta) cargar(); };
@@ -1607,6 +1787,7 @@ document.querySelectorAll("#segCanal button").forEach(b => b.onclick = () => {
   document.body.classList.toggle("c-web", S.canal === "web");
   $("#kTabLbl").textContent = S.canal === "web" ? "Pacientes de la web" : S.canal === "todos" ? "Pacientes de anuncios y web" : "Pacientes de anuncios";
   S.campana = S.anuncio = ""; $("#fCampana").value = $("#fAnuncio").value = "";
+  S.valor = null; if (S.canal === "web") S.sug = null;
   marcarClear(); S.ver = {}; cargar();
 });
 $("#fPlat").onchange = e => { S.plat = e.target.value; marcarClear(); S.ver = {}; cargar(); };
@@ -1617,7 +1798,7 @@ let qT; $("#fQ").oninput = e => { clearTimeout(qT); qT = setTimeout(() => { S.q 
 $("#btnClear").onclick = limpiar;
 $("#btnRefresh").onclick = () => cargar(true);
 
-setVista(location.hash === "#kanban" ? "kanban" : "panel", false);
+setVista(["#kanban", "#valor"].includes(location.hash) ? location.hash.slice(1) : "panel", false);
 cargar();
 </script>
 </body></html>

@@ -1,0 +1,35 @@
+{
+  "name": "recuperar_hora_no_concretada_v1",
+  "category": "MARKETING",
+  "language": "es_CL",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Hola {{1}}, te escribimos del Centro Médico Carampangue. Tu última hora quedó sin concretarse. Si aún necesitas atención, podemos buscarte un nuevo horario por este mismo chat.",
+      "example": {
+        "body_text": [
+          [
+            "Pedro"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "FOOTER",
+      "text": "Para no recibir estos avisos, toca No, gracias"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "QUICK_REPLY",
+          "text": "Agendar hora"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No, gracias"
+        }
+      ]
+    }
+  ]
+}

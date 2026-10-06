@@ -67,6 +67,15 @@ _ventana_cerrada_var: contextvars.ContextVar[bool] = contextvars.ContextVar(
 )
 
 
+# El webhook pone aquí un dict por request y _post_meta lo marca al entregar a
+# Meta una respuesta real (no la reacción ⏳). Si el procesamiento revienta, el
+# webhook mira esto para decidir si es seguro dejar que Meta reenvíe el mensaje
+# (sin respuesta → se reprocesa) o no (ya se contestó → reenviar duplicaría).
+_respuesta_enviada_var: contextvars.ContextVar = contextvars.ContextVar(
+    "meta_respuesta_enviada", default=None
+)
+
+
 def ventana_cerrada_ultimo_envio() -> bool:
     """True si el último _post_meta() en este contexto detectó la ventana de
     24h cerrada (códigos 131047 y afines). Leer inmediatamente después de un
@@ -95,6 +104,9 @@ async def _post_meta(payload: dict) -> str | None:
                 json=payload,
             )
             if r.status_code == 200:
+                _env = _respuesta_enviada_var.get()
+                if _env is not None and payload.get("type") != "reaction":
+                    _env["enviado"] = True
                 try:
                     data = r.json()
                     messages = data.get("messages", [])

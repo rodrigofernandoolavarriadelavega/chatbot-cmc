@@ -2,7 +2,7 @@
 # Backup online de sessions.db encriptada con SQLCipher.
 # Usa sqlcipher_export() (el .backup tradicional no soporta DBs encriptadas).
 # El backup resultante queda encriptado con la MISMA key.
-# Retención: escalonada (7 diarios + 4 semanales + 3 mensuales), en
+# Retención local: 2 diarios (la historia larga vive en el Space), en
 # scripts/purgar-respaldos.py. El cron corre TODOS LOS DÍAS, no semanal:
 # la purga vieja conservaba 30 copias diarias y llegó a ocupar 8,3 GB.
 set -euo pipefail

@@ -2225,7 +2225,7 @@ _FAST_PATH_BUTTONS = {
     # interpretaba "Fonasa" como preguntar_info y devolvía la dirección,
     # ignorando 5 mensajes consecutivos. Fast-path corta el classifier.
     "fonasa", "fona", "particular", "privado", "privada",
-    "no_gracias_reeng", "waitlist_antes_si", "seg_control", "reeng_si", "pagar_hora",
+    "no_gracias_reeng", "recup_no_gracias", "waitlist_antes_si", "seg_control", "reeng_si", "pagar_hora",
 }
 
 _FAST_PATH_PREFIXES = (
@@ -3849,6 +3849,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             f"_Tambien nos puedes llamar al {CMC_TELEFONO_FIJO}._"
         )
 
+    # "No, gracias" de la plantilla de "Recuperar pacientes" (recepción). La baja
+    # ya quedó registrada en el webhook (recuperacion.procesar_boton), también con
+    # la conversación en takeover; acá solo se cierra amable, sin escalar.
+    if tl == "recup_no_gracias":
+        return (
+            "Sin problema. No te enviaremos más recordatorios como este.\n\n"
+            f"Si más adelante necesitas una hora, escríbenos por aquí o llámanos al {CMC_TELEFONO_FIJO}."
+        )
+
     # "✅ Sí, continuar" del reenganche ("Tienes una reserva pendiente… ¿te la
     # reservo?"). Antes el botón era "menu": reseteaba y el paciente perdía la
     # hora que se le ofrecía guardar. Ahora retoma el paso donde quedó.
@@ -4798,8 +4807,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # ── Botones residuales de WAIT_SLOT que llegaron tarde (sesión expiró,
         # usuario volvió al menú pero el mensaje tardó en llegar). En vez de
         # devolver el menú genérico, relanzar el flujo de agendar. ──
-        if tl in ("ver_otros", "ver_todos", "otro_dia", "otro_día",
-                  "otro_prof", "confirmar_sugerido") or tl.startswith("agendar_prof_"):
+        # ("ver_otros" con especialidad_sugerida viva —botón del seguimiento de
+        # información— lo resuelve el handler de la sugerencia, más abajo.)
+        if (tl in ("ver_otros", "ver_todos", "otro_dia", "otro_día",
+                   "otro_prof", "confirmar_sugerido") or tl.startswith("agendar_prof_")) \
+                and not (tl == "ver_otros" and data.get("especialidad_sugerida")):
             return await _iniciar_agendar(phone, data, None)
 
         # ── BUG-B: botones de aclaración nombre inexistente (pedro kine) ────
@@ -5003,7 +5015,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # BUG-8: verificar timestamp de especialidad_sugerida. Si tiene >2 min
         # y el paciente no está respondiendo al botón explícito, limpiar para
         # evitar agendar lo equivocado en otro contexto.
-        if esp_sug_prev and tl not in ("agendar_sugerido", "no_agendar"):
+        if esp_sug_prev and tl not in ("agendar_sugerido", "no_agendar", "ver_otros"):
             _esp_ts8 = data.get("especialidad_sugerida_ts")
             if _esp_ts8:
                 try:
@@ -5106,14 +5118,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "tendrá otra", "tendra otra", "tendrás otra", "tendras otra",
                 "ver mas", "ver más", "ver todas", "ver todos",
             )
-            if any(kw in tl_norm for kw in _MAS_OPCIONES_KWS):
+            if tl == "ver_otros" or any(kw in tl_norm for kw in _MAS_OPCIONES_KWS):
                 log_event(phone, "faq_agendar_mas_opciones", {"esp": esp_sug_prev, "txt": txt[:100]})
                 data.pop("especialidad_sugerida", None)
                 perfil = get_profile(phone)
                 if perfil:
                     data["rut_conocido"] = perfil["rut"]
                     data["nombre_conocido"] = perfil["nombre"]
-                return await _iniciar_agendar(phone, data, esp_sug_prev)
+                _resp_mas = await _iniciar_agendar(phone, data, esp_sug_prev)
+                if tl == "ver_otros":
+                    # Botón "Ver otras horas" del seguimiento: ir directo al listado.
+                    _s_mas = get_session(phone)
+                    if _s_mas.get("state") == "WAIT_SLOT":
+                        return await handle_message(phone, "ver_otros", _s_mas)
+                return _resp_mas
             # BUG-J FIX: si el mensaje tiene referencias temporales ("para otro día",
             # "para mañana", "lunes", "próxima semana", etc.), conservar especialidad
             # del contexto FAQ y retomar agendamiento en vez de descartar el contexto.
@@ -6829,7 +6847,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # Solo cuando NO tenemos esp_sug (ya se ofrecio agendar arriba con boton).
             from datetime import datetime as _dt_m5
             data["followup_info_ts"] = _dt_m5.now(timezone.utc).isoformat()
-            data["followup_info_esp"] = (result.get("especialidad") or "").strip()
+            data["followup_info_esp"] = (
+                (result.get("especialidad") or "").strip()
+                or (_esp_ctx or "").strip()
+                or _detectar_apellido_profesional(txt)
+                or _detectar_especialidad_en_texto(txt) or "")
             data["followup_info_sent"] = False
             save_session(phone, "IDLE", data)
             return _btn_msg(

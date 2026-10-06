@@ -87,7 +87,9 @@ def load_templates(single_file: str | None = None) -> list[tuple[Path, dict]]:
             sys.exit(1)
         files = [path]
     else:
-        files = sorted(TEMPLATES_DIR.glob("*.json"))
+        # Los borradores (*.DRAFT.json) solo se suben nombrándolos con --file:
+        # una corrida masiva nunca debe mandar a Meta algo que el dueño no revisó.
+        files = sorted(f for f in TEMPLATES_DIR.glob("*.json") if not f.name.endswith(".DRAFT.json"))
 
     results = []
     for f in files:

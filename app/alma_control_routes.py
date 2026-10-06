@@ -132,6 +132,22 @@ def _build_map() -> dict:
         _riel("HORAS_VACIAS_ACTIVE", "Aviso de horas liberadas (D+1)",
               "Diario 14:00: si mañana hay agenda holgada, avisa a quienes preguntaron por esa especialidad sin agendar (30d). Tope 30/día, cooldown 14d, opt-out 'No avisar'.",
               default="true"),  # mismo default que el job (corría sin flag desde antes)
+        # Campañas a pacientes que corrían sin interruptor (agregadas 2026-09-28, default ON)
+        _riel("CAMPANA_REACTIVACION_ACTIVE", "Campaña: reactivación de pacientes",
+              "Lunes: invita a volver a pacientes inactivos (la tanda de ~150).", default="true"),
+        _riel("CAMPANA_ADHERENCIA_KINE_ACTIVE", "Campaña: adherencia kine",
+              "Recuerda a pacientes de kine que retomen sus sesiones.", default="true"),
+        _riel("CAMPANA_CONTROL_ESPECIALIDAD_ACTIVE", "Campaña: controles por especialidad",
+              "Recordatorio de control (Psicología, Nutrición, etc.).", default="true"),
+        _riel("CAMPANA_CUMPLEANOS_ACTIVE", "Campaña: saludo de cumpleaños",
+              "Diario 10:18: saludo con plantilla aprobada.", default="true"),
+        _riel("CAMPANA_WINBACK_MENSUAL_ACTIVE", "Campaña: win-back mensual (>90 días)",
+              "Primer lunes del mes, 10:42.", default="true"),
+        _riel("CAMPANA_CROSSSELL_KINE_ACTIVE", "Campaña: cross-sell kine", "", default="true"),
+        _riel("CAMPANA_CROSSSELL_ORL_FONO_ACTIVE", "Campaña: cross-sell ORL y fono", "", default="true"),
+        _riel("CAMPANA_CROSSSELL_ODONTO_ESTETICA_ACTIVE", "Campaña: cross-sell odonto a estética", "", default="true"),
+        _riel("CAMPANA_CROSSSELL_MG_CHEQUEO_ACTIVE", "Campaña: chequeo de medicina general", "", default="true"),
+        _riel("CAMPANA_CROSSSELL_POST_DENTAL_ACTIVE", "Campaña: cross-sell post dental a ortodoncia", "", default="true"),
         # Solo-env (viven en flows/jobs leyendo config al import — no conmutables acá):
         {"flag": "DENTAL_PROMO_FLYER_ACTIVE", "label": "Flyer dental al aceptar consent dental",
          "descr": "Riel del pool dental (consent_dental_v1 → flyer inmediato). Solo por .env.",
@@ -229,7 +245,12 @@ def _toggleable_flags() -> set[str]:
              "HORAS_VACIAS_ACTIVE", "ABONO_GATE_PSIQ_ACTIVE",
              # Carril de persistencia (2º toque a consultas abandonadas) — lee
              # switchboard vía autopilot.flags en cada tick → conmutable en vivo
-             "PERSISTENCIA_ACTIVE"}
+             "PERSISTENCIA_ACTIVE",
+             # Campañas a pacientes con interruptor propio (2026-09-28)
+             "CAMPANA_REACTIVACION_ACTIVE", "CAMPANA_ADHERENCIA_KINE_ACTIVE", "CAMPANA_CONTROL_ESPECIALIDAD_ACTIVE",
+             "CAMPANA_CUMPLEANOS_ACTIVE", "CAMPANA_WINBACK_MENSUAL_ACTIVE", "CAMPANA_CROSSSELL_KINE_ACTIVE",
+             "CAMPANA_CROSSSELL_ORL_FONO_ACTIVE", "CAMPANA_CROSSSELL_ODONTO_ESTETICA_ACTIVE",
+             "CAMPANA_CROSSSELL_MG_CHEQUEO_ACTIVE", "CAMPANA_CROSSSELL_POST_DENTAL_ACTIVE"}
     try:
         from alma_agents import registry
         flags |= {a.flag for a in registry.all_agents().values()}

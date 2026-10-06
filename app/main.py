@@ -116,6 +116,12 @@ logging.config.dictConfig({
         # writes a /var/log. Quedan WARNING/ERROR para alertas reales.
         "apscheduler.scheduler":          {"level": "WARNING"},
         "apscheduler.executors.default": {"level": "WARNING"},
+        # Seguridad 2026-09-28: httpx registra en INFO la URL completa de cada
+        # request saliente, y las llamadas a Graph API llevan ?access_token=...
+        # → el token de Meta quedaba en texto plano en /var/log/cmc-bot.log.
+        # (El _RedactTokenFilter de abajo solo cubre uvicorn.access, no httpx.)
+        "httpx":    {"level": "WARNING"},
+        "httpcore": {"level": "WARNING"},
     },
 })
 log = logging.getLogger("bot")
@@ -645,6 +651,17 @@ async def lifespan(app: FastAPI):
         id="meta_alertas_diario",
         replace_existing=True,
         misfire_grace_time=3600,
+        coalesce=True,
+    )
+    # Paciente de anuncio/web esperando a recepción > RECEPCION_ALERTA_MIN min
+    # hábiles → Telegram, un aviso por episodio. Flag RECEPCION_ALERTA_ACTIVE.
+    from meta_alertas import job_recepcion_sin_respuesta
+    scheduler.add_job(
+        job_recepcion_sin_respuesta,
+        CronTrigger(minute="*/10", timezone=_CLT),
+        id="recepcion_sin_respuesta",
+        replace_existing=True,
+        misfire_grace_time=300,
         coalesce=True,
     )
     # Foto diaria Meta Ads con desgloses (plataforma, ubicación, edad/sexo,
@@ -1688,6 +1705,7 @@ import marketing_routes; marketing_routes.register_marketing_routes(app)  # Estu
 import roas_routes; roas_routes.register_roas_routes(app)  # ROAS por campaña Meta × caja real (/alma/roas)
 import agenda_ticker_routes; agenda_ticker_routes.register_agenda_ticker_routes(app)  # Monitor de agendamientos en vivo (/alma/agenda-en-vivo)
 import ausentismo_routes; ausentismo_routes.register_ausentismo_routes(app)  # Ausentismo — ranking pacientes que no asisten (/alma/ausentismo)
+import recuperacion_routes; recuperacion_routes.register_recuperacion_routes(app)  # Recuperar pacientes — segundo contacto manual de recepción (/alma/recuperar)
 import numero_equivocado; numero_equivocado.register_numero_equivocado_routes(app)  # Números reciclados: limpieza 4 capas desde panel v2
 import direccion_routes; direccion_routes.register_direccion_routes(app)  # Plan de Dirección (tracker formación dueño)
 import conciliacion_transferencias_routes; conciliacion_transferencias_routes.register_conciliacion_transferencias_routes(app)  # Conciliación transferencias × correos banco + sugerencias de pago (/alma/conciliacion-transferencias)
@@ -11254,6 +11272,36 @@ def _request_interno(payload: dict) -> Request:
 
 @app.post("/webhook")
 async def webhook(request: Request):
+    """Envoltorio del webhook: si el procesamiento revienta ANTES de contestarle
+    al paciente, desmarca los msg_id que este request marcó como procesados y
+    re-lanza (→ 500) para que el reenvío de Meta se procese de verdad.
+
+    Incidente 2026-10-05 (disco lleno): el primer intento marcaba el mensaje,
+    reventaba en log_message, y el reenvío de Meta un segundo después caía en
+    "MSG duplicado ignorado" → mensaje perdido para el bot Y para recepción.
+    Si ya se alcanzó a contestar, NO se desmarca: reprocesar duplicaría la
+    respuesta (o una acción en Medilink).
+    """
+    from session import _marcados_en_request, desmarcar_procesados
+    from messaging import _respuesta_enviada_var
+    marcados: list = []
+    envio = {"enviado": False}
+    tok_m = _marcados_en_request.set(marcados)
+    tok_e = _respuesta_enviada_var.set(envio)
+    try:
+        return await _webhook_procesar(request)
+    except Exception:
+        if marcados and not envio["enviado"]:
+            log.error("webhook falló sin responder: se desmarcan %d msg_id para "
+                      "que Meta los reenvíe: %s", len(marcados), marcados)
+            desmarcar_procesados(marcados)
+        raise
+    finally:
+        _respuesta_enviada_var.reset(tok_e)
+        _marcados_en_request.reset(tok_m)
+
+
+async def _webhook_procesar(request: Request):
     """Recibe mensajes de Meta Cloud API (WhatsApp, Instagram, Messenger).
 
     Si META_APP_SECRET está configurado, valida la firma X-Hub-Signature-256
@@ -11320,12 +11368,16 @@ async def webhook(request: Request):
         _unidades = _partir_lote_wa(data)
         if len(_unidades) > 1:
             log.info("webhook WA en lote: %d unidades", len(_unidades))
+            _alguna_fallo = False
             for _u in _unidades:
                 try:
                     await webhook(_request_interno(_u))
                 except Exception as _e_u:  # noqa: BLE001 — una unidad no tumba las demás
                     log.error("webhook WA lote: unidad falló: %s", _e_u)
-            return Response(status_code=200)
+                    _alguna_fallo = True
+            # 500 si alguna unidad falló: Meta reenvía el lote, las que ya se
+            # procesaron caen en dedup y la fallida (desmarcada) se reintenta.
+            return Response(status_code=500 if _alguna_fallo else 200)
 
     # ── Helper: convertir mensaje interactivo WA a texto plano ──────────────
     _SOCIAL_PROMO = (
@@ -11751,7 +11803,7 @@ async def webhook(request: Request):
         _BUTTON_PAYLOADS_KNOWN = {
             "menu", "menu_volver", "agendar_sugerido", "ver_otros", "ver_todos",
             "otro_dia", "otro_día", "otro_prof", "confirmar_sugerido",
-            "no_gracias_reeng", "accion_recepcion", "accion_cambiar",
+            "no_gracias_reeng", "recup_no_gracias", "accion_recepcion", "accion_cambiar",
             "accion_agendar", "accion_mis_citas", "accion_otro", "accion_waitlist",
             "quick_other", "quick_book", "quick_yes", "quick_no",
             "quick_cancel", "waitlist_si", "waitlist_no", "reac_si", "reac_luego",
@@ -11824,6 +11876,15 @@ async def webhook(request: Request):
             _btn_payload = msg.get("button", {}).get("payload", "")
             texto = _btn_text or _btn_payload or ""
             log.info("MSG from=%s id=%s type=button text=%r payload=%r", phone, msg_id, _btn_text, _btn_payload)
+            # Botones de las plantillas "Recuperar pacientes" (envío manual de
+            # recepción): "No, gracias" registra la baja de este tipo de
+            # recordatorio ANTES de cualquier guard de takeover.
+            if _btn_payload in ("recup_agendar", "recup_no_gracias"):
+                try:
+                    import recuperacion as _recup
+                    texto = _recup.procesar_boton(phone, _btn_payload)
+                except Exception as _e_recup:
+                    log.warning("recuperacion: botón %s falló phone=...%s: %s", _btn_payload, phone[-4:], _e_recup)
             if not texto:
                 return Response(status_code=200)
         elif msg_type == "audio":

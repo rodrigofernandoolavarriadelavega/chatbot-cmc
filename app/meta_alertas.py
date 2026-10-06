@@ -133,12 +133,107 @@ def construir_resumen(hoy: date | None = None) -> str:
             L.append(f"*Peor anuncio* · {_lin(ads[-1])}")
         L.append("")
 
+    try:
+        L += _lineas_presupuesto(sugerencias_presupuesto(hoy))
+    except Exception as e:   # la sugerencia no puede tumbar el resumen
+        log.warning("meta_resumen: sin sugerencia de presupuesto: %s", e)
+
     wk, wp = web_c["kpis"], web_p["kpis"]
     L += ["*Página web*",
           f"Personas {wk['personas']} {_ant(wp['personas'])} · citas {wk['citas']} {_ant(wp['citas'])} · "
           f"venta {_clp(wk['venta'])} {_ant(wp['venta'], _clp)}", "",
           f"Detalle: {PANEL_URL}"]
     return "\n".join(L)
+
+
+# ── Sugerencia de presupuesto (lunes + panel) ───────────────────────────────
+# Solo sugiere: nada se cambia en Meta automáticamente. Base: últimas 4
+# semanas cerradas (hasta ayer) por campaña activa, con las 2 últimas como
+# tendencia. Ojo: la venta de las semanas recientes aún madura (controles,
+# instalaciones), así que la regla es conservadora para bajar.
+SUG_SUBIR_RET = 1.3        # retorno centro desde el que se sugiere subir
+SUG_MANTENER_RET = 0.8     # entre esto y SUBIR → mantener
+SUG_BAJAR_FUERTE_RET = 0.5
+SUG_FREC_SATURADO = 4.0    # sobre esto no se sube: primero renovar creativo
+SUG_SIN_CITAS_GASTO = 50000
+SUG_MUESTRA_CHICA = 5      # citas en 4 semanas
+SUG_SUBIR_PCT, SUG_BAJAR_PCT, SUG_BAJAR_FUERTE_PCT = 20, 15, 30
+
+
+def recomendar(c28: dict, c14: dict | None = None) -> dict | None:
+    """Regla pura para UNA campaña. c28/c14: filas de campaña de panel_data
+    (4 y 2 semanas). Devuelve {accion, monto_semana, razon, muestra_chica} o
+    None si no gastó."""
+    gasto = c28.get("gasto") or 0
+    if gasto <= 0:
+        return None
+    sem = gasto / 4
+    citas = c28.get("citas") or 0
+    ret_c = c28.get("retorno_centro")
+    frec = c28.get("frecuencia") or 0
+    chica = citas < SUG_MUESTRA_CHICA
+    ret14 = (c14 or {}).get("retorno_centro")
+
+    def r(acc, pct, razon):
+        monto = round(sem * pct / 100 / 1000) * 1000
+        return {"accion": acc, "monto_semana": monto if acc != "mantener" else 0, "razon": razon,
+                "muestra_chica": chica and acc != "pausar", "gasto_semana": round(sem), "retorno_centro": ret_c, "citas": citas}
+    if citas == 0 and gasto >= SUG_SIN_CITAS_GASTO:
+        return r("pausar", 100, f"Gastó {_clp(gasto)} en 4 semanas sin traer ninguna cita.")
+    if ret_c is None:
+        return r("mantener", 0, "Aún no hay venta para medirla.")
+    txt_ret = f"de cada $1.000 gastados vuelven {_clp(ret_c * 1000)} al centro"
+    if ret_c >= SUG_SUBIR_RET:
+        if frec > SUG_FREC_SATURADO:
+            return r("mantener", 0, f"Rinde ({txt_ret}), pero la gente ya lo vio mucho (frecuencia "
+                                    f"{str(round(frec, 1)).replace('.', ',')}): renueve el creativo antes de subir.")
+        if chica:
+            return r("mantener", 0, f"Rinde ({txt_ret}), pero con menos de {SUG_MUESTRA_CHICA} citas: espere una semana más.")
+        return r("subir", SUG_SUBIR_PCT, f"Se paga solo: {txt_ret}.")
+    if ret_c >= SUG_MANTENER_RET:
+        if ret14 is not None and ret14 < SUG_BAJAR_FUERTE_RET and not chica:
+            return r("bajar", SUG_BAJAR_PCT, f"Las últimas 2 semanas cayó: {txt_ret} en 4 semanas, menos en las 2 últimas.")
+        return r("mantener", 0, f"Cerca del equilibrio: {txt_ret}.")
+    if chica:
+        return r("mantener", 0, f"Todavía no se paga ({txt_ret}), pero con menos de {SUG_MUESTRA_CHICA} citas es pronto para cortar.")
+    if ret_c < SUG_BAJAR_FUERTE_RET:
+        return r("bajar", SUG_BAJAR_FUERTE_PCT, f"No se paga: {txt_ret}.")
+    return r("bajar", SUG_BAJAR_PCT, f"Aún no se paga: {txt_ret}.")
+
+
+def sugerencias_presupuesto(hoy: date | None = None) -> dict:
+    hoy = hoy or datetime.now(_CL).date()
+    h = hoy - timedelta(days=1)
+    p28 = _kpis(h - timedelta(days=27), h, "meta")
+    p14 = _kpis(h - timedelta(days=13), h, "meta")
+    c14 = {c["campaign_id"]: c for c in p14["campanas"]}
+    out = []
+    for c in p28["campanas"]:
+        if not c.get("activo"):
+            continue
+        rec = recomendar(c, c14.get(c["campaign_id"]))
+        if rec:
+            out.append({"campaign_id": c["campaign_id"], "campana": c["campana"] or "Sin campaña", **rec})
+    orden = {"pausar": 0, "bajar": 1, "subir": 2, "mantener": 3}
+    out.sort(key=lambda x: (orden[x["accion"]], -x["gasto_semana"]))
+    return {"desde": (h - timedelta(days=27)).isoformat(), "hasta": h.isoformat(), "campanas": out}
+
+
+_ACC_TXT = {"subir": "Subir", "mantener": "Mantener", "bajar": "Bajar", "pausar": "Pausar"}
+
+
+def _lineas_presupuesto(sug: dict) -> list[str]:
+    if not sug["campanas"]:
+        return []
+    L = ["*Sugerencia de presupuesto* (últimas 4 semanas; nada se cambia solo)"]
+    for x in sug["campanas"][:MAX_CAMPANAS]:
+        monto = ""
+        if x["accion"] in ("subir", "bajar", "pausar") and x["monto_semana"]:
+            monto = f" {'+' if x['accion'] == 'subir' else '−'}{_clp(x['monto_semana'])}/semana"
+        L.append(f"• {_ACC_TXT[x['accion']]}{monto} · {x['campana']}: {x['razon']}"
+                 + (" (muestra chica)" if x["muestra_chica"] else ""))
+    L.append("")
+    return L
 
 
 # ── Alertas ─────────────────────────────────────────────────────────────────
@@ -222,6 +317,93 @@ def evaluar_alertas(hoy: date | None = None) -> list[tuple[str, str]]:
                     f"Hay {n_hoy + n_venc} persona(s) de Campañas Meta por volver a llamar "
                     f"({', '.join(partes)}). Filtro «Por llamar» en el kanban."))
     return out
+
+
+# ── Recepción: paciente de anuncio/web esperando respuesta humana ───────────
+# Cada 10 min, en horario de atención: sesiones en HUMAN_TAKEOVER de personas
+# que llegaron por un anuncio o por la web (≤90 días) con mensajes sin
+# respuesta humana hace más de RECEPCION_ALERTA_MIN minutos HÁBILES. Un aviso
+# por episodio de espera (clave = persona + inicio de la espera): no se repite.
+RECEPCION_URL = "https://agentecmc.cl/admin/v2"
+VENTANA_LLEGADA_DIAS = 90
+
+
+def _recepcion_cfg() -> tuple[bool, int]:
+    import config
+    return (bool(getattr(config, "RECEPCION_ALERTA_ACTIVE", True)),
+            int(getattr(config, "RECEPCION_ALERTA_MIN", 15) or 15))
+
+
+def evaluar_recepcion_sin_respuesta(ahora_epoch: int | None = None, umbral_min: int | None = None) -> list[tuple[str, str]]:
+    import campanas_meta_routes as cm
+    import recepcion_tiempos as rt
+    from fastapi import HTTPException
+    from session import db
+    ahora = ahora_epoch or int(datetime.now(_CL).timestamp())
+    umbral = umbral_min if umbral_min is not None else _recepcion_cfg()[1]
+    if not rt.en_horario(ahora):
+        return []
+    out: list[tuple[str, str]] = []
+    with db() as c:
+        cm._ensure_insights(c)
+        mapa = cm._mapa_anuncios(c)
+        phones = [r[0] for r in c.execute("SELECT phone FROM sessions WHERE state='HUMAN_TAKEOVER'")]
+        for phone in phones:
+            k = cm._clave(phone)
+            try:
+                refs = cm._phones_de(c, cm._clave_valida(k))
+            except HTTPException:
+                continue   # no llegó por anuncio ni por la web
+            if not any(r["ts"] >= ahora - VENTANA_LLEGADA_DIAS * 86400 for r in refs):
+                continue
+            msgs = [{"ts": cm._utc_txt_epoch(r["ts"]) or 0, "dir": r["direction"], "texto": r["text"] or "",
+                     "state": r["state"] or ""}
+                    for r in c.execute("SELECT direction, text, state, ts FROM messages WHERE phone=? AND ts >= ?",
+                                       (phone, cm._utc_txt(ahora - 3 * 86400)))]
+            esp = rt.espera_actual(msgs, ahora)
+            if not esp or esp["minutos"] <= umbral:
+                continue
+            ult = refs[0]
+            info = cm._info(mapa, ult["source_id"] or "", ult["headline"] or "")
+            origen = (f"web · {info.get('pagina') or ''}".strip(" ·") if ult.get("origen") == "web"
+                      else f"anuncio «{info['anuncio']}»")
+            out.append((f"recepcion:{k}:{esp['inicio']}",
+                        f"{cm._mascara(phone)} ({origen}) espera respuesta de recepción hace "
+                        f"{int(esp['minutos'])} min en horario de atención."))
+    return out
+
+
+def _ya_enviadas(claves: list[str]) -> set[str]:
+    from session import db
+    if not claves:
+        return set()
+    with db() as c:
+        _ensure_estado(c)
+        return {r[0] for r in c.execute("SELECT clave FROM meta_alertas_estado WHERE clave IN (%s)"
+                                        % ",".join("?" * len(claves)), claves)}
+
+
+async def job_recepcion_sin_respuesta() -> None:
+    """Cada 10 min. Flag RECEPCION_ALERTA_ACTIVE, umbral RECEPCION_ALERTA_MIN."""
+    activo, umbral = _recepcion_cfg()
+    if not activo:
+        return
+    try:
+        ahora = int(datetime.now(_CL).timestamp())
+        vigentes = await asyncio.to_thread(evaluar_recepcion_sin_respuesta, ahora, umbral)
+        vistas = await asyncio.to_thread(_ya_enviadas, [k for k, _ in vigentes])
+    except Exception as e:
+        log.error("recepcion_sin_respuesta: no se pudo evaluar: %s", e, exc_info=True)
+        return
+    nuevas = [(k, t) for k, t in vigentes if k not in vistas]
+    if not nuevas:
+        return
+    texto = (f"*Recepción sin responder* · {len(nuevas)} paciente(s) de anuncios o web esperan más de "
+             f"{umbral} min\n\n" + "\n".join(f"• {t}" for _, t in nuevas) + f"\n\nCola de recepción: {RECEPCION_URL}")
+    canal = await enviar_al_dueno(texto)
+    if canal:
+        await asyncio.to_thread(marcar_enviadas, [k for k, _ in nuevas], ahora)
+    log.info("recepcion_sin_respuesta: %d aviso(s) por %s", len(nuevas), canal)
 
 
 # ── Estado de envío (dedup 48 h) ────────────────────────────────────────────

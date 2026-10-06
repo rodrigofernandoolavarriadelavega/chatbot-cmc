@@ -7,6 +7,7 @@ entorno y el módulo `sqlcipher3` está instalado, la conexión usa SQLCipher
 (AES-256). Fallback transparente a `sqlite3` para dev local y para DBs
 históricas sin encriptar.
 """
+import contextvars
 import json
 import logging
 import os
@@ -1022,12 +1023,31 @@ def _run_ddl_inline(conn) -> None:
     conn.commit()
 
 
+# ── Reintento tras falla (incidente disco lleno 2026-10-05) ─────────────────
+# is_duplicate() marca el msg_id ANTES de procesar. Si el procesamiento revienta
+# (disco lleno, SQLite bloqueada, bug), el webhook responde 500 y Meta reenvía…
+# y el reenvío caía en "duplicado ignorado": el mensaje quedaba marcado como
+# visto pero nunca contestado ni guardado (paciente en duelo pidiendo licencia,
+# 12:15, nadie lo vio). El webhook registra aquí lo que marcó en este request y,
+# si falla sin haber contestado, lo desmarca para que el reenvío se procese.
+_marcados_en_request: contextvars.ContextVar = contextvars.ContextVar(
+    "marcados_en_request", default=None
+)
+_reintento_permitido: set = set()   # fallback en memoria si el DELETE también falla
+
+
 def is_duplicate(msg_id: str) -> bool:
     """Retorna True si el msg_id ya fue procesado (idempotencia ante reenvíos de Meta).
 
     Usa INSERT OR IGNORE atómico: si la fila ya existía, rowcount==0 → duplicado.
     Evita race condition cuando Meta reenvía el mismo msg_id en paralelo.
     """
+    if msg_id in _reintento_permitido:
+        # Falló antes y se desmarcó, pero el DELETE no pudo escribir (p.ej.
+        # disco lleno): se deja pasar una vez sin tocar la base.
+        _reintento_permitido.discard(msg_id)
+        _anotar_marcado(msg_id)
+        return False
     with db() as conn:
         cur = conn.execute(
             "INSERT OR IGNORE INTO processed_msgs (msg_id) VALUES (?)", (msg_id,)
@@ -1040,7 +1060,32 @@ def is_duplicate(msg_id: str) -> bool:
         if random.random() < 0.01:
             conn.execute("DELETE FROM processed_msgs WHERE created_at < datetime('now', '-7 days')")
         conn.commit()
-        return cur.rowcount == 0
+        if cur.rowcount == 0:
+            return True
+    _anotar_marcado(msg_id)
+    return False
+
+
+def _anotar_marcado(msg_id: str) -> None:
+    marcados = _marcados_en_request.get()
+    if marcados is not None:
+        marcados.append(msg_id)
+
+
+def desmarcar_procesados(msg_ids: list) -> None:
+    """Deshace is_duplicate() para que el reenvío de Meta se procese de nuevo.
+    Nunca lanza: corre dentro del manejo de una excepción del webhook."""
+    ids = [m for m in msg_ids if m]
+    if not ids:
+        return
+    _reintento_permitido.update(ids)  # funciona aunque la base no pueda escribir
+    try:
+        with db() as conn:
+            conn.executemany("DELETE FROM processed_msgs WHERE msg_id=?", [(m,) for m in ids])
+            conn.commit()
+        _reintento_permitido.difference_update(ids)
+    except Exception as e:  # noqa: BLE001
+        logging.getLogger("session").error("desmarcar_procesados falló (queda en memoria): %s", e)
 
 
 # ── Inbox durable (causa de fondo incidente Matías 2026-06-05) ──────────────

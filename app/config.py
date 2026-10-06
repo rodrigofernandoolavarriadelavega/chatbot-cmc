@@ -84,6 +84,8 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     "roas":        {"label": "ROAS Campañas",    "icon": "trending-up","title": "ROAS por campaña · Meta Ads × Caja real", "sub": "Retorno de cada campaña vs ingreso real (caja)", "src": "/alma/roas"},
     "agenda_ticker":{"label": "Agendamientos en vivo","icon":"activity","title": "Monitor de Agendamientos en vivo", "sub": "Orden real de llegada · canal · citas pasadas sin cerrar", "src": "/alma/agenda-en-vivo"},
     "ausentismo":  {"label": "Ausentismo",       "icon": "users",     "title": "Ausentismo — pacientes que no asisten", "sub": "Ranking de inasistencias reales · filtro por profesional · a quién confirmar", "src": "/alma/ausentismo"},
+    # Cola de segundo contacto de recepcion: personas de anuncios/web que se cayeron. SIN gasto ni campanas (recepcion no ve plata de Meta).
+    "recuperar":   {"label": "Recuperar pacientes","icon": "users",    "title": "Recuperar pacientes — segundo contacto", "sub": "Quién se cayó (anuncios y web) · enviar recordatorio a mano · estado de gestión", "src": "/alma/recuperar"},
     "agenda":      {"label": "Agenda",           "icon": "calendar",  "title": "Agenda",                         "sub": "Ver citas del dia · Agendar nueva hora",           "src": "/alma/agenda"},
     "sala":        {"label": "En sala",          "icon": "users",     "title": "En sala de espera",              "sub": "Pacientes que avisaron que llegaron (check-in QR)", "src": "/alma/sala"},
     "pagos_olacore":{"label": "Pagos OLACORE",   "icon": "banknote",  "title": "Pagos del dia (completo)",       "sub": "Registro · copagos · bonif. Imed · Caja/Cierre",   "src": "/alma/pagos"},
@@ -167,7 +169,7 @@ ALMA_PROFILES: dict[str, dict] = {
     }} if OLACORE_TOKEN else {}),
     **({ADMIN_TOKEN: {
         "variante": "Recepción",
-        "modulos": ["panel", "panel2", "recepcion_kanban", "agenda", "sala", "ausentismo", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot", "imagendent", "vales_rx"],  # recepción — "inicio" (vistazo del dueño) reservado a OLACORE_TOKEN
+        "modulos": ["panel", "panel2", "recepcion_kanban", "agenda", "sala", "ausentismo", "recuperar", "pagos", "caja_diaria", "abonos", "envios", "impresion", "inventario", "proveedores", "pacientes", "interconsultas", "esterilizacion", "documentos", "examenes", "tareas", "calidad", "programas", "kine", "ortodoncia", "boxes", "autopilot", "imagendent", "vales_rx"],  # recepción — "inicio" (vistazo del dueño) reservado a OLACORE_TOKEN
         "secciones": {"autopilot": ["disenos"]},  # de Autopilot solo ve Diseños
         "boxes_financiero": False,  # sin valores monetarios en Boxes
         "panel_profesional": False,
@@ -473,6 +475,18 @@ CONCILIACION_TRANSFERENCIAS_ACTIVE = os.getenv(
 META_ALERTAS_ACTIVE = os.getenv(
     "META_ALERTAS_ACTIVE", "true"
 ).lower() in ("true", "1", "yes", "on")
+
+# Aviso al dueño (Telegram) cuando un paciente que llegó por un anuncio o por la
+# web está en HUMAN_TAKEOVER sin respuesta humana más de RECEPCION_ALERTA_MIN
+# minutos en horario de atención (app/meta_alertas.py, cada 10 min, un aviso
+# por episodio). Default ENCENDIDO; apagar: RECEPCION_ALERTA_ACTIVE=false.
+RECEPCION_ALERTA_ACTIVE = os.getenv(
+    "RECEPCION_ALERTA_ACTIVE", "true"
+).lower() in ("true", "1", "yes", "on")
+try:
+    RECEPCION_ALERTA_MIN = max(1, int(os.getenv("RECEPCION_ALERTA_MIN", "15")))
+except ValueError:
+    RECEPCION_ALERTA_MIN = 15
 
 # Lectura automática de órdenes médicas de eco (foto → tipo → oferta de agenda).
 # Práctica 2026-08-01: 15/15 órdenes reales leídas bien. El paciente SIEMPRE
