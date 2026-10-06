@@ -307,9 +307,9 @@ svg.i{flex:none;display:block}
 .fired{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--aqua-ink);margin-top:4px}
 
 /* ---------- Creatives ---------- */
-.ads{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr));gap:16px}
-.ad{border-radius:14px;border:1px solid var(--line);background:var(--surface);overflow:hidden;min-width:0;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
-.ad:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.anus{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr));gap:16px}
+.anu{border-radius:14px;border:1px solid var(--line);background:var(--surface);overflow:hidden;min-width:0;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.anu:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
 .thumb{position:relative;aspect-ratio:16/10;padding:14px;color:var(--on-accent);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
 .thumb.t1{background:linear-gradient(150deg,var(--navy-deep),var(--azul))}
 .thumb.t2{background:linear-gradient(150deg,var(--azul),var(--aqua))}
@@ -319,13 +319,13 @@ svg.i{flex:none;display:block}
 .th-h{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.15;position:relative;max-width:85%}
 .th-s{font-size:11px;opacity:.85;margin-top:4px;position:relative;max-width:calc(100% - 78px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .th-cta{position:absolute;right:12px;bottom:12px;height:24px;padding:0 10px;border-radius:var(--pill);background:var(--on-accent);color:var(--navy);font-size:11px;font-weight:800;display:grid;place-items:center}
-.ad-b{padding:12px 14px 14px}
-.ad-top{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-.ad-top b{color:var(--ink);font-weight:600}
-.ad-m{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
-.ad-m div{min-width:0}
-.ad-m small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-.ad-m b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.anu-b{padding:12px 14px 14px}
+.anu-top{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.anu-top b{color:var(--ink);font-weight:600}
+.anu-m{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.anu-m div{min-width:0}
+.anu-m small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.anu-m b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
 .fat{display:flex;gap:3px;margin-top:10px;align-items:center}
 .fat i{flex:1;height:5px;border-radius:3px;background:var(--track)}
 .fat i.on{background:var(--aqua)}
@@ -525,7 +525,7 @@ a.btn{text-decoration:none}
 .thumb.img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(6,24,39,.78));pointer-events:none}
 .thumb.img .th-in{position:absolute;left:14px;right:14px;bottom:12px;z-index:1}
 .thumb.img .rank{z-index:1}
-.ad-txt{font-size:12.5px;color:var(--ink-2);line-height:1.45;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.anu-txt{font-size:12.5px;color:var(--ink-2);line-height:1.45;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .fresh{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .fresh i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
 .fresh.old i{background:var(--warn)}
@@ -685,7 +685,7 @@ const MODS=[
  {id:'territorio',t:'Territorio',g:'Captación',ic:'map',st:'prod',src:'captacion',f:'Comuna real de quienes llegaron por anuncios y web, con su venta. Faltan la penetración por población y los tiempos de viaje.'},
  {id:'recepcion',t:'Recepción que convierte',s:'Recepción',g:'Conversión',ic:'headset',st:'prod',src:'conversion',f:'Tiempo a la primera respuesta humana y su efecto en la agenda, medidos. Falta la telefonía (llamadas perdidas).'},
  {id:'recall',t:'Retención y recall',g:'Conversión',ic:'repeat',st:'cerca',src:'conversion',f:'Retorno a 90 días, reenganche y segundo toque medidos; el contacto manual vive en Recuperar pacientes. Falta la probabilidad de abandono por paciente.'},
- {id:'reputacion',t:'Reputación',g:'Conversión',ic:'star',st:'vision',f:'Requiere conectar el Perfil de Empresa de Google y una encuesta breve después de cada atención.'},
+ {id:'reputacion',t:'Reputación',g:'Conversión',ic:'star',st:'cerca',src:'reputacion',f:'Nota de Google y encuesta después de la consulta, reales. Faltan el detalle por estrellas y responder reseñas (API de Perfil de Empresa en revisión) y clasificar temas.'},
  {id:'competencia',t:'Competencia y mercado',s:'Competencia',g:'Inteligencia',ic:'target',st:'vision',f:'Requiere un levantamiento de precios trimestral y datos de búsqueda por zona.'},
  {id:'finanzas',t:'Finanzas de crecimiento',s:'Finanzas',g:'Inteligencia',ic:'wallet',st:'prod',src:'finanzas',f:'Venta de caja, lo que queda al centro y economía por canal, reales. Falta la proyección con intervalo estadístico.'},
  {id:'prediccion',t:'Predicción',g:'Inteligencia',ic:'trending',st:'vision',f:'Requiere 24 meses de historia limpia por especialidad, clima local y calendario escolar.'},
@@ -919,6 +919,13 @@ function jChart(el,cac){if(!el)return;
  el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Valor acumulado de una paciente ilustrativa en el tiempo">${s}</svg>`;
 }
 R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.embudo||{}).meta||{};
+ const v12=D.valor12m||{},k12=((D.embudo||{}).meta||{}).valor12m||{};
+ const real12=v12.error?estadoV('No se pudo leer el valor a 12 meses',v12.error,{err:1,retry:'captacion'}):!(v12.meta&&v12.meta.hay_cohortes)?estadoV('Aún sin cohortes de 12 meses','Se calculan con los pacientes nuevos que ya cumplieron un año en la caja.'):`
+   <div class="mini">${(v12.top||[]).slice(0,4).map(e=>`<div class="so"><div class="kl">${esc(e.especialidad)}${e.muestra_chica?' · muestra chica':''}</div><b>${clp(e.c365)}</b><small>para el centro a 12 meses · ${th(e.n)} pacientes</small></div>`).join('')}</div>
+   ${k12.nuevos?`<div class="mini" style="margin-top:12px"><div class="so"><div class="kl">Nuevos por anuncios (rango)</div><b>${th(k12.nuevos_rango)}</b><small>de ${th(k12.nuevos_centro_rango)} nuevos del centro · costo por nuevo ${clp(k12.costo_nuevo_rango)}</small></div>
+    <div class="so"><div class="kl">Proyectado a 12 meses</div><b>${clp(k12.centro_12m)}</b><small>para el centro · retorno ${k12.retorno_12m==null?'—':dec(k12.retorno_12m,1)+'×'}</small></div></div>`:''}
+   ${(v12.recorrido||[]).slice(0,1).map(r=>`<p class="note" style="margin-top:12px">Dónde sigue el recorrido de quienes entran por ${esc(r.entrada)}: ${r.destinos.map(d=>esc(d.esp)+' '+String(d.pct).replace('.',',')+'%').join(' · ')}.</p>`).join('')}
+   <p class="note">Proyección según cohortes reales; no es venta realizada. Cohortes de pacientes nuevos con 12 meses cumplidos (primer pago entre ${fdate(v12.meta.ventana.desde)} y ${fdate(v12.meta.ventana.hasta)}).${v12.sin_especialidad?' Hay '+v12.sin_especialidad+' profesionales sin especialidad registrada.':''}</p>`;
  const real=v9.error?estadoV('No se pudo leer el valor a 90 días',v9.error,{err:1,retry:'captacion'}):!t.personas?estadoV('Sin personas con 90 días cumplidos','El valor a 90 días se mide solo con quienes llegaron hace 90 días o más; aparecerá a medida que maduren.'):`
    <div class="mini">${hz.map(x=>`<div class="so${x.dias===90?' hl':''}"><div class="kl">A ${x.dias} días</div><b>${clp(x.venta)}</b><small>${clp(x.centro)} para el centro</small></div>`).join('')}</div>
    <div class="mini" style="margin-top:12px">
@@ -930,6 +937,7 @@ R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.em
    <p class="note">Personas que llegaron por anuncios de Meta desde el ${fdate(v9.desde)} y cumplieron 90 días al ${fdate(v9.madura_hasta)}. Cuenta todo lo que pagaron en caja a 30, 60 y 90 días de su primer contacto.</p>`;
  return `${mh('viaje','Una paciente se ve así cuando todas las piezas se conectan: del anuncio a la tercera especialidad. El relato es ilustrativo; el valor a 90 días de quienes trajeron los anuncios, real.')}
  ${card('Valor en el tiempo de quienes llegaron por anuncios','trending',real,{sub:'Venta acumulada a 30, 60 y 90 días del primer contacto',real:v9.madura_hasta?`maduros al ${fdm(v9.madura_hasta)}`:''})}
+ ${card('Valor de un paciente nuevo en 12 meses','trending',real12,{sub:'Por especialidad de entrada, con cohortes reales',real:v12.meta&&v12.meta.hay_cohortes?'cohortes':''})}
  <div class="grid g-57">
   <section class="card"><div class="pt-card"><span class="avatar">A</span><div style="min-width:0"><h2 style="font-size:18px;font-weight:800;letter-spacing:-.02em">Paciente A</h2><div class="small muted">Recorrido de ejemplo · no corresponde a una persona real</div></div><span style="margin-left:auto">${tagI}</span></div>
    <div class="kpis" style="margin-top:18px;grid-template-columns:repeat(2,minmax(0,1fr))">
@@ -1001,17 +1009,17 @@ function adsHTML(D){const cr=D.creativos||{};const xs=(cr.anuncios||[]).slice();
   const ser=(d.ctr_semanas||[]);const falling=ser.filter(num).length>=2&&ser.filter(num).slice(-1)[0]<ser.filter(num)[0]*.8;
   const thumb=d.imagen?`<div class="thumb img"><img src="${esc(_tk('/alma/api/campanas-meta/creativo/'+encodeURIComponent(d.ad_id)))}" alt="${esc('Imagen del anuncio '+(d.titulo||d.anuncio))}" loading="lazy" decoding="async"><span class="rank">${i+1}</span><div class="th-in"><div class="th-h">${esc(d.titulo||d.anuncio)}</div></div></div>`
    :`<div class="thumb t${i%3+1}"><span class="rank">${i+1}</span><svg class="art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I.sparkles}</svg><div class="th-h">${esc(d.titulo||d.anuncio)}</div><div class="th-s">Sin imagen guardada todavía</div></div>`;
-  return `<article class="ad">${thumb}
- <div class="ad-b"><div class="ad-top"><b>${esc(d.anuncio)}</b><span style="margin-left:auto">${d.activo?'<span class="pill ok">Activo</span>':'<span class="pill mut">Sin gasto reciente</span>'}</span></div>
- ${d.texto?`<p class="ad-txt">${esc(d.texto)}</p>`:''}
- <div class="ad-m"><div><small>Retorno</small><b class="${(d.retorno_centro??1)>=1?'':'neg'}">${d.retorno_centro==null?'—':dec(d.retorno_centro,1)+'×'}</b></div><div><small>CTR 7 d</small><b>${f.ctr==null?'—':dec(f.ctr,1)+'%'}</b></div><div><small>Citas</small><b>${th(d.citas)}</b></div></div>
+  return `<article class="anu">${thumb}
+ <div class="anu-b"><div class="anu-top"><b>${esc(d.anuncio)}</b><span style="margin-left:auto">${d.activo?'<span class="pill ok">Activo</span>':'<span class="pill mut">Sin gasto reciente</span>'}</span></div>
+ ${d.texto?`<p class="anu-txt">${esc(d.texto)}</p>`:''}
+ <div class="anu-m"><div><small>Retorno</small><b class="${(d.retorno_centro??1)>=1?'':'neg'}">${d.retorno_centro==null?'—':dec(d.retorno_centro,1)+'×'}</b></div><div><small>CTR 7 d</small><b>${f.ctr==null?'—':dec(f.ctr,1)+'%'}</b></div><div><small>Citas</small><b>${th(d.citas)}</b></div></div>
  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px"><span class="small muted">CTR 6 semanas</span>${spark(ser,falling?'bad':'azul')}</div>
  <div class="fat ${cls}" title="Frecuencia de 7 días ${dec(fr,1)}">${[1,2,3,4,5].map(n=>`<i class="${n<=lv?'on':''}"></i>`).join('')}<span>Frecuencia ${dec(fr,1)} · <span class="pill ${fz[0]}" style="margin-left:2px">${fz[1]}</span></span></div></div></article>`}).join('')}
 R.creativos={html:D=>{const cr=D.creativos||{},rg=rng_(D.rango),rf=cr.resumen_fatiga||{};
  const fatig=(cr.anuncios||[]).filter(a=>(a.fatiga||{}).etiqueta==='cansado'||(a.fatiga||{}).etiqueta==='vigilar');
  if(cr.error)return `${mh('creativos','Cada anuncio juzgado por lo que deja al centro.')}${card('Anuncios','sparkles',estadoV('No se pudieron leer los anuncios',cr.error,{err:1,retry:'captacion'}))}`;
  return `${mh('creativos','Cada anuncio juzgado por lo que deja al centro, no por los «me gusta». La fatiga se mide con la frecuencia y el CTR de 7 días contra los 7 anteriores.')}
- ${card('Anuncios con gasto o citas','sparkles',`<div class="chips" role="group" aria-label="Ordenar anuncios" style="margin-bottom:16px">${[['ret','Retorno al centro'],['ctr','CTR'],['citas','Citas'],['fr','Fatiga']].map(([k,l])=>`<button class="chip" type="button" data-adsort="${k}" aria-pressed="${k===ADSORT}">${l}</button>`).join('')}</div><div class="ads" id="ads">${adsHTML(D)}</div><p class="note">Imágenes guardadas en el servidor del centro (nunca enlazadas a Meta). Retorno = lo que quedó para el centro ÷ gasto del anuncio, ${rg}. Foto de Meta al ${fdate(cr.ultima_foto)}.</p>`,{sub:'Ranking por retorno al centro',real:rg})}
+ ${card('Anuncios con gasto o citas','sparkles',`<div class="chips" role="group" aria-label="Ordenar anuncios" style="margin-bottom:16px">${[['ret','Retorno al centro'],['ctr','CTR'],['citas','Citas'],['fr','Fatiga']].map(([k,l])=>`<button class="chip" type="button" data-adsort="${k}" aria-pressed="${k===ADSORT}">${l}</button>`).join('')}</div><div class="anus" id="anus">${adsHTML(D)}</div><p class="note">Imágenes guardadas en el servidor del centro (nunca enlazadas a Meta). Retorno = lo que quedó para el centro ÷ gasto del anuncio, ${rg}. Foto de Meta al ${fdate(cr.ultima_foto)}.</p>`,{sub:'Ranking por retorno al centro',real:rg})}
  <div class="grid g-75">
   ${card('Variantes generadas esperando aprobación','sparkles',`
    ${[['t3','ear','Otorrino sin viajar a Concepción','Reemplazo de un anuncio cansado. Ángulo: distancia y tiempo, no síntoma.'],['t2','smile','Su evaluación de brackets, esta semana','Agrega hora concreta en el texto (ganó en el experimento E-01).']].map(x=>`<div class="var"><div class="thumb ${x[0]}"><svg class="art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">${I[x[1]]}</svg><div class="th-h">${x[2]}</div></div><div><h3>${x[2]}</h3><p>${x[3]}</p><div class="acts">${off('Aprobar','Disponible cuando exista el generador de variantes. Nada se publica sin aprobación humana.')}</div></div></div>`).join('')}`,{sub:'Predicción antes de publicar, con intervalo',real:0})}
@@ -1097,18 +1105,33 @@ R.recall={html:D=>{const X=D.experimentos||{},vu=D.volvieron||{},re=(X.reenganch
 
 /* ---------- 09 Reputación ---------- */
 const gauge=val=>{const W=220,H=124,cx=110,cy=112,r=88;const a=x=>Math.PI*(1-(x+100)/200);const P=x=>[cx+r*Math.cos(a(x)),cy-r*Math.sin(a(x))];const [x0,y0]=P(-100),[x1,y1]=P(val),[x2,y2]=P(100);
- return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="NPS ${val}"><path d="M${x0},${y0}A${r},${r} 0 0 1 ${x2},${y2}" style="fill:none;stroke:${v('track')};stroke-width:14;stroke-linecap:round"/><path d="M${x0},${y0}A${r},${r} 0 0 1 ${x1},${y1}" style="fill:none;stroke:${v('aqua')};stroke-width:14;stroke-linecap:round"/><text x="${cx}" y="${cy-18}" text-anchor="middle" style="fill:${v('ink')};font-size:40px;font-weight:800;letter-spacing:-1px">${val}</text><text x="${cx}" y="${cy+4}" text-anchor="middle" style="fill:${v('muted')};font-size:11px;font-weight:600">NPS · 30 días</text></svg>`};
+ return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="NPS ${val}"><path d="M${x0},${y0}A${r},${r} 0 0 1 ${x2},${y2}" style="fill:none;stroke:${v('track')};stroke-width:14;stroke-linecap:round"/><path d="M${x0},${y0}A${r},${r} 0 0 1 ${x1},${y1}" style="fill:none;stroke:${v('aqua')};stroke-width:14;stroke-linecap:round"/><text x="${cx}" y="${cy-18}" text-anchor="middle" style="fill:${v('ink')};font-size:40px;font-weight:800;letter-spacing:-1px">${val}</text><text x="${cx}" y="${cy+4}" text-anchor="middle" style="fill:${v('muted')};font-size:11px;font-weight:600">Índice · 30 días</text></svg>`};
 const stars=n=>`<span class="stars" aria-label="${n} de 5 estrellas">${[1,2,3,4,5].map(i=>`<svg width="14" height="14" viewBox="0 0 24 24" style="fill:${i<=n?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6" aria-hidden="true">${I.star}</svg>`).join('')}</span>`;
-R.reputacion={html:()=>`${mh('reputacion','Lo que los pacientes dicen en Google y en la encuesta posterior a la atención, ordenado por especialidad y por tema, con la respuesta ya redactada.')}
- <div class="ilus-band">${ic('info',16)}Todo este módulo es ilustrativo: muestra cómo se verá cuando se conecte el Perfil de Empresa de Google y la encuesta posterior a la atención.</div>
- <div class="grid g3">
-  <section class="card"><div class="kl">Google · Perfil de Empresa ${tagI}</div><div style="display:flex;align-items:baseline;gap:10px;margin-top:8px"><span class="ltv">4,7</span>${stars(5)}</div><div class="small muted">186 reseñas · 14 nuevas este mes</div>
-   <div style="margin-top:14px">${[[5,142],[4,26],[3,8],[2,4],[1,6]].map(([s,n])=>`<div class="hb2" style="grid-template-columns:28px minmax(0,1fr) 32px;padding:3px 0"><span class="small muted">${s} ★</span><span class="hb-t"><i class="${s>=4?'':'m'}" style="width:${n/142*100}%"></i></span><span class="hb-v">${n}</span></div>`).join('')}</div></section>
-  <section class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><div class="kl" style="align-self:stretch">Encuesta post-atención ${tagI}</div>${gauge(62)}<div class="small muted">412 respuestas · 71% promotores · 9% detractores</div></section>
-  ${card('Temas que aparecen','msg',`<div class="chips">${[['Trato amable',64,'p'],['Explican bien',31,'p'],['Puntualidad',22,'p'],['Espera en sala',14,'ng'],['Teléfono no contesta',9,'ng']].map(t=>`<span class="theme-chip ${t[2]}">${t[0]} <b>${t[1]}</b></span>`).join('')}</div>`,{real:0})}
- </div>
- ${card('Reseñas que esperan respuesta','msg',`<div class="rev"><q>Muy buena atención de la doctora, pero esperé 40 minutos y nadie avisó del atraso.</q><div class="meta">${stars(3)} Medicina General · hace 2 días</div><div class="reply"><b>Respuesta sugerida:</b> Gracias por su comentario y por su paciencia. Tiene razón: debimos avisarle del atraso. Esperamos verle pronto.</div><div style="margin-top:10px">${off('Publicar respuesta','Disponible cuando se conecte el Perfil de Empresa de Google.')}</div></div><p class="note">Las respuestas nunca confirman que la persona es paciente ni mencionan datos de su atención.</p>`,{real:0})}`,
- draw(){}};
+R.reputacion={html:D=>{const G=D.google||{},E=D.encuesta||{};const e30=E['30']||{},e90=E['90']||{};
+ const gCard=G.error?card('Google · Perfil de Empresa','star',estadoV('No se pudo leer la nota de Google',G.error,{err:1,retry:'reputacion'}))
+  :!G.hay?card('Google · Perfil de Empresa','star',estadoV('Sin nota guardada todavía','Aparecerá en cuanto Google responda; la consulta se repite cada 6 horas.'))
+  :`<section class="card"><div class="kl">Google · Perfil de Empresa ${tagR(G.actualizado?'al '+String(G.actualizado).slice(0,10).split('-').reverse().join('/'):'')}</div><div style="display:flex;align-items:baseline;gap:10px;margin-top:8px"><span class="ltv">${String(G.rating).replace('.',',')}</span>${stars(Math.round(G.rating))}</div><div class="small muted">${th(G.total||0)} reseñas en Google</div><p class="note">El detalle por estrellas llega cuando Google apruebe el acceso a la API de Perfil de Empresa (caso en revisión).</p>${G.link?`<a class="btn btn-sm" style="margin-top:10px" href="${esc(G.link)}" target="_blank" rel="noopener">Abrir enlace para pedir reseñas</a>`:''}</section>`;
+ const idx=x=>x==null?'—':String(x).replace('.',',');
+ const eCard=E.error?card('Encuesta después de la consulta','msg',estadoV('No se pudo leer la encuesta',E.error,{err:1,retry:'reputacion'}))
+  :`<section class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center"><div class="kl" style="align-self:stretch">Encuesta después de la consulta · 30 días ${tagR('')}</div>${e30.total?gauge(Math.round(e30.indice)):'<div class="ltv" style="margin:18px 0">—</div>'}<div class="small muted">${th(e30.total||0)} respuestas · ${th(e30.mejor||0)} «mejor» · ${th(e30.igual||0)} «igual» · ${th(e30.peor||0)} «peor»</div><p class="note">Índice = (mejor − peor) ÷ respuestas × 100, a la pregunta del bot «¿cómo se siente después de la consulta?». En 90 días: ${idx(e90.indice)} con ${th(e90.total||0)} respuestas.</p></section>`;
+ const T=D.temas||{};const TN={trato:'Trato',explicacion:'Explicación',puntualidad_espera:'Puntualidad y espera',precio:'Precio',contacto_telefono:'Contacto telefónico',instalaciones:'Instalaciones',resultado_mejoria:'Resultado y mejoría',agenda_disponibilidad:'Agenda y disponibilidad',otro:'Otros'};
+ const fT=x=>{if(!x)return '';const d=String(x).slice(0,10).split('-');return d.length===3?'al '+d.reverse().join('/'):''};
+ const tCard=T.error?card('Temas que aparecen','msg',estadoV('No se pudo leer los temas',T.error,{err:1,retry:'reputacion'}))
+  :!T.hay?card('Temas que aparecen','msg',estadoV('Aún sin clasificar','El análisis de comentarios se ejecuta cada noche; los temas aparecerán después de la primera corrida.'),{real:0})
+  :card('Temas que aparecen','msg',`<div class="chips" id="temasChips">${(T.temas||[]).map(t=>`<button class="chip" type="button" aria-pressed="false" data-tema="${esc(t.tema)}">${esc(TN[t.tema]||t.tema)} <b style="color:var(--ok-ink)">${t.positivo}</b> <b style="color:var(--bad-ink)">${t.negativo}</b>${t.neutro?` <span class="muted">${t.neutro}</span>`:''}</button>`).join('')}</div><div id="temasEj" class="small" style="margin-top:12px" aria-live="polite"></div><p class="note">${th(T.total)} opiniones de los últimos 90 días, de comentarios posteriores a la consulta y reseñas de Google. Verde: positivas. Rojo: negativas. Toque un tema para ver ejemplos.</p>`,{real:fT(T.ultima)||'90 días'});
+ const prof=(e90.por_profesional||[]).filter(x=>x.total>=1);
+ const pCard=card('Encuesta por profesional · 90 días','star',prof.length?`<div class="tw"><table class="tbl"><thead><tr><th>Profesional</th><th class="n">Respuestas</th><th class="n">Mejor</th><th class="n">Igual</th><th class="n">Peor</th><th class="n">Índice</th></tr></thead><tbody>${prof.map(r=>`<tr><td>${esc(r.profesional)}</td><td class="n">${r.total}</td><td class="n">${r.mejor}</td><td class="n">${r.igual}</td><td class="n">${r.peor}</td><td class="n ${r.total<10?'muted':r.indice<50?'wrn':''}">${idx(r.indice)}${r.total<10?' <small>muestra chica</small>':''}</td></tr>`).join('')}</tbody></table></div>`:estadoV('Sin respuestas en 90 días',''),{real:'90 días'});
+ const revs=(G.resenas||[]);
+ const rCard=card('Últimas reseñas de Google','msg',revs.length?revs.map(r=>`<div class="rev"><q>${esc(r.texto||'(sin texto)')}</q><div class="meta">${stars(r.estrellas||0)} ${esc(r.iniciales)} · ${esc(r.cuando||'')}</div></div>`).join('')+'<p class="note">Google entrega solo las reseñas más relevantes (hasta 5). Responderlas desde aquí requiere la API de Perfil de Empresa.</p>':estadoV('Sin reseñas guardadas',''),{real:G.hay?'Google':0});
+ return `${mh('reputacion','Lo que los pacientes dicen en Google y cómo se sienten después de la consulta, según la encuesta del bot.')}
+ <div class="grid g3">${gCard}${eCard}${tCard}</div>
+ <div class="grid g-57">${pCard}${rCard}</div>`},
+ draw(D){const T=(D||{}).temas||{};const box=$('#temasChips');if(!box||!T.temas)return;const ej=$('#temasEj');
+  box.addEventListener('click',e=>{const b=e.target.closest('[data-tema]');if(!b)return;const on=b.getAttribute('aria-pressed')==='true';
+   box.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed','false'));
+   if(on){ej.innerHTML='';return}
+   b.setAttribute('aria-pressed','true');const t=T.temas.find(x=>x.tema===b.dataset.tema)||{};
+   ej.innerHTML=(t.ejemplos||[]).length?t.ejemplos.map(x=>`<div class="rev"><q>${esc(x.texto)}</q><div class="meta">${x.tono==='negativo'?'Negativo':x.tono==='positivo'?'Positivo':'Neutro'}</div></div>`).join(''):'<span class="muted">Sin ejemplos guardados para este tema.</span>'})}};
 
 /* ---------- 10 Competencia ---------- */
 R.competencia={html:()=>`${mh('competencia','Contra quién compite el CMC por cada búsqueda, a qué precio y qué demanda de la zona hoy no atiende nadie.')}
@@ -1123,7 +1146,7 @@ R.competencia={html:()=>`${mh('competencia','Contra quién compite el CMC por ca
 R.finanzas={html:D=>{const M=D.meses||{},rg=rng_(D.rango);
  if(M.error)return `${mh('finanzas','El crecimiento visto como inversión.')}${card('Finanzas','wallet',estadoV('No se pudo leer la caja',M.error,{err:1,retry:'finanzas'}))}`;
  const an=M.anterior||{},ac=M.actual||{};const cs=D.canales||[];const v9=(D.valor90||{}).total||{};
- const med=(M.medios||{}).lista||[];const cols=['azul','aqua','bar-mute','vis','line-2'];
+ const med=(M.medios||{}).lista||[];const cols=['azul','aqua','vis','warn','ok','bad','bar-mute'];
  return `${mh('finanzas','El crecimiento visto como inversión: cuánto vende el centro según la caja, cuánto le queda tras honorarios, cuánto cuesta traer a un paciente y dónde queda el mes contra la meta.')}
  <div class="kpis">
   ${kpi(esc(cap(mesLargo(an.mes||'2026-01'))),mm(an.venta),`Venta de caja · ${clp(an.centro)} para el centro`,'',an.mes?'mes cerrado':'')}
@@ -1134,7 +1157,7 @@ R.finanzas={html:D=>{const M=D.meses||{},rg=rng_(D.rango);
  ${card('Venta mensual de caja','trending',`<div class="cwrap" id="finChart"></div><div class="legend" style="margin-top:8px"><span><i class="sw" style="background:${v('azul')}"></i>Venta de caja</span><span><i class="sw" style="background:${v('aqua')}"></i>Mes en curso al ritmo actual (estimado)</span><span><i class="sw" style="background:${v('vis')}"></i>Meta 2032</span></div><p class="note">Fuente: caja de Medilink (espejo diario). Último día con caja: ${fdate(M.caja_hasta)}. El mes en curso se estima como venta a la fecha ÷ días con caja × días del mes: es una referencia, no una proyección con intervalo.</p>`,{sub:'Millones de pesos',real:M.caja_hasta?`al ${fdm(M.caja_hasta)}`:''})}
  <div class="grid">
   ${card('Economía por canal','wallet',cs.length?`<div class="tw"><table class="tbl"><thead><tr><th>Canal</th><th class="n">Gasto</th><th class="n">Atendidos</th><th class="n">CAC atendido</th><th class="n">Venta</th><th class="n">Para el centro</th><th class="n">Retorno</th></tr></thead><tbody>${cs.map(c=>`<tr><td><span class="cn"><i class="sw" style="background:${v(c.canal==='meta'?'c-fb':'c-go')}"></i>${c.canal==='meta'?'Anuncios Meta':'Página web'}</span></td><td class="n">${c.gasto?clp(c.gasto):'—'}</td><td class="n">${th(c.atendidos)}</td><td class="n">${c.gasto?clp(c.cac_atendido):'—'}</td><td class="n">${clp(c.venta)}</td><td class="n">${clp(c.centro)}</td><td class="n">${c.gasto?`<span class="${(c.retorno_centro||0)>=1?'pos':'wrn'}">${dec(c.retorno_centro,1)}×</span>`:'<span class="muted">Sin pauta</span>'}</td></tr>`).join('')}</tbody></table></div>${num(v9.retorno_centro_90)?`<div class="callout" style="margin-top:14px">${ic('info')}<div>A 90 días, lo que dejan al centro los pacientes de Meta equivale a <b>${dec(v9.retorno_centro_90,1)} veces</b> el gasto de su periodo, con un ticket de ${clp(v9.ticket_90)} por paciente.</div></div>`:''}<p class="note">Retorno = para el centro ÷ gasto. Bajo 1× el anuncio no se paga solo en el rango; el valor a 90 días suele cambiar la lectura.</p>`:estadoV('Sin datos de canales','No se pudieron leer los canales del rango.',{err:1,retry:'finanzas'}),{sub:'Últimos 30 días',real:rg})}
-  ${card('Medio de pago','info',med.length?`<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">${donut(med.map((m,i)=>({l:m.medio,v:m.pct,c:cols[i%cols.length]})))}<div class="legend" style="flex-direction:column;gap:8px">${med.map((m,i)=>`<span><i class="sw" style="background:${v(cols[i%cols.length])}"></i>${esc(m.medio)} <b>${m.pct}%</b></span>`).join('')}</div></div>`:estadoV('Sin caja del mes anterior','Aparecerá cuando la caja del mes esté sincronizada.'),{sub:(M.medios||{}).mes?cap(mesLargo(M.medios.mes)):'',real:(M.medios||{}).mes?'mes cerrado':''})}
+  ${card('Medio de pago','info',med.length?`<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">${donut(med.map((m,i)=>({l:m.medio,v:m.pct,c:cols[i%cols.length]})))}<div class="legend" style="flex-direction:column;gap:8px">${med.map((m,i)=>`<span><i class="sw" style="background:${v(cols[i%cols.length])}"></i>${esc(m.medio)} <b>${m.pct}%</b> <span class="muted">${clp(m.venta)}</span></span>`).join('')}</div></div>`:estadoV('Sin caja del mes anterior','Aparecerá cuando la caja del mes esté sincronizada.'),{sub:(M.medios||{}).mes?cap(mesLargo(M.medios.mes)):'',real:(M.medios||{}).mes?'mes cerrado':''})}
  </div>`},
  draw(D){const M=D.meses||{};const se=M.serie||[];if(!se.length)return;const mx=Math.max(40e6,...se.map(s=>s.venta),M.proyeccion||0)/1e6;const ymax=Math.ceil(mx/5)*5+2;const ymin=0;
   const labels=se.map(s=>mesLbl(s.mes));const real=se.map((s,i)=>i===se.length-1?null:s.venta/1e6);
@@ -1240,7 +1263,7 @@ document.addEventListener('click',e=>{
  if(t.dataset.retry){const k=t.dataset.retry;delete SRC_ERR[k];load(k,true).then(()=>render(cur,true)).catch(()=>{render(cur,false);toast('Sigue sin responder. Intente en un momento.','err')});render(cur,false);return}
  if(t.dataset.fam){FAM=t.dataset.fam;$$('[data-fam]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#ftable').innerHTML=funnelTable(SRC.captacion);sankey($('#sankey'),SRC.captacion);return}
  if(t.dataset.sp){SPK=t.dataset.sp;$$('[data-sp]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#spName').textContent=SPK;INV=Math.min(300000,Math.round(SP[SPK].B*.5/10000)*10000);$('#invRange').value=INV;simUpdate();return}
- if(t.dataset.adsort){ADSORT=t.dataset.adsort;$$('[data-adsort]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#ads').innerHTML=adsHTML(SRC.captacion);return}
+ if(t.dataset.adsort){ADSORT=t.dataset.adsort;$$('[data-adsort]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#anus').innerHTML=adsHTML(SRC.captacion);return}
  if(t.id==='pauseBtn'){PU.paused=!PU.paused;t.setAttribute('aria-pressed',String(PU.paused));t.innerHTML=PU.paused?ic('play',14)+'Reanudar':ic('pause',14)+'Pausar';toast(PU.paused?'Actualización en vivo en pausa.':'Actualización en vivo reanudada.');return}
  if(t.id==='refreshBtn'){const m=MODS.find(x=>x.id===cur);if(!m||!m.src){toast('Este módulo no tiene datos que actualizar.');return}t.classList.add('spin');t.disabled=true;
   load(m.src,true).then(D=>{if(m.id==='pulso')pulseIngest(D,false);render(cur,false);toast('Datos actualizados.')}).catch(()=>toast('No se pudo actualizar. Se mantienen los datos que ya estaban a la vista con su hora de lectura.','err')).finally(()=>{t.classList.remove('spin');t.disabled=false});return}

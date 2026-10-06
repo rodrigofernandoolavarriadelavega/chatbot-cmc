@@ -690,6 +690,24 @@ body.v-valor .not-valor{display:none!important}
 .orto small{display:block;font-size:11.5px;color:var(--mute);margin-top:2px}
 @media(max-width:760px){.orto{grid-template-columns:1fr 1fr}.orto .h{grid-column:1/-1}.orto>div+div{border-left:0;border-top:1px solid var(--line-2)}
   .orto>div:nth-child(n+3){border-left:1px solid var(--line-2)}.orto>div:nth-child(3){border-left:0}}
+
+/* Pacientes nuevos por anuncios + valor a 12 meses */
+.nvk{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:0;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-sm);margin-bottom:24px;overflow:hidden}
+.nvk>div{padding:14px 18px;min-width:0}.nvk>div+div{border-left:1px solid var(--line-2);background:var(--aqua-s)}
+.nvk .lbl{font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--mute)}
+.nvk .ln{font-size:15px;color:var(--ink-2);margin-top:6px;line-height:1.5}
+.nvk .ln b{font-size:22px;color:var(--navy);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.nvk .sd{font-size:13px;color:var(--ink-2);line-height:1.55}
+.nvk .sd b{color:var(--navy);font-variant-numeric:tabular-nums}
+.nvk .nt{grid-column:1/-1;margin:0;padding:8px 18px 12px;font-size:11.5px;color:var(--mute);border-top:1px solid var(--line-2);background:#fff}
+@media(max-width:760px){.nvk{grid-template-columns:1fr}.nvk>div+div{border-left:0;border-top:1px solid var(--line-2)}}
+td.ret .r12{font-weight:700;color:var(--navy)}
+.dv-blk{padding:4px 18px 10px}.dv-blk+.dv-blk{border-top:1px solid var(--line-2);padding-top:12px}
+.dv-blk h4{margin:0 0 6px;font-size:13.5px;color:var(--navy);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dv-blk h4 small{font-weight:600;color:var(--mute);font-size:12px}
+.dv-blk table{width:100%}
+.v12-sub{margin:14px 18px 6px;font-size:13px;font-weight:800;color:var(--navy)}
 .tl .t-pago .ti,.tl .t-atencion .ti{background:var(--green-s)}.tl .t-pago .ti svg,.tl .t-atencion .ti svg{stroke:var(--green-d)}
 .tl .tb{min-width:0}
 .tl .tb b{font-size:13px;color:var(--ink);font-weight:700}
@@ -773,16 +791,17 @@ body.v-valor .not-valor{display:none!important}
   .g-save{position:static}
 }
 
+/* Nombres sin prefijo "ad-": los bloqueadores de anuncios (uBlock) ocultan .ad-* */
 /* ══ Integraciones (6-oct): creativos, agenda, territorio, velocidad, valor 90 d, aviso a Meta ══ */
 .thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--line-2);flex:none;border:1px solid var(--line);display:block}
 .thumb.ph{display:flex;align-items:center;justify-content:center}
 .thumb.ph svg{width:18px;height:18px;stroke:#9AACBA}
-.ad-cell{display:flex;gap:10px;align-items:flex-start}
-.ad-cell .nm{min-width:0}
-.ad-open{display:block;border:0;background:none;padding:0;margin:0;font:inherit;font-weight:700;color:var(--navy);text-align:left;cursor:pointer;
+.anu-cell{display:flex;gap:10px;align-items:flex-start}
+.anu-cell .nm{min-width:0}
+.anu-open{display:block;border:0;background:none;padding:0;margin:0;font:inherit;font-weight:700;color:var(--navy);text-align:left;cursor:pointer;
   overflow-wrap:anywhere;border-radius:6px}
-.ad-open:hover{color:var(--blue);text-decoration:underline;text-underline-offset:3px}
-.ad-open:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.anu-open:hover{color:var(--blue);text-decoration:underline;text-underline-offset:3px}
+.anu-open:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 td .vs{display:block;white-space:nowrap}
 td.ret .rs{opacity:.92}
 .badge.cansado{background:var(--red-s);color:var(--red-d)}.badge.vigilar{background:var(--orange-s);color:var(--orange-d)}.badge.sano{background:var(--green-s);color:var(--green-d)}
@@ -1085,7 +1104,7 @@ const I = {
 };
 
 /* ── Estado ─────────────────────────────────────────────────────────────── */
-const S = { agenda: null, crea: null, terr: null, vel: null, aviso: null, v90: null, gsc: null, gscAbierta: "", llamar: false, llamarData: null, sug: null, valor: null, valorPor: "canal", res: "", canal: "meta", v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
+const S = { agenda: null, crea: null, terr: null, vel: null, aviso: null, v90: null, v12: null, gsc: null, gscAbierta: "", llamar: false, llamarData: null, sug: null, valor: null, valorPor: "canal", res: "", canal: "meta", v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
             tabla: "anuncios", estado: (() => { try { return localStorage.getItem("cm_estado") || "todos"; } catch (_) { return "todos"; } })(), cols: (() => { try { return localStorage.getItem("cm_cols") || "resumen"; } catch (_) { return "resumen"; } })(), kcol: "escribio", panel: null, kanban: null, ver: {} };
 
 function hoyCL() {
@@ -1241,7 +1260,7 @@ function renderPanel() {
       ${st.cl ? `<div class="c" title="Gasto ÷ ${st.l.toLowerCase()}"><b>${fmt$(st.c)}</b>${st.cl}</div>` : ""}</div>`).join("")}</div>`;
 
   const soloMeta = web ? `<div class="card block"><div class="webnote">${I.info}<div><b>Desgloses, tendencia mensual y alertas de gasto</b> son datos de Meta Ads y aplican solo a los anuncios. Véalos en "Anuncios Meta" o "Todos".</div></div></div>` : "";
-  $("#v-panel").innerHTML = notaMedicion(p) + band + vsplit(p) + funnel + ortoKpi(p) + (web ? "" : sugerencias()) + (web ? "" : alertas(p)) + tabla(p) + (web ? '<div id="gscBox">' + googleHtml() + "</div>" : "") + velHtml() + conocieron(p) + terrHtml() + (web ? soloMeta : desgloses(p) + tendencia(p) + avisoHtml());
+  $("#v-panel").innerHTML = notaMedicion(p) + band + nuevosKpi(p) + vsplit(p) + funnel + ortoKpi(p) + (web ? "" : sugerencias()) + (web ? "" : alertas(p)) + tabla(p) + (web ? '<div id="gscBox">' + googleHtml() + "</div>" : "") + velHtml() + conocieron(p) + terrHtml() + (web ? soloMeta : desgloses(p) + tendencia(p) + avisoHtml());
   bindTabla();
   if (web) cargarGoogle();
 }
@@ -1295,7 +1314,9 @@ async function cargarValor() {
     S.valor = await api("/alma/api/campanas-meta/cohortes?por=" + S.valorPor + "&canal=" + S.canal);
     renderValor();
     S.v90 = null; const b90 = document.getElementById("v90Box"); if (b90) b90.outerHTML = valor90Html();
+    S.v12 = null; const b12 = document.getElementById("v12Box"); if (b12) b12.outerHTML = valor12mHtml();
     cargarValor90();
+    cargarValor12m();
   } catch (e) {
     el.innerHTML = e.perm ? estado("err", I.alert, "Sin permiso", "Solo el acceso del dueño abre esta vista.", "")
       : estado("err", I.alert, "No se pudo cargar el valor en el tiempo", "Revise la conexión e intente de nuevo.", '<button class="btn" type="button" onclick="cargarValor()">Reintentar</button>');
@@ -1306,7 +1327,7 @@ function renderValor() {
   const v = S.valor, el = $("#v-valor");
   const seg = `<div class="seg" id="segValor" role="group" aria-label="Agrupar por"><button type="button" data-p="canal" aria-pressed="${S.valorPor === "canal"}">Por canal</button><button type="button" data-p="campana" aria-pressed="${S.valorPor === "campana"}">Por campaña</button></div>`;
   const intro = `<div class="val-h"><p>Cada persona entra a la cohorte del mes en que escribió por primera vez (anuncio o web). Se suma lo que pagó en caja a los 30, 90, 180 y 365 días de ese contacto, y lo que de eso quedó para el centro tras honorarios. "Se pagó" = cuándo lo que quedó para el centro superó el gasto en Meta de ese mes.</p>${seg}</div>`;
-  if (!v.cohortes.length) { el.innerHTML = intro + valor90Html() + estado("", I.trend, "Aún no hay cohortes", "Las cohortes empiezan en mayo de 2026, cuando el bot empezó a amarrar cada persona a su anuncio.", ""); bindValor(); return; }
+  if (!v.cohortes.length) { el.innerHTML = intro + valor90Html() + valor12mHtml() + estado("", I.trend, "Aún no hay cohortes", "Las cohortes empiezan en mayo de 2026, cuando el bot empezó a amarrar cada persona a su anuncio.", ""); bindValor(); return; }
   const rows = v.cohortes.slice().reverse().map(x => {
     const [y, m] = x.cohorte.split("-");
     const hz = x.horizontes.map(h => !h.alcanzado ? `<td class="r hz" data-l="${h.dias} días">${dash}</td>`
@@ -1323,7 +1344,7 @@ function renderValor() {
       <td class="r" data-l="Gasto del mes">${x.gasto ? fmt$(x.gasto) : dash}<small class="pctc">${x.cac ? fmt$(x.cac) + " por paciente" : ""}</small></td>
       ${hz}<td data-l="¿Se pagó?">${pay}</td></tr>`;
   }).join("");
-  el.innerHTML = intro + valor90Html() + `<div class="card block"><div class="card-h"><div class="ic">${I.trend}</div><h2>Valor en el tiempo</h2><span class="cp">${v.cohortes.length}</span><div class="sp"></div><span class="sub">desde mayo 2026 · para el centro acumulado</span></div>
+  el.innerHTML = intro + valor90Html() + valor12mHtml() + `<div class="card block"><div class="card-h"><div class="ic">${I.trend}</div><h2>Valor en el tiempo</h2><span class="cp">${v.cohortes.length}</span><div class="sp"></div><span class="sub">desde mayo 2026 · para el centro acumulado</span></div>
     <div class="tbl-wrap full"><table><thead><tr><th>Cohorte</th><th class="r">Personas</th><th class="r" title="Pacientes con pagos en 2 o más días distintos dentro de 1 año">Volvieron</th><th class="r">Gasto del mes</th>${v.horizontes.map(h => `<th class="r">${h} días</th>`).join("")}<th>¿Se pagó?</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="tbl-foot">Montos de cada celda: lo que quedó para el centro (arriba) y la venta total (abajo), acumulados desde el primer contacto. "Parcial" = todavía no pasan esos días para toda la cohorte: la cifra va a crecer. Venta con la misma regla del panel (agendó por el bot, o pagó en caja dentro de 90 días del contacto). Las radiografías de Imagendent se cuentan como venta del profesional que cobró.</div></div>`;
   bindValor();
@@ -1413,6 +1434,23 @@ function ortoKpi(p) {
     <div><span class="lbl">Venta de ortodoncia</span><div class="v">${k.orto_venta ? fmt$(k.orto_venta) : "—"}</div><small>Dra. Castillo, desde el contacto</small></div>
     <div><span class="lbl">Costo por instalación</span><div class="v">${n && k.gasto ? fmt$(Math.round(k.gasto / n)) : "—"}</div><small>Gasto ÷ instalaciones</small></div></div>`;
 }
+const NOTA_PROY = "Proyección según cohortes reales; no es venta realizada.";
+const METODO_PROY = "A cada paciente nuevo se le suma lo ya pagado más lo que le falta, en promedio, a un paciente de su misma especialidad de entrada para llegar a su valor a 12 meses (valor de la cohorte a 12 meses menos lo que esa cohorte llevaba a la misma edad). Nunca baja de lo ya pagado. Si esa cohorte tiene menos de 30 pacientes se usa la de todas las especialidades. A quienes ya eran pacientes no se les proyecta: solo cuenta lo pagado.";
+function nuevosKpi(p) {
+  const v = p.kpis.valor12m; if (!v) return "";
+  const web = S.canal === "web";
+  const costo = v.costo_nuevo_rango;
+  const M = v.nuevos_centro_rango;
+  const linea = `<b>${fmtN(v.nuevos_rango)}</b> de ${fmtN(M)} nuevos del rango${v.pct_nuevos_anuncios != null ? " (" + String(v.pct_nuevos_anuncios).replace(".", ",") + "%)" : ""}${web ? "" : " · costo por nuevo <b>" + (costo ? fmt$(costo) : "—") + "</b>"}`;
+  const hay = p.valor12m && p.valor12m.hay_cohortes;
+  const lado = v.nuevos || v.ya
+    ? `<div class="sd">Ya eran pacientes: <b>${fmtN(v.ya)}</b> · ${fmt$(v.ya_venta)} pagado, aparte.<br>
+        ${hay ? `Para el centro a 12 meses: <b title="${esc(METODO_PROY)}">${fmt$(v.centro_12m)}</b> proyectado${v.retorno_12m != null && !web ? " · retorno <b>" + x2(v.retorno_12m) + "</b>" : ""}.`
+              : "Sin cohortes de 12 meses todavía: no hay proyección."}${v.n_cohorte_global ? `<br><small class="pctc">${fmtN(v.n_cohorte_global)} proyectados con la cohorte de todas las especialidades.</small>` : ""}</div>`
+    : `<div class="sd">Nadie del rango con pago en caja todavía.</div>`;
+  return `<div class="nvk" role="group" aria-label="Pacientes nuevos por anuncios"><div><span class="lbl">Pacientes nuevos por ${web ? "la web" : "anuncios"}</span><div class="ln">${linea}</div></div>${lado}
+    <p class="nt" title="${esc(METODO_PROY)}">Nuevo = sin ningún pago anterior a su fecha de inicio. "Nuevos del rango" = primer pago de su historia en caja dentro del rango, de todo el centro. ${NOTA_PROY} Pase el cursor sobre el monto para ver el método.</p></div>`;
+}
 function respaldoTxt(p) {
   const n = ((p.kpis.atendidos_fuente || {}).respaldo) || 0, m = p.medicion.medilink_desde;
   const hasta = m ? "citas anteriores al " + fdate(m) + ", que Medilink todavía no tenía" : "citas que ni Medilink ni la caja confirman";
@@ -1453,6 +1491,17 @@ function alertas(p) {
       : `<div class="al warn" style="--i:${i}"><div class="ico">${I.repeat}</div><div style="min-width:0"><div class="t">${esc(a.anuncio)}</div><div class="d">${esc(a.campana)} · ${esc(a.texto)}</div></div><div class="x num">${String(a.frecuencia).replace(".", ",")}<small>frecuencia mín.</small></div></div>`).join("")}</div></div>`;
 }
 const dash = '<span class="dash">—</span>';
+function nvCell(r) {
+  const v = r.valor12m;
+  if (!v || (!v.nuevos && !v.ya)) return `<td class="r" data-l="Nuevos / ya pacientes">${dash}</td>`;
+  return `<td class="r" data-l="Nuevos / ya pacientes"><b>${fmtN(v.nuevos)}</b> ${v.nuevos === 1 ? "nuevo" : "nuevos"}<small class="pctc">${fmt$(v.nuevos_venta)} pagado${v.costo_nuevo ? " · " + fmt$(v.costo_nuevo) + " c/u" : ""}</small>
+    <small class="pctc" title="Ya habían pagado antes. Solo se cuenta lo pagado, sin proyección.">${fmtN(v.ya)} ya ${v.ya === 1 ? "paciente" : "pacientes"} · ${fmt$(v.ya_venta)}</small>${v.muestra_chica && v.nuevos ? '<small class="pctc"><span class="badge mut">Muestra chica</span></small>' : ""}</td>`;
+}
+function r12Span(r, x) {
+  const v = r.valor12m;
+  if (!v || !v.nuevos || v.retorno_12m == null || v.n_sin_cohorte === v.nuevos) return "";
+  return `<span class="r12" title="Para el centro proyectado a 12 meses (nuevos) más lo pagado por quienes ya eran pacientes, ÷ gasto. ${esc(NOTA_PROY)}">${x(v.retorno_12m)}<small>12 m proy.</small></span>`;
+}
 function tienePop(r) { return (r.por_profesional && r.por_profesional.length) || r.conocieron || r.instalaron; }
 function tabla(p) {
   const anun = S.tabla === "anuncios", full = S.cols === "todo";
@@ -1463,7 +1512,7 @@ function tabla(p) {
   const malos = new Set(p.alertas.filter(a => a.tipo === "sin_citas").map(a => a.ad_id));
   const sat = new Set(p.alertas.filter(a => a.tipo === "saturado").map(a => a.ad_id));
   const sinG = S.plat === "sin_dato";
-  const ncol = full ? 17 : 8;
+  const ncol = full ? 18 : 9;
   const body = rows.length ? rows.map(r => {
     const badges = [];
     if (anun && malos.has(r.ad_id)) badges.push('<span class="badge bad">Sin citas</span>');
@@ -1484,15 +1533,16 @@ function tabla(p) {
     const resultado = `<td class="r mny res" data-l="Resultado">${sinG ? dash : `<b class="${r.resultado >= 0 ? "resp" : "resn"}">${fmt$(r.resultado)}</b>`}</td>`;
     const x = v => String(v).replace(".", ",") + "×";
     const retorno = `<td class="r ret" data-l="Retorno">${r.retorno == null ? dash
-      : `<span class="rv" title="Venta total ÷ gasto">${x(r.retorno)}<small>venta</small></span><span class="rc ${r.retorno_centro >= 1 ? "resp" : "resn"}" title="Para el centro ÷ gasto, con toda la venta del paciente. Sobre 1× el anuncio se paga solo">${x(r.retorno_centro)}<small>centro</small></span><span class="rs ${r.retorno_estricto >= 1 ? "resp" : "resn"}" title="Estricto: solo lo que queda al centro de la venta de la especialidad del anuncio en los primeros 30 días ÷ gasto. Atribución, no causalidad.">${x(r.retorno_estricto)}<small>estricto</small></span>`}</td>`;
+      : `<span class="rv" title="Venta total ÷ gasto">${x(r.retorno)}<small>venta</small></span><span class="rc ${r.retorno_centro >= 1 ? "resp" : "resn"}" title="Para el centro ÷ gasto, con toda la venta del paciente. Sobre 1× el anuncio se paga solo">${x(r.retorno_centro)}<small>centro</small></span><span class="rs ${r.retorno_estricto >= 1 ? "resp" : "resn"}" title="Estricto: solo lo que queda al centro de la venta de la especialidad del anuncio en los primeros 30 días ÷ gasto. Atribución, no causalidad.">${x(r.retorno_estricto)}<small>estricto</small></span>${r12Span(r, x)}`}</td>`;
+    const nv = nvCell(r);
     const abre = anun && !esWeb;
     const thumb = abre ? (cr && cr.imagen ? `<img class="thumb" src="${imgUrl(r.ad_id)}" alt="" loading="lazy" onerror="this.style.opacity=0">` : `<span class="thumb ph" aria-hidden="true">${I.img}</span>`) : "";
-    const first = `<td class="nmc" data-l="${uni}"><div class="ad-cell">${thumb}<div class="nm">${abre ? `<button type="button" class="ad-open" data-ad="${esc(r.ad_id)}" title="Ver creativo, embudo completo y fatiga">${esc(nombre)}</button>` : esc(nombre)}<small>${esc(sub)}</small></div></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
+    const first = `<td class="nmc" data-l="${uni}"><div class="anu-cell">${thumb}<div class="nm">${abre ? `<button type="button" class="anu-open" data-ad="${esc(r.ad_id)}" title="Ver creativo, embudo completo y fatiga">${esc(nombre)}</button>` : esc(nombre)}<small>${esc(sub)}</small></div></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
     const gasto = `<td class="r" data-l="Gasto">${sinG ? dash : esWeb ? '<span class="sin-gasto" title="La web no tiene gasto publicitario registrado">Sin gasto</span>' : fmt$(r.gasto)}</td>`;
     if (!full) return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">${first}${gasto}
       <td class="r" data-l="Citas">${fmtN(r.citas)}<small class="pctc">de ${fmtN(r.personas)} ${r.personas === 1 ? "persona" : "personas"} · ${fmtN(r.atendidos)} atend.</small>${r.no_asistio ? `<small class="pctc resn">${fmtN(r.no_asistio)} no asistió${r.no_asistio === 1 ? "" : "ron"}</small>` : ""}${r.instalaron ? `<small class="pctc resp">${fmtN(r.instalaron)} instaló ortodoncia</small>` : ""}</td>
       <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? dash : fmt$(r.cac_cita)}</span>${r.cac_atendido == null ? "" : `<small class="pctc">${fmt$(r.cac_atendido)} por atendido</small>`}</td>
-      ${venta}${centro}${resultado}${retorno}</tr>`;
+      ${nv}${venta}${centro}${resultado}${retorno}</tr>`;
     return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">${first}${gasto}
       <td class="r" data-l="Conversaciones">${sinG ? dash : fmtN(r.conversaciones)}</td>
       <td class="r" data-l="Personas">${fmtN(r.personas)}</td>
@@ -1503,18 +1553,19 @@ function tabla(p) {
       <td class="r" data-l="Costo / conv.">${r.cac_conv == null ? dash : fmt$(r.cac_conv)}</td>
       <td class="r" data-l="Costo / cita"><span class="cacv">${r.cac_cita == null ? dash : fmt$(r.cac_cita)}</span></td>
       <td class="r" data-l="Costo / atendido">${r.cac_atendido == null ? dash : fmt$(r.cac_atendido)}</td>
-      ${venta}${centro}${resultado}
+      ${nv}${venta}${centro}${resultado}
       <td class="r" data-l="Fuera de la esp." title="${r.grupo && r.fuera_pct != null ? "Especialidad del anuncio: " + esc(r.grupo) + ". " + fmt$(r.fuera_venta) + " de la venta fue en otras especialidades." : "Sin especialidad identificable"}">${r.fuera_pct == null ? dash : r.fuera_pct + "%" + '<small class="pctc">' + esc(r.grupo) + "</small>"
         + ((r.por_especialidad || []).filter(x => !x.del_anuncio).length ? '<small class="otras">+ ' + esc(r.por_especialidad.filter(x => !x.del_anuncio).slice(0, 3).map(x => x.grupo).join(", ")) + (r.por_especialidad.filter(x => !x.del_anuncio).length > 3 ? "…" : "") + "</small>" : "")}</td>
       ${retorno}
       <td class="r" data-l="Frecuencia">${r.frecuencia == null ? dash : String(r.frecuencia).replace(".", ",")}</td>
     </tr>`; }).join("")
     : `<tr><td colspan="${ncol}"><div class="empty" style="padding:28px 10px"><h3 style="font-size:15px">Sin ${anun ? "anuncios" : "campañas"}${S.estado === "activos" ? " activos" : S.estado === "pausados" ? " pausados" : ""} en este rango</h3><p style="margin:0">Pruebe con un rango más amplio o quite los filtros.</p></div></td></tr>`;
+  const thNv = `<th class="r" title="Nuevo = sin pago anterior a su fecha de inicio. Los que ya eran pacientes se cuentan aparte y no se proyectan. ${esc(NOTA_PROY)}">Nuevos / ya pacientes</th>`;
   const thMoney = `<th class="r mny">Venta</th><th class="r mny" title="Venta menos honorarios de los profesionales">Para el centro</th><th class="r mny" title="Para el centro menos gasto en el anuncio">Resultado</th>`;
   const head = full
     ? `<th>${uni}</th><th class="r">Gasto</th><th class="r">Conv.</th><th class="r">Personas</th><th class="r">Citas</th>
-      <th class="r" title="Según Medilink; respaldo: pago en caja ese día">Atendidos</th><th class="r" title="Mediana de minutos en horario de atención hasta la primera respuesta humana">Resp. recep.</th><th class="r" title="Medilink los marca como inasistencia (no asiste, sin anulación). % sobre atendidos + no asistió">No asistió</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
-    : `<th>${uni}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thMoney}<th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th>`;
+      <th class="r" title="Según Medilink; respaldo: pago en caja ese día">Atendidos</th><th class="r" title="Mediana de minutos en horario de atención hasta la primera respuesta humana">Resp. recep.</th><th class="r" title="Medilink los marca como inasistencia (no asiste, sin anulación). % sobre atendidos + no asistió">No asistió</th><th class="r">Costo / conv.</th><th class="r">Costo / cita</th><th class="r">Costo / atendido</th>${thNv}${thMoney}<th class="r" title="% de la venta que fue en otra especialidad distinta a la del anuncio">Fuera de esp.</th><th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th><th class="r" title="Frecuencia: cuántas veces, en promedio, vio el anuncio cada persona alcanzada. Sobre 6 = saturado">Frec.</th>`
+    : `<th>${uni}</th><th class="r">Gasto</th><th class="r" title="Citas del bot, sobre las personas que llegaron por el anuncio">Citas</th><th class="r">Costo / cita</th>${thNv}${thMoney}<th class="r" title="Por cada $1 gastado en Meta: cuánto se vendió (venta) y cuánto le quedó al centro tras honorarios (centro). Centro sobre 1× = el anuncio se paga solo">Retorno</th>`;
   return `<div class="card block tbl-mode"><div class="card-h"><div class="ic">${I.table}</div><h2>Rendimiento por ${web ? (anun ? "botón" : "página") : todosC ? (anun ? "origen" : "campaña o página") : (anun ? "anuncio" : "campaña")}</h2><span class="cp">${rows.length}</span><span class="sub" title="Mismo rango que usan las sugerencias de presupuesto">${rangoTxt(p.rango.desde, p.rango.hasta)}</span>
     <div class="sp"></div><div class="segs"><div class="seg${web ? " hidden-web" : ""}" id="segEstado" role="group" aria-label="Estado en Meta" title="${p.estado_fuente === "meta" ? "Estado de entrega según Meta" : "Meta no respondió: activo = tuvo gasto en los últimos 2 días"}">
       <button type="button" data-e="todos" aria-pressed="${S.estado === "todos"}">Todos</button><button type="button" data-e="activos" aria-pressed="${S.estado === "activos"}">Activos <span class="scnt">${todas.filter(r => r.activo && r.canal !== "web").length}</span></button><button type="button" data-e="pausados" aria-pressed="${S.estado === "pausados"}">Pausados</button></div>
@@ -2258,6 +2309,48 @@ async function cargarValor90() {
   const tmp = document.createElement("div"); tmp.innerHTML = valor90Html(); el.replaceWith(tmp.firstElementChild);
 }
 
+/* ── Valor a 12 meses por puerta de entrada y "Dónde sigue el recorrido" (pestaña Valor en el tiempo) ── */
+const TODAS_LBL = "Todas las especialidades";
+function valor12mHtml() {
+  const v = S.v12, T = "Valor de un paciente nuevo en 12 meses";
+  const head = cardHead(I.trend, T, v && v.especialidades ? v.especialidades.length : null, "por especialidad de entrada · cohortes con 12 meses cumplidos");
+  if (!v) return `<div class="card block" id="v12Box">${head}${skBloque(3, 46)}</div>`;
+  if (v.error) return cardErr("v12Box", I.trend, T, "No se pudo cargar el valor a 12 meses.");
+  if (!v.meta.hay_cohortes) return `<div class="card block" id="v12Box">${head}<div class="sec-p"><p class="dleg" style="margin:0">Aún no hay pacientes nuevos con 12 meses cumplidos en la caja.</p></div></div>`;
+  const filas = v.especialidades.map(e => `<tr class="${e.especialidad === TODAS_LBL ? "tot-row" : ""}"><td class="nmc" data-l="Puerta de entrada"><div class="nm">${esc(e.especialidad)}</div>${e.muestra_chica ? '<div><span class="badge mut" title="Menos de 30 pacientes: el promedio cambia mucho con pocos casos">Muestra chica</span></div>' : ""}</td>
+      <td class="r" data-l="Pacientes nuevos">${fmtN(e.n)}</td>
+      ${["30", "90", "180", "365"].map(h => `<td class="r hz" data-l="${h} días"><b>${fmt$(e.c[h])}</b><small>venta ${fmt$(e.v[h])}</small></td>`).join("")}
+      <td class="r" data-l="Intervalo a 12 m (95%)" title="Intervalo de confianza del 95% de la venta media a 12 meses">${e.ic_v365 ? fmt$(e.ic_v365[0]) + "–" + fmt$(e.ic_v365[1]) : dash}</td>
+      <td class="r" data-l="Visitas">${String(e.visitas).replace(".", ",")}<small class="pctc">${fmt$(e.v365_entrada)} en la entrada</small></td></tr>`).join("");
+  const tabla = `<div class="tbl-wrap full"><table><thead><tr><th>Puerta de entrada</th><th class="r">Pacientes</th><th class="r">30 días</th><th class="r">90 días</th><th class="r">180 días</th><th class="r">12 meses</th>
+    <th class="r">Venta a 12 m (IC 95%)</th><th class="r" title="Días distintos con pago en los 12 meses">Visitas</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+  const m = v.meta;
+  const bloques = v.matriz.filter(b => b.destinos.length).map(b => `<div class="dv-blk"><h4>${esc(b.entrada)} <small>${fmtN(b.n)} pacientes nuevos</small>${b.muestra_chica ? '<span class="badge mut">Muestra chica</span>' : ""}</h4>
+      <div class="tbl-wrap full"><table><thead><tr><th>Después pagó en</th><th class="r">% que pasa</th><th class="r">Venta de quien pasa</th><th class="r" title="Venta total en esa especialidad ÷ pacientes de la puerta de entrada">Aporte por paciente de entrada</th></tr></thead><tbody>${b.destinos.map(d =>
+        `<tr><td data-l="Después pagó en"><div class="nm">${esc(d.esp)}</div></td><td class="r" data-l="% que pasa">${String(d.pct).replace(".", ",")}%<small class="pctc">${fmtN(d.n)} pac.${d.muestra_chica ? " · muestra chica" : ""}</small></td>
+          <td class="r" data-l="Venta de quien pasa">${fmt$(d.venta_pasan)}</td><td class="r" data-l="Aporte por paciente">${fmt$(d.aporte_v)}</td></tr>`).join("")}</tbody></table></div></div>`).join("");
+  const profs = v.profesionales.length ? `<h3 class="v12-sub">Por profesional de entrada, a 12 meses</h3><div class="tbl-wrap full"><table><thead><tr><th>Profesional</th><th class="r">Pacientes nuevos</th><th class="r" title="Pacientes que además pagaron en otra especialidad dentro de 12 meses">Pagó también en otra especialidad</th><th>Dónde sigue</th></tr></thead><tbody>${v.profesionales.map(x =>
+      `<tr><td class="nmc" data-l="Profesional"><div class="nm">${esc(x.nombre)}<small>${esc(x.especialidad)}</small></div></td><td class="r" data-l="Pacientes nuevos">${fmtN(x.n)}${x.muestra_chica ? '<small class="pctc">muestra chica</small>' : ""}</td>
+        <td class="r" data-l="Pagó también en otra especialidad">${String(x.pct).replace(".", ",")}%<small class="pctc">${fmtN(x.pasan)} de ${fmtN(x.n)}</small></td>
+        <td data-l="Dónde sigue">${x.destinos.length ? x.destinos.map(d => esc(d.esp) + " " + String(d.pct).replace(".", ",") + "%").join(" · ") : '<span class="dash">—</span>'}</td></tr>`).join("")}</tbody></table></div>
+      <p class="dleg" style="margin:6px 18px 0">Cifras agregadas del recorrido de los pacientes, no una evaluación del profesional: depende de la especialidad, del tipo de consulta y de lo que el paciente necesita.${v.profesionales_otros_n ? " Hay " + fmtN(v.profesionales_otros_n) + " pacientes de profesionales con menos de 10 pacientes nuevos, que no se detallan." : ""}</p>` : "";
+  const o = v.orto;
+  const orto = o && o.entrada ? `<h3 class="v12-sub">Ortodoncia como tratamiento</h3><div class="sec-p"><div class="kv">
+      <div><span class="lbl">Instalan en 12 meses</span><div class="v">${fmtN(o.entrada.instalan)}</div><small>de ${fmtN(o.entrada.n_cohorte)} pacientes nuevos${o.entrada.pct != null ? " (" + String(o.entrada.pct).replace(".", ",") + "%)" : ""}${o.entrada.muestra_chica ? " · muestra chica" : ""}</small></div>
+      <div><span class="lbl">Valor a 12 m de quien instala</span><div class="v">${o.entrada.c365 != null ? fmt$(o.entrada.c365) : "—"}</div><small>para el centro · venta ${o.entrada.v365 != null ? fmt$(o.entrada.v365) : "—"}, de ella ortodoncia ${o.entrada.v365_orto != null ? fmt$(o.entrada.v365_orto) : "—"}</small></div>
+      <div><span class="lbl">Desde la instalación</span><div class="v">${o.desde_instalacion.c365 != null ? fmt$(o.desde_instalacion.c365) : "—"}</div><small>para el centro en 12 meses · venta ${o.desde_instalacion.v365 != null ? fmt$(o.desde_instalacion.v365) : "—"} · ${fmtN(o.desde_instalacion.n)} pacientes${o.desde_instalacion.muestra_chica ? " (muestra chica)" : ""}</small></div></div>
+      <p class="dleg" style="margin:0">${o.entrada.por_entrada.length ? "Entran por: " + o.entrada.por_entrada.map(e => esc(e.esp) + " " + fmtN(e.instalan) + " de " + fmtN(e.n)).join(" · ") + ". " : ""}Casi nadie entra por ortodoncia: entra por otra especialidad y después instala. ${esc(o.criterio)}</p></div>` : "";
+  const sin = v.sin_especialidad.length ? `<p class="dleg" style="margin:10px 18px 0"><b>Profesionales sin especialidad registrada</b> (se agrupan como "Sin especialidad registrada"; complételos en Equipo): ${v.sin_especialidad.map(x => "id " + x.id + " (" + esc(x.nombre) + ", " + fmtN(x.pagos) + " pagos)").join(", ")}.</p>` : "";
+  return `<div class="card block" id="v12Box">${head}${tabla}
+    <h3 class="v12-sub">${esc(v.titulo_matriz)}</h3>${bloques || '<p class="dleg" style="margin:0 18px 8px">Sin pacientes que hayan pasado a otra especialidad.</p>'}${profs}${orto}${sin}
+    <div class="tbl-foot">Pacientes nuevos = primer pago de su historia en caja, entre ${fdate(m.ventana.desde)} y ${fdate(m.ventana.hasta)} (con 12 meses cumplidos). Especialidad de entrada = la del profesional que cobró ese primer pago. Cada celda: lo que queda para el centro tras honorarios (arriba) y la venta (abajo), de todas las especialidades, acumulado desde el primer pago; las radiografías de Imagendent siguen su regla (venta menos costo del convenio). "Pasó a otra especialidad" significa que pagó en ella, no que lo haya derivado el médico. Muestra chica = menos de ${v.muestra_min} pacientes. Calculado el ${fdate(m.calculado)}${m.desactualizada ? " (desactualizado: hace más de 45 días)" : ""}; se recalcula el día 1 de cada mes. ${esc(NOTA_PROY)}</div></div>`;
+}
+async function cargarValor12m() {
+  try { S.v12 = await api(API + "valor12m"); } catch (e) { S.v12 = { error: true }; }
+  const el = document.getElementById("v12Box"); if (!el) return;
+  const tmp = document.createElement("div"); tmp.innerHTML = valor12mHtml(); el.replaceWith(tmp.firstElementChild);
+}
+
 /* ── Modal de un anuncio: creativo, embudo completo, fatiga ─────────────── */
 const AM = { ad: null, from: null };
 function sparkSvg(serie) {
@@ -2284,6 +2377,24 @@ function cerrarAnuncio() {
   setTimeout(() => { if (!AM.ad) bg.hidden = true; }, 220);
   if (AM.from && AM.from.focus) AM.from.focus();
 }
+function valorNuevosHtml(r) {
+  const v = r.valor12m; if (!v || (!v.nuevos && !v.ya)) return "";
+  return `<div class="am-c"><h3>${I.users}Nuevos y ya pacientes<span class="sp"></span>${v.muestra_chica && v.nuevos ? '<span class="badge mut">Muestra chica</span>' : ""}</h3><div class="kv">
+    <div><span class="lbl">Pacientes nuevos</span><div class="v">${fmtN(v.nuevos)}</div><small>${fmt$(v.nuevos_venta)} pagado${v.costo_nuevo ? " · " + fmt$(v.costo_nuevo) + " por nuevo" : ""}</small></div>
+    <div><span class="lbl" title="${esc(METODO_PROY)}">Proyectado a 12 meses</span><div class="v">${v.n_sin_cohorte === v.nuevos && v.nuevos ? "—" : fmt$(v.proy_centro)}</div><small>para el centro · pagado ${fmt$(v.nuevos_centro)}</small></div>
+    <div><span class="lbl">Ya eran pacientes</span><div class="v">${fmtN(v.ya)}</div><small>${fmt$(v.ya_venta)} pagado · no se proyecta</small></div>
+    <div><span class="lbl">Retorno a 12 meses</span><div class="v">${x2(v.retorno_12m)}</div><small>estricto ${x2(r.retorno_estricto)} · completo ${x2(r.retorno_centro)}</small></div></div>
+    <p class="sec-n" title="${esc(METODO_PROY)}">${esc(NOTA_PROY)} Retorno a 12 meses = (proyección de los nuevos + lo pagado por quienes ya eran pacientes) ÷ gasto. ${v.n_cohorte_global ? fmtN(v.n_cohorte_global) + " proyectados con la cohorte de todas las especialidades. " : ""}${v.n_sin_cohorte ? fmtN(v.n_sin_cohorte) + " sin cohorte: solo lo pagado." : ""}</p></div>`;
+}
+function recorridoHtml(r) {
+  const v = r.valor12m; if (!v || !v.recorrido || !v.recorrido.length) return "";
+  return `<div class="am-c"><h3>${I.users}Dónde sigue el recorrido de sus pacientes nuevos</h3>${v.recorrido.map(b => `<div style="margin-bottom:10px"><div class="nm" style="font-weight:700;color:var(--navy);font-size:13px">Entraron por ${esc(b.entrada)} <small style="color:var(--mute);font-weight:600">${fmtN(b.n)} ${b.n === 1 ? "paciente" : "pacientes"}</small>${b.muestra_chica ? ' <span class="badge mut" title="Pocos pacientes o cohorte de referencia chica">Muestra chica</span>' : ""}</div>
+      ${b.pasaron.length ? `<div class="tbl-wrap"><table><thead><tr><th>Después pagó en</th><th class="r">Observado</th><th class="r" title="Lo que la matriz de cohortes reales espera para pacientes de su misma edad">Esperado</th></tr></thead><tbody>${b.pasaron.map(x =>
+        `<tr><td data-l="Después pagó en">${esc(x.esp)}</td><td class="r" data-l="Observado"><b>${fmtN(x.n)}</b> (${String(x.pct).replace(".", ",")}%)<small class="pctc">${fmt$(x.venta)}</small></td>
+          <td class="r" data-l="Esperado">${String(x.esperado_n).replace(".", ",")} (${String(x.esperado_pct).replace(".", ",")}%)${x.venta_pasan_cohorte ? `<small class="pctc">${fmt$(x.venta_pasan_cohorte)} por quien pasa</small>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+        : '<p class="dleg" style="margin:4px 0 0">Todavía ningún paciente pagó en otra especialidad.</p>'}</div>`).join("")}
+    <p class="sec-n">Observado = pacientes de este anuncio que pagaron en otra especialidad después de la de entrada. Esperado = lo que la matriz de cohortes reales (12 meses) predice para pacientes de la misma edad; los más recientes aún no tienen tiempo de pasar. Cifras agregadas.</p></div>`;
+}
 function amBodyHtml(r, d) {
   const [dd, hh] = rangoFechas();
   const pasos = [["Impresiones", r.impresiones, null], ["Clics", r.clics, r.impresiones], ["Conversaciones", r.conversaciones, r.clics], ["Personas", r.personas, r.conversaciones],
@@ -2292,7 +2403,7 @@ function amBodyHtml(r, d) {
       const rt = prev ? Math.round(v / prev * 100) : null;
       return `<div><span class="lbl">${l}</span><div class="v"><span>${money ? fmt$(v) : fmtN(v)}</span>${rt != null && rt <= 100 ? `<span class="r" title="Sobre la etapa anterior">${rt}%</span>` : ""}</div>
         <small>${l === "Impresiones" ? "gasto " + fmt$(r.gasto) : l === "Clics" ? "CTR " + (r.impresiones ? String(Math.round(r.clics / r.impresiones * 1000) / 10).replace(".", ",") + "%" : "—") : l === "Conversaciones" ? (r.cac_conv ? fmt$(r.cac_conv) + " c/u" : "") : l === "Citas" ? (r.cac_cita ? fmt$(r.cac_cita) + " c/u" : "") : l === "Atendidos" ? (r.cac_atendido ? fmt$(r.cac_atendido) + " c/u" : "") : l === "Venta" ? r.pagaron + " pagaron" : "resultado " + fmt$(r.resultado)}</small></div>`; }).join("")}</div>
-    <p class="sec-n" style="margin-top:10px">Venta: especialidad del anuncio en 30 días ${fmt$(r.venta_esp30)} · otras y posteriores ${fmt$(r.venta_otra)} · solo por teléfono ${fmt$(r.venta_tel)}. Retorno para el centro: estricto ${x2(r.retorno_estricto)}, completo ${x2(r.retorno_centro)}. Atribución, no causalidad.</p></div>`;
+    <p class="sec-n" style="margin-top:10px">Venta: especialidad del anuncio en 30 días ${fmt$(r.venta_esp30)} · otras y posteriores ${fmt$(r.venta_otra)} · solo por teléfono ${fmt$(r.venta_tel)}. Retorno para el centro: estricto ${x2(r.retorno_estricto)}, completo ${x2(r.retorno_centro)}. Atribución, no causalidad.</p></div>${valorNuevosHtml(r)}${recorridoHtml(r)}`;
   if (!d) return emb + `<div class="am-c"><div class="sk" style="height:90px"></div></div>`;
   if (d.error) return emb + `<div class="am-c"><p class="dleg" style="margin:0">No se pudo cargar el detalle del anuncio (creativo, fatiga, territorio y velocidad).</p></div>`;
   const cr = d.creativo, f = d.fatiga;
@@ -2314,7 +2425,7 @@ function amBodyHtml(r, d) {
   return emb + creat + fat + `<div class="am-2">${ter || `<div class="am-c"><h3>${I.pin}Comuna de sus pacientes</h3><p class="dleg" style="margin:0">Sin personas en el rango.</p></div>`}${vel}</div>`;
 }
 document.addEventListener("click", e => {
-  const b = e.target.closest(".ad-open"); if (b) { abrirAnuncio(b.dataset.ad); return; }
+  const b = e.target.closest(".anu-open"); if (b) { abrirAnuncio(b.dataset.ad); return; }
   if (e.target.id === "am") cerrarAnuncio();
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && AM.ad) cerrarAnuncio(); });

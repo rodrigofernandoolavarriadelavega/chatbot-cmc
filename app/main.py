@@ -262,6 +262,19 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=900,
         coalesce=True,
     )
+    # Temas de opinión 03:40 CLT — clasifica SOLO mensajes nuevos (incremental)
+    # de las 72 h tras la encuesta postconsulta + reseñas de Google, para la
+    # tarjeta "Temas que aparecen" del Radar. Tope 1.000 por corrida; apagable
+    # con TEMAS_OPINION_ACTIVE=false. Ver app/opinion_temas.py.
+    from opinion_temas import job_opinion_temas
+    scheduler.add_job(
+        job_opinion_temas,
+        CronTrigger(hour=3, minute=40, timezone=_CLT),
+        id="opinion_temas",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
     # Agenda por día 04:40 CLT — cachea citas reales por profesional/día
     # (agenda_dias_cache) para que el calendario de /profesional/{id} distinga
     # "día con agenda" de "día solo con fichas a distancia" (bi_atenciones miente).
@@ -708,6 +721,18 @@ async def lifespan(app: FastAPI):
         id="meta_creativos",
         replace_existing=True,
         misfire_grace_time=7200,
+        coalesce=True,
+        max_instances=1,
+    )
+    # Cohortes de valor a 12 meses por especialidad de entrada (Campañas Meta):
+    # día 1 de cada mes 04:30 CLT, solo DB local. Flag VALOR_COHORTES_ACTIVE.
+    from valor_cohortes import job_valor_cohortes
+    scheduler.add_job(
+        job_valor_cohortes,
+        CronTrigger(day=1, hour=4, minute=30, timezone=_CLT),
+        id="valor_cohortes",
+        replace_existing=True,
+        misfire_grace_time=21600,
         coalesce=True,
         max_instances=1,
     )

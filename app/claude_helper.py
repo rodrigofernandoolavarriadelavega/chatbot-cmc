@@ -825,11 +825,11 @@ PODOLOGÍA
 - Verruga en la planta del pie → Verruga plantar, $10.000 por tratamiento en **Podología**.
 
 OTORRINO / OÍDO
-- Tapón de cera / no escucho / oído tapado → Lavado de oídos ($10.000, aparte de la consulta) con **Otorrinolaringología** (Dr. Manuel Borrego, consulta $35.000).
+- Tapón de cera / no escucho / oído tapado → Lavado de oídos con **Fonoaudiología** (Juana Arratia, presencial): $25.000; si requiere segunda sesión, $15.000. NO ofrecer lavado con otorrino (el Dr. Borrego atiende solo por videollamada).
 - Pito en el oído / zumbido / tinnitus → Terapia Tinnitus en **Fonoaudiología**, $25.000.
-- Mareos al girar la cabeza / vértigo / se mueve todo → Vértigo posicional (VPPB). Trata: **Fonoaudiología** (evaluación + maniobra $50.000) u **Otorrinolaringología**.
+- Mareos al girar la cabeza / vértigo / se mueve todo → Vértigo posicional (VPPB). Trata: **Fonoaudiología** (evaluación + maniobra $50.000, presencial).
 - Examen de audición / sordera → Audiometría ($25.000) en **Fonoaudiología** u **ORL**.
-- Dolor de oído / infección → **Otorrinolaringología** (Dr. Manuel Borrego), consulta $35.000.
+- Dolor de oído / infección / otitis → **Medicina General** (presencial: hay que examinar el oído).
 
 GINECOLOGÍA / MATRONA
 - Pap / papanicolau / examen del cuello del útero → $20.000 en **Matrona** (Saraí Gómez) o en **Ginecología**.
@@ -879,8 +879,8 @@ RESPIRATORIO (común en zona con humo de chimenea y leña)
 - Ahogos / me falta el aire / disnea — **bandera roja**: si es de inicio súbito, en reposo, o con dolor de pecho → **URGENCIA 131 inmediatamente** (posible TEP/edema/IAM). Solo si es progresivo en días en paciente con asma/gripe conocida → **Medicina General**.
 - Bronquitis / me dieron bronquitis → **Medicina General**.
 - Asma / pecho apretado / silbido al respirar → **Medicina General**.
-- Dolor de garganta / amigdalitis / anginas → **Medicina General** u **Otorrinolaringología**.
-- Sinusitis / presión en la frente / dolor en la cara → **Otorrinolaringología** (Dr. Borrego, $35.000).
+- Dolor de garganta / amigdalitis / anginas → **Medicina General**.
+- Sinusitis / presión en la frente / dolor en la cara → **Medicina General**.
 
 RENAL / URINARIO
 - Me duele el riñón / dolor al riñón (suele ser dolor lumbar bajo) → **Medicina General** primero.
@@ -1149,7 +1149,7 @@ INFO DEL CMC:
 - Ecografía vaginal = Ecografía ginecológica ($35.000, solo particular) con Dr. Tirso Rejón (Ginecología). Evalúa útero y ovarios.
 - Ecografía obstétrica: **NO disponible** en el CMC. Si el paciente la pide, indicar que no contamos con esa prestación.
 - Las ecografías generales (abdominal, tiroidea, renal, etc.) las realiza David Pardo.
-- Audiometría: disponible en Fonoaudiología y Otorrinolaringología
+- Audiometría: disponible en Fonoaudiología (presencial)
 
 PRECIOS (extraídos directamente del sistema):
 
@@ -1178,6 +1178,7 @@ FONOAUDIOLOGÍA (Juana Arratia):
 - Evaluación infantil/adulto: $30.000 — evaluación completa de lenguaje, habla, voz o deglución. Determina si necesitas terapia y de qué tipo.
 - Sesión de terapia infantil/adulto: $25.000 — sesión de rehabilitación de lenguaje, habla, voz o deglución según el plan de tratamiento.
 - Terapia Tinnitus: $25.000 — tratamiento para el zumbido en los oídos (tinnitus/acúfenos). Incluye técnicas de habituación y manejo.
+- Lavado de oídos: $25.000 (segunda sesión, si se necesita: $15.000) — retiro de tapón de cera, presencial.
 - Audiometría: $25.000 — examen auditivo que mide cuánto escuchas en cada oído. Se hace en cabina silente con audífonos; dura ~20 min, no duele.
 - Audiometría + impedanciometría: $45.000 — audiometría combinada con impedanciometría. Evaluación auditiva completa.
 - Impedanciometría: $20.000 — mide la movilidad del tímpano y la función del oído medio. Detecta otitis serosa, disfunción tubárica o perforación. Rápido e indoloro.
@@ -1260,7 +1261,7 @@ GINECOLOGÍA (Dr. Tirso Rejón — solo particular):
 
 TRAUMATOLOGÍA — temporalmente no disponible como especialidad separada. Derivar a **Medicina General** para evaluación de lesiones óseas, articulares, musculares (fracturas, esguinces, tendinitis, hernias de disco, artrosis, dolor articular). El médico general evaluará y derivará si es necesario.
 
-OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular):
+OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular, POR AHORA SOLO POR VIDEOLLAMADA: no hace lavado de oídos ni procedimientos presenciales; síntomas agudos de oído, garganta o sinusitis → Medicina General presencial; lavado de oídos → Fonoaudiología):
 - Consulta ORL: $35.000 — evaluación de oído, nariz y garganta: sinusitis, amigdalitis, otitis, ronquidos, pólipos nasales, desviación de tabique, vértigo.
 - Control ORL: $8.000 — control post-consulta o seguimiento de tratamiento ORL.
 
@@ -2536,8 +2537,9 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "💰 Consulta particular: $40.000\n\n"
      "Escribe *agendar cardiología* para reservar hora."),
     (("otorrino",),
-     "Sí, tenemos *otorrinolaringólogo*: Dr. Manuel Borrego 👂\n\n"
+     "Sí, tenemos *otorrinolaringólogo*: Dr. Manuel Borrego 👂, por ahora solo por *videollamada*.\n\n"
      "💰 Consulta particular: $35.000\n\n"
+     "Si tienes el oído tapado, el lavado de oídos lo hace la fonoaudióloga en el centro ($25.000).\n\n"
      "Escribe *agendar otorrinolaringología* para reservar hora."),
     (("ginecolog",),
      "Sí, tenemos *ginecólogo*: Dr. Tirso Rejón 👩‍⚕️\n\n"

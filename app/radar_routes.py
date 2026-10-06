@@ -456,7 +456,7 @@ def _panel(canal: str, d: str, h: str) -> dict:
 def _k_embudo(k: dict) -> dict:
     keys = ("personas", "conversaciones", "citas", "atendidos", "no_asistio", "anuladas", "venta", "centro",
             "gasto", "cac_cita", "cac_atendido", "retorno", "retorno_centro", "retorno_estricto", "pagaron",
-            "atendidos_fuente", "muestra_chica")
+            "atendidos_fuente", "muestra_chica", "valor12m")
     return {x: k.get(x) for x in keys}
 
 
@@ -550,6 +550,22 @@ def _valor90() -> dict:
     return _cacheado("valor90", TTL_PESADO, _f)
 
 
+def _valor12m() -> dict:
+    """Valor de un paciente nuevo a 12 meses por puerta de entrada (lee la tabla cache de cohortes)."""
+    import valor_cohortes as vc
+
+    def _f():
+        with db() as c:
+            p = vc.publico(c)
+        top = [{"especialidad": e["especialidad"], "n": e["n"], "c365": e["c"]["365"], "v365": e["v"]["365"],
+                "visitas": e["visitas"], "muestra_chica": e["muestra_chica"]} for e in p["especialidades"][:6]]
+        sig = [{"entrada": m["entrada"], "n": m["n"], "muestra_chica": m["muestra_chica"],
+                "destinos": [{"esp": d["esp"], "pct": d["pct"], "venta_pasan": d["venta_pasan"]} for d in m["destinos"][:3]]}
+               for m in p["matriz"][:3] if m["destinos"]]
+        return {"meta": p["meta"], "top": top, "recorrido": sig, "sin_especialidad": len(p["sin_especialidad"])}
+    return _cacheado("valor12m", TTL_PESADO, _f)
+
+
 def captacion_data(hoy: date | None = None) -> dict:
     d, h = _rango(hoy)
     pm = _seguro("panel_meta", _panel, "meta", d, h)
@@ -569,6 +585,7 @@ def captacion_data(hoy: date | None = None) -> dict:
             "creativos": _seguro("creativos", _creativos, pm) if "error" not in pm else pm,
             "territorio": _seguro("territorio", _territorio, d, h),
             "valor90": _seguro("valor90", _valor90),
+            "valor12m": _seguro("valor12m", _valor12m),
             "agenda": ({k: ag.get(k) for k in ("sin_datos", "activo", "hoy", "dias", "grupos", "senales", "gasto",
                                                "desactualizado", "umbrales")}
                        | {"actualizado": _iso_epoch(ag.get("actualizado_ts"))}) if isinstance(ag, dict) and "error" not in ag else ag}
@@ -675,9 +692,17 @@ def _meses(hoy: date) -> dict:
                           "WHERE fecha >= ? AND fecha <= ? GROUP BY 1, 2",
                           (ini.isoformat(), hoy.isoformat() + " 23:59:59")).fetchall()
         mes_ant = date(hoy.year - (hoy.month == 1), (hoy.month - 2) % 12 + 1, 1)
-        medios = c.execute("SELECT COALESCE(NULLIF(trim(metodo_pago),''),'Sin dato'), SUM(monto) FROM bi_pagos_caja "
-                           "WHERE substr(fecha,1,7) = ? GROUP BY 1 ORDER BY 2 DESC",
-                           (mes_ant.isoformat()[:7],)).fetchall()
+        # Medio de pago real = módulo Pagos (pagos_cmc, lo que registra recepción);
+        # bi_pagos_caja trae todo como "Efectivo". Lo que falta para llegar a la caja
+        # es la parte que paga Fonasa (ver memoria "las 2 fuentes").
+        try:
+            medios = c.execute("SELECT lower(COALESCE(NULLIF(trim(metodo_pago),''),'sin dato')), SUM(copago) FROM pagos_cmc "
+                               "WHERE substr(fecha,1,7) = ? GROUP BY 1 HAVING SUM(copago) > 0 ORDER BY 2 DESC",
+                               (mes_ant.isoformat()[:7],)).fetchall()
+        except Exception:  # noqa: BLE001
+            medios = []
+        caja_mes = c.execute("SELECT SUM(monto) FROM bi_pagos_caja WHERE substr(fecha,1,7) = ?",
+                             (mes_ant.isoformat()[:7],)).fetchone()[0] or 0
         ult = c.execute("SELECT MAX(fecha), MAX(synced_at) FROM bi_pagos_caja WHERE fecha <= ?",
                         (hoy.isoformat() + " 23:59:59",)).fetchone()
     acc: dict[str, dict] = {}
@@ -699,13 +724,20 @@ def _meses(hoy: date) -> dict:
     dias_con_caja = (min(hoy, date.fromisoformat(ult_fecha)) - hoy.replace(day=1)).days + 1 \
         if ult_fecha and ult_fecha >= hoy.replace(day=1).isoformat() else 0
     proy = round(actual["venta"] / dias_con_caja * dias_mes) if dias_con_caja >= 3 else None
-    tot_m = sum(int(r[1] or 0) for r in medios)
+    _lbl = {"transferencia": "Transferencia", "efectivo": "Efectivo", "debito": "Débito", "débito": "Débito",
+            "credito": "Crédito", "crédito": "Crédito", "bono_web": "Bono web", "sin dato": "Sin dato"}
+    pagado = sum(int(r[1] or 0) for r in medios)
+    fonasa = max(0, int(caja_mes) - pagado) if pagado else 0
+    tot_m = pagado + fonasa
     medios_out = []
-    for nombre, monto in medios[:4]:
-        medios_out.append({"medio": nombre, "venta": int(monto or 0), "pct": round(100 * (monto or 0) / tot_m) if tot_m else 0})
-    resto = tot_m - sum(x["venta"] for x in medios_out)
+    for nombre, monto in medios[:5]:
+        medios_out.append({"medio": _lbl.get(nombre, nombre.capitalize()), "venta": int(monto or 0),
+                           "pct": round(100 * (monto or 0) / tot_m) if tot_m else 0})
+    resto = pagado - sum(x["venta"] for x in medios_out)
     if resto > 0:
         medios_out.append({"medio": "Otros", "venta": resto, "pct": round(100 * resto / tot_m)})
+    if fonasa:
+        medios_out.append({"medio": "Fonasa (bonificación)", "venta": fonasa, "pct": round(100 * fonasa / tot_m)})
     anterior = serie[-2]
     return {"serie": serie, "actual": actual, "anterior": anterior,
             "proyeccion": proy, "dias_con_caja": dias_con_caja, "dias_mes": dias_mes,
@@ -886,6 +918,49 @@ def _consentimiento(hoy: date) -> dict:
                            "pending": priv.get("pending", 0)}}
 
 
+def _iniciales_resena(nombre: str) -> str:
+    partes = [x for x in (nombre or "").replace(".", " ").split() if x[:1].isalpha()]
+    return ".".join(x[0].upper() for x in partes[:2]) + "." if partes else "—"
+
+
+def reputacion_data() -> dict:
+    """Nota de Google (última buena guardada; nunca sale a la red) + encuesta
+    postconsulta mejor/igual/peor (fidelizacion_msgs). Sin teléfonos ni nombres."""
+    def _google():
+        import google_rating as gr
+        d = gr.cached_rating()
+        if not d or not d.get("rating"):
+            return {"hay": False}
+        revs = []
+        for r in (d.get("reviews") or [])[:6]:
+            revs.append({"iniciales": _iniciales_resena(r.get("author") or r.get("autor") or r.get("name") or ""),
+                         "estrellas": r.get("rating"), "texto": (r.get("text") or r.get("texto") or "")[:400],
+                         "cuando": r.get("relative") or r.get("relative_time") or r.get("cuando") or ""})
+        return {"hay": True, "rating": d.get("rating"), "total": d.get("review_count"),
+                "actualizado": _iso_epoch(d.get("updated_at")), "resenas": revs, "link": gr.get_review_link()}
+
+    def _encuesta():
+        from session import get_nps_por_profesional
+        out = {}
+        for dias in (30, 90):
+            n = get_nps_por_profesional(dias)
+            out[str(dias)] = {"indice": n["global_nps"], "total": n["global_total"], "mejor": n["global_mejor"],
+                              "igual": n["global_igual"], "peor": n["global_peor"],
+                              "por_profesional": [{"profesional": x.get("profesional") or "Sin dato", "total": x["total"],
+                                                   "mejor": x["mejor"], "igual": x["igual"], "peor": x["peor"],
+                                                   "indice": x["nps"]} for x in n["por_profesional"]]}
+        return out
+
+    def _temas():
+        import opinion_temas
+        with db() as c:
+            return opinion_temas.temas_data(c)
+
+    return {"google": _seguro("google", _google),
+            "encuesta": _seguro("encuesta", lambda: _cacheado("encuesta", 300, _encuesta)),
+            "temas": _seguro("temas", _temas)}
+
+
 def bitacora_data(ahora: datetime | None = None) -> dict:
     ahora = ahora or _ahora()
     import campanas_meta_integraciones as ci
@@ -934,6 +1009,12 @@ def api_conversion(request: Request, token: str | None = Query(None)):
 def api_finanzas(request: Request, token: str | None = Query(None)):
     cm._auth(request, token)
     return _json(finanzas_data())
+
+
+@router.get("/reputacion")
+def api_reputacion(request: Request, token: str | None = Query(None)):
+    cm._auth(request, token)
+    return _json(reputacion_data())
 
 
 @router.get("/bitacora")
