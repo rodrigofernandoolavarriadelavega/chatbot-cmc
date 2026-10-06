@@ -195,6 +195,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     },
     {
       "@type": "Question",
+      "name": "¿Puedo elegir el color de los elásticos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. Los brackets son metálicos y tú eliges el color de tus elásticos. Los elásticos se cambian en los controles mensuales, cuando se ajustan los arcos."
+      }
+    },
+    {
+      "@type": "Question",
       "name": "¿Qué hago si se me suelta un bracket?",
       "acceptedAnswer": {
         "@type": "Answer",
@@ -233,9 +241,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </script>
 
 <link rel="preload" href="/static/fonts/montserrat-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" type="image/webp" href="/static/images/ortodoncia/fachada-1000.webp" imagesrcset="/static/images/ortodoncia/fachada-640.webp 640w, /static/images/ortodoncia/fachada-1000.webp 1000w, /static/images/ortodoncia/fachada-1448.webp 1448w" imagesizes="(max-width:1023px) calc(100vw - 32px), 560px" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 
 <style>
 @font-face{
@@ -245,273 +255,320 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   font-weight:100 900; font-style:normal; font-display:swap;
 }
 :root{
-  --navy:#0F3F68; --navy-900:#0A2C4A; --azul:#1172AB; --azul-700:#0D5E8E; --azul-50:#EAF3FA;
+  --navy:#0F3F68; --navy-900:#0A2C4A; --navy-950:#071F35; --azul:#1172AB; --azul-50:#EAF3FA;
   --aqua:#4FBECE; --aqua-ink:#1A6F7C; --aqua-50:#E7F6F8; --aqua-100:#CDEDF2;
-  --tinta:#0F2233; --tinta-2:#2A3F52; --gris:#5E7183; --gris-300:#C7D2DC; --gris-200:#DFE6ED;
-  --gris-100:#EDF2F6; --bg:#F5F8FB; --blanco:#FFFFFF;
+  --tinta:#0F2233; --tinta-2:#2A3F52; --gris:#55687A; --gris-300:#C7D2DC; --gris-200:#DFE6ED; --gris-100:#EDF2F6;
+  --hueso:#F6F2EC; --hueso-2:#EEE7DC; --linea:rgba(15,63,104,.12); --linea-2:rgba(15,63,104,.07);
+  --ambar-ink:#94440A; --ambar-50:#FFF1E2; --ambar-200:#F6CFA6; --ambar:#FFC27D;
+  --blanco:#FFFFFF;
   --wa:#0B7D54; --wa-700:#08694A;
   --shadow-xs:0 1px 2px rgba(15,63,104,.06);
   --shadow-sm:0 2px 10px -2px rgba(15,63,104,.10), 0 1px 2px rgba(15,63,104,.05);
   --shadow-md:0 14px 30px -12px rgba(15,63,104,.22), 0 2px 6px rgba(15,63,104,.06);
   --shadow-lg:0 30px 60px -24px rgba(10,44,74,.38), 0 6px 16px rgba(15,63,104,.08);
-  --r:14px; --r-lg:22px; --pill:999px;
+  --r:14px; --r-lg:22px; --r-xl:32px; --pill:999px;
   --display:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;
   --body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
   --ease:cubic-bezier(.2,.7,.2,1);
   --back:cubic-bezier(.34,1.42,.64,1);
 }
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:72px}
 body{margin:0;font-family:var(--body);font-size:16px;line-height:1.6;color:var(--tinta-2);background:var(--blanco);
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
-h1,h2,h3,h4{font-family:var(--display);color:var(--tinta);margin:0;letter-spacing:-.02em;line-height:1.12}
+h1,h2,h3,h4{font-family:var(--display);color:var(--tinta);margin:0;letter-spacing:-.02em;line-height:1.1}
 p{margin:0}
-.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 18px}
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 :focus-visible{outline:3px solid var(--aqua);outline-offset:3px;border-radius:8px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-/* ── Etiquetas ── */
-.kicker{display:inline-flex;align-items:center;gap:8px;font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--aqua-ink)}
-.kicker::before{content:"";width:18px;height:2px;border-radius:2px;background:var(--aqua)}
-.tag{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--pill);font:600 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase}
-.tag-esp{background:#FFF1E2;color:#9A4A0B}
-.tag-esp svg{flex:none}
-.tag-est{background:var(--gris-100);color:var(--gris)}
+/* Etiquetas */
+.kicker{display:inline-flex;align-items:center;gap:10px;font:600 11px/1.2 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--aqua-ink)}
+.kicker::before{content:"";width:22px;height:2px;border-radius:2px;background:var(--aqua);flex:none}
+.esp{display:inline-flex;align-items:center;gap:5px;font:700 10px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:#3A1B03;background:var(--ambar);padding:5px 7px;border-radius:6px;white-space:nowrap}
+.esp svg{flex:none}
 
-/* ── Botones ── */
+/* Botones */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:var(--pill);
-  font:600 15px/1 var(--body);letter-spacing:-.005em;border:1.5px solid transparent;cursor:pointer;white-space:nowrap;
+  font:600 15px/1.2 var(--body);letter-spacing:-.005em;border:1.5px solid transparent;cursor:pointer;white-space:nowrap;text-align:center;
   transition:transform .18s var(--ease),box-shadow .18s var(--ease),background-color .18s var(--ease),border-color .18s var(--ease),color .18s var(--ease)}
 .btn svg{flex:none}
 .btn-wa{background:var(--wa);color:#fff;box-shadow:0 10px 22px -10px rgba(11,125,84,.65)}
 .btn-wa:hover{background:var(--wa-700);transform:translateY(-1px);box-shadow:0 14px 26px -10px rgba(11,125,84,.7)}
 .btn-wa:active{transform:translateY(0) scale(.98)}
-.btn-line{background:var(--blanco);color:var(--navy);border-color:var(--gris-200)}
+.btn-line{background:transparent;color:var(--navy);border-color:rgba(15,63,104,.22)}
 .btn-line:hover{border-color:var(--azul);color:var(--azul);transform:translateY(-1px)}
-.btn-xl{min-height:56px;padding:0 24px;font-size:16px}
-.btn-ghost-w{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.28)}
-.btn-ghost-w:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.5)}
+.btn-xl{min-height:56px;padding:0 26px;font-size:16px}
+.btn-ghost-w{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.32)}
+.btn-ghost-w:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.55)}
+.lnk{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:600;color:var(--azul)}
+.lnk svg{transition:transform .2s var(--ease)}
+.lnk:hover svg{transform:translateX(3px)}
 
-/* ── Franja emergencias ── */
-.emergency-strip{background:var(--navy-900);color:rgba(255,255,255,.82);font-size:12.5px;text-align:center;padding:7px 16px;line-height:1.4}
+/* Franja emergencias */
+.emergency-strip{background:var(--navy-950);color:rgba(255,255,255,.8);font-size:12.5px;text-align:center;padding:6px 16px;line-height:1.4}
 .emergency-strip strong{color:#fff;font-weight:600}
-.emergency-strip .em-long{}
 .emergency-strip a{color:#fff;font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.emergency-strip .em-long{display:none}
 
-/* ── Header ── */
-.nav-wrap{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);
-  border-bottom:1px solid transparent;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
-.nav-wrap.is-scrolled{border-color:var(--gris-100);box-shadow:var(--shadow-xs)}
-.nav{display:flex;align-items:center;gap:24px;height:68px}
+/* Header */
+.nav-wrap{position:sticky;top:0;z-index:50;background:rgba(246,242,236,.86);backdrop-filter:saturate(1.5) blur(14px);-webkit-backdrop-filter:saturate(1.5) blur(14px);
+  border-bottom:1px solid transparent;transition:border-color .2s var(--ease),box-shadow .2s var(--ease),background-color .2s var(--ease)}
+.nav-wrap.is-scrolled{border-color:var(--linea-2);box-shadow:var(--shadow-xs);background:rgba(255,255,255,.9)}
+.nav{display:flex;align-items:center;gap:12px;height:60px}
 .nav-brand{display:flex;align-items:center;flex:none;min-height:44px}
-.nav-brand img{height:38px;width:auto}
-.nav-menu{display:flex;gap:4px;margin-left:auto}
-.nav-menu + .nav-cta{margin-left:8px}
-.nav-menu a{font-size:14px;font-weight:500;color:var(--tinta-2);padding:10px 12px;border-radius:10px;transition:color .15s,background-color .15s}
-.nav-menu a:hover{color:var(--azul);background:var(--azul-50)}
+.nav-brand img{height:32px;width:auto}
+.nav-menu{display:none}
 .nav-cta{display:flex;gap:10px;align-items:center;margin-left:auto}
-.nav-cta .btn{min-height:44px;padding:0 18px;font-size:14px}
+.nav-cta .btn{min-height:44px;padding:0 16px;font-size:14px}
+.nav-cta .btn-line{display:none}
+.nav-cta .btn-wa{transition:opacity .2s var(--ease),transform .2s var(--ease)}
+.float-on .nav-cta .btn-wa{opacity:0;transform:scale(.92);visibility:hidden;transition:opacity .2s var(--ease),transform .2s var(--ease),visibility 0s .2s}
 
-/* ── Hero ── */
-.hero{position:relative;overflow:hidden;background:
-  radial-gradient(900px 480px at 92% -10%,rgba(79,190,206,.20),transparent 60%),
-  linear-gradient(180deg,#F6FAFD 0%,#FFFFFF 100%)}
-.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:64px 0 56px}
-.hero h1{font-size:clamp(34px,5.2vw,58px);font-weight:800;letter-spacing:-.035em;line-height:1.04;margin:18px 0 18px;text-wrap:balance}
-.hero h1 .sub{display:block;color:var(--azul);font-weight:700}
-.hero h1 .sub::after{content:"";display:block;width:84px;height:4px;border-radius:4px;margin-top:16px;background:linear-gradient(90deg,var(--aqua),var(--azul))}
-.hero-lead{font-size:18px;line-height:1.6;color:var(--tinta-2);max-width:540px}
+/* ── HERO ── */
+.hero{background:var(--hueso);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:var(--linea-2)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0;padding:10px 0 36px}
+.hero-photo{position:relative;order:-1;margin:0 0 16px}
+.arch{position:relative;overflow:hidden;border-radius:999px 999px 22px 22px / 150px 150px 22px 22px;background:#B9D7EE;isolation:isolate;box-shadow:var(--shadow-md)}
+.arch img{width:100%;height:100%;object-fit:cover}
+.hero-photo .arch{height:clamp(150px,21vh,240px)}
+.hero-photo .arch img{object-position:38% 62%}
+.hero-photo .arch::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(7,31,53,.55));z-index:1}
+.ph-tag{position:absolute;left:14px;bottom:12px;z-index:2;display:inline-flex;align-items:center;gap:8px;color:#fff;font:600 12.5px/1.3 var(--body);text-shadow:0 1px 8px rgba(0,0,0,.35)}
+.ph-tag svg{flex:none}
+.sat-card{display:none}
+
+.hero h1{font-size:clamp(31px,8.6vw,40px);font-weight:800;letter-spacing:-.04em;line-height:1.02;margin:10px 0 8px;text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--azul);display:block}
+.hero-lead{font-size:16px;line-height:1.55;color:var(--tinta-2);max-width:540px}
+.hero-lead .ld{display:none}
+.hero-lead .ls{display:inline}
 .hero-lead strong{color:var(--tinta);font-weight:600}
-.hero-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
-.only-m{display:none}
-.hero-meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:22px;font-size:14px;color:var(--gris)}
-.hero-meta span{display:inline-flex;align-items:center;gap:8px}
-.hero-meta svg{color:var(--aqua-ink)}
 
-/* Precio rápido (móvil/tablet) */
-.qprices{display:none}
-.qprice{background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow-xs);position:relative}
-.qprice .l{display:block;font-size:12.5px;line-height:1.3;color:var(--gris);font-weight:500}
-.qprice .v{display:block;font:800 21px/1.15 var(--display);color:var(--navy);letter-spacing:-.02em;margin-top:4px}
-.qprice.is-esp{border-color:#F6CFA6;background:linear-gradient(180deg,#FFF8F0,#fff)}
-.qprice.is-esp .flag{position:absolute;top:-9px;right:10px;background:#B45309;color:#fff;font:700 10px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:5px 7px;border-radius:6px}
-.qnote{display:none;font-size:12.5px;color:var(--gris);margin-top:10px;line-height:1.45}
+.ledger{display:grid;grid-template-columns:1fr 1fr;margin:16px 0 0;padding:0;border-top:1px solid var(--linea);border-left:1px solid var(--linea);border-radius:16px;overflow:hidden;background:rgba(255,255,255,.6)}
+.ledger > div{padding:10px 14px 11px;border-right:1px solid var(--linea);border-bottom:1px solid var(--linea);min-width:0;display:flex;flex-direction:column}
+.ledger dd{margin-top:auto!important;padding-top:4px}
+.ledger .is-esp{padding-top:26px!important}
+.ledger dt{font:500 12.5px/1.3 var(--body);color:var(--gris);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ledger dd{margin:4px 0 0;font:800 22px/1.05 var(--display);color:var(--navy);letter-spacing:-.03em}
+.ledger .is-esp{background:linear-gradient(180deg,#FFF6EC,#FFFDF9);position:relative}
+.ledger .is-esp .esp{position:absolute;top:0;right:0;border-radius:0 0 0 8px;padding:5px 8px 5px 9px;font-size:9.5px}
+.ledger .is-esp dd{color:var(--ambar-ink)}
+.ledger-note{font-size:12.5px;line-height:1.45;color:var(--gris);margin-top:8px}
+.ledger-note .xs{display:none}
+.hero-ctas{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.hero-ctas .btn{width:100%;white-space:normal;line-height:1.25}
+.hero-ctas .btn-line{display:none}
+.hero-meta{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;font-size:13px;color:var(--gris)}
+.hero-meta span{display:inline-flex;align-items:center;gap:7px}
+.hero-meta svg{color:var(--aqua-ink);flex:none}
 
-/* Tarjeta de precios (desktop) */
-.pcard{position:relative;background:linear-gradient(160deg,var(--navy) 0%,#0C3456 55%,#0A2C4A 100%);color:#fff;border-radius:28px;padding:28px 28px 24px;box-shadow:var(--shadow-lg);overflow:hidden;isolation:isolate}
-.pcard::before{content:"";position:absolute;inset:auto -120px -160px auto;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(79,190,206,.30),transparent 65%);z-index:-1}
-.pcard-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.pcard-top .kicker{color:var(--aqua-100)}
-.pcard-top .kicker::before{background:var(--aqua)}
-.pcard-doc{font-size:12.5px;color:rgba(255,255,255,.72)}
-.smile{display:block;width:100%;height:auto;margin:10px 0 6px}
-.smile .wire{fill:none;stroke:var(--aqua);stroke-width:2.2;stroke-linecap:round}
-.smile .tooth{fill:rgba(255,255,255,.95);}
-.smile .brk{fill:#9FB6C9;stroke:#E6EEF5;stroke-width:1}
-.prow{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;padding:13px 0;border-top:1px solid rgba(255,255,255,.10)}
-.prow:first-of-type{border-top:0}
-.prow .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 12.5px/1 var(--display);background:rgba(79,190,206,.16);color:var(--aqua-100)}
-.prow .t{font-size:15px;font-weight:500;line-height:1.3}
-.prow .t small{display:block;font-size:12.5px;color:rgba(255,255,255,.66);font-weight:400;margin-top:2px}
-.prow .v{font:800 21px/1 var(--display);letter-spacing:-.02em;text-align:right}
-.prow.is-esp{margin:4px -14px;padding:13px 14px;border-radius:14px;background:rgba(255,183,107,.10);border:1px solid rgba(255,183,107,.32)}
-.prow.is-esp + .prow{border-top-color:transparent}
-.prow.is-esp .n{background:rgba(255,183,107,.20);color:#FFD9AE}
-.prow .esp{display:inline-block;margin-left:6px;vertical-align:2px;font:700 10px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:#2B1603;background:#FFC27D;padding:4px 6px;border-radius:5px}
-.pcard-foot{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:14px;line-height:1.5}
+/* ── Secciones base ── */
+.sec{padding:64px 0}
+.bg-hueso{background:var(--hueso)}
+.sec-head{max-width:720px;margin-bottom:32px}
+.sec-head h2{font-size:clamp(28px,7.4vw,48px);font-weight:800;letter-spacing:-.035em;line-height:1.05;margin:14px 0 12px;text-wrap:balance}
+.sec-head h2 em{font-style:normal;color:var(--azul)}
+.sec-head p{font-size:16.5px;color:var(--gris);max-width:600px}
 
-/* ── Banda estudio radiográfico ── */
-.rx{padding:0 0 64px}
-.rx-in{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;background:linear-gradient(100deg,#FFF7EE 0%,#FFFFFF 70%);border:1px solid #F6D9BA;border-radius:var(--r-lg);padding:22px 26px;box-shadow:var(--shadow-sm)}
-.rx-ico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:#FFE7CC;color:#9A4A0B}
-.rx h2{font-size:21px;font-weight:700;margin:8px 0 4px}
-.rx p{font-size:15px;color:var(--tinta-2)}
-.rx-price{text-align:right}
-.rx-price .v{font:800 32px/1 var(--display);color:var(--tinta);letter-spacing:-.03em}
-.rx-price .s{display:block;font-size:12.5px;color:var(--gris);margin-top:6px}
+/* ── Recorrido (línea de tren) ── */
+.rail{list-style:none;margin:0;padding:0;position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.rail::before{content:"";position:absolute;left:11px;top:10px;bottom:24px;width:2px;background:var(--gris-200);border-radius:2px}
+.rail::after{content:"";position:absolute;left:11px;top:10px;bottom:24px;width:2px;background:linear-gradient(180deg,var(--aqua),var(--azul));border-radius:2px;transform-origin:top;transform:scaleY(var(--prog,1))}
+.js .rail::after{--prog:0;transition:transform 1.1s var(--ease) .1s}
+.js .rail.on::after{--prog:1}
+.stop{position:relative;padding:0 0 34px 44px}
+.stop:last-child{padding-bottom:0}
+.node{position:absolute;left:0;top:2px;width:24px;height:24px;border-radius:50%;background:var(--blanco);border:2px solid var(--azul);display:grid;place-items:center;z-index:1}
+.node::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--azul)}
+.stop.is-esp .node{border-color:#D9822B}
+.stop.is-esp .node::after{background:#D9822B}
+.stop-n{font:700 12.5px/1 var(--display);letter-spacing:.06em;color:var(--aqua-ink)}
+.stop h3{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:8px 0 8px}
+.stop p{font-size:15px;color:var(--tinta-2);line-height:1.6;max-width:440px}
+.stop p strong{color:var(--tinta);font-weight:600}
+.stop-price{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-top:14px}
+.stop-price .v{font:800 34px/1 var(--display);letter-spacing:-.04em;color:var(--navy)}
+.stop.is-esp .stop-price .v{color:var(--ambar-ink)}
+.stop-price .s{font-size:13px;color:var(--gris);line-height:1.45}
+.stop-price .s b{color:var(--tinta-2);font-weight:600}
+.stop .esp{margin-left:8px;vertical-align:3px}
+.rail-foot{margin-top:28px;font-size:13px;color:var(--gris);max-width:640px}
 
-/* ── Secciones ── */
-.sec{padding:88px 0}
-.sec-alt{background:var(--bg)}
-.sec-head{max-width:680px;margin-bottom:40px}
-.sec-head h2{font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.03em;margin:12px 0 12px;text-wrap:balance}
-.sec-head p{font-size:17px;color:var(--gris)}
-.sec-head.center{margin-left:auto;margin-right:auto;text-align:center}
+/* ── Colores (elemento firma) ── */
+.colors{background:radial-gradient(900px 520px at 85% 10%,rgba(79,190,206,.16),transparent 60%),linear-gradient(170deg,var(--navy-900) 0%,var(--navy-950) 100%);color:#fff;position:relative;overflow:hidden}
+.colors .kicker{color:var(--aqua-100)}
+.colors h2{color:#fff}
+.colors h2 em{color:var(--aqua)}
+.colors .sec-head p{color:rgba(255,255,255,.76)}
+.colors-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:center}
+.smile-stage{position:relative;margin:4px -12px 16px}
+.smile-svg{display:block;width:100%;height:auto;overflow:visible}
+.smile-svg .t{fill:url(#esmalte);stroke:rgba(120,100,80,.22);stroke-width:.8}
+.smile-svg .t2{fill:url(#esmalte-b);stroke:rgba(120,100,80,.22);stroke-width:.8}
+.smile-svg .b{fill:url(#metal);stroke:rgba(10,30,50,.4);stroke-width:.6}
+.smile-svg .w{fill:none;stroke:#E6ECF1;stroke-width:2.6;stroke-linecap:round}
+.smile-svg .labio{fill:none;stroke:rgba(255,255,255,.16);stroke-width:2}
+.smile-svg .lg{fill:none;stroke:var(--c,#4FBECE);stroke-width:4;transform-box:fill-box;transform-origin:center;
+  transition:stroke .22s var(--ease)}
+.smile-svg .lg.pop{animation:lgpop .32s var(--back) both;animation-delay:calc(var(--o) * 45ms)}
+@keyframes lgpop{0%{transform:scale(.55);opacity:.2}100%{transform:scale(1);opacity:1}}
+.smile-glow{position:absolute;left:8%;right:8%;bottom:-4%;height:40%;background:radial-gradient(closest-side,rgba(79,190,206,.22),transparent);filter:blur(8px);z-index:0}
+.smile-svg{position:relative;z-index:1}
+.picker{margin-top:0}
+.colors-head .sec-head{margin-bottom:20px}
+.mode{display:inline-flex;padding:4px;border-radius:var(--pill);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+.mode button{appearance:none;border:0;background:transparent;color:rgba(255,255,255,.8);font:600 14px/1 var(--body);min-height:40px;padding:0 16px;border-radius:var(--pill);cursor:pointer;transition:background-color .18s var(--ease),color .18s var(--ease)}
+.mode button[aria-pressed="true"]{background:#fff;color:var(--navy)}
+.slots{display:none;gap:8px;margin-left:10px;vertical-align:middle}
+.two .slots{display:inline-flex}
+.slot{appearance:none;width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.25);background:transparent;padding:0;cursor:pointer;display:grid;place-items:center;transition:border-color .18s var(--ease),transform .18s var(--ease)}
+.slot span{width:28px;height:28px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.slot[aria-pressed="true"]{border-color:#fff;transform:scale(1.05)}
+.swatches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:18px 0 0;max-width:330px}
+.sw{appearance:none;position:relative;aspect-ratio:1;min-width:44px;min-height:44px;border-radius:50%;border:0;padding:0;cursor:pointer;background:var(--c);
+  box-shadow:inset 0 -6px 10px rgba(0,0,0,.18),inset 0 4px 8px rgba(255,255,255,.28),0 6px 14px -6px rgba(0,0,0,.5);
+  transition:transform .18s var(--ease)}
+.sw::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid #fff;opacity:0;transform:scale(.85);transition:opacity .18s var(--ease),transform .18s var(--back)}
+.sw:hover{transform:translateY(-2px)}
+.sw[aria-pressed="true"]::after{opacity:1;transform:scale(1)}
+.sw:focus-visible{outline:3px solid var(--aqua);outline-offset:6px}
+.readout{margin-top:18px;font-size:15px;color:rgba(255,255,255,.78);min-height:24px}
+.readout strong{color:#fff;font-weight:600}
+.colors-cta{margin-top:22px;display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.colors-cta .btn{white-space:normal;line-height:1.25}
+@media (min-width:600px){.colors-cta{align-items:flex-start}.colors-cta .btn{white-space:nowrap}}
+.colors-note{font-size:12.5px;color:rgba(255,255,255,.62);line-height:1.5}
 
-/* Proceso */
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;counter-reset:s}
-.step{position:relative;background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r-lg);padding:24px 22px 22px;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;
-  transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease)}
-.step:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--gris-200)}
-.step-n{font:800 13px/1 var(--display);color:var(--aqua-ink);letter-spacing:.04em}
-.step h3{font-size:18px;font-weight:700;margin:14px 0 8px;line-height:1.25}
-.step p{font-size:14px;color:var(--gris);line-height:1.55}
-.step-price{margin-top:auto;padding-top:18px}
-.step-price .v{font:800 32px/1 var(--display);color:var(--navy);letter-spacing:-.03em}
-.step-price .s{display:block;font-size:12.5px;color:var(--gris);margin-top:6px;line-height:1.45}
-.step-price .s b{color:var(--tinta-2);font-weight:600}
-.step-line{height:1px;background:var(--gris-100);margin:0 0 14px}
-.step.is-esp{border-color:#F6D9BA;background:linear-gradient(180deg,#FFFAF4 0%,#fff 60%)}
-.step.is-esp .step-n{color:#9A4A0B}
-.step .tag{margin-top:12px;align-self:flex-start}
+/* ── Equipo ── */
+.team-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
+.place{margin:0;position:relative}
+.place .ph{border-radius:var(--r-xl);overflow:hidden;aspect-ratio:4/3;box-shadow:var(--shadow-md);background:var(--hueso-2)}
+.place img{width:100%;height:100%;object-fit:cover}
+.place figcaption{margin-top:10px;font-size:12.5px;color:var(--gris);display:flex;align-items:center;gap:8px}
+.people{display:flex;flex-direction:column;gap:0}
+.person{display:grid;grid-template-columns:76px minmax(0,1fr);gap:18px;align-items:start;padding:22px 0;border-top:1px solid var(--linea)}
+.person:last-child{border-bottom:1px solid var(--linea)}
+.portrait{margin:0;width:76px;height:92px;border-radius:38px 38px 14px 14px;overflow:hidden;position:relative;display:grid;place-items:center;
+  background:linear-gradient(160deg,var(--azul),var(--navy-900));color:#fff;font:700 22px/1 var(--display);letter-spacing:-.02em}
+.portrait.alt{background:linear-gradient(160deg,#5FC6D4,#22808D)}
+.portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.person .role{font:600 11px/1.2 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--aqua-ink)}
+.person h3{font-size:21px;font-weight:700;margin:6px 0 6px}
+.person p{font-size:15px;color:var(--tinta-2);line-height:1.6}
+.person p strong{color:var(--tinta);font-weight:600}
 
-.chev{transition:transform .22s var(--ease);flex:none;color:var(--azul)}
-details[open] > summary .chev{transform:rotate(180deg)}
+/* ── Sábados ── */
+.sat{padding:64px 0;background:var(--blanco);position:relative;overflow:hidden}
+.sat-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;align-items:end}
+.sat-word{font:800 clamp(64px,19vw,148px)/.86 var(--display);letter-spacing:-.06em;color:var(--navy);margin:14px 0 0}
+.sat-word span{display:block;font-size:.36em;letter-spacing:-.04em;line-height:1.05;color:var(--azul);margin-top:.18em}
+.sat-copy p{font-size:17px;line-height:1.6;color:var(--tinta-2);max-width:520px}
+.sat-copy p strong{color:var(--tinta);font-weight:600}
+.sat-copy .btn{margin-top:22px;width:100%;white-space:normal;line-height:1.25}
+.towns{margin-top:28px;padding-top:20px;border-top:1px solid var(--linea);font-size:14px;color:var(--gris);line-height:1.7}
+.towns b{color:var(--tinta);font-weight:600}
+.towns i{font-style:normal;color:var(--gris-300);padding:0 6px}
 
-/* CTA intermedio */
-.cta-mid{background:linear-gradient(120deg,var(--navy) 0%,var(--azul) 100%);color:#fff;position:relative;overflow:hidden}
-.cta-mid::before{content:"";position:absolute;right:-120px;top:-160px;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,rgba(79,190,206,.35),transparent 62%)}
-.cta-mid-in{position:relative;display:flex;align-items:center;justify-content:space-between;gap:28px;padding:44px 0}
-.cta-mid h2{color:#fff;font-size:clamp(22px,2.6vw,30px);font-weight:800;letter-spacing:-.025em}
-.cta-mid p{color:rgba(255,255,255,.8);font-size:15px;margin-top:8px}
-.cta-mid-actions{display:flex;flex-wrap:wrap;gap:12px;flex:none}
+/* ── Sin letra chica ── */
+.promises{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:0;counter-reset:p}
+.promise{padding:20px 0 22px;border-top:1px solid var(--linea);display:grid;align-content:start;grid-template-columns:44px minmax(0,1fr);gap:4px 12px}
+.promise::before{counter-increment:p;content:counter(p,decimal-leading-zero);font:700 13px/1.6 var(--display);color:var(--aqua-ink);letter-spacing:.04em;grid-row:span 2}
+.promise h3{font-size:18px;font-weight:700;line-height:1.3;letter-spacing:-.015em}
+.promise p{font-size:15px;color:var(--tinta-2);line-height:1.6}
 
-/* Equipo + cobertura */
-.team{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.person{display:flex;gap:18px;align-items:flex-start;background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r-lg);padding:24px;box-shadow:var(--shadow-xs)}
-.mono{flex:none;width:56px;height:56px;border-radius:18px;display:grid;place-items:center;font:700 18px/1 var(--display);letter-spacing:-.02em;color:#fff;background:linear-gradient(135deg,var(--azul),var(--navy))}
-.mono.alt{background:linear-gradient(135deg,var(--aqua),#2E97A6)}
-.person .role{font:600 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--aqua-ink)}
-.person h3{font-size:18px;font-weight:700;margin:8px 0 6px}
-.person p{font-size:14px;color:var(--gris);line-height:1.55}
-.towns{margin-top:16px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r-lg);padding:24px}
-.towns h3{font-size:18px;font-weight:700}
-.towns p{font-size:14px;color:var(--gris);margin-top:4px}
-.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-.chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:var(--pill);background:var(--bg);border:1px solid var(--gris-100);font-size:14px;font-weight:500;color:var(--tinta-2)}
-.chip.home{background:var(--aqua-50);border-color:var(--aqua-100);color:var(--aqua-ink);font-weight:600}
-
-/* Por qué aquí */
-.why{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.why-item{background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r-lg);padding:24px;transition:transform .22s var(--ease),box-shadow .22s var(--ease)}
-.why-item:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
-.why-ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--azul-50);color:var(--azul);margin-bottom:16px}
-.why-item h3{font-size:18px;font-weight:700;margin-bottom:6px;line-height:1.3}
-.why-item p{font-size:14px;color:var(--gris);line-height:1.55}
-
-/* FAQ */
-.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
-.faq-item{background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r);transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
-.faq-item[open]{border-color:var(--aqua-100);box-shadow:var(--shadow-sm)}
-.faq-item summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 20px;min-height:56px;font:600 15px/1.4 var(--body);color:var(--tinta)}
+/* ── FAQ ── */
+.faq-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
+.faq-aside p{font-size:15.5px;color:var(--gris);margin-top:4px}
+.faq-aside .lnk{margin-top:10px}
+.faq-list{border-top:1px solid var(--linea)}
+.faq-item{border-bottom:1px solid var(--linea)}
+.faq-item summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 2px;min-height:60px;font:600 16px/1.4 var(--body);color:var(--tinta);transition:color .15s var(--ease)}
+.faq-item summary:hover{color:var(--azul)}
 .faq-item summary::-webkit-details-marker{display:none}
-.faq-answer{padding:0 20px 18px;font-size:15px;color:var(--tinta-2);line-height:1.6}
+.pm{flex:none;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--linea);position:relative;transition:transform .25s var(--ease),background-color .2s var(--ease),border-color .2s var(--ease)}
+.pm::before,.pm::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;margin:-1px 0 0 -5.5px;background:var(--azul);border-radius:2px;transition:transform .25s var(--ease)}
+.pm::after{transform:rotate(90deg)}
+details[open] > summary .pm{background:var(--azul);border-color:var(--azul)}
+details[open] > summary .pm::before,details[open] > summary .pm::after{background:#fff}
+details[open] > summary .pm::after{transform:rotate(0)}
+.faq-answer{padding:0 44px 20px 2px;font-size:15.5px;color:var(--tinta-2);line-height:1.65}
 .faq-answer a{color:var(--azul);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+details[open] .faq-answer{animation:faqin .26s var(--ease) both}
+@keyframes faqin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 
-/* Mapa */
-.map-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:20px;align-items:stretch}
-.map{position:relative;border-radius:var(--r-lg);overflow:hidden;background:#EEF2F5;box-shadow:var(--shadow-sm);border:1px solid var(--gris-100);min-height:440px;min-width:0;--px:50.02%;--py:49.09%}
+/* ── Mapa ── */
+.map-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:stretch}
+.map{position:relative;border-radius:var(--r-xl);overflow:hidden;background:#EEF2F5;box-shadow:var(--shadow-sm);aspect-ratio:1/1;min-width:0;margin:0;--px:50.02%;--py:49.09%}
 .map picture{position:absolute;inset:0}
 .map img{width:100%;height:100%;object-fit:none;object-position:var(--px) var(--py)}
 .pin{position:absolute;left:var(--px);top:var(--py);width:0;height:0}
 .pin-pulse{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;background:rgba(17,114,171,.28);animation:pulse 2.4s var(--ease) infinite}
 .pin-drop{position:absolute;left:-21px;bottom:0;width:42px;height:54px;filter:drop-shadow(0 8px 10px rgba(10,44,74,.35));transform-origin:50% 100%}
-.pin-label{position:absolute;left:28px;top:-74px;white-space:nowrap;background:var(--blanco);border-radius:12px;padding:8px 12px;box-shadow:var(--shadow-md);font-size:12.5px;line-height:1.3;color:var(--gris)}
+.pin-label{position:absolute;left:-100px;top:-122px;white-space:nowrap;background:var(--blanco);border-radius:12px;padding:8px 12px;box-shadow:var(--shadow-md);font-size:12.5px;line-height:1.3;color:var(--gris)}
 .pin-label strong{display:block;font:700 14px/1.25 var(--display);color:var(--tinta);letter-spacing:-.01em}
-.map-attr{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.88);font-size:11px;color:#3C5166;padding:3px 8px;border-top-left-radius:8px}
+.map-attr{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.9);font-size:11px;color:#3C5166;padding:3px 8px;border-top-left-radius:8px}
 .map-attr a{text-decoration:underline}
-.loc{display:flex;flex-direction:column;gap:16px}
-.sat-hl{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:10px 0 4px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,var(--navy),#1172AB);color:#fff}
-.sat-day{font:800 20px/1.1 var(--display);letter-spacing:-.01em}
-.sat-hr{font:800 20px/1.1 var(--display);color:#BFEAF0}
-.sat-note{margin:6px 0 16px}
-.kicker-2{margin-top:6px}
-.sat-pill{background:#E6F6F8;color:var(--navy);border-radius:999px;padding:5px 12px}
-.loc-card{background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r-lg);padding:22px 24px}
-.loc-card h3{font-size:18px;font-weight:700;margin:10px 0 6px}
+.loc{display:flex;flex-direction:column;gap:14px}
+.loc-card{background:var(--blanco);border-radius:var(--r-lg);padding:22px 20px;box-shadow:var(--shadow-xs)}
+.loc-card h3{font-size:21px;font-weight:700;margin:12px 0 4px}
 .loc-card .addr{font-size:15px;color:var(--tinta-2);line-height:1.55}
-.loc-card .ref{display:inline-flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--aqua-ink);font-weight:600}
+.loc-card .ref{display:inline-flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;color:var(--aqua-ink);font-weight:600}
 .loc-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
-.loc-btns .btn{padding:0 14px;font-size:14px}
+.loc-btns .btn{padding:0 12px;font-size:14px}
+.sat-hl{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:12px 0 4px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,var(--navy),var(--azul));color:#fff}
+.sat-hl .d{font:800 19px/1.1 var(--display);letter-spacing:-.01em}
+.sat-hl .h{font:800 19px/1.1 var(--display);color:#BFEAF0}
+.loc-note{font-size:13px;color:var(--gris);margin:8px 0 18px;line-height:1.5}
 .hours{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
 .hours td{padding:9px 0;border-bottom:1px solid var(--gris-100)}
 .hours tr:last-child td{border-bottom:0}
 .hours td:last-child{text-align:right;font-weight:600;color:var(--tinta)}
-.hours .off td{color:var(--gris)}
-.hours .off td:last-child{color:var(--gris);font-weight:500}
-.loc-note{font-size:12.5px;color:var(--gris);margin-top:10px;line-height:1.5}
+.hours .off td,.hours .off td:last-child{color:var(--gris);font-weight:500}
 
-/* Blog */
-.posts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.post{display:flex;flex-direction:column;gap:8px;padding:22px 24px;background:var(--blanco);border:1px solid var(--gris-100);border-radius:var(--r-lg);min-height:44px;
-  transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease)}
-.post:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--aqua-100)}
-.post .kicker{font-size:11px}
-.post h3{font-size:18px;font-weight:700;line-height:1.3}
-.post p{font-size:14px;color:var(--gris)}
-.post .more{margin-top:auto;padding-top:6px;font-size:14px;font-weight:600;color:var(--azul);display:inline-flex;align-items:center;gap:6px}
-.post .more svg{transition:transform .2s var(--ease)}
-.post:hover .more svg{transform:translateX(3px)}
+/* ── Blog ── */
+.posts{border-top:1px solid var(--linea)}
+.post{display:grid;grid-template-columns:minmax(0,1fr) 28px;gap:4px 16px;align-items:center;padding:18px 2px;border-bottom:1px solid var(--linea);transition:background-color .2s var(--ease)}
+.post .k{font:600 11px/1.2 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--aqua-ink)}
+.post h3{font-size:18px;font-weight:700;line-height:1.3;margin-top:4px;transition:color .15s var(--ease)}
+.post p{font-size:14px;color:var(--gris);margin-top:2px}
+.post svg{grid-row:1/span 3;grid-column:2;color:var(--azul);transition:transform .2s var(--ease)}
+.post:hover h3{color:var(--azul)}
+.post:hover svg{transform:translateX(4px)}
 
-/* CTA final */
-.cta-band{background:linear-gradient(150deg,var(--navy-900) 0%,var(--navy) 50%,var(--azul) 120%);color:#fff;text-align:center;position:relative;overflow:hidden}
-.cta-band::before{content:"";position:absolute;left:50%;top:-260px;width:760px;height:520px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(79,190,206,.30),transparent)}
-.cta-band .wrap{position:relative;padding-top:88px;padding-bottom:88px}
-.cta-badge{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 24px;border-radius:20px;background:#fff;box-shadow:0 18px 36px -14px rgba(0,0,0,.45)}
-.cta-badge img{width:40px;height:40px}
-.cta-band h2{color:#fff;font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.035em;max-width:760px;margin:0 auto;text-wrap:balance}
-.cta-band h2 span{color:var(--aqua)}
-.cta-band p{color:rgba(255,255,255,.8);font-size:17px;max-width:600px;margin:14px auto 0}
-.cta-band-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:30px}
-.cobertura-note{margin-top:22px!important;font-size:13px!important;color:rgba(255,255,255,.62)!important;letter-spacing:.02em}
+/* ── CTA final con foto ── */
+.cta-photo{position:relative;color:#fff;overflow:hidden;isolation:isolate;background:var(--navy-950)}
+.cta-photo picture{position:absolute;inset:0;z-index:-2}
+.cta-photo picture img{width:100%;height:100%;object-fit:cover;object-position:55% 50%}
+.cta-photo::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(7,31,53,.78) 0%,rgba(7,31,53,.9) 60%,rgba(7,31,53,.96) 100%)}
+.cta-photo .wrap{padding-top:72px;padding-bottom:96px}
+.cta-photo .kicker{color:var(--aqua-100)}
+.cta-photo h2{color:#fff;font-size:clamp(32px,8.4vw,60px);font-weight:800;letter-spacing:-.04em;line-height:1.02;margin:16px 0 0;max-width:780px;text-wrap:balance}
+.cta-photo h2 em{font-style:normal;color:var(--aqua)}
+.cta-photo p{color:rgba(255,255,255,.82);font-size:17px;max-width:560px;margin-top:16px}
+.cta-photo-actions{display:flex;flex-direction:column;gap:12px;margin-top:28px}
+.cta-photo-actions .btn{white-space:normal;line-height:1.25}
+.cobertura-note{margin-top:26px;font-size:13px;color:rgba(255,255,255,.66);letter-spacing:.02em}
+.cta-photo .credit{position:absolute;right:16px;bottom:14px;font-size:11px;color:rgba(255,255,255,.55);display:none}
 
 /* Footer */
-.footer{background:var(--bg);border-top:1px solid var(--gris-100);padding:56px 0 calc(28px + env(safe-area-inset-bottom))}
-.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px}
-.footer-brand img{height:40px;width:auto}
+.footer{background:var(--hueso);padding:52px 0 calc(96px + env(safe-area-inset-bottom))}
+.footer-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+.footer-brand img{height:38px;width:auto}
 .footer-brand p{font-size:14px;color:var(--gris);margin-top:16px;max-width:320px}
-.footer h4{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--gris);margin-bottom:14px}
-.footer ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.footer h4{font:600 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--gris);margin-bottom:10px}
+.footer ul{list-style:none;margin:0;padding:0}
 .footer li{font-size:14px;color:var(--tinta-2)}
 .footer li a{display:inline-flex;align-items:center;min-height:44px;transition:color .15s}
 .footer li a:hover{color:var(--azul)}
-.footer-foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:40px;padding-top:20px;border-top:1px solid var(--gris-200);font-size:12.5px;color:var(--gris)}
+.footer-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:36px;padding-top:20px;border-top:1px solid var(--linea);font-size:12.5px;color:var(--gris)}
 
 /* Flotante WhatsApp */
-.wa-float{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;display:inline-flex;align-items:center;gap:10px;height:56px;padding:0 20px 0 16px;border-radius:var(--pill);
+.wa-float{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;display:inline-flex;align-items:center;gap:10px;height:56px;padding:0 18px 0 14px;border-radius:var(--pill);
   background:var(--wa);color:#fff;font:600 15px/1 var(--body);box-shadow:0 16px 30px -12px rgba(8,105,74,.7),0 2px 6px rgba(10,44,74,.18);
   transform:translateY(0);opacity:1;transition:transform .28s var(--back),opacity .2s var(--ease),background-color .18s}
 .wa-float:hover{background:var(--wa-700)}
@@ -519,107 +576,161 @@ details[open] > summary .chev{transform:rotate(180deg)}
 
 /* ── Movimiento ── */
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@keyframes pop{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
-@keyframes draw{from{stroke-dashoffset:420}to{stroke-dashoffset:0}}
+@keyframes reveal{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
 @keyframes pulse{0%{transform:scale(.5);opacity:.9}70%{transform:scale(1.9);opacity:0}100%{opacity:0}}
 @keyframes drop{0%{transform:translateY(-26px) scale(.9);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
-.hero .in{animation:rise .6s var(--ease) both;animation-delay:calc(var(--d,0) * 60ms + 80ms)}
-.pcard{animation:rise .7s var(--ease) both;animation-delay:200ms}
-.smile .wire{stroke-dasharray:420;animation:draw 1s var(--ease) both;animation-delay:.45s}
-.smile .brk{transform-box:fill-box;transform-origin:center;animation:pop .32s var(--back) both;animation-delay:calc(var(--i) * 50ms + 650ms)}
+.hero .in{animation:rise .55s var(--ease) both;animation-delay:calc(var(--d,0) * 55ms + 60ms)}
+.hero-photo .arch img{animation:reveal 1s var(--ease) both}
+.ledger > div{animation:rise .5s var(--ease) both;animation-delay:calc(var(--i,0) * 50ms + 260ms)}
 .js .rv{opacity:0;transform:translateY(16px);transition:opacity .55s var(--ease),transform .55s var(--ease);transition-delay:calc(var(--d,0) * 55ms)}
 .js .rv.on{opacity:1;transform:none}
 .js .map .pin-drop{opacity:0}
 .js .map.on .pin-drop{animation:drop .5s var(--back) both .15s}
 .js .map.on .pin-label{animation:rise .4s var(--ease) both .45s}
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0s!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0s!important;transition-duration:.001ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
   .js .rv{opacity:1;transform:none}
+  .js .rail::after{--prog:1}
   .js .map .pin-drop{opacity:1}
   .pin-pulse{display:none}
 }
 
-/* ── Responsive ── */
-@media (max-width:1100px){
-  .steps{grid-template-columns:repeat(2,1fr)}
-  .why{grid-template-columns:repeat(2,1fr)}
-}
-@media (max-width:1023px){
-  .hero-grid{grid-template-columns:minmax(0,1fr);gap:0;padding:36px 0 44px}
-  .hero-visual{display:none}
-  .qprices{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:24px}
-  .qnote{display:block}
-  .nav-menu{display:none}
-  .nav-menu + .nav-cta{margin-left:auto}
-  .map-grid{grid-template-columns:minmax(0,1fr)}
+/* ── ≥ 600 ── */
+@media (min-width:600px){
+  .wrap{padding:0 28px}
+  .ledger{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.1fr) minmax(0,1fr)}
+  .hero-lead .ld{display:inline}
+  .hero-lead .ls{display:none}
+  .hero-ctas{flex-direction:row;flex-wrap:wrap}
+  .hero-ctas .btn{width:auto}
+  .hero-ctas .btn-line{display:inline-flex}
+  .sat-copy .btn{width:auto}
+  .cta-photo-actions{flex-direction:row;flex-wrap:wrap}
+  .promises{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:40px}
+  .map{aspect-ratio:4/3}
   .footer-grid{grid-template-columns:1fr 1fr}
   .footer-brand{grid-column:1/-1}
+  .emergency-strip .em-long{display:inline}
 }
-@media (max-width:760px){
-  .wrap{padding:0 18px}
-  .emergency-strip .em-long{display:none}
-  .nav{height:60px;gap:12px}
-  .nav-brand img{height:32px}
-  .nav-cta .btn-line{display:none}
-  .nav-cta .btn{padding:0 16px}
-  .nav-cta .btn-wa{transition:opacity .2s var(--ease),transform .2s var(--ease)}
-  .float-on .nav-cta .btn-wa{opacity:0;transform:scale(.92);visibility:hidden;transition:opacity .2s var(--ease),transform .2s var(--ease),visibility 0s .2s}
-  .hero-grid{padding:24px 0 28px}
-  .rx{padding-bottom:40px}
-  .hero h1{font-size:clamp(31px,8.6vw,40px);margin:14px 0 12px}
-  .hero h1 .sub::after{margin-top:12px;width:64px;height:3px}
-  .hero-lead{font-size:16px}
-  .qprices{grid-template-columns:1fr 1fr;margin-top:20px}
-  .hero-ctas{margin-top:18px}
-  .hero-ctas .btn{width:100%;white-space:normal;text-align:center;line-height:1.25}
-  .only-m{display:inline}
-  .hero-ctas .btn-line{min-height:48px}
-  .hero-meta{font-size:13px;gap:6px 14px;margin-top:16px}
-  .rx-in{grid-template-columns:1fr;gap:12px;padding:20px}
-  .rx-ico{display:none}
-  .rx-price{text-align:left;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .rx-price .s{margin-top:0}
-  .sec{padding:60px 0}
-  .sec-head{margin-bottom:28px}
-  .sec-head p{font-size:16px}
-  .steps{grid-template-columns:1fr;gap:12px}
-  .step{padding:20px}
-  .cta-mid-in{flex-direction:column;align-items:stretch;padding:36px 0}
-  .cta-mid-actions .btn{flex:1 1 100%;white-space:normal;text-align:center;line-height:1.25}
-  .team{grid-template-columns:1fr;gap:12px}
-  .person{padding:20px}
-  .towns{grid-template-columns:1fr;padding:20px}
-  .chips{justify-content:flex-start}
-  .why{grid-template-columns:1fr;gap:12px}
-  .why-item{padding:20px;display:grid;grid-template-columns:44px 1fr;gap:4px 16px}
-  .why-ico{margin:0;grid-row:span 2}
-  .faq-grid{grid-template-columns:1fr}
-  .map{aspect-ratio:4/3;min-height:0}
-  .pin-label{left:-100px;top:-122px}
-  .posts{grid-template-columns:1fr;gap:12px}
-  .cta-band .wrap{padding-top:64px;padding-bottom:96px}
-  .cta-band-actions .btn{width:100%;white-space:normal;text-align:center;line-height:1.25}
-  .footer{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
-  .footer-grid{grid-template-columns:1fr;gap:28px}
-  .wa-float{padding:0 18px 0 14px}
+/* ── ≥ 761 ── */
+@media (min-width:761px){
+  .nav{height:68px;gap:24px}
+  .nav-brand img{height:38px}
+  .nav-cta .btn-line{display:inline-flex}
+  .float-on .nav-cta .btn-wa{opacity:1;transform:none;visibility:visible}
+  .sec{padding:96px 0}
+  .sat{padding:96px 0}
+  .stop h3{font-size:22px}
+  .person{grid-template-columns:96px minmax(0,1fr);gap:22px}
+  .portrait{width:96px;height:116px;border-radius:48px 48px 16px 16px;font-size:26px}
+  .footer{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+  .cta-photo .credit{display:block}
 }
-@media (max-width:480px){
-  .map{aspect-ratio:1/1}
+/* ── ≥ 1024: composición editorial ── */
+@media (min-width:1024px){
+  .nav-menu{display:flex;gap:2px;margin-left:auto}
+  .nav-menu a{font-size:14px;font-weight:500;color:var(--tinta-2);padding:10px 12px;border-radius:10px;transition:color .15s,background-color .15s}
+  .nav-menu a:hover{color:var(--azul);background:rgba(17,114,171,.07)}
+  .nav-menu + .nav-cta{margin-left:8px}
+
+  .hero-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:64px;align-items:center;padding:40px 0 64px}
+  .hero-photo{order:0;margin:0}
+  .hero-photo .arch{height:auto;aspect-ratio:4/4.6;border-radius:999px 999px 28px 28px / 300px 300px 28px 28px}
+  .hero-photo .arch img{object-position:30% 60%}
+  .ph-tag{left:24px;bottom:20px;font-size:14px}
+  .hero-photo .ph-tag{display:none}
+  .sat-card{display:block;position:absolute;left:-36px;bottom:40px;z-index:3;background:var(--blanco);border-radius:20px;padding:16px 20px 16px 18px;box-shadow:var(--shadow-lg);
+    animation:rise .6s var(--ease) both .5s}
+  .sat-card .k{font:600 11px/1.2 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--aqua-ink)}
+  .sat-card .d{display:block;font:800 26px/1.05 var(--display);letter-spacing:-.03em;color:var(--navy);margin-top:6px}
+  .sat-card .h{display:block;font:600 15px/1.3 var(--body);color:var(--tinta-2);margin-top:2px}
+  .ph-cap{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--gris);justify-content:flex-end}
+  .hero h1{font-size:clamp(46px,4.6vw,64px);margin:18px 0 16px}
+  .hero-lead{font-size:18px}
+  .ledger{margin-top:30px}
+  .ledger > div{padding:14px 16px 16px}
+  .ledger dd{font-size:24px}
+  .ledger-note .xs{display:inline}
+  .hero-ctas{margin-top:26px}
+  .hero-meta{font-size:14px;margin-top:18px}
+
+  .sec-head{margin-bottom:48px}
+  .rail{grid-template-columns:repeat(4,minmax(0,1fr));gap:32px}
+  .rail::before,.rail::after{left:12px;right:12px;top:11px;bottom:auto;width:auto;height:2px}
+  .rail::after{transform-origin:left;transform:scaleX(var(--prog,1))}
+  .stop{padding:44px 0 0 0}
+  .stop .node{top:0;left:0}
+  .stop p{font-size:15px}
+  .stop-price{flex-direction:column;align-items:flex-start;gap:6px;margin-top:20px;padding-top:18px;border-top:1px solid var(--linea)}
+  .stop-price .v{font-size:40px}
+
+  .colors-grid{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);grid-template-areas:"head smile" "pick smile";column-gap:64px;row-gap:8px;align-items:start}
+  .colors-head{grid-area:head;align-self:end}
+  .colors-pick{grid-area:pick}
+  .smile-stage{grid-area:smile;align-self:center;margin:0 -40px 0 -8px}
+  .colors-head .sec-head{margin-bottom:12px}
+
+  .team-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:64px;align-items:center}
+  .place .ph{aspect-ratio:5/4.3}
+  .team-copy .sec-head{margin-bottom:24px}
+
+  .sat-grid{grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr);gap:48px}
+  .sat-word{font-size:clamp(96px,10.4vw,148px)}
+  .sat-copy{padding-bottom:18px}
+
+  .promises{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:48px}
+  .promise{grid-template-columns:1fr;padding:24px 0 28px}
+  .promise::before{grid-row:auto;margin-bottom:6px}
+
+  .faq-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:72px;align-items:start}
+  .faq-aside{position:sticky;top:110px}
+  .faq-aside .sec-head{margin-bottom:12px}
+
+  .map-grid{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}
+  .map{aspect-ratio:auto;min-height:520px}
+  .pin-label{left:28px;top:-74px}
+  .loc-card{padding:24px 26px}
+
+  .posts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:40px;border-top:0}
+  .post{border-top:1px solid var(--linea);border-bottom:0;padding:22px 0;align-items:start}
+
+  .cta-photo::before{background:linear-gradient(90deg,rgba(7,31,53,.94) 0%,rgba(7,31,53,.82) 45%,rgba(7,31,53,.35) 100%)}
+  .cta-photo .wrap{padding-top:128px;padding-bottom:128px}
+  .footer-grid{grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px}
+  .footer-brand{grid-column:auto}
 }
+@media (max-width:1023px){ .ph-cap{display:none} }
 @media (max-width:380px){
-  .qprice{padding:10px 12px}
-  .qprice .v{font-size:19px}
+  .ledger > div{padding:10px 11px 11px}
+  .ledger dd{font-size:19px}
+  .ledger dt{font-size:12px}
+  .hero h1{font-size:30px}
+  .emergency-strip{font-size:11.5px}
   .loc-btns{grid-template-columns:1fr}
-  .emergency-strip{font-size:11px}
+  .swatches{gap:8px}
 }
-@media (max-height:480px) and (orientation:landscape){
+/* Teléfono horizontal: poca altura, manda el contenido */
+@media (max-height:500px) and (orientation:landscape){
   .nav-wrap{position:static}
-  .hero-grid{padding:20px 0 28px}
-  .hero h1{font-size:28px;margin:10px 0 8px}
-  .hero h1 .sub::after{display:none}
-  .hero-lead{display:none}
-  .qprices{grid-template-columns:repeat(4,1fr);margin-top:12px}
   .emergency-strip{padding:4px 16px}
+  .hero-grid{grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:28px;align-items:center;padding:16px 0 24px}
+  .hero-photo{order:0;margin:0}
+  .hero-photo .arch{height:auto;aspect-ratio:1/1.05;border-radius:999px 999px 18px 18px / 120px 120px 18px 18px}
+  .hero h1{font-size:30px;margin:8px 0 6px}
+  .hero h1 em{display:inline}
+  .hero-lead{display:none}
+  .ledger{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}
+  .ledger > div{padding:8px 10px}
+  .ledger dd{font-size:18px}
+  .ledger .is-esp{padding-top:8px!important}
+  .ledger .is-esp .esp{display:none}
+  .hero .kicker{display:none}
+  .nav{height:52px}
+  .hero-ctas .btn-xl{min-height:48px}
+  .ledger-note{display:none}
+  .hero-ctas{flex-direction:row;margin-top:12px}
+  .hero-ctas .btn{width:auto}
+  .hero-meta{display:none}
 }
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
@@ -634,10 +745,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
-  <symbol id="i-chev" viewBox="0 0 24 24"><polyline fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="6 9 12 15 18 9"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></g></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.8l1.4-2h6.6l1.4 2h1.8A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.5"/></g></symbol>
 </svg>
 
 <div class="emergency-strip">
@@ -653,6 +764,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="nav-menu">
         <a href="#precios">Precios</a>
         <a href="#proceso">Proceso</a>
+        <a href="#colores">Colores</a>
         <a href="#preguntas">Preguntas</a>
         <a href="#ubicacion">Cómo llegar</a>
         <a href="/blog">Blog</a>
@@ -675,20 +787,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <section class="hero" aria-labelledby="hero-h1" id="precios">
   <div class="wrap">
     <div class="hero-grid">
-      <div>
+      <div class="hero-copy">
         <div class="kicker in" style="--d:0">Ortodoncia · Dra. Daniela Castillo</div>
-        <h1 id="hero-h1" class="in" style="--d:1">Ortodoncia en Carampangue, <span class="sub">sin viajar a Concepción.</span></h1>
-        <p class="hero-lead in" style="--d:2">Brackets con ortodoncista aquí mismo, en la Provincia de Arauco, con <strong>instalaciones y controles los sábados</strong>. Cada etapa tiene su precio publicado.</p>
+        <h1 id="hero-h1" class="in" style="--d:1">Ortodoncia en Carampangue, <em>sin viajar a Concepción.</em></h1>
+        <p class="hero-lead in" style="--d:2"><span class="ld">Brackets con ortodoncista aquí mismo, en la Provincia de Arauco, con <strong>instalaciones y controles los sábados</strong>. Cada etapa tiene su precio publicado.</span><span class="ls"><strong>Instalaciones y controles los sábados</strong> · precios publicados.</span></p>
 
-        <div class="qprices in" style="--d:3" role="list" aria-label="Precios de ortodoncia">
-          <div class="qprice" role="listitem"><span class="l">1 · Evaluación</span><span class="v num">$15.000</span></div>
-          <div class="qprice is-esp" role="listitem"><span class="flag">Precio especial</span><span class="l">2 · Estudio radiográfico</span><span class="v num">$40.000</span></div>
-          <div class="qprice" role="listitem"><span class="l">3 · Brackets</span><span class="v num">$120.000</span></div>
-          <div class="qprice" role="listitem"><span class="l">4 · Control mensual</span><span class="v num">$30.000</span></div>
-        </div>
-        <p class="qnote in" style="--d:3" id="qnote-m">Brackets boca completa; una arcada $60.000. La evaluación se descuenta si ese mismo día comienzas o dejas pagado el tratamiento previo (casi siempre limpieza y flúor).</p>
+        <dl class="ledger num" aria-label="Precios de ortodoncia">
+          <div style="--i:0"><dt>Evaluación</dt><dd>$15.000</dd></div>
+          <div class="is-esp" style="--i:1"><dt>Estudio radiográfico</dt><dd>$40.000</dd><span class="esp">Precio especial</span></div>
+          <div style="--i:2"><dt>Brackets</dt><dd>$120.000</dd></div>
+          <div style="--i:3"><dt>Control mensual</dt><dd>$30.000</dd></div>
+        </dl>
+        <p class="ledger-note in" style="--d:4">Brackets boca completa; una arcada $60.000. <span class="xs">La evaluación se descuenta si ese mismo día comienzas o dejas pagado el tratamiento previo.</span></p>
 
-        <div class="hero-ctas in" style="--d:4">
+        <div class="hero-ctas in" style="--d:5">
           <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20una%20evaluaci%C3%B3n%20de%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=hero_cta&utm_campaign=ortodoncia_arauco"
              class="btn btn-wa btn-xl" target="_blank" rel="noopener" id="cta-hero-wa">
             <svg width="20" height="20" aria-hidden="true"><use href="#i-wa"/></svg>
@@ -696,301 +808,381 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </a>
           <a href="tel:+56442965226" class="btn btn-line btn-xl" aria-label="Llamar al (44) 296 5226">
             <svg width="18" height="18" aria-hidden="true"><use href="#i-phone"/></svg>
-            <span><span class="only-m">Llamar </span>(44) 296 5226</span>
+            (44) 296 5226
           </a>
         </div>
-        <div class="hero-meta in" style="--d:5">
+        <div class="hero-meta in" style="--d:6">
           <span><svg width="16" height="16" aria-hidden="true"><use href="#i-pin"/></svg>Monsalve 102, Carampangue</span>
           <span>Efectivo · transferencia · débito · crédito</span>
         </div>
       </div>
 
-      <div class="hero-visual">
-        <div class="pcard" aria-labelledby="pcard-h">
-          <div class="pcard-top">
-            <span class="kicker" id="pcard-h">Tu tratamiento, paso a paso</span>
-            <span class="pcard-doc">Precios vigentes</span>
-          </div>
-          <svg class="smile" viewBox="0 0 360 132" role="img" aria-label="Ilustración de una arcada dental con brackets">
-            <g>
-              <g transform="translate(42.7 40.0) rotate(35.0)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(73.2 59.0) rotate(28.5)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(103.7 73.2) rotate(21.2)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(134.2 82.7) rotate(13.1)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(164.7 87.4) rotate(4.4)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(195.3 87.4) rotate(-4.4)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(225.8 82.7) rotate(-13.1)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(256.3 73.2) rotate(-21.2)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(286.8 59.0) rotate(-28.5)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-              <g transform="translate(317.3 40.0) rotate(-35.0)"><rect class="tooth" x="-13" y="-6" width="26" height="30" rx="9"/></g>
-            </g>
-            <path class="wire" d="M24 26 Q180 150 336 26"/>
-            <g>
-              <g transform="translate(42.7 40.0) rotate(35.0)"><rect class="brk" style="--i:0" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(73.2 59.0) rotate(28.5)"><rect class="brk" style="--i:1" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(103.7 73.2) rotate(21.2)"><rect class="brk" style="--i:2" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(134.2 82.7) rotate(13.1)"><rect class="brk" style="--i:3" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(164.7 87.4) rotate(4.4)"><rect class="brk" style="--i:4" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(195.3 87.4) rotate(-4.4)"><rect class="brk" style="--i:5" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(225.8 82.7) rotate(-13.1)"><rect class="brk" style="--i:6" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(256.3 73.2) rotate(-21.2)"><rect class="brk" style="--i:7" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(286.8 59.0) rotate(-28.5)"><rect class="brk" style="--i:8" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-              <g transform="translate(317.3 40.0) rotate(-35.0)"><rect class="brk" style="--i:9" x="-6" y="-6" width="12" height="12" rx="2.5"/></g>
-            </g>
-          </svg>
-          <div class="prow"><span class="n">1</span><span class="t">Evaluación con dentista general<small>Se descuenta si ese día inicias el tratamiento previo</small></span><span class="v num">$15.000</span></div>
-          <div class="prow is-esp"><span class="n">2</span><span class="t">Estudio radiográfico <span class="esp">Precio especial</span><small>Panorámica + telerradiografía + bitewing</small></span><span class="v num">$40.000</span></div>
-          <div class="prow"><span class="n">3</span><span class="t">Instalación de brackets<small>Boca completa · una arcada $60.000</small></span><span class="v num">$120.000</span></div>
-          <div class="prow"><span class="n">4</span><span class="t">Control mensual<small>Habitualmente 18 a 24 meses</small></span><span class="v num">$30.000</span></div>
-          <p class="pcard-foot">Precios referenciales de atención particular. El plan y su duración los define la ortodoncista según tu caso.</p>
+      <figure class="hero-photo">
+        <div class="arch">
+          <picture>
+            <source type="image/webp" sizes="(max-width:1023px) calc(100vw - 36px), 560px"
+                    srcset="/static/images/ortodoncia/fachada-640.webp 640w, /static/images/ortodoncia/fachada-1000.webp 1000w, /static/images/ortodoncia/fachada-1448.webp 1448w">
+            <img src="/static/images/ortodoncia/fachada-1000.jpg" width="1000" height="750" fetchpriority="high" decoding="async"
+                 alt="Fachada del Centro Médico y Dental Carampangue en Monsalve 102, edificio de dos pisos revestido en madera oscura, en un día soleado.">
+          </picture>
+          <span class="ph-tag"><svg width="16" height="16" aria-hidden="true"><use href="#i-pin"/></svg>Monsalve 102 · frente a la antigua estación</span>
         </div>
-      </div>
-    </div>
-    <div class="rx" role="region" aria-labelledby="rx-h">
-      <div class="rx-in rv">
-        <div class="rx-ico" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 14c1.2-2.4 2.8-3.6 5-3.6s3.8 1.2 5 3.6"/><path d="M8.5 10.5v3M12 9.6v4.2M15.5 10.5v3"/></svg>
+        <div class="sat-card" aria-hidden="true">
+          <span class="k">Instalaciones y controles</span>
+          <span class="d">Sábados</span>
+          <span class="h num">09:00 – 19:00</span>
         </div>
-        <div>
-          <span class="tag tag-esp"><svg width="12" height="12" aria-hidden="true"><use href="#i-star"/></svg>Precio especial</span>
-          <h2 id="rx-h">Estudio radiográfico de ortodoncia</h2>
-          <p>Panorámica + telerradiografía + bitewing: las tres imágenes que la ortodoncista necesita para planificar tus brackets, en un solo valor.</p>
-        </div>
-        <div class="rx-price">
-          <span class="v num">$40.000</span>
-          <span class="s">Las tres imágenes en un solo valor</span>
-        </div>
-      </div>
+        <figcaption class="ph-cap"><svg width="15" height="15" aria-hidden="true"><use href="#i-pin"/></svg>Nuestro centro en Monsalve 102, frente a la antigua estación de trenes</figcaption>
+      </figure>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ PROCESO Y PRECIOS ═══════════ -->
+<!-- ═══════════ RECORRIDO ═══════════ -->
 <section class="sec" aria-labelledby="proceso-h2" id="proceso">
   <div class="wrap">
     <div class="sec-head rv">
       <span class="kicker">Cómo es el proceso</span>
-      <h2 id="proceso-h2">Cuatro pasos, cada uno con su precio</h2>
-      <p>Sin sorpresas: sabes qué viene y cuánto cuesta desde la primera conversación.</p>
+      <h2 id="proceso-h2">Cuatro paradas, <em>cada una con su precio.</em></h2>
+      <p>Sabes qué viene y cuánto cuesta desde la primera conversación. Sin paquetes cerrados: pagas cada etapa cuando llega.</p>
     </div>
 
-    <div class="steps">
-      <article class="step rv" style="--d:0">
-        <span class="step-n">PASO 01</span>
+    <ol class="rail" id="rail">
+      <li class="stop rv" style="--d:0">
+        <span class="node" aria-hidden="true"></span>
+        <span class="stop-n">PARADA 01</span>
         <h3>Evaluación con dentista general</h3>
-        <p>La Dra. Javiera Burgos revisa tus dientes, encías y mordida. Si hay algo que resolver antes (casi siempre limpieza y flúor), se hace primero, para que los brackets partan sobre una boca sana.</p>
-        <div class="step-price">
-          <div class="step-line"></div>
+        <p>La Dra. Javiera Burgos revisa dientes, encías y mordida. Si hay algo que resolver antes (casi siempre limpieza y flúor), se hace primero, para que los brackets partan sobre una boca sana.</p>
+        <div class="stop-price">
           <span class="v num">$15.000</span>
           <span class="s"><b>Se descuenta</b> si ese mismo día comienzas o dejas pagado el tratamiento previo.</span>
         </div>
-      </article>
-      <article class="step is-esp rv" style="--d:1">
-        <span class="step-n">PASO 02</span>
-        <h3>Estudio radiográfico de ortodoncia</h3>
+      </li>
+      <li class="stop is-esp rv" style="--d:1">
+        <span class="node" aria-hidden="true"></span>
+        <span class="stop-n">PARADA 02</span>
+        <h3>Estudio radiográfico de ortodoncia <span class="esp"><svg width="10" height="10" aria-hidden="true"><use href="#i-star"/></svg>Precio especial</span></h3>
         <p>Panorámica, telerradiografía y bitewing. Es requisito antes de instalar: con estas imágenes la ortodoncista planifica tu caso.</p>
-        <span class="tag tag-esp"><svg width="12" height="12" aria-hidden="true"><use href="#i-star"/></svg>Precio especial</span>
-        <div class="step-price">
-          <div class="step-line"></div>
+        <div class="stop-price">
           <span class="v num">$40.000</span>
           <span class="s">Las tres imágenes en un solo valor.</span>
         </div>
-      </article>
-      <article class="step rv" style="--d:2">
-        <span class="step-n">PASO 03</span>
+      </li>
+      <li class="stop rv" style="--d:2">
+        <span class="node" aria-hidden="true"></span>
+        <span class="stop-n">PARADA 03</span>
         <h3>Instalación con la Dra. Daniela Castillo</h3>
-        <p>La ortodoncista instala los brackets metálicos y el arco inicial, y <strong>tú eliges el color de tus elásticos</strong> 🎨. Puede haber una molestia leve por presión los primeros días.</p>
-        <div class="step-price">
-          <div class="step-line"></div>
+        <p>La ortodoncista instala los brackets metálicos y el arco inicial, y <strong>tú eliges el color de tus elásticos</strong>. Puede haber una molestia leve por presión los primeros días.</p>
+        <div class="stop-price">
           <span class="v num">$120.000</span>
           <span class="s">Boca completa. <b>Una arcada: $60.000.</b></span>
         </div>
-      </article>
-      <article class="step rv" style="--d:3">
-        <span class="step-n">PASO 04</span>
+      </li>
+      <li class="stop rv" style="--d:3">
+        <span class="node" aria-hidden="true"></span>
+        <span class="stop-n">PARADA 04</span>
         <h3>Controles mensuales</h3>
         <p>Cada mes se ajustan los arcos y elásticos y se revisa el avance. Asistir a todos los controles es lo que más influye en el tiempo total.</p>
-        <div class="step-price">
-          <div class="step-line"></div>
+        <div class="stop-price">
           <span class="v num">$30.000</span>
           <span class="s">Por control · habitualmente 18 a 24 meses.</span>
         </div>
-      </article>
-    </div>
-
+      </li>
+    </ol>
+    <p class="rail-foot rv">Precios referenciales de atención particular. El plan y su duración los define la ortodoncista según tu caso.</p>
   </div>
 </section>
 
-<!-- ═══════════ CTA MEDIO ═══════════ -->
-<section class="cta-mid" aria-label="Agendar evaluación">
+<!-- ═══════════ COLORES (elemento firma) ═══════════ -->
+<section class="sec colors" aria-labelledby="colores-h2" id="colores">
   <div class="wrap">
-    <div class="cta-mid-in">
-      <div class="rv">
-        <h2>El primer paso es la evaluación.</h2>
-        <p>Escríbenos y te damos hora con la dentista general. Desde ahí coordinamos todo lo demás.</p>
+    <div class="colors-grid">
+      <div class="colors-head">
+        <div class="sec-head rv">
+          <span class="kicker">Brackets metálicos</span>
+          <h2 id="colores-h2">El color de tus elásticos <em>lo eliges tú.</em></h2>
+          <p>Uno solo o dos alternados: pruébalo aquí. Los elásticos se cambian en los controles, cuando se ajustan los arcos.</p>
+        </div>
       </div>
-      <div class="cta-mid-actions rv" style="--d:1">
+      <div class="smile-stage rv" aria-hidden="true">
+        <div class="smile-glow"></div>
+        <svg class="smile-svg" id="smile" viewBox="26 88 548 204" focusable="false">
+          <defs><clipPath id="boca"><path d="M34 128 Q300 72 566 128 Q300 430 34 128Z"/></clipPath><linearGradient id="encia" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B35F70"/><stop offset="1" stop-color="#D98C98"/></linearGradient><linearGradient id="esmalte" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F1ECE3"/><stop offset=".35" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EEE8DD"/></linearGradient><linearGradient id="esmalte-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9E3D8"/><stop offset="1" stop-color="#D9D2C5"/></linearGradient><linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FAFCFD"/><stop offset=".5" stop-color="#C5CED7"/><stop offset="1" stop-color="#8794A1"/></linearGradient><radialGradient id="sombra-boca" cx=".5" cy=".5" r=".62"><stop offset=".62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient></defs>
+          <g clip-path="url(#boca)">
+          <path d="M34 128 Q300 72 566 128 Q300 430 34 128Z" fill="#2B121B"/>
+          <g class="teeth-lo">
+          <rect class="t2" x="70.2" y="158.2" width="33" height="130.0" rx="10.6"/>
+          <rect class="t2" x="105.8" y="167.0" width="36" height="130.0" rx="11.5"/>
+          <rect class="t2" x="144.2" y="174.6" width="38" height="130.0" rx="12.2"/>
+          <rect class="t2" x="184.8" y="184.4" width="40" height="130.0" rx="12.8"/>
+          <rect class="t2" x="227.2" y="184.1" width="35" height="130.0" rx="11.2"/>
+          <rect class="t2" x="264.8" y="185.8" width="34" height="130.0" rx="10.9"/>
+          <rect class="t2" x="301.2" y="185.8" width="34" height="130.0" rx="10.9"/>
+          <rect class="t2" x="337.8" y="184.1" width="35" height="130.0" rx="11.2"/>
+          <rect class="t2" x="375.2" y="184.4" width="40" height="130.0" rx="12.8"/>
+          <rect class="t2" x="417.8" y="174.6" width="38" height="130.0" rx="12.2"/>
+          <rect class="t2" x="458.2" y="167.0" width="36" height="130.0" rx="11.5"/>
+          <rect class="t2" x="496.8" y="158.2" width="33" height="130.0" rx="10.6"/>
+          </g>
+          <g class="arch arch-l">
+          <rect class="b" x="116.8" y="187.3" width="14.0" height="14.0" rx="2.2"/>
+          <rect class="b" x="156.2" y="202.8" width="14.0" height="14.0" rx="2.2"/>
+          <rect class="b" x="197.8" y="217.1" width="14.0" height="14.0" rx="2.2"/>
+          <rect class="b" x="237.8" y="221.1" width="14.0" height="14.0" rx="2.2"/>
+          <rect class="b" x="274.9" y="223.0" width="13.6" height="13.6" rx="2.2"/>
+          <rect class="b" x="311.4" y="223.0" width="13.6" height="13.6" rx="2.2"/>
+          <rect class="b" x="348.2" y="221.1" width="14.0" height="14.0" rx="2.2"/>
+          <rect class="b" x="388.2" y="217.1" width="14.0" height="14.0" rx="2.2"/>
+          <rect class="b" x="429.8" y="202.8" width="14.0" height="14.0" rx="2.2"/>
+          <rect class="b" x="469.2" y="187.3" width="14.0" height="14.0" rx="2.2"/>
+          <path class="w" d="M107.8 190.3 L123.8 194.3 C130.3 196.9 149.8 204.8 163.2 209.8 C176.8 214.8 191.2 221.1 204.8 224.1 C218.3 227.2 231.9 227.2 244.8 228.1 C257.6 229.1 269.5 229.5 281.8 229.8 C294.0 230.1 306.0 230.1 318.2 229.8 C330.5 229.5 342.4 229.1 355.2 228.1 C368.1 227.2 381.7 227.2 395.2 224.1 C408.8 221.1 423.2 214.8 436.8 209.8 C450.2 204.8 469.7 196.9 476.2 194.3 L492.2 190.3"/>
+          <rect class="lg" data-k="0" style="--o:4" x="113.8" y="184.3" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="1" style="--o:3" x="153.2" y="199.8" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="2" style="--o:2" x="194.8" y="214.1" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="3" style="--o:1" x="234.8" y="218.1" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="4" style="--o:0" x="271.9" y="220.0" width="19.6" height="19.6" rx="7.1"/>
+          <rect class="lg" data-k="5" style="--o:0" x="308.4" y="220.0" width="19.6" height="19.6" rx="7.1"/>
+          <rect class="lg" data-k="6" style="--o:1" x="345.2" y="218.1" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="7" style="--o:2" x="385.2" y="214.1" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="8" style="--o:3" x="426.8" y="199.8" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="9" style="--o:4" x="466.2" y="184.3" width="20.0" height="20.0" rx="7.2"/>
+          </g>
+          <g class="teeth-up">
+          <rect class="t" x="34.2" y="81.6" width="31" height="80.1" rx="10.5"/>
+          <rect class="t" x="67.8" y="83.5" width="35" height="88.2" rx="11.9"/>
+          <rect class="t" x="105.2" y="85.3" width="38" height="95.8" rx="12.9"/>
+          <rect class="t" x="145.8" y="86.9" width="44" height="106.4" rx="15.0"/>
+          <rect class="t" x="192.2" y="88.1" width="46" height="107.5" rx="15.6"/>
+          <rect class="t" x="240.8" y="88.9" width="58" height="110.5" rx="19.7"/>
+          <rect class="t" x="301.2" y="88.9" width="58" height="110.5" rx="19.7"/>
+          <rect class="t" x="361.8" y="88.1" width="46" height="107.5" rx="15.6"/>
+          <rect class="t" x="410.2" y="86.9" width="44" height="106.4" rx="15.0"/>
+          <rect class="t" x="456.8" y="85.3" width="38" height="95.8" rx="12.9"/>
+          <rect class="t" x="497.2" y="83.5" width="35" height="88.2" rx="11.9"/>
+          <rect class="t" x="534.8" y="81.6" width="31" height="80.1" rx="10.5"/>
+          </g>
+          <path d="M0 0 L0 110.3 L32.8 114.6 Q49.8 96.6 66.8 114.6 L66.2 116.5 Q85.2 98.5 104.2 116.5 L103.8 118.3 Q124.2 100.3 144.8 118.3 L144.2 119.9 Q167.8 101.9 191.2 119.9 L190.8 121.1 Q215.2 103.1 239.8 121.1 L239.2 121.9 Q269.8 103.9 300.2 121.9 L299.8 121.9 Q330.2 103.9 360.8 121.9 L360.2 121.1 Q384.8 103.1 409.2 121.1 L408.8 119.9 Q432.2 101.9 455.8 119.9 L455.2 118.3 Q475.8 100.3 496.2 118.3 L495.8 116.5 Q514.8 98.5 533.8 116.5 L533.2 114.6 Q550.2 96.6 567.2 114.6 L600 110.3 L600 0Z" fill="url(#encia)"/>
+          <g class="arch arch-u">
+          <rect class="b" x="78.2" y="133.9" width="14.0" height="14.0" rx="2.4"/>
+          <rect class="b" x="116.7" y="139.1" width="15.2" height="15.2" rx="2.4"/>
+          <rect class="b" x="159.8" y="145.8" width="16.0" height="16.0" rx="2.4"/>
+          <rect class="b" x="207.2" y="147.5" width="16.0" height="16.0" rx="2.4"/>
+          <rect class="b" x="261.8" y="149.9" width="16.0" height="16.0" rx="2.4"/>
+          <rect class="b" x="322.2" y="149.9" width="16.0" height="16.0" rx="2.4"/>
+          <rect class="b" x="376.8" y="147.5" width="16.0" height="16.0" rx="2.4"/>
+          <rect class="b" x="424.2" y="145.8" width="16.0" height="16.0" rx="2.4"/>
+          <rect class="b" x="468.1" y="139.1" width="15.2" height="15.2" rx="2.4"/>
+          <rect class="b" x="507.8" y="133.9" width="14.0" height="14.0" rx="2.4"/>
+          <path class="w" d="M69.2 136.9 L85.2 140.9 C91.8 141.9 110.5 144.5 124.2 146.7 C138.0 148.8 152.6 152.3 167.8 153.8 C182.9 155.2 198.2 154.9 215.2 155.5 C232.2 156.2 250.6 157.5 269.8 157.9 C288.9 158.3 311.1 158.3 330.2 157.9 C349.4 157.5 367.8 156.2 384.8 155.5 C401.8 154.9 417.1 155.2 432.2 153.8 C447.4 152.3 462.0 148.8 475.8 146.7 C489.5 144.5 508.2 141.9 514.8 140.9 L530.8 136.9"/>
+          <rect class="lg" data-k="10" style="--o:4" x="75.2" y="130.9" width="20.0" height="20.0" rx="7.2"/>
+          <rect class="lg" data-k="11" style="--o:3" x="113.7" y="136.1" width="21.2" height="21.2" rx="7.6"/>
+          <rect class="lg" data-k="12" style="--o:2" x="156.8" y="142.8" width="22.0" height="22.0" rx="7.9"/>
+          <rect class="lg" data-k="13" style="--o:1" x="204.2" y="144.5" width="22.0" height="22.0" rx="7.9"/>
+          <rect class="lg" data-k="14" style="--o:0" x="258.8" y="146.9" width="22.0" height="22.0" rx="7.9"/>
+          <rect class="lg" data-k="15" style="--o:0" x="319.2" y="146.9" width="22.0" height="22.0" rx="7.9"/>
+          <rect class="lg" data-k="16" style="--o:1" x="373.8" y="144.5" width="22.0" height="22.0" rx="7.9"/>
+          <rect class="lg" data-k="17" style="--o:2" x="421.2" y="142.8" width="22.0" height="22.0" rx="7.9"/>
+          <rect class="lg" data-k="18" style="--o:3" x="465.1" y="136.1" width="21.2" height="21.2" rx="7.6"/>
+          <rect class="lg" data-k="19" style="--o:4" x="504.8" y="130.9" width="20.0" height="20.0" rx="7.2"/>
+          </g>
+          <path d="M34 128 Q300 72 566 128 Q300 430 34 128Z" fill="url(#sombra-boca)"/>
+          </g>
+          <path class="labio" d="M34 128 Q300 72 566 128 Q300 430 34 128Z"/>
+        </svg>
+      </div>
+      <div class="colors-pick">
+        <div class="picker rv" style="--d:1" id="picker">
+          <div role="group" aria-label="Cantidad de colores">
+            <span class="mode">
+              <button type="button" data-mode="1" aria-pressed="true">Un color</button>
+              <button type="button" data-mode="2" aria-pressed="false">Dos colores</button>
+            </span>
+            <span class="slots" role="group" aria-label="Color que vas a cambiar">
+              <button type="button" class="slot" data-slot="0" aria-pressed="true" aria-label="Primer color"><span></span></button>
+              <button type="button" class="slot" data-slot="1" aria-pressed="false" aria-label="Segundo color"><span></span></button>
+            </span>
+          </div>
+          <div class="swatches" role="group" aria-label="Colores de elásticos">
+            <button type="button" class="sw" style="--c:#4FBECE" data-c="#4FBECE" data-n="celeste" aria-label="Celeste" aria-pressed="true"></button>
+            <button type="button" class="sw" style="--c:#2F6FE0" data-c="#2F6FE0" data-n="azul" aria-label="Azul" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#8B5CF6" data-c="#8B5CF6" data-n="morado" aria-label="Morado" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#F06FA6" data-c="#F06FA6" data-n="rosado" aria-label="Rosado" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#E5384B" data-c="#E5384B" data-n="rojo" aria-label="Rojo" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#F28C28" data-c="#F28C28" data-n="naranjo" aria-label="Naranjo" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#F5C518" data-c="#F5C518" data-n="amarillo" aria-label="Amarillo" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#22B573" data-c="#22B573" data-n="verde" aria-label="Verde" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#F4F1EA" data-c="#F4F1EA" data-n="blanco" aria-label="Blanco" aria-pressed="false"></button>
+            <button type="button" class="sw" style="--c:#1F2730" data-c="#1F2730" data-n="negro" aria-label="Negro" aria-pressed="false"></button>
+          </div>
+          <p class="readout" aria-live="polite">Tu combinación: <strong id="combo">celeste</strong></p>
+        </div>
+        <div class="colors-cta rv" style="--d:2">
+          <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20una%20evaluaci%C3%B3n%20de%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=colores&utm_campaign=ortodoncia_arauco"
+             class="btn btn-wa btn-xl" target="_blank" rel="noopener" id="cta-colores" data-wa-btn="colores">
+            <svg width="20" height="20" aria-hidden="true"><use href="#i-wa"/></svg>
+            Agendar con esta combinación
+          </a>
+          <p class="colors-note">Colores de referencia. La gama disponible se confirma el día de la instalación.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ EQUIPO ═══════════ -->
+<section class="sec bg-hueso" aria-labelledby="equipo-h2" id="equipo">
+  <div class="wrap">
+    <div class="team-grid">
+      <figure class="place rv">
+        <div class="ph">
+          <picture>
+            <source type="image/webp" sizes="(max-width:1023px) calc(100vw - 36px), 640px"
+                    srcset="/static/images/ortodoncia/sala-espera-700.webp 700w, /static/images/ortodoncia/sala-espera-1400.webp 1400w">
+            <img src="/static/images/ortodoncia/sala-espera-1000.jpg" width="1000" height="602" loading="lazy" decoding="async"
+                 alt="Sala de espera del Centro Médico Carampangue, con paredes revestidas en madera, mesón de recepción y ventanales hacia la calle.">
+          </picture>
+        </div>
+        <figcaption><svg width="15" height="15" aria-hidden="true"><use href="#i-cam"/></svg>Sala de espera del CMC, Monsalve 102</figcaption>
+      </figure>
+      <div class="team-copy">
+        <div class="sec-head rv">
+          <span class="kicker">Quién te atiende</span>
+          <h2 id="equipo-h2">La ortodoncista viene a Carampangue. <em>Tú no viajas.</em></h2>
+        </div>
+        <div class="people">
+          <article class="person rv">
+            <figure class="portrait" data-foto="pendiente" aria-hidden="true">DC</figure>
+            <div>
+              <span class="role">Ortodoncista</span>
+              <h3>Dra. Daniela Castillo</h3>
+              <p>Planifica tu tratamiento, instala los brackets y te acompaña en cada control. Atiende en Carampangue los <strong>sábados de 09:00 a 19:00</strong> y algunos días de la semana.</p>
+            </div>
+          </article>
+          <article class="person rv" style="--d:1">
+            <figure class="portrait alt" data-foto="pendiente" aria-hidden="true">JB</figure>
+            <div>
+              <span class="role">Dentista general · evaluación</span>
+              <h3>Dra. Javiera Burgos</h3>
+              <p>Hace tu evaluación inicial, solicita el estudio radiográfico y coordina tu paso a ortodoncia.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SÁBADOS ═══════════ -->
+<section class="sat" aria-labelledby="sat-h2">
+  <div class="wrap">
+    <div class="sat-grid">
+      <div class="rv">
+        <span class="kicker">Horario de ortodoncia</span>
+        <h2 id="sat-h2" class="sat-word">Sábados<span class="num">09:00 – 19:00</span></h2>
+      </div>
+      <div class="sat-copy rv" style="--d:1">
+        <p><strong>Instalaciones y controles en sábado</strong>, y también algunos días de la semana. No tienes que pedir permiso en el trabajo ni faltar al colegio.</p>
         <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20una%20evaluaci%C3%B3n%20de%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=mid_cta&utm_campaign=ortodoncia_arauco"
            class="btn btn-wa btn-xl" target="_blank" rel="noopener" data-wa-btn="cta-medio">
           <svg width="20" height="20" aria-hidden="true"><use href="#i-wa"/></svg>
-          Agendar por WhatsApp
-        </a>
-        <a href="tel:+56442965226" class="btn btn-ghost-w btn-xl">
-          <svg width="18" height="18" aria-hidden="true"><use href="#i-phone"/></svg>
-          (44) 296 5226
+          Ver la próxima hora por WhatsApp
         </a>
       </div>
     </div>
+    <p class="towns rv">Pacientes de <b>Carampangue</b><i>/</i>Arauco<i>/</i>Curanilahue<i>/</i>Lebu<i>/</i>Los Álamos<i>/</i>Cañete. Muchos aprovechan el mismo viaje para coordinar otras atenciones del centro.</p>
   </div>
 </section>
 
-<!-- ═══════════ EQUIPO + COBERTURA ═══════════ -->
-<section class="sec sec-alt" aria-labelledby="equipo-h2">
-  <div class="wrap">
-    <div class="sec-head rv">
-      <span class="kicker">Quién te atiende</span>
-      <h2 id="equipo-h2">Un equipo dental completo, cerca de tu casa</h2>
-      <p>La ortodoncista viene a Carampangue, para que tú no tengas que ir a Concepción cada mes.</p>
-    </div>
-    <div class="team">
-      <article class="person rv">
-        <div class="mono" aria-hidden="true">DC</div>
-        <div>
-          <span class="role">Ortodoncista</span>
-          <h3>Dra. Daniela Castillo</h3>
-          <p>Planifica tu tratamiento, instala los brackets y te acompaña en cada control. Atiende en Carampangue los <strong>sábados de 09:00 a 19:00</strong> y algunos días de la semana.</p>
-        </div>
-      </article>
-      <article class="person rv" style="--d:1">
-        <div class="mono alt" aria-hidden="true">JB</div>
-        <div>
-          <span class="role">Dentista general · evaluación</span>
-          <h3>Dra. Javiera Burgos</h3>
-          <p>Hace tu evaluación inicial, solicita el estudio radiográfico y coordina tu paso a ortodoncia.</p>
-        </div>
-      </article>
-    </div>
-    <div class="towns rv">
-      <div>
-        <h3>Pacientes de toda la provincia</h3>
-        <p>Muchos aprovechan el mismo viaje para coordinar otras atenciones del centro.</p>
-      </div>
-      <div class="chips">
-        <span class="chip home"><svg width="14" height="14" aria-hidden="true"><use href="#i-pin"/></svg>Carampangue</span>
-        <span class="chip">Arauco</span>
-        <span class="chip">Curanilahue</span>
-        <span class="chip">Lebu</span>
-        <span class="chip">Los Álamos</span>
-        <span class="chip">Cañete</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ POR QUÉ AQUÍ (reemplaza testimonios no verificables) ═══════════ -->
-<section class="sec" aria-labelledby="why-h2">
+<!-- ═══════════ SIN LETRA CHICA ═══════════ -->
+<section class="sec bg-hueso" aria-labelledby="why-h2">
   <div class="wrap">
     <div class="sec-head rv">
       <span class="kicker">Sin letra chica</span>
-      <h2 id="why-h2">Lo que puedes esperar de tu tratamiento aquí</h2>
+      <h2 id="why-h2">Lo que puedes esperar <em>de tu tratamiento aquí.</em></h2>
     </div>
-    <div class="why">
-      <div class="why-item rv" style="--d:0">
-        <div class="why-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2V3.4h10l7.2 7.2a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.4"/></svg></div>
-        <h3>Precios publicados</h3>
-        <p>Cada etapa tiene su valor a la vista. Si tu caso necesita algo distinto, te lo decimos antes de empezar.</p>
-      </div>
-      <div class="why-item rv" style="--d:1">
-        <div class="why-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
-        <h3>Primero, una boca sana</h3>
-        <p>La dentista general revisa y trata lo necesario antes de instalar. Así los brackets no esconden caries ni problemas de encías.</p>
-      </div>
-      <div class="why-item rv" style="--d:2">
-        <div class="why-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
-        <h3>¿Se soltó un bracket?</h3>
-        <p>Escríbenos por WhatsApp y coordinamos una hora. No tienes que esperar al próximo control.</p>
-      </div>
-      <div class="why-item rv" style="--d:3">
-        <div class="why-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg></div>
-        <h3>Paga como te acomode</h3>
-        <p>Efectivo, transferencia, débito o crédito. El tratamiento se paga por etapas: instalación y luego cada control.</p>
-      </div>
-      <div class="why-item rv" style="--d:4">
-        <div class="why-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <h3>Niños y adultos</h3>
-        <p>Entre los 8 y 12 años puede indicarse ortodoncia interceptiva u ortopedia. Si no es el momento, te lo decimos con claridad.</p>
-      </div>
-      <div class="why-item rv" style="--d:5">
-        <div class="why-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
-        <h3>Todo en un centro conocido</h3>
-        <p>Dentista general, ortodoncia y otras especialidades médicas y dentales en el mismo lugar de Carampangue.</p>
-      </div>
-    </div>
+    <ol class="promises">
+      <li class="promise rv" style="--d:0"><h3>Precios publicados</h3><p>Cada etapa tiene su valor a la vista. Si tu caso necesita algo distinto, te lo decimos antes de empezar.</p></li>
+      <li class="promise rv" style="--d:1"><h3>Primero, una boca sana</h3><p>La dentista general revisa y trata lo necesario antes de instalar. Así los brackets no esconden caries ni problemas de encías.</p></li>
+      <li class="promise rv" style="--d:2"><h3>¿Se soltó un bracket?</h3><p>Escríbenos por WhatsApp y coordinamos una hora. No tienes que esperar al próximo control.</p></li>
+      <li class="promise rv" style="--d:0"><h3>Paga como te acomode</h3><p>Efectivo, transferencia, débito o crédito. El tratamiento se paga por etapas: instalación y luego cada control.</p></li>
+      <li class="promise rv" style="--d:1"><h3>Niños y adultos</h3><p>Entre los 8 y 12 años puede indicarse ortodoncia interceptiva u ortopedia. Si no es el momento, te lo decimos con claridad.</p></li>
+      <li class="promise rv" style="--d:2"><h3>Todo en un centro conocido</h3><p>Dentista general, ortodoncia y otras especialidades médicas y dentales en el mismo lugar de Carampangue.</p></li>
+    </ol>
   </div>
 </section>
 
 <!-- ═══════════ FAQ ═══════════ -->
-<section class="sec sec-alt" aria-labelledby="faq-h2" id="preguntas">
+<section class="sec" aria-labelledby="faq-h2" id="preguntas">
   <div class="wrap">
-    <div class="sec-head rv">
-      <span class="kicker">Preguntas frecuentes</span>
-      <h2 id="faq-h2">Lo que más nos preguntan</h2>
-    </div>
     <div class="faq-grid">
-      <details class="faq-item rv">
-        <summary>¿Cuánto cuesta la evaluación inicial? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">La evaluación se hace con la dentista general y cuesta $15.000. Se descuenta si ese mismo día comienzas o dejas pagado el tratamiento previo (casi siempre limpieza y flúor).</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Qué incluye el estudio radiográfico? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">Radiografía panorámica, telerradiografía y bitewing. Es necesario antes de instalar los brackets, porque con él la ortodoncista planifica el tratamiento. Tiene un precio especial de $40.000.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Pueden ponerme brackets en una sola visita? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">No. Primero se hace la evaluación con la dentista general para descartar caries o problemas de encías y luego el estudio radiográfico de ortodoncia. Con eso la ortodoncista planifica e instala los brackets.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Cuánto dura el tratamiento? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">Habitualmente entre 18 y 24 meses, con un control mensual. Los casos más complejos pueden tomar más tiempo. Asistir a todos los controles es lo que más influye en el tiempo real.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Atienden Fonasa en ortodoncia? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">No. La ortodoncia en el CMC es atención particular. En el área dental se acepta efectivo, transferencia, débito y crédito.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Cómo puedo pagar? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">Con efectivo, transferencia, tarjeta de débito o tarjeta de crédito. Pagas cada etapa por separado: la instalación y luego cada control mensual.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Atienden ortodoncia para niños? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">Sí. Entre los 8 y 12 años, durante la dentición mixta, puede indicarse ortodoncia interceptiva u ortopedia. La evaluación define si conviene tratar ahora o esperar.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Qué hago si se me suelta un bracket? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">Escríbenos por WhatsApp al <a href="https://wa.me/56966610737?text=Hola%2C%20tengo%20una%20urgencia%20de%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=faq&utm_campaign=ortodoncia_arauco" target="_blank" rel="noopener" data-wa-btn="faq-urgencia">+56 9 6661 0737</a> y coordinamos una hora. No tienes que esperar al próximo control.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Cuándo atiende la ortodoncista? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">La Dra. Daniela Castillo atiende en Carampangue. La mayoría de las instalaciones y controles se hacen los sábados, de 09:00 a 19:00, y también algunos días de la semana: muchos pacientes lo prefieren porque no tienen que faltar al trabajo o al colegio. Escríbenos por WhatsApp para ver la próxima hora.</div>
-      </details>
-      <details class="faq-item rv">
-        <summary>¿Dónde están ubicados? <svg class="chev" width="20" height="20" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-        <div class="faq-answer">En Monsalve 102, frente a la antigua estación de trenes de Carampangue, comuna de Arauco, Región del Biobío. Atendemos pacientes de Arauco, Curanilahue, Lebu, Los Álamos y Cañete.</div>
-      </details>
+      <div class="faq-aside">
+        <div class="sec-head rv">
+          <span class="kicker">Preguntas frecuentes</span>
+          <h2 id="faq-h2">Lo que más nos preguntan.</h2>
+        </div>
+        <p class="rv">¿Tienes otra duda? Te respondemos por WhatsApp.</p>
+        <a class="lnk rv" href="https://wa.me/56966610737?text=Hola%2C%20tengo%20una%20pregunta%20sobre%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=faq&utm_campaign=ortodoncia_arauco" target="_blank" rel="noopener" data-wa-btn="faq-pregunta">Escribir una pregunta <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>¿Cuánto cuesta la evaluación inicial? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">La evaluación se hace con la dentista general y cuesta $15.000. Se descuenta si ese mismo día comienzas o dejas pagado el tratamiento previo (casi siempre limpieza y flúor).</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Qué incluye el estudio radiográfico? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Radiografía panorámica, telerradiografía y bitewing. Es necesario antes de instalar los brackets, porque con él la ortodoncista planifica el tratamiento. Tiene un precio especial de $40.000.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Pueden ponerme brackets en una sola visita? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">No. Primero se hace la evaluación con la dentista general para descartar caries o problemas de encías y luego el estudio radiográfico de ortodoncia. Con eso la ortodoncista planifica e instala los brackets.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Cuánto dura el tratamiento? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Habitualmente entre 18 y 24 meses, con un control mensual. Los casos más complejos pueden tomar más tiempo. Asistir a todos los controles es lo que más influye en el tiempo real.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Atienden Fonasa en ortodoncia? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">No. La ortodoncia en el CMC es atención particular. En el área dental se acepta efectivo, transferencia, débito y crédito.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Cómo puedo pagar? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Con efectivo, transferencia, tarjeta de débito o tarjeta de crédito. Pagas cada etapa por separado: la instalación y luego cada control mensual.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Atienden ortodoncia para niños? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Sí. Entre los 8 y 12 años, durante la dentición mixta, puede indicarse ortodoncia interceptiva u ortopedia. La evaluación define si conviene tratar ahora o esperar.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Puedo elegir el color de los elásticos? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Sí. Los brackets son metálicos y tú eliges el color de tus elásticos. Los elásticos se cambian en los controles mensuales, cuando se ajustan los arcos.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Qué hago si se me suelta un bracket? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Escríbenos por WhatsApp al <a href="https://wa.me/56966610737?text=Hola%2C%20tengo%20una%20urgencia%20de%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=faq&utm_campaign=ortodoncia_arauco" target="_blank" rel="noopener" data-wa-btn="faq-urgencia">+56 9 6661 0737</a> y coordinamos una hora. No tienes que esperar al próximo control.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Cuándo atiende la ortodoncista? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">La Dra. Daniela Castillo atiende en Carampangue. La mayoría de las instalaciones y controles se hacen los sábados, de 09:00 a 19:00, y también algunos días de la semana: muchos pacientes lo prefieren porque no tienen que faltar al trabajo o al colegio. Escríbenos por WhatsApp para ver la próxima hora.</div>
+        </details>
+        <details class="faq-item">
+          <summary>¿Dónde están ubicados? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">En Monsalve 102, frente a la antigua estación de trenes de Carampangue, comuna de Arauco, Región del Biobío. Atendemos pacientes de Arauco, Curanilahue, Lebu, Los Álamos y Cañete.</div>
+        </details>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ MAPA ═══════════ -->
-<section class="sec" aria-labelledby="mapa-h2" id="ubicacion">
+<section class="sec bg-hueso" aria-labelledby="mapa-h2" id="ubicacion">
   <div class="wrap">
     <div class="sec-head rv">
       <span class="kicker">Ubicación y horarios</span>
-      <h2 id="mapa-h2">Frente a la antigua estación de trenes</h2>
+      <h2 id="mapa-h2">Frente a la antigua <em>estación de trenes.</em></h2>
       <p>Monsalve 102, Carampangue. A pasos de la Ruta 160.</p>
     </div>
     <div class="map-grid">
-      <figure class="map rv" style="margin:0" id="mapa">
+      <figure class="map rv" id="mapa">
         <picture>
           <source type="image/webp" srcset="/static/images/ortodoncia/mapa-cmc-ancho.webp">
           <img src="/static/images/ortodoncia/mapa-cmc-ancho.jpg" width="1200" height="640" loading="lazy" decoding="async"
@@ -1011,18 +1203,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <p class="addr">Comuna de Arauco, Región del Biobío.</p>
           <span class="ref"><svg width="16" height="16" aria-hidden="true"><use href="#i-pin"/></svg>Frente a la antigua estación de trenes</span>
           <div class="loc-btns">
-            <a class="btn btn-line" href="https://www.google.com/maps/search/?api=1&query=-37.2548769,-73.2355041" target="_blank" rel="noopener">Abrir en Google Maps</a>
-            <a class="btn btn-line" href="https://waze.com/ul?ll=-37.2548769,-73.2355041&navigate=yes" target="_blank" rel="noopener">Abrir en Waze</a>
+            <a class="btn btn-line" href="https://www.google.com/maps/search/?api=1&query=-37.2548769,-73.2355041" target="_blank" rel="noopener">Google Maps</a>
+            <a class="btn btn-line" href="https://waze.com/ul?ll=-37.2548769,-73.2355041&navigate=yes" target="_blank" rel="noopener">Waze</a>
           </div>
         </div>
         <div class="loc-card rv" style="--d:2">
           <span class="kicker">Ortodoncia · instalaciones y controles</span>
           <div class="sat-hl">
-            <span class="sat-day">Sábados</span>
-            <span class="sat-hr num">09:00 – 19:00</span>
+            <span class="d">Sábados</span>
+            <span class="h num">09:00 – 19:00</span>
           </div>
-          <p class="loc-note sat-note">Y algunos días de la semana. Ideal si trabajas o estudias: no tienes que pedir permiso.</p>
-          <span class="kicker kicker-2">Dentista general · evaluación</span>
+          <p class="loc-note">Y algunos días de la semana. Ideal si trabajas o estudias: no tienes que pedir permiso.</p>
+          <span class="kicker">Dentista general · evaluación</span>
           <table class="hours num">
             <tr><td>Lunes a viernes</td><td>08:00 – 21:00</td></tr>
             <tr><td>Sábado</td><td>09:00 – 14:00</td></tr>
@@ -1035,7 +1227,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </section>
 
 <!-- ═══════════ BLOG ═══════════ -->
-<section class="sec sec-alt" aria-labelledby="blog-h2">
+<section class="sec" aria-labelledby="blog-h2">
   <div class="wrap">
     <div class="sec-head rv">
       <span class="kicker">Sigue leyendo</span>
@@ -1043,34 +1235,38 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="posts">
       <a class="post rv" href="/blog/ortodoncia" style="--d:0">
-        <span class="kicker">Guía</span>
+        <span class="k">Guía</span>
         <h3>Ortodoncia en Carampangue: guía completa</h3>
         <p>El proceso completo, desde la evaluación hasta la contención, con precios.</p>
-        <span class="more">Leer artículo <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        <svg width="22" height="22" aria-hidden="true"><use href="#i-arrow"/></svg>
       </a>
       <a class="post rv" href="/blog/precio-ortodoncia-arauco" style="--d:1">
-        <span class="kicker">Precios</span>
+        <span class="k">Precios</span>
         <h3>Precio de ortodoncia en Arauco 2026</h3>
         <p>Cuánto cuesta cada etapa: brackets, controles y contención.</p>
-        <span class="more">Leer artículo <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        <svg width="22" height="22" aria-hidden="true"><use href="#i-arrow"/></svg>
       </a>
       <a class="post rv" href="/blog/odontologia-general" style="--d:2">
-        <span class="kicker">Primer paso</span>
+        <span class="k">Primer paso</span>
         <h3>Odontología general en Carampangue</h3>
         <p>La evaluación con dentista general es el primer paso antes de los brackets.</p>
-        <span class="more">Leer artículo <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        <svg width="22" height="22" aria-hidden="true"><use href="#i-arrow"/></svg>
       </a>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ CTA FINAL ═══════════ -->
-<section class="cta-band" aria-labelledby="cta-final-h">
+<section class="cta-photo cta-band" aria-labelledby="cta-final-h">
+  <picture>
+    <source type="image/webp" sizes="100vw" srcset="/static/images/ortodoncia/recepcion-800.webp 800w, /static/images/ortodoncia/recepcion-1400.webp 1400w">
+    <img src="/static/images/ortodoncia/recepcion-1000.jpg" width="1000" height="588" loading="lazy" decoding="async" alt="">
+  </picture>
   <div class="wrap">
-    <span class="cta-badge"><img src="/static/isotipo.png" alt="" width="40" height="40" /></span>
-    <h2 id="cta-final-h" class="rv">Tu sonrisa se trabaja aquí, <span>sin viajar a Concepción.</span></h2>
-    <p class="rv" style="--d:1">Escríbenos y te agendamos la evaluación con la dentista general.</p>
-    <div class="cta-band-actions rv" style="--d:2">
+    <span class="kicker rv">Te esperamos en Monsalve 102</span>
+    <h2 id="cta-final-h" class="rv">Tu sonrisa se trabaja aquí, <em>sin viajar a Concepción.</em></h2>
+    <p class="rv" style="--d:1">Escríbenos y te agendamos la evaluación con la dentista general. Desde ahí coordinamos todo lo demás.</p>
+    <div class="cta-photo-actions rv" style="--d:2">
       <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20una%20evaluaci%C3%B3n%20de%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=footer_cta&utm_campaign=ortodoncia_arauco"
          class="btn btn-wa btn-xl" target="_blank" rel="noopener" id="cta-final-wa">
         <svg width="20" height="20" aria-hidden="true"><use href="#i-wa"/></svg>
@@ -1083,6 +1279,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <p class="cobertura-note">Carampangue · Arauco · Curanilahue · Lebu · Los Álamos · Cañete</p>
   </div>
+  <span class="credit">Recepción del CMC</span>
 </section>
 
 </main>
@@ -1169,8 +1366,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var flt = document.querySelector('.wa-float');
   var heroCta = document.getElementById('cta-hero-wa');
   var finalCta = document.getElementById('cta-final-wa');
-  var heroGone = false, finalOn = false;
-  function syncFloat(){ if (!flt) return; var show = heroGone && !finalOn; flt.classList.toggle('is-hidden', !show); document.documentElement.classList.toggle('float-on', show); }
+  var heroGone = false, finalOn = false, inPage = 0;
+  // El flotante nunca duplica un botón de WhatsApp grande que ya esté a la vista
+  function syncFloat(){ if (!flt) return; var show = heroGone && !finalOn && inPage === 0; flt.classList.toggle('is-hidden', !show); document.documentElement.classList.toggle('float-on', heroGone && !finalOn); }
   window.addEventListener('scroll', function(){
     if (nav) nav.classList.toggle('is-scrolled', window.scrollY > 8);
   }, {passive:true});
@@ -1178,15 +1376,83 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   if ('IntersectionObserver' in window) {
     if (heroCta) new IntersectionObserver(function(es){ heroGone = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; syncFloat(); }).observe(heroCta);
     if (finalCta) new IntersectionObserver(function(es){ finalOn = es[0].isIntersecting; syncFloat(); }).observe(finalCta);
+    var vis = new IntersectionObserver(function(es){
+      es.forEach(function(en){ en.target._v = en.isIntersecting; });
+      inPage = 0; bigs.forEach(function(x){ if (x._v) inPage++; }); syncFloat();
+    });
+    var bigs = Array.prototype.slice.call(document.querySelectorAll('main .btn-wa.btn-xl')).filter(function(x){ return x !== heroCta && x !== finalCta; });
+    bigs.forEach(function(x){ vis.observe(x); });
 
     // Aparición suave al entrar en pantalla
     var io = new IntersectionObserver(function(es){
       es.forEach(function(en){ if (en.isIntersecting || en.boundingClientRect.top < 0){ en.target.classList.add('on'); io.unobserve(en.target); } });
     }, {rootMargin:'0px 0px -8% 0px', threshold:0.08});
-    document.querySelectorAll('.rv, .map').forEach(function(el){ io.observe(el); });
+    document.querySelectorAll('.rv, .map, .rail').forEach(function(el){ io.observe(el); });
   } else {
-    document.querySelectorAll('.rv, .map').forEach(function(el){ el.classList.add('on'); });
+    document.querySelectorAll('.rv, .map, .rail').forEach(function(el){ el.classList.add('on'); });
     heroGone = true; syncFloat();
+  }
+
+  // ── Elemento firma: elige el color de tus elásticos ──
+  var picker = document.getElementById('picker');
+  var svg = document.getElementById('smile');
+  if (!picker || !svg) return;
+  var ligs = svg.querySelectorAll('.lg');
+  var sws = picker.querySelectorAll('.sw');
+  var modeBtns = picker.querySelectorAll('[data-mode]');
+  var slotBtns = picker.querySelectorAll('.slot');
+  var combo = document.getElementById('combo');
+  var cta = document.getElementById('cta-colores');
+  var st = { mode: 1, slot: 0, c: [ {c:'#4FBECE', n:'celeste'}, {c:'#2F6FE0', n:'azul'} ] };
+
+  function paint(anim){
+    ligs.forEach(function(l){
+      var k = +l.getAttribute('data-k');
+      var col = st.mode === 2 ? st.c[k % 2].c : st.c[0].c;
+      l.style.setProperty('--c', col);
+      if (anim){ l.classList.remove('pop'); l.getBoundingClientRect(); l.classList.add('pop'); }
+    });
+    slotBtns.forEach(function(b, i){
+      b.querySelector('span').style.setProperty('--c', st.c[i].c);
+      b.setAttribute('aria-pressed', String(i === st.slot));
+    });
+    var activo = st.mode === 2 ? st.c[st.slot].c : st.c[0].c;
+    sws.forEach(function(s){ s.setAttribute('aria-pressed', String(s.getAttribute('data-c') === activo)); });
+    var nombre = st.mode === 2 ? (st.c[0].n + ' y ' + st.c[1].n) : st.c[0].n;
+    combo.textContent = nombre;
+    picker.classList.toggle('two', st.mode === 2);
+    if (cta){
+      var txt = 'Hola, quiero una evaluación de ortodoncia. Me gustaron los elásticos ' + nombre + ' (web: landing_ortodoncia)';
+      var utm = '&utm_source=landing_ortodoncia&utm_medium=colores&utm_campaign=ortodoncia_arauco';
+      try {
+        cta.href = (window.cmcWa ? window.cmcWa.url(txt, cta) : 'https://wa.me/56966610737?text=' + encodeURIComponent(txt)) + utm;
+        cta.setAttribute('data-wa-ok', '');
+      } catch(e){}
+    }
+  }
+  sws.forEach(function(s){
+    s.addEventListener('click', function(){
+      var i = st.mode === 2 ? st.slot : 0;
+      st.c[i] = { c: s.getAttribute('data-c'), n: s.getAttribute('data-n') };
+      if (st.mode === 2) st.slot = st.slot === 0 ? 1 : 0;
+      paint(true);
+    });
+  });
+  modeBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      st.mode = +b.getAttribute('data-mode'); st.slot = st.mode === 2 ? 1 : 0;
+      modeBtns.forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); });
+      paint(true);
+    });
+  });
+  slotBtns.forEach(function(b, i){ b.addEventListener('click', function(){ st.slot = i; paint(false); }); });
+  // Primer pintado: espera a que cmc-wa.js haya marcado los enlaces
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ paint(false); });
+  else paint(false);
+  // Ola de color al entrar la sonrisa en pantalla
+  if ('IntersectionObserver' in window){
+    var so = new IntersectionObserver(function(es){ if (es[0].isIntersecting){ paint(true); so.disconnect(); } }, {threshold:.4});
+    so.observe(svg);
   }
 })();
 </script>
