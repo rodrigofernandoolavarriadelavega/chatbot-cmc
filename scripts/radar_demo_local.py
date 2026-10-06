@@ -66,9 +66,13 @@ def sembrar(tmp: Path, vacio: bool = False) -> None:
         ci._ensure_creativos(c)
         gs.ensure_tables(c)
         persistencia._ensure_table(c)
-        c.execute("CREATE TABLE IF NOT EXISTS equipo_cmc (id INTEGER PRIMARY KEY AUTOINCREMENT, id_medilink INTEGER, "
-                  "nombre TEXT, especialidad TEXT, pct_honorario INTEGER)")
         c.commit()
+    import equipo_routes
+    import pagos_routes
+    import finanzas_routes
+    equipo_routes.ensure_table()
+    pagos_routes.ensure_pagos_table()
+    finanzas_routes.ensure_table()   # egresos_cmc (gastos del módulo EBITDA)
     if vacio:
         return
 
@@ -83,7 +87,7 @@ def sembrar(tmp: Path, vacio: bool = False) -> None:
         for pid, nom, pct in ((1, "Dr. Rodrigo Olavarría", 0), (73, "Dr. Andrés Abarca", 0), (77, "Luis Armijo", 50),
                               (55, "Dra. Javiera Burgos", 45), (66, "Dra. Daniela Castillo", 50), (23, "Dr. Manuel Borrego", 70),
                               (68, "David Pardo", 65)):
-            c.execute("INSERT INTO equipo_cmc (id_medilink, nombre, pct_honorario) VALUES (?,?,?)", (pid, nom, pct))
+            c.execute("INSERT INTO equipo_cmc (id_medilink, nombre, pct_honorario) VALUES (?,?,?)", (pid, nom, pct or 70))
         # ── Meta: 4 anuncios, 75 días ───────────────────────────────────────
         ads = [("AD_OD", "Odontología · limpieza y evaluación", "C1", "Odontología octubre", 6500),
                ("AD_MG", "Medicina General hoy en Carampangue", "C2", "Medicina general", 5200),
@@ -93,12 +97,20 @@ def sembrar(tmp: Path, vacio: bool = False) -> None:
             f = (hoy - timedelta(days=i)).isoformat()
             for ad, nom, cid, cn, sp in ads:
                 fat = 1 + (0.9 if ad == "AD_OR" and i <= 7 else 0)
+                if ad == "AD_MG":   # el gasto de Medicina General varía por semana (el Laboratorio ajusta la curva)
+                    sp = 5200 * (0.4 + 0.35 * (((i - 1) // 7) % 4))
                 imp = int(sp / 4 * (1 + rnd.random() * .3))
                 c.execute("INSERT INTO meta_insights_diario (fecha, ad_id, desglose, valor, ad_name, campaign_id, campaign_name, "
                           "spend, impressions, reach, frequency, clicks, conversaciones, actualizado_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                           (f, ad, "total", "-", nom, cid, cn, sp * (1 + rnd.random() * .2), imp, int(imp / (1.6 * fat)), 1.5,
                            int(imp * (0.012 if ad == "AD_OR" and i <= 7 else 0.022)), rnd.randint(2, 6),
                            int((ult(6, 20) - timedelta(days=i - 1)).timestamp())))
+            for ad, nom, cid, cn, sp in ads:   # desglose por plataforma de publicación (70% Facebook, 30% Instagram)
+                for plat, fr in (("facebook", .7), ("instagram", .3)):
+                    c.execute("INSERT INTO meta_insights_diario (fecha, ad_id, desglose, valor, ad_name, campaign_id, campaign_name, "
+                              "spend, impressions, reach, frequency, clicks, conversaciones, actualizado_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                              (f, ad, "plataforma", plat, nom, cid, cn, sp * fr, int(sp / 4 * fr), int(sp / 6 * fr), 1.5, 10,
+                               rnd.randint(0, 3), int((ult(6, 20) - timedelta(days=i - 1)).timestamp())))
         # Creativos con imagen generada
         from PIL import Image, ImageDraw
         cdir = tmp / "creativos"
@@ -150,8 +162,10 @@ def sembrar(tmp: Path, vacio: bool = False) -> None:
                            None if ad == "web" else ad, None, pid, ""))
                 if fcita <= hoy:
                     est = rnd.choices([2, 8, 1], [80, 8, 12])[0]
-                    c.execute("INSERT INTO ausentismo_citas (id_cita, id_profesional, id_paciente, fecha, hora, id_estado, estado_cita, anulacion) "
-                              "VALUES (?,?,?,?,?,?,?,?)", (int(cid), prof, pid, fcita.isoformat(), "10:00", est, "", 1 if est == 1 else 0))
+                    c.execute("INSERT INTO ausentismo_citas (id_cita, id_profesional, id_paciente, fecha, hora, id_estado, estado_cita, "
+                              "anulacion, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                              (int(cid), prof, pid, fcita.isoformat(), "10:00", est,
+                               {2: "Atendido", 8: "No asiste", 1: "Anulado"}[est], 1 if est == 1 else 0, ult(4, 50).isoformat()))
                     if est == 2:
                         for k in range(rnd.choice([1, 1, 2, 3])):
                             if fcita + timedelta(days=k * 9) > hoy:
@@ -206,6 +220,39 @@ def sembrar(tmp: Path, vacio: bool = False) -> None:
                 st = rnd.choice(["WAIT_SLOT", "WAIT_ESPECIALIDAD", "IDLE"])
             c.execute("INSERT OR REPLACE INTO sessions (phone, state, data, updated_at) VALUES (?,?,?,?)",
                       (ph, st, json.dumps({"especialidad": esp.lower()}), _utc(t + timedelta(minutes=1))))
+        # Ausentismo: historia de 90 días y citas de mañana (algunas sin confirmar)
+        for n in range(400):
+            fch = (hoy - timedelta(days=rnd.randint(1, 89))).isoformat()
+            est = rnd.choices([2, 8], [92, 8])[0]
+            c.execute("INSERT OR IGNORE INTO ausentismo_citas (id_cita, id_profesional, id_paciente, fecha, hora, id_estado, estado_cita, "
+                      "anulacion, updated_at) VALUES (?,?,?,?,?,?,?,?,?)", (300000 + n, rnd.choice(ESPS)[1], 300000 + n, fch, "10:00", est,
+                                                                       "Atendido" if est == 2 else "No asiste", 0, ult(4, 50).isoformat()))
+        for n in range(31):
+            st = rnd.choices([(7, "No confirmado"), (3, "Confirmado por teléfono")], [55, 45])[0]
+            c.execute("INSERT OR IGNORE INTO ausentismo_citas (id_cita, id_profesional, id_paciente, fecha, hora, id_estado, estado_cita, "
+                      "anulacion, updated_at) VALUES (?,?,?,?,?,?,?,?,?)", (310000 + n, rnd.choice(ESPS)[1], 310000 + n,
+                                                                       (hoy + timedelta(days=1)).isoformat(), "11:00", st[0], st[1], 0,
+                                                                       ult(4, 50).isoformat()))
+        # «¿Cómo nos conociste?» (tags referido:*) de personas que no llegaron por anuncio
+        for n, tag in enumerate(["amigo"] * 9 + ["google"] * 4 + ["facebook_instagram"] * 3 + ["calle", "radio"]):
+            ph = f"56944{n:06d}"
+            t = ahora - timedelta(days=rnd.randint(0, 20), hours=rnd.randint(0, 8))
+            c.execute("INSERT INTO contact_tags (phone, tag, ts) VALUES (?,?,?)", (ph, "referido:" + tag, _utc(t)))
+            if rnd.random() < .7:
+                pid = 950000 + n
+                c.execute("INSERT INTO citas_bot (phone, id_cita, especialidad, created_at, id_paciente_medilink) VALUES (?,?,?,?,?)",
+                          (ph, str(95000 + n), "Medicina General", _utc(t), pid))
+                if t.date() < hoy:
+                    c.execute("INSERT INTO bi_pagos_caja (pago_id, fecha, id_profesional, id_paciente, monto, metodo_pago, synced_at) "
+                              "VALUES (?,?,?,?,?,?,?)", (pago_id, (t.date() + timedelta(days=1)).isoformat(), 1, pid, 15130,
+                                                         "Efectivo", _utc(ult(0, 10))))
+                    pago_id += 1
+        # Gastos registrados en el módulo EBITDA (sin arriendo: el puente lo advierte)
+        mes0 = (hoy.replace(day=1) - timedelta(days=150)).replace(day=1).isoformat()
+        for cat, monto in (("Sueldos y leyes sociales", 3099908), ("Insumos clínicos", 400000), ("Software/sistemas", 250000),
+                           ("Contador", 95000), ("Servicios básicos (luz/agua/internet)", 40000)):
+            c.execute("INSERT INTO egresos_cmc (fecha, categoria, descripcion, monto, recurrente) VALUES (?,?,?,?,1)",
+                      (mes0, cat, "Demo", monto))
         # Referencia: 4 semanas atrás, mismo día
         for k in range(1, 5):
             dia = ahora - timedelta(days=7 * k)

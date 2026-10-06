@@ -203,12 +203,15 @@ svg.i{flex:none;display:block}
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
 .tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 .tbl td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+.tbl td.wrap{white-space:normal;min-width:160px;line-height:1.4}
 .tbl th:first-child,.tbl td:first-child{padding-left:0}
 .tbl th:last-child,.tbl td:last-child{padding-right:0}
 .tbl .n{text-align:right}
 .tbl tbody tr{transition:background .15s}
 .tbl tbody tr:hover td{background:var(--surface-2)}
 .tbl tfoot td{font-weight:800;border-bottom:0;padding-top:12px}
+.tbl td .cn{white-space:normal;min-width:150px;max-width:280px}
+.tbl tr.subr td{font-size:13px;color:var(--ink-2);padding-top:7px;padding-bottom:7px}
 .cn{display:inline-flex;align-items:center;gap:8px;font-weight:600}
 .sw{width:10px;height:10px;border-radius:3px;flex:none}
 .pos{color:var(--ok-ink);font-weight:600}.neg{color:var(--bad-ink);font-weight:600}.wrn{color:var(--warn-ink);font-weight:600}
@@ -244,8 +247,53 @@ svg.i{flex:none;display:block}
 .pl{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:var(--pill);background:var(--surface-2);border:1px solid var(--line);font-size:12.5px;font-weight:600;white-space:nowrap}
 .pl i{width:8px;height:8px;border-radius:50%}
 .pl b{font-variant-numeric:tabular-nums}
-.pulse-cv{position:relative;height:190px;margin-top:8px}
-.pulse-cv canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pulse-sum{display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap;margin-top:4px}
+.pulse-sum .ps-n{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.pulse-sum .ps-n.tick{animation:tick .35s var(--back)}
+.pulse-sum .ps-t{font-size:15px;color:var(--ink-2);font-weight:600}
+.pulse-sum .ps-t b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ps-ref{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:14px;color:var(--ink-2)}
+.ps-ref b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.ps-d{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:var(--pill);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;background:var(--surface-3);color:var(--ink-2)}
+.ps-d.up{background:var(--ok-soft);color:var(--ok-ink)}.ps-d.down{background:var(--warn-soft);color:var(--warn-ink)}
+.ps-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.pulse-chart{position:relative;margin:14px 20px 0;height:210px}
+.pulse-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.pulse-chart text{font-family:Montserrat,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.pbar{transform-box:fill-box;transform-origin:50% 100%}
+svg.anim .pbar{animation:pgrow .42s var(--back) both;animation-delay:calc(var(--i) * 45ms)}
+@keyframes pgrow{from{transform:scaleY(0);opacity:.2}to{transform:none;opacity:1}}
+.pbar.bump{animation:pbump .9s var(--ease)}
+@keyframes pbump{0%{opacity:.35}100%{opacity:1}}
+.phit{fill:transparent;cursor:default;outline:none}
+.phit:focus-visible{fill:var(--aqua-soft);stroke:var(--aqua);stroke-width:2}
+.pslot.on .phit{fill:var(--surface-3)}
+.pslot.on .pbar{filter:brightness(1.06)}
+.p-now-l{font-size:11px;font-weight:700}
+.ptip{position:absolute;z-index:5;pointer-events:none;min-width:168px;max-width:240px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-md);padding:10px 12px;font-size:12.5px;line-height:1.45;opacity:0;transform:translateY(4px) scale(.98);transition:opacity .14s var(--ease),transform .14s var(--ease)}
+.ptip.on{opacity:1;transform:none}
+.ptip h4{margin:0 0 4px;font-size:12.5px;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+.ptip h4 span{font-variant-numeric:tabular-nums}
+.ptip .r{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+.ptip .r i{width:8px;height:8px;border-radius:50%;flex:none}
+.ptip .r b{margin-left:auto;font-weight:700}
+.ptip .avg{margin-top:6px;padding-top:6px;border-top:1px solid var(--line);color:var(--muted)}
+.ptip .avg b{color:var(--ink)}
+.pulse-leg2{display:flex;flex-wrap:wrap;gap:6px 8px;padding:10px 20px 0;position:relative}
+.pl.avgk{background:transparent;border-style:dashed}
+.pl.avgk i{width:16px;height:0;border-radius:0;border-top:2px dashed var(--ink-2)}
+.pstates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:14px 20px 0;position:relative}
+.pst{display:flex;align-items:center;gap:8px;min-height:48px;padding:6px 12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;font-weight:600;text-decoration:none;min-width:0}
+.pst b{font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.pst i{width:8px;height:8px;border-radius:50%;flex:none}
+.pst .pst-t{display:flex;align-items:baseline;gap:7px;min-width:0;white-space:nowrap}
+.pst .pst-t span{overflow:hidden;text-overflow:ellipsis}
+.pst .pst-a{margin-left:auto;color:var(--muted);flex:none}
+a.pst{transition:transform .18s var(--ease),box-shadow .18s var(--ease),border-color .18s var(--ease)}
+a.pst:hover{transform:translateY(-1px);box-shadow:var(--sh-md);border-color:var(--line-2)}
+a.pst:hover .pst-a{color:var(--aqua-ink)}
+@media (max-width:760px){.pulse-chart{margin:12px 12px 0;height:190px}.pulse-leg2,.pstates{padding-left:16px;padding-right:16px}.pstates{grid-template-columns:repeat(2,minmax(0,1fr))}.pst{padding:6px 8px;gap:6px;font-size:12px}.pst .pst-t{gap:6px}.pst b{font-size:18px}}
+@media (max-width:420px){a.pst .pst-a{display:none}a.pst .pst-t span{text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:3px}.pulse-sum .ps-n{font-size:38px}}
 .pulse-foot{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 20px 16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap;position:relative}
 
 /* ---------- Feed ---------- */
@@ -272,6 +320,8 @@ svg.i{flex:none;display:block}
 .dec-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--azul-soft);color:var(--azul)}
 .dec h3{font-size:15px;font-weight:600;line-height:1.35}
 .dec p{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.why{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.why li{margin:2px 0}
 .dec .imp{font-size:12.5px;font-weight:600;color:var(--ok-ink);margin-top:4px}
 .dec-a{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 
@@ -463,7 +513,7 @@ svg.i{flex:none;display:block}
   .ch{flex-wrap:wrap;row-gap:8px}
   .card.pulse{padding:0}
   .kpi .kl{flex-direction:column-reverse;align-items:flex-start;gap:6px}
-  .pl:nth-child(n+5){display:none}
+  .pulse-leg .pl:nth-child(n+5){display:none}
   .pl{height:26px;font-size:12px}
   .ch-t{flex:1 1 170px}
   .tw{margin:0 -16px;padding:0 16px}
@@ -540,6 +590,161 @@ a.btn{text-decoration:none}
 .grid.top-al{align-items:start}
 .pulse-note{font-size:12.5px;color:var(--ink-2);padding:0 20px;position:relative}
 @media (max-width:760px){.off{align-items:flex-start;max-width:none}.off-note{text-align:left}.pulse-note{padding:0 16px}}
+
+/* ---------- v2: portada, puente, centro de datos, laboratorio ---------- */
+.meta-r{padding:14px 0;border-bottom:1px solid var(--line)}
+.meta-r:first-child{padding-top:0}
+.meta-h{display:grid;grid-template-columns:minmax(0,1fr) 132px 230px;gap:20px;align-items:center}
+.meta-h h3{font-size:15px;font-weight:600}
+.meta-h p{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.meta-v{text-align:right}
+.meta-v b{display:block;font-size:21px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.meta-v small{font-size:12px;color:var(--muted)}
+.meta-r .prog{margin-top:0;flex:1 1 200px;max-width:320px}
+.meta-r.total{margin-top:6px;padding:16px;border:1px solid var(--line-2);border-radius:14px;background:linear-gradient(135deg,var(--aqua-soft),transparent 70%);border-bottom-width:1px}
+.meta-r.total .meta-v b{font-size:25px}
+.meta-r.total .meta-h{grid-template-columns:minmax(0,1fr) 132px 214px}
+.meta-eq{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--aqua-ink);margin-bottom:2px}
+.meta-t{display:flex;flex-direction:column;gap:2px}
+.mbars{display:block}
+.mb-l{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:600}
+.mv-d{font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}.mv-d.up{color:var(--ok-ink)}.mv-d.down{color:var(--warn-ink)}
+.meta-g{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--ink-2)}
+.meta-g b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.m-ritmo{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.m-ritmo svg{margin-top:2px;color:var(--aqua-ink)}
+.m-ritmo b{font-variant-numeric:tabular-nums}
+.meta-ed{margin-top:10px}
+.meta-ed>summary{list-style:none;display:inline-flex;width:auto}
+.meta-ed>summary::-webkit-details-marker{display:none}
+.meta-ed[open]>summary{display:none}
+.meta-f{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:10px}
+.meta-f label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.meta-f label.tg{text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);flex-direction:row}
+.meta-f input:not([type=checkbox]){height:44px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);padding:0 12px;font:500 16px Montserrat,system-ui,sans-serif;width:180px;max-width:100%}
+@media (max-width:760px){.meta-h{grid-template-columns:minmax(0,1fr) auto;gap:10px 16px}.meta-h .meta-n{grid-column:1/-1}.meta-v{text-align:right}.meta-r.total{padding:14px}.meta-r.total .meta-h{grid-template-columns:minmax(0,1fr) auto}.meta-r.total .meta-v b{font-size:21px}.meta-f label{flex:1 1 140px}.meta-f input:not([type=checkbox]){width:100%}.meta-f .btn{width:100%}}
+
+.brief{position:relative;overflow:hidden;padding:24px 24px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:end}
+.brief::before{content:"";position:absolute;inset:0;background:radial-gradient(70% 140% at 100% 0%,var(--aqua-soft),transparent 60%);pointer-events:none}
+.brief>*{position:relative}
+.brief h1{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.12;margin:6px 0 10px}
+.brief .lect{font-size:15px;line-height:1.55;color:var(--ink-2);max-width:72ch}
+.brief-side{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.stchip{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border-radius:var(--pill);border:1px solid var(--line);background:var(--surface);font-size:12.5px;font-weight:600;color:var(--ink-2);text-decoration:none;cursor:pointer;white-space:nowrap;transition:box-shadow .18s var(--ease),transform .12s var(--ease)}
+.stchip:hover{box-shadow:var(--sh-sm)}
+.stchip:active{transform:scale(.97)}
+.stchip b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.stchip i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.stchip.w i{background:var(--warn)}.stchip.b i{background:var(--bad)}
+.ops{list-style:none;margin:0;padding:0;counter-reset:op}
+.op{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(170px,auto);gap:16px;align-items:start;padding:16px 0;border-bottom:1px solid var(--line)}
+.op:first-child{padding-top:0}.op:last-child{border-bottom:0;padding-bottom:0}
+.op-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--azul-soft);color:var(--azul);position:relative}
+.op-ic::after{counter-increment:op;content:counter(op);position:absolute;right:-6px;top:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--surface);border:1px solid var(--line-2);font-size:11px;font-weight:800;color:var(--ink-2);display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.op.urg .op-ic{background:var(--bad-soft);color:var(--bad-ink)}
+.op h3{font-size:15px;font-weight:600;line-height:1.35}
+.op .ev{font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:4px}
+.op .src{margin-top:8px}
+.op-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right}
+.op-m{font-size:21px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.op-m small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.op-mn{font-size:12px;color:var(--muted);line-height:1.4;max-width:240px}
+.conf{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.conf span{display:inline-flex;gap:2px}
+.conf span i{width:6px;height:6px;border-radius:50%;background:var(--line-2)}
+.conf span i.on{background:var(--azul)}
+.solapa{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--warn-ink);margin-top:6px}
+.wf{display:grid;gap:2px}
+.wf-r{display:grid;grid-template-columns:minmax(0,270px) minmax(80px,1fr) 128px;gap:14px;align-items:center;padding:7px 0;font-size:14px}
+.wf-r .l{min-width:0;color:var(--ink-2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wf-r .l small{display:block;font-size:12px;color:var(--muted);font-weight:500;white-space:normal}
+.wf-r .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.wf-r .t{position:relative;height:12px;border-radius:6px;background:var(--track)}
+.wf-r .t i{position:absolute;top:0;bottom:0;border-radius:6px;background:var(--bar-mute);transform-origin:left center;animation:grow .6s var(--ease) both}
+.wf-r .t b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-2);opacity:.35}
+.wf-r.in .t i{background:var(--azul)}.wf-r.sub .t i{background:var(--aqua)}.wf-r.fin .t i{background:var(--ok)}.wf-r.fin.neg .t i{background:var(--bad)}
+.wf-r.sub,.wf-r.fin{border-top:1px solid var(--line);margin-top:4px;padding-top:11px}
+.wf-r.sub .l,.wf-r.fin .l{color:var(--ink);font-weight:800}
+.wf-r.sub .v,.wf-r.fin .v{font-weight:800;font-size:15px}
+.wf-r.fin .v{font-size:18px}
+.wf-r.ded .v{color:var(--ink-2);font-weight:500}
+.wf-r.op2 .l{padding-left:14px;font-weight:500}
+.wf-cut{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;border:1px dashed var(--line-2);margin-top:8px;font-size:13px;color:var(--ink-2);line-height:1.5}
+.dsum{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center}
+.dsum .big{font-size:32px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+.dsum .big small{font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0}
+.segbar{display:flex;gap:3px;height:10px;border-radius:6px;overflow:hidden;margin-top:10px}
+.segbar i{display:block;height:100%}
+.dp{display:grid;grid-template-columns:118px minmax(0,1.3fr) minmax(0,1fr) 92px;gap:16px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line)}
+.dp:last-child{border-bottom:0;padding-bottom:0}.dp:first-child{padding-top:0}
+.dp h3{font-size:14px;font-weight:600;line-height:1.35}
+.dp p{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.dp .err{color:var(--bad-ink)}
+.dp .when{font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2);line-height:1.4}
+.dp .when small{display:block;font-size:12px;color:var(--muted)}
+.dp .rows{text-align:right;font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.dp .rows small{display:block;font-size:11px;color:var(--muted)}
+.dst{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.dst i{width:9px;height:9px;flex:none}
+.dst.verde{color:var(--ok-ink)}.dst.verde i{background:var(--ok);border-radius:50%}
+.dst.ambar{color:var(--warn-ink)}.dst.ambar i{background:var(--warn);transform:rotate(45deg);border-radius:2px}
+.dst.rojo{color:var(--bad-ink)}.dst.rojo i{background:var(--bad);border-radius:2px}
+code.f{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;background:var(--surface-3);padding:1px 6px;border-radius:6px;color:var(--ink-2)}
+.lab{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px;align-items:start}
+.sl{padding:12px 0;border-bottom:1px solid var(--line)}
+.sl:last-child{border-bottom:0}
+.sl-h{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.sl-h label{font-size:13px;font-weight:600;color:var(--ink)}
+.sl-h output{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sl .rng{margin:12px 0 4px}
+.sl p{font-size:12px;color:var(--muted);line-height:1.45}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.presets .chip{min-height:30px;font-size:12px;padding:0 10px}
+.tg{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;cursor:pointer}
+.tg input{width:20px;height:20px;accent-color:var(--azul);margin:0}
+.sim-out.lab3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.capwarn{margin-top:12px}
+.cmp{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cmp th:first-child,.cmp td:first-child{text-align:left;padding-left:0;color:var(--muted);font-weight:600}
+.cmp thead th{font-size:12.5px;color:var(--ink);font-weight:800;vertical-align:bottom;white-space:normal;min-width:110px}
+.cmp tr.k td{font-weight:800;color:var(--ink)}
+.esc{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.esc:last-child{border-bottom:0}
+.esc input{width:20px;height:20px;accent-color:var(--azul);margin:0}
+.esc b{font-size:14px;font-weight:600}
+.esc small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.save{display:flex;gap:8px;margin-top:4px}
+.save input{flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);padding:0 12px;font:500 16px Montserrat,system-ui,sans-serif}
+.save input:focus-visible{outline:2px solid var(--aqua);outline-offset:1px}
+.ib{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.ib:hover{color:var(--bad-ink);border-color:var(--bad)}
+.dlg-bg{position:fixed;inset:0;z-index:90;background:rgba(6,24,39,.45);display:grid;place-items:center;padding:16px;animation:fadein .16s var(--ease)}
+.dlg{width:min(420px,100%);background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);padding:22px;animation:tin .22s var(--back)}
+.dlg h2{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.dlg p{font-size:14px;color:var(--ink-2);margin-top:8px;line-height:1.5}
+.dlg-a{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.btn-d{background:var(--bad);color:#fff;border-color:transparent}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@media (max-width:1180px){.lab{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){.dp{grid-template-columns:100px minmax(0,1fr) 80px}.dp .when{grid-column:2}.dp .rows{grid-row:1;grid-column:3}}
+@media (max-width:760px){
+  .brief{grid-template-columns:minmax(0,1fr);padding:18px 16px 16px;gap:14px}
+  .brief h1{font-size:25px}.brief .lect{font-size:14px}
+  .brief-side{align-items:flex-start;flex-direction:row;flex-wrap:wrap}
+  .op{grid-template-columns:40px minmax(0,1fr);gap:12px}
+  .op-side{grid-column:1/-1;align-items:stretch;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:end}
+  .op-side .op-mn{grid-column:1/-1;max-width:none}
+  .op-side .btn{grid-column:1/-1;width:100%}
+  .wf-r{grid-template-columns:minmax(0,1fr) 112px;grid-template-areas:"l v" "t t";gap:6px 12px}
+  .wf-r .l{grid-area:l;white-space:normal}.wf-r .v{grid-area:v}.wf-r .t{grid-area:t;height:8px}
+  .dsum{grid-template-columns:minmax(0,1fr);gap:10px}
+  .dp{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+  .dp>.dst{grid-column:1;grid-row:1}.dp .rows{grid-column:2;grid-row:1}
+  .dp>div:nth-child(2){grid-column:1/-1}.dp .when{grid-column:1/-1}
+  .sim-out.lab3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dlg-a{flex-direction:column-reverse}.dlg-a .btn{width:100%}
+}
 </style>
 </head>
 <body>
@@ -584,6 +789,8 @@ const th=n=>num(n)?String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.'):'�
 const clp=n=>num(n)?(n<0?'−':'')+'$'+th(Math.abs(n)):'—';
 const dec=(n,d=1)=>num(n)?n.toFixed(d).replace('.',','):'—';
 const mm=n=>num(n)?'$'+dec(n/1e6,n>=1e7?1:2)+'M':'—';
+// Razones (retorno): dos decimales entre 0,5 y 2, donde un decimal engaña (0,97× no es 1,0×).
+const rx=n=>num(n)?dec(n,n>=.5&&n<2?2:1)+'×':'—';
 const pctTxt=(n,d=0)=>num(n)?dec(n,d)+'%':'—';
 const hhmm=m=>{m=Math.max(0,Math.floor(m));const h=Math.floor(m/60)%24,mi=m%60;return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')};
 const fdate=iso=>{if(!iso)return '—';const [y,m,d]=String(iso).slice(0,10).split('-');return esc(`${d}/${m}/${y}`)};
@@ -637,6 +844,12 @@ const I={
  eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
  refresh:'<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/>',
  ext:'<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+ sunrise:'<path d="M12 2v8M4.93 10.93l1.41 1.41M2 18h2M20 18h2M19.07 10.93l-1.41 1.41M22 22H2M8 6l4-4 4 4M16 18a4 4 0 0 0-8 0"/>',
+ database:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',
+ tube:'<path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5s-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7M14.5 16h-5"/>',
+ trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+ save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+ layers:'<path d="m12 2 10 5-10 5L2 7l10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
 };
 const ic=(n,s=18,sw=1.9)=>`<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]||''}</svg>`;
 // Etiquetas de procedencia: toda cifra real lleva su fecha o rango.
@@ -677,6 +890,7 @@ const ok=x=>x&&!x.error;
 
 /* ================= Módulos ================= */
 const MODS=[
+ {id:'inicio',t:'Buen día',s:'Inicio',g:'Hoy',ic:'sunrise',st:'prod',src:'inicio',f:'Oportunidades del día con evidencia real, lo que queda en el centro (módulo EBITDA) y el estado de los procesos. Los montos son estimaciones y lo dicen.'},
  {id:'pulso',t:'Pulso de hoy',g:'Hoy',ic:'activity',st:'prod',src:'pulso',f:'Entradas reales de hoy por canal, recepción esperando, agenda de mañana y venta del mes. Falta registrar las llamadas al fijo y la llegada presencial.'},
  {id:'embudo',t:'Embudo omnicanal',g:'Captación',ic:'filter',st:'cerca',src:'captacion',f:'Meta y la página web se miden de punta a punta con la misma vara que Campañas Meta. Faltan el fijo, la recepción presencial, los QR y Google Ads.'},
  {id:'viaje',t:'Viaje del paciente',g:'Captación',ic:'route',st:'cerca',src:'captacion',f:'El valor a 30, 60 y 90 días de quienes trajo cada anuncio ya es real. Falta encadenar referidos y el perfil individual.'},
@@ -688,10 +902,12 @@ const MODS=[
  {id:'reputacion',t:'Reputación',g:'Conversión',ic:'star',st:'cerca',src:'reputacion',f:'Nota de Google y encuesta después de la consulta, reales. Faltan el detalle por estrellas y responder reseñas (API de Perfil de Empresa en revisión) y clasificar temas.'},
  {id:'competencia',t:'Competencia y mercado',s:'Competencia',g:'Inteligencia',ic:'target',st:'vision',f:'Requiere un levantamiento de precios trimestral y datos de búsqueda por zona.'},
  {id:'finanzas',t:'Finanzas de crecimiento',s:'Finanzas',g:'Inteligencia',ic:'wallet',st:'prod',src:'finanzas',f:'Venta de caja, lo que queda al centro y economía por canal, reales. Falta la proyección con intervalo estadístico.'},
+ {id:'laboratorio',t:'Laboratorio de presupuesto',s:'Laboratorio',g:'Inteligencia',ic:'tube',st:'cerca',src:'laboratorio',f:'Simulador con tasas reales de 90 días, capacidad de la agenda y valor a 12 meses. La curva de respuesta al gasto es un ajuste simple: la banda muestra sensibilidad, no un intervalo estadístico.'},
  {id:'prediccion',t:'Predicción',g:'Inteligencia',ic:'trending',st:'vision',f:'Requiere 24 meses de historia limpia por especialidad, clima local y calendario escolar.'},
  {id:'experimentos',t:'Experimentos',g:'Inteligencia',ic:'flask',st:'cerca',src:'conversion',f:'Reenganche con y sin hora, y segundo toque, medidos en vivo. Falta un registro formal de pruebas con su significancia.'},
  {id:'copiloto',t:'Copiloto Alma',g:'Inteligencia',ic:'bot',st:'vision',f:'Requiere un modelo con acceso de solo lectura a la base y que cite la fuente de cada cifra.'},
  {id:'bitacora',t:'Bitácora y cumplimiento',s:'Bitácora y consentimiento',g:'Control',ic:'shield',st:'prod',src:'bitacora',f:'Lo que el sistema hizo solo, según el rastro de cada tarea, y el consentimiento de marketing en conteos. Falta que el respaldo deje registro en la base.'},
+ {id:'datos',t:'Centro de datos',g:'Control',ic:'database',st:'prod',src:'datos',f:'Estado real de cada proceso nocturno según su rastro en la base: última corrida, frescura contra su horario, filas y error.'},
 ];
 MODS.forEach((m,i)=>m.n=i+1);
 const nn=n=>String(n).padStart(2,'0');
@@ -724,8 +940,10 @@ const donut=(parts,sz=150)=>{const r=sz/2-12,c=2*Math.PI*r;let off_=0;return `<s
 function spark(vals,col,w=84,h=26){const xs=vals.filter(num);if(xs.length<2)return '<span class="small muted">Sin serie</span>';const mx=Math.max(...xs),mn=Math.min(...xs);const pts=vals.map((x,i)=>num(x)?[2+i*(w-4)/(vals.length-1),h-3-(x-mn)/(mx-mn||1)*(h-6)]:null).filter(Boolean);const last=pts[pts.length-1];return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="M${pts.map(p=>p.join(',')).join('L')}" style="fill:none;stroke:${v(col)};stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/><circle cx="${last[0]}" cy="${last[1]}" r="2.6" style="fill:${v(col)}"/></svg>`}
 
 /* ---------- 01 Pulso ---------- */
-const PU={ev:[],seen:new Set(),run:false,paused:false,tok:{},nowMin:0,base:0,offs:0,ref:null,first:true};
-function legendHTML(){const c={};PU.ev.forEach(e=>c[e.canal]=(c[e.canal]||0)+1);const xs=Object.entries(c).sort((a,b)=>b[1]-a[1]);return xs.length?xs.map(([k,n])=>`<span class="pl"><i style="background:${v(chc(k))}"></i>${esc(chs(k))} <b>${n}</b></span>`).join(''):'<span class="pl">Sin entradas todavía</span>'}
+const PU={ev:[],seen:new Set(),paused:false,base:0,first:true,D:null,anim:false,bump:null,S:[],geo:null};
+function legendHTML(D){const c={};PU.ev.forEach(e=>c[e.canal]=(c[e.canal]||0)+1);const xs=Object.entries(c).sort((a,b)=>b[1]-a[1]);
+ const ref=(D||PU.D||{}).referencia;const k=ref&&ref.semanas?`<span class="pl avgk"><i></i>Promedio de ${esc(refDia(D||PU.D))}</span>`:'';
+ return (xs.length?xs.map(([k,n])=>`<span class="pl"><i style="background:${v(chc(k))}"></i>${esc(chs(k))} <b>${n}</b></span>`).join(''):'<span class="pl">Sin entradas todavía</span>')+k}
 function feedItem(f,isNew){const e=EST[f.estado]||EST.sin_cita;return `<li class="fi${isNew?' new':''}"><span class="fi-dot" style="background:${v(chc(f.canal))}"></span><div class="fi-b"><div class="fi-t"><b>${esc(chs(f.canal))}</b> · ${esc(f.especialidad||'Sin especialidad aún')}<span class="pill ${e[0]}">${e[1]}</span></div><div class="fi-d">Paciente ${esc(f.iniciales||'—')}</div></div><time>${esc(f.hora)}</time></li>`}
 function feedHTML(){const xs=PU.ev.slice().sort((a,b)=>b.min-a.min).slice(0,14);return xs.length?xs.map(f=>feedItem(f,f._new)).join(''):`<li>${estadoV('Todavía no entra nadie hoy','Cuando alguien escriba por WhatsApp, Instagram, Messenger o desde la web, aparecerá aquí con su canal y su estado. Nunca se muestran teléfonos ni nombres completos.',{icon:'msg'})}</li>`}
 const TOM_ILUS=0;
@@ -743,13 +961,13 @@ R.pulso={html:D=>{
  return `${mh('pulso','Lo que está pasando hoy en el centro: quién entra, por dónde, quién espera a recepción y cuánta agenda queda libre mañana.')}
  <section class="card pulse" aria-label="Pulso del día">
   <div class="pulse-head">
-   <div><div class="kl" style="justify-content:flex-start">Pulso del día · primeras entradas por canal ${tagR('hoy · se actualiza cada 60 s')}</div>
-    <div class="pulse-n"><b id="pCount">${PU.ev.length}</b><span id="pCountTxt">${PU.ev.length===1?'persona escribió hoy':'personas escribieron hoy'}</span></div></div>
-   <div class="pulse-leg" id="pLeg">${legendHTML()}</div>
+   <div style="min-width:0"><div class="kl" style="justify-content:flex-start;flex-wrap:wrap"><span style="white-space:nowrap">Pulso del día</span>${tagR('se actualiza cada 60 s')}</div>
+    <div id="pSum">${pulseSumHTML(D)}</div></div>
   </div>
-  <p class="pulse-note" id="pNote"></p>
-  <div class="pulse-cv"><canvas id="pulseCv" role="img" aria-label="Monitor de pulso: cada latido es una persona que escribió hoy por primera vez; el color indica el canal y la altura hasta dónde llegó."></canvas></div>
-  <div class="pulse-foot"><span>Cada latido es una persona que escribió hoy por primera vez. Altura: agendó, pasó a recepción, sigue conversando o quedó sin cita. La zona clara es el promedio del mismo día en las ${D.referencia&&D.referencia.semanas?D.referencia.semanas:4} semanas anteriores.</span><span class="fresh" id="pFresh"><i></i>Lectura ${fhm(D.ahora)}</span></div>
+  <div class="pulse-chart" id="pChart"></div>
+  <div class="pulse-leg2" id="pLeg">${legendHTML(D)}</div>
+  <div class="pstates" id="pStates">${pulseStatesHTML()}</div>
+  <div class="pulse-foot"><span>Cada barra es una hora: personas que escribieron por primera vez hoy, apiladas por canal. La línea punteada es el promedio de ${esc(refDia(D))} de las ${D.referencia&&D.referencia.semanas?D.referencia.semanas:4} semanas anteriores.</span><span class="fresh" id="pFresh"><i></i>Lectura ${fhm(D.ahora)}</span></div>
  </section>
  <div class="kpis">
   ${kpi('Citas agendadas hoy',th(D.citas_hoy),`${th(D.citas_hoy_meta)} desde anuncios de Meta · por el bot`,'accent','hoy')}
@@ -769,58 +987,81 @@ function fechaLarga(iso){if(!iso)return '';const d=new Date(iso+'T12:00:00');con
 function pulseIngest(D,initial){
  const nuevos=[];
  (D.eventos||[]).forEach(e=>{if(!PU.seen.has(e.id)){PU.seen.add(e.id);if(!initial&&!PU.first)nuevos.push(e)}});
- const byId={};PU.ev.forEach(e=>byId[e.id]=e);
- PU.ev=(D.eventos||[]).map(e=>({...e,born:byId[e.id]?byId[e.id].born:(nuevos.includes(e)?performance.now():0),_new:nuevos.includes(e)}));
- PU.first=false;
- PU.base=D.ahora_min||0;PU.offs=performance.now();PU.ref=(D.referencia&&D.referencia.por_media_hora)||null;
+ if(PU.first)PU.anim=true;
+ PU.ev=(D.eventos||[]).map(e=>({...e,_new:nuevos.includes(e)}));
+ PU.first=false;PU.D=D;PU.base=D.ahora_min||0;
+ PU.bump=nuevos.length?new Set(nuevos.map(e=>{const h=Math.floor(e.min/60);return h<8?0:h})):null;
  SRV.set(D.ahora);
- const c=$('#pCount');if(c){c.textContent=PU.ev.length;if(nuevos.length){c.classList.remove('tick');void c.offsetWidth;c.classList.add('tick')}}
- const ct=$('#pCountTxt');if(ct)ct.textContent=PU.ev.length===1?'persona escribió hoy':'personas escribieron hoy';
- const lg=$('#pLeg');if(lg)lg.innerHTML=legendHTML();
+ const sm=$('#pSum');if(sm){sm.innerHTML=pulseSumHTML(D);const c=$('#pCount');if(c&&nuevos.length){void c.offsetWidth;c.classList.add('tick')}}
+ const lg=$('#pLeg');if(lg)lg.innerHTML=legendHTML(D);
+ const st=$('#pStates');if(st)st.innerHTML=pulseStatesHTML();
  const fd=$('#feed');if(fd)fd.innerHTML=feedHTML();
  PU.ev.forEach(e=>e._new=false);
  const fr=$('#pFresh');if(fr)fr.innerHTML=`<i></i>Lectura ${fhm(D.ahora)}`;
- const note=$('#pNote');if(note){const h=Math.floor((D.ahora_min||0)/60);const tot=D.referencia&&D.referencia.total_dia;
-  note.textContent=(h<8||h>=21)&&PU.ev.length<5?`Fuera del horario del centro es normal que entre poca gente${num(tot)?`: en un ${fechaLarga(D.hoy).split(' ')[0]} típico entran ${dec(tot,0)} personas en todo el día`:''}.`:'';note.hidden=!note.textContent}
+ if(cur==='pulso')pulseDraw();
 }
-function readTok(){const cs=getComputedStyle(document.documentElement);const g=k=>cs.getPropertyValue('--'+k).trim();PU.tok={aqua:g('aqua'),aquaSoft:g('aqua-soft'),grid:g('grid'),muted:g('muted'),ink:g('ink'),surface:g('surface')};Object.keys(CHN).forEach(k=>PU.tok[k]=g(CHN[k].c))}
-const easeBack=t=>{const c1=1.4,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2)};
-const ALTO={agendo:1,recepcion:.72,conversando:.5,sin_cita:.3};
-function pulseDraw(ts){
- const cv=$('#pulseCv');if(!cv)return;const W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
- const d=Math.min(2,window.devicePixelRatio||1);if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d)}
- const x=cv.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,W,H);const C=PU.tok;
- const now=PU.base+(RM?0:(performance.now()-PU.offs)/60000);
- const narrow=W<560;let t0,t1;
- if(narrow){t0=now-240;t1=now+60}else{t0=Math.min(7*60,now-60);t1=Math.max(22*60,now+30);const first=PU.ev.length?PU.ev[0].min:t0;t0=Math.min(t0,first-15)}
- t0=Math.max(0,t0);t1=Math.min(24*60,t1);
- const pl=14,pr=14,pt=22,pb=24,iw=W-pl-pr,ih=H-pt-pb,base=pt+ih*.8;
- const X=t=>pl+(t-t0)/(t1-t0)*iw;
- x.font='600 11px Montserrat, system-ui, sans-serif';x.textBaseline='alphabetic';
- const step=narrow?60:60;
- for(let m=Math.ceil(t0/step)*step;m<=t1;m+=step){const xx=Math.round(X(m))+.5;x.strokeStyle=C.grid;x.lineWidth=1;x.beginPath();x.moveTo(xx,pt-6);x.lineTo(xx,H-pb+4);x.stroke();
-  x.fillStyle=C.muted;x.textAlign='center';if(Math.abs(xx-X(now))>34&&(!narrow||m%120===0||W>400))x.fillText(hhmm(m),xx,H-6)}
- // referencia: promedio del mismo día, últimas semanas (entradas por media hora)
- if(PU.ref&&PU.ref.some(v=>v>0)){const mx=Math.max(...PU.ref,1);x.beginPath();x.moveTo(X(t0),base);
-  for(let t=t0;t<=t1;t+=10){const i=Math.min(47,Math.floor(t/30));x.lineTo(X(t),base-PU.ref[i]/mx*ih*.62)}
-  x.lineTo(X(t1),base);x.closePath();x.fillStyle=C.aquaSoft;x.fill();
-  x.fillStyle=C.muted;x.textAlign='right';x.fillText('Promedio del mismo día',W-pr,pt+2)}
- const vis=PU.ev.filter(e=>e.min>=t0-3&&e.min<=now+1);
- x.beginPath();x.moveTo(pl,base);const peaks=[];
- for(const e of vis){const xx=X(e.min);const g=e.born&&!RM?Math.min(1,(ts-e.born)/520):1;const gg=easeBack(g);const h=(14+(ALTO[e.estado]||.3)*ih*.66)*gg;
-  x.lineTo(xx-6,base);x.lineTo(xx-3,base+4*gg);x.lineTo(xx,base-h);x.lineTo(xx+3,base+7*gg);x.lineTo(xx+6,base);peaks.push([xx,base-h,e])}
- x.lineTo(X(now),base);
- x.strokeStyle=C.aqua;x.lineWidth=2;x.lineJoin='round';x.lineCap='round';x.shadowColor=C.aqua;x.shadowBlur=10;x.stroke();x.shadowBlur=0;
- for(const [xx,yy,e] of peaks){const col=C[e.canal]||C.aqua;if(e.born&&!RM){const a=(ts-e.born)/2400;if(a<1){x.beginPath();x.arc(xx,yy,4+a*16,0,7);x.strokeStyle=col;x.globalAlpha=(1-a)*.7;x.lineWidth=2;x.stroke();x.globalAlpha=1}}
-  x.beginPath();x.arc(xx,yy,3.6,0,7);x.fillStyle=col;x.fill();x.lineWidth=1.5;x.strokeStyle=C.surface;x.stroke()}
- const hx=X(now);const ph=RM?0:(ts%1700)/1700;
- x.beginPath();x.arc(hx,base,5+ph*16,0,7);x.fillStyle=C.aqua;x.globalAlpha=(1-ph)*.35;x.fill();x.globalAlpha=1;
- x.beginPath();x.arc(hx,base,5,0,7);x.fillStyle=C.aqua;x.fill();x.lineWidth=2;x.strokeStyle=C.surface;x.stroke();
- x.fillStyle=C.ink;x.textAlign='center';x.font='600 11px Montserrat, system-ui, sans-serif';x.fillText('Ahora '+hhmm(now),Math.min(W-40,Math.max(40,hx)),H-6);
-}
-function loop(ts){if(!PU.run)return;pulseDraw(ts);requestAnimationFrame(loop)}
-function pulseStart(){readTok();if(RM){pulseDraw(0);return}if(PU.run)return;PU.run=true;requestAnimationFrame(loop)}
-function pulseStop(){PU.run=false}
+const DIAS_PL=['domingos','lunes','martes','miércoles','jueves','viernes','sábados'];
+function refDia(D){D=D||{};const r=D.referencia||{};if(r.dia_semana)return 'los '+r.dia_semana;if(D.hoy){const d=new Date(D.hoy+'T12:00:00');return 'los '+DIAS_PL[d.getDay()]}return 'este día'}
+function refHoras(r){if(!r||!r.semanas)return null;if(Array.isArray(r.por_hora)&&r.por_hora.length===24)return r.por_hora;const m=r.por_media_hora;if(!Array.isArray(m)||m.length!==48)return null;return Array.from({length:24},(_,h)=>(m[2*h]||0)+(m[2*h+1]||0))}
+function refHasta(r,mi){const m=r&&r.semanas&&r.por_media_hora;if(!Array.isArray(m)||m.length!==48)return null;const i=Math.min(47,Math.floor(mi/30));return m.slice(0,i).reduce((x,y)=>x+y,0)+m[i]*(mi-i*30)/30}
+const fdec=n=>!num(n)?'—':n>=10||Math.abs(n-Math.round(n))<.05?th(Math.round(n)):dec(n,1);
+function pulseSumHTML(D){const n=PU.ev.length;const ah=hhmm(D.ahora_min||0);const r=D.referencia||{};const pr=num(r.hasta_ahora)?r.hasta_ahora:refHasta(r,D.ahora_min||0);
+ let ref='';if(pr!=null){const df=Math.round(n-pr);const cls=df>=1?'up':df<=-1?'down':'';const txt=df>=1?`+${th(df)} sobre el promedio`:df<=-1?`−${th(-df)} bajo el promedio`:'igual que el promedio';
+  ref=`<div class="ps-ref"><span>Promedio de ${esc(refDia(D))} a esta hora: <b>${fdec(pr)}</b></span><span class="ps-d ${cls}">${txt}</span></div>${num(r.total_dia)?`<div class="ps-sub">En un día así escriben en promedio ${fdec(r.total_dia)} personas en total.</div>`:''}`}
+ else ref=`<div class="ps-sub">Sin historia de las semanas anteriores para comparar todavía.</div>`;
+ return `<div class="pulse-sum"><b class="ps-n" id="pCount">${th(n)}</b><span class="ps-t">${n===1?'persona escribió':'personas escribieron'} por primera vez hoy, hasta las <b>${ah}</b></span></div>${ref}`}
+function pulseStatesHTML(){const c={agendo:0,recepcion:0,conversando:0,sin_cita:0};PU.ev.forEach(e=>{if(e.estado in c)c[e.estado]++});
+ const A={recepcion:['Abrir panel de recepción','panel','/admin/v2'],sin_cita:['Abrir Recuperar pacientes','recuperar','/alma/recuperar']};
+ const dot={agendo:'ok',recepcion:'warn',conversando:'azul',sin_cita:'faint'};
+ return Object.keys(c).map(k=>{const t=`<i style="background:${v(dot[k])}"></i><span class="pst-t"><b>${th(c[k])}</b><span>${EST[k][1]}</span></span>`;const a=A[k];
+  return a&&c[k]?`<a class="pst" href="${esc(_tk(a[2]))}" data-alma="${esc(a[1])}" title="${esc(a[0])}" aria-label="${esc(EST[k][1]+': '+c[k]+'. '+a[0])}">${t}<span class="pst-a">${ic('arrow',15)}</span></a>`:`<div class="pst">${t}</div>`}).join('')}
+// Franjas: 08–22 por hora; la madrugada se agrupa en «00–08» y se extiende si hay entradas tarde.
+function pulseSlots(nowMin){const ev=PU.ev;const early=ev.some(e=>e.min<480)||nowMin<480;
+ let last=21;ev.forEach(e=>{const h=Math.floor(e.min/60);if(h>last)last=Math.min(23,h)});if(nowMin>=22*60)last=Math.max(last,Math.min(23,Math.floor(nowMin/60)));
+ const S=[];if(early)S.push({a:0,b:8,l:'00–08',ls:'0–8'});for(let h=8;h<=last;h++)S.push({a:h,b:h+1,l:String(h).padStart(2,'0')+':00',ls:String(h).padStart(2,'0')});return S}
+function niceMax(x){if(x<=4)return 4;const p=Math.pow(10,Math.floor(Math.log10(x)));for(const m of [1,2,3,4,5,6,8,10])if(m*p>=x&&(m*p)%2===0)return m*p;return 10*p}
+function pulseDraw(){const el=$('#pChart');if(!el)return;const D=PU.D||{};const W=el.clientWidth,H=el.clientHeight;if(!W||!H)return;
+ const now=PU.base;const narrow=W<560;const S=pulseSlots(now);const hr=refHoras(D.referencia);
+ const orden=Object.entries(PU.ev.reduce((o,e)=>(o[e.canal]=(o[e.canal]||0)+1,o),{})).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+ S.forEach(s=>{s.c={};s.n=0;PU.ev.forEach(e=>{if(e.min>=s.a*60&&e.min<s.b*60){s.c[e.canal]=(s.c[e.canal]||0)+1;s.n++}});
+  s.avg=hr?hr.slice(s.a,s.b).reduce((x,y)=>x+y,0):null;s.fut=now<s.a*60;s.cur=now>=s.a*60&&now<s.b*60});
+ const ymax=niceMax(Math.max(1,...S.map(s=>s.n),...S.map(s=>s.avg||0))*1.08);
+ const p={l:28,r:6,t:24,b:24};const iw=W-p.l-p.r,ih=H-p.t-p.b;const sw=iw/S.length;
+ const bw=Math.max(6,Math.min(narrow?16:38,sw*(narrow?.62:.6)));const X=i=>p.l+sw*i,Y=val=>p.t+ih*(1-val/ymax),base=Y(0);
+ let g='';[0,ymax/2,ymax].forEach(t=>{const y=Math.round(Y(t))+.5;g+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" style="stroke:${v(t?'grid':'line-2')}"/><text x="${p.l-6}" y="${y+4}" text-anchor="end" style="fill:${v('muted')};font-size:11px">${Math.round(t)===t?t:dec(t,1)}</text>`});
+ // barras apiladas por canal
+ let bars='';S.forEach((s,i)=>{const cx=X(i)+sw/2;let y=base;let seg='';orden.forEach(k=>{const n=s.c[k];if(!n)return;const h=ih*n/ymax;y-=h;seg+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" style="fill:${v(chc(k))}"/>`});
+  const bump=PU.bump&&PU.bump.has(s.a)?' bump':'';
+  bars+=`<g class="pslot" data-i="${i}"><rect class="phit" x="${X(i).toFixed(1)}" y="${p.t}" width="${sw.toFixed(1)}" height="${ih}" rx="6" tabindex="0" role="img" aria-label="${esc(slotAria(s))}"/><g class="pbar${bump}" style="--i:${i}" clip-path="url(#pclip${i})">${seg}</g></g>`;
+  g+=`<clipPath id="pclip${i}"><rect x="${(cx-bw/2).toFixed(1)}" y="${p.t-2}" width="${bw.toFixed(1)}" height="${(base-p.t+2).toFixed(1)}" rx="${Math.min(4,bw/3).toFixed(1)}"/></clipPath>`});
+ // promedio: escalón por franja (sólida hasta ahora, tenue después)
+ let avg='';if(hr){let d1='',d2='';S.forEach((s,i)=>{const y=Y(s.avg).toFixed(1);const seg=`M${X(i).toFixed(1)},${y}H${X(i+1).toFixed(1)}`;
+   const nx=S[i+1];const jn=nx?`M${X(i+1).toFixed(1)},${y}V${Y(nx.avg).toFixed(1)}`:'';if(s.fut){d2+=seg+jn}else{d1+=seg+(nx&&!nx.fut?jn:'');if(nx&&nx.fut)d2+=jn}});
+  avg=`<path d="${d1}" style="fill:none;stroke:${v('ink-2')};stroke-width:2;stroke-dasharray:5 4;stroke-linecap:round"/><path d="${d2}" style="fill:none;stroke:${v('ink-2')};stroke-width:1.5;stroke-dasharray:3 5;opacity:.45"/>`}
+ // eje X: etiquetas sin choques (en móvil, cada 2 h)
+ let xl='';let lastR=-1e9;S.forEach((s,i)=>{const l=sw<46?s.ls:s.l;if(narrow&&s.b-s.a===1&&s.a%2)return;const cx=X(i)+sw/2;const w=l.length*6.4;if(cx-w/2<lastR+6)return;lastR=cx+w/2;
+  xl+=`<text x="${cx.toFixed(1)}" y="${H-6}" text-anchor="middle" style="fill:${v(s.cur?'ink':'muted')};font-size:11px;font-weight:${s.cur?700:600}">${l}</text>`});
+ // marca «Ahora»: arriba del área del gráfico, nunca sobre el eje
+ const si=S.findIndex(s=>s.cur);let nw='';if(si>=0){const s=S[si];const fr=(now-s.a*60)/((s.b-s.a)*60);const nx=X(si)+sw*fr;const lbl='Ahora '+hhmm(now);const lw=lbl.length*6.2+12;const lx=Math.max(p.l+lw/2,Math.min(W-p.r-lw/2,nx));
+  nw=`<line x1="${nx.toFixed(1)}" x2="${nx.toFixed(1)}" y1="${p.t-4}" y2="${base}" style="stroke:${v('aqua')};stroke-width:1.5"/><circle cx="${nx.toFixed(1)}" cy="${base}" r="3.5" style="fill:${v('aqua')};stroke:${v('surface')};stroke-width:1.5"/><rect x="${(lx-lw/2).toFixed(1)}" y="2" width="${lw.toFixed(1)}" height="18" rx="9" style="fill:${v('aqua-soft')}"/><text class="p-now-l" x="${lx.toFixed(1)}" y="15" text-anchor="middle" style="fill:${v('aqua-ink')}">${lbl}</text>`}
+ const tot=PU.ev.length;const aria=`Personas que escribieron hoy por primera vez, por hora y canal: ${tot} hasta las ${hhmm(now)}.`+(hr?` Línea punteada: promedio de ${refDia(D)}.`:'');
+ el.innerHTML=`<svg class="${PU.anim&&!RM?'anim':''}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="group" aria-label="${esc(aria)}"><defs>${g.match(/<clipPath[\s\S]*?<\/clipPath>/g)?.join('')||''}</defs>${g.replace(/<clipPath[\s\S]*?<\/clipPath>/g,'')}${bars}${avg}${nw}${xl}</svg><div class="ptip" id="pTip" role="tooltip"></div>`;
+ PU.anim=false;PU.bump=null;PU.S=S;PU.geo={X,sw,p,W,ih,Y};pulseTipBind(el)}
+function slotAria(s){const l=s.b-s.a===1?`${String(s.a).padStart(2,'0')}:00 a ${String(s.b).padStart(2,'0')}:00`:'00:00 a 08:00';
+ return `${l}: ${s.fut?'aún no llega':s.n+(s.n===1?' persona':' personas')}${Object.keys(s.c).length?' ('+Object.entries(s.c).map(([k,n])=>chs(k)+' '+n).join(', ')+')':''}${num(s.avg)?`, promedio ${fdec(s.avg)}`:''}`}
+function tipHTML(s){const rng=s.b-s.a===1?`${String(s.a).padStart(2,'0')}:00–${String(s.b).padStart(2,'0')}:00`:'00:00–08:00';
+ const rows=Object.entries(s.c).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div class="r"><i style="background:${v(chc(k))}"></i>${esc(chs(k))}<b>${n}</b></div>`).join('');
+ return `<h4>${rng}${s.cur?' · en curso':''}<span>${s.fut?'—':th(s.n)}</span></h4>${s.fut?'<div class="muted">Esta hora aún no llega.</div>':rows||'<div class="muted">Nadie escribió en esta hora.</div>'}${num(s.avg)?`<div class="avg">Promedio de ${esc(refDia(PU.D))}: <b>${fdec(s.avg)}</b></div>`:''}`}
+function pulseTipBind(el){const tip=$('#pTip',el);if(!tip)return;let on=null;
+ const show=(g)=>{const i=+g.dataset.i;const s=PU.S[i];if(!s)return;if(on&&on!==g)on.classList.remove('on');on=g;g.classList.add('on');tip.innerHTML=tipHTML(s);tip.classList.add('on');
+  const G=PU.geo;const cx=G.X(i)+G.sw/2;const tw=tip.offsetWidth,th_=tip.offsetHeight;let x=cx+G.sw/2+8;if(x+tw>el.clientWidth)x=cx-G.sw/2-8-tw;if(x<0)x=Math.max(0,Math.min(el.clientWidth-tw,cx-tw/2));
+  let y=Math.max(0,Math.min(G.Y(Math.max(s.n,s.avg||0))-th_/2,el.clientHeight-th_));if(x<cx&&x+tw>cx)y=-th_-6;tip.style.left=x+'px';tip.style.top=y+'px'};
+ const hide=()=>{if(on)on.classList.remove('on');on=null;tip.classList.remove('on')};
+ $$('.pslot',el).forEach(g=>{g.addEventListener('pointerenter',()=>show(g));g.addEventListener('pointerdown',()=>show(g));const h=$('.phit',g);h.addEventListener('focus',()=>show(g));h.addEventListener('blur',hide)});
+ el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')hide()})}
+function pulseStart(){pulseDraw()}
+function pulseStop(){}
+function readTok(){/* el gráfico usa variables CSS: el tema cambia sin recalcular colores */}
 let pollT=null;
 function poll(){clearTimeout(pollT);pollT=setTimeout(async()=>{if(cur==='pulso'&&!document.hidden&&!PU.paused){try{const D=await load('pulso',true);pulseIngest(D,false);refreshDecisiones(D)}catch(e){toast('No se pudo actualizar el pulso. Se reintenta en un minuto.','err')}}poll()},60000)}
 function refreshDecisiones(D){/* las decisiones y KPIs se recalculan con cada lectura */const art=$('#m-pulso');if(!art||art.hidden)return;
@@ -829,20 +1070,43 @@ function refreshDecisiones(D){/* las decisiones y KPIs se recalculan con cada le
  const cards=$$('section.card',art),cards2=$$('section.card',tmp);[1,3].forEach(i=>{if(cards[i]&&cards2[i])cards[i].innerHTML=cards2[i].innerHTML});}
 
 /* ---------- 02 Embudo ---------- */
-let FAM='all';
-function embCanales(D){const e=D.embudo||{};const out=[];
- if(e.meta)out.push({k:'meta',l:'Anuncios Meta',c:'c-fb',...e.meta});
- if(e.web)out.push({k:'web',l:'Página web',c:'c-go',...e.web});return out}
+let FAM='all',NSC=false;
+const PLC={ig:'c-ig',fb:'c-fb',msg:'c-ms',sin:'c-ads'};
+function embMP(D){const mp=(D.embudo||{}).meta_plataformas;return mp&&!mp.error&&(mp.filas||[]).length?mp:null}
+function embNuevos(D){const n=(D.embudo||{}).nuevos;return n&&!n.error&&n.hay?n:null}
+// Canales para el flujo: Meta se abre por plataforma cuando hay desglose; con "Todos" se suma la fila de nuevos sin canal.
+function embCanales(D,porPlat=true){const e=D.embudo||{};const out=[];const mp=embMP(D);
+ if(e.meta){if(porPlat&&mp)mp.filas.forEach(f=>{if(f.personas)out.push({k:'meta_'+f.k,fam:'meta',c:PLC[f.k],atendidos:0,no_asistio:0,anuladas:0,...f,l:{ig:'Instagram',fb:'Facebook',msg:'Messenger/WhatsApp',sin:'Meta sin plataforma'}[f.k]||f.l})});else out.push({k:'meta',fam:'meta',l:'Anuncios Meta',c:'c-fb',...e.meta})}
+ if(e.web)out.push({k:'web',fam:'web',l:'Página web',c:'c-go',...e.web});
+ const nv=embNuevos(D);const DCC={recomendacion:'c-ref',fbig:'c-conv',google:'c-maps',letrero:'c-qr',qr:'c-tel'};
+ if(porPlat&&nv&&FAM==='all')((nv.declarados||{}).filas||[]).forEach(f=>{if(f.personas)out.push({k:'decl_'+f.k,fam:'decl',l:{recomendacion:'Recomendación',fbig:'Dijo FB/IG sin clic',google:'Google',letrero:'Letrero/radio',qr:'QR'}[f.k]||f.l,c:DCC[f.k]||'c-ads',personas:f.personas,citas:f.citas,atendidos:f.atendidos,no_asistio:0,anuladas:0})});
+ if(porPlat&&nv&&nv.sin_canal&&FAM==='all'&&NSC)out.push({k:'nuevo',fam:'nuevo',l:'Nuevos sin canal',c:'c-rec',personas:nv.sin_canal,citas:nv.sin_canal,atendidos:nv.sin_canal,no_asistio:0,anuladas:0});
+ return out}
 function funnelTable(D){
- const rows=embCanales(D).filter(c=>FAM==='all'||c.k===FAM);
- const S=k=>rows.reduce((a,c)=>a+(c[k]||0),0);
- const tr=c=>`<tr><td><span class="cn"><i class="sw" style="background:${v(c.c)}"></i>${c.l}</span></td><td class="n">${th(c.personas)}</td><td class="n">${c.k==='meta'?th(c.conversaciones):'—'}</td><td class="n">${th(c.citas)}</td><td class="n">${th(c.atendidos)}</td><td class="n">${clp(c.venta)}</td><td class="n">${clp(c.centro)}</td><td class="n">${c.gasto?clp(c.cac_atendido):'—'}</td><td class="n">${c.gasto?`<span class="${(c.retorno_centro||0)>=1?'pos':'wrn'}">${dec(c.retorno_centro,1)}×</span>`:'<span class="muted">Sin pauta</span>'}</td></tr>`;
- const sinm=['tel','rec','ref','qr','ads'].map(k=>`<tr><td><span class="cn"><i class="sw" style="background:${v(chc(k))};opacity:.5"></i>${CHN[k].n}</span></td><td colspan="8"><span class="tag sinm">Sin medición</span> <span class="muted small">${{tel:'El fijo no deja registro de llamadas en el sistema.',rec:'La llegada directa a recepción no se marca con su origen.',ref:'Los códigos de referido existen; falta cruzarlos con la caja.',qr:'Sin QR rastreables en letreros ni radio.',ads:'Sin campaña activa en Google Ads.'}[k]}</span></td></tr>`).join('');
+ const e=D.embudo||{},mp=embMP(D),nv=embNuevos(D);
+ const base=embCanales(D,false).filter(c=>FAM==='all'||c.fam===FAM);
+ const S=k=>base.reduce((a,c)=>a+(c[k]||0),0);
+ const nuevosDe=c=>c.valor12m&&num(c.valor12m.nuevos_rango)?th(c.valor12m.nuevos_rango):'—';
+ const ret=c=>c.gasto?`<span class="${(c.retorno_centro||0)>=1?'pos':'wrn'}">${rx(c.retorno_centro)}</span>`:'<span class="muted">Sin pauta</span>';
+ const tr=c=>`<tr><td><span class="cn"><i class="sw" style="background:${v(c.c)}"></i>${c.l}</span></td><td class="n">${th(c.personas)}</td><td class="n">${c.fam==='meta'?th(c.conversaciones):'—'}</td><td class="n">${th(c.citas)}</td><td class="n">${th(c.atendidos)}</td><td class="n">${nuevosDe(c)}</td><td class="n">${clp(c.venta)}</td><td class="n">${clp(c.centro)}</td><td class="n">${c.gasto?clp(c.cac_atendido):'—'}</td><td class="n">${ret(c)}</td></tr>`;
+ const antes=mp&&mp.antes_de_plataforma;
+ const sub=f=>{const parcial=f.parcial;const dash='<span class="muted" title="Incluido en «Meta · sin plataforma»">—</span>';
+  return `<tr class="subr"><td><span class="cn" style="padding-left:18px;font-weight:500"><i class="sw" style="background:${v(PLC[f.k])}"></i>${esc(f.l)}</span></td><td class="n">${th(f.personas)}</td><td class="n">${parcial?dash:th(f.conversaciones)}</td><td class="n">${th(f.citas)}</td><td class="n">${parcial?dash:th(f.atendidos)}</td><td class="n">${parcial?dash:nuevosDe(f)}</td><td class="n">${parcial?dash:clp(f.venta)}</td><td class="n">${parcial?dash:clp(f.centro)}</td><td class="n">${parcial||antes||!f.gasto||!f.atendidos?'—':clp(f.cac_atendido)}</td><td class="n">${parcial||antes?'—':f.gasto?`<span class="${(f.retorno_centro||0)>=1?'pos':'wrn'}">${rx(f.retorno_centro)}</span>`:'—'}</td></tr>`};
+ let rows='';base.forEach(c=>{rows+=tr(c);if(c.fam==='meta'&&mp)rows+=mp.filas.map(sub).join('')});
+ const DCC2={recomendacion:'c-ref',fbig:'c-conv',google:'c-maps',letrero:'c-qr',qr:'c-tel'};const decl=FAM==='all'&&nv&&nv.declarados?nv.declarados:null;
+ const declRows=decl?`<tr class="subr"><td colspan="10" style="padding-top:14px"><span class="kl" style="justify-content:flex-start">Dijeron cómo nos conocieron · sin anuncio ni web</span></td></tr>`+(decl.filas||[]).map(f=>`<tr><td><span class="cn"><i class="sw" style="background:${v(DCC2[f.k]||'c-ads')}"></i>${esc(f.l)}</span></td><td class="n">${th(f.personas)}</td><td class="n">—</td><td class="n">${th(f.citas)}</td><td class="n">${th(f.atendidos)}</td><td class="n">${th(f.nuevos)}</td><td class="n">${clp(f.venta)}</td><td class="n">—</td><td class="n">—</td><td class="n"><span class="muted">Sin pauta</span></td></tr>`).join(''):'';
+ const nvRow=FAM==='all'&&nv?`<tr><td><span class="cn"><i class="sw" style="background:${v('c-rec')}"></i>Pacientes nuevos sin canal registrado</span></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">${th(nv.sin_canal)}</td><td class="n">${th(nv.sin_canal)}</td><td class="n" title="Aproximado: venta de los nuevos del centro menos la de los nuevos atribuidos a Meta y web">≈ ${clp(nv.venta_sin_canal)}</td><td class="n">—</td><td class="n">—</td><td class="n"><span class="muted">Sin pauta</span></td></tr>`:'';
+ const sinm=['tel','rec','ref','qr','ads'].map(k=>`<tr><td><span class="cn"><i class="sw" style="background:${v(chc(k))};opacity:.5"></i>${CHN[k].n}</span></td><td colspan="9"><span class="tag sinm">Sin medición</span> <span class="muted small">${{tel:'El fijo no deja registro de llamadas en el sistema.',rec:'La llegada directa a recepción no se marca con su origen.',ref:'Los códigos de referido existen; falta cruzarlos con la caja.',qr:'Sin QR rastreables en letreros ni radio.',ads:'Sin campaña activa en Google Ads.'}[k]}</span></td></tr>`).join('');
  const g=S('gasto');
- return `<div class="tw"><table class="tbl"><thead><tr><th>Canal</th><th class="n">Personas</th><th class="n">Conv. Meta</th><th class="n">Citas</th><th class="n">Atendidos</th><th class="n">Venta</th><th class="n">Para el centro</th><th class="n">CAC atendido</th><th class="n">Retorno</th></tr></thead><tbody>${rows.map(tr).join('')}${FAM==='all'?sinm:''}</tbody>${rows.length>1?`<tfoot><tr><td>Total medido</td><td class="n">${th(S('personas'))}</td><td class="n">—</td><td class="n">${th(S('citas'))}</td><td class="n">${th(S('atendidos'))}</td><td class="n">${clp(S('venta'))}</td><td class="n">${clp(S('centro'))}</td><td class="n">—</td><td class="n">${g?dec(rows.reduce((a,c)=>a+(c.gasto?c.centro:0),0)/g,1)+'×':'—'}</td></tr></tfoot>`:''}</table></div>`;
+ const foot=(base.length>1||nvRow)?`<tfoot><tr><td>Total medido</td><td class="n">${th(S('personas'))}</td><td class="n">—</td><td class="n">${th(S('citas'))}</td><td class="n">${th(S('atendidos')+(nvRow?nv.sin_canal:0))}</td><td class="n">${nvRow?th(nv.nuevos_centro):'—'}</td><td class="n">${clp(S('venta')+(nvRow?nv.venta_sin_canal:0)+(decl?(decl.filas||[]).reduce((a,f)=>a+f.venta,0):0))}</td><td class="n">${clp(S('centro'))}</td><td class="n">—</td><td class="n">${g?rx(base.reduce((a,c)=>a+(c.gasto?c.centro:0),0)/g):'—'}</td></tr></tfoot>`:'';
+ const notas=[];
+ if(mp&&FAM!=='web')notas.push(`<b>La plataforma por paciente se registra desde el ${fdate(mp.desde)}.</b> Antes de esa fecha, las personas, citas y venta de Meta quedan en «Meta · sin plataforma»${antes?'; por eso el costo por atendido y el retorno por plataforma no se calculan en este rango':''}. ${mp.gasto_por_plataforma?`El gasto y las conversaciones por plataforma salen del desglose de Meta por plataforma de publicación${mp.otras_plataformas_gasto?` (${clp(mp.otras_plataformas_gasto)} en otras ubicaciones, como Audience Network, quedan en «sin plataforma»)`:''}.`:'La foto de Meta de este rango no trae desglose por plataforma: el gasto queda entero en «sin plataforma» y no se reparte.'} «Messenger/WhatsApp clic» cuenta personas y citas que llegaron por un clic a Messenger o con esa plataforma registrada; su venta queda en «sin plataforma».`);
+ if(decl)notas.push(`<b>«¿Cómo nos conociste?»: pregunta activa desde el ${fdate(decl.desde)}; se llena con el tiempo.</b> Cuenta a quienes respondieron en el rango y no llegaron por un anuncio ni por la web (esos ya están en sus filas). Atendidos = pagaron en caja en el rango. Antes de esa fecha la pregunta tenía otra versión: las respuestas «Amigo», «Google» y «Facebook/Instagram» se cuentan igual${decl.opcion_antigua?`, y ${th(decl.opcion_antigua)} que eligieron la opción antigua «Redes o Google» no se asignan a ninguna fila`:''}.${decl.qr_existe?'':' La fila QR aparecerá cuando exista el primer registro de un código QR.'}`);
+ if(nvRow)notas.push(`<b>Pacientes nuevos sin canal registrado</b>: ${th(nv.nuevos_centro)} pacientes tuvieron su primer pago de la historia en el rango; ${th(nv.nuevos_meta)} se atribuyen a Meta, ${th(nv.nuevos_web)} a la página web y ${th(nv.nuevos_declarados||0)} dijeron cómo nos conocieron. Los otros ${th(nv.sin_canal)} llegaron por un canal que no deja registro (fijo, recepción, referidos, letreros). Su venta es aproximada (≈): la de todos los nuevos menos la de los atribuidos.`);
+ return `<div class="tw"><table class="tbl"><thead><tr><th>Canal</th><th class="n">Personas</th><th class="n">Conv. Meta</th><th class="n">Citas</th><th class="n">Atendidos</th><th class="n">Nuevos</th><th class="n">Venta</th><th class="n">Para el centro</th><th class="n">CAC atendido</th><th class="n">Retorno</th></tr></thead><tbody>${rows}${declRows}${nvRow}${FAM==='all'?sinm:''}</tbody>${foot}</table></div>${notas.map(n=>`<p class="note">${n}</p>`).join('')}`;
 }
 function sankey(el,D){if(!el)return;
- const data=embCanales(D).filter(c=>(FAM==='all'||c.k===FAM)&&c.personas);
+ const data=embCanales(D).filter(c=>(FAM==='all'||c.fam===FAM)&&c.personas);
  if(!data.length){el.innerHTML=estadoV('Sin personas en el rango','Cuando lleguen personas por anuncios o por la web, el flujo se dibuja aquí.');return}
  const cw=el.clientWidth||640;const compact=cw<560;const W=compact?cw:Math.max(cw,640);const nodeW=12,lw=compact?112:W<760?150:180,rw=W<760?150:190;
  const L=data.map(c=>({id:c.k,l:c.l,v:c.personas,c:c.c}));
@@ -881,7 +1145,7 @@ R.embudo={html:D=>{const e=D.embudo||{},m=e.meta||{},w=e.web||{},rg=rng_(D.rango
   ${kpi('Sin cita',pers?pctTxt(100*(pers-cit)/pers,1):'—',`De ${th(pers)} personas de anuncios y web, ${th(Math.max(0,pers-cit))} no agendaron`,pers&&(pers-cit)/pers>.5?'alert':'',rg)}
   ${kpi('Página web → citas',th(w.citas),`${th(w.personas)} escribieron desde la web · ${clp(w.venta)} de venta`,'',rg)}
  </div>
- ${card('Flujo por canal','filter',`<div class="chips" role="group" aria-label="Filtrar canal" style="margin-bottom:16px">${[['all','Todos'],['meta','Meta'],['web','Página web']].map(([k,l])=>`<button class="chip" type="button" data-fam="${k}" aria-pressed="${k===FAM}">${l}</button>`).join('')}</div><div class="tw"><div class="cwrap" id="sankey"></div></div><p class="note">Ancho de cada banda a escala del número de personas. Una persona cuenta una vez, en el canal de su primer contacto del rango. Pase el cursor sobre una banda para ver la cifra.</p>`,{sub:'Personas → cita → atención',real:rg})}
+ ${card('Flujo por canal','filter',`<div class="chips" role="group" aria-label="Filtrar canal" style="margin-bottom:16px">${[['all','Todos'],['meta','Meta'],['web','Página web']].map(([k,l])=>`<button class="chip" type="button" data-fam="${k}" aria-pressed="${k===FAM}">${l}</button>`).join('')}${embNuevos(D)&&embNuevos(D).sin_canal?`<button class="chip" type="button" id="nscBtn" aria-pressed="${NSC}">Incluir ${th(embNuevos(D).sin_canal)} nuevos sin canal</button>`:''}</div><div class="tw"><div class="cwrap" id="sankey"></div></div><p class="note">Ancho de cada banda a escala del número de personas. Una persona cuenta una vez, en el canal de su primer contacto del rango. Meta se abre por plataforma: la plataforma por paciente se registra desde el ${fdate((embMP(D)||{}).desde||'2026-10-05')}, y antes de esa fecha queda en «Meta · sin plataforma». «Nuevos sin canal» (opcional, botón de arriba) son pacientes con su primer pago en el rango que no llegaron por anuncios, web ni dijeron cómo nos conocieron; por su tamaño se muestran aparte. Pase el cursor sobre una banda para ver la cifra.</p>`,{sub:'Personas → cita → atención',real:rg})}
  ${card('Embudo completo por canal','arrow',`<div id="ftable">${funnelTable(D)}</div><p class="note">Misma fuente y mismo rango que <a href="${esc(_tk('/alma/campanas-meta'))}" data-alma="campanas_meta">Campañas Meta</a>: las cifras cuadran con ese panel. «Atendido» sale del estado de la cita en Medilink; la venta, de la caja.</p>`,{sub:'Personas → citas → atendidos → venta → para el centro',real:rg})}
  <div class="grid g2">
   ${card('Facebook o Instagram','eye',pfT?`${pfRow('facebook','Facebook','c-fb')}${pfRow('instagram','Instagram','c-ig')}${pfRow('sin_dato','Sin plataforma registrada','bar-mute')}<p class="note">La plataforma de cada persona se registra desde el ${fdate(e.medicion&&e.medicion.plataforma_desde)}; antes de esa fecha aparece «sin plataforma».</p>`:estadoV('Sin llegadas de anuncios en el rango','Cuando alguien escriba desde un anuncio, se registra si vino de Facebook o de Instagram.'),{sub:'Personas que llegaron por anuncios',real:rg})}
@@ -923,7 +1187,7 @@ R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.em
  const real12=v12.error?estadoV('No se pudo leer el valor a 12 meses',v12.error,{err:1,retry:'captacion'}):!(v12.meta&&v12.meta.hay_cohortes)?estadoV('Aún sin cohortes de 12 meses','Se calculan con los pacientes nuevos que ya cumplieron un año en la caja.'):`
    <div class="mini">${(v12.top||[]).slice(0,4).map(e=>`<div class="so"><div class="kl">${esc(e.especialidad)}${e.muestra_chica?' · muestra chica':''}</div><b>${clp(e.c365)}</b><small>para el centro a 12 meses · ${th(e.n)} pacientes</small></div>`).join('')}</div>
    ${k12.nuevos?`<div class="mini" style="margin-top:12px"><div class="so"><div class="kl">Nuevos por anuncios (rango)</div><b>${th(k12.nuevos_rango)}</b><small>de ${th(k12.nuevos_centro_rango)} nuevos del centro · costo por nuevo ${clp(k12.costo_nuevo_rango)}</small></div>
-    <div class="so"><div class="kl">Proyectado a 12 meses</div><b>${clp(k12.centro_12m)}</b><small>para el centro · retorno ${k12.retorno_12m==null?'—':dec(k12.retorno_12m,1)+'×'}</small></div></div>`:''}
+    <div class="so"><div class="kl">Proyectado a 12 meses</div><b>${clp(k12.centro_12m)}</b><small>para el centro · retorno ${k12.retorno_12m==null?'—':rx(k12.retorno_12m)}</small></div></div>`:''}
    ${(v12.recorrido||[]).slice(0,1).map(r=>`<p class="note" style="margin-top:12px">Dónde sigue el recorrido de quienes entran por ${esc(r.entrada)}: ${r.destinos.map(d=>esc(d.esp)+' '+String(d.pct).replace('.',',')+'%').join(' · ')}.</p>`).join('')}
    <p class="note">Proyección según cohortes reales; no es venta realizada. Cohortes de pacientes nuevos con 12 meses cumplidos (primer pago entre ${fdate(v12.meta.ventana.desde)} y ${fdate(v12.meta.ventana.hasta)}).${v12.sin_especialidad?' Hay '+v12.sin_especialidad+' profesionales sin especialidad registrada.':''}</p>`;
  const real=v9.error?estadoV('No se pudo leer el valor a 90 días',v9.error,{err:1,retry:'captacion'}):!t.personas?estadoV('Sin personas con 90 días cumplidos','El valor a 90 días se mide solo con quienes llegaron hace 90 días o más; aparecerá a medida que maduren.'):`
@@ -932,7 +1196,7 @@ R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.em
     <div class="so"><div class="kl">Pacientes medidos</div><b>${th(t.pacientes_maduros)}</b><small>de ${th(t.personas_maduras)} personas con 90 días</small></div>
     <div class="so"><div class="kl">Ticket a 90 días</div><b>${clp(t.ticket_90)}</b><small>por paciente</small></div>
     <div class="so"><div class="kl">Volvió 2 veces o más</div><b>${pctTxt(t.volvieron_pct)}</b><small>${th(t.volvieron)} pacientes</small></div>
-    <div class="so"><div class="kl">Retorno al centro</div><b class="${(t.retorno_centro_90||0)>=1?'pos':'wrn'}">${t.retorno_centro_90==null?'—':dec(t.retorno_centro_90,1)+'×'}</b><small>sobre ${clp(t.gasto_maduro)} de gasto</small></div>
+    <div class="so"><div class="kl">Retorno al centro</div><b class="${(t.retorno_centro_90||0)>=1?'pos':'wrn'}">${t.retorno_centro_90==null?'—':rx(t.retorno_centro_90)}</b><small>sobre ${clp(t.gasto_maduro)} de gasto</small></div>
    </div>
    <p class="note">Personas que llegaron por anuncios de Meta desde el ${fdate(v9.desde)} y cumplieron 90 días al ${fdate(v9.madura_hasta)}. Cuenta todo lo que pagaron en caja a 30, 60 y 90 días de su primer contacto.</p>`;
  return `${mh('viaje','Una paciente se ve así cuando todas las piezas se conectan: del anuncio a la tercera especialidad. El relato es ilustrativo; el valor a 90 días de quienes trajeron los anuncios, real.')}
@@ -953,50 +1217,20 @@ R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.em
  draw(D){jChart($('#jchart'),((D.embudo||{}).meta||{}).cac_atendido)}};
 
 /* ---------- 04 Motor ---------- */
-const SP={
- 'Otorrino':{A:120,B:260000,ag:.32,sh:.86,tk:45000,mg:.38,cu:22,act:40000},
- 'Kinesiología':{A:150,B:220000,ag:.30,sh:.80,tk:90000,mg:.34,cu:9,act:30000},
- 'Odontología':{A:140,B:240000,ag:.34,sh:.84,tk:38000,mg:.40,cu:14,act:70000},
- 'Ortodoncia':{A:95,B:300000,ag:.19,sh:.90,tk:180000,mg:.35,cu:8,act:60000},
- 'Medicina General':{A:150,B:180000,ag:.45,sh:.85,tk:12000,mg:.28,cu:6,act:30000},
-};
-let SPK='Otorrino',INV=120000;
-function simAt(sp,s,f=1){const conv=sp.A*(1-Math.exp(-s/sp.B))*f;const citas=Math.min(conv*sp.ag,sp.cu/sp.sh+0.0001);return {conv,citas,at:Math.min(citas*sp.sh,sp.cu)}}
-function simUpdate(){
- const sp=SP[SPK];const m=simAt(sp,INV),lo=simAt(sp,INV,.72),hi=simAt(sp,INV,1.24);
- const venta=Math.round(m.at*sp.tk/1000)*1000,centro=venta*sp.mg,ret=INV?centro/INV:0;
- const box=$('#simOut');if(!box)return;const r=(a,b)=>`${a} a ${b}`;
- box.innerHTML=`<div class="so"><div class="kl">Conversaciones</div><b>${th(m.conv)}</b><small>${r(th(lo.conv),th(hi.conv))}</small></div><div class="so"><div class="kl">Citas</div><b>${th(m.citas)}</b><small>${r(th(lo.citas),th(hi.citas))}</small></div><div class="so"><div class="kl">Atendidos</div><b>${th(m.at)}</b><small>${r(th(lo.at),th(hi.at))}</small></div><div class="so"><div class="kl">Venta</div><b>${clp(venta)}</b><small>${r(clp(Math.round(lo.at*sp.tk/1000)*1000),clp(Math.round(hi.at*sp.tk/1000)*1000))}</small></div><div class="so"><div class="kl">Para el centro</div><b>${clp(Math.round(centro/1000)*1000)}</b><small>Margen ${dec(sp.mg*100,0)}%</small></div><div class="so hl"><div class="kl">Retorno</div><b class="${ret>=1?'pos':'wrn'}">${INV?dec(ret,1)+'×':'—'}</b><small>${INV?r(dec(lo.at*sp.tk*sp.mg/INV,1)+'×',dec(hi.at*sp.tk*sp.mg/INV,1)+'×'):'Sin inversión'}</small></div>`;
- $('#invVal').textContent=clp(INV);
- const rg=$('#invRange');rg.style.setProperty('--p',(INV/300000*100)+'%');rg.setAttribute('aria-valuetext',clp(INV)+' por semana');
- curve($('#curve'));
-}
-function curve(el){if(!el)return;const sp=SP[SPK];const W=el.clientWidth||500,H=210,p={l:40,r:16,t:16,b:28};
- const xs=[];for(let s=0;s<=300000;s+=10000)xs.push(s);
- const mid=xs.map(s=>simAt(sp,s).at),lo=xs.map(s=>simAt(sp,s,.72).at),hi=xs.map(s=>simAt(sp,s,1.24).at);
- const stp=Math.max(1,Math.ceil(Math.max(...hi,sp.cu)*1.1/4/5)*5);const ymax=stp*4;const X=s=>p.l+s/300000*(W-p.l-p.r),Y=a=>p.t+(H-p.t-p.b)*(1-a/ymax);
- let s='';for(let i=0;i<=4;i++){const val=ymax*i/4;const y=Y(val);s+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" style="stroke:${v('grid')}"/><text x="${p.l-8}" y="${y+4}" text-anchor="end" style="fill:${v('muted')};font-size:11px">${Math.round(val)}</text>`}
- [0,100000,200000,300000].forEach(t=>s+=`<text x="${X(t)}" y="${H-8}" text-anchor="${t===0?'start':t===300000?'end':'middle'}" style="fill:${v('muted')};font-size:11px">${t?'$'+t/1000+' mil':'$0'}</text>`);
- s+=`<path d="M${xs.map((x,i)=>X(x)+','+Y(hi[i])).join('L')}L${xs.slice().reverse().map((x,i)=>X(x)+','+Y(lo[xs.length-1-i])).join('L')}Z" style="fill:${v('azul-soft')}"/>`;
- s+=`<path d="M${xs.map((x,i)=>X(x)+','+Y(mid[i])).join('L')}" style="fill:none;stroke:${v('azul')};stroke-width:2.5"/>`;
- const m=simAt(sp,INV).at;s+=`<line x1="${X(INV)}" x2="${X(INV)}" y1="${p.t}" y2="${H-p.b}" style="stroke:${v('aqua')};stroke-width:1.5"/><circle cx="${X(INV)}" cy="${Y(m)}" r="6" style="fill:${v('surface')};stroke:${v('aqua')};stroke-width:3"/>`;
- el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva ilustrativa de atendidos según inversión semanal">${s}</svg>`}
 const SEN={sin_cupos:['bad','Sin cupos con gasto'],pocos_cupos:['warn','Pocos cupos con gasto'],cupos_sin_anuncio:['info','Cupos sin anuncio'],sin_agenda:['mut','Gasto sin agenda leída'],ok:['ok','Equilibrado'],sin_datos:['mut','Sin datos']};
+const ACC={bajar:['bad','Bajar o pausar'],revisar:['warn','Revisar anuncio'],subir:['ok','Subir'],probar:['info','Probar'],mantener:['mut','Mantener']};
+function reglasHTML(Rg){if(!Rg||Rg.error)return estadoV('No se pudieron calcular las sugerencias',(Rg&&Rg.error)||'',{err:1,retry:'captacion'});
+ if(Rg.sin_datos)return estadoV('Sin lectura de agenda todavía','Las sugerencias necesitan la próxima hora libre real de cada especialidad (lectura de las 05:30 y 21:30).',{icon:'calendar'});
+ const xs=Rg.reglas||[];if(!xs.length)return estadoV('Sin especialidades con agenda leída','Aparecerán cuando la agenda tenga cupos leídos.',{icon:'calendar'});
+ return xs.map(r=>{const a=ACC[r.accion]||ACC.mantener;return `<div class="dec" style="align-items:start"><span class="dec-ic">${ic(r.accion==='bajar'?'pause':r.accion==='subir'?'trending':r.accion==='revisar'?'alert':'sliders',20)}</span><div><h3>${esc(r.grupo)} <span class="pill ${a[0]}">${a[1]}</span></h3><p style="color:var(--ink-2)">${esc(r.titulo)}.</p><ul class="why">${r.porque.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${r.nota?`<p class="note" style="margin-top:6px">${esc(r.nota)}</p>`:''}</div><div class="dec-a"></div></div>`}).join('')+`<div style="margin-top:12px">${lnk('Abrir agenda × anuncios','campanas_meta','/alma/campanas-meta#agenda',0,1)}</div>`}
 R.motor={html:D=>{const ag=D.agenda||{};
  const real=ag.error?estadoV('No se pudo leer la agenda',ag.error,{err:1,retry:'captacion'}):ag.sin_datos?estadoV('Sin lectura de agenda todavía','Los cupos se leen a las 05:30 y 21:30 sin tocar Medilink al abrir esta página.',{icon:'calendar'}):`<div class="tw"><table class="tbl"><thead><tr><th>Especialidad</th><th class="n">Libres 7 días</th><th class="n">Libres 14 días</th><th class="n">Gasto Meta al día</th><th class="n">Valor libre 14 días</th><th>Señal</th></tr></thead><tbody>${(ag.grupos||[]).map(g=>{const s=SEN[g.senal]||SEN.ok;return `<tr><td><b>${esc(g.grupo)}</b><div class="small muted">${th(g.profesionales)} profesional${g.profesionales===1?'':'es'} · ${th(g.anuncios_activos)} anuncio${g.anuncios_activos===1?'':'s'} activo${g.anuncios_activos===1?'':'s'}</div></td><td class="n">${th(g.libres_7d)}</td><td class="n">${th(g.libres_14d)}</td><td class="n">${g.gasto_dia?clp(g.gasto_dia):'—'}</td><td class="n">${g.valor_14d?clp(g.valor_14d):'—'}</td><td><span class="pill ${s[0]}">${s[1]}</span></td></tr>`}).join('')}</tbody></table></div><p class="note">Cupos libres reales de los próximos 14 días contra el gasto diario promedio de Meta (7 días) en anuncios de esa especialidad. Lectura de agenda: ${fdate(ag.actualizado)} ${fhm(ag.actualizado)}${ag.desactualizado?' · <b>desactualizada</b>':''}. Foto de Meta: ${fdate((ag.gasto||{}).ultima_foto)}.</p><div style="margin-top:12px">${lnk('Abrir agenda × anuncios','campanas_meta','/alma/campanas-meta#agenda',0,1)}</div>`;
  return `${mh('motor','El gasto en publicidad se reparte según dos cosas que hasta ahora nadie cruzaba: los cupos libres reales de la agenda y lo que cada especialidad deja al centro.')}
  ${card('Agenda × anuncios','calendar',real,{sub:'Dónde se gasta sin agenda y dónde hay agenda sin anuncio',real:ag.actualizado?`lectura ${fdm(ag.actualizado)} ${fhm(ag.actualizado)}`:undefined})}
- <section class="card"><div class="ch"><span class="ch-ic">${ic('sliders')}</span><div class="ch-t"><h2>Simulador: ¿qué pasa si invierto aquí la próxima semana?</h2><div class="sub">Modelo de ejemplo con rendimientos decrecientes · no usa datos del CMC</div></div><div class="r">${tagI}</div></div>
-  <div class="chips" role="group" aria-label="Especialidad" id="spChips">${Object.keys(SP).map(k=>`<button class="chip" type="button" data-sp="${k}" aria-pressed="${k===SPK}">${k}</button>`).join('')}</div>
-  <div class="grid g2" style="margin-top:20px;align-items:start">
-   <div><div class="kl" style="justify-content:flex-start;gap:5px">Inversión semanal en <span id="spName">${SPK}</span></div><div class="big-inv" id="invVal">${clp(INV)}</div>
-    <input class="rng" id="invRange" type="range" min="0" max="300000" step="10000" value="${INV}" aria-label="Inversión semanal">
-    <div class="sim-out" id="simOut"></div></div>
-   <div class="cwrap"><div class="kl" style="margin-bottom:8px">Atendidos esperados según inversión</div><div id="curve"></div></div>
-  </div>
- </section>
- ${card('Reglas que el motor aplicaría solo','zap',`${[['R-01','Si una especialidad no tiene cupos en 72 horas, pausar sus anuncios','Se reactiva sola cuando aparecen cupos.'],['R-02','Si una especialidad está bajo 50% a 72 horas, subir su presupuesto 30%','Con tope semanal por especialidad.'],['R-03','Tope diario total entre Meta y Google','Cualquier excedente requiere aprobación del dueño.']].map(r=>`<div class="rule"><div><h3><span class="muted small">${r[0]}</span> · ${r[1]}</h3><p>${r[2]}</p></div><button class="sw-t" type="button" role="switch" aria-checked="false" aria-label="${r[1]}" disabled aria-disabled="true"></button></div>`).join('')}<p class="note">Disponible cuando el motor tenga permiso de escritura sobre las campañas de Meta. Hoy no lo tiene, por decisión: ningún cambio de presupuesto sale de Alma.</p>`,{sub:'Lo que el motor haría sin preguntar',real:0})}`},
- draw(){simUpdate()}};
+ ${card('Sugerencias por especialidad','zap',reglasHTML(D.reglas),{sub:'Próxima hora libre, plazo típico en que la gente agenda, días de atención y retorno histórico · cada sugerencia dice por qué',real:D.reglas&&!D.reglas.sin_datos&&!D.reglas.error?'agenda y 90 días':undefined})}
+ <section class="card"><div class="estado"><span class="ei">${ic('tube',20)}</span><div><h3>¿Cuánto rendiría invertir distinto?</h3><p>El simulador con tasas reales de 90 días, capacidad de la agenda y valor a 12 meses está en el Laboratorio de presupuesto.</p><button class="btn btn-sm" type="button" data-go="laboratorio">${ic('arrow',15)}Abrir el Laboratorio</button></div></div></section>
+ <p class="note">Nada de esto cambia campañas: el motor no tiene permiso de escritura sobre Meta, por decisión. Los cambios se hacen en el Administrador de anuncios.</p>`},
+ draw(){}};
 
 /* ---------- 05 Creativos ---------- */
 let ADSORT='ret';
@@ -1012,7 +1246,7 @@ function adsHTML(D){const cr=D.creativos||{};const xs=(cr.anuncios||[]).slice();
   return `<article class="anu">${thumb}
  <div class="anu-b"><div class="anu-top"><b>${esc(d.anuncio)}</b><span style="margin-left:auto">${d.activo?'<span class="pill ok">Activo</span>':'<span class="pill mut">Sin gasto reciente</span>'}</span></div>
  ${d.texto?`<p class="anu-txt">${esc(d.texto)}</p>`:''}
- <div class="anu-m"><div><small>Retorno</small><b class="${(d.retorno_centro??1)>=1?'':'neg'}">${d.retorno_centro==null?'—':dec(d.retorno_centro,1)+'×'}</b></div><div><small>CTR 7 d</small><b>${f.ctr==null?'—':dec(f.ctr,1)+'%'}</b></div><div><small>Citas</small><b>${th(d.citas)}</b></div></div>
+ <div class="anu-m"><div><small>Retorno</small><b class="${(d.retorno_centro??1)>=1?'':'neg'}">${d.retorno_centro==null?'—':rx(d.retorno_centro)}</b></div><div><small>CTR 7 d</small><b>${f.ctr==null?'—':dec(f.ctr,1)+'%'}</b></div><div><small>Citas</small><b>${th(d.citas)}</b></div></div>
  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px"><span class="small muted">CTR 6 semanas</span>${spark(ser,falling?'bad':'azul')}</div>
  <div class="fat ${cls}" title="Frecuencia de 7 días ${dec(fr,1)}">${[1,2,3,4,5].map(n=>`<i class="${n<=lv?'on':''}"></i>`).join('')}<span>Frecuencia ${dec(fr,1)} · <span class="pill ${fz[0]}" style="margin-left:2px">${fz[1]}</span></span></div></div></article>`}).join('')}
 R.creativos={html:D=>{const cr=D.creativos||{},rg=rng_(D.rango),rf=cr.resumen_fatiga||{};
@@ -1081,14 +1315,15 @@ R.recepcion={html:D=>{const V=D.velocidad||{},E=D.esperando||{},rg=rng_(D.rango)
   ${kpi('Esperando ahora',th(E.total),E.total?(E.max_min?`La más antigua lleva ${th(E.max_min)} min hábiles`:'Escribieron fuera del horario de recepción'):'Nadie espera','', 'ahora')}
  </div>
  <div class="grid g-57">
-  ${card('Cuánto pesa cada minuto','clock',`<div class="cwrap" id="rtChart"></div><p class="note">Porcentaje que agendó según el tiempo a la primera respuesta humana (personas de anuncios y web que necesitaron recepción). ${num(V.citas_perdidas_estimadas)?`Si los lentos hubiesen agendado como los rápidos: <b>≈${th(V.citas_perdidas_estimadas)} citas más</b> (referencia, no promesa).`:''}</p>`,{sub:'Conversión por tramo de espera',real:rg})}
+  ${card('Cuánto pesa cada minuto','clock',`<div class="cwrap" id="rtChart"></div><p class="note">Porcentaje que agendó según el tiempo a la primera respuesta humana (personas de anuncios y web que necesitaron recepción). ${num(V.citas_perdidas_estimadas)?`Si los lentos hubiesen agendado como los rápidos: <b>≈${th(V.citas_perdidas_estimadas)} citas más</b> (referencia, no promesa).`:''}</p><div class="callout warn" style="margin-top:12px">${ic('alert')}<div><b>Esta comparación no prueba causa.</b> Quienes esperan más de 2 horas suelen haber escrito fuera de horario o con una intención distinta (consultar un precio, no agendar hoy). Parte de la diferencia es de quién escribe, no del tiempo de espera.</div></div>${(()=>{const H=D.velocidad_horario||{};if(H.error||!H.necesitaron)return '<p class="note">Sin personas suficientes que hayan pasado a recepción dentro del horario para repetir la comparación.</p>';const hr=H.rapidos||{},hl=H.lentos||{};return `<div class="kl" style="margin:16px 0 4px">Solo quienes pasaron a recepción dentro del horario de atención · ${th(H.necesitaron)} personas</div><div class="cwrap" id="rtChartH"></div><p class="note">Dentro del horario: ${pctTxt(hr.pct)} agenda si responden en 30 min (${th(hr.personas)} personas) contra ${pctTxt(hl.pct)} si tardan más de 2 h o no responden (${th(hl.personas)}). Lunes a viernes 08:00 a 21:00 y sábado 09:00 a 14:00.</p>`})()}`,{sub:'Conversión por tramo de espera',real:rg})}
   ${card('Conversaciones esperando','msg',waitList,{sub:'Ordenadas por tiempo de espera · solo iniciales',real:'ahora'})}
  </div>
  <div class="grid g2">
   ${card('Cierre por turno','users',`${[['Mañana · 08 a 12',41],['Tarde · 15 a 20',36],['Sábado',31],['Mediodía · 12 a 15',28],['Fuera de horario · solo bot',22]].map(([l,p],i)=>`<div class="hb2"><span class="hb-l">${l}</span><span class="hb-t"><i class="${i===3?'w':i===0?'':'m'}" style="width:${p/45*100}%"></i></span><span class="hb-v"><b>${p}%</b> agenda</span></div>`).join('')}<div class="ilus-band" style="margin-top:14px">${ic('info',16)}Disponible cuando la medición de rapidez se agrupe por turno de recepción.</div>`,{sub:'Porcentaje de conversaciones que terminan en cita',real:0})}
   ${card('Llamadas perdidas','phone',`${[['10:33','Ecografía','Mensaje de voz transcrito'],['10:05','Medicina General','Sin mensaje · número con atenciones previas'],['09:47','Kinesiología','Mensaje de voz']].map(c=>`<div class="wl"><div class="wt" style="font-size:15px">${c[0]}</div><div style="min-width:0"><div style="font-weight:600">${c[1]}</div><div class="meta" style="white-space:normal">${c[2]}</div></div></div>`).join('')}<div style="margin-top:12px">${off('Devolver llamada','Disponible cuando el fijo (44) 296 5226 registre las llamadas en el sistema.',0)}</div>`,{sub:'Más reciente primero',real:0})}
  </div>`},
- draw(D){const V=D.velocidad||{};const cv=(V.curva||[]);barChart($('#rtChart'),{items:cv.map(c=>({l:c.label,ls:{lt5:'< 5 min',['5_30']:'5 a 30',['30_120']:'30 a 120',gt2h:'> 2 h',sin_respuesta:'Sin resp.'}[c.tramo],v:c.pct,hl:c.tramo==='lt5'||c.tramo==='5_30'})),ymax:100,ticks:[0,50,100],yfmt:t=>t+'%',vfmt:x=>x==null?'—':x+'%',aria:'Porcentaje que agenda por tramo de espera'})}};
+ draw(D){const V=D.velocidad||{};const cv=(V.curva||[]);barChart($('#rtChart'),{items:cv.map(c=>({l:c.label,ls:{lt5:'< 5 min',['5_30']:'5 a 30',['30_120']:'30 a 120',gt2h:'> 2 h',sin_respuesta:'Sin resp.'}[c.tramo],v:c.pct,hl:c.tramo==='lt5'||c.tramo==='5_30'})),ymax:100,ticks:[0,50,100],yfmt:t=>t+'%',vfmt:x=>x==null?'—':x+'%',aria:'Porcentaje que agenda por tramo de espera'});
+  const H=D.velocidad_horario||{};if(H.necesitaron){barChart($('#rtChartH'),{h:170,items:(H.curva||[]).map(c=>({l:c.label,ls:{lt5:'< 5 min',['5_30']:'5 a 30',['30_120']:'30 a 120',gt2h:'> 2 h',sin_respuesta:'Sin resp.'}[c.tramo],v:c.pct,hl:c.tramo==='lt5'||c.tramo==='5_30'})),ymax:100,ticks:[0,50,100],yfmt:t=>t+'%',vfmt:x=>x==null?'—':x+'%',aria:'Porcentaje que agenda por tramo de espera, solo dentro del horario'})}}};
 
 /* ---------- 08 Recall ---------- */
 R.recall={html:D=>{const X=D.experimentos||{},vu=D.volvieron||{},re=(X.reenganche||{}),ch=re.con_hora||{},pe=X.persistencia||{};
@@ -1143,6 +1378,21 @@ R.competencia={html:()=>`${mh('competencia','Contra quién compite el CMC por ca
  draw(){}};
 
 /* ---------- 11 Finanzas ---------- */
+const metaDe=(D,k)=>((D.metas||{}).metas||[]).find(m=>m.clave===k);
+function metaBars(se){const xs=(se||[]).map(x=>x.valor);if(!xs.some(num))return '<span class="small muted">Sin serie</span>';const w=132,h=40,n=xs.length,gap=4,bw=(w-gap*(n-1))/n;
+ const mx=Math.max(0,...xs.filter(num)),mn=Math.min(0,...xs.filter(num));const sc=(h-2)/((mx-mn)||1);const y0=1+mx*sc;
+ return `<svg class="mbars" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc('Últimos '+n+' meses: '+se.map(x=>mesLbl(x.mes)+' '+clp(x.valor)).join(', '))}">${se.map((x,i)=>{const val=num(x.valor)?x.valor:0;const hh=Math.max(1.5,Math.abs(val)*sc);const y=val>=0?y0-hh:y0;return `<rect x="${(i*(bw+gap)).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" rx="2" style="fill:${v(i===n-1?(val<0?'bad':'azul'):'bar-mute')}"><title>${esc(mesNom(x.mes))}: ${clp(x.valor)}</title></rect>`}).join('')}${mn<0?`<line x1="0" x2="${w}" y1="${y0}" y2="${y0}" style="stroke:${v('line-2')}"/>`:''}</svg><span class="mb-l"><span>${esc(mesLbl(se[0].mes))}</span><span>${esc(mesLbl(se[n-1].mes))}</span></span>`}
+function metaFila(m){const pc=num(m.avance_pct)?Math.max(0,Math.min(100,m.avance_pct)):0;const vr=m.variacion_pct;
+ const vtxt=num(vr)?`<span class="mv-d ${vr>0?'up':vr<0?'down':''}">${vr>0?'+':vr<0?'−':''}${th(Math.abs(vr))}% vs ${esc(mesLbl(m.serie[m.serie.length-2].mes))}</span>`:'';
+ const rt=m.ritmo;const ritmo=m.monto&&rt?(num(rt.pct_mensual)&&rt.pct_mensual>0?`<p class="m-ritmo">${ic('trending',15)}<span>Ritmo necesario: <b>+${dec(rt.pct_mensual,1)}% cada mes</b> durante ${th(rt.meses)} meses (≈ +${dec(rt.pct_anual,0)}% al año) para pasar de ${mm(m.actual)} a ${mm(m.monto)} al ${fdate(m.fecha_objetivo)}.</span></p>`:rt.motivo?`<p class="m-ritmo">${ic('info',15)}<span>${esc(rt.motivo)}</span></p>`:''):'';
+ const form=`<form class="meta-f" data-meta="${m.clave}"><label>Meta mensual<input name="monto" inputmode="numeric" value="${m.monto||''}" placeholder="Ej.: 5.000.000" aria-label="Meta mensual en pesos de ${esc(m.nombre)}"></label><label>Plazo<input name="fecha_objetivo" type="date" value="${esc(m.fecha_objetivo||'')}" aria-label="Fecha objetivo de ${esc(m.nombre)}"></label><button class="btn btn-sm btn-p" type="submit">${ic('save',15)}Guardar meta</button></form>`;
+ return `<div class="meta-r${m.total?' total':''}"><div class="meta-h"><div class="meta-n">${m.total?'<span class="meta-eq">Suma</span>':''}<h3>${esc(m.nombre)}</h3><p>${esc(m.formula)}${m.sin_gastos?' <b class="wrn">Sin gastos operativos registrados en el mes: el EBITDA queda sobreestimado.</b>':''}</p></div>
+  <div class="meta-t">${metaBars(m.serie)}</div>
+  <div class="meta-v"><b>${m.actual==null?'—':clp(m.actual)}</b><small>${esc(mesNom(m.mes))}${vtxt?' · ':''}${vtxt}</small></div></div>
+  ${m.monto?`<div class="meta-g"><div class="prog"><i style="width:${pc}%"></i></div><span><b>${pctTxt(m.avance_pct)}</b> de ${clp(m.monto)} al mes${m.fecha_objetivo?` · plazo ${fdate(m.fecha_objetivo)}`:''}</span></div>${ritmo}`:''}
+  <details class="meta-ed"><summary class="btn btn-sm">${ic(m.monto?'sliders':'target',15)}${m.monto?'Editar meta':'Definir meta'}</summary>${form}</details></div>`}
+function metasHTML(Mt){if(!Mt||Mt.error)return estadoV('No se pudieron leer las metas',(Mt&&Mt.error)||'',{err:1,retry:'finanzas'});
+ return (Mt.metas||[]).map(metaFila).join('')+`<p class="note">Cada cifra es la del último mes cerrado; las barras muestran los seis meses cerrados más recientes. Los honorarios son brutos (caja del profesional 1 × su porcentaje), antes de retención. Las metas no cambian ningún cálculo del Radar ni de EBITDA.</p>`}
 R.finanzas={html:D=>{const M=D.meses||{},rg=rng_(D.rango);
  if(M.error)return `${mh('finanzas','El crecimiento visto como inversión.')}${card('Finanzas','wallet',estadoV('No se pudo leer la caja',M.error,{err:1,retry:'finanzas'}))}`;
  const an=M.anterior||{},ac=M.actual||{};const cs=D.canales||[];const v9=(D.valor90||{}).total||{};
@@ -1152,18 +1402,20 @@ R.finanzas={html:D=>{const M=D.meses||{},rg=rng_(D.rango);
   ${kpi(esc(cap(mesLargo(an.mes||'2026-01'))),mm(an.venta),`Venta de caja · ${clp(an.centro)} para el centro`,'',an.mes?'mes cerrado':'')}
   ${kpi('Mes en curso',mm(ac.venta),M.proyeccion?`Al ritmo actual cerraría en ${mm(M.proyeccion)} <span class="tag ilus" title="Venta a la fecha ÷ días con caja × días del mes">estimado</span>`:'Muy pocos días con caja para estimar','accent',M.caja_hasta?`al ${fdm(M.caja_hasta)}`:'')}
   ${kpi('Para el centro',pctTxt(an.centro_pct),'De cada peso vendido, tras honorarios del profesional','',an.mes?mesLbl(an.mes)+' '+an.mes.slice(0,4):'')}
-  ${kpi('Camino a $40M/mes',pctTxt(M.avance_meta_pct),'Último mes cerrado contra la meta de mayo de 2032','',an.mes?'mes cerrado':'')}
+  ${(()=>{const mv=metaDe(D,'ingreso');return kpi('Ingreso total del dueño',mv&&mv.actual!=null?mm(mv.actual):'—',mv&&mv.monto?`${pctTxt(mv.avance_pct)} de la meta de ${mm(mv.monto)} al mes${mv.fecha_objetivo?' · plazo '+fdate(mv.fecha_objetivo):''}`:'EBITDA + honorarios médicos · sin meta definida','',mv&&mv.mes?mesNom(mv.mes):'')})()}
  </div>
- ${card('Venta mensual de caja','trending',`<div class="cwrap" id="finChart"></div><div class="legend" style="margin-top:8px"><span><i class="sw" style="background:${v('azul')}"></i>Venta de caja</span><span><i class="sw" style="background:${v('aqua')}"></i>Mes en curso al ritmo actual (estimado)</span><span><i class="sw" style="background:${v('vis')}"></i>Meta 2032</span></div><p class="note">Fuente: caja de Medilink (espejo diario). Último día con caja: ${fdate(M.caja_hasta)}. El mes en curso se estima como venta a la fecha ÷ días con caja × días del mes: es una referencia, no una proyección con intervalo.</p>`,{sub:'Millones de pesos',real:M.caja_hasta?`al ${fdm(M.caja_hasta)}`:''})}
+ ${card('Metas del dueño','target',`<div id="metasBox">${metasHTML(D.metas)}</div>`,{sub:'Venta, EBITDA y honorarios por separado, y su suma · cada meta se edita aquí',real:D.metas&&D.metas.mes?mesNom(D.metas.mes):''})}
+ ${card('¿Qué queda en el centro?','wallet',`<div class="pnt">${puenteHTML(D.puente,false)}</div>`,{sub:'Puente desde la venta de caja hasta el resultado operativo · cifras del módulo EBITDA',real:D.puente&&D.puente.anterior?'mes cerrado y en curso':''})}
+ ${card('Venta mensual de caja','trending',`<div class="cwrap" id="finChart"></div><div class="legend" style="margin-top:8px"><span><i class="sw" style="background:${v('azul')}"></i>Venta de caja</span><span><i class="sw" style="background:${v('aqua')}"></i>Mes en curso al ritmo actual (estimado)</span><span><i class="sw" style="background:${v('vis')}"></i>Meta de venta</span></div><p class="note">Fuente: caja de Medilink (espejo diario). Último día con caja: ${fdate(M.caja_hasta)}. El mes en curso se estima como venta a la fecha ÷ días con caja × días del mes: es una referencia, no una proyección con intervalo.</p>`,{sub:'Millones de pesos',real:M.caja_hasta?`al ${fdm(M.caja_hasta)}`:''})}
  <div class="grid">
-  ${card('Economía por canal','wallet',cs.length?`<div class="tw"><table class="tbl"><thead><tr><th>Canal</th><th class="n">Gasto</th><th class="n">Atendidos</th><th class="n">CAC atendido</th><th class="n">Venta</th><th class="n">Para el centro</th><th class="n">Retorno</th></tr></thead><tbody>${cs.map(c=>`<tr><td><span class="cn"><i class="sw" style="background:${v(c.canal==='meta'?'c-fb':'c-go')}"></i>${c.canal==='meta'?'Anuncios Meta':'Página web'}</span></td><td class="n">${c.gasto?clp(c.gasto):'—'}</td><td class="n">${th(c.atendidos)}</td><td class="n">${c.gasto?clp(c.cac_atendido):'—'}</td><td class="n">${clp(c.venta)}</td><td class="n">${clp(c.centro)}</td><td class="n">${c.gasto?`<span class="${(c.retorno_centro||0)>=1?'pos':'wrn'}">${dec(c.retorno_centro,1)}×</span>`:'<span class="muted">Sin pauta</span>'}</td></tr>`).join('')}</tbody></table></div>${num(v9.retorno_centro_90)?`<div class="callout" style="margin-top:14px">${ic('info')}<div>A 90 días, lo que dejan al centro los pacientes de Meta equivale a <b>${dec(v9.retorno_centro_90,1)} veces</b> el gasto de su periodo, con un ticket de ${clp(v9.ticket_90)} por paciente.</div></div>`:''}<p class="note">Retorno = para el centro ÷ gasto. Bajo 1× el anuncio no se paga solo en el rango; el valor a 90 días suele cambiar la lectura.</p>`:estadoV('Sin datos de canales','No se pudieron leer los canales del rango.',{err:1,retry:'finanzas'}),{sub:'Últimos 30 días',real:rg})}
+  ${card('Economía por canal','wallet',cs.length?`<div class="tw"><table class="tbl"><thead><tr><th>Canal</th><th class="n">Gasto</th><th class="n">Atendidos</th><th class="n">CAC atendido</th><th class="n">Venta</th><th class="n">Para el centro</th><th class="n">Retorno</th></tr></thead><tbody>${cs.map(c=>`<tr><td><span class="cn"><i class="sw" style="background:${v(c.canal==='meta'?'c-fb':'c-go')}"></i>${c.canal==='meta'?'Anuncios Meta':'Página web'}</span></td><td class="n">${c.gasto?clp(c.gasto):'—'}</td><td class="n">${th(c.atendidos)}</td><td class="n">${c.gasto?clp(c.cac_atendido):'—'}</td><td class="n">${clp(c.venta)}</td><td class="n">${clp(c.centro)}</td><td class="n">${c.gasto?`<span class="${(c.retorno_centro||0)>=1?'pos':'wrn'}">${rx(c.retorno_centro)}</span>`:'<span class="muted">Sin pauta</span>'}</td></tr>`).join('')}</tbody></table></div>${num(v9.retorno_centro_90)?`<div class="callout" style="margin-top:14px">${ic('info')}<div>A 90 días, lo que dejan al centro los pacientes de Meta equivale a <b>${rx(v9.retorno_centro_90).replace('×','')} veces</b> el gasto de su periodo, con un ticket de ${clp(v9.ticket_90)} por paciente.</div></div>`:''}<p class="note">Retorno = para el centro ÷ gasto. Bajo 1× el anuncio no se paga solo en el rango; el valor a 90 días suele cambiar la lectura.</p>`:estadoV('Sin datos de canales','No se pudieron leer los canales del rango.',{err:1,retry:'finanzas'}),{sub:'Últimos 30 días',real:rg})}
   ${card('Medio de pago','info',med.length?`<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">${donut(med.map((m,i)=>({l:m.medio,v:m.pct,c:cols[i%cols.length]})))}<div class="legend" style="flex-direction:column;gap:8px">${med.map((m,i)=>`<span><i class="sw" style="background:${v(cols[i%cols.length])}"></i>${esc(m.medio)} <b>${m.pct}%</b> <span class="muted">${clp(m.venta)}</span></span>`).join('')}</div></div>`:estadoV('Sin caja del mes anterior','Aparecerá cuando la caja del mes esté sincronizada.'),{sub:(M.medios||{}).mes?cap(mesLargo(M.medios.mes)):'',real:(M.medios||{}).mes?'mes cerrado':''})}
  </div>`},
- draw(D){const M=D.meses||{};const se=M.serie||[];if(!se.length)return;const mx=Math.max(40e6,...se.map(s=>s.venta),M.proyeccion||0)/1e6;const ymax=Math.ceil(mx/5)*5+2;const ymin=0;
+ draw(D){const M=D.meses||{};const se=M.serie||[];if(!se.length)return;const mv=metaDe(D,'venta');const metaM=mv&&mv.monto?mv.monto/1e6:null;const mx=Math.max((metaM||0)*1e6,...se.map(s=>s.venta),M.proyeccion||0)/1e6;const ymax=Math.ceil(mx/5)*5+2;const ymin=0;
   const labels=se.map(s=>mesLbl(s.mes));const real=se.map((s,i)=>i===se.length-1?null:s.venta/1e6);
   const proy=se.map((s,i)=>i===se.length-2?s.venta/1e6:i===se.length-1&&M.proyeccion?M.proyeccion/1e6:null);
   const tk=[];for(let t=0;t<=ymax;t+=10)tk.push(t);
-  lineChart($('#finChart'),{labels,ymin,ymax,ticks:tk,yfmt:t=>'$'+dec(t,t%1?1:0).replace(/,0$/,'')+'M',series:[{v:real,c:'azul',dots:1,lbl:real.map((x,i)=>i===se.length-2&&x!=null?mm(x*1e6):null)},{v:proy,c:'aqua',dash:1,dots:1,lbl:proy.map((x,i)=>i===se.length-1&&x!=null?mm(x*1e6):null)}],refs:[{v:40,l:'Meta 2032 · $40M/mes'}],aria:'Venta mensual de caja y mes en curso estimado'})}};
+  lineChart($('#finChart'),{labels,ymin,ymax,ticks:tk,yfmt:t=>'$'+dec(t,t%1?1:0).replace(/,0$/,'')+'M',series:[{v:real,c:'azul',dots:1,lbl:real.map((x,i)=>i===se.length-2&&x!=null?mm(x*1e6):null)},{v:proy,c:'aqua',dash:1,dots:1,lbl:proy.map((x,i)=>i===se.length-1&&x!=null?mm(x*1e6):null)}],refs:metaM?[{v:metaM,l:`Meta · ${mm(mv.monto)}/mes`}]:[],aria:'Venta mensual de caja y mes en curso estimado'})}};
 const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
 
 /* ---------- 12 Predicción ---------- */
@@ -1174,17 +1426,23 @@ R.prediccion={html:()=>`${mh('prediccion','La semana que viene, antes de que lle
  draw(){}};
 
 /* ---------- 13 Experimentos ---------- */
+function holdHTML(Hd){if(!Hd||Hd.error)return estadoV('No se pudo leer la prueba',(Hd&&Hd.error)||'',{err:1,retry:'conversion'});
+ if(Hd.estado==='sin_datos')return estadoV('Todavía no hay registros del grupo de control','La prueba empieza cuando el bot registre los primeros envíos (persistencia_enviada) y retenciones (persistencia_holdout). Se compara cuántos agendan dentro de '+Hd.ventana_h+' horas en cada grupo.',{icon:'flask'});
+ const a=Hd.con_toque||{},b=Hd.control||{};const curso=Hd.estado==='en_curso';const ic_=Hd.ic95_pp||[];const sig=ic_.length&&(ic_[0]>0||ic_[1]<0);
+ return `<div class="mini"><div class="so"><div class="kl">Con segundo toque</div><b>${pctTxt(a.pct,1)}</b><small>${th(a.agendaron)} de ${th(a.n)} agendaron</small></div><div class="so"><div class="kl">Grupo de control</div><b>${pctTxt(b.pct,1)}</b><small>${th(b.agendaron)} de ${th(b.n)} agendaron</small></div><div class="so hl"><div class="kl">Diferencia</div><b>${num(Hd.diferencia_pp)?(Hd.diferencia_pp>0?'+':'')+dec(Hd.diferencia_pp,1)+' pts':'—'}</b><small>${ic_.length?`IC 95%: ${dec(ic_[0],1)} a ${dec(ic_[1],1)} pts`:'Sin intervalo todavía'}</small></div></div>
+  <div class="callout${curso?' warn':''}" style="margin-top:12px">${ic(curso?'clock':sig?'check':'info')}<div>${curso?`<b>En curso.</b> Se necesitan al menos ${th(Hd.min_n)} consultas en cada grupo para leer el resultado; hoy hay ${th(a.n)} y ${th(b.n)}.`:sig?'<b>La diferencia es mayor que el ruido</b>: el intervalo no cruza cero.':'<b>Con esta muestra la diferencia no se distingue del ruido</b>: el intervalo cruza cero.'}</div></div>`}
 R.experimentos={html:D=>{const X=D.experimentos||{},re=X.reenganche||{},ch=re.con_hora||{},sh=re.sin_hora||{},pe=X.persistencia||{};
  if(X.error)return `${mh('experimentos','Cada idea se prueba antes de volverse costumbre.')}${card('Experimentos','flask',estadoV('No se pudieron leer los experimentos',X.error,{err:1,retry:'conversion'}))}`;
  const ratio=(ch.pct&&sh.pct)?ch.pct/sh.pct:null;
  return `${mh('experimentos','Cada idea se prueba antes de volverse costumbre: resultado, tamaño del efecto y si la diferencia es real o ruido.')}
  <div class="grid g-57">
-  ${card('E-01 · Reenganche: ¿qué mensaje hace volver?','flask',(ch.enviados||sh.enviados)?`<div class="cwrap" id="expChart"></div><div class="callout" style="margin-top:12px">${ic('check')}<div>${ratio?`<b>Con hora concreta agenda ${dec(ratio,1)} veces más</b> que sin hora`:'Todavía no hay suficientes mensajes en ambos grupos'} (agendó dentro de 24 horas del mensaje; barras con intervalo de confianza del 95%).</div></div>`:estadoV('Sin mensajes de reenganche en el periodo','El reenganche registra qué variante envió; aquí se compara cuál hace volver.'),{sub:`Porcentaje que agenda tras el mensaje · ${X.dias||90} días`,real:`${X.dias||90} días`})}
+  ${card('E-01 · Reenganche: ¿qué mensaje hace volver?','flask',(ch.enviados||sh.enviados)?`<div class="cwrap" id="expChart"></div><div class="callout" style="margin-top:12px">${ic('info')}<div>${ratio?`<b>Con hora concreta agenda ${rx(ratio).replace('×','')} veces más</b> que sin hora`:'Todavía no hay suficientes mensajes en ambos grupos'} (agendó dentro de 24 horas del mensaje; barras con intervalo de confianza del 95%).</div></div><p class="note"><b>Observacional, sin grupo de control:</b> la variante no se asignó al azar, así que parte de la diferencia puede venir de a quién se le mandó cada mensaje.</p>`:estadoV('Sin mensajes de reenganche en el periodo','El reenganche registra qué variante envió; aquí se compara cuál hace volver.'),{sub:`Porcentaje que agenda tras el mensaje · ${X.dias||90} días`,real:`${X.dias||90} días`})}
   ${card('Registro de pruebas','flask',`
-   <div class="exp"><div><h3><span class="muted small">E-01</span> · Reenganche con hora concreta contra sin hora <span class="pill ok">En producción</span> ${tagR('')}</h3><p>${th(ch.enviados)} con hora · ${th(sh.enviados)} sin hora · ${X.dias||90} días</p></div><div class="res"><b>${pctTxt(ch.pct,1)}</b>contra ${pctTxt(sh.pct,1)}</div></div>
-   <div class="exp"><div><h3><span class="muted small">E-02</span> · Segundo toque a consultas que quedaron abiertas <span class="pill ok">En producción</span> ${tagR('')}</h3><p>${pe.total?`${th(pe.total)} consultas en 30 días · ${th(pe.agendadas)} agendadas`:'Sin consultas en seguimiento en 30 días'}</p></div><div class="res"><b>${pctTxt(pe.pct,1)}</b>agendó</div></div>
+   <div class="exp"><div><h3><span class="muted small">E-01</span> · Reenganche con hora concreta contra sin hora <span class="pill mut">Observacional · sin control</span> ${tagR('')}</h3><p>${th(ch.enviados)} con hora · ${th(sh.enviados)} sin hora · ${X.dias||90} días</p></div><div class="res"><b>${pctTxt(ch.pct,1)}</b>contra ${pctTxt(sh.pct,1)}</div></div>
+   <div class="exp"><div><h3><span class="muted small">E-02</span> · Segundo toque a consultas que quedaron abiertas <span class="pill mut">Observacional · sin control</span> ${tagR('')}</h3><p>${pe.total?`${th(pe.total)} consultas en 30 días · ${th(pe.agendadas)} agendadas`:'Sin consultas en seguimiento en 30 días'}</p></div><div class="res"><b>${pctTxt(pe.pct,1)}</b>agendó</div></div>
    ${[['E-03','Precio visible en anuncio de Ortodoncia','Día 9 de 14 · aún es ruido','+0,4 pp','CTR','info','Ejemplo',64],['E-04','Recordatorio a 48 h contra 24 h','Día 5 de 21','−1,1 pp','inasistencia','info','Ejemplo',24]].map(e=>`<div class="exp"><div><h3><span class="muted small">${e[0]}</span> · ${e[1]} <span class="pill ${e[5]}">${e[6]}</span> ${tagI}</h3><p>${e[2]}</p><div class="prog"><i style="width:${e[7]}%"></i></div></div><div class="res"><b>${e[3]}</b>${e[4]}</div></div>`).join('')}`,{sub:'Más reciente primero'})}
- </div>`},
+ </div>
+ ${card('Prueba con grupo de control: segundo toque','flask',holdHTML(D.holdout),{sub:'A una parte de las consultas abiertas el bot NO les manda el segundo toque, al azar: la diferencia sí es efecto del mensaje',real:D.holdout&&D.holdout.estado!=='sin_datos'?`${(D.holdout||{}).dias||90} días`:undefined})}`},
  draw(D){const re=(D.experimentos||{}).reenganche||{};const ch=re.con_hora||{},sh=re.sin_hora||{};if(!(ch.enviados||sh.enviados))return;const hi=Math.max((ch.ic95||[0,0])[1],(sh.ic95||[0,0])[1],5);const ym=Math.ceil(hi/10)*10;
   barChart($('#expChart'),{items:[{l:'Con hora concreta',ls:'Con hora',v:ch.pct,lo:(ch.ic95||[])[0],hi:(ch.ic95||[])[1],hl:1},{l:'Sin hora',v:sh.pct,lo:(sh.ic95||[])[0],hi:(sh.ic95||[])[1]}].map(x=>x.lo==null?{...x,lo:undefined,hi:undefined}:x),ymax:ym,ticks:[0,ym/2,ym],yfmt:t=>t+'%',vfmt:x=>x==null?'—':dec(x,1)+'%',aria:'Conversión por tipo de mensaje de reenganche'})}};
 
@@ -1219,6 +1477,171 @@ R.bitacora={html:D=>{const N=D.noche||{},C=D.consentimiento||{},A=D.aviso_meta||
  </div>`},
  draw(){}};
 
+/* ---------- v2 · utilidades compartidas ---------- */
+async function apiSend(method,p,body){
+ const r=await fetch(_tk('/alma/api/radar/'+p),{method,headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:'Bearer '+TOKEN}:{})},credentials:'same-origin',cache:'no-store',body:body?JSON.stringify(body):undefined});
+ let d=null;try{d=await r.json()}catch(_){}
+ if(!r.ok){const e=new Error((d&&d.detail)||('http '+r.status));e.status=r.status;throw e}
+ return d;
+}
+// Diálogo de confirmación propio (no el nativo del navegador): devuelve Promise<boolean>.
+function confirmar({titulo,texto,accion='Confirmar',peligro=false}){return new Promise(res=>{
+ const bg=document.createElement('div');bg.className='dlg-bg';bg.innerHTML=`<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlgT" aria-describedby="dlgP"><h2 id="dlgT">${esc(titulo)}</h2><p id="dlgP">${esc(texto)}</p><div class="dlg-a"><button class="btn" type="button" data-r="0">Cancelar</button><button class="btn ${peligro?'btn-d':'btn-p'}" type="button" data-r="1">${esc(accion)}</button></div></div>`;
+ const prev=document.activeElement;const fin=v=>{document.removeEventListener('keydown',kd);bg.remove();if(prev&&prev.focus)prev.focus();res(v)};
+ const kd=e=>{if(e.key==='Escape')fin(false)};document.addEventListener('keydown',kd);
+ bg.addEventListener('click',e=>{if(e.target===bg)fin(false);const b=e.target.closest('[data-r]');if(b)fin(b.dataset.r==='1')});
+ document.body.appendChild(bg);$('[data-r="0"]',bg).focus();})}
+const hace=iso=>{if(!iso)return '';const t=Date.parse(iso);if(isNaN(t))return '';const m=Math.round((Date.now()+SRV.d-t)/60000);if(m<1)return 'recién';if(m<60)return `hace ${m} min`;const h=Math.round(m/60);if(h<48)return `hace ${h} h`;return `hace ${Math.round(h/24)} días`};
+const fdt=iso=>iso?`${fdate(iso)} ${fhm(iso)}`:'—';
+const CONF={alta:[3,'Confianza alta'],media:[2,'Confianza media'],baja:[1,'Confianza baja']};
+const confHTML=(c,nota)=>{const x=CONF[c]||CONF.baja;return `<span class="conf" title="${esc(nota||'')}"><span aria-hidden="true">${[1,2,3].map(i=>`<i class="${i<=x[0]?'on':''}"></i>`).join('')}</span>${x[1]}</span>`};
+const MT={techo:'Techo para el centro',estimado:'Estimado para el centro',en_riesgo:'En riesgo'};
+const NOMBRE_OP={cupos:'horas libres',recall:'recuperar pacientes',esperando:'conversaciones en espera',anuncios:'anuncios',confirmar:'confirmaciones',no_cerradas:'atenciones no cerradas'};
+const mesNom=k=>k?cap(mesLargo(k)):'';
+
+/* ---------- Puente «¿Qué queda en el centro?» ---------- */
+let PMES='anterior';
+function puenteHTML(P,compact){
+ if(!P)return estadoV('Sin datos de resultado','No se pudo leer el módulo EBITDA.',{err:1});
+ if(P.error)return estadoV('No se pudo armar el puente',P.error,{err:1,retry:compact?'inicio':'finanzas'});
+ if(P.no_disponible)return estadoV('Resultado no disponible',P.motivo||'El módulo EBITDA no está disponible.',{icon:'wallet'});
+ const M=P[PMES]||{};if(!M.mes)return estadoV('Sin datos del mes','No hay caja para ese mes.');
+ const pasos=[{k:'in',l:'Venta de caja',v:M.ingresos,s:'Caja de Medilink'},{k:'ded',l:'Honorarios profesionales',v:-M.honorarios,s:M.abarca_fijo?`Porcentaje de cada profesional; sueldo fijo del Dr. Abarca (${clp(M.abarca_fijo)})`:'Porcentaje de cada profesional'},
+  {k:'sub',l:'Para el centro',v:M.margen_cmc},{k:'ded',l:'Publicidad en Meta',v:-M.publicidad,s:M.publicidad_fuente==='foto_diaria'?'Foto diaria de anuncios, sin campañas de otros negocios':M.publicidad_fuente==='meta_cache'?'Lectura reciente de Meta':'Registrado en EBITDA'},
+  {k:'ded',l:'Comisión Transbank',v:-M.transbank,s:'Solo pagos con medio registrado'},{k:'sub',l:'Aporte tras honorarios y publicidad',v:M.aporte}];
+ if(M.hay_costos){(M.operativos||[]).forEach(o=>pasos.push({k:'ded op2',l:o.categoria,v:-o.monto}));pasos.push({k:'fin',l:M.faltan_categorias&&M.faltan_categorias.length?'Resultado operativo (parcial)':'Resultado operativo',v:M.resultado})}
+ let run=0;const pts=[0];pasos.forEach(p=>{if(p.k==='in'||p.k==='sub'||p.k==='fin')run=p.v;else run+=p.v;p.run=run;pts.push(run)});
+ const lo=Math.min(0,...pts),hi=Math.max(M.ingresos||1,...pts),X=x=>100*(x-lo)/(hi-lo||1);let prev=0;
+ const rows=pasos.map(p=>{let a,b;if(p.k==='in'||p.k==='sub'||p.k==='fin'){a=Math.min(0,p.v);b=Math.max(0,p.v)}else{a=Math.min(prev,p.run);b=Math.max(prev,p.run)}prev=p.run;
+  const neg=p.k==='fin'&&p.v<0;return `<div class="wf-r ${p.k}${neg?' neg':''}"><span class="l">${esc(p.l)}${p.s&&!compact?`<small>${esc(p.s)}</small>`:''}</span><span class="t">${lo<0?`<b style="left:${X(0)}%"></b>`:''}<i style="left:${X(a)}%;width:${Math.max(.6,X(b)-X(a))}%"></i></span><span class="v${p.v<0&&(p.k==='sub'||p.k==='fin')?' neg':''}">${p.k.startsWith('ded')?(p.v?'−'+clp(Math.abs(p.v)):'$0'):clp(p.v)}</span></div>`}).join('');
+ const avisos=[];
+ if(!M.hay_costos)avisos.push(`<div class="wf-cut">${ic('info',18)}<div><b>Ingrese los costos fijos para ver el resultado operativo.</b> No hay gastos operativos registrados para ${esc(mesNom(M.mes))} en el módulo EBITDA (sueldos, servicios, insumos, sistemas, contador).</div></div>`);
+ else if((M.faltan_categorias||[]).length)avisos.push(`<div class="callout warn" style="margin-top:12px">${ic('alert')}<div>Faltan categorías habituales en los gastos registrados: <b>${M.faltan_categorias.map(esc).join(' y ')}</b>. El resultado operativo está sobreestimado hasta que se registren.</div></div>`);
+ if(PMES==='actual')avisos.push(`<p class="note">Mes en curso, día ${M.dia} de ${M.dias_mes}: el sueldo fijo del Dr. Abarca y los gastos recurrentes se cargan completos aunque el mes recién empieza, mientras la venta es solo la de estos días. Compare con el mes cerrado.</p>`);
+ if(M.radar&&Math.abs(M.radar.dif_centro)>=1000&&!compact)avisos.push(`<p class="note">El puente usa las cifras del módulo EBITDA. «Para el centro» difiere en ${clp(Math.abs(M.radar.dif_centro))} de la estimación del Radar (${clp(M.radar.centro)}), que aplica al Dr. Abarca el 62% de su venta en vez de su sueldo fijo y el 70% a quien no tiene porcentaje registrado.${M.radar.dif_venta?` La venta difiere en ${clp(Math.abs(M.radar.dif_venta))}: EBITDA no cuenta pagos sin profesional.`:''}</p>`);
+ const chips=`<div class="chips" role="group" aria-label="Mes del puente">${[['anterior',P.anterior&&P.anterior.mes],['actual',P.actual&&P.actual.mes]].map(([k,m])=>`<button class="chip" type="button" data-pmes="${k}" aria-pressed="${PMES===k}">${esc(mesNom(m))}${k==='actual'?' · en curso':''}</button>`).join('')}</div>`;
+ return `${chips}<div class="wf" style="margin-top:16px" role="img" aria-label="Puente desde la venta de caja hasta el resultado operativo">${rows}</div>${avisos.join('')}<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">${lnk(P.editar?P.editar.label:'Editar gastos en EBITDA','ebitda',P.editar?P.editar.href:'/cmc/ebitda',0,1)}</div>`;
+}
+
+/* ---------- 00 Inicio ---------- */
+function opHTML(o){const mt=MT[o.monto_tipo]||'Estimado';
+ return `<li class="op${o.urgente?' urg':''}"><span class="op-ic">${ic(o.icono||'zap',20)}</span><div style="min-width:0"><h3>${esc(o.titulo)}</h3><p class="ev">${esc(o.evidencia)}</p><div class="src"><span>${esc(o.fuente)}</span>${o.fecha?`<span>· ${/T\d\d:/.test(o.fecha)?fdt(o.fecha):esc(o.fecha.replace(/(\d{4})-(\d\d)-(\d\d)/g,'$3/$2/$1'))}</span>`:''}</div>${(o.solapa_con||[]).length?`<div class="solapa">${ic('layers',13)}Se superpone con ${o.solapa_con.map(k=>esc(NOMBRE_OP[k]||k)).join(' y ')}</div>`:''}</div>
+  <div class="op-side"><div class="op-m"><small>${esc(mt)}</small>${num(o.monto)?clp(o.monto):'<span class="muted" style="font-size:15px">Sin monto</span>'}</div>${confHTML(o.confianza,o.nota_confianza)}<p class="op-mn">${esc(o.monto_nota||'')}</p>${lnk(o.accion.label,o.accion.modulo,o.accion.href,1,1)}</div></li>`}
+R.inicio={html:D=>{
+ const O=D.oportunidades||{},ops=O.oportunidades||[],P=D.puente,dt=D.datos||{};
+ const dcls=dt.rojos?'b':dt.ambar?'w':'';
+ const sol=(O.solapes||[]).length?`<div class="callout warn" style="margin-top:16px">${ic('layers')}<div><b>Los montos no se suman.</b> ${O.solapes.map((p,i)=>`${esc((i?(x=>x):cap)(NOMBRE_OP[p[0]]||p[0]))} y ${esc(NOMBRE_OP[p[1]]||p[1])}`).join('; ')} miden en parte la misma agenda o las mismas personas.</div></div>`:'';
+ const sinD=(O.sin_datos||[]).length?`<p class="note">Fuentes sin dato hoy: ${O.sin_datos.map(s=>`<b>${esc(s.fuente)}</b> (${esc(s.motivo)})`).join(' · ')}</p>`:'';
+ const lista=O.error?estadoV('No se pudieron armar las oportunidades',O.error,{err:1,retry:'inicio'}):ops.length?`<ol class="ops">${ops.map(opHTML).join('')}</ol>${sol}${sinD}`:`${estadoV('Sin oportunidades con evidencia hoy','Ninguna fuente muestra hoy algo que recuperar: no hay cupos libres valorizables, personas esperando, anuncios con pérdida ni citas de mañana sin confirmar.',{icon:'check'})}${sinD}`;
+ const u=(O.unitarios||{});const tk=u.ticket_centro||{},as=u.asistencia||{};
+ return `<section class="card brief" aria-label="Lectura del día"><div><div class="eyebrow">${esc(cap(fmtDia.format(new Date(Date.now()+SRV.d)).replace(',','')))} · Centro Médico Carampangue</div><h1>${esc(D.saludo||'Buen día')}, ${esc(D.nombre||'')}.</h1><p class="lect">${esc(D.lectura||'')}</p></div>
+  <div class="brief-side"><button class="stchip ${dcls}" type="button" data-go="datos"><i></i>${dt.error?'Estado de datos no disponible':`<b>${th(dt.al_dia)} de ${th(dt.total)}</b> procesos al día`}</button>${ops.length?`<button class="stchip" type="button" data-go="pulso">${ic('activity',15)}Ver el pulso de hoy</button>`:''}</div></section>
+ ${card('Oportunidades del día','zap',lista,{sub:'Ordenadas por monto · cada una con su evidencia, su fuente y la herramienta donde se actúa',real:'hoy'})}
+ <div class="grid g-75 top-al">
+  ${card('¿Qué queda en el centro?','wallet',`<div class="pnt">${puenteHTML(P,false)}</div>`,{sub:'Puente desde la venta de caja hasta el resultado operativo · cifras del módulo EBITDA',real:P&&P.anterior?`${mesNom(P.anterior.mes)} y en curso`:''})}
+  ${card('Con qué vara se estima','info',`<div class="mini" style="grid-template-columns:minmax(0,1fr)"><div class="so"><div class="kl">Lo que deja una atención</div><b>${clp(tk.mediana)}</b><small>Mediana para el centro tras honorarios · ${th(tk.n)} atenciones de ${th(tk.dias)} días</small></div><div class="so"><div class="kl">Asistencia real</div><b>${num(as.tasa)?pctTxt(100*as.tasa,1):'—'}</b><small>${th(as.atendidos)} atendidas y ${th(as.no_asiste)} inasistencias en 90 días</small></div></div><p class="note">Confianza según el tamaño de la muestra que sostiene cada tasa: alta con 30 casos o más, media con 10 a 29 y baja con menos. «Techo» es el máximo posible; «estimado», lo esperable con las tasas medidas; «en riesgo», lo que se perdería si se repite la inasistencia típica.</p>`,{sub:'Valores unitarios reales usados en los montos',real:'caja y ausentismo'})}
+ </div>`},
+ draw(){}};
+
+/* ---------- Centro de datos ---------- */
+const DST={verde:'Al día',ambar:'Atrasado',rojo:'Detenido'};
+R.datos={html:D=>{const ps=D.procesos||[];
+ const segs=[['verde','ok'],['ambar','warn'],['rojo','bad']].map(([k,c])=>{const n=ps.filter(p=>p.estado===k).length;return n?`<i style="flex:${n};background:${v(c)}" title="${DST[k]}: ${n}"></i>`:''}).join('');
+ const rows=ps.map(p=>`<div class="dp"><span class="dst ${p.estado}"><i></i>${DST[p.estado]}</span><div><h3>${esc(p.nombre)}</h3><p>${esc(p.detalle||'')}</p>${p.error?`<p class="err">${esc(p.error)}</p>`:''}<p><code class="f">${esc(p.fuente)}</code></p></div><div class="when">${p.ultima?`${fdt(p.ultima)}<small>${esc(hace(p.ultima))} · esperado ${esc(p.horario)}</small>`:`Sin corrida registrada<small>Esperado ${esc(p.horario)}</small>`}</div><div class="rows">${th(p.filas)}<small>filas</small></div></div>`).join('');
+ return `${mh('datos','Cada proceso que trabaja de noche deja un rastro en la base. Aquí se lee ese rastro: cuándo corrió por última vez, si llegó a su hora y cuántas filas tiene. Lo que no deja rastro aparece detenido, no como si estuviera bien.')}
+ <section class="card"><div class="dsum"><div class="big">${th(D.al_dia)} <small>de ${th(D.total)} al día</small></div><div><div class="legend"><span><i class="sw" style="background:${v('ok')}"></i>Al día ${th(ps.filter(p=>p.estado==='verde').length)}</span><span><i class="sw" style="background:${v('warn')}"></i>Atrasado ${th(D.ambar)}</span><span><i class="sw" style="background:${v('bad')}"></i>Detenido ${th(D.rojos)}</span></div><div class="segbar" role="img" aria-label="${th(D.al_dia)} de ${th(D.total)} procesos al día">${segs}</div></div></div></section>
+ ${card('Procesos','database',ps.length?rows:estadoV('Sin procesos','No se pudo leer ningún proceso.',{err:1,retry:'datos'}),{sub:'Detenidos primero · hora de Chile',real:fdt(D.ahora)})}
+ ${card('Cómo se mide la frescura','info',`<p class="small" style="line-height:1.6;color:var(--ink-2)"><b>Al día</b>: corrió después de su última hora programada (con ${th((D.reglas||{}).gracia_min)} minutos de gracia). <b>Atrasado</b>: se saltó una corrida. <b>Detenido</b>: se saltó dos o más, la tabla está vacía o no existe. La nota de Google no tiene horario fijo: se considera al día si tiene menos de 24 horas. Esta vista solo lee la base; no ejecuta ningún proceso.</p>`)}`},draw(){}};
+
+/* ---------- Laboratorio ---------- */
+const LB={g:null,p:{presupuesto:0,d_conv:0,d_asist:0,d_valor:0,capacidad:true},sel:new Set()};
+function labE(){const D=SRC.laboratorio||{};return (D.especialidades||[]).find(e=>e.grupo===LB.g)||(D.especialidades||[])[0]}
+function labSim(e,p,f=1){if(!e)return null;const c=e.curva;const B0=c.B,A0=c.A;const B=B0*f;const yref=A0*(1-Math.exp(-c.s_ref/B0));const A=f===1?A0:yref/(1-Math.exp(-c.s_ref/B));
+ const S=p.presupuesto;const conv=A*(1-Math.exp(-S/B));const cc=Math.max(0,Math.min(1,e.conv_cita+p.d_conv/100));const as=Math.max(0,Math.min(1,(e.asistencia??.9)+p.d_asist/100));
+ const citas=conv*cc;const atRaw=citas*as;const cap=(p.capacidad&&num(e.capacidad_sem))?e.capacidad_sem:Infinity;const at=Math.min(atRaw,cap);
+ const vu=(e.valor_12m??e.valor_primera)*(1+p.d_valor/100),v1=e.valor_primera*(1+p.d_valor/100);
+ return {conv,citas,at,atRaw,limitado:atRaw>cap,valor:at*vu,primera:at*v1,retorno:S?at*vu/S:null}}
+function labMax(e){return Math.max(150000,Math.ceil(e.gasto_sem*3/10000)*10000)}
+function labOut(){const e=labE();const box=$('#labOut');if(!e||!box)return;const p=LB.p;const m=labSim(e,p),lo=labSim(e,p,SENS_[0]),hi=labSim(e,p,SENS_[1]);const r=(a,b,f)=>{const x=f(Math.min(a,b)),y=f(Math.max(a,b));return x===y?'Sin cambio en la banda':`${x} a ${y}`};
+ box.innerHTML=`<div class="so"><div class="kl">Conversaciones</div><b>${th(m.conv)}</b><small>${r(lo.conv,hi.conv,th)}</small></div><div class="so"><div class="kl">Citas</div><b>${dec(m.citas,1)}</b><small>${r(lo.citas,hi.citas,x=>dec(x,1))}</small></div><div class="so"><div class="kl">Atendidos</div><b>${dec(m.at,1)}</b><small>${r(lo.at,hi.at,x=>dec(x,1))}</small></div><div class="so"><div class="kl">Primera atención</div><b>${clp(m.primera)}</b><small>para el centro</small></div><div class="so hl"><div class="kl">A 12 meses</div><b>${clp(m.valor)}</b><small>${r(lo.valor,hi.valor,clp)}</small></div><div class="so"><div class="kl">Retorno a 12 meses</div><b class="${(m.retorno||0)>=1?'pos':'wrn'}">${m.retorno==null?'—':rx(m.retorno)}</b><small>sobre ${clp(p.presupuesto)} a la semana</small></div>`;
+ const cw=$('#labCap');if(cw)cw.innerHTML=m.limitado?`<div class="callout warn">${ic('calendar')}<div><b>La agenda limita.</b> Con estas tasas llegarían ${dec(m.atRaw,1)} atendidos por semana, pero ${esc(e.grupo)} tiene ${dec(e.capacidad_sem,1)} cupos libres por semana en los próximos 14 días. Gastar más no se convierte en atenciones hasta abrir horas.</div></div>`:'';
+ const set=(id,t)=>{const x=$(id);if(x)x.textContent=t};set('#oPres',clp(p.presupuesto));set('#oConv',`${pctTxt(100*Math.max(0,Math.min(1,e.conv_cita+p.d_conv/100)),1)} (${p.d_conv>=0?'+':''}${dec(p.d_conv,0)} pts)`);set('#oAsist',`${pctTxt(100*Math.max(0,Math.min(1,(e.asistencia??.9)+p.d_asist/100)),1)} (${p.d_asist>=0?'+':''}${dec(p.d_asist,0)} pts)`);set('#oValor',`${p.d_valor>=0?'+':''}${dec(p.d_valor,0)}%`);
+ $$('.rng[data-lp]').forEach(rg=>{const mn=+rg.min,mx=+rg.max;rg.style.setProperty('--p',((+rg.value-mn)/(mx-mn)*100)+'%')});
+ labCurve();}
+let SENS_=[.6,1.6];
+function labCurve(){const el=$('#labCurve');const e=labE();if(!el||!e)return;const W=el.clientWidth||520,H=230,pd={l:44,r:14,t:16,b:30};const mx=labMax(e);const xs=[];for(let s=0;s<=mx;s+=mx/40)xs.push(s);
+ const p=LB.p;const f=(s,k)=>labSim(e,{...p,presupuesto:s},k).at;const mid=xs.map(s=>f(s,1)),lo=xs.map(s=>f(s,SENS_[0])),hi=xs.map(s=>f(s,SENS_[1]));
+ const obs=(e.curva.semanas||[]).filter(w=>w[0]>0).map(w=>[w[0],labSim(e,{...p,presupuesto:0},1)&&w[1]*Math.max(0,Math.min(1,e.conv_cita+p.d_conv/100))*Math.max(0,Math.min(1,(e.asistencia??.9)+p.d_asist/100))]);
+ const capY=(p.capacidad&&num(e.capacidad_sem))?e.capacidad_sem:null;const top=Math.max(.5,...hi,...lo,...obs.map(o=>o[1]));
+ // La escala la manda la curva; los cupos solo entran si están cerca (si no, se rotulan arriba).
+ const capIn=capY!=null&&capY<=top*1.6;const raw=Math.max(top,capIn?capY:0)*1.12;const stp=(()=>{const m=Math.pow(10,Math.floor(Math.log10(raw/4)));return [1,2,2.5,5,10].map(k=>k*m).find(k=>k*4>=raw)})();const ymax=stp*4;
+ const X=s=>pd.l+s/mx*(W-pd.l-pd.r),Y=a=>pd.t+(H-pd.t-pd.b)*(1-a/ymax);
+ let s='';for(let i=0;i<=4;i++){const val=stp*i,y=Y(val);s+=`<line x1="${pd.l}" x2="${W-pd.r}" y1="${y}" y2="${y}" style="stroke:${v('grid')}"/><text x="${pd.l-8}" y="${y+4}" text-anchor="end" style="fill:${v('muted')};font-size:11px">${dec(val,stp<1?1:0)}</text>`}
+ [0,mx/2,mx].forEach((t,i)=>s+=`<text x="${X(t)}" y="${H-8}" text-anchor="${i===0?'start':i===2?'end':'middle'}" style="fill:${v('muted')};font-size:11px">${t?'$'+th(t/1000)+' mil':'$0'}</text>`);
+ s+=`<path d="M${xs.map((x,i)=>X(x)+','+Y(Math.max(hi[i],lo[i]))).join('L')}L${xs.slice().reverse().map((x,i)=>X(x)+','+Y(Math.min(hi[xs.length-1-i],lo[xs.length-1-i]))).join('L')}Z" style="fill:${v('azul-soft')}"/>`;
+ if(capY!=null&&!capIn)s+=`<text x="${W-pd.r}" y="${pd.t+4}" text-anchor="end" style="fill:${v('warn-ink')};font-size:11px;font-weight:600">Cupos libres: ${dec(capY,1)} por semana (sobre la escala)</text>`;
+ if(capIn)s+=`<line x1="${pd.l}" x2="${W-pd.r}" y1="${Y(capY)}" y2="${Y(capY)}" style="stroke:${v('warn')};stroke-dasharray:5 4"/><text x="${W-pd.r}" y="${Y(capY)-6}" text-anchor="end" style="fill:${v('warn-ink')};font-size:11px;font-weight:600">Cupos libres por semana</text>`;
+ s+=`<path d="M${xs.map((x,i)=>X(x)+','+Y(mid[i])).join('L')}" style="fill:none;stroke:${v('azul')};stroke-width:2.5;stroke-linejoin:round"/>`;
+ obs.forEach(o=>{if(o[0]<=mx)s+=`<circle cx="${X(o[0])}" cy="${Y(o[1])}" r="3.5" style="fill:${v('surface')};stroke:${v('bar-mute')};stroke-width:2"><title>Semana observada: ${clp(o[0])} de gasto</title></circle>`});
+ const m=f(p.presupuesto,1);s+=`<line x1="${X(p.presupuesto)}" x2="${X(p.presupuesto)}" y1="${pd.t}" y2="${H-pd.b}" style="stroke:${v('aqua')};stroke-width:1.5"/><circle cx="${X(p.presupuesto)}" cy="${Y(m)}" r="6" style="fill:${v('surface')};stroke:${v('aqua')};stroke-width:3"/>`;
+ el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Atendidos por semana según presupuesto semanal en ${esc(e.grupo)}">${s}</svg>`}
+function escRes(e,p){const m=labSim(e,p);return {conv:m.conv,citas:m.citas,atendidos:m.at,valor:m.valor,primera:m.primera,retorno:m.retorno??0}}
+function escHTML(D){const xs=D.escenarios||[];if(!xs.length)return estadoV('Todavía no hay escenarios guardados','Mueva los controles, póngale un nombre y guárdelo. Luego marque dos o tres para compararlos lado a lado.',{icon:'layers'});
+ return xs.map(x=>{const p=x.params||{};return `<div class="esc"><input type="checkbox" data-esc="${x.id}" aria-label="Comparar ${esc(x.nombre)}" ${LB.sel.has(x.id)?'checked':''}><div><b>${esc(x.nombre)}</b><small>${esc(p.grupo||'')} · ${clp(p.presupuesto)} a la semana · ${fdate(x.creado_at)}</small></div><button class="ib" type="button" data-escdel="${x.id}" aria-label="Eliminar el escenario ${esc(x.nombre)}">${ic('trash',17)}</button></div>`}).join('')}
+function cmpHTML(D){const xs=(D.escenarios||[]).filter(x=>LB.sel.has(x.id));if(!xs.length)return '<p class="note">Marque escenarios en la lista para compararlos aquí.</p>';
+ const es=D.especialidades||[];const cols=xs.map(x=>{const e=es.find(z=>z.grupo===x.params.grupo);return {x,e,r:e?escRes(e,x.params):null}});
+ const fila=(lbl,f,k='')=>`<tr class="${k}"><td>${lbl}</td>${cols.map(c=>`<td>${f(c)}</td>`).join('')}</tr>`;
+ return `<div class="tw"><table class="cmp"><thead><tr><th></th>${cols.map(c=>`<th>${esc(c.x.nombre)}</th>`).join('')}</tr></thead><tbody>
+  ${fila('Especialidad',c=>esc(c.x.params.grupo))}${fila('Presupuesto semanal',c=>clp(c.x.params.presupuesto))}${fila('Conversión',c=>`${c.x.params.d_conv>=0?'+':''}${dec(c.x.params.d_conv,0)} pts`)}${fila('Asistencia',c=>`${c.x.params.d_asist>=0?'+':''}${dec(c.x.params.d_asist,0)} pts`)}${fila('Valor por paciente',c=>`${c.x.params.d_valor>=0?'+':''}${dec(c.x.params.d_valor,0)}%`)}
+  ${fila('Atendidos por semana',c=>c.r?dec(c.r.atendidos,1):'—','k')}${fila('Para el centro a 12 meses',c=>c.r?clp(c.r.valor):'—','k')}${fila('Retorno a 12 meses',c=>c.r&&c.x.params.presupuesto?rx(c.r.retorno):'—','k')}${fila('Guardado con',c=>c.x.params.resultado?`${dec(c.x.params.resultado.atendidos,1)} atend. · ${clp(c.x.params.resultado.valor)}`:'—')}
+ </tbody></table></div><p class="note">Los resultados se recalculan con las tasas de hoy; la última fila muestra lo que daba el escenario el día que se guardó.</p>`}
+R.laboratorio={html:D=>{
+ if(D.error)return `${mh('laboratorio','')}${card('',null,estadoV('No se pudo armar el laboratorio',D.error,{err:1,retry:'laboratorio'}))}`;
+ const es=D.especialidades||[];if(!LB.g||!es.some(e=>e.grupo===LB.g)){LB.g=es[0]&&es[0].grupo;if(es[0])LB.p.presupuesto=Math.round(es[0].gasto_sem/5000)*5000}
+ SENS_=(D.metodo&&D.metodo.sens)||SENS_;const e=labE();
+ if(!e)return `${mh('laboratorio','Simulador de presupuesto semanal con tasas reales.')}${card('',null,estadoV('Sin especialidades con anuncios en 90 días','El simulador necesita gasto y conversaciones reales para calcular el costo por conversación de cada especialidad.',{icon:'tube'}))}`;
+ const mx=labMax(e),p=LB.p;const c=e.curva;
+ const tasas=`<div class="tw"><table class="tbl"><thead><tr><th>Tasa</th><th class="n">Valor real</th><th>Fuente</th><th class="n">Muestra</th></tr></thead><tbody>
+  <tr><td>Gasto semanal</td><td class="n">${clp(e.gasto_sem)}</td><td class="small muted wrap">Foto diaria de Meta, 90 días</td><td class="n">${th(e.anuncios)} anuncios</td></tr>
+  <tr><td>Costo por conversación</td><td class="n">${clp(e.costo_conv)}</td><td class="small muted wrap">Gasto ÷ conversaciones</td><td class="n">${th(e.conv_90)}</td></tr>
+  <tr><td>Conversación → cita</td><td class="n">${pctTxt(100*e.conv_cita,1)}</td><td class="small muted wrap">Citas atribuidas ÷ conversaciones</td><td class="n">${th(e.citas_90)} citas</td></tr>
+  <tr><td>Asistencia</td><td class="n">${num(e.asistencia)?pctTxt(100*e.asistencia,1):'—'}</td><td class="small muted wrap">${esc(e.asistencia_fuente)}</td><td class="n">${th(e.asistencia_n)}</td></tr>
+  <tr><td>Cupos libres por semana</td><td class="n">${num(e.capacidad_sem)?dec(e.capacidad_sem,1):'—'}</td><td class="small muted wrap">${num(e.capacidad_sem)?'Agenda de 14 días ÷ 2':'Sin lectura de agenda'}</td><td class="n">—</td></tr>
+  <tr><td>Valor a 12 meses</td><td class="n">${clp(e.valor_12m)}</td><td class="small muted wrap">${e.valor_12m?'Cohortes de pacientes nuevos: '+esc((e.valor_12m_esp||[]).join(', ')):'Sin cohorte: se usa la primera atención'}</td><td class="n">${th(e.valor_12m_n)}</td></tr>
+  <tr><td>Primera atención</td><td class="n">${clp(e.valor_primera)}</td><td class="small muted wrap">${esc(e.valor_primera_fuente)}</td><td class="n">${th(e.atendidos_90)}</td></tr></tbody></table></div>`;
+ return `${mh('laboratorio','¿Qué pasa si se invierte distinto la próxima semana? Cada número parte de una tasa real de los últimos 90 días; los controles mueven esas tasas para probar hipótesis. Nada de esto cambia campañas ni envía mensajes.')}
+ <section class="card"><div class="ch"><span class="ch-ic">${ic('tube')}</span><div class="ch-t"><h2>Simulador semanal</h2><div class="sub">${esc(e.grupo)} · tasas de ${fdm(D.rango.desde)} a ${fdm(D.rango.hasta)}</div></div><div class="r">${tagR('90 días')}${confHTML(e.confianza,`${e.citas_90} citas en 90 días`)}</div></div>
+  <div class="chips" role="group" aria-label="Especialidad">${es.map(x=>`<button class="chip" type="button" data-lg="${esc(x.grupo)}" aria-pressed="${x.grupo===e.grupo}">${esc(x.grupo)}</button>`).join('')}</div>
+  <div class="lab" style="margin-top:16px">
+   <div>
+    <div class="sl"><div class="sl-h"><label for="rPres">Presupuesto semanal</label><output id="oPres">${clp(p.presupuesto)}</output></div><input class="rng" id="rPres" data-lp="presupuesto" type="range" min="0" max="${mx}" step="5000" value="${Math.min(mx,p.presupuesto)}"><p>Hoy se gastan ${clp(e.gasto_sem)} a la semana en promedio.</p></div>
+    <div class="sl"><div class="sl-h"><label for="rConv">Conversión a cita</label><output id="oConv"></output></div><input class="rng" id="rConv" data-lp="d_conv" type="range" min="-10" max="15" step="1" value="${p.d_conv}"><div class="presets"><button class="chip" type="button" data-pre="d_conv:5">Recepción responde en menos de 5 min · +5 pts</button></div><p>Real: ${pctTxt(100*e.conv_cita,1)}. Los atajos son hipótesis para probar, no resultados medidos.</p></div>
+    <div class="sl"><div class="sl-h"><label for="rAsist">Asistencia</label><output id="oAsist"></output></div><input class="rng" id="rAsist" data-lp="d_asist" type="range" min="-15" max="10" step="1" value="${p.d_asist}"><div class="presets"><button class="chip" type="button" data-pre="d_asist:3">Confirmación el día anterior · +3 pts</button></div><p>Real: ${num(e.asistencia)?pctTxt(100*e.asistencia,1):'sin dato (se usa 90%)'}.</p></div>
+    <div class="sl"><div class="sl-h"><label for="rValor">Valor por paciente</label><output id="oValor"></output></div><input class="rng" id="rValor" data-lp="d_valor" type="range" min="-50" max="50" step="5" value="${p.d_valor}"><p>Sobre ${clp(e.valor_12m??e.valor_primera)} a 12 meses para el centro.</p></div>
+    <div class="sl"><label class="tg"><input type="checkbox" id="labCapT" ${p.capacidad?'checked':''} ${num(e.capacidad_sem)?'':'disabled'}>Limitar a los cupos libres de la agenda</label><p>${num(e.capacidad_sem)?`${dec(e.capacidad_sem,1)} cupos libres por semana en los próximos 14 días.`:'Sin lectura de agenda: el resultado no tiene tope de capacidad.'}</p></div>
+    <div class="sl"><label for="escNom" class="small" style="font-weight:600">Guardar este escenario</label><div class="save"><input id="escNom" type="text" maxlength="80" placeholder="Ej.: ${esc(e.grupo)} con recepción rápida" autocomplete="off"><button class="btn btn-p" id="escSave" type="button">${ic('save',16)}Guardar</button></div></div>
+   </div>
+   <div><div class="sim-out lab3" id="labOut"></div><div id="labCap" class="capwarn"></div><div class="kl" style="margin:16px 0 8px">Atendidos por semana según presupuesto</div><div class="cwrap" id="labCurve"></div><div class="legend" style="margin-top:8px"><span><i class="sw" style="background:${v('azul')}"></i>Curva central</span><span><i class="sw" style="background:${v('azul-soft')}"></i>Sensibilidad a la curvatura</span><span><i class="sw" style="background:${v('bar-mute')}"></i>Semanas observadas</span></div></div>
+  </div>
+ </section>
+ <div class="grid top-al">
+  ${card('Tasas reales usadas','info',tasas,{sub:esc(e.grupo),real:'90 días'})}
+  ${card('Cómo se calcula','info',`<p class="small" style="line-height:1.6;color:var(--ink-2)">Conversaciones por semana = A·(1 − e<sup>−gasto/B</sup>): cada peso adicional rinde menos que el anterior. ${c.metodo==='ajuste'?`A y B se ajustaron a las ${th((c.semanas||[]).filter(w=>w[0]>0).length)} semanas con gasto de los últimos 90 días (R² ${dec(c.r2,2)}${c.r2<.5?'; ajuste débil: el gasto semanal explica poco de las conversaciones, lea la curva como orientación':''}).`:`No hubo variación suficiente de gasto para ajustar la curva (se piden ${th(D.metodo.fit_min_semanas)} semanas con gasto y variación de al menos ${th(100*D.metodo.fit_min_cv)}%): se supone B = ${dec(D.metodo.supuesto_b,0)} veces el gasto semanal actual.`} Luego: citas = conversaciones × conversión; atendidos = citas × asistencia, con tope en los cupos libres si se activa; valor = atendidos × valor por paciente.</p><p class="note">La banda no es un intervalo estadístico: muestra cómo cambia el resultado si la curva se satura antes (B × ${dec(SENS_[0],1)}) o después (B × ${dec(SENS_[1],1)}), pasando por el mismo punto observado. El valor a 12 meses sale de pacientes nuevos del centro; quien llega por un anuncio y ya era paciente vale distinto. Fuera del rango de gasto observado, la curva es una extrapolación.</p>`)}
+ </div>
+ <div class="grid g-57 top-al">
+  ${card('Escenarios guardados','layers',`<div id="escList">${escHTML(D)}</div>`,{sub:'Más reciente primero · marque para comparar'})}
+  ${card('Comparación','layers',`<div id="escCmp">${cmpHTML(D)}</div>`,{sub:'Lado a lado, con las tasas de hoy'})}
+ </div>
+ ${(D.sin_tasa||[]).length?`<p class="note">Sin simulación: ${D.sin_tasa.map(x=>`<b>${esc(x.grupo)}</b> (${esc(x.motivo)})`).join(' · ')}</p>`:''}`},
+ draw(){labOut()}};
+async function escGuardar(){const e=labE();const inp=$('#escNom');if(!e||!inp)return;const nombre=inp.value.trim();if(!nombre){inp.focus();toast('Póngale un nombre al escenario.','err');return}
+ const b=$('#escSave');b.disabled=true;
+ try{await apiSend('POST','escenarios',{nombre,params:{grupo:e.grupo,...LB.p,resultado:escRes(e,LB.p)}});const D=await load('laboratorio',true);inp.value='';$('#escList').innerHTML=escHTML(D);$('#escCmp').innerHTML=cmpHTML(D);toast('Escenario guardado.')}
+ catch(err){toast(err.message&&!/^http/.test(err.message)?err.message:'No se pudo guardar el escenario.','err')}finally{b.disabled=false}}
+async function escBorrar(id){const D=SRC.laboratorio||{};const x=(D.escenarios||[]).find(z=>z.id===id);
+ const okk=await confirmar({titulo:'Eliminar escenario',texto:`Se eliminará «${x?x.nombre:'el escenario'}». Esta acción no se puede deshacer.`,accion:'Eliminar',peligro:true});if(!okk)return;
+ try{await apiSend('DELETE','escenarios/'+id);LB.sel.delete(id);const D2=await load('laboratorio',true);$('#escList').innerHTML=escHTML(D2);$('#escCmp').innerHTML=cmpHTML(D2);toast('Escenario eliminado.')}catch(_){toast('No se pudo eliminar el escenario.','err')}}
+
 /* ================= Navegación y estados ================= */
 const main=$('#main'),rail=$('#rail');
 let cur=null;
@@ -1240,7 +1663,8 @@ function finish(id,art,D,anim){art.classList.remove('enter');if(anim&&!RM){void 
 function show(id,anim=true){if(!R[id])id='pulso';if(cur&&cur!==id&&R[cur].hide)R[cur].hide();
  $$('.mod').forEach(s=>s.hidden=s.dataset.mod!==id);
  $$('.ri').forEach(b=>b.setAttribute('aria-current',String(b.dataset.id===id)));
- const btn=$(`.ri[data-id="${id}"]`);if(btn&&getComputedStyle(rail.parentElement).overflowX==='auto'){const nav=rail.parentElement;nav.scrollTo({left:Math.max(0,btn.offsetLeft-16),behavior:RM?'auto':'smooth'})}
+ const btn=$(`.ri[data-id="${id}"]`);if(btn&&getComputedStyle(rail.parentElement).overflowX!=='auto'){const nav=rail.parentElement,r=btn.getBoundingClientRect(),n=nav.getBoundingClientRect();if(r.bottom>n.bottom||r.top<n.top)nav.scrollTop+=r.top-n.top-nav.clientHeight/2}
+ if(btn&&getComputedStyle(rail.parentElement).overflowX==='auto'){const nav=rail.parentElement;nav.scrollTo({left:Math.max(0,btn.offsetLeft-16),behavior:RM?'auto':'smooth'})}
  cur=id;try{localStorage.setItem('almaRadar.tab',id);if(location.hash!=='#'+id)history.replaceState(null,'',location.pathname+location.search+'#'+id)}catch(e){}
  render(id,anim);if(id==='pulso')poll();}
 function redraw(){const m=MODS.find(x=>x.id===cur);if(!m)return;const D=m.src?SRC[m.src]:{};if(D&&R[cur].draw)R[cur].draw(D)}
@@ -1261,8 +1685,13 @@ document.addEventListener('click',e=>{
  if(t.matches('.ri')){show(t.dataset.id);window.scrollTo({top:0,behavior:RM?'auto':'smooth'});return}
  if(t.dataset.go){show(t.dataset.go);window.scrollTo({top:0,behavior:RM?'auto':'smooth'});return}
  if(t.dataset.retry){const k=t.dataset.retry;delete SRC_ERR[k];load(k,true).then(()=>render(cur,true)).catch(()=>{render(cur,false);toast('Sigue sin responder. Intente en un momento.','err')});render(cur,false);return}
+ if(t.id==='nscBtn'){NSC=!NSC;t.setAttribute('aria-pressed',String(NSC));sankey($('#sankey'),SRC.captacion);return}
  if(t.dataset.fam){FAM=t.dataset.fam;$$('[data-fam]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#ftable').innerHTML=funnelTable(SRC.captacion);sankey($('#sankey'),SRC.captacion);return}
- if(t.dataset.sp){SPK=t.dataset.sp;$$('[data-sp]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#spName').textContent=SPK;INV=Math.min(300000,Math.round(SP[SPK].B*.5/10000)*10000);$('#invRange').value=INV;simUpdate();return}
+ if(t.dataset.pmes){PMES=t.dataset.pmes;const box=t.closest('.pnt');const D=cur==='finanzas'?SRC.finanzas:SRC.inicio;if(box&&D)box.innerHTML=puenteHTML(D.puente,false);return}
+ if(t.dataset.lg){LB.g=t.dataset.lg;const e=labE();LB.p={presupuesto:Math.round(e.gasto_sem/5000)*5000,d_conv:0,d_asist:0,d_valor:0,capacidad:true};render('laboratorio',false);return}
+ if(t.dataset.pre){const [k,val]=t.dataset.pre.split(':');LB.p[k]=+val;const rg=$(`.rng[data-lp="${k}"]`);if(rg)rg.value=val;labOut();return}
+ if(t.id==='escSave'){escGuardar();return}
+ if(t.dataset.escdel){escBorrar(+t.dataset.escdel);return}
  if(t.dataset.adsort){ADSORT=t.dataset.adsort;$$('[data-adsort]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#anus').innerHTML=adsHTML(SRC.captacion);return}
  if(t.id==='pauseBtn'){PU.paused=!PU.paused;t.setAttribute('aria-pressed',String(PU.paused));t.innerHTML=PU.paused?ic('play',14)+'Reanudar':ic('pause',14)+'Pausar';toast(PU.paused?'Actualización en vivo en pausa.':'Actualización en vivo reanudada.');return}
  if(t.id==='refreshBtn'){const m=MODS.find(x=>x.id===cur);if(!m||!m.src){toast('Este módulo no tiene datos que actualizar.');return}t.classList.add('spin');t.disabled=true;
@@ -1270,7 +1699,12 @@ document.addEventListener('click',e=>{
  if(t.id==='themeBtn'){const nx=curTheme()==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',nx);try{localStorage.setItem('almaRadar.theme',nx)}catch(_){}themeIcon();readTok();redraw();if(RM)pulseDraw(0);return}
  if(t.dataset.j!==undefined){const j=+t.dataset.j;$$('#tl li').forEach(li=>li.classList.toggle('on',+li.dataset.j===j));const li=$(`#tl li[data-j="${j}"]`);if(li&&t.tagName!=='LI')li.scrollIntoView({block:'nearest',behavior:RM?'auto':'smooth'});return}
 });
-document.addEventListener('input',e=>{if(e.target.id==='invRange'){INV=+e.target.value;simUpdate()}});
+document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.lp){LB.p[e.target.dataset.lp]=+e.target.value;labOut()}});
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='labCapT'){LB.p.capacidad=t.checked;labOut()}if(t.dataset&&t.dataset.esc){const id=+t.dataset.esc;t.checked?LB.sel.add(id):LB.sel.delete(id);if(LB.sel.size>3){LB.sel.delete(id);t.checked=false;toast('Compare hasta tres escenarios a la vez.','err')}$('#escCmp').innerHTML=cmpHTML(SRC.laboratorio||{})}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='escNom'){e.preventDefault();escGuardar()}});
+document.addEventListener('submit',async e=>{const f=e.target.closest&&e.target.closest('form[data-meta]');if(f){e.preventDefault();const b=f.querySelector('button');b.disabled=true;
+ try{const raw=(f.monto.value||'').replace(/[^0-9]/g,'');await apiSend('POST','metas',{clave:f.dataset.meta,monto:raw?+raw:null,fecha_objetivo:f.fecha_objetivo.value||null});await load('finanzas',true);render('finanzas',false);toast('Meta guardada.')}
+ catch(err){toast(err.message&&!/^http/.test(err.message)?err.message:'No se pudo guardar la meta.','err')}finally{b.disabled=false}return}});
 document.addEventListener('submit',e=>{if(e.target.id==='askForm'){e.preventDefault();toast('El copiloto todavía no está conectado. Las cifras reales están en los módulos 02, 07 y 11.')}});
 function curTheme(){const a=document.documentElement.getAttribute('data-theme');if(a)return a;return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}
 function themeIcon(){const d=curTheme()==='dark';const b=$('#themeBtn');b.innerHTML=ic(d?'sun':'moon',19);b.setAttribute('aria-label',d?'Cambiar a tema claro':'Cambiar a tema oscuro')}
@@ -1282,7 +1716,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pulseStop()
 
 try{const th_=localStorage.getItem('almaRadar.theme');if(th_==='dark'||th_==='light')document.documentElement.setAttribute('data-theme',th_)}catch(_){}
 buildRail();buildMain();themeIcon();readTok();updClock();
-let start='pulso';try{const s=(location.hash||'').slice(1)||localStorage.getItem('almaRadar.tab');if(s&&R[s])start=s}catch(e){}
+let start='inicio';try{const s=(location.hash||'').slice(1)||localStorage.getItem('almaRadar.tab');if(s&&R[s])start=s}catch(e){}
 show(start,false);
 // El pulso se precarga siempre: alimenta el reloj del servidor aunque se abra otro módulo.
 if(start!=='pulso')load('pulso').then(D=>SRV.set(D.ahora)).catch(()=>{});

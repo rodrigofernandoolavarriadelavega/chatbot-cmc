@@ -38,6 +38,53 @@ TRANSBANK_CREDITO = 0.013
 _META_NO_CMC = ("meulen", "terremoto", "brasas", "don pancho")
 _META_CACHE: dict = {}
 
+# Lectores que NO pueden salir a la red (Alma Radar): con esta marca el gasto de
+# Meta sale de la caché en memoria (si está fresca) o de la foto diaria local
+# `meta_insights_diario`, con la MISMA exclusión de campañas de otros negocios.
+# Sin la marca, todo sigue igual que antes (consulta en vivo con caché).
+import contextvars as _cv
+from contextlib import contextmanager as _ctx
+
+_SOLO_LOCAL = _cv.ContextVar("ebitda_solo_local", default=False)
+
+
+@_ctx
+def solo_datos_locales():
+    """`with solo_datos_locales(): _ebitda_mes(c, mes)` — sin llamadas a Meta."""
+    tok = _SOLO_LOCAL.set(True)
+    try:
+        yield
+    finally:
+        _SOLO_LOCAL.reset(tok)
+
+
+def _gasto_meta_local(c, mes: str):
+    """Mismo contrato que `_gasto_meta` → (monto, n_campañas, excluidas, fuente)
+    sin red: caché en memoria si está vigente; si no, la foto diaria."""
+    import time
+    hit = _META_CACHE.get(mes)
+    abierto = mes >= date.today().strftime("%Y-%m")
+    if hit and time.time() - hit[0] < (3600 if abierto else 7 * 86400):
+        return (*hit[1], "meta_cache")
+    inicio, fin = _mes_bounds(mes)
+    try:
+        filas = c.execute(
+            "SELECT campaign_name, SUM(spend) FROM meta_insights_diario WHERE desglose='total' "
+            "AND fecha>=? AND fecha<? GROUP BY campaign_id, campaign_name", (inicio, fin)).fetchall()
+    except Exception:
+        return None
+    total, n, excl = 0.0, 0, []
+    for nombre_, gasto in filas:
+        gasto = float(gasto or 0)
+        if gasto <= 0:
+            continue
+        if any(k in (nombre_ or "").lower() for k in _META_NO_CMC):
+            excl.append((nombre_ or "")[:40])
+            continue
+        total += gasto
+        n += 1
+    return (round(total), n, excl, "foto_diaria")
+
 
 def _norm_nom(s: str) -> str:
     import re
@@ -218,7 +265,7 @@ def _ebitda_mes(c, mes: str) -> dict:
     # Publicidad Meta automática, salvo que ya se haya cargado a mano.
     if not any("public" in (g.get("categoria") or "").lower() or
                "meta" in (g.get("categoria") or "").lower() for g in gastos_detalle):
-        _meta = _gasto_meta(mes)
+        _meta = _gasto_meta_local(c, mes) if _SOLO_LOCAL.get() else _gasto_meta(mes)
         if _meta and _meta[0] > 0:
             gastos += _meta[0]
             gastos_detalle.append({
@@ -226,6 +273,7 @@ def _ebitda_mes(c, mes: str) -> dict:
                 "descripcion": f"Auto · gasto real de {_meta[1]} campañas en Meta"
                                + (f" (excluye {len(_meta[2])} de otros negocios)" if _meta[2] else ""),
                 "monto": _meta[0], "recurrente": 0, "auto": True,
+                "fuente": _meta[3] if len(_meta) > 3 else "meta_en_vivo",
             })
     com_tbk, tbk_deb, tbk_cred = _comision_transbank(c, mes)
     if com_tbk > 0:

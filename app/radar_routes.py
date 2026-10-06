@@ -226,6 +226,7 @@ def _referencia_dia(hoy: date, excluir: set[str]) -> dict:
     """Promedio de entradas por media hora del MISMO día de la semana en las
     4 semanas anteriores: la línea de referencia del monitor."""
     buckets = [0.0] * 48
+    horas = [0.0] * 24
     dias = 0
     with db() as c:
         for k in range(1, 5):
@@ -237,9 +238,27 @@ def _referencia_dia(hoy: date, excluir: set[str]) -> dict:
             for ep in ent.values():
                 t = datetime.fromtimestamp(ep, _CL)
                 buckets[(t.hour * 60 + t.minute) // 30] += 1
+                horas[t.hour] += 1
     if dias:
         buckets = [round(x / dias, 2) for x in buckets]
-    return {"semanas": dias, "por_media_hora": buckets, "total_dia": round(sum(buckets), 1)}
+        horas = [round(x / dias, 2) for x in horas]
+    return {"semanas": dias, "por_media_hora": buckets, "por_hora": horas,
+            "dia_semana": _DIAS_SEMANA[hoy.weekday()], "total_dia": round(sum(buckets), 1)}
+
+
+_DIAS_SEMANA = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábados", "domingos")
+
+
+def _ref_hasta(ref: dict, minuto: float) -> float | None:
+    """Personas que en promedio ya habían escrito a esta misma hora del día
+    (suma de medias horas completas + la fracción de la media hora en curso)."""
+    if not isinstance(ref, dict) or not ref.get("semanas"):
+        return None
+    b = ref.get("por_media_hora") or []
+    minuto = max(0.0, min(1440.0, float(minuto)))
+    i = int(minuto // 30)
+    tot = sum(b[:i]) + (b[i] * (minuto - i * 30) / 30 if i < len(b) else 0)
+    return round(tot, 1)
 
 
 def _esperando(c, ahora_ep: int, excluir: set[str]) -> list[dict]:
@@ -436,6 +455,9 @@ def pulso_data(ahora: datetime | None = None) -> dict:
     vivo = _cacheado(f"vivo:{hoy}", TTL_PULSO, lambda: _vivo(ahora))
     ag = _seguro("agenda", _agenda)
     ref = _seguro("referencia", lambda: _cacheado(f"ref:{hoy}", TTL_PESADO, lambda: _referencia_dia(hoy, _admin_claves())))
+    if isinstance(ref, dict) and not ref.get("error"):
+        # la fracción depende de la hora: va fuera del caché del día
+        ref = {**ref, "hasta_ahora": _ref_hasta(ref, ahora.hour * 60 + ahora.minute)}
     return {**vivo, "agenda_manana": _agenda_manana(ag, hoy), "referencia": ref,
             "venta_mes": _seguro("venta_mes", lambda: _cacheado(f"vm:{hoy}", TTL_PESADO, lambda: _venta_mes(hoy))),
             "decisiones": _decisiones(vivo, ag if isinstance(ag, dict) else {}),
@@ -566,6 +588,182 @@ def _valor12m() -> dict:
     return _cacheado("valor12m", TTL_PESADO, _f)
 
 
+def _panel_plat(plat: str, d: str, h: str) -> dict:
+    def _f():
+        with cm.solo_datos_locales():
+            return cm.panel_data(d, h, canal="meta", plataforma=plat)
+    return _cacheado(f"panel:meta:{plat}:{d}:{h}", TTL_PESADO, _f)
+
+
+# Plataforma por persona: `meta_referrals.plataforma` / `citas_bot.ad_plataforma`,
+# registradas desde cm.PLATAFORMA_DESDE. Antes de esa fecha la persona queda
+# "sin plataforma" aunque Meta sí reparta el gasto por publisher_platform.
+_PLAT_FILAS = (("ig", "instagram", "Instagram"), ("fb", "facebook", "Facebook"))
+_MSG_PLATS = ("messenger", "whatsapp")
+
+
+def _meta_plataformas(d: str, h: str) -> dict:
+    d_, h_ = date.fromisoformat(d), date.fromisoformat(h)
+    e0, e1 = cm._epoch_ini(d_), cm._epoch_fin(h_)
+    a, b = cm._utc_txt(e0), cm._utc_txt(e1)
+    with db() as c:
+        cm._ensure_insights(c)
+        ins: dict[str, dict] = defaultdict(lambda: {"gasto": 0.0, "conv": 0, "alcance": 0, "impresiones": 0})
+        tot = {"gasto": 0.0, "conv": 0}
+        for f in cm._insights_filas(c, d_, h_, None, None, "plataforma"):
+            x = ins[(f["valor"] or "").lower()]
+            x["gasto"] += f["spend"] or 0
+            x["conv"] += f["conversaciones"] or 0
+            x["alcance"] += f["reach"] or 0
+            x["impresiones"] += f["impressions"] or 0
+        for f in cm._insights_filas(c, d_, h_, None, None, "total"):
+            tot["gasto"] += f["spend"] or 0
+            tot["conv"] += f["conversaciones"] or 0
+        ph = ",".join("?" * len(_MSG_PLATS))
+        msg_p = c.execute(f"SELECT COUNT(DISTINCT phone) FROM meta_referrals WHERE ts >= ? AND ts < ? AND "
+                          f"(lower(COALESCE(plataforma,'')) IN ({ph}) OR substr(phone,1,3) IN ('fb_','ig_'))",
+                          (e0, e1, *_MSG_PLATS)).fetchone()[0]
+        msg_c = c.execute(f"SELECT COUNT(*) FROM citas_bot WHERE created_at >= ? AND created_at < ? AND "
+                          f"COALESCE(ad_source_id,'') != '' AND (lower(COALESCE(ad_plataforma,'')) IN ({ph}) OR "
+                          f"substr(phone,1,3) IN ('fb_','ig_'))",
+                          (a, b, *_MSG_PLATS)).fetchone()[0]
+    hay_desglose = bool(ins)
+    filas = []
+    for k, plat, lbl in _PLAT_FILAS:
+        p = _panel_plat(plat, d, h)
+        kk = _k_embudo(p["kpis"])
+        x = ins.get(plat) or {}
+        kk.update({"gasto": round(x.get("gasto", 0)), "conversaciones": x.get("conv", 0), "alcance": x.get("alcance", 0),
+                   "impresiones": x.get("impresiones", 0)})
+        filas.append({"k": k, "l": lbl, "plataforma": plat, **kk})
+    p = _panel_plat("sin_dato", d, h)
+    sin = _k_embudo(p["kpis"])
+    resto_g = tot["gasto"] - sum(f["gasto"] for f in filas) if hay_desglose else tot["gasto"]
+    resto_c = tot["conv"] - sum(f["conversaciones"] for f in filas) if hay_desglose else tot["conv"]
+    sin.update({"gasto": max(0, round(resto_g)), "conversaciones": max(0, resto_c), "alcance": None, "impresiones": None})
+    msg = {"k": "msg", "l": "Messenger/WhatsApp clic", "personas": msg_p, "citas": msg_c, "parcial": True}
+    sin["personas"] = max(0, (sin.get("personas") or 0) - msg_p)
+    sin["citas"] = max(0, (sin.get("citas") or 0) - msg_c)
+    filas.append(msg)
+    filas.append({"k": "sin", "l": "Meta · sin plataforma", "plataforma": "sin_dato", **sin})
+    return {"filas": filas, "desde": cm.PLATAFORMA_DESDE, "antes_de_plataforma": d < cm.PLATAFORMA_DESDE,
+            "gasto_por_plataforma": hay_desglose,
+            "otras_plataformas_gasto": round(sum(v["gasto"] for kk_, v in ins.items() if kk_ not in ("facebook", "instagram")))}
+
+
+# Respuestas a «¿Cómo nos conociste?» (tags referido:* que guarda el bot) y el
+# marcador de QR (evento qr_origen). Pregunta activa desde PREGUNTA_DESDE.
+PREGUNTA_DESDE = "2026-10-05"
+DECLARADOS = (
+    ("recomendacion", "Recomendación (amigo/familiar)", ("amigo", "codigo")),
+    ("fbig", "Dijo Facebook/Instagram sin clic de anuncio", ("facebook_instagram",)),
+    ("google", "Google", ("google",)),
+    ("letrero", "Letrero/radio", ("calle", "radio")),
+    ("qr", "QR", ("qr",)),
+)
+
+
+def _declarados(c, d: str, h: str) -> dict:
+    """Personas que respondieron en el rango y NO llegaron por anuncio ni por la
+    web (ya contadas allí). Por fila: personas, citas del bot, atendidos (pagaron
+    en caja), venta en el rango y cuántos son pacientes NUEVOS (primer pago de su
+    historia en el rango, misma regla que el resto del embudo)."""
+    d_, h_ = date.fromisoformat(d), date.fromisoformat(h)
+    a, b = cm._utc_txt(cm._epoch_ini(d_)), cm._utc_txt(cm._epoch_fin(h_))
+    resp: dict[str, tuple[str, str]] = {}          # clave → (opción, ts)
+    for ph, tag, ts in c.execute("SELECT phone, tag, ts FROM contact_tags WHERE tag LIKE 'referido:%' AND ts >= ? AND ts < ?",
+                                 (a, b)):
+        k = cm._clave(ph)
+        op = (tag or "").split(":", 1)[-1].strip().lower()
+        if k not in resp or (ts or "") >= resp[k][1]:
+            resp[k] = (op, ts or "")
+    qr_existe = False
+    try:
+        for ph, ts in c.execute("SELECT phone, ts FROM conversation_events WHERE event='qr_origen' AND ts >= ? AND ts < ?", (a, b)):
+            resp[cm._clave(ph)] = ("qr", ts or "")
+        qr_existe = c.execute("SELECT 1 FROM conversation_events WHERE event='qr_origen' LIMIT 1").fetchone() is not None
+    except Exception:  # noqa: BLE001
+        pass
+    if not resp:
+        return {"filas": [], "desde": PREGUNTA_DESDE, "qr_existe": qr_existe, "nuevos": 0, "venta_nuevos": 0}
+    con_anuncio = {cm._clave(r[0]) for r in c.execute("SELECT DISTINCT phone FROM meta_referrals")}
+    con_web = {cm._clave(r[0]) for r in c.execute("SELECT DISTINCT phone FROM contact_tags WHERE tag LIKE 'referral_source:web%'")}
+    try:
+        con_web |= {cm._clave(r[0]) for r in c.execute("SELECT DISTINCT phone FROM conversation_events WHERE event='web_origen'")}
+    except Exception:  # noqa: BLE001
+        pass
+    opcion_a_fila = {op: fid for fid, _, ops in DECLARADOS for op in ops}
+    personas: dict[str, set] = defaultdict(set)
+    for k, (op, _) in resp.items():
+        fid = opcion_a_fila.get(op)
+        if fid and k not in con_anuncio and k not in con_web:
+            personas[fid].add(k)
+    todas = set().union(*personas.values()) if personas else set()
+    citas: dict[str, int] = defaultdict(int)
+    pids: dict[str, set] = defaultdict(set)
+    for ph, pid, creada in c.execute("SELECT phone, id_paciente_medilink, created_at FROM citas_bot WHERE phone IS NOT NULL"):
+        k = cm._clave(ph)
+        if k not in todas:
+            continue
+        if pid:
+            pids[k].add(int(pid))
+        if creada and a <= creada < b:
+            citas[k] += 1
+    todos_pids = set().union(*pids.values()) if pids else set()
+    venta_pid: dict[int, int] = defaultdict(int)
+    primer: dict[int, str] = {}
+    if todos_pids:
+        lista = list(todos_pids)
+        for i in range(0, len(lista), 500):
+            lote = lista[i:i + 500]
+            q = ",".join("?" * len(lote))
+            for pid, f, m in c.execute(f"SELECT id_paciente, substr(fecha,1,10), monto FROM bi_pagos_caja WHERE id_paciente IN ({q}) "
+                                       "AND monto > 0", lote):
+                if not primer.get(pid) or f < primer[pid]:
+                    primer[pid] = f
+                if d <= f <= h:
+                    venta_pid[pid] += int(m or 0)
+    antiguas = sum(1 for k, (op, _) in resp.items() if op == "rrss" and k not in con_anuncio and k not in con_web)
+    filas, n_nuevos, v_nuevos = [], 0, 0
+    for fid, lbl, _ in DECLARADOS:
+        ks = personas.get(fid, set())
+        if fid == "qr" and not qr_existe:
+            continue
+        ps = set().union(*(pids[k] for k in ks)) if ks else set()
+        nuevos = {p for p in ps if d <= primer.get(p, "9999") <= h}
+        n_nuevos += len(nuevos)
+        v_nuevos += sum(venta_pid[p] for p in nuevos)
+        filas.append({"k": fid, "l": lbl, "personas": len(ks), "citas": sum(citas[k] for k in ks),
+                      "atendidos": sum(1 for p in ps if venta_pid.get(p)), "venta": sum(venta_pid[p] for p in ps),
+                      "nuevos": len(nuevos)})
+    return {"filas": filas, "desde": PREGUNTA_DESDE, "qr_existe": qr_existe, "nuevos": n_nuevos, "venta_nuevos": v_nuevos,
+            "opcion_antigua": antiguas}
+
+
+def _nuevos_rango(d: str, h: str, meta_k: dict | None, web_k: dict | None) -> dict:
+    """Pacientes nuevos del centro (primer pago de su historia en el rango) y
+    cuántos no tienen canal registrado (ni anuncio de Meta ni página web)."""
+    with db() as c:
+        try:
+            r = c.execute("SELECT COUNT(*), COALESCE(SUM(v),0) FROM (SELECT id_paciente, "
+                          "SUM(CASE WHEN substr(fecha,1,10) BETWEEN ? AND ? THEN monto ELSE 0 END) v "
+                          "FROM bi_pagos_caja WHERE id_paciente IS NOT NULL AND monto > 0 AND fecha IS NOT NULL "
+                          "AND fecha != '' GROUP BY id_paciente HAVING MIN(substr(fecha,1,10)) BETWEEN ? AND ?)",
+                          (d, h, d, h)).fetchone()
+        except Exception:  # noqa: BLE001
+            return {"hay": False}
+        decl = _declarados(c, d, h)
+    n, venta = int(r[0] or 0), int(r[1] or 0)
+    vm = (meta_k or {}).get("valor12m") or {}
+    vw = (web_k or {}).get("valor12m") or {}
+    nm, nw = vm.get("nuevos_rango") or 0, vw.get("nuevos_rango") or 0
+    venta_attr = (vm.get("nuevos_venta") or 0) + (vw.get("nuevos_venta") or 0) + decl["venta_nuevos"]
+    return {"hay": True, "nuevos_centro": n, "venta_nuevos_centro": venta, "nuevos_meta": nm, "nuevos_web": nw,
+            "nuevos_declarados": decl["nuevos"], "declarados": decl,
+            "sin_canal": max(0, n - nm - nw - decl["nuevos"]), "venta_sin_canal": max(0, venta - venta_attr),
+            "venta_aprox": True}
+
+
 def captacion_data(hoy: date | None = None) -> dict:
     d, h = _rango(hoy)
     pm = _seguro("panel_meta", _panel, "meta", d, h)
@@ -578,8 +776,14 @@ def captacion_data(hoy: date | None = None) -> dict:
     if "error" not in pw:
         emb["web"] = _k_embudo(pw["kpis"])
     emb["plataformas"] = _seguro("plataformas", _plataformas, d, h)
+    emb["meta_plataformas"] = _seguro("meta_plataformas", lambda: _cacheado(f"mplat:{d}:{h}", TTL_PESADO,
+                                                                         lambda: _meta_plataformas(d, h)))
+    emb["nuevos"] = _seguro("nuevos", lambda: _nuevos_rango(d, h, emb.get("meta"), emb.get("web")))
     ag = _seguro("agenda", _agenda)
+    reglas = _seguro("reglas", lambda: _cacheado(f"reglas:{h}", TTL_PESADO,
+                                                 lambda: __import__("radar_v2").reglas_presupuesto(ag, date.fromisoformat(h))))
     return {"rango": {"desde": d, "hasta": h},
+            "reglas": reglas,
             "embudo": emb,
             "google": _seguro("google", _google, d, h),
             "creativos": _seguro("creativos", _creativos, pm) if "error" not in pm else pm,
@@ -667,6 +871,10 @@ def conversion_data(hoy: date | None = None) -> dict:
     v90 = _seguro("valor90", _valor90)
     return {"rango": {"desde": d, "hasta": h},
             "velocidad": _seguro("velocidad", _velocidad, d, h),
+            "velocidad_horario": _seguro("velocidad_horario", lambda: _cacheado(
+                f"velh:{d}:{h}", TTL_PESADO, lambda: __import__("radar_v2").velocidad_en_horario(d, h))),
+            "holdout": _seguro("holdout", lambda: _cacheado(f"hold:{hoy}", TTL_PESADO,
+                                                            lambda: __import__("radar_v2").holdout_data(hoy))),
             "esperando": {"lista": vivo.get("esperando", []), "total": vivo.get("esperando_total", 0),
                           "max_min": vivo.get("esperando_max_min")} if "error" not in vivo else vivo,
             "experimentos": _seguro("experimentos", lambda: _cacheado(f"exp:{hoy}", TTL_PESADO, lambda: _experimentos(hoy))),
@@ -679,7 +887,6 @@ def conversion_data(hoy: date | None = None) -> dict:
 # Finanzas
 # ═══════════════════════════════════════════════════════════════════════════
 
-META_MENSUAL = 40_000_000   # meta del dueño: $40M/mes al 6-may-2032
 MESES_SERIE = 7
 
 
@@ -741,8 +948,6 @@ def _meses(hoy: date) -> dict:
     anterior = serie[-2]
     return {"serie": serie, "actual": actual, "anterior": anterior,
             "proyeccion": proy, "dias_con_caja": dias_con_caja, "dias_mes": dias_mes,
-            "meta_mensual": META_MENSUAL,
-            "avance_meta_pct": round(100 * anterior["venta"] / META_MENSUAL) if anterior["venta"] else None,
             "medios": {"mes": mes_ant.isoformat()[:7], "lista": medios_out},
             "caja_hasta": ult_fecha or None, "sincronizado": ult[1] if ult else None}
 
@@ -761,6 +966,10 @@ def finanzas_data(hoy: date | None = None) -> dict:
     return {"rango": {"desde": d, "hasta": h},
             "meses": _seguro("meses", lambda: _cacheado(f"meses:{hoy}", TTL_PESADO, lambda: _meses(hoy))),
             "canales": canales,
+            "metas": _seguro("metas", lambda: _cacheado(f"metas:{hoy}", TTL_PESADO,
+                                                        lambda: __import__("radar_v2").metas_data(hoy))),
+            "puente": _seguro("puente", lambda: _cacheado(f"puente:{hoy}", TTL_PESADO,
+                                                          lambda: __import__("radar_v2").puente_data(hoy))),
             "valor90": ({"total": v90["total"], "madura_hasta": v90["madura_hasta"], "desde": v90["desde"]}
                         if "error" not in v90 else v90)}
 
@@ -1037,3 +1246,7 @@ def radar_page(request: Request, token: str | None = Query(None)):
     if not cm.token_dueno(token):
         raise HTTPException(403, "Solo el token del dueño abre Alma Radar")
     return HTMLResponse(_TEMPLATE.read_text(encoding="utf-8"), headers=_NO_STORE)
+
+
+# Portada, puente de resultado, centro de datos y laboratorio (rutas en este mismo router).
+import radar_v2  # noqa: E402,F401
