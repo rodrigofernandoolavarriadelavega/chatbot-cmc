@@ -617,6 +617,190 @@ def _fmt_clp_flows(n: int) -> str:
     return "$" + f"{int(n):,}".replace(",", ".")
 
 
+# ── Cierre suave tras pregunta de precio (6-oct-2026) ────────────────────────
+# Medido en producción (30 días, 322 preguntas de precio): el 65% son los
+# "ice-breakers" de Meta sin especialidad ("¿Cuál es el costo de la evaluación
+# médica?", "¿Cuál es el costo de la consulta?", "¿Costo de los servicios?").
+# Quien recibió una HORA concreta agendó 5%; quien recibió texto genérico
+# ("depende de la especialidad…") agendó 1%. Dos piezas:
+#   (a) ice-breaker de consulta/evaluación médica → se asume Medicina General
+#       (es lo que vende el anuncio, y el mensaje lo dice) y el camino existente
+#       de `esp_sug` ofrece la próxima hora con botón;
+#   (b) precio sin especialidad ni pista → lista interactiva con el valor en cada
+#       fila; al elegir, precio + próxima hora + botón "Sí, agendar".
+# En IG/FB la lista llega como texto plano y el paciente ESCRIBE el título:
+# `_fila_lista_precios` acepta el id o el título (ventana de 30 min).
+_PRECIO_ICEBREAKER_MG_RE = re.compile(
+    r"(costo|valor|precio)s?\s+(de\s+)?(la\s+|una\s+)?(consulta|evaluacion\s+medica)\b"
+    r"|cuanto\s+(cuesta|sale|vale)\s+(la\s+|una\s+)?(consulta|evaluacion\s+medica)\b"
+)
+_PRECIO_STOP = frozenset("""de la el los las un una unos unas cual cuales es son hola buenas buenos
+tardes dias noches por favor me podria podrian dar saber quisiera necesito consultar y o a en su sus
+tienen tiene hay costo costos valor valores precio precios cuanto cuesta cuestan sale salen vale valen
+cobran info informacion gracias quiero del para que como tarifa tarifas arancel aranceles servicio
+servicios atencion consulta consultas general cmc centro medico""".split())
+_PRECIO_LISTA_TTL_S = 30 * 60
+# (id de fila, título ≤24, clave en PRECIOS_SLOT, especialidad de ruteo para agendar)
+_PRECIO_LISTA_FILAS: list[tuple[str, str, str | None, str | None]] = [
+    ("precio_esp_mg",      "Medicina general",  "Medicina General",    "medicina general"),
+    ("precio_esp_kine",    "Kinesiología",      "Kinesiología",        "kinesiología"),
+    ("precio_esp_psico",   "Psicología",        "Psicología Adulto",   "psicología"),
+    ("precio_esp_nutri",   "Nutrición",         "Nutrición",           "nutrición"),
+    ("precio_esp_matrona", "Matrona",           "Matrona",             "matrona"),
+    ("precio_esp_dental",  "Dentista",          "Odontología General", "odontología"),
+    ("precio_esp_eco",     "Ecografía",         "Ecografía",           "ecografía"),
+    ("precio_esp_gine",    "Ginecología",       "Ginecología",         "ginecología"),
+    ("precio_esp_psiq",    "Psiquiatría",       "Psiquiatría",         "psiquiatría"),
+    ("precio_esp_otra",    "Otra especialidad", None,                  None),
+]
+
+
+def _sin_tildes_precio(t: str) -> str:
+    import unicodedata as _ud
+    t = _ud.normalize("NFD", (t or "").lower())
+    return "".join(c for c in t if not _ud.combining(c))
+
+
+def _precio_desc_fila(clave: str | None) -> str:
+    """Descripción (≤72 chars, límite de WhatsApp) de una fila, desde PRECIOS_SLOT."""
+    if not clave:
+        return "Dime cuál y te digo su valor"
+    e = PRECIOS_SLOT.get(clave)
+    if not e:
+        return ""
+    if e[0] == "ambas":
+        return f"Bono Fonasa {_fmt_clp_flows(e[1])} · Particular {_fmt_clp_flows(e[3])}"[:72]
+    suf = e[2] if len(e) > 2 and e[2] else ""
+    base = _fmt_clp_flows(e[1])
+    if suf == "desde":
+        return f"Desde {base}"
+    if suf == "evaluación":
+        return f"Evaluación {base}"
+    if suf == "control":
+        return f"Control {base}"
+    return (f"Particular {base}" + (f" · {suf}" if suf else ""))[:72]
+
+
+def _lista_precios_msg() -> dict:
+    """Lista interactiva de especialidades con su valor (máx. 10 filas en WhatsApp)."""
+    rows = []
+    for rid, titulo, clave, _ruta in _PRECIO_LISTA_FILAS[:10]:
+        row = {"id": rid, "title": titulo[:24]}
+        desc = _precio_desc_fila(clave)
+        if desc:
+            row["description"] = desc[:72]
+        rows.append(row)
+    return _list_msg(
+        "Los valores dependen de la especialidad 😊\n\n"
+        "Elige una y te digo el precio y la *próxima hora disponible*:",
+        "Ver valores",
+        [{"title": "Especialidades", "rows": rows}],
+    )
+
+
+def _texto_precio_icebreaker_mg() -> str:
+    e = PRECIOS_SLOT.get("Medicina General")
+    if e and e[0] == "ambas":
+        return (
+            f"La consulta de *Medicina General* cuesta *{_fmt_clp_flows(e[1])} con bono Fonasa* "
+            f"o *{_fmt_clp_flows(e[3])} particular*. El bono se emite en el centro el mismo día, con huella.\n\n"
+            "Si necesitas otra especialidad, dime cuál y te digo su valor."
+        )
+    return "Te cuento la próxima hora disponible de *Medicina General*:"
+
+
+def _clasificar_precio_sin_esp(txt: str) -> str | None:
+    """Para intent=precio SIN especialidad ni contexto reciente.
+
+    "mg"    → ice-breaker de consulta / evaluación médica (se asume Medicina General)
+    "lista" → precio genérico sin ninguna pista ("¿Costo de los servicios?")
+    None    → hay una especialidad, un apellido o contenido: camino de siempre.
+    """
+    t = _sin_tildes_precio(txt)
+    if not t.strip():
+        return None
+    if _detectar_especialidad_en_texto(txt) or _detectar_apellido_profesional(txt):
+        return None
+    if _PRECIO_ICEBREAKER_MG_RE.search(t):
+        return "mg"
+    toks = [w for w in re.findall(r"[a-zñ]+", t) if w not in _PRECIO_STOP]
+    return "lista" if len(toks) <= 1 else None
+
+
+def _fila_lista_precios(tl: str, data: dict | None):
+    """Fila elegida de la lista de precios: por id, o por título escrito (IG/FB)
+    dentro de los 30 min siguientes a haberla mostrado. None si no aplica."""
+    t = (tl or "").strip().lower()
+    if not t:
+        return None
+    for fila in _PRECIO_LISTA_FILAS:
+        if t == fila[0]:
+            return fila
+    ts = (data or {}).get("precio_lista_ts")
+    if not ts:
+        return None
+    try:
+        _t = datetime.fromisoformat(ts)
+        if _t.tzinfo is None:
+            _t = _t.replace(tzinfo=timezone.utc)
+        if (datetime.now(timezone.utc) - _t).total_seconds() > _PRECIO_LISTA_TTL_S:
+            return None
+    except (ValueError, TypeError):
+        return None
+    tn = _sin_tildes_precio(t)
+    for fila in _PRECIO_LISTA_FILAS:
+        if tn == _sin_tildes_precio(fila[1]):
+            return fila
+    return None
+
+
+async def _cierre_precio_con_hora(phone: str, data: dict, fila: tuple):
+    """Respuesta a una fila de la lista de precios: precio + próxima hora + botón.
+
+    Deja `especialidad_sugerida` en sesión para que los botones existentes
+    `agendar_sugerido` / `no_agendar` (mismo camino que la FAQ con hora) funcionen.
+    """
+    rid, titulo, clave, ruta = fila
+    data.pop("precio_lista_ts", None)
+    if not clave or not ruta:
+        save_session(phone, "IDLE", data)
+        log_event(phone, "precio_lista_elegida", {"fila": rid})
+        return (
+            "¿De qué especialidad quieres saber el valor? Escríbela (por ejemplo "
+            "*otorrino* o *ecografía*) y te digo el precio y la próxima hora disponible 😊"
+        )
+    mejor = None
+    if not is_medilink_down():
+        try:
+            if ruta in _ESP_MED_GENERAL:
+                _sm, _td = await buscar_primer_dia(ruta, solo_ids=_MED_AO_IDS)
+                mejor = _td[0] if _td else None
+            else:
+                _sm, _td = await buscar_primer_dia(ruta)
+                mejor = (_sm[0] if _sm else (_td[0] if _td else None))
+        except Exception as e:  # noqa: BLE001
+            log_event(phone, "faq_slot_lookup_error", {"esp": ruta, "error": str(e)[:200]})
+            mejor = None
+    # Con slot, el precio respeta el profesional (Salas sin bono, Márquez $30k).
+    linea = _precio_line(clave, slot=mejor)
+    data["especialidad_sugerida"] = ruta
+    data["especialidad_sugerida_ts"] = datetime.now(timezone.utc).isoformat()
+    save_session(phone, "IDLE", data)
+    log_event(phone, "precio_lista_elegida", {"fila": rid, "esp": ruta, "slot": bool(mejor)})
+    cab = f"*{titulo}*" + (f"\n{linea}" if linea else "")
+    botones = [
+        {"id": "agendar_sugerido", "title": "✅ Sí, agendar"},
+        {"id": "no_agendar",      "title": "No por ahora"},
+    ]
+    if mejor:
+        preview = (
+            f"📅 *{mejor.get('fecha_display') or mejor.get('fecha', '')}* · "
+            f"🕐 *{(mejor.get('hora_inicio') or '')[:5]}* · {mejor.get('profesional', '')}"
+        )
+        return _btn_msg(f"{cab}\n\nPróxima hora disponible:\n{preview}\n\n¿Te la reservo?", botones)
+    return _btn_msg(f"{cab}\n\n¿Te agendo en *{titulo}*?", botones)
+
+
 def _precio_line_sin_bono(pid, modalidad_override: str | None = None) -> str:
     """Línea de precio para un profesional de PRECIO_PROF_SIN_BONO, o "" si no
     aplica. Jamás menciona "bono": deja explícito que el paciente Fonasa paga
@@ -5242,6 +5426,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl == "accion_waitlist": return await _iniciar_waitlist(phone, data, None)
         if txt == "6": return _derivar_humano(phone=phone, contexto="menú opción 6")
 
+        # ── Lista de precios (cierre suave): fila elegida por id, o título
+        # escrito tal cual (en IG/FB la lista llega como texto plano) ────────
+        _fila_precio = _fila_lista_precios(tl, data)
+        if _fila_precio:
+            return await _cierre_precio_con_hora(phone, data, _fila_precio)
+
         # ── Motivos rápidos del menú ──────────────────────────────────────────
         # Cada motivo → ruta directa a _iniciar_agendar con la especialidad
         # preseleccionada + saludo prefix ("pausa" estilo 5A: una línea de
@@ -6851,6 +7041,22 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["last_esp_context"] = _esp_ctx
                 data["last_esp_context_ts"] = _dt_ctx.now(timezone.utc).isoformat()
                 save_session(phone, "IDLE", data)
+            # ── Cierre suave tras precio SIN especialidad (6-oct-2026) ───────
+            # Ver _PRECIO_LISTA_FILAS. Solo intent=precio sin especialidad ni
+            # contexto reciente; cualquier otra pregunta sigue el camino de siempre.
+            _resp_precio_forzada: str | None = None
+            if intent == "precio" and not _esp_ctx:
+                _tipo_p = _clasificar_precio_sin_esp(txt)
+                if _tipo_p == "mg":
+                    result = dict(result or {})
+                    result["especialidad"] = "Medicina General"
+                    _resp_precio_forzada = _texto_precio_icebreaker_mg()
+                    log_event(phone, "precio_mg_implicito", {"txt": txt[:80]})
+                elif _tipo_p == "lista":
+                    data["precio_lista_ts"] = datetime.now(timezone.utc).isoformat()
+                    save_session(phone, "IDLE", data)
+                    log_event(phone, "precio_lista_ofrecida", {"txt": txt[:80]})
+                    return _lista_precios_msg()
             # Respuesta DETERMINÍSTICA para preguntas sobre un tipo de ecografía
             # (qué es / para qué sirve / preparación). Más precisa que Claude y sin
             # riesgo de inventar; base en ecografias.ECO_INFO. Cae a FAQ si no aplica.
@@ -6895,7 +7101,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if _eco_offer_book:
                     data["eco_tipo_text"] = txt
             else:
-                resp = result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)
+                resp = _resp_precio_forzada or result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)
             resp = _strip_canal_circular(resp, phone)  # BUG-F
             esp_sug = (result.get("especialidad") or "").strip()
             # Si Claude infirió una especialidad, intentamos mostrar el próximo slot
