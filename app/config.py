@@ -488,6 +488,15 @@ try:
 except ValueError:
     RECEPCION_ALERTA_MIN = 15
 
+# Foto diaria de Google Search Console (app/gsc_snapshot.py, 06:40 CLT, últimos
+# 5 días) → gsc_diario / gsc_paginas_diario, para el canal "Página web" de
+# Campañas Meta. Service account de solo lectura; la llave NO va en el repo.
+GSC_SNAPSHOT_ACTIVE = os.getenv(
+    "GSC_SNAPSHOT_ACTIVE", "true"
+).lower() in ("true", "1", "yes", "on")
+GSC_CREDENTIALS_PATH = os.getenv("GSC_CREDENTIALS_PATH", "/opt/cmc-secrets/gsc-key.json")
+GSC_SITE = os.getenv("GSC_SITE", "sc-domain:centromedicocarampangue.cl")
+
 # Lectura automática de órdenes médicas de eco (foto → tipo → oferta de agenda).
 # Práctica 2026-08-01: 15/15 órdenes reales leídas bien. El paciente SIEMPRE
 # confirma antes de agendar; si la lectura falla, cae a recepción (flujo actual).

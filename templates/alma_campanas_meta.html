@@ -587,6 +587,41 @@ body.c-web .only-meta{display:none!important}
 .kintro .rescue svg{width:13px;height:13px;stroke:currentColor}
 .kintro .rescue[aria-pressed="true"]{background:var(--red-d);border-color:var(--red-d);color:#fff}
 .fs .ns{display:block;margin-top:6px;font-size:12px;font-weight:700;color:var(--red-d)}
+/* Google Search Console */
+.gtab tr.gpag td{background:#F7FAFC;border-top:1px solid var(--line)}
+.gtab tr.gpag .nm{font-size:14px}
+.gtab tr.gsub td:first-child{padding-left:28px}
+.gtab tr.gsub .nm{font-weight:600;color:var(--ink)}
+.gq{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.gq span{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--line-2);border-radius:999px;padding:1px 8px;max-width:240px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-more{border:0;background:none;color:var(--blue);font-weight:700;font-size:12.5px;cursor:pointer;min-height:36px;padding:0}
+.gchips{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 12px}
+.gchip{font-size:12px;color:var(--ink-2);background:var(--aqua-s);border-radius:999px;padding:3px 10px}
+.gchip b{color:var(--navy)}
+.gurl{font-size:12px;color:var(--ink-2);font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
+.gbars{display:grid;gap:8px;align-items:end;height:190px}
+.gbars .gb{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.gbars .bar{width:min(40px,100%);height:var(--h);background:#C3D2DE;border-radius:6px 6px 2px 2px;transform-origin:bottom;
+  animation:growy .45s var(--ease) both;animation-delay:calc(var(--i,0)*30ms)}
+.gbars .gb.last .bar{background:var(--blue)}
+.gbars .v{font-size:11.5px;font-weight:800;color:var(--navy);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.gbars .m{font-size:11.5px;font-weight:700;color:var(--ink-2);margin-top:6px}
+.gbars .s{font-size:10.5px;color:var(--mute);white-space:nowrap}
+.g-tog{display:none}
+@media(max-width:760px){.gtab tr.gsub td:first-child{padding-left:0}.gtab tr.gpag td{background:transparent}
+  .card .gtab tbody tr{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .card .gtab tbody td:first-child{grid-column:1/-1}
+  .card .gtab tbody td:not(:first-child){flex-direction:column;align-items:flex-start;justify-content:flex-start;text-align:left;gap:1px}
+  .card .gtab tbody td:not(:first-child)::before{margin:0}
+  .card .gtab tbody td:not(:first-child){flex-wrap:nowrap;min-width:0}
+  .card .gtab tbody td>small.pctc{text-align:left;flex-basis:auto}
+  .card .gtab tbody tr.gsub{display:none;margin-left:12px;background:#FAFCFE}
+  .card .gtab tbody tr.gsub.on{display:grid}
+  .g-tog{display:inline-flex;margin-top:8px;min-height:36px;align-items:center;border:1px solid var(--line);background:#fff;border-radius:10px;
+    padding:0 12px;font-weight:700;font-size:12.5px;color:var(--blue);cursor:pointer}
+  .gbars{gap:4px;height:160px}.gbars .s{display:none}.gbars .v{font-size:10px}}
+
 /* Sugerencia de presupuesto */
 .sug-list{padding:0 8px 8px}
 .sug{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 10px;border-radius:12px;
@@ -887,7 +922,7 @@ const I = {
 };
 
 /* ── Estado ─────────────────────────────────────────────────────────────── */
-const S = { llamar: false, llamarData: null, sug: null, valor: null, valorPor: "canal", res: "", canal: "meta", v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
+const S = { gsc: null, gscAbierta: "", llamar: false, llamarData: null, sug: null, valor: null, valorPor: "canal", res: "", canal: "meta", v: "panel", rango: "30", desde: "", hasta: "", campana: "", plat: "", anuncio: "", esp: "", q: "", gest: "",
             tabla: "anuncios", estado: (() => { try { return localStorage.getItem("cm_estado") || "todos"; } catch (_) { return "todos"; } })(), cols: (() => { try { return localStorage.getItem("cm_cols") || "resumen"; } catch (_) { return "resumen"; } })(), kcol: "escribio", panel: null, kanban: null, ver: {} };
 
 function hoyCL() {
@@ -1004,7 +1039,8 @@ function renderPanel() {
   const p = S.panel, k = p.kpis, m = p.medicion;
   const web = S.canal === "web", todos = S.canal === "todos";
   if (web && !k.personas) {
-    $("#v-panel").innerHTML = notaMedicion(p) + estado("", I.globe, "Nadie llegó desde la página web en este rango",
+    setTimeout(cargarGoogle, 0);
+    $("#v-panel").innerHTML = notaMedicion(p) + '<div id="gscBox">' + googleHtml() + "</div>" + estado("", I.globe, "Nadie llegó desde la página web en este rango",
       "Cuando alguien toque un botón de WhatsApp en centromedicocarampangue.cl, aparecerá aquí con la página y el botón que usó.", S.rango !== "90" ? '<button class="btn" type="button" onclick="setRango(\'90\')">Ver últimos 90 días</button>' : "");
     return;
   }
@@ -1040,8 +1076,9 @@ function renderPanel() {
       ${st.cl ? `<div class="c" title="Gasto ÷ ${st.l.toLowerCase()}"><b>${fmt$(st.c)}</b>${st.cl}</div>` : ""}</div>`).join("")}</div>`;
 
   const soloMeta = web ? `<div class="card block"><div class="webnote">${I.info}<div><b>Desgloses, tendencia mensual y alertas de gasto</b> son datos de Meta Ads y aplican solo a los anuncios. Véalos en "Anuncios Meta" o "Todos".</div></div></div>` : "";
-  $("#v-panel").innerHTML = notaMedicion(p) + band + funnel + ortoKpi(p) + (web ? "" : sugerencias()) + (web ? "" : alertas(p)) + tabla(p) + rapidez(p) + conocieron(p) + (web ? soloMeta : desgloses(p) + tendencia(p));
+  $("#v-panel").innerHTML = notaMedicion(p) + band + funnel + ortoKpi(p) + (web ? "" : sugerencias()) + (web ? "" : alertas(p)) + tabla(p) + (web ? '<div id="gscBox">' + googleHtml() + "</div>" : "") + rapidez(p) + conocieron(p) + (web ? soloMeta : desgloses(p) + tendencia(p));
   bindTabla();
+  if (web) cargarGoogle();
 }
 const ACC_LBL = { subir: "Subir", mantener: "Mantener", bajar: "Bajar", pausar: "Pausar" };
 function sugerencias() {
@@ -1128,6 +1165,76 @@ function bindValor() {
   document.querySelectorAll("#segValor button").forEach(b => b.onclick = () => { S.valorPor = b.dataset.p; cargarValor(); });
 }
 
+/* ── Google Search Console (canal Página web) ───────────────────────────── */
+let gscSeq = 0;
+async function cargarGoogle() {
+  const my = ++gscSeq;
+  const [d, h] = rangoFechas();
+  try { S.gsc = await api("/alma/api/campanas-meta/google?desde=" + d + "&hasta=" + h); }
+  catch (e) { S.gsc = { error: true }; }
+  if (my !== gscSeq) return;
+  const b = document.getElementById("gscBox"); if (b) { b.innerHTML = googleHtml(); bindGoogle(); }
+}
+function fmtPos(v) { return v == null ? dash : String(v).replace(".", ","); }
+function fmtPct(v) { return v == null ? dash : String(v).replace(".", ",") + "%"; }
+function googleHtml() {
+  const g = S.gsc;
+  const head = (t, sub, ic) => `<div class="card-h"><div class="ic">${ic || I.globe}</div><h2>${t}</h2><div class="sp"></div><span class="sub">${sub || ""}</span></div>`;
+  if (!g) return `<div class="card block">${head("Google por página", "cargando…")}<div style="padding:0 18px 16px"><div class="sk" style="height:120px"></div></div></div>`;
+  if (g.error) return `<div class="card block">${head("Google por página")}<p class="dleg" style="padding:0 18px 16px;margin:0">No se pudieron leer los datos de Google Search Console. Reintente con Actualizar.</p></div>`;
+  if (!g.hay_datos) return `<div class="card block">${head("Google por página")}<div class="empty" style="padding:28px 16px"><div class="ei">${I.globe}</div><h3 style="font-size:16px">Aún no hay datos de Google</h3><p style="margin:0">La foto diaria de Search Console se guarda a las 06:40. Cuando exista, aquí verá cuántas veces apareció cada página en Google, cuántos clics recibió y qué pasó con quienes escribieron por WhatsApp desde ella.</p></div></div>`;
+  const t = g.totales;
+  const kp = `<div class="rap-k" style="padding:0 18px"><div><span class="lbl">Apariciones en Google</span><div class="v">${fmtN(t.impressions)}</div><small>Veces que el sitio salió en una búsqueda</small></div>
+      <div><span class="lbl">Clics desde Google</span><div class="v">${fmtN(t.clicks)}</div><small>CTR ${fmtPct(t.ctr)}</small></div>
+      <div><span class="lbl">Escribieron por WhatsApp</span><div class="v">${fmtN(t.personas)}</div><small>${t.clicks ? Math.round(100 * t.personas / t.clicks) + " por cada 100 clics de Google" : "Desde botones del sitio"}</small></div></div>`;
+  const filaHtml = (r, sub, nArt) => `<tr class="${sub ? "gsub" : "gpag"}" data-pp="${esc(r.pagina_id)}"><td data-l="${sub ? "Artículo" : "Página"}"><div class="nm">${sub ? esc(r.articulo || "Portada de la sección / sin artículo") : esc(r.pagina)}${sub && r.urls && r.urls[0] ? `<small>${esc(r.urls[0])}</small>` : ""}</div>${!sub && nArt ? `<button type="button" class="g-tog" data-p="${esc(r.pagina_id)}" aria-expanded="false">Ver ${nArt} ${nArt === 1 ? "artículo" : "artículos"}</button>` : ""}
+      ${sub && r.consultas && r.consultas.length ? `<div class="gq">${r.consultas.slice(0, 4).map(q => `<span title="${fmtN(q.impressions)} apariciones · ${fmtN(q.clicks)} clics · posición ${fmtPos(q.pos)}">${esc(q.q)}</span>`).join("")}</div>` : ""}</td>
+      <td class="r" data-l="Apariciones">${fmtN(r.impressions)}</td><td class="r" data-l="Clics">${fmtN(r.clicks)}<small class="pctc">CTR ${fmtPct(r.ctr)}</small></td>
+      <td class="r" data-l="Posición media">${fmtPos(r.posicion)}</td>
+      <td class="r mny" data-l="Escribieron">${fmtN(r.personas)}<small class="pctc">${r.tasa_escribio == null ? "" : fmtPct(r.tasa_escribio) + " de los clics"}</small></td>
+      <td class="r mny" data-l="Citas">${fmtN(r.citas)}</td><td class="r mny" data-l="Venta">${r.venta ? fmt$(r.venta) : dash}</td><td class="r mny" data-l="Para el centro">${r.centro ? fmt$(r.centro) : dash}</td></tr>`;
+  const rows = g.paginas.map(p => {
+    const arts = S.gscAbierta === p.pagina_id ? p.articulos : p.articulos.slice(0, 5);
+    const mas = p.articulos.length > 5 && S.gscAbierta !== p.pagina_id ? `<tr class="gsub"><td colspan="8"><button type="button" class="g-more" data-p="${esc(p.pagina_id)}">Ver ${p.articulos.length - 5} artículos más de ${esc(p.pagina)}</button></td></tr>` : "";
+    const conArt = p.articulos.length > 1 || (p.articulos[0] && p.articulos[0].articulo);
+    return filaHtml(p, false, conArt ? arts.length : 0) + (conArt ? arts.map(a => filaHtml(a, true)).join("") + mas.replace('<tr class="gsub">', `<tr class="gsub" data-pp="${esc(p.pagina_id)}">`) : "");
+  }).join("");
+  const tabla = `<div class="card block">${head("Google por página", "Search Console · " + fdate(g.rango.desde) + " al " + fdate(g.rango.hasta))}${kp}
+    <div class="tbl-wrap full" style="margin-top:14px"><table class="gtab"><thead><tr><th>Página / artículo</th><th class="r">Apariciones</th><th class="r">Clics</th><th class="r" title="Posición media en Google, ponderada por apariciones (1 = primer resultado)">Posición</th><th class="r mny">Escribieron</th><th class="r mny">Citas</th><th class="r mny">Venta</th><th class="r mny">Para el centro</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="8"><p class="dleg" style="margin:8px 0">Sin datos de Google en este rango.</p></td></tr>`}</tbody></table></div>
+    <div class="tbl-foot">Google no entrega datos por persona: el cruce es por página. "Escribieron" son quienes tocaron un botón de WhatsApp en esa página (el artículo exacto del blog se registra desde el 05/10/2026; antes queda en "sin artículo"). Pueden haber llegado a la página desde Google, Facebook o directo. Se excluyen las páginas /products/ y las búsquedas en japonés, chino o coreano (restos de un hackeo antiguo)${t.basura_clicks ? `: ${fmtN(t.basura_clicks)} clics y ${fmtN(t.basura_impressions)} apariciones en el rango` : ""}. Consultas principales: Google oculta las búsquedas poco frecuentes, así que no suman el total de la página.</div></div>`;
+  const o = g.oportunidades;
+  const grupos = g.oportunidades_grupos.slice(0, 8).map(x => `<span class="gchip" title="${fmtN(x.consultas)} consultas · ${fmtN(x.clicks)} clics"><b>${esc(x.grupo)}</b> ${fmtN(x.impressions)} apar.</span>`).join("");
+  const oport = `<div class="card block">${head("Oportunidades en Google", `al menos ${g.umbrales.min_apariciones} apariciones y posición ${g.umbrales.posicion[0]}–${g.umbrales.posicion[1]}`, I.trend)}
+    ${o.length ? `<div class="gchips">${grupos}</div><div class="tbl-wrap full"><table><thead><tr><th>Búsqueda</th><th class="r">Apariciones</th><th class="r">Clics</th><th class="r">Posición</th><th>Página que aparece</th></tr></thead><tbody>${o.slice(0, 15).map(x => `<tr>
+      <td data-l="Búsqueda"><div class="nm">${esc(x.consulta)}<small>${esc(x.grupo)}</small></div></td>
+      <td class="r" data-l="Apariciones">${fmtN(x.impressions)}</td><td class="r" data-l="Clics">${fmtN(x.clicks)}<small class="pctc">CTR ${fmtPct(x.ctr)}</small></td>
+      <td class="r" data-l="Posición"><span class="badge ${x.pagina_1 ? "info" : "warn"}">${fmtPos(x.posicion)} · ${x.pagina_1 ? "pág. 1 baja" : "pág. 2"}</span></td>
+      <td data-l="Página que aparece"><span class="gurl">${esc(x.url)}</span></td></tr>`).join("")}</tbody></table></div>
+      <div class="tbl-foot">Búsquedas donde el sitio ya aparece pero abajo: subir unos puestos (mejor título, contenido o una página dedicada) suele multiplicar los clics. ${o.length > 15 ? `Se muestran 15 de ${o.length}.` : ""}</div>`
+      : `<p class="dleg" style="padding:0 18px 16px;margin:0">Ninguna búsqueda cumple el criterio en este rango.</p>`}</div>`;
+  const tr = g.tendencia;
+  let tend = "";
+  if (tr.length) {
+    const max = Math.max(...tr.map(x => x.clicks)) || 1;
+    tend = `<div class="card block">${head("Tendencia Google", "clics reales por mes, sin basura", I.trend)}<div class="trend">
+      <div class="gbars" style="grid-template-columns:repeat(${tr.length},minmax(0,1fr))">${tr.map((x, i) => `<div class="gb${i === tr.length - 1 ? " last" : ""}" title="${MES[+x.mes.slice(5) - 1]} ${x.mes.slice(0, 4)}: ${fmtN(x.clicks)} clics · ${fmtN(x.impressions)} apariciones · posición ${fmtPos(x.posicion)}">
+        <span class="v">${fmtN(x.clicks)}</span><span class="bar" style="--h:${Math.max(2, x.clicks / max * 100)}%;--i:${i}"></span><span class="m">${MES[+x.mes.slice(5) - 1]}</span><span class="s">${x.impressions >= 1000 ? (x.impressions / 1000).toFixed(1).replace(".", ",") + " mil" : fmtN(x.impressions)}</span></div>`).join("")}</div>
+      <p class="dleg" style="margin:8px 0 0">Barras: clics desde Google. Debajo del mes: apariciones. Search Console guarda 16 meses y llega con 2-3 días de retraso.</p></div></div>`;
+  }
+  return tabla + oport + tend;
+}
+function bindGoogle() {
+  document.querySelectorAll(".g-tog").forEach(b => b.onclick = () => {
+    const on = b.getAttribute("aria-expanded") !== "true";
+    b.setAttribute("aria-expanded", on);
+    b.textContent = on ? "Ocultar artículos" : b.textContent.replace("Ocultar artículos", "Ver artículos");
+    document.querySelectorAll(`.gtab tr.gsub[data-pp="${CSS.escape(b.dataset.p)}"]`).forEach(r => r.classList.toggle("on", on));
+    if (!on) b.textContent = "Ver artículos";
+  });
+  document.querySelectorAll(".g-more").forEach(b => b.onclick = () => { S.gscAbierta = b.dataset.p; const x = document.getElementById("gscBox"); x.innerHTML = googleHtml(); bindGoogle(); });
+}
+
 // KPI de ortodoncia: visible cuando la campaña elegida es dental u ortodoncia.
 function ortoKpi(p) {
   if (!S.campana) return "";
@@ -1152,6 +1259,7 @@ function notaMedicion(p) {
     <li><b>Plataforma por persona</b> (Facebook o Instagram) desde el ${fdate(m.plataforma_desde)}; antes queda "sin dato".</li>
     <li><b>Venta</b>: cobrado en caja (Medilink) a cada paciente que trajo el anuncio, hasta hoy. Incluye a quienes escribieron desde el anuncio y después agendaron por recepción o llegaron directo: se reconocen porque su teléfono está en la ficha de un paciente que pagó dentro de 90 días del clic. Un teléfono compartido (familia) suma a todos sus pacientes. Cada paciente cuenta una vez, en el anuncio de su primera cita. Si ya era paciente del centro, sus pagos posteriores también cuentan.</li>
     <li><b>Para el centro</b>: cada pago menos el honorario del profesional que atendió (su % cargado en Equipo; 70% si falta; Dr. Abarca con sueldo fijo se calcula al 62%). <b>Resultado</b> = para el centro menos el gasto del anuncio.</li>
+    <li><b>Google (Search Console)</b>: apariciones, clics y posición media por página, de la foto diaria de Search Console. Google no entrega datos por persona: el cruce con WhatsApp es por página, no por paciente. Se excluyen páginas /products/ y búsquedas en japonés, chino o coreano (restos de un hackeo antiguo).</li>
     <li><b>Página web</b>: personas que escribieron con un botón de WhatsApp de centromedicocarampangue.cl. La página, el artículo y el botón salen del evento que registra el bot en cada llegada (desde el 05/10/2026); antes de esa fecha, del texto pre-escrito del botón y del tag de la primera visita, y el artículo exacto del blog no viene (solo "blog"). Citas = las del bot hasta 90 días después de llegar. La web no tiene gasto publicitario registrado: Resultado = para el centro. En "Todos", cada persona cuenta una sola vez, en el canal de su primer contacto del rango; en cada canal por separado aparece en ambos.</li>
     <li><b>Cómo nos conocieron</b> <span class="tag-est">declarado</span> es lo que el paciente responde al bot después de agendar, no una medición. La opción antigua "Redes o Google" no separa redes sociales de Google.</li>
     <li><b>Frecuencia</b> <span class="tag-est">estimado</span> impresiones ÷ alcance diario sumado. Es un piso: la frecuencia real del rango es mayor.</li>
