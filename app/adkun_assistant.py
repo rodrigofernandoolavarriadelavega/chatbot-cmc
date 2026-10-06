@@ -166,7 +166,7 @@ def respond(text: str) -> str:
 # ═════════════════════════════════════════════════════════════════════════════
 # SWITCHER DE 3 MODOS — paciente / asistente CMC / asistente Adkun, en un número
 # ═════════════════════════════════════════════════════════════════════════════
-_VALID_MODES = ("adkun", "cmc", "paciente")
+_VALID_MODES = ("adkun", "cmc", "paciente", "doctor")
 
 
 def _mode_table(conn) -> None:
@@ -202,10 +202,11 @@ def set_mode(phone: str, mode: str) -> None:
 
 def _modes_menu() -> str:
     return (
-        "🔀 *Tus 3 modos* (escribe la palabra para cambiar):\n\n"
+        "🔀 *Tus 4 modos* (escribe la palabra para cambiar):\n\n"
         "🧠 *adkun* — la capa agéntica (P&L, win-back, Director)\n"
         "🏥 *cmc* — operación de la clínica (agenda, demanda, actividad)\n"
-        "🧪 *paciente* — usar el bot como un paciente normal (para probar)\n\n"
+        "🧪 *paciente* — usar el bot como un paciente normal (para probar)\n"
+        "🩺 *doctor* — asistente clínico (agenda, ficha por RUT, dx, preguntas clínicas)\n\n"
         "_Estás en un solo número; cambias de sombrero con una palabra._"
     )
 
@@ -304,12 +305,26 @@ def route(phone: str, text: str) -> tuple[bool, str | None]:
         set_mode(phone, "paciente")
         return True, ("🧪 *Modo paciente activado.* Ahora el bot te atiende como un paciente "
                       "normal (para probarlo). Escribe *adkun*, *cmc* o *modos* para volver.")
-    if t in ("modos", "cambiar modo", "menu principal", "switch"):
+    if t in ("doctor", "modo doctor", "asistente", "asistente clinico", "asistente clínico"):
+        set_mode(phone, "doctor")
+        try:  # el asistente clínico vive en flows (capa de comandos del doctor)
+            from flows import _set_doctor_mode
+            _set_doctor_mode(phone, "asistente")
+        except Exception as e:  # noqa: BLE001
+            log.warning("modo doctor: %s", e)
+        return True, ("🩺 *Asistente clínico activado.*\n\n"
+                      "📋 `agenda` · `agenda mañana`\n"
+                      "👤 `paciente 12345678-9`\n"
+                      "🔍 `buscar María González`\n"
+                      "🏷️ `dx RUT dm2 hta`\n"
+                      "💬 Cualquier otra cosa → pregunta clínica\n\n"
+                      "_Cambia de modo: *adkun* · *cmc* · *paciente* · *modos*_")
+    if t in ("modos", "modo", "cambiar modo", "menu principal", "switch"):
         return True, _modes_menu()
 
     mode = get_mode(phone)
-    if mode == "paciente":
-        return False, None            # cae al flujo de pacientes
+    if mode in ("paciente", "doctor"):
+        return False, None            # paciente: flujo de pacientes puro · doctor: capa clínica en flows
     if mode == "cmc":
         return True, _cmc_dispatch(t)
     return True, respond(text)        # modo adkun (default)

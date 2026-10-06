@@ -2073,16 +2073,10 @@ async def _handle_doctor_command(phone: str, txt: str, tl: str, data: dict, stat
         return _doctor_mode_menu()
 
     # ── Modo Agente CMC → pasar al flujo normal de pacientes ──────────────
-    # Si viene un saludo simple ("hola", "buenos días") en IDLE, asumir que
-    # el doctor olvidó que estaba en modo agente y volver al menú doctor.
+    # Un saludo NO saca del modo: un paciente real siempre parte con "Hola", y
+    # expulsar al doctor ahí hacía imposible probar el flujo (6-oct). La única
+    # salida es "modo" (bloque de arriba).
     if doctor_mode == "agente":
-        _saludos_naturales = {"hola", "hi", "buenos dias", "buenos días",
-                              "buenas tardes", "buenas noches", "buen dia",
-                              "buen día", "ola", "hey"}
-        if tl in _saludos_naturales and state == "IDLE":
-            _clear_doctor_mode(phone)
-            reset_session(phone)
-            return _doctor_mode_menu()
         return None  # None = seguir con el flujo normal de handle_message
 
     # ── Modo Asistente Clínico ────────────────────────────────────────────
@@ -4167,7 +4161,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _tiene_wa_prof = _get_permiso_wa(phone, "wa_access", default=False)
     except Exception:
         pass
-    if phone == ADMIN_ALERT_PHONE or _tiene_wa_prof:
+    # Dueño en "modo paciente" del Asistente Adkun: se le atiende EXACTAMENTE
+    # como a un paciente, sin la capa de comandos del doctor. Antes esa capa
+    # seguía activa y el "Hola" de prueba caía en el asistente clínico o en el
+    # menú de modos del doctor (6-oct: no pudo probar la respuesta de ortodoncia).
+    _modo_paciente_dueno = False
+    try:
+        from adkun_assistant import get_mode as _adk_get_mode
+        _modo_paciente_dueno = _adk_get_mode(phone) == "paciente"
+    except Exception:  # noqa: BLE001
+        pass
+    if (phone == ADMIN_ALERT_PHONE or _tiene_wa_prof) and not _modo_paciente_dueno:
         resp = await _handle_doctor_command(phone, txt, tl, data, state)
         if resp is not None:
             return resp
@@ -4621,7 +4625,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         return _menu_msg(nombre=_nm_retomar)
     if _es_comando_reset and state != "HUMAN_TAKEOVER":
         reset_session(phone)
-        if phone == _doctor_phone:
+        if phone == _doctor_phone and not _modo_paciente_dueno:
             # El modo se lee del tag, no de la sesión — sobrevive el reset
             doc_mode = _get_doctor_mode(phone)
             if doc_mode == "agente":
