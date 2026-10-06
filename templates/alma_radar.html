@@ -782,7 +782,7 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.quer
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Token: la página se sirve cruda; se lee de la propia URL y viaja en cada llamada (guardrail "cerrar auth rompe al propio front").
 const TOKEN=new URLSearchParams(location.search).get('token')||'';
-const _tk=u=>TOKEN?u+(u.includes('?')?'&':'?')+'token='+encodeURIComponent(TOKEN):u;
+const _tk=u=>{if(!TOKEN)return u;const i=u.indexOf('#'),h=i<0?'':u.slice(i),b=i<0?u:u.slice(0,i);return b+(b.includes('?')?'&':'?')+'token='+encodeURIComponent(TOKEN)+h};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=n=>typeof n==='number'&&isFinite(n);
 const th=n=>num(n)?String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.'):'—';
