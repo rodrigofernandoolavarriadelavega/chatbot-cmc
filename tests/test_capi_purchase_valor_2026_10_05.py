@@ -166,6 +166,26 @@ ENVIADOS.clear()
 r6 = asyncio.run(cp.enviar_purchases(HOY))
 check("reintento exitoso al día siguiente", any(e["event_id"] == "purchase_cita_3001" for e in ENVIADOS))
 
+# pago mal asignado en Medilink (otro prof) y el paciente vio SOLO a este prof -> usa el pago
+cita(5001, "56900000051", 901, 1, 2, fecha="2026-10-04", hora="15:00")
+pago(901, 99, 20000)
+# pago mal asignado y el paciente vio a OTRO prof ese día (cita de recepción, no del bot)
+# -> no se le carga al anuncio la plata de la otra atención: va a estimado
+cita(5002, "56900000052", 902, 1, 2, fecha="2026-10-04", hora="15:30")
+with session.db() as c:
+    c.execute("INSERT OR REPLACE INTO ausentismo_citas(id_cita,id_profesional,id_paciente,fecha,hora,"
+              "id_estado,anulacion) VALUES(?,?,?,?,?,?,?)", (5003, 77, 902, "2026-10-04", "16:00", 2, 0))
+pago(902, 99, 65000)
+ENVIADOS.clear()
+asyncio.run(cp.enviar_purchases(HOY))
+por_cita = {e["event_id"]: e for e in ENVIADOS}
+e51 = por_cita.get("purchase_cita_5001")
+check("pago con otro prof y un solo prof atendió: usa el pago",
+      e51 and e51["value"] == 6000.0 and e51["custom_data"]["venta_total"] == 20000)
+e52 = por_cita.get("purchase_cita_5002")
+check("pago con otro prof y varios profs atendieron: estimado, no suma la otra atención",
+      e52 and e52["custom_data"].get("value_estimado") is True and e52["custom_data"]["venta_total"] == 0)
+
 # fuera de ventana (>6 días) no se toca
 cita(4001, "56900000001", 801, 1, 2, fecha="2026-09-25")
 pago(801, 1, 10000, fecha="2026-09-25")

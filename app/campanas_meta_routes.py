@@ -59,6 +59,7 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -360,6 +361,7 @@ def parse_web(texto: str | None) -> dict:
     partes = [re.sub(r"[^\w-]", "", x.strip().lower()) for x in re.split(r"[·|/]", (m.group(1) or "") if m else "")]
     partes = [x for x in partes if x] + ["", "", ""]
     pag, articulo, pos = partes[0], partes[1][:80], partes[2][:40]
+    articulo = "" if articulo.strip("-") == "" else articulo   # el sitio manda "-" = sin artículo
     if articulo and not pos and _es_posicion(articulo):   # "(web: home · hero)"
         articulo, pos = "", articulo
     pag, pos = _pag_pos(pag, pos)
@@ -500,7 +502,7 @@ def _llegadas_web(c, e0: int | None = None, e1: int | None = None,
         pag, pos2 = _pag_pos(pag_tag, pos or w["posicion"])
         if not pag or (w["pagina_explicita"] and fuente == "tag"):
             pag = w["pagina_id"] if (w["pagina_explicita"] or not pag) else pag
-        art = articulo or w["articulo"]
+        art = (articulo if (articulo or "").strip("-") else "") or w["articulo"]
         ad_id = f"web:{pag}:{art or '-'}:{pos2 or '-'}:{w['boton_id']}"
         pag_lbl, pos_lbl = _web_lbl(pag), _pos_lbl(pos2)
         det = " · ".join(x for x in (f"Artículo «{art}»" if art else "", pos_lbl) if x)
@@ -1685,6 +1687,163 @@ def _opciones(c, mapa: dict, canal: str = "meta") -> dict:
             "anuncios": ads, "especialidades": esp}
 
 
+# ── Google Search Console × canal Página web ────────────────────────────────
+# Google no entrega datos por persona: el cruce es POR PÁGINA. Cada URL de
+# Search Console se lleva a la misma clave (página, artículo) que usa el
+# marcador "(web: página · artículo · botón)" del sitio (gsc_snapshot.
+# pagina_de_url), y se pone al lado de lo que pasó con quienes escribieron por
+# WhatsApp desde esa página (personas, citas, venta, para el centro).
+# Todo excluye la basura del hackeo antiguo (/products/, consultas CJK).
+OPORT_MIN_APARICIONES = 30
+OPORT_POS = (4.0, 20.0)
+
+
+def _grupo_consulta(q: str) -> str:
+    t = " " + " ".join(re.sub(r"[^a-z ]+", " ", _sin_tildes(q)).split()) + " "
+    com = next((lbl for lbl, k in _COMUNAS if f" {k} " in t), None)
+    if any(k in t for k in (" centro medico ", " clinica ", " cmc ", " consultorio ")) or t.strip() == (com or "").lower():
+        return "Marca: centro médico" + (f" · {com}" if com else "")
+    if any(k in t for k in (" pni ", " vacuna", " vacunacion ")):
+        return "Vacunas" + (f" · {com}" if com else "")
+    esp = _grupo(q)
+    if esp and com:
+        return f"{esp} · {com}"
+    return esp or (f"Centro médico · {com}" if com else "General")
+
+
+def google_data(desde: str | None = None, hasta: str | None = None) -> dict:
+    import gsc_snapshot as gs
+    d, h = _rango(desde, hasta)
+    with db() as c:
+        gs.ensure_tables(c)
+        ult = c.execute("SELECT MAX(fecha) FROM gsc_paginas_diario").fetchone()[0]
+        por_url = c.execute("SELECT page, SUM(clicks), SUM(impressions), SUM(position * impressions) "
+                            "FROM gsc_paginas_diario WHERE basura=0 AND fecha >= ? AND fecha <= ? GROUP BY page",
+                            (d.isoformat(), h.isoformat())).fetchall()
+        basura = c.execute("SELECT COALESCE(SUM(clicks),0), COALESCE(SUM(impressions),0) FROM gsc_paginas_diario "
+                           "WHERE basura=1 AND fecha >= ? AND fecha <= ?", (d.isoformat(), h.isoformat())).fetchone()
+        consultas = c.execute("SELECT page, query, SUM(clicks), SUM(impressions), SUM(position * impressions) "
+                              "FROM gsc_diario WHERE basura=0 AND fecha >= ? AND fecha <= ? GROUP BY page, query",
+                              (d.isoformat(), h.isoformat())).fetchall()
+        _m = h.year * 12 + h.month - 1 - 11
+        t0 = date(_m // 12, _m % 12 + 1, 1)
+        tend = c.execute("SELECT substr(fecha,1,7), SUM(clicks), SUM(impressions), SUM(position * impressions) "
+                         "FROM gsc_paginas_diario WHERE basura=0 AND fecha >= ? AND fecha <= ? GROUP BY 1 ORDER BY 1",
+                         (t0.isoformat(), h.isoformat())).fetchall()
+
+    def _clave_url(url):
+        pag, art = gs.pagina_de_url(url)
+        return pag, art
+
+    filas: dict[tuple[str, str], dict] = {}
+
+    def _f(k):
+        return filas.setdefault(k, {"pagina_id": k[0], "articulo": k[1], "clicks": 0, "impressions": 0, "_pos": 0.0,
+                                    "urls": set(), "consultas": [], "personas": 0, "citas": 0, "venta": 0,
+                                    "centro": 0, "pagaron": 0})
+    for url, cl, im, pw in por_url:
+        f = _f(_clave_url(url))
+        f["clicks"] += cl or 0
+        f["impressions"] += im or 0
+        f["_pos"] += pw or 0
+        f["urls"].add(urlparse_path(url))
+    for url, q, cl, im, pw in consultas:
+        _f(_clave_url(url))["consultas"].append({"q": q, "clicks": cl or 0, "impressions": im or 0,
+                                                 "pos": round((pw or 0) / im, 1) if im else None})
+    # Lo que pasó con quienes escribieron por WhatsApp desde cada página
+    pw_ = panel_data(d.isoformat(), h.isoformat(), canal="web")
+    for a in pw_["anuncios"]:
+        partes = (a["ad_id"].split(":") + ["", ""])[1:3]
+        k = (partes[0], "" if partes[1] in ("-", "") else partes[1])
+        f = _f(k)
+        for kk in ("personas", "citas", "venta", "centro", "pagaron"):
+            f[kk] += a.get(kk) or 0
+
+    out = []
+    for f in filas.values():
+        im, cl = f["impressions"], f["clicks"]
+        top = sorted(f["consultas"], key=lambda x: (-x["clicks"], -x["impressions"]))[:5]
+        out.append({"pagina_id": f["pagina_id"], "pagina": _web_lbl(f["pagina_id"]), "articulo": f["articulo"],
+                    "urls": sorted(f["urls"])[:3], "clicks": cl, "impressions": im,
+                    "ctr": round(100 * cl / im, 1) if im else None,
+                    "posicion": round(f["_pos"] / im, 1) if im else None,
+                    "consultas": top, "personas": f["personas"], "citas": f["citas"],
+                    "venta": round(f["venta"]), "centro": round(f["centro"]), "pagaron": f["pagaron"],
+                    "tasa_escribio": round(100 * f["personas"] / cl, 1) if cl else None})
+    # Agrupado por página (con sus artículos), más clics primero
+    paginas: dict[str, dict] = {}
+    for r in out:
+        g = paginas.setdefault(r["pagina_id"], {"pagina_id": r["pagina_id"], "pagina": r["pagina"], "clicks": 0,
+                                                "impressions": 0, "_pos": 0.0, "personas": 0, "citas": 0,
+                                                "venta": 0, "centro": 0, "articulos": []})
+        for kk in ("clicks", "impressions", "personas", "citas", "venta", "centro"):
+            g[kk] += r[kk]
+        g["_pos"] += (r["posicion"] or 0) * r["impressions"]
+        g["articulos"].append(r)
+    lista = []
+    for g in paginas.values():
+        im, cl = g.pop("impressions"), g["clicks"]
+        g["impressions"] = im
+        g["ctr"] = round(100 * cl / im, 1) if im else None
+        g["posicion"] = round(g.pop("_pos") / im, 1) if im else None
+        g["tasa_escribio"] = round(100 * g["personas"] / cl, 1) if cl else None
+        g["articulos"].sort(key=lambda x: (-x["clicks"], -x["personas"], -x["impressions"]))
+        lista.append(g)
+    lista.sort(key=lambda x: (-x["clicks"], -x["personas"]))
+
+    # Oportunidades: consultas con suficientes apariciones y posición 4-20
+    acc: dict[str, dict] = {}
+    for url, q, cl, im, pw in consultas:
+        a = acc.setdefault(q, {"q": q, "clicks": 0, "impressions": 0, "_pos": 0.0, "paginas": defaultdict(int)})
+        a["clicks"] += cl or 0
+        a["impressions"] += im or 0
+        a["_pos"] += pw or 0
+        a["paginas"][url] += im or 0
+    oport = []
+    for a in acc.values():
+        if a["impressions"] < OPORT_MIN_APARICIONES:
+            continue
+        pos = a["_pos"] / a["impressions"]
+        if not (OPORT_POS[0] <= pos <= OPORT_POS[1]):
+            continue
+        top_url = max(a["paginas"].items(), key=lambda x: x[1])[0]
+        pag, art = _clave_url(top_url)
+        oport.append({"consulta": a["q"], "grupo": _grupo_consulta(a["q"]), "impressions": a["impressions"],
+                      "clicks": a["clicks"], "posicion": round(pos, 1),
+                      "ctr": round(100 * a["clicks"] / a["impressions"], 1),
+                      "url": urlparse_path(top_url), "pagina": _web_lbl(pag), "articulo": art,
+                      "pagina_1": pos < 10.5})
+    oport.sort(key=lambda x: -x["impressions"])
+    grupos: dict[str, dict] = {}
+    for o in oport:
+        g = grupos.setdefault(o["grupo"], {"grupo": o["grupo"], "consultas": 0, "impressions": 0, "clicks": 0})
+        g["consultas"] += 1
+        g["impressions"] += o["impressions"]
+        g["clicks"] += o["clicks"]
+    tot_cl = sum(g["clicks"] for g in lista)
+    tot_im = sum(g["impressions"] for g in lista)
+    return {
+        "rango": {"desde": d.isoformat(), "hasta": h.isoformat()},
+        "hay_datos": ult is not None, "ultima_fecha": ult,
+        "totales": {"clicks": tot_cl, "impressions": tot_im,
+                    "ctr": round(100 * tot_cl / tot_im, 1) if tot_im else None,
+                    "personas": sum(g["personas"] for g in lista),
+                    "basura_clicks": basura[0], "basura_impressions": basura[1]},
+        "paginas": lista,
+        "oportunidades": oport[:60],
+        "oportunidades_grupos": sorted(grupos.values(), key=lambda x: -x["impressions"]),
+        "tendencia": [{"mes": m, "clicks": cl or 0, "impressions": im or 0,
+                       "posicion": round((pw or 0) / im, 1) if im else None} for m, cl, im, pw in tend],
+        "umbrales": {"min_apariciones": OPORT_MIN_APARICIONES, "posicion": list(OPORT_POS)},
+    }
+
+
+def urlparse_path(url: str) -> str:
+    from urllib.parse import urlparse
+    p = urlparse(url or "")
+    return (p.path or "/") if p.scheme else (url or "/")
+
+
 # ── A quién llamar hoy ──────────────────────────────────────────────────────
 # Lista priorizada para el dueño, encima del kanban (no lo cambia):
 #   1. No asistió hace ≤ 7 días (Medilink) — recuperar la hora.
@@ -2538,6 +2697,13 @@ def llamar_hoy(request: Request, desde: str | None = Query(None), hasta: str | N
     _auth(request, token)
     return llamar_hoy_data(desde, hasta, campana or None, anuncio or None, plataforma or None,
                            especialidad or None, canal=canal or None)
+
+
+@router.get("/google")
+def google(request: Request, desde: str | None = Query(None), hasta: str | None = Query(None),
+           token: str | None = Query(None)):
+    _auth(request, token)
+    return google_data(desde, hasta)
 
 
 @router.get("/cohortes")

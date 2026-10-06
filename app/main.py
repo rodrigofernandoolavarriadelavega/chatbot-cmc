@@ -675,6 +675,17 @@ async def lifespan(app: FastAPI):
         misfire_grace_time=7200,
         coalesce=True,
     )
+    # Foto diaria de Google Search Console (últimos 5 días; ~2-3 días de
+    # retraso) → gsc_diario / gsc_paginas_diario. Flag GSC_SNAPSHOT_ACTIVE.
+    from gsc_snapshot import job_gsc_diario
+    scheduler.add_job(
+        job_gsc_diario,
+        CronTrigger(hour=6, minute=40, timezone=_CLT),
+        id="gsc_diario",
+        replace_existing=True,
+        misfire_grace_time=7200,
+        coalesce=True,
+    )
     # Panel del Día: cache de CAPACIDAD REAL por profesional (Medilink /citas,
     # secuencial+throttle) 04:10 CLT — horario libre, off-peak. Alimenta el
     # potencial/ocupación reales del N1 sin fan-out en vivo.
