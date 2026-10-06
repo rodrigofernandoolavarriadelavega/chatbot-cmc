@@ -675,9 +675,17 @@ def _meses(hoy: date) -> dict:
                           "WHERE fecha >= ? AND fecha <= ? GROUP BY 1, 2",
                           (ini.isoformat(), hoy.isoformat() + " 23:59:59")).fetchall()
         mes_ant = date(hoy.year - (hoy.month == 1), (hoy.month - 2) % 12 + 1, 1)
-        medios = c.execute("SELECT COALESCE(NULLIF(trim(metodo_pago),''),'Sin dato'), SUM(monto) FROM bi_pagos_caja "
-                           "WHERE substr(fecha,1,7) = ? GROUP BY 1 ORDER BY 2 DESC",
-                           (mes_ant.isoformat()[:7],)).fetchall()
+        # Medio de pago real = módulo Pagos (pagos_cmc, lo que registra recepción);
+        # bi_pagos_caja trae todo como "Efectivo". Lo que falta para llegar a la caja
+        # es la parte que paga Fonasa (ver memoria "las 2 fuentes").
+        try:
+            medios = c.execute("SELECT lower(COALESCE(NULLIF(trim(metodo_pago),''),'sin dato')), SUM(copago) FROM pagos_cmc "
+                               "WHERE substr(fecha,1,7) = ? GROUP BY 1 HAVING SUM(copago) > 0 ORDER BY 2 DESC",
+                               (mes_ant.isoformat()[:7],)).fetchall()
+        except Exception:  # noqa: BLE001
+            medios = []
+        caja_mes = c.execute("SELECT SUM(monto) FROM bi_pagos_caja WHERE substr(fecha,1,7) = ?",
+                             (mes_ant.isoformat()[:7],)).fetchone()[0] or 0
         ult = c.execute("SELECT MAX(fecha), MAX(synced_at) FROM bi_pagos_caja WHERE fecha <= ?",
                         (hoy.isoformat() + " 23:59:59",)).fetchone()
     acc: dict[str, dict] = {}
@@ -699,13 +707,20 @@ def _meses(hoy: date) -> dict:
     dias_con_caja = (min(hoy, date.fromisoformat(ult_fecha)) - hoy.replace(day=1)).days + 1 \
         if ult_fecha and ult_fecha >= hoy.replace(day=1).isoformat() else 0
     proy = round(actual["venta"] / dias_con_caja * dias_mes) if dias_con_caja >= 3 else None
-    tot_m = sum(int(r[1] or 0) for r in medios)
+    _lbl = {"transferencia": "Transferencia", "efectivo": "Efectivo", "debito": "Débito", "débito": "Débito",
+            "credito": "Crédito", "crédito": "Crédito", "bono_web": "Bono web", "sin dato": "Sin dato"}
+    pagado = sum(int(r[1] or 0) for r in medios)
+    fonasa = max(0, int(caja_mes) - pagado) if pagado else 0
+    tot_m = pagado + fonasa
     medios_out = []
-    for nombre, monto in medios[:4]:
-        medios_out.append({"medio": nombre, "venta": int(monto or 0), "pct": round(100 * (monto or 0) / tot_m) if tot_m else 0})
-    resto = tot_m - sum(x["venta"] for x in medios_out)
+    for nombre, monto in medios[:5]:
+        medios_out.append({"medio": _lbl.get(nombre, nombre.capitalize()), "venta": int(monto or 0),
+                           "pct": round(100 * (monto or 0) / tot_m) if tot_m else 0})
+    resto = pagado - sum(x["venta"] for x in medios_out)
     if resto > 0:
         medios_out.append({"medio": "Otros", "venta": resto, "pct": round(100 * resto / tot_m)})
+    if fonasa:
+        medios_out.append({"medio": "Fonasa (bonificación)", "venta": fonasa, "pct": round(100 * fonasa / tot_m)})
     anterior = serie[-2]
     return {"serie": serie, "actual": actual, "anterior": anterior,
             "proyeccion": proy, "dias_con_caja": dias_con_caja, "dias_mes": dias_mes,
