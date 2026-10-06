@@ -360,7 +360,36 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-09-24
+**Última actualización**: 2026-10-06
+
+### 2026-10-05/06 — Atribución Meta Ads completa + Campañas Meta + orden del repo (TODO EN PROD)
+- **Atribución**: CAPI con `ctwa_clid` nativo + WABA; copia al dataset ligado a la WABA
+  (`META_CAPI_EXTRA_DATASET_IDS`); `meta_referrals` guarda plataforma FB/IG + `raw_json`;
+  `citas_bot.ad_*` (anuncio que trajo la cita); foto diaria `meta_insights_diario` (06:20).
+  Referral de Messenger/IG capturado (`messaging_referrals` suscrito; system user con
+  tarea MODERATE en la página).
+- **Purchase CAPI** (`app/capi_purchase.py`, 07:07 CLT): solo atendidos reales
+  (`ausentismo_citas.id_estado=2`), value = margen del centro de la caja de ese día.
+  Se eliminó el envío viejo de las 22:00 (inflaba: $7,4M informados vs $4,4M en caja).
+- **Campañas Meta** `/alma/campanas-meta` (solo dueño): venta real (caja + cruce por
+  teléfono), para el centro (venta × (1−pct_honorario)), resultado, retorno, canal Web,
+  estado Medilink, no-show, ortodoncia, rapidez de recepción, cohortes, sugerencia de
+  presupuesto, kanban con ficha trabajable. Resumen lunes 08:30 + alertas por Telegram.
+- **Recuperar pacientes** `/alma/recuperar` (recepción, MANUAL): plantillas
+  `recuperar_*_v1` enviadas a Meta 6-oct (PENDING). Persistencia automática (2º toque)
+  sigue ON por decisión del dueño, texto corregido.
+- **Web**: `static/cmc-wa.js` marca `(web: página · artículo · botón)`; bot loguea
+  `web_origen` en cada llegada. ¿Cómo nos conociste?: 3 botones, no se pregunta a quien
+  llegó por anuncio.
+- **Orden del repo 6-oct**: WIP sin subir de otras ventanas rescatado en la rama
+  `rescate/main-wip-2026-10-06` (backend ya desplegado en 8a227c7; el commit del
+  **rediseño premium del sitio** quedó SOLO en esa rama, sin revisar ni desplegar).
+  Todas las ramas `session/*` y worktrees borrados (estaban incluidos en prod).
+- **PENDIENTE DUEÑO**: audiencias win-back (`custom_audiences_sync`) suben pacientes sin
+  exigir consent y una se llama "CMC Ortodoncia activos" → decidir si se apaga; audiencias
+  nuevas apagadas (`META_AUDIENCIAS_CAPTACION_ACTIVE`) hasta revisión legal; rotar la
+  contraseña WP hardcodeada en `scripts/sync_landings_comuna_to_wp.py`; campaña de prueba
+  Ventas→WhatsApp optimizando por Schedule (semana del 12-oct).
 
 ### 2026-09-25 — Saldo API agotado + 8 bugs (DEPLOYADO)
 - 10:12 CLT saldo Anthropic agotado (recarga US$20 duró 3,6 días en vez de ~3 semanas):
