@@ -773,16 +773,17 @@ body.v-valor .not-valor{display:none!important}
   .g-save{position:static}
 }
 
+/* Nombres sin prefijo "ad-": los bloqueadores de anuncios (uBlock) ocultan .ad-* */
 /* ══ Integraciones (6-oct): creativos, agenda, territorio, velocidad, valor 90 d, aviso a Meta ══ */
 .thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--line-2);flex:none;border:1px solid var(--line);display:block}
 .thumb.ph{display:flex;align-items:center;justify-content:center}
 .thumb.ph svg{width:18px;height:18px;stroke:#9AACBA}
-.ad-cell{display:flex;gap:10px;align-items:flex-start}
-.ad-cell .nm{min-width:0}
-.ad-open{display:block;border:0;background:none;padding:0;margin:0;font:inherit;font-weight:700;color:var(--navy);text-align:left;cursor:pointer;
+.anu-cell{display:flex;gap:10px;align-items:flex-start}
+.anu-cell .nm{min-width:0}
+.anu-open{display:block;border:0;background:none;padding:0;margin:0;font:inherit;font-weight:700;color:var(--navy);text-align:left;cursor:pointer;
   overflow-wrap:anywhere;border-radius:6px}
-.ad-open:hover{color:var(--blue);text-decoration:underline;text-underline-offset:3px}
-.ad-open:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.anu-open:hover{color:var(--blue);text-decoration:underline;text-underline-offset:3px}
+.anu-open:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 td .vs{display:block;white-space:nowrap}
 td.ret .rs{opacity:.92}
 .badge.cansado{background:var(--red-s);color:var(--red-d)}.badge.vigilar{background:var(--orange-s);color:var(--orange-d)}.badge.sano{background:var(--green-s);color:var(--green-d)}
@@ -1487,7 +1488,7 @@ function tabla(p) {
       : `<span class="rv" title="Venta total ÷ gasto">${x(r.retorno)}<small>venta</small></span><span class="rc ${r.retorno_centro >= 1 ? "resp" : "resn"}" title="Para el centro ÷ gasto, con toda la venta del paciente. Sobre 1× el anuncio se paga solo">${x(r.retorno_centro)}<small>centro</small></span><span class="rs ${r.retorno_estricto >= 1 ? "resp" : "resn"}" title="Estricto: solo lo que queda al centro de la venta de la especialidad del anuncio en los primeros 30 días ÷ gasto. Atribución, no causalidad.">${x(r.retorno_estricto)}<small>estricto</small></span>`}</td>`;
     const abre = anun && !esWeb;
     const thumb = abre ? (cr && cr.imagen ? `<img class="thumb" src="${imgUrl(r.ad_id)}" alt="" loading="lazy" onerror="this.style.opacity=0">` : `<span class="thumb ph" aria-hidden="true">${I.img}</span>`) : "";
-    const first = `<td class="nmc" data-l="${uni}"><div class="ad-cell">${thumb}<div class="nm">${abre ? `<button type="button" class="ad-open" data-ad="${esc(r.ad_id)}" title="Ver creativo, embudo completo y fatiga">${esc(nombre)}</button>` : esc(nombre)}<small>${esc(sub)}</small></div></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
+    const first = `<td class="nmc" data-l="${uni}"><div class="anu-cell">${thumb}<div class="nm">${abre ? `<button type="button" class="anu-open" data-ad="${esc(r.ad_id)}" title="Ver creativo, embudo completo y fatiga">${esc(nombre)}</button>` : esc(nombre)}<small>${esc(sub)}</small></div></div>${badges.length ? `<div>${badges.join("")}</div>` : ""}</td>`;
     const gasto = `<td class="r" data-l="Gasto">${sinG ? dash : esWeb ? '<span class="sin-gasto" title="La web no tiene gasto publicitario registrado">Sin gasto</span>' : fmt$(r.gasto)}</td>`;
     if (!full) return `<tr class="${anun && malos.has(r.ad_id) ? "flag-bad" : ""}">${first}${gasto}
       <td class="r" data-l="Citas">${fmtN(r.citas)}<small class="pctc">de ${fmtN(r.personas)} ${r.personas === 1 ? "persona" : "personas"} · ${fmtN(r.atendidos)} atend.</small>${r.no_asistio ? `<small class="pctc resn">${fmtN(r.no_asistio)} no asistió${r.no_asistio === 1 ? "" : "ron"}</small>` : ""}${r.instalaron ? `<small class="pctc resp">${fmtN(r.instalaron)} instaló ortodoncia</small>` : ""}</td>
@@ -2314,7 +2315,7 @@ function amBodyHtml(r, d) {
   return emb + creat + fat + `<div class="am-2">${ter || `<div class="am-c"><h3>${I.pin}Comuna de sus pacientes</h3><p class="dleg" style="margin:0">Sin personas en el rango.</p></div>`}${vel}</div>`;
 }
 document.addEventListener("click", e => {
-  const b = e.target.closest(".ad-open"); if (b) { abrirAnuncio(b.dataset.ad); return; }
+  const b = e.target.closest(".anu-open"); if (b) { abrirAnuncio(b.dataset.ad); return; }
   if (e.target.id === "am") cerrarAnuncio();
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && AM.ad) cerrarAnuncio(); });
