@@ -272,6 +272,20 @@ def _run_ddl_inline(conn) -> None:
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fidel_phone ON fidelizacion_msgs(phone, tipo)")
+    # Opinión libre tras la encuesta postconsulta (app/opinion_mejora.py).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS opinion_libre (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone              TEXT,
+            cita_id            TEXT,
+            profesional        TEXT,
+            especialidad       TEXT,
+            respuesta_encuesta TEXT,
+            texto              TEXT,
+            created_at         TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_opinion_libre_phone ON opinion_libre(phone, created_at)")
     # BUG-01: intentar crear UNIQUE INDEX para evitar duplicados.
     # Wrapped en try/except: si la DB existente tiene duplicados previos,
     # la creacion falla silenciosamente (no bloquea el arranque).

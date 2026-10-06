@@ -67,6 +67,38 @@ def _clave(prefijo: str, valor: str) -> str:
     return hashlib.sha1(f"{prefijo}:{valor}".encode("utf-8")).hexdigest()[:20]
 
 
+def _tabla(conn, nombre: str) -> bool:
+    return conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (nombre,)).fetchone() is not None
+
+
+def _sin_opinion_libre(conn) -> str:
+    """Excluye de la fuente `messages` lo que ya entra por `opinion_libre` (mismo texto,
+    mismo teléfono) para no clasificarlo dos veces."""
+    if not _tabla(conn, "opinion_libre"):
+        return ""
+    return ("AND NOT EXISTS (SELECT 1 FROM opinion_libre o "
+            "WHERE o.phone = m.phone AND o.texto = TRIM(m.text))")
+
+
+def candidatos_opinion_libre(conn, limite: int) -> list[dict]:
+    """Opiniones libres capturadas por el bot tras la encuesta (app/opinion_mejora.py)."""
+    if limite <= 0 or not _tabla(conn, "opinion_libre"):
+        return []
+    ya = {r[0] for r in conn.execute("SELECT msg_key FROM opinion_temas")} if _existe(conn) else set()
+    out = []
+    for r in conn.execute(
+            f"SELECT id, texto, profesional, created_at FROM opinion_libre "
+            f"WHERE created_at >= datetime('now', '-{VENTANA_DIAS} days') ORDER BY id DESC"):
+        k = _clave("opinion", str(r["id"]))
+        if k in ya:
+            continue
+        out.append({"key": k, "fuente": "opinion_libre", "fecha": (r["created_at"] or "")[:10],
+                    "texto": enmascarar(r["texto"]), "profesional": r["profesional"] or ""})
+        if len(out) >= limite:
+            break
+    return out
+
+
 def candidatos_mensajes(conn, limite: int = TOPE_POR_CORRIDA) -> list[dict]:
     """Mensajes entrantes <=72 h tras una encuesta postconsulta, aún sin clasificar."""
     rows = conn.execute(f"""
@@ -78,6 +110,7 @@ def candidatos_mensajes(conn, limite: int = TOPE_POR_CORRIDA) -> list[dict]:
         WHERE f.tipo = 'postconsulta'
           AND f.enviado_en >= datetime('now', '-{VENTANA_DIAS} days')
           AND length(m.text) >= {LARGO_MIN}
+          {_sin_opinion_libre(conn)}
         GROUP BY m.id
         ORDER BY m.id DESC""").fetchall()
     ya = {r[0] for r in conn.execute("SELECT msg_key FROM opinion_temas")} if _existe(conn) else set()
@@ -150,7 +183,8 @@ def clasificar_lote(client, lote: list[dict]) -> tuple[list[dict], int, int]:
             base = lote[i]
         except (KeyError, ValueError, TypeError, IndexError):
             continue
-        op = o.get("es_opinion") is True
+        # La opinión libre ya es opinión por construcción; igual se clasifica tema/tono.
+        op = o.get("es_opinion") is True or base.get("fuente") == "opinion_libre"
         tema = o.get("tema") if o.get("tema") in TEMAS else "otro"
         tono = o.get("tono") if o.get("tono") in TONOS else "neutro"
         res.append({**base, "es_opinion": 1 if op else 0, "tema": tema if op else None, "tono": tono if op else None})
@@ -185,6 +219,7 @@ def correr(client=None, tope: int = TOPE_POR_CORRIDA) -> dict:
     with db() as c:
         c.execute(DDL)
         items = candidatos_mensajes(c, tope)
+        items += candidatos_opinion_libre(c, tope - len(items))
         if len(items) < tope:
             items += candidatos_resenas(c, tope - len(items))
     if not items:

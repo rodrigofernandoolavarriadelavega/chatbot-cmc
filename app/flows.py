@@ -48,6 +48,7 @@ from pni import get_vaccine_reminder, get_pni_meta, es_menor_de
 from hitos_desarrollo import get_milestones_reminder, get_hitos_meta
 from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
 from messaging import send_whatsapp
+import opinion_mejora
 
 log = logging.getLogger("bot.flows")
 
@@ -3533,6 +3534,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # "no" léxico — _niega() no lo captura, así que en IG/FB (donde el
         # paciente re-escribe el título del botón) necesita mapeo explícito.
         "es otra eco": "eco_pb_otra",
+        "nada por ahora": "opinion_nada",
     }
     _tl_map_key = tl_norm.lstrip("🔄💬📅📋👤⚡🏥❌✅🔎📊📷 ").strip()
     if _tl_map_key in _TITLE_TO_ID:
@@ -5277,9 +5279,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["upsell_postconsulta_ts"] = datetime.now(timezone.utc).isoformat()
                 data["upsell_postconsulta"] = construir_secuencia_upsell(esp, upsell_esp, upsell_msg, rating)
                 data["review_postconsulta"] = construir_secuencia_review(esp, rating)
+                _opin = opinion_mejora.marcar_pendiente(data, seg, categoria)
                 save_session(phone, "IDLE", data)
                 log_event(phone, "secuencia_postconsulta_programada",
                           {"especialidad_origen": esp, "especialidad_destino": upsell_esp})
+                if _opin:
+                    return _btn_msg(
+                        "Qué bueno saberlo 😊 Nos alegra que te sientas bien.\n\n"
+                        + opinion_mejora.PREGUNTA,
+                        [opinion_mejora.BOTON_NADA],
+                    )
                 return (
                     "Qué bueno saberlo 😊 Nos alegra que te sientas bien.\n\n"
                     "_Escribe *menu* si necesitas algo más._"
@@ -5329,6 +5338,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # flujo de mover citas y le ofrecía la que acababa de tener (ya
             # atendida), que el bot anulaba (caso 2026-09-28).
             data["seg_control_esp"] = (esp or "").lower()
+            if opinion_mejora.marcar_pendiente(data, seg, categoria):
+                save_session(phone, state, data)
+                return _btn_msg(
+                    "Lamentamos escuchar eso 😟\n\n"
+                    + opinion_mejora.PREGUNTA + "\n\n"
+                    f"Si prefieres agendar otra consulta{' con ' + prof if prof else ''}, "
+                    "toca *Sí, agendar*.",
+                    [{"id": "seg_control", "title": "Sí, agendar"},
+                     opinion_mejora.BOTON_NADA]
+                )
             save_session(phone, state, data)
             return _btn_msg(
                 "Lamentamos escuchar eso 😟\n\n"
@@ -5350,6 +5369,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 data["rut_conocido"] = perfil["rut"]
                 data["nombre_conocido"] = perfil["nombre"]
             return await _iniciar_agendar(phone, data, upsell_esp)
+        if tl == "opinion_nada":
+            _resp_nada = opinion_mejora.declinar(phone, data)
+            save_session(phone, state, data)
+            return _resp_nada
         if tl == "no_control":
             data.pop("upsell_especialidad", None)
             if data.get("upsell_postconsulta"):
@@ -5585,10 +5608,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     data["upsell_postconsulta_ts"] = datetime.now(timezone.utc).isoformat()
                     data["upsell_postconsulta"] = construir_secuencia_upsell(esp, upsell_esp, upsell_msg, rating_libre)
                     data["review_postconsulta"] = construir_secuencia_review(esp, rating_libre)
+                    _opin = opinion_mejora.marcar_pendiente(data, seg_pendiente, clasificacion)
                     save_session(phone, "IDLE", data)
                     log_event(phone, "secuencia_postconsulta_programada",
                               {"especialidad_origen": esp, "especialidad_destino": upsell_esp,
                                "fuente": "texto_libre"})
+                    if _opin:
+                        return _btn_msg(
+                            "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
+                            + opinion_mejora.PREGUNTA,
+                            [opinion_mejora.BOTON_NADA],
+                        )
                     return (
                         "Qué bueno saberlo 😊 Nos alegra que te sientas mejor.\n\n"
                         "_Escribe *menu* si necesitas algo más._"
@@ -5613,6 +5643,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         except Exception:
                             log.warning("No se pudo enviar alerta peor a %s", ADMIN_ALERT_PHONE)
                     data["seg_control_esp"] = (esp or "").lower()
+                    if opinion_mejora.marcar_pendiente(data, seg_pendiente, clasificacion):
+                        save_session(phone, state, data)
+                        return _btn_msg(
+                            "Lamentamos escuchar eso 😟\n\n"
+                            + opinion_mejora.PREGUNTA + "\n\n"
+                            f"Si prefieres agendar otra consulta{' con ' + prof if prof else ''}, "
+                            "toca *Sí, agendar*.",
+                            [{"id": "seg_control", "title": "Sí, agendar"},
+                             opinion_mejora.BOTON_NADA]
+                        )
                     save_session(phone, state, data)
                     return _btn_msg(
                         "Lamentamos escuchar eso 😟\n\n"
@@ -6148,6 +6188,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                      meta_referral=_meta_referral_ctx)
         intent = result.get("intent", "otro")
         log_event(phone, "intent_detectado", {"intent": intent, "esp": result.get("especialidad")})
+
+        # ── Opinión libre tras la encuesta postconsulta (opinion_mejora.py) ──
+        # Solo si NO es un intent claro: agendar/cancelar/humano/info/menú se
+        # procesan normal y no se guardan como opinión.
+        if intent == "otro" and len(txt) >= opinion_mejora.LARGO_MIN \
+                and opinion_mejora.pendiente_vigente(data):
+            _resp_op = opinion_mejora.guardar(phone, data, txt)
+            save_session(phone, "IDLE", data)
+            return _resp_op
 
         # ── Guard post-takeover: si la recepcionista ya agendó manualmente,
         # bloquear intent=agendar para que el bot no re-inicie ese flujo.
