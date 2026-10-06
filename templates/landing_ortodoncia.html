@@ -214,7 +214,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       "name": "¿Cuándo atiende la ortodoncista?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "La Dra. Daniela Castillo atiende en Carampangue. La mayoría de las instalaciones y controles se hacen los sábados, de 09:00 a 19:00, y también algunos días de la semana: muchos pacientes lo prefieren porque no tienen que faltar al trabajo o al colegio. Escríbenos por WhatsApp para ver la próxima hora."
+        "text": "La evaluación con la dentista se agenda de lunes a sábado. La Dra. Daniela Castillo hace la mayoría de las instalaciones y controles los sábados, de 09:00 a 19:00, y también otros días de la semana: muchos pacientes lo prefieren porque no tienen que faltar al trabajo o al colegio. Escríbenos por WhatsApp para ver la próxima hora."
       }
     },
     {
@@ -470,6 +470,9 @@ p{margin:0}
 .sat-copy p{font-size:17px;line-height:1.6;color:var(--tinta-2);max-width:520px}
 .sat-copy p strong{color:var(--tinta);font-weight:600}
 .sat-copy .btn{margin-top:22px;width:100%;white-space:normal;line-height:1.25}
+.sat-copy .sat-sec{margin-top:12px}
+.sat-copy .sat-orto{margin-top:14px;font-size:15.5px}
+.kicker-2{display:inline-block;margin-top:18px}
 .towns{margin-top:28px;padding-top:20px;border-top:1px solid var(--linea);font-size:14px;color:var(--gris);line-height:1.7}
 .towns b{color:var(--tinta);font-weight:600}
 .towns i{font-style:normal;color:var(--gris-300);padding:0 6px}
@@ -732,6 +735,26 @@ details[open] .faq-answer{animation:faqin .26s var(--ease) both}
   .hero-ctas .btn{width:auto}
   .hero-meta{display:none}
 }
+
+/* Horario en dos tiempos: evaluación (L-S) y ortodoncia (sábados) */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.sat-duo{display:grid;grid-template-columns:minmax(0,1fr);gap:48px}
+.sat-col{display:flex;flex-direction:column;align-items:flex-start}
+.sat-col .sat-word{font:800 clamp(64px,19vw,132px)/.86 var(--display);letter-spacing:-.06em;color:var(--navy);margin:14px 0 0}
+.sat-col .sat-word span{display:block;font-size:.4em;letter-spacing:-.035em;line-height:1.05;color:var(--azul);margin-top:.18em}
+.sat-col-2 .sat-word{color:var(--azul)}
+.sat-col-2 .sat-word span{color:var(--navy)}
+.sat-hours{margin-top:18px;font-size:16px;font-weight:600;color:var(--tinta)}
+.sat-hours .nw{white-space:nowrap}
+@media (max-width:899px){.sat-hours .sep{display:none}.sat-hours .nw{display:block}}
+.sat-txt{margin-top:6px;font-size:15.5px;line-height:1.6;color:var(--tinta-2);max-width:460px}
+.sat-col .btn{margin-top:22px;width:100%;white-space:normal;line-height:1.25}
+@media (min-width:900px){
+  .sat-duo{grid-template-columns:repeat(2,minmax(0,1fr));gap:64px}
+  .sat-col-2{padding-left:64px;border-left:1px solid var(--gris-100)}
+  .sat-col .sat-word{font-size:clamp(80px,7.4vw,112px)}
+  .sat-col .btn{width:auto}
+}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -790,7 +813,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="hero-copy">
         <div class="kicker in" style="--d:0">Ortodoncia · Dra. Daniela Castillo</div>
         <h1 id="hero-h1" class="in" style="--d:1">Ortodoncia en Carampangue, <em>sin viajar a Concepción.</em></h1>
-        <p class="hero-lead in" style="--d:2"><span class="ld">Brackets con ortodoncista aquí mismo, en la Provincia de Arauco, con <strong>instalaciones y controles los sábados</strong>. Cada etapa tiene su precio publicado.</span><span class="ls"><strong>Instalaciones y controles los sábados</strong> · precios publicados.</span></p>
+        <p class="hero-lead in" style="--d:2"><span class="ld">Brackets con ortodoncista aquí mismo, en la Provincia de Arauco. <strong>Evaluación de lunes a sábado</strong>, y la mayoría de las instalaciones y controles, los sábados.</span><span class="ls"><strong>Evaluación de lunes a sábado</strong> · instalaciones y controles, sobre todo los sábados.</span></p>
 
         <dl class="ledger num" aria-label="Precios de ortodoncia">
           <div style="--i:0"><dt>Evaluación</dt><dd>$15.000</dd></div>
@@ -828,7 +851,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <span class="ph-tag"><svg width="16" height="16" aria-hidden="true"><use href="#i-pin"/></svg>Monsalve 102 · frente a la antigua estación</span>
         </div>
         <div class="sat-card" aria-hidden="true">
-          <span class="k">Instalaciones y controles</span>
+          <span class="k">La mayoría de las instalaciones y controles</span>
           <span class="d">Sábados</span>
           <span class="h num">09:00 – 19:00</span>
         </div>
@@ -1055,7 +1078,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div>
               <span class="role">Ortodoncista</span>
               <h3>Dra. Daniela Castillo</h3>
-              <p>Planifica tu tratamiento, instala los brackets y te acompaña en cada control. Atiende en Carampangue los <strong>sábados de 09:00 a 19:00</strong> y algunos días de la semana.</p>
+              <p>Planifica tu tratamiento, instala los brackets y te acompaña en cada control. Hace la mayoría de las instalaciones y controles los <strong>sábados, de 09:00 a 19:00</strong>, y también otros días de la semana.</p>
             </div>
           </article>
           <article class="person rv" style="--d:1">
@@ -1063,7 +1086,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div>
               <span class="role">Dentista general · evaluación</span>
               <h3>Dra. Javiera Burgos</h3>
-              <p>Hace tu evaluación inicial, solicita el estudio radiográfico y coordina tu paso a ortodoncia.</p>
+              <p>Hace tu evaluación inicial <strong>de lunes a sábado</strong>, solicita el estudio radiográfico y coordina tu paso a ortodoncia.</p>
             </div>
           </article>
         </div>
@@ -1075,17 +1098,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- ═══════════ SÁBADOS ═══════════ -->
 <section class="sat" aria-labelledby="sat-h2">
   <div class="wrap">
-    <div class="sat-grid">
-      <div class="rv">
-        <span class="kicker">Horario de ortodoncia</span>
-        <h2 id="sat-h2" class="sat-word">Sábados<span class="num">09:00 – 19:00</span></h2>
-      </div>
-      <div class="sat-copy rv" style="--d:1">
-        <p><strong>Instalaciones y controles en sábado</strong>, y también algunos días de la semana. No tienes que pedir permiso en el trabajo ni faltar al colegio.</p>
-        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20una%20evaluaci%C3%B3n%20de%20ortodoncia%20(web%3A%20landing_ortodoncia)&utm_source=landing_ortodoncia&utm_medium=mid_cta&utm_campaign=ortodoncia_arauco"
+    <h2 id="sat-h2" class="sr-only">Horarios de evaluación y de ortodoncia</h2>
+    <div class="sat-duo">
+      <div class="sat-col rv">
+        <span class="kicker">1 · Evaluación con la dentista</span>
+        <p class="sat-word">Lunes<span>a sábado</span></p>
+        <p class="sat-hours num"><span class="nw">Lunes a viernes 08:00–21:00</span> <span class="sep">·</span> <span class="nw">Sábado 09:00–14:00</span></p>
+        <p class="sat-txt">Es el primer paso: revisa tu caso y te deriva con la ortodoncista.</p>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20evaluaci%C3%B3n%20de%20ortodoncia%20%28web%3A%20landing_ortodoncia%20%C2%B7%20horario%20%C2%B7%20evaluacion%29&utm_source=landing_ortodoncia&utm_medium=horario_evaluacion&utm_campaign=ortodoncia_arauco"
            class="btn btn-wa btn-xl" target="_blank" rel="noopener" data-wa-btn="cta-medio">
           <svg width="20" height="20" aria-hidden="true"><use href="#i-wa"/></svg>
-          Ver la próxima hora por WhatsApp
+          Agendar mi evaluación
+        </a>
+      </div>
+      <div class="sat-col sat-col-2 rv" style="--d:1">
+        <span class="kicker">2 · Instalaciones y controles</span>
+        <p class="sat-word">Sábados<span class="num">09:00–19:00</span></p>
+        <p class="sat-hours">La mayoría se hacen los sábados, y también otros días de la semana.</p>
+        <p class="sat-txt">No tienes que pedir permiso en el trabajo ni faltar al colegio.</p>
+        <a href="https://wa.me/56966610737?text=Hola%2C%20ya%20estoy%20en%20tratamiento%20de%20ortodoncia%20y%20necesito%20hora%20de%20control%20%28web%3A%20landing_ortodoncia%20%C2%B7%20horario%20%C2%B7%20tratamiento%29&utm_source=landing_ortodoncia&utm_medium=horario_tratamiento&utm_campaign=ortodoncia_arauco"
+           class="btn btn-line btn-xl" target="_blank" rel="noopener" data-wa-btn="horario-tratamiento">
+          Ya estoy en tratamiento
         </a>
       </div>
     </div>
@@ -1162,7 +1195,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </details>
         <details class="faq-item">
           <summary>¿Cuándo atiende la ortodoncista? <span class="pm" aria-hidden="true"></span></summary>
-          <div class="faq-answer">La Dra. Daniela Castillo atiende en Carampangue. La mayoría de las instalaciones y controles se hacen los sábados, de 09:00 a 19:00, y también algunos días de la semana: muchos pacientes lo prefieren porque no tienen que faltar al trabajo o al colegio. Escríbenos por WhatsApp para ver la próxima hora.</div>
+          <div class="faq-answer">La evaluación con la dentista se agenda de lunes a sábado. La Dra. Daniela Castillo hace la mayoría de las instalaciones y controles los sábados, de 09:00 a 19:00, y también otros días de la semana: muchos pacientes lo prefieren porque no tienen que faltar al trabajo o al colegio. Escríbenos por WhatsApp para ver la próxima hora.</div>
         </details>
         <details class="faq-item">
           <summary>¿Dónde están ubicados? <span class="pm" aria-hidden="true"></span></summary>
@@ -1208,18 +1241,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
         </div>
         <div class="loc-card rv" style="--d:2">
-          <span class="kicker">Ortodoncia · instalaciones y controles</span>
-          <div class="sat-hl">
-            <span class="d">Sábados</span>
-            <span class="h num">09:00 – 19:00</span>
-          </div>
-          <p class="loc-note">Y algunos días de la semana. Ideal si trabajas o estudias: no tienes que pedir permiso.</p>
-          <span class="kicker">Dentista general · evaluación</span>
+          <span class="kicker">Evaluación · dentista general</span>
           <table class="hours num">
             <tr><td>Lunes a viernes</td><td>08:00 – 21:00</td></tr>
             <tr><td>Sábado</td><td>09:00 – 14:00</td></tr>
             <tr class="off"><td>Domingo</td><td>Cerrado</td></tr>
           </table>
+          <span class="kicker kicker-2">Ortodoncia · instalaciones y controles</span>
+          <div class="sat-hl">
+            <span class="d">Sobre todo sábados</span>
+            <span class="h num">09:00 – 19:00</span>
+          </div>
+          <p class="loc-note">También otros días de la semana.</p>
         </div>
       </div>
     </div>
