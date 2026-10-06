@@ -664,7 +664,7 @@ ECO_INFO: dict[str, dict] = {
         "evalua": "el flujo de sangre en vasos y órganos",
         "sirve": "estudiar várices, trombosis, circulación de las piernas u órganos",
         "preparacion": "Depende de la zona; en general no requiere preparación especial. Te confirmamos al agendar.",
-        "prof": _PARDO,
+        "prof": (_PARDO[0], 90000),  # Doppler cuesta más que el resto (confirmado por dueño 2026-10-06)
     },
     "transvaginal": {
         "nombre": "Ecografía transvaginal (ginecológica)",

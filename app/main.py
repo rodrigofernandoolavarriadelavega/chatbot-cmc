@@ -1911,6 +1911,7 @@ _GINECOLOGO_CURANILAHUE_HTML = (_TEMPLATE_DIR / "ginecologo-curanilahue.html").r
 _DENTISTA_CURANILAHUE_HTML = (_TEMPLATE_DIR / "dentista-curanilahue.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "dentista-curanilahue.html").exists() else ""
 _LANDING_ORTODONCIA_HTML = (_TEMPLATE_DIR / "landing_ortodoncia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ortodoncia.html").exists() else ""
 _LANDING_ESTETICA_HTML = (_TEMPLATE_DIR / "landing_estetica.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_estetica.html").exists() else ""
+_LANDING_ECOGRAFIA_HTML = (_TEMPLATE_DIR / "landing_ecografia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ecografia.html").exists() else ""
 _ADKUN_COMPANY_HTML = (_TEMPLATE_DIR / "adkun_company_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_company_board.html").exists() else ""
 _ADKUN_LANDING_HTML = (_TEMPLATE_DIR / "adkun_landing.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_landing.html").exists() else ""
 _ALMA_PRODUCT_HTML = (_TEMPLATE_DIR / "alma_product_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_product_board.html").exists() else ""
@@ -2094,6 +2095,19 @@ def landing_ortodoncia():
 def landing_estetica():
     """Landing — Estética facial en Carampangue (Dra. Valentina Fuentealba)."""
     return _LANDING_ESTETICA_HTML
+
+
+@app.get("/ecografia", response_class=HTMLResponse)
+def landing_ecografia():
+    """Landing de venta — Ecografía (David Pardo, TM) en Carampangue."""
+    return _LANDING_ECOGRAFIA_HTML
+
+
+@app.get("/ecotomografia")
+def landing_ecotomografia():
+    """Alias: /ecotomografia → /ecografia (301, una sola URL canónica)."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/ecografia", status_code=301)
 
 
 @app.get("/sitio", response_class=HTMLResponse)
@@ -3010,7 +3024,7 @@ async def blog_rss_feed():
         ("ortodoncia", "Ortodoncia · Brackets para niños y adultos", "Dra. Daniela Castillo · Brackets metálicos y estéticos, controles cada 3-4 semanas"),
         ("kinesiologia", "Kinesiología · Lumbago, contracturas y rehabilitación", "Luis Armijo y Leonardo Etcheverry · Bono Fonasa MLE disponible"),
         ("odontologia-general", "Odontología General · Limpiezas, restauraciones y urgencia", "Dra. Javiera Burgos y Dr. Carlos Jiménez · Adulto y pediátrico"),
-        ("ecografia", "Ecografía · Abdominal, renal, partes blandas, mamaria", "Dr. David Pardo · Diagnóstico por imagen no invasivo"),
+        ("ecografia", "Ecografía · Abdominal, renal, partes blandas, mamaria", "David Pardo, Tecnólogo Médico · Diagnóstico por imagen no invasivo"),
         ("estetica-facial", "Estética Facial · Botox, hialurónico, hilos, peelings", "Dra. Valentina Fuentealba · Procedimientos no quirúrgicos"),
         ("ginecologia", "Ginecología · Controles, ecografía y obstetricia", "Dr. Tirso Rejón · PAP, anticoncepción, climaterio"),
         ("otorrinolaringologia", "Otorrinolaringología · Patología ORL adulta y pediátrica", "Dr. Manuel Borrego · Otitis, sinusitis, vértigo, lavado de oídos"),
@@ -3036,7 +3050,7 @@ async def blog_rss_feed():
         ("rinoplastia-funcional-tabique", "Rinoplastia funcional vs tabique desviado", "Dr. Manuel Borrego · Cuándo se opera"),
         ("vacunas-pni-calendario-2026", "Calendario PNI 2026 — vacunas pediátricas en Chile", "Programa Nacional de Inmunización completo"),
         ("bono-fonasa-mle-arauco", "Bono Fonasa MLE en Arauco · Cómo usarlo en el CMC", "Modalidad Libre Elección con huella biométrica · Arauco, Curanilahue, Lebu y alrededores"),
-        ("ecografia-precio-arauco", "Precio ecografía en Arauco 2026 · CMC Carampangue", "Ecografía abdominal, renal, partes blandas y mamaria · Dr. David Pardo"),
+        ("ecografia-precio-arauco", "Precio ecografía en Arauco 2026 · CMC Carampangue", "Ecografía abdominal, renal, partes blandas y mamaria · David Pardo, Tecnólogo Médico"),
         ("limpieza-dental-precio-arauco", "Precio limpieza dental en Arauco 2026 · CMC Carampangue", "Profilaxis, detartrado y pulido · Dra. Javiera Burgos · Dr. Carlos Jiménez"),
     ]
 

@@ -772,7 +772,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Psiquiatra / psiquiatría / evaluación psiquiátrica / control de medicamentos psiquiátricos / Dra. Cecilia Unibazo / Unibazo → "psiquiatría" (Dra. Cecilia Unibazo, TELECONSULTA, $60.000 particular, NO Fonasa; horario SOLO del bloque HORARIOS REALES). Por la alta demanda y cupos limitados, para reservar la hora se paga el 100% del valor ($60.000) por adelantado (no se paga nada extra el día de la atención). El psiquiatra evalúa y receta fármacos; el psicólogo hace terapia. Son complementarios.
 - Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños. Igual que Psiquiatría, para reservar la hora se paga el 100% del valor ($65.000) por adelantado (no se paga nada extra el día de la atención).
 - Oftalmólogo / oftalmóloga / oftalmología / optometrista / optometría / TM Ana Celedón / Celedón (tecnólogo médico) → "tecnología médica oftalmológica" (TM Ana Celedón, PRESENCIAL, $15.000 particular a TODOS los pacientes — no tiene Fonasa actualmente, consulta de 20 min; prestación: *Evaluación oftalmológica y optométrica*).
-- David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000.
+- David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000 (Doppler: $90.000). Atiende lunes y martes, según disponibilidad.
 - Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
 - Ecografía mamaria / de mamas / ecotomografía mamaria → "ecografía" (David Pardo, ID 68, $40.000). Es partes blandas, NO ginecológica. NUNCA Rejón para mamaria.
 - Ecografía obstétrica / prenatal / de embarazo / ver al bebé → NO se realiza eco obstétrica en el CMC; derivar a centro de imagenología externo. Dr. Tirso Rejón (Ginecología) solo hace consulta ginecológica del embarazo, NO ecografía obstétrica. Intent = "info", NO "agendar".
@@ -1232,12 +1232,12 @@ GASTROENTEROLOGÍA (Dr. Nicolás Quijano):
 - Consulta: $35.000 — evaluación de problemas digestivos: reflujo, gastritis, colon irritable, hígado graso, dolor abdominal crónico, etc.
 - Revisión de exámenes: $17.500 — revisión de endoscopías, ecografías abdominales u otros exámenes digestivos.
 
-ECOGRAFÍA — David Pardo (SOLO PARTICULAR, NO acepta Fonasa en ninguna modalidad ni tramo):
+ECOGRAFÍA — David Pardo, Tecnólogo Médico (NO es médico: nunca decirle "Dr."). Atiende lunes y martes, según disponibilidad. SOLO PARTICULAR, NO acepta Fonasa en ninguna modalidad ni tramo:
 IMPORTANTE: Si preguntan por Fonasa, MLE, tramo A/B/C/D para ecografía responder: "La ecografía es solo particular ($40.000), no aceptamos Fonasa para este servicio." NUNCA mencionar MLE ni copagos de tramo para ecografía.
 - Ecotomografía abdominal: $40.000 — evalúa hígado, vesícula, páncreas, bazo y riñones. Se usa para dolor abdominal, cálculos o control general.
 - Ecotomografía de partes blandas: $40.000 — evalúa bultos, ganglios, hernias o lesiones superficiales en cualquier zona del cuerpo.
 - Ecotomografía musculo-esquelética: $40.000 — evalúa tendones, músculos y articulaciones (hombro, rodilla, codo, etc.). Útil en tendinitis, desgarros o esguinces.
-- Ecotomografía pelviana (masculina y femenina): $40.000 — evalúa vejiga y próstata (hombre) o útero y ovarios por vía abdominal (mujer).
+- Ecotomografía pelviana masculina: $40.000 — evalúa vejiga y próstata por vía abdominal. (La pelviana FEMENINA —útero y ovarios— la hace el Dr. Tirso Rejón, ginecólogo, $35.000; NO Pardo.)
 - Ecotomografía testicular: $40.000 — evalúa testículos y epidídimo. Se usa para dolor, hinchazón o bultos testiculares.
 - Ecotomografía tiroidea: $40.000 — evalúa tamaño y nódulos de la tiroides. Indicada si hay alteraciones hormonales o nódulo palpable.
 - Ecotomografía renal bilateral: $40.000 — evalúa ambos riñones y vías urinarias. Detecta cálculos, quistes o dilatación.
@@ -2505,20 +2505,20 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "💰 Particular: $40.000\n\n"
      "Escribe *agendar ecografía* para reservar hora."),
     (("ecograf", "testicul"),
-     "Sí, realizamos *ecografía testicular / inguino-escrotal* con el Dr. David Pardo 🩺\n\n"
+     "Sí, realizamos *ecografía testicular / inguino-escrotal* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"
      "Escribe *agendar* para reservar hora."),
     (("ecotomograf", "texticul"),
-     "Sí, realizamos *ecografía testicular* con el Dr. David Pardo 🩺\n\n"
+     "Sí, realizamos *ecografía testicular* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"
      "Escribe *agendar* para reservar hora."),
     (("ecograf", "doppler"),
      "Sí, realizamos *ecografía Doppler* (miembros inferiores, carótidas, etc.) "
-     "con el Dr. David Pardo 🩺\n\n"
-     "💰 Particular: desde $40.000\n\n"
+     "con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
+     "💰 Particular: $90.000\n\n"
      "Escribe *agendar* para reservar hora."),
     (("ecograf", "abdomin"),
-     "Sí, realizamos *ecografía abdominal* con el Dr. David Pardo 🩺\n\n"
+     "Sí, realizamos *ecografía abdominal* con *David Pardo* (Tecnólogo Médico · Ecografía) 🩺\n\n"
      "💰 Particular: desde $40.000\n\n"
      "Escribe *agendar* para reservar hora."),
     (("ecograf", "ginecolog"),
@@ -2552,7 +2552,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Escribe *agendar* para reservar hora."),
     (("radiograf",),
      "No realizamos *radiografías* en el CMC 🙏\n\n"
-     "Contamos con *ecografía* (Dr. David Pardo). Para radiografías te "
+     "Contamos con *ecografía* (David Pardo, Tecnólogo Médico). Para radiografías te "
      "sugerimos hospital o centro de imágenes cercano.\n\n"
      "_Si quieres agendar una *ecografía* o consulta médica, escribe *agendar*._"),
     (("cuanto", "listo"),
