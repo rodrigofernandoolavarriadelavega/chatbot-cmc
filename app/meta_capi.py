@@ -39,6 +39,42 @@ def _cfg():
         return pixel, token, tecode
 
 
+def _extra_dataset_ids() -> list[str]:
+    try:
+        from config import META_CAPI_EXTRA_DATASET_IDS
+        return list(META_CAPI_EXTRA_DATASET_IDS)
+    except ImportError:
+        import os
+        return [x.strip() for x in os.getenv("META_CAPI_EXTRA_DATASET_IDS", "").split(",") if x.strip()]
+
+
+# Referencias a las tareas de copia para que el GC no las mate a medio vuelo.
+_extra_tasks: set = set()
+
+
+async def _send_copy(dataset_id: str, payload: dict, event_name: str, eid: str, attr: str) -> None:
+    """Copia best-effort del evento a un dataset adicional (2 intentos).
+
+    Nunca afecta al envío principal ni al flujo: solo loguea el resultado.
+    """
+    url = f"https://graph.facebook.com/v22.0/{dataset_id}/events"
+    for attempt in range(2):
+        try:
+            r = await _get_client().post(url, json=payload)
+            if r.status_code == 200:
+                log.info("CAPI copia %s dataset=%s event_id=%s received=%s attr=%s",
+                         event_name, dataset_id, eid[:8],
+                         (r.json() or {}).get("events_received", "?"), attr)
+                return
+            log.warning("CAPI copia %s dataset=%s HTTP %s: %s",
+                        event_name, dataset_id, r.status_code, r.text[:300])
+            if 400 <= r.status_code < 500 and r.status_code != 429:
+                return
+        except Exception as e:
+            log.warning("CAPI copia %s dataset=%s error: %s", event_name, dataset_id, e)
+        await asyncio.sleep(1.0)
+
+
 def _waba_id() -> str:
     try:
         from config import META_WABA_ID
@@ -257,6 +293,17 @@ async def send_event(
 
     # Limpiar nulos antes de enviar
     payload = _clean_none(payload)
+
+    # Copia a datasets adicionales (dataset ligado a la WABA). Ese dataset SOLO
+    # acepta business_messaging con ctwa_clid + WABA (probado 5-oct: sin clic →
+    # 400 "Falta el identificador de clic a WhatsApp"; con page_id → 400 "no hay
+    # ninguna página asociada"). El resto sigue yendo solo al píxel principal.
+    if action_source == "business_messaging" and user_data.get("ctwa_clid"):
+        for _ds in _extra_dataset_ids():
+            if _ds and _ds != pixel_id:
+                _t = asyncio.create_task(_send_copy(_ds, payload, event_name, eid, "ctwa"))
+                _extra_tasks.add(_t)
+                _t.add_done_callback(_extra_tasks.discard)
 
     # Endpoint
     url = f"https://graph.facebook.com/v22.0/{pixel_id}/events"

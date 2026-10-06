@@ -757,6 +757,11 @@ META_AUDIENCIA_EXCLUSION_EXIGE_CONSENT = os.getenv(
 META_PIXEL_ID             = os.getenv("META_PIXEL_ID", "")
 META_CAPI_ACCESS_TOKEN    = os.getenv("META_CAPI_ACCESS_TOKEN", "") or os.getenv("META_ACCESS_TOKEN", "")
 META_CAPI_TEST_EVENT_CODE = os.getenv("META_CAPI_TEST_EVENT_CODE", "")
+# Datasets ADICIONALES que reciben copia de los eventos de mensajería (coma-separados).
+# 5-oct-2026: la WABA quedó ligada al dataset 1081740194706002 ("Centro Médico
+# Carampangue Event Data"); META_PIXEL_ID (915…) es píxel web sin WABA → Meta no
+# cruzaba ctwa_clid con el anuncio. Vacío = comportamiento anterior.
+META_CAPI_EXTRA_DATASET_IDS = [x.strip() for x in os.getenv("META_CAPI_EXTRA_DATASET_IDS", "").split(",") if x.strip()]
 
 # ── Agendador público online (cara pública premium del agendamiento) ──────────
 # Crea citas REALES en Medilink desde una página pública sin login.
