@@ -1721,6 +1721,9 @@ import orto_embudo_routes
 app.include_router(orto_embudo_routes.router)   # embudo de ortodoncia previo a la instalacion
 import campanas_meta_routes
 app.include_router(campanas_meta_routes.router)  # SOLO DUENO: gasto Meta -> conversacion -> cita -> atencion
+import radar_routes
+app.include_router(radar_routes.router)   # SOLO DUENO: Alma Radar (API, solo SQLite/cache, sin Medilink ni Meta)
+app.include_router(radar_routes.pagina)   # /alma/radar
 import orto_fotos_routes
 app.include_router(orto_fotos_routes.router)     # registro fotografico de avance + nota dictada
 

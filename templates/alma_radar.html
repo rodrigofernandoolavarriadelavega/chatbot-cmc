@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Alma Radar — CMC</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="/static/fonts/montserrat-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Montserrat';src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations');font-weight:100 900;font-style:normal;font-display:swap}
+:root{
+  --bg:#EEF3F8;--bg-glass:rgba(238,243,248,.9);--surface:#FFFFFF;--surface-2:#F5F8FB;--surface-3:#EAF0F6;
+  --ink:#0E2235;--ink-2:#2A4157;--muted:#56697D;--faint:#93A3B4;
+  --line:#E2E9F0;--line-2:#CBD8E4;--card-line:rgba(15,63,104,.05);
+  --navy:#0F3F68;--navy-deep:#0a2e4d;--azul:#1172AB;--aqua:#4FBECE;--aqua-ink:#0B7383;
+  --aqua-soft:rgba(79,190,206,.16);--azul-soft:rgba(17,114,171,.10);
+  --sel-bg:#0F3F68;--sel-ink:#FFFFFF;--on-accent:#FFFFFF;--on-primary:#FFFFFF;
+  --ok:#16A34A;--ok-ink:#11733A;--ok-soft:#E5F5EB;
+  --warn:#E08A12;--warn-ink:#9A5500;--warn-soft:#FDF0DC;
+  --bad:#DC2626;--bad-ink:#B11E1E;--bad-soft:#FCE9E9;
+  --vis:#7B61D9;--vis-ink:#5A3FBD;--vis-soft:#EFEBFC;
+  --hdr-a:#0a2e4d;--hdr-b:#1172AB;--hdr-ink:#FFFFFF;--hdr-mut:rgba(255,255,255,.74);--hdr-chip:rgba(255,255,255,.10);--hdr-line:rgba(255,255,255,.18);--glow:rgba(79,190,206,.50);
+  --sea:#DDEBF5;--land:#F8FBFD;--road:#C2D1DF;
+  --grid:#E7EDF3;--bar-mute:#C9D5E1;--track:#EDF2F7;
+  --toast-bg:#0E2235;--toast-ink:#F1F6FA;
+  --c-ig:#C2477E;--c-fb:#2F6FD6;--c-wa:#1E9E6A;--c-ms:#7A5BE0;--c-go:#0E8FA0;--c-maps:#3E9C80;--c-ads:#8AA1B6;
+  --c-ref:#C9732A;--c-qr:#94683E;--c-tel:#5B7FA6;--c-rec:#0F3F68;--c-conv:#A8507A;
+  --sh-xs:0 1px 2px rgba(15,63,104,.06);
+  --sh-sm:0 1px 2px rgba(15,63,104,.05),0 8px 22px -10px rgba(15,63,104,.16);
+  --sh-md:0 14px 34px -12px rgba(15,63,104,.26);
+  --sh-lg:0 28px 64px -18px rgba(10,46,77,.40);
+  --r:16px;--r-sm:11px;--pill:999px;
+  --ease:cubic-bezier(.2,.7,.2,1);--back:cubic-bezier(.34,1.36,.64,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#08131D;--bg-glass:rgba(8,19,29,.88);--surface:#0F1F2E;--surface-2:#132739;--surface-3:#183046;
+  --ink:#E6EEF6;--ink-2:#C0CDDA;--muted:#93A6B9;--faint:#5E7489;
+  --line:#1C3144;--line-2:#29445C;--card-line:#172B3D;
+  --navy:#0F3F68;--navy-deep:#0a2e4d;--azul:#3D9BD6;--aqua:#5FD0DF;--aqua-ink:#74D8E5;
+  --aqua-soft:rgba(95,208,223,.14);--azul-soft:rgba(61,155,214,.16);
+  --sel-bg:#3D9BD6;--sel-ink:#06121C;--on-accent:#FFFFFF;--on-primary:#06121C;
+  --ok:#22C55E;--ok-ink:#62E096;--ok-soft:rgba(34,197,94,.14);
+  --warn:#F2A33A;--warn-ink:#FFC56B;--warn-soft:rgba(242,163,58,.15);
+  --bad:#F05252;--bad-ink:#FF8D8D;--bad-soft:rgba(240,82,82,.15);
+  --vis:#9C86F0;--vis-ink:#BBAAFF;--vis-soft:rgba(156,134,240,.16);
+  --hdr-a:#061827;--hdr-b:#0C5585;--hdr-chip:rgba(255,255,255,.08);--hdr-line:rgba(255,255,255,.14);--glow:rgba(95,208,223,.38);
+  --sea:#0D2537;--land:#10222F;--road:#2A4560;
+  --grid:#182C3E;--bar-mute:#2B4459;--track:#172A3B;
+  --toast-bg:#E6EEF6;--toast-ink:#0E2235;
+  --c-ig:#E46EA2;--c-fb:#5E95F2;--c-wa:#36C48C;--c-ms:#A08AF7;--c-go:#33BCCB;--c-maps:#62C5A5;--c-ads:#7C93A8;
+  --c-ref:#EB9C55;--c-qr:#C7996C;--c-tel:#8AAAD0;--c-rec:#8DBCE6;--c-conv:#D884AA;
+  --sh-xs:0 1px 2px rgba(2,9,16,.4);
+  --sh-sm:0 1px 2px rgba(2,9,16,.35),0 10px 24px -12px rgba(2,9,16,.6);
+  --sh-md:0 16px 36px -12px rgba(2,9,16,.7);
+  --sh-lg:0 30px 70px -18px rgba(2,9,16,.85);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#08131D;--bg-glass:rgba(8,19,29,.88);--surface:#0F1F2E;--surface-2:#132739;--surface-3:#183046;
+  --ink:#E6EEF6;--ink-2:#C0CDDA;--muted:#93A6B9;--faint:#5E7489;
+  --line:#1C3144;--line-2:#29445C;--card-line:#172B3D;
+  --navy:#0F3F68;--navy-deep:#0a2e4d;--azul:#3D9BD6;--aqua:#5FD0DF;--aqua-ink:#74D8E5;
+  --aqua-soft:rgba(95,208,223,.14);--azul-soft:rgba(61,155,214,.16);
+  --sel-bg:#3D9BD6;--sel-ink:#06121C;--on-accent:#FFFFFF;--on-primary:#06121C;
+  --ok:#22C55E;--ok-ink:#62E096;--ok-soft:rgba(34,197,94,.14);
+  --warn:#F2A33A;--warn-ink:#FFC56B;--warn-soft:rgba(242,163,58,.15);
+  --bad:#F05252;--bad-ink:#FF8D8D;--bad-soft:rgba(240,82,82,.15);
+  --vis:#9C86F0;--vis-ink:#BBAAFF;--vis-soft:rgba(156,134,240,.16);
+  --hdr-a:#061827;--hdr-b:#0C5585;--hdr-chip:rgba(255,255,255,.08);--hdr-line:rgba(255,255,255,.14);--glow:rgba(95,208,223,.38);
+  --sea:#0D2537;--land:#10222F;--road:#2A4560;
+  --grid:#182C3E;--bar-mute:#2B4459;--track:#172A3B;
+  --toast-bg:#E6EEF6;--toast-ink:#0E2235;
+  --c-ig:#E46EA2;--c-fb:#5E95F2;--c-wa:#36C48C;--c-ms:#A08AF7;--c-go:#33BCCB;--c-maps:#62C5A5;--c-ads:#7C93A8;
+  --c-ref:#EB9C55;--c-qr:#C7996C;--c-tel:#8AAAD0;--c-rec:#8DBCE6;--c-conv:#D884AA;
+  --sh-xs:0 1px 2px rgba(2,9,16,.4);
+  --sh-sm:0 1px 2px rgba(2,9,16,.35),0 10px 24px -12px rgba(2,9,16,.6);
+  --sh-md:0 16px 36px -12px rgba(2,9,16,.7);
+  --sh-lg:0 30px 70px -18px rgba(2,9,16,.85);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:140px}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 14px/1.5 Montserrat,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;transition:background .25s var(--ease),color .25s var(--ease)}
+h1,h2,h3,p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--aqua);outline-offset:2px;border-radius:8px}
+.num,.n{font-variant-numeric:tabular-nums}
+svg.i{flex:none;display:block}
+
+/* ---------- Header ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:linear-gradient(118deg,var(--hdr-a) 0%,var(--hdr-b) 100%);color:var(--hdr-ink);overflow:hidden;box-shadow:var(--sh-md)}
+.top::after{content:"";position:absolute;right:-60px;top:-150px;width:420px;height:320px;background:radial-gradient(closest-side,var(--glow),transparent);pointer-events:none}
+.top-in{max-width:1480px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;gap:16px;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.iso{width:40px;height:40px;border-radius:12px;background:var(--hdr-chip);border:1px solid var(--hdr-line);display:grid;place-items:center;flex:none}
+.brand-t{min-width:0}
+.brand-t b{display:block;font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1.15}
+.brand-t span{display:block;font-size:12.5px;color:var(--hdr-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-r{margin-left:auto;display:flex;align-items:center;gap:10px;flex:none}
+.mode{display:inline-flex;align-items:center;gap:9px;height:32px;padding:0 13px;border-radius:var(--pill);background:var(--hdr-chip);border:1px solid var(--hdr-line);font-size:12.5px;font-weight:600;white-space:nowrap}
+.dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--aqua);flex:none}
+.dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--aqua);animation:ping 1.8s var(--ease) infinite}
+@keyframes ping{from{transform:scale(1);opacity:.75}to{transform:scale(3.2);opacity:0}}
+.clock{font-size:12.5px;color:var(--hdr-mut);font-weight:600;white-space:nowrap}
+.clock b{color:var(--hdr-ink);font-weight:600}
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--hdr-line);background:var(--hdr-chip);color:var(--hdr-ink);display:grid;place-items:center;cursor:pointer;transition:transform .15s var(--ease),background .2s}
+.icon-btn:hover{background:var(--hdr-line)}
+.icon-btn:active{transform:scale(.94)}
+
+/* ---------- Shell / rail ---------- */
+.shell{max-width:1480px;margin:0 auto;padding:24px;display:grid;grid-template-columns:262px minmax(0,1fr);gap:28px;align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 88px);max-height:calc(100dvh - 112px);overflow:auto;scrollbar-width:thin;padding-right:4px}
+.rg{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:16px 12px 6px}
+.rg:first-child{padding-top:0}
+.ri{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:8px 10px;border:0;background:transparent;color:var(--ink-2);font-size:13.5px;font-weight:600;border-radius:12px;cursor:pointer;text-align:left;transition:background .18s var(--ease),color .18s var(--ease),box-shadow .18s var(--ease)}
+.ri .rn{font-size:11px;color:var(--muted);width:18px;flex:none;font-variant-numeric:tabular-nums}
+.ri svg{color:var(--muted)}
+.ri .rt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sd{width:8px;height:8px;border-radius:50%;flex:none}
+.sd.prod{background:var(--ok)}.sd.cerca{background:var(--warn)}.sd.vision{background:var(--vis)}
+.ri:hover{background:var(--surface)}
+.ri[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--sh-sm)}
+.ri[aria-current="true"] svg{color:var(--aqua-ink)}
+.ri[aria-current="true"]::before{content:"";position:absolute;left:-2px;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--aqua)}
+.rail-legend{margin-top:18px;padding:14px;border-radius:14px;background:var(--surface);box-shadow:var(--sh-xs);border:1px solid var(--card-line);font-size:12.5px;color:var(--ink-2)}
+.rail-legend .lg{display:flex;align-items:center;gap:8px;padding:3px 0}
+.rail-legend .lg b{margin-left:auto;font-variant-numeric:tabular-nums}
+.rail-legend p{color:var(--muted);font-size:11px;margin-top:8px;line-height:1.45}
+.main{min-width:0}
+.mod>*+*{margin-top:20px}
+.mod[hidden]{display:none}
+.mod.enter>*{animation:rise .32s var(--ease) both}
+.mod.enter>*:nth-child(2){animation-delay:.04s}.mod.enter>*:nth-child(3){animation-delay:.08s}.mod.enter>*:nth-child(4){animation-delay:.12s}.mod.enter>*:nth-child(5){animation-delay:.16s}.mod.enter>*:nth-child(n+6){animation-delay:.2s}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- Module head ---------- */
+.mh{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,350px);gap:24px;align-items:end;padding:4px 0 4px}
+.eyebrow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--aqua-ink);font-weight:600}
+.mh h1{font-size:32px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin:6px 0 8px}
+.lede{font-size:15px;color:var(--ink-2);max-width:64ch;line-height:1.55}
+.dist{border-radius:14px;padding:12px 14px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--sh-xs);min-width:0}
+.dist p{font-size:12.5px;color:var(--ink-2);margin-top:8px;line-height:1.5}
+.st{display:inline-flex;align-items:center;gap:7px;height:24px;padding:0 10px;border-radius:var(--pill);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st.prod{background:var(--ok-soft);color:var(--ok-ink)}
+.st.cerca{background:var(--warn-soft);color:var(--warn-ink)}
+.st.vision{background:var(--vis-soft);color:var(--vis-ink)}
+.tag{text-transform:none;display:inline-flex;align-items:center;height:20px;font-size:11px;font-weight:600;padding:0 8px;border-radius:var(--pill);white-space:nowrap;letter-spacing:.01em}
+.tag.real{background:var(--aqua-soft);color:var(--aqua-ink)}
+.tag.ilus{color:var(--muted);border:1px dashed var(--line-2)}
+
+/* ---------- Cards, grids ---------- */
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-sm);padding:20px;min-width:0;border:1px solid var(--card-line)}
+.ch{display:flex;align-items:center;gap:12px;margin-bottom:16px;min-width:0}
+.ch-ic{width:34px;height:34px;border-radius:10px;background:var(--aqua-soft);color:var(--aqua-ink);display:grid;place-items:center;flex:none}
+.ch-t{min-width:0;flex:1}
+.ch h2{font-size:15px;font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.ch .sub{font-size:12.5px;color:var(--muted);line-height:1.4}
+.ch .r{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.grid{display:grid;gap:20px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g-75{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+.g-57{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.kpi{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-sm);padding:16px 18px;border:1px solid var(--card-line);min-width:0;position:relative;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.kl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.kv{font-size:25px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:6px 0 2px;line-height:1.15}
+.ks{font-size:12.5px;color:var(--muted);line-height:1.45}
+.kpi.alert{box-shadow:inset 3px 0 0 var(--bad),var(--sh-sm)}
+.kpi.alert .kv{color:var(--bad-ink)}
+.kpi.good .kv{color:var(--ok-ink)}
+.kpi.accent{box-shadow:inset 3px 0 0 var(--aqua),var(--sh-sm)}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:12px}
+.callout{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);font-size:13px;color:var(--ink-2);line-height:1.5}
+.callout svg{color:var(--aqua-ink);margin-top:2px}
+.callout.warn svg{color:var(--warn-ink)}
+.callout b{color:var(--ink)}
+
+/* ---------- Buttons, chips ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;transition:transform .12s var(--ease),box-shadow .18s var(--ease),background .18s var(--ease),color .18s}
+.btn:hover{box-shadow:var(--sh-sm)}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--azul);border-color:transparent;color:var(--on-primary)}
+.btn-sm{min-height:34px;padding:0 12px;font-size:12.5px;border-radius:10px}
+.btn.done{background:var(--ok-soft);color:var(--ok-ink);border-color:transparent;cursor:default;box-shadow:none}
+.btn[disabled]:not(.done){opacity:.55;cursor:not-allowed}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:36px;padding:0 14px;border-radius:var(--pill);border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap;transition:background .18s var(--ease),color .18s var(--ease),border-color .18s}
+.chip:hover{border-color:var(--aqua)}
+.chip[aria-pressed="true"]{background:var(--sel-bg);color:var(--sel-ink);border-color:transparent}
+@media (pointer:coarse){.btn{min-height:44px}.chip{min-height:44px}.btn-sm{min-height:44px}}
+
+/* ---------- Tables ---------- */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -20px;padding:0 20px;scrollbar-width:thin}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+.tbl th:first-child,.tbl td:first-child{padding-left:0}
+.tbl th:last-child,.tbl td:last-child{padding-right:0}
+.tbl .n{text-align:right}
+.tbl tbody tr{transition:background .15s}
+.tbl tbody tr:hover td{background:var(--surface-2)}
+.tbl tfoot td{font-weight:800;border-bottom:0;padding-top:12px}
+.cn{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.sw{width:10px;height:10px;border-radius:3px;flex:none}
+.pos{color:var(--ok-ink);font-weight:600}.neg{color:var(--bad-ink);font-weight:600}.wrn{color:var(--warn-ink);font-weight:600}
+
+/* ---------- Bars ---------- */
+.hb{display:grid;grid-template-columns:minmax(0,170px) minmax(60px,1fr) 52px 104px;gap:12px;align-items:center;padding:7px 0;font-size:14px}
+.hb-l{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.hb-t{height:10px;border-radius:6px;background:var(--track);overflow:hidden;position:relative}
+.hb-t i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--azul);transform-origin:left center;animation:grow .7s var(--ease) both}
+.hb-t i.w{background:var(--warn)}.hb-t i.a{background:var(--aqua)}.hb-t i.m{background:var(--bar-mute)}.hb-t i.o{background:var(--ok)}.hb-t i.v{background:var(--vis)}.hb-t i.b{background:var(--bad)}
+.hb-v{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:12.5px;white-space:nowrap}
+.hb-m{text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;white-space:nowrap;font-weight:600}
+.hb.hot .hb-l{color:var(--ink)}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.hb.fc{grid-template-columns:minmax(0,150px) minmax(60px,1fr) 64px 110px}
+.hb2{display:grid;grid-template-columns:minmax(0,160px) minmax(60px,1fr) auto;gap:12px;align-items:center;padding:6px 0;font-size:14px}
+.chart{display:block;overflow:visible}
+.chart text{font-family:Montserrat,system-ui,sans-serif}
+.cwrap{min-width:0;position:relative}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+
+/* ---------- Pulse (hero) ---------- */
+.pulse{padding:0;overflow:hidden;position:relative}
+.pulse::before{content:"";position:absolute;inset:0;background:radial-gradient(80% 120% at 85% -20%,var(--aqua-soft),transparent 60%);pointer-events:none}
+.pulse-head{display:flex;gap:20px;align-items:flex-end;justify-content:space-between;padding:20px 20px 0;position:relative;flex-wrap:wrap}
+.pulse-n{display:flex;align-items:baseline;gap:10px;margin-top:4px;flex-wrap:wrap}
+.pulse-n b{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.pulse-n span{font-size:14px;color:var(--ink-2)}
+.pulse-n b.tick{animation:tick .35s var(--back)}
+@keyframes tick{0%{transform:translateY(6px);opacity:.3}100%{transform:none;opacity:1}}
+.pulse-leg{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:560px}
+.pl{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:var(--pill);background:var(--surface-2);border:1px solid var(--line);font-size:12.5px;font-weight:600;white-space:nowrap}
+.pl i{width:8px;height:8px;border-radius:50%}
+.pl b{font-variant-numeric:tabular-nums}
+.pulse-cv{position:relative;height:190px;margin-top:8px}
+.pulse-cv canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pulse-foot{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 20px 16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap;position:relative}
+
+/* ---------- Feed ---------- */
+.feed{list-style:none;margin:0;padding:0;position:relative}
+.fi{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}
+.fi:last-child{border-bottom:0}
+.fi-dot{width:10px;height:10px;border-radius:50%;margin-top:5px}
+.fi-t{font-size:14px;line-height:1.4}
+.fi-t b{font-weight:600}
+.fi-d{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+.fi time{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fi.new{animation:feedin .42s var(--back) both}
+.fi.new .fi-dot{animation:dotpop .9s var(--ease)}
+@keyframes feedin{from{opacity:0;transform:translateY(-10px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes dotpop{0%{box-shadow:0 0 0 0 var(--aqua-soft)}50%{box-shadow:0 0 0 8px var(--aqua-soft)}100%{box-shadow:0 0 0 0 transparent}}
+.pill{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--pill);font-size:11px;font-weight:600;margin-left:6px;vertical-align:1px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok-ink)}.pill.info{background:var(--azul-soft);color:var(--azul)}.pill.warn{background:var(--warn-soft);color:var(--warn-ink)}.pill.bad{background:var(--bad-soft);color:var(--bad-ink)}.pill.mut{background:var(--surface-3);color:var(--muted)}.pill.vis{background:var(--vis-soft);color:var(--vis-ink)}
+:root[data-theme="dark"] .pill.info{color:var(--aqua-ink)}
+
+/* ---------- Decisions ---------- */
+.dec{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.dec:last-child{border-bottom:0;padding-bottom:0}
+.dec:first-child{padding-top:0}
+.dec-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--azul-soft);color:var(--azul)}
+.dec h3{font-size:15px;font-weight:600;line-height:1.35}
+.dec p{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.dec .imp{font-size:12.5px;font-weight:600;color:var(--ok-ink);margin-top:4px}
+.dec-a{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+
+/* distance map */
+.dm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.dm-col{border-radius:14px;padding:14px;background:var(--surface-2);border:1px solid var(--line);min-width:0}
+.dm-col h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px}
+.dm-col h3 b{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted)}
+.dm-i{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;padding:7px 8px;margin:0 -8px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);min-height:36px}
+.dm-i:hover{background:var(--surface)}
+.dm-i span{font-size:11px;color:var(--muted);width:20px;font-variant-numeric:tabular-nums}
+
+/* ---------- Sliders ---------- */
+.rng{width:100%;appearance:none;-webkit-appearance:none;height:6px;border-radius:6px;background:linear-gradient(to right,var(--azul) var(--p,50%),var(--track) var(--p,50%));outline-offset:6px;margin:14px 0 6px}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--surface);border:3px solid var(--azul);box-shadow:var(--sh-md);cursor:grab;transition:transform .15s var(--ease)}
+.rng::-webkit-slider-thumb:active{transform:scale(1.12)}
+.rng::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--surface);border:3px solid var(--azul);box-shadow:var(--sh-md)}
+.sim-out{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.so{padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);min-width:0}
+.so .kl{font-size:11px}
+.so b{display:block;font-size:21px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px;line-height:1.2;transition:color .2s}
+.so small{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.so.hl{background:var(--azul-soft);border-color:transparent}
+.big-inv{font-size:32px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.rule{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.rule:last-child{border-bottom:0}
+.rule h3{font-size:14px;font-weight:600;line-height:1.4}
+.rule p{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.sw-t{position:relative;width:46px;height:28px;border-radius:var(--pill);border:0;background:var(--line-2);cursor:pointer;flex:none;transition:background .2s var(--ease)}
+.sw-t::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:var(--surface);box-shadow:var(--sh-xs);transition:transform .22s var(--back)}
+.sw-t[aria-checked="true"]{background:var(--ok)}
+.sw-t[aria-checked="true"]::after{transform:translateX(18px)}
+.fired{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--aqua-ink);margin-top:4px}
+
+/* ---------- Creatives ---------- */
+.ads{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr));gap:16px}
+.ad{border-radius:14px;border:1px solid var(--line);background:var(--surface);overflow:hidden;min-width:0;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.ad:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.thumb{position:relative;aspect-ratio:16/10;padding:14px;color:var(--on-accent);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.thumb.t1{background:linear-gradient(150deg,var(--navy-deep),var(--azul))}
+.thumb.t2{background:linear-gradient(150deg,var(--azul),var(--aqua))}
+.thumb.t3{background:linear-gradient(160deg,var(--navy),var(--navy-deep))}
+.thumb .art{position:absolute;right:-10px;top:-10px;width:120px;height:120px;opacity:.28}
+.thumb .rank{position:absolute;left:12px;top:12px;height:24px;min-width:24px;padding:0 8px;border-radius:var(--pill);background:var(--hdr-chip);border:1px solid var(--hdr-line);font-size:11px;font-weight:800;display:grid;place-items:center}
+.th-h{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.15;position:relative;max-width:85%}
+.th-s{font-size:11px;opacity:.85;margin-top:4px;position:relative;max-width:calc(100% - 78px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.th-cta{position:absolute;right:12px;bottom:12px;height:24px;padding:0 10px;border-radius:var(--pill);background:var(--on-accent);color:var(--navy);font-size:11px;font-weight:800;display:grid;place-items:center}
+.ad-b{padding:12px 14px 14px}
+.ad-top{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.ad-top b{color:var(--ink);font-weight:600}
+.ad-m{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.ad-m div{min-width:0}
+.ad-m small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.ad-m b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.fat{display:flex;gap:3px;margin-top:10px;align-items:center}
+.fat i{flex:1;height:5px;border-radius:3px;background:var(--track)}
+.fat i.on{background:var(--aqua)}
+.fat.w i.on{background:var(--warn)}
+.fat.b i.on{background:var(--bad)}
+.fat span{font-size:11px;color:var(--muted);margin-left:8px;white-space:nowrap;font-weight:600}
+.var{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.var:last-child{border-bottom:0;padding-bottom:0}
+.var .thumb{aspect-ratio:1/1;padding:10px;border-radius:12px}
+.var .th-h{font-size:13px;max-width:100%}
+.var .thumb .art{opacity:.16;width:90px;height:90px}
+.var h3{font-size:14px;font-weight:600}
+.var p{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.var .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+
+/* ---------- Map ---------- */
+.map-wrap{position:relative;border-radius:14px;overflow:hidden;background:var(--land);border:1px solid var(--line)}
+.map-note{position:absolute;left:12px;top:10px;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:var(--bg-glass);padding:3px 8px;border-radius:6px}
+
+/* ---------- Wait list / scripts ---------- */
+.wl{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.wl:last-child{border-bottom:0}
+.wt{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+.wt small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;margin-top:3px}
+.wl.hot .wt{color:var(--bad-ink)}
+.wl q{font-size:14px;quotes:"«" "»";color:var(--ink)}
+.wl .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+.script{grid-column:1/-1;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--ink-2);line-height:1.55;animation:rise .24s var(--ease)}
+.script b{color:var(--ink)}
+
+/* ---------- Timeline (journey, log) ---------- */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:15px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{position:relative;display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:14px;padding:10px 0;align-items:start;border-radius:12px;transition:background .18s var(--ease)}
+.tl li.on{background:var(--surface-2)}
+.tl .bub{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--surface);border:2px solid var(--line-2);color:var(--ink-2);position:relative;z-index:1}
+.tl .bub.v{background:var(--azul);border-color:var(--azul);color:var(--on-primary)}
+.tl .bub.a{border-color:var(--aqua);color:var(--aqua-ink)}
+.tl h3{font-size:14px;font-weight:600;line-height:1.4}
+.tl p{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:2px}
+.tl .val{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.tl .val small{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.tl time{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.pt-card{display:flex;gap:14px;align-items:center}
+.avatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(150deg,var(--navy),var(--azul));color:var(--on-accent);display:grid;place-items:center;font-weight:800;font-size:18px;flex:none}
+.ltv{font-size:32px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+
+/* ---------- Copilot ---------- */
+.ask{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line-2);border-radius:16px;padding:6px 6px 6px 16px;box-shadow:var(--sh-sm);transition:border-color .2s,box-shadow .2s}
+.ask:focus-within{border-color:var(--aqua);box-shadow:0 0 0 4px var(--aqua-soft),var(--sh-sm)}
+.ask input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:500 16px Montserrat,system-ui,sans-serif;height:44px;outline:none}
+.ask input::placeholder{color:var(--muted)}
+.sugs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.sug{display:inline-flex;align-items:center;gap:8px;text-align:left;min-height:40px;padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:border-color .18s,background .18s,transform .12s}
+.sug:hover{border-color:var(--aqua);background:var(--surface-2)}
+.sug:active{transform:scale(.98)}
+.sug[aria-pressed="true"]{border-color:var(--aqua);background:var(--aqua-soft);color:var(--ink)}
+.ans{margin-top:20px}
+.ans-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ans-av{width:34px;height:34px;border-radius:11px;background:linear-gradient(150deg,var(--navy),var(--azul));color:var(--on-accent);display:grid;place-items:center}
+.ans-body p{font-size:15px;line-height:1.6;color:var(--ink-2);max-width:72ch}
+.ans-body p+p{margin-top:10px}
+.ans-body b{color:var(--ink);font-weight:600}
+.ans-body>*{animation:rise .3s var(--ease) both}
+.ans-body>*:nth-child(2){animation-delay:.06s}.ans-body>*:nth-child(3){animation-delay:.12s}.ans-body>*:nth-child(4){animation-delay:.18s}.ans-body>*:nth-child(5){animation-delay:.24s}
+.src{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center;font-size:11px;color:var(--muted);font-weight:600}
+.src code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;background:var(--surface-3);padding:2px 6px;border-radius:6px;color:var(--ink-2)}
+
+/* ---------- Misc ---------- */
+.stars{display:inline-flex;gap:2px;color:var(--warn)}
+.theme-chip{display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:0 12px;border-radius:var(--pill);font-size:12.5px;font-weight:600;border:1px solid var(--line)}
+.theme-chip b{font-variant-numeric:tabular-nums}
+.theme-chip.p{background:var(--ok-soft);color:var(--ok-ink);border-color:transparent}
+.theme-chip.ng{background:var(--bad-soft);color:var(--bad-ink);border-color:transparent}
+.rev{padding:14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line)}
+.rev+.rev{margin-top:12px}
+.rev q{display:block;font-size:14px;color:var(--ink);line-height:1.5;quotes:"«" "»"}
+.rev .meta{font-size:12.5px;color:var(--muted);margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reply{margin-top:10px;padding:10px 12px;border-left:3px solid var(--aqua);background:var(--surface);border-radius:0 10px 10px 0;font-size:13px;color:var(--ink-2);line-height:1.5}
+.flow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.flow ul{list-style:none;margin:0;padding:0}
+.flow li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:13px;color:var(--ink-2);line-height:1.45}
+.flow li svg{margin-top:1px}
+.flow .yes svg{color:var(--ok-ink)}.flow .no svg{color:var(--bad-ink)}
+.flow h3{font-size:12.5px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-size:11px}
+.exp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.exp:last-child{border-bottom:0;padding-bottom:0}
+.exp:first-child{padding-top:0}
+.exp h3{font-size:14px;font-weight:600;line-height:1.4}
+.exp p{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.exp .res{text-align:right;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.exp .res b{display:block;font-size:18px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.prog{height:6px;border-radius:4px;background:var(--track);overflow:hidden;margin-top:8px;max-width:260px}
+.prog i{display:block;height:100%;background:var(--aqua);border-radius:4px;transform-origin:left;animation:grow .7s var(--ease) both}
+.risk{display:inline-flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;font-weight:600}
+.risk i{display:inline-block;width:56px;height:6px;border-radius:4px;background:var(--track);position:relative;overflow:hidden}
+.risk i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--w);background:var(--c,var(--azul));border-radius:4px}
+.draft{grid-column:1/-1}
+.cons-bar{display:flex;height:14px;border-radius:8px;overflow:hidden;gap:2px;margin:12px 0 10px}
+.cons-bar i{display:block;height:100%}
+
+.toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:80;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none}
+.toast{pointer-events:auto;display:flex;gap:10px;align-items:flex-start;background:var(--toast-bg);color:var(--toast-ink);padding:12px 16px;border-radius:14px;box-shadow:var(--sh-lg);max-width:380px;font-size:13.5px;line-height:1.45;animation:tin .28s var(--back) both}
+.toast svg{color:var(--aqua);margin-top:1px}
+.toast.out{animation:tout .18s var(--ease) both}
+@keyframes tin{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0;transform:translateY(6px) scale(.97)}}
+.foot{max-width:1480px;margin:0 auto;padding:8px 24px 40px;font-size:12px;color:var(--muted)}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1180px){.g-75,.g-57{grid-template-columns:minmax(0,1fr)}.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1024px){.mh{grid-template-columns:minmax(0,1fr);align-items:start;gap:14px}}
+@media (max-width:900px){
+  .top-in{height:56px;padding:0 16px;gap:10px}
+  .brand-t span,.clock{display:none}
+  .iso{width:36px;height:36px}
+  .shell{display:block;padding:0 16px 24px}
+  .rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:30;margin:0 -16px 16px;padding:10px 16px;max-height:none;overflow-x:auto;overflow-y:hidden;background:var(--bg-glass);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);scrollbar-width:none}
+  .rail::-webkit-scrollbar{display:none}
+  .rail-in{display:flex;gap:8px;width:max-content}
+  .rg,.rail-legend{display:none}
+  .ri{width:auto;min-height:44px;padding:0 14px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-xs);border:1px solid var(--line);white-space:nowrap}
+  .ri .rt{overflow:visible}
+  .ri .rn{display:none}
+  .ri[aria-current="true"]{background:var(--sel-bg);color:var(--sel-ink);border-color:transparent}
+  .ri[aria-current="true"] svg{color:var(--sel-ink)}
+  .ri[aria-current="true"]::before{display:none}
+  .foot{padding:8px 16px 32px}
+}
+@media (max-width:760px){
+  .g2,.g3,.dm,.flow{grid-template-columns:minmax(0,1fr)}
+  .mh h1{font-size:25px}
+  .lede{font-size:14px}
+  .card{padding:16px}
+  .ch{flex-wrap:wrap;row-gap:8px}
+  .card.pulse{padding:0}
+  .kpi .kl{flex-direction:column-reverse;align-items:flex-start;gap:6px}
+  .pl:nth-child(n+5){display:none}
+  .pl{height:26px;font-size:12px}
+  .ch-t{flex:1 1 170px}
+  .tw{margin:0 -16px;padding:0 16px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .kpi{padding:14px}
+  .kv{font-size:21px}
+  .hb{grid-template-columns:minmax(0,1fr) 112px;grid-template-areas:"l m" "t v";gap:6px 12px;padding:8px 0}
+  .hb.fc{grid-template-columns:minmax(0,1fr) 112px}
+  .hb .hb-l{grid-area:l}.hb .hb-t{grid-area:t}.hb .hb-v{grid-area:v}.hb .hb-m{grid-area:m}
+  .hb2{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+  .hb2 .hb-t{grid-column:1/-1;order:3}
+  .dec{grid-template-columns:40px minmax(0,1fr)}
+  .dec-a{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between}
+  .sim-out{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pulse-n b{font-size:36px}
+  .pulse-cv{height:150px}
+  .pulse-leg{justify-content:flex-start}
+  .pulse-head{padding:16px 16px 0}
+  .pulse-foot{padding:10px 16px 14px}
+  .var{grid-template-columns:88px minmax(0,1fr)}
+  .exp{grid-template-columns:minmax(0,1fr)}
+  .exp .res{text-align:left}
+  .wl{grid-template-columns:52px minmax(0,1fr)}
+  .wl .btn{grid-column:2;justify-self:start}
+  .tl li{grid-template-columns:32px minmax(0,1fr)}
+  .tl .val{grid-column:2;text-align:left}
+  .toasts{left:16px;right:16px;align-items:stretch}
+  .toast{max-width:none}
+  .mode-t{display:none}
+  .mode{padding:0 11px}
+  .mode::after{content:"En vivo";}
+}
+@media (max-width:340px){.kpis{grid-template-columns:minmax(0,1fr)}.sim-out{grid-template-columns:minmax(0,1fr)}}
+@media (max-height:480px) and (orientation:landscape){.top{position:relative}.rail{top:0}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+
+/* ---------- Radar en producción: datos reales, estados y enlaces ---------- */
+.tagg{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tag-d{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.tag.sinm{color:var(--warn-ink);background:var(--warn-soft)}
+a.btn{text-decoration:none}
+.btn[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.off{display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:260px}
+.off-note{font-size:11px;color:var(--muted);line-height:1.4;text-align:right}
+.dec-a .off{align-items:flex-end}
+.sk{display:block;border-radius:10px;background:linear-gradient(90deg,var(--surface-3) 0%,var(--surface-2) 45%,var(--surface-3) 90%);background-size:220% 100%;animation:sk 1.3s var(--ease) infinite}
+@keyframes sk{from{background-position:120% 0}to{background-position:-120% 0}}
+.sk-l{height:12px;margin:8px 0}.sk-h{height:28px;width:45%;margin:6px 0 10px}.sk-b{height:160px;margin-top:12px;border-radius:14px}
+.estado{display:flex;gap:14px;align-items:flex-start;padding:4px 0}
+.estado .ei{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface-3);color:var(--muted);flex:none}
+.estado.err .ei{background:var(--bad-soft);color:var(--bad-ink)}
+.estado h3{font-size:15px;font-weight:600;line-height:1.35}
+.estado p{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5;max-width:62ch}
+.estado .btn{margin-top:10px}
+.thumb.img{padding:0;background:var(--navy-deep)}
+.thumb.img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.thumb.img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(6,24,39,.78));pointer-events:none}
+.thumb.img .th-in{position:absolute;left:14px;right:14px;bottom:12px;z-index:1}
+.thumb.img .rank{z-index:1}
+.ad-txt{font-size:12.5px;color:var(--ink-2);line-height:1.45;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fresh{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fresh i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.fresh.old i{background:var(--warn)}
+.lk{transition:opacity .2s var(--ease)}
+.tl .bub.w{border-color:var(--warn);color:var(--warn-ink)}
+.tl .bub.e{border-color:var(--bad);color:var(--bad-ink)}
+.mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.ilus-band{display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:12px;border:1px dashed var(--line-2);font-size:12.5px;color:var(--muted);line-height:1.45}
+.ilus-band svg{flex:none}
+.top .icon-btn.spin svg{animation:rot .9s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.grid.top-al{align-items:start}
+.pulse-note{font-size:12.5px;color:var(--ink-2);padding:0 20px;position:relative}
+@media (max-width:760px){.off{align-items:flex-start;max-width:none}.off-note{text-align:left}.pulse-note{padding:0 16px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="iso" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 12 19 5"/><path d="M19.07 4.93A10 10 0 1 0 22 12"/><path d="M16.24 7.76A6 6 0 1 0 18 12"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>
+      </span>
+      <div class="brand-t"><b>Alma Radar</b><span>Centro Médico Carampangue · Captación y crecimiento</span></div>
+    </div>
+    <div class="top-r">
+      <span class="mode" title="Cifras reales de los sistemas del CMC; lo marcado «Ilustrativo» muestra el diseño de lo que viene"><i class="dot"></i><span class="mode-t">En vivo · datos reales</span></span>
+      <span class="clock" id="clock"></span>
+      <button class="icon-btn" id="refreshBtn" type="button" aria-label="Actualizar los datos de este módulo"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Cambiar entre tema claro y oscuro"></button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" aria-label="Módulos de Alma Radar">
+    <div class="rail-in" id="rail"></div>
+    <div class="rail-legend" id="railLegend"></div>
+  </nav>
+  <main class="main" id="main"></main>
+</div>
+<p class="foot">Las cifras con «Dato real» se calculan desde los sistemas del CMC (caja de Medilink, agenda, bot, Meta y Google) e indican su fecha o rango; las marcadas «Ilustrativo» muestran el diseño de lo que viene y no son datos. Esta página no envía mensajes ni modifica campañas. Nunca muestra teléfonos, nombres completos ni RUT: solo iniciales.</p>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script>
+(function(){
+'use strict';
+/* ================= Utilidades ================= */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Token: la página se sirve cruda; se lee de la propia URL y viaja en cada llamada (guardrail "cerrar auth rompe al propio front").
+const TOKEN=new URLSearchParams(location.search).get('token')||'';
+const _tk=u=>TOKEN?u+(u.includes('?')?'&':'?')+'token='+encodeURIComponent(TOKEN):u;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=n=>typeof n==='number'&&isFinite(n);
+const th=n=>num(n)?String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.'):'—';
+const clp=n=>num(n)?(n<0?'−':'')+'$'+th(Math.abs(n)):'—';
+const dec=(n,d=1)=>num(n)?n.toFixed(d).replace('.',','):'—';
+const mm=n=>num(n)?'$'+dec(n/1e6,n>=1e7?1:2)+'M':'—';
+const pctTxt=(n,d=0)=>num(n)?dec(n,d)+'%':'—';
+const hhmm=m=>{m=Math.max(0,Math.floor(m));const h=Math.floor(m/60)%24,mi=m%60;return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')};
+const fdate=iso=>{if(!iso)return '—';const [y,m,d]=String(iso).slice(0,10).split('-');return esc(`${d}/${m}/${y}`)};
+const fdm=iso=>{if(!iso)return '—';const [,m,d]=String(iso).slice(0,10).split('-');return esc(`${d}/${m}`)};
+const fhm=iso=>iso?esc(String(iso).slice(11,16)):'—';
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const mesLbl=k=>{const [y,m]=k.split('-');return MES3[+m-1]};
+const mesLargo=k=>{const [y,m]=k.split('-');return MESES[+m-1]+' '+y};
+const v=k=>`var(--${k})`;
+
+const I={
+ activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+ filter:'<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
+ route:'<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
+ sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4"/>',
+ sparkles:'<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
+ map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>',
+ headset:'<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
+ repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+ star:'<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
+ target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+ wallet:'<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+ trending:'<path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/>',
+ flask:'<path d="M9 3h6M10 3v6.5L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9.5V3"/><path d="M7 15h10"/>',
+ bot:'<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/>',
+ shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+ moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+ check:'<path d="M20 6 9 17l-5-5"/>',
+ x:'<path d="M18 6 6 18M6 6l12 12"/>',
+ phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+ msg:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+ arrow:'<path d="M5 12h14M12 5l7 7-7 7"/>',
+ send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+ alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/>',
+ pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+ play:'<path d="m6 3 14 9-14 9V3z"/>',
+ lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+ calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+ zap:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+ info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+ tooth:'<path d="M7 3c-2.5 0-4 2-4 4.5 0 3 1.5 4 2 7 .5 3 1 6.5 2.8 6.5 1.6 0 1.7-4.5 4.2-4.5s2.6 4.5 4.2 4.5C18 21 18.5 17.5 19 14.5c.5-3 2-4 2-7C21 5 19.5 3 17 3c-2 0-3 1-5 1S9 3 7 3z"/>',
+ ear:'<path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/>',
+ move:'<circle cx="13" cy="4" r="2"/><path d="m4 22 4-7 4 2 3-5"/><path d="m9 9 4-2 3 4 4 1"/>',
+ smile:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
+ wave:'<path d="M2 12h3l2-6 3 12 3-9 2 3h7"/>',
+ steth:'<path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/>',
+ eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+ refresh:'<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/>',
+ ext:'<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+};
+const ic=(n,s=18,sw=1.9)=>`<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]||''}</svg>`;
+// Etiquetas de procedencia: toda cifra real lleva su fecha o rango.
+const rng_=r=>r?`${fdm(r.desde)} a ${fdm(r.hasta)}`:'';
+const tagR=(cuando)=>`<span class="tagg"><span class="tag real">Dato real</span>${cuando?`<span class="tag-d">${esc(cuando)}</span>`:''}</span>`;
+const tagI='<span class="tag ilus">Ilustrativo</span>';
+const tag=r=>(r===0||r===false||r==null)?tagI:tagR(typeof r==='string'?r:'');
+const card=(title,icon,body,o={})=>`<section class="card ${o.cls||''}">${title?`<div class="ch"><span class="ch-ic">${ic(icon)}</span><div class="ch-t"><h2>${title}</h2>${o.sub?`<div class="sub">${o.sub}</div>`:''}</div><div class="r">${o.right||''}${o.real===undefined?'':tag(o.real)}</div></div>`:''}${body}</section>`;
+const kpi=(l,val,s,cls='',real=0)=>`<div class="kpi ${cls}"><div class="kl"><span>${l}</span>${tag(real)}</div><div class="kv">${val}</div><div class="ks">${s}</div></div>`;
+// Acción real: enlace al módulo que la ejecuta (dentro del shell activa el módulo; suelto, navega).
+const lnk=(label,modulo,href,primary=1,sm=0)=>`<a class="btn${primary?' btn-p':''}${sm?' btn-sm':''}" href="${esc(_tk(href))}" data-alma="${esc(modulo)}">${esc(label)}${ic('arrow',15)}</a>`;
+// Acción sin respaldo real: desactivada y con la condición a la vista.
+const off=(label,nota,sm=1)=>`<span class="off"><button class="btn${sm?' btn-sm':''}" type="button" disabled aria-disabled="true">${esc(label)}</button><span class="off-note">${esc(nota)}</span></span>`;
+const estadoV=(titulo,texto,o={})=>`<div class="estado${o.err?' err':''}"><span class="ei">${ic(o.icon||(o.err?'alert':'info'),20)}</span><div><h3>${esc(titulo)}</h3><p>${esc(texto)}</p>${o.retry?`<button class="btn btn-sm" type="button" data-retry="${o.retry}">${ic('refresh',15)}Reintentar</button>`:''}</div></div>`;
+const ST={prod:'En producción',cerca:'Cerca',vision:'Visión'};
+
+const CHN={fb:{n:'Anuncio · Facebook',s:'Facebook',c:'c-fb'},ig:{n:'Anuncio · Instagram',s:'Instagram',c:'c-ig'},meta:{n:'Anuncio Meta (sin plataforma)',s:'Anuncio Meta',c:'c-ads'},web:{n:'Página web',s:'Web',c:'c-go'},wa:{n:'WhatsApp directo',s:'WhatsApp',c:'c-wa'},ms:{n:'Messenger',c:'c-ms'},igd:{n:'Instagram Direct',s:'IG Direct',c:'c-conv'},
+ tel:{n:'Llamadas al fijo',c:'c-tel'},rec:{n:'Llegada a recepción',c:'c-rec'},ref:{n:'Referidos con código',c:'c-ref'},qr:{n:'Letreros y radio (QR)',c:'c-qr'},ads:{n:'Google Ads',c:'c-ads'},maps:{n:'Perfil de Empresa',c:'c-maps'}};
+const chs=k=>(CHN[k]||{}).s||(CHN[k]||{}).n||k;
+const chc=k=>(CHN[k]||{c:'c-ads'}).c;
+const EST={agendo:['ok','Agendó'],recepcion:['warn','Con recepción'],conversando:['info','Conversando'],sin_cita:['mut','Sin cita']};
+
+/* ================= Datos (API) ================= */
+const SRC={},SRC_ERR={},SRC_P={},SRC_T={};
+async function api(p){
+ const r=await fetch(_tk('/alma/api/radar/'+p),{headers:TOKEN?{Authorization:'Bearer '+TOKEN}:{},credentials:'same-origin',cache:'no-store'});
+ if(r.status===401||r.status===403){const e=new Error('perm');e.perm=1;throw e}
+ if(!r.ok){const e=new Error('http '+r.status);throw e}
+ return r.json();
+}
+function load(k,force){
+ if(SRC_P[k])return SRC_P[k];
+ if(SRC[k]&&!force)return Promise.resolve(SRC[k]);
+ SRC_P[k]=api(k).then(d=>{SRC[k]=d;SRC_T[k]=Date.now();delete SRC_ERR[k];return d}).catch(e=>{SRC_ERR[k]=e.perm?'perm':'err';throw e}).finally(()=>{delete SRC_P[k]});
+ return SRC_P[k];
+}
+const ok=x=>x&&!x.error;
+
+/* ================= Módulos ================= */
+const MODS=[
+ {id:'pulso',t:'Pulso de hoy',g:'Hoy',ic:'activity',st:'prod',src:'pulso',f:'Entradas reales de hoy por canal, recepción esperando, agenda de mañana y venta del mes. Falta registrar las llamadas al fijo y la llegada presencial.'},
+ {id:'embudo',t:'Embudo omnicanal',g:'Captación',ic:'filter',st:'cerca',src:'captacion',f:'Meta y la página web se miden de punta a punta con la misma vara que Campañas Meta. Faltan el fijo, la recepción presencial, los QR y Google Ads.'},
+ {id:'viaje',t:'Viaje del paciente',g:'Captación',ic:'route',st:'cerca',src:'captacion',f:'El valor a 30, 60 y 90 días de quienes trajo cada anuncio ya es real. Falta encadenar referidos y el perfil individual.'},
+ {id:'motor',t:'Presupuesto autónomo',g:'Captación',ic:'sliders',st:'cerca',src:'captacion',f:'Cupos libres reales a 14 días y gasto por especialidad ya se cruzan. Falta el permiso de escritura sobre Meta y el modelo de respuesta al gasto.'},
+ {id:'creativos',t:'Fábrica de creativos',g:'Captación',ic:'sparkles',st:'prod',src:'captacion',f:'Anuncios reales con su imagen, retorno al centro y fatiga de 7 días. Falta el generador de variantes con predicción previa.'},
+ {id:'territorio',t:'Territorio',g:'Captación',ic:'map',st:'prod',src:'captacion',f:'Comuna real de quienes llegaron por anuncios y web, con su venta. Faltan la penetración por población y los tiempos de viaje.'},
+ {id:'recepcion',t:'Recepción que convierte',s:'Recepción',g:'Conversión',ic:'headset',st:'prod',src:'conversion',f:'Tiempo a la primera respuesta humana y su efecto en la agenda, medidos. Falta la telefonía (llamadas perdidas).'},
+ {id:'recall',t:'Retención y recall',g:'Conversión',ic:'repeat',st:'cerca',src:'conversion',f:'Retorno a 90 días, reenganche y segundo toque medidos; el contacto manual vive en Recuperar pacientes. Falta la probabilidad de abandono por paciente.'},
+ {id:'reputacion',t:'Reputación',g:'Conversión',ic:'star',st:'vision',f:'Requiere conectar el Perfil de Empresa de Google y una encuesta breve después de cada atención.'},
+ {id:'competencia',t:'Competencia y mercado',s:'Competencia',g:'Inteligencia',ic:'target',st:'vision',f:'Requiere un levantamiento de precios trimestral y datos de búsqueda por zona.'},
+ {id:'finanzas',t:'Finanzas de crecimiento',s:'Finanzas',g:'Inteligencia',ic:'wallet',st:'prod',src:'finanzas',f:'Venta de caja, lo que queda al centro y economía por canal, reales. Falta la proyección con intervalo estadístico.'},
+ {id:'prediccion',t:'Predicción',g:'Inteligencia',ic:'trending',st:'vision',f:'Requiere 24 meses de historia limpia por especialidad, clima local y calendario escolar.'},
+ {id:'experimentos',t:'Experimentos',g:'Inteligencia',ic:'flask',st:'cerca',src:'conversion',f:'Reenganche con y sin hora, y segundo toque, medidos en vivo. Falta un registro formal de pruebas con su significancia.'},
+ {id:'copiloto',t:'Copiloto Alma',g:'Inteligencia',ic:'bot',st:'vision',f:'Requiere un modelo con acceso de solo lectura a la base y que cite la fuente de cada cifra.'},
+ {id:'bitacora',t:'Bitácora y cumplimiento',s:'Bitácora y consentimiento',g:'Control',ic:'shield',st:'prod',src:'bitacora',f:'Lo que el sistema hizo solo, según el rastro de cada tarea, y el consentimiento de marketing en conteos. Falta que el respaldo deje registro en la base.'},
+];
+MODS.forEach((m,i)=>m.n=i+1);
+const nn=n=>String(n).padStart(2,'0');
+function mh(id,lede){const m=MODS.find(x=>x.id===id);return `<header class="mh"><div><div class="eyebrow">Módulo ${nn(m.n)} · ${m.g}</div><h1>${m.t}</h1><p class="lede">${lede}</p></div><div class="dist"><span class="st ${m.st}">${ST[m.st]}</span><p>${m.f}</p></div></header>`}
+const R={};
+
+/* ---------- Gráficos SVG compartidos ---------- */
+function barChart(el,o){if(!el)return;
+ const W=el.clientWidth||500,H=o.h||220,p={l:o.pl||40,r:12,t:22,b:o.pb||34};const n=o.items.length;const iw=W-p.l-p.r,ih=H-p.t-p.b;
+ const ymax=o.ymax||Math.max(1,...o.items.map(d=>d.hi||d.v||0))*1.15;const bw=Math.min(56,iw/n*.56);const X=i=>p.l+iw*(i+.5)/n,Y=val=>p.t+ih*(1-val/ymax);
+ let s='';(o.ticks||[0,ymax/2,ymax]).forEach(t=>{const y=Y(t);s+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" style="stroke:${v('grid')}"/><text x="${p.l-8}" y="${y+4}" text-anchor="end" style="fill:${v('muted')};font-size:11px">${o.yfmt?o.yfmt(t):Math.round(t)}</text>`});
+ o.items.forEach((d,i)=>{const x=X(i);const val=d.v??0;const y=Y(val);s+=`<rect x="${x-bw/2}" y="${y}" width="${bw}" height="${Math.max(0,Y(0)-y)}" rx="5" style="fill:${v(d.hl?'azul':'bar-mute')}"><title>${esc(d.l)}: ${o.vfmt?o.vfmt(d.v):d.v}</title></rect>`;
+  if(d.lo!=null){s+=`<line x1="${x}" x2="${x}" y1="${Y(d.hi)}" y2="${Y(d.lo)}" style="stroke:${v('ink-2')};stroke-width:1.5"/><line x1="${x-6}" x2="${x+6}" y1="${Y(d.hi)}" y2="${Y(d.hi)}" style="stroke:${v('ink-2')};stroke-width:1.5"/><line x1="${x-6}" x2="${x+6}" y1="${Y(d.lo)}" y2="${Y(d.lo)}" style="stroke:${v('ink-2')};stroke-width:1.5"/>`}
+  s+=`<text x="${x+(d.lo!=null?bw/2+4:0)}" y="${(d.lo!=null?Y(d.hi):y)-7}" text-anchor="${d.lo!=null?'start':'middle'}" style="fill:${v(d.hl?'ink':'ink-2')};font-size:12px;font-weight:${d.hl?800:600}">${d.v==null?'—':(o.vfmt?o.vfmt(d.v):d.v)}</text>`;
+  const lbl=(iw/n<110||o.corto)&&d.ls?d.ls:d.l;s+=`<text x="${x}" y="${H-p.b+18}" text-anchor="middle" style="fill:${v('muted')};font-size:11px;font-weight:600">${esc(lbl)}</text>`});
+ el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'Gráfico de barras')}">${s}</svg>`;
+}
+function lineChart(el,o){if(!el)return;
+ const W=el.clientWidth||600,H=o.h||240,p={l:o.pl||52,r:o.pr||16,t:18,b:28};const n=o.labels.length,iw=W-p.l-p.r,ih=H-p.t-p.b;
+ const ymin=o.ymin||0,ymax=o.ymax;const ix=o.inset??24;const X=i=>p.l+ix+i*(iw-2*ix)/Math.max(1,n-1),Y=x=>p.t+ih*(1-(x-ymin)/(ymax-ymin));
+ let s='';o.ticks.forEach(t=>{const y=Y(t);s+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" style="stroke:${v('grid')}"/><text x="${p.l-8}" y="${y+4}" text-anchor="end" style="fill:${v('muted')};font-size:11px">${o.yfmt(t)}</text>`});
+ o.labels.forEach((l,i)=>s+=`<text x="${X(i)}" y="${H-8}" text-anchor="middle" style="fill:${v('muted')};font-size:11px;font-weight:600">${esc(l)}</text>`);
+ (o.refs||[]).forEach(r=>{const y=Y(r.v);s+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" style="stroke:${v(r.c||'vis')};stroke-dasharray:5 4"/><text x="${W-p.r}" y="${y-6}" text-anchor="end" style="fill:${v(r.tc||'vis-ink')};font-size:11px;font-weight:600">${esc(r.l)}</text>`});
+ o.series.forEach(se=>{const idx=se.v.map((x,i)=>x==null?null:i).filter(i=>i!=null);if(!idx.length)return;if(se.area)s+=`<path d="M${X(idx[0])},${Y(ymin)}L${idx.map(i=>X(i)+','+Y(se.v[i])).join('L')}L${X(idx[idx.length-1])},${Y(ymin)}Z" style="fill:${v('azul-soft')}"/>`;
+  s+=`<path d="M${idx.map(i=>X(i)+','+Y(se.v[i])).join('L')}" style="fill:none;stroke:${v(se.c)};stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round${se.dash?';stroke-dasharray:6 5':''}"/>`;
+  idx.forEach(i=>{if(se.dots)s+=`<circle cx="${X(i)}" cy="${Y(se.v[i])}" r="4" style="fill:${v('surface')};stroke:${v(se.c)};stroke-width:2.5"><title>${esc(o.labels[i])}: ${o.yfmt(se.v[i])}</title></circle>`;if(se.lbl&&se.lbl[i])s+=`<text x="${X(i)}" y="${Y(se.v[i])-12}" text-anchor="middle" style="fill:${v('ink')};font-size:12px;font-weight:800;paint-order:stroke;stroke:${v('surface')};stroke-width:4px">${esc(se.lbl[i])}</text>`})});
+ el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'Gráfico de líneas')}">${s}</svg>`;
+}
+const donut=(parts,sz=150)=>{const r=sz/2-12,c=2*Math.PI*r;let off_=0;return `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" role="img" aria-label="${esc(parts.map(p=>p.l+' '+p.v+'%').join(', '))}"><g transform="rotate(-90 ${sz/2} ${sz/2})">${parts.map(p=>{const len=c*p.v/100;const sg=`<circle cx="${sz/2}" cy="${sz/2}" r="${r}" style="fill:none;stroke:${v(p.c)};stroke-width:18;stroke-dasharray:${Math.max(0,len-2)} ${c-len+2};stroke-dashoffset:${-off_}"/>`;off_+=len;return sg}).join('')}</g></svg>`};
+function spark(vals,col,w=84,h=26){const xs=vals.filter(num);if(xs.length<2)return '<span class="small muted">Sin serie</span>';const mx=Math.max(...xs),mn=Math.min(...xs);const pts=vals.map((x,i)=>num(x)?[2+i*(w-4)/(vals.length-1),h-3-(x-mn)/(mx-mn||1)*(h-6)]:null).filter(Boolean);const last=pts[pts.length-1];return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="M${pts.map(p=>p.join(',')).join('L')}" style="fill:none;stroke:${v(col)};stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/><circle cx="${last[0]}" cy="${last[1]}" r="2.6" style="fill:${v(col)}"/></svg>`}
+
+/* ---------- 01 Pulso ---------- */
+const PU={ev:[],seen:new Set(),run:false,paused:false,tok:{},nowMin:0,base:0,offs:0,ref:null,first:true};
+function legendHTML(){const c={};PU.ev.forEach(e=>c[e.canal]=(c[e.canal]||0)+1);const xs=Object.entries(c).sort((a,b)=>b[1]-a[1]);return xs.length?xs.map(([k,n])=>`<span class="pl"><i style="background:${v(chc(k))}"></i>${esc(chs(k))} <b>${n}</b></span>`).join(''):'<span class="pl">Sin entradas todavía</span>'}
+function feedItem(f,isNew){const e=EST[f.estado]||EST.sin_cita;return `<li class="fi${isNew?' new':''}"><span class="fi-dot" style="background:${v(chc(f.canal))}"></span><div class="fi-b"><div class="fi-t"><b>${esc(chs(f.canal))}</b> · ${esc(f.especialidad||'Sin especialidad aún')}<span class="pill ${e[0]}">${e[1]}</span></div><div class="fi-d">Paciente ${esc(f.iniciales||'—')}</div></div><time>${esc(f.hora)}</time></li>`}
+function feedHTML(){const xs=PU.ev.slice().sort((a,b)=>b.min-a.min).slice(0,14);return xs.length?xs.map(f=>feedItem(f,f._new)).join(''):`<li>${estadoV('Todavía no entra nadie hoy','Cuando alguien escriba por WhatsApp, Instagram, Messenger o desde la web, aparecerá aquí con su canal y su estado. Nunca se muestran teléfonos ni nombres completos.',{icon:'msg'})}</li>`}
+const TOM_ILUS=0;
+R.pulso={html:D=>{
+ const vm=D.venta_mes||{},am=D.agenda_manana||{};
+ const esp=D.esperando_total||0,mx=D.esperando_max_min;
+ const by={prod:[],cerca:[],vision:[]};MODS.forEach(m=>by[m.st].push(m));
+ const dm=['prod','cerca','vision'].map(s=>`<div class="dm-col"><h3><span class="st ${s}">${ST[s]}</span><b>${by[s].length}</b></h3>${by[s].map(m=>`<button class="dm-i" type="button" data-go="${m.id}"><span>${nn(m.n)}</span>${m.t}</button>`).join('')}</div>`).join('');
+ const maxV=Math.max(1,...(am.grupos||[]).map(g=>g.valor||0));
+ const rows=(am.grupos||[]).map(g=>`<div class="hb${g.libres>=4?' hot':''}"><span class="hb-l">${esc(g.grupo)}</span><span class="hb-t" title="Valor para el centro de los cupos libres"><i class="${g.libres>=4?'w':'a'}" style="width:${Math.max(3,(g.valor||0)/maxV*100)}%"></i></span><span class="hb-v">${th(g.libres)} libre${g.libres===1?'':'s'}</span><span class="hb-m">${g.valor?clp(g.valor):g.libres?'<span class="muted">Sin precio</span>':'<span class="muted">Lleno</span>'}</span></div>`).join('');
+ const agCard=am.sin_datos?estadoV('Sin lectura de agenda todavía','La agenda se lee dos veces al día (05:30 y 21:30) en carril lento, sin tocar Medilink al abrir esta página. Aparecerá aquí después de la próxima lectura.',{icon:'calendar'})
+  :`<div>${rows}</div><p class="note">Cupos libres de mañana por especialidad, ordenados por lo que dejarían al centro si se llenaran (precio típico de caja × su parte tras honorarios). Lectura de agenda: ${fdate(am.actualizado)} ${fhm(am.actualizado)}${am.desactualizado?' · <b>desactualizada</b>':''}.</p>`;
+ const decs=(D.decisiones||[]).map(d=>`<div class="dec"><span class="dec-ic">${ic(d.icono||'zap',20)}</span><div><h3>${esc(d.titulo)}</h3><p>${esc(d.texto)}</p></div><div class="dec-a">${lnk(d.accion.label,d.accion.modulo,d.accion.href,1,1)}</div></div>`).join('')
+  ||estadoV('Nada urgente en este momento','No hay personas esperando a recepción, la agenda no muestra cupos sin anuncio ni anuncios sin cupos, y no hay consultas recientes sin agendar.',{icon:'check'});
+ return `${mh('pulso','Lo que está pasando hoy en el centro: quién entra, por dónde, quién espera a recepción y cuánta agenda queda libre mañana.')}
+ <section class="card pulse" aria-label="Pulso del día">
+  <div class="pulse-head">
+   <div><div class="kl" style="justify-content:flex-start">Pulso del día · primeras entradas por canal ${tagR('hoy · se actualiza cada 60 s')}</div>
+    <div class="pulse-n"><b id="pCount">${PU.ev.length}</b><span id="pCountTxt">${PU.ev.length===1?'persona escribió hoy':'personas escribieron hoy'}</span></div></div>
+   <div class="pulse-leg" id="pLeg">${legendHTML()}</div>
+  </div>
+  <p class="pulse-note" id="pNote"></p>
+  <div class="pulse-cv"><canvas id="pulseCv" role="img" aria-label="Monitor de pulso: cada latido es una persona que escribió hoy por primera vez; el color indica el canal y la altura hasta dónde llegó."></canvas></div>
+  <div class="pulse-foot"><span>Cada latido es una persona que escribió hoy por primera vez. Altura: agendó, pasó a recepción, sigue conversando o quedó sin cita. La zona clara es el promedio del mismo día en las ${D.referencia&&D.referencia.semanas?D.referencia.semanas:4} semanas anteriores.</span><span class="fresh" id="pFresh"><i></i>Lectura ${fhm(D.ahora)}</span></div>
+ </section>
+ <div class="kpis">
+  ${kpi('Citas agendadas hoy',th(D.citas_hoy),`${th(D.citas_hoy_meta)} desde anuncios de Meta · por el bot`,'accent','hoy')}
+  ${kpi('Esperando a recepción',th(esp),esp?(mx?`La más antigua lleva ${th(mx)} min hábiles`:'Escribieron fuera de horario: el tiempo corre desde la apertura'):'Nadie espera una respuesta humana',esp&&mx>=15?'alert':'','ahora')}
+  ${kpi('Venta del mes',vm.venta==null?'—':mm(vm.venta),vm.hasta?`Caja Medilink al ${fdate(vm.hasta)}`:'Sin caja sincronizada este mes','',vm.desde?`desde ${fdm(vm.desde)}`:'')}
+  ${kpi('Cupos libres mañana',am.sin_datos?'—':th(am.libres),am.sin_datos?'Sin lectura de agenda':`Hasta ${clp(am.valor)} para el centro si se llenaran`,'',am.sin_datos?'':fdate(am.fecha))}
+ </div>
+ <div class="grid g-75 top-al">
+  ${card(`Agenda de mañana, ${esc(fechaLarga(am.fecha))}`,'calendar',agCard,{sub:am.sin_datos?'Sin lectura':`${clp(am.valor)} en cupos libres`,real:am.sin_datos?undefined:`lectura ${fhm(am.actualizado)}`})}
+  ${card('En vivo','activity',`<ul class="feed" id="feed">${feedHTML()}</ul>`,{sub:'Hoy · más reciente primero · solo iniciales',right:`<button class="btn btn-sm" id="pauseBtn" type="button" aria-pressed="${PU.paused}">${ic(PU.paused?'play':'pause',14)}${PU.paused?'Reanudar':'Pausar'}</button>`,real:'hoy'})}
+ </div>
+ ${card('Decisiones para la próxima media hora','zap',decs,{sub:'Generadas con los datos de este momento · cada una lleva a su acción real',real:'ahora'})}
+ ${card('Qué tan lejos está cada pieza','info',`<div class="dm">${dm}</div>`,{sub:'Distancia entre la visión y lo que el CMC ya tiene funcionando'})}`},
+ after(D){pulseIngest(D,true)},
+ draw(){pulseStart()},hide(){pulseStop()}};
+function fechaLarga(iso){if(!iso)return '';const d=new Date(iso+'T12:00:00');const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];return `${dias[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`}
+function pulseIngest(D,initial){
+ const nuevos=[];
+ (D.eventos||[]).forEach(e=>{if(!PU.seen.has(e.id)){PU.seen.add(e.id);if(!initial&&!PU.first)nuevos.push(e)}});
+ const byId={};PU.ev.forEach(e=>byId[e.id]=e);
+ PU.ev=(D.eventos||[]).map(e=>({...e,born:byId[e.id]?byId[e.id].born:(nuevos.includes(e)?performance.now():0),_new:nuevos.includes(e)}));
+ PU.first=false;
+ PU.base=D.ahora_min||0;PU.offs=performance.now();PU.ref=(D.referencia&&D.referencia.por_media_hora)||null;
+ SRV.set(D.ahora);
+ const c=$('#pCount');if(c){c.textContent=PU.ev.length;if(nuevos.length){c.classList.remove('tick');void c.offsetWidth;c.classList.add('tick')}}
+ const ct=$('#pCountTxt');if(ct)ct.textContent=PU.ev.length===1?'persona escribió hoy':'personas escribieron hoy';
+ const lg=$('#pLeg');if(lg)lg.innerHTML=legendHTML();
+ const fd=$('#feed');if(fd)fd.innerHTML=feedHTML();
+ PU.ev.forEach(e=>e._new=false);
+ const fr=$('#pFresh');if(fr)fr.innerHTML=`<i></i>Lectura ${fhm(D.ahora)}`;
+ const note=$('#pNote');if(note){const h=Math.floor((D.ahora_min||0)/60);const tot=D.referencia&&D.referencia.total_dia;
+  note.textContent=(h<8||h>=21)&&PU.ev.length<5?`Fuera del horario del centro es normal que entre poca gente${num(tot)?`: en un ${fechaLarga(D.hoy).split(' ')[0]} típico entran ${dec(tot,0)} personas en todo el día`:''}.`:'';note.hidden=!note.textContent}
+}
+function readTok(){const cs=getComputedStyle(document.documentElement);const g=k=>cs.getPropertyValue('--'+k).trim();PU.tok={aqua:g('aqua'),aquaSoft:g('aqua-soft'),grid:g('grid'),muted:g('muted'),ink:g('ink'),surface:g('surface')};Object.keys(CHN).forEach(k=>PU.tok[k]=g(CHN[k].c))}
+const easeBack=t=>{const c1=1.4,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2)};
+const ALTO={agendo:1,recepcion:.72,conversando:.5,sin_cita:.3};
+function pulseDraw(ts){
+ const cv=$('#pulseCv');if(!cv)return;const W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
+ const d=Math.min(2,window.devicePixelRatio||1);if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d)}
+ const x=cv.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,W,H);const C=PU.tok;
+ const now=PU.base+(RM?0:(performance.now()-PU.offs)/60000);
+ const narrow=W<560;let t0,t1;
+ if(narrow){t0=now-240;t1=now+60}else{t0=Math.min(7*60,now-60);t1=Math.max(22*60,now+30);const first=PU.ev.length?PU.ev[0].min:t0;t0=Math.min(t0,first-15)}
+ t0=Math.max(0,t0);t1=Math.min(24*60,t1);
+ const pl=14,pr=14,pt=22,pb=24,iw=W-pl-pr,ih=H-pt-pb,base=pt+ih*.8;
+ const X=t=>pl+(t-t0)/(t1-t0)*iw;
+ x.font='600 11px Montserrat, system-ui, sans-serif';x.textBaseline='alphabetic';
+ const step=narrow?60:60;
+ for(let m=Math.ceil(t0/step)*step;m<=t1;m+=step){const xx=Math.round(X(m))+.5;x.strokeStyle=C.grid;x.lineWidth=1;x.beginPath();x.moveTo(xx,pt-6);x.lineTo(xx,H-pb+4);x.stroke();
+  x.fillStyle=C.muted;x.textAlign='center';if(Math.abs(xx-X(now))>34&&(!narrow||m%120===0||W>400))x.fillText(hhmm(m),xx,H-6)}
+ // referencia: promedio del mismo día, últimas semanas (entradas por media hora)
+ if(PU.ref&&PU.ref.some(v=>v>0)){const mx=Math.max(...PU.ref,1);x.beginPath();x.moveTo(X(t0),base);
+  for(let t=t0;t<=t1;t+=10){const i=Math.min(47,Math.floor(t/30));x.lineTo(X(t),base-PU.ref[i]/mx*ih*.62)}
+  x.lineTo(X(t1),base);x.closePath();x.fillStyle=C.aquaSoft;x.fill();
+  x.fillStyle=C.muted;x.textAlign='right';x.fillText('Promedio del mismo día',W-pr,pt+2)}
+ const vis=PU.ev.filter(e=>e.min>=t0-3&&e.min<=now+1);
+ x.beginPath();x.moveTo(pl,base);const peaks=[];
+ for(const e of vis){const xx=X(e.min);const g=e.born&&!RM?Math.min(1,(ts-e.born)/520):1;const gg=easeBack(g);const h=(14+(ALTO[e.estado]||.3)*ih*.66)*gg;
+  x.lineTo(xx-6,base);x.lineTo(xx-3,base+4*gg);x.lineTo(xx,base-h);x.lineTo(xx+3,base+7*gg);x.lineTo(xx+6,base);peaks.push([xx,base-h,e])}
+ x.lineTo(X(now),base);
+ x.strokeStyle=C.aqua;x.lineWidth=2;x.lineJoin='round';x.lineCap='round';x.shadowColor=C.aqua;x.shadowBlur=10;x.stroke();x.shadowBlur=0;
+ for(const [xx,yy,e] of peaks){const col=C[e.canal]||C.aqua;if(e.born&&!RM){const a=(ts-e.born)/2400;if(a<1){x.beginPath();x.arc(xx,yy,4+a*16,0,7);x.strokeStyle=col;x.globalAlpha=(1-a)*.7;x.lineWidth=2;x.stroke();x.globalAlpha=1}}
+  x.beginPath();x.arc(xx,yy,3.6,0,7);x.fillStyle=col;x.fill();x.lineWidth=1.5;x.strokeStyle=C.surface;x.stroke()}
+ const hx=X(now);const ph=RM?0:(ts%1700)/1700;
+ x.beginPath();x.arc(hx,base,5+ph*16,0,7);x.fillStyle=C.aqua;x.globalAlpha=(1-ph)*.35;x.fill();x.globalAlpha=1;
+ x.beginPath();x.arc(hx,base,5,0,7);x.fillStyle=C.aqua;x.fill();x.lineWidth=2;x.strokeStyle=C.surface;x.stroke();
+ x.fillStyle=C.ink;x.textAlign='center';x.font='600 11px Montserrat, system-ui, sans-serif';x.fillText('Ahora '+hhmm(now),Math.min(W-40,Math.max(40,hx)),H-6);
+}
+function loop(ts){if(!PU.run)return;pulseDraw(ts);requestAnimationFrame(loop)}
+function pulseStart(){readTok();if(RM){pulseDraw(0);return}if(PU.run)return;PU.run=true;requestAnimationFrame(loop)}
+function pulseStop(){PU.run=false}
+let pollT=null;
+function poll(){clearTimeout(pollT);pollT=setTimeout(async()=>{if(cur==='pulso'&&!document.hidden&&!PU.paused){try{const D=await load('pulso',true);pulseIngest(D,false);refreshDecisiones(D)}catch(e){toast('No se pudo actualizar el pulso. Se reintenta en un minuto.','err')}}poll()},60000)}
+function refreshDecisiones(D){/* las decisiones y KPIs se recalculan con cada lectura */const art=$('#m-pulso');if(!art||art.hidden)return;
+ const tmp=document.createElement('div');tmp.innerHTML=R.pulso.html(D);
+ const kp=$('.kpis',art),kp2=$('.kpis',tmp);if(kp&&kp2)kp.innerHTML=kp2.innerHTML;
+ const cards=$$('section.card',art),cards2=$$('section.card',tmp);[1,3].forEach(i=>{if(cards[i]&&cards2[i])cards[i].innerHTML=cards2[i].innerHTML});}
+
+/* ---------- 02 Embudo ---------- */
+let FAM='all';
+function embCanales(D){const e=D.embudo||{};const out=[];
+ if(e.meta)out.push({k:'meta',l:'Anuncios Meta',c:'c-fb',...e.meta});
+ if(e.web)out.push({k:'web',l:'Página web',c:'c-go',...e.web});return out}
+function funnelTable(D){
+ const rows=embCanales(D).filter(c=>FAM==='all'||c.k===FAM);
+ const S=k=>rows.reduce((a,c)=>a+(c[k]||0),0);
+ const tr=c=>`<tr><td><span class="cn"><i class="sw" style="background:${v(c.c)}"></i>${c.l}</span></td><td class="n">${th(c.personas)}</td><td class="n">${c.k==='meta'?th(c.conversaciones):'—'}</td><td class="n">${th(c.citas)}</td><td class="n">${th(c.atendidos)}</td><td class="n">${clp(c.venta)}</td><td class="n">${clp(c.centro)}</td><td class="n">${c.gasto?clp(c.cac_atendido):'—'}</td><td class="n">${c.gasto?`<span class="${(c.retorno_centro||0)>=1?'pos':'wrn'}">${dec(c.retorno_centro,1)}×</span>`:'<span class="muted">Sin pauta</span>'}</td></tr>`;
+ const sinm=['tel','rec','ref','qr','ads'].map(k=>`<tr><td><span class="cn"><i class="sw" style="background:${v(chc(k))};opacity:.5"></i>${CHN[k].n}</span></td><td colspan="8"><span class="tag sinm">Sin medición</span> <span class="muted small">${{tel:'El fijo no deja registro de llamadas en el sistema.',rec:'La llegada directa a recepción no se marca con su origen.',ref:'Los códigos de referido existen; falta cruzarlos con la caja.',qr:'Sin QR rastreables en letreros ni radio.',ads:'Sin campaña activa en Google Ads.'}[k]}</span></td></tr>`).join('');
+ const g=S('gasto');
+ return `<div class="tw"><table class="tbl"><thead><tr><th>Canal</th><th class="n">Personas</th><th class="n">Conv. Meta</th><th class="n">Citas</th><th class="n">Atendidos</th><th class="n">Venta</th><th class="n">Para el centro</th><th class="n">CAC atendido</th><th class="n">Retorno</th></tr></thead><tbody>${rows.map(tr).join('')}${FAM==='all'?sinm:''}</tbody>${rows.length>1?`<tfoot><tr><td>Total medido</td><td class="n">${th(S('personas'))}</td><td class="n">—</td><td class="n">${th(S('citas'))}</td><td class="n">${th(S('atendidos'))}</td><td class="n">${clp(S('venta'))}</td><td class="n">${clp(S('centro'))}</td><td class="n">—</td><td class="n">${g?dec(rows.reduce((a,c)=>a+(c.gasto?c.centro:0),0)/g,1)+'×':'—'}</td></tr></tfoot>`:''}</table></div>`;
+}
+function sankey(el,D){if(!el)return;
+ const data=embCanales(D).filter(c=>(FAM==='all'||c.k===FAM)&&c.personas);
+ if(!data.length){el.innerHTML=estadoV('Sin personas en el rango','Cuando lleguen personas por anuncios o por la web, el flujo se dibuja aquí.');return}
+ const cw=el.clientWidth||640;const compact=cw<560;const W=compact?cw:Math.max(cw,640);const nodeW=12,lw=compact?112:W<760?150:180,rw=W<760?150:190;
+ const L=data.map(c=>({id:c.k,l:c.l,v:c.personas,c:c.c}));
+ const ag=data.reduce((a,c)=>a+Math.min(c.citas,c.personas),0),tot=data.reduce((a,c)=>a+c.personas,0),cay=tot-ag;
+ const at=data.reduce((a,c)=>a+c.atendidos,0),ns=data.reduce((a,c)=>a+(c.no_asistio||0),0),an=data.reduce((a,c)=>a+(c.anuladas||0),0);const cp=Math.max(0,ag-at-ns-an);
+ const gap=12;const H=Math.max(260,data.length*60+120);
+ const k=(H-24-gap*(L.length-1))/tot;
+ const x0=lw,xm=compact?W-nodeW:Math.round(W*.5-nodeW/2),xr=W-rw-nodeW;
+ let y=12;L.forEach(n=>{n.y=y;n.h=Math.max(2,n.v*k);y+=n.h+gap});
+ const mid=[{id:'ag',l:'Agendó',v:ag,c:'azul'},{id:'cay',l:'Sin cita',v:cay,c:'bar-mute'}];
+ const totH=L.reduce((a,n)=>a+n.h,0);const mg=40;const mStart=Math.max(8,(H-(totH+mg))/2);
+ mid[0].y=mStart;mid[0].h=ag*k;mid[1].y=mStart+mid[0].h+mg;mid[1].h=cay*k;
+ const right=[{id:'at',l:'Atendido',v:at,c:'aqua'},{id:'ns',l:'No asistió',v:ns,c:'bad'},{id:'an',l:'Anuló',v:an,c:'bar-mute'},{id:'cp',l:'Pendiente',v:cp,c:'line-2'}].filter(n=>n.v>0);
+ let ry=mid[0].y-10;right.forEach(n=>{n.h=Math.max(3,n.v*k);n.y=ry;ry+=n.h+14});
+ const band=(x1,y1,x2,y2,h,col,op,tt)=>{const mx=(x1+x2)/2;return `<path d="M${x1},${y1}C${mx},${y1} ${mx},${y2} ${x2},${y2}L${x2},${y2+h}C${mx},${y2+h} ${mx},${y1+h} ${x1},${y1+h}Z" style="fill:${v(col)};opacity:${op}" class="lk"><title>${esc(tt)}</title></path>`};
+ let s='';let oA=0,oC=0;
+ L.forEach((n,i)=>{const c=data[i];const ci=Math.min(c.citas,c.personas);const ha=ci*k,hc=(c.personas-ci)*k;
+  s+=band(x0+nodeW,n.y,xm,mid[0].y+oA,ha,n.c,.42,`${n.l}: ${ci} con cita de ${c.personas} personas`);oA+=ha;
+  s+=band(x0+nodeW,n.y+ha,xm,mid[1].y+oC,hc,'bar-mute',.4,`${n.l}: ${c.personas-ci} sin cita`);oC+=hc});
+ let oR=0;if(!compact)right.forEach(n=>{s+=band(xm+nodeW,mid[0].y+oR,xr,n.y,n.v*k,n.c,.4,`${n.l}: ${n.v}`);oR+=n.v*k});
+ const lbl=(x,y,t,anchor,w=600,sz=12,col='ink')=>`<text x="${x}" y="${y}" text-anchor="${anchor}" style="fill:${v(col)};font-size:${sz}px;font-weight:${w};paint-order:stroke;stroke:${v('surface')};stroke-width:4px;stroke-linejoin:round">${t}</text>`;
+ L.forEach(n=>{s+=`<rect x="${x0}" y="${n.y}" width="${nodeW}" height="${n.h}" rx="3" style="fill:${v(n.c)}"/>`;s+=lbl(x0-10,n.y+n.h/2+4,`${n.l}  <tspan style="fill:${v('muted')};font-weight:500">${th(n.v)}</tspan>`,'end')});
+ mid.forEach(n=>{s+=`<rect x="${xm}" y="${n.y}" width="${nodeW}" height="${Math.max(2,n.h)}" rx="3" style="fill:${v(n.c)}"/>`;const lx=compact?xm-8:xm+nodeW+8,an_=compact?'end':'start';s+=lbl(lx,n.y+16,n.l,an_,800,13);s+=lbl(lx,n.y+32,`${th(n.v)} · ${pctTxt(100*n.v/tot,1)}`,an_,500,12,'ink-2')});
+ if(!compact)right.forEach(n=>{s+=`<rect x="${xr}" y="${n.y}" width="${nodeW}" height="${n.h}" rx="3" style="fill:${v(n.c)}"/>`;s+=lbl(xr+nodeW+8,n.y+Math.min(n.h/2,10)+4,`${n.l}  <tspan style="fill:${v('muted')};font-weight:500">${th(n.v)}</tspan>`,'start')});
+ el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Flujo de personas por canal hasta la atención">${s}</svg>`+(compact?`<div class="kpis" style="grid-template-columns:repeat(${Math.min(3,right.length)},minmax(0,1fr));gap:8px;margin-top:12px">${right.slice(0,3).map(n=>`<div class="so" style="padding:10px"><div class="kl">${n.l}</div><b style="font-size:18px">${th(n.v)}</b></div>`).join('')}</div>`:'');
+}
+R.embudo={html:D=>{const e=D.embudo||{},m=e.meta||{},w=e.web||{},rg=rng_(D.rango),g=D.google||{};
+ const pers=(m.personas||0)+(w.personas||0),cit=(m.citas||0)+(w.citas||0);
+ const pf=e.plataformas&&!e.plataformas.error?e.plataformas:{};const pfT=Object.values(pf).reduce((a,b)=>a+b,0);
+ const pfRow=(k,l,c)=>`<div class="hb2"><span class="hb-l">${l}</span><span class="hb-t"><i style="width:${pfT?(pf[k]||0)/pfT*100:0}%;background:${v(c)}"></i></span><span class="hb-v"><b>${th(pf[k]||0)}</b> personas</span></div>`;
+ const gT=g.totales||{};
+ return `${mh('embudo','Cada canal medido de punta a punta con la misma vara que Campañas Meta: desde que una persona escribe hasta lo que queda para el centro. Últimos 30 días.')}
+ <div class="kpis">
+  ${kpi('Citas desde Meta',th(m.citas),`${th(m.atendidos)} atendidas · ${th(m.no_asistio)} no asistieron`,'accent',rg)}
+  ${kpi('CAC por atendido Meta',m.gasto?clp(m.cac_atendido):'—','Gasto en Meta ÷ personas que efectivamente llegaron','',rg)}
+  ${kpi('Sin cita',pers?pctTxt(100*(pers-cit)/pers,1):'—',`De ${th(pers)} personas de anuncios y web, ${th(Math.max(0,pers-cit))} no agendaron`,pers&&(pers-cit)/pers>.5?'alert':'',rg)}
+  ${kpi('Página web → citas',th(w.citas),`${th(w.personas)} escribieron desde la web · ${clp(w.venta)} de venta`,'',rg)}
+ </div>
+ ${card('Flujo por canal','filter',`<div class="chips" role="group" aria-label="Filtrar canal" style="margin-bottom:16px">${[['all','Todos'],['meta','Meta'],['web','Página web']].map(([k,l])=>`<button class="chip" type="button" data-fam="${k}" aria-pressed="${k===FAM}">${l}</button>`).join('')}</div><div class="tw"><div class="cwrap" id="sankey"></div></div><p class="note">Ancho de cada banda a escala del número de personas. Una persona cuenta una vez, en el canal de su primer contacto del rango. Pase el cursor sobre una banda para ver la cifra.</p>`,{sub:'Personas → cita → atención',real:rg})}
+ ${card('Embudo completo por canal','arrow',`<div id="ftable">${funnelTable(D)}</div><p class="note">Misma fuente y mismo rango que <a href="${esc(_tk('/alma/campanas-meta'))}" data-alma="campanas_meta">Campañas Meta</a>: las cifras cuadran con ese panel. «Atendido» sale del estado de la cita en Medilink; la venta, de la caja.</p>`,{sub:'Personas → citas → atendidos → venta → para el centro',real:rg})}
+ <div class="grid g2">
+  ${card('Facebook o Instagram','eye',pfT?`${pfRow('facebook','Facebook','c-fb')}${pfRow('instagram','Instagram','c-ig')}${pfRow('sin_dato','Sin plataforma registrada','bar-mute')}<p class="note">La plataforma de cada persona se registra desde el ${fdate(e.medicion&&e.medicion.plataforma_desde)}; antes de esa fecha aparece «sin plataforma».</p>`:estadoV('Sin llegadas de anuncios en el rango','Cuando alguien escriba desde un anuncio, se registra si vino de Facebook o de Instagram.'),{sub:'Personas que llegaron por anuncios',real:rg})}
+  ${card('Búsqueda en Google','target',g.error?estadoV('Google no respondió',g.error,{err:1,retry:'captacion'}):!g.hay_datos?estadoV('Sin datos de Search Console','La foto de Google se guarda cada mañana; todavía no hay días registrados.'):`
+   <div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <div class="so"><div class="kl">Clics</div><b>${th(gT.clicks)}</b><small>${th(gT.impressions)} apariciones · CTR ${pctTxt(gT.ctr,1)}</small></div>
+    <div class="so"><div class="kl">Escribieron desde la web</div><b>${th(gT.personas)}</b><small>personas por WhatsApp</small></div>
+   </div>
+   <div style="margin-top:12px">${(g.oportunidades||[]).slice(0,3).map(o=>`<div class="hb2"><span class="hb-l">«${esc(o.consulta)}»</span><span class="hb-t"><i class="m" style="width:${Math.min(100,o.impressions/((g.oportunidades[0]||{}).impressions||1)*100)}%"></i></span><span class="hb-v">${th(o.impressions)} apar. · pos. ${dec(o.posicion,1)}</span></div>`).join('')||'<p class="note">Sin consultas en posición 4 a 20 con suficientes apariciones.</p>'}</div>
+   <p class="note">Oportunidades: consultas con apariciones suficientes en posición 4 a 20, donde subir unos lugares suma clics. Último día con datos: ${fdate(g.ultima_fecha)}.</p>`,{sub:'Search Console',real:g.ultima_fecha?`hasta ${fdm(g.ultima_fecha)}`:rg})}
+ </div>`},
+ draw(D){sankey($('#sankey'),D)}};
+
+/* ---------- 03 Viaje ---------- */
+const JV=[
+ {d:'03/03 · 21:04',t:'Vio el anuncio «Limpieza y evaluación» en Instagram',p:'Tercera impresión del anuncio. Campaña Odontología.',v:0,k:'a'},
+ {d:'03/03 · 21:06',t:'Escribió por WhatsApp desde el anuncio',p:'El bot respondió en segundos con tres horas concretas.',v:0,k:'a'},
+ {d:'03/03 · 21:09',t:'Agendó Odontología para el 06/03 a las 10:30',p:'La cita quedó marcada con su anuncio de origen.',v:0,k:'a'},
+ {d:'05/03 · 10:30',t:'Recordatorio a 24 horas: confirmó con un toque',p:'Estado de la cita pasó a confirmado por el bot.',v:0,k:''},
+ {d:'06/03',t:'Atendida en Odontología',p:'Al día siguiente, 07:07, se avisó a Meta la atención con su valor real.',v:35000,k:'v'},
+ {d:'20/03',t:'Medicina General, derivada por la odontóloga',p:'Segunda especialidad.',v:12000,k:'v'},
+ {d:'14/04',t:'Inicio de Ortodoncia',p:'Evaluación, registros e instalación.',v:250000,k:'v'},
+ {d:'may–sep',t:'Cinco controles mensuales de Ortodoncia',p:'Recordatorio con hora concreta cada mes.',v:150000,k:'v'},
+ {d:'08/07',t:'Refirió a su madre con un código',p:'Valor de red atribuido a la primera paciente.',v:98000,k:'v'},
+];
+function jChart(el,cac){if(!el)return;
+ const W=el.clientWidth||600,H=W>640?280:220,p={l:W<500?44:62,r:18,t:22,b:30};const n=JV.length;let c=0;const cum=JV.map(e=>c+=e.v);
+ const ymax=600000;const X=i=>p.l+18+i*(W-p.l-p.r-18)/(n-1),Y=val=>p.t+(H-p.t-p.b)*(1-val/ymax);
+ let s='';[0,200000,400000,600000].forEach(t=>{const y=Y(t);s+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" style="stroke:${v('grid')}"/><text x="${p.l-8}" y="${y+4}" text-anchor="end" style="fill:${v('muted')};font-size:11px">${t?'$'+t/1000+' mil':'$0'}</text>`});
+ let d=`M${X(0)},${Y(cum[0])}`;for(let i=1;i<n;i++)d+=`H${X(i)}V${Y(cum[i])}`;
+ s+=`<path d="${d}V${Y(0)}H${X(0)}Z" style="fill:${v('aqua-soft')}"/><path d="${d}" style="fill:none;stroke:${v('azul')};stroke-width:2.5;stroke-linejoin:round"/>`;
+ if(num(cac)){const cacY=Y(cac);s+=`<line x1="${p.l}" x2="${W-p.r}" y1="${cacY}" y2="${cacY}" style="stroke:${v('bad')};stroke-dasharray:4 4;opacity:.7"/><text x="${W-p.r}" y="${cacY-6}" text-anchor="end" style="fill:${v('bad-ink')};font-size:11px;font-weight:600">CAC real ${clp(cac)}</text>`}
+ JV.forEach((e,i)=>{const x=X(i),y=Y(cum[i]);const on=e.k==='v';s+=`<g class="jm" data-j="${i}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="11" style="fill:${on?v('azul'):v('surface')};stroke:${on?v('azul'):e.k==='a'?v('aqua'):v('line-2')};stroke-width:2"/><text x="${x}" y="${y+4}" text-anchor="middle" style="fill:${on?v('on-primary'):v('ink-2')};font-size:11px;font-weight:800">${i+1}</text></g>`;
+  if(W>=620||i%3===0)s+=`<text x="${x}" y="${H-8}" text-anchor="middle" style="fill:${v('muted')};font-size:11px">${e.d.slice(0,5)}</text>`});
+ el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Valor acumulado de una paciente ilustrativa en el tiempo">${s}</svg>`;
+}
+R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.embudo||{}).meta||{};
+ const real=v9.error?estadoV('No se pudo leer el valor a 90 días',v9.error,{err:1,retry:'captacion'}):!t.personas?estadoV('Sin personas con 90 días cumplidos','El valor a 90 días se mide solo con quienes llegaron hace 90 días o más; aparecerá a medida que maduren.'):`
+   <div class="mini">${hz.map(x=>`<div class="so${x.dias===90?' hl':''}"><div class="kl">A ${x.dias} días</div><b>${clp(x.venta)}</b><small>${clp(x.centro)} para el centro</small></div>`).join('')}</div>
+   <div class="mini" style="margin-top:12px">
+    <div class="so"><div class="kl">Pacientes medidos</div><b>${th(t.pacientes_maduros)}</b><small>de ${th(t.personas_maduras)} personas con 90 días</small></div>
+    <div class="so"><div class="kl">Ticket a 90 días</div><b>${clp(t.ticket_90)}</b><small>por paciente</small></div>
+    <div class="so"><div class="kl">Volvió 2 veces o más</div><b>${pctTxt(t.volvieron_pct)}</b><small>${th(t.volvieron)} pacientes</small></div>
+    <div class="so"><div class="kl">Retorno al centro</div><b class="${(t.retorno_centro_90||0)>=1?'pos':'wrn'}">${t.retorno_centro_90==null?'—':dec(t.retorno_centro_90,1)+'×'}</b><small>sobre ${clp(t.gasto_maduro)} de gasto</small></div>
+   </div>
+   <p class="note">Personas que llegaron por anuncios de Meta desde el ${fdate(v9.desde)} y cumplieron 90 días al ${fdate(v9.madura_hasta)}. Cuenta todo lo que pagaron en caja a 30, 60 y 90 días de su primer contacto.</p>`;
+ return `${mh('viaje','Una paciente se ve así cuando todas las piezas se conectan: del anuncio a la tercera especialidad. El relato es ilustrativo; el valor a 90 días de quienes trajeron los anuncios, real.')}
+ ${card('Valor en el tiempo de quienes llegaron por anuncios','trending',real,{sub:'Venta acumulada a 30, 60 y 90 días del primer contacto',real:v9.madura_hasta?`maduros al ${fdm(v9.madura_hasta)}`:''})}
+ <div class="grid g-57">
+  <section class="card"><div class="pt-card"><span class="avatar">A</span><div style="min-width:0"><h2 style="font-size:18px;font-weight:800;letter-spacing:-.02em">Paciente A</h2><div class="small muted">Recorrido de ejemplo · no corresponde a una persona real</div></div><span style="margin-left:auto">${tagI}</span></div>
+   <div class="kpis" style="margin-top:18px;grid-template-columns:repeat(2,minmax(0,1fr))">
+    <div class="so"><div class="kl">Primera visita</div><b>$35.000</b><small>Su primera atención</small></div>
+    <div class="so hl"><div class="kl">Siete meses</div><b>${clp(JV.reduce((a,e)=>a+e.v,0))}</b><small>Con tres especialidades y un referido</small></div>
+   </div>
+   <p class="note" style="margin-top:14px">Por esto se mide al paciente y no a la cita: juzgado por la primera atención, el anuncio se habría apagado.</p>
+   ${num(t.volvieron_pct)?`<div class="callout warn" style="margin-top:16px">${ic('alert')}<div>Dato real: de los pacientes de anuncios con 90 días cumplidos, <b>${pctTxt(t.volvieron_pct)} volvió una segunda vez</b>. El módulo 08 trabaja sobre el resto.</div></div>`:''}
+  </section>
+  ${card('Valor acumulado de la paciente A','trending',`<div class="cwrap" id="jchart"></div><div class="legend" style="margin-top:8px"><span><i class="sw" style="background:${v('azul')}"></i>Con venta</span><span><i class="sw" style="background:${v('aqua')}"></i>Atribución</span><span><i class="sw" style="background:${v('line-2')}"></i>Contacto</span>${num(m.cac_atendido)?`<span><i class="sw" style="background:${v('bad')}"></i>CAC real de Meta (${rng_(D.rango)})</span>`:''}</div>`,{sub:'Toque un punto para ver el detalle',real:0})}
+ </div>
+ ${card('Línea de tiempo','route',`<ol class="tl" id="tl">${JV.map((e,i)=>`<li data-j="${i}"><span class="bub ${e.k}">${i+1}</span><div><time>${e.d}</time><h3>${e.t}</h3><p>${e.p}</p></div><div class="val">${e.v?'+'+clp(e.v):'—'}${e.v?'<small>venta</small>':''}</div></li>`).join('')}</ol>`,{sub:'Del anuncio al referido',real:0})}`},
+ draw(D){jChart($('#jchart'),((D.embudo||{}).meta||{}).cac_atendido)}};
+
+/* ---------- 04 Motor ---------- */
+const SP={
+ 'Otorrino':{A:120,B:260000,ag:.32,sh:.86,tk:45000,mg:.38,cu:22,act:40000},
+ 'Kinesiología':{A:150,B:220000,ag:.30,sh:.80,tk:90000,mg:.34,cu:9,act:30000},
+ 'Odontología':{A:140,B:240000,ag:.34,sh:.84,tk:38000,mg:.40,cu:14,act:70000},
+ 'Ortodoncia':{A:95,B:300000,ag:.19,sh:.90,tk:180000,mg:.35,cu:8,act:60000},
+ 'Medicina General':{A:150,B:180000,ag:.45,sh:.85,tk:12000,mg:.28,cu:6,act:30000},
+};
+let SPK='Otorrino',INV=120000;
+function simAt(sp,s,f=1){const conv=sp.A*(1-Math.exp(-s/sp.B))*f;const citas=Math.min(conv*sp.ag,sp.cu/sp.sh+0.0001);return {conv,citas,at:Math.min(citas*sp.sh,sp.cu)}}
+function simUpdate(){
+ const sp=SP[SPK];const m=simAt(sp,INV),lo=simAt(sp,INV,.72),hi=simAt(sp,INV,1.24);
+ const venta=Math.round(m.at*sp.tk/1000)*1000,centro=venta*sp.mg,ret=INV?centro/INV:0;
+ const box=$('#simOut');if(!box)return;const r=(a,b)=>`${a} a ${b}`;
+ box.innerHTML=`<div class="so"><div class="kl">Conversaciones</div><b>${th(m.conv)}</b><small>${r(th(lo.conv),th(hi.conv))}</small></div><div class="so"><div class="kl">Citas</div><b>${th(m.citas)}</b><small>${r(th(lo.citas),th(hi.citas))}</small></div><div class="so"><div class="kl">Atendidos</div><b>${th(m.at)}</b><small>${r(th(lo.at),th(hi.at))}</small></div><div class="so"><div class="kl">Venta</div><b>${clp(venta)}</b><small>${r(clp(Math.round(lo.at*sp.tk/1000)*1000),clp(Math.round(hi.at*sp.tk/1000)*1000))}</small></div><div class="so"><div class="kl">Para el centro</div><b>${clp(Math.round(centro/1000)*1000)}</b><small>Margen ${dec(sp.mg*100,0)}%</small></div><div class="so hl"><div class="kl">Retorno</div><b class="${ret>=1?'pos':'wrn'}">${INV?dec(ret,1)+'×':'—'}</b><small>${INV?r(dec(lo.at*sp.tk*sp.mg/INV,1)+'×',dec(hi.at*sp.tk*sp.mg/INV,1)+'×'):'Sin inversión'}</small></div>`;
+ $('#invVal').textContent=clp(INV);
+ const rg=$('#invRange');rg.style.setProperty('--p',(INV/300000*100)+'%');rg.setAttribute('aria-valuetext',clp(INV)+' por semana');
+ curve($('#curve'));
+}
+function curve(el){if(!el)return;const sp=SP[SPK];const W=el.clientWidth||500,H=210,p={l:40,r:16,t:16,b:28};
+ const xs=[];for(let s=0;s<=300000;s+=10000)xs.push(s);
+ const mid=xs.map(s=>simAt(sp,s).at),lo=xs.map(s=>simAt(sp,s,.72).at),hi=xs.map(s=>simAt(sp,s,1.24).at);
+ const stp=Math.max(1,Math.ceil(Math.max(...hi,sp.cu)*1.1/4/5)*5);const ymax=stp*4;const X=s=>p.l+s/300000*(W-p.l-p.r),Y=a=>p.t+(H-p.t-p.b)*(1-a/ymax);
+ let s='';for(let i=0;i<=4;i++){const val=ymax*i/4;const y=Y(val);s+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" style="stroke:${v('grid')}"/><text x="${p.l-8}" y="${y+4}" text-anchor="end" style="fill:${v('muted')};font-size:11px">${Math.round(val)}</text>`}
+ [0,100000,200000,300000].forEach(t=>s+=`<text x="${X(t)}" y="${H-8}" text-anchor="${t===0?'start':t===300000?'end':'middle'}" style="fill:${v('muted')};font-size:11px">${t?'$'+t/1000+' mil':'$0'}</text>`);
+ s+=`<path d="M${xs.map((x,i)=>X(x)+','+Y(hi[i])).join('L')}L${xs.slice().reverse().map((x,i)=>X(x)+','+Y(lo[xs.length-1-i])).join('L')}Z" style="fill:${v('azul-soft')}"/>`;
+ s+=`<path d="M${xs.map((x,i)=>X(x)+','+Y(mid[i])).join('L')}" style="fill:none;stroke:${v('azul')};stroke-width:2.5"/>`;
+ const m=simAt(sp,INV).at;s+=`<line x1="${X(INV)}" x2="${X(INV)}" y1="${p.t}" y2="${H-p.b}" style="stroke:${v('aqua')};stroke-width:1.5"/><circle cx="${X(INV)}" cy="${Y(m)}" r="6" style="fill:${v('surface')};stroke:${v('aqua')};stroke-width:3"/>`;
+ el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva ilustrativa de atendidos según inversión semanal">${s}</svg>`}
+const SEN={sin_cupos:['bad','Sin cupos con gasto'],pocos_cupos:['warn','Pocos cupos con gasto'],cupos_sin_anuncio:['info','Cupos sin anuncio'],sin_agenda:['mut','Gasto sin agenda leída'],ok:['ok','Equilibrado'],sin_datos:['mut','Sin datos']};
+R.motor={html:D=>{const ag=D.agenda||{};
+ const real=ag.error?estadoV('No se pudo leer la agenda',ag.error,{err:1,retry:'captacion'}):ag.sin_datos?estadoV('Sin lectura de agenda todavía','Los cupos se leen a las 05:30 y 21:30 sin tocar Medilink al abrir esta página.',{icon:'calendar'}):`<div class="tw"><table class="tbl"><thead><tr><th>Especialidad</th><th class="n">Libres 7 días</th><th class="n">Libres 14 días</th><th class="n">Gasto Meta al día</th><th class="n">Valor libre 14 días</th><th>Señal</th></tr></thead><tbody>${(ag.grupos||[]).map(g=>{const s=SEN[g.senal]||SEN.ok;return `<tr><td><b>${esc(g.grupo)}</b><div class="small muted">${th(g.profesionales)} profesional${g.profesionales===1?'':'es'} · ${th(g.anuncios_activos)} anuncio${g.anuncios_activos===1?'':'s'} activo${g.anuncios_activos===1?'':'s'}</div></td><td class="n">${th(g.libres_7d)}</td><td class="n">${th(g.libres_14d)}</td><td class="n">${g.gasto_dia?clp(g.gasto_dia):'—'}</td><td class="n">${g.valor_14d?clp(g.valor_14d):'—'}</td><td><span class="pill ${s[0]}">${s[1]}</span></td></tr>`}).join('')}</tbody></table></div><p class="note">Cupos libres reales de los próximos 14 días contra el gasto diario promedio de Meta (7 días) en anuncios de esa especialidad. Lectura de agenda: ${fdate(ag.actualizado)} ${fhm(ag.actualizado)}${ag.desactualizado?' · <b>desactualizada</b>':''}. Foto de Meta: ${fdate((ag.gasto||{}).ultima_foto)}.</p><div style="margin-top:12px">${lnk('Abrir agenda × anuncios','campanas_meta','/alma/campanas-meta#agenda',0,1)}</div>`;
+ return `${mh('motor','El gasto en publicidad se reparte según dos cosas que hasta ahora nadie cruzaba: los cupos libres reales de la agenda y lo que cada especialidad deja al centro.')}
+ ${card('Agenda × anuncios','calendar',real,{sub:'Dónde se gasta sin agenda y dónde hay agenda sin anuncio',real:ag.actualizado?`lectura ${fdm(ag.actualizado)} ${fhm(ag.actualizado)}`:undefined})}
+ <section class="card"><div class="ch"><span class="ch-ic">${ic('sliders')}</span><div class="ch-t"><h2>Simulador: ¿qué pasa si invierto aquí la próxima semana?</h2><div class="sub">Modelo de ejemplo con rendimientos decrecientes · no usa datos del CMC</div></div><div class="r">${tagI}</div></div>
+  <div class="chips" role="group" aria-label="Especialidad" id="spChips">${Object.keys(SP).map(k=>`<button class="chip" type="button" data-sp="${k}" aria-pressed="${k===SPK}">${k}</button>`).join('')}</div>
+  <div class="grid g2" style="margin-top:20px;align-items:start">
+   <div><div class="kl" style="justify-content:flex-start;gap:5px">Inversión semanal en <span id="spName">${SPK}</span></div><div class="big-inv" id="invVal">${clp(INV)}</div>
+    <input class="rng" id="invRange" type="range" min="0" max="300000" step="10000" value="${INV}" aria-label="Inversión semanal">
+    <div class="sim-out" id="simOut"></div></div>
+   <div class="cwrap"><div class="kl" style="margin-bottom:8px">Atendidos esperados según inversión</div><div id="curve"></div></div>
+  </div>
+ </section>
+ ${card('Reglas que el motor aplicaría solo','zap',`${[['R-01','Si una especialidad no tiene cupos en 72 horas, pausar sus anuncios','Se reactiva sola cuando aparecen cupos.'],['R-02','Si una especialidad está bajo 50% a 72 horas, subir su presupuesto 30%','Con tope semanal por especialidad.'],['R-03','Tope diario total entre Meta y Google','Cualquier excedente requiere aprobación del dueño.']].map(r=>`<div class="rule"><div><h3><span class="muted small">${r[0]}</span> · ${r[1]}</h3><p>${r[2]}</p></div><button class="sw-t" type="button" role="switch" aria-checked="false" aria-label="${r[1]}" disabled aria-disabled="true"></button></div>`).join('')}<p class="note">Disponible cuando el motor tenga permiso de escritura sobre las campañas de Meta. Hoy no lo tiene, por decisión: ningún cambio de presupuesto sale de Alma.</p>`,{sub:'Lo que el motor haría sin preguntar',real:0})}`},
+ draw(){simUpdate()}};
+
+/* ---------- 05 Creativos ---------- */
+let ADSORT='ret';
+const FAT={cansado:['bad','Cansado',5],vigilar:['warn','Vigilar',3],sano:['ok','Sano',1],sin_datos:['mut','Sin base',0]};
+function adsHTML(D){const cr=D.creativos||{};const xs=(cr.anuncios||[]).slice();
+ const key={ret:x=>x.retorno_centro??-1,ctr:x=>(x.fatiga||{}).ctr??-1,citas:x=>x.citas||0,fr:x=>(x.fatiga||{}).frecuencia_7d??x.frecuencia??-1}[ADSORT];
+ xs.sort((a,b)=>key(b)-key(a));
+ if(!xs.length)return estadoV('Sin anuncios con gasto en el rango','Cuando un anuncio de Meta tenga gasto o citas en los últimos 30 días, aparece aquí con su imagen y su retorno.',{icon:'sparkles'});
+ return xs.map((d,i)=>{const f=d.fatiga||{};const fz=FAT[f.etiqueta]||FAT.sin_datos;const fr=f.frecuencia_7d??d.frecuencia;const lv=Math.min(5,Math.round(fr||0));const cls=f.etiqueta==='cansado'?'b':f.etiqueta==='vigilar'?'w':'';
+  const ser=(d.ctr_semanas||[]);const falling=ser.filter(num).length>=2&&ser.filter(num).slice(-1)[0]<ser.filter(num)[0]*.8;
+  const thumb=d.imagen?`<div class="thumb img"><img src="${esc(_tk('/alma/api/campanas-meta/creativo/'+encodeURIComponent(d.ad_id)))}" alt="${esc('Imagen del anuncio '+(d.titulo||d.anuncio))}" loading="lazy" decoding="async"><span class="rank">${i+1}</span><div class="th-in"><div class="th-h">${esc(d.titulo||d.anuncio)}</div></div></div>`
+   :`<div class="thumb t${i%3+1}"><span class="rank">${i+1}</span><svg class="art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I.sparkles}</svg><div class="th-h">${esc(d.titulo||d.anuncio)}</div><div class="th-s">Sin imagen guardada todavía</div></div>`;
+  return `<article class="ad">${thumb}
+ <div class="ad-b"><div class="ad-top"><b>${esc(d.anuncio)}</b><span style="margin-left:auto">${d.activo?'<span class="pill ok">Activo</span>':'<span class="pill mut">Sin gasto reciente</span>'}</span></div>
+ ${d.texto?`<p class="ad-txt">${esc(d.texto)}</p>`:''}
+ <div class="ad-m"><div><small>Retorno</small><b class="${(d.retorno_centro??1)>=1?'':'neg'}">${d.retorno_centro==null?'—':dec(d.retorno_centro,1)+'×'}</b></div><div><small>CTR 7 d</small><b>${f.ctr==null?'—':dec(f.ctr,1)+'%'}</b></div><div><small>Citas</small><b>${th(d.citas)}</b></div></div>
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px"><span class="small muted">CTR 6 semanas</span>${spark(ser,falling?'bad':'azul')}</div>
+ <div class="fat ${cls}" title="Frecuencia de 7 días ${dec(fr,1)}">${[1,2,3,4,5].map(n=>`<i class="${n<=lv?'on':''}"></i>`).join('')}<span>Frecuencia ${dec(fr,1)} · <span class="pill ${fz[0]}" style="margin-left:2px">${fz[1]}</span></span></div></div></article>`}).join('')}
+R.creativos={html:D=>{const cr=D.creativos||{},rg=rng_(D.rango),rf=cr.resumen_fatiga||{};
+ const fatig=(cr.anuncios||[]).filter(a=>(a.fatiga||{}).etiqueta==='cansado'||(a.fatiga||{}).etiqueta==='vigilar');
+ if(cr.error)return `${mh('creativos','Cada anuncio juzgado por lo que deja al centro.')}${card('Anuncios','sparkles',estadoV('No se pudieron leer los anuncios',cr.error,{err:1,retry:'captacion'}))}`;
+ return `${mh('creativos','Cada anuncio juzgado por lo que deja al centro, no por los «me gusta». La fatiga se mide con la frecuencia y el CTR de 7 días contra los 7 anteriores.')}
+ ${card('Anuncios con gasto o citas','sparkles',`<div class="chips" role="group" aria-label="Ordenar anuncios" style="margin-bottom:16px">${[['ret','Retorno al centro'],['ctr','CTR'],['citas','Citas'],['fr','Fatiga']].map(([k,l])=>`<button class="chip" type="button" data-adsort="${k}" aria-pressed="${k===ADSORT}">${l}</button>`).join('')}</div><div class="ads" id="ads">${adsHTML(D)}</div><p class="note">Imágenes guardadas en el servidor del centro (nunca enlazadas a Meta). Retorno = lo que quedó para el centro ÷ gasto del anuncio, ${rg}. Foto de Meta al ${fdate(cr.ultima_foto)}.</p>`,{sub:'Ranking por retorno al centro',real:rg})}
+ <div class="grid g-75">
+  ${card('Variantes generadas esperando aprobación','sparkles',`
+   ${[['t3','ear','Otorrino sin viajar a Concepción','Reemplazo de un anuncio cansado. Ángulo: distancia y tiempo, no síntoma.'],['t2','smile','Su evaluación de brackets, esta semana','Agrega hora concreta en el texto (ganó en el experimento E-01).']].map(x=>`<div class="var"><div class="thumb ${x[0]}"><svg class="art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">${I[x[1]]}</svg><div class="th-h">${x[2]}</div></div><div><h3>${x[2]}</h3><p>${x[3]}</p><div class="acts">${off('Aprobar','Disponible cuando exista el generador de variantes. Nada se publica sin aprobación humana.')}</div></div></div>`).join('')}`,{sub:'Predicción antes de publicar, con intervalo',real:0})}
+  ${card('Señales de fatiga','alert',`${fatig.length?fatig.slice(0,5).map(a=>{const f=a.fatiga;return `<div class="hb2"><span class="hb-l">${esc(a.anuncio)}</span><span class="hb-t"><i class="${f.etiqueta==='cansado'?'b':'w'}" style="width:${Math.min(100,(f.frecuencia_7d||0)/6*100)}%"></i></span><span class="hb-v">${dec(f.frecuencia_7d,1)}${f.ctr_cambio_pct!=null?` · CTR ${f.ctr_cambio_pct>0?'+':''}${f.ctr_cambio_pct}%`:''}</span></div>`}).join(''):estadoV('Sin anuncios cansados','Ningún anuncio con base suficiente muestra frecuencia alta ni caída de CTR.',{icon:'check'})}
+   <div class="callout" style="margin-top:14px">${ic('info')}<div>Cansados <b>${th(rf.cansado)}</b> · vigilar <b>${th(rf.vigilar)}</b> · sanos <b>${th(rf.sano)}</b>. Un anuncio se marca cansado si la frecuencia de 7 días pasa de 6, o pasa de 3 con el CTR cayendo 20% o más.</div></div>`,{sub:'Frecuencia de 7 días y cambio de CTR',real:cr.ultima_foto?`7 días al ${fdm(cr.ultima_foto)}`:''})}
+ </div>`},
+ draw(){}};
+
+/* ---------- 06 Territorio ---------- */
+const TOWNS=[
+ {n:'Carampangue',x:.56,y:.47,ax:'start',cmc:1},{n:'Arauco',x:.33,y:.50,ax:'end'},{n:'Laraquete',x:.50,y:.37,ax:'end'},
+ {n:'Curanilahue',x:.72,y:.63,ax:'start'},{n:'Los Álamos',x:.46,y:.75,ax:'start'},{n:'Cañete',x:.54,y:.92,ax:'start'},
+ {n:'Lebu',x:.20,y:.80,ax:'start'},{n:'Contulmo',x:.74,y:.97,ax:'end'},{n:'Lota',x:.60,y:.25,ax:'end'},{n:'Coronel',x:.65,y:.15,ax:'end'},{n:'Concepción',x:.84,y:.06,ax:'end'},
+];
+function drawMap(el,T){if(!el)return;
+ const by={};(T.comunas||[]).forEach(c=>by[c.comuna]=c);
+ const W=el.clientWidth||600;const H=Math.round(W<560?Math.max(460,W*1.4):Math.min(560,Math.max(380,W*.85)));const sc=Math.min(1,Math.max(.62,W/600));const P=(x,y)=>[x*W,y*H];
+ const coast=[[.66,0],[.62,.08],[.58,.18],[.56,.28],[.47,.33],[.40,.40],[.30,.45],[.25,.52],[.22,.62],[.15,.72],[.12,.82],[.10,1]];
+ let s=`<path d="M0,0 L${coast.map(c=>P(...c).join(',')).join(' L')} L0,${H}Z" style="fill:${v('sea')}"/>`;
+ s+=`<path d="M${coast.map(c=>P(...c).join(',')).join(' L')}" style="fill:none;stroke:${v('line-2')};stroke-width:1.5"/>`;
+ const sea=P(.04,.30);s+=`<text x="${sea[0]}" y="${sea[1]}" style="fill:${v('muted')};font-size:11px;letter-spacing:.12em;font-weight:600">GOLFO DE ARAUCO</text>`;
+ const byN=Object.fromEntries(TOWNS.map(t=>[t.n,t]));
+ [['Concepción','Coronel'],['Coronel','Lota'],['Lota','Laraquete'],['Laraquete','Carampangue'],['Carampangue','Arauco'],['Carampangue','Curanilahue'],['Carampangue','Los Álamos'],['Los Álamos','Cañete'],['Los Álamos','Lebu'],['Cañete','Contulmo']].forEach(([a,b])=>{const A=P(byN[a].x,byN[a].y),B=P(byN[b].x,byN[b].y);s+=`<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" style="stroke:${v('road')};stroke-width:3;stroke-linecap:round"/>`});
+ const maxP=Math.max(1,...TOWNS.map(t=>(by[t.n]||{}).personas||0));const maxV=Math.max(1,...TOWNS.map(t=>(by[t.n]||{}).venta||0));
+ TOWNS.forEach(t=>{const [x,y]=P(t.x,t.y);const c=by[t.n];const pp=c?c.personas:0;const r=(pp?6+Math.sqrt(pp/maxP)*22:4)*sc;const op=pp?Math.min(1,.18+(c.venta||0)/maxV*.82):0;
+  s+=`<circle cx="${x}" cy="${y}" r="${r}" style="fill:${v('land')}"/><circle cx="${x}" cy="${y}" r="${r}" style="fill:${v('aqua')};fill-opacity:${op};stroke:${v(pp?'azul':'line-2')};stroke-width:1.5"><title>${esc(t.n)}: ${pp?th(pp)+' personas · '+clp(c.venta)+' de venta':'sin personas en el rango'}</title></circle>`;
+  if(t.cmc)s+=`<circle cx="${x}" cy="${y}" r="4" style="fill:${v('navy')};stroke:${v('surface')};stroke-width:2"/>`;
+  const l1=t.n+(t.cmc&&W>=560?' · CMC':'');let ax=t.ax;const est=l1.length*7.4+8;if(ax==='start'&&x+r+6+est>W)ax='end';if(ax==='end'&&x-r-6-est<0)ax='start';const dx=ax==='start'?r+6:-(r+6);
+  const l2=pp?`${th(pp)} personas`:'—';const st=`paint-order:stroke;stroke:${v('land')};stroke-width:4px;stroke-linejoin:round`;
+  s+=`<text x="${x+dx}" y="${y-1}" text-anchor="${ax}" style="fill:${v(pp?'ink':'muted')};font-size:12px;font-weight:${pp?800:600};${st}">${esc(l1)}</text>${pp?`<text x="${x+dx}" y="${y+13}" text-anchor="${ax}" style="fill:${v('ink-2')};font-size:11px;font-weight:500;${st}">${l2}</text>`:''}`});
+ el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Esquema de la provincia de Arauco con las personas que llegaron por comuna">${s}</svg><span class="map-note">Esquema, no a escala</span>`;
+}
+R.territorio={html:D=>{const T=D.territorio||{},rg=rng_(D.rango);
+ if(T.error)return `${mh('territorio','De dónde viene cada paciente.')}${card('Territorio','map',estadoV('No se pudo leer el territorio',T.error,{err:1,retry:'captacion'}))}`;
+ const cs=T.comunas||[],cob=T.cobertura||{};const con=cs.filter(c=>c.comuna!=='Sin dato');const top=con[0];const cur=cs.find(c=>c.comuna==='Curanilahue');const sd=cs.find(c=>c.comuna==='Sin dato');
+ return `${mh('territorio','De dónde viene cada persona que llegó por anuncios o por la web, y cuánta venta dejó. La comuna sale de lo que dijo al bot o de su ficha en Medilink: la dirección manda.')}
+ <div class="kpis">
+  ${kpi('Con comuna conocida',pctTxt(cob.pct),`${th(cob.con_comuna)} de ${th(cob.personas)} personas`,'accent',rg)}
+  ${kpi('Comuna que más trae',top?esc(top.comuna):'—',top?`${th(top.personas)} personas · ${clp(top.venta)} de venta`:'Sin datos','',rg)}
+  ${kpi('Curanilahue',cur?th(cur.personas):'0',cur?`personas · ${clp(cur.venta)} de venta · ${th(cur.pct_venta)}% del total`:'Sin personas en el rango','',rg)}
+  ${kpi('Venta sin comuna',sd?th(sd.pct_venta)+'%':'0%',sd?`${clp(sd.venta)} sin origen registrado`:'Toda la venta tiene comuna',sd&&sd.pct_venta>=25?'alert':'',rg)}
+ </div>
+ <div class="grid g-75">
+  <section class="card"><div class="ch"><span class="ch-ic">${ic('map')}</span><div class="ch-t"><h2>Provincia de Arauco y alrededores</h2><div class="sub">Tamaño = personas · intensidad = venta</div></div><div class="r">${tagR(rg)}</div></div>
+   <div class="map-wrap"><div id="map"></div></div></section>
+  ${card('Por comuna','users',cs.length?`<div class="tw"><table class="tbl"><thead><tr><th>Comuna</th><th class="n">Personas</th><th class="n">Citas</th><th class="n">Venta</th><th class="n">% venta</th></tr></thead><tbody>${cs.map(c=>`<tr><td><b>${esc(c.comuna)}</b></td><td class="n">${th(c.personas)}</td><td class="n">${th(c.citas)}</td><td class="n">${clp(c.venta)}</td><td class="n">${th(c.pct_venta)}%</td></tr>`).join('')}</tbody></table></div><p class="note">Personas de anuncios y web del rango. La penetración por población y los tiempos de viaje todavía no están conectados.</p>`:estadoV('Sin personas en el rango','Cuando lleguen personas por anuncios o web, se ordenan aquí por comuna.'),{sub:'Ordenado por venta',real:rg})}
+ </div>`},
+ draw(D){drawMap($('#map'),D.territorio||{})}};
+
+/* ---------- 07 Recepción ---------- */
+R.recepcion={html:D=>{const V=D.velocidad||{},E=D.esperando||{},rg=rng_(D.rango);
+ const rp=V.rapidos||{},lt=V.lentos||{};
+ const waitList=E.error?estadoV('No se pudo leer la cola',E.error,{err:1,retry:'conversion'}):(E.lista||[]).length?(E.lista||[]).map(w=>`<div class="wl${w.minutos>=15?' hot':''}"><div class="wt">${th(w.minutos)}<small>min hábiles</small></div><div style="min-width:0"><div style="font-weight:600">${esc(chs(w.canal))} · ${esc(w.especialidad||'Sin especialidad aún')}</div><div class="meta">Paciente ${esc(w.iniciales||'—')} · espera desde las ${fhm(w.desde)}</div></div></div>`).join('')+`<div style="margin-top:12px">${lnk('Abrir panel de recepción','panel','/admin/v2',1,1)}</div>`:estadoV('Nadie espera una respuesta humana','Cuando el bot pase a alguien a recepción y nadie le haya contestado, aparece aquí con su tiempo de espera.',{icon:'check'});
+ return `${mh('recepcion','La recepción es el canal que más convierte y el que menos se medía. Aquí se ve cuánto pesa cada minuto de espera hasta la primera respuesta humana, contando solo el horario de atención.')}
+ <div class="kpis">
+  ${kpi('Primera respuesta humana',V.mediana_min==null?'—':dec(V.mediana_min,0)+' min',`Mediana · ${th(V.necesitaron)} personas necesitaron recepción`,'accent',rg)}
+  ${kpi('Agenda si responden en 30 min',pctTxt(rp.pct),`contra ${pctTxt(lt.pct)} si tardan más de 2 horas`,'',rg)}
+  ${kpi('Sin respuesta humana',th(V.sin_respuesta),'Personas que pidieron recepción y nadie les contestó',(V.sin_respuesta||0)>0?'alert':'',rg)}
+  ${kpi('Esperando ahora',th(E.total),E.total?(E.max_min?`La más antigua lleva ${th(E.max_min)} min hábiles`:'Escribieron fuera del horario de recepción'):'Nadie espera','', 'ahora')}
+ </div>
+ <div class="grid g-57">
+  ${card('Cuánto pesa cada minuto','clock',`<div class="cwrap" id="rtChart"></div><p class="note">Porcentaje que agendó según el tiempo a la primera respuesta humana (personas de anuncios y web que necesitaron recepción). ${num(V.citas_perdidas_estimadas)?`Si los lentos hubiesen agendado como los rápidos: <b>≈${th(V.citas_perdidas_estimadas)} citas más</b> (referencia, no promesa).`:''}</p>`,{sub:'Conversión por tramo de espera',real:rg})}
+  ${card('Conversaciones esperando','msg',waitList,{sub:'Ordenadas por tiempo de espera · solo iniciales',real:'ahora'})}
+ </div>
+ <div class="grid g2">
+  ${card('Cierre por turno','users',`${[['Mañana · 08 a 12',41],['Tarde · 15 a 20',36],['Sábado',31],['Mediodía · 12 a 15',28],['Fuera de horario · solo bot',22]].map(([l,p],i)=>`<div class="hb2"><span class="hb-l">${l}</span><span class="hb-t"><i class="${i===3?'w':i===0?'':'m'}" style="width:${p/45*100}%"></i></span><span class="hb-v"><b>${p}%</b> agenda</span></div>`).join('')}<div class="ilus-band" style="margin-top:14px">${ic('info',16)}Disponible cuando la medición de rapidez se agrupe por turno de recepción.</div>`,{sub:'Porcentaje de conversaciones que terminan en cita',real:0})}
+  ${card('Llamadas perdidas','phone',`${[['10:33','Ecografía','Mensaje de voz transcrito'],['10:05','Medicina General','Sin mensaje · número con atenciones previas'],['09:47','Kinesiología','Mensaje de voz']].map(c=>`<div class="wl"><div class="wt" style="font-size:15px">${c[0]}</div><div style="min-width:0"><div style="font-weight:600">${c[1]}</div><div class="meta" style="white-space:normal">${c[2]}</div></div></div>`).join('')}<div style="margin-top:12px">${off('Devolver llamada','Disponible cuando el fijo (44) 296 5226 registre las llamadas en el sistema.',0)}</div>`,{sub:'Más reciente primero',real:0})}
+ </div>`},
+ draw(D){const V=D.velocidad||{};const cv=(V.curva||[]);barChart($('#rtChart'),{items:cv.map(c=>({l:c.label,ls:{lt5:'< 5 min',['5_30']:'5 a 30',['30_120']:'30 a 120',gt2h:'> 2 h',sin_respuesta:'Sin resp.'}[c.tramo],v:c.pct,hl:c.tramo==='lt5'||c.tramo==='5_30'})),ymax:100,ticks:[0,50,100],yfmt:t=>t+'%',vfmt:x=>x==null?'—':x+'%',aria:'Porcentaje que agenda por tramo de espera'})}};
+
+/* ---------- 08 Recall ---------- */
+R.recall={html:D=>{const X=D.experimentos||{},vu=D.volvieron||{},re=(X.reenganche||{}),ch=re.con_hora||{},pe=X.persistencia||{};
+ return `${mh('recall','Quién debería volver, quién está por irse y qué decirle. El sistema prepara; una persona de recepción decide y envía desde Recuperar pacientes.')}
+ <div class="kpis">
+  ${kpi('Volvió una segunda vez',pctTxt(vu.pct),vu.pacientes?`De ${th(vu.pacientes)} pacientes de anuncios con 90 días cumplidos`:'Aún no hay pacientes con 90 días','',vu.madura_hasta?`maduros al ${fdm(vu.madura_hasta)}`:'')}
+  ${kpi('Reenganche con hora',pctTxt(ch.pct,1),`agendó en 24 h · ${th(ch.enviados)} mensajes`,'good',`${X.dias||90} días`)}
+  ${kpi('Segundo toque',pctTxt(pe.pct,1),pe.total?`${th(pe.agendadas)} de ${th(pe.total)} consultas abiertas terminaron agendadas`:'Sin consultas en seguimiento','', '30 días')}
+  ${kpi('Deberían volver este mes','251','Entre seis programas de seguimiento')}
+ </div>
+ ${card('Recuperar pacientes','send',`<div class="estado"><span class="ei">${ic('users',20)}</span><div><h3>La cola real de segundo contacto ya existe</h3><p>Quién se cayó de anuncios y web, con su estado de gestión y el envío manual de recordatorios. Nada se envía solo.</p><div style="margin-top:12px">${lnk('Abrir Recuperar pacientes','recuperar','/alma/recuperar',1,1)}</div></div></div>`,{sub:'Acción real de este módulo',real:'en uso'})}
+ ${card('Programas de seguimiento','repeat',`<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${[['Control diabetes',34,'$2,0M'],['Ortodoncia mensual',58,'$1,7M'],['Kine · serie incompleta',41,'$3,7M'],['Ecografía de control',19,'$0,7M'],['Crónicos Medicina General',77,'$0,9M'],['Psicología sin 2ª sesión',22,'$0,6M']].map(c=>`<div class="so"><div class="kl">${c[0]}</div><b>${c[1]}</b><small>${c[2]} en juego</small></div>`).join('')}</div><div class="ilus-band" style="margin-top:14px">${ic('info',16)}Disponible cuando cada programa tenga su regla de retorno y la probabilidad de abandono por paciente.</div>`,{sub:'Pacientes que deberían volver este mes',real:0})}`},
+ draw(){}};
+
+/* ---------- 09 Reputación ---------- */
+const gauge=val=>{const W=220,H=124,cx=110,cy=112,r=88;const a=x=>Math.PI*(1-(x+100)/200);const P=x=>[cx+r*Math.cos(a(x)),cy-r*Math.sin(a(x))];const [x0,y0]=P(-100),[x1,y1]=P(val),[x2,y2]=P(100);
+ return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="NPS ${val}"><path d="M${x0},${y0}A${r},${r} 0 0 1 ${x2},${y2}" style="fill:none;stroke:${v('track')};stroke-width:14;stroke-linecap:round"/><path d="M${x0},${y0}A${r},${r} 0 0 1 ${x1},${y1}" style="fill:none;stroke:${v('aqua')};stroke-width:14;stroke-linecap:round"/><text x="${cx}" y="${cy-18}" text-anchor="middle" style="fill:${v('ink')};font-size:40px;font-weight:800;letter-spacing:-1px">${val}</text><text x="${cx}" y="${cy+4}" text-anchor="middle" style="fill:${v('muted')};font-size:11px;font-weight:600">NPS · 30 días</text></svg>`};
+const stars=n=>`<span class="stars" aria-label="${n} de 5 estrellas">${[1,2,3,4,5].map(i=>`<svg width="14" height="14" viewBox="0 0 24 24" style="fill:${i<=n?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6" aria-hidden="true">${I.star}</svg>`).join('')}</span>`;
+R.reputacion={html:()=>`${mh('reputacion','Lo que los pacientes dicen en Google y en la encuesta posterior a la atención, ordenado por especialidad y por tema, con la respuesta ya redactada.')}
+ <div class="ilus-band">${ic('info',16)}Todo este módulo es ilustrativo: muestra cómo se verá cuando se conecte el Perfil de Empresa de Google y la encuesta posterior a la atención.</div>
+ <div class="grid g3">
+  <section class="card"><div class="kl">Google · Perfil de Empresa ${tagI}</div><div style="display:flex;align-items:baseline;gap:10px;margin-top:8px"><span class="ltv">4,7</span>${stars(5)}</div><div class="small muted">186 reseñas · 14 nuevas este mes</div>
+   <div style="margin-top:14px">${[[5,142],[4,26],[3,8],[2,4],[1,6]].map(([s,n])=>`<div class="hb2" style="grid-template-columns:28px minmax(0,1fr) 32px;padding:3px 0"><span class="small muted">${s} ★</span><span class="hb-t"><i class="${s>=4?'':'m'}" style="width:${n/142*100}%"></i></span><span class="hb-v">${n}</span></div>`).join('')}</div></section>
+  <section class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><div class="kl" style="align-self:stretch">Encuesta post-atención ${tagI}</div>${gauge(62)}<div class="small muted">412 respuestas · 71% promotores · 9% detractores</div></section>
+  ${card('Temas que aparecen','msg',`<div class="chips">${[['Trato amable',64,'p'],['Explican bien',31,'p'],['Puntualidad',22,'p'],['Espera en sala',14,'ng'],['Teléfono no contesta',9,'ng']].map(t=>`<span class="theme-chip ${t[2]}">${t[0]} <b>${t[1]}</b></span>`).join('')}</div>`,{real:0})}
+ </div>
+ ${card('Reseñas que esperan respuesta','msg',`<div class="rev"><q>Muy buena atención de la doctora, pero esperé 40 minutos y nadie avisó del atraso.</q><div class="meta">${stars(3)} Medicina General · hace 2 días</div><div class="reply"><b>Respuesta sugerida:</b> Gracias por su comentario y por su paciencia. Tiene razón: debimos avisarle del atraso. Esperamos verle pronto.</div><div style="margin-top:10px">${off('Publicar respuesta','Disponible cuando se conecte el Perfil de Empresa de Google.')}</div></div><p class="note">Las respuestas nunca confirman que la persona es paciente ni mencionan datos de su atención.</p>`,{real:0})}`,
+ draw(){}};
+
+/* ---------- 10 Competencia ---------- */
+R.competencia={html:()=>`${mh('competencia','Contra quién compite el CMC por cada búsqueda, a qué precio y qué demanda de la zona hoy no atiende nadie.')}
+ <div class="ilus-band">${ic('info',16)}Ilustrativo: requiere un levantamiento de precios trimestral y datos de búsqueda por zona. La búsqueda propia del CMC, real, está en el módulo 02.</div>
+ <div class="grid g-57">
+  ${card('Participación en búsquedas de salud · zona Arauco','target',`${[['CESFAM y hospitales públicos',34,'m'],['Clínicas de Concepción',28,'m'],['Centro Médico Carampangue',21,''],['Centros de Cañete',9,'m'],['Otros',8,'m']].map(r=>`<div class="hb2"><span class="hb-l">${r[0]}</span><span class="hb-t"><i class="${r[2]}" style="width:${r[1]/34*100}%"></i></span><span class="hb-v"><b>${r[1]}%</b></span></div>`).join('')}`,{sub:'Share of search · 90 días',real:0})}
+  ${card('Precios de referencia','wallet',`<div class="tw"><table class="tbl"><thead><tr><th>Prestación</th><th class="n">CMC</th><th class="n">CESFAM</th><th class="n">Clínica Concepción</th></tr></thead><tbody>${[['Consulta otorrino','$45.000','Derivación','$62.000'],['Ecografía abdominal','$38.000','Derivación','$55.000'],['Evaluación ortodoncia','$15.000','No ofrece','$30.000']].map(r=>`<tr><td>${r[0]}</td>${r.slice(1).map((c,i)=>`<td class="n${i===0?'':' muted'}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`,{sub:'Particular, misma prestación',real:0})}
+ </div>`,
+ draw(){}};
+
+/* ---------- 11 Finanzas ---------- */
+R.finanzas={html:D=>{const M=D.meses||{},rg=rng_(D.rango);
+ if(M.error)return `${mh('finanzas','El crecimiento visto como inversión.')}${card('Finanzas','wallet',estadoV('No se pudo leer la caja',M.error,{err:1,retry:'finanzas'}))}`;
+ const an=M.anterior||{},ac=M.actual||{};const cs=D.canales||[];const v9=(D.valor90||{}).total||{};
+ const med=(M.medios||{}).lista||[];const cols=['azul','aqua','bar-mute','vis','line-2'];
+ return `${mh('finanzas','El crecimiento visto como inversión: cuánto vende el centro según la caja, cuánto le queda tras honorarios, cuánto cuesta traer a un paciente y dónde queda el mes contra la meta.')}
+ <div class="kpis">
+  ${kpi(esc(cap(mesLargo(an.mes||'2026-01'))),mm(an.venta),`Venta de caja · ${clp(an.centro)} para el centro`,'',an.mes?'mes cerrado':'')}
+  ${kpi('Mes en curso',mm(ac.venta),M.proyeccion?`Al ritmo actual cerraría en ${mm(M.proyeccion)} <span class="tag ilus" title="Venta a la fecha ÷ días con caja × días del mes">estimado</span>`:'Muy pocos días con caja para estimar','accent',M.caja_hasta?`al ${fdm(M.caja_hasta)}`:'')}
+  ${kpi('Para el centro',pctTxt(an.centro_pct),'De cada peso vendido, tras honorarios del profesional','',an.mes?mesLbl(an.mes)+' '+an.mes.slice(0,4):'')}
+  ${kpi('Camino a $40M/mes',pctTxt(M.avance_meta_pct),'Último mes cerrado contra la meta de mayo de 2032','',an.mes?'mes cerrado':'')}
+ </div>
+ ${card('Venta mensual de caja','trending',`<div class="cwrap" id="finChart"></div><div class="legend" style="margin-top:8px"><span><i class="sw" style="background:${v('azul')}"></i>Venta de caja</span><span><i class="sw" style="background:${v('aqua')}"></i>Mes en curso al ritmo actual (estimado)</span><span><i class="sw" style="background:${v('vis')}"></i>Meta 2032</span></div><p class="note">Fuente: caja de Medilink (espejo diario). Último día con caja: ${fdate(M.caja_hasta)}. El mes en curso se estima como venta a la fecha ÷ días con caja × días del mes: es una referencia, no una proyección con intervalo.</p>`,{sub:'Millones de pesos',real:M.caja_hasta?`al ${fdm(M.caja_hasta)}`:''})}
+ <div class="grid">
+  ${card('Economía por canal','wallet',cs.length?`<div class="tw"><table class="tbl"><thead><tr><th>Canal</th><th class="n">Gasto</th><th class="n">Atendidos</th><th class="n">CAC atendido</th><th class="n">Venta</th><th class="n">Para el centro</th><th class="n">Retorno</th></tr></thead><tbody>${cs.map(c=>`<tr><td><span class="cn"><i class="sw" style="background:${v(c.canal==='meta'?'c-fb':'c-go')}"></i>${c.canal==='meta'?'Anuncios Meta':'Página web'}</span></td><td class="n">${c.gasto?clp(c.gasto):'—'}</td><td class="n">${th(c.atendidos)}</td><td class="n">${c.gasto?clp(c.cac_atendido):'—'}</td><td class="n">${clp(c.venta)}</td><td class="n">${clp(c.centro)}</td><td class="n">${c.gasto?`<span class="${(c.retorno_centro||0)>=1?'pos':'wrn'}">${dec(c.retorno_centro,1)}×</span>`:'<span class="muted">Sin pauta</span>'}</td></tr>`).join('')}</tbody></table></div>${num(v9.retorno_centro_90)?`<div class="callout" style="margin-top:14px">${ic('info')}<div>A 90 días, lo que dejan al centro los pacientes de Meta equivale a <b>${dec(v9.retorno_centro_90,1)} veces</b> el gasto de su periodo, con un ticket de ${clp(v9.ticket_90)} por paciente.</div></div>`:''}<p class="note">Retorno = para el centro ÷ gasto. Bajo 1× el anuncio no se paga solo en el rango; el valor a 90 días suele cambiar la lectura.</p>`:estadoV('Sin datos de canales','No se pudieron leer los canales del rango.',{err:1,retry:'finanzas'}),{sub:'Últimos 30 días',real:rg})}
+  ${card('Medio de pago','info',med.length?`<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">${donut(med.map((m,i)=>({l:m.medio,v:m.pct,c:cols[i%cols.length]})))}<div class="legend" style="flex-direction:column;gap:8px">${med.map((m,i)=>`<span><i class="sw" style="background:${v(cols[i%cols.length])}"></i>${esc(m.medio)} <b>${m.pct}%</b></span>`).join('')}</div></div>`:estadoV('Sin caja del mes anterior','Aparecerá cuando la caja del mes esté sincronizada.'),{sub:(M.medios||{}).mes?cap(mesLargo(M.medios.mes)):'',real:(M.medios||{}).mes?'mes cerrado':''})}
+ </div>`},
+ draw(D){const M=D.meses||{};const se=M.serie||[];if(!se.length)return;const mx=Math.max(40e6,...se.map(s=>s.venta),M.proyeccion||0)/1e6;const ymax=Math.ceil(mx/5)*5+2;const ymin=0;
+  const labels=se.map(s=>mesLbl(s.mes));const real=se.map((s,i)=>i===se.length-1?null:s.venta/1e6);
+  const proy=se.map((s,i)=>i===se.length-2?s.venta/1e6:i===se.length-1&&M.proyeccion?M.proyeccion/1e6:null);
+  const tk=[];for(let t=0;t<=ymax;t+=10)tk.push(t);
+  lineChart($('#finChart'),{labels,ymin,ymax,ticks:tk,yfmt:t=>'$'+dec(t,t%1?1:0).replace(/,0$/,'')+'M',series:[{v:real,c:'azul',dots:1,lbl:real.map((x,i)=>i===se.length-2&&x!=null?mm(x*1e6):null)},{v:proy,c:'aqua',dash:1,dots:1,lbl:proy.map((x,i)=>i===se.length-1&&x!=null?mm(x*1e6):null)}],refs:[{v:40,l:'Meta 2032 · $40M/mes'}],aria:'Venta mensual de caja y mes en curso estimado'})}};
+const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
+
+/* ---------- 12 Predicción ---------- */
+R.prediccion={html:()=>`${mh('prediccion','La semana que viene, antes de que llegue: cuánta demanda habrá por especialidad y qué citas de mañana tienen riesgo de quedar vacías.')}
+ <div class="ilus-band">${ic('info',16)}Todo este módulo es ilustrativo. Requiere 24 meses de historia limpia por especialidad, clima local y calendario escolar.</div>
+ ${card('Demanda prevista por especialidad','trending',`${[['Medicina General',148,140],['Kinesiología',96,120],['Odontología',74,80],['Otorrino',38,50],['Ecografía',62,50]].map(f=>{const mx=170;const over=f[1]>f[2];return `<div class="hb fc"><span class="hb-l">${f[0]}</span><span class="hb-t"><i class="${over?'w':''}" style="width:${f[1]/mx*100}%"></i></span><span class="hb-v"><b>${f[1]}</b> / ${f[2]}</span><span class="hb-m ${over?'wrn':'muted'}">${over?'Faltan '+(f[1]-f[2])+' cupos':'Holgura '+(f[2]-f[1])}</span></div>`}).join('')}`,{sub:'Pacientes previstos contra cupos',real:0})}
+ ${card('Inasistencia prevista · mañana','calendar',`<div class="tw"><table class="tbl"><thead><tr><th>Hora</th><th>Especialidad</th><th>Paciente</th><th>Riesgo</th><th>Acción</th></tr></thead><tbody>${[['08:30','Kinesiología','D.R.',.46],['15:00','Odontología','V.H.',.58],['17:30','Psicología','I.C.',.39]].map(r=>`<tr><td class="n">${r[0]}</td><td>${r[1]}</td><td><b>${r[2]}</b></td><td><span class="risk" style="--w:${r[3]*100}%;--c:${v(r[3]>=.5?'bad':'warn')}"><i></i>${Math.round(r[3]*100)}%</span></td><td>${off('Asignar a recepción','Disponible cuando exista el modelo de riesgo de inasistencia.')}</td></tr>`).join('')}</tbody></table></div>`,{sub:'Ejemplo de cómo se verá',real:0})}`,
+ draw(){}};
+
+/* ---------- 13 Experimentos ---------- */
+R.experimentos={html:D=>{const X=D.experimentos||{},re=X.reenganche||{},ch=re.con_hora||{},sh=re.sin_hora||{},pe=X.persistencia||{};
+ if(X.error)return `${mh('experimentos','Cada idea se prueba antes de volverse costumbre.')}${card('Experimentos','flask',estadoV('No se pudieron leer los experimentos',X.error,{err:1,retry:'conversion'}))}`;
+ const ratio=(ch.pct&&sh.pct)?ch.pct/sh.pct:null;
+ return `${mh('experimentos','Cada idea se prueba antes de volverse costumbre: resultado, tamaño del efecto y si la diferencia es real o ruido.')}
+ <div class="grid g-57">
+  ${card('E-01 · Reenganche: ¿qué mensaje hace volver?','flask',(ch.enviados||sh.enviados)?`<div class="cwrap" id="expChart"></div><div class="callout" style="margin-top:12px">${ic('check')}<div>${ratio?`<b>Con hora concreta agenda ${dec(ratio,1)} veces más</b> que sin hora`:'Todavía no hay suficientes mensajes en ambos grupos'} (agendó dentro de 24 horas del mensaje; barras con intervalo de confianza del 95%).</div></div>`:estadoV('Sin mensajes de reenganche en el periodo','El reenganche registra qué variante envió; aquí se compara cuál hace volver.'),{sub:`Porcentaje que agenda tras el mensaje · ${X.dias||90} días`,real:`${X.dias||90} días`})}
+  ${card('Registro de pruebas','flask',`
+   <div class="exp"><div><h3><span class="muted small">E-01</span> · Reenganche con hora concreta contra sin hora <span class="pill ok">En producción</span> ${tagR('')}</h3><p>${th(ch.enviados)} con hora · ${th(sh.enviados)} sin hora · ${X.dias||90} días</p></div><div class="res"><b>${pctTxt(ch.pct,1)}</b>contra ${pctTxt(sh.pct,1)}</div></div>
+   <div class="exp"><div><h3><span class="muted small">E-02</span> · Segundo toque a consultas que quedaron abiertas <span class="pill ok">En producción</span> ${tagR('')}</h3><p>${pe.total?`${th(pe.total)} consultas en 30 días · ${th(pe.agendadas)} agendadas`:'Sin consultas en seguimiento en 30 días'}</p></div><div class="res"><b>${pctTxt(pe.pct,1)}</b>agendó</div></div>
+   ${[['E-03','Precio visible en anuncio de Ortodoncia','Día 9 de 14 · aún es ruido','+0,4 pp','CTR','info','Ejemplo',64],['E-04','Recordatorio a 48 h contra 24 h','Día 5 de 21','−1,1 pp','inasistencia','info','Ejemplo',24]].map(e=>`<div class="exp"><div><h3><span class="muted small">${e[0]}</span> · ${e[1]} <span class="pill ${e[5]}">${e[6]}</span> ${tagI}</h3><p>${e[2]}</p><div class="prog"><i style="width:${e[7]}%"></i></div></div><div class="res"><b>${e[3]}</b>${e[4]}</div></div>`).join('')}`,{sub:'Más reciente primero'})}
+ </div>`},
+ draw(D){const re=(D.experimentos||{}).reenganche||{};const ch=re.con_hora||{},sh=re.sin_hora||{};if(!(ch.enviados||sh.enviados))return;const hi=Math.max((ch.ic95||[0,0])[1],(sh.ic95||[0,0])[1],5);const ym=Math.ceil(hi/10)*10;
+  barChart($('#expChart'),{items:[{l:'Con hora concreta',ls:'Con hora',v:ch.pct,lo:(ch.ic95||[])[0],hi:(ch.ic95||[])[1],hl:1},{l:'Sin hora',v:sh.pct,lo:(sh.ic95||[])[0],hi:(sh.ic95||[])[1]}].map(x=>x.lo==null?{...x,lo:undefined,hi:undefined}:x),ymax:ym,ticks:[0,ym/2,ym],yfmt:t=>t+'%',vfmt:x=>x==null?'—':dec(x,1)+'%',aria:'Conversión por tipo de mensaje de reenganche'})}};
+
+/* ---------- 14 Copiloto ---------- */
+R.copiloto={html:()=>`${mh('copiloto','Preguntas en lenguaje simple, respuestas con números y su fuente. El copiloto lee; no envía mensajes ni cambia campañas sin una persona.')}
+ <div class="ilus-band">${ic('info',16)}Ilustrativo. Disponible cuando exista un modelo con acceso de solo lectura a la base que cite la fuente de cada cifra.</div>
+ <section class="card"><form class="ask" id="askForm" autocomplete="off"><span class="muted">${ic('sparkles')}</span><input id="askIn" type="text" placeholder="Pregunte sobre pacientes, canales, agenda o plata…" aria-label="Pregunta para el copiloto"><button class="btn btn-p" type="submit">${ic('send',16)}Preguntar</button></form>
+  <div class="sugs">${['¿Dónde pongo $200.000 extra este mes?','¿Qué pasa si respondemos todo en menos de 5 minutos?','¿Cuánto vale de verdad un paciente de Instagram?'].map(q=>`<span class="sug" aria-disabled="true">${ic('arrow',14)}${q}</span>`).join('')}</div>
+  <p class="note">Mientras tanto, las respuestas reales están en los módulos 02 (canales), 07 (rapidez) y 11 (plata).</p></section>`,
+ draw(){}};
+
+/* ---------- 15 Bitácora ---------- */
+const BIC={ok:['a','check','ok','Hecho'],atrasado:['w','clock','warn','Atrasado'],aviso:['w','alert','warn','Con hallazgos'],error:['e','alert','bad','Con error']};
+R.bitacora={html:D=>{const N=D.noche||{},C=D.consentimiento||{},A=D.aviso_meta||{};
+ const evs=(N.eventos||[]);
+ const tl=N.error?estadoV('No se pudo leer la bitácora',N.error,{err:1,retry:'bitacora'}):evs.length?`<ol class="tl">${evs.map(e=>{const b=BIC[e.estado]||BIC.ok;return `<li><span class="bub ${b[0]}">${ic(b[1],14,2.4)}</span><div><time>${e.cuando?fdate(e.cuando)+' · '+fhm(e.cuando):'—'}</time><h3>${esc(e.titulo)}</h3><p>${esc(e.detalle)}</p></div><div class="val"><span class="pill ${b[2]}">${b[3]}</span></div></li>`}).join('')}</ol>`:estadoV('Sin tareas registradas todavía','Las tareas nocturnas dejan su rastro en la base; aparecerán aquí después de su primera corrida.',{icon:'clock'});
+ const mk=C.marketing||{},tot=(mk.accepted||0)+(mk.declined||0),pv=C.privacidad||{};
+ return `${mh('bitacora','Lo que el sistema hizo solo, según el rastro que dejó cada tarea, y la prueba de que respeta a cada paciente: quién autorizó, quién se dio de baja y qué datos nunca salen.')}
+ <div class="grid g-75">
+  ${card('Últimas corridas','clock',`${tl}${(N.sin_rastro||[]).length?`<p class="note">Sin rastro visible desde aquí: ${N.sin_rastro.map(esc).join(' · ')}. Lo que no deja registro no se muestra.</p>`:''}`,{sub:'Más reciente primero · hora de Chile',real:fdate(D.ahora)})}
+  <div class="grid" style="align-content:start">
+   ${card('Consentimiento de marketing','shield',C.error?estadoV('No se pudo leer',C.error,{err:1,retry:'bitacora'}):`
+    <div class="kl">Respuestas a la pregunta explícita · ${C.dias||30} días</div><div class="ltv" style="margin-top:4px">${th(tot)}</div>
+    ${tot?`<div class="cons-bar" role="img" aria-label="Autorizó ${th(mk.accepted)}, rechazó ${th(mk.declined)}"><i style="width:${100*(mk.accepted||0)/tot}%;background:${v('ok')}"></i><i style="width:${100*(mk.declined||0)/tot}%;background:${v('bad')}"></i></div>`:''}
+    <div class="legend" style="flex-direction:column;gap:6px"><span><i class="sw" style="background:${v('ok')}"></i>Autorizó mensajes <b style="margin-left:auto">${th(mk.accepted)}</b></span><span><i class="sw" style="background:${v('bad')}"></i>No por ahora <b style="margin-left:auto">${th(mk.declined)}</b></span></div>
+    <div class="callout" style="margin-top:14px">${ic('lock')}<div>Un «ok gracias» no es consentimiento: solo se registra la respuesta a la pregunta explícita. Registro de privacidad (Ley 19.628): <b>${th(pv.accepted)}</b> aceptaron, ${th(pv.declined)} rechazaron.</div></div>`,{sub:'Conteos agregados, sin datos por paciente',real:`${C.dias||30} días`})}
+  </div>
+ </div>
+ <div class="grid g2">
+  ${card('Qué sale hacia Meta','shield',`<div class="flow"><div><h3>Sale</h3><ul class="yes"><li>${ic('check',16)}Identificador del clic del anuncio</li><li>${ic('check',16)}Tipo de evento: cita, atención</li><li>${ic('check',16)}Nombre de la especialidad</li><li>${ic('check',16)}Valor en pesos para el centro</li><li>${ic('check',16)}Teléfono cifrado de forma irreversible</li></ul></div><div><h3>Nunca sale</h3><ul class="no"><li>${ic('x',16)}Motivo de consulta o síntomas</li><li>${ic('x',16)}Diagnósticos, recetas, exámenes</li><li>${ic('x',16)}RUT, nombre o dirección</li><li>${ic('x',16)}Conversaciones del chat</li></ul></div></div>${A&&A.hay_datos?`<div class="callout" style="margin-top:14px">${ic('info')}<div>Dato real, ${A.ventana_dias} días: Meta aceptó <b>${th(A.aceptados)}</b> avisos de atención (${th(A.aceptados_reales)} con valor de caja y ${th(A.aceptados_estimados)} estimados), por ${clp((A.valor_real||0)+(A.valor_estimado||0))}.</div></div>`:''}`,{sub:'Datos de salud nunca salen a plataformas publicitarias'})}
+  ${card('Respuestas por día','repeat',(C.por_dia||[]).length?`<div class="tw"><table class="tbl"><thead><tr><th>Fecha</th><th class="n">Autorizó</th><th class="n">No por ahora</th></tr></thead><tbody>${C.por_dia.map(r=>`<tr><td class="n" style="text-align:left">${fdate(r.fecha)}</td><td class="n">${th(r.accepted)}</td><td class="n">${th(r.declined)}</td></tr>`).join('')}</tbody></table></div><p class="note">Más reciente primero. Solo conteos: ningún nombre ni teléfono.</p>`:estadoV('Sin respuestas en el periodo','Cuando un paciente responda la pregunta de consentimiento, se cuenta aquí.'),{sub:'Últimos días con respuestas',real:`${C.dias||30} días`})}
+ </div>`},
+ draw(){}};
+
+/* ================= Navegación y estados ================= */
+const main=$('#main'),rail=$('#rail');
+let cur=null;
+function buildRail(){let g='',h='';MODS.forEach(m=>{if(m.g!==g){g=m.g;h+=`<div class="rg">${g}</div>`}h+=`<button class="ri" data-id="${m.id}" type="button"><span class="rn">${nn(m.n)}</span>${ic(m.ic,17)}<span class="rt">${m.s||m.t}</span><i class="sd ${m.st}" title="${ST[m.st]}"></i></button>`});rail.innerHTML=h;
+ const c={prod:0,cerca:0,vision:0};MODS.forEach(m=>c[m.st]++);
+ $('#railLegend').innerHTML=`${['prod','cerca','vision'].map(s=>`<div class="lg"><i class="sd ${s}"></i>${ST[s]}<b>${c[s]}</b></div>`).join('')}<p>Distancia de cada módulo a lo que el CMC ya tiene funcionando. «Dato real» lleva su fecha; «Ilustrativo» muestra el diseño de lo que viene.</p>`}
+function buildMain(){main.innerHTML=MODS.map(m=>`<article class="mod" id="m-${m.id}" data-mod="${m.id}" hidden></article>`).join('')}
+function skeleton(m){return `${mh(m.id,'Cargando datos del centro…')}<div class="kpis">${[1,2,3,4].map(()=>`<div class="kpi"><span class="sk sk-l" style="width:50%"></span><span class="sk sk-h"></span><span class="sk sk-l" style="width:80%"></span></div>`).join('')}</div><section class="card"><span class="sk sk-l" style="width:30%"></span><span class="sk sk-b"></span></section><section class="card"><span class="sk sk-l" style="width:40%"></span><span class="sk sk-l"></span><span class="sk sk-l" style="width:70%"></span></section>`}
+function render(id,anim){
+ const m=MODS.find(x=>x.id===id),art=$('#m-'+id);if(!art)return;
+ if(!m.src){art.innerHTML=R[id].html({});art.dataset.ok='1';finish(id,art,{},anim);return}
+ const D=SRC[m.src];
+ if(D){art.innerHTML=R[id].html(D);art.dataset.ok='1';if(R[id].after)R[id].after(D);finish(id,art,D,anim);return}
+ if(SRC_ERR[m.src]){const perm=SRC_ERR[m.src]==='perm';art.innerHTML=`${mh(id,'')}${card('',null,perm?estadoV('Sin permiso','Este módulo es solo para el dueño. Abra Alma Radar con el enlace del token de dueño.',{err:1,icon:'lock'}):estadoV('No se pudieron leer los datos','El servidor no respondió a tiempo. Los datos no se muestran incompletos ni de días anteriores: reintente en un momento.',{err:1,retry:m.src}))}`;return}
+ art.innerHTML=skeleton(m);art.dataset.ok='';
+ load(m.src).then(()=>{if(cur===id)render(id,anim)}).catch(()=>{if(cur===id)render(id,false)});
+}
+function finish(id,art,D,anim){art.classList.remove('enter');if(anim&&!RM){void art.offsetWidth;art.classList.add('enter')}requestAnimationFrame(()=>R[id].draw&&R[id].draw(D))}
+function show(id,anim=true){if(!R[id])id='pulso';if(cur&&cur!==id&&R[cur].hide)R[cur].hide();
+ $$('.mod').forEach(s=>s.hidden=s.dataset.mod!==id);
+ $$('.ri').forEach(b=>b.setAttribute('aria-current',String(b.dataset.id===id)));
+ const btn=$(`.ri[data-id="${id}"]`);if(btn&&getComputedStyle(rail.parentElement).overflowX==='auto'){const nav=rail.parentElement;nav.scrollTo({left:Math.max(0,btn.offsetLeft-16),behavior:RM?'auto':'smooth'})}
+ cur=id;try{localStorage.setItem('almaRadar.tab',id);if(location.hash!=='#'+id)history.replaceState(null,'',location.pathname+location.search+'#'+id)}catch(e){}
+ render(id,anim);if(id==='pulso')poll();}
+function redraw(){const m=MODS.find(x=>x.id===cur);if(!m)return;const D=m.src?SRC[m.src]:{};if(D&&R[cur].draw)R[cur].draw(D)}
+
+function toast(msg,kind){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.innerHTML=`${ic(kind==='err'?'alert':'check',18,2.2)}<div>${esc(msg)}</div>`;$('#toasts').appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),RM?0:200)},3400)}
+
+// Reloj de Chile con la hora del servidor (no la del equipo).
+const SRV={d:0,set(iso){const t=Date.parse(iso);if(!isNaN(t)){this.d=t-Date.now();updClock()}}};
+const fmtDia=new Intl.DateTimeFormat('es-CL',{timeZone:'America/Santiago',weekday:'long',day:'numeric',month:'long'});
+const fmtHora=new Intl.DateTimeFormat('es-CL',{timeZone:'America/Santiago',hour:'2-digit',minute:'2-digit',hour12:false});
+function updClock(){const d=new Date(Date.now()+SRV.d);const c=$('#clock');if(c)c.innerHTML=`${esc(cap(fmtDia.format(d).replace(',','')))} · <b>${esc(fmtHora.format(d))}</b>`}
+setInterval(updClock,15000);
+
+document.addEventListener('click',e=>{
+ const a=e.target.closest('a[data-alma]');
+ if(a){if(window.parent!==window){e.preventDefault();try{window.parent.postMessage({type:'ALMA_ACTIVATE_MODULE',id:a.dataset.alma},'*')}catch(_){location.href=a.href}}return}
+ const t=e.target.closest('button,[data-j]');if(!t)return;
+ if(t.matches('.ri')){show(t.dataset.id);window.scrollTo({top:0,behavior:RM?'auto':'smooth'});return}
+ if(t.dataset.go){show(t.dataset.go);window.scrollTo({top:0,behavior:RM?'auto':'smooth'});return}
+ if(t.dataset.retry){const k=t.dataset.retry;delete SRC_ERR[k];load(k,true).then(()=>render(cur,true)).catch(()=>{render(cur,false);toast('Sigue sin responder. Intente en un momento.','err')});render(cur,false);return}
+ if(t.dataset.fam){FAM=t.dataset.fam;$$('[data-fam]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#ftable').innerHTML=funnelTable(SRC.captacion);sankey($('#sankey'),SRC.captacion);return}
+ if(t.dataset.sp){SPK=t.dataset.sp;$$('[data-sp]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#spName').textContent=SPK;INV=Math.min(300000,Math.round(SP[SPK].B*.5/10000)*10000);$('#invRange').value=INV;simUpdate();return}
+ if(t.dataset.adsort){ADSORT=t.dataset.adsort;$$('[data-adsort]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#ads').innerHTML=adsHTML(SRC.captacion);return}
+ if(t.id==='pauseBtn'){PU.paused=!PU.paused;t.setAttribute('aria-pressed',String(PU.paused));t.innerHTML=PU.paused?ic('play',14)+'Reanudar':ic('pause',14)+'Pausar';toast(PU.paused?'Actualización en vivo en pausa.':'Actualización en vivo reanudada.');return}
+ if(t.id==='refreshBtn'){const m=MODS.find(x=>x.id===cur);if(!m||!m.src){toast('Este módulo no tiene datos que actualizar.');return}t.classList.add('spin');t.disabled=true;
+  load(m.src,true).then(D=>{if(m.id==='pulso')pulseIngest(D,false);render(cur,false);toast('Datos actualizados.')}).catch(()=>toast('No se pudo actualizar. Se mantienen los datos que ya estaban a la vista con su hora de lectura.','err')).finally(()=>{t.classList.remove('spin');t.disabled=false});return}
+ if(t.id==='themeBtn'){const nx=curTheme()==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',nx);try{localStorage.setItem('almaRadar.theme',nx)}catch(_){}themeIcon();readTok();redraw();if(RM)pulseDraw(0);return}
+ if(t.dataset.j!==undefined){const j=+t.dataset.j;$$('#tl li').forEach(li=>li.classList.toggle('on',+li.dataset.j===j));const li=$(`#tl li[data-j="${j}"]`);if(li&&t.tagName!=='LI')li.scrollIntoView({block:'nearest',behavior:RM?'auto':'smooth'});return}
+});
+document.addEventListener('input',e=>{if(e.target.id==='invRange'){INV=+e.target.value;simUpdate()}});
+document.addEventListener('submit',e=>{if(e.target.id==='askForm'){e.preventDefault();toast('El copiloto todavía no está conectado. Las cifras reales están en los módulos 02, 07 y 11.')}});
+function curTheme(){const a=document.documentElement.getAttribute('data-theme');if(a)return a;return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}
+function themeIcon(){const d=curTheme()==='dark';const b=$('#themeBtn');b.innerHTML=ic(d?'sun':'moon',19);b.setAttribute('aria-label',d?'Cambiar a tema claro':'Cambiar a tema oscuro')}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(!document.documentElement.getAttribute('data-theme')){themeIcon();readTok();redraw()}});
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{redraw();if(RM&&cur==='pulso')pulseDraw(0)},120)});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(R[h]&&h!==cur){show(h);window.scrollTo(0,0)}});
+window.addEventListener('orientationchange',()=>setTimeout(redraw,200));
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pulseStop();else if(cur==='pulso'){pulseStart();if(!PU.paused)load('pulso',true).then(D=>{pulseIngest(D,false);refreshDecisiones(D)}).catch(()=>{})}});
+
+try{const th_=localStorage.getItem('almaRadar.theme');if(th_==='dark'||th_==='light')document.documentElement.setAttribute('data-theme',th_)}catch(_){}
+buildRail();buildMain();themeIcon();readTok();updClock();
+let start='pulso';try{const s=(location.hash||'').slice(1)||localStorage.getItem('almaRadar.tab');if(s&&R[s])start=s}catch(e){}
+show(start,false);
+// El pulso se precarga siempre: alimenta el reloj del servidor aunque se abra otro módulo.
+if(start!=='pulso')load('pulso').then(D=>SRV.set(D.ahora)).catch(()=>{});
+})();
+</script>
+</body>
+</html>

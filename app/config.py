@@ -81,6 +81,10 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     # Recepcion (ADMIN_TOKEN); OLACORE_TOKEN (`modulos: None`) lo ve. Ademas su
     # pagina y su API exigen OLACORE_TOKEN: un ADMIN_TOKEN no lo abre.
     "campanas_meta":{"label": "Campañas Meta",  "icon": "target",    "title": "Campañas Meta — de la conversación a la atención", "sub": "CAC por anuncio · pacientes que llegaron por anuncios", "src": "/alma/campanas-meta"},
+    # SOLO DUENO: captación y crecimiento en 15 módulos (pulso del día, embudo,
+    # creativos, territorio, recepción, finanzas, bitácora). Lleva gasto y venta:
+    # no va en la allowlist de Recepción y su página/API exigen OLACORE_TOKEN.
+    "radar":       {"label": "Alma Radar",       "icon": "radar",     "title": "Alma Radar — captación y crecimiento", "sub": "Pulso del día · embudo · creativos · territorio · finanzas · bitácora", "src": "/alma/radar"},
     "roas":        {"label": "ROAS Campañas",    "icon": "trending-up","title": "ROAS por campaña · Meta Ads × Caja real", "sub": "Retorno de cada campaña vs ingreso real (caja)", "src": "/alma/roas"},
     "agenda_ticker":{"label": "Agendamientos en vivo","icon":"activity","title": "Monitor de Agendamientos en vivo", "sub": "Orden real de llegada · canal · citas pasadas sin cerrar", "src": "/alma/agenda-en-vivo"},
     "ausentismo":  {"label": "Ausentismo",       "icon": "users",     "title": "Ausentismo — pacientes que no asisten", "sub": "Ranking de inasistencias reales · filtro por profesional · a quién confirmar", "src": "/alma/ausentismo"},

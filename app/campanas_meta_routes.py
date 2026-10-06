@@ -226,11 +226,32 @@ def _mapa_anuncios(c) -> dict[str, dict]:
 _ESTADOS_CACHE: dict = {"ts": 0.0, "data": {}}
 _ESTADOS_TTL = 900
 
+# Lectores que NO pueden salir a la red (Alma Radar, app/radar_routes.py): con
+# esta marca `_estados_meta` usa solo lo que ya está en caché y, si no hay, cae
+# al respaldo "tuvo gasto ayer u hoy" de la foto diaria. Sin la marca, todo
+# sigue igual que antes.
+import contextvars as _cv
+from contextlib import contextmanager as _cm_ctx
+
+_SOLO_LOCAL = _cv.ContextVar("campanas_meta_solo_local", default=False)
+
+
+@_cm_ctx
+def solo_datos_locales():
+    """`with solo_datos_locales(): panel_data(...)` — sin llamadas a Meta."""
+    tok = _SOLO_LOCAL.set(True)
+    try:
+        yield
+    finally:
+        _SOLO_LOCAL.reset(tok)
+
 
 def _estados_meta() -> dict[str, str]:
     import time as _t
     if _t.time() - _ESTADOS_CACHE["ts"] < _ESTADOS_TTL and _ESTADOS_CACHE["data"]:
         return _ESTADOS_CACHE["data"]
+    if _SOLO_LOCAL.get():
+        return {}
     out: dict[str, str] = {}
     try:
         import httpx
