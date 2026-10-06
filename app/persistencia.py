@@ -242,6 +242,47 @@ def sync_consultas(dias: int = 3) -> dict:
 
 # ── Contacto (el único código de este módulo que envía mensajes) ──────────
 
+# El campo `especialidad` es lo que el paciente escribió al pedir la hora: a
+# veces la especialidad en minúscula ("kinesiología"), a veces el APELLIDO del
+# profesional ("abarca", "marquez"). Antes salía tal cual: "viendo horas de
+# *abarca*". Se normaliza a "de *Kinesiología*" o "con *Dr. Andrés Abarca*".
+_ESP_DISPLAY = {
+    "medico general": "Medicina General", "obstetrica": "Ecografía obstétrica",
+    "otorrino": "Otorrinolaringología", "psicologia adulto": "Psicología",
+    "psicologia infantil": "Psicología infantil", "odontologia": "Odontología",
+    "odontologia general": "Odontología", "no especificada": "",
+}
+
+
+def _sin_tildes(t: str) -> str:
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFD", (t or "").lower().strip())
+                   if unicodedata.category(ch) != "Mn")
+
+
+def _esp_para_mensaje(especialidad: str | None) -> str:
+    e = (especialidad or "").strip()
+    if not e:
+        return ""
+    k = _sin_tildes(e)
+    try:
+        from medilink import PROFESIONALES
+        for info in PROFESIONALES.values():
+            nombre = info.get("nombre", "")
+            apellidos = [_sin_tildes(w) for w in nombre.replace(".", " ").split()[1:]]
+            if k in apellidos and len(k) >= 4:
+                return f" con *{nombre}*"
+    except Exception:
+        pass
+    if k in _ESP_DISPLAY:
+        disp = _ESP_DISPLAY[k]
+        return f" de *{disp}*" if disp else ""
+    # Especialidad conocida: primera letra de cada palabra en mayúscula,
+    # salvo conectores ("Nutriología y Diabetología").
+    disp = " ".join(w if w in ("y", "de", "e") else w[:1].upper() + w[1:] for w in e.lower().split())
+    return f" de *{disp}*"
+
+
 async def job_persistencia_contacto() -> dict:
     """Segundo toque, único, para consultas 'abierta' que ya pasaron la
     ventana del reenganche existente (>=2h) sin resolverse. Gated OFF por
@@ -329,7 +370,7 @@ async def job_persistencia_contacto() -> dict:
 
         from session import is_window_open, log_event, log_message, save_session
 
-        esp_txt = f" de *{especialidad}*" if especialidad else ""
+        esp_txt = _esp_para_mensaje(especialidad)
         nombre = ""
         try:
             from session import get_profile
