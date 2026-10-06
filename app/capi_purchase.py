@@ -14,8 +14,9 @@ REGLA DE "ATENDIDO"
 
 VALUE = lo que le queda al CENTRO de lo cobrado ese día a ese paciente
   pagos de `bi_pagos_caja` del paciente en la fecha de la cita, del mismo profesional
-  (si ninguno calza y el paciente tuvo una sola cita atendida ese día, todos sus
-  pagos del día). Por pago: monto * (1 - pct_honorario/100) con `_pct_honorarios`
+  (si ninguno calza y en TODO Medilink el paciente fue atendido ese día solo por ese
+  profesional, todos sus pagos del día; si lo atendieron varios, va a estimado para
+  no cargarle al anuncio plata de otra atención). Por pago: monto * (1 - pct_honorario/100) con `_pct_honorarios`
   (campanas_meta_routes; pct es lo que se lleva el PROFESIONAL, default 70, Abarca 62).
   Imagendent (`convenio_consumo`): ese monto se saca de la línea del profesional y
   al centro le queda venta - costo. `custom_data.venta_total` = lo cobrado.
@@ -183,7 +184,14 @@ def evaluar(hoy: date | None = None) -> list[dict]:
                 "AND monto>0", (pac, fecha)).fetchall()
             propios = [p for p in pagos if p["id_profesional"] == prof]
             if not propios and pagos and por_pac_dia[(pac, fecha)] == 1:
-                propios = list(pagos)
+                # Medilink a veces deja el pago con otro profesional (o sin él). Se asumen
+                # todos los pagos del día SOLO si en TODO Medilink (no solo el bot) el
+                # paciente fue atendido por un único profesional; si no, va a estimado.
+                profs_dia = {x["id_profesional"] for x in c.execute(
+                    "SELECT id_profesional FROM ausentismo_citas WHERE id_paciente=? AND fecha=? "
+                    "AND id_estado=2 AND COALESCE(anulacion,0)=0", (pac, fecha))}
+                if len(profs_dia - {prof}) == 0:
+                    propios = list(pagos)
             if propios:
                 value, venta = _valor_cobrado(c, pac, prof, fecha, propios, pct_map)
                 out.append({**base, "id_profesional": prof, "value": float(round(value)),
