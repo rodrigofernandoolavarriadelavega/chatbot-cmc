@@ -339,13 +339,13 @@ PROFESIONALES = {
     # "Psicología Adulto" igual que Montalba, y flows._normalizar_slot_especialidad
     # la muestra como "Psicología Infantil" cuando el paciente pidió infantil.
     # Horario en Medilink: lun-vie 15:30-20:00 · sáb 09:00-14:00 (45 min).
-    # PRESENCIAL (dueño, 2026-10-01). Online por videollamada = EXCEPCIÓN a pedido
-    # del paciente, la coordina recepción: NO se modela con telemedicina_dias
-    # (eso marcaría todo un día como videollamada). Si algún día se abren días
-    # online fijos, agregar "telemedicina_dias": [...] como Montalba.
+    # MODALIDAD A ELECCIÓN (dueño, 2026-10-06): atiende presencial Y por
+    # videollamada en el mismo horario, así que el bot le PREGUNTA al paciente
+    # al elegir la hora (`modalidad_a_eleccion`). No se usa telemedicina_dias
+    # porque eso fijaría la modalidad por día.
     # PRECIO: $20.000 Fonasa (pago directo, SIN bono: aún no está en el registro
     # de la Superintendencia) / $25.000 particular → ver flows.PRECIO_PROF_SIN_BONO.
-    82: {"nombre": "Ps. Jacquelinne Salas",    "especialidad": "Psicología Adulto",     "intervalo": 45},
+    82: {"nombre": "Ps. Jacquelinne Salas",    "especialidad": "Psicología Adulto",     "intervalo": 45, "modalidad_a_eleccion": True},
     70: {"nombre": "Juana Arratia",            "especialidad": "Fonoaudiología",        "intervalo": 30},
     67: {"nombre": "Sarai Gómez",              "especialidad": "Matrona",               "intervalo": 30},
     56: {"nombre": "Andrea Guevara",           "especialidad": "Podología",             "intervalo": 60},

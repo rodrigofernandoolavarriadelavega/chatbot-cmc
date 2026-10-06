@@ -1312,6 +1312,10 @@ def _es_teleconsulta(slot: dict) -> bool:
     except (TypeError, ValueError):
         _pid_tc = 0
     _cfg_tc = _PROFS_TC.get(_pid_tc, {})
+    # Profesional con modalidad a elección: manda lo que eligió el paciente.
+    _elegida_tc = slot.get("modalidad_elegida")
+    if _elegida_tc and _cfg_tc.get("modalidad_a_eleccion"):
+        return _elegida_tc == "TELEMEDICINA"
     _dias_tc = _cfg_tc.get("telemedicina_dias")
     if _dias_tc is not None:
         _wd_tc = _weekday_slot(slot)
@@ -1331,6 +1335,38 @@ def _es_teleconsulta(slot: dict) -> bool:
     # es presencial): ninguno es substring del otro.
     return ("psiquiatr" in _esp_tc or "neurolog" in _esp_tc
             or "nutriolog" in _esp_tc or "diabetolog" in _esp_tc)
+
+
+def _modalidad_a_eleccion(slot: dict) -> bool:
+    """True si el profesional del slot atiende presencial Y por videollamada y
+    el paciente todavía no eligió (PROFESIONALES[id]["modalidad_a_eleccion"])."""
+    from medilink import PROFESIONALES as _PROFS_ME
+    try:
+        _pid_me = int(slot.get("id_profesional") or 0)
+    except (TypeError, ValueError):
+        return False
+    return bool(_PROFS_ME.get(_pid_me, {}).get("modalidad_a_eleccion")) and not slot.get("modalidad_elegida")
+
+
+_MODALIDAD_ATENCION_BOTONES = [
+    {"id": "mod_presencial", "title": "🏥 Presencial"},
+    {"id": "mod_video", "title": "💻 Videollamada"},
+]
+
+
+def _leer_modalidad_atencion(tl: str) -> str | None:
+    """'PRESENCIAL' / 'TELEMEDICINA' según la respuesta, o None si no se entiende.
+    Video se evalúa primero: "videoconsulta" no puede leerse como presencial."""
+    import unicodedata as _ud
+    t = "".join(c for c in _ud.normalize("NFD", (tl or "").lower().strip())
+                if _ud.category(c) != "Mn")
+    if t in ("mod_video", "2") or any(k in t for k in (
+            "video", "online", "en linea", "llamada", "remot", "zoom", "meet", "virtual", "desde mi casa")):
+        return "TELEMEDICINA"
+    if t in ("mod_presencial", "1") or any(k in t for k in (
+            "presencial", "en persona", "al centro", "en el centro", "ir alla")):
+        return "PRESENCIAL"
+    return None
 
 
 def _btn_msg(body_text: str, buttons: list) -> dict:
@@ -1486,6 +1522,21 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
         log.warning("slot revalidation failed: %s", _e_slot_val)
 
     data["slot_elegido"] = slot
+
+    # Profesional que atiende presencial Y por videollamada (Ps. Salas): se le
+    # pregunta al paciente antes de seguir. La respuesta queda en
+    # slot["modalidad_elegida"] y `_es_teleconsulta` la respeta en todo el flujo
+    # (confirmación, abono, creación en Medilink con [ONLINE]).
+    if _modalidad_a_eleccion(slot):
+        save_session(phone, "WAIT_MODALIDAD_ATENCION", data)
+        log_event(phone, "modalidad_atencion_preguntada", {
+            "id_profesional": slot.get("id_profesional"), "fecha": slot.get("fecha"),
+        })
+        return _btn_msg(
+            f"*{slot.get('profesional', '')}* atiende presencial y por videollamada.\n\n"
+            "¿Cómo prefieres tu sesión?",
+            _MODALIDAD_ATENCION_BOTONES,
+        )
 
     # Especialidades Solo Particular (ecografía, odontología, podología,
     # psiquiatría, etc.): NUNCA preguntar Fonasa/Particular ni mostrar el
@@ -2716,6 +2767,8 @@ def _recordatorio_prompt(state: str, data: dict) -> str:
         return "_Necesito tu RUT para continuar (ej: 12.345.678-9)._"
     if state == "WAIT_MODALIDAD":
         return "_Indica si tu atención es *Fonasa* o *Particular*._"
+    if state == "WAIT_MODALIDAD_ATENCION":
+        return "_Indica si prefieres la sesión *presencial* o por *videollamada*._"
     if state == "WAIT_BOOKING_FOR":
         return "_¿La hora es para *ti* o para *otra persona*?_"
     if state == "CONFIRMING_CITA":
@@ -3910,6 +3963,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # interceptarse aquí — pertenece al flujo activo del estado.
     _FLOW_STATES = {
         "WAIT_ESPECIALIDAD", "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
+        "WAIT_MODALIDAD_ATENCION",
         "WAIT_BOOKING_WHO", "WAIT_AGENDAR_OTRO", "WAIT_SLOT_OTRO", "WAIT_PARENTESCO",
         "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
         "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL",
@@ -4479,6 +4533,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     )
     _FLUJO_RETOMABLE = {
         "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR", "WAIT_BOOKING_WHO",
+        "WAIT_MODALIDAD_ATENCION",
         "WAIT_SLOT_OTRO",
         "WAIT_RUT_AGENDAR", "CONFIRMING_CITA",
         "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "CONFIRMING_CANCEL",
@@ -6572,7 +6627,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "• *Psiquiatría* — Dra. Cecilia Unibazo\n"
                     "• *Neurología* — Dra. Franca González\n"
                     "• *Nutriología y Diabetología* — Dr. Raúl Paz\n"
-                    "• *Psicología* — Jorge Montalba (lunes a viernes)\n\n"
+                    "• *Psicología* — Jorge Montalba (lunes a viernes) y Ps. Jacquelinne Salas\n\n"
                     "Las demás son presenciales en el centro:\n"
                     f"📍 {_CMC_DIRECCION}\n\n"
                     "Escríbeme la especialidad que necesitas (ej: *agendar psiquiatría*)."
@@ -9875,6 +9930,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
 
         slot = slots_mostrados[idx]
         return await _slot_confirmed(phone, data, slot)
+
+    # ── WAIT_MODALIDAD_ATENCION (presencial / videollamada) ──────────────────
+    if state == "WAIT_MODALIDAD_ATENCION":
+        _slot_ma = data.get("slot_elegido") or {}
+        _elegida_ma = _leer_modalidad_atencion(tl)
+        if not _slot_ma:
+            reset_session(phone)
+            return await _iniciar_agendar(phone, {}, data.get("especialidad") or None)
+        if not _elegida_ma:
+            return _btn_msg("¿Prefieres la sesión *presencial* en el centro o por *videollamada*?",
+                            _MODALIDAD_ATENCION_BOTONES)
+        _slot_ma = dict(_slot_ma, modalidad_elegida=_elegida_ma)
+        if _elegida_ma == "TELEMEDICINA":
+            data["telemedicina_modalidad"] = "TELEMEDICINA"
+        else:
+            data.pop("telemedicina_modalidad", None)
+        log_event(phone, "modalidad_atencion_elegida", {
+            "id_profesional": _slot_ma.get("id_profesional"), "modalidad": _elegida_ma,
+        })
+        return await _slot_confirmed(phone, data, _slot_ma)
 
     # ── WAIT_MODALIDAD ────────────────────────────────────────────────────────
     if state == "WAIT_MODALIDAD":
