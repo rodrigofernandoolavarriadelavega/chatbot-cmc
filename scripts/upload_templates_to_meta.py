@@ -68,12 +68,13 @@ ALREADY_APPROVED = {
 
 def load_env() -> tuple[str, str]:
     token = os.getenv("META_ACCESS_TOKEN", "")
-    waba_id = os.getenv("WHATSAPP_BUSINESS_ACCOUNT_ID", "")
+    # En el .env del VPS la variable se llama META_WABA_ID (la usa config.py).
+    waba_id = os.getenv("WHATSAPP_BUSINESS_ACCOUNT_ID", "") or os.getenv("META_WABA_ID", "")
     if not token:
         print("ERROR: META_ACCESS_TOKEN no está definido.")
         sys.exit(1)
     if not waba_id:
-        print("ERROR: WHATSAPP_BUSINESS_ACCOUNT_ID no está definido.")
+        print("ERROR: falta WHATSAPP_BUSINESS_ACCOUNT_ID (o META_WABA_ID).")
         sys.exit(1)
     return token, waba_id
 
