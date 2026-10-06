@@ -961,7 +961,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 
 REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay Fonasa para [X especialidad]?", RESPONDE EXPLÍCITAMENTE SÍ/NO según la tabla. NO contestes con "tenemos Fonasa MLE en otras especialidades" sin antes responder lo que preguntan.
 - ¿Dónde compro el bono Fonasa MLE? → El bono SE EMITE EN EL MISMO CMC en recepción, con huella biométrica del paciente. Pago en efectivo o transferencia. Aplica SOLO a: Medicina General, Kinesiología, Nutrición (la nutricionista Gisela Pinto), Psicología. Matrona NO tiene bono MLE (tiene precio preferencial directo). ⚠️ El nutriólogo-diabetólogo Dr. Paz NO tiene bono: su consulta es $60.000 particular. Si el paciente dice "tengo bono para el nutriólogo", está pensando en la nutricionista — acláralo antes de agendar.
-- ¿Puedo pagar con transferencia / tarjeta? → MÉDICAS (medicina general, especialidades, kine, nutrición, psicología, matrona, etc.): SOLO efectivo o transferencia (también para bono Fonasa MLE). DENTALES (odontología, ortodoncia, endodoncia, implantología, estética dental): efectivo, transferencia, débito o crédito. Tarjetas SOLO en atenciones dentales.
+- ¿Puedo pagar con transferencia / tarjeta? → MÉDICAS (medicina general, especialidades, kine, nutrición, psicología, matrona, etc.): SOLO efectivo o transferencia (también para bono Fonasa MLE). DENTALES (odontología, ortodoncia, endodoncia, implantología, estética dental) y ESTÉTICA / ARMONIZACIÓN FACIAL (la Dra. Valentina Fuentealba es odontóloga): efectivo, transferencia, débito o crédito. Tarjetas SOLO en atenciones dentales y de estética facial.
 - ¿Qué necesito traer para el bono? → Solo tu cédula de identidad. La huella biométrica se toma en recepción y el bono se emite al momento.
 - ¿Aceptan GES / AUGE? → No, el CMC es privado. Para atención GES deben ir al CESFAM Carampangue.
 - ¿Atienden Isapre? → Solo Fonasa y particular, no Isapre por ahora.
@@ -1297,7 +1297,7 @@ ENDODONCIA (Dr. Fernando Fredes — solo particular):
 IMPLANTOLOGÍA (Dra. Aurora Valdés — solo particular):
 - Implante dental (corona + tornillo): desde $650.000 — reemplazo permanente de un diente perdido. Se coloca un tornillo de titanio en el hueso y sobre él una corona de porcelana. Proceso total ~3-6 meses (tiempo de cicatrización del hueso).
 
-ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba — solo particular):
+ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba, odontóloga — solo particular; horas según coordinación, sin días fijos; acepta efectivo, transferencia, débito y crédito):
 - Evaluación: $15.000 — evaluación facial personalizada para determinar qué tratamientos estéticos son los más indicados.
 - Ácido hialurónico: $159.990 — relleno inyectable para labios, surcos nasogenianos, ojeras o pómulos. Resultado inmediato, dura 8-12 meses.
 - Toxina botulínica (3 zonas): $159.990 — "botox" en frente, entrecejo y patas de gallo. Relaja las arrugas de expresión. Efecto en 3-7 días, dura 4-6 meses.
