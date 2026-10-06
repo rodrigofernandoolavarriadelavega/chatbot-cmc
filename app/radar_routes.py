@@ -951,8 +951,14 @@ def reputacion_data() -> dict:
                                                    "indice": x["nps"]} for x in n["por_profesional"]]}
         return out
 
+    def _temas():
+        import opinion_temas
+        with db() as c:
+            return opinion_temas.temas_data(c)
+
     return {"google": _seguro("google", _google),
-            "encuesta": _seguro("encuesta", lambda: _cacheado("encuesta", 300, _encuesta))}
+            "encuesta": _seguro("encuesta", lambda: _cacheado("encuesta", 300, _encuesta)),
+            "temas": _seguro("temas", _temas)}
 
 
 def bitacora_data(ahora: datetime | None = None) -> dict:

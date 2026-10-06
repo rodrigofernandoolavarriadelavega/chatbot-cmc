@@ -307,9 +307,9 @@ svg.i{flex:none;display:block}
 .fired{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--aqua-ink);margin-top:4px}
 
 /* ---------- Creatives ---------- */
-.ads{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr));gap:16px}
-.ad{border-radius:14px;border:1px solid var(--line);background:var(--surface);overflow:hidden;min-width:0;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
-.ad:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.anus{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr));gap:16px}
+.anu{border-radius:14px;border:1px solid var(--line);background:var(--surface);overflow:hidden;min-width:0;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.anu:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
 .thumb{position:relative;aspect-ratio:16/10;padding:14px;color:var(--on-accent);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
 .thumb.t1{background:linear-gradient(150deg,var(--navy-deep),var(--azul))}
 .thumb.t2{background:linear-gradient(150deg,var(--azul),var(--aqua))}
@@ -319,13 +319,13 @@ svg.i{flex:none;display:block}
 .th-h{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.15;position:relative;max-width:85%}
 .th-s{font-size:11px;opacity:.85;margin-top:4px;position:relative;max-width:calc(100% - 78px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .th-cta{position:absolute;right:12px;bottom:12px;height:24px;padding:0 10px;border-radius:var(--pill);background:var(--on-accent);color:var(--navy);font-size:11px;font-weight:800;display:grid;place-items:center}
-.ad-b{padding:12px 14px 14px}
-.ad-top{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-.ad-top b{color:var(--ink);font-weight:600}
-.ad-m{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
-.ad-m div{min-width:0}
-.ad-m small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-.ad-m b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.anu-b{padding:12px 14px 14px}
+.anu-top{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.anu-top b{color:var(--ink);font-weight:600}
+.anu-m{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.anu-m div{min-width:0}
+.anu-m small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.anu-m b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
 .fat{display:flex;gap:3px;margin-top:10px;align-items:center}
 .fat i{flex:1;height:5px;border-radius:3px;background:var(--track)}
 .fat i.on{background:var(--aqua)}
@@ -525,7 +525,7 @@ a.btn{text-decoration:none}
 .thumb.img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(6,24,39,.78));pointer-events:none}
 .thumb.img .th-in{position:absolute;left:14px;right:14px;bottom:12px;z-index:1}
 .thumb.img .rank{z-index:1}
-.ad-txt{font-size:12.5px;color:var(--ink-2);line-height:1.45;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.anu-txt{font-size:12.5px;color:var(--ink-2);line-height:1.45;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .fresh{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .fresh i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
 .fresh.old i{background:var(--warn)}
@@ -1009,17 +1009,17 @@ function adsHTML(D){const cr=D.creativos||{};const xs=(cr.anuncios||[]).slice();
   const ser=(d.ctr_semanas||[]);const falling=ser.filter(num).length>=2&&ser.filter(num).slice(-1)[0]<ser.filter(num)[0]*.8;
   const thumb=d.imagen?`<div class="thumb img"><img src="${esc(_tk('/alma/api/campanas-meta/creativo/'+encodeURIComponent(d.ad_id)))}" alt="${esc('Imagen del anuncio '+(d.titulo||d.anuncio))}" loading="lazy" decoding="async"><span class="rank">${i+1}</span><div class="th-in"><div class="th-h">${esc(d.titulo||d.anuncio)}</div></div></div>`
    :`<div class="thumb t${i%3+1}"><span class="rank">${i+1}</span><svg class="art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I.sparkles}</svg><div class="th-h">${esc(d.titulo||d.anuncio)}</div><div class="th-s">Sin imagen guardada todavía</div></div>`;
-  return `<article class="ad">${thumb}
- <div class="ad-b"><div class="ad-top"><b>${esc(d.anuncio)}</b><span style="margin-left:auto">${d.activo?'<span class="pill ok">Activo</span>':'<span class="pill mut">Sin gasto reciente</span>'}</span></div>
- ${d.texto?`<p class="ad-txt">${esc(d.texto)}</p>`:''}
- <div class="ad-m"><div><small>Retorno</small><b class="${(d.retorno_centro??1)>=1?'':'neg'}">${d.retorno_centro==null?'—':dec(d.retorno_centro,1)+'×'}</b></div><div><small>CTR 7 d</small><b>${f.ctr==null?'—':dec(f.ctr,1)+'%'}</b></div><div><small>Citas</small><b>${th(d.citas)}</b></div></div>
+  return `<article class="anu">${thumb}
+ <div class="anu-b"><div class="anu-top"><b>${esc(d.anuncio)}</b><span style="margin-left:auto">${d.activo?'<span class="pill ok">Activo</span>':'<span class="pill mut">Sin gasto reciente</span>'}</span></div>
+ ${d.texto?`<p class="anu-txt">${esc(d.texto)}</p>`:''}
+ <div class="anu-m"><div><small>Retorno</small><b class="${(d.retorno_centro??1)>=1?'':'neg'}">${d.retorno_centro==null?'—':dec(d.retorno_centro,1)+'×'}</b></div><div><small>CTR 7 d</small><b>${f.ctr==null?'—':dec(f.ctr,1)+'%'}</b></div><div><small>Citas</small><b>${th(d.citas)}</b></div></div>
  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px"><span class="small muted">CTR 6 semanas</span>${spark(ser,falling?'bad':'azul')}</div>
  <div class="fat ${cls}" title="Frecuencia de 7 días ${dec(fr,1)}">${[1,2,3,4,5].map(n=>`<i class="${n<=lv?'on':''}"></i>`).join('')}<span>Frecuencia ${dec(fr,1)} · <span class="pill ${fz[0]}" style="margin-left:2px">${fz[1]}</span></span></div></div></article>`}).join('')}
 R.creativos={html:D=>{const cr=D.creativos||{},rg=rng_(D.rango),rf=cr.resumen_fatiga||{};
  const fatig=(cr.anuncios||[]).filter(a=>(a.fatiga||{}).etiqueta==='cansado'||(a.fatiga||{}).etiqueta==='vigilar');
  if(cr.error)return `${mh('creativos','Cada anuncio juzgado por lo que deja al centro.')}${card('Anuncios','sparkles',estadoV('No se pudieron leer los anuncios',cr.error,{err:1,retry:'captacion'}))}`;
  return `${mh('creativos','Cada anuncio juzgado por lo que deja al centro, no por los «me gusta». La fatiga se mide con la frecuencia y el CTR de 7 días contra los 7 anteriores.')}
- ${card('Anuncios con gasto o citas','sparkles',`<div class="chips" role="group" aria-label="Ordenar anuncios" style="margin-bottom:16px">${[['ret','Retorno al centro'],['ctr','CTR'],['citas','Citas'],['fr','Fatiga']].map(([k,l])=>`<button class="chip" type="button" data-adsort="${k}" aria-pressed="${k===ADSORT}">${l}</button>`).join('')}</div><div class="ads" id="ads">${adsHTML(D)}</div><p class="note">Imágenes guardadas en el servidor del centro (nunca enlazadas a Meta). Retorno = lo que quedó para el centro ÷ gasto del anuncio, ${rg}. Foto de Meta al ${fdate(cr.ultima_foto)}.</p>`,{sub:'Ranking por retorno al centro',real:rg})}
+ ${card('Anuncios con gasto o citas','sparkles',`<div class="chips" role="group" aria-label="Ordenar anuncios" style="margin-bottom:16px">${[['ret','Retorno al centro'],['ctr','CTR'],['citas','Citas'],['fr','Fatiga']].map(([k,l])=>`<button class="chip" type="button" data-adsort="${k}" aria-pressed="${k===ADSORT}">${l}</button>`).join('')}</div><div class="anus" id="anus">${adsHTML(D)}</div><p class="note">Imágenes guardadas en el servidor del centro (nunca enlazadas a Meta). Retorno = lo que quedó para el centro ÷ gasto del anuncio, ${rg}. Foto de Meta al ${fdate(cr.ultima_foto)}.</p>`,{sub:'Ranking por retorno al centro',real:rg})}
  <div class="grid g-75">
   ${card('Variantes generadas esperando aprobación','sparkles',`
    ${[['t3','ear','Otorrino sin viajar a Concepción','Reemplazo de un anuncio cansado. Ángulo: distancia y tiempo, no síntoma.'],['t2','smile','Su evaluación de brackets, esta semana','Agrega hora concreta en el texto (ganó en el experimento E-01).']].map(x=>`<div class="var"><div class="thumb ${x[0]}"><svg class="art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">${I[x[1]]}</svg><div class="th-h">${x[2]}</div></div><div><h3>${x[2]}</h3><p>${x[3]}</p><div class="acts">${off('Aprobar','Disponible cuando exista el generador de variantes. Nada se publica sin aprobación humana.')}</div></div></div>`).join('')}`,{sub:'Predicción antes de publicar, con intervalo',real:0})}
@@ -1114,7 +1114,11 @@ R.reputacion={html:D=>{const G=D.google||{},E=D.encuesta||{};const e30=E['30']||
  const idx=x=>x==null?'—':String(x).replace('.',',');
  const eCard=E.error?card('Encuesta después de la consulta','msg',estadoV('No se pudo leer la encuesta',E.error,{err:1,retry:'reputacion'}))
   :`<section class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center"><div class="kl" style="align-self:stretch">Encuesta después de la consulta · 30 días ${tagR('')}</div>${e30.total?gauge(Math.round(e30.indice)):'<div class="ltv" style="margin:18px 0">—</div>'}<div class="small muted">${th(e30.total||0)} respuestas · ${th(e30.mejor||0)} «mejor» · ${th(e30.igual||0)} «igual» · ${th(e30.peor||0)} «peor»</div><p class="note">Índice = (mejor − peor) ÷ respuestas × 100, a la pregunta del bot «¿cómo se siente después de la consulta?». En 90 días: ${idx(e90.indice)} con ${th(e90.total||0)} respuestas.</p></section>`;
- const tCard=card('Temas que aparecen','msg',estadoV('Aún sin clasificar','Requiere clasificar el texto de las reseñas y comentarios por tema.'),{real:0});
+ const T=D.temas||{};const TN={trato:'Trato',explicacion:'Explicación',puntualidad_espera:'Puntualidad y espera',precio:'Precio',contacto_telefono:'Contacto telefónico',instalaciones:'Instalaciones',resultado_mejoria:'Resultado y mejoría',agenda_disponibilidad:'Agenda y disponibilidad',otro:'Otros'};
+ const fT=x=>{if(!x)return '';const d=String(x).slice(0,10).split('-');return d.length===3?'al '+d.reverse().join('/'):''};
+ const tCard=T.error?card('Temas que aparecen','msg',estadoV('No se pudo leer los temas',T.error,{err:1,retry:'reputacion'}))
+  :!T.hay?card('Temas que aparecen','msg',estadoV('Aún sin clasificar','El análisis de comentarios se ejecuta cada noche; los temas aparecerán después de la primera corrida.'),{real:0})
+  :card('Temas que aparecen','msg',`<div class="chips" id="temasChips">${(T.temas||[]).map(t=>`<button class="chip" type="button" aria-pressed="false" data-tema="${esc(t.tema)}">${esc(TN[t.tema]||t.tema)} <b style="color:var(--ok-ink)">${t.positivo}</b> <b style="color:var(--bad-ink)">${t.negativo}</b>${t.neutro?` <span class="muted">${t.neutro}</span>`:''}</button>`).join('')}</div><div id="temasEj" class="small" style="margin-top:12px" aria-live="polite"></div><p class="note">${th(T.total)} opiniones de los últimos 90 días, de comentarios posteriores a la consulta y reseñas de Google. Verde: positivas. Rojo: negativas. Toque un tema para ver ejemplos.</p>`,{real:fT(T.ultima)||'90 días'});
  const prof=(e90.por_profesional||[]).filter(x=>x.total>=1);
  const pCard=card('Encuesta por profesional · 90 días','star',prof.length?`<div class="tw"><table class="tbl"><thead><tr><th>Profesional</th><th class="n">Respuestas</th><th class="n">Mejor</th><th class="n">Igual</th><th class="n">Peor</th><th class="n">Índice</th></tr></thead><tbody>${prof.map(r=>`<tr><td>${esc(r.profesional)}</td><td class="n">${r.total}</td><td class="n">${r.mejor}</td><td class="n">${r.igual}</td><td class="n">${r.peor}</td><td class="n ${r.total<10?'muted':r.indice<50?'wrn':''}">${idx(r.indice)}${r.total<10?' <small>muestra chica</small>':''}</td></tr>`).join('')}</tbody></table></div>`:estadoV('Sin respuestas en 90 días',''),{real:'90 días'});
  const revs=(G.resenas||[]);
@@ -1122,7 +1126,12 @@ R.reputacion={html:D=>{const G=D.google||{},E=D.encuesta||{};const e30=E['30']||
  return `${mh('reputacion','Lo que los pacientes dicen en Google y cómo se sienten después de la consulta, según la encuesta del bot.')}
  <div class="grid g3">${gCard}${eCard}${tCard}</div>
  <div class="grid g-57">${pCard}${rCard}</div>`},
- draw(){}};
+ draw(D){const T=(D||{}).temas||{};const box=$('#temasChips');if(!box||!T.temas)return;const ej=$('#temasEj');
+  box.addEventListener('click',e=>{const b=e.target.closest('[data-tema]');if(!b)return;const on=b.getAttribute('aria-pressed')==='true';
+   box.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed','false'));
+   if(on){ej.innerHTML='';return}
+   b.setAttribute('aria-pressed','true');const t=T.temas.find(x=>x.tema===b.dataset.tema)||{};
+   ej.innerHTML=(t.ejemplos||[]).length?t.ejemplos.map(x=>`<div class="rev"><q>${esc(x.texto)}</q><div class="meta">${x.tono==='negativo'?'Negativo':x.tono==='positivo'?'Positivo':'Neutro'}</div></div>`).join(''):'<span class="muted">Sin ejemplos guardados para este tema.</span>'})}};
 
 /* ---------- 10 Competencia ---------- */
 R.competencia={html:()=>`${mh('competencia','Contra quién compite el CMC por cada búsqueda, a qué precio y qué demanda de la zona hoy no atiende nadie.')}
@@ -1254,7 +1263,7 @@ document.addEventListener('click',e=>{
  if(t.dataset.retry){const k=t.dataset.retry;delete SRC_ERR[k];load(k,true).then(()=>render(cur,true)).catch(()=>{render(cur,false);toast('Sigue sin responder. Intente en un momento.','err')});render(cur,false);return}
  if(t.dataset.fam){FAM=t.dataset.fam;$$('[data-fam]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#ftable').innerHTML=funnelTable(SRC.captacion);sankey($('#sankey'),SRC.captacion);return}
  if(t.dataset.sp){SPK=t.dataset.sp;$$('[data-sp]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#spName').textContent=SPK;INV=Math.min(300000,Math.round(SP[SPK].B*.5/10000)*10000);$('#invRange').value=INV;simUpdate();return}
- if(t.dataset.adsort){ADSORT=t.dataset.adsort;$$('[data-adsort]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#ads').innerHTML=adsHTML(SRC.captacion);return}
+ if(t.dataset.adsort){ADSORT=t.dataset.adsort;$$('[data-adsort]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));$('#anus').innerHTML=adsHTML(SRC.captacion);return}
  if(t.id==='pauseBtn'){PU.paused=!PU.paused;t.setAttribute('aria-pressed',String(PU.paused));t.innerHTML=PU.paused?ic('play',14)+'Reanudar':ic('pause',14)+'Pausar';toast(PU.paused?'Actualización en vivo en pausa.':'Actualización en vivo reanudada.');return}
  if(t.id==='refreshBtn'){const m=MODS.find(x=>x.id===cur);if(!m||!m.src){toast('Este módulo no tiene datos que actualizar.');return}t.classList.add('spin');t.disabled=true;
   load(m.src,true).then(D=>{if(m.id==='pulso')pulseIngest(D,false);render(cur,false);toast('Datos actualizados.')}).catch(()=>toast('No se pudo actualizar. Se mantienen los datos que ya estaban a la vista con su hora de lectura.','err')).finally(()=>{t.classList.remove('spin');t.disabled=false});return}
