@@ -508,5 +508,13 @@ check("plantilla: sin voseo en los textos nuevos", not any(w in html for w in ("
 check("main.py registra los crons con misfire_grace_time", (lambda s: "job_agenda_cupos" in s and s.count("misfire_grace_time") > 0)(
     (Path(__file__).resolve().parent.parent / "app" / "main.py").read_text(encoding="utf-8")))
 
+# SSRF: el filtro de host usa el mismo parser que la descarga (httpx)
+_us = ci._url_segura
+check("url imagen Meta normal permitida", _us("https://scontent.xx.fbcdn.net/v/a.jpg?x=1"))
+check("url con trucos de parser rechazada", not any(_us(u) for u in (
+    "https://evil.com\\@x.fbcdn.net/a.jpg", "https://x.fbcdn.net@evil.com/a", "https://u:p@x.fbcdn.net/a",
+    "http://x.fbcdn.net/a", "https://x.fbcdn.net:8443/a", "https://evilfbcdn.net/a",
+    "https://x.fbcdn.net.evil.com/a", "https://evil.com#.fbcdn.net/", "https://evil.com?.fbcdn.net/")))
+
 print(f"\n{len(FALLAS)} fallas")
 sys.exit(1 if FALLAS else 0)

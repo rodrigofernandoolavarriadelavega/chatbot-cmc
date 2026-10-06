@@ -386,8 +386,18 @@ def _ensure_creativos(c) -> None:
 
 
 def _url_segura(url: str | None) -> bool:
-    m = re.match(r"^https://([^/:]+)(?::\d+)?/", url or "")
-    return bool(m) and any(m.group(1).lower().endswith(h) for h in _HOSTS_OK)
+    """Host permitido según el MISMO parser que hace la descarga (httpx), para que
+    no haya diferencias de lectura (`\\`, `@`, userinfo, puertos raros)."""
+    if not url or any(ch in url for ch in "\\@ \t\r\n"):
+        return False
+    try:
+        import httpx
+        u = httpx.URL(url)
+    except Exception:   # noqa: BLE001
+        return False
+    host = (u.host or "").lower().rstrip(".")
+    return (u.scheme == "https" and not u.userinfo and u.port in (None, 443)
+            and any(host.endswith(h) for h in _HOSTS_OK))
 
 
 def parse_creativo(ad: dict) -> dict:
