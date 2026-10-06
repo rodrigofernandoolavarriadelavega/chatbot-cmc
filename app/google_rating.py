@@ -30,16 +30,68 @@ API_KEY  = os.getenv("GOOGLE_PLACES_API_KEY", "").strip()
 CACHE_TTL_SECONDS = 6 * 3600
 
 _CACHE: dict[str, Any] = {"data": None, "fetched_at": 0.0}
+# Si Google falla, NO se reintenta en cada visita (oct-2026: 1.106 × 403 y 261 × 429
+# en el log por reintentar sin espera): se espera este tiempo y se sigue mostrando
+# la última nota buena, que además queda en disco para sobrevivir reinicios.
+BACKOFF_ERROR_SECONDS = {403: 12 * 3600, 429: 6 * 3600}
+BACKOFF_DEFAULT_SECONDS = 3600
+
+
+def _archivo() -> str:
+    try:
+        import session as _s
+        return os.path.join(os.path.dirname(str(_s.DB_PATH)), "google_rating.json")
+    except Exception:  # noqa: BLE001
+        return os.path.join(os.path.dirname(__file__), "..", "data", "google_rating.json")
+
+
+def _leer_disco() -> dict | None:
+    try:
+        import json
+        with open(_archivo(), encoding="utf-8") as f:
+            d = json.load(f)
+        return d if d.get("rating") else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _guardar_disco(d: dict) -> None:
+    try:
+        import json
+        tmp = _archivo() + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False)
+        os.replace(tmp, _archivo())
+    except Exception as e:  # noqa: BLE001
+        log.debug("google_rating: no se pudo guardar en disco: %s", e)
+
+
+def cached_rating() -> dict | None:
+    """Última nota buena conocida, SIN salir a la red (para paneles internos)."""
+    return _CACHE["data"] or _leer_disco()
+
+
+def _fallo(now: float, motivo: str, status: int | None = None) -> dict:
+    """Registra el fallo con espera y devuelve la última nota buena (memoria o disco)."""
+    espera = BACKOFF_ERROR_SECONDS.get(status or 0, BACKOFF_DEFAULT_SECONDS)
+    _CACHE["data"] = _CACHE["data"] or _leer_disco()
+    # fetched_at "adelantado" para que el próximo intento sea en `espera` segundos
+    _CACHE["fetched_at"] = now - CACHE_TTL_SECONDS + espera
+    if _CACHE["data"]:
+        return _CACHE["data"]
+    _CACHE["data"] = None
+    return {"rating": None, "review_count": None, "reviews": [], "updated_at": int(now), "source": motivo}
 
 
 async def fetch_rating(force: bool = False) -> dict[str, Any]:
     """Devuelve {rating, review_count, reviews[], updated_at, source}.
     Cache de 6h. Si la API falla, devuelve último valor cacheado o defaults."""
     now = time.time()
-    if (not force
-        and _CACHE["data"]
-        and (now - _CACHE["fetched_at"] < CACHE_TTL_SECONDS)):
-        return _CACHE["data"]
+    if not force and (now - _CACHE["fetched_at"] < CACHE_TTL_SECONDS):
+        return _CACHE["data"] or _leer_disco() or {
+            "rating": None, "review_count": None, "reviews": [],
+            "updated_at": int(now), "source": "en_espera",
+        }
 
     if not API_KEY:
         fallback = _CACHE["data"] or {
@@ -62,11 +114,9 @@ async def fetch_rating(force: bool = False) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=8) as client:
             r = await client.get(url, headers=headers, params={"languageCode": "es-CL"})
         if r.status_code != 200:
-            log.warning("google_rating http %s: %s", r.status_code, r.text[:160])
-            return _CACHE["data"] or {
-                "rating": None, "review_count": None, "reviews": [],
-                "updated_at": int(now), "source": f"http_{r.status_code}",
-            }
+            log.warning("google_rating http %s (próximo intento en %s h): %s", r.status_code,
+                        BACKOFF_ERROR_SECONDS.get(r.status_code, BACKOFF_DEFAULT_SECONDS) // 3600, r.text[:160])
+            return _fallo(now, f"http_{r.status_code}", r.status_code)
         d = r.json()
         result = {
             "rating": d.get("rating"),
@@ -77,15 +127,13 @@ async def fetch_rating(force: bool = False) -> dict[str, Any]:
         }
         _CACHE["data"] = result
         _CACHE["fetched_at"] = now
+        _guardar_disco(result)
         log.info("google_rating refreshed: %s ★ · %s reseñas",
                  result["rating"], result["review_count"])
         return result
     except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError) as e:
         log.warning("google_rating network error: %s", e)
-        return _CACHE["data"] or {
-            "rating": None, "review_count": None, "reviews": [],
-            "updated_at": int(now), "source": f"net_error",
-        }
+        return _fallo(now, "net_error")
 
 
 def _normalize_review(rv: dict) -> dict:

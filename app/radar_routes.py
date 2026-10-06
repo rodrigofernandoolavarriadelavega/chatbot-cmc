@@ -901,6 +901,43 @@ def _consentimiento(hoy: date) -> dict:
                            "pending": priv.get("pending", 0)}}
 
 
+def _iniciales_resena(nombre: str) -> str:
+    partes = [x for x in (nombre or "").replace(".", " ").split() if x[:1].isalpha()]
+    return ".".join(x[0].upper() for x in partes[:2]) + "." if partes else "—"
+
+
+def reputacion_data() -> dict:
+    """Nota de Google (última buena guardada; nunca sale a la red) + encuesta
+    postconsulta mejor/igual/peor (fidelizacion_msgs). Sin teléfonos ni nombres."""
+    def _google():
+        import google_rating as gr
+        d = gr.cached_rating()
+        if not d or not d.get("rating"):
+            return {"hay": False}
+        revs = []
+        for r in (d.get("reviews") or [])[:6]:
+            revs.append({"iniciales": _iniciales_resena(r.get("author") or r.get("autor") or r.get("name") or ""),
+                         "estrellas": r.get("rating"), "texto": (r.get("text") or r.get("texto") or "")[:400],
+                         "cuando": r.get("relative") or r.get("relative_time") or r.get("cuando") or ""})
+        return {"hay": True, "rating": d.get("rating"), "total": d.get("review_count"),
+                "actualizado": _iso_epoch(d.get("updated_at")), "resenas": revs, "link": gr.get_review_link()}
+
+    def _encuesta():
+        from session import get_nps_por_profesional
+        out = {}
+        for dias in (30, 90):
+            n = get_nps_por_profesional(dias)
+            out[str(dias)] = {"indice": n["global_nps"], "total": n["global_total"], "mejor": n["global_mejor"],
+                              "igual": n["global_igual"], "peor": n["global_peor"],
+                              "por_profesional": [{"profesional": x.get("profesional") or "Sin dato", "total": x["total"],
+                                                   "mejor": x["mejor"], "igual": x["igual"], "peor": x["peor"],
+                                                   "indice": x["nps"]} for x in n["por_profesional"]]}
+        return out
+
+    return {"google": _seguro("google", _google),
+            "encuesta": _seguro("encuesta", lambda: _cacheado("encuesta", 300, _encuesta))}
+
+
 def bitacora_data(ahora: datetime | None = None) -> dict:
     ahora = ahora or _ahora()
     import campanas_meta_integraciones as ci
@@ -949,6 +986,12 @@ def api_conversion(request: Request, token: str | None = Query(None)):
 def api_finanzas(request: Request, token: str | None = Query(None)):
     cm._auth(request, token)
     return _json(finanzas_data())
+
+
+@router.get("/reputacion")
+def api_reputacion(request: Request, token: str | None = Query(None)):
+    cm._auth(request, token)
+    return _json(reputacion_data())
 
 
 @router.get("/bitacora")
