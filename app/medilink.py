@@ -495,7 +495,7 @@ ESPECIALIDADES_MAP = {
     "tecnólogo médico": [80], "tecnologo medico": [80],
     "celedón": [80], "celedon": [80],
     "nutrición": [52], "nutricionista": [52],
-    # Bioimpedanciometría — prestación aparte ($15.000), NO requiere consulta
+    # Bioimpedanciometría — prestación aparte ($20.000), NO requiere consulta
     # nutricional. La realiza Gisela Pinto (52) sobre su propia agenda, en un
     # bloque de 15 min (vs 60 de la consulta) → intervalo_override en flows.py.
     #
@@ -2592,7 +2592,7 @@ async def cancelar_cita(id_cita: int) -> bool:
 SEGUIMIENTO_ESPECIALIDADES = {
     "kinesiologia":  {"label": "Kinesiología",  "ids": [77, 21],     "precio_fonasa": 7830,  "precio_particular": 20000},
     "ortodoncia":    {"label": "Ortodoncia",     "ids": [66],         "precio_fonasa": None,  "precio_particular": 30000},
-    "psicologia":    {"label": "Psicología",     "ids": [74, 49],     "precio_fonasa": 14420, "precio_particular": 20000},
+    "psicologia":    {"label": "Psicología",     "ids": [74, 49],     "precio_fonasa": 14420, "precio_particular": 25000},
     "nutricion":     {"label": "Nutrición",      "ids": [52],         "precio_fonasa": 4770,  "precio_particular": 20000},
 }
 

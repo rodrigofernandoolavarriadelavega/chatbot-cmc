@@ -190,7 +190,7 @@ _INTENT_CACHE: dict[str, dict] = {
     "raúl paz":       {"intent": "agendar", "especialidad": "nutriología y diabetología"},
     "nutrición":      {"intent": "agendar", "especialidad": "nutrición"},
     "nutricion":      {"intent": "agendar", "especialidad": "nutrición"},
-    # Bioimpedanciometría: prestación aparte ($15.000), la hace Gisela Pinto.
+    # Bioimpedanciometría: prestación aparte ($20.000), la hace Gisela Pinto.
     # OJO: NO agregar "impedanciometría" a secas — ese es el examen de OÍDO de
     # fonoaudiología ($20.000).
     "bioimpedanciometría": {"intent": "agendar", "especialidad": "bioimpedanciometría"},
@@ -911,7 +911,7 @@ PEDIÁTRICO / MATERNO
 - No se prende / problemas para amamantar → **Matrona** (Saraí Gómez).
 - Frenillo lingual corto / no saca la lengua → **Fonoaudiología** o **Odontología General**.
 - Niño que no habla bien / problemas de lenguaje → **Fonoaudiología** (Juana Arratia).
-- Niño inquieto / TDAH / problemas de conducta / sospecha de autismo (TEA) → **Psicología Infantil**: **Ps. Jacquelinne Salas** (PRESENCIAL en el CMC, formación infantojuvenil y TEA) o **Jorge Montalba** (lun-vie por **videollamada**, el niño se conecta desde la casa con un adulto presente; **sábado presencial**). Avisa SIEMPRE la modalidad de la hora que le ofreces. ⚠️ El valor es distinto según el profesional: con Montalba bono Fonasa $14.420 / particular $20.000; con la Ps. Salas Fonasa $20.000 SIN bono / particular $25.000.
+- Niño inquieto / TDAH / problemas de conducta / sospecha de autismo (TEA) → **Psicología Infantil**: **Ps. Jacquelinne Salas** (PRESENCIAL en el CMC, formación infantojuvenil y TEA) o **Jorge Montalba** (lun-vie por **videollamada**, el niño se conecta desde la casa con un adulto presente; **sábado presencial**). Avisa SIEMPRE la modalidad de la hora que le ofreces. ⚠️ El valor es distinto según el profesional: con Montalba bono Fonasa $14.420 / particular $25.000; con la Ps. Salas Fonasa $20.000 SIN bono / particular $25.000. Particular $20.000 solo para pacientes que ya estaban en tratamiento con ese psicólogo ANTES del alza de precio; todo paciente nuevo paga $25.000, también en sus controles.
 - Control del niño sano → **Medicina General**.
 
 DOLOR / CABEZA
@@ -942,8 +942,8 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Medicina Familiar (Dr. Márquez) | ✅ Bono MLE $7.880 | $30.000 ⚠️ | Particular es $30.000, NO $25.000 |
 | Kinesiología | ✅ Bono MLE $7.830 (sesión) · $10.360 (1ª/última sesión, incluye evaluación o informe alta) | $20.000 | Se emite bono en CMC con huella |
 | Nutrición | ✅ Bono MLE $4.770 | $20.000 | Se emite bono en CMC con huella |
-| Psicología (Ps. Jacquelinne Salas) | ⚠️ **SIN bono** — beneficiarios Fonasa pagan **$20.000 directo** en el CMC (no es copago MLE, NO emite bono Fonasa todavía) | $25.000 | NUNCA digas que acepta bono Fonasa ni que el paciente debe sacar bono para ella. Atiende niños, adolescentes y adultos, PRESENCIAL |
-| Psicología (Montalba / Rodríguez) | ✅ Bono MLE $14.420 | $20.000 | Se emite bono en CMC con huella. ⚠️ Montalba lun-vie es ONLINE y el bono igual aplica: el paciente lo emite pasando por recepción del CMC (antes o el mismo día) **o** lo saca por su cuenta en una sucursal o la app de Fonasa. No hace falta estar en la clínica para la sesión. Con Juan Pablo Rodríguez (presencial) no cambia nada |
+| Psicología (Ps. Jacquelinne Salas) | ⚠️ **SIN bono** — beneficiarios Fonasa pagan **$20.000 directo** en el CMC (no es copago MLE, NO emite bono Fonasa todavía) | $25.000 ($20.000 solo para pacientes que ya estaban en tratamiento con ese psicólogo ANTES del alza de precio; todo paciente nuevo paga $25.000, también en sus controles) | NUNCA digas que acepta bono Fonasa ni que el paciente debe sacar bono para ella. Atiende niños, adolescentes y adultos, PRESENCIAL |
+| Psicología (Montalba / Rodríguez) | ✅ Bono MLE $14.420 | $25.000 ($20.000 solo para pacientes que ya estaban en tratamiento con ese psicólogo ANTES del alza de precio; todo paciente nuevo paga $25.000, también en sus controles) | Se emite bono en CMC con huella. ⚠️ Montalba lun-vie es ONLINE y el bono igual aplica: el paciente lo emite pasando por recepción del CMC (antes o el mismo día) **o** lo saca por su cuenta en una sucursal o la app de Fonasa. No hace falta estar en la clínica para la sesión. Con Juan Pablo Rodríguez (presencial) no cambia nada |
 | Matrona | 🟡 Tarifa preferencial $16.000 | $20.000 | NO es bono, es precio rebajado Fonasa |
 | Ginecología | ❌ Solo particular | $30.000 | NO acepta Fonasa |
 | Cardiología | ❌ Solo particular | $40.000 | NO acepta Fonasa |
@@ -983,7 +983,7 @@ MEDICINA GENERAL / SÍNTOMAS
 - Licencia médica / chequeo general / examen preventivo (EMP) → **Medicina General**.
 
 SALUD MENTAL
-- Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba, Juan Pablo Rodríguez o Ps. Jacquelinne Salas). Montalba y Rodríguez: $14.420 con bono Fonasa / $20.000 particular. **Ps. Salas: Fonasa $20.000 SIN bono (pago directo) / $25.000 particular, presencial.** ⚠️ Ya NO son intercambiables en modalidad: **Montalba** atiende lun-vie **online** y sábado **presencial**; **Juan Pablo Rodríguez** es **presencial siempre**. Si el paciente pide expresamente presencial en la semana, ofrécele a Rodríguez, a la Ps. Salas (presencial lun-vie tarde y sábado) o el sábado con Montalba.
+- Ansiedad / estrés / ataques de pánico → **Psicología Adulto** (Jorge Montalba, Juan Pablo Rodríguez o Ps. Jacquelinne Salas). Montalba y Rodríguez: $14.420 con bono Fonasa / $25.000 particular ($20.000 solo para pacientes que ya estaban en tratamiento con ese psicólogo ANTES del alza de precio; todo paciente nuevo paga $25.000, también en sus controles). **Ps. Salas: Fonasa $20.000 SIN bono (pago directo) / $25.000 particular, presencial.** ⚠️ Ya NO son intercambiables en modalidad: **Montalba** atiende lun-vie **online** y sábado **presencial**; **Juan Pablo Rodríguez** es **presencial siempre**. Si el paciente pide expresamente presencial en la semana, ofrécele a Rodríguez, a la Ps. Salas (presencial lun-vie tarde y sábado) o el sábado con Montalba.
 - Psiquiatría / evaluación psiquiátrica / necesito un psiquiatra / control de medicamentos (antidepresivos, etc.) → **Psiquiatría** con la **Dra. Cecilia Unibazo**, por **TELECONSULTA (videollamada)**, en los días y horas del **bloque HORARIOS REALES**, **$60.000 particular** (no atiende por Fonasa). Hay pocos cupos por semana y mucha demanda, así que para reservar la hora se paga el **100% del valor ($60.000) por adelantado** — así el cupo queda para quien de verdad lo usará y más personas de la zona pueden acceder; el día de la atención no se cobra nada adicional. El psiquiatra evalúa y receta fármacos (el psicólogo hace terapia).
 - Depresión / tristeza / desánimo → **Psicología Adulto**; si es urgente mencionar Salud Responde 600 360 7777.
 - Problemas de aprendizaje en niño / conducta / autismo (TEA) → **Psicología Infantil** (Ps. Jacquelinne Salas o Jorge Montalba).
@@ -1075,8 +1075,8 @@ Una videollamada no sirve para esto y esperar una hora programada es peligroso. 
 - **Pérdida brusca de visión**.
 - Dificultad respiratoria o deterioro importante del estado general, por cualquier causa.
 
-BIOIMPEDANCIOMETRÍA (Gisela Pinto, nutricionista) — $15.000, PRESTACIÓN APARTE
-Es un examen de composición corporal. **Se agenda solo, NO requiere consulta con nutricionista.** Lo realiza la misma Gisela Pinto en un bloque de **15 minutos**, cuesta **$15.000 particular a todos** (NO tiene bono Fonasa, a diferencia de la consulta nutricional que sí lo tiene).
+BIOIMPEDANCIOMETRÍA (Gisela Pinto, nutricionista) — $20.000, PRESTACIÓN APARTE
+Es un examen de composición corporal. **Se agenda solo, NO requiere consulta con nutricionista.** Lo realiza la misma Gisela Pinto en un bloque de **15 minutos**, cuesta **$20.000 particular a todos** (NO tiene bono Fonasa, a diferencia de la consulta nutricional que sí lo tiene).
 - QUÉ ES (explicación simple): el paciente se para descalzo en un equipo especial que en un par de minutos mide de qué están hechos sus kilos. No duele, no hay pinchazos, no tiene radiación. Pasa una corriente eléctrica muy suave que no se siente.
 - QUÉ MIDE: masa grasa (kg y %), masa muscular, masa libre de grasa, agua corporal (total, intra y extracelular), metabolismo basal estimado, ángulo de fase.
 - PARA QUÉ SIRVE: distingue si los kilos que el paciente bajó fueron **grasa** (lo que se busca) o **músculo** (lo que hay que evitar) — algo que la pesa sola no puede decir. Útil en control de peso y obesidad, seguimiento del plan nutricional, diabetes y síndrome metabólico, sarcopenia/adulto mayor, deportistas, y evaluación de retención de líquidos.
@@ -1189,12 +1189,12 @@ FONOAUDIOLOGÍA (Juana Arratia):
 
 PSICOLOGÍA ADULTO E INFANTIL (Jorge Montalba — bono Fonasa disponible):
 ⚠️ MODALIDAD MIXTA SEGÚN EL DÍA (desde 2026-09-11): **lunes a viernes 18:00–20:30 por VIDEOLLAMADA (online)** · **sábado 09:00–14:00 PRESENCIAL en el CMC**. Dilo SIEMPRE antes de cerrar la hora, nunca después: el paciente del sábado tiene que venir a Carampangue y el de lunes a viernes NO — se le envía el link. Si no sabes qué día tomó, no afirmes la modalidad: pregúntale el día. Los cupos reales los muestra el bloque HORARIOS REALES.
-- Consulta psicología particular: $20.000 — sesión de psicoterapia (45 min). Trata ansiedad, depresión, duelo, estrés, problemas de pareja, crianza, etc.
+- Consulta psicología particular: $25.000 ($20.000 solo para pacientes que ya estaban en tratamiento con ese psicólogo ANTES del alza de precio; todo paciente nuevo paga $25.000, también en sus controles) — sesión de psicoterapia (45 min). Trata ansiedad, depresión, duelo, estrés, problemas de pareja, crianza, etc.
 - Consulta psicología bono Fonasa (sesión 45'): $14.420 — misma sesión con copago Fonasa. **El bono vale igual para las sesiones online de lunes a viernes.** Dos formas de conseguirlo: (1) pasando por recepción del CMC, donde se emite con huella — puede ser antes del día de la sesión; (2) sacándolo por su cuenta en una sucursal o en la app de Fonasa. Si el paciente pregunta «¿y cómo hago el bono si es por videollamada?», explícale estas dos vías: NO le digas que tiene que renunciar al bono ni que debe venir a la sesión.
 - Informe psicológico: $25.000–$30.000 — informe escrito para trámites legales, laborales, escolares o de salud.
 
 PSICOLOGÍA ADULTO (Juan Pablo Rodríguez — bono Fonasa disponible):
-- Consulta psicología particular: $20.000 — sesión de psicoterapia adultos (45 min). Ansiedad, depresión, estrés, duelo, problemas interpersonales.
+- Consulta psicología particular: $25.000 ($20.000 solo para pacientes que ya estaban en tratamiento con ese psicólogo ANTES del alza de precio; todo paciente nuevo paga $25.000, también en sus controles) — sesión de psicoterapia adultos (45 min). Ansiedad, depresión, estrés, duelo, problemas interpersonales.
 - Consulta psicología bono Fonasa (sesión 45'): $14.420 — misma sesión con copago Fonasa.
 - Informe psicológico: $25.000–$30.000 — informe escrito para trámites legales, laborales o de salud.
 
@@ -1208,7 +1208,7 @@ Psicóloga con formación en psicología infantojuvenil y en trastorno del espec
 NUTRICIÓN (Gisela Pinto — bono Fonasa disponible):
 - Consulta nutricionista bono Fonasa: $4.770 — evaluación nutricional, plan alimentario personalizado, control de peso, manejo de diabetes, hipertensión u otras patologías dietéticas.
 - Consulta nutricionista particular: $20.000 — misma consulta sin bono Fonasa.
-- Bioimpedanciometría: $15.000 — SE AGENDA SOLA, NO requiere consulta nutricional previa. Examen indoloro que mide composición corporal (masa grasa, masa muscular, agua corporal, metabolismo basal). Lo realiza la misma Gisela Pinto en un bloque de 15 min. NO tiene bono Fonasa (es particular para todos).
+- Bioimpedanciometría: $20.000 — SE AGENDA SOLA, NO requiere consulta nutricional previa. Examen indoloro que mide composición corporal (masa grasa, masa muscular, agua corporal, metabolismo basal). Lo realiza la misma Gisela Pinto en un bloque de 15 min. NO tiene bono Fonasa (es particular para todos).
 
 NUTRIOLOGÍA Y DIABETOLOGÍA (Dr. Raúl Paz — MÉDICO, sin bono Fonasa):
 - Consulta nutriólogo y diabetólogo: $60.000 — teleconsulta por videollamada, 30 min, desde 15 años. Diabetes, prediabetes, sobrepeso y obesidad, colesterol y triglicéridos, resistencia a la insulina, hígado graso, síndrome metabólico, problemas nutricionales por enfermedad. El médico evalúa, pide exámenes e indica tratamiento. Se reserva pagando el 100% del valor por adelantado ($60.000). ⚠️ NO confundir con la consulta de la NUTRICIONISTA ($20.000 / bono $4.770): son dos prestaciones distintas, con profesionales, precios y modalidades distintas.

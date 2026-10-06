@@ -563,10 +563,10 @@ PRECIOS_SLOT = {
     "Medicina General":       ("ambas",      7880,  None, 25000),  # Fonasa $7.880 / Particular $25.000
     "Medicina Familiar":      ("ambas",      7880,  None, 30000),  # Fonasa $7.880 / Particular $30.000 (Dr. Márquez)
     "Kinesiología":           ("ambas",     7830, None, 20000),   # Fonasa $7.830 / Particular $20.000 (F035)
-    "Psicología Adulto":      ("ambas",    14420, None, 20000),   # Fonasa $14.420 / Particular $20.000 (F035)
-    "Psicología Infantil":    ("ambas",    14420, None, 20000),   # Fonasa $14.420 / Particular $20.000 (F035)
+    "Psicología Adulto":      ("ambas",    14420, None, 25000),   # Fonasa $14.420 / Particular $25.000
+    "Psicología Infantil":    ("ambas",    14420, None, 25000),   # Fonasa $14.420 / Particular $25.000
     "Nutrición":              ("ambas",     4770, None, 20000),   # Fonasa $4.770 / Particular $20.000 (F035)
-    "Bioimpedanciometría":    ("particular", 15000),  # Gisela Pinto — examen aparte, sin bono Fonasa
+    "Bioimpedanciometría":    ("particular", 20000),  # Gisela Pinto — examen aparte, sin bono Fonasa
 
     "Matrona":                ("ambas",     16000,  None, 20000),  # Fonasa $16.000 / Particular $20.000
     "Psiquiatría":            ("particular", 60000),
@@ -629,7 +629,7 @@ def _precio_line_sin_bono(pid, modalidad_override: str | None = None) -> str:
 
 
 # ── Bioimpedanciometría (Gisela Pinto, 52) ───────────────────────────────────
-# Prestación aparte de la consulta nutricional: $15.000, bloque de 15 min, sin
+# Prestación aparte de la consulta nutricional: $20.000, bloque de 15 min, sin
 # bono Fonasa. Se agenda sola (no requiere consulta) y también se ofrece como
 # complemento a quien agenda Nutrición.
 _BIA_KEYS: set[str] = {
@@ -699,7 +699,7 @@ CROSS_REFERENCE: dict[str, str] = {
         "cuánta grasa, cuánto músculo y cuánta agua tienes.\n\n"
         "Sirve para saber si lo que bajas es *grasa* (lo que buscamos) o *músculo* "
         "(lo que hay que evitar) — algo que la pesa sola no puede decirte.\n\n"
-        "💰 *$15.000* · dura 15 minutos · lo realiza la misma *Gisela Pinto*\n\n"
+        "💰 *$20.000* · dura 15 minutos · lo realiza la misma *Gisela Pinto*\n\n"
         "Si quieres agregarlo, escribe *bioimpedanciometría* y te doy hora 😊"
     ),
     # Quien agenda con el nutriólogo es casi siempre diabético u obeso: el plan
@@ -711,7 +711,7 @@ CROSS_REFERENCE: dict[str, str] = {
         "El Dr. Paz indica el tratamiento médico; el *plan alimentario* lo armas "
         "con *Gisela Pinto*, nuestra nutricionista (*$20.000* particular o "
         "*$4.770* con bono Fonasa).\n\n"
-        "📊 También hacemos *Bioimpedanciometría* (*$15.000*, 15 min): mide "
+        "📊 También hacemos *Bioimpedanciometría* (*$20.000*, 15 min): mide "
         "cuánta grasa y cuánto músculo tienes, para saber si lo que bajas es "
         "grasa y no músculo.\n\n"
         "Si te interesa, escribe *menu* y lo agendamos 😊"
@@ -11337,10 +11337,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # pero reportada como fallida.
                     # Bioimpedanciometría: la cita cae en la agenda de Gisela (52),
                     # cuya especialidad en Medilink es "Nutrición". Sin esta marca
-                    # recepción la vería como consulta y cobraría $20.000 en vez de
-                    # $15.000. observaciones_extra la hace visible en la agenda.
+                    # recepción la vería como consulta nutricional en vez del
+                    # examen ($20.000). observaciones_extra la hace visible en la agenda.
                     _obs_prestacion = (
-                        "[BIOIMPEDANCIOMETRÍA $15.000]"
+                        "[BIOIMPEDANCIOMETRÍA $20.000]"
                         if data.get("especialidad") in _BIA_KEYS else ""
                     )
                     resultado = await asyncio.wait_for(crear_cita(
@@ -11520,7 +11520,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # La bioimpedanciometría se agenda en la agenda de la nutricionista,
                 # así que slot["especialidad"] dice "Nutrición". Corregirlo acá hace
                 # que el tag, la cita guardada, el recordatorio y el value del evento
-                # Purchase (CAPI) usen la prestación real y su arancel ($15.000).
+                # Purchase (CAPI) usen la prestación real y su arancel ($20.000).
                 if data.get("especialidad") in _BIA_KEYS:
                     esp = "Bioimpedanciometría"
                 # Dr. Alonso Márquez (id 13) está en el pool de "Medicina
