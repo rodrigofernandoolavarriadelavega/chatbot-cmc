@@ -456,7 +456,7 @@ def _panel(canal: str, d: str, h: str) -> dict:
 def _k_embudo(k: dict) -> dict:
     keys = ("personas", "conversaciones", "citas", "atendidos", "no_asistio", "anuladas", "venta", "centro",
             "gasto", "cac_cita", "cac_atendido", "retorno", "retorno_centro", "retorno_estricto", "pagaron",
-            "atendidos_fuente", "muestra_chica")
+            "atendidos_fuente", "muestra_chica", "valor12m")
     return {x: k.get(x) for x in keys}
 
 
@@ -550,6 +550,22 @@ def _valor90() -> dict:
     return _cacheado("valor90", TTL_PESADO, _f)
 
 
+def _valor12m() -> dict:
+    """Valor de un paciente nuevo a 12 meses por puerta de entrada (lee la tabla cache de cohortes)."""
+    import valor_cohortes as vc
+
+    def _f():
+        with db() as c:
+            p = vc.publico(c)
+        top = [{"especialidad": e["especialidad"], "n": e["n"], "c365": e["c"]["365"], "v365": e["v"]["365"],
+                "visitas": e["visitas"], "muestra_chica": e["muestra_chica"]} for e in p["especialidades"][:6]]
+        sig = [{"entrada": m["entrada"], "n": m["n"], "muestra_chica": m["muestra_chica"],
+                "destinos": [{"esp": d["esp"], "pct": d["pct"], "venta_pasan": d["venta_pasan"]} for d in m["destinos"][:3]]}
+               for m in p["matriz"][:3] if m["destinos"]]
+        return {"meta": p["meta"], "top": top, "recorrido": sig, "sin_especialidad": len(p["sin_especialidad"])}
+    return _cacheado("valor12m", TTL_PESADO, _f)
+
+
 def captacion_data(hoy: date | None = None) -> dict:
     d, h = _rango(hoy)
     pm = _seguro("panel_meta", _panel, "meta", d, h)
@@ -569,6 +585,7 @@ def captacion_data(hoy: date | None = None) -> dict:
             "creativos": _seguro("creativos", _creativos, pm) if "error" not in pm else pm,
             "territorio": _seguro("territorio", _territorio, d, h),
             "valor90": _seguro("valor90", _valor90),
+            "valor12m": _seguro("valor12m", _valor12m),
             "agenda": ({k: ag.get(k) for k in ("sin_datos", "activo", "hoy", "dias", "grupos", "senales", "gasto",
                                                "desactualizado", "umbrales")}
                        | {"actualizado": _iso_epoch(ag.get("actualizado_ts"))}) if isinstance(ag, dict) and "error" not in ag else ag}

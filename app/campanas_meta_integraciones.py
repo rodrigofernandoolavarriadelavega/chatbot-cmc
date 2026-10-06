@@ -52,6 +52,7 @@ from fastapi import HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 import campanas_meta_routes as cm
+import valor_cohortes as vc
 from session import db
 
 log = logging.getLogger("campanas_meta_integraciones")
@@ -1148,6 +1149,20 @@ def velocidad(request: Request, desde: str | None = Query(None), hasta: str | No
 def valor90(request: Request, canal: str | None = Query("meta"), token: str | None = Query(None)):
     cm._auth(request, token)
     return valor90_data(canal)
+
+
+@router.get("/valor12m")
+def valor12m(request: Request, token: str | None = Query(None)):
+    """Cohortes de valor a 12 meses por especialidad de entrada, derivación y ortodoncia (solo lee la cache)."""
+    cm._auth(request, token)
+    with db() as c:
+        return vc.publico(c)
+
+
+@router.post("/valor12m/recalcular")
+async def valor12m_recalcular(request: Request, token: str | None = Query(None)):
+    cm._auth(request, token)
+    return await asyncio.to_thread(vc.recalcular)
 
 
 @router.get("/aviso-meta")

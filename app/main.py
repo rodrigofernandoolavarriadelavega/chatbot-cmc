@@ -711,6 +711,18 @@ async def lifespan(app: FastAPI):
         coalesce=True,
         max_instances=1,
     )
+    # Cohortes de valor a 12 meses por especialidad de entrada (Campañas Meta):
+    # día 1 de cada mes 04:30 CLT, solo DB local. Flag VALOR_COHORTES_ACTIVE.
+    from valor_cohortes import job_valor_cohortes
+    scheduler.add_job(
+        job_valor_cohortes,
+        CronTrigger(day=1, hour=4, minute=30, timezone=_CLT),
+        id="valor_cohortes",
+        replace_existing=True,
+        misfire_grace_time=21600,
+        coalesce=True,
+        max_instances=1,
+    )
     # Panel del Día: cache de CAPACIDAD REAL por profesional (Medilink /citas,
     # secuencial+throttle) 04:10 CLT — horario libre, off-peak. Alimenta el
     # potencial/ocupación reales del N1 sin fan-out en vivo.

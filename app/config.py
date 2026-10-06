@@ -515,6 +515,13 @@ META_CREATIVOS_ACTIVE = os.getenv(
     "META_CREATIVOS_ACTIVE", "true"
 ).lower() in ("true", "1", "yes", "on")
 
+# Cohortes de valor a 12 meses por especialidad de entrada (app/valor_cohortes.py):
+# recálculo mensual (día 1, 04:30 CLT) de la tabla cache `valor_cohorte_especialidad`
+# a partir de `bi_pagos_caja`. Solo lee la DB local (no llama a Medilink ni a Meta).
+VALOR_COHORTES_ACTIVE = os.getenv(
+    "VALOR_COHORTES_ACTIVE", "true"
+).lower() in ("true", "1", "yes", "on")
+
 # Foto diaria de Google Search Console (app/gsc_snapshot.py, 06:40 CLT, últimos
 # 5 días) → gsc_diario / gsc_paginas_diario, para el canal "Página web" de
 # Campañas Meta. Service account de solo lectura; la llave NO va en el repo.

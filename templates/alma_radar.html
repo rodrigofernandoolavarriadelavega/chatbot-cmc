@@ -919,6 +919,13 @@ function jChart(el,cac){if(!el)return;
  el.innerHTML=`<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Valor acumulado de una paciente ilustrativa en el tiempo">${s}</svg>`;
 }
 R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.embudo||{}).meta||{};
+ const v12=D.valor12m||{},k12=((D.embudo||{}).meta||{}).valor12m||{};
+ const real12=v12.error?estadoV('No se pudo leer el valor a 12 meses',v12.error,{err:1,retry:'captacion'}):!(v12.meta&&v12.meta.hay_cohortes)?estadoV('Aún sin cohortes de 12 meses','Se calculan con los pacientes nuevos que ya cumplieron un año en la caja.'):`
+   <div class="mini">${(v12.top||[]).slice(0,4).map(e=>`<div class="so"><div class="kl">${esc(e.especialidad)}${e.muestra_chica?' · muestra chica':''}</div><b>${clp(e.c365)}</b><small>para el centro a 12 meses · ${th(e.n)} pacientes</small></div>`).join('')}</div>
+   ${k12.nuevos?`<div class="mini" style="margin-top:12px"><div class="so"><div class="kl">Nuevos por anuncios (rango)</div><b>${th(k12.nuevos_rango)}</b><small>de ${th(k12.nuevos_centro_rango)} nuevos del centro · costo por nuevo ${clp(k12.costo_nuevo_rango)}</small></div>
+    <div class="so"><div class="kl">Proyectado a 12 meses</div><b>${clp(k12.centro_12m)}</b><small>para el centro · retorno ${k12.retorno_12m==null?'—':dec(k12.retorno_12m,1)+'×'}</small></div></div>`:''}
+   ${(v12.recorrido||[]).slice(0,1).map(r=>`<p class="note" style="margin-top:12px">Dónde sigue el recorrido de quienes entran por ${esc(r.entrada)}: ${r.destinos.map(d=>esc(d.esp)+' '+String(d.pct).replace('.',',')+'%').join(' · ')}.</p>`).join('')}
+   <p class="note">Proyección según cohortes reales; no es venta realizada. Cohortes de pacientes nuevos con 12 meses cumplidos (primer pago entre ${fdate(v12.meta.ventana.desde)} y ${fdate(v12.meta.ventana.hasta)}).${v12.sin_especialidad?' Hay '+v12.sin_especialidad+' profesionales sin especialidad registrada.':''}</p>`;
  const real=v9.error?estadoV('No se pudo leer el valor a 90 días',v9.error,{err:1,retry:'captacion'}):!t.personas?estadoV('Sin personas con 90 días cumplidos','El valor a 90 días se mide solo con quienes llegaron hace 90 días o más; aparecerá a medida que maduren.'):`
    <div class="mini">${hz.map(x=>`<div class="so${x.dias===90?' hl':''}"><div class="kl">A ${x.dias} días</div><b>${clp(x.venta)}</b><small>${clp(x.centro)} para el centro</small></div>`).join('')}</div>
    <div class="mini" style="margin-top:12px">
@@ -930,6 +937,7 @@ R.viaje={html:D=>{const v9=D.valor90||{},t=v9.total||{},hz=t.h||[];const m=(D.em
    <p class="note">Personas que llegaron por anuncios de Meta desde el ${fdate(v9.desde)} y cumplieron 90 días al ${fdate(v9.madura_hasta)}. Cuenta todo lo que pagaron en caja a 30, 60 y 90 días de su primer contacto.</p>`;
  return `${mh('viaje','Una paciente se ve así cuando todas las piezas se conectan: del anuncio a la tercera especialidad. El relato es ilustrativo; el valor a 90 días de quienes trajeron los anuncios, real.')}
  ${card('Valor en el tiempo de quienes llegaron por anuncios','trending',real,{sub:'Venta acumulada a 30, 60 y 90 días del primer contacto',real:v9.madura_hasta?`maduros al ${fdm(v9.madura_hasta)}`:''})}
+ ${card('Valor de un paciente nuevo en 12 meses','trending',real12,{sub:'Por especialidad de entrada, con cohortes reales',real:v12.meta&&v12.meta.hay_cohortes?'cohortes':''})}
  <div class="grid g-57">
   <section class="card"><div class="pt-card"><span class="avatar">A</span><div style="min-width:0"><h2 style="font-size:18px;font-weight:800;letter-spacing:-.02em">Paciente A</h2><div class="small muted">Recorrido de ejemplo · no corresponde a una persona real</div></div><span style="margin-left:auto">${tagI}</span></div>
    <div class="kpis" style="margin-top:18px;grid-template-columns:repeat(2,minmax(0,1fr))">

@@ -68,6 +68,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from session import db
+import valor_cohortes as vc_mod
 
 log = logging.getLogger("campanas_meta_routes")
 router = APIRouter(prefix="/alma/api/campanas-meta", tags=["campanas-meta"])
@@ -1090,10 +1091,11 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]],
 
     pct = _pct_honorarios(c)
     pagos: dict[int, list] = defaultdict(list)
+    previos: set[int] = set()
     ids = list(inicio)
     for i in range(0, len(ids), 500):
         lote = ids[i:i + 500]
-        q = ("SELECT id_paciente, id_profesional, fecha, monto FROM bi_pagos_caja WHERE id_paciente IN (%s)"
+        q = ("SELECT pago_id, id_paciente, id_profesional, fecha, monto FROM bi_pagos_caja WHERE id_paciente IN (%s)"
              % ",".join("?" * len(lote)))
         try:
             filas = c.execute(q, lote).fetchall()
@@ -1104,6 +1106,8 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]],
             ad_id, dia, _ = inicio[r["id_paciente"]]
             if (r["fecha"] or "")[:10] >= dia:
                 pagos[r["id_paciente"]].append(r)
+            elif int(r["monto"] or 0) > 0:
+                previos.add(r["id_paciente"])   # ya había pagado antes de este anuncio: no es paciente nuevo
 
     out: dict[str, dict] = defaultdict(lambda: {"venta": 0, "centro": 0.0, "pagaron": 0, "pagaron_tel": 0,
                                                 "profs": {}, "split": {}})
@@ -1127,7 +1131,9 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]],
         o["pagaron_tel"] += 1 if camino == "telefono" else 0
         det = None
         if detalle is not None:
-            det = detalle[pid] = {"ad_id": ad_id, "venta": 0, "centro": 0.0}
+            # nuevo = sin pago previo (monto > 0) a su fecha de inicio de atribución
+            det = detalle[pid] = {"ad_id": ad_id, "venta": 0, "centro": 0.0, "desde": dia, "camino": camino,
+                                  "nuevo": pid not in previos, "pagos": []}
         for f in filas:
             monto = int(f["monto"] or 0)
             p_prof = pct.get(f["id_profesional"]) or PCT_HONORARIO_DEFAULT
@@ -1137,6 +1143,7 @@ def _venta_por_anuncio(c, citas: list[dict], clics: dict[str, tuple[int, str]],
             if det is not None:
                 det["venta"] += monto
                 det["centro"] += centro
+                det["pagos"].append(((f["fecha"] or "")[:10], f["id_profesional"], monto, f["pago_id"]))
             _split_sumar(o["split"], camino, _g(f["id_profesional"]),
                          (f["fecha"] or "")[:10] <= fin30.get(pid, ""), monto, centro)
             pp = o["profs"].setdefault(f["id_profesional"], {"venta": 0, "centro": 0.0, "pacientes": set()})
@@ -1370,7 +1377,7 @@ def _acum() -> dict:
             "por_proxy": 0, "con_medilink": 0, "instalaron": set(), "orto_venta": 0, "venta": 0, "centro": 0,
             "pagaron": 0, "pagaron_tel": 0, "profs": {},
             "split": {}, "v_esp30": 0, "c_esp30": 0.0, "v_tel": 0, "c_tel": 0.0,
-            "at_medilink": 0, "at_caja": 0, "at_proxy": 0}
+            "at_medilink": 0, "at_caja": 0, "at_proxy": 0, "valor": None}
 
 
 _NOMBRES_PROF: dict[int, str] = {}
@@ -1448,6 +1455,8 @@ def _cerrar(a: dict) -> dict:
         "frecuencia": round(a["impresiones"] / a["alcance"], 2) if a["alcance"] else None,
         "muestra_chica": citas < MUESTRA_CHICA,
         "conocieron": _conoc_resumen(a.get("conoc") or {}),
+        # Nuevos vs ya pacientes, valor proyectado a 12 meses y recorrido (valor_cohortes)
+        "valor12m": vc_mod.cerrar(a.get("valor"), g),
     }
 
 
@@ -1585,12 +1594,27 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
 
         _NOMBRES_PROF.clear()
         _NOMBRES_PROF.update(_nombres_profesionales(c))
-        for ad_id, v in _venta_por_anuncio(c, citas, clics).items():
+        detalle_pac: dict[int, dict] = {}
+        for ad_id, v in _venta_por_anuncio(c, citas, clics, detalle_pac).items():
             for a in (por_ad[ad_id], tot):
                 for kk in ("venta", "centro", "pagaron", "pagaron_tel"):
                     a[kk] += v[kk]
                 _sumar_profs(a["profs"], v["profs"])
                 _sumar_split(a["split"], v["split"])
+
+        # Nuevos vs ya pacientes y proyección a 12 meses con cohortes reales
+        # (tabla cache `valor_cohorte_especialidad`; el panel solo la lee).
+        try:
+            vcoh = vc_mod.cargar(c)
+            val_ad, val_tot = vc_mod.valor_por_anuncio(c, detalle_pac, vcoh, d, h, _hoy())
+            for ad_id, a in por_ad.items():
+                a["valor"] = val_ad.get(ad_id)
+            tot["valor"] = val_tot
+            nuevos_centro = vc_mod.nuevos_del_centro(c, d, h)
+            valor_meta = vc_mod.resumen_meta(vcoh)
+        except Exception as e:   # noqa: BLE001 — sin cohortes el panel sigue igual
+            log.warning("campanas_meta: valor 12m no disponible: %s", e)
+            nuevos_centro, valor_meta = 0, None
 
         # Especialidad del anuncio (nombre/título; si no dice, la más agendada)
         # y cuánto de su venta cayó en OTRA especialidad.
@@ -1665,6 +1689,9 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
             cid = info["campaign_id"]
             camp_nombre[cid] = info["campana"]
             pc = por_camp[cid]
+            if pc["valor"] is None:
+                pc["valor"] = vc_mod.acc()
+            vc_mod.sumar(pc["valor"], a.get("valor"))
             for k in ("gasto", "impresiones", "alcance", "clics", "conv", "citas", "atendidos", "venta", "centro", "pagaron", "pagaron_tel",
                       "no_asistio", "anuladas", "por_proxy", "con_medilink", "orto_venta",
                       "v_esp30", "c_esp30", "v_tel", "c_tel", "at_medilink", "at_caja", "at_proxy"):
@@ -1764,8 +1791,13 @@ def panel_data(desde: str | None = None, hasta: str | None = None,
                                   "AND fecha != ''").fetchone()[0]
 
     k = _cerrar(tot)
+    kv = k["valor12m"]
+    kv["nuevos_centro_rango"] = nuevos_centro
+    kv["costo_nuevo_rango"] = round(k["gasto"] / kv["nuevos_rango"]) if k["gasto"] and kv["nuevos_rango"] else None
+    kv["pct_nuevos_anuncios"] = (round(100 * kv["nuevos_rango"] / nuevos_centro, 1) if nuevos_centro else None)
     return {
         "rango": {"desde": d.isoformat(), "hasta": h.isoformat(), "dias": (h - d).days + 1},
+        "valor12m": valor_meta,
         "filtros": {"campana": campana or "", "plataforma": plat or "", "canal": canal},
         "canal": canal,
         "kpis": k,
