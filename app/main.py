@@ -13195,9 +13195,14 @@ async def _webhook_procesar(request: Request):
                     import reintento_saturado
                     from resilience import spawn_task
                     spawn_task(
+                        # Webhook de WhatsApp: canal fijo y el número es el
+                        # destinatario. Antes pasaba `canal`/`sender_id`/`send_fn`
+                        # copiados del webhook multicanal, que aquí no existen →
+                        # NameError y el "te escribo" nunca llegaba (7 pacientes
+                        # entre 24-sep y 6-oct).
                         reintento_saturado.programar(
-                            phone=phone, texto=texto, canal=canal,
-                            sender_id=sender_id, send_fn=send_fn,
+                            phone=phone, texto=texto, canal="whatsapp",
+                            sender_id=phone, send_fn=send_whatsapp,
                             desde_ts=_ts_entrante,
                         ),
                         name=f"reintento_saturado:{phone}",

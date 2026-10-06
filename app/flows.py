@@ -606,6 +606,12 @@ PRECIO_PROF_SIN_BONO: dict[int, tuple[int, int]] = {
     82: (20000, 25000),
 }
 
+# Profesionales que atienden PRESENCIAL pero cuyo horario en Medilink tiene la
+# videoconsulta habilitada: Medilink rechaza la cita con 400 "Debe mandar el
+# parámetro videoconsulta". Se reintenta mandando el campo SIN convertir la cita
+# en online. Sacar el id cuando recepción corrija el horario en Medilink.
+_PROFS_PRESENCIAL_FLAG_VIDEO: frozenset[int] = frozenset({82})
+
 
 def _fmt_clp_flows(n: int) -> str:
     return "$" + f"{int(n):,}".replace(",", ".")
@@ -11431,12 +11437,20 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # (ya usada para psiquiatría/Unibazo). Si el reintentar también falla,
                 # avisamos sin destruir la sesión (paciente puede elegir otro horario).
                 from medilink import MedilinkVideoconsultaRequired as _MlinkVidReq
+                _video_ok = False
                 if isinstance(_crear_err, _MlinkVidReq):
                     log_event(phone, "crear_cita_videoconsulta_required", {
                         "fecha": slot.get("fecha"),
                         "hora": slot.get("hora_inicio"),
                         "profesional": slot.get("profesional", ""),
                     })
+                    # Profesional presencial cuyo horario en Medilink quedó con
+                    # videoconsulta habilitada: se manda el campo pero la cita
+                    # SIGUE presencial (sin [ONLINE] ni "videollamada" al paciente).
+                    _presencial_flag = (
+                        slot.get("id_profesional") in _PROFS_PRESENCIAL_FLAG_VIDEO
+                        and data.get("telemedicina_modalidad", "PRESENCIAL") != "TELEMEDICINA"
+                    )
                     try:
                         resultado_video = await asyncio.wait_for(crear_cita(
                             id_paciente=paciente["id"],
@@ -11445,14 +11459,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             hora_inicio=slot["hora_inicio"],
                             hora_fin=slot["hora_fin"],
                             id_recurso=slot.get("id_recurso", 1),
-                            modalidad="TELEMEDICINA",
+                            modalidad="PRESENCIAL" if _presencial_flag else "TELEMEDICINA",
+                            forzar_videoconsulta=_presencial_flag,
                         ), timeout=45)
                     except Exception:
                         resultado_video = None
                     if resultado_video:
-                        # Éxito con TELEMEDICINA — continuar el flujo normal
-                        # marcando la modalidad para que la confirmación lo refleje
-                        data["telemedicina_modalidad"] = "TELEMEDICINA"
+                        # Éxito — continuar el flujo normal. Antes este camino caía
+                        # al `raise` del final: la cita quedaba creada en Medilink y
+                        # al paciente se le decía "problema técnico" (Fabián 2-oct →
+                        # no asistió; Julieta 6-oct).
+                        _video_ok = True
+                        if not _presencial_flag:
+                            data["telemedicina_modalidad"] = "TELEMEDICINA"
                         resultado = resultado_video
                         log_event(phone, "crear_cita_videoconsulta_retry_ok", {
                             "fecha": slot.get("fecha"),
@@ -11519,11 +11538,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # Otros errores (4xx, errores de datos, etc.): dejar subir para que
                 # el except genérico de main.py los maneje normalmente. Cerrar el
                 # par de auditoría para no contar esto como "muerta en vuelo".
-                log_event(phone, "reserva_resultado", {
-                    "ok": False, "causa": type(_crear_err).__name__,
-                    "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
-                })
-                raise
+                if not _video_ok:
+                    log_event(phone, "reserva_resultado", {
+                        "ok": False, "causa": type(_crear_err).__name__,
+                        "fecha": slot.get("fecha"), "hora": slot.get("hora_inicio"),
+                    })
+                    raise
             # Liberar lock tentativo — éxito o fallo, ya no lo necesitamos.
             # Si la cita se creó, Medilink ya tiene el slot ocupado real.
             # Si falló, otro paciente puede intentar este slot.

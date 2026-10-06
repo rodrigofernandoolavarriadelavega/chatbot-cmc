@@ -1926,7 +1926,8 @@ async def verificar_slot_disponible(id_profesional: int, fecha: str,
 async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
                      hora_inicio: str, hora_fin: str, id_recurso: int = 1,
                      modalidad: str = "PRESENCIAL",
-                     observaciones_extra: str = "") -> Optional[dict]:
+                     observaciones_extra: str = "",
+                     forzar_videoconsulta: bool = False) -> Optional[dict]:
     """Crea una cita en Medilink. Devuelve dict con id de la cita o None si falla.
 
     modalidad: 'PRESENCIAL' (default) o 'TELEMEDICINA'.
@@ -1955,7 +1956,10 @@ async def crear_cita(id_paciente: int, id_profesional: int, fecha: str,
     # teleconsulta en Medilink y RECHAZAN la creación con 400 si falta el campo
     # `videoconsulta`. Solo lo enviamos en TELEMEDICINA para no alterar el body
     # de las citas presenciales (que ya funcionan sin el campo).
-    if modalidad == "TELEMEDICINA":
+    # `forzar_videoconsulta`: el profesional atiende PRESENCIAL pero su horario
+    # en Medilink quedó con videoconsulta habilitada (Ps. Salas, 6-oct) → se
+    # manda el campo para que Medilink acepte, SIN el rótulo [ONLINE].
+    if modalidad == "TELEMEDICINA" or forzar_videoconsulta:
         body["videoconsulta"] = 1
     client = _get_shared_client()
     try:
