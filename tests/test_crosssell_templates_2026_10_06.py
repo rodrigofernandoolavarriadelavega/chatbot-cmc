@@ -41,6 +41,7 @@ if "winback" not in sys.modules:
     _fake_winback = types.ModuleType("winback")
     _fake_winback.is_template_approved = None
     _fake_winback.phone_in_opt_out = lambda phone: False
+    _fake_winback.has_marketing_consent = lambda phone: True
     sys.modules["winback"] = _fake_winback
 
 import session  # noqa: E402
@@ -56,7 +57,7 @@ def _tpl():
     return json.loads(TPL.read_text(encoding="utf-8"))
 
 
-def _setup(monkeypatch, window_open=False, template_aprobado=True):
+def _setup(monkeypatch, window_open=False, template_aprobado=True, consent_mkt=True):
     sent_tpl, sent_free, saved, events = [], [], [], []
 
     async def fake_tpl(phone, template_name, body_params=None,
@@ -88,6 +89,8 @@ def _setup(monkeypatch, window_open=False, template_aprobado=True):
     monkeypatch.setattr(fidelizacion, "log_event",
                         lambda phone, ev, data=None: events.append((phone, ev)))
     monkeypatch.setattr(winback, "is_template_approved", fake_is_approved)
+    monkeypatch.setattr(winback, "has_marketing_consent", lambda phone: consent_mkt,
+                        raising=False)
     return fake_tpl, fake_free, sent_tpl, sent_free, saved, events
 
 
@@ -265,6 +268,9 @@ def test_estetica_mas_informacion_llega_al_handler():
     ("crosssell_mg_chequeo", "crosssell_mg_chequeo.json"),
     ("crosssell_odonto_estetica", "crosssell_odonto_estetica.json"),
     ("crosssell_post_dental_ortodoncia", "crosssell_ortodoncia_post_dental_v1.json"),
+    ("crosssell_kine", "crosssell_kine.json"),
+    ("crosssell_orl_fono", "crosssell_orl_fono.json"),
+    ("crosssell_fono_orl", "crosssell_fono_orl.json"),
 ])
 def test_cada_boton_del_template_tiene_payload_con_handler(tipo, archivo):
     """Guardia: si alguien cambia los botones del template, esto avisa."""
@@ -279,4 +285,46 @@ def test_cada_boton_del_template_tiene_payload_con_handler(tipo, archivo):
         if payload is None:
             assert key in ("no por ahora",), f"{tipo}: botón {b['text']!r} sin payload"
             continue
-        assert f'if tl == "{payload}":' in src, f"{payload} no tiene handler"
+        assert (f'if tl == "{payload}":' in src
+                or f'if tl in ("{payload}",' in src), f"{payload} no tiene handler"
+
+
+# ── Consentimiento de MARKETING obligatorio para el template ────────────────
+
+@pytest.mark.parametrize("fn,cands", [
+    ("enviar_crosssell_mg_chequeo", "get_crosssell_mg_chequeo_candidatos"),
+    ("enviar_crosssell_odonto_estetica", "get_crosssell_odonto_estetica_candidatos"),
+    ("enviar_crosssell_kine", "get_crosssell_kine_candidatos"),
+    ("enviar_crosssell_orl_fono", "get_crosssell_orl_fono_candidatos"),
+])
+def test_sin_consent_marketing_no_envia_template(monkeypatch, fn, cands):
+    """privacy_consents se marca solo al dar el RUT: no autoriza marketing."""
+    tpl_fn, free_fn, sent_tpl, sent_free, saved, events = _setup(
+        monkeypatch, consent_mkt=False)
+    monkeypatch.setattr(fidelizacion, cands,
+                        lambda: [{"phone": "56911111111", "nombre": "Juana",
+                                  "origen": "Otorrinolaringología"}])
+    asyncio.run(getattr(fidelizacion, fn)(free_fn, send_template_fn=tpl_fn))
+    assert sent_tpl == [] and sent_free == [] and saved == []
+    assert ("56911111111", "template_skip_sin_consent_marketing") in events
+
+
+def test_kine_ya_no_manda_template_a_quien_tiene_ventana_abierta(monkeypatch):
+    tpl_fn, free_fn, sent_tpl, sent_free, saved, events = _setup(monkeypatch, window_open=True)
+    monkeypatch.setattr(fidelizacion, "get_crosssell_kine_candidatos",
+                        lambda: [{"phone": "56911111111", "nombre": "Juana"}])
+    asyncio.run(fidelizacion.enviar_crosssell_kine(free_fn, send_template_fn=tpl_fn))
+    assert sent_tpl == [] and len(sent_free) == 1
+
+
+@pytest.mark.parametrize("origen,template", [
+    ("Otorrinolaringología", "crosssell_orl_fono"),
+    ("Fonoaudiología", "crosssell_fono_orl"),
+])
+def test_orl_fono_elige_template_segun_origen(monkeypatch, origen, template):
+    tpl_fn, free_fn, sent_tpl, sent_free, saved, events = _setup(monkeypatch)
+    monkeypatch.setattr(fidelizacion, "get_crosssell_orl_fono_candidatos",
+                        lambda: [{"phone": "56911111111", "nombre": "Juana", "origen": origen}])
+    asyncio.run(fidelizacion.enviar_crosssell_orl_fono(free_fn, send_template_fn=tpl_fn))
+    assert [t["template"] for t in sent_tpl] == [template]
+    assert saved == [("56911111111", template)]

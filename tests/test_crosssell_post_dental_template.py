@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.join(ROOT, "app"))
 if "winback" not in sys.modules:
     _fake_winback = types.ModuleType("winback")
     _fake_winback.is_template_approved = None  # se parcheará por test
+    _fake_winback.has_marketing_consent = lambda phone: True
     sys.modules["winback"] = _fake_winback
 
 import fidelizacion  # noqa: E402
@@ -76,6 +77,7 @@ def _setup(monkeypatch, candidatos, window_open=False, template_aprobado=True):
     monkeypatch.setattr(fidelizacion, "log_event",
                         lambda phone, ev, data=None: events.append((phone, ev)))
     monkeypatch.setattr(winback, "is_template_approved", fake_is_approved)
+    monkeypatch.setattr(winback, "has_marketing_consent", lambda phone: True, raising=False)
     return fake_send_template_fn, sent_templates, saved, events
 
 

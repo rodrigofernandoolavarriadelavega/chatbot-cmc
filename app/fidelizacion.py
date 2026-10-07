@@ -67,6 +67,52 @@ def _nombre_corto(nombre: str | None) -> str:
     return primera.capitalize()
 
 
+async def _template_crosssell_aprobado(template: str, send_template_fn) -> bool:
+    """True si se puede usar el template (USE_TEMPLATES + fn + APPROVED en Meta)."""
+    if not (USE_TEMPLATES and send_template_fn is not None):
+        return False
+    from winback import is_template_approved as _is_tpl_approved
+    ok = await _is_tpl_approved(template)
+    if not ok:
+        log.warning("cross-sell: template %s no APPROVED en Meta — solo ventana 24h", template)
+    return ok
+
+
+async def _enviar_crosssell_template(phone: str, *, tipo: str, template: str,
+                                     body_params: list[str], button_payloads: list[str],
+                                     destino: str, send_template_fn) -> bool:
+    """Envío de cross-sell FUERA de la ventana de 24 h (template MARKETING).
+
+    Exige opt-in de MARKETING (bi.marketing_consent='accepted', respuesta a
+    consent_marketing_v2). privacy_consents NO alcanza: se marca solo al dar el
+    RUT (method='rut_provided'), no es un sí a recibir publicidad.
+    Si Meta rechaza (msg_id vacío) no se registra el envío → no quema cooldown.
+    """
+    from winback import has_marketing_consent as _has_mkt
+    if not _has_mkt(phone):
+        log_event(phone, "template_skip_sin_consent_marketing", {"template": template})
+        return False
+    try:
+        msg_id = await send_template_fn(phone, template, body_params=body_params,
+                                        button_payloads=button_payloads)
+    except Exception as e:
+        log.error("cross-sell %s template phone=%s: %s", tipo, phone, e)
+        msg_id = None
+    if not msg_id:
+        log_event(phone, "template_send_failed", {"template": template})
+        return False
+    save_fidelizacion_msg(phone, tipo)
+    set_pending_crosssell(phone, tipo, destino)
+    log_event(phone, "template_enviado", {"template": template})
+    log_message(phone, "out", f"[Cross-sell {tipo} — template]", "IDLE")
+    return True
+
+
+def _skip_ventana_cerrada(phone: str, template: str) -> None:
+    log_event(phone, "template_skip_no_aprobado",
+              {"template": template, "motivo": "sin_template_y_ventana_cerrada"})
+
+
 def _resolver_atendido(nombre: str | None) -> str:
     """Devuelve 'atendida' o 'atendido' según nombre inferido. Nunca 'atendido/a'."""
     sexo = _inferir_sexo_por_nombre(nombre)
@@ -663,31 +709,36 @@ async def enviar_crosssell_kine(send_fn, send_template_fn=None):
         return
 
     log.info("Cross-sell kine: enviando %d mensaje(s)", len(candidatos))
+    # 2026-10-06: antes mandaba el template a TODOS sin mirar consentimiento ni
+    # resultado del envío (guardaba antes de enviar → un 4xx quemaba 90 días).
+    _tpl_aprobado = await _template_crosssell_aprobado("crosssell_kine", send_template_fn)
     for p in candidatos:
-        if not puede_enviar_campana(p.get("phone",""), "crosssell_kine", dias_cooldown=90):
+        phone = p.get("phone", "")
+        if not puede_enviar_campana(phone, "crosssell_kine", dias_cooldown=90):
+            continue
+        if not has_privacy_consent(phone):
+            log_event(phone, "template_skip_no_consent", {"template": "crosssell_kine"})
+            continue
+        if not is_window_open(phone):
+            if not _tpl_aprobado:
+                _skip_ventana_cerrada(phone, "crosssell_kine")
+                continue
+            await _enviar_crosssell_template(
+                phone, tipo="crosssell_kine", template="crosssell_kine",
+                body_params=[_nombre_corto(p.get("nombre")) or "paciente"],
+                button_payloads=["xkine_si", "xkine_no"],
+                destino="kinesiología", send_template_fn=send_template_fn)
             continue
         try:
-            save_fidelizacion_msg(p["phone"], "crosssell_kine")  # BUG-01
-            set_pending_crosssell(p["phone"], "crosssell_kine", "kinesiología")
-            if USE_TEMPLATES and send_template_fn:
-                nombre = _nombre_corto(p.get("nombre")) or "paciente"
-                await send_template_fn(
-                    p["phone"],
-                    "crosssell_kine",
-                    body_params=[nombre],
-                    button_payloads=["xkine_si", "xkine_no"],
-                )
-                log_message(p["phone"], "out",
-                            "[Cross-sell kine] Tras tu consulta, ¿te gustaría agendar con nuestros kinesiólogos?",
-                            "IDLE")
-            else:
-                msg = _msg_crosssell_kine(p)
-                await send_fn(p["phone"], msg)
-                body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell kine]")
-                log_message(p["phone"], "out", body, "IDLE")
-            log.info("Cross-sell kine enviado → %s (%s)", p["phone"], p.get("especialidad"))
+            save_fidelizacion_msg(phone, "crosssell_kine")  # BUG-01
+            set_pending_crosssell(phone, "crosssell_kine", "kinesiología")
+            msg = _msg_crosssell_kine(p)
+            await send_fn(phone, msg)
+            body = msg.get("interactive", {}).get("body", {}).get("text", "[Cross-sell kine]")
+            log_message(phone, "out", body, "IDLE")
+            log.info("Cross-sell kine enviado → %s (%s)", phone, p.get("especialidad"))
         except Exception as e:
-            log.error("Error cross-sell kine phone=%s: %s", p.get("phone"), e)
+            log.error("Error cross-sell kine phone=%s: %s", phone, e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -738,19 +789,29 @@ async def enviar_crosssell_orl_fono(send_fn, send_template_fn=None):
         log.info("Cross-sell ORL↔Fono: sin candidatos")
         return
     log.info("Cross-sell ORL↔Fono: enviando %d mensaje(s)", len(candidatos))
+    _tpl_ok = {
+        "crosssell_orl_fono": await _template_crosssell_aprobado("crosssell_orl_fono", send_template_fn),
+        "crosssell_fono_orl": await _template_crosssell_aprobado("crosssell_fono_orl", send_template_fn),
+    }
     for p in candidatos:
         phone = p.get("phone", "")
         if not puede_enviar_campana(phone, "crosssell_orl_fono", dias_cooldown=90):
             continue
-        # Marketing → requiere consent + ventana 24h (sin template aprobado)
         if not has_privacy_consent(phone):
             log_event(phone, "template_skip_no_consent", {"template": "crosssell_orl_fono"})
             continue
         if not is_window_open(phone):
-            log_event(phone, "template_skip_no_aprobado",
-                      {"template": "crosssell_orl_fono",
-                       "motivo": "sin_template_y_ventana_cerrada"})
-            log.debug("Cross-sell ORL↔Fono skip ventana cerrada → %s", phone)
+            _orl = "otorrin" in (p.get("origen") or "").lower()
+            _tipo = "crosssell_orl_fono" if _orl else "crosssell_fono_orl"
+            if not _tpl_ok[_tipo]:
+                _skip_ventana_cerrada(phone, _tipo)
+                continue
+            await _enviar_crosssell_template(
+                phone, tipo=_tipo, template=_tipo,
+                body_params=[_nombre_corto(p.get("nombre")) or "paciente"],
+                button_payloads=["xorlfono_si", "xorlfono_no"],
+                destino="fonoaudiología" if _orl else "otorrinolaringología",
+                send_template_fn=send_template_fn)
             continue
         try:
             origen = (p.get("origen") or "").lower()
@@ -809,13 +870,7 @@ async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
         log.info("Cross-sell Odonto→Estética: sin candidatos")
         return
     log.info("Cross-sell Odonto→Estética: enviando %d mensaje(s)", len(candidatos))
-    _tpl_aprobado = False
-    if USE_TEMPLATES and send_template_fn is not None:
-        from winback import is_template_approved as _is_tpl_approved
-        _tpl_aprobado = await _is_tpl_approved("crosssell_odonto_estetica")
-        if not _tpl_aprobado:
-            log.warning("Cross-sell Odonto→Estética: template crosssell_odonto_estetica "
-                        "no APPROVED en Meta — solo ventana 24h")
+    _tpl_aprobado = await _template_crosssell_aprobado("crosssell_odonto_estetica", send_template_fn)
     for p in candidatos:
         phone = p.get("phone", "")
         if not puede_enviar_campana(phone, "crosssell_odonto_estetica", dias_cooldown=90):
@@ -826,30 +881,13 @@ async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
             continue
         if not is_window_open(phone):
             if not _tpl_aprobado:
-                log_event(phone, "template_skip_no_aprobado",
-                          {"template": "crosssell_odonto_estetica",
-                           "motivo": "sin_template_y_ventana_cerrada"})
-                log.debug("Cross-sell Odonto→Estética skip ventana cerrada → %s", phone)
+                _skip_ventana_cerrada(phone, "crosssell_odonto_estetica")
                 continue
-            try:
-                nombre = _nombre_corto(p.get("nombre")) or "paciente"
-                msg_id = await send_template_fn(
-                    phone,
-                    "crosssell_odonto_estetica",
-                    body_params=[nombre],
-                    button_payloads=["xestetica_si", "xestetica_info", "xestetica_no"],
-                )
-                if not msg_id:
-                    # Meta rechazó u omitió: NO quemar el cooldown de 90 días.
-                    log_event(phone, "template_send_failed",
-                              {"template": "crosssell_odonto_estetica"})
-                    continue
-                save_fidelizacion_msg(phone, "crosssell_odonto_estetica")
-                set_pending_crosssell(phone, "crosssell_odonto_estetica", "estética facial")
-                log_event(phone, "template_enviado", {"template": "crosssell_odonto_estetica"})
-                log_message(phone, "out", "[Cross-sell Odonto→Estética — template]", "IDLE")
-            except Exception as e:
-                log.error("Error cross-sell odonto-estetica (template) phone=%s: %s", phone, e)
+            await _enviar_crosssell_template(
+                phone, tipo="crosssell_odonto_estetica", template="crosssell_odonto_estetica",
+                body_params=[_nombre_corto(p.get("nombre")) or "paciente"],
+                button_payloads=["xestetica_si", "xestetica_info", "xestetica_no"],
+                destino="estética facial", send_template_fn=send_template_fn)
             continue
         try:
             save_fidelizacion_msg(phone, "crosssell_odonto_estetica")  # BUG-01
@@ -918,13 +956,7 @@ async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
         log.info("Cross-sell MG→Chequeo: sin candidatos")
         return
     log.info("Cross-sell MG→Chequeo: enviando %d mensaje(s)", len(candidatos))
-    _tpl_aprobado = False
-    if USE_TEMPLATES and send_template_fn is not None:
-        from winback import is_template_approved as _is_tpl_approved
-        _tpl_aprobado = await _is_tpl_approved("crosssell_mg_chequeo")
-        if not _tpl_aprobado:
-            log.warning("Cross-sell MG→Chequeo: template crosssell_mg_chequeo no "
-                        "APPROVED en Meta — solo ventana 24h")
+    _tpl_aprobado = await _template_crosssell_aprobado("crosssell_mg_chequeo", send_template_fn)
     for p in candidatos:
         phone = p.get("phone", "")
         if not puede_enviar_campana(phone, "crosssell_mg_chequeo", dias_cooldown=180):
@@ -935,30 +967,13 @@ async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
             continue
         if not is_window_open(phone):
             if not _tpl_aprobado:
-                log_event(phone, "template_skip_no_aprobado",
-                          {"template": "crosssell_mg_chequeo",
-                           "motivo": "sin_template_y_ventana_cerrada"})
-                log.debug("Cross-sell MG→Chequeo skip ventana cerrada → %s", phone)
+                _skip_ventana_cerrada(phone, "crosssell_mg_chequeo")
                 continue
-            try:
-                nombre = _nombre_corto(p.get("nombre")) or "paciente"
-                msg_id = await send_template_fn(
-                    phone,
-                    "crosssell_mg_chequeo",
-                    body_params=[nombre],
-                    button_payloads=["xchequeo_si", "xchequeo_no"],
-                )
-                if not msg_id:
-                    # Meta rechazó u omitió: NO quemar el cooldown de 180 días.
-                    log_event(phone, "template_send_failed",
-                              {"template": "crosssell_mg_chequeo"})
-                    continue
-                save_fidelizacion_msg(phone, "crosssell_mg_chequeo")
-                set_pending_crosssell(phone, "crosssell_mg_chequeo", "medicina general")
-                log_event(phone, "template_enviado", {"template": "crosssell_mg_chequeo"})
-                log_message(phone, "out", "[Cross-sell MG→Chequeo — template]", "IDLE")
-            except Exception as e:
-                log.error("Error cross-sell mg-chequeo (template) phone=%s: %s", phone, e)
+            await _enviar_crosssell_template(
+                phone, tipo="crosssell_mg_chequeo", template="crosssell_mg_chequeo",
+                body_params=[_nombre_corto(p.get("nombre")) or "paciente"],
+                button_payloads=["xchequeo_si", "xchequeo_no"],
+                destino="medicina general", send_template_fn=send_template_fn)
             continue
         try:
             save_fidelizacion_msg(phone, "crosssell_mg_chequeo")  # BUG-01
@@ -1145,9 +1160,12 @@ async def enviar_winback(send_fn):
             log_event(phone, "template_skip_no_consent", {"template": "winback_fidelizacion"})
             continue
         if not is_window_open(phone):
-            log_event(phone, "template_skip_no_aprobado",
+            # A propósito sin template: fuera de ventana el win-back lo hace
+            # winback.py (BI, plantillas por especialidad, exige consent de
+            # marketing). Usar winback_fidelizacion acá duplicaría el mensaje.
+            log_event(phone, "winback_skip_ventana_cerrada",
                       {"template": "winback_fidelizacion",
-                       "motivo": "sin_template_y_ventana_cerrada"})
+                       "motivo": "fuera_de_ventana_lo_cubre_winback_bi"})
             log.debug("Win-back skip ventana cerrada → %s", phone)
             continue
         try:
@@ -1613,25 +1631,15 @@ async def enviar_crosssell_post_dental_ortodoncia(send_fn, send_template_fn=None
         try:
             nombre = _nombre_corto(p.get("nombre"))
             if _usar_template:
-                # Template APPROVED: enviar fuera de ventana de 24h.
-                # {{1}} = nombre paciente · {{2}} = apellido de la Dra. tratante.
-                nombre_param = nombre or "paciente"
-                apellido_dra = _prof.split()[-1]
-                msg_id = await send_template_fn(
-                    phone,
-                    "crosssell_ortodoncia_post_dental_v1",
-                    body_params=[nombre_param, apellido_dra],
+                # Template APPROVED fuera de ventana: {{1}} = nombre paciente ·
+                # {{2}} = apellido de la Dra. tratante. Exige consent marketing.
+                await _enviar_crosssell_template(
+                    phone, tipo="crosssell_post_dental_ortodoncia",
+                    template="crosssell_ortodoncia_post_dental_v1",
+                    body_params=[nombre or "paciente", _prof.split()[-1]],
                     button_payloads=["xpostdental_orto_si", "xpostdental_orto_no"],
-                )
-                if not msg_id:
-                    # Meta rechazó (4xx) u omitió: NO quemar cooldown de 180 días.
-                    log_event(phone, "template_send_failed",
-                              {"template": "crosssell_ortodoncia_post_dental_v1"})
-                    continue
-                save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")
-                set_pending_crosssell(phone, "crosssell_post_dental_ortodoncia", "ortodoncia")
-                log_message(phone, "out",
-                            "[Cross-sell post-dental ortodoncia — template]", "IDLE")
+                    destino="ortodoncia", send_template_fn=send_template_fn)
+                continue
             else:
                 # Sin template: enviamos mensaje libre (ventana ya validada arriba).
                 save_fidelizacion_msg(phone, "crosssell_post_dental_ortodoncia")

@@ -671,6 +671,18 @@ _TEMPLATE_BTN_PAYLOAD: dict[str, dict[str, str]] = {
         "si agendar evaluacion": "xpostdental_orto_si",
         "mas informacion": "xpostdental_orto_info",
     },
+    "crosssell_kine": {
+        "si me interesa": "xkine_si",
+        "no por ahora": "xkine_no",
+    },
+    "crosssell_orl_fono": {
+        "si agendar": "xorlfono_si",
+        "no por ahora": "xorlfono_no",
+    },
+    "crosssell_fono_orl": {
+        "si agendar": "xorlfono_si",
+        "no por ahora": "xorlfono_no",
+    },
 }
 
 
@@ -5747,6 +5759,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _MAP_CS = {
                         "crosssell_kine":           ("xkine_si", "xkine_no"),
                         "crosssell_orl_fono":       ("xorlfono_si", "xorlfono_no"),
+                        "crosssell_fono_orl":       ("xorlfono_si", "xorlfono_no"),
                         "crosssell_odonto_estetica":("xestetica_si", "xestetica_no"),
                         "crosssell_mg_chequeo":     ("xchequeo_si", "xchequeo_no"),
                         "crosssell_post_dental_ortodoncia": ("xpostdental_orto_si", "xpostdental_orto_no"),
