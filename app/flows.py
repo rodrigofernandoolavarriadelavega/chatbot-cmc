@@ -3311,6 +3311,47 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
 
 
 _LIMPIEZA_OBS = "[LIMPIEZA DENTAL $30.000 · vía consentimiento]"
+# Odontología General, Ortodoncista, Implantología en bi.dim_especialidad
+# (mismos IDs que promo_postconsent._DENTAL_ESP_IDS).
+_DENTAL_ESP_IDS_BI = (9, 19, 20)
+_LIMPIEZA_YA_HECHA_RE = re.compile(
+    r"\b(ya\s+(me\s+)?(la\s+)?hice|me\s+(la\s+)?hice|me\s+(la\s+)?hicieron|"
+    r"hace\s+poco|reci[eé]n\s+(me|fui)|ya\s+fui|tengo\s+(mi\s+)?dentista|"
+    r"me\s+atiendo\s+en\s+otro)", re.I)
+
+
+def _atencion_dental_reciente(phone: str, dias: int = 180) -> bool:
+    """True si el teléfono tuvo atención dental en el CMC en los últimos `dias`
+    (BI fact_atenciones). Ante error → True: no ofrecer limpieza a ciegas."""
+    try:
+        from session import db as _db_lr
+        with _db_lr() as _c:
+            # Dijo "ya me la hice" (en otro lado) → no reofrecer por `dias`.
+            if _c.execute(
+                "SELECT 1 FROM conversation_events WHERE phone=? "
+                "AND event='consent_oferta_limpieza_ya_hecha' "
+                "AND ts >= datetime('now', ?) LIMIT 1",
+                (phone, f"-{dias} days")).fetchone():
+                return True
+    except Exception as e:
+        log.warning("_atencion_dental_reciente (local) error ...%s: %s", phone[-4:], e)
+        return True
+    try:
+        from winback import bi_conn
+        with bi_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT 1 FROM bi.fact_atenciones fa
+                   JOIN bi.dim_profesional pr ON pr.profesional_id = fa.profesional_id
+                   JOIN bi.dim_paciente dp ON dp.paciente_id = fa.paciente_id
+                   WHERE pr.especialidad_id = ANY(%s)
+                     AND fa.fecha >= CURRENT_DATE - %s
+                     AND RIGHT(regexp_replace(dp.telefono, '[^0-9]', '', 'g'), 9) = %s
+                   LIMIT 1""",
+                (list(_DENTAL_ESP_IDS_BI), dias, re.sub(r"\D", "", phone)[-9:]))
+            return cur.fetchone() is not None
+    except Exception as e:
+        log.warning("_atencion_dental_reciente error ...%s: %s", phone[-4:], e)
+        return True
 
 
 async def _oferta_limpieza_post_consent(phone: str, data: dict) -> dict:
@@ -3415,6 +3456,12 @@ async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: st
         # win-back genérico: dental es lo que más deja (decisión 2026-10-07).
         import consent_marketing as _cm_v
         if state in ("", "IDLE") and _cm_v.version_respondida(phone) == "v1":
+            if _atencion_dental_reciente(phone):
+                # Se atendió en dental hace <6 meses (o lo dijo, o BI no responde):
+                # ofrecerle limpieza sería spam. Solo se confirma.
+                log_event(phone, "consent_oferta_limpieza_skip_reciente", {})
+                return ("¡Listo, quedó activado! 😊 Te avisaremos cuando te toque "
+                        "tu próximo control.")
             return await _oferta_limpieza_post_consent(phone, data if data is not None else {})
 
         # Buscar datos del paciente en BI (incluye filtros consent + opt-out)
@@ -5097,6 +5144,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         log_event(phone, "consent_oferta_limpieza_rechazo", {})
         reset_session(phone)
         return "Sin problema 😊 Cuando quieras tu limpieza, escríbeme *agendar dental*."
+    if (data.get("obs_prestacion") == _LIMPIEZA_OBS and state in ("WAIT_SLOT", "IDLE")
+            and _LIMPIEZA_YA_HECHA_RE.search(txt or "")):
+        log_event(phone, "consent_oferta_limpieza_ya_hecha", {"txt": (txt or "")[:120]})
+        reset_session(phone)
+        return ("¡Bien ahí! 👏 Entonces no te molesto con eso. "
+                "Recuerda que se recomienda cada 6 meses; cuando te toque, "
+                "escríbeme *agendar dental* y te busco hora.")
     if tl == "xlimpieza_si":
         log_event(phone, "consent_oferta_limpieza_acepto", {"con_hora": False})
         data["obs_prestacion"] = _LIMPIEZA_OBS

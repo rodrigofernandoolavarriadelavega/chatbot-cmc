@@ -47,6 +47,8 @@ import consent_marketing  # noqa: E402
 import flows  # noqa: E402
 import jobs  # noqa: E402
 
+_ADR_REAL = flows._atencion_dental_reciente
+
 PHONE = "56933334444"
 SLOT = {"fecha": "2026-10-09", "fecha_display": "jueves 9 de octubre",
         "hora_inicio": "10:30:00", "hora_fin": "11:30:00",
@@ -74,6 +76,7 @@ def entorno(monkeypatch):
         monkeypatch.setattr(winback, k, v, raising=False)
     monkeypatch.setattr(flows, "buscar_primer_dia",
                         AsyncMock(return_value=([SLOT], [SLOT])))
+    monkeypatch.setattr(flows, "_atencion_dental_reciente", lambda p, dias=180: False)
     return winback_enviado
 
 
@@ -145,3 +148,46 @@ def test_ahora_no_cierra_y_registra(entorno):
         evs = [r[0] for r in conn.execute(
             "SELECT event FROM conversation_events WHERE phone=?", (PHONE,))]
     assert "consent_oferta_limpieza_rechazo" in evs
+
+
+# ── Limpieza reciente (2026-10-07) ──────────────────────────────────────────
+
+def test_atencion_dental_reciente_no_ofrece(entorno, monkeypatch):
+    monkeypatch.setattr(flows, "_atencion_dental_reciente", lambda p, dias=180: True)
+    _plantilla("v1")
+    resp = _si()
+    assert isinstance(resp, str) and "quedó activado" in resp
+    assert session.get_session(PHONE)["state"] != "WAIT_SLOT"
+
+
+def test_ya_me_la_hice_cierra_y_no_reofrece(entorno, monkeypatch):
+    monkeypatch.setattr(flows, "_atencion_dental_reciente", _ADR_REAL)
+    import winback as _wb
+
+    class _C:  # BI sin atenciones dentales
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def cursor(self): return self
+        def execute(self, *a): pass
+        def fetchone(self): return None
+    monkeypatch.setattr(_wb, "bi_conn", lambda: _C(), raising=False)
+    _plantilla("v1")
+    assert isinstance(_si(), dict)  # primera vez: oferta
+    resp = asyncio.run(flows.handle_message(
+        PHONE, "ya me la hice hace poco en Arauco", session.get_session(PHONE)))
+    assert "Bien ahí" in str(resp)
+    assert session.get_session(PHONE)["state"] == "IDLE"
+    # si vuelve a aceptar (otra plantilla v1), ya no se le ofrece
+    _plantilla("v1")
+    assert isinstance(_si(), str)
+
+
+def test_bi_caido_no_ofrece(entorno, monkeypatch):
+    monkeypatch.setattr(flows, "_atencion_dental_reciente", _ADR_REAL)
+    import winback as _wb
+
+    def _boom():
+        raise RuntimeError("BI caído")
+    monkeypatch.setattr(_wb, "bi_conn", _boom, raising=False)
+    _plantilla("v1")
+    assert isinstance(_si(), str)
