@@ -4445,6 +4445,7 @@ _ALMA_AGENDA_HTML = (_TEMPLATE_DIR / "alma_agenda.html").read_text(encoding="utf
 _AGENDADOR_HTML = (_TEMPLATE_DIR / "agendador.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador.html").exists() else ""
 _AGENDADOR_PORTAL_HTML = (_TEMPLATE_DIR / "agendador_portal.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador_portal.html").exists() else ""
 _AGENDADOR_V2_HTML = (_TEMPLATE_DIR / "agendador_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador_v2.html").exists() else ""
+_AGENDADOR_APP_HTML = (_TEMPLATE_DIR / "agendador_app.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "agendador_app.html").exists() else ""
 _VECINO_MEULEN_HTML = (_TEMPLATE_DIR / "vecino_meulen.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "vecino_meulen.html").exists() else ""
 _ALMA_PAGOS_HTML  = (_TEMPLATE_DIR / "alma_pagos.html").read_text(encoding="utf-8")  if (_TEMPLATE_DIR / "alma_pagos.html").exists()  else ""
 _ALMA_PAGOS_SIMPLE_HTML = (_TEMPLATE_DIR / "alma_pagos_simple.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "alma_pagos_simple.html").exists() else ""
@@ -5448,6 +5449,21 @@ def alma_shell(token: str | None = Query(None),
     if eff:
         return _render(eff)
     return RedirectResponse(url="/admin/login", status_code=302)
+
+
+@app.get("/agendar/app", response_class=HTMLResponse)
+def agendador_app_page(request: Request, demo: str = "", preview: str | None = Query(None)):
+    """Agendador versión app móvil (2026-10-07), EN REVISIÓN: se comparte para
+    opiniones, así que sin ?preview=ADMIN_TOKEN solo funciona en modo demo
+    (API simulada en el navegador, nunca toca Medilink)."""
+    is_preview = bool(preview) and preview == ADMIN_TOKEN
+    if not is_preview and demo != "1":
+        return RedirectResponse(url="/agendar/app?demo=1", status_code=302)
+    if not _AGENDADOR_APP_HTML:
+        raise HTTPException(404, "No disponible")
+    html = _AGENDADOR_APP_HTML.replace("__PREVIEW__", preview if is_preview else "")
+    return HTMLResponse(html, headers={"Cache-Control": "no-store, max-age=0",
+                                       "X-Robots-Tag": "noindex, nofollow"})
 
 
 @app.get("/agendar", response_class=HTMLResponse)
