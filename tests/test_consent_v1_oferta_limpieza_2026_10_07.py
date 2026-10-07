@@ -76,7 +76,7 @@ def entorno(monkeypatch):
         monkeypatch.setattr(winback, k, v, raising=False)
     monkeypatch.setattr(flows, "buscar_primer_dia",
                         AsyncMock(return_value=([SLOT], [SLOT])))
-    monkeypatch.setattr(flows, "_atencion_dental_reciente", lambda p, dias=180: False)
+    monkeypatch.setattr(flows, "_atencion_dental_reciente", lambda p, dias=180: "no")
     return winback_enviado
 
 
@@ -152,12 +152,29 @@ def test_ahora_no_cierra_y_registra(entorno):
 
 # ── Limpieza reciente (2026-10-07) ──────────────────────────────────────────
 
-def test_atencion_dental_reciente_no_ofrece(entorno, monkeypatch):
-    monkeypatch.setattr(flows, "_atencion_dental_reciente", lambda p, dias=180: True)
+def test_limpieza_al_dia_en_cmc_ofrece_blanqueamiento_y_ortodoncia(entorno, monkeypatch):
+    monkeypatch.setattr(flows, "_atencion_dental_reciente", lambda p, dias=180: "cmc")
+    monkeypatch.setattr(flows, "_ortodoncia_activa", lambda p, dias=90: False)
     _plantilla("v1")
     resp = _si()
-    assert isinstance(resp, str) and "quedó activado" in resp
-    assert session.get_session(PHONE)["state"] != "WAIT_SLOT"
+    body = resp["interactive"]["body"]["text"]
+    assert "Blanqueamiento dental: $75.000" in body and "Ortodoncia" in body
+    assert _ids(resp) == ["xblanq_si", "xortoeval_si", "xoferta_no"]
+
+
+def test_en_ortodoncia_no_le_ofrece_ortodoncia(entorno, monkeypatch):
+    monkeypatch.setattr(flows, "_atencion_dental_reciente", lambda p, dias=180: "cmc")
+    monkeypatch.setattr(flows, "_ortodoncia_activa", lambda p, dias=90: True)
+    _plantilla("v1")
+    assert _ids(_si()) == ["xblanq_si", "xoferta_no"]
+
+
+def test_blanqueamiento_ofrece_hora_real_con_marca(entorno):
+    resp = asyncio.run(flows.handle_message(PHONE, "xblanq_si", {"state": "IDLE", "data": {}}))
+    assert "$75.000" in resp["interactive"]["body"]["text"]
+    assert _ids(resp)[0] == "confirmar_sugerido"
+    d = session.get_session(PHONE)["data"]
+    assert d["obs_prestacion"].startswith("[BLANQUEAMIENTO $75.000")
 
 
 def test_ya_me_la_hice_cierra_y_no_reofrece(entorno, monkeypatch):
@@ -175,7 +192,10 @@ def test_ya_me_la_hice_cierra_y_no_reofrece(entorno, monkeypatch):
     assert isinstance(_si(), dict)  # primera vez: oferta
     resp = asyncio.run(flows.handle_message(
         PHONE, "ya me la hice hace poco en Arauco", session.get_session(PHONE)))
-    assert "Bien ahí" in str(resp)
+    body = resp["interactive"]["body"]["text"]
+    assert "Bien ahí" in body and "Toxina botulínica" in body and "Ácido hialurónico" in body
+    assert "$159.990" in body and "se descuenta" in body
+    assert _ids(resp) == ["xestfacial_si", "xestfacial_no"]
     assert session.get_session(PHONE)["state"] == "IDLE"
     # si vuelve a aceptar (otra plantilla v1), ya no se le ofrece
     _plantilla("v1")
@@ -191,3 +211,11 @@ def test_bi_caido_no_ofrece(entorno, monkeypatch):
     monkeypatch.setattr(_wb, "bi_conn", _boom, raising=False)
     _plantilla("v1")
     assert isinstance(_si(), str)
+
+
+def test_me_interesa_estetica_agenda_con_marca(entorno, monkeypatch):
+    ini = AsyncMock(return_value="OK")
+    monkeypatch.setattr(flows, "_iniciar_agendar", ini)
+    asyncio.run(flows.handle_message(PHONE, "xestfacial_si", {"state": "IDLE", "data": {}}))
+    assert ini.await_args.args[2] == "estética facial"
+    assert ini.await_args.args[1]["obs_prestacion_esp"] == "estética"

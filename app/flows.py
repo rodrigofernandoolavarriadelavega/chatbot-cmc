@@ -3320,22 +3320,22 @@ _LIMPIEZA_YA_HECHA_RE = re.compile(
     r"me\s+atiendo\s+en\s+otro)", re.I)
 
 
-def _atencion_dental_reciente(phone: str, dias: int = 180) -> bool:
-    """True si el teléfono tuvo atención dental en el CMC en los últimos `dias`
-    (BI fact_atenciones). Ante error → True: no ofrecer limpieza a ciegas."""
+def _atencion_dental_reciente(phone: str, dias: int = 180) -> str:
+    """'externa' si dijo que ya se la hizo en otro lado (≤dias), 'cmc' si tuvo
+    atención dental en el CMC (BI fact_atenciones), 'no' si nada, 'error' si no
+    se pudo saber (→ no se ofrece nada)."""
     try:
         from session import db as _db_lr
         with _db_lr() as _c:
-            # Dijo "ya me la hice" (en otro lado) → no reofrecer por `dias`.
             if _c.execute(
                 "SELECT 1 FROM conversation_events WHERE phone=? "
                 "AND event='consent_oferta_limpieza_ya_hecha' "
                 "AND ts >= datetime('now', ?) LIMIT 1",
                 (phone, f"-{dias} days")).fetchone():
-                return True
+                return "externa"
     except Exception as e:
         log.warning("_atencion_dental_reciente (local) error ...%s: %s", phone[-4:], e)
-        return True
+        return "error"
     try:
         from winback import bi_conn
         with bi_conn() as conn, conn.cursor() as cur:
@@ -3348,16 +3348,67 @@ def _atencion_dental_reciente(phone: str, dias: int = 180) -> bool:
                      AND RIGHT(regexp_replace(dp.telefono, '[^0-9]', '', 'g'), 9) = %s
                    LIMIT 1""",
                 (list(_DENTAL_ESP_IDS_BI), dias, re.sub(r"\D", "", phone)[-9:]))
-            return cur.fetchone() is not None
+            return "cmc" if cur.fetchone() is not None else "no"
     except Exception as e:
         log.warning("_atencion_dental_reciente error ...%s: %s", phone[-4:], e)
+        return "error"
+
+
+def _ortodoncia_activa(phone: str, dias: int = 90) -> bool:
+    """True si tuvo atención de Ortodoncista (esp 19) en `dias`. Error → True
+    (no ofrecer ortodoncia a quien quizá ya está en tratamiento)."""
+    try:
+        from winback import bi_conn
+        with bi_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT 1 FROM bi.fact_atenciones fa
+                   JOIN bi.dim_profesional pr ON pr.profesional_id = fa.profesional_id
+                   JOIN bi.dim_paciente dp ON dp.paciente_id = fa.paciente_id
+                   WHERE pr.especialidad_id = 19 AND fa.fecha >= CURRENT_DATE - %s
+                     AND RIGHT(regexp_replace(dp.telefono, '[^0-9]', '', 'g'), 9) = %s
+                   LIMIT 1""", (dias, re.sub(r"\D", "", phone)[-9:]))
+            return cur.fetchone() is not None
+    except Exception as e:
+        log.warning("_ortodoncia_activa error ...%s: %s", phone[-4:], e)
         return True
 
 
+async def _oferta_hora_dental(phone: str, data: dict, intro: str, obs: str,
+                             evento: str, sin_hora_si: str, btn_no: str) -> dict:
+    """Ofrece la primera hora real de Odontología General con `intro` arriba
+    (patrón masoterapia: WAIT_SLOT + slot_sugerido → confirmar_sugerido
+    reserva directo). `obs` queda en la cita de Medilink para recepción."""
+    try:
+        smart, todos = await buscar_primer_dia("odontología general")
+    except Exception as e:
+        log.warning("%s: buscar_primer_dia falló ...%s: %s", evento, phone[-4:], e)
+        smart, todos = [], []
+    if not todos or not smart:
+        log_event(phone, evento, {"con_hora": False})
+        data.update({"obs_prestacion": obs, "obs_prestacion_esp": "odontolog"})
+        save_session(phone, "IDLE", data)
+        return _btn_msg(intro + "\n\n¿Te busco una hora?",
+                        [{"id": sin_hora_si, "title": "Sí, buscar hora"},
+                         {"id": btn_no, "title": "Ahora no"}])
+    mejor = smart[0]
+    data.update({"especialidad": "odontología general", "slots": smart,
+                 "todos_slots": todos, "fechas_vistas": [todos[0]["fecha"]],
+                 "expansion_stage": 0, "prof_sugerido_id": mejor.get("id_profesional"),
+                 "slot_sugerido": mejor, "obs_prestacion": obs,
+                 "obs_prestacion_esp": "odontolog"})
+    save_session(phone, "WAIT_SLOT", data)
+    log_event(phone, evento,
+              {"con_hora": True, "fecha": mejor.get("fecha"), "prof": mejor.get("id_profesional")})
+    return _btn_msg(
+        intro + f"\n\nTengo hora el *{mejor['fecha_display']}* a las "
+        f"*{mejor['hora_inicio'][:5]}* con *{mejor['profesional']}*. ¿Te la reservo?",
+        [{"id": "confirmar_sugerido", "title": "✅ Sí, agendar"},
+         {"id": "ver_otros", "title": "📋 Ver otras horas"},
+         {"id": btn_no, "title": "Ahora no"}])
+
+
 async def _oferta_limpieza_post_consent(phone: str, data: dict) -> dict:
-    """Tras aceptar el consentimiento v1: ofrece limpieza dental con la primera
-    hora real de Odontología General (patrón de masoterapia: WAIT_SLOT +
-    slot_sugerido → confirmar_sugerido reserva directo)."""
+    """Tras aceptar el consentimiento v1: limpieza dental con hora real."""
     intro = (
         "¡Listo, quedó activado! 😊\n\n"
         "Ya que estás por aquí: ¿cuándo fue tu última limpieza dental? 🦷\n\n"
@@ -3365,31 +3416,36 @@ async def _oferta_limpieza_post_consent(phone: str, data: dict) -> dict:
         "alcanza, y previene caries y encías que sangran.\n\n"
         "*Limpieza dental: $30.000* — unos 40 minutos, sin dolor."
     )
-    try:
-        smart, todos = await buscar_primer_dia("odontología general")
-    except Exception as e:
-        log.warning("oferta_limpieza: buscar_primer_dia falló ...%s: %s", phone[-4:], e)
-        smart, todos = [], []
-    if not todos or not smart:
-        log_event(phone, "consent_oferta_limpieza", {"con_hora": False})
-        save_session(phone, "IDLE", data)
-        return _btn_msg(intro + "\n\n¿Te busco una hora?",
-                        [{"id": "xlimpieza_si", "title": "Sí, buscar hora"},
-                         {"id": "xlimpieza_no", "title": "Ahora no"}])
-    mejor = smart[0]
-    data.update({"especialidad": "odontología general", "slots": smart,
-                 "todos_slots": todos, "fechas_vistas": [todos[0]["fecha"]],
-                 "expansion_stage": 0, "prof_sugerido_id": mejor.get("id_profesional"),
-                 "slot_sugerido": mejor, "obs_prestacion": _LIMPIEZA_OBS})
-    save_session(phone, "WAIT_SLOT", data)
-    log_event(phone, "consent_oferta_limpieza",
-              {"con_hora": True, "fecha": mejor.get("fecha"), "prof": mejor.get("id_profesional")})
+    return await _oferta_hora_dental(phone, data, intro, _LIMPIEZA_OBS,
+                                     "consent_oferta_limpieza", "xlimpieza_si", "xlimpieza_no")
+
+
+def _oferta_post_limpieza(phone: str, ortodoncia_activa: bool) -> dict:
+    """Oferta A: ya tiene su limpieza al día en el CMC → blanqueamiento (y
+    ortodoncia, salvo que ya esté en tratamiento)."""
+    lineas = ["• *Blanqueamiento dental: $75.000* — aclara varios tonos en ~1 hora, sin dolor."]
+    botones = [{"id": "xblanq_si", "title": "Blanqueamiento"}]
+    if not ortodoncia_activa:
+        lineas.append("• *Ortodoncia* — parte con una evaluación de $15.000 "
+                      "(brackets $120.000 y controles de $30.000).")
+        botones.append({"id": "xortoeval_si", "title": "Ortodoncia"})
+    botones.append({"id": "xoferta_no", "title": "Ahora no"})
+    log_event(phone, "consent_oferta_post_limpieza", {"ortodoncia": not ortodoncia_activa})
     return _btn_msg(
-        intro + f"\n\nTengo hora el *{mejor['fecha_display']}* a las "
-        f"*{mejor['hora_inicio'][:5]}* con *{mejor['profesional']}*. ¿Te la reservo?",
-        [{"id": "confirmar_sugerido", "title": "✅ Sí, agendar"},
-         {"id": "ver_otros", "title": "📋 Ver otras horas"},
-         {"id": "xlimpieza_no", "title": "Ahora no"}])
+        "¡Listo, quedó activado! 😊\n\n"
+        "Como ya tienes tu limpieza al día, es el mejor momento para el siguiente paso 🦷✨\n\n"
+        + "\n".join(lineas), botones)
+
+
+_ESTETICA_OFERTA = (
+    "Por si te interesa, con la *Dra. Valentina Fuentealba* hacemos:\n\n"
+    "• *Toxina botulínica (botox)* — frente, entrecejo y patas de gallo: *$159.990*. "
+    "Suaviza las arrugas de expresión; dura 4 a 6 meses.\n"
+    "• *Ácido hialurónico* — labios, surcos u ojeras: *$159.990*. "
+    "Resultado inmediato; dura 8 a 12 meses.\n\n"
+    "Antes se hace una *evaluación facial de $15.000* para ver qué es lo indicado "
+    "para ti, y *se descuenta* si te haces el procedimiento."
+)
 
 
 def _tiene_cita_proxima(phone: str) -> bool:
@@ -3456,10 +3512,14 @@ async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: st
         # win-back genérico: dental es lo que más deja (decisión 2026-10-07).
         import consent_marketing as _cm_v
         if state in ("", "IDLE") and _cm_v.version_respondida(phone) == "v1":
-            if _atencion_dental_reciente(phone):
-                # Se atendió en dental hace <6 meses (o lo dijo, o BI no responde):
-                # ofrecerle limpieza sería spam. Solo se confirma.
-                log_event(phone, "consent_oferta_limpieza_skip_reciente", {})
+            _dr = _atencion_dental_reciente(phone)
+            if _dr == "cmc":
+                # Limpieza al día en el CMC → siguiente paso (blanqueamiento/orto).
+                return _oferta_post_limpieza(phone, _ortodoncia_activa(phone))
+            if _dr in ("externa", "error"):
+                # Ya tiene dentista afuera (ya se le ofreció estética) o no se
+                # pudo saber: solo se confirma.
+                log_event(phone, "consent_oferta_limpieza_skip_reciente", {"motivo": _dr})
                 return ("¡Listo, quedó activado! 😊 Te avisaremos cuando te toque "
                         "tu próximo control.")
             return await _oferta_limpieza_post_consent(phone, data if data is not None else {})
@@ -5148,12 +5208,39 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             and _LIMPIEZA_YA_HECHA_RE.search(txt or "")):
         log_event(phone, "consent_oferta_limpieza_ya_hecha", {"txt": (txt or "")[:120]})
         reset_session(phone)
-        return ("¡Bien ahí! 👏 Entonces no te molesto con eso. "
-                "Recuerda que se recomienda cada 6 meses; cuando te toque, "
-                "escríbeme *agendar dental* y te busco hora.")
+        log_event(phone, "consent_oferta_estetica", {})
+        return _btn_msg("¡Bien ahí! 👏 Entonces no te molesto con eso.\n\n" + _ESTETICA_OFERTA,
+                        [{"id": "xestfacial_si", "title": "Me interesa"},
+                         {"id": "xestfacial_no", "title": "No, gracias"}])
+    if tl in ("xoferta_no", "xestfacial_no"):
+        log_event(phone, "consent_oferta_rechazo", {"boton": tl})
+        reset_session(phone)
+        return "Sin problema 😊 Cuando quieras, escríbeme y te busco hora."
+    if tl == "xblanq_si":
+        log_event(phone, "consent_oferta_blanqueamiento_acepto", {})
+        return await _oferta_hora_dental(
+            phone, data,
+            "¡Buena elección! ✨ *Blanqueamiento dental: $75.000*. Se aplica un gel "
+            "en la consulta (~1 hora), aclara varios tonos y no duele.",
+            "[BLANQUEAMIENTO $75.000 · vía consentimiento]",
+            "consent_oferta_blanqueamiento", "xblanq_buscar", "xoferta_no")
+    if tl == "xblanq_buscar":
+        data.update({"obs_prestacion": "[BLANQUEAMIENTO $75.000 · vía consentimiento]",
+                     "obs_prestacion_esp": "odontolog"})
+        return await _iniciar_agendar(phone, data, "odontología general")
+    if tl == "xortoeval_si":
+        log_event(phone, "consent_oferta_ortodoncia_acepto", {})
+        data.update({"obs_prestacion": "[EVALUACIÓN ORTODONCIA $15.000 · vía consentimiento]",
+                     "obs_prestacion_esp": "odontolog"})
+        return await _iniciar_agendar(phone, data, "odontología general")
+    if tl == "xestfacial_si":
+        log_event(phone, "consent_oferta_estetica_acepto", {})
+        data.update({"obs_prestacion": "[EVALUACIÓN ESTÉTICA $15.000 (se descuenta) · vía consentimiento]",
+                     "obs_prestacion_esp": "estética"})
+        return await _iniciar_agendar(phone, data, "estética facial")
     if tl == "xlimpieza_si":
         log_event(phone, "consent_oferta_limpieza_acepto", {"con_hora": False})
-        data["obs_prestacion"] = _LIMPIEZA_OBS
+        data.update({"obs_prestacion": _LIMPIEZA_OBS, "obs_prestacion_esp": "odontolog"})
         return await _iniciar_agendar(phone, data, "odontología general")
 
     # ── PRE-ROUTER UNIVERSAL para estados WAIT_* / CONFIRMING_* ──
@@ -11911,7 +11998,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "[BIOIMPEDANCIOMETRÍA $20.000]"
                         if data.get("especialidad") in _BIA_KEYS
                         else (data.get("obs_prestacion") or ""
-                              if "odontolog" in (data.get("especialidad") or "").lower()
+                              if (data.get("obs_prestacion_esp") or "odontolog")
+                                 in (data.get("especialidad") or "").lower()
                               else "")
                     )
                     resultado = await asyncio.wait_for(crear_cita(
