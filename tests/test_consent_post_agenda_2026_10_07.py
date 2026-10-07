@@ -59,8 +59,27 @@ def entorno(monkeypatch):
         estado["registrados"].append(phone)
         estado["consent"] = "pending"
 
-    monkeypatch.setattr(winback, "marketing_consent_status", lambda p: estado["consent"], raising=False)
-    monkeypatch.setattr(winback, "phone_in_opt_out", lambda p: False, raising=False)
+    estado["optout"] = False
+    estado["bi_caido"] = False
+
+    class _Cur:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def execute(self, sql, params):
+            if estado["bi_caido"]:
+                raise RuntimeError("BI caído")
+            self._sql = sql
+        def fetchone(self):
+            if "marketing_consent" in self._sql:
+                return (estado["consent"],) if estado["consent"] else None
+            return (1,) if estado["optout"] else None
+
+    class _Conn:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def cursor(self): return _Cur()
+
+    monkeypatch.setattr(winback, "bi_conn", lambda: _Conn(), raising=False)
     monkeypatch.setattr(winback, "registrar_consent_enviado", registrar, raising=False)
     monkeypatch.setattr(winback, "is_template_approved", aprobado, raising=False)
     monkeypatch.setattr(messaging, "send_whatsapp_template", fake_tpl)
@@ -127,6 +146,21 @@ def test_respeta_respuesta_previa(entorno):
     entorno["consent"] = "declined"
     asyncio.run(jobs._job_consent_post_agenda())
     assert entorno["enviados"] == []
+
+
+def test_con_opt_out_no_envia(entorno):
+    _cita(30)
+    entorno["optout"] = True
+    asyncio.run(jobs._job_consent_post_agenda())
+    assert entorno["enviados"] == []
+
+
+def test_bi_caido_no_envia_fail_closed(entorno):
+    """Si BI falla no se puede saber si dijo que no → NO se envía."""
+    _cita(30)
+    entorno["bi_caido"] = True
+    asyncio.run(jobs._job_consent_post_agenda())
+    assert entorno["enviados"] == [] and entorno["registrados"] == []
 
 
 def test_apagado_por_flag(entorno, monkeypatch):

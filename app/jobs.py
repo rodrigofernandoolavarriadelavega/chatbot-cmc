@@ -3676,8 +3676,18 @@ async def _job_consent_post_agenda() -> dict:
     CAP = int(_os.getenv("CONSENT_POST_AGENDA_CAP", "20"))
     try:
         from session import db as _conn, get_session, log_message, log_event, normalize_wa_id
-        from winback import (marketing_consent_status, phone_in_opt_out,
-                             registrar_consent_enviado, is_template_approved)
+        from winback import bi_conn, registrar_consent_enviado, is_template_approved
+
+        def _estado_consent(teln: str) -> tuple[str | None, bool]:
+            """(status en marketing_consent, está en opt-out). FAIL-CLOSED: si BI
+            falla, propaga la excepción — los helpers de winback devuelven
+            None/False ante error, que acá se leería "nunca se le preguntó / sin
+            baja" y le re-preguntaría a quien ya dijo que no."""
+            with bi_conn() as conn, conn.cursor() as cur:
+                cur.execute("SELECT status FROM bi.marketing_consent WHERE phone = %s", (teln,))
+                row = cur.fetchone()
+                cur.execute("SELECT 1 FROM bi.opt_outs_marketing WHERE phone = %s", (teln,))
+                return (row[0] if row else None), cur.fetchone() is not None
         from messaging import send_whatsapp_template, render_template_body
 
         with _conn() as cdb:
@@ -3703,10 +3713,14 @@ async def _job_consent_post_agenda() -> dict:
                 continue
             if (get_session(teln) or {}).get("state", "IDLE") != "IDLE":
                 continue  # sigue conversando → la próxima corrida
-            if marketing_consent_status(teln) is not None:
-                continue  # ya se le pidió (o ya respondió)
-            if phone_in_opt_out(teln):
+            try:
+                _status, _optout = _estado_consent(teln)
+            except Exception as _e_bi:
+                log.warning("consent_post_agenda: BI no disponible (...%s): %s — no envío",
+                            teln[-4:], _e_bi)
                 continue
+            if _status is not None or _optout:
+                continue  # ya se le pidió / ya respondió / pidió la baja
             primer = ((nombre or "").strip().split() or ["Paciente"])[0].capitalize()
             try:
                 await send_whatsapp_template(teln, "consent_marketing_v2", body_params=[primer])
