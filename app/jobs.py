@@ -2843,6 +2843,15 @@ async def _job_horas_vacias_dia_siguiente():
     except Exception as _e_hv_at:
         log.warning("horas_vacias: filtro atendidos no disponible (%s) — sigo sin él", _e_hv_at)
 
+    from session import is_window_open as _hv_is_window_open, get_profile
+    from winback import has_marketing_consent as _hv_has_mkt
+    try:
+        from config import USE_TEMPLATES as _hv_use_tpl
+        from winback import is_template_approved as _hv_tpl_approved
+        _hv_tpl_ok = bool(_hv_use_tpl) and await _hv_tpl_approved("horas_liberadas_v1")
+    except Exception:
+        _hv_tpl_ok = False
+
     for especialidad_label, prof_ids in _ESPECIALIDADES_HORAS_VACIAS:
         esp_key = especialidad_label.lower()
 
@@ -2908,6 +2917,14 @@ async def _job_horas_vacias_dia_siguiente():
 
         enviados_esp = 0
         for phone in candidatos:
+            # Ventana 24 h cerrada → el texto libre lo rechaza Meta (131047: 47 de
+            # 59 avisos en 30 días al 2026-10-07). Fuera de ventana solo por
+            # template MARKETING y con opt-in de marketing; sin template → skip.
+            _ventana = _hv_is_window_open(phone)
+            if not _ventana and not (_hv_tpl_ok and _hv_has_mkt(phone)):
+                log_event(phone, "horas_vacias_skip_ventana",
+                          {"especialidad": esp_key, "tpl_ok": _hv_tpl_ok})
+                continue
             if ya_enviados + enviados_esp >= _HV_MAX_POR_ESPECIALIDAD:
                 log.info("horas_vacias: %s → tope diario alcanzado mid-loop", especialidad_label)
                 break
@@ -2923,8 +2940,20 @@ async def _job_horas_vacias_dia_siguiente():
             )
 
             try:
-                await send_whatsapp_proactive(phone, texto)
-                log_message(phone, "out", texto, "IDLE")
+                if _ventana:
+                    await send_whatsapp_proactive(phone, texto)
+                    log_message(phone, "out", texto, "IDLE")
+                else:
+                    _prof_hv = get_profile(phone) or {}
+                    _nom_hv = ((_prof_hv.get("nombre") or "").split() or ["Hola"])[0].capitalize()
+                    _params_hv = [_nom_hv, especialidad_label, manana_display, hora_ejemplo]
+                    _mid_hv = await send_whatsapp_template(phone, "horas_liberadas_v1",
+                                                           body_params=_params_hv)
+                    if not _mid_hv:
+                        log_event(phone, "template_send_failed", {"template": "horas_liberadas_v1"})
+                        continue
+                    from messaging import render_template_body as _rtb_hv
+                    log_message(phone, "out", _rtb_hv("horas_liberadas_v1", _params_hv), "IDLE")
                 # Usar el primer prof con slots como referencia para el registro
                 pid_ref = next(iter(slots_por_prof))
                 log_horas_vacias_envio(phone, esp_key, pid_ref, manana_str, hora_ejemplo)

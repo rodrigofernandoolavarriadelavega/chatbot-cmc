@@ -4231,6 +4231,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "no avisar", "no avisarme", "no quiero avisos", "no mas avisos",
         "no más avisos", "no quiero mas avisos", "no quiero más avisos",
         "dejar de avisar", "no me avisen", "no me avises",
+        # botón del template horas_liberadas_v1
+        "no avisar mas", "no avisar más",
     }
     if state != "HUMAN_TAKEOVER" and tl_norm in _TOKENS_NO_AVISAR:
         try:
@@ -4886,7 +4888,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     # Si el paciente recibió horas_vacias_enviado en las últimas 4h y responde
     # "SI" / "AGENDAR" en IDLE, lo llevamos al flujo de agendamiento con la
     # especialidad del push precargada.
-    if state == "IDLE" and tl_norm in ("si", "si", "s", "agendar", "quiero", "si quiero"):
+    if state == "IDLE" and tl_norm in ("si", "si", "s", "agendar", "quiero", "si quiero",
+                                       # botón del template horas_liberadas_v1
+                                       "si, reservar", "si reservar"):
         try:
             from session import db as _hv_conn
             import time as _hv_time
