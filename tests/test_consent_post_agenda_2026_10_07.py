@@ -181,3 +181,49 @@ def test_config_quita_comentario_inline_de_flags(monkeypatch):
     assert os.environ["MARKETING_CONSENT_BLAST_ACTIVE"] == "true"
     assert os.environ["ALGUN_CAP"] == "30"
     assert os.environ["UN_SECRETO"] == "abc  # no-es-flag"
+
+
+# ── Al responder "Sí": con cita próxima NO se manda el win-back ─────────────
+
+def _respuesta_si(monkeypatch, con_cita_futura: bool):
+    import flows
+    import consent_marketing
+    with session.db() as conn:
+        conn.execute("DELETE FROM citas_bot")
+        if con_cita_futura:
+            conn.execute(
+                "INSERT INTO citas_bot (phone, id_cita, especialidad, profesional, fecha, hora) "
+                "VALUES (?,?,?,?, date('now','+3 days'), '10:00')",
+                (PHONE, "9002", "Medicina General", "Dr. X"))
+        conn.commit()
+    winback_enviado = []
+
+    async def fake_winback(cand, prefer_session=True):
+        winback_enviado.append(cand)
+        return True
+
+    monkeypatch.setattr(consent_marketing, "registrar", lambda *a, **k: None)
+    for k, v in {"WINBACK_ACTIVE": True,
+                 "get_candidato_por_phone": lambda p: {"ultima_especialidad": "medicina general"},
+                 "ya_enviado_winback_hoy": lambda p: False,
+                 "send_winback_smart": fake_winback,
+                 "_especialidad_sin_profesional": lambda e: False}.items():
+        monkeypatch.setattr(winback, k, v, raising=False)
+
+    async def _go():
+        r = await flows._responder_consent_marketing(PHONE, True, "Sí, actívenlos")
+        await asyncio.sleep(0)  # deja correr la task del win-back si se creó
+        return r
+
+    return asyncio.run(_go()), winback_enviado
+
+
+def test_si_con_cita_proxima_no_manda_winback(monkeypatch):
+    resp, wb = _respuesta_si(monkeypatch, con_cita_futura=True)
+    assert wb == []
+    assert "quedó activado" in resp
+
+
+def test_si_sin_cita_proxima_mantiene_winback(monkeypatch):
+    resp, wb = _respuesta_si(monkeypatch, con_cita_futura=False)
+    assert resp is None and len(wb) == 1

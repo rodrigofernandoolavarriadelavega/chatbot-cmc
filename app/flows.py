@@ -3310,6 +3310,23 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     return None
 
 
+def _tiene_cita_proxima(phone: str) -> bool:
+    """True si el teléfono tiene una cita de hoy en adelante en citas_bot
+    (no cancelada). Ante error → True (fail-closed: mejor no mandar win-back)."""
+    from zoneinfo import ZoneInfo as _ZI_cp
+    hoy = datetime.now(_ZI_cp("America/Santiago")).date().isoformat()
+    try:
+        from session import db as _db_cp
+        with _db_cp() as conn:
+            return conn.execute(
+                "SELECT 1 FROM citas_bot WHERE phone=? AND fecha >= ? "
+                "AND cancel_detected_at IS NULL LIMIT 1", (phone, hoy)
+            ).fetchone() is not None
+    except Exception as e:
+        log.warning("_tiene_cita_proxima error ...%s: %s", phone[-4:], e)
+        return True
+
+
 async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: str,
                                       via: str = "flujo") -> str | None:
     """Registra la respuesta a consent_marketing_v2 y arma la respuesta al
@@ -3341,6 +3358,14 @@ async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: st
         if ya_enviado_winback_hoy(phone):
             log_event(phone, "winback_event_skip_rate_limit", {})
             return "Listo, queda registrado. Pronto recibirás recordatorios de salud."
+
+        # Ya tiene hora próxima (típico: el consent se lo pidió el bot recién
+        # agendado, _job_consent_post_agenda) → un win-back "hace tiempo no te
+        # vemos" no corresponde. get_candidato_por_phone NO mira citas futuras.
+        if _tiene_cita_proxima(phone):
+            log_event(phone, "winback_event_skip_cita_proxima", {})
+            return ("¡Listo, quedó activado! 😊 Te avisaremos cuando se acerque tu "
+                    "próximo control. Nos vemos en tu hora.")
 
         # Buscar datos del paciente en BI (incluye filtros consent + opt-out)
         _candidato = get_candidato_por_phone(phone)
