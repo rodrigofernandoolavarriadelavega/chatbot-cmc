@@ -15,6 +15,7 @@ import os
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,12 @@ import session  # noqa: E402
 from messaging import _respuesta_enviada_var  # noqa: E402
 
 
+def _wamid(nombre: str) -> str:
+    # session.py no respeta SESSIONS_DB (usa data/sessions.db): ids únicos por
+    # corrida para que una corrida anterior no los deje "ya procesados".
+    return f"wamid.test.{nombre}.{uuid.uuid4().hex}"
+
+
 class DedupReintento(unittest.TestCase):
     def _webhook_con(self, procesar):
         orig = main._webhook_procesar
@@ -38,7 +45,7 @@ class DedupReintento(unittest.TestCase):
             main._webhook_procesar = orig
 
     def test_falla_sin_responder_permite_reintento(self):
-        wamid = "wamid.caso_licencia_duelo"
+        wamid = _wamid("caso_licencia_duelo")
 
         async def revienta(_req):
             assert session.is_duplicate(wamid) is False
@@ -52,7 +59,7 @@ class DedupReintento(unittest.TestCase):
         self.assertTrue(session.is_duplicate(wamid))
 
     def test_falla_despues_de_responder_no_reprocesa(self):
-        wamid = "wamid.ya_contestado"
+        wamid = _wamid("ya_contestado")
 
         async def responde_y_revienta(_req):
             assert session.is_duplicate(wamid) is False
@@ -64,7 +71,7 @@ class DedupReintento(unittest.TestCase):
         self.assertTrue(session.is_duplicate(wamid))
 
     def test_exito_no_desmarca(self):
-        wamid = "wamid.normal"
+        wamid = _wamid("normal")
 
         async def ok(_req):
             session.is_duplicate(wamid)
@@ -74,7 +81,7 @@ class DedupReintento(unittest.TestCase):
         self.assertTrue(session.is_duplicate(wamid))
 
     def test_delete_falla_igual_permite_reintento_en_memoria(self):
-        wamid = "wamid.disco_lleno_total"
+        wamid = _wamid("disco_lleno_total")
         session.is_duplicate(wamid)
         orig_db = session.db
 
