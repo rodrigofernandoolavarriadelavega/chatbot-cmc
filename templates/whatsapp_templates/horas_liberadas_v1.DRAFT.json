@@ -1,24 +1,37 @@
 {
   "name": "horas_liberadas_v1",
   "language": "es_CL",
-  "category": "MARKETING",
+  "category": "UTILITY",
   "components": [
     {
       "type": "BODY",
-      "text": "Hola {{1}} 👋 Se liberaron horas para *{{2}}* mañana {{3}}.\n\nLa primera es a las *{{4}}*. ¿Te la reservo?",
+      "text": "Hola {{1}} 👋 Nos pediste hora para *{{2}}* y se liberaron cupos para mañana {{3}}.\n\nLa primera es a las *{{4}}*. ¿Te la reservo?",
       "example": {
-        "body_text": [["María", "Medicina General", "jueves 9 de octubre", "10:30"]]
+        "body_text": [
+          [
+            "María",
+            "Medicina General",
+            "jueves 9 de octubre",
+            "10:30"
+          ]
+        ]
       }
     },
     {
       "type": "FOOTER",
-      "text": "Te escribimos porque consultaste por esta especialidad"
+      "text": "Te escribimos porque nos pediste hora para esta especialidad"
     },
     {
       "type": "BUTTONS",
       "buttons": [
-        {"type": "QUICK_REPLY", "text": "Sí, reservar"},
-        {"type": "QUICK_REPLY", "text": "No avisar más"}
+        {
+          "type": "QUICK_REPLY",
+          "text": "Sí, reservar"
+        },
+        {
+          "type": "QUICK_REPLY",
+          "text": "No avisar más"
+        }
       ]
     }
   ]

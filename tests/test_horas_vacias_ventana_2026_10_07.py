@@ -1,7 +1,7 @@
 """
 horas_vacias mandaba SIEMPRE texto libre: 47 de 59 avisos (30 d) fallaron con
-131047 (ventana 24 h cerrada). Ahora: ventana abierta → texto; cerrada → solo
-template horas_liberadas_v1 con opt-in de marketing; si no, skip.
+131047 (ventana 24 h cerrada). Ahora: ventana abierta → texto; cerrada → template
+UTILITY horas_liberadas_v1 si pidió hora hace ≤14 días; si no, skip.
 """
 import os
 import sys
@@ -21,7 +21,8 @@ def test_job_revisa_ventana_y_consent_antes_de_enviar():
     cuerpo = s[i:i + 20000]
     assert "_hv_is_window_open(phone)" in cuerpo
     assert "horas_vacias_skip_ventana" in cuerpo
-    assert '"horas_liberadas_v1"' in cuerpo and "_hv_has_mkt(phone)" in cuerpo
+    assert '"horas_liberadas_v1"' in cuerpo and "_hv_pidio_reciente(phone, esp_key)" in cuerpo
+    assert "_hv_has_mkt" not in cuerpo  # pidió hora: no exige opt-in de marketing
 
 
 def test_botones_del_template_tienen_handler():

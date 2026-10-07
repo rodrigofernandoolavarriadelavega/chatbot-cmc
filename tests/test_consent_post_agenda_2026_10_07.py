@@ -237,3 +237,33 @@ def test_si_con_cita_proxima_no_manda_winback(monkeypatch):
 def test_si_sin_cita_proxima_mantiene_winback(monkeypatch):
     resp, wb = _respuesta_si(monkeypatch, con_cita_futura=False)
     assert resp is None and len(wb) == 1
+
+
+
+# ── También lista de espera y avisos de horas liberadas (2026-10-07) ────────
+
+def test_pide_consent_a_quien_quedo_en_lista_de_espera(entorno):
+    with session.db() as conn:
+        conn.execute("DELETE FROM waitlist")
+        conn.execute("INSERT INTO waitlist (phone, nombre, especialidad, created_at) "
+                     "VALUES (?, 'Rosa Pérez', 'cardiología', datetime('now','-30 minutes'))",
+                     (PHONE,))
+        conn.commit()
+    asyncio.run(jobs._job_consent_post_agenda())
+    with session.db() as conn:
+        conn.execute("DELETE FROM waitlist"); conn.commit()
+    assert entorno["enviados"] == [(PHONE, "consent_marketing_v1", ["Rosa"])]
+
+
+def test_pide_consent_tras_aviso_de_horas_liberadas(entorno):
+    import time
+    with session.db() as conn:
+        conn.execute("DELETE FROM horas_vacias_envios")
+        conn.execute("INSERT INTO horas_vacias_envios (phone, especialidad, profesional_id, "
+                     "fecha_slot, hora_slot, enviado_ts) VALUES (?, 'medicina general', 73, "
+                     "'2026-10-08', '09:00', ?)", (PHONE, int(time.time()) - 1800))
+        conn.commit()
+    asyncio.run(jobs._job_consent_post_agenda())
+    with session.db() as conn:
+        conn.execute("DELETE FROM horas_vacias_envios"); conn.commit()
+    assert len(entorno["enviados"]) == 1

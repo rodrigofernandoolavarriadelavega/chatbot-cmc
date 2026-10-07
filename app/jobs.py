@@ -2844,7 +2844,20 @@ async def _job_horas_vacias_dia_siguiente():
         log.warning("horas_vacias: filtro atendidos no disponible (%s) — sigo sin él", _e_hv_at)
 
     from session import is_window_open as _hv_is_window_open, get_profile
-    from winback import has_marketing_consent as _hv_has_mkt
+
+    def _hv_pidio_reciente(phone: str, esp: str, dias: int = 14) -> bool:
+        """Pidió hora de `esp` (intent_agendar o sin_disponibilidad) en ≤`dias`."""
+        try:
+            from session import db as _db_hv
+            with _db_hv() as _c:
+                return _c.execute(
+                    "SELECT 1 FROM conversation_events WHERE phone=? "
+                    "AND event IN ('intent_agendar','sin_disponibilidad') "
+                    "AND json_extract(meta,'$.especialidad') LIKE ? "
+                    "AND ts >= datetime('now', ?) LIMIT 1",
+                    (phone, f"%{esp}%", f"-{dias} days")).fetchone() is not None
+        except Exception:
+            return False
     try:
         from config import USE_TEMPLATES as _hv_use_tpl
         from winback import is_template_approved as _hv_tpl_approved
@@ -2918,10 +2931,13 @@ async def _job_horas_vacias_dia_siguiente():
         enviados_esp = 0
         for phone in candidatos:
             # Ventana 24 h cerrada → el texto libre lo rechaza Meta (131047: 47 de
-            # 59 avisos en 30 días al 2026-10-07). Fuera de ventana solo por
-            # template MARKETING y con opt-in de marketing; sin template → skip.
+            # 59 avisos en 30 días al 2026-10-07). Fuera de ventana va por el
+            # template UTILITY horas_liberadas_v1. No exige opt-in de marketing:
+            # todos los candidatos PIDIERON hora de esta especialidad y no la
+            # consiguieron (decisión del dueño 2026-10-07) — es la respuesta a
+            # su pedido. Solo si el pedido es de ≤14 días; si no, skip.
             _ventana = _hv_is_window_open(phone)
-            if not _ventana and not (_hv_tpl_ok and _hv_has_mkt(phone)):
+            if not _ventana and not (_hv_tpl_ok and _hv_pidio_reciente(phone, esp_key)):
                 log_event(phone, "horas_vacias_skip_ventana",
                           {"especialidad": esp_key, "tpl_ok": _hv_tpl_ok})
                 continue
@@ -3744,12 +3760,27 @@ async def _job_consent_post_agenda() -> dict:
         from messaging import send_whatsapp_template, render_template_body
 
         with _conn() as cdb:
+            # Tres momentos en que el paciente acaba de pedirnos algo (ventana
+            # abierta → la UTILITY no cuesta): agendó por el bot, quedó en lista
+            # de espera, o le avisamos horas liberadas (decisión del dueño
+            # 2026-10-07: "que queden enganchados" justo cuando les avisamos).
             rows = cdb.execute(
-                "SELECT cb.phone, MAX(p.nombre) FROM citas_bot cb "
-                "LEFT JOIN contact_profiles p ON p.phone = cb.phone "
-                "WHERE cb.created_at <= datetime('now','-10 minutes') "
-                "  AND cb.created_at >= datetime('now','-6 hours') "
-                "GROUP BY cb.phone"
+                "SELECT phone, MAX(nombre) FROM ("
+                "  SELECT cb.phone AS phone, p.nombre AS nombre FROM citas_bot cb "
+                "  LEFT JOIN contact_profiles p ON p.phone = cb.phone "
+                "  WHERE cb.created_at <= datetime('now','-10 minutes') "
+                "    AND cb.created_at >= datetime('now','-6 hours') "
+                "  UNION ALL "
+                "  SELECT w.phone, COALESCE(p.nombre, w.nombre) FROM waitlist w "
+                "  LEFT JOIN contact_profiles p ON p.phone = w.phone "
+                "  WHERE w.created_at <= datetime('now','-10 minutes') "
+                "    AND w.created_at >= datetime('now','-6 hours') "
+                "  UNION ALL "
+                "  SELECT h.phone, p.nombre FROM horas_vacias_envios h "
+                "  LEFT JOIN contact_profiles p ON p.phone = h.phone "
+                "  WHERE h.enviado_ts <= CAST(strftime('%s','now') AS INTEGER) - 600 "
+                "    AND h.enviado_ts >= CAST(strftime('%s','now') AS INTEGER) - 21600"
+                ") GROUP BY phone"
             ).fetchall()
         if not rows:
             return {"enviados": 0, "candidatos": 0}
