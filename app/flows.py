@@ -14266,20 +14266,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 sexo = "M"; continue
             if not sexo and _SEX_F.match(p):
                 sexo = "F"; continue
-            # ¿Es número de celular? (9 dígitos chilenos, opcionalmente +56)
-            if not celular_raw and _PHONE_RE.match(p):
-                digits = re.sub(r'[^\d]', '', p)
-                if digits.startswith("56") and len(digits) >= 10:
-                    celular_raw = digits[2:]  # sin código país
-                    continue
-                elif len(digits) >= 8 and len(digits) <= 9:
-                    celular_raw = digits
-                    continue
-            # ¿Es fecha?
+            # ¿Es fecha? Va ANTES que el celular (bug 2026-10-07): "15-03-1990",
+            # "15 03 1990" y "15031990" calzan con _PHONE_RE (8 dígitos) y se
+            # escribían como celular en Medilink, dejando la ficha sin fecha y
+            # sin el WhatsApp real. 80 registros en prod, 75 con guiones.
+            # Un celular de 9 dígitos nunca parsea como fecha (DDMMYYYY = 8).
             if not fecha_nac:
                 f = _parsear_fecha_nacimiento(p)
                 if f:
                     fecha_nac = f; continue
+            # ¿Es número de celular? 9 dígitos chilenos, opcionalmente +56.
+            # Ya no se aceptan 8 dígitos: los números de 8 no existen desde 2012
+            # y una fecha mal escrita que no parsea tampoco debe ir a celular.
+            if not celular_raw and _PHONE_RE.match(p):
+                digits = re.sub(r'[^\d]', '', p)
+                if digits.startswith("56") and len(digits) == 11:
+                    celular_raw = digits[2:]  # sin código país
+                    continue
+                elif len(digits) == 9:
+                    celular_raw = digits
+                    continue
             # ¿Es una localidad conocida de la provincia?
             # Solo se prueba DESPUES de tener nombre: el nombre siempre va
             # primero en el mensaje, y asi la localidad no puede robarselo
