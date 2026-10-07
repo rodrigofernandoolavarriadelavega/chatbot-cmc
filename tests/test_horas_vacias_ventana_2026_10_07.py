@@ -29,7 +29,7 @@ def test_job_revisa_ventana_y_consent_antes_de_enviar():
 def test_botones_del_template_tienen_handler():
     import json, unicodedata, re
     tpl = json.loads((ROOT / "templates" / "whatsapp_templates" /
-                      "horas_liberadas_v1.DRAFT.json").read_text(encoding="utf-8"))
+                      "horas_liberadas_v1.json").read_text(encoding="utf-8"))
     body = next(c for c in tpl["components"] if c["type"] == "BODY")["text"]
     assert sorted(set(re.findall(r"\{\{(\d+)\}\}", body))) == ["1", "2", "3", "4"]
     from triage_ges import normalizar_texto_paciente
