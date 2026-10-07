@@ -15,7 +15,8 @@ from session import (get_phone_by_rut, save_portal_otp, verify_portal_otp,
                      count_portal_otps, get_dx_tags, get_profile,
                      get_profile_full, update_profile_fields,
                      add_family_link, list_family_links, revoke_family_link,
-                     is_family_link, log_event)
+                     is_family_link, log_event, get_family_link,
+                     set_family_link_verified, get_ids_citas_tercero_de_phone)
 from medilink import buscar_paciente, listar_citas_paciente, listar_historial_paciente, valid_rut
 
 log = logging.getLogger("bot.portal")
@@ -296,6 +297,149 @@ def _resolve_context(portal_session: str | None,
     return owner_rut, owner_phone, active_rut, active_phone
 
 
+# ── Acceso al perfil representado (Ley 21.719, decisión dueño 7-oct-2026) ───
+# Menor (tutor_declaration, edad < 18)         -> completo.
+# Adulto con vínculo verificado                 -> completo. Tres caminos:
+#   otp (código al WhatsApp del adulto), recepcion (en persona) y
+#   ficha_medilink (el celular de SU ficha coincide con el del titular).
+# Adulto sin verificar ("declared" del bot)     -> solo las horas que el propio
+#   titular agendó para él (citas_bot.es_tercero=1 con el teléfono del titular).
+ACCESO_COMPLETO = "completo"
+ACCESO_SOLO_HORAS = "solo_horas_agendadas"
+_FICHA_REVERIF_DIAS = 30
+_ACCESO_TTL_OK = 300      # menor / no coincide: no repetir la consulta por request
+_ACCESO_TTL_ERROR = 60    # Medilink caído: reintentar pronto, sin golpearlo
+_acceso_cache: dict = {}
+_AVISO_NO_VERIFICADO = ("Para ver más, verifiquen el vínculo en recepción "
+                        "o con un código a su WhatsApp.")
+
+
+def _tel9(raw: str) -> str:
+    """Últimos 9 dígitos de un teléfono chileno (ignora +56, 56, espacios, guiones)."""
+    d = "".join(c for c in (raw or "") if c.isdigit())
+    return d[-9:] if len(d) >= 9 else ""
+
+
+def _ficha_coincide(pac: dict, owner_phone: str) -> bool:
+    """True si el celular/teléfono de la ficha Medilink es el del titular."""
+    mio = _tel9(owner_phone)
+    if not mio:
+        return False
+    return mio in {_tel9(pac.get("celular", "")), _tel9(pac.get("telefono", ""))} - {""}
+
+
+def _verificado_reciente(link: dict, owner_phone: str) -> bool:
+    """ficha_medilink vigente: <30 días y con el mismo teléfono del titular."""
+    from datetime import datetime, timedelta, timezone
+    if (link.get("verified_phone") or "") != _tel9(owner_phone):
+        return False
+    try:
+        v = datetime.strptime((link.get("verified_at") or "")[:19], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return False
+    return datetime.now(timezone.utc).replace(tzinfo=None) - v < timedelta(days=_FICHA_REVERIF_DIAS)
+
+
+async def _acceso_vinculo(owner_rut: str, owner_phone: str, dep_rut: str) -> dict:
+    """Decide el nivel de acceso del titular al perfil `dep_rut`.
+    Devuelve {"acceso": completo|solo_horas_agendadas, "metodo": str, "motivo": str}.
+    Fallo cerrado: si Medilink no responde, un adulto no verificado queda en
+    solo_horas_agendadas (la página no se rompe)."""
+    def r(acceso, metodo, motivo=""):
+        return {"acceso": acceso, "metodo": metodo, "motivo": motivo}
+
+    if dep_rut == owner_rut or dep_rut == DEMO_RUT or owner_rut == DEMO_RUT:
+        return r(ACCESO_COMPLETO, "titular")
+    link = get_family_link(owner_rut, dep_rut)
+    if not link:
+        return r(ACCESO_SOLO_HORAS, "", "sin_vinculo")
+    metodo = link.get("verification_method") or ""
+    if metodo in ("otp", "recepcion"):
+        return r(ACCESO_COMPLETO, metodo)
+    if metodo == "ficha_medilink" and _verificado_reciente(link, owner_phone):
+        return r(ACCESO_COMPLETO, metodo)
+
+    key = (owner_rut, dep_rut, _tel9(owner_phone), metodo)
+    hit = _acceso_cache.get(key)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
+
+    def cachear(res, ttl):
+        _acceso_cache[key] = (time.monotonic() + ttl, res)
+        return res
+
+    es_menor_decl = (metodo == "tutor_declaration")
+    try:
+        pac = await buscar_paciente(dep_rut, strict=True)
+    except Exception as e:
+        log.warning("acceso_vinculo: Medilink no respondió (%s)", type(e).__name__)
+        if es_menor_decl:   # menores: sin cambios
+            return r(ACCESO_COMPLETO, metodo, "menor_sin_consulta")
+        return cachear(r(ACCESO_SOLO_HORAS, metodo, "medilink_no_responde"), _ACCESO_TTL_ERROR)
+    if not pac:
+        if es_menor_decl:
+            return r(ACCESO_COMPLETO, metodo, "menor_sin_ficha")
+        return cachear(r(ACCESO_SOLO_HORAS, metodo, "sin_ficha"), _ACCESO_TTL_OK)
+
+    edad = _age_years(pac.get("fecha_nacimiento", ""))
+    if edad is not None and edad < 18:
+        return cachear(r(ACCESO_COMPLETO, metodo or "menor", "menor"), _ACCESO_TTL_OK)
+    if es_menor_decl and edad is None:
+        return r(ACCESO_COMPLETO, metodo, "menor_sin_fecha")
+
+    # Adulto: verificación automática por ficha
+    if _ficha_coincide(pac, owner_phone):
+        try:
+            set_family_link_verified(owner_rut, dep_rut, "ficha_medilink",
+                                     verified_by="auto", verified_phone=_tel9(owner_phone))
+            log_event(owner_phone, "portal_vinculo_verificado_ficha",
+                      {"owner": owner_rut, "dependent": dep_rut})
+        except Exception as e:
+            log.warning("acceso_vinculo: no se pudo guardar verificación: %s", e)
+        return r(ACCESO_COMPLETO, "ficha_medilink")
+    return cachear(r(ACCESO_SOLO_HORAS, metodo, "ficha_no_coincide"), _ACCESO_TTL_OK)
+
+
+async def _resolve_acceso(portal_session: str | None,
+                          portal_active: str | None) -> tuple[str, str, str, str, dict]:
+    """Como _resolve_context + nivel de acceso al perfil activo."""
+    owner_rut, owner_phone, active_rut, active_phone = _resolve_context(portal_session, portal_active)
+    if active_rut == owner_rut:
+        return owner_rut, owner_phone, active_rut, active_phone, {
+            "acceso": ACCESO_COMPLETO, "metodo": "titular", "motivo": ""}
+    ac = await _acceso_vinculo(owner_rut, owner_phone, active_rut)
+    return owner_rut, owner_phone, active_rut, active_phone, ac
+
+
+async def _resolve_completo(portal_session: str | None,
+                            portal_active: str | None) -> tuple[str, str, str, str]:
+    """Para endpoints que exponen datos del perfil: 403 si el adulto representado
+    no está verificado."""
+    owner_rut, owner_phone, active_rut, active_phone, ac = await _resolve_acceso(
+        portal_session, portal_active)
+    if ac["acceso"] != ACCESO_COMPLETO:
+        raise HTTPException(status_code=403, detail={
+            "error": "vinculo_no_verificado", "acceso": ac["acceso"],
+            "mensaje": _AVISO_NO_VERIFICADO})
+    return owner_rut, owner_phone, active_rut, active_phone
+
+
+async def _horas_agendadas_por_titular(owner_phone: str, dep_rut: str,
+                                       pac: dict | None = None) -> list[dict]:
+    """Horas futuras de `dep_rut` que ESTE titular agendó (citas_bot con su
+    teléfono y es_tercero=1) y que siguen vivas en Medilink. Levanta si
+    Medilink no responde."""
+    ids = get_ids_citas_tercero_de_phone(owner_phone)
+    if not ids:
+        return []
+    pac = pac or await buscar_paciente(dep_rut, strict=True)
+    if not pac:
+        return []
+    citas = await listar_citas_paciente(pac["id"], rut=pac.get("rut") or dep_rut,
+                                        raise_on_error=True)
+    return [c for c in (citas or []) if str(c.get("id") or c.get("id_cita")) in ids]
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/portal/api/request-code")
@@ -409,14 +553,41 @@ async def portal_verify_code(request: Request):
 async def portal_datos(portal_session: str | None = Cookie(None),
                        portal_active: str | None = Cookie(None)):
     """Retorna los datos del paciente activo (owner o familiar vinculado)."""
-    owner_rut, owner_phone, active_rut, active_phone = _resolve_context(portal_session, portal_active)
+    owner_rut, owner_phone, active_rut, active_phone, ac = await _resolve_acceso(
+        portal_session, portal_active)
 
     # Modo demo: datos ficticios cuando el activo es el RUT demo
     if active_rut == DEMO_RUT or (owner_rut == DEMO_RUT and active_rut in DEMO_FAMILY):
         data = _demo_data() if active_rut == DEMO_RUT else _demo_member_data(active_rut)
         data["owner_rut"] = owner_rut
         data["is_dependent"] = (active_rut != owner_rut)
+        data["acceso"] = ACCESO_COMPLETO
         return data
+
+    # Adulto representado SIN verificar: solo las horas que este titular agendó.
+    if ac["acceso"] != ACCESO_COMPLETO:
+        link = get_family_link(owner_rut, active_rut) or {}
+        citas, error_horas = [], False
+        try:
+            citas = await _horas_agendadas_por_titular(owner_phone, active_rut)
+        except Exception as e:
+            log.warning("datos restringido: no se pudieron leer horas (%s)", type(e).__name__)
+            error_horas = True
+        return {
+            "nombre": link.get("dependent_nombre") or "",
+            "rut": active_rut,
+            "fecha_nacimiento": "",
+            "sexo": "",
+            "citas_futuras": citas,
+            "historial": [],
+            "diagnosticos": [],
+            "whatsapp_url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20cita",
+            "owner_rut": owner_rut,
+            "is_dependent": True,
+            "acceso": ACCESO_SOLO_HORAS,
+            "aviso": _AVISO_NO_VERIFICADO,
+            "error_horas": error_horas,
+        }
 
     paciente = await buscar_paciente(active_rut)
     if not paciente:
@@ -446,6 +617,7 @@ async def portal_datos(portal_session: str | None = Cookie(None),
         "whatsapp_url": "https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20cita",
         "owner_rut": owner_rut,
         "is_dependent": (active_rut != owner_rut),
+        "acceso": ACCESO_COMPLETO,
     }
 
 
@@ -467,7 +639,7 @@ async def portal_add_vital(request: Request,
                            portal_session: str | None = Cookie(None),
                            portal_active: str | None = Cookie(None)):
     """Añade un registro (presión, glicemia, peso, temperatura) al paciente activo."""
-    _owner_rut, _owner_phone, rut, _active_phone = _resolve_context(portal_session, portal_active)
+    _owner_rut, _owner_phone, rut, _active_phone = await _resolve_completo(portal_session, portal_active)
     body = await request.json()
     tipo = (body.get("tipo") or "").strip().lower()
     if tipo not in _VITAL_TIPOS_OK:
@@ -510,7 +682,7 @@ async def portal_list_vitals(tipo: str | None = None, dias: int | None = None,
                              portal_session: str | None = Cookie(None),
                              portal_active: str | None = Cookie(None)):
     """Lista registros del paciente activo."""
-    _owner_rut, _owner_phone, rut, _active_phone = _resolve_context(portal_session, portal_active)
+    _owner_rut, _owner_phone, rut, _active_phone = await _resolve_completo(portal_session, portal_active)
     if tipo and tipo not in _VITAL_TIPOS_OK:
         raise HTTPException(status_code=400, detail="Tipo inválido")
     vitals = list_vitals(rut, tipo=tipo, dias=dias, limit=max(1, min(500, limit)))
@@ -521,7 +693,7 @@ async def portal_list_vitals(tipo: str | None = None, dias: int | None = None,
 async def portal_get_perfil(portal_session: str | None = Cookie(None),
                             portal_active: str | None = Cookie(None)):
     """Devuelve los campos editables del perfil del paciente activo."""
-    _owner_rut, _owner_phone, rut, phone = _resolve_context(portal_session, portal_active)
+    _owner_rut, _owner_phone, rut, phone = await _resolve_completo(portal_session, portal_active)
     if rut == DEMO_RUT:
         return {
             "ok": True, "demo": True,
@@ -559,7 +731,7 @@ async def portal_update_perfil(request: Request,
                                 portal_session: str | None = Cookie(None),
                                 portal_active: str | None = Cookie(None)):
     """Actualiza campos editables del perfil del paciente activo."""
-    _owner_rut, _owner_phone, rut, phone = _resolve_context(portal_session, portal_active)
+    _owner_rut, _owner_phone, rut, phone = await _resolve_completo(portal_session, portal_active)
     body = await request.json()
     # Validaciones ligeras
     campos = ("nombre", "fecha_nacimiento", "sexo", "email", "comuna",
@@ -589,7 +761,7 @@ async def portal_delete_vital(vital_id: int,
                               portal_session: str | None = Cookie(None),
                               portal_active: str | None = Cookie(None)):
     """Elimina un registro del paciente activo."""
-    _owner_rut, _owner_phone, rut, _active_phone = _resolve_context(portal_session, portal_active)
+    _owner_rut, _owner_phone, rut, _active_phone = await _resolve_completo(portal_session, portal_active)
     ok = delete_vital(rut, vital_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
@@ -631,8 +803,14 @@ def _age_years(fecha_nac: str) -> int | None:
 @router.get("/portal/api/family")
 async def portal_family_list(portal_session: str | None = Cookie(None)):
     """Lista los familiares vinculados al titular."""
-    owner_rut, _owner_phone = _require_portal(portal_session)
+    owner_rut, owner_phone = _require_portal(portal_session)
     links = list_family_links(owner_rut)
+    import asyncio
+    accesos = await asyncio.gather(*(
+        _acceso_vinculo(owner_rut, owner_phone, l["dependent_rut"]) for l in links))
+    for l, ac in zip(links, accesos):
+        l["acceso"] = ac["acceso"]
+        l["verificado"] = (ac["acceso"] == ACCESO_COMPLETO)
     return {"ok": True, "owner_rut": owner_rut, "links": links}
 
 
@@ -641,7 +819,7 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
     """Vista familiar: titular + dependientes, cada uno con su próxima cita.
     Caso de uso central: quien agenda para toda la familia (típicamente la mamá)
     abre SU portal y ve de un vistazo las horas de todos, sin cambiar de perfil."""
-    owner_rut, _owner_phone = _require_portal(portal_session)
+    owner_rut, owner_phone = _require_portal(portal_session)
 
     # Modo demo: familia ficticia completa (cada miembro navegable con switch)
     if owner_rut == DEMO_RUT:
@@ -677,6 +855,23 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
     async def fetch_member(m):
         # Fail-safe: cualquier error de Medilink degrada a "sin próxima cita",
         # nunca rompe la vista familiar completa.
+        if m["relation"] != "titular":
+            ac = await _acceso_vinculo(owner_rut, owner_phone, m["rut"])
+            if ac["acceso"] != ACCESO_COMPLETO:
+                # Adulto sin verificar: nada de su historial/dx/datos; solo la
+                # próxima hora que ESTE titular le agendó.
+                out = {**m, "acceso": ACCESO_SOLO_HORAS, "proxima": None}
+                try:
+                    hs = await _horas_agendadas_por_titular(owner_phone, m["rut"])
+                    hs.sort(key=lambda c: (c.get("fecha", ""), c.get("hora_inicio", "")))
+                    if hs:
+                        out["proxima"] = {"especialidad": hs[0].get("especialidad", ""),
+                                          "fecha": hs[0].get("fecha", ""),
+                                          "hora_inicio": hs[0].get("hora_inicio", ""),
+                                          "profesional": hs[0].get("profesional", "")}
+                except Exception:
+                    pass
+                return out
         try:
             pac = await buscar_paciente(m["rut"])
             if not pac:
@@ -687,6 +882,7 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
                 listar_historial_paciente(pac["id"], meses=12, rut=rut_ml),
             )
             out = {**m, "nombre": pac.get("nombre") or m["nombre"], "proxima": None,
+                   "acceso": ACCESO_COMPLETO,
                    "ultima": ({"especialidad": hist[0].get("especialidad", ""),
                                "fecha": hist[0].get("fecha", "")} if hist else None),
                    "n_at": len(hist or []),
@@ -726,7 +922,9 @@ async def portal_family_switch(request: Request,
 
     is_https = (request.url.scheme == "https"
                 or request.headers.get("x-forwarded-proto") == "https")
-    response = JSONResponse({"ok": True, "active_rut": target})
+    ac = (await _acceso_vinculo(owner_rut, _owner_phone, target)
+          if target != owner_rut else {"acceso": ACCESO_COMPLETO})
+    response = JSONResponse({"ok": True, "active_rut": target, "acceso": ac["acceso"]})
     if target == owner_rut:
         response.delete_cookie(key=_ACTIVE_COOKIE_NAME, path="/")
     else:
@@ -868,6 +1066,47 @@ async def portal_family_verify_otp(request: Request,
     log_event(owner_phone, "portal_family_add_adult",
               {"owner": owner_rut, "dependent": dep_rut, "relation": relation})
     return {"ok": True, "dependent_rut": dep_rut, "nombre": nombre}
+
+
+@router.post("/portal/api/horas/cancelar")
+async def portal_cancelar_hora(request: Request,
+                               portal_session: str | None = Cookie(None)):
+    """Anula una hora del perfil `rut` (titular o representado).
+    - Perfil propio / representado verificado / menor: cualquier hora futura suya.
+    - Adulto SIN verificar: SOLO las horas que este titular agendó para él.
+    Body: {rut, id_cita}."""
+    from medilink import cancelar_cita
+    owner_rut, owner_phone = _require_portal(portal_session)
+    body = await request.json()
+    rut = _normalize_rut((body.get("rut") or "").strip()) or owner_rut
+    id_cita = str(body.get("id_cita") or "").strip()
+    if not id_cita:
+        raise HTTPException(status_code=400, detail="Falta la hora a anular")
+    if rut != owner_rut and not is_family_link(owner_rut, rut):
+        raise HTTPException(status_code=403, detail="Familiar no vinculado")
+    ac = await _acceso_vinculo(owner_rut, owner_phone, rut)
+    try:
+        if ac["acceso"] == ACCESO_COMPLETO:
+            pac = await buscar_paciente(rut, strict=True)
+            citas = (await listar_citas_paciente(
+                pac["id"], rut=pac.get("rut") or rut, raise_on_error=True)) if pac else []
+        else:
+            citas = await _horas_agendadas_por_titular(owner_phone, rut)
+    except Exception as e:
+        log.error("portal cancelar lookup: %s", e)
+        raise HTTPException(status_code=503, detail="No pudimos procesar la anulación. Intente nuevamente.")
+    if id_cita not in {str(c.get("id") or c.get("id_cita")) for c in (citas or [])}:
+        raise HTTPException(status_code=403, detail="Esa hora no corresponde a una que usted pueda gestionar.")
+    try:
+        ok = await cancelar_cita(int(id_cita))
+    except Exception as e:
+        log.error("portal cancelar: %s", e)
+        raise HTTPException(status_code=503, detail="No pudimos anular la hora. Intente nuevamente.")
+    if not ok:
+        raise HTTPException(status_code=502, detail="El sistema no pudo anular la hora.")
+    log_event(owner_phone, "portal_hora_anulada",
+              {"owner": owner_rut, "rut": rut, "id_cita": id_cita, "acceso": ac["acceso"]})
+    return {"ok": True, "id_cita": id_cita}
 
 
 @router.delete("/portal/api/family/{dependent_rut}")
@@ -1162,7 +1401,7 @@ async def portal_examenes(portal_session: str | None = Cookie(None),
 
     Demo: ejemplos de diseño. Pacientes reales: SOLO lo que el staff revisó y
     PUBLICÓ desde /portal/examenes-admin (nunca sale nada directo de la IA)."""
-    _o, _op, rut, _phone = _resolve_context(portal_session, portal_active)
+    _o, _op, rut, _phone = await _resolve_completo(portal_session, portal_active)
     if rut == DEMO_RUT:
         return {"ok": True, "demo": True, "disponible": True, "examenes": _demo_examenes()}
     if rut in DEMO_FAMILY:
@@ -1189,7 +1428,7 @@ async def portal_checkin(request: Request,
                          portal_active: str | None = Cookie(None)):
     """El paciente confirma que viene a su hora de HOY. Queda registrado como
     evento (visible en la línea de tiempo de recepción); no toca Medilink."""
-    owner_rut, owner_phone, rut, _phone = _resolve_context(portal_session, portal_active)
+    owner_rut, owner_phone, rut, _phone = await _resolve_completo(portal_session, portal_active)
     body = await request.json()
     if rut == DEMO_RUT or rut in DEMO_FAMILY:
         return {"ok": True, "demo": True}

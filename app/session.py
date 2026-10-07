@@ -629,6 +629,14 @@ def _run_ddl_inline(conn) -> None:
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_family_owner ON family_links(owner_rut, revoked_at)")
+    # Verificación de vínculos adultos (Ley 21.719, 7-oct-2026): quién/cuándo
+    # verificó y con qué teléfono del titular (para re-verificar si cambia).
+    for _col_fl in ("verified_by TEXT", "carta_firmada INTEGER DEFAULT 0",
+                    "verified_phone TEXT"):
+        try:
+            conn.execute(f"ALTER TABLE family_links ADD COLUMN {_col_fl}")
+        except _OPERATIONAL_ERRORS:
+            pass
     # Registros personales del paciente (presión, glicemia, peso, temperatura)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS patient_vitals (
@@ -1953,6 +1961,27 @@ async def try_autocapture_rut_name(phone: str, text: str) -> dict | None:
     except Exception:
         pass
     return {"rut": rut_final, "nombre": nombre_final}
+
+
+def get_ids_citas_tercero_de_phone(phone: str) -> set[str]:
+    """IDs de cita (Medilink) que ESTE teléfono agendó para otra persona
+    (es_tercero=1). Compara por los últimos 9 dígitos (formatos +56/56/9)."""
+    d = "".join(c for c in (phone or "") if c.isdigit())
+    if len(d) < 9:
+        return set()
+    suf = d[-9:]
+    with db() as conn:
+        rows = conn.execute(
+            """SELECT id_cita, phone FROM citas_bot
+               WHERE es_tercero=1 AND phone LIKE ? AND id_cita IS NOT NULL""",
+            ("%" + suf,)
+        ).fetchall()
+    out = set()
+    for r in rows:
+        pd = "".join(c for c in (r["phone"] or "") if c.isdigit())
+        if pd[-9:] == suf:
+            out.add(str(r["id_cita"]))
+    return out
 
 
 def get_phone_by_rut(rut: str) -> str | None:
@@ -5127,20 +5156,41 @@ def count_portal_otps(rut: str, minutes: int = 60) -> int:
 
 # ── Portal del paciente — vinculaciones familiares ───────────────────────────
 
+# Métodos que dan acceso COMPLETO a un adulto representado.
+FAMILY_METODOS_VERIFICADOS = ("otp", "ficha_medilink", "recepcion")
+
+
 def add_family_link(owner_rut: str, dependent_rut: str, dependent_nombre: str,
                     relation: str, verification_method: str) -> int:
     """Crea una vinculación familiar. Si ya existe (revocada), la reactiva.
-    verification_method: 'tutor_declaration' (menor) | 'otp' (adulto)."""
+    verification_method: 'tutor_declaration' (menor) | 'declared' (adulto
+    declarado por el bot) | 'otp' | 'ficha_medilink' | 'recepcion'.
+
+    Un vínculo ya VERIFICADO (otp/ficha_medilink/recepcion) y vigente NO se
+    degrada cuando el bot lo vuelve a declarar al agendar otra hora."""
+    fuertes = ",".join(f"'{m}'" for m in FAMILY_METODOS_VERIFICADOS)
+    conservar = (f"(family_links.revoked_at IS NULL "
+                 f"AND family_links.verification_method IN ({fuertes}) "
+                 f"AND excluded.verification_method NOT IN ({fuertes}))")
     with db() as conn:
         conn.execute(
-            """INSERT INTO family_links
+            f"""INSERT INTO family_links
                (owner_rut, dependent_rut, dependent_nombre, relation, verification_method)
                VALUES (?, ?, ?, ?, ?)
                ON CONFLICT(owner_rut, dependent_rut) DO UPDATE SET
                    dependent_nombre=excluded.dependent_nombre,
                    relation=excluded.relation,
-                   verification_method=excluded.verification_method,
-                   verified_at=datetime('now'),
+                   verification_method=CASE WHEN {conservar}
+                       THEN family_links.verification_method
+                       ELSE excluded.verification_method END,
+                   verified_at=CASE WHEN {conservar}
+                       THEN family_links.verified_at ELSE datetime('now') END,
+                   verified_by=CASE WHEN {conservar}
+                       THEN family_links.verified_by ELSE NULL END,
+                   carta_firmada=CASE WHEN {conservar}
+                       THEN family_links.carta_firmada ELSE 0 END,
+                   verified_phone=CASE WHEN {conservar}
+                       THEN family_links.verified_phone ELSE NULL END,
                    revoked_at=NULL""",
             (owner_rut, dependent_rut, dependent_nombre, relation, verification_method)
         )
@@ -5152,12 +5202,60 @@ def add_family_link(owner_rut: str, dependent_rut: str, dependent_nombre: str,
         return row["id"] if row else 0
 
 
+def get_family_link(owner_rut: str, dependent_rut: str) -> dict | None:
+    """Vínculo ACTIVO (no revocado) owner→dependent, con datos de verificación."""
+    with db() as conn:
+        row = conn.execute(
+            """SELECT owner_rut, dependent_rut, dependent_nombre, relation,
+                      verification_method, verified_at, verified_by,
+                      carta_firmada, verified_phone, created_at
+               FROM family_links
+               WHERE owner_rut=? AND dependent_rut=? AND revoked_at IS NULL LIMIT 1""",
+            (owner_rut, dependent_rut)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def set_family_link_verified(owner_rut: str, dependent_rut: str, method: str,
+                             verified_by: str | None = None,
+                             carta_firmada: bool = False,
+                             verified_phone: str | None = None) -> bool:
+    """Marca un vínculo activo como verificado. True si hubo cambio."""
+    if method not in FAMILY_METODOS_VERIFICADOS:
+        raise ValueError(f"método de verificación inválido: {method}")
+    with db() as conn:
+        cur = conn.execute(
+            """UPDATE family_links SET verification_method=?, verified_at=datetime('now'),
+                      verified_by=?, carta_firmada=?, verified_phone=?
+               WHERE owner_rut=? AND dependent_rut=? AND revoked_at IS NULL""",
+            (method, verified_by, 1 if carta_firmada else 0, verified_phone,
+             owner_rut, dependent_rut)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def list_family_links_by_rut(rut: str) -> list[dict]:
+    """Vínculos activos donde `rut` es titular O representado (para recepción)."""
+    with db() as conn:
+        rows = conn.execute(
+            """SELECT owner_rut, dependent_rut, dependent_nombre, relation,
+                      verification_method, verified_at, verified_by,
+                      carta_firmada, created_at
+               FROM family_links
+               WHERE (owner_rut=? OR dependent_rut=?) AND revoked_at IS NULL
+               ORDER BY created_at DESC""",
+            (rut, rut)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def list_family_links(owner_rut: str) -> list[dict]:
     """Lista familiares activos (no revocados) de un titular."""
     with db() as conn:
         rows = conn.execute(
             """SELECT dependent_rut, dependent_nombre, relation, verification_method,
-                      verified_at, created_at
+                      verified_at, created_at, carta_firmada
                FROM family_links
                WHERE owner_rut=? AND revoked_at IS NULL
                ORDER BY created_at DESC""",

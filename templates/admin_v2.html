@@ -1486,6 +1486,10 @@ html, body{width:100%; max-width:100%; overflow-x:hidden}
       <h3>Próximas citas</h3>
       <div id="cxCitas"><div style="color:var(--text-dim); font-size:12px">Sin citas próximas</div></div>
     </div>
+    <div class="ctx-section" id="cxVinculosSection" style="display:none">
+      <h3>Vínculos pendientes del portal</h3>
+      <div id="cxVinculos"></div>
+    </div>
     <div class="ctx-section" id="cxFilesSection" style="display:none">
       <h3>📎 Archivos del paciente <span id="cxFilesCount" style="color:var(--text-dim); font-weight:400; font-size:10px"></span></h3>
       <div id="cxFiles" class="ctx-files"></div>
@@ -2814,7 +2818,36 @@ async function loadNotes(){
   } catch(e){}
 }
 
+async function loadVinculos(){
+  const sec = $("#cxVinculosSection"), el = $("#cxVinculos");
+  if (!sec || !el || !activePhone) return;
+  try {
+    const r = await api(`/admin/api/portal-vinculos?q=${encodeURIComponent(activePhone)}`);
+    const p = r.pendientes || [];
+    if (!p.length){ sec.style.display = "none"; return; }
+    sec.style.display = "";
+    el.innerHTML = p.map((v,i) => `
+      <div class="cita-item">
+        <div class="when">${esc(v.dependent_nombre || v.dependent_rut)}</div>
+        <div style="color:var(--text-mute)">Titular ${esc(v.owner_rut)} → ${esc(v.dependent_rut)} (${esc(v.relation)})</div>
+        <button class="btn" style="margin-top:4px" onclick="verificarVinculo('${esc(v.owner_rut)}','${esc(v.dependent_rut)}')">Verificado en persona</button>
+      </div>`).join("");
+  } catch(e){ sec.style.display = "none"; }
+}
+async function verificarVinculo(owner, dep){
+  const quien = prompt("Vas a dar acceso COMPLETO al portal de esta persona (historial, exámenes, datos).\nSolo si el adulto está presente o dejó carta firmada.\n\n¿Quién de recepción lo verifica? (nombre)");
+  if (!quien || !quien.trim()) return;
+  const carta = confirm("¿Hay carta firmada por el adulto? (Aceptar = sí, Cancelar = verificado presencialmente)");
+  try {
+    await api("/admin/api/portal-vinculos/verificar", {method:"POST",
+      body: JSON.stringify({owner_rut: owner, dependent_rut: dep, verificado_por: quien.trim(), carta_firmada: carta})});
+    toast("Vínculo verificado", "ok");
+    loadVinculos();
+  } catch(e){ toast("No se pudo verificar el vínculo", "error"); }
+}
+
 async function loadCitas(){
+  loadVinculos();
   try {
     const ctx = await api(`/admin/api/patient-context/${encodeURIComponent(activePhone)}`).catch(()=>({}));
     const el = $("#cxCitas");

@@ -3275,3 +3275,74 @@ def admin_orq_metrics(_: str = Depends(require_admin)):
     encendidos = sum(1 for c in cat if c.get("enabled"))
     return {"total": len(cat), "encendidos": encendidos, "apagados": len(cat) - encendidos,
             "por_dominio": dict(sorted(por_dominio.items(), key=lambda kv: -kv[1]))}
+
+
+# ── Portal: verificación de vínculos familiares adultos (Ley 21.719) ────────
+# Un adulto "declarado" (lo crea el bot al agendar para otra persona) solo da
+# acceso a las horas agendadas por el titular. Recepción lo verifica en persona.
+
+_VINCULO_FUERTES = ("otp", "ficha_medilink", "recepcion")
+
+
+def _rut_de_ident(ident: str) -> str:
+    """Acepta RUT (con guión/puntos/K) o teléfono; devuelve RUT normalizado o ''."""
+    from portal_routes import _normalize_rut
+    raw = (ident or "").strip()
+    digits = "".join(c for c in raw if c.isdigit())
+    es_rut = ("-" in raw or "." in raw or raw[-1:].upper() == "K")
+    if not es_rut and (len(digits) == 11 and digits.startswith("56")
+                       or len(digits) == 9 and digits.startswith("9")):
+        try:
+            return (get_profile(digits if digits.startswith("56") else "56" + digits) or {}).get("rut") or ""
+        except Exception:
+            return ""
+    return _normalize_rut(raw)
+
+
+@router.get("/admin/api/portal-vinculos")
+def admin_portal_vinculos(q: str = "", _: str = Depends(require_admin)):
+    """Vínculos familiares ACTIVOS de un paciente (por RUT o teléfono) que aún
+    NO están verificados (candidatos adultos). Muestra además los verificados."""
+    from session import list_family_links_by_rut
+    rut = _rut_de_ident(q)
+    if not rut:
+        raise HTTPException(status_code=400, detail="Indique un RUT o teléfono válido")
+    out = []
+    for l in list_family_links_by_rut(rut):
+        m = l.get("verification_method") or ""
+        out.append({
+            "owner_rut": l["owner_rut"], "dependent_rut": l["dependent_rut"],
+            "dependent_nombre": l.get("dependent_nombre") or "",
+            "relation": l.get("relation") or "", "metodo": m,
+            "verificado": m in _VINCULO_FUERTES,
+            "menor_declarado": m == "tutor_declaration",
+            "verificado_por": l.get("verified_by") or "",
+            "carta_firmada": bool(l.get("carta_firmada")),
+            "verified_at": l.get("verified_at") or "",
+        })
+    pendientes = [v for v in out if not v["verificado"] and not v["menor_declarado"]]
+    return {"rut": rut, "pendientes": pendientes, "vinculos": out}
+
+
+@router.post("/admin/api/portal-vinculos/verificar")
+async def admin_portal_vinculo_verificar(request: Request, _: str = Depends(require_admin)):
+    """Recepción marca un vínculo adulto como verificado EN PERSONA.
+    Body: {owner_rut, dependent_rut, verificado_por, carta_firmada?}."""
+    from portal_routes import _normalize_rut
+    from session import set_family_link_verified, get_family_link
+    body = await request.json()
+    owner = _normalize_rut((body.get("owner_rut") or "").strip())
+    dep = _normalize_rut((body.get("dependent_rut") or "").strip())
+    quien = (body.get("verificado_por") or "").strip()[:60]
+    if not owner or not dep:
+        raise HTTPException(status_code=400, detail="owner_rut y dependent_rut requeridos")
+    if not quien:
+        raise HTTPException(status_code=400, detail="Indique quién verificó (verificado_por)")
+    if not get_family_link(owner, dep):
+        raise HTTPException(status_code=404, detail="Vínculo activo no encontrado")
+    carta = bool(body.get("carta_firmada"))
+    set_family_link_verified(owner, dep, "recepcion", verified_by=quien, carta_firmada=carta)
+    log_event(owner, "portal_vinculo_verificado_recepcion",
+              {"owner": owner, "dependent": dep, "por": quien, "carta": carta})
+    return {"ok": True, "owner_rut": owner, "dependent_rut": dep,
+            "metodo": "recepcion", "verificado_por": quien, "carta_firmada": carta}

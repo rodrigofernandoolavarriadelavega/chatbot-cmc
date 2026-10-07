@@ -1806,11 +1806,26 @@ function showLogin() {
   document.getElementById('dashboard-screen').classList.remove('active');
   document.getElementById('rut-input').focus();
 }
+function avisoVinculoMin() {
+  /* Adulto representado sin verificar: solo ve las horas que usted le agendó. */
+  const scr = document.getElementById('dashboard-screen');
+  if (!scr) return;
+  let b = document.getElementById('aviso-vinculo');
+  const restr = !!(patientData && patientData.acceso === 'solo_horas_agendadas');
+  if (!restr) { if (b) b.remove(); return; }
+  if (!b) {
+    b = document.createElement('div'); b.id = 'aviso-vinculo'; b.setAttribute('role', 'note');
+    b.style.cssText = 'margin:12px 16px;padding:12px 14px;border-radius:10px;background:#e6f4f7;color:#0b4552;font-size:15px;line-height:1.4';
+    scr.insertBefore(b, scr.firstChild);
+  }
+  b.textContent = 'Vínculo sin verificar: de esta persona solo puede ver y gestionar las horas que usted le agendó. Para ver más, verifiquen el vínculo en recepción o con un código a su WhatsApp.';
+}
 function showDashboard() {
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('login-screen').classList.remove('active');
   document.getElementById('dashboard-screen').classList.add('active');
   renderAll();
+  avisoVinculoMin();
 }
 
 /* ═══ RUT formatter ═══ */
@@ -2169,7 +2184,7 @@ async function citaAnular() {
     if (patientData && patientData.demo) {
       await new Promise(r => setTimeout(r, 800));
     } else {
-      const r = await pfetch('/agendar/api/cancelar', {
+      const r = await pfetch((patientData && patientData.acceso === 'solo_horas_agendadas') ? '/portal/api/horas/cancelar' : '/agendar/api/cancelar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rut: (patientData && patientData.rut) || '', id_cita: String(c.id || '') }),
       }, { timeout: 20000 });
@@ -4552,7 +4567,7 @@ async function wizConfirmar() {
     if (_wiz.cambio && _wiz.cambio.id) {
       // Hora nueva asegurada → recién ahora se anula la antigua.
       try {
-        const rc = await pfetch('/agendar/api/cancelar', {
+        const rc = await pfetch((patientData && patientData.acceso === 'solo_horas_agendadas') ? '/portal/api/horas/cancelar' : '/agendar/api/cancelar', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rut: _wiz.rut, id_cita: String(_wiz.cambio.id) }),
         }, { timeout: 20000 });

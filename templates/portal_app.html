@@ -488,6 +488,7 @@ async function loadAll(){
   d.citas_futuras = (d.citas_futuras||[]).map(c=>({...c, id: c.id!=null?c.id:c.id_cita}));
   d.historial = (d.historial||[]).slice().sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
   S.d = d; S.offline=false; S.vitals=null; S.exams=null;
+  if (d.acceso==='solo_horas_agendadas'){ S.perfil={}; S.vitals=[]; S.exams=[]; loadFamily(); return; }
   store('cmc_app_citas', {nombre:d.nombre, rut:d.rut, citas:(d.citas_futuras||[]).slice(0,4), ts:Date.now()});
   api('/portal/api/perfil').then(r=>{ S.perfil=r.profile||{}; if(!S.d.is_dependent) S.ownerPhone=S.perfil.phone||''; if(['datos'].includes(route().name)) render(); }).catch(()=>{ S.perfil={}; });
   loadFamily();
@@ -572,12 +573,20 @@ function renderBands(){
   if (S.offline) h += `<div class="off-band" role="status">Sin señal: le mostramos lo último guardado en este teléfono.</div>`;
   $('#bands').innerHTML = h;
 }
+/* Adulto representado SIN verificar: solo ve las horas que usted le agendó. */
+function restringido(){ return !!(S.d && S.d.acceso==='solo_horas_agendadas'); }
+const SOLO_VERIFICADOS = ['salud','mediciones','medir','alertas','docs','datos','editar'];
+function avisoVinculo(){
+  return `<div class="note info" role="note">${ic('warn')}<div><b>Vínculo sin verificar.</b> Por privacidad, de ${esc(first((S.d&&S.d.nombre)||'')||'esta persona')} solo puede ver y gestionar las horas que usted le agendó. Para ver más, verifiquen el vínculo en recepción o con un código a su WhatsApp.</div></div>
+    <div class="btns" style="margin-top:14px"><a class="btn sec" href="#agregar">Verificar con un código</a>
+    <a class="btn sec" href="${wa('Hola, quiero verificar mi vínculo con un familiar adulto en el portal.')}" target="_blank" rel="noopener">Consultar por WhatsApp</a></div>`;
+}
 function render(){
   renderBands();
   if (!S.d){ $('#top').hidden=true; $('#nav').hidden=true; return; }
   renderTop(); renderNav();
   const r = route(); const V = VIEWS[r.name] || VIEWS.inicio;
-  let html; try{ html = V(r); }catch(e){ console.error(e); html = `<h1>Algo no funcionó</h1>${errorBlock(e,'render()')}`; }
+  let html; try{ html = (restringido() && SOLO_VERIFICADOS.includes(r.name)) ? `<h1>Información protegida</h1>${avisoVinculo()}` : V(r); }catch(e){ console.error(e); html = `<h1>Algo no funcionó</h1>${errorBlock(e,'render()')}`; }
   if (html==null) return;
   $('#app').innerHTML = `<div class="wrap view">${html}</div>`;
   const key = location.hash;
@@ -643,6 +652,7 @@ VIEWS.inicio = () => {
   const otras = cs.length - 1;
   return `<h1>${sal}, ${esc(nm)}</h1>
     ${S.d.is_dependent?`<p class="lead">Está viendo la ficha de <b>${esc(S.d.nombre)}</b>. <a href="#" onclick="switchTo('${jsq(S.d.owner_rut)}');return false">Volver a la suya</a></p>`:''}
+    ${restringido()?`<div style="margin-top:12px">${avisoVinculo()}</div>`:''}
     <div style="margin-top:16px">${main}</div>
     ${c?`<button class="btn aqua" style="margin-top:14px" onclick="startAgendar()">${ic('plus')}Pedir una hora nueva</button>`:''}
     ${otras>0?`<a class="btn sec" style="margin-top:10px" href="#horas">${otras===1?'Ver mi otra hora':'Ver mis otras '+otras+' horas'}</a>`:''}
@@ -732,7 +742,7 @@ async function anular(id){
   const c = citaById(id); const b=$('#anBtn'); if(!c||S.busy) return; S.busy=true; b.disabled=true; b.textContent='Anulando…';
   try{
     if (DEMO){ await sleep(700); DEMO_P[demoActive].citas_futuras = DEMO_P[demoActive].citas_futuras.filter(x=>String(x.id)!==String(id)); S.d=demoData(); S.family=demoMembers(); }
-    else { await api('/agendar/api/cancelar',{method:'POST',body:JSON.stringify({rut:rutApi(activeRut()), id_cita:String(c.id)})},25000); track('cita_anula'); try{ await loadAll(); }catch(e){} }
+    else { await api(restringido()?'/portal/api/horas/cancelar':'/agendar/api/cancelar',{method:'POST',body:JSON.stringify({rut:rutApi(activeRut()), id_cita:String(c.id)})},25000); track('cita_anula'); try{ await loadAll(); }catch(e){} }
     S.flow = {anulada:c}; location.replace('#listo/anulada');
   }catch(e){
     if(e.kind==='auth') return toLogin();
@@ -855,7 +865,7 @@ async function confirmarCambio(){
       const res = await api('/agendar/api/reservar',{method:'POST',body:JSON.stringify({consent:true, rut:rutApi(activeRut()), telefono:'569'+tel, id_profesional:+c.id_profesional, fecha:f.dia, hora_inicio:f.hora.hora_inicio, hora_fin:f.hora.hora_fin, es_tercero: activeRut()!==ownerRut()})},30000);
       nueva.id = res.id_cita;
       b.textContent='Liberando su hora anterior…';
-      try{ await api('/agendar/api/cancelar',{method:'POST',body:JSON.stringify({rut:rutApi(activeRut()), id_cita:String(c.id), telefono:'569'+tel})},25000); }
+      try{ await api(restringido()?'/portal/api/horas/cancelar':'/agendar/api/cancelar',{method:'POST',body:JSON.stringify({rut:rutApi(activeRut()), id_cita:String(c.id), telefono:'569'+tel})},25000); }
       catch(e){ aviso = 'Su hora NUEVA quedó lista, pero no alcanzamos a liberar la anterior ('+fCorta(c.fecha)+' a las '+hhmm(c.hora_inicio)+'). Anúlela desde "Mis horas" o escríbanos y lo hacemos por usted.'; }
       track('cita_cambia_exito'); try{ await loadAll(); }catch(e){}
     }
@@ -1216,7 +1226,7 @@ VIEWS.familia = () => {
       <p class="muted small" style="margin-top:6px;text-align:center">Toque a una persona para ver sus horas o pedirle una.</p>`:''}
     <h2>${ms.length>1?'Cada persona':'Su ficha'}</h2>
     <div class="stack">${ms.map(m=>{ const act=rutClean(m.rut)===activeRut(); const p=m.proxima;
-      return `<div class="card"><div class="mem"><span class="ava${act?' act':''}" aria-hidden="true">${esc(initials(m.nombre))}</span><span><h3>${esc(first(m.nombre))}${rutClean(m.rut)===ownerRut()?' (usted)':''}</h3><span class="muted">${esc(relLabel(m.relation))}${m.edad!=null?' · '+m.edad+' años':''}${act?' · viendo ahora':''}</span></span></div>
+      return `<div class="card"><div class="mem"><span class="ava${act?' act':''}" aria-hidden="true">${esc(initials(m.nombre))}</span><span><h3>${esc(first(m.nombre))}${rutClean(m.rut)===ownerRut()?' (usted)':''}</h3><span class="muted">${esc(relLabel(m.relation))}${m.edad!=null?' · '+m.edad+' años':''}${m.acceso==='solo_horas_agendadas'?' · vínculo sin verificar':''}${act?' · viendo ahora':''}</span></span></div>
         <p style="margin-top:10px">${p?`${ic('cal','style="width:20px;height:20px;vertical-align:-4px;color:var(--ok)"')} <b>${esc(p.especialidad)}</b>: ${fCorta(p.fecha)} · ${esc(hhmm(p.hora_inicio))} hrs`:'<span class="muted">Sin horas próximas</span>'}</p>
         <div class="row2" style="margin-top:12px">${act?`<button class="btn sec" onclick="go('horas')">Ver horas</button>`:`<button class="btn sec" onclick="switchTo('${jsq(m.rut)}','horas')">Ver sus horas</button>`}<button class="btn sec" onclick="startAgendar({rut:'${jsq(m.rut)}'})">Pedir hora</button></div></div>`; }).join('')}</div>
     ${sug.length?`<h2>Puede ser útil</h2><div class="list">${sug.map(s=>`<button class="li" onclick="startAgendar({rut:'${jsq(s.m.rut)}',esp:'${jsq(s.esp)}'})"><span class="ic nv">${esc(initials(s.m.nombre))}</span><span class="tx"><b>${esc(s.t)}</b><span>Para ${esc(first(s.m.nombre))} · ${esc(s.esp)}</span></span>${chev()}</button>`).join('')}</div><p class="muted small" style="margin-top:8px">Sugerencias generales por edad. Su profesional define lo que necesita cada uno.</p>`:''}
@@ -1227,7 +1237,7 @@ VIEWS.familia = () => {
       ${ms.length>1?`<button class="li" onclick="compartirFamilia()"><span class="ic">${ic('share')}</span><span class="tx"><b>Compartir las horas de la familia</b><span>Por WhatsApp</span></span>${chev()}</button>`:''}
     </div>
     ${(S.links||[]).length?`<h2>Personas vinculadas</h2><div class="list">${S.links.map(l=>`<div class="li" style="cursor:default"><span class="tx"><b>${esc(first(l.dependent_nombre)||rutFmt(l.dependent_rut))}</b><span>${esc(relLabel(l.relation))} · RUT ${esc(rutFmt(l.dependent_rut))}</span></span><button class="btn sec" style="width:auto;min-height:52px;padding:8px 14px;font-size:1rem" onclick="quitarVinculo('${jsq(l.dependent_rut)}','${jsq(first(l.dependent_nombre))}')">Quitar</button></div>`).join('')}</div>`:''}
-    <p class="muted small" style="margin-top:12px">Solo aparecen personas que le autorizaron: los menores con su declaración de tutor y los adultos con un código que les llega a su WhatsApp.</p>
+    <p class="muted small" style="margin-top:12px">Solo aparecen personas que le autorizaron: los menores con su declaración de tutor y los adultos verificados (código a su WhatsApp, recepción o coincidencia con su ficha). De un adulto sin verificar solo se ven las horas que usted le agendó.</p>
     ${helpBlock('Hola, necesito ayuda con las horas de mi familia.')}`;
 };
 VIEWS.familia.after = async () => {
