@@ -331,6 +331,66 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .scan.anim .scan-in{animation:scanIn .42s var(--ease)}
 @keyframes scanIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
+/* ── Cuerpo + lupa ── */
+.sel-grid{grid-template-areas:"chips" "body" "card"}
+.sel-chips{grid-area:chips} .bodymap{grid-area:body} #scan{grid-area:card}
+@media (min-width:980px){.sel-grid{grid-template-areas:"body card" "chips card";grid-template-rows:auto 1fr}}
+.bodymap{--s:1;--D:156px;position:relative;background:linear-gradient(180deg,#FDFCFA 0%,#F7F4EF 100%);border:1px solid var(--linea-2);border-radius:var(--r-xl);padding:12px 12px 16px;box-shadow:var(--shadow-sm);overflow:hidden}
+@media (min-width:600px){.bodymap{--s:1.2;padding:16px 18px 22px}}
+.bm-head{display:flex;justify-content:space-between;gap:12px;align-items:center;font:600 10.5px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--gris);margin:0 2px 8px}
+.bm-tag::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--aqua);margin-right:8px;vertical-align:1.5px}
+.bm-stage{position:relative;height:calc(340px * var(--s))}
+.bm-body{position:absolute;left:16px;top:0;width:calc(120px * var(--s));height:calc(340px * var(--s))}
+.bm-body svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.sil-out{fill:none;stroke:rgba(15,63,104,.2);stroke-width:1.7}
+.sil-fill{fill:url(#bg-v);stroke:none}
+.sil .sheen{fill:url(#bg-t);stroke:none}
+.sil .det{fill:none;stroke:rgba(15,63,104,.13);stroke-width:.8;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.sil .det-d{fill:rgba(15,63,104,.18);stroke:none}
+.rings circle{fill:rgba(255,255,255,.7);stroke:rgba(15,63,104,.42);stroke-width:1;vector-effect:non-scaling-stroke;transition:opacity .3s}
+.rings circle.on{opacity:0}
+.org{opacity:0;transition:opacity .35s var(--ease)}
+.org.on{opacity:1}
+.org path,.org ellipse,.org circle{fill:rgba(79,190,206,.2);stroke:#2A9FB2;stroke-width:1.1;stroke-linejoin:round;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 2.5px rgba(79,190,206,.55))}
+.org .ln{fill:none}
+.org .ghost{fill:none;stroke-opacity:.45;stroke-dasharray:2 2.5}
+.org .dash{stroke-dasharray:2 2.5}
+.org .art{stroke:#D45555;filter:none}.org .ven{stroke:#2F7FD0;filter:none}
+.halo{transition:transform .45s var(--ease),opacity .3s}
+.halo .dot{fill:var(--aqua);stroke:#fff;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.halo .pulse{fill:none;stroke:var(--aqua);stroke-width:1.2;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center;animation:hpulse 2.4s var(--ease) infinite}
+@keyframes hpulse{0%{opacity:.75;transform:scale(.55)}80%,100%{opacity:0;transform:scale(1.9)}}
+.bm-otro .halo{opacity:0}
+.zb{position:absolute;border:0;padding:0;margin:0;background:transparent;border-radius:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.zb:focus-visible{outline:2px solid var(--aqua);outline-offset:-2px}
+@media (hover:hover){.zb:hover{background:radial-gradient(closest-side,rgba(79,190,206,.16),rgba(79,190,206,0))}}
+.bm-link{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.bm-link path{fill:none;stroke:#3FB0C1;stroke-width:1.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:0;transition:stroke-dashoffset .38s var(--ease)}
+.bm-link circle{fill:#fff;stroke:#3FB0C1;stroke-width:1.2;transition:opacity .25s}
+.bm-link.off path{stroke-dashoffset:1;transition:none}.bm-link.off circle{opacity:0}
+.bm-probe{position:absolute;right:4px;top:0;width:var(--D);transition:top .45s var(--ease)}
+.lupa{position:relative;width:var(--D);height:var(--D);border-radius:50%;background:#071A2B;box-shadow:0 0 0 1px rgba(15,63,104,.08),0 0 0 6px #fff,0 0 0 7px rgba(15,63,104,.13),0 24px 42px -18px rgba(15,63,104,.55),0 6px 14px -6px rgba(15,63,104,.25);transition:transform .45s var(--ease)}
+.lupa canvas{display:block;width:100%;height:100%;border-radius:50%;transition:opacity .3s}
+.lupa::before{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(142,214,224,.45),inset 0 0 22px rgba(0,0,0,.55);pointer-events:none;z-index:1}
+.lupa::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(140% 90% at 28% -8%,rgba(255,255,255,.2) 0 34%,rgba(255,255,255,0) 35%),linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,0) 40%);pointer-events:none;z-index:2}
+.bm-moving .lupa{transform:scale(.97)}
+.bm-moving .lupa canvas{opacity:.55}
+.bm-info{margin-top:16px;transition:opacity .25s}
+.bm-moving .bm-info{opacity:.35}
+.bm-k{margin:0;font:600 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--azul-ink)}
+.bm-name{margin:7px 0 0;font:700 1.12rem/1.15 var(--display);letter-spacing:-.02em;color:var(--tinta)}
+.bm-sub{margin:4px 0 0;font-size:13px;line-height:1.4;color:var(--gris)}
+.bm-subs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.bm-subs:empty{display:none}
+.sub{appearance:none;min-height:44px;padding:0 13px;border-radius:999px;border:1px solid var(--linea);background:#fff;font:600 13px/1 var(--body);color:var(--tinta);cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.sub[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+@media (hover:hover){.sub:hover{border-color:var(--navy)}}
+.lupa-msg{position:absolute;inset:20%;display:none;align-items:center;justify-content:center;text-align:center;font:600 12.5px/1.35 var(--body);color:#BFEAF0;z-index:3}
+.bm-otro .lupa canvas{opacity:.3}
+.bm-otro .lupa-msg{display:flex}
+.bm-otro .bm-k{color:var(--gris)}
+@media (prefers-reduced-motion:reduce){.bm-probe,.lupa,.halo,.bm-link path{transition:none}.halo .pulse{animation:none;opacity:0}}
+
 /* ── Preparación (oscuro) ── */
 .prep{background:var(--navy);color:#DCE7F0;position:relative;overflow:hidden}
 .prep .kicker{color:var(--aqua-2)}
@@ -701,7 +761,82 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <p>Elige la de tu orden y verás qué evalúa, cuánto cuesta y cómo prepararte. Si tu examen pide ayuno o vejiga llena, te calculamos la hora.</p>
     </div>
     <div class="sel-grid">
-      <div class="rv" style="--d:1">
+      <div class="bodymap rv" id="bodymap" style="--d:1">
+        <div class="bm-head"><span class="bm-tag">Ilustración</span><span class="bm-hint">Toca el cuerpo</span></div>
+        <div class="bm-stage">
+          <div class="bm-body">
+            <svg viewBox="0 0 120 340" aria-hidden="true">
+              <defs>
+                <linearGradient id="bg-v" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C5DAE5"/><stop offset=".42" stop-color="#EFF6F9"/><stop offset=".62" stop-color="#E4EFF4"/><stop offset="1" stop-color="#C9DCE6"/></linearGradient>
+                <radialGradient id="bg-h" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#F3F9FB"/><stop offset="1" stop-color="#C8DCE6"/></radialGradient>
+                <radialGradient id="bg-t" cx=".42" cy=".28" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+                <radialGradient id="bg-glow"><stop offset="0" stop-color="#4FBECE" stop-opacity=".45"/><stop offset="1" stop-color="#4FBECE" stop-opacity="0"/></radialGradient>
+                <linearGradient id="bg-f" x1="0" y1="0" x2="0" y2="1"><stop offset=".86" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+                <mask id="bg-m" maskUnits="userSpaceOnUse" x="-20" y="0" width="160" height="340"><rect x="-20" y="0" width="160" height="340" fill="url(#bg-f)"/></mask>
+                <path id="arm" d="M27.5 60.5C19.5 65 14.5 75 12.5 90L9 128C9 132 19 132 19 128L23.5 98C25 86 29 75 33 67C32 62.5 30 60.5 27.5 60.5ZM9.2 126C8 150 6.5 172 6 190C6 194 13 194 13 190C14 172 16.5 150 18.8 126ZM6.2 186C5 192 4.8 199 6.5 204.5C7.6 208 11.4 208 12.6 204.5C14 199.5 13.8 192 12.8 186Z"/>
+                <path id="leg" d="M32.5 186C31 214 35 246 38.5 270L55.5 270C56.5 248 58 222 59.6 206ZM38.5 268C37.5 286 38 300 40 318C41 330 41.5 338 42 344L50 344C51 336 52 326 53 316C55 300 56 286 55.5 268Z"/>
+                <g id="silh">
+                  <use href="#leg"/><use href="#leg" transform="translate(120 0) scale(-1 1)"/>
+                  <use href="#arm"/><use href="#arm" transform="translate(120 0) scale(-1 1)"/>
+                  <path d="M54.5 33.5L65.5 33.5L67 54L53 54Z"/>
+                  <path d="M60 50C71 50 84 52 92 58C97 62 97 70 95.5 80C94 92 91 104 89 118C87.5 130 86 140 86.5 152C87 166 90 178 89.5 192C89 202 78 210 60 211C42 210 31 202 30.5 192C30 178 33 166 33.5 152C34 140 32.5 130 31 118C29 104 26 92 24.5 80C23 70 23 62 28 58C36 52 49 50 60 50Z"/>
+                  <ellipse cx="60" cy="20.5" rx="14.5" ry="18"/>
+                </g>
+              </defs>
+              <g class="sil" mask="url(#bg-m)">
+                <use href="#silh" class="sil-out"/>
+                <use href="#silh" class="sil-fill"/>
+                <path class="sheen" d="M60 50C71 50 84 52 92 58C97 62 97 70 95.5 80C94 92 91 104 89 118C87.5 130 86 140 86.5 152C87 166 90 178 89.5 192C89 202 78 210 60 211C42 210 31 202 30.5 192C30 178 33 166 33.5 152C34 140 32.5 130 31 118C29 104 26 92 24.5 80C23 70 23 62 28 58C36 52 49 50 60 50Z"/>
+                <path class="det" d="M43 61.5C49 64 55 63.5 58.5 62M77 61.5C71 64 65 63.5 61.5 62"/>
+                <circle class="det-d" cx="60" cy="160" r=".9"/>
+              </g>
+              <g class="rings">
+                <circle class="ring" data-r="cuello" cx="60" cy="49" r="3.4"/>
+                <circle class="ring" data-r="pecho" cx="60" cy="92" r="3.4"/>
+                <circle class="ring" data-r="brazo" cx="16" cy="150" r="3.4"/>
+                <circle class="ring" data-r="abdomen" cx="60" cy="146" r="3.4"/>
+                <circle class="ring" data-r="pelvis" cx="60" cy="198" r="3.4"/>
+                <circle class="ring" data-r="muslo" cx="76" cy="242" r="3.4"/>
+                <circle class="ring" data-r="rodilla" cx="46" cy="270" r="3.4"/>
+              </g>
+              <g class="orgs">
+                <g class="org" data-e="tiroides"><path d="M60 50.5C58 47 54 45.5 52.5 47.5C51 49.5 52.5 53 55.5 53C57.5 53 59 52 60 50.5C61 52 62.5 53 64.5 53C67.5 53 69 49.5 67.5 47.5C66 45.5 62 47 60 50.5Z"/></g>
+                <g class="org" data-e="mamaria"><path class="ln" d="M37 91C39 101 51 103 56 95M64 95C69 103 81 101 83 91"/><circle cx="47" cy="96" r="1.3"/><circle cx="73" cy="96" r="1.3"/></g>
+                <g class="org" data-e="hepatica"><path d="M33 124C40 117 60 116 70 121C73 123 72 127 68 128C58 133 46 138 38 136C33 134 31 128 33 124Z"/><path d="M49.5 131.5c0-3 5-3 5 0c0 3.2-1.2 5.5-2.5 5.5s-2.5-2.3-2.5-5.5Z"/></g>
+                <g class="org" data-e="renal"><path d="M46 132C41 131 38 136 39 142C40 148 44 150 47 148C49 147 48 144 48 142C48 140 50 139 50 137C50 134 49 132 46 132Z"/><path d="M74 132C79 131 82 136 81 142C80 148 76 150 73 148C71 147 72 144 72 142C72 140 70 139 70 137C70 134 71 132 74 132Z"/></g>
+                <g class="org" data-e="abdominal"><path d="M33 124C40 117 60 116 70 121C73 123 72 127 68 128C58 133 46 138 38 136C33 134 31 128 33 124Z"/><path d="M49.5 131.5c0-3 5-3 5 0c0 3.2-1.2 5.5-2.5 5.5s-2.5-2.3-2.5-5.5Z"/><path d="M46 132C41 131 38 136 39 142C40 148 44 150 47 148C49 147 48 144 48 142C48 140 50 139 50 137C50 134 49 132 46 132Z"/><path d="M74 132C79 131 82 136 81 142C80 148 76 150 73 148C71 147 72 144 72 142C72 140 70 139 70 137C70 134 71 132 74 132Z"/></g>
+                <g class="org" data-e="vesical"><path d="M51 192C51 185 69 185 69 192C69 199 63 201 60 201C57 201 51 199 51 192Z"/></g>
+                <g class="org" data-e="prostatica"><path class="ghost" d="M51 192C51 185 69 185 69 192C69 199 63 201 60 201C57 201 51 199 51 192Z"/><ellipse cx="60" cy="205.5" rx="5.5" ry="4"/></g>
+                <g class="org" data-e="testicular"><ellipse cx="56.4" cy="217" rx="3.2" ry="4.4"/><ellipse cx="63.6" cy="217" rx="3.2" ry="4.4"/></g>
+                <g class="org" data-e="partes"><circle cx="15.5" cy="150" r="3.6"/><circle class="ln dash" cx="15.5" cy="150" r="7"/></g>
+                <g class="org" data-e="musculo"><path class="ln" d="M38.5 259C41 264 51 264 53.5 259M38.5 281C41 276 51 276 53.5 281"/><ellipse cx="46" cy="270" rx="4.4" ry="5.4"/></g>
+                <g class="org" data-e="doppler"><path class="ln art" d="M72.5 204C74.5 228 75.5 250 73.5 278"/><path class="ln ven" d="M77.5 204C79.5 228 80.5 250 78.5 278"/></g>
+              </g>
+              <g class="halo" transform="translate(60 146)"><circle r="14" fill="url(#bg-glow)"/><circle class="pulse" r="6"/><circle class="dot" r="3.4"/></g>
+            </svg>
+            <div class="zbs" role="group" aria-label="Zonas del cuerpo">
+              <button type="button" class="zb" data-r="cuello" data-e="tiroides" aria-pressed="false" aria-label="Cuello: tiroides" style="left:31.667%;top:7.647%;width:36.667%;height:12.941%"></button>
+              <button type="button" class="zb" data-r="pecho" data-e="mamaria" aria-pressed="false" aria-label="Pecho: mamas" style="left:20.000%;top:20.588%;width:60.000%;height:12.941%"></button>
+              <button type="button" class="zb" data-r="brazo" data-e="partes" aria-pressed="false" aria-label="Brazo: partes blandas, bultos bajo la piel" style="left:-13.333%;top:37.059%;width:36.667%;height:14.118%"></button>
+              <button type="button" class="zb" data-r="abdomen" data-e="abdominal" aria-pressed="false" aria-label="Abdomen: abdominal, hígado y riñón" style="left:25.000%;top:33.529%;width:50.000%;height:18.824%"></button>
+              <button type="button" class="zb" data-r="pelvis" data-e="vesical" aria-pressed="false" aria-label="Pelvis: vejiga, próstata y testículos" style="left:25.000%;top:52.353%;width:50.000%;height:12.941%"></button>
+              <button type="button" class="zb" data-r="muslo" data-e="doppler" aria-pressed="false" aria-label="Muslo: Doppler de venas y arterias" style="left:51.667%;top:65.294%;width:36.667%;height:12.941%"></button>
+              <button type="button" class="zb" data-r="rodilla" data-e="musculo" aria-pressed="false" aria-label="Rodilla: tendones y articulaciones" style="left:11.667%;top:73.529%;width:38.333%;height:12.941%"></button>
+            </div>
+          </div>
+          <svg class="bm-link" aria-hidden="true"><path pathLength="1" d="M0 0"/><circle r="2.6"/></svg>
+          <div class="bm-probe">
+            <div class="lupa" role="img" aria-label="Ilustración de una ecografía simulada"><canvas id="lupa-cv" width="200" height="200" aria-hidden="true"></canvas><span class="lupa-msg" aria-hidden="true"></span></div>
+            <div class="bm-info">
+              <p class="bm-k">Zona</p>
+              <p class="bm-name">Abdomen</p>
+              <p class="bm-sub">Hígado, vesícula y riñones</p>
+              <div class="bm-subs" role="group" aria-label="Elegir ecografía de esta zona"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sel-chips rv" style="--d:1">
         <div class="grp">
           <p class="grp-t" id="g1">Abdomen y vía urinaria</p>
           <div class="chips" role="group" aria-labelledby="g1">
@@ -1107,7 +1242,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   if ('IntersectionObserver' in window) {
     if (heroCta) new IntersectionObserver(function(es){ heroGone = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; syncFloat(); }).observe(heroCta);
     if (finalCta) new IntersectionObserver(function(es){ finalOn = es[0].isIntersecting; syncFloat(); }).observe(finalCta);
-    var bigs = Array.prototype.slice.call(document.querySelectorAll('main .big-wa, #cta-zona'));
+    var bigs = Array.prototype.slice.call(document.querySelectorAll('main .big-wa, #cta-zona, #scan'));
     var vis = new IntersectionObserver(function(es){
       es.forEach(function(en){ en.target._v = en.isIntersecting; });
       inPage = 0; bigs.forEach(function(x){ if (x._v && document.body.contains(x)) inPage++; }); syncFloat();
@@ -1148,6 +1283,184 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     embarazo:  {n:'Ecografía de embarazo', k:'Obstétrica', no:true}
   };
   var UTM = '&utm_source=landing_ecografia&utm_medium=selector&utm_campaign=ecografia_arauco';
+  // ── Cuerpo + lupa: dónde se hace cada ecografía ──
+  var BM = (function(){
+    var map = document.getElementById('bodymap'); if (!map) return null;
+    var stage = map.querySelector('.bm-stage'), body = map.querySelector('.bm-body'), probe = map.querySelector('.bm-probe'), cv = map.querySelector('#lupa-cv');
+    var linkSvg = map.querySelector('.bm-link'), linkP = linkSvg.querySelector('path'), linkC = linkSvg.querySelector('circle');
+    var zbs = map.querySelectorAll('.zb'), rings = map.querySelectorAll('.rings circle'), orgs = map.querySelectorAll('.org'), halo = map.querySelector('.halo');
+    var nameEl = map.querySelector('.bm-name'), subEl = map.querySelector('.bm-sub'), kEl = map.querySelector('.bm-k'), subs = map.querySelector('.bm-subs'), lupa = map.querySelector('.lupa'), msg = map.querySelector('.lupa-msg');
+    var RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var visible = false, current = null, token = 0, wait = null, D = 156, lastTop = null, pick = null;
+    var REG = {cuello:['tiroides'], pecho:['mamaria'], brazo:['partes'], abdomen:['abdominal','hepatica','renal'], pelvis:['vesical','prostatica','testicular'], muslo:['doppler'], rodilla:['musculo']};
+    var REGOF = {}; for (var r in REG) REG[r].forEach(function(k){ REGOF[k] = r; });
+    var PT = {tiroides:[60,49], mamaria:[73,95], partes:[15.5,150], abdominal:[60,146], hepatica:[48,128], renal:[74,140], vesical:[60,193], prostatica:[60,205.5], testicular:[60,217], doppler:[76,242], musculo:[46,270]};
+    var CORTO = {abdominal:'General', hepatica:'Hígado', renal:'Riñón', vesical:'Vejiga', prostatica:'Próstata', testicular:'Testículos'};
+    var N = {abdominal:['Abdomen','Hígado, vesícula y riñones'], hepatica:['Hígado y vesícula','Bajo las costillas, a la derecha'], renal:['Riñones','A cada lado de la cintura'],
+      vesical:['Vejiga','Parte baja del abdomen'], prostatica:['Próstata','Bajo la vejiga, por el abdomen'], tiroides:['Tiroides','En el cuello'],
+      mamaria:['Mamas','Tejido mamario'], partes:['Partes blandas','Bultos bajo la piel'], testicular:['Testículos','Escroto'],
+      musculo:['Tendones y articulaciones','Rodilla, hombro, codo y otras'], doppler:['Venas y arterias','Flujo de sangre, en color']};
+    var OTRO = {gine:['Ginecológica','La realiza el Dr. Rejón'], corazon:['Corazón','Ecocardiograma, con cardiólogo'], embarazo:['Embarazo','No se realiza en el centro']};
+
+    // ── motor de speckle (el mismo del hero, en coordenadas de la sonda) ──
+    function ss(a, b, x){ x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); }
+    function fb(u, v){ return Math.sin(u * 13 + Math.sin(v * 21) * 1.7) * .5 + Math.sin(v * 19 + u * 6 + 1.3) * .3 + Math.sin((u + v) * 31) * .2; }
+    function el(u, v, cu, cv, ru, rv){ var a = (u - cu) / ru, b = (v - cv) / rv; return Math.sqrt(a * a + b * b); }
+    function gs(x, w){ return Math.exp(-x * x / (w * w)); }
+    function near(u, v, e){ if (v < .03) return .85; if (v < .1) return .24 + (Math.sin(v * 260 + u * 3) > .86 ? .4 : 0); return e; }
+    function skinL(u, v, e){ if (v < .035) return .88; if (v < .06) return .3; return e; }
+    function kidney(u, v, cu, cv, A, B, base){
+      var px = (u - cu) / A, py = (v - cv) / B, ang = Math.atan2(py, px), rho = Math.sqrt(px * px + py * py);
+      var R = 1 + .05 * Math.sin(3 * ang + .7) - .17 * Math.exp(-Math.pow(ang - 1.57, 2) / .16), t = rho / R;
+      if (t > 1.2) return base;
+      var caps = gs(t - 1, .04), cortex = ss(.56, .64, t) * (1 - ss(.95, .99, t)), sinus = 1 - ss(.55, .63, t);
+      var pyr = Math.max(0, Math.cos(9 * (ang + .25)) - .35) / .65 * ss(.58, .64, t) * (1 - ss(.78, .86, t));
+      var k = cortex * (.28 * (1 - pyr * .7)) + sinus * (.62 + .25 * (fb(u * 3, v * 3) * .5 + .5));
+      var inK = 1 - ss(.97, 1.02, t), fat = ss(1.04, 1.08, t) * (1 - ss(1.12, 1.2, t));
+      return Math.max(base * (1 - inK) * (1 - fat) + fat * .58 + inK * k, caps * .9);
+    }
+    function sup(u, v, cu, cv, ru, rv){ return Math.pow(Math.abs((u - cu) / ru), 4) + Math.pow(Math.abs((v - cv) / rv), 4); }
+    function seg(u, v, x1, y1, x2, y2){ var dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((u - x1) * dx + (v - y1) * dy) / (dx * dx + dy * dy))); var a = u - x1 - t * dx, b = v - y1 - t * dy; return [Math.sqrt(a * a + b * b), t]; }
+    var S = {
+      abdominal: {lin:0, e:function(u, v){ var e = .45 * (1 + .1 * fb(u, v)); var d = el(u, v, -.1, .46, .36, .15); if (d < 1) e = .03; e += .55 * gs(d - 1, .07); if (v > .62 && Math.abs(u + .1) < .3) e *= 1.3;
+        var p = el(u, v, -.58, .3, .08, .055); if (p < 1) e = .04; e += .4 * gs(p - 1, .12); e = kidney(u, v, .62, .87, .42, .18, e); return near(u, v, e); }},
+      hepatica: {lin:0, e:function(u, v){ var e = .46 * (1 + .1 * fb(u, v));
+        var V = [[-.8, .22], [.12, .16], [.82, .3]]; for (var i = 0; i < 3; i++){ var s = seg(u, v, V[i][0], V[i][1], 0, .86), w = .022 + .035 * s[1]; if (s[0] < w) e = .03; else e += .25 * gs(s[0] - w, .015); }
+        var dd = v - (.9 - .12 * u * u); if (Math.abs(dd) < .016) e = .95; else if (dd > .016) e = .14 + .1 * fb(u * 2, v); return near(u, v, e); }},
+      renal: {lin:0, e:function(u, v){ var e = .44 * (1 + .1 * fb(u, v)); e = kidney(u, v, .02, .6, .78, .28, e); return near(u, v, e); }},
+      vesical: {lin:0, e:function(u, v){ var e = .32 * (1 + .15 * fb(u * 2, v * 2)); var s = sup(u, v, 0, .48, .62, .29); if (s < 1) e = .02; e += .5 * gs(s - 1, .2); if (v > .77 && Math.abs(u) < .55) e *= 1.35;
+        if (v < .2 && Math.abs(u) > .4) e += .3 * (fb(u * 6, v * 6) > .4 ? 1 : 0); return near(u, v, e); }},
+      prostatica: {lin:0, e:function(u, v){ var e = .33 * (1 + .12 * fb(u * 2, v * 2)); var s = sup(u, v, 0, .34, .56, .2); if (s < 1) e = .02; e += .5 * gs(s - 1, .2);
+        var d = el(u, v, 0, .74, .34, .15); if (d < 1) e = .46 + .08 * fb(u * 4, v * 4) + .12 * gs(d, .4); e += .45 * gs(d - 1, .06); return near(u, v, e); }},
+      tiroides: {lin:1, e:function(u, v){ var e = .32 * (1 + .1 * fb(u * 2, v * 2)); if (v < .1) e = .2; else if (v < .21) e = .22 + .5 * gs(v - .1, .008) + .5 * gs(v - .21, .008);
+        var L = el(u, v, -.5, .43, .36, .19), R = el(u, v, .5, .43, .36, .19); if (L < 1 || R < 1) e = .62 + .06 * fb(u * 5, v * 5); e += .3 * (gs(L - 1, .06) + gs(R - 1, .06));
+        if (Math.abs(u) < .24 && Math.abs(v - .27) < .05) e = .6;
+        var t = el(u, v, 0, .5, .2, .17); if (v < .5 && Math.abs(t - 1) < .1) e = .95; if (Math.abs(u) < .17 && v > .5) e = .05 + (Math.sin(v * 70) > .92 ? .5 * (1.2 - v) : 0);
+        for (var s = -1; s <= 1; s += 2){ var c = el(u, v, s * .9, .54, .12, .12); if (c < 1) e = .02; e += .55 * gs(c - 1, .1); }
+        return skinL(u, v, e); }},
+      mamaria: {lin:1, e:function(u, v){ var e; var b = .26 + .04 * Math.sin(u * 4 + 1);
+        if (v < b) e = .2 + (Math.sin(u * 8 + v * 16 + Math.sin(u * 3)) > .9 ? .55 : 0); else if (v < .56) e = .62 + .15 * fb(u * 4, v * 4); else if (v < .62) e = .18; else if (v < .82) e = .34 + (Math.sin(v * 70 - u * 6) > .6 ? .22 : 0); else e = .3;
+        var R = [-.55, .45]; for (var i = 0; i < 2; i++){ var d = el(u, v, R[i], .92, .2, .07); if (v < .92 && Math.abs(d - 1) < .22) e = .9; if (v >= .92 && Math.abs(u - R[i]) < .19) e = .04; }
+        return skinL(u, v, e); }},
+      partes: {lin:1, e:function(u, v){ var f = .47 + .02 * Math.sin(u * 3), e;
+        if (v < f) e = .24 + (Math.sin(u * 6 + v * 22 + Math.sin(u * 2) * 2) > .93 ? .5 : 0); else e = .36 + (Math.sin(v * 110 - u * 8) > .7 ? .2 : 0);
+        e = Math.max(e, .95 * gs(v - f, .012)); return skinL(u, v, e); }},
+      testicular: {lin:1, e:function(u, v){ var e = .07; if (v < .1) e = .55 + .2 * Math.sin(v * 120);
+        var d = el(u, v, .05, .56, .8, .35); if (d < 1) e = .5 + .06 * fb(u * 6, v * 6); e += .45 * gs(d - 1, .05);
+        if (Math.abs(v - (.6 + .05 * u)) < .012 && u > .15 && u < .6) e = .8;
+        var p = el(u, v, -.74, .27, .2, .13); if (p < 1) e = .55 + .1 * fb(u * 5, v * 5); return skinL(u, v, e); }},
+      musculo: {lin:1, e:function(u, v){ var e; var v0 = .28 + .05 * u * u, vb = .66 + .05 * Math.cos(u * 2);
+        if (v < .17) e = .25 + (Math.sin(u * 6 + v * 22) > .94 ? .45 : 0);
+        else if (Math.abs(v - v0) < .1) e = .4 + (Math.sin((v - v0) * 210) > .25 ? .42 : 0) * (.85 + .15 * fb(u * 3, v));
+        else if (v < vb) e = .38 + .1 * fb(u * 4, v * 4); else e = .03;
+        e = Math.max(e, .98 * gs(v - vb, .016)); return skinL(u, v, e); }},
+      doppler: {lin:1, e:function(u, v){ var e; if (v < .25) e = .28 + (Math.sin(u * 6 + v * 22) > .94 ? .4 : 0); else e = .36 + (Math.sin(v * 100 - u * 5) > .7 ? .18 : 0);
+        var a = Math.abs(v - .42), w = Math.abs(v - .65); if (a < .065) e = .02; e += .8 * gs(a - .065, .008); if (w < .09) e = .03; e += .6 * gs(w - .09, .01); return skinL(u, v, e); },
+        c:function(u, v){ var a = Math.abs(v - .42) / .065, w = Math.abs(v - .65) / .09;
+          if (a < 1 && Math.abs(u) < .86) return [214, 72, 72, .92 * Math.sqrt(1 - a * a)];
+          if (w < 1 && Math.abs(u + .08 * Math.sin(v * 9)) < .8) return [66, 146, 224, .82 * Math.sqrt(1 - w * w)];
+          return null; }}
+    };
+
+
+    function draw(key){
+      var my = ++token, ctx = cv.getContext('2d'), W = 200, H = 200; cv.width = W; cv.height = H;
+      ctx.fillStyle = '#071A2B'; ctx.fillRect(0, 0, W, H);
+      var sc = S[key]; if (!sc) return;
+      var img = ctx.createImageData(W, H), d = img.data, row = new Float32Array(W), prev = new Float32Array(W), uu = new Float32Array(W), vv = new Float32Array(W);
+      var seed = 7 + key.length * 131; function rnd(){ seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+      var y = 0;
+      function fila(){
+        for (var x = 0; x < W; x++){
+          var u, v, ok;
+          if (sc.lin){ ok = x >= 14 && x <= 186 && y >= 14 && y <= 188; u = (x - 100) / 86; v = (y - 14) / 174; }
+          else { var dx = x - 100, dy = y - 6, r = Math.sqrt(dx * dx + dy * dy), th = Math.atan2(dx, dy); ok = r > 24 && r < 190 && Math.abs(th) < .64; u = th / .64; v = (r - 24) / 166; }
+          if (!ok){ row[x] = -1; continue; }
+          uu[x] = u; vv[x] = v;
+          var e = sc.e(u, v) * (1 - (sc.lin ? .28 : .42) * v), rr = rnd() || 1e-6;
+          row[x] = Math.max(0, e) * Math.sqrt(-2 * Math.log(rr)) * .62;
+        }
+        for (var x2 = 0; x2 < W; x2++){
+          var i = (y * W + x2) * 4;
+          if (row[x2] < 0){ d[i] = 7; d[i + 1] = 26; d[i + 2] = 43; d[i + 3] = 255; prev[x2] = 0; continue; }
+          var a = row[x2 > 0 && row[x2 - 1] >= 0 ? x2 - 1 : x2], b = row[x2], c = row[x2 < W - 1 && row[x2 + 1] >= 0 ? x2 + 1 : x2];
+          var h = (a + 2 * b + c) / 4, val = h * .7 + prev[x2] * .3; prev[x2] = h; val = Math.min(1, Math.pow(val, .92));
+          var R = 9 + val * 205, Gc = 27 + val * 207, B = 45 + val * 200;
+          if (sc.c){ var col = sc.c(uu[x2], vv[x2]); if (col){ var al = col[3] * (.75 + .25 * (rnd())); R = R * (1 - al) + col[0] * al; Gc = Gc * (1 - al) + col[1] * al; B = B * (1 - al) + col[2] * al; } }
+          d[i] = R; d[i + 1] = Gc; d[i + 2] = B; d[i + 3] = 255;
+        }
+      }
+      function tramo(){
+        if (my !== token) return;
+        var y0 = y, t0 = performance.now();
+        while (y < H && performance.now() - t0 < 8){ fila(); y++; if (!RM && y - y0 >= 9) break; }
+        if (RM){ if (y < H) return requestAnimationFrame(tramo); ctx.putImageData(img, 0, 0); return; }
+        ctx.putImageData(img, 0, 0, 0, y0, W, y - y0);
+        if (y < H){ ctx.fillStyle = 'rgba(142,214,224,.55)'; ctx.fillRect(0, y, W, 1.5); requestAnimationFrame(tramo); }
+      }
+      requestAnimationFrame(tramo);
+    }
+
+    function geom(key){
+      var W = stage.clientWidth, Hs = stage.clientHeight, s = body.clientWidth / 120, bl = body.offsetLeft;
+      D = Math.round(Math.max(132, Math.min(244, W - bl - 120 * s - 26))); map.style.setProperty('--D', D + 'px');
+      var pt = PT[key], mx = pt ? bl + pt[0] * s : bl + 60 * s, my = pt ? pt[1] * s : Hs * .3;
+      var lab = probe.offsetHeight - D, top = Math.round(Math.max(0, Math.min(Hs - D - lab, my - D / 2)));
+      return {W:W, s:s, mx:mx, my:my, top:top};
+    }
+    function linkTo(g){
+      var cx = g.W - 4 - D / 2, cy = g.top + D / 2, dx = g.mx - cx, dy = g.my - cy, L = Math.sqrt(dx * dx + dy * dy) || 1;
+      var ex = cx + dx / L * (D / 2 + 9), ey = cy + dy / L * (D / 2 + 9), k = (ex - g.mx) * .55;
+      linkP.setAttribute('d', 'M' + g.mx.toFixed(1) + ' ' + g.my.toFixed(1) + 'C' + (g.mx + k).toFixed(1) + ' ' + g.my.toFixed(1) + ' ' + (ex - k).toFixed(1) + ' ' + ey.toFixed(1) + ' ' + ex.toFixed(1) + ' ' + ey.toFixed(1));
+      linkC.setAttribute('cx', ex.toFixed(1)); linkC.setAttribute('cy', ey.toFixed(1));
+    }
+    function setSubs(key){
+      var r = REGOF[key], list = r ? REG[r] : [];
+      subs.innerHTML = '';
+      if (list.length < 2) return;
+      list.forEach(function(k){
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'sub'; b.textContent = CORTO[k];
+        b.setAttribute('aria-pressed', String(k === key)); b.setAttribute('aria-label', N[k][0]);
+        b.addEventListener('click', function(){ if (pick) pick(k, 'cuerpo'); });
+        subs.appendChild(b);
+      });
+    }
+    function set(key, anim){
+      var on = !!S[key], zona = on ? N[key] : (OTRO[key] || ['', '']), reg = REGOF[key];
+      var prevKey = current; current = key; clearTimeout(wait);
+      zbs.forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-r') === reg)); });
+      rings.forEach(function(c){ c.classList.toggle('on', c.getAttribute('data-r') === reg); });
+      orgs.forEach(function(o){ o.classList.toggle('on', o.getAttribute('data-e') === key); });
+      map.classList.toggle('bm-otro', !on);
+      kEl.textContent = on ? 'Zona' : (key === 'embarazo' ? 'No disponible' : 'Con otro especialista');
+      nameEl.textContent = zona[0]; subEl.textContent = zona[1]; setSubs(key);
+      msg.textContent = on ? '' : (key === 'embarazo' ? 'No se realiza en el centro' : 'Sin vista: la realiza otro especialista');
+      lupa.setAttribute('aria-label', on ? 'Ilustración de una ecografía simulada: ' + zona[0].toLowerCase() : 'Sin vista simulada para esta ecografía');
+      var g = geom(on ? key : null);
+      if (on) halo.setAttribute('transform', 'translate(' + PT[key][0] + ' ' + PT[key][1] + ')');
+      var moves = anim && !RM && lastTop !== null && Math.abs(g.top - lastTop) > 2;
+      linkSvg.classList.add('off');
+      probe.style.top = g.top + 'px'; lastTop = g.top;
+      if (moves) map.classList.add('bm-moving');
+      function llegar(){
+        map.classList.remove('bm-moving');
+        if (on){ linkTo(geom(key)); void linkP.getBoundingClientRect(); linkSvg.classList.remove('off'); }
+        if (!visible) return;
+        if (on) draw(key); else { token++; var c = cv.getContext('2d'); c.fillStyle = '#071A2B'; c.fillRect(0, 0, cv.width, cv.height); }
+      }
+      if (moves) wait = setTimeout(llegar, 440); else llegar();
+    }
+    if ('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(es){ if (es[0].isIntersecting){ io.disconnect(); visible = true; if (S[current]) draw(current); } }, {rootMargin:'120px 0px'});
+      io.observe(map);
+    } else visible = true;
+    var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt = setTimeout(function(){ if (!current) return; var on = !!S[current], g = geom(on ? current : null); probe.style.top = g.top + 'px'; lastTop = g.top; if (on) linkTo(g); }, 120); });
+    zbs.forEach(function(b){ b.addEventListener('click', function(){
+      var r = b.getAttribute('data-r'); if (REGOF[current] === r) return;
+      if (pick) pick(REG[r][0], 'cuerpo');
+    }); });
+    return {set:set, el:map, onPick:function(f){ pick = f; }};
+  })();
   var box = document.getElementById('scan'), inner = document.getElementById('scan-in');
   var chips = document.querySelectorAll('.chip');
   var hora = '10:00';
@@ -1193,12 +1506,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
     if (anim){ box.classList.remove('anim'); void box.offsetWidth; box.classList.add('anim'); }
     chips.forEach(function(c){ c.setAttribute('aria-pressed', String(c.getAttribute('data-e') === key)); });
+    if (BM) BM.set(key, anim);
   }
   chips.forEach(function(c){ c.addEventListener('click', function(){
     var k = c.getAttribute('data-e'); render(k, true);
     window.dataLayer.push({event:'eco_selector', eco_tipo:k});
-    if (window.innerWidth < 980 && box.getBoundingClientRect().top > window.innerHeight * .6) box.scrollIntoView({block:'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+    var tgt = BM ? BM.el : box;
+    if (window.innerWidth < 980 && tgt.getBoundingClientRect().top > window.innerHeight * .6) tgt.scrollIntoView({block:'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
   }); });
+  if (BM) BM.onPick(function(k, via){ render(k, true); window.dataLayer.push({event:'eco_selector', eco_tipo:k, via:via}); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ render('abdominal', false); });
   else render('abdominal', false);
 })();
