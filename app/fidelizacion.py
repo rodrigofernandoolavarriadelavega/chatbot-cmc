@@ -799,13 +799,23 @@ def _msg_crosssell_odonto_estetica(p: dict) -> dict:
 async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
     """Cross-sell odontología frecuente → estética facial. Cron bi-semanal.
 
-    Sin template aprobado → solo envía con ventana 24h abierta + consent.
+    Ventana 24h abierta → mensaje interactivo libre.
+    Ventana cerrada → template APPROVED `crosssell_odonto_estetica` ({{1}} = nombre;
+    botones Ver horas / Más información / No por ahora). Antes de 2026-10-06 el
+    template no se usaba: el 1-oct se saltaron 40 de 42 candidatos.
     """
     candidatos = get_crosssell_odonto_estetica_candidatos()
     if not candidatos:
         log.info("Cross-sell Odonto→Estética: sin candidatos")
         return
     log.info("Cross-sell Odonto→Estética: enviando %d mensaje(s)", len(candidatos))
+    _tpl_aprobado = False
+    if USE_TEMPLATES and send_template_fn is not None:
+        from winback import is_template_approved as _is_tpl_approved
+        _tpl_aprobado = await _is_tpl_approved("crosssell_odonto_estetica")
+        if not _tpl_aprobado:
+            log.warning("Cross-sell Odonto→Estética: template crosssell_odonto_estetica "
+                        "no APPROVED en Meta — solo ventana 24h")
     for p in candidatos:
         phone = p.get("phone", "")
         if not puede_enviar_campana(phone, "crosssell_odonto_estetica", dias_cooldown=90):
@@ -815,10 +825,31 @@ async def enviar_crosssell_odonto_estetica(send_fn, send_template_fn=None):
                       {"template": "crosssell_odonto_estetica"})
             continue
         if not is_window_open(phone):
-            log_event(phone, "template_skip_no_aprobado",
-                      {"template": "crosssell_odonto_estetica",
-                       "motivo": "sin_template_y_ventana_cerrada"})
-            log.debug("Cross-sell Odonto→Estética skip ventana cerrada → %s", phone)
+            if not _tpl_aprobado:
+                log_event(phone, "template_skip_no_aprobado",
+                          {"template": "crosssell_odonto_estetica",
+                           "motivo": "sin_template_y_ventana_cerrada"})
+                log.debug("Cross-sell Odonto→Estética skip ventana cerrada → %s", phone)
+                continue
+            try:
+                nombre = _nombre_corto(p.get("nombre")) or "paciente"
+                msg_id = await send_template_fn(
+                    phone,
+                    "crosssell_odonto_estetica",
+                    body_params=[nombre],
+                    button_payloads=["xestetica_si", "xestetica_info", "xestetica_no"],
+                )
+                if not msg_id:
+                    # Meta rechazó u omitió: NO quemar el cooldown de 90 días.
+                    log_event(phone, "template_send_failed",
+                              {"template": "crosssell_odonto_estetica"})
+                    continue
+                save_fidelizacion_msg(phone, "crosssell_odonto_estetica")
+                set_pending_crosssell(phone, "crosssell_odonto_estetica", "estética facial")
+                log_event(phone, "template_enviado", {"template": "crosssell_odonto_estetica"})
+                log_message(phone, "out", "[Cross-sell Odonto→Estética — template]", "IDLE")
+            except Exception as e:
+                log.error("Error cross-sell odonto-estetica (template) phone=%s: %s", phone, e)
             continue
         try:
             save_fidelizacion_msg(phone, "crosssell_odonto_estetica")  # BUG-01
@@ -1501,8 +1532,10 @@ def _get_crosssell_post_dental_candidatos() -> list:
                 """
                 SELECT DISTINCT cb.phone, cb.paciente_nombre, cb.profesional
                 FROM citas_bot cb
-                WHERE cb.especialidad IN ('odontología', 'odontologia',
-                                          'odontología general', 'odontologia general')
+                -- lower(): citas_bot guarda 'Odontología General'. Con el IN
+                -- case-sensitive el job dio 0 candidatos desde mayo-2026.
+                WHERE lower(cb.especialidad) IN ('odontología', 'odontologia',
+                                                 'odontología general', 'odontologia general')
                   AND cb.fecha BETWEEN ? AND ?
                   AND cb.cancel_detected_at IS NULL
                 """,

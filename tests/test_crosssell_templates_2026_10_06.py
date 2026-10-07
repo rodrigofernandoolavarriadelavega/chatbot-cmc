@@ -9,10 +9,17 @@ Además, el botón del template llega al webhook como TEXTO ("Sí, agendar
 control") y el mapa de cross-sell traducía a `xmgcheck_si/no`, ids que
 ningún handler escucha (el handler es `xchequeo_si/no`).
 
-Correr: venv/bin/python -m pytest tests/test_crosssell_mg_chequeo_template_2026_10_06.py -q
+Mismo bug en crosssell_odonto_estetica. Y crosssell_post_dental_ortodoncia
+nunca envió nada: filtraba especialidad en minúsculas ('odontología general')
+y citas_bot guarda 'Odontología General' → 0 candidatos; sus botones además
+no tenían handler.
+
+Correr: venv/bin/python -m pytest tests/test_crosssell_templates_2026_10_06.py -q
 """
 import asyncio
 import json
+
+import pytest
 import os
 import re
 import sys
@@ -131,7 +138,49 @@ def test_envio_fallido_no_quema_cooldown(monkeypatch):
     assert ("56911111111", "template_send_failed") in events
 
 
-# ── Respuesta al botón del template (llega como texto) ──────────────────────
+# ── Estética: mismo patrón de template ──────────────────────────────────────
+
+def test_estetica_ventana_cerrada_envia_template(monkeypatch):
+    tpl_fn, free_fn, sent_tpl, sent_free, saved, events = _setup(monkeypatch)
+    monkeypatch.setattr(fidelizacion, "get_crosssell_odonto_estetica_candidatos",
+                        lambda: [{"phone": "56911111111", "nombre": "Juana Pérez"}])
+    asyncio.run(fidelizacion.enviar_crosssell_odonto_estetica(free_fn, send_template_fn=tpl_fn))
+    assert len(sent_tpl) == 1 and sent_free == []
+    assert sent_tpl[0]["template"] == "crosssell_odonto_estetica"
+    assert sent_tpl[0]["body_params"] == ["Juana"]
+    assert saved == [("56911111111", "crosssell_odonto_estetica")]
+
+
+def test_estetica_envio_fallido_no_quema_cooldown(monkeypatch):
+    tpl_fn, free_fn, sent_tpl, sent_free, saved, events = _setup(monkeypatch)
+    monkeypatch.setattr(fidelizacion, "get_crosssell_odonto_estetica_candidatos",
+                        lambda: [{"phone": "56911111111", "nombre": "Juana Pérez"}])
+
+    async def tpl_falla(*a, **k):
+        return None
+
+    asyncio.run(fidelizacion.enviar_crosssell_odonto_estetica(free_fn, send_template_fn=tpl_falla))
+    assert saved == []
+    assert ("56911111111", "template_send_failed") in events
+
+
+# ── Post-dental: el filtro de especialidad ya encuentra candidatos ──────────
+
+def test_post_dental_encuentra_odontologia_general_con_mayuscula():
+    from datetime import date, timedelta
+    with session.db() as conn:
+        conn.execute("DELETE FROM citas_bot")
+        conn.execute(
+            "INSERT INTO citas_bot (phone, id_cita, especialidad, profesional, fecha, hora, paciente_nombre) "
+            "VALUES (?,?,?,?,?,?,?)",
+            ("56933330001", "7001", "Odontología General", "Dra. Javiera Burgos",
+             (date.today() - timedelta(days=2)).isoformat(), "10:00", "Ana Soto"))
+        conn.commit()
+    cands = fidelizacion._get_crosssell_post_dental_candidatos()
+    assert [c["phone"] for c in cands] == ["56933330001"]
+
+
+# ── Botones de template (llegan como TEXTO) → handler, sin Haiku ────────────
 
 def _mock_medilink():
     import medilink as _ml
@@ -152,14 +201,16 @@ _mock_medilink()
 _mock_messaging()
 import flows as flows_mod  # noqa: E402
 
+_SIN_CLAUDE = AsyncMock(side_effect=AssertionError("llamó a Claude"))
 
-def _seed(phone):
+
+def _seed(phone, tipo, destino):
     with session.db() as conn:
         conn.execute("DELETE FROM fidelizacion_msgs")
         conn.execute("DELETE FROM conversation_events")
         conn.commit()
-    session.save_fidelizacion_msg(phone, "crosssell_mg_chequeo")
-    session.set_pending_crosssell(phone, "crosssell_mg_chequeo", "medicina general")
+    session.save_fidelizacion_msg(phone, tipo)
+    session.set_pending_crosssell(phone, tipo, destino)
 
 
 def _eventos(phone):
@@ -168,33 +219,64 @@ def _eventos(phone):
             "SELECT event FROM conversation_events WHERE phone=?", (phone,))]
 
 
-def test_boton_si_del_template_resuelve_sin_llamar_a_claude():
+@pytest.mark.parametrize("tipo,destino,texto,esp_agendar", [
+    ("crosssell_mg_chequeo", "medicina general", "Sí, agendar control", "medicina general"),
+    ("crosssell_odonto_estetica", "estética facial", "Ver horas", "estética facial"),
+    ("crosssell_post_dental_ortodoncia", "ortodoncia", "Sí, agendar evaluación", "ortodoncia"),
+])
+def test_boton_si_inicia_agendar(tipo, destino, texto, esp_agendar):
     phone = "56900002001"
-    _seed(phone)
+    _seed(phone, tipo, destino)
     with patch.object(flows_mod, "_iniciar_agendar",
                       new=AsyncMock(return_value="OK_AGENDAR")) as ini, \
-         patch("claude_helper._claude_create",
-               new=AsyncMock(side_effect=AssertionError("llamó a Claude"))):
+         patch("claude_helper._claude_create", new=_SIN_CLAUDE):
         resp = asyncio.run(flows_mod.handle_message(
-            phone, "Sí, agendar control", {"state": "IDLE", "data": {}}))
+            phone, texto, {"state": "IDLE", "data": {}}))
     assert ini.await_count == 1, f"no inició agendar; resp={resp!r}"
-    assert ini.await_args.args[2] == "medicina general"
-
-
-def test_boton_no_del_template_cierra_sin_llamar_a_claude():
-    phone = "56900002002"
-    _seed(phone)
-    with patch("claude_helper._claude_create",
-               new=AsyncMock(side_effect=AssertionError("llamó a Claude"))):
-        resp = asyncio.run(flows_mod.handle_message(
-            phone, "No por ahora", {"state": "IDLE", "data": {}}))
-    assert "Sin problema" in str(resp)
+    assert ini.await_args.args[2] == esp_agendar
     assert session.get_pending_crosssell(phone, hours=48) is None
 
 
-def test_mapa_texto_libre_apunta_a_handlers_que_existen():
-    # Respaldo cuando no hay pending: el mapa debe traducir a ids con handler.
+@pytest.mark.parametrize("tipo,destino,texto,evento", [
+    ("crosssell_mg_chequeo", "medicina general", "No por ahora", "crosssell_mg_chequeo_rechazo"),
+    ("crosssell_odonto_estetica", "estética facial", "No por ahora", "crosssell_odonto_estetica_rechazo"),
+    ("crosssell_post_dental_ortodoncia", "ortodoncia", "Más información", "crosssell_post_dental_ortodoncia_info"),
+])
+def test_otros_botones_llegan_a_su_handler(tipo, destino, texto, evento):
+    phone = "56900002002"
+    _seed(phone, tipo, destino)
+    with patch("claude_helper._claude_create", new=_SIN_CLAUDE):
+        asyncio.run(flows_mod.handle_message(phone, texto, {"state": "IDLE", "data": {}}))
+    assert evento in _eventos(phone)
+
+
+def test_estetica_mas_informacion_llega_al_handler():
+    phone = "56900002003"
+    _seed(phone, "crosssell_odonto_estetica", "estética facial")
+    with patch.object(flows_mod, "respuesta_faq", new=AsyncMock(return_value=None)), \
+         patch("claude_helper._claude_create", new=_SIN_CLAUDE):
+        resp = asyncio.run(flows_mod.handle_message(
+            phone, "Más información", {"state": "IDLE", "data": {}}))
+    assert "crosssell_odonto_estetica_info" in _eventos(phone)
+    assert "estética facial" in str(resp)
+
+
+@pytest.mark.parametrize("tipo,archivo", [
+    ("crosssell_mg_chequeo", "crosssell_mg_chequeo.json"),
+    ("crosssell_odonto_estetica", "crosssell_odonto_estetica.json"),
+    ("crosssell_post_dental_ortodoncia", "crosssell_ortodoncia_post_dental_v1.json"),
+])
+def test_cada_boton_del_template_tiene_payload_con_handler(tipo, archivo):
+    """Guardia: si alguien cambia los botones del template, esto avisa."""
+    import re as _re
+    tpl = json.loads((ROOT / "templates" / "whatsapp_templates" / archivo).read_text(encoding="utf-8"))
+    botones = next(c for c in tpl["components"] if c["type"] == "BUTTONS")["buttons"]
     src = (ROOT / "app" / "flows.py").read_text(encoding="utf-8")
-    assert '"crosssell_mg_chequeo":     ("xchequeo_si", "xchequeo_no")' in src
-    assert 'if tl == "xchequeo_si":' in src and 'if tl == "xchequeo_no":' in src
-    assert "xmgcheck" not in src
+    for b in botones:
+        key = _re.sub(r"[^a-z ]", "", flows_mod._sin_tildes_precio(b["text"])).strip()
+        payload = flows_mod._TEMPLATE_BTN_PAYLOAD[tipo].get(key)
+        # "No por ahora" sin entrada propia cae al clasificador (caché → "no")
+        if payload is None:
+            assert key in ("no por ahora",), f"{tipo}: botón {b['text']!r} sin payload"
+            continue
+        assert f'if tl == "{payload}":' in src, f"{payload} no tiene handler"

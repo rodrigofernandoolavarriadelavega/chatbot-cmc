@@ -1405,9 +1405,6 @@ _CROSSSELL_RESP_CACHE: dict[str, str] = {
     "me interesa":           "si",
     "me interesa si":        "si",
     "si me gustaria":        "si",
-    # Botón del template crosssell_mg_chequeo (llega como texto, con tilde)
-    "si agendar control":    "si",
-    "sí agendar control":    "si",
     # Rechazos
     "no":                    "no",
     "no por ahora":          "no",

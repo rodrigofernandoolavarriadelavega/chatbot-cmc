@@ -655,6 +655,25 @@ _PRECIO_LISTA_FILAS: list[tuple[str, str, str | None, str | None]] = [
 ]
 
 
+# Texto de los botones QUICK_REPLY de los templates de cross-sell (sin tildes ni
+# puntuación) → payload del handler. Debe calzar con lo APPROVED en Meta.
+_TEMPLATE_BTN_PAYLOAD: dict[str, dict[str, str]] = {
+    "crosssell_mg_chequeo": {
+        "si agendar control": "xchequeo_si",
+        "no por ahora": "xchequeo_no",
+    },
+    "crosssell_odonto_estetica": {
+        "ver horas": "xestetica_si",
+        "mas informacion": "xestetica_info",
+        "no por ahora": "xestetica_no",
+    },
+    "crosssell_post_dental_ortodoncia": {
+        "si agendar evaluacion": "xpostdental_orto_si",
+        "mas informacion": "xpostdental_orto_info",
+    },
+}
+
+
 def _sin_tildes_precio(t: str) -> str:
     import unicodedata as _ud
     t = _ud.normalize("NFD", (t or "").lower())
@@ -5018,6 +5037,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Bug original (Ernesto 2026-05-28): bot ofreció kine, paciente respondió
         # "Sí, me interesa" y el bot cayó al menú genérico perdiendo el contexto.
         _pending_cs = get_pending_crosssell(phone, hours=48)
+        # Botón de TEMPLATE: Meta lo entrega como texto ("Sí, agendar control"),
+        # no como payload (main.py usa button.text). Traducción determinista al
+        # payload del handler según el cross-sell pendiente — sin Haiku.
+        if _pending_cs and tl:
+            _btn_key = re.sub(r"[^a-z ]", "", _sin_tildes_precio(tl)).strip()
+            _btn_payload = _TEMPLATE_BTN_PAYLOAD.get(_pending_cs["tipo"], {}).get(_btn_key)
+            if _btn_payload:
+                consume_pending_crosssell(phone)
+                log_event(phone, "crosssell_boton_template",
+                          {"tipo": _pending_cs["tipo"], "payload": _btn_payload})
+                tl = _btn_payload
         # Guard: no interceptar si el texto ya es un button payload conocido;
         # esos tienen handler dedicado más abajo y no necesitan clasificación.
         # Se excluyen: cross-sell (x*), adherencia (kine_*), reactivación (reac_*),
@@ -5695,14 +5725,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # bot cayó al fallback genérico en vez de iniciar flujo de kine.
         _AFIRMATIVOS_CS = {"sí, me interesa", "si, me interesa", "sí me interesa",
                            "si me interesa", "me interesa", "sí me interesa.",
-                           "si me interesa.", "si interesa",
-                           # Botón del template crosssell_mg_chequeo (llega como texto)
-                           "sí, agendar control", "si, agendar control",
-                           "sí agendar control", "si agendar control"}
+                           "si me interesa.", "si interesa"}
         _NEGATIVOS_CS = {"no, gracias", "no gracias", "no por ahora",
                          "no por ahora.", "no, gracias.", "no me interesa",
                          "no, no me interesa"}
-        if (tl in _AFIRMATIVOS_CS or tl in _NEGATIVOS_CS) and tl not in ("xkine_si","xkine_no","xorlfono_si","xorlfono_no","xestetica_si","xestetica_info","xestetica_no","xchequeo_si","xchequeo_no","kine_adh_si","kine_adh_no","reac_si","reac_luego","wb_agendar","wb_info","upsell_si","no_control"):
+        if (tl in _AFIRMATIVOS_CS or tl in _NEGATIVOS_CS) and tl not in ("xkine_si","xkine_no","xorlfono_si","xorlfono_no","xestetica_si","xestetica_info","xestetica_no","xchequeo_si","xchequeo_no","xpostdental_orto_si","xpostdental_orto_info","xpostdental_orto_no","kine_adh_si","kine_adh_no","reac_si","reac_luego","wb_agendar","wb_info","upsell_si","no_control"):
             try:
                 from session import db as _cs_conn
                 with _cs_conn() as _ccs:
@@ -5722,6 +5749,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "crosssell_orl_fono":       ("xorlfono_si", "xorlfono_no"),
                         "crosssell_odonto_estetica":("xestetica_si", "xestetica_no"),
                         "crosssell_mg_chequeo":     ("xchequeo_si", "xchequeo_no"),
+                        "crosssell_post_dental_ortodoncia": ("xpostdental_orto_si", "xpostdental_orto_no"),
                     }
                     if _tipo_cs in _MAP_CS:
                         tl = _MAP_CS[_tipo_cs][0 if _es_afirm else 1]
@@ -5785,6 +5813,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if tl == "xestetica_no":
             log_event(phone, "crosssell_odonto_estetica_rechazo", {})
             return "Entendido 😊 _Escribe *menu* cuando quieras volver._"
+
+        # ── Cross-sell post-dental → Ortodoncia ───────────────────────────
+        if tl == "xpostdental_orto_si":
+            log_event(phone, "crosssell_post_dental_ortodoncia_acepto", {})
+            perfil = get_profile(phone)
+            if perfil:
+                data["rut_conocido"] = perfil["rut"]
+                data["nombre_conocido"] = perfil["nombre"]
+            return await _iniciar_agendar(phone, data, "ortodoncia")
+        if tl == "xpostdental_orto_info":
+            log_event(phone, "crosssell_post_dental_ortodoncia_info", {})
+            return (
+                "La *evaluación de ortodoncia* es con la Dra. Daniela Castillo y cuesta "
+                "*$15.000*: revisa tu mordida y te entrega el plan de tratamiento con "
+                "sus costos.\n\n"
+                "Como referencia, la instalación de brackets parte en $120.000 y los "
+                "controles mensuales son de $30.000.\n\n"
+                "_Escribe *agendar ortodoncia* si quieres reservar tu evaluación._"
+            )
+        if tl == "xpostdental_orto_no":
+            log_event(phone, "crosssell_post_dental_ortodoncia_rechazo", {})
+            return "Sin problema 😊 Cuando quieras, avísame.\n_Escribe *menu* para ver opciones._"
 
         # ── Cross-sell Medicina General → Chequeo preventivo ──────────────
         if tl == "xchequeo_si":
