@@ -3,6 +3,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# systemd (EnvironmentFile) NO quita comentarios al final de la línea:
+# "X_ACTIVE=true  # auto-set" llegaba como "true  # auto-set" y cualquier
+# `getenv(...).lower() in ("true",...)` lo leía como False. Así quedó apagado
+# MARKETING_CONSENT_BLAST_ACTIVE desde el 2026-05-27 sin un solo log.
+# Solo se limpia si el primer token es un booleano o un número (no toca
+# secretos ni textos libres).
+import re as _re_env
+for _k, _v in list(os.environ.items()):
+    _m = _re_env.match(r"^(true|false|yes|no|on|off|\d+(?:\.\d+)?)\s+#.*$", _v, _re_env.I)
+    if _m:
+        os.environ[_k] = _m.group(1)
+
 MEDILINK_BASE_URL  = os.getenv("MEDILINK_BASE_URL", "https://api.medilink2.healthatom.com/api/v5")
 MEDILINK_TOKEN     = os.getenv("MEDILINK_TOKEN", "")
 MEDILINK_SUCURSAL  = int(os.getenv("MEDILINK_SUCURSAL", "1"))

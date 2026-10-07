@@ -81,6 +81,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_audiencias_captacion,
                   _job_marketing_consent_blast,
                   _job_consent_agendados,
+                  _job_consent_post_agenda,
                   _job_takeover_pendiente_alert,
                   _job_health_report,
                   _job_caja_report,
@@ -321,6 +322,16 @@ async def lifespan(app: FastAPI):
         id="consent_agendados_horario",
         replace_existing=True,
         misfire_grace_time=1800,  # F046: hasta 30 min de gracia (corre cada hora, 30 min es razonable)
+        coalesce=True,
+    )
+    # Consent de marketing a quien agendó POR EL BOT (el barrido de arriba los
+    # excluye). Cada 10 min, desfasado al :07 para no chocar con el escalonado.
+    scheduler.add_job(
+        _job_consent_post_agenda,
+        CronTrigger(minute="7-59/10", timezone=_CLT),
+        id="consent_post_agenda",
+        replace_existing=True,
+        misfire_grace_time=300,
         coalesce=True,
     )
     # Promo post-consent: consent_marketing aceptado + ATENCIÓN REALIZADA (pago

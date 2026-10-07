@@ -3586,7 +3586,7 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
                 break
             id_cita = str(cita.get("id_cita") or cita.get("id") or "")
             if id_cita and id_cita in bot_cita_ids:
-                continue  # agendada por el bot → el bot le pregunta
+                continue  # agendada por el bot → la cubre _job_consent_post_agenda
             id_pac = cita.get("id_paciente")
             if not id_pac:
                 continue
@@ -3643,6 +3643,84 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
         return {"enviados": enviados, "candidatos": len(candidatos)}
     except Exception as e:
         log.error("_job_consent_agendados falló: %s", e)
+        return {"status": "error", "error": str(e)}
+
+
+
+async def _job_consent_post_agenda() -> dict:
+    """Cada 10 min: pide consent_marketing_v2 a quien AGENDÓ POR EL BOT.
+
+    El barrido horario (_job_consent_agendados) excluye las citas del bot
+    suponiendo que "el bot le pregunta" — y el bot nunca preguntaba: 97 de 158
+    pacientes nuevos agendados por el bot en sep-2026 (61%) jamás recibieron el
+    consentimiento. Se manda 10 min - 6 h después de crear la cita (no en ráfaga
+    con la confirmación ni con "¿cómo nos conociste?"), solo si la sesión está
+    en IDLE y el teléfono nunca entró al sistema de consent. La ventana de 24 h
+    está abierta (acaba de escribir) → la plantilla UTILITY no tiene costo.
+    La respuesta la registra consent_marketing.detectar como siempre.
+    Gated CONSENT_POST_AGENDA_ACTIVE (default true). Cap CONSENT_POST_AGENDA_CAP.
+    """
+    import os as _os
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _ZI
+    _env_on = _os.getenv("CONSENT_POST_AGENDA_ACTIVE", "true").lower() in ("true", "1", "yes")
+    try:
+        from alma_switchboard import effective as _sb_eff
+        _on = _sb_eff("CONSENT_POST_AGENDA_ACTIVE", _env_on)
+    except Exception:
+        _on = _env_on
+    if not _on:
+        return {"status": "inactive"}
+    if not (9 <= _dt.now(_ZI("America/Santiago")).hour < 21):
+        return {"status": "fuera_horario"}
+    CAP = int(_os.getenv("CONSENT_POST_AGENDA_CAP", "20"))
+    try:
+        from session import db as _conn, get_session, log_message, log_event, normalize_wa_id
+        from winback import (marketing_consent_status, phone_in_opt_out,
+                             registrar_consent_enviado, is_template_approved)
+        from messaging import send_whatsapp_template, render_template_body
+
+        with _conn() as cdb:
+            rows = cdb.execute(
+                "SELECT cb.phone, MAX(p.nombre) FROM citas_bot cb "
+                "LEFT JOIN contact_profiles p ON p.phone = cb.phone "
+                "WHERE cb.created_at <= datetime('now','-10 minutes') "
+                "  AND cb.created_at >= datetime('now','-6 hours') "
+                "GROUP BY cb.phone"
+            ).fetchall()
+        if not rows:
+            return {"enviados": 0, "candidatos": 0}
+        if not await is_template_approved("consent_marketing_v2"):
+            log.warning("consent_post_agenda: consent_marketing_v2 no APPROVED — skip")
+            return {"status": "template_no_aprobado"}
+
+        enviados = 0
+        for phone, nombre in rows:
+            if enviados >= CAP:
+                break
+            teln = normalize_wa_id(phone or "")
+            if not teln or len(teln) < 11:
+                continue
+            if (get_session(teln) or {}).get("state", "IDLE") != "IDLE":
+                continue  # sigue conversando → la próxima corrida
+            if marketing_consent_status(teln) is not None:
+                continue  # ya se le pidió (o ya respondió)
+            if phone_in_opt_out(teln):
+                continue
+            primer = ((nombre or "").strip().split() or ["Paciente"])[0].capitalize()
+            try:
+                await send_whatsapp_template(teln, "consent_marketing_v2", body_params=[primer])
+                log_message(teln, "out", render_template_body("consent_marketing_v2", [primer]), "IDLE")
+                registrar_consent_enviado(teln)
+                log_event(teln, "consent_post_agenda_enviado", {})
+                enviados += 1
+            except Exception as _e:
+                log.error("consent_post_agenda: error ...%s: %s", teln[-4:], _e)
+        if enviados:
+            log.info("_job_consent_post_agenda: enviados=%d de %d citas recientes", enviados, len(rows))
+        return {"enviados": enviados, "candidatos": len(rows)}
+    except Exception as e:
+        log.error("_job_consent_post_agenda falló: %s", e)
         return {"status": "error", "error": str(e)}
 
 
