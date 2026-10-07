@@ -577,7 +577,7 @@ PRECIOS_SLOT = {
     # nutriólogo. Nunca ofrecer bono Fonasa para esta consulta.
     "Nutriología y Diabetología": ("particular", 60000),
     "Tecnología Médica Oftalmológica": ("particular", 15000),  # TM Ana Celedón, $15.000 a TODOS (sin Fonasa)
-    "Fonoaudiología":         ("particular", 30000),   # Evaluación infantil/adulto = prestación 5700 en Medilink (dueño 2026-10-03)
+    "Fonoaudiología":         ("particular", 25000),   # Evaluación infantil/adulto = prestación 5700 en Medilink (dueño 2026-10-07: $25.000)
     "Podología":              ("particular", 20000, "desde"),
     "Cardiología":            ("particular", 40000),
     "Ginecología":            ("particular", 30000, "eco ginecológica: $35.000"),  # dueño 2026-06-12: ATENCIÓN $30.000, ECO $35.000 (F034 había conflado la eco)

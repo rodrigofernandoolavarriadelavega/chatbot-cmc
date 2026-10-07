@@ -341,7 +341,7 @@ PAGINAS_3["pediatra-arauco"] = pag(
         ("Otras atenciones para niños y adolescentes",
          "<ul>"
          "<li><strong>Psicología:</strong> la Ps. Jacquelinne Salas atiende niños, adolescentes y adultos, de forma presencial (Fonasa $20.000 directo, particular $25.000). Jorge Montalba también atiende psicología infantil, con bono Fonasa ($14.420).</li>"
-         "<li><strong>Fonoaudiología:</strong> Juana Arratia evalúa lenguaje, habla, voz y deglución en niños. La evaluación cuesta $30.000.</li>"
+         "<li><strong>Fonoaudiología:</strong> Juana Arratia evalúa lenguaje, habla, voz y deglución en niños. La evaluación cuesta $25.000.</li>"
          "<li><strong>Odontología:</strong> la Dra. Burgos y el Dr. Jiménez atienden niños; no hay odontopediatría dedicada. Evaluación: $15.000.</li>"
          "<li><strong>Podología infantil:</strong> Andrea Guevara realiza atención pediátrica por $13.000.</li>"
          "</ul>"),
