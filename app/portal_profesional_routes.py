@@ -204,9 +204,14 @@ def _ctx(request: Request, token: str | None, cmc_session: str | None) -> dict:
     elif adm and hmac.compare_digest(tk, adm):
         rol, actor = "recepcion", "Recepción"
     else:
-        rol, actor = "perfil", prof.get("variante") or "Perfil Alma"
-    fwd = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
-    ip = fwd or (request.client.host if request.client else "")
+        # Otros perfiles Alma con el módulo habilitado NO tienen alcance definido:
+        # antes caían como "perfil" con scope None = veían TODOS los pacientes.
+        raise HTTPException(403, "Este perfil no tiene acceso al Portal del Profesional.")
+    # El primer elemento de X-Forwarded-For lo controla el cliente (falsificable);
+    # X-Real-IP lo fija nginx, y el ÚLTIMO de XFF es el que agregó nuestro proxy.
+    real = (request.headers.get("x-real-ip") or "").strip()
+    xff = [x.strip() for x in (request.headers.get("x-forwarded-for") or "").split(",") if x.strip()]
+    ip = real or (xff[-1] if xff else "") or (request.client.host if request.client else "")
     return {
         "rol": rol, "actor": actor, "scope": scope,
         "actor_hash": hashlib.sha256(f"pp:{tk}".encode()).hexdigest()[:12],
@@ -806,6 +811,7 @@ def api_buscar(request: Request, q: str = Query("", max_length=60),
                 res.append({"rut": _fmt_rut(rut), "nombre": nombre})
         return _json({"pacientes": res[:15]})
     ctx = _ctx(request, token, cmc_session)
+    _tope_fichas(ctx)   # buscar por RUT también expone pacientes: mismo tope
     cands: list[str] = []
     with db() as c:
         if es_rut:
@@ -874,6 +880,7 @@ def api_preparar(rut: str, request: Request, desde: str = Query(""),
     else:
         ctx = _ctx(request, token, cmc_session)
         _exigir_alcance(ctx, k, "preparar_control")
+        _tope_fichas(ctx)
         f = _ficha_real(k)
         f["citas"] = _citas_bi(k, ctx["scope"])
     base = "ultima_atencion"
