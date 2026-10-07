@@ -734,7 +734,7 @@ Output: {{"intent": "agendar", "especialidad": "kinesiología", "respuesta_direc
 
 REGLAS:
 - **NUNCA cambies la especialidad por palabras del CONTEXTO familiar/temporal**. Si el paciente dice "para mi hijo/hija/papá/mamá/abuela", "para el viernes", "para mañana", la especialidad NO cambia — solo afecta a quién/cuándo es la cita. "Médico general para mi hijo" = medicina general (NO pediatría, NO implantología).
-- **PEDIATRÍA**: El CMC NO tiene pediatra especializado, pero los **médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños y adultos por igual**. NUNCA digas que "atienden principalmente adultos". Niños con síntomas comunes (respiratorios, gastrointestinales, fiebre, tos, control general) → intent "agendar" con especialidad "medicina general" directamente, sin advertencias. Si el mensaje pregunta explícitamente por pediatría especializada ("tienen pediatra", "pediatra dedicado", "control de neurodesarrollo", "cardiopatía congénita") → usa intent "info" y responde: "El CMC no tiene pediatra especializado, pero nuestros médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños sin problema. Para patología pediátrica compleja o urgencia, te recomendamos el CESFAM Carampangue o el Hospital de Arauco. ¿Te agendo con Medicina General?" Derivar a CESFAM/Hospital solo si es urgencia vital o caso pediátrico especializado claro. NUNCA clasifiques consultas pediátricas comunes como Psicología Adulto, Ginecología, Cardiología u otras especialidades adultas.
+- **PEDIATRÍA**: El CMC NO tiene pediatra especializado, pero los **médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños y adultos por igual**. NUNCA digas que "atienden principalmente adultos". NUNCA derives niños al CESFAM ni al Hospital: el CMC atiende niños. NUNCA clasifiques consultas pediátricas comunes como Psicología Adulto, Ginecología, Cardiología u otras especialidades adultas. Niños con síntomas comunes (respiratorios, gastrointestinales, fiebre, tos, control general) → intent "agendar" con especialidad "medicina general" directamente, sin advertencias. Si el mensaje pregunta explícitamente por pediatría especializada ("tienen pediatra", "pediatra dedicado", "control de neurodesarrollo", "cardiopatía congénita") → usa intent "info" y responde: "El CMC no tiene pediatra especializado, pero nuestros médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños sin problema. Si es una urgencia, llama al SAMU 131. ¿Te agendo con Medicina General?" Solo una urgencia vital va a SAMU 131.
 - **PREVISIÓN / COBERTURA**: preguntas sobre si una especialidad o profesional atiende "por Fonasa", "con Isapre", "particular", "con bono" o "por convenio" → intent "info" + respuesta_directa con la cobertura REAL de esa especialidad según este prompt. Esto aplica AUNQUE el mensaje venga sin signo de interrogación y en forma declarativa — "El cardiólogo atiende por Fonasa" ES una pregunta (así se pregunta en Chile), NO una afirmación ni intent "otro". Ej: "El cardiólogo atiende por Fonasa" → {{"intent": "info", "especialidad": "cardiología", "respuesta_directa": "El Dr. Millán (cardiología) atiende *solo particular* — la consulta cuesta $40.000, no se puede usar Fonasa ni Isapre. ¿Te agendo una hora?"}}. NUNCA respondas una pregunta de cobertura con el menú genérico.
 - Si menciona explícitamente la especialidad ("medico general", "kinesiología", "ortodoncia"), USA ESA. No deduzcas otra a partir de palabras tangenciales.
 - intent "agendar": quiere pedir/reservar/agendar una hora. También si el mensaje es solo el nombre o abreviación de una especialidad (ej: "gine", "kine", "traumato", "psico", "nutri", "cardio", "otorrino", "fono", "podología", "ginecología", etc.)
@@ -898,11 +898,11 @@ PIEL / INFECCIONES
 - Herida que no sana / curación → **Medicina General**.
 - Picaduras de insectos / picada de mosquito/zancudo (reacción fuerte) → **Medicina General**.
 
-OJO (NO hay oftalmólogo en el CMC)
-Si el paciente pregunta por tema de ojos, responde: "En el CMC no tenemos oftalmólogo. Para temas de vista o enfermedades del ojo, te sugerimos ir a un oftalmólogo. Igual puedes empezar con **Medicina General** si es una molestia simple. ¿Te agendo o prefieres consultar en recepción al 📞 (44) 296 5226?"
+OJOS (no hay oftalmólogo MÉDICO, pero SÍ tecnóloga médica oftalmológica)
+Para la VISTA (ver mal, borroso, lentes, receta, vista cansada) → **Tecnología Médica Oftalmológica** (TM Ana Celedón, *Evaluación oftalmológica y optométrica*, $15.000). NUNCA digas "no tenemos atención de la vista" ni mandes a buscar oftalmólogo afuera por un tema de vista.
 - Orzuelo / me salió un ojo / grano en el párpado → **Medicina General** para evaluación.
 - Derrame al ojo / mancha roja en el ojo → **Medicina General**.
-- Se me nubla la vista / veo borroso → recepción / Medicina General (derivación).
+- Se me nubla la vista / veo borroso → **Tecnología Médica Oftalmológica** (ver sección más abajo; pérdida SÚBITA de visión → urgencia).
 - Dolor de ojos / ojos rojos → **Medicina General**.
 
 PEDIÁTRICO / MATERNO
@@ -968,7 +968,7 @@ REGLA ESTRICTA: Si te preguntan "¿el ginecólogo atiende por Fonasa?" o "¿hay 
 - ¿Dan licencia médica? → Sí, en Medicina General cuando corresponde clínicamente.
 - ¿Necesito orden médica para kine con bono Fonasa? → Sí, necesitas derivación médica previa. Si es particular no es obligatoria pero se recomienda.
 - ¿Atienden niños? → Sí. Los médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños y adultos sin distinción. También Odontología, Psicología Infantil (Jorge Montalba y Ps. Jacquelinne Salas) y Fonoaudiología.
-- ¿Tienen pediatra / médico de familia / médico familiar / médico de cabecera / médico para mi hijo? → El CMC NO tiene pediatra especializado, pero SÍ tenemos Medicina Familiar con el **Dr. Alonso Márquez**, que es exactamente el rol del médico de familia/cabecera: atiende a toda la familia (adultos y niños sanos) con enfoque integral, manejo de crónicos, controles preventivos y salud mental leve. Consulta particular $30.000 o bono Fonasa MLE $7.880. Para urgencias pediátricas o patología pediátrica compleja, derivar al CESFAM Carampangue u Hospital de Arauco. NUNCA ofrezcas solo Medicina General (Olavarría/Abarca) cuando el paciente pide explícitamente "médico de familia/familiar/cabecera" — Márquez es la opción correcta.
+- ¿Tienen pediatra / médico de familia / médico familiar / médico de cabecera / médico para mi hijo? → El CMC NO tiene pediatra especializado, pero SÍ tenemos Medicina Familiar con el **Dr. Alonso Márquez**, que es exactamente el rol del médico de familia/cabecera: atiende a toda la familia (adultos y niños) con enfoque integral, manejo de crónicos, controles preventivos y salud mental leve. Consulta particular $30.000 o bono Fonasa MLE $7.880. Si es una urgencia, SAMU 131. NUNCA derives niños al CESFAM: el CMC atiende niños. NUNCA ofrezcas solo Medicina General (Olavarría/Abarca) cuando el paciente pide explícitamente "médico de familia/familiar/cabecera" — Márquez es la opción correcta.
 - ¿Puedo hacer PAP con la regla? → No, debes esperar a terminar tu menstruación (idealmente 7–10 días después).
 - ¿Hacen certificado médico (trabajo, colegio, deporte)? → Sí, en Medicina General.
 - ¿Puedo llevar acompañante? → Sí, siempre.
@@ -997,7 +997,7 @@ El CMC SÍ tiene neuróloga: **Dra. Franca González**, atención por **TELEMEDI
 - Déficit atencional en adultos (TDAH adulto) → **Neurología**. En niños con TDAH o problemas de conducta sigue siendo **Psicología Infantil** (Ps. Jacquelinne Salas o Jorge Montalba).
 - Cefalea o jaqueca recurrente/crónica que el paciente ya trató con Medicina General sin mejora, o pide evaluación por especialista → **Neurología**. El primer episodio de dolor de cabeza simple sigue siendo **Medicina General** (ver bloque DOLOR/CABEZA).
 - Mareos o síntomas neurológicos persistentes sin causa clara (trastorno neurológico funcional) → **Neurología**.
-- Menor de 15 años con estos síntomas → Neurología NO aplica; ofrece **Medicina General** o deriva al CESFAM Carampangue/Hospital de Arauco para evaluación pediátrica.
+- Menor de 15 años con estos síntomas → Neurología NO aplica; ofrece **Medicina General** (los médicos generales atienden niños). NUNCA lo derives al CESFAM.
 
 NUTRIOLOGÍA Y DIABETOLOGÍA (Dr. Raúl Paz)
 El CMC SÍ tiene nutriólogo y diabetólogo: **Dr. Raúl Paz**, atención por **TELECONSULTA (videollamada)**, **$60.000 particular** (NO tiene bono Fonasa), consulta de **30 minutos**, desde los **15 años**. Atiende los **miércoles de 17:30 a 20:00** (5 cupos por semana: 17:30, 18:00, 18:30, 19:00, 19:30). Son pocos cupos y se llenan: no prometas disponibilidad, ofrece lo que el sistema muestre. Formación informada por el centro: nutriólogo y diabetólogo, Pontificia Universidad Católica de Chile. Para reservar la hora se paga el **100% del valor ($60.000) por adelantado** — el día de la atención no se cobra nada adicional.
@@ -1038,7 +1038,7 @@ SÍ ATIENDE TAMBIÉN (confirmado por el centro el 2026-09-10) — estos cuatro s
    ⚠️ URGENCIA OBSTÉTRICA (sangrado, contracciones, pérdida de líquido, no siente al bebé, dolor de cabeza fuerte con visión borrosa o hinchazón de cara y manos) → derivación inmediata a urgencia, NUNCA una teleconsulta ni "espere su hora".
 
 2) **DIABETES TIPO 1** — insulino dependientes, desde los 15 años. Quien se pincha desde chico, quien dice "soy insulino dependiente", "diabetes juvenil" o "diabetes tipo uno".
-   ⚠️ Menores de 15 siguen fuera: ofrece Medicina General o deriva al CESFAM/Hospital.
+   ⚠️ Menores de 15 siguen fuera: ofrece Medicina General (atiende niños). NUNCA derives al CESFAM.
 
 3) **BOMBAS DE INSULINA Y SENSORES DE GLUCOSA** — microinfusoras, monitoreo continuo, FreeStyle Libre, Dexcom, "el parche del azúcar". El médico **indica, interpreta en la consulta y ajusta**.
    ⚠️ El CMC **NO vende, NO presta y NO instala** los dispositivos: el paciente los consigue por su cuenta o por su sistema de salud. NUNCA ofrezcas el equipo, solo la consulta.
@@ -1047,7 +1047,7 @@ SÍ ATIENDE TAMBIÉN (confirmado por el centro el 2026-09-10) — estos cuatro s
 4) **SEGUIMIENTO DE CIRUGÍA BARIÁTRICA** — control después de manga gástrica, bypass gástrico o balón: déficits nutricionales (vitamina B12, hierro, calcio, vitamina D), recuperación de peso, síntomas post-operatorios.
    ⚠️ El CMC **NO OPERA** ni hace la evaluación pre-quirúrgica del equipo de cirugía. Si el paciente quiere operarse, dilo claro: acá hacemos el seguimiento médico-nutricional, la cirugía se realiza en otro centro.
 
-⚠️ ÚNICO LÍMITE DE EDAD: **menores de 15 años** no se agendan con él (ofrece Medicina General o deriva al CESFAM Carampangue / Hospital de Arauco).
+⚠️ ÚNICO LÍMITE DE EDAD: **menores de 15 años** no se agendan con él (ofrece Medicina General, que atiende niños; NUNCA derives al CESFAM).
 
 ⚠️ LÍMITES DUROS (se aplican SIEMPRE):
 - NUNCA prometas una receta, un medicamento puntual ni una dosis. Quien pide "Ozempic", "Saxenda", "Mounjaro", "semaglutida" o "pastillas para bajar de peso" va con el Dr. Paz porque es el especialista correcto, pero la respuesta es "él evalúa si corresponde según tus antecedentes y exámenes", JAMÁS "sí, te lo receta".
@@ -1647,6 +1647,17 @@ _MSG_ESP_NO_ATENDIDA = (
 # el bot podía decir que tenemos endocrinólogo, que es falso. Este mensaje hace
 # las dos cosas: niega la endocrinología y ofrece lo que existe de verdad.
 _ESP_NO_ATENDIDA_ALT: dict[tuple[str, ...], str] = {
+    # Pediatría: el CMC no tiene pediatra, pero SÍ atiende niños en medicina
+    # general y familiar. El genérico "vaya al CESFAM" mandaba niños al CESFAM
+    # cada vez que la respuesta decía "pediatra" (regla del dueño: jamás).
+    ("pediatr", "pediatra", "pediatría", "pediatria"): (
+        "*Pediatra* no tenemos en el CMC, pero nuestros *médicos generales* "
+        "(Dr. Abarca y Dr. Olavarría) y el *Dr. Márquez* (medicina familiar) "
+        "atienden niños de todas las edades.\n\n"
+        "Medicina general: bono Fonasa *$7.880* o *$25.000* particular.\n\n"
+        "Si es una urgencia, llama al *SAMU 131*.\n\n"
+        "¿Te agendo con medicina general?"
+    ),
     ("endocrinólog", "endocrinolog", "endocrinología", "endocrinologia"): (
         "*Endocrinólogo* no tenemos en el CMC.\n\n"
         "Lo que sí tenemos es *nutriólogo y diabetólogo*: el *Dr. Raúl Paz*, "
@@ -1665,6 +1676,10 @@ _ESP_NO_ATENDIDA_ALT: dict[tuple[str, ...], str] = {
 # al diabetólogo), se deja pasar tal cual: el guardrail existe para evitar que
 # el bot INVENTE la especialidad, no para borrar una aclaración que es correcta.
 _ALT_YA_ACLARADO: tuple[str, ...] = ("nutriólog", "nutriolog", "diabetólog", "diabetolog")
+# Pediatría: si la respuesta ya ofrece medicina general/familiar para el niño,
+# es correcta y no se pisa.
+_ALT_YA_ACLARADO_PEDIATRIA: tuple[str, ...] = ("medicina general", "médicos generales",
+                                               "medicos generales", "medicina familiar")
 
 # Nombres + apellidos de profesionales CONOCIDOS (minúscula, sin tildes).
 # Incluye primer nombre porque Haiku a veces escribe "Dr. Alonso" en vez de
@@ -1764,7 +1779,8 @@ def _validar_respuesta_faq(texto: str, phone: str = "") -> str:
                 if any(v in _claves for v in variantes):
                     _alt = _msg
                     break
-            if _alt is not None and any(w in tl for w in _ALT_YA_ACLARADO):
+            _aclarado = _ALT_YA_ACLARADO_PEDIATRIA if variantes[0] == "pediatr" else _ALT_YA_ACLARADO
+            if _alt is not None and any(w in tl for w in _aclarado):
                 # La respuesta ya distingue endocrinólogo de nutriólogo-
                 # diabetólogo → es correcta, no la pises. Sigue revisando las
                 # demás especialidades no atendidas.

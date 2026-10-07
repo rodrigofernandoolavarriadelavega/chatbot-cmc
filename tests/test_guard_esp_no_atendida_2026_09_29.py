@@ -16,7 +16,6 @@ NO_DEBE_DERIVAR = [
 DEBE_DERIVAR = [
     "Para eso necesitas un urólogo.",
     "Debes ver a un dermatólogo.",
-    "Eso lo ve Pediatría.",
     "Te conviene un reumatólogo.",
 ]
 
@@ -27,3 +26,14 @@ def test_no_deriva_especialidades_que_si_tenemos():
 def test_sigue_derivando_las_que_no_tenemos():
     for t in DEBE_DERIVAR:
         assert _validar_respuesta_faq(t) == _MSG_ESP_NO_ATENDIDA, t
+
+
+# 2026-10-07: pediatría NO manda al CESFAM (regla del dueño: el CMC atiende niños).
+def test_pediatria_ofrece_medicina_general_y_no_cesfam():
+    r = _validar_respuesta_faq("Eso lo ve Pediatría.")
+    assert r != _MSG_ESP_NO_ATENDIDA
+    assert "CESFAM" not in r and "medicina general" in r.lower()
+
+def test_pediatria_ya_aclarada_no_se_pisa():
+    t = "No tenemos pediatra, pero nuestros médicos generales atienden niños. ¿Te agendo con Medicina General?"
+    assert _validar_respuesta_faq(t) == t

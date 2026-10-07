@@ -831,11 +831,11 @@ class TestClaudeHelperPediatriaRegla(unittest.TestCase):
                       "Regla debe mencionar que NUNCA clasifique como Psicología Adulto")
 
     def test_derivacion_cesfam_en_regla(self):
-        """Regla debe mencionar CESFAM como derivación."""
+        """2026-10-07 (regla del dueño): el CMC atiende niños; la regla PROHÍBE derivarlos al CESFAM."""
         idx = self.contenido.find("PEDIATRÍA")
         bloque = self.contenido[idx:idx+600]
-        self.assertIn("CESFAM", bloque,
-                      "Regla de pediatría debe mencionar derivación a CESFAM")
+        self.assertIn("NUNCA derives niños al CESFAM", bloque,
+                      "Regla de pediatría debe prohibir derivar niños al CESFAM")
 
 def _run():
     """Ejecutor con resumen claro."""

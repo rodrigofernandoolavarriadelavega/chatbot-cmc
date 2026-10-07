@@ -17269,9 +17269,6 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         saludo_prefix = (
             "Nuestros médicos generales atienden pacientes de todas las edades, "
             "incluidos niños.\n\n"
-            "Para atención pediátrica especializada, lo más adecuado es el CESFAM "
-            "o el Hospital de Arauco, pero para consultas generales o de morbilidad "
-            "en niños, nuestros médicos pueden ayudarte.\n\n"
             "Te muestro la disponibilidad 👇\n\n"
         )
 
