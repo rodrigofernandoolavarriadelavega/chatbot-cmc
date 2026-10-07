@@ -802,7 +802,7 @@ Además, cuando el intent sea "info" por un término del glosario, SIEMPRE compl
 
 EJEMPLO:
 Input: "quiero tapadura"
-Output: {{"intent": "info", "especialidad": "odontología", "respuesta_directa": "Una *tapadura* (empaste) es la reparación de una muela con caries 🦷. El dentista limpia la zona picada y la rellena con resina del mismo color del diente. Dura ~30 min, usamos anestesia local, no duele. Desde $35.000."}}
+Output: {{"intent": "info", "especialidad": "odontología", "respuesta_directa": "Una *tapadura* (empaste) es la reparación de una muela con caries 🦷. El dentista limpia la zona picada y la rellena con resina del mismo color del diente. Dura ~30 min, usamos anestesia local, no duele. Desde $30.000."}}
 
 Input: "necesito un botox"
 Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_directa": "El *botox* relaja los músculos de la cara para suavizar arrugas de frente, entrecejo y patas de gallo ✨. La Dra. Valentina Fuentealba lo aplica con micro-inyecciones, ~20 min, efecto dura 4–6 meses."}}
@@ -810,7 +810,7 @@ Output: {{"intent": "info", "especialidad": "estética facial", "respuesta_direc
 No inventes términos que no estén acá; si no aparece, deriva a recepción.
 
 ODONTOLOGÍA / DENTAL
-- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. Se limpia la zona picada y se rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $35.000.
+- Tapadura / tapar muela / muela picada / caries / se me cayó una tapadura / se me salió un empaste → obturación con resina. Se limpia la zona picada y se rellena con resina del color del diente, ~30 min, anestesia local, indoloro. Trata: **Odontología General** (Dra. Javiera Burgos o Dr. Carlos Jiménez). Desde $30.000.
 - Limpieza dental / sarro / profilaxis / me sangran las encías → destartraje + profilaxis, $30.000 en **Odontología General**. Duración ~40 min, sin dolor.
 - Sacar muela / sacar diente / muela del juicio / muela picada que no se puede arreglar → exodoncia simple $40.000, compleja $60.000 en **Odontología General**. Se usa anestesia local, ~30–45 min.
 - Matar el nervio / tratamiento de conducto / dolor fuerte de muela / caries profunda que llega al nervio → tratamiento de **Endodoncia** con Dr. Fernando Fredes ($110.000–$220.000 según diente). Se limpia y sella el interior del diente para evitar extraerlo.
@@ -1267,7 +1267,7 @@ OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular, POR AHORA SOLO PO
 
 ODONTOLOGÍA GENERAL (Dra. Javiera Burgos y Dr. Carlos Jiménez — solo particular):
 - Evaluación dental: $15.000 — revisión completa de dientes, encías y mordida. Incluye diagnóstico y plan de tratamiento.
-- Restauración de resina (tapadura): desde $35.000 — reparación de caries o dientes rotos con resina del color del diente. Con anestesia local, sin dolor.
+- Restauración (tapadura) de resina: desde $30.000 por diente — reparación de caries o dientes rotos con resina del color del diente. Con anestesia local, sin dolor.
 - Exodoncia simple: $40.000 — extracción de diente con anestesia local. Para dientes que ya no se pueden reparar.
 - Exodoncia compleja: $60.000 — extracción quirúrgica (muelas del juicio, raíces difíciles). Puede requerir sutura.
 - Blanqueamiento dental: $75.000 — aclaramiento del color de los dientes. Se aplica gel blanqueador en consulta. Dura ~1 hora.
@@ -2698,7 +2698,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     # Evidencia: 16 phones preguntaron precio dental, solo 3 convirtieron (18.7%).
     # Top queries: brackets, endodoncia, limpieza, blanqueamiento, tapadura.
     (("cuanto", "limpieza"),
-     "La *limpieza dental* (destartraje + profilaxis) cuesta *$30.000*. "
+     "La *limpieza dental* (destartraje + profilaxis) cuesta desde *$30.000*. "
      "Incluye retiro de sarro con ultrasonido + pulido. Dura ~45 min.\n\n"
      "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
     (("cuanto", "blanqueamient"),
@@ -2712,7 +2712,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "- Molar (3-4 raíces): desde *$220.000*\n\n"
      "¿Quieres agendar? Escribe *agendar endodoncia* o *1*."),
     (("cuanto", "tapadura"),
-     "La *tapadura* (restauración de resina) cuesta desde *$35.000* por pieza. "
+     "La *restauración (tapadura)* de resina cuesta desde *$30.000* por diente. "
      "Con anestesia local, sin dolor.\n\n"
      "¿Quieres agendar? Escribe *agendar odontología* o *1*."),
     (("cuanto", "bracket"),

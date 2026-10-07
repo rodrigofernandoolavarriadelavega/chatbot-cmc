@@ -3414,7 +3414,7 @@ async def _oferta_limpieza_post_consent(phone: str, data: dict) -> dict:
         "Ya que estás por aquí: ¿cuándo fue tu última limpieza dental? 🦷\n\n"
         "Se recomienda cada 6 meses: saca el sarro y la placa que el cepillo no "
         "alcanza, y previene caries y encías que sangran.\n\n"
-        "*Limpieza dental: $30.000* — unos 40 minutos, sin dolor."
+        "*Limpieza dental: desde $30.000* — unos 40 minutos, sin dolor."
     )
     return await _oferta_hora_dental(phone, data, intro, _LIMPIEZA_OBS,
                                      "consent_oferta_limpieza", "xlimpieza_si", "xlimpieza_no")
