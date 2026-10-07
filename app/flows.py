@@ -3448,6 +3448,49 @@ _ESTETICA_OFERTA = (
 )
 
 
+def _consent_tras_agendar(phone: str, origen: str, nombre: str = "") -> None:
+    """Pide el consentimiento de marketing EN LA MISMA CONVERSACIÓN en que el
+    paciente agendó o quedó en lista de espera (decisión del dueño 2026-10-07:
+    "mientras está activo esperando la confirmación", no horas después).
+    Espera 4 s para salir después de la confirmación; si el bot le hizo otra
+    pregunta (cómo nos conociste, parentesco, serie kine…) espera hasta 3 min a
+    que quede en IDLE. Si no, lo recoge el respaldo _job_consent_post_agenda."""
+    import asyncio as _ai_ct
+    import time as _t_ct
+    from resilience import spawn_task as _spawn_ct
+
+    async def _run():
+        await _ai_ct.sleep(4)
+        for _ in range(10):
+            sess = get_session(phone) or {}
+            if sess.get("state", "IDLE") == "IDLE":
+                break
+            await _ai_ct.sleep(20)
+        else:
+            return
+        # No encimar con un cross-sell con botones recién mandado.
+        if _t_ct.time() - float((sess.get("data") or {}).get("cross_sell_sent_ts") or 0) < 90:
+            return
+        _nom = nombre or (get_profile(phone) or {}).get("nombre") or ""
+        try:
+            import consent_marketing as _cm_ct
+            await _cm_ct.pedir_si_corresponde(phone, _nom, origen)
+        except Exception as e:
+            log.warning("consent_tras_agendar ...%s: %s", phone[-4:], e)
+
+    try:
+        _spawn_ct(_run())
+    except Exception as e:
+        log.warning("consent_tras_agendar spawn ...%s: %s", phone[-4:], e)
+
+
+def _add_waitlist_consent(phone, *args, **kwargs):
+    """add_to_waitlist + pedir consentimiento en la misma conversación."""
+    wid = add_to_waitlist(phone, *args, **kwargs)
+    _consent_tras_agendar(phone, "lista_espera")
+    return wid
+
+
 def _tiene_cita_proxima(phone: str) -> bool:
     """True si el teléfono tiene una cita de hoy en adelante en citas_bot
     (no cancelada). Ante error → True (fail-closed: mejor no mandar win-back)."""
@@ -12263,6 +12306,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "id_cita_old": cita_old.get("id") if reagendar else None,
                     "funnel_id": data.get("_funnel_id", ""),
                 })
+                if not reagendar:
+                    _consent_tras_agendar(phone, "cita")
                 # ── Serie kine: la 1ª sesión quedó confirmada SIN fricción.
                 # Guardar la base de la serie; la OFERTA ("¿agendamos las N?")
                 # va como segundo mensaje post-confirmación, más abajo (mismo
@@ -13451,7 +13496,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "(ej: *12.345.678-9*)"
                     + _PRIVACY_NOTE
                 )
-            wid = add_to_waitlist(
+            wid = _add_waitlist_consent(
                 phone,
                 data.get("rut", ""),
                 data.get("paciente_nombre", ""),
@@ -13496,7 +13541,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if paciente:
             data["paciente_nombre"] = paciente["nombre"]
             save_profile(phone, rut, paciente["nombre"])
-        wid = add_to_waitlist(
+        wid = _add_waitlist_consent(
             phone,
             rut,
             data.get("paciente_nombre", ""),
@@ -17714,7 +17759,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             data["rut"] = perfil["rut"]
             data["paciente_nombre"] = perfil["nombre"]
             try:
-                wid = add_to_waitlist(phone, perfil["rut"], perfil["nombre"],
+                wid = _add_waitlist_consent(phone, perfil["rut"], perfil["nombre"],
                                        especialidad_lower, id_prof_pref)
                 save_tag(phone, f"waitlist-{especialidad_lower}")
                 log_event(phone, "waitlist_inscrito_auto",
@@ -18226,7 +18271,7 @@ def _inscribir_waitlist_y_responder(phone: str, data: dict) -> str:
     rut = data.get("rut", "") or data.get("rut_conocido", "")
     nombre = data.get("paciente_nombre", "") or data.get("nombre_conocido", "")
     id_prof_pref = data.get("waitlist_id_prof_pref")
-    wid = add_to_waitlist(phone, rut, nombre, esp, id_prof_pref)
+    wid = _add_waitlist_consent(phone, rut, nombre, esp, id_prof_pref)
     save_tag(phone, f"waitlist-{esp}")
     log_event(phone, "waitlist_inscrito",
               {"id": wid, "especialidad": esp, "id_prof_pref": id_prof_pref})

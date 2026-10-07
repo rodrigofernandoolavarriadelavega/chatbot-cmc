@@ -2845,6 +2845,17 @@ async def _job_horas_vacias_dia_siguiente():
 
     from session import is_window_open as _hv_is_window_open, get_profile
 
+    def _hv_baja_bi(phone: str) -> bool:
+        """True si pidió la baja de marketing en BI (o BI no responde: fail-closed).
+        Fuera de ventana el aviso es iniciativa nuestra → se respeta la baja."""
+        try:
+            from consent_marketing import estado_bi as _eb
+            from session import normalize_wa_id as _nw
+            _st, _oo = _eb(_nw(phone))
+            return _oo or _st == "declined"
+        except Exception:
+            return True
+
     def _hv_pidio_reciente(phone: str, esp: str, dias: int = 14) -> bool:
         """Pidió hora de `esp` (intent_agendar o sin_disponibilidad) en ≤`dias`."""
         try:
@@ -2937,7 +2948,8 @@ async def _job_horas_vacias_dia_siguiente():
             # consiguieron (decisión del dueño 2026-10-07) — es la respuesta a
             # su pedido. Solo si el pedido es de ≤14 días; si no, skip.
             _ventana = _hv_is_window_open(phone)
-            if not _ventana and not (_hv_tpl_ok and _hv_pidio_reciente(phone, esp_key)):
+            if not _ventana and not (_hv_tpl_ok and _hv_pidio_reciente(phone, esp_key)
+                                     and not _hv_baja_bi(phone)):
                 log_event(phone, "horas_vacias_skip_ventana",
                           {"especialidad": esp_key, "tpl_ok": _hv_tpl_ok})
                 continue
@@ -3490,7 +3502,7 @@ async def _job_crosssell_dx():
 # texto cubre "recordatorios de salud preventiva y NOVEDADES del centro" → el
 # que acepta puede recibir promociones (la v2 solo cubría avisos de controles).
 # Trata de tú, igual que el bot. Ambas APPROVED UTILITY en Meta.
-CONSENT_MARKETING_TEMPLATE = "consent_marketing_v1"
+from consent_marketing import TEMPLATE_CONSENT as CONSENT_MARKETING_TEMPLATE  # noqa: E402
 
 
 async def _job_marketing_consent_blast():
@@ -3747,16 +3759,7 @@ async def _job_consent_post_agenda() -> dict:
         from session import db as _conn, get_session, log_message, log_event, normalize_wa_id
         from winback import bi_conn, registrar_consent_enviado, is_template_approved
 
-        def _estado_consent(teln: str) -> tuple[str | None, bool]:
-            """(status en marketing_consent, está en opt-out). FAIL-CLOSED: si BI
-            falla, propaga la excepción — los helpers de winback devuelven
-            None/False ante error, que acá se leería "nunca se le preguntó / sin
-            baja" y le re-preguntaría a quien ya dijo que no."""
-            with bi_conn() as conn, conn.cursor() as cur:
-                cur.execute("SELECT status FROM bi.marketing_consent WHERE phone = %s", (teln,))
-                row = cur.fetchone()
-                cur.execute("SELECT 1 FROM bi.opt_outs_marketing WHERE phone = %s", (teln,))
-                return (row[0] if row else None), cur.fetchone() is not None
+        from consent_marketing import estado_bi as _estado_consent
         from messaging import send_whatsapp_template, render_template_body
 
         with _conn() as cdb:

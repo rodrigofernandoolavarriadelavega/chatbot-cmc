@@ -267,3 +267,52 @@ def test_pide_consent_tras_aviso_de_horas_liberadas(entorno):
     with session.db() as conn:
         conn.execute("DELETE FROM horas_vacias_envios"); conn.commit()
     assert len(entorno["enviados"]) == 1
+
+
+# ── Consentimiento inmediato tras agendar / lista de espera ─────────────────
+
+def test_wrapper_lista_espera_no_es_recursivo(monkeypatch):
+    import flows
+    llamadas = []
+    monkeypatch.setattr(flows, "add_to_waitlist", lambda *a, **k: llamadas.append(a) or 7)
+    monkeypatch.setattr(flows, "_consent_tras_agendar", lambda p, o, nombre="": llamadas.append(("consent", p, o)))
+    assert flows._add_waitlist_consent(PHONE, "1-9", "Rosa", "cardiología", None) == 7
+    assert llamadas[-1] == ("consent", PHONE, "lista_espera")
+
+
+def test_pedir_si_corresponde_fail_closed(monkeypatch):
+    import consent_marketing
+    enviados = []
+
+    async def fake_tpl(phone, name, body_params=None, **k):
+        enviados.append(phone)
+
+    monkeypatch.setattr(messaging, "send_whatsapp_template", fake_tpl)
+
+    def boom(_):
+        raise RuntimeError("BI caído")
+    monkeypatch.setattr(consent_marketing, "estado_bi", boom)
+    assert asyncio.run(consent_marketing.pedir_si_corresponde(PHONE, "Ana", "cita")) is False
+    monkeypatch.setattr(consent_marketing, "estado_bi", lambda p: ("declined", False))
+    assert asyncio.run(consent_marketing.pedir_si_corresponde(PHONE, "Ana", "cita")) is False
+    assert enviados == []
+
+
+def test_consent_tras_agendar_espera_idle_y_envia(monkeypatch):
+    import flows, resilience, consent_marketing
+    tareas, pedidos = [], []
+    monkeypatch.setattr(resilience, "spawn_task", lambda coro: tareas.append(coro))
+
+    async def no_sleep(s):
+        session.save_session(PHONE, "IDLE", {})  # respondió "cómo nos conociste"
+    monkeypatch.setattr(asyncio, "sleep", no_sleep)
+
+    async def fake_pedir(phone, nombre, origen):
+        pedidos.append((phone, origen))
+        return True
+    monkeypatch.setattr(consent_marketing, "pedir_si_corresponde", fake_pedir)
+    session.save_session(PHONE, "WAIT_REFERRAL_POST", {})
+    flows._consent_tras_agendar(PHONE, "cita", nombre="Ana")
+    assert len(tareas) == 1
+    asyncio.run(tareas[0])
+    assert pedidos == [(PHONE, "cita")]

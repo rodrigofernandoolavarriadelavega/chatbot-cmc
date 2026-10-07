@@ -26,6 +26,11 @@ import re
 log = logging.getLogger("bot")
 
 _TEMPLATE_PREFIJOS = ("[template: consent_marketing_v2]", "[template: consent_marketing_v1]")
+
+# Plantilla vigente para PEDIR el consentimiento (blast, barrido de recepción,
+# post-agenda e inmediato tras agendar). v1 cubre "novedades del centro"
+# (promos) y trata de tú. Decisión del dueño 2026-10-07.
+TEMPLATE_CONSENT = "consent_marketing_v1"
 VENTANA_DIAS = 7
 
 def version_respondida(phone: str) -> str | None:
@@ -118,3 +123,43 @@ def registrar(phone: str, status: str, texto: str, via: str) -> None:
         log.warning("consent_marketing opt-out sync error phone=...%s: %s", phone[-4:], e)
     log_event(phone, "marketing_consent_respuesta",
               {"status": status, "raw": (texto or "")[:120], "via": via})
+
+
+def estado_bi(phone: str) -> tuple[str | None, bool]:
+    """(status en bi.marketing_consent, está en opt-out). FAIL-CLOSED: si BI
+    falla, PROPAGA la excepción. Los helpers de winback devuelven None/False
+    ante error, que acá se leería "nunca se le preguntó / sin baja" y le
+    re-preguntaría a quien ya dijo que no."""
+    from winback import bi_conn
+    with bi_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT status FROM bi.marketing_consent WHERE phone = %s", (phone,))
+        row = cur.fetchone()
+        cur.execute("SELECT 1 FROM bi.opt_outs_marketing WHERE phone = %s", (phone,))
+        return (row[0] if row else None), cur.fetchone() is not None
+
+
+async def pedir_si_corresponde(phone: str, nombre: str, origen: str) -> bool:
+    """Envía la plantilla de consentimiento si el teléfono nunca entró al
+    sistema de consent y no está en opt-out. True si la envió."""
+    from session import normalize_wa_id, log_message, log_event
+    from winback import registrar_consent_enviado, is_template_approved
+    from messaging import send_whatsapp_template, render_template_body
+    teln = normalize_wa_id(phone or "")
+    if not teln or len(teln) < 11:
+        return False
+    try:
+        status, optout = estado_bi(teln)
+    except Exception as e:  # noqa: BLE001
+        log.warning("consent inmediato: BI no disponible (...%s): %s — no envío", teln[-4:], e)
+        return False
+    if status is not None or optout:
+        return False
+    if not await is_template_approved(TEMPLATE_CONSENT):
+        log.warning("consent inmediato: %s no APPROVED — skip", TEMPLATE_CONSENT)
+        return False
+    primer = ((nombre or "").strip().split() or ["Paciente"])[0].capitalize()
+    await send_whatsapp_template(teln, TEMPLATE_CONSENT, body_params=[primer])
+    log_message(teln, "out", render_template_body(TEMPLATE_CONSENT, [primer]), "IDLE")
+    registrar_consent_enviado(teln)
+    log_event(teln, "consent_inmediato_enviado", {"origen": origen})
+    return True

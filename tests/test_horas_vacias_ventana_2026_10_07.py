@@ -23,6 +23,7 @@ def test_job_revisa_ventana_y_consent_antes_de_enviar():
     assert "horas_vacias_skip_ventana" in cuerpo
     assert '"horas_liberadas_v1"' in cuerpo and "_hv_pidio_reciente(phone, esp_key)" in cuerpo
     assert "_hv_has_mkt" not in cuerpo  # pidió hora: no exige opt-in de marketing
+    assert "_hv_baja_bi(phone)" in cuerpo  # pero respeta la baja (fail-closed)
 
 
 def test_botones_del_template_tienen_handler():
