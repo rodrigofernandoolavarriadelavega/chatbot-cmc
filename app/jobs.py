@@ -48,6 +48,18 @@ log = logging.getLogger("bot")
 _BOT_LOG_PATH = "/var/log/cmc-bot.log"
 
 
+def _errores_meta_24h() -> tuple[int, int]:
+    """(131042, 132000) de message_statuses en las últimas 24 h."""
+    from session import db as _db_em
+    with _db_em() as conn:
+        rows = conn.execute(
+            "SELECT CAST(error_code AS TEXT), COUNT(*) FROM message_statuses "
+            "WHERE ts >= datetime('now','-24 hours') AND lower(status)='failed' "
+            "AND CAST(error_code AS TEXT) IN ('131042','132000') GROUP BY 1").fetchall()
+    d = {str(r[0]): int(r[1]) for r in rows}
+    return d.get("131042", 0), d.get("132000", 0)
+
+
 def _tail_lines(path: str = _BOT_LOG_PATH, n: int = 5000) -> str:
     """Lee las últimas n líneas del log sin subprocess (PATH seguro en systemd)."""
     try:
@@ -3445,7 +3457,8 @@ async def _job_marketing_consent_blast():
     """
     import os as _osc
     if not _osc.getenv("MARKETING_CONSENT_BLAST_ACTIVE", "false").lower() in ("true", "1", "yes"):
-        log.debug("_job_marketing_consent_blast: MARKETING_CONSENT_BLAST_ACTIVE=false — skip")
+        log.info("_job_marketing_consent_blast: MARKETING_CONSENT_BLAST_ACTIVE=false — skip "
+                 "(pausado a mano o por _job_watchdog_blast)")
         return
     try:
         from winback import (
@@ -4061,8 +4074,12 @@ async def _job_watchdog_blast() -> None:
         # grep sobre las últimas 24h. El log tiene timestamp ISO al inicio de cada línea.
         # Usamos las últimas 5000 líneas como proxy (más rápido que filtrar por fecha en bash).
         log_tail = _tail_lines()
-        err_131042 = log_tail.count("131042")
-        err_132000 = log_tail.count("132000")
+        # 131042/132000 desde message_statuses (lo que Meta reporta por webhook),
+        # NO buscando el texto en el log: ese conteo incluía los propios
+        # resúmenes de los watchdogs ("err_131042=0") y teléfonos/RUT con esos
+        # dígitos en URLs. El 7-oct pausó el blast con "28 errores" que eran 0
+        # reales (falsa alarma → el blast de las 11:12 no salió).
+        err_131042, err_132000 = _errores_meta_24h()
         err_4xx     = len(_re_wb.findall(r"MSG FAILED.*code=", log_tail))
         errores_total = err_131042 + err_132000 + err_4xx
         log.info("_job_watchdog_blast: errores 24h — 131042=%d 132000=%d 4xx=%d total=%d",
@@ -4646,11 +4663,8 @@ async def _job_winback_daily_report() -> None:
     try:
         import re as _re_dr
         log_tail = _tail_lines()
-        errores_24h = (
-            log_tail.count("131042")
-            + log_tail.count("132000")
-            + len(_re_dr.findall(r"MSG FAILED.*code=", log_tail))
-        )
+        _e1, _e2 = _errores_meta_24h()
+        errores_24h = _e1 + _e2 + len(_re_dr.findall(r"MSG FAILED.*code=", log_tail))
     except Exception as e:
         log.warning("_job_winback_daily_report: error leyendo log: %s", e)
 
