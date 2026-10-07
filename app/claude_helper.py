@@ -1174,6 +1174,7 @@ KINESIOLOGÍA (Luis Armijo / Leonardo Etcheverry — bono Fonasa MLE nivel 3):
 KINESIOLOGÍA (Paola Acosta — solo particular, masoterapia):
 - Masoterapia espalda y cuello 20 min: $17.990 — masaje terapéutico enfocado en contracturas, tensión cervical y dolor de espalda alta.
 - Masoterapia espalda y cuello 40 min: $26.990 — masaje más extenso, incluye zona lumbar. Ideal para contracturas severas o estrés acumulado.
+- Masoterapia espalda y cuello 50 min: $33.990 — sesión más larga de espalda y cuello con zona lumbar (se coordina con recepción; el bot agenda 20 o 40 min).
 
 FONOAUDIOLOGÍA (Juana Arratia):
 - Evaluación infantil/adulto: $25.000 — evaluación completa de lenguaje, habla, voz o deglución. Determina si necesitas terapia y de qué tipo.
@@ -1311,6 +1312,7 @@ ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba, odontóloga — solo particular
 
 KINESIOLOGÍA ADICIONAL (Paola Acosta — solo particular):
 - Masoterapia cuerpo completo 30 min: $34.990 — masaje relajante de cuerpo entero: espalda, piernas, brazos.
+- Masoterapia cuerpo completo 50 min: $48.990 — versión extendida del masaje de cuerpo entero.
 - Pack 4 masoterapias espalda 30 min: $54.990 — 4 sesiones con descuento. Ideal para contracturas recurrentes.
 - Drenaje linfático manual 1 sesión: $15.000 — masaje suave que estimula el sistema linfático. Reduce retención de líquidos, hinchazón post-operatoria o piernas cansadas.
 - Drenaje linfático manual 5 sesiones: $75.000 — pack 5 sesiones para tratamiento progresivo.
@@ -1600,7 +1602,7 @@ _SIN_HORARIOS = (
 # Precios conocidos del CMC (exactamente como aparecen en el SYSTEM_PROMPT).
 _PRECIOS_CONOCIDOS: frozenset[str] = frozenset({
     "$4.770", "$7.830", "$7.880", "$8.000", "$10.000", "$10.360",
-    "$13.000", "$14.420", "$15.000", "$16.000", "$17.500",
+    "$13.000", "$14.420", "$33.990", "$48.990", "$15.000", "$16.000", "$17.500",
     "$17.990", "$18.000", "$20.000", "$25.000", "$26.990", "$30.000",
     "$34.990", "$35.000", "$40.000", "$45.000", "$50.000", "$54.990",
     "$60.000", "$65.000", "$75.000", "$80.000", "$83.360", "$90.000", "$110.000",
