@@ -92,6 +92,14 @@ class TestCasoA_ReplyRespetaEstadoTransaccional(unittest.IsolatedAsyncioTestCase
         self.flows, self.admin = await _setup()
         import session as _s
         _s.DB_PATH = TMP_DB
+        # Estos casos prueban el takeover, no la ventana de 24 h (desde
+        # 2026-10-07 responder con ventana cerrada da 409 antes de enviar).
+        self._orig_win = _s.is_window_open
+        _s.is_window_open = lambda phone: True
+
+    async def asyncTearDown(self):
+        import session as _s
+        _s.is_window_open = self._orig_win
 
     def _phone(self, suffix: str) -> str:
         return f"5698887{suffix}"

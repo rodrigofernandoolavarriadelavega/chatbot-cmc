@@ -969,8 +969,14 @@ async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None)
     return enviados
 
 
-async def enviar_recordatorios_recepcion_48h(send_text_fn, send_interactive_fn=None) -> int:
-    """Recordatorio 48h para citas de recepción. Gate: RECORDATORIOS_RECEPCION_ENABLED."""
+async def enviar_recordatorios_recepcion_48h(send_text_fn, send_interactive_fn=None,
+                                            send_template_fn=None) -> int:
+    """Recordatorio 48h para citas de recepción. Gate: RECORDATORIOS_RECEPCION_ENABLED.
+
+    Ventana 24 h abierta → interactivo libre. Cerrada → template UTILITY
+    recordatorio_cita (mismo patrón que el 24h). Antes (hasta 2026-10-07) iba
+    SIEMPRE libre: 367 de 476 (77%) en 30 días fallaron con 131047 — los
+    pacientes de recepción casi nunca tienen la ventana abierta."""
     if not _guard_recepcion("enviar_recordatorios_recepcion_48h"):
         return 0
 
@@ -1012,7 +1018,32 @@ async def enviar_recordatorios_recepcion_48h(send_text_fn, send_interactive_fn=N
 
         # Piloto Márquez: enviamos 48h a todos (el Dr. quiere cobertura máxima)
         try:
-            if send_interactive_fn:
+            _last_in_48 = get_last_inbound_ts(phone)
+            _window_open_48 = (
+                _last_in_48 is not None
+                and (datetime.now(timezone.utc) - _last_in_48).total_seconds() < 86400
+            )
+            if not _window_open_48 and USE_TEMPLATES and send_template_fn:
+                _wamid_r48 = await send_template_fn(
+                    phone, "recordatorio_cita",
+                    body_params=[nombre, esp, prof, fecha_display, hora, "Particular"],
+                    button_payloads=[f"cita_confirm:{id_cita}",
+                                     f"cita_reagendar:{id_cita}",
+                                     f"cita_cancelar:{id_cita}"],
+                )
+                if _wamid_r48 is None:
+                    log.error("Recepción 48h (template) FALLÓ (sin wamid) → %s id_cita=%s; "
+                              "NO se marca reminder_48h_sent", phone[:8] + "***", id_cita)
+                    log_event(phone, "template_fallido", {
+                        "template": "recordatorio_cita", "id_cita": id_cita,
+                        "origen": "recepcion", "ventana": "48h",
+                    })
+                    continue
+                log_event(phone, "template_enviado", {
+                    "template": "recordatorio_cita", "id_cita": id_cita,
+                    "origen": "recepcion", "ventana": "48h",
+                })
+            elif send_interactive_fn:
                 body_txt = (
                     f"Hola {nombre}, te recordamos con anticipación tu cita:\n\n"
                     f"*{esp}* — {prof}\n"

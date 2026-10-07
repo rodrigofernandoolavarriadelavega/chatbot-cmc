@@ -2542,7 +2542,21 @@ async function sendReply(){
       pendingFile = null;
       $("#attachWrap").innerHTML = "";
     } else {
-      await api("/admin/api/reply", {method:"POST", body: JSON.stringify({phone: activePhone, message: text})});
+      try {
+        await api("/admin/api/reply", {method:"POST", body: JSON.stringify({phone: activePhone, message: text})});
+      } catch(e){
+        if (String(e.message).includes("HTTP 409")){
+          // Ventana de 24 h cerrada: el texto queda escrito para enviarlo
+          // cuando el paciente responda a la plantilla.
+          if (confirm("Este paciente escribió hace más de 24 horas: WhatsApp no deja enviarle mensajes libres y tu respuesta NO le llegaría.\n\n¿Le enviamos la plantilla para retomar la conversación? Cuando responda, podrás enviarle tu mensaje.")){
+            await api("/admin/api/retomar-conversacion", {method:"POST", body: JSON.stringify({phone: activePhone})});
+            toast("Plantilla enviada. Tu mensaje quedó escrito: envíalo cuando el paciente responda.", "success");
+            setTimeout(() => loadMessages(true), 400);
+          }
+          return;
+        }
+        throw e;
+      }
     }
     input.value = "";
     autosize();

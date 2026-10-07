@@ -651,6 +651,46 @@ async def admin_reply(request: Request, _: str = Depends(require_admin)):
     return await responder_como_recepcion(phone, message)
 
 
+_VENTANA_CERRADA_DETAIL = (
+    "ventana_cerrada: el paciente escribió hace más de 24 h y WhatsApp no deja "
+    "enviarle mensajes libres. Envíale la plantilla para retomar la conversación; "
+    "cuando responda, podrás escribirle.")
+_TPL_RETOMAR = "recuperar_consulta_abierta_v1"
+
+
+@router.post("/admin/api/retomar-conversacion")
+async def api_retomar_conversacion(request: Request, _: str = Depends(require_admin)):
+    """Plantilla para reabrir la ventana cuando recepción quiere responder a un
+    paciente que escribió hace >24 h. Respeta la baja de marketing (fail-closed)."""
+    body = await request.json()
+    phone = (body.get("phone") or "").strip()
+    if not phone or phone.startswith(("ig_", "fb_")):
+        raise HTTPException(status_code=400, detail="Solo para WhatsApp")
+    from session import normalize_wa_id, get_profile, log_message, log_event
+    phone = normalize_wa_id(phone)
+    try:
+        import consent_marketing as _cm_rt
+        _st, _optout = _cm_rt.estado_bi(phone)
+    except Exception:
+        raise HTTPException(status_code=503, detail="No se pudo verificar si el paciente pidió la baja. Intenta en unos minutos.")
+    import recuperacion as _recup_rt
+    from session import get_tags as _gt_rt
+    if _optout or _st == "declined" or _recup_rt.TAG_OPT_OUT in (_gt_rt(phone) or []):
+        raise HTTPException(status_code=409, detail="El paciente pidió no recibir avisos. Contáctalo por teléfono.")
+    from messaging import send_whatsapp_template, render_template_body
+    nombre = ((get_profile(phone) or {}).get("nombre") or "").strip().split()
+    nombre = nombre[0].capitalize() if nombre else "Hola"
+    import recuperacion as _recup_bt
+    wamid = await send_whatsapp_template(
+        phone, _TPL_RETOMAR, body_params=[nombre],
+        button_payloads=[_recup_bt.PAYLOAD_AGENDAR, _recup_bt.PAYLOAD_NO_GRACIAS])
+    if not wamid:
+        raise HTTPException(status_code=502, detail="WhatsApp no aceptó la plantilla.")
+    log_message(phone, "out", render_template_body(_TPL_RETOMAR, [nombre]), "HUMAN_TAKEOVER")
+    log_event(phone, "recepcion_retomar_enviado", {"template": _TPL_RETOMAR})
+    return {"ok": True}
+
+
 async def responder_como_recepcion(phone: str, message: str,
                                    exigir_entrega: bool = False) -> dict:
     """Envío humano con takeover + lock por teléfono. Lo usan el panel de
@@ -672,6 +712,13 @@ async def responder_como_recepcion(phone: str, message: str,
         await send_messenger(psid, message)
         canal = "messenger"
     else:
+        # Ventana de 24 h cerrada → WhatsApp rechaza el texto libre (131047)
+        # DESPUÉS, por webhook: send_whatsapp igual devuelve wamid y el panel
+        # lo mostraba como enviado (45 de 3.941 respuestas en 30 d al
+        # 2026-10-07). Se corta antes: el panel ofrece la plantilla para retomar.
+        from session import is_window_open as _is_win_rr
+        if not _is_win_rr(phone):
+            raise HTTPException(status_code=409, detail=_VENTANA_CERRADA_DETAIL)
         wamid = await send_whatsapp(phone, message)
         if not wamid and exigir_entrega:
             # Sin wamid Meta no aceptó el mensaje (ventana de 24 h cerrada,

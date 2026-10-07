@@ -3324,7 +3324,8 @@ async def _job_recordatorios_48h():
     # Piloto recepción: enviar también a citas no-bot (si flag activo)
     try:
         await enviar_recordatorios_recepcion_48h(
-            send_whatsapp_proactive, send_interactive_fn=send_whatsapp_interactive
+            send_whatsapp_proactive, send_interactive_fn=send_whatsapp_interactive,
+            send_template_fn=_tpl,
         )
     except Exception as e:
         log.error("_job_recordatorios_recepcion_48h falló: %s", e)
