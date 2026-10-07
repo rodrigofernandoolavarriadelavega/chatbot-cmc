@@ -1854,6 +1854,7 @@ _PORTAL_HTML = (_TEMPLATE_DIR / "portal.html").read_text(encoding="utf-8")
 _PORTAL_V2_HTML = (_TEMPLATE_DIR / "portal_v2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v2.html").exists() else ""
 _PORTAL_V3_HTML = (_TEMPLATE_DIR / "portal_v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v3.html").exists() else ""
 _PORTAL_V4_HTML = (_TEMPLATE_DIR / "portal_v4.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v4.html").exists() else ""
+_PORTAL_APP_HTML = (_TEMPLATE_DIR / "portal_app.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_app.html").exists() else ""
 _PORTAL_INFORME_HTML = (_TEMPLATE_DIR / "portal_informe.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_informe.html").exists() else ""
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
@@ -3637,6 +3638,15 @@ def portal_page_v3(request: Request, demo: str = ""):
 def portal_page_v4(request: Request, demo: str = ""):
     """Portal v4 — copia editable de v3 ("demo 2"). v3 queda congelada como demo 1."""
     return _serve_portal(_PORTAL_V4_HTML or _PORTAL_V3_HTML or _PORTAL_V2_HTML or _PORTAL_HTML, request, demo)
+
+
+@app.get("/portal/app", response_class=HTMLResponse)
+def portal_page_app(request: Request, demo: str = ""):
+    """Portal del paciente — versión app móvil (2026-10-07), en revisión. No
+    reemplaza /portal; con ?demo=1 muestra datos de ejemplo en el navegador."""
+    resp = _serve_portal(_PORTAL_APP_HTML or _PORTAL_HTML, request, demo)
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return resp
 
 
 @app.get("/portal/informe", response_class=HTMLResponse)
