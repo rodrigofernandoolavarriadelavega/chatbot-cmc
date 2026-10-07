@@ -368,24 +368,21 @@ async def _acceso_vinculo(owner_rut: str, owner_phone: str, dep_rut: str) -> dic
         _acceso_cache[key] = (time.monotonic() + ttl, res)
         return res
 
-    es_menor_decl = (metodo == "tutor_declaration")
     try:
         pac = await buscar_paciente(dep_rut, strict=True)
     except Exception as e:
         log.warning("acceso_vinculo: Medilink no respondió (%s)", type(e).__name__)
-        if es_menor_decl:   # menores: sin cambios
-            return r(ACCESO_COMPLETO, metodo, "menor_sin_consulta")
+        # Fallo CERRADO también para "tutor_declaration": el bot crea ese método
+        # al agendar para un "hijo" SIN mirar la edad, así que no prueba minoría.
         return cachear(r(ACCESO_SOLO_HORAS, metodo, "medilink_no_responde"), _ACCESO_TTL_ERROR)
     if not pac:
-        if es_menor_decl:
-            return r(ACCESO_COMPLETO, metodo, "menor_sin_ficha")
         return cachear(r(ACCESO_SOLO_HORAS, metodo, "sin_ficha"), _ACCESO_TTL_OK)
 
     edad = _age_years(pac.get("fecha_nacimiento", ""))
     if edad is not None and edad < 18:
         return cachear(r(ACCESO_COMPLETO, metodo or "menor", "menor"), _ACCESO_TTL_OK)
-    if es_menor_decl and edad is None:
-        return r(ACCESO_COMPLETO, metodo, "menor_sin_fecha")
+    # Sin fecha de nacimiento no hay prueba de que sea menor: se trata como
+    # adulto (verificación por ficha / recepción / código).
 
     # Adulto: verificación automática por ficha
     if _ficha_coincide(pac, owner_phone):

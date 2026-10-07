@@ -132,11 +132,13 @@ def test_menor_acceso_completo():
     assert cli.get("/portal/api/examenes").status_code == 200
 
 
-def test_menor_con_medilink_caido_sigue_completo():
+def test_tutor_declaration_con_medilink_caido_falla_cerrado():
+    # Revisión de seguridad 7-oct: el bot crea tutor_declaration sin mirar la
+    # edad; sin confirmar minoría en Medilink no se abre el perfil completo.
     _vinculo(MENOR, "tutor_declaration")
     _ML["caida"] = True
     _login(MENOR)
-    assert cli.get("/portal/api/vitals").status_code == 200
+    assert cli.get("/portal/api/vitals").status_code == 403
 
 
 # ── adulto declarado ─────────────────────────────────────────────────────────
