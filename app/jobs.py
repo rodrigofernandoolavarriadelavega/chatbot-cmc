@@ -3428,6 +3428,14 @@ async def _job_crosssell_dx():
         log.error("_job_crosssell_dx falló: %s", e)
 
 
+# Plantilla única de consentimiento de marketing para el blast, el barrido de
+# recepción y el post-agenda del bot. v1 (2026-10-07, decisión del dueño): su
+# texto cubre "recordatorios de salud preventiva y NOVEDADES del centro" → el
+# que acepta puede recibir promociones (la v2 solo cubría avisos de controles).
+# Trata de tú, igual que el bot. Ambas APPROVED UTILITY en Meta.
+CONSENT_MARKETING_TEMPLATE = "consent_marketing_v1"
+
+
 async def _job_marketing_consent_blast():
     """Blast diario L-V 10:30 CLT: envía consent_marketing_v2 (UTILITY)
     a phones en v_winback_cohortes_contactables sin registro en marketing_consent.
@@ -3449,7 +3457,7 @@ async def _job_marketing_consent_blast():
         from datetime import datetime as _dt_mc
 
         # Verificar template aprobado
-        if not await is_template_approved("consent_marketing_v2"):
+        if not await is_template_approved(CONSENT_MARKETING_TEMPLATE):
             log.warning("consent_template_not_approved: consent_marketing_v2 no está APPROVED en Meta — skip")
             return
 
@@ -3516,11 +3524,11 @@ async def _job_marketing_consent_blast():
             try:
                 await send_whatsapp_template(
                     phone,
-                    "consent_marketing_v2",
+                    CONSENT_MARKETING_TEMPLATE,
                     body_params=[nombre],
                 )
                 from messaging import render_template_body as _rtb_cm
-                log_message(phone, "out", _rtb_cm("consent_marketing_v2", [nombre]), "IDLE")
+                log_message(phone, "out", _rtb_cm(CONSENT_MARKETING_TEMPLATE, [nombre]), "IDLE")
                 registrar_consent_enviado(phone)
                 enviados += 1
                 log.info("consent_blast enviado → %s (%d/%d)", phone, enviados, len(candidates))
@@ -3634,8 +3642,8 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
         enviados = 0
         for teln, nombre in candidatos:
             try:
-                await send_whatsapp_template(teln, "consent_marketing_v2", body_params=[nombre])
-                log_message(teln, "out", render_template_body("consent_marketing_v2", [nombre]), "IDLE")
+                await send_whatsapp_template(teln, CONSENT_MARKETING_TEMPLATE, body_params=[nombre])
+                log_message(teln, "out", render_template_body(CONSENT_MARKETING_TEMPLATE, [nombre]), "IDLE")
                 registrar_consent_enviado(teln)
                 enviados += 1
                 log.info("consent_agendados: enviado → ...%s (%d/%d)", teln[-4:], enviados, len(candidatos))
@@ -3651,7 +3659,7 @@ async def _job_consent_agendados(dry_run: bool = False) -> dict:
 
 
 async def _job_consent_post_agenda() -> dict:
-    """Cada 10 min: pide consent_marketing_v2 a quien AGENDÓ POR EL BOT.
+    """Cada 10 min: pide el consentimiento de marketing a quien AGENDÓ POR EL BOT.
 
     El barrido horario (_job_consent_agendados) excluye las citas del bot
     suponiendo que "el bot le pregunta" — y el bot nunca preguntaba: 97 de 158
@@ -3703,7 +3711,7 @@ async def _job_consent_post_agenda() -> dict:
             ).fetchall()
         if not rows:
             return {"enviados": 0, "candidatos": 0}
-        if not await is_template_approved("consent_marketing_v2"):
+        if not await is_template_approved(CONSENT_MARKETING_TEMPLATE):
             log.warning("consent_post_agenda: consent_marketing_v2 no APPROVED — skip")
             return {"status": "template_no_aprobado"}
 
@@ -3726,8 +3734,8 @@ async def _job_consent_post_agenda() -> dict:
                 continue  # ya se le pidió / ya respondió / pidió la baja
             primer = ((nombre or "").strip().split() or ["Paciente"])[0].capitalize()
             try:
-                await send_whatsapp_template(teln, "consent_marketing_v2", body_params=[primer])
-                log_message(teln, "out", render_template_body("consent_marketing_v2", [primer]), "IDLE")
+                await send_whatsapp_template(teln, CONSENT_MARKETING_TEMPLATE, body_params=[primer])
+                log_message(teln, "out", render_template_body(CONSENT_MARKETING_TEMPLATE, [primer]), "IDLE")
                 registrar_consent_enviado(teln)
                 log_event(teln, "consent_post_agenda_enviado", {})
                 enviados += 1

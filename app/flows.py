@@ -3310,6 +3310,47 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
     return None
 
 
+_LIMPIEZA_OBS = "[LIMPIEZA DENTAL $30.000 · vía consentimiento]"
+
+
+async def _oferta_limpieza_post_consent(phone: str, data: dict) -> dict:
+    """Tras aceptar el consentimiento v1: ofrece limpieza dental con la primera
+    hora real de Odontología General (patrón de masoterapia: WAIT_SLOT +
+    slot_sugerido → confirmar_sugerido reserva directo)."""
+    intro = (
+        "¡Listo, quedó activado! 😊\n\n"
+        "Ya que estás por aquí: ¿cuándo fue tu última limpieza dental? 🦷\n\n"
+        "Se recomienda cada 6 meses: saca el sarro y la placa que el cepillo no "
+        "alcanza, y previene caries y encías que sangran.\n\n"
+        "*Limpieza dental: $30.000* — unos 40 minutos, sin dolor."
+    )
+    try:
+        smart, todos = await buscar_primer_dia("odontología general")
+    except Exception as e:
+        log.warning("oferta_limpieza: buscar_primer_dia falló ...%s: %s", phone[-4:], e)
+        smart, todos = [], []
+    if not todos or not smart:
+        log_event(phone, "consent_oferta_limpieza", {"con_hora": False})
+        save_session(phone, "IDLE", data)
+        return _btn_msg(intro + "\n\n¿Te busco una hora?",
+                        [{"id": "xlimpieza_si", "title": "Sí, buscar hora"},
+                         {"id": "xlimpieza_no", "title": "Ahora no"}])
+    mejor = smart[0]
+    data.update({"especialidad": "odontología general", "slots": smart,
+                 "todos_slots": todos, "fechas_vistas": [todos[0]["fecha"]],
+                 "expansion_stage": 0, "prof_sugerido_id": mejor.get("id_profesional"),
+                 "slot_sugerido": mejor, "obs_prestacion": _LIMPIEZA_OBS})
+    save_session(phone, "WAIT_SLOT", data)
+    log_event(phone, "consent_oferta_limpieza",
+              {"con_hora": True, "fecha": mejor.get("fecha"), "prof": mejor.get("id_profesional")})
+    return _btn_msg(
+        intro + f"\n\nTengo hora el *{mejor['fecha_display']}* a las "
+        f"*{mejor['hora_inicio'][:5]}* con *{mejor['profesional']}*. ¿Te la reservo?",
+        [{"id": "confirmar_sugerido", "title": "✅ Sí, agendar"},
+         {"id": "ver_otros", "title": "📋 Ver otras horas"},
+         {"id": "xlimpieza_no", "title": "Ahora no"}])
+
+
 def _tiene_cita_proxima(phone: str) -> bool:
     """True si el teléfono tiene una cita de hoy en adelante en citas_bot
     (no cancelada). Ante error → True (fail-closed: mejor no mandar win-back)."""
@@ -3328,7 +3369,8 @@ def _tiene_cita_proxima(phone: str) -> bool:
 
 
 async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: str,
-                                      via: str = "flujo") -> str | None:
+                                      via: str = "flujo", state: str = "",
+                                      data: dict | None = None) -> str | dict | None:
     """Registra la respuesta a consent_marketing_v2 y arma la respuesta al
     paciente (con winback inmediato si corresponde). Quién ES respuesta al
     consentimiento lo decide consent_marketing.detectar (a qué mensaje contesta,
@@ -3366,6 +3408,14 @@ async def _responder_consent_marketing(phone: str, _es_consent_si: bool, txt: st
             log_event(phone, "winback_event_skip_cita_proxima", {})
             return ("¡Listo, quedó activado! 😊 Te avisaremos cuando se acerque tu "
                     "próximo control. Nos vemos en tu hora.")
+
+        # Aceptó la v1 (cubre "novedades del centro") y no está en otro flujo →
+        # oferta de limpieza dental con la primera hora real. Es mensaje de
+        # sesión (ventana 24 h abierta): sin costo de envío. Reemplaza al
+        # win-back genérico: dental es lo que más deja (decisión 2026-10-07).
+        import consent_marketing as _cm_v
+        if state in ("", "IDLE") and _cm_v.version_respondida(phone) == "v1":
+            return await _oferta_limpieza_post_consent(phone, data if data is not None else {})
 
         # Buscar datos del paciente en BI (incluye filtros consent + opt-out)
         _candidato = get_candidato_por_phone(phone)
@@ -3697,7 +3747,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     import consent_marketing as _cm_mod
     _cm_status = _cm_mod.detectar(phone, txt)
     if _cm_status:
-        return await _responder_consent_marketing(phone, _cm_status == "accepted", txt)
+        return await _responder_consent_marketing(phone, _cm_status == "accepted", txt,
+                                                  state=state, data=data)
 
     # Fecha de hoy en Chile — disponible en todos los handlers del flujo.
     # IMPORTANTE: NO mover dentro de bloques condicionales — varios handlers
@@ -5040,6 +5091,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     log_event(phone, "hora_idle_recuperada", {"edad_min": int(_edad.total_seconds() / 60)})
         except Exception:
             pass
+
+    # ── Oferta de limpieza post-consentimiento: respuestas a sus botones ──
+    if tl == "xlimpieza_no":
+        log_event(phone, "consent_oferta_limpieza_rechazo", {})
+        reset_session(phone)
+        return "Sin problema 😊 Cuando quieras tu limpieza, escríbeme *agendar dental*."
+    if tl == "xlimpieza_si":
+        log_event(phone, "consent_oferta_limpieza_acepto", {"con_hora": False})
+        data["obs_prestacion"] = _LIMPIEZA_OBS
+        return await _iniciar_agendar(phone, data, "odontología general")
 
     # ── PRE-ROUTER UNIVERSAL para estados WAIT_* / CONFIRMING_* ──
     # Detecta cambios de tema y preguntas paralelas antes de que el handler
@@ -11794,7 +11855,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # examen ($20.000). observaciones_extra la hace visible en la agenda.
                     _obs_prestacion = (
                         "[BIOIMPEDANCIOMETRÍA $20.000]"
-                        if data.get("especialidad") in _BIA_KEYS else ""
+                        if data.get("especialidad") in _BIA_KEYS
+                        else (data.get("obs_prestacion") or ""
+                              if "odontolog" in (data.get("especialidad") or "").lower()
+                              else "")
                     )
                     resultado = await asyncio.wait_for(crear_cita(
                         id_paciente=paciente["id"],

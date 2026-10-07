@@ -28,6 +28,23 @@ log = logging.getLogger("bot")
 _TEMPLATE_PREFIJOS = ("[template: consent_marketing_v2]", "[template: consent_marketing_v1]")
 VENTANA_DIAS = 7
 
+def version_respondida(phone: str) -> str | None:
+    """'v1' | 'v2' según la última plantilla de consentimiento enviada (≤7 días).
+    Importa porque v1 cubre "novedades del centro" (promos) y v2 solo avisos de
+    controles: a quien aceptó la v2 no se le ofrecen promociones."""
+    from session import db
+    with db() as conn:
+        row = conn.execute(
+            "SELECT text FROM messages WHERE phone=? AND direction='out' "
+            "AND (text LIKE ? OR text LIKE ?) AND ts >= datetime('now', ?) "
+            "ORDER BY id DESC LIMIT 1",
+            (phone, _TEMPLATE_PREFIJOS[0] + "%", _TEMPLATE_PREFIJOS[1] + "%",
+             f"-{VENTANA_DIAS} days")).fetchone()
+    if not row:
+        return None
+    return "v1" if (row[0] or "").startswith("[template: consent_marketing_v1]") else "v2"
+
+
 # Solo textos EXCLUSIVOS de consent_marketing_v2 ("Sí, acepto" también es botón
 # del consentimiento dental y del de privacidad → va en _SI_ESCRITO).
 _BOTON_SI = {"sí, actívenlos", "si, activenlos", "sí, activenlos", "si, actívenlos",

@@ -122,13 +122,13 @@ def test_pide_consent_a_quien_agendo_por_el_bot(entorno):
     _cita(30)
     r = asyncio.run(jobs._job_consent_post_agenda())
     assert r["enviados"] == 1
-    assert entorno["enviados"] == [(PHONE, "consent_marketing_v2", ["María"])]
+    assert entorno["enviados"] == [(PHONE, "consent_marketing_v1", ["María"])]
     assert entorno["registrados"] == [PHONE]
     with session.db() as conn:
         txt = conn.execute("SELECT text FROM messages WHERE phone=? AND direction='out'",
                            (PHONE,)).fetchone()[0]
     # consent_marketing.detectar reconoce la respuesta por este prefijo
-    assert txt.startswith("[template: consent_marketing_v2]")
+    assert txt.startswith("[template: consent_marketing_v1]")
 
 
 def test_no_repite_si_ya_se_le_pidio(entorno):
