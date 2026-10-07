@@ -214,6 +214,29 @@ _AGENDAR_VIA = {
     },
 }
 
+def _abono_wa(esp: str, id_prof: int | None = None) -> dict | None:
+    """Prestaciones con abono previo (config.ABONO_REGLAS, gate_bot) NO se
+    reservan en la web: el bot cobra el abono ANTES de crear la cita y la web
+    no tiene ese paso (hasta 2026-10-07 gastro, Dr. Paz y estética se podían
+    reservar acá saltándose el abono). Devuelve nota + link de WhatsApp."""
+    try:
+        from config import abono_regla
+        regla = abono_regla(especialidad=esp, id_profesional=id_prof)
+    except Exception:
+        regla = None
+    if not regla:
+        return None
+    from urllib.parse import quote
+    monto = int(regla.get("monto") or 0)
+    txt = f"Hola, quiero agendar una hora de {esp} (web: agendar)"
+    return {
+        "wa_url": "https://wa.me/56966610737?text=" + quote(txt),
+        "nota": (f"{esp} se reserva por WhatsApp porque la hora se aparta con un "
+                 f"abono de {_fmt_clp(monto)}. Le mostramos las horas libres y la "
+                 "dejamos reservada mientras transfiere (24 horas)."),
+    }
+
+
 _ESP_EXTRA: dict[str, list[int]] = {
     "Medicina Familiar":   [13],   # Dr. Alonso Márquez
     "Psicología Infantil": [74, 82],   # Jorge Montalba + Ps. Jacquelinne Salas
@@ -273,6 +296,7 @@ def _build_catalogo() -> list[dict]:
                 "precio": _PRECIO_ESP_LABEL.get(esp) or _precio_label(esp, profs[0][0] if len(profs) == 1 else None),
                 "prestaciones": _PRESTACIONES.get(esp, []),
                 **(_AGENDAR_VIA.get(esp) or {}),
+                **(_abono_wa(esp, profs[0][0] if len(profs) == 1 else None) or {}),
                 "dental": _es_dental(esp),
                 "metodos_pago": (["Efectivo", "Transferencia", "Débito", "Crédito"]
                                  if _es_dental(esp) else ["Efectivo", "Transferencia"]),
@@ -455,6 +479,17 @@ async def reservar(request: Request, preview: str | None = Query(None)):
 
     es_tercero = bool(body.get("es_tercero"))
 
+    # 2b) Prestaciones con abono previo → solo por WhatsApp (el bot cobra antes)
+    _wa = _abono_wa(prof["especialidad"], id_profesional)
+    if _wa:
+        raise HTTPException(409, {"error": "via_whatsapp", "mensaje": _wa["nota"],
+                                  "wa_url": _wa["wa_url"]})
+    # Modalidad real de ESA hora (Montalba lun-vie = videollamada). La Ps.
+    # Salas (82) tiene videoconsulta habilitada en Medilink y EXIGE el campo:
+    # desde la web se reserva presencial → videoconsulta=0.
+    _modal = _modalidad(id_profesional, fecha)
+    _forzar_vc = bool(prof.get("modalidad_a_eleccion")) and _modal != "online"
+
     # 3) Buscar / crear paciente
     try:
         pac = await buscar_paciente(rut, strict=True)
@@ -526,6 +561,8 @@ async def reservar(request: Request, preview: str | None = Query(None)):
             id_paciente=int(id_paciente), id_profesional=id_profesional,
             fecha=fecha, hora_inicio=hora_inicio, hora_fin=hora_fin,
             observaciones_extra=(f"[{_prest}] " if _prest else ""),
+            modalidad=("TELEMEDICINA" if _modal == "online" else "PRESENCIAL"),
+            forzar_videoconsulta=_forzar_vc,
         )
     except Exception as e:
         log.error("reservar crear_cita: %s", e)
@@ -543,7 +580,8 @@ async def reservar(request: Request, preview: str | None = Query(None)):
         log.warning("reservar consent: %s", e)
     try:
         save_cita_bot(phone, str(id_cita), esp, prof["nombre"], fecha, hora_inicio,
-                      "PRESENCIAL", paciente_nombre=paciente_nombre,
+                      ("TELEMEDICINA" if _modal == "online" else "PRESENCIAL"),
+                      paciente_nombre=paciente_nombre,
                       es_tercero=es_tercero, id_paciente_medilink=int(id_paciente))
     except Exception as e:
         log.warning("reservar save_cita_bot: %s", e)
