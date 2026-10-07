@@ -62,7 +62,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   "employee": [
     {"@type": "Person", "@id": "https://centromedicocarampangue.cl/#etcheverry", "name": "Leonardo Etcheverry", "jobTitle": "Kinesiólogo", "worksFor": {"@id": "https://centromedicocarampangue.cl/#clinic"}},
     {"@type": "Person", "@id": "https://centromedicocarampangue.cl/#armijo", "name": "Luis Armijo", "jobTitle": "Kinesiólogo", "worksFor": {"@id": "https://centromedicocarampangue.cl/#clinic"}},
-    {"@type": "Person", "@id": "https://centromedicocarampangue.cl/#acosta", "name": "Paola Acosta", "jobTitle": "Masoterapia", "worksFor": {"@id": "https://centromedicocarampangue.cl/#clinic"}}
+    {"@type": "Person", "@id": "https://centromedicocarampangue.cl/#acosta", "name": "Paola Acosta", "jobTitle": "Kinesióloga", "worksFor": {"@id": "https://centromedicocarampangue.cl/#clinic"}}
   ]
 }
 </script>
@@ -359,6 +359,8 @@ p{margin:0}
 .team-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 60%}
 .docs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .doc{background:var(--papel);border:1px solid var(--linea-2);border-radius:var(--r-lg);padding:18px;display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;align-items:start}
+.portrait{overflow:hidden}
+.portrait img{width:100%;height:100%;object-fit:cover;display:block}
 .portrait{margin:0;width:64px;height:78px;border-radius:32px 32px 12px 12px;display:grid;place-items:center;background:linear-gradient(160deg,#2A6E9A,var(--navy));color:#fff;font:700 22px/1 var(--display);letter-spacing:-.02em}
 .doc.maso .portrait{background:linear-gradient(160deg,#3BA5B4,var(--aqua-ink))}
 .doc .role{font:600 11px/1.3 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--aqua-ink)}
@@ -931,9 +933,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </li>
           <li class="doc maso rv" style="--d:2">
-            <figure class="portrait" data-foto="pendiente" aria-hidden="true">PA</figure>
+            <figure class="portrait"><img src="/static/images/masoterapia/paola-acosta.webp" width="240" height="293" alt="Paola Acosta, kinesióloga" loading="lazy" decoding="async"></figure>
             <div>
-              <span class="role">Masoterapia · complemento</span>
+              <span class="role">Kinesióloga · masoterapia</span>
               <h3>Paola Acosta</h3>
               <p>Masaje terapéutico para contracturas y tensión de espalda y cuello. 20&nbsp;minutos, <span class="pr-inline">$17.990</span>. Solo particular, sin orden.</p>
             </div>

@@ -2138,7 +2138,7 @@ _LANDINGS_ESPECIALIDAD = (
     "kinesiologia", "nutricion", "medicina-familiar", "cardiologia",
     "otorrinolaringologia", "fonoaudiologia", "ginecologia", "matrona",
     "gastroenterologia", "neurologia", "psicologia-adulto", "psicologia-infantil",
-    "psiquiatria", "podologia", "oftalmologia", "implantologia", "endodoncia",
+    "psiquiatria", "podologia", "oftalmologia", "implantologia", "endodoncia", "masoterapia",
 )
 
 
