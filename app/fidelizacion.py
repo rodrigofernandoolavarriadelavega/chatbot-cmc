@@ -877,13 +877,23 @@ def _msg_crosssell_mg_chequeo(p: dict) -> dict:
 async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
     """Cross-sell paciente MG inactivo 30-180d → chequeo preventivo. Cron mensual.
 
-    Sin template aprobado → solo envía con ventana 24h abierta + consent.
+    Ventana 24h abierta → mensaje interactivo libre (texto según edad).
+    Ventana cerrada → template APPROVED `crosssell_mg_chequeo` ({{1}} = nombre).
+    Antes de 2026-10-06 el template existía aprobado pero no se usaba: el 97%
+    de los candidatos (934 de ~960) se saltaba por ventana cerrada.
     """
     candidatos = get_crosssell_mg_chequeo_candidatos()
     if not candidatos:
         log.info("Cross-sell MG→Chequeo: sin candidatos")
         return
     log.info("Cross-sell MG→Chequeo: enviando %d mensaje(s)", len(candidatos))
+    _tpl_aprobado = False
+    if USE_TEMPLATES and send_template_fn is not None:
+        from winback import is_template_approved as _is_tpl_approved
+        _tpl_aprobado = await _is_tpl_approved("crosssell_mg_chequeo")
+        if not _tpl_aprobado:
+            log.warning("Cross-sell MG→Chequeo: template crosssell_mg_chequeo no "
+                        "APPROVED en Meta — solo ventana 24h")
     for p in candidatos:
         phone = p.get("phone", "")
         if not puede_enviar_campana(phone, "crosssell_mg_chequeo", dias_cooldown=180):
@@ -893,10 +903,31 @@ async def enviar_crosssell_mg_chequeo(send_fn, send_template_fn=None):
                       {"template": "crosssell_mg_chequeo"})
             continue
         if not is_window_open(phone):
-            log_event(phone, "template_skip_no_aprobado",
-                      {"template": "crosssell_mg_chequeo",
-                       "motivo": "sin_template_y_ventana_cerrada"})
-            log.debug("Cross-sell MG→Chequeo skip ventana cerrada → %s", phone)
+            if not _tpl_aprobado:
+                log_event(phone, "template_skip_no_aprobado",
+                          {"template": "crosssell_mg_chequeo",
+                           "motivo": "sin_template_y_ventana_cerrada"})
+                log.debug("Cross-sell MG→Chequeo skip ventana cerrada → %s", phone)
+                continue
+            try:
+                nombre = _nombre_corto(p.get("nombre")) or "paciente"
+                msg_id = await send_template_fn(
+                    phone,
+                    "crosssell_mg_chequeo",
+                    body_params=[nombre],
+                    button_payloads=["xchequeo_si", "xchequeo_no"],
+                )
+                if not msg_id:
+                    # Meta rechazó u omitió: NO quemar el cooldown de 180 días.
+                    log_event(phone, "template_send_failed",
+                              {"template": "crosssell_mg_chequeo"})
+                    continue
+                save_fidelizacion_msg(phone, "crosssell_mg_chequeo")
+                set_pending_crosssell(phone, "crosssell_mg_chequeo", "medicina general")
+                log_event(phone, "template_enviado", {"template": "crosssell_mg_chequeo"})
+                log_message(phone, "out", "[Cross-sell MG→Chequeo — template]", "IDLE")
+            except Exception as e:
+                log.error("Error cross-sell mg-chequeo (template) phone=%s: %s", phone, e)
             continue
         try:
             save_fidelizacion_msg(phone, "crosssell_mg_chequeo")  # BUG-01

@@ -5695,11 +5695,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # bot cayó al fallback genérico en vez de iniciar flujo de kine.
         _AFIRMATIVOS_CS = {"sí, me interesa", "si, me interesa", "sí me interesa",
                            "si me interesa", "me interesa", "sí me interesa.",
-                           "si me interesa.", "si interesa"}
+                           "si me interesa.", "si interesa",
+                           # Botón del template crosssell_mg_chequeo (llega como texto)
+                           "sí, agendar control", "si, agendar control",
+                           "sí agendar control", "si agendar control"}
         _NEGATIVOS_CS = {"no, gracias", "no gracias", "no por ahora",
                          "no por ahora.", "no, gracias.", "no me interesa",
                          "no, no me interesa"}
-        if (tl in _AFIRMATIVOS_CS or tl in _NEGATIVOS_CS) and tl not in ("xkine_si","xkine_no","xorlfono_si","xorlfono_no","xestetica_si","xestetica_info","xestetica_no","xmgcheck_si","xmgcheck_no","kine_adh_si","kine_adh_no","reac_si","reac_luego","wb_agendar","wb_info","upsell_si","no_control"):
+        if (tl in _AFIRMATIVOS_CS or tl in _NEGATIVOS_CS) and tl not in ("xkine_si","xkine_no","xorlfono_si","xorlfono_no","xestetica_si","xestetica_info","xestetica_no","xchequeo_si","xchequeo_no","kine_adh_si","kine_adh_no","reac_si","reac_luego","wb_agendar","wb_info","upsell_si","no_control"):
             try:
                 from session import db as _cs_conn
                 with _cs_conn() as _ccs:
@@ -5718,7 +5721,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         "crosssell_kine":           ("xkine_si", "xkine_no"),
                         "crosssell_orl_fono":       ("xorlfono_si", "xorlfono_no"),
                         "crosssell_odonto_estetica":("xestetica_si", "xestetica_no"),
-                        "crosssell_mg_chequeo":     ("xmgcheck_si", "xmgcheck_no"),
+                        "crosssell_mg_chequeo":     ("xchequeo_si", "xchequeo_no"),
                     }
                     if _tipo_cs in _MAP_CS:
                         tl = _MAP_CS[_tipo_cs][0 if _es_afirm else 1]
