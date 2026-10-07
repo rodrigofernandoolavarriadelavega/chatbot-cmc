@@ -1913,6 +1913,7 @@ _LANDING_ORTODONCIA_HTML = (_TEMPLATE_DIR / "landing_ortodoncia.html").read_text
 _LANDING_ESTETICA_HTML = (_TEMPLATE_DIR / "landing_estetica.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_estetica.html").exists() else ""
 _LANDING_MEDICINA_GENERAL_HTML = (_TEMPLATE_DIR / "landing_medicina_general.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_medicina_general.html").exists() else ""
 _LANDING_ODONTOLOGIA_GENERAL_HTML = (_TEMPLATE_DIR / "landing_odontologia_general.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_odontologia_general.html").exists() else ""
+_LANDING_NUTRIOLOGIA_DIABETOLOGIA_HTML = (_TEMPLATE_DIR / "landing_nutriologia_diabetologia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_nutriologia_diabetologia.html").exists() else ""
 _LANDING_ECOGRAFIA_HTML = (_TEMPLATE_DIR / "landing_ecografia.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "landing_ecografia.html").exists() else ""
 _ADKUN_COMPANY_HTML = (_TEMPLATE_DIR / "adkun_company_board.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_company_board.html").exists() else ""
 _ADKUN_LANDING_HTML = (_TEMPLATE_DIR / "adkun_landing.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "adkun_landing.html").exists() else ""
@@ -2109,6 +2110,12 @@ def landing_medicina_general():
 def landing_odontologia_general():
     """Landing — Odontología general en Carampangue (evaluación $15.000)."""
     return _LANDING_ODONTOLOGIA_GENERAL_HTML
+
+
+@app.get("/nutriologia-diabetologia", response_class=HTMLResponse)
+def landing_nutriologia_diabetologia():
+    """Landing — Dr. Raúl Paz, Diabetología y Nutrición Clínica por teleconsulta ($60.000)."""
+    return _LANDING_NUTRIOLOGIA_DIABETOLOGIA_HTML
 
 
 @app.get("/ecografia", response_class=HTMLResponse)
@@ -2955,7 +2962,7 @@ async def sitemap_xml():
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
     # Landings directas (servidas vía bridge WP Snippet 8 bajo el dominio canónico)
-    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue", "ortodoncia", "estetica", "medicina-general", "odontologia-general"):
+    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue", "ortodoncia", "estetica", "medicina-general", "odontologia-general", "nutriologia-diabetologia"):
         urls.append((f"{base_url}/{direct_slug}", "0.85", "monthly"))
     # Comuna hubs
     for comuna_slug in COMUNAS_ARAUCO:
