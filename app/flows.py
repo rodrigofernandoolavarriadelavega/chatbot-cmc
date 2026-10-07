@@ -215,6 +215,118 @@ def _abono_gate_psiq_activo() -> bool:
         return env_val
 
 
+# ── Abono de EVALUACIÓN (Estética Facial) ───────────────────────────────────
+# Las reglas de ABONO_REGLAS son de dos tipos: "consulta completa" (Psiquiatría,
+# Gastro, Neurología, Nutriología: el abono ES el valor total y el día de la
+# atención no se paga nada) y "evaluación" (Estética Facial: el abono es la
+# evaluación de $15.000 y, si ese mismo día se hace el tratamiento, se descuenta
+# de él). El tipo viaja en `regla["concepto"]`; los textos al paciente salen de
+# estos helpers para que gate, confirmación, waitlist y precio no se desalineen.
+
+def _abono_es_evaluacion(regla: dict | None) -> bool:
+    return bool(regla) and regla.get("concepto") == "evaluacion"
+
+
+def _abono_frase_valor(regla: dict | None) -> str:
+    """Qué es el abono, en una frase (sin mayúscula inicial ni punto final)."""
+    if _abono_es_evaluacion(regla):
+        return ("corresponde a tu *evaluación*. Si ese mismo día te haces el "
+                "tratamiento, la evaluación sale gratis: solo pagas la diferencia, "
+                "porque el abono se descuenta del tratamiento")
+    return ("corresponde al valor total de la consulta, así que el día de la "
+            "atención no pagas nada adicional")
+
+
+def _abono_aviso_cancelacion(regla: dict | None) -> str:
+    """Política de cancelación que se publica junto al abono de evaluación."""
+    if _abono_es_evaluacion(regla):
+        return ("Si necesitas cancelar o cambiar tu hora, avísanos con al menos "
+                "24 horas de anticipación y te devolvemos el abono o reagendamos.")
+    return ""
+
+
+# Procedimientos/zonas de Estética Facial que el paciente puede nombrar. Sirven
+# para NO volver a preguntar lo que ya dijo (viene de la landing o lo escribió).
+_ESTETICA_INTERES_KW = (
+    "botox", "toxina", "botulin", "hialuron", "labios", "ojeras", "entrecejo",
+    "patas de gallo", "pomulos", "nasogenian", "surco", "mesoterapia",
+    "hilos tensores", "hilos revitalizantes", "papada", "exosoma",
+    "bioestimulador", "hidroxiapatita", "radiesse", "armonizacion", "peeling",
+    "manchas en la cara", "cicatrices de acne", "arrugas", "rejuvenec",
+    "lifting", "relleno facial", "rellenos faciales",
+)
+_ESTETICA_ZONA_RE = re.compile(r"me\s+interesa\s+la\s+zona\s*[:：]\s*(.+)$",
+                               re.IGNORECASE | re.DOTALL)
+_ESTETICA_NO_SABE_RE = re.compile(
+    r"\b(no\s+s[eé]|nose|no\s+tengo\s+claro|no\s+estoy\s+segur[oa]|"
+    r"no\s+lo\s+s[eé]|evaluaci[oó]n|evaluar|que\s+me\s+recomiend|"
+    r"que\s+me\s+aconsej|lo\s+que\s+me\s+(?:digan|indiquen|sugieran))",
+    re.IGNORECASE)
+_ESTETICA_INTERES_NO_SABE = "No sabe aún — quiere evaluación"
+
+
+def _extraer_interes_estetica(txt: str | None) -> str | None:
+    """Procedimiento/zona de estética que el texto ya nombra, o None.
+
+    "Hola, quiero agendar una evaluación facial. Me interesa la zona: entrecejo,
+    frente" (landing) → "entrecejo, frente". "quiero botox en la frente" → ese
+    mismo texto. Sin ninguna palabra de procedimiento → None (hay que preguntar).
+    """
+    import unicodedata as _ud_ei
+    t = (txt or "").strip()
+    if not t:
+        return None
+    m = _ESTETICA_ZONA_RE.search(t)
+    if m:
+        cand = m.group(1)
+    else:
+        tn = "".join(c for c in _ud_ei.normalize("NFD", t.lower())
+                     if _ud_ei.category(c) != "Mn")
+        if not any(k in tn for k in _ESTETICA_INTERES_KW):
+            return None
+        cand = t
+    cand = re.sub(r"\(\s*web[^)]*\)", " ", cand, flags=re.IGNORECASE)
+    cand = re.sub(r"[\[\]\r\n]+", " ", cand)
+    cand = re.sub(r"\s+", " ", cand).strip(" .,-–—")
+    return cand[:120] or None
+
+
+def _slot_es_estetica(slot: dict | None) -> bool:
+    """True si el slot es de Estética Facial (id 76, o la especialidad lo dice)."""
+    s = slot or {}
+    if str(s.get("id_profesional") or "") == "76":
+        return True
+    esp = (s.get("especialidad") or "").lower()
+    return "estética facial" in esp or "estetica facial" in esp
+
+
+def _obs_cita_estetica(data: dict, slot: dict | None) -> str:
+    """Texto para las observaciones de la cita de Estética en Medilink: lo que
+    el paciente quiere hacerse, para que la doctora lo vea. "" si el slot no es
+    de estética o no hay nada que decir."""
+    if not _slot_es_estetica(slot):
+        return ""
+    interes = (data.get("estetica_interes") or "").strip()
+    base = ""
+    if (data.get("obs_prestacion_esp") or "") == "estética":
+        base = data.get("obs_prestacion") or ""
+    if not interes:
+        return base
+    if not base:
+        base = "[EVALUACIÓN ESTÉTICA $15.000 (se descuenta)]"
+    return f"{base} [INTERÉS: {interes}]"
+
+
+def _modalidad_cita_abono(slot: dict) -> str:
+    """Modalidad con la que se crea la cita al confirmarse el abono.
+
+    Antes era `data.get("telemedicina_modalidad", "TELEMEDICINA")`: cualquier
+    cita con abono que no fuera de las teleconsultas conocidas se creaba como
+    [ONLINE]. Estética Facial es presencial, así que sale de PROFESIONALES vía
+    `_es_teleconsulta` (misma fuente que el resto del flujo)."""
+    return "TELEMEDICINA" if _es_teleconsulta(slot) else "PRESENCIAL"
+
+
 def _first_name(nombre) -> str:
     """Primer token de un nombre, seguro ante None/vacío/solo-espacios.
     Devuelve "" cuando el nombre está vacío para que los callers puedan
@@ -1453,6 +1565,10 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
         _regla_pl = _abono_regla_pl(especialidad=esp, id_profesional=_pid_pl)
         if _regla_pl and _abono_gate_psiq_activo():
             _monto_pl = f"${int(_regla_pl['monto']):,}".replace(",", ".")
+            if _abono_es_evaluacion(_regla_pl):
+                return (f"💳 Abono previo requerido: {_monto_pl} (tu evaluación) "
+                        "_(se paga para reservar la hora y se descuenta del "
+                        "tratamiento si ese mismo día te lo haces)_")
             return (f"💳 Abono previo requerido: {_monto_pl} "
                     "_(se paga antes de confirmar la hora)_")
     except Exception:
@@ -1737,6 +1853,26 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
         log.warning("slot revalidation failed: %s", _e_slot_val)
 
     data["slot_elegido"] = slot
+
+    # ── Estética Facial: preguntar qué procedimiento/zona le interesa ─────────
+    # ANTES de seguir con RUT/abono, para que la doctora lo vea en la cita. Si
+    # ya lo dijo (landing o texto) no se vuelve a preguntar; al reagendar la
+    # cita ya existe y tampoco. "No sé / quiero evaluación" es respuesta válida.
+    if (_slot_es_estetica(slot)
+            and not data.get("estetica_interes")
+            and not data.get("reagendar_mode")
+            and not (data.get("cita_old") or {}).get("id")):
+        save_session(phone, "WAIT_ESTETICA_INTERES", data)
+        log_event(phone, "estetica_interes_preguntado", {
+            "fecha": slot.get("fecha"), "hora": (slot.get("hora_inicio") or "")[:5],
+        })
+        return _btn_msg(
+            "Antes de reservar tu hora con la *Dra. Valentina Fuentealba*, cuéntame "
+            "qué procedimiento te interesa y en qué zona (por ejemplo: _botox en la "
+            "frente_, _relleno de labios_, _ojeras_).\n\n"
+            "Si aún no lo tienes claro, no hay problema: lo conversan en tu evaluación.",
+            [{"id": "est_int_nose", "title": "No sé, evaluación"}],
+        )
 
     # Profesional que atiende presencial Y por videollamada (Ps. Salas): se le
     # pregunta al paciente antes de seguir. La respuesta queda en
@@ -2542,6 +2678,12 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
         _esp_txt = _detectar_especialidad_en_texto(txt)
         if _esp_txt and _esp_txt.lower() != (data.get("especialidad") or data.get("meta_especialidad") or "").lower():
             return True
+    # WAIT_ESTETICA_INTERES: nombrar un procedimiento/zona o decir "no sé" ES la
+    # respuesta; el handler la guarda sin pasar por Claude.
+    if state == "WAIT_ESTETICA_INTERES" and (
+            tl == "est_int_nose" or _extraer_interes_estetica(txt)
+            or _ESTETICA_NO_SABE_RE.search(txt or "")):
+        return True
     # WAIT_MODALIDAD: respuestas obvias
     if state == "WAIT_MODALIDAD":
         if tl in {"fonasa", "fona", "f", "particular", "privado", "privada", "p", "1", "2", "isapre"}:
@@ -2810,6 +2952,19 @@ def _es_linea_abono_previo(linea: str) -> bool:
     return (linea or "").startswith("💳 Abono previo requerido")
 
 
+def _pago_abono_previo_texto(linea: str) -> tuple[str, str]:
+    """(encabezado de pago, cierre) para una línea de abono previo. La de
+    evaluación (Estética Facial) NO es "100% por adelantado / nada adicional":
+    el abono es la evaluación y se descuenta del tratamiento del mismo día."""
+    if "(tu evaluación)" in (linea or ""):
+        return ("💳 *Pago:* se abonan $15.000 por adelantado para reservar la hora "
+                "(es tu evaluación).\n",
+                "Si ese mismo día te haces el tratamiento, la evaluación sale gratis "
+                "y solo pagas la diferencia.")
+    return ("💳 *Pago:* se paga el 100% por adelantado para reservar la hora.\n",
+            "El día de la atención no se cobra nada adicional.")
+
+
 def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
     """Responde a preguntas de PRECIO (valor monetario).
     Diferente de métodos de pago — el paciente quiere saber CUÁNTO cuesta.
@@ -2878,11 +3033,12 @@ def _preguntar_precio_respuesta(data: dict | None = None, txt: str = "") -> str:
                     # Nutriología y Diabetología, Gastroenterología): el bloque
                     # genérico "se cancela al momento de la atención" contradice
                     # la línea de arriba. Ver docstring de _es_linea_abono_previo.
+                    _pg_enc, _pg_cierre = _pago_abono_previo_texto(linea)
                     return (
                         f"{linea}\n\n"
-                        "💳 *Pago:* se paga el 100% por adelantado para reservar la hora.\n"
+                        f"{_pg_enc}"
                         f"{metodos}"
-                        "El día de la atención no se cobra nada adicional."
+                        f"{_pg_cierre}"
                     )
                 return (
                     f"{linea}\n\n"
@@ -2943,11 +3099,12 @@ def _preguntar_pago_respuesta(data: dict | None = None, txt: str = "") -> str:
     if _es_linea_abono_previo(_linea_pago):
         # Ver docstring de _es_linea_abono_previo: no contradecir el abono-gate
         # con el bloque genérico "se cancela al momento de la atención".
+        _pg_enc2, _pg_cierre2 = _pago_abono_previo_texto(_linea_pago)
         return (
             f"{precio_block}"
-            "💳 *Pago:* se paga el 100% por adelantado para reservar la hora.\n"
+            f"{_pg_enc2}"
             f"{metodos}"
-            "El día de la atención no se cobra nada adicional."
+            f"{_pg_cierre2}"
         )
     return (
         f"{precio_block}"
@@ -3745,6 +3902,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         texto = txt
         tl = txt.lower().strip("*_~").strip()
 
+    # ── Interés en Estética Facial: recordar lo que el paciente YA dijo ───────
+    # Decisión del dueño 2026-10-07: antes de agendar estética se pregunta qué
+    # procedimiento y qué zona le interesan, salvo que ya lo haya dicho (viene de
+    # la landing "Me interesa la zona: entrecejo" o escribió "botox en la
+    # frente"). Se guarda acá, en el punto de entrada único, para que sirva sin
+    # importar por qué camino llegue después a elegir hora.
+    if state != "WAIT_ESTETICA_INTERES":
+        _int_est_in = _extraer_interes_estetica(txt)
+        if _int_est_in:
+            data["estetica_interes"] = _int_est_in
+
     # ── BUG-K FIX: Staff whitelist — silencio permanente en IDLE ──────────────
     # Personal médico/admin (ej: Dra. Javiera Burgos 56938738734) usa el canal
     # público para coordinar con recepción. El bot los interceptaba en cada
@@ -4413,6 +4581,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
         "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
         "WAIT_QUICK_BOOK", "WAIT_DURACION_MASOTERAPIA", "WAIT_BIA_SCREENING",
+        "WAIT_ESTETICA_INTERES",
         "WAIT_ORTODONCIA_ACTIVO",
         "WAIT_CONFIRMAR_ADULTO", "WAIT_MEDFAM_FALLBACK",
         "WAIT_CROSS_SELL",
@@ -7711,6 +7880,50 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 {"id": "medfam_fallback_no", "title": "No, gracias"},
             ]
         )
+
+    # ── WAIT_ESTETICA_INTERES ─────────────────────────────────────────────────
+    # Respuesta a "¿qué procedimiento y zona te interesa?" (se pregunta al elegir
+    # hora de Estética Facial, ver _slot_confirmed). Se guarda en
+    # data["estetica_interes"] y viaja a las observaciones de la cita en Medilink.
+    if state == "WAIT_ESTETICA_INTERES":
+        _slot_ei = data.get("slot_elegido") or {}
+        _interes_ei = None
+        if tl == "est_int_nose":
+            _interes_ei = _ESTETICA_INTERES_NO_SABE
+        else:
+            _interes_ei = _extraer_interes_estetica(txt)
+            if not _interes_ei and _ESTETICA_NO_SABE_RE.search(txt or ""):
+                _interes_ei = _ESTETICA_INTERES_NO_SABE
+        if not _interes_ei and _RX_ES_PREGUNTA.search(tl):
+            # Pregunta (precio, cuánto dura…): se responde y se repite la pregunta
+            # sin contarla como respuesta.
+            try:
+                _resp_ei = await respuesta_faq(txt)
+            except Exception:
+                _resp_ei = "Esa consulta te la responde la doctora en tu evaluación 😊"
+            save_session(phone, "WAIT_ESTETICA_INTERES", data)
+            return _btn_msg(
+                f"{_resp_ei}\n\n_Para seguir, dime qué procedimiento y zona te "
+                "interesan, o elige *No sé, evaluación*._",
+                [{"id": "est_int_nose", "title": "No sé, evaluación"}],
+            )
+        if not _interes_ei:
+            # Texto libre sin palabra de procedimiento conocida ("las arrugas de
+            # al lado de los ojos"): es la respuesta del paciente, se guarda tal cual.
+            _libre_ei = re.sub(r"\s+", " ", re.sub(r"[\[\]\r\n]+", " ", txt or "")).strip(" .,-–—")
+            if len(_libre_ei) < 3:
+                save_session(phone, "WAIT_ESTETICA_INTERES", data)
+                return _btn_msg(
+                    "¿Qué procedimiento y en qué zona te interesa? Por ejemplo: "
+                    "_botox en la frente_ o _relleno de labios_.",
+                    [{"id": "est_int_nose", "title": "No sé, evaluación"}],
+                )
+            _interes_ei = _libre_ei[:120]
+        data["estetica_interes"] = _interes_ei
+        log_event(phone, "estetica_interes_capturado", {"interes": _interes_ei[:120]})
+        if not _slot_ei:
+            return await _iniciar_agendar(phone, data, "estética facial")
+        return await _slot_confirmed(phone, data, _slot_ei)
 
     if state == "WAIT_DURACION_MASOTERAPIA":
         # Matchear número exacto o texto escrito
@@ -11896,6 +12109,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 _ABO_AG = int(_regla_ag["monto"])
                 _AREA_AG = _regla_ag["etiqueta"]
                 # Guardar TODO lo necesario para crear la cita después
+                # Lo que el paciente quiere hacerse (Estética) viaja con el slot:
+                # la cita se crea DESPUÉS, al validar el pago, y puede hacerla el
+                # poller de correo sin la sesión.
+                _obs_ag = _obs_cita_estetica(data, slot)
+                if _obs_ag:
+                    slot["obs_cita"] = _obs_ag
+                    slot["estetica_interes"] = data.get("estetica_interes") or ""
                 data["abono_gate_slot"]     = slot
                 data["abono_gate_paciente"] = paciente
                 data["abono_gate_ts"]       = datetime.now(_CHILE_TZ).isoformat()
@@ -11908,6 +12128,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "monto_requerido": _ABO_AG,
                 })
                 _monto_fmt = f"${_ABO_AG:,}".replace(",", ".")
+                _mt_ag = " mientras transfieres" if _abono_es_evaluacion(_regla_ag) else ""
+                _verbo_ag = "reservar" if _abono_es_evaluacion(_regla_ag) else "confirmar"
+                _intro_ag = (
+                    f"Para {_verbo_ag} tu hora de *{_AREA_AG}* pedimos un abono de "
+                    f"*{_monto_fmt} CLP* — {_abono_frase_valor(_regla_ag)}."
+                )
+                _cancel_ag = (_abono_aviso_cancelacion(_regla_ag) + "\n\n"
+                              if _abono_aviso_cancelacion(_regla_ag) else "")
 
                 # Confirmación automática por transferencia (2026-07-14, GATEADO
                 # ABONO_AUTO_ACTIVE). Con el flag ON generamos un link a la página
@@ -11959,15 +12187,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             "al confirmar el abono te enviamos el link.\n\n"
                         ) if _es_teleconsulta(slot) else ""
                         return (
-                            f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
-                            f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
-                            "así que el día de la atención no pagas nada adicional.\n\n"
+                            f"{_intro_ag}\n\n"
                             f"{_tc_ag}"
                             f"Aquí están los datos para transferir, con botón de copiar:\n"
                             f"{_link_ap['url']}\n\n"
-                            f"Tu hora queda apartada {_plazo_ag}.\n"
+                            f"Tu hora queda apartada {_plazo_ag}{_mt_ag}.\n"
                             "Cuando transfieras, *envíanos el comprobante por este chat* 📎 "
                             "y te confirmamos la hora.\n\n"
+                            f"{_cancel_ag}"
                             "_Si prefieres abonar en recepción, escribe *recepcion* y te orientamos._"
                         )
                     except Exception as _e_link_ap:
@@ -11998,9 +12225,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     "al confirmar el abono te enviamos el link.\n\n"
                 ) if _es_teleconsulta(slot) else ""
                 return (
-                    f"Para confirmar tu hora de *{_AREA_AG}* pedimos un abono de "
-                    f"*{_monto_fmt} CLP* — corresponde al valor total de la consulta, "
-                    "así que el día de la atención no pagas nada adicional.\n\n"
+                    f"{_intro_ag}\n\n"
                     f"{_tc_ag_fb}"
                     "*Datos para transferir:*\n"
                     f"{_CTF_AG['banco']}\n"
@@ -12008,8 +12233,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     f"{_CTF_AG['titular']}\n"
                     f"RUT: {_CTF_AG['rut']}\n"
                     f"Correo: {_CTF_AG['correo']}\n\n"
-                    f"Tu hora queda apartada {_plazo_fb}.\n"
+                    f"Tu hora queda apartada {_plazo_fb}{_mt_ag}.\n"
                     "Envía el comprobante por este chat 📎 y confirmo tu reserva de inmediato.\n\n"
+                    f"{_cancel_ag}"
                     "_Si prefieres abonar en recepción, escribe *recepcion* y te orientamos._"
                 )
             # ── fin Abono-Gate ────────────────────────────────────────────────
@@ -12049,6 +12275,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                                  in (data.get("especialidad") or "").lower()
                               else "")
                     )
+                    # Estética Facial: la doctora ve qué procedimiento/zona quiere.
+                    _obs_prestacion = _obs_cita_estetica(data, slot) or _obs_prestacion
                     resultado = await asyncio.wait_for(crear_cita(
                         id_paciente=paciente["id"],
                         id_profesional=slot["id_profesional"],
@@ -12651,10 +12879,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     try:
                         from config import CMC_TRANSFERENCIA as _CTF
                         _ABO = int(_r_ab2["monto"])
+                        _cancel_ab2 = _abono_aviso_cancelacion(_r_ab2)
+                        _abo_fmt2 = f"{_ABO:,}".replace(",", ".")
                         _abono_txt = (
                             f"💳 *Importante — abono para confirmar tu hora de {_r_ab2['etiqueta']}*\n\n"
-                            f"Pedimos un abono de *${_ABO:,} CLP* para asegurar tu hora "
-                            "— corresponde al valor total de la consulta; el día de la atención no pagas nada adicional.\n\n"
+                            f"Pedimos un abono de *${_abo_fmt2} CLP* para asegurar tu hora "
+                            f"— {_abono_frase_valor(_r_ab2)}.\n\n"
+                            + (_cancel_ab2 + "\n\n" if _cancel_ab2 else "") +
                             "*Datos para transferir:*\n"
                             f"{_CTF['banco']}\n"
                             f"{_CTF['tipo']} {_CTF['numero']}\n"
@@ -12663,7 +12894,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                             f"Correo: {_CTF['correo']}\n\n"
                             "Envía el comprobante por este chat 📎 y recepción deja tu hora confirmada.\n\n"
                             "_Si prefieres, también puedes abonar directamente en recepción._"
-                        ).replace(",", ".")
+                        )
                         from resilience import spawn_task as _spawn_abono
                         async def _send_abono_psiq():
                             import asyncio as _ai_ab
@@ -14865,11 +15096,13 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 async def _aviso_recep_abono():
                     from config import CMC_TRANSFERENCIA as _ctf_r
                     _msg_r = (
-                        f"📋 *Abono Psiquiatría — abonar en recepción*\n"
+                        f"📋 *Abono {_area_ab} — abonar en recepción*\n"
                         f"Paciente: {_nom_r}\n"
                         f"Fecha cita: {_slot_r.get('fecha_display', _slot_r.get('fecha', ''))}\n"
                         f"Hora: {(_slot_r.get('hora_inicio') or '')[:5]}\n"
                         f"WA: {phone}\n"
+                        + (f"Interés (estética): {_slot_r.get('estetica_interes')}\n"
+                           if _slot_r.get("estetica_interes") else "") +
                         "El paciente prefiere abonar presencialmente. Coordinar en recepción."
                     )
                     await send_whatsapp(ADMIN_ALERT_PHONE, _msg_r)
@@ -14902,8 +15135,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             return (
                 f"*{_area_ab}* es solo *particular* — no se puede pagar con Fonasa "
                 "ni Isapre.\n\n"
-                f"El abono de *{_monto_fn} CLP* corresponde al valor total de la "
-                "consulta; el día de la atención no pagas nada adicional.\n\n"
+                f"El abono de *{_monto_fn} CLP* {_abono_frase_valor(_r_fn)}.\n\n"
                 "Envía una *foto* del comprobante de transferencia para confirmar "
                 "tu hora 📎"
             )
@@ -17743,12 +17975,20 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         _abono_nota_wl = ""
         if _regla_wl:
             _monto_wl_txt = f"{_regla_wl['monto']:,.0f}".replace(",", ".")
-            _abono_nota_wl = (
-                f"\n\n💳 Ojo: *{_regla_wl['etiqueta']}* pide un abono de "
-                f"*${_monto_wl_txt}* por adelantado para confirmar la hora "
-                "(es el valor total de la consulta, el día de la atención no "
-                "pagas nada adicional)."
-            )
+            if _abono_es_evaluacion(_regla_wl):
+                _abono_nota_wl = (
+                    f"\n\n💳 Ojo: *{_regla_wl['etiqueta']}* pide un abono de "
+                    f"*${_monto_wl_txt}* por adelantado para reservar la hora "
+                    "(es tu evaluación: si ese mismo día te haces el tratamiento, "
+                    "sale gratis y solo pagas la diferencia)."
+                )
+            else:
+                _abono_nota_wl = (
+                    f"\n\n💳 Ojo: *{_regla_wl['etiqueta']}* pide un abono de "
+                    f"*${_monto_wl_txt}* por adelantado para confirmar la hora "
+                    "(es el valor total de la consulta, el día de la atención no "
+                    "pagas nada adicional)."
+                )
 
         # Auditoría 2026-05-03: 145 sin_disponibilidad/30d → 0 inserts en waitlist.
         # Pacientes abandonaban en WAIT_WAITLIST_CONFIRM sin responder. Fix: si ya
@@ -18769,7 +19009,7 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
             _hora_pf = (slot.get("hora_inicio") or "")[:5]
             if motivo == "monto_insuficiente":
                 _aviso_pf = (
-                    f"⚠️ *Abono Psiquiatría — validar manual*\n"
+                    f"⚠️ *Abono {_area_pc} — validar manual*\n"
                     f"Paciente: {_nom_pf} · WA: {phone}\n"
                     f"Cita: {_slot_fd} {_hora_pf}\n"
                     f"Comprobante recibido. Monto leído: ${monto:,} "
@@ -18777,7 +19017,7 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
                 )
             else:
                 _aviso_pf = (
-                    f"⚠️ *Abono Psiquiatría — comprobante ilegible*\n"
+                    f"⚠️ *Abono {_area_pc} — comprobante ilegible*\n"
                     f"Paciente: {_nom_pf} · WA: {phone}\n"
                     f"Cita: {_slot_fd} {_hora_pf}\n"
                     "Comprobante recibido pero no pude leerlo automáticamente — validar manual con el banco."
@@ -18835,7 +19075,8 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
             hora_inicio=slot["hora_inicio"],
             hora_fin=slot["hora_fin"],
             id_recurso=slot.get("id_recurso", 1),
-            modalidad=data.get("telemedicina_modalidad", "TELEMEDICINA"),
+            modalidad=_modalidad_cita_abono(slot),
+            observaciones_extra=slot.get("obs_cita") or "",
         ), timeout=45)
         if isinstance(resultado_ml, dict):
             id_cita = str(resultado_ml.get("id", ""))
@@ -18963,17 +19204,33 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     nombre_corto = _first_name(paciente.get("nombre", ""))
     saludo = f"*{nombre_corto}*" if nombre_corto else "Tu hora"
     _saldo_fmt = f"${saldo:,}".replace(",", ".")
-    confirmacion = (
-        f"✅ *{saludo}, tu hora de {_area_pc} quedó confirmada.*\n\n"
-        f"👤 {paciente.get('nombre', '')}\n"
-        f"🏥 Psiquiatría — {slot.get('profesional', '')}\n"
-        f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"
-        f"🕐 {(slot.get('hora_inicio') or '')[:5]}\n\n"
-        f"Abono recibido: ${monto:,} CLP\n"
-        f"Saldo a pagar el día de la atención: {_saldo_fmt} CLP\n\n"
-        "Recepción validará la transferencia con el banco.\n"
-        "_Escribe *menu* si necesitas algo más._"
-    ).replace(",", ".")
+    if _abono_es_evaluacion(_r_pc):
+        _monto_ok_fmt = f"{monto:,}".replace(",", ".")
+        confirmacion = (
+            f"✅ *{saludo}, tu hora de {_area_pc} quedó confirmada.*\n\n"
+            f"👤 {paciente.get('nombre', '')}\n"
+            f"🏥 {_area_pc} — {slot.get('profesional', '')}\n"
+            f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"
+            f"🕐 {(slot.get('hora_inicio') or '')[:5]}\n\n"
+            f"Abono recibido: ${_monto_ok_fmt} CLP (tu evaluación).\n"
+            "Si ese mismo día te haces el tratamiento, la evaluación sale gratis: "
+            "solo pagas la diferencia.\n\n"
+            f"{_abono_aviso_cancelacion(_r_pc)}\n\n"
+            "Recepción validará la transferencia con el banco.\n"
+            "_Escribe *menu* si necesitas algo más._"
+        )
+    else:
+        confirmacion = (
+            f"✅ *{saludo}, tu hora de {_area_pc} quedó confirmada.*\n\n"
+            f"👤 {paciente.get('nombre', '')}\n"
+            f"🏥 {_area_pc} — {slot.get('profesional', '')}\n"
+            f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"
+            f"🕐 {(slot.get('hora_inicio') or '')[:5]}\n\n"
+            f"Abono recibido: ${monto:,} CLP\n"
+            f"Saldo a pagar el día de la atención: {_saldo_fmt} CLP\n\n"
+            "Recepción validará la transferencia con el banco.\n"
+            "_Escribe *menu* si necesitas algo más._"
+        ).replace(",", ".")
 
     reset_session(phone)
 
@@ -18981,7 +19238,7 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
     if ADMIN_ALERT_PHONE:
         _nom_conf = paciente.get("nombre", "")
         _aviso_conf = (
-            f"✅ *Abono Psiquiatría — VALIDAR CON BANCO*\n"
+            f"✅ *Abono {_area_pc} — VALIDAR CON BANCO*\n"
             f"Paciente: {_nom_conf} · WA: {phone}\n"
             f"Cita: {fecha_cita_str} {(slot.get('hora_inicio') or '')[:5]} "
             f"(ID Medilink: {id_cita})\n"
@@ -18991,6 +19248,9 @@ async def procesar_imagen_abono(phone: str, img_bytes: bytes,
             f"Titular: {resultado_vision.get('titular_origen') or '?'}\n"
             "⚠️ Verificar que la transferencia llegó al banco antes de confirmar."
         ).replace(",", ".")
+        _int_aviso = data.get("estetica_interes") or slot.get("estetica_interes")
+        if _int_aviso and _abono_es_evaluacion(_r_pc):
+            _aviso_conf += f"\nInterés (estética): {_int_aviso}"
         async def _notif_recep_ok():
             from messaging import send_whatsapp as _sw_conf
             await _sw_conf(ADMIN_ALERT_PHONE, _aviso_conf)

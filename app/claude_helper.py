@@ -950,7 +950,7 @@ Responde directamente estas dudas sin necesidad de agendar:
 | Otorrinolaringología | ❌ Solo particular | $35.000 | NO acepta Fonasa |
 | Gastroenterología | ❌ Solo particular | $35.000 | NO acepta Fonasa |
 | Odontología (todas) | ❌ Solo particular | varía | NO acepta Fonasa |
-| Estética Facial | ❌ Solo particular | varía | NO acepta Fonasa |
+| Estética Facial | ❌ Solo particular | varía · evaluación $15.000 | NO acepta Fonasa · la evaluación ($15.000) se abona por adelantado para reservar la hora (ver regla en ESTÉTICA / ARMONIZACIÓN FACIAL) |
 | Fonoaudiología | ❌ Solo particular | $25.000–$50.000 | NO acepta Fonasa |
 | Podología | ❌ Solo particular | $20.000+ | NO acepta Fonasa |
 | Masoterapia | ❌ Solo particular | $17.990–$26.990 | NO acepta Fonasa |
@@ -1112,6 +1112,7 @@ ESTÉTICA / ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba)
 - Exosomas / regeneración celular → Vesículas que estimulan colágeno y regeneración profunda de la piel, resultado acumulativo. $349.900 con **Estética Facial**.
 - Bioestimulador / hidroxiapatita / colágeno / Radiesse → Inyección que estimula la producción natural de colágeno para mejorar firmeza y elasticidad, efecto dura 12–18 meses. $450.000 con **Estética Facial**.
 - Armonización facial / quiero arreglarme la cara → Conjunto de tratamientos estéticos (botox + rellenos + bioestimuladores) para mejorar proporción y simetría facial. Evaluación $15.000, luego plan personalizado con **Estética Facial**.
+- EVALUACIÓN Y ABONO (regla fija, cuando pregunten por la evaluación, el precio de la hora o cómo reservar en estética): la **evaluación facial cuesta $15.000** y es lo que se **abona por adelantado (transferencia) para reservar la hora**. La hora queda apartada 24 horas mientras transfieren. **Si ese mismo día se hacen el tratamiento, la evaluación sale gratis: solo pagan la diferencia** (el abono se descuenta del tratamiento). Si necesitan cancelar o cambiar la hora y avisan con al menos 24 horas de anticipación, se devuelve el abono o se reagenda. No inventes otras excepciones ni condiciones, no hables de "convenio" y no digas que es el valor total de una consulta: es la evaluación. Antes de reservar, el sistema les pregunta qué procedimiento y qué zona les interesa (ej. "botox en la frente", "relleno de labios", "ojeras"), para que la doctora lo vea; si aún no saben, basta con decir que quieren la evaluación.
 - Peeling / manchas en la cara / cicatrices de acné → Exfoliación química para remover células muertas y mejorar textura, manchas y marcas. Consultar precio con **Estética Facial**.
 
 DIFERENCIADORES CMC (usar cuando pregunten "¿por qué elegir CMC?" o comparen con otra clínica):
@@ -1298,7 +1299,7 @@ IMPLANTOLOGÍA (Dra. Aurora Valdés — solo particular):
 - Implante dental (corona + tornillo): desde $650.000 — reemplazo permanente de un diente perdido. Se coloca un tornillo de titanio en el hueso y sobre él una corona de porcelana. Proceso total ~3-6 meses (tiempo de cicatrización del hueso).
 
 ARMONIZACIÓN FACIAL (Dra. Valentina Fuentealba, odontóloga — solo particular; horas según coordinación, sin días fijos; acepta efectivo, transferencia, débito y crédito):
-- Evaluación: $15.000 — evaluación facial personalizada para determinar qué tratamientos estéticos son los más indicados.
+- Evaluación: $15.000 — evaluación facial personalizada para determinar qué tratamientos estéticos son los más indicados. Para reservar la hora se abonan esos $15.000 por transferencia (la hora queda apartada 24 horas); si ese mismo día se hacen el tratamiento, la evaluación sale gratis y solo pagan la diferencia. Con aviso de al menos 24 horas se devuelve el abono o se reagenda.
 - Ácido hialurónico: $159.990 — relleno inyectable para labios, surcos nasogenianos, ojeras o pómulos. Resultado inmediato, dura 8-12 meses.
 - Toxina botulínica (3 zonas): $159.990 — "botox" en frente, entrecejo y patas de gallo. Relaja las arrugas de expresión. Efecto en 3-7 días, dura 4-6 meses.
 - Mesoterapia/vitaminas (1 sesión): $80.000 — microinyecciones de vitaminas y ácido hialurónico en la piel del rostro. Hidrata, da luminosidad y mejora la textura.

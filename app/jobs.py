@@ -397,8 +397,10 @@ async def _enviar_reenganche():
                 try:
                     _canal_ab = _canal_de_phone(phone)
                     if _canal_ab != "unknown":
+                        _area_abj = ((data.get("abono_gate_slot") or {}).get("especialidad")
+                                     or "Psiquiatría")
                         _msg_ab = (
-                            "El tiempo para enviar el comprobante de tu hora de Psiquiatría venció "
+                            f"El tiempo para enviar el comprobante de tu hora de {_area_abj} venció "
                             "y el aparte fue liberado.\n\n"
                             "Escribe *menu* si quieres volver a buscar una hora."
                         )

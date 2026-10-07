@@ -612,6 +612,15 @@ def _tomar_abono_atomico(abono_id: int, desde_estado: str, hacia_estado: str, **
         return cur.rowcount > 0
 
 
+def _modalidad_slot(slot: dict) -> str:
+    """Modalidad de la cita al confirmar el abono, según el profesional/slot
+    (misma fuente que el resto del bot: flows._es_teleconsulta). Estaba fija en
+    TELEMEDICINA: una cita presencial con abono (Estética Facial) habría quedado
+    marcada [ONLINE] en Medilink."""
+    from flows import _es_teleconsulta
+    return "TELEMEDICINA" if _es_teleconsulta(slot) else "PRESENCIAL"
+
+
 async def _crear_cita_y_confirmar(abono: dict, monto_recibido: int, metodo_detalle: str,
                                   codigo_operacion: str | None, banco_origen: str | None,
                                   confirmado_por: str) -> bool:
@@ -638,7 +647,8 @@ async def _crear_cita_y_confirmar(abono: dict, monto_recibido: int, metodo_detal
             hora_inicio=slot.get("hora_inicio"),
             hora_fin=slot.get("hora_fin"),
             id_recurso=slot.get("id_recurso", 1),
-            modalidad="TELEMEDICINA",
+            modalidad=_modalidad_slot(slot),
+            observaciones_extra=slot.get("obs_cita") or "",
         ), timeout=45)
     except Exception as e:
         log.error("_crear_cita_y_confirmar: crear_cita falló abono_id=%s: %s", abono["id"], e)
@@ -735,16 +745,36 @@ async def _crear_cita_y_confirmar(abono: dict, monto_recibido: int, metodo_detal
     nombre_corto = (abono["paciente_nombre"] or "").split(" ")[0] if abono["paciente_nombre"] else ""
     saludo = f"*{nombre_corto}*" if nombre_corto else "Tu hora"
     saldo_fmt = f"${saldo:,}".replace(",", ".")
-    confirmacion = (
-        f"✅ {saludo}, recibimos tu transferencia y tu hora de Psiquiatría quedó "
-        f"*confirmada*.\n\n"
-        f"👤 {abono['paciente_nombre']}\n"
-        f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"
-        f"🕐 {(slot.get('hora_inicio') or '')[:5]}\n\n"
-        f"Abono recibido: ${monto_recibido:,} CLP\n"
-        f"Saldo a pagar el día de la atención: {saldo_fmt} CLP\n\n"
-        "_No necesitas mandarnos nada más — quedó todo listo._"
-    ).replace(",", ".")
+    _area_ab = (abono.get("especialidad") or "").strip() or "Psiquiatría"
+    from config import abono_regla as _abono_regla_em
+    from flows import _abono_es_evaluacion, _abono_aviso_cancelacion
+    _regla_em = _abono_regla_em(especialidad=_area_ab,
+                                id_profesional=slot.get("id_profesional"))
+    if _abono_es_evaluacion(_regla_em):
+        _monto_em = f"{monto_recibido:,}".replace(",", ".")
+        confirmacion = (
+            f"✅ {saludo}, recibimos tu transferencia y tu hora de {_area_ab} quedó "
+            f"*confirmada*.\n\n"
+            f"👤 {abono['paciente_nombre']}\n"
+            f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"
+            f"🕐 {(slot.get('hora_inicio') or '')[:5]}\n\n"
+            f"Abono recibido: ${_monto_em} CLP (tu evaluación).\n"
+            "Si ese mismo día te haces el tratamiento, la evaluación sale gratis: "
+            "solo pagas la diferencia.\n\n"
+            f"{_abono_aviso_cancelacion(_regla_em)}\n\n"
+            "_No necesitas mandarnos nada más — quedó todo listo._"
+        )
+    else:
+        confirmacion = (
+            f"✅ {saludo}, recibimos tu transferencia y tu hora de {_area_ab} quedó "
+            f"*confirmada*.\n\n"
+            f"👤 {abono['paciente_nombre']}\n"
+            f"📅 {slot.get('fecha_display', slot.get('fecha', ''))}\n"
+            f"🕐 {(slot.get('hora_inicio') or '')[:5]}\n\n"
+            f"Abono recibido: ${monto_recibido:,} CLP\n"
+            f"Saldo a pagar el día de la atención: {saldo_fmt} CLP\n\n"
+            "_No necesitas mandarnos nada más — quedó todo listo._"
+        ).replace(",", ".")
 
     try:
         from messaging import send_whatsapp
@@ -758,7 +788,7 @@ async def _crear_cita_y_confirmar(abono: dict, monto_recibido: int, metodo_detal
         from config import ADMIN_ALERT_PHONE
         if ADMIN_ALERT_PHONE:
             aviso = (
-                f"✅ *Abono Psiquiatría confirmado AUTOMÁTICO por correo bancario*\n"
+                f"✅ *Abono {_area_ab} confirmado AUTOMÁTICO por correo bancario*\n"
                 f"Paciente: {abono['paciente_nombre']} · WA: {phone}\n"
                 f"Cita: {slot.get('fecha_display', slot.get('fecha',''))} "
                 f"{(slot.get('hora_inicio') or '')[:5]} (ID Medilink: {id_cita})\n"
@@ -766,6 +796,8 @@ async def _crear_cita_y_confirmar(abono: dict, monto_recibido: int, metodo_detal
                 f"Código: {codigo_operacion or '?'}\n"
                 f"Método: {metodo_detalle}"
             ).replace(",", ".")
+            if slot.get("estetica_interes"):
+                aviso += f"\nInterés (estética): {slot['estetica_interes']}"
             from messaging import send_whatsapp as _sw
             await _sw(ADMIN_ALERT_PHONE, aviso)
             log_message(ADMIN_ALERT_PHONE, "out", aviso, "IDLE")
@@ -790,7 +822,7 @@ async def _preguntar_paciente(abono: dict, transferencia_id: int, nombre_pagador
     monto_fmt = f"${monto:,}".replace(",", ".")
     texto = (
         f"Recibimos una transferencia de *{monto_fmt}* a nombre de *{nombre_pagador}*.\n\n"
-        "¿Es la persona que pagó tu reserva de Psiquiatría?"
+        f"¿Es la persona que pagó tu reserva de {(abono.get('especialidad') or '').strip() or 'Psiquiatría'}?"
     )
     try:
         from flows import _btn_msg

@@ -299,6 +299,7 @@ CMC_TRANSFERENCIA = {
 # Monto del abono anticipado de Psiquiatría: la CONSULTA COMPLETA ($60.000,
 # dato dueño 2026-06-12) — no hay saldo el día de la atención.
 ABONO_PSIQUIATRIA_CLP = int(os.getenv("ABONO_PSIQUIATRIA_CLP", "60000"))
+ABONO_ESTETICA_CLP = int(os.getenv("ABONO_ESTETICA_CLP", "15000"))
 ABONO_GASTRO_CLP = int(os.getenv("ABONO_GASTRO_CLP", "35000"))
 ABONO_NEUROLOGIA_CLP = int(os.getenv("ABONO_NEUROLOGIA_CLP", "65000"))
 ABONO_NUTRIOLOGIA_CLP = int(os.getenv("ABONO_NUTRIOLOGIA_CLP", "60000"))
@@ -378,6 +379,20 @@ ABONO_REGLAS: dict[str, dict] = {
         "profesionales": [81],                    # Dr. Raúl Paz
         "gate_bot":      True,
     },
+    # Estética Facial (Dra. Fuentealba, id 76): el abono ES la evaluación
+    # ($15.000), no una consulta completa. Si ese mismo día el paciente se hace
+    # el tratamiento, el abono se descuenta (la evaluación sale gratis y paga la
+    # diferencia). Decisión del dueño 2026-10-07. `concepto="evaluacion"` hace
+    # que los mensajes al paciente usen el texto de evaluación y no el de
+    # "valor total de la consulta".
+    "estética facial": {
+        "etiqueta":      "Estética Facial",
+        "monto":         ABONO_ESTETICA_CLP,      # evaluación facial
+        "precio":        ABONO_ESTETICA_CLP,      # → saldo de la evaluación = 0
+        "profesionales": [76],                    # Dra. Valentina Fuentealba
+        "gate_bot":      True,
+        "concepto":      "evaluacion",
+    },
     # Estas dos son abono PARCIAL y las registra recepción en el mesón: el bot
     # no las bloquea al agendar. Viven acá igual para que el monto sugerido, la
     # contabilidad y el ciclo pendiente→aplicado sean los mismos.
@@ -446,6 +461,15 @@ def abono_regla(especialidad: str | None = None,
                 # ("nutriologia y diabetologia") y un "diabetologia" pelado no
                 # comparte prefijo con ella, así que el test genérico lo perdía.
                 if "nutriolo" in e or "diabetolo" in e:
+                    return {**cfg, "clave": clave}
+                continue
+            # "estética" es prefijo de DOS cosas: Estética Facial (Dra.
+            # Fuentealba, con abono) y "estética dental" (blanqueamiento,
+            # carillas — odontología, sin abono). El match por prefijo corto le
+            # pediría $15.000 a quien escribió "estética dental". Se exige que
+            # NO nombre lo dental.
+            if k.startswith("estetica"):
+                if e.startswith("estetica") and "dental" not in e and "dient" not in e:
                     return {**cfg, "clave": clave}
                 continue
             if e == k or e.startswith(k[:8]) or k.startswith(e[:8]):
