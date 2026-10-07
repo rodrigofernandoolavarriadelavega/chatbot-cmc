@@ -3462,7 +3462,10 @@ async def _job_marketing_consent_blast():
             log.debug("_job_marketing_consent_blast: fuera de ventana horaria — skip")
             return
 
-        LIMITE_DIA = 200
+        # Tope configurable: al reactivarlo (2026-10-07, apagado desde mayo por el
+        # comentario inline en .env) se partió con 100/día para cuidar la calidad
+        # del número antes de volver a 200.
+        LIMITE_DIA = int(_osc.getenv("MARKETING_CONSENT_BLAST_CAP", "200"))
         SLEEP_ENTRE = 30
 
         # Contar enviados hoy
