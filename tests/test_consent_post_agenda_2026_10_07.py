@@ -27,8 +27,18 @@ TMP_DB = Path(tempfile.mkdtemp(prefix="cmc_test_cpa_")) / "test_sessions.db"
 os.environ["SESSIONS_DB"] = str(TMP_DB)
 os.environ.setdefault("SQLCIPHER_KEY", "")
 
-if "winback" not in sys.modules:
-    sys.modules["winback"] = types.ModuleType("winback")
+# Mismo shim que los otros tests de cross-sell/consent: si este archivo se
+# importa primero, los demás reutilizan el módulo y esperan estos atributos.
+try:
+    import winback as _real_winback  # noqa: F401 — si importa, los tests lo parchean por atributo
+except Exception:
+    _real_winback = None
+if _real_winback is None and "winback" not in sys.modules:
+    _fake_winback = types.ModuleType("winback")
+    _fake_winback.is_template_approved = None
+    _fake_winback.phone_in_opt_out = lambda phone: False
+    _fake_winback.has_marketing_consent = lambda phone: True
+    sys.modules["winback"] = _fake_winback
 
 import session  # noqa: E402
 session.DB_PATH = TMP_DB
