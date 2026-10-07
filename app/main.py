@@ -2118,6 +2118,33 @@ def landing_nutriologia_diabetologia():
     return _LANDING_NUTRIOLOGIA_DIABETOLOGIA_HTML
 
 
+# Landings premium por especialidad (lote 2026-10-07). Cada slug sirve
+# templates/landing_<slug con _>.html tal cual, leído una vez al arrancar.
+_LANDINGS_ESPECIALIDAD = (
+    "kinesiologia", "nutricion", "medicina-familiar", "cardiologia",
+    "otorrinolaringologia", "fonoaudiologia", "ginecologia", "matrona",
+    "gastroenterologia", "neurologia", "psicologia-adulto", "psicologia-infantil",
+    "psiquiatria", "podologia", "oftalmologia", "implantologia", "endodoncia",
+)
+
+
+def _registrar_landing_especialidad(slug: str) -> None:
+    archivo = _TEMPLATE_DIR / f"landing_{slug.replace('-', '_')}.html"
+    if not archivo.exists():
+        return
+    html = archivo.read_text(encoding="utf-8")
+
+    def _landing() -> HTMLResponse:
+        return HTMLResponse(html)
+
+    app.add_api_route(f"/{slug}", _landing, methods=["GET"], response_class=HTMLResponse,
+                      name=f"landing_{slug.replace('-', '_')}")
+
+
+for _slug_landing in _LANDINGS_ESPECIALIDAD:
+    _registrar_landing_especialidad(_slug_landing)
+
+
 @app.get("/ecografia", response_class=HTMLResponse)
 def landing_ecografia():
     """Landing de venta — Ecografía (David Pardo, TM) en Carampangue."""
@@ -2962,7 +2989,7 @@ async def sitemap_xml():
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
     # Landings directas (servidas vía bridge WP Snippet 8 bajo el dominio canónico)
-    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue", "ortodoncia", "estetica", "medicina-general", "odontologia-general", "nutriologia-diabetologia"):
+    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue", "ortodoncia", "estetica", "medicina-general", "odontologia-general", "nutriologia-diabetologia") + _LANDINGS_ESPECIALIDAD:
         urls.append((f"{base_url}/{direct_slug}", "0.85", "monthly"))
     # Comuna hubs
     for comuna_slug in COMUNAS_ARAUCO:
