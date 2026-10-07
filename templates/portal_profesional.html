@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0F3F68">
+<title>Portal del Profesional — Alma CMC</title>
+<style>
+@font-face{font-family:'Montserrat';src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2-variations');font-weight:400 800;font-display:swap}
+@font-face{font-family:'Inter';src:url('/static/fonts/inter-var-latin.woff2') format('woff2-variations');font-weight:400 700;font-display:swap}
+:root{
+  --azul:#0F3F68;--azul-700:#0c3556;--azul-500:#1172AB;--azul-300:#7FA9CB;--azul-50:#EAF2F9;
+  --aqua:#4FBECE;--aqua-600:#2E9FB0;--aqua-50:#E6F7FA;
+  --verde:#16A34A;--verde-50:#E8F7EE;--naranja:#EA7317;--naranja-700:#B4560D;--naranja-50:#FDF1E7;
+  --rojo:#DC2626;--rojo-50:#FDECEC;
+  --bg:#EEF3F8;--bg-2:#F6F9FC;--blanco:#fff;--tinta:#12283A;
+  --gris-100:#E3EAF1;--gris-200:#D3DDE7;--gris-300:#B5C3D1;--gris-400:#8597A8;--gris-500:#5E7184;--gris-600:#46586A;
+  --linea:#E3EAF1;
+  --radius:14px;--radius-lg:20px;--radius-pill:999px;
+  --shadow-xs:0 1px 2px rgba(15,63,104,.06);
+  --shadow-sm:0 1px 3px rgba(15,63,104,.08),0 4px 12px rgba(15,63,104,.05);
+  --shadow-md:0 6px 20px rgba(15,63,104,.12);
+  --shadow-lg:0 18px 50px rgba(15,63,104,.22);
+  --grad-navy:linear-gradient(135deg,#0F3F68 0%,#14527F 60%,#1172AB 100%);
+  --font-display:'Montserrat',-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
+  --ease:cubic-bezier(.2,.7,.2,1);--ease-back:cubic-bezier(.34,1.3,.5,1);
+  --side:372px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{font-family:var(--font-body);background:var(--bg);color:var(--tinta);font-size:14px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select{font-family:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2.5px solid var(--aqua);outline-offset:2px;border-radius:8px}
+.num,.tab-num{font-variant-numeric:tabular-nums}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── Header ───────────────────────────────────────────── */
+.hdr{position:relative;display:flex;align-items:center;gap:14px;padding:0 20px;height:64px;background:var(--grad-navy);
+  color:#fff;overflow:hidden;z-index:5;padding-top:env(safe-area-inset-top)}
+.hdr::after{content:'';position:absolute;right:-80px;top:-120px;width:340px;height:300px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(79,190,206,.42),rgba(79,190,206,0));pointer-events:none}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;position:relative;z-index:1}
+.brand>div{min-width:0}
+.brand h1{overflow:hidden;text-overflow:ellipsis}
+.brand .iso{width:36px;height:36px;border-radius:11px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.12);flex:none}
+.brand .iso img{width:26px;height:26px}
+.brand h1{font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:-.02em;margin:0;white-space:nowrap}
+.brand p{margin:1px 0 0;font-size:12.5px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr .spacer{flex:1}
+.hpill{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);font-size:12.5px;font-weight:500;white-space:nowrap}
+.hpill .dot{width:7px;height:7px;border-radius:50%;background:var(--aqua);box-shadow:0 0 0 0 rgba(79,190,206,.7);animation:pulse 2.4s var(--ease) infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,190,206,.6)}70%{box-shadow:0 0 0 8px rgba(79,190,206,0)}100%{box-shadow:0 0 0 0 rgba(79,190,206,0)}}
+.hpill.demo{gap:0;background:#FFF4E5;color:#7A3E06;border-color:#F7CF9E;font-weight:600}
+.hbtn{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;min-width:36px;padding:0 12px;border-radius:10px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:500;transition:background .15s var(--ease)}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+.hbtn.aqua{background:var(--aqua);border-color:var(--aqua);color:#06303B;font-weight:600}
+.hbtn.aqua:hover{background:#6BCBD8}
+
+/* ── Layout ───────────────────────────────────────────── */
+.app{display:grid;grid-template-columns:var(--side) 1fr;height:calc(100dvh - 64px - env(safe-area-inset-top))}
+.side{background:var(--blanco);border-right:1px solid var(--linea);display:flex;flex-direction:column;min-height:0}
+.main{min-width:0;min-height:0;overflow:auto;scroll-behavior:smooth}
+
+/* ── Sidebar ──────────────────────────────────────────── */
+.side-top{padding:16px 16px 10px;border-bottom:1px solid var(--linea)}
+.search{position:relative}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gris-400);width:17px;height:17px}
+.search input{width:100%;height:42px;border:1px solid var(--gris-200);border-radius:12px;background:var(--bg-2);padding:0 40px 0 38px;font-size:14px;
+  transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .15s var(--ease)}
+.search input:focus{outline:none;border-color:var(--aqua);background:#fff;box-shadow:0 0 0 4px var(--aqua-50)}
+.search kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font:600 11px var(--font-body);color:var(--gris-400);border:1px solid var(--gris-200);border-radius:6px;padding:1px 6px;background:#fff}
+.seg{display:flex;gap:2px;background:var(--bg);border-radius:10px;padding:3px;margin-top:12px}
+.seg button{flex:1;white-space:nowrap;height:32px;border:0;background:transparent;border-radius:8px;font-size:13px;font-weight:500;color:var(--gris-600);transition:background .18s var(--ease),color .18s var(--ease),box-shadow .18s var(--ease)}
+.seg button[aria-pressed=true]{background:#fff;color:var(--azul);font-weight:600;box-shadow:var(--shadow-xs)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:var(--radius-pill);border:1px solid var(--gris-200);background:#fff;
+  font-size:12.5px;font-weight:500;color:var(--gris-600);transition:all .15s var(--ease)}
+.chip b{font-weight:600;color:var(--tinta)}
+.chip:hover{border-color:var(--azul-300)}
+.chip[aria-pressed=true]{background:var(--azul);border-color:var(--azul);color:#fff}
+.chip[aria-pressed=true] b{color:#fff}
+.list-h{display:flex;align-items:baseline;justify-content:space-between;padding:12px 16px 6px}
+.list-h h2{font-family:var(--font-display);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-500);margin:0;font-weight:600}
+.list-h span{font-size:12.5px;color:var(--gris-500)}
+.list{flex:1;overflow:auto;padding:2px 8px 16px;overscroll-behavior:contain}
+.pac{display:flex;gap:12px;width:100%;text-align:left;border:0;background:transparent;border-radius:12px;padding:11px 10px;position:relative;
+  transition:background .15s var(--ease);animation:rise .32s var(--ease-back) both;animation-delay:calc(var(--i,0) * 45ms)}
+.pac:hover{background:var(--bg-2)}
+.pac[aria-current=true]{background:var(--aqua-50)}
+.pac[aria-current=true]::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--aqua)}
+.av{width:40px;height:40px;border-radius:12px;background:var(--azul-50);color:var(--azul);display:grid;place-items:center;font:600 14px var(--font-display);flex:none;letter-spacing:-.01em}
+.pac[aria-current=true] .av{background:var(--azul);color:#fff}
+.pac .body{min-width:0;flex:1}
+.pac .row1{display:flex;align-items:baseline;gap:8px}
+.pac .nom{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;color:var(--tinta)}
+.pac .when{font-size:12px;color:var(--gris-500);white-space:nowrap}
+.pac .rut{font-size:12px;color:var(--gris-500);margin-top:1px}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.tag{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:7px;background:var(--bg);color:var(--gris-600);font-size:11.5px;font-weight:500;white-space:nowrap}
+.tag svg{width:12px;height:12px}
+.tag.ck{background:var(--aqua-50);color:#0E6F7E}
+.tag.hoy{background:var(--azul);color:#fff}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── Contenido ────────────────────────────────────────── */
+.wrap{max-width:1180px;margin:0 auto;padding:24px 28px 48px}
+.sec-label{font-family:var(--font-display);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-500);font-weight:600;margin:0 0 10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.kpi{background:#fff;border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);display:flex;gap:14px;align-items:center;
+  animation:rise .35s var(--ease-back) both;animation-delay:calc(var(--i,0)*50ms);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.kpi .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--azul-50);color:var(--azul);flex:none}
+.kpi .ic.aq{background:var(--aqua-50);color:#0E6F7E}
+.kpi .v{font-family:var(--font-display);font-size:25px;font-weight:700;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12.5px;color:var(--gris-500);margin-top:2px}
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+.tbl-cards,.tbl-med{overflow-x:auto}
+.note{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-xs);font-size:13.5px;color:var(--gris-600);line-height:1.55}
+.note svg{color:var(--azul-500);margin-top:2px}
+.note b{color:var(--tinta);font-weight:600}
+.welcome h2{font-family:var(--font-display);font-size:25px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;color:var(--azul)}
+.welcome p{margin:0 0 20px;color:var(--gris-500);font-size:15px}
+
+/* Ficha */
+.fhead{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.fhead .av{width:56px;height:56px;border-radius:16px;font-size:19px;background:var(--azul);color:#fff}
+.fhead .who{flex:1;min-width:220px}
+.fhead h2{font-family:var(--font-display);font-size:25px;font-weight:700;letter-spacing:-.02em;margin:2px 0 4px;color:var(--tinta)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--gris-500)}
+.meta span{display:inline-flex;align-items:center;gap:6px}
+.meta svg{width:15px;height:15px}
+.fhead .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--gris-200);
+  background:#fff;color:var(--azul);font-size:14px;font-weight:600;transition:transform .12s var(--ease),box-shadow .18s var(--ease),background .15s var(--ease),border-color .15s var(--ease)}
+.btn:hover{border-color:var(--azul-300);box-shadow:var(--shadow-xs)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--azul);border-color:var(--azul);color:#fff;box-shadow:0 4px 14px rgba(15,63,104,.22)}
+.btn-primary:hover{background:var(--azul-700);border-color:var(--azul-700);box-shadow:0 6px 18px rgba(15,63,104,.3)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--gris-600)}
+.btn-ghost:hover{background:var(--bg);border-color:transparent;box-shadow:none}
+.btn-sm{height:34px;padding:0 12px;font-size:13px;border-radius:10px}
+.back{display:none}
+.citas{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:18px}
+.cita{background:#fff;border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow-xs);display:flex;gap:12px;align-items:center}
+.cita .ic{width:34px;height:34px;border-radius:10px;background:var(--bg);color:var(--azul);display:grid;place-items:center;flex:none}
+.cita .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-500);font-weight:600}
+.cita .v{font-size:14px;font-weight:600;margin-top:1px}
+.cita .v small{font-weight:400;color:var(--gris-500);font-size:12.5px}
+.cita.hoy{background:var(--azul);color:#fff}
+.cita.hoy .l,.cita.hoy .v small{color:rgba(255,255,255,.75)}
+.cita.hoy .ic{background:rgba(255,255,255,.14);color:#fff}
+.desde{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13.5px;color:var(--gris-600)}
+.desde .tag{height:26px;font-size:12.5px;background:#fff;box-shadow:var(--shadow-xs)}
+
+.tabs{display:flex;gap:4px;margin:24px 0 16px;border-bottom:1px solid var(--gris-200);overflow-x:auto;scrollbar-width:none;position:relative}
+.tabs::-webkit-scrollbar{display:none}
+.tab{position:relative;display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 14px;border:0;background:transparent;font-size:14px;font-weight:500;color:var(--gris-500);white-space:nowrap;transition:color .15s var(--ease)}
+.tab:hover{color:var(--azul)}
+.tab[aria-selected=true]{color:var(--azul);font-weight:600}
+.tab .n{font-size:12px;font-weight:600;background:var(--bg);color:var(--gris-600);border-radius:var(--radius-pill);padding:1px 8px;font-variant-numeric:tabular-nums}
+.tab[aria-selected=true] .n{background:var(--aqua-50);color:#0E6F7E}
+.tab-ink{position:absolute;bottom:-1px;height:2.5px;border-radius:2px;background:var(--aqua);transition:transform .28s var(--ease),width .28s var(--ease);left:0}
+.pane{animation:fade .25s var(--ease) both}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* Mediciones */
+.vt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.vt .spacer{flex:1}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.stat{background:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-xs)}
+.stat .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-500);font-weight:600}
+.stat .v{font-family:var(--font-display);font-size:21px;font-weight:700;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums;color:var(--tinta)}
+.stat .v small{font-family:var(--font-body);font-size:12.5px;font-weight:500;color:var(--gris-500);letter-spacing:0;margin-left:3px}
+.stat .s{font-size:12.5px;color:var(--gris-500);margin-top:2px}
+.chart-card{padding:16px 16px 10px;position:relative}
+.chart-h{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 4px 8px}
+.chart-h h3{font-family:var(--font-display);font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--gris-600)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.legend i.hollow{background:#fff!important;border:2px solid var(--azul)}
+.chart{position:relative;height:260px}
+.chart svg{display:block;width:100%;height:100%;overflow:visible}
+.chart .gl{stroke:var(--gris-100);stroke-width:1}
+.chart .yl,.chart .xl{font:500 11px var(--font-body);fill:var(--gris-500);font-variant-numeric:tabular-nums}
+.chart .ln{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.chart .draw{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw .7s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.chart .pt{transition:r .12s var(--ease)}
+.chart .guide{stroke:var(--gris-300);stroke-width:1;stroke-dasharray:3 3;opacity:0;transition:opacity .12s}
+.tip{position:absolute;pointer-events:none;background:var(--tinta);color:#fff;border-radius:10px;padding:8px 11px;font-size:12.5px;line-height:1.4;box-shadow:var(--shadow-md);
+  opacity:0;transform:translate(-50%,calc(-100% - 10px)) scale(.96);transition:opacity .12s var(--ease),transform .12s var(--ease);white-space:nowrap;z-index:3}
+.tip.on{opacity:1;transform:translate(-50%,calc(-100% - 12px)) scale(1)}
+.tip b{font-size:14px;font-variant-numeric:tabular-nums}
+.tip span{color:rgba(255,255,255,.7)}
+.chart-foot{font-size:12px;color:var(--gris-500);margin:6px 4px 2px}
+
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-500);font-weight:600;padding:12px 16px;border-bottom:1px solid var(--gris-100);white-space:nowrap;background:var(--bg-2)}
+th:first-child{border-top-left-radius:var(--radius)}th:last-child{border-top-right-radius:var(--radius)}
+td{padding:11px 16px;border-bottom:1px solid var(--gris-100);font-size:14px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr{transition:background .12s var(--ease)}
+tbody tr:hover{background:var(--bg-2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td .val{font-weight:600;font-variant-numeric:tabular-nums}
+td .u{color:var(--gris-500);font-size:12.5px;margin-left:3px}
+.muted{color:var(--gris-500)}
+.small{font-size:12.5px}
+.more{display:flex;justify-content:center;padding:10px}
+
+.badge{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap}
+.badge svg{width:13px;height:13px}
+.badge.ok{background:var(--verde-50);color:#11743A}
+.badge.warn{background:var(--naranja-50);color:var(--naranja-700)}
+.badge.info{background:var(--azul-50);color:var(--azul)}
+.badge.mut{background:var(--bg);color:var(--gris-600)}
+
+/* Datos y familia */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+.card-h{display:flex;align-items:center;gap:10px;padding:16px 18px 4px}
+.card-h .ic{width:32px;height:32px;border-radius:10px;background:var(--azul-50);color:var(--azul);display:grid;place-items:center}
+.card-h h3{font-family:var(--font-display);font-size:15px;font-weight:600;margin:0;flex:1;letter-spacing:-.01em}
+.card-h .muted{font-size:12.5px}
+dl.kv{margin:0;padding:8px 18px 16px}
+dl.kv div{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--gris-100)}
+dl.kv div:last-child{border-bottom:0}
+dl.kv dt{font-size:12.5px;color:var(--gris-500)}
+dl.kv dd{margin:0;font-size:14px;font-weight:500;word-break:break-word}
+dl.kv dd.none{color:var(--gris-400);font-weight:400}
+.people{padding:8px 10px 14px}
+.person{display:flex;gap:12px;align-items:center;padding:10px 8px;border-radius:12px}
+.person .av{width:36px;height:36px;border-radius:11px;font-size:13px}
+.person .nm{font-weight:600;font-size:14px}
+.person .sub{font-size:12.5px;color:var(--gris-500)}
+.person .body{flex:1;min-width:0}
+.subhead{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-500);font-weight:600;padding:10px 18px 2px}
+.empty-mini{padding:6px 18px 16px;color:var(--gris-500);font-size:13.5px}
+
+/* Actividad */
+.tl{padding:6px 18px 12px}
+.tl-day{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-500);font-weight:600;padding:14px 0 6px}
+.ev{display:grid;grid-template-columns:56px 28px 1fr;gap:10px;align-items:flex-start;padding:7px 0}
+.ev .h{font-size:12.5px;color:var(--gris-500);font-variant-numeric:tabular-nums;padding-top:4px;text-align:right}
+.ev .dot{width:28px;height:28px;border-radius:9px;background:var(--bg);color:var(--gris-500);display:grid;place-items:center}
+.ev .dot svg{width:15px;height:15px}
+.ev.nov .dot{background:var(--aqua-50);color:#0E6F7E}
+.ev .t{font-size:14px;font-weight:500;padding-top:4px}
+.ev .d{font-size:12.5px;color:var(--gris-500)}
+
+/* Estados */
+.skel{background:linear-gradient(90deg,var(--gris-100) 0%,#F2F6FA 40%,var(--gris-100) 80%);background-size:200% 100%;animation:shim 1.2s linear infinite;border-radius:8px}
+@keyframes shim{to{background-position:-200% 0}}
+.empty{text-align:center;padding:40px 24px;color:var(--gris-500)}
+.empty .ic{width:52px;height:52px;border-radius:16px;background:var(--azul-50);color:var(--azul);display:grid;place-items:center;margin:0 auto 14px}
+.empty .ic svg{width:24px;height:24px}
+.empty h3{font-family:var(--font-display);font-size:18px;color:var(--tinta);margin:0 0 6px;letter-spacing:-.01em;font-weight:600}
+.empty p{margin:0 auto 16px;max-width:400px;font-size:14px;line-height:1.55}
+.banner{display:flex;gap:12px;align-items:center;background:var(--naranja-50);color:#7A3E06;border-radius:12px;padding:12px 14px;font-size:13.5px;margin:12px 16px 0}
+.banner.err{background:var(--rojo-50);color:#8F1B1B}
+.banner .btn{margin-left:auto;height:34px;font-size:13px}
+
+/* Overlays */
+.ov{position:fixed;inset:0;z-index:40;background:rgba(18,40,58,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;overflow:auto;
+  opacity:0;transition:opacity .2s var(--ease)}
+.ov.on{opacity:1}
+.ov[hidden]{display:none}
+.sheet-wrap{width:100%;max-width:860px;transform:translateY(12px) scale(.985);transition:transform .25s var(--ease-back)}
+.ov.on .sheet-wrap{transform:none}
+.sheet-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:14px 18px;border-bottom:1px solid var(--gris-100);position:sticky;top:-32px;z-index:2}
+.sheet-bar h2{font-family:var(--font-display);font-size:18px;font-weight:700;margin:0;flex:1;letter-spacing:-.02em;color:var(--azul)}
+.sheet-bar label{font-size:12.5px;color:var(--gris-500);display:flex;align-items:center;gap:8px}
+.sheet-bar input[type=date]{height:38px;border:1px solid var(--gris-200);border-radius:10px;padding:0 10px;font-size:16px;background:#fff}
+.sheet{background:#fff;border-radius:0 0 var(--radius-lg) var(--radius-lg);box-shadow:var(--shadow-lg);padding:28px 32px 32px;color:var(--tinta)}
+.sh-head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid var(--azul);padding-bottom:14px;margin-bottom:18px}
+.sh-head .c{font-family:var(--font-display);font-weight:700;color:var(--azul);font-size:15px;letter-spacing:-.01em}
+.sh-head .c small{display:block;font-family:var(--font-body);font-weight:400;color:var(--gris-500);font-size:12px;letter-spacing:0;margin-top:2px}
+.sh-head .p{text-align:right}
+.sh-head .p b{font-family:var(--font-display);font-size:18px;letter-spacing:-.02em;display:block}
+.sh-head .p span{font-size:12.5px;color:var(--gris-500)}
+.sh-sec{margin:20px 0 0;overflow-x:auto}
+.sh-sec h3{font-family:var(--font-display);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--azul);margin:0 0 8px;font-weight:700}
+.sh-sec table th{background:#fff;padding:7px 10px;border-bottom:1.5px solid var(--gris-200)}
+.sh-sec table td{padding:7px 10px;font-size:13px}
+.sh-spark{display:block;width:120px;height:28px}
+.sh-foot{margin-top:24px;padding-top:12px;border-top:1px solid var(--gris-200);font-size:11.5px;color:var(--gris-500);line-height:1.5}
+.sh-empty{font-size:13px;color:var(--gris-500);padding:4px 0}
+
+.audit{max-width:980px}
+.lock{position:fixed;inset:0;z-index:60;background:rgba(238,243,248,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:none;place-items:center}
+.lock.on{display:grid;animation:fade .2s var(--ease)}
+.lock .box{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:28px;text-align:center;max-width:360px}
+.lock .box .ic{width:52px;height:52px;border-radius:16px;background:var(--azul);color:#fff;display:grid;place-items:center;margin:0 auto 14px}
+.lock h3{font-family:var(--font-display);margin:0 0 6px;font-size:18px;letter-spacing:-.01em}
+.lock p{margin:0 0 18px;color:var(--gris-500);font-size:14px}
+
+.toasts{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{background:var(--tinta);color:#fff;padding:12px 16px;border-radius:12px;box-shadow:var(--shadow-md);font-size:14px;display:flex;gap:10px;align-items:center;max-width:380px;animation:tin .25s var(--ease-back)}
+.toast.err{background:#8F1B1B}
+.toast.out{animation:tout .18s var(--ease) forwards}
+@keyframes tin{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0;transform:scale(.96)}}
+
+.full{display:grid;place-items:center;height:calc(100dvh - 64px);padding:24px}
+.full .card{max-width:460px;padding:28px;text-align:center}
+
+/* ── Responsive ───────────────────────────────────────── */
+@media (max-width:1100px){:root{--side:320px}.wrap{padding:20px 20px 40px}}
+@media (max-width:1180px) and (min-width:761px){.col-pub{display:none}}
+@media (max-width:860px){
+  body{overflow:auto}
+  .app{display:block;height:auto}
+  .side{min-height:calc(100dvh - 64px);border-right:0}
+  .main{overflow:visible}
+  body.has-sel .side{display:none}
+  body:not(.has-sel) .main{display:none}
+  .back{display:inline-flex}
+  .list{overflow:visible}
+  .hdr .hpill.scope,.brand p{display:none}
+}
+@media (max-width:760px){
+  .hdr{padding:0 12px;gap:8px;height:56px}
+  .app,.side{min-height:calc(100dvh - 56px)}
+  .brand h1{font-size:16px}
+  .brand .iso{width:32px;height:32px}
+  .hpill.audit-pill{display:none}
+  .hbtn .txt{display:none}
+  .hbtn{padding:0;width:40px;height:40px}
+  .hpill.demo{height:28px;padding:0 10px;font-size:12px}
+  .hpill.demo .full-t{display:none}
+  .vt .seg{flex:1 1 100%}
+  .vt .spacer{display:none}
+  .tabs{margin:20px -14px 14px;padding:0 14px}
+  .wrap{padding:16px 14px 40px}
+  .fhead{gap:12px}
+  .fhead .av{width:46px;height:46px;font-size:16px;border-radius:14px}
+  .fhead h2{font-size:21px}
+  .fhead .acts{width:100%}
+  .fhead .acts .btn-primary{flex:1}
+  .chart{height:210px}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat .v{font-size:18px}
+  .tbl-cards table,.tbl-cards thead,.tbl-cards tbody,.tbl-cards tr,.tbl-cards td{display:block;width:100%}
+  .tbl-cards thead{position:absolute;left:-9999px}
+  .tbl-cards.card{background:transparent;box-shadow:none}
+  .tbl-cards tr{background:#fff;border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;box-shadow:var(--shadow-xs)}
+  .tbl-cards tbody tr:hover{background:#fff}
+  .tbl-cards td{display:flex;justify-content:space-between;gap:12px;border:0;padding:4px 0;text-align:right}
+  .tbl-cards td::before{content:attr(data-l);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--gris-500);font-weight:600;text-align:left}
+  .tbl-cards td:first-child{font-weight:600;justify-content:flex-start;padding-bottom:6px;border-bottom:1px solid var(--gris-100);margin-bottom:4px}
+  .tbl-cards td:first-child::before{display:none}
+  .tbl-cards td.num{text-align:right}
+  .tbl-med thead{position:absolute;left:-9999px}
+  .tbl-med table,.tbl-med tbody{display:block}
+  .tbl-med tr{display:grid;grid-template-columns:auto auto 1fr;column-gap:8px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--gris-100)}
+  .tbl-med td{border:0;padding:0;font-size:14px}
+  .tbl-med td:nth-child(1){font-weight:500}
+  .tbl-med td:nth-child(2){color:var(--gris-500)}
+  .tbl-med td:nth-child(3){text-align:right}
+  .tbl-med td:nth-child(4),.tbl-med td:nth-child(5){grid-column:1/-1;font-size:12.5px;color:var(--gris-500)}
+  .tbl-med td:nth-child(4):empty,.tbl-med td.vacio{display:none}
+  dl.kv div{grid-template-columns:1fr;gap:2px}
+  .person{flex-wrap:wrap}
+  .person .badge{margin-left:48px}
+  .ov{padding:0}
+  .sheet-wrap{max-width:none;min-height:100dvh;display:flex;flex-direction:column}
+  .sheet-bar{border-radius:0;top:0}
+  .sheet{border-radius:0;flex:1;padding:18px 16px 32px}
+  .sh-head{flex-direction:column}
+  .sheet-bar h2{font-size:16px;white-space:nowrap;flex:1 1 100%;padding-right:44px}
+  .sheet-bar [data-act=cerrar-prep],.sheet-bar [data-act=cerrar-audit]{position:absolute;right:8px;top:8px;width:44px;height:44px;padding:0}
+  .sh-sec table td,.sh-sec table th{padding:6px 8px;font-size:12.5px}
+  .sh-sec table td b{white-space:nowrap}
+  .sh-head .p{text-align:left}
+  .toasts{left:12px;right:12px;align-items:stretch}
+  .search input{font-size:16px}
+  .search kbd{display:none}
+  .ev{grid-template-columns:44px 28px 1fr}
+}
+@media (max-height:480px) and (orientation:landscape){
+  .hdr{height:48px}
+  .chart{height:170px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+  .chart .draw{stroke-dasharray:none;stroke-dashoffset:0}
+}
+@media print{
+  @page{size:A4;margin:14mm}
+  body{background:#fff;overflow:visible}
+  body > *:not(#ov-prep){display:none!important}
+  #ov-prep{position:static;background:none;backdrop-filter:none;padding:0;display:block!important;opacity:1}
+  .sheet-bar{display:none}
+  .sheet-wrap{transform:none;max-width:none}
+  .sheet{box-shadow:none;padding:0;border-radius:0}
+  .sh-sec{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="brand">
+    <div class="iso"><img src="/static/isotipo.png" alt=""></div>
+    <div><h1>Portal del Profesional</h1><p id="hdr-sub">Lo que sus pacientes registran en su portal</p></div>
+  </div>
+  <span class="hpill demo" id="pill-demo" hidden>Ejemplo<span class="full-t">&nbsp;· datos ficticios</span></span>
+  <span class="hpill scope" id="pill-scope" hidden></span>
+  <span class="hpill audit-pill" title="Cada ficha que abre queda registrada (Ley 21.719)"><span class="dot"></span><span class="txt">Accesos registrados</span></span>
+  <button class="hbtn" id="btn-audit" hidden aria-label="Registro de accesos"><svg class="i"><use href="#i-shield"/></svg><span class="txt">Accesos</span></button>
+  <button class="hbtn aqua" id="btn-refresh" aria-label="Actualizar"><svg class="i"><use href="#i-refresh"/></svg></button>
+</header>
+
+<div class="app" id="app">
+  <aside class="side" aria-label="Pacientes">
+    <div class="side-top">
+      <div class="search">
+        <svg class="i"><use href="#i-search"/></svg>
+        <input id="q" type="search" placeholder="Buscar por nombre o RUT" autocomplete="off" aria-label="Buscar paciente por nombre o RUT">
+        <kbd>/</kbd>
+      </div>
+      <div class="seg" role="group" aria-label="Período">
+        <button data-d="1" aria-pressed="false">Hoy</button>
+        <button data-d="7" aria-pressed="true">7 días</button>
+        <button data-d="30" aria-pressed="false">30 días</button>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Filtrar por tipo"></div>
+    </div>
+    <div class="list-h"><h2 id="list-title">Con información nueva</h2><span id="list-count"></span></div>
+    <div id="list-banner"></div>
+    <div class="list" id="list" role="list"></div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+
+<div class="ov" id="ov-prep" hidden role="dialog" aria-modal="true" aria-labelledby="prep-title"></div>
+<div class="ov" id="ov-audit" hidden role="dialog" aria-modal="true" aria-labelledby="audit-title"></div>
+<div class="lock" id="lock" role="dialog" aria-modal="true" aria-labelledby="lock-t">
+  <div class="box"><div class="ic"><svg class="i"><use href="#i-lock"/></svg></div>
+    <h3 id="lock-t">Pantalla protegida</h3><p>Se ocultaron los datos por inactividad. Nadie más en el box los está viendo.</p>
+    <button class="btn btn-primary" id="unlock">Continuar</button></div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v6c0 4.5 3.2 8 7.5 9 4.3-1 7.5-4.5 7.5-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="11" width="15" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+</svg>
+
+<script>
+'use strict';
+// ── Contexto ─────────────────────────────────────────────
+const QS = new URLSearchParams(location.search);
+const TOKEN = QS.get('token') || '';
+const DEMO = QS.get('demo') === '1';
+const _tk = u => { const p = []; if (TOKEN) p.push('token=' + encodeURIComponent(TOKEN)); if (DEMO) p.push('demo=1');
+  return p.length ? u + (u.includes('?') ? '&' : '?') + p.join('&') : u; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const ic = (n, cls = 'i') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const TZ = 'America/Santiago';
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const S = { dias: 7, filtro: 'todo', pacientes: null, sel: null, ficha: null, tab: 'med', vt: null, rango: 90, yo: null, q: '', buscando: null, verMas: false };
+
+// ── Formato ──────────────────────────────────────────────
+const dParts = (iso) => { const d = new Date(iso); if (isNaN(d)) return null;
+  const f = new Intl.DateTimeFormat('es-CL', {timeZone: TZ, day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false}).formatToParts(d);
+  const g = t => (f.find(p => p.type === t) || {}).value; return {d:g('day'), m:g('month'), y:g('year'), h:g('hour'), mi:g('minute'), date:d}; };
+const toDate = (iso) => { if (!iso) return null; if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) { const [y,m,d]=iso.split('-'); return new Date(+y, +m-1, +d, 12); } return new Date(iso); };
+function fFecha(iso){ if(!iso) return '—'; if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) { const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; } const p=dParts(iso); return p?`${p.d}/${p.m}/${p.y}`:'—'; }
+function fHora(iso){ const p=dParts(iso); return p?`${p.h}:${p.mi}`:''; }
+function fCorta(iso){ if(!iso) return ''; if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) { const [,m,d]=iso.split('-'); return `${d}/${m}`; } const p=dParts(iso); return p?`${p.d}/${p.m}`:''; }
+function hoyCL(){ const p = dParts(new Date().toISOString()); return `${p.y}-${p.m}-${p.d}`; }
+function ymdCL(iso){ if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso; const p=dParts(iso); return p?`${p.y}-${p.m}-${p.d}`:''; }
+function hace(iso){ if(!iso) return ''; const ms = Date.now() - toDate(iso).getTime(); const m = Math.round(ms/60000);
+  if (m < 1) return 'recién'; if (m < 60) return `hace ${m} min`; const h = Math.round(m/60); if (h < 24) return `hace ${h} h`;
+  const d = Math.round(h/24); if (d === 1) return 'ayer'; if (d < 7) return `hace ${d} días`; return fFecha(iso); }
+function diasEntre(a, b){ return Math.round((toDate(b) - toDate(a)) / 86400000); }
+const nf1 = new Intl.NumberFormat('es-CL', {maximumFractionDigits:1});
+const nf0 = new Intl.NumberFormat('es-CL', {maximumFractionDigits:0});
+const VT = {
+  presion:     {n:'Presión arterial', c:'Presión', pl:'presiones', u:'mmHg', dec:0},
+  glicemia:    {n:'Glicemia', c:'Glicemia', pl:'glicemias', u:'mg/dL', dec:0},
+  peso:        {n:'Peso', c:'Peso', pl:'pesos', u:'kg', dec:1},
+  temperatura: {n:'Temperatura', c:'Temperatura', pl:'temperaturas', u:'°C', dec:1},
+};
+const fmtN = (v, t) => v == null ? '—' : (VT[t].dec ? nf1 : nf0).format(v);
+function vValor(v){ return v.tipo === 'presion' ? `${fmtN(v.valor,'presion')}/${fmtN(v.valor2,'presion')}` : fmtN(v.valor, v.tipo); }
+function iniciales(n){ const p = String(n||'').trim().split(/\s+/).filter(Boolean); if(!p.length) return '·'; return ((p[0][0]||'') + (p.length>2 ? p[p.length-2][0] : (p[1]||'')[0]||'')).toUpperCase(); }
+const SEXO = {F:'Femenino', M:'Masculino', O:'Otro'};
+const CAMPO = {direccion:'dirección', comuna:'comuna', email:'correo', prevision:'previsión', fecha_nacimiento:'fecha de nacimiento', sexo:'sexo',
+  contacto_emerg_nombre:'contacto de emergencia', contacto_emerg_telefono:'teléfono de emergencia'};
+const METODO = {otp:['Verificado con código','ok','check'], tutor_declaration:['Tutor declarado · menor de edad','info','users'], declared:['Declarado al agendar · sin verificar','warn','alert']};
+
+// ── Red ──────────────────────────────────────────────────
+class ApiError extends Error { constructor(st, msg){ super(msg); this.status = st; } }
+async function api(path){
+  let r;
+  try { r = await fetch(_tk(path), {credentials:'same-origin', headers:{'Accept':'application/json'}}); }
+  catch(e){ throw new ApiError(0, 'Sin conexión con el servidor.'); }
+  if (!r.ok){ let m = ''; try { m = (await r.json()).detail || ''; } catch(e){} throw new ApiError(r.status, m || `Error ${r.status}`); }
+  return r.json();
+}
+function toast(msg, tipo){ const t = document.createElement('div'); t.className = 'toast' + (tipo === 'error' ? ' err' : '');
+  t.innerHTML = (tipo === 'error' ? ic('alert') : ic('check')) + `<span>${esc(msg)}</span>`; $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 200); }, tipo === 'error' ? 4000 : 2600); }
+
+function pantallaSinAcceso(err){
+  const msg = err.status === 401 ? 'Su sesión no es válida o expiró. Vuelva a entrar con su enlace personal de Alma.'
+    : (err.message || 'Su perfil no tiene habilitado el Portal del Profesional. Pídale acceso al administrador del centro.');
+  $('#app').innerHTML = `<div class="full" style="grid-column:1/-1"><div class="card">
+    <div class="empty" style="padding:8px 0 0"><div class="ic">${ic('lock')}</div><h3>${err.status === 401 ? 'Sesión no válida' : 'Sin permiso para esta vista'}</h3>
+    <p>${esc(msg)}</p><a class="btn btn-primary" href="/admin/login">Iniciar sesión</a></div></div></div>`;
+}
+
+// ── Sidebar: lista de novedades ──────────────────────────
+const FILTROS = [
+  ['todo', 'Todo'], ['mediciones', 'Mediciones'], ['examenes', 'Exámenes'], ['checkin', 'Check-in'], ['perfil', 'Datos'], ['familia', 'Familia'],
+];
+function contar(f){ const ps = S.pacientes || []; return f === 'todo' ? ps.length : ps.filter(p => p[f] > 0).length; }
+function renderChips(){
+  $('#chips').innerHTML = FILTROS.map(([k, l]) => { const n = contar(k);
+    if (k !== 'todo' && !n) return '';
+    return `<button class="chip" data-f="${k}" aria-pressed="${S.filtro === k}">${l} <b class="num">${n}</b></button>`; }).join('');
+}
+function tagsDe(p){
+  const t = [];
+  if (p.proxima_hoy) t.push(`<span class="tag hoy">${ic('cal')}Cita hoy</span>`);
+  if (p.mediciones) t.push(`<span class="tag">${ic('activity')}${p.mediciones} ${p.tipos && p.tipos.length === 1 ? (p.mediciones > 1 ? VT[p.tipos[0]].pl : VT[p.tipos[0]].c.toLowerCase()) : 'mediciones'}</span>`);
+  if (p.examenes) t.push(`<span class="tag">${ic('file')}${p.examenes} ${p.examenes > 1 ? 'exámenes' : 'examen'}</span>`);
+  if (p.checkin) t.push(`<span class="tag ck">${ic('check')}Viene hoy</span>`);
+  if (p.perfil) t.push(`<span class="tag">${ic('edit')}Datos</span>`);
+  if (p.familia) t.push(`<span class="tag">${ic('users')}Familia</span>`);
+  return t.join('');
+}
+function filaPac(p, i){
+  const sel = S.sel && S.sel === p.rut;
+  return `<button class="pac" role="listitem" style="--i:${Math.min(i, 12)}" data-rut="${esc(p.rut)}" aria-current="${!!sel}">
+    <span class="av">${esc(iniciales(p.nombre))}</span>
+    <span class="body"><span class="row1"><span class="nom">${esc(p.nombre || 'Sin nombre registrado')}</span>${p.ultimo ? `<span class="when">${esc(hace(p.ultimo))}</span>` : ''}</span>
+    <span class="rut num">${esc(p.rut)}${p.edad != null ? ' · ' + p.edad + ' años' : ''}</span>
+    ${p.mediciones != null ? `<span class="tags">${tagsDe(p)}</span>` : ''}</span></button>`;
+}
+function skelLista(n = 6){ return Array.from({length:n}, () => `<div style="display:flex;gap:12px;padding:12px 10px"><div class="skel" style="width:40px;height:40px;border-radius:12px"></div>
+  <div style="flex:1"><div class="skel" style="height:13px;width:62%"></div><div class="skel" style="height:11px;width:38%;margin-top:7px"></div><div class="skel" style="height:20px;width:70%;margin-top:9px"></div></div></div>`).join(''); }
+function renderLista(){
+  const L = $('#list');
+  if (S.buscando){
+    $('#list-title').textContent = 'Resultados de búsqueda';
+    const r = S.buscando.res;
+    $('#list-count').textContent = r ? `${r.length}` : '';
+    if (!r){ L.innerHTML = skelLista(3); return; }
+    if (S.buscando.corto){ L.innerHTML = `<div class="empty" style="padding:28px 16px"><p>Escriba al menos 3 letras del nombre, o el RUT completo.</p></div>`; return; }
+    L.innerHTML = r.length ? r.map(filaPac).join('') : `<div class="empty" style="padding:28px 16px"><div class="ic">${ic('search')}</div><h3>Sin resultados</h3>
+      <p>Solo aparecen pacientes ${S.yo && S.yo.alcance === 'propios' ? 'suyos ' : ''}que han registrado algo en su portal.</p></div>`;
+    return;
+  }
+  $('#list-title').textContent = 'Con información nueva';
+  if (S.pacientes == null){ L.innerHTML = skelLista(); $('#list-count').textContent = ''; return; }
+  const ps = S.filtro === 'todo' ? S.pacientes : S.pacientes.filter(p => p[S.filtro] > 0);
+  $('#list-count').textContent = ps.length ? `${ps.length} paciente${ps.length > 1 ? 's' : ''}` : '';
+  if (!ps.length){
+    const per = S.dias === 1 ? 'hoy' : `en los últimos ${S.dias} días`;
+    L.innerHTML = `<div class="empty"><div class="ic">${ic('heart')}</div><h3>Nada nuevo ${per}</h3>
+      <p>Cuando ${S.yo && S.yo.alcance === 'propios' ? 'un paciente suyo' : 'un paciente'} anote su presión, glicemia o peso, actualice sus datos o confirme que viene, aparecerá aquí.</p>
+      ${S.dias < 30 ? `<button class="btn btn-sm" data-act="ampliar">Ver últimos 30 días</button>` : ''}</div>`;
+    return;
+  }
+  L.innerHTML = ps.map(filaPac).join('');
+}
+async function cargarNovedades(){
+  S.pacientes = null; renderLista(); renderChips(); $('#list-banner').innerHTML = '';
+  try {
+    const d = await api(`/portal-profesional/api/novedades?dias=${S.dias}`);
+    S.pacientes = d.pacientes || [];
+    if (d.alcance_verificado === false){
+      $('#list-banner').innerHTML = `<div class="banner">${ic('alert')}<span>No pudimos verificar cuáles son sus pacientes. Por seguridad no se muestra ninguno.</span><button class="btn" data-act="reintentar">Reintentar</button></div>`;
+    }
+  } catch(e){
+    if (e.status === 401 || e.status === 403) return pantallaSinAcceso(e);
+    S.pacientes = [];
+    $('#list-banner').innerHTML = `<div class="banner err">${ic('alert')}<span>No se pudo cargar la lista. ${esc(e.message)}</span><button class="btn" data-act="reintentar">Reintentar</button></div>`;
+  }
+  renderChips(); renderLista(); if (!S.sel) renderInicio();
+}
+
+// ── Inicio (sin paciente seleccionado) ───────────────────
+function renderInicio(){
+  const ps = S.pacientes;
+  const per = S.dias === 1 ? 'hoy' : `últimos ${S.dias} días`;
+  const sum = k => (ps || []).reduce((a, p) => a + (p[k] || 0), 0);
+  const kp = (n, l, icn, aq, i) => `<div class="kpi" style="--i:${i}"><div class="ic${aq ? ' aq' : ''}">${ic(icn)}</div><div><div class="v">${ps ? nf0.format(n) : '<span class="skel" style="display:inline-block;width:40px;height:22px"></span>'}</div><div class="l">${l}</div></div></div>`;
+  $('#main').innerHTML = `<div class="wrap">
+    <div class="welcome"><h2>${S.yo && S.yo.alcance === 'propios' ? 'Sus pacientes' : 'Pacientes del centro'}</h2>
+    <p>Lo que registraron en su portal · ${per}</p></div>
+    <div class="kpis">
+      ${kp(ps ? ps.length : 0, 'pacientes con información nueva', 'users', false, 0)}
+      ${kp(sum('mediciones'), 'mediciones anotadas', 'activity', false, 1)}
+      ${kp(sum('examenes'), 'exámenes publicados', 'file', false, 2)}
+      ${kp((ps || []).filter(p => p.checkin).length, 'confirmaron que vienen', 'check', true, 3)}
+    </div>
+    <div style="height:20px"></div>
+    <div class="note">${ic('info')}<div><b>Son datos informados por el paciente.</b> Las mediciones se toman en casa, sin verificación del centro, y no reemplazan la medición en consulta. Esta vista no interpreta valores ni sugiere diagnósticos. Cada ficha que abre queda registrada con su nombre, fecha y hora.</div></div>
+    <div style="height:12px"></div>
+    <div class="note">${ic('search')}<div>Elija un paciente de la lista o búsquelo por nombre o RUT. Antes de la consulta, use <b>Preparar control</b> para ver e imprimir lo que anotó desde su última atención.</div></div>
+  </div>`;
+}
+
+// ── Ficha ────────────────────────────────────────────────
+async function abrir(rut, push = true){
+  S.sel = rut; S.ficha = null; S.tab = S.tab || 'med'; S.vt = null; S.verMas = false;
+  document.body.classList.add('has-sel');
+  $$('.pac').forEach(b => b.setAttribute('aria-current', b.dataset.rut === rut));
+  if (push) history.pushState({rut}, '', location.pathname + location.search + '#p=' + encodeURIComponent(rut));
+  $('#main').innerHTML = skelFicha(); $('#main').scrollTop = 0; if (innerWidth <= 860) scrollTo(0, 0);
+  try {
+    S.ficha = await api('/portal-profesional/api/paciente/' + encodeURIComponent(rut));
+    if (S.sel !== rut) return;
+    renderFicha();
+  } catch(e){
+    if (S.sel !== rut) return;
+    if (e.status === 401) return pantallaSinAcceso(e);
+    const t = e.status === 403 ? 'No es paciente suyo' : e.status === 429 ? 'Límite de fichas alcanzado' : 'No se pudo abrir la ficha';
+    $('#main').innerHTML = `<div class="wrap">${backBtn()}<div class="card"><div class="empty"><div class="ic">${ic(e.status === 403 ? 'lock' : 'alert')}</div>
+      <h3>${t}</h3><p>${esc(e.message)}</p>${e.status >= 500 || e.status === 0 ? `<button class="btn btn-primary" data-act="reabrir">Reintentar</button>` : ''}</div></div></div>`;
+  }
+}
+function cerrar(push = true){ S.sel = null; S.ficha = null; document.body.classList.remove('has-sel');
+  $$('.pac').forEach(b => b.setAttribute('aria-current', 'false'));
+  if (push) history.pushState({}, '', location.pathname + location.search); renderInicio(); }
+const backBtn = () => `<button class="btn btn-ghost btn-sm back" data-act="volver" style="margin:-4px 0 12px -8px">${ic('left')}Pacientes</button>`;
+function skelFicha(){ return `<div class="wrap">${backBtn()}<div style="display:flex;gap:18px"><div class="skel" style="width:56px;height:56px;border-radius:16px"></div>
+  <div style="flex:1"><div class="skel" style="height:24px;width:44%"></div><div class="skel" style="height:14px;width:30%;margin-top:10px"></div></div></div>
+  <div class="citas"><div class="skel" style="height:60px;border-radius:14px"></div><div class="skel" style="height:60px;border-radius:14px"></div></div>
+  <div class="skel" style="height:40px;margin:24px 0 16px;width:60%"></div><div class="stats">${'<div class="skel" style="height:78px;border-radius:14px"></div>'.repeat(4)}</div>
+  <div class="skel" style="height:290px;border-radius:14px"></div></div>`; }
+
+function desdeBase(f){ const u = f.citas && f.citas.ultima; return u && u.fecha ? u.fecha : null; }
+function renderFicha(){
+  const f = S.ficha, p = f.paciente, c = f.citas || {};
+  const hoy = hoyCL();
+  const base = desdeBase(f);
+  const corte = base || null;
+  const nuevos = corte ? f.mediciones.filter(v => ymdCL(v.ts) > corte) : [];
+  const porTipo = {}; nuevos.forEach(v => porTipo[v.tipo] = (porTipo[v.tipo] || 0) + 1);
+  const exNuevos = corte ? f.examenes.filter(e => (e.publicado && ymdCL(e.publicado) > corte)).length : 0;
+  const ult = c.ultima, prox = c.proxima;
+  const proxHoy = prox && prox.fecha === hoy;
+  const nTab = {med: f.mediciones.length, ex: f.examenes.length, act: f.actividad.length, dat: (f.representantes.length + f.gestiona.length) || ''};
+  const meta = [`<span class="num">${esc(p.rut)}</span>`];
+  if (p.edad != null) meta.push(`<span>${p.edad} años</span>`);
+  if (p.sexo) meta.push(`<span>${esc(SEXO[p.sexo] || p.sexo)}</span>`);
+  if (f.datos && f.datos.prevision) meta.push(`<span>${esc(f.datos.prevision)}</span>`);
+  $('#main').innerHTML = `<div class="wrap">${backBtn()}
+    <div class="fhead">
+      <div class="av">${esc(iniciales(p.nombre))}</div>
+      <div class="who"><h2>${esc(p.nombre || 'Sin nombre registrado')}</h2><div class="meta">${meta.join('<span aria-hidden="true">·</span>')}</div></div>
+      <div class="acts"><button class="btn btn-primary" data-act="preparar">${ic('print')}Preparar control</button></div>
+    </div>
+    <div class="citas">
+      <div class="cita"><div class="ic">${ic('clock')}</div><div><div class="l">${S.yo && S.yo.alcance === 'propios' ? 'Última atención con usted' : 'Última atención'}</div>
+        <div class="v">${ult ? `${fFecha(ult.fecha)} <small>· hace ${diasEntre(ult.fecha, hoy)} días${S.yo && S.yo.alcance === 'propios' ? '' : (ult.profesional ? ' · ' + esc(ult.profesional) : '')}</small>` : (c.disponible === false ? '<small>No disponible ahora</small>' : '<small>Sin registro</small>')}</div></div></div>
+      <div class="cita${proxHoy ? ' hoy' : ''}"><div class="ic">${ic('cal')}</div><div><div class="l">Próxima cita</div>
+        <div class="v">${prox ? `${proxHoy ? 'Hoy' : fFecha(prox.fecha)}${prox.hora ? ' · ' + esc(prox.hora) + ' hrs' : ''} <small>${prox.profesional ? '· ' + esc(prox.profesional) : ''}</small>` : (c.disponible === false ? '<small>No disponible ahora</small>' : '<small>Sin cita agendada</small>')}</div></div></div>
+    </div>
+    ${corte ? `<div class="desde"><span>Desde su última atención:</span>${Object.keys(porTipo).length || exNuevos ? Object.entries(porTipo).map(([t, n]) => `<span class="tag">${ic('activity')}${n} ${n > 1 ? VT[t].pl : VT[t].c.toLowerCase()}</span>`).join('') + (exNuevos ? `<span class="tag">${ic('file')}${exNuevos} ${exNuevos > 1 ? 'exámenes' : 'examen'}</span>` : '') : '<span class="muted">no anotó mediciones nuevas</span>'}</div>` : ''}
+    <div class="tabs" role="tablist" aria-label="Información del paciente">
+      ${[['med', 'Mediciones', nTab.med], ['ex', 'Exámenes', nTab.ex], ['dat', 'Datos y familia', nTab.dat], ['act', 'Actividad en el portal', nTab.act]]
+        .map(([k, l, n]) => `<button class="tab" role="tab" id="tab-${k}" aria-selected="${S.tab === k}" aria-controls="pane" data-tab="${k}">${l}${n !== '' && n != null ? ` <span class="n">${n}</span>` : ''}</button>`).join('')}
+      <span class="tab-ink" id="ink"></span>
+    </div>
+    <div id="pane" role="tabpanel"></div></div>`;
+  renderTab(); moverInk(false);
+}
+function moverInk(anim = true){ const t = $('.tab[aria-selected=true]'), ink = $('#ink'); if (!t || !ink) return;
+  if (!anim) ink.style.transition = 'none'; ink.style.width = t.offsetWidth + 'px'; ink.style.transform = `translateX(${t.offsetLeft}px)`;
+  if (!anim) requestAnimationFrame(() => ink.style.transition = ''); }
+function renderTab(){
+  const P = $('#pane'); if (!P) return; P.className = 'pane'; void P.offsetWidth;
+  ({med: paneMed, ex: paneEx, dat: paneDat, act: paneAct})[S.tab](P);
+}
+
+// Mediciones
+function paneMed(P){
+  const f = S.ficha;
+  const cnt = {}; f.mediciones.forEach(v => cnt[v.tipo] = (cnt[v.tipo] || 0) + 1);
+  const tipos = Object.keys(VT).filter(t => cnt[t]);
+  if (!tipos.length){ P.innerHTML = `<div class="card"><div class="empty"><div class="ic">${ic('activity')}</div><h3>Sin mediciones en su portal</h3>
+    <p>El paciente puede anotar presión, glicemia, peso y temperatura desde <b>Mi salud</b> en su portal. Puede sugerírselo para el próximo control.</p></div></div>`; return; }
+  if (!S.vt || !cnt[S.vt]) S.vt = tipos[0];
+  const t = S.vt, cfg = VT[t];
+  const desde = Date.now() - S.rango * 86400000;
+  const xs = f.mediciones.filter(v => v.tipo === t && toDate(v.ts).getTime() >= desde);
+  const vals = xs.map(v => v.valor), v2 = xs.map(v => v.valor2).filter(x => x != null);
+  const avg = a => a.reduce((s, x) => s + x, 0) / a.length;
+  const u = xs[0];
+  const stat = (l, v, s) => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  const pres = t === 'presion';
+  P.innerHTML = `
+    <div class="vt"><div class="seg" role="group" aria-label="Tipo de medición" style="margin:0">${tipos.map(k => `<button data-vt="${k}" aria-pressed="${k === t}" style="padding:0 12px">${VT[k].c} <span class="muted num" style="font-weight:500">${cnt[k]}</span></button>`).join('')}</div>
+      <span class="spacer"></span>
+      <div class="seg" role="group" aria-label="Rango" style="margin:0">${[30, 90, 365].map(r => `<button data-rango="${r}" aria-pressed="${S.rango === r}" style="padding:0 12px">${r === 365 ? '12 meses' : r + ' días'}</button>`).join('')}</div></div>
+    ${xs.length ? `<div class="stats">
+      ${stat('Último registro', `${vValor(u)}<small>${cfg.u}</small>`, `${fFecha(u.ts)} · ${fHora(u.ts)}${u.contexto ? ' · ' + esc(u.contexto) : ''}`)}
+      ${stat('Promedio del período', pres ? `${nf0.format(avg(vals))}/${nf0.format(avg(v2))}<small>${cfg.u}</small>` : `${fmtN(avg(vals), t)}<small>${cfg.u}</small>`, `${xs.length} registro${xs.length > 1 ? 's' : ''}`)}
+      ${stat(pres ? 'Sistólica mín – máx' : 'Mínimo – máximo', `${fmtN(Math.min(...vals), t)} – ${fmtN(Math.max(...vals), t)}`, cfg.u)}
+      ${pres ? stat('Diastólica mín – máx', `${fmtN(Math.min(...v2), t)} – ${fmtN(Math.max(...v2), t)}`, cfg.u) : stat('Primer registro del período', fFecha(xs[xs.length - 1].ts), `${diasEntre(xs[xs.length - 1].ts, new Date().toISOString())} días atrás`)}
+    </div>
+    <div class="card chart-card">
+      <div class="chart-h"><h3>${cfg.n}</h3><div class="legend">${pres ? `<span><i style="background:var(--azul)"></i>Sistólica</span><span><i style="background:var(--aqua)"></i>Diastólica</span>`
+        : t === 'glicemia' ? `<span><i style="background:var(--azul)"></i>En ayunas</span><span><i class="hollow"></i>Otro momento</span>` : `<span><i style="background:var(--azul)"></i>${cfg.c} (${cfg.u})</span>`}</div></div>
+      <div class="chart" id="chart"></div>
+      <div class="chart-foot">Valores anotados por el paciente en su casa. Sin rangos ni metas dibujadas: la lectura clínica es suya.</div>
+    </div>
+    <div style="height:16px"></div>
+    <div class="card tbl-med"><table><thead><tr><th>Fecha</th><th>Hora</th><th class="num">${cfg.c} (${cfg.u})</th><th>Momento</th><th>Nota del paciente</th></tr></thead>
+      <tbody>${(S.verMas ? xs : xs.slice(0, 25)).map(v => `<tr><td data-l="Fecha" class="num">${fFecha(v.ts)}</td><td data-l="Hora" class="num">${fHora(v.ts)}</td>
+        <td data-l="${cfg.c}" class="num"><span><span class="val">${vValor(v)}</span><span class="u">${cfg.u}</span></span></td><td data-l="Momento"${v.contexto ? '' : ' class="vacio"'}>${esc(v.contexto || '—')}</td><td data-l="Nota"${v.nota ? '' : ' class="vacio"'}>${v.nota ? esc(v.nota) : '<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table>
+      ${xs.length > 25 && !S.verMas ? `<div class="more"><button class="btn btn-sm" data-act="vermas">Ver los ${xs.length} registros</button></div>` : ''}</div>`
+    : `<div class="card"><div class="empty"><div class="ic">${ic('clock')}</div><h3>Sin registros de ${cfg.c.toLowerCase()} en este rango</h3><p>El último fue el ${fFecha(f.mediciones.find(v => v.tipo === t).ts)}.</p>
+      <button class="btn btn-sm" data-rango="365">Ver 12 meses</button></div></div>`}`;
+  if (xs.length) dibujarChart($('#chart'), xs.slice().reverse(), t, desde);
+}
+
+function niceTicks(lo, hi, n = 4){
+  const span = hi - lo || 1; const step0 = span / n; const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= step0) || step0;
+  const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step; const out = [];
+  for (let v = a; v <= b + step / 2; v += step) out.push(+v.toFixed(6)); return out;
+}
+function dibujarChart(el, pts, tipo, desdeMs){
+  const W = el.clientWidth, H = el.clientHeight; if (!W) return;
+  const m = {l: 44, r: 14, t: 14, b: 28};
+  const pres = tipo === 'presion';
+  const all = pts.flatMap(p => pres ? [p.valor, p.valor2] : [p.valor]).filter(v => v != null);
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * .15 || Math.max(1, hi * .05); lo -= pad; hi += pad;
+  const ticks = niceTicks(lo, hi); lo = ticks[0]; hi = ticks[ticks.length - 1];
+  const t0 = Math.min(desdeMs, toDate(pts[0].ts).getTime()), t1 = Date.now();
+  const X = t => m.l + (t - t0) / (t1 - t0 || 1) * (W - m.l - m.r);
+  const Y = v => m.t + (1 - (v - lo) / (hi - lo || 1)) * (H - m.t - m.b);
+  const nX = Math.max(2, Math.min(6, Math.floor((W - m.l) / 90)));
+  let g = '';
+  ticks.forEach(v => { const y = Y(v).toFixed(1); g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}"/><text class="yl" x="${m.l - 8}" y="${+y + 4}" text-anchor="end">${(VT[tipo].dec ? nf1 : nf0).format(v)}</text>`; });
+  for (let i = 0; i <= nX; i++){ const t = t0 + (t1 - t0) * i / nX; const x = X(t);
+    g += `<text class="xl" x="${x.toFixed(1)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === nX ? 'end' : 'middle'}">${fCorta(new Date(t).toISOString())}</text>`; }
+  const path = key => pts.filter(p => p[key] != null).map((p, i) => `${i ? 'L' : 'M'}${X(toDate(p.ts).getTime()).toFixed(1)},${Y(p[key]).toFixed(1)}`).join('');
+  const many = pts.length > 45, r = many ? 2.4 : 3.4;
+  const series = pres ? [['valor2', 'var(--aqua)'], ['valor', 'var(--azul)']] : [['valor', 'var(--azul)']];
+  let lines = '', dots = '';
+  series.forEach(([k, col]) => {
+    if (tipo !== 'glicemia') lines += `<path class="ln draw" d="${path(k)}" stroke="${col}"/>`;
+    pts.forEach((p, i) => { if (p[k] == null) return; const hollow = tipo === 'glicemia' && !/ayun/i.test(p.contexto || '');
+      dots += `<circle class="pt" data-i="${i}" cx="${X(toDate(p.ts).getTime()).toFixed(1)}" cy="${Y(p[k]).toFixed(1)}" r="${i === pts.length - 1 ? r + 1.4 : r}" fill="${hollow ? '#fff' : col}" stroke="${hollow ? col : '#fff'}" stroke-width="${hollow ? 2 : (i === pts.length - 1 ? 2 : 1)}" style="${RM ? '' : `opacity:0;animation:fade .3s var(--ease) ${Math.min(500, 250 + i * 6)}ms forwards`}"/>`; });
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de ${VT[tipo].n.toLowerCase()}, ${pts.length} registros">${g}
+    <line class="guide" id="guide" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}"/>${lines}${dots}
+    <rect x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" id="tip"></div>`;
+  $$('.ln.draw', el).forEach(p => { const L = p.getTotalLength ? p.getTotalLength() : 1000; p.style.setProperty('--len', Math.ceil(L)); });
+  const tip = $('#tip', el), guide = $('#guide', el), xsPx = pts.map(p => X(toDate(p.ts).getTime()));
+  const hit = $('#hit', el);
+  const mover = ev => { const rc = el.getBoundingClientRect(); const x = (ev.clientX - rc.left) * (W / rc.width);
+    let bi = 0, bd = 1e9; xsPx.forEach((px, i) => { const d = Math.abs(px - x); if (d < bd){ bd = d; bi = i; } });
+    const p = pts[bi], px = xsPx[bi], py = Y(p.valor);
+    guide.setAttribute('x1', px); guide.setAttribute('x2', px); guide.style.opacity = 1;
+    $$('.pt', el).forEach(c => c.setAttribute('r', +c.dataset.i === bi ? r + 2 : (+c.dataset.i === pts.length - 1 ? r + 1.4 : r)));
+    tip.innerHTML = `<b>${vValor(p)}</b> ${VT[tipo].u}<br><span>${fFecha(p.ts)} · ${fHora(p.ts)}${p.contexto ? ' · ' + esc(p.contexto) : ''}</span>`;
+    tip.style.left = Math.max(70, Math.min(rc.width - 70, px * rc.width / W)) + 'px'; tip.style.top = (py * rc.height / H) + 'px'; tip.classList.add('on'); };
+  const salir = () => { tip.classList.remove('on'); guide.style.opacity = 0; $$('.pt', el).forEach(c => c.setAttribute('r', +c.dataset.i === pts.length - 1 ? r + 1.4 : r)); };
+  hit.addEventListener('pointermove', mover); hit.addEventListener('pointerdown', mover); hit.addEventListener('pointerleave', salir);
+}
+
+// Exámenes
+function paneEx(P){
+  const ex = S.ficha.examenes;
+  if (!ex.length){ P.innerHTML = `<div class="card"><div class="empty"><div class="ic">${ic('file')}</div><h3>Sin exámenes en su portal</h3>
+    <p>Los resultados que el centro revisa y publica en el portal del paciente aparecen aquí. Hoy se publican desde <b>Exámenes del portal</b> en recepción.</p></div></div>`; return; }
+  const fuera = ex.filter(e => e.fuera_rango).length;
+  P.innerHTML = `${fuera ? `<div class="note" style="margin-bottom:12px">${ic('info')}<div><b>${fuera} resultado${fuera > 1 ? 's' : ''} fuera del rango de referencia registrado.</b> El rango es el que se ingresó al cargar el examen; confírmelo con el informe original del laboratorio.</div></div>` : ''}
+    <div class="card tbl-cards"><table><thead><tr><th>Examen</th><th class="num">Resultado</th><th class="num">Rango de referencia</th><th>Fecha del examen</th><th class="col-pub">Publicado</th></tr></thead><tbody>
+    ${ex.map(e => { const dir = e.fuera_rango ? (e.valor > e.rango_max ? 'Sobre el rango' : 'Bajo el rango') : '';
+      return `<tr><td data-l="Examen">${esc(e.nombre)}</td>
+      <td data-l="Resultado" class="num"><span><span class="val">${e.valor == null ? '—' : nf1.format(e.valor)}</span><span class="u">${esc(e.unidad)}</span>${e.fuera_rango ? `<span style="display:block;margin-top:4px"><span class="badge warn">${ic('alert')}${dir}</span></span>` : ''}</span></td>
+      <td data-l="Rango ref." class="num">${e.rango_min != null ? `${nf1.format(e.rango_min)} – ${nf1.format(e.rango_max)}` : '<span class="muted">No registrado</span>'}</td>
+      <td data-l="Fecha" class="num">${fFecha(e.fecha)}</td><td data-l="Publicado" class="num muted col-pub">${fFecha(e.publicado)}</td></tr>`; }).join('')}
+    </tbody></table></div>`;
+}
+
+// Datos y familia
+function paneDat(P){
+  const f = S.ficha, d = f.datos || {};
+  const fila = (l, v) => `<div><dt>${l}</dt><dd class="${v ? '' : 'none'}">${v ? esc(v) : 'No informado'}</dd></div>`;
+  const cambios = f.datos_cambios || [];
+  const persona = (x, sub) => { const [ml, cls, icn] = METODO[x.metodo] || [x.metodo || 'Sin método', 'mut', 'info'];
+    return `<div class="person"><span class="av">${esc(iniciales(x.nombre))}</span><span class="body"><span class="nm">${esc(x.nombre || 'Sin nombre')}</span>
+      <div class="sub">${esc(sub)} · desde ${fFecha(x.desde)}</div></span><span class="badge ${cls}">${ic(icn)}${ml}</span></div>`; };
+  P.innerHTML = `<div class="grid2">
+    <div class="card"><div class="card-h"><div class="ic">${ic('user')}</div><h3>Datos que informó</h3><span class="muted">${f.datos_actualizado ? 'Actualizado ' + fFecha(f.datos_actualizado) : ''}</span></div>
+      <dl class="kv">${fila('Fecha de nacimiento', d.fecha_nacimiento ? fFecha(d.fecha_nacimiento) : '')}${fila('Previsión', d.prevision)}${fila('Comuna', d.comuna)}${fila('Dirección', d.direccion)}${fila('Correo', d.email)}
+        ${fila('Contacto de emergencia', [d.contacto_emerg_nombre, d.contacto_emerg_telefono].filter(Boolean).join(' · '))}</dl>
+      ${cambios.length ? `<div class="subhead">Cambios hechos desde su portal</div><div class="tl" style="padding-top:0">${cambios.map(a => `<div class="ev nov"><span class="h">${fCorta(a.ts)}</span><span class="dot">${ic('edit')}</span>
+        <span><div class="t">Actualizó ${esc((a.detalle || '').split(',').map(s => CAMPO[s.trim()] || s.trim()).filter(Boolean).join(', ') || 'sus datos')}</div><div class="d">${fFecha(a.ts)} · ${fHora(a.ts)}</div></span></div>`).join('')}</div>` : ''}
+    </div>
+    <div class="card"><div class="card-h"><div class="ic">${ic('users')}</div><h3>Familia y representación</h3></div>
+      <div class="subhead">Quién gestiona su portal</div>
+      ${f.representantes.length ? `<div class="people">${f.representantes.map(x => persona(x, x.relacion ? `vínculo declarado: ${x.relacion}` : 'familiar')).join('')}</div>` : `<div class="empty-mini">Nadie más gestiona el portal de este paciente.</div>`}
+      <div class="subhead">A quién gestiona</div>
+      ${f.gestiona.length ? `<div class="people">${f.gestiona.map(x => persona(x, x.relacion ? `vínculo declarado: ${x.relacion}` : 'familiar')).join('')}</div>` : `<div class="empty-mini">No gestiona el portal de otras personas.</div>`}
+      <div class="note" style="margin:0 14px 16px;box-shadow:none;background:var(--bg-2)">${ic('info')}<div class="small">Solo <b>Verificado con código</b> significa que el familiar adulto autorizó el acceso. <b>Declarado al agendar</b> lo informó quien pidió la hora por WhatsApp y no está verificado.</div></div>
+    </div></div>`;
+}
+
+// Actividad
+const EV_IC = {portal_checkin_confirmado:'check', portal_perfil_actualizado:'edit', portal_login:'login', portal_login_magic_link:'login', portal_examenes_ver:'file',
+  portal_examen_cargado:'file', portal_wiz_exito:'cal', portal_cita_cambia_exito:'cal', portal_cita_anula:'x', portal_family_add_minor:'users', portal_family_add_adult:'users', portal_family_revoke:'users', portal_family_switch:'users'};
+function paneAct(P){
+  const a = S.ficha.actividad;
+  if (!a.length){ P.innerHTML = `<div class="card"><div class="empty"><div class="ic">${ic('clock')}</div><h3>Sin actividad en el portal</h3><p>Este paciente no ha usado su portal en los últimos 12 meses.</p></div></div>`; return; }
+  let html = '', dia = '';
+  a.forEach(e => { const d = ymdCL(e.ts); if (d !== dia){ dia = d; html += `<div class="tl-day">${d === hoyCL() ? 'Hoy' : fFecha(e.ts)}</div>`; }
+    html += `<div class="ev${e.novedad ? ' nov' : ''}"><span class="h">${fHora(e.ts)}</span><span class="dot">${ic(EV_IC[e.evento] || 'activity')}</span>
+      <span><div class="t">${esc(e.label)}</div>${e.detalle ? `<div class="d">${esc(e.evento === 'portal_perfil_actualizado' ? e.detalle.split(',').map(s => CAMPO[s.trim()] || s.trim()).join(', ') : e.detalle)}</div>` : ''}</span></div>`; });
+  P.innerHTML = `<div class="card"><div class="tl">${html}</div></div><p class="muted small" style="margin:10px 4px">Solo se muestra lo que el paciente hizo en su portal con su RUT. Las confirmaciones por WhatsApp no aparecen aquí porque un mismo celular puede ser de varias personas.</p>`;
+}
+
+// ── Preparar control ─────────────────────────────────────
+function abrirOv(id){ const o = $(id); o.hidden = false; requestAnimationFrame(() => o.classList.add('on')); document.body.style.overflow = 'hidden'; }
+function cerrarOv(id){ const o = $(id); o.classList.remove('on'); setTimeout(() => { o.hidden = true; o.innerHTML = ''; }, 200); document.body.style.overflow = ''; }
+async function preparar(desde){
+  const rut = S.sel; if (!rut) return;
+  const o = $('#ov-prep');
+  if (o.hidden){ o.innerHTML = `<div class="sheet-wrap"><div class="sheet-bar"><h2 id="prep-title">Preparar control</h2></div><div class="sheet"><div class="skel" style="height:22px;width:50%"></div>
+    <div class="skel" style="height:120px;margin-top:20px"></div><div class="skel" style="height:80px;margin-top:16px"></div></div></div>`; abrirOv('#ov-prep'); }
+  try {
+    const r = await api(`/portal-profesional/api/paciente/${encodeURIComponent(rut)}/preparar${desde ? '?desde=' + desde : ''}`);
+    renderPrep(r);
+  } catch(e){ cerrarOv('#ov-prep'); toast(e.message || 'No se pudo preparar el resumen.', 'error'); }
+}
+function spark(vals){ if (vals.length < 2) return ''; const lo = Math.min(...vals), hi = Math.max(...vals), W = 120, H = 28;
+  const d = vals.map((v, i) => `${i ? 'L' : 'M'}${(i / (vals.length - 1) * (W - 4) + 2).toFixed(1)},${(H - 3 - (v - lo) / ((hi - lo) || 1) * (H - 6)).toFixed(1)}`).join('');
+  return `<svg class="sh-spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${d}" fill="none" stroke="#0F3F68" stroke-width="1.6" stroke-linejoin="round"/></svg>`; }
+function renderPrep(r){
+  const p = r.paciente, base = {ultima_atencion: 'desde su última atención', '90_dias': 'últimos 90 días (sin atención previa registrada)', manual: 'desde la fecha elegida'}[r.base] || '';
+  const M = r.mediciones || {};
+  const filasMed = Object.keys(VT).filter(t => M[t]).map(t => { const s = M[t], pres = t === 'presion';
+    const serie = r.lecturas.filter(v => v.tipo === t).map(v => v.valor).reverse();
+    return `<tr><td>${VT[t].n}</td><td class="num">${s.n}</td><td class="num"><b>${pres ? `${fmtN(s.ultimo_valor, t)}/${fmtN(s.ultimo_valor2, t)}` : fmtN(s.ultimo_valor, t)}</b> ${VT[t].u}<br><span class="muted small">${fFecha(s.ultimo)}</span></td>
+      <td class="num">${pres ? `${nf0.format(s.promedio)}/${nf0.format(s.promedio2)}` : fmtN(s.promedio, t)}</td>
+      <td class="num">${pres ? `${fmtN(s.min, t)}–${fmtN(s.max, t)} / ${fmtN(s.min2, t)}–${fmtN(s.max2, t)}` : `${fmtN(s.min, t)} – ${fmtN(s.max, t)}`}</td><td>${spark(serie)}</td></tr>`; }).join('');
+  const o = $('#ov-prep');
+  o.innerHTML = `<div class="sheet-wrap"><div class="sheet-bar"><h2 id="prep-title">Preparar control</h2>
+      <label>Desde <input type="date" id="prep-desde" value="${esc(r.desde)}" max="${hoyCL()}"></label>
+      <button class="btn btn-primary btn-sm" data-act="imprimir">${ic('print')}Imprimir</button>
+      <button class="btn btn-ghost btn-sm" data-act="cerrar-prep" aria-label="Cerrar">${ic('x')}</button></div>
+    <div class="sheet">
+      <div class="sh-head"><div class="c">Centro Médico Carampangue<small>Resumen de lo que el paciente registró en su portal</small></div>
+        <div class="p"><b>${esc(p.nombre || 'Sin nombre registrado')}</b><span class="num">${esc(p.rut)}${p.edad != null ? ' · ' + p.edad + ' años' : ''}</span><br>
+        <span>Período: ${fFecha(r.desde)} al ${fFecha(hoyCL())} · ${esc(base)}</span></div></div>
+      <div class="sh-sec"><h3>Mediciones anotadas por el paciente</h3>
+        ${filasMed ? `<table><thead><tr><th>Medición</th><th class="num">Registros</th><th class="num">Último</th><th class="num">Promedio</th><th class="num">Mín – máx</th><th>Evolución</th></tr></thead><tbody>${filasMed}</tbody></table>` : '<div class="sh-empty">No anotó mediciones en el período.</div>'}</div>
+      ${r.lecturas.length ? `<div class="sh-sec"><h3>Detalle (${r.lecturas.length > 30 ? 'últimos 30 de ' + r.lecturas.length : r.lecturas.length} registros)</h3><table><thead><tr><th>Fecha</th><th>Hora</th><th>Medición</th><th class="num">Valor</th><th>Momento</th><th>Nota</th></tr></thead><tbody>
+        ${r.lecturas.slice(0, 30).map(v => `<tr><td class="num">${fFecha(v.ts)}</td><td class="num">${fHora(v.ts)}</td><td>${VT[v.tipo].c}</td><td class="num"><b>${vValor(v)}</b> ${VT[v.tipo].u}</td><td>${esc(v.contexto || '—')}</td><td>${esc(v.nota || '')}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      <div class="sh-sec"><h3>Exámenes publicados en su portal</h3>
+        ${r.examenes.length ? `<table><thead><tr><th>Examen</th><th class="num">Resultado</th><th class="num">Rango ref. registrado</th><th>Fecha</th></tr></thead><tbody>${r.examenes.map(e => `<tr><td>${esc(e.nombre)}</td>
+          <td class="num"><b>${e.valor == null ? '—' : nf1.format(e.valor)}</b> ${esc(e.unidad)}${e.fuera_rango ? (e.valor > e.rango_max ? ' (sobre el rango)' : ' (bajo el rango)') : ''}</td>
+          <td class="num">${e.rango_min != null ? `${nf1.format(e.rango_min)} – ${nf1.format(e.rango_max)}` : '—'}</td><td class="num">${fFecha(e.fecha)}</td></tr>`).join('')}</tbody></table>` : '<div class="sh-empty">Sin exámenes nuevos en el período.</div>'}</div>
+      <div class="sh-sec"><h3>Cambios en sus datos y familia</h3>
+        ${r.cambios.length || r.familia_nueva.length ? `<table><tbody>${r.cambios.map(a => `<tr><td class="num" style="width:110px">${fFecha(a.ts)}</td><td>${esc(a.label)}${a.detalle ? ' · ' + esc(a.evento === 'portal_perfil_actualizado' ? a.detalle.split(',').map(s => CAMPO[s.trim()] || s.trim()).join(', ') : a.detalle) : ''}</td></tr>`).join('')}
+          ${r.familia_nueva.map(x => `<tr><td class="num" style="width:110px">${fFecha(x.desde)}</td><td>Vínculo familiar: ${esc(x.nombre)} (${esc(x.relacion || 'familiar')}) · ${esc((METODO[x.metodo] || [x.metodo])[0])}</td></tr>`).join('')}</tbody></table>` : '<div class="sh-empty">Sin cambios en el período.</div>'}</div>
+      <div class="sh-foot">Valores informados por el paciente desde su portal, medidos fuera del centro y sin verificación; no reemplazan la medición en consulta ni constituyen diagnóstico.
+        Documento con datos de salud (Ley 21.719): uso exclusivo para la atención. Generado por ${esc(r.generado_por)} el ${fFecha(r.generado)} a las ${fHora(r.generado)}${r.demo ? ' · DATOS DE EJEMPLO' : ''}.</div>
+    </div></div>`;
+  const inp = $('#prep-desde'); inp.addEventListener('change', () => { if (inp.value) preparar(inp.value); });
+  setTimeout(() => $('[data-act=imprimir]', o)?.focus(), 60);
+}
+
+// ── Auditoría (dueño) ────────────────────────────────────
+const ACC = {ver_ficha:'Abrió ficha', preparar_control:'Preparó control', lista_novedades:'Vio la lista', buscar:'Buscó', ver_auditoria:'Revisó accesos', tope_fichas:'Superó el tope de fichas'};
+async function abrirAuditoria(){
+  const o = $('#ov-audit');
+  o.innerHTML = `<div class="sheet-wrap audit"><div class="sheet-bar"><h2 id="audit-title">Registro de accesos</h2><button class="btn btn-ghost btn-sm" data-act="cerrar-audit" aria-label="Cerrar">${ic('x')}</button></div>
+    <div class="sheet" id="audit-body"><div class="skel" style="height:200px"></div></div></div>`; abrirOv('#ov-audit');
+  try {
+    const r = await api('/portal-profesional/api/accesos');
+    const a = r.accesos || [];
+    $('#audit-body').innerHTML = `<p class="muted small" style="margin:0 0 12px">Últimos ${a.length} accesos. Quién vio qué paciente, cuándo y desde dónde. Se conserva para responder solicitudes de pacientes (Ley 21.719).</p>
+      ${a.length ? `<div class="tbl-cards"><table><thead><tr><th>Fecha y hora</th><th>Quién</th><th>Acción</th><th>Paciente</th><th>Resultado</th><th>IP</th></tr></thead><tbody>
+      ${a.map(x => `<tr><td data-l="Fecha" class="num">${fFecha(x.ts)} ${fHora(x.ts)}</td><td data-l="Quién">${esc(x.actor)}</td><td data-l="Acción">${esc(ACC[x.accion] || x.accion)}</td>
+        <td data-l="Paciente" class="num">${esc(x.rut || '—')}</td><td data-l="Resultado"><span class="badge ${x.resultado === 'ok' ? 'mut' : 'warn'}">${x.resultado === 'ok' ? 'Permitido' : x.resultado === 'denegado' ? 'Denegado' : esc(x.resultado)}</span></td>
+        <td data-l="IP" class="num muted">${esc(x.ip)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><h3>Sin accesos aún</h3></div>'}`;
+  } catch(e){ cerrarOv('#ov-audit'); toast(e.message, 'error'); }
+}
+
+// ── Búsqueda ─────────────────────────────────────────────
+let qT = 0;
+function onBuscar(){
+  const q = $('#q').value.trim(); clearTimeout(qT);
+  if (!q){ S.buscando = null; renderLista(); return; }
+  const digits = q.replace(/[^0-9kK]/g, '');
+  const corto = !(digits.length >= 7 && /^\d+$/.test(digits.slice(0, -1))) && q.length < 3;
+  S.buscando = {q, res: corto ? [] : null, corto}; renderLista(); if (corto) return;
+  qT = setTimeout(async () => {
+    try { const r = await api('/portal-profesional/api/buscar?q=' + encodeURIComponent(q)); if (S.buscando && S.buscando.q === q){ S.buscando.res = r.pacientes || []; renderLista(); } }
+    catch(e){ if (e.status === 401 || e.status === 403) return pantallaSinAcceso(e); if (S.buscando){ S.buscando.res = []; renderLista(); } toast(e.message, 'error'); }
+  }, 280);
+}
+
+// ── Eventos ──────────────────────────────────────────────
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('button,[data-act]'); if (!b) return;
+  if (b.classList.contains('pac')) return abrir(b.dataset.rut);
+  if (b.dataset.d){ S.dias = +b.dataset.d; $$('.seg [data-d]').forEach(x => x.setAttribute('aria-pressed', x === b)); S.filtro = 'todo'; return cargarNovedades(); }
+  if (b.dataset.f){ S.filtro = b.dataset.f; renderChips(); renderLista(); return; }
+  if (b.dataset.tab){ S.tab = b.dataset.tab; $$('.tab').forEach(t => t.setAttribute('aria-selected', t === b)); moverInk(); renderTab(); return; }
+  if (b.dataset.vt){ S.vt = b.dataset.vt; S.verMas = false; return renderTab(); }
+  if (b.dataset.rango){ S.rango = +b.dataset.rango; S.verMas = false; return renderTab(); }
+  const a = b.dataset.act;
+  if (a === 'ampliar'){ S.dias = 30; $$('.seg [data-d]').forEach(x => x.setAttribute('aria-pressed', x.dataset.d === '30')); return cargarNovedades(); }
+  if (a === 'reintentar') return cargarNovedades();
+  if (a === 'reabrir') return abrir(S.sel, false);
+  if (a === 'volver') return history.length > 1 && location.hash ? history.back() : cerrar();
+  if (a === 'preparar') return preparar();
+  if (a === 'imprimir') return window.print();
+  if (a === 'cerrar-prep') return cerrarOv('#ov-prep');
+  if (a === 'cerrar-audit') return cerrarOv('#ov-audit');
+  if (a === 'vermas'){ S.verMas = true; return renderTab(); }
+});
+$('#ov-prep').addEventListener('click', e => { if (e.target.id === 'ov-prep') cerrarOv('#ov-prep'); });
+$('#ov-audit').addEventListener('click', e => { if (e.target.id === 'ov-audit') cerrarOv('#ov-audit'); });
+$('#btn-audit').addEventListener('click', abrirAuditoria);
+$('#btn-refresh').addEventListener('click', () => { cargarNovedades(); if (S.sel) abrir(S.sel, false); toast('Información actualizada.'); });
+$('#q').addEventListener('input', onBuscar);
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT'){ e.preventDefault(); $('#q').focus(); }
+  if (e.key === 'Escape'){ if (!$('#ov-prep').hidden) return cerrarOv('#ov-prep'); if (!$('#ov-audit').hidden) return cerrarOv('#ov-audit');
+    if ($('#q').value){ $('#q').value = ''; onBuscar(); } }
+});
+addEventListener('popstate', () => { const m = location.hash.match(/p=([^&]+)/); if (m) abrir(decodeURIComponent(m[1]), false); else cerrar(false); });
+let rzT = 0; addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { if (S.ficha && S.tab === 'med') renderTab(); moverInk(false); }, 150); });
+
+// Pantalla protegida por inactividad (5 min): el box es un espacio compartido.
+let idle = 0; const IDLE_MS = 5 * 60 * 1000;
+const resetIdle = () => { clearTimeout(idle); idle = setTimeout(() => { if (S.sel) $('#lock').classList.add('on'); }, IDLE_MS); };
+['pointerdown', 'keydown', 'scroll', 'pointermove'].forEach(t => addEventListener(t, resetIdle, {passive: true}));
+$('#unlock').addEventListener('click', () => { $('#lock').classList.remove('on'); resetIdle(); });
+resetIdle();
+
+// ── Arranque ─────────────────────────────────────────────
+(async function init(){
+  if (DEMO){ $('#pill-demo').hidden = false; }
+  renderLista(); renderInicio();
+  try {
+    S.yo = await api('/portal-profesional/api/yo');
+    const sc = $('#pill-scope'); sc.hidden = false; sc.textContent = S.yo.alcance === 'propios' ? 'Solo sus pacientes' : 'Todo el centro';
+    $('#hdr-sub').textContent = S.yo.actor;
+    if (S.yo.ve_auditoria) $('#btn-audit').hidden = false;
+  } catch(e){ if (e.status === 401 || e.status === 403) return pantallaSinAcceso(e); }
+  await cargarNovedades();
+  const m = location.hash.match(/p=([^&]+)/); if (m) abrir(decodeURIComponent(m[1]), false);
+})();
+</script>
+</body>
+</html>

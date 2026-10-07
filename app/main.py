@@ -1843,6 +1843,8 @@ app.include_router(audit_routes.router)
 
 import print_routes; app.include_router(print_routes.router)  # Impresion remota → Alma Print
 
+import portal_profesional_routes; app.include_router(portal_profesional_routes.router)  # Portal del Profesional: lo que el paciente sube a su portal (solo lectura + auditoría)
+
 import abono_pago_routes; app.include_router(abono_pago_routes.router)  # Página pública /abono/{token} — confirmación auto de abonos por transferencia (gated ABONO_AUTO_ACTIVE, ver abono_transferencia.py)
 
 # Cargar HTML del panel admin y portal paciente

@@ -575,6 +575,12 @@ async def portal_update_perfil(request: Request,
     if rut == DEMO_RUT or rut in DEMO_FAMILY:
         return {"ok": True, "demo": True}  # no persistir demo
     update_profile_fields(phone, rut, data)
+    # Rastro para el Portal del Profesional: QUÉ campos tocó (nunca los valores).
+    try:
+        log_event(_owner_phone, "portal_perfil_actualizado",
+                  {"rut": rut, "campos": sorted(k for k in data if k != "nombre")[:9]})
+    except Exception:
+        pass
     return {"ok": True}
 
 
