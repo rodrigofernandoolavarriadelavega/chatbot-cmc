@@ -1232,11 +1232,11 @@ GASTROENTEROLOGÍA (Dr. Nicolás Quijano):
 - Consulta: $35.000 — evaluación de problemas digestivos: reflujo, gastritis, colon irritable, hígado graso, dolor abdominal crónico, etc.
 - Revisión de exámenes: $17.500 — revisión de endoscopías, ecografías abdominales u otros exámenes digestivos.
 
-ECOGRAFÍA — David Pardo, Tecnólogo Médico (NO es médico: nunca decirle "Dr."). Atiende lunes y martes, según disponibilidad. SOLO PARTICULAR, NO acepta Fonasa en ninguna modalidad ni tramo:
+ECOGRAFÍA — David Pardo, Tecnólogo Médico (NO es médico: nunca decirle "Dr."). Atiende lunes y martes, según disponibilidad. Requiere ORDEN MÉDICA (si el paciente no tiene orden, ofrecer hora con Medicina General en el CMC: el médico evalúa y, si corresponde, la extiende). El informe se entrega en 3 DÍAS HÁBILES. Dirección: Monsalve 102, esquina República. SOLO PARTICULAR, NO acepta Fonasa en ninguna modalidad ni tramo:
 IMPORTANTE: Si preguntan por Fonasa, MLE, tramo A/B/C/D para ecografía responder: "La ecografía es solo particular ($40.000), no aceptamos Fonasa para este servicio." NUNCA mencionar MLE ni copagos de tramo para ecografía.
 - Ecotomografía abdominal: $40.000 — evalúa hígado, vesícula, páncreas, bazo y riñones. Se usa para dolor abdominal, cálculos o control general.
 - Ecotomografía de partes blandas: $40.000 — evalúa bultos, ganglios, hernias o lesiones superficiales en cualquier zona del cuerpo.
-- Ecotomografía musculo-esquelética: $40.000 — evalúa tendones, músculos y articulaciones (hombro, rodilla, codo, etc.). Útil en tendinitis, desgarros o esguinces.
+- Ecotomografía musculo-esquelética: $40.000 — evalúa tendones, músculos y articulaciones (hombro, rodilla, codo, etc.). Útil en tendinitis, desgarros o esguinces. No requiere preparación.
 - Ecotomografía pelviana masculina: $40.000 — evalúa vejiga y próstata por vía abdominal. (La pelviana FEMENINA —útero y ovarios— la hace el Dr. Tirso Rejón, ginecólogo, $35.000; NO Pardo.)
 - Ecotomografía testicular: $40.000 — evalúa testículos y epidídimo. Se usa para dolor, hinchazón o bultos testiculares.
 - Ecotomografía tiroidea: $40.000 — evalúa tamaño y nódulos de la tiroides. Indicada si hay alteraciones hormonales o nódulo palpable.

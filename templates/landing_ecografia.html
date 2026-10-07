@@ -46,7 +46,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   "telephone": "+56442965226",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "Monsalve 102 (frente a la antigua estación de trenes)",
+    "streetAddress": "Monsalve 102, esquina República",
     "addressLocality": "Carampangue",
     "addressRegion": "Región del Biobío",
     "addressCountry": "CL"
@@ -72,8 +72,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   "name": "Ecotomografía (ecografía)",
   "alternateName": ["Ecografía", "Ultrasonido"],
   "procedureType": "https://schema.org/NoninvasiveProcedure",
-  "description": "Estudio de imágenes por ultrasonido. Ecografías generales realizadas por David Pardo, tecnólogo médico, en el Centro Médico Carampangue. El resultado lo interpreta el médico tratante.",
-  "preparation": "Según el tipo: abdominal y hepática/vesícula con ayuno de 6 a 8 horas; renal, vesical y prostática con vejiga llena; tiroides, mamaria, partes blandas y testicular sin preparación. Doppler y musculoesquelética: se confirma al agendar.",
+  "description": "Estudio de imágenes por ultrasonido. Ecografías generales realizadas por David Pardo, tecnólogo médico, en el Centro Médico Carampangue. Requiere orden médica. El informe se entrega en 3 días hábiles y lo interpreta el médico tratante.",
+  "preparation": "Según el tipo: abdominal y hepática/vesícula con ayuno de 6 a 8 horas; renal, vesical y prostática con vejiga llena; tiroides, mamaria, partes blandas, testicular y musculoesquelética sin preparación. Doppler: se confirma al agendar.",
   "performer": {"@id": "https://centromedicocarampangue.cl/#david-pardo"},
   "location": {"@id": "https://centromedicocarampangue.cl/#clinic"},
   "offers": [
@@ -104,13 +104,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     {"@type": "Question", "name": "¿Cómo puedo pagar?",
      "acceptedAnswer": {"@type": "Answer", "text": "En efectivo o por transferencia."}},
     {"@type": "Question", "name": "¿Cómo me preparo para la ecografía?",
-     "acceptedAnswer": {"@type": "Answer", "text": "Depende del tipo. Abdominal y hepática o de vesícula: ayuno de 6 a 8 horas; puedes tomar agua y tus medicamentos. Renal, vesical y prostática: vejiga llena; toma harta agua 1 hora antes y no orines hasta el examen. Tiroides, mamaria, partes blandas y testicular: no requieren preparación. Doppler y musculoesquelética: te confirmamos la preparación al agendar."}},
+     "acceptedAnswer": {"@type": "Answer", "text": "Depende del tipo. Abdominal y hepática o de vesícula: ayuno de 6 a 8 horas; puedes tomar agua y tus medicamentos. Renal, vesical y prostática: vejiga llena; toma harta agua 1 hora antes y no orines hasta el examen. Tiroides, mamaria, partes blandas, testicular y musculoesquelética: no requieren preparación. Doppler: te confirmamos la preparación al agendar."}},
     {"@type": "Question", "name": "¿Qué días se hacen las ecografías?",
      "acceptedAnswer": {"@type": "Answer", "text": "Lunes y martes, según disponibilidad. Confírmala por WhatsApp al +56 9 6661 0737."}},
     {"@type": "Question", "name": "¿Puedo mandar la foto de mi orden médica?",
      "acceptedAnswer": {"@type": "Answer", "text": "Sí. Envíala por WhatsApp al +56 9 6661 0737 y te decimos qué ecografía es, cuánto cuesta y cómo prepararte."}},
     {"@type": "Question", "name": "¿Quién realiza las ecografías?",
      "acceptedAnswer": {"@type": "Answer", "text": "David Pardo, tecnólogo médico en ecografía. Es un estudio de imágenes: el resultado lo interpreta el médico que te pidió el examen."}},
+    {"@type": "Question", "name": "¿Necesito orden médica?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Sí, la ecografía se hace con orden médica. Si tienes la orden, mándanos una foto por WhatsApp y te decimos cuál es y cómo prepararte. ¿No tienes orden? Pide hora con medicina general aquí mismo en el Centro Médico Carampangue: el médico te evalúa y, si corresponde, te la extiende."}},
+    {"@type": "Question", "name": "¿Cuándo está el informe?",
+     "acceptedAnswer": {"@type": "Answer", "text": "El informe se entrega en 3 días hábiles. Llévalo al médico que te pidió el examen para que lo interprete."}},
     {"@type": "Question", "name": "¿Hacen ecografía transvaginal o pelviana?",
      "acceptedAnswer": {"@type": "Answer", "text": "Sí, con el Dr. Tirso Rejón, ginecólogo, por $35.000 particular."}},
     {"@type": "Question", "name": "¿Hacen ecografía de embarazo?",
@@ -118,7 +122,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     {"@type": "Question", "name": "¿Hacen ecocardiograma?",
      "acceptedAnswer": {"@type": "Answer", "text": "Sí, con el Dr. Miguel Millán, cardiólogo, por $110.000 particular. Se realiza una vez al mes, por lista de espera."}},
     {"@type": "Question", "name": "¿Dónde están ubicados?",
-     "acceptedAnswer": {"@type": "Answer", "text": "En Monsalve 102, frente a la antigua estación de trenes de Carampangue, comuna de Arauco, Región del Biobío."}}
+     "acceptedAnswer": {"@type": "Answer", "text": "En Monsalve 102, esquina República, Carampangue, comuna de Arauco, Región del Biobío."}}
   ]
 }
 </script>
@@ -683,7 +687,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <li><svg class="i" aria-hidden="true"><use href="#i-cal"/></svg><span><strong>Lunes y martes</strong>según disponibilidad</span></li>
       <li><svg class="i" aria-hidden="true"><use href="#i-shield"/></svg><span><strong>Solo particular</strong>sin Fonasa ni bono</span></li>
       <li><svg class="i" aria-hidden="true"><use href="#i-cash"/></svg><span><strong>Efectivo o transferencia</strong>medios de pago</span></li>
-      <li><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg><span><strong>Monsalve 102</strong>frente a la antigua estación</span></li>
+      <li><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg><span><strong>Monsalve 102</strong>esquina República</span></li>
     </ul>
   </div>
 </section>
@@ -720,7 +724,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="grp">
           <p class="grp-t" id="g3">Músculos y circulación</p>
           <div class="chips" role="group" aria-labelledby="g3">
-            <button type="button" class="chip" data-e="musculo" aria-pressed="false"><span class="dt dt-conf" aria-hidden="true"></span>Musculoesquelética</button>
+            <button type="button" class="chip" data-e="musculo" aria-pressed="false"><span class="dt dt-libre" aria-hidden="true"></span>Musculoesquelética</button>
             <button type="button" class="chip" data-e="doppler" aria-pressed="false"><span class="dt dt-conf" aria-hidden="true"></span>Doppler</button>
           </div>
         </div>
@@ -790,7 +794,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </article>
     </div>
     <div class="prep-foot rv">
-      <span>Doppler y musculoesquelética: te confirmamos la preparación al agendar.</span>
+      <span>Doppler: te confirmamos la preparación al agendar.</span>
       <a class="lnk" data-wa-btn="prep-duda" target="_blank" rel="noopener" href="https://wa.me/56966610737?text=Hola%2C%20tengo%20una%20duda%20sobre%20la%20preparaci%C3%B3n%20de%20mi%20ecograf%C3%ADa%20(web%3A%20landing_ecografia)&utm_source=landing_ecografia&utm_medium=preparacion&utm_campaign=ecografia_arauco"><span>Preguntar por WhatsApp</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
     </div>
   </div>
@@ -855,10 +859,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <span class="kicker rv">Quién te atiende</span>
         <h2 id="eq-h2" class="rv" style="--d:1">David Pardo</h2>
         <p class="role rv" style="--d:1">Tecnólogo médico · Ecografía</p>
-        <p class="bio rv" style="--d:2">Realiza las ecografías generales del centro: abdominal, renal, tiroides, mamaria, partes blandas, testicular, próstata, musculoesquelética y Doppler. Es un estudio de imágenes: el resultado lo interpreta el médico que te pidió el examen.</p>
+        <p class="bio rv" style="--d:2">Realiza las ecografías generales del centro: abdominal, renal, tiroides, mamaria, partes blandas, testicular, próstata, musculoesquelética y Doppler. Es un estudio de imágenes: el informe se entrega en 3 días hábiles y lo interpreta el médico que te pidió el examen.</p>
         <dl class="tfacts rv" style="--d:3">
           <div><dt>Días</dt><dd>Lunes y martes<span>Según disponibilidad. Confírmala por WhatsApp.</span></dd></div>
-          <div><dt>Dónde</dt><dd>Monsalve 102, Carampangue<span>Frente a la antigua estación de trenes.</span></dd></div>
+          <div><dt>Dónde</dt><dd>Monsalve 102, Carampangue<span>Esquina República.</span></dd></div>
           <div><dt>Valor</dt><dd class="num">$40.000 particular<span>Doppler $90.000.</span></dd></div>
         </dl>
       </div>
@@ -926,7 +930,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <ol class="steps">
       <li class="rv" style="--d:1"><span class="n num">01</span><h3>Escríbenos o manda tu orden</h3><p>Por WhatsApp al +56&nbsp;9&nbsp;6661&nbsp;0737. Con la foto de la orden te decimos qué ecografía es y cuánto cuesta.</p></li>
       <li class="rv" style="--d:2"><span class="n num">02</span><h3>Elige tu hora</h3><p>Lunes o martes, según disponibilidad. Ahí mismo te indicamos cómo prepararte.</p></li>
-      <li class="rv" style="--d:3"><span class="n num">03</span><h3>Ven preparado</h3><p>A Monsalve 102, frente a la antigua estación. Pagas en efectivo o transferencia.</p></li>
+      <li class="rv" style="--d:3"><span class="n num">03</span><h3>Ven preparado</h3><p>A Monsalve 102, esquina República. Trae tu orden médica (si no tienes, pide hora con medicina general en el centro). Pagas en efectivo o transferencia.</p></li>
     </ol>
     <div class="steps-cta rv">
       <a class="btn btn-main big-wa" data-wa-btn="pasos" target="_blank" rel="noopener" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20ecograf%C3%ADa%20(web%3A%20landing_ecografia)&utm_source=landing_ecografia&utm_medium=pasos&utm_campaign=ecografia_arauco">
@@ -949,15 +953,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="rv" style="--d:1">
       <details><summary>¿Cuánto cuesta una ecografía?<span class="pm" aria-hidden="true"></span></summary><div class="fa num">$40.000 particular: abdominal, hígado y vesícula, renal, vesical, próstata, tiroides, mamaria, partes blandas, testicular y musculoesquelética. La ecografía Doppler cuesta $90.000.</div></details>
       <details><summary>¿Puedo usar Fonasa o un bono?<span class="pm" aria-hidden="true"></span></summary><div class="fa">No. La ecografía es solo particular: para este examen no trabajamos con Fonasa, en ninguna modalidad ni tramo.</div></details>
-      <details><summary>¿Cómo me preparo?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Depende del tipo. Abdominal y de hígado o vesícula: ayuno de 6 a 8 horas, con agua y tus medicamentos permitidos. Renal, vesical y próstata: vejiga llena, tomando harta agua 1 hora antes y sin orinar hasta el examen. Tiroides, mamaria, partes blandas y testicular: sin preparación. Doppler y musculoesquelética: te lo confirmamos al agendar. <a href="#que-eco">Revisa la tuya aquí</a>.</div></details>
+      <details><summary>¿Cómo me preparo?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Depende del tipo. Abdominal y de hígado o vesícula: ayuno de 6 a 8 horas, con agua y tus medicamentos permitidos. Renal, vesical y próstata: vejiga llena, tomando harta agua 1 hora antes y sin orinar hasta el examen. Tiroides, mamaria, partes blandas, testicular y musculoesquelética: sin preparación. Doppler: te lo confirmamos al agendar. <a href="#que-eco">Revisa la tuya aquí</a>.</div></details>
       <details><summary>¿Qué días se hacen?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Lunes y martes, según disponibilidad. Confírmala por WhatsApp al <a data-wa-btn="faq-dias" target="_blank" rel="noopener" href="https://wa.me/56966610737?text=Hola%2C%20quiero%20saber%20qu%C3%A9%20horas%20hay%20para%20ecograf%C3%ADa%20(web%3A%20landing_ecografia)&utm_source=landing_ecografia&utm_medium=faq&utm_campaign=ecografia_arauco">+56&nbsp;9&nbsp;6661&nbsp;0737</a>.</div></details>
       <details><summary>¿Puedo mandar la foto de mi orden?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Sí. Envíala por WhatsApp y te decimos qué ecografía es, cuánto cuesta y cómo prepararte.</div></details>
       <details><summary>¿Cómo puedo pagar?<span class="pm" aria-hidden="true"></span></summary><div class="fa">En efectivo o por transferencia.</div></details>
       <details><summary>¿Quién hace las ecografías?<span class="pm" aria-hidden="true"></span></summary><div class="fa">David Pardo, tecnólogo médico en ecografía. Es un estudio de imágenes: el resultado lo interpreta el médico que te pidió el examen.</div></details>
+      <details><summary>¿Necesito orden médica?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Sí, la ecografía se hace con orden médica. Si ya la tienes, mándanos una foto por WhatsApp y te decimos cuál es y cómo prepararte. ¿No tienes orden? Pide hora con medicina general aquí mismo en el Centro Médico Carampangue: el médico te evalúa y, si corresponde, te la extiende.</div></details>
+      <details><summary>¿Cuándo está el informe?<span class="pm" aria-hidden="true"></span></summary><div class="fa">En 3 días hábiles. Llévalo al médico que te pidió el examen para que lo interprete.</div></details>
       <details><summary>¿Hacen ecografía transvaginal o pelviana?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Sí, con el Dr. Tirso Rejón, ginecólogo, por $35.000 particular.</div></details>
       <details><summary>¿Hacen ecografía de embarazo?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Por ahora no realizamos ecografía obstétrica en el centro. Para ecografías de embarazo puedes consultar en la clínica de maternidad más cercana o en el hospital de tu red de salud.</div></details>
       <details><summary>¿Hacen ecocardiograma?<span class="pm" aria-hidden="true"></span></summary><div class="fa">Sí, con el Dr. Miguel Millán, cardiólogo, por $110.000 particular. Se realiza una vez al mes, por lista de espera.</div></details>
-      <details><summary>¿Dónde están?<span class="pm" aria-hidden="true"></span></summary><div class="fa">En Monsalve 102, frente a la antigua estación de trenes de Carampangue, comuna de Arauco.</div></details>
+      <details><summary>¿Dónde están?<span class="pm" aria-hidden="true"></span></summary><div class="fa">En Monsalve 102, esquina República, Carampangue, comuna de Arauco.</div></details>
     </div>
   </div>
 </section>
@@ -967,7 +973,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="wrap">
     <div class="sec-head rv">
       <span class="kicker">Cómo llegar</span>
-      <h2 id="mapa-h2">Frente a la antigua estación de trenes.</h2>
+      <h2 id="mapa-h2">Monsalve 102, esquina República.</h2>
       <p>Monsalve 102, Carampangue. A pasos de la Ruta 160.</p>
     </div>
     <div class="map-grid">
@@ -989,7 +995,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <span class="kicker">Dirección</span>
           <h3>Monsalve 102, Carampangue</h3>
           <p>Comuna de Arauco, Región del Biobío.</p>
-          <span class="ref"><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg>Frente a la antigua estación de trenes</span>
+          <span class="ref"><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg>Esquina República</span>
           <div class="loc-btns">
             <a class="btn btn-line" href="https://www.google.com/maps/search/?api=1&query=-37.2548769,-73.2355041" target="_blank" rel="noopener">Google Maps</a>
             <a class="btn btn-line" href="https://waze.com/ul?ll=-37.2548769,-73.2355041&navigate=yes" target="_blank" rel="noopener">Waze</a>
@@ -1033,7 +1039,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="f-grid">
       <div class="f-brand">
         <img src="/static/images/ecografia/logo-cmc.png" width="592" height="141" alt="Centro Médico Carampangue" loading="lazy">
-        <p>Monsalve 102, frente a la antigua estación de trenes. Carampangue, comuna de Arauco, Región del Biobío.</p>
+        <p>Monsalve 102, esquina República. Carampangue, comuna de Arauco, Región del Biobío.</p>
       </div>
       <div>
         <h4>Contacto</h4>
@@ -1135,7 +1141,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     mamaria:   {n:'Ecografía mamaria', g:'libre', p:'$40.000', ev:'Las mamas. Es un estudio de partes blandas, no ginecológico.', sv:'Estudiar nódulos o quistes palpables y complementar la mamografía, sobre todo en mamas densas o en mujeres jóvenes.', pr:'<strong>No requiere preparación.</strong> Idealmente, la primera semana después de la regla.', wa:'ecografía mamaria'},
     partes:    {n:'Ecografía de partes blandas', g:'libre', p:'$40.000', ev:'Estructuras bajo la piel: bultos, ganglios, lipomas y quistes.', sv:'Estudiar un bulto o aumento de volumen que se palpa.', pr:'<strong>No requiere preparación.</strong>', wa:'ecografía de partes blandas'},
     testicular:{n:'Ecografía testicular', g:'libre', p:'$40.000', ev:'Los testículos y el escroto.', sv:'Estudiar dolor, aumento de volumen, masas o varicocele.', pr:'<strong>No requiere preparación.</strong>', wa:'ecografía testicular'},
-    musculo:   {n:'Ecografía musculoesquelética', g:'conf', p:'$40.000', ev:'Tendones, músculos y articulaciones: hombro, rodilla, codo y otras.', sv:'Estudiar tendinitis, desgarros o esguinces.', pr:'Te confirmamos la preparación al agendar.', wa:'ecografía musculoesquelética'},
+    musculo:   {n:'Ecografía musculoesquelética', g:'libre', p:'$40.000', ev:'Tendones, músculos y articulaciones: hombro, rodilla, codo y otras.', sv:'Estudiar tendinitis, desgarros o esguinces.', pr:'<strong>No requiere preparación.</strong>', wa:'ecografía musculoesquelética'},
     doppler:   {n:'Ecografía Doppler', g:'conf', p:'$90.000', ev:'El flujo de sangre en vasos y órganos.', sv:'Estudiar várices, trombosis o la circulación de las piernas u órganos.', pr:'Depende de la zona; en general no requiere preparación especial. Te la confirmamos al agendar.', wa:'ecografía Doppler'},
     gine:      {n:'Ecografía transvaginal o pelviana', k:'Ginecología · Dr. Tirso Rejón, ginecólogo', g:'conf', gl:'La realiza el ginecólogo', p:'$35.000', ev:'El útero, los ovarios y el endometrio.', sv:'Estudiar quistes de ovario, miomas, dolor pélvico, sangrados o control ginecológico.', pr:'<strong>Transvaginal:</strong> vejiga vacía, orina antes del examen. <strong>Pelviana:</strong> vejiga llena, toma harta agua 1 hora antes.', wa:'ecografía ginecológica con el Dr. Rejón', cta:'Agendar con ginecología'},
     corazon:   {n:'Ecocardiograma', k:'Cardiología · Dr. Miguel Millán, cardiólogo', g:'conf', gl:'Lista de espera mensual', p:'$110.000', ev:'Válvulas, tamaño de las cavidades, función del corazón y flujo sanguíneo.', pr:'Se realiza una vez al mes. Te anotamos en la lista de espera y te avisamos cuando haya fecha.', wa:'ecocardiograma (lista de espera)', msg:'Hola, quiero anotarme en la lista de espera del ecocardiograma', cta:'Anotarme en la lista'},
@@ -1177,7 +1183,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         h += '<div class="calc"><label for="hora">Si tu hora es a las <select id="hora" class="num">' + opciones() + '</select></label><div id="calc-out">' + calcOut(e) + '</div></div>';
       }
       h += '<div class="scan-cta"></div>';
-      if (!e.k) h += '<p class="scan-note">Es un estudio de imágenes; el resultado lo interpreta tu médico.</p>';
+      if (!e.k) h += '<p class="scan-note">Necesitas orden médica. Informe en 3 días hábiles; lo interpreta tu médico.</p>';
       inner.innerHTML = h;
       var cta = inner.querySelector('.scan-cta');
       var a = waLink(e, key); cta.appendChild(a);
