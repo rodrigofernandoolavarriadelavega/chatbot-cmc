@@ -2374,7 +2374,7 @@ _COMUNA_SPECIALTIES = [
     ("oftalmologia", "Oftalmología", "$15.000 (todos)", "TM Ana Celedón", "Diagnóstico"),
     ("masoterapia", "Masoterapia", "$17.990 (20 min)", "Paola Acosta", "Bienestar"),
     ("odontologia-general", "Odontología General", "Limpieza desde $30.000", "Dra. Burgos · Dr. Jiménez", "Dental"),
-    ("ortodoncia", "Ortodoncia", "Brackets metálicos/estéticos", "Dra. Daniela Castillo", "Dental"),
+    ("ortodoncia", "Ortodoncia", "Brackets metálicos", "Dra. Daniela Castillo", "Dental"),
     ("endodoncia", "Endodoncia", "Tratamiento conducto", "Dr. Fernando Fredes", "Dental"),
     ("implantologia", "Implantología", "Implante + corona desde $650.000", "Dra. Aurora Valdés", "Dental"),
     ("estetica-facial", "Estética Facial", "Evaluación $15.000", "Dra. Valentina Fuentealba", "Estética"),
@@ -2674,6 +2674,7 @@ h1 em{{font-style:normal;color:#1F7E8C}}
 footer{{text-align:center;padding:24px;font-size:13px;color:#5e7183;border-top:1px solid #e5e7eb;margin-top:40px;background:#fff}}
 @media (max-width:600px){{h1{{font-size:30px}}.hero{{padding:40px 20px 32px}}}}
 </style>
+<script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
 <body>
 <header><a href="/">← Volver al inicio</a></header>
@@ -2702,7 +2703,7 @@ footer{{text-align:center;padding:24px;font-size:13px;color:#5e7183;border-top:1
   <div class="cta-band">
     <h2>Agenda desde tu comuna en 30 segundos</h2>
     <p>El asistente automático revisa disponibilidad real al instante, 24/7.</p>
-    <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora&utm_source=comuna_index&utm_medium=organic&utm_campaign=cta_general" target="_blank" rel="noopener">Agendar por WhatsApp</a>
+    <a href="https://wa.me/56966610737?text=Hola%2C%20quiero%20agendar%20una%20hora%20%28web%3A%20comuna%29&amp;utm_source=comuna_index&amp;utm_medium=organic&amp;utm_campaign=cta_general" target="_blank" rel="noopener" data-wa-btn="cta-general">Agendar por WhatsApp</a>
   </div>
 
   <h2>Preguntas frecuentes</h2>
