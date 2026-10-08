@@ -3019,7 +3019,7 @@ async def sitemap_xml():
         (f"{base_url}/privacidad", "0.3", "yearly"),
     ]
     # Landings directas (servidas vía bridge WP Snippet 8 bajo el dominio canónico)
-    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue", "ortodoncia", "estetica", "medicina-general", "odontologia-general", "nutriologia-diabetologia") + _LANDINGS_ESPECIALIDAD:
+    for direct_slug in ("lebu", "empresas", "los-alamos", "canete", "chequeos", "curanilahue", "ortodoncia", "estetica", "medicina-general", "odontologia-general", "nutriologia-diabetologia", "ecografia") + _LANDINGS_ESPECIALIDAD:
         urls.append((f"{base_url}/{direct_slug}", "0.85", "monthly"))
     # Comuna hubs
     for comuna_slug in COMUNAS_ARAUCO:
