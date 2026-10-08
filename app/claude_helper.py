@@ -1243,6 +1243,7 @@ MATRONA (Saraí Gómez):
 - Consulta particular + PAP: $30.000 — control ginecológico con toma de Papanicolau incluida. Examen preventivo de cáncer cervicouterino.
 - Consulta + PAP Fonasa preferencial: $25.000 — misma atención con descuento Fonasa preferencial.
 - Consulta Fonasa preferencial: $16.000 — consulta de matrona sin PAP. Control ginecológico, anticoncepción, orientación en salud sexual.
+- Consulta particular: $20.000 — la misma consulta de matrona sin PAP, para pacientes sin Fonasa (Isapre o particular).
 - Revisión de exámenes: $10.000 — revisión de resultados de PAP, ecografías u otros exámenes ginecológicos.
 - PAP / Papanicolau: $20.000 — toma de muestra del cuello uterino para detección precoz de cáncer cervicouterino. Rápido, leve molestia.
 
