@@ -78,7 +78,7 @@ OFERTA = {
     "oft": ("Examen de la vista (optometría, fondo de ojo preventivo y presión intraocular)", "$15.000", "TM Ana Celedón, tecnóloga médica. Mismo valor para todos los pacientes; sin bono Fonasa"),
     "odo_eval": ("Evaluación dental", "$15.000", "Dra. Javiera Burgos o Dr. Carlos Jiménez. Incluye diagnóstico y plan de tratamiento"),
     "odo_limpieza": ("Limpieza dental (destartraje y profilaxis)", "$30.000", "Odontología general"),
-    "odo_resina": ("Restauración con resina (tapadura)", "desde $35.000", "Odontología general"),
+    "odo_resina": ("Restauración con resina (tapadura)", "desde $30.000", "Odontología general"),
     "odo_exo": ("Extracción simple", "$40.000", "Odontología general"),
     "orto_brackets": ("Instalación de brackets, boca completa", "$120.000", "Dra. Daniela Castillo. Se parte con la evaluación dental"),
     "orto_control": ("Control de ortodoncia", "$30.000", "Ajuste periódico de arcos y elásticos"),

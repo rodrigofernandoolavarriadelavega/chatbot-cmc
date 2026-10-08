@@ -12,7 +12,7 @@ MG = "GeneralPractice"
 PAGINAS_3["odontologia-general-arauco"] = pag(
     comuna="arauco", base="odontologia-general", esp="Odontología general", spec=DENTAL,
     title="Dentista en Arauco · Evaluación $15.000, a 8 km | CMC",
-    meta="Dentista para pacientes de Arauco: evaluación $15.000, limpieza $30.000, tapaduras desde $35.000. Dra. Burgos y Dr. Jiménez, en Carampangue, a 8 km.",
+    meta="Dentista para pacientes de Arauco: evaluación $15.000, limpieza desde $30.000, tapaduras desde $30.000. Dra. Burgos y Dr. Jiménez, en Carampangue, a 8 km.",
     h1="Dentista para pacientes de <em>Arauco</em>",
     lead="La Dra. Javiera Burgos y el Dr. Carlos Jiménez atienden en Carampangue, a 8 km de Arauco. La evaluación dental cuesta $15.000 e incluye el plan de tratamiento.",
     secciones=[

@@ -2789,6 +2789,22 @@ def _specialty_label(base_slug: str) -> str:
         "neurologia": "neurología",
         "psiquiatria": "psiquiatría",
         "oftalmologia": "oftalmología",
+        # Artículos temáticos (blog premium 2026-10-07): sin esto el bloque local
+        # mostraba "Nutricion baja peso saludable en Lebu".
+        "cefalea-tipos-tratamiento": "dolor de cabeza",
+        "diabetes-tipo-2-control": "control de la diabetes",
+        "dolor-lumbar-cuando-consultar": "dolor lumbar",
+        "embarazo-controles-mensuales": "control del embarazo",
+        "hipertension-arterial-control": "control de la presión",
+        "nutricion-baja-peso-saludable": "nutrición",
+        "precio-implante-dental-arauco": "implantes dentales",
+        "precio-ortodoncia-arauco": "ortodoncia",
+        "psicologia-infantil-cuando-consultar": "psicología infantil",
+        "rinoplastia-funcional-tabique": "tabique y nariz",
+        "vacunas-pni-calendario-2026": "vacunas",
+        "bono-fonasa-mle-arauco": "bono Fonasa",
+        "limpieza-dental-precio-arauco": "limpieza dental",
+        "ecografia-precio-arauco": "ecografía",
     }.get(base_slug, base_slug.replace("-", " "))
 
 
