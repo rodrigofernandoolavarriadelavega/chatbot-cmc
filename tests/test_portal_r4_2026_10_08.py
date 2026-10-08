@@ -192,7 +192,14 @@ check("A revoca → el feed deja de responder", r.json()["revocados"] == 1 and r
 # link creado por la hija: si quita el vínculo, deja de funcionar solo
 tok3 = req("POST", "/portal/api/herramientas/calendario", cookies(HIJA, TEL_HIJA, active=A)).json()["url"].rsplit("/", 1)[-1].removesuffix(".ics")
 check("link creado por la hija funciona con el vínculo vigente", req("GET", f"/portal/cal/{tok3}.ics").status_code == 200)
+PR._acceso_vinculo = _no_verificado
+check("…y deja de funcionar si el acceso baja a solo-horas", req("GET", f"/portal/cal/{tok3}.ics").status_code == 404)
+async def _revienta(*a, **k): raise RuntimeError("medilink caído")
+PR._acceso_vinculo = _revienta
+check("…y falla cerrado si la verificación revienta", req("GET", f"/portal/cal/{tok3}.ics").status_code == 404)
 PR.is_family_link = lambda o, d: False
+async def _sin_vinculo(o, t, d): return {"acceso": "solo_horas_agendadas", "metodo": "", "motivo": "sin_vinculo"}
+PR._acceso_vinculo = _sin_vinculo
 check("…y deja de funcionar al quitar el vínculo", req("GET", f"/portal/cal/{tok3}.ics").status_code == 404)
 PR._acceso_vinculo = _orig
 

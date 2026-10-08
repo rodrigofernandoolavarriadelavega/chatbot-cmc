@@ -123,6 +123,10 @@ def _ensure_tablas() -> None:
                 n_access     INTEGER DEFAULT 0
             )""")
         c.execute("CREATE INDEX IF NOT EXISTS idx_portal_cal_tokens_rut ON portal_cal_tokens(rut)")
+        try:   # teléfono de quien creó el link: para re-verificar acceso COMPLETO en cada lectura
+            c.execute("ALTER TABLE portal_cal_tokens ADD COLUMN creado_por_tel TEXT DEFAULT ''")
+        except Exception:
+            pass   # ya existe
     _DDL_PATH = actual
 
 
@@ -437,8 +441,8 @@ async def calendario_crear(request: Request, portal_session: str | None = Cookie
     with _session.db() as c:
         c.execute("UPDATE portal_cal_tokens SET revoked_at=datetime('now') "
                   "WHERE rut=? AND revoked_at IS NULL", (rut,))
-        c.execute("INSERT INTO portal_cal_tokens (token_hash, rut, creado_por) VALUES (?,?,?)",
-                  (_hash_token(tok), rut, owner_rut))
+        c.execute("INSERT INTO portal_cal_tokens (token_hash, rut, creado_por, creado_por_tel) VALUES (?,?,?,?)",
+                  (_hash_token(tok), rut, owner_rut, owner_phone or ""))
     base, host = _base_url(request)
     try:
         _session.log_event(owner_phone, "portal_calendario_suscripcion", {"propio": owner_rut == rut})
@@ -466,7 +470,11 @@ async def calendario_feed(token: str, request: Request):
     """Feed de solo lectura para el calendario del teléfono. Sin cookie: la
     llave es el token (256 bits). Devuelve SOLO nombre del remedio y hora.
     404 genérico ante token inválido, revocado o vínculo ya quitado."""
-    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
+    # IP que puso nginx (X-Real-IP) o el ÚLTIMO salto de XFF: el primero lo
+    # controla el cliente y permitiría saltarse el límite.
+    xff = (request.headers.get("x-forwarded-for") or "").split(",")
+    ip = ((request.headers.get("x-real-ip") or "").strip() or xff[-1].strip()
+          or (request.client.host if request.client else ""))
     if not _cal_rate_ok("ip:" + ip, limit=120):
         raise HTTPException(429, "Demasiadas consultas")
     if not re.fullmatch(r"[A-Za-z0-9_-]{30,80}", token or ""):
@@ -476,15 +484,21 @@ async def calendario_feed(token: str, request: Request):
         raise HTTPException(429, "Demasiadas consultas")
     _ensure_tablas()
     with _session.db() as c:
-        row = c.execute("SELECT rut, creado_por FROM portal_cal_tokens "
+        row = c.execute("SELECT rut, creado_por, creado_por_tel FROM portal_cal_tokens "
                         "WHERE token_hash=? AND revoked_at IS NULL", (h,)).fetchone()
     if not row:
         raise HTTPException(404, "No encontrado")
     rut, creador = row["rut"], row["creado_por"]
     if creador != rut:
-        # Si el titular quitó el vínculo, el link deja de funcionar solo
-        from portal_routes import is_family_link
-        if not is_family_link(creador, rut):
+        # Link creado por un familiar: en CADA lectura se exige que siga con
+        # acceso COMPLETO (vínculo quitado o rebajado a solo-horas → 404).
+        # Fallo cerrado ante cualquier error de verificación.
+        from portal_routes import _acceso_vinculo, ACCESO_COMPLETO
+        try:
+            acc = await _acceso_vinculo(creador, row["creado_por_tel"] or "", rut)
+        except Exception:
+            acc = {}
+        if acc.get("acceso") != ACCESO_COMPLETO:
             raise HTTPException(404, "No encontrado")
     with _session.db() as c:
         c.execute("UPDATE portal_cal_tokens SET last_access=datetime('now'), "
