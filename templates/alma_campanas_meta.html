@@ -937,6 +937,12 @@ td.ret .rs{opacity:.92}
   .card td .vs{white-space:normal}
 }
 body.v-agenda .not-valor,body.v-agenda .not-agenda{display:none!important}
+body.v-mensajes .filters{display:none!important}
+.ma-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.ma-top p{margin:0;color:var(--mut,#5b6b7a);max-width:70ch}
+.ma-g td.gr{font-weight:700;color:var(--navy);background:var(--soft,#f3f6f9);padding-top:10px}
+.ma-t td .q{display:block;font-size:12px;color:var(--mut,#5b6b7a);font-weight:400}
+.ma-t .bad{color:#b23a3a;font-weight:700}.ma-t .good{color:#2e7d4f;font-weight:700}
 body.v-valor .not-agenda{display:none!important}
 
 .tot-row td{background:#F7FAFC;font-weight:700}
@@ -972,6 +978,8 @@ body.v-valor .not-agenda{display:none!important}
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg><span class="lg">Valor en el tiempo</span><span class="sh">Valor</span></button>
       <button class="tab" role="tab" id="tab-agenda" aria-controls="v-agenda" aria-selected="false" data-v="agenda">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 15h3"/></svg><span class="lg">Agenda y anuncios</span><span class="sh">Agenda</span></button>
+      <button class="tab" role="tab" id="tab-mensajes" aria-controls="v-mensajes" aria-selected="false" data-v="mensajes">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z"/><path d="M8 11h8M8 14h5"/></svg><span class="lg">Mensajes automáticos</span><span class="sh">Mensajes</span></button>
     </div>
     <div class="filters" role="group" aria-label="Filtros">
       <div class="seg canal not-agenda" id="segCanal" role="group" aria-label="Canal de llegada">
@@ -1016,6 +1024,7 @@ body.v-valor .not-agenda{display:none!important}
   <section class="view" id="v-kanban" role="tabpanel" aria-labelledby="tab-kanban"></section>
   <section class="view" id="v-valor" role="tabpanel" aria-labelledby="tab-valor"></section>
   <section class="view" id="v-agenda" role="tabpanel" aria-labelledby="tab-agenda"></section>
+  <section class="view" id="v-mensajes" role="tabpanel" aria-labelledby="tab-mensajes"></section>
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -2224,6 +2233,40 @@ function avisoHtml() {
 const SENAL = { sin_cupos: ["bad", "Gasta sin cupos"], pocos_cupos: ["warn", "Casi sin cupos"], cupos_sin_anuncio: ["info", "Cupos sin anuncio"],
   sin_agenda: ["mut", "Sin agenda leída"], ok: ["ok", "En equilibrio"], sin_datos: ["mut", "Sin datos"] };
 const DOW = ["D", "L", "M", "M", "J", "V", "S"];
+const MA_ERR = {"131047": "ventana de 24 h cerrada", "131026": "número sin WhatsApp", "131049": "Meta limitó el marketing a esa persona", "130472": "número en experimento de Meta"};
+async function cargarMensajes(forzar, dias) {
+  const el = $("#v-mensajes");
+  if (dias) S.maDias = dias;
+  S.maDias = S.maDias || 30;
+  if (!S.mensajes || forzar || S.mensajes.dias !== S.maDias)
+    el.innerHTML = `<div class="sk" style="height:46px;margin-bottom:14px"></div><div class="sk" style="height:420px;border-radius:18px"></div>`;
+  try { S.mensajes = await api(API + "mensajes?dias=" + S.maDias); renderMensajes(); }
+  catch (e) {
+    el.innerHTML = e.perm ? estado("err", I.alert, "Sin permiso", "Solo el acceso del dueño abre esta vista.", "")
+      : estado("err", I.alert, "No se pudieron cargar los mensajes", "Revise la conexión e intente de nuevo.", '<button class="btn" type="button" onclick="cargarMensajes(true)">Reintentar</button>');
+  }
+}
+function renderMensajes() {
+  const m = S.mensajes, el = $("#v-mensajes"), t = m.total;
+  const rng = [7, 30, 90].map(d => `<button type="button" aria-pressed="${m.dias === d}" onclick="cargarMensajes(true, ${d})">${d} días</button>`).join("");
+  const pc = (x, n) => n ? Math.round(100 * x / n) + "%" : "—";
+  let grupo = "", rows = "";
+  m.filas.forEach(f => {
+    if (f.grupo !== grupo) { grupo = f.grupo; rows += `<tr><td class="gr" colspan="6">${esc(grupo)}</td></tr>`; }
+    if (!f.enviados) { rows += `<tr><td>${esc(f.nombre)}<span class="q">${esc(f.que)}</span></td><td class="r" colspan="5"><span class="dash">Sin envíos en el rango</span></td></tr>`; return; }
+    const fallo = f.fallaron ? `<span class="${f.fallaron / f.enviados > 0.2 ? "bad" : ""}" title="${esc(MA_ERR[f.error_top] || "error " + (f.error_top || ""))}">${fmtN(f.fallaron)} (${pc(f.fallaron, f.enviados)})</span>` : "0";
+    const extra = f.key === "consent" ? `<span class="q">${fmtN(f.aceptaron)} aceptaron · ${fmtN(f.rechazaron)} dijeron que no</span>` : "";
+    rows += `<tr><td>${esc(f.nombre)}<span class="q">${esc(f.que)}</span></td>
+      <td class="r">${fmtN(f.enviados)}<span class="q">${fmtN(f.personas)} personas</span></td>
+      <td class="r">${pc(f.llegaron, f.enviados)}<span class="q">${fmtN(f.llegaron)}</span></td>
+      <td class="r">${fallo}</td>
+      <td class="r">${pc(f.respondieron, f.enviados)}<span class="q">${fmtN(f.respondieron)}</span>${extra}</td>
+      <td class="r"><span class="${f.agendaron ? "good" : ""}">${fmtN(f.agendaron)}</span><span class="q">${pc(f.agendaron, f.enviados)}</span></td></tr>`;
+  });
+  el.innerHTML = `<div class="ma-top"><p>Todo lo que el bot manda solo: consentimiento, ofertas, cross-sell, winback, reactivación y avisos. En ${m.dias} días: <b>${fmtN(t.enviados)}</b> envíos, ${pc(t.llegaron, t.enviados)} llegaron, ${fmtN(t.respondieron)} respondieron y <b>${fmtN(t.agendaron)}</b> agendaron por el bot.${m.bi_error ? " <b class='resn'>BI no respondió: faltan los winback.</b>" : ""}</p><div class="seg" role="group" aria-label="Rango">${rng}</div></div>
+    <div class="tbl-wrap full"><table class="ma-t ma-g"><thead><tr><th>Mensaje</th><th class="r">Enviados</th><th class="r">Llegaron</th><th class="r">Fallaron</th><th class="r">Respondieron (48 h)</th><th class="r">Agendaron (7 días)</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="tbl-foot">Cruce aproximado por teléfono y hora. <b>Llegaron</b>: Meta lo marcó entregado o leído. <b>Fallaron</b>: pase el mouse para ver el motivo (131047 = ventana de 24 h cerrada; 131026 = número sin WhatsApp). <b>Agendaron</b>: el paciente agendó cualquier hora por el bot dentro de 7 días; no cuenta lo que agendó por teléfono con recepción. Se recalcula cada 10 minutos.</div>`;
+}
 async function cargarAgenda(forzar) {
   const el = $("#v-agenda");
   if (!S.agenda || forzar) el.innerHTML = `<div class="sk" style="height:46px;margin-bottom:14px"></div><div class="sk" style="height:300px;border-radius:18px"></div>`;
@@ -2439,6 +2482,7 @@ function setVista(v, push) {
   if (push) history.replaceState(null, "", location.pathname + location.search + "#" + v);
   if (v === "valor" && !S.valor) cargarValor();
   if (v === "agenda") cargarAgenda(false);
+  if (v === "mensajes") cargarMensajes(false);
   marcarClear();
 }
 function setRango(r) {
@@ -2464,7 +2508,7 @@ function limpiar() {
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => setVista(t.dataset.v, true));
 document.querySelector(".tabs").addEventListener("keydown", e => {
   if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-  const vs = ["panel", "kanban", "valor", "agenda"], i = vs.indexOf(S.v);
+  const vs = ["panel", "kanban", "valor", "agenda", "mensajes"], i = vs.indexOf(S.v);
   const v = vs[(i + (e.key === "ArrowRight" ? 1 : vs.length - 1)) % vs.length]; setVista(v, true); $("#tab-" + v).focus();
 });
 document.querySelectorAll("#segRango button").forEach(b => b.onclick = () => setRango(b.dataset.r));
@@ -2489,7 +2533,7 @@ $("#btnClear").onclick = limpiar;
 $("#btnRefresh").onclick = () => { cargar(true); if (S.v === "agenda") cargarAgenda(true); };
 $("#amX").onclick = cerrarAnuncio;
 
-setVista(["#kanban", "#valor", "#agenda"].includes(location.hash) ? location.hash.slice(1) : "panel", false);
+setVista(["#kanban", "#valor", "#agenda", "#mensajes"].includes(location.hash) ? location.hash.slice(1) : "panel", false);
 cargar();
 </script>
 </body></html>

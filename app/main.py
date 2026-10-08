@@ -13446,8 +13446,16 @@ async def _webhook_procesar(request: Request):
             else:
                 resp_text = str(respuesta) if respuesta else ""
 
+            # Imagen de cabecera (ej. flyer de la oferta de limpieza): el panel
+            # la muestra en la conversación solo si queda en media_url.
+            _hdr_img = None
+            if isinstance(respuesta, dict) and respuesta.get("type") == "interactive":
+                _hdr = (respuesta.get("interactive") or {}).get("header") or {}
+                if _hdr.get("type") == "image":
+                    _hdr_img = (_hdr.get("image") or {}).get("link")
             if resp_text:
-                log_message(phone, "out", resp_text, state_after, canal="whatsapp")
+                log_message(phone, "out", resp_text, state_after, canal="whatsapp",
+                            media_url=_hdr_img, media_tipo="image" if _hdr_img else None)
             log.info("BOT to=%s state=%s reply=%r", phone, state_after, _scrub_pii(resp_text[:80]))
 
             if not respuesta:

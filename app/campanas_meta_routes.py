@@ -2863,6 +2863,14 @@ def llamar_hoy(request: Request, desde: str | None = Query(None), hasta: str | N
                            especialidad or None, canal=canal or None)
 
 
+@router.get("/mensajes")
+def mensajes(request: Request, dias: int = Query(30), token: str | None = Query(None)):
+    """Resultados de los mensajes automáticos (winback, cross-sell, consentimiento…)."""
+    _auth(request, token)
+    import mensajes_auto
+    return mensajes_auto.resumen(dias)
+
+
 @router.get("/google")
 def google(request: Request, desde: str | None = Query(None), hasta: str | None = Query(None),
            token: str | None = Query(None)):
