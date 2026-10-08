@@ -639,6 +639,8 @@ async def mis_horas(request: Request, preview: str | None = Query(None)):
         raise HTTPException(503, "No pudimos consultar sus horas. Intente nuevamente.")
     if not pac:
         return {"encontrado": False, "citas": []}
+    if not await _sesion_portal_autoriza(request, rut):
+        _exigir_celular_ficha(pac, body.get("telefono"))
     try:
         citas = await listar_citas_paciente(pac.get("id"), rut=rut)
     except Exception as e:
@@ -666,6 +668,47 @@ async def mis_horas(request: Request, preview: str | None = Query(None)):
     }
 
 
+def _tel9(raw) -> str:
+    d = "".join(ch for ch in str(raw or "") if ch.isdigit())
+    return d[-9:] if len(d) >= 9 else ""
+
+
+_MSG_CEL_NO_COINCIDE = ("El celular no coincide con el registrado en la ficha de este RUT. "
+                        "Escríbanos por WhatsApp al +56 9 6661 0737 o llame al (44) 296 5226 y le ayudamos.")
+
+
+async def _sesion_portal_autoriza(request: Request, rut: str) -> bool:
+    """True si la petición trae sesión válida del portal del paciente y ese RUT
+    es el titular o un familiar con acceso COMPLETO (mismas reglas del portal).
+    Así el portal y el agendador embebido no necesitan pedir el celular."""
+    try:
+        from portal_routes import _verify_portal_cookie, _acceso_vinculo, ACCESO_COMPLETO, _normalize_rut
+        ses = _verify_portal_cookie(request.cookies.get("portal_session") or "")
+        if not ses:
+            return False
+        owner_rut, owner_phone = ses
+        r = _normalize_rut(rut) or rut
+        if r == owner_rut:
+            return True
+        ac = await _acceso_vinculo(owner_rut, owner_phone, r)
+        return ac.get("acceso") == ACCESO_COMPLETO
+    except Exception as e:
+        log.warning("sesion_portal_autoriza: %s", e)
+        return False
+
+
+def _exigir_celular_ficha(pac: dict, telefono) -> None:
+    """Ver o anular horas exige el RUT Y el celular registrado en la ficha.
+    El RUT solo no basta: aparece en boletas y documentos (cualquiera que lo
+    conociera podía ver y ANULAR las horas de otra persona; fix 2026-10-07)."""
+    mio = _tel9(telefono)
+    if not mio:
+        raise HTTPException(400, "Ingrese el celular registrado en su ficha.")
+    ficha = {_tel9(pac.get("celular")), _tel9(pac.get("telefono"))} - {""}
+    if mio not in ficha:
+        raise HTTPException(403, _MSG_CEL_NO_COINCIDE)
+
+
 @router.post("/cancelar")
 async def cancelar(request: Request, preview: str | None = Query(None)):
     """Cancela una cita, verificando que pertenezca al RUT informado."""
@@ -684,7 +727,15 @@ async def cancelar(request: Request, preview: str | None = Query(None)):
         raise HTTPException(400, "Datos inválidos.")
     try:
         pac = await buscar_paciente(rut, strict=True)
-        citas = await listar_citas_paciente(pac.get("id"), rut=rut) if pac else []
+    except Exception as e:
+        log.error("cancelar lookup: %s", e)
+        raise HTTPException(503, "No pudimos procesar la cancelación.")
+    if not pac:
+        raise HTTPException(403, "Esa hora no corresponde al RUT indicado.")
+    if not await _sesion_portal_autoriza(request, rut):
+        _exigir_celular_ficha(pac, body.get("telefono"))
+    try:
+        citas = await listar_citas_paciente(pac.get("id"), rut=rut)
     except Exception as e:
         log.error("cancelar lookup: %s", e)
         raise HTTPException(503, "No pudimos procesar la cancelación.")

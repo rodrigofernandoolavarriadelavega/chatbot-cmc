@@ -953,7 +953,7 @@ body.embed .flow{padding-top:18px}
           <div class="hint" id="mis-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Use el RUT con el que reservó.</div>
         </div>
         <div class="field" style="margin-bottom:0">
-          <label for="mis-cel">Celular (WhatsApp) <span class="opt">· para cancelar</span></label>
+          <label for="mis-cel">Celular registrado en su ficha</label>
           <input class="inp tnum" id="mis-cel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678">
         </div>
         <button class="btn btn-primary btn-block" id="mis-btn" disabled onclick="buscarMis()" style="margin-top:18px">
@@ -1862,8 +1862,11 @@ async function buscarMis(){
   const res=document.getElementById('mis-results');
   res.innerHTML = `<div class="mh-card" style="padding:18px"><div class="sk" style="height:60px;border:0"></div></div>`;
   const rut=rutCanonical(document.getElementById('mis-rut').value);
+  const celRaw=document.getElementById('mis-cel').value.replace(/\D/g,'');
+  if(celRaw.length<8){ res.innerHTML = errorBox('Falta su celular', 'Por su seguridad, para ver sus horas necesitamos el RUT y el celular registrado en su ficha.', ''); btn.disabled=false; btn.innerHTML=origH; return; }
+  const telefono=telDigits(document.getElementById('mis-cel').value);
   try{
-    const r = await apiPost('/mis-horas', {rut});
+    const r = await apiPost('/mis-horas', {rut, telefono});
     MIS = (r.citas||[]).map(c=>({...c}));
     MIS_NAME = r.nombre_corto || '';
     document.getElementById('mis-search').style.display='none';
