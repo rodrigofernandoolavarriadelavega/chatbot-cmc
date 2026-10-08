@@ -773,7 +773,7 @@ Si mencionan un profesional por nombre, mapea al nombre de la especialidad:
 - Neurólogo / neuróloga / neurología / Dra. Franca González / González (neuróloga) → "neurología" (Dra. Franca González, TELEMEDICINA, $65.000 particular, NO Fonasa, consulta de 30 min). Atiende SOLO desde los 15 años (adolescentes y adultos), no niños. Igual que Psiquiatría, para reservar la hora se paga el 100% del valor ($65.000) por adelantado (no se paga nada extra el día de la atención).
 - Oftalmólogo / oftalmóloga / oftalmología / optometrista / optometría / TM Ana Celedón / Celedón (tecnólogo médico) → "tecnología médica oftalmológica" (TM Ana Celedón, PRESENCIAL, $15.000 particular a TODOS los pacientes — no tiene Fonasa actualmente, consulta de 20 min; prestación: *Evaluación oftalmológica y optométrica*).
 - David Pardo → "ecografía" para ecografías generales (abdominal, tiroidea, renal, partes blandas, doppler genérico, musculo-esquelética, mamaria / de mamas / ecotomografía mamaria, testicular, próstata, vesical, hepática, vesícula, cuello). Valor: $40.000 (Doppler: $90.000). Atiende lunes y martes, según disponibilidad.
-- Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000). NUNCA Pardo para estas.
+- Ecografía ginecológica / transvaginal / intravaginal / transvajinal / endovaginal / vaginal / pélvica / de ovarios / de útero → "ginecología" (Dr. Tirso Rejón, ID 61, $35.000 adicional a la consulta de $30.000). NUNCA Pardo para estas.
 - Ecografía mamaria / de mamas / ecotomografía mamaria → "ecografía" (David Pardo, ID 68, $40.000). Es partes blandas, NO ginecológica. NUNCA Rejón para mamaria.
 - Ecografía obstétrica / prenatal / de embarazo / ver al bebé → NO se realiza eco obstétrica en el CMC; derivar a centro de imagenología externo. Dr. Tirso Rejón (Ginecología) solo hace consulta ginecológica del embarazo, NO ecografía obstétrica. Intent = "info", NO "agendar".
 - Ecocardiograma / eco del corazón / eco cardíaca / eco cardiograma / doppler cardíaco / ultrasonido del corazón → "ecocardiograma" (Dr. Miguel Millán, cardiólogo, $110.000 solo particular, lista de espera mensual). NUNCA "ecografía", NUNCA Pardo.
@@ -836,7 +836,7 @@ GINECOLOGÍA / MATRONA
 - Control ginecológico / revisión mujer → **Matrona** (Fonasa preferencial $16.000 / particular $20.000) o **Ginecología** (Dr. Tirso Rejón, $30.000).
 - Retraso menstrual / no me llega la regla / test de embarazo → **Matrona** para evaluación.
 - Ecografía del embarazo / prenatal / obstétrica / ver al bebé → **NO disponible en el CMC**. Derivar a centro de imagenología externo. El Dr. Tirso Rejón hace consulta ginecológica del embarazo, no ecografía.
-- Ecografía vaginal / transvaginal / pélvica / de ovarios → Ginecología con **Dr. Tirso Rejón**, $35.000 particular (NO David Pardo).
+- Ecografía vaginal / transvaginal / pélvica / de ovarios → Ginecología con **Dr. Tirso Rejón**, $35.000 particular adicional a la consulta de $30.000 (NO David Pardo).
 - Ecografía mamaria / de mamas → **David Pardo** (Ecografía), $40.000 particular. Es partes blandas, NO ginecológica (NO Rejón).
 
 KINE / TRAUMA / DOLOR
@@ -1246,10 +1246,10 @@ IMPORTANTE: Si preguntan por Fonasa, MLE, tramo A/B/C/D para ecografía responde
 - Ecotomografía doppler: $90.000 — evalúa el flujo sanguíneo en arterias y venas. Se usa para várices, trombosis o insuficiencia venosa.
 NOTA: David Pardo NO realiza ecografías ginecológicas; esas las hace el Dr. Tirso Rejón (Ginecología). La ecografía obstétrica NO se realiza en el CMC.
 NOTA: El ecocardiograma (eco cardíaca, eco al corazón, doppler cardíaco) lo realiza el Dr. Miguel Millán (cardiólogo) a $110.000 solo particular, SIN Fonasa. Se hace 1 vez al mes sin fecha fija agendable — el paciente entra a LISTA DE ESPERA. Rutar intent a "ecocardiograma" (NO "ecografía", NO "cardiología"). David Pardo NO realiza ecocardiogramas.
-NOTA: La ecografía transvaginal / intravaginal / ginecológica del Dr. Rejón cuesta $35.000. Las ecografías generales de Pardo cuestan $40.000 (incluye mamaria, abdominal, tiroidea, partes blandas, etc.). La eco mamaria es de Pardo a $40.000, NO de Rejón.
+NOTA: La ecografía transvaginal / intravaginal / ginecológica del Dr. Rejón cuesta $35.000 ADICIONAL a la consulta ginecológica ($30.000): si se hace en la misma atención, el paciente paga $30.000 + $35.000 = $65.000. Dilo siempre así, nunca como si $35.000 fuera el total. Las ecografías generales de Pardo cuestan $40.000 (incluye mamaria, abdominal, tiroidea, partes blandas, etc.). La eco mamaria es de Pardo a $40.000, NO de Rejón.
 
 ECOGRAFÍA GINECOLÓGICA — Dr. Tirso Rejón (Ginecología, solo particular):
-- Ecografía ginecológica (transvaginal / intravaginal / pélvica / endovaginal): $35.000 — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
+- Ecografía ginecológica (transvaginal / intravaginal / pélvica / endovaginal): $35.000 adicional a la consulta ($30.000) — evalúa útero y ovarios. Detecta quistes, miomas, endometriosis o irregularidades menstruales.
 - Ecografía mamaria / eco de mamas: $40.000 — evalúa tejido mamario, detecta nódulos, quistes o lesiones. La realiza David Pardo (Ecografía, partes blandas), NO el Dr. Rejón.
 - Ecografía obstétrica: NO disponible en el CMC. Derivar a centro de imagenología.
 
