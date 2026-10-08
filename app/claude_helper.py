@@ -6,7 +6,7 @@ import json
 import logging
 import re
 import anthropic
-from config import ANTHROPIC_API_KEY, CMC_TELEFONO, CMC_TELEFONO_FIJO
+from config import ANTHROPIC_API_KEY, CMC_TELEFONO, CMC_TELEFONO_FIJO, ORL_SIN_AGENDA
 from medilink import especialidades_disponibles
 
 log = logging.getLogger("claude")
@@ -641,6 +641,21 @@ _INTENT_CACHE: dict[str, dict] = {
     "chao!":               {"intent": "menu", "especialidad": None},
 }
 
+# ORL_SIN_AGENDA (config.py): el Dr. Borrego no tiene agenda abierta. El prompt
+# NO debe vender ORL ni citar un horario fijo que ya no existe.
+_ORL_ENCABEZADO = (
+    "OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — POR AHORA SIN AGENDA: no hay fecha de atención. "
+    "NO confirmes que hay otorrino disponible ni inventes días u horarios. Si el paciente lo pide, "
+    "dile que por ahora no hay fecha y ofrece anotarlo en lista de espera (intent \"agendar\" con "
+    "especialidad otorrinolaringología: el sistema ofrece la lista de espera). Síntomas agudos de oído, "
+    "garganta o sinusitis → Medicina General presencial; lavado de oídos → Fonoaudiología. "
+    "Referencia de precio si preguntan: consulta $35.000 particular):"
+    if ORL_SIN_AGENDA else
+    "OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular, POR AHORA SOLO POR VIDEOLLAMADA: "
+    "no hace lavado de oídos ni procedimientos presenciales; síntomas agudos de oído, garganta o "
+    "sinusitis → Medicina General presencial; lavado de oídos → Fonoaudiología):"
+)
+
 SYSTEM_PROMPT = f"""Eres el asistente de recepción del Centro Médico Carampangue (CMC), ubicado en Carampangue, Chile.
 
 🚨 REGLA ABSOLUTA #0 — MEDICACIÓN / FÁRMACOS / DOSIS:
@@ -734,6 +749,7 @@ Output: {{"intent": "agendar", "especialidad": "kinesiología", "respuesta_direc
 
 REGLAS:
 - **NUNCA cambies la especialidad por palabras del CONTEXTO familiar/temporal**. Si el paciente dice "para mi hijo/hija/papá/mamá/abuela", "para el viernes", "para mañana", la especialidad NO cambia — solo afecta a quién/cuándo es la cita. "Médico general para mi hijo" = medicina general (NO pediatría, NO implantología).
+- **FIEBRE EN NIÑOS — EXCEPCIÓN DE SEGURIDAD**: si hay fiebre (≥38 °C) en un bebé MENOR DE 3 MESES o recién nacido, o un niño de cualquier edad que está decaído, muy somnoliento, no reacciona, respira rápido o con dificultad, o tiene los labios morados → NO agendes: responde que es una urgencia, que llame de inmediato al *SAMU 131* o vaya a urgencias del hospital (no al CESFAM ni a una hora de medicina general). Fiebre en un niño mayor de 3 meses sin esos signos sigue siendo Medicina General.
 - **PEDIATRÍA**: El CMC NO tiene pediatra especializado, pero los **médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños y adultos por igual**. NUNCA digas que "atienden principalmente adultos". NUNCA derives niños al CESFAM ni al Hospital: el CMC atiende niños. NUNCA clasifiques consultas pediátricas comunes como Psicología Adulto, Ginecología, Cardiología u otras especialidades adultas. Niños con síntomas comunes (respiratorios, gastrointestinales, fiebre, tos, control general) → intent "agendar" con especialidad "medicina general" directamente, sin advertencias. Si el mensaje pregunta explícitamente por pediatría especializada ("tienen pediatra", "pediatra dedicado", "control de neurodesarrollo", "cardiopatía congénita") → usa intent "info" y responde: "El CMC no tiene pediatra especializado, pero nuestros médicos generales (Dr. Abarca, Dr. Olavarría, Dr. Márquez) atienden niños sin problema. Si es una urgencia, llama al SAMU 131. ¿Te agendo con Medicina General?" Solo una urgencia vital va a SAMU 131.
 - **PREVISIÓN / COBERTURA**: preguntas sobre si una especialidad o profesional atiende "por Fonasa", "con Isapre", "particular", "con bono" o "por convenio" → intent "info" + respuesta_directa con la cobertura REAL de esa especialidad según este prompt. Esto aplica AUNQUE el mensaje venga sin signo de interrogación y en forma declarativa — "El cardiólogo atiende por Fonasa" ES una pregunta (así se pregunta en Chile), NO una afirmación ni intent "otro". Ej: "El cardiólogo atiende por Fonasa" → {{"intent": "info", "especialidad": "cardiología", "respuesta_directa": "El Dr. Millán (cardiología) atiende *solo particular* — la consulta cuesta $40.000, no se puede usar Fonasa ni Isapre. ¿Te agendo una hora?"}}. NUNCA respondas una pregunta de cobertura con el menú genérico.
 - Si menciona explícitamente la especialidad ("medico general", "kinesiología", "ortodoncia"), USA ESA. No deduzcas otra a partir de palabras tangenciales.
@@ -1143,7 +1159,7 @@ INFO DEL CMC:
 - Horario GENERAL del CMC (recepción): lunes a viernes 08:00–21:00, sábado 09:00–14:00 (horario continuo, sin pausa al mediodía)
 - Psicología Jorge Montalba: lunes a viernes 18:00–20:30 ONLINE (videollamada) · sábado 09:00–14:00 PRESENCIAL
 - Psicología Ps. Jacquelinne Salas: lunes a viernes 15:30–20:00 · sábado 09:00–14:00 — PRESENCIAL en el CMC (los cupos reales salen del bloque HORARIOS REALES)
-- IMPORTANTE: cada PROFESIONAL tiene su propio horario que NO coincide con el horario general del CMC. Ej: el Dr. Borrego (otorrino) atiende lunes a miércoles 16:00–20:00, NO de lunes a viernes. NUNCA inventes el horario de un profesional específico — si te preguntan "qué día atiende el otorrino / kine / ginecólogo / Dr. X", responde EXACTAMENTE: "Te confirmo los días y horarios exactos del [profesional/especialidad] desde el sistema. ¿Te muestro horarios disponibles?". El bot tiene un handler que consulta Medilink directo; NO improvises.
+- IMPORTANTE: cada PROFESIONAL tiene su propio horario que NO coincide con el horario general del CMC (ej: psicología, kinesiología y cada especialista tienen días y horas propios). NUNCA inventes el horario de un profesional específico — si te preguntan "qué día atiende el otorrino / kine / ginecólogo / Dr. X", responde EXACTAMENTE: "Te confirmo los días y horarios exactos del [profesional/especialidad] desde el sistema. ¿Te muestro horarios disponibles?". El bot tiene un handler que consulta Medilink directo; NO improvises.
 - Fonasa: atención como libre elección disponible en varias especialidades
 - Solo tienen Fonasa (MLE): Medicina General, Kinesiología, Nutrición y Psicología (Montalba y Rodríguez). Todo lo demás es SOLO PARTICULAR. Excepción: con la Ps. Jacquelinne Salas los pacientes Fonasa pagan $20.000 directo, SIN bono.
 - Los copagos Fonasa indicados son lo que paga el paciente (beneficiario nivel 3 MLE 2026)
@@ -1263,7 +1279,7 @@ GINECOLOGÍA (Dr. Tirso Rejón — solo particular):
 
 TRAUMATOLOGÍA — temporalmente no disponible como especialidad separada. Derivar a **Medicina General** para evaluación de lesiones óseas, articulares, musculares (fracturas, esguinces, tendinitis, hernias de disco, artrosis, dolor articular). El médico general evaluará y derivará si es necesario.
 
-OTORRINOLARINGOLOGÍA (Dr. Manuel Borrego — solo particular, POR AHORA SOLO POR VIDEOLLAMADA: no hace lavado de oídos ni procedimientos presenciales; síntomas agudos de oído, garganta o sinusitis → Medicina General presencial; lavado de oídos → Fonoaudiología):
+{_ORL_ENCABEZADO}
 - Consulta ORL: $35.000 — evaluación de oído, nariz y garganta: sinusitis, amigdalitis, otitis, ronquidos, pólipos nasales, desviación de tabique, vértigo.
 - Control ORL: $8.000 — control post-consulta o seguimiento de tratamiento ORL.
 
@@ -2555,10 +2571,18 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "💰 Consulta particular: $40.000\n\n"
      "Escribe *agendar cardiología* para reservar hora."),
     (("otorrino",),
-     "Sí, tenemos *otorrinolaringólogo*: Dr. Manuel Borrego 👂, por ahora solo por *videollamada*.\n\n"
-     "💰 Consulta particular: $35.000\n\n"
-     "Si tienes el oído tapado, el lavado de oídos lo hace la fonoaudióloga en el centro ($25.000).\n\n"
-     "Escribe *agendar otorrinolaringología* para reservar hora."),
+     (
+         "Por ahora el *otorrinolaringólogo* no tiene fecha de atención en el CMC 🙏\n\n"
+         "Si quieres, te inscribo en la lista de espera y te aviso apenas haya fecha: "
+         "escribe *agendar otorrinolaringología*.\n\n"
+         "Si tienes el oído tapado, el lavado de oídos lo hace la fonoaudióloga en el centro ($25.000). "
+         "Y si tienes síntomas agudos de oído o garganta, un médico general puede verte en persona."
+         if ORL_SIN_AGENDA else
+         "Sí, tenemos *otorrinolaringólogo*: Dr. Manuel Borrego 👂, por ahora solo por *videollamada*.\n\n"
+         "💰 Consulta particular: $35.000\n\n"
+         "Si tienes el oído tapado, el lavado de oídos lo hace la fonoaudióloga en el centro ($25.000).\n\n"
+         "Escribe *agendar otorrinolaringología* para reservar hora."
+     )),
     (("ginecolog",),
      "Sí, tenemos *ginecólogo*: Dr. Tirso Rejón 👩‍⚕️\n\n"
      "💰 Consulta particular: $30.000\n\n"
@@ -2599,7 +2623,8 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
     # Masoterapia — especialidades vivas que el paciente no podía descubrir.
     (("servicios", "ofrec"),
      "🏥 *Centro Médico Carampangue*\n\n"
-     "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología, otorrino\n"
+     "🩺 *Medicina:* general, familiar, cardiología, gastroenterología, ginecología"
+     + ("" if ORL_SIN_AGENDA else ", otorrino") + "\n"
      "🧠 *Salud mental y neuro:* psiquiatría y neurología (por videollamada), psicología\n"
      "🩸 *Diabetes y peso:* nutriólogo y diabetólogo (por videollamada) — *Dr. Raúl Paz*\n"
      "👁️ *Vista:* examen de la vista y receta de lentes — *Tecnología Médica Oftalmológica* (TM Ana Celedón)\n"
@@ -2609,7 +2634,7 @@ _FAQ_LOCAL_FALLBACKS: list[tuple[tuple[str, ...], str]] = [
      "Escribe *agendar* para reservar hora 📅"),
     (("que servicios",),
      "🏥 Atendemos: Medicina General, Odontología, Cardiología, Ginecología, "
-     "Gastroenterología, Otorrino, Neurología, Psiquiatría, "
+     "Gastroenterología, " + ("" if ORL_SIN_AGENDA else "Otorrino, ") + "Neurología, Psiquiatría, "
      "Nutriología y Diabetología (videollamada), "
      "Tecnología Médica Oftalmológica (examen de la vista y lentes), "
      "Kinesiología, Masoterapia, Nutrición, Bioimpedanciometría, Psicología, Fonoaudiología, "

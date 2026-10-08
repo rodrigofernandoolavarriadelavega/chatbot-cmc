@@ -709,6 +709,13 @@ RECORDATORIOS_RECEPCION_PROF_IDS: list[int] = [
 GA4_PROPERTY_ID      = os.getenv("GA4_PROPERTY_ID", "529028500")
 GA4_CREDENTIALS_PATH = os.getenv("GA4_CREDENTIALS_PATH", "")
 
+# Otorrinolaringología (Dr. Borrego, ID 23) sin agenda abierta desde agosto 2026.
+# True = el bot NO vende ORL (cross-sell fono→ORL, CROSS_REFERENCE, FAQ "sí
+# tenemos otorrino") y ofrece lista de espera. La especialidad sigue existiendo
+# en PROFESIONALES: para revertir cuando Borrego vuelva, ORL_SIN_AGENDA=false
+# en el .env (o cambiar el default) y reiniciar.
+ORL_SIN_AGENDA = os.getenv("ORL_SIN_AGENDA", "true").strip().lower() in ("1", "true", "yes", "si")
+
 # FIX-13: Validación pre-flight edad/género por especialidad ─────────────────
 # Evita agendar menores en especialidades adultas o vice-versa. El check se
 # hace en WAIT_RUT_AGENDAR cuando ya tenemos sexo y fecha_nacimiento del paciente.

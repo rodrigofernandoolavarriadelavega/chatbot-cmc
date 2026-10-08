@@ -7,17 +7,21 @@ El servicio devuelve, para un texto libre del paciente, las patologías
 más probables, la especialidad recomendada del CMC y si requiere derivar
 a urgencias (cuando la patología #1 del ranking es tiempo-dependiente).
 
-Falla silenciosamente: si el servicio está caído o el texto no matchea
-nada, devolvemos `None` y el chatbot cae en `detect_intent` como antes.
+Si el servicio está caído o el texto no matchea nada, devolvemos `None` y el
+chatbot cae en `detect_intent` como antes. Una caída/timeout se loguea como
+warning (antes era silencio).
 """
 from __future__ import annotations
 
+import logging
 import re
 import unicodedata
 
 import httpx
 
 from config import GES_ASSISTANT_URL
+
+log = logging.getLogger("triage_ges")
 
 
 # ── Normalización ortográfica para WhatsApp rural chileno ────────────────────
@@ -380,7 +384,11 @@ async def triage_sintomas(texto: str) -> dict | None:
             )
             r.raise_for_status()
             data = r.json()
-    except Exception:
+    except Exception as e:  # noqa: BLE001
+        # 2026-10-08: antes era silencio total. Si GES cae o tarda >3 s el bot
+        # sigue sin pre-triage; que quede rastro para que alguien lo note.
+        log.warning("triage_ges: servicio GES no respondió (%s: %s) — se sigue sin triage",
+                    type(e).__name__, e)
         return None
 
     matches = data.get("matches") or []

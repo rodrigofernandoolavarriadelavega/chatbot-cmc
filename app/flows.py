@@ -44,9 +44,14 @@ from session import (save_session, reset_session, get_session, save_tag, delete_
                      get_last_recepcionista_ts)
 from resilience import is_medilink_down
 from triage_ges import triage_sintomas, normalizar_texto_paciente
+from seguridad_clinica import (
+    emergencia_ampliada, crisis_salud_mental_ampliada, senal_critica_triage,
+    hay_senal_cardiorrespiratoria, patologia_descartable_con_senal_cardiorresp,
+    skip_triage_por_cita, lookup_norm,
+)
 from pni import get_vaccine_reminder, get_pni_meta, es_menor_de
 from hitos_desarrollo import get_milestones_reminder, get_hitos_meta
-from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE
+from config import CMC_TELEFONO, CMC_TELEFONO_FIJO, ADMIN_ALERT_PHONE, ORL_SIN_AGENDA
 from messaging import send_whatsapp
 import opinion_mejora
 
@@ -721,6 +726,11 @@ SALUD_MENTAL_CRISIS = {
     "pensamientos suicidas", "ideacion suicida", "ideación suicida",
     "quiero acabar con todo", "quiero acabar con mi vida",
     "no aguanto mas vivir", "no aguanto más vivir",
+    # 2026-10-08 (auditoría médica): frases sin cobertura léxica. Las que
+    # necesitan contexto (cortarme, hacerme daño, no quiero estar aquí, me tiro)
+    # viven como regex en seguridad_clinica.py para no dar falsos positivos.
+    "quitarme la vida", "quitarse la vida", "quitar la vida",
+    "terminar con mi vida", "mejor no despertar",
 }
 
 SALUD_MENTAL_PATRONES = [
@@ -732,6 +742,18 @@ SALUD_MENTAL_PATRONES = [
 ]
 
 DISCLAIMER = "_Soy tu asistente del CMC, no reemplazo la evaluación médica presencial._"
+
+
+def _msg_urgencia_samu(con_disclaimer: bool = True) -> str:
+    """Mensaje de urgencia del triage. Móvil + fijo (antes imprimía el fijo dos veces)."""
+    return (
+        "⚠️ Lo que describes puede requerir atención médica urgente.\n\n"
+        "Por favor, llama al *SAMU 131* o acude al servicio de "
+        "urgencias más cercano ahora mismo.\n\n"
+        f"También puedes contactarnos:\n📞 *{CMC_TELEFONO}*\n"
+        f"☎️ *{CMC_TELEFONO_FIJO}*"
+        + (f"\n\n{DISCLAIMER}" if con_disclaimer else "")
+    )
 
 # 200+ variaciones de saludo (chileno, coloquial, typos, WhatsApp).
 # Cualquiera de estos → resetea sesión y muestra menú principal.
@@ -1206,7 +1228,7 @@ CROSS_REFERENCE: dict[str, str] = {
         "• Impedanciometría ($20.000)\n"
         "• Evaluación + Maniobra VPPB ($50.000)\n"
         "• Octavo Par ($50.000)\n"
-        "• Evaluación infantil/adulto ($30.000)\n"
+        "• Evaluación infantil/adulto ($25.000)\n"
         "• Sesión de terapia infantil/adulto ($25.000)\n"
         "• Terapia vestibular / Terapia tinnitus ($25.000)\n"
         "• Prueba y calibración de audífonos\n\n"
@@ -1532,6 +1554,10 @@ UPSELL_POSTCONSULTA: dict[str, tuple[str, str]] = {
     ),
 }
 
+# ORL_SIN_AGENDA: el upsell fono → ORL llevaría a "sin fecha". Reversible desde config.
+if ORL_SIN_AGENDA:
+    UPSELL_POSTCONSULTA.pop("fonoaudiología", None)
+
 
 # Mapping de IDs de la lista NPS de post-consulta (1-5 estrellas) a las 3
 # categorías legacy ("mejor"/"igual"/"peor") + el rating numérico para NPS.
@@ -1649,6 +1675,10 @@ def _parsear_fecha_nacimiento(texto: str):
 def _cross_reference_msg(especialidad: str) -> str:
     """Retorna el mensaje de cross-reference para la especialidad, o string vacío."""
     if not especialidad:
+        return ""
+    # ORL_SIN_AGENDA: no vender al Dr. Borrego desde fonoaudiología mientras no
+    # tenga agenda abierta (desactivar la flag en config para revertir).
+    if ORL_SIN_AGENDA and especialidad.strip() == "Fonoaudiología":
         return ""
     return CROSS_REFERENCE.get(especialidad.strip(), "")
 
@@ -5032,7 +5062,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     if (any(p in tl_norm for p in SALUD_MENTAL_CRISIS)
             or any(pat.search(tl_norm) for pat in SALUD_MENTAL_PATRONES)
             or any(p in tl for p in SALUD_MENTAL_CRISIS)
-            or any(pat.search(tl) for pat in SALUD_MENTAL_PATRONES)):
+            or any(pat.search(tl) for pat in SALUD_MENTAL_PATRONES)
+            or crisis_salud_mental_ampliada(tl)
+            or crisis_salud_mental_ampliada(tl_norm)):
         save_tag(phone, "crisis-salud-mental")
         log_event(phone, "crisis_salud_mental", {"texto": txt[:240]})
         reset_session(phone)
@@ -5158,8 +5190,16 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         or _inhibir_por_reagendar
     )
 
+    # 2026-10-08: emergencias ampliadas (presión en el pecho, falta el aire,
+    # embarazo con sangrado, lactante con fiebre, etc.). Una señal ampliada
+    # NO se inhibe por contexto de reagendar/pasado: mejor un SAMU de más.
+    _emerg_ampliada = emergencia_ampliada(tl) or emergencia_ampliada(tl_norm)
+    if _emerg_ampliada:
+        _inhibir_emergencia = False
+
     if not _inhibir_emergencia and (
-            any(p in tl_norm for p in EMERGENCIAS)
+            _emerg_ampliada
+            or any(p in tl_norm for p in EMERGENCIAS)
             or any(pat.search(tl_norm) for pat in EMERGENCIAS_PATRONES)
             or any(pat.search(tl_norm) for pat in EMERGENCIAS_VITAL_PATRONES)
             or any(p in tl for p in EMERGENCIAS)
@@ -6697,12 +6737,15 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # (7 nomatch/7d con intención clara: "tengo hora hoy", "no podré
             # asistir", "horita hoy con el dr X", etc.).
             "tengo hora", "tengo una hora", "tengo cita", "tengo una cita",
-            "una horita", "una hora", "mi hora", "mi cita",
+            "una horita", "mi cita",
+            # "una hora", "mi hora" y "atrasado/a" se evalúan aparte con
+            # skip_triage_por_cita(): "hace una hora que no puedo mover el
+            # brazo" es duración de síntoma, no gestión de cita.
             "no podre", "no podré", "no creo que", "no asistir", "no asistire",
             "no asistiré", "no llegaré", "no llegare", "no voy a poder",
             "no podre asistir", "no podré asistir",
             "esa hora", "esa cita", "agendado", "agendada",
-            "voy a llegar tarde", "atrasado", "atrasada",
+            "voy a llegar tarde",
             "verificar mi hora", "confirmar mi", "confirmar hora",
             # Apellidos de profesionales (mención = gestión de cita, no síntoma)
             "abarca", "olavarria", "olavarría", "marquez", "márquez",
@@ -6725,7 +6768,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "hay doctor", "habra hora", "habrá hora", "tendra hora",
             "tendrá hora",
         )
-        _skip_triage = any(k in tl for k in _TRIAGE_SKIP_KWS)
+        _skip_triage = any(k in tl for k in _TRIAGE_SKIP_KWS) or skip_triage_por_cita(tl)
         # Fix H: crisis salud mental nunca debe pasar por triage GES bajo ninguna
         # circunstancia — el triage puede retornar especialidades incoherentes
         # (ej. "odontología") para textos de ideación suicida. El crisis check
@@ -6736,6 +6779,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             or any(pat.search(tl_norm) for pat in SALUD_MENTAL_PATRONES)
             or any(p in tl for p in SALUD_MENTAL_CRISIS)
             or any(pat.search(tl) for pat in SALUD_MENTAL_PATRONES)
+            or crisis_salud_mental_ampliada(tl)
+            or crisis_salud_mental_ampliada(tl_norm)
         )
         if _skip_triage_crisis:
             # Re-ejecutar contención aquí como safety net — el crisis check
@@ -6753,10 +6798,28 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "Si puedes, acércate a un familiar, vecino o persona de confianza "
                 "mientras llamas. Buscar ayuda es un acto de valentía 💙"
             )
+        # Guarda de seguridad clínica (auditoría 2026-10-08): con señal de
+        # embarazo con sangrado/dolor/sin movimientos fetales, lactante <3
+        # meses con fiebre o cuadro cardiorrespiratorio agudo, NUNCA se ofrece
+        # hora por triage — se deriva a urgencia/SAMU 131. Corre aunque el
+        # texto traiga marcadores de cita: la urgencia manda.
+        _senal_critica = senal_critica_triage(txt) or senal_critica_triage(tl_norm)
+        if _senal_critica and not txt.isdigit():
+            log_event(phone, "triage_guard_senal_critica",
+                      {"senal": _senal_critica, "texto": txt[:240]})
+            save_tag(phone, "triage-urgencia")
+            return _msg_urgencia_samu()
         if len(txt) >= 10 and not txt.isdigit() and not _skip_triage:
             _t0 = time.monotonic()
             triage = await triage_sintomas(txt)
             _elapsed_ms = int((time.monotonic() - _t0) * 1000)
+            # Climaterio/EPOC/Asma con síntoma de pecho/respiración: el motor
+            # GES no distingue un cuadro agudo; se descarta y sigue a Claude.
+            if (triage and hay_senal_cardiorrespiratoria(txt)
+                    and patologia_descartable_con_senal_cardiorresp(triage.get("top_pathology"))):
+                log_event(phone, "triage_ges_descartado_cardiorresp", {
+                    "top": triage.get("top_pathology"), "texto": txt[:240]})
+                triage = None
             if triage:
                 log_event(phone, "triage_ges_match", {
                     "top": triage.get("top_pathology"),
@@ -6769,14 +6832,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # NO nombramos la patología al paciente (responsabilidad clínica).
                 if triage.get("needs_urgency"):
                     save_tag(phone, "triage-urgencia")
-                    return (
-                        "⚠️ Lo que describes puede requerir atención médica urgente.\n\n"
-                        "Por favor, llama al *SAMU 131* o acude al servicio de "
-                        "urgencias más cercano ahora mismo.\n\n"
-                        f"También puedes contactarnos:\n📞 *{CMC_TELEFONO_FIJO}*\n"
-                        f"☎️ *{CMC_TELEFONO_FIJO}*\n\n"
-                        + DISCLAIMER
-                    )
+                    return _msg_urgencia_samu()
                 # Patología derivada a hospital → no se atiende en el CMC.
                 # Tampoco nombramos la patología; decimos "atención de mayor
                 # complejidad" para no alarmar ni dar un diagnóstico indirecto.
@@ -7207,7 +7263,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "en un laboratorio cercano.\n\n"
                 "Si necesitas una consulta para solicitar exámenes, escribe *agendar* "
                 "o llama a recepción:\n\n"
-                f"📞 *{CMC_TELEFONO_FIJO}*\n"
+                f"📞 *{CMC_TELEFONO}*\n"
                 f"☎️ *{CMC_TELEFONO_FIJO}*"
             )
 
@@ -7698,13 +7754,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
             if any(kw in tl_norm for kw in _DANGER_KW) or any(kw in tl for kw in _DANGER_KW):
                 log_event(phone, "humano_override_emergencia", {"texto": txt[:240]})
-                return (
-                    "⚠️ Lo que describes puede requerir atención urgente.\n\n"
-                    "Por favor, llama al *SAMU 131* o acude al servicio de "
-                    "urgencias más cercano ahora mismo.\n\n"
-                    f"También puedes contactarnos:\n📞 *{CMC_TELEFONO_FIJO}*\n"
-                    f"☎️ *{CMC_TELEFONO_FIJO}*"
-                )
+                return _msg_urgencia_samu(con_disclaimer=False)
             return _derivar_humano(phone=phone, contexto=txt)
 
         if intent == "disponibilidad":
@@ -11956,23 +12006,26 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     _edad_pac = (_today - _dparsed).days // 365
             _pf_err: str | None = None
             if _edad_pac is not None:
-                _min_e = EDAD_MIN_ESPECIALIDAD.get(_esp_lower)
-                _max_e = EDAD_MAX_ESPECIALIDAD.get(_esp_lower)
+                # 2026-10-08: lookup tolerante a tildes. data["especialidad"]
+                # viaja con tilde ("cardiología") y las claves de config no:
+                # con .get() exacto solo funcionaban neurología y nutriología.
+                _min_e = lookup_norm(EDAD_MIN_ESPECIALIDAD, _esp_lower)
+                _max_e = lookup_norm(EDAD_MAX_ESPECIALIDAD, _esp_lower)
                 if _min_e and _edad_pac < _min_e:
-                    alt = ALTERNATIVA_ESPECIALIDAD.get(_esp_lower, "")
+                    alt = lookup_norm(ALTERNATIVA_ESPECIALIDAD, _esp_lower, "")
                     _pf_err = (
                         f"Esta especialidad (*{_esp_lower.title()}*) es para mayores de {_min_e} años. "
                         f"El paciente tiene {_edad_pac} años."
                         + (f"\n\n¿Quieres agendar *{alt.title()}* en su lugar? Escribe *{alt}* o *menu*." if alt else "")
                     )
                 elif _max_e and _edad_pac > _max_e:
-                    alt = ALTERNATIVA_ESPECIALIDAD.get(_esp_lower, "")
+                    alt = lookup_norm(ALTERNATIVA_ESPECIALIDAD, _esp_lower, "")
                     _pf_err = (
                         f"Esta especialidad (*{_esp_lower.title()}*) es para menores de {_max_e + 1} años. "
                         f"El paciente tiene {_edad_pac} años."
                         + (f"\n\n¿Quieres agendar *{alt.title()}* en su lugar? Escribe *{alt}* o *menu*." if alt else "")
                     )
-            _genero_req = GENERO_REQUERIDO.get(_esp_lower)
+            _genero_req = lookup_norm(GENERO_REQUERIDO, _esp_lower)
             if not _pf_err and _genero_req and _sexo_pac and _sexo_pac != _genero_req:
                 _lbl = "mujeres" if _genero_req == "F" else "hombres"
                 _pf_err = (

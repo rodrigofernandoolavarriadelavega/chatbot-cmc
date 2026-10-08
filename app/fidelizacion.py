@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 _TZ_CHILE = ZoneInfo("America/Santiago")
 
-from config import USE_TEMPLATES
+from config import USE_TEMPLATES, ORL_SIN_AGENDA
 from session import (get_citas_para_seguimiento, get_pacientes_inactivos,
                      save_fidelizacion_msg, puede_enviar_campana, set_pending_crosssell,
                      get_kine_candidatos_adherencia, get_control_candidatos,
@@ -795,6 +795,9 @@ async def enviar_crosssell_orl_fono(send_fn, send_template_fn=None):
     }
     for p in candidatos:
         phone = p.get("phone", "")
+        # ORL_SIN_AGENDA: fono → ORL llevaría a un especialista sin fecha.
+        if ORL_SIN_AGENDA and "otorrin" not in (p.get("origen") or "").lower():
+            continue
         if not puede_enviar_campana(phone, "crosssell_orl_fono", dias_cooldown=90):
             continue
         if not has_privacy_consent(phone):
