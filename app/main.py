@@ -96,6 +96,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_watchdog_entrega)
 import admin_routes
 import portal_routes
+from instagram_sync import job_instagram_sync
 
 logging.config.dictConfig({
     "version": 1,
@@ -519,6 +520,16 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
         misfire_grace_time=3600,
         coalesce=True,
+    )
+    # Instagram → panel: trae la bandeja de IG (lo que recepción contesta desde la
+    # app, DM no-texto, lo que el webhook no entregó). Solo visibilidad: no
+    # responde ni dispara nada. No-op con INSTAGRAM_SYNC_ACTIVE=false (default).
+    scheduler.add_job(
+        job_instagram_sync,
+        "interval", minutes=10,
+        id="instagram_sync",
+        replace_existing=True,
+        misfire_grace_time=600, coalesce=True,
     )
     # Reenganche: cada 5 minutos revisa sesiones abandonadas
     scheduler.add_job(
@@ -11849,8 +11860,12 @@ async def _webhook_procesar(request: Request):
             else:
                 resp_text = str(respuesta) if respuesta else ""
             if resp_text:
-                await send_fn(sender_id, resp_text)
-                log_message(phone, "out", resp_text, state_after, canal=canal)
+                # send_fn devuelve False cuando Meta no entregó (IG: token vencido
+                # 14-jun→8-oct-2026). Se guarda igual, pero marcado, para que el
+                # panel no lo muestre como enviado.
+                _entregado = await send_fn(sender_id, resp_text)
+                log_message(phone, "out", resp_text, state_after, canal=canal,
+                            delivery="failed" if _entregado is False else None)
                 log.info("BOT %s to=%s state=%s reply=%r", canal.upper(), phone, state_after, _scrub_pii(resp_text[:80]))
 
     # ── Helper: ¿el perfil aún necesita un nombre real? ─────────────────────
@@ -11862,7 +11877,7 @@ async def _webhook_procesar(request: Request):
         if not p:
             return True
         n = (p.get("nombre") or "").strip()
-        return (not n) or n.startswith("ig_") or n.startswith("fb_")
+        return (not n) or n.startswith(("ig_", "fb_", "@"))
 
     # ── Helper: Page Access Token de la página FB (derivado del system-user) ──
     _FB_PAGE_TOKEN_CACHE = {}
@@ -11942,7 +11957,8 @@ async def _webhook_procesar(request: Request):
                         if platform == "instagram":
                             # Preferimos el nombre real ("María A") sobre el
                             # username ("maria.marita.m") — más legible para recepción.
-                            nombre = info.get("name") or info.get("username", "")
+                            nombre = info.get("name") or (
+                                "@" + info["username"].lstrip("@") if info.get("username") else "")
                         else:
                             nombre = info.get("name") or f"{info.get('first_name', '')} {info.get('last_name', '')}".strip()
                         if nombre and nombre != sender_id:
@@ -11997,7 +12013,9 @@ async def _webhook_procesar(request: Request):
                     # perfil con nombre vacío (antes solo capturaba en el 1er msg).
                     if _profile_needs_name(phone):
                         if sender_name:
-                            save_profile(phone, (get_profile(phone) or {}).get("rut", "") or "", sender_name)
+                            # sin nombre real, el username va con @ (provisional)
+                            _nom = ev.get("sender", {}).get("name") or "@" + sender_name.lstrip("@")
+                            save_profile(phone, (get_profile(phone) or {}).get("rut", "") or "", _nom)
                         else:
                             await _fetch_social_name(sender_id, phone, "instagram")
                     # Procesar con el chatbot completo

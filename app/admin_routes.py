@@ -479,6 +479,61 @@ def admin_conversation_detail(phone: str, _: str = Depends(require_admin)):
     return get_messages(phone)
 
 
+# ── Sincronización de la bandeja de Instagram (ver instagram_sync.py) ────────
+_IG_SYNC_ESTADO: dict = {"corriendo": False, "ultimo": None}
+
+
+@router.post("/admin/api/instagram-sync")
+async def admin_instagram_sync(modo: str = Query("backfill"),
+                               dry_run: bool = Query(True),
+                               desde_no_entregado: str = Query("2026-06-14"),
+                               igsid: str | None = Query(None),
+                               _: str = Depends(require_admin)):
+    """Lanza en segundo plano una sincronización de la bandeja de Instagram.
+
+    modo=backfill (default) trae TODA la bandeja y además marca como no
+    entregadas las respuestas 'out' sin par en Meta desde `desde_no_entregado`
+    (día en que venció el token, 14-jun-2026). dry_run=true (DEFAULT) solo cuenta:
+    hay que pedir dry_run=false para que escriba. No depende de
+    INSTAGRAM_SYNC_ACTIVE (esa bandera es solo del job de cada 10 min).
+    Resultado en GET /admin/api/instagram-sync."""
+    from datetime import datetime as _dtm, timezone as _tz
+    import instagram_sync as _igs
+    from resilience import spawn_task
+    if modo not in ("backfill", "incremental"):
+        raise HTTPException(status_code=400, detail="modo debe ser backfill o incremental")
+    if _IG_SYNC_ESTADO["corriendo"]:
+        raise HTTPException(status_code=409, detail="Ya hay una sincronización corriendo")
+    try:
+        desde = _dtm.strptime(desde_no_entregado, "%Y-%m-%d").replace(tzinfo=_tz.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="desde_no_entregado debe ser YYYY-MM-DD")
+
+    async def _correr():
+        _IG_SYNC_ESTADO["corriendo"] = True
+        try:
+            _IG_SYNC_ESTADO["ultimo"] = await _igs.sincronizar(
+                modo, dry_run=dry_run, desde_no_entregado=desde if modo == "backfill" else None,
+                solo_igsid=igsid)
+        except Exception as e:  # noqa: BLE001
+            log.exception("instagram-sync falló")
+            _IG_SYNC_ESTADO["ultimo"] = {"ok": False, "error": str(e)[:200]}
+        finally:
+            _IG_SYNC_ESTADO["corriendo"] = False
+
+    _IG_SYNC_ESTADO["corriendo"] = True   # evita doble clic antes de que arranque la tarea
+    _IG_SYNC_ESTADO["ultimo"] = None
+    spawn_task(_correr(), name="instagram_sync_admin")
+    return {"iniciado": True, "modo": modo, "dry_run": dry_run}
+
+
+@router.get("/admin/api/instagram-sync")
+def admin_instagram_sync_estado(_: str = Depends(require_admin)):
+    import instagram_sync as _igs
+    return {"corriendo": _IG_SYNC_ESTADO["corriendo"], "ultimo": _IG_SYNC_ESTADO["ultimo"],
+            "job_activo": _igs.sync_activo()}
+
+
 @router.get("/admin/api/staff-phones")
 def admin_staff_phones(_: str = Depends(require_admin)):
     return STAFF_PHONES

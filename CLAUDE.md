@@ -360,7 +360,20 @@ Script standalone de conciliación de pagos del CMC. Cruza CSVs de las 6 fuentes
 - No toca el bot en ejecución; es una herramienta offline para el cierre mensual.
 
 ## Sesión en curso
-**Última actualización**: 2026-10-06
+**Última actualización**: 2026-10-08
+
+### 2026-10-08 — Bandeja de Instagram al panel (SIN COMMIT, SIN DEPLOY, rama `session/ig-panel-sync`)
+- `app/instagram_sync.py`: importa las conversaciones de IG (API Instagram Login, solo GET) a
+  `messages` (`ig_<IGSID>`, wamid `ig:<id Meta>`, state NULL, sin push ni bot). Job cada 10 min
+  detrás de `INSTAGRAM_SYNC_ACTIVE` (default false) + `POST/GET /admin/api/instagram-sync`
+  (backfill; `dry_run=true` por defecto). Marca `messages.delivery='failed'` en las 'out' que Meta
+  nunca tuvo (panel v2 las muestra "No entregado"; el bot también marca si `send_fn` devuelve False).
+- Gotchas de la API (medidos): ~1 llamada/s máx (código 4 si se acelera); la lista corta en 800
+  conversaciones (error 500 en la página 17); `paging.next` de los mensajes da 403 siempre — se
+  pagina con `messages.limit(N).after(C){...}` dentro del campo; devuelve limit+1 por página.
+- Por qué faltaban mensajes: el webhook descarta los echo (`is_echo`, lo que recepción contesta
+  desde la app) y todo DM sin texto; el webhook IG solo está suscrito a `messages`.
+- `get_messages`/`get_conversations` ahora ordenan por `ts` (la historia importada llega con id nuevo).
 
 ### 2026-10-06 — Campañas Meta: integraciones (SIN COMMIT, SIN DEPLOY)
 - `app/campanas_meta_integraciones.py` (nuevo, cuelga de `cm.router`): agenda × anuncios

@@ -816,6 +816,14 @@ def _run_ddl_inline(conn) -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_msg_wamid ON messages(wamid)")
     except _OPERATIONAL_ERRORS:
         pass
+    # Migración: delivery — estado de entrega del mensaje SALIENTE por canal sin
+    # webhooks de estado (Instagram/Messenger). NULL = sin novedad; 'failed' =
+    # Meta nunca lo entregó (token vencido 14-jun→8-oct-2026: el panel mostraba
+    # esas respuestas como enviadas). WhatsApp sigue usando message_statuses.
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN delivery TEXT")
+    except _OPERATIONAL_ERRORS:
+        pass
     # Migración: media_url/media_tipo — pedido del dueño 2026-09-25, ver flyers
     # de campaña, imágenes entrantes de pacientes e interactivos con header IMAGE
     # renderizados como miniatura en el panel (no solo texto plano).
@@ -2377,7 +2385,8 @@ def _scrub_pii(text: str) -> str:
 
 def log_message(phone: str, direction: str, text: str, state: str = "IDLE",
                 canal: str = "whatsapp", wamid: str | None = None,
-                media_url: str | None = None, media_tipo: str | None = None):
+                media_url: str | None = None, media_tipo: str | None = None,
+                delivery: str | None = None):
     """Registra un mensaje entrante ('in') o saliente ('out') en el historial.
 
     media_url/media_tipo: cuando el mensaje trae una imagen (flyer/campaña con
@@ -2388,9 +2397,9 @@ def log_message(phone: str, direction: str, text: str, state: str = "IDLE",
     main.py (media handler) y admin_routes.py (send-document)."""
     with db() as conn:
         conn.execute(
-            "INSERT INTO messages (phone, direction, text, state, canal, wamid, media_url, media_tipo) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (phone, direction, str(text)[:2000], state, canal, wamid, media_url, media_tipo)
+            "INSERT INTO messages (phone, direction, text, state, canal, wamid, media_url, media_tipo, delivery) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (phone, direction, str(text)[:2000], state, canal, wamid, media_url, media_tipo, delivery)
         )
         conn.commit()
     # Web Push: notificar a la PWA admin en cada mensaje entrante de paciente.
@@ -2599,12 +2608,15 @@ def get_messages(phone: str, limit: int = 300) -> list[dict]:
     """Retorna los últimos `limit` mensajes de un número, ordenados cronológicamente
     (más antiguo primero, más reciente al final — lo que espera el panel para mostrar
     estilo WhatsApp). Antes usaba ORDER BY id ASC LIMIT N lo que devolvía los MÁS
-    ANTIGUOS y cortaba los mensajes nuevos en conversaciones largas."""
+    ANTIGUOS y cortaba los mensajes nuevos en conversaciones largas.
+
+    Ordena por ts (luego id), no solo por id: instagram_sync importa mensajes
+    históricos DESPUÉS de los que ya estaban, con id mayor pero ts anterior."""
     with db() as conn:
         rows = conn.execute(
             "SELECT id, phone, direction, text, state, ts, COALESCE(canal,'whatsapp') AS canal, "
-            "wamid, edited_at, media_url, media_tipo FROM messages "
-            "WHERE phone=? ORDER BY id DESC LIMIT ?",
+            "wamid, edited_at, media_url, media_tipo, delivery FROM messages "
+            "WHERE phone=? ORDER BY ts DESC, id DESC LIMIT ?",
             (phone, limit)
         ).fetchall()
         return [dict(r) for r in reversed(rows)]
@@ -2955,9 +2967,16 @@ def get_conversations(limit: int = 2000) -> list[dict]:
     """
     with db() as conn:
         rows = conn.execute("""
-            WITH last_msgs AS (
-                SELECT phone, MAX(id) AS last_id, COUNT(*) AS msg_count
+            WITH mx AS (
+                SELECT phone, MAX(ts) AS max_ts, COUNT(*) AS msg_count
                 FROM messages GROUP BY phone
+            ),
+            last_msgs AS (
+                -- Último mensaje = el de mayor ts (desempate por id), no el de mayor
+                -- id: instagram_sync inserta historia con id nuevo y ts viejo.
+                SELECT m2.phone, MAX(m2.id) AS last_id, mx.msg_count AS msg_count
+                FROM messages m2 JOIN mx ON mx.phone = m2.phone AND m2.ts = mx.max_ts
+                GROUP BY m2.phone
             )
             SELECT
                 ph.phone,
