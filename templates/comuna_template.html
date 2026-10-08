@@ -1,25 +1,41 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-CL">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0F3F68">
-<meta name="robots" content="{{ROBOTS}}">
-<title>{{TITLE}}</title>
-<meta name="description" content="{{DESCRIPTION}}">
-<meta property="og:title" content="{{TITLE}}">
-<meta property="og:description" content="{{DESCRIPTION}}">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://centromedicocarampangue.cl/{{SLUG}}">
-<meta property="og:image" content="https://centromedicocarampangue.cl/static/sitio/og-image.png">
-<meta property="og:locale" content="es_CL">
-<link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png">
-<link rel="canonical" href="https://centromedicocarampangue.cl/{{SLUG}}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-<!-- Schema 1: MedicalClinic + AggregateRating + Reviews -->
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-W428KN3R');</script>
+<!-- End Google Tag Manager -->
+
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}" />
+<meta name="robots" content="{{ROBOTS}}" />
+<link rel="canonical" href="https://centromedicocarampangue.cl/{{SLUG}}" />
+<meta name="theme-color" content="#F7F3EC" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Tu centro médico, a {{TIME_DIST}} de {{COMUNA_NAME}} · CMC" />
+<meta property="og:description" content="{{DESCRIPTION}}" />
+<meta property="og:url" content="https://centromedicocarampangue.cl/{{SLUG}}" />
+<meta property="og:image" content="https://centromedicocarampangue.cl/static/images/comuna/og-{{SLUG}}.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Ruta desde {{COMUNA_NAME}} al Centro Médico Carampangue: {{KM_DIST}} km, {{TIME_DIST}} en auto. Médico general con bono Fonasa $7.880." />
+<meta property="og:site_name" content="Centro Médico Carampangue" />
+<meta property="og:locale" content="es_CL" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Tu centro médico, a {{TIME_DIST}} de {{COMUNA_NAME}} · CMC" />
+<meta name="twitter:description" content="{{DESCRIPTION}}" />
+<meta name="twitter:image" content="https://centromedicocarampangue.cl/static/images/comuna/og-{{SLUG}}.jpg" />
+
+<link rel="icon" type="image/png" sizes="192x192" href="https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png" />
+<link rel="apple-touch-icon" href="https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png" />
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -28,752 +44,1181 @@
   "name": "Centro Médico Carampangue",
   "alternateName": "CMC",
   "url": "https://centromedicocarampangue.cl",
-  "telephone": "+56-44-2965226",
-  "image": "https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png",
-  "priceRange": "$$",
-  "currenciesAccepted": "CLP",
-  "paymentAccepted": "Efectivo, Tarjeta de débito, Tarjeta de crédito, Transferencia, Fonasa MLE",
+  "logo": "https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png",
+  "image": "https://centromedicocarampangue.cl/static/images/comuna/og-{{SLUG}}.jpg",
+  "telephone": "+56442965226",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "Monsalve 102",
+    "streetAddress": "Monsalve 102, esquina República (frente a la antigua estación de trenes)",
     "addressLocality": "Carampangue",
-    "addressRegion": "Biobío",
-    "postalCode": "4290000",
+    "addressRegion": "Región del Biobío",
     "addressCountry": "CL"
   },
-  "geo": {
-    "@type": "GeoCoordinates",
-    "latitude": -37.2650,
-    "longitude": -73.2800
-  },
+  "geo": {"@type": "GeoCoordinates", "latitude": -37.25499, "longitude": -73.23615},
+  "hasMap": "https://www.google.com/maps/search/?api=1&query=-37.25499,-73.23615",
   "openingHoursSpecification": [
     {"@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "08:00", "closes": "21:00"},
     {"@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "14:00"}
   ],
   "areaServed": [
-    { "@type": "City", "name": "{{COMUNA_NAME}}" },
-    { "@type": "City", "name": "Carampangue" },
-    { "@type": "City", "name": "Arauco" },
-    { "@type": "City", "name": "Curanilahue" }
+    {"@type": "City", "name": "{{COMUNA_NAME}}"},
+    {"@type": "City", "name": "Carampangue"},
+    {"@type": "City", "name": "Arauco"},
+    {"@type": "City", "name": "Curanilahue"},
+    {"@type": "City", "name": "Los Álamos"},
+    {"@type": "City", "name": "Lebu"},
+    {"@type": "City", "name": "Cañete"}
   ],
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "{{RATING_VALUE}}",
-    "reviewCount": "{{RATING_COUNT}}",
-    "bestRating": "5"
-  },
-  "review": [{{REVIEWS_SCHEMA}}],
-  "hasOfferCatalog": {
-    "@type": "OfferCatalog",
-    "name": "Especialidades médicas y dentales",
-    "itemListElement": [
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Medicina General"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Kinesiología"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Ginecología"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Otorrinolaringología"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Cardiología"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Odontología General"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Ortodoncia"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Endodoncia"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Psicología"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Nutrición"}},
-      {"@type":"Offer","itemOffered":{"@type":"MedicalProcedure","name":"Ecografía / Imagenología"}}
-    ]
-  }
+  "availableService": [
+    {"@type": "MedicalProcedure", "name": "Medicina general (bono Fonasa MLE $7.880)"},
+    {"@type": "MedicalProcedure", "name": "Otorrinolaringología por videollamada"},
+    {"@type": "MedicalProcedure", "name": "Psiquiatría por videollamada"},
+    {"@type": "MedicalProcedure", "name": "Neurología por videollamada"},
+    {"@type": "MedicalProcedure", "name": "Odontología general"},
+    {"@type": "MedicalProcedure", "name": "Ortodoncia"},
+    {"@type": "MedicalProcedure", "name": "Ecografía"}
+  ]
 }
 </script>
 
-<!-- Schema 2: FAQPage -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    {"@type":"Question","name":"¿A cuánto está el CMC desde {{COMUNA_NAME}}?","acceptedAnswer":{"@type":"Answer","text":"El Centro Médico Carampangue está a {{KM_DIST}} km de {{COMUNA_NAME}} — aproximadamente {{TIME_DIST}} en auto. {{TRANSPORT_DESC}}"}},
-    {"@type":"Question","name":"¿Atienden con Bono Fonasa?","acceptedAnswer":{"@type":"Answer","text":"Sí. El bono Fonasa MLE se emite en el centro, con huella biométrica, el día de la consulta. Aplica en medicina general, medicina familiar, kinesiología, nutrición y psicología (la Ps. Jacquelinne Salas no emite bono: Fonasa $20.000 directo, particular $25.000). No es necesario traerlo emitido."}},
-    {"@type":"Question","name":"¿Cómo agendo desde {{COMUNA_NAME}}?","acceptedAnswer":{"@type":"Answer","text":"Por WhatsApp al +56 9 6661 0737. Indique su nombre, RUT y la especialidad. Nuestro asistente automático te muestra los horarios disponibles 24/7."}},
-    {"@type":"Question","name":"¿Cuántas especialidades atienden?","acceptedAnswer":{"@type":"Answer","text":"Especialidades médicas y dentales en una sola sede, en Carampangue: medicina general y familiar, kinesiología, ginecología, otorrinolaringología, cardiología, gastroenterología, neurología, psiquiatría, odontología general, ortodoncia, endodoncia, implantología, psicología, nutrición, fonoaudiología, matrona, podología, ecografía y examen de la vista. No contamos con pediatra ni traumatólogo."}},
-    {"@type":"Question","name":"¿Aceptan tarjeta de crédito o débito?","acceptedAnswer":{"@type":"Answer","text":"Para consultas dentales aceptamos efectivo, transferencia, débito y crédito. Para consultas médicas con Bono Fonasa o particular: efectivo y transferencia."}},
-    {"@type":"Question","name":"¿Hay estacionamiento?","acceptedAnswer":{"@type":"Answer","text":"Sí, estacionamiento gratuito frente al centro. Si vienes en transporte público desde {{COMUNA_NAME}}, te ayudamos a coordinar el horario para que no esperes."}}
+    {"@type": "Question", "name": "¿A cuánto queda el centro desde {{COMUNA_NAME}}?",
+     "acceptedAnswer": {"@type": "Answer", "text": "A {{KM_DIST}} km, unos {{TIME_DIST}} en auto. {{TRANSPORT_DESC}}"}},
+    {"@type": "Question", "name": "¿Tienen sucursal en {{COMUNA_NAME}}?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. El Centro Médico Carampangue tiene una sola sede, en Monsalve 102, Carampangue. Algunas especialidades se atienden por videollamada, así que no siempre tienes que viajar."}},
+    {"@type": "Question", "name": "¿Qué consultas puedo hacer por videollamada?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Otorrinolaringología, psiquiatría, neurología, diabetes y peso con el Dr. Raúl Paz, y psicología según el profesional. El link de Medilink te llega por WhatsApp y se abre en el celular, sin instalar ninguna aplicación."}},
+    {"@type": "Question", "name": "¿Atienden con bono Fonasa?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Sí, en medicina general, medicina familiar, kinesiología, nutrición y psicología. El bono MLE se emite en el centro con tu huella: basta la cédula. La Ps. Jacquelinne Salas no emite bono: con Fonasa son $20.000 directo."}},
+    {"@type": "Question", "name": "¿Cómo se paga?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Consultas médicas, psicología, kinesiología, nutrición y demás atenciones de salud: efectivo o transferencia. Dental y estética facial: efectivo, transferencia, débito o crédito."}},
+    {"@type": "Question", "name": "¿Cómo agendo desde {{COMUNA_NAME}}?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Por WhatsApp al +56 9 6661 0737: el asistente te muestra las horas libres a cualquier hora. También puedes llamar al (44) 296 5226."}},
+    {"@type": "Question", "name": "¿Atienden niños?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Sí. Medicina general atiende niños y adultos, y también hay odontología, psicología infantil y fonoaudiología. No hay pediatra."}},
+    {"@type": "Question", "name": "¿Hay estacionamiento?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Sí, estacionamiento libre en la calle, en Monsalve con República, frente a la antigua estación de trenes."}}
   ]
 }
 </script>
 
-<!-- Schema 3: BreadcrumbList -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    {"@type":"ListItem","position":1,"name":"Inicio","item":"https://centromedicocarampangue.cl/"},
-    {"@type":"ListItem","position":2,"name":"Atención por comuna","item":"https://centromedicocarampangue.cl/comuna"},
-    {"@type":"ListItem","position":3,"name":"{{COMUNA_NAME}}","item":"https://centromedicocarampangue.cl/{{SLUG}}"}
+    {"@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://centromedicocarampangue.cl/"},
+    {"@type": "ListItem", "position": 2, "name": "Pacientes por comuna", "item": "https://centromedicocarampangue.cl/comuna/"},
+    {"@type": "ListItem", "position": 3, "name": "{{COMUNA_NAME}}", "item": "https://centromedicocarampangue.cl/{{SLUG}}"}
   ]
 }
 </script>
 
+<link rel="preload" href="/static/fonts/montserrat-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 
 <style>
-:root {
-  --brand-deep: #1172AB; --brand-deep-ink: #0B4F7A; --brand-deep-soft: #E8F2F9;
-  --brand-navy: #0F3F68; --brand-teal: #4FBECE; --brand-teal-soft: #E6F6F8; --brand-teal-ink: #1F7E8C;
-  --ink-900: #0A1A28; --ink-800: #11283C; --ink-700: #223548; --ink-600: #3C5166; --ink-500: #5E7183;
-  --ink-400: #8A97A6; --ink-300: #BAC4CE; --ink-200: #DFE5EC; --ink-100: #EEF2F6; --ink-50: #F7F9FB;
-  --paper: #FFFFFF; --accent-success: #15803D; --wa: #25D366; --wa-ink: #1EBE5A; --star: #F5B301;
-  --shadow-xs: 0 1px 2px rgba(11,79,122,0.04);
-  --shadow-sm: 0 2px 6px rgba(11,79,122,0.06);
-  --shadow:    0 10px 30px -12px rgba(11,79,122,0.18), 0 2px 6px rgba(11,79,122,0.06);
-  --shadow-lg: 0 30px 60px -20px rgba(11,79,122,0.25), 0 8px 16px rgba(11,79,122,0.08);
-  --radius-sm: 10px; --radius: 16px; --radius-lg: 24px; --radius-pill: 999px;
-  --ease: cubic-bezier(.2,.7,.2,1);
-  --font-display: 'Montserrat', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+@font-face{font-family:'Montserrat';src:url('/static/fonts/montserrat-var-latin.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Inter';src:url('/static/fonts/inter-var-latin.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+:root{
+  --navy:#0F3F68; --navy-900:#0A2C4A; --navy-950:#071F35; --azul:#1172AB; --aqua:#4FBECE;
+  --papel:#FFFDF9; --hueso:#F7F3EC; --hueso-2:#EFE8DC; --hueso-3:#E4DACA;
+  --aqua-50:#E4F4F6; --aqua-100:#CBEBEF; --aqua-ink:#0A6875; --aqua-soft:#8FD9E3;
+  --tinta:#0E2338; --tinta-2:#33475B; --gris:#5A6672;
+  --linea:rgba(14,35,56,.12); --linea-2:rgba(14,35,56,.07);
+  --wa:#1FA463;
+  --shadow-sm:0 2px 10px -2px rgba(15,63,104,.10), 0 1px 2px rgba(15,63,104,.05);
+  --shadow-md:0 18px 40px -18px rgba(15,63,104,.28), 0 2px 6px rgba(15,63,104,.05);
+  --shadow-lg:0 30px 60px -20px rgba(15,63,104,.25), 0 6px 16px rgba(15,63,104,.06);
+  --r:12px; --r-lg:20px; --r-xl:28px; --pill:999px;
+  --display:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --ease:cubic-bezier(.2,.7,.2,1);
 }
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0; font-family: var(--font-body); font-size: 16px; line-height: 1.6;
-  color: var(--ink-700); background: var(--paper);
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:76px}
+body{margin:0;font-family:var(--body);font-size:clamp(1rem,.96rem + .2vw,1.0625rem);line-height:1.6;color:var(--tinta-2);background:var(--hueso);
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+::selection{background:var(--aqua-100);color:var(--tinta)}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+h1,h2,h3{font-family:var(--display);font-weight:700;color:var(--tinta);margin:0;letter-spacing:-.028em;line-height:1.04}
+h1 em,h2 em{font-style:normal;color:var(--azul)}
+p{margin:0}
+button{font:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.num{font-variant-numeric:tabular-nums lining-nums}
+.nw{white-space:nowrap}
+:focus-visible{outline:2px solid var(--azul);outline-offset:3px;border-radius:8px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.kicker{display:inline-flex;align-items:center;gap:10px;font:600 11.5px/1.3 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--aqua-ink)}
+.kicker::before{content:"";width:22px;height:1.5px;background:currentColor;flex:none;opacity:.7}
+
+/* Botones (misma casa que las otras landings) */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:52px;padding:0 24px 0 10px;border-radius:var(--pill);
+  font:600 15.5px/1.2 var(--body);letter-spacing:-.005em;border:1px solid transparent;cursor:pointer;text-align:center;
+  transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .22s var(--ease),border-color .22s var(--ease),color .22s var(--ease)}
+.btn-main{background:var(--navy-950);color:#fff;box-shadow:0 14px 28px -14px rgba(7,31,53,.7)}
+.btn-main:hover{background:var(--navy);transform:translateY(-2px);box-shadow:0 18px 32px -14px rgba(7,31,53,.6)}
+.btn-main:active{transform:translateY(0) scale(.985)}
+.wa-dot{width:34px;height:34px;border-radius:50%;background:var(--wa);display:grid;place-items:center;flex:none}
+.wa-dot svg{width:18px;height:18px;color:#fff}
+.btn-line{background:transparent;color:var(--tinta);border-color:rgba(14,35,56,.22);padding:0 22px}
+.btn-line:hover{border-color:var(--tinta);transform:translateY(-1px)}
+.btn-line svg{color:var(--aqua-ink)}
+.btn-light{background:#fff;color:var(--navy-950)}
+.btn-light:hover{transform:translateY(-2px);box-shadow:0 18px 30px -14px rgba(0,0,0,.45)}
+.btn-ghost-w{background:transparent;color:#fff;border-color:rgba(255,255,255,.35);padding:0 22px}
+.btn-ghost-w:hover{border-color:#fff}
+.lnk{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-weight:500;color:var(--tinta)}
+.lnk span{border-bottom:1px solid var(--aqua);padding-bottom:2px}
+.lnk svg{transition:transform .22s var(--ease);color:var(--aqua-ink)}
+.lnk:hover svg{transform:translateX(3px)}
+
+.emergency-strip{background:var(--navy-950);color:rgba(255,255,255,.8);font-size:12.5px;text-align:center;padding:6px 16px;line-height:1.4}
+.emergency-strip strong{color:#fff;font-weight:600}
+.emergency-strip a{color:#fff;font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.emergency-strip .em-long{display:none}
+.nav-wrap{position:sticky;top:0;z-index:50;background:rgba(247,243,236,.86);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);
+  border-bottom:1px solid transparent;transition:border-color .2s var(--ease),background-color .2s var(--ease)}
+.nav-wrap.is-scrolled{border-color:var(--linea-2);background:rgba(247,243,236,.95)}
+.nav{display:flex;align-items:center;gap:12px;height:60px}
+.nav-brand{display:flex;align-items:center;flex:none;min-height:44px}
+.nav-brand img{height:32px;width:auto}
+.nav-menu{display:none}
+.nav-cta{display:flex;gap:10px;align-items:center;margin-left:auto}
+.nav-cta .btn{min-height:44px;padding:0 18px 0 6px;font-size:14px;gap:8px}
+.nav-cta .wa-dot{width:30px;height:30px}
+.nav-cta .wa-dot svg{width:16px;height:16px}
+.nav-cta .btn-line{display:none;padding:0 16px}
+.nav-cta .btn-main{transition:opacity .2s var(--ease),transform .2s var(--ease)}
+.float-on .nav-cta .btn-main{opacity:0;transform:scale(.92);visibility:hidden;transition:opacity .2s var(--ease),transform .2s var(--ease),visibility 0s .2s}
+
+/* ── HERO ── */
+.hero{position:relative;overflow:hidden;isolation:isolate;background:
+  radial-gradient(80% 50% at 100% 0%,rgba(203,235,239,.55),transparent 62%),
+  linear-gradient(180deg,var(--hueso),var(--hueso) 70%,var(--hueso-2))}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr);padding-top:18px;padding-bottom:56px;gap:30px}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--gris);margin-bottom:14px}
+.crumbs a{display:inline-flex;align-items:center;min-height:24px;transition:color .15s}
+.crumbs a:hover{color:var(--aqua-ink)}
+.crumbs i{font-style:normal;opacity:.5}
+.hero .kicker{margin-bottom:14px}
+.hero h1{font-size:clamp(2.15rem,1.2rem + 3.6vw,3.75rem);line-height:1.02;letter-spacing:-.035em;font-weight:800;text-wrap:balance}
+.hero h1 .t{color:var(--azul)}
+.hero-lead{margin-top:14px;font-size:16.5px;line-height:1.55;color:var(--tinta-2);max-width:34em;text-wrap:pretty}
+.hero-lead b{color:var(--tinta);font-weight:600}
+.fare{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;border-radius:var(--r-lg);overflow:hidden;background:var(--papel);border:1px solid var(--linea-2);box-shadow:var(--shadow-sm)}
+.fare > div{padding:13px 15px 14px;min-width:0}
+.fare > div + div{border-left:1px solid var(--linea-2)}
+.fare .main{background:linear-gradient(160deg,var(--aqua-50),#F1FAFB)}
+.fare-k{font:600 11px/1.3 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--gris)}
+.fare .main .fare-k{color:var(--aqua-ink)}
+.fare-v{font:800 clamp(1.85rem,1.45rem + 1.6vw,2.45rem)/1 var(--display);letter-spacing:-.035em;color:var(--tinta);margin-top:7px;font-variant-numeric:tabular-nums lining-nums}
+.fare .main .fare-v{color:var(--navy)}
+.fare-s{font-size:12.5px;line-height:1.4;color:var(--gris);margin-top:6px}
+.hero-ctas{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.hero-ctas .btn{width:100%}
+.hero-ctas .btn-line{display:none}
+.hero-call{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;font-size:14px;color:var(--tinta-2)}
+.hero-call b{font-weight:600;color:var(--tinta);border-bottom:1px solid var(--aqua);padding-bottom:1px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px;font-size:13px;color:var(--gris)}
+.hero-meta span{display:inline-flex;align-items:center;gap:7px}
+.hero-meta svg{color:var(--aqua-ink);flex:none}
+
+/* ── ELEMENTO FIRMA: la ruta ── */
+.rcard{position:relative;margin:0;background:var(--papel);border-radius:var(--r-xl);border:1px solid var(--linea-2);box-shadow:var(--shadow-lg);overflow:hidden}
+.tk{padding:16px 18px 14px;border-bottom:1px dashed var(--linea)}
+.tk-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:12px}
+.tk-k{display:block;font:600 10.5px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--gris)}
+.tk-v{display:block;margin-top:5px;font:800 clamp(1.05rem,.9rem + .7vw,1.45rem)/1.1 var(--display);letter-spacing:-.025em;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk-b{text-align:right}
+.tk-arrow{width:34px;height:16px;color:var(--aqua);margin-bottom:5px}
+.tk-stats{list-style:none;margin:12px 0 0;padding:0;display:flex;gap:8px;flex-wrap:wrap}
+.tk-stats li{display:inline-flex;align-items:baseline;gap:6px;padding:6px 11px;border-radius:var(--pill);background:var(--hueso);font-size:13px;color:var(--gris)}
+.tk-stats b{font:700 15px/1.2 var(--display);color:var(--navy);letter-spacing:-.01em}
+.tk-via{margin-top:9px;font-size:13px;color:var(--gris)}
+.tk-via b{font-weight:600;color:var(--tinta-2)}
+.rm{position:relative;aspect-ratio:600 / 788;background:#DDEEF1}
+.rm-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.m-sea{fill:#DDEEF1}
+.m-land{fill:#FBF8F2}
+.m-coast{fill:none;stroke:#A9D6DD;stroke-width:1.2;stroke-linejoin:round}
+.m-riv{fill:none;stroke:#C9E6EB;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
+.m-rds{fill:none;stroke:#E6DCCB;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.m-sea-lbl{font:600 11px var(--body);letter-spacing:.14em;text-transform:uppercase;fill:#7FB3BC}
+.rt-bg{fill:none;stroke:#fff;stroke-width:0;stroke-linecap:round;stroke-linejoin:round}
+.rt{fill:none;stroke:rgba(15,63,104,.3);stroke-width:1.7;stroke-dasharray:1.5 4.5;stroke-linecap:round;stroke-linejoin:round;transition:stroke .3s var(--ease),opacity .3s var(--ease)}
+.tw-dot{fill:#fff;stroke:rgba(15,63,104,.45);stroke-width:1.6;transition:fill .25s,stroke .25s}
+.tw-halo{fill:rgba(79,190,206,0);transition:fill .25s}
+.tw text{font:600 12.5px var(--display);fill:var(--gris);letter-spacing:-.01em;paint-order:stroke;stroke:#FBF8F2;stroke-width:4px;stroke-linejoin:round}
+.tw{cursor:pointer}
+.d-drop{fill:var(--navy)}
+.d-pulse{fill:rgba(17,114,171,.22);transform-origin:0 -24px;animation:pulse 2.6s var(--ease) infinite}
+/* Ruta activa (sin JS ya queda dibujada la de la página) */
+.rcard[data-c="lebu"] .rt[data-r="lebu"],.rcard[data-c="canete"] .rt[data-r="canete"],.rcard[data-c="los-alamos"] .rt[data-r="los-alamos"],
+.rcard[data-c="curanilahue"] .rt[data-r="curanilahue"],.rcard[data-c="arauco"] .rt[data-r="arauco"],.rcard[data-c="laraquete"] .rt[data-r="laraquete"]{stroke:var(--navy);stroke-width:4.2;stroke-dasharray:none}
+.rcard[data-c="lebu"] .rt-bg[data-r="lebu"],.rcard[data-c="canete"] .rt-bg[data-r="canete"],.rcard[data-c="los-alamos"] .rt-bg[data-r="los-alamos"],
+.rcard[data-c="curanilahue"] .rt-bg[data-r="curanilahue"],.rcard[data-c="arauco"] .rt-bg[data-r="arauco"],.rcard[data-c="laraquete"] .rt-bg[data-r="laraquete"]{stroke-width:10}
+.rcard[data-c="lebu"] .tw[data-r="lebu"],.rcard[data-c="canete"] .tw[data-r="canete"],.rcard[data-c="los-alamos"] .tw[data-r="los-alamos"],
+.rcard[data-c="curanilahue"] .tw[data-r="curanilahue"],.rcard[data-c="arauco"] .tw[data-r="arauco"],.rcard[data-c="laraquete"] .tw[data-r="laraquete"]{--on:1}
+.rcard[data-c="lebu"] .tw[data-r="lebu"] .tw-dot,.rcard[data-c="canete"] .tw[data-r="canete"] .tw-dot,.rcard[data-c="los-alamos"] .tw[data-r="los-alamos"] .tw-dot,
+.rcard[data-c="curanilahue"] .tw[data-r="curanilahue"] .tw-dot,.rcard[data-c="arauco"] .tw[data-r="arauco"] .tw-dot,.rcard[data-c="laraquete"] .tw[data-r="laraquete"] .tw-dot{fill:var(--aqua);stroke:var(--navy);stroke-width:2.4}
+.rcard[data-c="lebu"] .tw[data-r="lebu"] .tw-halo,.rcard[data-c="canete"] .tw[data-r="canete"] .tw-halo,.rcard[data-c="los-alamos"] .tw[data-r="los-alamos"] .tw-halo,
+.rcard[data-c="curanilahue"] .tw[data-r="curanilahue"] .tw-halo,.rcard[data-c="arauco"] .tw[data-r="arauco"] .tw-halo,.rcard[data-c="laraquete"] .tw[data-r="laraquete"] .tw-halo{fill:rgba(79,190,206,.28)}
+.rcard[data-c="lebu"] .tw[data-r="lebu"] text,.rcard[data-c="canete"] .tw[data-r="canete"] text,.rcard[data-c="los-alamos"] .tw[data-r="los-alamos"] text,
+.rcard[data-c="curanilahue"] .tw[data-r="curanilahue"] text,.rcard[data-c="arauco"] .tw[data-r="arauco"] text,.rcard[data-c="laraquete"] .tw[data-r="laraquete"] text{font-size:16px;font-weight:800;fill:var(--tinta)}
+/* Dibujo animado (solo con JS) */
+/* Destino */
+.rm-dest{position:absolute;transform:translate(calc(-100% - 26px),30px);display:flex;align-items:center;gap:9px;padding:6px 12px 6px 6px;background:#fff;border-radius:14px;box-shadow:var(--shadow-md);pointer-events:none;max-width:72%}
+.rm-dest img{width:46px;height:38px;border-radius:9px;object-fit:cover;flex:none}
+.rm-dest b{display:block;font:700 12.5px/1.2 var(--display);color:var(--tinta);letter-spacing:-.01em;white-space:nowrap}
+.rm-dest span{display:block;font-size:11.5px;color:var(--gris);white-space:nowrap}
+.rm-attr{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.88);font-size:10.5px;color:#3C5166;padding:2px 7px;border-top-left-radius:8px}
+.rm-attr a{text-decoration:underline}
+/* Modo videollamada */
+.rm-video{position:absolute;left:50%;top:50%;width:min(300px,82%);transform:translate(-50%,-44%);opacity:0;visibility:hidden;text-align:center;
+  background:rgba(7,31,53,.94);color:#fff;border-radius:var(--r-lg);padding:20px 18px 18px;box-shadow:var(--shadow-lg);transition:opacity .3s var(--ease),transform .3s var(--ease),visibility 0s .3s}
+.rm-video .z{display:block;font:800 56px/1 var(--display);letter-spacing:-.045em;color:var(--aqua-soft)}
+.rm-video .z small{font-size:24px;letter-spacing:-.02em;margin-left:4px;color:#fff}
+.rm-video p{font-size:14px;line-height:1.5;color:rgba(255,255,255,.86);margin-top:10px}
+.rm-video a{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:6px;font-weight:600;font-size:14px;color:#fff;border-bottom:1px solid var(--aqua-soft)}
+.rcard[data-mode="video"] .rm-video{opacity:1;visibility:visible;transform:translate(-50%,-50%);transition:opacity .3s var(--ease),transform .3s var(--ease),visibility 0s}
+.rcard[data-mode="video"] .m-rts,.rcard[data-mode="video"] .m-dest,.rcard[data-mode="video"] .rm-dest{opacity:.12;transition:opacity .3s var(--ease)}
+.m-rts,.m-dest{transition:opacity .3s var(--ease)}
+.rm-dest{transition:opacity .3s var(--ease)}
+.tk .v-only{display:none}
+.rcard[data-mode="video"] .tk .v-only{display:inline}
+.rcard[data-mode="video"] .tk .a-only{display:none}
+.rcard[data-mode="video"] .tk-stats li:first-child b{color:var(--aqua-ink)}
+/* Controles */
+.rm-ctrl{padding:14px 16px 16px;border-top:1px solid var(--linea-2)}
+.seg{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:var(--pill);background:var(--hueso);border:1px solid var(--linea-2)}
+.seg button{appearance:none;border:0;background:transparent;min-height:44px;border-radius:var(--pill);display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font:600 14px/1.2 var(--body);color:var(--tinta-2);cursor:pointer;transition:background-color .22s var(--ease),color .22s var(--ease),box-shadow .22s var(--ease)}
+.seg button svg{width:17px;height:17px;flex:none}
+.seg button[aria-pressed="true"]{background:var(--navy-950);color:#fff;box-shadow:0 8px 16px -10px rgba(7,31,53,.7)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.chips > span{width:100%;font-size:12.5px;color:var(--gris);margin-bottom:2px}
+.chip{appearance:none;min-height:44px;padding:0 14px;border-radius:var(--pill);border:1px solid var(--linea);background:#fff;font:500 13.5px/1 var(--body);color:var(--tinta-2);cursor:pointer;
+  transition:border-color .2s var(--ease),background-color .2s var(--ease),color .2s var(--ease)}
+.chip:hover{border-color:var(--aqua-ink)}
+.chip[aria-pressed="true"]{background:var(--aqua-50);border-color:var(--aqua-ink);color:var(--navy);font-weight:600}
+
+/* ── Secciones ── */
+.sec{padding:72px 0}
+.sec-head{max-width:760px;margin-bottom:30px}
+.sec-head h2{font-size:clamp(1.9rem,1.25rem + 2.7vw,3.2rem);line-height:1.05;letter-spacing:-.032em;margin:14px 0 12px;text-wrap:balance}
+.sec-head p{font-size:16.5px;color:var(--gris);max-width:36em;text-wrap:pretty}
+.bg-hueso2{background:var(--hueso-2)}
+
+/* Sin viajar (oscura) */
+.tele{background:var(--navy-950);color:rgba(255,255,255,.84);position:relative;overflow:hidden;isolation:isolate}
+.tele::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(60% 50% at 100% 0%,rgba(79,190,206,.2),transparent 60%),radial-gradient(50% 40% at 0% 100%,rgba(17,114,171,.25),transparent 60%)}
+.tele .kicker{color:var(--aqua-soft)}
+.tele h2{color:#fff}
+.tele h2 em{color:var(--aqua-soft)}
+.tele .sec-head p{color:rgba(255,255,255,.78)}
+.zero{display:flex;align-items:flex-end;gap:16px;margin:4px 0 30px}
+.zero b{font:800 clamp(4.5rem,3rem + 7vw,8.5rem)/.82 var(--display);letter-spacing:-.06em;color:#fff}
+.zero b small{font-size:.38em;letter-spacing:-.02em;color:var(--aqua-soft);margin-left:6px}
+.zero span{font-size:14.5px;line-height:1.45;color:rgba(255,255,255,.72);max-width:14em;padding-bottom:6px}
+.tcards{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.tcard{position:relative;display:flex;flex-direction:column;padding:20px 20px 18px;border-radius:var(--r-lg);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  transition:background-color .25s var(--ease),border-color .25s var(--ease),transform .25s var(--ease)}
+.tcard:hover{background:rgba(255,255,255,.08);border-color:rgba(143,217,227,.4);transform:translateY(-2px)}
+.tcard .pill{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font:600 10.5px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--aqua-soft);background:rgba(79,190,206,.12);padding:6px 9px;border-radius:var(--pill)}
+.tcard .pill svg{width:13px;height:13px}
+.tcard h3{color:#fff;font-size:20px;letter-spacing:-.02em;margin-top:14px}
+.tcard .who{font-size:13.5px;color:rgba(255,255,255,.62);margin-top:4px}
+.tcard .pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tcard .pr b{font:800 28px/1 var(--display);letter-spacing:-.035em;color:#fff;font-variant-numeric:tabular-nums lining-nums}
+.tcard .pr small{font-size:12.5px;color:rgba(255,255,255,.62)}
+.tcard p{font-size:14px;line-height:1.55;color:rgba(255,255,255,.74);margin-top:10px;flex-grow:1}
+.tcard .go{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:8px;font-weight:600;font-size:14px;color:#fff}
+.tcard .go span{border-bottom:1px solid var(--aqua-soft);padding-bottom:1px}
+.tcard .go::after{content:"";position:absolute;inset:0;border-radius:var(--r-lg)}
+.tcard .go svg{color:var(--aqua-soft);transition:transform .22s var(--ease)}
+.tcard:hover .go svg{transform:translateX(3px)}
+.tele-foot{display:flex;flex-direction:column;gap:16px;margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,.12)}
+.tele-foot p{font-size:14px;color:rgba(255,255,255,.7);max-width:40em}
+.tele-foot .btn{align-self:stretch}
+
+/* Lo más agendado + directorio */
+.feat{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:56px}
+.fcard{position:relative;display:none;flex-direction:column;padding:22px 22px 18px;background:var(--papel);border-radius:var(--r-lg);border:1px solid var(--linea-2);box-shadow:var(--shadow-sm);
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease),border-color .25s var(--ease)}
+.fcard:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:rgba(79,190,206,.6)}
+.fcard .rk{font:700 12px/1 var(--display);color:var(--aqua-ink);letter-spacing:.04em}
+.fcard h3{font-size:22px;letter-spacing:-.022em;margin-top:12px}
+.fcard .pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:12px}
+.fcard .pr b{font:800 clamp(2rem,1.7rem + 1vw,2.5rem)/1 var(--display);letter-spacing:-.04em;color:var(--navy);font-variant-numeric:tabular-nums lining-nums}
+.fcard .pr small{font-size:13px;color:var(--gris)}
+.fcard p{font-size:14.5px;line-height:1.55;color:var(--tinta-2);margin-top:10px;flex-grow:1}
+.fcard .tagv{position:absolute;top:20px;right:20px;display:inline-flex;align-items:center;gap:5px;font:600 10.5px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--aqua-ink);background:var(--aqua-50);padding:6px 8px;border-radius:var(--pill)}
+.fcard .tagv svg{width:13px;height:13px}
+.fcard .go{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:8px;font-weight:600;font-size:14px;color:var(--tinta)}
+.fcard .go span{border-bottom:1px solid var(--aqua);padding-bottom:1px}
+.fcard .go::after{content:"";position:absolute;inset:0;border-radius:var(--r-lg)}
+.fcard .go svg{color:var(--aqua-ink);transition:transform .22s var(--ease)}
+.fcard:hover .go svg{transform:translateX(3px)}
+/* qué se muestra según la comuna (datos: horas agendadas 12 meses, docs/SEO_PROVINCIA_2026-10.md) */
+.feat .f-mg,.feat .f-orto,.feat .f-orl,.feat .f-eco{display:flex}
+.feat[data-c="lebu"] .fcard,.feat[data-c="canete"] .fcard,.feat[data-c="los-alamos"] .fcard,.feat[data-c="curanilahue"] .fcard{display:none}
+.feat[data-c="lebu"] .f-orl,.feat[data-c="lebu"] .f-eco,.feat[data-c="lebu"] .f-cardio,.feat[data-c="lebu"] .f-mg{display:flex}
+.feat[data-c="lebu"] .f-orl{order:1}.feat[data-c="lebu"] .f-eco{order:2}.feat[data-c="lebu"] .f-cardio{order:3}.feat[data-c="lebu"] .f-mg{order:4}
+.feat[data-c="canete"] .f-orto,.feat[data-c="canete"] .f-orl,.feat[data-c="canete"] .f-psq,.feat[data-c="canete"] .f-mg{display:flex}
+.feat[data-c="canete"] .f-orto{order:1}.feat[data-c="canete"] .f-orl{order:2}.feat[data-c="canete"] .f-psq{order:3}.feat[data-c="canete"] .f-mg{order:4}
+.feat[data-c="los-alamos"] .f-orto,.feat[data-c="los-alamos"] .f-mg,.feat[data-c="los-alamos"] .f-orl,.feat[data-c="los-alamos"] .f-eco{display:flex}
+.feat[data-c="los-alamos"] .f-orto{order:1}.feat[data-c="los-alamos"] .f-mg{order:2}.feat[data-c="los-alamos"] .f-orl{order:3}.feat[data-c="los-alamos"] .f-eco{order:4}
+.feat[data-c="curanilahue"] .f-mg,.feat[data-c="curanilahue"] .f-orto,.feat[data-c="curanilahue"] .f-orl,.feat[data-c="curanilahue"] .f-eco{display:flex}
+.feat[data-c="curanilahue"] .f-mg{order:1}.feat[data-c="curanilahue"] .f-orto{order:2}.feat[data-c="curanilahue"] .f-orl{order:3}.feat[data-c="curanilahue"] .f-eco{order:4}
+
+.dir-head{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+.dir-head h3{font-size:clamp(1.5rem,1.2rem + 1.2vw,2rem);letter-spacing:-.028em}
+.dir-head p{font-size:15px;color:var(--gris)}
+.dir{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.dgrp{background:var(--papel);border-radius:var(--r-lg);border:1px solid var(--linea-2);padding:6px 18px 8px}
+.dgrp h4{margin:0;padding:14px 0 10px;font:600 11.5px/1.3 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--aqua-ink);border-bottom:1px solid var(--linea)}
+.dgrp ul{list-style:none;margin:0;padding:0}
+.dgrp li + li{border-top:1px solid var(--linea-2)}
+.dgrp a{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;min-height:58px;padding:9px 0;transition:color .15s}
+.dgrp a:hover .dn{color:var(--aqua-ink)}
+.dn{display:block;font:600 15px/1.3 var(--body);color:var(--tinta);transition:color .15s}
+.dw{display:block;font-size:12.5px;line-height:1.35;color:var(--gris);margin-top:2px}
+.dp{text-align:right;font:700 15px/1.2 var(--display);color:var(--navy);letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums;white-space:nowrap}
+.dp small{display:block;font:500 11.5px/1.3 var(--body);color:var(--gris);letter-spacing:0;margin-top:2px}
+.vtag{display:inline-flex;align-items:center;gap:4px;margin-left:6px;font:600 10px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--aqua-ink);background:var(--aqua-50);padding:4px 6px;border-radius:6px;vertical-align:2px}
+
+/* Si vienes */
+.come{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;align-items:start}
+.come-photo{position:relative;margin:0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--shadow-md);aspect-ratio:4/3;background:var(--hueso-3)}
+.come-photo img{width:100%;height:100%;object-fit:cover;transition:transform 1.2s var(--ease)}
+.come-photo:hover img{transform:scale(1.02)}
+.come-photo figcaption{position:absolute;left:12px;bottom:12px;right:12px;display:flex;flex-direction:column;padding:10px 14px;border-radius:14px;background:rgba(7,31,53,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff}
+.come-photo figcaption b{font:700 14px/1.3 var(--display);letter-spacing:-.01em}
+.come-photo figcaption span{font-size:12.5px;color:rgba(255,255,255,.78)}
+.tips{list-style:none;margin:0;padding:0;display:grid;gap:0;border-top:1px solid var(--linea)}
+.tips li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:18px 0;border-bottom:1px solid var(--linea)}
+.tips .ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--papel);border:1px solid var(--linea-2);color:var(--navy)}
+.tips .ic svg{width:21px;height:21px}
+.tips h3{font-size:18px;letter-spacing:-.018em;line-height:1.25}
+.tips p{font-size:15px;line-height:1.6;color:var(--tinta-2);margin-top:5px}
+.road{margin-top:22px;padding:16px 18px;border-radius:var(--r-lg);background:var(--papel);border:1px solid var(--linea-2);font-size:15px;line-height:1.6;color:var(--tinta-2)}
+.road b{font-weight:600;color:var(--tinta)}
+.pay{margin-top:12px;font-size:14px;color:var(--gris)}
+
+/* Reseñas: solo se muestran si vienen de Google (cada reseña real trae .date) */
+.reviews:not(:has(.review-card .date)){display:none}
+.reviews-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.review-card{padding:22px 20px 18px;background:var(--papel);border-radius:var(--r-lg);border:1px solid var(--linea-2)}
+.review-card:not(:has(.date)){display:none}
+.review-card .stars{color:#C98A1B;font-size:15px;letter-spacing:2px}
+.review-card .text{font-size:15px;line-height:1.65;color:var(--tinta-2);margin-top:10px}
+.review-card .author{font:700 14px/1.3 var(--display);color:var(--tinta);margin-top:14px}
+.review-card .date{font-size:12.5px;color:var(--gris);margin-top:2px}
+.reviews-meta{margin-top:18px}
+
+/* FAQ */
+.faq-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+.faq-aside p{font-size:15.5px;color:var(--gris)}
+.faq-list{border-top:1px solid var(--linea)}
+.faq-item{border-bottom:1px solid var(--linea)}
+.faq-item summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 2px;min-height:62px;font:500 16px/1.4 var(--body);color:var(--tinta);transition:color .15s var(--ease)}
+.faq-item summary:hover{color:var(--aqua-ink)}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-answer{padding:0 44px 20px 2px;font-size:15.5px;color:var(--tinta-2);line-height:1.65}
+.faq-answer a{color:var(--tinta);text-decoration:underline;text-decoration-color:var(--aqua);text-underline-offset:3px}
+.pm{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--linea);position:relative;transition:background-color .2s var(--ease),border-color .2s var(--ease)}
+.pm::before,.pm::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:1.5px;margin:-.75px 0 0 -5.5px;background:var(--tinta);border-radius:2px;transition:transform .25s var(--ease)}
+.pm::after{transform:rotate(90deg)}
+details[open] > summary .pm{background:var(--navy-950);border-color:var(--navy-950)}
+details[open] > summary .pm::before,details[open] > summary .pm::after{background:#fff}
+details[open] > summary .pm::after{transform:rotate(0)}
+details[open] .faq-answer{animation:swap .26s var(--ease) both}
+
+/* Ubicación */
+.map-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:stretch}
+.map{position:relative;border-radius:var(--r-xl);overflow:hidden;background:#EEF2F5;box-shadow:var(--shadow-sm);aspect-ratio:1/1;min-width:0;margin:0;--px:45.01%;--py:51.16%}
+.map picture{position:absolute;inset:0}
+.map img{width:100%;height:100%;object-fit:none;object-position:var(--px) var(--py)}
+.pin{position:absolute;left:var(--px);top:var(--py);width:0;height:0}
+.pin-pulse{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;background:rgba(17,114,171,.25);animation:pulse 2.6s var(--ease) infinite}
+.pin-drop{position:absolute;left:-21px;bottom:0;width:42px;height:54px;filter:drop-shadow(0 8px 10px rgba(10,44,74,.35))}
+.pin-label{position:absolute;left:-100px;top:-122px;white-space:nowrap;background:#fff;border-radius:12px;padding:8px 12px;box-shadow:var(--shadow-md);font-size:12.5px;line-height:1.3;color:var(--gris)}
+.pin-label strong{display:block;font:600 14px/1.25 var(--body);color:var(--tinta)}
+.map-attr{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.9);font-size:11px;color:#3C5166;padding:3px 8px;border-top-left-radius:8px}
+.map-attr a{text-decoration:underline}
+.loc{display:flex;flex-direction:column;gap:14px}
+.loc-card{background:var(--papel);border-radius:var(--r-lg);padding:22px 20px;border:1px solid var(--linea-2)}
+.loc-card h3{font-size:24px;margin:12px 0 4px;letter-spacing:-.022em}
+.loc-card .addr{font-size:15px;color:var(--tinta-2)}
+.loc-card .ref{display:inline-flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;color:var(--aqua-ink);font-weight:500}
+.loc-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.loc-btns .btn{padding:0 12px;font-size:14px;min-height:48px}
+.hrs{list-style:none;margin:12px 0 0;padding:0}
+.hrs li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linea-2);font-size:15px;color:var(--tinta-2)}
+.hrs li b{font:700 17px/1.3 var(--display);color:var(--tinta);letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums;text-align:right}
+.hrs .tag{font:600 10.5px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--aqua-ink);background:var(--aqua-50);padding:4px 7px;border-radius:6px;margin-left:8px;vertical-align:2px}
+.loc-card .small{font-size:14px;color:var(--gris);line-height:1.55;margin-top:12px}
+.loc-card .btn{margin-top:16px;width:100%}
+
+/* Cierre con foto */
+.cta-photo{position:relative;color:#fff;overflow:hidden;isolation:isolate;background:var(--navy-950)}
+.cta-photo picture{position:absolute;inset:0;z-index:-2}
+.cta-photo picture img{width:100%;height:100%;object-fit:cover;object-position:60% 50%}
+.cta-photo::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(7,31,53,.8) 0%,rgba(7,31,53,.9) 60%,rgba(7,31,53,.96) 100%)}
+.cta-photo .wrap{padding-top:80px;padding-bottom:96px}
+.cta-photo .kicker{color:var(--aqua-soft)}
+.cta-photo h2{color:#fff;font-size:clamp(2.2rem,1.3rem + 4vw,4.2rem);line-height:1.02;letter-spacing:-.035em;font-weight:800;margin:16px 0 0;max-width:12em;text-wrap:balance}
+.cta-photo h2 em{color:var(--aqua-soft)}
+.cta-photo p{color:rgba(255,255,255,.84);font-size:17px;max-width:32em;margin-top:16px}
+.cta-photo-actions{display:flex;flex-direction:column;gap:12px;margin-top:28px}
+.cta-photo .cobertura-note{margin-top:26px;font-size:13px;color:rgba(255,255,255,.68);letter-spacing:.02em}
+.cta-photo .cobertura-note a{color:#fff;text-decoration:underline;text-decoration-color:rgba(143,217,227,.6);text-underline-offset:3px;display:inline-flex;min-height:32px;align-items:center}
+
+/* Footer */
+.footer{background:var(--hueso-2);padding:52px 0 calc(96px + env(safe-area-inset-bottom))}
+.footer-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+.footer-brand img{height:38px;width:auto}
+.footer-brand p{font-size:14px;color:var(--gris);margin-top:16px;max-width:320px}
+.footer h4{font:600 11.5px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--gris);margin:0 0 10px}
+.footer ul{list-style:none;margin:0;padding:0}
+.footer li{font-size:14px;color:var(--tinta-2)}
+.footer li a{display:inline-flex;align-items:center;min-height:44px;transition:color .15s}
+.footer li a:hover{color:var(--aqua-ink)}
+.footer-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:36px;padding-top:20px;border-top:1px solid var(--linea);font-size:12.5px;color:var(--gris)}
+
+.wa-float{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;display:inline-flex;align-items:center;gap:10px;height:56px;padding:0 20px 0 10px;border-radius:var(--pill);
+  background:var(--navy-950);color:#fff;font:600 15px/1 var(--body);box-shadow:0 16px 30px -12px rgba(7,31,53,.7),0 2px 6px rgba(10,44,74,.18);
+  transform:translateY(0);opacity:1;transition:transform .3s var(--ease),opacity .2s var(--ease),background-color .18s}
+.wa-float:hover{background:var(--navy)}
+.wa-float.is-hidden{transform:translateY(130%);opacity:0;visibility:hidden;transition:transform .2s var(--ease),opacity .2s var(--ease),visibility 0s .2s}
+
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%{transform:scale(.5);opacity:.9}70%{transform:scale(1.9);opacity:0}100%{opacity:0}}
+@keyframes drop{0%{transform:translateY(-22px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes swap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hero .in{animation:rise .6s var(--ease) both;animation-delay:calc(var(--d,0) * 55ms + 40ms)}
+.js .rv{opacity:0;transform:translateY(16px);transition:opacity .6s var(--ease),transform .6s var(--ease);transition-delay:calc(var(--d,0) * 55ms)}
+.js .rv.on{opacity:1;transform:none}
+.js .map .pin-drop{opacity:0}
+.js .map.on .pin-drop{animation:drop .45s var(--ease) both .15s}
+.js .map.on .pin-label{animation:rise .4s var(--ease) both .4s}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .js .rv{opacity:1;transform:none}
+  .js .map .pin-drop{opacity:1}
 }
-a { color: inherit; text-decoration: none; }
-img { max-width: 100%; display: block; height: auto; }
-h1, h2, h3, h4, p { margin: 0; }
-.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 28px; }
-:focus-visible { outline: 3px solid var(--brand-teal); outline-offset: 2px; border-radius: 6px; }
-.skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; background: var(--brand-navy); color: #fff; padding: 10px 16px; border-radius: 10px; font: 700 14px var(--font-display); }
-.skip-link:focus { top: 12px; }
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 14px 22px; min-height: 44px; border-radius: var(--radius-pill); border: 1.5px solid transparent;
-  font-family: var(--font-display); font-weight: 700; font-size: 14.5px; letter-spacing: 0.01em; line-height: 1;
-  white-space: nowrap; cursor: pointer;
-  transition: transform .15s var(--ease), box-shadow .2s var(--ease), background .2s, color .2s, border-color .2s;
+
+@media (min-width:600px){
+  .wrap{padding:0 32px}
+  .emergency-strip .em-long{display:inline}
+  .hero-ctas{flex-direction:row;flex-wrap:wrap;align-items:center}
+  .hero-ctas .btn{width:auto}
+  .hero-ctas .btn-line{display:inline-flex}
+  .hero-call{display:none}
+  .tcards{grid-template-columns:1fr 1fr}
+  .feat{grid-template-columns:1fr 1fr}
+  .dir{grid-template-columns:1fr 1fr}
+  .reviews-grid{grid-template-columns:1fr 1fr}
+  .tele-foot{flex-direction:row;align-items:center;justify-content:space-between}
+  .tele-foot .btn{align-self:auto;flex:none}
+  .cta-photo-actions{flex-direction:row;flex-wrap:wrap}
+  .map{aspect-ratio:4/3}
+  .footer-grid{grid-template-columns:1fr 1fr}
+  .footer-brand{grid-column:1/-1}
+  .rcard{max-width:560px}
 }
-.btn svg { flex-shrink: 0; }
-.btn:active { transform: translateY(1px); }
-.btn-primary { background: var(--brand-deep); color: #fff; box-shadow: 0 8px 18px -8px rgba(17,114,171,0.55); }
-.btn-primary:hover { background: var(--brand-deep-ink); box-shadow: 0 12px 24px -8px rgba(17,114,171,0.6); }
-.btn-wa { background: var(--wa); color: #fff; box-shadow: 0 6px 16px -4px rgba(37,211,102,0.45); }
-.btn-wa:hover { background: var(--wa-ink); transform: translateY(-1px); box-shadow: 0 10px 22px -4px rgba(37,211,102,0.55); }
-.btn-ghost { color: var(--ink-800); background: #fff; border-color: var(--ink-200); }
-.btn-ghost:hover { border-color: var(--brand-deep); color: var(--brand-deep); background: var(--brand-deep-soft); }
-.btn-white { background: #fff; color: var(--brand-navy); }
-.btn-white:hover { background: var(--brand-deep-soft); transform: translateY(-1px); }
-.btn-lg { padding: 18px 28px; font-size: 15.5px; }
-
-.emergency-strip { background: #B91C1C; color: #fff; padding: 7px 16px; font-size: 12.5px; text-align: center; font-weight: 500; }
-.emergency-strip strong { font-weight: 700; }
-.emergency-strip a { color: #fff; text-decoration: underline; text-underline-offset: 2px; font-weight: 700; }
-
-.nav-wrap {
-  position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.94);
-  backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px);
-  border-bottom: 1px solid var(--ink-100);
+@media (min-width:761px){
+  .nav{height:68px;gap:24px}
+  .nav-brand img{height:38px}
+  .nav-cta .btn-line{display:inline-flex}
+  .float-on .nav-cta .btn-main{opacity:1;transform:none;visibility:visible}
+  .sec{padding:112px 0}
+  .footer{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+  .come{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:56px}
+  .come-photo{aspect-ratio:4/5;position:sticky;top:100px}
 }
-.nav { display: flex; align-items: center; gap: 20px; height: 72px; }
-.nav-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.nav-brand img { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
-.brand-text { display: flex; flex-direction: column; line-height: 1.1; font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--ink-900); letter-spacing: -0.02em; min-width: 0; }
-.nav-brand-sub { font-family: var(--font-display); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: var(--brand-deep); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nav-cta { margin-left: auto; display: flex; gap: 10px; align-items: center; }
-
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: var(--font-display); font-weight: 700; font-size: 11.5px;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-deep); margin-bottom: 16px;
+@media (min-width:1080px){
+  .nav-menu{display:flex;gap:2px;margin-left:auto}
+  .nav-menu a{font-size:14px;font-weight:500;color:var(--tinta-2);padding:10px 12px;border-radius:10px;transition:color .15s,background-color .15s}
+  .nav-menu a:hover{color:var(--aqua-ink);background:rgba(79,190,206,.12)}
+  .nav-menu + .nav-cta{margin-left:8px}
+  .wrap{padding:0 40px}
+  .hero-grid{grid-template-columns:minmax(0,1fr) minmax(0,460px);gap:64px;align-items:start;padding-top:36px;padding-bottom:96px}
+  .hero-lead{font-size:18.5px;margin-top:20px}
+  .fare{max-width:520px;margin-top:28px}
+  .hero-ctas{margin-top:26px}
+  .rcard{max-width:none}
+  .tcards{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .tele .sec-head{max-width:none;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:64px;align-items:end;margin-bottom:44px}
+  .tele .sec-head h2{margin-bottom:0}
+  .zero{margin:0;justify-content:flex-end}
+  .feat{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .dir{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}
+  .reviews-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .faq-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:72px;align-items:start}
+  .faq-aside{position:sticky;top:120px}
+  .map-grid{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}
+  .map{aspect-ratio:auto;min-height:540px}
+  .pin-label{left:28px;top:-74px}
+  .cta-photo::before{background:linear-gradient(90deg,rgba(7,31,53,.95) 0%,rgba(7,31,53,.84) 45%,rgba(7,31,53,.35) 100%)}
+  .cta-photo .wrap{padding-top:136px;padding-bottom:136px}
+  .footer-grid{grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px}
+  .footer-brand{grid-column:auto}
 }
-.eyebrow::before { content: ''; width: 18px; height: 2px; border-radius: 2px; background: var(--brand-teal); flex-shrink: 0; }
-.breadcrumb { margin-bottom: 22px; }
-.breadcrumb ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-500); }
-.breadcrumb li { display: inline-flex; align-items: center; gap: 6px; }
-.breadcrumb li + li::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid var(--ink-300); border-top: 1.5px solid var(--ink-300); transform: rotate(45deg); margin-right: 4px; }
-.breadcrumb a { color: var(--ink-500); padding: 4px 0; transition: color .15s; }
-.breadcrumb a:hover { color: var(--brand-deep); }
-.breadcrumb .current { color: var(--ink-800); font-weight: 600; }
-
-.sec { padding: 88px 0; }
-.sec-alt { background: var(--ink-50); }
-.sec-head { max-width: 720px; margin: 0 0 40px; }
-.sec-head.center { margin-left: auto; margin-right: auto; text-align: center; }
-.sec-head h2 {
-  font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3.2vw, 38px);
-  line-height: 1.12; letter-spacing: -0.025em; color: var(--ink-900); margin-bottom: 12px; text-wrap: balance;
+@media (min-width:1440px){
+  .hero-grid{grid-template-columns:minmax(0,1fr) minmax(0,520px)}
 }
-.sec-head h2 em { font-style: italic; color: var(--brand-teal-ink); }
-.sec-head p { font-size: 17px; line-height: 1.6; color: var(--ink-600); text-wrap: pretty; }
-
-.hero-photo {
-  position: relative; margin: 0; border-radius: var(--radius-lg); overflow: hidden;
-  box-shadow: var(--shadow-lg); border: 6px solid #fff; aspect-ratio: 4 / 3.3; background: var(--ink-100);
+@media (max-width:480px){
+  .rm-dest{padding:5px 10px 5px 5px;gap:7px}
+  .rm-dest img{width:36px;height:30px}
+  .rm-dest span{display:none}
+  .rm-dest b{font-size:11.5px}
 }
-.hero-photo img { width: 100%; height: 100%; object-fit: cover; }
-.hero-photo figcaption {
-  position: absolute; left: 14px; right: 14px; bottom: 14px; padding: 14px 18px; border-radius: 14px;
-  background: rgba(10,26,40,0.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  color: #fff; font-family: var(--font-display);
+@media (max-width:370px){
+  .fare-v{font-size:1.7rem}
+  .fare > div{padding:12px 12px 13px}
+  .tk-v{font-size:1.1rem}
+  .chip{padding:0 12px}
 }
-.hero-photo figcaption small { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 4px; }
-.hero-photo figcaption span { display: block; font-size: 15px; font-weight: 700; line-height: 1.35; }
-
-.faq-list { max-width: 800px; margin: 0 auto; display: grid; gap: 10px; }
-.faq-list details { background: #fff; border: 1px solid var(--ink-200); border-radius: 14px; transition: border-color .2s, box-shadow .2s; }
-.faq-list details[open] { border-color: rgba(79,190,206,0.7); box-shadow: var(--shadow-sm); }
-.faq-list summary {
-  cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px;
-  padding: 18px 20px; min-height: 56px; border-radius: 14px;
-  font-family: var(--font-display); font-weight: 700; font-size: 16px; line-height: 1.4; color: var(--ink-900);
-}
-.faq-list summary::-webkit-details-marker { display: none; }
-.faq-list summary:hover { color: var(--brand-deep); }
-.faq-list summary svg { flex-shrink: 0; width: 32px; height: 32px; padding: 7px; border-radius: 50%; background: var(--brand-deep-soft); color: var(--brand-deep); transition: transform .2s var(--ease), background .2s; }
-.faq-list details[open] summary svg { transform: rotate(180deg); background: var(--brand-deep); color: #fff; }
-.faq-list .answer { padding: 0 20px 20px; font-size: 15.5px; line-height: 1.7; color: var(--ink-600); animation: faqIn .22s var(--ease); }
-.faq-list .answer strong { color: var(--ink-900); }
-@keyframes faqIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-
-.cta-band { position: relative; overflow: hidden; text-align: center; color: #fff; padding: 80px 0; background: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-deep) 100%); }
-.cta-band::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(800px 400px at 95% -10%, rgba(79,190,206,0.32), transparent 55%), radial-gradient(600px 600px at 5% 120%, rgba(79,190,206,0.16), transparent 55%); }
-.cta-band > .container { position: relative; }
-.cta-band h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 3.8vw, 44px); line-height: 1.1; letter-spacing: -0.025em; margin: 0 auto 14px; max-width: 22ch; text-wrap: balance; }
-.cta-band h2 em { font-style: italic; color: var(--brand-teal); }
-.cta-band p { font-size: 17px; max-width: 580px; margin: 0 auto 32px; color: rgba(255,255,255,0.9); }
-.cta-band .ctas { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-
-.footer { background: #0A1A28; color: rgba(255,255,255,0.72); padding: 48px 0 32px; position: relative; font-size: 14px; }
-.footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--brand-teal) 0%, var(--brand-deep) 50%, var(--brand-teal) 100%); }
-.footer-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; align-items: flex-start; }
-.footer-brand { display: flex; gap: 12px; align-items: center; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 16px; }
-.footer-brand img { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
-.footer-brand small { display: block; font-size: 13px; font-weight: 500; font-family: var(--font-body); color: rgba(255,255,255,0.7); margin-top: 2px; }
-.footer-links { display: flex; flex-wrap: wrap; gap: 0 20px; list-style: none; margin: 0; padding: 0; }
-.footer-links a { display: inline-block; padding: 10px 0; color: rgba(255,255,255,0.78); transition: color .15s; }
-.footer-links a:hover { color: #fff; }
-.footer-foot { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12.5px; color: rgba(255,255,255,0.62); }
-.footer-foot a { color: rgba(255,255,255,0.8); text-decoration: underline; text-underline-offset: 2px; }
-
-.wa-float { position: fixed; right: 22px; bottom: 22px; z-index: 70; width: 58px; height: 58px; border-radius: 50%; background: var(--wa); color: #fff; display: grid; place-items: center; box-shadow: 0 12px 28px rgba(37,211,102,0.42); transition: transform .2s var(--ease); }
-.wa-float:hover { transform: scale(1.06); }
-.mob-bar {
-  display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; gap: 8px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--ink-100); box-shadow: 0 -8px 24px rgba(11,79,122,0.10);
-}
-.mob-bar a { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 12px; border-radius: 12px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; white-space: nowrap; transition: transform .15s var(--ease); }
-.mob-bar a:active { transform: scale(.97); }
-.mob-bar svg { flex-shrink: 0; }
-.mob-bar .mb-tel { flex: 0 0 auto; padding: 12px 18px; background: #fff; color: var(--brand-navy); border: 1.5px solid var(--ink-200); }
-.mob-bar .mb-wa { background: var(--wa); color: #fff; box-shadow: 0 6px 16px -6px rgba(37,211,102,0.6); }
-@media (max-width: 720px) {
-  .container { padding: 0 18px; }
-  .nav { height: 64px; gap: 10px; }
-  .nav-brand img { width: 36px; height: 36px; }
-  .brand-text { font-size: 15.5px; }
-  .nav-brand-sub { font-size: 9.5px; }
-  .nav-wa-btn { padding: 0; width: 44px; font-size: 0; gap: 0; }
-  .emergency-strip { font-size: 12px; padding: 6px 12px; }
-  .sec { padding: 56px 0; }
-  .sec-head { margin-bottom: 28px; }
-  .sec-head p { font-size: 16px; }
-  .hero-photo { aspect-ratio: 16 / 10; border-width: 4px; border-radius: 20px; }
-  .hero-photo figcaption { left: 10px; right: 10px; bottom: 10px; padding: 10px 14px; }
-  .hero-photo figcaption span { font-size: 14px; }
-  .faq-list summary { font-size: 15.5px; }
-  .cta-band { padding: 56px 0; }
-  .cta-band .ctas { display: flex; flex-direction: column; }
-  .cta-band .btn { width: 100%; }
-  .footer-row { flex-direction: column; }
-  .mob-bar { display: flex; }
-  body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-  .wa-float { display: none; }
-}
-@media (max-width: 400px) { .mob-bar .mb-long { display: none; } }
-@media (max-width: 360px) { .brand-text { font-size: 14.5px; } }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
-
-/* ── Hero ─────────────────────────────────── */
-.hero {
-  position: relative; overflow: hidden; padding: 40px 0 72px;
-  background: radial-gradient(900px 420px at 100% 0%, rgba(79,190,206,0.12), transparent 60%), linear-gradient(180deg, #fff 0%, var(--ink-50) 100%);
-  border-bottom: 1px solid var(--ink-100);
-}
-.hero-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 56px; align-items: center; }
-.hero h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 4.6vw, 54px); line-height: 1.06; letter-spacing: -0.03em; color: var(--ink-900); margin: 0 0 20px; text-wrap: balance; }
-.hero h1 em { font-style: italic; color: var(--brand-teal-ink); }
-.hero .lead { font-size: 18px; line-height: 1.6; color: var(--ink-600); max-width: 60ch; margin-bottom: 22px; text-wrap: pretty; }
-.rating-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 10px; margin-bottom: 26px; background: #fff; border: 1px solid var(--ink-200); border-radius: var(--radius-pill); font-size: 13.5px; color: var(--ink-600); box-shadow: var(--shadow-xs); }
-.rating-chip .stars { display: inline-flex; gap: 1px; color: var(--star); }
-.rating-chip strong { font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--ink-900); }
-.hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
-.hero-facts { list-style: none; margin: 0; padding: 18px 0 0; border-top: 1px solid var(--ink-200); display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; font-size: 14px; color: var(--ink-700); }
-.hero-facts li { display: flex; align-items: center; gap: 10px; }
-.hero-facts svg { color: var(--brand-teal-ink); flex-shrink: 0; }
-
-/* ── Franja de confianza ─────────────────── */
-.trust-strip { background: #fff; border-bottom: 1px solid var(--ink-100); }
-.trust-strip ul { list-style: none; margin: 0 auto; padding: 22px 28px; max-width: 1200px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.trust-strip li { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; color: var(--ink-800); line-height: 1.35; }
-.trust-strip .ico { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: var(--brand-deep-soft); color: var(--brand-deep); }
-
-/* ── Tarjetas de acción ──────────────────── */
-.cards-cta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.card-cta { position: relative; display: flex; flex-direction: column; padding: 28px; background: #fff; border: 1px solid var(--ink-100); border-radius: var(--radius); box-shadow: var(--shadow-xs); transition: transform .2s var(--ease), box-shadow .2s, border-color .2s; }
-.card-cta:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--brand-teal); }
-.card-cta .ico { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--brand-deep-soft); color: var(--brand-deep); margin-bottom: 18px; }
-.card-cta h3 { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--ink-900); margin-bottom: 8px; letter-spacing: -0.01em; }
-.card-cta p { font-size: 14.5px; line-height: 1.6; color: var(--ink-600); margin-bottom: 20px; flex-grow: 1; }
-.card-cta a { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--brand-deep); }
-.card-cta a::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius); }
-.card-cta a svg { transition: transform .2s var(--ease); }
-.card-cta:hover a svg { transform: translateX(3px); }
-
-/* ── Especialidades ──────────────────────── */
-.esp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-.esp-card { position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 24px 22px 20px; background: #fff; border: 1px solid var(--ink-100); border-radius: var(--radius); transition: transform .25s var(--ease), box-shadow .25s, border-color .2s; }
-.esp-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--brand-teal); transition: height .25s; }
-.esp-card.dental::before { background: var(--brand-teal-ink); }
-.esp-card.alt::before { background: var(--brand-deep); }
-.esp-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(15,63,104,0.12); border-color: var(--brand-teal); }
-.esp-card .ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-deep-soft); color: var(--brand-deep); margin-bottom: 16px; }
-.esp-card.dental .ico { background: var(--brand-teal-soft); color: var(--brand-teal-ink); }
-.esp-card.alt { background: linear-gradient(180deg, #fff 0%, var(--brand-deep-soft) 100%); }
-.esp-card h3 { font-family: var(--font-display); font-weight: 800; font-size: 16.5px; color: var(--ink-900); margin-bottom: 6px; letter-spacing: -0.01em; }
-.esp-card .desc { font-size: 13.5px; line-height: 1.55; color: var(--ink-600); margin-bottom: 16px; flex-grow: 1; }
-.esp-card .price { display: flex; flex-direction: column; gap: 4px; padding-top: 14px; border-top: 1px dashed var(--ink-200); font-variant-numeric: tabular-nums; }
-.esp-card .price span { font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--ink-900); letter-spacing: -0.01em; }
-.esp-card .price span.fonasa { color: var(--accent-success); }
-.esp-card .price small { font-family: var(--font-body); font-weight: 500; font-size: 12px; color: var(--ink-500); letter-spacing: 0; }
-.esp-card .price a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--brand-deep); }
-.esp-card .price a:hover { color: var(--brand-deep-ink); text-decoration: underline; text-underline-offset: 3px; }
-
-/* ── Cómo llegar ─────────────────────────── */
-.route-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
-.route-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-.stat { display: flex; align-items: center; gap: 14px; padding: 18px; background: #fff; border: 1px solid var(--ink-200); border-radius: var(--radius); }
-.stat .ico { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: var(--brand-deep-soft); color: var(--brand-deep); }
-.stat b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; color: var(--brand-navy); font-variant-numeric: tabular-nums; }
-.stat span { display: block; margin-top: 3px; font-size: 13px; color: var(--ink-600); }
-.stat.wide { grid-column: 1 / -1; }
-.stat.wide b { font-size: 16px; line-height: 1.35; letter-spacing: -0.005em; }
-.route-text p { font-size: 15.5px; line-height: 1.7; color: var(--ink-700); margin-bottom: 12px; }
-.route-text p strong { color: var(--ink-900); }
-.tip { display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: var(--brand-teal-soft); font-size: 14px; line-height: 1.55; color: var(--ink-700); }
-.tip svg { color: var(--brand-teal-ink); flex-shrink: 0; margin-top: 1px; }
-.tip strong { color: var(--ink-900); }
-.photos { display: grid; grid-template-columns: 1.4fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; }
-.photos figure { position: relative; margin: 0; border-radius: var(--radius); overflow: hidden; background: var(--ink-100); }
-.photos figure:first-child { grid-row: 1 / 3; }
-.photos img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1400 / 1173; }
-.photos figure:first-child img { aspect-ratio: auto; }
-.photos figcaption { position: absolute; left: 10px; bottom: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(10,26,40,0.7); color: #fff; font-family: var(--font-display); font-size: 12px; font-weight: 600; }
-
-/* ── Reseñas ─────────────────────────────── */
-.reviews-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
-.review-card { position: relative; padding: 26px 24px 22px; background: #fff; border: 1px solid var(--ink-100); border-radius: var(--radius); box-shadow: var(--shadow-xs); }
-.review-card .stars { color: var(--star); font-size: 16px; letter-spacing: 2px; margin-bottom: 12px; }
-.review-card .text { font-size: 15px; line-height: 1.65; color: var(--ink-700); margin-bottom: 16px; }
-.review-card .author { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--ink-900); }
-.review-card .date { font-size: 12.5px; color: var(--ink-500); margin-top: 2px; }
-.reviews-meta { text-align: center; margin-top: 28px; font-size: 14px; color: var(--ink-600); }
-.reviews-meta a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 700; color: var(--brand-deep); }
-
-@media (max-width: 1023px) {
-  .hero-grid { grid-template-columns: 1fr; gap: 32px; }
-  .hero-photo { aspect-ratio: 16 / 9; max-width: 720px; }
-  .trust-strip ul { grid-template-columns: 1fr 1fr; }
-  .cards-cta { grid-template-columns: 1fr; }
-  .route-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 720px) {
-  .hero { padding: 24px 0 40px; }
-  .hero .lead { font-size: 17px; }
-  .hero .ctas { flex-direction: column; }
-  .hero .ctas .btn { width: 100%; }
-  .hero-facts { grid-template-columns: 1fr; }
-  .trust-strip ul { padding: 18px; gap: 14px; }
-  .trust-strip li { font-size: 13px; }
-  .card-cta { padding: 22px; }
-  .esp-grid { grid-template-columns: 1fr; gap: 12px; }
-  .route-stats { grid-template-columns: 1fr 1fr; }
-  .stat { padding: 14px; gap: 10px; }
-  .stat b { font-size: 22px; }
-  .photos { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
-  .photos figure:first-child { grid-row: auto; grid-column: 1 / -1; }
-  .photos figure:first-child img { aspect-ratio: 16 / 10; }
-}
-@media (max-width: 400px) {
-  .trust-strip ul { grid-template-columns: 1fr; }
-  .route-stats { grid-template-columns: 1fr; }
+@media (max-height:500px) and (orientation:landscape){
+  .nav-wrap{position:static}
+  .emergency-strip{display:none}
+  .hero-grid{padding-top:12px}
+  .hero h1{font-size:2rem}
+  .hero-lead{display:none}
+  .fare{margin-top:12px;max-width:520px}
+  .hero-ctas{margin-top:12px}
+  .hero-meta{display:none}
 }
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W428KN3R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<script>document.documentElement.classList.add('js');</script>
 
-<a href="#contenido" class="skip-link">Saltar al contenido</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></g></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.25"/><path d="M12 7v5l3 2"/></g></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13.5" height="12" rx="2.5"/><path d="M16 10.5 21.5 7v10L16 13.5"/></g></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16.5h14M4.5 16.5V12l2-5.2A2 2 0 0 1 8.4 5.5h7.2a2 2 0 0 1 1.9 1.3l2 5.2v4.5"/><path d="M4.5 12h15"/><circle cx="7.5" cy="16.5" r="1.8"/><circle cx="16.5" cy="16.5" r="1.8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.5 9.5 17.5 19.5 7"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></g></symbol>
+  <symbol id="i-two" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="11" height="11" rx="2.5"/><path d="M10 9h8.5A2.5 2.5 0 0 1 21 11.5V18a2.5 2.5 0 0 1-2.5 2.5H12A2.5 2.5 0 0 1 9.5 18v-2.5"/></g></symbol>
+  <symbol id="i-id" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2.2"/><path d="M5.2 16c.6-1.500 1.800-2.300 3.300-2.300s2.700.8 3.300 2.300M14.500 10h4M14.500 13.500h3"/></g></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4.500h11.500l-2 3.750 2 3.750H5"/></g></symbol>
+  <symbol id="i-route" viewBox="0 0 44 16"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h38" stroke-dasharray="1 5"/><path d="M35 3l5 5-5 5"/></g></symbol>
+</svg>
 
-<div class="emergency-strip" role="note"><strong>Emergencias:</strong> llame al SAMU <a href="tel:131">131</a> · No somos servicio de urgencias</div>
+<div class="emergency-strip">
+  <strong>Emergencias:</strong> llama al SAMU <a href="tel:131">131</a><span class="em-long"> · Este centro no es servicio de urgencias</span>
+</div>
 
-<header class="nav-wrap">
-  <div class="container nav">
-    <a href="https://centromedicocarampangue.cl/" class="nav-brand" aria-label="Centro Médico Carampangue, ir al inicio">
-      <img src="https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png" alt="" width="44" height="44">
-      <span class="brand-text">Carampangue<span class="nav-brand-sub">Atendiendo a {{COMUNA_NAME}}</span></span>
-    </a>
-    <div class="nav-cta">
-      <a class="btn btn-wa nav-wa-btn" href="{{WA_LINK}}" rel="noopener" aria-label="Agendar por WhatsApp"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar por WhatsApp</a>
-    </div>
+<header class="nav-wrap" id="top">
+  <div class="wrap">
+    <nav class="nav" aria-label="Principal">
+      <a href="https://centromedicocarampangue.cl" class="nav-brand" aria-label="Centro Médico Carampangue — Inicio">
+        <img src="/static/images/ortodoncia/logo-cmc.png" alt="Centro Médico Carampangue" width="168" height="40" />
+      </a>
+      <div class="nav-menu">
+        <a href="#ruta">La ruta</a>
+        <a href="#sin-viajar">Sin viajar</a>
+        <a href="#especialidades">Especialidades</a>
+        <a href="#preguntas">Preguntas</a>
+        <a href="#ubicacion">Ubicación</a>
+      </div>
+      <div class="nav-cta">
+        <a href="https://centromedicocarampangue.cl" class="btn btn-line">Todo el centro</a>
+        <a href="{{WA_LINK}}%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=nav&amp;utm_campaign=comuna_arauco"
+           class="btn btn-main" target="_blank" rel="noopener" data-wa-btn="menu" aria-label="Agendar por WhatsApp">
+          <span class="wa-dot" aria-hidden="true"><svg><use href="#i-wa"/></svg></span>
+          Agendar
+        </a>
+      </div>
+    </nav>
   </div>
 </header>
 
-<main id="contenido">
+<main>
 
-<section class="hero">
-  <div class="container hero-grid">
-    <div>
-      <nav class="breadcrumb" aria-label="Ruta de navegación">
-        <ol>
-          <li><a href="https://centromedicocarampangue.cl/">Inicio</a></li>
-          <li><a href="https://centromedicocarampangue.cl/comuna">Atención por comuna</a></li>
-          <li><span class="current" aria-current="page">{{COMUNA_NAME}}</span></li>
-        </ol>
+<!-- ═══════════ HERO + ELEMENTO FIRMA ═══════════ -->
+<section class="hero" aria-labelledby="hero-h1">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <nav class="crumbs in" style="--d:0" aria-label="Ruta de navegación">
+        <a href="https://centromedicocarampangue.cl/">Inicio</a><i aria-hidden="true">/</i>
+        <a href="/comuna/">Pacientes por comuna</a><i aria-hidden="true">/</i>
+        <span aria-current="page">{{COMUNA_NAME}}</span>
       </nav>
-      <div class="eyebrow">Atención médica para {{COMUNA_NAME}}</div>
-      <h1>Médicos y especialistas <em>cerca de {{COMUNA_NAME}}</em></h1>
-      <p class="lead">{{HERO_LEAD}}</p>
-      <div class="rating-chip">
-        <span class="stars" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
-        <span><strong>{{RATING_VALUE}}</strong> en Google · {{RATING_COUNT}} reseñas verificadas</span>
+      <span class="kicker in" style="--d:1">Para pacientes de {{COMUNA_NAME}}</span>
+      <h1 id="hero-h1" class="in" style="--d:1">Tu centro médico, <span class="nw">a <span class="t">{{TIME_DIST}}</span></span> de&nbsp;{{COMUNA_NAME}}.</h1>
+      <p class="hero-lead in" style="--d:2">Médico, dentista y especialistas en una sola dirección: <b>Monsalve 102, Carampangue</b>, a {{KM_DIST}}&nbsp;km por {{BUS_DIST}}. Y cinco consultas por videollamada, sin salir de {{COMUNA_NAME}}.</p>
+      <div class="fare in" style="--d:3" role="group" aria-label="Precios de entrada">
+        <div class="main">
+          <div class="fare-k">Médico general</div>
+          <div class="fare-v">$7.880</div>
+          <div class="fare-s">con bono Fonasa, se emite aquí con tu huella</div>
+        </div>
+        <div>
+          <div class="fare-k">Dentista</div>
+          <div class="fare-v">$15.000</div>
+          <div class="fare-s">evaluación · débito o crédito</div>
+        </div>
       </div>
-      <div class="ctas">
-        <a class="btn btn-primary btn-lg" href="{{WA_LINK}}" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar ahora por WhatsApp</a>
-        <a class="btn btn-ghost btn-lg" href="tel:+56442965226"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Llamar a recepción</a>
+      <div class="hero-ctas in" style="--d:4">
+        <a href="{{WA_LINK}}%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=hero&amp;utm_campaign=comuna_arauco"
+           class="btn btn-main" id="cta-hero-wa" target="_blank" rel="noopener" data-wa-btn="hero">
+          <span class="wa-dot" aria-hidden="true"><svg><use href="#i-wa"/></svg></span>
+          Agendar mi hora por WhatsApp
+        </a>
+        <a href="tel:+56442965226" class="btn btn-line"><svg width="18" height="18" aria-hidden="true"><use href="#i-phone"/></svg>(44) 296 5226</a>
+        <a href="tel:+56442965226" class="hero-call">¿Prefieres llamar? <b>(44) 296 5226</b></a>
       </div>
-      <ul class="hero-facts">
-        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg> A {{KM_DIST}} km de {{COMUNA_NAME}}</li>
-        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg> Fonasa MLE + particular</li>
-        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> 19 especialidades</li>
-        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg> Agenda 24/7 por WhatsApp</li>
-      </ul>
+      <div class="hero-meta in" style="--d:5">
+        <span><svg width="15" height="15" aria-hidden="true"><use href="#i-clock"/></svg>Lun–vie 08:00–21:00 · sáb 09:00–14:00</span>
+        <span><svg width="15" height="15" aria-hidden="true"><use href="#i-check"/></svg>WhatsApp responde a toda hora</span>
+      </div>
     </div>
-    <figure class="hero-photo">
-      <picture>
-        <source srcset="https://centromedicocarampangue.cl/static/sitio/fachada-centro-medico-carampangue.webp" type="image/webp">
-        <img src="https://centromedicocarampangue.cl/static/sitio/fachada-centro-medico-carampangue.jpg" alt="Fachada del Centro Médico Carampangue, en Monsalve 102, esquina República" width="1448" height="1086" decoding="async">
-      </picture>
-      <figcaption><small>Sede única</small><span>Monsalve 102, esquina República, Carampangue</span></figcaption>
+
+    <figure class="rcard in" style="--d:3" id="ruta" data-c="{{SLUG}}" data-mode="auto" aria-label="Ruta desde {{COMUNA_NAME}} hasta el centro">
+      <div class="tk">
+        <div class="tk-row">
+          <div class="tk-a"><span class="tk-k">Desde</span><b class="tk-v" id="tk-from"><span class="a-only" id="tk-from-n">{{COMUNA_NAME}}</span><span class="v-only">Tu casa</span></b></div>
+          <svg class="tk-arrow" aria-hidden="true"><use href="#i-route"/></svg>
+          <div class="tk-b"><span class="tk-k">Hasta</span><b class="tk-v"><span class="a-only">Monsalve 102</span><span class="v-only">Videollamada</span></b></div>
+        </div>
+        <ul class="tk-stats num">
+          <li><b><span class="a-only" id="tk-km">{{KM_DIST}} km</span><span class="v-only">0 km</span></b></li>
+          <li><b><span class="a-only nw" id="tk-min">{{TIME_DIST}}</span><span class="v-only">Sin viaje</span></b><span class="a-only">en auto</span></li>
+        </ul>
+        <p class="tk-via"><span class="a-only">Por <b id="tk-ruta">{{BUS_DIST}}</b></span><span class="v-only">El link de Medilink te llega por <b>WhatsApp</b></span></p>
+      </div>
+      <div class="rm">
+        <svg class="rm-svg" viewBox="0 0 600 788" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rm-t rm-d"><title id="rm-t">Ruta desde {{COMUNA_NAME}} hasta el Centro Médico Carampangue</title><desc id="rm-d">Mapa de la Provincia de Arauco. Desde {{COMUNA_NAME}} son {{KM_DIST}} km por {{BUS_DIST}}, unos {{TIME_DIST}} en auto, hasta Monsalve 102, Carampangue.</desc><rect class="m-sea" width="600" height="788"/><path class="m-land" d="M548.6 -62.0l-1.7 7.8 -4.8 9.1 -1.6 1.5 -2.8 0.1 0 -1.2 -2.1 1.1 -5.2 -0.3 0.7 2.3 -1.7 0.8 0.3 3.1 -1.6 1.3 -2.6 -0.3 -2.9 8.3 -1.3 1.1 1.9 3.3 -0.4 3.3 4.3 -1.7 6.1 4.1 0.9 5 -1.9 1.1 -0.2 2 -1.4 0.3 0.3 1.6 4.5 2.2 2.6 -1 1.2 2.2 0.2 4.5 -1.5 4.2 -2.7 1.6 -4 -0.5 -8.5 8.2 0.1 3.5 -2.4 4 1 0.9 0.7 5.6 1.6 0.5 0.2 1.8 -8.3 10.2 -4.7 0.2 -1.6 6.5 -2.1 2.5 0.5 2.2 2.2 -0 -2.9 4.5 -25.7 25.8 -24.2 22.2 -16.5 11.7 -16.1 6.1 -42.9 11.1 -18.6 2.7 -27.4 -0.2 -26.5 -5.9 -5.8 -3.1 -1.5 -2.8 -0.6 -4.3 2.5 -1.6 -1.6 -4.4 -7 -4 -2.9 -3.1 -3.1 -4.5 0.2 -4.3 -2.2 -0.3 -1.6 -2.7 -5.6 2.3 -16.7 0.6 -3 -1.1 -1.6 -3.7 -15.7 4.8 -17.6 1.5 -11.5 -4.8 -1.9 -5.4 -6.1 -1.2 -9 -4.6 -3 -2.9 3.6 -9.3 -0.5 -5.4 2.8 -4.3 0.1 -1.6 -1.2 1 0.1 -1.4 -1.3 0.5 3.5 -2.8 -1.3 -1.3 -3.5 1.9 -0.1 -3.1 -4.2 0.2 -2.7 -2.7 1.4 -1.7 -2.7 -1.5 -1.4 -2.5 3 -4.7 -0.7 -4.2 -3.4 0.2 -3.8 -2.4 -4.2 -0.9 -0.9 0.7 1.5 0.5 -0.7 0.5 0.7 1 -2 0.8 0.4 1.3 -1.6 0.2 0.5 1.3 -1.5 0.6 -0.5 1.6 -1.8 0.2 0.8 1.4 -2.2 2.7 -3.5 1.4 -3.7 -1.3 0.5 0.9 -1 1.4 -2.9 0.6 0.5 1.1 -1.5 0.4 0.7 0.9 -3 9.2 -1.7 2.3 -2 -0.4 -2.8 3 -0.5 4.4 -1.6 2.8 -5.6 6.1 -4.2 0.1 -1.7 2.9 -3 -0.5 -0.3 1.5 -3.4 2.6 -1 4.1 0.7 0.8 -1.5 0.5 2.5 1 2.7 -0.4 -2.6 5 1.8 2.9 -0.7 2.3 -1.9 0.1 -0.8 2.1 -4.1 3 0.6 3.4 -2.6 0.8 1.2 1.3 -2 1.1 1.7 0.2 -0.9 1.1 0.6 1.2 -2.1 2 1.5 0.5 -1 1.6 -0.5 -0.6 -1.9 1.3 1.9 1.9 -0.8 1 1.2 1.9 -2.3 2.4 -0.8 -0.4 0.9 0.8 -1.5 2 3.1 1.7 0.6 1.8 -2.1 5.2 -2.5 0.2 -1.9 2.5 0.2 2.4 2.6 1.5 0.5 2.3 -3.7 3.2 0.6 2.1 -2.9 2.4 3.4 0.6 0.9 1.3 2.6 6.1 -0.1 5 -2.7 3.6 -1.8 0.4 -1.3 2.8 -2.4 0.7 -3.1 6.7 -2.1 0.8 1.2 0.8 -0.6 2 5.1 -4.2 3.8 0.5 3.8 3.7 1.6 6.9 -3.4 3.7 -2.3 0 0.2 3 -2.5 3.2 0 4.5 -2.5 1.4 -0.7 3.3 -1.2 0.4 -1.8 3.6 -0.1 2.4 -1.9 0.4 0.8 0.7 -0.9 2.2 -2.4 1.7 0.8 1.5 -3.4 1.7 -0.4 1.8 -2.5 2.5 0.1 1.4 5.3 -2.9 3.2 1.8 3.5 4.3 0.6 3.1 -1.3 3.5 -3.3 1.6 -0.6 2.3 -0.6 -0.5 0.5 1.3 -1.2 0.6 -0.8 2.8 1.1 2.2 -2.2 1.6 0.7 1.1 -1 3.2 -4 3.6 -0.4 2.1 2.9 -1.2 7.9 -8.7 3 -0.4 2.9 2 1.4 2.5 0.2 2.6 -1.1 2.3 6.8 -0.7 5.4 1 4.9 2.6 -0.3 2.2 1 0.2 -1.8 1.2 1.8 0.2 -0.1 1.8 4.6 -1.3 1.9 1 11.6 16.7 8.3 15.1 1 4.1 -0.1 4.1 -2.1 4 0.9 0.6 -1.9 3.3 3 -0.7 2.8 4.1 8 20.2 2.5 12.4 2.7 6.3 -0.2 6.6 -4.4 4.4 -0.2 4 2.8 10.2 -0.5 3.9 3.5 10.1 0.5 6.6 -1.7 4.2 -4.1 4.2 1.4 8.3 -1.2 8.6 -4.6 9.3 -9.4 4.9 -2.9 -0.1 -5.1 3.8 -8.8 11.9 -4.3 1.8 -5.5 -0.1 -2.6 3.1 -0.5 2.2 2.3 1.4 -1.1 1.4 0.3 3 -2 0.3 3 1.1 0.9 1 -0.8 1.2 2.4 2.9 1.7 -0.3 0.6 2.6 -0.7 2.1 -2.8 0.1 1.3 1.7 -3.8 9.8 -4.5 5.4 -5.3 2.6 -3.2 0.1 -1.8 -1.2 -0.8 -3 -1.8 0.2 1.3 -1.3 -2.4 -0.6 0.4 2.6 -3.3 4.2 -1.8 4.7 1.7 4.5 -2.7 3 0.4 6.8 -1.9 5.8 0.9 1 -1.9 0.9 -1.6 7.9 5.3 -2.1 1.1 0.6 2.5 2.7 3.4 8.5 2.1 8.7 -1.7 2 0.9 1.7 -2.1 4.9 3.3 2.7 0.4 3.5 2.6 3.5 -0.9 2.4 5.5 11.7 -0.7 3 -3.1 1.9 -0.5 2.9 3.6 2.6 0 2.7 -1.9 2.6 3.4 2.4 1.4 4.9 -4.2 8.6 4.2 5.1 -0.4 3.8 -4.4 5 -2.2 -1.8 -1.9 1.6 -2.6 -1.3 -0.7 1 1.2 2.2 -0.8 0.7 1.3 0.2 -0.4 1.2 1.6 1.1 3.9 -1.2 3 1.1 2 4.7 9.4 9.3 40.5 64 30.7 55.3 16.4 33.6 17.9 40.2 -0 -22.1 401.8 0 -0 -868 -91.4 0Z"/><path class="m-coast" d="M548.6 -62.0l-1.7 7.8 -4.8 9.1 -1.6 1.5 -2.8 0.1 0 -1.2 -2.1 1.1 -5.2 -0.3 0.7 2.3 -1.7 0.8 0.3 3.1 -1.6 1.3 -2.6 -0.3 -2.9 8.3 -1.3 1.1 1.9 3.3 -0.4 3.3 4.3 -1.7 6.1 4.1 0.9 5 -1.9 1.1 -0.2 2 -1.4 0.3 0.3 1.6 4.5 2.2 2.6 -1 1.2 2.2 0.2 4.5 -1.5 4.2 -2.7 1.6 -4 -0.5 -8.5 8.2 0.1 3.5 -2.4 4 1 0.9 0.7 5.6 1.6 0.5 0.2 1.8 -8.3 10.2 -4.7 0.2 -1.6 6.5 -2.1 2.5 0.5 2.2 2.2 -0 -2.9 4.5 -25.7 25.8 -24.2 22.2 -16.5 11.7 -16.1 6.1 -42.9 11.1 -18.6 2.7 -27.4 -0.2 -26.5 -5.9 -5.8 -3.1 -1.5 -2.8 -0.6 -4.3 2.5 -1.6 -1.6 -4.4 -7 -4 -2.9 -3.1 -3.1 -4.5 0.2 -4.3 -2.2 -0.3 -1.6 -2.7 -5.6 2.3 -16.7 0.6 -3 -1.1 -1.6 -3.7 -15.7 4.8 -17.6 1.5 -11.5 -4.8 -1.9 -5.4 -6.1 -1.2 -9 -4.6 -3 -2.9 3.6 -9.3 -0.5 -5.4 2.8 -4.3 0.1 -1.6 -1.2 1 0.1 -1.4 -1.3 0.5 3.5 -2.8 -1.3 -1.3 -3.5 1.9 -0.1 -3.1 -4.2 0.2 -2.7 -2.7 1.4 -1.7 -2.7 -1.5 -1.4 -2.5 3 -4.7 -0.7 -4.2 -3.4 0.2 -3.8 -2.4 -4.2 -0.9 -0.9 0.7 1.5 0.5 -0.7 0.5 0.7 1 -2 0.8 0.4 1.3 -1.6 0.2 0.5 1.3 -1.5 0.6 -0.5 1.6 -1.8 0.2 0.8 1.4 -2.2 2.7 -3.5 1.4 -3.7 -1.3 0.5 0.9 -1 1.4 -2.9 0.6 0.5 1.1 -1.5 0.4 0.7 0.9 -3 9.2 -1.7 2.3 -2 -0.4 -2.8 3 -0.5 4.4 -1.6 2.8 -5.6 6.1 -4.2 0.1 -1.7 2.9 -3 -0.5 -0.3 1.5 -3.4 2.6 -1 4.1 0.7 0.8 -1.5 0.5 2.5 1 2.7 -0.4 -2.6 5 1.8 2.9 -0.7 2.3 -1.9 0.1 -0.8 2.1 -4.1 3 0.6 3.4 -2.6 0.8 1.2 1.3 -2 1.1 1.7 0.2 -0.9 1.1 0.6 1.2 -2.1 2 1.5 0.5 -1 1.6 -0.5 -0.6 -1.9 1.3 1.9 1.9 -0.8 1 1.2 1.9 -2.3 2.4 -0.8 -0.4 0.9 0.8 -1.5 2 3.1 1.7 0.6 1.8 -2.1 5.2 -2.5 0.2 -1.9 2.5 0.2 2.4 2.6 1.5 0.5 2.3 -3.7 3.2 0.6 2.1 -2.9 2.4 3.4 0.6 0.9 1.3 2.6 6.1 -0.1 5 -2.7 3.6 -1.8 0.4 -1.3 2.8 -2.4 0.7 -3.1 6.7 -2.1 0.8 1.2 0.8 -0.6 2 5.1 -4.2 3.8 0.5 3.8 3.7 1.6 6.9 -3.4 3.7 -2.3 0 0.2 3 -2.5 3.2 0 4.5 -2.5 1.4 -0.7 3.3 -1.2 0.4 -1.8 3.6 -0.1 2.4 -1.9 0.4 0.8 0.7 -0.9 2.2 -2.4 1.7 0.8 1.5 -3.4 1.7 -0.4 1.8 -2.5 2.5 0.1 1.4 5.3 -2.9 3.2 1.8 3.5 4.3 0.6 3.1 -1.3 3.5 -3.3 1.6 -0.6 2.3 -0.6 -0.5 0.5 1.3 -1.2 0.6 -0.8 2.8 1.1 2.2 -2.2 1.6 0.7 1.1 -1 3.2 -4 3.6 -0.4 2.1 2.9 -1.2 7.9 -8.7 3 -0.4 2.9 2 1.4 2.5 0.2 2.6 -1.1 2.3 6.8 -0.7 5.4 1 4.9 2.6 -0.3 2.2 1 0.2 -1.8 1.2 1.8 0.2 -0.1 1.8 4.6 -1.3 1.9 1 11.6 16.7 8.3 15.1 1 4.1 -0.1 4.1 -2.1 4 0.9 0.6 -1.9 3.3 3 -0.7 2.8 4.1 8 20.2 2.5 12.4 2.7 6.3 -0.2 6.6 -4.4 4.4 -0.2 4 2.8 10.2 -0.5 3.9 3.5 10.1 0.5 6.6 -1.7 4.2 -4.1 4.2 1.4 8.3 -1.2 8.6 -4.6 9.3 -9.4 4.9 -2.9 -0.1 -5.1 3.8 -8.8 11.9 -4.3 1.8 -5.5 -0.1 -2.6 3.1 -0.5 2.2 2.3 1.4 -1.1 1.4 0.3 3 -2 0.3 3 1.1 0.9 1 -0.8 1.2 2.4 2.9 1.7 -0.3 0.6 2.6 -0.7 2.1 -2.8 0.1 1.3 1.7 -3.8 9.8 -4.5 5.4 -5.3 2.6 -3.2 0.1 -1.8 -1.2 -0.8 -3 -1.8 0.2 1.3 -1.3 -2.4 -0.6 0.4 2.6 -3.3 4.2 -1.8 4.7 1.7 4.5 -2.7 3 0.4 6.8 -1.9 5.8 0.9 1 -1.9 0.9 -1.6 7.9 5.3 -2.1 1.1 0.6 2.5 2.7 3.4 8.5 2.1 8.7 -1.7 2 0.9 1.7 -2.1 4.9 3.3 2.7 0.4 3.5 2.6 3.5 -0.9 2.4 5.5 11.7 -0.7 3 -3.1 1.9 -0.5 2.9 3.6 2.6 0 2.7 -1.9 2.6 3.4 2.4 1.4 4.9 -4.2 8.6 4.2 5.1 -0.4 3.8 -4.4 5 -2.2 -1.8 -1.9 1.6 -2.6 -1.3 -0.7 1 1.2 2.2 -0.8 0.7 1.3 0.2 -0.4 1.2 1.6 1.1 3.9 -1.2 3 1.1 2 4.7 9.4 9.3 40.5 64 30.7 55.3 16.4 33.6 17.9 40.2"/><path class="m-riv" d="M272.0 195.7l-10.2 -14.7 6.5 -8.5 -2.6 -4.2 5.1 -3.2M387.3 385.8l-5.3 -4.7 0.3 -3.7 -9 2.1 -11.3 -12.2 0.5 -6.4 -5.7 5 -0.4 -3.3 -4.3 -1.9 1.9 -10 -2.2 0.7 -6.1 -4.8 -3.4 3.3 -5.7 -2.5 -0.7 2M538.1 57.1l-2.5 -4.7 -4.3 -2.3 -7.7 -0.3 1.5 1.2 -2.8 5.7 -4.8 -3.2 -2.6 2.1 -4.9 -4.8M523.9 375.9l-6 -2.2 0.5 -2.1 -4.6 1.3 -0.9 -4.5 4.3 -1.4 -6.5 -8.5 -2.2 -9.2 -5.4 -0.6 2.9 -7.4 3.1 -2.1 -5.6 -6.5 2.8 -4 -2.4 -0.5 -6.3 -8.3 -0.1 -5.7 -6.1 -6.7 -8.8 -5.7 -9.7 -0.2 -2.4 -3.3 -7 -2.8 -9.4 -0.8 -4.7 -10.8 -4.1 2.5 -7.5 -1 -9.2 4.3 -4 -6.1 -4.6 -1.6 -0.7 -5.7 -7.2 -2.9 -3.5 4.2 -3.2 -0.2 -3 -8 0.4 -5.2 6.3 -0.6 1.4 -6.2 6.4 -6.4 3.1 -9.5 2 -1.2 1.9 3.1 3.3 -0.6 -1.4 -7.5 3.2 -5.9 20 -19.3 -0.4 -5.5 -8 -8.9 11 -8.3 -0 -4 5.6 -8.6 -6.8 -6.7 6.8 -2.1 -0.5 -4.9M294.1 459.8l-2 0.1 -0.1 -2.5 -1.8 0.8 -0.6 4.1 2.6 2.1 -2.5 5.1 -9.5 -4.1 -0.4 5.4 7.9 8.4 -7.6 4.9 -5 12.4 -4.6 1.7 1.1 7 -3.5 4.4 -11.3 0.8 -3.9 -10.4 -5.7 0.5 -0.2 8.4 6.7 4.2 -6.3 4 0.3 4.7 -2.3 3.3 -2 -7.1 -7.3 -4.6 -7.8 -8.7 -3.1 -9.6 -8.2 -4.2 -1.3 2.8 4 6.8 -3 6.5 6.6 8.5 -1.1 3.4M402.2 404.7l-3 -6.2 -4.1 -1.5 -7.8 -11.2M566.2 600.0l-10.8 -3.6 -1 -4.9 -10.1 -4.1 -1.8 -5.3 -5.2 2.5 -6.5 -2.7 -3.8 -7.5 -3.1 -0.7 -3 -5.2 -4.8 -0.2 -4.5 -9.4 -5.5 4.5 -10.9 -6.3 -7.6 0.5 -7.6 -2.7 -2.8 -6.2 -4.4 -0.2 -1.2 -4.2 -6.1 -4.5 -5.3 -0.2 0.4 -2.1 -6.4 4.1 -5.3 -0.4 -5.4 9.1 -5 -0.6 -2.1 -6.4 -4.6 2.1 -6.4 -1.2 -12.7 5.3 -8.7 -2 -5.9 2.3 -9.5 -6.1 -4.1 -9.7 -8.1 -6.4M226.5 115.1l4.1 3.5 1.9 -1.1 4.9 2.8 0.8 4.9 -2.2 2.5 2.1 3.7 2.8 -0.3 3.1 -4.3 5.9 2.5 3.9 5.1 9.5 -6.9 5.6 -0.7 3.5 -6.5 5.3 1.9 13.9 -0.3 8.3 5 1.6 -3.2M456.8 161.1l-2.3 -5.4 0.7 -6.7 -6.4 -1.9 -1.4 -3.2 1.7 -4.4 -5.2 -0.1 1.3 -7.6 -6.1 -4.4 -21 -4.7M442.0 130.5l-8.7 -3M328.3 826.0l-0 7.5 -4.2 2.5 0.6 7.1 3.5 3 0.1 13.4 -3.5 4.7 -6.5 2.8 -0.2 -6 -3.4 -2.9 -3.6 0.1 -1.9 11.9 -4.5 9.5 -1.8 -0.1 0.2 -2.6 -22.8 3.9 -2 -2.9 -5 1.4 -4.3 5.2 -7.5 1.9 -0.7 5.6 2.4 3.3 -2.3 8.6 8 17.4 -3 2.5M270.8 165.1l10.1 -4.6 -1 -5 4.4 -2.8M326.7 368.2l-2.5 -1.4M335.9 349.3l2.1 3 -3.6 1.7 -0.8 6.6 -4.5 7.8 -6.1 -1.8 -1 2.8 -3.8 0.5 -1.8 -2.2 -3.8 2.3 4.7 8.3 -4.7 5 -2.2 -2 -0.5 5 2 2.9 -6.1 12.6 -0.5 9.7 -6.8 6.9 2.6 4.3 -5 2.6 0.3 6.5 3.2 -1.4 -4 6.4 3.3 6.9 -3.1 5.5 -0.1 5.5 2.6 2.3 -4.1 2.8M576.5 460.8l-4.9 -1.3 -3.9 4.4 -0.8 -2 -3.9 1 -3.8 -2.6 -11.1 6 -1.1 -3 -7.9 -4 -2 -5.3 1.9 -1.9 -3 -5.7 2 -4.7 -5 -6.1 3.4 -3.2 -3.4 -1.6 3 -2.5 1.4 -5.9 -2.2 -5.5 2.2 -2.4 -1.8 -0.7 1 -2.7 -3.7 0.8 -5 -7.6 -3 -0.1 1.5 -5.9 -2.7 -13 4 -2.6 -3.8 -6.9M588.9 510.6l-2.2 0 -5.3 -7.8 -4.8 -11.5 1.6 -4.4 -3.5 -1.7 1.1 -2.2 -3.1 -1.9 1.6 -15.6 4 -0.9 -1.8 0.4 -0 -4.2M361.9 529.3l-6.4 -4.5 -1.4 -4.1 -5.4 0.3 -2.2 -3.3 1 -3.2 -5.9 -9.3 -5.9 -3.8M222.2 518.9l-4.1 3.8 -0.3 4 -6.6 -0.7 -3.9 3.7 -1.4 -2.4 -4.6 0.6 -4.2 -5.4 0.8 -4.3 -3.6 -8.7 -8.7 2.6 -3.7 -2.9 -4.4 2.2 2.7 8.5 -5.8 2.3 -10.6 8.8 -1.2 3.2 -5.6 2.9 2.6 4.6 -3.4 1 -3.2 -2.2 -2.8 3.6 -4.7 0.6 -9.3 -3.7 -2.5 -15.5 -3.6 -7 -16.2 -13.2M335.6 501.4l1.2 -4 -5.2 -2.6 0.2 -2.9 -13.7 -2.2 -8.1 -5.3 2.5 -7.6 -3.2 4 -2.9 -3.9 -4.7 -0.7 0.6 3 -2.6 -1.1 -3.6 3.5 -0.1 4.3 -0.3 -1.6 -2.7 1 -5.3 -6.2M371.9 521.9l-3.8 -0.3 -6.2 7.7M376.4 527.7l-4.6 -5.8M369.5 743.6l-1.5 -1.6 -1.6 2.2 -8.3 2.2 -3.9 -2.6 -2.7 1.4 -2.3 -3.7 -5.1 1.8 -4.8 -10.6 -4 -0.8 -3.8 -4.4 -3.8 3.5 -3.4 -2"/><path class="m-rds" d="M170.7 64.6l0.7 -6.7 5.2 -5.2 3.3 -9.2 2.5 -0.8 3.2 0.9 1.5 -3.2 -0.2 -1.5 -2.2 0.2 -5.2 -3.5M321.0 531.6l0.2 0.1M351.3 790.3l0.4 2.9M271.4 541.4l-4.9 5.5M291.0 538.5l-2.5 -0M311.3 131.3l-2.9 0.2 -1 1.9 -0.5 4.7 3.3 -0.4 -0.1 1.8M410.1 136.4l-2.9 -0.1M445.9 136.7l-1.7 -0.2M425.7 139.0l-8.7 -1.2M357.3 668.6l-1.4 8M127.1 514.4l-1.3 1.3M135.2 499.7l-1.7 6.2 -2.6 3.7M352.3 789.5l7.5 2.2 8.9 17.2M339.8 733.0l-0 0.4M347.0 656.0l0.2 0.2M347.2 656.1l4.5 3 5.6 9.5M264.1 177.1l-0.3 0M324.2 143.6l-3.1 0.1 -4.3 6.1 -2.2 9.5 -4.9 6.6 -9.9 9.5M334.5 828.1l-0.2 0.4M334.2 828.5l-0.8 2.9 3.1 17.5 -8.3 20.8 1.7 16.5M298.5 144.2l-1.7 -0.9M303.0 146.7l-0.7 -0.4M302.3 146.2l-3.4 -1.8M296.8 143.3l-3.4 -5.6 1.8 -4.4 -0.7 -3.1 -3.8 -4.8 -4.2 -0.7M285.6 122.6l0.2 -2M285.6 120.0l-0.1 -0.2M113.0 517.8l4.3 1.7M179.6 348.4l-0.3 7.9 3.8 4.4 0.3 9.9 -1.9 6.9 4 13.1 3.3 2.6 2.2 5.5 0.7 10.1 -0.3 4.3 -5.4 8.3 -0.8 4.5 -2.6 2.5M117.3 519.6l1 0.4M319.8 532.3l-2.6 2.8 -22.9 3.1M407.2 136.3l-5.8 1.1M321.5 525.5l-0.5 0.9M324.2 520.7l-1.8 3.1M203.7 224.1l0.5 6.2 -3 8.5 3.6 7.9 -2.6 14 4.1 8.4 0.9 7.3 -3.7 8.4 -0.3 4 -4.9 8.9 -0.2 4.5M179.6 348.1l-0 0.3M320.7 530.9l-0.4 -0.1M320.5 530.5l-0.1 0.3M320.2 531.3l-0 0.4M320.7 530.9l-0.2 -0.4M320.2 531.7l0.3 -0.2M320.7 531.5l0.4 0.1M321.0 531.6l-0.2 -0.4M341.5 720.1l-1.2 8.5M328.4 512.8l-0.5 1.5M321.2 531.7l0.3 0.6M328.2 509.5l0.3 2M321.5 525.6l1 -1.7M328.3 513.5l0.1 -0.6M328.6 511.4l-0.3 -2M281.5 538.5l-1.2 0.1M278.4 538.8l-7 2.7M282.6 538.5l4 -0.1M194.8 84.4l-1.9 -2.4M344.0 706.2l-1.4 3.5M466.7 140.8l-4.9 -1.5M349.8 635.1l1.2 3 -4.8 15.2 0.8 2.6M324.9 538.7l4.2 4.4M329.1 543.1l4.9 3.3 6.6 2 1.3 10.6 -2.5 6.3 1.4 6.1M343.2 586.0l0.1 2.7M343.3 588.7l-1.3 5.8M395.2 137.3l2.4 -0.4M327.6 508.8l0.2 0.2M399.1 137.8l-0.2 -1.1M125.8 515.7l-1.4 1.3M249.1 187.0l-2.9 2.6M246.2 189.6l-0.6 1M245.7 190.6l-2.7 3.8M243.0 194.4l-0.4 0.3M242.6 194.8l-0.2 0.2M242.4 194.9l-1.5 1.7M241.0 196.7l-0.2 0.3M263.8 177.1l-2.3 0.3 -7.2 5.2M223.0 209.2l-3 3.7M240.7 197.0l-7.8 6.7 -8.1 4.5M459.1 874.6l0.1 15.1M459.0 874.4l0 0.2M401.4 137.4l-2.4 0.4M328.3 509.5l-0.1 -0.7M327.8 509.0l0.4 0.6M331.6 138.8l-0.4 0.2M325.2 144.2l-0.4 -0.2M324.6 143.9l-0.4 -0.2M324.8 144.0l-0.2 -0.1M331.0 139.0l-3.4 6.3 -2.4 -1.1M264.7 177.1l-0.6 0M268.6 177.2l-2 -0.3M266.7 176.9l-1.9 0.2M272.0 178.8l-1.5 -2.4 -1.8 0.8M180.6 435.3l4.3 9 -0.1 5 -18.4 11.6 -2.4 2.7 -3 6.8 -5.6 3.6 -1 4.5 -7.5 6.3 -1.7 5.4M180.6 435.1l0 0.2M351.0 788.0l1.3 1.5M351.0 788.0l0.3 2.3M339.7 733.4l-0.6 20.2 11.8 29M139.1 493.4l-3.9 6.3M145.2 490.2l-6.1 3.2M377.0 138.7l-31.1 2.1 -12.7 -1.8M278.0 180.9l-3.4 -0 -2.6 -2.1M170.3 69.1l0.2 -4.1M170.3 70.4l-0 -1.3M209.9 218.0l-6.2 6.2M220.0 212.9l-3.3 1 -2.8 3.4 -4 0.7M327.9 514.3l-1.2 2.1M327.5 515.2l0.5 -0.9M288.5 538.5l-2.5 -0.2M286.6 538.4l1.9 0M294.3 538.2l-3.3 0.3M282.6 538.4l-1.1 0.1M280.3 538.5l1.2 0M280.3 538.5l-2 0.2M282.6 538.4l-0.1 0M286.0 538.3l-3.3 0.1M398.9 136.7l-0.1 0M320.2 531.7l-0.3 0.5M383.1 138.4l-0.6 0M455.1 138.0l-5.2 -1M455.6 138.1l-0.5 -0.1M449.4 137.0l-1.5 -0.1M449.9 137.1l-0.4 -0M266.4 546.9l-5 15 -29.5 21.3 -5 2 -6.7 -2.2M220.3 583.1l-7.9 -1.9 -1.8 -2.2M210.5 578.9l-2 -3.5 -2 -8.6 -1.7 -1.6 -21.7 -4 -34.4 -1.3 -6.6 -3.7 -5 -0.8 -2.6 -4.3 -7.3 -7.6 -6.5 -6 -3.3 -1.4 -1.5 -5.7 -5.6 -4.4 -0.8 -5.6 3.5 -2.6M330.8 137.8l-4.3 -3 -9.4 -0.8 -5.8 -2.7M310.1 139.5l-4.8 6.5 -2.2 0.7M298.9 144.4l-0.5 -0.3M286.5 124.7l-0.9 -2.1M284.7 119.6l-21.1 -2.3 -7 -4.4 -1 -4.8 -3.5 -4.1M252.0 104.0l-0.3 -4.9 -3.8 -2.5 -7.2 2 -8.8 -0.2 -8.5 2.6 -7.6 -2.5 -2.3 1.4 -4.6 -3.5 -0.3 -3.5 -1.9 -1.1 -5.4 0.5 0.1 -1.7M201.4 90.6l-2.6 -3.6 -4.1 -2.6M192.9 82.0l-2.1 -1.6 -3.4 2.7 0.6 -2.8 2.8 -3.1 -7.8 -0.7 1 -7.1 -6.4 2.7 -1.8 -3 -1.6 1.8 -3.6 -0.3M299.8 175.4l-11.3 5.9M288.5 181.3l-2.4 1.2 -5.3 -3.2 -2.9 1.6M251.9 185.7l-2.8 1.3M254.3 182.6l-2.4 3.1M224.8 208.1l-1.8 1.1M198.1 302.2l0.3 5.8M198.5 308.0l-6.9 16.2 -3.1 4.3 -2.9 9.6 -5.5 6.9 -0.5 3.1M182.6 428.4l-0.9 1.3 1.4 1.6 -3.5 1.9 1 1.9M355.9 676.6l-3.3 7.3M352.6 683.9l-6.2 15.2M398.9 136.7l-0 -0.1M350.9 782.5l0 5.5M368.7 808.9l1.5 2M370.2 810.9l5.5 2 7.3 0.7 3.6 3.6 9.1 2.4 10.6 -1.9 3.2 4.3 -4.1 7.7 0.2 2.1 12.8 7.2 1.6 -0.7 0.9 -3.9 4.2 -3.7 2.2 -0.7 3.4 1.2M430.7 831.2l2.5 1.2 -1.7 1.6 0.8 2M432.3 836.1l6.6 8M438.9 844.1l0.2 2.5 3.9 4.2 4.8 0.4 4.4 2.3 -0.2 2.2 1.7 2.9M453.8 858.6l1.3 5.7 3.8 4.3 0.2 5.9M351.7 793.2l1.2 9 -13.2 13.4 -5.3 12.5M345.4 702.7l-0.4 1M324.5 520.4l0 -0.1M325.0 519.3l-0.6 1M325.7 518.1l-0.7 1.2M325.1 519.3l1.2 -2.1M341.7 718.9l-0.1 0.5M341.7 718.5l-0 0.2M342.0 715.0l-0.2 2.1M342.2 712.7l-0.2 2.4M342.5 599.0l0.8 5.6M342.1 594.4l0.4 4.6M321.7 532.7l3.2 6M321.5 532.3l0.2 0.4M415.7 137.6l-0.5 -0.1M411.5 136.9l0.3 0M413.2 137.2l0.9 0.2M346.3 699.6l-0.2 0.7M346.1 700.3l-0.1 0.5M346.4 699.1l-0.1 0.5M346.0 700.8l-0.3 1.2M345.7 702.0l-0.3 0.8M324.7 519.9l0.4 -0.6M324.5 520.3l0.2 -0.4M324.5 520.3l-0.2 0.4M323.9 521.4l0.6 -1M326.4 516.8l-0.7 1.3M326.7 516.4l-0.3 0.5M326.3 517.2l0.4 -0.7M326.8 516.4l0.2 -0.3M320.5 528.9l-0 0.7M322.2 524.2l-0.7 1.3M322.4 523.8l-0.2 0.4M328.4 512.3l-0.1 0.5M328.5 511.5l-0.1 0.8M328.6 511.8l0 -0.4M328.5 512.4l0.1 -0.6M328.1 514.1l0.2 -0.6M328.0 514.4l0.1 -0.2M326.9 516.1l0.5 -0.9M321.0 526.8l0.1 -0.3M320.8 527.1l-0 0.3M321.1 526.5l0.5 -0.9M320.9 527.2l0.1 -0.4M321.0 526.5l-0.2 0.7M320.7 527.4l-0.2 1.5M320.7 528.9l0.2 -1.7M320.6 529.5l0 -0.6M320.6 530.2l0.1 -0.7M320.6 530.5l0 -0.3M320.5 530.2l0 0.3M320.5 529.6l-0 0.7M467.7 141.3l-0.3 -0.1M468.2 141.5l-0.6 -0.3M328.5 512.9l0.1 -0.5M341.8 717.1l-0.1 1.1M341.6 719.4l-0.1 0.7M341.7 718.8l-0 0.1M341.7 718.3l-0 0.3M341.7 718.2l-0 0.1M340.6 576.3l-0 0.9M340.7 571.5l-0.2 4.8M340.3 728.8l-0 0.2M340.3 728.6l0 0.2M340.3 729.0l-0.5 4M342.2 712.4l-0 0.3M342.6 710.0l-0.1 0.3M342.7 709.7l-0.1 0.3M344.2 705.7l-0.2 0.5M342.5 710.3l-0.3 2.1M345.0 703.7l-0.8 2M342.7 584.7l0.5 1.2M342.2 583.6l0.3 0.8M342.5 584.3l0.2 0.4M340.6 577.2l1.6 6.3M320.8 531.2l-0.1 -0.3M320.7 531.5l0.2 -0.3M320.4 531.5l0.3 -0M320.2 531.3l0.2 0.2M320.4 530.9l-0.2 0.4M327.5 508.5l0 0.3M328.0 508.2l-0.4 0.2M327.8 509.0l0.4 -0.2M328.2 508.8l0 -0.4M346.2 629.8l3.5 5.3M344.0 626.4l2.3 3.4M343.3 604.7l-2.5 11.5 3.2 10.3M444.2 136.5l-0.4 -0M443.8 136.4l-0.6 -0.1M333.2 139.1l-0.3 -0M331.6 138.4l-0.8 -0.6M331.8 138.6l-0.3 -0.2M332.2 138.7l-0.3 -0.2M332.9 139.0l-0.8 -0.3M331.2 138.9l-0.3 0.1M331.8 138.6l-0.2 0.2M410.3 136.5l-0.2 -0M411.5 136.9l-1.2 -0.4M285.2 119.7l-0.1 -0.1M285.4 119.9l-0.2 -0.1M285.1 119.7l-0.4 -0.1M285.7 120.5l-0.2 -0.5M170.5 65.0l0.2 -0.4M170.6 70.6l-0.3 -0.2M322.5 523.9l0.5 -1M323.0 522.9l0.9 -1.5M394.0 137.5l1.2 -0.2M392.3 137.8l1.7 -0.3M397.5 136.9l1.2 -0.2M398.7 136.7l0 0M388.1 138.1l4.2 -0.3M387.7 138.1l0.4 -0M387.5 138.1l0.2 -0M387.1 138.1l-0.5 0M386.2 138.2l-0.5 0M386.6 138.2l-0.5 0M385.2 138.2l-0.5 0M385.7 138.2l-0.5 0M384.7 138.3l-0.6 0M383.6 138.3l-0.4 0M384.1 138.3l-0.5 0M382.5 138.4l-5.5 0.3M387.5 138.1l-0.4 0M411.8 137.0l0.8 0.1M412.7 137.1l0.5 0.1M413.1 137.2l0.1 0M328.2 508.4l-0.2 -0.2M414.2 137.3l-0.6 -0.1M413.6 137.2l-0.4 -0M415.2 137.5l0.5 0.1M417.0 137.8l-0.3 -0M416.7 137.7l-1 -0.1M461.8 139.3l-0.4 -0.1M461.3 139.2l-0.3 -0.1M460.6 139.1l-5 -1M461.1 139.2l-0.5 -0.1M447.0 136.8l-1.1 -0.2M447.5 136.9l-0.5 -0.1M447.9 136.9l-0.5 -0M426.1 139.0l-0.4 -0M426.3 139.0l-0.2 -0M426.7 139.0l-0.4 0M428.7 138.9l-2 0.1M429.2 138.8l-0.5 0.1M429.8 138.7l-0.6 0.1M430.3 138.6l-0.5 0.1M430.7 138.6l-0.4 0.1M431.1 138.5l-0.4 0.1M432.1 138.3l-1 0.2M432.5 138.3l-0.4 0.1M433.2 138.1l-0.4 0.1M432.8 138.2l-0.3 0.1M434.6 137.9l-1.4 0.2M434.9 137.9l-0.3 0M435.1 137.8l-0.2 0M435.4 137.8l-0.3 0.1M437.1 137.4l-1.7 0.4M437.5 137.3l-0.4 0.1M438.9 136.8l-1.4 0.5M439.2 136.7l-0.4 0.1M443.2 136.4l-4 0.3M319.9 532.2l-0.1 0.1M130.9 509.6l-0.2 0.3M130.7 509.9l-3.6 4.5M281.5 538.6l1.1 -0.1M415.2 137.4l-1 -0.2M414.1 137.4l1.1 0.2M467.1 141.0l-0.5 -0.2M467.3 141.1l-0.2 -0.1"/><text class="m-sea-lbl" x="38" y="300">Océano</text><text class="m-sea-lbl" x="38" y="316">Pacífico</text><text class="m-sea-lbl" x="250" y="36">Golfo de Arauco</text><g class="m-rts"><path class="rt-bg" data-r="lebu" d="M123.7 518.1l0.7 -1.1 -1.2 -0.6 -3.3 8.3 2.6 0.1 0.8 -0.7 0.5 0.6 -0.5 1 1.2 -0.5 0.1 1.7 -1.8 0.1 -1 2 0.8 10.3 11.8 11.6 2.8 4.5 4.9 0.8 6.7 3.7 18 0.6 7 0.9 9.4 -0.2 21.6 4 1.8 1.6 2.1 9 3.2 5 14.7 4.4 6 -2.3 29.1 -21.1 5.1 -15.7 5.4 -5.2 7.2 -2.4 24.5 -1.1 14.3 -2.8 2.7 -3.4 0.2 -4.7 7.1 -12.5 0.4 -3.2 -0.3 -2.4 -4.5 -5.4 -0.8 -2 0.4 -2.9 2.7 -3.5 -0.1 -2.3 -2.2 -2.4 -3.8 -1.7 -0.8 -1.6 2.1 -7.6 -1.9 -4.3 3.5 -12.3 -0.3 -2.9 -1 -2 -4.4 -4.4 -4 -0.5 -0.9 -1.4 4.3 -9.7 0.1 -2.3 2 -5.9 0.4 -6.3 1.8 -5.4 4.6 -3.8 1.3 -2.3 0.3 -5.3 3.3 -6 -0.8 -6 2.8 -2.8 3.4 -1.4 2.1 -2.6 4.8 -12.6 3.6 -4.4 1.4 -3 4.6 -3.6 5.5 -0.1 8 -9.5 5 -15.7 16.2 -76 7.7 -10.7 3.5 -6.3 2.6 -2 1.8 -2.9 6.5 -6.6 3.6 -6 9.4 -10.6 6.6 -5 7 -2.9 3.4 -2.3 5.9 -6.9 3.3 -9 14.7 -28.1 5 -16.6 0.6 -1.7 1.5 -0.7 -0.2 -1.2"/><path class="rt-bg" data-r="canete" d="M336.3 720.3l-1 0.3 0.2 -0.9 2.7 0.7 0.3 -1 3.1 -0.9 1 -8.8 4.8 -14.2 8.5 -19.1 1.4 -7.5 -5.7 -9.8 -5.6 -4.2 1.5 -6.9 3.5 -10.4 -8.2 -13 -2 -8 2.6 -10.4 -1.5 -11.1 1.6 -8.2 -2.8 -8.5 0 -8.6 -1.3 -4.1 2.4 -6.3 -0.6 -9 -1.5 -3 -5.6 -0.9 -6.7 -4.2 -6.9 -11.6 0.6 -4.4 6.9 -12.2 0.6 -2.7 -0.4 -3 -4.5 -5.4 -0.8 -2 0.4 -2.9 2.7 -3.5 -0 -2.2 -2.3 -2.6 -3.8 -1.6 -0.8 -1.6 2.1 -7.6 -1.8 -4.3 1.1 -2.4 -0.1 -2.7 2.3 -9 -0.9 -2.6 -4.7 -4.9 -4 -0.5 -0.8 -1.6 4.2 -9.5 0.1 -2.3 2 -5.9 0.4 -6.3 1.8 -5.4 4.6 -3.9 1.3 -2.2 0.3 -5.3 3.3 -5.8 -0.9 -4.9 0.4 -1.7 2.6 -2.5 3.3 -1.3 2.1 -2.6 4.8 -12.6 3.6 -4.4 1.4 -3 4.6 -3.6 5.5 -0.1 8.1 -9.8 4.9 -15.4 16.1 -75.7 7.9 -11.1 3.4 -6.2 2.6 -2 1.8 -2.9 6.5 -6.6 3.6 -6 9.4 -10.6 6.6 -5 7 -2.9 3.4 -2.3 5.9 -6.9 3.3 -9 14.7 -28.1 5 -16.6 0.6 -1.7 1.5 -0.7 -0.2 -1.2"/><path class="rt-bg" data-r="los-alamos" d="M279.7 538.5l11.3 0 17.3 -1.8 9.5 -1.8 3 -3.6 0.3 -4.8 7.1 -12.5 0.4 -3.4 -0.3 -2.2 -4.5 -5.4 -0.8 -2 0.4 -2.9 2.6 -3.5 0 -2.3 -2.2 -2.4 -3.8 -1.7 -0.8 -1.6 2.1 -7.6 -1.9 -4.3 3.5 -12.3 -0.4 -2.9 -0.9 -2 -4.4 -4.3 -4 -0.6 -0.9 -1.4 4.3 -9.7 0.1 -2.3 2 -5.9 0.3 -6.3 1.8 -5.4 4.7 -3.8 1.3 -2.3 0.3 -5.3 3.3 -6 -0.8 -5.9 2.8 -2.9 3.3 -1.4 2.2 -2.6 4.8 -12.6 3.6 -4.4 1.4 -3 4.5 -3.6 5.5 -0.1 8.1 -9.5 4.9 -15.7 16.3 -76 7.7 -10.7 3.4 -6.2 2.7 -2.1 1.8 -2.9 6.5 -6.6 3.6 -6 9.4 -10.6 6.6 -5 7 -2.8 3.4 -2.4 5.9 -6.9 3.3 -8.9 14.7 -28.2 5 -16.6 0.6 -1.7 1.5 -0.7 -0.2 -1.2"/><path class="rt-bg" data-r="curanilahue" d="M376.2 377.3l-1.2 -0.1 0.4 -1.6 -3.2 -1.1 -6.1 -8 0.1 -9 4.6 -14.9 16 -75.5 8.1 -11.5 3.2 -6 2.7 -2.1 1.8 -2.8 6.5 -6.7 3.6 -6 9.4 -10.6 6.6 -4.9 7 -2.9 3.4 -2.4 5.9 -6.8 3.3 -9 14.7 -28.1 5 -16.7 0.6 -1.6 1.5 -0.8 -0.2 -1.2"/><path class="rt-bg" data-r="arauco" d="M401.5 138.0l0.1 0.6 9.6 -1.7 15.9 2.1 13.6 -2.7 9.6 0.8 13.4 2.6 6.6 3 0.8 -0.4 -1.3 4.7"/><path class="rt-bg" data-r="laraquete" d="M511.9 55.3l-2.6 2.4 -29.6 63.8 -3.8 6.5 -6.1 19"/><path class="rt" data-r="lebu" d="M123.7 518.1l0.7 -1.1 -1.2 -0.6 -3.3 8.3 2.6 0.1 0.8 -0.7 0.5 0.6 -0.5 1 1.2 -0.5 0.1 1.7 -1.8 0.1 -1 2 0.8 10.3 11.8 11.6 2.8 4.5 4.9 0.8 6.7 3.7 18 0.6 7 0.9 9.4 -0.2 21.6 4 1.8 1.6 2.1 9 3.2 5 14.7 4.4 6 -2.3 29.1 -21.1 5.1 -15.7 5.4 -5.2 7.2 -2.4 24.5 -1.1 14.3 -2.8 2.7 -3.4 0.2 -4.7 7.1 -12.5 0.4 -3.2 -0.3 -2.4 -4.5 -5.4 -0.8 -2 0.4 -2.9 2.7 -3.5 -0.1 -2.3 -2.2 -2.4 -3.8 -1.7 -0.8 -1.6 2.1 -7.6 -1.9 -4.3 3.5 -12.3 -0.3 -2.9 -1 -2 -4.4 -4.4 -4 -0.5 -0.9 -1.4 4.3 -9.7 0.1 -2.3 2 -5.9 0.4 -6.3 1.8 -5.4 4.6 -3.8 1.3 -2.3 0.3 -5.3 3.3 -6 -0.8 -6 2.8 -2.8 3.4 -1.4 2.1 -2.6 4.8 -12.6 3.6 -4.4 1.4 -3 4.6 -3.6 5.5 -0.1 8 -9.5 5 -15.7 16.2 -76 7.7 -10.7 3.5 -6.3 2.6 -2 1.8 -2.9 6.5 -6.6 3.6 -6 9.4 -10.6 6.6 -5 7 -2.9 3.4 -2.3 5.9 -6.9 3.3 -9 14.7 -28.1 5 -16.6 0.6 -1.7 1.5 -0.7 -0.2 -1.2"/><path class="rt" data-r="canete" d="M336.3 720.3l-1 0.3 0.2 -0.9 2.7 0.7 0.3 -1 3.1 -0.9 1 -8.8 4.8 -14.2 8.5 -19.1 1.4 -7.5 -5.7 -9.8 -5.6 -4.2 1.5 -6.9 3.5 -10.4 -8.2 -13 -2 -8 2.6 -10.4 -1.5 -11.1 1.6 -8.2 -2.8 -8.5 0 -8.6 -1.3 -4.1 2.4 -6.3 -0.6 -9 -1.5 -3 -5.6 -0.9 -6.7 -4.2 -6.9 -11.6 0.6 -4.4 6.9 -12.2 0.6 -2.7 -0.4 -3 -4.5 -5.4 -0.8 -2 0.4 -2.9 2.7 -3.5 -0 -2.2 -2.3 -2.6 -3.8 -1.6 -0.8 -1.6 2.1 -7.6 -1.8 -4.3 1.1 -2.4 -0.1 -2.7 2.3 -9 -0.9 -2.6 -4.7 -4.9 -4 -0.5 -0.8 -1.6 4.2 -9.5 0.1 -2.3 2 -5.9 0.4 -6.3 1.8 -5.4 4.6 -3.9 1.3 -2.2 0.3 -5.3 3.3 -5.8 -0.9 -4.9 0.4 -1.7 2.6 -2.5 3.3 -1.3 2.1 -2.6 4.8 -12.6 3.6 -4.4 1.4 -3 4.6 -3.6 5.5 -0.1 8.1 -9.8 4.9 -15.4 16.1 -75.7 7.9 -11.1 3.4 -6.2 2.6 -2 1.8 -2.9 6.5 -6.6 3.6 -6 9.4 -10.6 6.6 -5 7 -2.9 3.4 -2.3 5.9 -6.9 3.3 -9 14.7 -28.1 5 -16.6 0.6 -1.7 1.5 -0.7 -0.2 -1.2"/><path class="rt" data-r="los-alamos" d="M279.7 538.5l11.3 0 17.3 -1.8 9.5 -1.8 3 -3.6 0.3 -4.8 7.1 -12.5 0.4 -3.4 -0.3 -2.2 -4.5 -5.4 -0.8 -2 0.4 -2.9 2.6 -3.5 0 -2.3 -2.2 -2.4 -3.8 -1.7 -0.8 -1.6 2.1 -7.6 -1.9 -4.3 3.5 -12.3 -0.4 -2.9 -0.9 -2 -4.4 -4.3 -4 -0.6 -0.9 -1.4 4.3 -9.7 0.1 -2.3 2 -5.9 0.3 -6.3 1.8 -5.4 4.7 -3.8 1.3 -2.3 0.3 -5.3 3.3 -6 -0.8 -5.9 2.8 -2.9 3.3 -1.4 2.2 -2.6 4.8 -12.6 3.6 -4.4 1.4 -3 4.5 -3.6 5.5 -0.1 8.1 -9.5 4.9 -15.7 16.3 -76 7.7 -10.7 3.4 -6.2 2.7 -2.1 1.8 -2.9 6.5 -6.6 3.6 -6 9.4 -10.6 6.6 -5 7 -2.8 3.4 -2.4 5.9 -6.9 3.3 -8.9 14.7 -28.2 5 -16.6 0.6 -1.7 1.5 -0.7 -0.2 -1.2"/><path class="rt" data-r="curanilahue" d="M376.2 377.3l-1.2 -0.1 0.4 -1.6 -3.2 -1.1 -6.1 -8 0.1 -9 4.6 -14.9 16 -75.5 8.1 -11.5 3.2 -6 2.7 -2.1 1.8 -2.8 6.5 -6.7 3.6 -6 9.4 -10.6 6.6 -4.9 7 -2.9 3.4 -2.4 5.9 -6.8 3.3 -9 14.7 -28.1 5 -16.7 0.6 -1.6 1.5 -0.8 -0.2 -1.2"/><path class="rt" data-r="arauco" d="M401.5 138.0l0.1 0.6 9.6 -1.7 15.9 2.1 13.6 -2.7 9.6 0.8 13.4 2.6 6.6 3 0.8 -0.4 -1.3 4.7"/><path class="rt" data-r="laraquete" d="M511.9 55.3l-2.6 2.4 -29.6 63.8 -3.8 6.5 -6.1 19"/></g><g class="m-towns"><g class="tw" data-r="lebu"><circle class="tw-halo" cx="123.6" cy="518.1" r="13"/><circle class="tw-dot" cx="123.6" cy="518.1" r="5"/><text x="135.6" y="523.1" text-anchor="start">Lebu</text></g><g class="tw" data-r="canete"><circle class="tw-halo" cx="336.5" cy="720.4" r="13"/><circle class="tw-dot" cx="336.5" cy="720.4" r="5"/><text x="348.5" y="725.4" text-anchor="start">Cañete</text></g><g class="tw" data-r="los-alamos"><circle class="tw-halo" cx="279.7" cy="538.6" r="13"/><circle class="tw-dot" cx="279.7" cy="538.6" r="5"/><text x="291.7" y="530.6" text-anchor="start">Los Álamos</text></g><g class="tw" data-r="curanilahue"><circle class="tw-halo" cx="376.2" cy="377.5" r="13"/><circle class="tw-dot" cx="376.2" cy="377.5" r="5"/><text x="388.2" y="382.5" text-anchor="start">Curanilahue</text></g><g class="tw" data-r="arauco"><circle class="tw-halo" cx="402.1" cy="137.9" r="13"/><circle class="tw-dot" cx="402.1" cy="137.9" r="5"/><text x="392.1" y="127.9" text-anchor="end">Arauco</text></g><g class="tw" data-r="laraquete"><circle class="tw-halo" cx="511.8" cy="55.3" r="13"/><circle class="tw-dot" cx="511.8" cy="55.3" r="5"/><text x="499.8" y="60.3" text-anchor="end">Laraquete</text></g></g><g class="m-dest" transform="translate(469.9 147.0)"><circle class="d-pulse" r="16"/><path class="d-drop" d="M0 0c0 0-15-13.6-15-24.5a15 15 0 0 1 30 0C15-13.6 0 0 0 0z"/><circle cx="0" cy="-24.5" r="9.5" fill="#fff"/><image href="/static/isotipo.png" x="-7.5" y="-32" width="15" height="15"/></g></svg>
+        <div class="rm-dest" style="left:78.31%;top:18.66%">
+          <img src="/static/images/comuna/fachada-thumb.webp" width="92" height="76" alt="" decoding="async" />
+          <div><b>Centro Médico Carampangue</b><span>Monsalve 102, esquina República</span></div>
+        </div>
+        <div class="rm-video" id="rm-video">
+          <span class="z num">0<small>km</small></span>
+          <p>Otorrino, psiquiatría, neurología, diabetes y psicología: te atiendes desde tu casa.</p>
+          <a href="#sin-viajar">Ver consultas por videollamada <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+        <span class="rm-attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
+      </div>
+      <figcaption class="rm-ctrl">
+        <div class="seg" role="group" aria-label="Cómo te atiendes">
+          <button type="button" data-m="auto" aria-pressed="true"><svg aria-hidden="true"><use href="#i-car"/></svg>Voy al centro</button>
+          <button type="button" data-m="video" aria-pressed="false"><svg aria-hidden="true"><use href="#i-video"/></svg>Videollamada</button>
+        </div>
+        <div class="chips" role="group" aria-label="Elegir localidad de origen">
+          <span>¿Vienes de otra parte? Mira tu ruta:</span>
+          <button type="button" class="chip" data-r="lebu" aria-pressed="false">Lebu</button>
+          <button type="button" class="chip" data-r="canete" aria-pressed="false">Cañete</button>
+          <button type="button" class="chip" data-r="los-alamos" aria-pressed="false">Los Álamos</button>
+          <button type="button" class="chip" data-r="curanilahue" aria-pressed="false">Curanilahue</button>
+          <button type="button" class="chip" data-r="arauco" aria-pressed="false">Arauco</button>
+          <button type="button" class="chip" data-r="laraquete" aria-pressed="false">Laraquete</button>
+        </div>
+      </figcaption>
     </figure>
   </div>
 </section>
 
-<div class="trust-strip">
-  <ul>
-    <li><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>Bono Fonasa MLE en el centro</li>
-    <li><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>Lun-Vie 09:00–20:00 · Sáb 09:00–14:00</li>
-    <li><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg></span>Estacionamiento gratuito</li>
-    <li><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>Débito y crédito (dental)</li>
-  </ul>
-</div>
-
-<section class="sec">
-  <div class="container">
+<!-- ═══════════ SIN VIAJAR ═══════════ -->
+<section class="sec tele" aria-labelledby="tele-h2" id="sin-viajar">
+  <div class="wrap">
     <div class="sec-head">
-      <h2>¿Qué necesita hacer hoy?</h2>
-      <p>Tres caminos directos al CMC desde {{COMUNA_NAME}}. Si no está seguro, escríbanos por WhatsApp y lo orientamos en segundos.</p>
+      <div class="rv">
+        <span class="kicker">Desde {{COMUNA_NAME}}, sin viajar</span>
+        <h2 id="tele-h2">Cinco consultas que <em>no necesitan el viaje.</em></h2>
+        <p>Te atiendes por videollamada desde tu casa. El link de Medilink te llega por WhatsApp y se abre en el celular o el computador: no instalas ninguna aplicación.</p>
+      </div>
+      <div class="zero rv" style="--d:1" aria-hidden="true"><b class="num">0<small>km</small></b><span>de viaje desde {{COMUNA_NAME}} para estas cinco consultas.</span></div>
     </div>
-    <div class="cards-cta">
-      <div class="card-cta">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
-        <h3>Agendar una consulta</h3>
-        <p>Médico general, especialista, dental, kinesiología o psicología. Nuestro asistente automático por WhatsApp le muestra los horarios reales disponibles para esta semana.</p>
-        <a href="{{WA_LINK}}" rel="noopener">Agendar por WhatsApp <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-      </div>
-      <div class="card-cta">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></div>
-        <h3>Bono Fonasa MLE</h3>
-        <p>El bono se emite el día de la consulta en el centro, con huella biométrica. No es necesario traerlo emitido. Aplica en medicina general, medicina familiar, kinesiología, nutrición y psicología (excepto la Ps. Jacquelinne Salas, que no emite bono: Fonasa $20.000 directo, particular $25.000).</p>
-        <a href="https://centromedicocarampangue.cl/blog/bono-fonasa-mle-arauco" rel="noopener">Cómo funciona <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-      </div>
-      <div class="card-cta">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></div>
-        <h3>Chequeo preventivo</h3>
-        <p>Paquetes Mujer 30+, Hombre 40+, Escolar y Deportivo. Resultados rápidos y plan de seguimiento personalizado. Ideal si quiere venir una vez al año desde {{COMUNA_NAME}}.</p>
-        <a href="https://centromedicocarampangue.cl/chequeos" rel="noopener">Ver paquetes <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-      </div>
+    <div class="tcards">
+      <article class="tcard rv" style="--d:0">
+        <span class="pill"><svg aria-hidden="true"><use href="#i-video"/></svg>Videollamada</span>
+        <h3>Otorrino</h3>
+        <span class="who">Dr. Manuel Borrego</span>
+        <div class="pr"><b>$35.000</b><small>particular</small></div>
+        <p>Oído, nariz y garganta. El lavado de oídos y la audiometría son presenciales, con la fonoaudióloga.</p>
+        <a class="go" href="/otorrinolaringologia"><span>Ver otorrino</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="tcard rv" style="--d:1">
+        <span class="pill"><svg aria-hidden="true"><use href="#i-video"/></svg>Videollamada</span>
+        <h3>Psiquiatría</h3>
+        <span class="who">Dra. Cecilia Unibazo</span>
+        <div class="pr"><b>$60.000</b><small>40 minutos</small></div>
+        <p>Martes y jueves. Se paga al reservar, por transferencia.</p>
+        <a class="go" href="/psiquiatria"><span>Ver psiquiatría</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="tcard rv" style="--d:2">
+        <span class="pill"><svg aria-hidden="true"><use href="#i-video"/></svg>Videollamada</span>
+        <h3>Neurología</h3>
+        <span class="who">Dra. Franca González</span>
+        <div class="pr"><b>$65.000</b><small>desde 15&nbsp;años</small></div>
+        <p>Dolor de cabeza, migraña, epilepsia y memoria. Se paga al reservar.</p>
+        <a class="go" href="/neurologia"><span>Ver neurología</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="tcard rv" style="--d:3">
+        <span class="pill"><svg aria-hidden="true"><use href="#i-video"/></svg>Videollamada</span>
+        <h3>Diabetes y peso</h3>
+        <span class="who">Dr. Raúl Paz, subespecialista UC</span>
+        <div class="pr"><b>$60.000</b><small>miércoles 17:30–20:00</small></div>
+        <p>Diabetes, prediabetes y peso con un médico. Se paga al reservar.</p>
+        <a class="go" href="/nutriologia-diabetologia"><span>Ver al Dr. Paz</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="tcard rv" style="--d:4">
+        <span class="pill"><svg aria-hidden="true"><use href="#i-video"/></svg>Video o presencial</span>
+        <h3>Psicología</h3>
+        <span class="who">Adultos, niños y adolescentes</span>
+        <div class="pr"><b>$14.420</b><small>con bono Fonasa</small></div>
+        <p>Sesiones de 45 minutos, por videollamada o en Monsalve 102, según el profesional.</p>
+        <a class="go" href="/psicologia-adulto"><span>Ver psicología</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+    </div>
+    <div class="tele-foot rv">
+      <p>Si una consulta se paga al reservar y no puedes asistir, avisa con al menos 24&nbsp;horas y se devuelve o se reagenda.</p>
+      <a href="{{WA_LINK}}%20una%20teleconsulta%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=sin_viajar&amp;utm_campaign=comuna_arauco"
+         class="btn btn-light big-wa" target="_blank" rel="noopener" data-wa-btn="sin-viajar">
+        <span class="wa-dot" aria-hidden="true"><svg><use href="#i-wa"/></svg></span>
+        Agendar por videollamada
+      </a>
     </div>
   </div>
 </section>
 
-<section class="sec sec-alt">
-  <div class="container">
-    <div class="sec-head">
-      <h2>19 especialidades en una visita</h2>
-      <p>Pacientes desde {{COMUNA_NAME}} suelen aprovechar la visita para resolver varios temas. Estas son las especialidades disponibles bajo un mismo techo:</p>
+<!-- ═══════════ LO MÁS AGENDADO + DIRECTORIO ═══════════ -->
+<section class="sec" aria-labelledby="esp-h2" id="especialidades">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="kicker">Lo que más se agenda</span>
+      <h2 id="esp-h2">Lo que más piden <em>pacientes de {{COMUNA_NAME}}.</em></h2>
+      <p>Según las horas que agendaron en los últimos 12 meses. Abajo está todo lo que hay en Monsalve 102, con su precio de entrada.</p>
     </div>
-    <div class="esp-grid">
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg></div>
-        <h3>Medicina General</h3>
-        <p class="desc">Diagnóstico, tratamiento, recetas, licencias médicas y derivaciones a especialista.</p>
-        <div class="price">
-          <span class="fonasa">$7.880 <small>Bono Fonasa MLE</small></span>
-          <span class="particular">$25.000 <small>particular</small></span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <h3>Medicina Familiar</h3>
-        <p class="desc">Médico de cabecera con Dr. Márquez: enfoque integral del paciente y su familia, crónicos, preventivo.</p>
-        <div class="price">
-          <span class="fonasa">$7.880 <small>Bono Fonasa MLE</small></span>
-          <span class="particular">$30.000 <small>particular</small></span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-        <h3>Kinesiología</h3>
-        <p class="desc">Rehabilitación traumatológica, dolor lumbar, post-operatorio, kine respiratoria y a domicilio.</p>
-        <div class="price">
-          <span class="fonasa">$7.830 <small>Bono Fonasa MLE</small></span>
-          <span class="particular">$20.000 <small>particular</small></span>
-        </div>
-      </div>
-      <div class="esp-card alt">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"/></svg></div>
-        <h3>¿Busca traumatólogo?</h3>
-        <p class="desc">No contamos con traumatólogo. Para dolor de rodilla, hombro o espalda, esguinces y recuperación de lesiones, atendemos con kinesiología, con bono Fonasa.</p>
-        <div class="price">
-          <a href="https://centromedicocarampangue.cl/blog/kinesiologia-{{SLUG}}">Ver kinesiología para {{COMUNA_NAME}} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M12 15v7M9 19h6"/></svg></div>
-        <h3>Ginecología</h3>
-        <p class="desc">Control ginecológico, PAP, planificación familiar, climaterio, salud reproductiva.</p>
-        <div class="price">
-          <span class="particular">$30.000 <small>particular · no acepta Fonasa</small></span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12h.01M15 12h.01M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"/></svg></div>
-        <h3>Matrona</h3>
-        <p class="desc">Control prenatal, PAP, planificación familiar, anticoncepción, salud sexual.</p>
-        <div class="price">
-          <span class="fonasa">$16.000 <small>tarifa preferencial Fonasa</small></span>
-          <span class="particular">$30.000 <small>particular</small></span>
-        </div>
-      </div>
-      <div class="esp-card alt">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/></svg></div>
-        <h3>Otorrinolaringología</h3>
-        <p class="desc">Dr. Manuel Borrego. Atiende por videollamada. Para audiometría y evaluación auditiva hay fonoaudióloga presencial en el centro.</p>
-        <div class="price">
-          <span class="particular">Por videollamada</span>
-          <a href="https://centromedicocarampangue.cl/blog/fonoaudiologia-{{SLUG}}">Fonoaudiología presencial <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div>
-        <h3>Cardiología</h3>
-        <p class="desc">Dr. Miguel Millán. Hipertensión, arritmias, evaluación cardiovascular, electrocardiograma.</p>
-        <div class="price">
-          <span class="particular">$40.000 <small>particular · no acepta Fonasa</small></span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></div>
-        <h3>Gastroenterología</h3>
-        <p class="desc">Dr. Nicolás Quijano. Reflujo, gastritis, colon irritable, dolor abdominal.</p>
-        <div class="price">
-          <span class="particular">$35.000 <small>particular · no acepta Fonasa</small></span>
-        </div>
-      </div>
-      <div class="esp-card dental">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3c-2.2 0-4 1.8-4 4.5 0 2.5 1 4 1.6 6.3.5 2 .8 4.7 2.1 6.7.6.9 1.9.7 2.2-.3l.9-3.4c.3-1 1.9-1 2.2 0l.9 3.4c.3 1 1.6 1.2 2.2.3 1.3-2 1.6-4.7 2.1-6.7.6-2.3 1.6-3.8 1.6-6.3C21 4.8 19.2 3 17 3c-2 0-3 1-5 1S9 3 7 3Z"/></svg></div>
-        <h3>Odontología General</h3>
-        <p class="desc">Consulta + tapaduras, limpieza, exodoncia. Acepta tarjeta de débito y crédito.</p>
-        <div class="price">
-          <span class="particular">Tapaduras desde $35.000</span>
-          <span class="particular">Limpieza $30.000 · Exodoncia $40.000</span>
-        </div>
-      </div>
-      <div class="esp-card dental">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></div>
+    <div class="feat" data-c="{{SLUG}}">
+      <article class="fcard f-mg rv">
+        <h3>Medicina general</h3>
+        <div class="pr"><b>$7.880</b><small>con bono Fonasa · $25.000 particular</small></div>
+        <p>Niños y adultos, de lunes a sábado. El bono se emite aquí con tu huella.</p>
+        <a class="go" href="/medicina-general"><span>Ver medicina general</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="fcard f-orto rv" style="--d:1">
         <h3>Ortodoncia</h3>
-        <p class="desc">Dra. Daniela Castillo. Brackets, alineación de dientes. Empieza con evaluación dental general.</p>
-        <div class="price">
-          <span class="particular">Instalación $120.000</span>
-          <span class="particular">Control mensual $30.000</span>
-        </div>
-      </div>
-      <div class="esp-card dental">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3c-2.2 0-4 1.8-4 4.5 0 2.5 1 4 1.6 6.3.5 2 .8 4.7 2.1 6.7.6.9 1.9.7 2.2-.3l.9-3.4c.3-1 1.9-1 2.2 0l.9 3.4c.3 1 1.6 1.2 2.2.3 1.3-2 1.6-4.7 2.1-6.7.6-2.3 1.6-3.8 1.6-6.3C21 4.8 19.2 3 17 3c-2 0-3 1-5 1S9 3 7 3Z"/></svg></div>
-        <h3>Endodoncia</h3>
-        <p class="desc">Dr. Fernando Fredes. Tratamiento de conducto (cuando duele el diente y no se puede sacar).</p>
-        <div class="price">
-          <span class="particular">Consultar en recepción</span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/></svg></div>
-        <h3>Psicología Adulto</h3>
-        <p class="desc">Ansiedad, depresión, duelo, estrés, problemas de pareja. Sesiones de 45 min. También por videollamada.</p>
-        <div class="price">
-          <span class="fonasa">$14.420 <small>Bono Fonasa MLE</small></span>
-          <span class="particular">$25.000 <small>particular</small></span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></div>
-        <h3>Nutrición</h3>
-        <p class="desc">Gisela Pinto. Plan alimentario, manejo de sobrepeso, diabetes, hipertensión.</p>
-        <div class="price">
-          <span class="fonasa">$4.770 <small>Bono Fonasa MLE</small></span>
-          <span class="particular">$20.000 <small>particular</small></span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></div>
-        <h3>Fonoaudiología</h3>
-        <p class="desc">Juana Arratia. Lenguaje infantil, problemas de habla, deglución, voz.</p>
-        <div class="price">
-          <span class="particular">$25.000 – $50.000 <small>según procedimiento</small></span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0ZM20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/></svg></div>
-        <h3>Podología</h3>
-        <p class="desc">Andrea Guevara. Uñas encarnadas, hongos, podología diabética.</p>
-        <div class="price">
-          <span class="particular">Desde $20.000</span>
-        </div>
-      </div>
-      <div class="esp-card">
-        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg></div>
+        <div class="pr"><b>$15.000</b><small>evaluación, el primer paso</small></div>
+        <p>Brackets con la Dra. Daniela Castillo. Instalación $120.000. Débito o crédito.</p>
+        <a class="go" href="/ortodoncia"><span>Ver ortodoncia</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="fcard f-orl rv" style="--d:2">
+        <span class="tagv"><svg aria-hidden="true"><use href="#i-video"/></svg>Video</span>
+        <h3>Otorrino</h3>
+        <div class="pr"><b>$35.000</b><small>por videollamada</small></div>
+        <p>Dr. Manuel Borrego, sin viajar. Lavado de oídos presencial con la fonoaudióloga.</p>
+        <a class="go" href="/otorrinolaringologia"><span>Ver otorrino</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="fcard f-eco rv" style="--d:3">
         <h3>Ecografía</h3>
-        <p class="desc">David Pardo. Ecografía abdominal, renal, tiroidea, mamaria y de partes blandas. La obstétrica no se realiza en el centro.</p>
-        <div class="price">
-          <span class="particular">$40.000 <small>según tipo</small></span>
-        </div>
+        <div class="pr"><b>$40.000</b><small>particular · con orden médica</small></div>
+        <p>La realiza David Pardo, tecnólogo médico, los lunes y martes. La informa el Dr. Sergio Sandoval Jara, radiólogo.</p>
+        <a class="go" href="/ecografia"><span>Ver ecografía</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="fcard f-cardio rv" style="--d:2">
+        <h3>Cardiología</h3>
+        <div class="pr"><b>$40.000</b><small>particular</small></div>
+        <p>El Dr. Miguel Millán viene una vez al mes: anótate por WhatsApp y te avisamos la fecha.</p>
+        <a class="go" href="/cardiologia"><span>Ver cardiología</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+      <article class="fcard f-psq rv" style="--d:2">
+        <span class="tagv"><svg aria-hidden="true"><use href="#i-video"/></svg>Video</span>
+        <h3>Psiquiatría</h3>
+        <div class="pr"><b>$60.000</b><small>por videollamada</small></div>
+        <p>Dra. Cecilia Unibazo, martes y jueves. Se paga al reservar.</p>
+        <a class="go" href="/psiquiatria"><span>Ver psiquiatría</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </article>
+    </div>
+
+    <div class="dir-head rv">
+      <h3>Todo el centro, una dirección.</h3>
+      <p>Precio de entrada de cada atención. Toca una para ver el detalle.</p>
+    </div>
+    <div class="dir">
+      <div class="dgrp rv">
+        <h4>Medicina</h4>
+        <ul>
+          <li><a href="/medicina-general"><span><span class="dn">Medicina general</span><span class="dw">Niños y adultos</span></span><span class="dp">$7.880<small>bono Fonasa</small></span></a></li>
+          <li><a href="/medicina-familiar"><span><span class="dn">Medicina familiar</span><span class="dw">Dr. Alonso Márquez</span></span><span class="dp">$7.880<small>bono Fonasa</small></span></a></li>
+          <li><a href="/chequeos"><span><span class="dn">Chequeo preventivo</span><span class="dw">Según tu edad</span></span><span class="dp">$7.880<small>bono Fonasa</small></span></a></li>
+          <li><a href="/cardiologia"><span><span class="dn">Cardiología</span><span class="dw">Dr. Miguel Millán</span></span><span class="dp">$40.000<small>particular</small></span></a></li>
+          <li><a href="/gastroenterologia"><span><span class="dn">Gastroenterología</span><span class="dw">Dr. Nicolás Quijano</span></span><span class="dp">$35.000<small>particular</small></span></a></li>
+          <li><a href="/ginecologia"><span><span class="dn">Ginecología</span><span class="dw">Dr. Tirso Rejón</span></span><span class="dp">$30.000<small>particular</small></span></a></li>
+        </ul>
+      </div>
+      <div class="dgrp rv" style="--d:1">
+        <h4>Por videollamada</h4>
+        <ul>
+          <li><a href="/otorrinolaringologia"><span><span class="dn">Otorrinolaringología</span><span class="dw">Dr. Manuel Borrego</span></span><span class="dp">$35.000<small>particular</small></span></a></li>
+          <li><a href="/psiquiatria"><span><span class="dn">Psiquiatría</span><span class="dw">Dra. Cecilia Unibazo</span></span><span class="dp">$60.000<small>particular</small></span></a></li>
+          <li><a href="/neurologia"><span><span class="dn">Neurología</span><span class="dw">Dra. Franca González</span></span><span class="dp">$65.000<small>particular</small></span></a></li>
+          <li><a href="/nutriologia-diabetologia"><span><span class="dn">Diabetes y peso</span><span class="dw">Dr. Raúl Paz</span></span><span class="dp">$60.000<small>particular</small></span></a></li>
+        </ul>
+        <h4>Exámenes</h4>
+        <ul>
+          <li><a href="/ecografia"><span><span class="dn">Ecografía</span><span class="dw">David Pardo, tecnólogo médico</span></span><span class="dp">$40.000<small>particular</small></span></a></li>
+          <li><a href="/oftalmologia"><span><span class="dn">Examen de la vista</span><span class="dw">TM Ana Celedón</span></span><span class="dp">$15.000<small>particular</small></span></a></li>
+        </ul>
+      </div>
+      <div class="dgrp rv" style="--d:2">
+        <h4>Dental y estética</h4>
+        <ul>
+          <li><a href="/odontologia-general"><span><span class="dn">Odontología general</span><span class="dw">Niños y adultos</span></span><span class="dp">$15.000<small>evaluación</small></span></a></li>
+          <li><a href="/ortodoncia"><span><span class="dn">Ortodoncia</span><span class="dw">Dra. Daniela Castillo</span></span><span class="dp">$15.000<small>evaluación</small></span></a></li>
+          <li><a href="/endodoncia"><span><span class="dn">Endodoncia</span><span class="dw">Dr. Fernando Fredes</span></span><span class="dp">$15.000<small>evaluación</small></span></a></li>
+          <li><a href="/implantologia"><span><span class="dn">Implantes</span><span class="dw">Dra. Aurora Valdés</span></span><span class="dp">$15.000<small>evaluación</small></span></a></li>
+          <li><a href="/estetica"><span><span class="dn">Estética facial</span><span class="dw">Dra. Valentina Fuentealba</span></span><span class="dp">$15.000<small>evaluación</small></span></a></li>
+        </ul>
+      </div>
+      <div class="dgrp rv" style="--d:3">
+        <h4>Terapias y salud mental</h4>
+        <ul>
+          <li><a href="/psicologia-adulto"><span><span class="dn">Psicología adulto</span><span class="dw">Presencial o video</span></span><span class="dp">$14.420<small>bono Fonasa</small></span></a></li>
+          <li><a href="/psicologia-infantil"><span><span class="dn">Psicología infantil</span><span class="dw">Niños y adolescentes</span></span><span class="dp">$14.420<small>bono Fonasa</small></span></a></li>
+          <li><a href="/kinesiologia"><span><span class="dn">Kinesiología</span><span class="dw">Sesión de 40 minutos</span></span><span class="dp">$7.830<small>bono Fonasa</small></span></a></li>
+          <li><a href="/nutricion"><span><span class="dn">Nutrición</span><span class="dw">Gisela Pinto</span></span><span class="dp">$4.770<small>bono Fonasa</small></span></a></li>
+          <li><a href="/fonoaudiologia"><span><span class="dn">Fonoaudiología</span><span class="dw">Lavado de oídos</span></span><span class="dp">$25.000<small>particular</small></span></a></li>
+          <li><a href="/matrona"><span><span class="dn">Matrona</span><span class="dw">Sarai Gómez</span></span><span class="dp">$16.000<small>con Fonasa</small></span></a></li>
+          <li><a href="/podologia"><span><span class="dn">Podología</span><span class="dw">Andrea Guevara</span></span><span class="dp">$20.000<small>particular</small></span></a></li>
+          <li><a href="/masoterapia"><span><span class="dn">Masoterapia</span><span class="dw">Paola Acosta, 20 minutos</span></span><span class="dp">$17.990<small>particular</small></span></a></li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<section class="sec">
-  <div class="container route-grid">
+<!-- ═══════════ SI VIENES ═══════════ -->
+<section class="sec bg-hueso2" aria-labelledby="come-h2" id="si-vienes">
+  <div class="wrap come">
+    <figure class="come-photo rv">
+      <picture>
+        <source type="image/webp" sizes="(min-width:761px) 45vw, 100vw" srcset="/static/images/ortodoncia/recepcion-800.webp 800w, /static/images/ortodoncia/recepcion-1400.webp 1400w">
+        <img src="/static/images/ortodoncia/recepcion-1000.jpg" width="1000" height="588" loading="lazy" decoding="async"
+             alt="Recepción del Centro Médico Carampangue: mesón de madera con el logo del centro, sillones y ventanal a la calle." style="object-position:42% 50%">
+      </picture>
+      <figcaption><b>La recepción, en Monsalve 102</b><span>Aquí se emite tu bono Fonasa, con tu huella.</span></figcaption>
+    </figure>
     <div>
-      <div class="sec-head" style="margin-bottom:24px">
-        <h2>Cómo llegar desde {{COMUNA_NAME}}</h2>
+      <div class="sec-head rv" style="margin-bottom:22px">
+        <span class="kicker">Si vienes desde {{COMUNA_NAME}}</span>
+        <h2 id="come-h2">Que el viaje <em>valga la pena.</em></h2>
       </div>
-      <div class="route-stats">
-        <div class="stat"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></span><div><b>{{KM_DIST}} km</b><span>{{COMUNA_NAME}} → CMC</span></div></div>
-        <div class="stat"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg></span><div><b>{{TIME_DIST}}</b><span>en auto</span></div></div>
-        <div class="stat wide"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span><div><b>{{BUS_DIST}}</b><span>Monsalve 102, esquina República, Carampangue</span></div></div>
-      </div>
-      <div class="route-text">
-        <p><strong>{{COMUNA_NAME}} → Carampangue:</strong> {{TRANSPORT_DESC}}</p>
-        <p><strong>En auto:</strong> {{TIME_DIST}} aproximadamente vía Ruta 160.</p>
-        <p>Estacionamiento gratuito frente al centro. Si viene en transporte público, lo ayudamos a coordinar el horario para que no espere.</p>
-      </div>
-      <div class="tip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6M10 22h4"/></svg><span><strong>Dato útil:</strong> {{KINE_NOTE}}</span></div>
-    </div>
-    <div class="photos">
-      <figure>
-        <picture><source srcset="https://centromedicocarampangue.cl/static/sitio/recepcion.webp" type="image/webp"><img src="https://centromedicocarampangue.cl/static/sitio/recepcion-1.jpg" alt="Recepción del Centro Médico Carampangue" width="1400" height="1173" loading="lazy" decoding="async"></picture>
-        <figcaption>Recepción</figcaption>
-      </figure>
-      <figure>
-        <picture><source srcset="https://centromedicocarampangue.cl/static/sitio/sala-espera.webp" type="image/webp"><img src="https://centromedicocarampangue.cl/static/sitio/sala-espera-1.jpg" alt="Sala de espera del centro" width="1400" height="1173" loading="lazy" decoding="async"></picture>
-        <figcaption>Sala de espera</figcaption>
-      </figure>
-      <figure>
-        <picture><source srcset="https://centromedicocarampangue.cl/static/sitio/box-medico.webp" type="image/webp"><img src="https://centromedicocarampangue.cl/static/sitio/box-medico-1.jpg" alt="Box de atención médica" width="1400" height="1173" loading="lazy" decoding="async"></picture>
-        <figcaption>Box de atención</figcaption>
-      </figure>
+      <ol class="tips">
+        <li class="rv"><span class="ic" aria-hidden="true"><svg><use href="#i-cal"/></svg></span><div><h3>Confirma antes de salir</h3><p>El asistente de WhatsApp te muestra las horas libres y te deja la tuya confirmada. Responde a cualquier hora, también de noche.</p></div></li>
+        <li class="rv" style="--d:1"><span class="ic" aria-hidden="true"><svg><use href="#i-two"/></svg></span><div><h3>Junta dos atenciones en un viaje</h3><p>Si necesitas más de una, pregunta por WhatsApp si se pueden agendar el mismo día. Un viaje, dos cosas resueltas.</p></div></li>
+        <li class="rv" style="--d:2"><span class="ic" aria-hidden="true"><svg><use href="#i-id"/></svg></span><div><h3>Trae tu cédula</h3><p>Con Fonasa, el bono MLE se emite aquí con tu huella. No tienes que comprarlo antes.</p></div></li>
+        <li class="rv" style="--d:3"><span class="ic" aria-hidden="true"><svg><use href="#i-flag"/></svg></span><div><h3>Llegas sin perderte</h3><p>Monsalve 102, esquina República, frente a la antigua estación de trenes. Estacionamiento libre en la calle.</p></div></li>
+      </ol>
+      <p class="road rv"><b>El camino desde {{COMUNA_NAME}}:</b> {{TRANSPORT_DESC}}</p>
+      <p class="pay rv">Consultas médicas, psicología, kinesiología y demás atenciones de salud: efectivo o transferencia. Dental y estética facial: también débito y crédito.</p>
     </div>
   </div>
 </section>
 
-<section class="sec sec-alt">
-  <div class="container">
-    <div class="sec-head">
-      <h2>Lo que dicen los pacientes</h2>
-      <p>{{RATING_COUNT}} reseñas en Google con un promedio de {{RATING_VALUE}}/5. Estos son comentarios reales de pacientes, incluyendo personas de {{COMUNA_NAME}} y comunas vecinas.</p>
+<!-- ═══════════ RESEÑAS (solo si Google las entrega) ═══════════ -->
+<section class="sec reviews" aria-labelledby="rev-h2">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="kicker">Reseñas en Google</span>
+      <h2 id="rev-h2"><span class="num">{{RATING_VALUE}}</span> de 5 <em>en Google.</em></h2>
+      <p>{{RATING_COUNT}} reseñas. Estas son algunas, tal como las escribieron.</p>
     </div>
     <div class="reviews-grid">{{REVIEWS_HTML}}</div>
-    <p class="reviews-meta">Ver todas las reseñas en <a href="https://www.google.com/maps/place/Centro+M%C3%A9dico+Carampangue" target="_blank" rel="noopener">Google Maps <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></p>
+    <p class="reviews-meta"><a class="lnk" href="https://www.google.com/maps/search/?api=1&amp;query=Centro+M%C3%A9dico+Carampangue" target="_blank" rel="noopener"><span>Ver todas en Google Maps</span><svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
   </div>
 </section>
 
-<section class="sec">
-  <div class="container">
-    <div class="sec-head center">
-      <h2>Preguntas frecuentes desde {{COMUNA_NAME}}</h2>
-      <p>Lo que más nos consultan pacientes de su zona.</p>
-    </div>
-    <div class="faq-list">
-      <details><summary>¿A cuánto está el CMC desde {{COMUNA_NAME}}? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-        <div class="answer">El Centro Médico Carampangue está a {{KM_DIST}} km de {{COMUNA_NAME}} — aproximadamente {{TIME_DIST}} en auto. {{TRANSPORT_DESC}}</div>
-      </details>
-      <details><summary>¿Atienden con Bono Fonasa? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-        <div class="answer">Sí. El bono Fonasa MLE (Modalidad Libre Elección) se emite en el centro, con huella biométrica, el día de la consulta. Aplica en medicina general, medicina familiar, kinesiología, nutrición y psicología (la Ps. Jacquelinne Salas no emite bono: Fonasa $20.000 directo, particular $25.000). <strong>No es necesario traerlo emitido</strong>.</div>
-      </details>
-      <details><summary>¿Cómo agendo desde {{COMUNA_NAME}}? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-        <div class="answer">Por WhatsApp al <strong>+56 9 6661 0737</strong>. Indique su nombre, RUT y la especialidad. El asistente automático le muestra los horarios disponibles las 24 horas. Si prefiere llamar: <strong>(44) 296 5226</strong>.</div>
-      </details>
-      <details><summary>¿Cuántas especialidades atienden? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-        <div class="answer">19 especialidades médicas y dentales bajo un mismo techo. Si viene desde {{COMUNA_NAME}}, suele convenir aprovechar y resolver más de un tema en la misma visita.</div>
-      </details>
-      <details><summary>¿Aceptan tarjeta de crédito o débito? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-        <div class="answer">Para consultas <strong>dentales</strong> aceptamos efectivo, transferencia, débito y crédito. Para consultas <strong>médicas</strong> con Bono Fonasa o particular: efectivo y transferencia.</div>
-      </details>
-      <details><summary>¿Hay estacionamiento? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
-        <div class="answer">Sí, estacionamiento gratuito frente al centro. Si viene en transporte público desde {{COMUNA_NAME}}, lo ayudamos a coordinar el horario para que no espere.</div>
-      </details>
+<!-- ═══════════ FAQ ═══════════ -->
+<section class="sec" aria-labelledby="faq-h2" id="preguntas">
+  <div class="wrap">
+    <div class="faq-grid">
+      <div class="faq-aside">
+        <div class="sec-head rv" style="margin-bottom:12px">
+          <span class="kicker">Preguntas frecuentes</span>
+          <h2 id="faq-h2">Lo que más preguntan <em>desde {{COMUNA_NAME}}.</em></h2>
+        </div>
+        <p class="rv">¿Otra duda? Escríbenos y te respondemos por WhatsApp.</p>
+        <a class="lnk rv" href="https://wa.me/56966610737?text=Hola%2C%20tengo%20una%20pregunta%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=faq&amp;utm_campaign=comuna_arauco" target="_blank" rel="noopener" data-wa-btn="faq-pregunta"><span>Escribir una pregunta</span> <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item"><summary>¿A cuánto queda el centro desde {{COMUNA_NAME}}? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">A {{KM_DIST}}&nbsp;km, unos {{TIME_DIST}} en auto. {{TRANSPORT_DESC}}</div></details>
+        <details class="faq-item"><summary>¿Tienen sucursal en {{COMUNA_NAME}}? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">No. El Centro Médico Carampangue tiene una sola sede, en Monsalve 102, Carampangue. Algunas especialidades se atienden por videollamada, así que no siempre tienes que viajar.</div></details>
+        <details class="faq-item"><summary>¿Qué consultas puedo hacer por videollamada? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Otorrinolaringología, psiquiatría, neurología, diabetes y peso con el Dr. Raúl Paz, y psicología según el profesional. El link de Medilink te llega por WhatsApp y se abre en el celular, sin instalar ninguna aplicación.</div></details>
+        <details class="faq-item"><summary>¿Atienden con bono Fonasa? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Sí, en medicina general, medicina familiar, kinesiología, nutrición y psicología. El bono MLE se emite en el centro con tu huella: basta la cédula. La Ps. Jacquelinne Salas no emite bono: con Fonasa son $20.000 directo.</div></details>
+        <details class="faq-item"><summary>¿Cómo se paga? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Consultas médicas, psicología, kinesiología, nutrición y demás atenciones de salud: efectivo o transferencia. Dental y estética facial: efectivo, transferencia, débito o crédito.</div></details>
+        <details class="faq-item"><summary>¿Cómo agendo desde {{COMUNA_NAME}}? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Por WhatsApp al <a href="{{WA_LINK}}%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=faq&amp;utm_campaign=comuna_arauco" target="_blank" rel="noopener" data-wa-btn="faq">+56&nbsp;9&nbsp;6661&nbsp;0737</a>: el asistente te muestra las horas libres a cualquier hora. También puedes llamar al <a href="tel:+56442965226">(44)&nbsp;296&nbsp;5226</a>.</div></details>
+        <details class="faq-item"><summary>¿Atienden niños? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Sí. Medicina general atiende niños y adultos, y también hay odontología, psicología infantil y fonoaudiología. No hay pediatra.</div></details>
+        <details class="faq-item"><summary>¿Hay estacionamiento? <span class="pm" aria-hidden="true"></span></summary>
+          <div class="faq-answer">Sí, estacionamiento libre en la calle, en Monsalve con República, frente a la antigua estación de trenes.</div></details>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="cta-band">
-  <div class="container">
-    <h2>¿Listo para agendar desde <em>{{COMUNA_NAME}}</em>?</h2>
-    <p>Escríbanos por WhatsApp y le mostramos los horarios reales disponibles. Sin esperas, sin llamados largos. Si no encuentra lo que busca en su comuna, consulte en el CMC.</p>
-    <div class="ctas">
-      <a class="btn btn-wa btn-lg" href="{{WA_LINK}}" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar por WhatsApp</a>
-      <a class="btn btn-white btn-lg" href="tel:+56442965226">Llamar al (44) 296 5226</a>
+<!-- ═══════════ UBICACIÓN ═══════════ -->
+<section class="sec bg-hueso2" aria-labelledby="mapa-h2" id="ubicacion">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="kicker">El final de la ruta</span>
+      <h2 id="mapa-h2">Frente a la antigua <em>estación de trenes.</em></h2>
+      <p>Monsalve 102, esquina República, Carampangue. Es nuestra única sede.</p>
     </div>
+    <div class="map-grid">
+      <figure class="map rv" id="mapa">
+        <picture>
+          <source type="image/webp" srcset="/static/images/ortodoncia/mapa-cmc-ancho.webp">
+          <img src="/static/images/ortodoncia/mapa-cmc-ancho.jpg" width="1200" height="640" loading="lazy" decoding="async"
+               alt="Mapa de Carampangue con la ubicación del Centro Médico Carampangue en Monsalve 102, en la esquina con República, al oriente de la Ruta 160.">
+        </picture>
+        <div class="pin" aria-hidden="true">
+          <span class="pin-pulse"></span>
+          <svg class="pin-drop" viewBox="0 0 42 54"><path d="M21 53s19-17.3 19-31A19 19 0 0 0 2 22c0 13.7 19 31 19 31z" fill="#0F3F68"/><circle cx="21" cy="21" r="12.5" fill="#fff"/><image href="/static/isotipo.png" x="11" y="11" width="20" height="20"/></svg>
+          <span class="pin-label"><strong>Centro Médico Carampangue</strong>Monsalve 102</span>
+        </div>
+        <figcaption class="map-attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></figcaption>
+      </figure>
+      <div class="loc">
+        <div class="loc-card rv" style="--d:1">
+          <span class="kicker">Dirección</span>
+          <h3>Monsalve 102, Carampangue</h3>
+          <p class="addr">Esquina República. Comuna de Arauco, Región del Biobío.</p>
+          <span class="ref"><svg width="16" height="16" aria-hidden="true"><use href="#i-pin"/></svg>Frente a la antigua estación de trenes</span>
+          <div class="loc-btns">
+            <a class="btn btn-line" href="https://www.google.com/maps/search/?api=1&amp;query=-37.25499,-73.23615" target="_blank" rel="noopener">Google Maps</a>
+            <a class="btn btn-line" href="https://waze.com/ul?ll=-37.25499,-73.23615&amp;navigate=yes" target="_blank" rel="noopener">Waze</a>
+          </div>
+        </div>
+        <div class="loc-card rv" style="--d:2">
+          <span class="kicker">Horario del centro</span>
+          <ul class="hrs num" id="hrs">
+            <li data-d="1-5"><span>Lunes a viernes</span><b>08:00–21:00</b></li>
+            <li data-d="6"><span>Sábado</span><b>09:00–14:00</b></li>
+          </ul>
+          <p class="small">Cada profesional tiene sus propios días. El asistente de WhatsApp te muestra las horas libres.</p>
+          <a href="{{WA_LINK}}%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=ubicacion&amp;utm_campaign=comuna_arauco"
+             class="btn btn-main big-wa" target="_blank" rel="noopener" data-wa-btn="ubicacion">
+            <span class="wa-dot" aria-hidden="true"><svg><use href="#i-wa"/></svg></span>
+            Ver la próxima hora libre
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ CIERRE ═══════════ -->
+<section class="cta-photo cta-band" aria-labelledby="cta-final-h">
+  <picture>
+    <source type="image/webp" sizes="100vw" srcset="/static/images/ortodoncia/fachada-640.webp 640w, /static/images/ortodoncia/fachada-1000.webp 1000w, /static/images/ortodoncia/fachada-1448.webp 1448w">
+    <img src="/static/images/ortodoncia/fachada-1000.jpg" width="1000" height="750" loading="lazy" decoding="async" alt="">
+  </picture>
+  <div class="wrap">
+    <span class="kicker rv">Centro Médico Carampangue</span>
+    <h2 id="cta-final-h" class="rv">Desde {{COMUNA_NAME}}, <em>una sola dirección.</em></h2>
+    <p class="rv" style="--d:1">Monsalve 102, Carampangue: {{KM_DIST}}&nbsp;km por {{BUS_DIST}}. O por videollamada, desde tu casa.</p>
+    <div class="cta-photo-actions rv" style="--d:2">
+      <a href="{{WA_LINK}}%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=cierre&amp;utm_campaign=comuna_arauco"
+         class="btn btn-light" target="_blank" rel="noopener" id="cta-final-wa" data-wa-btn="cierre">
+        <span class="wa-dot" aria-hidden="true"><svg><use href="#i-wa"/></svg></span>
+        Agendar mi hora
+      </a>
+      <a href="tel:+56442965226" class="btn btn-ghost-w">
+        <svg width="18" height="18" aria-hidden="true"><use href="#i-phone"/></svg>
+        Llamar (44) 296 5226
+      </a>
+    </div>
+    <p class="cobertura-note">Pacientes de <a href="/curanilahue">Curanilahue</a> · <a href="/los-alamos">Los Álamos</a> · <a href="/lebu">Lebu</a> · <a href="/canete">Cañete</a> · <a href="/comuna/">otras localidades</a></p>
   </div>
 </section>
 
 </main>
 
 <footer class="footer">
-  <div class="container">
-    <div class="footer-row">
+  <div class="wrap">
+    <div class="footer-grid">
       <div class="footer-brand">
-        <img src="https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png" alt="" width="40" height="40" loading="lazy">
-        <span>Centro Médico Carampangue<small>Monsalve 102, esquina República, Carampangue · Salud cercana en provincia de Arauco</small></span>
+        <img src="/static/images/ortodoncia/logo-cmc.png" alt="Centro Médico Carampangue" width="185" height="44" loading="lazy" />
+        <p>Medicina, dental y especialistas en Monsalve 102, Carampangue. Una sola sede para toda la Provincia de Arauco.</p>
       </div>
-      <ul class="footer-links">
-        <li><a href="tel:+56442965226">(44) 296 5226</a></li>
-        <li><a href="{{WA_LINK}}" rel="noopener">WhatsApp</a></li>
-        <li><a href="https://centromedicocarampangue.cl/comuna">Atención por comuna</a></li>
-      </ul>
+      <div>
+        <h4>Contacto</h4>
+        <ul>
+          <li><a href="https://wa.me/56966610737?text=Hola%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=footer&amp;utm_campaign=comuna_arauco" target="_blank" rel="noopener" data-wa-btn="footer">WhatsApp +56 9 6661 0737</a></li>
+          <li><a href="tel:+56442965226">Teléfono (44) 296 5226</a></li>
+          <li><a href="https://www.google.com/maps/search/?api=1&amp;query=-37.25499,-73.23615" target="_blank" rel="noopener">Monsalve 102, Carampangue</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Lo más visto</h4>
+        <ul>
+          <li><a href="/medicina-general">Medicina general</a></li>
+          <li><a href="/ortodoncia">Ortodoncia</a></li>
+          <li><a href="/otorrinolaringologia">Otorrino por videollamada</a></li>
+          <li><a href="/ecografia">Ecografía</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Para pacientes de {{COMUNA_NAME}}</h4>
+        <ul>
+          <li><a href="/comuna/{{SLUG}}">Guía de atención desde {{COMUNA_NAME}}</a></li>
+          <li><a href="/comuna/">Todas las localidades</a></li>
+          <li><a href="https://centromedicocarampangue.cl">Inicio</a></li>
+          <li><a href="/privacidad">Privacidad</a></li>
+        </ul>
+      </div>
     </div>
-    <div class="footer-foot">Atendiendo a {{COMUNA_NAME}}, Carampangue, Arauco, Curanilahue y comunas cercanas · © 2026 Centro Médico Carampangue · <a href="https://centromedicocarampangue.cl/privacidad">Política de privacidad</a></div>
+    <div class="footer-foot">
+      <div>© 2026 Centro Médico Carampangue. Todos los derechos reservados.</div>
+      <div>Provincia de Arauco · Región del Biobío</div>
+    </div>
   </div>
 </footer>
 
-<a href="{{WA_LINK}}" class="wa-float" rel="noopener" aria-label="Agendar por WhatsApp"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg></a>
+<a href="{{WA_LINK}}%20%28web%3A%20comuna%29&amp;utm_source=comuna_{{SLUG}}&amp;utm_medium=float&amp;utm_campaign=comuna_arauco"
+   class="wa-float is-hidden" target="_blank" rel="noopener" data-wa-btn="flotante" aria-label="Agendar por WhatsApp">
+  <span class="wa-dot" aria-hidden="true"><svg><use href="#i-wa"/></svg></span>
+  <span>Agendar</span>
+</a>
 
-<div class="mob-bar" role="navigation" aria-label="Acciones rápidas">
-  <a class="mb-tel" href="tel:+56442965226" aria-label="Llamar a recepción"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Llamar</a>
-  <a class="mb-wa" href="{{WA_LINK}}" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.8-1.4-1.7-1.5-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.1-1.3c1.4.8 3 1.3 4.9 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2"/></svg> Agendar<span class="mb-long">&nbsp;por WhatsApp</span></a>
-</div>
+<script>
+(function(){
+  var SLUG = '{{SLUG}}';
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event: 'landing_comuna_view', comuna: SLUG, page_path: location.pathname });
+
+  document.addEventListener('click', function(e){
+    var a = e.target && e.target.closest ? e.target.closest('a[href*="wa.me/"]') : null;
+    if (!a) return;
+    try {
+      var url = new URL(a.href), p = url.searchParams;
+      window.dataLayer.push({
+        event: 'click_whatsapp_comuna',
+        wa_phone: url.pathname.replace(/\//g,''),
+        wa_source: p.get('utm_source') || ('comuna_' + SLUG),
+        wa_medium: p.get('utm_medium') || 'unknown',
+        wa_campaign: p.get('utm_campaign') || 'comuna_arauco',
+        wa_link_id: a.id || a.getAttribute('data-wa-btn') || 'unknown',
+        wa_link_text: (a.textContent||'').trim().slice(0,60),
+        wa_page_path: location.pathname
+      });
+    } catch(err) {}
+  }, true);
+
+  // Header + flotante (nunca duplica un botón grande de WhatsApp visible)
+  var nav = document.querySelector('.nav-wrap');
+  var flt = document.querySelector('.wa-float');
+  var heroCta = document.getElementById('cta-hero-wa');
+  var finalCta = document.getElementById('cta-final-wa');
+  var heroGone = false, finalOn = false, inPage = 0;
+  function syncFloat(){ if (!flt) return; var show = heroGone && !finalOn && inPage === 0; flt.classList.toggle('is-hidden', !show); document.documentElement.classList.toggle('float-on', heroGone && !finalOn); }
+  window.addEventListener('scroll', function(){
+    if (nav) nav.classList.toggle('is-scrolled', window.scrollY > 8);
+    if (finalCta){ var fo = finalCta.getBoundingClientRect().top < window.innerHeight; if (fo !== finalOn){ finalOn = fo; syncFloat(); } }
+  }, {passive:true});
+
+  var card = document.getElementById('ruta');
+  if ('IntersectionObserver' in window) {
+    if (heroCta) new IntersectionObserver(function(es){ heroGone = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; syncFloat(); }).observe(heroCta);
+    if (finalCta) new IntersectionObserver(function(es){ finalOn = es[0].isIntersecting || es[0].boundingClientRect.top < 0; syncFloat(); }).observe(finalCta);
+    var bigs = Array.prototype.slice.call(document.querySelectorAll('main .big-wa'));
+    var vis = new IntersectionObserver(function(es){
+      es.forEach(function(en){ en.target._v = en.isIntersecting; });
+      inPage = 0; bigs.forEach(function(x){ if (x._v) inPage++; }); syncFloat();
+    });
+    bigs.forEach(function(x){ vis.observe(x); });
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(en){ if (en.isIntersecting || en.boundingClientRect.top < 0){ en.target.classList.add('on'); io.unobserve(en.target); } });
+    }, {rootMargin:'0px 0px -8% 0px', threshold:0.08});
+    document.querySelectorAll('.rv, .map').forEach(function(el){ io.observe(el); });
+    if (card) { var io2 = new IntersectionObserver(function(es){ if (es[0].isIntersecting){ draw(); io2.disconnect(); } }, {threshold:0.25}); io2.observe(card); }
+  } else {
+    document.querySelectorAll('.rv, .map').forEach(function(el){ el.classList.add('on'); });
+    heroGone = true; syncFloat();
+  }
+
+  // Horario: marca el día de hoy (hora de Chile)
+  try {
+    var dow = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Santiago'})).getDay();
+    var k0 = dow === 6 ? '6' : (dow === 0 ? '' : '1-5');
+    var li = k0 ? document.querySelector('#hrs li[data-d="' + k0 + '"]') : null;
+    if (li){ var t = document.createElement('span'); t.className = 'tag'; t.textContent = 'Hoy'; li.firstElementChild.appendChild(t); }
+  } catch(e){}
+
+  // ── Elemento firma: la ruta ──
+  if (!card) return;
+  // km y minutos: ruteo vial OSRM/OpenStreetMap (COMUNAS_ARAUCO, 6-oct-2026)
+  var R = {
+    'lebu':        {n:'Lebu',        km:'77 km', t:'1 hora 20 minutos', r:'Ruta 160 hasta Carampangue'},
+    'canete':      {n:'Cañete',      km:'72 km', t:'1 hora 20 minutos', r:'Ruta P-60 y Ruta 160 hasta Carampangue'},
+    'los-alamos':  {n:'Los Álamos',  km:'53 km', t:'55 minutos',        r:'Ruta 160 directa hasta Carampangue'},
+    'curanilahue': {n:'Curanilahue', km:'30 km', t:'30 minutos',        r:'Ruta 160 directa hasta Carampangue'},
+    'arauco':      {n:'Arauco',      km:'8 km',  t:'11 minutos',        r:'Ruta P-20 hasta Carampangue'},
+    'laraquete':   {n:'Laraquete',   km:'12 km', t:'12 minutos',        r:'Ruta 160 hasta Carampangue'}
+  };
+  var $ = function(id){ return document.getElementById(id); };
+  var chips = card.querySelectorAll('.chip');
+  var segs = card.querySelectorAll('.seg button');
+  var rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function draw(){
+    var c = card.getAttribute('data-c');
+    card.querySelectorAll('.rt[style]').forEach(function(x){ x.removeAttribute('style'); });
+    var p = card.querySelector('.rt[data-r="' + c + '"]');
+    if (!p || rm || !p.getTotalLength) return;
+    var L = Math.ceil(p.getTotalLength());
+    p.style.transition = 'none'; p.style.strokeDasharray = L + ' ' + L; p.style.strokeDashoffset = L;
+    void p.getBoundingClientRect();
+    p.style.transition = 'stroke-dashoffset 1.6s cubic-bezier(.2,.7,.2,1)'; p.style.strokeDashoffset = '0';
+    p.addEventListener('transitionend', function f(){ p.removeEventListener('transitionend', f); p.removeAttribute('style'); });
+  }
+  function setOrigin(k, animate){
+    if (!R[k]) return;
+    card.setAttribute('data-c', k);
+    $('tk-from-n').textContent = R[k].n; $('tk-km').textContent = R[k].km; $('tk-min').textContent = R[k].t; $('tk-ruta').textContent = R[k].r;
+    chips.forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-r') === k)); });
+    if (animate) draw();
+  }
+  function setMode(m){
+    card.setAttribute('data-mode', m);
+    segs.forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-m') === m)); });
+    if (m === 'auto') draw();
+    try { window.dataLayer.push({event:'comuna_ruta_modo', modo:m, comuna:SLUG}); } catch(e){}
+  }
+  chips.forEach(function(b){ b.addEventListener('click', function(){ if (card.getAttribute('data-mode') !== 'auto') setMode('auto'); setOrigin(b.getAttribute('data-r'), true);
+    try { window.dataLayer.push({event:'comuna_ruta_origen', origen:b.getAttribute('data-r'), comuna:SLUG}); } catch(e){} }); });
+  segs.forEach(function(b){ b.addEventListener('click', function(){ setMode(b.getAttribute('data-m')); }); });
+  card.querySelectorAll('.tw').forEach(function(g){ g.addEventListener('click', function(){ if (card.getAttribute('data-mode') !== 'auto') setMode('auto'); setOrigin(g.getAttribute('data-r'), true); }); });
+  chips.forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-r') === SLUG)); });
+})();
+</script>
 
 </body>
 </html>

@@ -4104,34 +4104,34 @@ _COMUNA_TEMPLATE_HTML = (_TEMPLATE_DIR / "comuna_template.html").read_text(encod
 _COMUNAS_DATA = {
     "curanilahue": {
         "name": "Curanilahue",
-        "title": "Médicos en Curanilahue · Centro Médico Carampangue",
+        "title": "Centro médico a 30 minutos de Curanilahue · CMC",
         "description": "Atención médica completa para pacientes de Curanilahue. 22 especialidades médicas y dentales a 30 minutos del centro. Bono Fonasa, agendamiento por WhatsApp.",
-        "hero_lead": "Si vive en Curanilahue, el CMC está a 30 minutos. 22 especialidades médicas y dentales: medicina general, kinesiología, ginecología, odontología, psicología, ecografías y más. Bono Fonasa MLE en consultas elegibles.",
+        "hero_lead": "Si vives en Curanilahue, el CMC está a 30 minutos. 22 especialidades médicas y dentales: medicina general, kinesiología, ginecología, odontología, psicología, ecografías y más. Bono Fonasa MLE en consultas elegibles.",
         "km": "30", "time": "30 minutos", "bus": "Ruta 160 directa hasta Carampangue",
         "transport": "El viaje se hace por la Ruta 160, sin desvíos, en unos 30 minutos en auto. El centro está en Monsalve 102, esquina República, con estacionamiento libre en la calle.",
         "kine_note": "Ya atendemos pacientes recurrentes desde Curanilahue.",
     },
     "los-alamos": {
         "name": "Los Álamos",
-        "title": "Médicos cerca de Los Álamos · Centro Médico Carampangue",
+        "title": "Centro médico a 55 minutos de Los Álamos · CMC",
         "description": "Atención médica integral para pacientes de Los Álamos. CMC a 53 km, 22 especialidades, agendamiento por WhatsApp.",
-        "hero_lead": "Si estás en Los Álamos, el Centro Médico Carampangue es la opción más cercana fuera de tu comuna. 22 especialidades médicas y dentales con tarifa Fonasa donde aplica.",
+        "hero_lead": "Si estás en Los Álamos, el Centro Médico Carampangue está a 55 minutos. 22 especialidades médicas y dentales con tarifa Fonasa donde aplica.",
         "km": "53", "time": "55 minutos", "bus": "Ruta 160 directa hasta Carampangue",
         "transport": "El viaje se hace por la Ruta 160, que pasa por Curanilahue, en unos 55 minutos en auto. El centro está en Monsalve 102, esquina República.",
-        "kine_note": "Bono Fonasa MLE en kinesiología: 10 sesiones por $83.360.",
+        "kine_note": "Kinesiología con bono Fonasa: $7.830 por sesión.",
     },
     "canete": {
         "name": "Cañete",
-        "title": "Médicos cerca de Cañete · Centro Médico Carampangue",
+        "title": "Centro médico a 1 h 20 min de Cañete · CMC",
         "description": "Atención médica integral para pacientes de Cañete. 22 especialidades a 72 km, agendamiento por WhatsApp, Fonasa y particular.",
-        "hero_lead": "Atendemos pacientes desde Cañete y comunas cercanas (Tirúa, Contulmo). 22 especialidades médicas y dentales. Bono Fonasa MLE disponible. Si necesitas algo que no encontraste en tu comuna, te esperamos.",
+        "hero_lead": "Atendemos pacientes desde Cañete y comunas cercanas (Tirúa, Contulmo). 22 especialidades médicas y dentales. Bono Fonasa MLE disponible. Te esperamos en Carampangue.",
         "km": "72", "time": "1 hora 20 minutos", "bus": "Ruta P-60 y Ruta 160 hasta Carampangue",
         "transport": "El viaje se hace por la Ruta P-60 y luego por la Ruta 160, en cerca de 1 hora 20 minutos en auto. El centro está en Monsalve 102, esquina República, en Carampangue.",
         "kine_note": "Tratamientos extensos disponibles: kinesiología, psicología, ortodoncia.",
     },
     "lebu": {
         "name": "Lebu",
-        "title": "Médicos cerca de Lebu · Centro Médico Carampangue",
+        "title": "Centro médico a 1 h 20 min de Lebu · CMC",
         "description": "Atención médica integral para pacientes de Lebu. CMC en provincia de Arauco, 22 especialidades, agendamiento por WhatsApp.",
         "hero_lead": "Si estás en Lebu, capital de la provincia de Arauco, el CMC en Carampangue ofrece 22 especialidades médicas y dentales que pueden no estar disponibles en tu comuna. Bono Fonasa MLE en consultas elegibles.",
         "km": "77", "time": "1 hora 20 minutos", "bus": "Ruta 160 hasta Carampangue",
@@ -4153,10 +4153,11 @@ async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
     try:
         rating = await fetch_rating()
     except Exception:
-        rating = {"rating": 4.8, "review_count": 14, "reviews": []}
-
-    rv = float(rating.get("rating") or 4.8)
-    rc = int(rating.get("review_count") or 14)
+        rating = {}
+    # Sin datos reales de Google no se muestra nota ni reseñas (antes: 4,8 / 14
+    # y un testimonio inventado de respaldo).
+    rv = float(rating.get("rating") or 0)
+    rc = int(rating.get("review_count") or 0)
     reviews = rating.get("reviews") or []
 
     import json as _json
@@ -4183,12 +4184,6 @@ async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
             f'<div class="date">{when}</div>'
             f'</div>'
         )
-    if not reviews_html_parts:
-        reviews_html_parts.append(
-            '<div class="review-card"><div class="stars">★★★★★</div>'
-            '<p class="text">"Excelente atención, médicos empáticos y secretaría rápida."</p>'
-            '<div class="author">Paciente CMC</div></div>'
-        )
 
     wa_text = f"Hola%2C%20vivo%20en%20{data['name'].replace(' ', '%20')}%20y%20quiero%20agendar"
     html = _COMUNA_TEMPLATE_HTML
@@ -4208,8 +4203,15 @@ async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
         "{{RATING_COUNT}}": str(rc),
         "{{REVIEWS_SCHEMA}}": ",".join(reviews_schema),
         "{{REVIEWS_HTML}}": "".join(reviews_html_parts),
-        "{{ROBOTS}}": "index,follow" if for_wp else "noindex,nofollow",
+        # Indexable: el sitio ya no pasa por WordPress (for_wp quedó obsoleto);
+        # las copias en agentecmc.cl llevan canonical al dominio oficial.
+        "{{ROBOTS}}": "index,follow",
     }
+    if not reviews_html_parts or not rv:
+        i = html.find('<section class="sec reviews"')
+        j = html.find('</section>', i)
+        if i >= 0 and j > i:
+            html = html[:i] + html[j + len('</section>'):]
     for k, v in replacements.items():
         html = html.replace(k, v)
     return html
@@ -4222,8 +4224,7 @@ async def _render_comuna_html(slug: str, *, for_wp: bool = False) -> str | None:
 @app.get("/cañete", response_class=HTMLResponse)
 @app.get("/lebu", response_class=HTMLResponse)
 async def comuna_page(request: Request):
-    """Landing por comuna. Default agentecmc.cl: noindex,nofollow.
-    Si ?for_wp=1 (usado por Snippet 8 desde WP): indexable."""
+    """Landing por comuna (indexable; canonical al dominio oficial)."""
     url_path = request.url.path.lstrip("/").rstrip("/").lower()
     if url_path.startswith("comuna/"):
         slug = url_path.split("/", 1)[1]
