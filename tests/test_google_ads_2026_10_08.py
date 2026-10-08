@@ -90,9 +90,10 @@ check("tabla sin cuerpos basura tras los 400", q1("SELECT COUNT(*) n FROM google
 
 main._gclick_buckets.clear()
 codes = [429 if False else cli.post("/api/gclick", json={**OK_BODY, "code": "RRRR2"},
-                                    headers={"CF-Connecting-IP": "9.9.9.9"}).status_code for _ in range(25)]
+                                    headers={"X-Real-IP": "9.9.9.9"}).status_code for _ in range(25)]
 check("rate-limit por IP: pasa 20 y luego 429", codes.count(200) == 20 and codes[-1] == 429)
-check("otra IP sigue pasando", cli.post("/api/gclick", json=OK_BODY, headers={"CF-Connecting-IP": "8.8.8.8"}).status_code == 200)
+check("otra IP sigue pasando", cli.post("/api/gclick", json=OK_BODY, headers={"X-Real-IP": "8.8.8.8"}).status_code == 200)
+check("CF-Connecting-IP falsificado no evade el limite", cli.post("/api/gclick", json=OK_BODY, headers={"X-Real-IP": "9.9.9.9", "CF-Connecting-IP": "7.7.7.7"}).status_code == 429)
 main._gclick_buckets.clear()
 
 # ───────────────────────── Paso 2: bot ─────────────────────────

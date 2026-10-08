@@ -2165,12 +2165,20 @@ for _slug_landing in _LANDINGS_ESPECIALIDAD:
 # Solo ESCRIBE: no hay GET ni respuesta con datos del clic, así que nadie puede leer
 # gclids ajenos. Validación estricta, tope de cuerpo, rate-limit por IP y global.
 _GCLICK_ORIGENES = ("agentecmc.cl", "centromedicocarampangue.cl", "localhost", "127.0.0.1")
-_GCLICK_IP_MAX, _GCLICK_GLOBAL_MAX, _GCLICK_VENTANA = 20, 600, 60   # por minuto
+_GCLICK_IP_MAX, _GCLICK_GLOBAL_MAX, _GCLICK_VENTANA = 20, 120, 60   # por minuto
+# Tope diario de clics nuevos: el volumen real de búsquedas en la zona es de cientos al
+# MES; esto acota cuánto puede crecer google_clicks aunque alguien rote IPs.
+_GCLICK_DIA_MAX = 2000
 _gclick_buckets: dict[str, deque] = {}
+_gclick_dia: dict[str, int] = {}
+import time as _time_mod
 
 
 def _gclick_rate_ok(ip: str) -> bool:
     now = monotonic()
+    hoy = _time_mod.strftime("%Y-%m-%d", _time_mod.gmtime())
+    if _gclick_dia.get(hoy, 0) >= _GCLICK_DIA_MAX:
+        return False
     for key, tope in ((f"ip:{ip}", _GCLICK_IP_MAX), ("global", _GCLICK_GLOBAL_MAX)):
         b = _gclick_buckets.setdefault(key, deque())
         while b and now - b[0] > _GCLICK_VENTANA:
@@ -2179,6 +2187,9 @@ def _gclick_rate_ok(ip: str) -> bool:
             return False
     _gclick_buckets["global"].append(now)
     _gclick_buckets[f"ip:{ip}"].append(now)
+    if hoy not in _gclick_dia:
+        _gclick_dia.clear()
+    _gclick_dia[hoy] = _gclick_dia.get(hoy, 0) + 1
     if len(_gclick_buckets) > 5000:                       # limpieza oportunista
         for k in [k for k, v in _gclick_buckets.items() if not v or now - v[-1] > _GCLICK_VENTANA]:
             _gclick_buckets.pop(k, None)
@@ -2190,7 +2201,9 @@ async def api_gclick(request: Request):
     """Registra un clic de Google Ads: {code, gclid|gbraid|wbraid, landing, ts}."""
     import json as _json
     from urllib.parse import urlparse as _urlparse
-    ip = (request.headers.get("cf-connecting-ip") or request.headers.get("x-real-ip")
+    # X-Real-IP lo fija nginx con $remote_addr (pisa lo que mande el cliente);
+    # cf-connecting-ip NO: en centromedicocarampangue.cl no hay Cloudflare y es falsificable.
+    ip = (request.headers.get("x-real-ip")
           or (request.client.host if request.client else "?"))
     if not _gclick_rate_ok(ip):
         return JSONResponse({"ok": False}, status_code=429, headers={"Retry-After": "60"})
