@@ -5664,6 +5664,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         return _btn_msg("¡Bien ahí! 👏 Entonces no te molesto con eso.\n\n" + _ESTETICA_OFERTA,
                         [{"id": "xestfacial_si", "title": "Me interesa"},
                          {"id": "xestfacial_no", "title": "No, gracias"}])
+    # ── Reenganche del Dr. Paz: alternativas con bono Fonasa ──
+    if tl == "xpaz_si":
+        log_event(phone, "paz_reenganche_eligio", {"destino": "dr_paz"})
+        return await _iniciar_agendar(phone, data, "nutriología y diabetología")
+    if tl in ("xpaz_mg", "xpaz_nutri"):
+        _alt_paz = "medicina general" if tl == "xpaz_mg" else "nutrición"
+        log_event(phone, "paz_reenganche_eligio", {"destino": _alt_paz})
+        return await _iniciar_agendar(phone, data, _alt_paz)
     if tl in ("xoferta_no", "xestfacial_no"):
         log_event(phone, "consent_oferta_rechazo", {"boton": tl})
         reset_session(phone)

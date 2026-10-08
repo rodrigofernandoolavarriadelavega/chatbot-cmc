@@ -481,6 +481,39 @@ async def _enviar_reenganche():
             continue  # Medilink no respondió — reintenta el próximo ciclo
 
         canal = _canal_de_phone(phone)
+        # Dr. Paz (81): quien vio horas y no respondió suele ser Fonasa al que el
+        # valor particular se le complica (21-sep→6-oct: 102 vieron horas, 1
+        # agendó). En vez del genérico, se le ofrecen alternativas con bono
+        # Fonasa sin cerrarle la puerta al Dr. Paz (decisión del dueño 2026-10-08:
+        # no ahuyentar antes, ofrecer DESPUÉS si no responde).
+        _esp_paz_r = (especialidad or "").lower()
+        if canal == "wa" and ("nutriolog" in _esp_paz_r or "diabetolog" in _esp_paz_r):
+            from flows import _btn_msg as _btn_paz_r
+            _msg_paz = (
+                f"{_rt.saludo(_nombre_msg)} ¿Pudiste ver las horas del *Dr. Raúl Paz*? "
+                "Si quieres, te busco una.\n\n"
+                "Y si tienes *Fonasa* y el valor particular ($60.000) se te complica, "
+                "tu diabetes o tu peso también los puede ver un *médico general* o la "
+                "*nutricionista*, con bono Fonasa."
+            )
+            try:
+                _bt_paz = _btn_paz_r(_msg_paz, [
+                    {"id": "xpaz_si", "title": "Horas Dr. Paz"},
+                    {"id": "xpaz_mg", "title": "Médico general"},
+                    {"id": "xpaz_nutri", "title": "Nutricionista"},
+                ])
+                await send_whatsapp_interactive(phone, _bt_paz["interactive"])
+                log_message(phone, "out", _msg_paz, state)
+            except Exception:
+                log.exception("Reenganche Dr. Paz falló phone=%s", phone)
+                continue
+            data["reenganche_sent"] = True
+            from resilience import get_phone_lock as _gpl_paz
+            async with _gpl_paz(phone):
+                save_session(phone, state, data)
+            log_event(phone, "reenganche_enviado", {
+                "state": state, "canal": canal, "variante": "paz_alternativas_fonasa"})
+            continue
         try:
             if canal == "wa":
                 from flows import _btn_msg as _btn_msg_j
