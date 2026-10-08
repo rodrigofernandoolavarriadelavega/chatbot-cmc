@@ -535,6 +535,17 @@ H.pedir = id => { const p=personaActiva(); const it=itemsPara(p).find(x=>x.id===
 
 /* ════════════════ Precarga para Inicio ════════════════ */
 H.homeCard = homeCard;
+/* Dato vivo para el acceso "Mis remedios" del Inicio (ronda 5). null = aún cargando. */
+H.resumen = () => {
+  if (!S.d || restringido()) return null; const list = H.rem[rk()];
+  if (list===undefined || list===null) return null; if (!Array.isArray(list)) return {};
+  if (!list.length) return {vacio:true};
+  const hoy = tomasDe(list, today()); const done = tomadas(); const now = new Date();
+  const ahora = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const pend = hoy.filter(t=>!done.has(t.m.id+'|'+t.h)); const p = pend.find(t=>t.h>=ahora) || pend[0];
+  const bajo = list.find(m=>{ const q=diasQuedan(m); return q && q.dias<=7; });
+  return {total:hoy.length, prox: p ? {h:p.h, nombre:p.m.nombre} : null, bajo: bajo ? bajo.nombre.split(' ')[0] : ''};
+};
 H.precargar = async () => {
   if (!S.d || restringido()) return;
   const r = rk();

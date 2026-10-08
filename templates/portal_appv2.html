@@ -333,6 +333,93 @@ html.fz-130 .fzrow{grid-template-columns:1fr!important}
 .rtable th{font-weight:700;color:var(--muted)}
 @media print{.rprint .card{border:1px solid #999}.rtable td,.rtable th{font-size:11pt}}
 @media (min-width:700px){body{background:radial-gradient(1200px 500px at 50% -200px,#EAF4F7,transparent),var(--bone)}h1{font-size:2rem}}
+
+/* ═══ Ronda 5: composición de la v4 en el Inicio ═══ */
+.home{display:flex;flex-direction:column;gap:0;padding-top:10px}
+.hcol{display:contents}
+.h-hero{order:1}.h-aviso{order:2;margin-top:12px}.h-tools{order:3}.h-fam{order:4}.h-news{order:5}.h-sos{order:6;margin-top:22px}
+.home h2{margin:22px 0 10px}
+.ticket.hero{padding:18px 18px 18px}
+.hero h1{color:#fff;margin:0 0 4px;font-size:1.6rem}
+.hero-dep{color:#E8F3F8;font-size:1.05rem;margin-bottom:6px}.hero-dep a{color:#fff;font-weight:700}
+.hero-lbl{font-size:1rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#CFE9F0;margin:12px 0 6px}
+.cita-g{display:flex;align-items:center;gap:14px;padding:12px;border-radius:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.24);color:#fff;text-decoration:none;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.cita-g.empty{margin-top:12px;padding:16px}
+.cita-g .dt{width:70px;flex:none;align-self:stretch;display:flex;flex-direction:column;justify-content:center;border-radius:14px;background:rgba(255,255,255,.16);text-align:center;padding:6px 0;line-height:1.1}
+.cita-g .dt small{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#CFE9F0}
+.cita-g .dt b{font-family:var(--f-head);font-size:2rem;font-weight:800}
+.cg-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.cg-esp{font-family:var(--f-head);font-weight:700;font-size:1.125rem;color:#fff}
+.cg-hr{font-family:var(--f-head);font-weight:800;font-size:2rem;line-height:1.1;display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px}
+.cg-hr small{font-size:1.05rem;font-weight:600;opacity:.85;margin-left:-4px}
+.cg-hr .pill{font-size:1rem}
+.cg-doc{font-size:1.125rem;color:#E8F3F8}.cg-none{display:block;font-family:var(--f-head);font-size:1.3rem;margin-bottom:4px}
+.hero-mod{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:1.125rem;color:#E8F3F8}.hero-mod svg{width:24px;height:24px;flex:none}
+.hero .btns{margin-top:12px}
+.hero-ok{display:flex;align-items:center;gap:8px;font-weight:700;color:#fff;margin-bottom:10px}.hero-ok svg{width:22px;height:22px;color:var(--aqua)}
+.hero-cta{margin-top:10px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{position:relative;display:flex;flex-direction:column;gap:8px;min-height:120px;padding:14px;border-radius:var(--r);background:#fff;border:1px solid var(--line);box-shadow:var(--sh-1);text-decoration:none;color:var(--ink);transition:transform .15s,box-shadow .15s}
+.tile:active{transform:scale(.99)}
+.tile.wide{grid-column:1/-1;flex-direction:row;align-items:center;min-height:84px}
+.tile .chev{margin-left:auto;width:22px;height:22px;color:#9AA6B0;flex:none}
+.tile.wide .t-tx{flex:1}
+.t-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;flex:none}.t-ic svg{width:26px;height:26px}
+.t-rem .t-ic{background:var(--aqua-soft);color:var(--navy)}.t-res .t-ic{background:var(--bad-bg);color:var(--bad)}.t-med .t-ic{background:var(--ok-bg);color:var(--ok)}
+.t-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.t-tx>b{font-family:var(--f-head);font-weight:700;font-size:1.125rem;color:var(--navy)}
+.t-live{font-size:1.05rem;color:var(--ink-2);line-height:1.35}.t-live b{color:var(--navy);font-weight:700}
+.t-badge{display:inline-block;background:var(--bad);color:#fff;border-radius:999px;padding:1px 12px;font-weight:700}
+.t-warn{display:flex;gap:6px;align-items:center;color:var(--warn);font-weight:700;font-size:1rem}.t-warn svg{width:18px;height:18px;flex:none}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fcard{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:150px;padding:14px;border-radius:var(--r);background:#fff;border:1px solid var(--line);box-shadow:var(--sh-1);text-align:left;cursor:pointer;color:var(--ink);text-decoration:none;font:inherit}
+.fcard .ava{width:50px;height:50px;font-size:1.15rem;margin-bottom:8px}
+.fcard b{font-family:var(--f-head);font-weight:700;font-size:1.125rem;color:var(--navy)}
+.f-rel{font-size:1rem;color:var(--muted)}
+.f-next{margin-top:6px;font-weight:700;color:#0B5536;font-size:1.05rem}
+.f-esp{font-size:1rem;color:var(--ink-2)}.f-none{margin-top:6px;font-size:1rem;color:var(--muted)}
+.fcard.add{border:1.5px dashed var(--line-2);background:#FBFAF7;box-shadow:none}
+.fcard.add .ava{background:#fff;color:var(--blue);border:1.5px dashed var(--blue)}.fcard.add .ava svg{width:24px;height:24px}
+html.fz-130 .tiles,html.fz-130 .fgrid{grid-template-columns:1fr}
+@media (max-width:359px){.tiles,.fgrid{grid-template-columns:1fr}}
+
+/* Navegación: lateral solo en escritorio (el mismo <nav>) */
+.nav .side-brand,.nav .side-x,.nav .side-help{display:none}
+@media (max-width:1023px){ body.inflow .nav{display:none} }
+@media (min-width:1024px){
+  :root{--side-w:256px}
+  body.logged{padding-left:var(--side-w)}
+  .nav{top:0;bottom:0;right:auto;width:var(--side-w);border-top:0;border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;background:#fff}
+  .nav[hidden]{display:none}
+  .nav .in{display:flex;flex-direction:column;gap:4px;max-width:none;margin:0}
+  .nav a{flex-direction:row;justify-content:flex-start;gap:12px;min-height:52px;padding:0 12px;border-radius:14px;font-size:1.05rem;white-space:normal}
+  .nav a .dot{width:auto;height:auto;background:none!important}
+  .nav a[aria-current=page]{background:var(--aqua-soft);color:var(--navy)}
+  .nav a:hover{background:#F4F1EB}
+  .side-brand{display:flex!important;align-items:center;gap:10px;padding:4px 8px 14px!important;margin-bottom:6px;border-bottom:1px solid var(--line);border-radius:0!important;min-height:0!important;color:var(--navy)!important;text-decoration:none}
+  .side-brand:hover{background:none!important}
+  .side-brand img{width:40px;height:40px;border-radius:12px;box-shadow:var(--sh-1);padding:3px;background:#fff}
+  .side-brand small{display:block;font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+  .side-brand b{font-family:var(--f-head);font-weight:700;font-size:16px}
+  .nav .side-x{display:flex;flex-direction:column;gap:4px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .side-x svg{width:24px;height:24px;flex:none}
+  .side-t{font-size:.95rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 12px 4px}
+  .nav .side-help{display:block;margin-top:auto;padding:12px}.side-help a{min-height:48px;color:var(--bad);font-weight:700}
+  main,main.noNav{padding-bottom:48px}
+  .toast{bottom:24px;left:calc(var(--side-w) + 24px)}
+  .top .brand{visibility:hidden}
+  .top .wrap{max-width:none;padding:0 32px}
+  .wrap{max-width:720px}
+  .wrap.wide{max-width:1180px;padding:0 32px}
+  .home{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0 28px;align-items:start}
+  .hcol{display:flex;flex-direction:column}
+  .h-sos{grid-column:1/-1}
+  .hcol-b>section:first-child h2{margin-top:0}
+  .hero h1{font-size:2rem}
+  .ticket.hero{padding:26px 26px 24px}
+  .hero .btns .btn,.hero-cta{min-height:58px}
+  .fgrid{grid-template-columns:1fr 1fr}
+}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 @media print{.top,.nav,.help,.btns,.btn,.icon-b,#bands,.noprint{display:none!important}body{background:#fff}.card{box-shadow:none}}
 </style>
@@ -605,19 +692,20 @@ function pagoDe(esp, idProf){ const k=S.catMap[+idProf]; if(k&&k.pago&&k.pago.le
 function modalidad(c){ const id=+c.id_profesional; if(c.modalidad==='online') return 'video'; if(TELE_SIEMPRE.has(id)) return 'video'; if(TELE_DIAS[id]){ const d=pDate(c.fecha); return d&&TELE_DIAS[id].includes(d.getDay())?'video':'presencial'; } if(A_ELECCION.has(id)) return 'eleccion'; return 'presencial'; }
 const todasCitas = () => ((S.d&&S.d.citas_futuras)||[]).slice().sort((a,b)=>(a.fecha+hhmm(a.hora_inicio)).localeCompare(b.fecha+hhmm(b.hora_inicio)));
 function yaPaso(c){ const h=horasHasta(c); return h!=null && h < -0.75; }   // 45 min después de la hora de inicio
+function empezo(c){ const h=horasHasta(c); return h!=null && h < 0; }      // la hora ya comenzó: no se muestra como "próxima"
 /* Desenlace real de la cita (id_estado de Medilink; texto como respaldo). 'abierta' = sin desenlace aún. */
 function estadoCita(c){ const id=+(c&&c.id_estado)||0; const t=String((c&&c.estado)||'').trim().toLowerCase();
   if (id===2 || t.startsWith('atendido')) return 'atendida';
   if (id===8 || t.startsWith('no asiste')) return 'no_vino';
   if (id===5 || id===6 || t.startsWith('en sala') || t.startsWith('atendiéndose')) return 'en_curso';
   return 'abierta'; }
-const citas = () => todasCitas().filter(c=>!yaPaso(c) && estadoCita(c)==='abierta');
+const citas = () => todasCitas().filter(c=>!empezo(c) && estadoCita(c)==='abierta');
 /* Horas de HOY que ya pasaron o ya tienen desenlace: las abiertas vienen en citas_futuras; las
    atendidas / no asistidas, en el historial (el portal pide las de hoy con incluir_hoy_cerradas). */
 function pasadasHoy(){
   if (!S.d) return []; const hoy = iso(today()); const m = new Map();
   (S.d.historial||[]).filter(h=>String(h.fecha||'').slice(0,10)===hoy).forEach(h=>m.set(String(h.id), h));
-  todasCitas().filter(c=>daysFrom(c.fecha)===0 && (yaPaso(c) || estadoCita(c)!=='abierta')).forEach(c=>{ const k=String(c.id), o=m.get(k); if(!o || estadoCita(o)==='abierta') m.set(k, {...(o||{}), ...c, id_estado:c.id_estado!=null?c.id_estado:(o&&o.id_estado)}); });
+  todasCitas().filter(c=>daysFrom(c.fecha)===0 && (empezo(c) || estadoCita(c)!=='abierta')).forEach(c=>{ const k=String(c.id), o=m.get(k); if(!o || estadoCita(o)==='abierta') m.set(k, {...(o||{}), ...c, id_estado:c.id_estado!=null?c.id_estado:(o&&o.id_estado)}); });
   return [...m.values()].sort((a,b)=>hhmm(a.hora_inicio).localeCompare(hhmm(b.hora_inicio)));
 }
 const citaById = id => todasCitas().find(c=>String(c.id)===String(id));
@@ -659,13 +747,21 @@ function renderTop(){
 let _navved = false;   // ¿ya navegamos dentro del portal? (si no, Atrás no debe sacar a la persona del sitio)
 window.addEventListener('hashchange', ()=>{ _navved = true; });
 function goBack(){ const r=route(); if(_navved){ history.back(); return; } go(BACK[r.name]||'inicio'); }
+/* Navegación (ronda 5): UN solo <nav>. Celular/tablet (<1024 px): barra inferior fija con 5 destinos.
+   Escritorio (≥1024 px): el MISMO nav se dibuja como menú lateral izquierdo con nombre completo y
+   accesos extra. En flujos (pedir hora, anular…) la barra inferior se oculta; el lateral se mantiene.
+   Nunca hay dos menús a la vez: es un solo elemento que cambia de forma con CSS. */
+const SIDE_EXTRA = [['remedios','Mis remedios','pill'],['docs','Resultados','doc'],['mediciones','Mediciones','heart']];
 function renderNav(){
   const r = route(); const nav=$('#nav'); const main=$('#app');
-  const show = S.d && !FLOW.has(r.name);
-  nav.hidden = !show; main.classList.toggle('noNav', !show);
-  if (!show) return;
-  const cur = TAB_OF[r.name] || r.name;
-  nav.innerHTML = `<div class="in">${TABS.map(([k,t,i])=>`<a href="#${k}" ${cur===k?'aria-current="page"':''}><span class="dot">${ic(i)}</span>${t}</a>`).join('')}</div>`;
+  nav.hidden = !S.d; document.body.classList.toggle('logged', !!S.d); document.body.classList.toggle('inflow', !!S.d && FLOW.has(r.name));
+  main.classList.toggle('noNav', !S.d || FLOW.has(r.name));
+  if (!S.d) return;
+  const cur = TAB_OF[r.name] || r.name; const curX = r.name==='mediciones'||r.name==='medir' ? 'mediciones' : r.name;
+  nav.innerHTML = `<a class="side-brand" href="#inicio" aria-label="Inicio, Centro Médico Carampangue"><img src="/static/isotipo.png" alt="" width="40" height="40"><span><small>Centro Médico</small><b>Carampangue</b></span></a>
+    <div class="in">${TABS.map(([k,t,i])=>`<a href="#${k}" ${cur===k?'aria-current="page"':''}><span class="dot">${ic(i)}</span>${t}</a>`).join('')}</div>
+    ${restringido()?'':`<div class="side-x"><p class="side-t">Accesos</p>${SIDE_EXTRA.map(([k,t,i])=>`<a href="#${k}" ${curX===k?'aria-current="page"':''}>${ic(i)}<span>${t}</span></a>`).join('')}</div>`}
+    <p class="side-help"><a href="tel:131">Emergencia: SAMU 131</a></p>`;
 }
 function renderBands(){
   let h='';
@@ -688,7 +784,7 @@ function render(){
   const r = route(); const V = VIEWS[r.name] || VIEWS.inicio;
   let html; try{ html = (restringido() && SOLO_VERIFICADOS.includes(r.name)) ? `<h1>Información protegida</h1>${avisoVinculo()}` : V(r); }catch(e){ console.error(e); html = `<h1>Algo no funcionó</h1>${errorBlock(e,'render()')}`; }
   if (html==null) return;
-  $('#app').innerHTML = `<div class="wrap view">${html}</div>`;
+  $('#app').innerHTML = `<div class="wrap view${r.name==='inicio'?' wide':''}">${html}</div>`;
   const key = location.hash;
   if (key !== render._last){ render._last = key; const h1 = $('#app h1'); if (h1){ h1.setAttribute('tabindex','-1'); h1.focus({preventScroll:true}); } }
   if (V.after) V.after(r);
@@ -718,7 +814,6 @@ const skel = (n=3,h=72) => `<div class="stack" aria-busy="true">${('<div class="
    ═══════════════════════════════════════════════════════════════════ */
 function ticketHTML(c, opts={}){
   const n = daysFrom(c.fecha); const mod = modalidad(c);
-  if (opts.compact) return ticketCompact(c, n, mod, opts);
   const pill = n===0 ? '<span class="pill today">Hoy</span>' : n===1 ? '<span class="pill soon">Mañana</span>' : n!=null && n<=30 ? `<span class="pill soon">En ${n} días</span>` : '';
   const modTxt = mod==='video' ? `${ic('video')}<span><b>Teleconsulta por videollamada.</b> Le enviamos el link de Medilink por WhatsApp antes de la hora. No necesita instalar nada.</span>`
     : mod==='eleccion' ? `${ic('info')}<span>Presencial o por videollamada, según lo que usted eligió. Si es videollamada, el link le llega por WhatsApp.</span>`
@@ -731,55 +826,86 @@ function ticketHTML(c, opts={}){
     <div class="mod">${modTxt}</div>
     ${opts.btns?`<div class="btns">${opts.btns}</div>`:''}</article>`;
 }
-/* Boleto compacto de Inicio: misma información esencial en ~la mitad de alto, para que
-   debajo se vean los resultados nuevos y la familia sin hacer scroll (390×844). */
-function ticketCompact(c, n, mod, opts){
-  const d = pDate(c.fecha);
-  const pill = n===0 ? '<span class="pill today">Hoy</span>' : n===1 ? '<span class="pill soon">Mañana</span>' : n!=null && n<=30 ? `<span class="pill soon">En ${n} días</span>` : '';
-  const fecha = d ? DIAS[d.getDay()].charAt(0).toUpperCase()+DIAS[d.getDay()].slice(1)+' '+d.getDate()+' de '+MESES[d.getMonth()] : esc(c.fecha);
-  const modTxt = mod==='video' ? `${ic('video')}<span>Por videollamada · link por WhatsApp</span>`
-    : mod==='eleccion' ? `${ic('info')}<span>Presencial o videollamada</span>`
-    : `${ic('pin')}<span>Monsalve 102, Carampangue</span>`;
-  return `<article class="ticket compact" aria-label="${esc(opts.label||'Su próxima hora')}: ${esc(c.especialidad)}, ${esc(fecha)} a las ${esc(hhmm(c.hora_inicio))}">
-    <div class="eyebrow">${pill}<span class="tk-date">${esc(fecha)}</span></div>
-    <div class="tk-main"><div class="hour">${esc(hhmm(c.hora_inicio))}<small>hrs</small></div>
-      <div class="tk-when"><span class="tk-lbl">${esc(opts.label||'Su próxima hora')}</span><b>${esc(c.especialidad)}</b>${esc(c.profesional)}</div></div>
-    <div class="mod">${modTxt}</div>
-    ${opts.btns?`<div class="btns">${opts.btns}</div>`:''}</article>`;
-}
 const checkinKey = c => 'cmc_app_ci_'+c.fecha+'_'+(c.id||'');
 const VIEWS = {};
+/* INICIO (ronda 5): composición de la v4 — hero con la foto del centro, la cita en tarjeta de
+   vidrio con bloque de fecha y "Pedir una hora nueva" justo debajo; accesos con dato vivo;
+   familia en tarjetas con color. Celular: una columna (el orden lo da `order`).
+   Escritorio ≥1024: izquierda cita + novedades, derecha familia + herramientas. */
 VIEWS.inicio = () => {
   const cs = citas(); const c = cs[0]; const nm = first(S.d.nombre);
   const h = new Date().getHours(); const sal = h<12?'Buenos días':h<20?'Buenas tardes':'Buenas noches';
-  let main;
-  if (c){
-    const hoy = daysFrom(c.fecha)===0; const done = load(checkinKey(c));
-    let btns = '';
-    if (hoy && !done) btns = `<div class="tk-btns"><button class="btn light" onclick="checkin('${esc(c.id)}')">Sí, voy a mi hora</button><button class="btn ghostL" onclick="go('hora/${esc(c.id)}')">Ver detalle</button></div>`;
-    else btns = (hoy?`<div class="note ok" style="margin-bottom:10px">${ic('check')}<div><b>Recepción ya sabe que viene.</b></div></div>`:'')
-      + `<button class="btn light" onclick="go('hora/${esc(c.id)}')">Ver detalle, cambiar o anular</button>`;
-    main = ticketHTML(c, {btns, compact:true});
-  } else {
-    const ult = (S.d.historial||[]).find(h=>estadoCita(h)!=='no_vino');
-    main = `<div class="ticket compact"><div class="eyebrow">Su próxima hora</div><div class="when" style="font-size:1.4rem">No tiene horas próximas</div>
-      ${ult?`<p class="who-doc" style="margin-top:8px">Su última atención fue ${esc(hace(ult.fecha))} (${esc(ult.especialidad)}).</p>`:''}
-      <div class="btns"><button class="btn light" onclick="startAgendar()">${ic('plus')}Pedir una hora</button></div></div>`;
-  }
-  const otras = cs.length - 1; const pas = pasadasHoy();
-  /* Orden (ronda 4): hora → resultados nuevos / remedios → familia → pedir hora → horas que ya pasaron */
-  return `<h1 style="margin-top:10px">${sal}, ${esc(nm)}</h1>
-    ${S.d.is_dependent?`<p class="lead">Está viendo la ficha de <b>${esc(S.d.nombre)}</b>. <a href="#" onclick="switchTo('${jsq(S.d.owner_rut)}');return false">Volver a la suya</a></p>`:''}
-    ${restringido()?`<div style="margin-top:12px">${avisoVinculo()}</div>`:''}
-    <div style="margin-top:12px">${main}</div>
-    ${pendienteCard()}
-    ${familiaRow()}
-    ${c?`<button class="btn aqua" style="margin-top:16px" onclick="startAgendar()">${ic('plus')}Pedir una hora nueva</button>`:''}
-    ${otras>0?`<a class="btn sec" style="margin-top:10px" href="#horas">${otras===1?'Ver mi otra hora':'Ver mis otras '+otras+' horas'}</a>`:''}
-    ${pas.length?`<h2 style="margin-top:24px">Hoy</h2>${pas.map(pasadaHTML).join('')}`:''}
-    <p class="sos" style="margin-top:22px">¿Es una emergencia? No use el portal: <a href="tel:131">llame al SAMU 131</a></p>`;
+  const otras = cs.slice(1, 3); const pas = pasadasHoy();
+  const news = (pas.length?`<h2>Hoy</h2>${pas.map(pasadaHTML).join('')}`:'')
+    + (otras.length?`<h2>Sus otras horas</h2><div class="list">${otras.map(citaLi).join('')}</div>${cs.length>3?`<a class="btn sec" style="margin-top:10px" href="#horas">Ver todas mis horas</a>`:''}`:'');
+  return `<div class="home">
+    <div class="hcol hcol-a">
+      <div class="h-hero">${heroHTML(c, sal, nm)}</div>
+      ${restringido()?`<div class="h-aviso">${avisoVinculo()}</div>`:''}
+      ${news?`<div class="h-news">${news}</div>`:''}
+    </div>
+    <div class="hcol hcol-b">
+      ${restringido()?'':`<section class="h-tools" aria-labelledby="hT"><h2 id="hT">Mis herramientas</h2>${tilesHTML()}</section>`}
+      <section class="h-fam" aria-labelledby="hF">${famCards()}</section>
+    </div>
+    <p class="sos h-sos">¿Es una emergencia? No use el portal: <a href="tel:131">llame al SAMU 131</a></p>
+  </div>`;
 };
-
+function fechaTile(f){ const d=pDate(f)||today(); return `<span class="dt" aria-hidden="true"><small>${DIAS_C[d.getDay()]}</small><b>${d.getDate()}</b><small>${MESES[d.getMonth()].slice(0,3)}</small></span>`; }
+function heroHTML(c, sal, nm){
+  const dep = S.d.is_dependent ? `<p class="hero-dep">Está viendo la ficha de <b>${esc(S.d.nombre)}</b>. <a href="#" onclick="switchTo('${jsq(S.d.owner_rut)}');return false">Volver a la suya</a></p>` : '';
+  const pedir = `<button class="btn aqua hero-cta" onclick="startAgendar()">${ic('plus')}Pedir una hora nueva</button>`;
+  if (!c){
+    const ult = (S.d.historial||[]).find(x=>estadoCita(x)!=='no_vino');
+    return `<section class="ticket hero" aria-labelledby="hH"><h1 id="hH">${sal}, ${esc(nm)}</h1>${dep}
+      <div class="cita-g empty"><div><b class="cg-none">No tiene horas próximas</b>${ult?`<span class="cg-doc">Su última atención fue ${esc(hace(ult.fecha))} (${esc(ult.especialidad)}).</span>`:''}</div></div>
+      ${pedir.replace('Pedir una hora nueva','Pedir una hora')}</section>`;
+  }
+  const n = daysFrom(c.fecha); const mod = modalidad(c); const hoy = n===0; const done = load(checkinKey(c));
+  const pill = hoy ? '<span class="pill today">Hoy</span>' : n===1 ? '<span class="pill soon">Mañana</span>' : n!=null && n<=30 ? `<span class="pill soon">En ${n} días</span>` : '';
+  const modTxt = mod==='video' ? `${ic('video')}<span>Por videollamada · el link llega por WhatsApp</span>` : mod==='eleccion' ? `${ic('info')}<span>Presencial o videollamada</span>` : `${ic('pin')}<span>Monsalve 102, Carampangue</span>`;
+  const acc = hoy && !done
+    ? `<div class="tk-btns"><button class="btn light" onclick="checkin('${esc(c.id)}')">Sí, voy a mi hora</button><button class="btn ghostL" onclick="go('hora/${esc(c.id)}')">Ver detalle</button></div>`
+    : `${hoy?`<p class="hero-ok">${ic('check')}Recepción ya sabe que viene.</p>`:''}<button class="btn ghostL" onclick="go('hora/${esc(c.id)}')">Ver detalle, cambiar o anular</button>`;
+  return `<section class="ticket hero" aria-labelledby="hH"><h1 id="hH">${sal}, ${esc(nm)}</h1>${dep}
+    <p class="hero-lbl">Su próxima hora</p>
+    <a class="cita-g" href="#hora/${esc(c.id)}" aria-label="Su próxima hora: ${esc(c.especialidad)}, ${esc(fCorta(c.fecha))} a las ${esc(hhmm(c.hora_inicio))}, con ${esc(c.profesional)}">
+      ${fechaTile(c.fecha)}<span class="cg-tx"><span class="cg-esp">${esc(c.especialidad)}</span><span class="cg-hr">${esc(hhmm(c.hora_inicio))} <small>hrs</small> ${pill}</span><span class="cg-doc">${esc(c.profesional)}</span></span></a>
+    <p class="hero-mod">${modTxt}</p>
+    <div class="btns">${acc}</div>
+    ${pedir}</section>`;
+}
+/* Accesos con dato vivo: remedios (próxima toma), resultados (nuevos) y mediciones (última) */
+function tilesHTML(){
+  const rr = window.CMC_H && CMC_H.resumen ? CMC_H.resumen() : null;
+  let remT = 'Cargando…', remW = '';
+  if (rr){ if (rr.vacio) remT='Anote sus remedios y la hora de cada toma'; else if (rr.prox) remT=`Próxima toma: <b>${esc(rr.prox.h)}</b> · ${esc(rr.prox.nombre)}`; else if (rr.total) remT='Ya marcó todas las tomas de hoy'; else remT='Hoy no tiene tomas con hora';
+    if (rr.bajo) remW = `<span class="t-warn">${ic('warn')}Al ${esc(rr.bajo)} le queda poco</span>`; }
+  const n = examNuevos(); const ex = Array.isArray(S.exams) ? S.exams : null;
+  const resT = n ? `<span class="t-badge">${n} ${n===1?'nuevo':'nuevos'}</span>` : ex==null ? 'Cargando…' : ex.length ? `Último: ${esc(ex[0].nombre)}` : 'Aún no hay resultados publicados';
+  const pv = vlist('presion')[0], gv = vlist('glicemia')[0];
+  const medT = pv ? `Última presión: <b>${Math.round(pv.valor)}/${Math.round(pv.valor2)}</b>` : gv ? `Último azúcar: <b>${esc(String(gv.valor).replace('.',','))}</b>` : S.vitals==null ? 'Cargando…' : 'Anote su presión o su azúcar';
+  return `<div class="tiles">
+    <a class="tile wide t-rem" href="#remedios"><span class="t-ic">${ic('pill')}</span><span class="t-tx"><b>Mis remedios</b><span class="t-live">${remT}</span>${remW}</span>${chev()}</a>
+    <a class="tile t-res" href="#docs"><span class="t-ic">${ic('doc')}</span><span class="t-tx"><b>Resultados</b><span class="t-live">${resT}</span></span></a>
+    <a class="tile t-med" href="#mediciones/presion"><span class="t-ic">${ic('heart')}</span><span class="t-tx"><b>Mediciones</b><span class="t-live">${medT}</span></span></a>
+  </div>`;
+}
+function examNuevos(){ if(!Array.isArray(S.exams)) return 0; const seen=new Set(load('cmc_exseen_'+activeRut())||[]); return S.exams.filter(e=>!seen.has(String(e.id))).length; }
+/* Familia en tarjetas (v4): avatar con color propio por persona, nombre y próxima atención */
+const AVA_COL = ['#0F3F68','#1172AB','#0E6F7A','#6B4596','#9A4A12','#2E6B3A'];
+function avaCol(rut){ let h=0; for (const ch of rutClean(rut)) h=(h*31+ch.charCodeAt(0))>>>0; return AVA_COL[h%AVA_COL.length]; }
+function famCards(){
+  const ms = members().filter(m=>rutClean(m.rut)!==activeRut());
+  const card = m => { const p=m.proxima; const yo = rutClean(m.rut)===ownerRut();
+    return `<button class="fcard" onclick="openPersona('${jsq(m.rut)}')"><span class="ava" style="background:${avaCol(m.rut)}" aria-hidden="true">${esc(initials(m.nombre))}</span>
+      <b>${esc(first(m.nombre))}${yo?' (usted)':''}</b><span class="f-rel">${esc(relLabel(m.relation))}${m.edad!=null?' · '+m.edad+' años':''}</span>
+      ${p?`<span class="f-next">${esc(fCorta(p.fecha))} · ${esc(hhmm(p.hora_inicio))}</span><span class="f-esp">${esc(p.especialidad)}</span>`:`<span class="f-none">Sin horas próximas</span>`}</button>`; };
+  const shown = ms.slice(0, 3);
+  return `<h2 id="hF">Mi familia</h2><div class="fgrid">${shown.map(card).join('')}
+      <a class="fcard add" href="#agregar"><span class="ava" aria-hidden="true">${ic('plus')}</span><b>Agregar</b><span class="f-rel">Un familiar o cercano</span></a></div>
+    ${ms.length>3?`<a class="btn sec" style="margin-top:10px" href="#familia">Ver a toda la familia (${ms.length})</a>`:''}`;
+}
 /* Hora de hoy que ya pasó, con el desenlace REAL de Medilink (docs/medilink_gotchas.md §11):
    2 Atendido · 5/6 en sala/atendiéndose · 8 No asiste · el resto = recepción aún no la cierra. */
 function pasadaHTML(c){
@@ -798,22 +924,10 @@ function pasadaHTML(c){
       <button class="btn pri" onclick="repetir('${jsq(c.especialidad)}','${jsq(c.profesional)}')">Pedir otra hora con ${pc}</button>
       <p class="muted small" style="margin-top:8px">¿Sí vino? <a href="${wa('Hola, mi hora de '+c.especialidad+' de hoy a las '+hhmm(c.hora_inicio)+' aparece como no asistida, pero sí fui.')}" target="_blank" rel="noopener">Avísenos por WhatsApp</a> y lo corregimos.</p></div></div>`;
   if (st==='en_curso') return `<div class="past" role="note">${ic('clock')}<div><p><b>${esp}, ${hr} hrs: su atención está en curso.</b></p></div></div>`;
+  if (!yaPaso(c)){ const done = load(checkinKey(c));
+    return `<div class="past" role="note">${ic('clock')}<div><p><b>${esp}: su hora era a las ${hr}.</b></p><p class="muted">Si ya está en el centro, avise en recepción.</p>
+      ${done?`<p style="margin-top:6px"><b>Recepción ya sabe que viene.</b></p>`:`<button class="btn sec" onclick="checkin('${esc(c.id)}')">Avisar que voy en camino</button>`}</div></div>`; }
   return `<div class="past" role="note">${ic('clock')}<div><p><b>${esp}, ${hr} hrs: esta hora ya pasó.</b></p><p class="muted">Recepción todavía no la cierra en el sistema. Más tarde aparecerá aquí cómo quedó.</p></div></div>`;
-}
-/* Inicio: UNA sola tarjeta de pendiente real (examen nuevo > remedios de hoy > qué le toca) */
-function examNuevos(){ if(!Array.isArray(S.exams)) return 0; const seen=new Set(load('cmc_exseen_'+activeRut())||[]); return S.exams.filter(e=>!seen.has(String(e.id))).length; }
-function pendienteCard(){
-  if (restringido()) return '';
-  const n = examNuevos();
-  if (n) return `<a class="tool-teaser" style="margin-top:12px" href="#docs"><span class="ic" style="background:var(--bad-bg);color:var(--bad)">${ic('doc')}</span><span class="tx"><b>${n===1?'Tiene un resultado nuevo':'Tiene '+n+' resultados nuevos'}</b><span>Toque para verlo${n===1?'':'s'}</span></span>${chev()}</a>`;
-  return window.CMC_H ? CMC_H.homeCard() : '';
-}
-/* Inicio: la familia en una sola tarjeta compacta (de la v4) */
-function familiaRow(){
-  const ms = members().filter(m=>rutClean(m.rut)!==activeRut()); if (!ms.length) return '';
-  const row = m => { const p=m.proxima; return `<button class="fr" onclick="openPersona('${jsq(m.rut)}')"><span class="ava" aria-hidden="true">${esc(initials(m.nombre))}</span><span class="tx"><b>${esc(first(m.nombre))}${rutClean(m.rut)===ownerRut()?' (usted)':''}</b><span>${p?esc(p.especialidad)+' · '+fCorta(p.fecha)+' · '+esc(hhmm(p.hora_inicio)):'Sin horas próximas'}</span></span>${chev()}</button>`; };
-  return `<h2 style="margin-top:20px;margin-bottom:10px">Mi familia</h2><div class="card famcard">${ms.slice(0,4).map(row).join('')}</div>
-    ${ms.length>4?`<a class="btn sec" style="margin-top:10px" href="#familia">Ver a toda la familia</a>`:''}`;
 }
 /* Reserva repetida: misma persona + especialidad + profesional → directo a elegir día */
 function repetir(esp, prof){ startAgendar({rut:S.d.rut, esp, profNombre:prof, skipQuien:true}); }
@@ -1255,7 +1369,7 @@ async function loadVitals(){
   if (DEMO || S.vitals) return;
   try{ const r = await api('/portal/api/vitals?limit=200'); S.vitals = r.vitals||[]; }
   catch(e){ if(e.kind==='auth') return toLogin(); S.vitals = {error:e}; }
-  if (['salud','mediciones'].includes(route().name)) render();
+  if (['salud','mediciones','inicio'].includes(route().name)) render();
 }
 const vlist = t => Array.isArray(S.vitals) ? S.vitals.filter(v=>v.tipo===t).sort((a,b)=>String(b.ts).localeCompare(String(a.ts))) : [];
 function vValor(v){ const u=VT[v.tipo].u; return v.tipo==='presion' ? `${Math.round(v.valor)}/${Math.round(v.valor2)} <small>${u}</small>` : `${String(v.valor).replace('.',',')} <small>${u}</small>`; }
@@ -1712,6 +1826,7 @@ async function switchTo(rut, dest){
 const L_ = {step:'rut', rut:'', masked:'', err:'', sent:0};
 function toLogin(msg){ S.d=null; L_.step='rut'; L_.err=msg||''; renderLogin(); }
 function renderLogin(){
+  document.body.classList.remove('logged','inflow');
   $('#top').hidden=true; $('#nav').hidden=true; renderBands();
   let body;
   if (L_.step==='rut') body = `
@@ -1801,7 +1916,7 @@ async function boot(){
     if (Q.get('action')==='agendar' || location.hash==='#agendar'){ history.replaceState(null,'','#inicio'); render(); startAgendar(); return; }
     render();
     setTimeout(()=>{ if(restringido()) return; loadScript(STATIC+'herramientas.js').then(()=>CMC_H.precargar()).catch(()=>{});
-      if (S.exams==null && !DEMO) api('/portal/api/examenes').then(r=>{ S.exams=r.examenes||[]; if(route().name==='inicio') render(); }).catch(()=>{}); }, 400);
+      loadVitals(); if (S.exams==null && !DEMO) api('/portal/api/examenes').then(r=>{ S.exams=r.examenes||[]; if(route().name==='inicio') render(); }).catch(()=>{}); }, 400);
   }catch(e){
     if (e.kind==='auth' || (e.status===404 && e.kind==='bad')){ toLogin(e.status===404?'No encontramos su ficha. Escríbanos por WhatsApp y lo revisamos.':''); return; }
     const c = load('cmc_app_citas');
