@@ -1206,6 +1206,23 @@ async def main():
         ),
     ], None, True))
 
+    # SLOTPRECIO-01/02 (2026-10-08): pregunta lateral de precio/cobertura con horas en
+    # pantalla -> precio de lo ofrecido + las mismas horas, sin "no te entendi" ni
+    # derivar a recepcion, y el "si" siguiente sigue reservando la hora.
+    results.append(("SLOTPRECIO-01 MG: 'cuanto sale' / 'es por fonasa?' y luego 'si' reserva", "56999003001", [
+        ("quiero agendar medicina general", ["09:"]),
+        ("cuánto sale", {"all": ["7.880", "25.000", "09:00"],
+                         "none": NO_ENTENDI_MARKERS + ["Monsalve", "recepción"]}),
+        ("es por fonasa?", {"all": ["Fonasa", "09:00"], "none": NO_ENTENDI_MARKERS + ["Monsalve"]}),
+        ("sí", {"any": ["Fonasa", "Particular"], **NO_ERROR}),
+    ], None, True))
+    results.append(("SLOTPRECIO-02 odontologia: valor y fonasa se responden con la tabla", "56999003002", [
+        ("quiero agendar odontología", ["09:"]),
+        ("valor", {"all": ["15.000"], "none": NO_ENTENDI_MARKERS + ["te paso con recepción"]}),
+        ("atiende con fonasa?", {"all": ["solo Particular", "15.000"], "none": NO_ENTENDI_MARKERS}),
+        ("confirmo", {"any": ["RUT", "rut"], **NO_ERROR}),
+    ], None, True))
+
     # ── Run ─────────────────────────────────────────────────────────────────
     passed = 0
     failed = 0

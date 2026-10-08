@@ -607,6 +607,189 @@ def _afirma_slot(tl: str, tl_norm: str) -> bool:
     return not _CONTRASTE_SLOT_RE.search(tl_norm or tl or "")
 
 
+# ── Pregunta lateral de PRECIO / cobertura en WAIT_SLOT (2026-10-08) ─────────
+# Medido en prod (90 días): ~160 hilos escribieron "cuánto sale", "valor",
+# "es por fonasa?", "atiende con fonasa" teniendo horas en pantalla. El
+# pre-router LLM los clasificaba a veces como preguntar_info (ficha de dirección
+# y teléfono, 31 casos) y la respuesta de precio no resolvía la especialidad
+# ("Para confirmarte el valor exacto de odontología, te paso con recepción",
+# 20 casos). Es una pregunta lateral: se responde con la tabla (PRECIOS_SLOT /
+# PRECIO_PROF_SIN_BONO vía `_precio_line`) y se vuelven a mostrar las MISMAS
+# horas, sin tocar reintentos ni estado. Va por regla y no por LLM.
+_PRECIO_LATERAL_RE = re.compile(
+    r"\b(precios?|valor(?:es)?|costos?|montos?|cuestan?|cobran?|tarifas?|aranceles?|"
+    r"copagos?|bonos?|fonasa|isapres?|convenios?|"
+    r"cuanto\s+(?:cuesta|cuestan|sale|salen|vale|valen|cobran|es|seria|serian|"
+    r"pago|pagar|cancelo|debo|hay que|me sale|me cobran|total))\b")
+# Señales de que el mensaje es OTRA cosa (elegir/pedir hora, otro día, reservar,
+# otra persona): no se roba, sigue el camino de siempre.
+_PRECIO_LATERAL_NO_RE = re.compile(
+    r"(?<!\d)\d{1,2}\s*[:.]\s*\d{2}(?!\d)|\ba\s+las?\s+\d|\b\d{1,2}\s?(?:am|pm|hrs?|h)\b"
+    r"|\b(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo|hoy|manana|semana|"
+    r"reserv\w*|agend\w*|tomo|tomar|confirm\w*|esa hora|ver todos|"
+    r"otr[oa]s?\s+(?:dia|hora|horas|horario|horarios|profesional|doctor|doctora|medico|medica)|"
+    r"mas temprano|mas tarde|otra persona|mi (?:hij[oa]|espos[oa]|beb[e]|guagua|mama|papa|nin[oa]|pareja)|"
+    r"para (?:mi|un|una) )\b")
+
+
+# "cuánto antes", "cuánto se demora": llevan "cuanto" pero no preguntan precio.
+_CUANTO_NO_PRECIO_RE = re.compile(
+    r"cuanto\s+(?:antes|tiempo|se\s+demora|demora|dura|tarda|falta|rato)\b")
+# Procedimientos dentales por los que preguntan el precio (sin tildes).
+_PROC_DENTAL_RE = re.compile(
+    r"endodoncia|conducto|destartraje|detartraje|limpieza|profilaxis|tapadura|"
+    r"obturacion|caries|resina|muelas?|cordal|extraccion|sacar|saque|implantes?|"
+    r"coronas?|carillas?|blanqueamiento|brackets?|protesis|radiografia|panoramica|"
+    r"instalacion|cuota|tratamiento|cirugia|frenillo|armonizacion|botox")
+
+
+_COBERTURA_KW_SLOT = (
+    "fonasa", "isapre", "dipreca", "capredena", "particular",
+    "bono", "cubre", "cobertura", "atiende con", "acepta",
+)
+_PRECIO_KW_SLOT = ("precio", "cuánto", "cuanto", "vale", "cuesta", "costo",
+                   "valor", "bono", "cobran", "cobra")
+
+
+def _es_cobertura_slot(tl_norm_slot: str) -> bool:
+    return (any(k in tl_norm_slot for k in _COBERTURA_KW_SLOT)
+            and not tl_norm_slot.isdigit()
+            and len(tl_norm_slot) >= 4)
+
+
+async def _slot_responder_cobertura(phone: str, data: dict, txt: str,
+                                    todos_slots: list, slots_mostrados: list,
+                                    especialidad: str):
+    """BUG-05 / P1-C: pregunta de cobertura/modalidad en WAIT_SLOT.
+    "Atiende con fonasa?", "cubre isapre?", "solo particular?" → responder sin
+    salir del flujo y volver a mostrar las horas. Funciona aunque todos_slots
+    esté vacío (usa la especialidad del contexto; psiquiatría era el caso más
+    común). Antes caía al fallback genérico y respondía la dirección."""
+    _esp_cob = (todos_slots[0].get("especialidad", especialidad) if todos_slots
+                else especialidad) or especialidad
+    _slot_cob = todos_slots[0] if todos_slots else None
+    _precio_cob = _precio_line(_esp_cob, _slot_cob) if _esp_cob else ""
+    # Determinar modalidad. _FONASA_SPECIALTIES es Title Case → comparar lowercase.
+    _esp_cob_lower = _esp_cob.lower()
+    _es_solo_particular = not any(
+        _fsp.lower() == _esp_cob_lower for _fsp in _FONASA_SPECIALTIES
+    )
+    if _es_solo_particular:
+        # Incluir "No atiende por Fonasa" explícitamente (caso psiquiatría IG).
+        _resp_cob = (
+            "*{esp}* no atiende por Fonasa en el CMC.\n"
+            "Es atención *solo Particular*.{precio}"
+        ).format(
+            esp=str(_esp_cob or especialidad),
+            precio=("\n" + _precio_cob) if _precio_cob else "",
+        )
+    elif _slot_cob and int(_slot_cob.get("id_profesional") or 0) in PRECIO_PROF_SIN_BONO:
+        # Ps. Salas (82): atiende a pacientes Fonasa pero SIN bono —
+        # jamás decir "bono MLE" (ver PRECIO_PROF_SIN_BONO).
+        _resp_cob = (
+            "Con *{prof}* los pacientes Fonasa pagan un valor preferente "
+            "*directo en el CMC, sin bono* (todav\u00eda no emite bono Fonasa). "
+            "Tambi\u00e9n atiende *Particular*.{precio}"
+        ).format(
+            prof=str(_slot_cob.get("profesional") or "la psic\u00f3loga"),
+            precio=("\n" + _precio_cob) if _precio_cob else "",
+        )
+    else:
+        _resp_cob = (
+            "*{esp}* acepta *Fonasa* (bono MLE) y *Particular*.{precio}"
+        ).format(
+            esp=str(_esp_cob or especialidad),
+            precio=("\n" + _precio_cob) if _precio_cob else "",
+        )
+    save_session(phone, "WAIT_SLOT", data)
+    log_event(phone, "slot_pregunta_lateral", {"tipo": "cobertura", "txt": txt[:120]})
+    return _lateral_con_horas(_resp_cob, slots_mostrados)
+
+
+async def _slot_responder_precio(phone: str, data: dict, txt: str,
+                                 todos_slots: list, slots_mostrados: list,
+                                 especialidad: str):
+    """Pregunta de PRECIO en WAIT_SLOT con especialidad activa: siempre precio
+    directo y las mismas horas (sin esto "precio"/"cuánto" pasaban a detect_intent
+    y la respuesta era una FAQ genérica o "comunícate con recepción")."""
+    _esp_precio = todos_slots[0]["especialidad"] if todos_slots else especialidad
+    log_event(phone, "slot_pregunta_lateral", {"tipo": "precio", "txt": txt[:120]})
+    # Dental + nombra un procedimiento ("endodoncia", "destartraje", "2
+    # muelas"): la tabla solo trae la evaluación; el precio del
+    # procedimiento está en respuesta_faq (FAQ local + SYSTEM_PROMPT; misma fuente
+    # que usa el resto del bot para precios dentales).
+    if (_esp_precio and any(d in _esp_precio.lower() for d in _ESP_DENTALES)
+            and _PROC_DENTAL_RE.search(_sin_tildes_precio(txt))):
+        try:
+            _resp_dent = await respuesta_faq(txt)
+        except Exception:
+            _resp_dent = None
+        if _resp_dent:
+            save_session(phone, "WAIT_SLOT", data)
+            return _lateral_con_horas(_resp_dent, slots_mostrados)
+    if _esp_precio:
+        _pid_ws = (todos_slots[0].get("id_profesional") if todos_slots else None) or data.get("prof_sugerido_id")
+        _precio_resp = _precio_line(_esp_precio, id_profesional=_pid_ws)
+        if _precio_resp:
+            save_session(phone, "WAIT_SLOT", data)
+            return _lateral_con_horas(_precio_resp, slots_mostrados)
+    # Sin precio en tabla → respuesta_faq con contexto de especialidad
+    _consulta_precio = f"¿Cuánto cuesta una consulta de {_esp_precio}?" if _esp_precio else txt
+    try:
+        _resp_p = await respuesta_faq(_consulta_precio)
+    except Exception:
+        _resp_p = f"Para precios comunícate con recepción: 📞 *{CMC_TELEFONO}*"
+    save_session(phone, "WAIT_SLOT", data)
+    return _lateral_con_horas(_resp_p, slots_mostrados)
+
+
+def _es_pregunta_lateral_precio(txt: str, data: dict) -> bool:
+    """¿Es una pregunta de precio/cobertura sobre lo que el paciente YA tiene en
+    pantalla (WAIT_SLOT con horas ofrecidas)? Pura regla, sin LLM."""
+    if not (data.get("slots") or data.get("todos_slots")):
+        return False
+    t = _sin_tildes_precio(txt).strip()
+    if not t or len(t.split()) > 25 or not _PRECIO_LATERAL_RE.search(t):
+        return False
+    if _PRECIO_LATERAL_NO_RE.search(t):
+        return False
+    # Responde "Fonasa/Particular" a la pregunta de modalidad del flujo "otra
+    # persona": no es una consulta de precio.
+    if data.get("booking_for_other"):
+        return False
+    # Pregunta por OTRA especialidad ("cuánto sale una eco abdominal"): este
+    # atajo contesta solo sobre lo ofrecido. La familia dental cuenta como una.
+    esp_txt = (_detectar_especialidad_en_texto(txt) or "").lower()
+    if esp_txt:
+        esp_act = (data.get("especialidad") or
+                   ((data.get("todos_slots") or data.get("slots") or [{}])[0].get("especialidad")) or "").lower()
+        dental = lambda e: any(d in e for d in _ESP_DENTALES)
+        if not (esp_txt == esp_act or esp_txt in esp_act or esp_act in esp_txt
+                or (dental(esp_txt) and dental(esp_act))):
+            return False
+    return True
+
+
+def _lateral_con_horas(texto: str, slots: list):
+    """Respuesta a una pregunta lateral + las mismas horas otra vez (lista
+    interactiva). Sin horas, o si el cuerpo pasara el límite de WhatsApp (1024),
+    queda solo el texto con el recordatorio."""
+    pie = "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
+    if not slots:
+        return f"{texto}\n\n{pie}"
+    lista = _format_slots(slots)
+    if isinstance(lista, dict):
+        cuerpo = lista["interactive"]["body"]["text"]
+        if "💰" in texto:  # el precio ya va en la respuesta: no repetirlo
+            cuerpo = "\n".join(l for l in cuerpo.split("\n") if not l.startswith("💰"))
+        nuevo = f"{texto}\n\n{cuerpo}"
+        if len(nuevo) > 1000:
+            return f"{texto}\n\n{pie}"
+        lista["interactive"]["body"]["text"] = nuevo
+        return lista
+    return f"{texto}\n\n{lista}"
+
+
 def _niega(tl: str, tl_norm: str) -> bool:
     """Mismo tratamiento que `_afirma` pero para negaciones ("No, gracias")."""
     _sin_vocales_rep = re.sub(r"([aeiou])\1{2,}", r"\1", tl_norm)
@@ -1731,6 +1914,18 @@ def _precio_line(especialidad: str, slot: dict | None = None, modalidad_override
         # escrita.
         for _k_ps in PRECIOS_SLOT:
             if _k_ps.lower() == esp.lower():
+                esp = _k_ps
+                entry = PRECIOS_SLOT[_k_ps]
+                break
+    if not entry:
+        # Nombre genérico de la especialidad ("odontología", "psicología",
+        # "nutriología"): data["especialidad"] llega sin el apellido de la clave
+        # ("Odontología General", "Psicología Adulto"). Sin esto la respuesta de
+        # precio decía "te paso con recepción" teniendo el valor en la tabla
+        # (20 hilos en WAIT_SLOT, 90 días). Gana la primera clave de la tabla.
+        _esp_n = _sin_tildes_precio(esp)
+        for _k_ps in PRECIOS_SLOT:
+            if _sin_tildes_precio(_k_ps).startswith(_esp_n + " "):
                 esp = _k_ps
                 entry = PRECIOS_SLOT[_k_ps]
                 break
@@ -2924,6 +3119,10 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
             return True
     # WAIT_SLOT: frases muy cortas de navegación
     if state == "WAIT_SLOT":
+        # Pregunta lateral de precio/cobertura: la contesta el handler con la
+        # tabla y vuelve a mostrar las horas (ver _es_pregunta_lateral_precio).
+        if _es_pregunta_lateral_precio(txt, data):
+            return True
         if tl in ("otro dia", "otro día", "otra fecha", "cambiar fecha",
                   "ver todos", "todos", "ver mas",
                   "ver más", "mañana", "manana", "hoy", "pasado mañana",
@@ -9345,6 +9544,17 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(filtrado)
 
+        # Pregunta lateral de PRECIO / cobertura ("cuánto sale", "valor", "es por
+        # fonasa?"): se responde con la tabla y se vuelven a mostrar las MISMAS
+        # horas, sin tocar reintentos ni estado. Va antes del lector de horas:
+        # "sacarme las 2 muelas" se leía como "las 2" (14:00).
+        if _es_pregunta_lateral_precio(txt, data):
+            if _es_cobertura_slot(tl_norm_slot):
+                return await _slot_responder_cobertura(
+                    phone, data, txt, todos_slots, slots_mostrados, especialidad)
+            return await _slot_responder_precio(
+                phone, data, txt, todos_slots, slots_mostrados, especialidad)
+
         # Respuesta al sugerido proactivo (botón o texto libre "si"/"sí"/"confirmo"/...)
         # Afirmación libre: "puedo reservar?", "sí reservalo", "reserva esa hora",
         # "agenda esa", "tomo esa hora", etc. Caso real 2026-04-28
@@ -10085,57 +10295,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # P1-C fix: permitir respuesta aunque todos_slots esté vacío (usa especialidad
         # del contexto). Psiquiatría era el caso más común — paciente preguntaba
         # "¿no atiende por Fonasa?" y el bot respondía con la dirección del CMC.
-        _COBERTURA_KW = (
-            "fonasa", "isapre", "dipreca", "capredena", "particular",
-            "bono", "cubre", "cobertura", "atiende con", "acepta",
-        )
-        _es_pregunta_cobertura = (
-            any(k in tl_norm_slot for k in _COBERTURA_KW)
-            and not tl_norm_slot.isdigit()
-            and len(tl_norm_slot) >= 4
-        )
-        if _es_pregunta_cobertura and (todos_slots or especialidad):
-            _esp_cob = (todos_slots[0].get("especialidad", especialidad) if todos_slots
-                        else especialidad) or especialidad
-            _slot_cob = todos_slots[0] if todos_slots else None
-            _precio_cob = _precio_line(_esp_cob, _slot_cob) if _esp_cob else ""
-            # Determinar modalidad. _FONASA_SPECIALTIES es Title Case → comparar lowercase.
-            _esp_cob_lower = _esp_cob.lower()
-            _es_solo_particular = not any(
-                _fsp.lower() == _esp_cob_lower for _fsp in _FONASA_SPECIALTIES
-            )
-            if _es_solo_particular:
-                # Incluir "No atiende por Fonasa" explícitamente (caso psiquiatría IG).
-                _resp_cob = (
-                    "*{esp}* no atiende por Fonasa en el CMC.\n"
-                    "Es atención *solo Particular*.{precio}\n\n"
-                    "\u00bfTe sirve el horario? Elige un n\u00famero para reservar."
-                ).format(
-                    esp=str(_esp_cob or especialidad),
-                    precio=("\n" + _precio_cob) if _precio_cob else "",
-                )
-            elif _slot_cob and int(_slot_cob.get("id_profesional") or 0) in PRECIO_PROF_SIN_BONO:
-                # Ps. Salas (82): atiende a pacientes Fonasa pero SIN bono —
-                # jamás decir "bono MLE" (ver PRECIO_PROF_SIN_BONO).
-                _resp_cob = (
-                    "Con *{prof}* los pacientes Fonasa pagan un valor preferente "
-                    "*directo en el CMC, sin bono* (todav\u00eda no emite bono Fonasa). "
-                    "Tambi\u00e9n atiende *Particular*.{precio}\n\n"
-                    "\u00bfTe sirve el horario? Elige un n\u00famero para reservar."
-                ).format(
-                    prof=str(_slot_cob.get("profesional") or "la psic\u00f3loga"),
-                    precio=("\n" + _precio_cob) if _precio_cob else "",
-                )
-            else:
-                _resp_cob = (
-                    "*{esp}* acepta *Fonasa* (bono MLE) y *Particular*.{precio}\n\n"
-                    "\u00bfTe sirve el horario? Elige un n\u00famero para reservar."
-                ).format(
-                    esp=str(_esp_cob or especialidad),
-                    precio=("\n" + _precio_cob) if _precio_cob else "",
-                )
-            save_session(phone, "WAIT_SLOT", data)
-            return _resp_cob
+        if _es_cobertura_slot(tl_norm_slot) and (todos_slots or especialidad):
+            return await _slot_responder_cobertura(
+                phone, data, txt, todos_slots, slots_mostrados, especialidad)
 
         # ── Apellido específico mencionado ("con el dr marquez", "quiero con abarca") ──
         # PRIORIDAD MÁXIMA: si el paciente pide un doctor por nombre, filtramos
@@ -10681,30 +10843,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # Sin esto, inputs cortos como "precio" o "cuánto" pasan a detect_intent que
         # puede retornar intent != "precio" y la respuesta es inconsistente (FAQ genérica
         # o "comunícate con recepción"). Con especialidad activa: siempre precio directo.
-        _PRECIO_KW_SLOT = ("precio", "cuánto", "cuanto", "vale", "cuesta", "costo",
-                           "valor", "bono", "cobran", "cobra")
-        if idx is None and any(k in tl_norm_slot for k in _PRECIO_KW_SLOT):
-            _esp_precio = todos_slots[0]["especialidad"] if todos_slots else especialidad
-            if _esp_precio:
-                _pid_ws = (todos_slots[0].get("id_profesional") if todos_slots else None) or data.get("prof_sugerido_id")
-                _precio_resp = _precio_line(_esp_precio, id_profesional=_pid_ws)
-                if _precio_resp:
-                    save_session(phone, "WAIT_SLOT", data)
-                    return (
-                        f"{_precio_resp}\n\n"
-                        "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
-                    )
-            # Sin precio en tabla → respuesta_faq con contexto de especialidad
-            _consulta_precio = f"¿Cuánto cuesta una consulta de {_esp_precio}?" if _esp_precio else txt
-            try:
-                _resp_p = await respuesta_faq(_consulta_precio)
-            except Exception:
-                _resp_p = f"Para precios comunícate con recepción: 📞 *{CMC_TELEFONO}*"
-            save_session(phone, "WAIT_SLOT", data)
-            return (
-                f"{_resp_p}\n\n"
-                "_Elige un número para continuar con tu reserva o escribe *menu* para volver._"
-            )
+        if (idx is None and any(k in tl_norm_slot for k in _PRECIO_KW_SLOT)
+                and not _CUANTO_NO_PRECIO_RE.search(_sin_tildes_precio(txt))):
+            return await _slot_responder_precio(
+                phone, data, txt, todos_slots, slots_mostrados, especialidad)
 
         # ── Negativa explícita al slot ofrecido → mostrar otros slots ──
         # Paciente rechaza el horario con lenguaje libre antes de llegar a Claude.
