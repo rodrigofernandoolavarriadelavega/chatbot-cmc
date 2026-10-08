@@ -532,7 +532,10 @@ async def _sincronizar(token: str, modo: str, dry_run: bool,
                 if nombre and nombre != igsid:
                     session.save_profile(phone, rut, nombre)
                     st["nombres_guardados"] += 1
-        if not dry_run and not solo_igsid:
+        # Solo en backfill: en incremental re-pedía el perfil de los ~300 contactos con
+        # @username cada 10 min (el perfil falla ~40%), agotaba MAX_LLAMADAS y abortaba
+        # sin avanzar el watermark. Los contactos tocados ya resuelven nombre arriba.
+        if backfill and not dry_run and not solo_igsid:
             await _nombres_pendientes(cli, session, st, visitados)
     except SyncAbortado as e:
         st["abortado"] = str(e)
