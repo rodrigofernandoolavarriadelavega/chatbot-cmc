@@ -72,8 +72,8 @@ _RE_MEDIODIA = re.compile(r"medio\s?d[íi]a\b")
 _RE_TEMPRANO = re.compile(r"\btempran(?:o|ito)\b")
 _RE_MAS_TARDE = re.compile(r"\bm[áa]s\s+tard(?:e|ecito)\b")
 
-_RE_DESPUES = re.compile(r"despu[ée]s\s+de\s+las?\s+(\d{1,2})")
-_RE_ANTES = re.compile(r"antes\s+de\s+las?\s+(\d{1,2})")
+_RE_DESPUES = re.compile(r"(?:despu[ée]s\s+de\s+las?|after)\s+(\d{1,2})")
+_RE_ANTES = re.compile(r"(?:antes\s+de\s+las?|before)\s+(\d{1,2})")
 
 # "mañana" como DÍA, no como franja: solo cuando va sin preposición de franja.
 # "para mañana" es ambiguo en Chile ("para mañana" = el día siguiente), por eso

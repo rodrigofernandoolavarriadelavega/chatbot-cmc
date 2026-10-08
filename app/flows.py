@@ -336,6 +336,195 @@ def _first_name(nombre) -> str:
     return parts[0] if parts else ""
 
 
+# ── Pedidos múltiples en un mismo mensaje ────────────────────────────────────
+# "kine, ginecología y psicología" / "hora para Juan y para María": el flujo
+# agenda UN pedido a la vez. Antes tomaba el primero y descartaba el resto sin
+# decir nada. Ahora se avisa, el resto queda en data["cola_pedidos"] y se ofrece
+# al confirmar la cita (WAIT_SIGUIENTE_PEDIDO). Nunca se crean citas en lote.
+_COLA_TTL_SEG = 30 * 60
+_SEG_INFO_RE = re.compile(
+    r"\b(?:valor|precio|precios|cuesta|cuesto|cuanto|cuánto|cobran|direcci[oó]n|"
+    r"estacionamiento|isapre|aceptan|convenio)\b")
+_NOMBRE_TRAS_PARA_RE = re.compile(
+    r"\bpara\s+(?:mi\s+\w+\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,3})")
+_NO_NOMBRES = {"hoy", "mañana", "manana", "el", "la", "mi", "mí", "usted", "ti",
+               "mí", "otra", "otro", "ella", "él", "el", "los", "las"}
+
+
+def _etiqueta_pedido(p: dict) -> str:
+    if p.get("esp"):
+        return p["esp"].capitalize()
+    return p.get("paciente", "")
+
+
+def _lista_humana(items: list[str]) -> str:
+    items = [f"*{i}*" for i in items]
+    if len(items) <= 1:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " y " + items[-1]
+
+
+# Abreviaturas que el paciente escribe y que _FRASES_ESPECIALIDAD no cubre.
+_ABREV_MULTI = [
+    ("gineco", "ginecología"), ("psico", "psicología"), ("cardio", "cardiología"),
+    ("nutri", "nutrición"), ("podo", "podología"), ("traumato", "traumatología"),
+    ("kinesi", "kinesiología"), ("dentist", "odontología"), ("odonto", "odontología"),
+    ("cardió", "cardiología"), ("ginecó", "ginecología"), ("psicó", "psicología"),
+    ("kinesió", "kinesiología"), ("nutrió", "nutrición"), ("podó", "podología"),
+]
+
+
+def _detectar_pedidos_multiples(txt: str) -> list[dict] | None:
+    """Lista ordenada de pedidos distintos del mensaje, o None si hay uno solo.
+
+    Cada pedido es {"esp": "kinesiología"} o {"paciente": "María"}.
+    Conservador: no detecta si hay alternativas ("kine o médico") ni cuenta
+    especialidades que aparecen en preguntas de precio/dirección."""
+    if not txt or len(txt) < 8:
+        return None
+    tl = txt.lower()
+    if re.search(r"\b(?:o|u)\b", tl):
+        return None
+    # Especialidades, en orden de aparición, fuera de segmentos informativos.
+    pos: dict[str, int] = {}
+    off = 0
+    for seg in re.split(r"([,;\n]|\s+y\s+|\s+e\s+)", tl):
+        if seg and not _SEG_INFO_RE.search(seg):
+            for frase, key in list(_FRASES_ESPECIALIDAD) + _ABREV_MULTI:
+                m = re.search(r"(?<![a-záéíóúñ])" + re.escape(frase), seg)
+                if m:
+                    # Posición del PRIMER match en el texto (no el orden del
+                    # diccionario): "gineco, kine" -> ginecología primero.
+                    pos[key] = min(pos.get(key, 10**9), off + m.start())
+        off += len(seg)
+    esps = [k for k, _ in sorted(pos.items(), key=lambda kv: kv[1])]
+    if len(esps) >= 2:
+        return [{"esp": k} for k in esps]
+    # Pacientes: dos o más RUT válidos distintos, o dos nombres tras "para".
+    ruts = []
+    for m in re.finditer(r"\b\d{1,2}\.?\d{3}\.?\d{3}\s*-\s*[\dkK]\b", txt):
+        r = clean_rut(m.group(0))
+        if valid_rut(r) and r not in ruts:
+            ruts.append(r)
+    nombres: list[str] = []
+    for m in _NOMBRE_TRAS_PARA_RE.finditer(txt):
+        n = m.group(1).strip()
+        if n.lower() in _NO_NOMBRES or _detectar_especialidad_en_texto(n):
+            continue
+        if n not in nombres:
+            nombres.append(n)
+    if len(nombres) >= 2 or (len(ruts) >= 2 and len(nombres) >= 1):
+        return [{"paciente": n} for n in nombres]
+    return None
+
+
+def _aviso_pedidos_multiples(pedidos: list[dict]) -> str:
+    primero = _etiqueta_pedido(pedidos[0])
+    resto = _lista_humana([_etiqueta_pedido(p) for p in pedidos[1:]])
+    if pedidos[0].get("esp"):
+        return (f"Te ayudo con una hora a la vez: partamos con *{primero}*; "
+                f"después seguimos con {resto}.\n\n")
+    return (f"Te ayudo con una hora a la vez: partamos con la de *{primero}*; "
+            f"después seguimos con la de {resto}.\n\n")
+
+
+def _cola_dict(data: dict) -> dict:
+    """Fragmento {cola_pedidos, cola_ts} para arrastrar la cola a una sesión nueva."""
+    cola = _cola_vigente(data)
+    return {"cola_pedidos": cola, "cola_ts": time.time()} if cola else {}
+
+
+def _con_siguiente_pedido(phone: str, data: dict, texto: str):
+    """Tras inscribir en lista de espera: si queda cola, la confirmación sigue con
+    "¿Seguimos con X?" (WAIT_SIGUIENTE_PEDIDO). Sin cola devuelve `texto` igual."""
+    cola = _cola_vigente(data)
+    if not cola:
+        return texto
+    base = texto.replace("\n\n_Escribe *menu* si necesitas algo más._", "")
+    save_session(phone, "WAIT_SIGUIENTE_PEDIDO", {
+        "cola_pedidos": cola, "cola_ts": time.time(), "last_booked": {},
+        "especialidad_ult": data.get("waitlist_especialidad") or data.get("especialidad") or "",
+    })
+    log_event(phone, "cola_pedidos_ofrecido", {"quedan": len(cola), "via": "waitlist"})
+    cuerpo = (f"{base}\n\nQuedan pendientes: "
+              f"{_lista_humana([_etiqueta_pedido(p) for p in cola])}.\n\n"
+              f"¿Seguimos con la hora de *{_etiqueta_pedido(cola[0])}*?")
+    return _btn_msg(cuerpo[:1024],
+                    [{"id": "sig_si", "title": "Sí, seguimos"},
+                     {"id": "sig_no", "title": "No, gracias"}])
+
+
+def _cola_vigente(data: dict) -> list[dict]:
+    """Cola pendiente de la sesión; vacía si venció (no ofrecer pedidos viejos)."""
+    cola = data.get("cola_pedidos") or []
+    if not cola:
+        return []
+    try:
+        if time.time() - float(data.get("cola_ts", 0)) > _COLA_TTL_SEG:
+            return []
+    except (TypeError, ValueError):
+        return []
+    return list(cola)
+
+
+def _aplicar_pedidos_multiples(phone: str, txt: str, data: dict,
+                               especialidad: str | None):
+    """Aplica la regla de pedidos múltiples a `data`.
+
+    Devuelve (especialidad, aviso_para_el_paciente, pedidos|None). Si hay varios
+    pedidos, el primero (en orden de aparición) se agenda ahora y el resto queda
+    en data["cola_pedidos"]. Si el mensaje es la respuesta a "¿con cuál partimos?",
+    saca de la cola lo que se agenda ahora. Sin cola, limpia restos viejos."""
+    pedidos = _detectar_pedidos_multiples(txt)
+    if pedidos:
+        if pedidos[0].get("esp"):
+            especialidad = pedidos[0]["esp"]
+        data["cola_pedidos"] = pedidos[1:]
+        data["cola_ts"] = time.time()
+        log_event(phone, "pedidos_multiples_detectados",
+                  {"n": len(pedidos),
+                   "tipo": "esp" if pedidos[0].get("esp") else "paciente"})
+        return especialidad, _aviso_pedidos_multiples(pedidos), pedidos
+    cola = _cola_vigente(data)
+    if cola and especialidad:
+        from medilink import especialidad_canonica as _esp_c
+        ahora = _esp_c(especialidad).lower()
+        data["cola_pedidos"] = [p for p in cola
+                                if not p.get("esp") or _esp_c(p["esp"]).lower() != ahora]
+    else:
+        data.pop("cola_pedidos", None)
+        data.pop("cola_ts", None)
+    return especialidad, "", None
+
+
+_RUT_EN_TEXTO_RE = re.compile(r"\b\d{1,2}\.?\d{3}\.?\d{3}\s*-\s*[\dkK]\b")
+
+
+def _stash_hora_pedida(txt: str, data: dict) -> None:
+    """Guarda data["hora_pedida"]="HH:MM" si el mensaje pide una hora EXACTA
+    ("a las 16:30", "16:30", "a las 5 pm"). _iniciar_agendar la usa para ofrecer
+    el cupo de esa hora en vez de la primera del día. Solo patrones explícitos
+    (el RUT se descarta antes): leer cualquier número del mensaje como hora fue
+    justo el bug de "viernes 9 de octubre a las 16:30" -> 09:00."""
+    data.pop("hora_pedida", None)
+    try:
+        import time_parser as _tp
+        t = _RUT_EN_TEXTO_RE.sub(" ", (txt or "").lower())
+        if _tp._VENTANA_RE.search(_tp._normalizar(t)):
+            return
+        m = re.search(
+            r"\ba\s+las?\s+\d{1,2}(?:\s*[:.h]\s*\d{2})?(?:\s*(?:a\.?m\.?|p\.?m\.?|hrs?|horas))?"
+            r"|\b\d{1,2}\s*:\s*\d{2}\b",
+            t)
+        if not m:
+            return
+        hm = _tp.parse_hora(m.group(0))
+        if hm:
+            data["hora_pedida"] = f"{hm[0]:02d}:{hm[1]:02d}"
+    except Exception:  # noqa: BLE001 — detección secundaria
+        pass
+
+
 def _detectar_franja_horaria(txt: str) -> "tuple[int, int] | None":
     """Retorna (hora_min, hora_max) si detecta franja horaria en el texto, None si no.
     Se guarda en data["franja_horaria"] para filtrar slots al presentarlos.
@@ -1691,10 +1880,11 @@ def _leer_modalidad_atencion(tl: str) -> str | None:
     import unicodedata as _ud
     t = "".join(c for c in _ud.normalize("NFD", (tl or "").lower().strip())
                 if _ud.category(c) != "Mn")
-    if t in ("mod_video", "2") or any(k in t for k in (
+    _n_op = _ref_opcion_n(t) if len(t.split()) <= 6 else None
+    if t in ("mod_video", "2") or _n_op == 2 or any(k in t for k in (
             "video", "online", "en linea", "llamada", "remot", "zoom", "meet", "virtual", "desde mi casa")):
         return "TELEMEDICINA"
-    if t in ("mod_presencial", "1") or any(k in t for k in (
+    if t in ("mod_presencial", "1") or _n_op == 1 or any(k in t for k in (
             "presencial", "en persona", "al centro", "en el centro", "ir alla")):
         return "PRESENCIAL"
     return None
@@ -2628,6 +2818,7 @@ _FAST_PATH_BUTTONS = {
     # interpretaba "Fonasa" como preguntar_info y devolvía la dirección,
     # ignorando 5 mensajes consecutivos. Fast-path corta el classifier.
     "fonasa", "fona", "particular", "privado", "privada",
+    "sig_si", "sig_no",
     "no_gracias_reeng", "recup_no_gracias", "waitlist_antes_si", "seg_control", "reeng_si", "pagar_hora",
 }
 
@@ -2683,6 +2874,14 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
     if state == "WAIT_ESTETICA_INTERES" and (
             tl == "est_int_nose" or _extraer_interes_estetica(txt)
             or _ESTETICA_NO_SABE_RE.search(txt or "")):
+        return True
+    # WAIT_SIGUIENTE_PEDIDO: sí/no (o sus botones) son la respuesta obvia.
+    if state == "WAIT_SIGUIENTE_PEDIDO" and (_afirma(tl, tl) or _niega(tl, tl)):
+        return True
+    # "Option 1" / "opción 2" / "la primera" sobre botones numerados: es la
+    # respuesta obvia (se resuelve como índice en el handler del estado).
+    if (state in ("WAIT_MODALIDAD", "WAIT_MODALIDAD_ATENCION", "WAIT_SIGUIENTE_PEDIDO")
+            and len(tl.split()) <= 6 and _ref_opcion_n(tl) in (1, 2)):
         return True
     # WAIT_MODALIDAD: respuestas obvias
     if state == "WAIT_MODALIDAD":
@@ -3308,6 +3507,11 @@ async def _pre_router_wait(phone: str, txt: str, tl: str, state: str, data: dict
             # ("perfecto tomo la hora", "sí me sirve", "esa está bien").
             slots_mostrados = data.get("slots", [])
             if state == "WAIT_SLOT" and slots_mostrados:
+                # La hora ofrecida con ⭐ (slot_sugerido) manda sobre la primera de
+                # la lista: puede ser la que el paciente pidió y no la primera.
+                _sug_cs = data.get("slot_sugerido")
+                if _sug_cs and _sug_cs in slots_mostrados:
+                    return await _slot_confirmed(phone, data, _sug_cs)
                 return await _slot_confirmed(phone, data, slots_mostrados[0])
             return None
 
@@ -4570,6 +4774,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         "WAIT_ESPECIALIDAD", "WAIT_SLOT", "WAIT_MODALIDAD", "WAIT_BOOKING_FOR",
         "WAIT_MODALIDAD_ATENCION",
         "WAIT_BOOKING_WHO", "WAIT_AGENDAR_OTRO", "WAIT_SLOT_OTRO", "WAIT_PARENTESCO",
+        "WAIT_SIGUIENTE_PEDIDO",
         "WAIT_PHONE_OWNER_NAME", "WAIT_RUT_AGENDAR", "WAIT_NOMBRE_NUEVO",
         "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_COMUNA", "WAIT_EMAIL",
         "WAIT_REFERRAL", "WAIT_REFERRAL_POST", "CONFIRMING_CITA",
@@ -5016,7 +5221,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 "WAIT_RUT_CANCELAR", "WAIT_CITA_CANCELAR", "WAIT_RUT_REAGENDAR",
                 "WAIT_CITA_REAGENDAR", "WAIT_RUT_VER", "WAIT_DATOS_NUEVO",
                 "WAIT_NOMBRE_NUEVO", "WAIT_FECHA_NAC", "WAIT_SEXO", "WAIT_BOOKING_FOR",
-                "WAIT_BOOKING_WHO", "WAIT_AGENDAR_OTRO", "WAIT_SLOT_OTRO",
+                "WAIT_BOOKING_WHO", "WAIT_AGENDAR_OTRO", "WAIT_SLOT_OTRO", "WAIT_SIGUIENTE_PEDIDO",
                 "WAIT_WAITLIST_CONFIRM", "WAIT_REFERRAL_POST",
                 "WAIT_META_SLOT_CHOICE", "WAIT_META_WAITLIST",
                 "WAIT_WAITLIST_CONFIRM_ECOCA", "WAIT_WAITLIST_RUT_ECOCA",
@@ -5484,6 +5689,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _fr_idle_top = _detectar_franja_horaria(txt)
         if _fr_idle_top:
             data["franja_horaria"] = _fr_idle_top
+        _stash_hora_pedida(txt, data)
 
         # ── Pending cross-sell: el bot envió hace ≤72h un cross-sell con botones
         # (kine / orl-fono / odonto-estética / mg-chequeo / post-dental-ortodoncia).
@@ -6690,7 +6896,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             )
             if _esp_idle == "medicina general" and any(k in tl_norm for k in _PEDIATRIA_ALIAS):
                 data["_pediatra_a_mg"] = True
-            return await _iniciar_agendar(phone, data, _esp_idle)
+            _esp_idle, _aviso_multi_l, _ = _aplicar_pedidos_multiples(
+                phone, txt, data, _esp_idle)
+            return await _iniciar_agendar(phone, data, _esp_idle,
+                                          saludo_prefix=_aviso_multi_l or None)
         # Pregunta "¿realizan X?" (existencia del servicio) con especialidad →
         # FAQ local antes de Claude. Robusto ante outages.
         # NO interceptar preguntas de precio — dejamos que Claude responda con
@@ -6752,6 +6961,21 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 rut_hallado = clean_rut(_m_rut.group(1))
                 if valid_rut(rut_hallado):
                     data["rut_sugerido"] = rut_hallado
+                _pedidos_sc = _detectar_pedidos_multiples(txt)
+                if _pedidos_sc and _pedidos_sc[0].get("esp"):
+                    # Varias especialidades en el mismo mensaje: se pregunta con
+                    # cuál partir y el resto queda en cola (no se pierde).
+                    data["cola_pedidos"] = _pedidos_sc
+                    data["cola_ts"] = time.time()
+                    save_session(phone, "IDLE", data)
+                    log_event(phone, "pedidos_multiples_detectados",
+                              {"n": len(_pedidos_sc), "tipo": "esp", "via": "datos"})
+                    return (
+                        "¡Gracias por enviarme tus datos! Vi varias solicitudes de hora: "
+                        f"{_lista_humana([_etiqueta_pedido(p) for p in _pedidos_sc])}.\n\n"
+                        "Te ayudo con una hora a la vez. Dime con cuál partimos "
+                        "y después seguimos con las otras."
+                    )
                 return (
                     "¡Gracias por enviarme tus datos! 🙌\n\n"
                     "Para agendar necesito saber *qué especialidad* quieres. "
@@ -7134,6 +7358,10 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 if not any(fr in _fp_tl for fr in ("en la mañana", "en la manana",
                                                     "por la mañana", "por la manana")):
                     data["fecha_preferida"] = (_hoy_cl + _td_fp(days=1)).strftime("%Y-%m-%d")
+            # Pedidos múltiples ("kine, ginecología y psicología", "para Juan y
+            # para María"): se atiende uno, el resto queda en cola y se avisa.
+            especialidad, _aviso_multi, _pedidos_multi = _aplicar_pedidos_multiples(
+                phone, txt, data, especialidad)
             # Pre-fill RUT si el paciente ya agendó antes
             perfil = get_profile(phone)
             if perfil:
@@ -7146,7 +7374,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             #      inmediato (mismo doctor) para reducir 4-6 pasos a 2.
             # Antes el bug: solo (a), pero Claude casi siempre infiere esp →
             # el quick-book nunca disparaba (0 ofertas en 14 días).
-            if perfil:
+            if perfil and not _pedidos_multi:
                 ultima = get_ultima_cita_paciente(phone)
                 esp_ultima = (ultima or {}).get("especialidad", "")
                 esp_norm = (especialidad or "").lower().strip()
@@ -7266,7 +7494,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             ):
                 data["_pediatra_a_mg"] = True
                 especialidad = "medicina general"
-            return await _iniciar_agendar(phone, data, especialidad)
+            return await _iniciar_agendar(phone, data, especialidad,
+                                          saludo_prefix=_aviso_multi or None)
 
         if intent == "reagendar":
             return await _iniciar_reagendar(phone, data)
@@ -8750,6 +8979,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _fr_we = _detectar_franja_horaria(txt)
         if _fr_we:
             data["franja_horaria"] = _fr_we
+        _stash_hora_pedida(txt, data)
 
         # Selección de categoría (paso intermedio)
         if tl == "cat_medico":
@@ -9040,13 +9270,23 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 # UN slot de ese doctor — debe ser a esa hora. Antes se tomaba
                 # el primer slot del doctor sin importar la hora, confirmando
                 # en silencio una hora distinta a la pedida.
-                _slot_pedido = next(
-                    (s for s in slots_mostrados
-                     if s.get("id_profesional") == _pedido
-                     and (not _hora_pedida_exp
-                          or (s.get("hora_inicio") or "")[:5] == _hora_pedida_exp)),
-                    None,
-                )
+                _sug_ped = data.get("slot_sugerido") or {}
+                _slot_pedido = _sug_ped if (
+                    _sug_ped.get("id_profesional") == _pedido
+                    and any(x.get("fecha") == _sug_ped.get("fecha")
+                            and x.get("hora_inicio") == _sug_ped.get("hora_inicio")
+                            for x in (data.get("todos_slots") or slots_mostrados))
+                    and (not _hora_pedida_exp
+                         or (_sug_ped.get("hora_inicio") or "")[:5] == _hora_pedida_exp)
+                ) else None
+                if not _slot_pedido:
+                    _slot_pedido = next(
+                        (s for s in slots_mostrados
+                         if s.get("id_profesional") == _pedido
+                         and (not _hora_pedida_exp
+                              or (s.get("hora_inicio") or "")[:5] == _hora_pedida_exp)),
+                        None,
+                    )
                 if _slot_pedido:
                     data.pop("prof_pedido_explicito", None)
                     data.pop("hora_pedida_explicita", None)
@@ -10137,6 +10377,14 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             save_session(phone, "WAIT_SLOT", data)
             return _format_slots(slots_mostrados, mostrar_todos=True)
 
+        # "Opción 2" / "Option 2" / "la segunda" cuando la sesión solo mostró UNA
+        # hora sugerida: la lista numerada nunca se le enseñó, así que el índice
+        # no apunta a nada visible. Se muestra la lista en vez de elegir a ciegas
+        # (ni leerlo como las 14:00, como pasaba antes).
+        if (data.get("slot_sugerido") and len(slots_mostrados) > 1
+                and _ref_opcion_n(tl_norm_slot) not in (None, 1)):
+            return _format_slots(slots_mostrados, mostrar_todos=True)
+
         idx = _parse_slot_selection(txt, slots_mostrados)
 
         # Número 8-21 suelto: puede ser una OPCIÓN de la lista o una HORA. Antes
@@ -10729,6 +10977,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             "fonasa" in tl
             or "bono fonasa" in tl
         )
+        # "Option 1" / "opción 2" / "la primera": índice de los botones mostrados
+        # (1 = Fonasa, 2 = Particular).
+        _n_mod = _ref_opcion_n(tl) if len(tl.split()) <= 6 else None
+        if _n_mod in (1, 2) and not _es_fonasa_libre and not _es_particular_libre:
+            tl = tl_norm = str(_n_mod)
         if _es_fonasa_libre and not _es_particular_libre:
             data["modalidad"] = "fonasa"
         elif _es_particular_libre:
@@ -11109,6 +11362,53 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             + _PRIVACY_NOTE
         )
 
+    # ── WAIT_SIGUIENTE_PEDIDO ───────────────────────────────────────────────────
+    # Tras confirmar una cita, quedaban otros pedidos del mismo mensaje (otra
+    # especialidad u otro paciente). "Sí" abre el siguiente; "No" limpia la cola.
+    if state == "WAIT_SIGUIENTE_PEDIDO":
+        _cola_w = _cola_vigente(data)
+        _AFIRM_SIG = AFIRMACIONES | {"sig_si"}
+        _NEG_SIG = NEGACIONES | {"sig_no", "ahora no"}
+        _n_sig = _ref_opcion_n(tl) if len(tl.split()) <= 6 else None
+        if _n_sig == 1:
+            tl = "sig_si"
+        elif _n_sig == 2:
+            tl = "sig_no"
+        if tl in _NEG_SIG or _niega(tl, tl_norm) or not _cola_w:
+            reset_session(phone)
+            return "Perfecto. Si necesitas otra hora, escríbeme cuando quieras.\n\n_Escribe *menu* si necesitas algo más._"
+        if tl in _AFIRM_SIG or _afirma(tl, tl_norm):
+            _sig_w = _cola_w[0]
+            _resto_w = _cola_w[1:]
+            log_event(phone, "cola_pedidos_aceptado", {"quedan": len(_resto_w)})
+            if _sig_w.get("esp"):
+                reset_session(phone)
+                _d_sig = {"cola_pedidos": _resto_w, "cola_ts": time.time()} if _resto_w else {}
+                return await _iniciar_agendar(phone, _d_sig, _sig_w["esp"])
+            # Otro paciente: mismo flujo de "agendar a otra persona".
+            if not data.get("last_booked"):
+                # Venía de una lista de espera: no hay cita previa a la que
+                # pegarse, se busca hora normal para la misma especialidad.
+                reset_session(phone)
+                _d_np = {"booking_for_other": True}
+                if _resto_w:
+                    _d_np.update({"cola_pedidos": _resto_w, "cola_ts": time.time()})
+                return await _iniciar_agendar(
+                    phone, _d_np, data.get("especialidad_ult") or None)
+            _d_ao = {"last_booked": data.get("last_booked") or {}}
+            if _resto_w:
+                _d_ao["cola_pedidos"] = _resto_w
+                _d_ao["cola_ts"] = time.time()
+            save_session(phone, "WAIT_AGENDAR_OTRO", _d_ao)
+            return await handle_message(phone, "otro_si", {"state": "WAIT_AGENDAR_OTRO", "data": _d_ao})
+        _btn_resp = _btn_msg(
+            f"¿Seguimos con la hora de *{_etiqueta_pedido(_cola_w[0])}*?",
+            [{"id": "sig_si", "title": "Sí, seguimos"},
+             {"id": "sig_no", "title": "No, gracias"}]
+        )
+        save_session(phone, "WAIT_SIGUIENTE_PEDIDO", data)
+        return _btn_resp
+
     # ── WAIT_AGENDAR_OTRO ───────────────────────────────────────────────────────
     # Tras confirmar una cita propia ofrecemos agendar a otra persona (familiar).
     # Si acepta, mostramos los 2 cupos más cercanos (antes/después de la hora
@@ -11175,10 +11475,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     sections=[{"title": "Horas contiguas", "rows": _rows_c}],
                 )
             # Sin cupos contiguos: caer al flujo normal de tercero
+            _cola_ao = _cola_dict(data)
             reset_session(phone)
             return await _iniciar_agendar(
                 phone,
-                {"booking_for_other": True, "modalidad": lb.get("modalidad", "particular")},
+                {"booking_for_other": True, "modalidad": lb.get("modalidad", "particular"),
+                 **_cola_ao},
                 _esp_lb or None,
             )
         # Input ambiguo → re-preguntar
@@ -11195,10 +11497,12 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         _slots_otro = data.get("_slots_otro") or []
         if tl == "slot_otro_dia":
             _esp_so = data.get("especialidad", "")
+            _cola_so = _cola_dict(data)
             reset_session(phone)
             return await _iniciar_agendar(
                 phone,
-                {"booking_for_other": True, "modalidad": data.get("modalidad", "particular")},
+                {"booking_for_other": True, "modalidad": data.get("modalidad", "particular"),
+                 **_cola_so},
                 _esp_so or None,
             )
         _idx_so = None
@@ -13018,6 +13322,37 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         if _pni_tel_std:
                             log_event(phone, "pni_enviado", _pni_tel_std)
                     _spawn_pni(_send_pni_delayed())
+                # ── Cola de pedidos del mismo mensaje ──────────────────────────
+                # Quedó algo pendiente ("después seguimos con X"): se ofrece, sin
+                # crear nada en lote. Reemplaza cross-sell/parentesco de este turno.
+                _cola_sig = _cola_vigente(data) if not reagendar else []
+                if _cola_sig:
+                    _sig = _cola_sig[0]
+                    _msg_sig = confirmacion_msg + _conf_suffix
+                    await send_whatsapp(phone, _msg_sig)
+                    from session import log_message as _lm_sig
+                    _lm_sig(phone, "out", _msg_sig, "WAIT_SIGUIENTE_PEDIDO")
+                    save_session(phone, "WAIT_SIGUIENTE_PEDIDO", {
+                        "cola_pedidos": _cola_sig,
+                        "cola_ts": time.time(),
+                        "last_booked": {
+                            "especialidad": esp,
+                            "id_profesional": slot.get("id_profesional"),
+                            "profesional": slot.get("profesional"),
+                            "fecha": slot.get("fecha"),
+                            "fecha_display": slot.get("fecha_display"),
+                            "hora_inicio": slot.get("hora_inicio"),
+                            "modalidad": data.get("modalidad", "particular"),
+                        },
+                    })
+                    log_event(phone, "cola_pedidos_ofrecido", {"quedan": len(_cola_sig)})
+                    _quedan = _lista_humana([_etiqueta_pedido(p) for p in _cola_sig])
+                    return _btn_msg(
+                        f"Quedan pendientes: {_quedan}.\n\n"
+                        f"¿Seguimos con la hora de *{_etiqueta_pedido(_sig)}*?",
+                        [{"id": "sig_si", "title": "Sí, seguimos"},
+                         {"id": "sig_no", "title": "No, gracias"}]
+                    )
                 # ── Tercero: preguntar parentesco (opcional) ───────────────────
                 # Si la cita fue para un familiar, el vínculo ya quedó guardado
                 # (heurístico, arriba). Preguntamos el parentesco explícito para
@@ -18017,7 +18352,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 _msg_auto = _ESP_SIN_DISPONIBILIDAD_MSG.get(especialidad_lower)
                 if _msg_auto:
                     _header_auto = _msg_auto.split("\n\n")[0]  # primera línea: contexto
-                    return (
+                    return _con_siguiente_pedido(phone, data, (saludo_prefix or "") +
                         f"{_header_auto}\n\n"
                         f"Te inscribí {saludo}en la lista de espera. Apenas tengamos fecha "
                         "te aviso por este mismo chat 📱"
@@ -18025,7 +18360,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                         "Si prefieres no recibir aviso, responde *BAJA*.\n"
                         "_Escribe *menu* si necesitas algo más._"
                     )
-                return (
+                return _con_siguiente_pedido(phone, data, (saludo_prefix or "") +
                     f"No hay horas disponibles para *{especialidad}* en los próximos días 😕\n\n"
                     f"Te inscribí {saludo}en la lista de espera. Apenas se libere un cupo "
                     "te aviso por este mismo chat 📱"
@@ -18051,7 +18386,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
             )
         )
         return _btn_msg(
-            _texto_sin_disp,
+            ((saludo_prefix or "") + _texto_sin_disp)[:1024],
             [
                 {"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
                 {"id": "waitlist_no", "title": "No, gracias"},
@@ -18089,6 +18424,26 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
                 "esp": especialidad_lower, "fecha": fecha,
                 "franja": list(_franja),
             })
+    # Hora exacta pedida en el mensaje ("a las 16:30"): ofrecer el cupo más
+    # cercano a esa hora dentro del día ofrecido, no la primera hora del día.
+    _hp = data.pop("hora_pedida", None)
+    if _hp and mejor:
+        try:
+            _tgt = int(_hp[:2]) * 60 + int(_hp[3:5])
+            _mismo_dia = [x for x in todos if x.get("fecha") == mejor.get("fecha")
+                          and x.get("id_profesional") == mejor.get("id_profesional")]
+            if _mismo_dia:
+                _dist = lambda x: abs(  # noqa: E731
+                    int(x["hora_inicio"][:2]) * 60 + int(x["hora_inicio"][3:5]) - _tgt)
+                _mejor_hp = min(_mismo_dia, key=_dist)
+                if _mejor_hp is not mejor:
+                    mejor = _mejor_hp
+                    # "Sí, esa hora" exige que el sugerido esté en la lista: se
+                    # arma con los 5 cupos más cercanos a la hora pedida.
+                    smart_sugerido = sorted(sorted(_mismo_dia, key=_dist)[:5],
+                                            key=lambda x: x["hora_inicio"])
+        except Exception:  # noqa: BLE001
+            pass
     # SOBRECUPO en la PRIMERA oferta: si la especialidad sobrecupea (eco) y la hora
     # formal está LEJOS, anteponer cupos cercanos ANTES de persistir/mostrar, para no
     # perder al paciente. Sin esto la 1ª oferta mostraba el formal lejano (caso real:
@@ -18526,11 +18881,11 @@ def _inscribir_waitlist_y_responder(phone: str, data: dict) -> str:
     saludo = f"*{nombre_corto}*, " if nombre_corto else ""
     _sx_w = (data.get("sexo") or (data.get("paciente") or {}).get("sexo") or "").upper()
     _flex_ins = "inscrita" if _sx_w == "F" else "inscrito"
-    return (
+    return _con_siguiente_pedido(phone, data, (
         f"✅ Listo {saludo}quedaste {_flex_ins} en la lista de espera de *{esp}*.\n\n"
         "Apenas se libere un cupo te aviso por este mismo chat 📱\n\n"
         "_Escribe *menu* si necesitas algo más._"
-    )
+    ))
 
 
 def _format_citas_reagendar(citas: list, nombre_paciente: str) -> dict:
@@ -18641,6 +18996,25 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
     return "\n".join(lineas)
 
 
+_ORD_REF = {"primer": 1, "primera": 1, "primero": 1, "first": 1,
+            "segund": 2, "segunda": 2, "segundo": 2, "second": 2,
+            "tercer": 3, "tercera": 3, "tercero": 3, "third": 3,
+            "cuarta": 4, "cuarto": 4, "fourth": 4, "quinta": 5, "quinto": 5, "fifth": 5}
+
+
+def _ref_opcion_n(tl: str) -> int | None:
+    """N si el texto es una referencia a una opción de lista ("opción 2",
+    "option 2", "la segunda", "the first"), None si no lo es."""
+    t = (tl or "").lower()
+    m = re.search(r"\b(?:opci[oó]n|option|opc)\.?\s*#?\s*(\d{1,2})\b", t)
+    if m:
+        return int(m.group(1))
+    for w, n in _ORD_REF.items():
+        if re.search(rf"\b{w}\b", t):
+            return n
+    return None
+
+
 def _parse_slot_selection(txt: str, slots: list) -> int | None:
     """Interpreta texto libre como selección de slot. Retorna índice (0-based) o None.
 
@@ -18670,6 +19044,11 @@ def _parse_slot_selection(txt: str, slots: list) -> int | None:
     }
     for token, ord_idx in _ORDINALES.items():
         if token in tl and 0 <= ord_idx < len(slots):
+            return ord_idx
+    # Ordinales en inglés ("the first available slot", "second option").
+    _ORD_EN = {"first": 0, "second": 1, "third": 2, "fourth": 3, "fifth": 4}
+    for token, ord_idx in _ORD_EN.items():
+        if re.search(rf"\b{token}\b", tl) and 0 <= ord_idx < len(slots):
             return ord_idx
     # "el último" / "la última" → último slot disponible
     if any(k in tl for k in ("ultim", "último", "ultima", "última", "last")):

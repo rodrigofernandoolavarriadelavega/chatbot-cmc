@@ -101,6 +101,38 @@ _DIA_DEL_MES_RE = re.compile(
 )
 
 
+_MES_RE = (r"(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|"
+           r"octubre|noviembre|diciembre|ene|feb|mar|abr|may|jun|jul|ago|sept?|oct|nov|dic)")
+_DIAS_SEM_RE = r"(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)"
+_VENTANA_RE = re.compile(
+    r"\b(?:despues\s+de|antes\s+de|a\s+partir\s+de|after|before|from|until|"
+    r"desde|hasta)\s+(?:las?\s+|the\s+)?\d{1,2}\b"
+)
+_FECHA_OPCION_RES = (
+    # "9 de octubre", "9 oct", "9 de octubre de 2026", "9 de octubre del 2026"
+    re.compile(rf"\b\d{{1,2}}\s+(?:de\s+)?{_MES_RE}\b(?:\s+(?:de|del)?\s*\d{{4}})?"),
+    # "octubre 9"
+    re.compile(rf"\b{_MES_RE}\s+\d{{1,2}}\b(?!\s*[:h])"),
+    # "09/10", "9-10-2026", "09/10/26"
+    # (con guion solo si trae año: "10-30" es una hora, no una fecha)
+    re.compile(r"\b\d{1,2}\s*/\s*\d{1,2}(?:\s*/\s*\d{2,4})?\b(?!\s*[:h])"),
+    re.compile(r"\b\d{1,2}-\d{1,2}-\d{2,4}\b"),
+    # "viernes 9" (día de semana + número, sin indicador de hora pegado)
+    re.compile(rf"\b{_DIAS_SEM_RE}\s+(?:el\s+)?(?:dia\s+)?\d{{1,2}}\b(?!\s*(?:[:.h]\d|h\b|hrs?\b|horas?\b|[ap]\.?m\b))"),
+    # "opción 2", "option 2", "numero 3", "n° 1", "#2"
+    re.compile(r"\b(?:opcion|option|numero|nro|num)\.?\s*(?:#|n°|nº)?\s*\d{1,2}\b"),
+    re.compile(r"(?:#|n°|nº)\s*\d{1,2}\b"),
+    # año suelto
+    re.compile(r"\b20\d{2}\b"),
+)
+
+
+def _quitar_fechas_y_opciones(t: str) -> str:
+    for rx in _FECHA_OPCION_RES:
+        t = rx.sub(" ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
 def parse_hora(texto: str) -> Optional[Tuple[int, int]]:
     """Extrae (hora, minuto) de texto libre en español. None si no aplica.
 
@@ -122,6 +154,16 @@ def parse_hora(texto: str) -> Optional[Tuple[int, int]]:
     )
     if not _tiene_indicador_hora and _DIA_DEL_MES_RE.search(t):
         return None
+
+    # Ventanas ("después de las 4 PM", "after 4 PM", "antes de las 12") no son
+    # una hora exacta: las resuelve el filtro de franja del flujo. Leerlas como
+    # hora puntual ofrecía/agendaba la hora equivocada.
+    if _VENTANA_RE.search(t):
+        return None
+
+    # Quitar fechas y referencias "opción N" ANTES de buscar la hora, para que
+    # "viernes 9 de octubre a las 16:30" no devuelva 09:00 ni "opción 2" 14:00.
+    t = _quitar_fechas_y_opciones(t)
 
     # Mediodía / medianoche
     if re.search(r"\b(al\s+)?mediod[ií]?a\b|\bmedio\s?dia\b", t):
