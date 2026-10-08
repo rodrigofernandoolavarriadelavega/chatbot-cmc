@@ -3963,8 +3963,16 @@ def _ortodoncia_activa(phone: str, dias: int = 90) -> bool:
         return True
 
 
+def _con_imagen(msg: dict, img: str | None) -> dict:
+    """Agrega una imagen de cabecera a un mensaje de botones (_btn_msg)."""
+    if img and isinstance(msg, dict) and msg.get("type") == "interactive":
+        msg["interactive"]["header"] = {"type": "image", "image": {"link": img}}
+    return msg
+
+
 async def _oferta_hora_dental(phone: str, data: dict, intro: str, obs: str,
-                             evento: str, sin_hora_si: str, btn_no: str) -> dict:
+                             evento: str, sin_hora_si: str, btn_no: str,
+                             header_img: str | None = None) -> dict:
     """Ofrece la primera hora real de Odontología General con `intro` arriba
     (patrón masoterapia: WAIT_SLOT + slot_sugerido → confirmar_sugerido
     reserva directo). `obs` queda en la cita de Medilink para recepción."""
@@ -3977,9 +3985,9 @@ async def _oferta_hora_dental(phone: str, data: dict, intro: str, obs: str,
         log_event(phone, evento, {"con_hora": False})
         data.update({"obs_prestacion": obs, "obs_prestacion_esp": "odontolog"})
         save_session(phone, "IDLE", data)
-        return _btn_msg(intro + "\n\n¿Te busco una hora?",
+        return _con_imagen(_btn_msg(intro + "\n\n¿Te busco una hora?",
                         [{"id": sin_hora_si, "title": "Sí, buscar hora"},
-                         {"id": btn_no, "title": "Ahora no"}])
+                         {"id": btn_no, "title": "Ahora no"}]), header_img)
     mejor = smart[0]
     data.update({"especialidad": "odontología general", "slots": smart,
                  "todos_slots": todos, "fechas_vistas": [todos[0]["fecha"]],
@@ -3989,12 +3997,12 @@ async def _oferta_hora_dental(phone: str, data: dict, intro: str, obs: str,
     save_session(phone, "WAIT_SLOT", data)
     log_event(phone, evento,
               {"con_hora": True, "fecha": mejor.get("fecha"), "prof": mejor.get("id_profesional")})
-    return _btn_msg(
+    return _con_imagen(_btn_msg(
         intro + f"\n\nTengo hora el *{mejor['fecha_display']}* a las "
         f"*{mejor['hora_inicio'][:5]}* con *{mejor['profesional']}*. ¿Te la reservo?",
         [{"id": "confirmar_sugerido", "title": "✅ Sí, agendar"},
          {"id": "ver_otros", "title": "📋 Ver otras horas"},
-         {"id": btn_no, "title": "Ahora no"}])
+         {"id": btn_no, "title": "Ahora no"}]), header_img)
 
 
 async def _oferta_limpieza_post_consent(phone: str, data: dict) -> dict:
@@ -4006,8 +4014,10 @@ async def _oferta_limpieza_post_consent(phone: str, data: dict) -> dict:
         "alcanza, y previene caries y encías que sangran.\n\n"
         "*Limpieza dental: desde $30.000* — unos 40 minutos, sin dolor."
     )
+    from config import LIMPIEZA_FLYER_IMG
     return await _oferta_hora_dental(phone, data, intro, _LIMPIEZA_OBS,
-                                     "consent_oferta_limpieza", "xlimpieza_si", "xlimpieza_no")
+                                     "consent_oferta_limpieza", "xlimpieza_si", "xlimpieza_no",
+                                     header_img=LIMPIEZA_FLYER_IMG)
 
 
 def _oferta_post_limpieza(phone: str, ortodoncia_activa: bool) -> dict:

@@ -107,7 +107,7 @@ def test_si_a_v1_ofrece_limpieza_con_hora_real(entorno):
     _plantilla("v1")
     resp = _si()
     body = resp["interactive"]["body"]["text"]
-    assert "Limpieza dental: $30.000" in body
+    assert "Limpieza dental: desde $30.000" in body
     assert "jueves 9 de octubre" in body and "10:30" in body and "Burgos" in body
     assert _ids(resp) == ["confirmar_sugerido", "ver_otros", "xlimpieza_no"]
     sess = session.get_session(PHONE)
@@ -219,3 +219,11 @@ def test_me_interesa_estetica_agenda_con_marca(entorno, monkeypatch):
     asyncio.run(flows.handle_message(PHONE, "xestfacial_si", {"state": "IDLE", "data": {}}))
     assert ini.await_args.args[2] == "estética facial"
     assert ini.await_args.args[1]["obs_prestacion_esp"] == "estética"
+
+
+def test_oferta_limpieza_lleva_flyer(entorno):
+    _plantilla("v1")
+    resp = _si()
+    h = resp["interactive"].get("header") or {}
+    assert h.get("type") == "image"
+    assert h["image"]["link"].endswith("/static/promos/limpieza_dental_30000.jpg")

@@ -284,6 +284,10 @@ DENTAL_PROMO_FLYER_ACTIVE   = os.getenv("DENTAL_PROMO_FLYER_ACTIVE", "false").lo
 DENTAL_PROMO_FLYER_TEMPLATE = os.getenv("DENTAL_PROMO_FLYER_TEMPLATE", "dental_limpieza_junio_v2")
 DENTAL_PROMO_FLYER_IMG      = os.getenv("DENTAL_PROMO_FLYER_IMG",
                                         "https://agentecmc.cl/static/promos/dental_limpieza_junio.jpg")
+# Flyer de limpieza dental $30.000 (sin fecha de vencimiento) que acompaña la
+# oferta post-consentimiento (flows._oferta_limpieza_post_consent). 1200×1600.
+LIMPIEZA_FLYER_IMG          = os.getenv("LIMPIEZA_FLYER_IMG",
+                                        "https://agentecmc.cl/static/promos/limpieza_dental_30000.jpg")
 
 # Datos de transferencia bancaria del CMC (abonos / pagos anticipados).
 # Fuente única: cualquier mensaje que pida transferencia debe leer de acá.
