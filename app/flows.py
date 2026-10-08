@@ -5576,6 +5576,24 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                     # Intentar mapear headline → especialidad y buscar 3 slots
                     from medilink import headline_to_especialidad as _h2esp, top3_slots_especialidad as _top3
                     _esp_ctwa = _h2esp(_headline_bv)
+                    # Anuncio de ortodoncia: NO buscar horas de la ortodoncista.
+                    # El paciente nuevo parte con evaluación de la dentista
+                    # general (Dra. Burgos) y el que ya está en tratamiento va
+                    # con la Dra. Castillo — regla de _iniciar_agendar. Antes se
+                    # buscaban 3 horas de Castillo en 7 días y, con su agenda
+                    # llena, el lead recibía "No hay horas disponibles esta
+                    # semana para Ortodoncia" (auditoría 2026-10-08, anuncio
+                    # "Brackets sin viajar $120K"). El disclosure va como mensaje
+                    # aparte: pegado al texto de ortodoncia pasaría el tope de
+                    # 1024 caracteres del cuerpo interactivo.
+                    if (_esp_ctwa or "").strip().lower() in (
+                            "ortodoncia", "ortodoncista", "brackets", "frenillos"):
+                        log_event(phone, "ctwa_orto_delegada_agendar", {
+                            "headline": _headline_bv[:80],
+                        })
+                        await send_whatsapp(phone, _disclosure_txt)
+                        data["_txt_raw"] = txt
+                        return await _iniciar_agendar(phone, data, "ortodoncia")
                     if _esp_ctwa:
                         try:
                             _slots_ctwa = await _top3(_esp_ctwa, dias=7)
@@ -7931,6 +7949,18 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                 resp = _resp_precio_forzada or result.get("respuesta_directa") or await respuesta_faq(txt_enriquecido, recepcion_resumen=_recepcion_resumen, meta_referral=_meta_referral_ctx)
             resp = _strip_canal_circular(resp, phone)  # BUG-F
             esp_sug = (result.get("especialidad") or "").strip()
+            # Ortodoncia por la vía informativa ("Quiero más información" desde
+            # un anuncio): Claude redactaba su propia versión (con voseo) y el
+            # preview ofrecía hora con la ortodoncista a un mes, contradiciendo
+            # "primero la evaluación con la dentista". _iniciar_agendar ya tiene
+            # el texto acordado + horas de odontología general para pacientes
+            # nuevos, y horas con la Dra. Castillo para los que están en
+            # tratamiento: se delega ahí.
+            if (esp_sug.lower() in ("ortodoncia", "ortodoncista", "brackets", "frenillos")
+                    and not is_medilink_down()):
+                log_event(phone, "orto_info_delegada_agendar", {"txt": txt[:120]})
+                data["_txt_raw"] = txt
+                return await _iniciar_agendar(phone, data, "ortodoncia")
             # Si Claude infirió una especialidad, intentamos mostrar el próximo slot
             # inline + botón para agendar directo.
             if esp_sug and not is_medilink_down():

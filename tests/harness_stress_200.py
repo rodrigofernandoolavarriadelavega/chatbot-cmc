@@ -1019,7 +1019,10 @@ async def main():
     ])
 
     mk("100 FAQ precio ortodoncia", "56910000100", [
-        ("cuanto sale la ortodoncia", {"any": ["valor", "depende", "consulta"], **NO_ERROR}),
+        # Desde 64d8dc7 (+ auditoría 2026-10-08): la pregunta de precio de
+        # ortodoncia usa el texto acordado (brackets $120.000 + evaluación con la
+        # dentista general), no una respuesta genérica de Claude.
+        ("cuanto sale la ortodoncia", {"any": ["$120.000", "evaluación"], "none": ["Castillo", *NO_ENTENDI_MARKERS]}),
     ])
 
     # ═══════════════════════════════════════════════════════════════════════════
