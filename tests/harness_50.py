@@ -1189,6 +1189,23 @@ async def main():
         ),
     ], None, True))
 
+    # GADS-01/02: marcador de Google Ads "g-<code>" (2026-10-08). Debe limpiarse antes de
+    # clasificar: la conversación sigue como si el paciente solo hubiera escrito la frase.
+    # (Tags/vínculo phone<->gclid se verifican en tests/test_google_ads_2026_10_08.py)
+    results.append(("GADS-01 marcador (web: pagina · art · boton · g-code) no contamina el agendar", "56999002001", [
+        (
+            "Hola, quiero agendar una ecografía. (web: landing_ecografia · ecografia · hero · g-k7m2x)",
+            {"none": ["g-k7m2x", "(web"] + NO_ENTENDI_MARKERS, "any": ["eco", "Eco", "RUT", "horario", "tipo"]},
+        ),
+    ], None, True))
+    results.append(("GADS-02 marcador simple (web: g-code) + agendar medicina general", "56999002002", [
+        (
+            "Hola, quiero agendar una hora de medicina general. (web: g-abcd2)",
+            {"none": ["g-abcd2", "(web"] + NO_ENTENDI_MARKERS,
+             "any": ["RUT", "horario", "Abarca", "Olavarría", "Márquez", "medicina general", "Medicina General"]},
+        ),
+    ], None, True))
+
     # ── Run ─────────────────────────────────────────────────────────────────
     passed = 0
     failed = 0

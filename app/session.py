@@ -879,6 +879,46 @@ def _run_ddl_inline(conn) -> None:
             conn.execute(f"ALTER TABLE citas_bot ADD COLUMN {_col_ad}")
         except _OPERATIONAL_ERRORS:
             pass
+    # Migración: clic de Google Ads que trajo la cita (ventana 90d, ver google_ads.py).
+    for _col_g in ("gads_code TEXT", "gads_click_type TEXT", "gads_click_id TEXT",
+                   "gads_click_ts INTEGER"):
+        try:
+            conn.execute(f"ALTER TABLE citas_bot ADD COLUMN {_col_g}")
+        except _OPERATIONAL_ERRORS:
+            pass
+    # ── Google Ads: clics con gclid/gbraid/wbraid (POST /api/gclick) ──────────
+    # code = código corto que viaja en el marcador "(web: ... · g-<code>)" del wa.me.
+    # phone se llena cuando el bot recibe ese marcador (vincula teléfono <-> clic).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS google_clicks (
+            code        TEXT PRIMARY KEY,
+            click_type  TEXT NOT NULL,            -- 'gclid' | 'gbraid' | 'wbraid'
+            click_id    TEXT NOT NULL,
+            landing     TEXT,
+            ts          INTEGER NOT NULL,         -- epoch del clic (servidor)
+            phone       TEXT,
+            linked_ts   INTEGER
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_gclicks_phone ON google_clicks(phone)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_gclicks_ts ON google_clicks(ts)")
+    # Cola de conversiones offline hacia Google Ads (idempotente por id_cita = order_id).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS google_ads_uploads (
+            id_cita      TEXT PRIMARY KEY,
+            phone        TEXT,
+            click_type   TEXT,
+            click_id     TEXT,
+            click_ts     INTEGER,
+            conv_ts      INTEGER,                 -- epoch de la atención
+            value        REAL,
+            estado       TEXT NOT NULL DEFAULT 'pendiente',  -- pendiente|sent|fallido|expirada
+            intentos     INTEGER NOT NULL DEFAULT 0,
+            ultimo_error TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
+            sent_at      TEXT
+        )
+    """)
     # ── Compliance Ley 19.628 (Chile, reforma 2024) ───────────────────────────
     # Registro de consentimiento explícito del paciente para almacenar
     # conversación + datos. Sin un registro 'accepted' aquí NO se almacena
@@ -1490,6 +1530,12 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
                 conn.commit()
     except Exception as _e_attr:
         log.debug("save_cita_bot: atribución anuncio falló: %s", _e_attr)
+    # Atribución Google Ads (gclid vinculado al teléfono, ≤90d). Igual de aislada.
+    try:
+        import google_ads as _gads
+        _gads.vincular_cita(phone, id_cita)
+    except Exception as _e_g:
+        log.debug("save_cita_bot: atribución Google Ads falló: %s", _e_g)
 
 
 def ultimo_referral_antes_de(phone: str, hasta_ts: int,

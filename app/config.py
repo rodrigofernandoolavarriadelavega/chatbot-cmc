@@ -902,3 +902,16 @@ TELEGRAM_ALERT_CHAT_ID = os.getenv("TELEGRAM_ALERT_CHAT_ID", "")
 # Si falla N veces seguidas → alerta_oob. Read-only y barato.
 # default true porque es completamente inocuo sin las env de Telegram/healthchecks.
 SYNTHETIC_CHECK_ENABLED: bool = os.getenv("SYNTHETIC_CHECK_ENABLED", "true").lower() in ("true", "1", "yes")
+
+# ── Google Ads: conversiones offline (ConversionUploadService.UploadClickConversions) ──
+# Apagado por defecto. Con el flag en 1 pero sin credenciales no sube nada (solo avisa en log).
+# El developer token requiere aprobación de Google (días). Ver app/google_ads.py.
+GOOGLE_ADS_OFFLINE_ENABLED = os.getenv("GOOGLE_ADS_OFFLINE_ENABLED", "0").strip().lower() in ("1", "true", "yes", "on")
+GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN", "")
+GOOGLE_ADS_CLIENT_ID = os.getenv("GOOGLE_ADS_CLIENT_ID", "")
+GOOGLE_ADS_CLIENT_SECRET = os.getenv("GOOGLE_ADS_CLIENT_SECRET", "")
+GOOGLE_ADS_REFRESH_TOKEN = os.getenv("GOOGLE_ADS_REFRESH_TOKEN", "")
+GOOGLE_ADS_CUSTOMER_ID = os.getenv("GOOGLE_ADS_CUSTOMER_ID", "")            # 10 dígitos, con o sin guiones
+GOOGLE_ADS_CONVERSION_ACTION_ID = os.getenv("GOOGLE_ADS_CONVERSION_ACTION_ID", "")
+GOOGLE_ADS_LOGIN_CUSTOMER_ID = os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "")  # solo si se opera vía cuenta administradora (MCC)
+GOOGLE_ADS_API_VERSION = os.getenv("GOOGLE_ADS_API_VERSION", "v21")           # VERIFICAR versión vigente al activar

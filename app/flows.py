@@ -4047,6 +4047,32 @@ async def _atender_entrada_no_rut(phone: str, txt: str, tl: str, state: str,
     )
 
 
+def _gads_extraer_codigo(partes: list[str]) -> tuple[str, list[str]]:
+    """Saca la parte `g-<code>` del marcador web (Google Ads). Nunca lanza."""
+    try:
+        import google_ads
+        return google_ads.extraer_codigo(partes)
+    except Exception:
+        return "", partes
+
+
+def _gads_vincular_llegada(phone: str, code: str) -> None:
+    """Llegada desde un clic de Google Ads: tag referral_source:google_ads + vínculo
+    phone <-> code <-> gclid. Best-effort: jamás debe tumbar el mensaje."""
+    try:
+        import google_ads
+        clic = google_ads.vincular_phone(phone, code)
+        if not clic:
+            log_event(phone, "gads_codigo_sin_clic", {"code": code})
+            return
+        if "referral_source:google_ads" not in get_tags(phone):
+            save_tag(phone, "referral_source:google_ads")
+            log_event(phone, "referral_source_auto", {"source": "google_ads"})
+        log_event(phone, "gads_vinculo", {"code": code, "tipo": clic["click_type"]})
+    except Exception as e:
+        log.warning("gads: vincular llegada falló phone=%s: %s", (phone or "")[:8], e)
+
+
 async def handle_message(phone: str, texto: str, session: dict) -> str:
     state = session["state"]
     data  = session["data"]
@@ -4069,6 +4095,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
     ) or re.match(r"^\s*\(\s*web(?:\s*[:：]\s*([^()]{0,120}?))?\s*\)\s*", txt, re.IGNORECASE)
     if _web_match:
         _partes = [p.strip().lower() for p in re.split(r"[·|/]", _web_match.group(1) or "") if p.strip()]
+        # Google Ads: parte "g-<code>" (ej. "(web: landing_ecografia · ecografia · hero · g-k7m2x)"
+        # o "(web: g-k7m2x)"). Se saca de _partes para no contaminar slug/artículo/botón.
+        _g_code, _partes = _gads_extraer_codigo(_partes)
         _slug = re.sub(r"[^\w-]", "", _partes[0]) if _partes else ""
         _art = re.sub(r"[^\w-]", "", _partes[1])[:80] if len(_partes) > 1 else ""
         _btn = re.sub(r"[^\w-]", "", _partes[2])[:40] if len(_partes) > 2 else ""
@@ -4082,6 +4111,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # botón, para medir qué artículo y qué botón traen pacientes.
         log_event(phone, "web_origen", {"pagina": _slug, "articulo": _art, "boton": _btn,
                                         "texto": txt[:160]})
+        if _g_code:
+            _gads_vincular_llegada(phone, _g_code)
         # Limpiar el marcador del texto para el resto del pipeline conversacional
         txt = (txt[: _web_match.start()] + txt[_web_match.end():]).strip(" .,-–—")
         texto = txt

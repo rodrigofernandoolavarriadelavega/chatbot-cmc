@@ -272,6 +272,13 @@ async def enviar_purchases(hoy: date | None = None) -> dict:
             _marcar(it, "omitida_dup")
             res["duplicados"] += 1
         else:
+            # Google Ads (offline conversions): mismo gatillo, cola propia con reintentos.
+            # Independiente del resultado de Meta; best-effort, nunca rompe el Purchase.
+            try:
+                import google_ads
+                google_ads.encolar_conversion(it)
+            except Exception as e:
+                log.warning("google_ads encolar cita %s: %s", it["id_cita"], e)
             try:
                 prof = get_profile(it["phone"]) or {}
                 nom = (it["nombre"] or prof.get("nombre") or "").split()
@@ -306,6 +313,11 @@ async def enviar_purchases(hoy: date | None = None) -> dict:
                 res["errores"] += 1
     log.info("capi_purchase_diario: %s", res)
     registrar_corrida(res)
+    try:                      # sube lo pendiente a Google Ads (no-op con flag apagado / sin credenciales)
+        import google_ads
+        await google_ads.subir_pendientes()
+    except Exception as e:
+        log.warning("google_ads subir_pendientes: %s", e)
     return res
 
 

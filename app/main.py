@@ -2161,6 +2161,66 @@ for _slug_landing in _LANDINGS_ESPECIALIDAD:
     _registrar_landing_especialidad(_slug_landing)
 
 
+# ── Google Ads: registro del clic (gclid/gbraid/wbraid) desde las landings ───
+# Solo ESCRIBE: no hay GET ni respuesta con datos del clic, así que nadie puede leer
+# gclids ajenos. Validación estricta, tope de cuerpo, rate-limit por IP y global.
+_GCLICK_ORIGENES = ("agentecmc.cl", "centromedicocarampangue.cl", "localhost", "127.0.0.1")
+_GCLICK_IP_MAX, _GCLICK_GLOBAL_MAX, _GCLICK_VENTANA = 20, 600, 60   # por minuto
+_gclick_buckets: dict[str, deque] = {}
+
+
+def _gclick_rate_ok(ip: str) -> bool:
+    now = monotonic()
+    for key, tope in ((f"ip:{ip}", _GCLICK_IP_MAX), ("global", _GCLICK_GLOBAL_MAX)):
+        b = _gclick_buckets.setdefault(key, deque())
+        while b and now - b[0] > _GCLICK_VENTANA:
+            b.popleft()
+        if len(b) >= tope:
+            return False
+    _gclick_buckets["global"].append(now)
+    _gclick_buckets[f"ip:{ip}"].append(now)
+    if len(_gclick_buckets) > 5000:                       # limpieza oportunista
+        for k in [k for k, v in _gclick_buckets.items() if not v or now - v[-1] > _GCLICK_VENTANA]:
+            _gclick_buckets.pop(k, None)
+    return True
+
+
+@app.post("/api/gclick")
+async def api_gclick(request: Request):
+    """Registra un clic de Google Ads: {code, gclid|gbraid|wbraid, landing, ts}."""
+    import json as _json
+    from urllib.parse import urlparse as _urlparse
+    ip = (request.headers.get("cf-connecting-ip") or request.headers.get("x-real-ip")
+          or (request.client.host if request.client else "?"))
+    if not _gclick_rate_ok(ip):
+        return JSONResponse({"ok": False}, status_code=429, headers={"Retry-After": "60"})
+    origen = request.headers.get("origin") or ""
+    if origen:
+        host = (_urlparse(origen).hostname or "").lower()
+        if not any(host == o or host.endswith("." + o) for o in _GCLICK_ORIGENES):
+            return JSONResponse({"ok": False}, status_code=403)
+    raw = await request.body()
+    if len(raw) > 2048:
+        return JSONResponse({"ok": False}, status_code=413)
+    try:
+        body = _json.loads(raw or b"{}")
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=400)
+    import google_ads
+    datos, motivo = google_ads.validar_payload(body)
+    if not datos:
+        return JSONResponse({"ok": False, "error": motivo}, status_code=400)
+    try:
+        r = await asyncio.to_thread(google_ads.registrar_click, datos["code"], datos["click_type"],
+                                    datos["click_id"], datos["landing"])
+    except Exception as e:
+        logging.getLogger("bot.google_ads").warning("gclick: no se pudo guardar: %s", e)
+        return JSONResponse({"ok": False}, status_code=500)
+    if r == "conflict":
+        return JSONResponse({"ok": False, "error": "code_en_uso"}, status_code=409)
+    return JSONResponse({"ok": True})
+
+
 @app.get("/ecografia", response_class=HTMLResponse)
 def landing_ecografia():
     """Landing de venta — Ecografía (David Pardo, TM) en Carampangue."""
