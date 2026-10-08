@@ -114,7 +114,7 @@ class T(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("no contamos", str(r).lower(), e)
 
     def test_precio_fono_evaluacion(self):
-        self.assertEqual(flows.PRECIOS_SLOT["Fonoaudiología"][1], 30000)
+        self.assertEqual(flows.PRECIOS_SLOT["Fonoaudiología"][1], 25000)  # dueño 2026-10-07
 
     def _lista(self):
         hs = ["09:00", "09:15", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00",

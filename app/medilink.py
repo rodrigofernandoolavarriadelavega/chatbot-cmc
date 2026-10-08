@@ -307,7 +307,7 @@ PROFESIONALES = {
      1: {"nombre": "Dr. Rodrigo Olavarría",    "especialidad": "Medicina General",      "intervalo": 15},
     73: {"nombre": "Dr. Andrés Abarca",        "especialidad": "Medicina General",      "intervalo": 15},
     13: {"nombre": "Dr. Alonso Márquez",       "especialidad": "Medicina General",      "intervalo": 20},
-    23: {"nombre": "Dr. Manuel Borrego",       "especialidad": "Otorrinolaringología",  "intervalo": 20},
+    23: {"nombre": "Dr. Manuel Borrego",       "especialidad": "Otorrinolaringología",  "intervalo": 20, "telemedicina": True},  # solo videollamada (dueño 2026-10-08)
     60: {"nombre": "Dr. Miguel Millán",        "especialidad": "Cardiología",           "intervalo": 20, "dias": [5]},
     # 64: Dr. Claudio Barraza — Traumatología — temporalmente deshabilitado
     61: {"nombre": "Dr. Tirso Rejón",          "especialidad": "Ginecología",           "intervalo": 20},
