@@ -12,6 +12,13 @@ adulto representado sin verificar da 403). Los datos se guardan por RUT del
 paciente activo, NUNCA por teléfono: dos pacientes que comparten celular no
 ven lo del otro.
 
+Ronda 4 (2026-10-08):
+4. Tomas compartidas: "lo tomé" se guarda en el servidor (portal_tomas), con
+   quién marcó y a qué hora, para que la hija y la mamá vean lo mismo.
+5. Recordatorios honestos: un solo .ics por persona (UID estable + SEQUENCE)
+   y suscripción de calendario por token secreto, revocable y de solo
+   lectura (portal_cal_tokens; se guarda solo el hash del token).
+
 Nada aquí da consejos de dosis ni interpreta resultados. Los avisos por
 WhatsApp NO existen en esta ronda (interruptor PORTAL_REMEDIOS_AVISOS_WA,
 apagado y sin uso).
@@ -82,6 +89,40 @@ def _ensure_tablas() -> None:
                 consent_por  TEXT NOT NULL,
                 updated_at   TEXT DEFAULT (datetime('now'))
             )""")
+        # SEQUENCE del .ics: sube cada vez que el remedio cambia (RFC 5545 §3.8.7.4)
+        try:
+            c.execute("ALTER TABLE portal_remedios ADD COLUMN seq INTEGER DEFAULT 0")
+        except Exception:
+            pass   # ya existe
+        # Tomas marcadas ("lo tomé"), compartidas entre quienes tienen acceso
+        # COMPLETO al perfil. rut = paciente; marcado_por_rut = titular de la
+        # sesión que marcó (puede ser el mismo paciente o un familiar).
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS portal_tomas (
+                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                rut                TEXT NOT NULL,
+                remedio_id         INTEGER NOT NULL,
+                fecha              TEXT NOT NULL,
+                hora               TEXT NOT NULL,
+                marcado_por_rut    TEXT NOT NULL DEFAULT '',
+                marcado_por_nombre TEXT NOT NULL DEFAULT '',
+                marcado_ts         TEXT NOT NULL,
+                UNIQUE(rut, remedio_id, fecha, hora)
+            )""")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_portal_tomas_rut ON portal_tomas(rut, fecha)")
+        # Suscripción de calendario: solo el HASH del token (el token viaja una
+        # vez al navegador). Revocable; solo lectura; sin RUT en la URL.
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS portal_cal_tokens (
+                token_hash   TEXT PRIMARY KEY,
+                rut          TEXT NOT NULL,
+                creado_por   TEXT NOT NULL,
+                created_at   TEXT DEFAULT (datetime('now')),
+                revoked_at   TEXT,
+                last_access  TEXT,
+                n_access     INTEGER DEFAULT 0
+            )""")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_portal_cal_tokens_rut ON portal_cal_tokens(rut)")
     _DDL_PATH = actual
 
 
@@ -187,7 +228,8 @@ async def remedios_guardar(request: Request,
             # "quedan" se re-fecha solo si la persona cambió el número
             qf = prev["quedan_fecha"] if (quedan == prev["quedan"]) else (hoy if quedan is not None else None)
             c.execute("""UPDATE portal_remedios SET nombre=?, dosis=?, horarios=?, dias=?,
-                         quedan=?, por_toma=?, quedan_fecha=?, updated_at=datetime('now')
+                         quedan=?, por_toma=?, quedan_fecha=?, updated_at=datetime('now'),
+                         seq=COALESCE(seq,0)+1
                          WHERE id=? AND rut=?""",
                       (nombre, dosis, json.dumps(horarios), json.dumps(dias), quedan,
                        por_toma, qf, int(rid), rut))
@@ -220,6 +262,8 @@ async def remedios_borrar(rid: int, portal_session: str | None = Cookie(None),
     _ensure_tablas()
     with _session.db() as c:
         cur = c.execute("DELETE FROM portal_remedios WHERE id=? AND rut=?", (rid, rut))
+        if cur.rowcount:
+            c.execute("DELETE FROM portal_tomas WHERE remedio_id=? AND rut=?", (rid, rut))
     if not cur.rowcount:
         raise HTTPException(404, "No encontramos ese remedio.")
     return {"ok": True}
@@ -266,15 +310,21 @@ def uid_toma(rut: str, remedio_uid: str, hora: str) -> str:
 
 
 def construir_ics(rut: str, remedios: list[dict], nombre_persona: str = "",
-                  ahora: datetime | None = None) -> str:
+                  ahora: datetime | None = None, publico: bool = False) -> str:
+    """publico=True: versión para la suscripción por link (la puede leer
+    cualquiera que tenga la URL) → SOLO nombre del remedio y hora: sin dosis,
+    sin nombre de la persona, sin RUT, sin diagnósticos."""
     ahora = ahora or datetime.now(_TZ)
     stamp = ahora.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     hoy = ahora.date()
-    cal = "Mis remedios" + (f" · {nombre_persona}" if nombre_persona else "")
+    cal = "Mis remedios" + (f" · {nombre_persona}" if nombre_persona and not publico else "")
     L = ["BEGIN:VCALENDAR", "VERSION:2.0",
          "PRODID:-//Centro Medico Carampangue//Portal del Paciente//ES",
          "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
          f"X-WR-CALNAME:{_ics_esc(cal)}", "X-WR-TIMEZONE:America/Santiago"]
+    if publico:
+        # Sugerencia de refresco para calendarios suscritos (cada cliente decide)
+        L += ["REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H"]
     L += _VTIMEZONE
     for r in remedios:
         dias = r.get("dias") or []
@@ -288,13 +338,14 @@ def construir_ics(rut: str, remedios: list[dict], nombre_persona: str = "",
                         break
                     d += timedelta(days=1)
             dt = f"{d.strftime('%Y%m%d')}T{hh}{mm}00"
-            titulo = f"Tomar {r['nombre']}" + (f" ({r['dosis']})" if r.get("dosis") else "")
+            titulo = f"Tomar {r['nombre']}" + (f" ({r['dosis']})" if r.get("dosis") and not publico else "")
             rrule = ("RRULE:FREQ=WEEKLY;BYDAY=" + ",".join(_DIAS_ICS[i] for i in dias)
                      if dias else "RRULE:FREQ=DAILY")
             desc = ("Recordatorio que usted anotó en su portal. "
                     "Siga siempre la indicación de su médico. Centro Médico Carampangue.")
             L += ["BEGIN:VEVENT",
                   f"UID:{uid_toma(rut, r['uid'], hora)}",
+                  f"SEQUENCE:{int(r.get('seq') or 0)}",
                   f"DTSTAMP:{stamp}",
                   f"DTSTART;TZID=America/Santiago:{dt}",
                   "DURATION:PT5M",
@@ -324,6 +375,227 @@ async def remedios_ics(portal_session: str | None = Cookie(None),
     return Response(construir_ics(rut, rems), media_type="text/calendar; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="mis-remedios.ics"',
                              "Cache-Control": "no-store"})
+
+
+# ── Suscripción de calendario (se actualiza sola, sin reimportar) ───────────
+_CAL_RATE: dict[str, list[float]] = {}
+
+
+def _cal_rate_ok(key: str, limit: int = 30, window_s: int = 3600) -> bool:
+    import time as _t
+    now = _t.monotonic()
+    xs = [t for t in _CAL_RATE.get(key, []) if now - t < window_s]
+    if len(xs) >= limit:
+        _CAL_RATE[key] = xs
+        return False
+    xs.append(now)
+    _CAL_RATE[key] = xs
+    return True
+
+
+def _hash_token(tok: str) -> str:
+    return hashlib.sha256(tok.encode()).hexdigest()
+
+
+def _base_url(request: Request) -> tuple[str, str]:
+    """(https://host, host) respetando el proxy (nginx/Cloudflare)."""
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    return f"{proto}://{host}", host
+
+
+def _suscripcion_estado(rut: str) -> dict:
+    _ensure_tablas()
+    with _session.db() as c:
+        r = c.execute("""SELECT created_at, last_access FROM portal_cal_tokens
+                         WHERE rut=? AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1""",
+                      (rut,)).fetchone()
+    return {"activa": bool(r), "creada": r["created_at"] if r else None,
+            "ultimo_uso": r["last_access"] if r else None}
+
+
+@router.get("/portal/api/herramientas/calendario")
+async def calendario_estado(portal_session: str | None = Cookie(None),
+                            portal_active: str | None = Cookie(None)):
+    _o, _op, rut, _p = await _resolve_completo(portal_session, portal_active)
+    if _es_demo(rut):
+        return {"ok": True, "demo": True, "activa": False}
+    return {"ok": True, **_suscripcion_estado(rut)}
+
+
+@router.post("/portal/api/herramientas/calendario")
+async def calendario_crear(request: Request, portal_session: str | None = Cookie(None),
+                           portal_active: str | None = Cookie(None)):
+    """Crea un link secreto de suscripción para el perfil activo. Revoca los
+    anteriores de ESTE perfil (un solo link vigente por persona): el link solo
+    se muestra una vez, en el servidor queda el hash."""
+    owner_rut, owner_phone, rut, _p = await _resolve_completo(portal_session, portal_active)
+    if _es_demo(rut):
+        return {"ok": True, "demo": True}
+    _ensure_tablas()
+    tok = secrets.token_urlsafe(32)          # 256 bits, 43 caracteres
+    with _session.db() as c:
+        c.execute("UPDATE portal_cal_tokens SET revoked_at=datetime('now') "
+                  "WHERE rut=? AND revoked_at IS NULL", (rut,))
+        c.execute("INSERT INTO portal_cal_tokens (token_hash, rut, creado_por) VALUES (?,?,?)",
+                  (_hash_token(tok), rut, owner_rut))
+    base, host = _base_url(request)
+    try:
+        _session.log_event(owner_phone, "portal_calendario_suscripcion", {"propio": owner_rut == rut})
+    except Exception:
+        pass
+    path = f"/portal/cal/{tok}.ics"
+    return {"ok": True, "url": base + path, "webcal": f"webcal://{host}{path}"}
+
+
+@router.delete("/portal/api/herramientas/calendario")
+async def calendario_revocar(portal_session: str | None = Cookie(None),
+                             portal_active: str | None = Cookie(None)):
+    owner_rut, owner_phone, rut, _p = await _resolve_completo(portal_session, portal_active)
+    if _es_demo(rut):
+        return {"ok": True, "demo": True}
+    _ensure_tablas()
+    with _session.db() as c:
+        cur = c.execute("UPDATE portal_cal_tokens SET revoked_at=datetime('now') "
+                        "WHERE rut=? AND revoked_at IS NULL", (rut,))
+    return {"ok": True, "revocados": cur.rowcount}
+
+
+@router.get("/portal/cal/{token}.ics")
+async def calendario_feed(token: str, request: Request):
+    """Feed de solo lectura para el calendario del teléfono. Sin cookie: la
+    llave es el token (256 bits). Devuelve SOLO nombre del remedio y hora.
+    404 genérico ante token inválido, revocado o vínculo ya quitado."""
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
+    if not _cal_rate_ok("ip:" + ip, limit=120):
+        raise HTTPException(429, "Demasiadas consultas")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{30,80}", token or ""):
+        raise HTTPException(404, "No encontrado")
+    h = _hash_token(token)
+    if not _cal_rate_ok("tok:" + h, limit=30):
+        raise HTTPException(429, "Demasiadas consultas")
+    _ensure_tablas()
+    with _session.db() as c:
+        row = c.execute("SELECT rut, creado_por FROM portal_cal_tokens "
+                        "WHERE token_hash=? AND revoked_at IS NULL", (h,)).fetchone()
+    if not row:
+        raise HTTPException(404, "No encontrado")
+    rut, creador = row["rut"], row["creado_por"]
+    if creador != rut:
+        # Si el titular quitó el vínculo, el link deja de funcionar solo
+        from portal_routes import is_family_link
+        if not is_family_link(creador, rut):
+            raise HTTPException(404, "No encontrado")
+    with _session.db() as c:
+        c.execute("UPDATE portal_cal_tokens SET last_access=datetime('now'), "
+                  "n_access=COALESCE(n_access,0)+1 WHERE token_hash=?", (h,))
+    rems = [r for r in listar_remedios(rut) if r.get("horarios")]
+    return Response(construir_ics(rut, rems, publico=True),
+                    media_type="text/calendar; charset=utf-8",
+                    headers={"Cache-Control": "private, max-age=900",
+                             "X-Robots-Tag": "noindex, nofollow",
+                             "Content-Disposition": 'inline; filename="remedios.ics"'})
+
+
+# ── Tomas compartidas ("lo tomé") ────────────────────────────────────────────
+def _hoy() -> str:
+    return datetime.now(_TZ).strftime("%Y-%m-%d")
+
+
+def _fecha_toma(v) -> str:
+    """Solo hoy o ayer (Chile): no se marca el futuro ni se reescribe el pasado."""
+    f = str(v or "").strip()[:10] or _hoy()
+    try:
+        d = datetime.strptime(f, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(400, "Fecha inválida")
+    hoy = datetime.now(_TZ).date()
+    if not (hoy - timedelta(days=1) <= d <= hoy):
+        raise HTTPException(400, "Solo se puede marcar hoy o ayer.")
+    return f
+
+
+def _nombre_marcador(owner_rut: str, owner_phone: str) -> str:
+    """Primer nombre de quien marca, SOLO si el perfil del teléfono es de ese
+    mismo RUT (teléfonos compartidos: jamás el nombre de otra persona)."""
+    try:
+        p = _session.get_profile(owner_phone) or {}
+    except Exception:
+        p = {}
+    if (p.get("rut") or "").replace(".", "").upper() == owner_rut.replace(".", "").upper():
+        w = (p.get("nombre") or "").strip().split(" ")[0]
+        return w[:1].upper() + w[1:].lower() if w else ""
+    return ""
+
+
+def _fila_toma(r, owner_rut: str) -> dict:
+    ts = r["marcado_ts"] or ""
+    try:
+        hhmm = datetime.strptime(ts[:19], "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc).astimezone(_TZ).strftime("%H:%M")
+    except ValueError:
+        hhmm = ""
+    propio = r["marcado_por_rut"] == owner_rut
+    return {"remedio_id": r["remedio_id"], "hora": r["hora"], "fecha": r["fecha"],
+            "propio": propio, "marcado_por": "" if propio else (r["marcado_por_nombre"] or ""),
+            "marcado_hhmm": hhmm}
+
+
+@router.get("/portal/api/herramientas/tomas")
+async def tomas_listar(fecha: str = "", portal_session: str | None = Cookie(None),
+                       portal_active: str | None = Cookie(None)):
+    owner_rut, _op, rut, _p = await _resolve_completo(portal_session, portal_active)
+    f = _fecha_toma(fecha)
+    if _es_demo(rut):
+        return {"ok": True, "demo": True, "fecha": f, "tomas": []}
+    _ensure_tablas()
+    with _session.db() as c:
+        rows = c.execute("SELECT * FROM portal_tomas WHERE rut=? AND fecha=? ORDER BY hora",
+                         (rut, f)).fetchall()
+    return {"ok": True, "fecha": f, "tomas": [_fila_toma(r, owner_rut) for r in rows]}
+
+
+@router.post("/portal/api/herramientas/tomas")
+async def tomas_marcar(request: Request, portal_session: str | None = Cookie(None),
+                       portal_active: str | None = Cookie(None)):
+    """{remedio_id, hora, fecha?, tomado: bool}. Requiere acceso COMPLETO al
+    perfil. Si otra persona ya la marcó, se respeta su marca (quién y cuándo)."""
+    owner_rut, owner_phone, rut, _p = await _resolve_completo(portal_session, portal_active)
+    b = await request.json()
+    try:
+        rid = int(b.get("remedio_id"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Remedio inválido")
+    hora = str(b.get("hora") or "")[:5]
+    if not _HORA_RE.match(hora):
+        raise HTTPException(400, "Hora inválida")
+    f = _fecha_toma(b.get("fecha"))
+    tomado = b.get("tomado") is not False
+    if _es_demo(rut):
+        return {"ok": True, "demo": True}
+    _ensure_tablas()
+    with _session.db() as c:
+        rem = c.execute("SELECT horarios FROM portal_remedios WHERE id=? AND rut=?", (rid, rut)).fetchone()
+        if not rem:
+            raise HTTPException(404, "No encontramos ese remedio.")
+        if hora not in json.loads(rem["horarios"] or "[]"):
+            raise HTTPException(400, "Ese remedio no tiene toma a esa hora.")
+        if tomado:
+            c.execute("""INSERT OR IGNORE INTO portal_tomas
+                         (rut, remedio_id, fecha, hora, marcado_por_rut, marcado_por_nombre, marcado_ts)
+                         VALUES (?,?,?,?,?,?,?)""",
+                      (rut, rid, f, hora, owner_rut, _nombre_marcador(owner_rut, owner_phone),
+                       datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")))
+        else:
+            c.execute("DELETE FROM portal_tomas WHERE rut=? AND remedio_id=? AND fecha=? AND hora=?",
+                      (rut, rid, f, hora))
+        row = c.execute("SELECT * FROM portal_tomas WHERE rut=? AND remedio_id=? AND fecha=? AND hora=?",
+                        (rut, rid, f, hora)).fetchone()
+    try:
+        _session.log_event(owner_phone, "portal_toma_marcada", {"propio": owner_rut == rut, "tomado": tomado})
+    except Exception:
+        pass
+    return {"ok": True, "toma": _fila_toma(row, owner_rut) if row else None}
 
 
 # ═══ Ficha de emergencia ═══════════════════════════════════════════════════

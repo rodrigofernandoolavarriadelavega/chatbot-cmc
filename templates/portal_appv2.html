@@ -101,6 +101,21 @@ h3{font-family:var(--f-head);font-weight:700;font-size:1.15rem;color:var(--navy)
 .ticket .btns{margin-top:18px}
 .ticket .btn.light{background:#fff;color:var(--navy)}
 .ticket .btn.ghostL{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35)}
+/* Inicio (ronda 4): boleto compacto — hora grande a la izquierda, día y profesional a la derecha */
+.ticket.compact{padding:16px 18px 16px}
+.tk-main{display:flex;align-items:center;flex-wrap:wrap;gap:4px 16px;margin-top:8px}
+.tk-main .hour{margin:0;font-size:2.5rem;flex:none}
+.tk-main .tk-when{flex:1 1 150px;min-width:0;font-size:1.125rem;line-height:1.35;color:#E8F3F8}
+.tk-main .tk-when b{display:block;font-family:var(--f-head);font-weight:700;font-size:1.15rem;color:#fff;line-height:1.25}
+.tk-main .tk-lbl{display:block;font-size:1rem;font-weight:600;color:#CFE9F0}
+.ticket.compact .eyebrow{font-size:1.125rem;color:#fff}.tk-date{font-family:var(--f-head);font-weight:700}
+.ticket.compact .mod{margin-top:10px;padding-top:10px;font-size:1.125rem;align-items:center}
+.ticket.compact .btns{margin-top:12px}
+.tk-btns{display:grid;grid-template-columns:3fr 2fr;gap:10px}
+.tk-btns .btn{min-height:56px;padding:8px 10px;font-size:1.1rem}
+html.fz-115 .tk-btns,html.fz-130 .tk-btns{grid-template-columns:1fr}
+@media (max-width:374px){.tk-btns{grid-template-columns:1fr}}
+.home-sec{margin-top:12px}
 
 /* ── Botones ── */
 .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;padding:12px 20px;border-radius:16px;border:0;font-family:var(--f-head);font-weight:700;font-size:1.1rem;line-height:1.25;text-align:center;text-decoration:none;cursor:pointer;transition:transform .12s ease,background-color .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
@@ -307,6 +322,12 @@ html.fz-130 .fzrow{grid-template-columns:1fr!important}
 .famcard .tx b{display:block;color:var(--navy);font-weight:600}.famcard .tx span{display:block;font-size:1rem;color:var(--ink-2)}
 .past{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px dashed var(--line-2);border-radius:var(--r);padding:14px 16px;margin-top:14px}
 .past svg{width:24px;height:24px;flex:none;color:var(--muted);margin-top:2px}
+.past.ok{border-style:solid;border-color:#BFE3CF;background:#F6FBF8}.past.ok>svg{color:var(--ok)}
+.past.info{border-style:solid;border-color:#CDE8EE;background:#F5FBFC}.past.info>svg{color:#0B5563}
+.past .btn{min-height:56px;margin-top:10px}
+.past p+p{margin-top:4px}
+.tag-nv{display:inline-block;font-size:.95rem;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:999px;padding:1px 10px;margin-top:4px}
+.li.toma .tx span.by{color:#0B5536;font-weight:600}
 .li .tx span.badge-n,.badge-n{display:inline-block;margin-left:6px;background:var(--bad);color:#fff;border-radius:999px;padding:0 9px;font-size:.9rem;font-weight:700;vertical-align:2px}
 .rtable{width:100%;border-collapse:collapse;margin-top:8px}.rtable td,.rtable th{text-align:left;padding:8px 6px;border-top:1px solid var(--line);font-size:1rem;vertical-align:top}
 .rtable th{font-weight:700;color:var(--muted)}
@@ -493,16 +514,19 @@ const hm = d => String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).
 const DEMO_PROX = (()=>{ const t=new Date(Date.now()+90*6e4); t.setMinutes(t.getMinutes()<=30?30:60,0,0);
   if (_AHORA.getDay()===0 || t.getDate()!==_AHORA.getDate() || t.getHours()>=20 || t.getHours()<8) return {fecha:dNext(1,[1,2,3,4,5,6]), hora:'10:30'};
   return {fecha:iso(dAdd(0)), hora:hm(t)}; })();
-const DEMO_PASADA = (_AHORA.getDay()!==0 && _AHORA.getHours()>=10) ? [{id:899,id_profesional:77,profesional:'Luis Armijo',especialidad:'Kinesiología',fecha:iso(dAdd(0)),hora_inicio:String(_AHORA.getHours()-2).padStart(2,'0')+':00'}] : [];
+const DEMO_PASADA_EST = {atendida:[2,'Atendido'], no_vino:[8,'No asiste'], abierta:[7,'No confirmado']}[Q.get('pasada')||'atendida'] || [2,'Atendido'];
+const DEMO_PASADA = (_AHORA.getDay()!==0 && _AHORA.getHours()>=10) ? [{id:899,id_profesional:77,profesional:'Luis Armijo',especialidad:'Kinesiología',fecha:iso(dAdd(0)),hora_inicio:String(_AHORA.getHours()-2).padStart(2,'0')+':00',id_estado:DEMO_PASADA_EST[0],estado:DEMO_PASADA_EST[1]}] : [];
 const DEMO_P = {
   '50000000-7': { nombre:'María Ejemplo Demo', rut:'50.000.000-7', fecha_nacimiento:'1975-06-15', sexo:'F', relation:'titular', diagnosticos:['hta','dm2'],
     citas_futuras:[
-      ...DEMO_PASADA,
+      ...DEMO_PASADA.filter(c=>c.id_estado===7),
       {id:900,id_profesional:73,profesional:'Dr. Andrés Abarca',especialidad:'Medicina General',fecha:DEMO_PROX.fecha,hora_inicio:DEMO_PROX.hora},
       {id:901,id_profesional:60,profesional:'Dr. Miguel Millán',especialidad:'Cardiología',fecha:dNext(3,[1,2,3,4,5,6]),hora_inicio:'11:00'},
       {id:903,id_profesional:78,profesional:'Dra. Cecilia Unibazo',especialidad:'Psiquiatría',fecha:dNext(5,[2,4]),hora_inicio:'16:40'}],
     historial:[
+      ...DEMO_PASADA.filter(c=>c.id_estado!==7),
       {profesional:'Dr. Rodrigo Olavarría',especialidad:'Medicina General',fecha:iso(dAdd(-14))},
+      {profesional:'Dr. Miguel Millán',especialidad:'Cardiología',fecha:iso(dAdd(-21)),id_estado:8,estado:'No asiste'},
       {profesional:'Dr. Andrés Abarca',especialidad:'Medicina General',fecha:iso(dAdd(-45))},
       {profesional:'Luis Armijo',especialidad:'Kinesiología',fecha:iso(dAdd(-60))},
       {profesional:'Gisela Pinto',especialidad:'Nutrición',fecha:iso(dAdd(-230))},
@@ -581,8 +605,21 @@ function pagoDe(esp, idProf){ const k=S.catMap[+idProf]; if(k&&k.pago&&k.pago.le
 function modalidad(c){ const id=+c.id_profesional; if(c.modalidad==='online') return 'video'; if(TELE_SIEMPRE.has(id)) return 'video'; if(TELE_DIAS[id]){ const d=pDate(c.fecha); return d&&TELE_DIAS[id].includes(d.getDay())?'video':'presencial'; } if(A_ELECCION.has(id)) return 'eleccion'; return 'presencial'; }
 const todasCitas = () => ((S.d&&S.d.citas_futuras)||[]).slice().sort((a,b)=>(a.fecha+hhmm(a.hora_inicio)).localeCompare(b.fecha+hhmm(b.hora_inicio)));
 function yaPaso(c){ const h=horasHasta(c); return h!=null && h < -0.75; }   // 45 min después de la hora de inicio
-const citas = () => todasCitas().filter(c=>!yaPaso(c));
-const pasadasHoy = () => todasCitas().filter(c=>yaPaso(c) && daysFrom(c.fecha)===0);
+/* Desenlace real de la cita (id_estado de Medilink; texto como respaldo). 'abierta' = sin desenlace aún. */
+function estadoCita(c){ const id=+(c&&c.id_estado)||0; const t=String((c&&c.estado)||'').trim().toLowerCase();
+  if (id===2 || t.startsWith('atendido')) return 'atendida';
+  if (id===8 || t.startsWith('no asiste')) return 'no_vino';
+  if (id===5 || id===6 || t.startsWith('en sala') || t.startsWith('atendiéndose')) return 'en_curso';
+  return 'abierta'; }
+const citas = () => todasCitas().filter(c=>!yaPaso(c) && estadoCita(c)==='abierta');
+/* Horas de HOY que ya pasaron o ya tienen desenlace: las abiertas vienen en citas_futuras; las
+   atendidas / no asistidas, en el historial (el portal pide las de hoy con incluir_hoy_cerradas). */
+function pasadasHoy(){
+  if (!S.d) return []; const hoy = iso(today()); const m = new Map();
+  (S.d.historial||[]).filter(h=>String(h.fecha||'').slice(0,10)===hoy).forEach(h=>m.set(String(h.id), h));
+  todasCitas().filter(c=>daysFrom(c.fecha)===0 && (yaPaso(c) || estadoCita(c)!=='abierta')).forEach(c=>{ const k=String(c.id), o=m.get(k); if(!o || estadoCita(o)==='abierta') m.set(k, {...(o||{}), ...c, id_estado:c.id_estado!=null?c.id_estado:(o&&o.id_estado)}); });
+  return [...m.values()].sort((a,b)=>hhmm(a.hora_inicio).localeCompare(hhmm(b.hora_inicio)));
+}
 const citaById = id => todasCitas().find(c=>String(c.id)===String(id));
 const activeRut = () => S.d ? rutClean(S.d.rut) : '';
 const ownerRut = () => S.d ? rutClean(S.d.owner_rut||S.d.rut) : '';
@@ -681,6 +718,7 @@ const skel = (n=3,h=72) => `<div class="stack" aria-busy="true">${('<div class="
    ═══════════════════════════════════════════════════════════════════ */
 function ticketHTML(c, opts={}){
   const n = daysFrom(c.fecha); const mod = modalidad(c);
+  if (opts.compact) return ticketCompact(c, n, mod, opts);
   const pill = n===0 ? '<span class="pill today">Hoy</span>' : n===1 ? '<span class="pill soon">Mañana</span>' : n!=null && n<=30 ? `<span class="pill soon">En ${n} días</span>` : '';
   const modTxt = mod==='video' ? `${ic('video')}<span><b>Teleconsulta por videollamada.</b> Le enviamos el link de Medilink por WhatsApp antes de la hora. No necesita instalar nada.</span>`
     : mod==='eleccion' ? `${ic('info')}<span>Presencial o por videollamada, según lo que usted eligió. Si es videollamada, el link le llega por WhatsApp.</span>`
@@ -693,6 +731,22 @@ function ticketHTML(c, opts={}){
     <div class="mod">${modTxt}</div>
     ${opts.btns?`<div class="btns">${opts.btns}</div>`:''}</article>`;
 }
+/* Boleto compacto de Inicio: misma información esencial en ~la mitad de alto, para que
+   debajo se vean los resultados nuevos y la familia sin hacer scroll (390×844). */
+function ticketCompact(c, n, mod, opts){
+  const d = pDate(c.fecha);
+  const pill = n===0 ? '<span class="pill today">Hoy</span>' : n===1 ? '<span class="pill soon">Mañana</span>' : n!=null && n<=30 ? `<span class="pill soon">En ${n} días</span>` : '';
+  const fecha = d ? DIAS[d.getDay()].charAt(0).toUpperCase()+DIAS[d.getDay()].slice(1)+' '+d.getDate()+' de '+MESES[d.getMonth()] : esc(c.fecha);
+  const modTxt = mod==='video' ? `${ic('video')}<span>Por videollamada · link por WhatsApp</span>`
+    : mod==='eleccion' ? `${ic('info')}<span>Presencial o videollamada</span>`
+    : `${ic('pin')}<span>Monsalve 102, Carampangue</span>`;
+  return `<article class="ticket compact" aria-label="${esc(opts.label||'Su próxima hora')}: ${esc(c.especialidad)}, ${esc(fecha)} a las ${esc(hhmm(c.hora_inicio))}">
+    <div class="eyebrow">${pill}<span class="tk-date">${esc(fecha)}</span></div>
+    <div class="tk-main"><div class="hour">${esc(hhmm(c.hora_inicio))}<small>hrs</small></div>
+      <div class="tk-when"><span class="tk-lbl">${esc(opts.label||'Su próxima hora')}</span><b>${esc(c.especialidad)}</b>${esc(c.profesional)}</div></div>
+    <div class="mod">${modTxt}</div>
+    ${opts.btns?`<div class="btns">${opts.btns}</div>`:''}</article>`;
+}
 const checkinKey = c => 'cmc_app_ci_'+c.fecha+'_'+(c.id||'');
 const VIEWS = {};
 VIEWS.inicio = () => {
@@ -702,44 +756,63 @@ VIEWS.inicio = () => {
   if (c){
     const hoy = daysFrom(c.fecha)===0; const done = load(checkinKey(c));
     let btns = '';
-    if (hoy) btns += done ? `<div class="note ok">${ic('check')}<div><b>Listo, recepción ya sabe que viene.</b> Puede pagar con ${esc(pagoDe(c.especialidad,c.id_profesional).join(', ').toLowerCase())}.</div></div>`
-                          : `<button class="btn light" onclick="checkin('${esc(c.id)}')">${ic('check')}Sí, voy a mi hora</button>`;
-    btns += `<button class="btn ${hoy&&!done?'ghostL':'light'}" onclick="go('hora/${esc(c.id)}')">Ver detalle, cambiar o anular</button>`;
-    main = ticketHTML(c, {btns});
+    if (hoy && !done) btns = `<div class="tk-btns"><button class="btn light" onclick="checkin('${esc(c.id)}')">Sí, voy a mi hora</button><button class="btn ghostL" onclick="go('hora/${esc(c.id)}')">Ver detalle</button></div>`;
+    else btns = (hoy?`<div class="note ok" style="margin-bottom:10px">${ic('check')}<div><b>Recepción ya sabe que viene.</b></div></div>`:'')
+      + `<button class="btn light" onclick="go('hora/${esc(c.id)}')">Ver detalle, cambiar o anular</button>`;
+    main = ticketHTML(c, {btns, compact:true});
   } else {
-    const ult = (S.d.historial||[])[0];
-    main = `<div class="ticket"><div class="eyebrow">Su próxima hora</div><div class="when" style="font-size:1.4rem">No tiene horas próximas</div>
+    const ult = (S.d.historial||[]).find(h=>estadoCita(h)!=='no_vino');
+    main = `<div class="ticket compact"><div class="eyebrow">Su próxima hora</div><div class="when" style="font-size:1.4rem">No tiene horas próximas</div>
       ${ult?`<p class="who-doc" style="margin-top:8px">Su última atención fue ${esc(hace(ult.fecha))} (${esc(ult.especialidad)}).</p>`:''}
       <div class="btns"><button class="btn light" onclick="startAgendar()">${ic('plus')}Pedir una hora</button></div></div>`;
   }
   const otras = cs.length - 1; const pas = pasadasHoy();
-  return `<h1>${sal}, ${esc(nm)}</h1>
+  /* Orden (ronda 4): hora → resultados nuevos / remedios → familia → pedir hora → horas que ya pasaron */
+  return `<h1 style="margin-top:10px">${sal}, ${esc(nm)}</h1>
     ${S.d.is_dependent?`<p class="lead">Está viendo la ficha de <b>${esc(S.d.nombre)}</b>. <a href="#" onclick="switchTo('${jsq(S.d.owner_rut)}');return false">Volver a la suya</a></p>`:''}
     ${restringido()?`<div style="margin-top:12px">${avisoVinculo()}</div>`:''}
-    <div style="margin-top:16px">${main}</div>
-    ${c?`<button class="btn aqua" style="margin-top:14px" onclick="startAgendar()">${ic('plus')}Pedir una hora nueva</button>`:''}
-    ${otras>0?`<a class="btn sec" style="margin-top:10px" href="#horas">${otras===1?'Ver mi otra hora':'Ver mis otras '+otras+' horas'}</a>`:''}
-    ${pas.map(pasadaHTML).join('')}
+    <div style="margin-top:12px">${main}</div>
     ${pendienteCard()}
     ${familiaRow()}
+    ${c?`<button class="btn aqua" style="margin-top:16px" onclick="startAgendar()">${ic('plus')}Pedir una hora nueva</button>`:''}
+    ${otras>0?`<a class="btn sec" style="margin-top:10px" href="#horas">${otras===1?'Ver mi otra hora':'Ver mis otras '+otras+' horas'}</a>`:''}
+    ${pas.length?`<h2 style="margin-top:24px">Hoy</h2>${pas.map(pasadaHTML).join('')}`:''}
     <p class="sos" style="margin-top:22px">¿Es una emergencia? No use el portal: <a href="tel:131">llame al SAMU 131</a></p>`;
 };
 
-function pasadaHTML(c){ return `<div class="past" role="note">${ic('clock')}<div><b>Su hora de ${esc(c.especialidad)} de hoy a las ${esc(hhmm(c.hora_inicio))} ya pasó.</b><br><span class="muted">Si no alcanzó a venir, pida otra.</span>
-  <button class="btn sec" style="margin-top:10px;min-height:52px" onclick="repetir('${jsq(c.especialidad)}','${jsq(c.profesional)}')">Pedir otra hora con ${esc(profCorto(c.profesional))}</button></div></div>`; }
+/* Hora de hoy que ya pasó, con el desenlace REAL de Medilink (docs/medilink_gotchas.md §11):
+   2 Atendido · 5/6 en sala/atendiéndose · 8 No asiste · el resto = recepción aún no la cierra. */
+function pasadaHTML(c){
+  const st = estadoCita(c); const hr = esc(hhmm(c.hora_inicio)); const esp = esc(c.especialidad); const pc = esc(profCorto(c.profesional));
+  if (st==='atendida'){
+    const exs = Array.isArray(S.exams) ? S.exams.filter(e=>String(e.fecha||'').slice(0,10)===String(c.fecha).slice(0,10)) : [];
+    const imagen = /ecograf|oftalmo|tecnolog/i.test(c.especialidad||'');
+    const ctrl = imagen ? '' : `<button class="btn sec" onclick="repetir('${jsq(c.especialidad)}','${jsq(c.profesional)}')">${/kine|masoter|fonoaud|psicol|nutri/i.test(c.especialidad||'')?'Pedir la próxima sesión':'Pedir control'} con ${pc}</button>`;
+    return `<div class="past ok" role="note">${ic('check')}<div><p><b>${esp}, ${hr} hrs: atendida.</b></p>
+      ${exs.length?`<a class="btn sec" href="#docs">${ic('doc')}Ver ${exs.length===1?'el resultado':'los '+exs.length+' resultados'} de ese día</a>`
+        :`<p class="muted">Si le pidieron exámenes o un informe, aparecerán en <a href="#docs">Exámenes y documentos</a> cuando el centro los publique.</p>`}
+      ${ctrl?`<p class="muted" style="margin-top:8px">Si su profesional le indicó volver:</p>${ctrl}`:''}</div></div>`;
+  }
+  if (st==='no_vino') return `<div class="past info" role="note">${ic('info')}<div><p><b>${esp}, ${hr} hrs: quedó registrada como «no asistió».</b></p>
+      <p>¿Quiere pedir otra hora?</p>
+      <button class="btn pri" onclick="repetir('${jsq(c.especialidad)}','${jsq(c.profesional)}')">Pedir otra hora con ${pc}</button>
+      <p class="muted small" style="margin-top:8px">¿Sí vino? <a href="${wa('Hola, mi hora de '+c.especialidad+' de hoy a las '+hhmm(c.hora_inicio)+' aparece como no asistida, pero sí fui.')}" target="_blank" rel="noopener">Avísenos por WhatsApp</a> y lo corregimos.</p></div></div>`;
+  if (st==='en_curso') return `<div class="past" role="note">${ic('clock')}<div><p><b>${esp}, ${hr} hrs: su atención está en curso.</b></p></div></div>`;
+  return `<div class="past" role="note">${ic('clock')}<div><p><b>${esp}, ${hr} hrs: esta hora ya pasó.</b></p><p class="muted">Recepción todavía no la cierra en el sistema. Más tarde aparecerá aquí cómo quedó.</p></div></div>`;
+}
 /* Inicio: UNA sola tarjeta de pendiente real (examen nuevo > remedios de hoy > qué le toca) */
 function examNuevos(){ if(!Array.isArray(S.exams)) return 0; const seen=new Set(load('cmc_exseen_'+activeRut())||[]); return S.exams.filter(e=>!seen.has(String(e.id))).length; }
 function pendienteCard(){
   if (restringido()) return '';
   const n = examNuevos();
-  if (n) return `<a class="tool-teaser" href="#docs"><span class="ic" style="background:var(--bad-bg);color:var(--bad)">${ic('doc')}</span><span class="tx"><b>${n===1?'Tiene un resultado nuevo':'Tiene '+n+' resultados nuevos'}</b><span>Exámenes que el centro le publicó</span></span>${chev()}</a>`;
+  if (n) return `<a class="tool-teaser" style="margin-top:12px" href="#docs"><span class="ic" style="background:var(--bad-bg);color:var(--bad)">${ic('doc')}</span><span class="tx"><b>${n===1?'Tiene un resultado nuevo':'Tiene '+n+' resultados nuevos'}</b><span>Toque para verlo${n===1?'':'s'}</span></span>${chev()}</a>`;
   return window.CMC_H ? CMC_H.homeCard() : '';
 }
 /* Inicio: la familia en una sola tarjeta compacta (de la v4) */
 function familiaRow(){
   const ms = members().filter(m=>rutClean(m.rut)!==activeRut()); if (!ms.length) return '';
   const row = m => { const p=m.proxima; return `<button class="fr" onclick="openPersona('${jsq(m.rut)}')"><span class="ava" aria-hidden="true">${esc(initials(m.nombre))}</span><span class="tx"><b>${esc(first(m.nombre))}${rutClean(m.rut)===ownerRut()?' (usted)':''}</b><span>${p?esc(p.especialidad)+' · '+fCorta(p.fecha)+' · '+esc(hhmm(p.hora_inicio)):'Sin horas próximas'}</span></span>${chev()}</button>`; };
-  return `<h2 style="margin-top:26px">Mi familia</h2><div class="card famcard">${ms.slice(0,4).map(row).join('')}</div>
+  return `<h2 style="margin-top:20px;margin-bottom:10px">Mi familia</h2><div class="card famcard">${ms.slice(0,4).map(row).join('')}</div>
     ${ms.length>4?`<a class="btn sec" style="margin-top:10px" href="#familia">Ver a toda la familia</a>`:''}`;
 }
 /* Reserva repetida: misma persona + especialidad + profesional → directo a elegir día */
@@ -754,11 +827,11 @@ VIEWS.horas = () => {
   return `<h1>Mis horas</h1>
     <p class="lead">Toque una hora para ver el detalle, cambiarla o anularla.</p>
     <button class="btn aqua" style="margin-top:16px" onclick="startAgendar()">${ic('plus')}Pedir una hora nueva</button>
-    ${pasadasHoy().map(pasadaHTML).join('')}
+    ${pasadasHoy().length?`<h2>Hoy</h2>${pasadasHoy().map(pasadaHTML).join('')}`:''}
     <h2>Próximas</h2>
     ${cs.length?`<div class="list">${cs.map(citaLi).join('')}</div>`:`<div class="card"><p>No tiene horas próximas.</p></div>`}
     <h2>Atenciones anteriores</h2>
-    ${hist.length?`<div class="list">${hist.map(h=>`<div class="li" style="cursor:default"><span class="tx"><b>${esc(h.especialidad)}</b><span>${fMes(h.fecha)}</span><span>${esc(h.profesional)}</span></span><button class="btn sec" style="width:auto;min-height:52px;padding:8px 14px;font-size:1rem" onclick="repetir('${jsq(h.especialidad)}','${jsq(h.profesional)}')" aria-label="Pedir otra hora de ${esc(h.especialidad)} con ${esc(h.profesional)}">Otra hora</button></div>`).join('')}</div><p class="muted small" style="margin-top:8px">Se muestran los últimos 12 meses.</p>`:`<div class="card"><p class="muted">Aún no hay atenciones registradas.</p></div>`}
+    ${hist.length?`<div class="list">${hist.map(h=>`<div class="li" style="cursor:default"><span class="tx"><b>${esc(h.especialidad)}</b><span>${fMes(h.fecha)}</span><span>${esc(h.profesional)}</span>${estadoCita(h)==='no_vino'?'<span class="tag-nv">No asistió</span>':''}</span><button class="btn sec" style="width:auto;min-height:52px;padding:8px 14px;font-size:1rem" onclick="repetir('${jsq(h.especialidad)}','${jsq(h.profesional)}')" aria-label="Pedir otra hora de ${esc(h.especialidad)} con ${esc(h.profesional)}">Otra hora</button></div>`).join('')}</div><p class="muted small" style="margin-top:8px">Se muestran los últimos 12 meses.</p>`:`<div class="card"><p class="muted">Aún no hay atenciones registradas.</p></div>`}
     ${helpBlock('Hola, tengo una consulta sobre mis horas.')}`;
 };
 VIEWS.hora = (r) => {
@@ -1173,7 +1246,7 @@ VIEWS.listo = (r) => {
    ═══════════════════════════════════════════════════════════════════ */
 function buildControles(){
   const last={}, next={};
-  for (const h of (S.d.historial||[])){ const e=(h.especialidad||'').trim(); if(e && (!last[e]||h.fecha>last[e].fecha)) last[e]=h; }
+  for (const h of (S.d.historial||[])){ if(estadoCita(h)==='no_vino') continue; const e=(h.especialidad||'').trim(); if(e && (!last[e]||h.fecha>last[e].fecha)) last[e]=h; }
   for (const c of citas()){ const e=(c.especialidad||'').trim(); if(e && (!next[e]||c.fecha<next[e].fecha)) next[e]=c; }
   return [...new Set([...Object.keys(next),...Object.keys(last)])].map(e=>({esp:e,last:last[e]||null,next:next[e]||null}))
     .sort((a,b)=> (!!b.next-!!a.next) || ((b.last?b.last.fecha:'')>(a.last?a.last.fecha:'')?1:-1));
@@ -1217,9 +1290,9 @@ VIEWS.salud.after = () => { loadVitals(); loadScript(STATIC+'salud.js').catch(()
 /* ── Herramientas (remedios · ficha de emergencia · qué me toca): viven en herramientas.js, carga a pedido ── */
 function herrList(){ const li = (h,i,t,s) => `<a class="li" href="#${h}"><span class="ic">${ic(i)}</span><span class="tx"><b>${t}</b><span>${s}</span></span>${chev()}</a>`;
   const n = examNuevos();
-  return `<div class="list">${li('docs','doc','Exámenes y documentos'+(n?`<span class="badge-n">${n} ${n===1?'nuevo':'nuevos'}</span>`:''),'Resultados que el centro le publicó')}${li('remedios','pill','Mis remedios','Horarios, alarmas en el celular y cuántos le quedan')}${li('emergencia','idcard','Ficha de emergencia','Alergias y a quién llamar, para mostrar o imprimir')}${li('toca','listcheck','Qué me toca este año','Controles y vacunas según la edad')}</div>`; }
+  return `<div class="list">${li('docs','doc','Exámenes y documentos'+(n?`<span class="badge-n">${n} ${n===1?'nuevo':'nuevos'}</span>`:''),'Resultados que el centro le publicó')}${li('remedios','pill','Mis remedios','Horarios, recordatorios en el calendario y cuántos le quedan')}${li('emergencia','idcard','Ficha de emergencia','Alergias y a quién llamar, para mostrar o imprimir')}${li('toca','listcheck','Qué me toca este año','Controles y vacunas según la edad')}</div>`; }
 function needHerr(){ if (window.CMC_H) return false; loadScript(STATIC+'herramientas.js').then(render).catch(e=>{ $('#app .wrap').innerHTML = `<h1>Mi salud</h1>${errorBlock(e,'render()')}`; }); return true; }
-[['remedios','Mis remedios'],['remedio','Remedio'],['alarmas','Alarmas en su celular'],['emergencia','Ficha de emergencia'],['fichaedit','Ficha de emergencia'],['toca','Qué le toca este año']]
+[['remedios','Mis remedios'],['remedio','Remedio'],['alarmas','Recordatorios en su calendario'],['emergencia','Ficha de emergencia'],['fichaedit','Ficha de emergencia'],['toca','Qué le toca este año']]
   .forEach(([n,t])=>{ VIEWS[n] = () => { needHerr(); return `<h1>${t}</h1>${skel(3,90)}`; }; });
 function vChart(t, list){
   const pts = list.slice(0,20).reverse(); if (pts.length<2) return '';
@@ -1537,10 +1610,12 @@ VIEWS.docs = () => {
   return `<h1>Exámenes y documentos</h1><p class="lead">Lo que el centro le ha enviado.</p>
     <h2>Resultados de exámenes</h2>${exHTML}
     <h2>Informes y otros documentos</h2>
-    <div class="card"><p>Los informes de ecografía y otros documentos se los enviamos por WhatsApp a este mismo número. Si necesita una copia, pídala aquí:</p>
-      <a class="btn sec" style="margin-top:12px" href="${wa('Hola, necesito una copia de un informe o documento.')}" target="_blank" rel="noopener">${ic('wa')}Pedir una copia</a></div>${helpBlock()}`;
+    <div class="card"><p>El informe original (PDF o foto) se lo enviamos por WhatsApp a este mismo número. Si necesita una copia, pídala aquí y se la mandamos:</p>
+      <a class="btn sec" style="margin-top:12px" href="${wa(pedirCopiaTxt())}" target="_blank" rel="noopener">${ic('wa')}Pedir el informe original</a></div>${helpBlock()}`;
 };
 VIEWS.docs.after = () => { track('examenes_ver'); if(Array.isArray(S.exams)&&S.exams.length) store('cmc_exseen_'+activeRut(), S.exams.map(e=>String(e.id))); if(S.exams==null && !DEMO) api('/portal/api/examenes').then(r=>{ S.exams=r.examenes||[]; store('cmc_exseen_'+activeRut(), S.exams.map(e=>String(e.id))); }).catch(e=>{ if(e.kind==='auth') return toLogin(); S.exams={error:e}; }).finally(()=>{ if(route().name==='docs') render(); }); };
+function pedirCopiaTxt(){ const ex = Array.isArray(S.exams) ? S.exams.slice(0,3) : []; const quien = S.d && S.d.is_dependent ? ' de '+S.d.nombre : '';
+  return 'Hola, necesito una copia del informe original'+quien+(ex.length?': '+ex.map(e=>e.nombre+' ('+fMes(e.fecha)+')').join(', '):'')+'.'; }
 function refTxt(e){ const a=e.rango_min, b=e.rango_max, u=e.unidad||''; if(a!=null&&b!=null&&a!==0) return a+' a '+b+' '+u; if(b!=null) return 'menos de '+b+' '+u; if(a!=null) return 'más de '+a+' '+u; return ''; }
 VIEWS.datos = () => {
   const p = S.perfil; const d=S.d;

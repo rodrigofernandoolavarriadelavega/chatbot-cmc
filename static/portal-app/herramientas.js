@@ -1,11 +1,13 @@
 /* Portal del paciente (portal_app) — HERRAMIENTAS de uso diario (ronda 3, 8-oct-2026).
-   1) Mis remedios (pastillero + alarmas .ics)  2) Ficha de emergencia (tarjeta, billetera, QR)
+   Ronda 4: las marcas "lo tomé" viven en el servidor (las ve toda la familia autorizada,
+   con quién marcó y a qué hora) y los recordatorios no prometen que "suena".
+   1) Mis remedios (pastillero + recordatorios .ics / suscripción)  2) Ficha de emergencia (tarjeta, billetera, QR)
    3) Qué me toca este año (guía preventiva del bot por edad y sexo).
    Se carga a pedido. Usa las utilidades globales del template (S, VIEWS, api, ic, esc…).
    Nunca da consejos de dosis ni interpreta resultados. */
 (function(){
 'use strict';
-const H = window.CMC_H = { rem:{}, ficha:{}, guia:null, form:null, fform:null, tocaRut:null };
+const H = window.CMC_H = { rem:{}, ficha:{}, guia:null, form:null, fform:null, tocaRut:null, tomas:{}, cal:{} };
 const AVISOS_WA = false;   // Interruptor futuro (avisos por WhatsApp). Apagado: no hay UI ni envío.
 const DIAS_L = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];   // índice 0 = lunes
 const DIAS_S = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -26,6 +28,8 @@ const DEMO_REM = {
 const DEMO_FICHA = {
   '50000000-7':{ficha:{alergias:'Penicilina',enfermedades:'Presión alta (hipertensión); Diabetes tipo 2',grupo_sanguineo:'O+',contacto_nombre:'Juan Ejemplo (esposo)',contacto_telefono:'+56 9 8765 4321',notas:'Usa lentes para leer',incluir_remedios:true},updated_at:iso(dAdd(-20))},
 };
+/* Marcas de ejemplo: una propia y una hecha por otra persona (para ver "marcado por"). */
+const DEMO_TOMAS = { '500000007':{'1|08:00':{propio:true,hhmm:'08:04'}}, '500000031':{'5|08:00':{propio:false,por:'Rosa',hhmm:'08:05'}} };
 const rk = () => rutClean(S.d && S.d.rut);
 function demoKey(r){ return Object.keys(DEMO_P).find(k=>rutClean(k)===rutClean(r)) || DEMO_OWNER; }
 
@@ -57,8 +61,32 @@ const rerender = (...names) => () => { if (names.includes(route().name)) render(
 
 /* ════════════════ Cálculos del pastillero (aritmética, no clínica) ════════════════ */
 function tomasDe(list, d){ const out=[]; (list||[]).forEach(m=>{ if(m.dias&&m.dias.length&&!m.dias.includes(wd(d))) return; (m.horarios||[]).forEach(h=>out.push({h,m})); }); return out.sort((a,b)=>a.h.localeCompare(b.h)); }
+/* ── Tomas marcadas: en el servidor (compartidas), con copia en el teléfono para cuando no hay señal ── */
 const tomKey = () => 'cmc_tomas_'+rk()+'_'+iso(today());
-const tomadas = () => new Set(load(tomKey())||[]);
+const TQ = 'cmc_tomas_q';   // marcas hechas sin señal, se envían solas después
+function tomasHoy(){ const t=H.tomas[rk()]; if (t && t.fecha===iso(today()) && t.map) return t.map; const c=load(tomKey()); return (c && !Array.isArray(c)) ? c : {}; }
+const tomadas = () => new Set(Object.keys(tomasHoy()));
+async function loadTomas(force){
+  const r = rk(); if (!r) return {}; const f = iso(today());
+  if (!force && H.tomas[r] && H.tomas[r].fecha===f) return H.tomas[r].map;
+  if (DEMO){ H.tomas[r] = {fecha:f, map:(DEMO_TOMAS[r] = DEMO_TOMAS[r] || {})}; return H.tomas[r].map; }
+  await flushTomasQ();
+  try{ const x = await api('/portal/api/herramientas/tomas?fecha='+f); const map={};
+    (x.tomas||[]).forEach(t=>{ map[t.remedio_id+'|'+t.hora] = {propio:!!t.propio, por:t.marcado_por||'', hhmm:t.marcado_hhmm||''}; });
+    (load(TQ)||[]).filter(q=>q.rut===r && q.fecha===f).forEach(q=>{ const k=q.remedio_id+'|'+q.hora; if(q.tomado) map[k]=map[k]||{propio:true,hhmm:q.hhmm,pend:true}; else delete map[k]; });
+    H.tomas[r] = {fecha:f, map}; store(tomKey(), map); }
+  catch(e){ if(e.kind==='auth'){ toLogin(); return {}; } H.tomas[r] = {fecha:f, map:tomasHoy(), offline:true}; }
+  return H.tomas[r].map;
+}
+async function flushTomasQ(){
+  if (DEMO) return; const q = load(TQ)||[]; if (!q.length) return; const rest=[];
+  for (const it of q){ if (it.rut!==rk()){ rest.push(it); continue; }   // la API marca en el perfil ACTIVO: solo se envían las suyas
+    try{ await api('/portal/api/herramientas/tomas',{method:'POST',body:JSON.stringify({remedio_id:it.remedio_id,hora:it.hora,fecha:it.fecha,tomado:it.tomado})}); }
+    catch(e){ if (['offline','timeout','server','busy'].includes(e.kind)) rest.push(it); } }
+  store(TQ, rest.length?rest:undefined);
+}
+window.addEventListener('online', ()=>{ flushTomasQ().then(()=>{ if(route().name==='remedios'||route().name==='inicio') loadTomas(true).then(rerender('remedios','inicio')); }); });
+function marcaTxt(e){ if(!e) return ''; const quien = e.propio ? 'usted' : (e.por || 'un familiar'); return e.pend ? 'Marcado en este teléfono · se enviará cuando tenga señal' : 'Marcado por '+quien+(e.hhmm?', '+e.hhmm:''); }
 function porDia(m){ const n=(m.horarios||[]).length; if(!n) return 0; return n*((m.dias&&m.dias.length)?m.dias.length/7:1)*(m.por_toma||1); }
 /* Días que alcanzan: lo que la persona anotó, menos lo que debió tomar desde ese día. */
 function diasQuedan(m){
@@ -98,11 +126,11 @@ VIEWS.remedios = () => {
   if (list.error) return `<h1>Mis remedios</h1>${errorBlock(list.error,"CMC_H.rem['"+jsq(r)+"']=undefined;render()")}`;
   if (!list.length) return `<h1>Mis remedios</h1>${deQuien()}
     <div class="card" style="margin-top:16px;text-align:left"><div class="big-ic">${ic('pill')}</div>
-      <h3 style="margin-top:10px">Anote sus remedios y ponga alarmas</h3>
-      <p style="margin-top:6px">Su celular le avisará a la hora de cada toma, aunque no tenga internet. También le avisamos aquí cuando le queden pocos.</p></div>
+      <h3 style="margin-top:10px">Anote sus remedios y agréguelos a su calendario</h3>
+      <p style="margin-top:6px">Su calendario le avisa a la hora de cada toma, según cómo lo tenga configurado. También le avisamos aquí cuando le queden pocos.</p></div>
     <button class="btn aqua" style="margin-top:16px" onclick="CMC_H.nuevo()">${ic('plus')}Anotar mi primer remedio</button>
     <p class="muted small" style="margin-top:14px">${SIGA}</p>`;
-  const hoy = tomasDe(list, today()); const done = tomadas();
+  const hoy = tomasDe(list, today()); const map = tomasHoy(); const done = new Set(Object.keys(map));
   const bajos = list.map(m=>({m,q:diasQuedan(m)})).filter(x=>x.q && x.q.dias<=7);
   const sinHora = list.some(m=>!(m.horarios||[]).length);
   return `<h1>Mis remedios</h1>${deQuien()}
@@ -112,21 +140,40 @@ VIEWS.remedios = () => {
       <button class="btn pri" style="margin-top:12px" onclick="CMC_H.receta(${+m.id})">${ic('cal')}Pedir hora para la receta</button>
       <button class="btn link" style="color:var(--blue)" onclick="go('remedio/${+m.id}')">Ya compré más: actualizar</button></div>`).join('')}
     <h2>Hoy, ${esc(fCorta(iso(today())))}</h2>
-    ${hoy.length?`<div class="list" role="group" aria-label="Tomas de hoy">${hoy.map(t=>{ const k=t.m.id+'|'+t.h, on=done.has(k);
-      return `<button class="li toma" aria-pressed="${on}" onclick="CMC_H.marcar('${jsq(k)}')"><span class="hr">${esc(t.h)}</span><span class="tx"><b>${esc(t.m.nombre)}</b><span>${esc(t.m.dosis||'')}</span></span><span class="tick" aria-hidden="true">${on?ic('check'):''}</span><span class="sr">${on?'Tomado. Toque para desmarcar':'Toque para marcar como tomado'}</span></button>`; }).join('')}</div>
-      <p class="muted small" style="margin-top:8px">Toque una toma para marcarla. Lo que marca queda solo en este teléfono.</p>`
+    ${H.tomas[rk()]&&H.tomas[rk()].offline?`<p class="muted small" style="margin:-4px 0 8px">Sin señal: las marcas que haga se envían solas cuando vuelva la conexión.</p>`:''}
+    ${hoy.length?`<div class="list" role="group" aria-label="Tomas de hoy">${hoy.map(t=>{ const k=t.m.id+'|'+t.h, on=done.has(k), e=map[k];
+      return `<button class="li toma" aria-pressed="${on}" onclick="CMC_H.marcar('${jsq(k)}')"><span class="hr">${esc(t.h)}</span><span class="tx"><b>${esc(t.m.nombre)}</b>${t.m.dosis?`<span>${esc(t.m.dosis)}</span>`:''}${on?`<span class="by">${ic('check','style="width:16px;height:16px;vertical-align:-2px"')} ${esc(marcaTxt(e))}</span>`:''}</span><span class="tick" aria-hidden="true">${on?ic('check'):''}</span><span class="sr">${on?'Tomado. Toque para desmarcar':'Toque para marcar como tomado'}</span></button>`; }).join('')}</div>
+      <p class="muted small" style="margin-top:8px">Toque una toma cuando la haya tomado. La marca también la ven los familiares autorizados en su portal.</p>`
       :`<div class="card"><p>Hoy no tiene tomas con hora.</p></div>`}
-    <button class="btn pri" style="margin-top:18px" onclick="go('alarmas')" ${list.some(m=>(m.horarios||[]).length)?'':'disabled'}>${ic('bell')}Poner alarmas en mi celular</button>
+    <button class="btn pri" style="margin-top:18px" onclick="go('alarmas')" ${list.some(m=>(m.horarios||[]).length)?'':'disabled'}>${ic('cal')}Agregar recordatorios al calendario</button>
     <h2>Todos sus remedios</h2>
     <div class="list">${list.map(m=>{ const q=diasQuedan(m);
       return `<a class="li" href="#remedio/${+m.id}"><span class="ic">${ic('pill')}</span><span class="tx"><b>${esc(m.nombre)}</b><span>${esc(m.dosis||'')}${m.dosis?' · ':''}${esc(horasTxt(m))}</span><span>${esc(diasTxt(m))}${q?' · le quedan para unos '+q.dias+(q.dias===1?' día':' días'):''}</span></span>${chev()}</a>`; }).join('')}</div>
     <button class="btn aqua" style="margin-top:14px" onclick="CMC_H.nuevo()">${ic('plus')}Anotar otro remedio</button>
-    ${sinHora?`<p class="muted small" style="margin-top:10px">Los remedios sin hora fija no tienen alarma, pero sí aparecen en su ficha de emergencia.</p>`:''}
+    ${sinHora?`<p class="muted small" style="margin-top:10px">Los remedios sin hora fija no van al calendario, pero sí aparecen en su ficha de emergencia.</p>`:''}
     <div class="note info" style="margin-top:18px">${ic('info')}<div>${SIGA}</div></div>
     ${helpBlock('Hola, tengo una consulta sobre mis remedios.')}`;
 };
-VIEWS.remedios.after = () => { if (H.rem[rk()]===undefined) loadRem().then(rerender('remedios')); };
-H.marcar = k => { const s=tomadas(); s.has(k)?s.delete(k):s.add(k); store(tomKey(), [...s]); try{ localStorage.removeItem('cmc_tomas_'+rk()+'_'+iso(dAdd(-2))); }catch(e){} say(s.has(k)?'Marcado como tomado.':'Desmarcado.'); render(); };
+VIEWS.remedios.after = () => { const r=rk(); if (H.rem[r]===undefined) loadRem().then(rerender('remedios')); if (!H.tomas[r] || H.tomas[r].fecha!==iso(today())) loadTomas().then(rerender('remedios')); };
+H.marcar = async k => {
+  const r = rk(), f = iso(today()); const [rid, hora] = k.split('|'); const map = {...tomasHoy()}; const prev = map[k];
+  if (prev && !prev.propio && prev.por && !confirm('Esta toma la marcó '+prev.por+'. ¿Quitar la marca?')) return;
+  const tomado = !prev; const now = new Date(); const hhmm = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if (tomado) map[k] = {propio:true, hhmm, pend:!DEMO}; else delete map[k];
+  H.tomas[r] = {...(H.tomas[r]||{}), fecha:f, map}; store(tomKey(), map); try{ localStorage.removeItem('cmc_tomas_'+r+'_'+iso(dAdd(-2))); }catch(e){}
+  say(tomado?'Marcado como tomado.':'Desmarcado.'); render();
+  if (DEMO){ if(tomado) map[k].pend=false; DEMO_TOMAS[r]=map; return; }
+  try{
+    const x = await api('/portal/api/herramientas/tomas',{method:'POST',body:JSON.stringify({remedio_id:+rid,hora,fecha:f,tomado})});
+    const m2 = {...tomasHoy()}; if (x.toma) m2[k] = {propio:!!x.toma.propio, por:x.toma.marcado_por||'', hhmm:x.toma.marcado_hhmm||''}; else delete m2[k];
+    H.tomas[r] = {fecha:f, map:m2}; store(tomKey(), m2);
+  }catch(e){
+    if (e.kind==='auth') return toLogin();
+    if (['offline','timeout','server','busy'].includes(e.kind)){ const q=(load(TQ)||[]).filter(x=>!(x.rut===r&&x.fecha===f&&x.remedio_id===+rid&&x.hora===hora)); q.push({rut:r,fecha:f,remedio_id:+rid,hora,tomado,hhmm}); store(TQ,q.slice(-60)); toast('Sin señal: la marca quedó en este teléfono y se enviará sola.'); }
+    else { const m3={...tomasHoy()}; if(prev) m3[k]=prev; else delete m3[k]; H.tomas[r]={fecha:f,map:m3}; store(tomKey(),m3); toast(e.message||'No se pudo guardar la marca.'); }
+  }
+  if (route().name==='remedios' || route().name==='inicio') render();
+};
 H.nuevo = () => { H.form = null; go('remedio/nuevo'); };
 H.receta = id => { const m=(H.rem[rk()]||[]).find(x=>+x.id===+id); startAgendar({rut:S.d.rut, esp:'Medicina General', motivo:'Control y receta: '+(m?m.nombre:''), skipQuien:true}); };
 
@@ -200,30 +247,79 @@ H.guardar = async (ev) => {
     if (e.kind==='offline'||e.kind==='timeout') return err('Se cortó la conexión. Lo que escribió sigue aquí: intente de nuevo cuando tenga señal.'); err(e.message); }
 };
 H.borrar = async id => {
-  if (!confirm('¿Borrar este remedio? Si puso alarmas, bórrelas también desde el calendario de su teléfono.')) return;
+  if (!confirm('¿Borrar este remedio? Si lo agregó a su calendario con el archivo, borre también esos recordatorios en el calendario.')) return;
   try{ if(DEMO){ const k=demoKey(rk()); DEMO_REM[k]=(DEMO_REM[k]||[]).filter(m=>m.id!==id); H.rem[rk()]=DEMO_REM[k]; }
        else { await api('/portal/api/herramientas/remedios/'+id,{method:'DELETE'}); await loadRem(true); }
        H.form=null; toast('Remedio borrado.'); location.replace('#remedios'); }
   catch(e){ if(e.kind==='auth') return toLogin(); toast(e.message); }
 };
 
-/* ── Alarmas: archivo .ics que el teléfono importa a su calendario ── */
+/* ── Recordatorios: UN archivo .ics por persona (UID estables + SEQUENCE) y, opcional,
+      un link privado de suscripción que mantiene el calendario al día solo. ── */
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 VIEWS.alarmas = () => {
+  if (H.rem[rk()]===undefined){ loadRem().then(rerender('alarmas')); return `<h1>Recordatorios en su calendario</h1>${skel(3,72)}`; }
   const list = (H.rem[rk()]||[]); const con = Array.isArray(list) ? list.filter(m=>(m.horarios||[]).length) : [];
   if (!con.length){ setTimeout(()=>go('remedios'),0); return ''; }
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent); const n = con.reduce((a,m)=>a+m.horarios.length,0);
-  return `<span class="step">Mis remedios</span><h1>Alarmas en su celular</h1>
-    <p class="lead">Su teléfono le avisará a la hora de cada toma, aunque no tenga internet. Es gratis.</p>
-    <div class="card" style="margin-top:14px"><p><b>${n} ${n===1?'alarma':'alarmas'}</b> para ${con.length===1?'1 remedio':con.length+' remedios'}${S.d.is_dependent?' de '+esc(first(S.d.nombre)):''}:</p>
-      <ul class="stack" style="padding-left:20px;margin-top:8px">${con.map(m=>`<li>${esc(m.nombre)}: ${esc(horasTxt(m))}, ${esc(diasTxt(m).toLowerCase())}</li>`).join('')}</ul></div>
+  const ios = isIOS(); const n = con.reduce((a,m)=>a+m.horarios.length,0); const de = S.d.is_dependent?' de '+esc(first(S.d.nombre)):'';
+  return `<span class="step">Mis remedios</span><h1>Recordatorios en su calendario</h1>
+    <p class="lead">Ponemos cada toma en el calendario de su teléfono. Le avisa su calendario, según cómo lo tenga configurado.</p>
+    <div class="card" style="margin-top:14px"><p><b>${n} ${n===1?'recordatorio':'recordatorios'}</b> para ${con.length===1?'1 remedio':con.length+' remedios'}${de}:</p>
+      <ul class="stack" style="padding-left:20px;margin-top:8px">${con.map(m=>`<li>${esc(m.nombre)}: ${esc(horasTxt(m).replace(/^A las/,"a las"))}, ${esc(diasTxt(m).toLowerCase())}</li>`).join('')}</ul></div>
     <h2>Cómo se hace</h2>
     <ol class="steps"><li>Toque el botón azul de abajo.</li>
       <li>${ios?'El teléfono le muestra los recordatorios. Toque <b>Agregar todo</b>.':'Abra el archivo que se descargó (<b>mis-remedios.ics</b>) y elija su <b>Calendario</b>. Toque <b>Importar</b> o <b>Guardar</b>.'}</li>
-      <li>Listo. A la hora de cada toma, sonará el aviso del calendario.</li></ol>
-    <a class="btn pri" style="margin-top:18px" ${DEMO?`href="#" onclick="CMC_H.icsDemo();return false"`:`href="/portal/api/herramientas/remedios.ics" download="mis-remedios.ics" onclick="track('remedios_ics')"`}>${ic('bell')}Poner las alarmas</a>
-    <div class="note info" style="margin-top:14px">${ic('info')}<div>Si cambia un remedio, vuelva a tocar el botón. Si ve avisos repetidos, borre los antiguos desde el calendario del teléfono.</div></div>
+      <li>Listo. A la hora de cada toma, su calendario le muestra un aviso.</li></ol>
+    <a class="btn pri" style="margin-top:18px" ${DEMO?`href="#" onclick="CMC_H.icsDemo();return false"`:`href="/portal/api/herramientas/remedios.ics" download="mis-remedios.ics" onclick="track('remedios_ics')"`}>${ic('cal')}Agregar recordatorios al calendario</a>
+    <div class="note info" style="margin-top:14px">${ic('info')}<div>Si cambia un remedio, vuelva a tocar el botón; si después ve un aviso repetido, bórrelo en el calendario.</div></div>
     ${!ios?'<p class="muted small" style="margin-top:10px">Si no encuentra el archivo, búsquelo en la carpeta <b>Descargas</b> o en las notificaciones del teléfono.</p>':''}
-    ${helpBlock('Hola, necesito ayuda para poner las alarmas de mis remedios en el celular.')}`;
+    <details class="acc" style="margin-top:18px" ${H.cal.abierto?'open':''} ontoggle="CMC_H.cal.abierto=this.open;if(this.open)CMC_H.calEstado()"><summary><b>Que se actualice solo<small>Opcional: un link privado para su calendario</small></b>${ic('chev','class="chev"')}</summary>
+      <div class="body" id="calBox">${calBox()}</div></details>
+    ${helpBlock('Hola, necesito ayuda para agregar los recordatorios de mis remedios al calendario del celular.')}`;
+};
+function calBox(){
+  const c = H.cal[rk()] || {};
+  const intro = `<p>Con un link privado, su calendario se pone al día solo cuando usted cambia un remedio: no tiene que repetir los pasos. El link muestra solo el nombre del remedio y la hora.</p>`;
+  if (c.cargando) return intro + skel(1,58);
+  if (c.error) return intro + errorBlock(c.error, 'CMC_H.calEstado(true)', 'Hola, necesito ayuda con el link de calendario de mis remedios.');
+  if (c.url){
+    const g = 'https://calendar.google.com/calendar/r?cid='+encodeURIComponent(c.webcal);
+    return `<div class="note ok" role="status">${ic('check')}<div><b>Su link privado está listo.</b> Agréguelo una sola vez en este teléfono.</div></div>
+      <div class="btns" style="margin-top:12px">
+        ${isIOS()?`<a class="btn pri" href="${esc(c.webcal)}">${ic('cal')}Agregar al calendario del iPhone</a><a class="btn sec" href="${esc(g)}" target="_blank" rel="noopener">Usar Google Calendar</a>`
+                 :`<a class="btn pri" href="${esc(g)}" target="_blank" rel="noopener">${ic('cal')}Agregar a Google Calendar</a><a class="btn sec" href="${esc(c.webcal)}">Otro calendario</a>`}
+        <button class="btn sec" onclick="CMC_H.calCopiar()">Copiar el link</button></div>
+      <p class="muted small" style="margin-top:10px">Los cambios pueden tardar unas horas en aparecer en su calendario. No comparta este link: quien lo tenga ve los nombres de sus remedios.</p>
+      <button class="btn link" onclick="CMC_H.calRevocar()">Desactivar el link</button>`;
+  }
+  if (c.activa) return intro + `<div class="note info">${ic('info')}<div>Ya tiene un link activo${c.creada?' (creado el '+esc(fMes(String(c.creada).slice(0,10)))+')':''}. Si lo quiere agregar en otro teléfono, cree uno nuevo: el anterior deja de funcionar.</div></div>
+      <div class="btns" style="margin-top:12px"><button class="btn sec" onclick="CMC_H.calCrear()">Crear un link nuevo</button><button class="btn link" onclick="CMC_H.calRevocar()">Desactivar el link</button></div>`;
+  return intro + `<button class="btn sec" style="margin-top:12px" onclick="CMC_H.calCrear()">Crear mi link privado</button>
+    ${DEMO?'<p class="muted small" style="margin-top:8px">Ejemplo: no se crea ningún link de verdad.</p>':''}`;
+}
+const calPaint = () => { const b=$('#calBox'); if(b) b.innerHTML = calBox(); };
+H.calEstado = async (force) => {
+  const r = rk(); if (!force && H.cal[r] && !H.cal[r].error) return calPaint();
+  if (DEMO){ H.cal[r] = H.cal[r] || {}; return calPaint(); }
+  H.cal[r] = {cargando:true}; calPaint();
+  try{ const x = await api('/portal/api/herramientas/calendario'); H.cal[r] = {activa:!!x.activa, creada:x.creada}; }
+  catch(e){ if(e.kind==='auth') return toLogin(); H.cal[r] = {error:e}; }
+  calPaint();
+};
+H.calCrear = async () => {
+  const r = rk(); if (H.cal[r] && H.cal[r].activa && !confirm('El link anterior dejará de funcionar. ¿Crear uno nuevo?')) return;
+  if (DEMO){ H.cal[r] = {url:location.origin+'/portal/cal/ejemplo.ics', webcal:'webcal://'+location.host+'/portal/cal/ejemplo.ics', demo:true}; calPaint(); toast('Ejemplo: este link no funciona de verdad.'); return; }
+  H.cal[r] = {cargando:true}; calPaint();
+  try{ const x = await api('/portal/api/herramientas/calendario',{method:'POST',body:'{}'}); H.cal[r] = {url:x.url, webcal:x.webcal, activa:true}; track('remedios_cal_link'); say('Su link privado está listo.'); }
+  catch(e){ if(e.kind==='auth') return toLogin(); H.cal[r] = {error:e}; }
+  calPaint();
+};
+H.calCopiar = async () => { const c=H.cal[rk()]||{}; try{ await navigator.clipboard.writeText(c.url); toast('Link copiado.'); }catch(e){ prompt('Copie este link:', c.url); } };
+H.calRevocar = async () => {
+  if (!confirm('¿Desactivar el link? Su calendario dejará de recibir cambios. Los avisos ya agregados se borran desde el calendario.')) return;
+  const r = rk();
+  try{ if (!DEMO) await api('/portal/api/herramientas/calendario',{method:'DELETE'}); H.cal[r] = {activa:false}; toast('Link desactivado.'); calPaint(); }
+  catch(e){ if(e.kind==='auth') return toLogin(); toast(e.message); }
 };
 
 /* Generador .ics del modo ejemplo (el real lo arma el servidor; mismo formato RFC 5545). */
@@ -239,7 +335,7 @@ function icsTexto(rut, list){
   list.forEach(m=>(m.horarios||[]).forEach(h=>{
     let d=today(); if(m.dias&&m.dias.length){ for(let i=0;i<7&&!m.dias.includes(wd(d));i++) d.setDate(d.getDate()+1); }
     const t='Tomar '+m.nombre+(m.dosis?' ('+m.dosis+')':'');
-    L.push('BEGIN:VEVENT','UID:cmc-remedio-ej-'+rutClean(rut)+'-'+m.uid+'-'+h.replace(':','')+'@centromedicocarampangue.cl','DTSTAMP:'+stamp,
+    L.push('BEGIN:VEVENT','UID:cmc-remedio-ej-'+m.uid+'-'+h.replace(':','')+'@centromedicocarampangue.cl','SEQUENCE:'+(m.seq||0),'DTSTAMP:'+stamp,
       'DTSTART;TZID=America/Santiago:'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'T'+h.replace(':','')+'00','DURATION:PT5M',
       (m.dias&&m.dias.length)?'RRULE:FREQ=WEEKLY;BYDAY='+m.dias.map(i=>DI[i]).join(','):'RRULE:FREQ=DAILY',
       'SUMMARY:'+icsEsc(t),'DESCRIPTION:'+icsEsc('Recordatorio que usted anotó en su portal. Siga siempre la indicación de su médico. Centro Médico Carampangue.'),'TRANSP:TRANSPARENT',
@@ -249,7 +345,7 @@ function icsTexto(rut, list){
 H.icsTexto = icsTexto;
 H.icsDemo = () => { const txt=icsTexto(S.d.rut, (H.rem[rk()]||[]).filter(m=>(m.horarios||[]).length));
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/calendar;charset=utf-8'})); a.download='mis-remedios.ics'; document.body.appendChild(a); a.click(); a.remove();
-  toast('Ejemplo: se descargó un archivo de alarmas con remedios inventados.'); };
+  toast('Ejemplo: se descargó un archivo de recordatorios con remedios inventados.'); };
 
 /* ════════════════ 2 · FICHA DE EMERGENCIA ════════════════ */
 function edadTxt(){ const e=edadDe(S.d.fecha_nacimiento); return e!=null ? e+' años' : ''; }
@@ -442,7 +538,7 @@ H.homeCard = homeCard;
 H.precargar = async () => {
   if (!S.d || restringido()) return;
   const r = rk();
-  await Promise.all([H.rem[r]===undefined?loadRem():null, H.guia?null:loadGuia()]);
+  await Promise.all([H.rem[r]===undefined?loadRem():null, H.guia?null:loadGuia(), loadTomas()]);
   if (route().name==='inicio') render();
 };
 })();

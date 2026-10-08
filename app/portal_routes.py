@@ -597,7 +597,10 @@ async def portal_datos(portal_session: str | None = Cookie(None),
     rut_medilink = paciente.get("rut") or ""
     citas_futuras, historial = await asyncio.gather(
         listar_citas_paciente(id_pac, rut=rut_medilink),
-        listar_historial_paciente(id_pac, meses=12, rut=rut_medilink),
+        # incluir_hoy_cerradas: las horas de HOY que ya tienen desenlace
+        # (atendida / no asiste) para que la app diga lo que pasó de verdad.
+        listar_historial_paciente(id_pac, meses=12, rut=rut_medilink,
+                                  incluir_hoy_cerradas=True),
     )
 
     # Los tags de dx están ligados al teléfono; para dependientes usamos el del dependiente si lo hay
@@ -878,6 +881,8 @@ async def portal_family_overview(portal_session: str | None = Cookie(None)):
                 listar_citas_paciente(pac["id"], rut=rut_ml),
                 listar_historial_paciente(pac["id"], meses=12, rut=rut_ml),
             )
+            # "No asiste" (id_estado 8) no es una atención: no cuenta como última
+            hist = [h for h in (hist or []) if h.get("id_estado") != 8]
             out = {**m, "nombre": pac.get("nombre") or m["nombre"], "proxima": None,
                    "acceso": ACCESO_COMPLETO,
                    "ultima": ({"especialidad": hist[0].get("especialidad", ""),

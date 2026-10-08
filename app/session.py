@@ -6040,13 +6040,30 @@ def delete_patient_data(phone: str | None, rut: str | None,
                     deleted["patient_vitals"] = cur.rowcount
                 # Herramientas del portal (2026-10-08): remedios y ficha de emergencia
                 # son datos de salud del paciente → también entran al borrado.
-                for _t_herr in ("portal_remedios", "portal_ficha_emergencia"):
+                # Ronda 4 (2026-10-08): tomas marcadas, links de calendario y
+                # resultados publicados al portal (portal_examenes faltaba).
+                for _t_herr in ("portal_remedios", "portal_ficha_emergencia",
+                                "portal_tomas", "portal_cal_tokens", "portal_examenes"):
                     try:
                         cur = conn.execute(f"DELETE FROM {_t_herr} WHERE rut=?", (resolved_rut,))
                         if cur.rowcount:
                             deleted[_t_herr] = cur.rowcount
                     except _OPERATIONAL_ERRORS:
                         pass  # la tabla aún no existe (se crea al primer uso)
+                # Lo que ESTA persona marcó o creó en la ficha de un familiar:
+                # el dato de salud es del familiar (se conserva), pero se quita
+                # quién lo hizo, y sus links de calendario dejan de funcionar.
+                try:
+                    cur = conn.execute("UPDATE portal_tomas SET marcado_por_rut='', marcado_por_nombre='' "
+                                       "WHERE marcado_por_rut=?", (resolved_rut,))
+                    if cur.rowcount:
+                        deleted["portal_tomas_anonimizadas"] = cur.rowcount
+                    conn.execute("UPDATE portal_remedios SET creado_por='' WHERE creado_por=?", (resolved_rut,))
+                    cur = conn.execute("DELETE FROM portal_cal_tokens WHERE creado_por=?", (resolved_rut,))
+                    if cur.rowcount:
+                        deleted["portal_cal_tokens"] = deleted.get("portal_cal_tokens", 0) + cur.rowcount
+                except _OPERATIONAL_ERRORS:
+                    pass
             # Borrado por id_paciente Medilink (caches locales)
             if id_paciente_medilink:
                 for table in ("citas_cache", "ortodoncia_cache", "kine_tracking"):

@@ -2121,6 +2121,7 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None,
             "fecha_display": _fmt_fecha(c.get("fecha", "")),
             "hora_inicio": c.get("hora_inicio", "")[:5],
             "estado":      c.get("estado_cita", ""),
+            "id_estado":   _id_estado(c),
         })
     # FIX F143: ordenar por fecha ASC antes de cortar para que el dup-check
     # y cancelar siempre vean las citas más próximas (no 5 aleatorias).
@@ -2128,10 +2129,25 @@ async def listar_citas_paciente(id_paciente: int, rut: str | None = None,
     return citas[:5]
 
 
-async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str | None = None) -> list:
+def _id_estado(c: dict) -> int | None:
+    """id_estado de una cita cruda de Medilink (int) o None si no viene."""
+    try:
+        v = c.get("id_estado")
+        return int(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str | None = None,
+                                    incluir_hoy_cerradas: bool = False) -> list:
     """Lista citas pasadas de un paciente (últimos N meses).
 
     Usa filtro por RUT (Medilink no soporta id_paciente en /citas).
+    Cada fila trae además `id_estado`/`estado` (desenlace real: 2 Atendido,
+    8 No asiste…; ver docs/medilink_gotchas.md §11).
+    incluir_hoy_cerradas=True (solo el portal): agrega las citas de HOY que ya
+    tienen desenlace (atendida / en sala / atendiéndose / no asiste), que
+    `listar_citas_paciente` excluye y que el historial normal no muestra.
     """
     hoy = datetime.now(_CHILE_TZ).date()
     desde = (hoy - timedelta(days=meses * 30)).strftime("%Y-%m-%d")
@@ -2157,7 +2173,9 @@ async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str |
         # Defensa: Medilink a veces ignora `lte` y devuelve citas futuras.
         # Historial no debe incluir fechas >= hoy.
         hoy_str = hoy.strftime("%Y-%m-%d")
-        data = [c for c in data if c.get("fecha", "") < hoy_str]
+        data = [c for c in data if c.get("fecha", "") < hoy_str
+                or (incluir_hoy_cerradas and c.get("fecha", "") == hoy_str
+                    and (_cita_ya_avanzo(c) or _id_estado(c) == 8))]
     else:
         log.warning("listar_historial_paciente id=%d sin rut — Medilink no soporta id_paciente filter", id_paciente)
         return []
@@ -2167,11 +2185,14 @@ async def listar_historial_paciente(id_paciente: int, meses: int = 6, rut: str |
         prof_info = PROFESIONALES.get(id_prof, {}) if id_prof else {}
         citas.append({
             "id":           c["id"],
+            "id_profesional": id_prof,
             "profesional":  c.get("nombre_profesional", "") or prof_info.get("nombre", ""),
             "especialidad": prof_info.get("especialidad", ""),
             "fecha":        c.get("fecha", ""),
             "fecha_display": _fmt_fecha(c.get("fecha", "")),
             "hora_inicio":  c.get("hora_inicio", "")[:5],
+            "estado":       c.get("estado_cita", ""),
+            "id_estado":    _id_estado(c),
         })
     # Ordenar por fecha descendente (más reciente primero)
     citas.sort(key=lambda x: x["fecha"], reverse=True)
