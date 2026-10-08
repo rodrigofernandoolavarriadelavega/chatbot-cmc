@@ -6038,6 +6038,15 @@ def delete_patient_data(phone: str | None, rut: str | None,
                 cur = conn.execute("DELETE FROM patient_vitals WHERE rut=?", (resolved_rut,))
                 if cur.rowcount:
                     deleted["patient_vitals"] = cur.rowcount
+                # Herramientas del portal (2026-10-08): remedios y ficha de emergencia
+                # son datos de salud del paciente → también entran al borrado.
+                for _t_herr in ("portal_remedios", "portal_ficha_emergencia"):
+                    try:
+                        cur = conn.execute(f"DELETE FROM {_t_herr} WHERE rut=?", (resolved_rut,))
+                        if cur.rowcount:
+                            deleted[_t_herr] = cur.rowcount
+                    except _OPERATIONAL_ERRORS:
+                        pass  # la tabla aún no existe (se crea al primer uso)
             # Borrado por id_paciente Medilink (caches locales)
             if id_paciente_medilink:
                 for table in ("citas_cache", "ortodoncia_cache", "kine_tracking"):

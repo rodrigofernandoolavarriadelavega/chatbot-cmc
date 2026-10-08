@@ -1736,6 +1736,7 @@ app.include_router(capital_demo_routes.router)  # bandeja de recepción Alma Cap
 from autopilot.routes import router as autopilot_router  # noqa: E402
 app.include_router(autopilot_router)
 app.include_router(portal_routes.router)
+import portal_herramientas_routes; app.include_router(portal_herramientas_routes.router)  # Portal: pastillero, ficha de emergencia, qué me toca (2026-10-08)
 from alma_brain.routes import router as alma_brain_router  # noqa: E402
 app.include_router(alma_brain_router)
 from alma_agents.routes import router as alma_agents_router  # noqa: E402
@@ -1857,6 +1858,7 @@ _PORTAL_V2_HTML = (_TEMPLATE_DIR / "portal_v2.html").read_text(encoding="utf-8")
 _PORTAL_V3_HTML = (_TEMPLATE_DIR / "portal_v3.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v3.html").exists() else ""
 _PORTAL_V4_HTML = (_TEMPLATE_DIR / "portal_v4.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_v4.html").exists() else ""
 _PORTAL_APP_HTML = (_TEMPLATE_DIR / "portal_app.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_app.html").exists() else ""
+_PORTAL_APPV2_HTML = (_TEMPLATE_DIR / "portal_appv2.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_appv2.html").exists() else ""
 _PORTAL_INFORME_HTML = (_TEMPLATE_DIR / "portal_informe.html").read_text(encoding="utf-8") if (_TEMPLATE_DIR / "portal_informe.html").exists() else ""
 _ECOSISTEMA_HTML = (_TEMPLATE_DIR / "ecosistema.html").read_text(encoding="utf-8")
 _DASHBOARD_HTML = (_TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
@@ -3656,6 +3658,15 @@ def portal_page_v3(request: Request, demo: str = ""):
 def portal_page_v4(request: Request, demo: str = ""):
     """Portal v4 — copia editable de v3 ("demo 2"). v3 queda congelada como demo 1."""
     return _serve_portal(_PORTAL_V4_HTML or _PORTAL_V3_HTML or _PORTAL_V2_HTML or _PORTAL_HTML, request, demo)
+
+
+@app.get("/portal/appv2", response_class=HTMLResponse)
+def portal_page_appv2(request: Request, demo: str = ""):
+    """Portal del paciente app v2 (ronda 3: remedios, ficha de emergencia,
+    qué me toca). En revisión: no reemplaza /portal ni /portal/app."""
+    resp = _serve_portal(_PORTAL_APPV2_HTML or _PORTAL_APP_HTML or _PORTAL_HTML, request, demo)
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return resp
 
 
 @app.get("/portal/app", response_class=HTMLResponse)

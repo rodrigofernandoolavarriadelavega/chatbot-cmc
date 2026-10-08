@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="light only">
 <meta name="theme-color" content="#0F3F68">
-<title>Mi Salud · CMC (demo 2 — borrador)</title>
+<title>Portal del paciente · Centro Médico Carampangue</title>
 <link rel="icon" type="image/png" href="https://centromedicocarampangue.cl/static/sitio/cropped-logo-carampangue.png">
 <link rel="apple-touch-icon" href="/static/pwa/icon-192.png">
 <link rel="manifest" href="/static/pwa/portal-v4-manifest.webmanifest">
@@ -1271,7 +1271,7 @@ a{color:inherit; text-decoration:none}
       <div class="logo"><img src="/static/isotipo.png" alt="CMC" onerror="this.src='/static/logo.png'"></div>
       <h1>Mi Salud</h1>
       <span class="tag">Centro Médico Carampangue</span>
-      <span class="v2badge">V2</span>
+      <span class="v2badge">Portal del paciente</span>
     </div>
     <div id="step-rut">
       <div class="form-group">
@@ -1314,7 +1314,7 @@ a{color:inherit; text-decoration:none}
       <div class="tb-logo"><img src="/static/isotipo.png" alt="CMC" onerror="this.src='/static/logo.png'"></div>
       <div class="tb-text">
         <span class="top">Centro Médico</span>
-        <span class="bot">Carampangue <span class="v2">V2</span></span>
+        <span class="bot">Carampangue</span>
       </div>
     </div>
     <div class="tb-spacer"></div>
@@ -2369,7 +2369,7 @@ function famSugerencias(m) {
     out.push({ ic: '🩺', t: 'Control sano', s: 'Medicina General · crecimiento y desarrollo' });
   } else if (m.edad < 60) {
     out.push({ ic: '🩺', t: 'Chequeo preventivo anual', s: 'Medicina General · bono Fonasa $7.880' });
-    if (esMujer && m.edad >= 25) out.push({ ic: '🌸', t: 'PAP al día', s: 'Matrona · bono preferencial' });
+    if (esMujer && m.edad >= 25) out.push({ ic: '🌸', t: 'PAP al día', s: 'Matrona · consulta con PAP' });
     else if (!/odont/.test(esp)) out.push({ ic: '🦷', t: 'Control dental', s: 'Limpieza y revisión anual' });
   } else {
     if (!/podo/.test(esp)) out.push({ ic: '🦶', t: 'Podología preventiva', s: 'Cuidado del pie, clave en diabetes' });
@@ -2893,7 +2893,7 @@ const PROMO_CATALOG = {
     svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M5 5l2 2"/><path d="M17 17l2 2"/></svg>` },
   podologia: { label:'Podología', title:'Atención podológica', desc:'Andrea: uñas encarnadas, callos, pie diabético.', price:'Consulta $25.000',
     svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c4-3 6-7 6-11a6 6 0 00-12 0c0 4 2 8 6 11z"/></svg>` },
-  matrona: { label:'Matrona', title:'Control ginecológico + PAP', desc:'Sarai atiende con bono preferencial.', price:'Bono $25.000',
+  matrona: { label:'Matrona', title:'Control ginecológico + PAP', desc:'Con la matrona Saraí Gómez. Consulta sola: Fonasa $16.000 · Particular $20.000. No tiene bono.', price:'Con PAP: Fonasa $25.000 · Particular $30.000',
     svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>` },
   estetica: { label:'Estética facial', title:'Armonización facial', desc:'Dra. Fuentealba: hilos, bioestimuladores, exosomas.', price:'Consulta',
     svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 00-7 7c0 3.5 2 5.5 3 7s1 3 4 3 3-1.5 4-3 3-3.5 3-7a7 7 0 00-7-7z"/></svg>` },
