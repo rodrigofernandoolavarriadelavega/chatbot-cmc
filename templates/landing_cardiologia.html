@@ -646,6 +646,10 @@ details[open] .faq-answer{animation:swap .26s var(--ease) both}
   .hero-ctas{margin-top:12px}
   .hero-meta{display:none}
 }
+
+/* Fotos reales del equipo (recortes de afiches) */
+.portrait{overflow:hidden}
+.foto-eq{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;position:relative;z-index:1}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -914,7 +918,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <h2 id="doc-h2">Un cardiólogo, <em>aquí en la provincia.</em></h2>
         </div>
         <div class="doc-card rv" style="--d:1">
-          <figure class="portrait" aria-hidden="true">MM<svg viewBox="0 0 120 20" preserveAspectRatio="none"><path d="M0 12 H44 l4 -3 l4 3 h4 l2 4 l3 -14 l3 16 l2 -6 H120" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></figure>
+          <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/millan.webp" srcset="/static/images/equipo/millan.webp 240w, /static/images/equipo/millan-360.webp 360w" sizes="120px" width="240" height="293" alt="Dr. Miguel Millán" loading="lazy" decoding="async"></figure>
           <div>
             <span class="role">Cardiología</span>
             <h3>Dr.&nbsp;Miguel Millán</h3>

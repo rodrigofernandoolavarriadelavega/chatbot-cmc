@@ -657,6 +657,10 @@ details[open] .faq-answer{animation:swap .26s var(--ease) both}
   .hero-ctas{margin-top:12px}
   .hero-meta{display:none}
 }
+
+/* Fotos reales del equipo (recortes de afiches) */
+.portrait,.arch{overflow:hidden}
+.foto-eq{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;position:relative;z-index:1}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -761,7 +765,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <div class="call" aria-hidden="true">
             <div class="call-top"><span class="live"><i></i>Teleconsulta</span><span>Neurología · 30&nbsp;min</span></div>
             <div class="call-mid">
-              <div class="arch">FG</div>
+              <div class="arch"><img class="foto-eq" src="/static/images/equipo/gonzalez.webp" srcset="/static/images/equipo/gonzalez.webp 240w, /static/images/equipo/gonzalez-360.webp 360w" sizes="128px" width="240" height="293" alt="Dra. Franca González" loading="lazy" decoding="async"></div>
               <div class="nameplate"><b>Dra.&nbsp;Franca&nbsp;González</b><span>Neuróloga</span></div>
             </div>
             <svg class="call-sig" viewBox="0 0 600 70" preserveAspectRatio="none" fill="none">
@@ -945,7 +949,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <h2 id="doc-h2">Te atiende <em>una neuróloga.</em></h2>
         </div>
         <div class="doc-card rv" style="--d:1">
-          <figure class="portrait" aria-hidden="true">FG</figure>
+          <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/gonzalez.webp" srcset="/static/images/equipo/gonzalez.webp 240w, /static/images/equipo/gonzalez-360.webp 360w" sizes="120px" width="240" height="293" alt="Dra. Franca González" loading="lazy" decoding="async"></figure>
           <div>
             <span class="role">Neurología</span>
             <h3>Dra.&nbsp;Franca<br>González</h3>

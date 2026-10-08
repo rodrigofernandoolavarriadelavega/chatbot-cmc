@@ -1800,6 +1800,7 @@ a.spec-card { color: inherit; text-decoration: none; font: inherit; }
   display: grid; place-items: center;
 }
 .team-portrait svg { width: 100%; height: 100%; }
+.team-portrait .foto-eq { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
 .team-badge {
   position: absolute; top: 12px; right: 12px;
   padding: 4px 10px; border-radius: var(--radius-pill);
@@ -3911,13 +3912,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <!-- Cada doctor: SVG illustrado con paleta única -->
       <article class="team-card">
         <div class="team-portrait" style="background: linear-gradient(145deg, #1172AB 0%, #0F3F68 100%);">
-          <svg viewBox="0 0 200 220" aria-hidden="true">
-            <circle cx="100" cy="80" r="34" fill="#F4D6B8"/>
-            <path d="M68 78 Q72 50 100 47 Q128 50 132 78 Q124 64 100 62 Q76 64 68 78z" fill="#3A2418"/>
-            <path d="M50 220 L50 160 Q50 122 90 110 L100 108 L100 124 Q104 132 100 138 L100 124 L110 108 L120 110 Q150 122 150 160 L150 220 Z" fill="#FFF"/>
-            <circle cx="120" cy="158" r="8" fill="#1172AB"/>
-            <circle cx="120" cy="158" r="4" fill="#4FBECE"/>
-          </svg>
+          <img class="foto-eq" src="/static/images/equipo/olavarria.webp" srcset="/static/images/equipo/olavarria.webp 240w, /static/images/equipo/olavarria-360.webp 360w" sizes="(max-width: 600px) 92vw, 280px" width="240" height="293" alt="Dr. Rodrigo Olavarría" loading="lazy" decoding="async">
           <div class="team-badge"><span class="led" aria-hidden="true"></span>Disponible</div>
         </div>
         <div class="team-info">
@@ -3929,13 +3924,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <article class="team-card">
         <div class="team-portrait" style="background: linear-gradient(145deg, #4FBECE 0%, #1F7E8C 100%);">
-          <svg viewBox="0 0 200 220" aria-hidden="true">
-            <circle cx="100" cy="80" r="34" fill="#E8C4A0"/>
-            <path d="M65 80 Q70 50 100 45 Q130 50 135 80 Q120 65 100 64 Q80 65 65 80z" fill="#5C3520"/>
-            <path d="M50 220 L50 162 Q52 124 92 112 L102 110 L102 126 L98 138 L98 126 L108 110 L118 112 Q152 124 152 162 L152 220 Z" fill="#FFF"/>
-            <circle cx="120" cy="158" r="8" fill="#4FBECE"/>
-            <circle cx="120" cy="158" r="4" fill="#1172AB"/>
-          </svg>
+          <img class="foto-eq" src="/static/images/equipo/abarca.webp" srcset="/static/images/equipo/abarca.webp 240w, /static/images/equipo/abarca-360.webp 360w" sizes="(max-width: 600px) 92vw, 280px" width="240" height="293" alt="Dr. Andrés Abarca" loading="lazy" decoding="async">
           <div class="team-badge"><span class="led" aria-hidden="true"></span>Disponible</div>
         </div>
         <div class="team-info">
@@ -3947,13 +3936,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <article class="team-card">
         <div class="team-portrait" style="background: linear-gradient(145deg, #F2825E 0%, #C4513A 100%);">
-          <svg viewBox="0 0 200 220" aria-hidden="true">
-            <circle cx="100" cy="80" r="34" fill="#F4D6B8"/>
-            <path d="M68 80 Q70 48 100 46 Q132 48 134 80 Q124 60 100 60 Q76 60 68 80z" fill="#2A1A14"/>
-            <path d="M50 220 L50 160 Q52 122 92 110 L100 108 L102 124 L98 136 L98 124 L108 108 L118 110 Q150 122 150 160 L150 220 Z" fill="#FFF"/>
-            <circle cx="120" cy="158" r="8" fill="#F2825E"/>
-            <circle cx="120" cy="158" r="4" fill="white"/>
-          </svg>
+          <img class="foto-eq" src="/static/images/equipo/millan.webp" srcset="/static/images/equipo/millan.webp 240w, /static/images/equipo/millan-360.webp 360w" sizes="(max-width: 600px) 92vw, 280px" width="240" height="293" alt="Dr. Miguel Millán" loading="lazy" decoding="async">
           <div class="team-badge"><span class="led" aria-hidden="true"></span>Disponible</div>
         </div>
         <div class="team-info">
@@ -3965,13 +3948,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <article class="team-card">
         <div class="team-portrait" style="background: linear-gradient(145deg, #B6E3D4 0%, #4FBECE 100%);">
-          <svg viewBox="0 0 200 220" aria-hidden="true">
-            <circle cx="100" cy="80" r="34" fill="#F4D6B8"/>
-            <path d="M65 78 Q60 30 100 28 Q140 30 135 78 Q140 50 100 56 Q60 50 65 78z" fill="#4A2818"/>
-            <path d="M50 220 L50 158 Q52 122 92 110 L100 108 L102 124 L98 138 L98 124 L108 108 L118 110 Q150 122 150 158 L150 220 Z" fill="#FFF"/>
-            <circle cx="120" cy="158" r="8" fill="#1172AB"/>
-            <circle cx="120" cy="158" r="4" fill="#4FBECE"/>
-          </svg>
+          <img class="foto-eq" src="/static/images/equipo/castillo.webp" srcset="/static/images/equipo/castillo.webp 240w, /static/images/equipo/castillo-360.webp 360w" sizes="(max-width: 600px) 92vw, 280px" width="240" height="293" alt="Dra. Daniela Castillo" loading="lazy" decoding="async">
           <div class="team-badge"><span class="led" aria-hidden="true"></span>Disponible</div>
         </div>
         <div class="team-info">
@@ -3983,13 +3960,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <article class="team-card">
         <div class="team-portrait" style="background: linear-gradient(145deg, #0F3F68 0%, #1172AB 100%);">
-          <svg viewBox="0 0 200 220" aria-hidden="true">
-            <circle cx="100" cy="80" r="34" fill="#E8C4A0"/>
-            <path d="M68 76 Q72 50 100 48 Q128 50 132 76 Q120 60 100 60 Q80 60 68 76z" fill="#1A1209"/>
-            <path d="M50 220 L50 160 Q52 122 92 110 L100 108 L102 124 L98 136 L98 124 L108 108 L118 110 Q150 122 150 160 L150 220 Z" fill="#FFF"/>
-            <circle cx="120" cy="158" r="8" fill="#4FBECE"/>
-            <circle cx="120" cy="158" r="4" fill="white"/>
-          </svg>
+          <img class="foto-eq" src="/static/images/equipo/rejon.webp" srcset="/static/images/equipo/rejon.webp 240w, /static/images/equipo/rejon-360.webp 360w" sizes="(max-width: 600px) 92vw, 280px" width="240" height="293" alt="Dr. Tirso Rejón" loading="lazy" decoding="async">
           <div class="team-badge"><span class="led" aria-hidden="true"></span>Disponible</div>
         </div>
         <div class="team-info">
@@ -4019,13 +3990,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <article class="team-card">
         <div class="team-portrait" style="background: linear-gradient(145deg, #E8C4A0 0%, #B98F61 100%);">
-          <svg viewBox="0 0 200 220" aria-hidden="true">
-            <circle cx="100" cy="80" r="34" fill="#F4D6B8"/>
-            <path d="M62 76 Q60 28 100 26 Q140 28 138 76 Q140 50 100 56 Q60 50 62 76z" fill="#5C3520"/>
-            <path d="M50 220 L50 158 Q52 122 92 110 L100 108 L102 124 L98 138 L98 124 L108 108 L118 110 Q150 122 150 158 L150 220 Z" fill="#FFF"/>
-            <circle cx="120" cy="158" r="8" fill="#1F7E8C"/>
-            <circle cx="120" cy="158" r="4" fill="#FFF"/>
-          </svg>
+          <img class="foto-eq" src="/static/images/equipo/valdes.webp" srcset="/static/images/equipo/valdes.webp 240w, /static/images/equipo/valdes-360.webp 360w" sizes="(max-width: 600px) 92vw, 280px" width="240" height="293" alt="Dra. Aurora Valdés" loading="lazy" decoding="async">
           <div class="team-badge"><span class="led" aria-hidden="true"></span>Disponible</div>
         </div>
         <div class="team-info">

@@ -709,6 +709,10 @@ details[open] .faq-answer{animation:swap .26s var(--ease) both}
   .hero-ctas{margin-top:12px}
   .hero-meta{display:none}
 }
+
+/* Fotos reales del equipo (recortes de afiches) */
+.portrait,.doc-av,.cf-avs .dr{overflow:hidden}
+.foto-eq{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;position:relative;z-index:1}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -846,7 +850,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <b>Tu hija</b><small>Fiebre</small>
           </div>
           <div class="doc-node" aria-hidden="true">
-            <span class="doc-av">AM</span>
+            <span class="doc-av"><img class="foto-eq" src="/static/images/equipo/marquez.webp" srcset="/static/images/equipo/marquez.webp 240w, /static/images/equipo/marquez-360.webp 360w" sizes="110px" width="240" height="293" alt="Dr. Alonso Márquez" loading="lazy" decoding="async"></span>
             <span class="doc-plate"><b>Dr. Alonso Márquez</b><span>Médico de familia</span></span>
           </div>
           <p class="fam-cap" aria-hidden="true">Un mismo médico que ya conoce la historia de cada uno.</p>
@@ -1038,7 +1042,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <h2 id="doc-h2">Tu médico de familia, <em>con nombre y apellido.</em></h2>
         </div>
         <div class="doc-card rv" style="--d:1">
-          <figure class="portrait" data-foto="pendiente" aria-hidden="true">AM</figure>
+          <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/marquez.webp" srcset="/static/images/equipo/marquez.webp 240w, /static/images/equipo/marquez-360.webp 360w" sizes="120px" width="240" height="293" alt="Dr. Alonso Márquez" loading="lazy" decoding="async"></figure>
           <div>
             <span class="role">Medicina familiar</span>
             <h3>Dr. Alonso Márquez</h3>
@@ -1401,7 +1405,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var ks = chosen(), n = ks.length;
     count.textContent = n === 1 ? '1 persona' : n + ' personas';
     // Banda: avatares unidos al médico
-    var h = '<span class="dr">AM</span>';
+    var h = '<span class="dr"><img class="foto-eq" src="/static/images/equipo/marquez.webp" srcset="/static/images/equipo/marquez.webp 240w, /static/images/equipo/marquez-360.webp 360w" sizes="48px" width="240" height="293" alt="Dr. Alonso Márquez" decoding="async"></span>';
     if (ks.length){ h += '<span class="sep"></span><span class="grp">'; ks.forEach(function(k){ h += '<span class="av' + (k === changed ? ' pop' : '') + '" style="--bg:' + P[k].bg + ';--fg:' + P[k].fg + '"><svg><use href="#' + P[k].av + '"/></svg></span>'; }); h += '</span>'; }
     avs.innerHTML = h;
     if (!n){

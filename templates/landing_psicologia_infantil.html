@@ -719,6 +719,10 @@ details[open] .faq-answer{animation:swap .26s var(--ease) both}
   .firma-grid.o .firma-left{position:static}
 }
 @media (prefers-reduced-motion:reduce){ .js .doodles path,.js .doodles circle{animation:none} }
+
+/* Fotos reales del equipo (recortes de afiches) */
+.portrait{overflow:hidden}
+.foto-eq{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;position:relative;z-index:1}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -982,7 +986,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="team two">
       <article class="pro rv">
         <div class="pro-top">
-          <figure class="portrait s" aria-hidden="true">JS</figure>
+          <figure class="portrait s"><img class="foto-eq" src="/static/images/equipo/salas.webp" srcset="/static/images/equipo/salas.webp 240w, /static/images/equipo/salas-360.webp 360w" sizes="88px" width="240" height="293" alt="Jacquelinne Salas" loading="lazy" decoding="async"></figure>
           <div><span class="role">Psicóloga · niños, adolescentes y adultos</span><h3>Ps.&nbsp;Jacquelinne Salas</h3></div>
         </div>
         <dl>
@@ -995,7 +999,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </article>
       <article class="pro rv" style="--d:1">
         <div class="pro-top">
-          <figure class="portrait" aria-hidden="true">JM</figure>
+          <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/montalba.webp" srcset="/static/images/equipo/montalba.webp 240w, /static/images/equipo/montalba-360.webp 360w" sizes="88px" width="240" height="293" alt="Jorge Montalba" loading="lazy" decoding="async"></figure>
           <div><span class="role">Psicólogo · niños y adultos</span><h3>Jorge&nbsp;Montalba</h3></div>
         </div>
         <dl>

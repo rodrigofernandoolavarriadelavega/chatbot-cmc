@@ -614,6 +614,10 @@ details[open] .faq-answer{animation:swap .26s var(--ease) both}
   .hero-ctas{margin-top:12px}
   .hero-meta{display:none}
 }
+
+/* Fotos reales del equipo (recortes de afiches) */
+.portrait{overflow:hidden}
+.foto-eq{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;position:relative;z-index:1}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -915,7 +919,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div>
         <ul class="docs">
           <li class="doc rv">
-            <figure class="portrait" data-foto="pendiente" aria-hidden="true">LE</figure>
+            <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/etcheverry.webp" srcset="/static/images/equipo/etcheverry.webp 240w, /static/images/equipo/etcheverry-360.webp 360w" sizes="120px" width="240" height="293" alt="Leonardo Etcheverry" loading="lazy" decoding="async"></figure>
             <div>
               <span class="role">Kinesiología</span>
               <h3>Leonardo Etcheverry</h3>
@@ -924,7 +928,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </li>
           <li class="doc rv" style="--d:1">
-            <figure class="portrait" data-foto="pendiente" aria-hidden="true">LA</figure>
+            <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/armijo.webp" srcset="/static/images/equipo/armijo.webp 240w, /static/images/equipo/armijo-360.webp 360w" sizes="120px" width="240" height="293" alt="Luis Armijo" loading="lazy" decoding="async"></figure>
             <div>
               <span class="role">Kinesiología</span>
               <h3>Luis Armijo</h3>

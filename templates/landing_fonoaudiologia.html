@@ -818,6 +818,10 @@ details[open] .faq-answer{animation:swap .26s var(--ease) both}
 }
 @media (min-width:600px){ .ring-wrap{position:absolute;inset:0} }
 
+
+/* Fotos reales del equipo (recortes de afiches) */
+.portrait{overflow:hidden}
+.foto-eq{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;position:relative;z-index:1}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -1119,7 +1123,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <h2 id="doc-h2">Escuchar, hablar, tragar <em>y mantener el equilibrio.</em></h2>
         </div>
         <div class="doc-card rv" style="--d:1">
-          <figure class="portrait" aria-hidden="true"><span>JA</span></figure>
+          <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/arratia.webp" srcset="/static/images/equipo/arratia.webp 240w, /static/images/equipo/arratia-360.webp 360w" sizes="120px" width="240" height="293" alt="Juana Arratia" loading="lazy" decoding="async"></figure>
           <div>
             <span class="role">Fonoaudiología</span>
             <h3>Juana Arratia</h3>

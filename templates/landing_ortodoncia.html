@@ -799,6 +799,10 @@ details[open] .faq-answer{animation:faqin .26s var(--ease) both}
   .sat-col .sat-word{font-size:clamp(80px,7.4vw,112px)}
   .sat-col .btn{width:auto}
 }
+
+/* Fotos reales del equipo (recortes de afiches) */
+.portrait{overflow:hidden}
+.foto-eq{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;position:relative;z-index:1}
 </style>
 <script defer src="/static/cmc-wa.js?v=1"></script>
 </head>
@@ -1087,7 +1091,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
         <div class="people">
           <article class="person rv">
-            <figure class="portrait" data-foto="pendiente" aria-hidden="true">DC</figure>
+            <figure class="portrait"><img class="foto-eq" src="/static/images/equipo/castillo.webp" srcset="/static/images/equipo/castillo.webp 240w, /static/images/equipo/castillo-360.webp 360w" sizes="120px" width="240" height="293" alt="Dra. Daniela Castillo" loading="lazy" decoding="async"></figure>
             <div>
               <span class="role">Ortodoncista</span>
               <h3>Dra. Daniela Castillo</h3>
@@ -1095,7 +1099,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </article>
           <article class="person rv" style="--d:1">
-            <figure class="portrait alt" data-foto="pendiente" aria-hidden="true">JB</figure>
+            <figure class="portrait alt"><img class="foto-eq" src="/static/images/equipo/burgos.webp" srcset="/static/images/equipo/burgos.webp 240w, /static/images/equipo/burgos-360.webp 360w" sizes="120px" width="240" height="293" alt="Dra. Javiera Burgos" loading="lazy" decoding="async"></figure>
             <div>
               <span class="role">Dentista general · evaluación</span>
               <h3>Dra. Javiera Burgos</h3>
