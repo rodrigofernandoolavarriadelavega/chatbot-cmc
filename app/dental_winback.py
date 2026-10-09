@@ -906,12 +906,20 @@ async def run_dental_consent_blast() -> dict:
     log.info("dental_winback: consent blast -- %d candidatos", len(candidates))
     enviados = 0
 
-    from messaging import send_whatsapp_template, render_template_body as _rtb
+    from messaging import (send_whatsapp_template, render_template_body as _rtb,
+                           _normalize_phone_outbound as _tel_valido)
     from session import log_message as _lm, normalize_wa_id as _norm
     from contact_budget import can_contact, record_contact
 
     _seen_run: set[str] = set()  # canónico — evita dos filas del mismo paciente (formatos distintos) en un run
     for phone, nombre in candidates:
+        # Teléfono que WhatsApp no acepta (ej. '01121997', fecha de nacimiento
+        # guardada como celular en Medilink): se mandaba el consent CADA día hábil
+        # desde 13-ago — el envío fallaba, pero se logueaba como enviado y, con
+        # menos de 9 dígitos, el dedup por últimos 9 nunca lo excluía.
+        if _tel_valido(phone) is None:
+            log.info("dental_winback: consent blast — teléfono inválido en ficha, skip %r", phone)
+            continue
         _canon = _norm(phone)
         if _canon in _seen_run:
             log.info("dental_winback: consent blast — phone duplicado en run, skip ...%s", _canon[-4:])
@@ -927,11 +935,14 @@ async def run_dental_consent_blast() -> dict:
                      _canon[-4:], _cb_motivo)
             continue
         try:
-            await send_whatsapp_template(
+            _wamid = await send_whatsapp_template(
                 phone,
                 "consent_dental_v2",
                 body_params=[nombre],
             )
+            if not _wamid:
+                log.warning("dental_winback: consent no enviado (Meta rechazó) ...%s", phone[-4:])
+                continue
             _lm(phone, "out", _rtb("consent_dental_v2", [nombre]), "IDLE")
             registrar_dental_consent_enviado(phone)
             record_contact(phone, "dental_consent", {})
