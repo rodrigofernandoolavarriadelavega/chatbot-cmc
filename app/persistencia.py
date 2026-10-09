@@ -383,6 +383,18 @@ async def job_persistencia_contacto() -> dict:
 
         enviado = False
         if is_window_open(phone):
+            from holdout import en_grupo_control
+            if en_grupo_control(phone, "persistencia"):
+                # Grupo de control: mismo punto de decisión, sin mensaje.
+                log_event(phone, "persistencia_holdout",
+                          {"funnel_id": fid, "especialidad": especialidad})
+                with db() as conn:
+                    conn.execute(
+                        "UPDATE consultas_persistencia SET estado='holdout', intentos=intentos+1, "
+                        "ultimo_intento_at=datetime('now'), updated_at=datetime('now') "
+                        "WHERE id=?", (cid,))
+                    conn.commit()
+                continue
             from flows import _btn_msg
             from messaging import send_whatsapp_interactive
             msg = (

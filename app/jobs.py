@@ -480,6 +480,17 @@ async def _enviar_reenganche():
         if _cita_ext == "error":
             continue  # Medilink no respondió — reintenta el próximo ciclo
 
+        from holdout import en_grupo_control as _en_control
+        if _en_control(phone, "reenganche"):
+            # Grupo de control: no se manda; se marca como resuelto igual que un
+            # envío para que no se reintente cada ciclo.
+            data["reenganche_sent"] = True
+            from resilience import get_phone_lock as _gpl_ho
+            async with _gpl_ho(phone):
+                save_session(phone, state, data)
+            log_event(phone, "reenganche_holdout", {"state": state, "canal": _canal_de_phone(phone)})
+            continue
+
         canal = _canal_de_phone(phone)
         # Dr. Paz (81): quien vio horas y no respondió suele ser Fonasa al que el
         # valor particular se le complica (21-sep→6-oct: 102 vieron horas, 1

@@ -493,8 +493,16 @@ async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
         return
 
     log.info("Reactivación: enviando %d mensaje(s)", len(pacientes))
+    from holdout import en_grupo_control
+    from session import log_event as _le_reac
     for p in pacientes:
         try:
+            if en_grupo_control(p["phone"], "reactivacion"):
+                # Grupo de control: queda registrado (no se re-elige por 60 días)
+                # pero no recibe el mensaje.
+                save_fidelizacion_msg(p["phone"], "reactivacion_holdout")
+                _le_reac(p["phone"], "reactivacion_holdout", {"especialidad": p.get("especialidad", "")})
+                continue
             # BUG-01: save antes de send para idempotencia
             save_fidelizacion_msg(p["phone"], "reactivacion")
             if USE_TEMPLATES and send_template_fn:
@@ -519,6 +527,7 @@ async def enviar_reactivacion_pacientes(send_fn, send_template_fn=None):
             # sin tocar el botón (144/153 casos auditados en 14 días).
             esp_reac = p.get("especialidad") or ""
             set_pending_crosssell(p["phone"], "reactivacion", esp_reac)
+            _le_reac(p["phone"], "reactivacion_enviado", {"especialidad": esp_reac})
             log.info("Reactivación enviada → %s (%s)", p["phone"], p.get("especialidad"))
         except Exception as e:
             log.error("Error reactivación phone=%s: %s", p.get("phone"), e)

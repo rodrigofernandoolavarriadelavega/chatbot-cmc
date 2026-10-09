@@ -3209,7 +3209,7 @@ def get_pacientes_inactivos(dias_min: int = 30, dias_max: int = 90) -> list[dict
             AND   cb.fecha >= date('now', ?)
             AND NOT EXISTS (
                 SELECT 1 FROM fidelizacion_msgs f
-                WHERE f.phone = cb.phone AND f.tipo = 'reactivacion'
+                WHERE f.phone = cb.phone AND f.tipo IN ('reactivacion', 'reactivacion_holdout')
                 AND   f.enviado_en >= datetime('now', '-60 days')
             )
             GROUP BY cb.phone

@@ -875,6 +875,8 @@ def conversion_data(hoy: date | None = None) -> dict:
                 f"velh:{d}:{h}", TTL_PESADO, lambda: __import__("radar_v2").velocidad_en_horario(d, h))),
             "holdout": _seguro("holdout", lambda: _cacheado(f"hold:{hoy}", TTL_PESADO,
                                                             lambda: __import__("radar_v2").holdout_data(hoy))),
+            "holdout_rails": _seguro("holdout_rails", lambda: _cacheado(f"holdr:{hoy}", TTL_PESADO,
+                                                                        lambda: __import__("radar_v2").holdout_todos(hoy))),
             "esperando": {"lista": vivo.get("esperando", []), "total": vivo.get("esperando_total", 0),
                           "max_min": vivo.get("esperando_max_min")} if "error" not in vivo else vivo,
             "experimentos": _seguro("experimentos", lambda: _cacheado(f"exp:{hoy}", TTL_PESADO, lambda: _experimentos(hoy))),

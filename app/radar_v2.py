@@ -1322,14 +1322,32 @@ HOLDOUT_VENTANA_H = 72
 HOLDOUT_MIN_N = 100
 
 
-def holdout_data(hoy: date | None = None) -> dict:
+# Grupo de control activo desde 2026-10-09 (app/holdout.py). Antes de eso el
+# panel leía 'persistencia_enviada', evento que nadie escribía → siempre sin_datos.
+HOLDOUT_INICIO_UTC = "2026-10-10 00:00:00"
+HOLDOUT_RAILS = {
+    "persistencia": ("persistencia_toque2_enviado", "persistencia_holdout"),
+    "reenganche": ("reenganche_enviado", "reenganche_holdout"),
+    "reactivacion": ("reactivacion_enviado", "reactivacion_holdout"),
+}
+
+
+def holdout_todos(hoy: date | None = None) -> dict:
+    return {rail: holdout_data(hoy, rail) for rail in HOLDOUT_RAILS}
+
+
+def holdout_data(hoy: date | None = None, rail: str = "persistencia") -> dict:
     hoy = hoy or rr._hoy()
     desde = cm._utc_txt(cm._epoch_ini(hoy - timedelta(days=HOLDOUT_DIAS)))
-    grupos = {"persistencia_enviada": [], "persistencia_holdout": []}
+    # Ambos grupos desde que existe el control: comparar envíos de agosto contra
+    # un control de octubre mezclaría estacionalidad con efecto del mensaje.
+    desde = max(desde, HOLDOUT_INICIO_UTC)
+    ev_env, ev_ctrl = HOLDOUT_RAILS[rail]
+    grupos = {ev_env: [], ev_ctrl: []}
     with db() as c:
         try:
             for ph, ev, ts in c.execute("SELECT phone, event, ts FROM conversation_events WHERE event IN "
-                                        "('persistencia_enviada','persistencia_holdout') AND ts >= ?", (desde,)):
+                                        "(?, ?) AND ts >= ?", (ev_env, ev_ctrl, desde)):
                 grupos[ev].append((ph, cm._utc_txt_epoch(ts) or 0))
         except Exception:  # noqa: BLE001
             pass
@@ -1338,7 +1356,7 @@ def holdout_data(hoy: date | None = None) -> dict:
             for ph, ts in c.execute("SELECT phone, created_at FROM citas_bot WHERE created_at >= ?", (desde,)):
                 citas[cm._clave(ph)].append(cm._utc_txt_epoch(ts) or 0)
     res = {}
-    for ev, lbl in (("persistencia_enviada", "con_toque"), ("persistencia_holdout", "control")):
+    for ev, lbl in ((ev_env, "con_toque"), (ev_ctrl, "control")):
         n = len(grupos[ev])
         k = sum(1 for ph, t in grupos[ev] if any(t <= x <= t + HOLDOUT_VENTANA_H * 3600 for x in citas.get(cm._clave(ph), ())))
         res[lbl] = {"n": n, "agendaron": k, "pct": round(100 * k / n, 1) if n else None}
@@ -1350,5 +1368,5 @@ def holdout_data(hoy: date | None = None) -> dict:
         se = math.sqrt(p1 * (1 - p1) / a["n"] + p2 * (1 - p2) / b["n"])
         ic = [round(100 * (p1 - p2 - 1.96 * se), 1), round(100 * (p1 - p2 + 1.96 * se), 1)]
     estado = "sin_datos" if not (a["n"] or b["n"]) else "en_curso" if min(a["n"], b["n"]) < HOLDOUT_MIN_N else "con_muestra"
-    return {"dias": HOLDOUT_DIAS, "ventana_h": HOLDOUT_VENTANA_H, "min_n": HOLDOUT_MIN_N, "estado": estado,
+    return {"rail": rail, "dias": HOLDOUT_DIAS, "ventana_h": HOLDOUT_VENTANA_H, "min_n": HOLDOUT_MIN_N, "estado": estado,
             "con_toque": a, "control": b, "diferencia_pp": dif, "ic95_pp": ic}
