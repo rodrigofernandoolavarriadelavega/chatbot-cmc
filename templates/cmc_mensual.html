@@ -538,6 +538,14 @@ let data = JSON.parse(JSON.stringify(ORIGINAL));
 /* ══════════ SIMULACIÓN ══════════ */
 let globalDias = 22;
 let simParams  = ORIGINAL.map(()=>({pacDia:0,ingPaciente:0,dias:null,profPct:null,tipo_pago_sim:null,hono_fijo_sim:null}));
+// data puede crecer sin simParams (fila "Sin asignar (caja)", estado guardado
+// más corto): rellenar antes de leer simParams[i] para que la simulación no se caiga.
+function alinearSimParams(){
+  if(!Array.isArray(simParams)) simParams=[];
+  for(let i=0;i<data.length;i++){
+    if(!simParams[i]) simParams[i]={pacDia:0,ingPaciente:0,dias:null,profPct:null,tipo_pago_sim:null,hono_fijo_sim:null};
+  }
+}
 
 // Tipo de pago efectivo para simulación (null = heredar del dato real)
 const tipoPagoSim = (i)=> simParams[i].tipo_pago_sim ?? (data[i].tipo_pago||'pct');
@@ -548,6 +556,7 @@ const profPctFor  = (i)=> simParams[i].profPct != null ? simParams[i].profPct/10
 const realProfPct = ()=> data.map((_,i)=>profPctFor(i));
 
 function calcSim(){
+  alinearSimParams();
   return data.map((d,i)=>{
     const p=simParams[i], dias=p.dias!==null?p.dias:globalDias;
     const total=Math.round(p.pacDia*p.ingPaciente*dias);
@@ -1652,6 +1661,7 @@ function renderSimDashboard(){
 
 /* ══════════ RENDER SIM EDITOR ══════════ */
 function renderSimEditor(){
+  alinearSimParams();
   document.getElementById('globalDias').value=globalDias;
   const tbody=document.getElementById('simBody'); tbody.innerHTML='';
   data.forEach((d,i)=>{
@@ -1730,11 +1740,13 @@ function updateSimFooter(){
 
 function setGlobalDias(v){
   globalDias=parseInt(v)||22;
+  alinearSimParams();
   data.forEach((_,i)=>{if(simParams[i].dias===null) updateSimRow(i);});
   saveState();
 }
 function resetSim(){if(!confirm('¿Limpiar simulación?'))return;simParams=data.map(()=>({pacDia:0,ingPaciente:0,dias:null,profPct:null,tipo_pago_sim:null,hono_fijo_sim:null}));globalDias=22;renderSimEditor();saveState();}
 function importFromReal(){
+  alinearSimParams();
   data.forEach((d,i)=>{if(d.total>0){simParams[i].pacDia=5;simParams[i].ingPaciente=Math.round(d.total/(5*globalDias));simParams[i].dias=null;}});
   renderSimEditor();
   saveState();
