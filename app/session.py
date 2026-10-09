@@ -2496,6 +2496,35 @@ def upsert_message_status(wamid: str, phone: str, status: str,
         conn.commit()
 
 
+def record_message_pricing(wamid: str, phone: str, pricing: dict,
+                           origin: str | None = None) -> None:
+    """Guarda cómo cobra Meta cada mensaje saliente (objeto `pricing` del webhook
+    de estados). Desde 2-oct-2026 Meta cobra el servicio por mensaje; con esto se
+    mide costo por tipo de conversación y la ventana gratis por anuncio
+    (free_entry_point). Se queda con el primer pricing que llega (sent); los
+    estados siguientes no lo pisan. Mejor-esfuerzo; nunca lanza."""
+    if not wamid or not pricing:
+        return
+    try:
+        with db() as conn:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS message_pricing ("
+                "wamid TEXT PRIMARY KEY, phone TEXT, category TEXT, type TEXT, "
+                "billable INTEGER, pricing_model TEXT, origin TEXT, "
+                "ts TEXT DEFAULT (datetime('now')))")
+            billable = pricing.get("billable")
+            conn.execute(
+                "INSERT OR IGNORE INTO message_pricing "
+                "(wamid, phone, category, type, billable, pricing_model, origin) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (wamid, phone, pricing.get("category"), pricing.get("type"),
+                 None if billable is None else int(bool(billable)),
+                 pricing.get("pricing_model"), origin))
+            conn.commit()
+    except Exception as e:
+        log.debug("record_message_pricing falló: %s", e)
+
+
 def record_template_send(wamid: str, template_name: str, phone: str) -> None:
     """Registra (wamid → template) al enviar un template, para poder cruzar con
     message_statuses y reportar entrega POR template. Mejor-esfuerzo; nunca lanza.

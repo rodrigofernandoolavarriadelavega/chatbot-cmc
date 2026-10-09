@@ -38,7 +38,7 @@ from messaging import (send_whatsapp, send_whatsapp_interactive,
 from session import (get_session, is_duplicate, reset_session, save_session,
                      get_metricas, log_message, log_event,
                      intent_queue_depth, waitlist_depth, purge_old_data,
-                     upsert_message_status, upsert_bsuid,
+                     upsert_message_status, record_message_pricing, upsert_bsuid,
                      get_profile, save_profile, _scrub_pii)
 from resilience import is_medilink_down, is_claude_down, claude_down_reason
 from medilink import MedilinkRateLimited, MedilinkInactiva
@@ -12080,6 +12080,11 @@ async def _webhook_procesar(request: Request):
                         error_code=str(err.get("code", "")) if err else None,
                         error_title=err.get("title", "") if err else None,
                     )
+                    if st.get("pricing"):
+                        record_message_pricing(
+                            wamid, recipient, st["pricing"],
+                            origin=((st.get("conversation") or {}).get("origin") or {}).get("type"),
+                        )
                     if status == "failed":
                         # 131047/51/52 = ventana 24h cerrada (esperado, no error).
                         # Admin personal tampoco es customer-facing issue.
