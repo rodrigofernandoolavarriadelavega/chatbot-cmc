@@ -167,6 +167,70 @@ def _gasto_meta(mes: str):
     _META_CACHE[mes] = (ahora, res)
     return res
 
+# WhatsApp Business: desde el 1-oct-2026 Meta cobra también los mensajes de
+# servicio (respuestas del bot y de recepción). El costo real sale de
+# `pricing_analytics` de la WABA (en USD) y se pasa a CLP con el dólar observado.
+_WA_CACHE: dict = {}
+_USD_CACHE: dict = {}
+USD_CLP_RESPALDO = 950      # si mindicador.cl no responde
+
+
+def _dolar_clp() -> float:
+    import time
+    import httpx
+    hit = _USD_CACHE.get("v")
+    if hit and time.time() - hit[0] < 12 * 3600:
+        return hit[1]
+    try:
+        v = float(httpx.get("https://mindicador.cl/api/dolar", timeout=10).json()["serie"][0]["valor"])
+    except Exception:
+        return hit[1] if hit else USD_CLP_RESPALDO
+    _USD_CACHE["v"] = (time.time(), v)
+    return v
+
+
+def _gasto_whatsapp(mes: str):
+    """Costo WhatsApp del mes → (monto_clp, usd, {categoría: usd}) o None si Meta
+    no respondió. Misma caché que Meta Ads; en modo solo-local, solo la caché."""
+    import time
+    import json as _json
+    from datetime import datetime, timezone
+    import httpx
+    import config
+    ahora = time.time()
+    abierto = mes >= date.today().strftime("%Y-%m")
+    hit = _WA_CACHE.get(mes)
+    if hit and (_SOLO_LOCAL.get() or ahora - hit[0] < (3600 if abierto else 7 * 86400)):
+        return hit[1]
+    if _SOLO_LOCAL.get():
+        return None
+    token = getattr(config, "META_ACCESS_TOKEN", "")
+    waba = getattr(config, "META_WABA_ID", "")
+    if not token or not waba:
+        return None
+    inicio, fin = _mes_bounds(mes)
+    ts = lambda s: int(datetime.fromisoformat(s).replace(tzinfo=timezone.utc).timestamp())
+    campo = (f"pricing_analytics.start({ts(inicio)}).end({ts(fin)})"
+             f".granularity(DAILY).dimensions({_json.dumps(['PRICING_CATEGORY'])})")
+    try:
+        r = httpx.get(f"https://graph.facebook.com/v21.0/{waba}", params={"fields": campo},
+                      headers={"Authorization": f"Bearer {token}"}, timeout=20)
+        data = r.json()
+    except Exception:
+        return None
+    if not isinstance(data, dict) or data.get("error"):
+        return None
+    por_cat: dict = {}
+    for blk in (data.get("pricing_analytics") or {}).get("data", []):
+        for p in blk.get("data_points", []):
+            k = p.get("pricing_category") or "OTRO"
+            por_cat[k] = por_cat.get(k, 0.0) + float(p.get("cost") or 0)
+    usd = sum(por_cat.values())
+    res = (round(usd * _dolar_clp()), round(usd, 2), {k: round(v, 2) for k, v in por_cat.items()})
+    _WA_CACHE[mes] = (ahora, res)
+    return res
+
+
 # Honorario FIJO mensual (no % del ingreso). Único contrato fijo: Dr. Abarca (id 73).
 # Su CMC = ingreso − fijo puede ser negativo (riesgo del centro). El fijo cambió:
 # hasta abril 2026 era $3.414.126; desde mayo 2026 es la mitad ($1.707.063).
@@ -274,6 +338,17 @@ def _ebitda_mes(c, mes: str) -> dict:
                                + (f" (excluye {len(_meta[2])} de otros negocios)" if _meta[2] else ""),
                 "monto": _meta[0], "recurrente": 0, "auto": True,
                 "fuente": _meta[3] if len(_meta) > 3 else "meta_en_vivo",
+            })
+    if not any("whatsapp" in ((g.get("categoria") or "") + (g.get("descripcion") or "")).lower()
+               for g in gastos_detalle):
+        _wa = _gasto_whatsapp(mes)
+        if _wa and _wa[0] > 0:
+            gastos += _wa[0]
+            _cats = " · ".join(f"{k.lower()} US${v:,.2f}" for k, v in _wa[2].items() if v > 0)
+            gastos_detalle.append({
+                "id": None, "categoria": "WhatsApp Business",
+                "descripcion": f"Auto · costo real Meta US${_wa[1]:,.2f} ({_cats})",
+                "monto": _wa[0], "recurrente": 0, "auto": True,
             })
     com_tbk, tbk_deb, tbk_cred = _comision_transbank(c, mes)
     if com_tbk > 0:
