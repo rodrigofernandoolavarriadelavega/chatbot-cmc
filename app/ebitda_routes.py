@@ -31,12 +31,14 @@ SIN_RETENCION = {65, 68, 73}    # Quijano (gastro), David Pardo (ecografía), Ab
 # sale baja; cuando se complete el medio en todos, queda exacta automáticamente.
 TRANSBANK_DEBITO = 0.006
 TRANSBANK_CREDITO = 0.013
+_TBK_DIA: dict = {}      # mes → {fecha: comisión} (lo deja _comision_transbank, sin costo extra)
 
 # Publicidad Meta Ads: se lee del gasto real de la cuenta publicitaria (no se
 # carga a mano). La cuenta la comparten otros negocios de la familia: esas
 # campañas no son gasto del CMC y se excluyen por nombre.
 _META_NO_CMC = ("meulen", "terremoto", "brasas", "don pancho")
 _META_CACHE: dict = {}
+_META_DET: dict = {}     # mes → [{campana, monto, cmc}] (mismo llamado en vivo, sin costo extra)
 
 # Lectores que NO pueden salir a la red (Alma Radar): con esta marca el gasto de
 # Meta sale de la caché en memoria (si está fresca) o de la foto diaria local
@@ -107,6 +109,7 @@ def _comision_transbank(c, mes: str):
         (inicio, fin),
     ).fetchall()}
     deb = cred = 0
+    por_dia: dict = {}
     for r in c.execute(
         "SELECT monto, fecha, id_paciente FROM bi_pagos_caja WHERE fecha>=? AND fecha<?",
         (inicio, fin),
@@ -115,9 +118,12 @@ def _comision_transbank(c, mes: str):
         met = metodos.get((r["fecha"], _norm_nom(nom))) if nom else None
         if met == "debito":
             deb += r["monto"] or 0
+            por_dia[r["fecha"]] = por_dia.get(r["fecha"], 0) + (r["monto"] or 0) * TRANSBANK_DEBITO
         elif met in ("credito", "crédito"):
             cred += r["monto"] or 0
+            por_dia[r["fecha"]] = por_dia.get(r["fecha"], 0) + (r["monto"] or 0) * TRANSBANK_CREDITO
     com = round(deb * TRANSBANK_DEBITO + cred * TRANSBANK_CREDITO)
+    _TBK_DIA[mes] = por_dia
     return com, deb, cred
 def _gasto_meta(mes: str):
     """Gasto de Meta Ads del mes (CLP) → (monto, n_campañas, excluidas) o None si
@@ -153,6 +159,7 @@ def _gasto_meta(mes: str):
     if not isinstance(data, dict) or data.get("error"):
         return None
     total, n, excl = 0.0, 0, []
+    det = []
     for c in data.get("data", []):
         gasto = float(c.get("spend") or 0)
         if gasto <= 0:
@@ -160,17 +167,21 @@ def _gasto_meta(mes: str):
         nombre = (c.get("campaign_name") or "").lower()
         if any(k in nombre for k in _META_NO_CMC):
             excl.append((c.get("campaign_name") or "")[:40])
+            det.append({"campana": c.get("campaign_name") or "", "monto": round(gasto), "cmc": False})
             continue
         total += gasto
         n += 1
+        det.append({"campana": c.get("campaign_name") or "", "monto": round(gasto), "cmc": True})
     res = (round(total), n, excl)
     _META_CACHE[mes] = (ahora, res)
+    _META_DET[mes] = sorted(det, key=lambda x: -x["monto"])
     return res
 
 # WhatsApp Business: desde el 1-oct-2026 Meta cobra también los mensajes de
 # servicio (respuestas del bot y de recepción). El costo real sale de
 # `pricing_analytics` de la WABA (en USD) y se pasa a CLP con el dólar observado.
 _WA_CACHE: dict = {}
+_WA_DET: dict = {}       # mes → {dolar, por_dia_usd, volumen} (mismo llamado DAILY)
 _USD_CACHE: dict = {}
 USD_CLP_RESPALDO = 950      # si mindicador.cl no responde
 
@@ -187,6 +198,12 @@ def _dolar_clp() -> float:
         return hit[1] if hit else USD_CLP_RESPALDO
     _USD_CACHE["v"] = (time.time(), v)
     return v
+
+
+def _fecha_clt_de_ts(ts: int) -> str:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return datetime.fromtimestamp(ts, ZoneInfo("America/Santiago")).date().isoformat()
 
 
 def _gasto_whatsapp(mes: str):
@@ -221,13 +238,25 @@ def _gasto_whatsapp(mes: str):
     if not isinstance(data, dict) or data.get("error"):
         return None
     por_cat: dict = {}
+    por_dia: dict = {}
+    vol_cat: dict = {}
     for blk in (data.get("pricing_analytics") or {}).get("data", []):
         for p in blk.get("data_points", []):
             k = p.get("pricing_category") or "OTRO"
-            por_cat[k] = por_cat.get(k, 0.0) + float(p.get("cost") or 0)
+            costo = float(p.get("cost") or 0)
+            por_cat[k] = por_cat.get(k, 0.0) + costo
+            vol_cat[k] = vol_cat.get(k, 0) + int(p.get("volume") or 0)
+            try:
+                dia = _fecha_clt_de_ts(int(p.get("start")))
+                por_dia[dia] = por_dia.get(dia, 0.0) + costo
+            except Exception:
+                pass
     usd = sum(por_cat.values())
-    res = (round(usd * _dolar_clp()), round(usd, 2), {k: round(v, 2) for k, v in por_cat.items()})
+    dolar = _dolar_clp()
+    res = (round(usd * dolar), round(usd, 2), {k: round(v, 2) for k, v in por_cat.items()})
     _WA_CACHE[mes] = (ahora, res)
+    _WA_DET[mes] = {"dolar": round(dolar, 2), "por_dia_usd": {k: round(v, 4) for k, v in por_dia.items()},
+                    "volumen": vol_cat}
     return res
 
 
@@ -278,6 +307,24 @@ def _gastos_mes(c, mes: str) -> tuple[int, list]:
     return total, detalle
 
 
+def _pct_map(c) -> dict:
+    """% de honorario por id_medilink (equipo_cmc)."""
+    out = {}
+    for r in c.execute("SELECT id_medilink, pct_honorario FROM equipo_cmc").fetchall():
+        if r["id_medilink"] is not None:
+            out[r["id_medilink"]] = r["pct_honorario"] or 0
+    return out
+
+
+def _regla_honorario(pid, mes: str, pct_map: dict):
+    """Regla ÚNICA de honorario → (pct, fijo). Si fijo no es None, el bruto
+    del mes es ese monto y pct es None; si no, bruto = ingreso × pct / 100."""
+    _fijo = honorario_fijo(pid, mes)
+    if _fijo is not None:
+        return None, _fijo
+    return pct_map.get(pid, PCT_DEFAULT), None
+
+
 def _ebitda_mes(c, mes: str) -> dict:
     from medilink import PROFESIONALES
     inicio, fin = _mes_bounds(mes)
@@ -290,11 +337,7 @@ def _ebitda_mes(c, mes: str) -> dict:
         (inicio, fin),
     ).fetchall()
     # mapa pct por id_medilink
-    pct_map = {}
-    fijo_map = {}
-    for r in c.execute("SELECT id_medilink, pct_honorario, tipo_contrato FROM equipo_cmc").fetchall():
-        if r["id_medilink"] is not None:
-            pct_map[r["id_medilink"]] = r["pct_honorario"] or 0
+    pct_map = _pct_map(c)
 
     profs = []
     tot_ing = tot_bruto = tot_liq = tot_cmc = 0
@@ -303,12 +346,10 @@ def _ebitda_mes(c, mes: str) -> dict:
         ingreso = int(r["ingreso"] or 0)
         info = PROFESIONALES.get(pid, {})
         nombre = info.get("nombre") or f"Prof {pid}"
-        _fijo = honorario_fijo(pid, mes)
+        pct, _fijo = _regla_honorario(pid, mes, pct_map)
         if _fijo is not None:
-            pct = None
             bruto = _fijo
         else:
-            pct = pct_map.get(pid, PCT_DEFAULT)
             bruto = round(ingreso * pct / 100)
         if pid in SIN_RETENCION:
             liquido = bruto          # factura: sin retención
@@ -375,6 +416,277 @@ def _ebitda_mes(c, mes: str) -> dict:
     }
 
 
+# ───────────────────────── Vista por día ─────────────────────────────────────
+# El EBITDA de un mes en curso no se puede leer contra el mes completo: los
+# FIJOS (contrato fijo de Abarca + gastos recurrentes) se pagan enteros, pero la
+# venta todavía no llega. Para leerlo "a la fecha" los fijos se prorratean:
+#   · días corridos  → día X de N del mes (default)
+#   · días con caja  → días hábiles transcurridos / días hábiles del mes
+#                      (Chile: lun-sáb, sin domingos ni feriados)
+# Los variables (honorarios %, Meta, WhatsApp, Transbank, gastos puntuales) van
+# tal cual en su fecha. En un mes cerrado el factor es 1 y el acumulado al
+# último día es EXACTAMENTE el EBITDA del mes (`_ebitda_mes`).
+
+# Feriados nacionales (irrenunciables + legales). Editar acá si cambian.
+FERIADOS_CL = {
+    # 2025
+    "2025-01-01", "2025-04-18", "2025-04-19", "2025-05-01", "2025-05-21", "2025-06-20",
+    "2025-06-29", "2025-07-16", "2025-08-15", "2025-09-18", "2025-09-19", "2025-10-12",
+    "2025-10-31", "2025-11-01", "2025-11-16", "2025-12-08", "2025-12-14", "2025-12-25",
+    # 2026
+    "2026-01-01", "2026-04-03", "2026-04-04", "2026-05-01", "2026-05-21", "2026-06-21",
+    "2026-06-29", "2026-07-16", "2026-08-15", "2026-09-18", "2026-09-19", "2026-10-12",
+    "2026-10-31", "2026-11-01", "2026-12-08", "2026-12-25",
+    # 2027 (revisar cuando se publique el calendario oficial)
+    "2027-01-01", "2027-03-26", "2027-03-27", "2027-05-01", "2027-05-21", "2027-06-21",
+    "2027-06-28", "2027-07-16", "2027-08-15", "2027-09-18", "2027-09-19", "2027-10-11",
+    "2027-10-31", "2027-11-01", "2027-12-08", "2027-12-25",
+}
+
+
+def _hoy_clt() -> date:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("America/Santiago")).date()
+
+
+def _es_habil(d: date) -> bool:
+    return d.weekday() != 6 and d.isoformat() not in FERIADOS_CL
+
+
+def _mes_prev(mes: str, n: int = 1) -> str:
+    yr, mo = int(mes[:4]), int(mes[5:7]) - n
+    while mo <= 0:
+        mo += 12; yr -= 1
+    return f"{yr}-{mo:02d}"
+
+
+def _dias_del_mes(mes: str) -> list:
+    inicio, fin = _mes_bounds(mes)
+    a, b = date.fromisoformat(inicio).toordinal(), date.fromisoformat(fin).toordinal()
+    return [date.fromordinal(o) for o in range(a, b)]
+
+
+def _factor(dias: list, hasta: int, criterio: str) -> tuple:
+    """(transcurridos, totales, factor) para prorratear los fijos al día `hasta`."""
+    if criterio == "habiles":
+        tot = sum(1 for d in dias if _es_habil(d))
+        tr = sum(1 for d in dias[:hasta] if _es_habil(d))
+    else:
+        tot, tr = len(dias), hasta
+    return tr, tot, (tr / tot if tot else 1.0)
+
+
+def _repartir(total: float, pesos: dict, dias_iso: list, uniforme_hasta: int) -> dict:
+    """Reparte `total` entre días según `pesos` (fecha→peso). Sin pesos, en
+    partes iguales entre los días 1..uniforme_hasta. Devuelve fecha→monto."""
+    s = sum(v for k, v in pesos.items() if k in dias_iso and v > 0)
+    if total and s > 0:
+        return {k: total * pesos.get(k, 0) / s for k in dias_iso if pesos.get(k, 0) > 0}
+    n = max(1, uniforme_hasta)
+    return {k: total / n for k in dias_iso[:n]} if total else {}
+
+
+def _meta_pesos_dia(c, mes: str) -> dict:
+    """Gasto Meta CMC por día desde la foto diaria local (misma exclusión)."""
+    inicio, fin = _mes_bounds(mes)
+    out = {}
+    try:
+        for fe, nom, g in c.execute(
+            "SELECT fecha, campaign_name, SUM(spend) FROM meta_insights_diario WHERE desglose='total' "
+            "AND fecha>=? AND fecha<? GROUP BY fecha, campaign_id, campaign_name", (inicio, fin)).fetchall():
+            if any(k in (nom or "").lower() for k in _META_NO_CMC):
+                continue
+            out[fe] = out.get(fe, 0.0) + float(g or 0)
+    except Exception:
+        pass
+    return out
+
+
+def _meta_campanas(c, mes: str) -> tuple:
+    """Detalle por campaña: en vivo si la caché lo tiene; si no, foto diaria."""
+    if _META_DET.get(mes):
+        return _META_DET[mes], "meta_en_vivo"
+    inicio, fin = _mes_bounds(mes)
+    det = []
+    try:
+        for nom, g in c.execute(
+            "SELECT campaign_name, SUM(spend) FROM meta_insights_diario WHERE desglose='total' "
+            "AND fecha>=? AND fecha<? GROUP BY campaign_id, campaign_name ORDER BY 2 DESC", (inicio, fin)).fetchall():
+            if float(g or 0) <= 0:
+                continue
+            det.append({"campana": nom or "", "monto": round(float(g)),
+                        "cmc": not any(k in (nom or "").lower() for k in _META_NO_CMC)})
+    except Exception:
+        pass
+    return det, "foto_diaria"
+
+
+def _serie_mes(c, mes: str, hoy: date) -> dict:
+    """Serie diaria del mes con el MISMO total que `_ebitda_mes`."""
+    e = _ebitda_mes(c, mes)            # fija Meta/WA/Transbank (con caché) y totales
+    dias = _dias_del_mes(mes)
+    iso = [d.isoformat() for d in dias]
+    abierto = mes == hoy.strftime("%Y-%m")
+    futuro = mes > hoy.strftime("%Y-%m")
+    dia_corte = hoy.day if abierto else (0 if futuro else len(dias))
+    inicio, fin = _mes_bounds(mes)
+    pct_map = _pct_map(c)
+
+    # venta y honorario variable por día y profesional (misma regla que el mes)
+    por_prof: dict = {}
+    venta = {k: 0 for k in iso}; hon = {k: 0.0 for k in iso}
+    npag = {k: 0 for k in iso}; npac = {k: 0 for k in iso}
+    for r in c.execute(
+        "SELECT fecha, id_profesional, SUM(monto) m, COUNT(*) n, COUNT(DISTINCT id_paciente) p "
+        "FROM bi_pagos_caja WHERE fecha>=? AND fecha<? AND id_profesional IS NOT NULL "
+        "GROUP BY fecha, id_profesional", (inicio, fin)).fetchall():
+        fe, pid, m = r["fecha"], r["id_profesional"], int(r["m"] or 0)
+        if fe not in venta:
+            continue
+        pct, fijo = _regla_honorario(pid, mes, pct_map)
+        venta[fe] += m; npag[fe] += r["n"]; npac[fe] += r["p"]
+        if fijo is None:
+            hon[fe] += m * pct / 100
+        por_prof.setdefault(str(pid), {})[fe] = [m, r["n"], r["p"]]
+
+    # fijos (contrato fijo + recurrentes) vs variables (resto, en su fecha)
+    fijo_contrato = sum(p["bruto"] for p in e["profesionales"] if p["fijo"])
+    recurrentes = [g for g in e["gastos_detalle"] if g.get("recurrente") and not g.get("auto")]
+    puntuales = [g for g in e["gastos_detalle"] if not g.get("recurrente") and not g.get("auto")]
+    rec_total = sum(int(g["monto"] or 0) for g in recurrentes)
+    auto = {g["categoria"]: int(g["monto"] or 0) for g in e["gastos_detalle"] if g.get("auto")}
+    hasta_uni = max(1, dia_corte)
+    meta_d = _repartir(auto.get("Publicidad Meta Ads", 0), _meta_pesos_dia(c, mes), iso, hasta_uni)
+    wa_pesos = (_WA_DET.get(mes) or {}).get("por_dia_usd") or {}
+    wa_d = _repartir(auto.get("WhatsApp Business", 0), wa_pesos, iso, hasta_uni)
+    tbk_d = _repartir(auto.get("Comisión Transbank", 0), _TBK_DIA.get(mes) or {}, iso, hasta_uni)
+    punt_d: dict = {}
+    for g in puntuales:
+        k = (g.get("fecha") or inicio)[:10]
+        k = k if k in venta else inicio
+        punt_d[k] = punt_d.get(k, 0) + int(g["monto"] or 0)
+
+    fijos_total = fijo_contrato + rec_total
+    filas, acum_var = [], 0.0
+    for i, d in enumerate(dias):
+        k = d.isoformat()
+        var = venta[k] - hon[k] - meta_d.get(k, 0) - wa_d.get(k, 0) - tbk_d.get(k, 0) - punt_d.get(k, 0)
+        fut = i + 1 > dia_corte
+        if not fut:
+            acum_var += var
+        filas.append({
+            "fecha": k, "dia": d.day, "dow": d.weekday(), "habil": _es_habil(d),
+            "feriado": k in FERIADOS_CL, "futuro": fut,
+            "venta": venta[k], "honorarios_var": round(hon[k]), "cmc_var": round(venta[k] - hon[k]),
+            "meta": round(meta_d.get(k, 0)), "whatsapp": round(wa_d.get(k, 0)),
+            "transbank": round(tbk_d.get(k, 0)), "puntuales": punt_d.get(k, 0),
+            "pagos": npag[k], "pacientes": npac[k],
+            "var_acum": None if fut else round(acum_var),
+        })
+    # Residuo de redondeo (honorarios redondeados por profesional en el mes):
+    # el acumulado al corte debe calzar al peso con el EBITDA del mes.
+    var_total_mes = e["ebitda"] + fijos_total
+    if dia_corte:
+        resid = var_total_mes - acum_var
+        filas[dia_corte - 1]["var_acum"] = round(acum_var + resid)
+
+    crit = {}
+    for cr in ("corridos", "habiles"):
+        tr, tot, fac = _factor(dias, dia_corte, cr)
+        serie = []
+        for i, f in enumerate(filas):
+            if f["var_acum"] is None:
+                serie.append(None); continue
+            _, _, fi = _factor(dias, i + 1, cr)
+            serie.append(round(f["var_acum"] - fijos_total * fi))
+        crit[cr] = {"transcurridos": tr, "totales": tot, "factor": round(fac, 4),
+                    "fijos_prorrateados": round(fijos_total * fac),
+                    "ebitda_proporcional": round(var_total_mes - fijos_total * fac) if dia_corte else 0,
+                    "serie": serie}
+    return {
+        "mes": mes, "abierto": abierto, "futuro": futuro, "dia_corte": dia_corte, "dias_mes": len(dias),
+        "e": e, "dias": filas, "por_prof": por_prof, "criterios": crit,
+        "fijos": {"total": fijos_total, "contrato_fijo": fijo_contrato, "recurrentes": rec_total,
+                  "detalle_recurrentes": [{"id": g["id"], "categoria": g["categoria"],
+                                           "descripcion": g.get("descripcion"), "monto": g["monto"]}
+                                          for g in recurrentes],
+                  "contratos": [{"id": p["id"], "nombre": p["nombre"], "monto": p["bruto"]}
+                                for p in e["profesionales"] if p["fijo"]]},
+        "variables_total": round(var_total_mes),
+    }
+
+
+def _corte_info(c, mes: str, hoy: date, serie: dict) -> dict:
+    """Hasta dónde llega la caja: última fecha con pagos + hora del último sync."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    ult = None
+    for f in serie["dias"]:
+        if f["venta"] > 0:
+            ult = f["fecha"]
+    sync = None
+    try:
+        r = c.execute("SELECT fin FROM bi_sync_log WHERE tipo='pagos' AND ok=1 "
+                      "ORDER BY id DESC LIMIT 1").fetchone()
+        if r and r[0]:
+            # bi_sync escribe utcnow() → pasar a hora de Chile
+            dt = datetime.fromisoformat(r[0][:19]).replace(tzinfo=ZoneInfo("UTC"))
+            sync = dt.astimezone(ZoneInfo("America/Santiago")).strftime("%Y-%m-%dT%H:%M")
+    except Exception:
+        pass
+    return {"ultima_fecha_caja": ult, "sync_clt": sync, "hoy": hoy.isoformat()}
+
+
+def _proyeccion(serie: dict, prev: dict | None, hoy: date) -> dict | None:
+    """Cierre proyectado del mes en curso: ritmo diario × días con caja que
+    faltan. Rango = mín/máx de 3 ritmos (este mes, mes anterior, últimos 10 días
+    hábiles). Es una PROYECCIÓN, no un dato."""
+    if not serie["abierto"]:
+        return None
+    filas = serie["dias"]
+    d = serie["dia_corte"]
+    completos = [f for f in filas[:d - 1] if f["habil"]]          # sin hoy (parcial)
+    restantes = [f for f in filas[d - 1:] if f["habil"]]          # hoy + lo que falta
+    if not completos:
+        return None
+    venta_comp = sum(f["venta"] for f in filas[:d - 1])
+    r_mes = sum(f["venta"] for f in completos) / len(completos)
+    ritmos = {"este_mes": r_mes}
+    if prev:
+        ph = [f for f in prev["dias"] if f["habil"] and not f["futuro"]]
+        if ph:
+            ritmos["mes_anterior"] = sum(f["venta"] for f in ph) / len(ph)
+        ult10 = (ph + completos)[-10:]
+        ritmos["ultimos_10"] = sum(f["venta"] for f in ult10) / len(ult10)
+    venta_hasta = sum(f["venta"] for f in filas[:d - 1])
+    cmc_hasta = sum(f["cmc_var"] for f in filas[:d - 1])
+    ratio_cmc = cmc_hasta / venta_hasta if venta_hasta else 0.35
+    tbk_ratio = (sum(f["transbank"] for f in filas[:d]) / max(1, sum(f["venta"] for f in filas[:d])))
+    dias_tr = max(1, d)
+    meta_rr = sum(f["meta"] for f in filas[:d]) / dias_tr * serie["dias_mes"]
+    wa_rr = sum(f["whatsapp"] for f in filas[:d]) / dias_tr * serie["dias_mes"]
+    punt = sum(f["puntuales"] for f in filas)
+    fijos = serie["fijos"]["total"]
+
+    def _cierre(ritmo):
+        v = venta_comp + ritmo * len(restantes)
+        cmc = cmc_hasta + ritmo * len(restantes) * ratio_cmc
+        eb = cmc - meta_rr - wa_rr - v * tbk_ratio - punt - fijos
+        return round(v), round(eb)
+
+    vals = sorted(ritmos.values())
+    lo, mid, hi = _cierre(vals[0]), _cierre(r_mes), _cierre(vals[-1])
+    return {
+        "ritmos": {k: round(v) for k, v in ritmos.items()},
+        "dias_habiles_restantes": len(restantes), "dias_habiles_completos": len(completos),
+        "venta": {"bajo": lo[0], "central": mid[0], "alto": hi[0]},
+        "ebitda": {"bajo": lo[1], "central": mid[1], "alto": hi[1]},
+        "supuestos": {"margen_cmc_variable_pct": round(ratio_cmc * 100, 1),
+                      "meta_mes": round(meta_rr), "whatsapp_mes": round(wa_rr)},
+    }
+
+
 def register_ebitda_routes(app):
     """Registra el módulo EBITDA. Llamar desde main.py."""
 
@@ -410,6 +722,80 @@ def register_ebitda_routes(app):
         data["meses_disponibles"] = meses
         data["evolucion"] = evol
         return data
+
+    @app.get("/api/cmc/ebitda/diario", tags=["bi"])
+    def api_ebitda_diario(mes: str | None = Query(None), token: str | None = Query(None),
+                          cmc_session: str | None = Cookie(None)):
+        """Vista por día: venta, margen CMC y EBITDA acumulado con los fijos
+        prorrateados (días corridos y días con caja), venta por profesional por
+        día, comparación a la misma altura con los 2 meses anteriores y
+        proyección de cierre. Reusa `_ebitda_mes` (mismos totales, misma caché
+        de Meta/WhatsApp: no agrega llamadas por día)."""
+        _auth(token, cmc_session)
+        from session import db
+        from medilink import PROFESIONALES
+        hoy = _hoy_clt()
+        if not mes:
+            mes = hoy.strftime("%Y-%m")
+        if len(mes) != 7 or mes[4] != "-":
+            raise HTTPException(400, "mes debe ser YYYY-MM")
+        with db() as c:
+            s = _serie_mes(c, mes, hoy)
+            corte = _corte_info(c, mes, hoy, s)
+            prevs = [_serie_mes(c, _mes_prev(mes, k), hoy) for k in (1, 2)]
+            meta_det, meta_fuente = _meta_campanas(c, mes)
+        # Comparación a la misma altura: días COMPLETOS (en el mes en curso hoy
+        # va parcial → se compara hasta ayer).
+        d_cmp = s["dia_corte"] - 1 if s["abierto"] and s["dia_corte"] > 1 else s["dia_corte"]
+
+        def _a_la_altura(sx, d):
+            d = min(d, sx["dias_mes"])
+            fil = sx["dias"][:d]
+            out = {"mes": sx["mes"], "hasta_dia": d,
+                   "venta": sum(f["venta"] for f in fil),
+                   "cmc_var": sum(f["cmc_var"] for f in fil),
+                   "pacientes": sum(f["pacientes"] for f in fil),
+                   "venta_mes_completo": sx["e"]["ingresos"],
+                   "ebitda_mes_completo": sx["e"]["ebitda"], "abierto": sx["abierto"]}
+            for cr in ("corridos", "habiles"):
+                ser = sx["criterios"][cr]["serie"]
+                out["ebitda_" + cr] = ser[d - 1] if d and ser[d - 1] is not None else None
+            return out
+
+        comparacion = [_a_la_altura(x, d_cmp) for x in [s] + prevs] if d_cmp else []
+        e = s["e"]
+        wa = _WA_DET.get(mes) or {}
+        return {
+            "mes": mes, "hoy": hoy.isoformat(), "abierto": s["abierto"],
+            "dia_corte": s["dia_corte"], "dias_mes": s["dias_mes"], "corte": corte,
+            "dias": s["dias"], "criterios": s["criterios"], "fijos": s["fijos"],
+            "variables_total": s["variables_total"],
+            "ebitda_mes_completo": e["ebitda"], "ingresos": e["ingresos"],
+            "resumen": {k: e[k] for k in ("ingresos", "honorarios_bruto", "retencion_total",
+                                          "liquido_total", "margen_cmc", "gastos", "ebitda",
+                                          "margen_ebitda_pct", "margen_cmc_pct")},
+            "gastos_detalle": e["gastos_detalle"],
+            "por_prof_dia": s["por_prof"],
+            "profesionales": [dict(p, especialidad=p.get("especialidad") or
+                                   PROFESIONALES.get(p["id"], {}).get("especialidad", ""))
+                              for p in e["profesionales"]],
+            "comparacion": comparacion, "dia_comparacion": d_cmp,
+            "previos": [{"mes": x["mes"], "abierto": x["abierto"], "dia_corte": x["dia_corte"],
+                         "fijos": {k: x["fijos"][k] for k in ("total", "contrato_fijo", "recurrentes")},
+                         "ingresos": x["e"]["ingresos"], "ebitda_mes_completo": x["e"]["ebitda"],
+                         "dias": [{k: f[k] for k in ("dia", "fecha", "habil", "futuro", "venta",
+                                                     "honorarios_var", "cmc_var", "meta", "whatsapp",
+                                                     "transbank", "puntuales", "pacientes")}
+                                  for f in x["dias"]],
+                         "criterios": {cr: {"factor": x["criterios"][cr]["factor"],
+                                            "serie": x["criterios"][cr]["serie"]}
+                                       for cr in ("corridos", "habiles")}} for x in prevs],
+            "proyeccion": _proyeccion(s, prevs[0] if prevs else None, hoy),
+            "meta_campanas": meta_det, "meta_fuente": meta_fuente,
+            "whatsapp": {"dolar": wa.get("dolar"), "volumen": wa.get("volumen") or {},
+                         "por_dia_usd": wa.get("por_dia_usd") or {}},
+            "feriados": sorted(f for f in FERIADOS_CL if f.startswith(mes)),
+        }
 
     @app.post("/api/cmc/ebitda/gasto", tags=["bi"])
     def api_gasto_add(payload: dict = Body(...), token: str | None = Query(None),
