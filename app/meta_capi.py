@@ -64,6 +64,13 @@ def _sin_datos_de_salud(custom_data: dict) -> dict:
     return {k: v for k, v in (custom_data or {}).items() if k in _CUSTOM_DATA_PERMITIDO}
 
 
+# El dataset de la WABA (business_messaging) solo acepta una lista cerrada de
+# nombres: "Lead" y "Schedule" daban 400 subcode 2804066 en el 100% de las copias
+# (6-9 oct). Probado 9-oct con test_event_code: AppointmentBooked y LeadSubmitted
+# pasan la validación de nombre; LeadQualified no. Solo se renombra la COPIA.
+_NOMBRE_EN_WABA = {"Lead": "LeadSubmitted", "Schedule": "AppointmentBooked"}
+
+
 async def _send_copy(dataset_id: str, payload: dict, event_name: str, eid: str, attr: str) -> None:
     """Copia best-effort del evento a un dataset adicional (2 intentos).
 
@@ -313,7 +320,9 @@ async def send_event(
     if action_source == "business_messaging" and user_data.get("ctwa_clid"):
         for _ds in _extra_dataset_ids():
             if _ds and _ds != pixel_id:
-                _t = asyncio.create_task(_send_copy(_ds, payload, event_name, eid, "ctwa"))
+                _nombre_copia = _NOMBRE_EN_WABA.get(event_name, event_name)
+                _payload_copia = {**payload, "data": [{**payload["data"][0], "event_name": _nombre_copia}]}
+                _t = asyncio.create_task(_send_copy(_ds, _payload_copia, _nombre_copia, eid, "ctwa"))
                 _extra_tasks.add(_t)
                 _t.add_done_callback(_extra_tasks.discard)
 

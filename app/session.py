@@ -1547,7 +1547,9 @@ def save_cita_bot(phone: str, id_cita: str, especialidad: str,
 
 
 def ultimo_referral_antes_de(phone: str, hasta_ts: int,
-                             ttl_dias: int = 90) -> dict | None:
+                             ttl_dias: int = 7) -> dict | None:
+    # 7 días = ventana de clic estándar de Meta. Con 90, una cita de octubre se
+    # atribuía a un clic de agosto (9-oct: 4 de 6 citas "de anuncio" eran así).
     """Último clic en anuncio Meta del teléfono en los `ttl_dias` previos a
     `hasta_ts` (epoch). Empareja por últimos 9 dígitos, igual que
     get_meta_referral_fresh. Lo usan save_cita_bot y el backfill histórico."""
