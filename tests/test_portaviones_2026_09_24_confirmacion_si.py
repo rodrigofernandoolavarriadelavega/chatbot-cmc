@@ -129,10 +129,14 @@ class TestAfirmacionColoquialWaitSlot(unittest.IsolatedAsyncioTestCase):
     async def test_si_por_favor_reserva_el_slot_ofrecido(self):
         """Caso 56910111979: 'Si por favor' sobre un slot mostrado debe
         confirmarlo, no responder 'No te entendí bien'."""
+        from datetime import date, timedelta
         from flows import handle_message
+        # Fecha dinámica: con "2026-09-28" fija el test empezó a fallar el
+        # 29-sep (la defensa de slots expirados rechaza horas pasadas).
+        _f = (date.today() + timedelta(days=7)).isoformat()
         slot = {
             "especialidad": "Ecografía", "profesional": "David Pardo",
-            "fecha": "2026-09-28", "fecha_display": "Lunes 28 de septiembre",
+            "fecha": _f, "fecha_display": "Lunes 28 de septiembre",
             "hora_inicio": "12:45", "id_profesional": 68,
         }
         data = {"slots": [slot], "todos_slots": [slot], "especialidad": "ecografía"}

@@ -559,6 +559,10 @@ AFIRMACIONES = {
     "me sirve", "sirve", "genial", "buenisimo", "buenísimo", "vale", "acepto", "acepta",
     "reservar", "reservalo", "resérvalo", "reservala", "resérvala", "agenda", "agendala",
     "agéndala", "agendar", "confirma", "confírmalo", "confirmalo", "de acuerdo",
+    # Variantes de "ok" y "sí" que llegaban como rechazo en WAIT_SLOT (medido
+    # 2026-10-11 sobre los `funnel_slot_rechazado` reales desde junio).
+    "oki", "okis", "oka", "okey", "okay", "okei", "de todas maneras",
+    "siporfavor", "siporfa",
 }
 NEGACIONES   = {"no", "nop", "nope", "cancelar", "cancel", "no gracias"}
 
@@ -576,8 +580,10 @@ _PUNTUACION_RE = re.compile(r"[,.;:!¡¿?]+")
 
 def _afirma(tl: str, tl_norm: str) -> bool:
     """True si el texto es una afirmación, tolerando puntuación pegada
-    ("Sí, reservar", "Sí!, dale") y vocales repetidas ("siii")."""
-    _sin_vocales_rep = re.sub(r"([aeiou])\1{2,}", r"\1", tl_norm)
+    ("Sí, reservar", "Sí!, dale") y vocales repetidas ("sii", "siii")."""
+    # 2+ vocales iguales seguidas se colapsan: "sii" llegaba como rechazo en
+    # WAIT_SLOT (7 casos reales jun-oct 2026); antes solo se colapsaban 3+.
+    _sin_vocales_rep = re.sub(r"([aeiou])\1+", r"\1", tl_norm)
     limpio = re.sub(r"\s+", " ", _PUNTUACION_RE.sub(" ", _sin_vocales_rep)).strip()
     if tl in AFIRMACIONES or tl_norm in AFIRMACIONES or limpio in AFIRMACIONES:
         return True
@@ -600,7 +606,12 @@ def _afirma_slot(tl: str, tl_norm: str) -> bool:
     resto del handler, no reservar la hora sugerida."""
     # "Por favor" solo, respondiendo a "¿te reservo esta hora?", es un sí
     # (caso 25-sep: quedó sin agendar por "slot_no_elegido").
-    if re.sub(r"[^a-z ]", "", (tl_norm or tl or "")).strip() in _POR_FAVOR_SOLO:
+    _solo_letras = re.sub(r"\s+", " ", re.sub(r"[^a-z ]", " ", (tl_norm or tl or ""))).strip()
+    if _solo_letras in _POR_FAVOR_SOLO:
+        return True
+    # "Por favor, agradecida" / "por favor gracias": sigue siendo un sí.
+    if re.fullmatch(r"(?:por favor|porfavor|porfa|por fa|x favor|xfavor|xfa) "
+                    r"(?:muchas |mil )?(?:gracias|agradecid[oa]|grax)", _solo_letras):
         return True
     if not _afirma(tl, tl_norm):
         return False
@@ -3045,6 +3056,9 @@ _FAST_PATH_BUTTONS = {
     "fonasa", "fona", "particular", "privado", "privada",
     "sig_si", "sig_no",
     "no_gracias_reeng", "recup_no_gracias", "waitlist_antes_si", "seg_control", "reeng_si", "pagar_hora",
+    # botón "⚡ Sí, agendar" del quick-book: si llega en WAIT_SLOT es un sí a la
+    # hora en pantalla; el clasificador LLM no tiene nada que interpretar.
+    "quick_yes",
 }
 
 _FAST_PATH_PREFIXES = (
@@ -3122,6 +3136,12 @@ def _es_respuesta_obvia_al_prompt(txt: str, tl: str, state: str, data: dict) -> 
         # Pregunta lateral de precio/cobertura: la contesta el handler con la
         # tabla y vuelve a mostrar las horas (ver _es_pregunta_lateral_precio).
         if _es_pregunta_lateral_precio(txt, data):
+            return True
+        # Un "sí" limpio a la hora en pantalla ("Sii", "Si por favor", "Oki"):
+        # lo resuelve el handler sin gastar una llamada LLM. Además, si el
+        # clasificador falla (caída/saldo), su default `responder_prompt` se
+        # tragaba el sí y la hora no se reservaba.
+        if _afirma_slot(tl, normalizar_texto_paciente(txt)):
             return True
         if tl in ("otro dia", "otro día", "otra fecha", "cambiar fecha",
                   "ver todos", "todos", "ver mas",
@@ -9598,7 +9618,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # compartido que ya tolera eso (prefijo "si " + puntuación pegada +
         # vocales repetidas) — se usa en CONFIRMING_CITA/CONFIRMING_CANCEL,
         # faltaba acá.
-        if (tl == "confirmar_sugerido" or _afirma_slot(tl, tl_norm) or _afirm_libre) and slots_mostrados:
+        # "quick_yes" (botón "⚡ Sí, agendar" de un mensaje anterior) que llega
+        # con horas ya en pantalla: es un sí a la hora sugerida, no un rechazo.
+        if (tl in ("confirmar_sugerido", "quick_yes") or _afirma_slot(tl, tl_norm) or _afirm_libre) and slots_mostrados:
             # Si el paciente pidió explicitamente otro profesional antes y los
             # slots mostrados NO son de él, preferir uno que sí lo sea.
             _pedido = data.get("prof_pedido_explicito")
