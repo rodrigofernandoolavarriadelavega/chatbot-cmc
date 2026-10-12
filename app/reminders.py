@@ -5,6 +5,7 @@ Recordatorios automáticos:
 """
 import asyncio
 import logging
+import os
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -15,6 +16,7 @@ from session import (
     get_citas_bot_para_2h_reminder,
     get_citas_bot_para_48h_reminder,
     get_last_inbound_ts,
+    is_window_open,
     mark_reminder_sent,
     mark_reminder_2h_sent,
     mark_reminder_48h_sent,
@@ -40,6 +42,34 @@ _TZ_CL = ZoneInfo("America/Santiago")
 # citas de un profesional/día en una sola llamada (en vez de una por cita)
 # necesitamos el ID. Se construye una sola vez al importar el módulo.
 _PROF_NOMBRE_A_ID = {info["nombre"]: pid for pid, info in PROFESIONALES.items()}
+
+
+# ── Recordatorio 2h con botones (plantilla recordatorio_2h_botones) ───────────
+# Plantilla UTILITY nueva (Confirmo / No podré ir). Se usa SOLO si Meta la tiene
+# APPROVED; si no, siguen con `recordatorio_cita_2h` (sin botones). Apagar con
+# RECORDATORIO_2H_BOTONES=0 en el .env.
+TPL_2H = "recordatorio_cita_2h"
+TPL_2H_BOTONES = "recordatorio_2h_botones"
+
+
+def _flag_2h_botones() -> bool:
+    return os.getenv("RECORDATORIO_2H_BOTONES", "1").strip().lower() not in ("0", "false", "no", "")
+
+
+async def _plantilla_2h(id_cita) -> tuple[str, list[str] | None]:
+    """(nombre_plantilla, button_payloads) para el recordatorio de 2 h.
+    Con botones solo si el flag está activo Y Meta la tiene APPROVED
+    (winback.is_template_approved: caché 30 min, fail-safe False)."""
+    if _flag_2h_botones():
+        try:
+            from winback import is_template_approved
+            if await is_template_approved(TPL_2H_BOTONES):
+                # Prefijo r2h_ → main.py lo mapea a cita_confirm:/cita_cancelar: y
+                # registra el evento `recordatorio_2h_boton` (medición).
+                return TPL_2H_BOTONES, [f"r2h_confirm:{id_cita}", f"r2h_cancelar:{id_cita}"]
+        except Exception as e:  # noqa: BLE001
+            log.warning("2h botones: no se pudo verificar aprobación (%s) → plantilla sin botones", e)
+    return TPL_2H, None
 
 
 async def _estado_pre_envio(id_cita, id_prof: int | None, fecha: str) -> dict | None:
@@ -477,25 +507,28 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
             elif USE_TEMPLATES and send_template_fn:
                 _tpl_params_2h = [nombre_pac, cita["especialidad"],
                                   cita["profesional"], hora]
+                _tpl_2h_name, _tpl_2h_btns = await _plantilla_2h(id_cita_medilink)
                 _wamid_2h = await send_template_fn(
                     cita["phone"],
-                    "recordatorio_cita_2h",
+                    _tpl_2h_name,
                     body_params=_tpl_params_2h,
+                    **({"button_payloads": _tpl_2h_btns} if _tpl_2h_btns else {}),
                 )
                 if _wamid_2h is None:
                     log.error("Recordatorio 2h (template) FALLÓ (sin wamid) → %s cita_id=%s; "
                               "NO se marca reminder_2h_sent", cita["phone"], id_cita_medilink)
                     log_event(cita["phone"], "template_fallido", {
-                        "template": "recordatorio_cita_2h",
+                        "template": _tpl_2h_name,
                         "id_cita": id_cita_medilink,
                     })
                     continue
                 log_event(cita["phone"], "template_enviado", {
-                    "template": "recordatorio_cita_2h",
+                    "template": _tpl_2h_name,
                     "id_cita": id_cita_medilink,
+                    "botones": bool(_tpl_2h_btns),
                 })
-                log.info("Recordatorio 2h (template, paid) → %s cita_id=%s",
-                         cita["phone"], id_cita_medilink)
+                log.info("Recordatorio 2h (template %s, paid) → %s cita_id=%s",
+                         _tpl_2h_name, cita["phone"], id_cita_medilink)
             else:
                 # Fallback: sin templates y sin service window → intenta texto plano igual
                 # (WhatsApp rechazara si no hay ventana; fallo se loguea)
@@ -516,10 +549,10 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
 
             # log_message: si fue por template usamos el body renderizado;
             # si fue por service window o fallback, texto genérico.
-            _tpl_was_used = USE_TEMPLATES and send_template_fn and not en_service_window
+            _tpl_was_used = bool(USE_TEMPLATES and send_template_fn and not en_service_window)
             if _tpl_was_used:
                 log_message(cita["phone"], "out",
-                            render_template_body("recordatorio_cita_2h",
+                            render_template_body(_tpl_2h_name,
                                                  [nombre_pac, cita["especialidad"],
                                                   cita["profesional"], hora]),
                             "IDLE")
@@ -529,63 +562,6 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
                             "IDLE")
             mark_reminder_2h_sent(cita["id"])
 
-            # ── Aviso de liberación de slot (anti no-show) ────────────────────
-            # Si la cita es en peak horario (16-19h) o el paciente tiene historial
-            # de no-show Y no ha confirmado todavía → enviar aviso de liberación.
-            _cita_confirmation = cita.get("confirmation_status")
-            _cita_no_confirmada = (
-                _cita_confirmation is None
-                or _cita_confirmation not in ("confirmed",)
-            )
-            if _cita_no_confirmada:
-                try:
-                    _hora_int = int((cita.get("hora") or "00")[:2])
-                    _es_peak = 16 <= _hora_int < 19
-                except (ValueError, TypeError):
-                    _es_peak = False
-                _tiene_noshow = tiene_historial_noshow(cita["phone"])
-                if _es_peak or _tiene_noshow:
-                    try:
-                        await send_text_fn(
-                            cita["phone"],
-                            "Si no puedes asistir, por favor avísanos respondiendo *NO*.\n\n"
-                            "Tu hora queda disponible en *30 minutos* si no recibimos confirmación, "
-                            "para que otro paciente pueda ocuparla."
-                        )
-                        log_event(cita["phone"], "aviso_liberacion_slot", {
-                            "id_cita": cita.get("id_cita"),
-                            "motivo": ("peak" if _es_peak else "")
-                                      + ("+noshow" if _tiene_noshow else ""),
-                        })
-                        # Notificar lista de espera para esta especialidad
-                        try:
-                            _waitlist = get_waitlist_by_especialidad(cita["especialidad"])
-                            if _waitlist:
-                                _primer = _waitlist[0]
-                                _wp = _primer.get("phone", "")
-                                if _wp:
-                                    await send_text_fn(
-                                        _wp,
-                                        f"Hay una posible hora disponible en "
-                                        f"*{cita['especialidad']}* hoy a las *{hora}*.\n\n"
-                                        "Escribe *agendar* si te interesa tomarla."
-                                    )
-                                    # FIX F045: este es un aviso especulativo (el slot aún
-                                    # no se liberó realmente). NO marcar notified_at aquí
-                                    # para que el paciente siga en waitlist y reciba la
-                                    # oferta real cuando la operativa confirme la cancelación.
-                                    # Solo loggear el aviso enviado.
-                                    log_event(_wp, "waitlist_notif_slot_liberado", {
-                                        "especialidad": cita["especialidad"],
-                                        "hora": hora,
-                                        "especulativo": True,
-                                    })
-                        except Exception as _ew:
-                            log.warning("Error notificando waitlist slot liberado: %s", _ew)
-                    except Exception as _ea:
-                        log.warning("Error aviso liberación slot cita_id=%s: %s",
-                                    cita.get("id_cita"), _ea)
-
             log.info("Recordatorio 2h enviado → %s cita_id=%s", cita["phone"], cita["id_cita"])
         except Exception as e:
             log.error("Error enviando recordatorio 2h cita_id=%s: %s", cita.get("id"), e)
@@ -593,7 +569,7 @@ async def enviar_recordatorios_2h(send_text_fn, send_template_fn=None):
 
 # ── Recordatorio 48h anti no-show ─────────────────────────────────────────────
 
-async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
+async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None, send_template_fn=None):
     """Recordatorio 48h antes para pacientes con riesgo de no-show.
 
     Se envía a:
@@ -601,6 +577,10 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
     2. Cualquier cita en franja 16:00-19:00 (peak no-show).
 
     Incluye botones de confirmación interactivos.
+    Ventana de 24 h CERRADA → template UTILITY `recordatorio_cita` (mismo que
+    usa el 24h y el 48h de recepción, commit 720d228). Antes (hasta 2026-10-11)
+    iba SIEMPRE libre: 62% fallaba con 131047. Si Meta no acepta el template,
+    NO se marca reminder_48h_sent (reintenta en la próxima corrida).
     Se ejecuta diariamente a las 10:00 CLT con fecha pasado mañana.
     """
     pasado_manana = (
@@ -695,7 +675,36 @@ async def enviar_recordatorios_48h(send_text_fn, send_interactive_fn=None):
         motivo_log = "+".join(_motivos) if _motivos else "ticket_alto"
 
         try:
-            if send_interactive_fn:
+            if not is_window_open(phone):
+                if not (USE_TEMPLATES and send_template_fn):
+                    # Ventana cerrada y sin template: texto libre fallaría con
+                    # 131047. No enviar ni marcar.
+                    log.warning("Recordatorio 48h: ventana cerrada y sin template → %s cita_id=%s",
+                                phone, id_cita)
+                    log_event(phone, "recordatorio_48h_sin_ventana_ni_template",
+                              {"id_cita": id_cita})
+                    continue
+                _modalidad_48 = (cita.get("modalidad") or "particular").capitalize()
+                _params_48 = [nombre_pac, esp, prof, fecha_display, hora, _modalidad_48]
+                _wamid_48 = await send_template_fn(
+                    phone, "recordatorio_cita", body_params=_params_48,
+                    button_payloads=[f"cita_confirm:{id_cita}",
+                                     f"cita_reagendar:{id_cita}",
+                                     f"cita_cancelar:{id_cita}"],
+                )
+                if _wamid_48 is None:
+                    log.error("Recordatorio 48h (template) FALLÓ (sin wamid) → %s cita_id=%s; "
+                              "NO se marca reminder_48h_sent", phone, id_cita)
+                    log_event(phone, "template_fallido", {
+                        "template": "recordatorio_cita", "id_cita": id_cita,
+                        "origen": "bot", "ventana": "48h",
+                    })
+                    continue
+                log_event(phone, "template_enviado", {
+                    "template": "recordatorio_cita", "id_cita": id_cita,
+                    "origen": "bot", "ventana": "48h",
+                })
+            elif send_interactive_fn:
                 body_txt = (
                     f"Hola {nombre_pac} te recordamos tu cita con anticipación:\n\n"
                     f"*{esp}* — {prof}\n"
@@ -933,17 +942,23 @@ async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None)
                 # FIX F041: template recordatorio_cita_2h tiene 4 placeholders
                 # {{1}}=nombre {{2}}=especialidad {{3}}=profesional {{4}}=hora
                 # (fecha_display era el 5to parámetro que causaba error Meta 132000)
-                _wamid_r2h = await send_template_fn(phone, "recordatorio_cita_2h",
-                                       body_params=[nombre, esp, prof, hora])
+                # Con botones (Confirmo / No podré ir) si recordatorio_2h_botones
+                # está APPROVED; si no, la plantilla sin botones de siempre.
+                _tpl_r2h, _btns_r2h = await _plantilla_2h(id_cita)
+                _wamid_r2h = await send_template_fn(
+                    phone, _tpl_r2h, body_params=[nombre, esp, prof, hora],
+                    **({"button_payloads": _btns_r2h} if _btns_r2h else {}),
+                )
                 if _wamid_r2h is None:
                     log.error("Recepción 2h (template) FALLÓ (sin wamid) → %s id_cita=%s; "
                               "NO se marca reminder_2h_sent", phone[:8] + "***", id_cita)
                     log_event(phone, "template_fallido", {
-                        "template": "recordatorio_cita_2h", "id_cita": id_cita, "origen": "recepcion",
+                        "template": _tpl_r2h, "id_cita": id_cita, "origen": "recepcion",
                     })
                     continue
                 log_event(phone, "template_enviado", {
-                    "template": "recordatorio_cita_2h", "id_cita": id_cita, "origen": "recepcion",
+                    "template": _tpl_r2h, "id_cita": id_cita, "origen": "recepcion",
+                    "botones": bool(_btns_r2h),
                 })
             else:
                 await send_text_fn(
@@ -967,6 +982,44 @@ async def enviar_recordatorios_recepcion_2h(send_text_fn, send_template_fn=None)
     if enviados:
         log.info("Recordatorios recepción 2h: %d enviados", enviados)
     return enviados
+
+
+_KINE_IDS = (77, 21)   # ESPECIALIDADES_MAP["kinesiología"]
+_KINE_DIAS_RUTINA = 14
+
+
+def _kine_con_rutina(cita: dict, hoy: date | None = None) -> bool:
+    """True si la cita es de kinesiología Y el paciente tuvo una sesión de kine
+    en los últimos 14 días (semana actual + anterior).
+
+    Fuente: tabla local `ausentismo_citas` (barrido nocturno de Medilink; sin
+    llamadas a la API). Cuenta como sesión: fecha en [hoy-14, hoy], NO anulada,
+    y estado distinto de 8 (No asiste) y 14 (Cambio de fecha). Incluye 2
+    (Atendido) y también citas del pasado aún sin cerrar en Medilink — el
+    barrido corre 04:50, así que las sesiones de hoy/ayer sin cerrar son
+    indistinguibles de las asistidas; se asume que asistieron. Fail-open: ante
+    cualquier error o paciente sin id, devuelve False (se envía el recordatorio)."""
+    try:
+        if cita.get("id_profesional") not in _KINE_IDS:
+            return False
+        id_pac = cita.get("id_paciente")
+        if not id_pac:
+            return False
+        hoy = hoy or datetime.now(_TZ_CL).date()
+        desde = (hoy - timedelta(days=_KINE_DIAS_RUTINA)).isoformat()
+        from session import db
+        ph = ",".join("?" * len(_KINE_IDS))
+        with db() as c:
+            row = c.execute(
+                f"SELECT 1 FROM ausentismo_citas WHERE id_paciente=? "
+                f"AND id_profesional IN ({ph}) AND fecha>=? AND fecha<=? "
+                f"AND anulacion=0 AND COALESCE(id_estado,0) NOT IN (8,14) LIMIT 1",
+                (int(id_pac), *_KINE_IDS, desde, hoy.isoformat()),
+            ).fetchone()
+        return row is not None
+    except Exception as e:  # noqa: BLE001
+        log.warning("_kine_con_rutina falló (fail-open, se envía): %s", e)
+        return False
 
 
 async def enviar_recordatorios_recepcion_48h(send_text_fn, send_interactive_fn=None,
@@ -1012,6 +1065,18 @@ async def enviar_recordatorios_recepcion_48h(send_text_fn, send_interactive_fn=N
             log.info("Recepción 48h: cita %s CONFIRMADA por recepción, skip", id_cita)
             log_event(phone, "recordatorio_skip_confirmada", {
                 "id_cita": id_cita, "riel": "recepcion", "ventana": "48h",
+            })
+            mark_recepcion_reminder_48h_sent(cita["id"])
+            continue
+
+        # Kinesiología con rutina andando: no se manda el 48h a quien ya tuvo
+        # sesión de kine en los últimos 14 días (semana actual + anterior). Sí
+        # se manda en la primera sesión de una serie nueva.
+        if _kine_con_rutina(cita):
+            log.info("Recepción 48h: cita %s kine con rutina (sesión en 14d), skip", id_cita)
+            log_event(phone, "recordatorio_skip_kine_rutina", {
+                "id_cita": id_cita, "riel": "recepcion", "ventana": "48h",
+                "id_profesional": cita.get("id_profesional"),
             })
             mark_recepcion_reminder_48h_sent(cita["id"])
             continue

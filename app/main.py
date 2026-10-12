@@ -51,6 +51,7 @@ from jobs import (_enviar_reenganche, _sync_citas_hoy, _job_learned_skills,
                   _job_postconsulta, _job_postconsulta_morning,
                   _job_enrolar_atendidos_dia,
                   _job_detectar_cancelaciones,
+                  _job_operativa_tandas, _job_detectar_anuladas_recepcion,
                   _job_monitor_anomalias,
                   _job_reactivacion, _job_abarca_sync, _job_olavarria_sync,
                   _job_bi_sync_diario, _job_bi_sync_intradia, _job_pagos_prellenar_intradia,
@@ -612,6 +613,19 @@ async def lifespan(app: FastAPI):
         id="detectar_cancelaciones",
         replace_existing=True,
         misfire_grace_time=300, coalesce=True,
+    )
+    # Horas liberadas (No podré ir / anulaciones): 2ª tanda de avisos cada 5 min y
+    # detector de horas de RECEPCION anuladas hoy, cada hora al :54.
+    scheduler.add_job(
+        _job_operativa_tandas, "interval", minutes=5,
+        id="operativa_tandas", replace_existing=True,
+        misfire_grace_time=300, coalesce=True,
+    )
+    scheduler.add_job(
+        _job_detectar_anuladas_recepcion,
+        CronTrigger(hour="8-20", minute=54, timezone=_CLT),
+        id="detectar_anuladas_recepcion", replace_existing=True,
+        misfire_grace_time=600, coalesce=True,
     )
     # Monitor de anomalías: cada 15 min escanea bugs sospechosos y manda
     # resumen al WhatsApp del dueño (ADMIN_ALERT_PHONE). El dueño se entera
@@ -12251,6 +12265,22 @@ async def _webhook_procesar(request: Request):
                     texto = _recup.procesar_boton(phone, _btn_payload)
                 except Exception as _e_recup:
                     log.warning("recuperacion: botón %s falló phone=...%s: %s", _btn_payload, phone[-4:], _e_recup)
+            # Botones del recordatorio de 2 h (plantilla recordatorio_2h_botones):
+            # el payload lleva el id_cita exacto (r2h_confirm:<id> / r2h_cancelar:<id>).
+            # Se enruta al mismo handler que los botones del 24 h
+            # (cita_confirm:/cita_cancelar: → _handle_confirmacion_precita) y se
+            # registra el evento para medir la respuesta por botón.
+            if _btn_payload.startswith(("r2h_confirm:", "r2h_cancelar:")):
+                _r2h_acc, _r2h_id = _btn_payload.split(":", 1)
+                texto = ("cita_confirm:" if _r2h_acc == "r2h_confirm" else "cita_cancelar:") + _r2h_id
+                try:
+                    from session import log_event as _log_ev_r2h
+                    _log_ev_r2h(phone, "recordatorio_2h_boton", {
+                        "accion": "confirmo" if _r2h_acc == "r2h_confirm" else "no_podre_ir",
+                        "id_cita": _r2h_id, "boton": _btn_text,
+                    })
+                except Exception:
+                    pass
             if not texto:
                 return Response(status_code=200)
         elif msg_type == "audio":

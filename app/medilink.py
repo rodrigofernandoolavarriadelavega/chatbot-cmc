@@ -2522,6 +2522,27 @@ def _mark_cancelada_por_sistema(id_cita) -> None:
         log.warning("No se pudo marcar cita %s como anulada por sistema: %s", id_cita, e)
 
 
+_BG_TASKS_HORA_LIBERADA: set = set()
+
+
+def _ofrecer_hora_liberada_bg(cita: dict, id_cita) -> None:
+    """Toda anulación que sale de cancelar_cita() (botón "No podré ir" del bot,
+    texto, panel, agendador web, portal) ofrece la hora liberada a la lista de
+    espera / demanda reciente en segundo plano. Nunca afecta la anulación."""
+    if not cita:
+        return
+    try:
+        from alma_brain import operativa
+        c = dict(cita)
+        c.setdefault("id", id_cita)
+        t = asyncio.get_running_loop().create_task(
+            operativa.ofrecer_hora_liberada(c, origen="cancelar_cita"))
+        _BG_TASKS_HORA_LIBERADA.add(t)
+        t.add_done_callback(_BG_TASKS_HORA_LIBERADA.discard)
+    except Exception as e:  # noqa: BLE001
+        log.warning("hora liberada: no pude lanzar la oferta de cita %s: %s", id_cita, e)
+
+
 # Estados Medilink en que la cita ya ocurrió o está ocurriendo: 2 Atendido,
 # 5 En sala de espera, 6 Atendiéndose. El bot JAMÁS anula una cita así.
 # Caso real 2026-09-28 (Martín, Abarca 14:15): el seguimiento de la noche le
@@ -2554,6 +2575,7 @@ async def cancelar_cita_con_motivo(id_cita: int) -> tuple[bool, str]:
     # no se toca (venga de reagendar, cancelar, recepción o un job). Si
     # Medilink no responde, se sigue como antes: bloquear toda cancelación
     # por un 429 sería peor.
+    _c: dict = {}
     try:
         rg = await _get(client, url, headers=HEADERS)
         if rg.status_code == 200:
@@ -2579,6 +2601,7 @@ async def cancelar_cita_con_motivo(id_cita: int) -> tuple[bool, str]:
                 # el próximo paciente vea el slot recién disponible.
                 _proxima_cache.clear()
                 _mark_cancelada_por_sistema(id_cita)
+                _ofrecer_hora_liberada_bg(_c, id_cita)
                 return True, ""
             if r.status_code == 400 and "igual al original" in r.text:
                 # La cita ya estaba en estado anulado — tratar como éxito

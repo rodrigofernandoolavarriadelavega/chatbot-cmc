@@ -1106,13 +1106,14 @@ async def _job_detectar_cancelaciones():
                     id_prof_slot = next(
                         (pid for pid, p in PROFESIONALES.items()
                          if p.get("nombre", "").strip().lower() == _pn), None)
-                await operativa.fill_freed_slot({
+                await operativa.ofrecer_hora_liberada({
+                    "id": id_cita,
                     "especialidad": c.get("especialidad", ""),
-                    "id_prof": id_prof_slot,
+                    "id_profesional": id_prof_slot,
                     "fecha": c.get("fecha", ""),
                     "hora": c.get("hora", ""),
-                    "phone_cancelador": c.get("phone", ""),
-                })
+                    "phone": c.get("phone", ""),
+                }, origen="detector_citas_bot")
             except Exception as e:
                 log.warning("operativa: fill_freed_slot falló id=%s: %s", id_cita, e)
             # Bus de eventos (Alma Agents): notifica la cancelación a los agentes
@@ -3362,7 +3363,8 @@ async def _job_recordatorios_48h():
     Solo envía a pacientes con historial de no-show o cita en peak 16-19h.
     """
     try:
-        await enviar_recordatorios_48h(send_whatsapp_proactive, send_interactive_fn=send_whatsapp_interactive)
+        await enviar_recordatorios_48h(send_whatsapp_proactive, send_interactive_fn=send_whatsapp_interactive,
+                                       send_template_fn=_tpl)
     except Exception as e:
         log.error("_job_recordatorios_48h falló: %s", e)
     # Piloto recepción: enviar también a citas no-bot (si flag activo)
@@ -3373,6 +3375,88 @@ async def _job_recordatorios_48h():
         )
     except Exception as e:
         log.error("_job_recordatorios_recepcion_48h falló: %s", e)
+
+
+async def _job_operativa_tandas():
+    """Cada 5 min: segunda tanda (3 avisos) de las horas liberadas cuya primera
+    tanda salió hace ≥10 min y nadie tomó. Gateado por ALMA_OPERATIVA_ENABLED."""
+    try:
+        from alma_brain import operativa
+        if operativa._operativa_enabled():
+            await operativa.continuar_tandas()
+    except Exception as e:
+        log.error("_job_operativa_tandas falló: %s", e)
+
+
+async def _job_detectar_anuladas_recepcion():
+    """Horas de RECEPCION anuladas hoy (la recepción anula directo en Medilink y
+    el detector de citas_bot no las ve). Por cada profesional con citas de
+    recepción HOY a ≥60 min, UNA consulta /citas del día (no anuladas) y se
+    compara con citas_recepcion_reminders: las que ya no están se ofrecen como
+    hora liberada (operativa verifica que el hueco siga libre — cubre
+    'Cambio de fecha' con el mismo paciente en la misma hora). Corre cada hora;
+    solo mira HOY para acotar llamadas a Medilink (~1 por profesional)."""
+    import asyncio
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+    from config import MEDILINK_SUCURSAL
+    from session import log_event
+    _CL = ZoneInfo("America/Santiago")
+    try:
+        from alma_brain import operativa
+        if not operativa._operativa_enabled() or is_medilink_down():
+            return
+        from session import db
+        ahora = datetime.now(_CL)
+        hoy = ahora.strftime("%Y-%m-%d")
+        corte = (ahora + timedelta(minutes=operativa.MIN_ANTELACION_MIN)).strftime("%H:%M")
+        with db() as c:
+            try:
+                c.execute("ALTER TABLE citas_recepcion_reminders ADD COLUMN anulada_detectada_at TEXT")
+                c.commit()
+            except Exception:
+                pass
+            filas = c.execute(
+                "SELECT * FROM citas_recepcion_reminders WHERE fecha=? AND hora>=? "
+                "AND anulada_detectada_at IS NULL", (hoy, corte)).fetchall()
+        por_prof: dict = {}
+        for f in filas:
+            por_prof.setdefault(f["id_profesional"], []).append(dict(f))
+        if not por_prof:
+            return
+        from medilink import _get, HEADERS as _H
+        import httpx, json as _json
+        async with httpx.AsyncClient(timeout=15) as client:
+            for id_prof, rows in por_prof.items():
+                await asyncio.sleep(1.0)
+                params = {"id_sucursal": {"eq": MEDILINK_SUCURSAL}, "id_profesional": {"eq": id_prof},
+                          "fecha": {"eq": hoy}, "estado_anulacion": {"eq": 0}}
+                try:
+                    r = await _get(client, f"{MEDILINK_BASE_URL}/citas",
+                                   params={"q": _json.dumps(params, separators=(",", ":"))}, headers=_H)
+                except Exception as e:
+                    log.warning("anuladas_recepcion prof=%s: %s", id_prof, e)
+                    continue
+                if r.status_code != 200:
+                    continue
+                vivas = {int(x["id"]) for x in r.json().get("data", []) if x.get("id")}
+                for row in rows:
+                    if int(row["id_cita_medilink"]) in vivas:
+                        continue
+                    with db() as c:
+                        c.execute("UPDATE citas_recepcion_reminders SET anulada_detectada_at=datetime('now') "
+                                  "WHERE id=?", (row["id"],))
+                        c.commit()
+                    log_event(row.get("phone") or "", "cita_cancelada_detectada",
+                              {"id_cita": row["id_cita_medilink"], "fecha": hoy, "hora": row["hora"],
+                               "tipo": "anulada_recepcion"})
+                    await operativa.ofrecer_hora_liberada({
+                        "id": row["id_cita_medilink"], "especialidad": row.get("especialidad", ""),
+                        "id_profesional": id_prof, "fecha": hoy, "hora": row["hora"],
+                        "phone": row.get("phone") or "",
+                    }, origen="detector_recepcion")
+    except Exception as e:
+        log.error("_job_detectar_anuladas_recepcion falló: %s", e)
 
 
 async def _job_sync_citas_recepcion():

@@ -553,6 +553,15 @@ def _run_ddl_inline(conn) -> None:
             id_cita       TEXT                  -- id de cita Medilink una vez confirmada
         )
     """)
+    # Horas liberadas por "No podré ir": grupo de origen del destinatario
+    # ('a' = lista de espera, 'b' = pidió hora al bot en ≤3 días sin quedar con
+    # cita) y tanda de envío (1 = primeros 2, 2 = siguientes 3 tras 10 min).
+    for _col, _ddl in (("grupo", "TEXT DEFAULT 'a'"), ("tanda", "INTEGER DEFAULT 1")):
+        try:
+            conn.execute(f"ALTER TABLE waitlist_offers ADD COLUMN {_col} {_ddl}")
+            conn.commit()
+        except Exception:
+            pass  # columna ya existe
     conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_slot ON waitlist_offers(slot_key, estado)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_phone_open ON waitlist_offers(phone, estado)")
     # Resultados de examen pendientes de avisar (tool del orquestador resultados_examenes).
@@ -4788,7 +4797,8 @@ def make_slot_key(id_prof, fecha: str, hora: str) -> str:
 
 def create_offer(slot_key: str, phone: str, especialidad: str, id_prof,
                  fecha: str, hora: str, *, waitlist_id: int | None = None,
-                 rut: str = "", nombre: str = "") -> int:
+                 rut: str = "", nombre: str = "",
+                 grupo: str = "a", tanda: int = 1) -> int:
     """Crea una oferta 'enviada' para un candidato. Idempotente por (slot_key, phone):
     si ya existe una oferta abierta de ese paciente para ese cupo, no la duplica."""
     with db() as conn:
@@ -4800,9 +4810,11 @@ def create_offer(slot_key: str, phone: str, especialidad: str, id_prof,
             return int(dup["id"])
         cur = conn.execute("""
             INSERT INTO waitlist_offers
-                (slot_key, waitlist_id, phone, rut, nombre, especialidad, id_prof, fecha, hora)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (slot_key, waitlist_id, phone, rut, nombre, especialidad, id_prof, fecha, (hora or "")[:5]))
+                (slot_key, waitlist_id, phone, rut, nombre, especialidad, id_prof, fecha, hora,
+                 grupo, tanda)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (slot_key, waitlist_id, phone, rut, nombre, especialidad, id_prof, fecha, (hora or "")[:5],
+              grupo, int(tanda)))
         conn.commit()
         return int(cur.lastrowid)
 

@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "app"))
+os.environ["ALMA_OPERATIVA_VERIFICAR_LIBRE"] = "false"  # sin Medilink en tests
 
 # DB temporal ANTES de importar nada que toque session.
 import session  # noqa: E402
@@ -160,6 +161,7 @@ def test_fill_usa_template_cuando_flag():
     llamadas = []
     async def _fake_tpl(to, name, body_params=None, **k):
         llamadas.append((to, name, body_params))
+        return "wamid.TEST"
     messaging.send_whatsapp_template = _fake_tpl
     messaging.render_template_body = lambda name, params=None: f"[{name}] {params}"
 

@@ -14129,30 +14129,11 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
                         ), name=f"prof_notif_cancel_{_id_prof_c}")
                 except Exception as _pn_c_err:
                     log.warning("prof_notif_cancelacion falló: %s", _pn_c_err)
-                # ── Event-driven: notificar waitlist al instante ──
-                esp_cancelada = cita.get("especialidad", "")
-                if esp_cancelada:
-                    try:
-                        waiters = get_waitlist_by_especialidad(esp_cancelada)
-                        for w in waiters[:3]:  # notificar hasta 3 personas
-                            w_phone = w["phone"]
-                            w_nombre = (w.get("nombre") or "").split()
-                            w_saludo = f"*{w_nombre[0]}*" if w_nombre else ""
-                            _wl_msg = (
-                                f"Hola {w_saludo} 👋 ¡Se acaba de liberar una hora de "
-                                f"*{esp_cancelada}* con *{cita.get('profesional', '')}*!\n\n"
-                                f"📅 *{cita.get('fecha_display', '')}* a las *{cita.get('hora_inicio', '')[:5]}*\n\n"
-                                "Escribe *menu* ahora para reservarla antes de que se llene."
-                            )
-                            await send_whatsapp(w_phone, _wl_msg)
-                            from session import log_message as _lm_f8
-                            _lm_f8(w_phone, "out", _wl_msg, "IDLE")
-                            mark_waitlist_notified(w["id"])
-                            log_event(w_phone, "waitlist_notificado_cancelacion", {
-                                "especialidad": esp_cancelada, "cita_cancelada": cita["id"],
-                            })
-                    except Exception as e:
-                        log.warning("Error notificando waitlist post-cancel: %s", e)
+                # La oferta de la hora liberada (lista de espera + demanda reciente,
+                # con ventana/consent/tandas) la dispara cancelar_cita_con_motivo()
+                # en segundo plano (alma_brain.operativa.ofrecer_hora_liberada).
+                # Reemplaza el aviso directo a la waitlist que había acá: iba en
+                # texto libre sin mirar la ventana de 24 h y sin reserva atómica.
                 # BUG-4: si venía con multi_intent, el mensaje es más explícito
                 _cancel_suffix = (
                     "\n\nCancelé tu cita. ¿Quieres ahora agendar una nueva hora?"
