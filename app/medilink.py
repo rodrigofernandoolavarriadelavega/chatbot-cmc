@@ -1376,16 +1376,77 @@ def _generar_slots_horario(hora_inicio: str, hora_fin: str, intervalo: int,
     return slots
 
 
+# ── Hora temprana alternativa en Medicina General ────────────────────────────
+# Regla de negocio: se llena primero a Abarca (73). Pero si su primera hora libre
+# del día cae MÁS de MG_UMBRAL_TEMPRANO_MIN minutos después de la primera hora
+# libre de Olavarría (1) o Márquez (13) ese mismo día, se ofrece además esa hora
+# más temprana. Abarca sigue siendo la oferta principal y va primero en las listas.
+# Medido 11-oct (6 semanas): 70 de 97 que pidieron "hoy" y no agendaron tenían
+# oferta de hoy, pero lejana o con otro médico.
+MG_UMBRAL_TEMPRANO_MIN = 120
+MG_ID_BASE = 73
+MG_IDS_ALTERNATIVOS = (1, 13)   # en este orden de preferencia si empatan en hora
+
+
+def elegir_hora_temprana(slots_base: list, slots_otros: list,
+                         umbral_min: int = None) -> Optional[dict]:
+    """Función pura. Devuelve (copia de) el slot más temprano de slots_otros si
+    la primera hora de slots_base es más de `umbral_min` minutos posterior; si no, None.
+    Ambas listas deben ser del mismo día. El slot devuelto lleva alt_temprana=True."""
+    if umbral_min is None:
+        umbral_min = MG_UMBRAL_TEMPRANO_MIN
+    if not slots_base or not slots_otros:
+        return None
+    base_min = min(_h_to_min(s["hora_inicio"]) for s in slots_base)
+
+    def _clave(s):
+        pref = MG_IDS_ALTERNATIVOS.index(s["id_profesional"]) \
+            if s.get("id_profesional") in MG_IDS_ALTERNATIVOS else 99
+        return (_h_to_min(s["hora_inicio"]), pref)
+
+    mejor = min(slots_otros, key=_clave)
+    if base_min - _h_to_min(mejor["hora_inicio"]) > umbral_min:
+        return {**mejor, "alt_temprana": True}
+    return None
+
+
+async def hora_temprana_mg(fecha: str, slots_base: list) -> Optional[dict]:
+    """Consulta la agenda real de Olavarría y Márquez para `fecha` y devuelve la
+    hora temprana alternativa respecto a slots_base (Abarca), o None.
+    Respeta el buffer de 60 min (lo aplica _slots_para_fecha)."""
+    if not slots_base:
+        return None
+    # Hoy: ningún otro médico puede tener algo antes de ahora+buffer; si Abarca
+    # ya está dentro del umbral desde ese piso, no hay nada que buscar.
+    _ahora = datetime.now(_CHILE_TZ)
+    if fecha == _ahora.strftime("%Y-%m-%d"):
+        piso = _h_to_min(_ahora.strftime("%H:%M")) + 60
+        if min(_h_to_min(s["hora_inicio"]) for s in slots_base) - piso <= MG_UMBRAL_TEMPRANO_MIN:
+            return None
+    _, otros = await buscar_slots_dia_por_ids(list(MG_IDS_ALTERNATIVOS), fecha)
+    otros = [s for s in (otros or []) if s.get("fecha") == fecha]
+    return elegir_hora_temprana(slots_base, otros)
+
+
 async def _slots_para_fecha(client: httpx.AsyncClient, ids: list, horarios: dict,
                             fecha: str, prioridad: bool = False) -> tuple[list, list]:
     """
     Retorna (smart_5, todos_libres) para la fecha dada.
     Si prioridad=True, itera los IDs en orden y retorna al primer profesional con disponibilidad.
+    En Medicina General (primero Abarca) agrega al final la hora temprana alternativa
+    de Olavarría/Márquez si corresponde (ver MG_UMBRAL_TEMPRANO_MIN).
     """
     if prioridad:
-        for id_prof in ids:
+        for pos, id_prof in enumerate(ids):
             smart, todos = await _slots_para_fecha(client, [id_prof], horarios, fecha, prioridad=False)
             if todos:
+                resto = [i for i in ids[pos + 1:] if i in MG_IDS_ALTERNATIVOS]
+                if id_prof == MG_ID_BASE and resto:
+                    _, otros = await _slots_para_fecha(client, resto, horarios, fecha, prioridad=False)
+                    alt = elegir_hora_temprana(todos, otros)
+                    if alt:
+                        smart = list(smart) + [alt]
+                        todos = list(todos) + [alt]
                 return smart, todos
         return [], []
 

@@ -21,7 +21,7 @@ from medilink import (buscar_primer_dia, buscar_slots_dia, buscar_slots_dia_por_
                       confirmar_cita_whatsapp, estado_confirmacion_bot,
                       valid_rut, clean_rut, hint_rut_error, especialidades_disponibles,
                       consultar_proxima_fecha, verificar_slot_disponible,
-                      MedilinkRateLimited)
+                      MedilinkRateLimited, hora_temprana_mg, MG_ID_BASE, MG_UMBRAL_TEMPRANO_MIN)
 from session import (save_session, reset_session, get_session, save_tag, delete_tag, get_tags,
                      save_cita_bot, log_event, has_recent_event,
                      save_profile, get_profile, save_fidelizacion_respuesta, get_ultimo_seguimiento,
@@ -2235,6 +2235,19 @@ async def _slot_confirmed(phone: str, data: dict, slot: dict) -> str | dict:
     Si no hay perfil o el paciente está agendando para un tercero, sigue el
     flujo normal por WAIT_MODALIDAD.
     """
+    # Medición MG hora temprana / re-búsqueda mid-conversación (martes 13-oct):
+    # el slot elegido viene marcado con _mg_origen; el evento se cruza por phone
+    # con cita_confirmada para contar cuántas terminaron en cita.
+    if slot.get("_mg_origen") or slot.get("alt_temprana"):
+        try:
+            log_event(phone, "mg_slot_elegido", {
+                "origen": slot.get("_mg_origen") or "lista_alt",
+                "alt_temprana": bool(slot.get("alt_temprana")),
+                "id_profesional": slot.get("id_profesional"),
+                "fecha": slot.get("fecha", ""), "hora": (slot.get("hora_inicio") or "")[:5],
+            })
+        except Exception:  # noqa: BLE001
+            pass
     # Medición sistémica del embudo: chokepoint único de "eligió slot" (11
     # sitios de llamada). Ver nota en _iniciar_agendar sobre _funnel_id.
     try:
@@ -3043,7 +3056,7 @@ import re as _re_pre
 _FAST_PATH_BUTTONS = {
     # botones universales
     "si", "sí", "no", "confirmar", "cancelar", "rechazar",
-    "confirmar_sugerido", "ver_otros", "ver_todos", "otro_dia", "otro_día",
+    "confirmar_sugerido", "confirmar_temprano", "ver_otros", "ver_todos", "otro_dia", "otro_día",
     "otro_prof", "otro_profesional", "menu", "menu_volver", "cambiar_datos",
     "cd_horario", "cd_persona", "cd_datos",
     "accion_recepcion", "accion_cambiar", "accion_agendar",
@@ -6078,7 +6091,8 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # ("ver_otros" con especialidad_sugerida viva —botón del seguimiento de
         # información— lo resuelve el handler de la sugerencia, más abajo.)
         if (tl in ("ver_otros", "ver_todos", "otro_dia", "otro_día",
-                   "otro_prof", "confirmar_sugerido") or tl.startswith("agendar_prof_")) \
+                   "otro_prof", "confirmar_sugerido", "confirmar_temprano")
+                or tl.startswith("agendar_prof_")) \
                 and not (tl == "ver_otros" and data.get("especialidad_sugerida")):
             return await _iniciar_agendar(phone, data, None)
 
@@ -6315,7 +6329,7 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
             # agendar_prof_<id>: pre-seleccionar esa especialidad si el ID es conocido.
             # ver_otros / ver_todos / otro_dia / otro_prof: misma lógica.
             _HUERFANOS_AGENDAR = {
-                "agendar_sugerido", "confirmar_sugerido",
+                "agendar_sugerido", "confirmar_sugerido", "confirmar_temprano",
                 "ver_otros", "ver_todos", "otro_dia", "otro_día", "otro_prof",
             }
             if tl in _HUERFANOS_AGENDAR or tl.startswith("agendar_prof_"):
@@ -9442,7 +9456,9 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # primera disponible): inscribe en lista de espera sin perder la oferta.
         if tl in ("waitlist_antes_si", "accion_waitlist"):
             data["waitlist_especialidad"] = data.get("especialidad", "")
-            data["waitlist_id_prof_pref"] = (data.get("slot_sugerido") or {}).get("id_profesional")
+            data["waitlist_id_prof_pref"] = (
+                None if data.pop("_wl_sin_prof", False)
+                else (data.get("slot_sugerido") or {}).get("id_profesional"))
             log_event(phone, "waitlist_desde_pide_antes", {"esp": data["waitlist_especialidad"]})
             perfil = get_profile(phone)
             if perfil and perfil.get("rut"):
@@ -9620,6 +9636,19 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         # faltaba acá.
         # "quick_yes" (botón "⚡ Sí, agendar" de un mensaje anterior) que llega
         # con horas ya en pantalla: es un sí a la hora sugerida, no un rechazo.
+        # Botón de la hora temprana alternativa de Medicina General (otro médico).
+        if tl == "confirmar_temprano" and slots_mostrados:
+            _st = data.pop("slot_temprano", None)
+            _st = next((x for x in slots_mostrados if _st and x.get("alt_temprana")
+                        and x.get("fecha") == _st.get("fecha")
+                        and x.get("hora_inicio") == _st.get("hora_inicio")
+                        and x.get("id_profesional") == _st.get("id_profesional")), None)
+            if _st:
+                data.pop("slot_sugerido", None)
+                return await _slot_confirmed(phone, data, _st)
+            # La hora temprana ya no está vigente (pasó, se filtró): mostrar lo que hay.
+            save_session(phone, "WAIT_SLOT", data)
+            return _format_slots(slots_mostrados, mostrar_todos=True)
         if (tl in ("confirmar_sugerido", "quick_yes") or _afirma_slot(tl, tl_norm) or _afirm_libre) and slots_mostrados:
             # Si el paciente pidió explicitamente otro profesional antes y los
             # slots mostrados NO son de él, preferir uno que sí lo sea.
@@ -10330,6 +10359,32 @@ async def handle_message(phone: str, texto: str, session: dict) -> str:
         if _es_cobertura_slot(tl_norm_slot) and (todos_slots or especialidad):
             return await _slot_responder_cobertura(
                 phone, data, txt, todos_slots, slots_mostrados, especialidad)
+
+        # Medicina General: médico / "hoy" / franja / hora que lo mostrado no cubre
+        # -> re-buscar en la agenda real (ver _mg_rebuscar_mid).
+        if especialidad in _ESP_MED_GENERAL and tl != "otro_prof":
+            _mg_sl = _mg_si_con_pedido_coincide(tl, tl_norm, txt, slots_mostrados, data)
+            if _mg_sl == "AMBIGUO":
+                # Abarca + hora temprana en pantalla y "sí, para hoy": no se elige por él.
+                _alt = next(x for x in slots_mostrados if x.get("alt_temprana"))
+                _sg = data.get("slot_sugerido") or next(
+                    (x for x in slots_mostrados if not x.get("alt_temprana")), slots_mostrados[0])
+                log_event(phone, "mg_si_ambiguo_dos_medicos", {"alt": _alt["hora_inicio"][:5]})
+                save_session(phone, "WAIT_SLOT", data)
+                return _btn_msg("¿Cuál te acomoda?", [
+                    {"id": "confirmar_sugerido",
+                     "title": f"✅ {_apellido_corto(_sg)} {_sg['hora_inicio'][:5]}"[:20]},
+                    {"id": "confirmar_temprano",
+                     "title": f"✅ {_apellido_corto(_alt)} {_alt['hora_inicio'][:5]}"[:20]},
+                ])
+            if _mg_sl:
+                data.pop("slot_temprano", None)
+                data.pop("slot_sugerido", None)
+                return await _slot_confirmed(phone, data, _mg_sl)
+            _mg_resp = await _mg_rebuscar_mid(phone, data, txt, tl_norm_slot,
+                                              todos_slots, fecha_actual)
+            if _mg_resp is not None:
+                return _mg_resp
 
         # ── Apellido específico mencionado ("con el dr marquez", "quiero con abarca") ──
         # PRIORIDAD MÁXIMA: si el paciente pide un doctor por nombre, filtramos
@@ -18766,6 +18821,39 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         except Exception as _e_scf:  # noqa: BLE001 — nunca romper el agendamiento
             log.warning("sobrecupo primera oferta falló: %s", _e_scf)
 
+    # Medicina General: si Abarca (oferta principal) empieza más de
+    # MG_UMBRAL_TEMPRANO_MIN después de la primera hora de Olavarría/Márquez ese
+    # día, se muestra además esa hora más temprana (misma tarjeta, sin mensaje extra).
+    _alt_temprana = None
+    data.pop("slot_temprano", None)
+    if (especialidad_lower in _ESP_MED_GENERAL and prof_sugerido_id == MG_ID_BASE
+            and not _hp and not data.get("prof_pedido_explicito")):
+        try:
+            _base_dia = [x for x in todos if x.get("fecha") == fecha
+                         and x.get("id_profesional") == MG_ID_BASE]
+            _alt_temprana = await hora_temprana_mg(fecha, _base_dia)
+        except MedilinkRateLimited:
+            raise
+        except Exception as _e_alt:  # noqa: BLE001 — la oferta principal no depende de esto
+            log.warning("hora_temprana_mg falló fecha=%s: %s", fecha, _e_alt)
+        if _alt_temprana and _franja and not _franja_mod.filtrar([_alt_temprana], _franja):
+            _alt_temprana = None
+        if _alt_temprana:
+            _alt_temprana["_mg_origen"] = "card_temprana"
+            if not any(x.get("fecha") == _alt_temprana["fecha"]
+                       and x.get("hora_inicio") == _alt_temprana["hora_inicio"]
+                       and x.get("id_profesional") == _alt_temprana["id_profesional"]
+                       for x in todos):
+                todos = list(todos) + [_alt_temprana]
+            smart_sugerido = list(smart_sugerido) + [_alt_temprana]
+            data["slot_temprano"] = _alt_temprana
+            log_event(phone, "mg_hora_temprana_mostrada", {
+                "origen": "card", "fecha": fecha,
+                "abarca": mejor.get("hora_inicio", "")[:5],
+                "alt": _alt_temprana["hora_inicio"][:5],
+                "alt_prof": _alt_temprana.get("id_profesional"),
+                "umbral_min": MG_UMBRAL_TEMPRANO_MIN,
+            })
     data.update({"especialidad": especialidad_lower, "slots": smart_sugerido,
                  "todos_slots": todos, "fechas_vistas": [fecha],
                  "expansion_stage": 0, "prof_sugerido_id": prof_sugerido_id,
@@ -18848,6 +18936,21 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         botones.append({"id": "otro_prof", "title": "👤 Otro profesional"})
     else:
         botones.append({"id": "otro_dia", "title": "📅 Otro día"})
+    _linea_temprana = ""
+    if _alt_temprana:
+        # Los 3 botones de WhatsApp: cada hora con su médico + "Otros horarios".
+        # "Otro profesional" sale: el paciente puede escribirlo y ahora se re-busca.
+        botones = [
+            {"id": "confirmar_sugerido",
+             "title": f"✅ {_apellido_corto(mejor)} {mejor['hora_inicio'][:5]}"[:20]},
+            {"id": "confirmar_temprano",
+             "title": f"✅ {_apellido_corto(_alt_temprana)} {_alt_temprana['hora_inicio'][:5]}"[:20]},
+            {"id": "ver_otros", "title": "📋 Otros horarios"},
+        ]
+        _linea_temprana = (
+            f"⏰ Más temprano: *{_alt_temprana['hora_inicio'][:5]}* "
+            f"con {_alt_temprana['profesional']}\n"
+        )
 
     precio_linea = _precio_line(mejor.get("especialidad", ""), mejor)
     # P1-C bonus: para especialidades solo-particular, anotar "Solo Particular"
@@ -18859,7 +18962,7 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
     _particular_nota = "_Solo Particular (no Fonasa)_\n" if _es_solo_part_bl and precio_linea else ""
     precio_bloque = f"{precio_linea}\n{_particular_nota}" if precio_linea else ""
     # Señal de escasez cuando quedan pocas horas
-    n_slots = len(todos)
+    n_slots = len([x for x in todos if not x.get("alt_temprana")])
     escasez = ""
     if n_slots <= 2:
         escasez = "⚡ _Última hora disponible_\n"
@@ -18916,10 +19019,11 @@ async def _iniciar_agendar(phone: str, data: dict, especialidad: str | None,
         f"🏥 *{mejor['especialidad']}* — {mejor['profesional']}\n"
         f"📅 *{mejor['fecha_display']}*\n"
         f"🕐 *{mejor['hora_inicio'][:5]}* ⭐\n"
+        f"{_linea_temprana}"
         f"{_tele_linea}"
         f"{precio_bloque}"
         f"{escasez}\n"
-        "¿Te la reservo?",
+        + ("¿Cuál prefieres?" if _alt_temprana else "¿Te la reservo?"),
         botones
     )
 
@@ -19244,12 +19348,289 @@ def _derivar_humano(phone: str = None, contexto: str = "",
     return msg
 
 
+_MG_RE_HOY = re.compile(r"\b(hoy|hoy dia|hoy mismo|ya mismo|esta tarde|esta noche|esta ma[ñn]ana)\b")
+_MG_RE_HORA = re.compile(
+    r"\b(?:a|para|como a|tipo)\s+las?\s+(\d{1,2})(?:[:.h](\d{2}))?\b|\b(\d{1,2})[:.](\d{2})\b")
+_MG_RE_OTRO_DIA = re.compile(
+    r"\b(pasado ma[ñn]ana|para ma[ñn]ana|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|"
+    r"enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b")
+
+
+def _hm_a_min(hm: str) -> int:
+    try:
+        return int(hm[:2]) * 60 + int(hm[3:5])
+    except (ValueError, TypeError):
+        return 9999
+
+
+def _mg_con_encabezado(resp, hdr: str):
+    """Antepone `hdr` al mensaje (lista interactiva o texto) sin gastar otro mensaje."""
+    if isinstance(resp, dict):
+        try:
+            body = resp.get("interactive", {}).get("body", {})
+            body["text"] = (hdr + "\n\n" + body.get("text", ""))[:1024]
+        except Exception:  # noqa: BLE001
+            pass
+        return resp
+    return hdr + "\n\n" + resp
+
+
+async def _mg_rebuscar_mid(phone: str, data: dict, txt: str, tl_norm: str,
+                           todos_slots: list, fecha_actual: str | None):
+    """Medicina General, estado WAIT_SLOT: el paciente pide otro médico, "hoy",
+    una franja (mañana/tarde) o una hora y lo mostrado no lo cubre -> se re-busca
+    en la agenda real (Abarca, Olavarría y Márquez). Devuelve la respuesta o None
+    si el pedido no es de este tipo (o ya lo resuelve el handler existente con
+    los slots en pantalla).
+
+    Reemplaza, para MG, el texto fijo "las horas de arriba son las próximas
+    disponibles" (medido 11-oct: 23 veces, 22% agendó): ahora consulta y, si no
+    hay, lo dice y ofrece el día más cercano o la lista de espera ya existente.
+    """
+    import franja as _fr
+    from medilink import PROFESIONALES as _PF, _ids_para_especialidad as _ids_esp
+    t = (tl_norm or "").strip().lstrip("¿¡ ").rstrip("!?.,;:¿¡ ")
+    hoy = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
+
+    # ── Qué pidió ──
+    ids = None
+    motivo = []
+    ap = _detectar_apellido_profesional(txt)
+    if ap:
+        _ids_ap = [i for i in _ids_esp(ap) if i in _MED_GENERAL_IDS]
+        if len(_ids_ap) == 1:
+            ids = _ids_ap
+            motivo.append("medico")
+    hoy_explicito = bool(_MG_RE_HOY.search(t))
+    if hoy_explicito:
+        motivo.append("hoy")
+    elif _MG_RE_OTRO_DIA.search(t) and not _fr.es_franja_no_dia(t):
+        return None   # pidió otra fecha: lo resuelven los handlers de día
+    franja = _fr.parse(t)
+    if franja:
+        motivo.append("franja")
+    hora_pedida = None
+    _mh = _MG_RE_HORA.search(t)
+    if _mh and not t.isdigit():
+        _hh = int(_mh.group(1) or _mh.group(3))
+        _mm = int(_mh.group(2) or _mh.group(4) or 0)
+        if _hh < 8:
+            _hh += 12      # "a las 3": el centro atiende 08-21
+        if 0 <= _hh <= 23 and 0 <= _mm <= 59:
+            hora_pedida = _hh * 60 + _mm
+            motivo.append("hora")
+    if not motivo:
+        return None
+
+    # ── ¿Lo que hay en pantalla ya lo cubre? Entonces manda el handler existente ──
+    def _cubre(sl: list) -> bool:
+        if ids:
+            sl = [x for x in sl if x.get("id_profesional") in ids]
+        if franja:
+            sl = _fr.filtrar(sl, franja)
+        if hora_pedida is not None:
+            sl = [x for x in sl if abs(_hm_a_min(x.get("hora_inicio", "")) - hora_pedida) <= 30]
+        return bool(sl)
+    solo_hoy = hoy_explicito and not ids and not franja and hora_pedida is None
+    if solo_hoy and fecha_actual == hoy:
+        return None   # pide "hoy" y lo mostrado ya ES hoy: nada que re-buscar
+    if not solo_hoy and not franja and _cubre(todos_slots or []):
+        return None   # franja: nunca se resuelve solo con lo que hay en pantalla
+
+    # ── Fechas a consultar ──
+    primera_oferta = data.get("expansion_stage", 0) == 0 and len(data.get("fechas_vistas") or []) <= 1
+    if hoy_explicito:
+        fechas = [hoy]
+    else:
+        fechas = ([hoy] if primera_oferta and fecha_actual and fecha_actual > hoy else []) \
+            + ([fecha_actual] if fecha_actual else [hoy])
+
+    _reag = data.get("_reagendar_excluir")
+
+    def _depurar(sl: list) -> list:
+        out = list(sl)
+        if _reag:
+            out = [x for x in out if not (x.get("fecha") == _reag[0]
+                                          and (x.get("hora_inicio") or "")[:5] == _reag[1][:5])]
+        if ids:
+            out = [x for x in out if x.get("id_profesional") in ids]
+        if franja:
+            out = _fr.filtrar(out, franja)
+        if hora_pedida is not None:
+            out = sorted(out, key=lambda x: abs(_hm_a_min(x["hora_inicio"]) - hora_pedida))[:6]
+        return out
+
+    elegidos: list = []
+    fecha_ok = None
+    for f in fechas:
+        if not solo_hoy:
+            _, todos_f = await buscar_slots_dia_por_ids(list(ids or _MED_GENERAL_IDS), f)
+        else:
+            _, todos_f = await buscar_slots_dia("medicina general", f)   # regla Abarca + hora temprana
+        elegidos = _depurar([x for x in (todos_f or []) if x.get("fecha") == f])
+        if elegidos:
+            fecha_ok = f
+            break
+
+    # ── Texto de contexto ──
+    _nom = _PF.get(ids[0], {}).get("nombre", "") if ids else ""
+    ctx = (f" con {_nom}" if _nom else "") \
+        + (f" en {_fr.label(franja)}" if franja else "")
+    hora_txt = f"{hora_pedida // 60:02d}:{hora_pedida % 60:02d}" if hora_pedida is not None else ""
+    meta = {"motivo": "+".join(motivo), "hoy_explicito": hoy_explicito,
+            "fechas": fechas, "ids": ids or []}
+    origen = "rebusca_" + "+".join(motivo)
+
+    if elegidos:
+        _prio = {73: 0, 1: 1, 13: 2}
+        _ord = sorted(elegidos, key=lambda x: (x["hora_inicio"], _prio.get(x.get("id_profesional"), 9)))
+        if not ids and hora_pedida is None:
+            # Regla de negocio: se llena primero a Abarca. Los otros médicos solo
+            # si Abarca no tiene nada en lo pedido, o su primera hora cae >120 min
+            # después: entonces SOLO esa hora más temprana, al final (como la tarjeta).
+            _ab = [x for x in _ord if x.get("id_profesional") == 73]
+            _otros = [x for x in _ord if x.get("id_profesional") != 73]
+            if _ab:
+                from medilink import elegir_hora_temprana as _elegir_alt
+                _alt_f = _elegir_alt(_ab, _otros)
+                _tres = _ab[:7] + ([_alt_f] if _alt_f else [])
+                if not _alt_f:
+                    _tres = _ab[:8]
+            else:
+                _tres, _cont = [], {}
+                for x in _otros:
+                    _cont[x.get("id_profesional")] = _cont.get(x.get("id_profesional"), 0) + 1
+                    if _cont[x.get("id_profesional")] <= 3:
+                        _tres.append(x)
+        else:
+            _tres = _ord
+        sel = [dict(x) for x in _tres[:8]]
+        if len({x.get("id_profesional") for x in sel}) > 1:
+            for x in sel:
+                x["_rotular_prof"] = True
+        for x in sel:
+            x["_mg_origen"] = origen
+        data.pop("slot_sugerido", None)
+        data.pop("slot_temprano", None)
+        fv = list(data.get("fechas_vistas") or [])
+        if fecha_ok not in fv:
+            fv.append(fecha_ok)
+        data.update({"slots": sel, "todos_slots": sel, "fechas_vistas": fv,
+                     "prof_sugerido_id": sel[0].get("id_profesional")})
+        save_session(phone, "WAIT_SLOT", data)
+        log_event(phone, "mg_rebusca_mid", {**meta, "resultado": "lista", "fecha": fecha_ok, "n": len(sel)})
+        dia = "hoy" if fecha_ok == hoy else (sel[0].get("fecha_display") or fecha_ok)
+        if hora_pedida is not None and min(
+                abs(_hm_a_min(x["hora_inicio"]) - hora_pedida) for x in sel) > 30:
+            hdr = f"No tengo a las {hora_txt}{ctx}. Esto es lo más cercano para {dia}:"
+        else:
+            hdr = f"Revisé la agenda de {dia}{ctx}:"
+        return _mg_con_encabezado(_format_slots(sel, mostrar_todos=True), hdr)
+
+    # ── Sin horas: decirlo y ofrecer lo más cercano o lista de espera ──
+    dia_neg = "hoy" if hoy in fechas else "ese día"
+    try:
+        _, todos_x = await buscar_primer_dia("medicina general",
+                                             solo_ids=list(ids or _MED_GENERAL_IDS),
+                                             excluir=[f for f in fechas if f])
+    except MedilinkRateLimited:
+        raise
+    except Exception as _e_x:  # noqa: BLE001
+        log.warning("mg_rebusca_mid: buscar_primer_dia falló: %s", _e_x)
+        todos_x = []
+    if todos_x and franja:
+        todos_x = _fr.filtrar(todos_x, franja) or todos_x
+    if todos_x:
+        prox = dict(todos_x[0])
+        prox["_mg_origen"] = origen
+        data.pop("slot_temprano", None)
+        data.update({"slots": [prox], "todos_slots": todos_x, "slot_sugerido": prox,
+                     "prof_sugerido_id": prox.get("id_profesional"),
+                     "fechas_vistas": list(data.get("fechas_vistas") or []) + [prox["fecha"]]})
+        if not ids:
+            data["_wl_sin_prof"] = True   # pidió "hoy"/franja, no un médico: el aviso no se ata a este
+        save_session(phone, "WAIT_SLOT", data)
+        log_event(phone, "mg_rebusca_mid", {**meta, "resultado": "mas_cercano", "fecha": prox["fecha"]})
+        h0 = prox["hora_inicio"][:5]
+        return _btn_msg(
+            f"No tengo horas{ctx} para {dia_neg} 😕\n\n"
+            f"Lo más cercano es *{prox.get('fecha_display', prox['fecha'])} a las {h0}* "
+            f"con {prox.get('profesional', '')}.\n\n"
+            "¿La tomas o prefieres que te avise si se libera algo antes?",
+            [{"id": "confirmar_sugerido", "title": f"✅ Tomar {h0}"},
+             {"id": "waitlist_antes_si", "title": "📝 Avisarme antes"}],
+        )
+    data["waitlist_especialidad"] = "medicina general"
+    data["waitlist_id_prof_pref"] = ids[0] if ids else None
+    save_session(phone, "WAIT_WAITLIST_CONFIRM", data)
+    log_event(phone, "mg_rebusca_mid", {**meta, "resultado": "lista_espera"})
+    return _btn_msg(
+        f"No tengo horas{ctx} para {dia_neg} ni en los próximos días 😕\n\n"
+        "¿Quieres que te avise apenas se libere un cupo?",
+        [{"id": "waitlist_si", "title": "📝 Sí, inscribirme"},
+         {"id": "waitlist_no", "title": "No, gracias"}],
+    )
+
+
+def _mg_si_con_pedido_coincide(tl: str, tl_norm: str, txt: str,
+                               slots_mostrados: list, data: dict) -> dict | str | None:
+    """MG en WAIT_SLOT: un "sí" que trae "hoy" o una hora que COINCIDE con lo que
+    hay en pantalla ("sí, para hoy", "sí, a las 10:30", "ya, la de hoy") confirma
+    esa hora; no es un pedido nuevo. Devuelve el slot a confirmar o None (en cuyo
+    caso sigue el camino normal: re-buscar si el pedido es distinto, o el manejo
+    actual del sí ambiguo)."""
+    import franja as _fr
+    if not slots_mostrados or not _afirma(tl, tl_norm):
+        return None
+    t = (txt or "").lower().strip().lstrip("¿¡ ").rstrip("!?.,;:¿¡ ")
+    if _fr.parse(t) or _detectar_apellido_profesional(txt):
+        return None   # "sí pero en la tarde" / "sí con Márquez": pedido distinto
+    hoy = datetime.now(_CHILE_TZ).date().strftime("%Y-%m-%d")
+    mh = _MG_RE_HORA.search(t)
+    if mh:
+        hh = int(mh.group(1) or mh.group(3))
+        mm = int(mh.group(2) or mh.group(4) or 0)
+        if hh < 8:
+            hh += 12
+        hora = f"{hh:02d}:{mm:02d}"
+        vistos, cand = set(), []
+        for x in slots_mostrados:
+            k = (x.get("fecha"), (x.get("hora_inicio") or "")[:5], x.get("id_profesional"))
+            if k not in vistos and k[1] == hora:
+                vistos.add(k)
+                cand.append(x)
+        if len(cand) != 1:
+            return None
+        if _MG_RE_HOY.search(t) and cand[0].get("fecha") != hoy:
+            return None
+        return cand[0]
+    if _MG_RE_HOY.search(t):
+        # Dos médicos en pantalla (Abarca + temprana): "sí, para hoy" es ambiguo.
+        if any(x.get("alt_temprana") for x in slots_mostrados):
+            _alt = next(x for x in slots_mostrados if x.get("alt_temprana"))
+            return "AMBIGUO" if _alt.get("fecha") == hoy else None
+        sug = data.get("slot_sugerido")
+        key = lambda x: (x.get("fecha"), (x.get("hora_inicio") or "")[:5], x.get("id_profesional"))  # noqa: E731
+        cand = sug if sug and any(key(x) == key(sug) for x in slots_mostrados) else slots_mostrados[0]
+        return cand if cand.get("fecha") == hoy else None
+    return None
+
+
+def _apellido_corto(slot: dict) -> str:
+    """'Dr. Andrés Abarca' -> 'Abarca' (para botones y filas de lista)."""
+    nom = (slot.get("profesional") or "").split()
+    return nom[-1] if nom else ""
+
+
 def _format_slots(slots: list, mostrar_todos: bool = False):
     if not slots:
         return "No hay horarios disponibles."
     fecha = slots[0]["fecha_display"]
     prof  = slots[0]["profesional"]
     precio_linea = _precio_line(slots[0].get("especialidad", ""), slots[0])
+    # Lista mixta de médicos (Medicina General con hora temprana alternativa o
+    # re-búsqueda): cada fila lleva su médico y el encabezado no nombra a uno solo.
+    rotular = any(s.get("_rotular_prof") or s.get("alt_temprana") for s in slots)
 
     # Usar lista interactiva cuando caben en el límite de 10 filas total
     nav_rows = []
@@ -19263,11 +19644,14 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
         for i, s in enumerate(slots, 1):
             hora = s["hora_inicio"][:5]
             title = f"⚡ {hora} — Primero disp." if i == 1 and not mostrar_todos else hora
+            if rotular:
+                title = f"{hora} · {_apellido_corto(s)}"
             slot_rows.append({"id": str(i), "title": title[:24]})
         sections = [{"title": fecha[:24], "rows": slot_rows}]
         if nav_rows:
             sections.append({"title": "Más opciones", "rows": nav_rows})
-        body_text = f"Te encontré estas opciones 👇\n\n*{fecha}* — {prof}"
+        body_text = (f"Te encontré estas opciones 👇\n\n*{fecha}*" if rotular
+                     else f"Te encontré estas opciones 👇\n\n*{fecha}* — {prof}")
         if precio_linea:
             body_text += f"\n{precio_linea}"
         return _list_msg(
@@ -19277,13 +19661,15 @@ def _format_slots(slots: list, mostrar_todos: bool = False):
         )
 
     # Fallback texto para listas muy largas
-    lineas = [f"📅 *{fecha}* — {prof}"]
+    lineas = [f"📅 *{fecha}*" if rotular else f"📅 *{fecha}* — {prof}"]
     if precio_linea:
         lineas.append(precio_linea)
     lineas.append("")  # línea en blanco antes de los slots
     for i, s in enumerate(slots, 1):
         hora = s['hora_inicio'][:5]
         prefix = f"*{i}.* ⚡ {hora} — Primero disponible" if i == 1 and not mostrar_todos else f"*{i}.* {hora}"
+        if rotular:
+            prefix = f"*{i}.* {hora} — {s.get('profesional', '')}"
         lineas.append(prefix)
     if mostrar_todos:
         lineas.append("\nElige un número o escribe *otro día* si no te acomoda.")
