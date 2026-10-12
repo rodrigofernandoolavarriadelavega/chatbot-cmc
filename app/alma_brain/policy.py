@@ -116,6 +116,15 @@ _MARGEN_BASE_H = 24.0
 _MARGEN_ESCASA_H = 48.0
 
 
+_MARGEN_MG_H = 1.0
+
+
+def _es_mg(especialidad: str) -> bool:
+    esp = (especialidad or "").strip().lower()
+    return "medicina general" in esp or "medicina familiar" in esp or "médico general" in esp \
+        or "medico general" in esp or "médico familiar" in esp or "medico familiar" in esp
+
+
 def _margen_horas(especialidad: str) -> float:
     esp = (especialidad or "").strip().lower()
     return _MARGEN_ESCASA_H if any(k in esp for k in _ESP_ESCASAS) else _MARGEN_BASE_H
@@ -143,7 +152,12 @@ def should_auto_confirm(ctx: OfferContext) -> tuple[bool, str]:
     if not (ctx.paciente_conocido and ctx.rut_valido and ctx.esp_coincide and ctx.desde_waitlist):
         return False, "señal insuficiente (paciente / RUT / especialidad / inscripción) → recepción"
 
-    margen = _margen_horas(ctx.especialidad)
+    # Decisión 11-oct-2026: solo MG/Medicina Familiar se auto-confirma, con 1 h
+    # de margen (las horas liberadas son casi siempre del mismo día y esperar a
+    # recepción las pierde). El resto de especialidades va siempre a recepción.
+    if not _es_mg(ctx.especialidad):
+        return False, f"{ctx.especialidad or 'especialidad'} no se auto-confirma → recepción"
+    margen = _MARGEN_MG_H
     if ctx.horas_hasta > margen:
         return True, (f"bajo riesgo: paciente conocido, especialidad coincide, "
                       f"cupo a >{margen:.0f}h")

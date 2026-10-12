@@ -59,36 +59,32 @@ def test_autoconfirm_off_por_defecto():
 
 def test_autoconfirm_bajo_riesgo():
     os.environ["ALMA_OPERATIVA_AUTOCONFIRM"] = "true"
-    bajo = policy.OfferContext(paciente_conocido=True, rut_valido=True,
-                               esp_coincide=True, horas_hasta=48, desde_waitlist=True)
-    auto, _ = policy.should_auto_confirm(bajo)
-    _ok(auto, "paciente conocido + esp coincide + >24h → auto-confirma")
+    base = dict(rut_valido=True, esp_coincide=True, desde_waitlist=True,
+                especialidad="medicina general")
+    bajo = policy.OfferContext(paciente_conocido=True, horas_hasta=3, **base)
+    _ok(policy.should_auto_confirm(bajo)[0], "MG, paciente conocido, cupo a 3h → auto")
 
-    riesgo = policy.OfferContext(paciente_conocido=False, rut_valido=True,
-                                 esp_coincide=True, horas_hasta=48, desde_waitlist=True)
-    auto2, _ = policy.should_auto_confirm(riesgo)
-    _ok(not auto2, "paciente desconocido → recepción")
+    riesgo = policy.OfferContext(paciente_conocido=False, horas_hasta=3, **base)
+    _ok(not policy.should_auto_confirm(riesgo)[0], "paciente desconocido → recepción")
 
-    apurado = policy.OfferContext(paciente_conocido=True, rut_valido=True,
-                                  esp_coincide=True, horas_hasta=3, desde_waitlist=True)
-    auto3, _ = policy.should_auto_confirm(apurado)
-    _ok(not auto3, "cupo a menos de 24h → recepción")
+    apurado = policy.OfferContext(paciente_conocido=True, horas_hasta=0.5, **base)
+    _ok(not policy.should_auto_confirm(apurado)[0], "MG a <1h → recepción")
+
+    sin_wl = policy.OfferContext(paciente_conocido=True, rut_valido=True, esp_coincide=True,
+                                 desde_waitlist=False, horas_hasta=3, especialidad="medicina general")
+    _ok(not policy.should_auto_confirm(sin_wl)[0], "sin inscripción en lista de espera → recepción")
 
 
-def test_autoconfirm_margen_por_especialidad_escasa():
-    """Especialista escaso (cardio/gastro) exige >48h; el resto >24h."""
+def test_autoconfirm_solo_mg_y_familiar():
+    """Decisión 11-oct-2026: solo MG / Medicina Familiar se auto-confirma (margen 1 h)."""
     os.environ["ALMA_OPERATIVA_AUTOCONFIRM"] = "true"
     base = dict(paciente_conocido=True, rut_valido=True, esp_coincide=True, desde_waitlist=True)
-
-    # 30h de margen: alcanza para una general, NO para cardiología.
-    general = policy.OfferContext(horas_hasta=30, especialidad="medicina general", **base)
-    cardio  = policy.OfferContext(horas_hasta=30, especialidad="cardiología", **base)
-    _ok(policy.should_auto_confirm(general)[0], "general a 30h → auto (margen 24h)")
-    _ok(not policy.should_auto_confirm(cardio)[0], "cardiología a 30h → recepción (exige 48h)")
-
-    # 50h: cardiología ya pasa el margen ampliado.
-    cardio_ok = policy.OfferContext(horas_hasta=50, especialidad="cardiología", **base)
-    _ok(policy.should_auto_confirm(cardio_ok)[0], "cardiología a 50h → auto (supera 48h)")
+    for esp in ("medicina general", "Medicina Familiar", "médico general"):
+        ctx = policy.OfferContext(horas_hasta=2, especialidad=esp, **base)
+        _ok(policy.should_auto_confirm(ctx)[0], f"{esp} a 2h → auto")
+    for esp in ("cardiología", "kinesiología", "odontología general", "ecografía", ""):
+        ctx = policy.OfferContext(horas_hasta=100, especialidad=esp, **base)
+        _ok(not policy.should_auto_confirm(ctx)[0], f"{esp or 'sin esp'} → recepción aunque falten 100h")
 
 
 if __name__ == "__main__":
