@@ -20,6 +20,14 @@ MEDILINK_TOKEN     = os.getenv("MEDILINK_TOKEN", "")
 MEDILINK_SUCURSAL  = int(os.getenv("MEDILINK_SUCURSAL", "1"))
 
 ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY", "")
+# Modelo del chatbot (claude_helper). Rollback a Haiku 4.5 sin tocar código:
+#   CLAUDE_MODEL=claude-haiku-4-5-20251001 en .env + systemctl restart chatbot-cmc.
+# Con un modelo 5.x se usa salida estructurada (output_config) y esfuerzo CLAUDE_EFFORT;
+# con 4.5 se mantiene el prefill "{" y no se manda output_config.
+CLAUDE_MODEL       = os.getenv("CLAUDE_MODEL", "claude-haiku-5-5").strip()
+CLAUDE_EFFORT      = os.getenv("CLAUDE_EFFORT", "low").strip()
+# "disabled" apaga el razonamiento en 5.x (mas rapido y barato; medido 12-oct). Cualquier otro valor lo deja adaptativo.
+CLAUDE_THINKING    = os.getenv("CLAUDE_THINKING", "disabled").strip().lower()
 OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY", "")   # Whisper para transcripción de audios
 
 # Lector de correos de Medilink (ver app/email_ticker.py) — buzón Gmail al que

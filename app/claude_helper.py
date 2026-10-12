@@ -6,7 +6,7 @@ import json
 import logging
 import re
 import anthropic
-from config import ANTHROPIC_API_KEY, CMC_TELEFONO, CMC_TELEFONO_FIJO, ORL_SIN_AGENDA
+from config import ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUDE_EFFORT, CLAUDE_THINKING, CMC_TELEFONO, CMC_TELEFONO_FIJO, ORL_SIN_AGENDA
 from medilink import especialidades_disponibles
 
 log = logging.getLogger("claude")
@@ -14,7 +14,31 @@ log = logging.getLogger("claude")
 client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
 
-async def _claude_create(**kwargs):
+class ClaudeRefusal(Exception):
+    """El modelo rechazó la solicitud (stop_reason == "refusal").
+
+    Haiku 5.5 no tiene fallback server-side. Se trata como error recuperable: los
+    callers ya capturan Exception y caen a su fallback de siempre (el mismo camino
+    que cuando la API falla). No cuenta como caída de Claude."""
+
+
+def _modelo_con_output_config(model: str) -> bool:
+    """True para la familia 5.x: sin prefill, salida estructurada y esfuerzo explícito.
+    Haiku 4.5 no acepta `effort`; conserva el prefill de assistant."""
+    return model.startswith("claude-haiku-5") or model.startswith("claude-5")
+
+
+def _resp_text(resp) -> str:
+    """Texto del primer bloque `text` (nunca content[0]: con thinking activo el
+    primer bloque puede ser `thinking`). Sin bloque text (p. ej. max_tokens cortó
+    antes del texto) levanta ValueError -> el caller cae a su fallback."""
+    for b in getattr(resp, "content", None) or []:
+        if getattr(b, "type", None) == "text":
+            return b.text
+    raise ValueError(f"respuesta sin bloque text (stop_reason={getattr(resp, 'stop_reason', '?')})")
+
+
+async def _claude_create(*, schema: dict | None = None, prefill: str = "", **kwargs):
     """Wrapper único de client.messages.create que registra la salud de Claude.
 
     Toda llamada a la API pasa por aquí: un éxito marca Claude 'up', una excepción
@@ -22,8 +46,30 @@ async def _claude_create(**kwargs):
     su propio fallback. Esto le da a Claude la misma observabilidad que Medilink
     (ver resilience.py) — sin esto, el apagón de saldo de 3 días (29-may a 1-jun)
     corrió en silencio. El estado lo consume el reporte de estado al admin (jobs.py)
-    y el camino degradado del paciente (is_claude_down)."""
+    y el camino degradado del paciente (is_claude_down).
+
+    Compatibilidad de modelo (CLAUDE_MODEL, ver config.py):
+      - `schema`: JSON schema de la respuesta. En 5.x va por output_config.format
+        (obligatorio: sin él 5.5 responde en prosa). En 4.5 se ignora.
+      - `prefill`: texto inicial de assistant. Solo se manda en 4.5 (en 5.5 da 400);
+        el caller debe anteponerlo al texto con `_resp_text(resp)` solo si
+        `not _modelo_con_output_config(model)`.
+      - En 5.x se manda output_config.effort = CLAUDE_EFFORT. Nunca temperature/top_p/top_k.
+    """
+    import time as _time
     from resilience import note_claude_ok, note_claude_failure, _classify_claude_error
+    kwargs.setdefault("model", CLAUDE_MODEL)
+    model = kwargs["model"]
+    if _modelo_con_output_config(model):
+        oc: dict = {"effort": CLAUDE_EFFORT}
+        if schema:
+            oc["format"] = {"type": "json_schema", "schema": schema}
+        kwargs["extra_body"] = {**(kwargs.get("extra_body") or {}), "output_config": oc}
+        if CLAUDE_THINKING == "disabled":
+            kwargs["extra_body"]["thinking"] = {"type": "disabled"}
+    elif prefill:
+        kwargs["messages"] = list(kwargs["messages"]) + [{"role": "assistant", "content": prefill}]
+    _t0 = _time.monotonic()
     try:
         resp = await client.messages.create(**kwargs)
         note_claude_ok()
@@ -31,17 +77,69 @@ async def _claude_create(**kwargs):
             _u = getattr(resp, "usage", None)
             if _u is not None:
                 logging.getLogger("bot").info(
-                    "CLAUDE_CALL fn=helper model=%s in=%s cache_r=%s cache_w=%s out=%s",
-                    kwargs.get("model", "?"), getattr(_u, "input_tokens", "?"),
+                    "CLAUDE_CALL fn=helper model=%s in=%s cache_r=%s cache_w=%s out=%s ms=%d stop=%s",
+                    model, getattr(_u, "input_tokens", "?"),
                     getattr(_u, "cache_read_input_tokens", 0),
                     getattr(_u, "cache_creation_input_tokens", 0),
-                    getattr(_u, "output_tokens", "?"))
+                    getattr(_u, "output_tokens", "?"),
+                    int((_time.monotonic() - _t0) * 1000),
+                    getattr(resp, "stop_reason", "?"))
         except Exception:
             pass
-        return resp
     except Exception as e:
         note_claude_failure(_classify_claude_error(str(e)))
         raise
+    if getattr(resp, "stop_reason", None) == "refusal":
+        _det = getattr(resp, "stop_details", None)
+        _cat = (_det.get("category") if isinstance(_det, dict) else getattr(_det, "category", None)) or "desconocida"
+        log.warning("CLAUDE_REFUSAL model=%s categoria=%s", model, _cat)
+        raise ClaudeRefusal(f"refusal categoria={_cat}")
+    return resp
+
+
+# JSON schemas de salida estructurada (solo se envían a modelos 5.x).
+_INTENTS_DETECT = ["agendar", "reagendar", "cancelar", "ver_reservas", "waitlist", "precio",
+                   "info", "disponibilidad", "humano", "consulta_farmaco", "otro"]
+_SCHEMA_DETECT_INTENT = {
+    "type": "object",
+    "properties": {
+        "intent": {"type": "string", "enum": _INTENTS_DETECT},
+        "especialidad": {"type": ["string", "null"]},
+        "respuesta_directa": {"type": ["string", "null"]},
+    },
+    "required": ["intent", "especialidad", "respuesta_directa"],
+    "additionalProperties": False,
+}
+_SCHEMA_FAQ = {
+    "type": "object",
+    "properties": {"respuesta_directa": {"type": "string"}},
+    "required": ["respuesta_directa"],
+    "additionalProperties": False,
+}
+_INTENTS_CONTEXTO = ["responder_prompt", "preguntar_horario", "preguntar_precio", "preguntar_pago",
+                     "preguntar_info", "buscar_fecha", "cambiar_especialidad", "cambiar_profesional",
+                     "pedir_hora_nuevo", "cancelar_cita_real", "llamar_recepcion",
+                     "fuera_de_alcance", "confirmar_slot"]
+_SCHEMA_CONTEXTO = {
+    "type": "object",
+    "properties": {
+        "intent": {"type": "string", "enum": _INTENTS_CONTEXTO},
+        "args": {
+            "type": "object",
+            "properties": {
+                "especialidad": {"type": ["string", "null"]},
+                "fecha_desde": {"type": ["string", "null"]},
+                "fecha_hasta": {"type": ["string", "null"]},
+                "preferencia_horaria": {"anyOf": [{"type": "string", "enum": ["mañana", "tarde", "noche"]},
+                                                  {"type": "null"}]},
+            },
+            "required": ["especialidad", "fecha_desde", "fecha_hasta", "preferencia_horaria"],
+            "additionalProperties": False,
+        },
+    },
+    "required": ["intent", "args"],
+    "additionalProperties": False,
+}
 
 # Cache de intents determinísticos — evita llamar a Claude para casos obvios.
 # Clave: texto normalizado (lower + strip). Valor: dict con intent y especialidad.
@@ -1466,8 +1564,7 @@ async def clasificar_respuesta_crosssell(mensaje: str, destino: str) -> str:
     # Ambiguo: pregunta de precio, otra especialidad, saludo, audio sin transcribir.
     try:
         resp = await _claude_create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=10,
+            max_tokens=200,
             system=(
                 f"El bot acaba de ofrecerle al paciente agendar una hora en {destino}. "
                 "El paciente es de la Región del Biobío, Chile (zona rural de Arauco). "
@@ -1484,7 +1581,7 @@ async def clasificar_respuesta_crosssell(mensaje: str, destino: str) -> str:
             ),
             messages=[{"role": "user", "content": mensaje}],
         )
-        resultado = resp.content[0].text.strip().lower()
+        resultado = _resp_text(resp).strip().lower()
         if resultado in ("si", "no", "ambiguo"):
             log.info("crosssell Claude: %r (destino=%s) → %s", mensaje[:60], destino, resultado)
             return resultado
@@ -1538,8 +1635,7 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
 
     try:
         resp = await _claude_create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=10,
+            max_tokens=200,
             system=(
                 "Clasifica si el mensaje es una respuesta a '¿Cómo te sientes después de tu consulta médica?'. "
                 "Devuelve SOLO una de estas palabras exactas: mejor, igual, peor, ninguno.\n"
@@ -1553,7 +1649,7 @@ async def clasificar_respuesta_seguimiento(mensaje: str) -> str | None:
             ),
             messages=[{"role": "user", "content": mensaje}],
         )
-        resultado = resp.content[0].text.strip().lower()
+        resultado = _resp_text(resp).strip().lower()
         if resultado in ("mejor", "igual", "peor"):
             log.info("seguimiento Claude: %r → %s", mensaje[:40], resultado)
             return resultado
@@ -2339,16 +2435,17 @@ async def detect_intent(mensaje: str, recepcion_resumen: list | None = None,
                 f"propias palabras, de forma factual.\n\n"
             )
         resp = await _claude_create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
+            max_tokens=2048,
             system=_sistema_con_horarios(await _horarios_vivos()),
             messages=[
                 {"role": "user", "content": _ctx_fecha15 + _recepcion_ctx15 + _referral_ctx15 + mensaje},
-                {"role": "assistant", "content": "{"},
             ],
+            schema=_SCHEMA_DETECT_INTENT,
+            prefill="{",
         )
-        # Prefill "{" → concatenar antes de parsear
-        text = _strip_markdown_json("{" + resp.content[0].text)
+        # 4.5: prefill "{" → concatenar antes de parsear. 5.x: salida estructurada, sin prefill.
+        _pf = "" if _modelo_con_output_config(CLAUDE_MODEL) else "{"
+        text = _strip_markdown_json(_pf + _resp_text(resp))
         if resp.stop_reason == "max_tokens":
             log.warning("detect_intent truncado por max_tokens: %r", mensaje[:80])
         # raw_decode tolerante: Claude a veces agrega texto/markdown después
@@ -2496,12 +2593,11 @@ async def consulta_clinica_doctor(pregunta: str) -> str:
     )
     try:
         resp = await _claude_create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
+            max_tokens=2048,
             system=system,
             messages=[{"role": "user", "content": pregunta}],
         )
-        return _scrub_telefonos(resp.content[0].text)
+        return _scrub_telefonos(_resp_text(resp))
     except Exception as e:
         log.error("consulta_clinica_doctor falló: %s", e)
         from resilience import is_claude_down, claude_down_reason
@@ -2887,12 +2983,12 @@ async def respuesta_faq(mensaje: str, recepcion_resumen: list | None = None,
             'NO escribas prosa fuera del JSON.\n\n'
         )
         resp = await _claude_create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
+            max_tokens=2048,
             system=_sistema_con_horarios(await _horarios_vivos()),
             messages=[{"role": "user", "content": _ctx_fecha15f + _recepcion_ctx15f + _referral_ctx15f + _json_instruct_f + mensaje}],
+            schema=_SCHEMA_FAQ,
         )
-        text = _strip_markdown_json(resp.content[0].text)
+        text = _strip_markdown_json(_resp_text(resp))
         if resp.stop_reason == "max_tokens":
             log.warning("respuesta_faq truncado por max_tokens: %r", mensaje[:80])
         # Misma sanitización defensiva que detect_intent: repara comillas dobles
@@ -3060,12 +3156,12 @@ async def classify_with_context(mensaje: str, state: str, session_data: dict) ->
 
     try:
         resp = await _claude_create(
-            model="claude-haiku-4-5",
-            max_tokens=120,
+            max_tokens=400,
             system=sys_prompt,
-            messages=[{"role": "user", "content": mensaje[:500]}]
+            messages=[{"role": "user", "content": mensaje[:500]}],
+            schema=_SCHEMA_CONTEXTO,
         )
-        raw = resp.content[0].text.strip()
+        raw = _resp_text(resp).strip()
         raw = _strip_markdown_json(raw)
         # raw_decode tolera texto extra despues del JSON (Claude a veces
         # agrega markdown/nota). Fallback a loads estricto como ultimo recurso.

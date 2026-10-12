@@ -15,7 +15,7 @@ Permite a los pacientes agendar, cancelar y ver sus citas médicas directamente 
 
 ## Stack tecnológico
 - **Backend**: Python 3.11 + FastAPI + Uvicorn
-- **IA**: Claude Haiku (`claude-haiku-4-5-20251001`) para detección de intención
+- **IA**: Claude Haiku (`CLAUDE_MODEL`, default `claude-haiku-5-5` con salida estructurada + effort low; rollback: `CLAUDE_MODEL=claude-haiku-4-5-20251001` en .env y restart) para detección de intención
 - **Agendamiento**: API Medilink 2 (healthatom) — `https://api.medilink2.healthatom.com/api/v5`
 - **Mensajería**: Meta Cloud API (WhatsApp Business) — webhook `POST /webhook`
 - **Sesiones**: SQLite (`data/sessions.db`) con timeout de 30 minutos
