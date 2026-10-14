@@ -317,6 +317,7 @@ table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--
 .dh{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface);flex:none;min-height:46px}
 .dh .crumb{display:flex;align-items:center;gap:6px;font-size:var(--fs-12);color:var(--text-3);min-width:0}
 .dh .crumb b{color:var(--text);font-size:var(--fs-15);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh .crumb{flex-shrink:0;max-width:40%} .dh .crumb span{white-space:nowrap}
 .d3{display:grid;grid-template-columns:repeat(3,1fr) 1.2fr;border-bottom:1px solid var(--line);background:var(--surface);flex:none}
 .d3 .kpi .kv{font-size:var(--fs-15)}
 .d3 .kpi .kl i{width:8px;height:8px;border-radius:2px;display:inline-block}
@@ -577,6 +578,7 @@ html[data-theme="dark"] .toast button{color:var(--blue)}
 
 <div class="win" id="sim" role="dialog" aria-label="Simulador de pagos" aria-modal="false"></div>
 <div class="ovl" id="palOvl"><div class="pal" role="dialog" aria-label="Paleta de comandos"><div class="pal-i"><svg class="ico mute"><use href="#i-search"/></svg><input id="palIn" placeholder="Ir a un profesional o ejecutar una acción…" autocomplete="off"><kbd>esc</kbd></div><div class="pal-l" id="palL"></div></div></div>
+<div class="ovl" id="repOvl"><div class="help" role="dialog" aria-label="Pegar reporte de Medilink" id="repBox" style="width:860px"></div></div>
 <div class="ovl" id="helpOvl"><div class="help" role="dialog" aria-label="Atajos de teclado" id="helpBox"></div></div>
 <div id="toasts" aria-live="polite"></div>
 <div id="print"></div>
@@ -614,6 +616,11 @@ function telNorm(t){let d=String(t||'').replace(/\D/g,'');if(d.length===9&&d[0]=
 const TIPOS={
   ok:{l:'Calza',c:'ok',g:'ok'},
   ok_patron:{l:'Patrón conocido',c:'ok',g:'pat'},
+  reporte_ok:{l:'Calza con reporte Medilink',c:'ok',g:'ok'},
+  sin_aplicar:{l:'Pago sin aplicar',c:'bad',g:'af',x:'El pago no está aplicado a un tratamiento de este profesional en Medilink (atención editada a $0 o aplicado a otro). Baja la base.'},
+  partido:{l:'Pago partido',c:'bad',g:'af',x:'Un mismo pago cubre tratamientos de dos profesionales. Confirme el reparto.'},
+  solo_en_reporte:{l:'Solo en reporte Medilink',c:'bad',g:'af',x:'El reporte de Medilink lo trae y el sistema no. Sube la base.'},
+  posible_exceso:{l:'Posible exceso',c:'bad',g:'af',x:'El reporte de otro profesional trae parte de este pago. Pegue el reporte de este profesional o confirme el reparto.'},
   fantasma_sistema:{l:'En sistema, no en Medilink',c:'bad',g:'af',x:'Está en el espejo pero ya no en Medilink (probablemente se anuló después del sync). Baja la base de pago.'},
   falta_en_sistema:{l:'En Medilink, falta en sistema',c:'bad',g:'af',x:'Medilink tiene el pago y el espejo no (sync atrasado). Sube la base de pago.'},
   otro_profesional:{l:'Otro profesional en Medilink',c:'bad',g:'af',x:'El mismo pago está atribuido a otro profesional en Medilink. Cambia a quién se le paga.'},
@@ -746,6 +753,7 @@ function buildMock(){
     if(method==='POST'&&path==='ajuste'){const a={id:Math.floor(rnd()*1e6),monto:body.monto,motivo:body.motivo};(DB.ajustes[body.prof]=DB.ajustes[body.prof]||[]).push(a);return {ok:true,id:a.id};}
     if(method==='DELETE'&&path.startsWith('ajuste/')){const aid=+path.split('/')[1];for(const k in DB.ajustes)DB.ajustes[k]=DB.ajustes[k].filter(a=>a.id!==aid);return {ok:true};}
     if(method==='POST'&&path==='whatsapp-enviado')return {ok:true,whatsapp_enviado_at:new Date().toISOString()};
+    if(path==='reporte-medilink'||path==='reparto'||path.startsWith('reparto/'))throw {status:400,detail:'En el modo de prueba no se procesan reportes ni repartos: use la vista previa con datos reales.'};
     if(method==='POST'&&path==='linea-decision')return {ok:true,clave_linea:body.clave_linea,decision:body.incluir};
     if(method==='POST'&&path==='config'){if(body.pct!=null)DB.pct[body.id]=body.pct;if(body.telefono!=null)DB.tel[body.id]=body.telefono;return {ok:true};}
     if(method==='POST'&&path==='verificar-medilink'){DB.run={t0:Date.now(),d:0};DB.verificado=false;return {ok:true,estado:'en_curso'};}
@@ -840,7 +848,7 @@ function renderTop(){
   el.style.display='';
   if(isRun(v)){const pc=v.dias_total?Math.round(100*(v.dias_ok||0)/v.dias_total):0;
     el.className='verif run';el.innerHTML=`<svg class="ico sm" style="color:var(--accent)"><use href="#i-refresh"/></svg><div class="vt"><b>Verificando con Medilink</b><small>día ${v.dias_ok||0} de ${v.dias_total||'—'}${v.dia_actual?' · '+fDia(v.dia_actual):''}</small></div><div class="vbar" role="progressbar" aria-valuenow="${pc}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pc}%"></i></div>`;}
-  else if(isVerif()){el.className='verif ok';el.innerHTML=`${ico('shield','sm')}<div class="vt"><b>Verificado con Medilink</b><small>${v.dias_ok||v.dias_total||''}${v.dias_total?' días':''} · ${fHace(v.at)||fFecha(v.at)}</small></div><button class="btn ghost sm" data-act="verificar" title="Volver a verificar (V)">${ico('refresh','xs')}</button>`;}
+  else if(isVerif()){el.className='verif ok';el.innerHTML=`${ico('shield','sm')}<div class="vt"><b>Caja verificada con Medilink</b><small>${v.dias_ok||v.dias_total||''}${v.dias_total?' días':''} · ${fHace(v.at)||fFecha(v.at)}</small></div><button class="btn ghost sm" data-act="verificar" title="Volver a verificar (V)">${ico('refresh','xs')}</button>`;}
   else if(v.estado==='error'){el.className='verif err';el.innerHTML=`${ico('alert','sm')}<div class="vt"><b>Verificación falló</b><small>${esc(v.error||'Medilink no respondió')}</small></div><button class="btn sm" data-act="verificar">Reintentar</button>`;}
   else {el.className='verif';el.innerHTML=`<span class="sdot neu"></span><div class="vt"><b>Medilink sin verificar</b><small>base de pago = sistema</small></div><button class="btn sm pri" data-act="verificar" title="Verificar con Medilink (V)">Verificar<kbd>V</kbd></button>`;}
 }
@@ -959,8 +967,10 @@ function insLiq(p){
   const ajRows=(l.ajustes||[]).map(a=>`<div class="sub"><span>${esc(a.motivo||'Ajuste')}<button class="ajx" data-act="ajdel" data-aj="${a.id}" title="Eliminar ajuste" aria-label="Eliminar ajuste">${ico('x','xs')}</button></span><b>${sgn(a.monto)}</b></div>`).join('');
   const centro=(l.base||0)-(l.bruto||0);
   const liq=`<div class="kv">
-    <div><span>Base de pago <small>${l.base_fuente==='medilink'?'Medilink en vivo':'sistema (sin verificar)'}</small></span><b>${clp(l.base)}</b></div>
-    <div><span>${p.fijo?'Honorario <small>monto fijo</small>':'Honorario <small>'+pctF(p.pct)+' de la base</small>'}</span><b>${clp(l.bruto)}</b></div>
+    <div><span>Base de pago <small>${BASEF[l.base_fuente]||l.base_fuente||''}</small></span><b>${clp(l.base)}</b></div>
+    <div><span>${p.fijo?'Honorario <small>monto fijo</small>':'Honorario <small>'+pctF(p.pct)+' de la base</small>'}</span><b>${clp(l.bruto_propio!=null?l.bruto_propio:l.bruto)}</b></div>
+    ${jefRows(l).map(j=>`<div><span>${esc(j.txt)} <small>lo paga el centro</small></span><b>${clp(j.monto)}</b></div>`).join('')}
+    ${(l.jefatura||[]).length?`<div><span>Honorario total <small>boleta</small></span><b>${clp(l.bruto)}</b></div>`:''}
     <div class="neg"><span>${p.sin_retencion?'Factura <small>sin retención</small>':'Retención boleta <small>15,25%</small>'}</span><b>${l.retencion?clp(-l.retencion):'$0'}</b></div>
     <div><span>Líquido</span><b>${clp(l.liquido)}</b></div>
     ${ajRows}
@@ -1116,6 +1126,45 @@ function lineCells(l){const T=tipo(l.tipo),v=isVerif(),hl=T.g==='pat'||T.g==='ok
   const dif=l.diferencia?`<div class="num dif" style="color:${T.g==='pat'?'var(--text-3)':'var(--'+(T.c==='ok'?'text-3':T.c)+')'}">${sgn(l.diferencia)}</div>`:'<div class="num na">—</div>';
   const af=(T.g==='af'||l.efecto_pago)?`<div class="afp" title="Afecta el pago${l.efecto_pago?': '+sgn(l.efecto_pago):''}">${ico('alert','xs')}</div>`:(l.cuenta_para_pago===false?`<div class="afp no" title="No cuenta en la base de pago">${ico('min','xs')}</div>`:'<div></div>');
   return `<div class="num mute">${fDia(l.fecha)}</div><div class="pac" title="${esc(l.paciente)}">${esc(l.paciente)}</div>${sis}${med}${mod}${dif}<div><span class="chip ${T.g==='pat'||T.g==='ok'?'soft neu':T.c}" title="${esc(l.explicacion||T.x||'')}">${T.g==='pat'||T.g==='ok'?'<span class="dot" style="color:var(--ok)"></span>':''}${esc(T.l)}</span></div>${af}`;}
+/* ═══════════════ atribución: reporte de Medilink + repartos ═══════════════ */
+function atribChip(p){const vr=p.verificacion||{},a=p.atribucion||{};
+  if(vr.atribucion==='verificada_reporte')return `<span class="chip ${a.cuadra===false?'warn':'ok'}" title="Reporte «Pagos período de» pegado ${esc(fHace(a.cargado_at)||'')}: ${fmtN.format(a.n_reporte||0)} pagos, ${clp(a.total_reporte)}. La base de pago es el total del reporte.">${ico('check','xs')}Atribución verificada</span>`;
+  return `<span class="chip ${vr.caja==='ok'?'soft ok':'soft neu'}" title="Medilink confirma que los pagos existen, pero no a qué profesional se aplicó cada uno: eso solo lo verifica el reporte por profesional.">Atribución sin verificar</span>`;}
+function jefRows(l){return (l.jefatura||[]).map(j=>({...j,txt:`${j.etiqueta}: ${(+j.pct).toLocaleString('es-CL')}% de la venta de ${j.nombre} (${clp(j.base)})`}));}
+const BASEF={medilink:'Medilink en vivo',sistema:'sistema (sin verificar)',reporte_medilink:'reporte de Medilink'};
+function nomProf(id){if(!id)return 'Sin asignar (saldo a favor)';const x=byId(id);return x?x.nombre:'Profesional #'+id;}
+function repartosBox(p,d){if(!d||!d.lineas)return '';const pr=d.repartos_propuestos||[],cf=d.repartos_confirmados||[];if(!pr.length&&!cf.length)return '';
+  const parts=x=>x.partes.map(t=>`<b>${clp(t.monto)}</b> ${esc(nomProf(t.id_profesional))}`).join(' + ');
+  return `<div class="sec" style="margin:8px 12px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--r3)"><div class="sec-t">REPARTOS DE PAGOS · SOLO PARA REMUNERACIONES<span class="r mute">No cambia el espejo ni Medilink</span></div>
+  ${pr.map((x,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--line-2)"><span class="chip bad">Propuesto</span><span style="flex:1">Pago #${x.pago_id} · ${fDia(x.fecha)} · ${esc(x.paciente||'')} · ${clp(x.monto_pago)} → ${parts(x)}<br><small class="mute">${esc(x.motivo||'')}${x.origen==='detector'?' (detector automático)':' (según el reporte)'}</small></span><button class="btn sm pri" data-act="rconf" data-i="${i}">Confirmar</button></div>`).join('')}
+  ${cf.map(x=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--line-2)"><span class="chip ok">${ico('check','xs')}Confirmado</span><span style="flex:1">Pago #${x.pago_id} → ${parts(x)}</span><button class="btn ghost sm" data-act="rdel" data-pid="${x.pago_id}">Deshacer</button></div>`).join('')}</div>`;}
+const REP={txt:'',prev:null,err:null,busy:false};
+function openRep(){const p=byId(S.sel);if(!p)return;REP.prev=null;REP.err=null;$('#repOvl').classList.add('on');renderRep();const t=$('#repTxt');if(t)t.focus();}
+function closeRep(){$('#repOvl').classList.remove('on');}
+function renderRep(){const p=byId(S.sel);if(!p)return;const a=p.atribucion||{},pv=REP.prev;
+  $('#repBox').innerHTML=`<h2>Pegar reporte de Medilink · ${esc(p.nombre)} · ${mesLabel(S.mes).toLowerCase()}<button class="btn ghost sm" data-act="repclose">Cerrar<kbd>esc</kbd></button></h2>
+  <p class="note" style="margin-bottom:8px">En Medilink abra <b>Pagos período de</b> del profesional, del 1 al último día del mes, seleccione todo (desde «Pagos período de» hasta la última fila) y péguelo aquí. Solo se guardan número de pago, tratamiento, fecha, medio y monto; los nombres no se guardan.</p>
+  ${a.estado==='reporte'?`<p class="note" style="margin-bottom:8px">Ya hay un reporte cargado (${fmtN.format(a.n_reporte)} pagos, ${clp(a.total_reporte)}). Si pega otro, lo reemplaza. <button class="btn ghost sm danger" data-act="repdel">Quitar reporte</button></p>`:''}
+  <textarea class="wa-txt" id="repTxt" spellcheck="false" style="min-height:220px;font-family:ui-monospace,Menlo,monospace;font-size:12px" placeholder="Pagos período de&#10;Nombre del profesional&#10;Total$935.250&#10;#    # Trat.    Medio de pago    Nombre paciente    Recepción    Monto&#10;40587    58556    Efectivo    …    30 Sep 2026    $11.390">${esc(REP.txt)}</textarea>
+  ${REP.err?`<div class="chip bad" style="margin-top:8px;height:auto;padding:6px 10px;white-space:normal">${ico('alert','xs')}${esc(REP.err)}</div>`:''}
+  ${pv?`<div style="margin-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center"><span class="chip ok">${ico('check','xs')}${fmtN.format(pv.n)} filas · suman ${clp(pv.total)} = Total del reporte</span><span>Base actual: <b>${clp(pv.base_actual)}</b></span><span>Con el reporte: <b>${clp(pv.total)}</b> (<b style="color:${pv.diferencia_vs_base?'var(--bad)':'var(--ok)'}">${sgn(pv.diferencia_vs_base)}</b>)</span></div>
+    ${(pv.advertencias||[]).map(w=>`<div class="chip warn" style="margin-top:6px;height:auto;padding:4px 8px;white-space:normal">${esc(w)}</div>`).join('')}
+    <div style="max-height:200px;overflow:auto;margin-top:8px;border:1px solid var(--line);border-radius:var(--r2)"><table class="cmp" style="width:100%;font-size:12px"><thead><tr><th>#</th><th># Trat.</th><th>Fecha</th><th>Medio</th><th class="num">Monto</th></tr></thead><tbody>${pv.filas.map(f=>`<tr><td>${f.pago_id}</td><td>${f.id_atencion||'—'}</td><td>${fDia(f.fecha)}</td><td>${esc(f.medio||'')}</td><td class="num">${clp(f.monto)}</td></tr>`).join('')}</tbody></table></div>`:''}
+  <div class="wa-acts" style="margin-top:10px"><button class="btn" data-act="repprev" ${REP.busy?'disabled':''}>Revisar filas</button><button class="btn pri" data-act="repsave" ${pv&&!REP.busy?'':'disabled'} title="${pv?'':'Primero revise las filas'}">Guardar y cruzar</button></div>`;
+  const t=$('#repTxt');if(t)t.addEventListener('input',()=>{REP.txt=t.value;if(REP.prev){REP.prev=null;renderRep();$('#repTxt').focus();}});}
+async function repPost(guardar){const p=byId(S.sel);if(!p)return;REP.busy=true;REP.err=null;renderRep();
+  try{const d=await api('reporte-medilink',{method:'POST',body:{prof:p.id,mes:S.mes,texto:REP.txt,guardar}});
+    if(!guardar){REP.prev=d;}else{REP.prev=null;REP.txt='';closeRep();
+      toast(`Reporte guardado. Base de ${p.nombre}: ${clp(d.base_antes)} → ${clp(d.base_ahora)}.${(d.repartos_propuestos||[]).length?' Hay repartos propuestos para confirmar.':''}`);
+      await refreshAtrib(p);}}
+  catch(e){REP.err=errMsg(e);}
+  REP.busy=false;if($('#repOvl').classList.contains('on'))renderRep();}
+async function refreshAtrib(p){S.det={};delete S.wa[waKey(p)];await loadMes({silent:true});await loadDet(p.id,true);if(S.view==='detail')renderDetail();renderIns();}
+async function repDel(){const p=byId(S.sel);if(!p)return;try{await api('reporte-medilink',{method:'DELETE',query:{prof:p.id,mes:S.mes}});closeRep();toast('Reporte quitado: la base vuelve a la caja.');await refreshAtrib(p);}catch(e){toast(errMsg(e),{err:1});}}
+async function repartoConf(i){const p=byId(S.sel),d=p&&S.det[p.id+'|'+S.mes],x=d&&(d.repartos_propuestos||[])[i];if(!x)return;
+  try{await api('reparto',{method:'POST',body:{pago_id:x.pago_id,origen:x.origen,partes:x.partes.map(t=>({id_profesional:t.id_profesional,monto:t.monto}))}});
+    toast(`Reparto del pago #${x.pago_id} confirmado.`);await refreshAtrib(p);}catch(e){toast(errMsg(e),{err:1});}}
+async function repartoDel(pid){const p=byId(S.sel);try{await api('reparto/'+pid,{method:'DELETE'});toast(`Reparto del pago #${pid} deshecho.`);await refreshAtrib(p);}catch(e){toast(errMsg(e),{err:1});}}
 function renderDetail(){
   const el=$('#det'),p=byId(S.sel);if(!p){el.innerHTML='';return;}
   const k=p.id+'|'+S.mes,d=S.det[k],fs=p.fuentes||{},c=conc(p),v=isVerif();
@@ -1128,13 +1177,15 @@ function renderDetail(){
   el.innerHTML=`<div class="dh"><button class="btn ghost sm" data-act="back" title="Volver a la lista (Esc)">${ico('l','sm')}Lista<kbd>esc</kbd></button>
     <div class="crumb"><b>${esc(p.nombre)}</b><span>· conciliación ${mesLabel(S.mes).toLowerCase()}</span></div>
     <button class="btn ghost icon sm" data-act="prev" title="Profesional anterior ([)" ${i<=0?'disabled':''}>${ico('up','sm')}</button><button class="btn ghost icon sm" data-act="next" title="Profesional siguiente (])" ${i>=ids.length-1?'disabled':''}>${ico('dn','sm')}</button>
-    <span class="spacer"></span>${v?'':`<button class="btn sm pri" data-act="verificar">Verificar con Medilink<kbd>V</kbd></button>`}
+    ${atribChip(p)}
+    <span class="spacer"></span><button class="btn sm" data-act="repopen" title="Pegar el reporte «Pagos período de» de este profesional desde Medilink">${ico('copy','sm')}Pegar reporte</button>${v?'':`<button class="btn sm pri" data-act="verificar">Verificar con Medilink<kbd>V</kbd></button>`}
     <label class="search" style="min-width:170px">${ico('search','sm')}<input id="dq" placeholder="Paciente o fecha" value="${esc(S.dd.q)}" aria-label="Buscar línea"><kbd>/</kbd></label></div>
   <div class="d3">
     <div class="kpi"><div class="kl"><i style="background:var(--src-sis)"></i>Sistema (espejo)</div><div class="kv">${clp(fs.sistema&&fs.sistema.monto)}</div><div class="ks">${fs.sistema?fmtN.format(fs.sistema.n)+' pagos':''}</div></div>
     <div class="kpi"><div class="kl"><i style="background:var(--src-med)"></i>Medilink en vivo</div><div class="kv">${fs.medilink?clp(fs.medilink.monto):'<span class="mute2">Sin verificar</span>'}</div><div class="ks">${fs.medilink?(dm?`<span style="color:var(--bad);font-weight:600">${sgn(dm)} vs sistema</span>`:`<span style="color:var(--ok);font-weight:600">${ico('check','xs')} calza al peso con el sistema</span>`):'consulta día por día'}</div></div>
     <div class="kpi"><div class="kl"><i style="background:var(--src-mod)"></i>Módulo Pagos (recepción)</div><div class="kv">${clp(fs.modulo&&fs.modulo.esperado)}</div><div class="ks">copago ${clpS(fs.modulo&&fs.modulo.copago)} + bonif. est. ${clpS(fs.modulo&&fs.modulo.bonif_est)}</div></div>
     <div class="kpi"><div class="kl"><span class="sdot ${c.cls}"></span>${c.nAf?'Afecta el pago':'Efecto en el pago'}</div><div class="kv" style="color:${c.nAf?'var(--bad)':'var(--ok)'}">${c.nAf?clp(c.mAf):'$0'}</div><div class="ks">${c.nAf?c.nAf+' líneas cambian la base':'Base de pago: '+(L(p).base_fuente==='medilink'?'Medilink en vivo':'sistema')}</div></div></div>
+  ${repartosBox(p,d)}
   <div class="tbar" style="min-height:42px;padding:6px 12px"><div class="seg" style="flex-wrap:wrap" role="tablist">${chips.map(([k2,l2,n])=>`<button role="tab" class="${S.dd.filter===k2?'on':''}" data-act="dfilt" data-f="${k2}">${k2!=='revisar'&&k2!=='todas'?`<span class="sdot ${tipo(k2).c}" style="width:6px;height:6px"></span>`:''}${esc(l2)}<span class="n">${fmtN.format(n||0)}</span></button>`).join('')}</div></div>
   <div class="ltable" id="lt" tabindex="-1"><div class="lhead"><div>Fecha</div><div>Paciente</div><div class="src"><i style="background:var(--src-sis)"></i>Sistema</div><div class="src"><i style="background:var(--src-med)"></i>Medilink</div><div class="src"><i style="background:var(--src-mod)"></i>Recepción</div><div class="num">Dif.</div><div>Tipo</div><div></div></div><div id="lbody" style="position:relative"></div></div>
   <div class="lfoot" id="lfoot"></div>`;
@@ -1178,10 +1229,14 @@ function simCompute(sc){
   ps.slice().sort((a,b)=>(L(b).a_transferir||0)-(L(a).a_transferir||0)).forEach(p=>{if(!ord.includes(String(p.id)))ord.push(String(p.id));});
   sc.extra.forEach(x=>{if(!ord.includes('x:'+x.id))ord.push('x:'+x.id);});sc.ord=ord;
   let rem=sc.disp==null?null:sc.disp,need=0,cov=0,nNeed=0,centro=0,acc=0;
+  const offK=new Set(ord.filter(k=>(sc.ov[k]||{}).off));
   const rows=ord.map(k=>{const o=sc.ov[k]||{};let r;
     if(k.startsWith('x:')){const x=sc.extra.find(e=>'x:'+e.id===k);r={k,extra:x,nombre:x.nombre||'Otro pago',transfer:x.monto||0,off:!!o.off,paid:false};}
     else{const p=byId(+k),l=L(p),pct=o.pct!=null?o.pct:p.pct;const chg=!p.fijo&&o.pct!=null&&o.pct!==p.pct;
-      const bruto=chg?Math.round((l.base||0)*pct/100):(l.bruto||0),ret=p.sin_retencion?0:(chg?Math.round(bruto*RET):(l.retencion||0));
+      // Jefatura: % de la venta de OTRO profesional; si a ese otro se le saca del escenario, no corre.
+      const jef=(l.jefatura||[]).reduce((s2,j)=>{if(offK.has(String(j.id_profesional)))return s2;const lo=byId(j.id_profesional);return s2+Math.round(((lo?L(lo).base:j.base)||0)*j.pct/100);},0);
+      const propio=chg?Math.round((l.base||0)*pct/100):(l.bruto_propio!=null?l.bruto_propio:(l.bruto||0)),chgJ=jef!==(l.total_jefatura||0);
+      const bruto=propio+jef,ret=p.sin_retencion?0:((chg||chgJ)?Math.round(bruto*RET):(l.retencion||0));
       const ajs=(o.aj||[]).reduce((s,a)=>s+(a.t==='bono'?1:-1)*(a.m||0),0);
       r={k,p,pct,chg,bruto,ret,ajs,transfer:bruto-ret+(l.total_ajustes||0)+ajs,off:!!o.off,paid:!!p.pagado};
       centro+=(l.base||0)-bruto;}
@@ -1310,8 +1365,8 @@ function buildPrint(){const el=$('#print');const T=S.data&&S.data.totales||{};co
     <tr class="tot"><td>Total</td><td class="r">${clp(T.base_pago)}</td><td></td><td class="r">${clp(T.bruto)}</td><td></td><td></td><td class="r">${clp((T.pagado||0)+(T.por_pagar||0))}</td><td></td></tr></tbody></table>`;return;}
   const p=byId(S.sel),l=L(p),d=S.det[p.id+'|'+S.mes];const ls=d&&d.lineas?d.lineas.filter(x=>x.cuenta_para_pago!==false).sort((a,b)=>a.fecha<b.fecha?-1:1):null;
   el.innerHTML=`<div class="ph"><div><h1>Liquidación de honorarios</h1><small>Centro Médico Carampangue · ${mesLabel(S.mes)}</small></div><small>Emitido ${now}</small></div>
-  <table><tbody><tr><td style="width:40%">Profesional</td><td><b>${esc(p.nombre)}</b></td></tr><tr><td>Especialidad</td><td>${esc(p.especialidad||'')}</td></tr><tr><td>Base de pago</td><td>${l.base_fuente==='medilink'?'Caja Medilink verificada':'Caja según sistema'}</td></tr></tbody></table>
-  <table><tbody><tr><td>Venta del mes (base)</td><td class="r">${clp(l.base)}</td></tr><tr><td>Honorario ${p.fijo?'(monto fijo)':'('+pctF(p.pct)+')'}</td><td class="r">${clp(l.bruto)}</td></tr>
+  <table><tbody><tr><td style="width:40%">Profesional</td><td><b>${esc(p.nombre)}</b></td></tr><tr><td>Especialidad</td><td>${esc(p.especialidad||'')}</td></tr><tr><td>Base de pago</td><td>${l.base_fuente==='reporte_medilink'?'Reporte de Medilink del profesional':l.base_fuente==='medilink'?'Caja Medilink verificada':'Caja según sistema'}</td></tr></tbody></table>
+  <table><tbody><tr><td>Venta del mes (base)</td><td class="r">${clp(l.base)}</td></tr><tr><td>Honorario ${p.fijo?'(monto fijo)':'('+pctF(p.pct)+')'}</td><td class="r">${clp(l.bruto_propio!=null?l.bruto_propio:l.bruto)}</td></tr>${jefRows(l).map(j=>`<tr><td>${esc(j.txt)}</td><td class="r">${clp(j.monto)}</td></tr>`).join('')}
   <tr><td>${p.sin_retencion?'Factura (sin retención)':'Retención boleta de honorarios 15,25%'}</td><td class="r">${clp(-(l.retencion||0))}</td></tr>
   ${(l.ajustes||[]).map(a=>`<tr><td>${esc(a.motivo||'Ajuste')}</td><td class="r">${sgn(a.monto)}</td></tr>`).join('')}
   <tr class="tot"><td>Total a transferir</td><td class="r">${clp(l.a_transferir)}</td></tr></tbody></table>
@@ -1337,7 +1392,7 @@ function renderAll(){renderTop();renderSum();renderList();renderIns();if(S.view=
 /* ═══════════════ eventos ═══════════════ */
 document.addEventListener('click',async e=>{
   const pi=e.target.closest('[data-pi]');if(pi){palRun(+pi.dataset.pi);return;}
-  if(e.target.id==='palOvl'){closePal();return;} if(e.target.id==='helpOvl'){closeHelp();return;}
+  if(e.target.id==='palOvl'){closePal();return;} if(e.target.id==='helpOvl'){closeHelp();return;} if(e.target.id==='repOvl'){closeRep();return;}
   const ri=e.target.closest('#lbody [data-ri]');if(ri){const i=+ri.dataset.ri,k=DSEL.indexOf(i);if(k>=0){S.dd.sel=k;if(DROWS[i].k==='grp')detToggle();else drawLines(false);}return;}
   const b=e.target.closest('[data-act]');
   if(!b){const tr=e.target.closest('#twrap tr.r');if(tr)select(+tr.dataset.id,{sheet:matchMedia('(max-width:760px)').matches});
@@ -1371,6 +1426,13 @@ document.addEventListener('click',async e=>{
     case 'wareload':delete S.wa[waKey(p)];renderIns();break;
     case 'warestore':{const w=S.wa[waKey(p)];w.texto=w.orig;w.edited=false;renderIns();break;}
     case 'wasend':if(p&&waSend(p))renderIns();break;
+    case 'repopen':openRep();break;
+    case 'repclose':closeRep();break;
+    case 'repprev':repPost(false);break;
+    case 'repsave':repPost(true);break;
+    case 'repdel':repDel();break;
+    case 'rconf':repartoConf(+b.dataset.i);break;
+    case 'rdel':repartoDel(+b.dataset.pid);break;
     case 'ldec':{const k2=p&&(p.id+'|'+S.mes),d2=k2&&S.det[k2],r2=d2&&DROWS[DSEL[S.dd.sel]];if(!r2||!r2.l)break;const v2=b.dataset.v===''?null:b.dataset.v==='1';
       api('linea-decision',{method:'POST',body:{prof:p.id,mes:S.mes,clave_linea:r2.l.clave_linea,incluir:v2}}).then(async()=>{toast(v2==null?'Línea vuelve a la regla por defecto.':v2?'Línea incluida en el pago.':'Línea excluida del pago.');delete S.wa[waKey(p)];await loadDet(p.id,true);await loadMes({silent:true});renderDetail();}).catch(e=>toast(errMsg(e),{err:1}));break;}
     case 'wacopy':if(p)waCopy(p);break;
@@ -1411,6 +1473,7 @@ document.addEventListener('keydown',e=>{
   if(mod&&k.toLowerCase()==='k'){e.preventDefault();$('#palOvl').classList.contains('on')?closePal():openPal();return;}
   if($('#palOvl').classList.contains('on')){if(k==='Escape'){e.preventDefault();closePal();}else if(k==='ArrowDown'||k==='ArrowUp'){e.preventDefault();PAL.sel=Math.max(0,Math.min(PAL.items.length-1,PAL.sel+(k==='ArrowDown'?1:-1)));palRender();}else if(k==='Enter'){e.preventDefault();palRun(PAL.sel);}return;}
   if($('#helpOvl').classList.contains('on')){if(k==='Escape'||k==='?'){e.preventDefault();closeHelp();}return;}
+  if($('#repOvl').classList.contains('on')){if(k==='Escape'){e.preventDefault();closeRep();}return;}
   if(mod&&k==='Enter'){const p=byId(S.sel);if(p&&S.batch){e.preventDefault();if(waSend(p))batchNext(true);return;}if(p&&S.insTab==='wa'){e.preventDefault();if(waSend(p))renderIns();return;}}
   if(mod&&k==='ArrowRight'&&S.batch&&!typing){e.preventDefault();batchNext(false);return;}
   if(mod&&k.toLowerCase()==='z'&&!e.shiftKey&&!typing){e.preventDefault();undo();return;}

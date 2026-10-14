@@ -88,3 +88,70 @@ Base de pago = Medilink en vivo si el mes está verificado; si no, sistema (y la
 - `POST /whatsapp-enviado {prof, mes}` → registra el envío (tabla `remun_envios(id, id_profesional, mes, canal, at)`); responde `{ok, whatsapp_enviado_at}`. No envía nada: el envío es en wa.me.
 - `POST /linea-decision {prof, mes, clave_linea, incluir: true|false|null}` → tabla `remun_decisiones(mes, id_profesional, clave_linea, incluir, at)`. Solo líneas `solo_en_modulo` (400 si es otro tipo, 404 si la clave no existe). `null` borra la decisión. `_linea_cuenta_para_pago` la respeta ANTES de la regla default. Cada línea de `/detalle` trae `clave_linea` (`fecha|id_profesional|id:<id_paciente>` o `n:<nombre normalizado>`) y `decision` (null|true|false). Las decisiones con `id:<id_paciente>` entran al borrado por derecho al olvido.
 - `POST /ajuste` → `{ok, id}`.
+
+## FASE 2 — Atribución (14-oct): reporte de Medilink, repartos, detector, jefatura
+
+**Por qué**: "Sistema = Medilink al peso" solo prueba que los pagos EXISTEN; la atribución usa la misma
+regla en ambos lados (`bi_sync._resolver_profesional_pago`). Caso real Armijo (77) sep-2026: reporte UI
+$935.250 (70 pagos) vs módulo $953.990 = pago 39968 sin aplicar ($30.130, atención 58037 editada a $0) +
+pago 40457 partido ($26.520 = $15.130 Márquez + $11.390 Armijo, el espejo lo cargaba entero a Márquez).
+La API no expone pago→tratamiento. La UI separa **caja verificada** (`verificado_medilink`) de
+**atribución verificada** (`profesional.verificacion.atribucion`).
+
+Tipos nuevos (todos afectan el pago, badge rojo): `sin_aplicar`, `partido`, `solo_en_reporte`,
+`posible_exceso`; y `reporte_ok` (calza con el reporte, verde). Prioridad: atribución > caja > recepción.
+
+Endpoints:
+- `POST /reporte-medilink {prof, mes, texto, guardar?}` → parsea el texto copiado de "Pagos período de"
+  (tabs o espacios, `$935.250`, fechas `30 Sep 2026` es/en, encabezados, línea Total). Valida suma de
+  filas = Total (400 con mensaje claro), sin duplicados, todas las fechas en el mes. `guardar:false` =
+  previsualizar (`filas, n, total, base_actual, diferencia_vs_base, advertencias`). Guardar responde
+  `base_antes, base_ahora, por_tipo, repartos_propuestos`. Tablas `remun_reporte_cab` +
+  `remun_reporte_medilink(mes, id_profesional, pago_id, id_atencion, fecha, monto, medio)` — SIN nombres
+  ni id_paciente (no requiere cascada).
+- `DELETE /reporte-medilink?prof=&mes=`.
+- Con reporte cargado la base del profesional = total del reporte (`base_fuente='reporte_medilink'`);
+  la regla `_linea_cuenta_para_pago` lo respeta después de la decisión por línea y antes del default.
+  A los otros profesionales que el espejo cargaba con parte de un pago del reporte: `posible_exceso`
+  ("pegue su reporte para confirmar"), con `efecto_pago` negativo.
+- Repartos (solo remuneraciones; NO toca `bi_pagos_caja` ni `bi_pago_overrides`): tabla
+  `remun_reparto(pago_id, id_profesional, monto, origen reporte|manual|detector, confirmado, at)`;
+  `id_profesional 0` = sin asignar (saldo a favor). `GET /repartos?mes=` → `{propuestos, confirmados}`;
+  `POST /reparto {pago_id, partes:[{id_profesional, monto}], origen?}` (Σ ≤ monto del pago; reemplaza);
+  `DELETE /reparto/{pago_id}`. La liquidación usa el reparto confirmado por encima del espejo (el pago se
+  parte en filas por profesional en sistema y Medilink).
+- `GET /mes` agrega `repartos_propuestos`, por profesional `verificacion {caja, atribucion}`,
+  `atribucion {estado, total_reporte, n_reporte, cargado_at, cuadra}`, `conciliacion.n_atribucion`,
+  `liquidacion.{bruto_propio, jefatura[], total_jefatura}`; totales `n_atribucion, n_reportes,
+  n_repartos_propuestos, n_repartos_confirmados`. `GET /detalle` agrega `reporte`, `verificacion`,
+  `repartos_propuestos`, `repartos_confirmados`; cada línea `reporte {monto, pago_ids, id_atencion}|null`,
+  `reporte_cargado`, `propuesta`, `reparto`, `pagos_linea [{pago_id, monto, atencion_id}]`.
+
+Detector automático (en cada GET /mes, local):
+- **Partido probable**: monto del pago = arancel de un área + arancel de otra (reusa
+  `bi_sync._tabla_monto_area` y `_AREA_POR_PROF`, la lógica de "pago partido por suma de aranceles" de
+  `auditar_atribucion_pagos`), el paciente tuvo cita Atendido / atención ese día con ambos profesionales,
+  solución única, pago sin override manual → propone reparto (origen `detector`). Sep-2026: 2 casos
+  (40457 y 39386).
+- **Sin aplicar probable**: la atención que el espejo asocia al pago tiene total $0 EN VIVO
+  (`remun_atencion_check`, llenada por el barrido con `GET /atenciones/{id}` SOLO para atenciones que
+  `bi_atenciones` muestra en $0, ≥4 s y backoff 429, tope 250; `POST /verificar-medilink
+  {mes, solo_atenciones:true}` corre solo esa parte). Es PROBABLE: el `atencion_id` del espejo es la
+  elección del matcher (39799 y 39968 apuntan ambos a la atención 58037; solo 39968 quedó sin aplicar),
+  por eso no propone reparto: lo resuelve el reporte pegado. `bi_atenciones.total` no sirve solo: es una
+  foto del día siguiente a la atención (155 pagos de sep apuntan a atenciones en $0).
+
+**Comisión de jefatura** (decisión del dueño 14-oct): `ebitda_routes.COMISION_JEFATURA = {21: [(77, 0.10,
+"Jefatura kinesiología")]}` y `comision_jefatura()` = regla única usada por `_ebitda_mes` y Remuneraciones.
+Etcheverry cobra su % + 10% de la venta de Luis; lo paga el centro (a Luis no se le descuenta); suma al
+bruto de 21 con su retención normal. Base de Luis = la misma con que se le paga (reporte / reparto /
+espejo; en EBITDA, su caja). Liquidación, impresión, WhatsApp y simulador muestran la línea "Jefatura
+kinesiología: 10% de la venta de Luis Armijo ($base) = $X"; el simulador la recalcula si se saca a Luis.
+
+**Pasos de deploy de la fase 2**:
+1. Desplegar el código (rutas nuevas, `ebitda_routes` con jefatura).
+2. EN EL MISMO deploy: `UPDATE equipo_cmc SET pct_honorario=50, updated_at=datetime('now') WHERE
+   id_medilink=21` (hoy 52, aproximación vieja; con la jefatura pasa a 50). 77 ya está en 50.
+3. Correr una vez `POST /verificar-medilink {mes:'2026-09', solo_atenciones:true}` fuera de horario punta.
+4. Avisar: `/cmc/mensual` (cmc_mensual.html) calcula honorarios en JS por su cuenta (semillas ORIGINAL,
+   "Kine Leo" 50%) y NO conoce la jefatura ni los repartos: su honorario de 21 no calzará con EBITDA.

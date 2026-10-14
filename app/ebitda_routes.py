@@ -276,6 +276,32 @@ def honorario_fijo(pid: int, mes: str):
     return None
 
 
+# Comisión de JEFATURA (decisión del dueño 14-oct-2026): el jefe cobra, además de
+# su % sobre su propia venta, un % de la VENTA de otro profesional. Lo paga el
+# CENTRO (no se le descuenta al otro): suma al bruto del jefe (con su retención
+# normal) y resta del margen del centro. jefe → [(id_otro, fracción, etiqueta)].
+# La base es la MISMA con que se le paga al otro profesional (en EBITDA, su
+# ingreso de caja; en Remuneraciones, su base de pago: reporte de Medilink o
+# reparto confirmado si existe).
+COMISION_JEFATURA: dict = {
+    21: [(77, 0.10, "Jefatura kinesiología")],   # Leo Etcheverry: 10% de la venta de Luis Armijo
+}
+
+
+def comision_jefatura(pid, bases: dict, nombres: dict | None = None) -> list[dict]:
+    """Comisiones de jefatura de `pid` dadas las bases de venta por profesional.
+    Regla ÚNICA: la usan `_ebitda_mes` y Remuneraciones Pro."""
+    out = []
+    for otro, frac, etiqueta in COMISION_JEFATURA.get(pid, ()):
+        base = int(bases.get(otro) or 0)
+        if base <= 0:
+            continue
+        out.append({"id_profesional": otro, "nombre": (nombres or {}).get(otro) or f"Prof {otro}",
+                    "etiqueta": etiqueta, "pct": round(frac * 100, 2), "base": base,
+                    "monto": round(base * frac)})
+    return out
+
+
 def _mes_bounds(mes: str):
     yr, mo = int(mes[:4]), int(mes[5:7])
     inicio = f"{mes}-01"
@@ -364,6 +390,31 @@ def _ebitda_mes(c, mes: str) -> dict:
             "pacientes": r["pac"],
         })
         tot_ing += ingreso; tot_bruto += bruto; tot_liq += liquido; tot_cmc += cmc
+
+    # Comisión de jefatura: sobre el ingreso de caja del otro profesional; la
+    # paga el centro (baja el margen del jefe en la tabla y el total).
+    ingresos = {p["id"]: p["ingreso"] for p in profs}
+    nombres = {p["id"]: p["nombre"] for p in profs}
+    for jefe in COMISION_JEFATURA:
+        com = comision_jefatura(jefe, ingresos, nombres)
+        if not com:
+            continue
+        pj = next((p for p in profs if p["id"] == jefe), None)
+        if pj is None:
+            info = PROFESIONALES.get(jefe, {})
+            pct, _f = _regla_honorario(jefe, mes, pct_map)
+            pj = {"id": jefe, "nombre": info.get("nombre") or f"Prof {jefe}",
+                  "especialidad": info.get("especialidad", ""), "ingreso": 0, "pct": pct, "fijo": False,
+                  "bruto": 0, "liquido": 0, "retencion": 0, "cmc": 0, "pacientes": 0}
+            profs.append(pj)
+        extra = sum(x["monto"] for x in com)
+        bruto = pj["bruto"] + extra
+        liquido = bruto if jefe in SIN_RETENCION else round(bruto * (1 - RETENCION_BOLETA))
+        tot_bruto += bruto - pj["bruto"]
+        tot_liq += liquido - pj["liquido"]
+        tot_cmc -= extra
+        pj.update(bruto=bruto, liquido=liquido, retencion=bruto - liquido, cmc=pj["cmc"] - extra,
+                  jefatura=com)
 
     gastos, gastos_detalle = _gastos_mes(c, mes)
     # Comisión Transbank automática (calculada del cruce caja × medio de pago)

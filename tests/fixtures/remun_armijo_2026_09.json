@@ -1,0 +1,1078 @@
+{
+"_doc": "Caso Armijo (77) sep-2026: pagos e ids de atenci\u00f3n REALES; id_paciente seudonimizados; sin nombres. Reporte UI Medilink = 70 pagos / 935.250; espejo = 953.990.",
+"espejo": [
+{
+"pago_id": 39213,
+"atencion_id": 56929,
+"fecha": "2026-09-01",
+"id_profesional": 77,
+"id_paciente": 900001,
+"monto": 11390
+},
+{
+"pago_id": 39220,
+"atencion_id": 56376,
+"fecha": "2026-09-01",
+"id_profesional": 77,
+"id_paciente": 900002,
+"monto": 11390
+},
+{
+"pago_id": 39271,
+"atencion_id": 56825,
+"fecha": "2026-09-02",
+"id_profesional": 77,
+"id_paciente": 900003,
+"monto": 11390
+},
+{
+"pago_id": 39276,
+"atencion_id": 56756,
+"fecha": "2026-09-02",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 15070
+},
+{
+"pago_id": 39289,
+"atencion_id": 56479,
+"fecha": "2026-09-02",
+"id_profesional": 77,
+"id_paciente": 900005,
+"monto": 11390
+},
+{
+"pago_id": 39339,
+"atencion_id": 56865,
+"fecha": "2026-09-03",
+"id_profesional": 77,
+"id_paciente": 900006,
+"monto": 15070
+},
+{
+"pago_id": 39344,
+"atencion_id": 57093,
+"fecha": "2026-09-03",
+"id_profesional": 77,
+"id_paciente": 900007,
+"monto": 11390
+},
+{
+"pago_id": 39345,
+"atencion_id": 56922,
+"fecha": "2026-09-03",
+"id_profesional": 77,
+"id_paciente": 900008,
+"monto": 11390
+},
+{
+"pago_id": 39352,
+"atencion_id": 56929,
+"fecha": "2026-09-03",
+"id_profesional": 77,
+"id_paciente": 900001,
+"monto": 11390
+},
+{
+"pago_id": 39354,
+"atencion_id": 53163,
+"fecha": "2026-09-03",
+"id_profesional": 77,
+"id_paciente": 900002,
+"monto": 15070
+},
+{
+"pago_id": 39421,
+"atencion_id": 56707,
+"fecha": "2026-09-04",
+"id_profesional": 77,
+"id_paciente": 900009,
+"monto": 15070
+},
+{
+"pago_id": 39434,
+"atencion_id": 56479,
+"fecha": "2026-09-04",
+"id_profesional": 77,
+"id_paciente": 900005,
+"monto": 11390
+},
+{
+"pago_id": 39436,
+"atencion_id": 56824,
+"fecha": "2026-09-04",
+"id_profesional": 77,
+"id_paciente": 900003,
+"monto": 3680
+},
+{
+"pago_id": 39442,
+"atencion_id": 57054,
+"fecha": "2026-09-05",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 11390
+},
+{
+"pago_id": 39444,
+"atencion_id": 56503,
+"fecha": "2026-09-05",
+"id_profesional": 77,
+"id_paciente": 900010,
+"monto": 15070
+},
+{
+"pago_id": 39526,
+"atencion_id": 57533,
+"fecha": "2026-09-07",
+"id_profesional": 77,
+"id_paciente": 900003,
+"monto": 11390
+},
+{
+"pago_id": 39542,
+"atencion_id": 57194,
+"fecha": "2026-09-07",
+"id_profesional": 77,
+"id_paciente": 900011,
+"monto": 11390
+},
+{
+"pago_id": 39549,
+"atencion_id": 56922,
+"fecha": "2026-09-07",
+"id_profesional": 77,
+"id_paciente": 900008,
+"monto": 11390
+},
+{
+"pago_id": 39550,
+"atencion_id": 57093,
+"fecha": "2026-09-07",
+"id_profesional": 77,
+"id_paciente": 900007,
+"monto": 11390
+},
+{
+"pago_id": 39611,
+"atencion_id": 57054,
+"fecha": "2026-09-08",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 11390
+},
+{
+"pago_id": 39618,
+"atencion_id": 57112,
+"fecha": "2026-09-08",
+"id_profesional": 77,
+"id_paciente": 900012,
+"monto": 15070
+},
+{
+"pago_id": 39624,
+"atencion_id": 57281,
+"fecha": "2026-09-08",
+"id_profesional": 77,
+"id_paciente": 900013,
+"monto": 16000
+},
+{
+"pago_id": 39672,
+"atencion_id": 57533,
+"fecha": "2026-09-09",
+"id_profesional": 77,
+"id_paciente": 900003,
+"monto": 11390
+},
+{
+"pago_id": 39678,
+"atencion_id": 57367,
+"fecha": "2026-09-09",
+"id_profesional": 77,
+"id_paciente": 900012,
+"monto": 11390
+},
+{
+"pago_id": 39684,
+"atencion_id": 57281,
+"fecha": "2026-09-09",
+"id_profesional": 77,
+"id_paciente": 900013,
+"monto": 16000
+},
+{
+"pago_id": 39735,
+"atencion_id": 57444,
+"fecha": "2026-09-10",
+"id_profesional": 77,
+"id_paciente": 900001,
+"monto": 11390
+},
+{
+"pago_id": 39736,
+"atencion_id": 56922,
+"fecha": "2026-09-10",
+"id_profesional": 77,
+"id_paciente": 900008,
+"monto": 11390
+},
+{
+"pago_id": 39737,
+"atencion_id": 57093,
+"fecha": "2026-09-10",
+"id_profesional": 77,
+"id_paciente": 900007,
+"monto": 11390
+},
+{
+"pago_id": 39782,
+"atencion_id": 57358,
+"fecha": "2026-09-11",
+"id_profesional": 77,
+"id_paciente": 900003,
+"monto": 19990
+},
+{
+"pago_id": 39783,
+"atencion_id": 57533,
+"fecha": "2026-09-11",
+"id_profesional": 77,
+"id_paciente": 900003,
+"monto": 11390
+},
+{
+"pago_id": 39799,
+"atencion_id": 58037,
+"fecha": "2026-09-11",
+"id_profesional": 77,
+"id_paciente": 900012,
+"monto": 45560
+},
+{
+"pago_id": 39802,
+"atencion_id": 57545,
+"fecha": "2026-09-12",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 11390
+},
+{
+"pago_id": 39805,
+"atencion_id": 57547,
+"fecha": "2026-09-12",
+"id_profesional": 77,
+"id_paciente": 900010,
+"monto": 11390
+},
+{
+"pago_id": 39902,
+"atencion_id": 57699,
+"fecha": "2026-09-14",
+"id_profesional": 77,
+"id_paciente": 900011,
+"monto": 11390
+},
+{
+"pago_id": 39917,
+"atencion_id": 56922,
+"fecha": "2026-09-14",
+"id_profesional": 77,
+"id_paciente": 900008,
+"monto": 11390
+},
+{
+"pago_id": 39919,
+"atencion_id": 57093,
+"fecha": "2026-09-14",
+"id_profesional": 77,
+"id_paciente": 900007,
+"monto": 11390
+},
+{
+"pago_id": 39920,
+"atencion_id": 57281,
+"fecha": "2026-09-14",
+"id_profesional": 77,
+"id_paciente": 900013,
+"monto": 16000
+},
+{
+"pago_id": 39962,
+"atencion_id": 58785,
+"fecha": "2026-09-15",
+"id_profesional": 77,
+"id_paciente": 900014,
+"monto": 15070
+},
+{
+"pago_id": 39963,
+"atencion_id": 57876,
+"fecha": "2026-09-15",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 11390
+},
+{
+"pago_id": 39968,
+"atencion_id": 58037,
+"fecha": "2026-09-15",
+"id_profesional": 77,
+"id_paciente": 900012,
+"monto": 30130
+},
+{
+"pago_id": 39970,
+"atencion_id": 57711,
+"fecha": "2026-09-15",
+"id_profesional": 77,
+"id_paciente": 900001,
+"monto": 11390
+},
+{
+"pago_id": 40018,
+"atencion_id": 58039,
+"fecha": "2026-09-16",
+"id_profesional": 77,
+"id_paciente": 900013,
+"monto": 16000
+},
+{
+"pago_id": 40021,
+"atencion_id": 57848,
+"fecha": "2026-09-16",
+"id_profesional": 77,
+"id_paciente": 900014,
+"monto": 11390
+},
+{
+"pago_id": 40032,
+"atencion_id": 57876,
+"fecha": "2026-09-17",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 11390
+},
+{
+"pago_id": 40033,
+"atencion_id": 57879,
+"fecha": "2026-09-17",
+"id_profesional": 77,
+"id_paciente": 900011,
+"monto": 11390
+},
+{
+"pago_id": 40036,
+"atencion_id": 57093,
+"fecha": "2026-09-17",
+"id_profesional": 77,
+"id_paciente": 900007,
+"monto": 11390
+},
+{
+"pago_id": 40037,
+"atencion_id": 58571,
+"fecha": "2026-09-17",
+"id_profesional": 77,
+"id_paciente": 900008,
+"monto": 11390
+},
+{
+"pago_id": 40107,
+"atencion_id": 58034,
+"fecha": "2026-09-21",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 11390
+},
+{
+"pago_id": 40118,
+"atencion_id": 58039,
+"fecha": "2026-09-21",
+"id_profesional": 77,
+"id_paciente": 900013,
+"monto": 16000
+},
+{
+"pago_id": 40121,
+"atencion_id": 58571,
+"fecha": "2026-09-21",
+"id_profesional": 77,
+"id_paciente": 900008,
+"monto": 11390
+},
+{
+"pago_id": 40122,
+"atencion_id": 58829,
+"fecha": "2026-09-21",
+"id_profesional": 77,
+"id_paciente": 900007,
+"monto": 11390
+},
+{
+"pago_id": 40176,
+"atencion_id": 58034,
+"fecha": "2026-09-22",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 22780
+},
+{
+"pago_id": 40183,
+"atencion_id": 58140,
+"fecha": "2026-09-22",
+"id_profesional": 77,
+"id_paciente": 900011,
+"monto": 11390
+},
+{
+"pago_id": 40188,
+"atencion_id": 57984,
+"fecha": "2026-09-22",
+"id_profesional": 77,
+"id_paciente": 900001,
+"monto": 3680
+},
+{
+"pago_id": 40192,
+"atencion_id": 58026,
+"fecha": "2026-09-22",
+"id_profesional": 77,
+"id_paciente": 900015,
+"monto": 15070
+},
+{
+"pago_id": 40246,
+"atencion_id": 58233,
+"fecha": "2026-09-23",
+"id_profesional": 77,
+"id_paciente": 900015,
+"monto": 11390
+},
+{
+"pago_id": 40251,
+"atencion_id": 58039,
+"fecha": "2026-09-23",
+"id_profesional": 77,
+"id_paciente": 900013,
+"monto": 16000
+},
+{
+"pago_id": 40338,
+"atencion_id": 58382,
+"fecha": "2026-09-25",
+"id_profesional": 77,
+"id_paciente": 900011,
+"monto": 11390
+},
+{
+"pago_id": 40340,
+"atencion_id": 58948,
+"fecha": "2026-09-25",
+"id_profesional": 77,
+"id_paciente": 900014,
+"monto": 11390
+},
+{
+"pago_id": 40349,
+"atencion_id": 55440,
+"fecha": "2026-09-25",
+"id_profesional": 77,
+"id_paciente": 900001,
+"monto": 15070
+},
+{
+"pago_id": 40360,
+"atencion_id": 58039,
+"fecha": "2026-09-26",
+"id_profesional": 77,
+"id_paciente": 900013,
+"monto": 16000
+},
+{
+"pago_id": 40457,
+"atencion_id": 58238,
+"fecha": "2026-09-28",
+"id_profesional": 13,
+"id_paciente": 900015,
+"monto": 26520
+},
+{
+"pago_id": 40470,
+"atencion_id": 58562,
+"fecha": "2026-09-28",
+"id_profesional": 77,
+"id_paciente": 900012,
+"monto": 37850
+},
+{
+"pago_id": 40478,
+"atencion_id": 58236,
+"fecha": "2026-09-28",
+"id_profesional": 77,
+"id_paciente": 900012,
+"monto": 11390
+},
+{
+"pago_id": 40481,
+"atencion_id": 58665,
+"fecha": "2026-09-28",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 11390
+},
+{
+"pago_id": 40483,
+"atencion_id": 58571,
+"fecha": "2026-09-28",
+"id_profesional": 77,
+"id_paciente": 900008,
+"monto": 11390
+},
+{
+"pago_id": 40486,
+"atencion_id": 58829,
+"fecha": "2026-09-28",
+"id_profesional": 77,
+"id_paciente": 900007,
+"monto": 11390
+},
+{
+"pago_id": 40540,
+"atencion_id": 58660,
+"fecha": "2026-09-29",
+"id_profesional": 77,
+"id_paciente": 900016,
+"monto": 15070
+},
+{
+"pago_id": 40546,
+"atencion_id": 56756,
+"fecha": "2026-09-29",
+"id_profesional": 77,
+"id_paciente": 900004,
+"monto": 15070
+},
+{
+"pago_id": 40585,
+"atencion_id": 58731,
+"fecha": "2026-09-30",
+"id_profesional": 77,
+"id_paciente": 900011,
+"monto": 11390
+},
+{
+"pago_id": 40587,
+"atencion_id": 58556,
+"fecha": "2026-09-30",
+"id_profesional": 77,
+"id_paciente": 900015,
+"monto": 11390
+},
+{
+"pago_id": 39250,
+"atencion_id": 57755,
+"fecha": "2026-09-02",
+"id_profesional": 13,
+"id_paciente": 900017,
+"monto": 30000
+},
+{
+"pago_id": 39256,
+"atencion_id": 57260,
+"fecha": "2026-09-02",
+"id_profesional": 13,
+"id_paciente": 900018,
+"monto": 15130
+},
+{
+"pago_id": 39257,
+"atencion_id": 56754,
+"fecha": "2026-09-02",
+"id_profesional": 13,
+"id_paciente": 900019,
+"monto": 15130
+},
+{
+"pago_id": 39260,
+"atencion_id": 56699,
+"fecha": "2026-09-02",
+"id_profesional": 13,
+"id_paciente": 900020,
+"monto": 15130
+},
+{
+"pago_id": 39261,
+"atencion_id": 56689,
+"fecha": "2026-09-02",
+"id_profesional": 13,
+"id_paciente": 900021,
+"monto": 15130
+}
+],
+"reporte_filas": [
+{
+"pago_id": 40587,
+"id_atencion": 58556,
+"fecha": "2026-09-30",
+"monto": 11390
+},
+{
+"pago_id": 40585,
+"id_atencion": 58731,
+"fecha": "2026-09-30",
+"monto": 11390
+},
+{
+"pago_id": 40546,
+"id_atencion": 56756,
+"fecha": "2026-09-29",
+"monto": 15070
+},
+{
+"pago_id": 40540,
+"id_atencion": 58660,
+"fecha": "2026-09-29",
+"monto": 15070
+},
+{
+"pago_id": 40486,
+"id_atencion": 58829,
+"fecha": "2026-09-28",
+"monto": 11390
+},
+{
+"pago_id": 40483,
+"id_atencion": 58571,
+"fecha": "2026-09-28",
+"monto": 11390
+},
+{
+"pago_id": 40481,
+"id_atencion": 58665,
+"fecha": "2026-09-28",
+"monto": 11390
+},
+{
+"pago_id": 40478,
+"id_atencion": 58236,
+"fecha": "2026-09-28",
+"monto": 11390
+},
+{
+"pago_id": 40470,
+"id_atencion": 58562,
+"fecha": "2026-09-28",
+"monto": 37850
+},
+{
+"pago_id": 40457,
+"id_atencion": 58314,
+"fecha": "2026-09-28",
+"monto": 11390
+},
+{
+"pago_id": 40360,
+"id_atencion": 58039,
+"fecha": "2026-09-26",
+"monto": 16000
+},
+{
+"pago_id": 40349,
+"id_atencion": 55440,
+"fecha": "2026-09-25",
+"monto": 15070
+},
+{
+"pago_id": 40340,
+"id_atencion": 58948,
+"fecha": "2026-09-25",
+"monto": 11390
+},
+{
+"pago_id": 40338,
+"id_atencion": 58382,
+"fecha": "2026-09-25",
+"monto": 11390
+},
+{
+"pago_id": 40251,
+"id_atencion": 58039,
+"fecha": "2026-09-23",
+"monto": 16000
+},
+{
+"pago_id": 40246,
+"id_atencion": 58233,
+"fecha": "2026-09-23",
+"monto": 11390
+},
+{
+"pago_id": 40192,
+"id_atencion": 58026,
+"fecha": "2026-09-22",
+"monto": 15070
+},
+{
+"pago_id": 40188,
+"id_atencion": 57984,
+"fecha": "2026-09-22",
+"monto": 3680
+},
+{
+"pago_id": 40183,
+"id_atencion": 58140,
+"fecha": "2026-09-22",
+"monto": 11390
+},
+{
+"pago_id": 40176,
+"id_atencion": 58034,
+"fecha": "2026-09-22",
+"monto": 22780
+},
+{
+"pago_id": 40122,
+"id_atencion": 58829,
+"fecha": "2026-09-21",
+"monto": 11390
+},
+{
+"pago_id": 40121,
+"id_atencion": 58571,
+"fecha": "2026-09-21",
+"monto": 11390
+},
+{
+"pago_id": 40118,
+"id_atencion": 58039,
+"fecha": "2026-09-21",
+"monto": 16000
+},
+{
+"pago_id": 40107,
+"id_atencion": 58034,
+"fecha": "2026-09-21",
+"monto": 11390
+},
+{
+"pago_id": 40037,
+"id_atencion": 58571,
+"fecha": "2026-09-17",
+"monto": 11390
+},
+{
+"pago_id": 40036,
+"id_atencion": 57093,
+"fecha": "2026-09-17",
+"monto": 11390
+},
+{
+"pago_id": 40033,
+"id_atencion": 57879,
+"fecha": "2026-09-17",
+"monto": 11390
+},
+{
+"pago_id": 40032,
+"id_atencion": 57876,
+"fecha": "2026-09-17",
+"monto": 11390
+},
+{
+"pago_id": 40021,
+"id_atencion": 57848,
+"fecha": "2026-09-16",
+"monto": 11390
+},
+{
+"pago_id": 40018,
+"id_atencion": 58039,
+"fecha": "2026-09-16",
+"monto": 16000
+},
+{
+"pago_id": 39970,
+"id_atencion": 57711,
+"fecha": "2026-09-15",
+"monto": 11390
+},
+{
+"pago_id": 39963,
+"id_atencion": 57876,
+"fecha": "2026-09-15",
+"monto": 11390
+},
+{
+"pago_id": 39962,
+"id_atencion": 58785,
+"fecha": "2026-09-15",
+"monto": 15070
+},
+{
+"pago_id": 39920,
+"id_atencion": 57281,
+"fecha": "2026-09-14",
+"monto": 16000
+},
+{
+"pago_id": 39919,
+"id_atencion": 57093,
+"fecha": "2026-09-14",
+"monto": 11390
+},
+{
+"pago_id": 39917,
+"id_atencion": 56922,
+"fecha": "2026-09-14",
+"monto": 11390
+},
+{
+"pago_id": 39902,
+"id_atencion": 57699,
+"fecha": "2026-09-14",
+"monto": 11390
+},
+{
+"pago_id": 39805,
+"id_atencion": 57547,
+"fecha": "2026-09-12",
+"monto": 11390
+},
+{
+"pago_id": 39802,
+"id_atencion": 57545,
+"fecha": "2026-09-12",
+"monto": 11390
+},
+{
+"pago_id": 39799,
+"id_atencion": 58037,
+"fecha": "2026-09-11",
+"monto": 45560
+},
+{
+"pago_id": 39783,
+"id_atencion": 57533,
+"fecha": "2026-09-11",
+"monto": 11390
+},
+{
+"pago_id": 39782,
+"id_atencion": 57358,
+"fecha": "2026-09-11",
+"monto": 19990
+},
+{
+"pago_id": 39737,
+"id_atencion": 57093,
+"fecha": "2026-09-10",
+"monto": 11390
+},
+{
+"pago_id": 39736,
+"id_atencion": 56922,
+"fecha": "2026-09-10",
+"monto": 11390
+},
+{
+"pago_id": 39735,
+"id_atencion": 57444,
+"fecha": "2026-09-10",
+"monto": 11390
+},
+{
+"pago_id": 39684,
+"id_atencion": 57281,
+"fecha": "2026-09-09",
+"monto": 16000
+},
+{
+"pago_id": 39678,
+"id_atencion": 57367,
+"fecha": "2026-09-09",
+"monto": 11390
+},
+{
+"pago_id": 39672,
+"id_atencion": 57533,
+"fecha": "2026-09-09",
+"monto": 11390
+},
+{
+"pago_id": 39624,
+"id_atencion": 57281,
+"fecha": "2026-09-08",
+"monto": 16000
+},
+{
+"pago_id": 39618,
+"id_atencion": 57112,
+"fecha": "2026-09-08",
+"monto": 15070
+},
+{
+"pago_id": 39611,
+"id_atencion": 57054,
+"fecha": "2026-09-08",
+"monto": 11390
+},
+{
+"pago_id": 39550,
+"id_atencion": 57093,
+"fecha": "2026-09-07",
+"monto": 11390
+},
+{
+"pago_id": 39549,
+"id_atencion": 56922,
+"fecha": "2026-09-07",
+"monto": 11390
+},
+{
+"pago_id": 39542,
+"id_atencion": 57194,
+"fecha": "2026-09-07",
+"monto": 11390
+},
+{
+"pago_id": 39526,
+"id_atencion": 57533,
+"fecha": "2026-09-07",
+"monto": 11390
+},
+{
+"pago_id": 39444,
+"id_atencion": 56503,
+"fecha": "2026-09-05",
+"monto": 15070
+},
+{
+"pago_id": 39442,
+"id_atencion": 57054,
+"fecha": "2026-09-05",
+"monto": 11390
+},
+{
+"pago_id": 39436,
+"id_atencion": 56824,
+"fecha": "2026-09-04",
+"monto": 3680
+},
+{
+"pago_id": 39434,
+"id_atencion": 56479,
+"fecha": "2026-09-04",
+"monto": 11390
+},
+{
+"pago_id": 39421,
+"id_atencion": 56707,
+"fecha": "2026-09-04",
+"monto": 15070
+},
+{
+"pago_id": 39354,
+"id_atencion": 53163,
+"fecha": "2026-09-03",
+"monto": 15070
+},
+{
+"pago_id": 39352,
+"id_atencion": 56929,
+"fecha": "2026-09-03",
+"monto": 11390
+},
+{
+"pago_id": 39345,
+"id_atencion": 56922,
+"fecha": "2026-09-03",
+"monto": 11390
+},
+{
+"pago_id": 39344,
+"id_atencion": 57093,
+"fecha": "2026-09-03",
+"monto": 11390
+},
+{
+"pago_id": 39339,
+"id_atencion": 56865,
+"fecha": "2026-09-03",
+"monto": 15070
+},
+{
+"pago_id": 39289,
+"id_atencion": 56479,
+"fecha": "2026-09-02",
+"monto": 11390
+},
+{
+"pago_id": 39276,
+"id_atencion": 56756,
+"fecha": "2026-09-02",
+"monto": 15070
+},
+{
+"pago_id": 39271,
+"id_atencion": 56825,
+"fecha": "2026-09-02",
+"monto": 11390
+},
+{
+"pago_id": 39220,
+"id_atencion": 56376,
+"fecha": "2026-09-01",
+"monto": 11390
+},
+{
+"pago_id": 39213,
+"id_atencion": 56929,
+"fecha": "2026-09-01",
+"monto": 11390
+}
+],
+"reporte_total": 935250,
+"atenciones": [
+{
+"atencion_id": 58037,
+"fecha": "2026-09-21",
+"id_paciente": 900012,
+"id_profesional": 77,
+"total": 0,
+"abonado": 0
+},
+{
+"atencion_id": 58238,
+"fecha": "2026-09-24",
+"id_paciente": 900015,
+"id_profesional": 13,
+"total": 0,
+"abonado": 0
+},
+{
+"atencion_id": 58314,
+"fecha": "2026-09-25",
+"id_paciente": 900015,
+"id_profesional": 77,
+"total": 11390,
+"abonado": 0
+}
+],
+"citas": [
+{
+"fecha": "2026-09-28",
+"id_paciente": 900015,
+"id_profesional": 13,
+"estado_cita": "Atendido"
+},
+{
+"fecha": "2026-09-28",
+"id_paciente": 900015,
+"id_profesional": 77,
+"estado_cita": "Atendido"
+}
+],
+"paciente_partido": 900015,
+"paciente_sin_aplicar": 900012
+}

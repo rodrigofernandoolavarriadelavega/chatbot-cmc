@@ -53,7 +53,9 @@ def _reset_db():
     with db() as c:
         for t in ("bi_pagos_caja", "bi_atenciones", "bi_pago_overrides", "pagos_cmc", "equipo_cmc",
                   "egresos_cmc", "remun_medilink_pagos", "remun_medilink_dias", "remun_verificacion",
-                  "remun_ajustes", "remuneracion_estado"):
+                  "remun_ajustes", "remuneracion_estado", "remun_envios", "remun_decisiones",
+                  "remun_reporte_cab", "remun_reporte_medilink", "remun_reparto", "remun_atencion_check",
+                  "ausentismo_citas"):
             c.execute(f"DROP TABLE IF EXISTS {t}")
         c.execute("""CREATE TABLE bi_pagos_caja (pago_id INTEGER PRIMARY KEY, atencion_id INTEGER, fecha TEXT,
             id_profesional INTEGER, id_paciente INTEGER, monto INTEGER, metodo_pago TEXT, n_folio TEXT,
@@ -611,6 +613,316 @@ class TestBarrido(Base):
         r = cli.post("/api/remuneraciones/verificar-medilink", params=Q, json={"mes": "2099-01"})
         self.assertEqual(r.status_code, 400)
 
+
+# ═════════════════ Fase 2: atribución (caso real Armijo, sep-2026) ═════════════
+import json as _json  # noqa: E402
+import bi_sync  # noqa: E402
+
+ARM = _json.loads((ROOT / "tests" / "fixtures" / "remun_armijo_2026_09.json").read_text())
+_MESES_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+_TABLA = {15130: "med", 11390: "kine", 3680: "kine", 15070: "kine", 20980: "psico"}
+
+
+def _fecha_ui(iso):
+    return f"{iso[8:10]} {_MESES_EN[int(iso[5:7]) - 1]} {iso[:4]}"
+
+
+def texto_reporte(filas=None, total=None, sep="    ", nombre="Luis Ariel Armijo Toloza"):
+    """Mismo formato que copia la UI de Medilink (nombres de pacientes FALSOS)."""
+    filas = ARM["reporte_filas"] if filas is None else filas
+    total = sum(f["monto"] for f in filas) if total is None else total
+    L = ["Pagos período de ", nombre, "Generar 30 Sep 2026al01 Sep 2026del",
+         "Mostrar/Esconder resumen de tipos de pago", "Total$" + f"{total:,}".replace(",", "."),
+         sep.join(["#", "# Trat.", "Medio de pago", "Nombre paciente", "Recepción", "Monto"])]
+    for i, f in enumerate(filas):
+        L.append(sep.join([str(f["pago_id"]), str(f["id_atencion"]), "Efectivo", f"Paciente Ficticio {i}",
+                           _fecha_ui(f["fecha"]), "$" + f"{f['monto']:,}".replace(",", ".")]))
+    return "\n".join(L)
+
+
+class TestParserReporte(unittest.TestCase):
+    def test_parser_formato_real_espacios_y_tabs(self):
+        for sep in ("    ", "\t", "  \t "):
+            r = rp.parsear_reporte_medilink(texto_reporte(sep=sep))
+            self.assertEqual((r["n"], r["total"]), (70, 935250))
+            f = next(x for x in r["filas"] if x["pago_id"] == 40457)
+            self.assertEqual((f["id_atencion"], f["fecha"], f["monto"], f["medio"]),
+                             (58314, "2026-09-28", 11390, "Efectivo"))
+            self.assertEqual(r["profesional_texto"], "Luis Ariel Armijo Toloza")
+            self.assertEqual(r["periodo"], ("2026-09-01", "2026-09-30"))
+
+    def test_parser_inicio_literal_del_dueno(self):
+        t = ("Pagos período de \nLuis Ariel Armijo Toloza\nGenerar 30 Sep 2026al01 Sep 2026del\n"
+             "Mostrar/Esconder resumen de tipos de pago\nTotal$37.850\n"
+             "#    # Trat.    Medio de pago    Nombre paciente    Recepción    Monto\n"
+             "40587    58556    Efectivo    Ana Uno Prueba    30 Sep 2026    $11.390\n"
+             "40457    58314    Efectivo    Ana Uno Prueba    28 Sep 2026    $11.390\n"
+             "40188    57984    Efectivo    Berta Dos Prueba    22 Sep 2026    $3.680\n"
+             "39213    56371    Efectivo    Berta Dos Prueba    01 Sep 2026    $11.390\n")
+        r = rp.parsear_reporte_medilink(t)
+        self.assertEqual([x["pago_id"] for x in r["filas"]], [40587, 40457, 40188, 39213])
+        self.assertEqual(r["filas"][3]["fecha"], "2026-09-01")
+
+    def test_meses_en_espanol_y_total_con_espacio(self):
+        t = ("Total $26.520\n1    2    Tarjeta de débito    X Y    3 ago 2026    $15.130\n"
+             "3    4    Transferencia    Z W    4 dic. 2026    $ 11.390")
+        r = rp.parsear_reporte_medilink(t)
+        self.assertEqual([x["fecha"] for x in r["filas"]], ["2026-08-03", "2026-12-04"])
+        self.assertEqual(r["filas"][0]["medio"], "Tarjeta de débito")
+
+    def test_suma_distinta_del_total_es_error(self):
+        with self.assertRaisesRegex(ValueError, "no coincide con el Total"):
+            rp.parsear_reporte_medilink(texto_reporte(total=900000))
+        with self.assertRaisesRegex(ValueError, "Total"):
+            rp.parsear_reporte_medilink("40587    58556    Efectivo    X    30 Sep 2026    $11.390")
+
+
+class _ArmijoBase(Base):
+    def setUp(self):
+        super().setUp()
+        self._tabla = bi_sync._tabla_monto_area
+        bi_sync._tabla_monto_area = lambda c: dict(_TABLA)
+        from session import db
+        with db() as c:
+            for r in ARM["espejo"]:
+                c.execute("INSERT INTO bi_pagos_caja (pago_id, atencion_id, fecha, id_profesional, id_paciente, "
+                          "monto, nombre_paciente) VALUES (?,?,?,?,?,?,?)",
+                          (r["pago_id"], r["atencion_id"], r["fecha"], r["id_profesional"], r["id_paciente"],
+                           r["monto"], f"Paciente Ficticio {r['id_paciente']}"))
+            for a in ARM["atenciones"]:
+                c.execute("INSERT INTO bi_atenciones (atencion_id, fecha, id_paciente, id_profesional, total) "
+                          "VALUES (?,?,?,?,?)", (a["atencion_id"], a["fecha"], a["id_paciente"],
+                                                 a["id_profesional"], a["total"]))
+            c.execute("CREATE TABLE ausentismo_citas (fecha TEXT, id_paciente INTEGER, id_profesional INTEGER, "
+                      "estado_cita TEXT)")
+            for x in ARM["citas"]:
+                c.execute("INSERT INTO ausentismo_citas VALUES (?,?,?,?)",
+                          (x["fecha"], x["id_paciente"], x["id_profesional"], x["estado_cita"]))
+            c.execute("INSERT INTO equipo_cmc (id_medilink, nombre, pct_honorario) VALUES (77,'Luis Armijo',41)")
+            c.execute("INSERT INTO equipo_cmc (id_medilink, nombre, pct_honorario) VALUES (13,'Dr. Alonso Márquez',75)")
+
+    def tearDown(self):
+        bi_sync._tabla_monto_area = self._tabla
+
+    def _base(self, pid):
+        return prof(mes(), pid)["liquidacion"]["base"]
+
+    def _pegar(self, **kw):
+        return cli.post("/api/remuneraciones/reporte-medilink", params=Q,
+                        json={"prof": 77, "mes": MES, "texto": texto_reporte(), **kw})
+
+
+
+class TestAtribucionArmijo(_ArmijoBase):
+    def test_espejo_da_953990_y_detector_propone_partido(self):
+        self.assertEqual(self._base(77), 953990)
+        m = mes()
+        prop = {p["pago_id"]: p for p in m["repartos_propuestos"]}
+        self.assertIn(40457, prop)
+        self.assertEqual(sorted((x["id_profesional"], x["monto"]) for x in prop[40457]["partes"]),
+                         [(13, 15130), (77, 11390)])
+        self.assertEqual(prop[40457]["origen"], "detector")
+        ml = next(x for x in lineas(13) if 40457 in x["sistema"]["pago_ids"])
+        self.assertEqual(ml["tipo"], "partido")
+        self.assertEqual(ml["efecto_pago"], -11390)
+        al = next(x for x in lineas(77) if x["tipo"] == "partido")
+        self.assertEqual(al["efecto_pago"], 11390)
+        self.assertFalse(al["cuenta_para_pago"])              # hasta que el dueño confirme
+        self.assertGreater(prof(m, 77)["conciliacion"]["n_dif"], 0)   # badge rojo
+        self.assertNotIn(39968, prop)                         # sin chequeo en vivo no se inventa
+
+    def test_sin_aplicar_con_atencion_total_cero_en_vivo(self):
+        from session import db
+        with db() as c:
+            rp._ensure_tablas(c)
+            c.execute("INSERT INTO remun_atencion_check (atencion_id, id_profesional, total, abonado, deuda, "
+                      "fetched_at) VALUES (58037, 77, 0, 0, 0, datetime('now'))")
+        x = next(l for l in lineas(77) if 39968 in (l["sistema"] or {}).get("pago_ids", []))
+        self.assertEqual(x["tipo"], "sin_aplicar")
+        self.assertIn("re-aplicarlo o es saldo a favor", x["explicacion"])
+        self.assertEqual(x["efecto_pago"], -30130)
+        # probable, no seguro: no se propone reparto sin el reporte
+        self.assertNotIn(39968, {p["pago_id"] for p in mes()["repartos_propuestos"]})
+
+    def test_dos_pagos_misma_atencion_cero_el_reporte_desempata(self):
+        """39799 y 39968 apuntan a la atención #58037 ($0 en vivo): el detector
+        marca ambos como probables; con el reporte solo queda 39968."""
+        from session import db
+        with db() as c:
+            rp._ensure_tablas(c)
+            c.execute("INSERT INTO remun_atencion_check (atencion_id, id_profesional, total, abonado, deuda, "
+                      "fetched_at) VALUES (58037, 77, 0, 0, 0, datetime('now'))")
+        pids = lambda: sorted(l["pagos_linea"][0]["pago_id"] for l in lineas(77) if l["tipo"] == "sin_aplicar")  # noqa: E731
+        self.assertEqual(pids(), [39799, 39968])
+        self._pegar()
+        self.assertEqual(pids(), [39968])
+        x = next(l for l in lineas(77) if l["tipo"] == "sin_aplicar")
+        self.assertIn("re-aplicarlo o es saldo a favor", x["explicacion"])
+
+    def test_previsualizar_no_guarda(self):
+        r = self._pegar(guardar=False)
+        self.assertEqual(r.status_code, 200, r.text)
+        d = r.json()
+        self.assertEqual((d["guardado"], d["n"], d["total"], d["base_actual"]), (False, 70, 935250, 953990))
+        self.assertEqual(d["diferencia_vs_base"], -18740)
+        self.assertEqual(self._base(77), 953990)
+
+    def test_reporte_pegado_manda_la_base_y_marca_tipos(self):
+        r = self._pegar()
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual((r.json()["base_antes"], r.json()["base_ahora"]), (953990, 935250))
+        m = mes()
+        a = prof(m, 77)
+        self.assertEqual(a["liquidacion"]["base"], 935250)
+        self.assertEqual(a["liquidacion"]["base_fuente"], "reporte_medilink")
+        self.assertEqual(a["verificacion"]["atribucion"], "verificada_reporte")
+        self.assertTrue(a["atribucion"]["cuadra"])
+        ls = lineas(77)
+        tipos = Counter(x["tipo"] for x in ls)
+        self.assertEqual(tipos["sin_aplicar"], 1)
+        self.assertEqual(tipos["partido"], 1)
+        # sin módulo Pagos en este fixture: el tipo primario es la alerta de recepción, pero
+        # toda línea que el reporte trae queda marcada reporte_ok o partido
+        self.assertEqual(sum(1 for x in ls if "reporte_ok" in x["tipos"]) + tipos["partido"],
+                         sum(1 for x in ls if x["reporte"]))
+        sa = next(x for x in ls if x["tipo"] == "sin_aplicar")
+        self.assertEqual(sa["pagos_linea"][0]["pago_id"], 39968)
+        self.assertFalse(sa["cuenta_para_pago"])
+        pa = next(x for x in ls if x["tipo"] == "partido")
+        self.assertEqual((pa["reporte"]["monto"], pa["monto_pago"]), (11390, 11390))
+        mq = next(x for x in lineas(13) if 40457 in x["sistema"]["pago_ids"])
+        self.assertEqual(mq["tipo"], "posible_exceso")
+        self.assertEqual(mq["efecto_pago"], -11390)
+        self.assertIn("Pegue su reporte", mq["explicacion"])
+        prop = {p["pago_id"]: p for p in m["repartos_propuestos"]}
+        self.assertEqual(prop[40457]["origen"], "reporte")
+        self.assertEqual(sorted((x["id_profesional"], x["monto"]) for x in prop[39968]["partes"]), [(0, 30130)])
+        # el reporte no guarda nombres de pacientes
+        from session import db
+        with db() as c:
+            cols = {r[1] for r in c.execute("PRAGMA table_info(remun_reporte_medilink)").fetchall()}
+        self.assertFalse(any("nombre" in x or "paciente" in x for x in cols))
+
+    def test_reporte_de_otro_mes_o_suma_mala_400(self):
+        r = cli.post("/api/remuneraciones/reporte-medilink", params=Q,
+                     json={"prof": 77, "mes": MES, "texto": texto_reporte(total=1)})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("no coincide", r.json()["detail"])
+        r = cli.post("/api/remuneraciones/reporte-medilink", params=Q,
+                     json={"prof": 77, "mes": "2026-08", "texto": texto_reporte()})
+        self.assertEqual(r.status_code, 400)
+
+    def test_reparto_confirmado_mueve_a_ambos(self):
+        b77, b13 = self._base(77), self._base(13)
+        r = cli.post("/api/remuneraciones/reparto", params=Q,
+                     json={"pago_id": 40457, "partes": [{"id_profesional": 77, "monto": 11390},
+                                                        {"id_profesional": 13, "monto": 15130}]})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(self._base(77), b77 + 11390)
+        self.assertEqual(self._base(13), b13 - 11390)
+        m = mes()
+        self.assertNotIn(40457, {p["pago_id"] for p in m["repartos_propuestos"]})
+        self.assertEqual(m["totales"]["sistema"], sum(r["monto"] for r in ARM["espejo"]))   # caja intacta
+        from session import db
+        with db() as c:   # el espejo NO se toca
+            self.assertEqual(c.execute("SELECT id_profesional, monto FROM bi_pagos_caja WHERE pago_id=40457"
+                                       ).fetchone()[:], (13, 26520))
+        # con 39968 sin asignar, el espejo de Armijo = reporte de Medilink
+        cli.post("/api/remuneraciones/reparto", params=Q,
+                 json={"pago_id": 39968, "partes": [{"id_profesional": 0, "monto": 30130}]})
+        self.assertEqual(self._base(77), 935250)
+        self._pegar()
+        ls = lineas(77)
+        self.assertTrue(all("reporte_ok" in x["tipos"] for x in ls if x["reporte"]))
+        self.assertFalse({"partido", "sin_aplicar"} & {x["tipo"] for x in ls})
+        self.assertEqual(self._base(77), 935250)
+        self.assertNotIn("posible_exceso", {x["tipo"] for x in lineas(13)})
+        self.assertEqual(cli.delete("/api/remuneraciones/reparto/40457", params=Q).status_code, 200)
+        self.assertEqual(self._base(13), b13)
+
+    def test_reparto_invalido(self):
+        r = cli.post("/api/remuneraciones/reparto", params=Q,
+                     json={"pago_id": 40457, "partes": [{"id_profesional": 77, "monto": 30000}]})
+        self.assertEqual(r.status_code, 400)
+        r = cli.post("/api/remuneraciones/reparto", params=Q,
+                     json={"pago_id": 1, "partes": [{"id_profesional": 77, "monto": 1}]})
+        self.assertEqual(r.status_code, 404)
+
+    def test_auth_solo_dueno_en_endpoints_nuevos(self):
+        for metodo, url, kw in (("post", "/api/remuneraciones/reporte-medilink",
+                                 {"json": {"prof": 77, "mes": MES, "texto": "x"}}),
+                                ("delete", "/api/remuneraciones/reporte-medilink", {"params": {"prof": 77}}),
+                                ("get", "/api/remuneraciones/repartos", {}),
+                                ("post", "/api/remuneraciones/reparto", {"json": {"pago_id": 40457, "partes": []}}),
+                                ("delete", "/api/remuneraciones/reparto/40457", {})):
+            kw = dict(kw)
+            kw["params"] = {**kw.get("params", {}), "token": RECEP, "mes": MES}
+            self.assertEqual(getattr(cli, metodo)(url, **kw).status_code, 403, url)
+
+    def test_barrido_verifica_atenciones_candidatas(self):
+        llamadas = []
+
+        async def fake_dia(cli_, fecha):
+            return [], False, "no"            # no importa: se pide solo_atenciones
+
+        async def fake_aten(cli_, aid):
+            llamadas.append(aid)
+            return {"atencion_id": aid, "id_profesional": 77, "total": 0, "abonado": 0, "deuda": 0}
+        o1, o2 = rp._fetch_dia, rp._fetch_atencion
+        rp._fetch_dia, rp._fetch_atencion = fake_dia, fake_aten
+
+        async def go():
+            await rp.iniciar_barrido(MES, solo_atenciones=True)
+            await rp._TAREA["task"]
+        try:
+            asyncio.run(go())
+        finally:
+            rp._fetch_dia, rp._fetch_atencion = o1, o2
+            rp._TAREA.update(task=None, mes=None)
+        self.assertEqual(sorted(llamadas), [58037, 58238])     # solo las de total $0 locales
+        x = next(l for l in lineas(77) if 39968 in (l["sistema"] or {}).get("pago_ids", []))
+        self.assertEqual(x["tipo"], "sin_aplicar")
+
+
+class TestJefaturaKine(_ArmijoBase):
+    """Leo Etcheverry (21) = 50% de su venta + 10% de la venta de Luis Armijo (77),
+    que paga el centro. Base de Luis = la misma con que se le paga a él."""
+
+    def setUp(self):
+        super().setUp()
+        from session import db
+        with db() as c:
+            c.execute("UPDATE equipo_cmc SET pct_honorario=50 WHERE id_medilink IN (21, 77)")
+            c.execute("INSERT INTO bi_pagos_caja (pago_id, fecha, id_profesional, id_paciente, monto, "
+                      "nombre_paciente) VALUES (999001, '2026-09-10', 21, 1, 2818560, 'Paciente Ficticio Leo')")
+
+    def test_jefatura_con_reporte_de_luis(self):
+        self.assertEqual(self._pegar().status_code, 200)
+        m = mes()
+        luis, leo = prof(m, 77), prof(m, 21)
+        self.assertEqual(luis["liquidacion"]["base"], 935250)
+        self.assertEqual(luis["liquidacion"]["bruto"], 467625)                 # a Luis no se le descuenta
+        j = leo["liquidacion"]["jefatura"]
+        self.assertEqual([(x["id_profesional"], x["base"], x["monto"]) for x in j], [(77, 935250, 93525)])
+        self.assertEqual(leo["liquidacion"]["bruto"], 1502805)                 # 0,5 × 2.818.560 + 93.525
+        self.assertEqual(leo["liquidacion"]["liquido"], round(1502805 * (1 - ebitda_routes.RETENCION_BOLETA)))
+        t = cli.get("/api/remuneraciones/whatsapp", params={**Q, "prof": 21, "mes": MES}).json()["texto"]
+        self.assertIn("Jefatura kinesiología: 10% de la venta de Luis Armijo ($935.250) = $93.525", t)
+        self.assertIn("Boleta de honorarios a emitir: $1.502.805", t)
+
+    def test_jefatura_igual_en_ebitda_sin_reporte(self):
+        from session import db
+        with db() as c, ebitda_routes.solo_datos_locales():
+            e = {p["id"]: p for p in ebitda_routes._ebitda_mes(c, MES)["profesionales"]}
+        leo = prof(mes(), 21)
+        self.assertEqual(e[21]["bruto"], 1409280 + 95399)                     # 10% de 953.990 (espejo)
+        self.assertEqual(leo["liquidacion"]["bruto"], e[21]["bruto"])
+        self.assertEqual(leo["liquidacion"]["liquido"], e[21]["liquido"])
+        self.assertEqual(e[21]["cmc"], 2818560 - 1409280 - 95399)             # lo paga el centro
+        self.assertEqual(e[77]["bruto"], 476995)
+
+
+from collections import Counter  # noqa: E402
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

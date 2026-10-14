@@ -8,6 +8,12 @@ se aplican EN MEMORIA: no toca la base de datos, ni Medilink, ni el VPS.
 
 Uso:
     python3 scripts/remun_preview_server.py [--fixtures DIR] [--port 8871] [--sin-verificar]
+    venv/bin/python scripts/remun_preview_server.py --db COPIA.db [--port 8871]
+
+Con --db (recomendado, requiere el venv del repo) los endpoints corren con el
+MOTOR REAL sobre una copia temporal de esa base: pegar reporte, repartos,
+ajustes, etc. se calculan de verdad y se pierden al cerrar. La copia original no
+se toca y "Verificar con Medilink" está deshabilitado (nunca sale a la red).
 
 Con --sin-verificar arranca mostrando el estado previo al barrido de Medilink;
 "Verificar con Medilink" simula el progreso día a día (~1 s por día) y al
@@ -165,6 +171,29 @@ class Estado:
 
 
 EST: Estado | None = None
+MOTOR = None      # TestClient del router real (modo --db)
+_MOTOR_LOCK = threading.Lock()
+
+
+def _motor(db_path: str):
+    """Monta el router real sobre una COPIA temporal de la base."""
+    import os
+    import shutil
+    import tempfile
+    os.environ.pop("SQLCIPHER_KEY", None)
+    sys.path.insert(0, str(REPO))
+    tmp = Path(tempfile.mkdtemp(prefix="remun_preview_")) / "sessions.db"
+    shutil.copy(db_path, tmp)
+    import session
+    session.DB_PATH = tmp
+    import config
+    config.OLACORE_TOKEN = TOKEN
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import remuneraciones_pro_routes as rp
+    app = FastAPI()
+    rp.register_remuneraciones_pro_routes(app)
+    return TestClient(app)
 
 
 class H(BaseHTTPRequestHandler):
@@ -213,7 +242,35 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b)
 
+    def _al_motor(self, metodo: str) -> bool:
+        u = urlparse(self.path)
+        if MOTOR is None or not u.path.startswith("/api/remuneraciones/"):
+            return False
+        if u.path.endswith("/verificar-medilink"):
+            self._json({"detail": "En la vista previa no se consulta Medilink."}, 400)
+            return True
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        q["token"] = TOKEN
+        kw = {"params": q}
+        if metodo in ("POST", "DELETE"):
+            n = int(self.headers.get("Content-Length") or 0)
+            if n:
+                kw["content"] = self.rfile.read(n)
+                kw["headers"] = {"Content-Type": "application/json"}
+        with _MOTOR_LOCK:
+            r = MOTOR.request(metodo, u.path, **kw)
+        b = r.content
+        self.send_response(r.status_code)
+        self.send_header("Content-Type", r.headers.get("content-type", "application/json"))
+        self.send_header("Content-Length", str(len(b)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(b)
+        return True
+
     def do_GET(self):  # noqa: N802
+        if self._al_motor("GET"):
+            return
         u = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         mes = q.get("mes") or "2026-09"
@@ -249,6 +306,8 @@ class H(BaseHTTPRequestHandler):
         return self._json({"detail": "no encontrado"}, 404)
 
     def do_POST(self):  # noqa: N802
+        if self._al_motor("POST"):
+            return
         u = urlparse(self.path)
         b = self._body()
         with EST.lock:
@@ -298,6 +357,8 @@ class H(BaseHTTPRequestHandler):
         return self._json({"detail": "no encontrado"}, 404)
 
     def do_DELETE(self):  # noqa: N802
+        if self._al_motor("DELETE"):
+            return
         u = urlparse(self.path)
         m = re.match(r"^/api/remuneraciones/ajuste/(\d+)$", u.path)
         if m:
@@ -319,12 +380,19 @@ class H(BaseHTTPRequestHandler):
 
 
 def main():
-    global EST
+    global EST, MOTOR
     ap = argparse.ArgumentParser()
     ap.add_argument("--fixtures", default=str(FIX_DEFAULT))
     ap.add_argument("--port", type=int, default=8871)
     ap.add_argument("--sin-verificar", action="store_true")
+    ap.add_argument("--db", help="copia local de la base (modo motor real)")
     a = ap.parse_args()
+    if a.db:
+        MOTOR = _motor(a.db)
+        print(f"Remuneraciones Pro (vista previa, MOTOR REAL sobre copia de {a.db}) → "
+              f"http://127.0.0.1:{a.port}/")
+        ThreadingHTTPServer(("127.0.0.1", a.port), H).serve_forever()
+        return
     EST = Estado(Path(a.fixtures), a.sin_verificar)
     if EST.mes_ok is None:
         sys.exit(f"No hay fixtures en {a.fixtures} (falta mes_2026-09.json)")
