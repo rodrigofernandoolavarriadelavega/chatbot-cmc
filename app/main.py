@@ -1785,6 +1785,7 @@ import comparador_routes; comparador_routes.register_comparador_routes(app)  # C
 import ebitda_routes; ebitda_routes.register_ebitda_routes(app)  # EBITDA / Resultado  # Check-in QR (gateado CHECKIN_ENABLED)
 import panel_dia_routes; panel_dia_routes.register_panel_dia_routes(app)  # Panel del Día — datos reales (N1/N2/N3)
 import remuneraciones_routes; remuneraciones_routes.register_remuneraciones_routes(app)  # Panel del Día N4 — remuneraciones
+import remuneraciones_pro_routes; remuneraciones_pro_routes.register_remuneraciones_pro_routes(app)  # SOLO DUEÑO: Remuneraciones Pro (/alma/remuneraciones + /api/remuneraciones/*)
 import captacion_routes; captacion_routes.register_captacion_routes(app)  # Dashboard captación (cómo nos conociste)
 import mg_abandono_routes; mg_abandono_routes.register_mg_abandono_routes(app)  # métrica abandono Medicina General
 import persistencia_routes; persistencia_routes.register_persistencia_routes(app)  # carril de persistencia (GATED PERSISTENCIA_ACTIVE)

@@ -120,6 +120,10 @@ ALMA_MODULE_REGISTRY: dict[str, dict] = {
     # todo, asi que con omitirlo de esa allowlist basta. Ademas su propio _auth
     # exige OLACORE_TOKEN: un ADMIN_TOKEN no lo abre.
     "trayectoria": {"label": "Trayectoria y techo","icon":"trending-up","title": "Trayectoria y techo real",  "sub": "5 años de caja · la banda del margen · si dejas de atender · techo demostrado","src": "/alma/trayectoria"},
+    # SOLO DUENO: honorarios de cada profesional + conciliación sistema/Medilink/
+    # recepción. No va en la allowlist de Recepción; su página y su API exigen
+    # OLACORE_TOKEN (un ADMIN_TOKEN o la cookie admin no lo abren).
+    "remuneraciones":{"label": "Remuneraciones", "icon": "coins",     "title": "Remuneraciones — honorarios del mes", "sub": "Tres fuentes conciliadas · liquidación · simulador · WhatsApp", "src": "/alma/remuneraciones"},
     "ebitda":      {"label": "EBITDA / Resultado","icon": "wallet",    "title": "EBITDA / Resultado Operativo",   "sub": "Ingresos − honorarios − gastos · rentabilidad real del mes","src": "/cmc/ebitda"},
     "autopilot":   {"label": "Autopilot Ads",    "icon": "target",    "title": "Autopilot de Marketing",         "sub": "Meta Ads · decisiones por rentabilidad real",      "src": "/autopilot"},
     "demanda":     {"label": "Demanda",          "icon": "search",    "title": "Demanda capturada",              "sub": "Qué piden los pacientes que no capturamos",        "src": "/demanda"},

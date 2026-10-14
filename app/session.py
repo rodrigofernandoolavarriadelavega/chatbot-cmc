@@ -6162,7 +6162,8 @@ def delete_patient_data(phone: str | None, rut: str | None,
                     pass
             # Borrado por id_paciente Medilink (caches locales)
             if id_paciente_medilink:
-                for table in ("citas_cache", "ortodoncia_cache", "kine_tracking"):
+                for table in ("citas_cache", "ortodoncia_cache", "kine_tracking",
+                              "remun_medilink_pagos"):
                     try:
                         cur = conn.execute(
                             f"DELETE FROM {table} WHERE id_paciente=?",
@@ -6172,6 +6173,14 @@ def delete_patient_data(phone: str | None, rut: str | None,
                             deleted[table] = cur.rowcount
                     except _OPERATIONAL_ERRORS:
                         pass
+                # Remuneraciones Pro: decisiones por línea llevan el id del paciente en la clave.
+                try:
+                    cur = conn.execute("DELETE FROM remun_decisiones WHERE clave_linea LIKE ?",
+                                       (f"%|id:{int(id_paciente_medilink)}",))
+                    if cur.rowcount:
+                        deleted["remun_decisiones"] = cur.rowcount
+                except _OPERATIONAL_ERRORS:
+                    pass
             conn.execute("COMMIT")
         except Exception:
             conn.execute("ROLLBACK")
